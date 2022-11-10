@@ -117,6 +117,14 @@ template<std::size_t _Nm> inline
 _InputArray::_InputArray(const std::array<Mat, _Nm>& arr)
 { init(STD_ARRAY_MAT + ACCESS_READ, arr.data(), Size(1, _Nm)); }
 
+template<typename _Tp, std::size_t _Nm> inline
+_InputArray::_InputArray(const _Tp (&arr)[_Nm])
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_READ, arr, Size(1, _Nm)); }
+
+template<std::size_t _Nm> inline
+_InputArray::_InputArray(const Mat (&arr)[_Nm])
+{ init(STD_ARRAY_MAT + ACCESS_READ, arr, Size(1, _Nm)); }
+
 inline
 _InputArray::_InputArray(const std::vector<bool>& vec)
 { init(FIXED_TYPE + STD_BOOL_VECTOR + traits::Type<bool>::value + ACCESS_READ, &vec); }
@@ -175,6 +183,16 @@ _InputArray _InputArray::rawIn(const std::array<_Tp, _Nm>& arr)
     return v;
 }
 
+template<typename _Tp, std::size_t _Nm> inline
+_InputArray _InputArray::rawIn(const _Tp (&arr)[_Nm])
+{
+    _InputArray v;
+    v.flags = FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_READ;
+    v.obj = (void*)arr;
+    v.sz = Size(1, _Nm);
+    return v;
+}
+
 inline _InputArray::~_InputArray() {}
 
 inline Mat _InputArray::getMat(int i) const
@@ -214,7 +232,15 @@ _OutputArray::_OutputArray(std::array<_Tp, _Nm>& arr)
 
 template<std::size_t _Nm> inline
 _OutputArray::_OutputArray(std::array<Mat, _Nm>& arr)
-{ init(STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+
+template<typename _Tp, std::size_t _Nm> inline
+_OutputArray::_OutputArray(_Tp (&arr)[_Nm])
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE, arr, Size(1, _Nm)); }
+
+template<std::size_t _Nm> inline
+_OutputArray::_OutputArray(Mat (&arr)[_Nm])
+{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_WRITE, arr, Size(1, _Nm)); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<std::vector<_Tp> >& vec)
@@ -247,6 +273,14 @@ _OutputArray::_OutputArray(const std::array<_Tp, _Nm>& arr)
 template<std::size_t _Nm> inline
 _OutputArray::_OutputArray(const std::array<Mat, _Nm>& arr)
 { init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_WRITE, arr.data(), Size(1, _Nm)); }
+
+template<typename _Tp, std::size_t _Nm> inline
+_OutputArray::_OutputArray(const _Tp (&arr)[_Nm])
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE, arr, Size(1, _Nm)); }
+
+template<std::size_t _Nm> inline
+_OutputArray::_OutputArray(const Mat (&arr)[_Nm])
+{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_WRITE, arr, Size(1, _Nm)); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const std::vector<std::vector<_Tp> >& vec)
@@ -321,6 +355,16 @@ _OutputArray _OutputArray::rawOut(std::array<_Tp, _Nm>& arr)
     return v;
 }
 
+template<typename _Tp, std::size_t _Nm> inline
+_OutputArray _OutputArray::rawOut(_Tp (&arr)[_Nm])
+{
+    _OutputArray v;
+    v.flags = FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_WRITE;
+    v.obj = (void*)arr;
+    v.sz = Size(1, _Nm);
+    return v;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 inline _InputOutputArray::_InputOutputArray() { init(0+ACCESS_RW, 0); }
@@ -340,7 +384,15 @@ _InputOutputArray::_InputOutputArray(std::array<_Tp, _Nm>& arr)
 
 template<std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(std::array<Mat, _Nm>& arr)
-{ init(STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+
+template<typename _Tp, std::size_t _Nm> inline
+_InputOutputArray::_InputOutputArray(_Tp (&arr)[_Nm])
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW, arr, Size(1, _Nm)); }
+
+template<std::size_t _Nm> inline
+_InputOutputArray::_InputOutputArray(Mat (&arr)[_Nm])
+{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_RW, arr, Size(1, _Nm)); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(std::vector<std::vector<_Tp> >& vec)
@@ -373,6 +425,14 @@ _InputOutputArray::_InputOutputArray(const std::array<_Tp, _Nm>& arr)
 template<std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(const std::array<Mat, _Nm>& arr)
 { init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_RW, arr.data(), Size(1, _Nm)); }
+
+template<typename _Tp, std::size_t _Nm> inline
+_InputOutputArray::_InputOutputArray(const _Tp (&arr)[_Nm])
+{ init(FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW, arr, Size(1, _Nm)); }
+
+template<std::size_t _Nm> inline
+_InputOutputArray::_InputOutputArray(const Mat (&arr)[_Nm])
+{ init(FIXED_SIZE + STD_ARRAY_MAT + ACCESS_RW, arr, Size(1, _Nm)); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(const std::vector<std::vector<_Tp> >& vec)
@@ -449,6 +509,15 @@ _InputOutputArray _InputOutputArray::rawInOut(std::array<_Tp, _Nm>& arr)
     return v;
 }
 
+template<typename _Tp, std::size_t _Nm> inline
+_InputOutputArray _InputOutputArray::rawInOut(_Tp (&arr)[_Nm])
+{
+    _InputOutputArray v;
+    v.flags = FIXED_TYPE + FIXED_SIZE + MATX + traits::Type<_Tp>::value + ACCESS_RW;
+    v.obj = (void*)arr;
+    v.sz = Size(1, _Nm);
+    return v;
+}
 
 template<typename _Tp> static inline _InputArray rawIn(_Tp& v) { return _InputArray::rawIn(v); }
 template<typename _Tp> static inline _OutputArray rawOut(_Tp& v) { return _OutputArray::rawOut(v); }
@@ -510,6 +579,23 @@ Mat::Mat(const std::array<_Tp, _Nm>& arr, bool copyData)
     }
     else
         Mat((int)arr.size(), 1, traits::Type<_Tp>::value, (uchar*)arr.data()).copyTo(*this);
+}
+
+template<typename _Tp, std::size_t _Nm> inline
+Mat::Mat(const _Tp (&arr)[_Nm], bool copyData)
+    : flags(MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows((int)_Nm),
+      cols(1), data(0), datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
+{
+    if(_Nm == 0)
+        return;
+    if( !copyData )
+    {
+        step[0] = step[1] = sizeof(_Tp);
+        datastart = data = (uchar*)arr;
+        datalimit = dataend = datastart + rows * step[0];
+    }
+    else
+        Mat((int)_Nm, 1, traits::Type<_Tp>::value, (uchar*)arr).copyTo(*this);
 }
 
 template<typename _Tp, int n> inline
@@ -1419,6 +1505,11 @@ Mat_<_Tp>::Mat_(const std::initializer_list<int> sizes, std::initializer_list<_T
 
 template<typename _Tp> template<std::size_t _Nm> inline
 Mat_<_Tp>::Mat_(const std::array<_Tp, _Nm>& arr, bool copyData)
+    : Mat(arr, copyData)
+{}
+
+template<typename _Tp> template<std::size_t _Nm> inline
+Mat_<_Tp>::Mat_(const _Tp (&arr)[_Nm], bool copyData)
     : Mat(arr, copyData)
 {}
 
