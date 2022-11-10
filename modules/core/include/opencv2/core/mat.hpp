@@ -212,11 +212,13 @@ public:
     template<std::size_t _Nm> _InputArray(const std::array<Mat, _Nm>& arr);
 
     template<typename _Tp, std::size_t _Nm> _InputArray(const _Tp (&arr)[_Nm]);
+    template<std::size_t _Nm> _InputArray(const char (&arr)[_Nm]) = delete;
     template<std::size_t _Nm> _InputArray(const Mat (&arr)[_Nm]);
 
     template<typename _Tp> static _InputArray rawIn(const std::vector<_Tp>& vec);
     template<typename _Tp, std::size_t _Nm> static _InputArray rawIn(const std::array<_Tp, _Nm>& arr);
     template<typename _Tp, std::size_t _Nm> static _InputArray rawIn(const _Tp (&arr)[_Nm]);
+    template<std::size_t _Nm> static _InputArray rawIn(const char (&arr)[_Nm]) = delete;
 
     Mat getMat(int idx=-1) const;
     Mat getMat_(int idx=-1) const;
@@ -357,12 +359,15 @@ public:
 
     template<typename _Tp, std::size_t _Nm> _OutputArray(_Tp (&arr)[_Nm]);
     template<typename _Tp, std::size_t _Nm> _OutputArray(const _Tp (&arr)[_Nm]);
+    template<std::size_t _Nm> _OutputArray(char (&arr)[_Nm]) = delete;
+    template<std::size_t _Nm> _OutputArray(const char (&arr)[_Nm]) = delete;
     template<std::size_t _Nm> _OutputArray(Mat (&arr)[_Nm]);
     template<std::size_t _Nm> _OutputArray(const Mat (&arr)[_Nm]);
 
     template<typename _Tp> static _OutputArray rawOut(std::vector<_Tp>& vec);
     template<typename _Tp, std::size_t _Nm> static _OutputArray rawOut(std::array<_Tp, _Nm>& arr);
     template<typename _Tp, std::size_t _Nm> static _OutputArray rawOut(_Tp (&arr)[_Nm]);
+    template<std::size_t _Nm> static _OutputArray rawOut(char (&arr)[_Nm]) = delete;
 
     bool fixedSize() const;
     bool fixedType() const;
@@ -436,12 +441,15 @@ public:
 
     template<typename _Tp, std::size_t _Nm> _InputOutputArray(_Tp (&arr)[_Nm]);
     template<typename _Tp, std::size_t _Nm> _InputOutputArray(const _Tp (&arr)[_Nm]);
+    template<std::size_t _Nm> _InputOutputArray(char (&arr)[_Nm]) = delete;
+    template<std::size_t _Nm> _InputOutputArray(const char (&arr)[_Nm]) = delete;
     template<std::size_t _Nm> _InputOutputArray(Mat (&arr)[_Nm]);
     template<std::size_t _Nm> _InputOutputArray(const Mat (&arr)[_Nm]);
 
     template<typename _Tp> static _InputOutputArray rawInOut(std::vector<_Tp>& vec);
     template<typename _Tp, std::size_t _Nm> _InputOutputArray rawInOut(std::array<_Tp, _Nm>& arr);
     template<typename _Tp, std::size_t _Nm> _InputOutputArray rawInOut(_Tp (&arr)[_Nm]);
+    template<std::size_t _Nm> _InputOutputArray rawInOut(char (&arr)[_Nm]) = delete;
 };
 
 /** Helper to wrap custom types. @see InputArray */
@@ -1054,6 +1062,7 @@ public:
     /** @overload
     */
     template<typename _Tp, size_t _Nm> explicit Mat(const _Tp (&arr)[_Nm], bool copyData=false);
+    template<std::size_t _Nm> Mat(const char (&arr)[_Nm], bool copyData) = delete;
 
     /** @overload
     */
@@ -2277,6 +2286,7 @@ public:
     template <std::size_t _Nm> explicit Mat_(const std::array<_Tp, _Nm>& arr, bool copyData=false);
 
     template <std::size_t _Nm> explicit Mat_(const _Tp (&arr)[_Nm], bool copyData=false);
+    template <std::size_t _Nm> Mat_(const char (&arr)[_Nm], bool copyData) = delete;
 
     Mat_& operator = (const Mat& m);
     Mat_& operator = (const Mat_& m);
