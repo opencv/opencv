@@ -112,7 +112,7 @@ public:
         }
 
         cv::Mat tmp(height, width, CV_MAKETYPE(CV_8U, cn), data, step);
-        this->rotateFrame(tmp);
+        applyMetadataRotation(*this, tmp);
         tmp.copyTo(frame);
 
         return true;
@@ -137,30 +137,6 @@ public:
 
 protected:
     CvCapture_FFMPEG* ffmpegCapture;
-
-    void rotateFrame(cv::Mat &mat) const
-    {
-        bool rotation_auto = 0 != getProperty(CAP_PROP_ORIENTATION_AUTO);
-        int rotation_angle = static_cast<int>(getProperty(CAP_PROP_ORIENTATION_META));
-
-        if(!rotation_auto || rotation_angle%360 == 0)
-        {
-            return;
-        }
-
-        cv::RotateFlags flag;
-        if(rotation_angle == 90 || rotation_angle == -270) { // Rotate clockwise 90 degrees
-            flag = cv::ROTATE_90_CLOCKWISE;
-        } else if(rotation_angle == 270 || rotation_angle == -90) { // Rotate clockwise 270 degrees
-            flag = cv::ROTATE_90_COUNTERCLOCKWISE;
-        } else if(rotation_angle == 180 || rotation_angle == -180) { // Rotate clockwise 180 degrees
-            flag = cv::ROTATE_180;
-        } else { // Unsupported rotation
-            return;
-        }
-
-        cv::rotate(mat, mat, flag);
-    }
 };
 
 } // namespace
