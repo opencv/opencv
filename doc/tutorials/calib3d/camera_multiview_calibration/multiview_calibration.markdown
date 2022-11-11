@@ -32,7 +32,7 @@ Multiview calibration is a very important task in computer vision. It is widely 
 
 The calibration algorithms require a set of images for each camera, where on the images a calibration pattern (e.g., checkerboard, aruco etc) is visible and detected. Additionally, to get results with a real scale, the 3D distance between two neighbor points of the calibration pattern grid should be measured. For extrinsics calibration, images must share the calibration pattern obtained from different views, i.e., overlap of cameras' field of view. Moreover, images that share the pattern grid have to be taken at the same moment of time, or in other words, cameras must be synchronized. Otherwise, the extrinsics calibration will fail.
 
-The intrinsics calibration incorporates estimation of focal lengths, skew, and principal point of the camera; these parameters are combined in the intrinsic upper triangular matrix of size 3x3. Additionally, intrinsic calibration includes finding distortion parameters of the camera. The extrinsics parameters represent a relative rotation and translation between two cameras. Therefore, for `N` cameras, a sufficient amount of correctly selected pairs of estimated relative rotations / translations is `N-1`, while extrinsics parameters for all possible pairs ${N\choose 2} = \frac{N(N-1)}{2})$ could be derived from those that are estimated. More details about intrinsics calibration could be found in this tutorial @ref tutorial_camera_calibration_pattern, and its implementation [cv::calibrateCamera](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga3207604e4b1a1758aa66acb6ed5aa65d).
+The intrinsics calibration incorporates estimation of focal lengths, skew, and principal point of the camera; these parameters are combined in the intrinsic upper triangular matrix of size 3x3. Additionally, intrinsic calibration includes finding distortion parameters of the camera. The extrinsics parameters represent a relative rotation and translation between two cameras. Therefore, for `N` cameras, a sufficient amount of correctly selected pairs of estimated relative rotations / translations is `N-1`, while extrinsics parameters for all possible pairs ${N\choose 2} = \frac{N(N-1)}{2})$ could be derived from those that are estimated. More details about intrinsics calibration could be found in this tutorial @ref tutorial_camera_calibration_pattern, and its implementation @ref cv::calibrateCamera.
 
 After intrinsics and extrinsics calibration, the projection matrices of cameras are found by combing intrinsic, rotation matrices and translation. The projection matrices enable doing triangulation (3D reconstruction), rectification, finding epipolar geometry etc.
 
@@ -82,7 +82,7 @@ Additional (optional) flags to Python sample that could be used are as follows:
 * `--resize_image_detection` - True / False, if True an image will be resized to speed-up corners detection
 
 Alternatively, the Python sample could be run from JSON file that should contain image points, pattern points, and boolean indicator whether a camera is fisheye.
-The example of JSON file is in `opencv_extra/testdata/python/multiview_calibration_data.json` (currently under [pull request](https://github.com/opencv/opencv_extra/pull/1001)). Its format should be dictionary with the following items:
+The example of JSON file is in `opencv_extra/testdata/python/multiview_calibration_data.json` (currently under pull request 1001 in `opencv_extra`). Its format should be dictionary with the following items:
 * `object_points` - list of lists of pattern (object) points (size NUM_POINTS x 3).
 * `image_points` - list of lists of lists of lists of image points (size NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 2).
 * `image_sizes` - list of tuples (width x height) of image size.
@@ -104,7 +104,7 @@ The expected output in Linux terminal for `multiview_calibration_images` data (f
 ![](images/terminal-demo.png)
 
 The expected output for real-life calibration images in `opencv_extra/testdata/python/real_multiview_calibration_images` is the following:
-![](images/terminal-real-demo.png)
+![](images/terminal-real-demo.jpg)
 
 Python visualization:
 ----
@@ -132,21 +132,21 @@ If files to images are provided, then the output is an image with plotted arrows
 
 Details Of The Algorithm:
 ----
-1. If the intrinsics are not provided, the calibration procedure starts intrinsics calibration independently for each camera using OpenCV function `cv::calibrateCamera` [see this turorial](https://github.com/opencv/opencv/blob/5.x/doc/tutorials/calib3d/camera_calibration/camera_calibration.markdown).
+1. If the intrinsics are not provided, the calibration procedure starts intrinsics calibration independently for each camera using OpenCV function @ref cv::calibrateCamera.
 * a. If input is a combination of fisheye and pinhole cameras, then fisheye images are calibrated with the default OpenCV calibrate function. The reason is that stereo calibration in OpenCV does not support a mix of fisheye and pinhole cameras. The following flags are used in this scenario;
-* * i. #CALIB_RATIONAL_MODEL [see](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa204766e24f2e413e7a7c9f8b9e93f16c) - it extends default (5 coefficients) distortion model and returns more parameters.
-* * ii. #CALIB_ZERO_TANGENT_DIST [see](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa769b5792d4e9c4ae073eaf317aec73ef) - it zeroes out tangential distortion coefficients, since the fisheye model does not have them.
-* * iii. #CALIB_FIX_K5 [see](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa5e080a1f6b8e545196c2c2e874dce6ac), #CALIB_FIX_K6 [see](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa7d57502505ca433b25116aebadf33088) - it zeroes out the fifth and sixth parameter, so in total 4 parameters are returned.
+* * i. @ref cv::CALIB_RATIONAL_MODEL - it extends default (5 coefficients) distortion model and returns more parameters.
+* * ii. @ref cv::CALIB_ZERO_TANGENT_DIST - it zeroes out tangential distortion coefficients, since the fisheye model does not have them.
+* * iii. @ref cv::CALIB_FIX_K5, @ref cv::CALIB_FIX_K6 - it zeroes out the fifth and sixth parameter, so in total 4 parameters are returned.
 * b. Output of intrinsic calibration is also rotation, translation vectors (transform of pattern points to camera frame), and errors per frame.
 * * i. For each frame, the index of the camera with the lowest error among all cameras is saved.
-2. Otherwise, if intrinsics are known, then the proposed algorithm runs perspective-n-point estimation ([see solvePnP](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga549c2075fac14829ff4a58bc931c033d)) to estimate rotation / translation vectors, and reprojection error for each frame.
+2. Otherwise, if intrinsics are known, then the proposed algorithm runs perspective-n-point estimation @ref cv::solvePnP) to estimate rotation / translation vectors, and reprojection error for each frame.
 3. Assume that cameras can be represented as nodes of a connected graph. An edge between two cameras is created if there is any image overlap over all frames. If the graph does not connect all cameras (i.e., exists a camera that has no overlap with other cameras) then calibration is not possible. Otherwise, the next step consists of finding the [maximum spanning tree](https://en.wikipedia.org/wiki/Minimum_spanning_tree) (MST) of this graph. The MST captures all best pairwise camera connections. The weight of edges across all frames is a weighted combination of multiple factors:
 * a. The main contribution is a number of pattern points detected in both images (cameras).
 * b. Ratio of area of convex hull of projected points in the image to the image resolution.
 * c. Angle between cameras' optical axes (found from rotation vectors).
 * d. Angle between the camera's optical axis and the pattern's normal vector (found from 3 non-collinear pattern's points).
-4. The initial estimate of cameras' extrinsics is found by pairwise stereo calibration (see [stereoCalibrate](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga91018d80e2a93ade37539f01e6f07de5)). Without loss of generality, the 0-th camera’s rotation is fixed to identity and translation to zero vector, and the 0-th node becomes the root of the MST. The order of stereo calibration is selected by traversing MST in breadth first search, starting from the root. The total number of pairs (also number of edges of tree) is NUM_CAMERAS - 1, which is property of a tree graph.
-5. Given the initial estimate of extrinsics the aim is to polish results using global optimization (via Levenberq-Marquardt method, see [cv::LevMarq class](https://github.com/opencv/opencv/blob/5.x/modules/3d/include/opencv2/3d.hpp#L518)).
+4. The initial estimate of cameras' extrinsics is found by pairwise stereo calibration (see @ref cv::stereoCalibrate). Without loss of generality, the 0-th camera’s rotation is fixed to identity and translation to zero vector, and the 0-th node becomes the root of the MST. The order of stereo calibration is selected by traversing MST in breadth first search, starting from the root. The total number of pairs (also number of edges of tree) is NUM_CAMERAS - 1, which is property of a tree graph.
+5. Given the initial estimate of extrinsics the aim is to polish results using global optimization (via Levenberq-Marquardt method, see @ref cv::LevMarq class).
 * a. To reduce the total number of parameters, all rotation / translation vectors estimated in the first step from intrinsics calibration with the lowest error are transformed to be relative with respect to the root camera.
 * b. The total number of parameters is (NUM_CAMERAS - 1) x (3 + 3) + NUM_FRAMES x (3 + 3), where 3 stands for a rotation vector and 3 for a translation vector. The first part of parameters are extrinsics, and the second part is for rotation / translation vectors per frame.
 * c. Robust function is additionally applied to mitigate impact of outlier points during the optimization. The function has the shape of derivative of Gaussian, or it is $x\cdot exp(-x/s)$ (efficiently implemented by approximation of the `exp`), where `x` is a square pixel error, and `s` is manually pre-defined scale. The choice of this function is that it is increasing on the interval of `0` to `y` pixel error, and it’s decreasing thereafter. The idea is that the function slightly decreases errors until it reaches `y`, and if error is too high (more than `y`) then its robust value limits to `0`. The value of scale factor was found by exhaustive evaluation that forces robust function to almost linearly increase until the robust value of an error is 10 px and decrease afterwards (see graph of the function below). The value itself is equal to 30, but could be modified in OpenCV source code.
@@ -162,7 +162,7 @@ The high-level input of the proposed method is as follows:
 * Detection mask matrix of size NUM_CAMERAS x NUM_FRAMES that indicates whether pattern points are detected for specific camera and frame index.
 * Ks (optional) - intrinsic matrices per camera.
 * Distortions (optional).
-* [use_intrinsics_guess](https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#gga7b31a379c097fb87997d28266762f12fa6eedf3c8312d4b29edfe0a434722e2ef) - indicates whether intrinsics are provided.
+* use_intrinsics_guess - indicates whether intrinsics are provided.
 * Flags_intrinsics - flag for intrinsics estimation.
 
 Method Output:
@@ -203,6 +203,7 @@ def mutiviewCalibration (pattern_points, image_points, detection_mask):
 
 Python sample API:
 ----
+
 ```python
 if pattern_type.lower() == 'checkerboard':
     ret, corners = cv.findChessboardCorners(img_detection, grid_size, None)
