@@ -1,6 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #include <vector>
 #include <string>
-#include <cassert>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
@@ -22,12 +25,12 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
             }
         }
     } else {
-        assert(false && "not implemented!");
+        CV_Error(cv::Error::StsNotImplemented, "pattern_type is not implemented!");
     }
     int num_frames = -1;
     for (const auto &filename : filenames) {
         std::fstream file(filename);
-        assert(file.is_open());
+        CV_Assert(file.is_open());
         std::string img_file;
         std::vector<cv::Mat> image_points_cameras;
         bool save_img_size = true;
@@ -53,7 +56,7 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
         if (num_frames == -1)
             num_frames = (int)image_points_cameras.size();
         else
-            assert(num_frames == (int)image_points_cameras.size());
+            CV_Assert(num_frames == (int)image_points_cameras.size());
         image_points_all.emplace_back(image_points_cameras);
     }
 
@@ -63,7 +66,7 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
             visibility.at<int>(i,j) = (int)(!image_points_all[i][j].empty());
         }
     }
-    assert(num_frames != -1);
+    CV_Assert(num_frames != -1);
     std::vector<std::vector<cv::Vec3f>> objPoints(num_frames, board);
     const double rmse = calibrateMultiview (objPoints, image_points_all, image_sizes, visibility,
        Rs, Ts, Ks, distortions, cv::noArray(), cv::noArray(), is_fisheye, errors_mat, output_pairs, false/*use intrinsics guess*/);
@@ -92,7 +95,7 @@ int main (int argc, char **argv) {
         parser.printMessage();
         return 0;
     }
-    assert(parser.has("pattern_width") && parser.has("pattern_width") && parser.has("pattern_height") && parser.has("pattern_type") &&
+    CV_Assert(parser.has("pattern_width") && parser.has("pattern_width") && parser.has("pattern_height") && parser.has("pattern_type") &&
         parser.has("is_fisheye") && parser.has("files_with_images"));
     const cv::Size pattern_size (parser.get<int>("pattern_width"), parser.get<int>("pattern_height"));
     std::vector<bool> is_fisheye;
@@ -116,7 +119,7 @@ int main (int argc, char **argv) {
         }
     }
     filenames.emplace_back(temp_str);
-    assert(filenames.size() == is_fisheye.size());
+    CV_CheckEQ(filenames.size(), is_fisheye.size(), "filenames size must be equal to number of cameras!");
     detectPointsAndCalibrate (pattern_size, parser.get<double>("pattern_scale"), parser.get<cv::String>("pattern_type"), is_fisheye, filenames);
     return 0;
 }
