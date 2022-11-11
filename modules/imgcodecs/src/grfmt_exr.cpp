@@ -693,12 +693,10 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
         }
         if (params[i] == IMWRITE_EXR_DWA_COMPRESSION_LEVEL)
         {
-#if defined(OPENEXR_VERSION_MAJOR) && OPENEXR_VERSION_MAJOR >= 3
+#if OPENEXR_VERSION_MAJOR >= 3
             header.dwaCompressionLevel() = params[i + 1];
-#elif defined(OPENEXR_VERSION_MAJOR)
-            throw std::runtime_error("Setting `IMWRITE_EXR_DWA_COMPRESSION_LEVEL` not supported in OpenEXR version " + std::to_string(OPENEXR_VERSION_MAJOR) + " (version 3 is required)");
 #else
-            throw std::runtime_error("Setting `IMWRITE_EXR_DWA_COMPRESSION_LEVEL` not supported when `OPENEXR_VERSION_MAJOR` is not defined");
+            CV_LOG_ONCE_WARNING(NULL, "Setting `IMWRITE_EXR_DWA_COMPRESSION_LEVEL` not supported in OpenEXR version " + std::to_string(OPENEXR_VERSION_MAJOR) + " (version 3 is required)");
 #endif
         }
     }
