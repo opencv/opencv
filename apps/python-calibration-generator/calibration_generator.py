@@ -1,7 +1,13 @@
-import argparse, numpy as np, traceback, pdb, sys, math
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+
+import argparse
+import numpy as np
+import math
+import yaml
 from drawer import animation2D, animation3D
 from utils import RandGen, insideImage, eul2rot, saveKDRT, areAllInsideImage, insideImageMask, projectCamera, export2JSON
-from yacs.config import CfgNode as CN
 from pathlib import Path
 from board import CheckerBoard
 
@@ -291,23 +297,23 @@ def generateCircularCameras():
 
 def getCamerasFromCfg(cfg):
     cameras = []
-    for i in range(cfg.NUM_CAMERAS):
-        cameras.append(Camera(i, cfg['CAMERA' + str(i+1)].IMG_WIDTH, cfg['CAMERA' + str(i+1)].IMG_HEIGHT,
-              cfg['CAMERA' + str(i+1)].FX, cfg['CAMERA' + str(i+1)].EULER_LIMIT, cfg['CAMERA' + str(i+1)].T_LIMIT,
-              cfg['CAMERA' + str(i+1)].FISHEYE, cfg['CAMERA' + str(i+1)].FY_DEVIATION,
-              noise_scale_img_diag=cfg['CAMERA' + str(i+1)].NOISE_SCALE, distortion_limit=cfg['CAMERA' + str(i+1)].DIST))
+    for i in range(cfg['NUM_CAMERAS']):
+        cameras.append(Camera(i, cfg['CAMERA' + str(i+1)]['IMG_WIDTH'], cfg['CAMERA' + str(i+1)]['IMG_HEIGHT'],
+              cfg['CAMERA' + str(i+1)]['FX'], cfg['CAMERA' + str(i+1)]['EULER_LIMIT'], cfg['CAMERA' + str(i+1)]['T_LIMIT'],
+              cfg['CAMERA' + str(i+1)]['FISHEYE'], cfg['CAMERA' + str(i+1)]['FY_DEVIATION'],
+              noise_scale_img_diag=cfg['CAMERA' + str(i+1)]['NOISE_SCALE'], distortion_limit=cfg['CAMERA' + str(i+1)]['DIST']))
     return cameras
 
 def main(cfg_name, save_folder):
-    cfg = CN.load_cfg(open(cfg_name, "r"))
+    cfg = yaml.safe_load(open(cfg_name, 'r'))
     print(cfg)
-    np.random.seed(cfg.SEED)
-    for trial in range(cfg.NUM_SAMPLES):
+    np.random.seed(cfg['SEED'])
+    for trial in range(cfg['NUM_SAMPLES']):
         Path(save_folder).mkdir(exist_ok=True, parents=True)
 
-        checkerboard = CheckerBoard(cfg.BOARD.WIDTH, cfg.BOARD.HEIGHT, cfg.BOARD.SQUARE_LEN, cfg.BOARD.EULER_LIMIT, cfg.BOARD.T_LIMIT, cfg.BOARD.T_ORIGIN)
+        checkerboard = CheckerBoard(cfg['BOARD']['WIDTH'], cfg['BOARD']['HEIGHT'], cfg['BOARD']['SQUARE_LEN'], cfg['BOARD']['EULER_LIMIT'], cfg['BOARD']['T_LIMIT'], cfg['BOARD']['T_ORIGIN'])
         cameras = getCamerasFromCfg(cfg)
-        points_2d, points_3d = generateAll(cameras, checkerboard, cfg.MAX_FRAMES, RandGen(cfg.SEED), cfg.MAX_RANDOM_ITERS, save_folder+'plots_projections.mp4', save_folder+'board_cameras.mp4')
+        points_2d, points_3d = generateAll(cameras, checkerboard, cfg['MAX_FRAMES'], RandGen(cfg['SEED']), cfg['MAX_RANDOM_ITERS'], save_folder+'plots_projections.mp4', save_folder+'board_cameras.mp4')
 
         for i in range(len(cameras)):
             print('Camera', i)
@@ -319,17 +325,12 @@ def main(cfg_name, save_folder):
 
         imgs_width_height = [[cam.img_width, cam.img_height] for cam in cameras]
         is_fisheye = [cam.is_fisheye for cam in cameras]
-        export2JSON(checkerboard.pattern, points_2d, imgs_width_height, is_fisheye, save_folder+'opencv_sample_'+cfg.NAME+'.json')
+        export2JSON(checkerboard.pattern, points_2d, imgs_width_height, is_fisheye, save_folder+'opencv_sample_'+cfg['NAME']+'.json')
         saveKDRT(cameras, save_folder+'gt.txt')
 
 if __name__ == '__main__':
-    try:
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--cfg', type=str, required=True, help='path to config file')
-        parser.add_argument('--output_path', type=str, default='', help='output folder')
-        params, _ = parser.parse_known_args()
-        main(params.cfg, params.output_path)
-    except:
-        extype, value, tb = sys.exc_info()
-        traceback.print_exc()
-        pdb.post_mortem(tb)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cfg', type=str, required=True, help='path to config file, e.g., config_cv_test.yaml')
+    parser.add_argument('--output_folder', type=str, default='', help='output folder')
+    params, _ = parser.parse_known_args()
+    main(params.cfg, params.output_folder)

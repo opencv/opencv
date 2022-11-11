@@ -1,9 +1,16 @@
-import numpy as np, matplotlib.animation as manimation, matplotlib.pyplot as plt, cv2
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+
+import numpy as np
+import matplotlib.animation as manimation
+import matplotlib.pyplot as plt
+import cv2 as cv
 
 def plotImg(img):
     new_img_size = 1200. * 800.
     if img.shape[0] * img.shape[1] > new_img_size:
-        new_img = cv2.resize(img, (int(np.sqrt(img.shape[1] * new_img_size / img.shape[0])), int(np.sqrt(img.shape[0] * new_img_size / img.shape[1]))))
+        new_img = cv.resize(img, (int(np.sqrt(img.shape[1] * new_img_size / img.shape[0])), int(np.sqrt(img.shape[0] * new_img_size / img.shape[1]))))
     else: new_img = img
     fig = plt.figure(figsize=(14,8))
     fig.tight_layout()

@@ -1,4 +1,11 @@
-import numpy as np, math, cv2, json
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+
+import numpy as np
+import math
+import cv2 as cv
+import json
 
 class RandGen:
     def __init__(self, seed = 0):
@@ -9,9 +16,9 @@ class RandGen:
 
 def project(K, R, t, dist, pts_3d, is_fisheye):
     if is_fisheye:
-        pts_2d = cv2.fisheye.projectPoints(pts_3d.T[None,:], cv2.Rodrigues(R)[0], t, K, dist.flatten())[0].reshape(-1,2).T
+        pts_2d = cv.fisheye.projectPoints(pts_3d.T[None,:], cv.Rodrigues(R)[0], t, K, dist.flatten())[0].reshape(-1,2).T
     else:
-        pts_2d = cv2.projectPoints(pts_3d, R, t, K, dist)[0].reshape(-1,2).T
+        pts_2d = cv.projectPoints(pts_3d, R, t, K, dist)[0].reshape(-1,2).T
     return pts_2d
 
 def projectCamera(camera, pts_3d):

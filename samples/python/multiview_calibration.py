@@ -1,4 +1,18 @@
-import sys, cv2 as cv, numpy as np, os, pickle, json, argparse, matplotlib.pyplot as plt, time, joblib, multiprocessing
+# This file is part of OpenCV project.
+# It is subject to the license terms in the LICENSE file found in the top-level directory
+# of this distribution and at http://opencv.org/license.html.
+
+import sys
+import cv2 as cv
+import numpy as np
+import os
+import pickle
+import json
+import argparse
+import matplotlib.pyplot as plt
+import time
+import joblib
+import multiprocessing
 from datetime import datetime
 
 def getDimBox(pts):
