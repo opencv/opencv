@@ -302,4 +302,22 @@ BIGDATA_TEST(Imgproc_DistanceTransform, large_image_12218)
     EXPECT_EQ(nz, (size.height*size.width / 2));
 }
 
+TEST(Imgproc_DistanceTransform, wide_image_22732)
+{
+    Mat src = Mat::zeros(1, 4099, CV_8U); // 4099 or larger used to be bad
+    Mat dist(src.rows, src.cols, CV_32F);
+    distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE, CV_32F);
+    int nz = countNonZero(dist);
+    EXPECT_EQ(nz, 0);
+}
+
+TEST(Imgproc_DistanceTransform, large_square_22732)
+{
+    Mat src = Mat::zeros(8000, 8000, CV_8U);
+    Mat dist(src.rows, src.cols, CV_32F);
+    distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE, CV_32F);
+    int nz = countNonZero(dist);
+    EXPECT_EQ(nz, 0);
+}
+
 }} // namespace
