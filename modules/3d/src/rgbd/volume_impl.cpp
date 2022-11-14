@@ -268,7 +268,7 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 #endif
     }
 #ifndef HAVE_OPENCL
-    integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, depth, pixNorms, volUnitsData, volumeUnits);
+    integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, enableGrowth, depth, pixNorms, volUnitsData, volumeUnits);
     lastFrameId++;
 #else
     if (useGPU)
@@ -413,6 +413,12 @@ Vec6f HashTsdfVolume::getBoundingBox(int precision) const
         float side = res[0] * voxelSize;
 
         std::vector<Vec3i> vi;
+#ifndef HAVE_OPENCL
+        for (const auto& keyvalue : volumeUnits)
+        {
+            vi.push_back(keyvalue.first);
+        }
+#else
         if (useGPU)
         {
             for (int row = 0; row < hashTable.last; row++)
@@ -428,6 +434,7 @@ Vec6f HashTsdfVolume::getBoundingBox(int precision) const
                 vi.push_back(keyvalue.first);
             }
         }
+#endif
 
         if (vi.empty())
         {
