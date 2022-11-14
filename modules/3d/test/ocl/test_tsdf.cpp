@@ -571,6 +571,125 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
 
+
+void debugVolumeDraw(const Volume &volume, Affine3f pose, Mat depth, float depthFactor, std::string objFname)
+{
+    Vec3f lightPose = Vec3f::all(0.f);
+    UMat points, normals;
+    volume.raycast(pose.matrix, points, normals);
+
+    UMat ptsList, ptsList3, nrmList, nrmList3;
+    volume.fetchPointsNormals(ptsList, nrmList);
+    // transform 4 channels to 3 channels
+    cvtColor(ptsList, ptsList3, COLOR_BGRA2BGR);
+    cvtColor(ptsList, nrmList3, COLOR_BGRA2BGR);
+    savePointCloud(objFname, ptsList3, nrmList3);
+
+    displayImage(depth, points.getMat(ACCESS_READ), normals.getMat(ACCESS_READ), depthFactor, lightPose);
+}
+
+
+void boundingBoxGrowthTest(VolumeType volumeType)
+{
+    VolumeSettings vs(volumeType);
+    Volume volume(volumeType, vs);
+
+    if ( volumeType == VolumeType::TSDF || volumeType == VolumeType::ColorTSDF )
+    {
+        Vec3i res;
+        vs.getVolumeResolution(res);
+        float voxelSize = vs.getVoxelSize();
+        Matx44f pose;
+        vs.getVolumePose(pose);
+        Vec3f end   = voxelSize * Vec3f(res);
+        Vec6f truebb(0, 0, 0, end[0], end[1], end[2]);
+        Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+        Vec6f diff = bb - truebb;
+        double normdiff = std::sqrt(diff.ddot(diff));
+        ASSERT_LE(normdiff, std::numeric_limits<double>::epsilon());
+    }
+    else // HashTSDF
+    {
+        Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
+        Matx33f intr;
+        vs.getCameraIntegrateIntrinsics(intr);
+        bool onlySemisphere = false;
+        float depthFactor = vs.getDepthFactor();
+        Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+        std::vector<Affine3f> poses = scene->getPoses();
+
+        Mat depth = scene->depth(poses[0]);
+        UMat udepth;
+        depth.copyTo(udepth);
+
+        // depth is integrated with multiple weight
+        //TODO: add weight parameter to integrate() call (both scalar and array of 8u/32f)
+        const int nIntegrations = 1;
+        for (int i = 0; i < nIntegrations; i++)
+            volume.integrate(udepth, poses[0].matrix);
+
+        Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+        Vec6f truebb(-0.9375f, 1.3125f, -0.8906f, 3.9375f, 2.6133f, 1.4004f);
+        Vec6f diff = bb - truebb;
+        double bbnorm = std::sqrt(diff.ddot(diff));
+        // it's OK to have such big difference since this is volume unit size-grained BB calculation
+        EXPECT_LE(bbnorm, 0.2228);
+
+        if (cvtest::debugLevel > 0)
+        {
+            debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts_gpu.obj");
+        }
+
+        // Integrate another depth with disabled growth
+
+        Mat depth2 = scene->depth(poses[0].translate(Vec3f(0, -0.25f, 0)));
+        UMat udepth2;
+        depth2.copyTo(udepth2);
+
+        volume.setEnableGrowth(false);
+
+        for (int i = 0; i < nIntegrations; i++)
+            volume.integrate(udepth2, poses[0].matrix);
+
+        Vec6f bb2 = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+
+        // BB size should not be changed, checking
+        Vec6f diff2 = bb2 - bb;
+        double bbnorm2 = std::sqrt(diff2.ddot(diff2));
+        EXPECT_LE(bbnorm2, 0.0);
+
+        if (cvtest::debugLevel > 0)
+        {
+            debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts_no_growth_gpu.obj");
+        }
+
+        // Repeating the same but with enabled growth
+
+        volume.reset();
+
+        for (int i = 0; i < nIntegrations; i++)
+            volume.integrate(udepth, poses[0].matrix);
+
+        volume.setEnableGrowth(true);
+
+        for (int i = 0; i < nIntegrations; i++)
+            volume.integrate(udepth2, poses[0].matrix);
+
+        Vec6f bb3 = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+
+        Vec6f truebb3 = truebb + Vec6f(0, -(1.3125f-1.0723f), -(-0.8906f-(-1.4238f)), 0, 0, 0);
+        Vec6f diff3 = bb3 - truebb3;
+        double bbnorm3 = std::sqrt(diff3.ddot(diff3));
+        EXPECT_LE(bbnorm3, 0.2148);
+
+        if (cvtest::debugLevel > 0)
+        {
+            debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts_growth_gpu.obj");
+        }
+    }
+}
+
+
 TEST(TSDF_GPU, raycast_custom_framesize_normals_mat)
 {
     normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
@@ -619,6 +738,11 @@ TEST(TSDF_GPU, valid_points_common_framesize_mat)
 TEST(TSDF_GPU, valid_points_common_framesize_frame)
 {
     valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(TSDF_GPU, boundingBox)
+{
+    boundingBoxGrowthTest(VolumeType::TSDF);
 }
 
 TEST(HashTSDF_GPU, raycast_custom_framesize_normals_mat)
@@ -674,6 +798,11 @@ TEST(HashTSDF_GPU, valid_points_common_framesize_frame)
 TEST(HashTSDF_GPU, reproduce_volPoseRot)
 {
     regressionVolPoseRot();
+}
+
+TEST(HashTSDF_GPU, boundingBoxEnableGrowth)
+{
+    boundingBoxGrowthTest(VolumeType::HashTSDF);
 }
 
 }
