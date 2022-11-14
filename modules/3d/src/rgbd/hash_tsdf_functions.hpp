@@ -283,7 +283,6 @@ public:
 
 int calcVolumeUnitDegree(Point3i volumeResolution);
 
-typedef std::unordered_set<cv::Vec3i, tsdf_hash> VolumeUnitIndexSet;
 typedef std::unordered_map<cv::Vec3i, VolumeUnit, tsdf_hash> VolumeUnitIndexes;
 
 void integrateHashTsdfVolumeUnit(
