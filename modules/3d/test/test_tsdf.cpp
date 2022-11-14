@@ -1274,7 +1274,7 @@ TEST(TSDF_CPU, valid_points_common_framesize_frame)
 TEST(TSDF_CPU, boundingBox)
 {
     cv::ocl::setUseOpenCL(false);
-    boundingBoxGrowthTest(VolumeType::HashTSDF);
+    boundingBoxGrowthTest(VolumeType::TSDF);
     cv::ocl::setUseOpenCL(true);
 }
 
