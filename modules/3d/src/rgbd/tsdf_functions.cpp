@@ -60,8 +60,6 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& came
 void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
                              InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
-    //std::cout << "integrateTsdfVolumeUnit" << std::endl;
-
     Depth depth = _depth.getMat();
     Mat volume = _volume.getMat();
     Mat pixNorms = _pixNorms.getMat();
