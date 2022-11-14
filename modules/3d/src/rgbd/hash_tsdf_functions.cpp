@@ -89,7 +89,7 @@ Point3f ocl_getNormalVoxel(
 #endif
 
 void integrateHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, const int volumeUnitDegree,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, const int volumeUnitDegree, bool enableGrowth,
     InputArray _depth, InputArray _pixNorms, InputArray _volUnitsData, VolumeUnitIndexes& volumeUnits)
 {
     //TODO: this
@@ -186,12 +186,16 @@ void integrateHashTsdfVolumeUnit(
     Mat volUnitsData = _volUnitsData.getMat();
     Mat pixNorms = _pixNorms.getMat();
 
-    if (enableGrowth)
-{
-    //! Compute volumes to be allocated
-    const int depthStride = volumeUnitDegree;
-    const float invDepthFactor = 1.f / settings.getDepthFactor();
-    const float truncDist = settings.getTsdfTruncateDistance();
+    Matx44f _pose;
+    settings.getVolumePose(_pose);
+    const Affine3f pose = Affine3f(_pose);
+    const Affine3f cam2vol(pose.inv() * Affine3f(cameraPose));
+
+    Matx33f intr;
+    settings.getCameraIntegrateIntrinsics(intr);
+    const Intr intrinsics(intr);
+    const Intr::Reprojector reproj(intrinsics.makeReprojector());
+
     const float maxDepth = settings.getMaxDepth();
     const float voxelSize = settings.getVoxelSize();
 
@@ -199,15 +203,12 @@ void integrateHashTsdfVolumeUnit(
     settings.getVolumeResolution(resolution);
     const float volumeUnitSize = voxelSize * resolution[0];
 
-    Matx33f intr;
-    settings.getCameraIntegrateIntrinsics(intr);
-    const Intr intrinsics(intr);
-    const Intr::Reprojector reproj(intrinsics.makeReprojector());
-
-    Matx44f _pose;
-    settings.getVolumePose(_pose);
-    const Affine3f pose = Affine3f(_pose);
-    const Affine3f cam2vol(pose.inv() * Affine3f(cameraPose));
+    if (enableGrowth)
+{
+    //! Compute volumes to be allocated
+    const int depthStride = volumeUnitDegree;
+    const float invDepthFactor = 1.f / settings.getDepthFactor();
+    const float truncDist = settings.getTsdfTruncateDistance();
 
     const Point3f truncPt(truncDist, truncDist, truncDist);
     VolumeUnitIndexSet newIndices;
@@ -561,7 +562,7 @@ void markActive(
 
 
 void ocl_integrateHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree, const int volumeUnitDegree,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree, const int volumeUnitDegree, bool enableGrowth,
     InputArray _depth, InputArray _pixNorms, InputArray _lastVisibleIndices, InputArray _volUnitsDataCopy,  InputArray _volUnitsData, CustomHashSet& hashTable, InputArray _isActiveFlags)
 {
     //TODO: this

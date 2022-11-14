@@ -273,12 +273,12 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 #else
     if (useGPU)
     {
-        ocl_integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, volumeUnitDegree, depth, gpu_pixNorms,
+        ocl_integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, volumeUnitDegree, enableGrowth, depth, gpu_pixNorms,
                                         lastVisibleIndices, volUnitsDataCopy, gpu_volUnitsData, hashTable, isActiveFlags);
     }
     else
     {
-        integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, depth,
+        integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, enableGrowth, depth,
                                     cpu_pixNorms, cpu_volUnitsData, cpu_volumeUnits);
         lastFrameId++;
     }
@@ -348,6 +348,7 @@ void HashTsdfVolume::reset()
     CV_TRACE_FUNCTION();
     lastVolIndex = 0;
     lastFrameId = 0;
+    enableGrowth = true;
 #ifndef HAVE_OPENCL
     volUnitsData.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
         {
