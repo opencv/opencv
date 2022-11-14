@@ -740,8 +740,6 @@ if (enableGrowth)
 
     if (!k.run(3, globalSize, NULL, true))
         throw std::runtime_error("Failed to run kernel");
-
-    //std::cout << "ocl_integrateHashTsdfVolumeUnit() end" << std::endl;
 }
 #endif
 
