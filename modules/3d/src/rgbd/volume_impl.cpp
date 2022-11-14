@@ -163,7 +163,7 @@ void TsdfVolume::reset()
         });
 #else
     if (useGPU)
-        gpu_volume.setTo(Scalar(0, 0));
+        gpu_volume.setTo(Scalar(floatToTsdf(0.0f), 0));
     else
         //TODO: use setTo(Scalar(0, 0))
         cpu_volume.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
