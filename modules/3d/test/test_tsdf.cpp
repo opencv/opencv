@@ -758,6 +758,24 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
 
+
+void debugVolumeDraw(const Volume &volume, Affine3f pose, Mat depth, float depthFactor, std::string objFname)
+{
+    Vec3f lightPose = Vec3f::all(0.f);
+    Mat points, normals;
+    volume.raycast(pose.matrix, points, normals);
+
+    Mat ptsList, ptsList3, nrmList, nrmList3;
+    volume.fetchPointsNormals(ptsList, nrmList);
+    // transform 4 channels to 3 channels
+    cvtColor(ptsList, ptsList3, COLOR_BGRA2BGR);
+    cvtColor(ptsList, nrmList3, COLOR_BGRA2BGR);
+    savePointCloud(objFname, ptsList3, nrmList3);
+
+    displayImage(depth, points, normals, depthFactor, lightPose);
+}
+
+
 void boundingBoxGrowthTest(VolumeType volumeType)
 {
     VolumeSettings vs(volumeType);
@@ -772,7 +790,6 @@ void boundingBoxGrowthTest(VolumeType volumeType)
         vs.getVolumePose(pose);
         Vec3f end   = voxelSize * Vec3f(res);
         Vec6f truebb(0, 0, 0, end[0], end[1], end[2]);
-        //TODO: check bounding box to be equal to volume size
         Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
         Vec6f diff = bb - truebb;
         double normdiff = std::sqrt(diff.ddot(diff));
@@ -785,59 +802,73 @@ void boundingBoxGrowthTest(VolumeType volumeType)
         vs.getCameraIntegrateIntrinsics(intr);
         bool onlySemisphere = false;
         float depthFactor = vs.getDepthFactor();
-        Vec3f lightPose = Vec3f::all(0.f);
         Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
         std::vector<Affine3f> poses = scene->getPoses();
 
         Mat depth = scene->depth(poses[0]);
-        Mat rgb = scene->rgb(poses[0]);
-        Mat points, normals;
 
-        volume.integrate(depth, poses[0].matrix);
-        volume.integrate(depth, poses[0].matrix);
+        // depth is integrated with multiple weight
+        //TODO: add weight parameter to integrate() call (both scalar and array of 8u/32f)
+        const int nIntegrations = 1;
+        for (int i = 0; i < nIntegrations; i++)
+            volume.integrate(depth, poses[0].matrix);
 
         Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
-        //TODO: true value
-        Vec6f truebb;
+        Vec6f truebb(-0.9375f, 1.3125f, -0.8906f, 3.9375f, 2.6133f, 1.4004f);
         Vec6f diff = bb - truebb;
         double bbnorm = std::sqrt(diff.ddot(diff));
-        EXPECT_LE(bbnorm, 0.0);
+        // it's OK to have such big difference since this is volume unit size-grained BB calculation
+        EXPECT_LE(bbnorm, 0.2228);
 
         if (cvtest::debugLevel > 0)
         {
-            volume.raycast(poses[0].matrix, points, normals);
-
-            displayImage(depth, points, normals, depthFactor, lightPose);
+            debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts.obj");
         }
 
-        // TODO: check that pose
-        Mat depth2 = scene->depth(poses[0].translate(Vec3f(1.2f, 0, 0)));
+        // Integrate another depth with disabled growth
+
+        Mat depth2 = scene->depth(poses[0].translate(Vec3f(0, -0.25f, 0)));
 
         volume.setEnableGrowth(false);
 
-        //DEBUG
-        //volume.integrate(depth2, pose2.matrix);
-        volume.integrate(depth2, poses[0].matrix);
+        for (int i = 0; i < nIntegrations; i++)
+            volume.integrate(depth2, poses[0].matrix);
 
         Vec6f bb2 = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
 
-        // TODO: true value
-        Vec6f truebb2;
-        Vec6f diff2 = bb2 - truebb2;
+        if (cvtest::debugLevel > 0)
+        {
+            debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts_no_growth.obj");
+        }
+
+        // BB size should not be changed, checking
+        Vec6f diff2 = bb2 - bb;
         double bbnorm2 = std::sqrt(diff2.ddot(diff2));
         EXPECT_LE(bbnorm2, 0.0);
 
+        // Repeating the same but with enabled growth
+
+        volume.reset();
+
+        for (int i = 0; i < nIntegrations; i++)
+            volume.integrate(depth, poses[0].matrix);
+
+        volume.setEnableGrowth(true);
+
+        for (int i = 0; i < nIntegrations; i++)
+            volume.integrate(depth2, poses[0].matrix);
+
+        Vec6f bb3 = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+
+        Vec6f truebb3 = truebb + Vec6f(0, -(1.3125f-1.0723f), -(-0.8906f-(-1.4238f)), 0, 0, 0);
+        Vec6f diff3 = bb3 - truebb3;
+        double bbnorm3 = std::sqrt(diff3.ddot(diff3));
+        EXPECT_LE(bbnorm3, 0.2148);
+
         if (cvtest::debugLevel > 0)
         {
-            volume.raycast(poses[0].matrix, points, normals);
-
-            displayImage(depth, points, normals, depthFactor, lightPose);
+            debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts_growth.obj");
         }
-
-        // TODO: create scene with prolongating geometry
-        // TODO: render scene from 1st pose, integrate, measure bounding box
-        // TODO: if growthTest flag is on, enable/disable growth
-        // TODO: render scene from 2nd pose == 1st pose + translate(distance, 0, 0), integrate, measure bounding box
     }
 }
 
