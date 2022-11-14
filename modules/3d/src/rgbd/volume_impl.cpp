@@ -197,7 +197,7 @@ void TsdfVolume::setEnableGrowth(bool /*v*/) { }
 
 bool TsdfVolume::getEnableGrowth() const
 {
-    return true;
+    return false;
 }
 
 
@@ -576,7 +576,7 @@ void ColorTsdfVolume::setEnableGrowth(bool /*v*/) { }
 
 bool ColorTsdfVolume::getEnableGrowth() const
 {
-    return true;
+    return false;
 }
 
 }
