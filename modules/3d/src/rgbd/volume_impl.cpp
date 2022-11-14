@@ -143,7 +143,6 @@ void TsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) con
         ocl_fetchPointsNormalsFromTsdfVolumeUnit(settings, gpu_volume, points, normals);
     else
         fetchPointsNormalsFromTsdfVolumeUnit(settings, cpu_volume, points, normals);
-
 #endif
 }
 
@@ -211,7 +210,6 @@ HashTsdfVolume::HashTsdfVolume(const VolumeSettings& _settings) :
     settings.getVolumeResolution(resolution);
     const Point3i volResolution = Point3i(resolution);
     volumeUnitDegree = calcVolumeUnitDegree(volResolution);
-    enableGrowth = true;
 
 #ifndef HAVE_OPENCL
     volUnitsData = cv::Mat(VOLUMES_SIZE, resolution[0] * resolution[1] * resolution[2], rawType<TsdfVoxel>());

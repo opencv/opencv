@@ -38,8 +38,6 @@ void preCalculationPixNorm(Size size, const Intr& intrinsics, Mat& pixNorm)
 #ifdef HAVE_OPENCL
 void ocl_preCalculationPixNorm(Size size, const Intr& intrinsics, UMat& pixNorm)
 {
-    //std::cout << "ocl_preCalculationPixNorm" << std::endl;
-
     // calculating this on CPU then uploading to GPU is faster than calculating this on GPU
     Mat cpuPixNorm;
     preCalculationPixNorm(size, intrinsics, cpuPixNorm);

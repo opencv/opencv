@@ -424,13 +424,13 @@ void normalsCheck(Mat normals)
     for (auto pvector = normals.begin<Vec4f>(); pvector < normals.end<Vec4f>(); pvector++)
     {
         vector = *pvector;
-        if (!cvIsNaN(vector[0]))
+        if (!(cvIsNaN(vector[0]) || cvIsNaN(vector[1]) || cvIsNaN(vector[2])))
         {
             counter++;
-            float length = vector[0] * vector[0] +
-                vector[1] * vector[1] +
-                vector[2] * vector[2];
-            ASSERT_LT(abs(1 - length), 0.0001f) << "There is normal with length != 1";
+            float l2 = vector[0] * vector[0] +
+                       vector[1] * vector[1] +
+                       vector[2] * vector[2];
+            ASSERT_LT(abs(1.f - l2), 0.0001f) << "There is normal with length != 1";
         }
     }
     ASSERT_GT(counter, 0) << "There are not normals";
@@ -537,6 +537,7 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
     normalsCheck(normals);
 }
 
+
 void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction testFunction, VolumeTestSrcType testSrcType)
 {
     VolumeSettings vs(volumeType);
@@ -602,6 +603,7 @@ void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction test
 
     normalsCheck(normals);
 }
+
 
 void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType testSrcType)
 {
@@ -678,6 +680,7 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     ASSERT_NE(anfas, 0) << "There is no points in anfas";
     ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
 }
+
 
 void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType testSrcType)
 {
