@@ -2483,6 +2483,11 @@ TEST_P(Test_ONNX_layers, YOLOv7)
     normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes);
 }
 
+TEST_P(Test_ONNX_layers, Tile)
+{
+    testONNXModels("tile", pb);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
