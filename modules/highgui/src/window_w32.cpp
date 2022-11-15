@@ -2212,7 +2212,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
         /* Retrieve current buttons count */
         bcount = (int)SendMessage(window->toolbar.toolbar, TB_BUTTONCOUNT, 0, 0);
 
-        if(bcount > 1)
+        if (bcount > 0)
         {
             /* If this is not the first button then we need to
             separate it from the previous one */
