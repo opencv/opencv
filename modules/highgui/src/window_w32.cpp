@@ -2253,7 +2253,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
         tbis.cbSize = sizeof(tbis);
         tbis.dwMask = TBIF_SIZE;
 
-        GetClientRect(window->hwnd, &rect);
+        GetClientRect(window->toolbar.toolbar, &rect);
         tbis.cx = (unsigned short)(rect.right - rect.left);
 
         SendMessage(window->toolbar.toolbar, TB_SETBUTTONINFO,
@@ -2271,7 +2271,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
         trackbar->parent = window;
         trackbar->pos = 0;
         trackbar->data = 0;
-        trackbar->id = bcount;
+        trackbar->id = tbs.idCommand;
         trackbar->next = window->toolbar.first;
         trackbar->name = (char*)(trackbar + 1);
         memcpy( trackbar->name, trackbar_name, len + 1 );
