@@ -89,6 +89,37 @@ public:
             CV_Error(cv::Error::StsBadArg, "Unknown operation type \"" + operation + "\"");
     }
 
+    static String op2str(OPERATION op)
+    {
+        return
+            op == OPERATION::EQUAL ? "equal" :
+            op == OPERATION::GREATER ? "greater" :
+            op == OPERATION::GREATER_EQUAL ? "greater_equal" :
+            op == OPERATION::LESS ? "less" :
+            op == OPERATION::LESS_EQUAL ? "less_equal" :
+            op == OPERATION::ADD ? "add" :
+            op == OPERATION::AND ? "and" :
+            op == OPERATION::BITSHIFT ? "bitshift" :
+            op == OPERATION::DIV ? "div" :
+            op == OPERATION::MAX ? "max" :
+            op == OPERATION::MEAN ? "mean" :
+            op == OPERATION::MIN ? "min" :
+            op == OPERATION::MOD ? "mod" :
+            op == OPERATION::OR ? "or" :
+            op == OPERATION::POW ? "pow" :
+            op == OPERATION::PROD ? "prod" :
+            op == OPERATION::SUB ? "sub" :
+            op == OPERATION::SUM ? "sum" :
+            op == OPERATION::XOR ? "xor" :
+            "???";
+    }
+
+    virtual void serialize(LayerParams& params) const CV_OVERRIDE
+    {
+        std::string opstr = op2str(op);
+        params.set("op", opstr);
+    }
+
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV;

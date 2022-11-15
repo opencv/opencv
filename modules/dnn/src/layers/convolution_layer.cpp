@@ -91,7 +91,7 @@ public:
         setParamsFrom(params);
         getConvolutionKernelParams(params, kernel_size, pads_begin, pads_end, strides, dilations, padMode, adjust_pads);
 
-        numOutput = params.get<int>("num_output");
+        numOutput = params.get<int>("num_output", 0);
         int ngroups = params.get<int>("group", 1);
 #ifdef HAVE_WEBNN
         groups = ngroups;
@@ -118,6 +118,18 @@ public:
 
         fusedWeights = false;
         fusedBias = false;
+    }
+
+    virtual void serialize(LayerParams& params) const CV_OVERRIDE
+    {
+        Layer::serialize(params);
+        std::vector<size_t> pads(pads_begin.size() + pads_end.size());
+        std::copy(pads_begin.begin(), pads_begin.end(), pads.begin());
+        std::copy(pads_end.begin(), pads_end.end(), pads.begin() + pads_begin.size());
+        params.setIntArray("kernel_size", &kernel_size[0], 2);
+        params.setIntArray("stride", &strides[0], 2);
+        params.setIntArray("dilation", &dilations[0], 2);
+        params.setIntArray("pad", &pads[0], pads.size());
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE

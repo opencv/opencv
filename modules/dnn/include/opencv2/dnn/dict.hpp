@@ -60,20 +60,23 @@ CV__DNN_INLINE_NS_BEGIN
 struct CV_EXPORTS_W DictValue
 {
     DictValue(const DictValue &r);
-    explicit DictValue(bool i)           : type(Param::INT), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i ? 1 : 0; }       //!< Constructs integer scalar
-    explicit DictValue(int64 i = 0)      : type(Param::INT), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i; }       //!< Constructs integer scalar
-    CV_WRAP explicit DictValue(int i)    : type(Param::INT), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i; }       //!< Constructs integer scalar
-    explicit DictValue(unsigned p)       : type(Param::INT), pi(new AutoBuffer<int64,1>) { (*pi)[0] = p; }       //!< Constructs integer scalar
-    CV_WRAP explicit DictValue(double p)         : type(Param::REAL), pd(new AutoBuffer<double,1>) { (*pd)[0] = p; }     //!< Constructs floating point scalar
-    CV_WRAP explicit DictValue(const String &s)  : type(Param::STRING), ps(new AutoBuffer<String,1>) { (*ps)[0] = s; }   //!< Constructs string scalar
-    explicit DictValue(const char *s)            : type(Param::STRING), ps(new AutoBuffer<String,1>) { (*ps)[0] = s; }   //!< @overload
+    explicit DictValue(bool i)           : type(Param::INT), ndims(0), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i ? 1 : 0; }       //!< Constructs integer scalar
+    explicit DictValue(int64 i = 0)      : type(Param::INT), ndims(0), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i; }       //!< Constructs integer scalar
+    CV_WRAP explicit DictValue(int i)    : type(Param::INT), ndims(0), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i; }       //!< Constructs integer scalar
+    explicit DictValue(unsigned p)       : type(Param::INT), ndims(0), pi(new AutoBuffer<int64,1>) { (*pi)[0] = p; }       //!< Constructs integer scalar
+    CV_WRAP explicit DictValue(double p) : type(Param::REAL), ndims(0), pd(new AutoBuffer<double,1>) { (*pd)[0] = p; }     //!< Constructs floating point scalar
+    CV_WRAP explicit DictValue(const String &s) : type(Param::STRING), ndims(0), ps(new AutoBuffer<String,1>) { (*ps)[0] = s; }   //!< Constructs string scalar
+    explicit DictValue(const char *s)    : type(Param::STRING), ndims(0), ps(new AutoBuffer<String,1>) { (*ps)[0] = s; }   //!< @overload
+    explicit DictValue(const Mat& m, int real_ndims=-1) // !< Constructs tensor
+        : type(Param::MAT), ndims(real_ndims >= 0 ? real_ndims : m.dims), pv(new Mat(m))
+    {}
 
     template<typename TypeIter>
-    static DictValue arrayInt(TypeIter begin, int size);    //!< Constructs integer array
+    static DictValue arrayInt(TypeIter begin, size_t size);    //!< Constructs integer array
     template<typename TypeIter>
-    static DictValue arrayReal(TypeIter begin, int size);   //!< Constructs floating point array
+    static DictValue arrayReal(TypeIter begin, size_t size);   //!< Constructs floating point array
     template<typename TypeIter>
-    static DictValue arrayString(TypeIter begin, int size); //!< Constructs array of strings
+    static DictValue arrayString(TypeIter begin, size_t size); //!< Constructs array of strings
 
     template<typename T>
     T get(int idx = -1) const; //!< Tries to convert array element with specified index to requested type and returns its.
@@ -83,10 +86,13 @@ struct CV_EXPORTS_W DictValue
     CV_WRAP bool isInt() const;
     CV_WRAP bool isString() const;
     CV_WRAP bool isReal() const;
+    CV_WRAP bool isMat() const;
 
     CV_WRAP int getIntValue(int idx = -1) const;
     CV_WRAP double getRealValue(int idx = -1) const;
     CV_WRAP String getStringValue(int idx = -1) const;
+    CV_WRAP Mat getMat() const;
+    CV_WRAP int getDims() const;
 
     DictValue &operator=(const DictValue &r);
 
@@ -97,6 +103,7 @@ struct CV_EXPORTS_W DictValue
 private:
 
     Param type;
+    int ndims;
 
     union
     {
@@ -106,7 +113,7 @@ private:
         void *pv;
     };
 
-    DictValue(Param _type, void *_p) : type(_type), pv(_p) {}
+    DictValue(Param _type, int _ndims, void *_p) : type(_type), ndims(_ndims), pv(_p) {}
     void release();
 };
 
@@ -141,6 +148,12 @@ public:
     //! Sets new @p value for the @p key, or adds new key-value pair into the dictionary.
     template<typename T>
     const T &set(const String &key, const T &value);
+
+    template<typename TypeIter>
+    void setIntArray(const String& key, TypeIter begin, size_t size);
+
+    template<typename TypeIter>
+    void setRealArray(const String& key, TypeIter begin, size_t size);
 
     //! Erase @p key from the dictionary.
     void erase(const String &key);
