@@ -41,12 +41,10 @@ public:
     UMat umat_weight, umat_bias;
     mutable int dims;
 
-
     BatchNormLayerImpl(const LayerParams& params)
         : dims(-1)
     {
         setParamsFrom(params);
-        CV_Assert(blobs.size() >= 2);
 
         hasWeights = params.get<bool>("has_weight", false);
         hasBias = params.get<bool>("has_bias", false);
@@ -55,6 +53,13 @@ public:
             hasWeights = hasBias = true;
         epsilon = params.get<float>("eps", 1E-5);
 
+        if (blobs.size() >= 2)
+            initWeightsBias();
+    }
+
+    void initWeightsBias()
+    {
+        CV_Assert(blobs.size() >= 2);
         size_t n = blobs[0].total();
         CV_Assert(blobs[1].total() == n &&
                   blobs[0].isContinuous() && blobs[1].isContinuous() &&
@@ -68,8 +73,8 @@ public:
                 varMeanScale = 1/varMeanScale;
         }
 
-        const int biasBlobIndex = blobs.size() - 1;
-        const int weightsBlobIndex = biasBlobIndex - hasBias;
+        const size_t biasBlobIndex = blobs.size() - 1;
+        const size_t weightsBlobIndex = biasBlobIndex - hasBias;
 
         if( hasWeights )
         {

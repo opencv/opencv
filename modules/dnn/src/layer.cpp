@@ -253,5 +253,30 @@ bool Layer::updateMemoryShapes(const std::vector<MatShape>& inputs)
     return true;
 }
 
+bool Layer::inferOutputShapes(const Net2& net,
+                               const std::vector<int>& inputs,
+                               const std::vector<int>& inptypes,
+                               const std::vector<TensorShape>& inpshapes,
+                               const std::vector<int>& outputs,
+                               std::vector<int>& outtypes,
+                               std::vector<TensorShape>& outshapes)
+{
+    size_t ninputs = inputs.size(), noutputs = outputs.size();
+    CV_Assert(ninputs >= 1 && noutputs >= 1);
+    outtypes.resize(noutputs);
+    outshapes.resize(noutputs);
+    for (size_t i = 0; i < noutputs; i++) {
+        outtypes[i] = inptypes[0];
+        outshapes[i] = inpshapes[0];
+    }
+    return true;
+}
+
+void Layer::serialize(LayerParams& params) const
+{
+    params.name = name;
+    params.type = type;
+}
+
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

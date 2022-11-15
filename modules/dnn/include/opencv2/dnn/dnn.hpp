@@ -56,7 +56,35 @@ CV__DNN_INLINE_NS_BEGIN
 //! @addtogroup dnn
 //! @{
 
+    enum Layout
+    {
+        DNN_LAYOUT_UNKNOWN = 0,
+        DNN_LAYOUT_ND = 1,
+        DNN_LAYOUT_NCHW = 2,
+        DNN_LAYOUT_NHWC = 3,
+        DNN_LAYOUT_NCHWс = 4
+    };
+    
     typedef std::vector<int> MatShape;
+    struct CV_EXPORTS TensorShape
+    {
+        TensorShape();
+        template<typename _Tp> TensorShape(int ndims, const _Tp* shape,
+                                           int layout=DNN_LAYOUT_UNKNOWN);
+        template<typename _Tp> TensorShape(std::initializer_list<_Tp> shape,
+                                           int layout=DNN_LAYOUT_UNKNOWN);
+        static TensorShape fromArray(InputArray m, int ndims,
+                                     int layout=DNN_LAYOUT_UNKNOWN);
+        int toMatShape(int* mshape) const;
+        size_t total() const;
+        bool empty() const;
+        void updateC();
+        enum {MAX_TENSOR_DIMS=10};
+        int layout;
+        int ndims;
+        int64_t C;
+        int64_t shape[MAX_TENSOR_DIMS];
+    };
 
     /**
      * @brief Enum of computation backends supported by layers.
@@ -189,6 +217,8 @@ CV__DNN_INLINE_NS_BEGIN
     };
 
     class CV_EXPORTS ActivationLayer;
+    class CV_EXPORTS Net;
+    class CV_EXPORTS Net2;
 
     /** @brief This interface class allows to build new Layers - are building blocks of networks.
      *
@@ -417,13 +447,22 @@ CV__DNN_INLINE_NS_BEGIN
                                const std::vector<MatShape> &outputs) const {CV_UNUSED(inputs); CV_UNUSED(outputs); return 0;}
 
         virtual bool updateMemoryShapes(const std::vector<MatShape> &inputs);
+        
+        virtual bool inferOutputShapes(const Net2& net,
+                                       const std::vector<int>& inpargs,
+                                       const std::vector<int>& inptypes,
+                                       const std::vector<TensorShape>& inpshapes,
+                                       const std::vector<int>& outargs,
+                                       std::vector<int>& outtypes,
+                                       std::vector<TensorShape>& outshapes);
+        virtual void serialize(LayerParams& params) const;
 
         CV_PROP String name; //!< Name of the layer instance, can be used for logging or other internal purposes.
         CV_PROP String type; //!< Type name which was used for creating layer by layer factory.
         CV_PROP int preferableTarget; //!< prefer target for layer forwarding
 
         Layer();
-        explicit Layer(const LayerParams &params);      //!< Initializes only #name, #type and #blobs fields.
+        explicit Layer(const LayerParams &params); //!< Initializes only #name, #type and #blobs fields.
         void setParamsFrom(const LayerParams &params);  //!< Initializes only #name, #type and #blobs fields.
         virtual ~Layer();
     };
@@ -844,6 +883,27 @@ CV__DNN_INLINE_NS_BEGIN
         struct Impl;
         Ptr<Impl> impl;
     };
+
+    class CV_EXPORTS_W_SIMPLE Net2
+    {
+    public:
+        CV_WRAP Net2();  //!< Default constructor.
+        CV_WRAP ~Net2(); //!< Destructor frees the net only if there aren't references to the net anymore.
+
+        CV_WRAP void forward(InputArrayOfArrays inputBlobs,
+                             OutputArrayOfArrays outputBlobs);
+        CV_WRAP void set(int propId, double value);
+        CV_WRAP double get(int propId);
+        CV_WRAP void getPerfProfile(std::vector<String>& opnames, std::vector<double>& times);
+        CV_WRAP void dump();
+
+        struct Impl;
+        Ptr<Impl> impl();
+    private:
+        Ptr<Impl> impl_;
+    };
+
+    CV_EXPORTS_W Net2 readNetFromONNX2(const String& onnxFile);
 
     /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
     *  @param cfgFile      path to the .cfg file with text description of the network architecture.
