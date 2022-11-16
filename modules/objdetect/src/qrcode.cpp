@@ -8,6 +8,7 @@
 #include "precomp.hpp"
 #include "opencv2/objdetect.hpp"
 #include "opencv2/calib3d.hpp"
+#include <opencv2/core/utils/logger.hpp>
 
 #ifdef HAVE_QUIRC
 #include "quirc.h"
@@ -2360,6 +2361,9 @@ bool QRDecode::versionDefinition()
     version = saturate_cast<uint8_t>((std::min(transition_x, transition_y) - 1) * 0.25 - 1);
     if ( !(  0 < version && version <= 40 ) ) { return false; }
     version_size = 21 + (version - 1) * 4;
+    CV_LOG_INFO(NULL, "QR corners: " << original_points[0] << " " << original_points[1] << " " << original_points[2] <<
+                      " " << original_points[3]);
+    CV_LOG_INFO(NULL, "QR version: " << (int)version);
     return true;
 }
 
