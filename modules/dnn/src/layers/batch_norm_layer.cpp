@@ -57,6 +57,12 @@ public:
             initWeightsBias();
     }
 
+    virtual void serialize(LayerParams& params) const CV_OVERRIDE
+    {
+        Layer::serialize(params);
+        params.set("epsilon", epsilon);
+    }
+
     void initWeightsBias()
     {
         CV_Assert(blobs.size() >= 2);

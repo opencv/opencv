@@ -893,12 +893,13 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP void forward(InputArrayOfArrays inputBlobs,
                              OutputArrayOfArrays outputBlobs);
         CV_WRAP void set(int propId, double value);
-        CV_WRAP double get(int propId);
-        CV_WRAP void getPerfProfile(std::vector<String>& opnames, std::vector<double>& times);
-        CV_WRAP void dump();
+        CV_WRAP double get(int propId) const;
+        CV_WRAP void getPerfProfile(std::vector<String>& opnames, std::vector<double>& times) const;
+        CV_WRAP void dump() const;
+        CV_WRAP bool empty() const;
 
         struct Impl;
-        Ptr<Impl> impl();
+        Ptr<Impl> impl() const;
     private:
         Ptr<Impl> impl_;
     };

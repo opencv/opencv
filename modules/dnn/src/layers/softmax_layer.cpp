@@ -80,6 +80,14 @@ public:
         setParamsFrom(params);
     }
 
+    virtual void serialize(LayerParams& params) const CV_OVERRIDE
+    {
+        Layer::serialize(params);
+        params.set("axis", axisRaw);
+        if (logSoftMax)
+            params.set("log_softmax", logSoftMax);
+    }
+
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNSoftmax<float> > softmaxOp;
 #endif

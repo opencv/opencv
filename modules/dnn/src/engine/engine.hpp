@@ -178,12 +178,16 @@ struct Net2::Impl
 
     void clear();
     void useCounts(std::vector<int>& usecounts);
+    void updateUseCounts(std::vector<int>& usecounts, const Graph& graph);
     void assignBuffers();
     int addConstTensor(const std::string& name, const Tensor& t, int idx=-1);
     int addArg(int argkind, const ArgInfo& arginfo);
     int64_t findDim(const std::string& dimname);
     int findArg(const std::string& argname);
     int findOutputArg(const std::string& argname);
+    bool isConst(int argidx) const;
+    int kind(int argidx) const;
+    bool empty() const;
     void dump() const;
     void dumpGraph(const Graph& graph,
                    const std::string& indent,

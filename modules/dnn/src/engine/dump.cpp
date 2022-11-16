@@ -11,7 +11,7 @@ CV__DNN_INLINE_NS_BEGIN
 using std::vector;
 using std::string;
 
-void Net2::dump()
+void Net2::dump() const
 {
     impl()->dump();
 }
@@ -36,7 +36,7 @@ static const char* typ2str(int typ)
 
 void Net2::Impl::dumpArgInfo(int argidx, const string& indent, bool comma) const
 {
-    const LayerArg& arg = args[argidx];
+    const LayerArg& arg = args.at(argidx);
     const char* kind_str =
         arg.kind == DNN_ARG_CONST ? "const" :
         arg.kind == DNN_ARG_INPUT ? "input" :
@@ -60,9 +60,8 @@ void Net2::Impl::dumpArgInfo(int argidx, const string& indent, bool comma) const
         printf(">");
     }
     printf(" %s", typ2str(arg.typ));
-    if (arg.kind == DNN_ARG_TEMP && argidx < bufidxs.size()) {
+    //if (arg.kind == DNN_ARG_TEMP && argidx < bufidxs.size())
         printf(" (buf #%d)", bufidxs[argidx]);
-    }
     printf("\n");
 }
 

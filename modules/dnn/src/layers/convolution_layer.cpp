@@ -83,9 +83,8 @@ class BaseConvolutionLayerImpl : public ConvolutionLayer
 public:
     bool fusedWeights, fusedBias;
     std::vector<double> weightsMultipliers;
-#ifdef HAVE_WEBNN
     int groups;
-#endif
+
     BaseConvolutionLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
@@ -93,23 +92,21 @@ public:
 
         numOutput = params.get<int>("num_output", 0);
         int ngroups = params.get<int>("group", 1);
-#ifdef HAVE_WEBNN
         groups = ngroups;
-#endif
         CV_Assert(numOutput % ngroups == 0);
 
         if (kernel_size.size() == 2) {
-            kernel = Size(kernel_size[1], kernel_size[0]);
-            stride = Size(strides[1], strides[0]);
+            kernel = Size((int)kernel_size[1], (int)kernel_size[0]);
+            stride = Size((int)strides[1], (int)strides[0]);
             for (int i = 0; i < pads_begin.size(); i++) {
                 if (pads_begin[i] != pads_end[i])
                     CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
             }
-            pad = Size(pads_begin[1], pads_begin[0]);
-            dilation = Size(dilations[1], dilations[0]);
+            pad = Size((int)pads_begin[1], (int)pads_begin[0]);
+            dilation = Size((int)dilations[1], (int)dilations[0]);
 
-            adjustPad.height = adjust_pads[0];
-            adjustPad.width = adjust_pads[1];
+            adjustPad.height = (int)adjust_pads[0];
+            adjustPad.width = (int)adjust_pads[1];
         }
 
         for (int i = 0; i < adjust_pads.size(); i++) {
@@ -126,13 +123,15 @@ public:
         std::vector<size_t> pads(pads_begin.size() + pads_end.size());
         std::copy(pads_begin.begin(), pads_begin.end(), pads.begin());
         std::copy(pads_end.begin(), pads_end.end(), pads.begin() + pads_begin.size());
+        params.set("group", groups);
         params.setIntArray("kernel_size", &kernel_size[0], 2);
         params.setIntArray("stride", &strides[0], 2);
         params.setIntArray("dilation", &dilations[0], 2);
         params.setIntArray("pad", &pads[0], pads.size());
     }
 
-    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
+    virtual void finalize(InputArrayOfArrays inputs_arr,
+                          OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
@@ -179,7 +178,7 @@ public:
                 if (pads_begin[i] != pads_end[i])
                     CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in convolution layer");
             }
-            pad = Size(pads_begin[1], pads_begin[0]);
+            pad = Size((int)pads_begin[1], (int)pads_begin[0]);
         }
         fusedWeights = false;
         fusedBias = false;
@@ -323,7 +322,7 @@ public:
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
     {
         CV_Assert(!blobs.empty());
-        int dims = inpShape.size();
+        int dims = (int)inpShape.size();
         int inpD = dims == 5 ? inpShape[2] : 1;
         int inpH = inpShape[dims - 2];
         int inpW = inpShape.back();
@@ -409,7 +408,8 @@ public:
         if (padMode.empty())
         {
             for (int i = 0; i < inpShape.size(); i++)
-                outShape.push_back((inpShape[i] + pads_begin[i] + pads_end[i] - dilations[i] * (kernel_size[i] - 1) - 1) / strides[i] + 1);
+                outShape.push_back((inpShape[i] + pads_begin[i] + pads_end[i] -
+                        dilations[i] * (kernel_size[i] - 1) - 1) / strides[i] + 1);
         }
         else
         {

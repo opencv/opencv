@@ -44,7 +44,7 @@ typedef Net2::Impl NetImpl;
 
 static void onnxParseError(const string& ctx, const string& msg)
 {
-    throw std::runtime_error((ctx.empty() ? " " + ctx : "") + ": " + msg);
+    throw std::runtime_error((!ctx.empty() ? " " + ctx : "") + ": " + msg);
 }
 
 #define OnnxAssert(ctx, expr) if (!!(expr)) ; else onnxParseError(ctx, "assertion '" #expr "' is invalid")
@@ -117,6 +117,8 @@ protected:
                            LayerParams&, vector<int>&, vector<int>&);
     void parseDetectionOutput(const string&, const OpenCVOnnx__NodeProto*,
                               LayerParams&, vector<int>&, vector<int>&);
+    void parseDropout(const string&, const OpenCVOnnx__NodeProto*,
+                      LayerParams&, vector<int>&, vector<int>&);
     void parseElemwiseBinary(const string&, const OpenCVOnnx__NodeProto*,
                              LayerParams&, vector<int>&, vector<int>&);
     void parseElemwiseNary(const string&, const OpenCVOnnx__NodeProto*,
@@ -638,6 +640,7 @@ void OnnxImporter2::init(Net2& net)
     dispatch["ConvTranspose"] = &OnnxImporter2::parseConvTranspose;
     dispatch["CumSum"] = &OnnxImporter2::parseCumSum;
     //dispatch["DetectionOutput"] = &OnnxImporter2::parseDetectionOutput;
+    dispatch["Dropout"] = &OnnxImporter2::parseDropout;
     dispatch["Expand"] = &OnnxImporter2::parseExpand;
     dispatch["Flatten"] = &OnnxImporter2::parseFlatten;
     dispatch["Gather"] = &OnnxImporter2::parseGather;
@@ -663,7 +666,7 @@ void OnnxImporter2::init(Net2& net)
     dispatch["Resize"] = &OnnxImporter2::parseResize;
     dispatch["Shape"] = &OnnxImporter2::parseShape;
     dispatch["Slice"] = &OnnxImporter2::parseSlice;
-    dispatch["SoftMax"] = dispatch["LogSoftmax"] = &OnnxImporter2::parseSoftMax;
+    dispatch["Softmax"] = dispatch["SoftMax"] = dispatch["LogSoftmax"] = &OnnxImporter2::parseSoftMax;
     dispatch["SpaceToDepth"] = dispatch["DepthToSpace"] = &OnnxImporter2::parseDepthToSpace;
     dispatch["Split"] = &OnnxImporter2::parseSplit;
     dispatch["Squeeze"] = &OnnxImporter2::parseSqueeze;
@@ -673,10 +676,10 @@ void OnnxImporter2::init(Net2& net)
 
     vector<string> simpleLayers{
         "Abs", "Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh",
-        "Ceil", "Celu", "Cos", "Cosh", "Dropout", "Elu", "Erf",
+        "Ceil", "Celu", "Cos", "Cosh", "Elu", "Erf",
         "Exp", "Floor", "HardSigmoid", "HardSwish", "Identity",
         "Log", "Neg", "Round", "Reciprocal", "Selu",
-        "Sign", "Sigmoid", "Sin", "Sinh", "Softmax", "Softplus",
+        "Sign", "Sigmoid", "Sin", "Sinh", "Softplus",
         "Softsign", "Shrink", "Sqrt", "Tan", "Tanh", "ThresholdedRelu"};
     for (const auto& name : simpleLayers)
         dispatch[name] = &OnnxImporter2::parseElemwiseUnary;
@@ -945,8 +948,6 @@ void OnnxImporter2::parseConv(const string& ctx, const OpenCVOnnx__NodeProto* no
     size_t ninputs = inputs.size();
     OnnxAssert(ctx, ninputs == 2 || ninputs == 3);
     OnnxAssert(ctx, outputs.size() == 1);
-    if (layerParams.has("kernel_shape"))
-        replaceLayerParam(layerParams, "kernel_shape", "kernel_size");
     layerParams.type = "Convolution";
 }
 
@@ -1002,6 +1003,17 @@ void OnnxImporter2::parseDepthToSpace(const string& ctx, const OpenCVOnnx__NodeP
     }
     addLayer(layerParams, node_proto);
 }*/
+
+void OnnxImporter2::parseDropout(const string& ctx, const OpenCVOnnx__NodeProto* node_proto,
+                                 LayerParams& layerParams,
+                                 vector<int>& inputs, vector<int>& outputs)
+{
+    size_t ninputs = inputs.size(), noutputs = outputs.size();
+    OnnxAssert(ctx, 1 <= ninputs && ninputs <= 3);
+    OnnxAssert(ctx, 1 <= noutputs && noutputs <= 2);
+    if (noutputs == 2)
+        outputs.pop_back();
+}
 
 // "Equal" "Greater" "Less" "Pow" "Add" "Sub" "Mul" "Div" ...
 void OnnxImporter2::parseElemwiseBinary(const string& ctx, const OpenCVOnnx__NodeProto* node_proto,
@@ -1669,6 +1681,10 @@ Net2 readNetFromONNX2(const String& onnxFile)
 {
     Net2 net;
     OnnxImporter2 importer(net, onnxFile.c_str());
+    Ptr<Net2::Impl> netimpl = net.impl();
+    if (netimpl.empty())
+        return net;
+    net.impl()->assignBuffers();
     return net;
 }
 
