@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+""" Utility package for run.py
+"""
+
 import sys
 import os
 import platform
