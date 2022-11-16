@@ -93,6 +93,15 @@ public:
         normBySize = params.get<bool>("norm_by_size", true);
     }
 
+    virtual void serialize(LayerParams& params) const CV_OVERRIDE
+    {
+        Layer::serialize(params);
+        params.set("alpha", alpha);
+        params.set("beta", beta);
+        params.set("bias", bias);
+        params.set("local_size", size);
+    }
+
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNLRN<float> > lrnOp;
 #endif

@@ -1054,6 +1054,18 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<CumSumLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS IfLayer : public Layer
+    {
+    public:
+        static Ptr<IfLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS LoopLayer : public Layer
+    {
+    public:
+        static Ptr<LoopLayer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END

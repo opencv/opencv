@@ -102,8 +102,9 @@ bool getParameter(const LayerParams &params, const std::string& nameBase, const 
 
 void getKernelSize(const LayerParams &params, std::vector<size_t>& kernel)
 {
-    if (!util::getParameter(params, "kernel", "kernel_size", kernel))
-        CV_Error(cv::Error::StsBadArg, "kernel_size (or kernel_h and kernel_w) not specified");
+    String kernel_shape_name = params.has("kernel_shape") ? "kernel_shape" : "kernel_size";
+    if (!util::getParameter(params, "kernel", kernel_shape_name, kernel))
+        CV_Error(cv::Error::StsBadArg, "neither of 'kernel_size', 'kernel_shape', 'kernel_h' or 'kernel_w' is specified");
 
     for (int i = 0; i < kernel.size(); i++)
         CV_Assert(kernel[i] > 0);
@@ -121,7 +122,8 @@ void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_be
         pads_end.push_back(params.get<int>("pad_r"));
     }
     else {
-        util::getParameter(params, "pad", "pad", pads_begin, true, std::vector<size_t>(kernel_size, 0));
+        String pads_name = params.has("pads") ? "pads" : "pad";
+        util::getParameter(params, "pad", pads_name, pads_begin, true, std::vector<size_t>(kernel_size, 0));
         if (pads_begin.size() < 4)
             pads_end = pads_begin;
         else
@@ -131,7 +133,8 @@ void getStrideAndPadding(const LayerParams &params, std::vector<size_t>& pads_be
         }
         CV_Assert(pads_begin.size() == pads_end.size());
     }
-    util::getParameter(params, "stride", "stride", strides, true, std::vector<size_t>(kernel_size, 1));
+    String strides_name = params.has("strides") ? "strides" : "stride";
+    util::getParameter(params, "stride", strides_name, strides, true, std::vector<size_t>(kernel_size, 1));
 
     padMode = "";
     if (params.has("pad_mode"))
@@ -191,7 +194,8 @@ void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& 
 {
     util::getKernelSize(params, kernel);
     util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode, kernel.size());
-    util::getParameter(params, "dilation", "dilation", dilations, true, std::vector<size_t>(kernel.size(), 1));
+    String dilations_name = params.has("dilations") ? "dilations" : "dilation";
+    util::getParameter(params, "dilation", dilations_name, dilations, true, std::vector<size_t>(kernel.size(), 1));
     util::getParameter(params, "adj", "adj", adjust_pads, true, std::vector<size_t>(kernel.size(), 0));
 
     for (int i = 0; i < dilations.size(); i++)

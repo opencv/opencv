@@ -149,6 +149,25 @@ public:
         avePoolPaddedArea = params.get<bool>("ave_pool_padded_area", true);
     }
 
+    virtual void serialize(LayerParams& params) const CV_OVERRIDE
+    {
+        Layer::serialize(params);
+        params.set("pool", type == MAX ? "max" : type == AVE ? "ave" :
+                   type == STOCHASTIC ? "stochastic" : type == SUM ? "sum" : "???");
+        if (globalPooling) {
+            params.set("global_pooling", globalPooling);
+        } else {
+            std::vector<size_t> pads(pads_begin.size() + pads_end.size());
+            std::copy(pads_begin.begin(), pads_begin.end(), pads.begin());
+            std::copy(pads_end.begin(), pads_end.end(), pads.begin() + pads_begin.size());
+            params.setIntArray("kernel_shape", &kernel_size[0], 2);
+            params.setIntArray("strides", &strides[0], 2);
+            params.setIntArray("pads", &pads[0], pads.size());
+            if (type == AVE)
+                params.set("ave_pool_padded_area", (int)avePoolPaddedArea);
+        }
+    }
+
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNPool<float> > poolOp;
 #endif

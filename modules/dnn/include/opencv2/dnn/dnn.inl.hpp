@@ -342,6 +342,7 @@ inline DictValue::DictValue(const DictValue &r)
     : pv(NULL)
 {
     type = r.type;
+    ndims = r.ndims;
 
     if (r.type == Param::INT)
         pi = new AutoBuffer<int64, 1>(*r.pi);

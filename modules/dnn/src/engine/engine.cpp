@@ -18,7 +18,9 @@ Net2::Net2()
 
 Net2::~Net2() {}
 
-Ptr<Net2::Impl> Net2::impl() { return impl_; }
+Ptr<Net2::Impl> Net2::impl() const { return impl_; }
+
+bool Net2::empty() const { return impl_->empty(); }
 
 Net2::Impl::Impl()
 {
@@ -48,17 +50,6 @@ void Net2::Impl::clear()
 }
 
 Net2::Impl::~Impl() {}
-
-void Net2::Impl::useCounts(std::vector<int>& usecounts)
-{
-    size_t nargs = args.size();
-    usecounts.assign(nargs, 0);
-}
-
-void Net2::Impl::assignBuffers()
-{
-
-}
 
 LayerArg::LayerArg()
 {
@@ -132,6 +123,48 @@ int Net2::Impl::findOutputArg(const std::string& argname)
     arginfo.typ = -1;
     return addArg(DNN_ARG_TEMP, arginfo);
     }
+}
+
+bool Net2::Impl::isConst(int argidx) const
+{
+    return args.at(argidx).kind == DNN_ARG_CONST;
+}
+
+int Net2::Impl::kind(int argidx) const
+{
+    return args.at(argidx).kind;
+}
+
+bool Net2::Impl::empty() const { return graph.empty(); }
+
+void Net2::Impl::updateUseCounts(std::vector<int>& usecounts, const Graph& graph)
+{
+    /* 1. when we have the main graph, we gonna use its outputs in one way or another,
+          so we increment the use count.
+       2. when we have a subgraph, we need to copy (which could possibly done in-place, i.e.
+          without actual copying) its formal outputs to the actual outputs,
+          specified in If, Loop, Scan etc. To reflect it, we increment the use counts as well.
+       So, whether it's the main graph or a subgraph, we increment 'usage counter' of each
+       its output
+    */
+    for (auto output: graph.outputs)
+        usecounts.at(output)++;
+    for (const auto& op: graph.prog) {
+        for (auto op_input: op.inputs)
+            usecounts.at(op_input)++;
+        for (const auto& pgr: op.subgraphs)
+            if (!pgr.empty()) {
+                const Graph& subgraph = *pgr.get();
+                updateUseCounts(usecounts, subgraph);
+            }
+    }
+}
+
+void Net2::Impl::useCounts(vector<int>& usecounts)
+{
+    int i, nargs = (int)args.size();
+    usecounts.assign(nargs, 0);
+    updateUseCounts(usecounts, graph);
 }
 
 bool Graph::empty() const { return prog.empty(); }
