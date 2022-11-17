@@ -806,12 +806,14 @@ void boundingBoxGrowthTest(VolumeType volumeType)
         std::vector<Affine3f> poses = scene->getPoses();
 
         Mat depth = scene->depth(poses[0]);
+        UMat udepth;
+        depth.copyTo(udepth);
 
         // depth is integrated with multiple weight
         //TODO: add weight parameter to integrate() call (both scalar and array of 8u/32f)
         const int nIntegrations = 1;
         for (int i = 0; i < nIntegrations; i++)
-            volume.integrate(depth, poses[0].matrix);
+            volume.integrate(udepth, poses[0].matrix);
 
         Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
         Vec6f truebb(-0.9375f, 1.3125f, -0.8906f, 3.9375f, 2.6133f, 1.4004f);
@@ -828,35 +830,37 @@ void boundingBoxGrowthTest(VolumeType volumeType)
         // Integrate another depth with disabled growth
 
         Mat depth2 = scene->depth(poses[0].translate(Vec3f(0, -0.25f, 0)));
+        UMat udepth2;
+        depth2.copyTo(udepth2);
 
         volume.setEnableGrowth(false);
 
         for (int i = 0; i < nIntegrations; i++)
-            volume.integrate(depth2, poses[0].matrix);
+            volume.integrate(udepth2, poses[0].matrix);
 
         Vec6f bb2 = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
-
-        if (cvtest::debugLevel > 0)
-        {
-            debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts_no_growth.obj");
-        }
 
         // BB size should not be changed, checking
         Vec6f diff2 = bb2 - bb;
         double bbnorm2 = std::sqrt(diff2.ddot(diff2));
         EXPECT_LE(bbnorm2, 0.0);
 
+        if (cvtest::debugLevel > 0)
+        {
+            debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts_no_growth.obj");
+        }
+
         // Repeating the same but with enabled growth
 
         volume.reset();
 
         for (int i = 0; i < nIntegrations; i++)
-            volume.integrate(depth, poses[0].matrix);
+            volume.integrate(udepth, poses[0].matrix);
 
         volume.setEnableGrowth(true);
 
         for (int i = 0; i < nIntegrations; i++)
-            volume.integrate(depth2, poses[0].matrix);
+            volume.integrate(udepth2, poses[0].matrix);
 
         Vec6f bb3 = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
 
@@ -1443,6 +1447,16 @@ TEST(HashTSDF_CPU, boundingBoxEnableGrowth)
 TEST(HashTSDF_GPU, reproduce_volPoseRot)
 {
     regressionVolPoseRot();
+}
+
+TEST(TSDF_GPU, boundingBox)
+{
+    boundingBoxGrowthTest(VolumeType::TSDF);
+}
+
+TEST(HashTSDF_GPU, boundingBoxEnableGrowth)
+{
+    boundingBoxGrowthTest(VolumeType::HashTSDF);
 }
 
 #endif
