@@ -179,7 +179,7 @@ void integrateHashTsdfVolumeUnit(
     {
         VolumeUnit& vu = volumeUnits.emplace(idx, VolumeUnit()).first->second;
 
-        Matx44f subvolumePose = pose.translate(volumeUnitIdxToVolume(idx, volumeUnitSize)).matrix;
+        Matx44f subvolumePose = pose.translate(pose.rotation() * volumeUnitIdxToVolume(idx, volumeUnitSize)).matrix;
 
         vu.pose = subvolumePose;
         vu.index = lastVolIndex; lastVolIndex++;
@@ -203,7 +203,6 @@ void integrateHashTsdfVolumeUnit(
     {
         totalVolUnits.push_back(keyvalue.first);
     }
-
 
     //! Mark volumes in the camera frustum as active
     Range inFrustumRange(0, (int)volumeUnits.size());
@@ -510,7 +509,6 @@ void ocl_integrateHashTsdfVolumeUnit(
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
     Matx44f vol2camMatrix = (Affine3f(cameraPose).inv() * pose).matrix;
-    Matx44f camInvMatrix = Affine3f(cameraPose).inv().matrix;
 
     // Save length to fill new data in ranges
     int sizeBefore = hashTable.last;
@@ -580,7 +578,6 @@ void ocl_integrateHashTsdfVolumeUnit(
         ocl::KernelArg::ReadOnly(pixNorms),
         ocl::KernelArg::ReadOnly(isActiveFlags),
         vol2camMatrix,
-        camInvMatrix,
         voxelSize,
         volumeUnitResolution,
         volStrides.val,
@@ -1174,8 +1171,8 @@ void ocl_raycastHashTsdfVolumeUnit(
     const float volumeUnitSize = voxelSize * volResolution.x;
 
     Vec4f boxMin, boxMax(volumeUnitSize - voxelSize,
-        volumeUnitSize - voxelSize,
-        volumeUnitSize - voxelSize);
+                         volumeUnitSize - voxelSize,
+                         volumeUnitSize - voxelSize);
 
     Matx44f _pose;
     settings.getVolumePose(_pose);
@@ -1185,9 +1182,6 @@ void ocl_raycastHashTsdfVolumeUnit(
 
     Matx44f cam2volRotGPU = cam2vol.matrix;
     Matx44f vol2camRotGPU = vol2cam.matrix;
-
-    UMat volPoseGpu = Mat(pose.matrix).getUMat(ACCESS_READ);
-    UMat invPoseGpu = Mat(pose.inv().matrix).getUMat(ACCESS_READ);
 
     UMat hashesGpu = Mat(hashTable.hashes, false).getUMat(ACCESS_READ);
     UMat hashDataGpu = Mat(hashTable.data, false).getUMat(ACCESS_READ);
