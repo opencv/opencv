@@ -538,9 +538,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
         rectangle( thresh_img_new, Point(0,0), Point(thresh_img_new.cols-1, thresh_img_new.rows-1), Scalar(255,255,255), 3, LINE_8);
 
         detector.reset();
-
-        Mat binarized_img = thresh_img_new;
-        detector.generateQuads(binarized_img, flags);
+        detector.generateQuads(thresh_img_new, flags);
         DPRINTF("Quad count: %d/%d", detector.all_quads_count, (pattern_size.width/2+1)*(pattern_size.height/2+1));
         SHOW_QUADS("New quads", thresh_img_new, &detector.all_quads[0], detector.all_quads_count);
         if (detector.processQuads(out_corners, prev_sqr_size))
@@ -605,9 +603,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
                 rectangle( thresh_img, Point(0,0), Point(thresh_img.cols-1, thresh_img.rows-1), Scalar(255,255,255), 3, LINE_8);
 
                 detector.reset();
-
-                Mat binarized_img = thresh_img;
-                detector.generateQuads(binarized_img, flags);
+                detector.generateQuads(thresh_img, flags);
                 DPRINTF("Quad count: %d/%d", detector.all_quads_count, (pattern_size.width/2+1)*(pattern_size.height/2+1));
                 SHOW_QUADS("Old quads", thresh_img, &detector.all_quads[0], detector.all_quads_count);
                 if (detector.processQuads(out_corners, prev_sqr_size))
