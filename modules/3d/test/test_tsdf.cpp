@@ -846,14 +846,15 @@ static Mat normalsError(Mat srcNormals, Mat dstNormals)
 
 void regressionVolPoseRot()
 {
+    // Make 2 volumes which differ only in their pose (especially rotation)
     VolumeSettings vs(VolumeType::HashTSDF);
     Volume volume0(VolumeType::HashTSDF, vs);
+
     VolumeSettings vsRot(vs);
     Matx44f pose;
     vsRot.getVolumePose(pose);
     pose = Affine3f(Vec3f(1, 1, 1), Vec3f()).matrix;
     vsRot.setVolumePose(pose);
-
     Volume volumeRot(VolumeType::HashTSDF, vsRot);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
@@ -866,29 +867,33 @@ void regressionVolPoseRot()
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
-    depth.copyTo(depth);
+    UMat udepth;
+    depth.copyTo(udepth);
 
-    volume0.integrate(depth, poses[0].matrix);
-    volumeRot.integrate(depth, poses[0].matrix);
+    volume0.integrate(udepth, poses[0].matrix);
+    volumeRot.integrate(udepth, poses[0].matrix);
 
-    Mat pts, nrm, ptsRot, nrmRot;
+    UMat upts, unrm, uptsRot, unrmRot;
 
-    volume0.raycast(poses[0].matrix, pts, nrm);
-    volumeRot.raycast(poses[0].matrix, ptsRot, nrmRot);
+    volume0.raycast(poses[0].matrix, upts, unrm);
+    volumeRot.raycast(poses[0].matrix, uptsRot, unrmRot);
+
+    Mat mpts = upts.getMat(ACCESS_READ), mnrm = unrm.getMat(ACCESS_READ);
+    Mat mptsRot = uptsRot.getMat(ACCESS_READ), mnrmRot = unrmRot.getMat(ACCESS_READ);
 
     if (cvtest::debugLevel > 0)
     {
-        displayImage(depth, pts, nrm, depthFactor, lightPose);
-        displayImage(depth, ptsRot, nrmRot, depthFactor, lightPose);
+        displayImage(depth, mpts, mnrm, depthFactor, lightPose);
+        displayImage(depth, mptsRot, mnrmRot, depthFactor, lightPose);
     }
 
     std::vector<Mat> ptsCh(3), ptsRotCh(3);
-    split(pts, ptsCh);
-    split(ptsRot, ptsRotCh);
+    split(mpts, ptsCh);
+    split(uptsRot, ptsRotCh);
     Mat maskPts0 = ptsCh[2] > 0;
     Mat maskPtsRot = ptsRotCh[2] > 0;
-    Mat maskNrm0 = nanMask(nrm);
-    Mat maskNrmRot = nanMask(nrmRot);
+    Mat maskNrm0 = nanMask(mnrm);
+    Mat maskNrmRot = nanMask(mnrmRot);
     Mat maskPtsDiff, maskNrmDiff;
     cv::bitwise_xor(maskPts0, maskPtsRot, maskPtsDiff);
     cv::bitwise_xor(maskNrm0, maskNrmRot, maskNrmDiff);
@@ -898,8 +903,8 @@ void regressionVolPoseRot()
     EXPECT_LE(ptsDiffNorm, 786);
     EXPECT_LE(nrmDiffNorm, 786);
 
-    double normPts = cv::norm(pts, ptsRot, NORM_INF, (maskPts0 & maskPtsRot));
-    Mat absdot = normalsError(nrm, nrmRot);
+    double normPts = cv::norm(mpts, mptsRot, NORM_INF, (maskPts0 & maskPtsRot));
+    Mat absdot = normalsError(mnrm, mnrmRot);
     double normNrm = cv::norm(absdot, NORM_L2, (maskNrm0 & maskNrmRot));
 
     EXPECT_LE(normPts, 2.0);
@@ -1280,6 +1285,14 @@ TEST(ColorTSDF_CPU, valid_points_common_framesize_fetch)
     valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
     cv::ocl::setUseOpenCL(true);
 }
+
+
+// OpenCL tests
+TEST(HashTSDF_GPU, reproduce_volPoseRot)
+{
+    regressionVolPoseRot();
+}
+
 
 #endif
 }
