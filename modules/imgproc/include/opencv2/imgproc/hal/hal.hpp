@@ -238,6 +238,10 @@ CV_EXPORTS void integral(int depth, int sdepth, int sqdepth,
                          uchar* sqsum, size_t sqsumstep,
                          uchar* tilted, size_t tstep,
                          int width, int height, int cn);
+    
+CV_EXPORTS double getlen(InputArray Point1, InputArray Point2);
+
+CV_EXPORTS void getangle(InputArray Point1, InputArray Point2, InputArray Point3, InputArray Point4, double w, double h, double& angleA, double& angleB);
 
 //! @}
 
