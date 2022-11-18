@@ -304,7 +304,7 @@ struct InferWithReshape: public ::testing::Test {
     InferenceEngine::CNNNetwork net;
     InferenceEngine::Core plugin;
 
-    InferWithReshape() {
+    void SetUp() {
         // FIXME: it must be cv::imread(findDataFile("../dnn/grace_hopper_227.png", false));
         m_in_mat = cv::Mat(cv::Size(320, 240), CV_8UC3);
         cv::randu(m_in_mat, 0, 255);
@@ -386,6 +386,7 @@ struct InferWithReshapeNV12: public InferWithReshape {
     cv::Mat m_in_uv;
     cv::Mat m_in_y;
     void SetUp() {
+        InferWithReshape::SetUp();
         cv::Size sz{320, 240};
         m_in_y = cv::Mat{sz, CV_8UC1};
         cv::randu(m_in_y, 0, 255);
