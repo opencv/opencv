@@ -2665,6 +2665,36 @@ static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation
 
 namespace hal {
 
+const double rad =  0.01745;
+
+double hal::getlen(InputArray Point1, InputArray Point2)
+{
+    Mat point1 = Point1.getMat(), point2 = Point2.getMat();
+    Point2f p1 = point1.at<Point2f>(0, 0);
+    Point2f p2 = point2.at<Point2f>(0, 0);
+
+    return std::sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2));
+}
+
+void getangle(InputArray Point1, InputArray Point2, InputArray Point3, InputArray Point4, double w, double h, double& angleA, double& angleB)
+{
+    double ratio = h/w;
+    double ab = getlen(Point1, Point2);
+    double bc = getlen(Point2, Point3);
+    double ad = getlen(Point1, Point4);
+
+    double sinA = ratio * bc / ab;
+
+    double sinA_1 = ratio * ad / ab;
+
+    double A = asin(sinA);
+    double A_1 = asin(sinA_1);
+
+    angleA = A / rad;
+    angleB = A_1 / rad;
+
+}
+   
 void warpAffine(int src_type,
                 const uchar * src_data, size_t src_step, int src_width, int src_height,
                 uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
