@@ -77,16 +77,14 @@ public:
 
 namespace ocl {
 
-Context& initializeContextFromVA(VADisplay display, bool tryInterop)
+Context& initializeContextFromVA(VADisplay display)
 {
-    CV_UNUSED(display); CV_UNUSED(tryInterop);
+    CV_UNUSED(display);
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
 
 #   ifdef HAVE_VA_INTEL
-    if (tryInterop)
-    {
         cl_uint numPlatforms;
         cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
         if (status != CL_SUCCESS)
@@ -175,7 +173,6 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
             clExecCtx.bind();
             return const_cast<Context&>(clExecCtx.getContext());
         }
-    }
 # endif // HAVE_VA_INTEL
     {
         Context& ctx = Context::getDefault(true);
@@ -537,17 +534,15 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
 #ifdef HAVE_VA_INTEL
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
     VAAPIInterop* interop = ocl_context.getContext().getUserContext<VAAPIInterop>().get();
-    CV_LOG_IF_DEBUG(NULL, !interop,
-        "OpenCL/VA_INTEL: Can't interop with current OpenCL context - missing VAAPIInterop API. "
-        "OpenCL context should be created through initializeContextFromVA()");
-    void* context_display = ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
-    CV_LOG_IF_INFO(NULL, interop && !context_display,
-        "OpenCL/VA_INTEL: Can't interop with current OpenCL context - missing VA display, context re-creation is required");
-    bool isValidContextDisplay = (display == context_display);
-    CV_LOG_IF_INFO(NULL, interop && context_display && !isValidContextDisplay,
-        "OpenCL/VA_INTEL: Can't interop with current OpenCL context - VA display mismatch: " << context_display << "(context) vs " << (void*)display << "(surface)");
-    if (isValidContextDisplay && interop)
-    {
+    if(!display)
+        CV_Error(cv::Error::StsError,
+                "Invalid VADisplay passed to convertFromVASurface");
+
+    if(!interop) {
+        CV_Error(cv::Error::StsError,
+                "OpenCL/VA_INTEL: Can't interop with current OpenCL context - missing VAAPIInterop API. "
+                "OpenCL context should be created through initializeContextFromVA()");
+    } else {
         UMat u = src.getUMat();
 
         // TODO Add support for roi
@@ -589,8 +584,8 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
         status = clReleaseMemObject(clImageUV);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed (UV plane)");
+        return;
     }
-    else
 # endif // HAVE_VA_INTEL
     {
         init_libva();
@@ -683,8 +678,16 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 #ifdef HAVE_VA_INTEL
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
     VAAPIInterop* interop = ocl_context.getContext().getUserContext<VAAPIInterop>().get();
-    if (display == ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && interop)
-    {
+
+    if(!display)
+        CV_Error(cv::Error::StsError,
+                "Invalid VADisplay passed to convertFromVASurface");
+
+    if(!interop) {
+        CV_Error(cv::Error::StsError,
+                "OpenCL/VA_INTEL: Can't interop with current OpenCL context - missing VAAPIInterop API. "
+                "OpenCL context should be created through initializeContextFromVA()");
+    } else {
         UMat u = dst.getUMat();
 
         // TODO Add support for roi
@@ -726,77 +729,75 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
         status = clReleaseMemObject(clImageUV);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed (UV plane)");
+        return;
     }
-    else
 # endif // HAVE_VA_INTEL
-    {
-        init_libva();
-        Mat m = dst.getMat();
+    init_libva();
+    Mat m = dst.getMat();
 
-        // TODO Add support for roi
-        CV_Assert(m.data == m.datastart);
-        CV_Assert(m.isContinuous());
+    // TODO Add support for roi
+    CV_Assert(m.data == m.datastart);
+    CV_Assert(m.isContinuous());
 
-        VAStatus status = 0;
+    VAStatus status = 0;
 
-        status = vaSyncSurface(display, surface);
+    status = vaSyncSurface(display, surface);
+    if (status != VA_STATUS_SUCCESS)
+        CV_Error(cv::Error::StsError, "VA-API: vaSyncSurface failed");
+
+    VAImage image;
+    status = vaDeriveImage(display, surface, &image);
+    if (status != VA_STATUS_SUCCESS){
+        //try vaCreateImage + vaGetImage
+        //pick a format
+        int num_formats = vaMaxNumImageFormats(display);
+        if (num_formats <= 0)
+            CV_Error(cv::Error::StsError, "VA-API: vaMaxNumImageFormats failed");
+        std::vector<VAImageFormat> fmt_list(num_formats);
+
+        status = vaQueryImageFormats(display, fmt_list.data(), &num_formats);
         if (status != VA_STATUS_SUCCESS)
-            CV_Error(cv::Error::StsError, "VA-API: vaSyncSurface failed");
-
-        VAImage image;
-        status = vaDeriveImage(display, surface, &image);
-        if (status != VA_STATUS_SUCCESS){
-            //try vaCreateImage + vaGetImage
-            //pick a format
-            int num_formats = vaMaxNumImageFormats(display);
-            if (num_formats <= 0)
-                CV_Error(cv::Error::StsError, "VA-API: vaMaxNumImageFormats failed");
-            std::vector<VAImageFormat> fmt_list(num_formats);
-
-            status = vaQueryImageFormats(display, fmt_list.data(), &num_formats);
-            if (status != VA_STATUS_SUCCESS)
-                CV_Error(cv::Error::StsError, "VA-API: vaQueryImageFormats failed");
-            VAImageFormat *selected_format = nullptr;
-            for (auto &fmt : fmt_list){
-                if (fmt.fourcc == VA_FOURCC_NV12 || fmt.fourcc == VA_FOURCC_YV12){
-                    selected_format = &fmt;
-                    break;
-                }
-            }
-            if (selected_format == nullptr)
-                CV_Error(cv::Error::StsError, "VA-API: vaQueryImageFormats did not return a supported format");
-
-            status = vaCreateImage(display, selected_format, size.width, size.height, &image);
-            if (status != VA_STATUS_SUCCESS)
-                CV_Error(cv::Error::StsError, "VA-API: vaCreateImage failed");
-
-            status = vaGetImage(display, surface, 0, 0, size.width, size.height, image.image_id);
-            if (status != VA_STATUS_SUCCESS){
-                vaDestroyImage(display, image.image_id);
-                CV_Error(cv::Error::StsError, "VA-API: vaPutImage failed");
+            CV_Error(cv::Error::StsError, "VA-API: vaQueryImageFormats failed");
+        VAImageFormat *selected_format = nullptr;
+        for (auto &fmt : fmt_list){
+            if (fmt.fourcc == VA_FOURCC_NV12 || fmt.fourcc == VA_FOURCC_YV12){
+                selected_format = &fmt;
+                break;
             }
         }
+        if (selected_format == nullptr)
+            CV_Error(cv::Error::StsError, "VA-API: vaQueryImageFormats did not return a supported format");
 
-        unsigned char* buffer = 0;
-        status = vaMapBuffer(display, image.buf, (void **)&buffer);
+        status = vaCreateImage(display, selected_format, size.width, size.height, &image);
         if (status != VA_STATUS_SUCCESS)
-            CV_Error(cv::Error::StsError, "VA-API: vaMapBuffer failed");
+            CV_Error(cv::Error::StsError, "VA-API: vaCreateImage failed");
 
-        if (image.format.fourcc == VA_FOURCC_NV12)
-            copy_convert_nv12_to_bgr(image, buffer, m);
-        if (image.format.fourcc == VA_FOURCC_YV12)
-            copy_convert_yv12_to_bgr(image, buffer, m);
-        else
-            CV_Check((int)image.format.fourcc, image.format.fourcc == VA_FOURCC_NV12 || image.format.fourcc == VA_FOURCC_YV12, "Unexpected image format");
-
-        status = vaUnmapBuffer(display, image.buf);
-        if (status != VA_STATUS_SUCCESS)
-            CV_Error(cv::Error::StsError, "VA-API: vaUnmapBuffer failed");
-
-        status = vaDestroyImage(display, image.image_id);
-        if (status != VA_STATUS_SUCCESS)
-            CV_Error(cv::Error::StsError, "VA-API: vaDestroyImage failed");
+        status = vaGetImage(display, surface, 0, 0, size.width, size.height, image.image_id);
+        if (status != VA_STATUS_SUCCESS){
+            vaDestroyImage(display, image.image_id);
+            CV_Error(cv::Error::StsError, "VA-API: vaPutImage failed");
+        }
     }
+
+    unsigned char* buffer = 0;
+    status = vaMapBuffer(display, image.buf, (void **)&buffer);
+    if (status != VA_STATUS_SUCCESS)
+        CV_Error(cv::Error::StsError, "VA-API: vaMapBuffer failed");
+
+    if (image.format.fourcc == VA_FOURCC_NV12)
+        copy_convert_nv12_to_bgr(image, buffer, m);
+    if (image.format.fourcc == VA_FOURCC_YV12)
+        copy_convert_yv12_to_bgr(image, buffer, m);
+    else
+        CV_Check((int)image.format.fourcc, image.format.fourcc == VA_FOURCC_NV12 || image.format.fourcc == VA_FOURCC_YV12, "Unexpected image format");
+
+    status = vaUnmapBuffer(display, image.buf);
+    if (status != VA_STATUS_SUCCESS)
+        CV_Error(cv::Error::StsError, "VA-API: vaUnmapBuffer failed");
+
+    status = vaDestroyImage(display, image.image_id);
+    if (status != VA_STATUS_SUCCESS)
+        CV_Error(cv::Error::StsError, "VA-API: vaDestroyImage failed");
 #endif  // !HAVE_VA
 }
 

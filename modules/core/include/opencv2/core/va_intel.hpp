@@ -48,7 +48,7 @@ using namespace cv::ocl;
 @param tryInterop - try to set up for interoperability, if true; set up for use slow copy if false.
 @return Returns reference to OpenCL Context
  */
-CV_EXPORTS Context& initializeContextFromVA(VADisplay display, bool tryInterop = true);
+CV_EXPORTS Context& initializeContextFromVA(VADisplay display);
 
 } // namespace cv::va_intel::ocl
 
