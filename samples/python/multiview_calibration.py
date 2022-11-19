@@ -125,7 +125,7 @@ def plotProjection(points_2d, pattern_points, rvec0, tvec0, rvec1, tvec1, K, dis
     ax.set_title(title, loc='center', wrap=True, fontsize=16)
 
 def getDetectionMask(image_points):
-    detection_mask = np.zeros((len(image_points), len(image_points[0])), dtype=int)
+    detection_mask = np.zeros((len(image_points), len(image_points[0])), dtype=np.uint8)
     for i in range(len(image_points)):
         for j in range(len(image_points[0])):
             detection_mask[i,j] = int(len(image_points[i][j]) != 0)
@@ -136,7 +136,7 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, p
     pattern_points: NUM_POINTS x 3 (numpy array)
     image_points: NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 2
     is_fisheye: NUM_CAMERAS (bool)
-    image_sizes: NUMCAMERAS x [width, height]
+    image_sizes: NUM_CAMERAS x [width, height]
     """
 
     num_cameras = len(image_points)
@@ -172,8 +172,8 @@ def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, p
                               detection_mask=detection_mask,
                               Ks=Ks,
                               distortions=distortions,
-                              is_fisheye=np.array(is_fisheye, dtype=int),
-                              USE_INTRINSICS_GUESS=USE_INTRINSICS_GUESS,
+                              is_fisheye=np.array(is_fisheye, dtype=np.uint8),
+                              use_intrinsics_guess=USE_INTRINSICS_GUESS,
                               flags_intrinsics=0)
     except Exception as e:
         print("Multi-view calibration failed with the following exception:", e.__class__)
@@ -224,7 +224,7 @@ def visualizeFromFile(file):
     visualizeResults(**input)
 
 def saveToFile(path_to_save, **kwargs):
-    save_file = cv.FileStorage(path_to_save if path_to_save != '' else datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")+'.pkl', cv.FileStorage_WRITE)
+    save_file = cv.FileStorage(path_to_save if path_to_save != '' else datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")+'.yaml', cv.FileStorage_WRITE)
     kwargs['is_fisheye'] = np.array(kwargs['is_fisheye'], dtype=int)
     image_points = kwargs['image_points']
     for i in range(len(image_points)):
