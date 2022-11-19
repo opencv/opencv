@@ -9,7 +9,7 @@
 #include "opencv2/core.hpp"
 #include <type_traits>
 #include <utility>
-#include "opencv2/core/detail/util.hh"
+#include "opencv2/core/detail/util.hpp"
 
 namespace cv {
 namespace detail {

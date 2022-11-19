@@ -8,7 +8,7 @@
 #include <tuple>
 #include <type_traits>
 #include <iterator>
-#include "opencv2/core/detail/util.hh"
+#include "opencv2/core/detail/util.hpp"
 #include "opencv2/core/detail/cpp_features.hpp"
 
 //This opencv feature requires certain C++14 features

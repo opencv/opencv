@@ -10,7 +10,7 @@
 #include "opencv2/core/detail/pointer-tuple-replacer.hpp"
 #include "opencv2/core/detail/variadic-continuous-checker.hpp"
 #include "opencv2/core/detail/cpp_features.hpp"
-#include "opencv2/core/detail/util.hh"
+#include "opencv2/core/detail/util.hpp"
 #include <tuple>
 
 //This opencv feature requires return type auto a C++14 feature
