@@ -2266,3 +2266,86 @@ graph = onnx.helper.make_graph(nodes, "gather_multi", inputs, outputs)
 onnx_model = onnx.helper.make_model(graph)
 
 save_data_and_onnx_model("gather_multi", input, output, onnx_model)
+
+###################### Tile #################################
+
+# input & output are taken from onnx conformance test 'test_tile'
+
+def generate_onnx_single_operator(single_op, onnx_name, save_prefix="./models"):
+    # Create inputs (ValueInfoProto)
+    inputs = []
+    input_names = []
+    initializers = []
+    for name, prop in single_op.get("inputs").items():
+        input_names.append(name)
+
+        dtype = prop.get("dtype")
+        shape = prop.get("shape")
+        inputs.append(
+            helper.make_tensor_value_info(name, dtype, shape)
+        )
+        initializer = prop.get("initializer")
+        if initializer is not None:
+            initializers.append(
+                helper.make_tensor(name, dtype, shape, initializer)
+            )
+
+    # Create outputs (ValueInfoProto)
+    outputs = []
+    output_names = []
+    for name, prop in single_op.get("outputs").items():
+        output_names.append(name)
+
+        dtype = prop.get("dtype")
+        shape = prop.get("shape")
+        outputs.append(
+            helper.make_tensor_value_info(name, dtype, shape)
+        )
+
+    # Create a node (NodeProto)
+    attributes = single_op.get("attributes", {})
+    node_def = onnx.helper.make_node(
+        single_op.get("op_name"),
+        inputs=input_names,
+        outputs=output_names,
+        **attributes,
+    )
+
+    # Create the graph (GraphProto)
+    graph_def = helper.make_graph(
+        [node_def],        # nodes
+        onnx_name,         # name
+        inputs,            # inputs
+        outputs,           # outputs
+        initializers       # initializer
+    )
+
+    # Create the model (ModelProto)
+    model_def = helper.make_model(graph_def, producer_name="github.com/opencv/opencv_extra")
+    onnx.checker.check_model(model_def)
+    onnx.save(model_def, "models/{}.onnx".format(onnx_name))
+
+    return True
+
+tile=dict(
+    op_name="Tile",
+    inputs=dict(
+        input=dict(
+            dtype=TensorProto.FLOAT,
+            shape=[2, 3, 4, 5],
+        ),
+        repeats=dict(
+            dtype=TensorProto.INT64,
+            shape=[4],
+            initializer=np.array([7, 6, 4, 2], dtype=np.int64)
+        ),
+    ),
+    outputs=dict(
+        y=dict(
+            dtype=TensorProto.FLOAT,
+            shape=[14, 18, 16, 10]
+        )
+    )
+)
+
+generate_onnx_single_operator(tile, "tile")
