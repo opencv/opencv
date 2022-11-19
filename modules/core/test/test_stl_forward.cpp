@@ -16,8 +16,8 @@ class CORE_stl_forward : public ::testing::Test {
     void SetUp() override
     {
         size_t size = 13;
-        mat = cv::Mat(size,size,CV_32S);
-        mat_f = cv::Mat_<float>(size,size);
+        mat = cv::Mat(static_cast<int>(size),static_cast<int>(size),CV_32S);
+        mat_f = cv::Mat_<float>(static_cast<int>(size),static_cast<int>(size));
 
 
         intVec = std::vector<int>(size*size);
