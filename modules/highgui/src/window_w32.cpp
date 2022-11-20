@@ -1943,7 +1943,6 @@ static LRESULT CALLBACK HGToolbarProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
 
             if(window->toolbar.rows != rows)
             {
-                SendMessage(window->toolbar.toolbar, TB_BUTTONCOUNT, 0, 0);
                 CvTrackbar* trackbar = window->toolbar.first;
 
                 for( ; trackbar != 0; trackbar = trackbar->next )
