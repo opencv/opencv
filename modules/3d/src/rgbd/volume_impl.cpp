@@ -181,7 +181,7 @@ Vec6f TsdfVolume::getBoundingBox(int precision) const
 {
     if (precision == Volume::BoundingBoxPrecision::VOXEL)
     {
-        CV_Error(Error::StsNotImplemented, "This mode is not implemented yet");
+        CV_Error(Error::StsNotImplemented, "Voxel mode is not implemented yet");
     }
     else
     {
@@ -403,7 +403,7 @@ Vec6f HashTsdfVolume::getBoundingBox(int precision) const
 {
     if (precision == Volume::BoundingBoxPrecision::VOXEL)
     {
-        CV_Error(Error::StsNotImplemented, "This mode is not implemented yet");
+        CV_Error(Error::StsNotImplemented, "Voxel mode is not implemented yet");
     }
     else
     {
@@ -567,7 +567,7 @@ Vec6f ColorTsdfVolume::getBoundingBox(int precision) const
 {
     if (precision == Volume::BoundingBoxPrecision::VOXEL)
     {
-        CV_Error(Error::StsNotImplemented, "This mode is not implemented yet");
+        CV_Error(Error::StsNotImplemented, "Voxel mode is not implemented yet");
     }
     else
     {
