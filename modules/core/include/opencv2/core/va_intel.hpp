@@ -45,7 +45,6 @@ using namespace cv::ocl;
 // TODO static functions in the Context class
 /** @brief Creates OpenCL context from VA.
 @param display    - VADisplay for which CL interop should be established.
-@param tryInterop - try to set up for interoperability, if true; set up for use slow copy if false.
 @return Returns reference to OpenCL Context
  */
 CV_EXPORTS Context& initializeContextFromVA(VADisplay display);
