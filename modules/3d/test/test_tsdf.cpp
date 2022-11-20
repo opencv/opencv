@@ -819,8 +819,13 @@ void boundingBoxGrowthTest(VolumeType volumeType)
         Vec6f truebb(-0.9375f, 1.3125f, -0.8906f, 3.9375f, 2.6133f, 1.4004f);
         Vec6f diff = bb - truebb;
         double bbnorm = std::sqrt(diff.ddot(diff));
+
+        Vec3f vuRes;
+        vs.getVolumeResolution(vuRes);
+        double vuSize = vs.getVoxelSize() * vuRes[0];
         // it's OK to have such big difference since this is volume unit size-grained BB calculation
-        EXPECT_LE(bbnorm, 0.2228);
+        // Theoretical max difference can be sqrt(6) =(approx)= 2.4494
+        EXPECT_LE(bbnorm, vuSize * 2.38);
 
         if (cvtest::debugLevel > 0)
         {
@@ -843,7 +848,7 @@ void boundingBoxGrowthTest(VolumeType volumeType)
         // BB size should not be changed, checking
         Vec6f diff2 = bb2 - bb;
         double bbnorm2 = std::sqrt(diff2.ddot(diff2));
-        EXPECT_LE(bbnorm2, 0.0);
+        EXPECT_LE(bbnorm2, std::numeric_limits<double>::epsilon());
 
         if (cvtest::debugLevel > 0)
         {
@@ -867,7 +872,7 @@ void boundingBoxGrowthTest(VolumeType volumeType)
         Vec6f truebb3 = truebb + Vec6f(0, -(1.3125f-1.0723f), -(-0.8906f-(-1.4238f)), 0, 0, 0);
         Vec6f diff3 = bb3 - truebb3;
         double bbnorm3 = std::sqrt(diff3.ddot(diff3));
-        EXPECT_LE(bbnorm3, 0.2148);
+        EXPECT_LE(bbnorm3, vuSize * 2.3);
 
         if (cvtest::debugLevel > 0)
         {
