@@ -572,22 +572,6 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
 }
 
 
-void debugVolumeDraw(const Volume &volume, Affine3f pose, Mat depth, float depthFactor, std::string objFname)
-{
-    Vec3f lightPose = Vec3f::all(0.f);
-    UMat points, normals;
-    volume.raycast(pose.matrix, points, normals);
-
-    UMat ptsList, ptsList3, nrmList, nrmList3;
-    volume.fetchPointsNormals(ptsList, nrmList);
-    // transform 4 channels to 3 channels
-    cvtColor(ptsList, ptsList3, COLOR_BGRA2BGR);
-    cvtColor(ptsList, nrmList3, COLOR_BGRA2BGR);
-    savePointCloud(objFname, ptsList3, nrmList3);
-
-    displayImage(depth, points.getMat(ACCESS_READ), normals.getMat(ACCESS_READ), depthFactor, lightPose);
-}
-
 TEST(TSDF_GPU, raycast_custom_framesize_normals_mat)
 {
     normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
