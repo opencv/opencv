@@ -776,110 +776,98 @@ void debugVolumeDraw(const Volume &volume, Affine3f pose, Mat depth, float depth
 }
 
 
-void boundingBoxGrowthTest(VolumeType volumeType)
+// For fixed volumes which are TSDF and ColorTSDF
+void staticBoundingBoxTest(VolumeType volumeType)
 {
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
 
-    if ( volumeType == VolumeType::TSDF || volumeType == VolumeType::ColorTSDF )
-    {
-        Vec3i res;
-        vs.getVolumeResolution(res);
-        float voxelSize = vs.getVoxelSize();
-        Matx44f pose;
-        vs.getVolumePose(pose);
-        Vec3f end   = voxelSize * Vec3f(res);
-        Vec6f truebb(0, 0, 0, end[0], end[1], end[2]);
-        Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
-        Vec6f diff = bb - truebb;
-        double normdiff = std::sqrt(diff.ddot(diff));
-        ASSERT_LE(normdiff, std::numeric_limits<double>::epsilon());
-    }
-    else // HashTSDF
-    {
-        Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-        Matx33f intr;
-        vs.getCameraIntegrateIntrinsics(intr);
-        bool onlySemisphere = false;
-        float depthFactor = vs.getDepthFactor();
-        Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
-        std::vector<Affine3f> poses = scene->getPoses();
-
-        Mat depth = scene->depth(poses[0]);
-        UMat udepth;
-        depth.copyTo(udepth);
-
-        // depth is integrated with multiple weight
-        //TODO: add weight parameter to integrate() call (both scalar and array of 8u/32f)
-        const int nIntegrations = 1;
-        for (int i = 0; i < nIntegrations; i++)
-            volume.integrate(udepth, poses[0].matrix);
-
-        Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
-        Vec6f truebb(-0.9375f, 1.3125f, -0.8906f, 3.9375f, 2.6133f, 1.4004f);
-        Vec6f diff = bb - truebb;
-        double bbnorm = std::sqrt(diff.ddot(diff));
-
-        Vec3f vuRes;
-        vs.getVolumeResolution(vuRes);
-        double vuSize = vs.getVoxelSize() * vuRes[0];
-        // it's OK to have such big difference since this is volume unit size-grained BB calculation
-        // Theoretical max difference can be sqrt(6) =(approx)= 2.4494
-        EXPECT_LE(bbnorm, vuSize * 2.38);
-
-        if (cvtest::debugLevel > 0)
-        {
-            debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts.obj");
-        }
-
-        // Integrate another depth with disabled growth
-
-        Mat depth2 = scene->depth(poses[0].translate(Vec3f(0, -0.25f, 0)));
-        UMat udepth2;
-        depth2.copyTo(udepth2);
-
-        volume.setEnableGrowth(false);
-
-        for (int i = 0; i < nIntegrations; i++)
-            volume.integrate(udepth2, poses[0].matrix);
-
-        Vec6f bb2 = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
-
-        // BB size should not be changed, checking
-        Vec6f diff2 = bb2 - bb;
-        double bbnorm2 = std::sqrt(diff2.ddot(diff2));
-        EXPECT_LE(bbnorm2, std::numeric_limits<double>::epsilon());
-
-        if (cvtest::debugLevel > 0)
-        {
-            debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts_no_growth.obj");
-        }
-
-        // Repeating the same but with enabled growth
-
-        volume.reset();
-
-        for (int i = 0; i < nIntegrations; i++)
-            volume.integrate(udepth, poses[0].matrix);
-
-        volume.setEnableGrowth(true);
-
-        for (int i = 0; i < nIntegrations; i++)
-            volume.integrate(udepth2, poses[0].matrix);
-
-        Vec6f bb3 = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
-
-        Vec6f truebb3 = truebb + Vec6f(0, -(1.3125f-1.0723f), -(-0.8906f-(-1.4238f)), 0, 0, 0);
-        Vec6f diff3 = bb3 - truebb3;
-        double bbnorm3 = std::sqrt(diff3.ddot(diff3));
-        EXPECT_LE(bbnorm3, vuSize * 2.3);
-
-        if (cvtest::debugLevel > 0)
-        {
-            debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts_growth.obj");
-        }
-    }
+    Vec3i res;
+    vs.getVolumeResolution(res);
+    float voxelSize = vs.getVoxelSize();
+    Matx44f pose;
+    vs.getVolumePose(pose);
+    Vec3f end = voxelSize * Vec3f(res);
+    Vec6f truebb(0, 0, 0, end[0], end[1], end[2]);
+    Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+    Vec6f diff = bb - truebb;
+    double normdiff = std::sqrt(diff.ddot(diff));
+    ASSERT_LE(normdiff, std::numeric_limits<double>::epsilon());
 }
+
+
+// For HashTSDF only
+void boundingBoxGrowthTest(bool enableGrowth)
+{
+    VolumeSettings vs(VolumeType::HashTSDF);
+    Volume volume(VolumeType::HashTSDF, vs);
+
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
+    Matx33f intr;
+    vs.getCameraIntegrateIntrinsics(intr);
+    bool onlySemisphere = false;
+    float depthFactor = vs.getDepthFactor();
+    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    std::vector<Affine3f> poses = scene->getPoses();
+
+    Mat depth = scene->depth(poses[0]);
+    UMat udepth;
+    depth.copyTo(udepth);
+
+    // depth is integrated with multiple weight
+    // TODO: add weight parameter to integrate() call (both scalar and array of 8u/32f)
+    const int nIntegrations = 1;
+    for (int i = 0; i < nIntegrations; i++)
+        volume.integrate(udepth, poses[0].matrix);
+
+    Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+    Vec6f truebb(-0.9375f, 1.3125f, -0.8906f, 3.9375f, 2.6133f, 1.4004f);
+    Vec6f diff = bb - truebb;
+    double bbnorm = std::sqrt(diff.ddot(diff));
+
+    Vec3f vuRes;
+    vs.getVolumeResolution(vuRes);
+    double vuSize = vs.getVoxelSize() * vuRes[0];
+    // it's OK to have such big difference since this is volume unit size-grained BB calculation
+    // Theoretical max difference can be sqrt(6) =(approx)= 2.4494
+    EXPECT_LE(bbnorm, vuSize * 2.38);
+
+    if (cvtest::debugLevel > 0)
+    {
+        debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts.obj");
+    }
+
+    // Integrate another depth growth changed
+
+    Mat depth2 = scene->depth(poses[0].translate(Vec3f(0, -0.25f, 0)));
+    UMat udepth2;
+    depth2.copyTo(udepth2);
+
+    volume.setEnableGrowth(enableGrowth);
+
+    for (int i = 0; i < nIntegrations; i++)
+        volume.integrate(udepth2, poses[0].matrix);
+
+    Vec6f bb2 = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+
+    Vec6f truebb2 = truebb + Vec6f(0, -(1.3125f - 1.0723f), -(-0.8906f - (-1.4238f)), 0, 0, 0);
+    Vec6f diff2 = enableGrowth ? bb2 - truebb2 : bb2 - bb;
+    double bbnorm2 = std::sqrt(diff2.ddot(diff2));
+    EXPECT_LE(bbnorm2, enableGrowth ? (vuSize * 2.3) : std::numeric_limits<double>::epsilon());
+
+    if (cvtest::debugLevel > 0)
+    {
+        debugVolumeDraw(volume, poses[0], depth, depthFactor, enableGrowth ? "pts_growth.obj" : "pts_no_growth.obj");
+    }
+
+    // Reset check
+
+    volume.reset();
+    Vec6f bb3 = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+    double bbnorm3 = std::sqrt(bb3.ddot(bb3));
+    EXPECT_LE(bbnorm3, std::numeric_limits<double>::epsilon());
+}
+
 
 static Mat nanMask(Mat img)
 {
@@ -1089,11 +1077,6 @@ TEST(TSDF, valid_points_common_framesize_frame)
     valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-TEST(TSDF, boundingBox)
-{
-    boundingBoxGrowthTest(VolumeType::TSDF);
-}
-
 TEST(HashTSDF, raycast_custom_framesize_normals_mat)
 {
     normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
@@ -1144,10 +1127,16 @@ TEST(HashTSDF, valid_points_common_framesize_frame)
     valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-TEST(HashTSDF, boundingBoxEnableGrowth)
+class BoundingBoxEnableGrowthTest : public ::testing::TestWithParam<bool>
+{ };
+
+TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
 {
-    boundingBoxGrowthTest(VolumeType::HashTSDF);
+    boundingBoxGrowthTest(GetParam());
 }
+
+INSTANTIATE_TEST_CASE_P(TSDF, BoundingBoxEnableGrowthTest, ::testing::Bool());
+
 
 TEST(HashTSDF, reproduce_volPoseRot)
 {
@@ -1204,10 +1193,15 @@ TEST(ColorTSDF, valid_points_common_framesize_fetch)
     valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-TEST(ColorTSDF, boundingBox)
+class StaticVolumeBoundingBox : public ::testing::TestWithParam<VolumeType>
+{ };
+
+TEST_P(StaticVolumeBoundingBox, boundingBox)
 {
-    boundingBoxGrowthTest(VolumeType::ColorTSDF);
+    staticBoundingBoxTest(GetParam());
 }
+
+INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(VolumeType::TSDF, VolumeType::ColorTSDF));
 
 #else
 TEST(TSDF_CPU, raycast_custom_framesize_normals_mat)
@@ -1277,13 +1271,6 @@ TEST(TSDF_CPU, valid_points_common_framesize_frame)
 {
     cv::ocl::setUseOpenCL(false);
     valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(TSDF_CPU, boundingBox)
-{
-    cv::ocl::setUseOpenCL(false);
-    boundingBoxGrowthTest(VolumeType::TSDF);
     cv::ocl::setUseOpenCL(true);
 }
 
@@ -1434,19 +1421,24 @@ TEST(ColorTSDF_CPU, valid_points_common_framesize_fetch)
     cv::ocl::setUseOpenCL(true);
 }
 
-TEST(ColorTSDF_CPU, boundingBox)
+
+class StaticVolumeBoundingBox : public ::testing::TestWithParam<VolumeType>
+{ };
+
+TEST_P(StaticVolumeBoundingBox, boundingBoxCPU)
 {
-    cv::ocl::setUseOpenCL(false);
-    boundingBoxGrowthTest(VolumeType::ColorTSDF);
-    cv::ocl::setUseOpenCL(true);
+    bool revertOcl = cv::ocl::useOpenCL();
+    if (revertOcl)
+        cv::ocl::setUseOpenCL(false);
+
+    staticBoundingBoxTest(GetParam());
+
+    if (revertOcl)
+        cv::ocl::setUseOpenCL(true);
 }
 
-TEST(HashTSDF_CPU, boundingBoxEnableGrowth)
-{
-    cv::ocl::setUseOpenCL(false);
-    boundingBoxGrowthTest(VolumeType::HashTSDF);
-    cv::ocl::setUseOpenCL(true);
-}
+INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(VolumeType::TSDF, VolumeType::ColorTSDF));
+
 
 // OpenCL tests
 TEST(HashTSDF_GPU, reproduce_volPoseRot)
@@ -1454,15 +1446,49 @@ TEST(HashTSDF_GPU, reproduce_volPoseRot)
     regressionVolPoseRot();
 }
 
-TEST(TSDF_GPU, boundingBox)
+//TODO: use this when ColorTSDF gets GPU support
+/*
+class StaticVolumeBoundingBox : public ::testing::TestWithParam<VolumeType>
+{ };
+
+TEST_P(StaticVolumeBoundingBox, GPU)
 {
-    boundingBoxGrowthTest(VolumeType::TSDF);
+    staticBoundingBoxTest(GetParam());
 }
 
-TEST(HashTSDF_GPU, boundingBoxEnableGrowth)
+INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(VolumeType::TSDF, VolumeType::ColorTSDF));
+*/
+
+// until that, we don't need parametrized test
+TEST(TSDF, boundingBoxGPU)
 {
-    boundingBoxGrowthTest(VolumeType::HashTSDF);
+    staticBoundingBoxTest(VolumeType::TSDF);
 }
+
+
+class BoundingBoxEnableGrowthTest : public ::testing::TestWithParam<std::tuple<bool, bool>>
+{ };
+
+TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
+{
+    auto p = GetParam();
+    bool gpu = std::get<0>(p);
+    bool enableGrowth = std::get<1>(p);
+
+    bool revertOcl = false;
+    if (!gpu)
+        revertOcl = cv::ocl::useOpenCL();
+
+    if (revertOcl)
+        cv::ocl::setUseOpenCL(false);
+
+    boundingBoxGrowthTest(enableGrowth);
+
+    if (revertOcl)
+        cv::ocl::setUseOpenCL(false);
+}
+
+INSTANTIATE_TEST_CASE_P(TSDF, BoundingBoxEnableGrowthTest, ::testing::Combine(::testing::Bool(), ::testing::Bool()));
 
 #endif
 }
