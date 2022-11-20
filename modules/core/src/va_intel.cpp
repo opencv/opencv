@@ -172,6 +172,8 @@ Context& initializeContextFromVA(VADisplay display)
             }
             clExecCtx.bind();
             return const_cast<Context&>(clExecCtx.getContext());
+        } else {
+            CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't create context for VA-interop");
         }
 # endif // HAVE_VA_INTEL
     {
