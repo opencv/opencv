@@ -14,7 +14,7 @@ protected:
     void SetUp() override
     {
         pointCloudSize = 1000;
-        maxDepth = 4;
+        maxDepth = 18;
 
         int scale;
         Point3i pmin, pmax;

@@ -13,7 +13,7 @@ namespace cv{
 static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& node);
 
 static bool _isPointInBound(const Point3f& _point, const Point3f& _origin, double _size);
-static void insertPointRecurse( Ptr<OctreeNode>& node,  const Point3f& point, int maxDepth);
+static bool insertPointRecurse( Ptr<OctreeNode>& node,  const Point3f& point, int maxDepth);
 bool deletePointRecurse( Ptr<OctreeNode>& node);
 
 // For Nearest neighbor search.
@@ -128,14 +128,14 @@ Octree::Octree(int _maxDepth) : p(new Impl)
 
 Octree::~Octree(){}
 
-void Octree::insertPoint(const Point3f& point)
+bool Octree::insertPoint(const Point3f& point)
 {
     if(p->rootNode.empty())
     {
         p->rootNode = new OctreeNode( 0, p->size, p->origin, -1);
     }
 
-    insertPointRecurse(p->rootNode, point, p->maxDepth);
+    return insertPointRecurse(p->rootNode, point, p->maxDepth);
 }
 
 
@@ -175,11 +175,15 @@ bool Octree::create(const std::vector<Point3f> &pointCloud, int _maxDepth)
     this->p->size = 2 * halfSize;
 
     // Insert every point in PointCloud data.
+    int cnt=0;
     for(size_t idx = 0; idx < pointCloud.size(); idx++ )
     {
-        insertPoint(pointCloud[idx]);
+        if(!insertPoint(pointCloud[idx])){
+            cnt++;
+        };
     }
 
+    CV_LOG_IF_WARNING(NULL,cnt!=0,"OverAll "<<cnt<<" points has been ignored! The number of point clouds contained in the current octree is "<<pointCloud.size()-cnt);
     return true;
 }
 
@@ -344,19 +348,23 @@ bool deletePointRecurse(Ptr<OctreeNode>& _node)
     }
 }
 
-void insertPointRecurse( Ptr<OctreeNode>& _node,  const Point3f& point, int maxDepth)
+bool insertPointRecurse( Ptr<OctreeNode>& _node,  const Point3f& point, int maxDepth)
 {
     OctreeNode& node = *_node;
-    if(!node.isPointInBound(point, node.origin, node.size))
+    bool pointInBoundFlag = node.isPointInBound(point, node.origin, node.size);
+    if(node.depth==0 && !pointInBoundFlag)
     {
         CV_Error(Error::StsBadArg, "The point is out of boundary!");
+    }
+    else if (!pointInBoundFlag){
+        return false;
     }
 
     if(node.depth == maxDepth)
     {
         node.isLeaf = true;
         node.pointList.push_back(point);
-        return;
+        return true;
     }
 
     double childSize = node.size * 0.5;
@@ -377,7 +385,7 @@ void insertPointRecurse( Ptr<OctreeNode>& _node,  const Point3f& point, int maxD
         node.children[childIndex] = new OctreeNode(node.depth + 1, childSize, childOrigin, int(childIndex));
         node.children[childIndex]->parent = _node;
     }
-    insertPointRecurse(node.children[childIndex], point, maxDepth);
+    return insertPointRecurse(node.children[childIndex], point, maxDepth);
 }
 
 // For Nearest neighbor search.
