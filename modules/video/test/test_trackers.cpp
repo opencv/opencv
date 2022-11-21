@@ -126,4 +126,34 @@ TEST(DaSiamRPN, memory_usage)
     }
 }
 
+TEST(NanoTrack, memory_usage)
+{
+    cv::Rect roi(145, 70, 85, 85);
+
+    std::string backbonePath = cvtest::findDataFile("dnn/onnx/models/nanotrack_backbone_sim.onnx", false);
+    std::string neckheadPath = cvtest::findDataFile("dnn/onnx/models/nanotrack_head_sim.onnx", false);
+    cv::TrackerNano::Params params;
+    params.backbone = backbonePath;
+    params.neckhead = neckheadPath;
+    cv::Ptr<Tracker> tracker = TrackerNano::create(params);
+
+    string inputVideo = cvtest::findDataFile("tracking/david/data/david.webm");
+    cv::VideoCapture video(inputVideo);
+    ASSERT_TRUE(video.isOpened()) << inputVideo;
+
+    cv::Mat frame;
+    video >> frame;
+    ASSERT_FALSE(frame.empty()) << inputVideo;
+    tracker->init(frame, roi);
+    string ground_truth_bb;
+    for (int nframes = 0; nframes < 15; ++nframes)
+    {
+        std::cout << "Frame: " << nframes << std::endl;
+        video >> frame;
+        bool res = tracker->update(frame, roi);
+        ASSERT_TRUE(res);
+        std::cout << "Predicted ROI: " << roi << std::endl;
+    }
+}
+
 }}  // namespace opencv_test::
