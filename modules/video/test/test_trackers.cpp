@@ -83,7 +83,6 @@ TEST(GOTURN, memory_usage)
     video >> frame;
     ASSERT_FALSE(frame.empty()) << inputVideo;
     tracker->init(frame, roi);
-    string ground_truth_bb;
     for (int nframes = 0; nframes < 15; ++nframes)
     {
         std::cout << "Frame: " << nframes << std::endl;
@@ -115,7 +114,6 @@ TEST(DaSiamRPN, memory_usage)
     video >> frame;
     ASSERT_FALSE(frame.empty()) << inputVideo;
     tracker->init(frame, roi);
-    string ground_truth_bb;
     for (int nframes = 0; nframes < 15; ++nframes)
     {
         std::cout << "Frame: " << nframes << std::endl;
@@ -145,7 +143,6 @@ TEST(NanoTrack, memory_usage)
     video >> frame;
     ASSERT_FALSE(frame.empty()) << inputVideo;
     tracker->init(frame, roi);
-    string ground_truth_bb;
     for (int nframes = 0; nframes < 15; ++nframes)
     {
         std::cout << "Frame: " << nframes << std::endl;
