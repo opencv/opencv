@@ -30,8 +30,8 @@ TrackerNano::~TrackerNano()
 
 TrackerNano::Params::Params()
 {
-    backbone = "./backbone.onnx";
-    neckhead = "./neckhead.onnx";
+    backbone = "backbone.onnx";
+    neckhead = "neckhead.onnx";
 #ifdef HAVE_OPENCV_DNN
     backend = dnn::DNN_BACKEND_DEFAULT;
     target = dnn::DNN_TARGET_CPU;
@@ -114,10 +114,6 @@ public:
 
     TrackerNano::Params params;
 
-protected:
-    dnn::Net backbone, neckhead;
-    Mat image;
-
     struct trackerConfig
     {
         int exemplarSize = 127;
@@ -128,23 +124,25 @@ protected:
         bool swapRB = true;
         int totalStride = 16;
         float penaltyK = 0.055f;
-
-        int scoreSize = (instanceSize - exemplarSize) / totalStride + 8;
-
-        Mat hanningWindow;
-        Mat grid2searchX, grid2searchY;
-
-        Size imgSize = {0, 0};
     };
 
+protected:
     trackerConfig trackState;
+    int scoreSize;
+    Size imgSize = {0, 0};
+    Mat hanningWindow;
+    Mat grid2searchX, grid2searchY;
+
+    dnn::Net backbone, neckhead;
+    Mat image;
+
     void getSubwindow(Mat& dstCrop, Mat& srcImg, int originalSz, int resizeSz);
     void generateGrids();
 };
 
 void TrackerNanoImpl::generateGrids()
 {
-    int sz = trackState.scoreSize;
+    int sz = scoreSize;
     const int sz2 = sz / 2;
 
     std::vector<float> x1Vec(sz, 0);
@@ -156,18 +154,20 @@ void TrackerNanoImpl::generateGrids()
 
     Mat x1M(1, sz, CV_32FC1, x1Vec.data());
 
-    cv::repeat(x1M, sz, 1, trackState.grid2searchX);
-    cv::repeat(x1M.t(), 1, sz, trackState.grid2searchY);
+    cv::repeat(x1M, sz, 1, grid2searchX);
+    cv::repeat(x1M.t(), 1, sz, grid2searchY);
 
-    trackState.grid2searchX *= trackState.totalStride;
-    trackState.grid2searchY *= trackState.totalStride;
+    grid2searchX *= trackState.totalStride;
+    grid2searchY *= trackState.totalStride;
 
-    trackState.grid2searchX += trackState.instanceSize/2;
-    trackState.grid2searchY += trackState.instanceSize/2;
+    grid2searchX += trackState.instanceSize/2;
+    grid2searchY += trackState.instanceSize/2;
 }
 
 void TrackerNanoImpl::init(InputArray image_, const Rect &boundingBox_)
 {
+    scoreSize = (trackState.instanceSize - trackState.exemplarSize) / trackState.totalStride + 8;
+    trackState = trackerConfig();
     image = image_.getMat().clone();
 
     // convert Rect2d from left-up to center.
@@ -177,7 +177,7 @@ void TrackerNanoImpl::init(InputArray image_, const Rect &boundingBox_)
     targetSz[0] = float(boundingBox_.width);
     targetSz[1] = float(boundingBox_.height);
 
-    trackState.imgSize = image.size();
+    imgSize = image.size();
 
     // Extent the bounding box.
     float sumSz = targetSz[0] + targetSz[1];
@@ -193,7 +193,7 @@ void TrackerNanoImpl::init(InputArray image_, const Rect &boundingBox_)
     Mat out = backbone.forward(); // Feature extraction.
     neckhead.setInput(out, "input1");
 
-    createHanningWindow(trackState.hanningWindow, Size(trackState.scoreSize, trackState.scoreSize), CV_32F);
+    createHanningWindow(hanningWindow, Size(scoreSize, scoreSize), CV_32F);
     generateGrids();
 }
 
@@ -263,19 +263,19 @@ bool TrackerNanoImpl::update(InputArray image_, Rect &boundingBoxRes)
     Mat clsScore = outs[0]; // 1x2x16x16
     Mat bboxPred = outs[1]; // 1x4x16x16
 
-    clsScore = clsScore.reshape(0, {2, trackState.scoreSize, trackState.scoreSize});
-    bboxPred = bboxPred.reshape(0, {4, trackState.scoreSize, trackState.scoreSize});
+    clsScore = clsScore.reshape(0, {2, scoreSize, scoreSize});
+    bboxPred = bboxPred.reshape(0, {4, scoreSize, scoreSize});
 
     Mat scoreSoftmax; // 2x16x16
     softmax(clsScore, scoreSoftmax);
 
     Mat score = scoreSoftmax.row(1);
-    score = score.reshape(0, {trackState.scoreSize, trackState.scoreSize});
+    score = score.reshape(0, {scoreSize, scoreSize});
 
-    Mat predX1 = trackState.grid2searchX - bboxPred.row(0).reshape(0, {trackState.scoreSize, trackState.scoreSize});
-    Mat predY1 = trackState.grid2searchY - bboxPred.row(1).reshape(0, {trackState.scoreSize, trackState.scoreSize});
-    Mat predX2 = trackState.grid2searchX + bboxPred.row(2).reshape(0, {trackState.scoreSize, trackState.scoreSize});
-    Mat predY2 = trackState.grid2searchY + bboxPred.row(3).reshape(0, {trackState.scoreSize, trackState.scoreSize});
+    Mat predX1 = grid2searchX - bboxPred.row(0).reshape(0, {scoreSize, scoreSize});
+    Mat predY1 = grid2searchY - bboxPred.row(1).reshape(0, {scoreSize, scoreSize});
+    Mat predX2 = grid2searchX + bboxPred.row(2).reshape(0, {scoreSize, scoreSize});
+    Mat predY2 = grid2searchY + bboxPred.row(3).reshape(0, {scoreSize, scoreSize});
 
     // size penalty
     // scale penalty
@@ -285,7 +285,7 @@ bool TrackerNanoImpl::update(InputArray image_, Rect &boundingBoxRes)
     // ratio penalty
     float ratioVal = targetSz[0] / targetSz[1];
 
-    Mat ratioM(trackState.scoreSize, trackState.scoreSize, CV_32FC1, Scalar::all(ratioVal));
+    Mat ratioM(scoreSize, scoreSize, CV_32FC1, Scalar::all(ratioVal));
     Mat rc = ratioM / ((predX2 - predX1) / (predY2 - predY1));
     elementReciprocalMax(rc);
 
@@ -294,7 +294,7 @@ bool TrackerNanoImpl::update(InputArray image_, Rect &boundingBoxRes)
     Mat pscore = penalty.mul(score);
 
     // Window penalty
-    pscore = pscore * (1.0 - trackState.windowInfluence) + trackState.hanningWindow * trackState.windowInfluence;
+    pscore = pscore * (1.0 - trackState.windowInfluence) + hanningWindow * trackState.windowInfluence;
 
     // get Max
     int bestID[2] = { 0, 0 };
@@ -325,10 +325,10 @@ bool TrackerNanoImpl::update(InputArray image_, Rect &boundingBoxRes)
     float resW = predW * lr + (1 - lr) * targetSz[0];
     float resH = predH * lr + (1 - lr) * targetSz[1];
 
-    resX = std::max(0.f, std::min((float)trackState.imgSize.width, resX));
-    resY = std::max(0.f, std::min((float)trackState.imgSize.height, resY));
-    resW = std::max(10.f, std::min((float)trackState.imgSize.width, resW));
-    resH = std::max(10.f, std::min((float)trackState.imgSize.height, resH));
+    resX = std::max(0.f, std::min((float)imgSize.width, resX));
+    resY = std::max(0.f, std::min((float)imgSize.height, resY));
+    resW = std::max(10.f, std::min((float)imgSize.width, resW));
+    resH = std::max(10.f, std::min((float)imgSize.height, resH));
 
     targetPos[0] = resX;
     targetPos[1] = resY;
