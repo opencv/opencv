@@ -32,6 +32,7 @@
 #include <va/va_backend.h>
 #ifdef HAVE_VA_INTEL
 #include "opencv2/core/va_intel.hpp"
+#include "opencv2/core/va_intel_interop.hpp"
 #ifndef CL_TARGET_OPENCL_VERSION
 #define CL_TARGET_OPENCL_VERSION 120
 #endif
@@ -473,9 +474,16 @@ void hw_init_opencl(AVBufferRef* ctx) {
     if (!hw_device_ctx)
         return;
 #ifdef HAVE_VA_INTEL
-    VADisplay va_display = hw_get_va_display(hw_device_ctx);
-    if (va_display) {
-        va_intel::ocl::initializeContextFromVA(va_display);
+    ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
+    cv::va_intel::VAAPIInterop* interop = ocl_context.getContext().getUserContext<cv::va_intel::VAAPIInterop>().get();
+    //only initialize the context automatically if it isn't already
+    if(!interop) {
+        VADisplay va_display = hw_get_va_display(hw_device_ctx);
+        if (va_display) {
+            va_intel::ocl::initializeContextFromVA(va_display);
+        }
+    } else {
+        CV_LOG_DEBUG(NULL, "OpenCL/VA_INTEL: CL/VA interop already initialized. ")
     }
 #endif
 #ifdef HAVE_D3D11

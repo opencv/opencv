@@ -12,7 +12,6 @@
 #  error va_intel.hpp header must be compiled as C++
 #endif
 
-#include "opencv2/core.hpp"
 #include "ocl.hpp"
 
 #if defined(HAVE_VA)

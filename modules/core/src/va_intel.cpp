@@ -19,21 +19,15 @@ using namespace cv;
 
 ////////////////////////////////////////////////////////////////////////
 // CL-VA Interoperability
-
 #ifdef HAVE_OPENCL
 #  include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #  include "opencv2/core.hpp"
 #  include "opencv2/core/ocl.hpp"
 #  include "opencl_kernels_core.hpp"
+#  ifdef HAVE_VA_INTEL
+#    include "opencv2/core/va_intel_interop.hpp"
+#  endif
 #endif // HAVE_OPENCL
-
-#ifdef HAVE_VA_INTEL
-#ifdef HAVE_VA_INTEL_OLD_HEADER
-#  include <CL/va_ext.h>
-#else
-#  include <CL/cl_va_api_media_sharing_intel.h>
-#endif
-#endif
 
 #ifdef HAVE_VA
 #ifndef OPENCV_LIBVA_LINK
@@ -46,36 +40,7 @@ static void init_libva() { /* nothing */ }
 using namespace cv::detail;
 #endif
 
-namespace cv { namespace va_intel {
-
-#ifdef HAVE_VA_INTEL
-
-class VAAPIInterop : public ocl::Context::UserContext
-{
-public:
-    VAAPIInterop(cl_platform_id platform) {
-        clCreateFromVA_APIMediaSurfaceINTEL       = (clCreateFromVA_APIMediaSurfaceINTEL_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromVA_APIMediaSurfaceINTEL");
-        clEnqueueAcquireVA_APIMediaSurfacesINTEL  = (clEnqueueAcquireVA_APIMediaSurfacesINTEL_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireVA_APIMediaSurfacesINTEL");
-        clEnqueueReleaseVA_APIMediaSurfacesINTEL  = (clEnqueueReleaseVA_APIMediaSurfacesINTEL_fn)
-                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseVA_APIMediaSurfacesINTEL");
-        if (!clCreateFromVA_APIMediaSurfaceINTEL ||
-            !clEnqueueAcquireVA_APIMediaSurfacesINTEL ||
-            !clEnqueueReleaseVA_APIMediaSurfacesINTEL) {
-            CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get extension function for VA-API interop");
-        }
-    }
-    virtual ~VAAPIInterop() {
-    }
-    clCreateFromVA_APIMediaSurfaceINTEL_fn       clCreateFromVA_APIMediaSurfaceINTEL;
-    clEnqueueAcquireVA_APIMediaSurfacesINTEL_fn  clEnqueueAcquireVA_APIMediaSurfacesINTEL;
-    clEnqueueReleaseVA_APIMediaSurfacesINTEL_fn  clEnqueueReleaseVA_APIMediaSurfacesINTEL;
-};
-
-#endif // HAVE_VA_INTEL
-
-namespace ocl {
+namespace cv { namespace va_intel { namespace ocl {
 
 Context& initializeContextFromVA(VADisplay display)
 {
@@ -541,7 +506,7 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
                 "Invalid VADisplay passed to convertFromVASurface");
 
     if(!interop) {
-        CV_Error(cv::Error::StsError,
+        CV_LOG_DEBUG(NULL,
                 "OpenCL/VA_INTEL: Can't interop with current OpenCL context - missing VAAPIInterop API. "
                 "OpenCL context should be created through initializeContextFromVA()");
     } else {
@@ -686,7 +651,7 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
                 "Invalid VADisplay passed to convertFromVASurface");
 
     if(!interop) {
-        CV_Error(cv::Error::StsError,
+        CV_LOG_DEBUG(NULL,
                 "OpenCL/VA_INTEL: Can't interop with current OpenCL context - missing VAAPIInterop API. "
                 "OpenCL context should be created through initializeContextFromVA()");
     } else {
