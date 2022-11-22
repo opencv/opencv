@@ -54,21 +54,21 @@ public:
     int   getIntegrateHeight() const;
 
 
-    /** @brief Sets the width of the raycasted image.
+    /** @brief Sets the width of the raycasted image, used when user does not provide it at raycast() call.
     * @param val input value.
     */
     void  setRaycastWidth(int val);
 
-    /** @brief Returns the width of the raycasted image.
+    /** @brief Returns the width of the raycasted image, used when user does not provide it at raycast() call.
     */
     int   getRaycastWidth() const;
 
-    /** @brief Sets the height of the raycasted image.
+    /** @brief Sets the height of the raycasted image, used when user does not provide it at raycast() call.
     * @param val input value.
     */
     void  setRaycastHeight(int val);
 
-    /** @brief Returns the height of the raycasted image.
+    /** @brief Returns the height of the raycasted image, used when user does not provide it at raycast() call.
     */
     int   getRaycastHeight() const;
 
