@@ -1422,19 +1422,28 @@ TEST(ColorTSDF_CPU, valid_points_common_framesize_fetch)
 }
 
 
+// used to store current OpenCL status (on/off) and revert it after test is done
+// works even after exceptions thrown in test body
+struct OpenCLStatusRevert
+{
+    OpenCLStatusRevert(bool oclStatus) : originalOpenCLStatus(oclStatus) { }
+    ~OpenCLStatusRevert()
+    {
+        cv::ocl::setUseOpenCL(originalOpenCLStatus);
+    }
+    bool originalOpenCLStatus;
+};
+
 class StaticVolumeBoundingBox : public ::testing::TestWithParam<VolumeType>
 { };
 
 TEST_P(StaticVolumeBoundingBox, boundingBoxCPU)
 {
-    bool revertOcl = cv::ocl::useOpenCL();
-    if (revertOcl)
-        cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
+
+    cv::ocl::setUseOpenCL(false);
 
     staticBoundingBoxTest(GetParam());
-
-    if (revertOcl)
-        cv::ocl::setUseOpenCL(true);
 }
 
 INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(VolumeType::TSDF, VolumeType::ColorTSDF));
@@ -1475,17 +1484,12 @@ TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
     bool gpu = std::get<0>(p);
     bool enableGrowth = std::get<1>(p);
 
-    bool revertOcl = false;
-    if (!gpu)
-        revertOcl = cv::ocl::useOpenCL();
+    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
 
-    if (revertOcl)
+    if (!gpu)
         cv::ocl::setUseOpenCL(false);
 
     boundingBoxGrowthTest(enableGrowth);
-
-    if (revertOcl)
-        cv::ocl::setUseOpenCL(false);
 }
 
 INSTANTIATE_TEST_CASE_P(TSDF, BoundingBoxEnableGrowthTest, ::testing::Combine(::testing::Bool(), ::testing::Bool()));
