@@ -191,10 +191,12 @@ public:
         outshape.layout = inpshape.layout;
         outshape.ndims = inpshape.ndims;
         int nspatdims = inpshape.ndims - 2;
-        CV_Assert(strides.size() == (size_t)nspatdims);
-        CV_Assert(kernel_size.size() == (size_t)nspatdims);
-        CV_Assert(pads_begin.size() == (size_t)nspatdims);
-        CV_Assert(pads_end.size() == (size_t)nspatdims);
+        if (!globalPooling) {
+            CV_Assert(strides.size() == (size_t)nspatdims);
+            CV_Assert(kernel_size.size() == (size_t)nspatdims);
+            CV_Assert(pads_begin.size() == (size_t)nspatdims);
+            CV_Assert(pads_end.size() == (size_t)nspatdims);
+        }
 
         outshape.ndims = inpshape.ndims;
         outshape.layout = outshape.layout;
@@ -433,6 +435,12 @@ public:
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+        int ndims = inputs[0].dims;
+
+        for (int i = 2; i < ndims; i++) {
+            if (isGlobalPooling.at(i-1))
+                kernel_size.at(i-1) = inputs[0].size[i];
+        }
 
         switch (type)
         {
