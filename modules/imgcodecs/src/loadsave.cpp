@@ -662,7 +662,7 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
 }
 
 static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
-                      const std::vector<int>& params, bool flipv )
+                      const std::vector<int>& params_, bool flipv )
 {
     bool isMultiImg = img_vec.size() > 1;
     std::vector<Mat> write_vec;
@@ -696,7 +696,27 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     }
 
     encoder->setDestination( filename );
-    CV_Assert(params.size() <= CV_IO_MAX_IMAGE_PARAMS*2);
+#if CV_VERSION_MAJOR < 5 && defined(HAVE_IMGCODEC_HDR)
+    bool fixed = false;
+    std::vector<int> params_pair(2);
+    if (dynamic_cast<HdrEncoder*>(encoder.get()))
+    {
+        if (params_.size() == 1)
+        {
+            CV_LOG_WARNING(NULL, "imwrite() accepts key-value pair of parameters, but single value is passed. "
+                                 "HDR encoder behavior has been changed, please use IMWRITE_HDR_COMPRESSION key.");
+            params_pair[0] = IMWRITE_HDR_COMPRESSION;
+            params_pair[1] = params_[0];
+            fixed = true;
+        }
+    }
+    const std::vector<int>& params = fixed ? params_pair : params_;
+#else
+    const std::vector<int>& params = params_;
+#endif
+
+    CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
+    CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
     bool code = false;
     try
     {
@@ -936,7 +956,7 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
 }
 
 bool imencode( const String& ext, InputArray _image,
-               std::vector<uchar>& buf, const std::vector<int>& params )
+               std::vector<uchar>& buf, const std::vector<int>& params_ )
 {
     CV_TRACE_FUNCTION();
 
@@ -957,6 +977,28 @@ bool imencode( const String& ext, InputArray _image,
         image.convertTo(temp, CV_8U);
         image = temp;
     }
+
+#if CV_VERSION_MAJOR < 5 && defined(HAVE_IMGCODEC_HDR)
+    bool fixed = false;
+    std::vector<int> params_pair(2);
+    if (dynamic_cast<HdrEncoder*>(encoder.get()))
+    {
+        if (params_.size() == 1)
+        {
+            CV_LOG_WARNING(NULL, "imwrite() accepts key-value pair of parameters, but single value is passed. "
+                                 "HDR encoder behavior has been changed, please use IMWRITE_HDR_COMPRESSION key.");
+            params_pair[0] = IMWRITE_HDR_COMPRESSION;
+            params_pair[1] = params_[0];
+            fixed = true;
+        }
+    }
+    const std::vector<int>& params = fixed ? params_pair : params_;
+#else
+    const std::vector<int>& params = params_;
+#endif
+
+    CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
+    CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
 
     bool code;
     if( encoder->setDestination(buf) )
