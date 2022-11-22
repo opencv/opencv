@@ -13,7 +13,7 @@ namespace cv {
 
 void preCalculationPixNorm(Size size, const Intr& intrinsics, Mat& pixNorm)
 {
-    //std::cout << "preCalculationPixNorm" << std::endl;
+    CV_TRACE_FUNCTION();
 
     Point2f fl(intrinsics.fx, intrinsics.fy);
     Point2f pp(intrinsics.cx, intrinsics.cy);
@@ -332,10 +332,7 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& volu
 void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
     InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
-    //std::cout << "ocl_integrateTsdfVolumeUnit" << std::endl;
-
     CV_TRACE_FUNCTION();
-    //CV_UNUSED(frameId);
     CV_Assert(!_depth.empty());
 
     UMat depth = _depth.getUMat();
@@ -621,10 +618,10 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
                            int height, int width, InputArray intr,
                            InputArray _volume, OutputArray _points, OutputArray _normals)
 {
-    //std::cout << "raycastVolumeUnit" << std::endl;
+    CV_TRACE_FUNCTION();
 
     const Size frameSize(width, height);
-    //CV_Assert(frameSize.area() > 0);
+    CV_Assert(frameSize.area() > 0);
     _points.create(frameSize, POINT_TYPE);
     _normals.create(frameSize, POINT_TYPE);
 
@@ -926,8 +923,6 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
                                int height, int width, InputArray intr,
                                InputArray _volume, OutputArray _points, OutputArray _normals)
 {
-    //std::cout << "ocl_raycastVolumeUnit" << std::endl;
-
     CV_TRACE_FUNCTION();
 
     const Size frameSize(width, height);
@@ -1023,8 +1018,6 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
 
 void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, InputArray _points, OutputArray _normals)
 {
-    //std::cout << "fetchNormalsFromTsdfVolumeUnit" << std::endl;
-
     CV_TRACE_FUNCTION();
     CV_Assert(!_points.empty());
     if (!_normals.needed())

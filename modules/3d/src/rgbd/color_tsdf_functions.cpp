@@ -25,7 +25,7 @@ void integrateColorTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
     InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _volume)
 {
-    //std::cout << "integrateColorTsdfVolumeUnit()" << std::endl;
+    CV_TRACE_FUNCTION();
 
     Depth depth = _depth.getMat();
     Colors color = _rgb.getMat();
@@ -70,7 +70,6 @@ void integrateColorTsdfVolumeUnit(
 
         v_float32x4 zStep(zStepPt.x, zStepPt.y, zStepPt.z, 0);
         v_float32x4 vfxy(projDepth.fx, projDepth.fy, 0.f, 0.f), vcxy(projDepth.cx, projDepth.cy, 0.f, 0.f);
-        v_float32x4 rgb_vfxy(projColor.fx, projColor.fy, 0.f, 0.f), rgb_vcxy(projColor.cx, projColor.cy, 0.f, 0.f);
         const v_float32x4 upLimits = v_cvt_f32(v_int32x4(depth.cols - 1, depth.rows - 1, 0, 0));
 
         for (int x = range.start; x < range.end; x++)
@@ -128,7 +127,7 @@ void integrateColorTsdfVolumeUnit(
                     v_float32x4 projected = v_muladd(camPixVec, vfxy, vcxy);
                     // leave only first 2 lanes
                     projected = v_reinterpret_as_f32(v_reinterpret_as_u32(projected) &
-                        v_uint32x4(0xFFFFFFFF, 0xFFFFFFFF, 0, 0));
+                                                     v_uint32x4(0xFFFFFFFF, 0xFFFFFFFF, 0, 0));
 
                     depthType v;
                     // bilinearly interpolate depth at projected
@@ -136,7 +135,7 @@ void integrateColorTsdfVolumeUnit(
                         const v_float32x4& pt = projected;
                         // check coords >= 0 and < imgSize
                         v_uint32x4 limits = v_reinterpret_as_u32(pt < v_setzero_f32()) |
-                            v_reinterpret_as_u32(pt >= upLimits);
+                                            v_reinterpret_as_u32(pt >= upLimits);
                         limits = limits | v_rotate_right<1>(limits);
                         if (limits.get0())
                             continue;
@@ -323,10 +322,6 @@ void integrateColorTsdfVolumeUnit(
     };
 #endif
     parallel_for_(integrateRange, IntegrateInvoker);
-    //IntegrateInvoker(integrateRange);
-
-    //std::cout << "integrateColorTsdfVolumeUnit() end" << std::endl;
-
 }
 
 
@@ -702,7 +697,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
                                 int height, int width, InputArray intr,
                                 InputArray _volume, OutputArray _points, OutputArray _normals, OutputArray _colors)
 {
-    //std::cout << "raycastColorTsdfVolumeUnit()" << std::endl;
+    CV_TRACE_FUNCTION();
 
     Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
@@ -1011,17 +1006,12 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
 #endif
 
     parallel_for_(raycastRange, RaycastInvoker);
-    //RaycastInvoker(raycastRange);
-
-    //std::cout << "raycastColorTsdfVolumeUnit() end" << std::endl;
 }
 
 
 void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
-    InputArray _points, OutputArray _normals)
+                                         InputArray _points, OutputArray _normals)
 {
-    //std::cout << "fetchNormalsFromColorTsdfVolumeUnit" << std::endl;
-
     CV_TRACE_FUNCTION();
     CV_Assert(!_points.empty());
     if (!_normals.needed())

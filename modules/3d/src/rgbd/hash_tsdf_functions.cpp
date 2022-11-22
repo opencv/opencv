@@ -991,8 +991,6 @@ void raycastHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
     InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals)
 {
-    //std::cout << "raycastHashTsdfVolumeUnit()" << std::endl;
-
     CV_TRACE_FUNCTION();
     Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
@@ -1093,7 +1091,6 @@ void raycastHashTsdfVolumeUnit(
                         stepSize = tstep;
                     }
 
-                    //std::cout << prevTsdf << " " << currTsdf << " " << currWeight << std::endl;
                     //! Surface crossing
                     if (prevTsdf > 0.f && currTsdf <= 0.f && currWeight > 0)
                     {
@@ -1123,8 +1120,6 @@ void raycastHashTsdfVolumeUnit(
     };
 
     parallel_for_(Range(0, points.rows), _HashRaycastInvoker, nstripes);
-
-    //std::cout << "raycastHashTsdfVolumeUnit() end" << std::endl;
 }
 
 #ifdef HAVE_OPENCL
