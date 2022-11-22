@@ -184,7 +184,7 @@ public:
     */
     void getCameraIntegrateIntrinsics(OutputArray val) const;
 
-    /** @brief Sets intrinsics of camera for raycast image.
+    /** @brief Sets camera intrinsics for raycast image which, used when user does not provide them at raycast() call.
     * Format of input:
     * [ fx  0 cx ]
     * [  0 fy cy ]
@@ -194,7 +194,7 @@ public:
     */
     void setCameraRaycastIntrinsics(InputArray val);
 
-    /** @brief Returns intrinsics of camera for raycast image.
+    /** @brief Returns camera intrinsics for raycast image, used when user does not provide them at raycast() call.
     * Format of output:
     * [ fx  0 cx ]
     * [  0 fy cy ]

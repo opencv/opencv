@@ -988,7 +988,7 @@ Point3f ocl_getNormalVoxel(
 #endif
 
 void raycastHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, const int volumeUnitDegree,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
     InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals)
 {
     //std::cout << "raycastHashTsdfVolumeUnit()" << std::endl;
@@ -1028,9 +1028,8 @@ void raycastHashTsdfVolumeUnit(
     const Affine3f cam2vol(pose.inv() * Affine3f(cameraPose));
     const Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
 
-    Matx33f intr;
-    settings.getCameraRaycastIntrinsics(intr);
-    const Intr intrinsics(intr);
+    Matx33f mintr(intr.getMat());
+    const Intr intrinsics(mintr);
     const Intr::Reprojector reproj(intrinsics.makeReprojector());
 
     const int nstripes = -1;
@@ -1131,7 +1130,7 @@ void raycastHashTsdfVolumeUnit(
 #ifdef HAVE_OPENCL
 
 void ocl_raycastHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, const int volumeUnitDegree,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
     const CustomHashSet& hashTable, InputArray _volUnitsData, OutputArray _points, OutputArray _normals)
 {
     CV_TRACE_FUNCTION();
@@ -1156,9 +1155,8 @@ void ocl_raycastHashTsdfVolumeUnit(
     UMat points = _points.getUMat();
     UMat normals = _normals.getUMat();
 
-    Matx33f intr;
-    settings.getCameraRaycastIntrinsics(intr);
-    Intr intrinsics(intr);
+    Matx33f mintr(intr.getMat());
+    Intr intrinsics(mintr);
     Intr::Reprojector r = intrinsics.makeReprojector();
     Vec2f finv(r.fxinv, r.fyinv), cxy(r.cx, r.cy);
 

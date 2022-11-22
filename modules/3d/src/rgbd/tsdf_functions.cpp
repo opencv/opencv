@@ -617,8 +617,9 @@ inline Point3f getNormalVoxel( const Mat& volume,
 }
 #endif
 
-void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
-                       InputArray _volume, OutputArray _points, OutputArray _normals)
+void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+                           int height, int width, InputArray intr,
+                           InputArray _volume, OutputArray _points, OutputArray _normals)
 {
     //std::cout << "raycastVolumeUnit" << std::endl;
 
@@ -648,8 +649,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
     const Point3i volResolution = Point3i(resolution);
     const Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
 
-    Matx33f intr;
-    settings.getCameraRaycastIntrinsics(intr);
+    Matx33f mintr(intr.getMat());
 
     Matx44f _pose;
     settings.getVolumePose(_pose);
@@ -663,7 +663,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
     const Mat volume = _volume.getMat();
     float voxelSize = settings.getVoxelSize();
     float voxelSizeInv = 1.0f / voxelSize;
-    const Intr::Reprojector reproj = Intr(intr).makeReprojector();
+    const Intr::Reprojector reproj = Intr(mintr).makeReprojector();
     float tstep = settings.getTsdfTruncateDistance() * settings.getRaycastStepFactor();
 
     Range raycastRange = Range(0, points.rows);
@@ -922,8 +922,9 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
 
 
 #ifdef HAVE_OPENCL
-void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
-    InputArray _volume, OutputArray _points, OutputArray _normals)
+void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+                               int height, int width, InputArray intr,
+                               InputArray _volume, OutputArray _points, OutputArray _normals)
 {
     //std::cout << "ocl_raycastVolumeUnit" << std::endl;
 
@@ -975,9 +976,8 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
     Affine3f cam2vol = pose.inv() * Affine3f(cameraPose);
     Mat(cam2vol.matrix).copyTo(cam2volGpu);
     Mat(vol2cam.matrix).copyTo(vol2camGpu);
-    Matx33f intr;
-    settings.getCameraRaycastIntrinsics(intr);
-    Intr intrinsics(intr);
+    Matx33f mintr(intr.getMat());
+    Intr intrinsics(mintr);
     Intr::Reprojector r = intrinsics.makeReprojector();
 
     const UMat volume = _volume.getUMat();

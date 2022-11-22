@@ -73,13 +73,14 @@ public:
     Rendered image size and camera intrinsics are taken from volume settings structure.
 
     * @param cameraPose the pose of camera in global coordinates.
-    * @param height the height of result image.
-    * @param width the width of result image.
+    * @param height the height of result image
+    * @param width the width of result image
+    * @param intr camera raycast intrinsics
     * @param points image to store rendered points.
     * @param normals image to store rendered normals corresponding to points.
     * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
     */
-    void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
+    void raycast(InputArray cameraPose, int height, int width, InputArray intr, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
 
     /** @brief Extract the all data from volume.
     * @param points the input exist point.

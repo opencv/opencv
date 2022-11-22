@@ -477,12 +477,13 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
@@ -506,9 +507,9 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
     if (testFunction == VolumeTestFunction::RAYCAST)
     {
         if (volumeType == VolumeType::ColorTSDF)
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals, colors);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, points, normals, colors);
         else
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, points, normals);
     }
     else if (testFunction == VolumeTestFunction::FETCH_NORMALS)
     {
@@ -611,12 +612,13 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = true;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
@@ -639,9 +641,9 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     }
 
     if (volumeType == VolumeType::ColorTSDF)
-        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals, colors);
+        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, points, normals, colors);
     else
-        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
+        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, points, normals);
 
     patchNaNs(points);
     anfas = counterOfValid(points);
@@ -658,9 +660,9 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     normals.release();
 
     if (volumeType == VolumeType::ColorTSDF)
-        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, points, normals, colors);
+        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, points, normals, colors);
     else
-        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, points, normals);
+        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, points, normals);
 
     patchNaNs(points);
     profile = counterOfValid(points);

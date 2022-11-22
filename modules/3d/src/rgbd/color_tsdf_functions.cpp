@@ -712,10 +712,9 @@ inline Point3f getColorVoxel(const Mat& volume,
 #endif
 
 
-
-
-void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
-    InputArray _volume, OutputArray _points, OutputArray _normals, OutputArray _colors)
+void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &cameraPose,
+                                int height, int width, InputArray intr,
+                                InputArray _volume, OutputArray _points, OutputArray _normals, OutputArray _colors)
 {
     //std::cout << "raycastColorTsdfVolumeUnit()" << std::endl;
 
@@ -748,9 +747,8 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
     const Point3i volResolution = Point3i(resolution);
     const Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
 
-    Matx33f intr;
-    settings.getCameraRaycastIntrinsics(intr);
-    const Intr::Reprojector reprojDepth = Intr(intr).makeReprojector();
+    Matx33f mintr(intr.getMat());
+    const Intr::Reprojector reprojDepth = Intr(mintr).makeReprojector();
 
     Matx44f _pose;
     settings.getVolumePose(_pose);

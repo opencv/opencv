@@ -99,11 +99,13 @@ void TsdfVolume::integrate(InputArray, InputArray, InputArray)
 
 void TsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
 {
-    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals, colors);
+    Matx33f intr;
+    settings.getCameraRaycastIntrinsics(intr);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), intr, points, normals, colors);
 }
 
 
-void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, InputArray intr, OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
     if (_colors.needed())
         CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
@@ -116,9 +118,9 @@ void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputAr
     raycastTsdfVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals);
 #else
     if (useGPU)
-        ocl_raycastTsdfVolumeUnit(settings, cameraPose, height, width, gpu_volume, _points, _normals);
+        ocl_raycastTsdfVolumeUnit(settings, cameraPose, height, width, intr, gpu_volume, _points, _normals);
     else
-        raycastTsdfVolumeUnit(settings, cameraPose, height, width, cpu_volume, _points, _normals);
+        raycastTsdfVolumeUnit(settings, cameraPose, height, width, intr, cpu_volume, _points, _normals);
 #endif
 }
 
@@ -293,11 +295,13 @@ void HashTsdfVolume::integrate(InputArray, InputArray, InputArray)
 
 void HashTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
 {
-    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals, colors);
+    Matx33f intr;
+    settings.getCameraRaycastIntrinsics(intr);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), intr, points, normals, colors);
 }
 
 
-void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, InputArray intr, OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
     if (_colors.needed())
         CV_Error(cv::Error::StsBadFunc, "This volume doesn't support vertex colors");
@@ -308,9 +312,9 @@ void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, Outp
     raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volumeUnitDegree, volUnitsData, volumeUnits, _points, _normals);
 #else
     if (useGPU)
-        ocl_raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volumeUnitDegree, hashTable, gpu_volUnitsData, _points, _normals);
+        ocl_raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, hashTable, gpu_volUnitsData, _points, _normals);
     else
-        raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volumeUnitDegree, cpu_volUnitsData, cpu_volumeUnits, _points, _normals);
+        raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, cpu_volUnitsData, cpu_volumeUnits, _points, _normals);
 #endif
 }
 
@@ -525,13 +529,15 @@ void ColorTsdfVolume::integrate(InputArray _depth, InputArray _image, InputArray
 
 void ColorTsdfVolume::raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors)  const
 {
-    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), points, normals, colors);
+    Matx33f intr;
+    settings.getCameraRaycastIntrinsics(intr);
+    raycast(cameraPose, settings.getRaycastHeight(), settings.getRaycastWidth(), intr, points, normals, colors);
 }
 
-void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const
+void ColorTsdfVolume::raycast(InputArray _cameraPose, int height, int width, InputArray intr, OutputArray _points, OutputArray _normals, OutputArray _colors) const
 {
     const Matx44f cameraPose = _cameraPose.getMat();
-    raycastColorTsdfVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals, _colors);
+    raycastColorTsdfVolumeUnit(settings, cameraPose, height, width, intr, volume, _points, _normals, _colors);
 }
 
 void ColorTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
