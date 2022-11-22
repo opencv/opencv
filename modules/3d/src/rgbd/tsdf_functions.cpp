@@ -330,7 +330,7 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& volu
 
 #ifdef HAVE_OPENCL
 void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
-    InputArray _depth, InputArray _pixNorms, InputArray _volume)
+                                 InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
     CV_TRACE_FUNCTION();
     CV_Assert(!_depth.empty());
@@ -914,7 +914,6 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
 
 #endif
     parallel_for_(raycastRange, RaycastInvoker);
-    //RaycastInvoker(raycastRange);
 }
 
 

@@ -13,7 +13,7 @@ namespace cv {
 
 
 void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
-    InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _volume)
+                                  InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _volume)
 {
     Matx44f volumePose;
     settings.getVolumePose(volumePose);
@@ -21,9 +21,8 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
 }
 
 
-void integrateColorTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
-    InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _volume)
+void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
+                                  InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _volume)
 {
     CV_TRACE_FUNCTION();
 
@@ -48,10 +47,6 @@ void integrateColorTsdfVolumeUnit(
     Matx33f intr;
     settings.getCameraIntegrateIntrinsics(intr);
     const Intr::Projector projDepth = Intr(intr).makeProjector();
-
-    Matx33f rgb_intr;
-    settings.getCameraIntegrateIntrinsics(rgb_intr);
-    const Intr::Projector projColor = Intr(rgb_intr);
 
     const float dfac(1.f / settings.getDepthFactor());
     const float truncDist = settings.getTsdfTruncateDistance();
@@ -330,8 +325,8 @@ void integrateColorTsdfVolumeUnit(
 // all coordinate checks should be done in inclosing cycle
 
 inline float interpolateColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords,
-    const v_float32x4& p)
+                                   const Vec4i& volDims, const Vec8i& neighbourCoords,
+                                   const v_float32x4& p)
 {
     // tx, ty, tz = floor(p)
     v_int32x4 ip = v_floor(p);
@@ -373,8 +368,8 @@ inline float interpolateColorVoxel(const Mat& volume,
 }
 
 inline float interpolateColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords,
-    const Point3f& _p)
+                                   const Vec4i& volDims, const Vec8i& neighbourCoords,
+                                   const Point3f& _p)
 {
     v_float32x4 p(_p.x, _p.y, _p.z, 0);
     return interpolateColorVoxel(volume, volDims, neighbourCoords, p);
@@ -383,8 +378,8 @@ inline float interpolateColorVoxel(const Mat& volume,
 
 #else
 inline float interpolateColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords,
-    const Point3f& p)
+                                   const Vec4i& volDims, const Vec8i& neighbourCoords,
+                                   const Point3f& p)
 {
     int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
 
@@ -421,8 +416,8 @@ inline float interpolateColorVoxel(const Mat& volume,
 //gradientDeltaFactor is fixed at 1.0 of voxel size
 
 inline v_float32x4 getNormalColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-    const v_float32x4& p)
+                                       const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
+                                       const v_float32x4& p)
 {
     if (v_check_any(p < v_float32x4(1.f, 1.f, 1.f, 0.f)) ||
         v_check_any(p >= v_float32x4((float)(volResolution.x - 2),
@@ -482,8 +477,8 @@ inline v_float32x4 getNormalColorVoxel(const Mat& volume,
 }
 
 inline Point3f getNormalColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-    const Point3f& _p)
+                                   const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
+                                   const Point3f& _p)
 {
     v_float32x4 p(_p.x, _p.y, _p.z, 0.f);
     v_float32x4 result = getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, p);
@@ -493,8 +488,8 @@ inline Point3f getNormalColorVoxel(const Mat& volume,
 }
 #else
 inline Point3f getNormalColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-    const Point3f& p)
+                                   const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
+                                   const Point3f& p)
 {
     int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
     const RGBTsdfVoxel* volData = volume.ptr<RGBTsdfVoxel>();

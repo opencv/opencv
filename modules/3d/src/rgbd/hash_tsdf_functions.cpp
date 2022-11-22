@@ -1216,6 +1216,7 @@ void ocl_raycastHashTsdfVolumeUnit(
 }
 #endif
 
+
 void fetchNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
     const int volumeUnitDegree, InputArray _points, OutputArray _normals)
