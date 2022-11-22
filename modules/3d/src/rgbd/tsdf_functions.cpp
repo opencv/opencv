@@ -67,7 +67,7 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& volu
     TsdfVoxel* volDataStart = volume.ptr<TsdfVoxel>();
 
     Vec4i volStrides;
-    settings.getVolumeDimensions(volStrides);
+    settings.getVolumeStrides(volStrides);
 
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
@@ -366,7 +366,7 @@ void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& 
     Intr intrinsics(intr);
     Vec2f fxy(intrinsics.fx, intrinsics.fy), cxy(intrinsics.cx, intrinsics.cy);
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
 
     const float voxelSize = settings.getVoxelSize();
     const float truncatedDistance = settings.getTsdfTruncateDistance();
@@ -629,7 +629,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
     Normals normals = _normals.getMat();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -944,7 +944,7 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
     UMat normals = _normals.getUMat();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -1038,7 +1038,7 @@ void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _
     float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -1091,7 +1091,7 @@ void ocl_fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArr
     float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -1214,7 +1214,7 @@ void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputA
     float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -1312,7 +1312,7 @@ void ocl_fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, In
     float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),

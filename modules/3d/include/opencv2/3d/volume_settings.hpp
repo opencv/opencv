@@ -159,10 +159,10 @@ public:
     void getVolumeResolution(OutputArray val) const;
 
     /** @brief Returns 3 integers representing strides by x, y and z dimension.
-        Can be used to iterate over volume unit raw data.
+        Can be used to iterate over raw volume unit data.
     * @param val output value.
     */
-    void getVolumeDimensions(OutputArray val) const;
+    void getVolumeStrides(OutputArray val) const;
 
     /** @brief Sets intrinsics of camera for integrations.
     * Format of input:
