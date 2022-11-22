@@ -52,7 +52,7 @@ public:
     virtual ~Submap() = default;
 
     virtual void integrate(InputArray _depth, const int currframeId);
-    virtual void raycast(const cv::Affine3f& cameraPose, cv::Size frameSize,
+    virtual void raycast(const cv::Affine3f& cameraPose, cv::Size frameSize, cv::Matx33f intr,
                          OutputArray points = noArray(), OutputArray normals = noArray());
 
     virtual int getTotalAllocatedBlocks() const { return int(volume.getTotalVolumeUnits()); };
@@ -112,14 +112,14 @@ void Submap<MatType>::integrate(InputArray _depth, const int currFrameId)
 }
 
 template<typename MatType>
-void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, cv::Size frameSize,
+void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, cv::Size frameSize, cv::Matx33f intr,
                               OutputArray points, OutputArray normals)
 {
     if (!points.needed() && !normals.needed())
     {
         MatType pts, nrm;
         //TODO: get depth instead of pts from raycast
-        volume.raycast(_cameraPose.matrix, frameSize.height, frameSize.height, pts, nrm);
+        volume.raycast(_cameraPose.matrix, frameSize.height, frameSize.width, intr, pts, nrm);
 
         std::vector<MatType> pch(3);
         split(pts, pch);
@@ -130,7 +130,7 @@ void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, cv::Size frameSiz
     }
     else
     {
-        volume.raycast(_cameraPose.matrix, frameSize.height, frameSize.height, points, normals);
+        volume.raycast(_cameraPose.matrix, frameSize.height, frameSize.width, intr, points, normals);
     }
 }
 
