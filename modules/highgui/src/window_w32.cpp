@@ -1939,26 +1939,19 @@ static LRESULT CALLBACK HGToolbarProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPAR
     case WM_NCCALCSIZE:
         {
             LRESULT ret = CallWindowProc(window->toolbar.toolBarProc, hwnd, uMsg, wParam, lParam);
-            int rows = (int)SendMessage(hwnd, TB_GETROWS, 0, 0);
+            CvTrackbar* trackbar = window->toolbar.first;
 
-            if(window->toolbar.rows != rows)
-            {
-                SendMessage(window->toolbar.toolbar, TB_BUTTONCOUNT, 0, 0);
-                CvTrackbar* trackbar = window->toolbar.first;
-
-                for( ; trackbar != 0; trackbar = trackbar->next )
-                {
-                    RECT rect = { 0 };
-                    SendMessage(window->toolbar.toolbar, TB_GETITEMRECT,
-                               (WPARAM)trackbar->id, (LPARAM)&rect);
-                    MoveWindow(trackbar->hwnd, rect.left + HG_BUDDY_WIDTH, rect.top,
-                               rect.right - rect.left - HG_BUDDY_WIDTH,
-                               rect.bottom - rect.top, FALSE);
-                    MoveWindow(trackbar->buddy, rect.left, rect.top,
-                               HG_BUDDY_WIDTH, rect.bottom - rect.top, FALSE);
-                }
-                window->toolbar.rows = rows;
+            for (; trackbar != 0; trackbar = trackbar->next) {
+                RECT rect = { 0 };
+                SendMessage(window->toolbar.toolbar, TB_GETITEMRECT,
+                    (WPARAM)trackbar->id, (LPARAM)&rect);
+                MoveWindow(trackbar->hwnd, rect.left + HG_BUDDY_WIDTH, rect.top,
+                    rect.right - rect.left - HG_BUDDY_WIDTH,
+                    rect.bottom - rect.top, FALSE);
+                MoveWindow(trackbar->buddy, rect.left, rect.top,
+                    HG_BUDDY_WIDTH, rect.bottom - rect.top, FALSE);
             }
+            window->toolbar.rows = static_cast<int>(SendMessage(hwnd, TB_GETROWS, 0, 0));
             return ret;
         }
     }
