@@ -586,16 +586,16 @@ public:
             int l = input[1].size[dims - 1];
             for (size_t i = 0; i < numSlice; i++)
             {
-                Mat inpSlice(m, n, CV_32F, inpData);
-                Mat weightSlice(k, l, CV_32F, weightData);
-                Mat outSlice((transA ? n : m), (transB ? l : k), CV_32F, outData);
+                Mat inpSlice(m, n, input[0].type(), inpData);
+                Mat weightSlice(k, l, input[1].type(), weightData);
+                Mat outSlice((transA ? n : m), (transB ? k : l), output[0].type(), outData);
                 Mat bias;
                 if (input.size() == 3) {
                     if (bias_ndims <= 1)
-                        bias = Mat(1, input[2].size[0], CV_32F, outData);
+                        bias = Mat(1, input[2].size[0], input[2].type(), input[2].data);
                     else {
                         CV_Assert(bias_ndims == dims);
-                        bias = Mat(input[2].size[dims-2], input[2].size[dims-1], CV_32F, outData);
+                        bias = Mat(input[2].size[dims-2], input[2].size[dims-1], input[2].type(), input[2].data);
                     }
                 }
                 gemm(inpSlice, weightSlice, alpha, bias, beta, outSlice,

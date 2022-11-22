@@ -52,6 +52,7 @@ public:
         if(params.get<bool>("scale_bias", false))
             hasWeights = hasBias = true;
         epsilon = params.get<float>("eps", 1E-5);
+        CV_Assert(epsilon >= 0);
 
         if (blobs.size() >= 2)
             initWeightsBias();
@@ -112,6 +113,31 @@ public:
             float w = (hasWeights ? weightsData[i] : 1.0f) / sqrt(stdData[i] * varMeanScale + epsilon);
             dstWeightsData[i] = w;
             dstBiasData[i] = (hasBias ? biasData[i] : 0.0f) - w * meanData[i] * varMeanScale;
+        }
+    }
+
+    void initWeightBias2(const std::vector<Mat>& inputs)
+    {
+        CV_Assert(inputs.size() == 5);
+        size_t i, C = inputs[1].total();
+        for (i = 1; i < 5; i++) {
+            CV_Assert(inputs[i].total() == C);
+            CV_Assert(inputs[i].type() == CV_32F);
+            CV_Assert(inputs[i].isContinuous());
+        }
+        weights_.create(1, (int)C, CV_32F);
+        bias_.create(1, (int)C, CV_32F);
+        const float* inpscale = inputs[1].ptr<float>();
+        const float* inpbias = inputs[2].ptr<float>();
+        const float* inpmean = inputs[3].ptr<float>();
+        const float* inpvar = inputs[4].ptr<float>();
+        float* wptr = weights_.ptr<float>();
+        float* bptr = bias_.ptr<float>();
+        for (i = 0; i < C; i++) {
+            float w = inpscale[i]/sqrtf(inpvar[i] + epsilon);
+            float b = inpbias[i] - inpmean[i]*w;
+            wptr[i] = w;
+            bptr[i] = b;
         }
     }
 
@@ -281,14 +307,16 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        CV_Assert(blobs.size() >= 2);
-        CV_Assert(inputs.size() == 1);
+        CV_Assert((inputs.size() == 1 && blobs.size() >= 2) ||
+                  (inputs.size() == 5 && blobs.empty()));
 
         Mat &inpBlob = inputs[0];
         int planeSize = 1;
         for (size_t i = 2; i < inpBlob.dims; i++) {
             planeSize *= inpBlob.size[i];
         }
+        if (blobs.empty())
+            initWeightBias2(inputs);
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {

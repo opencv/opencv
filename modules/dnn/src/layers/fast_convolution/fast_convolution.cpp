@@ -645,7 +645,6 @@ void runFastConv2d(InputArray _input, OutputArray _output,
                     int n = ng / ngroups, g = ng - n * ngroups;
                     size_t inp_plane_ofs = (size_t) (n * ngroups + g) * Cg * inp_planesize;
                     kyx1 = kyx1 <= Kstripes ? kyx1 : Kstripes; // Guarantee that maximum kyx1 is Kstripes.
-                    subtask += kyx1 - kyx0;
                     int k0, k1;
                     int yx0, yx_limit;
 
@@ -685,6 +684,7 @@ void runFastConv2d(InputArray _input, OutputArray _output,
                         matMulCompute(outptr0, inpbuf_task, cbuf, conv, HkWkCg, k0, k1, yx0, yx1, out_planesize, g,
                                       Kg, Kg_aligned, partial0, activ, minval, maxval, ifMinMaxAct);
                     }
+                    subtask += kyx1 - kyx0;
                 }
             }
         });

@@ -80,6 +80,12 @@ public:
                backendId == DNN_BACKEND_CUDA;
     }
 
+    virtual void serialize(LayerParams& params) const CV_OVERRIDE
+    {
+        Layer::serialize(params);
+        params.set("axis", _startAxis);
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -114,6 +120,45 @@ public:
         outputs.resize(inputs.size(), outputShapeVec);
 
         return true;
+    }
+
+    virtual void inferOutputShapes(const Net2& net,
+                                   const std::vector<int>& inputs,
+                                   const std::vector<int>& inptypes,
+                                   const std::vector<TensorShape>& inpshapes,
+                                   const std::vector<int>& outputs,
+                                   std::vector<int>& outtypes,
+                                   std::vector<TensorShape>& outshapes) CV_OVERRIDE
+    {
+        size_t ninputs = inputs.size(), noutputs = outputs.size();
+        CV_Assert(ninputs == 1 && noutputs == 1);
+        int inptyp = inptypes[0];
+        const TensorShape& inpshape = inpshapes[0];
+        TensorShape outshape;
+
+        int i, ndims = inpshape.ndims;
+        int outtyp = inptyp;
+
+        int axis = normalize_axis(_startAxis, ndims);
+        int64_t sz0 = 1, sz1 = 1;
+
+        for (i = 0; i < ndims; i++) {
+            int64_t sz = inpshape.shape[i];
+            if (i < axis)
+                sz0 *= sz;
+            else
+                sz1 *= sz;
+        }
+
+        outshape.layout = DNN_LAYOUT_ND;
+        outshape.ndims = 2;
+        outshape.shape[0] = sz0;
+        outshape.shape[1] = sz1;
+
+        outtypes.resize(noutputs);
+        outshapes.resize(noutputs);
+        outtypes[0] = outtyp;
+        outshapes[0] = outshape;
     }
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE

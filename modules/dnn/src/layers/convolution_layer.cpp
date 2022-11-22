@@ -139,20 +139,27 @@ public:
                                    std::vector<TensorShape>& outshapes) CV_OVERRIDE
     {
         size_t ninputs = inputs.size(), noutputs = outputs.size();
-        CV_Assert(ninputs == 3 && noutputs == 1);
-        int inptyp = inptypes[0], wtyp = inptypes[1], btyp = inptypes[2];
+        CV_Assert(ninputs == 2 || ninputs == 3);
+        CV_Assert(noutputs == 1);
+        int inptyp = inptypes[0], wtyp = inptypes[1];
         const TensorShape& inpshape = inpshapes[0];
         const TensorShape& wshape = inpshapes[1];
-        const TensorShape& bshape = inpshapes[2];
         TensorShape outshape;
 
         CV_Assert(inptyp == CV_16F || inptyp == CV_32F);
-        CV_Assert(wtyp == CV_32F && btyp == CV_32F); // [TODO] support quantized models
+        CV_Assert(wtyp == CV_32F); // [TODO] support quantized models
+        CV_Assert(wshape.ndims == inpshape.ndims); // [TODO] support block layout
+
+        if (ninputs >= 3) {
+            int btyp = inptypes[2];
+            const TensorShape& bshape = inpshapes[2];
+            CV_Assert(bshape.ndims == 1);
+            CV_Assert(bshape.shape[0] == wshape.shape[0]);
+            CV_Assert(btyp == CV_32F);
+        }
 
         DataLayout inplayout = inpshape.layout;
         int c_idx = inplayout == DNN_LAYOUT_NHWC ? inpshape.ndims-1 : 1;
-        CV_Assert(wshape.ndims == inpshape.ndims); // [TODO] support block layout
-        CV_Assert(bshape.ndims == 1);
 
         int outtyp = inptyp;
         outshape.layout = inpshape.layout;
@@ -163,7 +170,7 @@ public:
         CV_Assert(kernel_size.size() == (size_t)nspatdims);
         CV_Assert(pads_begin.size() == (size_t)nspatdims);
         CV_Assert(pads_end.size() == (size_t)nspatdims);
-        CV_Assert(bshape.shape[0] == wshape.shape[0]);
+
 
         outshape.ndims = inpshape.ndims;
         outshape.layout = outshape.layout;
@@ -2059,12 +2066,14 @@ public:
                 weightsMat = wm_buffer.colRange(0, wm.cols);
 
                 wm.copyTo((const Mat&)weightsMat);
-                if (inputs.size() > 2)
-                {
+                if (inputs.size() > 2) {
                     Mat biasMat = inputs[2].reshape(1, outCn);
                     biasMat.col(0).copyTo(biasvec);
+                } else {
+                    biasvec.resize(outCn, 0.f);
                 }
-                biasvec.resize(outCn + 2, 0);
+                biasvec.push_back(0.f);
+                biasvec.push_back(0.f);
             }
         }
         /*if (inputs[0].dims > 3) {

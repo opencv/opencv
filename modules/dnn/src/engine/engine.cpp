@@ -304,8 +304,6 @@ void Net2::Impl::forwardGraph(const Graph& graph)
                 dumpArg("Input", (int)j, argidx, false);
             }
         }
-        if (layer->type == "Reshape")
-            putchar('.');
 
         inptensors.clear();
         inpshapes.clear();
