@@ -587,6 +587,8 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 
     [window setContentView:[[CVView alloc] init]];
 
+    [NSApp activateIgnoringOtherApps:YES];
+
     [window setHasShadow:YES];
     [window setAcceptsMouseMovedEvents:YES];
     [window useOptimizedDrawing:YES];
