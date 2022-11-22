@@ -109,6 +109,9 @@ typedef Ptr<Layer> PLayer;
 struct Graph;
 typedef Ptr<Graph> PGraph;
 
+void fitMat(Mat& m, size_t size);
+void dump(const Tensor& t, int border=3, int maxsz_all=100, bool braces=true);
+
 struct Node
 {
     Node() {}
@@ -177,8 +180,10 @@ struct Net2::Impl
     ~Impl();
 
     void clear();
-    void useCounts(std::vector<int>& usecounts);
-    void updateUseCounts(std::vector<int>& usecounts, const Graph& graph);
+    void forward(InputArrayOfArrays inputBlobs, OutputArrayOfArrays outputBlobs);
+    void forwardGraph(const Graph& graph);
+    void useCounts(std::vector<int>& usecounts) const;
+    void updateUseCounts(std::vector<int>& usecounts, const Graph& graph) const;
     void assignBuffers();
     int addConstTensor(const std::string& name, const Tensor& t, int idx=-1);
     int addArg(int argkind, const ArgInfo& arginfo);
@@ -199,8 +204,14 @@ struct Net2::Impl
                   const std::vector<PGraph>& subgraphs,
                   const std::string& indent,
                   bool comma) const;
+    void dumpArg(const String& prefix, int i,
+                 int argidx, bool dumpdata) const;
     void dumpArgInfo(int argidx, const std::string& indent, bool comma) const;
+    bool useFP16() const;
+    void set(int propId, double value);
+    double get(int propId) const;
 
+    Net2* net;
     int modelFormat;
     OnnxInfo onnxInfo;
 
@@ -212,11 +223,13 @@ struct Net2::Impl
     std::vector<int> bufidxs;
     std::vector<Buffer> buffers;
     Graph graph;
-    int defaultLayout;
+    DataLayout defaultLayout;
     bool enableFP16;
+    bool haveFP16;
     bool trace;
     bool profile;
     bool traceProfile;
+
     Buffer scratchBuf;
     std::vector<int64_t> perfProfileTime;
     std::vector<int> perfProfileCount;

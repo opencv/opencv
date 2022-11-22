@@ -253,7 +253,7 @@ bool Layer::updateMemoryShapes(const std::vector<MatShape>& inputs)
     return true;
 }
 
-bool Layer::inferOutputShapes(const Net2& net,
+void Layer::inferOutputShapes(const Net2& net,
                                const std::vector<int>& inputs,
                                const std::vector<int>& inptypes,
                                const std::vector<TensorShape>& inpshapes,
@@ -269,7 +269,6 @@ bool Layer::inferOutputShapes(const Net2& net,
         outtypes[i] = inptypes[0];
         outshapes[i] = inpshapes[0];
     }
-    return true;
 }
 
 void Layer::serialize(LayerParams& params) const

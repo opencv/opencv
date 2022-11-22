@@ -1809,12 +1809,20 @@ UMat& _OutputArray::getUMatRef(int i) const
     }
 }
 
+std::vector<Mat>& _OutputArray::getMatVecRef() const
+{
+    _InputArray::KindFlag k = kind();
+    CV_Assert(k == STD_VECTOR_MAT);
+    return *(std::vector<Mat>*)obj;
+}
+
 cuda::GpuMat& _OutputArray::getGpuMatRef() const
 {
     _InputArray::KindFlag k = kind();
     CV_Assert( k == CUDA_GPU_MAT );
     return *(cuda::GpuMat*)obj;
 }
+
 std::vector<cuda::GpuMat>& _OutputArray::getGpuMatVecRef() const
 {
     _InputArray::KindFlag k = kind();

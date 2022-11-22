@@ -42,6 +42,7 @@
 #include <opencv2/core.hpp>
 #include <map>
 #include <ostream>
+#include <utility>
 
 #include <opencv2/dnn/dnn.hpp>
 
@@ -59,16 +60,18 @@ CV__DNN_INLINE_NS_BEGIN
  */
 struct CV_EXPORTS_W DictValue
 {
+    typedef std::pair<Mat, int> MatValue;
+
     DictValue(const DictValue &r);
-    explicit DictValue(bool i)           : type(Param::INT), ndims(0), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i ? 1 : 0; }       //!< Constructs integer scalar
-    explicit DictValue(int64 i = 0)      : type(Param::INT), ndims(0), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i; }       //!< Constructs integer scalar
-    CV_WRAP explicit DictValue(int i)    : type(Param::INT), ndims(0), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i; }       //!< Constructs integer scalar
-    explicit DictValue(unsigned p)       : type(Param::INT), ndims(0), pi(new AutoBuffer<int64,1>) { (*pi)[0] = p; }       //!< Constructs integer scalar
-    CV_WRAP explicit DictValue(double p) : type(Param::REAL), ndims(0), pd(new AutoBuffer<double,1>) { (*pd)[0] = p; }     //!< Constructs floating point scalar
-    CV_WRAP explicit DictValue(const String &s) : type(Param::STRING), ndims(0), ps(new AutoBuffer<String,1>) { (*ps)[0] = s; }   //!< Constructs string scalar
-    explicit DictValue(const char *s)    : type(Param::STRING), ndims(0), ps(new AutoBuffer<String,1>) { (*ps)[0] = s; }   //!< @overload
+    explicit DictValue(bool i)           : type(Param::INT), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i ? 1 : 0; }       //!< Constructs integer scalar
+    explicit DictValue(int64 i = 0)      : type(Param::INT), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i; }       //!< Constructs integer scalar
+    CV_WRAP explicit DictValue(int i)    : type(Param::INT), pi(new AutoBuffer<int64,1>) { (*pi)[0] = i; }       //!< Constructs integer scalar
+    explicit DictValue(unsigned p)       : type(Param::INT), pi(new AutoBuffer<int64,1>) { (*pi)[0] = p; }       //!< Constructs integer scalar
+    CV_WRAP explicit DictValue(double p) : type(Param::REAL), pd(new AutoBuffer<double,1>) { (*pd)[0] = p; }     //!< Constructs floating point scalar
+    CV_WRAP explicit DictValue(const String &s) : type(Param::STRING), ps(new AutoBuffer<String,1>) { (*ps)[0] = s; }   //!< Constructs string scalar
+    explicit DictValue(const char *s)    : type(Param::STRING), ps(new AutoBuffer<String,1>) { (*ps)[0] = s; }   //!< @overload
     explicit DictValue(const Mat& m, int real_ndims=-1) // !< Constructs tensor
-        : type(Param::MAT), ndims(real_ndims >= 0 ? real_ndims : m.dims), pv(new Mat(m))
+        : type(Param::MAT), pv(new MatValue(m, real_ndims))
     {}
 
     template<typename TypeIter>
@@ -91,8 +94,7 @@ struct CV_EXPORTS_W DictValue
     CV_WRAP int getIntValue(int idx = -1) const;
     CV_WRAP double getRealValue(int idx = -1) const;
     CV_WRAP String getStringValue(int idx = -1) const;
-    CV_WRAP Mat getMat() const;
-    CV_WRAP int getDims() const;
+    CV_WRAP MatValue getMat() const;
 
     DictValue &operator=(const DictValue &r);
 
@@ -103,8 +105,6 @@ struct CV_EXPORTS_W DictValue
 private:
 
     Param type;
-    int ndims;
-
     union
     {
         AutoBuffer<int64, 1> *pi;
@@ -113,7 +113,7 @@ private:
         void *pv;
     };
 
-    DictValue(Param _type, int _ndims, void *_p) : type(_type), ndims(_ndims), pv(_p) {}
+    DictValue(Param _type, void *_p) : type(_type), pv(_p) {}
     void release();
 };
 

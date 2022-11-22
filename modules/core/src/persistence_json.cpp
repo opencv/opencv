@@ -404,29 +404,29 @@ public:
         return ptr;
     }
 
-    char* parseKey( char* ptr, FileNode& collection, FileNode& value_placeholder )
+    char* parseKey( char* ptr, FileNode& collection, FileNode& value_placeholder, bool quoted )
     {
         if (!ptr)
             CV_PARSE_ERROR_CPP("Invalid input");
 
-        if( *ptr != '"' )
+        if( quoted && *ptr != '"' )
             CV_PARSE_ERROR_CPP( "Key must start with \'\"\'" );
 
-        char * beg = ptr + 1;
+        char* beg = ptr + (int)quoted;
 
         do {
             ++ptr;
             CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-        } while( cv_isprint(*ptr) && *ptr != '"' );
+        } while( (!quoted && cv_isalnum(*ptr)) || (quoted && cv_isprint(*ptr) && *ptr != '"'));
 
-        if( *ptr != '"' )
+        if( quoted && *ptr != '"' )
             CV_PARSE_ERROR_CPP( "Key must end with \'\"\'" );
 
         if( ptr == beg )
             CV_PARSE_ERROR_CPP( "Key is empty" );
         value_placeholder = fs->addNode(collection, std::string(beg, (size_t)(ptr - beg)), FileNode::NONE);
 
-        ptr++;
+        ptr += (int)quoted;
         ptr = skipSpaces( ptr );
         if( !ptr || !*ptr )
             return 0;
@@ -707,10 +707,10 @@ public:
             if( !ptr || !*ptr )
                 break;
 
-            if ( *ptr == '"' )
+            if ( *ptr == '"' || cv_isalnum(*ptr))
             {
                 FileNode child;
-                ptr = parseKey( ptr, node, child );
+                ptr = parseKey( ptr, node, child, *ptr == '"' );
                 if( !ptr || !*ptr )
                     break;
                 ptr = skipSpaces( ptr );

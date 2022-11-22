@@ -365,6 +365,8 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         int axis;
+        bool transA, transB;
+        float alpha, beta;
         static Ptr<InnerProductLayer> create(const LayerParams& params);
     };
 
@@ -396,6 +398,7 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         MatShape newShapeDesc;
         Range newShapeRange;
+        bool allowzero;
 
         static Ptr<ReshapeLayer> create(const LayerParams& params);
     };

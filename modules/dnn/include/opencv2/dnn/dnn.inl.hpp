@@ -51,7 +51,7 @@ CV__DNN_INLINE_NS_BEGIN
 template<typename TypeIter>
 DictValue DictValue::arrayInt(TypeIter begin, size_t size)
 {
-    DictValue res(Param::INT, 1, new AutoBuffer<int64, 1>(size));
+    DictValue res(Param::INT, new AutoBuffer<int64, 1>(size));
     for (size_t j = 0; j < size; begin++, j++)
         (*res.pi)[j] = *begin;
     return res;
@@ -60,7 +60,7 @@ DictValue DictValue::arrayInt(TypeIter begin, size_t size)
 template<typename TypeIter>
 DictValue DictValue::arrayReal(TypeIter begin, size_t size)
 {
-    DictValue res(Param::REAL, 1, new AutoBuffer<double, 1>(size));
+    DictValue res(Param::REAL, new AutoBuffer<double, 1>(size));
     for (size_t j = 0; j < size; begin++, j++)
         (*res.pd)[j] = *begin;
     return res;
@@ -69,7 +69,7 @@ DictValue DictValue::arrayReal(TypeIter begin, size_t size)
 template<typename TypeIter>
 DictValue DictValue::arrayString(TypeIter begin, size_t size)
 {
-    DictValue res(Param::STRING, 1, new AutoBuffer<String, 1>(size));
+    DictValue res(Param::STRING, new AutoBuffer<String, 1>(size));
     for (size_t j = 0; j < size; begin++, j++)
         (*res.ps)[j] = *begin;
     return res;
@@ -236,11 +236,11 @@ inline float DictValue::get<float>(int idx) const
 }
 
 template<>
-inline Mat DictValue::get<Mat>(int idx) const
+inline DictValue::MatValue DictValue::get<DictValue::MatValue>(int idx) const
 {
     CV_Assert(idx == -1 || idx == 0);
     CV_Assert(isMat());
-    return *(Mat*)pv;
+    return *(MatValue*)pv;
 }
 
 template<>
@@ -257,14 +257,9 @@ inline String DictValue::getStringValue(int idx) const
     return get<String>(idx);
 }
 
-inline Mat DictValue::getMat() const
+inline DictValue::MatValue DictValue::getMat() const
 {
-    return get<Mat>(0);
-}
-
-inline int DictValue::getDims() const
-{
-    return ndims;
+    return get<MatValue>(0);
 }
 
 inline void DictValue::release()
@@ -283,7 +278,7 @@ inline void DictValue::release()
     case Param::BOOLEAN:
         break;
     case Param::MAT:
-        delete (Mat*)pv;
+        delete (MatValue*)pv;
         break;
     case Param::MAT_VECTOR:
     case Param::ALGORITHM:
@@ -295,7 +290,6 @@ inline void DictValue::release()
         break; // unhandled
     }
     type = Param::BOOLEAN;
-    ndims = 0;
     pv = 0;
 }
 
@@ -334,7 +328,6 @@ inline DictValue & DictValue::operator=(const DictValue &r)
     }
 
     type = r.type;
-    ndims = r.ndims;
     return *this;
 }
 
@@ -342,7 +335,6 @@ inline DictValue::DictValue(const DictValue &r)
     : pv(NULL)
 {
     type = r.type;
-    ndims = r.ndims;
 
     if (r.type == Param::INT)
         pi = new AutoBuffer<int64, 1>(*r.pi);
@@ -351,7 +343,7 @@ inline DictValue::DictValue(const DictValue &r)
     else if (r.type == Param::REAL)
         pd = new AutoBuffer<double, 1>(*r.pd);
     else if (r.type == Param::MAT)
-        pv = new Mat(*(Mat*)r.pv);
+        pv = new MatValue(*(MatValue*)r.pv);
 }
 
 inline bool DictValue::isString() const
@@ -424,7 +416,7 @@ inline std::ostream &operator<<(std::ostream &stream, const DictValue &dictv)
     }
     else if (dictv.isMat())
     {
-        stream << dictv.get<Mat>();
+        stream << dictv.get<DictValue::MatValue>().first;
     }
 
     return stream;
@@ -526,7 +518,7 @@ inline std::map<String, DictValue>::const_iterator Dict::end() const
 /////////////////////////////////////////////////////////////////
 
 template<typename _Tp>
-TensorShape::TensorShape(int ndims_, const _Tp* shape_, int layout_)
+TensorShape::TensorShape(int ndims_, const _Tp* shape_, DataLayout layout_)
 {
     CV_Assert(0 <= ndims_ && ndims_ < MAX_TENSOR_DIMS);
     for (int i = 0; i < ndims_; i++)
@@ -537,7 +529,7 @@ TensorShape::TensorShape(int ndims_, const _Tp* shape_, int layout_)
 }
 
 template<typename _Tp>
-TensorShape::TensorShape(std::initializer_list<_Tp> shape_, int layout_)
+TensorShape::TensorShape(std::initializer_list<_Tp> shape_, DataLayout layout_)
 {
     size_t i, ndims_ = shape_.size();
     auto it = shape_.begin();

@@ -168,6 +168,59 @@ public:
         }
     }
 
+    virtual void inferOutputShapes(const Net2& net,
+                                   const std::vector<int>& inputs,
+                                   const std::vector<int>& inptypes,
+                                   const std::vector<TensorShape>& inpshapes,
+                                   const std::vector<int>& outputs,
+                                   std::vector<int>& outtypes,
+                                   std::vector<TensorShape>& outshapes) CV_OVERRIDE
+    {
+        size_t ninputs = inputs.size(), noutputs = outputs.size();
+        CV_Assert(ninputs == 1 && noutputs == 1);
+        int inptyp = inptypes[0];
+        const TensorShape& inpshape = inpshapes[0];
+        TensorShape outshape;
+
+        CV_Assert(inptyp == CV_16F || inptyp == CV_32F || inptyp == CV_8U);
+
+        int inplayout = inpshape.layout;
+        int c_idx = inplayout == DNN_LAYOUT_NHWC ? inpshape.ndims-1 : 1;
+
+        int outtyp = inptyp;
+        outshape.layout = inpshape.layout;
+        outshape.ndims = inpshape.ndims;
+        int nspatdims = inpshape.ndims - 2;
+        CV_Assert(strides.size() == (size_t)nspatdims);
+        CV_Assert(kernel_size.size() == (size_t)nspatdims);
+        CV_Assert(pads_begin.size() == (size_t)nspatdims);
+        CV_Assert(pads_end.size() == (size_t)nspatdims);
+
+        outshape.ndims = inpshape.ndims;
+        outshape.layout = outshape.layout;
+        for (int i = 0, j = 0; i < outshape.ndims; i++) {
+            int64_t inpsz = inpshape.shape[i], outsz;
+            if (i == 0 || i == c_idx)
+                outsz = inpsz;
+            else if (globalPooling)
+                outsz = 1;
+            else {
+                int64_t ksz = (int64_t)kernel_size[j];
+                int64_t stride = (int64_t)strides[j];
+                int64_t dilation = 1; // [TODO] add support for dilated pooling
+                int64_t pad = (int64_t)pads_begin[j] + (int64_t)pads_end[j];
+                j++;
+                outsz = (inpsz + pad - dilation*(ksz - 1) - 1)/stride + 1;
+            }
+            outshape.shape[i] = outsz;
+        }
+
+        outtypes.resize(noutputs);
+        outshapes.resize(noutputs);
+        outtypes[0] = outtyp;
+        outshapes[0] = outshape;
+    }
+
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNPool<float> > poolOp;
 #endif
@@ -385,6 +438,7 @@ public:
         {
             case MAX:
             {
+                computeMaxIdx = outputs.size() > 1;
                 CV_Assert_N(inputs.size() == 1, !computeMaxIdx || outputs.size() == 2);
                 Mat mask = computeMaxIdx ? outputs[1] : Mat();
                 maxPooling(inputs[0], outputs[0], mask);

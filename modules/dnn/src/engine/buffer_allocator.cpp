@@ -141,10 +141,6 @@ struct BufferAllocator
         size_t nargs = usecounts.size();
         bufidxs.assign(nargs, -1);
         nbufs = 0;
-        for (auto inparg : netimpl->graph.inputs) {
-            if (!netimpl->isConst(inparg))
-                bufidxs[inparg] = getFreeBuffer();
-        }
         assign(netimpl->graph);
         netimpl->bufidxs = bufidxs;
         netimpl->buffers.resize(nbufs);

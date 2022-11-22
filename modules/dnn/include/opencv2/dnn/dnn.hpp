@@ -56,7 +56,7 @@ CV__DNN_INLINE_NS_BEGIN
 //! @addtogroup dnn
 //! @{
 
-    enum Layout
+    enum DataLayout
     {
         DNN_LAYOUT_UNKNOWN = 0,
         DNN_LAYOUT_ND = 1,
@@ -70,21 +70,23 @@ CV__DNN_INLINE_NS_BEGIN
     {
         TensorShape();
         template<typename _Tp> TensorShape(int ndims, const _Tp* shape,
-                                           int layout=DNN_LAYOUT_UNKNOWN);
+                                           DataLayout layout=DNN_LAYOUT_UNKNOWN);
         template<typename _Tp> TensorShape(std::initializer_list<_Tp> shape,
-                                           int layout=DNN_LAYOUT_UNKNOWN);
+                                           DataLayout layout=DNN_LAYOUT_UNKNOWN);
         static TensorShape fromArray(InputArray m, int ndims,
-                                     int layout=DNN_LAYOUT_UNKNOWN);
-        int toMatShape(int* mshape) const;
+                                     DataLayout layout=DNN_LAYOUT_UNKNOWN);
+        int toMatShape(int* mshape, int maxdims) const;
         size_t total() const;
         bool empty() const;
         void updateC();
         enum {MAX_TENSOR_DIMS=10};
-        int layout;
+        DataLayout layout;
         int ndims;
         int64_t C;
         int64_t shape[MAX_TENSOR_DIMS];
     };
+
+    CV_EXPORTS void dump(InputArray m, int ndims, int border=3, int maxsz_all=100, bool braces=true);
 
     /**
      * @brief Enum of computation backends supported by layers.
@@ -448,7 +450,7 @@ CV__DNN_INLINE_NS_BEGIN
 
         virtual bool updateMemoryShapes(const std::vector<MatShape> &inputs);
         
-        virtual bool inferOutputShapes(const Net2& net,
+        virtual void inferOutputShapes(const Net2& net,
                                        const std::vector<int>& inpargs,
                                        const std::vector<int>& inptypes,
                                        const std::vector<TensorShape>& inpshapes,
@@ -887,11 +889,14 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS_W_SIMPLE Net2
     {
     public:
+        enum { PROP_TRACE=1, PROP_PROFILE=2 };
         CV_WRAP Net2();  //!< Default constructor.
         CV_WRAP ~Net2(); //!< Destructor frees the net only if there aren't references to the net anymore.
 
         CV_WRAP void forward(InputArrayOfArrays inputBlobs,
                              OutputArrayOfArrays outputBlobs);
+        CV_WRAP void getInputNames(std::vector<String>& inputs) const;
+        CV_WRAP void getOutputNames(std::vector<String>& outputs) const;
         CV_WRAP void set(int propId, double value);
         CV_WRAP double get(int propId) const;
         CV_WRAP void getPerfProfile(std::vector<String>& opnames, std::vector<double>& times) const;
