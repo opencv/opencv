@@ -22,7 +22,7 @@ public:
     * @param vtype the volume type [TSDF, HashTSDF, ColorTSDF].
     * @param settings the custom settings for volume.
     */
-    Volume(VolumeType vtype, const VolumeSettings& settings);
+    Volume(VolumeType vtype, VolumeSettings settings);
     virtual ~Volume();
 
     /** @brief Integrates the input data to the volume.
