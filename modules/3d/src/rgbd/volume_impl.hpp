@@ -37,6 +37,10 @@ public:
     virtual int getVisibleBlocks() const = 0;
     virtual size_t getTotalVolumeUnits() const = 0;
 
+    virtual Vec6f getBoundingBox(int precision) const = 0;
+    virtual void setEnableGrowth(bool v) = 0;
+    virtual bool getEnableGrowth() const = 0;
+
 public:
     const VolumeSettings& settings;
 #ifdef HAVE_OPENCL
@@ -64,6 +68,19 @@ public:
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
+
+    // Gets bounding box in volume coordinates with given precision:
+    // VOLUME_UNIT - up to volume unit
+    // VOXEL - up to voxel
+    // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+    virtual Vec6f getBoundingBox(int precision) const override;
+
+    // Enabels or disables new volume unit allocation during integration
+    // Applicable for HashTSDF only
+    virtual void setEnableGrowth(bool v) override;
+    // Returns if new volume units are allocated during integration or not
+    // Applicable for HashTSDF only
+    virtual bool getEnableGrowth() const override;
 
 public:
     Vec6f frameParams;
@@ -105,11 +122,26 @@ public:
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
+
+    // Enabels or disables new volume unit allocation during integration
+    // Applicable for HashTSDF only
+    virtual void setEnableGrowth(bool v) override;
+    // Returns if new volume units are allocated during integration or not
+    // Applicable for HashTSDF only
+    virtual bool getEnableGrowth() const override;
+
+    // Gets bounding box in volume coordinates with given precision:
+    // VOLUME_UNIT - up to volume unit
+    // VOXEL - up to voxel
+    // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+    virtual Vec6f getBoundingBox(int precision) const override;
+
 public:
     int lastVolIndex;
     int lastFrameId;
     Vec6f frameParams;
     int volumeUnitDegree;
+    bool enableGrowth;
 
 #ifndef HAVE_OPENCL
     Mat volUnitsData;
@@ -154,6 +186,20 @@ public:
     virtual void reset() override;
     virtual int getVisibleBlocks() const override;
     virtual size_t getTotalVolumeUnits() const override;
+
+    // Gets bounding box in volume coordinates with given precision:
+    // VOLUME_UNIT - up to volume unit
+    // VOXEL - up to voxel
+    // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+    virtual Vec6f getBoundingBox(int precision) const override;
+
+    // Enabels or disables new volume unit allocation during integration
+    // Applicable for HashTSDF only
+    virtual void setEnableGrowth(bool v) override;
+    // Returns if new volume units are allocated during integration or not
+    // Applicable for HashTSDF only
+    virtual bool getEnableGrowth() const override;
+
 private:
     Vec4i volStrides;
     Vec6f frameParams;
@@ -202,6 +248,10 @@ void Volume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, O
 void Volume::reset() { this->impl->reset(); }
 int Volume::getVisibleBlocks() const { return this->impl->getVisibleBlocks(); }
 size_t Volume::getTotalVolumeUnits() const { return this->impl->getTotalVolumeUnits(); }
+
+Vec6f Volume::getBoundingBox(int precision) const { return this->impl->getBoundingBox(precision); }
+void Volume::setEnableGrowth(bool v) { this->impl->setEnableGrowth(v); }
+bool Volume::getEnableGrowth() const { return this->impl->getEnableGrowth(); }
 
 
 }

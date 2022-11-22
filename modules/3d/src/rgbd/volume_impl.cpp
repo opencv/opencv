@@ -66,8 +66,8 @@ void TsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
     settings.getCameraIntegrateIntrinsics(intr);
     Intr intrinsics(intr);
     Vec6f newParams((float)depth.rows, (float)depth.cols,
-        intrinsics.fx, intrinsics.fy,
-        intrinsics.cx, intrinsics.cy);
+                    intrinsics.fx, intrinsics.fy,
+                    intrinsics.cx, intrinsics.cy);
     if (!(frameParams == newParams))
     {
         frameParams = newParams;
@@ -143,7 +143,6 @@ void TsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) con
         ocl_fetchPointsNormalsFromTsdfVolumeUnit(settings, gpu_volume, points, normals);
     else
         fetchPointsNormalsFromTsdfVolumeUnit(settings, cpu_volume, points, normals);
-
 #endif
 }
 
@@ -164,7 +163,7 @@ void TsdfVolume::reset()
         });
 #else
     if (useGPU)
-        gpu_volume.setTo(Scalar(0, 0));
+        gpu_volume.setTo(Scalar(floatToTsdf(0.0f), 0));
     else
         //TODO: use setTo(Scalar(0, 0))
         cpu_volume.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
@@ -177,6 +176,29 @@ void TsdfVolume::reset()
 int TsdfVolume::getVisibleBlocks() const { return 1; }
 size_t TsdfVolume::getTotalVolumeUnits() const { return 1; }
 
+
+Vec6f TsdfVolume::getBoundingBox(int precision) const
+{
+    if (precision == Volume::BoundingBoxPrecision::VOXEL)
+    {
+        CV_Error(Error::StsNotImplemented, "Voxel mode is not implemented yet");
+    }
+    else
+    {
+        float sz = this->settings.getVoxelSize();
+        Vec3f res;
+        this->settings.getVolumeResolution(res);
+        Vec3f volSize = res * sz;
+        return Vec6f(0, 0, 0, volSize[0], volSize[1], volSize[2]);
+    }
+}
+
+void TsdfVolume::setEnableGrowth(bool /*v*/) { }
+
+bool TsdfVolume::getEnableGrowth() const
+{
+    return false;
+}
 
 
 // HASH_TSDF
@@ -246,16 +268,18 @@ void HashTsdfVolume::integrate(InputArray _depth, InputArray _cameraPose)
 #endif
     }
 #ifndef HAVE_OPENCL
-    integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, depth, pixNorms, volUnitsData, volumeUnits);
+    integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, enableGrowth, depth, pixNorms, volUnitsData, volumeUnits);
     lastFrameId++;
 #else
     if (useGPU)
     {
-        ocl_integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, volumeUnitDegree, depth, gpu_pixNorms, lastVisibleIndices, volUnitsDataCopy, gpu_volUnitsData, hashTable, isActiveFlags);
+        ocl_integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, volumeUnitDegree, enableGrowth, depth, gpu_pixNorms,
+                                        lastVisibleIndices, volUnitsDataCopy, gpu_volUnitsData, hashTable, isActiveFlags);
     }
     else
     {
-        integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, depth, cpu_pixNorms, cpu_volUnitsData, cpu_volumeUnits);
+        integrateHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, volumeUnitDegree, enableGrowth, depth,
+                                    cpu_pixNorms, cpu_volUnitsData, cpu_volumeUnits);
         lastFrameId++;
     }
 #endif
@@ -324,6 +348,7 @@ void HashTsdfVolume::reset()
     CV_TRACE_FUNCTION();
     lastVolIndex = 0;
     lastFrameId = 0;
+    enableGrowth = true;
 #ifndef HAVE_OPENCL
     volUnitsData.forEach<VecTsdfVoxel>([](VecTsdfVoxel& vv, const int* /* position */)
         {
@@ -363,6 +388,92 @@ void HashTsdfVolume::reset()
 
 int HashTsdfVolume::getVisibleBlocks() const { return 1; }
 size_t HashTsdfVolume::getTotalVolumeUnits() const { return 1; }
+
+void HashTsdfVolume::setEnableGrowth(bool v)
+{
+    enableGrowth = v;
+}
+
+bool HashTsdfVolume::getEnableGrowth() const
+{
+    return enableGrowth;
+}
+
+Vec6f HashTsdfVolume::getBoundingBox(int precision) const
+{
+    if (precision == Volume::BoundingBoxPrecision::VOXEL)
+    {
+        CV_Error(Error::StsNotImplemented, "Voxel mode is not implemented yet");
+    }
+    else
+    {
+        Vec3i res;
+        this->settings.getVolumeResolution(res);
+        float voxelSize = this->settings.getVoxelSize();
+        float side = res[0] * voxelSize;
+
+        std::vector<Vec3i> vi;
+#ifndef HAVE_OPENCL
+        for (const auto& keyvalue : volumeUnits)
+        {
+            vi.push_back(keyvalue.first);
+        }
+#else
+        if (useGPU)
+        {
+            for (int row = 0; row < hashTable.last; row++)
+            {
+                Vec4i idx4 = hashTable.data[row];
+                vi.push_back(Vec3i(idx4[0], idx4[1], idx4[2]));
+            }
+        }
+        else
+        {
+            for (const auto& keyvalue : cpu_volumeUnits)
+            {
+                vi.push_back(keyvalue.first);
+            }
+        }
+#endif
+
+        if (vi.empty())
+        {
+            return Vec6f();
+        }
+        else
+        {
+            std::vector<Point3f> pts;
+            for (Vec3i idx : vi)
+            {
+                Point3f base = Point3f(idx[0], idx[1], idx[2]) * side;
+                pts.push_back(base);
+                pts.push_back(base + Point3f(side, 0, 0));
+                pts.push_back(base + Point3f(0, side, 0));
+                pts.push_back(base + Point3f(0, 0, side));
+                pts.push_back(base + Point3f(side, side, 0));
+                pts.push_back(base + Point3f(side, 0, side));
+                pts.push_back(base + Point3f(0, side, side));
+                pts.push_back(base + Point3f(side, side, side));
+            }
+
+            const float mval = std::numeric_limits<float>::max();
+            Vec6f bb(mval, mval, mval, -mval, -mval, -mval);
+            for (auto p : pts)
+            {
+                // pt in local coords
+                Point3f pg = p;
+                bb[0] = min(bb[0], pg.x);
+                bb[1] = min(bb[1], pg.y);
+                bb[2] = min(bb[2], pg.z);
+                bb[3] = max(bb[3], pg.x);
+                bb[4] = max(bb[4], pg.y);
+                bb[5] = max(bb[5], pg.z);
+            }
+
+            return bb;
+        }
+    }
+}
 
 // COLOR_TSDF
 
@@ -451,5 +562,28 @@ void ColorTsdfVolume::reset()
 
 int ColorTsdfVolume::getVisibleBlocks() const { return 1; }
 size_t ColorTsdfVolume::getTotalVolumeUnits() const { return 1; }
+
+Vec6f ColorTsdfVolume::getBoundingBox(int precision) const
+{
+    if (precision == Volume::BoundingBoxPrecision::VOXEL)
+    {
+        CV_Error(Error::StsNotImplemented, "Voxel mode is not implemented yet");
+    }
+    else
+    {
+        float sz = this->settings.getVoxelSize();
+        Vec3f res;
+        this->settings.getVolumeResolution(res);
+        Vec3f volSize = res * sz;
+        return Vec6f(0, 0, 0, volSize[0], volSize[1], volSize[2]);
+    }
+}
+
+void ColorTsdfVolume::setEnableGrowth(bool /*v*/) { }
+
+bool ColorTsdfVolume::getEnableGrowth() const
+{
+    return false;
+}
 
 }

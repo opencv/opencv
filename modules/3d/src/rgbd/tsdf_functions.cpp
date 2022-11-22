@@ -38,8 +38,6 @@ void preCalculationPixNorm(Size size, const Intr& intrinsics, Mat& pixNorm)
 #ifdef HAVE_OPENCL
 void ocl_preCalculationPixNorm(Size size, const Intr& intrinsics, UMat& pixNorm)
 {
-    //std::cout << "ocl_preCalculationPixNorm" << std::endl;
-
     // calculating this on CPU then uploading to GPU is faster than calculating this on GPU
     Mat cpuPixNorm;
     preCalculationPixNorm(size, intrinsics, cpuPixNorm);
@@ -51,7 +49,7 @@ void ocl_preCalculationPixNorm(Size size, const Intr& intrinsics, UMat& pixNorm)
 // Integrate
 
 void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
-    InputArray _depth, InputArray _pixNorms, InputArray _volume)
+                             InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
     Matx44f volumePose;
     settings.getVolumePose(volumePose);
@@ -59,12 +57,9 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& came
 }
 
 
-void integrateTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
-    InputArray _depth, InputArray _pixNorms, InputArray _volume)
+void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
+                             InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
-    //std::cout << "integrateTsdfVolumeUnit" << std::endl;
-
     Depth depth = _depth.getMat();
     Mat volume = _volume.getMat();
     Mat pixNorms = _pixNorms.getMat();

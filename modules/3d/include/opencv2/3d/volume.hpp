@@ -23,7 +23,7 @@ public:
     * @param settings the custom settings for volume.
     */
     Volume(VolumeType vtype, const VolumeSettings& settings);
-    ~Volume();
+    virtual ~Volume();
 
     /** @brief Integrates the input data to the volume.
 
@@ -102,13 +102,37 @@ public:
     */
     void reset();
 
+    //TODO: remove this
     /** @brief return visible blocks in volume.
     */
     int getVisibleBlocks() const;
 
-    /** @brief return number of vulmeunits in volume.
+    /** @brief return number of volume units in volume.
     */
     size_t getTotalVolumeUnits() const;
+
+    enum BoundingBoxPrecision
+    {
+        VOLUME_UNIT = 0,
+        VOXEL = 1
+    };
+    /** @brief Gets bounding box in volume coordinates with given precision:
+     * VOLUME_UNIT - up to volume unit
+     * VOXEL - up to voxel (currently not supported)
+     * @return (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+     */
+    virtual Vec6f getBoundingBox(int precision) const;
+
+    /**
+     * @brief Enables or disables new volume unit allocation during integration.
+     * Makes sense for HashTSDF only.
+     */
+    virtual void setEnableGrowth(bool v);
+    /**
+     * @brief Returns if new volume units are allocated during integration or not.
+     * Makes sense for HashTSDF only.
+     */
+    virtual bool getEnableGrowth() const;
 
     class Impl;
 private:
