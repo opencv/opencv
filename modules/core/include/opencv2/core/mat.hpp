@@ -354,6 +354,7 @@ public:
     Mat& getMatRef(int i=-1) const;
     UMat& getUMatRef(int i=-1) const;
     cuda::GpuMat& getGpuMatRef() const;
+    std::vector<Mat>& getMatVecRef() const;
     std::vector<cuda::GpuMat>& getGpuMatVecRef() const;
     ogl::Buffer& getOGlBufferRef() const;
     cuda::HostMem& getHostMemRef() const;

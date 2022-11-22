@@ -47,6 +47,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
 #include "../op_timvx.hpp"
+#include "../engine/engine.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -166,6 +167,7 @@ public:
         int axis = params.get<int>("axis", 0);
         int numAxes = params.get<int>("num_axes", -1);
         hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
+        allowzero = params.get<bool>("allowzero", false);
         shapesInitialized = !hasDynamicShapes;
 
         zeropoint = params.get<int>("zeropoints", 0);
@@ -202,6 +204,78 @@ public:
                 }
             }
         }
+    }
+
+    virtual void inferOutputShapes(const Net2& net,
+                                   const std::vector<int>& inputs,
+                                   const std::vector<int>& inptypes,
+                                   const std::vector<TensorShape>& inpshapes,
+                                   const std::vector<int>& outputs,
+                                   std::vector<int>& outtypes,
+                                   std::vector<TensorShape>& outshapes) CV_OVERRIDE
+    {
+        size_t ninputs = inputs.size(), noutputs = outputs.size();
+        CV_Assert(ninputs == 2 && noutputs == 1);
+        int inptyp = inptypes[0], shtyp = inptypes[1];
+        const TensorShape& inpshape = inpshapes[0];
+        const TensorShape& shshape = inpshapes[1];
+        TensorShape outshape;
+
+        CV_Assert(shtyp == CV_32S && shshape.ndims <= 1);
+        DataLayout inplayout = inpshape.layout;
+        DataLayout outlayout = shshape.ndims > 2 ? inplayout : DNN_LAYOUT_ND;
+
+        int outtyp = inptyp;
+        outshape.layout = outlayout;
+
+        int old_ndims = inpshape.ndims;
+        size_t old_total = inpshape.total();
+        int i, new_ndims = (int)shshape.total();
+        CV_Assert(new_ndims <= TensorShape::MAX_TENSOR_DIMS);
+        const int* newshape = (const int*)net.impl()->tensors.at(inputs[1]).data();
+        /*printf("new shape: ");
+        for (i = 0; i < nshape; i++) {
+            printf("%d ", newshape[i]);
+        }
+        printf("\n");*/
+        size_t new_total = 1;
+        bool havem1 = false;
+        for (i = 0; i < new_ndims; i++) {
+            int sz = newshape[i];
+            if (sz == -1) {
+                CV_Assert(!havem1);
+                havem1 = true;
+            } else if (sz == 0) {
+                if (allowzero)
+                    ;
+                else
+                    CV_Assert(i < old_ndims);
+                new_total *= inpshape.shape[i];
+            }
+            else
+                new_total *= sz;
+        }
+
+        int m1sz = 1;
+        if (havem1) {
+            CV_Assert(old_total >= new_total && old_total % new_total == 0);
+            m1sz = (int)(old_total/new_total);
+        }
+
+        outshape.ndims = new_ndims;
+        for (i = 0; i < new_ndims; i++) {
+            int sz = newshape[i];
+            outshape.shape[i] =
+                sz == -1 ? m1sz :
+                sz != 0 ? sz :
+                allowzero ? 0 :
+                inpshape.shape[i];
+        }
+
+        outtypes.resize(noutputs);
+        outshapes.resize(noutputs);
+        outtypes[0] = outtyp;
+        outshapes[0] = outshape;
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE

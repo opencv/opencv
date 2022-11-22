@@ -130,6 +130,67 @@ public:
         params.setIntArray("pad", &pads[0], pads.size());
     }
 
+    virtual void inferOutputShapes(const Net2& net,
+                                   const std::vector<int>& inputs,
+                                   const std::vector<int>& inptypes,
+                                   const std::vector<TensorShape>& inpshapes,
+                                   const std::vector<int>& outputs,
+                                   std::vector<int>& outtypes,
+                                   std::vector<TensorShape>& outshapes) CV_OVERRIDE
+    {
+        size_t ninputs = inputs.size(), noutputs = outputs.size();
+        CV_Assert(ninputs == 3 && noutputs == 1);
+        int inptyp = inptypes[0], wtyp = inptypes[1], btyp = inptypes[2];
+        const TensorShape& inpshape = inpshapes[0];
+        const TensorShape& wshape = inpshapes[1];
+        const TensorShape& bshape = inpshapes[2];
+        TensorShape outshape;
+
+        CV_Assert(inptyp == CV_16F || inptyp == CV_32F);
+        CV_Assert(wtyp == CV_32F && btyp == CV_32F); // [TODO] support quantized models
+
+        DataLayout inplayout = inpshape.layout;
+        int c_idx = inplayout == DNN_LAYOUT_NHWC ? inpshape.ndims-1 : 1;
+        CV_Assert(wshape.ndims == inpshape.ndims); // [TODO] support block layout
+        CV_Assert(bshape.ndims == 1);
+
+        int outtyp = inptyp;
+        outshape.layout = inpshape.layout;
+        outshape.ndims = inpshape.ndims;
+        int nspatdims = inpshape.ndims - 2;
+        CV_Assert(strides.size() == (size_t)nspatdims);
+        CV_Assert(dilations.size() == (size_t)nspatdims);
+        CV_Assert(kernel_size.size() == (size_t)nspatdims);
+        CV_Assert(pads_begin.size() == (size_t)nspatdims);
+        CV_Assert(pads_end.size() == (size_t)nspatdims);
+        CV_Assert(bshape.shape[0] == wshape.shape[0]);
+
+        outshape.ndims = inpshape.ndims;
+        outshape.layout = outshape.layout;
+        for (int i = 0, j = 0; i < outshape.ndims; i++) {
+            int64_t inpsz = inpshape.shape[i], outsz;
+            if (i == 0)
+                outsz = inpsz;
+            else if (i == c_idx)
+                outsz = wshape.shape[0];
+            else {
+                int64_t ksz = (int64_t)kernel_size[j];
+                int64_t stride = (int64_t)strides[j];
+                int64_t dilation = (int64_t)dilations[j];
+                int64_t pad = (int64_t)pads_begin[j] + (int64_t)pads_end[j];
+                j++;
+                outsz = (inpsz + pad - dilation*(ksz - 1) - 1)/stride + 1;
+            }
+            outshape.shape[i] = outsz;
+        }
+
+        outtypes.resize(noutputs);
+        outshapes.resize(noutputs);
+        outtypes[0] = outtyp;
+        outshapes[0] = outshape;
+        numOutput = (int)wshape.shape[0];
+    }
+
     virtual void finalize(InputArrayOfArrays inputs_arr,
                           OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
@@ -140,6 +201,7 @@ public:
         CV_Assert((inputs.size() > outputs.size() && blobs.empty()) ||
                   (!inputs.empty() && (blobs.size() == 1 || blobs.size() == 2)));
         MatSize weightShape = blobs.empty() ? inputs[1].size : blobs[0].size;
+
 
         CV_Assert(inputs[0].dims == outputs[0].dims);
         if (weightShape.dims() == 3)
@@ -433,6 +495,8 @@ public:
 
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
+        if (inputs.size() == 3)
+            numOutput = inputs[1].size[0];
         // prepare weightsMat where each row is aligned and has enough zero padding on the right to
         // use vectorized (i.e. with intrinsics) loops without tail processing
         if (!blobs.empty())
@@ -1966,7 +2030,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth(0) == CV_16S)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;

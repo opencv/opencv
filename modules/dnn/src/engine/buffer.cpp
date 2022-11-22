@@ -11,6 +11,15 @@ CV__DNN_INLINE_NS_BEGIN
 using std::vector;
 using std::string;
 
+void fitMat(Mat& m, size_t size)
+{
+    if (!m.isContinuous() || m.total()*m.elemSize() < size) {
+        m.release();
+        CV_Assert(size <= (size_t)INT_MAX);
+        m.create((int)size, 1, CV_8U);
+    }
+}
+
 Device::~Device() {}
 
 struct CPUDevice : Device
@@ -119,13 +128,16 @@ Buffer::Buffer(const void* data, size_t size_, bool copy)
 
 Buffer& Buffer::operator = (const Buffer& buf)
 {
-    if (this != &buf) {
+    if (this != &buf &&
+        (!shared || !buf.shared || shared->refcount != buf.shared->refcount))
+    {
         if (buf.shared)
             CV_XADD(&buf.shared->refcount, 1);
         release();
         mm = buf.mm;
         device = buf.device;
         handle = buf.handle;
+        size = buf.size;
         shared = buf.shared;
     }
     return *this;
@@ -219,7 +231,7 @@ void TensorShape::updateC()
         ndims == 2 ? (int)shape[0] : (int)(shape[0]*shape[ndims-1]);
 }
 
-TensorShape TensorShape::fromArray(InputArray m, int ndims_, int layout_)
+TensorShape TensorShape::fromArray(InputArray m, int ndims_, DataLayout layout_)
 {
     TensorShape shape;
     shape.layout = layout_;
@@ -244,17 +256,19 @@ TensorShape TensorShape::fromArray(InputArray m, int ndims_, int layout_)
     return shape;
 }
 
-int TensorShape::toMatShape(int* mshape) const
+int TensorShape::toMatShape(int* mshape, int maxdims) const
 {
+    int mdims = std::max(ndims, 2);
+    CV_Assert(maxdims >= mdims);
     int i = 0;
     for (; i < ndims; i++) {
         int64_t sz_i = shape[i];
         CV_Assert(INT_MIN <= sz_i && sz_i <= INT_MAX);
         mshape[i] = (int)sz_i;
     }
-    for (; i < 2; i++)
+    for (; i < mdims; i++)
         mshape[i] = 1;
-    return std::max(ndims, 2);
+    return mdims;
 }
 
 Tensor::Tensor()
@@ -348,7 +362,7 @@ void* Tensor::data() const
 Mat Tensor::getMat()
 {
     int mshape[CV_MAX_DIM];
-    int mdims = shape.toMatShape(mshape);
+    int mdims = shape.toMatShape(mshape, CV_MAX_DIM);
     void* dataptr = data();
     return Mat(mdims, mshape, typ, dataptr);
 }

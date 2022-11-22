@@ -70,6 +70,7 @@ class FullyConnectedLayerImpl CV_FINAL : public InnerProductLayer
 {
 public:
     enum { VEC_ALIGN = 8 };
+    int bias_ndims;
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNInnerProduct<float> > innerProductOp;
@@ -82,6 +83,10 @@ public:
         setParamsFrom(params);
         bias = params.get<bool>("bias_term", true);
         axis = params.get<int>("axis", 1);
+        transA = params.get<bool>("transA", false);
+        transB = params.get<bool>("transB", false);
+        alpha = (float)params.get<double>("alpha", 1.0);
+        beta = (float)params.get<double>("beta", 1.0);
         if (!blobs.empty())
         {
             CV_Assert(1 <= blobs.size() && blobs.size() <= 2);
@@ -108,6 +113,71 @@ public:
             else
                 biasMat = Mat::zeros(1, numOutput, weightsMat.type());
         }
+    }
+
+    virtual void serialize(LayerParams& params) const CV_OVERRIDE
+    {
+        Layer::serialize(params);
+        if (alpha != 1.f)
+            params.set("alpha", alpha);
+        if (beta != 1.f)
+            params.set("beta", beta);
+        if (transA)
+            params.set("transA", transA);
+        if (transB)
+            params.set("transB", transB);
+    }
+
+    virtual void inferOutputShapes(const Net2& net,
+                                   const std::vector<int>& inputs,
+                                   const std::vector<int>& inptypes,
+                                   const std::vector<TensorShape>& inpshapes,
+                                   const std::vector<int>& outputs,
+                                   std::vector<int>& outtypes,
+                                   std::vector<TensorShape>& outshapes) CV_OVERRIDE
+    {
+        size_t ninputs = inputs.size(), noutputs = outputs.size();
+        CV_Assert((ninputs == 2 || ninputs == 3) && noutputs == 1);
+        int typ1 = inptypes[0], typ2 = inptypes[1], typ3 = ninputs == 3 ? inptypes[2] : -1;
+        const TensorShape& inpshape1 = inpshapes[0];
+        const TensorShape& inpshape2 = inpshapes[1];
+        TensorShape inpshape3;
+        TensorShape outshape;
+        bias_ndims = 0;
+        if (ninputs == 3) {
+            inpshape3 = inpshapes[2];
+            bias_ndims = inpshapes[2].ndims;
+        }
+
+        CV_Assert(inpshape1.ndims == 2);
+        CV_Assert(inpshape2.ndims == 2);
+        CV_Assert(inpshape3.ndims <= 2);
+        CV_Assert(typ1 == CV_32F);
+        CV_Assert(typ2 == CV_32F);
+        CV_Assert(typ3 == -1 || typ3 == typ1 || typ3 == typ2);
+        DataLayout inplayout1 = inpshape1.layout;
+        DataLayout inplayout2 = inpshape2.layout;
+        CV_Assert(inplayout1 == inplayout2);
+        DataLayout outlayout = inplayout1;
+        int outtyp = typ1 == CV_16F || typ2 == CV_16F ? CV_16F : CV_32F;
+
+        int64_t rows1 = inpshape1.shape[0], cols1 = inpshape1.shape[1];
+        int64_t rows2 = inpshape2.shape[0], cols2 = inpshape2.shape[1];
+        if (transA)
+            std::swap(rows1, cols1);
+        if (transB)
+            std::swap(rows2, cols2);
+        CV_Assert(cols1 == rows2);
+
+        outshape.layout = outlayout;
+        outshape.ndims = 2;
+        outshape.shape[0] = rows1;
+        outshape.shape[1] = cols2;
+
+        outtypes.resize(noutputs);
+        outshapes.resize(noutputs);
+        outtypes[0] = outtyp;
+        outshapes[0] = outshape;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -509,17 +579,27 @@ public:
             float* outData = output[0].ptr<float>();
 
             int dims = output[0].dims;
-            int numSlice = output[0].total() / output[0].total(dims - 2);
+            size_t numSlice = output[0].total() / output[0].total(dims - 2);
             int m = input[0].size[dims - 2];
             int n = input[0].size[dims - 1];
-            int k = input[1].size[dims - 1];
-            for (int i = 0; i < numSlice; i++)
+            int k = input[1].size[dims - 2];
+            int l = input[1].size[dims - 1];
+            for (size_t i = 0; i < numSlice; i++)
             {
                 Mat inpSlice(m, n, CV_32F, inpData);
-                Mat weightSlice(n, k, CV_32F, weightData);
-                Mat outSlice(m, k, CV_32F, outData);
-
-                outSlice = inpSlice * weightSlice;
+                Mat weightSlice(k, l, CV_32F, weightData);
+                Mat outSlice((transA ? n : m), (transB ? l : k), CV_32F, outData);
+                Mat bias;
+                if (input.size() == 3) {
+                    if (bias_ndims <= 1)
+                        bias = Mat(1, input[2].size[0], CV_32F, outData);
+                    else {
+                        CV_Assert(bias_ndims == dims);
+                        bias = Mat(input[2].size[dims-2], input[2].size[dims-1], CV_32F, outData);
+                    }
+                }
+                gemm(inpSlice, weightSlice, alpha, bias, beta, outSlice,
+                     (transA ? GEMM_1_T : 0) | (transB ? GEMM_2_T : 0));
                 inpData += inpSlice.total();
                 weightData += weightSlice.total();
                 outData += outSlice.total();

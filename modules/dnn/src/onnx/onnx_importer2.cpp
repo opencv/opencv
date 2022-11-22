@@ -466,6 +466,7 @@ void OnnxImporter2::parseGraph(const OpenCVOnnx__GraphProto* proto,
 
     for (size_t i = 0; i < proto->n_node; i++) {
         OpenCVOnnx__NodeProto* node_proto = proto->node[i];
+        //printf("(%d/%d). parsing %s (%s)\n", (int)i, (int)proto->n_node, node_proto->name, node_proto->op_type);
         string node_ctx = onnxConcatCtx(ctx, format("when parsing '%s' (%s)",
                                         node_proto->name, node_proto->op_type));
         node_inputs.clear();
@@ -549,7 +550,8 @@ OnnxImporter2::OnnxImporter2(Net2& net, const char* buffer, size_t bufsize)
 bool OnnxImporter2::parse(const char* filename_)
 {
     size_t fsize, freaded;
-    vector<char> buf;
+    AutoBuffer<char> buf;
+    char* bufptr;
 
     filename = filename_;
     FILE* f = fopen(filename_, "rb");
@@ -561,13 +563,15 @@ bool OnnxImporter2::parse(const char* filename_)
     fseek(f, 0, SEEK_END);
     fsize = (size_t)ftell(f);
     fseek(f, 0, SEEK_SET);
-    buf.resize(fsize+256);
-    freaded = fread(&buf[0], 1, fsize, f);
+    buf.allocate(fsize+256);
+    bufptr = buf.data();
+    freaded = fread(bufptr, 1, fsize, f);
+    fclose(f);
     if (freaded != fsize) {
         CV_LOG_DEBUG(NULL, "DNN/Onnx: cannot read file " << filename_);
         return false;
     }
-    return parse(&buf[0], freaded);
+    return parse(bufptr, freaded);
 }
 
 bool OnnxImporter2::parse(const char* buffer, size_t datasize)
@@ -907,9 +911,8 @@ void OnnxImporter2::parseConstant(const string& ctx, const OpenCVOnnx__NodeProto
     OnnxAssert(ctx, outputs.size() == 1);
     if (layerParams.has("value")) {
         DictValue v = layerParams.get("value");
-        int ndims = v.getDims();
-        Mat m = v.getMat();
-        t = Tensor(m, ndims, true);
+        auto m = v.getMat();
+        t = Tensor(m.first, m.second, true);
     } else if (layerParams.has("value_int")) {
         int v = saturate_cast<int>(layerParams.get<int64>("value_int"));
         t = Tensor(scalar_shape, CV_32S, &v, true);

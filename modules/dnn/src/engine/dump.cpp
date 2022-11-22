@@ -34,6 +34,18 @@ static const char* typ2str(int typ)
         typ == CV_16F ? "F16" : "<unknown_type>";
 }
 
+static const char* layout2str(char* buf, DataLayout layout, int c=0)
+{
+    if (layout == DNN_LAYOUT_NCHWс) {
+        sprintf(buf, "NCHWc(%d)", c);
+        return buf;
+    }
+    return  layout == DNN_LAYOUT_UNKNOWN ? "unknown" :
+            layout == DNN_LAYOUT_ND ? "ND" :
+            layout == DNN_LAYOUT_NCHW ? "NCHW" :
+            layout == DNN_LAYOUT_NHWC ? "NHWC" : "???";
+}
+
 void Net2::Impl::dumpArgInfo(int argidx, const string& indent, bool comma) const
 {
     const LayerArg& arg = args.at(argidx);
@@ -112,13 +124,13 @@ void Net2::Impl::dumpAttrValue(const DictValue& dictv) const
     }
     else if (dictv.isMat())
     {
-        Mat m = dictv.getMat();
-        TensorShape shape = TensorShape::fromArray(m, dictv.getDims());
+        auto m = dictv.getMat();
+        TensorShape shape = TensorShape::fromArray(m.first, m.second);
         printf("<");
         int i, ndims = shape.ndims;
         for (i = 0; i < ndims; i++)
             printf("%s%d", (i == 0 ? "" : " x "), (int)shape.shape[i]);
-        printf("> %s", typ2str(m.type()));
+        printf("> %s", typ2str(m.first.type()));
     }
     if (!scalar) printf("]");
 }
@@ -170,6 +182,158 @@ void Net2::Impl::dumpNode(const Layer& layer,
         }
     }
     printf("%s}%s\n", indent.c_str(), (comma ? "," : ""));
+}
+
+void Net2::Impl::dumpArg(const String& prefix, int i,
+                         int argidx, bool dumpdata) const
+{
+    char buf[128];
+    const Tensor& t = tensors.at(argidx);
+    const LayerArg& arg = args.at(argidx);
+    printf("%s %d. Name: %s\n  Buf: %d\n  Type: %s\n  Shape: {",
+           prefix.c_str(), i, arg.name.c_str(), bufidxs.at(argidx), typ2str(t.typ));
+    for (int i = 0; i < t.shape.ndims; i++) {
+        if (i > 0) printf(", ");
+        printf("%lld", (long long)t.shape.shape[i]);
+    }
+    printf("}\n  Layout: %s\n", layout2str(buf, t.shape.layout, t.shape.shape[t.shape.ndims-1]));
+    if (dumpdata) {
+        // [TODO] in the case of block layout probably we need to
+        // make 'NCHW' copy of the tensor data before dumping it.
+        cv::dnn::dump(t);
+    }
+}
+
+template<typename _Tp> struct Fmt
+{
+    typedef _Tp temp_type;
+    static const char* fmt() { return "%d"; }
+};
+
+template<> struct Fmt<int64_t>
+{
+    typedef long long temp_type;
+    static const char* fmt() { return "%lld"; }
+};
+
+template<> struct Fmt<uint64_t>
+{
+    typedef unsigned long long temp_type;
+    static const char* fmt() { return "%llu"; }
+};
+
+template<> struct Fmt<float>
+{
+    typedef float temp_type;
+    static const char* fmt() { return "%.5g"; }
+};
+
+template<> struct Fmt<double>
+{
+    typedef double temp_type;
+    static const char* fmt() { return "%.5g"; }
+};
+
+template<> struct Fmt<float16_t>
+{
+    typedef float temp_type;
+    static const char* fmt() { return "%.5g"; }
+};
+
+template <typename _Tp>
+static void dumpRow(const _Tp* ptr, int n, size_t ofs, int border)
+{
+    const char* fmt = Fmt<_Tp>::fmt();
+    int i, ndump = border > 0 ? std::min(n, border*2+1) : n;
+    if (border == 0)
+        border = ndump;
+    for (i = 0; i < ndump; i++) {
+        int j = n == ndump || i < border ? i : i == border ? -1 : n-border*2-1+i;
+        if (i > 0)
+            printf(", ");
+        if (j >= 0)
+            printf(fmt, (typename Fmt<_Tp>::temp_type)ptr[ofs + j]);
+        else
+            printf("... ");
+    }
+}
+
+static void dumpSlice(const Tensor& t, const size_t* step, int d, size_t ofs, int border)
+{
+    int ndims = t.shape.ndims;
+    int n = d >= ndims ? 1 : (int)t.shape.shape[d];
+    if (d >= ndims - 1) {
+        int typ = t.typ;
+        void* data = t.data();
+        if (typ == CV_8U)
+            dumpRow((const uint8_t*)data, n, ofs, border);
+        else if (typ == CV_8S)
+            dumpRow((const int8_t*)data, n, ofs, border);
+        else if (typ == CV_16U)
+            dumpRow((const uint16_t*)data, n, ofs, border);
+        else if (typ == CV_16S)
+            dumpRow((const int16_t*)data, n, ofs, border);
+        else if (typ == CV_32S)
+            dumpRow((const int*)data, n, ofs, border);
+        else if (typ == CV_32F)
+            dumpRow((const float*)data, n, ofs, border);
+        else if (typ == CV_64F)
+            dumpRow((const double*)data, n, ofs, border);
+        else if (typ == CV_16F)
+            dumpRow((const float16_t*)data, n, ofs, border);
+        else {
+            CV_Error(Error::StsNotImplemented, "unsupported type");
+        }
+    } else {
+        int i, ndump = border > 0 ? std::min(n, border*2+1) : n;
+        bool dots = false;
+        for (i = 0; i < ndump; i++) {
+            if (i > 0 && !dots) {
+                int nempty_lines = ndims - 2 - d;
+                for (int k = 0; k < nempty_lines; k++)
+                    printf("\n");
+            }
+            if (i > 0)
+                printf("\n");
+            int j = n == ndump || i < border ? i :
+                    i == border ? -1 :
+                    n - border*2 - 1 + i;
+            bool dots = j < 0;
+            if (!dots)
+                dumpSlice(t, step, d+1, ofs + j*step[d], border);
+            else
+                printf("...");
+        }
+    }
+}
+
+void dump(const Tensor& t, int border0, int maxsz_all, bool braces)
+{
+    const TensorShape& shape = t.shape;
+    size_t szall = shape.total();
+    if (szall == 0) {
+        printf("no data");
+    } else {
+        int ndims = t.shape.ndims;
+        int border = szall < (size_t)maxsz_all ? 0 : border0;
+        size_t step[TensorShape::MAX_TENSOR_DIMS];
+        step[ndims-1] = 1;
+        for (int i = ndims-2; i >= 0; i--)
+            step[i] = step[i+1]*t.shape.shape[i+1];
+        if (braces)
+            printf("[");
+        dumpSlice(t, step, 0, 0, border);
+        if (braces)
+            printf("]\n");
+        else
+            printf("\n");
+    }
+}
+
+void dump(InputArray m, int ndims, int border, int maxsz_all, bool braces)
+{
+    Tensor t(m, ndims, false);
+    dump(t, border, maxsz_all, braces);
 }
 
 CV__DNN_INLINE_NS_END

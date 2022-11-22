@@ -48,6 +48,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
 #include "../op_webnn.hpp"
+#include "../engine/engine.hpp"
 
 #include <algorithm>
 #include <stdlib.h>
@@ -230,13 +231,17 @@ public:
             return;
         }
 
-        std::vector<Mat> inputs, outputs, internals;
+        std::vector<Mat> inputs, outputs;
+        std::vector<Mat>& internals = internals_arr.getMatVecRef();
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
-        internals_arr.getMatVector(internals);
 
         const Mat &src = inputs[0];
         Mat &dst = outputs[0];
+        if (internals.empty())
+            internals.resize(1);
+        Mat &buf = internals[0];
+        fitMat(buf, src.total()*src.elemSize());
 
         int axis = normalize_axis(axisRaw, src.dims);
         size_t outerSize = src.total(0, axis), channels = src.size[axis],
@@ -247,7 +252,7 @@ public:
 
         const float *srcPtr = src.ptr<float>();
         float *dstPtr = dst.ptr<float>();
-        float *bufPtr = internals[0].ptr<float>();
+        float *bufPtr = buf.ptr<float>();
 
         size_t outerStep = src.total(axis);
         size_t cnStep = src.total(axis + 1);
