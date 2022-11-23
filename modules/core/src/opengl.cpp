@@ -1759,31 +1759,31 @@ void convertToGLTexture2D(InputArray src, Texture2D& texture)
     cl_int status = 0;
     cl_mem clImage = clCreateFromGLTexture(context, CL_MEM_WRITE_ONLY, gl::TEXTURE_2D, 0, texture.texId(), &status);
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromGLTexture failed");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromGLTexture failed: " + std::to_string(status));
 
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
     status = clEnqueueAcquireGLObjects(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireGLObjects failed");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireGLObjects failed: " + std::to_string(status));
     size_t offset = 0; // TODO
     size_t dst_origin[3] = {0, 0, 0};
     size_t region[3] = { (size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyBufferToImage(q, clBuffer, clImage, offset, dst_origin, region, 0, NULL, NULL);
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyBufferToImage failed: " + std::to_string(status));
     status = clEnqueueReleaseGLObjects(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseGLObjects failed");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseGLObjects failed: " + std::to_string(status));
 
     status = clFinish(q); // TODO Use events
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clFinish failed");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clFinish failed: " + std::to_string(status));
 
     status = clReleaseMemObject(clImage); // TODO RAII
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMemObject failed");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMemObject failed: " + std::to_string(status));
 #endif
 }
 
@@ -1821,31 +1821,31 @@ void convertFromGLTexture2D(const Texture2D& texture, OutputArray dst)
     cl_int status = 0;
     cl_mem clImage = clCreateFromGLTexture(context, CL_MEM_READ_ONLY, gl::TEXTURE_2D, 0, texture.texId(), &status);
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromGLTexture failed");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromGLTexture failed: " + std::to_string(status));
 
     cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
     cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
     status = clEnqueueAcquireGLObjects(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireGLObjects failed");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireGLObjects failed: " + std::to_string(status));
     size_t offset = 0; // TODO
     size_t src_origin[3] = {0, 0, 0};
     size_t region[3] = { (size_t)u.cols, (size_t)u.rows, 1};
     status = clEnqueueCopyImageToBuffer(q, clImage, clBuffer, src_origin, region, offset, 0, NULL, NULL);
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueCopyImageToBuffer failed: " + std::to_string(status));
     status = clEnqueueReleaseGLObjects(q, 1, &clImage, 0, NULL, NULL);
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseGLObjects failed");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseGLObjects failed: " + std::to_string(status));
 
     status = clFinish(q); // TODO Use events
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clFinish failed");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clFinish failed: " + std::to_string(status));
 
     status = clReleaseMemObject(clImage); // TODO RAII
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMemObject failed");
+        CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMemObject failed: " + std::to_string(status));
 #endif
 }
 
