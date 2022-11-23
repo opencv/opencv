@@ -290,8 +290,9 @@ struct RGB2HSV_f
         v_float32 v_g_eq_max = v_eq(v_g, v_max_rgb);
         v_h = v_select(v_r_eq_max, v_sub(v_g, v_b),
               v_select(v_g_eq_max, v_sub(v_b, v_r), v_sub(v_r, v_g)));
-        v_float32 v_res = v_select(v_r_eq_max, v_and(v_lt(v_g, v_b), vx_setall_f32(360.0f)),
-                          v_select(v_g_eq_max, vx_setall_f32(120.0f), vx_setall_f32(240.0f)));
+        v_float32 v_res = v_select(v_r_eq_max,
+                            v_select(v_lt(v_g, v_b), vx_setall_f32(360.0f), vx_setall_f32(0.0f)),
+                            v_select(v_g_eq_max, vx_setall_f32(120.0f), vx_setall_f32(240.0f)));
         v_float32 v_rev_diff = v_div(vx_setall_f32(60.0f), v_add(v_diff, v_eps));
         v_h = v_mul(v_muladd(v_h, v_rev_diff, v_res), vx_setall_f32(hscale));
 
@@ -392,26 +393,26 @@ inline void HSV2RGB_simd(const v_float32& h, const v_float32& s, const v_float32
     v_sector = v_sub(v_pre_sector, v_mul(v_sector, v_six));
 
     v_float32 v_two = vx_setall_f32(2.0f);
-    v_h = v_and(v_tab1, v_lt(v_sector, v_two));
-    v_h = v_or(v_h, v_and(v_tab3, v_eq(v_sector, v_two)));
+    v_h = v_select(v_lt(v_sector, v_two), v_tab1, vx_setall_f32(0.0f));
+    v_h = v_select(v_eq(v_sector, v_two), v_tab3, v_h);
     v_float32 v_three = vx_setall_f32(3.0f);
-    v_h = v_or(v_h, v_and(v_tab0, v_eq(v_sector, v_three)));
+    v_h = v_select(v_eq(v_sector, v_three), v_tab0, v_h);
     v_float32 v_four = vx_setall_f32(4.0f);
-    v_h = v_or(v_h, v_and(v_tab0, v_eq(v_sector, v_four)));
-    v_h = v_or(v_h, v_and(v_tab2, v_gt(v_sector, v_four)));
+    v_h = v_select(v_eq(v_sector, v_four), v_tab0, v_h);
+    v_h = v_select(v_gt(v_sector, v_four), v_tab2, v_h);
 
-    v_s = v_and(v_tab3, v_lt(v_sector, v_one));
-    v_s = v_or(v_s, v_and(v_tab0, v_eq(v_sector, v_one)));
-    v_s = v_or(v_s, v_and(v_tab0, v_eq(v_sector, v_two)));
-    v_s = v_or(v_s, v_and(v_tab2, v_eq(v_sector, v_three)));
-    v_s = v_or(v_s, v_and(v_tab1, v_gt(v_sector, v_three)));
+    v_s = v_select(v_lt(v_sector, v_one), v_tab3, v_s);
+    v_s = v_select(v_eq(v_sector, v_one), v_tab0, v_s);
+    v_s = v_select(v_eq(v_sector, v_two), v_tab0, v_s);
+    v_s = v_select(v_eq(v_sector, v_three), v_tab2, v_s);
+    v_s = v_select(v_gt(v_sector, v_three), v_tab1, v_s);
 
-    v_v = v_and(v_tab0, v_lt(v_sector, v_one));
-    v_v = v_or(v_v, v_and(v_tab2, v_eq(v_sector, v_one)));
-    v_v = v_or(v_v, v_and(v_tab1, v_eq(v_sector, v_two)));
-    v_v = v_or(v_v, v_and(v_tab1, v_eq(v_sector, v_three)));
-    v_v = v_or(v_v, v_and(v_tab3, v_eq(v_sector, v_four)));
-    v_v = v_or(v_v, v_and(v_tab0, v_gt(v_sector, v_four)));
+    v_v = v_select(v_lt(v_sector, v_one), v_tab0, v_v);
+    v_v = v_select(v_eq(v_sector, v_one), v_tab2, v_v);
+    v_v = v_select(v_eq(v_sector, v_two), v_tab1, v_v);
+    v_v = v_select(v_eq(v_sector, v_three), v_tab1, v_v);
+    v_v = v_select(v_eq(v_sector, v_four), v_tab3, v_v);
+    v_v = v_select(v_gt(v_sector, v_four), v_tab0, v_v);
 
     b = v_h;
     g = v_s;
@@ -696,7 +697,7 @@ struct RGB2HLS_f
         v_float32 gMaxMask = v_eq(maxRgb, g);
 
         h = v_select(rMaxMask, v_sub(g, b), v_select(gMaxMask, v_sub(b, r), v_sub(r, g)));
-        v_float32 hpart = v_select(rMaxMask, v_and(v_lt(g, b), vx_setall_f32(360.0f)),
+        v_float32 hpart = v_select(rMaxMask, v_select(v_lt(g, b), vx_setall_f32(360.0f), vx_setall_f32(0.0f)),
                           v_select(gMaxMask, vx_setall_f32(120.0f), vx_setall_f32(240.0f)));
 
         v_float32 invDiff = v_div(vx_setall_f32(60.0f), diff);
@@ -704,9 +705,9 @@ struct RGB2HLS_f
 
         v_float32 diffEpsMask = v_gt(diff, vx_setall_f32(FLT_EPSILON));
 
-        h = v_and(diffEpsMask, h);
+        h = v_select(diffEpsMask, h, vx_setall_f32(0.0f));
         // l = l;
-        s = v_and(diffEpsMask, s);
+        s = v_select(diffEpsMask, s, vx_setall_f32(0.0f));
     }
 #endif
 
