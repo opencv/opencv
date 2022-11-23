@@ -115,7 +115,7 @@ void TsdfVolume::raycast(InputArray _cameraPose, int height, int width, InputArr
 
     const Matx44f cameraPose = _cameraPose.getMat();
 #ifndef HAVE_OPENCL
-    raycastTsdfVolumeUnit(settings, cameraPose, height, width, volume, _points, _normals);
+    raycastTsdfVolumeUnit(settings, cameraPose, height, width, intr, volume, _points, _normals);
 #else
     if (useGPU)
         ocl_raycastTsdfVolumeUnit(settings, cameraPose, height, width, intr, gpu_volume, _points, _normals);
@@ -309,7 +309,7 @@ void HashTsdfVolume::raycast(InputArray _cameraPose, int height, int width, Inpu
     const Matx44f cameraPose = _cameraPose.getMat();
 
 #ifndef HAVE_OPENCL
-    raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, volumeUnitDegree, volUnitsData, volumeUnits, _points, _normals);
+    raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, volUnitsData, volumeUnits, _points, _normals);
 #else
     if (useGPU)
         ocl_raycastHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, hashTable, gpu_volUnitsData, _points, _normals);
