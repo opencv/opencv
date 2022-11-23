@@ -749,6 +749,20 @@ namespace CV__SIMD_NAMESPACE {
         return ~a; \
     }
 
+    #define OPENCV_HAL_WRAP_BIN_OP_LOGIC_FLT(_Tpvec) \
+    inline _Tpvec v_and(const _Tpvec& a, const _Tpvec& b) \
+    { \
+        return a & b; \
+    } \
+    inline _Tpvec v_or(const _Tpvec& a, const _Tpvec& b) \
+    { \
+        return a | b; \
+    } \
+    inline _Tpvec v_xor(const _Tpvec& a, const _Tpvec& b) \
+    { \
+        return a ^ b; \
+    } \
+
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint8)
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint16)
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint32)
@@ -757,11 +771,10 @@ namespace CV__SIMD_NAMESPACE {
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int16)
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int32)
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int64)
-    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float32)
+    OPENCV_HAL_WRAP_BIN_OP_LOGIC_FLT(v_float32)
     #if CV_SIMD_64F
-    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float64)
+    OPENCV_HAL_WRAP_BIN_OP_LOGIC_FLT(v_float64)
     #endif
-
 
     #define OPENCV_HAL_WRAP_BIN_OP_MUL(_Tpvec) \
     inline _Tpvec v_mul(const _Tpvec& a, const _Tpvec& b) \
