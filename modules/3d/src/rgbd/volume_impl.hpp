@@ -42,7 +42,7 @@ public:
     virtual bool getEnableGrowth() const = 0;
 
 public:
-    const VolumeSettings& settings;
+    VolumeSettings settings;
 #ifdef HAVE_OPENCL
     const bool useGPU;
 #endif
