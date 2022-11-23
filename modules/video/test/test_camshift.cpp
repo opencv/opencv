@@ -274,7 +274,7 @@ int CV_CamShiftTest::validate_test_results( int /*test_case_idx*/ )
         cvIsNaN(box.center.y) || cvIsInf(box.center.y) ||
         cvIsNaN(box.angle) || cvIsInf(box.angle) || box.angle < -180 || box.angle > 180 )
     {
-        ts->printf( cvtest::TS::LOG, "Invalid Box2D was returned by CamShift\n" );
+        ts->printf( cvtest::TS::LOG, "Invalid RotatedRect was returned by CamShift\n" );
         code = cvtest::TS::FAIL_INVALID_OUTPUT;
         goto _exit_;
     }
