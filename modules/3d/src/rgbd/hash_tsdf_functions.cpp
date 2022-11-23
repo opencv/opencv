@@ -995,6 +995,8 @@ void raycastHashTsdfVolumeUnit(
     Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
 
+    Matx33f mintr(intr.getMat());
+
     Mat volUnitsData = _volUnitsData.getMat();
 
     _points.create(frameSize, POINT_TYPE);
@@ -1026,7 +1028,6 @@ void raycastHashTsdfVolumeUnit(
     const Affine3f cam2vol(pose.inv() * Affine3f(cameraPose));
     const Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
 
-    Matx33f mintr(intr.getMat());
     const Intr intrinsics(mintr);
     const Intr::Reprojector reproj(intrinsics.makeReprojector());
 
@@ -1132,6 +1133,8 @@ void ocl_raycastHashTsdfVolumeUnit(
     Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
 
+    Matx33f mintr(intr.getMat());
+
     UMat volUnitsData = _volUnitsData.getUMat();
 
     String errorStr;
@@ -1150,7 +1153,6 @@ void ocl_raycastHashTsdfVolumeUnit(
     UMat points = _points.getUMat();
     UMat normals = _normals.getUMat();
 
-    Matx33f mintr(intr.getMat());
     Intr intrinsics(mintr);
     Intr::Reprojector r = intrinsics.makeReprojector();
     Vec2f finv(r.fxinv, r.fyinv), cxy(r.cx, r.cy);

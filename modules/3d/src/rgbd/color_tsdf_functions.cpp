@@ -697,6 +697,8 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
     Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
 
+    Matx33f mintr(intr.getMat());
+
     _points.create(frameSize, POINT_TYPE);
     _normals.create(frameSize, POINT_TYPE);
     _colors.create(frameSize, COLOR_TYPE);
@@ -723,7 +725,6 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &c
     const Point3i volResolution = Point3i(resolution);
     const Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
 
-    Matx33f mintr(intr.getMat());
     const Intr::Reprojector reprojDepth = Intr(mintr).makeReprojector();
 
     Matx44f _pose;

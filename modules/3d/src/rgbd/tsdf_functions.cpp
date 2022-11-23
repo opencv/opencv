@@ -622,6 +622,9 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
 
     const Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
+
+    Matx33f mintr(intr.getMat());
+
     _points.create(frameSize, POINT_TYPE);
     _normals.create(frameSize, POINT_TYPE);
 
@@ -645,8 +648,6 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
     settings.getVolumeResolution(resolution);
     const Point3i volResolution = Point3i(resolution);
     const Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
-
-    Matx33f mintr(intr.getMat());
 
     Matx44f _pose;
     settings.getVolumePose(_pose);
@@ -927,6 +928,8 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
     const Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
 
+    Matx33f mintr(intr.getMat());
+
     String errorStr;
     String name = "raycast";
     ocl::ProgramSource source = ocl::_3d::tsdf_oclsrc;
@@ -970,7 +973,7 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
     Affine3f cam2vol = pose.inv() * Affine3f(cameraPose);
     Mat(cam2vol.matrix).copyTo(cam2volGpu);
     Mat(vol2cam.matrix).copyTo(vol2camGpu);
-    Matx33f mintr(intr.getMat());
+
     Intr intrinsics(mintr);
     Intr::Reprojector r = intrinsics.makeReprojector();
 
