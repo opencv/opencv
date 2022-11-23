@@ -8,7 +8,7 @@
 namespace cv
 {
 
-Vec4i calcVolumeStrides(Point3i volumeResolution, bool ZFirstMemOrder)
+static Vec4i calcVolumeStrides(Point3i volumeResolution, bool ZFirstMemOrder)
 {
     // (xRes*yRes*zRes) array
     // Depending on zFirstMemOrder arg:
