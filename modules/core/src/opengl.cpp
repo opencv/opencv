@@ -1708,7 +1708,7 @@ Context& initializeContextFromGL()
         };
 
 #if defined(HAVE_EGL) && defined(HAVE_GLX) //GLX fallback
-        if(properties[4] == CL_EGL_DISPLAY_KHR && properties[3] == (cl_context_properties)EGL_NO_DISPLAY) {
+        if(properties[4] == CL_EGL_DISPLAY_KHR && properties[3] == (cl_context_properties)EGL_NO_CONTEXT) {
             properties[3] = (cl_context_properties)glXGetCurrentContext();
             properties[4] = (cl_context_properties)CL_GLX_DISPLAY_KHR;
             properties[5] = (cl_context_properties)glXGetCurrentDisplay();
