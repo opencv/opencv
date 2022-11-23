@@ -127,14 +127,14 @@
         #define CV_GL_GET_PROC_ADDRESS(name) AppleGLGetProcAddress(name)
     #elif defined(__sgi) || defined(__sun)
         #define CV_GL_GET_PROC_ADDRESS(name) SunGetProcAddress(name)
+    #elif defined(HAVE_EGL) // pref EGL
+        #include <EGL/egl.h>
+
+        #define CV_GL_GET_PROC_ADDRESS(name) eglGetProcAddress((const char*) name)
     #elif defined(HAVE_GLX) // GLX
         #include <GL/glx.h>
 
         #define CV_GL_GET_PROC_ADDRESS(name) glXGetProcAddressARB((const GLubyte*) name)
-    #elif defined(HAVE_EGL) // EGL
-        #include <EGL/EGL.h>
-
-        #define CV_GL_GET_PROC_ADDRESS(name) eglGetProcAddress((const GLubyte*) name)
     #else
         #define CV_GL_GET_PROC_ADDRESS(name) CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support")
     #endif
