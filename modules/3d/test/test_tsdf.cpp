@@ -1520,18 +1520,28 @@ TEST(ColorTSDF_CPU, valid_points_common_framesize_fetch)
     valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-class StaticVolumeBoundingBox : public ::testing::TestWithParam<VolumeTypeEnum>
+
+class StaticVolumeBoundingBox : public ::testing::TestWithParam<PlatformVolumeType>
 { };
 
-TEST_P(StaticVolumeBoundingBox, boundingBoxCPU)
+TEST_P(StaticVolumeBoundingBox, staticBoundingBox)
 {
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
+    auto p = GetParam();
+    bool gpu = bool(std::get<0>(p));
+    VolumeType volumeType = std::get<1>(p);
 
-    staticBoundingBoxTest(GetParam());
+    OpenCLStatusRevert oclStatus;
+    if (!gpu)
+        oclStatus.off();
+
+    staticBoundingBoxTest(volumeType);
 }
 
-INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(VolumeType::TSDF, VolumeType::ColorTSDF));
+//TODO: edit this list when ColorTSDF gets GPU support
+INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(
+                        PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
+                        PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
+                        PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF}));
 
 
 // OpenCL tests
@@ -1540,24 +1550,6 @@ TEST(HashTSDF_GPU, reproduce_volPoseRot)
     regressionVolPoseRot();
 }
 
-//TODO: use this when ColorTSDF gets GPU support
-/*
-class StaticVolumeBoundingBox : public ::testing::TestWithParam<VolumeType>
-{ };
-
-TEST_P(StaticVolumeBoundingBox, GPU)
-{
-    staticBoundingBoxTest(GetParam());
-}
-
-INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(VolumeType::TSDF, VolumeType::ColorTSDF));
-*/
-
-// until that, we don't need parametrized test
-TEST(TSDF, boundingBoxGPU)
-{
-    staticBoundingBoxTest(VolumeType::TSDF);
-}
 
 enum Growth
 {
