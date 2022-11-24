@@ -1249,12 +1249,75 @@ struct OpenCLStatusRevert
 #endif
 };
 
-TEST(TSDF_CPU, raycast_custom_framesize_normals_mat)
+
+// CV_ENUM does not support enum class types, so let's implement the class explicitly
+namespace
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+    struct VolumeTypeEnum
+    {
+        static const std::array<VolumeType, 3> vals;
+        static const std::array<std::string, 3> svals;
+
+        VolumeTypeEnum(VolumeType v = VolumeType::TSDF) : val(v) {}
+        operator VolumeType() const { return val; }
+        void PrintTo(std::ostream *os) const
+        {
+            int v = int(val);
+            if (v >= 0 && v < 3)
+            {
+                *os << svals[v];
+            }
+            else
+            {
+                *os << "UNKNOWN";
+            }
+        }
+        static ::testing::internal::ParamGenerator<VolumeTypeEnum> all()
+        {
+            return ::testing::Values(VolumeTypeEnum(vals[0]), VolumeTypeEnum(vals[1]), VolumeTypeEnum(vals[2]));
+        }
+
+    private:
+        VolumeType val;
+    };
+    const std::array<VolumeType, 3> VolumeTypeEnum::vals{VolumeType::TSDF, VolumeType::HashTSDF, VolumeType::ColorTSDF};
+    const std::array<std::string, 3> VolumeTypeEnum::svals{std::string("TSDF"), std::string("HashTSDF"), std::string("ColorTSDF")};
+
+    static inline void PrintTo(const VolumeTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
+
+typedef std::tuple<PlatformTypeEnum, VolumeTypeEnum> PlatformVolumeType;
+struct VolumeTestFixture : public ::testing::TestWithParam<PlatformVolumeType>
+{
+protected:
+    void SetUp() override
+    {
+        auto p = GetParam();
+        gpu = std::get<0>(p);
+        volumeType = std::get<1>(p);
+
+        if (!gpu)
+            oclStatus.off();
+    }
+
+    bool gpu;
+    VolumeType volumeType;
+    OpenCLStatusRevert oclStatus;
+};
+
+
+TEST_P(VolumeTestFixture, raycast_custom_framesize_normals_mat)
+{
+    normal_test_custom_framesize(volumeType, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+
+//TODO: uncomment it when ColorTSDF gets GPU version
+INSTANTIATE_TEST_CASE_P(VolumeCPU, VolumeTestFixture, /*::testing::Combine(PlatformTypeEnum::all(), VolumeTypeEnum::all())*/
+                        ::testing::Values(PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
+                                          PlatformVolumeType {PlatformType::CPU, VolumeType::HashTSDF},
+                                          PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
+                                          PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF},
+                                          PlatformVolumeType {PlatformType::GPU, VolumeType::HashTSDF}));
 
 
 #ifdef HAVE_OPENCL
@@ -1321,12 +1384,6 @@ TEST(TSDF_CPU, valid_points_common_framesize_frame)
     valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-TEST(HashTSDF_CPU, raycast_custom_framesize_normals_mat)
-{
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-}
 
 TEST(HashTSDF_CPU, raycast_custom_framesize_normals_frame)
 {
@@ -1398,12 +1455,7 @@ TEST(HashTSDF_CPU, reproduce_volPoseRot)
     regressionVolPoseRot();
 }
 
-TEST(ColorTSDF_CPU, raycast_custom_framesize_normals_mat)
-{
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-}
+
 
 TEST(ColorTSDF_CPU, raycast_custom_framesize_normals_frame)
 {
@@ -1468,7 +1520,7 @@ TEST(ColorTSDF_CPU, valid_points_common_framesize_fetch)
     valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-class StaticVolumeBoundingBox : public ::testing::TestWithParam<VolumeType>
+class StaticVolumeBoundingBox : public ::testing::TestWithParam<VolumeTypeEnum>
 { };
 
 TEST_P(StaticVolumeBoundingBox, boundingBoxCPU)
@@ -1507,15 +1559,20 @@ TEST(TSDF, boundingBoxGPU)
     staticBoundingBoxTest(VolumeType::TSDF);
 }
 
+enum Growth
+{
+    OFF = 0, ON = 1
+};
+CV_ENUM(GrowthEnum, Growth::OFF, Growth::ON);
 
-class BoundingBoxEnableGrowthTest : public ::testing::TestWithParam<std::tuple<bool, bool>>
+class BoundingBoxEnableGrowthTest : public ::testing::TestWithParam<std::tuple<PlatformTypeEnum, GrowthEnum>>
 { };
 
 TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
 {
     auto p = GetParam();
-    bool gpu = std::get<0>(p);
-    bool enableGrowth = std::get<1>(p);
+    bool gpu = bool(std::get<0>(p));
+    bool enableGrowth = bool(std::get<1>(p));
 
     OpenCLStatusRevert oclStatus;
 
@@ -1525,7 +1582,7 @@ TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
     boundingBoxGrowthTest(enableGrowth);
 }
 
-INSTANTIATE_TEST_CASE_P(TSDF, BoundingBoxEnableGrowthTest, ::testing::Combine(::testing::Bool(), ::testing::Bool()));
+INSTANTIATE_TEST_CASE_P(TSDF, BoundingBoxEnableGrowthTest, ::testing::Combine(PlatformTypeEnum::all(), GrowthEnum::all()));
 
 #endif
 }
