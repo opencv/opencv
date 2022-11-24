@@ -576,43 +576,6 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
 }
 
 
-
-
-
-
-
-
-
-
-TEST(TSDF_GPU, valid_points_common_framesize_mat)
-{
-    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
-}
-
-TEST(TSDF_GPU, valid_points_common_framesize_frame)
-{
-    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
-
-
-
-
-
-
-
-
-
-
-TEST(HashTSDF_GPU, valid_points_common_framesize_mat)
-{
-    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
-}
-
-TEST(HashTSDF_GPU, valid_points_common_framesize_frame)
-{
-    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
-
 }
 }  // namespace
 

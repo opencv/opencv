@@ -733,17 +733,20 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
 
     Mat depth = scene->depth(poses[0]);
     Mat rgb = scene->rgb(poses[0]);
-    Mat points, normals, colors, newPoints, newNormals;
+    Mat udepth, urgb;
+    depth.copyTo(udepth);
+    rgb.copyTo(urgb);
+    UMat upoints, unormals, ucolors;
     int anfas, profile;
 
-    OdometryFrame odf(rgb, depth);
+    OdometryFrame odf(urgb, udepth);
 
     if (testSrcType == VolumeTestSrcType::MAT)
     {
         if (volumeType == VolumeType::ColorTSDF)
-            volume.integrate(depth, rgb, poses[0].matrix);
+            volume.integrate(udepth, urgb, poses[0].matrix);
         else
-            volume.integrate(depth, poses[0].matrix);
+            volume.integrate(udepth, poses[0].matrix);
     }
     else
     {
@@ -751,9 +754,14 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     }
 
     if (volumeType == VolumeType::ColorTSDF)
-        volume.raycast(poses[0].matrix, points, normals, colors);
+        volume.raycast(poses[0].matrix, upoints, unormals, ucolors);
     else
-        volume.raycast(poses[0].matrix, points, normals);
+        volume.raycast(poses[0].matrix, upoints, unormals);
+
+    Mat points, normals, colors;
+    points = upoints.getMat(ACCESS_READ);
+    normals = unormals.getMat(ACCESS_READ);
+    colors = ucolors.getMat(ACCESS_READ);
 
     patchNaNs(points);
     anfas = counterOfValid(points);
@@ -766,13 +774,18 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
             displayImage(depth, points, normals, depthFactor, lightPose);
     }
 
-    points.release();
-    normals.release();
+    upoints.release();
+    unormals.release();
+    ucolors.release();
 
     if (volumeType == VolumeType::ColorTSDF)
-        volume.raycast(poses[17].matrix, points, normals, colors);
+        volume.raycast(poses[17].matrix, upoints, unormals, ucolors);
     else
-        volume.raycast(poses[17].matrix, points, normals);
+        volume.raycast(poses[17].matrix, upoints, unormals);
+
+    points = upoints.getMat(ACCESS_READ);
+    normals = unormals.getMat(ACCESS_READ);
+    colors = ucolors.getMat(ACCESS_READ);
 
     patchNaNs(points);
     profile = counterOfValid(points);
@@ -1067,43 +1080,6 @@ void regressionVolPoseRot()
 
 
 
-
-
-
-
-
-
-
-TEST(TSDF, valid_points_common_framesize_mat)
-{
-    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
-}
-
-TEST(TSDF, valid_points_common_framesize_frame)
-{
-    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
-
-
-
-
-
-
-
-
-
-
-
-TEST(HashTSDF, valid_points_common_framesize_mat)
-{
-    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
-}
-
-TEST(HashTSDF, valid_points_common_framesize_frame)
-{
-    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
-
 class BoundingBoxEnableGrowthTest : public ::testing::TestWithParam<bool>
 { };
 
@@ -1128,15 +1104,6 @@ TEST(ColorTSDF, valid_points_custom_framesize_fetch)
     valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-TEST(ColorTSDF, valid_points_common_framesize_mat)
-{
-    valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
-}
-
-TEST(ColorTSDF, valid_points_common_framesize_fetch)
-{
-    valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
 
 class StaticVolumeBoundingBox : public ::testing::TestWithParam<VolumeType>
 { };
@@ -1276,6 +1243,16 @@ TEST_P(VolumeTestFixture, valid_points_custom_framesize_frame)
     valid_points_test_custom_framesize(volumeType, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
+TEST_P(VolumeTestFixture, valid_points_common_framesize_mat)
+{
+    valid_points_test_common_framesize(volumeType, VolumeTestSrcType::MAT);
+}
+
+TEST_P(VolumeTestFixture, valid_points_common_framesize_frame)
+{
+    valid_points_test_common_framesize(volumeType, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
 //TODO: uncomment it when ColorTSDF gets GPU version
 INSTANTIATE_TEST_CASE_P(Volume, VolumeTestFixture, /*::testing::Combine(PlatformTypeEnum::all(), VolumeTypeEnum::all())*/
                         ::testing::Values(PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
@@ -1296,19 +1273,6 @@ INSTANTIATE_TEST_CASE_P(Volume, VolumeTestFixture, /*::testing::Combine(Platform
 
 
 
-TEST(TSDF_CPU, valid_points_common_framesize_mat)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
-}
-
-TEST(TSDF_CPU, valid_points_common_framesize_frame)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
 
 
 
@@ -1317,19 +1281,6 @@ TEST(TSDF_CPU, valid_points_common_framesize_frame)
 
 
 
-TEST(HashTSDF_CPU, valid_points_common_framesize_mat)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
-}
-
-TEST(HashTSDF_CPU, valid_points_common_framesize_frame)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
 
 TEST(HashTSDF_CPU, reproduce_volPoseRot)
 {
@@ -1348,19 +1299,7 @@ TEST(ColorTSDF_CPU, valid_points_custom_framesize_fetch)
     valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-TEST(ColorTSDF_CPU, valid_points_common_framesize_mat)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
-}
 
-TEST(ColorTSDF_CPU, valid_points_common_framesize_fetch)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
 
 
 class StaticVolumeBoundingBox : public ::testing::TestWithParam<PlatformVolumeType>
