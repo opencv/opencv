@@ -1240,7 +1240,7 @@ TEST_P(StaticVolumeBoundingBox, staticBoundingBox)
 }
 
 //TODO: edit this list when ColorTSDF gets GPU support
-INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(
+INSTANTIATE_TEST_CASE_P(Volume, StaticVolumeBoundingBox, ::testing::Values(
                         PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
                         PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
                         PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF}));
@@ -1261,7 +1261,7 @@ TEST_P(ReproduceVolPoseRotTest, reproduce_volPoseRot)
     regressionVolPoseRot();
 }
 
-INSTANTIATE_TEST_CASE_P(TSDF, ReproduceVolPoseRotTest, PlatformTypeEnum::all());
+INSTANTIATE_TEST_CASE_P(Volume, ReproduceVolPoseRotTest, PlatformTypeEnum::all());
 
 
 enum Growth
@@ -1287,7 +1287,7 @@ TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
     boundingBoxGrowthTest(enableGrowth);
 }
 
-INSTANTIATE_TEST_CASE_P(TSDF, BoundingBoxEnableGrowthTest, ::testing::Combine(PlatformTypeEnum::all(), GrowthEnum::all()));
+INSTANTIATE_TEST_CASE_P(Volume, BoundingBoxEnableGrowthTest, ::testing::Combine(PlatformTypeEnum::all(), GrowthEnum::all()));
 
 }
 }  // namespace
