@@ -2676,7 +2676,7 @@ double hal::getlen(InputArray Point1, InputArray Point2)
     return std::sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2));
 }
 
-void getangle(InputArray Point1, InputArray Point2, InputArray Point3, InputArray Point4, double w, double h, double& angleA, double& angleB)
+void findcamangle(InputArray Point1, InputArray Point2, InputArray Point3, InputArray Point4, double w, double h, double& angleA, double& angleB)
 {
     double ratio = h/w;
     double ab = getlen(Point1, Point2);
