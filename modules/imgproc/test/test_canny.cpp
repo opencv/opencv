@@ -198,25 +198,50 @@ test_Canny( const Mat& src, Mat& dst,
     float lowThreshold = (float)MIN(threshold1, threshold2);
     float highThreshold = (float)MAX(threshold1, threshold2);
 
-    int x, y, width = src.cols, height = src.rows;
+    int x, y;
+    const int width = src.cols, height = src.rows;
+    const int cn = src.channels();
 
     Mat dxkernel = cvtest::calcSobelKernel2D( 1, 0, m, 0 );
     Mat dykernel = cvtest::calcSobelKernel2D( 0, 1, m, 0 );
-    Mat dx, dy, mag(height, width, CV_32F);
+    Mat dx, dy, mag(height, width, CV_32FC(cn));
     cvtest::filter2D(src, dx, CV_32S, dxkernel, anchor, 0, BORDER_REPLICATE);
     cvtest::filter2D(src, dy, CV_32S, dykernel, anchor, 0, BORDER_REPLICATE);
+
+    Mat dx_n(dx.size(), dx.type());
+    Mat dy_n(dy.size(), dy.type());
+    Mat mag_n(mag.size(), CV_32F);
 
     // calc gradient magnitude
     for( y = 0; y < height; y++ )
     {
         for( x = 0; x < width; x++ )
         {
-            int dxval = dx.at<int>(y, x), dyval = dy.at<int>(y, x);
-            mag.at<float>(y, x) = use_true_gradient ?
-                (float)sqrt((double)(dxval*dxval + dyval*dyval)) :
-                (float)(fabs((double)dxval) + fabs((double)dyval));
+            for (int k = 0; k < cn; k++)
+            {
+                int dxval = dx.ptr<int>(y, x)[k], dyval = dy.ptr<int>(y, x)[k];
+                mag.ptr<float>(y, x)[k] = use_true_gradient ?
+                    (float)sqrt((double)(dxval*dxval + dyval*dyval)) :
+                    (float)(fabs((double)dxval) + fabs((double)dyval));
+            }
+
+            int maxIdx = 0;
+            for (int k = 1; k < cn; k++)
+            {
+                if (mag.ptr<float>(y, x)[k] > mag.ptr<float>(y, x)[maxIdx])
+                {
+                    maxIdx = k;
+                }
+            }
+            mag_n.at<float>(y, x) = mag.ptr<float>(y, x)[maxIdx];
+            dx_n.at<int>(y, x) = dx.ptr<int>(y, x)[maxIdx];
+            dy_n.at<int>(y, x) = dy.ptr<int>(y, x)[maxIdx];
         }
     }
+
+    mag = mag_n;
+    dx = dx_n;
+    dy = dy_n;
 
     // calc gradient direction, do nonmaxima suppression
     for( y = 0; y < height; y++ )
