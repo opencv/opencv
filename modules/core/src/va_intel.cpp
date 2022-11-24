@@ -498,9 +498,13 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
 
 #ifdef HAVE_VA_INTEL
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
+    void* context_display = ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
     VAAPIInterop* interop = ocl_context.getContext().getUserContext<VAAPIInterop>().get();
+    if(!context_display || context_display != display)
+        CV_Error_(cv::Error::StsBadArg, ("Can't interop with current OpenCL context - VA display mismatch: %p (context) vs %p (surface).\ndid you call initializeContextFromVA before using VideoCapture/VideoWriter?", context_display, (void*)display));
+
     if(!display)
-        CV_Error(cv::Error::StsError,
+        CV_Error(cv::Error::StsBadArg,
                 "Invalid VADisplay passed to convertFromVASurface");
 
     if(interop) {
@@ -642,10 +646,13 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 
 #ifdef HAVE_VA_INTEL
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
+    void* context_display = ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
     VAAPIInterop* interop = ocl_context.getContext().getUserContext<VAAPIInterop>().get();
+    if(!context_display || context_display != display)
+        CV_Error_(cv::Error::StsBadArg, ("Can't interop with current OpenCL context - VA display mismatch: %p (context) vs %p (surface).\ndid you call initializeContextFromVA before using VideoCapture/VideoWriter?", context_display, (void*)display));
 
     if(!display)
-        CV_Error(cv::Error::StsError,
+        CV_Error(cv::Error::StsBadArg,
                 "Invalid VADisplay passed to convertFromVASurface");
 
     if(interop) {

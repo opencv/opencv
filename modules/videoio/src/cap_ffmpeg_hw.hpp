@@ -456,6 +456,8 @@ AVHWDeviceType hw_check_opencl_context(AVHWDeviceContext* ctx) {
     VADisplay vadisplay_ctx = hw_get_va_display(ctx);
     if (vadisplay_ocl && vadisplay_ocl == vadisplay_ctx)
         return AV_HWDEVICE_TYPE_VAAPI;
+    else
+       CV_Error_(cv::Error::StsBadArg, ("Can't interop with current OpenCL context - VA display mismatch: %p (hwcontext) vs %p (ocl_context).\ndid you call initializeContextFromVA before using VideoCapture/VideoWriter?", vadisplay_ctx, vadisplay_ocl));
 #endif
 #ifdef HAVE_D3D11
     ID3D11Device* d3d11device_ocl = (ID3D11Device*)ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_D3D11_DEVICE_KHR);
