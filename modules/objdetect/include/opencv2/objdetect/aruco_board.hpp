@@ -180,6 +180,7 @@ public:
      * @param squareLength chessboard square side length (normally in meters)
      * @param markerLength marker side length (same unit than squareLength)
      * @param dictionary dictionary of markers indicating the type of markers.
+     * @param ids array of id used markers
      * The first markers in the dictionary are used to fill the white chessboard squares.
      * @return the output CharucoBoard object
      *
