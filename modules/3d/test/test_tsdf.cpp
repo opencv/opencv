@@ -471,6 +471,12 @@ enum class VolumeTestSrcType
     ODOMETRY_FRAME = 1
 };
 
+enum class FrameSizeType
+{
+    DEFAULT = 0,
+    CUSTOM = 1
+};
+
 void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction testFunction, VolumeTestSrcType testSrcType)
 {
     VolumeSettings vs(volumeType);
@@ -625,7 +631,7 @@ void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction test
 }
 
 
-void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType testSrcType)
+void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType, FrameSizeType frameSizeSpecified)
 {
     VolumeSettings vs(volumeType);
     Volume volume(volumeType, vs);
@@ -662,10 +668,20 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
         volume.integrate(odf, poses[0].matrix);
     }
 
-    if (volumeType == VolumeType::ColorTSDF)
-        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
-    else
-        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
+    if (frameSizeSpecified == FrameSizeType::CUSTOM)
+    {
+        if (volumeType == VolumeType::ColorTSDF)
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
+        else
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
+    }
+    else // DEFAULT
+    {
+        if (volumeType == VolumeType::ColorTSDF)
+            volume.raycast(poses[0].matrix, upoints, unormals, ucolors);
+        else
+            volume.raycast(poses[0].matrix, upoints, unormals);
+    }
 
     Mat points, normals, colors;
     points = upoints.getMat(ACCESS_READ);
@@ -687,101 +703,20 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     unormals.release();
     ucolors.release();
 
-    if (volumeType == VolumeType::ColorTSDF)
-        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
-    else
-        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
-
-    points = upoints.getMat(ACCESS_READ);
-    normals = unormals.getMat(ACCESS_READ);
-    colors = ucolors.getMat(ACCESS_READ);
-
-    patchNaNs(points);
-    profile = counterOfValid(points);
-
-    if (cvtest::debugLevel > 0)
+    if (frameSizeSpecified == FrameSizeType::CUSTOM)
     {
         if (volumeType == VolumeType::ColorTSDF)
-            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+            volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
         else
-            displayImage(depth, points, normals, depthFactor, lightPose);
+            volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
     }
-
-    // TODO: why profile == 2*anfas ?
-    float percentValidity = float(anfas) / float(profile);
-
-    ASSERT_NE(profile, 0) << "There is no points in profile";
-    ASSERT_NE(anfas, 0) << "There is no points in anfas";
-    ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
-}
-
-
-void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType testSrcType)
-{
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = true;
-    float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    Mat depth = scene->depth(poses[0]);
-    Mat rgb = scene->rgb(poses[0]);
-    Mat udepth, urgb;
-    depth.copyTo(udepth);
-    rgb.copyTo(urgb);
-    UMat upoints, unormals, ucolors;
-    int anfas, profile;
-
-    OdometryFrame odf(urgb, udepth);
-
-    if (testSrcType == VolumeTestSrcType::MAT)
+    else
     {
         if (volumeType == VolumeType::ColorTSDF)
-            volume.integrate(udepth, urgb, poses[0].matrix);
+            volume.raycast(poses[17].matrix, upoints, unormals, ucolors);
         else
-            volume.integrate(udepth, poses[0].matrix);
+            volume.raycast(poses[17].matrix, upoints, unormals);
     }
-    else
-    {
-        volume.integrate(odf, poses[0].matrix);
-    }
-
-    if (volumeType == VolumeType::ColorTSDF)
-        volume.raycast(poses[0].matrix, upoints, unormals, ucolors);
-    else
-        volume.raycast(poses[0].matrix, upoints, unormals);
-
-    Mat points, normals, colors;
-    points = upoints.getMat(ACCESS_READ);
-    normals = unormals.getMat(ACCESS_READ);
-    colors = ucolors.getMat(ACCESS_READ);
-
-    patchNaNs(points);
-    anfas = counterOfValid(points);
-
-    if (cvtest::debugLevel > 0)
-    {
-        if (volumeType == VolumeType::ColorTSDF)
-            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
-        else
-            displayImage(depth, points, normals, depthFactor, lightPose);
-    }
-
-    upoints.release();
-    unormals.release();
-    ucolors.release();
-
-    if (volumeType == VolumeType::ColorTSDF)
-        volume.raycast(poses[17].matrix, upoints, unormals, ucolors);
-    else
-        volume.raycast(poses[17].matrix, upoints, unormals);
 
     points = upoints.getMat(ACCESS_READ);
     normals = unormals.getMat(ACCESS_READ);
@@ -1196,22 +1131,22 @@ TEST_P(VolumeTestFixture, fetch_normals)
 
 TEST_P(VolumeTestFixture, valid_points_custom_framesize_mat)
 {
-    valid_points_test_custom_framesize(volumeType, VolumeTestSrcType::MAT);
+    valid_points_test(volumeType, VolumeTestSrcType::MAT, FrameSizeType::CUSTOM);
 }
 
 TEST_P(VolumeTestFixture, valid_points_custom_framesize_frame)
 {
-    valid_points_test_custom_framesize(volumeType, VolumeTestSrcType::ODOMETRY_FRAME);
+    valid_points_test(volumeType, VolumeTestSrcType::ODOMETRY_FRAME, FrameSizeType::CUSTOM);
 }
 
 TEST_P(VolumeTestFixture, valid_points_common_framesize_mat)
 {
-    valid_points_test_common_framesize(volumeType, VolumeTestSrcType::MAT);
+    valid_points_test(volumeType, VolumeTestSrcType::MAT, FrameSizeType::DEFAULT);
 }
 
 TEST_P(VolumeTestFixture, valid_points_common_framesize_frame)
 {
-    valid_points_test_common_framesize(volumeType, VolumeTestSrcType::ODOMETRY_FRAME);
+    valid_points_test(volumeType, VolumeTestSrcType::ODOMETRY_FRAME, FrameSizeType::DEFAULT);
 }
 
 //TODO: uncomment it when ColorTSDF gets GPU version
