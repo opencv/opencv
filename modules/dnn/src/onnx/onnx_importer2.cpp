@@ -869,6 +869,15 @@ void OnnxImporter2::parseBatchNormalization(const string& ctx, const OpenCVOnnx_
     layerParams.type = "BatchNorm";
     replaceLayerParam(layerParams, "epsilon", "eps");
     replaceLayerParam(layerParams, "spatial", "use_global_stats");
+    bool const_bn = netimpl->isConst(inputs[1]) && netimpl->isConst(inputs[2]) &&
+                    netimpl->isConst(inputs[3]) && netimpl->isConst(inputs[4]);
+    if (const_bn) {
+        for (int i = 1; i < 5; i++) {
+            Mat t = netimpl->tensors.at(inputs[i]).getMat();
+            layerParams.blobs.push_back(t);
+        }
+        inputs.resize(1);
+    }
 }
 
 void OnnxImporter2::parseCast(const string& ctx, const OpenCVOnnx__NodeProto* node_proto,
@@ -952,6 +961,14 @@ void OnnxImporter2::parseConv(const string& ctx, const OpenCVOnnx__NodeProto* no
     OnnxAssert(ctx, ninputs == 2 || ninputs == 3);
     OnnxAssert(ctx, outputs.size() == 1);
     layerParams.type = "Convolution";
+    bool const_conv = netimpl->isConst(inputs[1]) && (ninputs == 2 || netimpl->isConst(inputs[2]));
+    if (const_conv) {
+        for (int i = 1; i < ninputs; i++) {
+            Mat t = netimpl->tensors.at(inputs[i]).getMat();
+            layerParams.blobs.push_back(t);
+        }
+        inputs.resize(1);
+    }
 }
 
 void OnnxImporter2::parseConvTranspose(const string& ctx, const OpenCVOnnx__NodeProto* node_proto,
@@ -1442,6 +1459,7 @@ void OnnxImporter2::parseRelu(const string& ctx, const OpenCVOnnx__NodeProto* no
 {
     OnnxAssert(ctx, inputs.size() == 1 && outputs.size() == 1);
     layerParams.type = "ReLU";
+    layerParams.set("op", "ReLU");
 }
 
 void OnnxImporter2::parseReshape(const string& ctx,
@@ -1687,6 +1705,7 @@ Net2 readNetFromONNX2(const String& onnxFile)
     Ptr<Net2::Impl> netimpl = net.impl();
     if (netimpl.empty())
         return net;
+    net.impl()->fuse();
     net.impl()->assignBuffers();
     return net;
 }

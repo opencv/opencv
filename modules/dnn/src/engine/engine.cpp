@@ -226,6 +226,20 @@ double Net2::Impl::get(int propId) const
     return 0.;
 }
 
+void Net2::Impl::getTensors(const int* idxs, size_t n,
+                            vector<Mat>& ts) const
+{
+    ts.resize(n);
+    for (size_t i = 0; i < n; i++) {
+        int j = idxs[i];
+        if (j < 0)
+            ts[i] = Mat();
+        else {
+            ts[i] = tensors.at(j).getMat();
+        }
+    }
+}
+
 bool Net2::Impl::useFP16() const { return enableFP16 && haveFP16; }
 
 void Net2::Impl::forward(InputArrayOfArrays inputBlobs,

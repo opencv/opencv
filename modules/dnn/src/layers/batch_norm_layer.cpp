@@ -66,78 +66,61 @@ public:
 
     void initWeightsBias()
     {
-        CV_Assert(blobs.size() >= 2);
+        size_t nblobs = blobs.size();
+        CV_Assert(nblobs >= 2);
+        for (auto& blob: blobs) {
+            CV_Assert(blob.isContinuous() && blob.type() == CV_32F);
+        }
         size_t n = blobs[0].total();
-        CV_Assert(blobs[1].total() == n &&
-                  blobs[0].isContinuous() && blobs[1].isContinuous() &&
-                  blobs[0].type() == CV_32F && blobs[1].type() == CV_32F);
-
-        float varMeanScale = 1.f;
-        if (!hasWeights && !hasBias && blobs.size() > 2 && useGlobalStats) {
-            CV_Assert(blobs.size() == 3); CV_CheckTypeEQ(blobs[2].type(), CV_32FC1, "");
-            varMeanScale = blobs[2].at<float>(0);
-            if (varMeanScale != 0)
-                varMeanScale = 1/varMeanScale;
-        }
-
-        const size_t biasBlobIndex = blobs.size() - 1;
-        const size_t weightsBlobIndex = biasBlobIndex - hasBias;
-
-        if( hasWeights )
-        {
-            CV_Assert((size_t)weightsBlobIndex < blobs.size());
-            const Mat& w = blobs[weightsBlobIndex];
-            CV_Assert(w.isContinuous() && w.type() == CV_32F && w.total() == (size_t)n);
-        }
-
-        if( hasBias )
-        {
-            CV_Assert((size_t)biasBlobIndex < blobs.size());
-            const Mat& b = blobs[weightsBlobIndex];
-            CV_Assert(b.isContinuous() && b.type() == CV_32F && b.total() == (size_t)n);
-        }
-
-        const float* meanData = blobs[0].ptr<float>();
-        const float* stdData = blobs[1].ptr<float>();
-        const float* weightsData = hasWeights ? blobs[weightsBlobIndex].ptr<float>() : 0;
-        const float* biasData = hasBias ? blobs[biasBlobIndex].ptr<float>() : 0;
-
-        origin_weights.create(1, (int)n, CV_32F);
-        origin_bias.create(1, (int)n, CV_32F);
-
-        float* dstWeightsData = origin_weights.ptr<float>();
-        float* dstBiasData = origin_bias.ptr<float>();
-
-        for (size_t i = 0; i < n; ++i)
-        {
-            float w = (hasWeights ? weightsData[i] : 1.0f) / sqrt(stdData[i] * varMeanScale + epsilon);
-            dstWeightsData[i] = w;
-            dstBiasData[i] = (hasBias ? biasData[i] : 0.0f) - w * meanData[i] * varMeanScale;
-        }
-    }
-
-    void initWeightBias2(const std::vector<Mat>& inputs)
-    {
-        CV_Assert(inputs.size() == 5);
-        size_t i, C = inputs[1].total();
-        for (i = 1; i < 5; i++) {
-            CV_Assert(inputs[i].total() == C);
-            CV_Assert(inputs[i].type() == CV_32F);
-            CV_Assert(inputs[i].isContinuous());
-        }
-        weights_.create(1, (int)C, CV_32F);
-        bias_.create(1, (int)C, CV_32F);
-        const float* inpscale = inputs[1].ptr<float>();
-        const float* inpbias = inputs[2].ptr<float>();
-        const float* inpmean = inputs[3].ptr<float>();
-        const float* inpvar = inputs[4].ptr<float>();
-        float* wptr = weights_.ptr<float>();
-        float* bptr = bias_.ptr<float>();
-        for (i = 0; i < C; i++) {
-            float w = inpscale[i]/sqrtf(inpvar[i] + epsilon);
-            float b = inpbias[i] - inpmean[i]*w;
-            wptr[i] = w;
-            bptr[i] = b;
+        CV_Assert(blobs[1].total() == n);
+        if (nblobs == 4) {
+            std::vector<Mat> inputs = {Mat(), blobs[0], blobs[1], blobs[2], blobs[3]};
+            calcScaleShift(inputs, origin_weights, origin_bias, epsilon);
+            origin_weights.copyTo(weights_);
+            origin_bias.copyTo(bias_);
+        } else {
+            float varMeanScale = 1.f;
+            if (!hasWeights && !hasBias && blobs.size() > 2 && useGlobalStats) {
+                CV_Assert(nblobs == 3);
+                varMeanScale = blobs[2].at<float>(0);
+                if (varMeanScale != 0)
+                    varMeanScale = 1/varMeanScale;
+            }
+            
+            const size_t biasBlobIndex = blobs.size() - 1;
+            const size_t weightsBlobIndex = biasBlobIndex - hasBias;
+            
+            if( hasWeights )
+            {
+                CV_Assert((size_t)weightsBlobIndex < blobs.size());
+                const Mat& w = blobs[weightsBlobIndex];
+                CV_Assert(w.isContinuous() && w.type() == CV_32F && w.total() == (size_t)n);
+            }
+            
+            if( hasBias )
+            {
+                CV_Assert((size_t)biasBlobIndex < blobs.size());
+                const Mat& b = blobs[weightsBlobIndex];
+                CV_Assert(b.isContinuous() && b.type() == CV_32F && b.total() == (size_t)n);
+            }
+            
+            const float* meanData = blobs[0].ptr<float>();
+            const float* stdData = blobs[1].ptr<float>();
+            const float* weightsData = hasWeights ? blobs[weightsBlobIndex].ptr<float>() : 0;
+            const float* biasData = hasBias ? blobs[biasBlobIndex].ptr<float>() : 0;
+            
+            origin_weights.create(1, (int)n, CV_32F);
+            origin_bias.create(1, (int)n, CV_32F);
+            
+            float* dstWeightsData = origin_weights.ptr<float>();
+            float* dstBiasData = origin_bias.ptr<float>();
+            
+            for (size_t i = 0; i < n; ++i)
+            {
+                float w = (hasWeights ? weightsData[i] : 1.0f) / sqrt(stdData[i] * varMeanScale + epsilon);
+                dstWeightsData[i] = w;
+                dstBiasData[i] = (hasBias ? biasData[i] : 0.0f) - w * meanData[i] * varMeanScale;
+            }
         }
     }
 
@@ -316,7 +299,7 @@ public:
             planeSize *= inpBlob.size[i];
         }
         if (blobs.empty())
-            initWeightBias2(inputs);
+            calcScaleShift(inputs, weights_, bias_, epsilon);
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
         {
@@ -493,6 +476,39 @@ public:
 private:
     bool useGlobalStats;
 };
+
+void BatchNormLayer::calcScaleShift(InputArrayOfArrays inputs_,
+                                    OutputArray scale_, OutputArray shift_,
+                                    float epsilon)
+{
+    std::vector<Mat> inputs;
+    inputs_.getMatVector(inputs);
+    CV_Assert(inputs.size() == 5);
+    int i, C = (int)inputs[1].total();
+    for (i = 1; i < 5; i++) {
+        CV_Assert(inputs[i].total() == C);
+        CV_Assert(inputs[i].type() == CV_32F);
+        CV_Assert(inputs[i].isContinuous());
+    }
+    scale_.create(1, C, CV_32F);
+    shift_.create(1, C, CV_32F);
+    Mat scale = scale_.getMat();
+    Mat shift = shift_.getMat();
+    const float* inpscale = inputs[1].ptr<float>();
+    const float* inpbias = inputs[2].ptr<float>();
+    const float* inpmean = inputs[3].ptr<float>();
+    const float* inpvar = inputs[4].ptr<float>();
+    float* wptr = scale.ptr<float>();
+    float* bptr = shift.ptr<float>();
+    for (i = 0; i < C; i++) {
+        float w = inpscale[i]/sqrtf(inpvar[i] + epsilon);
+        float b = inpbias[i] - inpmean[i]*w;
+        wptr[i] = w;
+        bptr[i] = b;
+    }
+}
+
+
 
 Ptr<BatchNormLayer> BatchNormLayer::create(const LayerParams& params)
 {
