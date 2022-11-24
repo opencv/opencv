@@ -582,10 +582,7 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
 
 
 
-TEST(TSDF_GPU, valid_points_custom_framesize_frame)
-{
-    valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
+
 
 TEST(TSDF_GPU, valid_points_common_framesize_mat)
 {
@@ -604,10 +601,7 @@ TEST(TSDF_GPU, valid_points_common_framesize_frame)
 
 
 
-TEST(HashTSDF_GPU, valid_points_custom_framesize_frame)
-{
-    valid_points_test_custom_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
+
 
 TEST(HashTSDF_GPU, valid_points_common_framesize_mat)
 {

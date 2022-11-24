@@ -1073,10 +1073,6 @@ void regressionVolPoseRot()
 
 
 
-TEST(TSDF, valid_points_custom_framesize_frame)
-{
-    valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
 
 TEST(TSDF, valid_points_common_framesize_mat)
 {
@@ -1096,10 +1092,7 @@ TEST(TSDF, valid_points_common_framesize_frame)
 
 
 
-TEST(HashTSDF, valid_points_custom_framesize_frame)
-{
-    valid_points_test_custom_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
+
 
 TEST(HashTSDF, valid_points_common_framesize_mat)
 {
@@ -1278,8 +1271,13 @@ TEST_P(VolumeTestFixture, valid_points_custom_framesize_mat)
     valid_points_test_custom_framesize(volumeType, VolumeTestSrcType::MAT);
 }
 
+TEST_P(VolumeTestFixture, valid_points_custom_framesize_frame)
+{
+    valid_points_test_custom_framesize(volumeType, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
 //TODO: uncomment it when ColorTSDF gets GPU version
-INSTANTIATE_TEST_CASE_P(VolumeCPU, VolumeTestFixture, /*::testing::Combine(PlatformTypeEnum::all(), VolumeTypeEnum::all())*/
+INSTANTIATE_TEST_CASE_P(Volume, VolumeTestFixture, /*::testing::Combine(PlatformTypeEnum::all(), VolumeTypeEnum::all())*/
                         ::testing::Values(PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
                                           PlatformVolumeType {PlatformType::CPU, VolumeType::HashTSDF},
                                           PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
@@ -1296,12 +1294,7 @@ INSTANTIATE_TEST_CASE_P(VolumeCPU, VolumeTestFixture, /*::testing::Combine(Platf
 
 
 
-TEST(TSDF_CPU, valid_points_custom_framesize_frame)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
+
 
 TEST(TSDF_CPU, valid_points_common_framesize_mat)
 {
@@ -1322,12 +1315,7 @@ TEST(TSDF_CPU, valid_points_common_framesize_frame)
 
 
 
-TEST(HashTSDF_CPU, valid_points_custom_framesize_frame)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    valid_points_test_custom_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
+
 
 TEST(HashTSDF_CPU, valid_points_common_framesize_mat)
 {
