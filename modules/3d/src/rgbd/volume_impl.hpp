@@ -27,7 +27,7 @@ public:
     virtual void integrate(InputArray depth, InputArray image, InputArray pose) = 0;
 
     virtual void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const = 0;
-    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const = 0;
+    virtual void raycast(InputArray cameraPose, int height, int width, InputArray intr, OutputArray points, OutputArray normals, OutputArray colors) const = 0;
 
     virtual void fetchNormals(InputArray points, OutputArray normals) const = 0;
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const = 0;
@@ -42,7 +42,7 @@ public:
     virtual bool getEnableGrowth() const = 0;
 
 public:
-    const VolumeSettings& settings;
+    VolumeSettings settings;
 #ifdef HAVE_OPENCL
     const bool useGPU;
 #endif
@@ -59,7 +59,7 @@ public:
     virtual void integrate(InputArray depth, InputArray pose) override;
     virtual void integrate(InputArray depth, InputArray image, InputArray pose) override;
     virtual void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const override;
-    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, InputArray intr, OutputArray points, OutputArray normals, OutputArray colors) const override;
 
     virtual void fetchNormals(InputArray points, OutputArray normals) const override;
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
@@ -113,7 +113,7 @@ public:
     virtual void integrate(InputArray depth, InputArray pose) override;
     virtual void integrate(InputArray depth, InputArray image, InputArray pose) override;
     virtual void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const override;
-    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, InputArray intr, OutputArray points, OutputArray normals, OutputArray colors) const override;
 
     virtual void fetchNormals(InputArray points, OutputArray normals) const override;
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
@@ -177,7 +177,7 @@ public:
     virtual void integrate(InputArray depth, InputArray pose) override;
     virtual void integrate(InputArray depth, InputArray image, InputArray pose) override;
     virtual void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const override;
-    virtual void raycast(InputArray cameraPose, int height, int width, OutputArray points, OutputArray normals, OutputArray colors) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, InputArray intr, OutputArray points, OutputArray normals, OutputArray colors) const override;
 
     virtual void fetchNormals(InputArray points, OutputArray normals) const override;
     virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
@@ -216,7 +216,7 @@ Volume::Volume()
     VolumeSettings settings;
     this->impl = makePtr<TsdfVolume>(settings);
 }
-Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
+Volume::Volume(VolumeType vtype, VolumeSettings settings)
 {
     switch (vtype)
     {
@@ -240,7 +240,7 @@ void Volume::integrate(const OdometryFrame& frame, InputArray pose) { this->impl
 void Volume::integrate(InputArray depth, InputArray pose) { this->impl->integrate(depth, pose); }
 void Volume::integrate(InputArray depth, InputArray image, InputArray pose) { this->impl->integrate(depth, image, pose); }
 void Volume::raycast(InputArray cameraPose, OutputArray _points, OutputArray _normals, OutputArray _colors) const { this->impl->raycast(cameraPose, _points, _normals, _colors); }
-void Volume::raycast(InputArray cameraPose, int height, int width, OutputArray _points, OutputArray _normals, OutputArray _colors) const { this->impl->raycast(cameraPose, height, width, _points, _normals, _colors); }
+void Volume::raycast(InputArray cameraPose, int height, int width, InputArray _intr, OutputArray _points, OutputArray _normals, OutputArray _colors) const { this->impl->raycast(cameraPose, height, width, _intr, _points, _normals, _colors); }
 void Volume::fetchNormals(InputArray points, OutputArray normals) const { this->impl->fetchNormals(points, normals); }
 void Volume::fetchPointsNormals(OutputArray points, OutputArray normals) const { this->impl->fetchPointsNormals(points, normals); }
 void Volume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const { this->impl->fetchPointsNormalsColors(points, normals, colors); };

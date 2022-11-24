@@ -497,7 +497,7 @@ void ocl_integrateHashTsdfVolumeUnit(
     const Intr intrinsics(intr);
 
     Vec4i volStrides;
-    settings.getVolumeDimensions(volStrides);
+    settings.getVolumeStrides(volStrides);
 
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
@@ -988,14 +988,14 @@ Point3f ocl_getNormalVoxel(
 #endif
 
 void raycastHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, const int volumeUnitDegree,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
     InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals)
 {
-    //std::cout << "raycastHashTsdfVolumeUnit()" << std::endl;
-
     CV_TRACE_FUNCTION();
     Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
+
+    Matx33f mintr(intr.getMat());
 
     Mat volUnitsData = _volUnitsData.getMat();
 
@@ -1016,7 +1016,7 @@ void raycastHashTsdfVolumeUnit(
     const float voxelSizeInv = 1.f / voxelSize;
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
     const Point3i volResolution = Point3i(resolution);
@@ -1028,9 +1028,7 @@ void raycastHashTsdfVolumeUnit(
     const Affine3f cam2vol(pose.inv() * Affine3f(cameraPose));
     const Affine3f vol2cam(Affine3f(cameraPose.inv()) * pose);
 
-    Matx33f intr;
-    settings.getCameraRaycastIntrinsics(intr);
-    const Intr intrinsics(intr);
+    const Intr intrinsics(mintr);
     const Intr::Reprojector reproj(intrinsics.makeReprojector());
 
     const int nstripes = -1;
@@ -1094,7 +1092,6 @@ void raycastHashTsdfVolumeUnit(
                         stepSize = tstep;
                     }
 
-                    //std::cout << prevTsdf << " " << currTsdf << " " << currWeight << std::endl;
                     //! Surface crossing
                     if (prevTsdf > 0.f && currTsdf <= 0.f && currWeight > 0)
                     {
@@ -1124,19 +1121,19 @@ void raycastHashTsdfVolumeUnit(
     };
 
     parallel_for_(Range(0, points.rows), _HashRaycastInvoker, nstripes);
-
-    //std::cout << "raycastHashTsdfVolumeUnit() end" << std::endl;
 }
 
 #ifdef HAVE_OPENCL
 
 void ocl_raycastHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, const int volumeUnitDegree,
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
     const CustomHashSet& hashTable, InputArray _volUnitsData, OutputArray _points, OutputArray _normals)
 {
     CV_TRACE_FUNCTION();
     Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
+
+    Matx33f mintr(intr.getMat());
 
     UMat volUnitsData = _volUnitsData.getUMat();
 
@@ -1156,9 +1153,7 @@ void ocl_raycastHashTsdfVolumeUnit(
     UMat points = _points.getUMat();
     UMat normals = _normals.getUMat();
 
-    Matx33f intr;
-    settings.getCameraRaycastIntrinsics(intr);
-    Intr intrinsics(intr);
+    Intr intrinsics(mintr);
     Intr::Reprojector r = intrinsics.makeReprojector();
     Vec2f finv(r.fxinv, r.fyinv), cxy(r.cx, r.cy);
 
@@ -1170,7 +1165,7 @@ void ocl_raycastHashTsdfVolumeUnit(
     const float voxelSizeInv = 1.f / voxelSize;
 
     const Vec4i volStrides;
-    settings.getVolumeDimensions(volStrides);
+    settings.getVolumeStrides(volStrides);
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
     const Point3i volResolution = Point3i(resolution);
@@ -1223,6 +1218,7 @@ void ocl_raycastHashTsdfVolumeUnit(
 }
 #endif
 
+
 void fetchNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
     const int volumeUnitDegree, InputArray _points, OutputArray _normals)
@@ -1243,7 +1239,7 @@ void fetchNormalsFromHashTsdfVolumeUnit(
     const float voxelSizeInv = 1.f / voxelSize;
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
 
     Matx44f _pose;
     settings.getVolumePose(_pose);
@@ -1288,7 +1284,7 @@ void olc_fetchNormalsFromHashTsdfVolumeUnit(
     const float voxelSizeInv = 1.f / voxelSize;
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
 
     Matx44f _pose;
     settings.getVolumePose(_pose);
@@ -1334,7 +1330,7 @@ void fetchPointsNormalsFromHashTsdfVolumeUnit(
     const float volumeUnitSize = voxelSize * resolution[0];
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
 
     std::vector<Vec3i> totalVolUnits;
     for (const auto& keyvalue : volumeUnits)
@@ -1461,7 +1457,7 @@ void ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(
     const float volumeUnitSize = voxelSize * resolution[0];
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
 
     Range _fetchRange(0, hashTable.last);
 

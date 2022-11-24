@@ -428,11 +428,12 @@ PERF_TEST(Perf_TSDF, integrate_mat)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     for (size_t i = 0; i < poses.size(); i++)
@@ -460,11 +461,12 @@ PERF_TEST(Perf_TSDF, integrate_frame)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     for (size_t i = 0; i < poses.size(); i++)
@@ -492,12 +494,13 @@ PERF_TEST(Perf_TSDF, raycast_mat)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     for (size_t i = 0; i < poses.size(); i++)
@@ -509,7 +512,7 @@ PERF_TEST(Perf_TSDF, raycast_mat)
         volume.integrate(depth, pose);
 
         startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, points, normals);
+        volume.raycast(pose, frameSize.height, frameSize.width, intrRaycast, points, normals);
         stopTimer();
 
         if (display)
@@ -531,11 +534,12 @@ PERF_TEST(Perf_TSDF_CPU, integrate_mat)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
 
@@ -564,11 +568,12 @@ PERF_TEST(Perf_TSDF_CPU, integrate_frame)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     for (size_t i = 0; i < poses.size(); i++)
@@ -597,12 +602,13 @@ PERF_TEST(Perf_TSDF_CPU, raycast_mat)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     for (size_t i = 0; i < poses.size(); i++)
@@ -614,7 +620,7 @@ PERF_TEST(Perf_TSDF_CPU, raycast_mat)
         volume.integrate(depth, pose);
 
         startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, points, normals);
+        volume.raycast(pose, frameSize.height, frameSize.width, intrRaycast, points, normals);
         stopTimer();
 
         if (display)
@@ -640,11 +646,12 @@ PERF_TEST(Perf_HashTSDF, integrate_mat)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     for (size_t i = 0; i < poses.size(); i++)
@@ -672,11 +679,12 @@ PERF_TEST(Perf_HashTSDF, integrate_frame)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     for (size_t i = 0; i < poses.size(); i++)
@@ -705,12 +713,13 @@ PERF_TEST(Perf_HashTSDF, raycast_mat)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     for (size_t i = 0; i < poses.size(); i++)
@@ -722,7 +731,7 @@ PERF_TEST(Perf_HashTSDF, raycast_mat)
         volume.integrate(depth, pose);
 
         startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, points, normals);
+        volume.raycast(pose, frameSize.height, frameSize.width, intrRaycast, points, normals);
         stopTimer();
 
         if (display)
@@ -743,11 +752,12 @@ PERF_TEST(Perf_HashTSDF_CPU, integrate_mat)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
 
@@ -776,11 +786,12 @@ PERF_TEST(Perf_HashTSDF_CPU, integrate_frame)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     for (size_t i = 0; i < poses.size(); i++)
@@ -809,12 +820,13 @@ PERF_TEST(Perf_HashTSDF_CPU, raycast_mat)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     for (size_t i = 0; i < poses.size(); i++)
@@ -826,7 +838,7 @@ PERF_TEST(Perf_HashTSDF_CPU, raycast_mat)
         volume.integrate(depth, pose);
 
         startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, points, normals);
+        volume.raycast(pose, frameSize.height, frameSize.width, intrRaycast, points, normals);
         stopTimer();
 
         if (display)
@@ -851,11 +863,12 @@ PERF_TEST(Perf_ColorTSDF, integrate_mat)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     for (size_t i = 0; i < poses.size(); i++)
@@ -884,11 +897,12 @@ PERF_TEST(Perf_ColorTSDF, integrate_frame)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     for (size_t i = 0; i < poses.size(); i++)
@@ -918,12 +932,13 @@ PERF_TEST(Perf_ColorTSDF, raycast_mat)
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     for (size_t i = 0; i < poses.size(); i++)
@@ -937,7 +952,7 @@ PERF_TEST(Perf_ColorTSDF, raycast_mat)
         volume.integrate(depth, rgb, pose);
 
         startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, points, normals, colors);
+        volume.raycast(pose, frameSize.height, frameSize.width, intrRaycast, points, normals, colors);
         stopTimer();
 
         if (display)

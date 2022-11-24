@@ -54,21 +54,21 @@ public:
     int   getIntegrateHeight() const;
 
 
-    /** @brief Sets the width of the raycasted image.
+    /** @brief Sets the width of the raycasted image, used when user does not provide it at raycast() call.
     * @param val input value.
     */
     void  setRaycastWidth(int val);
 
-    /** @brief Returns the width of the raycasted image.
+    /** @brief Returns the width of the raycasted image, used when user does not provide it at raycast() call.
     */
     int   getRaycastWidth() const;
 
-    /** @brief Sets the height of the raycasted image.
+    /** @brief Sets the height of the raycasted image, used when user does not provide it at raycast() call.
     * @param val input value.
     */
     void  setRaycastHeight(int val);
 
-    /** @brief Returns the height of the raycasted image.
+    /** @brief Returns the height of the raycasted image, used when user does not provide it at raycast() call.
     */
     int   getRaycastHeight() const;
 
@@ -159,10 +159,10 @@ public:
     void getVolumeResolution(OutputArray val) const;
 
     /** @brief Returns 3 integers representing strides by x, y and z dimension.
-        Can be used to iterate over volume unit raw data.
+        Can be used to iterate over raw volume unit data.
     * @param val output value.
     */
-    void getVolumeDimensions(OutputArray val) const;
+    void getVolumeStrides(OutputArray val) const;
 
     /** @brief Sets intrinsics of camera for integrations.
     * Format of input:
@@ -184,7 +184,7 @@ public:
     */
     void getCameraIntegrateIntrinsics(OutputArray val) const;
 
-    /** @brief Sets intrinsics of camera for raycast image.
+    /** @brief Sets camera intrinsics for raycast image which, used when user does not provide them at raycast() call.
     * Format of input:
     * [ fx  0 cx ]
     * [  0 fy cy ]
@@ -194,7 +194,7 @@ public:
     */
     void setCameraRaycastIntrinsics(InputArray val);
 
-    /** @brief Returns intrinsics of camera for raycast image.
+    /** @brief Returns camera intrinsics for raycast image, used when user does not provide them at raycast() call.
     * Format of output:
     * [ fx  0 cx ]
     * [  0 fy cy ]

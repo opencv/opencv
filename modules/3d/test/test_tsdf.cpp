@@ -477,26 +477,31 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
-    bool onlySemisphere = false;
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
+    bool onlySemisphere = false; //TODO: check both
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
     Mat rgb = scene->rgb(poses[0]);
-    Mat points, normals, tmpnormals, colors;
+    //TODO: check this utmpnormals, it looks redundant
+    UMat upoints, unormals, utmpnormals, ucolors;
+    UMat udepth, urgb;
+    depth.copyTo(udepth);
+    rgb.copyTo(urgb);
 
-    OdometryFrame odf(rgb, depth);
+    OdometryFrame odf(urgb, udepth);
 
     if (testSrcType == VolumeTestSrcType::MAT)
     {
         if (volumeType == VolumeType::ColorTSDF)
-            volume.integrate(depth, rgb, poses[0].matrix);
+            volume.integrate(udepth, urgb, poses[0].matrix);
         else
-            volume.integrate(depth, poses[0].matrix);
+            volume.integrate(udepth, poses[0].matrix);
     }
     else
     {
@@ -506,25 +511,30 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
     if (testFunction == VolumeTestFunction::RAYCAST)
     {
         if (volumeType == VolumeType::ColorTSDF)
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals, colors);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
         else
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
     }
     else if (testFunction == VolumeTestFunction::FETCH_NORMALS)
     {
         if (volumeType == VolumeType::ColorTSDF)
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, tmpnormals, colors);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, utmpnormals, ucolors);
         else
-            // hash_tsdf cpu don't works with raycast normals
-            //volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, tmpnormals);
-            volume.fetchPointsNormals(points, tmpnormals);
+            // hash_tsdf cpu doesn't work with raycast normals
+            //volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, utmpnormals);
+            volume.fetchPointsNormals(upoints, utmpnormals);
 
-        volume.fetchNormals(points, normals);
+        volume.fetchNormals(upoints, unormals);
     }
     else if (testFunction == VolumeTestFunction::FETCH_POINTS_NORMALS)
     {
-        volume.fetchPointsNormals(points, normals);
+        volume.fetchPointsNormals(upoints, unormals);
     }
+
+    Mat points, normals, colors;
+    points = upoints.getMat(ACCESS_READ);
+    normals = unormals.getMat(ACCESS_READ);
+    colors = ucolors.getMat(ACCESS_READ);
 
     if (testFunction == VolumeTestFunction::RAYCAST && cvtest::debugLevel > 0)
     {
@@ -544,12 +554,13 @@ void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction test
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
@@ -611,12 +622,13 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = true;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
@@ -639,9 +651,9 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     }
 
     if (volumeType == VolumeType::ColorTSDF)
-        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals, colors);
+        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, points, normals, colors);
     else
-        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, normals);
+        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, points, normals);
 
     patchNaNs(points);
     anfas = counterOfValid(points);
@@ -658,9 +670,9 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     normals.release();
 
     if (volumeType == VolumeType::ColorTSDF)
-        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, points, normals, colors);
+        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, points, normals, colors);
     else
-        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, points, normals);
+        volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, points, normals);
 
     patchNaNs(points);
     profile = counterOfValid(points);
@@ -688,12 +700,13 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = true;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
@@ -803,11 +816,12 @@ void boundingBoxGrowthTest(bool enableGrowth)
     Volume volume(VolumeType::HashTSDF, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
@@ -972,12 +986,13 @@ void regressionVolPoseRot()
     Volume volumeRot(VolumeType::HashTSDF, vsRot);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = false;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
@@ -1203,250 +1218,330 @@ TEST_P(StaticVolumeBoundingBox, boundingBox)
 
 INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(VolumeType::TSDF, VolumeType::ColorTSDF));
 
-#else
-TEST(TSDF_CPU, raycast_custom_framesize_normals_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
+#endif
 
-TEST(TSDF_CPU, raycast_custom_framesize_normals_frame)
+enum PlatformType
 {
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(TSDF_CPU, raycast_common_framesize_normals_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_common_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(TSDF_CPU, raycast_common_framesize_normals_frame)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(TSDF_CPU, fetch_points_normals)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(TSDF_CPU, fetch_normals)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(TSDF_CPU, valid_points_custom_framesize_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-    valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(TSDF_CPU, valid_points_custom_framesize_frame)
-{
-    cv::ocl::setUseOpenCL(false);
-    valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(TSDF_CPU, valid_points_common_framesize_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(TSDF_CPU, valid_points_common_framesize_frame)
-{
-    cv::ocl::setUseOpenCL(false);
-    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, raycast_custom_framesize_normals_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, raycast_custom_framesize_normals_frame)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, raycast_common_framesize_normals_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, raycast_common_framesize_normals_frame)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_common_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, fetch_points_normals)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, fetch_normals)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, valid_points_custom_framesize_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-    valid_points_test_custom_framesize(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, valid_points_custom_framesize_frame)
-{
-    cv::ocl::setUseOpenCL(false);
-    valid_points_test_custom_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, valid_points_common_framesize_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, valid_points_common_framesize_frame)
-{
-    cv::ocl::setUseOpenCL(false);
-    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(HashTSDF_CPU, reproduce_volPoseRot)
-{
-    cv::ocl::setUseOpenCL(false);
-    regressionVolPoseRot();
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(ColorTSDF_CPU, raycast_custom_framesize_normals_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(ColorTSDF_CPU, raycast_custom_framesize_normals_frame)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(ColorTSDF_CPU, raycast_common_framesize_normals_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_common_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(ColorTSDF_CPU, raycast_common_framesize_normals_frame)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_common_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(ColorTSDF_CPU, fetch_normals)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(ColorTSDF_CPU, fetch_points_normals)
-{
-    cv::ocl::setUseOpenCL(false);
-    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(ColorTSDF_CPU, valid_points_custom_framesize_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-    valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(ColorTSDF_CPU, valid_points_custom_framesize_fetch)
-{
-    cv::ocl::setUseOpenCL(false);
-    valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(ColorTSDF_CPU, valid_points_common_framesize_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-    valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
-    cv::ocl::setUseOpenCL(true);
-}
-
-TEST(ColorTSDF_CPU, valid_points_common_framesize_fetch)
-{
-    cv::ocl::setUseOpenCL(false);
-    valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-    cv::ocl::setUseOpenCL(true);
-}
-
+    CPU = 0, GPU = 1
+};
+CV_ENUM(PlatformTypeEnum, PlatformType::CPU, PlatformType::GPU);
 
 // used to store current OpenCL status (on/off) and revert it after test is done
 // works even after exceptions thrown in test body
 struct OpenCLStatusRevert
 {
-    OpenCLStatusRevert(bool oclStatus) : originalOpenCLStatus(oclStatus) { }
+#ifdef HAVE_OPENCL
+    OpenCLStatusRevert()
+    {
+        originalOpenCLStatus = cv::ocl::useOpenCL();
+    }
     ~OpenCLStatusRevert()
     {
         cv::ocl::setUseOpenCL(originalOpenCLStatus);
     }
+    void off()
+    {
+        cv::ocl::setUseOpenCL(false);
+    }
     bool originalOpenCLStatus;
+#else
+    void off() { }
+#endif
 };
 
-class StaticVolumeBoundingBox : public ::testing::TestWithParam<VolumeType>
-{ };
 
-TEST_P(StaticVolumeBoundingBox, boundingBoxCPU)
+// CV_ENUM does not support enum class types, so let's implement the class explicitly
+namespace
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
+    struct VolumeTypeEnum
+    {
+        static const std::array<VolumeType, 3> vals;
+        static const std::array<std::string, 3> svals;
 
-    cv::ocl::setUseOpenCL(false);
+        VolumeTypeEnum(VolumeType v = VolumeType::TSDF) : val(v) {}
+        operator VolumeType() const { return val; }
+        void PrintTo(std::ostream *os) const
+        {
+            int v = int(val);
+            if (v >= 0 && v < 3)
+            {
+                *os << svals[v];
+            }
+            else
+            {
+                *os << "UNKNOWN";
+            }
+        }
+        static ::testing::internal::ParamGenerator<VolumeTypeEnum> all()
+        {
+            return ::testing::Values(VolumeTypeEnum(vals[0]), VolumeTypeEnum(vals[1]), VolumeTypeEnum(vals[2]));
+        }
 
-    staticBoundingBoxTest(GetParam());
+    private:
+        VolumeType val;
+    };
+    const std::array<VolumeType, 3> VolumeTypeEnum::vals{VolumeType::TSDF, VolumeType::HashTSDF, VolumeType::ColorTSDF};
+    const std::array<std::string, 3> VolumeTypeEnum::svals{std::string("TSDF"), std::string("HashTSDF"), std::string("ColorTSDF")};
+
+    static inline void PrintTo(const VolumeTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
-INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(VolumeType::TSDF, VolumeType::ColorTSDF));
+typedef std::tuple<PlatformTypeEnum, VolumeTypeEnum> PlatformVolumeType;
+struct VolumeTestFixture : public ::testing::TestWithParam<PlatformVolumeType>
+{
+protected:
+    void SetUp() override
+    {
+        auto p = GetParam();
+        gpu = std::get<0>(p);
+        volumeType = std::get<1>(p);
+
+        if (!gpu)
+            oclStatus.off();
+    }
+
+    bool gpu;
+    VolumeType volumeType;
+    OpenCLStatusRevert oclStatus;
+};
+
+
+TEST_P(VolumeTestFixture, raycast_custom_framesize_normals_mat)
+{
+    normal_test_custom_framesize(volumeType, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+
+//TODO: uncomment it when ColorTSDF gets GPU version
+INSTANTIATE_TEST_CASE_P(VolumeCPU, VolumeTestFixture, /*::testing::Combine(PlatformTypeEnum::all(), VolumeTypeEnum::all())*/
+                        ::testing::Values(PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
+                                          PlatformVolumeType {PlatformType::CPU, VolumeType::HashTSDF},
+                                          PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
+                                          PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF},
+                                          PlatformVolumeType {PlatformType::GPU, VolumeType::HashTSDF}));
+
+
+#ifdef HAVE_OPENCL
+TEST(TSDF_CPU, raycast_custom_framesize_normals_frame)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(TSDF_CPU, raycast_common_framesize_normals_mat)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_common_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+
+TEST(TSDF_CPU, raycast_common_framesize_normals_frame)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(TSDF_CPU, fetch_points_normals)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
+}
+
+TEST(TSDF_CPU, fetch_normals)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
+}
+
+TEST(TSDF_CPU, valid_points_custom_framesize_mat)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
+}
+
+TEST(TSDF_CPU, valid_points_custom_framesize_frame)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(TSDF_CPU, valid_points_common_framesize_mat)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
+}
+
+TEST(TSDF_CPU, valid_points_common_framesize_frame)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+
+TEST(HashTSDF_CPU, raycast_custom_framesize_normals_frame)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(HashTSDF_CPU, raycast_common_framesize_normals_mat)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+
+TEST(HashTSDF_CPU, raycast_common_framesize_normals_frame)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_common_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(HashTSDF_CPU, fetch_points_normals)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
+}
+
+TEST(HashTSDF_CPU, fetch_normals)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
+}
+
+TEST(HashTSDF_CPU, valid_points_custom_framesize_mat)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    valid_points_test_custom_framesize(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
+}
+
+TEST(HashTSDF_CPU, valid_points_custom_framesize_frame)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    valid_points_test_custom_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(HashTSDF_CPU, valid_points_common_framesize_mat)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
+}
+
+TEST(HashTSDF_CPU, valid_points_common_framesize_frame)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(HashTSDF_CPU, reproduce_volPoseRot)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    regressionVolPoseRot();
+}
+
+
+
+TEST(ColorTSDF_CPU, raycast_custom_framesize_normals_frame)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(ColorTSDF_CPU, raycast_common_framesize_normals_mat)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_common_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
+}
+
+TEST(ColorTSDF_CPU, raycast_common_framesize_normals_frame)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_common_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(ColorTSDF_CPU, fetch_normals)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
+}
+
+TEST(ColorTSDF_CPU, fetch_points_normals)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
+}
+
+TEST(ColorTSDF_CPU, valid_points_custom_framesize_mat)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
+}
+
+TEST(ColorTSDF_CPU, valid_points_custom_framesize_fetch)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+TEST(ColorTSDF_CPU, valid_points_common_framesize_mat)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
+}
+
+TEST(ColorTSDF_CPU, valid_points_common_framesize_fetch)
+{
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
+    valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
+
+class StaticVolumeBoundingBox : public ::testing::TestWithParam<PlatformVolumeType>
+{ };
+
+TEST_P(StaticVolumeBoundingBox, staticBoundingBox)
+{
+    auto p = GetParam();
+    bool gpu = bool(std::get<0>(p));
+    VolumeType volumeType = std::get<1>(p);
+
+    OpenCLStatusRevert oclStatus;
+    if (!gpu)
+        oclStatus.off();
+
+    staticBoundingBoxTest(volumeType);
+}
+
+//TODO: edit this list when ColorTSDF gets GPU support
+INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(
+                        PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
+                        PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
+                        PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF}));
 
 
 // OpenCL tests
@@ -1455,44 +1550,31 @@ TEST(HashTSDF_GPU, reproduce_volPoseRot)
     regressionVolPoseRot();
 }
 
-//TODO: use this when ColorTSDF gets GPU support
-/*
-class StaticVolumeBoundingBox : public ::testing::TestWithParam<VolumeType>
-{ };
 
-TEST_P(StaticVolumeBoundingBox, GPU)
+enum Growth
 {
-    staticBoundingBoxTest(GetParam());
-}
+    OFF = 0, ON = 1
+};
+CV_ENUM(GrowthEnum, Growth::OFF, Growth::ON);
 
-INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(VolumeType::TSDF, VolumeType::ColorTSDF));
-*/
-
-// until that, we don't need parametrized test
-TEST(TSDF, boundingBoxGPU)
-{
-    staticBoundingBoxTest(VolumeType::TSDF);
-}
-
-
-class BoundingBoxEnableGrowthTest : public ::testing::TestWithParam<std::tuple<bool, bool>>
+class BoundingBoxEnableGrowthTest : public ::testing::TestWithParam<std::tuple<PlatformTypeEnum, GrowthEnum>>
 { };
 
 TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
 {
     auto p = GetParam();
-    bool gpu = std::get<0>(p);
-    bool enableGrowth = std::get<1>(p);
+    bool gpu = bool(std::get<0>(p));
+    bool enableGrowth = bool(std::get<1>(p));
 
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
+    OpenCLStatusRevert oclStatus;
 
     if (!gpu)
-        cv::ocl::setUseOpenCL(false);
+        oclStatus.off();
 
     boundingBoxGrowthTest(enableGrowth);
 }
 
-INSTANTIATE_TEST_CASE_P(TSDF, BoundingBoxEnableGrowthTest, ::testing::Combine(::testing::Bool(), ::testing::Bool()));
+INSTANTIATE_TEST_CASE_P(TSDF, BoundingBoxEnableGrowthTest, ::testing::Combine(PlatformTypeEnum::all(), GrowthEnum::all()));
 
 #endif
 }

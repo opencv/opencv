@@ -13,7 +13,7 @@ namespace cv {
 
 void preCalculationPixNorm(Size size, const Intr& intrinsics, Mat& pixNorm)
 {
-    //std::cout << "preCalculationPixNorm" << std::endl;
+    CV_TRACE_FUNCTION();
 
     Point2f fl(intrinsics.fx, intrinsics.fy);
     Point2f pp(intrinsics.cx, intrinsics.cy);
@@ -67,7 +67,7 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& volu
     TsdfVoxel* volDataStart = volume.ptr<TsdfVoxel>();
 
     Vec4i volStrides;
-    settings.getVolumeDimensions(volStrides);
+    settings.getVolumeStrides(volStrides);
 
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
@@ -330,12 +330,9 @@ void integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& volu
 
 #ifdef HAVE_OPENCL
 void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
-    InputArray _depth, InputArray _pixNorms, InputArray _volume)
+                                 InputArray _depth, InputArray _pixNorms, InputArray _volume)
 {
-    //std::cout << "ocl_integrateTsdfVolumeUnit" << std::endl;
-
     CV_TRACE_FUNCTION();
-    //CV_UNUSED(frameId);
     CV_Assert(!_depth.empty());
 
     UMat depth = _depth.getUMat();
@@ -369,7 +366,7 @@ void ocl_integrateTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& 
     Intr intrinsics(intr);
     Vec2f fxy(intrinsics.fx, intrinsics.fy), cxy(intrinsics.cx, intrinsics.cy);
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
 
     const float voxelSize = settings.getVoxelSize();
     const float truncatedDistance = settings.getTsdfTruncateDistance();
@@ -617,13 +614,17 @@ inline Point3f getNormalVoxel( const Mat& volume,
 }
 #endif
 
-void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
-                       InputArray _volume, OutputArray _points, OutputArray _normals)
+void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+                           int height, int width, InputArray intr,
+                           InputArray _volume, OutputArray _points, OutputArray _normals)
 {
-    //std::cout << "raycastVolumeUnit" << std::endl;
+    CV_TRACE_FUNCTION();
 
     const Size frameSize(width, height);
-    //CV_Assert(frameSize.area() > 0);
+    CV_Assert(frameSize.area() > 0);
+
+    Matx33f mintr(intr.getMat());
+
     _points.create(frameSize, POINT_TYPE);
     _normals.create(frameSize, POINT_TYPE);
 
@@ -631,7 +632,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
     Normals normals = _normals.getMat();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -648,9 +649,6 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
     const Point3i volResolution = Point3i(resolution);
     const Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
 
-    Matx33f intr;
-    settings.getCameraRaycastIntrinsics(intr);
-
     Matx44f _pose;
     settings.getVolumePose(_pose);
     const Affine3f pose = Affine3f(_pose);
@@ -663,7 +661,7 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
     const Mat volume = _volume.getMat();
     float voxelSize = settings.getVoxelSize();
     float voxelSizeInv = 1.0f / voxelSize;
-    const Intr::Reprojector reproj = Intr(intr).makeReprojector();
+    const Intr::Reprojector reproj = Intr(mintr).makeReprojector();
     float tstep = settings.getTsdfTruncateDistance() * settings.getRaycastStepFactor();
 
     Range raycastRange = Range(0, points.rows);
@@ -917,20 +915,20 @@ void raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& camera
 
 #endif
     parallel_for_(raycastRange, RaycastInvoker);
-    //RaycastInvoker(raycastRange);
 }
 
 
 #ifdef HAVE_OPENCL
-void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
-    InputArray _volume, OutputArray _points, OutputArray _normals)
+void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+                               int height, int width, InputArray intr,
+                               InputArray _volume, OutputArray _points, OutputArray _normals)
 {
-    //std::cout << "ocl_raycastVolumeUnit" << std::endl;
-
     CV_TRACE_FUNCTION();
 
     const Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
+
+    Matx33f mintr(intr.getMat());
 
     String errorStr;
     String name = "raycast";
@@ -949,7 +947,7 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
     UMat normals = _normals.getUMat();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -975,9 +973,8 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
     Affine3f cam2vol = pose.inv() * Affine3f(cameraPose);
     Mat(cam2vol.matrix).copyTo(cam2volGpu);
     Mat(vol2cam.matrix).copyTo(vol2camGpu);
-    Matx33f intr;
-    settings.getCameraRaycastIntrinsics(intr);
-    Intr intrinsics(intr);
+
+    Intr intrinsics(mintr);
     Intr::Reprojector r = intrinsics.makeReprojector();
 
     const UMat volume = _volume.getUMat();
@@ -1023,8 +1020,6 @@ void ocl_raycastTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& ca
 
 void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume, InputArray _points, OutputArray _normals)
 {
-    //std::cout << "fetchNormalsFromTsdfVolumeUnit" << std::endl;
-
     CV_TRACE_FUNCTION();
     CV_Assert(!_points.empty());
     if (!_normals.needed())
@@ -1046,7 +1041,7 @@ void fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArray _
     float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -1099,7 +1094,7 @@ void ocl_fetchNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputArr
     float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -1222,7 +1217,7 @@ void fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, InputA
     float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -1320,7 +1315,7 @@ void ocl_fetchPointsNormalsFromTsdfVolumeUnit(const VolumeSettings& settings, In
     float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),

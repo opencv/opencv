@@ -13,7 +13,7 @@ namespace cv {
 
 
 void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
-    InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _volume)
+                                  InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _volume)
 {
     Matx44f volumePose;
     settings.getVolumePose(volumePose);
@@ -21,11 +21,10 @@ void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f&
 }
 
 
-void integrateColorTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
-    InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _volume)
+void integrateColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& volumePose, const Matx44f& cameraPose,
+                                  InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _volume)
 {
-    //std::cout << "integrateColorTsdfVolumeUnit()" << std::endl;
+    CV_TRACE_FUNCTION();
 
     Depth depth = _depth.getMat();
     Colors color = _rgb.getMat();
@@ -35,7 +34,7 @@ void integrateColorTsdfVolumeUnit(
     RGBTsdfVoxel* volDataStart = volume.ptr<RGBTsdfVoxel>();
 
     Vec4i volStrides;
-    settings.getVolumeDimensions(volStrides);
+    settings.getVolumeStrides(volStrides);
 
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
@@ -48,10 +47,6 @@ void integrateColorTsdfVolumeUnit(
     Matx33f intr;
     settings.getCameraIntegrateIntrinsics(intr);
     const Intr::Projector projDepth = Intr(intr).makeProjector();
-
-    Matx33f rgb_intr;
-    settings.getCameraIntegrateIntrinsics(rgb_intr);
-    const Intr::Projector projColor = Intr(rgb_intr);
 
     const float dfac(1.f / settings.getDepthFactor());
     const float truncDist = settings.getTsdfTruncateDistance();
@@ -70,7 +65,6 @@ void integrateColorTsdfVolumeUnit(
 
         v_float32x4 zStep(zStepPt.x, zStepPt.y, zStepPt.z, 0);
         v_float32x4 vfxy(projDepth.fx, projDepth.fy, 0.f, 0.f), vcxy(projDepth.cx, projDepth.cy, 0.f, 0.f);
-        v_float32x4 rgb_vfxy(projColor.fx, projColor.fy, 0.f, 0.f), rgb_vcxy(projColor.cx, projColor.cy, 0.f, 0.f);
         const v_float32x4 upLimits = v_cvt_f32(v_int32x4(depth.cols - 1, depth.rows - 1, 0, 0));
 
         for (int x = range.start; x < range.end; x++)
@@ -128,7 +122,7 @@ void integrateColorTsdfVolumeUnit(
                     v_float32x4 projected = v_muladd(camPixVec, vfxy, vcxy);
                     // leave only first 2 lanes
                     projected = v_reinterpret_as_f32(v_reinterpret_as_u32(projected) &
-                        v_uint32x4(0xFFFFFFFF, 0xFFFFFFFF, 0, 0));
+                                                     v_uint32x4(0xFFFFFFFF, 0xFFFFFFFF, 0, 0));
 
                     depthType v;
                     // bilinearly interpolate depth at projected
@@ -136,7 +130,7 @@ void integrateColorTsdfVolumeUnit(
                         const v_float32x4& pt = projected;
                         // check coords >= 0 and < imgSize
                         v_uint32x4 limits = v_reinterpret_as_u32(pt < v_setzero_f32()) |
-                            v_reinterpret_as_u32(pt >= upLimits);
+                                            v_reinterpret_as_u32(pt >= upLimits);
                         limits = limits | v_rotate_right<1>(limits);
                         if (limits.get0())
                             continue;
@@ -177,23 +171,15 @@ void integrateColorTsdfVolumeUnit(
                             continue;
                     }
 
-                    v_float32x4 projectedRGB = v_muladd(camPixVec, rgb_vfxy, rgb_vcxy);
-                    // leave only first 2 lanes
-                    projectedRGB = v_reinterpret_as_f32(v_reinterpret_as_u32(projected) &
-                        v_uint32x4(0xFFFFFFFF, 0xFFFFFFFF, 0, 0));
-
                     // norm(camPixVec) produces double which is too slow
                     int _u = (int)projected.get0();
                     int _v = (int)v_rotate_right<1>(projected).get0();
-                    int rgb_u = (int)projectedRGB.get0();
-                    int rgb_v = (int)v_rotate_right<1>(projectedRGB).get0();
 
-                    if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows &&
-                        rgb_v >= 0 && rgb_v < color.rows && rgb_u >= 0 && rgb_u < color.cols))
+                    if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows))
                         continue;
                     float pixNorm = pixNorms.at<float>(_v, _u);
                     // TODO: Add support of 3point and 4 point representation
-                    Vec3f colorRGB = color.at<Vec3f>(rgb_v, rgb_u);
+                    Vec3f colorRGB = color.at<Vec3f>(_v, _u);
                     //float pixNorm = sqrt(v_reduce_sum(camPixVec*camPixVec));
                     // difference between distances of point and of surface to camera
                     float sdf = pixNorm * (v * dfac - zCamSpace);
@@ -283,7 +269,6 @@ void integrateColorTsdfVolumeUnit(
 
                     Point3f camPixVec;
                     Point2f projected = projDepth(camSpacePt, camPixVec);
-                    Point2f projectedRGB = projColor(camSpacePt, camPixVec);
 
                     depthType v = bilinearDepth(depth, projected);
                     if (v == 0) {
@@ -292,17 +277,12 @@ void integrateColorTsdfVolumeUnit(
                     int _u = projected.x;
                     int _v = projected.y;
 
-                    int rgb_u = (int)projectedRGB.x;
-                    int rgb_v = (int)projectedRGB.y;
-
-                    if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows
-                        && rgb_v >= 0 && rgb_v < color.rows && rgb_u >= 0 && rgb_u < color.cols
-                        ))
+                    if (!(_u >= 0 && _u < depth.cols && _v >= 0 && _v < depth.rows))
                         continue;
 
                     float pixNorm = pixNorms.at<float>(_v, _u);
                     // TODO: Add support of 3point and 4 point representation
-                    Vec3f colorRGB = color.at<Vec3f>(rgb_v, rgb_u);
+                    Vec3f colorRGB = color.at<Vec3f>(_v, _u);
 
                     // difference between distances of point and of surface to camera
                     float sdf = pixNorm * (v * dfac - camSpacePt.z);
@@ -337,10 +317,6 @@ void integrateColorTsdfVolumeUnit(
     };
 #endif
     parallel_for_(integrateRange, IntegrateInvoker);
-    //IntegrateInvoker(integrateRange);
-
-    //std::cout << "integrateColorTsdfVolumeUnit() end" << std::endl;
-
 }
 
 
@@ -349,8 +325,8 @@ void integrateColorTsdfVolumeUnit(
 // all coordinate checks should be done in inclosing cycle
 
 inline float interpolateColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords,
-    const v_float32x4& p)
+                                   const Vec4i& volDims, const Vec8i& neighbourCoords,
+                                   const v_float32x4& p)
 {
     // tx, ty, tz = floor(p)
     v_int32x4 ip = v_floor(p);
@@ -392,8 +368,8 @@ inline float interpolateColorVoxel(const Mat& volume,
 }
 
 inline float interpolateColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords,
-    const Point3f& _p)
+                                   const Vec4i& volDims, const Vec8i& neighbourCoords,
+                                   const Point3f& _p)
 {
     v_float32x4 p(_p.x, _p.y, _p.z, 0);
     return interpolateColorVoxel(volume, volDims, neighbourCoords, p);
@@ -402,8 +378,8 @@ inline float interpolateColorVoxel(const Mat& volume,
 
 #else
 inline float interpolateColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords,
-    const Point3f& p)
+                                   const Vec4i& volDims, const Vec8i& neighbourCoords,
+                                   const Point3f& p)
 {
     int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
 
@@ -440,8 +416,8 @@ inline float interpolateColorVoxel(const Mat& volume,
 //gradientDeltaFactor is fixed at 1.0 of voxel size
 
 inline v_float32x4 getNormalColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-    const v_float32x4& p)
+                                       const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
+                                       const v_float32x4& p)
 {
     if (v_check_any(p < v_float32x4(1.f, 1.f, 1.f, 0.f)) ||
         v_check_any(p >= v_float32x4((float)(volResolution.x - 2),
@@ -501,8 +477,8 @@ inline v_float32x4 getNormalColorVoxel(const Mat& volume,
 }
 
 inline Point3f getNormalColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-    const Point3f& _p)
+                                   const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
+                                   const Point3f& _p)
 {
     v_float32x4 p(_p.x, _p.y, _p.z, 0.f);
     v_float32x4 result = getNormalColorVoxel(volume, volDims, neighbourCoords, volResolution, p);
@@ -512,8 +488,8 @@ inline Point3f getNormalColorVoxel(const Mat& volume,
 }
 #else
 inline Point3f getNormalColorVoxel(const Mat& volume,
-    const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
-    const Point3f& p)
+                                   const Vec4i& volDims, const Vec8i& neighbourCoords, const Point3i volResolution,
+                                   const Point3f& p)
 {
     int xdim = volDims[0], ydim = volDims[1], zdim = volDims[2];
     const RGBTsdfVoxel* volData = volume.ptr<RGBTsdfVoxel>();
@@ -712,15 +688,16 @@ inline Point3f getColorVoxel(const Mat& volume,
 #endif
 
 
-
-
-void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
-    InputArray _volume, OutputArray _points, OutputArray _normals, OutputArray _colors)
+void raycastColorTsdfVolumeUnit(const VolumeSettings &settings, const Matx44f &cameraPose,
+                                int height, int width, InputArray intr,
+                                InputArray _volume, OutputArray _points, OutputArray _normals, OutputArray _colors)
 {
-    //std::cout << "raycastColorTsdfVolumeUnit()" << std::endl;
+    CV_TRACE_FUNCTION();
 
     Size frameSize(width, height);
     CV_Assert(frameSize.area() > 0);
+
+    Matx33f mintr(intr.getMat());
 
     _points.create(frameSize, POINT_TYPE);
     _normals.create(frameSize, POINT_TYPE);
@@ -731,7 +708,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
     Colors colors = _colors.getMat();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -748,9 +725,7 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
     const Point3i volResolution = Point3i(resolution);
     const Point3f volSize = Point3f(volResolution) * settings.getVoxelSize();
 
-    Matx33f intr;
-    settings.getCameraRaycastIntrinsics(intr);
-    const Intr::Reprojector reprojDepth = Intr(intr).makeReprojector();
+    const Intr::Reprojector reprojDepth = Intr(mintr).makeReprojector();
 
     Matx44f _pose;
     settings.getVolumePose(_pose);
@@ -1027,17 +1002,12 @@ void raycastColorTsdfVolumeUnit(const VolumeSettings& settings, const Matx44f& c
 #endif
 
     parallel_for_(raycastRange, RaycastInvoker);
-    //RaycastInvoker(raycastRange);
-
-    //std::cout << "raycastColorTsdfVolumeUnit() end" << std::endl;
 }
 
 
 void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputArray _volume,
-    InputArray _points, OutputArray _normals)
+                                         InputArray _points, OutputArray _normals)
 {
-    //std::cout << "fetchNormalsFromColorTsdfVolumeUnit" << std::endl;
-
     CV_TRACE_FUNCTION();
     CV_Assert(!_points.empty());
     if (!_normals.needed())
@@ -1058,7 +1028,7 @@ void fetchNormalsFromColorTsdfVolumeUnit(const VolumeSettings& settings, InputAr
     float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),
@@ -1171,7 +1141,7 @@ void fetchPointsNormalsColorsFromColorTsdfVolumeUnit(const VolumeSettings& setti
     float voxelSizeInv = 1.f / settings.getVoxelSize();
 
     const Vec4i volDims;
-    settings.getVolumeDimensions(volDims);
+    settings.getVolumeStrides(volDims);
     const Vec8i neighbourCoords = Vec8i(
         volDims.dot(Vec4i(0, 0, 0)),
         volDims.dot(Vec4i(0, 0, 1)),

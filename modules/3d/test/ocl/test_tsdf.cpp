@@ -343,12 +343,13 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = true;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
@@ -367,14 +368,14 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
 
     if (testFunction == VolumeTestFunction::RAYCAST)
     {
-        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, upoints, unormals);
+        volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
     }
     else if (testFunction == VolumeTestFunction::FETCH_NORMALS)
     {
         if (testSrcType == VolumeTestSrcType::MAT)
         {
             // takes only point from raycast for checking fetched normals on the display
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, upoints, utmpnormals);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, utmpnormals);
             // volume.fetchPointsNormals(upoints, utmpnormals);
             volume.fetchNormals(upoints, unormals);
         }
@@ -402,12 +403,13 @@ void normal_test_common_framesize(VolumeType volumeType, VolumeTestFunction test
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = true;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
@@ -461,12 +463,13 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = true;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
@@ -485,7 +488,7 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     else
         volume.integrate(odf, poses[0].matrix);
 
-    volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, upoints, unormals);
+    volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
 
     normals = unormals.getMat(af);
     points  = upoints.getMat(af);
@@ -495,7 +498,7 @@ void valid_points_test_custom_framesize(VolumeType volumeType, VolumeTestSrcType
     if (cvtest::debugLevel > 0)
         displayImage(depth, points, normals, depthFactor, lightPose);
 
-    volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, upoints1, unormals1);
+    volume.raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, upoints1, unormals1);
 
     normals = unormals1.getMat(af);
     points  = upoints1.getMat(af);
@@ -519,12 +522,13 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
     Volume volume(volumeType, vs);
 
     Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intr;
-    vs.getCameraIntegrateIntrinsics(intr);
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
     bool onlySemisphere = true;
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intr, depthFactor, onlySemisphere);
+    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
     std::vector<Affine3f> poses = scene->getPoses();
 
     Mat depth = scene->depth(poses[0]);
