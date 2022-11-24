@@ -1075,20 +1075,7 @@ void regressionVolPoseRot()
     EXPECT_LE(normNrm, 73.08);
 }
 
-
-#ifndef HAVE_OPENCL
-
-
-
-TEST(HashTSDF, reproduce_volPoseRot)
-{
-    regressionVolPoseRot();
-}
-
-
-
-
-#endif
+///////// Parametrized tests
 
 enum PlatformType
 {
@@ -1155,6 +1142,7 @@ namespace
 
     static inline void PrintTo(const VolumeTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
+
 
 typedef std::tuple<PlatformTypeEnum, VolumeTypeEnum> PlatformVolumeType;
 struct VolumeTestFixture : public ::testing::TestWithParam<PlatformVolumeType>
@@ -1235,38 +1223,6 @@ INSTANTIATE_TEST_CASE_P(Volume, VolumeTestFixture, /*::testing::Combine(Platform
                                           PlatformVolumeType {PlatformType::GPU, VolumeType::HashTSDF}));
 
 
-#ifdef HAVE_OPENCL
-//TODO: rewrite other code to the same style as above
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-TEST(HashTSDF_CPU, reproduce_volPoseRot)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    regressionVolPoseRot();
-}
-
-
-
-
-
-
 class StaticVolumeBoundingBox : public ::testing::TestWithParam<PlatformVolumeType>
 { };
 
@@ -1290,11 +1246,22 @@ INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(
                         PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF}));
 
 
-// OpenCL tests
-TEST(HashTSDF_GPU, reproduce_volPoseRot)
+class ReproduceVolPoseRotTest : public ::testing::TestWithParam<PlatformTypeEnum>
+{ };
+
+TEST_P(ReproduceVolPoseRotTest, reproduce_volPoseRot)
 {
+    bool gpu = bool(GetParam());
+
+    OpenCLStatusRevert oclStatus;
+
+    if (!gpu)
+        oclStatus.off();
+
     regressionVolPoseRot();
 }
+
+INSTANTIATE_TEST_CASE_P(TSDF, ReproduceVolPoseRotTest, PlatformTypeEnum::all());
 
 
 enum Growth
@@ -1322,6 +1289,5 @@ TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
 
 INSTANTIATE_TEST_CASE_P(TSDF, BoundingBoxEnableGrowthTest, ::testing::Combine(PlatformTypeEnum::all(), GrowthEnum::all()));
 
-#endif
 }
 }  // namespace
