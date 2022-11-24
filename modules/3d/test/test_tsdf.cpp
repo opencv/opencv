@@ -1080,17 +1080,6 @@ void regressionVolPoseRot()
 
 
 
-class BoundingBoxEnableGrowthTest : public ::testing::TestWithParam<bool>
-{ };
-
-TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
-{
-    boundingBoxGrowthTest(GetParam());
-}
-
-INSTANTIATE_TEST_CASE_P(TSDF, BoundingBoxEnableGrowthTest, ::testing::Bool());
-
-
 TEST(HashTSDF, reproduce_volPoseRot)
 {
     regressionVolPoseRot();
@@ -1098,22 +1087,6 @@ TEST(HashTSDF, reproduce_volPoseRot)
 
 
 
-
-TEST(ColorTSDF, valid_points_custom_framesize_fetch)
-{
-    valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
-
-
-class StaticVolumeBoundingBox : public ::testing::TestWithParam<VolumeType>
-{ };
-
-TEST_P(StaticVolumeBoundingBox, boundingBox)
-{
-    staticBoundingBoxTest(GetParam());
-}
-
-INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(VolumeType::TSDF, VolumeType::ColorTSDF));
 
 #endif
 
@@ -1290,14 +1263,6 @@ TEST(HashTSDF_CPU, reproduce_volPoseRot)
 }
 
 
-
-
-TEST(ColorTSDF_CPU, valid_points_custom_framesize_fetch)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
-}
 
 
 
