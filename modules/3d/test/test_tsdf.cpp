@@ -1051,10 +1051,7 @@ void regressionVolPoseRot()
 
 
 #ifndef HAVE_OPENCL
-TEST(TSDF, raycast_custom_framesize_normals_mat)
-{
-    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-}
+
 
 TEST(TSDF, raycast_common_framesize_normals_frame)
 {
@@ -1091,10 +1088,7 @@ TEST(TSDF, valid_points_common_framesize_frame)
     valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-TEST(HashTSDF, raycast_custom_framesize_normals_mat)
-{
-    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-}
+
 
 TEST(HashTSDF, raycast_common_framesize_normals_frame)
 {
@@ -1147,10 +1141,6 @@ TEST(HashTSDF, reproduce_volPoseRot)
     regressionVolPoseRot();
 }
 
-TEST(ColorTSDF, raycast_custom_framesize_normals_mat)
-{
-    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-}
 
 TEST(ColorTSDF, raycast_common_framesize_normals_frame)
 {
