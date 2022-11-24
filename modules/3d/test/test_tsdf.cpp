@@ -480,7 +480,7 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
     Matx33f intrIntegrate, intrRaycast;
     vs.getCameraIntegrateIntrinsics(intrIntegrate);
     vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
+    bool onlySemisphere = false; //TODO: check both
     float depthFactor = vs.getDepthFactor();
     Vec3f lightPose = Vec3f::all(0.f);
     Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
@@ -488,16 +488,20 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
 
     Mat depth = scene->depth(poses[0]);
     Mat rgb = scene->rgb(poses[0]);
-    Mat points, normals, tmpnormals, colors;
+    //TODO: check this utmpnormals, it looks redundant
+    UMat upoints, unormals, utmpnormals, ucolors;
+    UMat udepth, urgb;
+    depth.copyTo(udepth);
+    rgb.copyTo(urgb);
 
-    OdometryFrame odf(rgb, depth);
+    OdometryFrame odf(urgb, udepth);
 
     if (testSrcType == VolumeTestSrcType::MAT)
     {
         if (volumeType == VolumeType::ColorTSDF)
-            volume.integrate(depth, rgb, poses[0].matrix);
+            volume.integrate(udepth, urgb, poses[0].matrix);
         else
-            volume.integrate(depth, poses[0].matrix);
+            volume.integrate(udepth, poses[0].matrix);
     }
     else
     {
@@ -507,25 +511,30 @@ void normal_test_custom_framesize(VolumeType volumeType, VolumeTestFunction test
     if (testFunction == VolumeTestFunction::RAYCAST)
     {
         if (volumeType == VolumeType::ColorTSDF)
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, points, normals, colors);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
         else
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, points, normals);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
     }
     else if (testFunction == VolumeTestFunction::FETCH_NORMALS)
     {
         if (volumeType == VolumeType::ColorTSDF)
-            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, tmpnormals, colors);
+            volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, utmpnormals, ucolors);
         else
-            // hash_tsdf cpu don't works with raycast normals
-            //volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, points, tmpnormals);
-            volume.fetchPointsNormals(points, tmpnormals);
+            // hash_tsdf cpu doesn't work with raycast normals
+            //volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, utmpnormals);
+            volume.fetchPointsNormals(upoints, utmpnormals);
 
-        volume.fetchNormals(points, normals);
+        volume.fetchNormals(upoints, unormals);
     }
     else if (testFunction == VolumeTestFunction::FETCH_POINTS_NORMALS)
     {
-        volume.fetchPointsNormals(points, normals);
+        volume.fetchPointsNormals(upoints, unormals);
     }
+
+    Mat points, normals, colors;
+    points = upoints.getMat(ACCESS_READ);
+    normals = unormals.getMat(ACCESS_READ);
+    colors = ucolors.getMat(ACCESS_READ);
 
     if (testFunction == VolumeTestFunction::RAYCAST && cvtest::debugLevel > 0)
     {
