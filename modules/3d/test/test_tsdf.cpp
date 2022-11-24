@@ -1053,10 +1053,7 @@ void regressionVolPoseRot()
 #ifndef HAVE_OPENCL
 
 
-TEST(TSDF, raycast_common_framesize_normals_frame)
-{
-    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
-}
+
 
 TEST(TSDF, fetch_points_normals)
 {
@@ -1090,10 +1087,6 @@ TEST(TSDF, valid_points_common_framesize_frame)
 
 
 
-TEST(HashTSDF, raycast_common_framesize_normals_frame)
-{
-    normal_test_common_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
-}
 
 TEST(HashTSDF, fetch_points_normals)
 {
@@ -1142,10 +1135,6 @@ TEST(HashTSDF, reproduce_volPoseRot)
 }
 
 
-TEST(ColorTSDF, raycast_common_framesize_normals_frame)
-{
-    normal_test_common_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
-}
 
 TEST(ColorTSDF, fetch_normals)
 {
@@ -1290,6 +1279,11 @@ TEST_P(VolumeTestFixture, raycast_common_framesize_normals_mat)
     normal_test_common_framesize(volumeType, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
 }
 
+TEST_P(VolumeTestFixture, raycast_common_framesize_normals_frame)
+{
+    normal_test_common_framesize(volumeType, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
+}
+
 
 //TODO: uncomment it when ColorTSDF gets GPU version
 INSTANTIATE_TEST_CASE_P(VolumeCPU, VolumeTestFixture, /*::testing::Combine(PlatformTypeEnum::all(), VolumeTypeEnum::all())*/
@@ -1305,12 +1299,6 @@ INSTANTIATE_TEST_CASE_P(VolumeCPU, VolumeTestFixture, /*::testing::Combine(Platf
 
 
 
-TEST(TSDF_CPU, raycast_common_framesize_normals_frame)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
-}
 
 TEST(TSDF_CPU, fetch_points_normals)
 {
@@ -1354,12 +1342,6 @@ TEST(TSDF_CPU, valid_points_common_framesize_frame)
     valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
-TEST(HashTSDF_CPU, raycast_common_framesize_normals_frame)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    normal_test_common_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
-}
 
 TEST(HashTSDF_CPU, fetch_points_normals)
 {
@@ -1410,12 +1392,6 @@ TEST(HashTSDF_CPU, reproduce_volPoseRot)
     regressionVolPoseRot();
 }
 
-TEST(ColorTSDF_CPU, raycast_common_framesize_normals_frame)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    normal_test_common_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
-}
 
 TEST(ColorTSDF_CPU, fetch_normals)
 {
