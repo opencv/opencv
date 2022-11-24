@@ -37,6 +37,36 @@ TEST(NMS, Accuracy)
         ASSERT_EQ(indices[i], ref_indices[i]);
 }
 
+TEST(BatchedNMS, Accuracy)
+{
+    //reference results obtained using tf.image.non_max_suppression with iou_threshold=0.5
+    std::string dataPath = findDataFile("dnn/batched_nms_reference.yml");
+    FileStorage fs(dataPath, FileStorage::READ);
+
+    std::vector<Rect> bboxes;
+    std::vector<float> scores;
+    std::vector<int> idxs;
+    std::vector<int> ref_indices;
+
+    fs["boxes"] >> bboxes;
+    fs["probs"] >> scores;
+    fs["idxs"] >> idxs;
+    fs["output"] >> ref_indices;
+
+    const float nms_thresh = .5f;
+    const float score_thresh = .05f;
+    std::vector<int> indices;
+    cv::dnn::NMSBoxesBatched(bboxes, scores, idxs, score_thresh, nms_thresh, indices);
+
+    ASSERT_EQ(ref_indices.size(), indices.size());
+
+    std::sort(indices.begin(), indices.end());
+    std::sort(ref_indices.begin(), ref_indices.end());
+
+    for(size_t i = 0; i < indices.size(); i++)
+        ASSERT_EQ(indices[i], ref_indices[i]);
+}
+
 TEST(SoftNMS, Accuracy)
 {
     //reference results are obtained using TF v2.7 tf.image.non_max_suppression_with_scores

@@ -58,6 +58,61 @@ void NMSBoxes(const std::vector<RotatedRect>& bboxes, const std::vector<float>& 
     NMSFast_(bboxes, scores, score_threshold, nms_threshold, eta, top_k, indices, rotatedRectIOU);
 }
 
+template<class Rect_t>
+static inline void NMSBoxesBatchedImpl(const std::vector<Rect_t>& bboxes,
+                                       const std::vector<float>& scores, const std::vector<int>& class_ids,
+                                       const float score_threshold, const float nms_threshold,
+                                       std::vector<int>& indices, const float eta, const int top_k)
+{
+    double x1, y1, x2, y2, max_coord = 0;
+    for (int i = 0; i < bboxes.size(); i++)
+    {
+        x1 = bboxes[i].x;
+        y1 = bboxes[i].y;
+        x2 = x1 + bboxes[i].width;
+        y2 = y1 + bboxes[i].height;
+
+        max_coord = std::max(x1, max_coord);
+        max_coord = std::max(y1, max_coord);
+        max_coord = std::max(x2, max_coord);
+        max_coord = std::max(y2, max_coord);
+    }
+
+    // calculate offset and add offset to each bbox
+    std::vector<Rect_t> bboxes_offset;
+    double offset;
+    for (int i = 0; i < bboxes.size(); i++)
+    {
+        offset = class_ids[i] * (max_coord + 1);
+        bboxes_offset.push_back(
+            Rect_t(bboxes[i].x + offset, bboxes[i].y + offset,
+                   bboxes[i].width, bboxes[i].height)
+        );
+    }
+
+    NMSFast_(bboxes_offset, scores, score_threshold, nms_threshold, eta, top_k, indices, rectOverlap);
+}
+
+void NMSBoxesBatched(const std::vector<Rect>& bboxes,
+                     const std::vector<float>& scores, const std::vector<int>& class_ids,
+                     const float score_threshold, const float nms_threshold,
+                     std::vector<int>& indices, const float eta, const int top_k)
+{
+    CV_Assert_N(bboxes.size() == scores.size(), scores.size() == class_ids.size(), nms_threshold >= 0, eta > 0);
+
+    NMSBoxesBatchedImpl(bboxes, scores, class_ids, score_threshold, nms_threshold, indices, eta, top_k);
+}
+
+void NMSBoxesBatched(const std::vector<Rect2d>& bboxes,
+                     const std::vector<float>& scores, const std::vector<int>& class_ids,
+                     const float score_threshold, const float nms_threshold,
+                     std::vector<int>& indices, const float eta, const int top_k)
+{
+    CV_Assert_N(bboxes.size() == scores.size(), scores.size() == class_ids.size(), nms_threshold >= 0, eta > 0);
+
+    NMSBoxesBatchedImpl(bboxes, scores, class_ids, score_threshold, nms_threshold, indices, eta, top_k);
+}
+
 void softNMSBoxes(const std::vector<Rect>& bboxes,
                   const std::vector<float>& scores,
                   std::vector<float>& updated_scores,
