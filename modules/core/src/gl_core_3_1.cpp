@@ -127,11 +127,11 @@
         #define CV_GL_GET_PROC_ADDRESS(name) AppleGLGetProcAddress(name)
     #elif defined(__sgi) || defined(__sun)
         #define CV_GL_GET_PROC_ADDRESS(name) SunGetProcAddress(name)
-    #elif defined(HAVE_EGL) // pref EGL
+    #elif defined(OPENCV_ENABLE_EGL) // pref EGL
         #include <EGL/egl.h>
 
         #define CV_GL_GET_PROC_ADDRESS(name) eglGetProcAddress((const char*) name)
-    #elif defined(HAVE_GLX) // GLX
+    #elif defined(OPENCV_ENABLE_GLX) // GLX
         #include <GL/glx.h>
 
         #define CV_GL_GET_PROC_ADDRESS(name) glXGetProcAddressARB((const GLubyte*) name)

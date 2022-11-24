@@ -1590,10 +1590,10 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
 #  if defined(__ANDROID__)
 #    include <EGL/egl.h>
 #  elif defined(__linux__)
-#    if defined(HAVE_EGL)
+#    if defined(OPENCV_ENABLE_EGL)
 #      include <EGL/egl.h>
 #    endif
-#    if defined(HAVE_GLX)
+#    if defined(OPENCV_ENABLE_GLX)
 #      include <GL/glx.h>
 #    endif
 #  endif
@@ -1694,11 +1694,11 @@ Context& initializeContextFromGL()
             CL_GL_CONTEXT_KHR, (cl_context_properties)eglGetCurrentContext(),
             CL_EGL_DISPLAY_KHR, (cl_context_properties)eglGetCurrentDisplay(),
 #elif defined(__linux__)
-#  if defined(HAVE_EGL) // prefer EGL
+#  if defined(OPENCV_ENABLE_EGL) // prefer EGL
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)eglGetCurrentContext(),
             CL_EGL_DISPLAY_KHR, (cl_context_properties)eglGetCurrentDisplay(),
-#  elif defined(HAVE_GLX)
+#  elif defined(OPENCV_ENABLE_GLX)
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
             CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
@@ -1707,7 +1707,7 @@ Context& initializeContextFromGL()
             0
         };
 
-#if defined(HAVE_EGL) && defined(HAVE_GLX) //GLX fallback
+#if defined(OPENCV_ENABLE_EGL) && defined(OPENCV_ENABLE_GLX) //GLX fallback
         if(properties[4] == CL_EGL_DISPLAY_KHR && properties[3] == (cl_context_properties)EGL_NO_CONTEXT) {
             properties[3] = (cl_context_properties)glXGetCurrentContext();
             properties[4] = (cl_context_properties)CL_GLX_DISPLAY_KHR;
