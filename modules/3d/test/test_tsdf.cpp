@@ -1056,10 +1056,7 @@ void regressionVolPoseRot()
 
 
 
-TEST(TSDF, fetch_normals)
-{
-    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
-}
+
 
 TEST(TSDF, valid_points_custom_framesize_mat)
 {
@@ -1085,10 +1082,7 @@ TEST(TSDF, valid_points_common_framesize_frame)
 
 
 
-TEST(HashTSDF, fetch_normals)
-{
-    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
-}
+
 
 TEST(HashTSDF, valid_points_custom_framesize_mat)
 {
@@ -1126,12 +1120,6 @@ TEST(HashTSDF, reproduce_volPoseRot)
     regressionVolPoseRot();
 }
 
-
-
-TEST(ColorTSDF, fetch_normals)
-{
-    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
-}
 
 
 
@@ -1278,6 +1266,11 @@ TEST_P(VolumeTestFixture, fetch_points_normals)
     normal_test_custom_framesize(volumeType, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
 }
 
+TEST_P(VolumeTestFixture, fetch_normals)
+{
+    normal_test_custom_framesize(volumeType, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
+}
+
 //TODO: uncomment it when ColorTSDF gets GPU version
 INSTANTIATE_TEST_CASE_P(VolumeCPU, VolumeTestFixture, /*::testing::Combine(PlatformTypeEnum::all(), VolumeTypeEnum::all())*/
                         ::testing::Values(PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
@@ -1294,12 +1287,6 @@ INSTANTIATE_TEST_CASE_P(VolumeCPU, VolumeTestFixture, /*::testing::Combine(Platf
 
 
 
-TEST(TSDF_CPU, fetch_normals)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
-}
 
 TEST(TSDF_CPU, valid_points_custom_framesize_mat)
 {
@@ -1332,12 +1319,6 @@ TEST(TSDF_CPU, valid_points_common_framesize_frame)
 
 
 
-TEST(HashTSDF_CPU, fetch_normals)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
-}
 
 TEST(HashTSDF_CPU, valid_points_custom_framesize_mat)
 {
@@ -1374,13 +1355,6 @@ TEST(HashTSDF_CPU, reproduce_volPoseRot)
     regressionVolPoseRot();
 }
 
-
-TEST(ColorTSDF_CPU, fetch_normals)
-{
-    OpenCLStatusRevert oclStatus;
-    oclStatus.off();
-    normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
-}
 
 
 TEST(ColorTSDF_CPU, valid_points_custom_framesize_mat)

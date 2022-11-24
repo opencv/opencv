@@ -582,12 +582,6 @@ void valid_points_test_common_framesize(VolumeType volumeType, VolumeTestSrcType
 
 
 
-
-TEST(TSDF_GPU, fetch_normals)
-{
-    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
-}
-
 TEST(TSDF_GPU, valid_points_custom_framesize_mat)
 {
     valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
@@ -612,10 +606,6 @@ TEST(TSDF_GPU, valid_points_common_framesize_frame)
 
 
 
-TEST(HashTSDF_GPU, fetch_normals)
-{
-    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
-}
 
 TEST(HashTSDF_GPU, valid_points_custom_framesize_mat)
 {
