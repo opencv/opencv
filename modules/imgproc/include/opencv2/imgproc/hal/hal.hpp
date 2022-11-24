@@ -241,7 +241,8 @@ CV_EXPORTS void integral(int depth, int sdepth, int sqdepth,
     
 CV_EXPORTS double getlen(InputArray Point1, InputArray Point2);
 
-CV_EXPORTS void getangle(InputArray Point1, InputArray Point2, InputArray Point3, InputArray Point4, double w, double h, double& angleA, double& angleB);
+// Get camera angle
+CV_EXPORTS void findfilmangle(InputArray Point1, InputArray Point2, InputArray Point3, InputArray Point4, double w, double h, double& angleA, double& angleB);
 
 //! @}
 
