@@ -130,74 +130,6 @@ public:
         params.setIntArray("pad", &pads[0], pads.size());
     }
 
-    virtual void inferOutputShapes(const Net2& net,
-                                   const std::vector<int>& inputs,
-                                   const std::vector<int>& inptypes,
-                                   const std::vector<TensorShape>& inpshapes,
-                                   const std::vector<int>& outputs,
-                                   std::vector<int>& outtypes,
-                                   std::vector<TensorShape>& outshapes) CV_OVERRIDE
-    {
-        size_t ninputs = inputs.size(), noutputs = outputs.size();
-        CV_Assert(ninputs == 2 || ninputs == 3);
-        CV_Assert(noutputs == 1);
-        int inptyp = inptypes[0], wtyp = inptypes[1];
-        const TensorShape& inpshape = inpshapes[0];
-        const TensorShape& wshape = inpshapes[1];
-        TensorShape outshape;
-
-        CV_Assert(inptyp == CV_16F || inptyp == CV_32F);
-        CV_Assert(wtyp == CV_32F); // [TODO] support quantized models
-        CV_Assert(wshape.ndims == inpshape.ndims); // [TODO] support block layout
-
-        if (ninputs >= 3) {
-            int btyp = inptypes[2];
-            const TensorShape& bshape = inpshapes[2];
-            CV_Assert(bshape.ndims == 1);
-            CV_Assert(bshape.shape[0] == wshape.shape[0]);
-            CV_Assert(btyp == CV_32F);
-        }
-
-        DataLayout inplayout = inpshape.layout;
-        int c_idx = inplayout == DNN_LAYOUT_NHWC ? inpshape.ndims-1 : 1;
-
-        int outtyp = inptyp;
-        outshape.layout = inpshape.layout;
-        outshape.ndims = inpshape.ndims;
-        int nspatdims = inpshape.ndims - 2;
-        CV_Assert(strides.size() == (size_t)nspatdims);
-        CV_Assert(dilations.size() == (size_t)nspatdims);
-        CV_Assert(kernel_size.size() == (size_t)nspatdims);
-        CV_Assert(pads_begin.size() == (size_t)nspatdims);
-        CV_Assert(pads_end.size() == (size_t)nspatdims);
-
-
-        outshape.ndims = inpshape.ndims;
-        outshape.layout = outshape.layout;
-        for (int i = 0, j = 0; i < outshape.ndims; i++) {
-            int64_t inpsz = inpshape.shape[i], outsz;
-            if (i == 0)
-                outsz = inpsz;
-            else if (i == c_idx)
-                outsz = wshape.shape[0];
-            else {
-                int64_t ksz = (int64_t)kernel_size[j];
-                int64_t stride = (int64_t)strides[j];
-                int64_t dilation = (int64_t)dilations[j];
-                int64_t pad = (int64_t)pads_begin[j] + (int64_t)pads_end[j];
-                j++;
-                outsz = (inpsz + pad - dilation*(ksz - 1) - 1)/stride + 1;
-            }
-            outshape.shape[i] = outsz;
-        }
-
-        outtypes.resize(noutputs);
-        outshapes.resize(noutputs);
-        outtypes[0] = outtyp;
-        outshapes[0] = outshape;
-        numOutput = (int)wshape.shape[0];
-    }
-
     virtual void finalize(InputArrayOfArrays inputs_arr,
                           OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
@@ -268,11 +200,31 @@ public:
 
     virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
     {
+        Mat w, b;
         Ptr<BlankLayer> blank_layer = top.dynamicCast<BlankLayer>();
         if (blank_layer)
             return true;
+        /*
+            for now disable fusion in the case of non-constant
+            convolution weights, since logic is broken anyway.
 
-        Mat w, b;
+            [TODO] restore it after the old convolution kernels are removed.
+            There should be _separate_ bn_weights, bn_bias arrays,
+            to which we should assign or accumulate w, b:
+            bn_weights(0) := w
+            bn_bias(0) := b
+
+            // in the case of multiple batchnorm/scale/add layers:
+            // layer fusion algorithm should recognize it
+            bn_weights(n+1) := bn_weights(n)*w
+            bn_bias(n+1) := bn_bias(n)*w + b.
+
+            then we need to apply that {bn_weights, bn_bias} during
+            repacking weights to the optimal representation in zigzag form
+        */
+        if (blobs.empty())
+            return false;
+
         top->getScaleShift(w, b);
         if (!w.empty() || !b.empty())
         {
@@ -362,8 +314,19 @@ public:
     float cuda_power_exp, cuda_power_scale, cuda_power_shift;
 #endif
 
+    virtual void serialize(LayerParams& params) const CV_OVERRIDE
+    {
+        BaseConvolutionLayer::serialize(params);
+        if (!activ.empty()) {
+            params.set("fused_acitvation", activ->op);
+        }
+    }
+
     ConvolutionLayerImpl(const LayerParams &params) : BaseConvolutionLayerImpl(params)
     {
+        if (!blobs.empty())
+            alignWeights(blobs[0], blobs.size() > 1 ? blobs[1] : Mat());
+
 #ifdef HAVE_OPENCL
         newActiv = false;
         activType = OCL4DNN_CONV_FUSED_ACTIV_NONE;
@@ -496,44 +459,104 @@ public:
         return false;
     }
 
-    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
+    virtual void inferOutputShapes(const Net2& net,
+                                   const std::vector<int>& inputs,
+                                   const std::vector<int>& inptypes,
+                                   const std::vector<TensorShape>& inpshapes,
+                                   const std::vector<int>& outputs,
+                                   std::vector<int>& outtypes,
+                                   std::vector<TensorShape>& outshapes) CV_OVERRIDE
     {
-        BaseConvolutionLayerImpl::finalize(inputs_arr, outputs_arr);
+        size_t ninputs = inputs.size(), noutputs = outputs.size();
+        size_t nblobs = blobs.size();
+        CV_Assert((ninputs == 1 && nblobs >= 1) || ((ninputs == 2 || ninputs == 3) && nblobs == 0));
+        CV_Assert(noutputs == 1);
+        int inptyp = inptypes[0], wtyp;
+        const TensorShape& inpshape = inpshapes[0];
+        TensorShape wshape, outshape;
 
-        std::vector<Mat> inputs;
-        inputs_arr.getMatVector(inputs);
-        if (inputs.size() == 3)
-            numOutput = inputs[1].size[0];
+        if (ninputs >= 2) {
+            wtyp = inptypes[1];
+            wshape = inpshapes[1];
+        } else {
+            wtyp = blobs[0].type();
+            wshape = TensorShape::fromArray(blobs[0], blobs[0].dims);
+        }
+
+        CV_Assert(inptyp == CV_16F || inptyp == CV_32F);
+        CV_Assert(wtyp == CV_32F); // [TODO] support quantized models
+        CV_Assert(wshape.ndims == inpshape.ndims); // [TODO] support block layout
+
+        if (ninputs >= 3 || nblobs >= 2) {
+            int btyp = nblobs >= 2 ? blobs[1].type() : inptypes[2];
+            TensorShape bshape = nblobs >= 2 ?
+                TensorShape::fromArray(blobs[1], 1) : inpshapes[2];
+            CV_Assert(bshape.ndims == 1);
+            CV_Assert(bshape.shape[0] == wshape.shape[0]);
+            CV_Assert(btyp == CV_32F);
+        }
+
+        DataLayout inplayout = inpshape.layout;
+        int c_idx = inplayout == DNN_LAYOUT_NHWC ? inpshape.ndims-1 : 1;
+
+        int outtyp = inptyp;
+        outshape.layout = inpshape.layout;
+        outshape.ndims = inpshape.ndims;
+        int nspatdims = inpshape.ndims - 2;
+        CV_Assert(strides.size() == (size_t)nspatdims);
+        CV_Assert(dilations.size() == (size_t)nspatdims);
+        CV_Assert(kernel_size.size() == (size_t)nspatdims);
+        CV_Assert(pads_begin.size() == (size_t)nspatdims);
+        CV_Assert(pads_end.size() == (size_t)nspatdims);
+
+        outshape.ndims = inpshape.ndims;
+        outshape.layout = outshape.layout;
+        for (int i = 0, j = 0; i < outshape.ndims; i++) {
+            int64_t inpsz = inpshape.shape[i], outsz;
+            if (i == 0)
+                outsz = inpsz;
+            else if (i == c_idx)
+                outsz = wshape.shape[0];
+            else {
+                int64_t ksz = (int64_t)kernel_size[j];
+                int64_t stride = (int64_t)strides[j];
+                int64_t dilation = (int64_t)dilations[j];
+                int64_t pad = (int64_t)pads_begin[j] + (int64_t)pads_end[j];
+                j++;
+                outsz = (inpsz + pad - dilation*(ksz - 1) - 1)/stride + 1;
+            }
+            outshape.shape[i] = outsz;
+        }
+
+        outtypes.resize(noutputs);
+        outshapes.resize(noutputs);
+        outtypes[0] = outtyp;
+        outshapes[0] = outshape;
+        numOutput = (int)wshape.shape[0];
+    }
+
+    void alignWeights(const Mat& w0, const Mat& bias0)
+    {
+        numOutput = w0.size[0];
         // prepare weightsMat where each row is aligned and has enough zero padding on the right to
         // use vectorized (i.e. with intrinsics) loops without tail processing
-        if (!blobs.empty())
+        Mat wm = w0.reshape(1, numOutput);
+        if ((wm.step1() % VEC_ALIGN != 0) ||
+            !isAligned<VEC_ALIGN * sizeof(float)>(wm.data))
         {
-            Mat wm = blobs[0].reshape(1, numOutput);
-            if ((wm.step1() % VEC_ALIGN != 0) ||
-                !isAligned<VEC_ALIGN * sizeof(float)>(wm.data)
-            )
-            {
-                int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
-                Mat wm_buffer = Mat(numOutput, newcols, wm.type());
-                Mat wm_padding = wm_buffer.colRange(wm.cols, newcols);
-                wm_padding.setTo(Scalar::all(0.));
-                Mat wm_aligned = wm_buffer.colRange(0, wm.cols);
-                wm.copyTo(wm_aligned);
-                wm = wm_aligned;
-            }
-            fastWeights = blobs[0].reshape(1, numOutput);
-            weightsMat = wm;
+            int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
+            Mat wm_buffer = Mat(numOutput, newcols, wm.type());
+            Mat wm_padding = wm_buffer.colRange(wm.cols, newcols);
+            wm_padding.setTo(Scalar::all(0.));
+            Mat wm_aligned = wm_buffer.colRange(0, wm.cols);
+            wm.copyTo(wm_aligned);
+            wm = wm_aligned;
         }
-        else
-        {
-            // initialized in .forward()
-            weightsMat.release();
-        }
-
+        fastWeights = w0.reshape(1, numOutput);
+        weightsMat = wm;
         weightsMultipliers.assign(numOutput, 1.0);
-
-        Mat biasMat = hasBias() ? blobs[1].reshape(1, numOutput) : Mat();
-        biasvec.resize(numOutput+2);
+        Mat biasMat = !bias0.empty() ? blobs[1].reshape(1, numOutput) : Mat();
+        biasvec.assign(numOutput+2, 0.f);
         if( biasMat.empty() )
         {
             for(int i = 0; i < numOutput; i++ )
@@ -543,6 +566,17 @@ public:
         {
             for(int i = 0; i < numOutput; i++ )
                 biasvec[i] = biasMat.at<float>(i);
+        }
+    }
+
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+        BaseConvolutionLayerImpl::finalize(inputs_arr, outputs_arr);
+
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+        if (inputs.size() == 3) {
+            alignWeights(inputs[1], inputs[2]);
         }
 #ifdef HAVE_TENGINE
         if(NULL != tengine_graph )
@@ -2053,28 +2087,7 @@ public:
         if (blobs.empty())
         {
             variableWeight = true;
-            if (fastWeights.data != inputs[1].data)
-                fastWeights = inputs[1].clone();
-
-            Mat wm = inputs[1].reshape(1, outCn);
-            if (wm.data != weightsMat.data)
-            {
-                int newcols = (int)alignSize(wm.step1(), VEC_ALIGN);
-                Mat wm_buffer = Mat(numOutput, newcols, wm.type());
-                Mat wm_padding = wm_buffer.colRange(wm.cols, newcols);
-                wm_padding.setTo(Scalar::all(0.));
-                weightsMat = wm_buffer.colRange(0, wm.cols);
-
-                wm.copyTo((const Mat&)weightsMat);
-                if (inputs.size() > 2) {
-                    Mat biasMat = inputs[2].reshape(1, outCn);
-                    biasMat.col(0).copyTo(biasvec);
-                } else {
-                    biasvec.resize(outCn, 0.f);
-                }
-                biasvec.push_back(0.f);
-                biasvec.push_back(0.f);
-            }
+            alignWeights(inputs[1], inputs.size() > 2 ? inputs[2] : Mat());
         }
         /*if (inputs[0].dims > 3) {
             printf("conv %s: input (%d x %d x %d x %d), kernel (%d x %d), pad (%d x %d), stride (%d x %d), dilation (%d x %d)\n",

@@ -465,7 +465,7 @@ CV__DNN_INLINE_NS_BEGIN
 
         Layer();
         explicit Layer(const LayerParams &params); //!< Initializes only #name, #type and #blobs fields.
-        void setParamsFrom(const LayerParams &params);  //!< Initializes only #name, #type and #blobs fields.
+        virtual void setParamsFrom(const LayerParams &params);  //!< Initializes only #name, #type and #blobs fields.
         virtual ~Layer();
     };
 

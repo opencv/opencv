@@ -93,6 +93,12 @@ using std::sin;
 using std::sinh;
 using std::tan;
 
+void ActivationLayer::setParamsFrom(const LayerParams &params)
+{
+    Layer::setParamsFrom(params);
+    op = params.get<String>("op", "???");
+}
+
 template<typename Func>
 class ElementWiseLayer : public Func::Layer
 {

@@ -550,6 +550,8 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS ActivationLayer : public Layer
     {
     public:
+        String op;
+        virtual void setParamsFrom(const LayerParams &params) CV_OVERRIDE;
         virtual void forwardSlice(const float* src, float* dst, int len,
                                   size_t outPlaneSize, int cn0, int cn1) const {};
         virtual void forwardSlice(const int* src, const int* lut, int* dst, int len,
@@ -865,6 +867,9 @@ CV__DNN_INLINE_NS_BEGIN
         bool hasWeights, hasBias;
         float epsilon;
 
+        static void calcScaleShift(InputArrayOfArrays inputs,
+                                   OutputArray scale, OutputArray shift,
+                                   float epsilon);
         static Ptr<BatchNormLayer> create(const LayerParams &params);
     };
 

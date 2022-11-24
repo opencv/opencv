@@ -5,6 +5,8 @@
 #ifndef __OPENCV_DNN_ENGINE_HPP__
 #define __OPENCV_DNN_ENGINE_HPP__
 
+#include "opencv2/dnn/all_layers.hpp"
+
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
@@ -96,7 +98,7 @@ struct Tensor
     size_t total() const;
     bool empty() const;
     void* data() const;
-    Mat getMat();
+    Mat getMat() const;
     void* map(int access=DNN_BUF_RW);
     void unmap(int access=DNN_BUF_RW);
 
@@ -184,7 +186,7 @@ struct Net2::Impl
     void forwardGraph(const Graph& graph);
     void useCounts(std::vector<int>& usecounts) const;
     void updateUseCounts(std::vector<int>& usecounts, const Graph& graph) const;
-    void assignBuffers();
+
     int addConstTensor(const std::string& name, const Tensor& t, int idx=-1);
     int addArg(int argkind, const ArgInfo& arginfo);
     int64_t findDim(const std::string& dimname);
@@ -210,6 +212,14 @@ struct Net2::Impl
     bool useFP16() const;
     void set(int propId, double value);
     double get(int propId) const;
+    void getTensors(const int* firstarg, size_t nargs, std::vector<Mat>& inputs) const;
+
+    //template<typename _LayerType> bool isOp(const Node* node) const
+    //{ return node && dynamic_cast<_LayerType>(*node->op.get()) != 0; }
+    
+    void assignBuffers();
+    void fuse();
+    void foldConstSubexpr();
 
     Net2* net;
     int modelFormat;

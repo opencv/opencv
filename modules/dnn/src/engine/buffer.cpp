@@ -359,7 +359,7 @@ void* Tensor::data() const
     return dataptr;
 }
 
-Mat Tensor::getMat()
+Mat Tensor::getMat() const
 {
     int mshape[CV_MAX_DIM];
     int mdims = shape.toMatShape(mshape, CV_MAX_DIM);
