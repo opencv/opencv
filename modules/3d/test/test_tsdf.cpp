@@ -1218,18 +1218,35 @@ TEST_P(StaticVolumeBoundingBox, boundingBox)
 
 INSTANTIATE_TEST_CASE_P(TSDF, StaticVolumeBoundingBox, ::testing::Values(VolumeType::TSDF, VolumeType::ColorTSDF));
 
-#else
+#endif
+
+enum PlatformType
+{
+    CPU = 0, GPU = 1
+};
+CV_ENUM(PlatformTypeEnum, PlatformType::CPU, PlatformType::GPU);
 
 // used to store current OpenCL status (on/off) and revert it after test is done
 // works even after exceptions thrown in test body
 struct OpenCLStatusRevert
 {
-    OpenCLStatusRevert(bool oclStatus) : originalOpenCLStatus(oclStatus) { }
+#ifdef HAVE_OPENCL
+    OpenCLStatusRevert()
+    {
+        originalOpenCLStatus = cv::ocl::useOpenCL();
+    }
     ~OpenCLStatusRevert()
     {
         cv::ocl::setUseOpenCL(originalOpenCLStatus);
     }
+    void off()
+    {
+        cv::ocl::setUseOpenCL(false);
+    }
     bool originalOpenCLStatus;
+#else
+    void off() { }
+#endif
 };
 
 TEST(TSDF_CPU, raycast_custom_framesize_normals_mat)
@@ -1239,66 +1256,68 @@ TEST(TSDF_CPU, raycast_custom_framesize_normals_mat)
     normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
 }
 
+
+#ifdef HAVE_OPENCL
 TEST(TSDF_CPU, raycast_custom_framesize_normals_frame)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(TSDF_CPU, raycast_common_framesize_normals_mat)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_common_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
 }
 
 TEST(TSDF_CPU, raycast_common_framesize_normals_frame)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(TSDF_CPU, fetch_points_normals)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
 }
 
 TEST(TSDF_CPU, fetch_normals)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
 }
 
 TEST(TSDF_CPU, valid_points_custom_framesize_mat)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
 }
 
 TEST(TSDF_CPU, valid_points_custom_framesize_frame)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     valid_points_test_custom_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(TSDF_CPU, valid_points_common_framesize_mat)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::MAT);
 }
 
 TEST(TSDF_CPU, valid_points_common_framesize_frame)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     valid_points_test_common_framesize(VolumeType::TSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
@@ -1311,71 +1330,71 @@ TEST(HashTSDF_CPU, raycast_custom_framesize_normals_mat)
 
 TEST(HashTSDF_CPU, raycast_custom_framesize_normals_frame)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(HashTSDF_CPU, raycast_common_framesize_normals_mat)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
 }
 
 TEST(HashTSDF_CPU, raycast_common_framesize_normals_frame)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_common_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(HashTSDF_CPU, fetch_points_normals)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
 }
 
 TEST(HashTSDF_CPU, fetch_normals)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
 }
 
 TEST(HashTSDF_CPU, valid_points_custom_framesize_mat)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     valid_points_test_custom_framesize(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
 }
 
 TEST(HashTSDF_CPU, valid_points_custom_framesize_frame)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     valid_points_test_custom_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(HashTSDF_CPU, valid_points_common_framesize_mat)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::MAT);
 }
 
 TEST(HashTSDF_CPU, valid_points_common_framesize_frame)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     valid_points_test_common_framesize(VolumeType::HashTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(HashTSDF_CPU, reproduce_volPoseRot)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     regressionVolPoseRot();
 }
 
@@ -1388,64 +1407,64 @@ TEST(ColorTSDF_CPU, raycast_custom_framesize_normals_mat)
 
 TEST(ColorTSDF_CPU, raycast_custom_framesize_normals_frame)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(ColorTSDF_CPU, raycast_common_framesize_normals_mat)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_common_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
 }
 
 TEST(ColorTSDF_CPU, raycast_common_framesize_normals_frame)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_common_framesize(VolumeType::ColorTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(ColorTSDF_CPU, fetch_normals)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_NORMALS, VolumeTestSrcType::MAT);
 }
 
 TEST(ColorTSDF_CPU, fetch_points_normals)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     normal_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestFunction::FETCH_POINTS_NORMALS, VolumeTestSrcType::MAT);
 }
 
 TEST(ColorTSDF_CPU, valid_points_custom_framesize_mat)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
 }
 
 TEST(ColorTSDF_CPU, valid_points_custom_framesize_fetch)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     valid_points_test_custom_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(ColorTSDF_CPU, valid_points_common_framesize_mat)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::MAT);
 }
 
 TEST(ColorTSDF_CPU, valid_points_common_framesize_fetch)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
     valid_points_test_common_framesize(VolumeType::ColorTSDF, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
@@ -1454,9 +1473,8 @@ class StaticVolumeBoundingBox : public ::testing::TestWithParam<VolumeType>
 
 TEST_P(StaticVolumeBoundingBox, boundingBoxCPU)
 {
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
-
-    cv::ocl::setUseOpenCL(false);
+    OpenCLStatusRevert oclStatus;
+    oclStatus.off();
 
     staticBoundingBoxTest(GetParam());
 }
@@ -1499,10 +1517,10 @@ TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
     bool gpu = std::get<0>(p);
     bool enableGrowth = std::get<1>(p);
 
-    OpenCLStatusRevert revert(cv::ocl::useOpenCL());
+    OpenCLStatusRevert oclStatus;
 
     if (!gpu)
-        cv::ocl::setUseOpenCL(false);
+        oclStatus.off();
 
     boundingBoxGrowthTest(enableGrowth);
 }
