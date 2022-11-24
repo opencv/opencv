@@ -581,11 +581,6 @@ TEST(TSDF_GPU, raycast_custom_framesize_normals_mat)
     normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
 }
 
-TEST(TSDF_GPU, raycast_custom_framesize_normals_frame)
-{
-    normal_test_custom_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
-}
-
 TEST(TSDF_GPU, raycast_common_framesize_normals_mat)
 {
     normal_test_common_framesize(VolumeType::TSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
@@ -629,11 +624,6 @@ TEST(TSDF_GPU, valid_points_common_framesize_frame)
 TEST(HashTSDF_GPU, raycast_custom_framesize_normals_mat)
 {
     normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::MAT);
-}
-
-TEST(HashTSDF_GPU, raycast_custom_framesize_normals_frame)
-{
-    normal_test_custom_framesize(VolumeType::HashTSDF, VolumeTestFunction::RAYCAST, VolumeTestSrcType::ODOMETRY_FRAME);
 }
 
 TEST(HashTSDF_GPU, raycast_common_framesize_normals_mat)
