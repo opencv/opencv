@@ -829,18 +829,18 @@ struct ArucoDetector::ArucoDetectorImpl {
     Ptr<DetectorParameters> detectorParams;
 
     /// marker refine parameters
-    Ptr<RefineParameters> refineParams;
+    RefineParameters refineParams;
     ArucoDetectorImpl() {}
 
     ArucoDetectorImpl(const Ptr<Dictionary> &_dictionary, const Ptr<DetectorParameters> &_detectorParams,
-                      const Ptr<RefineParameters> &_refineParams): dictionary(_dictionary),
+                      const RefineParameters& _refineParams): dictionary(_dictionary),
                       detectorParams(_detectorParams), refineParams(_refineParams) {}
 
 };
 
 ArucoDetector::ArucoDetector(const Ptr<Dictionary> &_dictionary,
                              const Ptr<DetectorParameters> &_detectorParams,
-                             const Ptr<RefineParameters> &_refineParams) {
+                             const RefineParameters& _refineParams) {
     arucoDetectorImpl = makePtr<ArucoDetectorImpl>(_dictionary, _detectorParams, _refineParams);
 }
 
@@ -1098,8 +1098,8 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
                                           InputArray _distCoeffs, OutputArray _recoveredIdxs) {
     const Ptr<DetectorParameters>& detectorParams = arucoDetectorImpl->detectorParams;
     const Ptr<Dictionary>& dictionary = arucoDetectorImpl->dictionary;
-    const Ptr<RefineParameters>& refineParams = arucoDetectorImpl->refineParams;
-    CV_Assert(refineParams->minRepDistance > 0);
+    RefineParameters& refineParams = arucoDetectorImpl->refineParams;
+    CV_Assert(refineParams.minRepDistance > 0);
 
     if(_detectedIds.total() == 0 || _rejectedCorners.total() == 0) return;
 
@@ -1122,7 +1122,7 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
 
     // maximum bits that can be corrected
     int maxCorrectionRecalculated =
-        int(double(dictionary->maxCorrectionBits) * refineParams->errorCorrectionRate);
+        int(double(dictionary->maxCorrectionBits) * refineParams.errorCorrectionRate);
 
     Mat grey;
     _convertToGrey(_image, grey);
@@ -1144,7 +1144,7 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
 
         // best match at the moment
         int closestCandidateIdx = -1;
-        double closestCandidateDistance = refineParams->minRepDistance * refineParams->minRepDistance + 1;
+        double closestCandidateDistance = refineParams.minRepDistance * refineParams.minRepDistance + 1;
         Mat closestRotatedMarker;
 
         for(unsigned int j = 0; j < _rejectedCorners.total(); j++) {
@@ -1168,14 +1168,14 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
                     validRot = c;
                     minDistance = currentMaxDistance;
                 }
-                if(!refineParams->checkAllOrders) break;
+                if(!refineParams.checkAllOrders) break;
             }
 
             if(!valid) continue;
 
             // apply rotation
             Mat rotatedMarker;
-            if(refineParams->checkAllOrders) {
+            if(refineParams.checkAllOrders) {
                 rotatedMarker = Mat(4, 1, CV_32FC2);
                 for(int c = 0; c < 4; c++)
                     rotatedMarker.ptr<Point2f>()[c] =
@@ -1186,7 +1186,7 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
             // last filter, check if inner code is close enough to the assigned marker code
             int codeDistance = 0;
             // if errorCorrectionRate, dont check code
-            if(refineParams->errorCorrectionRate >= 0) {
+            if(refineParams.errorCorrectionRate >= 0) {
 
                 // extract bits
                 Mat bits = _extractBits(
@@ -1203,7 +1203,7 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
             }
 
             // if everythin is ok, assign values to current best match
-            if(refineParams->errorCorrectionRate < 0 || codeDistance < maxCorrectionRecalculated) {
+            if(refineParams.errorCorrectionRate < 0 || codeDistance < maxCorrectionRecalculated) {
                 closestCandidateIdx = j;
                 closestCandidateDistance = minDistance;
                 closestRotatedMarker = rotatedMarker;
@@ -1262,13 +1262,13 @@ void ArucoDetector::write(FileStorage &fs) const {
     Ptr<FileStorage> pfs = makePtr<FileStorage>(fs);
     arucoDetectorImpl->dictionary->writeDictionary(pfs);
     arucoDetectorImpl->detectorParams->writeDetectorParameters(pfs);
-    arucoDetectorImpl->refineParams->writeRefineParameters(pfs);
+    arucoDetectorImpl->refineParams.writeRefineParameters(pfs);
 }
 
 void ArucoDetector::read(const FileNode &fn) {
     arucoDetectorImpl->dictionary->readDictionary(fn);
     arucoDetectorImpl->detectorParams->readDetectorParameters(fn);
-    arucoDetectorImpl->refineParams->readRefineParameters(fn);
+    arucoDetectorImpl->refineParams.readRefineParameters(fn);
 }
 
 Ptr<Dictionary> ArucoDetector::getDictionary() const {
@@ -1278,7 +1278,7 @@ Ptr<Dictionary> ArucoDetector::getDictionary() const {
 Ptr<DetectorParameters> ArucoDetector::getDetectorParameters() const {
     return arucoDetectorImpl->detectorParams;
 }
-Ptr<RefineParameters> ArucoDetector::getRefineParameters() const {
+RefineParameters& ArucoDetector::getRefineParameters() {
     return arucoDetectorImpl->refineParams;
 }
 

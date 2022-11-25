@@ -236,7 +236,7 @@ struct CV_EXPORTS_W DetectorParameters {
 
 /** @brief struct RefineParameters is used by ArucoDetector
  */
-struct CV_EXPORTS_W RefineParameters {
+struct CV_EXPORTS_W_SIMPLE RefineParameters {
     CV_WRAP RefineParameters(float minRepDistance = 10.f, float errorCorrectionRate = 3.f, bool checkAllOrders = true);
 
 
@@ -284,7 +284,7 @@ public:
      */
     CV_WRAP ArucoDetector(const Ptr<Dictionary> &dictionary = getPredefinedDictionary(cv::aruco::DICT_4X4_50),
                           const Ptr<DetectorParameters> &detectorParams = makePtr<DetectorParameters>(),
-                          const Ptr<RefineParameters> &refineParams = makePtr<RefineParameters>());
+                          const RefineParameters& refineParams = RefineParameters());
 
     /** @brief Basic marker detection
      *
@@ -339,7 +339,7 @@ public:
 
     Ptr<Dictionary> getDictionary() const;
     Ptr<DetectorParameters> getDetectorParameters() const;
-    Ptr<RefineParameters> getRefineParameters() const;
+    RefineParameters& getRefineParameters();
 
     /** @brief Stores algorithm parameters in a file storage
     */
