@@ -639,6 +639,7 @@ void valid_points_test(VolumeType volumeType, VolumeTestSrcType testSrcType, Fra
             displayImage(depth, points, normals, depthFactor, lightPose);
     }
 
+    points.release(); normals.release(); colors.release();
     upoints.release();
     unormals.release();
     ucolors.release();
