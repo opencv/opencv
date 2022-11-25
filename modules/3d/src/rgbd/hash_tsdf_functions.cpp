@@ -1262,7 +1262,7 @@ void fetchNormalsFromHashTsdfVolumeUnit(
 }
 
 #ifdef HAVE_OPENCL
-void olc_fetchNormalsFromHashTsdfVolumeUnit(
+void ocl_fetchNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, const int volumeUnitDegree, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
     const CustomHashSet& hashTable, InputArray _points, OutputArray _normals)
 {

@@ -433,7 +433,7 @@ void normalsCheck(Mat normals)
             ASSERT_LT(abs(1.f - l2), 0.0001f) << "There is normal with length != 1";
         }
     }
-    ASSERT_GT(counter, 0) << "There are not normals";
+    ASSERT_GT(counter, 0) << "There are no normals";
 }
 
 int counterOfValid(Mat points)
@@ -539,7 +539,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction,
             if (frameSizeSpecified == FrameSizeType::CUSTOM)
                 volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, utmpnormals, ucolors);
             else if (frameSizeSpecified == FrameSizeType::DEFAULT)
-                volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, utmpnormals, ucolors);
+                volume.raycast(poses[0].matrix, upoints, utmpnormals, ucolors);
         }
         else
             // TODO: check this

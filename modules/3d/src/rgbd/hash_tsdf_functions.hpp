@@ -310,7 +310,7 @@ void ocl_raycastHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
     const CustomHashSet& hashTable, InputArray _volUnitsData, OutputArray _points, OutputArray _normals);
 
-void olc_fetchNormalsFromHashTsdfVolumeUnit(
+void ocl_fetchNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, const int volumeUnitDegree, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
     const CustomHashSet& hashTable, InputArray _points, OutputArray _normals);
 
