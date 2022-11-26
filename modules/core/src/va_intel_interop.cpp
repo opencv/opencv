@@ -6,6 +6,7 @@
 
 #if defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL)
 #  include "opencv2/core/opencl/runtime/opencl_core.hpp"
+#  include "opencv2/core/detail/va_intel_interop.hpp"
 
 namespace cv { namespace va_intel {
 

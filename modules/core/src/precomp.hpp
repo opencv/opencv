@@ -55,7 +55,6 @@
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/va_intel.hpp"
-#include "opencv2/core/va_intel_interop.hpp"
 
 #include "opencv2/core/private.hpp"
 #include "opencv2/core/private.cuda.hpp"

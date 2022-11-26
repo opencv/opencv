@@ -32,7 +32,7 @@
 #include <va/va_backend.h>
 #ifdef HAVE_VA_INTEL
 #include "opencv2/core/va_intel.hpp"
-#include "opencv2/core/va_intel_interop.hpp"
+#include "opencv2/core/detail/va_intel_interop.hpp"
 #ifndef CL_TARGET_OPENCL_VERSION
 #define CL_TARGET_OPENCL_VERSION 120
 #endif

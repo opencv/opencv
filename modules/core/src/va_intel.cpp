@@ -25,7 +25,7 @@ using namespace cv;
 #  include "opencv2/core/ocl.hpp"
 #  include "opencl_kernels_core.hpp"
 #  ifdef HAVE_VA_INTEL
-#    include "opencv2/core/va_intel_interop.hpp"
+#    include "opencv2/core/detail/va_intel_interop.hpp"
 #  endif
 #endif // HAVE_OPENCL
 
