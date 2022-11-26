@@ -559,12 +559,21 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction,
     normals = unormals.getMat(ACCESS_READ);
     colors  = ucolors.getMat(ACCESS_READ);
 
-    if (testFunction == VolumeTestFunction::RAYCAST && cvtest::debugLevel > 0)
+    if (cvtest::debugLevel > 0)
     {
-        if (volumeType == VolumeType::ColorTSDF)
-            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
-        else
-            displayImage(depth, points, normals, depthFactor, lightPose);
+        if (testFunction == VolumeTestFunction::RAYCAST && cvtest::debugLevel > 0)
+        {
+            if (volumeType == VolumeType::ColorTSDF)
+                displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+            else
+                displayImage(depth, points, normals, depthFactor, lightPose);
+        }
+
+        Mat pts3, nrm3;
+        cvtColor(points, pts3, COLOR_RGBA2RGB);
+        cvtColor(normals, nrm3, COLOR_RGBA2RGB);
+        savePointCloud(cv::format("pts%d%d%d%d.obj", volumeType, testFunction, testSrcType, frameSizeSpecified),
+                       pts3.reshape(3, 1), nrm3.reshape(3, 1));
     }
 
     normalsCheck(normals);
