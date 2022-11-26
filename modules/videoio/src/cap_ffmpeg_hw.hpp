@@ -475,8 +475,8 @@ void hw_init_opencl(AVBufferRef* ctx) {
     AVHWDeviceContext* hw_device_ctx = (AVHWDeviceContext*)ctx->data;
     if (!hw_device_ctx)
         return;
-#ifdef HAVE_VA_INTEL
     ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
+#ifdef HAVE_VA_INTEL
     cv::va_intel::VAAPIInterop* interop = ocl_context.getContext().getUserContext<cv::va_intel::VAAPIInterop>().get();
     //only initialize the context automatically if it isn't already
     if(!interop) {
@@ -496,8 +496,7 @@ void hw_init_opencl(AVBufferRef* ctx) {
 #endif
     if (hw_check_opencl_context(hw_device_ctx) != AV_HWDEVICE_TYPE_NONE) {
         // Attach AVHWDeviceContext to OpenCL context
-        ocl::Context &ocl_context = ocl::OpenCLExecutionContext::getCurrent().getContext();
-        ocl_context.setUserContext(std::make_shared<OpenCL_FFMPEG_Context>(ctx));
+        ocl_context.getContext().setUserContext(std::make_shared<OpenCL_FFMPEG_Context>(ctx));
     }
 }
 
