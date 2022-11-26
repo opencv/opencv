@@ -572,7 +572,7 @@ void normal_test(VolumeType volumeType, VolumeTestFunction testFunction,
         Mat pts3, nrm3;
         cvtColor(points, pts3, COLOR_RGBA2RGB);
         cvtColor(normals, nrm3, COLOR_RGBA2RGB);
-        savePointCloud(cv::format("pts%d%d%d%d.obj", volumeType, testFunction, testSrcType, frameSizeSpecified),
+        savePointCloud(cv::format("pts%d%d%d%d.obj", int(volumeType), int(testFunction), int(testSrcType), int(frameSizeSpecified)),
                        pts3.reshape(3, 1), nrm3.reshape(3, 1));
     }
 
