@@ -952,8 +952,6 @@ protected:
     Vec3f lightPose;
 
     Mat depth, rgb;
-    //TODO: check this utmpnormals, it looks redundant
-    UMat upoints, unormals, utmpnormals, ucolors;
 };
 
 
@@ -977,6 +975,7 @@ void VolumeTestFixture::saveObj(std::string funcName, Mat points, Mat normals)
 
 void VolumeTestFixture::raycast_test()
 {
+    UMat upoints, unormals, ucolors;
     if (frameSizeSpecified == FrameSizeType::CUSTOM)
     {
         if (volumeType == VolumeType::ColorTSDF)
@@ -1013,25 +1012,14 @@ void VolumeTestFixture::raycast_test()
 
 void VolumeTestFixture::fetch_normals_test()
 {
-    if (volumeType == VolumeType::ColorTSDF)
-    {
-        if (frameSizeSpecified == FrameSizeType::CUSTOM)
-            volume->raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, utmpnormals, ucolors);
-        else if (frameSizeSpecified == FrameSizeType::DEFAULT)
-            volume->raycast(poses[0].matrix, upoints, utmpnormals, ucolors);
-    }
-    else
-        // TODO: check this
-        //  hash_tsdf cpu doesn't work with raycast normals
-        // volume.raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, utmpnormals);
-        volume->fetchPointsNormals(upoints, utmpnormals);
+    UMat upoints, unormals;
+    volume->fetchPointsNormals(upoints, noArray());
 
     volume->fetchNormals(upoints, unormals);
 
     Mat points, normals, colors;
     points  = upoints.getMat(ACCESS_READ);
     normals = unormals.getMat(ACCESS_READ);
-    colors  = ucolors.getMat(ACCESS_READ);
 
     if (cvtest::debugLevel > 0)
     {
@@ -1044,12 +1032,12 @@ void VolumeTestFixture::fetch_normals_test()
 
 void VolumeTestFixture::fetch_points_normals_test()
 {
+    UMat upoints, unormals;
     volume->fetchPointsNormals(upoints, unormals);
 
-    Mat points, normals, colors;
+    Mat points, normals;
     points  = upoints.getMat(ACCESS_READ);
     normals = unormals.getMat(ACCESS_READ);
-    colors  = ucolors.getMat(ACCESS_READ);
 
     if (cvtest::debugLevel > 0)
     {
@@ -1062,6 +1050,7 @@ void VolumeTestFixture::fetch_points_normals_test()
 
 void VolumeTestFixture::valid_points_test()
 {
+    UMat upoints, unormals, ucolors;
     if (frameSizeSpecified == FrameSizeType::CUSTOM)
     {
         if (volumeType == VolumeType::ColorTSDF)
