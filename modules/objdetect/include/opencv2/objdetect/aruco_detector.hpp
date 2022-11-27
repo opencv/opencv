@@ -49,7 +49,7 @@ enum CornerRefineMethod{
 
 /** @brief struct DetectorParameters is used by ArucoDetector
  */
-struct CV_EXPORTS_W DetectorParameters {
+struct CV_EXPORTS_W_SIMPLE DetectorParameters {
     CV_WRAP DetectorParameters() {
         adaptiveThreshWinSizeMin = 3;
         adaptiveThreshWinSizeMax = 23;
@@ -283,7 +283,7 @@ public:
      * @param refineParams marker refine detection parameters
      */
     CV_WRAP ArucoDetector(const Ptr<Dictionary> &dictionary = getPredefinedDictionary(cv::aruco::DICT_4X4_50),
-                          const Ptr<DetectorParameters> &detectorParams = makePtr<DetectorParameters>(),
+                          const DetectorParameters &detectorParams = DetectorParameters(),
                           const RefineParameters& refineParams = RefineParameters());
 
     /** @brief Basic marker detection
@@ -338,7 +338,7 @@ public:
                                        OutputArray recoveredIdxs = noArray());
 
     Ptr<Dictionary> getDictionary() const;
-    Ptr<DetectorParameters> getDetectorParameters() const;
+    DetectorParameters& getDetectorParameters();
     RefineParameters& getRefineParameters();
 
     /** @brief Stores algorithm parameters in a file storage

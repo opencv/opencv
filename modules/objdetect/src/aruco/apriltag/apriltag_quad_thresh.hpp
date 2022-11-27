@@ -112,7 +112,7 @@ void threshold(const Mat mIm, const Ptr<DetectorParameters> &parameters, Mat& mT
 zarray_t *apriltag_quad_thresh(const Ptr<DetectorParameters> &parameters, const Mat & mImg,
                                std::vector<std::vector<Point> > &contours);
 
-void _apriltag(Mat im_orig, const Ptr<DetectorParameters> & _params, std::vector<std::vector<Point2f> > &candidates,
+void _apriltag(Mat im_orig, const DetectorParameters & _params, std::vector<std::vector<Point2f> > &candidates,
                std::vector<std::vector<Point> > &contours);
 
 }}

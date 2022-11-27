@@ -282,7 +282,7 @@ int err_compare_descending(const void *_a, const void *_b){
   rather than pairs of clusters.) Critically, this helps keep nearby
   edges from becoming connected.
  **/
-int quad_segment_maxima(const Ptr<DetectorParameters> &td, int sz, struct line_fit_pt *lfps, int indices[4]){
+int quad_segment_maxima(const DetectorParameters &td, int sz, struct line_fit_pt *lfps, int indices[4]){
 
     // ksz: when fitting points, how many points on either side do we consider?
     // (actual "kernel" width is 2ksz).
@@ -368,7 +368,7 @@ int quad_segment_maxima(const Ptr<DetectorParameters> &td, int sz, struct line_f
         return 0;
 
     // select only the best maxima if we have too many
-    int max_nmaxima = td->aprilTagMaxNmaxima;
+    int max_nmaxima = td.aprilTagMaxNmaxima;
 
     if (nmaxima > max_nmaxima) {
         std::vector<double> maxima_errs_copy(maxima_errs.begin(), maxima_errs.begin()+nmaxima);
@@ -394,7 +394,7 @@ int quad_segment_maxima(const Ptr<DetectorParameters> &td, int sz, struct line_f
     double params01[4], params12[4], params23[4], params30[4];
 
     // disallow quads where the angle is less than a critical value.
-    double max_dot = cos(td->aprilTagCriticalRad); //25*M_PI/180);
+    double max_dot = cos(td.aprilTagCriticalRad); //25*M_PI/180);
 
     for (int m0 = 0; m0 < nmaxima - 3; m0++) {
         int i0 = maxima[m0];
@@ -404,14 +404,14 @@ int quad_segment_maxima(const Ptr<DetectorParameters> &td, int sz, struct line_f
 
             fit_line(lfps, sz, i0, i1, params01, &err01, &mse01);
 
-            if (mse01 > td->aprilTagMaxLineFitMse)
+            if (mse01 > td.aprilTagMaxLineFitMse)
                 continue;
 
             for (int m2 = m1+1; m2 < nmaxima - 1; m2++) {
                 int i2 = maxima[m2];
 
                 fit_line(lfps, sz, i1, i2, params12, &err12, &mse12);
-                if (mse12 > td->aprilTagMaxLineFitMse)
+                if (mse12 > td.aprilTagMaxLineFitMse)
                     continue;
 
                 double dot = params01[2]*params12[2] + params01[3]*params12[3];
@@ -422,11 +422,11 @@ int quad_segment_maxima(const Ptr<DetectorParameters> &td, int sz, struct line_f
                     int i3 = maxima[m3];
 
                     fit_line(lfps, sz, i2, i3, params23, &err23, &mse23);
-                    if (mse23 > td->aprilTagMaxLineFitMse)
+                    if (mse23 > td.aprilTagMaxLineFitMse)
                         continue;
 
                     fit_line(lfps, sz, i3, i0, params30, &err30, &mse30);
-                    if (mse30 > td->aprilTagMaxLineFitMse)
+                    if (mse30 > td.aprilTagMaxLineFitMse)
                         continue;
 
                     double err = err01 + err12 + err23 + err30;
@@ -448,7 +448,7 @@ int quad_segment_maxima(const Ptr<DetectorParameters> &td, int sz, struct line_f
     for (int i = 0; i < 4; i++)
         indices[i] = best_indices[i];
 
-    if (best_error / sz < td->aprilTagMaxLineFitMse)
+    if (best_error / sz < td.aprilTagMaxLineFitMse)
         return 1;
     return 0;
 }
@@ -600,7 +600,7 @@ static void do_unionfind_line(unionfind_t *uf, Mat &im, int w, int s, int y){
  *  return 1 if the quad looks okay, 0 if it should be discarded
  *  quad
  **/
-int fit_quad(const Ptr<DetectorParameters> &_params, const Mat im, zarray_t *cluster, struct sQuad *quad){
+int fit_quad(const DetectorParameters &_params, const Mat im, zarray_t *cluster, struct sQuad *quad){
     CV_Assert(cluster != NULL);
 
     int res = 0;
@@ -880,7 +880,7 @@ int fit_quad(const Ptr<DetectorParameters> &_params, const Mat im, zarray_t *clu
             double err;
             fit_line(lfps, sz, i0, i1, lines[i], NULL, &err);
 
-            if (err > _params->aprilTagMaxLineFitMse) {
+            if (err > _params.aprilTagMaxLineFitMse) {
                 res = 0;
                 goto finish;
             }
@@ -1010,7 +1010,7 @@ int fit_quad(const Ptr<DetectorParameters> &_params, const Mat im, zarray_t *clu
             if (dtheta < 0)
                 dtheta += 2*CV_PI;
 
-            if (dtheta < _params->aprilTagCriticalRad || dtheta > (CV_PI - _params->aprilTagCriticalRad))
+            if (dtheta < _params.aprilTagCriticalRad || dtheta > (CV_PI - _params.aprilTagCriticalRad))
                 res = 0;
 
             total += dtheta;
@@ -1029,7 +1029,7 @@ int fit_quad(const Ptr<DetectorParameters> &_params, const Mat im, zarray_t *clu
 }
 
 
-static void do_quad(int nCidx0, int nCidx1, zarray_t &nClusters, int nW, int nH, zarray_t *nquads, const Ptr<DetectorParameters> &td, const Mat im){
+static void do_quad(int nCidx0, int nCidx1, zarray_t &nClusters, int nW, int nH, zarray_t *nquads, const DetectorParameters &td, const Mat im){
 
     CV_Assert(nquads != NULL);
 
@@ -1044,7 +1044,7 @@ static void do_quad(int nCidx0, int nCidx1, zarray_t &nClusters, int nW, int nH,
         zarray_t *cluster;
         _zarray_get(&nClusters, cidx, &cluster);
 
-        if (_zarray_size(cluster) < td->aprilTagMinClusterPixels)
+        if (_zarray_size(cluster) < td.aprilTagMinClusterPixels)
             continue;
 
         // a cluster should contain only boundary points around the
@@ -1068,7 +1068,7 @@ static void do_quad(int nCidx0, int nCidx1, zarray_t &nClusters, int nW, int nH,
     }
 }
 
-void threshold(const Mat mIm, const Ptr<DetectorParameters> &parameters, Mat& mThresh){
+void threshold(const Mat mIm, const DetectorParameters &parameters, Mat& mThresh){
     int w = mIm.cols, h = mIm.rows;
     int s = (unsigned) mIm.step;
     CV_Assert(w < 32768);
@@ -1173,7 +1173,7 @@ void threshold(const Mat mIm, const Ptr<DetectorParameters> &parameters, Mat& mT
             int max_ = im_max[ty*tw + tx];
 
             // low contrast region? (no edges)
-            if (max_ - min_ < parameters->aprilTagMinWhiteBlackDiff) {
+            if (max_ - min_ < parameters.aprilTagMinWhiteBlackDiff) {
                 for (int dy = 0; dy < tilesz; dy++) {
                     int y = ty*tilesz + dy;
 
@@ -1247,7 +1247,7 @@ void threshold(const Mat mIm, const Ptr<DetectorParameters> &parameters, Mat& mT
 
     // this is a dilate/erode deglitching scheme that does not improve
     // anything as far as I can tell.
-    if (parameters->aprilTagDeglitch) {
+    if (parameters.aprilTagDeglitch) {
         Mat tmp(h,w, mIm.type());
         for (int y = 1; y + 1 < h; y++) {
             for (int x = 1; x + 1 < w; x++) {
@@ -1290,7 +1290,7 @@ static void _darken(const Mat &im){
 }
 #endif
 
-zarray_t *apriltag_quad_thresh(const Ptr<DetectorParameters> &parameters, const Mat & mImg, std::vector<std::vector<Point> > &contours){
+zarray_t *apriltag_quad_thresh(const DetectorParameters &parameters, const Mat & mImg, std::vector<std::vector<Point> > &contours){
 
     ////////////////////////////////////////////////////////
     // step 1. threshold the image, creating the edge image.
@@ -1544,7 +1544,7 @@ imwrite("2.5 debug_lines.pnm", out);
     return quads;
 }
 
-void _apriltag(Mat im_orig, const Ptr<DetectorParameters> & _params, std::vector<std::vector<Point2f> > &candidates,
+void _apriltag(Mat im_orig, const DetectorParameters & _params, std::vector<std::vector<Point2f> > &candidates,
                std::vector<std::vector<Point> > &contours){
 
     ///////////////////////////////////////////////////////////
@@ -1552,15 +1552,15 @@ void _apriltag(Mat im_orig, const Ptr<DetectorParameters> & _params, std::vector
     /// and blurring parameters.
     Mat quad_im;
 
-    if (_params->aprilTagQuadDecimate > 1){
-        resize(im_orig, quad_im, Size(), 1/_params->aprilTagQuadDecimate, 1/_params->aprilTagQuadDecimate, INTER_AREA);
+    if (_params.aprilTagQuadDecimate > 1){
+        resize(im_orig, quad_im, Size(), 1/_params.aprilTagQuadDecimate, 1/_params.aprilTagQuadDecimate, INTER_AREA);
     }
     else {
         im_orig.copyTo(quad_im);
     }
 
     // Apply a Blur
-    if (_params->aprilTagQuadSigma != 0) {
+    if (_params.aprilTagQuadSigma != 0) {
         // compute a reasonable kernel width by figuring that the
         // kernel should go out 2 std devs.
         //
@@ -1570,13 +1570,13 @@ void _apriltag(Mat im_orig, const Ptr<DetectorParameters> & _params, std::vector
         // 1.499              5
         // 1.999              7
 
-        float sigma = fabsf((float) _params->aprilTagQuadSigma);
+        float sigma = fabsf((float) _params.aprilTagQuadSigma);
 
         int ksz = cvFloor(4 * sigma); // 2 std devs in each direction
         ksz |= 1; // make odd number
 
         if (ksz > 1) {
-            if (_params->aprilTagQuadSigma > 0)
+            if (_params.aprilTagQuadSigma > 0)
                 GaussianBlur(quad_im, quad_im, Size(ksz, ksz), sigma, sigma, BORDER_REPLICATE);
             else {
                 Mat orig;
@@ -1614,13 +1614,13 @@ void _apriltag(Mat im_orig, const Ptr<DetectorParameters> & _params, std::vector
 
     // adjust centers of pixels so that they correspond to the
     // original full-resolution image.
-    if (_params->aprilTagQuadDecimate > 1) {
+    if (_params.aprilTagQuadDecimate > 1) {
         for (int i = 0; i < _zarray_size(quads); i++) {
             struct sQuad *q;
             _zarray_get_volatile(quads, i, &q);
             for (int j = 0; j < 4; j++) {
-                q->p[j][0] *= _params->aprilTagQuadDecimate;
-                q->p[j][1] *= _params->aprilTagQuadDecimate;
+                q->p[j][0] *= _params.aprilTagQuadDecimate;
+                q->p[j][1] *= _params.aprilTagQuadDecimate;
             }
         }
     }
