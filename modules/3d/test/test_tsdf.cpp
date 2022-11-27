@@ -1082,47 +1082,45 @@ void VolumeTestFixture::valid_points_test()
             displayImage(depth, points, normals, depthFactor, lightPose);
     }
 
-    points.release(); normals.release(); colors.release();
-    upoints.release();
-    unormals.release();
-    ucolors.release();
+    UMat upoints2, unormals2, ucolors2;
+    Mat points2, normals2, colors2;
 
     if (frameSizeSpecified == FrameSizeType::CUSTOM)
     {
         if (volumeType == VolumeType::ColorTSDF)
-            volume->raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
+            volume->raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, upoints2, unormals2, ucolors2);
         else
-            volume->raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
+            volume->raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, upoints2, unormals2);
     }
     else
     {
         if (volumeType == VolumeType::ColorTSDF)
-            volume->raycast(poses[17].matrix, upoints, unormals, ucolors);
+            volume->raycast(poses[17].matrix, upoints2, unormals2, ucolors2);
         else
-            volume->raycast(poses[17].matrix, upoints, unormals);
+            volume->raycast(poses[17].matrix, upoints2, unormals2);
     }
 
-    points = upoints.getMat(ACCESS_READ);
-    normals = unormals.getMat(ACCESS_READ);
-    colors = ucolors.getMat(ACCESS_READ);
+    points2 = upoints2.getMat(ACCESS_READ);
+    normals2 = unormals2.getMat(ACCESS_READ);
+    colors2 = ucolors2.getMat(ACCESS_READ);
 
-    patchNaNs(points);
-    int profile = counterOfValid(points);
+    patchNaNs(points2);
+    int profile = counterOfValid(points2);
 
     if (cvtest::debugLevel > 0)
     {
         if (volumeType == VolumeType::ColorTSDF)
-            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+            displayColorImage(depth, rgb, points2, normals2, colors2, depthFactor, lightPose);
         else
-            displayImage(depth, points, normals, depthFactor, lightPose);
+            displayImage(depth, points2, normals2, depthFactor, lightPose);
     }
 
     // TODO: why profile == 2*enface ?
     float percentValidity = float(enface) / float(profile);
 
-    ASSERT_NE(profile, 0) << "There is no points in profile";
-    ASSERT_NE(enface, 0) << "There is no points in enface";
-    ASSERT_LT(abs(0.5 - percentValidity), 0.3) << "percentValidity out of [0.3; 0.7] (percentValidity=" << percentValidity << ")";
+    ASSERT_GT(profile, 0) << "There are no points in profile";
+    ASSERT_GT(enface, 0) << "There are no points in enface";
+    ASSERT_LT(abs(0.5 - percentValidity), 0.05) << "percentValidity should be in range 45-55%, but it's " << percentValidity*100.f << "%";
 }
 
 TEST_P(VolumeTestFixture, valid_points)
