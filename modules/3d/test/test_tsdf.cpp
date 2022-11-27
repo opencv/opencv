@@ -842,7 +842,7 @@ namespace
         VolumeTestSrcType val;
     };
     const std::array<VolumeTestSrcType, 2> VolumeTestSrcTypeEnum::vals{VolumeTestSrcType::MAT, VolumeTestSrcType::ODOMETRY_FRAME};
-    const std::array<std::string, 2> VolumeTestSrcTypeEnum::svals{std::string("MAT"), std::string("ODOMETRY_FRAME")};
+    const std::array<std::string, 2> VolumeTestSrcTypeEnum::svals{std::string("UMat"), std::string("OdometryFrame")};
 
     static inline void PrintTo(const VolumeTestSrcTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 
@@ -875,7 +875,7 @@ namespace
         FrameSizeType val;
     };
     const std::array<FrameSizeType, 2> FrameSizeTypeEnum::vals{FrameSizeType::DEFAULT, FrameSizeType::CUSTOM};
-    const std::array<std::string, 2> FrameSizeTypeEnum::svals{std::string("DEFAULT"), std::string("CUSTOM")};
+    const std::array<std::string, 2> FrameSizeTypeEnum::svals{std::string("DefaultSize"), std::string("CustomSize")};
 
     static inline void PrintTo(const FrameSizeTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
@@ -989,7 +989,14 @@ void VolumeTestFixture::raycast_test()
         Mat pts3, nrm3;
         cvtColor(points, pts3, COLOR_RGBA2RGB);
         cvtColor(normals, nrm3, COLOR_RGBA2RGB);
-        savePointCloud(cv::format("pts_raycast_%d_%d_%d.obj", int(volumeType), int(testSrcType), int(frameSizeSpecified)),
+        string volumeTypeString = volumeType == VolumeType::TSDF ? "TSDF" :
+                                  volumeType == VolumeType::HashTSDF ? "HashTSDF" :
+                                  volumeType == VolumeType::ColorTSDF ? "ColorTSDF" : "";
+        string testSrcTypeString = testSrcType == VolumeTestSrcType::MAT ? "MAT" :
+                                   testSrcType == VolumeTestSrcType::ODOMETRY_FRAME ? "OFRAME" : "";
+        string frameSizeSpecifiedString = frameSizeSpecified == FrameSizeType::DEFAULT ? "DefaultSize" :
+                                          frameSizeSpecified == FrameSizeType::CUSTOM ? "CustomSize" : "";
+        savePointCloud(cv::format("pts_raycast_%s_%s_%s.obj", volumeTypeString, testSrcTypeString, frameSizeSpecifiedString),
                        pts3.reshape(3, 1), nrm3.reshape(3, 1));
     }
 
@@ -1024,7 +1031,15 @@ void VolumeTestFixture::fetch_normals_test()
         Mat pts3, nrm3;
         cvtColor(points, pts3, COLOR_RGBA2RGB);
         cvtColor(normals, nrm3, COLOR_RGBA2RGB);
-        savePointCloud(cv::format("pts_fetch_normals_%d_%d_%d.obj", int(volumeType), int(testSrcType), int(frameSizeSpecified)),
+
+        string volumeTypeString = volumeType == VolumeType::TSDF ? "TSDF" :
+                                  volumeType == VolumeType::HashTSDF ? "HashTSDF" :
+                                  volumeType == VolumeType::ColorTSDF ? "ColorTSDF" : "";
+        string testSrcTypeString = testSrcType == VolumeTestSrcType::MAT ? "MAT" :
+                                   testSrcType == VolumeTestSrcType::ODOMETRY_FRAME ? "OFRAME" : "";
+        string frameSizeSpecifiedString = frameSizeSpecified == FrameSizeType::DEFAULT ? "DefaultSize" :
+                                          frameSizeSpecified == FrameSizeType::CUSTOM ? "CustomSize" : "";
+        savePointCloud(cv::format("pts_fetch_normals_%s_%s_%s.obj", volumeTypeString, testSrcTypeString, frameSizeSpecifiedString),
                        pts3.reshape(3, 1), nrm3.reshape(3, 1));
     }
 
@@ -1046,7 +1061,14 @@ void VolumeTestFixture::fetch_points_normals_test()
         Mat pts3, nrm3;
         cvtColor(points, pts3, COLOR_RGBA2RGB);
         cvtColor(normals, nrm3, COLOR_RGBA2RGB);
-        savePointCloud(cv::format("pts_fetch_points_normals_%d_%d_%d.obj", int(volumeType), int(testSrcType), int(frameSizeSpecified)),
+        string volumeTypeString = volumeType == VolumeType::TSDF ? "TSDF" :
+                                  volumeType == VolumeType::HashTSDF ? "HashTSDF" :
+                                  volumeType == VolumeType::ColorTSDF ? "ColorTSDF" : "";
+        string testSrcTypeString = testSrcType == VolumeTestSrcType::MAT ? "MAT" :
+                                   testSrcType == VolumeTestSrcType::ODOMETRY_FRAME ? "OFRAME" : "";
+        string frameSizeSpecifiedString = frameSizeSpecified == FrameSizeType::DEFAULT ? "DefaultSize" :
+                                          frameSizeSpecified == FrameSizeType::CUSTOM ? "CustomSize" : "";
+        savePointCloud(cv::format("pts_fetch_points_normals_%s_%s_%s.obj", volumeTypeString, testSrcTypeString, frameSizeSpecifiedString),
                        pts3.reshape(3, 1), nrm3.reshape(3, 1));
     }
 
