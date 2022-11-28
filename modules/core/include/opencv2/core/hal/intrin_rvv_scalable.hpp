@@ -639,6 +639,35 @@ OPENCV_HAL_IMPL_RVV_LOGIC_OP(v_int32, VTraits<v_int32>::vlanes())
 OPENCV_HAL_IMPL_RVV_LOGIC_OP(v_uint64, VTraits<v_uint64>::vlanes())
 OPENCV_HAL_IMPL_RVV_LOGIC_OP(v_int64, VTraits<v_int64>::vlanes())
 
+#define OPENCV_HAL_IMPL_RVV_FLT_BIT_OP(intrin) \
+inline v_float32 intrin (const v_float32& a, const v_float32& b) \
+{ \
+    return vreinterpret_f32m1(intrin(vreinterpret_i32m1(a), vreinterpret_i32m1(b))); \
+}
+OPENCV_HAL_IMPL_RVV_FLT_BIT_OP(v_and)
+OPENCV_HAL_IMPL_RVV_FLT_BIT_OP(v_or)
+OPENCV_HAL_IMPL_RVV_FLT_BIT_OP(v_xor)
+
+inline v_float32 v_not (const v_float32& a) \
+{ \
+    return vreinterpret_f32m1(v_not(vreinterpret_i32m1(a))); \
+}
+
+#if CV_SIMD_SCALABLE_64F
+#define OPENCV_HAL_IMPL_RVV_FLT64_BIT_OP(intrin) \
+inline v_float64 intrin (const v_float64& a, const v_float64& b) \
+{ \
+    return vreinterpret_f64m1(intrin(vreinterpret_i64m1(a), vreinterpret_i64m1(b))); \
+}
+OPENCV_HAL_IMPL_RVV_FLT64_BIT_OP(v_and)
+OPENCV_HAL_IMPL_RVV_FLT64_BIT_OP(v_or)
+OPENCV_HAL_IMPL_RVV_FLT64_BIT_OP(v_xor)
+
+inline v_float64 v_not (const v_float64& a) \
+{ \
+    return vreinterpret_f64m1(v_not(vreinterpret_i64m1(a))); \
+}
+#endif
 
 
 ////////////// Bitwise shifts //////////////
