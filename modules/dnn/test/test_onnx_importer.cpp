@@ -961,6 +961,8 @@ TEST_P(Test_ONNX_layers, MatMul_init)
     testONNXModels("matmul_2d_init");
     testONNXModels("matmul_3d_init");
     testONNXModels("matmul_4d_init");
+
+    testONNXModels("matmul_init_2");
 }
 
 TEST_P(Test_ONNX_layers, MatMulAdd)
