@@ -961,13 +961,13 @@ void VolumeTestFixture::saveObj(std::string funcName, Mat points, Mat normals)
     cvtColor(points, pts3, COLOR_RGBA2RGB);
     cvtColor(normals, nrm3, COLOR_RGBA2RGB);
     string platformString = gpu ? "GPU" : "CPU";
-    string volumeTypeString = volumeType == VolumeType::TSDF ? "TSDF" : volumeType == VolumeType::HashTSDF ? "HashTSDF"
-                                                                    : volumeType == VolumeType::ColorTSDF  ? "ColorTSDF"
-                                                                                                           : "";
-    string testSrcTypeString = testSrcType == VolumeTestSrcType::MAT ? "MAT" : testSrcType == VolumeTestSrcType::ODOMETRY_FRAME ? "OFRAME"
-                                                                                                                                : "";
-    string frameSizeSpecifiedString = frameSizeSpecified == FrameSizeType::DEFAULT ? "DefaultSize" : frameSizeSpecified == FrameSizeType::CUSTOM ? "CustomSize"
-                                                                                                                                                 : "";
+    string volumeTypeString = volumeType == VolumeType::TSDF ? "TSDF" :
+                              volumeType == VolumeType::HashTSDF ? "HashTSDF" :
+                              volumeType == VolumeType::ColorTSDF  ? "ColorTSDF" : "";
+    string testSrcTypeString = testSrcType == VolumeTestSrcType::MAT ? "MAT" :
+                               testSrcType == VolumeTestSrcType::ODOMETRY_FRAME ? "OFRAME" : "";
+    string frameSizeSpecifiedString = frameSizeSpecified == FrameSizeType::DEFAULT ? "DefaultSize" :
+                                      frameSizeSpecified == FrameSizeType::CUSTOM ? "CustomSize" : "";
     savePointCloud(cv::format("pts_%s_%s_%s_%s_%s.obj", funcName.c_str(), platformString.c_str(), volumeTypeString.c_str(),
                               testSrcTypeString.c_str(), frameSizeSpecifiedString.c_str()),
                    pts3.reshape(3, 1), nrm3.reshape(3, 1));
