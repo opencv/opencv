@@ -534,6 +534,18 @@ protected:
 
         if (!gpu)
             oclStatus.off();
+
+        VolumeSettings vs(volumeType);
+        volume = makePtr<Volume>(volumeType, vs);
+
+        frameSize = Size(vs.getRaycastWidth(), vs.getRaycastHeight());
+        Matx33f intrIntegrate;
+        vs.getCameraIntegrateIntrinsics(intrIntegrate);
+        vs.getCameraRaycastIntrinsics(intrRaycast);
+        bool onlySemisphere = false;
+        depthFactor = vs.getDepthFactor();
+        scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
+        poses = scene->getPoses();
     }
 
     bool gpu;
@@ -541,23 +553,18 @@ protected:
     VolumeTestSrcType testSrcType;
 
     OpenCLStatusRevert oclStatus;
+
+    Ptr<Volume> volume;
+    Size frameSize;
+    Matx33f intrRaycast;
+    Ptr<Scene> scene;
+    std::vector<Affine3f> poses;
+    float depthFactor;
 };
 
 
 PERF_TEST_P_(VolumePerfFixture, integrate)
 {
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
     for (size_t i = 0; i < poses.size(); i++)
     {
         Matx44f pose = poses[i].matrix;
@@ -571,11 +578,11 @@ PERF_TEST_P_(VolumePerfFixture, integrate)
         startTimer();
         if (testSrcType == VolumeTestSrcType::MAT)
             if (volumeType == VolumeType::ColorTSDF)
-                volume.integrate(udepth, urgb, pose);
+                volume->integrate(udepth, urgb, pose);
             else
-                volume.integrate(udepth, pose);
+                volume->integrate(udepth, pose);
         else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-            volume.integrate(odf, pose);
+            volume->integrate(odf, pose);
         stopTimer();
 
     }
@@ -585,19 +592,6 @@ PERF_TEST_P_(VolumePerfFixture, integrate)
 
 PERF_TEST_P_(VolumePerfFixture, raycast)
 {
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
     for (size_t i = 0; i < poses.size(); i++)
     {
         Matx44f pose = poses[i].matrix;
@@ -608,13 +602,21 @@ PERF_TEST_P_(VolumePerfFixture, raycast)
         rgb.copyTo(urgb);
         UMat upoints, unormals, ucolors;
 
-        volume.integrate(depth, pose);
+        OdometryFrame odf(urgb, udepth);
 
+        if (testSrcType == VolumeTestSrcType::MAT)
+            if (volumeType == VolumeType::ColorTSDF)
+                volume->integrate(udepth, urgb, pose);
+            else
+                volume->integrate(udepth, pose);
+        else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
+            volume->integrate(odf, pose);
+        
         startTimer();
         if (volumeType == VolumeType::ColorTSDF)
-            volume.raycast(pose, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
+            volume->raycast(pose, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
         else
-            volume.raycast(pose, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
+            volume->raycast(pose, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
         stopTimer();
 
         Mat points, normals, colors;
@@ -624,6 +626,7 @@ PERF_TEST_P_(VolumePerfFixture, raycast)
 
         if (display)
         {
+            Vec3f lightPose = Vec3f::all(0.f);
             if (volumeType == VolumeType::ColorTSDF)
                 displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
             else
