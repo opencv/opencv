@@ -92,7 +92,7 @@ int err_compare_descending(const void *_a, const void *_b);
   rather than pairs of clusters.) Critically, this helps keep nearby
   edges from becoming connected.
  **/
-int quad_segment_maxima(const Ptr<DetectorParameters> &td, int sz, struct line_fit_pt *lfps, int indices[4]);
+int quad_segment_maxima(const DetectorParameters &td, int sz, struct line_fit_pt *lfps, int indices[4]);
 
 /**
  * returns 0 if the cluster looks bad.
@@ -103,16 +103,16 @@ int quad_segment_agg(int sz, struct line_fit_pt *lfps, int indices[4]);
  *  return 1 if the quad looks okay, 0 if it should be discarded
  *  quad
  **/
-int fit_quad(const Ptr<DetectorParameters> &_params, const Mat im, zarray_t *cluster, struct sQuad *quad);
+int fit_quad(const DetectorParameters &_params, const Mat im, zarray_t *cluster, struct sQuad *quad);
 
 
-void threshold(const Mat mIm, const Ptr<DetectorParameters> &parameters, Mat& mThresh);
+void threshold(const Mat mIm, const DetectorParameters &parameters, Mat& mThresh);
 
 
-zarray_t *apriltag_quad_thresh(const Ptr<DetectorParameters> &parameters, const Mat & mImg,
+zarray_t *apriltag_quad_thresh(const DetectorParameters &parameters, const Mat & mImg,
                                std::vector<std::vector<Point> > &contours);
 
-void _apriltag(Mat im_orig, const DetectorParameters & _params, std::vector<std::vector<Point2f> > &candidates,
+void _apriltag(Mat im_orig, const DetectorParameters &_params, std::vector<std::vector<Point2f> > &candidates,
                std::vector<std::vector<Point> > &contours);
 
 }}
