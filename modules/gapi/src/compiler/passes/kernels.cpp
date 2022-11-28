@@ -212,7 +212,7 @@ void cv::gimpl::passes::resolveKernels(ade::passes::PassContext   &ctx,
                 GAPI_Assert(op.k.outMeta == nullptr);
                 const_cast<cv::GKernel::M&>(op.k.outMeta) = selected_impl.outMeta;
             } else {
-                // Sanity check: the metadata funciton must be present
+                // Sanity check: the metadata function must be present
                 GAPI_Assert(op.k.outMeta != nullptr);
             }
         }

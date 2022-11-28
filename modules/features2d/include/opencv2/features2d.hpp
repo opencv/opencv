@@ -108,6 +108,10 @@ public:
      */
     static void runByPixelsMask( std::vector<KeyPoint>& keypoints, const Mat& mask );
     /*
+     * Remove objects from some image and a vector of points by mask for pixels of this image
+     */
+    static void runByPixelsMask2VectorPoint(std::vector<KeyPoint> &keypoints, std::vector<std::vector<Point> > &removeFrom, const Mat &mask);
+    /*
      * Remove duplicated keypoints.
      */
     static void removeDuplicated( std::vector<KeyPoint>& keypoints );
@@ -719,6 +723,8 @@ public:
       CV_PROP_RW bool filterByConvexity;
       CV_PROP_RW float minConvexity, maxConvexity;
 
+      CV_PROP_RW bool collectContours;
+
       void read( const FileNode& fn );
       void write( FileStorage& fs ) const;
   };
@@ -726,6 +732,7 @@ public:
   CV_WRAP static Ptr<SimpleBlobDetector>
     create(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
   CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+  CV_WRAP virtual const std::vector<std::vector<cv::Point> >& getBlobContours() const;
 };
 
 //! @} features2d_main
@@ -1143,8 +1150,8 @@ protected:
         virtual void clear();
 
         const Mat& getDescriptors() const;
-        const Mat getDescriptor( int imgIdx, int localDescIdx ) const;
-        const Mat getDescriptor( int globalDescIdx ) const;
+        Mat getDescriptor( int imgIdx, int localDescIdx ) const;
+        Mat getDescriptor( int globalDescIdx ) const;
         void getLocalIdx( int globalDescIdx, int& imgIdx, int& localDescIdx ) const;
 
         int size() const;

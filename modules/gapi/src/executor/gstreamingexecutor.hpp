@@ -12,7 +12,6 @@
                                 // on concurrent_bounded_queue
 #endif
 
-#include <memory> // unique_ptr, shared_ptr
 #include <thread> // thread
 #include <vector>
 #include <unordered_map>
@@ -26,9 +25,7 @@ template<typename T> using QueueClass = cv::gapi::own::concurrent_bounded_queue<
 #endif // TBB
 #include "executor/last_value.hpp"
 
-#include <ade/graph.hpp>
-
-#include "backends/common/gbackend.hpp"
+#include "executor/gabstractstreamingexecutor.hpp"
 
 namespace cv {
 namespace gimpl {
@@ -50,11 +47,12 @@ struct Result {
 
 using Cmd = cv::util::variant
     < cv::util::monostate
-    , Start        // Tells emitters to start working. Not broadcasted to workers.
-    , Stop         // Tells emitters to stop working. Broadcasted to workers.
-    , cv::GRunArg  // Workers data payload to process.
-    , Result       // Pipeline's data for gout()
-    >;
+    , Start                // Tells emitters to start working. Not broadcasted to workers.
+    , Stop                 // Tells emitters to stop working. Broadcasted to workers.
+    , cv::GRunArg          // Workers data payload to process.
+    , Result               // Pipeline's data for gout()
+    , cv::gimpl::Exception // Exception which is thrown while execution.
+   >;
 
 // Interface over a queue. The underlying queue implementation may be
 // different. This class is mainly introduced to bring some
@@ -103,7 +101,7 @@ public:
 // FIXME: Currently all GExecutor comments apply also
 // to this one. Please document it separately in the future.
 
-class GStreamingExecutor final
+class GStreamingExecutor final: public GAbstractStreamingExecutor
 {
 protected:
     // GStreamingExecutor is a state machine described as follows
@@ -130,14 +128,8 @@ protected:
         RUNNING,
     } state = State::STOPPED;
 
-    std::unique_ptr<ade::Graph> m_orig_graph;
-    std::shared_ptr<ade::Graph> m_island_graph;
-    cv::GCompileArgs m_comp_args;
     cv::GMetaArgs m_last_metas;
     util::optional<bool> m_reshapable;
-
-    cv::gimpl::GIslandModel::Graph m_gim; // FIXME: make const?
-    const bool m_desync;
 
     // FIXME: Naive executor details are here for now
     // but then it should be moved to another place
@@ -201,14 +193,14 @@ public:
     explicit GStreamingExecutor(std::unique_ptr<ade::Graph> &&g_model,
                                 const cv::GCompileArgs &comp_args);
     ~GStreamingExecutor();
-    void setSource(GRunArgs &&args);
-    void start();
-    bool pull(cv::GRunArgsP &&outs);
-    bool pull(cv::GOptRunArgsP &&outs);
-    std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> pull();
-    bool try_pull(cv::GRunArgsP &&outs);
-    void stop();
-    bool running() const;
+    void setSource(GRunArgs &&args) override;
+    void start() override;
+    bool pull(cv::GRunArgsP &&outs) override;
+    bool pull(cv::GOptRunArgsP &&outs) override;
+    PyPullResult pull() override;
+    bool try_pull(cv::GRunArgsP &&outs) override;
+    void stop() override;
+    bool running() const override;
 };
 
 } // namespace gimpl

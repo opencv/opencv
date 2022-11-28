@@ -44,8 +44,8 @@ int main(int argc, char** argv)
         "{image2 i2         |            | Path to the input image2. When image1 and image2 parameters given then the program try to find a face on both images and runs face recognition algorithm}"
         "{video v           | 0          | Path to the input video}"
         "{scale sc          | 1.0        | Scale factor used to resize input video frames}"
-        "{fd_model fd       | yunet.onnx | Path to the model. Download yunet.onnx in https://github.com/ShiqiYu/libfacedetection.train/tree/master/tasks/task1/onnx }"
-        "{fr_model fr       | face_recognizer_fast.onnx | Path to the face recognition model. Download the model at https://drive.google.com/file/d/1ClK9WiB492c5OZFKveF3XiHCejoOxINW/view}"
+        "{fd_model fd       | face_detection_yunet_2021dec.onnx| Path to the model. Download yunet.onnx in https://github.com/opencv/opencv_zoo/tree/master/models/face_detection_yunet}"
+        "{fr_model fr       | face_recognition_sface_2021dec.onnx | Path to the face recognition model. Download the model at https://github.com/opencv/opencv_zoo/tree/master/models/face_recognition_sface}"
         "{score_threshold   | 0.9        | Filter out faces of score < score_threshold}"
         "{nms_threshold     | 0.3        | Suppress bounding boxes of iou >= nms_threshold}"
         "{top_k             | 5000       | Keep top_k bounding boxes before NMS}"
@@ -65,6 +65,7 @@ int main(int argc, char** argv)
     int topK = parser.get<int>("top_k");
 
     bool save = parser.get<bool>("save");
+    float scale = parser.get<float>("scale");
 
     double cosine_similar_thresh = 0.363;
     double l2norm_similar_thresh = 1.128;
@@ -87,6 +88,9 @@ int main(int argc, char** argv)
             return 2;
         }
 
+        int imageWidth = int(image1.cols * scale);
+        int imageHeight = int(image1.rows * scale);
+        resize(image1, image1, Size(imageWidth, imageHeight));
         tm.start();
 
         //! [inference]
@@ -199,7 +203,6 @@ int main(int argc, char** argv)
     else
     {
         int frameWidth, frameHeight;
-        float scale = parser.get<float>("scale");
         VideoCapture capture;
         std::string video = parser.get<string>("video");
         if (video.size() == 1 && isdigit(video[0]))

@@ -197,28 +197,95 @@ void Model::predict(InputArray frame, OutputArrayOfArrays outs) const
 }
 
 
+class ClassificationModel_Impl : public Model::Impl
+{
+public:
+    virtual ~ClassificationModel_Impl() {}
+    ClassificationModel_Impl() : Impl() {}
+    ClassificationModel_Impl(const ClassificationModel_Impl&) = delete;
+    ClassificationModel_Impl(ClassificationModel_Impl&&) = delete;
+
+    void setEnableSoftmaxPostProcessing(bool enable)
+    {
+        applySoftmax = enable;
+    }
+
+    bool getEnableSoftmaxPostProcessing() const
+    {
+        return applySoftmax;
+    }
+
+    std::pair<int, float> classify(InputArray frame)
+    {
+        std::vector<Mat> outs;
+        processFrame(frame, outs);
+        CV_Assert(outs.size() == 1);
+
+        Mat out = outs[0].reshape(1, 1);
+
+        if(getEnableSoftmaxPostProcessing())
+        {
+            softmax(out, out);
+        }
+
+        double conf;
+        Point maxLoc;
+        cv::minMaxLoc(out, nullptr, &conf, nullptr, &maxLoc);
+        return {maxLoc.x, static_cast<float>(conf)};
+    }
+
+protected:
+    void softmax(InputArray inblob, OutputArray outblob)
+    {
+        const Mat input = inblob.getMat();
+        outblob.create(inblob.size(), inblob.type());
+
+        Mat exp;
+        const float max = *std::max_element(input.begin<float>(), input.end<float>());
+        cv::exp((input - max), exp);
+        outblob.getMat() = exp / cv::sum(exp)[0];
+    }
+
+protected:
+    bool applySoftmax = false;
+};
+
+ClassificationModel::ClassificationModel()
+    : Model()
+{
+    // nothing
+}
+
 ClassificationModel::ClassificationModel(const String& model, const String& config)
-    : Model(model, config)
+    : ClassificationModel(readNet(model, config))
 {
     // nothing
 }
 
 ClassificationModel::ClassificationModel(const Net& network)
-    : Model(network)
+    : Model()
 {
-    // nothing
+    impl = makePtr<ClassificationModel_Impl>();
+    impl->initNet(network);
+}
+
+ClassificationModel& ClassificationModel::setEnableSoftmaxPostProcessing(bool enable)
+{
+    CV_Assert(impl != nullptr && impl.dynamicCast<ClassificationModel_Impl>() != nullptr);
+    impl.dynamicCast<ClassificationModel_Impl>()->setEnableSoftmaxPostProcessing(enable);
+    return *this;
+}
+
+bool ClassificationModel::getEnableSoftmaxPostProcessing() const
+{
+    CV_Assert(impl != nullptr && impl.dynamicCast<ClassificationModel_Impl>() != nullptr);
+    return impl.dynamicCast<ClassificationModel_Impl>()->getEnableSoftmaxPostProcessing();
 }
 
 std::pair<int, float> ClassificationModel::classify(InputArray frame)
 {
-    std::vector<Mat> outs;
-    impl->processFrame(frame, outs);
-    CV_Assert(outs.size() == 1);
-
-    double conf;
-    cv::Point maxLoc;
-    minMaxLoc(outs[0].reshape(1, 1), nullptr, &conf, nullptr, &maxLoc);
-    return {maxLoc.x, static_cast<float>(conf)};
+    CV_Assert(impl != nullptr && impl.dynamicCast<ClassificationModel_Impl>() != nullptr);
+    return impl.dynamicCast<ClassificationModel_Impl>()->classify(frame);
 }
 
 void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
@@ -732,7 +799,7 @@ struct TextRecognitionModel_Impl : public Model::Impl
 
     virtual
     std::string ctcPrefixBeamSearchDecode(const Mat& prediction) {
-          // CTC prefix beam seach decode.
+          // CTC prefix beam search decode.
           // For more detail, refer to:
           // https://distill.pub/2017/ctc/#inference
           // https://gist.github.com/awni/56369a90d03953e370f3964c826ed4b0i
@@ -1500,4 +1567,4 @@ int TextDetectionModel_DB::getMaxCandidates() const
 }
 
 
-}} // namespace
+}}  // namespace

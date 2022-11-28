@@ -703,10 +703,18 @@ cv::ogl::Texture2D::Format cv::ogl::Texture2D::format() const
 
 ///////
 
+// WARNING: unreachable code using Ninja
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(push)
+#pragma warning(disable: 4702)
+#endif
 inline
 cv::ogl::Arrays::Arrays() : size_(0)
 {
 }
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(pop)
+#endif
 
 inline
 int cv::ogl::Arrays::size() const

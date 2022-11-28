@@ -436,8 +436,8 @@ PERF_TEST_P_(DivPerfTest, TestPerformance)
     // FIXIT Unstable input data for divide
     initMatsRandU(type, sz, dtype, false);
 
-    //This condition need to workaround bug in OpenCV.
-    //It reinitializes divider matrix without zero values.
+    //This condition need to workaround the #21044 issue in the OpenCV.
+    //It reinitializes divider matrix without zero values for CV_16S DST type.
     if (dtype == CV_16S && dtype != type)
         cv::randu(in_mat2, cv::Scalar::all(1), cv::Scalar::all(255));
 
@@ -482,6 +482,11 @@ PERF_TEST_P_(DivCPerfTest, TestPerformance)
     // FIXIT Unstable input data for divide
     initMatsRandU(type, sz, dtype, false);
 
+    //This condition need to workaround the #21044 issue in the OpenCV.
+    //It reinitializes divider scalar without zero values for CV_16S DST type.
+    if (dtype == CV_16S || (type == CV_16S && dtype == -1))
+        cv::randu(sc, cv::Scalar::all(1), cv::Scalar::all(SHRT_MAX));
+
     // OpenCV code ///////////////////////////////////////////////////////////
     cv::divide(in_mat1, sc, out_mat_ocv, scale, dtype);
 
@@ -523,6 +528,10 @@ PERF_TEST_P_(DivRCPerfTest, TestPerformance)
 
     // FIXIT Unstable input data for divide
     initMatsRandU(type, sz, dtype, false);
+    //This condition need to workaround the #21044 issue in the OpenCV.
+    //It reinitializes divider matrix without zero values for CV_16S DST type.
+    if (dtype == CV_16S || (type == CV_16S && dtype == -1))
+        cv::randu(in_mat1, cv::Scalar::all(1), cv::Scalar::all(255));
 
     // OpenCV code ///////////////////////////////////////////////////////////
     cv::divide(sc, in_mat1, out_mat_ocv, scale, dtype);
@@ -2270,187 +2279,6 @@ PERF_TEST_P_(TransposePerfTest, TestPerformance)
     TEST_CYCLE()
     {
         c.apply(cv::gin(in_mat1), cv::gout(out_mat_gapi));
-    }
-
-    // Comparison ////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-    }
-
-    SANITY_CHECK_NOTHING();
-}
-
-//------------------------------------------------------------------------------
-
-PERF_TEST_P_(ResizePerfTest, TestPerformance)
-{
-    compare_f cmpF;
-    MatType type = -1;
-    int interp = 1;
-    cv::Size sz;
-    cv::Size sz_out;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, interp, sz, sz_out, compile_args) = GetParam();
-
-    in_mat1 = cv::Mat(sz, type);
-    cv::Scalar mean = cv::Scalar::all(127);
-    cv::Scalar stddev = cv::Scalar::all(40.f);
-    cv::randn(in_mat1, mean, stddev);
-    out_mat_gapi = cv::Mat(sz_out, type);
-    out_mat_ocv = cv::Mat(sz_out, type);
-
-    // OpenCV code ///////////////////////////////////////////////////////////
-    cv::resize(in_mat1, out_mat_ocv, sz_out, 0.0, 0.0, interp);
-
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GMat in;
-    auto out = cv::gapi::resize(in, sz_out, 0.0, 0.0, interp);
-    cv::GComputation c(in, out);
-
-    // Warm-up graph engine:
-    auto cc = c.compile(descr_of(gin(in_mat1)),
-                        std::move(compile_args));
-    cc(gin(in_mat1), gout(out_mat_gapi));
-
-    TEST_CYCLE()
-    {
-        cc(gin(in_mat1), gout(out_mat_gapi));
-    }
-
-    // Comparison ////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-    }
-
-    SANITY_CHECK_NOTHING();
-}
-
-//------------------------------------------------------------------------------
-
-PERF_TEST_P_(ResizeFxFyPerfTest, TestPerformance)
-{
-    compare_f cmpF;
-    MatType type = -1;
-    int interp = 1;
-    cv::Size sz;
-    double fx = 0.0;
-    double fy = 0.0;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, interp, sz, fx, fy, compile_args) = GetParam();
-
-    in_mat1 = cv::Mat(sz, type);
-    cv::Scalar mean = cv::Scalar::all(127);
-    cv::Scalar stddev = cv::Scalar::all(40.f);
-    cv::randn(in_mat1, mean, stddev);
-    cv::Size sz_out = cv::Size(saturate_cast<int>(sz.width *fx), saturate_cast<int>(sz.height*fy));
-    out_mat_gapi = cv::Mat(sz_out, type);
-    out_mat_ocv = cv::Mat(sz_out, type);
-
-    // OpenCV code ///////////////////////////////////////////////////////////
-    cv::resize(in_mat1, out_mat_ocv, sz_out, fx, fy, interp);
-
-    // G-API code //////////////////////////////////////////////////////////////
-    cv::GMat in;
-    auto out = cv::gapi::resize(in, sz_out, fx, fy, interp);
-    cv::GComputation c(in, out);
-
-    // Warm-up graph engine:
-    auto cc = c.compile(descr_of(gin(in_mat1)),
-                        std::move(compile_args));
-    cc(gin(in_mat1), gout(out_mat_gapi));
-
-    TEST_CYCLE()
-    {
-        cc(gin(in_mat1), gout(out_mat_gapi));
-    }
-    // Comparison ////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-    }
-
-    SANITY_CHECK_NOTHING();
-}
-
-//------------------------------------------------------------------------------
-
-// This test cases were created to control performance result of test scenario mentioned here:
-// https://stackoverflow.com/questions/60629331/opencv-gapi-performance-not-good-as-expected
-
-PERF_TEST_P_(BottleneckKernelsConstInputPerfTest, TestPerformance)
-{
-    compare_f cmpF;
-    std::string fileName = "";
-    cv::GCompileArgs compile_args;
-    double fx = 0.5;
-    double fy = 0.5;
-    std::tie(cmpF, fileName, compile_args) = GetParam();
-
-    in_mat1 = cv::imread(findDataFile(fileName));
-
-    cv::Mat cvvga;
-    cv::Mat cvgray;
-    cv::Mat cvblurred;
-
-    cv::resize(in_mat1, cvvga, cv::Size(), fx, fy);
-    cv::cvtColor(cvvga, cvgray, cv::COLOR_BGR2GRAY);
-    cv::blur(cvgray, cvblurred, cv::Size(3, 3));
-    cv::Canny(cvblurred, out_mat_ocv, 32, 128, 3);
-
-    cv::GMat in;
-    cv::GMat vga = cv::gapi::resize(in, cv::Size(), fx, fy, INTER_LINEAR);
-    cv::GMat gray = cv::gapi::BGR2Gray(vga);
-    cv::GMat blurred = cv::gapi::blur(gray, cv::Size(3, 3));
-    cv::GMat out = cv::gapi::Canny(blurred, 32, 128, 3);
-    cv::GComputation ac(in, out);
-
-    auto cc = ac.compile(descr_of(gin(in_mat1)),
-        std::move(compile_args));
-    cc(gin(in_mat1), gout(out_mat_gapi));
-
-    TEST_CYCLE()
-    {
-        cc(gin(in_mat1), gout(out_mat_gapi));
-    }
-
-    // Comparison ////////////////////////////////////////////////////////////
-    {
-        EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));
-    }
-
-    SANITY_CHECK_NOTHING();
-}
-
-//------------------------------------------------------------------------------
-
-PERF_TEST_P_(ResizeInSimpleGraphPerfTest, TestPerformance)
-{
-    compare_f cmpF;
-    MatType type = -1;
-    cv::Size sz;
-    double fx = 0.5;
-    double fy = 0.5;
-    cv::GCompileArgs compile_args;
-    std::tie(cmpF, type, sz, fx, fy, compile_args) = GetParam();
-
-    initMatsRandU(type, sz, type, false);
-
-    cv::Mat add_res_ocv;
-
-    cv::add(in_mat1, in_mat2, add_res_ocv);
-    cv::resize(add_res_ocv, out_mat_ocv, cv::Size(), fx, fy);
-
-    cv::GMat in1, in2;
-    cv::GMat add_res_gapi = cv::gapi::add(in1, in2);
-    cv::GMat out = cv::gapi::resize(add_res_gapi, cv::Size(), fx, fy, INTER_LINEAR);
-    cv::GComputation ac(GIn(in1, in2), GOut(out));
-
-    auto cc = ac.compile(descr_of(gin(in_mat1, in_mat2)),
-                         std::move(compile_args));
-    cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
-
-    TEST_CYCLE()
-    {
-        cc(gin(in_mat1, in_mat2), gout(out_mat_gapi));
     }
 
     // Comparison ////////////////////////////////////////////////////////////

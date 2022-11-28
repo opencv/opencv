@@ -29,6 +29,7 @@
 #ifdef HAVE_MSMF_DXVA
 #include <d3d11.h>
 #include <d3d11_4.h>
+#include <locale>
 #endif
 #include <new>
 #include <map>
@@ -347,6 +348,12 @@ struct MediaType
         }
         return false;
     }
+    bool VideoIsAvailable() const
+    {
+        return ((subType == MFVideoFormat_RGB32) ||
+            (subType == MFVideoFormat_RGB24) ||
+            (subType == MFVideoFormat_YUY2));
+    }
 };
 
 void printFormat(std::ostream& out, const GUID& fmt)
@@ -536,7 +543,7 @@ private:
     // Destructor is private. Caller should call Release.
     virtual ~SourceReaderCB()
     {
-        CV_LOG_WARNING(NULL, "terminating async callback");
+        CV_LOG_INFO(NULL, "terminating async callback");
     }
 
 public:
@@ -627,7 +634,7 @@ public:
         {
             if (i->second.majorType == MFMediaType_Video)
             {
-                if (best.second.isEmpty() || i->second.VideoIsBetterThan(best.second, newType))
+                if (best.second.isEmpty() || (i->second.VideoIsBetterThan(best.second, newType) && i->second.VideoIsAvailable()))
                 {
                     best = *i;
                 }

@@ -160,18 +160,45 @@ static inline MatShape shape(int a0, int a1=-1, int a2=-1, int a3=-1)
 
 static inline int total(const MatShape& shape, int start = -1, int end = -1)
 {
-    if (start == -1) start = 0;
-    if (end == -1) end = (int)shape.size();
-
     if (shape.empty())
         return 0;
 
+    int dims = (int)shape.size();
+
+    if (start == -1) start = 0;
+    if (end == -1) end = dims;
+
+    CV_CheckLE(0, start, "");
+    CV_CheckLE(start, end, "");
+    CV_CheckLE(end, dims, "");
+
     int elems = 1;
-    CV_Assert(start <= (int)shape.size() && end <= (int)shape.size() &&
-              start <= end);
-    for(int i = start; i < end; i++)
+    for (int i = start; i < end; i++)
     {
         elems *= shape[i];
+    }
+    return elems;
+}
+
+// TODO: rename to countDimsElements()
+static inline int total(const Mat& mat, int start = -1, int end = -1)
+{
+    if (mat.empty())
+        return 0;
+
+    int dims = mat.dims;
+
+    if (start == -1) start = 0;
+    if (end == -1) end = dims;
+
+    CV_CheckLE(0, start, "");
+    CV_CheckLE(start, end, "");
+    CV_CheckLE(end, dims, "");
+
+    int elems = 1;
+    for (int i = start; i < end; i++)
+    {
+        elems *= mat.size[i];
     }
     return elems;
 }
@@ -184,7 +211,8 @@ static inline MatShape concat(const MatShape& a, const MatShape& b)
     return c;
 }
 
-static inline std::string toString(const MatShape& shape, const String& name = "")
+template<typename _Tp>
+static inline std::string toString(const std::vector<_Tp>& shape, const String& name = "")
 {
     std::ostringstream ss;
     if (!name.empty())
@@ -195,11 +223,14 @@ static inline std::string toString(const MatShape& shape, const String& name = "
     ss << " ]";
     return ss.str();
 }
-static inline void print(const MatShape& shape, const String& name = "")
+
+template<typename _Tp>
+static inline void print(const std::vector<_Tp>& shape, const String& name = "")
 {
     std::cout << toString(shape, name) << std::endl;
 }
-static inline std::ostream& operator<<(std::ostream &out, const MatShape& shape)
+template<typename _Tp>
+static inline std::ostream& operator<<(std::ostream &out, const std::vector<_Tp>& shape)
 {
     out << toString(shape);
     return out;

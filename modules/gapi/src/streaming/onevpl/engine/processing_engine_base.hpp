@@ -9,6 +9,7 @@
 
 #include <queue>
 #include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
+#include <opencv2/gapi/garg.hpp>
 #include "streaming/onevpl/engine/engine_session.hpp"
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 
@@ -67,14 +68,23 @@ protected:
 
     std::vector<operation_t> pipeline;
     std::unique_ptr<VPLAccelerationPolicy> acceleration_policy;
-
+public:
     virtual ExecutionStatus execute_op(operation_t& op, EngineSession& sess);
 
     template<class ...Ops>
     void create_pipeline(Ops&&...ops)
     {
-        GAPI_DbgAssert(pipeline.empty() && "Pipeline must be empty");
         std::vector<operation_t>({std::forward<Ops>(ops)...}).swap(pipeline);
+    }
+
+    template<class ...Ops>
+    void inject_pipeline_operations(size_t in_position, Ops&&...ops)
+    {
+        GAPI_Assert(pipeline.size() >= in_position &&
+                    "Invalid position to inject pipeline operation");
+        auto it = pipeline.begin();
+        std::advance(it, in_position);
+        pipeline.insert(it, {std::forward<Ops>(ops)...});
     }
 
     template<class SpecificSession, class ...SessionArgs>

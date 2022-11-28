@@ -284,7 +284,7 @@ TEST(Reproducibility_SSD, Accuracy)
     Mat out = net.forward("detection_out");
 
     Mat ref = blobFromNPY(_tf("ssd_out.npy"));
-    normAssertDetections(ref, out, "", FLT_MIN);
+    normAssertDetections(ref, out, "", 0.06);
 }
 
 typedef testing::TestWithParam<tuple<Backend, Target> > Reproducibility_MobileNet_SSD;
@@ -557,7 +557,7 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
     if (target == DNN_TARGET_OPENCL_FP16)
     {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019020000)
-        l1 = 0.045; lInf = 0.21;
+        l1 = 0.05; lInf = 0.3;
 #else
         l1 = 0.017; lInf = 0.0795;
 #endif
@@ -633,6 +633,9 @@ TEST_P(opencv_face_detector, Accuracy)
     std::string model = findDataFile(get<0>(GetParam()), false);
     dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
 
+    if (targetId == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
     Net net = readNetFromCaffe(proto, model);
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png"));
     Mat blob = blobFromImage(img, 1.0, Size(), Scalar(104.0, 177.0, 123.0), false, false);
@@ -650,7 +653,7 @@ TEST_P(opencv_face_detector, Accuracy)
                                     0, 1, 0.98977017, 0.23901358, 0.09084064, 0.29902688, 0.1769477,
                                     0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
                                     0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
-    normAssertDetections(ref, out, "", 0.5, 1e-5, 2e-4);
+    normAssertDetections(ref, out, "", 0.5, 1e-4, 2e-4);
 }
 
 // False positives bug for large faces: https://github.com/opencv/opencv/issues/15106
@@ -659,6 +662,9 @@ TEST_P(opencv_face_detector, issue_15106)
     std::string proto = findDataFile("dnn/opencv_face_detector.prototxt");
     std::string model = findDataFile(get<0>(GetParam()), false);
     dnn::Target targetId = (dnn::Target)(int)get<1>(GetParam());
+
+    if (targetId == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
     Net net = readNetFromCaffe(proto, model);
     Mat img = imread(findDataFile("cv/shared/lena.png"));
@@ -673,13 +679,13 @@ TEST_P(opencv_face_detector, issue_15106)
     // An every detection is a vector of values [id, classId, confidence, left, top, right, bottom]
     Mat out = net.forward();
     Mat ref = (Mat_<float>(1, 7) << 0, 1, 0.9149431, 0.30424616, 0.26964942, 0.88733053, 0.99815309);
-    normAssertDetections(ref, out, "", 0.2, 6e-5, 1e-4);
+    normAssertDetections(ref, out, "", 0.89, 6e-5, 1e-4);
 }
 INSTANTIATE_TEST_CASE_P(Test_Caffe, opencv_face_detector,
     Combine(
         Values("dnn/opencv_face_detector.caffemodel",
                "dnn/opencv_face_detector_fp16.caffemodel"),
-        Values(DNN_TARGET_CPU, DNN_TARGET_OPENCL)
+        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV))
     )
 );
 
@@ -689,7 +695,7 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 #if defined(OPENCV_32BIT_CONFIGURATION) && defined(HAVE_OPENCL)
         CV_TEST_TAG_MEMORY_2GB,  // utilizes ~1Gb, but huge blobs may not be allocated on 32-bit systems due memory fragmentation
 #else
-        (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+        CV_TEST_TAG_MEMORY_2GB,
 #endif
         CV_TEST_TAG_LONG,
         CV_TEST_TAG_DEBUG_VERYLONG
@@ -719,6 +725,18 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    // IE exception: Cannot get memory!
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+
+    // Check 'backward_compatible_check || in_out_elements_equal' failed at core/src/op/reshape.cpp:427:
+    // While validating node 'v1::Reshape bbox_pred_reshape (bbox_pred[0]:f32{1,84}, Constant_265242[0]:i64{4}) -> (f32{?,?,?,?})' with friendly_name 'bbox_pred_reshape':
+    // Requested output shape {1,6300,4,1} is incompatible with input shape {1, 84}
+    if (target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
     static Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
                                            0, 7, 0.997022, 481.841, 92.3218, 722.685, 175.953,
                                            0, 12, 0.993028, 133.221, 189.377, 350.994, 563.166);
@@ -742,6 +760,13 @@ TEST_P(Test_Caffe_nets, FasterRCNN_zf)
             CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
         );
 #endif
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    // IE exception: Cannot get memory!
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
          backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
@@ -763,17 +788,7 @@ TEST_P(Test_Caffe_nets, RFCN)
         CV_TEST_TAG_LONG,
         CV_TEST_TAG_DEBUG_VERYLONG
     );
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
-    // Exception: Function contains several inputs and outputs with one friendly name! (HETERO bug?)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
-         backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_OPENCL_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
-         backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+
     float scoreDiff = default_l1, iouDiff = default_lInf;
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
     {
@@ -785,6 +800,41 @@ TEST_P(Test_Caffe_nets, RFCN)
         scoreDiff = 0.0034;
         iouDiff = 0.12;
     }
+
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    // Exception: Cannot get memory!
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+    // Sporadic: "Cannot get memory!"
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+    {
+        scoreDiff = 0.1f;
+        iouDiff = 0.2f;
+    }
+
+    // Check 'backward_compatible_check || in_out_elements_equal' failed at core/src/op/reshape.cpp:427:
+    // While validating node 'v1::Reshape bbox_pred_reshape (ave_bbox_pred_rois[0]:f32{1,8,1,1}, Constant_388[0]:i64{4}) -> (f32{?,?,?,?})' with friendly_name 'bbox_pred_reshape':
+    // Requested output shape {1,300,8,1} is incompatible with input shape {1, 8, 1, 1}
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+    // Exception: Function contains several inputs and outputs with one friendly name! (HETERO bug?)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#elif defined(INF_ENGINE_RELEASE)
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
+         backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
+         backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
+#endif
+
     static Mat ref = (Mat_<float>(2, 7) << 0, 7, 0.991359, 491.822, 81.1668, 702.573, 178.234,
                                            0, 12, 0.94786, 132.093, 223.903, 338.077, 566.16);
     testFaster("rfcn_pascal_voc_resnet50.prototxt", "resnet50_rfcn_final.caffemodel", ref, scoreDiff, iouDiff);

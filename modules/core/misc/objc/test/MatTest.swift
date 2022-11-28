@@ -17,6 +17,12 @@ class MatTests: OpenCVTestCase {
         super.tearDown()
     }
 
+    func testInitWithSize() {
+        let size = Size(width: 7, height: 9)
+        let mat = Mat(size: size, type: CvType.CV_8U)
+        assertSizeEquals(size, mat.size())
+    }
+
     func testAdjustROI() throws {
         let roi = gray0.submat(rowStart: 3, rowEnd: 5, colStart: 7, colEnd: 10)
         let originalroi = roi.clone()

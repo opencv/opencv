@@ -44,6 +44,7 @@ std::ostream& operator<<(std::ostream& os, const cv::GFrameDesc &d) {
     switch (d.fmt) {
     case MediaFormat::BGR:  os << "BGR"; break;
     case MediaFormat::NV12: os << "NV12"; break;
+    case MediaFormat::GRAY: os << "GRAY"; break;
     default: GAPI_Assert(false && "Invalid media format");
     }
     os << ' ' << d.size << ']';

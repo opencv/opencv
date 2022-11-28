@@ -38,9 +38,6 @@ const char * usage =
 "</images>\n"
 "</opencv_storage>\n";
 
-
-
-
 const char* liveCaptureHelp =
     "When the live video from camera is used as input, the following hot-keys may be used:\n"
         "  <ESC>, 'q' - quit the program\n"
@@ -59,19 +56,25 @@ static void help(char** argv)
         "                              #  of board views actually available)\n"
         "     [-d=<delay>]             # a minimum delay in ms between subsequent attempts to capture a next view\n"
         "                              # (used only for video capturing)\n"
-        "     [-s=<squareSize>]       # square size in some user-defined units (1 by default)\n"
+        "     [-s=<squareSize>]        # square size in some user-defined units (1 by default)\n"
         "     [-o=<out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
         "     [-op]                    # write detected feature points\n"
         "     [-oe]                    # write extrinsic parameters\n"
         "     [-oo]                    # write refined 3D object points\n"
         "     [-zt]                    # assume zero tangential distortion\n"
-        "     [-a=<aspectRatio>]      # fix aspect ratio (fx/fy)\n"
+        "     [-a=<aspectRatio>]       # fix aspect ratio (fx/fy)\n"
         "     [-p]                     # fix the principal point at the center\n"
         "     [-v]                     # flip the captured images around the horizontal axis\n"
         "     [-V]                     # use a video file, and not an image list, uses\n"
         "                              # [input_data] string for the video file name\n"
         "     [-su]                    # show undistorted images after calibration\n"
-        "     [-ws=<number_of_pixel>]  # Half of search window for cornerSubPix (11 by default)\n"
+        "     [-ws=<number_of_pixel>]  # half of search window for cornerSubPix (11 by default)\n"
+        "     [-fx=<X focal length>]   # focal length in X-dir as an initial intrinsic guess (if this flag is used, fx, fy, cx, cy must be set)\n"
+        "     [-fy=<Y focal length>]   # focal length in Y-dir as an initial intrinsic guess (if this flag is used, fx, fy, cx, cy must be set)\n"
+        "     [-cx=<X center point>]   # camera center point in X-dir as an initial intrinsic guess (if this flag is used, fx, fy, cx, cy must be set)\n"
+        "     [-cy=<Y center point>]   # camera center point in Y-dir as an initial intrinsic guess (if this flag is used, fx, fy, cx, cy must be set)\n"
+        "     [-imshow-scale           # image resize scaling factor when displaying the results (must be >= 1)\n"
+        "     [-enable-k3=<0/1>        # to enable (1) or disable (0) K3 coefficient for the distortion model\n"
         "     [-dt=<distance>]         # actual distance between top-left and top-right corners of\n"
         "                              # the calibration grid. If this parameter is specified, a more\n"
         "                              # accurate calibration method will be used which may be better\n"
@@ -151,7 +154,6 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
                     vector<Point3f>& newObjPoints,
                     double& totalAvgErr)
 {
-    cameraMatrix = Mat::eye(3, 3, CV_64F);
     if( flags & CALIB_FIX_ASPECT_RATIO )
         cameraMatrix.at<double>(0,0) = aspectRatio;
 
@@ -170,7 +172,7 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
         iFixedPoint = boardSize.width - 1;
     rms = calibrateCameraRO(objectPoints, imagePoints, imageSize, iFixedPoint,
                             cameraMatrix, distCoeffs, rvecs, tvecs, newObjPoints,
-                            flags | CALIB_FIX_K3 | CALIB_USE_LU);
+                            flags | CALIB_USE_LU);
     printf("RMS error reported by calibrateCamera: %g\n", rms);
 
     bool ok = checkRange(cameraMatrix) && checkRange(distCoeffs);
@@ -190,7 +192,6 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
 
     return ok;
 }
-
 
 static void saveCameraParams( const string& filename,
                        Size imageSize, Size boardSize,
@@ -225,7 +226,7 @@ static void saveCameraParams( const string& filename,
 
     if( flags != 0 )
     {
-        sprintf( buf, "flags: %s%s%s%s",
+        snprintf( buf, sizeof(buf), "flags: %s%s%s%s",
             flags & CALIB_USE_INTRINSIC_GUESS ? "+use_intrinsic_guess" : "",
             flags & CALIB_FIX_ASPECT_RATIO ? "+fix_aspectRatio" : "",
             flags & CALIB_FIX_PRINCIPAL_POINT ? "+fix_principal_point" : "",
@@ -346,7 +347,6 @@ static bool runAndSave(const string& outputFilename,
     return ok;
 }
 
-
 int main( int argc, char** argv )
 {
     Size boardSize, imageSize;
@@ -375,6 +375,8 @@ int main( int argc, char** argv )
         "{help ||}{w||}{h||}{pt|chessboard|}{n|10|}{d|1000|}{s|1|}{o|out_camera_data.yml|}"
         "{op||}{oe||}{zt||}{a||}{p||}{v||}{V||}{su||}"
         "{oo||}{ws|11|}{dt||}"
+        "{fx||}{fy||}{cx||}{cy||}"
+        "{imshow-scale|1|}{enable-k3|0|}"
         "{@input_data|0|}");
     if (parser.has("help"))
     {
@@ -419,6 +421,23 @@ int main( int argc, char** argv )
     else
         inputFilename = parser.get<string>("@input_data");
     int winSize = parser.get<int>("ws");
+    cameraMatrix = Mat::eye(3, 3, CV_64F);
+    if (parser.has("fx") && parser.has("fy") && parser.has("cx") && parser.has("cy"))
+    {
+        cameraMatrix.at<double>(0,0) = parser.get<double>("fx");
+        cameraMatrix.at<double>(0,2) = parser.get<double>("cx");
+        cameraMatrix.at<double>(1,1) = parser.get<double>("fy");
+        cameraMatrix.at<double>(1,2) = parser.get<double>("cy");
+        flags |= CALIB_USE_INTRINSIC_GUESS;
+        std::cout << "Use the following camera matrix as an initial guess:\n" << cameraMatrix << std::endl;
+    }
+    int viewScaleFactor = parser.get<int>("imshow-scale");
+    bool useK3 = parser.get<bool>("enable-k3");
+    std::cout << "Use K3 distortion coefficient? " << useK3 << std::endl;
+    if (!useK3)
+    {
+        flags |= CALIB_FIX_K3;
+    }
     float grid_width = squareSize * (boardSize.width - 1);
     bool release_object = false;
     if (parser.has("dt")) {
@@ -554,8 +573,17 @@ int main( int argc, char** argv )
             Mat temp = view.clone();
             undistort(temp, view, cameraMatrix, distCoeffs);
         }
+        if (viewScaleFactor > 1)
+        {
+            Mat viewScale;
+            resize(view, viewScale, Size(), 1.0/viewScaleFactor, 1.0/viewScaleFactor, INTER_AREA);
+            imshow("Image View", viewScale);
+        }
+        else
+        {
+            imshow("Image View", view);
+        }
 
-        imshow("Image View", view);
         char key = (char)waitKey(capture.isOpened() ? 50 : 500);
 
         if( key == 27 )
@@ -596,9 +624,17 @@ int main( int argc, char** argv )
             view = imread(imageList[i], 1);
             if(view.empty())
                 continue;
-            //undistort( view, rview, cameraMatrix, distCoeffs, cameraMatrix );
             remap(view, rview, map1, map2, INTER_LINEAR);
-            imshow("Image View", rview);
+            if (viewScaleFactor > 1)
+            {
+                Mat rviewScale;
+                resize(rview, rviewScale, Size(), 1.0/viewScaleFactor, 1.0/viewScaleFactor, INTER_AREA);
+                imshow("Image View", rviewScale);
+            }
+            else
+            {
+                imshow("Image View", rview);
+            }
             char c = (char)waitKey();
             if( c == 27 || c == 'q' || c == 'Q' )
                 break;

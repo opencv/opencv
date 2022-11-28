@@ -28,6 +28,7 @@ else()
 endif()
 
 if(CUDA_FOUND)
+  unset(CUDA_nvcuvenc_LIBRARY CACHE)
   set(HAVE_CUDA 1)
   if(NOT CUDA_VERSION VERSION_LESS 11.0)
     # CUDA 11.0 removes nppicom
@@ -53,7 +54,7 @@ if(CUDA_FOUND)
       endif()
   endif()
 
-  if(WITH_NVCUVID)
+  if(WITH_NVCUVID OR WITH_NVCUVENC)
     macro(ocv_cuda_SEARCH_NVCUVID_HEADER _filename _result)
       # place header file under CUDA_TOOLKIT_TARGET_DIR or CUDA_TOOLKIT_ROOT_DIR
       find_path(_header_result
@@ -71,18 +72,25 @@ if(CUDA_FOUND)
       endif()
       unset(_header_result CACHE)
     endmacro()
-    ocv_cuda_SEARCH_NVCUVID_HEADER("nvcuvid.h" HAVE_NVCUVID_HEADER)
-    ocv_cuda_SEARCH_NVCUVID_HEADER("dynlink_nvcuvid.h" HAVE_DYNLINK_NVCUVID_HEADER)
-    find_cuda_helper_libs(nvcuvid)
-    if(WIN32)
-      find_cuda_helper_libs(nvcuvenc)
+    if(WITH_NVCUVID)
+      ocv_cuda_SEARCH_NVCUVID_HEADER("nvcuvid.h" HAVE_NVCUVID_HEADER)
+      ocv_cuda_SEARCH_NVCUVID_HEADER("dynlink_nvcuvid.h" HAVE_DYNLINK_NVCUVID_HEADER)
+      find_cuda_helper_libs(nvcuvid)
+      if(CUDA_nvcuvid_LIBRARY AND (${HAVE_NVCUVID_HEADER} OR ${HAVE_DYNLINK_NVCUVID_HEADER}))
+        # make sure to have both header and library before enabling
+        set(HAVE_NVCUVID 1)
+      endif()
     endif()
-    if(CUDA_nvcuvid_LIBRARY AND (${HAVE_NVCUVID_HEADER} OR ${HAVE_DYNLINK_NVCUVID_HEADER}))
-      # make sure to have both header and library before enabling
-      set(HAVE_NVCUVID 1)
-    endif()
-    if(CUDA_nvcuvenc_LIBRARY)
-      set(HAVE_NVCUVENC 1)
+    if(WITH_NVCUVENC)
+      ocv_cuda_SEARCH_NVCUVID_HEADER("nvEncodeAPI.h" HAVE_NVCUVENC_HEADER)
+      if(WIN32)
+        find_cuda_helper_libs(nvencodeapi)
+      else()
+        find_cuda_helper_libs(nvidia-encode)
+      endif()
+      if((CUDA_nvencodeapi_LIBRARY OR CUDA_nvidia-encode_LIBRARY) AND ${HAVE_NVCUVENC_HEADER})
+        set(HAVE_NVCUVENC 1)
+      endif()
     endif()
   endif()
 
@@ -253,12 +261,13 @@ if(CUDA_FOUND)
       endif()
       if(NOT _nvcc_res EQUAL 0)
         message(STATUS "Automatic detection of CUDA generation failed. Going to build for all known architectures.")
-        # TX1 (5.3) TX2 (6.2) Xavier (7.2) V100 (7.0)
+        # TX1 (5.3) TX2 (6.2) Xavier (7.2) V100 (7.0) Orin (8.7)
         ocv_filter_available_architecture(__cuda_arch_bin
             5.3
             6.2
             7.2
             7.0
+            8.7
         )
       else()
         set(__cuda_arch_bin "${_nvcc_out}")
@@ -410,6 +419,10 @@ if(CUDA_FOUND)
     endif()
     if(APPLE)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fno-finite-math-only)
+    endif()
+
+    if(WIN32)
+      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcudafe --display_error_number --diag-suppress 1394,1388)
     endif()
 
     if(CMAKE_CROSSCOMPILING AND (ARM OR AARCH64))

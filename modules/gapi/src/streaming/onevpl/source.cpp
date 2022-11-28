@@ -35,6 +35,13 @@ GSource::GSource(const std::string& filePath,
 
 GSource::GSource(const std::string& filePath,
                  const CfgParams& cfg_params,
+                 const Device &device, const Context &ctx) :
+    GSource(filePath, update_param_with_accel_type(CfgParams{cfg_params}, device.get_type()),
+            std::make_shared<CfgParamDeviceSelector>(device, ctx, cfg_params)) {
+}
+
+GSource::GSource(const std::string& filePath,
+                 const CfgParams& cfg_params,
                  std::shared_ptr<IDeviceSelector> selector) :
     GSource(DataProviderDispatcher::create(filePath, cfg_params), cfg_params, selector) {
     if (filePath.empty()) {
@@ -71,6 +78,10 @@ GSource::GSource(const std::string&, const CfgParams&) {
 
 GSource::GSource(const std::string&, const CfgParams&, const std::string&,
                  void*, void*) {
+    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+}
+
+GSource::GSource(const std::string&, const CfgParams&, const Device &, const Context &) {
     GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 

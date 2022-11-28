@@ -229,6 +229,9 @@ GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Point &pt);
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Point2f &pt);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Point2f &pt);
 
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Point3f &pt);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Point3f &pt);
+
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Size &sz);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Size &sz);
 
@@ -241,7 +244,7 @@ GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Scalar &s);
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Mat &m);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Mat &m);
 
-// FIXME: for GRunArgs serailization
+// FIXME: for GRunArgs serialization
 #if !defined(GAPI_STANDALONE)
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::UMat & um);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::UMat & um);

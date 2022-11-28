@@ -637,7 +637,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
         globalsize[0] = ROUNDUP(globalsize[0], wgRound);
 
         char build_options[1024];
-        sprintf(build_options, "-D cn=%d "
+        snprintf(build_options, sizeof(build_options), "-D cn=%d "
                 "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
                 "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d "
                 "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
@@ -1401,7 +1401,7 @@ static void ocvSepFilter(int stype, int dtype, int ktype,
     Mat src(Size(width, height), stype, src_data, src_step);
     Mat dst(Size(width, height), dtype, dst_data, dst_step);
     f->apply(src, dst, Size(full_width, full_height), Point(offset_x, offset_y));
-};
+}
 
 //===================================================================
 //       HAL functions

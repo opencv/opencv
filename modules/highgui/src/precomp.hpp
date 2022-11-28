@@ -60,8 +60,6 @@
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/highgui/highgui_c.h"
 
-#include "opencv2/imgcodecs.hpp"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -116,6 +114,7 @@ double cvGetOpenGlProp_W32(const char* name);
 double cvGetOpenGlProp_GTK(const char* name);
 
 double cvGetPropVisible_W32(const char* name);
+double cvGetPropVisible_COCOA(const char* name);
 
 double cvGetPropTopmost_W32(const char* name);
 double cvGetPropTopmost_COCOA(const char* name);
@@ -130,6 +129,7 @@ void setWindowTitle_W32(const cv::String& name, const cv::String& title);
 void setWindowTitle_GTK(const cv::String& name, const cv::String& title);
 void setWindowTitle_QT(const cv::String& name, const cv::String& title);
 void setWindowTitle_COCOA(const cv::String& name, const cv::String& title);
+void setWindowTitle_WAYLAND(const cv::String& name, const cv::String& title);
 
 int pollKey_W32();
 

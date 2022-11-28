@@ -587,8 +587,8 @@ void DpSeamFinder::computeGradients(const Mat &image1, const Mat &image2)
 bool DpSeamFinder::hasOnlyOneNeighbor(int comp)
 {
     std::set<std::pair<int, int> >::iterator begin, end;
-    begin = lower_bound(edges_.begin(), edges_.end(), std::make_pair(comp, std::numeric_limits<int>::min()));
-    end = upper_bound(edges_.begin(), edges_.end(), std::make_pair(comp, std::numeric_limits<int>::max()));
+    begin = edges_.lower_bound(std::make_pair(comp, std::numeric_limits<int>::min()));
+    end = edges_.upper_bound(std::make_pair(comp, std::numeric_limits<int>::max()));
     return ++begin == end;
 }
 

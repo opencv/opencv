@@ -89,7 +89,7 @@ inline Rect& operator&=(Rect& lhs, const Rect& rhs)
     return lhs;
 }
 
-inline const Rect operator&(const Rect& lhs, const Rect& rhs)
+inline Rect operator&(const Rect& lhs, const Rect& rhs)
 {
     Rect result = lhs;
     return result &= rhs;

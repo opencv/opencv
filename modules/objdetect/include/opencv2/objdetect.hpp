@@ -49,8 +49,8 @@
 /**
 @defgroup objdetect Object Detection
 
-Haar Feature-based Cascade Classifier for Object Detection
-----------------------------------------------------------
+@{
+    @defgroup objdetect_cascade_classifier Cascade Classifier for Object Detection
 
 The object detector described below has been initially proposed by Paul Viola @cite Viola01 and
 improved by Rainer Lienhart @cite Lienhart02 .
@@ -90,8 +90,7 @@ middle) and the sum of the image pixels under the black stripe multiplied by 3 i
 compensate for the differences in the size of areas. The sums of pixel values over a rectangular
 regions are calculated rapidly using integral images (see below and the integral description).
 
-To see the object detector at work, have a look at the facedetect demo:
-<https://github.com/opencv/opencv/tree/4.x/samples/cpp/dbt_face_detection.cpp>
+Check @ref tutorial_cascade_classifier "the corresponding tutorial" for more details.
 
 The following reference is for the detection part only. There is a separate application called
 opencv_traincascade that can train a cascade of boosted classifiers from a set of samples.
@@ -99,10 +98,13 @@ opencv_traincascade that can train a cascade of boosted classifiers from a set o
 @note In the new C++ interface it is also possible to use LBP (local binary pattern) features in
 addition to Haar-like features. .. [Viola01] Paul Viola and Michael J. Jones. Rapid Object Detection
 using a Boosted Cascade of Simple Features. IEEE CVPR, 2001. The paper is available online at
-<http://research.microsoft.com/en-us/um/people/viola/Pubs/Detect/violaJones_CVPR2001.pdf>
+<https://github.com/SvHey/thesis/blob/master/Literature/ObjectDetection/violaJones_CVPR2001.pdf>
 
-@{
-    @defgroup objdetect_c C API
+    @defgroup objdetect_hog HOG (Histogram of Oriented Gradients) descriptor and object detector
+    @defgroup objdetect_qrcode QRCode detection and encoding
+    @defgroup objdetect_dnn_face DNN-based face detection and recognition
+Check @ref tutorial_dnn_face "the corresponding tutorial" for more details.
+    @defgroup objdetect_common Common functions and classes
 @}
  */
 
@@ -111,13 +113,15 @@ typedef struct CvHaarClassifierCascade CvHaarClassifierCascade;
 namespace cv
 {
 
-//! @addtogroup objdetect
+//! @addtogroup objdetect_common
 //! @{
 
 ///////////////////////////// Object Detection ////////////////////////////
 
-//! class for grouping object candidates, detected by Cascade Classifier, HOG etc.
-//! instance of the class is to be passed to cv::partition (see cxoperations.hpp)
+/** @brief This class is used for grouping object candidates detected by Cascade Classifier, HOG etc.
+
+instance of the class is to be passed to cv::partition
+ */
 class CV_EXPORTS SimilarRects
 {
 public:
@@ -162,6 +166,10 @@ CV_EXPORTS   void groupRectangles(std::vector<Rect>& rectList, std::vector<int>&
 CV_EXPORTS   void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>& foundWeights,
                                             std::vector<double>& foundScales,
                                             double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
+//! @}
+
+//! @addtogroup objdetect_cascade_classifier
+//! @{
 
 template<> struct DefaultDeleter<CvHaarClassifierCascade>{ CV_EXPORTS void operator ()(CvHaarClassifierCascade* obj) const; };
 
@@ -243,7 +251,7 @@ public:
     CV_WRAP bool load( const String& filename );
     /** @brief Reads a classifier from a FileStorage node.
 
-    @note The file may contain a new cascade classifier (trained traincascade application) only.
+    @note The file may contain a new cascade classifier (trained by the traincascade application) only.
      */
     CV_WRAP bool read( const FileNode& node );
 
@@ -260,12 +268,6 @@ public:
     cvHaarDetectObjects. It is not used for a new cascade.
     @param minSize Minimum possible object size. Objects smaller than that are ignored.
     @param maxSize Maximum possible object size. Objects larger than that are ignored. If `maxSize == minSize` model is evaluated on single scale.
-
-    The function is parallelized with the TBB library.
-
-    @note
-       -   (Python) A face detection example using cascade classifiers can be found at
-            opencv_source_code/samples/python/facedetect.py
     */
     CV_WRAP void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
@@ -338,7 +340,10 @@ public:
 };
 
 CV_EXPORTS Ptr<BaseCascadeClassifier::MaskGenerator> createFaceDetectionMaskGenerator();
+//! @}
 
+//! @addtogroup objdetect_hog
+//! @{
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
 
 //! struct for detection region of interest (ROI)
@@ -378,7 +383,7 @@ public:
          };
     enum DescriptorStorageFormat { DESCR_FORMAT_COL_BY_COL, DESCR_FORMAT_ROW_BY_ROW };
 
-    /**@brief Creates the HOG descriptor and detector with default params.
+    /**@brief Creates the HOG descriptor and detector with default parameters.
 
     aqual to HOGDescriptor(Size(64,128), Size(16,16), Size(8,8), Size(8,8), 9 )
     */
@@ -414,6 +419,8 @@ public:
     {}
 
     /** @overload
+
+    Creates the HOG descriptor and detector and loads HOGDescriptor parameters and coefficients for the linear SVM classifier from a file.
     @param filename The file name containing HOGDescriptor properties and coefficients for the linear SVM classifier.
     */
     CV_WRAP HOGDescriptor(const String& filename)
@@ -452,19 +459,19 @@ public:
     */
     CV_WRAP virtual void setSVMDetector(InputArray svmdetector);
 
-    /** @brief Reads HOGDescriptor parameters from a cv::FileNode.
+    /** @brief Reads HOGDescriptor parameters and coefficients for the linear SVM classifier from a file node.
     @param fn File node
     */
     virtual bool read(FileNode& fn);
 
-    /** @brief Stores HOGDescriptor parameters in a cv::FileStorage.
+    /** @brief Stores HOGDescriptor parameters and coefficients for the linear SVM classifier in a file storage.
     @param fs File storage
     @param objname Object name
     */
     virtual void write(FileStorage& fs, const String& objname) const;
 
-    /** @brief loads HOGDescriptor parameters and coefficients for the linear SVM classifier from a file.
-    @param filename Path of the file to read.
+    /** @brief loads HOGDescriptor parameters and coefficients for the linear SVM classifier from a file
+    @param filename Name of the file to read.
     @param objname The optional name of the node to read (if empty, the first top-level node will be used).
     */
     CV_WRAP virtual bool load(const String& filename, const String& objname = String());
@@ -537,13 +544,14 @@ public:
     @param winStride Window stride. It must be a multiple of block stride.
     @param padding Padding
     @param scale Coefficient of the detection window increase.
-    @param finalThreshold Final threshold
+    @param groupThreshold Coefficient to regulate the similarity threshold. When detected, some objects can be covered
+    by many rectangles. 0 means not to perform grouping.
     @param useMeanshiftGrouping indicates grouping algorithm
     */
     CV_WRAP virtual void detectMultiScale(InputArray img, CV_OUT std::vector<Rect>& foundLocations,
                                   CV_OUT std::vector<double>& foundWeights, double hitThreshold = 0,
                                   Size winStride = Size(), Size padding = Size(), double scale = 1.05,
-                                  double finalThreshold = 2.0,bool useMeanshiftGrouping = false) const;
+                                  double groupThreshold = 2.0, bool useMeanshiftGrouping = false) const;
 
     /** @brief Detects objects of different sizes in the input image. The detected objects are returned as a list
     of rectangles.
@@ -555,13 +563,14 @@ public:
     @param winStride Window stride. It must be a multiple of block stride.
     @param padding Padding
     @param scale Coefficient of the detection window increase.
-    @param finalThreshold Final threshold
+    @param groupThreshold Coefficient to regulate the similarity threshold. When detected, some objects can be covered
+    by many rectangles. 0 means not to perform grouping.
     @param useMeanshiftGrouping indicates grouping algorithm
     */
     virtual void detectMultiScale(InputArray img, CV_OUT std::vector<Rect>& foundLocations,
                                   double hitThreshold = 0, Size winStride = Size(),
                                   Size padding = Size(), double scale = 1.05,
-                                  double finalThreshold = 2.0, bool useMeanshiftGrouping = false) const;
+                                  double groupThreshold = 2.0, bool useMeanshiftGrouping = false) const;
 
     /** @brief  Computes gradients and quantized gradient orientations.
     @param img Matrix contains the image to be computed
@@ -666,6 +675,10 @@ public:
     */
     void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
 };
+//! @}
+
+//! @addtogroup objdetect_qrcode
+//! @{
 
 class CV_EXPORTS_W QRCodeEncoder {
 protected:
@@ -827,7 +840,7 @@ protected:
     Ptr<Impl> p;
 };
 
-//! @} objdetect
+//! @}
 }
 
 #include "opencv2/objdetect/detection_based_tracker.hpp"

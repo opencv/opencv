@@ -37,11 +37,8 @@ void skipModelImport(bool skip)
 
 void detail::LayerHandler::addMissing(const std::string& name, const std::string& type)
 {
-    cv::AutoLock lock(getLayerFactoryMutex());
-    auto& registeredLayers = getLayerFactoryImpl();
-
     // If we didn't add it, but can create it, it's custom and not missing.
-    if (layers.find(type) == layers.end() && registeredLayers.find(type) != registeredLayers.end())
+    if (!contains(type) && LayerFactory::isLayerRegistered(type))
     {
         return;
     }
@@ -51,17 +48,17 @@ void detail::LayerHandler::addMissing(const std::string& name, const std::string
 
 bool detail::LayerHandler::contains(const std::string& type) const
 {
-    return layers.find(type) != layers.end();
+    return layers.count(type) != 0;
 }
 
-void detail::LayerHandler::printMissing()
+void detail::LayerHandler::printMissing() const
 {
     if (layers.empty())
     {
         return;
     }
 
-    std::stringstream ss;
+    std::ostringstream ss;
     ss << "DNN: Not supported types:\n";
     for (const auto& type_names : layers)
     {

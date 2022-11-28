@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+import sys
 import ctypes
 from functools import partial
 from collections import namedtuple
@@ -606,6 +607,110 @@ class Arguments(NewOpenCVTests):
         rr = rrv[0]
         self.assertTrue(isinstance(rr, tuple), msg=type(rrv))
         self.assertEqual(len(rr), 3)
+
+    def test_nested_function_availability(self):
+        self.assertTrue(hasattr(cv.utils, "nested"),
+                        msg="Module is not generated for nested namespace")
+        self.assertTrue(hasattr(cv.utils.nested, "testEchoBooleanFunction"),
+                        msg="Function in nested module is not available")
+
+        if sys.version_info[0] < 3:
+            # Nested submodule is managed only by the global submodules dictionary
+            # and parent native module
+            expected_ref_count = 2
+        else:
+            # Nested submodule is managed by the global submodules dictionary,
+            # parent native module and Python part of the submodule
+            expected_ref_count = 3
+
+        # `getrefcount` temporary increases reference counter by 1
+        actual_ref_count = sys.getrefcount(cv.utils.nested) - 1
+
+        self.assertEqual(actual_ref_count, expected_ref_count,
+                         msg="Nested submodule reference counter has wrong value\n"
+                         "Expected: {}. Actual: {}".format(expected_ref_count, actual_ref_count))
+        for flag in (True, False):
+            self.assertEqual(flag, cv.utils.nested.testEchoBooleanFunction(flag),
+                             msg="Function in nested module returns wrong result")
+
+    def test_class_from_submodule_has_global_alias(self):
+        self.assertTrue(hasattr(cv.ml, "Boost"),
+                        msg="Class is not registered in the submodule")
+        self.assertTrue(hasattr(cv, "ml_Boost"),
+                        msg="Class from submodule doesn't have alias in the "
+                        "global module")
+        self.assertEqual(cv.ml.Boost, cv.ml_Boost,
+                         msg="Classes from submodules and global module don't refer "
+                         "to the same type")
+
+    def test_class_from_submodule_has_global_alias(self):
+        self.assertTrue(hasattr(cv.ml, "Boost"),
+                        msg="Class is not registered in the submodule")
+        self.assertTrue(hasattr(cv, "ml_Boost"),
+                        msg="Class from submodule doesn't have alias in the "
+                        "global module")
+        self.assertEqual(cv.ml.Boost, cv.ml_Boost,
+                         msg="Classes from submodules and global module don't refer "
+                         "to the same type")
+
+    def test_inner_class_has_global_alias(self):
+        self.assertTrue(hasattr(cv.SimpleBlobDetector, "Params"),
+                        msg="Class is not registered as inner class")
+        self.assertTrue(hasattr(cv, "SimpleBlobDetector_Params"),
+                        msg="Inner class doesn't have alias in the global module")
+        self.assertEqual(cv.SimpleBlobDetector.Params, cv.SimpleBlobDetector_Params,
+                        msg="Inner class and class in global module don't refer "
+                        "to the same type")
+        self.assertTrue(hasattr(cv, "SimpleBlobDetector_Params"),
+                        msg="Inner class doesn't have alias in the global module")
+
+    def test_export_class_with_different_name(self):
+        self.assertTrue(hasattr(cv.utils.nested, "ExportClassName"),
+                        msg="Class with export alias is not registered in the submodule")
+        self.assertTrue(hasattr(cv, "utils_nested_ExportClassName"),
+                        msg="Class with export alias doesn't have alias in the "
+                        "global module")
+        self.assertEqual(cv.utils.nested.ExportClassName.originalName(), "OriginalClassName")
+
+        instance = cv.utils.nested.ExportClassName.create()
+        self.assertTrue(isinstance(instance, cv.utils.nested.ExportClassName),
+                        msg="Factory function returns wrong class instance: {}".format(type(instance)))
+        self.assertTrue(hasattr(cv.utils.nested, "ExportClassName_create"),
+                        msg="Factory function should have alias in the same module as the class")
+        # self.assertFalse(hasattr(cv.utils.nested, "OriginalClassName_create"),
+        #                  msg="Factory function should not be registered with original class name, "\
+        #                  "when class has different export name")
+
+    def test_export_inner_class_of_class_exported_with_different_name(self):
+        if not hasattr(cv.utils.nested, "ExportClassName"):
+            raise unittest.SkipTest("Outer class with export alias is not registered in the submodule")
+
+        self.assertTrue(hasattr(cv.utils.nested.ExportClassName, "Params"),
+                        msg="Inner class with export alias is not registered in "
+                        "the outer class")
+        self.assertTrue(hasattr(cv, "utils_nested_ExportClassName_Params"),
+                        msg="Inner class with export alias is not registered in "
+                        "global module")
+        params = cv.utils.nested.ExportClassName.Params()
+        params.int_value = 45
+        params.float_value = 4.5
+
+        instance = cv.utils.nested.ExportClassName.create(params)
+        self.assertTrue(isinstance(instance, cv.utils.nested.ExportClassName),
+                        msg="Factory function returns wrong class instance: {}".format(type(instance)))
+        self.assertEqual(
+            params.int_value, instance.getIntParam(),
+            msg="Class initialized with wrong integer parameter. Expected: {}. Actual: {}".format(
+            params.int_value, instance.getIntParam()
+        ))
+        self.assertEqual(
+            params.float_value, instance.getFloatParam(),
+            msg="Class initialized with wrong integer parameter. Expected: {}. Actual: {}".format(
+            params.float_value, instance.getFloatParam()
+        ))
+
+
+
 
 class CanUsePurePythonModuleFunction(NewOpenCVTests):
     def test_can_get_ocv_version(self):

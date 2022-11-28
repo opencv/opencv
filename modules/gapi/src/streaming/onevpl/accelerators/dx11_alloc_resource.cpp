@@ -96,6 +96,9 @@ void LockAdapter::unlock_write(mfxMemId mid, mfxFrameData &data) {
 
 SharedLock* LockAdapter::set_adaptee(SharedLock* new_impl) {
     SharedLock* old_impl = impl;
+    GAPI_LOG_DEBUG(nullptr, "this: " << this <<
+                            ", old: " << old_impl << ", new: " << new_impl);
+    GAPI_DbgAssert(old_impl == nullptr || new_impl == nullptr && "Must not be previous impl");
     impl = new_impl;
     return old_impl;
 }
@@ -183,6 +186,8 @@ void DX11AllocationItem::on_first_in_impl(mfxFrameData *ptr) {
     D3D11_MAP mapType = D3D11_MAP_READ;
     UINT mapFlags = D3D11_MAP_FLAG_DO_NOT_WAIT;
 
+    GAPI_LOG_DEBUG(nullptr, "texture: " << get_texture_ptr() <<
+                            ", subresorce: " << get_subresource());
     shared_device_context->CopySubresourceRegion(get_staging_texture_ptr(), 0,
                                                  0, 0, 0,
                                                  get_texture_ptr(),
@@ -244,8 +249,8 @@ mfxStatus DX11AllocationItem::release_access(mfxFrameData *ptr) {
 }
 
 mfxStatus DX11AllocationItem::shared_access_acquire_unsafe(mfxFrameData *ptr) {
-    GAPI_LOG_DEBUG(nullptr, "acquire READ lock: " << this);
-    GAPI_LOG_DEBUG(nullptr, "texture: " << get_texture_ptr() <<
+    GAPI_LOG_DEBUG(nullptr, "acquire READ lock: " << this <<
+                            ", texture: " << get_texture_ptr() <<
                             ", sub id: " << get_subresource());
     // shared access requires elastic barrier
     // first-in visited thread uses resource mapping on host memory
@@ -256,6 +261,7 @@ mfxStatus DX11AllocationItem::shared_access_acquire_unsafe(mfxFrameData *ptr) {
 
     if (!(ptr->Y && (ptr->UV || (ptr->U && ptr->V)))) {
         GAPI_LOG_WARNING(nullptr, "No any data obtained: " << this);
+        GAPI_DbgAssert(false && "shared access must provide data");
         return MFX_ERR_LOCK_MEMORY;
     }
     GAPI_LOG_DEBUG(nullptr, "READ access granted: " << this);
@@ -263,8 +269,8 @@ mfxStatus DX11AllocationItem::shared_access_acquire_unsafe(mfxFrameData *ptr) {
 }
 
 mfxStatus DX11AllocationItem::shared_access_release_unsafe(mfxFrameData *ptr) {
-    GAPI_LOG_DEBUG(nullptr, "releasing READ lock: " << this);
-    GAPI_LOG_DEBUG(nullptr, "texture: " << get_texture_ptr() <<
+    GAPI_LOG_DEBUG(nullptr, "releasing READ lock: " << this <<
+                            ", texture: " << get_texture_ptr() <<
                             ", sub id: " << get_subresource());
     // releasing shared access requires elastic barrier
     // last-out thread must make memory unmapping then and only then no more
@@ -277,8 +283,8 @@ mfxStatus DX11AllocationItem::shared_access_release_unsafe(mfxFrameData *ptr) {
 }
 
 mfxStatus DX11AllocationItem::exclusive_access_acquire_unsafe(mfxFrameData *ptr) {
-    GAPI_LOG_DEBUG(nullptr, "acquire WRITE lock: " << this);
-    GAPI_LOG_DEBUG(nullptr, "texture: " << get_texture_ptr() <<
+    GAPI_LOG_DEBUG(nullptr, "acquire WRITE lock: " << this <<
+                            ", texture: " << get_texture_ptr() <<
                             ", sub id: " << get_subresource());
     D3D11_MAP mapType = D3D11_MAP_WRITE;
     UINT mapFlags = D3D11_MAP_FLAG_DO_NOT_WAIT;
@@ -320,8 +326,8 @@ mfxStatus DX11AllocationItem::exclusive_access_acquire_unsafe(mfxFrameData *ptr)
 }
 
 mfxStatus DX11AllocationItem::exclusive_access_release_unsafe(mfxFrameData *ptr) {
-    GAPI_LOG_DEBUG(nullptr, "releasing WRITE lock: " << this);
-    GAPI_LOG_DEBUG(nullptr, "texture: " << get_texture_ptr() <<
+    GAPI_LOG_DEBUG(nullptr, "releasing WRITE lock: " << this <<
+                            ", texture: " << get_texture_ptr() <<
                             ", sub id: " << get_subresource());
 
     get_device_ctx_ptr()->Unmap(get_staging_texture_ptr(), 0);
@@ -355,13 +361,14 @@ DX11AllocationRecord::~DX11AllocationRecord() {
     GAPI_LOG_DEBUG(nullptr, "release final referenced texture: " << texture_ptr.get());
 }
 
-void DX11AllocationRecord::init(unsigned int items,
-                                ID3D11DeviceContext* origin_ctx,
+void DX11AllocationRecord::init(unsigned int items, ID3D11DeviceContext* origin_ctx,
                                 mfxFrameAllocator origin_allocator,
-                                ComPtrGuard<ID3D11Texture2D>&& texture,
+                                std::vector<ComPtrGuard<ID3D11Texture2D>> &&textures,
                                 std::vector<ComPtrGuard<ID3D11Texture2D>> &&staging_textures) {
+
     GAPI_DbgAssert(items != 0 && "Cannot create DX11AllocationRecord with empty items");
     GAPI_DbgAssert(items == staging_textures.size() && "Allocation items count and staging size are not equal");
+    GAPI_DbgAssert(textures.size() != 1 ? items == textures.size() : true && "Allocation items count and staging size are not equal");
     GAPI_DbgAssert(origin_ctx &&
                    "Cannot create DX11AllocationItem for empty origin_ctx");
     auto shared_allocator_copy = origin_allocator;
@@ -374,13 +381,22 @@ void DX11AllocationRecord::init(unsigned int items,
     shared_allocator_copy.pthis = nullptr;
 
 
-    GAPI_LOG_DEBUG(nullptr, "subresources count: " << items << ", text: " << texture.get());
+    GAPI_LOG_DEBUG(nullptr, "subresources count: " << items);
     resources.reserve(items);
-    // no AddRef here, because DX11AllocationRecord receive ownership it here
-    texture_ptr = createCOMSharedPtrGuard(std::move(texture));
+
+    if (textures.size() == 1) {
+        texture_ptr = createCOMSharedPtrGuard(std::move(textures[0]));
+    }
     for(unsigned int i = 0; i < items; i++) {
-        resources.emplace_back(new DX11AllocationItem(get_ptr(), origin_ctx, shared_allocator_copy,
-                                                      texture_ptr, i, std::move(staging_textures[i])));
+        if (textures.size() == 1) {
+            GAPI_LOG_DEBUG(nullptr, "subresources: [" << i <<", " << items << "], ID3D11Texture2D: " << texture_ptr.get());
+            resources.emplace_back(new DX11AllocationItem(get_ptr(), origin_ctx, shared_allocator_copy,
+                                                          texture_ptr, i, std::move(staging_textures[i])));
+        } else {
+            GAPI_LOG_DEBUG(nullptr, "subresources: [" << i <<", " << items << "], ID3D11Texture2D: " << textures[i].get());
+            resources.emplace_back(new DX11AllocationItem(get_ptr(), origin_ctx, shared_allocator_copy,
+                                                          std::move(textures[i]), 0, std::move(staging_textures[i])));
+        }
     }
 }
 

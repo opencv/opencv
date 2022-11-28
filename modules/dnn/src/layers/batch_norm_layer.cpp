@@ -170,11 +170,14 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return preferableTarget == DNN_TARGET_CPU || dims == 4;
+#endif
         return (backendId == DNN_BACKEND_OPENCV) ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide()) ||
-               backendId == DNN_BACKEND_WEBNN ||
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && haveInfEngine() && (preferableTarget == DNN_TARGET_CPU || dims == 4));
+               backendId == DNN_BACKEND_WEBNN;
     }
 
 #ifdef HAVE_OPENCL
@@ -382,16 +385,6 @@ public:
     }
 #endif  // HAVE_HALIDE
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::Layer ieLayer = InferenceEngine::Builder::ScaleShiftLayer(name);
-        const size_t numChannels = weights_.total();
-        addConstantData("weights", wrapToInfEngineBlob(weights_, {numChannels}, InferenceEngine::Layout::C), ieLayer);
-        addConstantData("biases", wrapToInfEngineBlob(bias_, {numChannels}, InferenceEngine::Layout::C), ieLayer);
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
@@ -416,6 +409,7 @@ public:
     {
         params.set("input_scale", scales[0][0]);
         params.set("input_zeropoint", zeropoints[0][0]);
+        params.set("eps", epsilon);
 
         params.blobs.clear();
         params.blobs.push_back(origin_weights);

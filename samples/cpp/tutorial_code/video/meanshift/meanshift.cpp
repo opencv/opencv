@@ -58,7 +58,7 @@ int main(int argc, char **argv)
     calcHist(&hsv_roi, 1, channels, mask, roi_hist, 1, histSize, range);
     normalize(roi_hist, roi_hist, 0, 255, NORM_MINMAX);
 
-    // Setup the termination criteria, either 10 iteration or move by atleast 1 pt
+    // Setup the termination criteria, either 10 iteration or move by at least 1 pt
     TermCriteria term_crit(TermCriteria::EPS | TermCriteria::COUNT, 10, 1);
 
     while(true){

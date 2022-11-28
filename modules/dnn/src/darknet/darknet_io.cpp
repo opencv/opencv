@@ -229,7 +229,7 @@ namespace cv {
                         activation_param.set<float>("negative_slope", 0.1f);
                         activation_param.type = "ReLU";
                     }
-                    else if (type == "swish")
+                    else if (type == "swish" || type == "silu") // swish is an extension of silu.
                     {
                         activation_param.type = "Swish";
                     }
@@ -376,7 +376,7 @@ namespace cv {
                     int begin[] = {0, split_size * group_id, 0, 0};
                     cv::dnn::DictValue paramBegin = cv::dnn::DictValue::arrayInt(begin, 4);
 
-                    int end[] = {-1, begin[1] + split_size, -1, -1};
+                    int end[] = {INT_MAX, begin[1] + split_size, INT_MAX, INT_MAX};
                     cv::dnn::DictValue paramEnd = cv::dnn::DictValue::arrayInt(end, 4);
 
                     darknet::LayerParameter lp;
@@ -791,7 +791,7 @@ namespace cv {
                             if (layers_vec.size() > 1)
                             {
                                 // layer ids in layers_vec - inputs of Slice layers
-                                // after adding offset to layers_vec: layer ids - ouputs of Slice layers
+                                // after adding offset to layers_vec: layer ids - outputs of Slice layers
                                 for (size_t k = 0; k < layers_vec.size(); ++k)
                                     layers_vec[k] += layers_vec.size();
 

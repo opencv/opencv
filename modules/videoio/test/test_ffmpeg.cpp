@@ -95,6 +95,54 @@ TEST(videoio_ffmpeg, image)
 
 //==========================================================================
 
+typedef tuple<string, int, bool> videoio_read_params_t;
+typedef testing::TestWithParam< testing::tuple<videoio_read_params_t, int, bool>> videoio_read;
+
+TEST_P(videoio_read, threads)
+{
+    const VideoCaptureAPIs api = CAP_FFMPEG;
+    if (!videoio_registry::hasBackend(api))
+        throw SkipTestException("Backend was not found");
+    const string fileName = get<0>(get<0>(GetParam()));
+    const int nFrames = get<1>(get<0>(GetParam()));
+    const bool fixedThreadCount = get<2>(get<0>(GetParam()));
+    const int nThreads = get<1>(GetParam());
+    const bool rawRead = get<2>(GetParam());
+    VideoCapture cap(findDataFile(fileName), api, { CAP_PROP_N_THREADS, nThreads });
+    if (!cap.isOpened())
+        throw SkipTestException("Video stream is not supported");
+    if (nThreads == 0 || fixedThreadCount)
+        EXPECT_EQ(cap.get(CAP_PROP_N_THREADS), VideoCapture(findDataFile(fileName), api).get(CAP_PROP_N_THREADS));
+    else
+        EXPECT_EQ(cap.get(CAP_PROP_N_THREADS), nThreads);
+    if (rawRead && !cap.set(CAP_PROP_FORMAT, -1))  // turn off video decoder (extract stream)
+        throw SkipTestException("Fetching of RAW video streams is not supported");
+    Mat frame;
+    int n = 0;
+    while (cap.read(frame)) {
+        ASSERT_FALSE(frame.empty());
+        n++;
+    }
+    ASSERT_EQ(n, nFrames);
+}
+
+const videoio_read_params_t videoio_read_params[] =
+{
+    videoio_read_params_t("video/big_buck_bunny.h264", 125, false),
+    //videoio_read_params_t("video/big_buck_bunny.h265", 125, false),
+    videoio_read_params_t("video/big_buck_bunny.mjpg.avi", 125, true),
+    //videoio_read_params_t("video/big_buck_bunny.mov", 125, false),
+    //videoio_read_params_t("video/big_buck_bunny.mp4", 125, false),
+    //videoio_read_params_t("video/big_buck_bunny.mpg", 125, false),
+    //videoio_read_params_t("video/big_buck_bunny.wmv", 125, true),
+};
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_read, testing::Combine(testing::ValuesIn(videoio_read_params),
+                                                             testing::Values(0, 1, 2, 2000),
+                                                             testing::Values(true, false)));
+
+//==========================================================================
+
 typedef tuple<VideoCaptureAPIs, string, string, string, string, string> videoio_container_params_t;
 typedef testing::TestWithParam< videoio_container_params_t > videoio_container;
 
@@ -235,8 +283,8 @@ static void generateFrame(Mat &frame, unsigned int i, const Point &center, const
     frame = Scalar::all(i % 255);
     stringstream buf(ios::out);
     buf << "frame #" << i;
-    putText(frame, buf.str(), Point(50, center.y), FONT_HERSHEY_SIMPLEX, 5.0, color, 5, CV_AA);
-    circle(frame, center, i + 2, color, 2, CV_AA);
+    putText(frame, buf.str(), Point(50, center.y), FONT_HERSHEY_SIMPLEX, 5.0, color, 5, LINE_AA);
+    circle(frame, center, i + 2, color, 2, LINE_AA);
 }
 
 TEST(videoio_ffmpeg, parallel)
@@ -399,7 +447,33 @@ const ffmpeg_cap_properties_param_t videoio_ffmpeg_properties[] = {
 
 INSTANTIATE_TEST_CASE_P(videoio, ffmpeg_cap_properties, testing::ValuesIn(videoio_ffmpeg_properties));
 
+typedef tuple<string, string> ffmpeg_get_fourcc_param_t;
+typedef testing::TestWithParam<ffmpeg_get_fourcc_param_t> ffmpeg_get_fourcc;
 
+TEST_P(ffmpeg_get_fourcc, check_short_codecs)
+{
+    const VideoCaptureAPIs api = CAP_FFMPEG;
+    if (!videoio_registry::hasBackend(api))
+        throw SkipTestException("Backend was not found");
+    const string fileName = get<0>(GetParam());
+    const string fourcc_string = get<1>(GetParam());
+    VideoCapture cap(findDataFile(fileName), api);
+    if (!cap.isOpened())
+        throw SkipTestException("Video stream is not supported");
+    const double fourcc = cap.get(CAP_PROP_FOURCC);
+    ASSERT_EQ(fourcc_string, fourccToString((int)fourcc));
+}
+
+const ffmpeg_get_fourcc_param_t ffmpeg_get_fourcc_param[] =
+{
+    ffmpeg_get_fourcc_param_t("../cv/tracking/faceocc2/data/faceocc2.webm", "VP80"),
+    ffmpeg_get_fourcc_param_t("video/sample_322x242_15frames.yuv420p.libvpx-vp9.mp4", "vp09"),
+    ffmpeg_get_fourcc_param_t("video/sample_322x242_15frames.yuv420p.libaom-av1.mp4", "av01"),
+    ffmpeg_get_fourcc_param_t("video/big_buck_bunny.h265", "hevc"),
+    ffmpeg_get_fourcc_param_t("video/big_buck_bunny.h264", "h264")
+};
+
+INSTANTIATE_TEST_CASE_P(videoio, ffmpeg_get_fourcc, testing::ValuesIn(ffmpeg_get_fourcc_param));
 
 // related issue: https://github.com/opencv/opencv/issues/15499
 TEST(videoio, mp4_orientation_meta_auto)
@@ -412,6 +486,9 @@ TEST(videoio, mp4_orientation_meta_auto)
     VideoCapture cap;
     EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
     ASSERT_TRUE(cap.isOpened()) << "Can't open the video: " << video_file << " with backend " << CAP_FFMPEG << std::endl;
+
+    // related issue: https://github.com/opencv/opencv/issues/22088
+    EXPECT_EQ(90, cap.get(CAP_PROP_ORIENTATION_META));
 
     cap.set(CAP_PROP_ORIENTATION_AUTO, true);
     if (cap.get(CAP_PROP_ORIENTATION_AUTO) == 0)
@@ -486,10 +563,6 @@ TEST(videoio_ffmpeg, ffmpeg_check_extra_data)
     EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
     ASSERT_TRUE(cap.isOpened()) << "Can't open the video";
     const int codecExtradataIdx = (int)cap.get(CAP_PROP_CODEC_EXTRADATA_INDEX);
-#ifdef _WIN32  // handle old FFmpeg backend
-    if (codecExtradataIdx <= 0)
-        throw SkipTestException("Codec extra data is not supported by backend or video stream");
-#endif
     Mat data;
     ASSERT_TRUE(cap.retrieve(data, codecExtradataIdx));
     EXPECT_EQ(CV_8UC1, data.type()) << "CV_8UC1 != " << typeToString(data.type());
@@ -536,5 +609,17 @@ TEST(videoio_ffmpeg, create_with_property_badarg)
     EXPECT_FALSE(cap.isOpened());
 }
 
+// related issue: https://github.com/opencv/opencv/issues/16821
+TEST(videoio_ffmpeg, DISABLED_open_from_web)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    string video_file = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+    VideoCapture cap(video_file, CAP_FFMPEG);
+    int n_frames = -1;
+    EXPECT_NO_THROW(n_frames = (int)cap.get(CAP_PROP_FRAME_COUNT));
+    EXPECT_EQ((int)14315, n_frames);
+}
 
 }} // namespace

@@ -56,7 +56,7 @@ static int create_input_node(teng_graph_t graph, const char* node_name, int inch
 }
 
 static int create_conv_node(teng_graph_t graph, const char* node_name, const char* input_name, int in_h, int in_w, int out_h, int out_w,
-    int kernel_h, int kernel_w, int stride_h, int stride_w, int pad_h, int pad_w, int inch, int outch, int group,
+    int kernel_h, int kernel_w, int stride_h, int stride_w, int pad_h0, int pad_h1, int pad_w0, int pad_w1, int inch, int outch, int group,
     int dilation_h, int dilation_w, int activation, std::string padMode)
 {
     node_t conv_node      = teng_create_graph_node(graph, node_name, "Convolution");
@@ -107,15 +107,12 @@ static int create_conv_node(teng_graph_t graph, const char* node_name, const cha
     teng_release_graph_node(b_node);
     teng_release_graph_tensor(b_tensor);
 
-    int pad_h1 = pad_h;
-    int pad_w1 = pad_w;
-
     if (!padMode.empty())
     {
         if (padMode == "SAME")
         {
-            int out_h_temp = (in_h-kernel_h + 2*pad_h)/stride_h + 1;
-            int out_w_temp = (in_w-kernel_w + 2*pad_w)/stride_w + 1;
+            int out_h_temp = (in_h-kernel_h + 2*pad_h0)/stride_h + 1;
+            int out_w_temp = (in_w-kernel_w + 2*pad_w0)/stride_w + 1;
 
             if (out_h_temp < out_h)
                 pad_h1 += 1;
@@ -129,8 +126,8 @@ static int create_conv_node(teng_graph_t graph, const char* node_name, const cha
     teng_set_node_attr_int(conv_node, "kernel_w", &kernel_w);
     teng_set_node_attr_int(conv_node, "stride_h", &stride_h);
     teng_set_node_attr_int(conv_node, "stride_w", &stride_w);
-    teng_set_node_attr_int(conv_node, "pad_h0", &pad_h);
-    teng_set_node_attr_int(conv_node, "pad_w0", &pad_w);
+    teng_set_node_attr_int(conv_node, "pad_h0", &pad_h0);
+    teng_set_node_attr_int(conv_node, "pad_w0", &pad_w0);
     teng_set_node_attr_int(conv_node, "pad_h1", &pad_h1);
     teng_set_node_attr_int(conv_node, "pad_w1", &pad_w1);
     teng_set_node_attr_int(conv_node, "output_channel", &outch);
@@ -149,7 +146,7 @@ static teng_graph_t create_conv_graph(const char* layer_name, float* input_data,
                         float* output_data, int outch, int out_h, int out_w,
                         int kernel_h, int kernel_w,
                         int stride_h,int stride_w,
-                        int pad_h, int pad_w,  int dilation_h, int dilation_w, int activation,
+                        int pad_h0, int pad_h1, int pad_w0, int pad_w1, int dilation_h, int dilation_w, int activation,
                         float* teg_weight, float* teg_bias, std::string padMode, int nstripes)
 {
     node_t    conv_node     = NULL;
@@ -188,7 +185,7 @@ static teng_graph_t create_conv_graph(const char* layer_name, float* input_data,
     }
 
     if (ok && create_conv_node(graph, conv_name, input_name, in_h, in_w, out_h, out_w, kernel_h, kernel_w,
-        stride_h, stride_w, pad_h, pad_w, inch, outch, group, dilation_h, dilation_w, activation, padMode) < 0)
+        stride_h, stride_w, pad_h0, pad_h1, pad_w0, pad_w1, inch, outch, group, dilation_h, dilation_w, activation, padMode) < 0)
     {
         CV_LOG_WARNING(NULL,"Tengine: create conv node failed." );
         ok = false;
@@ -289,8 +286,8 @@ static bool tengine_init_flag = false;
 teng_graph_t tengine_init(const char* layer_name, float* input_, int inch, int group, int in_h, int in_w,
                         float *output_, int out_b, int outch, int out_h, int out_w,
                         float *kernel_, int kernel_s ,int kernel_h, int kernel_w,
-                        float *teg_bias, int stride_h,int stride_w,
-                        int pad_h, int pad_w,  int dilation_h, int dilation_w,
+                        float *teg_bias, int stride_h, int stride_w,
+                        int pad_h0, int pad_h1, int pad_w0, int pad_w1, int dilation_h, int dilation_w,
                         size_t wstep, const std::string padMode, teng_graph_t &graph, int nstripes)
 {
     std::vector<float> teg_weight_vec;
@@ -299,9 +296,9 @@ teng_graph_t tengine_init(const char* layer_name, float* input_, int inch, int g
     // Do not using the activation fuse mode, just convolution only.
     int activation = -1;
 
-    if (!(kernel_s == 2 && kernel_h == kernel_w && pad_h == pad_w
+    if (!(kernel_s == 2 && kernel_h == kernel_w
         && dilation_h == dilation_w && stride_h == stride_w
-        && out_b == 1 && pad_h < 10)) // just for Conv2D
+        && out_b == 1 && pad_h0 < 10 && pad_h1 < 10 && pad_w0 < 10 && pad_w1 < 10)) // just for Conv2D
     {
        // printf("return : just for Conv2D\n");
         return NULL;
@@ -314,7 +311,7 @@ teng_graph_t tengine_init(const char* layer_name, float* input_, int inch, int g
                kernel_w, kernel_h,
                stride_w, stride_h,
                dilation_w, dilation_h,
-               pad_w, pad_h);
+               pad_h0, pad_h1, pad_w0, pad_w1);
      */
         // weight
         if (kernel_inwh != wstep)
@@ -331,7 +328,7 @@ teng_graph_t tengine_init(const char* layer_name, float* input_, int inch, int g
             teg_weight = kernel_;
         }
 
-        /* initial the resoruce of tengine */
+        /* initial the resource of tengine */
         if(false == tengine_init_flag)
         {
             init_tengine();
@@ -342,7 +339,7 @@ teng_graph_t tengine_init(const char* layer_name, float* input_, int inch, int g
         graph = create_conv_graph(layer_name, input_, inch, group, in_h, in_w,
                                     output_, outch, out_h, out_w,
                                     kernel_h, kernel_w, stride_h,stride_w,
-                                    pad_h, pad_w, dilation_h, dilation_w, activation,
+                                    pad_h0, pad_h1, pad_w0, pad_w1, dilation_h, dilation_w, activation,
                                     teg_weight, teg_bias, padMode, nstripes);
         if(NULL == graph )
         {

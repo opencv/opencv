@@ -22,14 +22,14 @@ namespace onevpl {
 /**
  * @brief Public class is using for creation of onevpl::GSource instances.
  *
- * Class members availaible through methods @ref CfgParam::get_name() and @ref CfgParam::get_value() are used by
+ * Class members available through methods @ref CfgParam::get_name() and @ref CfgParam::get_value() are used by
  * onevpl::GSource inner logic to create or find oneVPL particular implementation
  * (software/hardware, specific API version and etc.).
  *
  * @note Because oneVPL may provide several implementations which are satisfying with multiple (or single one) @ref CfgParam
  * criteria therefore it is possible to configure `preferred` parameters. This kind of CfgParams are created
  * using `is_major = false` argument in @ref CfgParam::create method and are not used by creating oneVPL particular implementations.
- * Instead they fill out a "score table" to select preferrable implementation from available list. Implementation are satisfying
+ * Instead they fill out a "score table" to select preferable implementation from available list. Implementation are satisfying
  * with most of these optional params would be chosen.
  * If no one optional CfgParam params were present then first of available oneVPL implementation would be applied.
  * Please get on https://spec.oneapi.io/versions/latest/elements/oneVPL/source/API_ref/VPL_disp_api_func.html?highlight=mfxcreateconfig#mfxsetconfigfilterproperty
@@ -110,6 +110,62 @@ struct GAPI_EXPORTS CfgParam {
     static CfgParam create_implementation(uint32_t value);
     static CfgParam create_implementation(const char* value);
 
+
+    static constexpr const char *vpp_frames_pool_size_name() { return "vpp_frames_pool_size"; }
+    static CfgParam create_vpp_frames_pool_size(size_t value);
+
+    static constexpr const char *vpp_in_width_name() { return "vpp.In.Width"; }
+    static CfgParam create_vpp_in_width(uint16_t value);
+
+    static constexpr const char *vpp_in_height_name() { return "vpp.In.Height"; }
+    static CfgParam create_vpp_in_height(uint16_t value);
+
+    static constexpr const char *vpp_in_crop_x_name() { return "vpp.In.CropX"; }
+    static CfgParam create_vpp_in_crop_x(uint16_t value);
+
+    static constexpr const char *vpp_in_crop_y_name() { return "vpp.In.CropY"; }
+    static CfgParam create_vpp_in_crop_y(uint16_t value);
+
+    static constexpr const char *vpp_in_crop_w_name() { return "vpp.In.CropW"; }
+    static CfgParam create_vpp_in_crop_w(uint16_t value);
+
+    static constexpr const char *vpp_in_crop_h_name() { return "vpp.In.CropH"; }
+    static CfgParam create_vpp_in_crop_h(uint16_t value);
+
+
+    static constexpr const char *vpp_out_fourcc_name() { return "vpp.Out.FourCC"; }
+    static CfgParam create_vpp_out_fourcc(uint32_t value);
+
+    static constexpr const char *vpp_out_chroma_format_name() { return "vpp.Out.ChromaFormat"; }
+    static CfgParam create_vpp_out_chroma_format(uint16_t value);
+
+    static constexpr const char *vpp_out_width_name() { return "vpp.Out.Width"; }
+    static CfgParam create_vpp_out_width(uint16_t value);
+
+    static constexpr const char *vpp_out_height_name() { return "vpp.Out.Height"; }
+    static CfgParam create_vpp_out_height(uint16_t value);
+
+    static constexpr const char *vpp_out_crop_x_name() { return "vpp.Out.CropX"; }
+    static CfgParam create_vpp_out_crop_x(uint16_t value);
+
+    static constexpr const char *vpp_out_crop_y_name() { return "vpp.Out.CropY"; }
+    static CfgParam create_vpp_out_crop_y(uint16_t value);
+
+    static constexpr const char *vpp_out_crop_w_name() { return "vpp.Out.CropW"; }
+    static CfgParam create_vpp_out_crop_w(uint16_t value);
+
+    static constexpr const char *vpp_out_crop_h_name() { return "vpp.Out.CropH"; }
+    static CfgParam create_vpp_out_crop_h(uint16_t value);
+
+    static constexpr const char *vpp_out_pic_struct_name() { return "vpp.Out.PicStruct"; }
+    static CfgParam create_vpp_out_pic_struct(uint16_t value);
+
+    static constexpr const char *vpp_out_framerate_n_name() { return "vpp.Out.FrameRateExtN"; }
+    static CfgParam create_vpp_out_framerate_n(uint32_t value);
+
+    static constexpr const char *vpp_out_framerate_d_name() { return "vpp.Out.FrameRateExtD"; }
+    static CfgParam create_vpp_out_framerate_d(uint32_t value);
+
     /**
      * Create generic onevp::GSource configuration parameter.
      *
@@ -129,6 +185,8 @@ struct GAPI_EXPORTS CfgParam {
     const name_t& get_name() const;
     const value_t& get_value() const;
     bool is_major() const;
+    std::string to_string() const;
+
     bool operator==(const CfgParam& rhs) const;
     bool operator< (const CfgParam& rhs) const;
     bool operator!=(const CfgParam& rhs) const;

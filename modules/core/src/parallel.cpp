@@ -153,6 +153,9 @@
 
 #include "opencv2/core/detail/exception_ptr.hpp"  // CV__EXCEPTION_PTR = 1 if std::exception_ptr is available
 
+#include <opencv2/core/utils/fp_control_utils.hpp>
+#include <opencv2/core/utils/fp_control.private.hpp>
+
 using namespace cv;
 
 namespace cv {
@@ -203,6 +206,9 @@ namespace {
 
             // propagate main thread state
             rng = cv::theRNG();
+#if OPENCV_SUPPORTS_FP_DENORMALS_HINT && OPENCV_IMPL_FP_HINTS
+            details::saveFPDenormalsState(fp_denormals_base_state);
+#endif
 
 #ifdef OPENCV_TRACE
             traceRootRegion = CV_TRACE_NS::details::getCurrentRegion();
@@ -283,6 +289,11 @@ namespace {
                 }
             }
         }
+
+#if OPENCV_SUPPORTS_FP_DENORMALS_HINT && OPENCV_IMPL_FP_HINTS
+        details::FPDenormalsModeState fp_denormals_base_state;
+#endif
+
     private:
         ParallelLoopBodyWrapperContext(const ParallelLoopBodyWrapperContext&); // disabled
         ParallelLoopBodyWrapperContext& operator=(const ParallelLoopBodyWrapperContext&); // disabled
@@ -319,6 +330,9 @@ namespace {
 
             // propagate main thread state
             cv::theRNG() = ctx.rng;
+#if OPENCV_SUPPORTS_FP_DENORMALS_HINT && OPENCV_IMPL_FP_HINTS
+            FPDenormalsIgnoreHintScope fp_denormals_scope(ctx.fp_denormals_base_state);
+#endif
 
             cv::Range r;
             cv::Range wholeRange = ctx.wholeRange;
@@ -972,7 +986,7 @@ int getNumberOfCPUs_()
 
 #endif
 
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if !defined(_WIN32) && !defined(__APPLE__) && defined(_SC_NPROCESSORS_ONLN)
 
     static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
     ncpus = minNonZero(ncpus, cpu_count_sysconf);

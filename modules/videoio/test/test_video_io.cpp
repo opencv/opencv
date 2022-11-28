@@ -1,47 +1,8 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                           License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of the copyright holders may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
-#include "opencv2/videoio/videoio_c.h"
 
 namespace opencv_test
 {
@@ -254,8 +215,28 @@ public:
             throw SkipTestException(cv::String("Backend ") +  cv::videoio_registry::getBackendName(apiPref) +
                     cv::String(" can't open the video: ")  + video_file);
 
+        int frame_count = (int)cap.get(CAP_PROP_FRAME_COUNT);
+
+        // HACK: Video consists of 125 frames, but cv::VideoCapture with FFmpeg reports only 122 frames for mpg video.
+        // mpg file reports 5.08 sec * 24 fps => property returns 122 frames,but actual number of frames returned is 125
+        // HACK: CAP_PROP_FRAME_COUNT is not supported for vmw + MSMF. Just force check for all 125 frames
+        if (ext == "mpg")
+            EXPECT_GT(frame_count, 121);
+        else if ((ext == "wmv") && (apiPref == CAP_MSMF))
+            frame_count = 125;
+        else
+            EXPECT_EQ(frame_count, 125);
         Mat img;
-        for(int i = 0; i < 10; i++)
+
+#ifdef _WIN32  // handle old FFmpeg wrapper on Windows till rebuild
+        frame_count = 10;
+#else
+        // HACK: FFmpeg reports picture_pts = AV_NOPTS_VALUE_ for the last frame for AVI container by some reason
+        if ((ext == "avi") && (apiPref == CAP_FFMPEG))
+            frame_count--;
+#endif
+
+        for (int i = 0; i < frame_count; i++)
         {
             double timestamp = 0;
             ASSERT_NO_THROW(cap >> img);
@@ -263,7 +244,7 @@ public:
             if (cvtest::debugLevel > 0)
                 std::cout << "i = " << i << ": timestamp = " << timestamp << std::endl;
             const double frame_period = 1000.f/bunny_param.getFps();
-            // NOTE: eps == frame_period, because videoCapture returns frame begining timestamp or frame end
+            // NOTE: eps == frame_period, because videoCapture returns frame beginning timestamp or frame end
             // timestamp depending on codec and back-end. So the first frame has timestamp 0 or frame_period.
             EXPECT_NEAR(timestamp, i*frame_period, frame_period) << "i=" << i;
         }
@@ -752,6 +733,13 @@ TEST_P(videocapture_acceleration, read)
                 if (filename == "sample_322x242_15frames.yuv420p.libaom-av1.mp4")
                     throw SkipTestException("Unable to read the first frame with AV1 codec (missing support)");
             }
+#ifdef _WIN32
+            if (!read_umat_result && i == 1)
+            {
+                if (filename == "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4")
+                    throw SkipTestException("Unable to read the second frame with VP9 codec (media stack misconfiguration / outdated MSMF version)");
+            }
+#endif
             EXPECT_TRUE(read_umat_result);
             ASSERT_FALSE(umat.empty());
             umat.copyTo(frame);
@@ -767,6 +755,13 @@ TEST_P(videocapture_acceleration, read)
                 if (filename == "sample_322x242_15frames.yuv420p.libaom-av1.mp4")
                     throw SkipTestException("Unable to read the first frame with AV1 codec (missing support)");
             }
+#ifdef _WIN32
+            if (!read_result && i == 1)
+            {
+                if (filename == "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4")
+                    throw SkipTestException("Unable to read the second frame with VP9 codec (media stack misconfiguration / outdated MSMF version)");
+            }
+#endif
             EXPECT_TRUE(read_result);
         }
         ASSERT_FALSE(frame.empty());
@@ -796,8 +791,8 @@ static const VideoCaptureAccelerationInput hw_filename[] = {
         { "sample_322x242_15frames.yuv420p.libxvid.mp4", 28.0 },
         { "sample_322x242_15frames.yuv420p.mjpeg.mp4", 20.0 },
         { "sample_322x242_15frames.yuv420p.mpeg2video.mp4", 24.0 },  // GSTREAMER on Ubuntu 18.04
-        { "sample_322x242_15frames.yuv420p.libx264.mp4", 24.0 },  // GSTREAMER on Ubuntu 18.04
-        { "sample_322x242_15frames.yuv420p.libx265.mp4", 30.0 },
+        { "sample_322x242_15frames.yuv420p.libx264.mp4", 23.0 },  // D3D11 on GHA/Windows, GSTREAMER on Ubuntu 18.04
+        { "sample_322x242_15frames.yuv420p.libx265.mp4", 23.0 },  // D3D11 on GHA/Windows
         { "sample_322x242_15frames.yuv420p.libvpx-vp9.mp4", 30.0 },
         { "sample_322x242_15frames.yuv420p.libaom-av1.mp4", 30.0 }
 };

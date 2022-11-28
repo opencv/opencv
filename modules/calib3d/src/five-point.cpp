@@ -601,7 +601,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
     P3(Range::all(), Range(0, 3)) = R1 * 1.0; P3.col(3) = -t * 1.0;
     P4(Range::all(), Range(0, 3)) = R2 * 1.0; P4.col(3) = -t * 1.0;
 
-    // Do the cheirality check.
+    // Do the chirality check.
     // Notice here a threshold dist is used to filter
     // out far away points (i.e. infinite points) since
     // their depth may vary between positive and negative.

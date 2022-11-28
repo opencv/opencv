@@ -7,18 +7,21 @@
 #ifndef GAPI_STREAMING_ONEVPL_CFG_PARAM_DEVICE_SELECTOR_HPP
 #define GAPI_STREAMING_ONEVPL_CFG_PARAM_DEVICE_SELECTOR_HPP
 
-#ifdef HAVE_ONEVPL
-
 #include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp>
 #include <opencv2/gapi/streaming/onevpl/cfg_params.hpp>
 #include <opencv2/gapi/streaming/onevpl/source.hpp>
 
 #include "opencv2/gapi/own/exports.hpp" // GAPI_EXPORTS
 
+#ifdef HAVE_ONEVPL
+
 namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
+
+struct PlatformSpecificParams;
+std::vector<CfgParam> update_param_with_accel_type(std::vector<CfgParam> &&param_array, AccelType type);
 
 struct GAPI_EXPORTS CfgParamDeviceSelector final: public IDeviceSelector {
     CfgParamDeviceSelector(const CfgParams& params = {});
@@ -26,6 +29,9 @@ struct GAPI_EXPORTS CfgParamDeviceSelector final: public IDeviceSelector {
                            const std::string& device_id,
                            Context::Ptr ctx_ptr,
                            const CfgParams& params);
+    CfgParamDeviceSelector(const Device &device_ptr,
+                           const Context &ctx_ptr,
+                           CfgParams params);
     ~CfgParamDeviceSelector();
 
     DeviceScoreTable select_devices() const override;
@@ -34,6 +40,7 @@ struct GAPI_EXPORTS CfgParamDeviceSelector final: public IDeviceSelector {
 private:
     Device suggested_device;
     Context suggested_context;
+    std::unique_ptr<PlatformSpecificParams> platform_specific_data;
 };
 } // namespace onevpl
 } // namespace wip

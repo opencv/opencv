@@ -9,6 +9,7 @@
 #include <opencv2/gapi/own/assert.hpp>
 #include <opencv2/gapi/util/variant.hpp>
 
+#include <opencv2/gapi/streaming/onevpl/device_selector_interface.hpp>
 #include "streaming/onevpl/cfg_param_device_selector.hpp"
 #include "streaming/onevpl/cfg_params_parser.hpp"
 #include "streaming/onevpl/utils.hpp"
@@ -16,27 +17,67 @@
 
 #ifdef HAVE_DIRECTX
 #ifdef HAVE_D3D11
-#pragma comment(lib,"d3d11.lib")
 
 // get rid of generate macro max/min/etc from DX side
 #define D3D11_NO_HELPERS
 #define NOMINMAX
 #include <d3d11.h>
 #include <d3d11_4.h>
-#pragma comment(lib, "dxgi")
 #undef D3D11_NO_HELPERS
 #undef NOMINMAX
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
+
+#ifdef __linux__
+#include <fcntl.h>
+#include <unistd.h>
+#if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#include "va/va.h"
+#include "va/va_drm.h"
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#endif // __linux__
 
 #include <codecvt>
 #include "opencv2/core/directx.hpp"
-#ifdef HAVE_OPENCL
-#include <CL/cl_d3d11.h>
-#endif
 
 namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
+#ifdef __linux__
+struct PlatformSpecificParams {
+    ~PlatformSpecificParams() {
+        for (int fd : fds) {
+            close(fd);
+        }
+    }
+
+    void track_fd(int fd) {
+        fds.insert(fd);
+    }
+private:
+    std::set<int> fds;
+};
+#else
+struct PlatformSpecificParams {};
+#endif
+
+std::vector<CfgParam> update_param_with_accel_type(std::vector<CfgParam> &&param_array, AccelType type) {
+    switch (type) {
+        case AccelType::HOST:
+            break;
+        case AccelType::DX11:
+            param_array.push_back(CfgParam::create_acceleration_mode(MFX_ACCEL_MODE_VIA_D3D11));
+            break;
+        case AccelType::VAAPI:
+            param_array.push_back(CfgParam::create_acceleration_mode(MFX_IMPL_VIA_VAAPI));
+            break;
+        default:
+            GAPI_DbgAssert(false && "Unexpected AccelType");
+            break;
+    }
+    return std::move(param_array);
+}
 
 CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
     suggested_device(IDeviceSelector::create<Device>(nullptr, "CPU", AccelType::HOST)),
@@ -57,8 +98,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
 
     switch(accel_mode.Data.U32) {
         case MFX_ACCEL_MODE_VIA_D3D11: {
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
+#if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             ID3D11Device *hw_handle = nullptr;
             ID3D11DeviceContext* device_context = nullptr;
 
@@ -127,14 +167,88 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
 
             suggested_device = IDeviceSelector::create<Device>(hw_handle, "GPU", AccelType::DX11);
             suggested_context = IDeviceSelector::create<Context>(device_context, AccelType::DX11);
-#else
+#else  // defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             GAPI_LOG_WARNING(nullptr, "Unavailable \"" <<  CfgParam::acceleration_mode_name() << ": MFX_ACCEL_MODE_VIA_D3D11\""
                                       "was chosen for current project configuration");
             throw std::logic_error(std::string("Unsupported \"") +
                                    CfgParam::acceleration_mode_name() +
                                    ": MFX_ACCEL_MODE_VIA_D3D11\"");
-#endif // HAVE_DIRECTX
-#endif // HAVE_D3D11
+#endif // defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
+            break;
+        }
+        case MFX_IMPL_VIA_VAAPI : {
+#ifdef __linux__
+#if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+            static const char *predefined_vaapi_devices_list[] {"/dev/dri/renderD128",
+                                                                "/dev/dri/renderD129",
+                                                                "/dev/dri/card0",
+                                                                "/dev/dri/card1",
+                                                                nullptr};
+            std::stringstream ss;
+            int device_fd = -1;
+            VADisplay va_handle;va_handle = nullptr;
+            for (const char **device_path = predefined_vaapi_devices_list;
+                *device_path != nullptr; device_path++) {
+                device_fd = open(*device_path, O_RDWR);
+                if (device_fd < 0) {
+                    std::string info("Cannot open GPU file: \"");
+                    info = info + *device_path + "\", error: " + strerror(errno);
+                    GAPI_LOG_DEBUG(nullptr, info);
+                    ss << info << std::endl;
+                    continue;
+                }
+                va_handle = vaGetDisplayDRM(device_fd);
+                if (!va_handle) {
+                    close(device_fd);
+
+                    std::string info("VAAPI device vaGetDisplayDRM failed, error: ");
+                    info += strerror(errno);
+                    GAPI_LOG_DEBUG(nullptr, info);
+                    ss << info << std::endl;
+                    continue;
+                }
+                int major_version = 0, minor_version = 0;
+                VAStatus status {};
+                status = vaInitialize(va_handle, &major_version, &minor_version);
+                if (VA_STATUS_SUCCESS != status) {
+                    close(device_fd);
+                    va_handle = nullptr;
+
+                    std::string info("Cannot initialize VAAPI device, error: ");
+                    info += vaErrorStr(status);
+                    GAPI_LOG_DEBUG(nullptr, info);
+                    ss << info << std::endl;
+                    continue;
+                }
+                GAPI_LOG_INFO(nullptr, "VAAPI created for device: " << *device_path);
+                break;
+            }
+
+            // check device creation
+            if (!va_handle) {
+                GAPI_LOG_WARNING(nullptr, "Cannot create VAAPI device. Log:\n" << ss.str());
+                throw std::logic_error(std::string("Cannot create device for \"") +
+                                   CfgParam::acceleration_mode_name() +
+                                   ": MFX_IMPL_VIA_VAAPI\"");
+            }
+
+            // Unfortunately VAAPI doesn't provide API for extracting initial FD value from VADisplay, which
+            // value is stored as VADisplay fields, by the way. But, because we here are only one creator
+            // of VAAPI device then we will need make cleanup for all allocated resources by ourselfs
+            //and FD is definitely must be utilized. So, let's use complementary struct `PlatformSpecificParams` which
+            // represent some kind of 'platform specific data' and which will store opened FD for
+            // future utilization
+            platform_specific_data.reset (new PlatformSpecificParams);
+            platform_specific_data->track_fd(device_fd);
+
+            suggested_device = IDeviceSelector::create<Device>(va_handle, "GPU", AccelType::VAAPI);
+            suggested_context = IDeviceSelector::create<Context>(nullptr, AccelType::VAAPI);
+#else  // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+            GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current linux configuration");
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#else // #ifdef __linux__
+            GAPI_Assert(false && "MFX_IMPL_VIA_VAAPI is supported on linux only");
+#endif // #ifdef __linux__
             break;
         }
         case MFX_ACCEL_MODE_NA: {
@@ -184,10 +298,10 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
     }
     mfxVariant accel_mode = cfg_param_to_mfx_variant(*accel_mode_it);
 
+    cv::util::suppress_unused_warning(device_id);
     switch(accel_mode.Data.U32) {
         case MFX_ACCEL_MODE_VIA_D3D11: {
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
+#if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             suggested_device = IDeviceSelector::create<Device>(device_ptr, device_id, AccelType::DX11);
             ID3D11Device* dx_device_ptr =
                 reinterpret_cast<ID3D11Device*>(suggested_device.get_ptr());
@@ -206,14 +320,26 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
             }
 
             dx_ctx_ptr->AddRef();
-#else
+#else  // defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             GAPI_LOG_WARNING(nullptr, "Unavailable \"" <<  CfgParam::acceleration_mode_name() <<
                                       ": MFX_ACCEL_MODE_VIA_D3D11\""
                                       "was chosen for current project configuration");
             throw std::logic_error(std::string("Unsupported \"") +
                                    CfgParam::acceleration_mode_name() + ": MFX_ACCEL_MODE_VIA_D3D11\"");
-#endif // HAVE_DIRECTX
-#endif // HAVE_D3D11
+#endif // #if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
+            break;
+        }
+        case MFX_IMPL_VIA_VAAPI : {
+#ifdef __linux__
+#if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+            suggested_device = IDeviceSelector::create<Device>(device_ptr, device_id, AccelType::VAAPI);
+            suggested_context = IDeviceSelector::create<Context>(nullptr, AccelType::VAAPI);
+#else  // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+            GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current linux configuration");
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#else // #ifdef __linux__
+            GAPI_Assert(false && "MFX_IMPL_VIA_VAAPI is supported on linux only");
+#endif // #ifdef __linux__
             break;
         }
         case MFX_ACCEL_MODE_NA: {
@@ -231,6 +357,59 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(Device::Ptr device_ptr,
     }
 }
 
+CfgParamDeviceSelector::CfgParamDeviceSelector(const Device &device,
+                                               const Context &ctx,
+                                               CfgParams) :
+    suggested_device(device),
+    suggested_context(ctx) {
+
+    switch(device.get_type()) {
+        case AccelType::DX11: {
+#if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
+            ID3D11Device* dx_device_ptr =
+                reinterpret_cast<ID3D11Device*>(suggested_device.get_ptr());
+            dx_device_ptr->AddRef();
+
+            ID3D11DeviceContext* dx_ctx_ptr =
+                reinterpret_cast<ID3D11DeviceContext*>(suggested_context.get_ptr());
+
+            // oneVPL recommendation
+            {
+                ID3D11Multithread *pD11Multithread = nullptr;
+                dx_ctx_ptr->QueryInterface(IID_PPV_ARGS(&pD11Multithread));
+                pD11Multithread->SetMultithreadProtected(true);
+                pD11Multithread->Release();
+            }
+
+            dx_ctx_ptr->AddRef();
+            break;
+#else // defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
+            GAPI_LOG_WARNING(nullptr, "Unavailable \"" <<  CfgParam::acceleration_mode_name() <<
+                                      ": MFX_ACCEL_MODE_VIA_D3D11\""
+                                      "was chosen for current project configuration");
+            throw std::logic_error(std::string("Unsupported \"") +
+                                   CfgParam::acceleration_mode_name() + ": MFX_ACCEL_MODE_VIA_D3D11\"");
+#endif // defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
+        }
+        case AccelType::VAAPI:
+#ifdef __linux__
+#if !defined(HAVE_VA) || !defined(HAVE_VA_INTEL)
+            GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current linux configuration");
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#else // #ifdef __linux__
+            GAPI_Assert(false && "MFX_IMPL_VIA_VAAPI is supported on linux only");
+#endif // #ifdef __linux__
+            break;
+        case AccelType::HOST:
+            break;
+        default:
+            throw std::logic_error(std::string("Unsupported \"") +  CfgParam::acceleration_mode_name() +
+                                   "\" requested: " +
+                                   to_cstring(device.get_type()));
+            break;
+    }
+}
+
 CfgParamDeviceSelector::~CfgParamDeviceSelector() {
     GAPI_LOG_INFO(nullptr, "release context: " << suggested_context.get_ptr());
     AccelType ctype = suggested_context.get_type();
@@ -239,14 +418,12 @@ CfgParamDeviceSelector::~CfgParamDeviceSelector() {
             //nothing to do
             break;
         case AccelType::DX11: {
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
+#if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             ID3D11DeviceContext* device_ctx_ptr =
                 reinterpret_cast<ID3D11DeviceContext*>(suggested_context.get_ptr());
             device_ctx_ptr->Release();
             device_ctx_ptr = nullptr;
-#endif // HAVE_DIRECTX
-#endif // HAVE_D3D11
+#endif // defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             break;
         }
         default:
@@ -262,14 +439,21 @@ CfgParamDeviceSelector::~CfgParamDeviceSelector() {
             //nothing to do
             break;
         case AccelType::DX11: {
-#ifdef HAVE_DIRECTX
-#ifdef HAVE_D3D11
+#if defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             ID3D11Device* device_ptr = reinterpret_cast<ID3D11Device*>(suggested_device.get_ptr());
             device_ptr->Release();
             device_ptr = nullptr;
-#endif // HAVE_DIRECTX
-#endif // HAVE_D3D11
+#endif // defined(HAVE_DIRECTX) && defined(HAVE_D3D11)
             break;
+        }
+        case AccelType::VAAPI: {
+#ifdef __linux__
+#if defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+            VADisplay va_handle = reinterpret_cast<VADisplay>(suggested_device.get_ptr());
+            vaTerminate(va_handle);
+            platform_specific_data.reset();
+#endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
+#endif // #ifdef __linux__
         }
         default:
             break;
@@ -277,7 +461,7 @@ CfgParamDeviceSelector::~CfgParamDeviceSelector() {
 }
 
 CfgParamDeviceSelector::DeviceScoreTable CfgParamDeviceSelector::select_devices() const {
-    return {std::make_pair(Score::MaxActivePriority, suggested_device)};
+    return {std::make_pair(Score::Type(Score::MaxActivePriority), suggested_device)};
 }
 
 CfgParamDeviceSelector::DeviceContexts CfgParamDeviceSelector::select_context() {
@@ -288,6 +472,4 @@ CfgParamDeviceSelector::DeviceContexts CfgParamDeviceSelector::select_context() 
 } // namespace wip
 } // namespace gapi
 } // namespace cv
-#endif // HAVE_D3D11
-#endif // HAVE_DIRECTX
 #endif // HAVE_ONEVPL

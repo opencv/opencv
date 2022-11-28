@@ -21,7 +21,7 @@ namespace calib
 
     enum InputType { Video, Pictures };
     enum InputVideoSource { Camera, File };
-    enum TemplateType { AcirclesGrid, Chessboard, chAruco, DoubleAcirclesGrid };
+    enum TemplateType { AcirclesGrid, Chessboard, chAruco, DoubleAcirclesGrid, CirclesGrid };
 
     static const std::string mainWindowName = "Calibration";
     static const std::string gridWindowName = "Board locations";
@@ -44,6 +44,8 @@ namespace calib
         std::vector<cv::Mat> tvecs;
         double totalAvgErr;
         cv::Size imageSize;
+
+        std::vector<cv::Mat> allFrames;
 
         std::vector<std::vector<cv::Point2f> > imagePoints;
         std::vector< std::vector<cv::Point3f> > objectPoints;
@@ -91,6 +93,9 @@ namespace calib
         cv::Size cameraResolution;
         int maxFramesNum;
         int minFramesNum;
+        bool saveFrames;
+        float zoom;
+        bool forceReopen;
 
         captureParameters()
         {
@@ -100,6 +105,7 @@ namespace calib
             minFramesNum = 10;
             fps = 30;
             cameraResolution = cv::Size(IMAGE_MAX_WIDTH, IMAGE_MAX_HEIGHT);
+            saveFrames = false;
         }
     };
 

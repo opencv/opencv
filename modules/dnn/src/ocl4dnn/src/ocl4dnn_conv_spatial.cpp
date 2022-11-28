@@ -181,8 +181,11 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     // assumption: spatial dimension is 2.
     kernel_h_ = config.kernel.height;
     kernel_w_ = config.kernel.width;
-    pad_h_ = config.pad.height;
-    pad_w_ = config.pad.width;
+    // pads: [pad_top, pad_bottom, pad_left, pad_right]
+    pad_h_ = config.pads[0]; // pad_top
+    pad_bottom_ = config.pads[1];
+    pad_w_ = config.pads[2]; // pad_left
+    pad_right_ = config.pads[3];
     stride_h_ = config.stride.height;
     stride_w_ = config.stride.width;
     dilation_h_ = config.dilation.height;
@@ -194,12 +197,6 @@ OCL4DNNConvSpatial<Dtype>::OCL4DNNConvSpatial(OCL4DNNConvConfig config)
     output_w_ = config.out_shape[dims - spatial_dims + 1];
     bottom_dim_ = channels_ * width_ * height_;
     top_dim_ = num_output_ * output_w_ * output_h_;
-    int Ph = (output_h_ - 1) * stride_h_ + (dilation_h_ * (kernel_h_ - 1) + 1) - height_;
-    int Pw = (output_w_ - 1) * stride_w_ + (dilation_w_ * (kernel_w_ - 1) + 1) - width_;
-    Ph = (Ph > 0) ? Ph : 0;
-    Pw = (Pw > 0) ? Pw : 0;
-    pad_right_  = (Pw + 1) / 2;
-    pad_bottom_ = (Ph + 1) / 2;
 
     cache_path_ = utils::getConfigurationParameterString("OPENCV_OCL4DNN_CONFIG_PATH", "");
     dwconv_ = (num_output_ == channels_ && channels_ == group_);

@@ -40,6 +40,7 @@ Supported patterns:
 -   Asymmetrical circle pattern
 -   Dual asymmetrical circle pattern
 -   chAruco (chessboard with Aruco markers)
+-   Symmetrical circle pattern
 
 Description of parameters
 ------
@@ -55,9 +56,9 @@ All of this parameters are passed to application through a command line.
 -  -v=[filename]: get video from filename, default input -- camera with id=0
 -  -ci=[0]: get video from camera with specified id
 -  -flip=[false]: vertical flip of input frames
--  -t=[circles]: pattern for calibration (circles, chessboard, dualCircles, chAruco)
+-  -t=[circles]: pattern for calibration (circles, chessboard, dualCircles, chAruco, symcircles)
 -  -sz=[16.3]: distance between two nearest centers of circles or squares on calibration board
--  -dst=[295] distance between white and black parts of daulCircles pattern
+-  -dst=[295] distance between white and black parts of dualCircles pattern
 -  -w=[width]: width of pattern (in corners or circles)
 -  -h=[height]: height of pattern (in corners or circles)
 -  -of=[camParams.xml]: output file name
@@ -65,6 +66,9 @@ All of this parameters are passed to application through a command line.
 -  -vis=[grid]: captured boards visualization (grid, window)
 -  -d=[0.8]: delay between captures in seconds
 -  -pf=[defaultConfig.xml]: advanced application parameters file
+-  -force_reopen=[false]: Forcefully reopen camera in case of errors. Can be helpful for ip cameras with unstable connection.
+-  -save_frames=[false]: Save frames that contribute to final calibration
+-  -zoom=[1]: Zoom factor applied to the preview image
 
 ### Advanced parameters:
 

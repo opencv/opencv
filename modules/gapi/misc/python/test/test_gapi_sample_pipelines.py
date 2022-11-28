@@ -187,7 +187,7 @@ try:
                                               blockSize=block_sz,
                                               useHarrisDetector=use_harris_detector, k=k)
             # NB: The operation output is cv::GArray<cv::Pointf>, so it should be mapped
-            # to python paramaters like this: [(1.2, 3.4), (5.2, 3.2)], because the cv::Point2f
+            # to python parameters like this: [(1.2, 3.4), (5.2, 3.2)], because the cv::Point2f
             # according to opencv rules mapped to the tuple and cv::GArray<> mapped to the list.
             # OpenCV returns np.array with shape (n_features, 1, 2), so let's to convert it to list
             # tuples with size == n_features.
@@ -203,7 +203,7 @@ try:
 
             @staticmethod
             def outMeta(desc):
-                raise NotImplementedError("outMeta isn't imlemented")
+                raise NotImplementedError("outMeta isn't implemented")
         return Op
 
 
@@ -432,7 +432,7 @@ try:
             with self.assertRaises(Exception): create_op([cv.GMat, int], [cv.GMat]).on(cv.GMat())
 
 
-        def test_stateful_kernel(self):
+        def test_state_in_class(self):
             @cv.gapi.op('custom.sum', in_types=[cv.GArray.Int], out_types=[cv.GOpaque.Int])
             class GSum:
                 @staticmethod
@@ -605,7 +605,7 @@ try:
             img1 = np.array([1, 2, 3])
 
             # FIXME: Cause Bad variant access.
-            # Need to provide more descriptive error messsage.
+            # Need to provide more descriptive error message.
             with self.assertRaises(Exception): comp.apply(cv.gin(img0, img1),
                                                           args=cv.gapi.compile_args(
                                                               cv.gapi.kernels(GAddImpl)))

@@ -40,6 +40,9 @@
 //M*/
 
 #include "../precomp.hpp"
+
+#include <opencv2/core/utils/fp_control_utils.hpp>
+
 #include <limits>
 #include <set>
 #include <map>
@@ -106,6 +109,8 @@ static inline bool endsWith(const String &str, const char *substr)
 
 struct TorchImporter
 {
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
     typedef std::map<String, std::pair<int, Mat> > TensorsMap;
     Net net;
 
@@ -949,7 +954,7 @@ struct TorchImporter
                 int size = scalarParams.get<int>("size");
 
                 int begins[] = {0, 0, size, size};
-                int ends[] = {-1, -1, -size - 1, -size - 1};
+                int ends[] = {INT_MAX, INT_MAX, -size, -size};
 
                 newModule->apiType = "Slice";
                 layerParams.set("begin", DictValue::arrayInt<int*>(&begins[0], 4));

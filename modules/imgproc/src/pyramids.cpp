@@ -82,6 +82,8 @@ template<typename T1, typename T2> int PyrDownVecV(T1**, T2*, int) { return 0; }
 
 template<typename T1, typename T2> int PyrUpVecV(T1**, T2**, int) { return 0; }
 
+template<typename T1, typename T2> int PyrUpVecVOneRow(T1**, T2*, int) { return 0; }
+
 #if CV_SIMD
 
 template<> int PyrDownVecH<uchar, int, 1>(const uchar* src, int* row, int width)
@@ -717,6 +719,120 @@ template <> int PyrUpVecV<float, float>(float** src, float** dst, int width)
     return x;
 }
 
+template <> int PyrUpVecVOneRow<int, uchar>(int** src, uchar* dst, int width)
+{
+    int x = 0;
+    const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
+
+    for( ; x <= width - v_uint8::nlanes; x += v_uint8::nlanes)
+    {
+        v_int16 v_r00 = v_pack(vx_load(row0 + x), vx_load(row0 + x + v_int32::nlanes)),
+                v_r01 = v_pack(vx_load(row0 + x + 2 * v_int32::nlanes), vx_load(row0 + x + 3 * v_int32::nlanes)),
+                v_r10 = v_pack(vx_load(row1 + x), vx_load(row1 + x + v_int32::nlanes)),
+                v_r11 = v_pack(vx_load(row1 + x + 2 * v_int32::nlanes), vx_load(row1 + x + 3 * v_int32::nlanes)),
+                v_r20 = v_pack(vx_load(row2 + x), vx_load(row2 + x + v_int32::nlanes)),
+                v_r21 = v_pack(vx_load(row2 + x + 2 * v_int32::nlanes), vx_load(row2 + x + 3 * v_int32::nlanes));
+        v_int16 v_2r10 = v_r10 + v_r10, v_2r11 = (v_r11 + v_r11);
+        v_store(dst + x, v_rshr_pack_u<6>(v_r00 + v_r20 + (v_2r10 + v_2r10 + v_2r10), v_r01 + v_r21 + (v_2r11 + v_2r11 + v_2r11)));
+    }
+    if(x <= width - v_uint16::nlanes)
+    {
+        v_int16 v_r00 = v_pack(vx_load(row0 + x), vx_load(row0 + x + v_int32::nlanes)),
+                v_r10 = v_pack(vx_load(row1 + x), vx_load(row1 + x + v_int32::nlanes)),
+                v_r20 = v_pack(vx_load(row2 + x), vx_load(row2 + x + v_int32::nlanes));
+        v_int16 v_2r10 = v_r10 + v_r10;
+        v_rshr_pack_u_store<6>(dst + x, v_r00 + v_r20 + (v_2r10 + v_2r10 + v_2r10));
+        x += v_uint16::nlanes;
+    }
+    typedef int CV_DECL_ALIGNED(1) unaligned_int;
+    for (; x <= width - v_int32x4::nlanes; x += v_int32x4::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r10 = vx_load(row1 + x),
+                v_r20 = vx_load(row2 + x);
+        v_int32 v_2r10 = v_r10 + v_r10;
+        v_int16 d = v_pack(v_r00 + v_r20 + (v_2r10 + v_2r10 + v_2r10), (v_r10 + v_r20) << 2);
+        *(unaligned_int*)(dst + x) = v_reinterpret_as_s32(v_rshr_pack_u<6>(d, vx_setzero_s16())).get0();
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template <> int PyrUpVecVOneRow<int, short>(int** src, short* dst, int width)
+{
+    int x = 0;
+    const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
+
+    for( ; x <= width - v_int16::nlanes; x += v_int16::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r01 = vx_load(row0 + x + v_int32::nlanes),
+                v_r10 = vx_load(row1 + x),
+                v_r11 = vx_load(row1 + x + v_int32::nlanes),
+                v_r20 = vx_load(row2 + x),
+                v_r21 = vx_load(row2 + x + v_int32::nlanes);
+        v_store(dst + x, v_rshr_pack<6>(v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)), v_r01 + v_r21 + ((v_r11 << 1) + (v_r11 << 2))));
+    }
+    if(x <= width - v_int32::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r10 = vx_load(row1 + x),
+                v_r20 = vx_load(row2 + x);
+        v_rshr_pack_store<6>(dst + x, v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)));
+        x += v_int32::nlanes;
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template <> int PyrUpVecVOneRow<int, ushort>(int** src, ushort* dst, int width)
+{
+    int x = 0;
+    const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
+
+    for( ; x <= width - v_uint16::nlanes; x += v_uint16::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r01 = vx_load(row0 + x + v_int32::nlanes),
+                v_r10 = vx_load(row1 + x),
+                v_r11 = vx_load(row1 + x + v_int32::nlanes),
+                v_r20 = vx_load(row2 + x),
+                v_r21 = vx_load(row2 + x + v_int32::nlanes);
+        v_store(dst + x, v_rshr_pack_u<6>(v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)), v_r01 + v_r21 + ((v_r11 << 1) + (v_r11 << 2))));
+    }
+    if(x <= width - v_int32::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r10 = vx_load(row1 + x),
+                v_r20 = vx_load(row2 + x);
+        v_rshr_pack_u_store<6>(dst + x, v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)));
+        x += v_int32::nlanes;
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template <> int PyrUpVecVOneRow<float, float>(float** src, float* dst, int width)
+{
+    int x = 0;
+    const float *row0 = src[0], *row1 = src[1], *row2 = src[2];
+
+    v_float32 v_6 = vx_setall_f32(6.0f), v_scale = vx_setall_f32(1.f/64.f);
+    for( ; x <= width - v_float32::nlanes; x += v_float32::nlanes)
+    {
+        v_float32 v_r0 = vx_load(row0 + x),
+                  v_r1 = vx_load(row1 + x),
+                  v_r2 = vx_load(row2 + x);
+        v_store(dst + x, v_scale * (v_muladd(v_6, v_r1, v_r0) + v_r2));
+    }
+    vx_cleanup();
+
+    return x;
+}
+
 #endif
 
 template<class CastOp>
@@ -963,7 +1079,7 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
 
                 if (dsize.width > ssize.width*2)
                 {
-                    row[(_dst.cols-1) + x] = row[dx + cn];
+                    row[(_dst.cols-1) * cn + x] = row[dx + cn];
                 }
             }
 
@@ -983,13 +1099,26 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
         row0 = rows[0]; row1 = rows[1]; row2 = rows[2];
         dsts[0] = dst0; dsts[1] = dst1;
 
-        x = PyrUpVecV<WT, T>(rows, dsts, dsize.width);
-        for( ; x < dsize.width; x++ )
+        if (dst0 != dst1)
         {
-            T t1 = castOp((row1[x] + row2[x])*4);
-            T t0 = castOp(row0[x] + row1[x]*6 + row2[x]);
-            dst1[x] = t1; dst0[x] = t0;
+            x = PyrUpVecV<WT, T>(rows, dsts, dsize.width);
+            for( ; x < dsize.width; x++ )
+            {
+                T t1 = castOp((row1[x] + row2[x])*4);
+                T t0 = castOp(row0[x] + row1[x]*6 + row2[x]);
+                dst1[x] = t1; dst0[x] = t0;
+            }
         }
+        else
+        {
+            x = PyrUpVecVOneRow<WT, T>(rows, dst0, dsize.width);
+            for( ; x < dsize.width; x++ )
+            {
+                T t0 = castOp(row0[x] + row1[x]*6 + row2[x]);
+                dst0[x] = t0;
+            }
+        }
+
     }
 
     if (dsize.height > ssize.height*2)

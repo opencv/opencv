@@ -268,6 +268,7 @@ namespace cv {
 #define CV_CPU_AVX_5124FMAPS    27
 
 #define CV_CPU_NEON             100
+#define CV_CPU_NEON_DOTPROD     101
 
 #define CV_CPU_MSA              150
 
@@ -277,6 +278,8 @@ namespace cv {
 #define CV_CPU_VSX3             201
 
 #define CV_CPU_RVV              210
+
+#define CV_CPU_LASX             230
 
 // CPU features groups
 #define CV_CPU_AVX512_SKX       256
@@ -324,6 +327,7 @@ enum CpuFeatures {
     CPU_AVX_5124FMAPS   = 27,
 
     CPU_NEON            = 100,
+    CPU_NEON_DOTPROD    = 101,
 
     CPU_MSA             = 150,
 
@@ -333,6 +337,8 @@ enum CpuFeatures {
     CPU_VSX3            = 201,
 
     CPU_RVV             = 210,
+
+    CPU_LASX             = 230,
 
     CPU_AVX512_SKX      = 256, //!< Skylake-X with AVX-512F/CD/BW/DQ/VL
     CPU_AVX512_COMMON   = 257, //!< Common instructions AVX-512F/CD for all CPUs that support AVX-512
@@ -804,7 +810,7 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #  define CV_CONSTEXPR
 #endif
 
-// Integer types portatibility
+// Integer types portability
 #ifdef OPENCV_STDINT_HEADER
 #include OPENCV_STDINT_HEADER
 #elif defined(__cplusplus)

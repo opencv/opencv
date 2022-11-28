@@ -531,6 +531,35 @@ public:
     }
 };
 
+// softplus(x) = log(exp(x) + 1)
+class SoftplusSubgraph: public Subgraph
+{
+public:
+    SoftplusSubgraph()
+    {
+        int input = addNodeToMatch("");
+        int exp = addNodeToMatch("Exp", input);
+        int addVal = addNodeToMatch("");
+        int add = addNodeToMatch("Add", addVal, exp);
+        addNodeToMatch("Log", add);
+        setFusedNode("Softplus", input);
+    }
+};
+
+class SoftplusSubgraph2: public Subgraph
+{
+public:
+    SoftplusSubgraph2()
+    {
+        int input = addNodeToMatch("");
+        int exp = addNodeToMatch("Exp", input);
+        int addVal = addNodeToMatch("");
+        int add = addNodeToMatch("Add", exp, addVal);
+        addNodeToMatch("Log", add);
+        setFusedNode("Softplus", input);
+    }
+};
+
 class MulCastSubgraph : public Subgraph
 {
 public:
@@ -734,6 +763,8 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph1>());
     subgraphs.push_back(makePtr<BatchNormalizationSubgraph2>());
     subgraphs.push_back(makePtr<ExpandSubgraph>());
+    subgraphs.push_back(makePtr<SoftplusSubgraph>());
+    subgraphs.push_back(makePtr<SoftplusSubgraph2>());
     subgraphs.push_back(makePtr<MishSubgraph>());
     subgraphs.push_back(makePtr<NormalizeSubgraph4>());
     subgraphs.push_back(makePtr<NormalizeSubgraph5>());
@@ -767,11 +798,67 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
             Mat(sizes, CV_32FC1, val).copyTo(blob);
         }
     }
+    else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT16)
+    {
+        // FIXME, for now, we only load FP16 Tensor as FP32 Mat, full support for FP16 is required in the future.
+        CV_LOG_ONCE_WARNING(NULL, "DNN: load FP16 model as FP32 model, and it takes twice the FP16 RAM requirement.");
+
+        // ONNX saves float 16 data in two format: int32 and raw_data.
+        // Link: https://github.com/onnx/onnx/issues/4460#issuecomment-1224373746
+        if (!tensor_proto.int32_data().empty())
+        {
+            int offset = 0;
+#ifdef WORDS_BIGENDIAN
+            offset = 1;
+#endif
+            const ::google::protobuf::RepeatedField<int32_t> field = tensor_proto.int32_data();
+
+            AutoBuffer<float16_t, 16> aligned_val;
+            size_t sz = tensor_proto.int32_data().size();
+            aligned_val.allocate(sz);
+            float16_t* bufPtr = aligned_val.data();
+
+            float16_t *fp16Ptr = (float16_t *)field.data();
+            for (int i = 0; i < sz; i++)
+            {
+                bufPtr[i] = fp16Ptr[i*2 + offset];
+            }
+            Mat(sizes, CV_16FC1, bufPtr).convertTo(blob, CV_32FC1);
+        }
+        else
+        {
+            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
+#if CV_STRONG_ALIGNMENT
+            // Aligned pointer is required.
+            AutoBuffer<float16_t, 16> aligned_val;
+            if (!isAligned<sizeof(float16_t)>(val))
+            {
+                size_t sz = tensor_proto.raw_data().size();
+                aligned_val.allocate(divUp(sz, sizeof(float16_t)));
+                memcpy(aligned_val.data(), val, sz);
+                val = (char*)aligned_val.data();
+            }
+#endif
+            Mat(sizes, CV_16FC1, val).convertTo(blob, CV_32FC1);
+        }
+    }
     else if (datatype == opencv_onnx::TensorProto_DataType_DOUBLE)
     {
         const ::google::protobuf::RepeatedField<double> field = tensor_proto.double_data();
         CV_Assert(!field.empty());
-        Mat(sizes, CV_64FC1, (void*)field.data()).convertTo(blob, CV_32FC1);
+        char* val = (char *)field.data();
+#if CV_STRONG_ALIGNMENT
+        // Aligned pointer is required.
+        AutoBuffer<double, 16> aligned_val;
+        if (!isAligned<sizeof(double)>(val))
+        {
+            size_t sz = tensor_proto.raw_data().size();
+            aligned_val.allocate(divUp(sz, sizeof(double)));
+            memcpy(aligned_val.data(), val, sz);
+            val = (char*)aligned_val.data();
+        }
+#endif
+        Mat(sizes, CV_64FC1, val).convertTo(blob, CV_32FC1);
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_INT32)
     {

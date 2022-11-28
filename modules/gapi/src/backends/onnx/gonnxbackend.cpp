@@ -735,7 +735,8 @@ void ONNXCompiled::extractMat(ONNXCallContext &ctx, const size_t in_idx, Views& 
     }
 }
 
-void ONNXCompiled::setOutput(int i, cv::Mat &m) {
+void ONNXCompiled::setOutput(int i, cv::Mat &m)
+{
     // FIXME: No need in double-indexing?
     out_data[i] = m;
 }
@@ -1102,7 +1103,7 @@ struct InferList2: public cv::detail::KernelTag {
                 } else {
                     GAPI_Assert(false && "Only Rect and Mat types are supported for infer list 2!");
                 }
-                // }}} (Preapre input)
+                // }}} (Prepare input)
             } // }}} (For every input of the net)
 
             std::vector<cv::Mat> out_mats(uu.oc->numOutputs());
@@ -1133,9 +1134,34 @@ namespace {
             // FIXME: Introduce a DNNBackend interface which'd specify
             // the framework for this???
             GONNXModel gm(gr);
-            const auto &np = gm.metadata(nh).get<NetworkParams>();
-            const auto &pp = cv::util::any_cast<cv::gapi::onnx::detail::ParamDesc>(np.opaque);
+            auto &np = gm.metadata(nh).get<NetworkParams>();
+            auto &pp = cv::util::any_cast<cv::gapi::onnx::detail::ParamDesc>(np.opaque);
             const auto &ki = cv::util::any_cast<KImpl>(ii.opaque);
+
+            GModel::Graph model(gr);
+            auto& op = model.metadata(nh).get<Op>();
+            if (pp.is_generic) {
+                auto& info = cv::util::any_cast<cv::detail::InOutInfo>(op.params);
+
+                for (const auto& a : info.in_names)
+                {
+                    pp.input_names.push_back(a);
+                }
+                // Adding const input is necessary because the definition of input_names
+                // includes const input.
+                for (const auto& a : pp.const_inputs)
+                {
+                    pp.input_names.push_back(a.first);
+                }
+                pp.num_in = info.in_names.size();
+
+                for (const auto& a : info.out_names)
+                {
+                    pp.output_names.push_back(a);
+                }
+                pp.num_out = info.out_names.size();
+            }
+
             gm.metadata(nh).set(ONNXUnit{pp});
             gm.metadata(nh).set(ONNXCallable{ki.run});
             gm.metadata(nh).set(CustomMetaFunction{ki.customMetaFunc});

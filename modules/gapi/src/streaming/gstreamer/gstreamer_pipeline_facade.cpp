@@ -111,11 +111,11 @@ GstElement* GStreamerPipelineFacade::getElementByName(const std::string& element
 void GStreamerPipelineFacade::completePreroll() {
     // FIXME: If there are multiple sources in pipeline and one of them is live, then pipeline
     //        will return GST_STATE_CHANGE_NO_PREROLL while pipeline pausing.
-    //        But appsink may not be connected to this live source and only to anothers,
+    //        But appsink may not be connected to this live source and only to another,
     //        not-live ones. So, it is not required to start the playback for appsink to complete
     //        the preroll.
     //        Starting of playback for the not-live sources before the first frame pull will lead
-    //        to loosing of some amount of frames and pulling of the first frame can return frame
+    //        to losing of some amount of frames and pulling of the first frame can return frame
     //        which is far from the first.
     //
     //        Need to handle this case or forbid to mix multiples sources of different
