@@ -880,6 +880,7 @@ namespace
     static inline void PrintTo(const FrameSizeTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
+
 typedef std::tuple<PlatformTypeEnum, VolumeTypeEnum> PlatformVolumeType;
 struct VolumeTestFixture : public ::testing::TestWithParam<std::tuple<PlatformVolumeType, VolumeTestSrcTypeEnum, FrameSizeTypeEnum>>
 {
