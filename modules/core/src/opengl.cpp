@@ -1883,13 +1883,13 @@ UMat mapGLBuffer(const Buffer& buffer, AccessFlag accessFlags)
     cl_int status = 0;
     cl_mem clBuffer = clCreateFromGLBuffer(context, clAccessFlags, buffer.bufId(), &status);
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, ("OpenCL: clCreateFromGLBuffer failed: %d", status));
+        CV_Error_(cv::Error::OpenCLApiCallError, ("OpenCL: clCreateFromGLBuffer failed: %d", status));
 
     gl::Finish();
 
     status = clEnqueueAcquireGLObjects(clQueue, 1, &clBuffer, 0, NULL, NULL);
     if (status != CL_SUCCESS)
-        CV_Error(cv::Error::OpenCLApiCallError, ("OpenCL: clEnqueueAcquireGLObjects failed: %d", status));
+        CV_Error_(cv::Error::OpenCLApiCallError, ("OpenCL: clEnqueueAcquireGLObjects failed: %d", status));
 
     size_t step = buffer.cols() * buffer.elemSize();
     int rows = buffer.rows();
