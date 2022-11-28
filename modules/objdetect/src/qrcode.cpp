@@ -16,7 +16,6 @@
 
 #include <limits>
 #include <cmath>
-#include <iostream>
 #include <queue>
 #include <limits>
 #include <map>
@@ -990,6 +989,7 @@ public:
     bool straightDecodingProcess();
     bool curvedDecodingProcess();
 protected:
+    double getNumModules();
     bool updatePerspective();
     bool versionDefinition();
     bool samplingForVersion();
@@ -2251,6 +2251,91 @@ bool QRDecode::preparingCurvedQRCodes()
     return true;
 }
 
+/**
+ * @param finderPattern 4 points of finder pattern markers, calculated by findPatternsVerticesPoints()
+ * @return true if the pattern has the correct side lengths
+ */
+static inline bool checkFinderPatternByAspect(const vector<Point> &finderPattern) {
+    if (finderPattern.size() != 4ull)
+        return false;
+    float sidesLen[4];
+    for (size_t i = 0; i < finderPattern.size(); i++) {
+        sidesLen[i] = (sqrt(normL2Sqr<float>(Point2f(finderPattern[i] - finderPattern[(i+1ull)%finderPattern.size()]))));
+    }
+    const float maxSide = max(max(sidesLen[0], sidesLen[1]), max(sidesLen[2], sidesLen[3]));
+    const float minSide = min(min(sidesLen[0], sidesLen[1]), min(sidesLen[2], sidesLen[3]));
+
+    const float patternMaxRelativeLen = .3f;
+    if (1.f - minSide / maxSide > patternMaxRelativeLen)
+        return false;
+    return true;
+}
+
+/**
+ * @param finderPattern - 4 points of finder pattern markers, calculated by findPatternsVerticesPoints()
+ * @param cornerPointsQR - 4 corner points of QR code
+ * @return pair<int, int> first - the index in points of finderPattern closest to the corner of the QR code,
+ *                        second - the index in points of cornerPointsQR closest to the corner of finderPattern
+ *
+ * This function matches finder patterns to the corners of the QR code. Points of finder pattern calculated by
+ * findPatternsVerticesPoints() may be erroneous, so they are checked.
+ */
+static inline std::pair<int, int> matchPatternPoints(const vector<Point> &finderPattern,
+                                                     const vector<Point2f> cornerPointsQR) {
+    if (!checkFinderPatternByAspect(finderPattern))
+        return std::make_pair(-1, -1);
+
+    float distanceToOrig = normL2Sqr<float>(Point2f(finderPattern[0]) - cornerPointsQR[0]);
+    int closestFinderPatternV = 0;
+    int closetOriginalV = 0;
+
+    for (size_t i = 0ull; i < finderPattern.size(); i++) {
+        for (size_t j = 0ull; j < cornerPointsQR.size(); j++) {
+            const float tmp = normL2Sqr<float>(Point2f(finderPattern[i]) - cornerPointsQR[j]);
+            if (tmp < distanceToOrig) {
+                distanceToOrig = tmp;
+                closestFinderPatternV = i;
+                closetOriginalV = j;
+            }
+        }
+    }
+
+    // check that the distance from the QR pattern to the corners of the QR code is small
+    const float originalQrSide = sqrt(normL2Sqr<float>(cornerPointsQR[0] - cornerPointsQR[1]))*0.5f +
+                                 sqrt(normL2Sqr<float>(cornerPointsQR[0] - cornerPointsQR[3]))*0.5f;
+    const float maxRelativeDistance = .1f;
+
+    if (distanceToOrig/originalQrSide > maxRelativeDistance)
+        return std::make_pair(-1, -1);
+    return std::make_pair(closestFinderPatternV, closetOriginalV);
+}
+
+double QRDecode::getNumModules() {
+    vector<vector<Point>> finderPatterns;
+    double numModulesX = 0., numModulesY = 0.;
+    bool flag = findPatternsVerticesPoints(finderPatterns);
+    if (flag) {
+        vector<double> pattern_distance(4);
+        for (auto& pattern : finderPatterns) {
+            auto indexes = matchPatternPoints(pattern, original_points);
+            if (indexes == std::make_pair(-1, -1))
+                return 0.;
+            Point2f vf[4] = {pattern[indexes.first % 4], pattern[(1+indexes.first) % 4],
+                                  pattern[(2+indexes.first) % 4], pattern[(3+indexes.first) % 4]};
+            for (int i = 1; i < 4; i++) {
+                pattern_distance[indexes.second] += (norm(vf[i] - vf[i-1]));
+            }
+            pattern_distance[indexes.second] += norm(vf[3] - vf[0]);
+            pattern_distance[indexes.second] /= 4.;
+        }
+        const double moduleSizeX = (pattern_distance[0] + pattern_distance[1])/(2.*7.);
+        const double moduleSizeY = (pattern_distance[0] + pattern_distance[3])/(2.*7.);
+        numModulesX = norm(original_points[1] - original_points[0])/moduleSizeX;
+        numModulesY = norm(original_points[3] - original_points[0])/moduleSizeY;
+    }
+    return (numModulesX + numModulesY)/2.;
+}
+
 bool QRDecode::updatePerspective()
 {
     CV_TRACE_FUNCTION();
@@ -2284,7 +2369,7 @@ bool QRDecode::updatePerspective()
     return true;
 }
 
-inline Point computeOffset(const vector<Point>& v)
+static inline Point computeOffset(const vector<Point>& v)
 {
     // compute the width/height of convex hull
     Rect areaBox = boundingRect(v);
@@ -2298,9 +2383,80 @@ inline Point computeOffset(const vector<Point>& v)
     return offset;
 }
 
+// QR code with version 7 or higher has a special 18 bit version number code.
+// @return std::pair<double, int> first - distance to estimatedVersion, second - version
+/**
+ * @param numModules - estimated numModules
+ * @param estimatedVersion
+ * @return pair<double, int>, first - Hamming distance to 18 bit code, second - closest version
+ *
+ * QR code with version 7 or higher has a special 18 bit version number code:
+ * https://www.thonky.com/qr-code-tutorial/format-version-information
+ */
+static inline std::pair<double, int> getVersionByCode(double numModules, Mat qr, int estimatedVersion) {
+    const double moduleSize = qr.rows / numModules;
+    Point2d startVersionInfo1 = Point2d((numModules-8.-3.)*moduleSize, 0.);
+    Point2d endVersionInfo1 = Point2d((numModules-8.)*moduleSize, moduleSize*6.);
+    Point2d startVersionInfo2 = Point2d(0., (numModules-8.-3.)*moduleSize);
+    Point2d endVersionInfo2 = Point2d(moduleSize*6., (numModules-8.)*moduleSize);
+    Mat v1(qr, Rect2d(startVersionInfo1, endVersionInfo1));
+    Mat v2(qr, Rect2d(startVersionInfo2, endVersionInfo2));
+    const double thresh = 127.;
+    resize(v1, v1, Size(3, 6), 0., 0., INTER_AREA);
+    threshold(v1, v1, thresh, 255, THRESH_BINARY);
+    resize(v2, v2, Size(6, 3), 0., 0., INTER_AREA);
+    threshold(v2, v2, thresh, 255, THRESH_BINARY);
+
+    Mat version1, version2;
+    // convert version1 (top right version information block) and
+    // version2 (bottom left version information block) to version table format
+    // https://www.thonky.com/qr-code-tutorial/format-version-tables
+    rotate((255-v1)/255, version1, ROTATE_180), rotate(((255-v2)/255).t(), version2, ROTATE_180);
+
+    static uint8_t versionCodes[][18] = {{0,0,0,1,1,1,1,1,0,0,1,0,0,1,0,1,0,0},{0,0,1,0,0,0,0,1,0,1,1,0,1,1,1,1,0,0},
+                                         {0,0,1,0,0,1,1,0,1,0,1,0,0,1,1,0,0,1},{0,0,1,0,1,0,0,1,0,0,1,1,0,1,0,0,1,1},
+                                         {0,0,1,0,1,1,1,0,1,1,1,1,1,1,0,1,1,0},{0,0,1,1,0,0,0,1,1,1,0,1,1,0,0,0,1,0},
+                                         {0,0,1,1,0,1,1,0,0,0,0,1,0,0,0,1,1,1},{0,0,1,1,1,0,0,1,1,0,0,0,0,0,1,1,0,1},
+                                         {0,0,1,1,1,1,1,0,0,1,0,0,1,0,1,0,0,0},{0,1,0,0,0,0,1,0,1,1,0,1,1,1,1,0,0,0},
+                                         {0,1,0,0,0,1,0,1,0,0,0,1,0,1,1,1,0,1},{0,1,0,0,1,0,1,0,1,0,0,0,0,1,0,1,1,1},
+                                         {0,1,0,0,1,1,0,1,0,1,0,0,1,1,0,0,1,0},{0,1,0,1,0,0,1,0,0,1,1,0,1,0,0,1,1,0},
+                                         {0,1,0,1,0,1,0,1,1,0,1,0,0,0,0,0,1,1},{0,1,0,1,1,0,1,0,0,0,1,1,0,0,1,0,0,1},
+                                         {0,1,0,1,1,1,0,1,1,1,1,1,1,0,1,1,0,0},{0,1,1,0,0,0,1,1,1,0,1,1,0,0,0,1,0,0},
+                                         {0,1,1,0,0,1,0,0,0,1,1,1,1,0,0,0,0,1},{0,1,1,0,1,0,1,1,1,1,1,0,1,0,1,0,1,1},
+                                         {0,1,1,0,1,1,0,0,0,0,1,0,0,0,1,1,1,0},{0,1,1,1,0,0,1,1,0,0,0,0,0,1,1,0,1,0},
+                                         {0,1,1,1,0,1,0,0,1,1,0,0,1,1,1,1,1,1},{0,1,1,1,1,0,1,1,0,1,0,1,1,1,0,1,0,1},
+                                         {0,1,1,1,1,1,0,0,1,0,0,1,0,1,0,0,0,0},{1,0,0,0,0,0,1,0,0,1,1,1,0,1,0,1,0,1},
+                                         {1,0,0,0,0,1,0,1,1,0,1,1,1,1,0,0,0,0},{1,0,0,0,1,0,1,0,0,0,1,0,1,1,1,0,1,0},
+                                         {1,0,0,0,1,1,0,1,1,1,1,0,0,1,1,1,1,1},{1,0,0,1,0,0,1,0,1,1,0,0,0,0,1,0,1,1},
+                                         {1,0,0,1,0,1,0,1,0,0,0,0,1,0,1,1,1,0},{1,0,0,1,1,0,1,0,1,0,0,1,1,0,0,1,0,0},
+                                         {1,0,0,1,1,1,0,1,0,1,0,1,0,0,0,0,0,1},{1,0,1,0,0,0,1,1,0,0,0,1,1,0,1,0,0,1}
+    };
+    double minDist = 19.;
+    int bestVersion = -1;
+    const double penaltyFactor = 0.8;
+
+    for (int i = 0; i < (int)(sizeof(versionCodes)/sizeof(versionCodes[0])); i++) {
+        Mat currVers(Size(3, 6), CV_8UC1, versionCodes[i]);
+        // minimum hamming distance between version = 8
+        double tmp = norm(currVers, version1, NORM_HAMMING) + penaltyFactor*abs(estimatedVersion-i-7);
+        if (tmp < minDist) {
+            bestVersion = i+7;
+            minDist = tmp;
+        }
+        tmp = norm(currVers, version2, NORM_HAMMING) + penaltyFactor*abs(estimatedVersion-i-7);
+        if (tmp < minDist) {
+            bestVersion = i+7;
+            minDist = tmp;
+        }
+    }
+    return std::make_pair(minDist, bestVersion);
+}
+
 bool QRDecode::versionDefinition()
 {
     CV_TRACE_FUNCTION();
+    CV_LOG_INFO(NULL, "QR corners: " << original_points[0] << " " << original_points[1] << " " << original_points[2] <<
+                      " " << original_points[3]);
     LineIterator line_iter(intermediate, Point2f(0, 0), Point2f(test_perspective_size, test_perspective_size));
     Point black_point = Point(0, 0);
     for(int j = 0; j < line_iter.count; j++, ++line_iter)
@@ -2358,11 +2514,54 @@ bool QRDecode::versionDefinition()
             transition_y++;
         }
     }
-    version = saturate_cast<uint8_t>((std::min(transition_x, transition_y) - 1) * 0.25 - 1);
-    if ( !(  0 < version && version <= 40 ) ) { return false; }
+
+    const int versionByTransition = saturate_cast<uint8_t>((std::min(transition_x, transition_y) - 1) * 0.25 - 1);
+    const int numModulesByTransition = 21 + (versionByTransition - 1) * 4;
+
+    const double numModulesByFinderPattern = getNumModules();
+    const double versionByFinderPattern = (numModulesByFinderPattern - 21.) * .25 + 1.;
+    bool useFinderPattern = false;
+    const double thresholdFinderPattern = 0.2;
+    const double roundingError = abs(numModulesByFinderPattern - cvRound(numModulesByFinderPattern));
+    if (cvRound(versionByFinderPattern) >= 1 && versionByFinderPattern <= 6 && transition_x != transition_y) {
+        if (roundingError < thresholdFinderPattern)
+            useFinderPattern = true;
+    }
+
+    bool useCode = false;
+    int versionByCode = 7;
+    if (cvRound(versionByFinderPattern) >= 7 || versionByTransition >= 7) {
+        vector<std::pair<double, int>> versionAndDistances;
+        if (cvRound(versionByFinderPattern) >= 7) {
+            versionAndDistances.push_back(getVersionByCode(numModulesByFinderPattern, no_border_intermediate,
+                                                           cvRound(versionByFinderPattern)));
+        }
+        if (versionByTransition >= 7) {
+            versionAndDistances.push_back(getVersionByCode(numModulesByTransition, no_border_intermediate,
+                                                           versionByTransition));
+        }
+        const auto& bestVersion = min(versionAndDistances.front(), versionAndDistances.back());
+        double distanceByCode = bestVersion.first;
+        versionByCode = bestVersion.second;
+        if (distanceByCode < 5.) {
+            useCode = true;
+        }
+    }
+
+    if (useCode) {
+        CV_LOG_INFO(NULL, "Version type: useCode");
+        version = versionByCode;
+    }
+    else if (useFinderPattern ) {
+        CV_LOG_INFO(NULL, "Version type: useFinderPattern");
+        version = cvRound(versionByFinderPattern);
+    }
+    else {
+        CV_LOG_INFO(NULL, "Version type: useTransition");
+        version = versionByTransition;
+    }
     version_size = 21 + (version - 1) * 4;
-    CV_LOG_INFO(NULL, "QR corners: " << original_points[0] << " " << original_points[1] << " " << original_points[2] <<
-                      " " << original_points[3]);
+    if ( !(0 < version && version <= 40) ) { return false; }
     CV_LOG_INFO(NULL, "QR version: " << (int)version);
     return true;
 }
