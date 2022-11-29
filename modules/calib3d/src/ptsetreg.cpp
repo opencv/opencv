@@ -1182,4 +1182,57 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
     return H;
 }
 
+
+Mat estimateSE2(InputArray _from, InputArray _to, OutputArray _inliers,
+                     const int method, const double ransacReprojThreshold,
+                     const size_t maxIters, const double confidence,
+                     const size_t refineIters)
+{
+
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
+        return cv::usac::estimateSE2(_from, _to, _inliers, method,
+            ransacReprojThreshold, (int)maxIters, confidence, (int)refineIters);
+    else
+        CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
+}
+
+Mat estimateSIM2(InputArray _from, InputArray _to, OutputArray _inliers,
+                     const int method, const double ransacReprojThreshold,
+                     const size_t maxIters, const double confidence,
+                     const size_t refineIters)
+{
+
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
+        return cv::usac::estimateSIM2(_from, _to, _inliers, method,
+            ransacReprojThreshold, (int)maxIters, confidence, (int)refineIters);
+    else
+        CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
+}
+
+Mat estimateSE3(InputArray _from, InputArray _to, OutputArray _inliers,
+                     const int method, const double ransacReprojThreshold,
+                     const size_t maxIters, const double confidence,
+                     const size_t refineIters)
+{
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
+        return cv::usac::estimateSE3(_from, _to, _inliers, method,
+            ransacReprojThreshold, (int)maxIters, confidence, (int)refineIters);
+    else
+        CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
+}
+
+Mat estimateSIM3(InputArray _from, InputArray _to, OutputArray _inliers,
+                     const int method, const double ransacReprojThreshold,
+                     const size_t maxIters, const double confidence,
+                     const size_t refineIters)
+{
+
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
+        return cv::usac::estimateSIM3(_from, _to, _inliers, method,
+            ransacReprojThreshold, (int)maxIters, confidence, (int)refineIters);
+    else
+        CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
+}
+
+
 } // namespace cv

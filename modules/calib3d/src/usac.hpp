@@ -6,7 +6,7 @@
 #define OPENCV_USAC_USAC_HPP
 
 namespace cv { namespace usac {
-enum EstimationMethod { Homography, Fundamental, Fundamental8, Essential, Affine, P3P, P6P};
+enum EstimationMethod { Homography, Fundamental, Fundamental8, Essential, Affine, SE2, SE3, SIM2, SIM3, P3P, P6P};
 enum VerificationMethod { NullVerifier, SprtVerifier };
 enum PolishingMethod { NonePolisher, LSQPolisher };
 enum ErrorMetric {DIST_TO_LINE, SAMPSON_ERR, SGD_ERR, SYMM_REPR_ERR, FORW_REPR_ERR, RERPOJ};
@@ -56,6 +56,12 @@ public:
 class ReprojectionErrorAffine : public Error {
 public:
     static Ptr<ReprojectionErrorAffine> create(const Mat &points);
+};
+
+// Reprojection Error for Affine 3D matrix
+class ReprojectionErrorAffine3D : public Error {
+public:
+    static Ptr<ReprojectionErrorAffine3D> create(const Mat &points);
 };
 
 // Normalizing transformation of data points
@@ -125,6 +131,29 @@ public:
     static Ptr<AffineMinimalSolver> create(const Mat &points_);
 };
 
+//-------------------------- SE/SIM -----------------------
+class SE2MinimalSolver : public MinimalSolver {
+public:
+    static Ptr<SE2MinimalSolver> create(const Mat &points_);
+};
+// class PartialNdMinimalSolver : public MinimalSolver {
+// public:
+//     static Ptr<PartialNdMinimalSolver> create(const Mat &points_, const int Nd=2, const bool is_similarity=false);
+// };
+class SIM2MinimalSolver : public MinimalSolver {
+public:
+    static Ptr<SIM2MinimalSolver> create(const Mat &points_);
+};
+class SE3MinimalSolver : public MinimalSolver {
+public:
+    static Ptr<SE3MinimalSolver> create(const Mat &points_);
+};
+class SIM3MinimalSolver : public MinimalSolver {
+public:
+    static Ptr<SIM3MinimalSolver> create(const Mat &points_);
+};
+
+
 //////////////////////////////////////// NON MINIMAL SOLVER ///////////////////////////////////////
 class NonMinimalSolver : public Algorithm {
 public:
@@ -172,6 +201,30 @@ class AffineNonMinimalSolver : public NonMinimalSolver {
 public:
     static Ptr<AffineNonMinimalSolver> create(const Mat &points_);
 };
+
+
+//-------------------------- SE/SIM -----------------------
+class SE2NonMinimalSolver : public NonMinimalSolver {
+public:
+    static Ptr<SE2NonMinimalSolver> create(const Mat &points_);
+};
+// class PartialNdNonMinimalSolver : public NonMinimalSolver {
+// public:
+//     static Ptr<PartialNdNonMinimalSolver> create(const Mat &points_, const int Nd=2, const bool is_similarity=false);
+// };
+class SIM2NonMinimalSolver : public NonMinimalSolver {
+public:
+    static Ptr<SIM2NonMinimalSolver> create(const Mat &points_);
+};
+class SE3NonMinimalSolver : public NonMinimalSolver {
+public:
+    static Ptr<SE3NonMinimalSolver> create(const Mat &points_);
+};
+class SIM3NonMinimalSolver : public NonMinimalSolver {
+public:
+    static Ptr<SIM3NonMinimalSolver> create(const Mat &points_);
+};
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////// SCORE ///////////////////////////////////////////
@@ -804,6 +857,22 @@ Mat findEssentialMat( InputArray points1, InputArray points2,
                       double threshold, OutputArray mask);
 
 Mat estimateAffine2D(InputArray from, InputArray to, OutputArray inliers,
+     int method, double ransacReprojThreshold, int maxIters,
+     double confidence, int refineIters);
+
+Mat estimateSE2(InputArray from, InputArray to, OutputArray inliers,
+     int method, double ransacReprojThreshold, int maxIters,
+     double confidence, int refineIters);
+
+Mat estimateSIM2(InputArray from, InputArray to, OutputArray inliers,
+     int method, double ransacReprojThreshold, int maxIters,
+     double confidence, int refineIters);
+
+Mat estimateSE3(InputArray from, InputArray to, OutputArray inliers,
+     int method, double ransacReprojThreshold, int maxIters,
+     double confidence, int refineIters);
+
+Mat estimateSIM3(InputArray from, InputArray to, OutputArray inliers,
      int method, double ransacReprojThreshold, int maxIters,
      double confidence, int refineIters);
 

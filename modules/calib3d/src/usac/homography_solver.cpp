@@ -335,4 +335,356 @@ public:
 Ptr<AffineNonMinimalSolver> AffineNonMinimalSolver::create(const Mat &points_) {
     return makePtr<AffineNonMinimalSolverImpl>(points_);
 }
+
+Mat solve_weighted_umeyama(const Mat &points_, const bool is_scale, const std::vector<double> &weights_=std::vector<double>());
+
+class SE2MinimalSolverImpl : public SE2MinimalSolver {
+private:
+    const Mat * points_mat;
+    const float * const points;
+public:
+    explicit SE2MinimalSolverImpl (const Mat &points_) :
+            points_mat(&points_), points((float *) points_.data) {}
+    int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
+        Mat p_mat;
+        std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]),};
+        cv::vconcat(arr, p_mat);
+        models[0] = solve_weighted_umeyama(p_mat, false);
+        return 1;
+    }
+    int getSampleSize() const override { return 2; }
+    int getMaxNumberOfSolutions () const override { return 1; }
+    Ptr<MinimalSolver> clone () const override {
+        return makePtr<SE2MinimalSolverImpl>(*points_mat);
+    }
+};
+Ptr<SE2MinimalSolver> SE2MinimalSolver::create(const Mat &points_) {
+    return makePtr<SE2MinimalSolverImpl>(points_);
+}
+
+class SIM2MinimalSolverImpl : public SIM2MinimalSolver {
+private:
+    const Mat * points_mat;
+    const float * const points;
+public:
+    explicit SIM2MinimalSolverImpl (const Mat &points_) :
+            points_mat(&points_), points((float *) points_.data) {}
+    int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
+        Mat p_mat;
+        std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]),};
+        cv::vconcat(arr, p_mat);
+        models[0] = solve_weighted_umeyama(p_mat, true);
+        return 1;
+    }
+    int getSampleSize() const override { return 2; }
+    int getMaxNumberOfSolutions () const override { return 1; }
+    Ptr<MinimalSolver> clone () const override {
+        return makePtr<SIM2MinimalSolverImpl>(*points_mat);
+    }
+};
+Ptr<SIM2MinimalSolver> SIM2MinimalSolver::create(const Mat &points_) {
+    return makePtr<SIM2MinimalSolverImpl>(points_);
+}
+
+class SE3MinimalSolverImpl : public SE3MinimalSolver {
+private:
+    const Mat * points_mat;
+    const float * const points;
+public:
+    explicit SE3MinimalSolverImpl (const Mat &points_) :
+            points_mat(&points_), points((float *) points_.data) {}
+    int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
+        Mat p_mat;
+        std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]), points_mat->row(sample[2]),};
+        cv::vconcat(arr, p_mat);
+        models[0] = solve_weighted_umeyama(p_mat, false);
+        return 1;
+    }
+    int getSampleSize() const override { return 3; }
+    int getMaxNumberOfSolutions () const override { return 1; }
+    Ptr<MinimalSolver> clone () const override {
+        return makePtr<SE3MinimalSolverImpl>(*points_mat);
+    }
+};
+Ptr<SE3MinimalSolver> SE3MinimalSolver::create(const Mat &points_) {
+    return makePtr<SE3MinimalSolverImpl>(points_);
+}
+
+class SIM3MinimalSolverImpl : public SIM3MinimalSolver {
+private:
+    const Mat * points_mat;
+    const float * const points;
+public:
+    explicit SIM3MinimalSolverImpl (const Mat &points_) :
+            points_mat(&points_), points((float *) points_.data) {}
+    int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
+        Mat p_mat;
+        std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]), points_mat->row(sample[2]),};
+        cv::vconcat(arr, p_mat);
+        models[0] = solve_weighted_umeyama(p_mat, true);
+        return 1;
+    }
+    int getSampleSize() const override { return 3; }
+    int getMaxNumberOfSolutions () const override { return 1; }
+    Ptr<MinimalSolver> clone () const override {
+        return makePtr<SIM3MinimalSolverImpl>(*points_mat);
+    }
+};
+Ptr<SIM3MinimalSolver> SIM3MinimalSolver::create(const Mat &points_) {
+    return makePtr<SIM3MinimalSolverImpl>(points_);
+}
+
+class SE2NonMinimalSolverImpl : public SE2NonMinimalSolver {
+private:
+    const Mat * points_mat;
+    const float * const points;
+    // const NormTransform<double> norm_transform;
+public:
+    explicit SE2NonMinimalSolverImpl (const Mat &points_) :
+            points_mat(&points_), points((float*) points_.data)
+    /*, norm_transform(points_)*/ {}
+
+    int estimate (const std::vector<int> &sample, int sample_size, std::vector<Mat> &models,
+                  const std::vector<double> &weights) const override {
+        if (sample_size < getMinimumRequiredSampleSize())
+            return 0;
+
+        Mat p_mat;
+        std::vector<cv::Mat> arr(sample_size);
+        for (int p = 0; p < sample_size; p++) {
+            arr[p] = points_mat->row(sample[p]);
+        }
+        cv::vconcat(arr, p_mat);
+        models[0] = solve_weighted_umeyama(p_mat, false, weights);
+        return 1;
+    }
+
+    int getMinimumRequiredSampleSize() const override { return 2; }
+    int getMaxNumberOfSolutions () const override { return 1; }
+    Ptr<NonMinimalSolver> clone () const override {
+        return makePtr<SE2NonMinimalSolverImpl>(*points_mat);
+    }
+};
+Ptr<SE2NonMinimalSolver> SE2NonMinimalSolver::create(const Mat &points_) {
+    return makePtr<SE2NonMinimalSolverImpl>(points_);
+}
+
+class SIM2NonMinimalSolverImpl : public SIM2NonMinimalSolver {
+private:
+    const Mat * points_mat;
+    const float * const points;
+    // const NormTransform<double> norm_transform;
+public:
+    explicit SIM2NonMinimalSolverImpl (const Mat &points_) :
+            points_mat(&points_), points((float*) points_.data)
+    /*, norm_transform(points_)*/ {}
+
+    int estimate (const std::vector<int> &sample, int sample_size, std::vector<Mat> &models,
+                  const std::vector<double> &weights) const override {
+        if (sample_size < getMinimumRequiredSampleSize())
+            return 0;
+
+        Mat p_mat;
+        std::vector<cv::Mat> arr(sample_size);
+        for (int p = 0; p < sample_size; p++) {
+            arr[p] = points_mat->row(sample[p]);
+        }
+        cv::vconcat(arr, p_mat);
+        models[0] = solve_weighted_umeyama(p_mat, true, weights);
+        return 1;
+    }
+
+    int getMinimumRequiredSampleSize() const override { return 2; }
+    int getMaxNumberOfSolutions () const override { return 1; }
+    Ptr<NonMinimalSolver> clone () const override {
+        return makePtr<SIM2NonMinimalSolverImpl>(*points_mat);
+    }
+};
+Ptr<SIM2NonMinimalSolver> SIM2NonMinimalSolver::create(const Mat &points_) {
+    return makePtr<SIM2NonMinimalSolverImpl>(points_);
+}
+
+class SE3NonMinimalSolverImpl : public SE3NonMinimalSolver {
+private:
+    const Mat * points_mat;
+    const float * const points;
+    // const NormTransform<double> norm_transform;
+public:
+    explicit SE3NonMinimalSolverImpl (const Mat &points_) :
+            points_mat(&points_), points((float*) points_.data)
+    /*, norm_transform(points_)*/ {}
+
+    int estimate (const std::vector<int> &sample, int sample_size, std::vector<Mat> &models,
+                  const std::vector<double> &weights) const override {
+        if (sample_size < getMinimumRequiredSampleSize())
+            return 0;
+
+        Mat p_mat;
+        std::vector<cv::Mat> arr(sample_size);
+        for (int p = 0; p < sample_size; p++) {
+            arr[p] = points_mat->row(sample[p]);
+        }
+        cv::vconcat(arr, p_mat);
+        models[0] = solve_weighted_umeyama(p_mat, false, weights);
+        return 1;
+    }
+
+    int getMinimumRequiredSampleSize() const override { return 3; }
+    int getMaxNumberOfSolutions () const override { return 1; }
+    Ptr<NonMinimalSolver> clone () const override {
+        return makePtr<SE3NonMinimalSolverImpl>(*points_mat);
+    }
+};
+Ptr<SE3NonMinimalSolver> SE3NonMinimalSolver::create(const Mat &points_) {
+    return makePtr<SE3NonMinimalSolverImpl>(points_);
+}
+
+class SIM3NonMinimalSolverImpl : public SIM3NonMinimalSolver {
+private:
+    const Mat * points_mat;
+    const float * const points;
+    // const NormTransform<double> norm_transform;
+public:
+    explicit SIM3NonMinimalSolverImpl (const Mat &points_) :
+            points_mat(&points_), points((float*) points_.data)
+    /*, norm_transform(points_)*/ {}
+
+    int estimate (const std::vector<int> &sample, int sample_size, std::vector<Mat> &models,
+                  const std::vector<double> &weights) const override {
+        if (sample_size < getMinimumRequiredSampleSize())
+            return 0;
+
+        Mat p_mat;
+        std::vector<cv::Mat> arr(sample_size);
+        for (int p = 0; p < sample_size; p++) {
+            arr[p] = points_mat->row(sample[p]);
+        }
+        cv::vconcat(arr, p_mat);
+        models[0] = solve_weighted_umeyama(p_mat, true, weights);
+        return 1;
+    }
+
+    int getMinimumRequiredSampleSize() const override { return 3; }
+    int getMaxNumberOfSolutions () const override { return 1; }
+    Ptr<NonMinimalSolver> clone () const override {
+        return makePtr<SIM3NonMinimalSolverImpl>(*points_mat);
+    }
+};
+Ptr<SIM3NonMinimalSolver> SIM3NonMinimalSolver::create(const Mat &points_) {
+    return makePtr<SIM3NonMinimalSolverImpl>(points_);
+}
+
+// class PartialNdMinimalSolverImpl : public PartialNdMinimalSolver {
+// private:
+//     const Mat * points_mat;
+//     const float * const points;
+//     const int Nd;
+//     const bool is_similarity;
+// public:
+//     explicit PartialNdMinimalSolverImpl (const Mat &points_, const int Nd_, const bool is_similarity_) :
+//             points_mat(&points_), points((float *) points_.data), Nd(Nd_), is_similarity(is_similarity_) {}
+//     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
+//         Mat p_mat;
+//         std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]),};
+//         cv::vconcat(arr, p_mat);
+//         models[0] = solve_weighted_umeyama(p_mat, is_similarity);
+//         return 1;
+//     }
+//     int getSampleSize() const override { return Nd; }
+//     int getMaxNumberOfSolutions () const override { return 1; }
+//     Ptr<MinimalSolver> clone () const override {
+//         return makePtr<PartialNdMinimalSolverImpl>(*points_mat);
+//     }
+// };
+// Ptr<PartialNdMinimalSolver> PartialNdMinimalSolver::create(const Mat &points_, const int Nd_, const bool is_similarity_) {
+//     return makePtr<PartialNdMinimalSolverImpl>(points_, Nd_, is_similarity_);
+// }
+//
+// class PartialNdNonMinimalSolverImpl : public PartialNdNonMinimalSolver {
+// private:
+//     const Mat * points_mat;
+//     const float * const points;
+//     const int Nd;
+//     const bool is_similarity;
+//     // const NormTransform<double> norm_transform;
+// public:
+//     explicit PartialNdNonMinimalSolverImpl (const Mat &points_, const int Nd_, const bool is_similarity_) :
+//             points_mat(&points_), points((float*) points_.data), Nd(Nd_), is_similarity(is_similarity_)
+//     /*, norm_transform(points_)*/ {}
+//
+//     int estimate (const std::vector<int> &sample, int sample_size, std::vector<Mat> &models,
+//                   const std::vector<double> &weights) const override {
+//         if (sample_size < getMinimumRequiredSampleSize())
+//             return 0;
+//
+//         Mat p_mat;
+//         std::vector<cv::Mat> arr(sample_size);
+//         for (int p = 0; p < sample_size; p++) {
+//             arr[p] = points_mat->row(sample[p]);
+//         }
+//         cv::vconcat(arr, p_mat);
+//         models[0] = solve_weighted_umeyama(p_mat, is_similarity, weights);
+//         return 1;
+//     }
+//
+//     int getMinimumRequiredSampleSize() const override { return Nd; }
+//     int getMaxNumberOfSolutions () const override { return 1; }
+//     Ptr<NonMinimalSolver> clone () const override {
+//         return makePtr<PartialNdNonMinimalSolverImpl>(*points_mat);
+//     }
+// };
+// Ptr<PartialNdNonMinimalSolver> PartialNdNonMinimalSolver::create(const Mat &points_, const int Nd_, const bool is_similarity_) {
+//     return makePtr<PartialNdNonMinimalSolverImpl>(points_, Nd_, is_similarity_);
+// }
+
+Mat solve_weighted_umeyama(const Mat &points_, const bool is_scale, const std::vector<double> &weights_)
+{
+    // DOI: 10.1109/34.88573
+    // https://web.stanford.edu/class/cs273/refs/umeyama.pdf
+    const int dim = points_.cols/2, N = points_.rows;
+    Mat center(1,dim*2,CV_64F), weighted_points;
+    points_.convertTo(weighted_points, CV_64F);
+    Mat offset = weighted_points.clone();
+    double total_weight = 0;
+
+    std::vector<double> weights(weights_);
+    if (weights_.empty())
+        weights = std::vector<double>(N,1.);
+
+    for (int n=0; n < N; n++) {
+        weighted_points(Rect(0,n,dim*2,1)) *= weights[n];
+        total_weight += weights[n];
+    }
+    for (int d = 0; d < dim*2; d++) {
+        Rect roi = Rect(d,0,1,N);
+        center.at<double>(0,d) = sum(weighted_points(roi))[0] / total_weight;
+        offset(roi) -= center.at<double>(0,d);
+    }
+    Mat weighted_offset = offset.clone();
+    for (int n=0; n < N; n++)
+        weighted_offset(Rect(0,n,dim*2,1)) *= sqrt(weights[n]/total_weight);
+
+    Mat X1 = weighted_offset(Rect(0,0,dim,N)), X2 = weighted_offset(Rect(dim,0,dim,N)), ABt = X2.t()*X1, A2 = X1.mul(X1), w, u, vt, s;
+    SVDecomp(ABt, w, u, vt, SVD::FULL_UV);
+    s = Mat::eye(dim, dim, CV_64F);
+    s.at<double>(dim-1,dim-1) = determinant(u)*determinant(vt);
+
+    Mat rot, tmp;
+    gemm(u,s,1,Mat(),0, tmp);
+    gemm(tmp,vt,1,Mat(),0, rot);
+
+    // Scale
+    w.at<double>(dim-1,0) *= s.at<double>(dim-1,dim-1);
+    double scale = sum(w)[0] / sum(A2)[0];
+
+    Mat h_eye = Mat::eye(dim+1,dim+1,CV_64F), h_tsl = h_eye.clone(), h_scl = h_eye.clone(), h_rot = h_eye.clone(), h_inv = h_eye.clone();
+    h_tsl(Rect(dim,0,1,dim)) += center(Rect(dim,0,dim,1)).t();
+    h_inv(Rect(dim,0,1,dim)) -= center(Rect(0,0,dim,1)).t();
+    rot.copyTo(h_rot(Rect(0,0,dim,dim)));
+    if (is_scale)
+        h_scl(Rect(0,0,dim,dim)) *= scale;
+
+    return (h_tsl*h_scl*h_rot*h_inv)(Rect(0,0,dim+1,dim));
+}
+
 }}

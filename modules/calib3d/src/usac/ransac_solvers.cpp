@@ -7,7 +7,7 @@
 #include <atomic>
 
 namespace cv { namespace usac {
-int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, bool ispnp);
+int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, EstimationMethod estimator);
 void setParameters (int flag, Ptr<Model> &params, EstimationMethod estimator, double thr,
                     int max_iters, double conf, bool mask_needed);
 
@@ -383,7 +383,8 @@ public:
  * output is matrix of size N x (a + b)
  * return points_size = N
  */
-int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, bool ispnp) {
+int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, EstimationMethod estimator) {
+
     Mat pts1 = pts1_.getMat(), pts2 = pts2_.getMat();
     auto convertPoints = [] (Mat &points, int pt_dim) {
         points.convertTo(points, CV_32F); // convert points to have float precision
@@ -396,10 +397,32 @@ int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, bool ispnp) {
             points = points.colRange(0, pt_dim);
     };
 
-    convertPoints(pts1, 2); // pts1 are always image points
-    convertPoints(pts2, ispnp ? 3 : 2); // for PnP points are 3D
+    switch (estimator) {
+        case EstimationMethod::Homography:
+        case EstimationMethod::Fundamental:
+        case EstimationMethod::Fundamental8:
+        case EstimationMethod::Essential:
+        case EstimationMethod::Affine:
+        case EstimationMethod::SE2:
+        case EstimationMethod::SIM2:
+            convertPoints(pts1, 2); // pts1 are always image points
+            convertPoints(pts2, 2);
+            break;
+        case EstimationMethod::SE3:
+        case EstimationMethod::SIM3:
+            convertPoints(pts1, 3);
+            convertPoints(pts2, 3);
+            break;
+        case EstimationMethod::P3P:
+        case EstimationMethod::P6P:
+            convertPoints(pts1, 2); // pts1 are always image points
+            convertPoints(pts2, 3); // for PnP points are 3D
+            break;
+        default: CV_Error(cv::Error::StsNotImplemented, "Estimator has not implemented yet!");
+    }
 
     // points are of size [Nx2 Nx2] = Nx4 for H, F, E
+    // points are of size [Nx3 Nx3] = Nx6 for SE3, SIM3
     // points are of size [Nx2 Nx3] = Nx5 for PnP
     hconcat(pts1, pts2, pts);
     return pts.rows;
@@ -579,6 +602,74 @@ Mat estimateAffine2D(InputArray from, InputArray to, OutputArray mask, int metho
     return Mat();
 }
 
+Mat estimateSE2(InputArray from, InputArray to, OutputArray mask, int method,
+        double thr, int max_iters, double conf, int /*refineIters*/) {
+    Ptr<Model> params;
+    setParameters(method, params, EstimationMethod ::SE2, thr, max_iters, conf, mask.needed());
+    Ptr<RansacOutput> ransac_output;
+    if (run(params, from, to, params->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        saveMask(mask, ransac_output->getInliersMask());
+        return ransac_output->getModel().rowRange(0,2);
+    }
+    if (mask.needed()){
+        mask.create(std::max(from.getMat().rows, from.getMat().cols), 1, CV_8U);
+        mask.setTo(Scalar::all(0));
+    }
+    return Mat();
+}
+
+Mat estimateSIM2(InputArray from, InputArray to, OutputArray mask, int method,
+        double thr, int max_iters, double conf, int /*refineIters*/) {
+    Ptr<Model> params;
+    setParameters(method, params, EstimationMethod ::SIM2, thr, max_iters, conf, mask.needed());
+    Ptr<RansacOutput> ransac_output;
+    if (run(params, from, to, params->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        saveMask(mask, ransac_output->getInliersMask());
+        return ransac_output->getModel().rowRange(0,2);
+    }
+    if (mask.needed()){
+        mask.create(std::max(from.getMat().rows, from.getMat().cols), 1, CV_8U);
+        mask.setTo(Scalar::all(0));
+    }
+    return Mat();
+}
+
+Mat estimateSE3(InputArray from, InputArray to, OutputArray mask, int method,
+        double thr, int max_iters, double conf, int /*refineIters*/) {
+    Ptr<Model> params;
+    setParameters(method, params, EstimationMethod ::SE3, thr, max_iters, conf, mask.needed());
+    Ptr<RansacOutput> ransac_output;
+    if (run(params, from, to, params->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        saveMask(mask, ransac_output->getInliersMask());
+        return ransac_output->getModel().rowRange(0,3);
+    }
+    if (mask.needed()){
+        mask.create(std::max(from.getMat().rows, from.getMat().cols), 1, CV_8U);
+        mask.setTo(Scalar::all(0));
+    }
+    return Mat();
+}
+
+Mat estimateSIM3(InputArray from, InputArray to, OutputArray mask, int method,
+        double thr, int max_iters, double conf, int /*refineIters*/) {
+    Ptr<Model> params;
+    setParameters(method, params, EstimationMethod ::SIM3, thr, max_iters, conf, mask.needed());
+    Ptr<RansacOutput> ransac_output;
+    if (run(params, from, to, params->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        saveMask(mask, ransac_output->getInliersMask());
+        return ransac_output->getModel().rowRange(0,3);
+    }
+    if (mask.needed()){
+        mask.create(std::max(from.getMat().rows, from.getMat().cols), 1, CV_8U);
+        mask.setTo(Scalar::all(0));
+    }
+    return Mat();
+}
+
 class ModelImpl : public Model {
 private:
     // main parameters:
@@ -647,6 +738,18 @@ public:
             // time needed to verify if a point is consistent with this model
             case (EstimationMethod::Affine):
                 avg_num_models = 1; time_for_model_est = 50;
+                sample_size = 3; est_error = ErrorMetric ::FORW_REPR_ERR; break;
+            case (EstimationMethod::SE2):
+                avg_num_models = 1; time_for_model_est = 100;
+                sample_size = 2; est_error = ErrorMetric ::FORW_REPR_ERR; break;
+            case (EstimationMethod::SIM2):
+                avg_num_models = 1; time_for_model_est = 100;
+                sample_size = 2; est_error = ErrorMetric ::FORW_REPR_ERR; break;
+            case (EstimationMethod::SE3):
+                avg_num_models = 1; time_for_model_est = 100;
+                sample_size = 3; est_error = ErrorMetric ::FORW_REPR_ERR; break;
+            case (EstimationMethod::SIM3):
+                avg_num_models = 1; time_for_model_est = 100;
                 sample_size = 3; est_error = ErrorMetric ::FORW_REPR_ERR; break;
             case (EstimationMethod::Homography):
                 avg_num_models = 1; time_for_model_est = 150;
@@ -787,14 +890,14 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
                 if (points1.isContinuous())
                      undistortPoints(points1, undist_points1, K1_, dist_coeff1);
                 else undistortPoints(points1.getMat().clone(), undist_points1, K1_, dist_coeff1);
-                points_size = mergePoints(undist_points1, points2, points, true);
+                points_size = mergePoints(undist_points1, points2, points, params->getEstimator());
                 Utils::normalizeAndDecalibPointsPnP (K1, points, calib_points);
             } else {
-                points_size = mergePoints(points1, points2, points, true);
+                points_size = mergePoints(points1, points2, points, params->getEstimator());
                 Utils::calibrateAndNormalizePointsPnP(K1, points, calib_points);
             }
         } else
-            points_size = mergePoints(points1, points2, points, true);
+            points_size = mergePoints(points1, points2, points, params->getEstimator());
     } else {
         if (params->isEssential()) {
             CV_CheckEQ((int)(!K1_.empty() && !K2_.empty()), 1, "Intrinsic matrix must not be empty!");
@@ -808,15 +911,15 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
                 if (points2.isContinuous())
                      undistortPoints(points2, undist_points2, K2_, dist_coeff2);
                 else undistortPoints(points2.getMat().clone(), undist_points2, K2_, dist_coeff2);
-                points_size = mergePoints(undist_points1, undist_points2, calib_points, false);
+                points_size = mergePoints(undist_points1, undist_points2, calib_points, params->getEstimator());
             } else {
-                points_size = mergePoints(points1, points2, points, false);
+                points_size = mergePoints(points1, points2, points, params->getEstimator());
                 Utils::calibratePoints(K1, K2, points, calib_points);
             }
             threshold = Utils::getCalibratedThreshold(threshold, K1, K2);
             max_thr = Utils::getCalibratedThreshold(max_thr, K1, K2);
         } else
-            points_size = mergePoints(points1, points2, points, false);
+            points_size = mergePoints(points1, points2, points, params->getEstimator());
     }
 
     // Since error function output squared error distance, so make
@@ -835,7 +938,6 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
                     params->getGraphRadius(), 5, 1);
         } else CV_Error(cv::Error::StsNotImplemented, "Graph type is not implemented!");
     }
-
     std::vector<Ptr<NeighborhoodGraph>> layers;
     if (params->getSampler() == SamplingMethod::SAMPLING_PROGRESSIVE_NAPSAC) {
         CV_CheckEQ((int)params->isPnP(), 0, "ProgressiveNAPSAC for PnP is not implemented!");
@@ -876,9 +978,19 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
         case ErrorMetric::SYMM_REPR_ERR:
             error = ReprojectionErrorSymmetric::create(points); break;
         case ErrorMetric::FORW_REPR_ERR:
-            if (params->getEstimator() == EstimationMethod::Affine)
-                error = ReprojectionErrorAffine::create(points);
-            else error = ReprojectionErrorForward::create(points);
+            switch(params->getEstimator()){
+                case EstimationMethod::Affine:
+                case EstimationMethod::SE2:
+                case EstimationMethod::SIM2:
+                    error = ReprojectionErrorAffine::create(points);
+                    break;
+                case EstimationMethod::SE3:
+                case EstimationMethod::SIM3:
+                    error = ReprojectionErrorAffine3D::create(points);
+                    break;
+                default:
+                    error = ReprojectionErrorForward::create(points);
+            }
             break;
         case ErrorMetric::SAMPSON_ERR:
             error = SampsonError::create(points); break;
@@ -934,6 +1046,26 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
         degeneracy = makePtr<Degeneracy>();
         min_solver = AffineMinimalSolver::create(points);
         non_min_solver = AffineNonMinimalSolver::create(points);
+        estimator = AffineEstimator::create(min_solver, non_min_solver);
+    } else if (params->getEstimator() == EstimationMethod::SE2) {
+        degeneracy = makePtr<Degeneracy>();
+        min_solver = SE2MinimalSolver::create(points);
+        non_min_solver = SE2NonMinimalSolver::create(points);
+        estimator = AffineEstimator::create(min_solver, non_min_solver);
+    } else if (params->getEstimator() == EstimationMethod::SIM2) {
+        degeneracy = makePtr<Degeneracy>();
+        min_solver = SIM2MinimalSolver::create(points);
+        non_min_solver = SIM2NonMinimalSolver::create(points);
+        estimator = AffineEstimator::create(min_solver, non_min_solver);
+    } else if (params->getEstimator() == EstimationMethod::SE3) {
+        degeneracy = makePtr<Degeneracy>();
+        min_solver = SE3MinimalSolver::create(points);
+        non_min_solver = SE3NonMinimalSolver::create(points);
+        estimator = AffineEstimator::create(min_solver, non_min_solver);
+    } else if (params->getEstimator() == EstimationMethod::SIM3) {
+        degeneracy = makePtr<Degeneracy>();
+        min_solver = SIM3MinimalSolver::create(points);
+        non_min_solver = SIM3NonMinimalSolver::create(points);
         estimator = AffineEstimator::create(min_solver, non_min_solver);
     } else CV_Error(cv::Error::StsNotImplemented, "Estimator not implemented!");
 
