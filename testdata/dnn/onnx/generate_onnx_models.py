@@ -2277,6 +2277,26 @@ gemm_model2 = onnx.helper.make_model(graph2)
 output_np = gemm_reference_implementation(input_np, weight_np)
 save_data_and_onnx_model("gemm_transB_0", input_np, output_np, gemm_model2)
 
+## gemm with transA = 1, transB = 1 and the first input is constance.
+
+weight_np = np.random.rand(10, 2).astype("float32")
+weight_tensor = helper.make_tensor('weight_tensor', data_type=onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[weight_np.dtype], dims=weight_np.shape, vals=weight_np)
+
+input_np = np.random.rand(3, 10).astype("float32")
+inputs = [helper.make_tensor_value_info("input1", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_np.dtype], shape=input_np.shape)]
+
+outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=(2, 3))]
+
+nodes = [helper.make_node("Gemm", ["weight_tensor", "input1"], ["output"], transA=1, transB=1)]
+
+graph = helper.make_graph(nodes,
+                            "gemm_test",
+                            inputs,
+                            outputs, initializer=[weight_tensor])
+gemm_model = helper.make_model(graph)
+output_np = gemm_reference_implementation(weight_np.T, input_np.T)
+save_data_and_model("gemm_first_const", input_np, output_np, gemm_model)
+
 # ########################## ReduceSum with Dynamic Batch ##########################
 input_np = np.random.rand(2, 4, 4, 4).astype("float32")
 inputs = [onnx.helper.make_tensor_value_info("input1", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_np.dtype], shape=('?', 4, 4, 4))]
