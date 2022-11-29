@@ -49,13 +49,6 @@ if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 
-if(HAVE_CUDA)
-  if(NOT HAVE_opencv_cudev)
-    message(FATAL_ERROR "CUDA: OpenCV requires enabled 'cudev' module from 'opencv_contrib' repository: https://github.com/opencv/opencv_contrib")
-  endif()
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
-endif()
-
 if(CV_TRACE AND HAVE_ITT)
   add_definitions(-DOPENCV_WITH_ITT=1)
 endif()
@@ -153,7 +146,6 @@ elseif(HAVE_CXX11 OR DEFINED OPENCV_ALLOCATOR_STATS_COUNTER_TYPE)
   endif()
 endif()
 
-
 if(PARALLEL_ENABLE_PLUGINS)
   ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/parallel/parallel.cpp "PARALLEL_ENABLE_PLUGINS=1")
   if(OPENCV_DEBUG_POSTFIX)
@@ -161,6 +153,15 @@ if(PARALLEL_ENABLE_PLUGINS)
   endif()
 endif()
 
+if(HAVE_CUDA)
+  if(NOT HAVE_opencv_cudev)
+    message(FATAL_ERROR "CUDA: OpenCV requires enabled 'cudev' module from 'opencv_contrib' repository: https://github.com/opencv/opencv_contrib")
+  endif()
+  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
+   ocv_module_include_directories(${CUDAToolkit_INCLUDE_DIRS})
+  endif()
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
+endif()
 
 ocv_create_module(${extra_libs})
 
