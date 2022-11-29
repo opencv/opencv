@@ -56,7 +56,7 @@ struct RenderInvoker : ParallelLoopBody
                 Point3f screenVec = reproj(Point3f((float)x, (float)y, 1.f));
                 float xyt = 1.f / (screenVec.x * screenVec.x +
                     screenVec.y * screenVec.y + 1.f);
-                Point3f dir = normalize(Vec3f(pose.rotation() * screenVec));
+                Point3f dir = cv::normalize(Vec3f(pose.rotation() * screenVec));
                 // screen space axis
                 dir.y = -dir.y;
 
@@ -113,7 +113,7 @@ struct RenderColorInvoker : ParallelLoopBody
                 Point3f orig = pose.translation();
                 // direction through pixel
                 Point3f screenVec = reproj(Point3f((float)x, (float)y, 1.f));
-                Point3f dir = normalize(Vec3f(pose.rotation() * screenVec));
+                Point3f dir = cv::normalize(Vec3f(pose.rotation() * screenVec));
                 // screen space axis
                 dir.y = -dir.y;
 
@@ -287,12 +287,6 @@ inline cv::Vec3f fromPtype(const ptype& x)
     return cv::Vec3f(x[0], x[1], x[2]);
 }
 
-inline Point3f normalize(const Vec3f& v)
-{
-    double nv = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-    return v * (nv ? 1. / nv : 0.);
-}
-
 void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray image, Affine3f lightPose)
 {
     Size sz = _points.size();
@@ -336,9 +330,9 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
                         const float Sx = 1.f;   //specular color, can be RGB
                         const float Lx = 1.f;   //light color
 
-                        Point3f l = normalize(lightPose.translation() - Vec3f(p));
-                        Point3f v = normalize(-Vec3f(p));
-                        Point3f r = normalize(Vec3f(2.f * n * n.dot(l) - l));
+                        Point3f l = cv::normalize(lightPose.translation() - Vec3f(p));
+                        Point3f v = cv::normalize(-Vec3f(p));
+                        Point3f r = cv::normalize(Vec3f(2.f * n * n.dot(l) - l));
 
                         uchar ix = (uchar)((Ax * Ka * Dx + Lx * Kd * Dx * max(0.f, n.dot(l)) +
                             Lx * Ks * Sx * specPow<sp>(max(0.f, r.dot(v)))) * 255.f);
@@ -1018,7 +1012,7 @@ void VolumeTestFixture::fetch_normals_test()
 
     volume->fetchNormals(upoints, unormals);
 
-    Mat points, normals, colors;
+    Mat points, normals;
     points  = upoints.getMat(ACCESS_READ);
     normals = unormals.getMat(ACCESS_READ);
 
