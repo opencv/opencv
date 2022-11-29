@@ -600,7 +600,6 @@ PERF_TEST_P_(VolumePerfFixture, raycast)
         UMat urgb, udepth;
         depth.copyTo(udepth);
         rgb.copyTo(urgb);
-        UMat upoints, unormals, ucolors;
 
         OdometryFrame odf(urgb, udepth);
 
@@ -611,7 +610,9 @@ PERF_TEST_P_(VolumePerfFixture, raycast)
                 volume->integrate(udepth, pose);
         else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
             volume->integrate(odf, pose);
-        
+
+        UMat upoints, unormals, ucolors;
+
         startTimer();
         if (volumeType == VolumeType::ColorTSDF)
             volume->raycast(pose, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
