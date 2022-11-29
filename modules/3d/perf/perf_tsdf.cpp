@@ -526,6 +526,8 @@ class VolumePerfFixture : public perf::TestBaseWithParam<std::tuple<PlatformVolu
 protected:
     void SetUp() override
     {
+        TestBase::SetUp();
+
         auto p = GetParam();
         gpu = std::get<0>(std::get<0>(p));
         volumeType = std::get<1>(std::get<0>(p));
