@@ -116,8 +116,6 @@ public:
 
     struct trackerConfig
     {
-        int exemplarSize = 127;
-        int instanceSize = 255;
         float windowInfluence = 0.455f;
         float lr = 0.37f;
         float contextAmount = 0.5;
@@ -127,6 +125,9 @@ public:
     };
 
 protected:
+    const int exemplarSize = 127;
+    const int instanceSize = 255;
+
     trackerConfig trackState;
     int scoreSize;
     Size imgSize = {0, 0};
@@ -160,13 +161,13 @@ void TrackerNanoImpl::generateGrids()
     grid2searchX *= trackState.totalStride;
     grid2searchY *= trackState.totalStride;
 
-    grid2searchX += trackState.instanceSize/2;
-    grid2searchY += trackState.instanceSize/2;
+    grid2searchX += instanceSize/2;
+    grid2searchY += instanceSize/2;
 }
 
 void TrackerNanoImpl::init(InputArray image_, const Rect &boundingBox_)
 {
-    scoreSize = (trackState.instanceSize - trackState.exemplarSize) / trackState.totalStride + 8;
+    scoreSize = (instanceSize - exemplarSize) / trackState.totalStride + 8;
     trackState = trackerConfig();
     image = image_.getMat().clone();
 
@@ -186,7 +187,7 @@ void TrackerNanoImpl::init(InputArray image_, const Rect &boundingBox_)
     int sz = int(cv::sqrt(wExtent * hExtent));
 
     Mat crop;
-    getSubwindow(crop, image, sz, trackState.exemplarSize);
+    getSubwindow(crop, image, sz, exemplarSize);
     Mat blob = dnn::blobFromImage(crop, 1.0, Size(), Scalar(), trackState.swapRB);
 
     backbone.setInput(blob);
@@ -227,7 +228,7 @@ void TrackerNanoImpl::getSubwindow(Mat& dstCrop, Mat& srcImg, int originalSz, in
     }
     else // Crop image with padding, and the padding value is avgChans
     {
-        cv::Mat tmpMat = cv::Mat::zeros(imgSz.height + top_pad + bottom_pad, imgSz.width + left_pad + right_pad, srcImg.type());
+        cv::Mat tmpMat;
         cv::copyMakeBorder(srcImg, tmpMat, top_pad, bottom_pad, left_pad, right_pad, cv::BORDER_CONSTANT, avgChans);
         cropImg = tmpMat(cv::Rect(context_xmin, context_ymin, context_xmax - context_xmin + 1, context_ymax - context_ymin + 1));
     }
@@ -242,13 +243,13 @@ bool TrackerNanoImpl::update(InputArray image_, Rect &boundingBoxRes)
     float wc = targetSz[0] + trackState.contextAmount * targetSzSum;
     float hc = targetSz[1] + trackState.contextAmount * targetSzSum;
     float sz = cv::sqrt(wc * hc);
-    float scale_z = trackState.exemplarSize / sz;
-    float sx = sz * (trackState.instanceSize/trackState.exemplarSize);
+    float scale_z = exemplarSize / sz;
+    float sx = sz * (instanceSize / exemplarSize);
     targetSz[0] *= scale_z;
     targetSz[1] *= scale_z;
 
     Mat crop;
-    getSubwindow(crop, image, int(sx), trackState.instanceSize);
+    getSubwindow(crop, image, int(sx), instanceSize);
 
     Mat blob = dnn::blobFromImage(crop, 1.0, Size(), Scalar(), trackState.swapRB);
     backbone.setInput(blob);
@@ -312,8 +313,8 @@ bool TrackerNanoImpl::update(InputArray image_, Rect &boundingBoxRes)
     float predW = (x2Val - x1Val)/scale_z;
     float predH = (y2Val - y1Val)/scale_z;
 
-    float diffXs = (predXs - trackState.instanceSize / 2) / scale_z;
-    float diffYs = (predYs - trackState.instanceSize / 2) / scale_z;
+    float diffXs = (predXs - instanceSize / 2) / scale_z;
+    float diffYs = (predYs - instanceSize / 2) / scale_z;
 
     targetSz[0] /= scale_z;
     targetSz[1] /= scale_z;
