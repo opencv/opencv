@@ -736,6 +736,13 @@ class CanUsePurePythonModuleFunction(NewOpenCVTests):
         res = cv.utils._native.testOverwriteNativeMethod(123)
         self.assertEqual(res, 123, msg="Failed to call native method implementation")
 
+    def test_default_matx_argument(self):
+        res = cv.utils.dumpVec2i()
+        self.assertEqual(res, "Vec2i(42, 24)",
+                         msg="Default argument is not properly handled")
+        res = cv.utils.dumpVec2i((12, 21))
+        self.assertEqual(res, "Vec2i(12, 21)")
+
 
 class SamplesFindFile(NewOpenCVTests):
 
