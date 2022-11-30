@@ -344,7 +344,9 @@ private:
     // const float * const points;
 public:
     explicit SE2MinimalSolverImpl (const Mat &points_) :
-            points_mat(&points_), points((float *) points_.data) {}
+            points_mat(&points_)
+            // , points((float *) points_.data)
+            {}
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         Mat p_mat;
         std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]),};
@@ -368,7 +370,9 @@ private:
     // const float * const points;
 public:
     explicit SIM2MinimalSolverImpl (const Mat &points_) :
-            points_mat(&points_), points((float *) points_.data) {}
+            points_mat(&points_)
+            // , points((float *) points_.data)
+            {}
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         Mat p_mat;
         std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]),};
@@ -392,7 +396,9 @@ private:
     // const float * const points;
 public:
     explicit SE3MinimalSolverImpl (const Mat &points_) :
-            points_mat(&points_), points((float *) points_.data) {}
+            points_mat(&points_)
+            // , points((float *) points_.data)
+            {}
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         Mat p_mat;
         std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]), points_mat->row(sample[2]),};
@@ -416,7 +422,9 @@ private:
     // const float * const points;
 public:
     explicit SIM3MinimalSolverImpl (const Mat &points_) :
-            points_mat(&points_), points((float *) points_.data) {}
+            points_mat(&points_)
+            // , points((float *) points_.data)
+            {}
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         Mat p_mat;
         std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]), points_mat->row(sample[2]),};
@@ -441,8 +449,8 @@ private:
     // const NormTransform<double> norm_transform;
 public:
     explicit SE2NonMinimalSolverImpl (const Mat &points_) :
-            points_mat(&points_), points((float*) points_.data)
-    /*, norm_transform(points_)*/ {}
+            points_mat(&points_)
+    /*, points((float*) points_.data), norm_transform(points_)*/ {}
 
     int estimate (const std::vector<int> &sample, int sample_size, std::vector<Mat> &models,
                   const std::vector<double> &weights) const override {
@@ -476,8 +484,8 @@ private:
     // const NormTransform<double> norm_transform;
 public:
     explicit SIM2NonMinimalSolverImpl (const Mat &points_) :
-            points_mat(&points_), points((float*) points_.data)
-    /*, norm_transform(points_)*/ {}
+            points_mat(&points_)
+    /*, points((float*) points_.data), norm_transform(points_)*/ {}
 
     int estimate (const std::vector<int> &sample, int sample_size, std::vector<Mat> &models,
                   const std::vector<double> &weights) const override {
@@ -511,8 +519,8 @@ private:
     // const NormTransform<double> norm_transform;
 public:
     explicit SE3NonMinimalSolverImpl (const Mat &points_) :
-            points_mat(&points_), points((float*) points_.data)
-    /*, norm_transform(points_)*/ {}
+            points_mat(&points_)
+    /*, points((float*) points_.data), norm_transform(points_)*/ {}
 
     int estimate (const std::vector<int> &sample, int sample_size, std::vector<Mat> &models,
                   const std::vector<double> &weights) const override {
@@ -546,8 +554,8 @@ private:
     // const NormTransform<double> norm_transform;
 public:
     explicit SIM3NonMinimalSolverImpl (const Mat &points_) :
-            points_mat(&points_), points((float*) points_.data)
-    /*, norm_transform(points_)*/ {}
+            points_mat(&points_)
+    /*, points((float*) points_.data), norm_transform(points_)*/ {}
 
     int estimate (const std::vector<int> &sample, int sample_size, std::vector<Mat> &models,
                   const std::vector<double> &weights) const override {
