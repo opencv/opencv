@@ -422,6 +422,12 @@ enum PlatformType
 };
 CV_ENUM(PlatformTypeEnum, PlatformType::CPU, PlatformType::GPU);
 
+enum Sequence
+{
+    ALL = 0, FIRST = 1
+};
+CV_ENUM(SequenceEnum, Sequence::ALL, Sequence::FIRST);
+
 enum class VolumeTestSrcType
 {
     MAT = 0,
@@ -521,7 +527,7 @@ namespace
 }
 
 typedef std::tuple<PlatformTypeEnum, VolumeTypeEnum> PlatformVolumeType;
-class VolumePerfFixture : public perf::TestBaseWithParam<std::tuple<PlatformVolumeType, VolumeTestSrcTypeEnum>>
+class VolumePerfFixture : public perf::TestBaseWithParam<std::tuple<PlatformVolumeType, VolumeTestSrcTypeEnum, SequenceEnum>>
 {
 protected:
     void SetUp() override
@@ -533,6 +539,8 @@ protected:
         volumeType = std::get<1>(std::get<0>(p));
 
         testSrcType = std::get<1>(p);
+
+        repeat = (std::get<2>(p) == Sequence::FIRST);
 
         if (!gpu)
             oclStatus.off();
@@ -553,6 +561,7 @@ protected:
     bool gpu;
     VolumeType volumeType;
     VolumeTestSrcType testSrcType;
+    bool repeat;
 
     OpenCLStatusRevert oclStatus;
 
@@ -567,7 +576,7 @@ protected:
 
 PERF_TEST_P_(VolumePerfFixture, integrate)
 {
-    for (size_t i = 0; i < poses.size(); i++)
+    for (size_t i = 0; i < (repeat ? 1 : poses.size()); i++)
     {
         Matx44f pose = poses[i].matrix;
         Mat depth = scene->depth(pose);
@@ -577,16 +586,33 @@ PERF_TEST_P_(VolumePerfFixture, integrate)
         rgb.copyTo(urgb);
         OdometryFrame odf(urgb, udepth);
 
-        startTimer();
-        if (testSrcType == VolumeTestSrcType::MAT)
-            if (volumeType == VolumeType::ColorTSDF)
-                volume->integrate(udepth, urgb, pose);
-            else
-                volume->integrate(udepth, pose);
-        else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-            volume->integrate(odf, pose);
-        stopTimer();
-
+        if (repeat)
+        {
+            while(next())
+            {
+                startTimer();
+                if (testSrcType == VolumeTestSrcType::MAT)
+                    if (volumeType == VolumeType::ColorTSDF)
+                        volume->integrate(udepth, urgb, pose);
+                    else
+                        volume->integrate(udepth, pose);
+                else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
+                    volume->integrate(odf, pose);
+                stopTimer();
+            }
+        }
+        else
+        {
+            startTimer();
+            if (testSrcType == VolumeTestSrcType::MAT)
+                if (volumeType == VolumeType::ColorTSDF)
+                    volume->integrate(udepth, urgb, pose);
+                else
+                    volume->integrate(udepth, pose);
+            else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
+                volume->integrate(odf, pose);
+            stopTimer();
+        }
     }
     SANITY_CHECK_NOTHING();
 }
@@ -647,6 +673,6 @@ INSTANTIATE_TEST_CASE_P(Volume, VolumePerfFixture, /*::testing::Combine(Platform
                                           PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
                                           PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF},
                                           PlatformVolumeType {PlatformType::GPU, VolumeType::HashTSDF}),
-                        VolumeTestSrcTypeEnum::all()));
+                        VolumeTestSrcTypeEnum::all(), SequenceEnum::all()));
 
 }} // namespace
