@@ -341,7 +341,7 @@ Mat solve_weighted_umeyama(const Mat &points_, const bool is_scale, const std::v
 class SE2MinimalSolverImpl : public SE2MinimalSolver {
 private:
     const Mat * points_mat;
-    const float * const points;
+    // const float * const points;
 public:
     explicit SE2MinimalSolverImpl (const Mat &points_) :
             points_mat(&points_), points((float *) points_.data) {}
@@ -365,7 +365,7 @@ Ptr<SE2MinimalSolver> SE2MinimalSolver::create(const Mat &points_) {
 class SIM2MinimalSolverImpl : public SIM2MinimalSolver {
 private:
     const Mat * points_mat;
-    const float * const points;
+    // const float * const points;
 public:
     explicit SIM2MinimalSolverImpl (const Mat &points_) :
             points_mat(&points_), points((float *) points_.data) {}
@@ -389,7 +389,7 @@ Ptr<SIM2MinimalSolver> SIM2MinimalSolver::create(const Mat &points_) {
 class SE3MinimalSolverImpl : public SE3MinimalSolver {
 private:
     const Mat * points_mat;
-    const float * const points;
+    // const float * const points;
 public:
     explicit SE3MinimalSolverImpl (const Mat &points_) :
             points_mat(&points_), points((float *) points_.data) {}
@@ -413,7 +413,7 @@ Ptr<SE3MinimalSolver> SE3MinimalSolver::create(const Mat &points_) {
 class SIM3MinimalSolverImpl : public SIM3MinimalSolver {
 private:
     const Mat * points_mat;
-    const float * const points;
+    // const float * const points;
 public:
     explicit SIM3MinimalSolverImpl (const Mat &points_) :
             points_mat(&points_), points((float *) points_.data) {}
@@ -437,7 +437,7 @@ Ptr<SIM3MinimalSolver> SIM3MinimalSolver::create(const Mat &points_) {
 class SE2NonMinimalSolverImpl : public SE2NonMinimalSolver {
 private:
     const Mat * points_mat;
-    const float * const points;
+    // const float * const points;
     // const NormTransform<double> norm_transform;
 public:
     explicit SE2NonMinimalSolverImpl (const Mat &points_) :
@@ -472,7 +472,7 @@ Ptr<SE2NonMinimalSolver> SE2NonMinimalSolver::create(const Mat &points_) {
 class SIM2NonMinimalSolverImpl : public SIM2NonMinimalSolver {
 private:
     const Mat * points_mat;
-    const float * const points;
+    // const float * const points;
     // const NormTransform<double> norm_transform;
 public:
     explicit SIM2NonMinimalSolverImpl (const Mat &points_) :
@@ -507,7 +507,7 @@ Ptr<SIM2NonMinimalSolver> SIM2NonMinimalSolver::create(const Mat &points_) {
 class SE3NonMinimalSolverImpl : public SE3NonMinimalSolver {
 private:
     const Mat * points_mat;
-    const float * const points;
+    // const float * const points;
     // const NormTransform<double> norm_transform;
 public:
     explicit SE3NonMinimalSolverImpl (const Mat &points_) :
@@ -542,7 +542,7 @@ Ptr<SE3NonMinimalSolver> SE3NonMinimalSolver::create(const Mat &points_) {
 class SIM3NonMinimalSolverImpl : public SIM3NonMinimalSolver {
 private:
     const Mat * points_mat;
-    const float * const points;
+    // const float * const points;
     // const NormTransform<double> norm_transform;
 public:
     explicit SIM3NonMinimalSolverImpl (const Mat &points_) :
