@@ -162,55 +162,42 @@ static bool checkIOU(const Rect& r0, const Rect& r1, double threshold)
         return true;
     else
     {
-        std::cout << cv::format("Unmatched IOU:  expect IOU val (%lf) > the IOU threadhold (%lf)! Box0 is ",
-                                iouVal, threshold)<< r0 <<", and Box1 is "<<r1<< std::endl;
+        std::cout << cv::format("Unmatched IOU:  expect IOU val (%lf) > the IOU threadhold (%lf)! Box 0 is ",
+                                iouVal, threshold)<< r0 <<", and Box 1 is "<<r1<< std::endl;
         return false;
     }
 }
 
 static  void checkTrackingAccuracy(cv::Ptr<Tracker>& tracker, double iouThreshold = 0.8)
 {
+    // Template image
     Mat img0 = imread(findDataFile("tracking/bag/00000001.jpg"), 1);
-    Mat img1 = imread(findDataFile("tracking/bag/00000002.jpg"), 1);
-    Mat img2 = imread(findDataFile("tracking/bag/00000003.jpg"), 1);
-    Mat img3 = imread(findDataFile("tracking/bag/00000004.jpg"), 1);
-    Mat img4 = imread(findDataFile("tracking/bag/00000005.jpg"), 1);
-    Mat img5 = imread(findDataFile("tracking/bag/00000006.jpg"), 1);
+
+    // Tracking image sequence.
+    std::vector<Mat> imgs;
+    imgs.push_back(imread(findDataFile("tracking/bag/00000002.jpg"), 1));
+    imgs.push_back(imread(findDataFile("tracking/bag/00000003.jpg"), 1));
+    imgs.push_back(imread(findDataFile("tracking/bag/00000004.jpg"), 1));
+    imgs.push_back(imread(findDataFile("tracking/bag/00000005.jpg"), 1));
+    imgs.push_back(imread(findDataFile("tracking/bag/00000006.jpg"), 1));
 
     cv::Rect roi(325, 164, 100, 100);
-
-    cv::Rect targetRoi1(278, 133, 99, 104);
-    cv::Rect targetRoi2(293, 88, 93, 110);
-    cv::Rect targetRoi3(287, 76, 89, 116);
-    cv::Rect targetRoi4(297, 74, 82, 122);
-    cv::Rect targetRoi5(311, 83, 78, 125);
+    std::vector<Rect> targetRois;
+    targetRois.push_back(cv::Rect(278, 133, 99, 104));
+    targetRois.push_back(cv::Rect(293, 88, 93, 110));
+    targetRois.push_back(cv::Rect(287, 76, 89, 116));
+    targetRois.push_back(cv::Rect(297, 74, 82, 122));
+    targetRois.push_back(cv::Rect(311, 83, 78, 125));
 
     tracker->init(img0, roi);
+    CV_Assert(targetRois.size() == imgs.size());
 
-    // tracking and check the img1.
-    bool res = tracker->update(img1, roi);
-    ASSERT_TRUE(res);
-    ASSERT_TRUE(checkIOU(roi, targetRoi1, iouThreshold)) << "Fail at img1.";
-
-    // tracking and check the img2.
-    res = tracker->update(img2, roi);
-    ASSERT_TRUE(res);
-    ASSERT_TRUE(checkIOU(roi, targetRoi2, iouThreshold)) << "Fail at img2.";
-
-    // tracking and check the img3.
-    res = tracker->update(img3, roi);
-    ASSERT_TRUE(res);
-    ASSERT_TRUE(checkIOU(roi, targetRoi3, iouThreshold)) << "Fail at img3.";
-
-    // tracking and check the img4.
-    res = tracker->update(img4, roi);
-    ASSERT_TRUE(res);
-    ASSERT_TRUE(checkIOU(roi, targetRoi4, iouThreshold)) << "Fail at img4.";
-
-    // tracking and check the img5.
-    res = tracker->update(img5, roi);
-    ASSERT_TRUE(res);
-    ASSERT_TRUE(checkIOU(roi, targetRoi5, iouThreshold)) << "Fail at img5.";
+    for (int i = 0; i < (int)imgs.size(); i++)
+    {
+        bool res = tracker->update(imgs[i], roi);
+        ASSERT_TRUE(res);
+        ASSERT_TRUE(checkIOU(roi, targetRois[i], iouThreshold)) << cv::format("Fail at img %d.",i);
+    }
 }
 
 TEST(GOTURN, accuracy)
