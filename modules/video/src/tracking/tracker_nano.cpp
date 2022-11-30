@@ -335,9 +335,8 @@ bool TrackerNanoImpl::update(InputArray image_, Rect &boundingBoxRes)
     targetSz[0] = resW;
     targetSz[1] = resH;
 
-    // convert center to Rect2f.
-    Rect2f resBox = { resX - resW/2, resY - resH/2, resW, resH};
-    boundingBoxRes = resBox;
+    // convert center to Rect.
+    boundingBoxRes = { int(resX - resW/2), int(resY - resH/2), int(resW), int(resH)};
     return true;
 }
 

@@ -153,4 +153,100 @@ TEST(NanoTrack, memory_usage)
     }
 }
 
+static bool checkIOU(const Rect& r0, const Rect& r1, double threshold)
+{
+    int interArea = (r0 & r1).area();
+    double iouVal = (interArea * 1.0 )/ (r0.area() + r1.area() - interArea);;
+
+    if (iouVal > threshold)
+        return true;
+    else
+    {
+        std::cout << cv::format("Unmatched IOU:  expect IOU val (%lf) > the IOU threadhold (%lf)! Box0 is ",
+                                iouVal, threshold)<< r0 <<", and Box1 is "<<r1<< std::endl;
+        return false;
+    }
+}
+
+static  void checkTrackingAccuracy(cv::Ptr<Tracker>& tracker, double iouThreshold = 0.8)
+{
+    Mat img0 = imread(findDataFile("tracking/bag/00000001.jpg"), 1);
+    Mat img1 = imread(findDataFile("tracking/bag/00000002.jpg"), 1);
+    Mat img2 = imread(findDataFile("tracking/bag/00000003.jpg"), 1);
+    Mat img3 = imread(findDataFile("tracking/bag/00000004.jpg"), 1);
+    Mat img4 = imread(findDataFile("tracking/bag/00000005.jpg"), 1);
+    Mat img5 = imread(findDataFile("tracking/bag/00000006.jpg"), 1);
+
+    cv::Rect roi(325, 164, 100, 100);
+
+    cv::Rect targetRoi1(278, 133, 99, 104);
+    cv::Rect targetRoi2(293, 88, 93, 110);
+    cv::Rect targetRoi3(287, 76, 89, 116);
+    cv::Rect targetRoi4(297, 74, 82, 122);
+    cv::Rect targetRoi5(311, 83, 78, 125);
+
+    tracker->init(img0, roi);
+
+    // tracking and check the img1.
+    bool res = tracker->update(img1, roi);
+    ASSERT_TRUE(res);
+    ASSERT_TRUE(checkIOU(roi, targetRoi1, iouThreshold)) << "Fail at img1.";
+
+    // tracking and check the img2.
+    res = tracker->update(img2, roi);
+    ASSERT_TRUE(res);
+    ASSERT_TRUE(checkIOU(roi, targetRoi2, iouThreshold)) << "Fail at img2.";
+
+    // tracking and check the img3.
+    res = tracker->update(img3, roi);
+    ASSERT_TRUE(res);
+    ASSERT_TRUE(checkIOU(roi, targetRoi3, iouThreshold)) << "Fail at img3.";
+
+    // tracking and check the img4.
+    res = tracker->update(img4, roi);
+    ASSERT_TRUE(res);
+    ASSERT_TRUE(checkIOU(roi, targetRoi4, iouThreshold)) << "Fail at img4.";
+
+    // tracking and check the img5.
+    res = tracker->update(img5, roi);
+    ASSERT_TRUE(res);
+    ASSERT_TRUE(checkIOU(roi, targetRoi5, iouThreshold)) << "Fail at img5.";
+}
+
+TEST(GOTURN, accuracy)
+{
+    std::string model = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.prototxt");
+    std::string weights = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.caffemodel", false);
+    cv::TrackerGOTURN::Params params;
+    params.modelTxt = model;
+    params.modelBin = weights;
+    cv::Ptr<Tracker> tracker = TrackerGOTURN::create(params);
+    // TODO! GOTURN have low accuracy. Try to remove this api at 5.x.
+    checkTrackingAccuracy(tracker, 0.08);
+}
+
+TEST(DaSiamRPN, accuracy)
+{
+    std::string model = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_model.onnx", false);
+    std::string kernel_r1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_r1.onnx", false);
+    std::string kernel_cls1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_cls1.onnx", false);
+    cv::TrackerDaSiamRPN::Params params;
+    params.model = model;
+    params.kernel_r1 = kernel_r1;
+    params.kernel_cls1 = kernel_cls1;
+    cv::Ptr<Tracker> tracker = TrackerDaSiamRPN::create(params);
+    checkTrackingAccuracy(tracker, 0.7);
+}
+
+TEST(NanoTrack, accuracy)
+{
+    std::string backbonePath = cvtest::findDataFile("dnn/onnx/models/nanotrack_backbone_sim.onnx", false);
+    std::string neckheadPath = cvtest::findDataFile("dnn/onnx/models/nanotrack_head_sim.onnx", false);
+
+    cv::TrackerNano::Params params;
+    params.backbone = backbonePath;
+    params.neckhead = neckheadPath;
+    cv::Ptr<Tracker> tracker = TrackerNano::create(params);
+    checkTrackingAccuracy(tracker);
+}
 }}  // namespace opencv_test::
