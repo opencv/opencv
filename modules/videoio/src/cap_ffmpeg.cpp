@@ -54,6 +54,7 @@
 #define icvReleaseCapture_FFMPEG_p cvReleaseCapture_FFMPEG
 #define icvGrabFrame_FFMPEG_p cvGrabFrame_FFMPEG
 #define icvRetrieveFrame_FFMPEG_p cvRetrieveFrame_FFMPEG
+#define icvRetrieveFrame2_FFMPEG_p cvRetrieveFrame2_FFMPEG
 #define icvSetCaptureProperty_FFMPEG_p cvSetCaptureProperty_FFMPEG
 #define icvGetCaptureProperty_FFMPEG_p cvGetCaptureProperty_FFMPEG
 #define icvCreateVideoWriter_FFMPEG_p cvCreateVideoWriter_FFMPEG
@@ -90,7 +91,7 @@ public:
     virtual bool retrieveFrame(int flag, cv::OutputArray frame) CV_OVERRIDE
     {
         unsigned char* data = 0;
-        int step=0, width=0, height=0, cn=0;
+        int step=0, width=0, height=0, cn=0, depth=0;
 
         if (!ffmpegCapture)
             return false;
@@ -103,15 +104,15 @@ public:
         }
 
         if (flag == 0) {
-            if (!icvRetrieveFrame_FFMPEG_p(ffmpegCapture, &data, &step, &width, &height, &cn))
+            if (!icvRetrieveFrame2_FFMPEG_p(ffmpegCapture, &data, &step, &width, &height, &cn, &depth))
                 return false;
         }
         else {
-            if (!ffmpegCapture->retrieveFrame(flag, &data, &step, &width, &height, &cn))
+            if (!ffmpegCapture->retrieveFrame(flag, &data, &step, &width, &height, &cn, &depth))
                 return false;
         }
 
-        cv::Mat tmp(height, width, CV_MAKETYPE(CV_8U, cn), data, step);
+        cv::Mat tmp(height, width, CV_MAKETYPE(depth, cn), data, step);
         applyMetadataRotation(*this, tmp);
         tmp.copyTo(frame);
 
@@ -165,7 +166,7 @@ public:
     {
         if(!ffmpegWriter)
             return;
-        CV_Assert(image.depth() == CV_8U);
+        CV_Assert(image.depth() == CV_8U || image.depth() == CV_16U);
 
         // if UMat, try GPU to GPU copy using OpenCL extensions
         if (image.isUMat()) {
