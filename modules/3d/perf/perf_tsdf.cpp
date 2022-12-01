@@ -540,7 +540,7 @@ protected:
 
         testSrcType = std::get<1>(p);
 
-        repeat = (std::get<2>(p) == Sequence::FIRST);
+        repeat1st = (std::get<2>(p) == Sequence::FIRST);
 
         if (!gpu)
             oclStatus.off();
@@ -561,7 +561,7 @@ protected:
     bool gpu;
     VolumeType volumeType;
     VolumeTestSrcType testSrcType;
-    bool repeat;
+    bool repeat1st;
 
     OpenCLStatusRevert oclStatus;
 
@@ -576,7 +576,7 @@ protected:
 
 PERF_TEST_P_(VolumePerfFixture, integrate)
 {
-    for (size_t i = 0; i < (repeat ? 1 : poses.size()); i++)
+    for (size_t i = 0; i < (repeat1st ? 1 : poses.size()); i++)
     {
         Matx44f pose = poses[i].matrix;
         Mat depth = scene->depth(pose);
@@ -586,22 +586,8 @@ PERF_TEST_P_(VolumePerfFixture, integrate)
         rgb.copyTo(urgb);
         OdometryFrame odf(urgb, udepth);
 
-        if (repeat)
-        {
-            while(next())
-            {
-                startTimer();
-                if (testSrcType == VolumeTestSrcType::MAT)
-                    if (volumeType == VolumeType::ColorTSDF)
-                        volume->integrate(udepth, urgb, pose);
-                    else
-                        volume->integrate(udepth, pose);
-                else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
-                    volume->integrate(odf, pose);
-                stopTimer();
-            }
-        }
-        else
+        bool done = false;
+        while (repeat1st ? next() : !done)
         {
             startTimer();
             if (testSrcType == VolumeTestSrcType::MAT)
@@ -612,6 +598,12 @@ PERF_TEST_P_(VolumePerfFixture, integrate)
             else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
                 volume->integrate(odf, pose);
             stopTimer();
+
+            // perf check makes sense only for identical states
+            if (repeat1st)
+                volume->reset();
+
+            done = true;
         }
     }
     SANITY_CHECK_NOTHING();
@@ -620,7 +612,7 @@ PERF_TEST_P_(VolumePerfFixture, integrate)
 
 PERF_TEST_P_(VolumePerfFixture, raycast)
 {
-    for (size_t i = 0; i < poses.size(); i++)
+    for (size_t i = 0; i < (repeat1st ? 1 : poses.size()); i++)
     {
         Matx44f pose = poses[i].matrix;
         Mat depth = scene->depth(pose);
@@ -641,20 +633,26 @@ PERF_TEST_P_(VolumePerfFixture, raycast)
 
         UMat upoints, unormals, ucolors;
 
-        startTimer();
-        if (volumeType == VolumeType::ColorTSDF)
-            volume->raycast(pose, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
-        else
-            volume->raycast(pose, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
-        stopTimer();
+        bool done = false;
+        while (repeat1st ? next() : !done)
+        {
+            startTimer();
+            if (volumeType == VolumeType::ColorTSDF)
+                volume->raycast(pose, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
+            else
+                volume->raycast(pose, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
+            stopTimer();
 
-        Mat points, normals, colors;
-        points  = upoints.getMat(ACCESS_READ);
-        normals = unormals.getMat(ACCESS_READ);
-        colors  = ucolors.getMat(ACCESS_READ);
+            done = true;
+        }
 
         if (display)
         {
+            Mat points, normals, colors;
+            points = upoints.getMat(ACCESS_READ);
+            normals = unormals.getMat(ACCESS_READ);
+            colors = ucolors.getMat(ACCESS_READ);
+
             Vec3f lightPose = Vec3f::all(0.f);
             if (volumeType == VolumeType::ColorTSDF)
                 displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
