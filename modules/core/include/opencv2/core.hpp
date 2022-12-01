@@ -1102,6 +1102,13 @@ around both axes.
 */
 CV_EXPORTS_W void flip(InputArray src, OutputArray dst, int flipCode);
 
+/** @brief Flips a n-dimensional at given axis
+ *  @param src input array
+ *  @param dst output array that has the same shape of src
+ *  @param axis axis that performs a flip on. 0 <= axis < src.dims.
+ */
+CV_EXPORTS_W void flipND(InputArray src, OutputArray dst, int axis);
+
 enum RotateFlags {
     ROTATE_90_CLOCKWISE = 0, //!<Rotate 90 degrees clockwise
     ROTATE_180 = 1, //!<Rotate 180 degrees clockwise

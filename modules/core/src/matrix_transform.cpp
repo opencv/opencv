@@ -6,6 +6,8 @@
 #include "opencl_kernels_core.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
 
+#include <algorithm> // std::swap_ranges
+
 namespace cv {
 
 ////////////////////////////////////// transpose /////////////////////////////////////////
@@ -810,6 +812,49 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
 
     if( flip_mode < 0 )
         flipHoriz( dst.ptr(), dst.step, dst.ptr(), dst.step, dst.size(), esz );
+}
+
+static void
+flipNDImpl(uchar* data, const int* shape, const size_t* step, int axis)
+{
+    int total = 1;
+    for (int i = 0; i < axis; ++i)
+        total *= shape[i];
+
+    int shape_at_axis = shape[axis];
+    size_t step_at_axis = step[axis];
+    size_t offset = 0;
+    size_t offset_increment = axis == 0 ? 0 : step[axis - 1];
+    for (int i = 0; i < total; ++i, offset += offset_increment)
+        for (int j = 0, k = shape_at_axis - 1; j < shape_at_axis / 2; ++j, --k)
+            std::swap_ranges(data + offset + j * step_at_axis,
+                             data + offset + j * step_at_axis + step_at_axis,
+                             data + offset + k * step_at_axis);
+}
+
+void flipND(InputArray _src, OutputArray _dst, int _axis)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat src = _src.getMat();
+
+    // verify axis
+    int ndim = src.dims;
+    CV_CheckLT(_axis, ndim, "flipND: given axis is out of range");
+    CV_CheckGE(_axis, -ndim, "flipND: given axis is out of range");
+    int axis = (_axis + ndim) % ndim;
+
+    // in-place flip
+    _src.copyTo(_dst);
+
+    // return the src if it has only one element on the flip axis
+    const auto shape = src.size.p;
+    if (shape[axis] == 1)
+        return ;
+
+    // call impl
+    Mat dst = _dst.getMat();
+    flipNDImpl(dst.ptr(), dst.size.p, dst.step.p, axis);
 }
 
 void rotate(InputArray _src, OutputArray _dst, int rotateMode)
