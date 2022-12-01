@@ -1145,6 +1145,7 @@ TEST_P(Test_ONNX_layers, Slice)
     testONNXModels("slice");
     testONNXModels("slice_neg_starts");
     testONNXModels("slice_opset_11");
+    testONNXModels("slice_neg_steps", pb);
 #endif
 }
 
