@@ -698,29 +698,4 @@ int VideoWriter::fourcc(char c1, char c2, char c3, char c4)
     return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
 }
 
-
-void applyMetadataRotation(const IVideoCapture& cap, OutputArray mat)
-{
-    bool rotation_auto = 0 != cap.getProperty(CAP_PROP_ORIENTATION_AUTO);
-    int rotation_angle = static_cast<int>(cap.getProperty(CAP_PROP_ORIENTATION_META));
-
-    if(!rotation_auto || rotation_angle%360 == 0)
-    {
-        return;
-    }
-
-    cv::RotateFlags flag;
-    if(rotation_angle == 90 || rotation_angle == -270) { // Rotate clockwise 90 degrees
-        flag = cv::ROTATE_90_CLOCKWISE;
-    } else if(rotation_angle == 270 || rotation_angle == -90) { // Rotate clockwise 270 degrees
-        flag = cv::ROTATE_90_COUNTERCLOCKWISE;
-    } else if(rotation_angle == 180 || rotation_angle == -180) { // Rotate clockwise 180 degrees
-        flag = cv::ROTATE_180;
-    } else { // Unsupported rotation
-        return;
-    }
-
-    cv::rotate(mat, mat, flag);
-}
-
 } // namespace cv
