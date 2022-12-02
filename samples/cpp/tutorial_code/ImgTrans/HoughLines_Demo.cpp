@@ -15,7 +15,7 @@ using namespace std;
 /// Global variables
 
 /** General variables */
-Mat src, edges;
+Mat src, canny_edge, sobel_edge;
 Mat src_gray;
 Mat standard_hough, probabilistic_hough, weighted_hough;
 int min_threshold = 50;
@@ -64,9 +64,9 @@ int main( int argc, char** argv )
 
    /// Create Trackbars for Thresholds
    char thresh_label[50];
-   snprintf( thresh_label, "Thres: %d + input", min_threshold );
+   snprintf( thresh_label, sizeof(thresh_label), "Thres: %d + input", min_threshold );
    char edge_thresh_label[50];
-   snprintf( edge_thresh_label, "Edge Thres: input" );
+   sprintf( edge_thresh_label, "Edge Thres: input" );
    namedWindow( standard_name, WINDOW_AUTOSIZE );
    createTrackbar( thresh_label, standard_name, &s_trackbar, max_trackbar, Standard_Hough );
 
