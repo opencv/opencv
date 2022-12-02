@@ -10,8 +10,8 @@ For DaSiamRPN:
     kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
     kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
 For NanoTrack:
-    nanotrack_backBone: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/onnx/nanotrack_backbone_sim.onnx
-    nanotrack_headNeck: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/onnx/nanotrack_head_sim.onnx
+    nanotrack_backone: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/onnx/nanotrack_backbone_sim.onnx
+    nanotrack_headneck: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/onnx/nanotrack_head_sim.onnx
 
 USAGE:
     tracker.py [-h] [--input INPUT] [--tracker_algo TRACKER_ALGO]
@@ -21,7 +21,7 @@ USAGE:
                     [--dasiamrpn_kernel_cls1 DASIAMRPN_KERNEL_CLS1]
                     [--dasiamrpn_backend DASIAMRPN_BACKEND]
                     [--dasiamrpn_target DASIAMRPN_TARGET]
-                    [--nanotrack_backBone NANOTRACK_BACKEND] [--nanotrack_headNeck NANOTRACK_TARGET]
+                    [--nanotrack_backone NANOTRACK_BACKEND] [--nanotrack_headneck NANOTRACK_TARGET]
 '''
 
 # Python 2/3 compatibility
@@ -58,8 +58,8 @@ class App(object):
             tracker = cv.TrackerDaSiamRPN_create(params)
         elif self.trackerAlgorithm == 'nanotrack':
             params = cv.TrackerNano_Params()
-            params.backbone = args.nanotrack_backBone
-            params.neckhead = args.nanotrack_headNeck
+            params.backbone = args.nanotrack_backone
+            params.neckhead = args.nanotrack_headneck
             tracker = cv.TrackerNano_create(params)
         else:
             sys.exit("Tracker {} is not recognized. Please use one of three available: mil, goturn, dasiamrpn, nanotrack.".format(self.trackerAlgorithm))
@@ -132,8 +132,8 @@ if __name__ == '__main__':
     parser.add_argument("--dasiamrpn_net", type=str, default="dasiamrpn_model.onnx", help="Path to onnx model of DaSiamRPN net")
     parser.add_argument("--dasiamrpn_kernel_r1", type=str, default="dasiamrpn_kernel_r1.onnx", help="Path to onnx model of DaSiamRPN kernel_r1")
     parser.add_argument("--dasiamrpn_kernel_cls1", type=str, default="dasiamrpn_kernel_cls1.onnx", help="Path to onnx model of DaSiamRPN kernel_cls1")
-    parser.add_argument("--nanotrack_backBone", type=str, default="nanotrack_backbone_sim.onnx", help="Path to onnx model of NanoTrack backBone")
-    parser.add_argument("--nanotrack_headNeck", type=str, default="nanotrack_head_sim.onnx", help="Path to onnx model of NanoTrack headNeck")
+    parser.add_argument("--nanotrack_backone", type=str, default="nanotrack_backbone_sim.onnx", help="Path to onnx model of NanoTrack backBone")
+    parser.add_argument("--nanotrack_headneck", type=str, default="nanotrack_head_sim.onnx", help="Path to onnx model of NanoTrack headNeck")
 
     args = parser.parse_args()
     App(args).run()

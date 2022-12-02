@@ -73,13 +73,13 @@ static bool checkIOU(const Rect& r0, const Rect& r1, double threshold)
         return true;
     else
     {
-        std::cout << cv::format("Unmatched IOU:  expect IOU val (%lf) > the IOU threadhold (%lf)! Box 0 is ",
-                                iouVal, threshold)<< r0 <<", and Box 1 is "<<r1<< std::endl;
+        std::cout <<"Unmatched IOU:  expect IOU val ("<<iouVal <<") > the IOU threadhold ("<<threshold<<")! Box 0 is "
+                                << r0 <<", and Box 1 is "<<r1<< std::endl;
         return false;
     }
 }
 
-static  void checkTrackingAccuracy(cv::Ptr<Tracker>& tracker, double iouThreshold = 0.8)
+static void checkTrackingAccuracy(cv::Ptr<Tracker>& tracker, double iouThreshold = 0.8)
 {
     // Template image
     Mat img0 = imread(findDataFile("tracking/bag/00000001.jpg"), 1);

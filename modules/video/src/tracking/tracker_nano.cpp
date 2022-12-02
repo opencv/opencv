@@ -14,8 +14,6 @@
 #include "opencv2/dnn.hpp"
 #endif
 
-typedef std::vector<int> MatShape;
-
 namespace cv {
 
 TrackerNano::TrackerNano()
@@ -59,7 +57,7 @@ static void softmax(const Mat& src, Mat& dst)
 
 static float sizeCal(float w, float h)
 {
-    float pad = (w + h) * float(0.5);
+    float pad = (w + h) * 0.5f;
     float sz2 = (w + pad) * (h + pad);
     return sqrt(sz2);
 }
@@ -220,7 +218,7 @@ void TrackerNanoImpl::getSubwindow(Mat& dstCrop, Mat& srcImg, int originalSz, in
     context_ymax += top_pad;
 
     Mat cropImg;
-    if (left_pad ==0 && top_pad == 0 && right_pad == 0 && bottom_pad == 0)
+    if (left_pad == 0 && top_pad == 0 && right_pad == 0 && bottom_pad == 0)
     {
         // Crop image without padding.
         cropImg = srcImg(cv::Rect(context_xmin, context_ymin,
