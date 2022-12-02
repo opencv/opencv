@@ -179,7 +179,7 @@ int TsdfVolume::getVisibleBlocks() const { return 1; }
 size_t TsdfVolume::getTotalVolumeUnits() const { return 1; }
 
 
-Vec6f TsdfVolume::getBoundingBox(int precision) const
+void TsdfVolume::getBoundingBox(OutputArray bb, int precision) const
 {
     if (precision == Volume::BoundingBoxPrecision::VOXEL)
     {
@@ -191,7 +191,7 @@ Vec6f TsdfVolume::getBoundingBox(int precision) const
         Vec3f res;
         this->settings.getVolumeResolution(res);
         Vec3f volSize = res * sz;
-        return Vec6f(0, 0, 0, volSize[0], volSize[1], volSize[2]);
+        Vec6f(0, 0, 0, volSize[0], volSize[1], volSize[2]).copyTo(bb);
     }
 }
 
@@ -403,7 +403,7 @@ bool HashTsdfVolume::getEnableGrowth() const
     return enableGrowth;
 }
 
-Vec6f HashTsdfVolume::getBoundingBox(int precision) const
+void HashTsdfVolume::getBoundingBox(OutputArray boundingBox, int precision) const
 {
     if (precision == Volume::BoundingBoxPrecision::VOXEL)
     {
@@ -442,7 +442,7 @@ Vec6f HashTsdfVolume::getBoundingBox(int precision) const
 
         if (vi.empty())
         {
-            return Vec6f();
+            boundingBox.setZero();
         }
         else
         {
@@ -474,7 +474,7 @@ Vec6f HashTsdfVolume::getBoundingBox(int precision) const
                 bb[5] = max(bb[5], pg.z);
             }
 
-            return bb;
+            bb.copyTo(boundingBox);
         }
     }
 }
@@ -569,7 +569,7 @@ void ColorTsdfVolume::reset()
 int ColorTsdfVolume::getVisibleBlocks() const { return 1; }
 size_t ColorTsdfVolume::getTotalVolumeUnits() const { return 1; }
 
-Vec6f ColorTsdfVolume::getBoundingBox(int precision) const
+void ColorTsdfVolume::getBoundingBox(OutputArray bb, int precision) const
 {
     if (precision == Volume::BoundingBoxPrecision::VOXEL)
     {
@@ -581,7 +581,7 @@ Vec6f ColorTsdfVolume::getBoundingBox(int precision) const
         Vec3f res;
         this->settings.getVolumeResolution(res);
         Vec3f volSize = res * sz;
-        return Vec6f(0, 0, 0, volSize[0], volSize[1], volSize[2]);
+        Vec6f(0, 0, 0, volSize[0], volSize[1], volSize[2]).copyTo(bb);
     }
 }
 

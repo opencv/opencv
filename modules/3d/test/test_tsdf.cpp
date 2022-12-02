@@ -502,7 +502,8 @@ void staticBoundingBoxTest(VolumeType volumeType)
     vs.getVolumePose(pose);
     Vec3f end = voxelSize * Vec3f(res);
     Vec6f truebb(0, 0, 0, end[0], end[1], end[2]);
-    Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+    Vec6f bb;
+    volume.getBoundingBox(bb, Volume::BoundingBoxPrecision::VOLUME_UNIT);
     Vec6f diff = bb - truebb;
     double normdiff = std::sqrt(diff.ddot(diff));
     ASSERT_LE(normdiff, std::numeric_limits<double>::epsilon());
@@ -534,7 +535,8 @@ void boundingBoxGrowthTest(bool enableGrowth)
     for (int i = 0; i < nIntegrations; i++)
         volume.integrate(udepth, poses[0].matrix);
 
-    Vec6f bb = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+    Vec6f bb;
+    volume.getBoundingBox(bb, Volume::BoundingBoxPrecision::VOLUME_UNIT);
     Vec6f truebb(-0.9375f, 1.3125f, -0.8906f, 3.9375f, 2.6133f, 1.4004f);
     Vec6f diff = bb - truebb;
     double bbnorm = std::sqrt(diff.ddot(diff));
@@ -562,7 +564,8 @@ void boundingBoxGrowthTest(bool enableGrowth)
     for (int i = 0; i < nIntegrations; i++)
         volume.integrate(udepth2, poses[0].matrix);
 
-    Vec6f bb2 = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+    Vec6f bb2;
+    volume.getBoundingBox(bb2, Volume::BoundingBoxPrecision::VOLUME_UNIT);
 
     Vec6f truebb2 = truebb + Vec6f(0, -(1.3125f - 1.0723f), -(-0.8906f - (-1.4238f)), 0, 0, 0);
     Vec6f diff2 = enableGrowth ? bb2 - truebb2 : bb2 - bb;
@@ -577,7 +580,8 @@ void boundingBoxGrowthTest(bool enableGrowth)
     // Reset check
 
     volume.reset();
-    Vec6f bb3 = volume.getBoundingBox(Volume::BoundingBoxPrecision::VOLUME_UNIT);
+    Vec6f bb3;
+    volume.getBoundingBox(bb3, Volume::BoundingBoxPrecision::VOLUME_UNIT);
     double bbnorm3 = std::sqrt(bb3.ddot(bb3));
     EXPECT_LE(bbnorm3, std::numeric_limits<double>::epsilon());
 }

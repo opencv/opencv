@@ -117,12 +117,15 @@ public:
         VOLUME_UNIT = 0,
         VOXEL = 1
     };
-    /** @brief Gets bounding box in volume coordinates with given precision:
+
+    /**
+     * @brief Gets bounding box in volume coordinates with given precision:
      * VOLUME_UNIT - up to volume unit
      * VOXEL - up to voxel (currently not supported)
-     * @return (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+     * @param bb 6-float 1d array containing (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+     * @param precision bounding box calculation precision
      */
-    virtual Vec6f getBoundingBox(int precision) const;
+    CV_WRAP void getBoundingBox(OutputArray bb, int precision) const;
 
     /**
      * @brief Enables or disables new volume unit allocation during integration.
