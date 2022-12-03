@@ -976,6 +976,12 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
         return false;
 #endif
 
+    if (dev.deviceVersionMajor() == 1 && dev.deviceVersionMinor() < 2)
+    {
+        // 'static' storage class specifier used by "minmaxloc" is available from OpenCL 1.2+ only
+        return false;
+    }
+
     bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty(),
         haveSrc2 = _src2.kind() != _InputArray::NONE;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),

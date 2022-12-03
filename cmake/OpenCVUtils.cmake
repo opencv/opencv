@@ -868,6 +868,7 @@ macro(ocv_check_modules define)
           list(APPEND _libs_paths ${CMAKE_MATCH_1})
         elseif(IS_ABSOLUTE "${flag}"
             OR flag STREQUAL "-lstdc++"
+            OR flag STREQUAL "-latomic"
         )
           list(APPEND _libs "${flag}")
         elseif(flag MATCHES "^-l(.*)")
