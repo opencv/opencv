@@ -1079,6 +1079,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ScatterNDLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS TileLayer : public Layer
+    {
+    public:
+        static Ptr<TileLayer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END
