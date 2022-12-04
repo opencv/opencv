@@ -132,6 +132,7 @@ protected:
     T* ptr;
 public:
     inline GSafePtr() CV_NOEXCEPT : ptr(NULL) { }
+    inline GSafePtr(T* p) : ptr(p) { }
     inline ~GSafePtr() CV_NOEXCEPT { release(); }
     inline void release() CV_NOEXCEPT
     {
@@ -178,7 +179,7 @@ public:
 
     inline void swap(GSafePtr& o) CV_NOEXCEPT { std::swap(ptr, o.ptr); }
 private:
-    //GSafePtr(const GSafePtr&); // = disabled
+    GSafePtr(const GSafePtr&); // = disabled
     GSafePtr& operator=(const T*); // = disabled
 };
 
@@ -343,7 +344,8 @@ private:
     GSafePtr<GstSample>  impendingVideoSample;
     GSafePtr<GstSample>  usedVideoSample;
     GSafePtr<GstSample>  impendingAudioSample;
-    std::vector<GSafePtr<GstSample>> audioSamples;
+    GSafePtr<GstSample>  audioSample;
+    std::vector<GstSample*> audioSamples;
     GSafePtr<GstCaps>    caps;
     GSafePtr<GstCaps>    audiocaps;
 
@@ -357,6 +359,7 @@ private:
     gint64        usedVideoSampleTime;
     gint64        videoSampleDuration;
     gint64        audioSampleDuration;
+    gint64        impendingAudioSampleTime;
     gint64        audioSampleTime;
     gint64        chunkLengthOfBytes;
     gint64        givenAudioTime;
@@ -424,9 +427,10 @@ GStreamerCapture::GStreamerCapture() :
     bufferedAudioDuration(0),
     requiredAudioTime(0),
     audioStartOffset(-1), videoStartOffset(-1),
-    impendingVideoSampleTime(0), 
+    impendingVideoSampleTime(0),
     usedVideoSampleTime(0),
     videoSampleDuration(0), audioSampleDuration(0),
+    impendingAudioSampleTime(0),
     audioSampleTime(0),
     chunkLengthOfBytes(0),
     givenAudioTime(0),
@@ -563,6 +567,7 @@ bool GStreamerCapture::setAudioProperties(const cv::VideoCaptureParameters& para
  */
 bool GStreamerCapture::grabFrame()
 {
+    //std::cout << "--------------------------------------" << std::endl;
     if (!pipeline || !GST_IS_ELEMENT(pipeline.get()))
         return false;
 
@@ -575,9 +580,9 @@ bool GStreamerCapture::grabFrame()
         return false;
 
     bool returnFlag = true;
+
     if (streamData.videoStream >= 0)
     {
-        std::cout << "grabFrame video" << std::endl;
         if (!vEOS)
             returnFlag &= grabVideoFrame();
         if (!returnFlag)
@@ -586,16 +591,8 @@ bool GStreamerCapture::grabFrame()
 
     if (streamData.audioStream >= 0)
     {
-        /*audioSample.attach(gst_app_sink_pull_sample(GST_APP_SINK(audiosink.get())));
-        if (!audioSample)
-            return false;
-
-        if (isPosFramesEmulated)
-            emulatedFrameNumber++;
-        configureAudioFrame();*/
-
-        std::cout << "grabFrame audio" << std::endl;
-        bufferedAudioDuration = (double)(bufferAudioData.size()/((audioBitPerSample/8)*nAudioChannels))/audioSamplesPerSecond;
+        bufferedAudioDuration = (gint64)(1e9*(((double)bufferAudioData.size()/((audioBitPerSample/8)*nAudioChannels))/audioSamplesPerSecond));
+        //std::cout << "bufferAudioData.size() " << bufferAudioData.size() << std::endl;
         audioFrame.release();
         if (!aEOS)
             returnFlag &= grabAudioFrame();
@@ -606,14 +603,13 @@ bool GStreamerCapture::grabFrame()
 
 bool GStreamerCapture::grabVideoFrame()
 {
-    /*gint64 val = 0;
-    gst_element_query_position(sink, CV_GST_FORMAT(GST_FORMAT_TIME), &val);
-    std::cout << val << std::endl;*/
-    
+    //std::cout << "GStreamerCapture::grabVideoFrame" << std::endl;
+    usedVideoSample.release();
+
     bool returnFlag = false;
     bool stopFlag = false;
 
-    if (streamData.audioStream == -1)
+    if (streamData.audioStream != -1)
     {
         usedVideoSample.swap(impendingVideoSample);
         std::swap(usedVideoSampleTime, impendingVideoSampleTime);
@@ -627,62 +623,179 @@ bool GStreamerCapture::grabVideoFrame()
             lastFrame = true;
             stopFlag = true;
             if (streamData.audioStream == -1)
+            {
                 returnFlag = false;
+            }
             else if (usedVideoSample)
-                returnFlag = true;
-        }
-
-        impendingVideoSample.attach(gst_app_sink_pull_sample(GST_APP_SINK(sink.get())));
-        if (!impendingVideoSample)
-        {
-            std::cout << "video sample empty!" << std::endl;
-            CV_LOG_DEBUG(NULL, "videoio(MSMF): gst_app_sink_pull_sample() method is not succeeded");
-            return false;
-        }
-        gst_element_query_position(sink.get(), CV_GST_FORMAT(GST_FORMAT_TIME), &impendingVideoSampleTime);
-
-        if (streamData.audioStream != -1)
-        {
-            if (!usedVideoSample)
             {
-                usedVideoSample.swap(impendingVideoSample);
-                std::swap(usedVideoSampleTime, impendingVideoSampleTime);
-                videoStartOffset = usedVideoSampleTime;
-            }
-            else
-            {
-                stopFlag = true;
-            }
-            if (impendingVideoSample)
-            {
-                //if (isPosFramesEmulated)
-                    emulatedFrameNumber++;
+                gst_element_query_position(sink.get(), CV_GST_FORMAT(GST_FORMAT_TIME), &impendingVideoSampleTime);
                 videoSampleDuration = impendingVideoSampleTime - usedVideoSampleTime;
                 requiredAudioTime = impendingVideoSampleTime - givenAudioTime;
                 givenAudioTime += requiredAudioTime;
+                returnFlag = true;
             }
         }
-        else
+        else 
         {
-            usedVideoSample.swap(impendingVideoSample);
-            std::swap(usedVideoSampleTime, impendingVideoSampleTime);
-            stopFlag = true;
-            //if (isPosFramesEmulated)
-                emulatedFrameNumber++;
+            impendingVideoSample.attach(gst_app_sink_pull_sample(GST_APP_SINK(sink.get())));
+            if (!impendingVideoSample)
+            {
+                //std::cout << "video sample empty!" << std::endl;
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): gst_app_sink_pull_sample() method is not succeeded");
+                return false;
+            }
+            gst_element_query_position(sink.get(), CV_GST_FORMAT(GST_FORMAT_TIME), &impendingVideoSampleTime);
+
+            if (streamData.audioStream != -1)
+            {
+                if (!usedVideoSample)
+                {
+                    usedVideoSample.swap(impendingVideoSample);
+                    std::swap(usedVideoSampleTime, impendingVideoSampleTime);
+                    videoStartOffset = usedVideoSampleTime;
+                }
+                else
+                {
+                    stopFlag = true;
+                }
+                if (impendingVideoSample)
+                {
+                    //if (isPosFramesEmulated)
+                        emulatedFrameNumber++;
+                }
+                videoSampleDuration = impendingVideoSampleTime - usedVideoSampleTime;
+                requiredAudioTime = impendingVideoSampleTime - givenAudioTime;
+                givenAudioTime += requiredAudioTime;
+                std::cout << "videoSampleDuration " << videoSampleDuration << std::endl;
+                //std::cout << "requiredAudioTime " << requiredAudioTime << std::endl;
+                //std::cout << "usedVideoSampleTime " << usedVideoSampleTime << std::endl;
+                //std::cout << "impendingVideoSampleTime " << impendingVideoSampleTime << std::endl;
+            }
+            else
+            {
+                usedVideoSample.swap(impendingVideoSample);
+                std::swap(usedVideoSampleTime, impendingVideoSampleTime);
+                stopFlag = true;
+                //if (isPosFramesEmulated)
+                    emulatedFrameNumber++;
+            }
+            returnFlag = true;
         }
-        returnFlag = true;
     }
 
     return returnFlag;
 }
 
+bool GStreamerCapture::grabAudioFrame()
+{
+    //std::cout << "GStreamerCapture::grabAudioFrame" << std::endl;
+    audioSample.reset(NULL);
+    for (uint i = 0; i < audioSamples.size(); i++)
+    {
+        gst_sample_unref(audioSamples[i]);
+    }
+    audioSamples.clear();
+
+    bool returnFlag = false;
+    audioTime = bufferedAudioDuration;
+
+    if (bufferedAudioDuration > requiredAudioTime)
+        return true;
+
+    while ((!vEOS) ? audioTime <= requiredAudioTime : !aEOS)
+    {
+        std::cout << "new iteration" << std::endl;
+        /*audioSample.swap(impendingAudioSample);
+        std::swap(audioSampleTime, impendingAudioSampleTime);*/
+
+        if (audioStartOffset - usedVideoSampleTime > videoSampleDuration)
+            return true;
+    
+        if (gst_app_sink_is_eos(GST_APP_SINK(audiosink.get())))
+        {
+            aEOS = true;
+            if (streamData.videoStream != -1 && !vEOS)
+                returnFlag = true;
+            if (streamData.videoStream == -1)
+                audioSamplePos += chunkLengthOfBytes/((audioBitPerSample/8)*nAudioChannels);
+            break;
+        }
+        else
+        {
+            audioSample.attach(gst_app_sink_pull_sample(GST_APP_SINK(audiosink.get())));
+            if (!audioSample)
+            {
+                CV_LOG_DEBUG(NULL, "videoio(MSMF): gst_app_sink_pull_sample() method is not succeeded");
+                return false;
+            }
+            gst_element_query_position(audiosink.get(), CV_GST_FORMAT(GST_FORMAT_TIME), &audioSampleTime);
+
+            /*if (!audioSample)
+            {
+                audioSample.swap(impendingAudioSample);
+                std::swap(audioSampleTime, impendingAudioSampleTime);
+            }
+
+            if (!impendingAudioSample)
+            {
+                std::cout << "second pull" << std::endl;
+                impendingAudioSample.attach(gst_app_sink_pull_sample(GST_APP_SINK(audiosink.get())));
+                if (!impendingAudioSample)
+                {
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): gst_app_sink_pull_sample() method is not succeeded");
+                    return false;
+                }
+                gst_element_query_position(audiosink.get(), CV_GST_FORMAT(GST_FORMAT_TIME), &impendingAudioSampleTime);
+            }*/
+
+            GstMapInfo map_info = {};
+            GstBuffer* buf = gst_sample_get_buffer(audioSample);
+            if (!buf)
+                return false;
+            if (!gst_buffer_map(buf, &map_info, GST_MAP_READ))
+            {
+                CV_LOG_ERROR(NULL, "GStreamer: Failed to map GStreamer buffer to system memory");
+                return false;
+            }
+            ScopeGuardGstMapInfo map_guard(buf, &map_info);
+            audioSampleDuration = 1e9*(((double)map_info.size/((audioBitPerSample/8)*nAudioChannels))/audioSamplesPerSecond);
+            //std::cout << "audioSampleTime " << audioSampleTime << std::endl;
+            //audioSampleDuration = impendingAudioSampleTime - audioSampleTime;
+            audioSamples.push_back(audioSample.get());
+            audioSample.detach();
+            audioSample.reset(NULL);
+            
+            CV_LOG_DEBUG(NULL, "videoio(MSMF): got audio frame with timestamp=" << audioSampleTime << "  duration=" << audioSampleDuration);
+            //std::cout << "bufferedAudioDuration " << bufferedAudioDuration << std::endl;
+            //std::cout << "audioTime " << audioTime << std::endl;
+            audioTime += (int64_t)(audioSampleDuration);
+            if (emulatedFrameNumber == 1 && audioStartOffset == -1)
+            {
+                //audioStartOffset = audioSampleTime - audioSampleDuration;
+                audioStartOffset = 0;
+                //std::cout << "audioStartOffset " << audioStartOffset << std::endl;
+                requiredAudioTime -= audioStartOffset;
+            }
+            //std::cout << "audioSampleDuration " << audioSampleDuration << std::endl;
+            //std::cout << "audioTime " << audioTime << std::endl;
+            //std::cout << "bufferedAudioDuration " << bufferedAudioDuration << std::endl;
+            //std::cout << "audioStartOffset " << audioStartOffset << std::endl;
+            returnFlag = true;
+        }  
+    }
+
+    returnFlag &= configureAudioFrame();
+    return returnFlag;
+}
+
 bool GStreamerCapture::configureAudioFrame()
 {
+    //std::cout << "GStreamerCapture::configureAudioFrame" << std::endl;
     if (!audioSamples.empty() || (!bufferAudioData.empty() && aEOS))
     {
         std::vector<uint8_t> audioDataInUse;
         GstMapInfo map_info = {};
-        std::cout << audioSamples.size() << std::endl;
+
         GstCaps* frame_caps = gst_sample_get_caps(audioSamples[0]);  // no lifetime transfer
         if (!frame_caps)
         {
@@ -739,13 +852,17 @@ bool GStreamerCapture::configureAudioFrame()
                 bufferAudioData[lastSize+j]=*(map_info.data + j);
             }
         }
-        audioSamples.clear();
+
+        //std::cout << "audio Time " << audioTime << std::endl;
+        //std::cout << "bufferedAudioDuration " << bufferedAudioDuration << std::endl;
+        //std::cout << "requiredAudioTime " << requiredAudioTime << std::endl;
+        //std::cout << "videoSampleDuration " << videoSampleDuration << std::endl;
 
         audioSamplePos += chunkLengthOfBytes/((audioBitPerSample/8)*nAudioChannels);
-        chunkLengthOfBytes = (streamData.videoStream != -1) ? (int64_t)((requiredAudioTime*audioSamplesPerSecond*nAudioChannels*(audioBitPerSample)/8)/1e9) : map_info.size;
+        chunkLengthOfBytes = (streamData.videoStream != -1) ? (int64_t)((requiredAudioTime * 1e-9 * audioSamplesPerSecond*nAudioChannels*(audioBitPerSample)/8)) : map_info.size;
         if ((streamData.videoStream != -1) && (chunkLengthOfBytes % ((int)(audioBitPerSample)/8* (int)nAudioChannels) != 0))
         {
-            if ( (double)audioSamplePos/audioSamplesPerSecond + audioStartOffset * 1e-9 - usedVideoSampleTime * 1e-9 >= 0 )
+            if ( (double)audioSamplePos/audioSamplesPerSecond + audioStartOffset * 1e-9 - usedVideoSampleTime * 1e-9 >= 0 ) 
                 chunkLengthOfBytes -= numberOfAdditionalAudioBytes;
             numberOfAdditionalAudioBytes = ((int)(audioBitPerSample)/8* (int)nAudioChannels)
                                         - chunkLengthOfBytes % ((int)(audioBitPerSample)/8* (int)nAudioChannels);
@@ -758,7 +875,10 @@ bool GStreamerCapture::configureAudioFrame()
         }
         CV_Check((double)chunkLengthOfBytes, chunkLengthOfBytes >= INT_MIN || chunkLengthOfBytes <= INT_MAX, "GSTREAMER: The chunkLengthOfBytes is out of the allowed range");
         copy(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes, std::back_inserter(audioDataInUse));
+        std::cout << "chunkLengthOfBytes " << chunkLengthOfBytes << std::endl;
+        std::cout << "before bufferAudioData size " << bufferAudioData.size() << std::endl;
         bufferAudioData.erase(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes);
+        //std::cout << "after bufferAudioData size " << bufferAudioData.size() << std::endl;
 
         if (name == "audio/x-raw")
         {
@@ -777,31 +897,40 @@ bool GStreamerCapture::configureAudioFrame()
             {
                 buffer[i] = *(map_info.data + i);
             }*/
+            /*file.write(reinterpret_cast<char*>(buffer), sizeof(buffer));
+            file.close();*/
+
+            if (format != "S8" && format != "S16LE" && format != "S32LE" && format != "F32LE")
+            {
+                CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer audio format: %s", format.c_str()));
+                return false;
+            }
             if (format == "S8")
             {
-                Mat(map_info.size/bpf, nAudioChannels, CV_8S, audioDataInUse.data()).copyTo(audioFrame);
+                Mat((int)chunkLengthOfBytes/bpf, nAudioChannels, CV_8S, audioDataInUse.data()).copyTo(audioFrame);
                 return true;
             }
             if (format == "S16LE")
             {
-                Mat(map_info.size/bpf, nAudioChannels, CV_16S, audioDataInUse.data()).copyTo(audioFrame);
-                /*file.write(reinterpret_cast<char*>(buffer), sizeof(buffer));
-                file.close();*/
+                Mat((int)chunkLengthOfBytes/bpf, nAudioChannels, CV_16S, audioDataInUse.data()).copyTo(audioFrame);
+                
                 return true;
             }
             if (format == "S32LE")
             {
-                Mat(map_info.size/bpf, nAudioChannels, CV_32S, audioDataInUse.data()).copyTo(audioFrame);
+                Mat((int)chunkLengthOfBytes/bpf, nAudioChannels, CV_32S, audioDataInUse.data()).copyTo(audioFrame);
                 return true;
             }
             if (format == "F32LE")
             {
-                Mat(map_info.size/bpf, nAudioChannels, CV_32F, audioDataInUse.data()).copyTo(audioFrame);
+                Mat((int)chunkLengthOfBytes/bpf, nAudioChannels, CV_32F, audioDataInUse.data()).copyTo(audioFrame);
                 return true;
             }
-            CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer audio format: %s", format.c_str()));
-        }
 
+            audioDataInUse.clear();
+            audioDataInUse.shrink_to_fit();
+            return true;
+        }
         CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer layer type: %s", name.c_str()));
     }
     else
@@ -810,88 +939,9 @@ bool GStreamerCapture::configureAudioFrame()
     }
 }
 
-bool GStreamerCapture::grabAudioFrame()
-{   
-    GSafePtr<GstSample> audioSample;
-    audioSample.reset(NULL);
-    audioSamples.clear();
-
-    bool returnFlag = false;
-    audioTime = 0;
-    int numberOfSamples = -1;
-    gint64 queryPosition = 0, impendingPosition = 0;
-
-    if (bufferedAudioDuration*1e9 > requiredAudioTime)
-        return true;
-
-    while ((!vEOS) ? audioTime <= requiredAudioTime : !aEOS)
-    {
-        std::cout << "grabAudioFrame while iteration" << std::endl;
-        std::cout << "audioTime " << audioTime << std::endl;
-        std::cout << "requiredAudioTime " << requiredAudioTime << std::endl;
-        if (audioStartOffset - usedVideoSampleTime > videoSampleDuration)
-            return true;
-    
-        if (gst_app_sink_is_eos(GST_APP_SINK(audiosink.get())))
-        {
-            aEOS = true;
-            if (streamData.videoStream != -1 && !vEOS)
-                returnFlag = true;
-            if (streamData.videoStream == -1)
-                audioSamplePos += chunkLengthOfBytes/((audioBitPerSample/8)*nAudioChannels);
-            break;
-        }
-        else
-        {
-            //gst_element_query_position(audiosink, CV_GST_FORMAT(GST_FORMAT_TIME), &queryPosition);
-
-            audioSample.attach(gst_app_sink_pull_sample(GST_APP_SINK(audiosink.get())));
-            if (!audioSample)
-            {
-                std::cout << "audio sample empty!" << std::endl;
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): gst_app_sink_pull_sample() method is not succeeded");
-                return false;
-            }
-
-            GstMapInfo map_info = {};
-            GstBuffer* buf = gst_sample_get_buffer(audioSample);
-            if (!buf)
-                return false;
-            if (!gst_buffer_map(buf, &map_info, GST_MAP_READ))
-            {
-                CV_LOG_ERROR(NULL, "GStreamer: Failed to map GStreamer buffer to system memory");
-                return false;
-            }
-            ScopeGuardGstMapInfo map_guard(buf, &map_info);
-            std::cout << map_info.size << std::endl;
-            audioSampleDuration = 1e9*(((double)map_info.size/((audioBitPerSample/8)*nAudioChannels))/audioSamplesPerSecond);
-        
-            //gst_element_query_position(audiosink, CV_GST_FORMAT(GST_FORMAT_TIME), &impendingPosition);
-
-            audioSamples.push_back(audioSample);
-            audioSample.reset(NULL);
-            numberOfSamples++;
-            //std::cout << "impendingPosition " << impendingPosition << std::endl;
-            //std::cout << "queryPosition " << queryPosition << std::endl;
-            std::cout << "audioSampleDuration " << audioSampleDuration << std::endl;
-            //audioSampleDuration = impendingPosition - queryPosition;
-            CV_LOG_DEBUG(NULL, "videoio(MSMF): got audio frame with timestamp=" << audioSampleTime << "  duration=" << audioSampleDuration);
-            audioTime += (int64_t)(audioSampleDuration + bufferedAudioDuration*1e9);
-            if (emulatedFrameNumber == 1 && audioStartOffset == -1)
-            {
-                audioStartOffset = audioSampleTime - audioSampleDuration;
-                requiredAudioTime -= audioStartOffset;
-            }
-            returnFlag = true;
-        }  
-    }
-
-    returnFlag &= configureAudioFrame();
-    return returnFlag;
-}
-
 bool GStreamerCapture::retrieveAudioFrame(int index, OutputArray dst)
 {
+    //std::cout << "GStreamerCapture::retrieveAudioFrame" << std::endl;
     if (audioStartOffset - usedVideoSampleTime > videoSampleDuration)
     {
         dst.release();
@@ -941,6 +991,7 @@ bool GStreamerCapture::retrieveAudioFrame(int index, OutputArray dst)
 
 bool GStreamerCapture::retrieveVideoFrame(int, OutputArray dst)
 {
+    //std::cout << "GStreamerCapture::retrieveVideoFrame" << std::endl;
     GstCaps* frame_caps = gst_sample_get_caps(usedVideoSample);  // no lifetime transfer
     if (!frame_caps)
     {
@@ -1142,21 +1193,32 @@ bool GStreamerCapture::retrieveFrame(int index, OutputArray dst)
 {
     if (index < 0)
         return false;
-    if (streamData.videoStream >= 0)
-        if (!usedVideoSample || vEOS)
-            return false;
-    if (streamData.audioStream >= 0)
-        if (audioSamples.empty() || aEOS)
-            return false;
-    if (index == 0)
+
+    if ((gint)index < audioBaseIndex)
     {
-        CV_CheckGE(streamData.videoStream, 0, "No video stream configured");
-        return retrieveVideoFrame(index, dst);
+        if (streamData.videoStream == -1)
+        {
+            dst.release();
+            return false;
+        }
+        else
+        {
+            CV_CheckGE(streamData.videoStream, 0, "No video stream configured");
+            return retrieveVideoFrame(index, dst);
+        }
     }
-    else if (index >= audioBaseIndex)
+    else
     {
-        CV_CheckGE(streamData.audioStream, 0, "No audio stream configured");
-        return retrieveAudioFrame(index, dst);
+        if (streamData.audioStream == -1)
+        {
+            dst.release();
+            return false;
+        }
+        else
+        {
+            CV_CheckGE(streamData.audioStream, 0, "No audio stream configured");
+            return retrieveAudioFrame(index, dst);
+        }
     }
 
     CV_LOG_ERROR(NULL, "GStreamer(retrive): unrecognized index=" << index);
@@ -1383,12 +1445,12 @@ GstBusSyncReply GStreamerCapture::busMessage(GstBus * /*bus*/, GstMessage * mess
     {
         case GST_MESSAGE_ERROR:
         {
-            std::cout << "GST_MESSAGE_ERROR" << std::endl;
+            //std::cout << "GST_MESSAGE_ERROR" << std::endl;
             break;
         }
         case GST_MESSAGE_EOS:
         {
-            std::cout << "GST_MESSAGE_EOS" << std::endl;
+            //std::cout << "GST_MESSAGE_EOS" << std::endl;
             break;
         }
         case GST_MESSAGE_STREAM_COLLECTION:
@@ -1492,7 +1554,7 @@ bool GStreamerCapture::switchStreams(StreamData * data)
     }
 
     data->ev = gst_event_new_select_streams(streams);
-    std::cout << GST_EVENT_TYPE_NAME(data->ev) << std::endl;
+    //std::cout << GST_EVENT_TYPE_NAME(data->ev) << std::endl;
     //gst_event_type_get_name
     //gst_element_send_event (pipeline.get(), ev);
     gboolean ret = gst_element_send_event(data->pipeline.get(), data->ev);
@@ -2027,6 +2089,10 @@ double GStreamerCapture::getProperty(int propId) const
     case CV_CAP_PROP_POS_MSEC:
         CV_LOG_ONCE_WARNING(NULL, "OpenCV | GStreamer: CAP_PROP_POS_MSEC property result may be unrealiable: "
                                   "https://github.com/opencv/opencv/issues/19025");
+        if (streamData.audioStream != -1)
+        {
+            return usedVideoSampleTime * 1e-6;
+        }
         format = GST_FORMAT_TIME;
         status = gst_element_query_position(sink.get(), CV_GST_FORMAT(format), &value);
         if(!status) {
@@ -2103,6 +2169,10 @@ double GStreamerCapture::getProperty(int propId) const
         return audioBaseIndex;
     case CAP_PROP_AUDIO_TOTAL_STREAMS:
         return streamData.nbAudioStream;
+    case CAP_PROP_AUDIO_POS:
+        return audioSamplePos;
+    case CAP_PROP_AUDIO_SHIFT_NSEC:
+        return (double)(audioStartOffset - videoStartOffset)*1e-6;
     default:
         CV_WARN("unhandled property: " << propId);
         break;
