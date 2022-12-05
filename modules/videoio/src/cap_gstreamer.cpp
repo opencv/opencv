@@ -77,6 +77,8 @@
 #define COLOR_ELEM_NAME COLOR_ELEM
 
 #define CV_GST_FORMAT(format) (format)
+#define GSTREAMER_INTERRUPT_OPEN_DEFAULT_TIMEOUT_NS 30e9
+#define GSTREAMER_INTERRUPT_READ_DEFAULT_TIMEOUT_NS 30e9
 
 
 namespace cv {
@@ -328,6 +330,8 @@ private:
     gint          width;
     gint          height;
     double        fps;
+    GstClockTime  openTimeout; // measured in nanoseconds
+    GstClockTime  readTimeout; // measured in nanoseconds
     bool          isPosFramesSupported;
     bool          isPosFramesEmulated;
     gint64        emulatedFrameNumber;
@@ -372,6 +376,8 @@ GStreamerCapture::GStreamerCapture() :
     videoStream(0),
     audioStream(-1),
     duration(-1), width(-1), height(-1), fps(-1),
+    openTimeout(GSTREAMER_INTERRUPT_OPEN_DEFAULT_TIMEOUT_NS),
+    readTimeout(GSTREAMER_INTERRUPT_READ_DEFAULT_TIMEOUT_NS),
     isPosFramesSupported(false),
     isPosFramesEmulated(false),
     emulatedFrameNumber(-1),
@@ -504,7 +510,7 @@ bool GStreamerCapture::grabFrame()
     if (gst_app_sink_is_eos(GST_APP_SINK(sink.get())))
         return false;
 
-    sample.attach(gst_app_sink_pull_sample(GST_APP_SINK(sink.get())));
+    sample.attach(gst_app_sink_try_pull_sample(GST_APP_SINK(sink.get()), readTimeout));
     if (!sample)
         return false;
 
@@ -1353,7 +1359,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
         if (status == GST_STATE_CHANGE_ASYNC)
         {
             // wait for status update
-            status = gst_element_get_state(pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
+            status = gst_element_get_state(pipeline, NULL, NULL, openTimeout);
         }
         if (status == GST_STATE_CHANGE_FAILURE)
         {
@@ -1565,6 +1571,10 @@ double GStreamerCapture::getProperty(int propId) const
         return outputAudioFormat;
     case CAP_PROP_AUDIO_BASE_INDEX:
         return audioBaseIndex;
+    case CAP_PROP_OPEN_TIMEOUT_MSEC:
+        return openTimeout / 1e6; // convert for ns to ms
+    case CAP_PROP_READ_TIMEOUT_MSEC:
+        return readTimeout / 1e6; // convert for ns to ms
     default:
         CV_WARN("unhandled property: " << propId);
         break;
@@ -1718,6 +1728,32 @@ bool GStreamerCapture::setProperty(int propId, double value)
         }
         gst_app_sink_set_max_buffers(GST_APP_SINK(sink.get()), (guint) value);
         return true;
+    }
+    case CAP_PROP_OPEN_TIMEOUT_MSEC:
+    {
+        if(value > 0)
+        {
+            openTimeout = GstClockTime(value * 1e6); // convert from ms to ns
+            return true;
+        }
+        else
+        {
+            CV_WARN("GStreamer open timeout should be positive");
+            return false;
+        }
+    }
+    case CAP_PROP_READ_TIMEOUT_MSEC:
+    {
+        if(value > 0)
+        {
+            readTimeout = GstClockTime(value * 1e6); // convert from ms to ns
+            return true;
+        }
+        else
+        {
+            CV_WARN("GStreamer read timeout should be positive");
+            return false;
+        }
     }
     default:
         CV_WARN("GStreamer: unhandled property");
