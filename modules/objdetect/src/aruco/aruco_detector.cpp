@@ -514,10 +514,10 @@ static int _getBorderErrors(const Mat &bits, int markerSize, int borderSize) {
  *                           1 if the candidate is a black candidate (default candidate)
  *                           2 if the candidate is a white candidate
  */
-static uint8_t _identifyOneCandidate(const Ptr<Dictionary>& dictionary, InputArray _image,
-                                    const vector<Point2f>& _corners, int& idx,
-                                    const DetectorParameters& params, int& rotation,
-                                    const float scale = 1.f) {
+static uint8_t _identifyOneCandidate(const Dictionary& dictionary, InputArray _image,
+                                     const vector<Point2f>& _corners, int& idx,
+                                     const DetectorParameters& params, int& rotation,
+                                     const float scale = 1.f) {
     CV_DbgAssert(_corners.size() == 4);
     CV_DbgAssert(_image.getMat().total() != 0);
     CV_DbgAssert(params.markerBorderBits > 0);
@@ -531,21 +531,21 @@ static uint8_t _identifyOneCandidate(const Ptr<Dictionary>& dictionary, InputArr
     }
 
     Mat candidateBits =
-        _extractBits(_image, scaled_corners, dictionary->markerSize, params.markerBorderBits,
+        _extractBits(_image, scaled_corners, dictionary.markerSize, params.markerBorderBits,
                      params.perspectiveRemovePixelPerCell,
                      params.perspectiveRemoveIgnoredMarginPerCell, params.minOtsuStdDev);
 
     // analyze border bits
     int maximumErrorsInBorder =
-        int(dictionary->markerSize * dictionary->markerSize * params.maxErroneousBitsInBorderRate);
+        int(dictionary.markerSize * dictionary.markerSize * params.maxErroneousBitsInBorderRate);
     int borderErrors =
-        _getBorderErrors(candidateBits, dictionary->markerSize, params.markerBorderBits);
+        _getBorderErrors(candidateBits, dictionary.markerSize, params.markerBorderBits);
 
     // check if it is a white marker
     if(params.detectInvertedMarker){
         // to get from 255 to 1
         Mat invertedImg = ~candidateBits-254;
-        int invBError = _getBorderErrors(invertedImg, dictionary->markerSize, params.markerBorderBits);
+        int invBError = _getBorderErrors(invertedImg, dictionary.markerSize, params.markerBorderBits);
         // white marker
         if(invBError<borderErrors){
             borderErrors = invBError;
@@ -562,7 +562,7 @@ static uint8_t _identifyOneCandidate(const Ptr<Dictionary>& dictionary, InputArr
             .colRange(params.markerBorderBits, candidateBits.cols - params.markerBorderBits);
 
     // try to indentify the marker
-    if(!dictionary->identify(onlyBits, idx, rotation, params.errorCorrectionRate))
+    if(!dictionary.identify(onlyBits, idx, rotation, params.errorCorrectionRate))
         return 0;
 
     return typ;
@@ -604,7 +604,7 @@ static size_t _findOptPyrImageForCanonicalImg(
 static void _identifyCandidates(InputArray grey,
                                 const vector<Mat>& image_pyr,
                                 vector<vector<vector<Point2f> > >& _candidatesSet,
-                                vector<vector<vector<Point> > >& _contoursSet, const Ptr<Dictionary> &_dictionary,
+                                vector<vector<vector<Point> > >& _contoursSet, const Dictionary &_dictionary,
                                 vector<vector<Point2f> >& _accepted, vector<vector<Point> >& _contours, vector<int>& ids,
                                 const DetectorParameters &params,
                                 OutputArrayOfArrays _rejected = noArray()) {
@@ -823,7 +823,7 @@ static inline void findCornerInPyrImage(const float scale_init, const int closes
 
 struct ArucoDetector::ArucoDetectorImpl {
     /// dictionary indicates the type of markers that will be searched
-    Ptr<Dictionary> dictionary;
+    Dictionary dictionary;
 
     /// marker detection parameters, check DetectorParameters docs to see available settings
     DetectorParameters detectorParams;
@@ -832,13 +832,13 @@ struct ArucoDetector::ArucoDetectorImpl {
     RefineParameters refineParams;
     ArucoDetectorImpl() {}
 
-    ArucoDetectorImpl(const Ptr<Dictionary> &_dictionary, const DetectorParameters &_detectorParams,
+    ArucoDetectorImpl(const Dictionary &_dictionary, const DetectorParameters &_detectorParams,
                       const RefineParameters& _refineParams): dictionary(_dictionary),
                       detectorParams(_detectorParams), refineParams(_refineParams) {}
 
 };
 
-ArucoDetector::ArucoDetector(const Ptr<Dictionary> &_dictionary,
+ArucoDetector::ArucoDetector(const Dictionary &_dictionary,
                              const DetectorParameters &_detectorParams,
                              const RefineParameters& _refineParams) {
     arucoDetectorImpl = makePtr<ArucoDetectorImpl>(_dictionary, _detectorParams, _refineParams);
@@ -848,7 +848,7 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
                                   OutputArrayOfArrays _rejectedImgPoints) {
     CV_Assert(!_image.empty());
     DetectorParameters& detectorParams = arucoDetectorImpl->detectorParams;
-    const Ptr<Dictionary>& dictionary = arucoDetectorImpl->dictionary;
+    const Dictionary& dictionary = arucoDetectorImpl->dictionary;
 
     CV_Assert(detectorParams.markerBorderBits > 0);
     // check that the parameters are set correctly if Aruco3 is used
@@ -1097,7 +1097,7 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
                                           InputOutputArrayOfArrays _rejectedCorners, InputArray _cameraMatrix,
                                           InputArray _distCoeffs, OutputArray _recoveredIdxs) {
     DetectorParameters& detectorParams = arucoDetectorImpl->detectorParams;
-    const Ptr<Dictionary>& dictionary = arucoDetectorImpl->dictionary;
+    const Dictionary& dictionary = arucoDetectorImpl->dictionary;
     RefineParameters& refineParams = arucoDetectorImpl->refineParams;
     CV_Assert(refineParams.minRepDistance > 0);
 
@@ -1122,7 +1122,7 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
 
     // maximum bits that can be corrected
     int maxCorrectionRecalculated =
-        int(double(dictionary->maxCorrectionBits) * refineParams.errorCorrectionRate);
+        int(double(dictionary.maxCorrectionBits) * refineParams.errorCorrectionRate);
 
     Mat grey;
     _convertToGrey(_image, grey);
@@ -1190,7 +1190,7 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
 
                 // extract bits
                 Mat bits = _extractBits(
-                    grey, rotatedMarker, dictionary->markerSize, detectorParams.markerBorderBits,
+                    grey, rotatedMarker, dictionary.markerSize, detectorParams.markerBorderBits,
                     detectorParams.perspectiveRemovePixelPerCell,
                     detectorParams.perspectiveRemoveIgnoredMarginPerCell, detectorParams.minOtsuStdDev);
 
@@ -1199,7 +1199,7 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
                         .colRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits);
 
                 codeDistance =
-                    dictionary->getDistanceToId(onlyBits, undetectedMarkersIds[i], false);
+                    dictionary.getDistanceToId(onlyBits, undetectedMarkersIds[i], false);
             }
 
             // if everythin is ok, assign values to current best match
@@ -1260,18 +1260,18 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
 
 void ArucoDetector::write(FileStorage &fs) const {
     Ptr<FileStorage> pfs = makePtr<FileStorage>(fs);
-    arucoDetectorImpl->dictionary->writeDictionary(pfs);
+    arucoDetectorImpl->dictionary.writeDictionary(pfs);
     arucoDetectorImpl->detectorParams.writeDetectorParameters(pfs);
     arucoDetectorImpl->refineParams.writeRefineParameters(pfs);
 }
 
 void ArucoDetector::read(const FileNode &fn) {
-    arucoDetectorImpl->dictionary->readDictionary(fn);
+    arucoDetectorImpl->dictionary.readDictionary(fn);
     arucoDetectorImpl->detectorParams.readDetectorParameters(fn);
     arucoDetectorImpl->refineParams.readRefineParameters(fn);
 }
 
-Ptr<Dictionary> ArucoDetector::getDictionary() const {
+Dictionary& ArucoDetector::getDictionary() const {
     return arucoDetectorImpl->dictionary;
 }
 
@@ -1323,8 +1323,8 @@ void drawDetectedMarkers(InputOutputArray _image, InputArrayOfArrays _corners,
     }
 }
 
-void drawMarker(const Ptr<Dictionary> &dictionary, int id, int sidePixels, OutputArray _img, int borderBits) {
-    dictionary->drawMarker(id, sidePixels, _img, borderBits);
+void drawMarker(const Dictionary &dictionary, int id, int sidePixels, OutputArray _img, int borderBits) {
+    dictionary.drawMarker(id, sidePixels, _img, borderBits);
 }
 
 }

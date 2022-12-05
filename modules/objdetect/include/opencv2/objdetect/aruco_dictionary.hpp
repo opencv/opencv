@@ -22,7 +22,7 @@ namespace aruco {
  *
  * `bytesList.ptr(i)[k*nbytes + j]` is then the j-th byte of i-th marker, in its k-th rotation.
  */
-class CV_EXPORTS_W Dictionary {
+class CV_EXPORTS_W_SIMPLE Dictionary {
 
     public:
     CV_PROP_RW Mat bytesList;         // marker code information
@@ -35,7 +35,6 @@ class CV_EXPORTS_W Dictionary {
     CV_WRAP Dictionary(const Mat &bytesList, int _markerSize, int maxcorr = 0);
 
 
-    CV_WRAP Dictionary(const Ptr<Dictionary> &dictionary);
 
     /** @brief Read a new dictionary from FileNode.
      *
@@ -117,12 +116,12 @@ enum PREDEFINED_DICTIONARY_NAME {
 
 /** @brief Returns one of the predefined dictionaries defined in PREDEFINED_DICTIONARY_NAME
   */
-CV_EXPORTS Ptr<Dictionary> getPredefinedDictionary(PREDEFINED_DICTIONARY_NAME name);
+CV_EXPORTS Dictionary getPredefinedDictionary(PREDEFINED_DICTIONARY_NAME name);
 
 
 /** @brief Returns one of the predefined dictionaries referenced by DICT_*.
   */
-CV_EXPORTS_W Ptr<Dictionary> getPredefinedDictionary(int dict);
+CV_EXPORTS_W Dictionary getPredefinedDictionary(int dict);
 
 /** @brief Extend base dictionary by new nMarkers
   *
@@ -136,8 +135,8 @@ CV_EXPORTS_W Ptr<Dictionary> getPredefinedDictionary(int dict);
   * included and the rest are generated based on them. If the size of baseDictionary is higher
   * than nMarkers, only the first nMarkers in baseDictionary are taken and no new marker is added.
   */
-CV_EXPORTS_W Ptr<Dictionary> extendDictionary(int nMarkers, int markerSize, const Ptr<Dictionary> &baseDictionary = makePtr<Dictionary>(),
-                                              int randomSeed=0);
+CV_EXPORTS_W Dictionary extendDictionary(int nMarkers, int markerSize, const Dictionary &baseDictionary = Dictionary(),
+                                         int randomSeed=0);
 
 
 

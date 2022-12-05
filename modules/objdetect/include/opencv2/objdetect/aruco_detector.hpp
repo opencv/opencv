@@ -282,7 +282,7 @@ public:
      * @param detectorParams marker detection parameters
      * @param refineParams marker refine detection parameters
      */
-    CV_WRAP ArucoDetector(const Ptr<Dictionary> &dictionary = getPredefinedDictionary(cv::aruco::DICT_4X4_50),
+    CV_WRAP ArucoDetector(const Dictionary &dictionary = getPredefinedDictionary(cv::aruco::DICT_4X4_50),
                           const DetectorParameters &detectorParams = DetectorParameters(),
                           const RefineParameters& refineParams = RefineParameters());
 
@@ -337,7 +337,7 @@ public:
                                        InputArray cameraMatrix = noArray(), InputArray distCoeffs = noArray(),
                                        OutputArray recoveredIdxs = noArray());
 
-    Ptr<Dictionary> getDictionary() const;
+    Dictionary& getDictionary() const;
     DetectorParameters& getDetectorParameters();
     RefineParameters& getRefineParameters();
 
@@ -381,7 +381,7 @@ CV_EXPORTS_W void drawDetectedMarkers(InputOutputArray image, InputArrayOfArrays
  *
  * This function returns a marker image in its canonical form (i.e. ready to be printed)
  */
-CV_EXPORTS_W void drawMarker(const Ptr<Dictionary> &dictionary, int id, int sidePixels, OutputArray img,
+CV_EXPORTS_W void drawMarker(const Dictionary &dictionary, int id, int sidePixels, OutputArray img,
                              int borderBits = 1);
 
 //! @}

@@ -145,7 +145,7 @@ static void getSyntheticRT(double yaw, double pitch, double distance, Mat &rvec,
 /**
  * @brief Create a synthetic image of a marker with perspective
  */
-static Mat projectMarker(const Ptr<aruco::Dictionary> &dictionary, int id, Mat cameraMatrix, double yaw,
+static Mat projectMarker(const aruco::Dictionary &dictionary, int id, Mat cameraMatrix, double yaw,
                          double pitch, double distance, Size imageSize, int markerBorder,
                          vector<Point2f> &corners, int encloseMarker=0) {
 
@@ -400,12 +400,10 @@ CV_ArucoBitCorrection::CV_ArucoBitCorrection() {}
 
 void CV_ArucoBitCorrection::run(int) {
 
-    Ptr<aruco::Dictionary> _dictionary1 = aruco::getPredefinedDictionary(aruco::DICT_6X6_250);
-    Ptr<aruco::Dictionary> _dictionary2 = aruco::getPredefinedDictionary(aruco::DICT_6X6_250);
-    aruco::Dictionary &dictionary1 = *_dictionary1;
-    aruco::Dictionary &dictionary2 = *_dictionary2;
+    aruco::Dictionary dictionary1 = aruco::getPredefinedDictionary(aruco::DICT_6X6_250);
+    aruco::Dictionary dictionary2 = aruco::getPredefinedDictionary(aruco::DICT_6X6_250);
     aruco::DetectorParameters params;
-    aruco::ArucoDetector detector1(_dictionary1, params);
+    aruco::ArucoDetector detector1(dictionary1, params);
     int markerSide = 50;
     int imageSize = 150;
 
@@ -466,7 +464,7 @@ void CV_ArucoBitCorrection::run(int) {
             }
 
             // dictionary3 is only composed by the modified marker (in its original form)
-            Ptr<aruco::Dictionary> _dictionary3 = makePtr<aruco::Dictionary>(
+            aruco::Dictionary _dictionary3 = aruco::Dictionary(
                     dictionary2.bytesList.rowRange(id, id + 1).clone(),
                     dictionary1.markerSize,
                     dictionary1.maxCorrectionBits);

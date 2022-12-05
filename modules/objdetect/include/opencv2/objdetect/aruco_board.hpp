@@ -44,11 +44,11 @@ public:
      * @param dictionary the dictionary of markers employed for this board
      * @param ids vector of the identifiers of the markers in the board
      */
-    CV_WRAP static Ptr<Board> create(InputArrayOfArrays objPoints, const Ptr<Dictionary> &dictionary, InputArray ids);
+    CV_WRAP static Ptr<Board> create(InputArrayOfArrays objPoints, const Dictionary &dictionary, InputArray ids);
 
     /** @brief return the Dictionary of markers employed for this board
      */
-    CV_WRAP Ptr<Dictionary> getDictionary() const;
+    CV_WRAP const Dictionary& getDictionary() const;
 
     /** @brief return array of object points of all the marker corners in the board.
      *
@@ -123,7 +123,7 @@ public:
      * the marker size and marker separation.
      */
     CV_WRAP static Ptr<GridBoard> create(int markersX, int markersY, float markerLength, float markerSeparation,
-                                         const Ptr<Dictionary> &dictionary, InputArray ids);
+                                         const Dictionary &dictionary, InputArray ids);
 
     /**
      * @overload
@@ -138,7 +138,7 @@ public:
      * @return the output GridBoard object
      */
     CV_WRAP static Ptr<GridBoard> create(int markersX, int markersY, float markerLength, float markerSeparation,
-                                         const Ptr<Dictionary> &dictionary, int firstMarker = 0);
+                                         const Dictionary &dictionary, int firstMarker = 0);
 
     CV_WRAP Size getGridSize() const;
     CV_WRAP float getMarkerLength() const;
@@ -188,7 +188,7 @@ public:
      * and the size of the markers and chessboard squares.
      */
     CV_WRAP static Ptr<CharucoBoard> create(int squaresX, int squaresY, float squareLength, float markerLength,
-                                            const Ptr<Dictionary> &dictionary, InputArray ids = noArray());
+                                            const Dictionary &dictionary, InputArray ids = noArray());
 
     CV_WRAP Size getChessboardSize() const;
     CV_WRAP float getSquareLength() const;

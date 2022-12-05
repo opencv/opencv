@@ -14,12 +14,12 @@ using namespace std;
 
 struct Board::BoardImpl {
     std::vector<std::vector<Point3f> > objPoints;
-    Ptr<Dictionary> dictionary;
+    Dictionary dictionary;
     Point3f rightBottomBorder;
     std::vector<int> ids;
 
     BoardImpl() {
-        dictionary = makePtr<Dictionary>(getPredefinedDictionary(PREDEFINED_DICTIONARY_NAME::DICT_4X4_50));
+        dictionary = Dictionary(getPredefinedDictionary(PREDEFINED_DICTIONARY_NAME::DICT_4X4_50));
     }
 };
 
@@ -39,7 +39,7 @@ GridBoard::GridBoard(): gridImpl(makePtr<GridImpl>()) {}
 
 Board::Board(): boardImpl(makePtr<BoardImpl>()) {}
 
-Ptr<Board> Board::create(InputArrayOfArrays objPoints, const Ptr<Dictionary> &dictionary, InputArray ids) {
+Ptr<Board> Board::create(InputArrayOfArrays objPoints, const Dictionary &dictionary, InputArray ids) {
     CV_Assert(objPoints.total() == ids.total());
     CV_Assert(objPoints.type() == CV_32FC3 || objPoints.type() == CV_32FC1);
 
@@ -70,7 +70,7 @@ Ptr<Board> Board::create(InputArrayOfArrays objPoints, const Ptr<Dictionary> &di
     return res;
 }
 
-Ptr<Dictionary> Board::getDictionary() const {
+const Dictionary& Board::getDictionary() const {
     return this->boardImpl->dictionary;
 }
 
@@ -148,7 +148,7 @@ void Board::draw(Size outSize, OutputArray img, int marginSize, int borderBits) 
         // get marker
         Size dst_sz(outCorners[2] - outCorners[0]); // assuming CCW order
         dst_sz.width = dst_sz.height = std::min(dst_sz.width, dst_sz.height); //marker should be square
-        getDictionary()->drawMarker(this->getIds()[m], dst_sz.width, marker, borderBits);
+        getDictionary().drawMarker(this->getIds()[m], dst_sz.width, marker, borderBits);
 
         if((outCorners[0].y == outCorners[1].y) && (outCorners[1].x == outCorners[2].x)) {
             // marker is aligned to image axes
@@ -202,7 +202,7 @@ void Board::matchImagePoints(InputArray detectedCorners, InputArray detectedIds,
 Board::~Board() {}
 
 Ptr<GridBoard> GridBoard::create(int markersX, int markersY, float markerLength, float markerSeparation,
-                                 const Ptr<Dictionary> &dictionary, InputArray ids) {
+                                 const Dictionary &dictionary, InputArray ids) {
     CV_Assert(markersX > 0 && markersY > 0 && markerLength > 0 && markerSeparation > 0);
     Ptr<GridBoard> res = makePtr<GridBoard>();
     res->gridImpl->sizeX = markersX;
@@ -235,7 +235,7 @@ Ptr<GridBoard> GridBoard::create(int markersX, int markersY, float markerLength,
 }
 
 Ptr<GridBoard> GridBoard::create(int markersX, int markersY, float markerLength, float markerSeparation,
-                                 const Ptr<Dictionary> &dictionary, int firstMarker) {
+                                 const Dictionary &dictionary, int firstMarker) {
     vector<int> ids(markersX*markersY);
     std::iota(ids.begin(), ids.end(), firstMarker);
     return GridBoard::create(markersX, markersY, markerLength, markerSeparation, dictionary, ids);
@@ -391,7 +391,7 @@ void CharucoBoard::CharucoImpl::_getNearestMarkerCorners(CharucoBoard &board, fl
 }
 
 Ptr<CharucoBoard> CharucoBoard::create(int squaresX, int squaresY, float squareLength, float markerLength,
-                                       const Ptr<Dictionary> &dictionary, InputArray ids) {
+                                       const Dictionary &dictionary, InputArray ids) {
     CV_Assert(squaresX > 1 && squaresY > 1 && markerLength > 0 && squareLength > markerLength);
     Ptr<CharucoBoard> res = makePtr<CharucoBoard>();
 
