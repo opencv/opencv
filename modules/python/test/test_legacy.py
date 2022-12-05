@@ -89,6 +89,10 @@ class Hackathon244Tests(NewOpenCVTests):
         self.check_close_pairs(mc, mc0, 5)
         self.assertLessEqual(abs(mr - mr0), 5)
 
+    def test_issue_22893(self):
+        img = np.zeros(( 4, 1 ), np.uint8)
+        kernel = cv.getStructuringElement(cv.MORPH_RECT, ( 4, 4 ))
+        cv.morphologyEx(img, cv.MORPH_DILATE, kernel)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
