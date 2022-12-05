@@ -17,13 +17,13 @@ class CV_EXPORTS_W Volume
 public:
     /** @brief Constructor of default volume - TSDF.
     */
-    Volume();
+    CV_WRAP Volume();
     /** @brief Constructor of custom volume.
     * @param vtype the volume type [TSDF, HashTSDF, ColorTSDF].
     * @param settings the custom settings for volume.
     */
-    Volume(VolumeType vtype, VolumeSettings settings);
-    virtual ~Volume();
+    CV_WRAP explicit Volume(VolumeType vtype, VolumeSettings settings);
+    ~Volume();
 
     /** @brief Integrates the input data to the volume.
 
@@ -34,7 +34,7 @@ public:
       This can be done using function registerDepth() from 3d module.
     * @param pose the pose of camera in global coordinates.
     */
-    void integrate(const OdometryFrame& frame, InputArray pose);
+    CV_WRAP_AS(integrateFrame) void integrate(const OdometryFrame& frame, InputArray pose);
 
     /** @brief Integrates the input data to the volume.
 
@@ -43,7 +43,7 @@ public:
     * @param depth the depth image.
     * @param pose the pose of camera in global coordinates.
     */
-    void integrate(InputArray depth, InputArray pose);
+    CV_WRAP_AS(integrate) void integrate(InputArray depth, InputArray pose);
 
     /** @brief Integrates the input data to the volume.
 
@@ -55,7 +55,7 @@ public:
       This can be done using function registerDepth() from 3d module.
     * @param pose the pose of camera in global coordinates.
     */
-    void integrate(InputArray depth, InputArray image, InputArray pose);
+    CV_WRAP_AS(integrateColor) void integrate(InputArray depth, InputArray image, InputArray pose);
 
     /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
 
@@ -66,7 +66,7 @@ public:
     * @param normals image to store rendered normals corresponding to points.
     * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
     */
-    void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
+    CV_WRAP void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
 
     /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
 
@@ -80,37 +80,37 @@ public:
     * @param normals image to store rendered normals corresponding to points.
     * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
     */
-    void raycast(InputArray cameraPose, int height, int width, InputArray K, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
+    CV_WRAP_AS(raycastEx) void raycast(InputArray cameraPose, int height, int width, InputArray K, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
 
     /** @brief Extract the all data from volume.
     * @param points the input exist point.
     * @param normals the storage of normals (corresponding to input points) in the image.
     */
-    void fetchNormals(InputArray points, OutputArray normals) const;
+    CV_WRAP void fetchNormals(InputArray points, OutputArray normals) const;
     /** @brief Extract the all data from volume.
     * @param points the storage of all points.
     * @param normals the storage of all normals, corresponding to points.
     */
-    void fetchPointsNormals(OutputArray points, OutputArray normals) const;
+    CV_WRAP void fetchPointsNormals(OutputArray points, OutputArray normals) const;
     /** @brief Extract the all data from volume.
     * @param points the storage of all points.
     * @param normals the storage of all normals, corresponding to points.
     * @param colors the storage of all colors, corresponding to points (only for ColorTSDF).
     */
-    void fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const;
+    CV_WRAP void fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const;
 
     /** @brief clear all data in volume.
     */
-    void reset();
+    CV_WRAP void reset();
 
     //TODO: remove this
     /** @brief return visible blocks in volume.
     */
-    int getVisibleBlocks() const;
+    CV_WRAP int getVisibleBlocks() const;
 
     /** @brief return number of volume units in volume.
     */
-    size_t getTotalVolumeUnits() const;
+    CV_WRAP size_t getTotalVolumeUnits() const;
 
     enum BoundingBoxPrecision
     {
@@ -131,12 +131,12 @@ public:
      * @brief Enables or disables new volume unit allocation during integration.
      * Makes sense for HashTSDF only.
      */
-    virtual void setEnableGrowth(bool v);
+    CV_WRAP void setEnableGrowth(bool v);
     /**
      * @brief Returns if new volume units are allocated during integration or not.
      * Makes sense for HashTSDF only.
      */
-    virtual bool getEnableGrowth() const;
+    CV_WRAP bool getEnableGrowth() const;
 
     class Impl;
 private:

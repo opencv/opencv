@@ -211,11 +211,6 @@ private:
 };
 
 
-Volume::Volume()
-{
-    VolumeSettings settings;
-    this->impl = makePtr<TsdfVolume>(settings);
-}
 Volume::Volume(VolumeType vtype, VolumeSettings settings)
 {
     switch (vtype)
