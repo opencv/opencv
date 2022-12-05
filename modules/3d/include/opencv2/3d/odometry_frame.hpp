@@ -46,7 +46,7 @@ public:
      * @param mask A user-provided mask of valid pixels, should be CV_8UC1
      * @param normals A user-provided normals to the depth surface, should be CV_32FC4
      */
-    OdometryFrame(InputArray image = noArray(), InputArray depth = noArray(), InputArray mask = noArray(), InputArray normals = noArray());
+    CV_WRAP explicit OdometryFrame(InputArray image = noArray(), InputArray depth = noArray(), InputArray mask = noArray(), InputArray normals = noArray());
     ~OdometryFrame() {};
 
     /**
@@ -54,43 +54,43 @@ public:
      *
      * @param image Output image
      */
-    void getImage(OutputArray image) const;
+    CV_WRAP void getImage(OutputArray image) const;
     /**
      * @brief Get the gray image generated from the user-provided BGR/Gray image
      *
      * @param image Output image
      */
-    void getGrayImage(OutputArray image) const;
+    CV_WRAP void getGrayImage(OutputArray image) const;
     /**
      * @brief Get the original user-provided depth image
      *
      * @param depth Output image
      */
-    void getDepth(OutputArray depth) const;
+    CV_WRAP void getDepth(OutputArray depth) const;
     /**
      * @brief Get the depth image generated from the user-provided one after conversion, rescale or filtering for ICP algorithm needs
      *
      * @param depth Output image
      */
-    void getProcessedDepth(OutputArray depth) const;
+    CV_WRAP void getProcessedDepth(OutputArray depth) const;
     /**
      * @brief Get the valid pixels mask generated for the ICP calculations intersected with the user-provided mask
      *
      * @param mask Output image
      */
-    void getMask(OutputArray mask) const;
+    CV_WRAP void getMask(OutputArray mask) const;
     /**
      * @brief Get the normals image either generated for the ICP calculations or user-provided
      *
      * @param normals Output image
      */
-    void getNormals(OutputArray normals) const;
+    CV_WRAP void getNormals(OutputArray normals) const;
 
     /**
      * @brief Get the amount of levels in pyramids (all of them if not empty should have the same number of levels)
      * or 0 if no pyramids were prepared yet
      */
-    size_t getPyramidLevels() const;
+    CV_WRAP size_t getPyramidLevels() const;
     /**
      * @brief Get the image generated for the ICP calculations from one of the pyramids specified by pyrType. Returns empty image if
      * the pyramid is empty or there's no such pyramid level
@@ -99,7 +99,7 @@ public:
      * @param pyrType Type of pyramid
      * @param level Level in the pyramid
      */
-    void getPyramidAt(OutputArray img, OdometryFramePyramidType pyrType, size_t level) const;
+    CV_WRAP void getPyramidAt(OutputArray img, OdometryFramePyramidType pyrType, size_t level) const;
 
     class Impl;
     Ptr<Impl> impl;
