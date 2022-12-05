@@ -243,11 +243,6 @@ public:
 };
 
 
-VolumeSettings::VolumeSettings()
-{
-    this->impl = makePtr<VolumeSettingsImpl>();
-}
-
 VolumeSettings::VolumeSettings(VolumeType volumeType)
 {
     this->impl = makePtr<VolumeSettingsImpl>(volumeType);
