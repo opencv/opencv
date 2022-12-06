@@ -211,7 +211,7 @@ private:
 };
 
 
-Volume::Volume(VolumeType vtype, VolumeSettings settings)
+Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
 {
     switch (vtype)
     {

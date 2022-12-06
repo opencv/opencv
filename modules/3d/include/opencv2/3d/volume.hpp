@@ -15,14 +15,11 @@ namespace cv
 class CV_EXPORTS_W Volume
 {
 public:
-    /** @brief Constructor of default volume - TSDF.
-    */
-    CV_WRAP Volume();
     /** @brief Constructor of custom volume.
     * @param vtype the volume type [TSDF, HashTSDF, ColorTSDF].
     * @param settings the custom settings for volume.
     */
-    CV_WRAP explicit Volume(VolumeType vtype, VolumeSettings settings);
+    CV_WRAP explicit Volume(VolumeType vtype, const VolumeSettings& settings);
     ~Volume();
 
     /** @brief Integrates the input data to the volume.

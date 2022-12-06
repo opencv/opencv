@@ -20,7 +20,7 @@ enum class VolumeType
 };
 
 
-class CV_EXPORTS_W VolumeSettings
+class CV_EXPORTS_W_SIMPLE VolumeSettings
 {
 public:
     /** @brief Constructor of settings for custom Volume type.

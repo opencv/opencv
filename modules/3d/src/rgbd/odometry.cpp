@@ -266,7 +266,7 @@ Odometry::Odometry(OdometryType otype)
     }
 }
 
-Odometry::Odometry(OdometryType otype, OdometrySettings settings, OdometryAlgoType algtype)
+Odometry::Odometry(OdometryType otype, const OdometrySettings& settings, OdometryAlgoType algtype)
 {
     switch (otype)
     {

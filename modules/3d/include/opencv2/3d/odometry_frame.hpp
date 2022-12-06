@@ -33,7 +33,7 @@ enum OdometryFramePyramidType
  * OdometryFrame is made to be used together with Odometry class to reuse precalculated data between Rt data calculations.
  * A proper way to do that is to call Odometry::prepareFrames() on prev and next frames and then pass them to Odometry::compute() method.
  */
-class CV_EXPORTS_W OdometryFrame
+class CV_EXPORTS_W_SIMPLE OdometryFrame
 {
 public:
     /**
