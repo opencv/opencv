@@ -31,7 +31,6 @@ public:
     * @param volumeType volume type.
     */
     VolumeSettings(VolumeType volumeType);
-
     VolumeSettings(const VolumeSettings& vs);
     ~VolumeSettings();
 

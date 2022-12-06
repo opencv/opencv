@@ -416,549 +416,261 @@ void displayColorImage(Mat depth, Mat rgb, Mat points, Mat normals, Mat colors, 
 
 static const bool display = false;
 
-// Perf_TSDF_GPU.integrate_mat
+enum PlatformType
+{
+    CPU = 0, GPU = 1
+};
+CV_ENUM(PlatformTypeEnum, PlatformType::CPU, PlatformType::GPU);
+
+enum Sequence
+{
+    ALL = 0, FIRST = 1
+};
+CV_ENUM(SequenceEnum, Sequence::ALL, Sequence::FIRST);
+
+enum class VolumeTestSrcType
+{
+    MAT = 0,
+    ODOMETRY_FRAME = 1
+};
+
+// used to store current OpenCL status (on/off) and revert it after test is done
+// works even after exceptions thrown in test body
+struct OpenCLStatusRevert
+{
 #ifdef HAVE_OPENCL
-PERF_TEST(Perf_TSDF_GPU, integrate_mat)
+    OpenCLStatusRevert()
+    {
+        originalOpenCLStatus = cv::ocl::useOpenCL();
+    }
+    ~OpenCLStatusRevert()
+    {
+        cv::ocl::setUseOpenCL(originalOpenCLStatus);
+    }
+    void off()
+    {
+        cv::ocl::setUseOpenCL(false);
+    }
+    bool originalOpenCLStatus;
 #else
-PERF_TEST(Perf_TSDF, integrate_mat)
+    void off() { }
 #endif
+};
+
+// CV_ENUM does not support enum class types, so let's implement the class explicitly
+namespace
 {
-    VolumeType volumeType = VolumeType::TSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
+    struct VolumeTypeEnum
     {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
+        static const std::array<VolumeType, 3> vals;
+        static const std::array<std::string, 3> svals;
 
-        startTimer();
-        volume.integrate(depth, pose);
-        stopTimer();
+        VolumeTypeEnum(VolumeType v = VolumeType::TSDF) : val(v) {}
+        operator VolumeType() const { return val; }
+        void PrintTo(std::ostream *os) const
+        {
+            int v = int(val);
+            if (v >= 0 && v < 3)
+            {
+                *os << svals[v];
+            }
+            else
+            {
+                *os << "UNKNOWN";
+            }
+        }
+        static ::testing::internal::ParamGenerator<VolumeTypeEnum> all()
+        {
+            return ::testing::Values(VolumeTypeEnum(vals[0]), VolumeTypeEnum(vals[1]), VolumeTypeEnum(vals[2]));
+        }
 
-    }
-    SANITY_CHECK_NOTHING();
+    private:
+        VolumeType val;
+    };
+    const std::array<VolumeType, 3> VolumeTypeEnum::vals{VolumeType::TSDF, VolumeType::HashTSDF, VolumeType::ColorTSDF};
+    const std::array<std::string, 3> VolumeTypeEnum::svals{std::string("TSDF"), std::string("HashTSDF"), std::string("ColorTSDF")};
+
+    static inline void PrintTo(const VolumeTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
+
+
+    struct VolumeTestSrcTypeEnum
+    {
+        static const std::array<VolumeTestSrcType, 2> vals;
+        static const std::array<std::string, 2> svals;
+
+        VolumeTestSrcTypeEnum(VolumeTestSrcType v = VolumeTestSrcType::MAT) : val(v) {}
+        operator VolumeTestSrcType() const { return val; }
+        void PrintTo(std::ostream *os) const
+        {
+            int v = int(val);
+            if (v >= 0 && v < 3)
+            {
+                *os << svals[v];
+            }
+            else
+            {
+                *os << "UNKNOWN";
+            }
+        }
+        static ::testing::internal::ParamGenerator<VolumeTestSrcTypeEnum> all()
+        {
+            return ::testing::Values(VolumeTestSrcTypeEnum(vals[0]), VolumeTestSrcTypeEnum(vals[1]));
+        }
+
+    private:
+        VolumeTestSrcType val;
+    };
+    const std::array<VolumeTestSrcType, 2> VolumeTestSrcTypeEnum::vals{VolumeTestSrcType::MAT, VolumeTestSrcType::ODOMETRY_FRAME};
+    const std::array<std::string, 2> VolumeTestSrcTypeEnum::svals{std::string("UMat"), std::string("OdometryFrame")};
+
+    static inline void PrintTo(const VolumeTestSrcTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 }
 
-// Perf_TSDF_GPU.integrate_frame
-#ifdef HAVE_OPENCL
-PERF_TEST(Perf_TSDF_GPU, integrate_frame)
-#else
-PERF_TEST(Perf_TSDF, integrate_frame)
-#endif
+typedef std::tuple<PlatformTypeEnum, VolumeTypeEnum> PlatformVolumeType;
+class VolumePerfFixture : public perf::TestBaseWithParam<std::tuple<PlatformVolumeType, VolumeTestSrcTypeEnum, SequenceEnum>>
 {
-    VolumeType volumeType = VolumeType::TSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
+protected:
+    void SetUp() override
     {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-        OdometryFrame odf(noArray(), depth);
+        TestBase::SetUp();
 
-        startTimer();
-        volume.integrate(odf, pose);
-        stopTimer();
+        auto p = GetParam();
+        gpu = std::get<0>(std::get<0>(p));
+        volumeType = std::get<1>(std::get<0>(p));
+
+        testSrcType = std::get<1>(p);
+
+        repeat1st = (std::get<2>(p) == Sequence::FIRST);
+
+        if (!gpu)
+            oclStatus.off();
+
+        VolumeSettings vs(volumeType);
+        volume = makePtr<Volume>(volumeType, vs);
+
+        frameSize = Size(vs.getRaycastWidth(), vs.getRaycastHeight());
+        Matx33f intrIntegrate;
+        vs.getCameraIntegrateIntrinsics(intrIntegrate);
+        vs.getCameraRaycastIntrinsics(intrRaycast);
+        bool onlySemisphere = false;
+        depthFactor = vs.getDepthFactor();
+        scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
+        poses = scene->getPoses();
     }
-    SANITY_CHECK_NOTHING();
-}
 
-// Perf_TSDF_GPU.raycast_mat
-#ifdef HAVE_OPENCL
-PERF_TEST(Perf_TSDF_GPU, raycast_mat)
-#else
-PERF_TEST(Perf_TSDF, raycast_mat)
-#endif
+    bool gpu;
+    VolumeType volumeType;
+    VolumeTestSrcType testSrcType;
+    bool repeat1st;
+
+    OpenCLStatusRevert oclStatus;
+
+    Ptr<Volume> volume;
+    Size frameSize;
+    Matx33f intrRaycast;
+    Ptr<Scene> scene;
+    std::vector<Affine3f> poses;
+    float depthFactor;
+};
+
+
+PERF_TEST_P_(VolumePerfFixture, integrate)
 {
-    VolumeType volumeType = VolumeType::TSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-        Mat points, normals;
-
-        volume.integrate(depth, pose);
-
-        startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, intrRaycast, points, normals);
-        stopTimer();
-
-        if (display)
-            displayImage(depth, points, normals, depthFactor, lightPose);
-
-    }
-    SANITY_CHECK_NOTHING();
-}
-
-
-#ifdef HAVE_OPENCL
-// Perf_TSDF_CPU.integrate_mat
-PERF_TEST(Perf_TSDF_CPU, integrate_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-
-    VolumeType volumeType = VolumeType::TSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-
-        startTimer();
-        volume.integrate(depth, pose);
-        stopTimer();
-
-    }
-    SANITY_CHECK_NOTHING();
-
-    cv::ocl::setUseOpenCL(true);
-}
-
-// Perf_TSDF_CPU.integrate_frame
-PERF_TEST(Perf_TSDF_CPU, integrate_frame)
-{
-    cv::ocl::setUseOpenCL(false);
-
-    VolumeType volumeType = VolumeType::TSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-        OdometryFrame odf(noArray(), depth);
-
-        startTimer();
-        volume.integrate(odf, pose);
-        stopTimer();
-
-    }
-    SANITY_CHECK_NOTHING();
-
-    cv::ocl::setUseOpenCL(true);
-}
-
-// Perf_TSDF_CPU.raycast_mat
-PERF_TEST(Perf_TSDF_CPU, raycast_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-
-    VolumeType volumeType = VolumeType::TSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-        Mat points, normals;
-
-        volume.integrate(depth, pose);
-
-        startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, intrRaycast, points, normals);
-        stopTimer();
-
-        if (display)
-            displayImage(depth, points, normals, depthFactor, lightPose);
-
-    }
-    SANITY_CHECK_NOTHING();
-
-    cv::ocl::setUseOpenCL(true);
-}
-
-#endif
-
-// Perf_HashTSDF_GPU.integrate_mat
-#ifdef HAVE_OPENCL
-PERF_TEST(Perf_HashTSDF_GPU, integrate_mat)
-#else
-PERF_TEST(Perf_HashTSDF, integrate_mat)
-#endif
-{
-    VolumeType volumeType = VolumeType::HashTSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-
-        startTimer();
-        volume.integrate(depth, pose);
-        stopTimer();
-
-    }
-    SANITY_CHECK_NOTHING();
-}
-
-// Perf_HashTSDF_GPU.integrate_frame
-#ifdef HAVE_OPENCL
-PERF_TEST(Perf_HashTSDF_GPU, integrate_frame)
-#else
-PERF_TEST(Perf_HashTSDF, integrate_frame)
-#endif
-{
-    VolumeType volumeType = VolumeType::HashTSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-        OdometryFrame odf(noArray(), depth);
-
-        startTimer();
-        volume.integrate(odf, pose);
-        stopTimer();
-
-    }
-    SANITY_CHECK_NOTHING();
-}
-
-// Perf_HashTSDF_GPU.raycast_mat
-#ifdef HAVE_OPENCL
-PERF_TEST(Perf_HashTSDF_GPU, raycast_mat)
-#else
-PERF_TEST(Perf_HashTSDF, raycast_mat)
-#endif
-{
-    VolumeType volumeType = VolumeType::HashTSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-        Mat points, normals;
-
-        volume.integrate(depth, pose);
-
-        startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, intrRaycast, points, normals);
-        stopTimer();
-
-        if (display)
-            displayImage(depth, points, normals, depthFactor, lightPose);
-
-    }
-    SANITY_CHECK_NOTHING();
-}
-
-#ifdef HAVE_OPENCL
-// Perf_HashTSDF_CPU.integrate_mat
-PERF_TEST(Perf_HashTSDF_CPU, integrate_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-
-    VolumeType volumeType = VolumeType::HashTSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-
-        startTimer();
-        volume.integrate(depth, pose);
-        stopTimer();
-
-    }
-    SANITY_CHECK_NOTHING();
-
-    cv::ocl::setUseOpenCL(true);
-}
-
-// Perf_HashTSDF_CPU.integrate_frame
-PERF_TEST(Perf_HashTSDF_CPU, integrate_frame)
-{
-    cv::ocl::setUseOpenCL(false);
-
-    VolumeType volumeType = VolumeType::HashTSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-        OdometryFrame odf(noArray(), depth);
-
-        startTimer();
-        volume.integrate(odf, pose);
-        stopTimer();
-
-    }
-    SANITY_CHECK_NOTHING();
-
-    cv::ocl::setUseOpenCL(true);
-}
-
-// Perf_HashTSDF_CPU.raycast_mat
-PERF_TEST(Perf_HashTSDF_CPU, raycast_mat)
-{
-    cv::ocl::setUseOpenCL(false);
-
-    VolumeType volumeType = VolumeType::HashTSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-        Mat points, normals;
-
-        volume.integrate(depth, pose);
-
-        startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, intrRaycast, points, normals);
-        stopTimer();
-
-        if (display)
-            displayImage(depth, points, normals, depthFactor, lightPose);
-    }
-    SANITY_CHECK_NOTHING();
-
-    cv::ocl::setUseOpenCL(true);
-}
-#endif
-
-
-// Perf_ColorTSDF_CPU.integrate_mat
-#ifdef HAVE_OPENCL
-PERF_TEST(Perf_ColorTSDF_CPU, integrate_mat)
-#else
-PERF_TEST(Perf_ColorTSDF, integrate_mat)
-#endif
-{
-    VolumeType volumeType = VolumeType::ColorTSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
+    for (size_t i = 0; i < (repeat1st ? 1 : poses.size()); i++)
     {
         Matx44f pose = poses[i].matrix;
         Mat depth = scene->depth(pose);
         Mat rgb = scene->rgb(pose);
+        UMat urgb, udepth;
+        depth.copyTo(udepth);
+        rgb.copyTo(urgb);
+        OdometryFrame odf(urgb, udepth);
 
-        startTimer();
-        volume.integrate(depth, rgb, pose);
-        stopTimer();
+        bool done = false;
+        while (repeat1st ? next() : !done)
+        {
+            startTimer();
+            if (testSrcType == VolumeTestSrcType::MAT)
+                if (volumeType == VolumeType::ColorTSDF)
+                    volume->integrate(udepth, urgb, pose);
+                else
+                    volume->integrate(udepth, pose);
+            else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
+                volume->integrate(odf, pose);
+            stopTimer();
 
+            // perf check makes sense only for identical states
+            if (repeat1st)
+                volume->reset();
+
+            done = true;
+        }
     }
     SANITY_CHECK_NOTHING();
 }
 
-// Perf_ColorTSDF_CPU.integrate_frame
-#ifdef HAVE_OPENCL
-PERF_TEST(Perf_ColorTSDF_CPU, integrate_frame)
-#else
-PERF_TEST(Perf_ColorTSDF, integrate_frame)
-#endif
+
+PERF_TEST_P_(VolumePerfFixture, raycast)
 {
-    VolumeType volumeType = VolumeType::ColorTSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
-
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
-
-    for (size_t i = 0; i < poses.size(); i++)
+    for (size_t i = 0; i < (repeat1st ? 1 : poses.size()); i++)
     {
         Matx44f pose = poses[i].matrix;
         Mat depth = scene->depth(pose);
         Mat rgb = scene->rgb(pose);
-        OdometryFrame odf(rgb, depth);
+        UMat urgb, udepth;
+        depth.copyTo(udepth);
+        rgb.copyTo(urgb);
 
-        startTimer();
-        volume.integrate(odf, pose);
-        stopTimer();
+        OdometryFrame odf(urgb, udepth);
 
-    }
-    SANITY_CHECK_NOTHING();
-}
+        if (testSrcType == VolumeTestSrcType::MAT)
+            if (volumeType == VolumeType::ColorTSDF)
+                volume->integrate(udepth, urgb, pose);
+            else
+                volume->integrate(udepth, pose);
+        else if (testSrcType == VolumeTestSrcType::ODOMETRY_FRAME)
+            volume->integrate(odf, pose);
 
-// Perf_ColorTSDF_CPU.raycast_mat
-#ifdef HAVE_OPENCL
-PERF_TEST(Perf_ColorTSDF_CPU, raycast_mat)
-#else
-PERF_TEST(Perf_ColorTSDF, raycast_mat)
-#endif
-{
-    VolumeType volumeType = VolumeType::ColorTSDF;
-    VolumeSettings vs(volumeType);
-    Volume volume(volumeType, vs);
+        UMat upoints, unormals, ucolors;
 
-    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
-    Matx33f intrIntegrate, intrRaycast;
-    vs.getCameraIntegrateIntrinsics(intrIntegrate);
-    vs.getCameraRaycastIntrinsics(intrRaycast);
-    bool onlySemisphere = false;
-    float depthFactor = vs.getDepthFactor();
-    Vec3f lightPose = Vec3f::all(0.f);
-    Ptr<Scene> scene = Scene::create(frameSize, intrIntegrate, depthFactor, onlySemisphere);
-    std::vector<Affine3f> poses = scene->getPoses();
+        bool done = false;
+        while (repeat1st ? next() : !done)
+        {
+            startTimer();
+            if (volumeType == VolumeType::ColorTSDF)
+                volume->raycast(pose, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
+            else
+                volume->raycast(pose, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
+            stopTimer();
 
-    for (size_t i = 0; i < poses.size(); i++)
-    {
-        Matx44f pose = poses[i].matrix;
-        Mat depth = scene->depth(pose);
-        Mat rgb = scene->rgb(pose);
-        Mat points, normals, colors;
-
-        startTimer();
-        volume.integrate(depth, rgb, pose);
-
-        startTimer();
-        volume.raycast(pose, frameSize.height, frameSize.width, intrRaycast, points, normals, colors);
-        stopTimer();
+            done = true;
+        }
 
         if (display)
-            displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+        {
+            Mat points, normals, colors;
+            points = upoints.getMat(ACCESS_READ);
+            normals = unormals.getMat(ACCESS_READ);
+            colors = ucolors.getMat(ACCESS_READ);
+
+            Vec3f lightPose = Vec3f::all(0.f);
+            if (volumeType == VolumeType::ColorTSDF)
+                displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
+            else
+                displayImage(depth, points, normals, depthFactor, lightPose);
+        }
     }
     SANITY_CHECK_NOTHING();
 }
+
+//TODO: fix it when ColorTSDF gets GPU version
+INSTANTIATE_TEST_CASE_P(Volume, VolumePerfFixture, /*::testing::Combine(PlatformTypeEnum::all(), VolumeTypeEnum::all())*/
+                        ::testing::Combine(
+                        ::testing::Values(PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
+                                          PlatformVolumeType {PlatformType::CPU, VolumeType::HashTSDF},
+                                          PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
+                                          PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF},
+                                          PlatformVolumeType {PlatformType::GPU, VolumeType::HashTSDF}),
+                        VolumeTestSrcTypeEnum::all(), SequenceEnum::all()));
 
 }} // namespace

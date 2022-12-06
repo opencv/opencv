@@ -1243,16 +1243,15 @@ void fetchNormalsFromHashTsdfVolumeUnit(
 
     Matx44f _pose;
     settings.getVolumePose(_pose);
-    const Affine3f pose = Affine3f(_pose);
+    const Affine3f pose(_pose);
 
     auto HashPushNormals = [&](const ptype& point, const int* position) {
-        //Affine3f invPose(pose.inv());
+        Affine3f invPose(pose.inv());
         Point3f p = fromPtype(point);
         Point3f n = nan3;
         if (!isNaN(p))
         {
-            //Point3f voxelPoint = invPose * p;
-            Point3f voxelPoint = p;
+            Point3f voxelPoint = invPose * p;
             n = pose.rotation() * getNormalVoxel(voxelPoint, voxelSizeInv, volumeUnitDegree, volDims, volUnitsData, volumeUnits);
         }
         normals(position[0], position[1]) = toPtype(n);
@@ -1262,7 +1261,7 @@ void fetchNormalsFromHashTsdfVolumeUnit(
 }
 
 #ifdef HAVE_OPENCL
-void olc_fetchNormalsFromHashTsdfVolumeUnit(
+void ocl_fetchNormalsFromHashTsdfVolumeUnit(
     const VolumeSettings& settings, const int volumeUnitDegree, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
     const CustomHashSet& hashTable, InputArray _points, OutputArray _normals)
 {
@@ -1332,6 +1331,10 @@ void fetchPointsNormalsFromHashTsdfVolumeUnit(
     const Vec4i volDims;
     settings.getVolumeStrides(volDims);
 
+    Matx44f mpose;
+    settings.getVolumePose(mpose);
+    const Affine3f pose(mpose);
+
     std::vector<Vec3i> totalVolUnits;
     for (const auto& keyvalue : volumeUnits)
     {
@@ -1343,6 +1346,7 @@ void fetchPointsNormalsFromHashTsdfVolumeUnit(
     bool needNormals(_normals.needed());
     Mutex mutex;
 
+    //TODO: this is incorrect; a 0-surface should be captured instead of all non-zero voxels
     auto HashFetchPointsNormalsInvoker = [&](const Range& range)
     {
         std::vector<ptype> points, normals;
@@ -1363,14 +1367,15 @@ void fetchPointsNormalsFromHashTsdfVolumeUnit(
                             cv::Vec3i voxelIdx(x, y, z);
                             TsdfVoxel voxel = _at(volUnitsData, voxelIdx, it->second.index, volResolution.x, volDims);
 
+                            // floatToTsdf(1.0) == -128
                             if (voxel.tsdf != -128 && voxel.weight != 0)
                             {
                                 Point3f point = base_point + voxelCoordToVolume(voxelIdx, voxelSize);
-                                localPoints.push_back(toPtype(point));
+                                localPoints.push_back(toPtype(pose * point));
                                 if (needNormals)
                                 {
                                     Point3f normal = getNormalVoxel(point, voxelSizeInv, volumeUnitDegree, volDims, volUnitsData, volumeUnits);
-                                    localNormals.push_back(toPtype(normal));
+                                    localNormals.push_back(toPtype(pose.rotation() * normal));
                                 }
                             }
                         }
@@ -1459,6 +1464,10 @@ void ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(
     const Vec4i volDims;
     settings.getVolumeStrides(volDims);
 
+    Matx44f mpose;
+    settings.getVolumePose(mpose);
+    const Affine3f pose(mpose);
+
     Range _fetchRange(0, hashTable.last);
 
     const int nstripes = -1;
@@ -1466,6 +1475,7 @@ void ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(
     bool needNormals(_normals.needed());
     Mutex mutex;
 
+    //TODO: this is incorrect; a 0-surface should be captured instead of all non-zero voxels
     auto _HashFetchPointsNormalsInvoker = [&](const Range& range)
     {
         std::vector<ptype> points, normals;
@@ -1485,15 +1495,16 @@ void ocl_fetchPointsNormalsFromHashTsdfVolumeUnit(
                         cv::Vec3i voxelIdx(x, y, z);
                         TsdfVoxel voxel = new_at(volUnitsDataCopy, voxelIdx, row, volumeUnitResolution, volDims);
 
+                        // floatToTsdf(1.0) == -128
                         if (voxel.tsdf != -128 && voxel.weight != 0)
                         {
                             Point3f point = base_point + voxelCoordToVolume(voxelIdx, voxelSize);
 
-                            localPoints.push_back(toPtype(point));
+                            localPoints.push_back(toPtype(pose * point));
                             if (needNormals)
                             {
                                 Point3f normal = ocl_getNormalVoxel(point, voxelSizeInv, volumeUnitDegree, volDims, volUnitsDataCopy, hashTable);
-                                localNormals.push_back(toPtype(normal));
+                                localNormals.push_back(toPtype(pose.rotation() * normal));
                             }
                         }
                     }
