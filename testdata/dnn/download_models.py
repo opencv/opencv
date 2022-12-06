@@ -1000,6 +1000,16 @@ models = [
         downloader=GDrive('1rm3mIqjJNu0xPTCjMKnXccspazV1B2zv'),
         sha='fcd0fa401c83bf2b29e18239a9c2c989c9b8669d',
         filename='onnx/models/yolov7_not_simplified.onnx'),
+    Model(
+        name='NanoTrack (ONNX)',
+        url='https://raw.githubusercontent.com/zihaomu/opencv_extra_data_backup/main/NanoTrack/models/nanotrack_backbone_sim.onnx',
+        sha='9b083a2dbe10dcfe17e694879aa6749302a5888f',
+        filename='onnx/models/nanotrack_backbone_sim.onnx'),
+    Model(
+        name='NanoTrack (ONNX)',
+        url='https://raw.githubusercontent.com/zihaomu/opencv_extra_data_backup/main/NanoTrack/models/nanotrack_head_sim.onnx',
+        sha='8fa668893b27b726f9cab6695846b4690650a199',
+        filename='onnx/models/nanotrack_head_sim.onnx'),
 ]
 
 # Note: models will be downloaded to current working directory
