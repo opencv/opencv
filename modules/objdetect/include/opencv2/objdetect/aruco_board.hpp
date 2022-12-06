@@ -23,9 +23,9 @@ class Dictionary;
  * - The identifier of all the markers in the board.
  */
 class CV_EXPORTS_W Board {
+protected:
+    Board(); // use ::create()
 public:
-    CV_WRAP Board();
-
     /** @brief Draw a planar board
      *
      * @param outSize size of the output image in pixels.
@@ -81,7 +81,6 @@ public:
      */
     CV_WRAP void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
                                   OutputArray objPoints, OutputArray imgPoints) const;
-
     virtual ~Board();
 protected:
     struct BoardImpl;
@@ -94,8 +93,9 @@ protected:
  * The board can be drawn using draw() method.
  */
 class CV_EXPORTS_W GridBoard : public Board {
+protected:
+    GridBoard();
 public:
-    CV_WRAP GridBoard();
     /** @brief Draw a GridBoard
      *
      * @param outSize size of the output image in pixels.
@@ -157,8 +157,9 @@ protected:
  * which is important for calibration and pose estimation. The board can be drawn using draw() method.
  */
 class CV_EXPORTS_W CharucoBoard : public Board {
+protected:
+    CharucoBoard();
 public:
-    CV_WRAP CharucoBoard();
 
     /** @brief Draw a ChArUco board
      *

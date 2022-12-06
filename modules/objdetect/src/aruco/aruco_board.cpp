@@ -23,21 +23,9 @@ struct Board::BoardImpl {
     }
 };
 
-struct GridBoard::GridImpl {
-    GridImpl(){};
-    // number of markers in X and Y directions
-    int sizeX = 3, sizeY = 3;
-
-    // marker side length (normally in meters)
-    float markerLength = 1.f;
-
-    // separation between markers in the grid
-    float markerSeparation = .5f;
-};
-
-GridBoard::GridBoard(): gridImpl(makePtr<GridImpl>()) {}
-
 Board::Board(): boardImpl(makePtr<BoardImpl>()) {}
+
+Board::~Board() {}
 
 Ptr<Board> Board::create(InputArrayOfArrays objPoints, const Dictionary &dictionary, InputArray ids) {
     CV_Assert(objPoints.total() == ids.total());
@@ -62,7 +50,8 @@ Ptr<Board> Board::create(InputArrayOfArrays objPoints, const Dictionary &diction
         }
         obj_points_vector.push_back(corners);
     }
-    Ptr<Board> res = makePtr<Board>();
+    Board board;
+    Ptr<Board> res = makePtr<Board>(board);
     ids.copyTo(res->boardImpl->ids);
     res->boardImpl->objPoints = obj_points_vector;
     res->boardImpl->dictionary = dictionary;
@@ -199,12 +188,25 @@ void Board::matchImagePoints(InputArray detectedCorners, InputArray detectedIds,
     Mat(imgPnts).copyTo(imgPoints);
 }
 
-Board::~Board() {}
+struct GridBoard::GridImpl {
+    GridImpl(){};
+    // number of markers in X and Y directions
+    int sizeX = 3, sizeY = 3;
+
+    // marker side length (normally in meters)
+    float markerLength = 1.f;
+
+    // separation between markers in the grid
+    float markerSeparation = .5f;
+};
+
+GridBoard::GridBoard(): gridImpl(makePtr<GridImpl>()) {}
 
 Ptr<GridBoard> GridBoard::create(int markersX, int markersY, float markerLength, float markerSeparation,
                                  const Dictionary &dictionary, InputArray ids) {
     CV_Assert(markersX > 0 && markersY > 0 && markerLength > 0 && markerSeparation > 0);
-    Ptr<GridBoard> res = makePtr<GridBoard>();
+    GridBoard board;
+    Ptr<GridBoard> res = makePtr<GridBoard>(board);
     res->gridImpl->sizeX = markersX;
     res->gridImpl->sizeY = markersY;
     res->gridImpl->markerLength = markerLength;
@@ -393,7 +395,8 @@ void CharucoBoard::CharucoImpl::_getNearestMarkerCorners(CharucoBoard &board, fl
 Ptr<CharucoBoard> CharucoBoard::create(int squaresX, int squaresY, float squareLength, float markerLength,
                                        const Dictionary &dictionary, InputArray ids) {
     CV_Assert(squaresX > 1 && squaresY > 1 && markerLength > 0 && squareLength > markerLength);
-    Ptr<CharucoBoard> res = makePtr<CharucoBoard>();
+    CharucoBoard board;
+    Ptr<CharucoBoard> res = makePtr<CharucoBoard>(board);
 
     res->charucoImpl->sizeX = squaresX;
     res->charucoImpl->sizeY = squaresY;
