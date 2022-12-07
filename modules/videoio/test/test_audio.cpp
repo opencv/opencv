@@ -182,7 +182,7 @@ public:
             SCOPED_TRACE(cv::format("frame=%d", frame));
 
             ASSERT_TRUE(cap.grab());
-
+#ifdef _WIN32
             if (frame == 0)
             {
                 double audio_shift = cap.get(CAP_PROP_AUDIO_SHIFT_NSEC);
@@ -190,7 +190,7 @@ public:
                 audio0_timestamp = video0_timestamp + audio_shift * 1e-9;
                 std::cout << "video0 timestamp: " << video0_timestamp << "  audio0 timestamp: " << audio0_timestamp << " (audio shift nanoseconds: " << audio_shift << " , seconds: " << audio_shift * 1e-9 << ")" << std::endl;
             }
-
+#endif
             ASSERT_TRUE(cap.retrieve(videoFrame));
             if (epsilon >= 0)
             {
@@ -236,8 +236,10 @@ public:
             }
             if (frame != 0 && frame != numberOfFrames-1 && audioData[0].size() != (size_t)numberOfSamples)
             {
+#ifdef _WIN32
                 // validate audio frame size
-                EXPECT_NEAR(audioFrame.cols, samplesPerFrame, audioSamplesTolerance);
+                /EXPECT_NEAR(audioFrame.cols, samplesPerFrame, audioSamplesTolerance);
+#endif
             }
         }
         ASSERT_FALSE(cap.grab());
@@ -267,11 +269,13 @@ TEST_P(Media, audio)
     doTest();
 }
 
-#ifdef _WIN32
+//#ifdef _WIN32
 const paramCombination mediaParams[] =
 {
+    paramCombination("test_audio.mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 132299, 30, 30., cv::CAP_GSTREAMER)
 #ifdef _WIN32
-    paramCombination("test_audio.mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 131819, 30, 30., cv::CAP_MSMF)
+    , paramCombination("test_audio.mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 131819, 30, 30., cv::CAP_MSMF),
+    
 #if 0
     // https://filesamples.com/samples/video/mp4/sample_960x400_ocean_with_audio.mp4
     , paramCombination("sample_960x400_ocean_with_audio.mp4", 2, -1/*eplsilon*/, CV_8UC3, 400, 960, 1116, 2056588, 30, 30., cv::CAP_MSMF)
@@ -280,7 +284,9 @@ const paramCombination mediaParams[] =
 };
 
 INSTANTIATE_TEST_CASE_P(/**/, Media, testing::ValuesIn(mediaParams));
-#endif  // _WIN32
+//#endif  // _WIN32
+
+#ifdef _WIN32
 
 TEST(AudioOpenCheck, bad_arg_invalid_audio_stream)
 {
@@ -308,7 +314,7 @@ TEST(AudioOpenCheck, bad_arg_invalid_audio_stream_video)
     ASSERT_FALSE(cap.isOpened());
 }
 
-#ifdef _WIN32
+
 TEST(AudioOpenCheck, MSMF_bad_arg_invalid_audio_sample_per_second)
 {
     std::string fileName = "audio/test_audio.mp4";
