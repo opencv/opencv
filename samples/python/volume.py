@@ -83,12 +83,7 @@ def main():
     volume = cv.Volume(volume_type, settings)
 
     for key in list(depth_info.keys())[:]:
-        Rt = np.array(
-            [[1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1]]
-        )
+        Rt = np.eye(4)
         for key1 in groundtruth_info:
             if np.abs(key1 - key) < 0.01:
                 Rt = make_Rt(groundtruth_info[key1])
