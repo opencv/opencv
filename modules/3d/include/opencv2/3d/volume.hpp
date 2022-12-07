@@ -19,7 +19,8 @@ public:
     * @param vtype the volume type [TSDF, HashTSDF, ColorTSDF].
     * @param settings the custom settings for volume.
     */
-    CV_WRAP explicit Volume(VolumeType vtype, const VolumeSettings& settings);
+    CV_WRAP explicit Volume(VolumeType vtype = VolumeType::TSDF,
+                            const VolumeSettings& settings = VolumeSettings(VolumeType::TSDF));
     ~Volume();
 
     /** @brief Integrates the input data to the volume.
