@@ -61,7 +61,9 @@ def main():
         default="")
     # Use source data from this site:
     # https://vision.in.tum.de/data/datasets/rgbd-dataset/download
-    #TODO: specify exact data path
+    # For example if you use rgbd_dataset_freiburg1_xyz sequence, your prompt should be:
+    # python /path_to_opencv/samples/python/volume.py --source_folder /path_to_datasets/rgbd_dataset_freiburg1_xyz --algo <some algo>
+    # so that the folder contains files groundtruth.txt and depth.txt
 
     args = parser.parse_args()
 
