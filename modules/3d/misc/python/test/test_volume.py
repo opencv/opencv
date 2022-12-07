@@ -93,4 +93,3 @@ class volume_test(NewOpenCVTests):
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
-
