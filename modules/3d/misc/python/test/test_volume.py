@@ -7,11 +7,7 @@ class volume_test(NewOpenCVTests):
     def test_VolumeDefault(self):
         depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH).astype(np.float32)
 
-        Rt = np.array(
-            [[1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1]])
+        Rt = np.eye(4)
         volume = cv.Volume()
         volume.integrate(depth, Rt)
 
@@ -29,11 +25,7 @@ class volume_test(NewOpenCVTests):
     def test_VolumeTSDF(self):
         depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH).astype(np.float32)
 
-        Rt = np.array(
-            [[1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1]])
+        Rt = np.eye(4)
 
         settings = cv.VolumeSettings(cv.VolumeType_TSDF)
         volume = cv.Volume(cv.VolumeType_TSDF, settings)
@@ -50,11 +42,7 @@ class volume_test(NewOpenCVTests):
     def test_VolumeHashTSDF(self):
         depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH).astype(np.float32)
 
-        Rt = np.array(
-            [[1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1]])
+        Rt = np.eye(4)
         settings = cv.VolumeSettings(cv.VolumeType_HashTSDF)
         volume = cv.Volume(cv.VolumeType_HashTSDF, settings)
         volume.integrate(depth, Rt)
@@ -71,12 +59,7 @@ class volume_test(NewOpenCVTests):
         depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH).astype(np.float32)
         rgb = self.get_sample('cv/rgbd/rgb.png', cv.IMREAD_ANYCOLOR).astype(np.float32)
 
-        Rt = np.array(
-            [[1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1]])
-
+        Rt = np.eye(4)
         settings = cv.VolumeSettings(cv.VolumeType_ColorTSDF)
         volume = cv.Volume(cv.VolumeType_ColorTSDF, settings)
         volume.integrateColor(depth, rgb, Rt)
