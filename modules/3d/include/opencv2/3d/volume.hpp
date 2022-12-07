@@ -55,6 +55,18 @@ public:
     */
     CV_WRAP_AS(integrateColor) void integrate(InputArray depth, InputArray image, InputArray pose);
 
+    // Python bindings do not process noArray() default argument correctly, so the raycast() method is repeated several times
+
+    /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
+
+    Rendered image size and camera intrinsics are taken from volume settings structure.
+
+    * @param cameraPose the pose of camera in global coordinates.
+    * @param points image to store rendered points.
+    * @param normals image to store rendered normals corresponding to points.
+    */
+    CV_WRAP void raycast(InputArray cameraPose, OutputArray points, OutputArray normals) const;
+
     /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
 
     Rendered image size and camera intrinsics are taken from volume settings structure.
@@ -64,7 +76,21 @@ public:
     * @param normals image to store rendered normals corresponding to points.
     * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
     */
-    CV_WRAP void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
+    CV_WRAP_AS(raycastColor) void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const;
+
+    /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
+
+    Rendered image size and camera intrinsics are taken from volume settings structure.
+
+    * @param cameraPose the pose of camera in global coordinates.
+    * @param height the height of result image
+    * @param width the width of result image
+    * @param K camera raycast intrinsics
+    * @param points image to store rendered points.
+    * @param normals image to store rendered normals corresponding to points.
+    */
+    CV_WRAP_AS(raycastEx) void raycast(InputArray cameraPose, int height, int width, InputArray K, OutputArray points, OutputArray normals) const;
+
 
     /** @brief Renders the volume contents into an image. The resulting points and normals are in camera's coordinate system.
 
@@ -78,7 +104,7 @@ public:
     * @param normals image to store rendered normals corresponding to points.
     * @param colors image to store rendered colors corresponding to points (only for ColorTSDF).
     */
-    CV_WRAP_AS(raycastEx) void raycast(InputArray cameraPose, int height, int width, InputArray K, OutputArray points, OutputArray normals, OutputArray colors = noArray()) const;
+    CV_WRAP_AS(raycastExColor) void raycast(InputArray cameraPose, int height, int width, InputArray K, OutputArray points, OutputArray normals, OutputArray colors) const;
 
     /** @brief Extract the all data from volume.
     * @param points the input exist point.

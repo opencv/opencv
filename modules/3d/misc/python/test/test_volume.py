@@ -19,7 +19,11 @@ class volume_test(NewOpenCVTests):
         points  = np.zeros(size, np.float32)
         normals = np.zeros(size, np.float32)
 
-        volume.raycast(Rt, size[0], size[1], points, normals)
+        Kraycast = np.array([[525. ,   0. , 319.5],
+                             [  0. , 525. , 239.5],
+                             [  0. ,   0. ,   1. ]])
+
+        volume.raycastEx(Rt, size[0], size[1], Kraycast, points, normals)
         volume.raycast(Rt, points, normals)
 
     def test_VolumeTSDF(self):
@@ -30,14 +34,17 @@ class volume_test(NewOpenCVTests):
             [0, 1, 0, 0],
             [0, 0, 1, 0],
             [0, 0, 0, 1]])
-        volume = cv.Volume(cv.VolumeType_TSDF)
+
+        settings = cv.VolumeSettings(cv.VolumeType_TSDF)
+        volume = cv.Volume(cv.VolumeType_TSDF, settings)
         volume.integrate(depth, Rt)
 
         size = (480, 640, 4)
         points  = np.zeros(size, np.float32)
         normals = np.zeros(size, np.float32)
 
-        volume.raycast(Rt, size[0], size[1], points, normals)
+        Kraycast = settings.getCameraRaycastIntrinsics()
+        volume.raycastEx(Rt, size[0], size[1], Kraycast, points, normals)
         volume.raycast(Rt, points, normals)
 
     def test_VolumeHashTSDF(self):
@@ -48,14 +55,16 @@ class volume_test(NewOpenCVTests):
             [0, 1, 0, 0],
             [0, 0, 1, 0],
             [0, 0, 0, 1]])
-        volume = cv.Volume(cv.VolumeType_HashTSDF)
+        settings = cv.VolumeSettings(cv.VolumeType_HashTSDF)
+        volume = cv.Volume(cv.VolumeType_HashTSDF, settings)
         volume.integrate(depth, Rt)
 
         size = (480, 640, 4)
         points  = np.zeros(size, np.float32)
         normals = np.zeros(size, np.float32)
 
-        volume.raycast(Rt, size[0], size[1], points, normals)
+        Kraycast = settings.getCameraRaycastIntrinsics()
+        volume.raycastEx(Rt, size[0], size[1], Kraycast, points, normals)
         volume.raycast(Rt, points, normals)
 
     def test_VolumeColorTSDF(self):
@@ -67,7 +76,9 @@ class volume_test(NewOpenCVTests):
             [0, 1, 0, 0],
             [0, 0, 1, 0],
             [0, 0, 0, 1]])
-        volume = cv.Volume(cv.VolumeType_ColorTSDF)
+
+        settings = cv.VolumeSettings(cv.VolumeType_ColorTSDF)
+        volume = cv.Volume(cv.VolumeType_ColorTSDF, settings)
         volume.integrateColor(depth, rgb, Rt)
 
         size = (480, 640, 4)
@@ -75,7 +86,8 @@ class volume_test(NewOpenCVTests):
         normals = np.zeros(size, np.float32)
         colors = np.zeros(size, np.float32)
 
-        volume.raycastColor(Rt, size[0], size[1], points, normals, colors)
+        Kraycast = settings.getCameraRaycastIntrinsics()
+        volume.raycastExColor(Rt, size[0], size[1], Kraycast, points, normals, colors)
         volume.raycastColor(Rt, points, normals, colors)
 
 

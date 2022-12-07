@@ -234,8 +234,11 @@ Volume::~Volume() {}
 void Volume::integrate(const OdometryFrame& frame, InputArray pose) { this->impl->integrate(frame, pose); }
 void Volume::integrate(InputArray depth, InputArray pose) { this->impl->integrate(depth, pose); }
 void Volume::integrate(InputArray depth, InputArray image, InputArray pose) { this->impl->integrate(depth, image, pose); }
+void Volume::raycast(InputArray cameraPose, OutputArray _points, OutputArray _normals) const { this->impl->raycast(cameraPose, _points, _normals, noArray()); }
 void Volume::raycast(InputArray cameraPose, OutputArray _points, OutputArray _normals, OutputArray _colors) const { this->impl->raycast(cameraPose, _points, _normals, _colors); }
+void Volume::raycast(InputArray cameraPose, int height, int width, InputArray _intr, OutputArray _points, OutputArray _normals) const { this->impl->raycast(cameraPose, height, width, _intr, _points, _normals, noArray()); }
 void Volume::raycast(InputArray cameraPose, int height, int width, InputArray _intr, OutputArray _points, OutputArray _normals, OutputArray _colors) const { this->impl->raycast(cameraPose, height, width, _intr, _points, _normals, _colors); }
+
 void Volume::fetchNormals(InputArray points, OutputArray normals) const { this->impl->fetchNormals(points, normals); }
 void Volume::fetchPointsNormals(OutputArray points, OutputArray normals) const { this->impl->fetchPointsNormals(points, normals); }
 void Volume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const { this->impl->fetchPointsNormalsColors(points, normals, colors); };
