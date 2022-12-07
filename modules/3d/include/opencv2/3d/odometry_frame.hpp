@@ -90,7 +90,7 @@ public:
      * @brief Get the amount of levels in pyramids (all of them if not empty should have the same number of levels)
      * or 0 if no pyramids were prepared yet
      */
-    CV_WRAP size_t getPyramidLevels() const;
+    CV_WRAP int getPyramidLevels() const;
     /**
      * @brief Get the image generated for the ICP calculations from one of the pyramids specified by pyrType. Returns empty image if
      * the pyramid is empty or there's no such pyramid level
