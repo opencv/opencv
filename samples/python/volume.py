@@ -97,8 +97,14 @@ def main():
                 rgb_path = path + rgb_info[key1]
                 break
 
-        depth = cv.imread(path + depth_info[key], cv.IMREAD_ANYDEPTH).astype(np.float32)
+        depthPath = path + depth_info[key]
+        depth = cv.imread(depthPath, cv.IMREAD_ANYDEPTH).astype(np.float32)
+        if depth.size <= 0:
+            raise Exception('Failed to load depth file: %s' % depthPath)
+
         rgb = cv.imread(rgb_path, cv.IMREAD_COLOR).astype(np.float32)
+        if rgb.size <= 0:
+            raise Exception('Failed to load RGB file: %s' % rgb_path)
 
         if volume_type != cv.VolumeType_ColorTSDF:
             volume.integrate(depth, Rt)
