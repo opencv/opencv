@@ -29,6 +29,7 @@ public:
     CV_WRAP explicit VolumeSettings(VolumeType volumeType = VolumeType::TSDF);
 
     VolumeSettings(const VolumeSettings& vs);
+    VolumeSettings& operator=(const VolumeSettings&);
     ~VolumeSettings();
 
     /** @brief Sets the width of the image for integration.

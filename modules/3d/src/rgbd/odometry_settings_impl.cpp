@@ -162,6 +162,12 @@ OdometrySettings::OdometrySettings(const OdometrySettings& s)
     this->impl = makePtr<OdometrySettingsImplCommon>(*s.impl.dynamicCast<OdometrySettingsImplCommon>());
 }
 
+OdometrySettings& OdometrySettings::operator=(const OdometrySettings& s)
+{
+    this->impl = makePtr<OdometrySettingsImplCommon>(*s.impl.dynamicCast<OdometrySettingsImplCommon>());
+    return *this;
+}
+
 void OdometrySettings::setCameraMatrix(InputArray val) { this->impl->setCameraMatrix(val); }
 void OdometrySettings::getCameraMatrix(OutputArray val) const { this->impl->getCameraMatrix(val); }
 void OdometrySettings::setIterCounts(InputArray val) { this->impl->setIterCounts(val); }

@@ -253,6 +253,12 @@ VolumeSettings::VolumeSettings(const VolumeSettings& vs)
     this->impl = makePtr<VolumeSettingsImpl>(*vs.impl.dynamicCast<VolumeSettingsImpl>());
 }
 
+VolumeSettings& VolumeSettings::operator=(const VolumeSettings& vs)
+{
+    this->impl = makePtr<VolumeSettingsImpl>(*vs.impl.dynamicCast<VolumeSettingsImpl>());
+    return *this;
+}
+
 VolumeSettings::~VolumeSettings() {}
 
 void  VolumeSettings::setIntegrateWidth(int val) { this->impl->setIntegrateWidth(val); };
