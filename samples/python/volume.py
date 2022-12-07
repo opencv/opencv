@@ -79,7 +79,8 @@ def main():
     elif args.algo == "ColorTSDF":
         volume_type = cv.VolumeType_ColorTSDF
 
-    volume = cv.Volume(volume_type)
+    settings = cv.VolumeSettings(volume_type)
+    volume = cv.Volume(volume_type, settings)
 
     for key in list(depth_info.keys())[:]:
         Rt = np.array(
@@ -116,7 +117,7 @@ def main():
         if volume_type != cv.VolumeType_ColorTSDF:
             volume.raycast(Rt, points, normals)
         else:
-            volume.raycastColor(Rt, size[0], size[1], points, normals, colors)
+            volume.raycastColor(Rt, points, normals, colors)
 
         channels = list(cv.split(points))
 
