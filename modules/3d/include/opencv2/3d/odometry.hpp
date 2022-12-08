@@ -65,8 +65,8 @@ public:
      */
     CV_WRAP bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const;
 
-    CV_WRAP bool compute(InputArray srcDepthFrame, InputArray dstDepthFrame, OutputArray Rt) const;
-    CV_WRAP bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame, InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const;
+    CV_WRAP bool compute(InputArray srcDepth, InputArray dstDepth, OutputArray Rt) const;
+    CV_WRAP bool compute(InputArray srcDepth, InputArray srcRGB, InputArray dstDepth, InputArray dstRGB, OutputArray Rt) const;
 
     /**
      * @brief Get the normals computer object used for normals calculation (if presented).

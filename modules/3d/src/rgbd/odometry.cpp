@@ -18,9 +18,9 @@ public:
     virtual void prepareFrame(OdometryFrame& frame) const = 0;
     virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const = 0;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const = 0;
-    virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const = 0;
-    virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
-                         InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const = 0;
+    virtual bool compute(InputArray srcDepth, InputArray dstDepth, OutputArray Rt) const = 0;
+    virtual bool compute(InputArray srcDepth, InputArray srcRGB,
+                         InputArray dstDepth, InputArray dstRGB, OutputArray Rt) const = 0;
     virtual Ptr<RgbdNormals> getNormalsComputer() const = 0;
 };
 
@@ -41,9 +41,9 @@ public:
     virtual void prepareFrame(OdometryFrame& frame) const override;
     virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const override;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
-    virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const override;
-    virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
-                         InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const override;
+    virtual bool compute(InputArray srcDepth, InputArray dstDepth, OutputArray Rt) const override;
+    virtual bool compute(InputArray srcDepth, InputArray srcRGB,
+                         InputArray dstDepth, InputArray dstRGB, OutputArray Rt) const override;
     virtual Ptr<RgbdNormals> getNormalsComputer() const override;
 };
 
@@ -90,13 +90,13 @@ bool OdometryICP::compute(InputArray _srcDepth, InputArray _dstDepth, OutputArra
     return isCorrect;
 }
 
-bool OdometryICP::compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
-                          InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const
+bool OdometryICP::compute(InputArray srcDepth, InputArray srcRGB,
+                          InputArray dstDepth, InputArray dstRGB, OutputArray Rt) const
 {
-    CV_UNUSED(srcDepthFrame);
-    CV_UNUSED(srcRGBFrame);
-    CV_UNUSED(dstDepthFrame);
-    CV_UNUSED(dstRGBFrame);
+    CV_UNUSED(srcDepth);
+    CV_UNUSED(srcRGB);
+    CV_UNUSED(dstDepth);
+    CV_UNUSED(dstRGB);
     CV_UNUSED(Rt);
     CV_Error(cv::Error::StsBadFunc, "This odometry does not work with rgb data");
 }
@@ -114,9 +114,9 @@ public:
     virtual void prepareFrame(OdometryFrame& frame) const override;
     virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const override;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
-    virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const override;
-    virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
-                         InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const override;
+    virtual bool compute(InputArray srcDepth, InputArray dstDepth, OutputArray Rt) const override;
+    virtual bool compute(InputArray srcDepth, InputArray srcRGB,
+                         InputArray dstDepth, InputArray dstRGB, OutputArray Rt) const override;
     virtual Ptr<RgbdNormals> getNormalsComputer() const override { return Ptr<RgbdNormals>(); }
 };
 
@@ -149,10 +149,10 @@ bool OdometryRGB::compute(const OdometryFrame& srcFrame, const OdometryFrame& ds
     return isCorrect;
 }
 
-bool OdometryRGB::compute(InputArray _srcImage, InputArray _dstImage, OutputArray Rt) const
+bool OdometryRGB::compute(InputArray _srcDepth, InputArray _dstDepth, OutputArray Rt) const
 {
-    CV_UNUSED(_srcImage);
-    CV_UNUSED(_dstImage);
+    CV_UNUSED(_srcDepth);
+    CV_UNUSED(_dstDepth);
     CV_UNUSED(Rt);
     CV_Error(cv::Error::StsBadFunc, "This odometry algorithm requires depth and rgb data simultaneously");
 }
@@ -181,9 +181,9 @@ public:
     virtual void prepareFrame(OdometryFrame& frame) const override;
     virtual void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const override;
     virtual bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const override;
-    virtual bool compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const override;
-    virtual bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
-                         InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const override;
+    virtual bool compute(InputArray srcDepth, InputArray dstDepth, OutputArray Rt) const override;
+    virtual bool compute(InputArray srcDepth, InputArray srcRGB,
+                         InputArray dstDepth, InputArray dstRGB, OutputArray Rt) const override;
     virtual Ptr<RgbdNormals> getNormalsComputer() const override;
 };
 
@@ -219,10 +219,10 @@ bool OdometryRGBD::compute(const OdometryFrame& srcFrame, const OdometryFrame& d
     return isCorrect;
 }
 
-bool OdometryRGBD::compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const
+bool OdometryRGBD::compute(InputArray srcDepth, InputArray dstDepth, OutputArray Rt) const
 {
-    CV_UNUSED(srcFrame);
-    CV_UNUSED(dstFrame);
+    CV_UNUSED(srcDepth);
+    CV_UNUSED(dstDepth);
     CV_UNUSED(Rt);
     CV_Error(cv::Error::StsBadFunc, "This odometry algorithm needs depth and rgb data simultaneously");
 }
@@ -305,15 +305,15 @@ bool Odometry::compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFr
     return this->impl->compute(srcFrame, dstFrame, Rt);
 }
 
-bool Odometry::compute(InputArray srcFrame, InputArray dstFrame, OutputArray Rt) const
+bool Odometry::compute(InputArray srcDepth, InputArray dstDepth, OutputArray Rt) const
 {
-    return this->impl->compute(srcFrame, dstFrame, Rt);
+    return this->impl->compute(srcDepth, dstDepth, Rt);
 }
 
-bool Odometry::compute(InputArray srcDepthFrame, InputArray srcRGBFrame,
-                       InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const
+bool Odometry::compute(InputArray srcDepth, InputArray srcRGB,
+                       InputArray dstDepth, InputArray dstRGB, OutputArray Rt) const
 {
-    return this->impl->compute(srcDepthFrame, srcRGBFrame, dstDepthFrame, dstRGBFrame, Rt);
+    return this->impl->compute(srcDepth, srcRGB, dstDepth, dstRGB, Rt);
 }
 
 Ptr<RgbdNormals> Odometry::getNormalsComputer() const
