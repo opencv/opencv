@@ -3810,7 +3810,7 @@ void resize(int src_type,
         resize_bitExact<schar, interpolationLinear<schar> >,
         resize_bitExact<ushort, interpolationLinear<ushort> >,
         resize_bitExact<short, interpolationLinear<short> >,
-        resize_bitExact<int, interpolationLinear<int> >,
+        resize_bitExact<int32_t, interpolationLinear<int32_t> >,
         0,
         0,
         0

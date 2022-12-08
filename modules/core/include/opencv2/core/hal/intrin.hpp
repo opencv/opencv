@@ -62,7 +62,7 @@
 #define OPENCV_HAL_1ST(a, b) (a)
 
 namespace {
-inline unsigned int trailingZeros32(unsigned int value) {
+inline uint32_t trailingZeros32(uint32_t value) {
 #if defined(_MSC_VER)
 #if (_MSC_VER < 1700) || defined(_M_ARM) || defined(_M_ARM64)
     unsigned long index = 0;
@@ -81,7 +81,7 @@ inline unsigned int trailingZeros32(unsigned int value) {
 #elif defined(__clang__)
     return llvm.cttz.i32(value, true);
 #else
-    static const int MultiplyDeBruijnBitPosition[32] = {
+    static const int32_t MultiplyDeBruijnBitPosition[32] = {
         0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
         31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
     return MultiplyDeBruijnBitPosition[((uint32_t)((value & -value) * 0x077CB531U)) >> 27];
@@ -161,12 +161,12 @@ template<typename _Tp> struct V_TypeTraits
         } \
     }
 
-CV_INTRIN_DEF_TYPE_TRAITS(uchar, schar, uchar, uchar, ushort, unsigned, unsigned);
-CV_INTRIN_DEF_TYPE_TRAITS(schar, schar, uchar, uchar, short, int, int);
-CV_INTRIN_DEF_TYPE_TRAITS(ushort, short, ushort, ushort, unsigned, uint64, unsigned);
-CV_INTRIN_DEF_TYPE_TRAITS(short, short, ushort, ushort, int, int64, int);
-CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(unsigned, int, unsigned, unsigned, uint64, unsigned);
-CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(int, int, unsigned, unsigned, int64, int);
+CV_INTRIN_DEF_TYPE_TRAITS(uchar, schar, uchar, uchar, ushort, uint32_t, uint32_t);
+CV_INTRIN_DEF_TYPE_TRAITS(schar, schar, uchar, uchar, short, int32_t, int32_t);
+CV_INTRIN_DEF_TYPE_TRAITS(ushort, short, ushort, ushort, uint32_t, uint64, uint32_t);
+CV_INTRIN_DEF_TYPE_TRAITS(short, short, ushort, ushort, int32_t, int64, int32_t);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(uint32_t, int32_t, uint32_t, uint32_t, uint64, uint32_t);
+CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(int32_t, int32_t, uint32_t, uint32_t, int64, int32_t);
 CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(float, int, unsigned, float, double, float);
 CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(uint64, int64, uint64, uint64, void, uint64);
 CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(int64, int64, uint64, uint64, void, int64);
@@ -594,8 +594,8 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load(const schar * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_uint16 vx_load(const ushort * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_int16 vx_load(const short * ptr) { return VXPREFIX(_load)(ptr); }
-    inline v_int32 vx_load(const int * ptr) { return VXPREFIX(_load)(ptr); }
-    inline v_uint32 vx_load(const unsigned * ptr) { return VXPREFIX(_load)(ptr); }
+    inline v_int32 vx_load(const int32_t * ptr) { return VXPREFIX(_load)(ptr); }
+    inline v_uint32 vx_load(const uint32_t * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_float32 vx_load(const float * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_int64 vx_load(const int64 * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_uint64 vx_load(const uint64 * ptr) { return VXPREFIX(_load)(ptr); }
@@ -611,8 +611,8 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load_aligned(const schar * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_uint16 vx_load_aligned(const ushort * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_int16 vx_load_aligned(const short * ptr) { return VXPREFIX(_load_aligned)(ptr); }
-    inline v_int32 vx_load_aligned(const int * ptr) { return VXPREFIX(_load_aligned)(ptr); }
-    inline v_uint32 vx_load_aligned(const unsigned * ptr) { return VXPREFIX(_load_aligned)(ptr); }
+    inline v_int32 vx_load_aligned(const int32_t * ptr) { return VXPREFIX(_load_aligned)(ptr); }
+    inline v_uint32 vx_load_aligned(const uint32_t * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_float32 vx_load_aligned(const float * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_int64 vx_load_aligned(const int64 * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_uint64 vx_load_aligned(const uint64 * ptr) { return VXPREFIX(_load_aligned)(ptr); }
@@ -628,8 +628,8 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load_low(const schar * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_uint16 vx_load_low(const ushort * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_int16 vx_load_low(const short * ptr) { return VXPREFIX(_load_low)(ptr); }
-    inline v_int32 vx_load_low(const int * ptr) { return VXPREFIX(_load_low)(ptr); }
-    inline v_uint32 vx_load_low(const unsigned * ptr) { return VXPREFIX(_load_low)(ptr); }
+    inline v_int32 vx_load_low(const int32_t * ptr) { return VXPREFIX(_load_low)(ptr); }
+    inline v_uint32 vx_load_low(const uint32_t * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_float32 vx_load_low(const float * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_int64 vx_load_low(const int64 * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_uint64 vx_load_low(const uint64 * ptr) { return VXPREFIX(_load_low)(ptr); }
@@ -645,8 +645,8 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load_halves(const schar * ptr0, const schar * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_uint16 vx_load_halves(const ushort * ptr0, const ushort * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_int16 vx_load_halves(const short * ptr0, const short * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
-    inline v_int32 vx_load_halves(const int * ptr0, const int * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
-    inline v_uint32 vx_load_halves(const unsigned * ptr0, const unsigned * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
+    inline v_int32 vx_load_halves(const int32_t * ptr0, const int32_t * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
+    inline v_uint32 vx_load_halves(const uint32_t * ptr0, const uint32_t * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_float32 vx_load_halves(const float * ptr0, const float * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_int64 vx_load_halves(const int64 * ptr0, const int64 * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_uint64 vx_load_halves(const uint64 * ptr0, const uint64 * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
@@ -662,8 +662,8 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_lut(const schar * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_uint16 vx_lut(const ushort * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_int16 vx_lut(const short* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
-    inline v_int32 vx_lut(const int* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
-    inline v_uint32 vx_lut(const unsigned* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
+    inline v_int32 vx_lut(const int32_t* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
+    inline v_uint32 vx_lut(const uint32_t* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_float32 vx_lut(const float* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_int64 vx_lut(const int64 * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_uint64 vx_lut(const uint64 * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
@@ -679,8 +679,8 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_lut_pairs(const schar * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_uint16 vx_lut_pairs(const ushort * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_int16 vx_lut_pairs(const short* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
-    inline v_int32 vx_lut_pairs(const int* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
-    inline v_uint32 vx_lut_pairs(const unsigned* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
+    inline v_int32 vx_lut_pairs(const int32_t* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
+    inline v_uint32 vx_lut_pairs(const uint32_t* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_float32 vx_lut_pairs(const float* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_int64 vx_lut_pairs(const int64 * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_uint64 vx_lut_pairs(const uint64 * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
@@ -696,8 +696,8 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_lut_quads(const schar* ptr, const int* idx) { return VXPREFIX(_lut_quads)(ptr, idx); }
     inline v_uint16 vx_lut_quads(const ushort* ptr, const int* idx) { return VXPREFIX(_lut_quads)(ptr, idx); }
     inline v_int16 vx_lut_quads(const short* ptr, const int* idx) { return VXPREFIX(_lut_quads)(ptr, idx); }
-    inline v_int32 vx_lut_quads(const int* ptr, const int* idx) { return VXPREFIX(_lut_quads)(ptr, idx); }
-    inline v_uint32 vx_lut_quads(const unsigned* ptr, const int* idx) { return VXPREFIX(_lut_quads)(ptr, idx); }
+    inline v_int32 vx_lut_quads(const int32_t* ptr, const int* idx) { return VXPREFIX(_lut_quads)(ptr, idx); }
+    inline v_uint32 vx_lut_quads(const uint32_t* ptr, const int* idx) { return VXPREFIX(_lut_quads)(ptr, idx); }
     inline v_float32 vx_lut_quads(const float* ptr, const int* idx) { return VXPREFIX(_lut_quads)(ptr, idx); }
     //! @}
 
@@ -708,8 +708,8 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int16 vx_load_expand(const schar * ptr) { return VXPREFIX(_load_expand)(ptr); }
     inline v_uint32 vx_load_expand(const ushort * ptr) { return VXPREFIX(_load_expand)(ptr); }
     inline v_int32 vx_load_expand(const short* ptr) { return VXPREFIX(_load_expand)(ptr); }
-    inline v_int64 vx_load_expand(const int* ptr) { return VXPREFIX(_load_expand)(ptr); }
-    inline v_uint64 vx_load_expand(const unsigned* ptr) { return VXPREFIX(_load_expand)(ptr); }
+    inline v_int64 vx_load_expand(const int32_t* ptr) { return VXPREFIX(_load_expand)(ptr); }
+    inline v_uint64 vx_load_expand(const uint32_t* ptr) { return VXPREFIX(_load_expand)(ptr); }
     inline v_float32 vx_load_expand(const float16_t * ptr) { return VXPREFIX(_load_expand)(ptr); }
     //! @}
 
@@ -727,7 +727,7 @@ namespace CV__SIMD_NAMESPACE {
     // Compatibility layer
 
     template<typename T> struct VTraits {
-        static inline int vlanes() { return T::nlanes; }
+        static inline int32_t vlanes() { return T::nlanes; }
         enum { nlanes = T::nlanes, max_nlanes = T::nlanes };
         using lane_type = typename T::lane_type;
     };

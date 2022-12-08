@@ -494,9 +494,9 @@ typedef v_reg<ushort, 8> v_uint16x8;
 /** @brief Eight 16-bit signed integer values */
 typedef v_reg<short, 8> v_int16x8;
 /** @brief Four 32-bit unsigned integer values */
-typedef v_reg<unsigned, 4> v_uint32x4;
+typedef v_reg<uint32_t, 4> v_uint32x4;
 /** @brief Four 32-bit signed integer values */
-typedef v_reg<int, 4> v_int32x4;
+typedef v_reg<int32_t, 4> v_int32x4;
 /** @brief Four 32-bit floating point values (single precision) */
 typedef v_reg<float, 4> v_float32x4;
 /** @brief Two 64-bit floating point values (double precision) */
@@ -623,8 +623,8 @@ __CV_EXPAND(macro_name(uchar, __VA_ARGS__)) \
 __CV_EXPAND(macro_name(schar, __VA_ARGS__)) \
 __CV_EXPAND(macro_name(ushort, __VA_ARGS__)) \
 __CV_EXPAND(macro_name(short, __VA_ARGS__)) \
-__CV_EXPAND(macro_name(unsigned, __VA_ARGS__)) \
-__CV_EXPAND(macro_name(int, __VA_ARGS__)) \
+__CV_EXPAND(macro_name(uint32_t, __VA_ARGS__)) \
+__CV_EXPAND(macro_name(int32_t, __VA_ARGS__)) \
 __CV_EXPAND(macro_name(uint64, __VA_ARGS__)) \
 __CV_EXPAND(macro_name(int64, __VA_ARGS__)) \
 
@@ -2535,7 +2535,7 @@ template<int n> inline v_reg<int, n*2> v_trunc(const v_reg<double, n>& a)
 /** @brief Convert to float
 
 Supported input type is cv::v_int32. */
-template<int n> inline v_reg<float, n> v_cvt_f32(const v_reg<int, n>& a)
+template<int n> inline v_reg<float, n> v_cvt_f32(const v_reg<int32_t, n>& a)
 {
     v_reg<float, n> c;
     for( int i = 0; i < n; i++ )
@@ -2574,7 +2574,7 @@ template<int n> inline v_reg<float, n*2> v_cvt_f32(const v_reg<double, n>& a, co
 /** @brief Convert lower half to double
 
 Supported input type is cv::v_int32. */
-template<int n> CV_INLINE v_reg<double, n/2> v_cvt_f64(const v_reg<int, n>& a)
+template<int n> CV_INLINE v_reg<double, n/2> v_cvt_f64(const v_reg<int32_t, n>& a)
 {
     v_reg<double, (n/2)> c;
     for( int i = 0; i < (n/2); i++ )
@@ -2585,7 +2585,7 @@ template<int n> CV_INLINE v_reg<double, n/2> v_cvt_f64(const v_reg<int, n>& a)
 /** @brief Convert to double high part of vector
 
 Supported input type is cv::v_int32. */
-template<int n> CV_INLINE v_reg<double, (n/2)> v_cvt_f64_high(const v_reg<int, n>& a)
+template<int n> CV_INLINE v_reg<double, (n/2)> v_cvt_f64_high(const v_reg<int32_t, n>& a)
 {
     v_reg<double, (n/2)> c;
     for( int i = 0; i < (n/2); i++ )
@@ -3012,12 +3012,12 @@ template<int shift, int n> inline v_reg<_Tpn, 2*n> v_rshr_##pack_suffix(const v_
 //! @note All variants except 64-bit use saturation.
 OPENCV_HAL_IMPL_C_RSHR_PACK(ushort, uchar, pack, saturate_cast)
 OPENCV_HAL_IMPL_C_RSHR_PACK(short, schar, pack, saturate_cast)
-OPENCV_HAL_IMPL_C_RSHR_PACK(unsigned, ushort, pack, saturate_cast)
-OPENCV_HAL_IMPL_C_RSHR_PACK(int, short, pack, saturate_cast)
-OPENCV_HAL_IMPL_C_RSHR_PACK(uint64, unsigned, pack, static_cast)
-OPENCV_HAL_IMPL_C_RSHR_PACK(int64, int, pack, static_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(uint32_t, ushort, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(int32_t, short, pack, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(uint64, uint32_t, pack, static_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(int64, int32_t, pack, static_cast)
 OPENCV_HAL_IMPL_C_RSHR_PACK(short, uchar, pack_u, saturate_cast)
-OPENCV_HAL_IMPL_C_RSHR_PACK(int, ushort, pack_u, saturate_cast)
+OPENCV_HAL_IMPL_C_RSHR_PACK(int32_t, ushort, pack_u, saturate_cast)
 //! @}
 
 //! @brief Helper macro
