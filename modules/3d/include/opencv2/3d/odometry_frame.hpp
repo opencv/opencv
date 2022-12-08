@@ -31,7 +31,7 @@ enum OdometryFramePyramidType
  * When not empty, it contains a depth image, a mask of valid pixels and a set of pyramids generated from that data.
  * A BGR/Gray image and normals are optional.
  * OdometryFrame is made to be used together with Odometry class to reuse precalculated data between Rt data calculations.
- * A proper way to do that is to call Odometry::prepareFrames() on prev and next frames and then pass them to Odometry::compute() method.
+ * A correct way to do that is to call Odometry::prepareFrames() on prev and next frames and then pass them to Odometry::compute() method.
  */
 class CV_EXPORTS_W_SIMPLE OdometryFrame
 {
