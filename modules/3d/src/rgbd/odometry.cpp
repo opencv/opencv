@@ -67,10 +67,7 @@ bool OdometryICP::compute(const OdometryFrame& srcFrame, const OdometryFrame& ds
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
     std::vector<int> iterCounts;
-    Mat miterCounts;
-    settings.getIterCounts(miterCounts);
-    for (int i = 0; i < miterCounts.size().height; i++)
-        iterCounts.push_back(miterCounts.at<int>(i));
+    settings.getIterCounts(iterCounts);
     bool isCorrect = RGBDICPOdometryImpl(Rt, Mat(), srcFrame, dstFrame, cameraMatrix,
                                          this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
                                          iterCounts, this->settings.getMaxTranslation(),
@@ -136,11 +133,7 @@ bool OdometryRGB::compute(const OdometryFrame& srcFrame, const OdometryFrame& ds
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
     std::vector<int> iterCounts;
-    Mat miterCounts;
-    settings.getIterCounts(miterCounts);
-    CV_CheckTypeEQ(miterCounts.type(), CV_32S, "");
-    for (int i = 0; i < miterCounts.size().height; i++)
-        iterCounts.push_back(miterCounts.at<int>(i));
+    settings.getIterCounts(iterCounts);
     bool isCorrect = RGBDICPOdometryImpl(Rt, Mat(), srcFrame, dstFrame, cameraMatrix,
                                          this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
                                          iterCounts, this->settings.getMaxTranslation(),
@@ -207,10 +200,7 @@ bool OdometryRGBD::compute(const OdometryFrame& srcFrame, const OdometryFrame& d
     Matx33f cameraMatrix;
     settings.getCameraMatrix(cameraMatrix);
     std::vector<int> iterCounts;
-    Mat miterCounts;
-    settings.getIterCounts(miterCounts);
-    for (int i = 0; i < miterCounts.size().height; i++)
-        iterCounts.push_back(miterCounts.at<int>(i));
+    settings.getIterCounts(iterCounts);
     bool isCorrect = RGBDICPOdometryImpl(Rt, Mat(), srcFrame, dstFrame, cameraMatrix,
                                          this->settings.getMaxDepthDiff(), this->settings.getAngleThreshold(),
                                          iterCounts, this->settings.getMaxTranslation(),
