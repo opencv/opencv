@@ -46,13 +46,13 @@ public:
     /** Prepare frame for odometry calculation
      * @param frame odometry prepare this frame as src frame and dst frame simultaneously
      */
-    void prepareFrame(OdometryFrame& frame) const;
+    CV_WRAP void prepareFrame(OdometryFrame& frame) const;
 
     /** Prepare frame for odometry calculation
      * @param srcFrame frame will be prepared as src frame ("original" image)
      * @param dstFrame frame will be prepared as dsr frame ("rotated" image)
      */
-    void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const;
+    CV_WRAP void prepareFrames(OdometryFrame& srcFrame, OdometryFrame& dstFrame) const;
 
     /** Compute Rigid Transformation between two frames so that Rt * src = dst
      * Both frames, source and destination, should have been prepared by calling prepareFrame() first

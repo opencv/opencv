@@ -41,6 +41,7 @@ class odometry_test(NewOpenCVTests):
             else:
                 srcFrame = cv.OdometryFrame(depth)
                 dstFrame = cv.OdometryFrame(warped_depth)
+            odometry.prepareFrames(srcFrame, dstFrame)
             isCorrect = odometry.compute(srcFrame, dstFrame, Rt_res)
         else:
             if needRgb:
