@@ -913,7 +913,7 @@ protected:
         depth.copyTo(udepth);
         rgb.copyTo(urgb);
 
-        OdometryFrame odf(urgb, udepth);
+        OdometryFrame odf(udepth, urgb);
 
         if (testSrcType == VolumeTestSrcType::MAT)
         {

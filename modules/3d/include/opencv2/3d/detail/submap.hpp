@@ -125,7 +125,7 @@ void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, cv::Size frameSiz
 
         renderFrame = frame;
 
-        frame = OdometryFrame(noArray(), pch[2]);
+        frame = OdometryFrame(pch[2]);
     }
     else
     {

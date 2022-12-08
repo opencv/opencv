@@ -81,8 +81,8 @@ bool OdometryICP::compute(const OdometryFrame& srcFrame, const OdometryFrame& ds
 
 bool OdometryICP::compute(InputArray _srcDepth, InputArray _dstDepth, OutputArray Rt) const
 {
-    OdometryFrame srcFrame(noArray(), _srcDepth);
-    OdometryFrame dstFrame(noArray(), _dstDepth);
+    OdometryFrame srcFrame(_srcDepth);
+    OdometryFrame dstFrame(_dstDepth);
 
     prepareICPFrame(srcFrame, dstFrame, this->normalsComputer, this->settings, this->algtype);
 
@@ -157,10 +157,10 @@ bool OdometryRGB::compute(InputArray _srcImage, InputArray _dstImage, OutputArra
     CV_Error(cv::Error::StsBadFunc, "This odometry algorithm requires depth and rgb data simultaneously");
 }
 
-bool OdometryRGB::compute(InputArray srcDepthFrame, InputArray srcRGBFrame, InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const
+bool OdometryRGB::compute(InputArray srcDepth, InputArray srcRGB, InputArray dstDepth, InputArray dstRGB, OutputArray Rt) const
 {
-    OdometryFrame srcFrame(srcRGBFrame, srcDepthFrame);
-    OdometryFrame dstFrame(dstRGBFrame, dstDepthFrame);
+    OdometryFrame srcFrame(srcDepth, srcRGB);
+    OdometryFrame dstFrame(dstDepth, dstRGB);
 
     prepareRGBFrame(srcFrame, dstFrame, this->settings);
 
@@ -227,11 +227,11 @@ bool OdometryRGBD::compute(InputArray srcFrame, InputArray dstFrame, OutputArray
     CV_Error(cv::Error::StsBadFunc, "This odometry algorithm needs depth and rgb data simultaneously");
 }
 
-bool OdometryRGBD::compute(InputArray _srcDepthFrame, InputArray _srcRGBFrame,
-                           InputArray _dstDepthFrame, InputArray _dstRGBFrame, OutputArray Rt) const
+bool OdometryRGBD::compute(InputArray _srcDepth, InputArray _srcRGB,
+                           InputArray _dstDepth, InputArray _dstRGB, OutputArray Rt) const
 {
-    OdometryFrame srcFrame(_srcRGBFrame, _srcDepthFrame);
-    OdometryFrame dstFrame(_dstRGBFrame, _dstDepthFrame);
+    OdometryFrame srcFrame(_srcDepth, _srcRGB);
+    OdometryFrame dstFrame(_dstDepth, _dstRGB);
 
     prepareRGBDFrame(srcFrame, dstFrame, this->normalsComputer, this->settings, this->algtype);
     bool isCorrect = compute(srcFrame, dstFrame, Rt);

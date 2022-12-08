@@ -584,7 +584,7 @@ PERF_TEST_P_(VolumePerfFixture, integrate)
         UMat urgb, udepth;
         depth.copyTo(udepth);
         rgb.copyTo(urgb);
-        OdometryFrame odf(urgb, udepth);
+        OdometryFrame odf(udepth, urgb);
 
         bool done = false;
         while (repeat1st ? next() : !done)
@@ -621,7 +621,7 @@ PERF_TEST_P_(VolumePerfFixture, raycast)
         depth.copyTo(udepth);
         rgb.copyTo(urgb);
 
-        OdometryFrame odf(urgb, udepth);
+        OdometryFrame odf(udepth, urgb);
 
         if (testSrcType == VolumeTestSrcType::MAT)
             if (volumeType == VolumeType::ColorTSDF)
