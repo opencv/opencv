@@ -584,6 +584,11 @@ TEST_P(videoio_ffmpeg_16bit, basic)
     const double time_sec = 1;
     const int numFrames = static_cast<int>(fps * time_sec);
 
+#ifdef _WIN32 // TODO: FFmpeg wrapper update
+    if (isSupported)
+        throw SkipTestException("FFmpeg wrapper update is required");
+#endif
+
     {
         VideoWriter writer;
         writer.open(filename, CAP_FFMPEG, fourcc, fps, sz,
