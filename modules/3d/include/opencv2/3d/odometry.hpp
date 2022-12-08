@@ -18,7 +18,7 @@ namespace cv
 * @param RGB       only rgb image
 * @param RGB_DEPTH depth and rgb data simultaneously
 */
-enum OdometryType
+enum class OdometryType
 {
     DEPTH     = 0,
     RGB       = 1,
