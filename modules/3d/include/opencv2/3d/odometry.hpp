@@ -63,7 +63,7 @@ public:
      *   R_31 R_32 R_33 t_3
      *   0    0    0    1  }
      */
-    bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const;
+    CV_WRAP bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const;
 
     CV_WRAP bool compute(InputArray srcDepthFrame, InputArray dstDepthFrame, OutputArray Rt) const;
     CV_WRAP bool compute(InputArray srcDepthFrame, InputArray srcRGBFrame, InputArray dstDepthFrame, InputArray dstRGBFrame, OutputArray Rt) const;
