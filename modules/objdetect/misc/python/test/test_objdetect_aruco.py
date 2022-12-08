@@ -60,15 +60,11 @@ class aruco_objdetect_test(NewOpenCVTests):
         gold_corners = np.array([[offset, offset],[marker_size+offset-1.0,offset],
                                  [marker_size+offset-1.0,marker_size+offset-1.0],
                                  [offset, marker_size+offset-1.0]], dtype=np.float32)
-        expected_corners, expected_ids, expected_rejected = cv.aruco.detectMarkers(img_marker, aruco_dict,
-                                                                                   parameters=aruco_params)
-
         corners, ids, rejected = aruco_detector.detectMarkers(img_marker)
 
         self.assertEqual(1, len(ids))
         self.assertEqual(id, ids[0])
-        for i in range(0, len(ids)):
-            np.testing.assert_array_equal(expected_corners[i], corners[i])
+        for i in range(0, len(corners)):
             np.testing.assert_array_equal(gold_corners, corners[i].reshape(4, 2))
 
     def test_aruco_detector_refine(self):
@@ -86,14 +82,10 @@ class aruco_objdetect_test(NewOpenCVTests):
         part_rejected.append(corners[-1])
 
         refine_corners, refine_ids, refine_rejected, recovered_ids = aruco_detector.refineDetectedMarkers(board_image, board, part_corners, part_ids, part_rejected)
-        refine_corners_c, _, _, _ = cv.aruco.refineDetectedMarkers(board_image, board, part_corners, part_ids, part_rejected)
 
         self.assertEqual(board_size[0] * board_size[1], len(refine_ids))
         self.assertEqual(1, len(recovered_ids))
 
-        for i in range(0, len(ids)):
-            np.testing.assert_array_equal(refine_corners_c[i], refine_corners[i])
-        #self.assertEqual(ids[-1], recovered_ids[0])
         self.assertEqual(ids[-1], refine_ids[-1])
         self.assertEqual((1, 4, 2), refine_corners[0].shape)
         np.testing.assert_array_equal(corners, refine_corners)

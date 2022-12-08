@@ -7,18 +7,16 @@
 #include <opencv2/objdetect/aruco_dictionary.hpp>
 
 /** @defgroup aruco ArUco Marker Detection
- * This module is dedicated to square fiducial markers (also known as Augmented Reality Markers)
- * These markers are useful for easy, fast and robust camera pose estimation.
+ * Square fiducial markers (also known as Augmented Reality Markers) are useful for easy,
+ * fast and robust camera pose estimation.
  *
- * The main functionality of ArucoDetector class is:
- * - Detection of markers in an image
- *
- * There are even more functionalities implemented in aruco_board.hpp, charuco.hpp and aruco_calib.hpp:
+ * The main functionality of ArucoDetector class is detection of markers in an image. There are even more
+ * functionalities implemented in the aruco contrib module (files aruco.hpp, charuco.hpp, aruco_calib.hpp):
  * - Pose estimation from a single marker or from a board/set of markers
  * - Detection of ChArUco board for high subpixel accuracy
  * - Camera calibration from both, ArUco boards and ChArUco boards.
  * - Detection of ChArUco diamond markers
- * The samples directory includes easy examples of how to use the module.
+ * The functionalities from the aruco contrib module is planned to be transferred to the main repository.
  *
  * The implementation is based on the ArUco Library by R. Muñoz-Salinas and S. Garrido-Jurado @cite Aruco2014.
  *
@@ -28,9 +26,7 @@
  * "Automatic generation and detection of highly reliable fiducial markers under occlusion".
  * Pattern Recogn. 47, 6 (June 2014), 2280-2292. DOI=10.1016/j.patcog.2014.01.005
  *
- * @sa http://www.uco.es/investiga/grupos/ava/node/26
- *
- * This module has been originally developed by Sergio Garrido-Jurado as a project
+ * This code has been originally developed by Sergio Garrido-Jurado as a project
  * for Google Summer of Code 2015 (GSoC 15).
  */
 
@@ -135,12 +131,12 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
     /** @brief default value CORNER_REFINE_NONE.
      *
      * refinement method:
-     * 0:CORNER_REFINE_NONE, no refinement.
-     * 1: CORNER_REFINE_SUBPIX, do subpixel refinement.
-     * 2: CORNER_REFINE_CONTOUR use contour-Points,
-     * 3: CORNER_REFINE_APRILTAG  use the AprilTag2 approach).
+     * 0: CORNER_REFINE_NONE, no refinement
+     * 1: CORNER_REFINE_SUBPIX, do subpixel refinement
+     * 2: CORNER_REFINE_CONTOUR, use contour-Points
+     * 3: CORNER_REFINE_APRILTAG, use the AprilTag2 approach
      */
-    CV_PROP_RW int cornerRefinementMethod;
+    CV_PROP_RW CornerRefineMethod cornerRefinementMethod;
 
     /// window size for the corner refinement process (in pixels) (default 5).
     CV_PROP_RW int cornerRefinementWinSize;
