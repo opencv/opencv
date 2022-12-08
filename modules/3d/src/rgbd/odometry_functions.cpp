@@ -496,6 +496,11 @@ bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
                          double maxTranslation, double maxRotation, double sobelScale,
                          OdometryType method, OdometryTransformType transformType, OdometryAlgoType algtype)
 {
+    if (srcFrame.getPyramidLevels() != (int)(iterCounts.size()))
+        CV_Error(Error::StsBadArg, "srcFrame has incorrect number of pyramid levels. Did you forget to call prepareFrame()?");
+    if (dstFrame.getPyramidLevels() != (int)(iterCounts.size()))
+        CV_Error(Error::StsBadArg, "dstFrame has incorrect number of pyramid levels. Did you forget to call prepareFrame()?");
+
     int transformDim = getTransformDim(transformType);
 
     const int minOverdetermScale = 20;
