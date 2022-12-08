@@ -159,8 +159,8 @@ void prepareRGBFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, OdometryS
 void prepareICPFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, Ptr<RgbdNormals>& normalsComputer, const OdometrySettings settings, OdometryAlgoType algtype);
 
 bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
-                         const OdometryFrame srcFrame,
-                         const OdometryFrame dstFrame,
+                         const OdometryFrame& srcFrame,
+                         const OdometryFrame& dstFrame,
                          const Matx33f& cameraMatrix,
                          float maxDepthDiff, float angleThreshold, const std::vector<int>& iterCounts,
                          double maxTranslation, double maxRotation, double sobelScale,

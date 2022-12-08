@@ -489,8 +489,8 @@ void prepareRGBDFrame(OdometryFrame& srcFrame, OdometryFrame& dstFrame, Ptr<Rgbd
 }
 
 bool RGBDICPOdometryImpl(OutputArray _Rt, const Mat& initRt,
-                         const OdometryFrame srcFrame,
-                         const OdometryFrame dstFrame,
+                         const OdometryFrame& srcFrame,
+                         const OdometryFrame& dstFrame,
                          const Matx33f& cameraMatrix,
                          float maxDepthDiff, float angleThreshold, const std::vector<int>& iterCounts,
                          double maxTranslation, double maxRotation, double sobelScale,
