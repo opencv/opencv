@@ -69,7 +69,9 @@ const FourCC_Ext_Size entries[] =
     make_tuple("mp4v", "avi", bigSize),
     make_tuple("MPEG", "avi", Size(720, 576)),
     make_tuple("XVID", "avi", bigSize),
-    make_tuple("H264", "mp4", Size(4096, 2160))
+    make_tuple("H264", "mp4", Size(4096, 2160)),
+    make_tuple("FFV1", "avi", bigSize),
+    make_tuple("FFV1", "mkv", bigSize)
 };
 
 INSTANTIATE_TEST_CASE_P(videoio, videoio_ffmpeg, testing::ValuesIn(entries));
@@ -559,5 +561,90 @@ TEST(videoio_ffmpeg, DISABLED_open_from_web)
     EXPECT_NO_THROW(n_frames = (int)cap.get(CAP_PROP_FRAME_COUNT));
     EXPECT_EQ((int)14315, n_frames);
 }
+
+
+typedef tuple<string, string, bool, bool> FourCC_Ext_Color_Support;
+typedef testing::TestWithParam< FourCC_Ext_Color_Support > videoio_ffmpeg_16bit;
+
+TEST_P(videoio_ffmpeg_16bit, basic)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    const int fourcc = fourccFromString(get<0>(GetParam()));
+    const string ext = string(".") + get<1>(GetParam());
+    const bool isColor = get<2>(GetParam());
+    const bool isSupported = get<3>(GetParam());
+    const int cn = isColor ? 3 : 1;
+    const int dataType = CV_16UC(cn);
+
+    const string filename = tempfile(ext.c_str());
+    const Size sz(640, 480);
+    const double fps = 30.0;
+    const double time_sec = 1;
+    const int numFrames = static_cast<int>(fps * time_sec);
+
+    {
+        VideoWriter writer;
+        writer.open(filename, CAP_FFMPEG, fourcc, fps, sz,
+                             {
+                                 VIDEOWRITER_PROP_DEPTH, CV_16U,
+                                 VIDEOWRITER_PROP_IS_COLOR, isColor
+                             });
+
+        ASSERT_EQ(isSupported, writer.isOpened());
+        if (isSupported)
+        {
+            Mat img(sz, dataType, Scalar::all(0));
+            const int coeff = cvRound(min(sz.width, sz.height)/(fps * time_sec));
+            for (int i = 0 ; i < numFrames; i++ )
+            {
+                rectangle(img,
+                          Point2i(coeff * i, coeff * i),
+                          Point2i(coeff * (i + 1), coeff * (i + 1)),
+                          Scalar::all(255 * (1.0 - static_cast<double>(i) / (fps * time_sec * 2))),
+                          -1);
+                writer << img;
+            }
+            writer.release();
+            EXPECT_GT(getFileSize(filename), 8192);
+        }
+    }
+
+    if (isSupported)
+    {
+        VideoCapture cap;
+        ASSERT_TRUE(cap.open(filename, CAP_FFMPEG, {CAP_PROP_CONVERT_RGB, false}));
+        ASSERT_TRUE(cap.isOpened());
+        Mat img;
+        bool res = true;
+        int numRead = 0;
+        while(res)
+        {
+            res = cap.read(img);
+            if (res)
+            {
+                ++numRead;
+                ASSERT_EQ(img.type(), dataType);
+                ASSERT_EQ(img.size(), sz);
+            }
+        }
+        ASSERT_EQ(numRead, numFrames);
+        remove(filename.c_str());
+    }
+}
+
+const FourCC_Ext_Color_Support sixteen_bit_modes[] =
+{
+    // 16-bit grayscale is supported
+    make_tuple("FFV1", "avi", false, true),
+    make_tuple("FFV1", "mkv", false, true),
+    // 16-bit color formats are NOT supported
+    make_tuple("FFV1", "avi", true, false),
+    make_tuple("FFV1", "mkv", true, false),
+
+};
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_16bit, testing::ValuesIn(sixteen_bit_modes));
 
 }} // namespace
