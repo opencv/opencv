@@ -209,7 +209,8 @@ simple_argtype_mapping = {
     "int": ArgTypeInfo("int", FormatStrings.int, "0", True),
     "float": ArgTypeInfo("float", FormatStrings.float, "0.f", True),
     "double": ArgTypeInfo("double", FormatStrings.double, "0", True),
-    "c_string": ArgTypeInfo("char*", FormatStrings.string, '(char*)""')
+    "c_string": ArgTypeInfo("char*", FormatStrings.string, '(char*)""'),
+    "UMat": ArgTypeInfo("UMat", FormatStrings.object, 'UMat()', True),  # FIXIT: switch to CV_EXPORTS_W_SIMPLE as UMat is already a some kind of smart pointer
 }
 
 # Set of reserved keywords for Python. Can be acquired via the following call
@@ -422,6 +423,7 @@ class ArgInfo(object):
             self.name += "_"
         self.defval = arg_tuple[2]
         self.isarray = False
+        self.is_smart_ptr = self.tp.startswith('Ptr<')  # FIXIT: handle through modifiers - need to modify parser
         self.arraylen = 0
         self.arraycvt = None
         self.inputarg = True
@@ -713,7 +715,21 @@ class FuncInfo(object):
                 if any(tp in codegen.enums.keys() for tp in tp_candidates):
                     defval0 = "static_cast<%s>(%d)" % (a.tp, 0)
 
-                arg_type_info = simple_argtype_mapping.get(tp, ArgTypeInfo(tp, FormatStrings.object, defval0, True))
+                if tp in simple_argtype_mapping:
+                    arg_type_info = simple_argtype_mapping[tp]
+                else:
+                    if tp in all_classes:
+                        tp_classinfo = all_classes[tp]
+                        cname_of_value = tp_classinfo.cname if tp_classinfo.issimple else "Ptr<{}>".format(tp_classinfo.cname)
+                        arg_type_info = ArgTypeInfo(cname_of_value, FormatStrings.object, defval0, True)
+                        assert not (a.is_smart_ptr and tp_classinfo.issimple), "Can't pass 'simple' type as Ptr<>"
+                        if not a.is_smart_ptr and not tp_classinfo.issimple:
+                            assert amp == ''
+                            amp = '*'
+                    else:
+                        # FIXIT: Ptr_ / vector_ / enums / nested types
+                        arg_type_info = ArgTypeInfo(tp, FormatStrings.object, defval0, True)
+
                 parse_name = a.name
                 if a.py_inputarg:
                     if arg_type_info.strict_conversion:

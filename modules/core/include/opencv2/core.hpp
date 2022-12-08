@@ -3095,12 +3095,12 @@ public:
 
     /** @brief Stores algorithm parameters in a file storage
     */
-    virtual void write(FileStorage& fs) const { CV_UNUSED(fs); }
+    CV_WRAP virtual void write(FileStorage& fs) const { CV_UNUSED(fs); }
 
-    /** @brief simplified API for language bindings
+    /**
     * @overload
     */
-    CV_WRAP void write(const Ptr<FileStorage>& fs, const String& name = String()) const;
+    CV_WRAP void write(FileStorage& fs, const String& name) const;
 
     /** @brief Reads algorithm parameters from a file storage
     */

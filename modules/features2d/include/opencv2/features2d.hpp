@@ -212,7 +212,7 @@ public:
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 
     // see corresponding cv::Algorithm method
-    CV_WRAP inline void write(const Ptr<FileStorage>& fs, const String& name = String()) const { Algorithm::write(fs, name); }
+    CV_WRAP inline void write(FileStorage& fs, const String& name) const { Algorithm::write(fs, name); }
 };
 
 /** Feature detectors in OpenCV have wrappers with a common interface that enables you to easily switch
@@ -1101,7 +1101,7 @@ public:
 
 
     // see corresponding cv::Algorithm method
-    CV_WRAP inline void write(const Ptr<FileStorage>& fs, const String& name = String()) const { Algorithm::write(fs, name); }
+    CV_WRAP inline void write(FileStorage& fs, const String& name) const { Algorithm::write(fs, name); }
 
 protected:
     /**
