@@ -29,7 +29,7 @@ public:
     void processNet(std::string weights, std::string proto,
                     Mat inp, const std::string& outputLayer = "",
                     std::string halideScheduler = "",
-                    double l1 = 0.0, double lInf = 0.0, double detectionConfThresh = 0.2)
+                    double l1 = 0.0, double lInf = 0.0, double detectionConfThresh = 0.2, bool useWinograd = true)
     {
         checkBackend();
         l1 = l1 ? l1 : default_l1;
@@ -49,6 +49,7 @@ public:
         net.setInput(inp);
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
+        net.enableWinograd(useWinograd);
         if (backend == DNN_BACKEND_HALIDE && !halideScheduler.empty())
         {
             halideScheduler = findDataFile(halideScheduler);
@@ -347,7 +348,8 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
     }
 
     processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel",
-               "dnn/ssd_vgg16.prototxt", inp, "detection_out", "", scoreDiff, iouDiff);
+               "dnn/ssd_vgg16.prototxt", inp, "detection_out", "", scoreDiff,
+               iouDiff, 0.2, false);
     expectNoFallbacksFromIE(net);
 }
 

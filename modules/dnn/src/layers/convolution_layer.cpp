@@ -2112,8 +2112,11 @@ public:
                 int dilation_h = dilations[dilations.size() - 2];
                 int dilation_w = dilations.back();
 
+                // Winograd only works well on input h and w >12.
+                bool canUseWinograd = useWinograd && inputs[0].size[2] >= 12 && inputs[0].size[3] >= 12;
+
                 fastConv2dImpl = initFastConv2d(ngroups, K, C, Hk, Wk, stride_w, stride_h, dilation_w,
-                                                dilation_h, pads_begin, pads_end, weightsMat, &biasvec[0], useWinograd);
+                                                dilation_h, pads_begin, pads_end, weightsMat, &biasvec[0], canUseWinograd);
             }
 
             if (fastConv2dImpl)
