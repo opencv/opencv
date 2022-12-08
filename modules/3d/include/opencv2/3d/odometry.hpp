@@ -56,7 +56,7 @@ public:
 
     /** Compute Rigid Transformation between two frames so that Rt * src = dst
      * Both frames, source and destination, should have been prepared by calling prepareFrame() first
-     * 
+     *
      * @param srcFrame src frame ("original" image)
      * @param dstFrame dst frame ("rotated" image)
      * @param Rt Rigid transformation, which will be calculated, in form:
@@ -69,7 +69,7 @@ public:
     CV_WRAP bool compute(const OdometryFrame& srcFrame, const OdometryFrame& dstFrame, OutputArray Rt) const;
     /**
      * @brief Compute Rigid Transformation between two frames so that Rt * src = dst
-     * 
+     *
      * @param srcDepth source depth ("original" image)
      * @param dstDepth destination depth ("rotated" image)
      * @param Rt Rigid transformation, which will be calculated, in form:
@@ -82,7 +82,7 @@ public:
     CV_WRAP bool compute(InputArray srcDepth, InputArray dstDepth, OutputArray Rt) const;
     /**
      * @brief Compute Rigid Transformation between two frames so that Rt * src = dst
-     * 
+     *
      * @param srcDepth source depth ("original" image)
      * @param srcRgb source RGB
      * @param dstDepth destination depth ("rotated" image)
