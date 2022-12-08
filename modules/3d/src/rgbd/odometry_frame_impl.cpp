@@ -11,22 +11,6 @@
 namespace cv
 {
 
-OdometryFrame::OdometryFrame() :
-    OdometryFrame(noArray(), noArray(), noArray(), noArray())
-{ }
-
-OdometryFrame::OdometryFrame(InputArray depth) :
-    OdometryFrame(depth, noArray(), noArray(), noArray())
-{ }
-
-OdometryFrame::OdometryFrame(InputArray depth, InputArray image) :
-    OdometryFrame(depth, image, noArray(), noArray())
-{ }
-
-OdometryFrame::OdometryFrame(InputArray depth, InputArray image, InputArray mask) :
-    OdometryFrame(depth, image, mask, noArray())
-{ }
-
 OdometryFrame::OdometryFrame(InputArray depth, InputArray image, InputArray mask, InputArray normals)
 {
     this->impl = makePtr<OdometryFrame::Impl>();

@@ -37,17 +37,6 @@ class CV_EXPORTS_W_SIMPLE OdometryFrame
 {
 public:
     /**
-     * @brief Construct a new empty OdometryFrame object.
-     */
-    CV_WRAP explicit OdometryFrame();
-
-    /**
-     * @brief Construct a new OdometryFrame object. All non-empty images should have the same size.
-     * @param depth A depth image, should be CV_8UC1
-     */
-    CV_WRAP explicit OdometryFrame(InputArray depth);
-
-    /**
      * @brief Construct a new OdometryFrame object. All non-empty images should have the same size.
      *
      * @param depth A depth image, should be CV_8UC1
@@ -57,31 +46,7 @@ public:
      * @param mask A user-provided mask of valid pixels, should be CV_8UC1
      * @param normals A user-provided normals to the depth surface, should be CV_32FC4
      */
-    CV_WRAP explicit OdometryFrame(InputArray depth, InputArray image);
-
-    /**
-     * @brief Construct a new OdometryFrame object. All non-empty images should have the same size.
-     *
-     * @param depth A depth image, should be CV_8UC1
-     * @param image An BGR or grayscale image (or noArray() if it's not required for used ICP algorithm).
-     * Should be CV_8UC3 or CV_8C4 if it's BGR image or CV_8UC1 if it's grayscale. If it's BGR then it's converted to grayscale
-     * image automatically.
-     * @param mask A user-provided mask of valid pixels, should be CV_8UC1
-     * @param normals A user-provided normals to the depth surface, should be CV_32FC4
-     */
-    CV_WRAP explicit OdometryFrame(InputArray depth, InputArray image, InputArray mask);
-
-    /**
-     * @brief Construct a new OdometryFrame object. All non-empty images should have the same size.
-     *
-     * @param depth A depth image, should be CV_8UC1
-     * @param image An BGR or grayscale image (or noArray() if it's not required for used ICP algorithm).
-     * Should be CV_8UC3 or CV_8C4 if it's BGR image or CV_8UC1 if it's grayscale. If it's BGR then it's converted to grayscale
-     * image automatically.
-     * @param mask A user-provided mask of valid pixels, should be CV_8UC1
-     * @param normals A user-provided normals to the depth surface, should be CV_32FC4
-     */
-    CV_WRAP explicit OdometryFrame(InputArray depth, InputArray image, InputArray mask, InputArray normals);
+    CV_WRAP explicit OdometryFrame(InputArray depth = noArray(), InputArray image = noArray(), InputArray mask = noArray(), InputArray normals = noArray());
     ~OdometryFrame() {};
 
     /**
