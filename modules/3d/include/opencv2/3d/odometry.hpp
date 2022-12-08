@@ -101,7 +101,7 @@ public:
      * The normals computer is generated at first need during prepareFrame when normals are required for the ICP algorithm
      * but not presented by a user. Re-generated each time the related settings change or a new frame arrives with the different size.
      */
-    Ptr<RgbdNormals> getNormalsComputer() const;
+    CV_WRAP Ptr<RgbdNormals> getNormalsComputer() const;
 
     class Impl;
 private:
