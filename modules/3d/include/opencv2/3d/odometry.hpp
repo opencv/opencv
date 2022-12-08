@@ -84,9 +84,9 @@ public:
      * @brief Compute Rigid Transformation between two frames so that Rt * src = dst
      *
      * @param srcDepth source depth ("original" image)
-     * @param srcRgb source RGB
+     * @param srcRGB source RGB
      * @param dstDepth destination depth ("rotated" image)
-     * @param dstRgb destination RGB
+     * @param dstRGB destination RGB
      * @param Rt Rigid transformation, which will be calculated, in form:
      * { R_11 R_12 R_13 t_1
      *   R_21 R_22 R_23 t_2
