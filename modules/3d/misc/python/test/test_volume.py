@@ -5,7 +5,10 @@ from tests_common import NewOpenCVTests
 
 class volume_test(NewOpenCVTests):
     def test_VolumeDefault(self):
-        depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH).astype(np.float32)
+        depthPath = 'cv/rgbd/depth.png'
+        depth = self.get_sample(depthPath, cv.IMREAD_ANYDEPTH).astype(np.float32)
+        if depth.size <= 0:
+            raise Exception('Failed to load depth file: %s' % depthPath)
 
         Rt = np.eye(4)
         volume = cv.Volume()
@@ -23,7 +26,10 @@ class volume_test(NewOpenCVTests):
         volume.raycast(Rt, points, normals)
 
     def test_VolumeTSDF(self):
-        depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH).astype(np.float32)
+        depthPath = 'cv/rgbd/depth.png'
+        depth = self.get_sample(depthPath, cv.IMREAD_ANYDEPTH).astype(np.float32)
+        if depth.size <= 0:
+            raise Exception('Failed to load depth file: %s' % depthPath)
 
         Rt = np.eye(4)
 
@@ -40,7 +46,10 @@ class volume_test(NewOpenCVTests):
         volume.raycast(Rt, points, normals)
 
     def test_VolumeHashTSDF(self):
-        depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH).astype(np.float32)
+        depthPath = 'cv/rgbd/depth.png'
+        depth = self.get_sample(depthPath, cv.IMREAD_ANYDEPTH).astype(np.float32)
+        if depth.size <= 0:
+            raise Exception('Failed to load depth file: %s' % depthPath)
 
         Rt = np.eye(4)
         settings = cv.VolumeSettings(cv.VolumeType_HashTSDF)
@@ -56,8 +65,15 @@ class volume_test(NewOpenCVTests):
         volume.raycast(Rt, points, normals)
 
     def test_VolumeColorTSDF(self):
-        depth = self.get_sample('cv/rgbd/depth.png', cv.IMREAD_ANYDEPTH).astype(np.float32)
-        rgb = self.get_sample('cv/rgbd/rgb.png', cv.IMREAD_ANYCOLOR).astype(np.float32)
+        depthPath = 'cv/rgbd/depth.png'
+        rgbPath = 'cv/rgbd/rgb.png'
+        depth = self.get_sample(depthPath, cv.IMREAD_ANYDEPTH).astype(np.float32)
+        rgb = self.get_sample(rgbPath, cv.IMREAD_ANYCOLOR).astype(np.float32)
+
+        if depth.size <= 0:
+            raise Exception('Failed to load depth file: %s' % depthPath)
+        if rgb.size <= 0:
+            raise Exception('Failed to load RGB file: %s' % rgbPath)
 
         Rt = np.eye(4)
         settings = cv.VolumeSettings(cv.VolumeType_ColorTSDF)
