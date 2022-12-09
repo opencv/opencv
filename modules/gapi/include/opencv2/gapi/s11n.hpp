@@ -335,7 +335,7 @@ IIStream& operator>> (IIStream& is, std::vector<T> &ts) {
 namespace detail {
 template<typename V>
 IOStream& put_v(IOStream&, const V&, std::size_t) {
-    GAPI_Assert(false && "variant>>: requested index is invalid");
+    GAPI_Error("variant>>: requested index is invalid");
 };
 
 template<typename V, typename X, typename... Xs>
@@ -347,7 +347,7 @@ IOStream& put_v(IOStream& os, const V& v, std::size_t x) {
 
 template<typename V>
 IIStream& get_v(IIStream&, V&, std::size_t, std::size_t) {
-    GAPI_Assert(false && "variant<<: requested index is invalid");
+    GAPI_Error("variant<<: requested index is invalid");
 }
 
 template<typename V, typename X, typename... Xs>
@@ -423,7 +423,7 @@ static GRunArg exec(cv::gapi::s11n::IIStream& is) {
 template<typename RA>
 struct deserialize_arg_with_adapter<RA, void> {
 static GRunArg exec(cv::gapi::s11n::IIStream&) {
-    GAPI_Assert(false && "No suitable adapter class found during RMat/MediaFrame deserialization. "
+    GAPI_Error("No suitable adapter class found during RMat/MediaFrame deserialization. "
                          "Please, make sure you've passed them in cv::gapi::deserialize() template");
     return GRunArg{};
 }
