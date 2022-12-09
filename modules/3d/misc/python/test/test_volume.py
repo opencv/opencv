@@ -23,7 +23,14 @@ class volume_test(NewOpenCVTests):
                              [  0. ,   0. ,   1. ]])
 
         volume.raycastEx(Rt, size[0], size[1], Kraycast, points, normals)
+
+        self.assertEqual(points.shape, size)
+        self.assertEqual(points.shape, normals.shape)
+
         volume.raycast(Rt, points, normals)
+
+        self.assertEqual(points.shape, size)
+        self.assertEqual(points.shape, normals.shape)
 
     def test_VolumeTSDF(self):
         depthPath = 'cv/rgbd/depth.png'
@@ -43,7 +50,14 @@ class volume_test(NewOpenCVTests):
 
         Kraycast = settings.getCameraRaycastIntrinsics()
         volume.raycastEx(Rt, size[0], size[1], Kraycast, points, normals)
+
+        self.assertEqual(points.shape, size)
+        self.assertEqual(points.shape, normals.shape)
+
         volume.raycast(Rt, points, normals)
+
+        self.assertEqual(points.shape, size)
+        self.assertEqual(points.shape, normals.shape)
 
     def test_VolumeHashTSDF(self):
         depthPath = 'cv/rgbd/depth.png'
@@ -62,7 +76,14 @@ class volume_test(NewOpenCVTests):
 
         Kraycast = settings.getCameraRaycastIntrinsics()
         volume.raycastEx(Rt, size[0], size[1], Kraycast, points, normals)
+
+        self.assertEqual(points.shape, size)
+        self.assertEqual(points.shape, normals.shape)
+
         volume.raycast(Rt, points, normals)
+
+        self.assertEqual(points.shape, size)
+        self.assertEqual(points.shape, normals.shape)
 
     def test_VolumeColorTSDF(self):
         depthPath = 'cv/rgbd/depth.png'
@@ -87,7 +108,15 @@ class volume_test(NewOpenCVTests):
 
         Kraycast = settings.getCameraRaycastIntrinsics()
         volume.raycastExColor(Rt, size[0], size[1], Kraycast, points, normals, colors)
+
+        self.assertEqual(points.shape, size)
+        self.assertEqual(points.shape, normals.shape)
+
         volume.raycastColor(Rt, points, normals, colors)
+
+        self.assertEqual(points.shape, size)
+        self.assertEqual(points.shape, normals.shape)
+        self.assertEqual(points.shape, colors.shape)
 
 
 if __name__ == '__main__':
