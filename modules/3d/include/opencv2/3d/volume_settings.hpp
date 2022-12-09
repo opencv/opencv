@@ -35,43 +35,43 @@ public:
     /** @brief Sets the width of the image for integration.
     * @param val input value.
     */
-    CV_WRAP void  setIntegrateWidth(int val);
+    CV_WRAP void setIntegrateWidth(int val);
 
     /** @brief Returns the width of the image for integration.
     */
-    CV_WRAP int   getIntegrateWidth() const;
+    CV_WRAP int getIntegrateWidth() const;
 
     /** @brief Sets the height of the image for integration.
     * @param val input value.
     */
-    CV_WRAP void  setIntegrateHeight(int val);
+    CV_WRAP void setIntegrateHeight(int val);
 
     /** @brief Returns the height of the image for integration.
     */
-    CV_WRAP int   getIntegrateHeight() const;
+    CV_WRAP int getIntegrateHeight() const;
 
     /** @brief Sets the width of the raycasted image, used when user does not provide it at raycast() call.
     * @param val input value.
     */
-    CV_WRAP void  setRaycastWidth(int val);
+    CV_WRAP void setRaycastWidth(int val);
 
     /** @brief Returns the width of the raycasted image, used when user does not provide it at raycast() call.
     */
-    CV_WRAP int   getRaycastWidth() const;
+    CV_WRAP int getRaycastWidth() const;
 
     /** @brief Sets the height of the raycasted image, used when user does not provide it at raycast() call.
     * @param val input value.
     */
-    CV_WRAP void  setRaycastHeight(int val);
+    CV_WRAP void setRaycastHeight(int val);
 
     /** @brief Returns the height of the raycasted image, used when user does not provide it at raycast() call.
     */
-    CV_WRAP int   getRaycastHeight() const;
+    CV_WRAP int getRaycastHeight() const;
 
     /** @brief Sets depth factor, witch is the number for depth scaling.
     * @param val input value.
     */
-    CV_WRAP void  setDepthFactor(float val);
+    CV_WRAP void setDepthFactor(float val);
 
     /** @brief Returns depth factor, witch is the number for depth scaling.
     */
@@ -80,7 +80,7 @@ public:
     /** @brief Sets the size of voxel.
     * @param val input value.
     */
-    CV_WRAP void  setVoxelSize(float val);
+    CV_WRAP void setVoxelSize(float val);
 
     /** @brief Returns the size of voxel.
     */
@@ -89,7 +89,7 @@ public:
     /** @brief Sets TSDF truncation distance. Distances greater than value from surface will be truncated to 1.0.
     * @param val input value.
     */
-    CV_WRAP void  setTsdfTruncateDistance(float val);
+    CV_WRAP void setTsdfTruncateDistance(float val);
 
     /** @brief Returns TSDF truncation distance. Distances greater than value from surface will be truncated to 1.0.
     */
@@ -98,7 +98,7 @@ public:
     /** @brief Sets threshold for depth truncation in meters. Truncates the depth greater than threshold to 0.
     * @param val input value.
     */
-    CV_WRAP void  setMaxDepth(float val);
+    CV_WRAP void setMaxDepth(float val);
 
     /** @brief Returns threshold for depth truncation in meters. Truncates the depth greater than threshold to 0.
     */
@@ -108,18 +108,18 @@ public:
         Represents the max number of frames over which a running average of the TSDF is calculated for a voxel.
     * @param val input value.
     */
-    CV_WRAP void  setMaxWeight(int val);
+    CV_WRAP void setMaxWeight(int val);
 
     /** @brief Returns max number of frames to integrate per voxel.
         Represents the max number of frames over which a running average of the TSDF is calculated for a voxel.
     */
-    CV_WRAP int   getMaxWeight() const;
+    CV_WRAP int getMaxWeight() const;
 
     /** @brief Sets length of single raycast step.
         Describes the percentage of voxel length that is skipped per march.
     * @param val input value.
     */
-    CV_WRAP void  setRaycastStepFactor(float val);
+    CV_WRAP void setRaycastStepFactor(float val);
 
     /** @brief Returns length of single raycast step.
         Describes the percentage of voxel length that is skipped per march.
@@ -197,7 +197,6 @@ public:
     * @param val output value.
     */
     CV_WRAP void getCameraRaycastIntrinsics(OutputArray val) const;
-
 
     class Impl;
 private:
