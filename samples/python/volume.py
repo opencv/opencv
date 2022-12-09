@@ -9,7 +9,7 @@ import argparse
 # so that the folder contains files groundtruth.txt and depth.txt
 
 # for more info about this function look cv::Quat::toRotMat3x3(...)
-def calcR(a, b, c, d):
+def quatToMat3(a, b, c, d):
     return np.array([
         [1 - 2 * (c * c + d * d), 2 * (b * c - a * d)    , 2 * (b * d + a * c)],
         [2 * (b * c + a * d)    , 1 - 2 * (b * b + d * d), 2 * (c * d - a * b)],
@@ -17,7 +17,7 @@ def calcR(a, b, c, d):
     ])
 
 def make_Rt(val):
-    R = calcR(val[6], val[3], val[4] ,val[5])
+    R = quatToMat3(val[6], val[3], val[4] ,val[5])
     t = np.array([ [val[0]], [val[1]], [val[2]] ])
     tmp = np.array([0, 0, 0, 1])
 
