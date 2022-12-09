@@ -213,6 +213,9 @@ public:
 
     // see corresponding cv::Algorithm method
     CV_WRAP inline void write(FileStorage& fs, const String& name) const { Algorithm::write(fs, name); }
+#if CV_VERSION_MAJOR < 5
+    inline void write(const Ptr<FileStorage>& fs, const String& name) const { CV_Assert(fs); Algorithm::write(*fs, name); }
+#endif
 };
 
 /** Feature detectors in OpenCV have wrappers with a common interface that enables you to easily switch
@@ -1102,6 +1105,9 @@ public:
 
     // see corresponding cv::Algorithm method
     CV_WRAP inline void write(FileStorage& fs, const String& name) const { Algorithm::write(fs, name); }
+#if CV_VERSION_MAJOR < 5
+    inline void write(const Ptr<FileStorage>& fs, const String& name) const { CV_Assert(fs); Algorithm::write(*fs, name); }
+#endif
 
 protected:
     /**
