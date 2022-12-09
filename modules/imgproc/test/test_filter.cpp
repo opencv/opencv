@@ -2366,5 +2366,18 @@ TEST(Imgproc_GaussianBlur, regression_11303)
     EXPECT_LE(cv::norm(src, dst, NORM_L2), 1e-3);
 }
 
+TEST(Imgproc, morphologyEx_small_input_22893)
+{
+    char input_data[] = {1, 2, 3, 4};
+    char gold_data[] = {2, 3, 4, 4};
+    cv::Mat img(1, 4, CV_8UC1, input_data);
+    cv::Mat gold(1, 4, CV_8UC1, gold_data);
+
+    cv::Mat kernel = getStructuringElement(cv::MORPH_RECT, cv::Size(4,4));
+    cv::Mat result;
+    morphologyEx(img, result, cv::MORPH_DILATE, kernel);
+
+    ASSERT_EQ(0, cvtest::norm(result, gold, NORM_INF));
+}
 
 }} // namespace
