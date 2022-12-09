@@ -2,6 +2,12 @@ import numpy as np
 import cv2 as cv
 import argparse
 
+# Use source data from this site:
+# https://vision.in.tum.de/data/datasets/rgbd-dataset/download
+# For example if you use rgbd_dataset_freiburg1_xyz sequence, your prompt should be:
+# python /path_to_opencv/samples/python/volume.py --source_folder /path_to_datasets/rgbd_dataset_freiburg1_xyz --algo <some algo>
+# so that the folder contains files groundtruth.txt and depth.txt
+
 # for more info about this function look cv::Quat::toRotMat3x3(...)
 def calcR(a, b, c, d):
     return np.array([
@@ -59,11 +65,6 @@ def main():
         '-src',
         '--source_folder',
         default="")
-    # Use source data from this site:
-    # https://vision.in.tum.de/data/datasets/rgbd-dataset/download
-    # For example if you use rgbd_dataset_freiburg1_xyz sequence, your prompt should be:
-    # python /path_to_opencv/samples/python/volume.py --source_folder /path_to_datasets/rgbd_dataset_freiburg1_xyz --algo <some algo>
-    # so that the folder contains files groundtruth.txt and depth.txt
 
     args = parser.parse_args()
 
