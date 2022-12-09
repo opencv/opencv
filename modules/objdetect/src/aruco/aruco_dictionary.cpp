@@ -47,11 +47,10 @@ bool Dictionary::readDictionary(const cv::FileNode& fn) {
     return true;
 }
 
-
-void Dictionary::writeDictionary(Ptr<FileStorage>& fs) {
-    *fs << "nmarkers" << bytesList.rows;
-    *fs << "markersize" << markerSize;
-    *fs << "maxCorrectionBits" << maxCorrectionBits;
+void Dictionary::writeDictionary(FileStorage &fs) {
+    fs << "nmarkers" << bytesList.rows;
+    fs << "markersize" << markerSize;
+    fs << "maxCorrectionBits" << maxCorrectionBits;
     for (int i = 0; i < bytesList.rows; i++) {
         Mat row = bytesList.row(i);;
         Mat bitMarker = getBitsFromByteList(row, markerSize);
@@ -61,8 +60,16 @@ void Dictionary::writeDictionary(Ptr<FileStorage>& fs) {
         string marker;
         for (int j = 0; j < markerSize * markerSize; j++)
             marker.push_back(bitMarker.at<uint8_t>(j) + '0');
-        *fs << markerName << marker;
+        fs << markerName << marker;
     }
+}
+
+void Dictionary::writeDictionary(Ptr<FileStorage>& fs, const String &name) {
+    if(name.empty())
+        return writeDictionary(*fs);
+    *fs << name << "{";
+    writeDictionary(*fs);
+    *fs << "}";
 }
 
 

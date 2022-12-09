@@ -62,11 +62,21 @@ bool DetectorParameters::readDetectorParameters(const FileNode& fn) {
     return readWrite(*this, pfn);
 }
 
-bool DetectorParameters::writeDetectorParameters(const Ptr<FileStorage>& fs)
-{
-    if (fs.empty() || !fs->isOpened())
+bool DetectorParameters::writeDetectorParameters(const Ptr<FileStorage>& fs, const String& name) {
+    if (fs.empty())
         return false;
-    return readWrite(*this, nullptr, fs);
+    if(name.empty())
+        return writeDetectorParameters(*fs);
+    *fs << name << "{";
+    bool res = writeDetectorParameters(*fs);
+    *fs << "}";
+    return res;
+}
+
+bool DetectorParameters::writeDetectorParameters(FileStorage &fs) {
+    if (!fs.isOpened())
+        return false;
+    return readWrite(*this, nullptr, makePtr<FileStorage>(fs));
 }
 
 static inline bool readWrite(RefineParameters& refineParameters, const Ptr<FileNode>& readNode,
@@ -91,10 +101,21 @@ bool RefineParameters::readRefineParameters(const FileNode &fn) {
     return readWrite(*this, pfn);
 }
 
-bool RefineParameters::writeRefineParameters(const Ptr<FileStorage> &fs) {
+bool RefineParameters::writeRefineParameters(FileStorage &fs) {
+    if(!fs.isOpened())
+        return false;
+    return readWrite(*this, nullptr, makePtr<FileStorage>(fs));
+}
+
+bool RefineParameters::writeRefineParameters(const Ptr<FileStorage>& fs, const String& name) {
     if(fs.empty())
         return false;
-    return readWrite(*this, nullptr, fs);
+    if(name.empty())
+        return writeRefineParameters(*fs);
+    *fs << name << "{";
+    bool res = writeRefineParameters(*fs);
+    *fs << "}";
+    return res;
 }
 
 /**
@@ -1261,8 +1282,8 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
 void ArucoDetector::write(FileStorage &fs) const {
     Ptr<FileStorage> pfs = makePtr<FileStorage>(fs);
     arucoDetectorImpl->dictionary.writeDictionary(pfs);
-    arucoDetectorImpl->detectorParams.writeDetectorParameters(pfs);
-    arucoDetectorImpl->refineParams.writeRefineParameters(pfs);
+    arucoDetectorImpl->detectorParams.writeDetectorParameters(fs);
+    arucoDetectorImpl->refineParams.writeRefineParameters(fs);
 }
 
 void ArucoDetector::read(const FileNode &fn) {
