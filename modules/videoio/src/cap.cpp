@@ -472,6 +472,14 @@ bool VideoCapture::waitAny(const std::vector<VideoCapture>& streams,
 }
 
 
+std::vector<int> VideoCapture::waitAny(const std::vector<VideoCapture>& streams, double timeoutNs)
+{
+    std::vector<int> readyIndex;
+
+    VideoCapture::waitAny(streams, readyIndex, static_cast<int64>(timeoutNs));
+    return readyIndex;
+}
+
 //=================================================================================================
 
 
