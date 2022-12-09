@@ -213,7 +213,7 @@ void DepthFrameUnpacker::process(Frame *frame){
     uint8_t *src = frame->data;
 
     uint32_t      pixelSize = frame->width * frame->height;
-    for(int i = 0; i < pixelSize; i += tarStep) {
+    for(uint32_t i = 0; i < pixelSize; i += tarStep) {
         tar[0] = (TAKE_BITS(src[0], 8, 0) << 6) | TAKE_BITS(src[1], 6, 2);
         tar[1] = (TAKE_BITS(src[1], 2, 0) << 12) | (TAKE_BITS(src[2], 8, 0) << 4) | TAKE_BITS(src[3], 4, 4);
         tar[2] = (TAKE_BITS(src[3], 4, 0) << 10) | (TAKE_BITS(src[4], 8, 0) << 2) | TAKE_BITS(src[5], 2, 6);
