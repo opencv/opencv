@@ -57,6 +57,11 @@
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/matx.hpp"
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4459)  // declaration of '...' hides global declaration
+#endif
+
 namespace cv
 {
 
@@ -2444,5 +2449,9 @@ TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
 //! @endcond
 
 } // cv
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif //OPENCV_CORE_TYPES_HPP

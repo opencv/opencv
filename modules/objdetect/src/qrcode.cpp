@@ -2294,8 +2294,8 @@ static inline std::pair<int, int> matchPatternPoints(const vector<Point> &finder
             const float tmp = normL2Sqr<float>(Point2f(finderPattern[i]) - cornerPointsQR[j]);
             if (tmp < distanceToOrig) {
                 distanceToOrig = tmp;
-                closestFinderPatternV = i;
-                closetOriginalV = j;
+                closestFinderPatternV = (int)i;
+                closetOriginalV = (int)j;
             }
         }
     }
@@ -2550,15 +2550,15 @@ bool QRDecode::versionDefinition()
 
     if (useCode) {
         CV_LOG_INFO(NULL, "Version type: useCode");
-        version = versionByCode;
+        version = (uint8_t)versionByCode;
     }
     else if (useFinderPattern ) {
         CV_LOG_INFO(NULL, "Version type: useFinderPattern");
-        version = cvRound(versionByFinderPattern);
+        version = (uint8_t)cvRound(versionByFinderPattern);
     }
     else {
         CV_LOG_INFO(NULL, "Version type: useTransition");
-        version = versionByTransition;
+        version = (uint8_t)versionByTransition;
     }
     version_size = 21 + (version - 1) * 4;
     if ( !(0 < version && version <= 40) ) { return false; }

@@ -1791,10 +1791,10 @@ double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<
         perViewErrors2.resize(numImgs);
     }
 
-    for (size_t i = 0; i<numImgs; i++)
+    for (size_t i = 0; i < numImgs; i++)
     {
-        perViewErrors1[i] = perViewErrorsMat.at<double>(i, 0);
-        perViewErrors2[i] = perViewErrorsMat.at<double>(i, 1);
+        perViewErrors1[i] = perViewErrorsMat.at<double>((int)i, 0);
+        perViewErrors2[i] = perViewErrorsMat.at<double>((int)i, 1);
     }
 
     if (rotationMatrices.size() != numImgs)
@@ -1806,7 +1806,7 @@ double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<
         translationVectors.resize(numImgs);
     }
 
-    for( size_t i = 0; i < numImgs; i++ )
+    for (size_t i = 0; i < numImgs; i++)
     {
         Mat r9;
         cv::Rodrigues( rvecs[i], r9 );
