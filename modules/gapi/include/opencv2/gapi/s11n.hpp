@@ -17,7 +17,8 @@
 #include <opencv2/gapi/util/util.hpp>
 
 // FIXME: caused by deserialize_runarg
-#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
+#if defined _MSC_VER
+#pragma warning(push)
 #pragma warning(disable: 4702)
 #endif
 
@@ -504,5 +505,9 @@ cv::GRunArgs getRunArgsWithAdapters(const std::vector<char> &bytes) {
 
 } // namespace gapi
 } // namespace cv
+
+#if defined _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // OPENCV_GAPI_S11N_HPP

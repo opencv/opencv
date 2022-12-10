@@ -1119,13 +1119,10 @@ namespace oak {
 
 cv::gapi::GKernelPackage kernels() {
     GAPI_Error("Built without OAK support");
-    return {};
 }
 
 cv::gapi::GBackend backend() {
     GAPI_Error("Built without OAK support");
-    static cv::gapi::GBackend this_backend(nullptr);
-    return this_backend;
 }
 
 } // namespace oak
