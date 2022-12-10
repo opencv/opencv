@@ -148,7 +148,7 @@ void TrackerNanoImpl::generateGrids()
 
     for (int i = 0; i < sz; i++)
     {
-        x1Vec[i] = i - sz2;
+        x1Vec[i] = (float)(i - sz2);
     }
 
     Mat x1M(1, sz, CV_32FC1, x1Vec.data());
@@ -202,9 +202,9 @@ void TrackerNanoImpl::getSubwindow(Mat& dstCrop, Mat& srcImg, int originalSz, in
     Size imgSz = srcImg.size();
     int c = (originalSz + 1) / 2;
 
-    int context_xmin = targetPos[0] - c;
+    int context_xmin = (int)(targetPos[0]) - c;
     int context_xmax = context_xmin + originalSz - 1;
-    int context_ymin = targetPos[1] - c;
+    int context_ymin = (int)(targetPos[1]) - c;
     int context_ymax = context_ymin + originalSz - 1;
 
     int left_pad = std::max(0, -context_xmin);
@@ -236,7 +236,7 @@ void TrackerNanoImpl::getSubwindow(Mat& dstCrop, Mat& srcImg, int originalSz, in
 bool TrackerNanoImpl::update(InputArray image_, Rect &boundingBoxRes)
 {
     image = image_.getMat().clone();
-    int targetSzSum = targetSz[0] + targetSz[1];
+    int targetSzSum = (int)(targetSz[0] + targetSz[1]);
 
     float wc = targetSz[0] + trackState.contextAmount * targetSzSum;
     float hc = targetSz[1] + trackState.contextAmount * targetSzSum;
