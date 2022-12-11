@@ -89,6 +89,8 @@ static void undistortButton(int state, void* data)
 
 int main(int argc, char** argv)
 {
+    /* FIXME */ std:: cout << "\n\t\t ITS ALIVE AGAIN!!\n" << std::endl;
+
     cv::CommandLineParser parser(argc, argv, keys);
     if(parser.has("help")) {
         parser.printMessage();
