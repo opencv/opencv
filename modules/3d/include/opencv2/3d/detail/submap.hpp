@@ -45,10 +45,9 @@ public:
 
     Submap(int _id, const VolumeSettings& settings, const cv::Affine3f& _pose = cv::Affine3f::Identity(),
            int _startFrameId = 0)
-        : id(_id), pose(_pose), cameraPose(Affine3f::Identity()), startFrameId(_startFrameId)
-    {
-        volume = Volume(VolumeType::HashTSDF, settings);
-    }
+        : id(_id), pose(_pose), cameraPose(Affine3f::Identity()), startFrameId(_startFrameId),
+          volume(VolumeType::HashTSDF, settings)
+    { }
     virtual ~Submap() = default;
 
     virtual void integrate(InputArray _depth, const int currframeId);
@@ -126,7 +125,7 @@ void Submap<MatType>::raycast(const cv::Affine3f& _cameraPose, cv::Size frameSiz
 
         renderFrame = frame;
 
-        frame = OdometryFrame(noArray(), pch[2]);
+        frame = OdometryFrame(pch[2]);
     }
     else
     {

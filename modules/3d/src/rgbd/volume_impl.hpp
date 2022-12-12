@@ -37,7 +37,7 @@ public:
     virtual int getVisibleBlocks() const = 0;
     virtual size_t getTotalVolumeUnits() const = 0;
 
-    virtual Vec6f getBoundingBox(int precision) const = 0;
+    virtual void getBoundingBox(OutputArray bb, int precision) const = 0;
     virtual void setEnableGrowth(bool v) = 0;
     virtual bool getEnableGrowth() const = 0;
 
@@ -73,7 +73,7 @@ public:
     // VOLUME_UNIT - up to volume unit
     // VOXEL - up to voxel
     // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
-    virtual Vec6f getBoundingBox(int precision) const override;
+    virtual void getBoundingBox(OutputArray bb, int precision) const override;
 
     // Enabels or disables new volume unit allocation during integration
     // Applicable for HashTSDF only
@@ -134,7 +134,7 @@ public:
     // VOLUME_UNIT - up to volume unit
     // VOXEL - up to voxel
     // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
-    virtual Vec6f getBoundingBox(int precision) const override;
+    virtual void getBoundingBox(OutputArray bb, int precision) const override;
 
 public:
     int lastVolIndex;
@@ -191,7 +191,7 @@ public:
     // VOLUME_UNIT - up to volume unit
     // VOXEL - up to voxel
     // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
-    virtual Vec6f getBoundingBox(int precision) const override;
+    virtual void getBoundingBox(OutputArray bb, int precision) const override;
 
     // Enabels or disables new volume unit allocation during integration
     // Applicable for HashTSDF only
@@ -211,12 +211,7 @@ private:
 };
 
 
-Volume::Volume()
-{
-    VolumeSettings settings;
-    this->impl = makePtr<TsdfVolume>(settings);
-}
-Volume::Volume(VolumeType vtype, VolumeSettings settings)
+Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
 {
     switch (vtype)
     {
@@ -239,8 +234,11 @@ Volume::~Volume() {}
 void Volume::integrate(const OdometryFrame& frame, InputArray pose) { this->impl->integrate(frame, pose); }
 void Volume::integrate(InputArray depth, InputArray pose) { this->impl->integrate(depth, pose); }
 void Volume::integrate(InputArray depth, InputArray image, InputArray pose) { this->impl->integrate(depth, image, pose); }
+void Volume::raycast(InputArray cameraPose, OutputArray _points, OutputArray _normals) const { this->impl->raycast(cameraPose, _points, _normals, noArray()); }
 void Volume::raycast(InputArray cameraPose, OutputArray _points, OutputArray _normals, OutputArray _colors) const { this->impl->raycast(cameraPose, _points, _normals, _colors); }
+void Volume::raycast(InputArray cameraPose, int height, int width, InputArray _intr, OutputArray _points, OutputArray _normals) const { this->impl->raycast(cameraPose, height, width, _intr, _points, _normals, noArray()); }
 void Volume::raycast(InputArray cameraPose, int height, int width, InputArray _intr, OutputArray _points, OutputArray _normals, OutputArray _colors) const { this->impl->raycast(cameraPose, height, width, _intr, _points, _normals, _colors); }
+
 void Volume::fetchNormals(InputArray points, OutputArray normals) const { this->impl->fetchNormals(points, normals); }
 void Volume::fetchPointsNormals(OutputArray points, OutputArray normals) const { this->impl->fetchPointsNormals(points, normals); }
 void Volume::fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const { this->impl->fetchPointsNormalsColors(points, normals, colors); };
@@ -249,7 +247,7 @@ void Volume::reset() { this->impl->reset(); }
 int Volume::getVisibleBlocks() const { return this->impl->getVisibleBlocks(); }
 size_t Volume::getTotalVolumeUnits() const { return this->impl->getTotalVolumeUnits(); }
 
-Vec6f Volume::getBoundingBox(int precision) const { return this->impl->getBoundingBox(precision); }
+void Volume::getBoundingBox(OutputArray bb, int precision) const { this->impl->getBoundingBox(bb, precision); }
 void Volume::setEnableGrowth(bool v) { this->impl->setEnableGrowth(v); }
 bool Volume::getEnableGrowth() const { return this->impl->getEnableGrowth(); }
 

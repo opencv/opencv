@@ -181,7 +181,7 @@ int main(int argc, char** argv)
         {
             Mat gray;
             cvtColor(image, gray, COLOR_BGR2GRAY);
-            frame_curr = OdometryFrame(gray, depth);
+            frame_curr = OdometryFrame(depth, gray);
 
             Mat Rt;
             if(!Rts.empty())

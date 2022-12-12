@@ -243,11 +243,6 @@ public:
 };
 
 
-VolumeSettings::VolumeSettings()
-{
-    this->impl = makePtr<VolumeSettingsImpl>();
-}
-
 VolumeSettings::VolumeSettings(VolumeType volumeType)
 {
     this->impl = makePtr<VolumeSettingsImpl>(volumeType);
@@ -256,6 +251,12 @@ VolumeSettings::VolumeSettings(VolumeType volumeType)
 VolumeSettings::VolumeSettings(const VolumeSettings& vs)
 {
     this->impl = makePtr<VolumeSettingsImpl>(*vs.impl.dynamicCast<VolumeSettingsImpl>());
+}
+
+VolumeSettings& VolumeSettings::operator=(const VolumeSettings& vs)
+{
+    this->impl = makePtr<VolumeSettingsImpl>(*vs.impl.dynamicCast<VolumeSettingsImpl>());
+    return *this;
 }
 
 VolumeSettings::~VolumeSettings() {}

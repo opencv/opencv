@@ -251,7 +251,7 @@ public:
     virtual void getMask(OutputArray mask) const ;
     virtual void getNormals(OutputArray normals) const ;
 
-    virtual size_t getPyramidLevels() const ;
+    virtual int getPyramidLevels() const ;
 
     virtual void getPyramidAt(OutputArray img,
                               OdometryFramePyramidType pyrType, size_t level) const ;

@@ -11,7 +11,7 @@
 namespace cv
 {
 
-OdometryFrame::OdometryFrame(InputArray image, InputArray depth, InputArray mask, InputArray normals)
+OdometryFrame::OdometryFrame(InputArray depth, InputArray image, InputArray mask, InputArray normals)
 {
     this->impl = makePtr<OdometryFrame::Impl>();
     if (!image.empty())
@@ -39,7 +39,7 @@ void OdometryFrame::getProcessedDepth(OutputArray depth) const { this->impl->get
 void OdometryFrame::getMask(OutputArray mask) const { this->impl->getMask(mask); }
 void OdometryFrame::getNormals(OutputArray normals) const { this->impl->getNormals(normals); }
 
-size_t OdometryFrame::getPyramidLevels() const { return this->impl->getPyramidLevels(); }
+int OdometryFrame::getPyramidLevels() const { return this->impl->getPyramidLevels(); }
 
 void OdometryFrame::getPyramidAt(OutputArray img, OdometryFramePyramidType pyrType, size_t level) const
 {
@@ -76,13 +76,13 @@ void OdometryFrame::Impl::getNormals(OutputArray _normals) const
     _normals.assign(this->normals);
 }
 
-size_t OdometryFrame::Impl::getPyramidLevels() const
+int OdometryFrame::Impl::getPyramidLevels() const
 {
     // all pyramids should have the same size
     for (const auto& p : this->pyramids)
     {
         if (!p.empty())
-            return p.size();
+            return (int)(p.size());
     }
     return 0;
 }
