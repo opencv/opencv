@@ -22,10 +22,7 @@
  *
  * Markers can also be detected based on the AprilTag 2 @cite wang2016iros fiducial detection method.
  *
- * @sa S. Garrido-Jurado, R. Muñoz-Salinas, F. J. Madrid-Cuevas, and M. J. Marín-Jiménez. 2014.
- * "Automatic generation and detection of highly reliable fiducial markers under occlusion".
- * Pattern Recogn. 47, 6 (June 2014), 2280-2292. DOI=10.1016/j.patcog.2014.01.005
- *
+ * @sa @cite Aruco2014
  * This code has been originally developed by Sergio Garrido-Jurado as a project
  * for Google Summer of Code 2015 (GSoC 15).
  */
