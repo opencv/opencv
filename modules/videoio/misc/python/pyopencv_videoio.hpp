@@ -23,10 +23,9 @@ bool pyopencv_to(PyObject *o, std::vector<cv::VideoCaptureAPIs>& apis, const Arg
 
 template<> bool pyopencv_to(PyObject* obj, cv::VideoCapture& stream, const ArgInfo& info)
 {
-    Ptr<VideoCapture> * obj_getp = 0;
+    Ptr<VideoCapture> * obj_getp = nullptr;
     if (!pyopencv_VideoCapture_getp(obj, obj_getp))
         return failmsgp("Incorrect type of self (must be 'VideoCapture' or its derivative)");
-    //Ptr<VideoCapture> self = *(obj_getp);
 
     stream = **obj_getp;
     return true;
