@@ -45,4 +45,6 @@
 #error this is a compatibility header which should not be used inside the OpenCV library
 #endif
 
+
+//API for Light-weight object Detection using Nanodet and YoloX
 #include "opencv2/objdetect.hpp"
