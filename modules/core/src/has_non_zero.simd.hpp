@@ -40,13 +40,13 @@ inline bool hasNonZero_(const double* src, size_t len ) {return hasNonZero_(rein
 static bool hasNonZero8u( const uchar* src, size_t len )
 {
     bool res = false;
+    const uchar* srcEnd = src+len;
 #if CV_SIMD
     typedef v_uint8 v_type;
     const v_type v_zero = vx_setzero_u8();
     constexpr const int unrollCount = 2;
     int step = v_type::nlanes * unrollCount;
     int len0 = len & -step;
-    const uchar* srcEnd = src+len;
     const uchar* srcSimdEnd = src+len0;
 
     int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
@@ -60,21 +60,20 @@ static bool hasNonZero8u( const uchar* src, size_t len )
     }
 
     v_cleanup();
-
 #endif
-    return res || hasNonZero_(src, srcEnd-srcSimdEnd);
+    return res || hasNonZero_(src, srcEnd-src);
 }
 
 static bool hasNonZero16u( const ushort* src, size_t len )
 {
     bool res = false;
+    const ushort* srcEnd = src+len;
 #if CV_SIMD
     typedef v_uint16 v_type;
     const v_type v_zero = vx_setzero_u16();
     constexpr const int unrollCount = 4;
     int step = v_type::nlanes * unrollCount;
     int len0 = len & -step;
-    const ushort* srcEnd = src+len;
     const ushort* srcSimdEnd = src+len0;
 
     int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
@@ -95,19 +94,19 @@ static bool hasNonZero16u( const ushort* src, size_t len )
 
     v_cleanup();
 #endif
-    return res || hasNonZero_(src, srcEnd-srcSimdEnd);
+    return res || hasNonZero_(src, srcEnd-src);
 }
 
 static bool hasNonZero32s( const int* src, size_t len )
 {
     bool res = false;
+    const int* srcEnd = src+len;
 #if CV_SIMD
     typedef v_int32 v_type;
     const v_type v_zero = vx_setzero_s32();
     constexpr const int unrollCount = 8;
     int step = v_type::nlanes * unrollCount;
     int len0 = len & -step;
-    const int* srcEnd = src+len;
     const int* srcSimdEnd = src+len0;
 
     int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
@@ -141,19 +140,19 @@ static bool hasNonZero32s( const int* src, size_t len )
 
     v_cleanup();
 #endif
-    return res || hasNonZero_(src, srcEnd-srcSimdEnd);
+    return res || hasNonZero_(src, srcEnd-src);
 }
 
 static bool hasNonZero32f( const float* src, size_t len )
 {
     bool res = false;
+    const float* srcEnd = src+len;
 #if CV_SIMD
     typedef v_float32 v_type;
     const v_type v_zero = vx_setzero_f32();
     constexpr const int unrollCount = 8;
     int step = v_type::nlanes * unrollCount;
     int len0 = len & -step;
-    const float* srcEnd = src+len;
     const float* srcSimdEnd = src+len0;
 
     int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
@@ -187,19 +186,19 @@ static bool hasNonZero32f( const float* src, size_t len )
 
     v_cleanup();
 #endif
-    return res || hasNonZero_(src, srcEnd-srcSimdEnd);
+    return res || hasNonZero_(src, srcEnd-src);
 }
 
 static bool hasNonZero64f( const double* src, size_t len )
 {
     bool res = false;
+    const double* srcEnd = src+len;
 #if CV_SIMD_64F
     typedef v_float64 v_type;
     const v_type v_zero = vx_setzero_f64();
     constexpr const int unrollCount = 16;
     int step = v_type::nlanes * unrollCount;
     int len0 = len & -step;
-    const double* srcEnd = src+len;
     const double* srcSimdEnd = src+len0;
 
     int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
@@ -258,7 +257,7 @@ static bool hasNonZero64f( const double* src, size_t len )
 
     v_cleanup();
 #endif
-    return res || hasNonZero_(src, srcEnd-srcSimdEnd);
+    return res || hasNonZero_(src, srcEnd-src);
 }
 
 HasNonZeroFunc getHasNonZeroTab(int depth)
