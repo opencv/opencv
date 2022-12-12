@@ -50,7 +50,7 @@ static bool hasNonZero8u( const uchar* src, size_t len )
     const uchar* srcSimdEnd = src+len0;
 
     int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
-    while(!res && countSIMD--) 
+    while(!res && countSIMD--)
     {
         v_type v0 = vx_load(src);
         src += v_type::nlanes;
@@ -78,7 +78,7 @@ static bool hasNonZero16u( const ushort* src, size_t len )
     const ushort* srcSimdEnd = src+len0;
 
     int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
-    while(!res && countSIMD--) 
+    while(!res && countSIMD--)
     {
         v_type v0 = vx_load(src);
         src += v_type::nlanes;
@@ -111,7 +111,7 @@ static bool hasNonZero32s( const int* src, size_t len )
     const int* srcSimdEnd = src+len0;
 
     int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
-    while(!res && countSIMD--) 
+    while(!res && countSIMD--)
     {
         v_type v0 = vx_load(src);
         src += v_type::nlanes;
@@ -157,7 +157,7 @@ static bool hasNonZero32f( const float* src, size_t len )
     const float* srcSimdEnd = src+len0;
 
     int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
-    while(!res && countSIMD--) 
+    while(!res && countSIMD--)
     {
         v_type v0 = vx_load(src);
         src += v_type::nlanes;
@@ -203,7 +203,7 @@ static bool hasNonZero64f( const double* src, size_t len )
     const double* srcSimdEnd = src+len0;
 
     int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
-    while(!res && countSIMD--) 
+    while(!res && countSIMD--)
     {
         v_type v0 = vx_load(src);
         src += v_type::nlanes;
