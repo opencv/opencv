@@ -1,0 +1,276 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
+#include "precomp.hpp"
+
+namespace cv {
+
+typedef bool (*HasNonZeroFunc)(const uchar*, size_t);
+
+
+CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
+
+HasNonZeroFunc getHasNonZeroTab(int depth);
+
+
+#ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
+template<typename T>
+static inline bool hasNonZero_(const T* src, size_t len )
+{
+    bool res = false;
+    if (len > 0)
+    {
+        size_t i=0;
+        #if CV_ENABLE_UNROLLED
+        for(; !res && (i+4 <= len); i += 4 )
+            res |= (((src[i] != 0) + (src[i+1] != 0) + (src[i+2] != 0) + (src[i+3] != 0)) > 0);
+        #endif
+        for( ; !res && (i < len); i++ )
+            res |= (src[i] != 0);
+    }
+    return res;
+}
+
+static bool hasNonZero8u( const uchar* src, size_t len )
+{
+    bool res = false;
+#if CV_SIMD
+    typedef v_uint8 v_type;
+    const v_type v_zero = vx_setzero_u8();
+    constexpr const int unrollCount = 2;
+    int step = v_type::nlanes * unrollCount;
+    int len0 = len & -step;
+    const uchar* srcEnd = src+len;
+    const uchar* srcSimdEnd = src+len0;
+
+    int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
+    while(!res && countSIMD--) 
+    {
+        v_type v0 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v1 = vx_load(src);
+        src += v_type::nlanes;
+        res = v_check_any(((v0 | v1) != v_zero));
+    }
+
+    v_cleanup();
+
+#endif
+    return res || hasNonZero_(src, srcEnd-srcSimdEnd);
+}
+
+static bool hasNonZero16u( const ushort* src, size_t len )
+{
+    bool res = false;
+#if CV_SIMD
+    typedef v_uint16 v_type;
+    const v_type v_zero = vx_setzero_u16();
+    constexpr const int unrollCount = 4;
+    int step = v_type::nlanes * unrollCount;
+    int len0 = len & -step;
+    const ushort* srcEnd = src+len;
+    const ushort* srcSimdEnd = src+len0;
+
+    int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
+    while(!res && countSIMD--) 
+    {
+        v_type v0 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v1 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v2 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v3 = vx_load(src);
+        src += v_type::nlanes;
+        v0 |= v1;
+        v2 |= v3;
+        res = v_check_any(((v0 | v2) != v_zero));
+    }
+
+    v_cleanup();
+#endif
+    return res || hasNonZero_(src, srcEnd-srcSimdEnd);
+}
+
+static bool hasNonZero32s( const int* src, size_t len )
+{
+    bool res = false;
+#if CV_SIMD
+    typedef v_int32 v_type;
+    const v_type v_zero = vx_setzero_s32();
+    constexpr const int unrollCount = 8;
+    int step = v_type::nlanes * unrollCount;
+    int len0 = len & -step;
+    const int* srcEnd = src+len;
+    const int* srcSimdEnd = src+len0;
+
+    int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
+    while(!res && countSIMD--) 
+    {
+        v_type v0 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v1 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v2 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v3 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v4 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v5 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v6 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v7 = vx_load(src);
+        src += v_type::nlanes;
+        v0 |= v1;
+        v2 |= v3;
+        v4 |= v5;
+        v6 |= v7;
+
+        v0 |= v2;
+        v4 |= v6;
+        res = v_check_any(((v0 | v4) != v_zero));
+    }
+
+    v_cleanup();
+#endif
+    return res || hasNonZero_(src, srcEnd-srcSimdEnd);
+}
+
+static bool hasNonZero32f( const float* src, size_t len )
+{
+    bool res = false;
+#if CV_SIMD
+    typedef v_float32 v_type;
+    const v_type v_zero = vx_setzero_f32();
+    constexpr const int unrollCount = 8;
+    int step = v_type::nlanes * unrollCount;
+    int len0 = len & -step;
+    const float* srcEnd = src+len;
+    const float* srcSimdEnd = src+len0;
+
+    int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
+    while(!res && countSIMD--) 
+    {
+        v_type v0 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v1 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v2 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v3 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v4 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v5 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v6 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v7 = vx_load(src);
+        src += v_type::nlanes;
+        v0 |= v1;
+        v2 |= v3;
+        v4 |= v5;
+        v6 |= v7;
+
+        v0 |= v2;
+        v4 |= v6;
+        res = v_check_any(((v0 | v4) != v_zero));
+    }
+
+    v_cleanup();
+#endif
+    return res || hasNonZero_(src, srcEnd-srcSimdEnd);
+}
+
+static bool hasNonZero64f( const double* src, size_t len )
+{
+    bool res = false;
+#if CV_SIMD_64F
+    typedef v_float64 v_type;
+    const v_type v_zero = vx_setzero_f64();
+    constexpr const int unrollCount = 16;
+    int step = v_type::nlanes * unrollCount;
+    int len0 = len & -step;
+    const double* srcEnd = src+len;
+    const double* srcSimdEnd = src+len0;
+
+    int countSIMD = static_cast<int>((srcSimdEnd-src)/step);
+    while(!res && countSIMD--) 
+    {
+        v_type v0 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v1 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v2 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v3 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v4 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v5 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v6 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v7 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v8 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v9 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v10 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v11 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v12 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v13 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v14 = vx_load(src);
+        src += v_type::nlanes;
+        v_type v15 = vx_load(src);
+        src += v_type::nlanes;
+        v0  |= v1;
+        v2  |= v3;
+        v4  |= v5;
+        v6  |= v7;
+        v8  |= v9;
+        v10 |= v11;
+        v12 |= v13;
+        v14 |= v15;
+
+        v0  |= v2;
+        v4  |= v6;
+        v8  |= v10;
+        v12 |= v14;
+
+        v0  |= v4;
+        v8  |= v12;
+        res = v_check_any(((v0 | v8) != v_zero));
+    }
+
+    v_cleanup();
+#endif
+    return res || hasNonZero_(src, srcEnd-srcSimdEnd);
+}
+
+HasNonZeroFunc getHasNonZeroTab(int depth)
+{
+    static HasNonZeroFunc hasNonZeroTab[] =
+    {
+        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero8u), (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero8u),
+        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero16u), (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero16u),
+        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero32s), (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero32f),
+        (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero64f), 0
+    };
+
+    return hasNonZeroTab[depth];
+}
+
+#endif
+
+CV_CPU_OPTIMIZATION_NAMESPACE_END
+} // namespace
