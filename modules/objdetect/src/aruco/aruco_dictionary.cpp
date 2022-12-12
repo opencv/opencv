@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-#include <opencv2/imgproc.hpp>
+#include "../precomp.hpp"
 #include "opencv2/core/hal/hal.hpp"
 
 #include "aruco_utils.hpp"

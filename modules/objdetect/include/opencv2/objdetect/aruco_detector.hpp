@@ -1,10 +1,14 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
-#ifndef OPENCV_ARUCO_DETECTOR_HPP
-#define OPENCV_ARUCO_DETECTOR_HPP
-#include <opencv2/objdetect/aruco_board.hpp>
+#ifndef OPENCV_OBJDETECT_ARUCO_DETECTOR_HPP
+#define OPENCV_OBJDETECT_ARUCO_DETECTOR_HPP
+
 #include <opencv2/objdetect/aruco_dictionary.hpp>
+#include <opencv2/objdetect/aruco_board.hpp>
+
+namespace cv {
+namespace aruco {
 
 /** @defgroup aruco ArUco Marker Detection
  * Square fiducial markers (also known as Augmented Reality Markers) are useful for easy,
@@ -26,9 +30,6 @@
  * This code has been originally developed by Sergio Garrido-Jurado as a project
  * for Google Summer of Code 2015 (GSoC 15).
  */
-
-namespace cv {
-namespace aruco {
 
 //! @addtogroup aruco
 //! @{
