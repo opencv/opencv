@@ -961,17 +961,11 @@ public:
 
     After this call use VideoCapture::retrieve() to decode and fetch frame data.
     */
-    static /*CV_WRAP*/
+    CV_WRAP static
     bool waitAny(
             const std::vector<VideoCapture>& streams,
             CV_OUT std::vector<int>& readyIndex,
             int64 timeoutNs = 0);
-
-    CV_WRAP static
-    std::vector<int> waitAny(
-            const std::vector<VideoCapture>& streams,
-            double timeoutNs = 0);
-
 
 protected:
     Ptr<CvCapture> cap;
