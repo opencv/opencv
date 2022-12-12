@@ -5,7 +5,6 @@
 #include <opencv2/imgproc.hpp>
 #include "opencv2/core/hal/hal.hpp"
 
-#include "precomp.hpp"
 #include "aruco_utils.hpp"
 #include "predefined_dictionaries.hpp"
 #include "apriltag/predefined_dictionaries_apriltag.hpp"

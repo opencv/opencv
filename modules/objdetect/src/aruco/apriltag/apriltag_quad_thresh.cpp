@@ -16,7 +16,6 @@
 // because we use a fixed-point 16 bit integer representation with one
 // fractional bit.
 
-#include "../precomp.hpp"
 #include "apriltag_quad_thresh.hpp"
 
 //#define APRIL_DEBUG
