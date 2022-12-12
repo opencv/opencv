@@ -67,8 +67,9 @@ public:
     std::vector<std::vector<std::shared_ptr<ngraph::Node>>> components;
     std::unordered_map<std::string, std::shared_ptr<ngraph::Node>* > all_nodes;
 
-    InferenceEngine::ExecutableNetwork netExec;
-    InferenceEngine::BlobMap allBlobs;
+    // InferenceEngine::ExecutableNetwork netExec;
+    ov::CompiledModel netExec;
+    std::map<std::string, ov::Tensor> allBlobs;
     std::string device_name;
     bool isInit = false;
 
@@ -78,7 +79,7 @@ public:
 
         void makePromises(const std::vector<Ptr<BackendWrapper> >& outs);
 
-        InferenceEngine::InferRequest req;
+        ov::InferRequest req;
         std::vector<cv::AsyncPromise> outProms;
         std::vector<std::string> outsNames;
         bool isReady;
@@ -89,7 +90,7 @@ public:
     bool hasNetOwner;
     std::unordered_map<std::string, Ptr<InfEngineNgraphNode> > requestedOutputs;
 
-    std::map<std::string, InferenceEngine::TensorDesc> outputsDesc;
+    // std::map<std::string, InferenceEngine::TensorDesc> outputsDesc;
 };
 
 class InfEngineNgraphNode : public BackendNode
@@ -123,16 +124,17 @@ public:
     virtual void setHostDirty() CV_OVERRIDE;
 
     Mat* host;
-    InferenceEngine::DataPtr dataPtr;
-    InferenceEngine::Blob::Ptr blob;
+    std::string name;
+    ov::Tensor blob;
+    // InferenceEngine::Blob::Ptr blob;
     AsyncArray futureMat;
 };
 
-InferenceEngine::DataPtr ngraphDataNode(const Ptr<BackendWrapper>& ptr);
-InferenceEngine::DataPtr ngraphDataOutputNode(
-        const Ptr<BackendWrapper>& ptr,
-        const InferenceEngine::TensorDesc& description,
-        const std::string name);
+// InferenceEngine::DataPtr ngraphDataNode(const Ptr<BackendWrapper>& ptr);
+// InferenceEngine::DataPtr ngraphDataOutputNode(
+//         const Ptr<BackendWrapper>& ptr,
+//         const InferenceEngine::TensorDesc& description,
+//         const std::string name);
 
 // This is a fake class to run networks from Model Optimizer. Objects of that
 // class simulate responses of layers are imported by OpenCV and supported by

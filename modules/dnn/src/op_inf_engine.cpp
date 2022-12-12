@@ -40,32 +40,31 @@ cv::String setInferenceEngineBackendType(const cv::String& newBackendType)
 CV__DNN_INLINE_NS_END
 
 
-Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
-{
-    // NOTE: Inference Engine sizes are reversed.
-    std::vector<size_t> dims = blob->getTensorDesc().getDims();
-    std::vector<int> size(dims.begin(), dims.end());
-    auto precision = blob->getTensorDesc().getPrecision();
+// Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
+// {
+//     // NOTE: Inference Engine sizes are reversed.
+//     std::vector<size_t> dims = blob->getTensorDesc().getDims();
+//     std::vector<int> size(dims.begin(), dims.end());
+//     auto precision = blob->getTensorDesc().getPrecision();
 
-    int type = -1;
-    switch (precision)
-    {
-        case InferenceEngine::Precision::FP32: type = CV_32F; break;
-        case InferenceEngine::Precision::U8: type = CV_8U; break;
-        default:
-            CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
-    }
-    return Mat(size, type, (void*)blob->buffer());
-}
+//     int type = -1;
+//     switch (precision)
+//     {
+//         case InferenceEngine::Precision::FP32: type = CV_32F; break;
+//         case InferenceEngine::Precision::U8: type = CV_8U; break;
+//         default:
+//             CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
+//     }
+//     return Mat(size, type, (void*)blob->buffer());
+// }
 
-void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
-                          std::vector<Mat>& mats)
-{
-    mats.resize(blobs.size());
-    for (int i = 0; i < blobs.size(); ++i)
-        mats[i] = infEngineBlobToMat(blobs[i]);
-}
-
+// void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
+//                           std::vector<Mat>& mats)
+// {
+//     mats.resize(blobs.size());
+//     for (int i = 0; i < blobs.size(); ++i)
+//         mats[i] = infEngineBlobToMat(blobs[i]);
+// }
 
 static bool init_IE_plugins()
 {
@@ -130,9 +129,9 @@ static bool detectArmPlugin_()
     {
         if (i->find("CPU") != std::string::npos)
         {
-            const std::string name = ie.GetMetric(*i, METRIC_KEY(FULL_DEVICE_NAME)).as<std::string>();
-            CV_LOG_INFO(NULL, "CPU plugin: " << name);
-            return name.find("arm_compute::NEON") != std::string::npos;
+            // const std::string name = ie.GetMetric(*i, METRIC_KEY(FULL_DEVICE_NAME)).as<std::string>();
+            // CV_LOG_INFO(NULL, "CPU plugin: " << name);
+            // return name.find("arm_compute::NEON") != std::string::npos;
         }
     }
     return false;
@@ -150,9 +149,9 @@ static bool detectMyriadX_(const std::string& device)
     {
         if (i->find(device) != std::string::npos)
         {
-            const std::string name = ie.GetMetric(*i, METRIC_KEY(FULL_DEVICE_NAME)).as<std::string>();
-            CV_LOG_INFO(NULL, "Myriad device: " << name);
-            return name.find("MyriadX") != std::string::npos || name.find("Myriad X") != std::string::npos || name.find("HDDL") != std::string::npos;
+            // const std::string name = ie.GetMetric(*i, METRIC_KEY(FULL_DEVICE_NAME)).as<std::string>();
+            // CV_LOG_INFO(NULL, "Myriad device: " << name);
+            // return name.find("MyriadX") != std::string::npos || name.find("Myriad X") != std::string::npos || name.find("HDDL") != std::string::npos;
         }
     }
     return false;

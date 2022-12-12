@@ -19,11 +19,6 @@
 
 #ifdef HAVE_INF_ENGINE
 
-#define INF_ENGINE_RELEASE_2018R5 2018050000
-#define INF_ENGINE_RELEASE_2019R1 2019010000
-#define INF_ENGINE_RELEASE_2019R2 2019020000
-#define INF_ENGINE_RELEASE_2019R3 2019030000
-#define INF_ENGINE_RELEASE_2020_1 2020010000
 #define INF_ENGINE_RELEASE_2020_2 2020020000
 #define INF_ENGINE_RELEASE_2020_3 2020030000
 #define INF_ENGINE_RELEASE_2020_4 2020040000
@@ -31,6 +26,7 @@
 #define INF_ENGINE_RELEASE_2021_2 2021020000
 #define INF_ENGINE_RELEASE_2021_3 2021030000
 #define INF_ENGINE_RELEASE_2021_4 2021040000
+#define INF_ENGINE_RELEASE_2022_1 2022010000
 
 #ifndef INF_ENGINE_RELEASE
 #warning("IE version have not been provided via command-line. Using 2021.4 by default")
@@ -48,7 +44,9 @@
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
 
-#include <inference_engine.hpp>
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+#include <openvino/openvino.hpp>
+#endif
 
 #if defined(__GNUC__) && __GNUC__ >= 5
 //#pragma GCC diagnostic pop
@@ -73,11 +71,17 @@ CV__DNN_INLINE_NS_END
 
 Backend& getInferenceEngineBackendTypeParam();
 
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+Mat infEngineBlobToMat(const ov::Tensor& blob);
+
+void infEngineBlobsToMats(const std::vector<ov::Tensor>& blobs,
+                          std::vector<Mat>& mats);
+#else
 Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
 
 void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
                           std::vector<Mat>& mats);
-
+#endif  // OpenVINO >= 2022.1
 
 
 CV__DNN_INLINE_NS_BEGIN
@@ -90,6 +94,53 @@ bool isArmComputePlugin();
 
 CV__DNN_INLINE_NS_END
 
+// This is a temporal wrapper for OpenVINO 2.0 API compatibility
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+namespace InferenceEngine {
+
+class CNNNetwork {
+public:
+    CNNNetwork() {}
+
+    CNNNetwork(std::shared_ptr<ov::Model> model) : model(model) {}
+
+    std::shared_ptr<ov::Model> getFunction() const {
+        return model;
+    }
+
+private:
+    std::shared_ptr<ov::Model> model = nullptr;
+};
+
+class Core {
+public:
+    Core() {
+    }
+
+    Core(ov::Core& core) : core(core) {}
+
+    std::vector<std::string> GetAvailableDevices() {
+        return core.get_available_devices();
+    }
+
+    void UnregisterPlugin(const std::string& id) {
+        core.unload_plugin(id);
+    }
+
+    CNNNetwork ReadNetwork(const std::string& xmlPath, const std::string& binPath) {
+        return core.read_model(xmlPath, binPath);
+    }
+
+    ov::CompiledModel LoadNetwork(CNNNetwork net, const std::string& device) {
+        return core.compile_model(net.getFunction(), device);
+    }
+
+private:
+    ov::Core core;
+};
+
+}
+#endif // OpenVINO >= 2022.1
 
 InferenceEngine::Core& getCore(const std::string& id);
 
