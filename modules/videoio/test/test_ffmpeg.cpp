@@ -55,7 +55,11 @@ TEST_P(videoio_ffmpeg, write_big)
     remove(filename.c_str());
 }
 
+#if defined(OPENCV_32BIT_CONFIGURATION)
+static const Size bigSize(1920, 1080);
+#else
 static const Size bigSize(4096, 4096);
+#endif
 
 const FourCC_Ext_Size entries[] =
 {
