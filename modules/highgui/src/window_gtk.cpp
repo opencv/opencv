@@ -567,7 +567,7 @@ struct CvWindow : CvUIBase
         last_key(0), flags(0), status(0),
         on_mouse(NULL), on_mouse_param(NULL)
 #ifdef HAVE_OPENGL
-        ,useGl(false), glDrawCallback(NULL), glDrawData(NULL)
+        ,useGl(false), glDrawCallback(NULL), glFreeCallback(NULL), glDrawData(NULL)
 #endif
     {
         CV_LOG_INFO(NULL, "OpenCV/UI: creating GTK window: " << window_name);
@@ -593,6 +593,7 @@ struct CvWindow : CvUIBase
     bool useGl;
 
     CvOpenGlDrawCallback glDrawCallback;
+    CvOpenGlFreeCallback glFreeCallback;
     void* glDrawData;
 #endif
 };
@@ -1140,6 +1141,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
         createGlContext(window);
 
     window->glDrawCallback = 0;
+    window->glFreeCallback = 0;
     window->glDrawData = 0;
 #endif
 
@@ -1258,6 +1260,54 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback call
     window->glDrawData = userdata;
 }
 
+CV_IMPL void cvSetOpenGlFreeCallback(const char* name, CvOpenGlFreeCallback callback)
+{
+    CV_Assert(name && "NULL name string");
+
+    CV_LOCK_MUTEX();
+
+    auto window = icvFindWindowByName(name);
+    if( !window )
+        return;
+
+    if (!window->useGl)
+        CV_Error( CV_OpenGlNotSupported, "Window was created without OpenGL context" );
+
+    window->glFreeCallback = callback;
+}
+
+CV_IMPL CvOpenGlDrawCallback cvGetOpenGlDrawCallback(const char* name)
+{
+    CV_Assert(name && "NULL name string");
+
+    CV_LOCK_MUTEX();
+
+    auto window = icvFindWindowByName(name);
+    if (!window)
+        return NULL;
+
+    if (!window->useGl)
+        CV_Error(CV_OpenGlNotSupported, "Window was created without OpenGL context");
+
+    return window->glDrawCallback;
+}
+
+CV_IMPL void* cvGetOpenGlUserData(const char* name)
+{
+    CV_Assert(name && "NULL name string");
+
+    CV_LOCK_MUTEX();
+
+    auto window = icvFindWindowByName(name);
+    if( !window )
+        return NULL;
+
+    if (!window->useGl)
+        CV_Error( CV_OpenGlNotSupported, "Window was created without OpenGL context" );
+
+    return window->glDrawData;
+}
+
 #endif // HAVE_OPENGL
 
 
@@ -1271,6 +1321,12 @@ CvWindow::~CvWindow()
 inline void CvWindow::destroy()
 {
     CV_LOG_INFO(NULL, "OpenCV/UI: destroying GTK window: " << name);
+    #ifdef HAVE_OPENGL
+    if (glFreeCallback && glDrawData) {
+        glFreeCallback(glDrawData);
+        glDrawData = 0;
+    }
+    #endif // HAVE_OPENGL
     gtk_widget_destroy(frame);
     frame = nullptr;
 }
