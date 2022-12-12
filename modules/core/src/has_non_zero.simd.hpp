@@ -17,7 +17,7 @@ HasNonZeroFunc getHasNonZeroTab(int depth);
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
 template<typename T>
-static inline bool hasNonZero_(const T* src, size_t len )
+inline bool hasNonZero_(const T* src, size_t len )
 {
     bool res = false;
     if (len > 0)
@@ -25,13 +25,17 @@ static inline bool hasNonZero_(const T* src, size_t len )
         size_t i=0;
         #if CV_ENABLE_UNROLLED
         for(; !res && (i+4 <= len); i += 4 )
-            res |= (((src[i] != 0) + (src[i+1] != 0) + (src[i+2] != 0) + (src[i+3] != 0)) > 0);
+            res |= ((src[i] | src[i+1] | src[i+2] | src[i+3]) != 0);
         #endif
         for( ; !res && (i < len); i++ )
             res |= (src[i] != 0);
     }
     return res;
 }
+template<>
+inline bool hasNonZero_(const float* src, size_t len ) {return hasNonZero_(reinterpret_cast<const uint32_t*>(src), len);}
+template<>
+inline bool hasNonZero_(const double* src, size_t len ) {return hasNonZero_(reinterpret_cast<const uint64_t*>(src), len);}
 
 static bool hasNonZero8u( const uchar* src, size_t len )
 {

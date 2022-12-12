@@ -114,7 +114,7 @@ PERF_TEST_P(Size_MatType, hasNonZero, testing::Combine( testing::Values( TYPICAL
     int runs = (sz.width <= 640) ? 8 : 1;
     TEST_CYCLE_MULTIRUN(runs) hnz = hasNonZero(src);
 
-    SANITY_CHECK(cnt);
+    SANITY_CHECK(hnz);
 }
 
 } // namespace

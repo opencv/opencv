@@ -148,10 +148,10 @@ bool CV_HasNonZeroTest::get_has_non_zero()
         for (int j = 0; j < src.cols; ++j)
         {
             if (current_type == CV_8U) result |= (src.at<uchar>(i, j) > 0);
-            else if (current_type == CV_8S) result |= abs(sign(src.at<char>(i, j)));
+            else if (current_type == CV_8S) result |= (abs(sign(src.at<char>(i, j)))>0);
             else if (current_type == CV_16U) result |= (src.at<ushort>(i, j) > 0);
-            else if (current_type == CV_16S) result |= abs(sign(src.at<short>(i, j)));
-            else if (current_type == CV_32S) result |= abs(sign(src.at<int>(i, j)));
+            else if (current_type == CV_16S) result |= (abs(sign(src.at<short>(i, j)))>0);
+            else if (current_type == CV_32S) result |= (abs(sign(src.at<int>(i, j))) > 0);
             else if (current_type == CV_32F) result |= (fabs(src.at<float>(i, j)) > eps_32);
             else result |= (fabs(src.at<double>(i, j)) > eps_64);
         }
