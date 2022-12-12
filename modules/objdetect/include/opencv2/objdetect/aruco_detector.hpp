@@ -132,14 +132,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
      */
     CV_PROP_RW double minMarkerDistanceRate;
 
-    /** @brief default value CORNER_REFINE_NONE.
-     *
-     * refinement method:
-     * 0: CORNER_REFINE_NONE, no refinement
-     * 1: CORNER_REFINE_SUBPIX, do subpixel refinement
-     * 2: CORNER_REFINE_CONTOUR, use contour-Points
-     * 3: CORNER_REFINE_APRILTAG, use the AprilTag2 approach
-     */
+    /** @brief default value CORNER_REFINE_NONE */
     CV_PROP_RW CornerRefineMethod cornerRefinementMethod;
 
     /// window size for the corner refinement process (in pixels) (default 5).
@@ -341,9 +334,14 @@ public:
                                        InputArray cameraMatrix = noArray(), InputArray distCoeffs = noArray(),
                                        OutputArray recoveredIdxs = noArray());
 
-    Dictionary& getDictionary() const;
-    DetectorParameters& getDetectorParameters();
-    RefineParameters& getRefineParameters();
+    CV_WRAP const Dictionary& getDictionary() const;
+    CV_WRAP void setDictionary(const Dictionary& dictionary);
+
+    CV_WRAP const DetectorParameters& getDetectorParameters() const;
+    CV_WRAP void setDetectorParameters(const DetectorParameters& detectorParameters);
+
+    CV_WRAP const RefineParameters& getRefineParameters() const;
+    CV_WRAP void setRefineParameters(const RefineParameters& refineParameters);
 
     /** @brief Stores algorithm parameters in a file storage
     */

@@ -1291,15 +1291,28 @@ void ArucoDetector::read(const FileNode &fn) {
     arucoDetectorImpl->refineParams.readRefineParameters(fn);
 }
 
-Dictionary& ArucoDetector::getDictionary() const {
+const Dictionary& ArucoDetector::getDictionary() const {
     return arucoDetectorImpl->dictionary;
 }
 
-DetectorParameters& ArucoDetector::getDetectorParameters() {
+void ArucoDetector::setDictionary(const Dictionary& dictionary) {
+    arucoDetectorImpl->dictionary = dictionary;
+}
+
+const DetectorParameters& ArucoDetector::getDetectorParameters() const {
     return arucoDetectorImpl->detectorParams;
 }
-RefineParameters& ArucoDetector::getRefineParameters() {
+
+void ArucoDetector::setDetectorParameters(const DetectorParameters& detectorParameters) {
+    arucoDetectorImpl->detectorParams = detectorParameters;
+}
+
+const RefineParameters& ArucoDetector::getRefineParameters() const {
     return arucoDetectorImpl->refineParams;
+}
+
+void ArucoDetector::setRefineParameters(const RefineParameters& refineParameters) {
+    arucoDetectorImpl->refineParams = refineParameters;
 }
 
 void drawDetectedMarkers(InputOutputArray _image, InputArrayOfArrays _corners,
