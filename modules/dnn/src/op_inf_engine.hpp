@@ -96,49 +96,47 @@ bool isArmComputePlugin();
 
 CV__DNN_INLINE_NS_END
 
-// This is a temporal wrapper for OpenVINO 2.0 API compatibility
+// A series of wrappers for classes from OpenVINO API 2.0.
+// Need just for less conditional compilation inserts.
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
 namespace InferenceEngine {
 
 class CNNNetwork {
 public:
-    CNNNetwork() {}
+    CNNNetwork();
 
-    CNNNetwork(std::shared_ptr<ov::Model> model) : model(model) {}
+    CNNNetwork(std::shared_ptr<ov::Model> model);
 
-    std::shared_ptr<ov::Model> getFunction() const {
-        return model;
-    }
+    std::shared_ptr<ov::Model> getFunction() const;
 
-    void serialize(const std::string& xmlPath, const std::string& binPath) {
-        ov::pass::Serialize(xmlPath, binPath).run_on_model(model);
-    }
+    void serialize(const std::string& xmlPath, const std::string& binPath);
 
-    void reshape(const std::map<ov::Output<ov::Node>, ov::PartialShape>& shapes) {
-        model->reshape(shapes);
-    }
+    void reshape(const std::map<ov::Output<ov::Node>, ov::PartialShape>& shapes);
 
 private:
     std::shared_ptr<ov::Model> model = nullptr;
 };
 
+typedef ov::InferRequest InferRequest;
+
+class ExecutableNetwork : public ov::CompiledModel {
+public:
+    ExecutableNetwork();
+
+    ExecutableNetwork(const ov::CompiledModel& copy);
+
+    ov::InferRequest CreateInferRequest();
+};
+
 class Core : public ov::Core {
 public:
-    std::vector<std::string> GetAvailableDevices() {
-        return get_available_devices();
-    }
+    std::vector<std::string> GetAvailableDevices();
 
-    void UnregisterPlugin(const std::string& id) {
-        unload_plugin(id);
-    }
+    void UnregisterPlugin(const std::string& id);
 
-    CNNNetwork ReadNetwork(const std::string& xmlPath, const std::string& binPath) {
-        return read_model(xmlPath, binPath);
-    }
+    CNNNetwork ReadNetwork(const std::string& xmlPath, const std::string& binPath);
 
-    ov::CompiledModel LoadNetwork(CNNNetwork net, const std::string& device) {
-        return compile_model(net.getFunction(), device);
-    }
+    ExecutableNetwork LoadNetwork(CNNNetwork net, const std::string& device);
 };
 
 }

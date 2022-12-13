@@ -67,8 +67,7 @@ public:
     std::vector<std::vector<std::shared_ptr<ngraph::Node>>> components;
     std::unordered_map<std::string, std::shared_ptr<ngraph::Node>* > all_nodes;
 
-    // InferenceEngine::ExecutableNetwork netExec;
-    ov::CompiledModel netExec;
+    InferenceEngine::ExecutableNetwork netExec;
     std::map<std::string, ov::Tensor> allBlobs;
     std::string device_name;
     bool isInit = false;
@@ -79,7 +78,7 @@ public:
 
         void makePromises(const std::vector<Ptr<BackendWrapper> >& outs);
 
-        ov::InferRequest req;
+        InferenceEngine::InferRequest req;
         std::vector<cv::AsyncPromise> outProms;
         std::vector<std::string> outsNames;
         bool isReady;
@@ -125,8 +124,11 @@ public:
 
     Mat* host;
     std::string name;
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
     ov::Tensor blob;
-    // InferenceEngine::Blob::Ptr blob;
+#else
+    InferenceEngine::Blob::Ptr blob;
+#endif
     AsyncArray futureMat;
 };
 

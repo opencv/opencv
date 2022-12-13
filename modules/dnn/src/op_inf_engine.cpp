@@ -40,6 +40,48 @@ cv::String setInferenceEngineBackendType(const cv::String& newBackendType)
 CV__DNN_INLINE_NS_END
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+namespace InferenceEngine {
+
+CNNNetwork::CNNNetwork() {}
+
+CNNNetwork::CNNNetwork(std::shared_ptr<ov::Model> model) : model(model) {}
+
+std::shared_ptr<ov::Model> CNNNetwork::getFunction() const {
+    return model;
+}
+
+void CNNNetwork::serialize(const std::string& xmlPath, const std::string& binPath) {
+    ov::pass::Serialize(xmlPath, binPath).run_on_model(model);
+}
+
+void CNNNetwork::reshape(const std::map<ov::Output<ov::Node>, ov::PartialShape>& shapes) {
+    model->reshape(shapes);
+}
+
+std::vector<std::string> Core::GetAvailableDevices() {
+    return get_available_devices();
+}
+
+void Core::UnregisterPlugin(const std::string& id) {
+    unload_plugin(id);
+}
+
+CNNNetwork Core::ReadNetwork(const std::string& xmlPath, const std::string& binPath) {
+    return read_model(xmlPath, binPath);
+}
+
+ExecutableNetwork Core::LoadNetwork(CNNNetwork net, const std::string& device) {
+    return compile_model(net.getFunction(), device);
+}
+
+ExecutableNetwork::ExecutableNetwork() {}
+
+ExecutableNetwork::ExecutableNetwork(const ov::CompiledModel& copy) : CompiledModel(copy) {}
+
+ov::InferRequest ExecutableNetwork::CreateInferRequest() { return create_infer_request(); }
+
+}  // namespace InferenceEngine
+
 Mat infEngineBlobToMat(const ov::Tensor& blob)
 {
     std::vector<size_t> dims = blob.get_shape();

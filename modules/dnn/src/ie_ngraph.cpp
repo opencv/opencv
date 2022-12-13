@@ -257,12 +257,7 @@ void InfEngineNgraphNet::createNet(Target targetId) {
         {
             CV_LOG_DEBUG(NULL, "DNN/NGRAPH: Add 'Result' output: " << output_node_it->first);
             CV_Assert(output_node_it->second);
-            // output_node_it->second->node->set_friendly_name(output_node_it->first);
             auto out = std::make_shared<ngraph::op::Result>(output_node_it->second->node);
-            // out->set_names({output_node_it->first});
-            // std::cout << out->get_any_name() << std::endl;
-            // std::cout << "~~~~~~~~~~~~`" << std::endl;
-            // std::cout << "result " << output_node_it->first << std::endl;
             out->set_friendly_name(output_node_it->first);
             outs.push_back(out);
         }
@@ -395,7 +390,6 @@ void InfEngineNgraphNet::init(Target targetId)
                 auto iter = requestedOutputs.find(name);
                 if (iter != requestedOutputs.end()) {
                     requestedOutputs.erase(iter);
-                    // std::cout << "add putput " << name << std::endl;
                     // cnn.addOutput(name);
                 }
             }
@@ -428,7 +422,6 @@ ngraph::ParameterVector InfEngineNgraphNet::setInputs(const std::vector<cv::Mat>
     {
         std::vector<size_t> shape = getShape<size_t>(inputs[i]);
         auto inp = std::make_shared<ngraph::op::Parameter>(ngraph::element::f32, ngraph::Shape(shape));
-        // std::cout << "setInput " << names[i] << std::endl;
         inp->set_friendly_name(names[i]);
 
         auto it = std::find_if(inputs_vec.begin(), inputs_vec.end(),
@@ -486,16 +479,18 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
             {
                 CV_LOG_WARNING(NULL, "DNN-IE: Can't load extension plugin (extra layers for some networks). Specify path via OPENCV_DNN_IE_EXTRA_PLUGIN_PATH parameter");
             }
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2022_1)
             // Some of networks can work without a library of extra layers.
             // OpenCV fallbacks as extensions.
             try
             {
-                // ie.AddExtension(std::make_shared<InfEngineNgraphExtension>(), "CPU");
+                ie.AddExtension(std::make_shared<InfEngineNgraphExtension>(), "CPU");
             }
             catch(const std::exception& e)
             {
                 CV_LOG_INFO(NULL, "DNN-IE: Can't register OpenCV custom layers nGraph extension: " << e.what());
             }
+#endif // OpenVINO < 2022.1
 #ifndef _WIN32
             // Limit the number of CPU threads.
             if (device_name == "CPU")
@@ -621,78 +616,7 @@ void NgraphBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays 
     CV_Error(Error::StsInternal, "Choose Inference Engine as a preferable backend.");
 }
 
-
-// static InferenceEngine::Layout estimateLayout(int dims)
-// {
-//     if (dims == 4)
-//         return InferenceEngine::Layout::NCHW;
-//     else if (dims == 3)
-//         return InferenceEngine::Layout::CHW;
-//     else if (dims == 2)
-//         return InferenceEngine::Layout::NC;
-//     else if (dims == 1)
-//         return InferenceEngine::Layout::C;
-//     else if (dims == 5)
-//         return InferenceEngine::Layout::NCDHW;
-//     else
-//         return InferenceEngine::Layout::ANY;
-// }
-// static inline
-// InferenceEngine::Layout estimateLayout(size_t dims)
-// {
-//     return estimateLayout((int)dims);
-// }
-
-// static inline
-// InferenceEngine::Layout estimateLayout(const Mat& m)
-// {
-//     return estimateLayout(m.dims);
-// }
-
-// static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std::string& name = "")
-// {
-//     std::vector<size_t> shape = getShape<size_t>(m);
-//     if (m.type() == CV_32F)
-//         return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
-//                {InferenceEngine::Precision::FP32, shape, estimateLayout(m)}));
-//     else if (m.type() == CV_8U)
-//         return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
-//                {InferenceEngine::Precision::U8, shape, estimateLayout(m)}));
-//     else
-//         CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
-// }
-
-// InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m, const std::vector<size_t>& shape,
-//                                                InferenceEngine::Layout layout)
-// {
-//     if (m.type() == CV_32F)
-//         return InferenceEngine::make_shared_blob<float>(
-//                {InferenceEngine::Precision::FP32, shape, layout}, (float*)m.data);
-//     else if (m.type() == CV_8U)
-//         return InferenceEngine::make_shared_blob<uint8_t>(
-//                {InferenceEngine::Precision::U8, shape, layout}, (uint8_t*)m.data);
-//     else
-//         CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
-// }
-
-// InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m, InferenceEngine::Layout layout)
-// {
-//     std::vector<size_t> shape = getShape<size_t>(m);
-//     return wrapToNgraphBlob(m, shape, layout);
-// }
-
-// InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m, const std::vector<size_t>& shape,
-//                                                InferenceEngine::Layout layout)
-// {
-//     if (m.type() == CV_32F)
-//         return InferenceEngine::make_shared_blob<float>(
-//                {InferenceEngine::Precision::FP32, shape, layout}, (float*)m.data);
-//     else if (m.type() == CV_8U)
-//         return InferenceEngine::make_shared_blob<uint8_t>(
-//                {InferenceEngine::Precision::U8, shape, layout}, (uint8_t*)m.data);
-//     else
-//         CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
-// }
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
 
 ov::Tensor wrapToTensor(const Mat& m) {
     std::vector<size_t> shape = getShape<size_t>(m);
@@ -703,6 +627,69 @@ ov::Tensor wrapToTensor(const Mat& m) {
     else
         CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
 }
+
+#else
+
+static InferenceEngine::Layout estimateLayout(int dims)
+{
+    if (dims == 4)
+        return InferenceEngine::Layout::NCHW;
+    else if (dims == 3)
+        return InferenceEngine::Layout::CHW;
+    else if (dims == 2)
+        return InferenceEngine::Layout::NC;
+    else if (dims == 1)
+        return InferenceEngine::Layout::C;
+    else if (dims == 5)
+        return InferenceEngine::Layout::NCDHW;
+    else
+        return InferenceEngine::Layout::ANY;
+}
+static inline
+InferenceEngine::Layout estimateLayout(size_t dims)
+{
+    return estimateLayout((int)dims);
+}
+
+static inline
+InferenceEngine::Layout estimateLayout(const Mat& m)
+{
+    return estimateLayout(m.dims);
+}
+
+static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std::string& name = "")
+{
+    std::vector<size_t> shape = getShape<size_t>(m);
+    if (m.type() == CV_32F)
+        return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
+               {InferenceEngine::Precision::FP32, shape, estimateLayout(m)}));
+    else if (m.type() == CV_8U)
+        return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
+               {InferenceEngine::Precision::U8, shape, estimateLayout(m)}));
+    else
+        CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
+}
+
+InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m, const std::vector<size_t>& shape,
+                                               InferenceEngine::Layout layout)
+{
+    if (m.type() == CV_32F)
+        return InferenceEngine::make_shared_blob<float>(
+               {InferenceEngine::Precision::FP32, shape, layout}, (float*)m.data);
+    else if (m.type() == CV_8U)
+        return InferenceEngine::make_shared_blob<uint8_t>(
+               {InferenceEngine::Precision::U8, shape, layout}, (uint8_t*)m.data);
+    else
+        CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
+}
+
+InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m, InferenceEngine::Layout layout)
+{
+    std::vector<size_t> shape = getShape<size_t>(m);
+    return wrapToNgraphBlob(m, shape, layout);
+}
+
+#endif // OpenVINO >= 2022.1
 
 NgraphBackendWrapper::NgraphBackendWrapper(int targetId, const cv::Mat& m)
     : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, targetId)
@@ -742,98 +729,99 @@ void NgraphBackendWrapper::setHostDirty()
     //CV_Error(Error::StsNotImplemented, "");
 }
 
-// InferenceEngine::Blob::Ptr copyBlob(const InferenceEngine::Blob::Ptr& blob)
-// {
-//     InferenceEngine::Blob::Ptr copy;
-//     auto description = blob->getTensorDesc();
-//     InferenceEngine::Precision precision = description.getPrecision();
-//     if (precision == InferenceEngine::Precision::FP32)
-//     {
-//         copy = InferenceEngine::make_shared_blob<float>(description);
-//     }
-//     else if (precision == InferenceEngine::Precision::U8)
-//     {
-//         copy = InferenceEngine::make_shared_blob<uint8_t>(description);
-//     }
-//     else
-//     {
-//         std::ostringstream msg;
-//         msg << precision;
-//         CV_Error_(Error::StsNotImplemented, ("Unsupported blob precision: %s", msg.str().c_str()));
-//     }
-//     copy->allocate();
-//     return copy;
-// }
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2022_1)
+InferenceEngine::Blob::Ptr copyBlob(const InferenceEngine::Blob::Ptr& blob)
+{
+    InferenceEngine::Blob::Ptr copy;
+    auto description = blob->getTensorDesc();
+    InferenceEngine::Precision precision = description.getPrecision();
+    if (precision == InferenceEngine::Precision::FP32)
+    {
+        copy = InferenceEngine::make_shared_blob<float>(description);
+    }
+    else if (precision == InferenceEngine::Precision::U8)
+    {
+        copy = InferenceEngine::make_shared_blob<uint8_t>(description);
+    }
+    else
+    {
+        std::ostringstream msg;
+        msg << precision;
+        CV_Error_(Error::StsNotImplemented, ("Unsupported blob precision: %s", msg.str().c_str()));
+    }
+    copy->allocate();
+    return copy;
+}
 
-// InferenceEngine::DataPtr ngraphDataNode(const Ptr<BackendWrapper>& ptr)
-// {
-//     CV_Assert(!ptr.empty());
-//     Ptr<NgraphBackendWrapper> p = ptr.dynamicCast<NgraphBackendWrapper>();
-//     CV_Assert(!p.empty());
-//     return p->dataPtr;
-// }
+InferenceEngine::DataPtr ngraphDataNode(const Ptr<BackendWrapper>& ptr)
+{
+    CV_Assert(!ptr.empty());
+    Ptr<NgraphBackendWrapper> p = ptr.dynamicCast<NgraphBackendWrapper>();
+    CV_Assert(!p.empty());
+    return p->dataPtr;
+}
 
-// static
-// InferenceEngine::Blob::Ptr reallocateBlob(Mat &m, const InferenceEngine::TensorDesc& description)
-// {
-//     auto dims = description.getDims();
-//     auto layout = estimateLayout(dims.size());
-//     MatShape matShape(dims.begin(), dims.end());
-//     if (description.getPrecision() == InferenceEngine::Precision::FP32)
-//     {
-//         m.create(matShape, CV_32FC1);
-//         return InferenceEngine::make_shared_blob<float>(
-//                 {description.getPrecision(), dims, layout}, (float*)m.data);
-//     }
-//     else if (description.getPrecision() == InferenceEngine::Precision::I32)
-//     {
-//         m.create(matShape, CV_32SC1);
-//         return InferenceEngine::make_shared_blob<int>(
-//                 {description.getPrecision(), dims, layout}, (int*)m.data);
-//     }
-//     else if (description.getPrecision() == InferenceEngine::Precision::U8)
-//     {
-//         m.create(matShape, CV_8UC1);
-//         return InferenceEngine::make_shared_blob<uchar>(
-//                 {description.getPrecision(), dims, layout}, (uchar*)m.data);
-//     }
-//     std::ostringstream msg;
-//     msg << "Unsupported IE precision: " << description.getPrecision();
-//     CV_Error(Error::StsNotImplemented, msg.str());
-// }
+static
+InferenceEngine::Blob::Ptr reallocateBlob(Mat &m, const InferenceEngine::TensorDesc& description)
+{
+    auto dims = description.getDims();
+    auto layout = estimateLayout(dims.size());
+    MatShape matShape(dims.begin(), dims.end());
+    if (description.getPrecision() == InferenceEngine::Precision::FP32)
+    {
+        m.create(matShape, CV_32FC1);
+        return InferenceEngine::make_shared_blob<float>(
+                {description.getPrecision(), dims, layout}, (float*)m.data);
+    }
+    else if (description.getPrecision() == InferenceEngine::Precision::I32)
+    {
+        m.create(matShape, CV_32SC1);
+        return InferenceEngine::make_shared_blob<int>(
+                {description.getPrecision(), dims, layout}, (int*)m.data);
+    }
+    else if (description.getPrecision() == InferenceEngine::Precision::U8)
+    {
+        m.create(matShape, CV_8UC1);
+        return InferenceEngine::make_shared_blob<uchar>(
+                {description.getPrecision(), dims, layout}, (uchar*)m.data);
+    }
+    std::ostringstream msg;
+    msg << "Unsupported IE precision: " << description.getPrecision();
+    CV_Error(Error::StsNotImplemented, msg.str());
+}
 
-// InferenceEngine::DataPtr ngraphDataOutputNode(
-//         const Ptr<BackendWrapper>& ptr,
-//         const InferenceEngine::TensorDesc& description,
-//         const std::string name)
-// {
-//     CV_Assert(!ptr.empty());
-//     Ptr<NgraphBackendWrapper> p = ptr.dynamicCast<NgraphBackendWrapper>();
-//     CV_Assert(!p.empty());
-//     NgraphBackendWrapper& w = *p;
-//     const InferenceEngine::TensorDesc& blobDesc = w.blob.get()->getTensorDesc();
-//     auto dims = description.getDims();
-//     bool reallocate = false;
-//     if (blobDesc.getPrecision() != description.getPrecision())
-//     {
-//         reallocate = true;
-//         CV_LOG_WARNING(NULL, "Reallocate output '" << name << "' blob due to wrong precision: " << blobDesc.getPrecision() << " => " << description.getPrecision() << "  ndims=" << dims.size());
-//     }
-//     if (dims.size() != blobDesc.getDims().size())
-//     {
-//         reallocate = true;
-//         CV_LOG_WARNING(NULL, "Reallocate output '" << name << "' blob due to wrong dims: " << blobDesc.getDims().size() << " => " << dims.size());
-//     }
-//     if (reallocate)
-//     {
-//         auto layout = estimateLayout(dims.size());
-//         w.dataPtr = InferenceEngine::DataPtr(new InferenceEngine::Data(name,
-//                {description.getPrecision(), dims, layout}));
-//         w.blob = reallocateBlob(*w.host, description);
-//     }
-//     return w.dataPtr;
-// }
-
+InferenceEngine::DataPtr ngraphDataOutputNode(
+        const Ptr<BackendWrapper>& ptr,
+        const InferenceEngine::TensorDesc& description,
+        const std::string name)
+{
+    CV_Assert(!ptr.empty());
+    Ptr<NgraphBackendWrapper> p = ptr.dynamicCast<NgraphBackendWrapper>();
+    CV_Assert(!p.empty());
+    NgraphBackendWrapper& w = *p;
+    const InferenceEngine::TensorDesc& blobDesc = w.blob.get()->getTensorDesc();
+    auto dims = description.getDims();
+    bool reallocate = false;
+    if (blobDesc.getPrecision() != description.getPrecision())
+    {
+        reallocate = true;
+        CV_LOG_WARNING(NULL, "Reallocate output '" << name << "' blob due to wrong precision: " << blobDesc.getPrecision() << " => " << description.getPrecision() << "  ndims=" << dims.size());
+    }
+    if (dims.size() != blobDesc.getDims().size())
+    {
+        reallocate = true;
+        CV_LOG_WARNING(NULL, "Reallocate output '" << name << "' blob due to wrong dims: " << blobDesc.getDims().size() << " => " << dims.size());
+    }
+    if (reallocate)
+    {
+        auto layout = estimateLayout(dims.size());
+        w.dataPtr = InferenceEngine::DataPtr(new InferenceEngine::Data(name,
+               {description.getPrecision(), dims, layout}));
+        w.blob = reallocateBlob(*w.host, description);
+    }
+    return w.dataPtr;
+}
+#endif // OpenVINO < 2022.1
 
 void InfEngineNgraphNet::reset()
 {
@@ -909,7 +897,7 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
         reqWrapper = Ptr<NgraphReqWrapper>(new NgraphReqWrapper());
         try
         {
-            reqWrapper->req = netExec.create_infer_request();
+            reqWrapper->req = netExec.CreateInferRequest();
         }
         catch (const std::exception& ex)
         {
@@ -1077,7 +1065,11 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
     }
     else
     {
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
         reqWrapper->req.infer();
+#else
+        reqWrapper->req.Infer();
+#endif
     }
 }
 

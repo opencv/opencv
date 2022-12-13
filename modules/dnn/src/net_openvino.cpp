@@ -316,7 +316,6 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
             {
                 for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                 {
-                        // std::cout << "here 2" << std::endl;
                     // auto it = ienet.outputsDesc.find(ld.name);
                     // if (it != ienet.outputsDesc.end())
                     // {
@@ -739,14 +738,13 @@ Net NetImplOpenVINO::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork
 
     std::vector<std::shared_ptr<ngraph::Node>> ngraphOperations = ngraphFunction->get_ops();
 
-    // std::cout << 1 << std::endl;
     for (auto& it : ngraphFunction->outputs())
     {
         CV_TRACE_REGION("output");
         // nGraph models end with "Result" layers which have names such as "output/sink_port_0".
         // Their inputs are actual model outputs and we set friendly name to them.
         it.get_node()->set_friendly_name(it.get_any_name());
-        auto outputName = it.get_node()->get_friendly_name();
+        const auto outputName = it.get_node()->get_friendly_name();
 
         LayerParams lp;
         int lid = cvNet.addLayer(outputName, "", lp);
@@ -794,7 +792,6 @@ Net NetImplOpenVINO::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork
         for (int i = 0; i < inputsNames.size(); ++i)
             cvNet.connect(0, i, lid, i);
     }
-    // std::cout << 2 << std::endl;
 
     CV_TRACE_REGION_NEXT("finalize");
 
