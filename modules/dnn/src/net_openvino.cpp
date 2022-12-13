@@ -831,28 +831,31 @@ Net openvino_readNetwork(
         const uchar* bufferWeightsPtr, size_t bufferWeightsSize
 )
 {
-    CV_Error(Error::StsNotImplemented, "From Model Optimizer buffer");
-
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
-    // InferenceEngine::Core& ie = getCore("");
+    InferenceEngine::Core& ie = getCore("");
 
     std::string model; model.assign((char*)bufferModelConfigPtr, bufferModelConfigSize);
 
-    // InferenceEngine::CNNNetwork ieNet;
-    // try
-    // {
-    //     InferenceEngine::TensorDesc tensorDesc(InferenceEngine::Precision::U8, { bufferWeightsSize }, InferenceEngine::Layout::C);
-    //     InferenceEngine::Blob::CPtr weights_blob = InferenceEngine::make_shared_blob<uint8_t>(tensorDesc, (uint8_t*)bufferWeightsPtr, bufferWeightsSize);
+    InferenceEngine::CNNNetwork ieNet;
+    try
+    {
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+        ov::Tensor weights_blob(ov::element::u8, {bufferWeightsSize}, (void*)bufferWeightsPtr);
+        ieNet = ie.read_model(model, weights_blob);
+#else
+        InferenceEngine::TensorDesc tensorDesc(InferenceEngine::Precision::U8, { bufferWeightsSize }, InferenceEngine::Layout::C);
+        InferenceEngine::Blob::CPtr weights_blob = InferenceEngine::make_shared_blob<uint8_t>(tensorDesc, (uint8_t*)bufferWeightsPtr, bufferWeightsSize);
 
-    //     // ieNet = ie.ReadNetwork(model, weights_blob);
-    // }
-    // catch (const std::exception& e)
-    // {
-    //     CV_Error(Error::StsError, std::string("DNN: OpenVINO failed to read model: ") + e.what());
-    // }
+        ieNet = ie.ReadNetwork(model, weights_blob);
+#endif
+    }
+    catch (const std::exception& e)
+    {
+        CV_Error(Error::StsError, std::string("DNN: OpenVINO failed to read model: ") + e.what());
+    }
 
-    // return NetImplOpenVINO::createNetworkFromModelOptimizer(ieNet);
+    return NetImplOpenVINO::createNetworkFromModelOptimizer(ieNet);
 }
 
 #endif  // HAVE_INF_ENGINE
