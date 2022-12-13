@@ -36,6 +36,12 @@ String dumpInt(int argument)
 }
 
 CV_WRAP static inline
+String dumpInt64(int64 argument)
+{
+    return cv::format("Int: %lld", static_cast<long long>(argument));
+}
+
+CV_WRAP static inline
 String dumpSizeT(size_t argument)
 {
     std::ostringstream oss("size_t: ", std::ios::ate);
