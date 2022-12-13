@@ -360,6 +360,7 @@ InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& n
 }
 
 void InfEngineNgraphNode::setName(const std::string& name) {
+    std::cout << "setName " << name << std::endl;
     node->set_friendly_name(name);
 }
 
@@ -456,7 +457,13 @@ void InfEngineNgraphNet::createNet(Target targetId) {
         {
             CV_LOG_DEBUG(NULL, "DNN/NGRAPH: Add 'Result' output: " << output_node_it->first);
             CV_Assert(output_node_it->second);
+            // output_node_it->second->node->set_friendly_name(output_node_it->first);
             auto out = std::make_shared<ngraph::op::Result>(output_node_it->second->node);
+            // out->set_names({output_node_it->first});
+            // std::cout << out->get_any_name() << std::endl;
+            // std::cout << "~~~~~~~~~~~~`" << std::endl;
+            // std::cout << "result " << output_node_it->first << std::endl;
+            out->set_friendly_name(output_node_it->first);
             outs.push_back(out);
         }
         CV_Assert_N(!inputs_vec.empty(), !outs.empty());
@@ -536,26 +543,26 @@ void InfEngineNgraphNet::init(Target targetId)
         }
         cnn = InferenceEngine::CNNNetwork(ngraph_function);
 
-//         if (DNN_IE_SERIALIZE)
-//         {
-// #ifndef OPENCV_DNN_DISABLE_NETWORK_AUTO_DUMP
-//             std::string dumpFileNameBase = netImpl_.getDumpFileNameBase();
-//             try
-//             {
-//                 cnn.serialize(dumpFileNameBase + "_ngraph.xml", dumpFileNameBase + "_ngraph.bin");
-//             }
-//             catch (const std::exception& e)
-//             {
-//                 std::ofstream out((dumpFileNameBase + "_ngraph.error").c_str(), std::ios::out);
-//                 out << "Exception: " << e.what() << std::endl;
-//             }
-//             catch (...)
-//             {
-//                 std::ofstream out((dumpFileNameBase + "_ngraph.error").c_str(), std::ios::out);
-//                 out << "Can't dump: unknown exception" << std::endl;
-//             }
-// #endif
-//         }
+        if (DNN_IE_SERIALIZE)
+        {
+#ifndef OPENCV_DNN_DISABLE_NETWORK_AUTO_DUMP
+            std::string dumpFileNameBase = netImpl_.getDumpFileNameBase();
+            try
+            {
+                cnn.serialize(dumpFileNameBase + "_ngraph.xml", dumpFileNameBase + "_ngraph.bin");
+            }
+            catch (const std::exception& e)
+            {
+                std::ofstream out((dumpFileNameBase + "_ngraph.error").c_str(), std::ios::out);
+                out << "Exception: " << e.what() << std::endl;
+            }
+            catch (...)
+            {
+                std::ofstream out((dumpFileNameBase + "_ngraph.error").c_str(), std::ios::out);
+                out << "Can't dump: unknown exception" << std::endl;
+            }
+#endif
+        }
     }
 
     switch (targetId)
@@ -588,13 +595,12 @@ void InfEngineNgraphNet::init(Target targetId)
                 auto iter = requestedOutputs.find(name);
                 if (iter != requestedOutputs.end()) {
                     requestedOutputs.erase(iter);
-                    std::cout << "add putput" << name << std::endl;
+                    std::cout << "add putput " << name << std::endl;
                     // cnn.addOutput(name);
                 }
             }
         }
     }
-std::cout << "ahaha" << std::endl;
     // for (const auto& it : cnn.getInputsInfo())
     // {
     //     const std::string& name = it.first;
@@ -622,6 +628,7 @@ ngraph::ParameterVector InfEngineNgraphNet::setInputs(const std::vector<cv::Mat>
     {
         std::vector<size_t> shape = getShape<size_t>(inputs[i]);
         auto inp = std::make_shared<ngraph::op::Parameter>(ngraph::element::f32, ngraph::Shape(shape));
+        std::cout << "setInput " << names[i] << std::endl;
         inp->set_friendly_name(names[i]);
 
         auto it = std::find_if(inputs_vec.begin(), inputs_vec.end(),
@@ -778,16 +785,15 @@ bool NgraphBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
     //     InferenceEngine::CNNNetwork curr_t_net(t_net);
     //     curr_t_net.reshape(inShapes);
     // }
+    std::cout << 3 << std::endl;
     for (const auto& it : t_net.getFunction()->outputs()) {
-        // std::cout << "name - " << std::endl;
-        // std::cout << it.get_node()->get_friendly_name() << std::endl;
-        // std::cout << it.get_any_name() << std::endl;
-        if (it.get_any_name() == name) {
+        if (it.get_node()->get_friendly_name() == name) {
             auto dims = it.get_shape();
             outputs.push_back(MatShape(dims.begin(), dims.end()));
             return false;
         }
     }
+    std::cout << 4 << std::endl;
     if (outputs.empty())
         CV_Error(Error::StsError, "Cannot find output with name " + name);
     return false;
@@ -880,7 +886,6 @@ void NgraphBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays 
 // }
 
 ov::Tensor wrapToTensor(const Mat& m) {
-    std::cout << "wrapToTensor " << (void*)m.data << std::endl;
     std::vector<size_t> shape = getShape<size_t>(m);
     if (m.type() == CV_32F)
         return ov::Tensor(ov::element::f32, shape, m.data);
@@ -903,6 +908,7 @@ NgraphBackendWrapper::NgraphBackendWrapper(Ptr<BackendWrapper> wrapper)
     Ptr<NgraphBackendWrapper> ieWrapper = wrapper.dynamicCast<NgraphBackendWrapper>();
     CV_Assert(!ieWrapper.empty());
     name = ieWrapper->name;
+    std::cout << "NgraphBackendWrapper " << name << std::endl;
     blob = ieWrapper->blob;
 }
 
@@ -1104,28 +1110,53 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
         infRequests.push_back(reqWrapper);
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
-        for (const auto& it : cnn.getFunction()->inputs())
+std::cout << 7 << std::endl;
+
+    // ov::Core core;
+    // auto model = core.read_model("ocv_dnn_net_00001_00_ngraph.xml");
+    // auto compiled = core.compile_model(model, "CPU");
+    // auto req = compiled.create_infer_request();
+    // std::vector<float> data(2*6*75*113, 0);
+    // ov::Tensor t(ov::element::f32, {2,6,75,113}, (void*)data.data());
+    // req.set_tensor("input", t);
+    // req.set_input_tensor(0, t);
+
+std::cout << 7.5 << std::endl;
+        std::vector<ov::Tensor> inputs, outputs;
+        for (const auto& it : netExec.inputs())
         {
-            const std::string& name = it.get_any_name();
+//             std::cout <<  << std::endl;
+// std::cout << it.get_any_name() << std::endl;
+            const std::string& name = it.get_node()->get_friendly_name();
             auto blobIt = allBlobs.find(name);
             CV_Assert(blobIt != allBlobs.end());
 
-std::cout << 1 << std::endl;
-            reqWrapper->req.set_tensor(name, blobIt->second);
-std::cout << 2 << std::endl;
-            
+            std::cout << name << std::endl;
+            inputs.push_back(blobIt->second);
+            // reqWrapper->req.set_tensor(name, blobIt->second);            
             // inpBlobs[name] = isAsync ? copyBlob(blobIt->second) : blobIt->second;
         }
-        for (const auto& it : cnn.getFunction()->outputs())
+        reqWrapper->req.set_input_tensors(inputs);
+std::cout << 8 << std::endl;
+
+std::cout << 5 << std::endl;
+        int i = 0;
+        for (const auto& it : netExec.outputs())
         {
-            const std::string& name = it.get_any_name();
+            for (const auto& it : allBlobs) {
+                std::cout << it.first << std::endl;
+            }
+            std::cout << std::endl;
+
+            const std::string& name = it.get_node()->get_friendly_name();
+            std::cout << name << std::endl;
+
             auto blobIt = allBlobs.find(name);
             CV_Assert(blobIt != allBlobs.end());
             // outBlobs[name] = isAsync ? copyBlob(blobIt->second) : blobIt->second;
-std::cout << 3 << std::endl;
-            reqWrapper->req.set_tensor(name, blobIt->second);
-std::cout << 4 << std::endl;
+            reqWrapper->req.set_output_tensor(i++, blobIt->second);
         }
+std::cout << 6 << std::endl;
 #else
         InferenceEngine::BlobMap inpBlobs, outBlobs;
         for (const auto& it : cnn.getInputsInfo())

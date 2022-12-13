@@ -261,7 +261,6 @@ void NetImplOpenVINO::addNgraphOutputs(LayerData& ld)
 
 void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 {
-    std::cout << "initBackend" << std::endl;
     CV_TRACE_FUNCTION();
     CV_CheckEQ(preferableBackend, DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, "");
 
@@ -708,7 +707,6 @@ Net NetImplOpenVINO::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork
     std::vector<MatShape> inp_shapes;
     for (auto& it : ngraphFunction->inputs())
     {
-        std::cout << "input " << it.get_node()->get_friendly_name() << std::endl;
         inputsNames.push_back(it.get_node()->get_friendly_name());
         std::vector<size_t> dims = it.get_shape();
         inp_shapes.push_back(std::vector<int>(dims.begin(), dims.end()));
@@ -741,11 +739,14 @@ Net NetImplOpenVINO::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork
 
     std::vector<std::shared_ptr<ngraph::Node>> ngraphOperations = ngraphFunction->get_ops();
 
+    std::cout << 1 << std::endl;
     for (auto& it : ngraphFunction->outputs())
     {
         CV_TRACE_REGION("output");
-        const auto& outputName = it.get_any_name();
-        std::cout << "outputName " << outputName << std::endl;
+        // nGraph models end with "Result" layers which have names such as "output/sink_port_0".
+        // Their inputs are actual model outputs and we set friendly name to them.
+        it.get_node()->set_friendly_name(it.get_any_name());
+        auto outputName = it.get_node()->get_friendly_name();
 
         LayerParams lp;
         int lid = cvNet.addLayer(outputName, "", lp);
@@ -793,6 +794,7 @@ Net NetImplOpenVINO::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork
         for (int i = 0; i < inputsNames.size(); ++i)
             cvNet.connect(0, i, lid, i);
     }
+    std::cout << 2 << std::endl;
 
     CV_TRACE_REGION_NEXT("finalize");
 

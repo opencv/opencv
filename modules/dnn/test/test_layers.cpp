@@ -1287,12 +1287,12 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
     double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 1.8e-2 : 1e-4;
     normAssert(outDefault, out, "", l1, lInf);
 
-    // std::vector<int> outLayers = net.getUnconnectedOutLayers();
-    // ASSERT_EQ(net.getLayer(outLayers[0])->name, "output");
-    // if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-    //     ASSERT_EQ(net.getLayer(outLayers[0])->type, "Convolution");
-    // else
-    //     ASSERT_EQ(net.getLayer(outLayers[0])->type, "Add");
+    std::vector<int> outLayers = net.getUnconnectedOutLayers();
+    ASSERT_EQ(net.getLayer(outLayers[0])->name, "output");
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        ASSERT_EQ(net.getLayer(outLayers[0])->type, "Convolution");
+    else
+        ASSERT_EQ(net.getLayer(outLayers[0])->type, "Result");
 }
 
 TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)

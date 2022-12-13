@@ -108,6 +108,10 @@ public:
         return model;
     }
 
+    void serialize(const std::string& xmlPath, const std::string& binPath) {
+        ov::pass::Serialize(xmlPath, binPath).run_on_model(model);
+    }
+
 private:
     std::shared_ptr<ov::Model> model = nullptr;
 };
