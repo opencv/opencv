@@ -78,6 +78,8 @@ ngraphWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
     return wrappers;
 }
 
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+
 class NgraphCustomOp: public ov::op::Op {
 public:
     OPENVINO_OP(kOpenCVLayersType);
@@ -129,6 +131,257 @@ public:
     std::vector<Mat> outputs, internals;
 };
 
+#else
+
+class NgraphCustomOp: public ngraph::op::Op {
+public:
+    const ngraph::NodeTypeInfo& get_type_info() const override
+    {
+        static constexpr ngraph::NodeTypeInfo type_info{kOpenCVLayersType, static_cast<uint64_t>(0)};
+        return type_info;
+    }
+
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_3)
+    NgraphCustomOp(const ngraph::OutputVector& inputs,
+#else
+    NgraphCustomOp(const ngraph::NodeVector& inputs,
+#endif
+                   const std::map<std::string, InferenceEngine::Parameter>& params = {}):
+        Op(inputs), params(params)
+    {
+        constructor_validate_and_infer_types();
+    }
+
+    ~NgraphCustomOp()
+    {
+        // nothing
+    }
+
+    void validate_and_infer_types() override
+    {
+        std::vector<std::vector<size_t> > shapes;
+        strToShapes(params["outputs"], shapes);
+        set_output_size(shapes.size());
+        for (size_t i = 0; i < shapes.size(); ++i)
+        {
+            ngraph::Shape output_shape(shapes[i]);
+            set_output_type(i, get_input_element_type(0), output_shape);
+        }
+    }
+
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_4)
+    std::shared_ptr<ngraph::Node> clone_with_new_inputs(const ngraph::OutputVector& new_args) const override
+    {
+        return std::make_shared<NgraphCustomOp>(new_args, params);
+    }
+#else
+    std::shared_ptr<ngraph::Node> copy_with_new_args(const ngraph::NodeVector& new_args) const override
+    {
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_3)
+        return std::make_shared<NgraphCustomOp>(ngraph::as_output_vector(new_args), params);
+#else
+        return std::make_shared<NgraphCustomOp>(new_args, params);
+#endif
+    }
+#endif
+
+    bool visit_attributes(ngraph::AttributeVisitor& visitor) override
+    {
+        for (auto& attr : params)
+        {
+            if (attr.second.is<std::string>())
+                visitor.on_attribute(attr.first, attr.second.as<std::string>());
+        }
+        return true;
+    }
+
+    std::map<std::string, InferenceEngine::Parameter> params;
+};
+
+class InfEngineNgraphCustomLayer : public InferenceEngine::ILayerExecImpl
+{
+public:
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2)
+    explicit InfEngineNgraphCustomLayer(const std::shared_ptr<ngraph::Node>& _node)
+    {
+        node = std::dynamic_pointer_cast<NgraphCustomOp>(_node);
+        CV_Assert(node);
+        std::string implStr = node->params["impl"];
+        std::istringstream iss(implStr);
+#else
+    explicit InfEngineNgraphCustomLayer(const InferenceEngine::CNNLayer& layer) : cnnLayer(layer)
+    {
+        std::istringstream iss(layer.GetParamAsString("impl"));
+#endif
+        size_t ptr;
+        iss >> ptr;
+        cvLayer = (Layer*)ptr;
+
+        std::vector<std::vector<size_t> > shapes;
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2)
+        strToShapes(node->params["internals"], shapes);
+#else
+        strToShapes(layer.GetParamAsString("internals"), shapes);
+#endif
+        internals.resize(shapes.size());
+        for (int i = 0; i < shapes.size(); ++i)
+            internals[i].create(std::vector<int>(shapes[i].begin(), shapes[i].end()), CV_32F);
+    }
+
+    ~InfEngineNgraphCustomLayer()
+    {
+        // nothing
+    }
+
+    virtual InferenceEngine::StatusCode execute(std::vector<InferenceEngine::Blob::Ptr>& inputs,
+                                                std::vector<InferenceEngine::Blob::Ptr>& outputs,
+                                                InferenceEngine::ResponseDesc *resp) noexcept
+    {
+        std::vector<Mat> inpMats, outMats;
+        infEngineBlobsToMats(inputs, inpMats);
+        infEngineBlobsToMats(outputs, outMats);
+
+        try
+        {
+            cvLayer->forward(inpMats, outMats, internals);
+            return InferenceEngine::StatusCode::OK;
+        }
+        catch (...)
+        {
+            return InferenceEngine::StatusCode::GENERAL_ERROR;
+        }
+    }
+
+    virtual InferenceEngine::StatusCode
+    getSupportedConfigurations(std::vector<InferenceEngine::LayerConfig>& conf,
+                               InferenceEngine::ResponseDesc* resp) noexcept
+    {
+        std::vector<InferenceEngine::DataConfig> inDataConfig;
+        std::vector<InferenceEngine::DataConfig> outDataConfig;
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2)
+        InferenceEngine::SizeVector order;
+        for (int i = 0; i < node->get_input_size(); ++i)
+        {
+            InferenceEngine::DataConfig conf;
+            auto shape = node->input_value(i).get_shape();
+            order.resize(shape.size());
+            std::iota(order.begin(), order.end(), 0);
+            conf.desc = InferenceEngine::TensorDesc(InferenceEngine::Precision::FP32, shape, {shape, order});
+            inDataConfig.push_back(conf);
+        }
+
+        for (int i = 0; i < node->get_output_size(); ++i)
+        {
+            InferenceEngine::DataConfig conf;
+            auto shape = node->output(i).get_shape();
+            order.resize(shape.size());
+            std::iota(order.begin(), order.end(), 0);
+            conf.desc = InferenceEngine::TensorDesc(InferenceEngine::Precision::FP32, shape, {shape, order});
+            outDataConfig.push_back(conf);
+        }
+#else
+        for (auto& it : cnnLayer.insData)
+        {
+            InferenceEngine::DataConfig conf;
+            conf.desc = it.lock()->getTensorDesc();
+            inDataConfig.push_back(conf);
+        }
+
+        for (auto& it : cnnLayer.outData)
+        {
+            InferenceEngine::DataConfig conf;
+            conf.desc = it->getTensorDesc();
+            outDataConfig.push_back(conf);
+        }
+#endif
+
+        InferenceEngine::LayerConfig layerConfig;
+        layerConfig.inConfs = inDataConfig;
+        layerConfig.outConfs = outDataConfig;
+
+        conf.push_back(layerConfig);
+        return InferenceEngine::StatusCode::OK;
+    }
+
+    InferenceEngine::StatusCode init(InferenceEngine::LayerConfig& config,
+                                     InferenceEngine::ResponseDesc *resp) noexcept
+    {
+        return InferenceEngine::StatusCode::OK;
+    }
+
+private:
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2)
+    std::shared_ptr<NgraphCustomOp> node;
+#else
+    InferenceEngine::CNNLayer cnnLayer;
+#endif
+    dnn::Layer* cvLayer;
+    std::vector<Mat> internals;
+};
+
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2020_2)
+class InfEngineNgraphCustomLayerFactory : public InferenceEngine::ILayerImplFactory {
+public:
+    explicit InfEngineNgraphCustomLayerFactory(const InferenceEngine::CNNLayer* layer) : cnnLayer(*layer)
+    {
+        // nothing
+    }
+
+    InferenceEngine::StatusCode
+    getImplementations(std::vector<InferenceEngine::ILayerImpl::Ptr>& impls,
+                       InferenceEngine::ResponseDesc* resp) noexcept override
+    {
+        impls.push_back(std::make_shared<InfEngineNgraphCustomLayer>(cnnLayer));
+        return InferenceEngine::StatusCode::OK;
+    }
+
+private:
+    InferenceEngine::CNNLayer cnnLayer;
+};
+#endif
+
+
+class InfEngineNgraphExtension : public InferenceEngine::IExtension
+{
+public:
+    void Unload() noexcept override {}
+    void Release() noexcept override { delete this; }
+    void GetVersion(const InferenceEngine::Version*&) const noexcept override {}
+
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2)
+    std::vector<std::string> getImplTypes(const std::shared_ptr<ngraph::Node>& node) override {
+        return {"CPU"};
+    }
+
+    InferenceEngine::ILayerImpl::Ptr getImplementation(const std::shared_ptr<ngraph::Node>& node, const std::string& implType) override {
+        if (std::dynamic_pointer_cast<NgraphCustomOp>(node) && implType == "CPU") {
+            return std::make_shared<InfEngineNgraphCustomLayer>(node);
+        }
+        return nullptr;
+    }
+#else
+    virtual void SetLogCallback(InferenceEngine::IErrorListener&) noexcept {}
+
+    virtual InferenceEngine::StatusCode getPrimitiveTypes(char**&, unsigned int&,
+                                                          InferenceEngine::ResponseDesc*) noexcept
+    {
+        return InferenceEngine::StatusCode::OK;
+    }
+
+    InferenceEngine::StatusCode getFactoryFor(InferenceEngine::ILayerImplFactory*& factory,
+                                              const InferenceEngine::CNNLayer* cnnLayer,
+                                              InferenceEngine::ResponseDesc* resp) noexcept
+    {
+        if (cnnLayer->type != kOpenCVLayersType)
+            return InferenceEngine::StatusCode::NOT_IMPLEMENTED;
+        factory = new InfEngineNgraphCustomLayerFactory(cnnLayer);
+        return InferenceEngine::StatusCode::OK;
+    }
+#endif
+};
+
+#endif // OpenVINO >= 2022.1
+
 InfEngineNgraphNode::InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(std::move(_node)) {}
 
@@ -153,7 +406,7 @@ InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& n
 #else
     std::ostringstream oss;
     oss << (size_t)cvLayer.get();
-    std::map<std::string, std::string> params = {
+    std::map<std::string, InferenceEngine::Parameter> params = {
         {"impl", oss.str()},
         {"outputs", shapesToStr(outputs)},
         {"internals", shapesToStr(internals)}
@@ -592,6 +845,7 @@ bool NgraphBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
                                             std::vector<MatShape> &outputs,
                                             std::vector<MatShape> &internals) const
 {
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
     auto ngraph_function = t_net.getFunction();
     bool equal_flag = true;
     std::map<ov::Output<ov::Node>, ov::PartialShape> inShapes;
@@ -615,15 +869,32 @@ bool NgraphBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
         InferenceEngine::CNNNetwork curr_t_net(t_net);
         curr_t_net.reshape(inShapes);
     }
-    for (const auto& it : ngraph_function->outputs()) {
-        if (it.get_node()->get_friendly_name() == name) {
-            auto dims = it.get_shape();
-            outputs.push_back(MatShape(dims.begin(), dims.end()));
-            return false;
+    std::vector<size_t> dims = t_net.getOutputsInfo()[name];
+    outputs.push_back(MatShape(dims.begin(), dims.end()));
+#else
+    InferenceEngine::ICNNNetwork::InputShapes inShapes = t_net.getInputShapes();
+    InferenceEngine::ICNNNetwork::InputShapes::iterator itr;
+    bool equal_flag = true;
+    size_t i = 0;
+    for (itr = inShapes.begin(); itr != inShapes.end(); ++itr)
+    {
+        InferenceEngine::SizeVector currentInShape(inputs[i].begin(), inputs[i].end());
+        if (itr->second != currentInShape)
+        {
+            itr->second = currentInShape;
+            equal_flag = false;
         }
+        i++;
     }
-    if (outputs.empty())
-        CV_Error(Error::StsError, "Cannot find output with name " + name);
+
+    if (!equal_flag)
+    {
+        InferenceEngine::CNNNetwork curr_t_net(t_net);
+        curr_t_net.reshape(inShapes);
+    }
+    std::vector<size_t> dims = t_net.getOutputsInfo()[name]->getDims();
+    outputs.push_back(MatShape(dims.begin(), dims.end()));
+#endif // OpenVINO >= 2022.1
     return false;
 }
 
@@ -642,7 +913,7 @@ void NgraphBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays 
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
 
-ov::Tensor wrapToTensor(const Mat& m) {
+ov::Tensor wrapToNgraphBlob(const Mat& m) {
     std::vector<size_t> shape = getShape<size_t>(m);
     if (m.type() == CV_32F)
         return ov::Tensor(ov::element::f32, shape, m.data);
@@ -681,18 +952,18 @@ InferenceEngine::Layout estimateLayout(const Mat& m)
     return estimateLayout(m.dims);
 }
 
-static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std::string& name = "")
-{
-    std::vector<size_t> shape = getShape<size_t>(m);
-    if (m.type() == CV_32F)
-        return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
-               {InferenceEngine::Precision::FP32, shape, estimateLayout(m)}));
-    else if (m.type() == CV_8U)
-        return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
-               {InferenceEngine::Precision::U8, shape, estimateLayout(m)}));
-    else
-        CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
-}
+// static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std::string& name = "")
+// {
+//     std::vector<size_t> shape = getShape<size_t>(m);
+//     if (m.type() == CV_32F)
+//         return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
+//                {InferenceEngine::Precision::FP32, shape, estimateLayout(m)}));
+//     else if (m.type() == CV_8U)
+//         return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
+//                {InferenceEngine::Precision::U8, shape, estimateLayout(m)}));
+//     else
+//         CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
+// }
 
 InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m, const std::vector<size_t>& shape,
                                                InferenceEngine::Layout layout)
@@ -713,13 +984,15 @@ InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m, InferenceEngine::Layou
     return wrapToNgraphBlob(m, shape, layout);
 }
 
+InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m) { return wrapToNgraphBlob(m, estimateLayout(m)); }
+
 #endif // OpenVINO >= 2022.1
 
 NgraphBackendWrapper::NgraphBackendWrapper(int targetId, const cv::Mat& m)
     : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, targetId)
     , host((Mat*)&m)
 {
-    blob = wrapToTensor(m);
+    blob = wrapToNgraphBlob(m);
 }
 
 NgraphBackendWrapper::NgraphBackendWrapper(Ptr<BackendWrapper> wrapper)
@@ -777,74 +1050,74 @@ InferenceEngine::Blob::Ptr copyBlob(const InferenceEngine::Blob::Ptr& blob)
     return copy;
 }
 
-InferenceEngine::DataPtr ngraphDataNode(const Ptr<BackendWrapper>& ptr)
-{
-    CV_Assert(!ptr.empty());
-    Ptr<NgraphBackendWrapper> p = ptr.dynamicCast<NgraphBackendWrapper>();
-    CV_Assert(!p.empty());
-    return p->dataPtr;
-}
+// InferenceEngine::DataPtr ngraphDataNode(const Ptr<BackendWrapper>& ptr)
+// {
+//     CV_Assert(!ptr.empty());
+//     Ptr<NgraphBackendWrapper> p = ptr.dynamicCast<NgraphBackendWrapper>();
+//     CV_Assert(!p.empty());
+//     return p->dataPtr;
+// }
 
-static
-InferenceEngine::Blob::Ptr reallocateBlob(Mat &m, const InferenceEngine::TensorDesc& description)
-{
-    auto dims = description.getDims();
-    auto layout = estimateLayout(dims.size());
-    MatShape matShape(dims.begin(), dims.end());
-    if (description.getPrecision() == InferenceEngine::Precision::FP32)
-    {
-        m.create(matShape, CV_32FC1);
-        return InferenceEngine::make_shared_blob<float>(
-                {description.getPrecision(), dims, layout}, (float*)m.data);
-    }
-    else if (description.getPrecision() == InferenceEngine::Precision::I32)
-    {
-        m.create(matShape, CV_32SC1);
-        return InferenceEngine::make_shared_blob<int>(
-                {description.getPrecision(), dims, layout}, (int*)m.data);
-    }
-    else if (description.getPrecision() == InferenceEngine::Precision::U8)
-    {
-        m.create(matShape, CV_8UC1);
-        return InferenceEngine::make_shared_blob<uchar>(
-                {description.getPrecision(), dims, layout}, (uchar*)m.data);
-    }
-    std::ostringstream msg;
-    msg << "Unsupported IE precision: " << description.getPrecision();
-    CV_Error(Error::StsNotImplemented, msg.str());
-}
+// static
+// InferenceEngine::Blob::Ptr reallocateBlob(Mat &m, const InferenceEngine::TensorDesc& description)
+// {
+//     auto dims = description.getDims();
+//     auto layout = estimateLayout(dims.size());
+//     MatShape matShape(dims.begin(), dims.end());
+//     if (description.getPrecision() == InferenceEngine::Precision::FP32)
+//     {
+//         m.create(matShape, CV_32FC1);
+//         return InferenceEngine::make_shared_blob<float>(
+//                 {description.getPrecision(), dims, layout}, (float*)m.data);
+//     }
+//     else if (description.getPrecision() == InferenceEngine::Precision::I32)
+//     {
+//         m.create(matShape, CV_32SC1);
+//         return InferenceEngine::make_shared_blob<int>(
+//                 {description.getPrecision(), dims, layout}, (int*)m.data);
+//     }
+//     else if (description.getPrecision() == InferenceEngine::Precision::U8)
+//     {
+//         m.create(matShape, CV_8UC1);
+//         return InferenceEngine::make_shared_blob<uchar>(
+//                 {description.getPrecision(), dims, layout}, (uchar*)m.data);
+//     }
+//     std::ostringstream msg;
+//     msg << "Unsupported IE precision: " << description.getPrecision();
+//     CV_Error(Error::StsNotImplemented, msg.str());
+// }
 
-InferenceEngine::DataPtr ngraphDataOutputNode(
-        const Ptr<BackendWrapper>& ptr,
-        const InferenceEngine::TensorDesc& description,
-        const std::string name)
-{
-    CV_Assert(!ptr.empty());
-    Ptr<NgraphBackendWrapper> p = ptr.dynamicCast<NgraphBackendWrapper>();
-    CV_Assert(!p.empty());
-    NgraphBackendWrapper& w = *p;
-    const InferenceEngine::TensorDesc& blobDesc = w.blob.get()->getTensorDesc();
-    auto dims = description.getDims();
-    bool reallocate = false;
-    if (blobDesc.getPrecision() != description.getPrecision())
-    {
-        reallocate = true;
-        CV_LOG_WARNING(NULL, "Reallocate output '" << name << "' blob due to wrong precision: " << blobDesc.getPrecision() << " => " << description.getPrecision() << "  ndims=" << dims.size());
-    }
-    if (dims.size() != blobDesc.getDims().size())
-    {
-        reallocate = true;
-        CV_LOG_WARNING(NULL, "Reallocate output '" << name << "' blob due to wrong dims: " << blobDesc.getDims().size() << " => " << dims.size());
-    }
-    if (reallocate)
-    {
-        auto layout = estimateLayout(dims.size());
-        w.dataPtr = InferenceEngine::DataPtr(new InferenceEngine::Data(name,
-               {description.getPrecision(), dims, layout}));
-        w.blob = reallocateBlob(*w.host, description);
-    }
-    return w.dataPtr;
-}
+// InferenceEngine::DataPtr ngraphDataOutputNode(
+//         const Ptr<BackendWrapper>& ptr,
+//         const InferenceEngine::TensorDesc& description,
+//         const std::string name)
+// {
+//     CV_Assert(!ptr.empty());
+//     Ptr<NgraphBackendWrapper> p = ptr.dynamicCast<NgraphBackendWrapper>();
+//     CV_Assert(!p.empty());
+//     NgraphBackendWrapper& w = *p;
+//     const InferenceEngine::TensorDesc& blobDesc = w.blob.get()->getTensorDesc();
+//     auto dims = description.getDims();
+//     bool reallocate = false;
+//     if (blobDesc.getPrecision() != description.getPrecision())
+//     {
+//         reallocate = true;
+//         CV_LOG_WARNING(NULL, "Reallocate output '" << name << "' blob due to wrong precision: " << blobDesc.getPrecision() << " => " << description.getPrecision() << "  ndims=" << dims.size());
+//     }
+//     if (dims.size() != blobDesc.getDims().size())
+//     {
+//         reallocate = true;
+//         CV_LOG_WARNING(NULL, "Reallocate output '" << name << "' blob due to wrong dims: " << blobDesc.getDims().size() << " => " << dims.size());
+//     }
+//     if (reallocate)
+//     {
+//         auto layout = estimateLayout(dims.size());
+//         w.dataPtr = InferenceEngine::DataPtr(new InferenceEngine::Data(name,
+//                {description.getPrecision(), dims, layout}));
+//         w.blob = reallocateBlob(*w.host, description);
+//     }
+//     return w.dataPtr;
+// }
 #endif // OpenVINO < 2022.1
 
 void InfEngineNgraphNet::reset()

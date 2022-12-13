@@ -58,6 +58,20 @@ void CNNNetwork::reshape(const std::map<ov::Output<ov::Node>, ov::PartialShape>&
     model->reshape(shapes);
 }
 
+std::map<std::string, std::vector<size_t> > CNNNetwork::getOutputsInfo() const {
+    std::map<std::string, std::vector<size_t> > res;
+    for (const auto& it : model->outputs()) {
+        const std::string& name = it.get_any_name();
+        // nGraph models end with "Result" layers which have names such as "output/sink_port_0".
+        // Their inputs are actual model outputs and we set friendly name to them.
+        if (it.get_node()->get_friendly_name() != name)
+            it.get_node()->set_friendly_name(name);
+
+        res.insert({name, it.get_shape()});
+    }
+    return res;
+}
+
 std::vector<std::string> Core::GetAvailableDevices() {
     return get_available_devices();
 }

@@ -686,10 +686,17 @@ Net NetImplOpenVINO::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork
 
     std::vector<String> inputsNames;
     std::vector<MatShape> inp_shapes;
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
     for (auto& it : ngraphFunction->inputs())
     {
         inputsNames.push_back(it.get_node()->get_friendly_name());
         std::vector<size_t> dims = it.get_shape();
+#else
+    for (auto& it : ieNet.getInputsInfo())
+    {
+        inputsNames.push_back(it.first);
+        std::vector<size_t> dims = it.second->getTensorDesc().getDims();
+#endif
         inp_shapes.push_back(std::vector<int>(dims.begin(), dims.end()));
     }
 
@@ -720,16 +727,13 @@ Net NetImplOpenVINO::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork
 
     std::vector<std::shared_ptr<ngraph::Node>> ngraphOperations = ngraphFunction->get_ops();
 
-    for (auto& it : ngraphFunction->outputs())
+    for (auto& it : ieNet.getOutputsInfo())
     {
         CV_TRACE_REGION("output");
-        // nGraph models end with "Result" layers which have names such as "output/sink_port_0".
-        // Their inputs are actual model outputs and we set friendly name to them.
-        it.get_node()->set_friendly_name(it.get_any_name());
-        const auto outputName = it.get_node()->get_friendly_name();
+        const auto& outputName = it.first;
 
         LayerParams lp;
-        int lid = cvNet.addLayer(outputName, "", lp);
+        int lid = cvNet.addLayer(it.first, "", lp);
 
         LayerData& ld = openvino_impl.layers[lid];
 
