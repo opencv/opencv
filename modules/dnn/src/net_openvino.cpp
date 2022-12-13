@@ -312,24 +312,6 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                     ld.inputBlobsWrappers[i].dynamicCast<NgraphBackendWrapper>()->name = netInputLayer->outNames[i];
                 }
             }
-            else
-            {
-                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
-                {
-                    // auto it = ienet.outputsDesc.find(ld.name);
-                    // if (it != ienet.outputsDesc.end())
-                    // {
-                    //     // const InferenceEngine::TensorDesc& descriptor = it->second;
-                    //     // InferenceEngine::DataPtr dataPtr = ngraphDataOutputNode(ld.outputBlobsWrappers[i], descriptor, ld.name);
-                    //     // dataPtr->setName(ld.name);
-                    // }
-                    // else
-                    // {
-                    //     // InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
-                    //     // dataPtr->setName(ld.name);
-                    // }
-                }
-            }
             ienet.addBlobs(ld.inputBlobsWrappers);
             ienet.addBlobs(ld.outputBlobsWrappers);
             ld.skip = true;

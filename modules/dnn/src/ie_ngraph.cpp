@@ -35,33 +35,35 @@ static bool DNN_IE_SERIALIZE = utils::getConfigurationParameterBool("OPENCV_DNN_
 static std::string kDefaultInpLayerName = "opencv_ngraph_empty_inp_layer_name";
 static constexpr const char* kOpenCVLayersType = "opencv_ngraph_layer";
 
-// static std::string shapesToStr(const std::vector<Mat>& mats)
-// {
-//     std::ostringstream shapes;
-//     shapes << mats.size() << " ";
-//     for (const Mat& m : mats)
-//     {
-//         shapes << m.dims << " ";
-//         for (int i = 0; i < m.dims; ++i)
-//             shapes << m.size[i] << " ";
-//     }
-//     return shapes.str();
-// }
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2022_1)
+static std::string shapesToStr(const std::vector<Mat>& mats)
+{
+    std::ostringstream shapes;
+    shapes << mats.size() << " ";
+    for (const Mat& m : mats)
+    {
+        shapes << m.dims << " ";
+        for (int i = 0; i < m.dims; ++i)
+            shapes << m.size[i] << " ";
+    }
+    return shapes.str();
+}
 
-// static void strToShapes(const std::string& str, std::vector<std::vector<size_t> >& shapes)
-// {
-//     std::istringstream ss(str);
-//     int num, dims;
-//     ss >> num;
-//     shapes.resize(num);
-//     for (int i = 0; i < num; ++i)
-//     {
-//         ss >> dims;
-//         shapes[i].resize(dims);
-//         for (int j = 0; j < dims; ++j)
-//             ss >> shapes[i][j];
-//     }
-// }
+static void strToShapes(const std::string& str, std::vector<std::vector<size_t> >& shapes)
+{
+    std::istringstream ss(str);
+    int num, dims;
+    ss >> num;
+    shapes.resize(num);
+    for (int i = 0; i < num; ++i)
+    {
+        ss >> dims;
+        shapes[i].resize(dims);
+        for (int j = 0; j < dims; ++j)
+            ss >> shapes[i][j];
+    }
+}
+#endif // OpenVINO < 2022.1
 
 static std::vector<Ptr<NgraphBackendWrapper> >
 ngraphWrappers(const std::vector<Ptr<BackendWrapper> >& ptrs)
@@ -138,14 +140,6 @@ InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& n
                                          std::vector<Mat>& outputs, std::vector<Mat>& internals)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), cvLayer(cvLayer_)
 {
-    // std::ostringstream oss;
-    // oss << (size_t)cvLayer.get();
-    // std::map<std::string, std::string> params = {
-    //     {"impl", oss.str()},
-    //     {"outputs", shapesToStr(outputs)},
-    //     {"internals", shapesToStr(internals)}
-    // };
-
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_3)
     ngraph::OutputVector inp_nodes;
 #else
@@ -153,14 +147,25 @@ InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& n
 #endif
     for (const auto& node : nodes)
         inp_nodes.emplace_back(node.dynamicCast<InfEngineNgraphNode>()->node);
+
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
     node = std::make_shared<NgraphCustomOp>(inp_nodes, cvLayer, outputs, internals);
+#else
+    std::ostringstream oss;
+    oss << (size_t)cvLayer.get();
+    std::map<std::string, std::string> params = {
+        {"impl", oss.str()},
+        {"outputs", shapesToStr(outputs)},
+        {"internals", shapesToStr(internals)}
+    };
+    node = std::make_shared<NgraphCustomOp>(inp_nodes, params);
+#endif
 
     CV_Assert(!cvLayer->name.empty());
     setName(cvLayer->name);
 }
 
 void InfEngineNgraphNode::setName(const std::string& name) {
-    // std::cout << "setName " << name << std::endl;
     node->set_friendly_name(name);
 }
 
@@ -395,21 +400,40 @@ void InfEngineNgraphNet::init(Target targetId)
             }
         }
     }
-    // for (const auto& it : cnn.getInputsInfo())
-    // {
-    //     const std::string& name = it.first;
-    //     auto blobIt = allBlobs.find(name);
-    //     CV_Assert(blobIt != allBlobs.end());
-    //     it.second->setPrecision(blobIt->second->getTensorDesc().getPrecision());
-    // }
 
-    // for (const auto& it : cnn.getOutputsInfo())
-    // {
-    //     const std::string& name = it.first;
-    //     auto blobIt = allBlobs.find(name);
-    //     CV_Assert(blobIt != allBlobs.end());
-    //     it.second->setPrecision(blobIt->second->getTensorDesc().getPrecision());  // Should be always FP32
-    // }
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+    auto model = cnn.getFunction();
+    ov::preprocess::PrePostProcessor ppp(model);
+    for (const auto& inp : model->inputs()) {  // TODO: not sure why but ngraph_function->inputs() here causes segfault.
+        const std::string& name = inp.get_node()->get_friendly_name();
+        auto blobIt = allBlobs.find(name);
+        CV_Assert(blobIt != allBlobs.end());
+
+        auto srcT = blobIt->second.get_element_type();
+        if (srcT != inp.get_node()->get_element_type()) {
+            ppp.input(name).tensor().set_element_type(srcT);
+        }
+    }
+    ppp.build();
+
+#else
+
+    for (const auto& it : cnn.getInputsInfo())
+    {
+        const std::string& name = it.first;
+        auto blobIt = allBlobs.find(name);
+        CV_Assert(blobIt != allBlobs.end());
+        it.second->setPrecision(blobIt->second->getTensorDesc().getPrecision());
+    }
+
+    for (const auto& it : cnn.getOutputsInfo())
+    {
+        const std::string& name = it.first;
+        auto blobIt = allBlobs.find(name);
+        CV_Assert(blobIt != allBlobs.end());
+        it.second->setPrecision(blobIt->second->getTensorDesc().getPrecision());  // Should be always FP32
+    }
+#endif // OpenVINO >= 2022.1
 
     initPlugin(cnn);
 }
@@ -828,13 +852,6 @@ void InfEngineNgraphNet::reset()
     allBlobs.clear();
     infRequests.clear();
     isInit = false;
-
-    // outputsDesc.clear();
-    // for (const auto& it : cnn.getOutputsInfo())
-    // {
-    //     const std::string& name = it.first;
-    //     outputsDesc.insert({name, it.second->getTensorDesc()});
-    // }
 }
 
 void InfEngineNgraphNet::addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs)
@@ -860,23 +877,6 @@ void InfEngineNgraphNet::NgraphReqWrapper::makePromises(const std::vector<Ptr<Ba
         outsNames[i] = outs[i]->name;
     }
 }
-
-// Mat ngraphBlobToMat(const InferenceEngine::Blob::Ptr& blob)
-// {
-//     std::vector<size_t> dims = blob->getTensorDesc().getDims();
-//     std::vector<int> size(dims.begin(), dims.end());
-//     auto precision = blob->getTensorDesc().getPrecision();
-
-//     int type = -1;
-//     switch (precision)
-//     {
-//         case InferenceEngine::Precision::FP32: type = CV_32F; break;
-//         case InferenceEngine::Precision::U8: type = CV_8U; break;
-//         default:
-//             CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
-//     }
-//     return Mat(size, type, (void*)blob->buffer());
-// }
 
 void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers, bool isAsync)
 {
@@ -906,53 +906,24 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
         infRequests.push_back(reqWrapper);
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
-// std::cout << 7 << std::endl;
-
-    // ov::Core core;
-    // auto model = core.read_model("ocv_dnn_net_00001_00_ngraph.xml");
-    // auto compiled = core.compile_model(model, "CPU");
-    // auto req = compiled.create_infer_request();
-    // std::vector<float> data(2*6*75*113, 0);
-    // ov::Tensor t(ov::element::f32, {2,6,75,113}, (void*)data.data());
-    // req.set_tensor("input", t);
-    // req.set_input_tensor(0, t);
-
-// std::cout << 7.5 << std::endl;
         std::vector<ov::Tensor> inputs, outputs;
         int i = 0;
         for (const auto& it : netExec.inputs())
         {
-//             std::cout <<  << std::endl;
-// std::cout << it.get_any_name() << std::endl;
             const std::string& name = it.get_node()->get_friendly_name();
             auto blobIt = allBlobs.find(name);
             CV_Assert(blobIt != allBlobs.end());
-
-            // std::cout << name << std::endl;
-            // reqWrapper->req.set_tensor(name, blobIt->second);            
-            // inpBlobs[name] = isAsync ? copyBlob(blobIt->second) : blobIt->second;
             reqWrapper->req.set_input_tensor(i++, blobIt->second);
         }
-// std::cout << 8 << std::endl;
 
-// std::cout << 5 << std::endl;
         i = 0;
         for (const auto& it : netExec.outputs())
         {
-            // for (const auto& it : allBlobs) {
-            //     std::cout << it.first << std::endl;
-            // }
-            // std::cout << std::endl;
-
             const std::string& name = it.get_node()->get_friendly_name();
-            // std::cout << name << std::endl;
-
             auto blobIt = allBlobs.find(name);
             CV_Assert(blobIt != allBlobs.end());
-            // outBlobs[name] = isAsync ? copyBlob(blobIt->second) : blobIt->second;
             reqWrapper->req.set_output_tensor(i++, blobIt->second);
         }
-// std::cout << 6 << std::endl;
 #else
         InferenceEngine::BlobMap inpBlobs, outBlobs;
         for (const auto& it : cnn.getInputsInfo())
@@ -1010,7 +981,7 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
 //                     for (; processedOutputs < wrapper.outProms.size(); ++processedOutputs)
 //                     {
 //                         const std::string& name = wrapper.outsNames[processedOutputs];
-//                         // Mat m = ngraphBlobToMat(wrapper.req.GetBlob(name));
+//                         // Mat m = infEngineBlobToMat(wrapper.req.GetBlob(name));
 //                         Mat m;
 
 //                         try
@@ -1052,8 +1023,8 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
         // {
         //     const std::string& name = it.first;
         //     auto blobIt = allBlobs.find(name);
-        //     Mat srcMat = ngraphBlobToMat(blobIt->second);
-        //     Mat dstMat = ngraphBlobToMat(reqWrapper->req.GetBlob(name));
+        //     Mat srcMat = infEngineBlobToMat(blobIt->second);
+        //     Mat dstMat = infEngineBlobToMat(reqWrapper->req.GetBlob(name));
         //     srcMat.copyTo(dstMat);
         // }
 
