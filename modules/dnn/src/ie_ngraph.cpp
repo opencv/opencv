@@ -573,35 +573,36 @@ bool NgraphBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
                                             std::vector<MatShape> &outputs,
                                             std::vector<MatShape> &internals) const
 {
-    // InferenceEngine::ICNNNetwork::InputShapes inShapes = t_net.getInputShapes();
-    // InferenceEngine::ICNNNetwork::InputShapes::iterator itr;
-    // bool equal_flag = true;
-    // size_t i = 0;
-    // for (itr = inShapes.begin(); itr != inShapes.end(); ++itr)
-    // {
-    //     InferenceEngine::SizeVector currentInShape(inputs[i].begin(), inputs[i].end());
-    //     if (itr->second != currentInShape)
-    //     {
-    //         itr->second = currentInShape;
-    //         equal_flag = false;
-    //     }
-    //     i++;
-    // }
+    auto ngraph_function = t_net.getFunction();
+    bool equal_flag = true;
+    std::map<ov::Output<ov::Node>, ov::PartialShape> inShapes;
+    for (const auto& inp : ngraph_function->inputs())
+    {
+        ov::PartialShape inShape;
+        inShape.insert(inShape.begin(), inputs[0].begin(), inputs[0].end());
+        if (inp.get_partial_shape() != inShape)
+        {
+            equal_flag = false;
+            inShapes.insert({inp, inShape});
+        }
+        else
+        {
+            inShapes.insert({inp, inp.get_partial_shape()});
+        }
+    }
 
-    // if (!equal_flag)
-    // {
-    //     InferenceEngine::CNNNetwork curr_t_net(t_net);
-    //     curr_t_net.reshape(inShapes);
-    // }
-    // std::cout << 3 << std::endl;
-    for (const auto& it : t_net.getFunction()->outputs()) {
+    if (!equal_flag)
+    {
+        InferenceEngine::CNNNetwork curr_t_net(t_net);
+        curr_t_net.reshape(inShapes);
+    }
+    for (const auto& it : ngraph_function->outputs()) {
         if (it.get_node()->get_friendly_name() == name) {
             auto dims = it.get_shape();
             outputs.push_back(MatShape(dims.begin(), dims.end()));
             return false;
         }
     }
-    // std::cout << 4 << std::endl;
     if (outputs.empty())
         CV_Error(Error::StsError, "Cannot find output with name " + name);
     return false;
@@ -716,7 +717,6 @@ NgraphBackendWrapper::NgraphBackendWrapper(Ptr<BackendWrapper> wrapper)
     Ptr<NgraphBackendWrapper> ieWrapper = wrapper.dynamicCast<NgraphBackendWrapper>();
     CV_Assert(!ieWrapper.empty());
     name = ieWrapper->name;
-    // std::cout << "NgraphBackendWrapper " << name << std::endl;
     blob = ieWrapper->blob;
 }
 
@@ -838,8 +838,8 @@ void NgraphBackendWrapper::setHostDirty()
 void InfEngineNgraphNet::reset()
 {
     allBlobs.clear();
-    // infRequests.clear();
-    // isInit = false;
+    infRequests.clear();
+    isInit = false;
 
     // outputsDesc.clear();
     // for (const auto& it : cnn.getOutputsInfo())

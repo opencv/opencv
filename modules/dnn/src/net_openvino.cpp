@@ -276,7 +276,7 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
             for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
             {
                 std::string outputName = netInputLayer->outNames.empty() ? ld.name : netInputLayer->outNames[i];
-                outputName = ld.outputBlobsWrappers.size() > 1 ? (outputName + "." + std::to_string(i)) : outputName;
+                outputName = i > 0 ? (outputName + "." + std::to_string(i)) : outputName;
                 ld.outputBlobsWrappers[i].dynamicCast<NgraphBackendWrapper>()->name = outputName;
             }
         }
@@ -284,7 +284,7 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         {
             for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
             {
-                std::string outputName = ld.outputBlobsWrappers.size() > 1 ? (ld.name + "." + std::to_string(i)) : ld.name;
+                std::string outputName = i > 0 ? (ld.name + "." + std::to_string(i)) : ld.name;
                 ld.outputBlobsWrappers[i].dynamicCast<NgraphBackendWrapper>()->name = outputName;
             }
         }
@@ -811,7 +811,6 @@ Net openvino_readNetwork(const String& modelPath, const String& binPath)
 
     InferenceEngine::Core& ie = getCore("");
     InferenceEngine::CNNNetwork ieNet;
-    // std::cout << modelPath << std::endl;
     try
     {
         ieNet = ie.ReadNetwork(modelPath, binPath);

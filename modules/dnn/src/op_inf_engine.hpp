@@ -114,6 +114,10 @@ public:
         ov::pass::Serialize(xmlPath, binPath).run_on_model(model);
     }
 
+    void reshape(const std::map<ov::Output<ov::Node>, ov::PartialShape>& shapes) {
+        model->reshape(shapes);
+    }
+
 private:
     std::shared_ptr<ov::Model> model = nullptr;
 };
