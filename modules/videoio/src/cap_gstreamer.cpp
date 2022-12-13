@@ -510,7 +510,11 @@ bool GStreamerCapture::grabFrame()
     if (gst_app_sink_is_eos(GST_APP_SINK(sink.get())))
         return false;
 
+#if FULL_GST_VERSION >= VERSION_NUM(1,10,0)
     sample.attach(gst_app_sink_try_pull_sample(GST_APP_SINK(sink.get()), readTimeout));
+#else
+    sample.attach(gst_app_sink_pull_sample(GST_APP_SINK(sink.get())));
+#endif
     if (!sample)
         return false;
 
@@ -681,7 +685,12 @@ bool GStreamerCapture::retrieveVideoFrame(int, OutputArray dst)
     // the data. The gst_video_frame_map will parse the meta for us, or default to
     // regular strides/offsets if no meta is present.
     GstVideoFrame frame = {};
+#if FULL_GST_VERSION >= VERSION_NUM(1,6,0)
     GstMapFlags flags = static_cast<GstMapFlags>(GST_MAP_READ | GST_VIDEO_FRAME_MAP_FLAG_NO_REF);
+#else
+    GstMapFlags flags = static_cast<GstMapFlags>(GST_MAP_READ);
+#endif
+
     if (!gst_video_frame_map(&frame, &info, buf, flags))
     {
         CV_LOG_ERROR(NULL, "GStreamer: Failed to map GStreamer buffer to system memory");
@@ -1574,7 +1583,11 @@ double GStreamerCapture::getProperty(int propId) const
     case CAP_PROP_OPEN_TIMEOUT_MSEC:
         return GST_TIME_AS_MSECONDS(openTimeout);
     case CAP_PROP_READ_TIMEOUT_MSEC:
+#if FULL_GST_VERSION >= VERSION_NUM(1,10,0)
         return GST_TIME_AS_MSECONDS(readTimeout);
+#else
+        return 0;
+#endif
     default:
         CV_WARN("unhandled property: " << propId);
         break;
@@ -1744,6 +1757,7 @@ bool GStreamerCapture::setProperty(int propId, double value)
     }
     case CAP_PROP_READ_TIMEOUT_MSEC:
     {
+#if FULL_GST_VERSION >= VERSION_NUM(1,10,0)
         if(value > 0)
         {
             readTimeout = GstClockTime(value * GST_MSECOND); // convert from ms to ns
@@ -1754,6 +1768,10 @@ bool GStreamerCapture::setProperty(int propId, double value)
             CV_WARN("GStreamer read timeout should be positive");
             return false;
         }
+#else
+        CV_WARN("GStreamer before 1.10 does not support read timeout");
+        return false;
+#endif
     }
     default:
         CV_WARN("GStreamer: unhandled property");
