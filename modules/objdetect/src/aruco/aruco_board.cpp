@@ -17,7 +17,7 @@ struct Board::BoardImpl {
     std::vector<int> ids;
 
     BoardImpl() {
-        dictionary = Dictionary(getPredefinedDictionary(PREDEFINED_DICTIONARY_NAME::DICT_4X4_50));
+        dictionary = Dictionary(getPredefinedDictionary(PREDEFINED_DICTIONARY::DICT_4X4_50));
     }
 };
 
@@ -65,7 +65,7 @@ const vector<vector<Point3f> >& Board::getObjPoints() const {
     return this->boardImpl->objPoints;
 }
 
-const Point3f& Board::getRightBottomBorder() const {
+const Point3f& Board::getRightBottomCorner() const {
     return this->boardImpl->rightBottomBorder;
 }
 
@@ -75,7 +75,7 @@ const vector<int>& Board::getIds() const {
 
 /** @brief Implementation of draw planar board that accepts a raw Board pointer.
  */
-void Board::draw(Size outSize, OutputArray img, int marginSize, int borderBits) const {
+void Board::generateImage(Size outSize, OutputArray img, int marginSize, int borderBits) const {
     CV_Assert(!outSize.empty());
     CV_Assert(marginSize >= 0);
 
@@ -135,7 +135,7 @@ void Board::draw(Size outSize, OutputArray img, int marginSize, int borderBits) 
         // get marker
         Size dst_sz(outCorners[2] - outCorners[0]); // assuming CCW order
         dst_sz.width = dst_sz.height = std::min(dst_sz.width, dst_sz.height); //marker should be square
-        getDictionary().drawMarker(this->getIds()[m], dst_sz.width, marker, borderBits);
+        getDictionary().generateImageMarker(this->getIds()[m], dst_sz.width, marker, borderBits);
 
         if((outCorners[0].y == outCorners[1].y) && (outCorners[1].x == outCorners[2].x)) {
             // marker is aligned to image axes
@@ -241,8 +241,8 @@ Ptr<GridBoard> GridBoard::create(int markersX, int markersY, float markerLength,
     return GridBoard::create(markersX, markersY, markerLength, markerSeparation, dictionary, ids);
 }
 
-void GridBoard::draw(Size outSize, OutputArray _img, int marginSize, int borderBits) const {
-    Board::draw(outSize, _img, marginSize, borderBits);
+void GridBoard::generateImage(Size outSize, OutputArray _img, int marginSize, int borderBits) const {
+    Board::generateImage(outSize, _img, marginSize, borderBits);
 }
 
 Size GridBoard::getGridSize() const {
@@ -276,7 +276,7 @@ struct CharucoBoard::CharucoImpl : GridBoard::GridImpl {
 
 CharucoBoard::CharucoBoard(): charucoImpl(makePtr<CharucoImpl>()) {}
 
-void CharucoBoard::draw(Size outSize, OutputArray _img, int marginSize, int borderBits) const {
+void CharucoBoard::generateImage(Size outSize, OutputArray _img, int marginSize, int borderBits) const {
     CV_Assert(!outSize.empty());
     CV_Assert(marginSize >= 0);
 
@@ -317,7 +317,7 @@ void CharucoBoard::draw(Size outSize, OutputArray _img, int marginSize, int bord
 
     // draw markers
     Mat markersImg;
-    Board::draw(chessboardZoneImg.size(), markersImg, diffSquareMarkerLengthPixels, borderBits);
+    Board::generateImage(chessboardZoneImg.size(), markersImg, diffSquareMarkerLengthPixels, borderBits);
     markersImg.copyTo(chessboardZoneImg);
 
     // now draw black squares
@@ -451,7 +451,7 @@ float CharucoBoard::getSquareLength() const { return charucoImpl->squareLength; 
 
 float CharucoBoard::getMarkerLength() const { return charucoImpl->markerLength; }
 
-bool CharucoBoard::testCharucoCornersCollinear(InputArray charucoIds) const {
+bool CharucoBoard::checkCharucoCornersCollinear(InputArray charucoIds) const {
     unsigned int nCharucoCorners = (unsigned int)charucoIds.getMat().total();
     if (nCharucoCorners <= 2)
         return true;

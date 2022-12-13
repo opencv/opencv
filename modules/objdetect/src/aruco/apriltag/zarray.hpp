@@ -14,8 +14,6 @@
 #ifndef _OPENCV_ZARRAY_HPP_
 #define _OPENCV_ZARRAY_HPP_
 
-#include <stdlib.h>
-#include <string.h>
 
 namespace cv {
 namespace aruco {

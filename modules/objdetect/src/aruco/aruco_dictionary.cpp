@@ -133,7 +133,7 @@ int Dictionary::getDistanceToId(InputArray bits, int id, bool allRotations) cons
 }
 
 
-void Dictionary::drawMarker(int id, int sidePixels, OutputArray _img, int borderBits) const {
+void Dictionary::generateImageMarker(int id, int sidePixels, OutputArray _img, int borderBits) const {
     CV_Assert(sidePixels >= (markerSize + 2*borderBits));
     CV_Assert(id < bytesList.rows);
     CV_Assert(borderBits > 0);
@@ -227,7 +227,7 @@ Mat Dictionary::getBitsFromByteList(const Mat &byteList, int markerSize) {
 }
 
 
-Dictionary getPredefinedDictionary(PREDEFINED_DICTIONARY_NAME name) {
+Dictionary getPredefinedDictionary(PREDEFINED_DICTIONARY name) {
     // DictionaryData constructors calls
     //    moved out of globals so construted on first use, which allows lazy-loading of opencv dll
     static const Dictionary DICT_ARUCO_DATA = Dictionary(Mat(1024, (5 * 5 + 7) / 8, CV_8UC4, (uchar*)DICT_ARUCO_BYTES), 5, 0);
@@ -313,7 +313,7 @@ Dictionary getPredefinedDictionary(PREDEFINED_DICTIONARY_NAME name) {
 
 
 Dictionary getPredefinedDictionary(int dict) {
-    return getPredefinedDictionary(PREDEFINED_DICTIONARY_NAME(dict));
+    return getPredefinedDictionary(PREDEFINED_DICTIONARY(dict));
 }
 
 

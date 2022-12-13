@@ -13,29 +13,29 @@ import org.opencv.objdetect.*;
 
 public class ArucoTest extends OpenCVTestCase {
 
-    public void testDrawBoards() {
-            Dictionary dictionary = Objdetect.getPredefinedDictionary(Objdetect.DICT_4X4_50);
+    public void testGenerateBoards() {
+        Dictionary dictionary = Objdetect.getPredefinedDictionary(Objdetect.DICT_4X4_50);
 
-            Mat point1 = new Mat(4, 3, CvType.CV_32FC1);
-            int row = 0, col = 0;
-            double squareLength = 40.;
-            point1.put(row, col, 0, 0, 0,
-                                 0, squareLength, 0,
-                                 squareLength, squareLength, 0,
-                                 0, squareLength, 0);
-            List<Mat>objPoints = new ArrayList<Mat>();
-            objPoints.add(point1);
+        Mat point1 = new Mat(4, 3, CvType.CV_32FC1);
+        int row = 0, col = 0;
+        double squareLength = 40.;
+        point1.put(row, col, 0, 0, 0,
+                   0, squareLength, 0,
+                   squareLength, squareLength, 0,
+                   0, squareLength, 0);
+        List<Mat>objPoints = new ArrayList<Mat>();
+        objPoints.add(point1);
 
-            Mat ids = new Mat(1, 1, CvType.CV_32SC1);
-            ids.put(row, col, 0);
+        Mat ids = new Mat(1, 1, CvType.CV_32SC1);
+        ids.put(row, col, 0);
 
-            Board board = Board.create(objPoints, dictionary, ids);
+        Board board = Board.create(objPoints, dictionary, ids);
 
-            Mat image = new Mat();
-            board.draw(new Size(80, 80), image, 2);
+        Mat image = new Mat();
+        board.generateImage(new Size(80, 80), image, 2);
 
-            assertTrue(image.total() > 0);
-        }
+        assertTrue(image.total() > 0);
+    }
 
     public void testArucoIssue3133() {
         byte[][] marker = {{0,1,1},{1,1,1},{0,1,1}};
@@ -62,7 +62,7 @@ public class ArucoTest extends OpenCVTestCase {
 
         Mat markerImage = new Mat();
         int id = 1, offset = 5, size = 40;
-        Objdetect.drawMarker(dictionary, id, size, markerImage, detectorParameters.get_markerBorderBits());
+        Objdetect.generateImageMarker(dictionary, id, size, markerImage, detectorParameters.get_markerBorderBits());
 
         Mat image = new Mat(markerImage.rows() + 2*offset, markerImage.cols() + 2*offset,
                             CvType.CV_8UC1, new Scalar(255));

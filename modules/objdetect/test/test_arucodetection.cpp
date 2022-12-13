@@ -40,7 +40,7 @@ void CV_ArucoDetectionSimple::run(int) {
             for(int x = 0; x < 2; x++) {
                 Mat marker;
                 int id = i * 4 + y * 2 + x;
-                aruco::drawMarker(detector.getDictionary(), id, markerSidePixels, marker);
+                aruco::generateImageMarker(detector.getDictionary(), id, markerSidePixels, marker);
                 Point2f firstCorner =
                     Point2f(markerSidePixels / 2.f + x * (1.5f * markerSidePixels),
                             markerSidePixels / 2.f + y * (1.5f * markerSidePixels));
@@ -153,7 +153,7 @@ static Mat projectMarker(const aruco::Dictionary &dictionary, int id, Mat camera
     Mat marker, markerImg;
     const int markerSizePixels = 100;
 
-    aruco::drawMarker(dictionary, id, markerSizePixels, marker, markerBorder);
+    aruco::generateImageMarker(dictionary, id, markerSizePixels, marker, markerBorder);
     marker.copyTo(markerImg);
 
     if(encloseMarker){ //to enclose the marker
@@ -338,7 +338,7 @@ void CV_ArucoDetectionMarkerSize::run(int) {
 
         // create synthetic image
         Mat img = Mat(imageSize, imageSize, CV_8UC1, Scalar::all(255));
-        aruco::drawMarker(detector.getDictionary(), id, markerSide, marker);
+        aruco::generateImageMarker(detector.getDictionary(), id, markerSide, marker);
         Mat aux = img.colRange(30, 30 + markerSide).rowRange(50, 50 + markerSide);
         marker.copyTo(aux);
 
@@ -443,7 +443,7 @@ void CV_ArucoBitCorrection::run(int) {
             Mat currentCodeBytesError = aruco::Dictionary::getByteListFromBits(currentCodeBits);
             currentCodeBytesError.copyTo(dictionary2.bytesList.rowRange(id, id + 1));
             Mat img = Mat(imageSize, imageSize, CV_8UC1, Scalar::all(255));
-            dictionary2.drawMarker(id, markerSide, marker);
+            dictionary2.generateImageMarker(id, markerSide, marker);
             Mat aux = img.colRange(30, 30 + markerSide).rowRange(50, 50 + markerSide);
             marker.copyTo(aux);
 
@@ -484,7 +484,7 @@ void CV_ArucoBitCorrection::run(int) {
             Mat currentCodeBytesError = aruco::Dictionary::getByteListFromBits(currentCodeBits);
             currentCodeBytesError.copyTo(dictionary2.bytesList.rowRange(id, id + 1));
             Mat img = Mat(imageSize, imageSize, CV_8UC1, Scalar::all(255));
-            dictionary2.drawMarker(id, markerSide, marker);
+            dictionary2.generateImageMarker(id, markerSide, marker);
             Mat aux = img.colRange(30, 30 + markerSide).rowRange(50, 50 + markerSide);
             marker.copyTo(aux);
 
@@ -646,7 +646,7 @@ TEST_P(ArucoThreading, number_of_threads_does_not_change_results)
 
     // Create a test image
     Mat img_marker;
-    aruco::drawMarker(detector.getDictionary(), 23, height_marker, img_marker, 1);
+    aruco::generateImageMarker(detector.getDictionary(), 23, height_marker, img_marker, 1);
 
     // Copy to bigger image to get a white border
     Mat img(height_img, height_img, CV_8UC1, Scalar(255));

@@ -181,7 +181,7 @@ int main(int argc, char** argv)
                 else {
 #ifdef HAVE_OPENCV_ARUCO
                     cv::aruco::Dictionary dictionary =
-                            cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(capParams.charucoDictName));
+                            cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY(capParams.charucoDictName));
                     cv::Ptr<cv::aruco::CharucoBoard> charucoboard =
                                 cv::aruco::CharucoBoard::create(capParams.boardSize.width, capParams.boardSize.height,
                                                                 capParams.charucoSquareLength, capParams.charucoMarkerSize, dictionary);

@@ -375,7 +375,7 @@ protected:
 CV_EXPORTS_W void drawDetectedMarkers(InputOutputArray image, InputArrayOfArrays corners,
                                       InputArray ids = noArray(), Scalar borderColor = Scalar(0, 255, 0));
 
-/** @brief Draw a canonical marker image
+/** @brief Generate a canonical marker image
  *
  * @param dictionary dictionary of markers indicating the type of markers
  * @param id identifier of the marker that will be returned. It has to be a valid id in the specified dictionary.
@@ -385,8 +385,8 @@ CV_EXPORTS_W void drawDetectedMarkers(InputOutputArray image, InputArrayOfArrays
  *
  * This function returns a marker image in its canonical form (i.e. ready to be printed)
  */
-CV_EXPORTS_W void drawMarker(const Dictionary &dictionary, int id, int sidePixels, OutputArray img,
-                             int borderBits = 1);
+CV_EXPORTS_W void generateImageMarker(const Dictionary &dictionary, int id, int sidePixels, OutputArray img,
+                                      int borderBits = 1);
 
 //! @}
 

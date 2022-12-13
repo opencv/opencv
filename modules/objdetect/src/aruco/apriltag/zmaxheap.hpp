@@ -14,10 +14,6 @@
 #ifndef _OPENCV_ZMAXHEAP_HPP_
 #define _OPENCV_ZMAXHEAP_HPP_
 
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-
 namespace cv {
 namespace aruco {
 typedef struct zmaxheap zmaxheap_t;

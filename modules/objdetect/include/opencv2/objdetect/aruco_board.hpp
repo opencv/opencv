@@ -36,7 +36,7 @@ public:
      *
      * This function return the image of the GridBoard, ready to be printed.
      */
-    CV_WRAP virtual void draw(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const;
+    CV_WRAP virtual void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const;
 
     /** @brief Provide way to create Board by passing necessary data. Specially needed in Python.
      *
@@ -69,7 +69,7 @@ public:
 
     /** @brief get coordinate of the bottom right corner of the board, is set when calling the function create()
      */
-    CV_WRAP const Point3f& getRightBottomBorder() const;
+    CV_WRAP const Point3f& getRightBottomCorner() const;
 
     /** @brief Given a board configuration and a set of detected markers, returns the corresponding
      * image points and object points to call solvePnP
@@ -90,7 +90,7 @@ protected:
 /** @brief Planar board with grid arrangement of markers
  *
  * More common type of board. All markers are placed in the same plane in a grid arrangement.
- * The board can be drawn using draw() method.
+ * The board image can be drawn using generateImage() method.
  */
 class CV_EXPORTS_W GridBoard : public Board {
 protected:
@@ -106,7 +106,7 @@ public:
      *
      * This function return the image of the GridBoard, ready to be printed.
      */
-    CV_WRAP void draw(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const CV_OVERRIDE;
+    CV_WRAP void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const CV_OVERRIDE;
 
     /**
      * @brief Create a GridBoard object
@@ -154,7 +154,7 @@ protected:
  * @brief ChArUco board is a planar chessboard where the markers are placed inside the white squares of a chessboard.
  *
  * The benefits of ChArUco boards is that they provide both, ArUco markers versatility and chessboard corner precision,
- * which is important for calibration and pose estimation. The board can be drawn using draw() method.
+ * which is important for calibration and pose estimation. The board image can be drawn using generateImage() method.
  */
 class CV_EXPORTS_W CharucoBoard : public Board {
 protected:
@@ -171,7 +171,7 @@ public:
      *
      * This function return the image of the ChArUco board, ready to be printed.
      */
-    CV_WRAP void draw(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const CV_OVERRIDE;
+    CV_WRAP void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const CV_OVERRIDE;
 
 
     /** @brief Create a CharucoBoard object
@@ -207,7 +207,7 @@ public:
      */
     CV_PROP std::vector<std::vector<int> > getNearestMarkerCorners() const;
 
-    /** @brief test whether the ChArUco markers are collinear
+    /** @brief check whether the ChArUco markers are collinear
      *
      * @param charucoIds list of identifiers for each corner in charucoCorners per frame.
      * @return bool value, 1 (true) if detected corners form a line, 0 (false) if they do not.
@@ -218,7 +218,7 @@ public:
      * Axis parallel, as well as diagonal and other straight lines detected.  Degenerate cases:
      * for number of charucoIDs <= 2,the function returns true.
      */
-    CV_WRAP bool testCharucoCornersCollinear(InputArray charucoIds) const;
+    CV_WRAP bool checkCharucoCornersCollinear(InputArray charucoIds) const;
 
 protected:
     struct CharucoImpl;

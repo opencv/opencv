@@ -1357,8 +1357,8 @@ void drawDetectedMarkers(InputOutputArray _image, InputArrayOfArrays _corners,
     }
 }
 
-void drawMarker(const Dictionary &dictionary, int id, int sidePixels, OutputArray _img, int borderBits) {
-    dictionary.drawMarker(id, sidePixels, _img, borderBits);
+void generateImageMarker(const Dictionary &dictionary, int id, int sidePixels, OutputArray _img, int borderBits) {
+    dictionary.generateImageMarker(id, sidePixels, _img, borderBits);
 }
 
 }

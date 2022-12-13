@@ -69,9 +69,9 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
     CV_WRAP int getDistanceToId(InputArray bits, int id, bool allRotations = true) const;
 
 
-    /** @brief Draw a canonical marker image
+    /** @brief Generate a canonical marker image
      */
-    CV_WRAP void drawMarker(int id, int sidePixels, OutputArray _img, int borderBits = 1) const;
+    CV_WRAP void generateImageMarker(int id, int sidePixels, OutputArray _img, int borderBits = 1) const;
 
 
     /** @brief Transform matrix of bits to list of bytes in the 4 rotations
@@ -93,7 +93,7 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
  * - DICT_ARUCO_ORIGINAL: standard ArUco Library Markers. 1024 markers, 5x5 bits, 0 minimum
                           distance
  */
-enum PREDEFINED_DICTIONARY_NAME {
+enum PREDEFINED_DICTIONARY {
     DICT_4X4_50 = 0,        ///< 4x4 bits, minimum hamming distance between any two codes = 4, 50 codes
     DICT_4X4_100,           ///< 4x4 bits, minimum hamming distance between any two codes = 3, 100 codes
     DICT_4X4_250,           ///< 4x4 bits, minimum hamming distance between any two codes = 3, 250 codes
@@ -118,9 +118,9 @@ enum PREDEFINED_DICTIONARY_NAME {
 };
 
 
-/** @brief Returns one of the predefined dictionaries defined in PREDEFINED_DICTIONARY_NAME
+/** @brief Returns one of the predefined dictionaries defined in PREDEFINED_DICTIONARY
   */
-CV_EXPORTS Dictionary getPredefinedDictionary(PREDEFINED_DICTIONARY_NAME name);
+CV_EXPORTS Dictionary getPredefinedDictionary(PREDEFINED_DICTIONARY name);
 
 
 /** @brief Returns one of the predefined dictionaries referenced by DICT_*.

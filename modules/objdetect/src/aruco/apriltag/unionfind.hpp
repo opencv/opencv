@@ -14,8 +14,6 @@
 #ifndef _OPENCV_UNIONFIND_HPP_
 #define _OPENCV_UNIONFIND_HPP_
 
-#include <stdint.h>
-#include <stdlib.h>
 namespace cv {
 namespace aruco {
 

@@ -300,8 +300,7 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
     {
     case chAruco:
 #ifdef HAVE_OPENCV_ARUCO
-        mArucoDictionary = cv::aruco::getPredefinedDictionary(
-                    cv::aruco::PREDEFINED_DICTIONARY_NAME(capParams.charucoDictName));
+        mArucoDictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY(capParams.charucoDictName));
         mCharucoBoard = cv::aruco::CharucoBoard::create(mBoardSize.width, mBoardSize.height, capParams.charucoSquareLength,
                                                         capParams.charucoMarkerSize, mArucoDictionary);
 #endif
