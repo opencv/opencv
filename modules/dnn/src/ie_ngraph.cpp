@@ -1123,6 +1123,7 @@ std::cout << 7 << std::endl;
 
 std::cout << 7.5 << std::endl;
         std::vector<ov::Tensor> inputs, outputs;
+        int i = 0;
         for (const auto& it : netExec.inputs())
         {
 //             std::cout <<  << std::endl;
@@ -1132,15 +1133,14 @@ std::cout << 7.5 << std::endl;
             CV_Assert(blobIt != allBlobs.end());
 
             std::cout << name << std::endl;
-            inputs.push_back(blobIt->second);
             // reqWrapper->req.set_tensor(name, blobIt->second);            
             // inpBlobs[name] = isAsync ? copyBlob(blobIt->second) : blobIt->second;
+            reqWrapper->req.set_input_tensor(i++, blobIt->second);
         }
-        reqWrapper->req.set_input_tensors(inputs);
 std::cout << 8 << std::endl;
 
 std::cout << 5 << std::endl;
-        int i = 0;
+        i = 0;
         for (const auto& it : netExec.outputs())
         {
             for (const auto& it : allBlobs) {
