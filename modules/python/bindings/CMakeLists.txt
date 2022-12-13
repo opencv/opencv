@@ -2,7 +2,6 @@ set(MODULE_NAME "python_bindings_generator")
 set(OPENCV_MODULE_IS_PART_OF_WORLD FALSE)
 ocv_add_module(${MODULE_NAME} INTERNAL)
 
-set(OPENCV_PYTHON_STUB_FILE "${CMAKE_CURRENT_BINARY_DIR}/__init__.pyi" CACHE INTERNAL "")
 set(OPENCV_PYTHON_SIGNATURES_FILE "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_signatures.json" CACHE INTERNAL "")
 set(OPENCV_PYTHON_BINDINGS_DIR "${CMAKE_CURRENT_BINARY_DIR}" CACHE INTERNAL "")
 
@@ -72,17 +71,19 @@ set(cv2_generated_files
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_modules_content.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_types.h"
     "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_generated_types_content.h"
-    "${OPENCV_PYTHON_STUB_FILE}"
     "${OPENCV_PYTHON_SIGNATURES_FILE}"
 )
 
 string(REPLACE ";" "\n" opencv_hdrs_ "${opencv_hdrs}")
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs_}")
+file(GLOB_RECURSE typing_stubs_generation_files "${PYTHON_SOURCE_DIR}/src2/typing_stubs_generation/*.py")
 add_custom_command(
     OUTPUT ${cv2_generated_files}
     COMMAND "${PYTHON_DEFAULT_EXECUTABLE}" "${PYTHON_SOURCE_DIR}/src2/gen2.py" "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/headers.txt"
     DEPENDS "${PYTHON_SOURCE_DIR}/src2/gen2.py"
             "${PYTHON_SOURCE_DIR}/src2/hdr_parser.py"
+            "${typing_stubs_generation_files}"
+            "${PYTHON_SOURCE_DIR}/src2/typing_stubs_generator.py"
             # not a real build dependency (file(WRITE) result): ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
             ${opencv_hdrs}
     COMMENT "Generate files for Python bindings and documentation"
@@ -90,12 +91,9 @@ add_custom_command(
 
 add_custom_target(gen_opencv_python_source DEPENDS ${cv2_generated_files})
 
-add_custom_target(package_python_stub DEPENDS gen_opencv_python_source)
-
-add_custom_command(
-    TARGET package_python_stub
-    COMMAND ${CMAKE_COMMAND} -E copy ${OPENCV_PYTHON_STUB_FILE} ${CMAKE_BINARY_DIR}/python_loader/cv2/__init__.pyi
-)
+if(TARGET copy_opencv_typing_stubs)
+  add_dependencies(copy_opencv_typing_stubs gen_opencv_python_source)
+endif()
 
 set(cv2_custom_hdr "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_custom_headers.h")
 set(cv2_custom_hdr_str "//user-defined headers\n")

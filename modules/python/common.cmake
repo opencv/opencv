@@ -34,9 +34,9 @@ if(TARGET gen_opencv_python_source)
   add_dependencies(${the_module} gen_opencv_python_source)
 endif()
 
-if(TARGET package_python_stub AND ${PYTHON}_VERSION_MAJOR EQUAL 3 AND ${PYTHON}_VERSION_MINOR GREATER 4)
-  # Python 3.5+
-  add_dependencies(${the_module} package_python_stub)
+if(TARGET copy_opencv_typing_stubs)
+  # Python 3.6+
+  add_dependencies(${the_module} copy_opencv_typing_stubs)
 endif()
 
 ocv_assert(${PYTHON}_VERSION_MAJOR)
