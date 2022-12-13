@@ -324,10 +324,7 @@ public:
     {
         gint                 videoStream;
         gint                 audioStream;
-        gint                 nbVideoStream;
-        gint                 nbAudioStream;
-
-        StreamData() : videoStream(0), audioStream(-1), nbVideoStream(0), nbAudioStream(0) {};
+        StreamData() : videoStream(0), audioStream(-1) {};
     };
 private:
     GSafePtr<GstElement> audiopipeline;
@@ -622,7 +619,7 @@ bool GStreamerCapture::grabVideoFrame()
                 returnFlag = true;
             }
         }
-        else 
+        else
         {
             impendingVideoSample.attach(gst_app_sink_pull_sample(GST_APP_SINK(sink.get())));
             if (!impendingVideoSample)
@@ -685,7 +682,7 @@ bool GStreamerCapture::grabAudioFrame()
     }
 
     while ((!vEOS) ? audioTime <= requiredAudioTime : !aEOS)
-    {   
+    {
         if (gst_app_sink_is_eos(GST_APP_SINK(audiosink.get())))
         {
             aEOS = true;
@@ -791,7 +788,7 @@ bool GStreamerCapture::configureAudioFrame()
                 return false;
             }
             ScopeGuardGstMapInfo map_guard(buf, &map_info);
-            
+
             gsize lastSize = bufferAudioData.size();
             bufferAudioData.resize(lastSize+map_info.size);
             for (gsize j = 0; j < map_info.size; j++)
@@ -799,12 +796,12 @@ bool GStreamerCapture::configureAudioFrame()
                 bufferAudioData[lastSize+j]=*(map_info.data + j);
             }
         }
-        
+
         audioSamplePos += chunkLengthOfBytes/((audioBitPerSample/8)*nAudioChannels);
         chunkLengthOfBytes = (streamData.videoStream != -1) ? (int64_t)((requiredAudioTime * 1e-9 * audioSamplesPerSecond*nAudioChannels*(audioBitPerSample)/8)) : map_info.size;
         if ((streamData.videoStream != -1) && (chunkLengthOfBytes % ((int)(audioBitPerSample)/8* (int)nAudioChannels) != 0))
         {
-            if ( (double)audioSamplePos/audioSamplesPerSecond - usedVideoSampleTime * 1e-9 >= 0 ) 
+            if ( (double)audioSamplePos/audioSamplesPerSecond - usedVideoSampleTime * 1e-9 >= 0 )
                 chunkLengthOfBytes -= numberOfAdditionalAudioBytes;
             numberOfAdditionalAudioBytes = ((int)(audioBitPerSample)/8* (int)nAudioChannels)
                                         - chunkLengthOfBytes % ((int)(audioBitPerSample)/8* (int)nAudioChannels);
@@ -843,7 +840,6 @@ bool GStreamerCapture::configureAudioFrame()
             if (format == "S16LE")
             {
                 Mat((int)chunkLengthOfBytes/bpf, nAudioChannels, CV_16S, audioDataInUse.data()).copyTo(audioFrame);
-                
                 return true;
             }
             if (format == "S32LE")
@@ -1553,7 +1549,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
                 CV_WARN("GStreamer(video): cannot link color -> sink");
                 pipeline.release();
                 return false;
-            }  
+            }
         }
         if (streamData.audioStream >= 0)
         {
@@ -1691,7 +1687,7 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
             }
 
             handleMessage(pipeline);
-            
+
             const GstStructure *structure = gst_caps_get_structure(buffer_caps, 0);  // no lifetime transfer
             if (!gst_structure_get_int (structure, "width", &width) ||
                 !gst_structure_get_int (structure, "height", &height))

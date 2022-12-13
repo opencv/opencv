@@ -170,7 +170,6 @@ public:
         const int samplePerSecond = (int)cap.get(CAP_PROP_AUDIO_SAMPLES_PER_SECOND);
         ASSERT_EQ(44100, samplePerSecond);
         int samplesPerFrame = (int)(1./fps*samplePerSecond);
-        int audioSamplesTolerance = samplesPerFrame / 2;
 
         double audio0_timestamp = 0;
 
@@ -182,15 +181,16 @@ public:
             SCOPED_TRACE(cv::format("frame=%d", frame));
 
             ASSERT_TRUE(cap.grab());
-#ifdef _WIN32
-            if (frame == 0)
+            if (backend == cv::CAP_MSMF)
             {
-                double audio_shift = cap.get(CAP_PROP_AUDIO_SHIFT_NSEC);
-                double video0_timestamp = cap.get(CAP_PROP_POS_MSEC) * 1e-3;
-                audio0_timestamp = video0_timestamp + audio_shift * 1e-9;
-                std::cout << "video0 timestamp: " << video0_timestamp << "  audio0 timestamp: " << audio0_timestamp << " (audio shift nanoseconds: " << audio_shift << " , seconds: " << audio_shift * 1e-9 << ")" << std::endl;
+                if (frame == 0)
+                {
+                    double audio_shift = cap.get(CAP_PROP_AUDIO_SHIFT_NSEC);
+                    double video0_timestamp = cap.get(CAP_PROP_POS_MSEC) * 1e-3;
+                    audio0_timestamp = video0_timestamp + audio_shift * 1e-9;
+                    std::cout << "video0 timestamp: " << video0_timestamp << "  audio0 timestamp: " << audio0_timestamp << " (audio shift nanoseconds: " << audio_shift << " , seconds: " << audio_shift * 1e-9 << ")" << std::endl;
+                }
             }
-#endif
             ASSERT_TRUE(cap.retrieve(videoFrame));
             if (epsilon >= 0)
             {
@@ -236,10 +236,12 @@ public:
             }
             if (frame != 0 && frame != numberOfFrames-1 && audioData[0].size() != (size_t)numberOfSamples)
             {
-#ifdef _WIN32
-                // validate audio frame size
-                /EXPECT_NEAR(audioFrame.cols, samplesPerFrame, audioSamplesTolerance);
-#endif
+                if (backend == cv::CAP_MSMF)
+                {
+                    int audioSamplesTolerance = samplesPerFrame / 2;
+                    // validate audio frame size
+                    EXPECT_NEAR(audioFrame.cols, samplesPerFrame, audioSamplesTolerance);
+                }
             }
         }
         ASSERT_FALSE(cap.grab());
@@ -269,13 +271,11 @@ TEST_P(Media, audio)
     doTest();
 }
 
-//#ifdef _WIN32
 const paramCombination mediaParams[] =
 {
     paramCombination("test_audio.mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 132299, 30, 30., cv::CAP_GSTREAMER)
 #ifdef _WIN32
     , paramCombination("test_audio.mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 131819, 30, 30., cv::CAP_MSMF),
-    
 #if 0
     // https://filesamples.com/samples/video/mp4/sample_960x400_ocean_with_audio.mp4
     , paramCombination("sample_960x400_ocean_with_audio.mp4", 2, -1/*eplsilon*/, CV_8UC3, 400, 960, 1116, 2056588, 30, 30., cv::CAP_MSMF)
@@ -284,7 +284,6 @@ const paramCombination mediaParams[] =
 };
 
 INSTANTIATE_TEST_CASE_P(/**/, Media, testing::ValuesIn(mediaParams));
-//#endif  // _WIN32
 
 #ifdef _WIN32
 
