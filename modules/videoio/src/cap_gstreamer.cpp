@@ -77,8 +77,8 @@
 #define COLOR_ELEM_NAME COLOR_ELEM
 
 #define CV_GST_FORMAT(format) (format)
-#define GSTREAMER_INTERRUPT_OPEN_DEFAULT_TIMEOUT_NS 30e9
-#define GSTREAMER_INTERRUPT_READ_DEFAULT_TIMEOUT_NS 30e9
+#define GSTREAMER_INTERRUPT_OPEN_DEFAULT_TIMEOUT_NS (30 * GST_SECOND)
+#define GSTREAMER_INTERRUPT_READ_DEFAULT_TIMEOUT_NS (30 * GST_SECOND)
 
 
 namespace cv {
@@ -901,7 +901,7 @@ void GStreamerCapture::startPipeline()
     if (status == GST_STATE_CHANGE_ASYNC)
     {
         // wait for status update
-        status = gst_element_get_state(pipeline, NULL, NULL, GST_CLOCK_TIME_NONE);
+        status = gst_element_get_state(pipeline, NULL, NULL, openTimeout);
     }
     if (status == GST_STATE_CHANGE_FAILURE)
     {
@@ -1572,9 +1572,9 @@ double GStreamerCapture::getProperty(int propId) const
     case CAP_PROP_AUDIO_BASE_INDEX:
         return audioBaseIndex;
     case CAP_PROP_OPEN_TIMEOUT_MSEC:
-        return openTimeout / 1e6; // convert for ns to ms
+        return GST_TIME_AS_MSECONDS(openTimeout);
     case CAP_PROP_READ_TIMEOUT_MSEC:
-        return readTimeout / 1e6; // convert for ns to ms
+        return GST_TIME_AS_MSECONDS(readTimeout);
     default:
         CV_WARN("unhandled property: " << propId);
         break;
@@ -1733,7 +1733,7 @@ bool GStreamerCapture::setProperty(int propId, double value)
     {
         if(value > 0)
         {
-            openTimeout = GstClockTime(value * 1e6); // convert from ms to ns
+            openTimeout = GstClockTime(value * GST_MSECOND); // convert from ms to ns
             return true;
         }
         else
@@ -1746,7 +1746,7 @@ bool GStreamerCapture::setProperty(int propId, double value)
     {
         if(value > 0)
         {
-            readTimeout = GstClockTime(value * 1e6); // convert from ms to ns
+            readTimeout = GstClockTime(value * GST_MSECOND); // convert from ms to ns
             return true;
         }
         else

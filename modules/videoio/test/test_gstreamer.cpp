@@ -151,4 +151,22 @@ TEST(videoio_gstreamer, gray16_writing)
     EXPECT_EQ(0, remove(temp_file.c_str()));
 }
 
+TEST(videoio_gstreamer, timeout_property)
+{
+    if (!videoio_registry::hasBackend(CAP_GSTREAMER))
+        throw SkipTestException("GStreamer backend was not found");
+    VideoCapture cap;
+    cap.open("videotestsrc ! appsink", CAP_GSTREAMER);
+    ASSERT_TRUE(cap.isOpened());
+    const double default_timeout = 30000; // 30 seconds
+    const double open_timeout = 5678; // 3 seconds
+    const double read_timeout = 1234; // 1 second
+    EXPECT_NEAR(default_timeout, cap.get(CAP_PROP_OPEN_TIMEOUT_MSEC), 1e-3);
+    EXPECT_NEAR(default_timeout, cap.get(CAP_PROP_READ_TIMEOUT_MSEC), 1e-3);
+    cap.set(CAP_PROP_OPEN_TIMEOUT_MSEC, open_timeout);
+    cap.set(CAP_PROP_READ_TIMEOUT_MSEC, read_timeout);
+    EXPECT_NEAR(open_timeout, cap.get(CAP_PROP_OPEN_TIMEOUT_MSEC), 1e-3);
+    EXPECT_NEAR(read_timeout, cap.get(CAP_PROP_READ_TIMEOUT_MSEC), 1e-3);
+}
+
 }} // namespace
