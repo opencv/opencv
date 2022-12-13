@@ -46,6 +46,8 @@
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
 #include <openvino/openvino.hpp>
+#else
+#include <inference_engine.hpp>
 #endif
 
 #if defined(__GNUC__) && __GNUC__ >= 5
@@ -116,31 +118,23 @@ private:
     std::shared_ptr<ov::Model> model = nullptr;
 };
 
-class Core {
+class Core : public ov::Core {
 public:
-    Core() {
-    }
-
-    Core(ov::Core& core) : core(core) {}
-
     std::vector<std::string> GetAvailableDevices() {
-        return core.get_available_devices();
+        return get_available_devices();
     }
 
     void UnregisterPlugin(const std::string& id) {
-        core.unload_plugin(id);
+        unload_plugin(id);
     }
 
     CNNNetwork ReadNetwork(const std::string& xmlPath, const std::string& binPath) {
-        return core.read_model(xmlPath, binPath);
+        return read_model(xmlPath, binPath);
     }
 
     ov::CompiledModel LoadNetwork(CNNNetwork net, const std::string& device) {
-        return core.compile_model(net.getFunction(), device);
+        return compile_model(net.getFunction(), device);
     }
-
-private:
-    ov::Core core;
 };
 
 }

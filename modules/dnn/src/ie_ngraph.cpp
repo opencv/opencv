@@ -499,9 +499,13 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
 #ifndef _WIN32
             // Limit the number of CPU threads.
             if (device_name == "CPU")
-                // ie.SetConfig({{
-                //     InferenceEngine::PluginConfigParams::KEY_CPU_THREADS_NUM, format("%d", getNumThreads()),
-                // }}, device_name);
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+                ie.set_property(device_name, ov::inference_num_threads(getNumThreads()));
+#else
+                ie.SetConfig({{
+                    InferenceEngine::PluginConfigParams::KEY_CPU_THREADS_NUM, format("%d", getNumThreads()),
+                }}, device_name);
+#endif // OpenVINO >= 2022.1
 #endif
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_2)
             if (device_name.find("GPU") == 0)
@@ -514,9 +518,13 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
                 if (!cache_path.empty() && cache_path != "disabled")
                 {
                     CV_LOG_INFO(NULL, "OpenCV/nGraph: using GPU kernels cache: " << cache_path);
-                    // ie.SetConfig({{
-                    //     InferenceEngine::PluginConfigParams::KEY_CACHE_DIR, cache_path,
-                    // }}, device_name);
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+                    ie.set_property(device_name, ov::cache_dir(cache_path));
+#else
+                    ie.SetConfig({{
+                        InferenceEngine::PluginConfigParams::KEY_CACHE_DIR, cache_path,
+                    }}, device_name);
+#endif // OpenVINO >= 2022.1
                 }
             }
 #endif
