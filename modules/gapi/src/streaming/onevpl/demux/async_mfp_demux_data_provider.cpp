@@ -5,14 +5,6 @@
 // Copyright (C) 2021 Intel Corporation
 #ifdef HAVE_ONEVPL
 #include <errno.h>
-#ifdef _WIN32
-
-#pragma comment(lib, "Mf.lib")
-#pragma comment(lib, "Mfuuid.lib")
-#pragma comment(lib, "Mfplat.lib")
-#pragma comment(lib, "shlwapi.lib")
-#pragma comment(lib, "mfreadwrite.lib")
-#endif // _WIN32
 
 #include <opencv2/gapi/own/assert.hpp>
 #include "streaming/onevpl/demux/async_mfp_demux_data_provider.hpp"

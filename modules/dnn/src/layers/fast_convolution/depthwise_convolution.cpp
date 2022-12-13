@@ -20,6 +20,7 @@ static void depthWiseBlock(const float *inptr, float *outptr, const float *weigh
                            int inner_ybottom, bool ifMinMaxAct, bool useSIMD, bool is3x3)
 {
 #if CV_SIMD128
+    const int VEC_NLANES = 4;
     v_float32x4 vminval = v_setall_f32(minval), vmaxval = v_setall_f32(maxval);
 
     v_float32x4 w0 = v_setall_f32(
@@ -110,7 +111,7 @@ static void depthWiseBlock(const float *inptr, float *outptr, const float *weigh
                 {
                     if (dy0 == 3)
                     {
-                        for (; x0 <= x1 - FAST_VEC_NLANES; x0 += FAST_VEC_NLANES)
+                        for (; x0 <= x1 - VEC_NLANES; x0 += VEC_NLANES)
                         {
                             int xi_ = x0 * stride_x - pad_left;
                             const float *inptr_xi = inptr + Wi * yi_ + xi_;
@@ -186,7 +187,7 @@ static void depthWiseBlock(const float *inptr, float *outptr, const float *weigh
                     }
                     else
                     {
-                        for (; x0 <= x1 - FAST_VEC_NLANES; x0 += FAST_VEC_NLANES)
+                        for (; x0 <= x1 - VEC_NLANES; x0 += VEC_NLANES)
                         {
                             int xi_ = x0 * stride_x - pad_left;
                             const float *inptr_xi = inptr + Wi * yi_ + xi_;
@@ -211,7 +212,7 @@ static void depthWiseBlock(const float *inptr, float *outptr, const float *weigh
                 }
                 else
                 {
-                    for (; x0 <= x1 - FAST_VEC_NLANES; x0 += FAST_VEC_NLANES)
+                    for (; x0 <= x1 - VEC_NLANES; x0 += VEC_NLANES)
                     {
                         int xi_ = x0 * stride_x - pad_left, k = 0;
                         const float *inptr_xi = inptr + Wi * yi_ + xi_;
@@ -314,7 +315,12 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
     int pad_top = conv->pad_top, pad_bottom = conv->pad_bottom;
     int pad_left = conv->pad_left, pad_right = conv->pad_right;
 
-    int ksize = Hk * Wk, padded_ksize = ((ksize + FAST_VEC_NLANES - 1) / FAST_VEC_NLANES) * FAST_VEC_NLANES;
+    int VEC_NLANES = 4;
+#if CV_TRY_AVX2
+    if (conv->useAVX2)
+        VEC_NLANES = 8;
+#endif
+    int ksize = Hk * Wk, padded_ksize = ((ksize + VEC_NLANES - 1) / VEC_NLANES) * VEC_NLANES;
 
     const float *inp = input.ptr<float>();
     float *out = output.ptr<float>();
@@ -333,7 +339,7 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv2d>&
         ofstab[k] = dy * Wi + dx;
     }
 
-    const float *weights0 = conv->weightsBuf.data(), *bias = conv->biasBuf.data();
+    const float *weights0 = conv->weightsBufPtr, *bias = conv->biasBuf.data();
     int inner_ytop = (pad_bottom + stride_y - 1) / stride_y, inner_ybottom = 3;
     int inner_xleft = (pad_left + stride_x - 1) / stride_x, inner_xright = 4;
 

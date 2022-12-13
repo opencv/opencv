@@ -204,14 +204,13 @@ public:
         std::vector<InferenceEngine::DataConfig> outDataConfig;
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2)
         InferenceEngine::SizeVector order;
-        size_t offset = std::numeric_limits<size_t>::max();
         for (int i = 0; i < node->get_input_size(); ++i)
         {
             InferenceEngine::DataConfig conf;
             auto shape = node->input_value(i).get_shape();
             order.resize(shape.size());
             std::iota(order.begin(), order.end(), 0);
-            conf.desc = InferenceEngine::TensorDesc(InferenceEngine::Precision::FP32, shape, {shape, order, offset});
+            conf.desc = InferenceEngine::TensorDesc(InferenceEngine::Precision::FP32, shape, {shape, order});
             inDataConfig.push_back(conf);
         }
 
@@ -221,7 +220,7 @@ public:
             auto shape = node->output(i).get_shape();
             order.resize(shape.size());
             std::iota(order.begin(), order.end(), 0);
-            conf.desc = InferenceEngine::TensorDesc(InferenceEngine::Precision::FP32, shape, {shape, order, offset});
+            conf.desc = InferenceEngine::TensorDesc(InferenceEngine::Precision::FP32, shape, {shape, order});
             outDataConfig.push_back(conf);
         }
 #else
@@ -988,14 +987,6 @@ InferenceEngine::DataPtr ngraphDataOutputNode(
     return w.dataPtr;
 }
 
-void forwardNgraph(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
-                      Ptr<BackendNode>& node, bool isAsync)
-{
-    CV_Assert(!node.empty());
-    Ptr<InfEngineNgraphNode> ieNode = node.dynamicCast<InfEngineNgraphNode>();
-    CV_Assert(!ieNode.empty());
-    ieNode->net->forward(outBlobsWrappers, isAsync);
-}
 
 void InfEngineNgraphNet::reset()
 {
@@ -1192,12 +1183,6 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
     }
 }
 
-#else
-void forwardNgraph(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers,
-                   Ptr<BackendNode>& node, bool isAsync)
-{
-    CV_Assert(false && "nGraph is not enabled in this OpenCV build");
-}
 #endif
 
 }}

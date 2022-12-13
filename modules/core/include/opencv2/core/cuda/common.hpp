@@ -65,8 +65,10 @@
 namespace cv { namespace cuda {
     static inline void checkCudaError(cudaError_t err, const char* file, const int line, const char* func)
     {
-        if (cudaSuccess != err)
+        if (cudaSuccess != err) {
+            cudaGetLastError(); // reset the last stored error to cudaSuccess
             cv::error(cv::Error::GpuApiCallError, cudaGetErrorString(err), func, file, line);
+        }
     }
 }}
 

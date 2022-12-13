@@ -3,12 +3,12 @@ set(CMAKE_SYSTEM_PROCESSOR riscv64)
 
 if(NOT DEFINED CMAKE_C_COMPILER)
   find_program(CMAKE_C_COMPILER NAMES riscv64-unknown-linux-gnu-gcc
-                                PATHS /opt/RISCV/bin ENV PATH)
+                                PATHS /opt/riscv/bin ENV PATH)
 endif()
 
 if(NOT DEFINED CMAKE_CXX_COMPILER)
   find_program(CMAKE_CXX_COMPILER NAMES riscv64-unknown-linux-gnu-g++
-                                  PATHS /opt/RISCV/bin ENV PATH)
+                                  PATHS /opt/riscv/bin ENV PATH)
 endif()
 
 get_filename_component(RISCV_GCC_INSTALL_ROOT ${CMAKE_C_COMPILER} DIRECTORY)

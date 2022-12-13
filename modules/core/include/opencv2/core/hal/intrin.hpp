@@ -50,6 +50,12 @@
 #include <stdlib.h>
 #include "opencv2/core/cvdef.h"
 
+#if defined(__GNUC__) && __GNUC__ == 12
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 #define OPENCV_HAL_ADD(a, b) ((a) + (b))
 #define OPENCV_HAL_AND(a, b) ((a) & (b))
 #define OPENCV_HAL_NOP(a) (a)
@@ -538,6 +544,11 @@ using namespace CV__SIMD_NAMESPACE;
 
 #endif
 
+//! @cond IGNORED
+#ifndef CV_SIMD_64F
+#define CV_SIMD_64F 0
+#endif
+
 namespace CV__SIMD_NAMESPACE {
 //! @addtogroup core_hal_intrin
 //! @{
@@ -774,7 +785,6 @@ namespace CV__SIMD_NAMESPACE {
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int32)
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int64)
 
-
     #define OPENCV_HAL_WRAP_BIN_OP_MUL(_Tpvec) \
     inline _Tpvec v_mul(const _Tpvec& a, const _Tpvec& b) \
     { \
@@ -902,10 +912,6 @@ namespace CV__SIMD_NAMESPACE {
     #undef VXPREFIX
 } // namespace
 
-//! @cond IGNORED
-#ifndef CV_SIMD_64F
-#define CV_SIMD_64F 0
-#endif
 
 #ifndef CV_SIMD_FP16
 #define CV_SIMD_FP16 0  //!< Defined to 1 on native support of operations with float16x8_t / float16x16_t (SIMD256) types
@@ -924,5 +930,9 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 } // cv::
 
 //! @endcond
+
+#if defined(__GNUC__) && __GNUC__ == 12
+#pragma GCC diagnostic pop
+#endif
 
 #endif

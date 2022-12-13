@@ -161,7 +161,7 @@ public:
         int mat_order = 10, info, lda = 10, ldvl = 10, ldvr = 1, lwork = 100;
         double wr[10], wi[10] = {0}, eig_vecs[100], work[100]; // 10 = mat_order, 100 = lwork
         char jobvl = 'V', jobvr = 'N'; // only left eigen vectors are computed
-        dgeev_(&jobvl, &jobvr, &mat_order, action_mat_data, &lda, wr, wi, eig_vecs, &ldvl,
+        OCV_LAPACK_FUNC(dgeev)(&jobvl, &jobvr, &mat_order, action_mat_data, &lda, wr, wi, eig_vecs, &ldvl,
                 nullptr, &ldvr, work, &lwork, &info);
         if (info != 0) return 0;
 #endif

@@ -126,10 +126,10 @@ public:
 
         errStrip[idxErr]=err ;
 
-    };
+    }
     ParallelCalcError& operator=(const ParallelCalcError &) {
         return *this;
-    };
+    }
 };
 
 

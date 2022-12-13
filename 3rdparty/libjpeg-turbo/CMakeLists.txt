@@ -56,8 +56,6 @@ if(MSVC_IDE AND CMAKE_GENERATOR_PLATFORM MATCHES "arm64")
   set(CPU_TYPE arm64)
 endif()
 
-message(STATUS "${BITS}-bit build (${CPU_TYPE})")
-
 OCV_OPTION(ENABLE_LIBJPEG_TURBO_SIMD "Include SIMD extensions for libjpeg-turbo, if available for this platform" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF BUILD_JPEG)
 option(WITH_ARITH_ENC "Include arithmetic encoding support when emulating the libjpeg v6b API/ABI" TRUE)
@@ -146,22 +144,6 @@ if(WITH_ARITH_DEC)
   set(JPEG_SOURCES ${JPEG_SOURCES} jdarith.c)
 endif()
 
-if(MSVC)
-  option(WITH_CRT_DLL
-    "Link all ${CMAKE_PROJECT_NAME} libraries and executables with the C run-time DLL (msvcr*.dll) instead of the static C run-time library (libcmt*.lib.)  The default is to use the C run-time DLL only with the libraries and executables that need it."
-    FALSE)
-  if(NOT WITH_CRT_DLL)
-    # Use the static C library for all build types
-    foreach(var CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-      CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
-      if(${var} MATCHES "/MD")
-        string(REGEX REPLACE "/MD" "/MT" ${var} "${${var}}")
-      endif()
-    endforeach()
-  endif()
-  add_definitions(-D_CRT_NONSTDC_NO_WARNINGS)
-endif()
-
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
   # Use the maximum optimization level for release builds
   foreach(var CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_RELWITHDEBINFO)
@@ -201,9 +183,10 @@ if(WITH_SIMD)
     set_source_files_properties(${SIMD_OBJS} PROPERTIES GENERATED 1)
   endif()
 else()
-  add_library(simd OBJECT src/jsimd_none.c)
+  add_library(jsimd OBJECT src/jsimd_none.c)
+  set_target_properties(jsimd PROPERTIES FOLDER "3rdparty")
   if(NOT WIN32 AND (CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED))
-    set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
+    set_target_properties(jsimd PROPERTIES POSITION_INDEPENDENT_CODE 1)
   endif()
 endif()
 
@@ -211,7 +194,7 @@ ocv_list_add_prefix(JPEG_SOURCES src/)
 
 set(JPEG_SOURCES ${JPEG_SOURCES} ${SIMD_OBJS})
 
-add_library(${JPEG_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${JPEG_SOURCES} $<TARGET_OBJECTS:simd> ${SIMD_OBJS})
+add_library(${JPEG_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${JPEG_SOURCES} $<TARGET_OBJECTS:jsimd> ${SIMD_OBJS})
 
 set_target_properties(${JPEG_LIBRARY}
   PROPERTIES OUTPUT_NAME ${JPEG_LIBRARY}

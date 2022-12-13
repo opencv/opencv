@@ -1,3 +1,9 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
+// The original implementation is contributed by HAN Liutong.
+// Copyright (C) 2022, Institute of Software, Chinese Academy of Sciences.
 
 #ifndef OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
 #define OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
@@ -633,6 +639,35 @@ OPENCV_HAL_IMPL_RVV_LOGIC_OP(v_int32, VTraits<v_int32>::vlanes())
 OPENCV_HAL_IMPL_RVV_LOGIC_OP(v_uint64, VTraits<v_uint64>::vlanes())
 OPENCV_HAL_IMPL_RVV_LOGIC_OP(v_int64, VTraits<v_int64>::vlanes())
 
+#define OPENCV_HAL_IMPL_RVV_FLT_BIT_OP(intrin) \
+inline v_float32 intrin (const v_float32& a, const v_float32& b) \
+{ \
+    return vreinterpret_f32m1(intrin(vreinterpret_i32m1(a), vreinterpret_i32m1(b))); \
+}
+OPENCV_HAL_IMPL_RVV_FLT_BIT_OP(v_and)
+OPENCV_HAL_IMPL_RVV_FLT_BIT_OP(v_or)
+OPENCV_HAL_IMPL_RVV_FLT_BIT_OP(v_xor)
+
+inline v_float32 v_not (const v_float32& a) \
+{ \
+    return vreinterpret_f32m1(v_not(vreinterpret_i32m1(a))); \
+}
+
+#if CV_SIMD_SCALABLE_64F
+#define OPENCV_HAL_IMPL_RVV_FLT64_BIT_OP(intrin) \
+inline v_float64 intrin (const v_float64& a, const v_float64& b) \
+{ \
+    return vreinterpret_f64m1(intrin(vreinterpret_i64m1(a), vreinterpret_i64m1(b))); \
+}
+OPENCV_HAL_IMPL_RVV_FLT64_BIT_OP(v_and)
+OPENCV_HAL_IMPL_RVV_FLT64_BIT_OP(v_or)
+OPENCV_HAL_IMPL_RVV_FLT64_BIT_OP(v_xor)
+
+inline v_float64 v_not (const v_float64& a) \
+{ \
+    return vreinterpret_f64m1(v_not(vreinterpret_i64m1(a))); \
+}
+#endif
 
 
 ////////////// Bitwise shifts //////////////
@@ -1618,7 +1653,7 @@ inline int v_signmask(const _Tpvec& a) \
 { \
     uint8_t ans[4] = {0}; \
     vsm(ans, vmslt(a, 0, VTraits<_Tpvec>::vlanes()), VTraits<_Tpvec>::vlanes()); \
-    return *(reinterpret_cast<int*>(ans)); \
+    return *(reinterpret_cast<int*>(ans)) & (((__int128_t)1 << VTraits<_Tpvec>::vlanes()) - 1); \
 } \
 inline int v_scan_forward(const _Tpvec& a) \
 { \
@@ -1689,7 +1724,7 @@ OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(v_float64, vlmul_trunc_u8mf8)
 
 ////// FP16 support ///////
 
-#if __riscv_zfh
+#if defined(__riscv_zfh) && __riscv_zfh
 inline v_float32 v_load_expand(const float16_t* ptr)
 {
     return vfwcvt_f(vle16_v_f16mf2((_Float16*)ptr, VTraits<v_float32>::vlanes()) ,VTraits<v_float32>::vlanes());;

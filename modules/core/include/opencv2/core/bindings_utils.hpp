@@ -219,6 +219,11 @@ AsyncArray testAsyncException()
     return p.getArrayResult();
 }
 
+CV_WRAP static inline
+String dumpVec2i(const cv::Vec2i value = cv::Vec2i(42, 24)) {
+    return format("Vec2i(%d, %d)", value[0], value[1]);
+}
+
 namespace nested {
 CV_WRAP static inline bool testEchoBooleanFunction(bool flag) {
     return flag;

@@ -63,7 +63,7 @@ class TraceMessage;
 class TraceStorage {
 public:
     TraceStorage() {}
-    virtual ~TraceStorage() {};
+    virtual ~TraceStorage() {}
 
     virtual bool put(const TraceMessage& msg) const = 0;
 };

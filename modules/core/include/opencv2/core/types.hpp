@@ -57,6 +57,11 @@
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/matx.hpp"
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4459)  // declaration of '...' hides global declaration
+#endif
+
 namespace cv
 {
 
@@ -2017,6 +2022,15 @@ double jaccardDistance(const Rect_<_Tp>& a, const Rect_<_Tp>& b) {
     return 1.0 - Aab / (Aa + Ab - Aab);
 }
 
+/** @brief Finds out if there is any intersection between two rectangles
+ *
+ * mainly useful for language bindings
+ * @param rect1 First rectangle
+ * @param rect2 Second rectangle
+ * @return the area of the intersection
+ */
+CV_EXPORTS_W inline double rectangleIntersectionArea(const Rect2d& a, const Rect2d& b) { return (a & b).area(); }
+
 ////////////////////////////// RotatedRect //////////////////////////////
 
 inline
@@ -2435,5 +2449,9 @@ TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
 //! @endcond
 
 } // cv
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif //OPENCV_CORE_TYPES_HPP

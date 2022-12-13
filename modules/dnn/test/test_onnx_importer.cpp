@@ -106,12 +106,6 @@ TEST_P(Test_ONNX_layers, MaxPooling)
 }
 TEST_P(Test_ONNX_layers, MaxPooling_2)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // IE exception: Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-
     testONNXModels("two_maxpooling", npy, 0, 0, false, false);
 }
 
@@ -221,11 +215,21 @@ TEST_P(Test_ONNX_layers, GatherMulti)
 
 TEST_P(Test_ONNX_layers, Convolution3D)
 {
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        // CUDA_FP16: cuDNN did not return a suitable algorithm for convolution.
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    }
     testONNXModels("conv3d");
 }
 
 TEST_P(Test_ONNX_layers, Convolution3D_bias)
 {
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        // CUDA_FP16: cuDNN did not return a suitable algorithm for convolution.
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    }
     testONNXModels("conv3d_bias");
 }
 
@@ -586,19 +590,7 @@ TEST_P(Test_ONNX_layers, Elementwise_Sqrt)
 
 TEST_P(Test_ONNX_layers, Elementwise_not)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
-        );
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -609,11 +601,7 @@ TEST_P(Test_ONNX_layers, Elementwise_not)
 
 TEST_P(Test_ONNX_layers, Compare_EQ)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // IE exception: Function contains several inputs and outputs with one friendly name!
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
@@ -634,11 +622,7 @@ TEST_P(Test_ONNX_layers, Compare_EQ)
 
 TEST_P(Test_ONNX_layers, Compare_GT)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // IE exception: Function contains several inputs and outputs with one friendly name!
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
@@ -659,11 +643,7 @@ TEST_P(Test_ONNX_layers, Compare_GT)
 
 TEST_P(Test_ONNX_layers, Compare_LT)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // IE exception: Function contains several inputs and outputs with one friendly name!
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
@@ -682,13 +662,19 @@ TEST_P(Test_ONNX_layers, Compare_LT)
     testONNXModels("less");
 }
 
+TEST_P(Test_ONNX_layers, Compare_GTorEQ)
+{
+    testONNXModels("greater_or_equal");
+}
+
+TEST_P(Test_ONNX_layers, Compare_LEorEQ)
+{
+    testONNXModels("less_or_equal");
+}
+
 TEST_P(Test_ONNX_layers, CompareSameDims_EQ)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // IE exception: Function contains several inputs and outputs with one friendly name!
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
@@ -709,11 +695,7 @@ TEST_P(Test_ONNX_layers, CompareSameDims_EQ)
 
 TEST_P(Test_ONNX_layers, CompareSameDims_GT)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // IE exception: Function contains several inputs and outputs with one friendly name!
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
@@ -734,11 +716,7 @@ TEST_P(Test_ONNX_layers, CompareSameDims_GT)
 
 TEST_P(Test_ONNX_layers, CompareSameDims_LT)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // IE exception: Function contains several inputs and outputs with one friendly name!
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
@@ -858,6 +836,12 @@ TEST_P(Test_ONNX_layers, PoolConv3D)
     if (backend == DNN_BACKEND_VKCOM)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+    {
+        // CUDA_FP16: cuDNN did not return a suitable algorithm for convolution.
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    }
+
     testONNXModels("pool_conv_3d");
 }
 
@@ -928,6 +912,15 @@ TEST_P(Test_ONNX_layers, MatMul)
     testONNXModels("matmul_2d");
     testONNXModels("matmul_3d");
     testONNXModels("matmul_4d");
+}
+
+TEST_P(Test_ONNX_layers, MatMul_init)
+{
+    testONNXModels("matmul_2d_init");
+    testONNXModels("matmul_3d_init");
+    testONNXModels("matmul_4d_init");
+
+    testONNXModels("matmul_init_2");
 }
 
 TEST_P(Test_ONNX_layers, MatMulAdd)
@@ -1063,10 +1056,9 @@ TEST_P(Test_ONNX_layers, Div)
     Mat out = net.forward();
 
     normAssert(ref, out, "", default_l1,  default_lInf);
-    expectNoFallbacksFromIE(net);
-    expectNoFallbacksFromCUDA(net);
 
-    testONNXModels("div_test_1x1",npy, 0, 0, false, true, 2);
+    // NaryEltwise layer suuports only CPU for now
+    testONNXModels("div_test_1x1", npy, 0, 0, false, false, 2);
 }
 
 TEST_P(Test_ONNX_layers, DynamicReshape)
@@ -1084,6 +1076,11 @@ TEST_P(Test_ONNX_layers, Reshape)
 {
     testONNXModels("unsqueeze");
     testONNXModels("unsqueeze_opset_13");
+}
+
+TEST_P(Test_ONNX_layers, Unsqueeze_Neg_Axes)
+{
+    testONNXModels("unsqueeze_neg_axes");
 }
 
 TEST_P(Test_ONNX_layers, Squeeze)
@@ -1112,8 +1109,17 @@ TEST_P(Test_ONNX_layers, Split)
     testONNXModels("split_2");
     testONNXModels("split_3");
     testONNXModels("split_4");
-    testONNXModels("split_sizes");
     testONNXModels("split_neg_axis");
+}
+
+// Mul inside with 0-d tensor, output should be A x 1, but is 1 x A. PR #22652
+TEST_P(Test_ONNX_layers, DISABLED_Split_sizes_0d)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("split_sizes");
 }
 
 TEST_P(Test_ONNX_layers, Slice)
@@ -1134,17 +1140,6 @@ TEST_P(Test_ONNX_layers, Slice_Steps_2DInput)
 
 TEST_P(Test_ONNX_layers, Slice_Steps_3DInput)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // IE exception: Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
-        );
-#endif
-
     testONNXModels("slice_opset_11_steps_3d");
 }
 
@@ -1155,21 +1150,21 @@ TEST_P(Test_ONNX_layers, Slice_Steps_4DInput)
 
 TEST_P(Test_ONNX_layers, Slice_Steps_5DInput)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // IE exception: Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
-        );
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-
     testONNXModels("slice_opset_11_steps_5d");
+}
+
+TEST_P(Test_ONNX_layers, Slice_Nonseq_Axes)
+{
+    testONNXModels("slice_nonseq_axes");
+    testONNXModels("slice_nonseq_axes_steps");
+    testONNXModels("slice_nonseq_miss_axes_steps");
+}
+
+TEST_P(Test_ONNX_layers, Slice_Neg_Axes)
+{
+    testONNXModels("slice_neg_axes");
+    testONNXModels("slice_neg_axes_steps");
+    testONNXModels("slice_neg_miss_axes_steps");
 }
 
 TEST_P(Test_ONNX_layers, Softmax)
@@ -1191,9 +1186,6 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
 TEST_P(Test_ONNX_layers, LSTM_Activations)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // IE exception: Node Block1326/lstm/reshape_0/permute was not assigned on any pointed device
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
@@ -1230,9 +1222,6 @@ TEST_P(Test_ONNX_layers, LSTM_hidden)
 TEST_P(Test_ONNX_layers, LSTM_hidden_bidirectional)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // IE exception: Node Transpose_45 was not assigned on any pointed device.
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
@@ -1246,9 +1235,6 @@ TEST_P(Test_ONNX_layers, LSTM_hidden_bidirectional)
 TEST_P(Test_ONNX_layers, GRU)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // IE exception: Node GRU_22 was not assigned on any pointed device
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
@@ -1280,11 +1266,7 @@ TEST_P(Test_ONNX_layers, LSTM_cell_forward)
 }
 TEST_P(Test_ONNX_layers, LSTM_cell_bidirectional)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // Ngraph operation Reshape with name LSTM_16/lstm_y/reshape has dynamic output shape on 0 port, but CPU plug-in supports only static shape
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -1657,16 +1639,7 @@ TEST_P(Test_ONNX_layers, MaxPoolSigmoid1d)
 
 TEST_P(Test_ONNX_layers, MaxPool1d_Twise)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
-        );
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
     {
         if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
@@ -1681,11 +1654,7 @@ TEST_P(Test_ONNX_layers, MaxPool1d_Twise)
 
 TEST_P(Test_ONNX_layers, AvePool1d)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
     {
         if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
@@ -1700,19 +1669,7 @@ TEST_P(Test_ONNX_layers, AvePool1d)
 
 TEST_P(Test_ONNX_layers, PoolConv1d)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
-        );
-#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
     {
         if (target == DNN_TARGET_MYRIAD) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
@@ -1767,15 +1724,27 @@ TEST_P(Test_ONNX_layers, Gemm)
 {
     testONNXModels("gemm_no_transB");
     testONNXModels("gemm_transB_0");
+    testONNXModels("gemm_first_const");
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {
-    testONNXModels("quantized_conv_uint8_weights", npy, 0.004, 0.02);
-    testONNXModels("quantized_conv_int8_weights", npy, 0.03, 0.5);
-    testONNXModels("quantized_conv_per_channel_weights", npy, 0.06, 0.4);
+    // The difference of QOperator and QDQ format:
+    // https://onnxruntime.ai/docs/performance/quantization.html#onnx-quantization-representation-format.
+    {
+        SCOPED_TRACE("QOperator quantized model.");
+        testONNXModels("quantized_conv_uint8_weights", npy, 0.004, 0.02);
+        testONNXModels("quantized_conv_int8_weights", npy, 0.03, 0.5);
+        testONNXModels("quantized_conv_per_channel_weights", npy, 0.06, 0.4);
+        testONNXModels("quantized_conv_asymmetric_pads_int8_weights");
+    }
 
-    testONNXModels("quantized_conv_asymmetric_pads_int8_weights");
+    {
+        SCOPED_TRACE("QDQ quantized model.");
+        testONNXModels("quantized_conv_uint8_weights_qdq", npy, 0.004, 0.02);
+        testONNXModels("quantized_conv_int8_weights_qdq", npy, 0.03, 0.5);
+        testONNXModels("quantized_conv_per_channel_weights_qdq", npy, 0.06, 0.4);
+    }
 }
 
 TEST_P(Test_ONNX_layers, Quantized_MatMul)
@@ -2155,7 +2124,7 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        l1 = 0.008;
+        l1 = 0.009;
         lInf = 0.04;
     }
     testONNXModels("LResNet100E_IR", pb, l1, lInf);
@@ -2342,7 +2311,7 @@ TEST_P(Test_ONNX_layers, CumSum)
 //  4. 1D mat dimension issue with the output of range operator
 TEST_P(Test_ONNX_layers, YOLOv7)
 {
-    std::string weightPath = _tf("models/yolov7_not_simplified.onnx");
+    std::string weightPath = _tf("models/yolov7_not_simplified.onnx", false);
     std::string imgPath = _tf("../dog_orig_size.png");
 
     Size targetSize{640, 640};
@@ -2417,6 +2386,11 @@ TEST_P(Test_ONNX_layers, YOLOv7)
     }
 
     normAssertDetections(refClassIds, refScores, refBoxes, keep_classIds, keep_confidences, keep_boxes);
+}
+
+TEST_P(Test_ONNX_layers, Tile)
+{
+    testONNXModels("tile", pb);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
