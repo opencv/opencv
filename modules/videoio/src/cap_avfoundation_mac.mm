@@ -376,6 +376,15 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
         return 0;
     }
 
+    // Preserve devices ordering on the system
+    // see AVCaptureDevice::uniqueID property documentation for more info
+    devices = [devices
+        sortedArrayUsingComparator:^NSComparisonResult(AVCaptureDevice *d1,
+                                                     AVCaptureDevice *d2) {
+          return [d1.uniqueID compare:d2.uniqueID];
+        }
+    ];
+
     mCaptureDevice = devices[cameraNum];
 
     if ( ! mCaptureDevice ) {
