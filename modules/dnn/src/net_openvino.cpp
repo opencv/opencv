@@ -316,7 +316,7 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
             {
                 for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
                 {
-                        std::cout << "here 2" << std::endl;
+                        // std::cout << "here 2" << std::endl;
                     // auto it = ienet.outputsDesc.find(ld.name);
                     // if (it != ienet.outputsDesc.end())
                     // {
@@ -739,7 +739,7 @@ Net NetImplOpenVINO::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork
 
     std::vector<std::shared_ptr<ngraph::Node>> ngraphOperations = ngraphFunction->get_ops();
 
-    std::cout << 1 << std::endl;
+    // std::cout << 1 << std::endl;
     for (auto& it : ngraphFunction->outputs())
     {
         CV_TRACE_REGION("output");
@@ -794,7 +794,7 @@ Net NetImplOpenVINO::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork
         for (int i = 0; i < inputsNames.size(); ++i)
             cvNet.connect(0, i, lid, i);
     }
-    std::cout << 2 << std::endl;
+    // std::cout << 2 << std::endl;
 
     CV_TRACE_REGION_NEXT("finalize");
 
@@ -811,7 +811,7 @@ Net openvino_readNetwork(const String& modelPath, const String& binPath)
 
     InferenceEngine::Core& ie = getCore("");
     InferenceEngine::CNNNetwork ieNet;
-    std::cout << modelPath << std::endl;
+    // std::cout << modelPath << std::endl;
     try
     {
         ieNet = ie.ReadNetwork(modelPath, binPath);

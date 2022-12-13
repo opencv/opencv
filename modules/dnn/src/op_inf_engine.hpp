@@ -74,7 +74,7 @@ Backend& getInferenceEngineBackendTypeParam();
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
 Mat infEngineBlobToMat(const ov::Tensor& blob);
 
-void infEngineBlobsToMats(const std::vector<ov::Tensor>& blobs,
+void infEngineBlobsToMats(const ov::TensorVector& blobs,
                           std::vector<Mat>& mats);
 #else
 Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);

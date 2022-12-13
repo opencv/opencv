@@ -39,7 +39,30 @@ cv::String setInferenceEngineBackendType(const cv::String& newBackendType)
 
 CV__DNN_INLINE_NS_END
 
+Mat infEngineBlobToMat(const ov::Tensor& blob)
+{
+    std::vector<size_t> dims = blob.get_shape();
+    std::vector<int> size(dims.begin(), dims.end());
+    auto precision = blob.get_element_type();
 
+    int type = -1;
+    switch (precision)
+    {
+        case ov::element::f32: type = CV_32F; break;
+        case ov::element::u8: type = CV_8U; break;
+        default:
+            CV_Error(Error::StsNotImplemented, "Unsupported blob precision");
+    }
+    return Mat(size, type, blob.data());
+}
+
+void infEngineBlobsToMats(const ov::TensorVector& blobs,
+                          std::vector<Mat>& mats)
+{
+    mats.resize(blobs.size());
+    for (int i = 0; i < blobs.size(); ++i)
+        mats[i] = infEngineBlobToMat(blobs[i]);
+}
 // Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob)
 // {
 //     // NOTE: Inference Engine sizes are reversed.
