@@ -831,6 +831,8 @@ Net openvino_readNetwork(
         const uchar* bufferWeightsPtr, size_t bufferWeightsSize
 )
 {
+    CV_Error(Error::StsNotImplemented, "From Model Optimizer buffer");
+
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     // InferenceEngine::Core& ie = getCore("");

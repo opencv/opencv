@@ -403,6 +403,7 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+        CV_Error(Error::StsNotImplemented, "Concat layer");
         // InferenceEngine::DataPtr data = ngraphDataNode(inputs[0]);
         // const int numDims = data->getDims().size();
         // const int numDims = 4;

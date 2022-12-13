@@ -337,9 +337,9 @@ InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& n
                                          std::vector<Mat>& outputs, std::vector<Mat>& internals)
     : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), cvLayer(cvLayer_)
 {
+    CV_Error(Error::StsNotImplemented, "Custom layer");
     std::ostringstream oss;
     oss << (size_t)cvLayer.get();
-
     // std::map<std::string, InferenceEngine::Parameter> params = {
     //     {"impl", oss.str()},
     //     {"outputs", shapesToStr(outputs)},
