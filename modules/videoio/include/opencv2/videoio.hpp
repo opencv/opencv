@@ -961,7 +961,7 @@ public:
 
     After this call use VideoCapture::retrieve() to decode and fetch frame data.
     */
-    static /*CV_WRAP*/
+    CV_WRAP static
     bool waitAny(
             const std::vector<VideoCapture>& streams,
             CV_OUT std::vector<int>& readyIndex,
