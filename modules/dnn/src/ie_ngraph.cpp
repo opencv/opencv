@@ -198,6 +198,7 @@ public:
     std::map<std::string, InferenceEngine::Parameter> params;
 };
 
+
 class InfEngineNgraphCustomLayer : public InferenceEngine::ILayerExecImpl
 {
 public:
@@ -516,7 +517,9 @@ void InfEngineNgraphNet::createNet(Target targetId) {
             CV_LOG_DEBUG(NULL, "DNN/NGRAPH: Add 'Result' output: " << output_node_it->first);
             CV_Assert(output_node_it->second);
             auto out = std::make_shared<ngraph::op::Result>(output_node_it->second->node);
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
             out->set_friendly_name(output_node_it->first);
+#endif
             outs.push_back(out);
         }
         CV_Assert_N(!inputs_vec.empty(), !outs.empty());
@@ -640,20 +643,6 @@ void InfEngineNgraphNet::init(Target targetId)
             CV_Error(Error::StsNotImplemented, "Unknown target");
     };
 
-    if (!hasNetOwner) {
-        for (size_t i = 0; i < ngraph_function->get_output_size(); ++i) {
-            auto node = ngraph_function->output(i).get_node();
-            for (size_t j = 0; j < node->get_input_size(); ++j) {
-                std::string name = node->input_value(j).get_node()->get_friendly_name();
-                auto iter = requestedOutputs.find(name);
-                if (iter != requestedOutputs.end()) {
-                    requestedOutputs.erase(iter);
-                    // cnn.addOutput(name);
-                }
-            }
-        }
-    }
-
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
     auto model = cnn.getFunction();
     ov::preprocess::PrePostProcessor ppp(model);
@@ -735,22 +724,26 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
             bool found = false;
             for (size_t i = 0; i != candidates.size(); ++i)
             {
-                // const std::string& libName = candidates[i];
-//                 try
-//                 {
-//                     InferenceEngine::IExtensionPtr extension =
-// #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)
-//                         std::make_shared<InferenceEngine::Extension>(libName);
-// #else
-//                         InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(libName);
-// #endif
+                const std::string& libName = candidates[i];
+                try
+                {
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+                    ie.add_extension(libName);
+#else
+                    InferenceEngine::IExtensionPtr extension =
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)
+                        std::make_shared<InferenceEngine::Extension>(libName);
+#else
+                        InferenceEngine::make_so_pointer<InferenceEngine::IExtension>(libName);
+#endif
 
-//                     // ie.AddExtension(extension, "CPU");
-//                     CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << libName);
-//                     found = true;
-//                     break;
-//                 }
-//                 catch(...) {}
+                    ie.AddExtension(extension, "CPU");
+#endif
+                    CV_LOG_INFO(NULL, "DNN-IE: Loaded extension plugin: " << libName);
+                    found = true;
+                    break;
+                }
+                catch(...) {}
             }
             if (!found && !candidates.empty())
             {
@@ -845,56 +838,32 @@ bool NgraphBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
                                             std::vector<MatShape> &outputs,
                                             std::vector<MatShape> &internals) const
 {
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
-    auto ngraph_function = t_net.getFunction();
+    auto ngraphFunction = t_net.getFunction();
     bool equal_flag = true;
-    std::map<ov::Output<ov::Node>, ov::PartialShape> inShapes;
-    for (const auto& inp : ngraph_function->inputs())
+    std::map<std::string, std::vector<size_t> > inShapes;
+    int i = 0;
+    for (const auto& inp : ngraphFunction->get_parameters())
     {
-        ov::PartialShape inShape;
-        inShape.insert(inShape.begin(), inputs[0].begin(), inputs[0].end());
-        if (inp.get_partial_shape() != inShape)
+        std::vector<size_t> oldShape = inp->get_shape();
+        std::vector<size_t> newShape(inputs[i].begin(), inputs[i].end());
+        inShapes.insert({inp->get_friendly_name(), newShape});
+        if (oldShape != newShape)
         {
-            equal_flag = false;
-            inShapes.insert({inp, inShape});
-        }
-        else
-        {
-            inShapes.insert({inp, inp.get_partial_shape()});
-        }
-    }
-
-    if (!equal_flag)
-    {
-        InferenceEngine::CNNNetwork curr_t_net(t_net);
-        curr_t_net.reshape(inShapes);
-    }
-    std::vector<size_t> dims = t_net.getOutputsInfo()[name];
-    outputs.push_back(MatShape(dims.begin(), dims.end()));
-#else
-    InferenceEngine::ICNNNetwork::InputShapes inShapes = t_net.getInputShapes();
-    InferenceEngine::ICNNNetwork::InputShapes::iterator itr;
-    bool equal_flag = true;
-    size_t i = 0;
-    for (itr = inShapes.begin(); itr != inShapes.end(); ++itr)
-    {
-        InferenceEngine::SizeVector currentInShape(inputs[i].begin(), inputs[i].end());
-        if (itr->second != currentInShape)
-        {
-            itr->second = currentInShape;
             equal_flag = false;
         }
         i++;
     }
-
     if (!equal_flag)
     {
         InferenceEngine::CNNNetwork curr_t_net(t_net);
         curr_t_net.reshape(inShapes);
     }
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+    std::vector<size_t> dims = t_net.getOutputsInfo()[name];
+#else
     std::vector<size_t> dims = t_net.getOutputsInfo()[name]->getDims();
+#endif
     outputs.push_back(MatShape(dims.begin(), dims.end()));
-#endif // OpenVINO >= 2022.1
     return false;
 }
 
@@ -951,19 +920,6 @@ InferenceEngine::Layout estimateLayout(const Mat& m)
 {
     return estimateLayout(m.dims);
 }
-
-// static InferenceEngine::DataPtr wrapToInfEngineDataNode(const Mat& m, const std::string& name = "")
-// {
-//     std::vector<size_t> shape = getShape<size_t>(m);
-//     if (m.type() == CV_32F)
-//         return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
-//                {InferenceEngine::Precision::FP32, shape, estimateLayout(m)}));
-//     else if (m.type() == CV_8U)
-//         return InferenceEngine::DataPtr(new InferenceEngine::Data(name,
-//                {InferenceEngine::Precision::U8, shape, estimateLayout(m)}));
-//     else
-//         CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
-// }
 
 InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m, const std::vector<size_t>& shape,
                                                InferenceEngine::Layout layout)
@@ -1050,74 +1006,6 @@ InferenceEngine::Blob::Ptr copyBlob(const InferenceEngine::Blob::Ptr& blob)
     return copy;
 }
 
-// InferenceEngine::DataPtr ngraphDataNode(const Ptr<BackendWrapper>& ptr)
-// {
-//     CV_Assert(!ptr.empty());
-//     Ptr<NgraphBackendWrapper> p = ptr.dynamicCast<NgraphBackendWrapper>();
-//     CV_Assert(!p.empty());
-//     return p->dataPtr;
-// }
-
-// static
-// InferenceEngine::Blob::Ptr reallocateBlob(Mat &m, const InferenceEngine::TensorDesc& description)
-// {
-//     auto dims = description.getDims();
-//     auto layout = estimateLayout(dims.size());
-//     MatShape matShape(dims.begin(), dims.end());
-//     if (description.getPrecision() == InferenceEngine::Precision::FP32)
-//     {
-//         m.create(matShape, CV_32FC1);
-//         return InferenceEngine::make_shared_blob<float>(
-//                 {description.getPrecision(), dims, layout}, (float*)m.data);
-//     }
-//     else if (description.getPrecision() == InferenceEngine::Precision::I32)
-//     {
-//         m.create(matShape, CV_32SC1);
-//         return InferenceEngine::make_shared_blob<int>(
-//                 {description.getPrecision(), dims, layout}, (int*)m.data);
-//     }
-//     else if (description.getPrecision() == InferenceEngine::Precision::U8)
-//     {
-//         m.create(matShape, CV_8UC1);
-//         return InferenceEngine::make_shared_blob<uchar>(
-//                 {description.getPrecision(), dims, layout}, (uchar*)m.data);
-//     }
-//     std::ostringstream msg;
-//     msg << "Unsupported IE precision: " << description.getPrecision();
-//     CV_Error(Error::StsNotImplemented, msg.str());
-// }
-
-// InferenceEngine::DataPtr ngraphDataOutputNode(
-//         const Ptr<BackendWrapper>& ptr,
-//         const InferenceEngine::TensorDesc& description,
-//         const std::string name)
-// {
-//     CV_Assert(!ptr.empty());
-//     Ptr<NgraphBackendWrapper> p = ptr.dynamicCast<NgraphBackendWrapper>();
-//     CV_Assert(!p.empty());
-//     NgraphBackendWrapper& w = *p;
-//     const InferenceEngine::TensorDesc& blobDesc = w.blob.get()->getTensorDesc();
-//     auto dims = description.getDims();
-//     bool reallocate = false;
-//     if (blobDesc.getPrecision() != description.getPrecision())
-//     {
-//         reallocate = true;
-//         CV_LOG_WARNING(NULL, "Reallocate output '" << name << "' blob due to wrong precision: " << blobDesc.getPrecision() << " => " << description.getPrecision() << "  ndims=" << dims.size());
-//     }
-//     if (dims.size() != blobDesc.getDims().size())
-//     {
-//         reallocate = true;
-//         CV_LOG_WARNING(NULL, "Reallocate output '" << name << "' blob due to wrong dims: " << blobDesc.getDims().size() << " => " << dims.size());
-//     }
-//     if (reallocate)
-//     {
-//         auto layout = estimateLayout(dims.size());
-//         w.dataPtr = InferenceEngine::DataPtr(new InferenceEngine::Data(name,
-//                {description.getPrecision(), dims, layout}));
-//         w.blob = reallocateBlob(*w.host, description);
-//     }
-//     return w.dataPtr;
-// }
 #endif // OpenVINO < 2022.1
 
 void InfEngineNgraphNet::reset()
@@ -1179,7 +1067,6 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
         infRequests.push_back(reqWrapper);
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
-        std::vector<ov::Tensor> inputs, outputs;
         int i = 0;
         for (const auto& it : netExec.inputs())
         {

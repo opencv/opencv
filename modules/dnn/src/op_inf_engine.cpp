@@ -54,8 +54,14 @@ void CNNNetwork::serialize(const std::string& xmlPath, const std::string& binPat
     ov::pass::Serialize(xmlPath, binPath).run_on_model(model);
 }
 
-void CNNNetwork::reshape(const std::map<ov::Output<ov::Node>, ov::PartialShape>& shapes) {
-    model->reshape(shapes);
+void CNNNetwork::reshape(const std::map<std::string, std::vector<size_t> >& shapes) {
+    std::map<std::string, ov::PartialShape> partialShapes;
+    for (const auto& it : shapes) {
+        ov::PartialShape shape;
+        shape.insert(shape.begin(), it.second.begin(), it.second.end());
+        partialShapes.insert({it.first, shape});
+    }
+    model->reshape(partialShapes);
 }
 
 std::map<std::string, std::vector<size_t> > CNNNetwork::getOutputsInfo() const {

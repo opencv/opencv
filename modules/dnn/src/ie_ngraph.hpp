@@ -134,12 +134,6 @@ public:
     AsyncArray futureMat;
 };
 
-// InferenceEngine::DataPtr ngraphDataNode(const Ptr<BackendWrapper>& ptr);
-// InferenceEngine::DataPtr ngraphDataOutputNode(
-//         const Ptr<BackendWrapper>& ptr,
-//         const InferenceEngine::TensorDesc& description,
-//         const std::string name);
-
 // This is a fake class to run networks from Model Optimizer. Objects of that
 // class simulate responses of layers are imported by OpenCV and supported by
 // Inference Engine. The main difference is that they do not perform forward pass.

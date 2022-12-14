@@ -276,7 +276,11 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
             for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
             {
                 std::string outputName = netInputLayer->outNames.empty() ? ld.name : netInputLayer->outNames[i];
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
                 outputName = i > 0 ? (outputName + "." + std::to_string(i)) : outputName;
+#else
+                outputName = ld.outputBlobsWrappers.size() > 1 ? (outputName + "." + std::to_string(i)) : outputName;
+#endif
                 ld.outputBlobsWrappers[i].dynamicCast<NgraphBackendWrapper>()->name = outputName;
             }
         }
@@ -284,7 +288,11 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         {
             for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
             {
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
                 std::string outputName = i > 0 ? (ld.name + "." + std::to_string(i)) : ld.name;
+#else
+                std::string outputName = ld.outputBlobsWrappers.size() > 1 ? (ld.name + "." + std::to_string(i)) : ld.name;
+#endif
                 ld.outputBlobsWrappers[i].dynamicCast<NgraphBackendWrapper>()->name = outputName;
             }
         }
@@ -686,17 +694,10 @@ Net NetImplOpenVINO::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork
 
     std::vector<String> inputsNames;
     std::vector<MatShape> inp_shapes;
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
-    for (auto& it : ngraphFunction->inputs())
+    for (auto& it : ngraphFunction->get_parameters())
     {
-        inputsNames.push_back(it.get_node()->get_friendly_name());
-        std::vector<size_t> dims = it.get_shape();
-#else
-    for (auto& it : ieNet.getInputsInfo())
-    {
-        inputsNames.push_back(it.first);
-        std::vector<size_t> dims = it.second->getTensorDesc().getDims();
-#endif
+        inputsNames.push_back(it->get_friendly_name());
+        std::vector<size_t> dims = it->get_shape();
         inp_shapes.push_back(std::vector<int>(dims.begin(), dims.end()));
     }
 
