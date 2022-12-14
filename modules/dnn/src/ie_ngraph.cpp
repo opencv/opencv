@@ -797,9 +797,9 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
         std::map<std::string, std::string> config;
         if (device_name == "MYRIAD" || device_name == "HDDL") {
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-            // config.emplace("MYRIAD_DETECT_NETWORK_BATCH", CONFIG_VALUE(NO));
+            config.emplace("MYRIAD_DETECT_NETWORK_BATCH", "NO");
 #else
-            // config.emplace("VPU_DETECT_NETWORK_BATCH", CONFIG_VALUE(NO));
+            config.emplace("VPU_DETECT_NETWORK_BATCH", "NO");
 #endif
         }
 
@@ -820,7 +820,7 @@ void InfEngineNgraphNet::initPlugin(InferenceEngine::CNNNetwork& net)
 
         std::string ieDevice = isHetero ? ("HETERO:" + device_name + ",CPU") : device_name;
         CV_LOG_INFO(NULL, "DNN/IE: Calling LoadNetwork(device=" << ieDevice << ")...");
-        netExec = ie.LoadNetwork(net, ieDevice);
+        netExec = ie.LoadNetwork(net, ieDevice, config);
     }
     catch (const std::exception& ex)
     {

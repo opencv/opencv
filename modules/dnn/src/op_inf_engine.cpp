@@ -90,8 +90,13 @@ CNNNetwork Core::ReadNetwork(const std::string& xmlPath, const std::string& binP
     return read_model(xmlPath, binPath);
 }
 
-ExecutableNetwork Core::LoadNetwork(CNNNetwork net, const std::string& device) {
-    return compile_model(net.getFunction(), device);
+ExecutableNetwork Core::LoadNetwork(CNNNetwork net, const std::string& device,
+                                    const std::map<std::string, std::string>& config) {
+    ov::AnyMap props;
+    for (const auto& it : config) {
+        props.insert(it);
+    }
+    return compile_model(net.getFunction(), device, props);
 }
 
 ExecutableNetwork::ExecutableNetwork() {}

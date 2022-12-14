@@ -138,7 +138,8 @@ public:
 
     CNNNetwork ReadNetwork(const std::string& xmlPath, const std::string& binPath);
 
-    ExecutableNetwork LoadNetwork(CNNNetwork net, const std::string& device);
+    ExecutableNetwork LoadNetwork(CNNNetwork net, const std::string& device,
+                                  const std::map<std::string, std::string>& config);
 };
 
 }
