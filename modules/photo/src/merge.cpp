@@ -235,8 +235,7 @@ public:
         }
         int maxlevel =
             static_cast<int>(logf(static_cast<float>(min(size.width, size.height))) / logf(2.0f));
-        std::vector<Mat> res_pyr(maxlevel + 1);
-        std::vector<std::vector<Mat>> img_pyrs(images.size(), res_pyr);
+        std::vector<std::vector<Mat>> img_pyrs(images.size(), std::vector<Mat>(maxlevel + 1));
 
         parallel_for_(Range(0, images.size()),
                       [&](const Range& range)
@@ -272,27 +271,20 @@ public:
                       {
                           for (int lvl = range.start; lvl < range.end; lvl++)
                           {
-                              for (size_t i = 0; i < images.size(); i++)
+                              for (size_t i = 1; i < images.size(); i++)
                               {
-                                  if (res_pyr[lvl].empty())
-                                  {
-                                      res_pyr[lvl] = img_pyrs[i][lvl];
-                                  }
-                                  else
-                                  {
-                                      res_pyr[lvl] += img_pyrs[i][lvl];
-                                  }
+                                  img_pyrs[0][lvl] += img_pyrs[i][lvl];
                               }
                           }
                       });
         for (int lvl = maxlevel; lvl > 0; lvl--)
         {
             Mat up;
-            pyrUp(res_pyr[lvl], up, res_pyr[lvl - 1].size());
-            res_pyr[lvl - 1] += up;
+            pyrUp(img_pyrs[0][lvl], up, img_pyrs[0][lvl - 1].size());
+            img_pyrs[0][lvl - 1] += up;
         }
         dst.create(size, CV_32FCC);
-        res_pyr[0].copyTo(dst);
+        img_pyrs[0][0].copyTo(dst);
     }
 
     float getContrastWeight() const CV_OVERRIDE { return wcon; }
