@@ -46,6 +46,8 @@
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
 #include <openvino/openvino.hpp>
+#include <openvino/pass/serialize.hpp>
+#include <openvino/pass/convert_fp32_to_fp16.hpp>
 #else
 #include <inference_engine.hpp>
 #endif

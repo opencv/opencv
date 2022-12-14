@@ -573,6 +573,9 @@ void InfEngineNgraphNet::init(Target targetId)
     {
         if (targetId == DNN_TARGET_OPENCL_FP16)
         {
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+            ov::pass::ConvertFP32ToFP16().run_on_model(ngraph_function);
+#else
             auto nodes = ngraph_function->get_ordered_ops();
             for (auto& node : nodes)
             {
@@ -596,6 +599,7 @@ void InfEngineNgraphNet::init(Target targetId)
                 }
             }
             ngraph_function->validate_nodes_and_infer_types();
+#endif  // OpenVINO >= 2022.1
         }
         cnn = InferenceEngine::CNNNetwork(ngraph_function);
 
@@ -983,7 +987,12 @@ void NgraphBackendWrapper::setHostDirty()
     //CV_Error(Error::StsNotImplemented, "");
 }
 
-#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2022_1)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+ov::Tensor copyBlob(const ov::Tensor& blob)
+{
+    return ov::Tensor(blob.get_element_type(), blob.get_shape());
+}
+#else
 InferenceEngine::Blob::Ptr copyBlob(const InferenceEngine::Blob::Ptr& blob)
 {
     InferenceEngine::Blob::Ptr copy;
@@ -1074,7 +1083,7 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
             const std::string& name = it.get_node()->get_friendly_name();
             auto blobIt = allBlobs.find(name);
             CV_Assert(blobIt != allBlobs.end());
-            reqWrapper->req.set_input_tensor(i++, blobIt->second);
+            reqWrapper->req.set_input_tensor(i++, isAsync ? copyBlob(blobIt->second) : blobIt->second);
         }
 
         i = 0;
@@ -1083,7 +1092,7 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
             const std::string& name = it.get_node()->get_friendly_name();
             auto blobIt = allBlobs.find(name);
             CV_Assert(blobIt != allBlobs.end());
-            reqWrapper->req.set_output_tensor(i++, blobIt->second);
+            reqWrapper->req.set_output_tensor(i++, isAsync ? copyBlob(blobIt->second) : blobIt->second);
         }
 #else
         InferenceEngine::BlobMap inpBlobs, outBlobs;
@@ -1105,7 +1114,48 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
         reqWrapper->req.SetOutput(outBlobs);
 #endif
 
-#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2022_1)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+    reqWrapper->req.set_callback([reqWrapper](std::exception_ptr ex) {
+        CV_LOG_DEBUG(NULL, "DNN(nGraph): completionCallback(" << (int)status << ")");
+
+        size_t processedOutputs = 0;
+        try
+        {
+            for (; processedOutputs < reqWrapper->outProms.size(); ++processedOutputs)
+            {
+                Mat m = infEngineBlobToMat(reqWrapper->req.get_output_tensor(processedOutputs));
+
+                try
+                {
+                    reqWrapper->outProms[processedOutputs].setValue(m.clone());
+                }
+                catch (...)
+                {
+                    try {
+                        reqWrapper->outProms[processedOutputs].setException(std::current_exception());
+                    } catch(...) {
+                        CV_LOG_ERROR(NULL, "DNN: Exception occurred during async inference exception propagation");
+                    }
+                }
+            }
+        }
+        catch (...)
+        {
+            std::exception_ptr e = std::current_exception();
+            for (; processedOutputs < reqWrapper->outProms.size(); ++processedOutputs)
+            {
+                try {
+                    reqWrapper->outProms[processedOutputs].setException(e);
+                } catch(...) {
+                    CV_LOG_ERROR(NULL, "DNN: Exception occurred during async inference exception propagation");
+                }
+            }
+        }
+        reqWrapper->isReady = true;
+    });
+
+#else // OpenVINO >= 2022.1
+
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)
         InferenceEngine::InferRequest infRequest = reqWrapper->req;
         NgraphReqWrapper* wrapperPtr = reqWrapper.get();
@@ -1175,13 +1225,28 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
                 wrapper.isReady = true;
             }
         );
-#endif // OpenVINO < 2022.1
+#endif // OpenVINO >= 2022.1
     }
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
     if (isAsync)
     {
-        CV_Error(Error::StsNotImplemented, "Asynchronous inference using OpenVINO API 2.0");
+        // Copy actual data to infer request's input blobs.
+        int i = 0;
+        for (const auto& it : cnn.getFunction()->get_parameters())
+        {
+            const std::string& name = it->get_friendly_name();
+            auto blobIt = allBlobs.find(name);
+            Mat srcMat = infEngineBlobToMat(blobIt->second);
+            Mat dstMat = infEngineBlobToMat(reqWrapper->req.get_input_tensor(i++));
+            srcMat.copyTo(dstMat);
+        }
+
+        // Set promises to output blobs wrappers.
+        reqWrapper->makePromises(outBlobsWrappers);
+
+        reqWrapper->isReady = false;
+        reqWrapper->req.start_async();
     }
     else
     {
