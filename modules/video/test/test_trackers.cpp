@@ -79,7 +79,7 @@ static bool checkIOU(const Rect& r0, const Rect& r1, double threshold)
     }
 }
 
-static void checkTrackingAccuracy(cv::Ptr<Tracker>& tracker, double iouThreshold = 0.8)
+static void checkTrackingAccuracy(cv::Ptr<Tracker>& tracker, double iouThreshold = 0.7)
 {
     // Template image
     Mat img0 = imread(findDataFile("tracking/bag/00000001.jpg"), 1);
@@ -136,7 +136,7 @@ TEST(DaSiamRPN, accuracy)
     checkTrackingAccuracy(tracker, 0.7);
 }
 
-TEST(NanoTrack, accuracy)
+TEST(NanoTrack, accuracy_NanoTrack_V1)
 {
     std::string backbonePath = cvtest::findDataFile("dnn/onnx/models/nanotrack_backbone_sim.onnx", false);
     std::string neckheadPath = cvtest::findDataFile("dnn/onnx/models/nanotrack_head_sim.onnx", false);
@@ -147,4 +147,17 @@ TEST(NanoTrack, accuracy)
     cv::Ptr<Tracker> tracker = TrackerNano::create(params);
     checkTrackingAccuracy(tracker);
 }
+
+TEST(NanoTrack, accuracy_NanoTrack_V2)
+{
+    std::string backbonePath = cvtest::findDataFile("dnn/onnx/models/nanotrack_backbone_sim_v2.onnx", false);
+    std::string neckheadPath = cvtest::findDataFile("dnn/onnx/models/nanotrack_head_sim_v2.onnx", false);
+
+    cv::TrackerNano::Params params;
+    params.backbone = backbonePath;
+    params.neckhead = neckheadPath;
+    cv::Ptr<Tracker> tracker = TrackerNano::create(params);
+    checkTrackingAccuracy(tracker, 0.69);
+}
+
 }}  // namespace opencv_test::
