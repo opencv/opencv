@@ -114,6 +114,8 @@ extern "C" {
 #include <libavcodec/bsf.h>
 #endif
 
+#include <libavutil/pixdesc.h>
+
 // https://github.com/FFmpeg/FFmpeg/blob/b6af56c034759b81985f8ea094e41cbd5f7fecfb/doc/APIchanges#L208-L210
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(59, 0, 100)
 #  define CV_FFMPEG_FMT_CONST const
