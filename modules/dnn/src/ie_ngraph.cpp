@@ -853,6 +853,7 @@ bool NgraphBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
         }
         i++;
     }
+
     if (!equal_flag)
     {
         InferenceEngine::CNNNetwork curr_t_net(t_net);
@@ -1104,104 +1105,112 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
         reqWrapper->req.SetOutput(outBlobs);
 #endif
 
-// #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)
-//         InferenceEngine::InferRequest infRequest = reqWrapper->req;
-//         NgraphReqWrapper* wrapperPtr = reqWrapper.get();
-//         CV_Assert(wrapperPtr && "Internal error");
-// #else
-//         InferenceEngine::IInferRequest::Ptr infRequestPtr = reqWrapper->req;
-//         CV_Assert(infRequestPtr);
-//         InferenceEngine::IInferRequest& infRequest = *infRequestPtr.get();
-//         infRequest.SetUserData(reqWrapper.get(), 0);
-// #endif
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2022_1)
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)
+        InferenceEngine::InferRequest infRequest = reqWrapper->req;
+        NgraphReqWrapper* wrapperPtr = reqWrapper.get();
+        CV_Assert(wrapperPtr && "Internal error");
+#else
+        InferenceEngine::IInferRequest::Ptr infRequestPtr = reqWrapper->req;
+        CV_Assert(infRequestPtr);
+        InferenceEngine::IInferRequest& infRequest = *infRequestPtr.get();
+        infRequest.SetUserData(reqWrapper.get(), 0);
+#endif
 
-// #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)
-//         // do NOT capture 'reqWrapper' (smart ptr) in the lambda callback
-//         // infRequest.SetCompletionCallback<std::function<void(InferenceEngine::InferRequest, InferenceEngine::StatusCode)>>(
-//             // [wrapperPtr](InferenceEngine::InferRequest /*request*/, InferenceEngine::StatusCode status)
-// #else
-//         infRequest.SetCompletionCallback(
-//             [](InferenceEngine::IInferRequest::Ptr requestPtr, InferenceEngine::StatusCode status)
-// #endif
-//             {
-//                 CV_LOG_DEBUG(NULL, "DNN(nGraph): completionCallback(" << (int)status << ")");
-// #if !INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)
-//                 CV_Assert(requestPtr);
-//                 InferenceEngine::IInferRequest& request = *requestPtr.get();
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)
+        // do NOT capture 'reqWrapper' (smart ptr) in the lambda callback
+        infRequest.SetCompletionCallback<std::function<void(InferenceEngine::InferRequest, InferenceEngine::StatusCode)>>(
+            [wrapperPtr](InferenceEngine::InferRequest /*request*/, InferenceEngine::StatusCode status)
+#else
+        infRequest.SetCompletionCallback(
+            [](InferenceEngine::IInferRequest::Ptr requestPtr, InferenceEngine::StatusCode status)
+#endif
+            {
+                CV_LOG_DEBUG(NULL, "DNN(nGraph): completionCallback(" << (int)status << ")");
+#if !INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)
+                CV_Assert(requestPtr);
+                InferenceEngine::IInferRequest& request = *requestPtr.get();
 
-//                 NgraphReqWrapper* wrapperPtr;
-//                 request.GetUserData((void**)&wrapperPtr, 0);
-//                 CV_Assert(wrapperPtr && "Internal error");
-// #endif
-//                 NgraphReqWrapper& wrapper = *wrapperPtr;
+                NgraphReqWrapper* wrapperPtr;
+                request.GetUserData((void**)&wrapperPtr, 0);
+                CV_Assert(wrapperPtr && "Internal error");
+#endif
+                NgraphReqWrapper& wrapper = *wrapperPtr;
 
-//                 size_t processedOutputs = 0;
-//                 try
-//                 {
-//                     for (; processedOutputs < wrapper.outProms.size(); ++processedOutputs)
-//                     {
-//                         const std::string& name = wrapper.outsNames[processedOutputs];
-//                         // Mat m = infEngineBlobToMat(wrapper.req.GetBlob(name));
-//                         Mat m;
+                size_t processedOutputs = 0;
+                try
+                {
+                    for (; processedOutputs < wrapper.outProms.size(); ++processedOutputs)
+                    {
+                        const std::string& name = wrapper.outsNames[processedOutputs];
+                        Mat m = infEngineBlobToMat(wrapper.req.GetBlob(name));
 
-//                         try
-//                         {
-//                             CV_Assert(status == InferenceEngine::StatusCode::OK);
-//                             wrapper.outProms[processedOutputs].setValue(m.clone());
-//                         }
-//                         catch (...)
-//                         {
-//                             try {
-//                                 wrapper.outProms[processedOutputs].setException(std::current_exception());
-//                             } catch(...) {
-//                                 CV_LOG_ERROR(NULL, "DNN: Exception occurred during async inference exception propagation");
-//                             }
-//                         }
-//                     }
-//                 }
-//                 catch (...)
-//                 {
-//                     std::exception_ptr e = std::current_exception();
-//                     for (; processedOutputs < wrapper.outProms.size(); ++processedOutputs)
-//                     {
-//                         try {
-//                             wrapper.outProms[processedOutputs].setException(e);
-//                         } catch(...) {
-//                             CV_LOG_ERROR(NULL, "DNN: Exception occurred during async inference exception propagation");
-//                         }
-//                     }
-//                 }
-//                 wrapper.isReady = true;
-//             }
-//         );
+                        try
+                        {
+                            CV_Assert(status == InferenceEngine::StatusCode::OK);
+                            wrapper.outProms[processedOutputs].setValue(m.clone());
+                        }
+                        catch (...)
+                        {
+                            try {
+                                wrapper.outProms[processedOutputs].setException(std::current_exception());
+                            } catch(...) {
+                                CV_LOG_ERROR(NULL, "DNN: Exception occurred during async inference exception propagation");
+                            }
+                        }
+                    }
+                }
+                catch (...)
+                {
+                    std::exception_ptr e = std::current_exception();
+                    for (; processedOutputs < wrapper.outProms.size(); ++processedOutputs)
+                    {
+                        try {
+                            wrapper.outProms[processedOutputs].setException(e);
+                        } catch(...) {
+                            CV_LOG_ERROR(NULL, "DNN: Exception occurred during async inference exception propagation");
+                        }
+                    }
+                }
+                wrapper.isReady = true;
+            }
+        );
+#endif // OpenVINO < 2022.1
     }
 
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+    if (isAsync)
+    {
+        CV_Error(Error::StsNotImplemented, "Asynchronous inference using OpenVINO API 2.0");
+    }
+    else
+    {
+        reqWrapper->req.infer();
+    }
+#else
     if (isAsync)
     {
         // Copy actual data to infer request's input blobs.
-        // for (const auto& it : cnn.getInputsInfo())
-        // {
-        //     const std::string& name = it.first;
-        //     auto blobIt = allBlobs.find(name);
-        //     Mat srcMat = infEngineBlobToMat(blobIt->second);
-        //     Mat dstMat = infEngineBlobToMat(reqWrapper->req.GetBlob(name));
-        //     srcMat.copyTo(dstMat);
-        // }
+        for (const auto& it : cnn.getInputsInfo())
+        {
+            const std::string& name = it.first;
+            auto blobIt = allBlobs.find(name);
+            Mat srcMat = infEngineBlobToMat(blobIt->second);
+            Mat dstMat = infEngineBlobToMat(reqWrapper->req.GetBlob(name));
+            srcMat.copyTo(dstMat);
+        }
 
         // Set promises to output blobs wrappers.
         reqWrapper->makePromises(outBlobsWrappers);
 
         reqWrapper->isReady = false;
-        // reqWrapper->req.StartAsync();
+        reqWrapper->req.StartAsync();
     }
     else
     {
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
-        reqWrapper->req.infer();
-#else
         reqWrapper->req.Infer();
-#endif
     }
+#endif // OpenVINO >= 2022.1
 }
 
 #endif
