@@ -227,7 +227,7 @@ Mat Dictionary::getBitsFromByteList(const Mat &byteList, int markerSize) {
 }
 
 
-Dictionary getPredefinedDictionary(PREDEFINED_DICTIONARY name) {
+Dictionary getPredefinedDictionary(PredefinedDictionaryType name) {
     // DictionaryData constructors calls
     //    moved out of globals so construted on first use, which allows lazy-loading of opencv dll
     static const Dictionary DICT_ARUCO_DATA = Dictionary(Mat(1024, (5 * 5 + 7) / 8, CV_8UC4, (uchar*)DICT_ARUCO_BYTES), 5, 0);
@@ -313,7 +313,7 @@ Dictionary getPredefinedDictionary(PREDEFINED_DICTIONARY name) {
 
 
 Dictionary getPredefinedDictionary(int dict) {
-    return getPredefinedDictionary(PREDEFINED_DICTIONARY(dict));
+    return getPredefinedDictionary(PredefinedDictionaryType(dict));
 }
 
 

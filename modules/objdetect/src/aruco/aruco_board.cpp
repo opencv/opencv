@@ -17,7 +17,7 @@ struct Board::BoardImpl {
     std::vector<int> ids;
 
     BoardImpl() {
-        dictionary = Dictionary(getPredefinedDictionary(PREDEFINED_DICTIONARY::DICT_4X4_50));
+        dictionary = Dictionary(getPredefinedDictionary(PredefinedDictionaryType::DICT_4X4_50));
     }
 };
 
