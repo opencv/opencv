@@ -169,7 +169,7 @@ public:
         std::vector<Mat> weights(images.size());
         Mat weight_sum = Mat::zeros(size, CV_32F);
 
-        parallel_for_(Range(0, images.size()),
+        parallel_for_(Range(0, static_cast<int>(images.size())),
                       [&](const Range& range)
                       {
                           for (int i = range.start; i < range.end; i++)
@@ -237,7 +237,7 @@ public:
             static_cast<int>(logf(static_cast<float>(min(size.width, size.height))) / logf(2.0f));
         std::vector<std::vector<Mat>> img_pyrs(images.size(), std::vector<Mat>(maxlevel + 1));
 
-        parallel_for_(Range(0, images.size()),
+        parallel_for_(Range(0, static_cast<int>(images.size())),
                       [&](const Range& range)
                       {
                           for (int i = range.start; i < range.end; i++)
