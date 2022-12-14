@@ -644,42 +644,5 @@ void cv::accumulateWeighted( InputArray _src, InputOutputArray _dst,
 }
 
 
-CV_IMPL void
-cvAcc( const void* arr, void* sumarr, const void* maskarr )
-{
-    cv::Mat src = cv::cvarrToMat(arr), dst = cv::cvarrToMat(sumarr), mask;
-    if( maskarr )
-        mask = cv::cvarrToMat(maskarr);
-    cv::accumulate( src, dst, mask );
-}
-
-CV_IMPL void
-cvSquareAcc( const void* arr, void* sumarr, const void* maskarr )
-{
-    cv::Mat src = cv::cvarrToMat(arr), dst = cv::cvarrToMat(sumarr), mask;
-    if( maskarr )
-        mask = cv::cvarrToMat(maskarr);
-    cv::accumulateSquare( src, dst, mask );
-}
-
-CV_IMPL void
-cvMultiplyAcc( const void* arr1, const void* arr2,
-               void* sumarr, const void* maskarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(arr1), src2 = cv::cvarrToMat(arr2);
-    cv::Mat dst = cv::cvarrToMat(sumarr), mask;
-    if( maskarr )
-        mask = cv::cvarrToMat(maskarr);
-    cv::accumulateProduct( src1, src2, dst, mask );
-}
-
-CV_IMPL void
-cvRunningAvg( const void* arr, void* sumarr, double alpha, const void* maskarr )
-{
-    cv::Mat src = cv::cvarrToMat(arr), dst = cv::cvarrToMat(sumarr), mask;
-    if( maskarr )
-        mask = cv::cvarrToMat(maskarr);
-    cv::accumulateWeighted( src, dst, alpha, mask );
-}
 
 /* End of file. */

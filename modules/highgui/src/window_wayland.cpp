@@ -1442,18 +1442,18 @@ cv::Rect cv_wl_titlebar::draw(void *data, cv::Size const &size, bool force) {
             cv::putText(
                     buf_, window_->get_title(),
                     origin, title_.face, title_.scale,
-                    CV_RGB(0xff, 0xff, 0xff), title_.thickness, CV_AA
+                    CV_RGB(0xff, 0xff, 0xff), title_.thickness, cv::LINE_AA
             );
         }
 
         buf_(cv::Rect(btn_min_.tl(), cv::Size(titlebar_min_width, size.height))) = bg_color_;
-        cv::line(buf_, btn_cls.tl(), btn_cls.br(), line_color_, 1, CV_AA);
+        cv::line(buf_, btn_cls.tl(), btn_cls.br(), line_color_, 1, cv::LINE_AA);
         cv::line(buf_, btn_cls.tl() + cv::Point(btn_cls.width, 0), btn_cls.br() - cv::Point(btn_cls.width, 0),
-                 line_color_, 1, CV_AA);
-        cv::rectangle(buf_, btn_max.tl(), btn_max.br(), line_color_, 1, CV_AA);
+                 line_color_, 1, cv::LINE_AA);
+        cv::rectangle(buf_, btn_max.tl(), btn_max.br(), line_color_, 1, cv::LINE_AA);
         cv::line(buf_, cv::Point(btn_min_.x + 8, btn_min_.height / 2),
-                 cv::Point(btn_min_.x + btn_min_.width - 8, btn_min_.height / 2), line_color_, 1, CV_AA);
-        cv::line(buf_, cv::Point(0, 0), cv::Point(buf_.size().width, 0), border_color_, 1, CV_AA);
+                 cv::Point(btn_min_.x + btn_min_.width - 8, btn_min_.height / 2), line_color_, 1, cv::LINE_AA);
+        cv::line(buf_, cv::Point(0, 0), cv::Point(buf_.size().width, 0), border_color_, 1, cv::LINE_AA);
 
         write_mat_to_xrgb8888(buf_, data);
         last_size_ = size;
@@ -1475,7 +1475,7 @@ cv_wl_viewer::cv_wl_viewer(cv_wl_window *window, int flags)
 void cv_wl_viewer::set_image(cv::Mat const &image) {
     if (image.type() == CV_8UC1) {
         cv::Mat bgr;
-        cv::cvtColor(image, bgr, CV_GRAY2BGR);
+        cv::cvtColor(image, bgr, cv::COLOR_GRAY2BGR);
         image_ = bgr.clone();
     } else {
         image_ = image.clone();
@@ -1509,7 +1509,7 @@ void cv_wl_viewer::get_preferred_height_for_width(int width, int &minimum, int &
         minimum = natural = image_.size().height;
     } else {
         natural = static_cast<int>(width * aspect_ratio(image_.size()));
-        minimum = (flags_ & CV_WINDOW_FREERATIO ? 0 : natural);
+        minimum = (flags_ & cv::WINDOW_FREERATIO ? 0 : natural);
     }
 }
 
@@ -1548,11 +1548,11 @@ cv::Rect cv_wl_viewer::draw(void *data, cv::Size const &size, bool force) {
         CV_Assert(image_.size() == size);
         write_mat_to_xrgb8888(image_, data);
     } else {
-        if (flags_ & CV_WINDOW_FREERATIO) {
+        if (flags_ & cv::WINDOW_FREERATIO) {
             cv::Mat resized;
             cv::resize(image_, resized, size);
             write_mat_to_xrgb8888(resized, data);
-        } else /* CV_WINDOW_KEEPRATIO */ {
+        } else /* cv::WINDOW_KEEPRATIO */ {
             auto rect = cv::Rect(cv::Point(0, 0), size);
             if (aspect_ratio(size) >= aspect_ratio(image_.size())) {
                 rect.height = static_cast<int>(image_.size().height * ((double) rect.width / image_.size().width));
@@ -1657,12 +1657,12 @@ cv::Rect cv_wl_trackbar::draw(void *data, cv::Size const &size, bool force) {
                 data_,
                 (name_ + ": " + std::to_string(slider_.value)),
                 bar_.text_orig, bar_.fontface, bar_.fontscale,
-                CV_RGB(0x00, 0x00, 0x00), bar_.font_thickness, CV_AA);
+                CV_RGB(0x00, 0x00, 0x00), bar_.font_thickness, cv::LINE_AA);
 
-        cv::line(data_, bar_.left, bar_.right, color_.bg, bar_.thickness + 3, CV_AA);
-        cv::line(data_, bar_.left, bar_.right, color_.fg, bar_.thickness, CV_AA);
-        cv::circle(data_, slider_.pos, slider_.radius, color_.fg, -1, CV_AA);
-        cv::circle(data_, slider_.pos, slider_.radius, color_.bg, 1, CV_AA);
+        cv::line(data_, bar_.left, bar_.right, color_.bg, bar_.thickness + 3, cv::LINE_AA);
+        cv::line(data_, bar_.left, bar_.right, color_.fg, bar_.thickness, cv::LINE_AA);
+        cv::circle(data_, slider_.pos, slider_.radius, color_.fg, -1, cv::LINE_AA);
+        cv::circle(data_, slider_.pos, slider_.radius, color_.bg, 1, cv::LINE_AA);
 
         write_mat_to_xrgb8888(data_, data);
         damage = cv::Rect(cv::Point(0, 0), size);
@@ -2310,57 +2310,33 @@ protected:
 
 std::shared_ptr<cv_wl_core> CvWlCore::sInstance = nullptr;
 
-CV_IMPL int cvStartWindowThread() {
-    return 0;
-}
-
-CV_IMPL int cvNamedWindow(const char *name, int flags) {
+int namedWindowImpl(const char *name, int flags) {
     return CvWlCore::getInstance().create_window(name, flags);
 }
 
-CV_IMPL void cvDestroyWindow(const char *name) {
+void destroyWindowImpl(const char *name) {
     CvWlCore::getInstance().destroy_window(name);
 }
 
-CV_IMPL void cvDestroyAllWindows() {
+void destroyAllWindowsImpl() {
     CvWlCore::getInstance().destroy_all_windows();
 }
 
-CV_IMPL void *cvGetWindowHandle(const char *name) {
-    return CvWlCore::getInstance().get_window_handle(name);
-}
-
-CV_IMPL const char *cvGetWindowName(void *window_handle) {
-    return CvWlCore::getInstance().get_window_name(window_handle).c_str();
-}
-
-CV_IMPL void cvMoveWindow(const char *name, int x, int y) {
+void moveWindowImpl(const char *name, int x, int y) {
     CV_UNUSED(name);
     CV_UNUSED(x);
     CV_UNUSED(y);
     CV_LOG_ONCE_WARNING(nullptr, "Function not implemented: User cannot move window surfaces in Wayland");
 }
 
-CV_IMPL void cvResizeWindow(const char *name, int width, int height) {
+void resizeWindowImpl(const char *name, int width, int height) {
     if (auto window = CvWlCore::getInstance().get_window(name))
         window->show(cv::Size(width, height));
     else
         throw_system_error("Could not get window name", errno)
 }
 
-CV_IMPL int cvCreateTrackbar(const char *name_bar, const char *window_name, int *value, int count,
-                             CvTrackbarCallback on_change) {
-    CV_UNUSED(name_bar);
-    CV_UNUSED(window_name);
-    CV_UNUSED(value);
-    CV_UNUSED(count);
-    CV_UNUSED(on_change);
-    CV_LOG_ONCE_WARNING(nullptr, "Not implemented, use cvCreateTrackbar2");
-
-    return 0;
-}
-
-CV_IMPL int cvCreateTrackbar2(const char *trackbar_name, const char *window_name, int *val, int count,
+int createTrackbar2Impl(const char *trackbar_name, const char *window_name, int *val, int count,
                               CvTrackbarCallback2 on_notify, void *userdata) {
     if (auto window = CvWlCore::getInstance().get_window(window_name))
         window->create_trackbar(trackbar_name, val, count, on_notify, userdata);
@@ -2368,7 +2344,7 @@ CV_IMPL int cvCreateTrackbar2(const char *trackbar_name, const char *window_name
     return 0;
 }
 
-CV_IMPL int cvGetTrackbarPos(const char *trackbar_name, const char *window_name) {
+int getTrackbarPosImpl(const char *trackbar_name, const char *window_name) {
     if (auto window = CvWlCore::getInstance().get_window(window_name)) {
         auto trackbar_ptr = window->get_trackbar(trackbar_name);
         if (auto trackbar = trackbar_ptr.lock())
@@ -2378,7 +2354,7 @@ CV_IMPL int cvGetTrackbarPos(const char *trackbar_name, const char *window_name)
     return -1;
 }
 
-CV_IMPL void cvSetTrackbarPos(const char *trackbar_name, const char *window_name, int pos) {
+void setTrackbarPosImpl(const char *trackbar_name, const char *window_name, int pos) {
     if (auto window = CvWlCore::getInstance().get_window(window_name)) {
         auto trackbar_ptr = window->get_trackbar(trackbar_name);
         if (auto trackbar = trackbar_ptr.lock())
@@ -2386,7 +2362,7 @@ CV_IMPL void cvSetTrackbarPos(const char *trackbar_name, const char *window_name
     }
 }
 
-CV_IMPL void cvSetTrackbarMax(const char *trackbar_name, const char *window_name, int maxval) {
+void setTrackbarMaxImpl(const char *trackbar_name, const char *window_name, int maxval) {
     if (auto window = CvWlCore::getInstance().get_window(window_name)) {
         auto trackbar_ptr = window->get_trackbar(trackbar_name);
         if (auto trackbar = trackbar_ptr.lock())
@@ -2394,18 +2370,18 @@ CV_IMPL void cvSetTrackbarMax(const char *trackbar_name, const char *window_name
     }
 }
 
-CV_IMPL void cvSetTrackbarMin(const char *trackbar_name, const char *window_name, int minval) {
+void setTrackbarMinImpl(const char *trackbar_name, const char *window_name, int minval) {
     CV_UNUSED(trackbar_name);
     CV_UNUSED(window_name);
     CV_UNUSED(minval);
 }
 
-CV_IMPL void cvSetMouseCallback(const char *window_name, CvMouseCallback on_mouse, void *param) {
+void setMouseCallbackImpl(const char *window_name, CvMouseCallback on_mouse, void *param) {
     if (auto window = CvWlCore::getInstance().get_window(window_name))
         window->set_mouse_callback(on_mouse, param);
 }
 
-CV_IMPL void cvShowImage(const char *name, const CvArr *arr) {
+void showImageImpl(const char *name, const CvArr *arr) {
     auto cv_core = CvWlCore::getInstance();
     auto window = cv_core.get_window(name);
     if (!window) {
@@ -2423,7 +2399,7 @@ void setWindowTitle_WAYLAND(const cv::String &winname, const cv::String &title) 
         window->set_title(title);
 }
 
-CV_IMPL int cvWaitKey(int delay) {
+int waitKeyImpl(int delay) {
     int key = -1;
     auto limit = ch::duration_cast<ch::nanoseconds>(ch::milliseconds(delay));
     auto start_time = ch::duration_cast<ch::nanoseconds>(
@@ -2462,13 +2438,13 @@ CV_IMPL int cvWaitKey(int delay) {
 }
 
 #ifdef HAVE_OPENGL
-CV_IMPL void cvSetOpenGlDrawCallback(const char *, CvOpenGlDrawCallback, void *) {
+void setOpenGLDrawCallbackImpl(const char *, CvOpenGlDrawCallback, void *) {
 }
 
-CV_IMPL void cvSetOpenGlContext(const char *) {
+void setOpenGLContextImpl(const char *) {
 }
 
-CV_IMPL void cvUpdateWindow(const char *) {
+void updateWindowImpl(const char *) {
 }
 #endif // HAVE_OPENGL
 

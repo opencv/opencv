@@ -167,8 +167,6 @@ It provides easy interface to:
             cv::createTrackbar("Twin brother", windowName, &state, 100, callbackTwin);
         }
     @endcode
-
-    @defgroup highgui_c C API
 @}
 */
 
@@ -797,7 +795,7 @@ CV_EXPORTS_W void displayOverlay(const String& winname, const String& text, int 
 
 The function displayStatusBar displays useful information/tips on top of the window for a certain
 amount of time *delayms* . This information is displayed on the window statusbar (the window must be
-created with the CV_GUI_EXPANDED flags).
+created with the cv::WINDOW_GUI_EXPANDED flags).
 
 @param winname Name of the window.
 @param text Text to write on the window statusbar.

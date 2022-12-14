@@ -1549,21 +1549,3 @@ void cv::buildPyramid( InputArray _src, OutputArrayOfArrays _dst, int maxlevel, 
     for( ; i <= maxlevel; i++ )
         pyrDown( _dst.getMatRef(i-1), _dst.getMatRef(i), Size(), borderType );
 }
-
-CV_IMPL void cvPyrDown( const void* srcarr, void* dstarr, int _filter )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-
-    CV_Assert( _filter == CV_GAUSSIAN_5x5 && src.type() == dst.type());
-    cv::pyrDown( src, dst, dst.size() );
-}
-
-CV_IMPL void cvPyrUp( const void* srcarr, void* dstarr, int _filter )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-
-    CV_Assert( _filter == CV_GAUSSIAN_5x5 && src.type() == dst.type());
-    cv::pyrUp( src, dst, dst.size() );
-}
-
-/* End of file. */

@@ -230,7 +230,7 @@
    Memcheck:Leak
    ...
    fun:gtk_init
-   fun:cvInitSystem
+   fun:gtk_InitSystem
 }
 
 {

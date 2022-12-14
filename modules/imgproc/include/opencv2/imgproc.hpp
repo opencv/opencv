@@ -190,7 +190,6 @@ location of points on the plane, building special graphs (such as NNG,RNG), and 
     @defgroup imgproc_feature Feature Detection
     @defgroup imgproc_object Object Detection
     @defgroup imgproc_segmentation Image Segmentation
-    @defgroup imgproc_c C API
     @defgroup imgproc_hal Hardware Acceleration Layer
     @{
         @defgroup imgproc_hal_functions Functions
@@ -437,6 +436,8 @@ enum RetrievalModes {
 
 //! the contour approximation algorithm
 enum ContourApproximationModes {
+    /** TBD */
+    CHAIN_CODE            = 0,
     /** stores absolutely all the contour points. That is, any 2 subsequent points (x1,y1) and
     (x2,y2) of the contour will be either horizontal, vertical or diagonal neighbors, that is,
     max(abs(x1-x2),abs(y2-y1))==1. */
@@ -447,7 +448,9 @@ enum ContourApproximationModes {
     /** applies one of the flavors of the Teh-Chin chain approximation algorithm @cite TehChin89 */
     CHAIN_APPROX_TC89_L1   = 3,
     /** applies one of the flavors of the Teh-Chin chain approximation algorithm @cite TehChin89 */
-    CHAIN_APPROX_TC89_KCOS = 4
+    CHAIN_APPROX_TC89_KCOS = 4,
+    /** TBD */
+    LINK_RUNS              = 5
 };
 
 /** @brief Shape matching methods
@@ -722,7 +725,7 @@ enum ColorConversionCodes {
 
     COLOR_YUV2GRAY_UYVY = 123,
     COLOR_YUV2GRAY_YUY2 = 124,
-    //CV_YUV2GRAY_VYUY    = CV_YUV2GRAY_UYVY,
+    //COLOR_YUV2GRAY_VYUY    = COLOR_YUV2GRAY_UYVY,
     COLOR_YUV2GRAY_Y422 = COLOR_YUV2GRAY_UYVY,
     COLOR_YUV2GRAY_UYNV = COLOR_YUV2GRAY_UYVY,
     COLOR_YUV2GRAY_YVYU = COLOR_YUV2GRAY_YUY2,

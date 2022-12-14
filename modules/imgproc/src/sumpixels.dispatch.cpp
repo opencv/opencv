@@ -465,30 +465,3 @@ void integral( InputArray src, OutputArray sum, OutputArray sqsum, int sdepth, i
 }
 
 } // namespace
-
-CV_IMPL void
-cvIntegral( const CvArr* image, CvArr* sumImage,
-            CvArr* sumSqImage, CvArr* tiltedSumImage )
-{
-    cv::Mat src = cv::cvarrToMat(image), sum = cv::cvarrToMat(sumImage), sum0 = sum;
-    cv::Mat sqsum0, sqsum, tilted0, tilted;
-    cv::Mat *psqsum = 0, *ptilted = 0;
-
-    if( sumSqImage )
-    {
-        sqsum0 = sqsum = cv::cvarrToMat(sumSqImage);
-        psqsum = &sqsum;
-    }
-
-    if( tiltedSumImage )
-    {
-        tilted0 = tilted = cv::cvarrToMat(tiltedSumImage);
-        ptilted = &tilted;
-    }
-    cv::integral( src, sum, psqsum ? cv::_OutputArray(*psqsum) : cv::_OutputArray(),
-                  ptilted ? cv::_OutputArray(*ptilted) : cv::_OutputArray(), sum.depth() );
-
-    CV_Assert( sum.data == sum0.data && sqsum.data == sqsum0.data && tilted.data == tilted0.data );
-}
-
-/* End of file. */

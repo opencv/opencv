@@ -628,25 +628,3 @@ int cv::floodFill( InputOutputArray _image, Point seedPoint,
     Mat mask;
     return floodFill(_image, mask, seedPoint, newVal, rect, loDiff, upDiff, flags);
 }
-
-
-CV_IMPL void
-cvFloodFill( CvArr* arr, CvPoint seed_point,
-             CvScalar newVal, CvScalar lo_diff, CvScalar up_diff,
-             CvConnectedComp* comp, int flags, CvArr* maskarr )
-{
-    if( comp )
-        memset( comp, 0, sizeof(*comp) );
-
-    cv::Mat img = cv::cvarrToMat(arr), mask = cv::cvarrToMat(maskarr);
-    int area = cv::floodFill(img, mask, seed_point, newVal,
-                             comp ? (cv::Rect*)&comp->rect : 0,
-                             lo_diff, up_diff, flags );
-    if( comp )
-    {
-        comp->area = area;
-        comp->value = newVal;
-    }
-}
-
-/* End of file. */

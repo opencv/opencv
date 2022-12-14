@@ -76,7 +76,6 @@ protected:
     bool inplace;
     bool custom_inv_transform;
     int fwd_code, inv_code;
-    bool test_cpp;
     int hue_range;
     bool srgb;
 };
@@ -97,7 +96,6 @@ CV_ColorCvtBaseTest::CV_ColorCvtBaseTest( bool _custom_inv_transform, bool _allo
 
     fwd_code_str = inv_code_str = 0;
 
-    test_cpp = false;
     hue_range = 0;
     blue_idx = 0;
     srgb = false;
@@ -147,7 +145,6 @@ void CV_ColorCvtBaseTest::get_test_array_types_and_sizes( int test_case_idx,
         types[OUTPUT][1] = types[REF_OUTPUT][1] = CV_MAKETYPE(depth, cn);
 
     inplace = cn == 3 && cvtest::randInt(rng) % 2 != 0;
-    test_cpp = (cvtest::randInt(rng) & 256) == 0;
 }
 
 
@@ -164,20 +161,14 @@ void CV_ColorCvtBaseTest::run_func()
     CvArr* out0 = test_array[OUTPUT][0];
     cv::Mat _out0 = cv::cvarrToMat(out0), _out1 = cv::cvarrToMat(test_array[OUTPUT][1]);
 
-    if(!test_cpp)
-        cvCvtColor( inplace ? out0 : test_array[INPUT][0], out0, fwd_code );
-    else
-        cv::cvtColor( cv::cvarrToMat(inplace ? out0 : test_array[INPUT][0]), _out0, fwd_code, _out0.channels());
+    cv::cvtColor( cv::cvarrToMat(inplace ? out0 : test_array[INPUT][0]), _out0, fwd_code, _out0.channels());
 
     if( inplace )
     {
         cvCopy( out0, test_array[OUTPUT][1] );
         out0 = test_array[OUTPUT][1];
     }
-    if(!test_cpp)
-        cvCvtColor( out0, test_array[OUTPUT][1], inv_code );
-    else
-        cv::cvtColor(cv::cvarrToMat(out0), _out1, inv_code, _out1.channels());
+    cv::cvtColor(cv::cvarrToMat(out0), _out1, inv_code, _out1.channels());
 }
 
 
@@ -1077,7 +1068,7 @@ double CV_ColorLabTest::get_success_error_level( int /*test_case_idx*/, int i, i
 {
     int depth = test_mat[i][j].depth();
     // j == 0 is for forward code, j == 1 is for inverse code
-    return (depth ==  CV_8U) ? (srgb ? 32 : 8) :
+    return (depth ==  CV_8U) ? (srgb ? 37 : 8) :
            //(depth == CV_16U) ? 32 : // 16u is disabled
            srgb ? ((j == 0) ? 0.4 : 0.0055) : 1e-3;
 }
@@ -1256,7 +1247,7 @@ double CV_ColorLuvTest::get_success_error_level( int /*test_case_idx*/, int i, i
 {
     int depth = test_mat[i][j].depth();
     // j == 0 is for forward code, j == 1 is for inverse code
-    return (depth ==  CV_8U) ? (srgb ? 36 : 8) :
+    return (depth ==  CV_8U) ? (srgb ? 37 : 8) :
            //(depth == CV_16U) ? 32 : // 16u is disabled
            5e-2;
 }
@@ -1730,13 +1721,8 @@ double CV_ColorBayerTest::get_success_error_level( int /*test_case_idx*/, int /*
 
 void CV_ColorBayerTest::run_func()
 {
-    if(!test_cpp)
-        cvCvtColor( test_array[INPUT][0], test_array[OUTPUT][0], fwd_code );
-    else
-    {
-        cv::Mat _out = cv::cvarrToMat(test_array[OUTPUT][0]);
-        cv::cvtColor(cv::cvarrToMat(test_array[INPUT][0]), _out, fwd_code, _out.channels());
-    }
+    cv::Mat _out = cv::cvarrToMat(test_array[OUTPUT][0]);
+    cv::cvtColor(cv::cvarrToMat(test_array[INPUT][0]), _out, fwd_code, _out.channels());
 }
 
 

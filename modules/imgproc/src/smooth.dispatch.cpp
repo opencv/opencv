@@ -755,33 +755,3 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
 }
 
 } // namespace
-
-//////////////////////////////////////////////////////////////////////////////////////////
-
-CV_IMPL void
-cvSmooth( const void* srcarr, void* dstarr, int smooth_type,
-          int param1, int param2, double param3, double param4 )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst0 = cv::cvarrToMat(dstarr), dst = dst0;
-
-    CV_Assert( dst.size() == src.size() &&
-        (smooth_type == CV_BLUR_NO_SCALE || dst.type() == src.type()) );
-
-    if( param2 <= 0 )
-        param2 = param1;
-
-    if( smooth_type == CV_BLUR || smooth_type == CV_BLUR_NO_SCALE )
-        cv::boxFilter( src, dst, dst.depth(), cv::Size(param1, param2), cv::Point(-1,-1),
-            smooth_type == CV_BLUR, cv::BORDER_REPLICATE );
-    else if( smooth_type == CV_GAUSSIAN )
-        cv::GaussianBlur( src, dst, cv::Size(param1, param2), param3, param4, cv::BORDER_REPLICATE );
-    else if( smooth_type == CV_MEDIAN )
-        cv::medianBlur( src, dst, param1 );
-    else
-        cv::bilateralFilter( src, dst, param1, param3, param4, cv::BORDER_REPLICATE );
-
-    if( dst.data != dst0.data )
-        CV_Error( CV_StsUnmatchedFormats, "The destination image does not have the proper type" );
-}
-
-/* End of file. */

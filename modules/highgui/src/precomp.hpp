@@ -58,7 +58,6 @@
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/highgui/highgui_c.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -88,6 +87,34 @@
 
 #define CV_WINDOW_MAGIC_VAL     0x00420042
 #define CV_TRACKBAR_MAGIC_VAL   0x00420043
+
+// Obsolete but widely used types and functions hidden here
+typedef void (CV_CDECL *CvTrackbarCallback)(int pos);
+int namedWindowImpl(const char* name, int flags = cv::WINDOW_AUTOSIZE);
+void showImageImpl( const char* name, const CvArr* image );
+void resizeWindowImpl( const char* name, int width, int height );
+void moveWindowImpl( const char* name, int x, int y );
+void destroyWindowImpl(const char* name);
+void destroyAllWindowsImpl(void);
+int waitKeyImpl(int delay);
+
+int getTrackbarPosImpl( const char* trackbar_name, const char* window_name );
+void setTrackbarPosImpl( const char* trackbar_name, const char* window_name, int pos );
+void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int maxval);
+void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int minval);
+typedef void (CV_CDECL *CvTrackbarCallback2)(int pos, void* userdata);
+int createTrackbar2Impl( const char* trackbar_name, const char* window_name,
+                              int* value, int count, CvTrackbarCallback2 on_change,
+                              void* userdata CV_DEFAULT(0));
+
+typedef void (CV_CDECL *CvMouseCallback )(int event, int x, int y, int flags, void* param);
+void setMouseCallbackImpl( const char* window_name, CvMouseCallback on_mouse, void* param);
+
+typedef void (CV_CDECL *CvOpenGlDrawCallback)(void* userdata);
+void setOpenGLDrawCallbackImpl(const char* window_name, CvOpenGlDrawCallback callback, void* userdata);
+void setOpenGLContextImpl(const char* window_name);
+void updateWindowImpl(const char* window_name);
+
 
 //Yannick Verdie 2010, Max Kostin 2015
 void cvSetModeWindow_W32(const char* name, double prop_value);

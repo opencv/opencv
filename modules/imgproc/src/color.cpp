@@ -356,14 +356,3 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
     }
 }
 } //namespace cv
-
-
-CV_IMPL void
-cvCvtColor( const CvArr* srcarr, CvArr* dstarr, int code )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst0 = cv::cvarrToMat(dstarr), dst = dst0;
-    CV_Assert( src.depth() == dst.depth() );
-
-    cv::cvtColor(src, dst, code, dst.channels());
-    CV_Assert( dst.data == dst0.data );
-}
