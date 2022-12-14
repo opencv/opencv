@@ -1,7 +1,9 @@
 #include "perf_precomp.hpp"
 
-namespace opencv_test { namespace {
-
+namespace opencv_test
+{
+namespace
+{
 static vector<float> DEFAULT_VECTOR;
 void loadExposureSeq(String path, vector<Mat>& images, vector<float>& times = DEFAULT_VECTOR)
 {
@@ -9,7 +11,8 @@ void loadExposureSeq(String path, vector<Mat>& images, vector<float>& times = DE
     ASSERT_TRUE(list_file.is_open());
     string name;
     float val;
-    while(list_file >> name >> val) {
+    while (list_file >> name >> val)
+    {
         Mat img = imread(path + name);
         ASSERT_FALSE(img.empty()) << "Could not load input image " << path + name;
         images.push_back(img);
@@ -50,4 +53,5 @@ PERF_TEST(HDR, Robertson)
     SANITY_CHECK_NOTHING();
 }
 
-}} // namespace
+} // namespace
+} // namespace opencv_test
