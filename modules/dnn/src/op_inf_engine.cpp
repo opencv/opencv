@@ -20,6 +20,10 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
+#if INF_ENGINE_VER_MAJOR_EQ(INF_ENGINE_RELEASE_2022_1)
+#include <ngraph/pass/serialize.hpp>
+#endif
+
 namespace cv { namespace dnn {
 
 #ifdef HAVE_INF_ENGINE
