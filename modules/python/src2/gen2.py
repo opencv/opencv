@@ -169,10 +169,10 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
 
 
 gen_template_prop_init = Template("""
-    {(char*)"${member}", (getter)pyopencv_${name}_get_${member}, NULL, (char*)"${member}", NULL},""")
+    {(char*)"${export_member_name}", (getter)pyopencv_${name}_get_${member}, NULL, (char*)"${export_member_name}", NULL},""")
 
 gen_template_rw_prop_init = Template("""
-    {(char*)"${member}", (getter)pyopencv_${name}_get_${member}, (setter)pyopencv_${name}_set_${member}, (char*)"${member}", NULL},""")
+    {(char*)"${export_member_name}", (getter)pyopencv_${name}_get_${member}, (setter)pyopencv_${name}_set_${member}, (char*)"${export_member_name}", NULL},""")
 
 gen_template_overloaded_function_call = Template("""
     {
@@ -241,6 +241,13 @@ class ClassProp(object):
         self.readonly = True
         if "/RW" in decl[3]:
             self.readonly = False
+
+    @property
+    def export_name(self):
+        if self.name in python_reserved_keywords:
+            return self.name + "_"
+        return self.name
+
 
 class ClassInfo(object):
     def __init__(self, name, decl=None, codegen=None):
@@ -357,13 +364,13 @@ class ClassInfo(object):
             else:
                 getset_code.write(gen_template_get_prop.substitute(name=self.name, member=pname, membertype=p.tp, access=access_op))
             if p.readonly:
-                getset_inits.write(gen_template_prop_init.substitute(name=self.name, member=pname))
+                getset_inits.write(gen_template_prop_init.substitute(name=self.name, member=pname, export_member_name=p.export_name))
             else:
                 if self.isalgorithm:
                     getset_code.write(gen_template_set_prop_algo.substitute(name=self.name, cname=self.cname, member=pname, membertype=p.tp, access=access_op))
                 else:
                     getset_code.write(gen_template_set_prop.substitute(name=self.name, member=pname, membertype=p.tp, access=access_op))
-                getset_inits.write(gen_template_rw_prop_init.substitute(name=self.name, member=pname))
+                getset_inits.write(gen_template_rw_prop_init.substitute(name=self.name, member=pname, export_member_name=p.export_name))
 
         methods_code = StringIO()
         methods_inits = StringIO()

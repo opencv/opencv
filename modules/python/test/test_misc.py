@@ -119,6 +119,23 @@ class Bindings(NewOpenCVTests):
         test_overload_resolution('rect with float coordinates', (4.5, 4, 2, 1))
         test_overload_resolution('rect with wrong number of coordinates', (4, 4, 1))
 
+    def test_properties_with_reserved_keywords_names_are_transformed(self):
+        obj = cv.utils.ClassWithKeywordProperties(except_arg=23)
+        self.assertTrue(hasattr(obj, "lambda_"),
+                        msg="Class doesn't have RW property with converted name")
+        try:
+            obj.lambda_ = 32
+        except Exception as e:
+            self.fail("Failed to set value to RW property. Error: {}".format(e))
+
+        self.assertTrue(hasattr(obj, "except_"),
+                        msg="Class doesn't have readonly property with converted name")
+        self.assertEqual(obj.except_, 23,
+                         msg="Can't access readonly property value")
+        with self.assertRaises(AttributeError):
+            obj.except_ = 32
+
+
 
 class Arguments(NewOpenCVTests):
 
