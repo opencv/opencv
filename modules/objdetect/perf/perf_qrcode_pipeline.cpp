@@ -114,7 +114,6 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
         straight_barcode_sort.push_back(result[i].second);
     }
     SANITY_CHECK(decoded_info_sort);
-    SANITY_CHECK(straight_barcode_sort);
 }
 #endif
 

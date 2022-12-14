@@ -760,6 +760,12 @@ public:
      */
     CV_WRAP void setEpsY(double epsY);
 
+    /** @brief use markers to improve the position of the corners of the QR code
+     *
+     * alignmentMarkers using by default
+     */
+    CV_WRAP void setUseAlignmentMarkers(bool useAlignmentMarkers);
+
     /** @brief Detects QR code in image and returns the quadrangle containing the code.
      @param img grayscale or color (BGR) image containing (or not) QR code.
      @param points Output vector of vertices of the minimum-area quadrangle containing the code.
