@@ -630,20 +630,41 @@ public:
         std::string op_name = cv::format("matmul_%d", index);
         auto op = std::make_shared<ge::op::MatMulV2>(op_name);
 
-        // set attributes
-        op->set_attr_transpose_x1(false);
-        // weightMat always needs to be transposed, since CPU backend
-        // implementation is input * weight.im2row
-        op->set_attr_transpose_x2(true);
+        if (!blobs.empty()) // if B is const
+        {
+            // set attributes
+            op->set_attr_transpose_x1(false);
+            // weightMat always needs to be transposed, since CPU backend
+            // implementation is input * weight.im2row
+            op->set_attr_transpose_x2(true);
+
+            // set inputs
+            // set inputs : x2 (weight)
+            auto op_const_weight = std::make_shared<CannConstOp>(weightsMat.data, weightsMat.type(), shape(weightsMat), cv::format("%s_w", op_name.c_str()));
+            op->set_input_x2_by_name(*(op_const_weight->getOp()), "y");
+            op->update_input_desc_x2(*(op_const_weight->getTensorDesc()));
+        }
+        else
+        {
+            // A and B are variable inputs; non-const bias is not considered
+            CV_Assert(inputsWrapper.size() == 2);
+            CV_Assert(nodes.size() == 2);
+
+            // set attributes
+            op->set_attr_transpose_x1(transA);
+            op->set_attr_transpose_x2(transB);
+
+            // set inputs : x2 (weight)
+            auto op_x2 = nodes[1].dynamicCast<CannBackendNode>()->getOp();
+            auto x2_desc = inputsWrapper[1].dynamicCast<CannBackendWrapper>()->getTensorDesc();
+            op->set_input_x2_by_name(*op_x2, "y");
+            op->update_input_desc_x2(*x2_desc);
+        }
 
         // set inputs
         // set inputs : x1 (input)
         op->set_input_x1_by_name(*op_x1, "y");
         op->update_input_desc_x1(*x1_desc);
-        // set inputs : x2 (weight)
-        auto op_const_weight = std::make_shared<CannConstOp>(weightsMat.data, weightsMat.type(), shape(weightsMat), cv::format("%s_w", op_name.c_str()));
-        op->set_input_x2_by_name(*(op_const_weight->getOp()), "y");
-        op->update_input_desc_x2(*(op_const_weight->getTensorDesc()));
         // set inputs : bias (bias)
         auto bias_mat = bias ? biasMat : Mat::zeros(1, weightsMat.size[0], weightsMat.type());
         std::vector<int> bias_shape{weightsMat.size[0]};
