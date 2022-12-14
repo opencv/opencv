@@ -258,7 +258,7 @@ class Arguments(NewOpenCVTests):
         min_int64, max_int64 = get_limits(ctypes.c_longlong)
         for convertible in (-10, -1, 2, int(43.2), np.uint8(15), np.int8(33), np.int16(-13),
                             np.int32(4), np.int64(345), (23), min_int64, max_int64, np.int_(33)):
-            expected = 'int: {0:d}'.format(convertible)
+            expected = 'int64: {0:d}'.format(convertible)
             actual = try_to_convert(convertible)
             self.assertEqual(expected, actual,
                              msg=get_conversion_error_msg(convertible, expected, actual))
@@ -267,16 +267,11 @@ class Arguments(NewOpenCVTests):
         min_int64, max_int64 = get_limits(ctypes.c_longlong)
         for not_convertible in (1.2, np.float(4), float(3), np.double(45), 's', 'str',
                                 np.array([1, 2]), (1,), [1, 2], min_int64 - 1, max_int64 + 1,
-                                complex(1, 1), complex(imag=2), complex(1.1)):
+                                complex(1, 1), complex(imag=2), complex(1.1), np.bool_(True),
+                                True, False, np.float32(2.3), np.array([3, ], dtype=int),
+                                np.array([-2, ], dtype=np.int32), np.array([1, ], dtype=np.int),
+                                np.array([11, ], dtype=np.uint8)):
             with self.assertRaises((TypeError, OverflowError, ValueError),
-                                   msg=get_no_exception_msg(not_convertible)):
-                _ = cv.utils.dumpInt64(not_convertible)
-
-    def test_parse_to_int64_not_convertible_extra(self):
-        for not_convertible in (np.bool_(True), True, False, np.float32(2.3),
-                                np.array([3, ], dtype=int), np.array([-2, ], dtype=np.int32),
-                                np.array([1, ], dtype=np.int), np.array([11, ], dtype=np.uint8)):
-            with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpInt64(not_convertible)
 

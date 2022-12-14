@@ -38,7 +38,9 @@ String dumpInt(int argument)
 CV_WRAP static inline
 String dumpInt64(int64 argument)
 {
-    return cv::format("Int: %lld", static_cast<long long>(argument));
+    std::ostringstream oss("Int64: ", std::ios::ate);
+    oss << argument;
+    return oss.str();
 }
 
 CV_WRAP static inline
