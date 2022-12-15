@@ -1204,6 +1204,10 @@ inputA = np.random.randn(6, 2, 3, 4).astype(np.float32)
 inputB = np.random.randn(6, 2, 4, 5).astype(np.float32)
 generate_matmul_init("matmul_4d_init", inputA, inputB)
 
+inputA = np.random.randn(2, 3, 4, 5).astype(np.float32)
+inputB = np.random.randn(3, 5, 6).astype(np.float32)
+generate_matmul_init("matmul_init_bcast", inputA, inputB)
+
 def generate_matmul_init_2(name, inputA, inputB):
     outputY = inputA @ inputB
     shapeA = inputA.shape
