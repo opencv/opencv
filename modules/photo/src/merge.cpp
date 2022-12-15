@@ -230,12 +230,12 @@ public:
             weight_sum += weights[i];
         }
         int maxlevel = static_cast<int>(logf(static_cast<float>(min(size.width, size.height))) / logf(2.0f));
-        std::vector<Mat> res_pyr(maxlevel + 1);
         struct SyncSummationOrder
         {
             std::mutex mutex;
             std::condition_variable cond;
             int index = 0;
+            Mat res;
         };
         std::vector<SyncSummationOrder> sync(maxlevel + 1);
 
@@ -262,10 +262,10 @@ public:
 
                     std::unique_lock<std::mutex> lock(sync[lvl].mutex);
                     sync[lvl].cond.wait(lock, [&]{ return sync[lvl].index == i; });
-                    if(res_pyr[lvl].empty()) {
-                        res_pyr[lvl] = img_pyr[lvl];
+                    if(sync[lvl].res.empty()) {
+                        sync[lvl].res = img_pyr[lvl];
                     } else {
-                        res_pyr[lvl] += img_pyr[lvl];
+                        sync[lvl].res += img_pyr[lvl];
                     }
                     sync[lvl].index++;
                     sync[lvl].cond.notify_all();
@@ -274,11 +274,11 @@ public:
         });
         for(int lvl = maxlevel; lvl > 0; lvl--) {
             Mat up;
-            pyrUp(res_pyr[lvl], up, res_pyr[lvl - 1].size());
-            res_pyr[lvl - 1] += up;
+            pyrUp(sync[lvl].res, up, sync[lvl - 1].res.size());
+            sync[lvl - 1].res += up;
         }
         dst.create(size, CV_32FCC);
-        res_pyr[0].copyTo(dst);
+        sync[0].res.copyTo(dst);
     }
 
     float getContrastWeight() const CV_OVERRIDE { return wcon; }
