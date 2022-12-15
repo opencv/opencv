@@ -921,6 +921,7 @@ TEST_P(Test_ONNX_layers, MatMul_init)
     testONNXModels("matmul_4d_init");
 
     testONNXModels("matmul_init_2");
+    testONNXModels("matmul_init_bcast");
 }
 
 TEST_P(Test_ONNX_layers, MatMulAdd)
