@@ -223,13 +223,13 @@ struct Net::Impl : public detail::NetImplBase
 
     void forwardToLayer(LayerData& ld, bool clearFlags = true);
 
-    virtual Mat forward(const String& outputName);
+    Mat forward(const String& outputName);
     AsyncArray forwardAsync(const String& outputName);
-    virtual void forward(OutputArrayOfArrays outputBlobs, const String& outputName);
-    virtual void forward(OutputArrayOfArrays outputBlobs,
-                         const std::vector<String>& outBlobNames);
-    virtual void forward(std::vector<std::vector<Mat>>& outputBlobs,
-                         const std::vector<String>& outBlobNames);
+    void forward(OutputArrayOfArrays outputBlobs, const String& outputName);
+    void forward(OutputArrayOfArrays outputBlobs,
+            const std::vector<String>& outBlobNames);
+    void forward(std::vector<std::vector<Mat>>& outputBlobs,
+            const std::vector<String>& outBlobNames);
 
 
     void getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes);

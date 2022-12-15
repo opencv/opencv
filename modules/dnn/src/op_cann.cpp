@@ -111,13 +111,6 @@ CannBackendNode::CannBackendNode(const std::shared_ptr<ge::Operator>& op)
 
 std::shared_ptr<ge::Operator> CannBackendNode::getOp() { return op_; }
 
-// void CannBackendNode::createCannNet(ge::Graph& graph)
-// {
-//     cannNet = std::make_shared<CannNet>();
-//     cannNet->buildFromGraph(graph);
-//     cannNet->loadToDevice();
-// }
-
 CannBackendWrapper::CannBackendWrapper(const Mat& m)
     : BackendWrapper(DNN_BACKEND_CANN, DNN_TARGET_NPU),  host((Mat*)&m)
 {
@@ -132,12 +125,12 @@ CannBackendWrapper::CannBackendWrapper(const Mat& m)
 
 void CannBackendWrapper::copyToHost()
 {
-    CV_LOG_INFO(NULL, "Not implemented");
+    CV_LOG_DEBUG(NULL, "Not implemented");
 }
 
 void CannBackendWrapper::setHostDirty()
 {
-    CV_LOG_INFO(NULL, "Not implemented");
+    CV_LOG_DEBUG(NULL, "Not implemented");
 }
 
 CannNet::~CannNet()
@@ -166,12 +159,6 @@ CannNet::~CannNet()
     model_desc = nullptr;
     CV_LOG_INFO(NULL, "[Success] Unloaded model (id=" << model_id << ")");
 
-    // destroy stream
-    // if (stream != nullptr)
-    // {
-    //     ACL_CHECK_RET(aclrtDestroyStream(stream));
-    //     stream = nullptr;
-    // }
     // destroy context
     if (context != nullptr)
     {
@@ -179,7 +166,6 @@ CannNet::~CannNet()
         context = nullptr;
     }
     // reset device
-    // if (context == nullptr && stream == nullptr)
     if (context == nullptr)
     {
         ACL_CHECK_RET(aclrtResetDevice(device_id));
@@ -215,76 +201,82 @@ void CannNet::loadToDevice()
     createOutputDataset();
 }
 
-void CannNet::setInput(const Mat& input, const String& name)
+void CannNet::bindInputWrappers(const std::vector<Ptr<BackendWrapper>>& inputWrappers)
 {
-    size_t idx;
-    if (!name.empty())
+    CV_Assert(inputWrappers.size() == getInputNum());
+    for (size_t i = 0; i < inputWrappers.size(); ++i)
     {
-        ACL_CHECK_RET(aclmdlGetInputIndexByName(model_desc, name.c_str(), &idx));
+        auto wrapper = inputWrappers[i].dynamicCast<CannBackendWrapper>();
+
+        // verify size
+        aclmdlIODims model_dims;
+        ACL_CHECK_RET(aclmdlGetInputDims(model_desc, i, &model_dims));
+        CV_CheckEQ((int)model_dims.dimCount, wrapper->host->dims, "Dimension of input does not match with model's requirement");
+        for (size_t j = 0; j < model_dims.dimCount; ++j)
+            CV_CheckEQ((int)model_dims.dims[j], wrapper->host->size[j], "Size of input does not match with model's requirement");
+
+        input_wrappers.push_back(wrapper);
     }
-    else
+}
+
+void CannNet::bindOutputWrappers(const std::vector<Ptr<BackendWrapper>>& outputWrappers)
+{
+    CV_Assert(outputWrappers.size() == getOutputNum());
+    for (int i = 0; i < outputWrappers.size(); ++i)
     {
-        idx = 0;
+        auto wrapper = outputWrappers[i].dynamicCast<CannBackendWrapper>();
+
+        // verify size
+        aclmdlIODims model_dims;
+        ACL_CHECK_RET(aclmdlGetOutputDims(model_desc, i, &model_dims));
+        CV_CheckEQ((int)model_dims.dimCount, wrapper->host->dims, "Dimension of input does not match with model's requirement");
+        for (size_t j = 0; j < model_dims.dimCount; ++j)
+            CV_CheckEQ((int)model_dims.dims[j], wrapper->host->size[j], "Size of input does not match with model's requirement");
+
+        output_wrappers.push_back(wrapper);
     }
-
-    // verify size
-    aclmdlIODims model_dims;
-    ACL_CHECK_RET(aclmdlGetInputDims(model_desc, idx, &model_dims));
-    CV_CheckEQ((int)model_dims.dimCount, input.dims, "Dimension of input does not match with model's requirement");
-    for (int i = 0; i < input.dims; i++)
-        // CV_Assert(model_dims.dims[i] == input.size[i]);
-        CV_CheckEQ((int)model_dims.dims[i], input.size[i], "Size of input does not match with model's requirement");
-
-    auto data_buffer = aclmdlGetDatasetBuffer(inputs, idx);
-    auto data_size = aclGetDataBufferSizeV2(data_buffer);
-    auto p_device = aclGetDataBufferAddr(data_buffer);
-    // TODO: verify input size
-    CV_LOG_INFO(NULL, "Data size = " << data_size << ", Mat total = " << input.total() << ", Mat shape = " << input.size);
-
-    const void* p_host = (const void*)input.data;
-    ACL_CHECK_RET(aclrtMemcpy(p_device, data_size, p_host, data_size, ACL_MEMCPY_HOST_TO_DEVICE));
 }
 
 void CannNet::forward()
 {
+    // send inputs from host to device
+    CV_LOG_DEBUG(NULL, "DNN/CANN: start sending inputs to device");
+    for (size_t i = 0; i < input_wrappers.size(); ++i)
+    {
+        const void* p_host = (const void*)input_wrappers[i]->host->data;
+
+        auto db = aclmdlGetDatasetBuffer(inputs, i);
+        auto p_device = aclGetDataBufferAddr(db);
+        auto db_size = aclGetDataBufferSizeV2(db);
+
+        ACL_CHECK_RET(aclrtMemcpy(p_device, db_size, p_host, db_size, ACL_MEMCPY_HOST_TO_DEVICE));
+    }
+    CV_LOG_DEBUG(NULL, "DNN/CANN: finished sending inputs to device");
+
+    // forward
+    CV_LOG_DEBUG(NULL, "DNN/CANN: start network forward");
     ACL_CHECK_RET(aclrtSetCurrentContext(context));
     ACL_CHECK_RET(aclmdlExecute(model_id, inputs, outputs));
-    CV_LOG_INFO(NULL, "[Success] Finished forward");
+    CV_LOG_DEBUG(NULL, "DNN/CANN: finished network forward");
+
+    // fetch ouputs from device to host
+    CV_LOG_DEBUG(NULL, "DNN/CANN: start fetching outputs to host");
+    for (size_t i = 0; i < output_wrappers.size(); ++i)
+    {
+        void* p_host = (void*)output_wrappers[i]->host->data;
+
+        auto db = aclmdlGetDatasetBuffer(outputs, i);
+        auto p_device = aclGetDataBufferAddr(db);
+        auto db_size = aclGetDataBufferSizeV2(db);
+
+        ACL_CHECK_RET(aclrtMemcpy(p_host, db_size, p_device, db_size, ACL_MEMCPY_DEVICE_TO_HOST));
+    }
+    CV_LOG_DEBUG(NULL, "DNN/CANN: finish fetching outputs to host");
 }
 
-void CannNet::fetchOutput(Mat& output, const String& name)
+size_t CannNet::getInputNum() const
 {
-    size_t idx;
-    if (name.empty())
-        idx = 0;
-    else
-        idx = getOutputIndexByName(name);
-
-    fetchOutput(output, idx);
-}
-
-void CannNet::fetchOutput(Mat& output, const size_t idx)
-{
-    // TODO: check idx in range [0, net_output_number)
-
-    auto data_buffer = aclmdlGetDatasetBuffer(outputs, idx);
-    auto data_size = aclGetDataBufferSizeV2(data_buffer);
-    auto p_device = aclGetDataBufferAddr(data_buffer);
-
-    // get output dimensions
-    aclmdlIODims dimensions;
-    ACL_CHECK_RET(aclmdlGetCurOutputDims(model_desc, idx, &dimensions));
-    std::vector<int> dims;
-    for (int i = 0; i < dimensions.dimCount; i++)
-        dims.push_back((int)dimensions.dims[i]);
-
-    if (!output.empty())
-        output.release();
-
-    output = Mat(dims.size(), dims.data(), CV_32FC1); // TODO: consider other types?
-    void* p_host = (void*)output.data;
-
-    ACL_CHECK_RET(aclrtMemcpy(p_host, data_size, p_device, data_size, ACL_MEMCPY_DEVICE_TO_HOST));
+    return aclmdlGetNumInputs(model_desc);
 }
 
 size_t CannNet::getOutputNum() const
@@ -292,29 +284,23 @@ size_t CannNet::getOutputNum() const
     return aclmdlGetNumOutputs(model_desc);
 }
 
-void CannNet::setOutputNames(const std::vector<std::string>& names)
-{
-    CV_Assert(names.size() == getOutputNum());
-
-    output_names.clear();
-    output_names.assign(names.begin(), names.end());
-}
-
-void CannNet::buildFromGraph(ge::Graph& graph)
+void CannNet::buildFromGraph(std::shared_ptr<ge::Graph> graph)
 {
     using namespace ge;
 
     ModelBufferData om_model;
     std::map<AscendString, AscendString> build_options;
     CV_LOG_INFO(NULL, "Build OM model from graph");
-    ACL_CHECK_GRAPH_RET(aclgrphBuildModel(graph, build_options, om_model));
+    ACL_CHECK_GRAPH_RET(aclgrphBuildModel(*graph, build_options, om_model));
 
 
 #if 0
     // (optional). Dump model
-    aclgrphDumpGraph(graph, "test", 4);
+    AscendString graph_name;
+    graph.GetName(graph_name);
+    aclgrphDumpGraph(graph, graph_name.GetString(), 7);
     // (optional). Save model
-    aclgrphSaveModel("test", om_model);
+    aclgrphSaveModel(graph_name.GetString(), om_model);
 #endif
 
     model.clear();
@@ -328,7 +314,6 @@ void CannNet::init()
 {
     ACL_CHECK_RET(aclrtSetDevice(device_id));
     ACL_CHECK_RET(aclrtCreateContext(&context, device_id));
-    // ACL_CHECK_RET(aclrtCreateStream(&stream));
 
     initAclGraphBuilder();
 }
@@ -362,16 +347,6 @@ void CannNet::createOutputDataset()
         auto p_data_buffer = aclCreateDataBuffer(p_device, length);
         ACL_CHECK_RET(aclmdlAddDatasetBuffer(outputs, p_data_buffer));
     }
-}
-
-int CannNet::getOutputIndexByName(const std::string& name)
-{
-    int idx;
-    for (idx = 0; idx < output_names.size(); idx++)
-        if (output_names[idx] == name)
-            return idx;
-
-    return -1;
 }
 
 void CannNet::destroyDataset(aclmdlDataset** dataset)

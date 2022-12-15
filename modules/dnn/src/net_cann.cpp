@@ -18,14 +18,15 @@ class NetImplCann CV_FINAL : public Net::Impl
 public:
     typedef Net::Impl Base;
 
-    // MapIdToLayerData subNets;
-    std::shared_ptr<CannNet> cann_net{nullptr};
+    bool netWasConverted;
+    
 
     explicit NetImplCann(const Ptr<Net::Impl>& basePtr)
         : Net::Impl()
     {
         CV_LOG_INFO(NULL, "Initializing NetImplCann");
         basePtr_ = basePtr;
+        netWasConverted = false;
 
         init();
 
@@ -57,8 +58,6 @@ public:
         netWasAllocated = base.netWasAllocated;
         netWasQuantized = base.netWasQuantized;
         fusion = base.fusion;
-
-        cann_net = std::make_shared<CannNet>();
     }
 
     bool empty() const override
@@ -90,104 +89,11 @@ public:
         return Ptr<BackendWrapper>(new CannBackendWrapper(host));
     }
 
-    // void setInput(InputArray blob, const String& name, double scalefactor, const Scalar& mean) override
-    // {
-    //     Mat blob_ = blob.getMat();
-    //     Mat input_;
-    //     blob_.convertTo(input_, CV_32F, scalefactor, -mean[0] * scalefactor);
-
-    //     cann_net->setInput(input_, name);
-    // }
-
-    //    1. call initBackend
-    //    2. call setInput from the netInputLayer
-    //    3. forward
-    Mat forward(const String& outputName) override
-    {
-        String layerName = outputName;
-
-        if (layerName.empty())
-        {
-            std::vector<String> layerNames = getLayerNames(); // collects names of all layers on the go
-            CV_Assert(!layerNames.empty());
-            layerName = layerNames.back();
-        }
-
-        std::vector<LayerPin> pins(1, getPinByAlias(layerName));
-        setUpNet(pins); // calls initBackend
-
-        // set input
-        auto it = layers.find(0);
-        const auto& ld_input = it->second;
-        const auto n_input = ld_input.outputBlobsWrappers.size();
-        for (int i = 0; i < n_input; i++)
-        {
-            const String& i_input_name = netInputLayer->outNames[i];
-            Mat i_input_mat;
-            netInputLayer->inputsData[i].convertTo(i_input_mat, CV_32F);
-            cann_net->setInput(i_input_mat, i_input_name);
-        }
-
-        cann_net->forward();
-
-        Mat output;
-        cann_net->fetchOutput(output, outputName);
-        return output;
-    }
-
-    // void forward(OutputArrayOfArrays outputBlobs, const String& outputName) override
-    // {
-    //     cann_net->forward();
-
-    //     if (outputBlobs.isMat())
-    //     {
-    //         Mat output;
-    //         cann_net->fetchOutput(output, outputName);
-    //         outputBlobs.assign(output);
-    //     }
-    //     else if (outputBlobs.isMatVector())
-    //     {
-    //         int output_num = cann_net->getOutputNum();
-    //         std::vector<Mat> matVec;
-    //         for (int i = 0; i < output_num; i++)
-    //         {
-    //             Mat output_i;
-    //             cann_net->fetchOutput(output_i, i);
-    //             matVec.push_back(output_i);
-    //         }
-    //         outputBlobs.create(output_num, 1, CV_32F, -1);
-    //         outputBlobs.assign(matVec);
-    //     }
-    //     else
-    //         CV_Error(Error::StsNotImplemented, "Content of outputBlobs should be Mat or std::vector<Mat>");
-    // }
-
-    // void forward(OutputArrayOfArrays outputBlobs,
-    //              const std::vector<String>& outBlobNames) override
-    // {
-    //     cann_net->forward();
-
-    //     std::vector<Mat> matVec;
-    //     for (size_t i = 0; i < outBlobNames.size(); i++)
-    //     {
-    //         Mat output_i;
-    //         cann_net->fetchOutput(output_i, outBlobNames[i]);
-    //         matVec.push_back(output_i);
-    //     }
-    //     outputBlobs.create((int)outBlobNames.size(), 1, CV_32F, -1);
-    //     outputBlobs.assign(matVec);
-    // }
-
-    // void forward(std::vector<std::vector<Mat>>& outputBlobs,
-    //              const std::vector<String>& outBlobNames) override
-    // {
-    //     // FIXIT: what does this API mean?
-    //     CV_Error(Error::StsNotImplemented, "Not supported");
-    // }
-
-    // void fuseLayers(const std::vector<LayerPin>& blobsToKeep_); // consider to fuse the the extra flatten
+    // void fuseLayers(const std::vector<LayerPin>& blobsToKeep_); // fusion is done in the CANN graph engine
 
     void initBackend(const std::vector<LayerPin>& blobsToKeep_) override;
+
+    void forwardLayer(LayerData& ld) override;
 };
 
 // TODO: rebuild cann_net if network was changed.
@@ -196,13 +102,17 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
     CV_TRACE_FUNCTION();
     CV_CheckEQ(preferableBackend, DNN_BACKEND_CANN, "");
 
-    if (cann_net != nullptr && !cann_net->empty())
+    if (netWasConverted && netWasAllocated) // in case requested output is changed
         return;
 
-    // add inputs to the graph and connect operators
-    std::vector<Ptr<BackendNode> > inputs;
-    std::vector<ge::Operator> graph_inputs;
-    CV_LOG_INFO(NULL, "build graphs");
+    // convert layers to CANN operators,
+    // collect graph input and output operators,
+    // collect and input and output wrappers
+    int firstOutputLayerId = -1;
+    std::vector<Ptr<BackendNode> > netInputNodes;
+    std::vector<ge::Operator> graphInputOps, graphOutputOps;
+    std::vector<Ptr<BackendWrapper>> graphInputWrappers, graphOutputWrappers;
+    CV_LOG_INFO(NULL, "DNN/CANN: converting layers to CANN operators");
     for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); ++it)
     {
         LayerData& ld = it->second;
@@ -212,80 +122,134 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 
         if (ld.id == 0)
         {
-            // inputs.resize(ld.outputBlobsWrappers.size());
             for (int i = 0; i < ld.outputBlobsWrappers.size(); i++)
             {
-                std::string input_i_name = netInputLayer->outNames.empty() ? cv::format("%s_%d", ld.name.c_str(), i) : netInputLayer->outNames[i];
-                auto input_i = std::make_shared<ge::op::Data>(input_i_name);
+                std::string inputName = netInputLayer->outNames.empty() ? cv::format("%s_%d", ld.name.c_str(), i) : netInputLayer->outNames[i];
+                auto inputOp = std::make_shared<ge::op::Data>(inputName);
 
                 // retrieve tensor description
-                auto p = ld.outputBlobsWrappers[i].dynamicCast<CannBackendWrapper>();
-                CV_Assert(!p.empty());
+                auto wrapper = ld.outputBlobsWrappers[i];
+                graphInputWrappers.push_back(wrapper);
+                auto cannWrapper = wrapper.dynamicCast<CannBackendWrapper>();
+                CV_Assert(!cannWrapper.empty());
 
-                input_i->update_input_desc_x(*(p->desc_));
-                input_i->update_output_desc_y(*(p->desc_));
+                inputOp->update_input_desc_x(*(cannWrapper->desc_));
+                inputOp->update_output_desc_y(*(cannWrapper->desc_));
 
-                graph_inputs.push_back(*input_i);
-                inputs.push_back(Ptr<BackendNode>(new CannBackendNode(input_i)));
+                graphInputOps.push_back(*inputOp);
+                netInputNodes.push_back(Ptr<BackendNode>(new CannBackendNode(inputOp)));
             }
         }
         else
         {
-            std::vector<Ptr<BackendNode> > input_nodes;
-            for (int i = 0; i < ld.inputBlobsId.size(); i++)
-            {
-                int input_node_id = ld.inputBlobsId[i].lid;
-                int input_node_oid = ld.inputBlobsId[i].oid;
-                if (input_node_id == 0)
-                {
-                    input_nodes.push_back(inputs[input_node_oid]);
-                }
-                else
-                {
-                    LayerData& input_node_ld = layers[input_node_id];
-                    input_nodes.push_back(input_node_ld.backendNodes[preferableBackend]);
-                }
-            }
             if (layer->supportBackend(preferableBackend))
             {
+                std::vector<Ptr<BackendNode> > layerInputNodes;
+                for (int i = 0; i < ld.inputBlobsId.size(); i++)
+                {
+                    int layerInputLid = ld.inputBlobsId[i].lid;
+                    int layerInputOid = ld.inputBlobsId[i].oid;
+                    if (layerInputLid == 0)
+                    {
+                        layerInputNodes.push_back(netInputNodes[layerInputOid]);
+                    }
+                    else // here we do not consider an op with multiple outputs
+                    {
+                        layerInputNodes.push_back(layers[layerInputLid].backendNodes[preferableBackend]);
+                    }
+                }
+
                 CV_LOG_INFO(NULL, "DNN/CANN: converting layer " << ld.name << "@" << ld.type << "@" << ld.id << " to CANN operator");
-                ld.backendNodes[preferableBackend] = layer->initCann(ld.inputBlobsWrappers, ld.id, input_nodes);
+                auto backendNode = layer->initCann(ld.inputBlobsWrappers, ld.id, layerInputNodes);
+
+                // collect outputs
+                bool isOutputNode = ld.consumers.size() == 0 ? true : false;
+                if (isOutputNode)
+                {
+                    if (firstOutputLayerId < 0)
+                        firstOutputLayerId = ld.id;
+                    auto cannNode = backendNode.dynamicCast<CannBackendNode>();
+                    graphOutputOps.push_back(*(cannNode->getOp()));
+                    // assume cann graph outputs and dnn net outputs have the same order
+                    for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                    {
+                        graphOutputWrappers.push_back(ld.outputBlobsWrappers[i]);
+                    }
+                }
+
+                ld.backendNodes[preferableBackend] = backendNode;
             }
             else
             {
-                CV_LOG_INFO(NULL, "DNN/CANN: layer " << ld.name << "@" << ld.type << "is not supported by CANN backend");
+                CV_LOG_INFO(NULL, "DNN/CANN: layer (name=" << ld.name << ", type=" << ld.type << ") is not supported by CANN backend. Going back to CPU backend");
             }
         }
     }
+    CV_LOG_INFO(NULL, "DNN/CANN: done converting layers to CANN operators");
 
-    // collect outputs
-    std::vector<int> outputs_lid;
-    std::vector<ge::Operator> graph_outputs;
-    std::vector<std::string> graph_output_names;
-    CV_LOG_INFO(NULL, "Collect outputs");
-    for (MapIdToLayerData::reverse_iterator it = layers.rbegin(); it != layers.rend(); ++it)
+    // build graph from collected graph inputs and outputs
+    CV_LOG_INFO(NULL, "DNN/CANN: building ge::Graph");
+    std::string graphName = cv::format("graph_%d", 0);
+    std::shared_ptr<ge::Graph> graph = std::make_shared<ge::Graph>(graphName.c_str());
+    (void)graph->SetInputs(graphInputOps);
+    (void)graph->SetOutputs(graphOutputOps);
+    CV_LOG_INFO(NULL, "DNN/CANN: done building ge::Graph");
+
+    // convert ge::Graph to OM buffer
+    CV_LOG_INFO(NULL, "DNN/CANN: converting ge::Graph to OM buffer");
+    std::shared_ptr<CannNet> net = std::shared_ptr<CannNet>(new CannNet());
+    net = std::shared_ptr<CannNet>(new CannNet());
+    net->buildFromGraph(graph);
+    net->loadToDevice();
+    net->bindInputWrappers(graphInputWrappers);
+    net->bindOutputWrappers(graphOutputWrappers);
+    CV_LOG_INFO(NULL, "DNN/CANN: done building ge::Graph to OM buffer");
+
+    // keep net in the first output node and mark the node runnable
+    auto& ld = layers[firstOutputLayerId];
+    auto cannNode = ld.backendNodes[preferableBackend].dynamicCast<CannBackendNode>();
+    cannNode->net = net;
+    ld.skip = false;
+
+    netWasConverted = true;
+}
+
+void NetImplCann::forwardLayer(LayerData& ld)
+{
+    CV_TRACE_FUNCTION();
+
+    auto layer = ld.layerInstance;
+
+    if (!ld.skip)
     {
-        LayerData& ld = it->second;
-
-        if (ld.consumers.size() == 0) // outputs
+        auto it = ld.backendNodes.find(preferableBackend);
+        if (ld.id == 0 || it == ld.backendNodes.end()) // input layer
         {
-            CV_LOG_INFO(NULL, "DNN/CANN: collecting output on layer " << ld.name << "@" << ld.type);
-            outputs_lid.push_back(ld.id);
-            graph_output_names.push_back(ld.name);
-            auto node = ld.backendNodes[preferableBackend].dynamicCast<CannBackendNode>();
-            graph_outputs.push_back(*(node->getOp()));
+            return Base::forwardLayer(ld);
         }
-        else
-            continue;
+
+        CV_Assert(it != ld.backendNodes.end());
+        const Ptr<BackendNode>& node = it->second;
+        CV_Assert(!node.empty());
+        auto cannNode = node.dynamicCast<CannBackendNode>();
+        CV_Assert(!cannNode.empty());
+        CV_Assert(cannNode->net);
+
+        TickMeter tm;
+        tm.start();
+
+        cannNode->net->forward();
+
+        tm.stop();
+        int64_t t = tm.getTimeTicks();
+        layersTimings[ld.id] = (t > 0) ? t : 1;
+    }
+    else
+    {
+        layersTimings[ld.id] = 0;
     }
 
-    // build graph and keep it in the subgraph
-    CV_LOG_INFO(NULL, "build ge::Graph");
-    ge::Graph graph("graph");
-    graph.SetInputs(graph_inputs).SetOutputs(graph_outputs);
-    cann_net->buildFromGraph(graph);
-    cann_net->loadToDevice();
-    cann_net->setOutputNames(graph_output_names);
+    ld.flag = 1;
 }
 
 void switchToCannBackend(Net& net)

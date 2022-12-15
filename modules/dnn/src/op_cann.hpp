@@ -83,10 +83,9 @@ CV__DNN_INLINE_NS_END
     public:
         CannBackendNode(const std::shared_ptr<ge::Operator>& op);
         std::shared_ptr<ge::Operator> getOp();
-        // void createCannNet(ge::Graph& graph);
+        std::shared_ptr<CannNet> net;
     private:
         std::shared_ptr<ge::Operator> op_;
-        // std::shared_ptr<CannNet> cannNet;
     };
 
     class CannBackendWrapper : public BackendWrapper
@@ -119,18 +118,16 @@ CV__DNN_INLINE_NS_END
 
         bool empty() const;
 
-        void buildFromGraph(ge::Graph& graph);
-        // CannNet& bindInput(const std::vector<Mat>& inputs, const std::vector<String>& names = {});
-        // CannNet& bindOutput(const std::vector<Mat>& inputs, const std::vector<String>& names = {});
+        void buildFromGraph(std::shared_ptr<ge::Graph> graph);
         void loadToDevice(); // call aclInit before this API is called
 
-        void setInput(const Mat& input, const String& name = String());
-        void forward();
-        void fetchOutput(Mat& output, const String& name);
-        void fetchOutput(Mat& output, const size_t idx);
+        void bindInputWrappers(const std::vector<Ptr<BackendWrapper>>& inputWrappers);
+        void bindOutputWrappers(const std::vector<Ptr<BackendWrapper>>& outputWrappers);
 
+        void forward();
+
+        size_t getInputNum() const;
         size_t getOutputNum() const;
-        void setOutputNames(const std::vector<std::string>& names);
 
     private:
         void init();
@@ -143,7 +140,9 @@ CV__DNN_INLINE_NS_END
         void destroyDataset(aclmdlDataset** dataset);
 
         std::shared_ptr<AclEnvGuard> acl_env;
-        std::vector<std::string> output_names;
+
+        std::vector<Ptr<CannBackendWrapper>> input_wrappers;
+        std::vector<Ptr<CannBackendWrapper>> output_wrappers;
 
         uint32_t model_id{0};
         aclmdlDesc* model_desc{nullptr};
@@ -153,7 +152,6 @@ CV__DNN_INLINE_NS_END
 
         int device_id{0};
         aclrtContext context{nullptr};
-        // aclrtStream stream{nullptr};
     };
 
 #endif // HAVE_CANN

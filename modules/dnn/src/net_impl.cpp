@@ -904,7 +904,7 @@ Mat Net::Impl::forward(const String& outputName)
 
     if (layerName.empty())
     {
-        std::vector<String> layerNames = getLayerNames(); // collects names of all layers on the go
+        std::vector<String> layerNames = getLayerNames();
         CV_Assert(!layerNames.empty());
         layerName = layerNames.back();
     }
