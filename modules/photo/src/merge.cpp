@@ -43,6 +43,8 @@
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
 #include "hdr_common.hpp"
+#include <atomic>
+#include <condition_variable>
 
 namespace cv
 {
@@ -229,7 +231,13 @@ public:
         }
         int maxlevel = static_cast<int>(logf(static_cast<float>(min(size.width, size.height))) / logf(2.0f));
         std::vector<Mat> res_pyr(maxlevel + 1);
-        std::vector<std::mutex> mutexes(maxlevel + 1);
+        struct SyncSummationOrder
+        {
+            std::mutex mutex;
+            std::condition_variable cond;
+            int index = 0;
+        };
+        std::vector<SyncSummationOrder> sync(maxlevel + 1);
 
         parallel_for_(Range(0, static_cast<int>(images.size())), [&](const Range& range) {
             for(int i = range.start; i < range.end; i++) {
@@ -252,12 +260,15 @@ public:
                     }
                     merge(splitted, img_pyr[lvl]);
 
-                    std::lock_guard<std::mutex> guard(mutexes[lvl]);
+                    std::unique_lock<std::mutex> lock(sync[lvl].mutex);
+                    sync[lvl].cond.wait(lock, [&]{ return sync[lvl].index == i; });
                     if(res_pyr[lvl].empty()) {
                         res_pyr[lvl] = img_pyr[lvl];
                     } else {
                         res_pyr[lvl] += img_pyr[lvl];
                     }
+                    sync[lvl].index++;
+                    sync[lvl].cond.notify_all();
                 }
             }
         });
