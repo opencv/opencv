@@ -660,6 +660,24 @@ void InfEngineNgraphNet::init(Target targetId)
             ppp.input(name).tensor().set_element_type(srcT);
         }
     }
+
+    int i = 0;
+    for (const auto& it : model->outputs())
+    {
+        const std::string& name = it.get_node()->get_friendly_name();
+        auto blobIt = allBlobs.find(name);
+        CV_Assert(blobIt != allBlobs.end());
+        const auto& src = blobIt->second;
+
+        // A workaround for single dimension output for which OpenCV allocates 2d Mat.
+        // For example, face-detection-0105 with Result of shape {200} while output blob is {200, 1}
+        if (it.get_shape() != src.get_shape()) {
+            allBlobs[name] = ov::Tensor(src.get_element_type(), it.get_shape(), src.data());
+        }
+
+        ppp.output(i++).tensor().set_element_type(ov::element::f32);  // Should be always FP32
+    }
+
     ppp.build();
 
 #else
@@ -893,6 +911,8 @@ ov::Tensor wrapToNgraphBlob(const Mat& m) {
         return ov::Tensor(ov::element::f32, shape, m.data);
     else if (m.type() == CV_8U)
         return ov::Tensor(ov::element::u8, shape, m.data);
+    else if (m.type() == CV_32SC1)
+        return ov::Tensor(ov::element::i32, shape, m.data);
     else
         CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
 }
