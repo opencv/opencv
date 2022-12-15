@@ -155,11 +155,15 @@ TEST(Photo_MergeMertens, regression)
 
     Ptr<MergeMertens> merge = createMergeMertens();
 
-    Mat result, expected;
+    Mat result, deterministic_result, expected;
     loadImage(test_path + "merge/mertens.png", expected);
     merge->process(images, result);
     result.convertTo(result, CV_8UC3, 255);
     checkEqual(expected, result, 3, "Mertens");
+
+    merge->process(images, deterministic_result);
+    deterministic_result.convertTo(deterministic_result, CV_8UC3, 255);
+    checkEqual(result, deterministic_result, 0, "Mertens");
 
     Mat uniform(100, 100, CV_8UC3);
     uniform = Scalar(0, 255, 0);
