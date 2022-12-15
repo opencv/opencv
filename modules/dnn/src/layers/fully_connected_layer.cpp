@@ -85,6 +85,7 @@ public:
 
         bias = params.get<bool>("bias_term", true);
         axis = params.get<int>("axis", 1);
+        isMatMul = params.get<bool>("is_matmul", false);
         if (!blobs.empty())
         {
             CV_Assert(1 <= blobs.size() && blobs.size() <= 2);
@@ -94,6 +95,7 @@ public:
             CV_Assert(blobs[0].dims >= 2 && (size_t)(innerSize * numOutput) == blobs[0].total());
             CV_Assert(!bias || (blobs.size() == 2 && (size_t)numOutput == blobs[1].total()));
 
+            blobs[0].copyTo(oriMat);
             weightsMat = blobs[0] = blobs[0].reshape(1, numOutput);
             int vecsize = weightsMat.cols;
             if (vecsize % VEC_ALIGN != 0)
@@ -108,6 +110,8 @@ public:
 
             if (bias)
                 biasMat = blobs[1] = blobs[1].reshape(1, 1);
+            else if(isMatMul)
+                biasMat = Mat::zeros(1, oriMat.size[oriMat.dims - 2], weightsMat.type());
             else
                 biasMat = Mat::zeros(1, numOutput, weightsMat.type());
         }
@@ -153,7 +157,10 @@ public:
             CV_Assert(!transA && !transB);
             CV_CheckEQ(inputsTmp.size(), (size_t)1, "");
             CV_CheckEQ(blobs[0].dims, 2, "");
-            numOutput = blobs[0].size[0];
+            if(isMatMul)
+                numOutput = oriMat.size[oriMat.dims - 2];
+            else
+                numOutput = blobs[0].size[0];
             CV_Assert(!bias || (size_t)numOutput == blobs[1].total());
             cAxis = normalize_axis(axis, inputsTmp[0]);
         }
@@ -519,16 +526,40 @@ public:
         if (!blobs.empty())
         {
             CV_Assert(!transA && !transB);
-            int axisCan = normalize_axis(axis, input[0].dims);
-            int outerSize = input[0].total(0, axisCan);
-
-            for (size_t i = 0; i < input.size(); i++)
+            int inp1Dim = input[0].dims;
+            if (isMatMul)
             {
-                Mat srcMat = input[i].reshape(1, outerSize);
-                Mat dstMat = output[i].reshape(1, outerSize);
+                int matNum = input[0].total(0, inp1Dim - 2);
+                int rowMatMul = oriMat.size[oriMat.dims - 2];
+                Mat srcMatTmp = input[0].reshape(1, matNum);
+                Mat dstMatTmp = output[0].reshape(1, matNum);
 
-                const int nstripes = getNumThreads();
-                FullyConnected::run(srcMat, weightsMat, biasMat, dstMat, activ.get(), nstripes);
+                int outerSize = input[0].size[inp1Dim - 2];
+                int rowStart = -rowMatMul;
+                for (int n = 0; n < matNum; ++n)
+                {
+                    Mat srcMat = srcMatTmp.row(n).reshape(1, outerSize);
+                    Mat dstMat = dstMatTmp.row(n).reshape(1, outerSize);
+                    rowStart = (rowStart + rowMatMul) % weightsMat.rows;
+                    Mat weiMat = weightsMat.rowRange(rowStart, rowStart + rowMatMul);
+
+                    const int nstripes = getNumThreads();
+                    FullyConnected::run(srcMat, weiMat, biasMat, dstMat, activ.get(), nstripes);
+                }
+            }
+            else
+            {
+                int axisCan = normalize_axis(axis, inp1Dim);
+                int outerSize = input[0].total(0, axisCan);
+
+                for (size_t i = 0; i < input.size(); i++)
+                {
+                    Mat srcMat = input[i].reshape(1, outerSize);
+                    Mat dstMat = output[i].reshape(1, outerSize);
+
+                    const int nstripes = getNumThreads();
+                    FullyConnected::run(srcMat, weightsMat, biasMat, dstMat, activ.get(), nstripes);
+                }
             }
         }
         else
@@ -579,14 +610,26 @@ public:
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
 
-        if (weightsMat.empty())
+        if (weightsMat.empty() || isMatMul)
         {
             CV_Assert(!bias);
-            return make_cuda_node<cuda4dnn::MatMulOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle));
+            int inp2Dim;
+            // broadcast is not supported with CUDA
+            if(weightsMat.empty())
+            {
+                auto input_wrapper2 = inputs[1].dynamicCast<CUDABackendWrapper>();
+                inp2Dim = input_wrapper2->getRank();
+            }else
+                inp2Dim = oriMat.dims;
+
+            if(input_wrapper->getRank() == inp2Dim)
+                return make_cuda_node<cuda4dnn::MatMulOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), oriMat);
+            else
+                return Ptr<BackendNode>();
         }
 
-        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto flatten_start_axis = normalize_axis(axis, input_wrapper->getRank());
         auto biasMat_ = bias ? biasMat : Mat();
         return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, weightsMat, biasMat_);
@@ -752,8 +795,9 @@ public:
     }
 
     bool bias;
-    Mat weightsMat, biasMat;
+    Mat weightsMat, biasMat, oriMat;
     bool transA, transB;
+    bool isMatMul = false;
     Ptr<ActivationLayer> activ;
 };
 
