@@ -175,16 +175,17 @@ public:
 
         parallel_for_(Range(0, static_cast<int>(images.size())), [&](const Range& range) {
             for(int i = range.start; i < range.end; i++) {
+                Mat& img = images[i];
                 Mat gray, contrast, saturation, wellexp;
                 std::vector<Mat> splitted(channels);
 
-                images[i].convertTo(images[i], CV_32F, 1.0f/255.0f);
+                img.convertTo(img, CV_32F, 1.0f/255.0f);
                 if(channels == 3) {
-                    cvtColor(images[i], gray, COLOR_RGB2GRAY);
+                    cvtColor(img, gray, COLOR_RGB2GRAY);
                 } else {
-                    images[i].copyTo(gray);
+                    img.copyTo(gray);
                 }
-                split(images[i], splitted);
+                split(img, splitted);
 
                 Laplacian(gray, contrast, CV_32F);
                 contrast = abs(contrast);
@@ -227,45 +228,46 @@ public:
             weight_sum += weights[i];
         }
         int maxlevel = static_cast<int>(logf(static_cast<float>(min(size.width, size.height))) / logf(2.0f));
-        std::vector<std::vector<Mat>> img_pyrs(images.size(), std::vector<Mat>(maxlevel + 1));
+        std::vector<Mat> res_pyr(maxlevel + 1);
+        std::vector<std::mutex> mutexes(maxlevel + 1);
 
         parallel_for_(Range(0, static_cast<int>(images.size())), [&](const Range& range) {
             for(int i = range.start; i < range.end; i++) {
                 weights[i] /= weight_sum;
 
-                std::vector<Mat> weight_pyr;
-                buildPyramid(images[i], img_pyrs[i], maxlevel);
+                std::vector<Mat> img_pyr, weight_pyr;
+                buildPyramid(images[i], img_pyr, maxlevel);
                 buildPyramid(weights[i], weight_pyr, maxlevel);
 
                 for(int lvl = 0; lvl < maxlevel; lvl++) {
                     Mat up;
-                    pyrUp(img_pyrs[i][lvl + 1], up, img_pyrs[i][lvl].size());
-                    img_pyrs[i][lvl] -= up;
+                    pyrUp(img_pyr[lvl + 1], up, img_pyr[lvl].size());
+                    img_pyr[lvl] -= up;
                 }
                 for(int lvl = 0; lvl <= maxlevel; lvl++) {
                     std::vector<Mat> splitted(channels);
-                    split(img_pyrs[i][lvl], splitted);
+                    split(img_pyr[lvl], splitted);
                     for(int c = 0; c < channels; c++) {
                         splitted[c] = splitted[c].mul(weight_pyr[lvl]);
                     }
-                    merge(splitted, img_pyrs[i][lvl]);
-                }
-            }
-        });
-        parallel_for_(Range(0, maxlevel + 1), [&](const Range& range) {
-            for(int lvl = range.start; lvl < range.end; lvl++) {
-                for(size_t i = 1; i < images.size(); i++) {
-                    img_pyrs[0][lvl] += img_pyrs[i][lvl];
+                    merge(splitted, img_pyr[lvl]);
+
+                    std::lock_guard<std::mutex> guard(mutexes[lvl]);
+                    if(res_pyr[lvl].empty()) {
+                        res_pyr[lvl] = img_pyr[lvl];
+                    } else {
+                        res_pyr[lvl] += img_pyr[lvl];
+                    }
                 }
             }
         });
         for(int lvl = maxlevel; lvl > 0; lvl--) {
             Mat up;
-            pyrUp(img_pyrs[0][lvl], up, img_pyrs[0][lvl - 1].size());
-            img_pyrs[0][lvl - 1] += up;
+            pyrUp(res_pyr[lvl], up, res_pyr[lvl - 1].size());
+            res_pyr[lvl - 1] += up;
         }
         dst.create(size, CV_32FCC);
-        img_pyrs[0][0].copyTo(dst);
+        res_pyr[0].copyTo(dst);
     }
 
     float getContrastWeight() const CV_OVERRIDE { return wcon; }
