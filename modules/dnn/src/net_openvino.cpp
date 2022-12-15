@@ -492,7 +492,12 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 CV_LOG_DEBUG(NULL, "DNN/IE: bind output port " << lid << ":" << oid << " (" << ngraph_input_node->get_friendly_name() << ":" << ngraph_input_node->get_type_info().name << ")");
 
                 // Handle parameters from other subnets. Output port is not used in this case
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
                 if ((ngraph::op::is_parameter(ngraph_input_node) || ngraph::op::is_constant(ngraph_input_node)) &&
+#else
+                if ((ngraph_input_node->is_parameter() || ngraph_input_node->is_constant()) &&
+#endif
+
                         ngraph_input_node->get_output_size() == 1)
                 {
                     inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(ngraph_input_node));

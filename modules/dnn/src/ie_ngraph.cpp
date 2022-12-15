@@ -567,6 +567,11 @@ void InfEngineNgraphNet::createNet(Target targetId) {
     }
 }
 
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2022_1)
+static inline
+InferenceEngine::Layout estimateLayout(size_t dims);
+#endif
+
 void InfEngineNgraphNet::init(Target targetId)
 {
     if (!hasNetOwner)
@@ -698,6 +703,13 @@ void InfEngineNgraphNet::init(Target targetId)
         const std::string& name = it.first;
         auto blobIt = allBlobs.find(name);
         CV_Assert(blobIt != allBlobs.end());
+        InferenceEngine::TensorDesc& desc = blobIt->second->getTensorDesc();
+
+        auto outShape = it.second->getDims();
+        if (outShape != desc.getDims()) {
+            desc.reshape(outShape, estimateLayout(outShape.size()));
+        }
+
         it.second->setPrecision(blobIt->second->getTensorDesc().getPrecision());  // Should be always FP32
     }
 #endif // OpenVINO >= 2022.1
@@ -958,6 +970,9 @@ InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m, const std::vector<size
     else if (m.type() == CV_8U)
         return InferenceEngine::make_shared_blob<uint8_t>(
                {InferenceEngine::Precision::U8, shape, layout}, (uint8_t*)m.data);
+    else if (m.type() == CV_32SC1)
+        return InferenceEngine::make_shared_blob<int32_t>(
+               {InferenceEngine::Precision::I32, shape, layout}, (int32_t*)m.data);
     else
         CV_Error(Error::StsNotImplemented, format("Unsupported data type %s", typeToString(m.type()).c_str()));
 }
