@@ -671,8 +671,11 @@ void InfEngineNgraphNet::init(Target targetId)
 
         // A workaround for single dimension output for which OpenCV allocates 2d Mat.
         // For example, face-detection-0105 with Result of shape {200} while output blob is {200, 1}
-        if (it.get_shape() != src.get_shape()) {
-            allBlobs[name] = ov::Tensor(src.get_element_type(), it.get_shape(), src.data());
+        auto outShape = it.get_partial_shape().get_max_shape();
+        if (outShape != src.get_shape()) {
+            size_t sz = std::accumulate(outShape.begin(), outShape.end(), 1, std::multiplies<size_t>());
+            CV_Assert(sz == src.get_size());
+            allBlobs[name] = ov::Tensor(src.get_element_type(), outShape, src.data());
         }
 
         ppp.output(i++).tensor().set_element_type(ov::element::f32);  // Should be always FP32

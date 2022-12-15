@@ -72,8 +72,7 @@ std::map<std::string, std::vector<size_t> > CNNNetwork::getOutputsInfo() const {
         // Their inputs are actual model outputs and we set friendly name to them.
         if (it.get_node()->get_friendly_name() != name)
             it.get_node()->set_friendly_name(name);
-
-        res.insert({name, it.get_shape()});
+        res.insert({name, it.get_partial_shape().get_max_shape()});
     }
     return res;
 }
