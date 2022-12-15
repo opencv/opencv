@@ -32,6 +32,7 @@ std::string qrcode_images_multiple[] = {
   "2_qrcodes.png", "3_close_qrcodes.png", "3_qrcodes.png", "4_qrcodes.png",
   "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png"
 };
+
 //#define UPDATE_QRCODE_TEST_DATA
 #ifdef  UPDATE_QRCODE_TEST_DATA
 
@@ -501,7 +502,7 @@ TEST_P(Objdetect_QRCode_Multi, regression)
 {
     const std::string name_current_image = GetParam();
     const std::string root = "qrcode/multiple/";
-    const int pixels_error = 3;
+    const int pixels_error = 4;
 
     std::string image_path = findDataFile(root + name_current_image);
     Mat src = imread(image_path);
@@ -758,6 +759,26 @@ TEST(Objdetect_QRCode_decode, decode_regression_version_25)
     ASSERT_FALSE(straight_barcode.empty()) << "Can't decode qrimage.";
     EXPECT_EQ(expect_msg, decoded_msg);
 #endif
+}
+
+TEST(Objdetect_QRCode_decodeMulti, decode_9_qrcodes_version7)
+{
+    const std::string name_current_image = "9_qrcodes_version7.jpg";
+    const std::string root = "qrcode/multiple/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat src = imread(image_path);
+    QRCodeDetector qrcode;
+    std::vector<Point> corners;
+    std::vector<cv::String> decoded_info;
+
+    std::vector<Mat1b> straight_barcode;
+    qrcode.detectAndDecodeMulti(src, decoded_info, corners, straight_barcode);
+    EXPECT_EQ(9ull, decoded_info.size());
+    const string gold_info = "I love OpenCV, QR Code version = 7, error correction = level Quartile";
+    for (const auto& info : decoded_info) {
+        EXPECT_EQ(info, gold_info);
+    }
 }
 
 #endif // UPDATE_QRCODE_TEST_DATA
