@@ -518,7 +518,7 @@ void InfEngineNgraphNet::createNet(Target targetId) {
             CV_Assert(output_node_it->second);
             auto out = std::make_shared<ngraph::op::Result>(output_node_it->second->node);
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
-            out->set_friendly_name(output_node_it->first);
+            out->set_friendly_name(output_node_it->first + (output_node_it->second->node->get_output_size() == 1 ? "" : ".0"));
 #endif
             outs.push_back(out);
         }
@@ -897,7 +897,14 @@ bool NgraphBackendLayer::getMemoryShapes(const std::vector<MatShape> &inputs,
         curr_t_net.reshape(inShapes);
     }
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
-    std::vector<size_t> dims = t_net.getOutputsInfo()[name];
+    std::vector<size_t> dims;
+    for (const auto& it : ngraphFunction->outputs()) {
+        if (it.get_node()->get_friendly_name() == name) {
+            dims = it.get_partial_shape().get_max_shape();
+        }
+    }
+    if (dims.empty())
+        CV_Error(Error::StsError, format("Unable find result with name %s", name.c_str()));
 #else
     std::vector<size_t> dims = t_net.getOutputsInfo()[name]->getDims();
 #endif

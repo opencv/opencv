@@ -115,8 +115,6 @@ public:
 
     void reshape(const std::map<std::string, std::vector<size_t> >& shapes);
 
-    std::map<std::string, std::vector<size_t> > getOutputsInfo() const;
-
 private:
     std::shared_ptr<ov::Model> model = nullptr;
 };
