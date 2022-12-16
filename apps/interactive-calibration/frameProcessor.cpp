@@ -79,7 +79,7 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
 
     std::vector<std::vector<cv::Point2f> > corners, rejected;
     std::vector<int> ids;
-    cv::aruco::detectMarkers(frame, mArucoDictionary, corners, ids, cv::aruco::DetectorParameters::create(), rejected);
+    cv::aruco::detectMarkers(frame, cv::makePtr<cv::aruco::Dictionary>(mArucoDictionary), corners, ids, cv::makePtr<cv::aruco::DetectorParameters>(), rejected);
     cv::aruco::refineDetectedMarkers(frame, board, corners, ids, rejected);
     cv::Mat currentCharucoCorners, currentCharucoIds;
     if(ids.size() > 0)
@@ -266,8 +266,8 @@ bool CalibProcessor::checkLastFrame()
         allObjPoints.reserve(mCurrentCharucoIds.total());
         for(size_t i = 0; i < mCurrentCharucoIds.total(); i++) {
             int pointID = mCurrentCharucoIds.at<int>((int)i);
-            CV_Assert(pointID >= 0 && pointID < (int)mCharucoBoard->chessboardCorners.size());
-            allObjPoints.push_back(mCharucoBoard->chessboardCorners[pointID]);
+            CV_Assert(pointID >= 0 && pointID < (int)mCharucoBoard->getChessboardCorners().size());
+            allObjPoints.push_back(mCharucoBoard->getChessboardCorners()[pointID]);
         }
 
         cv::solvePnP(allObjPoints, mCurrentCharucoCorners, tmpCamMatrix, mCalibData->distCoeffs, r, t);
@@ -300,8 +300,7 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
     {
     case chAruco:
 #ifdef HAVE_OPENCV_ARUCO
-        mArucoDictionary = cv::aruco::getPredefinedDictionary(
-                    cv::aruco::PREDEFINED_DICTIONARY_NAME(capParams.charucoDictName));
+        mArucoDictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PredefinedDictionaryType(capParams.charucoDictName));
         mCharucoBoard = cv::aruco::CharucoBoard::create(mBoardSize.width, mBoardSize.height, capParams.charucoSquareLength,
                                                         capParams.charucoMarkerSize, mArucoDictionary);
 #endif
