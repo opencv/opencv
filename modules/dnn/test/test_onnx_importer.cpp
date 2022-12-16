@@ -1998,8 +1998,8 @@ TEST_P(Test_ONNX_nets, DISABLED_AlexNet)
     std::cout << cv::format("min = %f, max = %f, avg = %f, first run = %f\n", min_time, max_time, total_time/repeat, firstrun);
 }
 
-// TEST_P(Test_ONNX_nets, DISABLED_ResNet50_val)
-TEST_P(Test_ONNX_nets, ResNet50_val)
+TEST_P(Test_ONNX_nets, DISABLED_ResNet50_val)
+// TEST_P(Test_ONNX_nets, ResNet50_val)
 {
     const String model =  findDataFile("dnn/ascend-models/pp-resnet50.onnx", true);
 
@@ -2049,8 +2049,8 @@ TEST_P(Test_ONNX_nets, ResNet50_val)
     }
 }
 
-// TEST_P(Test_ONNX_nets, DISABLED_ResNet50)
-TEST_P(Test_ONNX_nets, ResNet50)
+TEST_P(Test_ONNX_nets, DISABLED_ResNet50)
+// TEST_P(Test_ONNX_nets, ResNet50)
 {
     const String model =  findDataFile("dnn/ascend-models/pp-resnet50.onnx", true);
 
@@ -2112,8 +2112,8 @@ TEST_P(Test_ONNX_nets, ResNet50)
     std::cout << "max = " << maxVal << ", max loc = " << maxLoc << std::endl;
 }
 
-// TEST_P(Test_ONNX_nets, DISABLED_MobileNet_val)
-TEST_P(Test_ONNX_nets, MobileNet_val)
+TEST_P(Test_ONNX_nets, DISABLED_MobileNet_val)
+// TEST_P(Test_ONNX_nets, MobileNet_val)
 {
     const String model =  findDataFile("dnn/ascend-models/mnetv1.onnx", true);
 
@@ -2159,8 +2159,8 @@ TEST_P(Test_ONNX_nets, MobileNet_val)
     }
 }
 
-// TEST_P(Test_ONNX_nets, DISABLED_MobileNet)
-TEST_P(Test_ONNX_nets, MobileNet)
+TEST_P(Test_ONNX_nets, DISABLED_MobileNet)
+// TEST_P(Test_ONNX_nets, MobileNet)
 {
     const String model =  findDataFile("dnn/ascend-models/mnetv1.onnx", true);
 
@@ -2221,8 +2221,8 @@ TEST_P(Test_ONNX_nets, MobileNet)
     std::cout << "max = " << maxVal << ", max loc = " << maxLoc << std::endl;
 }
 
-// TEST_P(Test_ONNX_nets, DISABLED_YOLOX)
-TEST_P(Test_ONNX_nets, YOLOX)
+TEST_P(Test_ONNX_nets, DISABLED_YOLOX)
+// TEST_P(Test_ONNX_nets, YOLOX)
 {
     const String model =  findDataFile("dnn/ascend-models/yolox.onnx", true);
 

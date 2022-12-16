@@ -559,28 +559,7 @@ public:
         if (type == MAX)
         {
             std::string op_name = cv::format("max_%s", op_name_base.c_str());
-            // auto op = std::make_shared<ge::op::Pooling>(op_name);
             auto op = std::make_shared<ge::op::MaxPoolV3>(op_name);
-
-            /* Pooling
-            // set attributes
-            op->set_attr_mode(0);
-            op->set_attr_global_pooling(globalPooling);
-            op->set_attr_window(ge::Operator::OpListInt(
-                {(int64_t)kernel_size[0], (int64_t)kernel_size[1]}
-            )); // 0: h, 1: w
-            op->set_attr_stride(ge::Operator::OpListInt(
-                {(int64_t)strides[0], (int64_t)strides[1]}
-            )); // 0: h, 1: w
-            std::cout << cv::format("pads_begin: %d, %d; pads_end: %d, %d", (int)pads_begin[0], (int)pads_begin[1], (int)pads_end[0], (int)pads_end[1]) << std::endl;
-            op->set_attr_pad(ge::Operator::OpListInt(
-                {(int64_t)pads_begin[0], (int64_t)pads_end[0], (int64_t)pads_begin[1], (int64_t)pads_end[1]}
-            )); // [top, bottom, left, right]
-            if (!ceilMode) // true: ceil, false: floor
-            {
-                op->set_attr_ceil_mode(1); // 0: ceil, default; 1: floor
-            }
-            */
 
             // set attributes
             op->set_attr_ksize(ge::Operator::OpListInt(

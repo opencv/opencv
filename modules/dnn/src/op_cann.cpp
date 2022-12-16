@@ -87,9 +87,7 @@ CannBackendWrapper::CannBackendWrapper(const Mat& m)
     : BackendWrapper(DNN_BACKEND_CANN, DNN_TARGET_NPU),  host((Mat*)&m)
 {
     auto mat_shape = shape(*host);
-    std::vector<int64_t> shape_;
-    for (int s : mat_shape)
-        shape_.push_back((int64_t)s);
+    std::vector<int64_t> shape_{mat_shape.begin(), mat_shape.end()};
 
     auto ge_shape = ge::Shape(shape_);
     desc_ = std::make_shared<ge::TensorDesc>(ge_shape, ge::FORMAT_NCHW, ge::DT_FLOAT);

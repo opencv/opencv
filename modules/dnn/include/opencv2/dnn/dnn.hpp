@@ -863,6 +863,7 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
 
+
         struct Impl;
         inline Impl* getImpl() const { return impl.get(); }
         inline Impl& getImplRef() const { CV_DbgAssert(impl); return *impl.get(); }

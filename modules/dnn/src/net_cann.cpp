@@ -97,13 +97,13 @@ public:
     void forwardLayer(LayerData& ld) override;
 };
 
-// TODO: rebuild cann_net if network was changed.
 void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 {
     CV_TRACE_FUNCTION();
     CV_CheckEQ(preferableBackend, DNN_BACKEND_CANN, "");
 
-    if (netWasConverted && netWasAllocated) // in case requested output is changed
+    // netWasAllocated turns to false if requested output is changed or input shape changes
+    if (netWasConverted && netWasAllocated)
         return;
 
     // convert layers to CANN operators,
