@@ -8,7 +8,6 @@
 #include <mutex>
 #include <map>
 #include <cstring> // memcpy
-#include <cstdlib> // atexit
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -52,36 +51,9 @@ std::shared_ptr<AclEnvGuard> AclEnvGuard::GetAclEnv()
     return acl_env;
 }
 
-static void finalizeAclGraphBuilder()
-{
-    CV_LOG_INFO(NULL, "Finalizing CANN Graph builder");
-    ge::aclgrphBuildFinalize();
-}
-
-void initAclGraphBuilder()
-{
-    using namespace ge;
-
-    static std::mutex mtx;
-    static bool aclGraphInitialized = false;
-    mtx.lock();
-    if (!aclGraphInitialized)
-    {
-        CV_LOG_INFO(NULL, "Initialize CANN Graph builder");
-        std::map<AscendString, AscendString> global_options = {
-            {AscendString(ir_option::SOC_VERSION), AscendString("Ascend310")},
-        }; // TODO: support other chips
-        ACL_CHECK_GRAPH_RET(aclgrphBuildInitialize(global_options));
-        aclGraphInitialized = true;
-    }
-    mtx.unlock();
-}
-
 CannConstOp::CannConstOp(const uint8_t* data, const int dtype, const std::vector<int>& shape, const std::string& name)
 {
     std::vector<int64_t> shape_{shape.begin(), shape.end()};
-    // for (int s : shape)
-    //     shape_.push_back((int64_t)s);
 
     auto ge_shape = ge::Shape(shape_);
     auto ge_dtype = ge::DT_FLOAT;
@@ -172,33 +144,19 @@ CannNet::~CannNet()
     }
 }
 
-void CannNet::finalize()
-{
-    finalizeAclGraphBuilder();
-}
-
 bool CannNet::empty() const
 {
     return (model_desc == nullptr);
 }
 
-void CannNet::loadToDevice()
+void CannNet::loadModelBuffer(std::shared_ptr<ge::ModelBufferData> modelBuffer)
 {
-    if (model_desc != nullptr)
-    {
-        CV_LOG_INFO(NULL, "Model has been loaded to device. Skipping ...");
-        return;
-    }
-
-    CV_LOG_INFO(NULL, "Load model to NPU memory");
-    ACL_CHECK_RET(aclmdlLoadFromMem(reinterpret_cast<const void*>(model.data()), model.size(), &model_id));
-
-    CV_LOG_INFO(NULL, "Create model description");
-    model_desc = aclmdlCreateDesc();
-    ACL_CHECK_RET(aclmdlGetDesc(model_desc, model_id));
-
-    createInputDataset();
-    createOutputDataset();
+    model.clear();
+    model.resize(modelBuffer->length);
+    std::memcpy(reinterpret_cast<void*>(model.data()),
+                reinterpret_cast<void*>(modelBuffer->data.get()),
+                modelBuffer->length);
+    loadToDevice();
 }
 
 void CannNet::bindInputWrappers(const std::vector<Ptr<BackendWrapper>>& inputWrappers)
@@ -284,38 +242,29 @@ size_t CannNet::getOutputNum() const
     return aclmdlGetNumOutputs(model_desc);
 }
 
-void CannNet::buildFromGraph(std::shared_ptr<ge::Graph> graph)
-{
-    using namespace ge;
-
-    ModelBufferData om_model;
-    std::map<AscendString, AscendString> build_options;
-    CV_LOG_INFO(NULL, "Build OM model from graph");
-    ACL_CHECK_GRAPH_RET(aclgrphBuildModel(*graph, build_options, om_model));
-
-
-#if 0
-    // (optional). Dump model
-    AscendString graph_name;
-    graph.GetName(graph_name);
-    aclgrphDumpGraph(graph, graph_name.GetString(), 7);
-    // (optional). Save model
-    aclgrphSaveModel(graph_name.GetString(), om_model);
-#endif
-
-    model.clear();
-    model.resize(om_model.length);
-    std::memcpy(reinterpret_cast<void*>(model.data()),
-                reinterpret_cast<void*>(om_model.data.get()),
-                om_model.length);
-}
-
 void CannNet::init()
 {
     ACL_CHECK_RET(aclrtSetDevice(device_id));
     ACL_CHECK_RET(aclrtCreateContext(&context, device_id));
+}
 
-    initAclGraphBuilder();
+void CannNet::loadToDevice()
+{
+    if (model_desc != nullptr)
+    {
+        CV_LOG_INFO(NULL, "Model has been loaded to device. Skipping ...");
+        return;
+    }
+
+    CV_LOG_INFO(NULL, "Load model to NPU memory");
+    ACL_CHECK_RET(aclmdlLoadFromMem(reinterpret_cast<const void*>(model.data()), model.size(), &model_id));
+
+    CV_LOG_INFO(NULL, "Create model description");
+    model_desc = aclmdlCreateDesc();
+    ACL_CHECK_RET(aclmdlGetDesc(model_desc, model_id));
+
+    createInputDataset();
+    createOutputDataset();
 }
 
 void CannNet::createInputDataset()

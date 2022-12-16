@@ -59,14 +59,6 @@ Net::Impl::Impl()
 }
 
 
-void Net::Impl::finalize()
-{
-#ifdef HAVE_CANN
-    CannNet::finalize();
-#endif
-}
-
-
 bool Net::Impl::empty() const
 {
     return layers.size() <= 1;  // first layer is default Data layer

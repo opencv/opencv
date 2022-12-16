@@ -15,6 +15,10 @@ if(CANN_INSTALL_DIR)
         return()
     endif()
 
+    # Supported OS: linux (because of we need fork() to build models in child process)
+    # done via checks in cann.cpp
+    # FIXME: remove the check if a better model building solution is found
+
     # include
     set(incs_cann "${CANN_INSTALL_DIR}/include")
     list(APPEND incs_cann "${CANN_INSTALL_DIR}/opp")

@@ -1,4 +1,5 @@
 #include <acl/acl.h>
+#include <unistd.h> // fork()
 #include <iostream>
 
 int main(int /*argc*/, char** /*argv*/)

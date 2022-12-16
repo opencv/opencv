@@ -1996,12 +1996,10 @@ TEST_P(Test_ONNX_nets, DISABLED_AlexNet)
             max_time = t;
     }
     std::cout << cv::format("min = %f, max = %f, avg = %f, first run = %f\n", min_time, max_time, total_time/repeat, firstrun);
-
-    Net::finalizeDevice();
 }
 
-TEST_P(Test_ONNX_nets, DISABLED_ResNet50_val)
-// TEST_P(Test_ONNX_nets, ResNet50_val)
+// TEST_P(Test_ONNX_nets, DISABLED_ResNet50_val)
+TEST_P(Test_ONNX_nets, ResNet50_val)
 {
     const String model =  findDataFile("dnn/ascend-models/pp-resnet50.onnx", true);
 
@@ -2049,13 +2047,10 @@ TEST_P(Test_ONNX_nets, DISABLED_ResNet50_val)
         cv::minMaxLoc(out, &minVal, &maxVal, &minLoc, &maxLoc);
         std::cout << "max = " << maxVal << ", max loc = " << maxLoc << std::endl;
     }
-
-
-    Net::finalizeDevice();
 }
 
-TEST_P(Test_ONNX_nets, DISABLED_ResNet50)
-// TEST_P(Test_ONNX_nets, ResNet50)
+// TEST_P(Test_ONNX_nets, DISABLED_ResNet50)
+TEST_P(Test_ONNX_nets, ResNet50)
 {
     const String model =  findDataFile("dnn/ascend-models/pp-resnet50.onnx", true);
 
@@ -2115,13 +2110,10 @@ TEST_P(Test_ONNX_nets, DISABLED_ResNet50)
     cv::Point minLoc, maxLoc;
     cv::minMaxLoc(out, &minVal, &maxVal, &minLoc, &maxLoc);
     std::cout << "max = " << maxVal << ", max loc = " << maxLoc << std::endl;
-
-
-    Net::finalizeDevice();
 }
 
-TEST_P(Test_ONNX_nets, DISABLED_MobileNet_val)
-// TEST_P(Test_ONNX_nets, MobileNet_val)
+// TEST_P(Test_ONNX_nets, DISABLED_MobileNet_val)
+TEST_P(Test_ONNX_nets, MobileNet_val)
 {
     const String model =  findDataFile("dnn/ascend-models/mnetv1.onnx", true);
 
@@ -2165,13 +2157,10 @@ TEST_P(Test_ONNX_nets, DISABLED_MobileNet_val)
         cv::minMaxLoc(out, &minVal, &maxVal, &minLoc, &maxLoc);
         std::cout << "max = " << maxVal << ", max loc = " << maxLoc << std::endl;
     }
-
-
-    Net::finalizeDevice();
 }
 
-TEST_P(Test_ONNX_nets, DISABLED_MobileNet)
-// TEST_P(Test_ONNX_nets, MobileNet)
+// TEST_P(Test_ONNX_nets, DISABLED_MobileNet)
+TEST_P(Test_ONNX_nets, MobileNet)
 {
     const String model =  findDataFile("dnn/ascend-models/mnetv1.onnx", true);
 
@@ -2230,13 +2219,10 @@ TEST_P(Test_ONNX_nets, DISABLED_MobileNet)
     cv::Point minLoc, maxLoc;
     cv::minMaxLoc(out, &minVal, &maxVal, &minLoc, &maxLoc);
     std::cout << "max = " << maxVal << ", max loc = " << maxLoc << std::endl;
-
-
-    Net::finalizeDevice();
 }
 
-TEST_P(Test_ONNX_nets, DISABLED_YOLOX)
-// TEST_P(Test_ONNX_nets, YOLOX)
+// TEST_P(Test_ONNX_nets, DISABLED_YOLOX)
+TEST_P(Test_ONNX_nets, YOLOX)
 {
     const String model =  findDataFile("dnn/ascend-models/yolox.onnx", true);
 
@@ -2399,8 +2385,6 @@ TEST_P(Test_ONNX_nets, DISABLED_YOLOX)
         int cls = int(dets.at<float>(i, 5));
         std::cout << cv::format("box [%d, %d, %d, %d], score %f, class %d\n", x1, y1, x2, y2, score, cls);
     }
-
-    Net::finalizeDevice();
 }
 
 TEST_P(Test_ONNX_nets, CaffeNet)

@@ -17,6 +17,13 @@
 #include "ge/ge_api_types.h" // ge::ir_option::SOC_VERSION
 #include "ge/ge_ir_build.h" // build graph
 
+// for fork()
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #endif // HAVE_CANN
 
 #include <vector>
@@ -50,9 +57,6 @@ CV__DNN_INLINE_NS_BEGIN
 void switchToCannBackend(Net& net);
 
 CV__DNN_INLINE_NS_END
-
-    // void initAcl();
-    void initAclGraphBuilder();
 
     class CannNet;
 
@@ -114,12 +118,10 @@ CV__DNN_INLINE_NS_END
             acl_env = AclEnvGuard::GetAclEnv();
         }
         ~CannNet(); // release private members
-        static void finalize();
 
         bool empty() const;
 
-        void buildFromGraph(std::shared_ptr<ge::Graph> graph);
-        void loadToDevice(); // call aclInit before this API is called
+        void loadModelBuffer(std::shared_ptr<ge::ModelBufferData> modelBuffer);
 
         void bindInputWrappers(const std::vector<Ptr<BackendWrapper>>& inputWrappers);
         void bindOutputWrappers(const std::vector<Ptr<BackendWrapper>>& outputWrappers);
@@ -132,6 +134,7 @@ CV__DNN_INLINE_NS_END
     private:
         void init();
 
+        void loadToDevice(); // call aclInit before this API is called
         void createInputDataset();
         void createOutputDataset();
 

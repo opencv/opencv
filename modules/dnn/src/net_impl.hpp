@@ -46,8 +46,6 @@ struct Net::Impl : public detail::NetImplBase
     // Inheritance support
     Ptr<Net::Impl> basePtr_;
 
-    static void finalize();
-
     Ptr<DataLayer> netInputLayer;
     std::vector<LayerPin> blobsToKeep;
     MapIdToLayerData layers;
