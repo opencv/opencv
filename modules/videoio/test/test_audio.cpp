@@ -275,7 +275,7 @@ const paramCombination mediaParams[] =
 {
     paramCombination("test_audio.mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 132299, 30, 30., cv::CAP_GSTREAMER)
 #ifdef _WIN32
-    , paramCombination("test_audio.mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 131819, 30, 30., cv::CAP_MSMF),
+    , paramCombination("test_audio.mp4", 1, 0.15, CV_8UC3, 240, 320, 90, 131819, 30, 30., cv::CAP_MSMF)
 #if 0
     // https://filesamples.com/samples/video/mp4/sample_960x400_ocean_with_audio.mp4
     , paramCombination("sample_960x400_ocean_with_audio.mp4", 2, -1/*eplsilon*/, CV_8UC3, 400, 960, 1116, 2056588, 30, 30., cv::CAP_MSMF)
