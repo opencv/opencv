@@ -851,5 +851,6 @@ protected:
 
 #include "opencv2/objdetect/detection_based_tracker.hpp"
 #include "opencv2/objdetect/face.hpp"
+#include "opencv2/objdetect/aruco_detector.hpp"
 
 #endif

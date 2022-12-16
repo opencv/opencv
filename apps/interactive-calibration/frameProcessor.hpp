@@ -40,7 +40,7 @@ protected:
 
     cv::Ptr<cv::SimpleBlobDetector> mBlobDetectorPtr;
 #ifdef HAVE_OPENCV_ARUCO
-    cv::Ptr<cv::aruco::Dictionary> mArucoDictionary;
+    cv::aruco::Dictionary mArucoDictionary;
     cv::Ptr<cv::aruco::CharucoBoard> mCharucoBoard;
 #endif
 
