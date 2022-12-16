@@ -20,13 +20,14 @@ class NetImplCann CV_FINAL : public Net::Impl
 public:
     typedef Net::Impl Base;
 
-    bool netWasConverted;
+    bool newWasSupported, netWasConverted;
 
     explicit NetImplCann(const Ptr<Net::Impl>& basePtr)
         : Net::Impl()
     {
         CV_LOG_INFO(NULL, "Initializing NetImplCann");
         basePtr_ = basePtr;
+        newWasSupported = true;
         netWasConverted = false;
 
         init();
@@ -106,6 +107,23 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
     if (netWasConverted && netWasAllocated)
         return;
 
+    if (!netWasConverted)
+    {
+        newWasSupported = true;
+        for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); ++it)
+        {
+            auto& ld = it->second;
+            auto layer = ld.layerInstance;
+            if (ld.id != 0 && !layer->supportBackend(preferableBackend))
+            {
+                newWasSupported = false;
+                CV_LOG_INFO(NULL, "DNN/CANN: layer (name=" << ld.name << ", type=" << ld.type << ") is not supported by CANN backend. Going back to CPU backend");
+            }
+        }
+    }
+    if (!newWasSupported)
+        return ;
+
     // convert layers to CANN operators,
     // collect graph input and output operators,
     // collect and input and output wrappers
@@ -143,47 +161,40 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         }
         else
         {
-            if (layer->supportBackend(preferableBackend))
+            std::vector<Ptr<BackendNode> > layerInputNodes;
+            for (int i = 0; i < ld.inputBlobsId.size(); i++)
             {
-                std::vector<Ptr<BackendNode> > layerInputNodes;
-                for (int i = 0; i < ld.inputBlobsId.size(); i++)
+                int layerInputLid = ld.inputBlobsId[i].lid;
+                int layerInputOid = ld.inputBlobsId[i].oid;
+                if (layerInputLid == 0)
                 {
-                    int layerInputLid = ld.inputBlobsId[i].lid;
-                    int layerInputOid = ld.inputBlobsId[i].oid;
-                    if (layerInputLid == 0)
-                    {
-                        layerInputNodes.push_back(netInputNodes[layerInputOid]);
-                    }
-                    else // here we do not consider an op with multiple outputs
-                    {
-                        layerInputNodes.push_back(layers[layerInputLid].backendNodes[preferableBackend]);
-                    }
+                    layerInputNodes.push_back(netInputNodes[layerInputOid]);
                 }
-
-                CV_LOG_INFO(NULL, "DNN/CANN: converting layer " << ld.name << "@" << ld.type << "@" << ld.id << " to CANN operator");
-                auto backendNode = layer->initCann(ld.inputBlobsWrappers, ld.id, layerInputNodes);
-
-                // collect outputs
-                bool isOutputNode = ld.consumers.size() == 0 ? true : false;
-                if (isOutputNode)
+                else // here we do not consider an op with multiple outputs
                 {
-                    if (firstOutputLayerId < 0)
-                        firstOutputLayerId = ld.id;
-                    auto cannNode = backendNode.dynamicCast<CannBackendNode>();
-                    graphOutputOps.push_back(*(cannNode->getOp()));
-                    // assume cann graph outputs and dnn net outputs have the same order
-                    for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
-                    {
-                        graphOutputWrappers.push_back(ld.outputBlobsWrappers[i]);
-                    }
+                    layerInputNodes.push_back(layers[layerInputLid].backendNodes[preferableBackend]);
                 }
-
-                ld.backendNodes[preferableBackend] = backendNode;
             }
-            else
+
+            CV_LOG_INFO(NULL, "DNN/CANN: converting layer " << ld.name << "@" << ld.type << "@" << ld.id << " to CANN operator");
+            auto backendNode = layer->initCann(ld.inputBlobsWrappers, ld.id, layerInputNodes);
+
+            // collect outputs
+            bool isOutputNode = ld.consumers.size() == 0 ? true : false;
+            if (isOutputNode)
             {
-                CV_LOG_INFO(NULL, "DNN/CANN: layer (name=" << ld.name << ", type=" << ld.type << ") is not supported by CANN backend. Going back to CPU backend");
+                if (firstOutputLayerId < 0)
+                    firstOutputLayerId = ld.id;
+                auto cannNode = backendNode.dynamicCast<CannBackendNode>();
+                graphOutputOps.push_back(*(cannNode->getOp()));
+                // assume cann graph outputs and dnn net outputs have the same order
+                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+                {
+                    graphOutputWrappers.push_back(ld.outputBlobsWrappers[i]);
+                }
             }
+
+            ld.backendNodes[preferableBackend] = backendNode;
         }
     }
     CV_LOG_INFO(NULL, "DNN/CANN: done converting layers to CANN operators");
