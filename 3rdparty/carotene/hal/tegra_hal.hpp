@@ -1296,13 +1296,13 @@ struct MorphCtx
     CAROTENE_NS::BORDER_MODE border;
     uchar borderValues[4];
 };
-inline int TEGRA_MORPHINIT(cvhalFilter2D **context, int operation, int src_type, int dst_type, int, int,
+inline int TEGRA_MORPHINIT(cvhalFilter2D **context, int operation, int src_type, int dst_type, int width, int height,
                            int kernel_type, uchar *kernel_data, size_t kernel_step, int kernel_width, int kernel_height, int anchor_x, int anchor_y,
                            int borderType, const double borderValue[4], int iterations, bool allowSubmatrix, bool allowInplace)
 {
     if(!context || !kernel_data || src_type != dst_type ||
        CV_MAT_DEPTH(src_type) != CV_8U || src_type < 0 || (src_type >> CV_CN_SHIFT) > 3 ||
-
+       width < kernel_width || height < kernel_height ||
        allowSubmatrix || allowInplace || iterations != 1 ||
        !CAROTENE_NS::isSupportedConfiguration())
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
