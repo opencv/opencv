@@ -126,6 +126,23 @@ class Bindings(NewOpenCVTests):
         test_overload_resolution('rect with float coordinates', (4.5, 4, 2, 1))
         test_overload_resolution('rect with wrong number of coordinates', (4, 4, 1))
 
+    def test_properties_with_reserved_keywords_names_are_transformed(self):
+        obj = cv.utils.ClassWithKeywordProperties(except_arg=23)
+        self.assertTrue(hasattr(obj, "lambda_"),
+                        msg="Class doesn't have RW property with converted name")
+        try:
+            obj.lambda_ = 32
+        except Exception as e:
+            self.fail("Failed to set value to RW property. Error: {}".format(e))
+
+        self.assertTrue(hasattr(obj, "except_"),
+                        msg="Class doesn't have readonly property with converted name")
+        self.assertEqual(obj.except_, 23,
+                         msg="Can't access readonly property value")
+        with self.assertRaises(AttributeError):
+            obj.except_ = 32
+
+
 
 class Arguments(NewOpenCVTests):
 
@@ -665,26 +682,14 @@ class Arguments(NewOpenCVTests):
                          msg="Classes from submodules and global module don't refer "
                          "to the same type")
 
-    def test_class_from_submodule_has_global_alias(self):
-        self.assertTrue(hasattr(cv.ml, "Boost"),
-                        msg="Class is not registered in the submodule")
-        self.assertTrue(hasattr(cv, "ml_Boost"),
-                        msg="Class from submodule doesn't have alias in the "
-                        "global module")
-        self.assertEqual(cv.ml.Boost, cv.ml_Boost,
-                         msg="Classes from submodules and global module don't refer "
-                         "to the same type")
-
     def test_inner_class_has_global_alias(self):
         self.assertTrue(hasattr(cv.SimpleBlobDetector, "Params"),
                         msg="Class is not registered as inner class")
         self.assertTrue(hasattr(cv, "SimpleBlobDetector_Params"),
                         msg="Inner class doesn't have alias in the global module")
         self.assertEqual(cv.SimpleBlobDetector.Params, cv.SimpleBlobDetector_Params,
-                        msg="Inner class and class in global module don't refer "
-                        "to the same type")
-        self.assertTrue(hasattr(cv, "SimpleBlobDetector_Params"),
-                        msg="Inner class doesn't have alias in the global module")
+                         msg="Inner class and class in global module don't refer "
+                         "to the same type")
 
     def test_export_class_with_different_name(self):
         self.assertTrue(hasattr(cv.utils.nested, "ExportClassName"),
@@ -705,7 +710,8 @@ class Arguments(NewOpenCVTests):
 
     def test_export_inner_class_of_class_exported_with_different_name(self):
         if not hasattr(cv.utils.nested, "ExportClassName"):
-            raise unittest.SkipTest("Outer class with export alias is not registered in the submodule")
+            raise unittest.SkipTest(
+                "Outer class with export alias is not registered in the submodule")
 
         self.assertTrue(hasattr(cv.utils.nested.ExportClassName, "Params"),
                         msg="Inner class with export alias is not registered in "
@@ -723,14 +729,15 @@ class Arguments(NewOpenCVTests):
         self.assertEqual(
             params.int_value, instance.getIntParam(),
             msg="Class initialized with wrong integer parameter. Expected: {}. Actual: {}".format(
-            params.int_value, instance.getIntParam()
-        ))
+                params.int_value, instance.getIntParam()
+            )
+        )
         self.assertEqual(
             params.float_value, instance.getFloatParam(),
             msg="Class initialized with wrong integer parameter. Expected: {}. Actual: {}".format(
-            params.float_value, instance.getFloatParam()
-        ))
-
+                params.float_value, instance.getFloatParam()
+            )
+        )
 
 
 
