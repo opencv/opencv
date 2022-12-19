@@ -174,7 +174,6 @@ TEST(Photo_MergeMertens, regression)
 
 TEST(Photo_MergeDebevec, regression)
 {
-    std::cout << cv::getNumThreads() << std::endl;
     string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
 
     vector<Mat> images;
