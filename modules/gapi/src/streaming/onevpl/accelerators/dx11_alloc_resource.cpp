@@ -46,7 +46,7 @@ size_t LockAdapter::read_lock(mfxMemId mid, mfxFrameData &data) {
     // adapter will throw error if VPL frame allocator fails
     if (sts != MFX_ERR_NONE) {
         impl->unlock_shared();
-        GAPI_Assert(false && "Cannot lock frame on READ using VPL allocator");
+        GAPI_Error("Cannot lock frame on READ using VPL allocator");
     }
 
     return prev_lock_count;
@@ -76,7 +76,7 @@ void LockAdapter::write_lock(mfxMemId mid, mfxFrameData &data) {
     // adapter will throw error if VPL frame allocator fails
     if (sts != MFX_ERR_NONE) {
         impl->unlock();
-        GAPI_Assert(false && "Cannot lock frame on WRITE using VPL allocator");
+        GAPI_Error("Cannot lock frame on WRITE using VPL allocator");
     }
 }
 
@@ -199,13 +199,13 @@ void DX11AllocationItem::on_first_in_impl(mfxFrameData *ptr) {
         err = shared_device_context->Map(get_staging_texture_ptr(), 0, mapType, mapFlags, &lockedRect);
         if (S_OK != err && DXGI_ERROR_WAS_STILL_DRAWING != err) {
             GAPI_LOG_WARNING(nullptr, "Cannot Map staging texture in device context, error: " << std::to_string(HRESULT_CODE(err)));
-            GAPI_Assert(false && "Cannot Map staging texture in device context");
+            GAPI_Error("Cannot Map staging texture in device context");
         }
     } while (DXGI_ERROR_WAS_STILL_DRAWING == err);
 
     if (FAILED(err)) {
         GAPI_LOG_WARNING(nullptr, "Cannot lock frame");
-        GAPI_Assert(false && "Cannot lock frame");
+        GAPI_Error("Cannot lock frame");
         return ;
     }
 

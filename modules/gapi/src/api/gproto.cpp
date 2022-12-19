@@ -313,7 +313,7 @@ std::ostream& operator<<(std::ostream& os, const cv::GMetaArg &arg)
         break;
 
     default:
-        GAPI_Assert(false);
+        GAPI_Error("InternalError");
     }
 
     return os;

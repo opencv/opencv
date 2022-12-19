@@ -397,7 +397,7 @@ void inline unpackBlobs(const cv::GInferInputs::Map& blobs,
                 kinds.emplace_back(cv::detail::OpaqueKind::CV_UNKNOWN);
                 break;
             default:
-                GAPI_Assert(false);
+                GAPI_Error("InternalError");
         }
     }
 }
@@ -629,7 +629,7 @@ infer2(const std::string& tag,
                 kinds.emplace_back(cv::detail::OpaqueKind::CV_RECT);
                 break;
             default:
-                GAPI_Assert(false);
+                GAPI_Error("InternalError");
         }
     }
 

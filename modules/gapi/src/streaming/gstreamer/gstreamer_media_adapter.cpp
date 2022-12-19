@@ -40,7 +40,7 @@ GStreamerMediaAdapter::GStreamerMediaAdapter(const cv::GFrameDesc& frameDesc,
                 break;
             }
             default: {
-                GAPI_Assert(false && "Non NV12 or GRAY Media format is not expected here");
+                GAPI_Error("Non NV12 or GRAY Media format is not expected here");
                 break;
             }
         }
@@ -59,7 +59,7 @@ GStreamerMediaAdapter::GStreamerMediaAdapter(const cv::GFrameDesc& frameDesc,
                 break;
             }
             default: {
-                GAPI_Assert(false && "Non NV12 or GRAY Media format is not expected here");
+                GAPI_Error("Non NV12 or GRAY Media format is not expected here");
                 break;
             }
         }
@@ -160,7 +160,7 @@ cv::MediaFrame::View GStreamerMediaAdapter::access(cv::MediaFrame::Access access
             break;
         }
         default: {
-            GAPI_Assert(false && "Non NV12 or GRAY Media format is not expected here");
+            GAPI_Error("Non NV12 or GRAY Media format is not expected here");
             break;
         }
     }
@@ -171,7 +171,7 @@ cv::MediaFrame::View GStreamerMediaAdapter::access(cv::MediaFrame::Access access
 }
 
 cv::util::any GStreamerMediaAdapter::blobParams() const {
-    GAPI_Assert(false && "No implementation for GStreamerMediaAdapter::blobParams()");
+    GAPI_Error("No implementation for GStreamerMediaAdapter::blobParams()");
 }
 
 } // namespace gst

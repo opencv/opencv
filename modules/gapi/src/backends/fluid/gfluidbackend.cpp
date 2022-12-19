@@ -313,7 +313,7 @@ static int maxLineConsumption(const cv::GFluidKernel::Kind kind, int window, int
         }
     } break;
     case cv::GFluidKernel::Kind::YUV420toRGB: return inPort == 0 ? 2 : 1; break;
-    default: GAPI_Assert(false); return 0;
+    default: GAPI_Error("InternalError"); return 0;
     }
 }
 
@@ -325,7 +325,7 @@ static int borderSize(const cv::GFluidKernel::Kind kind, int window)
     // Resize never reads from border pixels
     case cv::GFluidKernel::Kind::Resize: return 0; break;
     case cv::GFluidKernel::Kind::YUV420toRGB: return 0; break;
-    default: GAPI_Assert(false); return 0;
+    default: GAPI_Error("InternalError"); return 0;
     }
 }
 
@@ -685,7 +685,7 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
                         case 0: roi = produced; break;
                         case 1:
                         case 2: roi = cv::Rect{ produced.x/2, produced.y/2, produced.width/2, produced.height/2 }; break;
-                        default: GAPI_Assert(false);
+                        default: GAPI_Error("InternalError");
                         }
                         return roi;
                     };
@@ -699,7 +699,7 @@ void cv::gimpl::GFluidExecutable::initBufferRois(std::vector<int>& readStarts,
                     case GFluidKernel::Kind::Filter:      resized = produced; break;
                     case GFluidKernel::Kind::Resize:      resized = adjResizeRoi(produced, in_meta.size, meta.size); break;
                     case GFluidKernel::Kind::YUV420toRGB: resized = adj420Roi(produced, m_gm.metadata(in_edge).get<Input>().port); break;
-                    default: GAPI_Assert(false);
+                    default: GAPI_Error("InternalError");
                     }
 
                     // All below transformations affect roi of the writer, preserve read start position here
@@ -814,7 +814,7 @@ cv::gimpl::FluidGraphInputData cv::gimpl::fluidExtractInputDataFromGraph(const a
             last_agent++;
             break;
         }
-        default: GAPI_Assert(false);
+        default: GAPI_Error("InternalError");
         }
     }
 
@@ -844,7 +844,7 @@ cv::gimpl::GFluidExecutable::GFluidExecutable(const ade::Graph                  
             case GFluidKernel::Kind::Filter:      agent_ptr.reset(new FluidFilterAgent(g, agent_data.nh));      break;
             case GFluidKernel::Kind::Resize:      agent_ptr.reset(new FluidResizeAgent(g, agent_data.nh));      break;
             case GFluidKernel::Kind::YUV420toRGB: agent_ptr.reset(new Fluid420toRGBAgent(g, agent_data.nh));    break;
-            default: GAPI_Assert(false);
+            default: GAPI_Error("InternalError");
         }
         std::tie(agent_ptr->in_buffer_ids, agent_ptr->out_buffer_ids) = std::tie(agent_data.in_buffer_ids, agent_data.out_buffer_ids);
         return agent_ptr;
@@ -1388,7 +1388,7 @@ cv::gimpl::GParallelFluidExecutable::GParallelFluidExecutable(const ade::Graph  
 void cv::gimpl::GParallelFluidExecutable::reshape(ade::Graph&, const GCompileArgs& )
 {
     //TODO: implement ?
-    GAPI_Assert(false && "Not Implemented;");
+    GAPI_Error("Not Implemented;");
 }
 
 void cv::gimpl::GParallelFluidExecutable::run(std::vector<InObj>  &&input_objs,
@@ -1474,7 +1474,7 @@ void GFluidBackendImpl::addMetaSensitiveBackendPasses(ade::ExecutionEngineSetupC
             case NodeKind::EMIT:
             case NodeKind::SINK:
                 break; // do nothing for Streaming nodes
-            default: GAPI_Assert(false);
+            default: GAPI_Error("InternalError");
             } // switch
         } // for (gim.nodes())
     });
