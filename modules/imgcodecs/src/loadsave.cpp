@@ -216,10 +216,11 @@ ImageCodecInitializer& getCodecs()
  * Find the decoders
  *
  * @param[in] filename File to search
+ * @param[in] status Function result
  *
  * @return Image decoder to parse image file.
 */
-static ImageDecoder findDecoder( const String& filename ) {
+static ImageDecoder findDecoder( const std::string& filename, ImreadStatus& status ) {
 
     size_t i, maxlen = 0;
 
@@ -236,13 +237,14 @@ static ImageDecoder findDecoder( const String& filename ) {
 
     /// in the event of a failure, return an empty image decoder
     if( !f ) {
+        status = IMREAD_ERROR_FILE_NOT_FOUND;
         CV_LOG_WARNING(NULL, "imread_('" << filename << "'): can't open/read file: check file path/integrity");
         return ImageDecoder();
     }
 
     // read the file signature
-    String signature(maxlen, ' ');
-    maxlen = fread( (void*)signature.c_str(), 1, maxlen, f );
+    std::string signature(maxlen, ' ');
+    maxlen = fread( (void*)&signature[0], 1, maxlen, f );
     fclose(f);
     signature = signature.substr(0, maxlen);
 
@@ -254,7 +256,13 @@ static ImageDecoder findDecoder( const String& filename ) {
     }
 
     /// If no decoder was found, return base type
+    status = IMREAD_ERROR_UNRECOGNIZED_FORMAT;
     return ImageDecoder();
+}
+
+static ImageDecoder findDecoder( const String& filename ) {
+    ImreadStatus status;
+    return findDecoder(filename, status);
 }
 
 static ImageDecoder findDecoder( const Mat& buf )
@@ -492,6 +500,125 @@ imread_( const String& filename, int flags, Mat& mat )
     return true;
 }
 
+/**
+ * Read an image into memory and return the information
+ *
+ * @param[in] filename File to load
+ * @param[in] OutputArray Reference to C++ Mat/Umat/GpuMat object
+ * @param[in] ImreadParams flags, maxPixels, maxSize options
+ *
+*/
+static ImreadStatus
+imread_2( String const& filename, OutputArray image, ImreadParams params)
+{
+    /// Search for the relevant decoder to handle the imagery
+    ImageDecoder decoder;
+    ImreadStatus status = IMREAD_OK;
+    int flags = params.flags;
+
+#ifdef HAVE_GDAL
+    if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
+        decoder = GdalDecoder().newDecoder();
+    }else{
+#endif
+        decoder = findDecoder( filename, status );
+#ifdef HAVE_GDAL
+    }
+#endif
+
+    // if no decoder was found, return nothing.
+    if( !decoder || status != IMREAD_OK){
+        return status;
+    }
+
+    /// set the scale_denom in the driver
+    decoder->setScale( params.scaleDenom );
+
+    /// set the filename in the driver
+    decoder->setSource( filename );
+
+    try
+    {
+        // read the header to make sure it succeeds
+        if( !decoder->readHeader() )
+            return IMREAD_ERROR_INVALID_HEADER;
+    }
+    catch (const cv::Exception& e)
+    {
+        std::cerr << "imread_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+        return IMREAD_ERROR_INVALID_HEADER;
+    }
+    catch (...)
+    {
+        std::cerr << "imread_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+        return IMREAD_ERROR_INVALID_HEADER;
+    }
+
+    // established the required input image size
+    Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
+
+    if(params.maxPixels != 0 && params.maxPixels < static_cast<size_t>(decoder->width()) * decoder->height())
+    {
+        return IMREAD_ERROR_SIZE_LIMIT_EXCEEDED;
+    }
+
+    if(!params.maxSize.empty() && (params.maxSize.height < decoder->height() || params.maxSize.width < decoder->width()))
+    {
+        return IMREAD_ERROR_SIZE_LIMIT_EXCEEDED;
+    }
+
+    // grab the decoded type
+    int type = decoder->type();
+    if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
+    {
+        if( (flags & IMREAD_ANYDEPTH) == 0 )
+            type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
+
+        if( (flags & IMREAD_COLOR) != 0 ||
+           ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
+            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
+        else
+            type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
+    }
+
+    image.create( size.height, size.width, type );
+    Mat image_data = image.getMat();
+
+    // read the image data
+    bool success = false;
+    try
+    {
+        if (decoder->readData(image_data))
+            success = true;
+    }
+    catch (const cv::Exception& e)
+    {
+        std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+    }
+    catch (...)
+    {
+        std::cerr << "imread_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+    }
+    if (!success)
+    {
+        image.release();
+        return IMREAD_ERROR_INVALID_DATA;
+    }
+
+    if( decoder->setScale( params.scaleDenom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
+    {
+        resize( image_data, image_data, Size( size.width / params.scaleDenom, size.height / params.scaleDenom ), 0, 0, INTER_LINEAR_EXACT);
+    }
+
+    /// optionally rotate the data if EXIF orientation flag says so
+    if (!image_data.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
+    {
+        ApplyExifOrientation(decoder->getExifTag(ORIENTATION), image_data);
+    }
+
+    return IMREAD_OK;
+}
+
 
 static bool
 imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int start, int count)
@@ -628,6 +755,21 @@ Mat imread( const String& filename, int flags )
 
     /// return a reference to the data
     return img;
+}
+
+/**
+ * Read an image into Mat,Umat,GpuMat
+ *
+ *  This function merely calls the actual implementation above and returns itself.
+ *
+ * @param[in] filename File to load
+ * @param[in] flags Flags you wish to set.
+*/
+ImreadStatus imread2( const std::string& filename, OutputArray image, ImreadParams params )
+{
+    CV_TRACE_FUNCTION();
+
+    return imread_2(filename, image, params);
 }
 
 /**

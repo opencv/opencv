@@ -303,4 +303,97 @@ TEST(Imgcodecs_Image, write_umat)
     EXPECT_EQ(0, remove(dst_name.c_str()));
 }
 
+TEST(ImgCodecs_Imread, read_signature_fail)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "../highgui/pngsuite/xcrn0g04.png";
+
+    cv::Mat m;
+    ImreadParams params;
+    params.flags = IMREAD_COLOR;
+    ImreadStatus err = imread2(filename, m, params);
+    EXPECT_EQ(IMREAD_ERROR_UNRECOGNIZED_FORMAT, err);
+}
+
+TEST(ImgCodecs_Imread, read_header_fail)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "../highgui/pngsuite/xd0n2c08.png";
+
+    cv::Mat m;
+    ImreadParams params;
+    params.flags = IMREAD_COLOR;
+    ImreadStatus err = imread2(filename, m, params);
+    EXPECT_EQ(IMREAD_ERROR_INVALID_HEADER, err);
+    EXPECT_TRUE(m.empty());
+}
+
+TEST(ImgCodecs_Imread, read_data_fail)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "../highgui/pngsuite/xcsn0g01.png";
+
+    cv::Mat m;
+    ImreadParams params;
+    params.flags = IMREAD_COLOR;
+    ImreadStatus err = imread2(filename, m, params);
+    EXPECT_EQ(IMREAD_ERROR_INVALID_DATA, err);
+    EXPECT_TRUE(m.empty());
+}
+
+TEST(ImgCodecs_Imread, file_not_found)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "../highgui/pngsuite/file_not_found.png";
+
+    cv::Mat m;
+    ImreadParams params;
+    params.flags = IMREAD_COLOR;
+    ImreadStatus err = imread2(filename, m, params);
+    EXPECT_EQ(IMREAD_ERROR_FILE_NOT_FOUND, err);
+    EXPECT_TRUE(m.empty());
+}
+
+TEST(ImgCodecs_Imread, max_pixels_exceeded)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "../perf/2560x1600.png";
+
+    cv::Mat m;
+    ImreadParams params;
+    params.flags = IMREAD_COLOR;
+    params.maxPixels = 1920*1080;
+    ImreadStatus err = imread2(filename, m, params);
+    EXPECT_EQ(IMREAD_ERROR_SIZE_LIMIT_EXCEEDED, err);
+    EXPECT_TRUE(m.empty());
+}
+
+TEST(ImgCodecs_Imread, max_size_exceed)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "../perf/2560x1600.png";
+
+    cv::Mat m;
+    ImreadParams params;
+    params.flags = IMREAD_COLOR;
+    params.maxSize = {2560, 1599};
+    ImreadStatus err = imread2(filename, m, params);
+    EXPECT_EQ(IMREAD_ERROR_SIZE_LIMIT_EXCEEDED, err);
+    EXPECT_TRUE(m.empty());
+}
+
+TEST(ImgCodecs_Imread, read_success)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "../cv/shared/baboon.png";
+
+    cv::Mat m;
+    ImreadParams params;
+    params.flags = IMREAD_COLOR;
+    ImreadStatus err = imread2(filename, m, params);
+    EXPECT_EQ(IMREAD_OK, err);
+    EXPECT_FALSE(m.empty());
+}
+
+
 }} // namespace

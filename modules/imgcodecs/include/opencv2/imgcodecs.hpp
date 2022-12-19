@@ -82,6 +82,13 @@ enum ImreadModes {
        IMREAD_IGNORE_ORIENTATION   = 128 //!< If set, do not rotate the image according to EXIF's orientation flag.
      };
 
+enum ImreadScaleDenom {
+       IMREAD_SCALE_DENOM_1 = 1,
+       IMREAD_SCALE_DENOM_2 = 2,
+       IMREAD_SCALE_DENOM_4 = 4,
+       IMREAD_SCALE_DENOM_8 = 8
+};
+
 //! Imwrite flags
 enum ImwriteFlags {
        IMWRITE_JPEG_QUALITY        = 1,  //!< For JPEG, it can be a quality from 0 to 100 (the higher is the better). Default value is 95.
@@ -160,6 +167,32 @@ enum ImwritePAMFlags {
        IMWRITE_PAM_FORMAT_RGB_ALPHA       = 5
      };
 
+
+enum ImreadStatus {
+      IMREAD_OK                         = 0,
+      IMREAD_ERROR_FILE_NOT_FOUND       = 1,
+      IMREAD_ERROR_UNRECOGNIZED_FORMAT  = 2,
+      IMREAD_ERROR_SIZE_LIMIT_EXCEEDED  = 3,
+      IMREAD_ERROR_INVALID_HEADER       = 4,
+      IMREAD_ERROR_INVALID_DATA         = 5
+     };
+
+/** @brief Additional parameters for imread2
+
+@anchor ImreadParams
+
+@param flags
+@param maxPixels
+@param maxSize
+@param scaleDenom
+*/
+struct CV_EXPORTS_W_PARAMS ImreadParams {
+      CV_PROP_RW int flags = IMREAD_COLOR;
+      CV_PROP_RW size_t maxPixels = 0;
+      CV_PROP_RW Size maxSize = {};
+      CV_PROP_RW ImreadScaleDenom scaleDenom = IMREAD_SCALE_DENOM_1;
+     };
+
 //! @} imgcodecs_flags
 
 /** @brief Loads an image from a file.
@@ -214,6 +247,24 @@ Currently, the following file formats are supported:
 @param flags Flag that can take values of cv::ImreadModes
 */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
+
+
+/** @brief Loads an image from a file.
+
+@anchor imread2
+
+The function imread loads an image from the specified file and returns it. If the image cannot be
+read (because of missing file, improper permissions, unsupported or invalid format), the function
+returns an ImreadStatus codes and empty OutputArray ( Mat::data==NULL ).
+
+Currently, the following file formats are supported:
+- @sa imread
+
+@param filename Name of file to be loaded.
+@param image OutputArray that image is loaded
+@param params additional parameters to set how image is read
+*/
+CV_EXPORTS_W ImreadStatus imread2( const std::string& filename, OutputArray image, ImreadParams params);
 
 /** @brief Loads a multi-page image from a file.
 
