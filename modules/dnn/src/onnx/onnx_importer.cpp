@@ -190,6 +190,7 @@ private:
     void parseRange                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTile                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimpleLayers         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
@@ -3285,6 +3286,56 @@ void ONNXImporter::parseTile(LayerParams& layerParams, const opencv_onnx::NodePr
     }
 }
 
+void ONNXImporter::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    // validate axis and convert it if negative
+    auto inputDims = static_cast<int>(outShapes[node_proto.input(0)].size());
+    int axis = layerParams.get<int>("axis", -1);
+    // axis: [-dims, dims)
+    CV_CheckGE(axis, -inputDims, "DNN/ONNXImporter: axis of LayerNormalization is out of range");
+    CV_CheckLT(axis,  inputDims, "DNN/ONNXImporter: axis of LayerNormalization is out of range");
+    axis = (axis + inputDims) % inputDims;
+    layerParams.set("axis", axis);
+
+    // check if bias existed
+    bool hasBias = false;
+    if (node_proto.input_size() > 2)
+        hasBias = true;
+    layerParams.set("hasBias", hasBias);
+
+    // constants as constant inputs
+    for (size_t i = 1; i < node_proto.input_size(); i++)
+    {
+        if (layer_id.find(node_proto.input(i)) == layer_id.end())
+        {
+            Mat blob = getBlob(node_proto, i);
+
+            LayerParams constParams;
+            constParams.name = node_proto.input(i);
+            constParams.type = "Const";
+            constParams.blobs.push_back(blob);
+
+            opencv_onnx::NodeProto proto;
+            proto.add_output(constParams.name);
+            addLayer(constParams, proto);
+        }
+    }
+
+    // Remove additional outputs (Mean, InvStdDev)
+    if (node_proto.output_size() > 1)
+    {
+        auto outputName = node_proto.output(0);
+        opencv_onnx::NodeProto node_proto_ = node_proto;
+        node_proto_.clear_output();
+        node_proto_.add_output(outputName);
+        addLayer(layerParams, node_proto_);
+    }
+    else
+    {
+        addLayer(layerParams, node_proto);
+    }
+}
+
 void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     bool is_all_input_const = true;
@@ -3987,6 +4038,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["SpaceToDepth"] = dispatch["DepthToSpace"] = &ONNXImporter::parseDepthToSpace;
     dispatch["ScatterElements"] = dispatch["Scatter"] = dispatch["ScatterND"] = &ONNXImporter::parseScatter;
     dispatch["Tile"] = &ONNXImporter::parseTile;
+    dispatch["LayerNormalization"] = &ONNXImporter::parseLayerNorm;
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =
