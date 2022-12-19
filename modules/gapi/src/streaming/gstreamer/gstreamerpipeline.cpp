@@ -73,7 +73,7 @@ GStreamerPipeline::Priv::~Priv() { }
 
 GStreamerPipeline::Priv::Priv(const std::string&)
 {
-    GAPI_Assert(false && "Built without GStreamer support!");
+    GAPI_Error("Built without GStreamer support!");
 }
 
 IStreamSource::Ptr GStreamerPipeline::Priv::getStreamingSource(const std::string&,

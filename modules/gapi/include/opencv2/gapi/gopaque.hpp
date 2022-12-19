@@ -171,7 +171,7 @@ namespace detail
             {
                 util::get<rw_own_t>(m_ref) = {};
             }
-            else GAPI_Assert(false); // shouldn't be called in *EXT modes
+            else GAPI_Error("InternalError"); // shouldn't be called in *EXT modes
         }
 
         // Obtain a WRITE reference to underlying object

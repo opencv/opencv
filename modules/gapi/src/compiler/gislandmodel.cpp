@@ -120,7 +120,7 @@ ade::NodeHandle GIsland::producer(const ade::Graph &g,
     }
     // Consistency: A GIsland requested for producer() of slot_nh should
     // always had the appropriate GModel node handle in its m_out_ops vector.
-    GAPI_Assert(false && "Broken GIslandModel ?.");
+    GAPI_Error("Broken GIslandModel ?.");
 }
 
 std::string GIsland::name() const
@@ -164,7 +164,7 @@ void GIslandModel::generateInitial(GIslandModel::Graph &g,
         {
         case NodeType::OP:   all_operations.insert(src_nh);                break;
         case NodeType::DATA: data_to_slot[src_nh] = mkSlotNode(g, src_nh); break;
-        default: GAPI_Assert(false); break;
+        default: GAPI_Error("InternalError"); break;
         }
     } // for (src_g.nodes)
 

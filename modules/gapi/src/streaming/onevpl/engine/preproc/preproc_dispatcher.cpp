@@ -66,7 +66,7 @@ pp_session VPPPreprocDispatcher::initialize_preproc(const pp_params& initial_fra
             return sess;
         }
     }
-    GAPI_Assert(false && "Cannot initialize VPP preproc in dispatcher, no suitable worker");
+    GAPI_Error("Cannot initialize VPP preproc in dispatcher, no suitable worker");
 }
 
 cv::MediaFrame VPPPreprocDispatcher::run_sync(const pp_session &session_handle,
@@ -80,7 +80,7 @@ cv::MediaFrame VPPPreprocDispatcher::run_sync(const pp_session &session_handle,
             return w->run_sync(session_handle, in_frame, opt_roi);
         }
     }
-    GAPI_Assert(false && "Cannot invoke VPP preproc in dispatcher, no suitable worker");
+    GAPI_Error("Cannot invoke VPP preproc in dispatcher, no suitable worker");
 }
 
 #else // HAVE_ONEVPL
@@ -90,13 +90,13 @@ cv::util::optional<pp_params> VPPPreprocDispatcher::is_applicable(const cv::Medi
 
 pp_session VPPPreprocDispatcher::initialize_preproc(const pp_params&,
                                                     const GFrameDesc&) {
-    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+    GAPI_Error("Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 
 cv::MediaFrame VPPPreprocDispatcher::run_sync(const pp_session &,
                                               const cv::MediaFrame&,
                                               const cv::util::optional<cv::Rect> &) {
-    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+    GAPI_Error("Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 #endif // HAVE_ONEVPL
 } // namespace onevpl

@@ -69,12 +69,12 @@ GStreamerEnv::~GStreamerEnv()
 
 const GStreamerEnv& GStreamerEnv::init()
 {
-    GAPI_Assert(false && "Built without GStreamer support!");
+    GAPI_Error("Built without GStreamer support!");
 }
 
 GStreamerEnv::GStreamerEnv()
 {
-    GAPI_Assert(false && "Built without GStreamer support!");
+    GAPI_Error("Built without GStreamer support!");
 }
 
 GStreamerEnv::~GStreamerEnv()

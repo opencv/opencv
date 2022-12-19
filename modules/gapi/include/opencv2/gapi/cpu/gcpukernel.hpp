@@ -8,9 +8,9 @@
 #ifndef OPENCV_GAPI_GCPUKERNEL_HPP
 #define OPENCV_GAPI_GCPUKERNEL_HPP
 
-#ifdef _MSC_VER
-#pragma warning(disable: 4702)  // "Unreachable code"
-// on postprocess(...) call inside OCVCallHelper
+#if defined _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4702)  // "Unreachable code" on postprocess(...) call inside OCVCallHelper
 #endif
 
 #include <functional>
@@ -534,5 +534,9 @@ gapi::cpu::GOCVFunctor gapi::cpu::ocv_kernel(const Callable& c)
 //! @endcond
 
 } // namespace cv
+
+#if defined _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // OPENCV_GAPI_GCPUKERNEL_HPP

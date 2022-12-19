@@ -127,26 +127,23 @@ FileDataProvider::FileDataProvider(const std::string&,
     source_handle(nullptr, &fclose),
     codec(std::numeric_limits<mfx_codec_id_type>::max()),
     bitstream_data_size(bitstream_data_size_value) {
-    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
+    GAPI_Error("Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 
 FileDataProvider::~FileDataProvider() = default;
 
 IDataProvider::mfx_codec_id_type FileDataProvider::get_mfx_codec_id() const {
     cv::util::suppress_unused_warning(codec);
-    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
-    return codec;
+    GAPI_Error("Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 
 bool FileDataProvider::fetch_bitstream_data(std::shared_ptr<mfx_bitstream> &) {
     cv::util::suppress_unused_warning(bitstream_data_size);
-    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
-    return false;
+    GAPI_Error("Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 
 bool FileDataProvider::empty() const {
-    GAPI_Assert(false && "Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
-    return true;
+    GAPI_Error("Unsupported: G-API compiled without `WITH_GAPI_ONEVPL=ON`");
 }
 #endif // HAVE_ONEVPL
 } // namespace onevpl

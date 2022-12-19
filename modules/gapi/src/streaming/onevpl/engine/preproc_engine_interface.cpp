@@ -30,7 +30,7 @@ namespace wip {
 template<typename SpecificPreprocEngine, typename ...PreprocEngineArgs >
 std::unique_ptr<SpecificPreprocEngine>
 IPreprocEngine::create_preproc_engine_impl(const PreprocEngineArgs& ...) {
-    GAPI_Assert(false && "Unsupported ");
+    GAPI_Error("Unsupported ");
 }
 
 template <>
@@ -91,7 +91,7 @@ IPreprocEngine::create_preproc_engine_impl(const onevpl::Device &device,
     }
     if (!pp_is_created) {
         GAPI_LOG_WARNING(nullptr, "Cannot create VPP preprocessing engine: configuration unsupported");
-        GAPI_Assert(false && "VPP preproc unsupported");
+        GAPI_Error("VPP preproc unsupported");
     }
 #endif // HAVE_ONEVPL
     return dispatcher;

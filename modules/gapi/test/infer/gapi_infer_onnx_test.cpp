@@ -114,7 +114,7 @@ inline int toCV(ONNXTensorElementDataType prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return CV_32S;
-    default: GAPI_Assert(false && "Unsupported data type");
+    default: GAPI_Error("Unsupported data type");
     }
     return -1;
 }
@@ -142,7 +142,7 @@ void copyFromONNX(Ort::Value &v, cv::Mat& mat) {
                    [](int64_t el) { return static_cast<int>(el); });
             break;
         }
-    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    default: GAPI_Error("ONNX. Unsupported data type");
     }
 }
 

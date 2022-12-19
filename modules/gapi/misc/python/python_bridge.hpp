@@ -22,7 +22,7 @@
     switch(type) { \
         LIST_G(HC, HC)  \
         default: \
-            GAPI_Assert(false && "Unsupported type"); \
+            GAPI_Error("Unsupported type"); \
     }
 
 using cv::gapi::wip::draw::Prim;
@@ -157,7 +157,7 @@ public:
         SWITCH(m_arg.index(), GOPAQUE_TYPE_LIST_G, HC)
 #undef HC
 
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
     }
 
     GAPI_WRAP gapi::ArgType type() { return m_type; }
@@ -195,7 +195,7 @@ public:
         SWITCH(m_arg.index(), GARRAY_TYPE_LIST_G, HC)
 #undef HC
 
-        GAPI_Assert(false);
+        GAPI_Error("InternalError");
     }
 
     GAPI_WRAP gapi::ArgType type() { return m_type; }

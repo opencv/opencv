@@ -338,7 +338,7 @@ void cv::gimpl::GCompiler::validateInputMeta()
             return util::holds_alternative<cv::GOpaqueDesc>(meta);
 
         default:
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
         }
         return false; // should never happen
     };
@@ -485,7 +485,7 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
         // Otherwise, set it up with executor object only
         compiled.priv().setup(std::move(pE));
     }
-    else GAPI_Assert(false && "Impossible happened -- please report a bug");
+    else GAPI_Error("Impossible happened -- please report a bug");
     return compiled;
 }
 

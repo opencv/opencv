@@ -171,7 +171,7 @@ inline int toCV(ONNXTensorElementDataType prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return CV_32S;
-    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    default: GAPI_Error("ONNX. Unsupported data type");
     }
     return -1;
 }
@@ -207,7 +207,7 @@ inline void copyFromONNX(Ort::Value &v, cv::Mat& mat) {
                                            mat.total());
             break;
         }
-    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    default: GAPI_Error("ONNX. Unsupported data type");
     }
 }
 
@@ -233,7 +233,7 @@ inline void preprocess(const cv::Mat& src,
                             "32F tensor dimensions should match with all non-dynamic NN input dimensions");
             }
         } else {
-            GAPI_Assert(false && "32F tensor size should match with NN input");
+            GAPI_Error("32F tensor size should match with NN input");
         }
 
         dst = src;
@@ -338,7 +338,7 @@ void preprocess(const cv::MediaFrame::View& view,
             break;
         }
         default:
-            GAPI_Assert(false && "Unsupported media format for ONNX backend");
+            GAPI_Error("Unsupported media format for ONNX backend");
     }
 }
 
@@ -367,7 +367,7 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
         return createTensor<int32_t>(memory_info, tensor_params, data);
     default:
-        GAPI_Assert(false && "ONNX. Unsupported data type");
+        GAPI_Error("ONNX. Unsupported data type");
     }
     return Ort::Value{nullptr};
 }
@@ -858,7 +858,7 @@ static void checkInputMeta(const cv::GMetaArg mm) {
                 case cv::MediaFormat::NV12: break;
                 case cv::MediaFormat::BGR:  break;
                 default:
-                    GAPI_Assert(false && "Unsupported media format for ONNX backend");
+                    GAPI_Error("Unsupported media format for ONNX backend");
             } break;
         } break;
         default:
@@ -1101,7 +1101,7 @@ struct InferList2: public cv::detail::KernelTag {
                     const auto &vec = this_vec.rref<cv::Mat>();
                     uu.oc->setInput(in_idx, vec[list_idx]);
                 } else {
-                    GAPI_Assert(false && "Only Rect and Mat types are supported for infer list 2!");
+                    GAPI_Error("Only Rect and Mat types are supported for infer list 2!");
                 }
                 // }}} (Prepare input)
             } // }}} (For every input of the net)

@@ -249,13 +249,13 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
     sts = MFXCreateSession(mfx_handle, impl_number, &mfx_vpp_session);
     if (sts != MFX_ERR_NONE) {
         GAPI_LOG_WARNING(nullptr, "Cannot clone VPP session, error: " << mfxstatus_to_string(sts));
-        GAPI_Assert(false && "Cannot continue VPP preprocessing");
+        GAPI_Error("Cannot continue VPP preprocessing");
     }
 
     sts = MFXJoinSession(params.handle, mfx_vpp_session);
     if (sts != MFX_ERR_NONE) {
         GAPI_LOG_WARNING(nullptr, "Cannot join VPP sessions, error: " << mfxstatus_to_string(sts));
-        GAPI_Assert(false && "Cannot continue VPP preprocessing");
+        GAPI_Error("Cannot continue VPP preprocessing");
     }
 
     GAPI_LOG_INFO(nullptr, "[" << mfx_vpp_session << "] starting pool allocation");
@@ -301,7 +301,7 @@ pp_session VPPPreprocEngine::initialize_preproc(const pp_params& initial_frame_p
         }
     } catch (const std::exception&) {
         MFXClose(mfx_vpp_session);
-        GAPI_Assert(false && "Cannot init preproc resources");
+        GAPI_Error("Cannot init preproc resources");
     }
 
     // create engine session after all

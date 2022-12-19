@@ -738,7 +738,7 @@ static cv::GRunArgs run_py_kernel(cv::detail::PyObjectHolder kernel,
         else
         {
             // Seems to be impossible case.
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
         }
     }
     catch (...)

@@ -404,7 +404,7 @@ void VPLLegacyTranscodeEngine::validate_vpp_param(const mfxVideoParam& mfxVPPPar
                                   " must be less or equal to \"" <<
                                   CfgParam::vpp_in_width_name() << "\": " <<
                                   mfxVPPParams.vpp.In.Width);
-        GAPI_Assert(false && "Invalid VPP params combination: Width & Crop");
+        GAPI_Error("Invalid VPP params combination: Width & Crop");
     }
 
     if (mfxVPPParams.vpp.In.Height < mfxVPPParams.vpp.In.CropH + mfxVPPParams.vpp.In.CropY) {
@@ -416,7 +416,7 @@ void VPLLegacyTranscodeEngine::validate_vpp_param(const mfxVideoParam& mfxVPPPar
                                   " must be less or equal to \"" <<
                                   CfgParam::vpp_in_height_name() << "\": " <<
                                   mfxVPPParams.vpp.In.Height);
-        GAPI_Assert(false && "Invalid VPP params combination: Height & Crop");
+        GAPI_Error("Invalid VPP params combination: Height & Crop");
     }
 
     if (mfxVPPParams.vpp.Out.Width < mfxVPPParams.vpp.Out.CropW + mfxVPPParams.vpp.Out.CropX) {
@@ -428,7 +428,7 @@ void VPLLegacyTranscodeEngine::validate_vpp_param(const mfxVideoParam& mfxVPPPar
                                   " must be less or equal to \"" <<
                                   CfgParam::vpp_out_width_name() << "\": " <<
                                   mfxVPPParams.vpp.Out.Width);
-        GAPI_Assert(false && "Invalid VPP params combination: Width & Crop");
+        GAPI_Error("Invalid VPP params combination: Width & Crop");
     }
 
     if (mfxVPPParams.vpp.Out.Height < mfxVPPParams.vpp.Out.CropH + mfxVPPParams.vpp.Out.CropY) {
@@ -440,7 +440,7 @@ void VPLLegacyTranscodeEngine::validate_vpp_param(const mfxVideoParam& mfxVPPPar
                                   " must be less or equal to \"" <<
                                   CfgParam::vpp_out_height_name() << "\": " <<
                                   mfxVPPParams.vpp.Out.Height);
-        GAPI_Assert(false && "Invalid VPP params combination: Height & Crop");
+        GAPI_Error("Invalid VPP params combination: Height & Crop");
     }
 
     GAPI_LOG_INFO(nullptr, "Finished VPP param validation");

@@ -67,7 +67,7 @@ protected:
         cv::Mat tmp;
         if (!cap.read(tmp))
         {
-            GAPI_Assert(false && "Couldn't grab the very first frame");
+            GAPI_Error("Couldn't grab the very first frame");
         }
         // NOTE: Some decode/media VideoCapture backends continue
         // owning the video buffer under cv::Mat so in order to

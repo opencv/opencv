@@ -248,11 +248,11 @@ struct scratch_helper<false, Impl, Ins...>
                           const cv::GArgs     &,
                           gapi::fluid::Buffer &)
     {
-        GAPI_Assert(false);
+        GAPI_Error("InternalError");
     }
     static void help_reset(gapi::fluid::Buffer &)
     {
-        GAPI_Assert(false);
+        GAPI_Error("InternalError");
     }
 };
 

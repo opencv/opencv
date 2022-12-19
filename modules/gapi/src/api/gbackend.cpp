@@ -35,7 +35,7 @@ cv::gapi::GBackend::Priv::compile(const ade::Graph&,
                                   const std::vector<ade::NodeHandle> &) const
 {
     // ...and this method is here for the same reason!
-    GAPI_Assert(false);
+    GAPI_Error("InternalError");
     return {};
 }
 
@@ -391,7 +391,7 @@ void unbind(Mag& mag, const RcDesc &rc)
         break;
 
     default:
-        GAPI_Assert(false);
+        GAPI_Error("InternalError");
     }
 }
 

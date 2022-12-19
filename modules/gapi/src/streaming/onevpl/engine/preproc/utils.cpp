@@ -28,7 +28,7 @@ cv::MediaFormat fourcc_to_MediaFormat(int value) {
         default:
             GAPI_LOG_WARNING(nullptr, "Unsupported FourCC format requested: " << value <<
                                      ". Cannot cast to cv::MediaFrame");
-            GAPI_Assert(false && "Unsupported FOURCC");
+            GAPI_Error("Unsupported FOURCC");
 
     }
 }
@@ -44,7 +44,7 @@ int MediaFormat_to_fourcc(cv::MediaFormat value) {
             GAPI_LOG_WARNING(nullptr, "Unsupported cv::MediaFormat format requested: " <<
                                       static_cast<typename std::underlying_type<cv::MediaFormat>::type>(value) <<
                                      ". Cannot cast to FourCC");
-            GAPI_Assert(false && "Unsupported cv::MediaFormat");
+            GAPI_Error("Unsupported cv::MediaFormat");
     }
 }
 int MediaFormat_to_chroma(cv::MediaFormat value) {
@@ -58,7 +58,7 @@ int MediaFormat_to_chroma(cv::MediaFormat value) {
             GAPI_LOG_WARNING(nullptr, "Unsupported cv::MediaFormat format requested: " <<
                                       static_cast<typename std::underlying_type<cv::MediaFormat>::type>(value) <<
                                      ". Cannot cast to ChromaFormateIdc");
-            GAPI_Assert(false && "Unsupported cv::MediaFormat");
+            GAPI_Error("Unsupported cv::MediaFormat");
     }
 }
 

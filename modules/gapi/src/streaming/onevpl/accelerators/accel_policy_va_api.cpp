@@ -39,13 +39,13 @@ VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t sel
 
     va_handle = reinterpret_cast<VADisplay>(devices.begin()->second.get_ptr());
 #else  // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
-    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLVAAPIAccelerationPolicy unavailable in current configuration");
 #endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
 }
 #else // __linux__
 VPLVAAPIAccelerationPolicy::VPLVAAPIAccelerationPolicy(device_selector_ptr_t selector) :
     VPLAccelerationPolicy(selector) {
-    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLVAAPIAccelerationPolicy unavailable in current configuration");
 }
 #endif // __linux__
 
@@ -102,33 +102,33 @@ cv::MediaFrame::AdapterPtr VPLVAAPIAccelerationPolicy::create_frame_adapter(pool
 VPLVAAPIAccelerationPolicy::~VPLVAAPIAccelerationPolicy() = default;
 
 void VPLVAAPIAccelerationPolicy::init(session_t ) {
-    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLVAAPIAccelerationPolicy unavailable in current configuration");
 }
 
 void VPLVAAPIAccelerationPolicy::deinit(session_t) {
-    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLVAAPIAccelerationPolicy unavailable in current configuration");
 }
 
 VPLVAAPIAccelerationPolicy::pool_key_t VPLVAAPIAccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest&,
                                                                                      mfxFrameInfo&) {
-    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLVAAPIAccelerationPolicy unavailable in current configuration");
 }
 
 VPLVAAPIAccelerationPolicy::surface_weak_ptr_t VPLVAAPIAccelerationPolicy::get_free_surface(pool_key_t) {
-    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLVAAPIAccelerationPolicy unavailable in current configuration");
 }
 
 size_t VPLVAAPIAccelerationPolicy::get_free_surface_count(pool_key_t) const {
-    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLVAAPIAccelerationPolicy unavailable in current configuration");
 }
 
 size_t VPLVAAPIAccelerationPolicy::get_surface_count(pool_key_t) const {
-    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLVAAPIAccelerationPolicy unavailable in current configuration");
 }
 
 cv::MediaFrame::AdapterPtr VPLVAAPIAccelerationPolicy::create_frame_adapter(pool_key_t,
                                                                           const FrameConstructorArgs &) {
-    GAPI_Assert(false && "VPLVAAPIAccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLVAAPIAccelerationPolicy unavailable in current configuration");
 }
 #endif // defined(HAVE_VA) || defined(HAVE_VA_INTEL)
 } // namespace onevpl

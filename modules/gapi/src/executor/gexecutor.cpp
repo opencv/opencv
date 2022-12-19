@@ -75,7 +75,7 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
             break;
 
         default:
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
             break;
         } // switch(kind)
     } // for(gim nodes)
@@ -248,7 +248,7 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle & nh, const ade::N
         break;
     }
     default:
-        GAPI_Assert(false);
+        GAPI_Error("InternalError");
     }
 }
 
