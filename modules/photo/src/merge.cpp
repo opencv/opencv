@@ -43,8 +43,6 @@
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
 #include "hdr_common.hpp"
-#include <atomic>
-#include <condition_variable>
 
 namespace cv
 {
@@ -173,16 +171,9 @@ public:
         int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
 
         std::vector<Mat> weights(images.size());
+        Mat weight_sum = Mat::zeros(size, CV_32F);
+        Mutex weight_sum_mutex;
 
-        struct SyncSummationOrder
-        {
-            std::mutex mutex;
-            std::condition_variable cond;
-            int index = 0;
-            Mat sum;
-        };
-        SyncSummationOrder weight_sync;
-        weight_sync.sum = Mat::zeros(size, CV_32F);
         parallel_for_(Range(0, static_cast<int>(images.size())), [&](const Range& range) {
             for(int i = range.start; i < range.end; i++) {
                 Mat& img = images[i];
@@ -233,20 +224,18 @@ public:
                 }
                 weights[i] = weights[i].mul(wellexp) + 1e-12f;
 
-                std::unique_lock<std::mutex> lock(weight_sync.mutex);
-                weight_sync.cond.wait(lock, [&]{ return weight_sync.index == i; });
-                weight_sync.sum += weights[i];
-                weight_sync.index++;
-                weight_sync.cond.notify_all();
+                AutoLock lock(weight_sum_mutex);
+                weight_sum += weights[i];
             }
         });
 
         int maxlevel = static_cast<int>(logf(static_cast<float>(min(size.width, size.height))) / logf(2.0f));
+        std::vector<Mat> res_pyr(maxlevel + 1);
+        std::vector<Mutex> res_pyr_mutexes(maxlevel + 1);
 
-        std::vector<SyncSummationOrder> res_sync(maxlevel + 1);
         parallel_for_(Range(0, static_cast<int>(images.size())), [&](const Range& range) {
             for(int i = range.start; i < range.end; i++) {
-                weights[i] /= weight_sync.sum;
+                weights[i] /= weight_sum;
 
                 std::vector<Mat> img_pyr, weight_pyr;
                 buildPyramid(images[i], img_pyr, maxlevel);
@@ -265,25 +254,22 @@ public:
                     }
                     merge(splitted, img_pyr[lvl]);
 
-                    std::unique_lock<std::mutex> lock(res_sync[lvl].mutex);
-                    res_sync[lvl].cond.wait(lock, [&]{ return res_sync[lvl].index == i; });
-                    if(res_sync[lvl].sum.empty()) {
-                        res_sync[lvl].sum = img_pyr[lvl];
+                    AutoLock lock(res_pyr_mutexes[lvl]);
+                    if(res_pyr[lvl].empty()) {
+                        res_pyr[lvl] = img_pyr[lvl];
                     } else {
-                        res_sync[lvl].sum += img_pyr[lvl];
+                        res_pyr[lvl] += img_pyr[lvl];
                     }
-                    res_sync[lvl].index++;
-                    res_sync[lvl].cond.notify_all();
                 }
             }
         });
         for(int lvl = maxlevel; lvl > 0; lvl--) {
             Mat up;
-            pyrUp(res_sync[lvl].sum, up, res_sync[lvl - 1].sum.size());
-            res_sync[lvl - 1].sum += up;
+            pyrUp(res_pyr[lvl], up, res_pyr[lvl - 1].size());
+            res_pyr[lvl - 1] += up;
         }
         dst.create(size, CV_32FCC);
-        res_sync[0].sum.copyTo(dst);
+        res_pyr[0].copyTo(dst);
     }
 
     float getContrastWeight() const CV_OVERRIDE { return wcon; }
