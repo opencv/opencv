@@ -899,14 +899,14 @@ models = [
         filename='efficientdet-d0.pb'),
     Model(
         name='YOLOv4',  # https://github.com/opencv/opencv/issues/17148
-        downloader=GDrive('1cewMfusmPjYWbrnuJRuKhPMwRe_b9PaT'),
+        url="https://github.com/AlexeyAB/darknet/releases/download/yolov4/yolov4.weights",
         sha='0143deb6c46fcc7f74dd35bf3c14edc3784e99ee',
         filename='yolov4.weights'),
     Model(
-        name='YOLOv4-tiny',  # https://github.com/opencv/opencv/issues/17148
-        url='https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.weights',
-        sha='d110379b7b86899226b591ad4affc7115f707157',
-        filename='yolov4-tiny.weights'),
+        name='YOLOv4-tiny-2020-12',  # https://github.com/opencv/opencv/issues/17148
+        url='https://github.com/AlexeyAB/darknet/releases/download/yolov4/yolov4-tiny.weights',
+        sha='451caaab22fb9831aa1a5ee9b5ba74a35ffa5dcb',
+        filename='yolov4-tiny-2020-12.weights'),
     Model(
         name='YOLOv4x-mish',  # https://github.com/opencv/opencv/issues/18975
         url='https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4x-mish.weights',
