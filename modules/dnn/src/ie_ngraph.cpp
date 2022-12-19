@@ -655,6 +655,7 @@ void InfEngineNgraphNet::init(Target targetId)
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
     auto model = cnn.getFunction();
     ov::preprocess::PrePostProcessor ppp(model);
+    int i = 0;
     for (const auto& inp : model->inputs()) {  // TODO: not sure why but ngraph_function->inputs() here causes segfault.
         const std::string& name = inp.get_node()->get_friendly_name();
         auto blobIt = allBlobs.find(name);
@@ -662,11 +663,11 @@ void InfEngineNgraphNet::init(Target targetId)
 
         auto srcT = blobIt->second.get_element_type();
         if (srcT != inp.get_node()->get_element_type()) {
-            ppp.input(name).tensor().set_element_type(srcT);
+            ppp.input(i++).tensor().set_element_type(srcT);
         }
     }
 
-    int i = 0;
+    i = 0;
     for (const auto& it : model->outputs())
     {
         const std::string& name = it.get_node()->get_friendly_name();
