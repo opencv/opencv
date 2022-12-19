@@ -137,8 +137,6 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         LayerData& ld = it->second;
         auto layer = ld.layerInstance;
 
-        ld.skip = true; // skip all cann operators
-
         if (ld.id == 0)
         {
             for (int i = 0; i < ld.outputBlobsWrappers.size(); i++)
@@ -161,6 +159,8 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         }
         else
         {
+            ld.skip = true; // skip all cann operators
+
             std::vector<Ptr<BackendNode> > layerInputNodes;
             for (int i = 0; i < ld.inputBlobsId.size(); i++)
             {
