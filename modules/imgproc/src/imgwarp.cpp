@@ -1721,7 +1721,7 @@ void cv::remap( InputArray _src, OutputArray _dst,
         ((borderType & BORDER_ISOLATED) != 0 || !src.isSubmatrix()),
         openvx_remap(src, dst, map1, map2, interpolation, borderValue));
 
-    CV_Assert( dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX );
+    //CV_Assert( dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX );
 
     if( dst.data == src.data )
         src = src.clone();
