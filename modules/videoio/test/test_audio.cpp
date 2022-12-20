@@ -285,10 +285,11 @@ const paramCombination mediaParams[] =
 
 INSTANTIATE_TEST_CASE_P(/**/, Media, testing::ValuesIn(mediaParams));
 
-#ifdef _WIN32
-
 TEST(AudioOpenCheck, bad_arg_invalid_audio_stream)
 {
+    if (!videoio_registry::hasBackend(cv::VideoCaptureAPIs(cv::CAP_MSMF)))
+        throw SkipTestException("CAP_MSMF backend was not found");
+
     std::string fileName = "audio/test_audio.wav";
     std::vector<int> params {
          CAP_PROP_AUDIO_STREAM, 1,
@@ -296,12 +297,15 @@ TEST(AudioOpenCheck, bad_arg_invalid_audio_stream)
          CAP_PROP_AUDIO_DATA_DEPTH, CV_16S
     };
     VideoCapture cap;
-    cap.open(findDataFile(fileName), cv::CAP_ANY, params);
+    cap.open(findDataFile(fileName), cv::CAP_MSMF, params);
     ASSERT_FALSE(cap.isOpened());
 }
 
 TEST(AudioOpenCheck, bad_arg_invalid_audio_stream_video)
 {
+    if (!videoio_registry::hasBackend(cv::VideoCaptureAPIs(cv::CAP_MSMF)))
+        throw SkipTestException("CAP_MSMF backend was not found");
+
     std::string fileName = "audio/test_audio.mp4";
     std::vector<int> params {
          CAP_PROP_AUDIO_STREAM, 1,
@@ -309,13 +313,16 @@ TEST(AudioOpenCheck, bad_arg_invalid_audio_stream_video)
          CAP_PROP_AUDIO_DATA_DEPTH, CV_16S
     };
     VideoCapture cap;
-    cap.open(findDataFile(fileName), cv::CAP_ANY, params);
+    cap.open(findDataFile(fileName), cv::CAP_MSMF, params);
     ASSERT_FALSE(cap.isOpened());
 }
 
 
 TEST(AudioOpenCheck, MSMF_bad_arg_invalid_audio_sample_per_second)
 {
+    if (!videoio_registry::hasBackend(cv::VideoCaptureAPIs(cv::CAP_MSMF)))
+        throw SkipTestException("CAP_MSMF backend was not found");
+
     std::string fileName = "audio/test_audio.mp4";
     std::vector<int> params {
         CAP_PROP_AUDIO_STREAM, 0,
@@ -326,7 +333,6 @@ TEST(AudioOpenCheck, MSMF_bad_arg_invalid_audio_sample_per_second)
     cap.open(findDataFile(fileName), cv::CAP_MSMF, params);
     ASSERT_FALSE(cap.isOpened());
 }
-#endif
 
 TEST(AudioOpenCheck, bad_arg_invalid_audio_sample_per_second)
 {

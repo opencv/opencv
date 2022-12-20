@@ -331,11 +331,9 @@ private:
     GSafePtr<GstSample>  usedVideoSample;
     GSafePtr<GstSample>  impendingAudioSample;
     GSafePtr<GstSample>  audioSample;
-    std::vector<GstSample*> audioSamples;
     GSafePtr<GstCaps>    caps;
     GSafePtr<GstCaps>    audiocaps;
 
-    gint64        duration;
     gint64        audioTime;
     gint64        bufferedAudioDuration;
     gint64        requiredAudioTime;
@@ -349,6 +347,9 @@ private:
     gint64        givenAudioTime;
     gint64        numberOfAdditionalAudioBytes;
     gint64        audioSamplePos;
+    gint          videoStream;
+    gint          audioStream;
+    gint64        duration;
     gint          width;
     gint          height;
     double        fps;
@@ -366,8 +367,9 @@ private:
     gint          audioBaseIndex;
     gint          nAudioChannels;
     gint          audioSamplesPerSecond;
-    gint          videoStream;
-    gint          audioStream;
+    gint          audioBitPerFrame;
+    gint          audioSampleSize;
+    std::string   audioFormat;
 
     Mat audioFrame;
     std::deque<uint8_t> bufferAudioData;
@@ -417,6 +419,8 @@ GStreamerCapture::GStreamerCapture() :
     givenAudioTime(0),
     numberOfAdditionalAudioBytes(0),
     audioSamplePos(0),
+    videoStream(0),
+    audioStream(-1),
     duration(-1), width(-1), height(-1), fps(-1),
     openTimeout(GSTREAMER_INTERRUPT_OPEN_DEFAULT_TIMEOUT_NS),
     readTimeout(GSTREAMER_INTERRUPT_READ_DEFAULT_TIMEOUT_NS),
@@ -432,8 +436,9 @@ GStreamerCapture::GStreamerCapture() :
     audioBaseIndex(1),
     nAudioChannels(0),
     audioSamplesPerSecond(44100),
-    videoStream(0),
-    audioStream(-1)
+    audioBitPerFrame(0),
+    audioSampleSize(0),
+    audioFormat("S16LE")
     , va_type(VIDEO_ACCELERATION_NONE)
     , hw_device(-1)
 {}
@@ -672,11 +677,6 @@ bool GStreamerCapture::grabVideoFrame()
 bool GStreamerCapture::grabAudioFrame()
 {
     audioSample.reset(NULL);
-    for (uint i = 0; i < audioSamples.size(); i++)
-    {
-        gst_sample_unref(audioSamples[i]);
-    }
-    audioSamples.clear();
 
     bool returnFlag = false;
     audioTime = bufferedAudioDuration;
@@ -708,6 +708,64 @@ bool GStreamerCapture::grabAudioFrame()
             gst_element_query_position(audiosink.get(), CV_GST_FORMAT(GST_FORMAT_TIME), &audioSampleTime);
 
             GstMapInfo map_info = {};
+            GstCaps* frame_caps = gst_sample_get_caps(audioSample.get());  // no lifetime transfer
+            if (!frame_caps)
+            {
+                CV_LOG_ERROR(NULL, "GStreamer: gst_sample_get_caps() returns NULL");
+                return false;
+            }
+            if (!GST_CAPS_IS_SIMPLE(frame_caps))
+            {
+                // bail out in no caps
+                CV_LOG_ERROR(NULL, "GStreamer: GST_CAPS_IS_SIMPLE(frame_caps) check is failed");
+                return false;
+            }
+            GstAudioInfo info = {};
+            gboolean audio_info_res = gst_audio_info_from_caps(&info, frame_caps);
+            if (!audio_info_res)
+            {
+                CV_Error(Error::StsError, "GStreamer: gst_audio_info_from_caps() is failed. Can't handle unknown layout");
+            }
+            audioBitPerFrame = GST_AUDIO_INFO_BPF(&info);
+            CV_CheckGT(audioBitPerFrame, 0, "");
+
+            GstStructure* structure = gst_caps_get_structure(frame_caps, 0);  // no lifetime transfer
+            if (!structure)
+            {
+                CV_LOG_ERROR(NULL, "GStreamer: Can't query 'structure'-0 from GStreamer sample");
+                return false;
+            }
+
+            const gchar* name_ = gst_structure_get_name(structure);
+            if (!name_)
+            {
+                CV_LOG_ERROR(NULL, "GStreamer: Can't query 'name' from GStreamer sample");
+                return false;
+            }
+            std::string name = toLowerCase(std::string(name_));
+            if (name != "audio/x-raw")
+            {
+                CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer layer type: %s", name.c_str()));
+                return false;
+            }
+
+            const gchar* format_ = gst_structure_get_string(structure, "format");
+            if (!format_)
+            {
+                CV_LOG_ERROR(NULL, "GStreamer: Can't query 'format' of 'audio/x-raw'");
+                return false;
+            }
+            std::string format = toUpperCase(std::string(format_));
+            if (format != "S8" && format != "S16LE" && format != "S32LE" && format != "F32LE")
+            {
+                CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer audio format: %s", format.c_str()));
+                return false;
+            }
+            if (format != audioFormat)
+            {
+                return false;
+            }
+
             GstBuffer* buf = gst_sample_get_buffer(audioSample);
             if (!buf)
             {
@@ -720,12 +778,14 @@ bool GStreamerCapture::grabAudioFrame()
                 return false;
             }
             ScopeGuardGstMapInfo map_guard(buf, &map_info);
-
-            audioSampleDuration = 1e9*(((double)map_info.size/((audioBitPerSample/8)*nAudioChannels))/audioSamplesPerSecond);
-
-            audioSamples.push_back(audioSample.get());
-            audioSample.detach();
-            audioSample.reset(NULL);
+            gsize lastSize = bufferAudioData.size();
+            audioSampleSize = map_info.size;
+            bufferAudioData.resize(lastSize+audioSampleSize);
+            for (gint j = 0; j < audioSampleSize; j++)
+            {
+                bufferAudioData[lastSize+j]=*(map_info.data + j);
+            }
+            audioSampleDuration = 1e9*(((double)audioSampleSize/((audioBitPerSample/8)*nAudioChannels))/audioSamplesPerSecond);
 
             CV_LOG_DEBUG(NULL, "videoio(MSMF): got audio frame with timestamp=" << audioSampleTime << "  duration=" << audioSampleDuration);
             audioTime += (int64_t)(audioSampleDuration);
@@ -740,134 +800,57 @@ bool GStreamerCapture::grabAudioFrame()
 
 bool GStreamerCapture::configureAudioFrame()
 {
-    if (!audioSamples.empty() || (!bufferAudioData.empty() && aEOS))
-    {
-        std::vector<uint8_t> audioDataInUse;
-        GstMapInfo map_info = {};
-
-        GstCaps* frame_caps = gst_sample_get_caps(audioSamples[0]);  // no lifetime transfer
-        if (!frame_caps)
-        {
-            CV_LOG_ERROR(NULL, "GStreamer: gst_sample_get_caps() returns NULL");
-            return false;
-        }
-        if (!GST_CAPS_IS_SIMPLE(frame_caps))
-        {
-            // bail out in no caps
-            CV_LOG_ERROR(NULL, "GStreamer: GST_CAPS_IS_SIMPLE(frame_caps) check is failed");
-            return false;
-        }
-
-        GstAudioInfo info = {};
-        gboolean audio_info_res = gst_audio_info_from_caps(&info, frame_caps);
-        if (!audio_info_res)
-        {
-            CV_Error(Error::StsError, "GStreamer: gst_audio_info_from_caps() is failed. Can't handle unknown layout");
-        }
-        int bpf = GST_AUDIO_INFO_BPF(&info);
-        CV_CheckGT(bpf, 0, "");
-
-        GstStructure* structure = gst_caps_get_structure(frame_caps, 0);  // no lifetime transfer
-        if (!structure)
-        {
-            CV_LOG_ERROR(NULL, "GStreamer: Can't query 'structure'-0 from GStreamer sample");
-            return false;
-        }
-
-        const gchar* name_ = gst_structure_get_name(structure);
-        if (!name_)
-        {
-            CV_LOG_ERROR(NULL, "GStreamer: Can't query 'name' from GStreamer sample");
-            return false;
-        }
-        std::string name = toLowerCase(std::string(name_));
-
-        for (uint i = 0; i < audioSamples.size(); i++)
-        {
-            GstBuffer* buf = gst_sample_get_buffer(audioSamples[i]);
-            if (!buf)
-                return false;
-            if (!gst_buffer_map(buf, &map_info, GST_MAP_READ))
-            {
-                CV_LOG_ERROR(NULL, "GStreamer: Failed to map GStreamer buffer to system memory");
-                return false;
-            }
-            ScopeGuardGstMapInfo map_guard(buf, &map_info);
-
-            gsize lastSize = bufferAudioData.size();
-            bufferAudioData.resize(lastSize+map_info.size);
-            for (gsize j = 0; j < map_info.size; j++)
-            {
-                bufferAudioData[lastSize+j]=*(map_info.data + j);
-            }
-        }
-
-        audioSamplePos += chunkLengthOfBytes/((audioBitPerSample/8)*nAudioChannels);
-        chunkLengthOfBytes = (videoStream != -1) ? (int64_t)((requiredAudioTime * 1e-9 * audioSamplesPerSecond*nAudioChannels*(audioBitPerSample)/8)) : map_info.size;
-        if ((videoStream != -1) && (chunkLengthOfBytes % ((int)(audioBitPerSample)/8* (int)nAudioChannels) != 0))
-        {
-            if ( (double)audioSamplePos/audioSamplesPerSecond - usedVideoSampleTime * 1e-9 >= 0 )
-                chunkLengthOfBytes -= numberOfAdditionalAudioBytes;
-            numberOfAdditionalAudioBytes = ((int)(audioBitPerSample)/8* (int)nAudioChannels)
-                                        - chunkLengthOfBytes % ((int)(audioBitPerSample)/8* (int)nAudioChannels);
-            chunkLengthOfBytes += numberOfAdditionalAudioBytes;
-        }
-        if ((lastFrame && !syncLastFrame) || (aEOS && !vEOS))
-        {
-            chunkLengthOfBytes = bufferAudioData.size();
-            audioSamplePos += chunkLengthOfBytes/((audioBitPerSample/8)*nAudioChannels);
-        }
-        CV_Check((double)chunkLengthOfBytes, chunkLengthOfBytes >= INT_MIN || chunkLengthOfBytes <= INT_MAX, "GSTREAMER: The chunkLengthOfBytes is out of the allowed range");
-        copy(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes, std::back_inserter(audioDataInUse));
-        bufferAudioData.erase(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes);
-
-        if (name == "audio/x-raw")
-        {
-            const gchar* format_ = gst_structure_get_string(structure, "format");
-            if (!format_)
-            {
-                CV_LOG_ERROR(NULL, "GStreamer: Can't query 'format' of 'video/x-raw'");
-                return false;
-            }
-            std::string format = toUpperCase(std::string(format_));
-            cv::Mat data;
-
-            if (format != "S8" && format != "S16LE" && format != "S32LE" && format != "F32LE")
-            {
-                CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer audio format: %s", format.c_str()));
-                return false;
-            }
-            if (format == "S8")
-            {
-                Mat((int)chunkLengthOfBytes/bpf, nAudioChannels, CV_8S, audioDataInUse.data()).copyTo(audioFrame);
-                return true;
-            }
-            if (format == "S16LE")
-            {
-                Mat((int)chunkLengthOfBytes/bpf, nAudioChannels, CV_16S, audioDataInUse.data()).copyTo(audioFrame);
-                return true;
-            }
-            if (format == "S32LE")
-            {
-                Mat((int)chunkLengthOfBytes/bpf, nAudioChannels, CV_32S, audioDataInUse.data()).copyTo(audioFrame);
-                return true;
-            }
-            if (format == "F32LE")
-            {
-                Mat((int)chunkLengthOfBytes/bpf, nAudioChannels, CV_32F, audioDataInUse.data()).copyTo(audioFrame);
-                return true;
-            }
-
-            audioDataInUse.clear();
-            audioDataInUse.shrink_to_fit();
-            return true;
-        }
-        CV_Error_(Error::StsNotImplemented, ("Unsupported GStreamer layer type: %s", name.c_str()));
-    }
-    else
+    if (bufferAudioData.empty() && aEOS)
     {
         return false;
     }
+    std::vector<uint8_t> audioDataInUse;
+
+    audioSamplePos += chunkLengthOfBytes/((audioBitPerSample/8)*nAudioChannels);
+    chunkLengthOfBytes = (videoStream != -1) ? (int64_t)((requiredAudioTime * 1e-9 * audioSamplesPerSecond*nAudioChannels*(audioBitPerSample)/8)) : audioSampleSize;
+    if ((videoStream != -1) && (chunkLengthOfBytes % ((int)(audioBitPerSample)/8* (int)nAudioChannels) != 0))
+    {
+        if ( (double)audioSamplePos/audioSamplesPerSecond - usedVideoSampleTime * 1e-9 >= 0 )
+            chunkLengthOfBytes -= numberOfAdditionalAudioBytes;
+        numberOfAdditionalAudioBytes = ((int)(audioBitPerSample)/8* (int)nAudioChannels)
+                                    - chunkLengthOfBytes % ((int)(audioBitPerSample)/8* (int)nAudioChannels);
+        chunkLengthOfBytes += numberOfAdditionalAudioBytes;
+    }
+    if ((lastFrame && !syncLastFrame) || (aEOS && !vEOS))
+    {
+        chunkLengthOfBytes = bufferAudioData.size();
+        audioSamplePos += chunkLengthOfBytes/((audioBitPerSample/8)*nAudioChannels);
+    }
+    CV_Check((double)chunkLengthOfBytes, chunkLengthOfBytes >= INT_MIN || chunkLengthOfBytes <= INT_MAX, "GSTREAMER: The chunkLengthOfBytes is out of the allowed range");
+    copy(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes, std::back_inserter(audioDataInUse));
+    bufferAudioData.erase(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes);
+
+    cv::Mat data;
+
+    if (audioFormat == "S8")
+    {
+        Mat((int)chunkLengthOfBytes/audioBitPerFrame, nAudioChannels, CV_8S, audioDataInUse.data()).copyTo(audioFrame);
+        return true;
+    }
+    if (audioFormat == "S16LE")
+    {
+        Mat((int)chunkLengthOfBytes/audioBitPerFrame, nAudioChannels, CV_16S, audioDataInUse.data()).copyTo(audioFrame);
+        return true;
+    }
+    if (audioFormat == "S32LE")
+    {
+        Mat((int)chunkLengthOfBytes/audioBitPerFrame, nAudioChannels, CV_32S, audioDataInUse.data()).copyTo(audioFrame);
+        return true;
+    }
+    if (audioFormat == "F32LE")
+    {
+        Mat((int)chunkLengthOfBytes/audioBitPerFrame, nAudioChannels, CV_32F, audioDataInUse.data()).copyTo(audioFrame);
+        return true;
+    }
+
+    audioDataInUse.clear();
+    audioDataInUse.shrink_to_fit();
+    return true;
 }
 
 bool GStreamerCapture::retrieveAudioFrame(int index, OutputArray dst)
@@ -1605,7 +1588,6 @@ bool GStreamerCapture::open(const String &filename_, const cv::VideoCaptureParam
     if (audioStream >= 0)
     {
         gst_app_sink_set_emit_signals(GST_APP_SINK(audiosink.get()), FALSE);
-        std::string audioFormat;
         switch (outputAudioFormat)
         {
         case CV_8S:
