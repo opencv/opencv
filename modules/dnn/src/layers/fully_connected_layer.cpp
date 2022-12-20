@@ -510,7 +510,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) && !isMatMul,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         if (inputs_arr.depth() == CV_16S)
