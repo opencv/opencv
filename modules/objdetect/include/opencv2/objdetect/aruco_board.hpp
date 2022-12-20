@@ -79,8 +79,8 @@ public:
      * @param objPoints Vector of vectors of board marker points in the board coordinate space.
      * @param imgPoints Vector of vectors of the projections of board marker corner points.
      */
-    CV_WRAP void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
-                                  OutputArray objPoints, OutputArray imgPoints) const;
+    CV_WRAP virtual void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
+                                          OutputArray objPoints, OutputArray imgPoints) const;
     virtual ~Board();
 protected:
     struct BoardImpl;
@@ -219,6 +219,17 @@ public:
      * for number of charucoIDs <= 2,the function returns true.
      */
     CV_WRAP bool checkCharucoCornersCollinear(InputArray charucoIds) const;
+
+    /** @brief Given a board configuration and a set of detected markers, returns the corresponding
+     * image points and object points to call solvePnP
+     *
+     * @param detectedCorners List of detected marker corners of the board.
+     * @param detectedIds List of identifiers for each marker.
+     * @param objPoints Vector of vectors of board marker points in the board coordinate space.
+     * @param imgPoints Vector of vectors of the projections of board marker corner points.
+     */
+    CV_WRAP void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
+                                  OutputArray objPoints, OutputArray imgPoints) const override;
 protected:
     struct CharucoImpl;
     friend struct CharucoImpl;

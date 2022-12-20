@@ -505,5 +505,26 @@ std::vector<std::vector<int> > CharucoBoard::getNearestMarkerCorners() const {
     return charucoImpl->nearestMarkerCorners;
 }
 
+void CharucoBoard::matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
+                                    OutputArray objPoints, OutputArray imgPoints) const {
+    if (detectedCorners.kind() == _InputArray::STD_VECTOR_VECTOR ||
+        detectedCorners.isMatVector() || detectedCorners.isUMatVector())
+        Board::matchImagePoints(detectedCorners, detectedIds, objPoints, imgPoints);
+    else {
+        CV_Assert(detectedCorners.isMat() || detectedCorners.isVector());
+        size_t nDetected = detectedCorners.total();
+        vector<Point3f> objPnts(nDetected);
+        vector<Point2f> imgPnts(nDetected);
+        for(size_t i = 0ull; i < nDetected; i++) {
+            int pointId = detectedIds.getMat().at<int>(i);
+            CV_Assert(pointId >= 0 && pointId < (int)getChessboardCorners().size());
+            objPnts[i] = getChessboardCorners()[pointId];
+            imgPnts[i] = detectedCorners.getMat().at<Point2f>(i);
+        }
+        Mat(objPnts).copyTo(objPoints);
+        Mat(imgPnts).copyTo(imgPoints);
+    }
+}
+
 }
 }
