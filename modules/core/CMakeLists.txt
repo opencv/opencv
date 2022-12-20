@@ -143,6 +143,10 @@ endif()
 
 ocv_create_module(${extra_libs})
 
+if(BUILD_ZLIB)
+  add_dependencies(${the_module} ${ZLIB_LIBRARY})
+endif()
+
 ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
     "${OPENGL_LIBRARIES}"
