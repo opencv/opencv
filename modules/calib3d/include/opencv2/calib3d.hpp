@@ -3283,6 +3283,10 @@ CV_EXPORTS_W cv::Mat estimateSE2(InputArray from, InputArray to, OutputArray inl
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
 
+CV_EXPORTS_W cv::Mat estimateSE2(InputArray pts1, InputArray pts2, OutputArray inliers,
+                     const UsacParams &params);
+
+
 /** @brief Computes an optimal limited \f$Sim(2)\f$ transformation with 3 degrees of freedom between
 two 2D point sets.
 
@@ -3318,6 +3322,9 @@ CV_EXPORTS_W cv::Mat estimateSIM2(InputArray from, InputArray to, OutputArray in
                                   int method = USAC_DEFAULT, double ransacReprojThreshold = 3,
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
+
+CV_EXPORTS_W cv::Mat estimateSIM2(InputArray pts1, InputArray pts2, OutputArray inliers,
+                     const UsacParams &params);
 
 /** @brief Computes an optimal limited \f$SE(3)\f$ transformation with 4 degrees of freedom between
 two 3D point sets.
@@ -3355,6 +3362,9 @@ CV_EXPORTS_W cv::Mat estimateSE3(InputArray from, InputArray to, OutputArray inl
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
 
+CV_EXPORTS_W cv::Mat estimateSE3(InputArray pts1, InputArray pts2, OutputArray inliers,
+                     const UsacParams &params);
+
 /** @brief Computes an optimal limited \f$Sim(3)\f$ transformation with 4 degrees of freedom between
 two 3D point sets.
 
@@ -3389,6 +3399,9 @@ combinations of translation, rotation, and uniform scaling.
                                   int method = USAC_DEFAULT, double ransacReprojThreshold = 3,
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
+
+CV_EXPORTS_W cv::Mat estimateSIM3(InputArray pts1, InputArray pts2, OutputArray inliers,
+                     const UsacParams &params);
 
 /** @example samples/cpp/tutorial_code/features2D/Homography/decompose_homography.cpp
 An example program with homography decomposition.
