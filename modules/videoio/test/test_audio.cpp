@@ -181,15 +181,12 @@ public:
             SCOPED_TRACE(cv::format("frame=%d", frame));
 
             ASSERT_TRUE(cap.grab());
-            if (backend == cv::CAP_MSMF)
+            if (frame == 0)
             {
-                if (frame == 0)
-                {
-                    double audio_shift = cap.get(CAP_PROP_AUDIO_SHIFT_NSEC);
-                    double video0_timestamp = cap.get(CAP_PROP_POS_MSEC) * 1e-3;
-                    audio0_timestamp = video0_timestamp + audio_shift * 1e-9;
-                    std::cout << "video0 timestamp: " << video0_timestamp << "  audio0 timestamp: " << audio0_timestamp << " (audio shift nanoseconds: " << audio_shift << " , seconds: " << audio_shift * 1e-9 << ")" << std::endl;
-                }
+                double audio_shift = cap.get(CAP_PROP_AUDIO_SHIFT_NSEC);
+                double video0_timestamp = cap.get(CAP_PROP_POS_MSEC) * 1e-3;
+                audio0_timestamp = video0_timestamp + audio_shift * 1e-9;
+                std::cout << "video0 timestamp: " << video0_timestamp << "  audio0 timestamp: " << audio0_timestamp << " (audio shift nanoseconds: " << audio_shift << " , seconds: " << audio_shift * 1e-9 << ")" << std::endl;
             }
             ASSERT_TRUE(cap.retrieve(videoFrame));
             if (epsilon >= 0)
