@@ -190,7 +190,7 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
         // TODO make proper direction
         mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
     } else {
-        GAPI_Assert(false && "unsupported AccelType from device selector");
+        GAPI_Error("unsupported AccelType from device selector");
     }
 
     // try fetch & decode input data

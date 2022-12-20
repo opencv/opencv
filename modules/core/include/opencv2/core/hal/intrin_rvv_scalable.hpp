@@ -13,6 +13,13 @@
 #include <vector>
 #include <opencv2/core/check.hpp>
 
+#if defined(__GNUC__) && !defined(__clang__)
+// FIXIT: eliminate massive warnigs from templates
+// GCC from 'rvv-next': riscv64-unknown-linux-gnu-g++ (g42df3464463) 12.0.1 20220505 (prerelease)
+// doesn't work: #pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif
+
 #ifndef CV_RVV_MAX_VLEN
 #define CV_RVV_MAX_VLEN 1024
 #endif

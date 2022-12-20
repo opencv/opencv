@@ -36,6 +36,14 @@ String dumpInt(int argument)
 }
 
 CV_WRAP static inline
+String dumpInt64(int64 argument)
+{
+    std::ostringstream oss("Int64: ", std::ios::ate);
+    oss << argument;
+    return oss.str();
+}
+
+CV_WRAP static inline
 String dumpSizeT(size_t argument)
 {
     std::ostringstream oss("size_t: ", std::ios::ate);
@@ -218,6 +226,22 @@ AsyncArray testAsyncException()
     }
     return p.getArrayResult();
 }
+
+CV_WRAP static inline
+String dumpVec2i(const cv::Vec2i value = cv::Vec2i(42, 24)) {
+    return format("Vec2i(%d, %d)", value[0], value[1]);
+}
+
+struct CV_EXPORTS_W_SIMPLE ClassWithKeywordProperties {
+    CV_PROP_RW int lambda;
+    CV_PROP int except;
+
+    CV_WRAP explicit ClassWithKeywordProperties(int lambda_arg = 24, int except_arg = 42)
+    {
+        lambda = lambda_arg;
+        except = except_arg;
+    }
+};
 
 namespace nested {
 CV_WRAP static inline bool testEchoBooleanFunction(bool flag) {

@@ -2001,18 +2001,9 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
 {
     CV_Assert(node_proto.input_size() >= 2);
     layerParams.type = "InnerProduct";
-    Mat weights = getBlob(node_proto, 1);
+    int transA = layerParams.get<int>("transA", 0);
+    layerParams.set("transA", transA == 1);
 
-    if (!layerParams.get<int>("transB", 0))
-    {
-        transpose(weights, weights);
-    }
-    layerParams.blobs.push_back(weights);
-
-    if (node_proto.input_size() == 3) {
-        Mat bias = getBlob(node_proto, 2);
-        layerParams.blobs.push_back(bias);
-    }
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
     {
         Mat inputBuf = getBlob(node_proto, 0);
@@ -2027,7 +2018,43 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
         addLayer(constParams, proto);
     }
 
-    layerParams.set("num_output", layerParams.blobs[0].size[0]);
+    int transB = layerParams.get<int>("transB", 0);
+    if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
+    {
+        Mat weights = getBlob(node_proto, 1);
+
+        if (transA == 0) // optimized barnch, for now, we can only optimize the Gemm when transA = 0.
+        {
+            if (transB == 0)
+            {
+                transpose(weights, weights);
+            }
+            layerParams.set("transB", false);
+            layerParams.blobs.push_back(weights);
+            layerParams.set("num_output", layerParams.blobs[0].size[0]);
+        }
+        else // no optimized branch, TODO! optimize when the transA==1.
+        {
+            LayerParams constParams;
+            constParams.name = node_proto.input(1);
+            constParams.type = "Const";
+            constParams.blobs.push_back(weights);
+
+            opencv_onnx::NodeProto proto;
+            proto.add_output(constParams.name);
+            addLayer(constParams, proto);
+            layerParams.set("transB", transB == 1);
+        }
+    }
+    else
+        layerParams.set("transB", transB == 1);
+
+    if (node_proto.input_size() == 3)
+    {
+        Mat bias = getBlob(node_proto, 2);
+        layerParams.blobs.push_back(bias);
+    }
+
     layerParams.set("bias_term", node_proto.input_size() == 3);
     addLayer(layerParams, node_proto);
 }
@@ -2061,30 +2088,21 @@ void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::Node
     if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
     {
         Mat blob = getBlob(node_proto, 1);
+        Mat transBlob;
         secondInpDims = blob.dims;
-        if (secondInpDims == 2)
-        {
-            layerParams.blobs.push_back(blob.t());
-            layerParams.set("num_output", layerParams.blobs[0].size[0]);
-        }
-        else
-        {
-            LayerParams constParams;
-            constParams.name = layerParams.name + "/const_1";
-            constParams.type = "Const";
-            constParams.blobs.push_back(blob);
-
-            opencv_onnx::NodeProto tmpProto;
-            tmpProto.add_output(constParams.name);
-            addLayer(constParams, tmpProto);
-
-            node_proto.set_input(1, constParams.name);
-        }
-    }
-    else
+        // create order transposing last 2 dimensions
+        std::vector<int> order(secondInpDims);
+        std::iota(order.begin(), order.end(), 0);
+        std::swap(order[secondInpDims - 2], order[secondInpDims - 1]);
+        transposeND(blob, order, transBlob);
+        layerParams.blobs.push_back(transBlob);
+        int numOutput = layerParams.blobs[0].total(0, secondInpDims - 1);
+        layerParams.set("num_output", numOutput);
+        layerParams.set("is_matmul", true);
+    } else
         secondInpDims = outShapes[node_proto.input(1)].size();
 
-    layerParams.set("axis", firstInpDims - secondInpDims + 1);
+    layerParams.set("axis", firstInpDims - 1);
     addLayer(layerParams, node_proto);
 }
 
