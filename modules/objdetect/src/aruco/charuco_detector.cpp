@@ -127,7 +127,7 @@ struct CharucoDetector::CharucoDetectorImpl {
         Ptr<Board> b = board.staticCast<Board>();
         Mat objPoints, imgPoints; // object and image points for the solvePnP function
         board->matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);
-        if (objPoints.total() < 4ull)
+        if (objPoints.total() < 4ull)  // need, at least, 4 corners
             return;
         solvePnP(objPoints, imgPoints, charucoParameters.cameraMatrix, charucoParameters.distCoeffs, approximatedRvec, approximatedTvec);
 
@@ -303,6 +303,137 @@ void CharucoDetector::detectBoard(InputArray image, InputOutputArrayOfArrays mar
     // to return a charuco corner, its closest aruco markers should have been detected
     charucoDetectorImpl->filterCornersWithoutMinMarkers(charucoCorners, charucoIds, markerIds, charucoCorners,
                                                         charucoIds);
+}
+
+void CharucoDetector::detectDiamonds(InputArray image, InputOutputArrayOfArrays _markerCorners,
+                                     InputOutputArrayOfArrays _markerIds, OutputArrayOfArrays _diamondCorners,
+                                     OutputArray _diamondIds) const {
+    CV_Assert(getBoard()->getChessboardSize() == Size(3, 3));
+    CV_Assert((_markerCorners.empty() && _markerIds.empty() && !image.empty()) || (_markerCorners.size() == _markerIds.size()));
+    if (_markerCorners.empty() && _markerIds.empty()) {
+        charucoDetectorImpl->arucoDetector.detectMarkers(image, _markerCorners, _markerIds);
+    }
+    const float minRepDistanceRate = 1.302455f;
+    vector<vector<Point2f>> diamondCorners;
+    vector<Vec4i> diamondIds;
+
+    // stores if the detected markers have been assigned or not to a diamond
+    vector<bool> assigned(_markerIds.total(), false);
+    if(_markerIds.total() < 4ull) return; // a diamond need at least 4 markers
+
+    // convert input image to grey
+    Mat grey;
+    if(image.type() == CV_8UC3)
+        cvtColor(image, grey, COLOR_BGR2GRAY);
+    else
+        grey = image.getMat();
+    auto board = getBoard();
+
+    // for each of the detected markers, try to find a diamond
+    for(unsigned int i = 0; i < (unsigned int)_markerIds.total(); i++) {
+        if(assigned[i]) continue;
+
+        // calculate marker perimeter
+        float perimeterSq = 0;
+        Mat corners = _markerCorners.getMat(i);
+        for(int c = 0; c < 4; c++) {
+          Point2f edge = corners.at<Point2f>(c) - corners.at<Point2f>((c + 1) % 4);
+          perimeterSq += edge.x*edge.x + edge.y*edge.y;
+        }
+        // maximum reprojection error relative to perimeter
+        float minRepDistance = sqrt(perimeterSq) * minRepDistanceRate;
+
+        int currentId = _markerIds.getMat().at<int>(i);
+
+        // prepare data to call refineDetectedMarkers()
+        // detected markers (only the current one)
+        vector<Mat> currentMarker;
+        vector<int> currentMarkerId;
+        currentMarker.push_back(_markerCorners.getMat(i));
+        currentMarkerId.push_back(currentId);
+
+        // marker candidates (the rest of markers if they have not been assigned)
+        vector<Mat> candidates;
+        vector<int> candidatesIdxs;
+        for(unsigned int k = 0; k < assigned.size(); k++) {
+            if(k == i) continue;
+            if(!assigned[k]) {
+                candidates.push_back(_markerCorners.getMat(k));
+                candidatesIdxs.push_back(k);
+            }
+        }
+        if(candidates.size() < 3ull) break; // we need at least 3 free markers
+        // modify charuco layout id to make sure all the ids are different than current id
+        vector<int> tmpIds(4ull);
+        for(int k = 1; k < 4; k++)
+            tmpIds[k] = currentId + 1 + k;
+        // current id is assigned to [0], so it is the marker on the top
+        tmpIds[0] = currentId;
+        // create Charuco board layout for diamond (3x3 layout)
+        Ptr<CharucoBoard> _charucoDiamondLayout = CharucoBoard::create(3, 3, board->getSquareLength(),
+                                                                       board->getMarkerLength(), board->getDictionary(),
+                                                                       tmpIds);
+        charucoDetectorImpl->board = _charucoDiamondLayout;
+
+        // try to find the rest of markers in the diamond
+        vector<int> acceptedIdxs;
+        if (currentMarker.size() != 4ull)
+        {
+            RefineParameters refineParameters(minRepDistance, -1.f, false);
+            RefineParameters tmp = charucoDetectorImpl->arucoDetector.getRefineParameters();
+            charucoDetectorImpl->arucoDetector.setRefineParameters(refineParameters);
+            charucoDetectorImpl->arucoDetector.refineDetectedMarkers(grey, getBoard(), currentMarker, currentMarkerId,
+                                                                     candidates,
+                                                                     noArray(), noArray(), acceptedIdxs);
+            charucoDetectorImpl->arucoDetector.setRefineParameters(tmp);
+        }
+
+        // if found, we have a diamond
+        if(currentMarker.size() == 4ull) {
+            assigned[i] = true;
+            // calculate diamond id, acceptedIdxs array indicates the markers taken from candidates array
+            Vec4i markerId;
+            markerId[0] = currentId;
+            for(int k = 1; k < 4; k++) {
+                int currentMarkerIdx = candidatesIdxs[acceptedIdxs[k - 1]];
+                markerId[k] = _markerIds.getMat().at<int>(currentMarkerIdx);
+                assigned[currentMarkerIdx] = true;
+            }
+
+            // interpolate the charuco corners of the diamond
+            vector<Point2f> currentMarkerCorners;
+            Mat aux;
+            detectBoard(grey, currentMarker, currentMarkerId, currentMarkerCorners, aux);
+
+            // if everything is ok, save the diamond
+            if(currentMarkerCorners.size() > 0ull) {
+                // reorder corners
+                vector<Point2f> currentMarkerCornersReorder;
+                currentMarkerCornersReorder.resize(4);
+                currentMarkerCornersReorder[0] = currentMarkerCorners[0];
+                currentMarkerCornersReorder[1] = currentMarkerCorners[1];
+                currentMarkerCornersReorder[2] = currentMarkerCorners[3];
+                currentMarkerCornersReorder[3] = currentMarkerCorners[2];
+
+                diamondCorners.push_back(currentMarkerCornersReorder);
+                diamondIds.push_back(markerId);
+            }
+        }
+    }
+    charucoDetectorImpl->board = board;
+
+    if(diamondIds.size() > 0ull) {
+        // parse output
+        Mat(diamondIds).copyTo(_diamondIds);
+
+        _diamondCorners.create((int)diamondCorners.size(), 1, CV_32FC2);
+        for(unsigned int i = 0; i < diamondCorners.size(); i++) {
+            _diamondCorners.create(4, 1, CV_32FC2, i, true);
+            for(int j = 0; j < 4; j++) {
+                _diamondCorners.getMat(i).at<Point2f>(j) = diamondCorners[i][j];
+            }
+        }
+    }
 }
 
 void drawDetectedCornersCharuco(InputOutputArray _image, InputArray _charucoCorners,

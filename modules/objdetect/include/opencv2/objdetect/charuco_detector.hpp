@@ -50,7 +50,7 @@ public:
     CV_WRAP void setRefineParameters(const RefineParameters& refineParameters);
 
     /**
-     * @brief If nedeed detect aruco markers and interpolate position of ChArUco board corners
+     * @brief detect aruco markers and interpolate position of ChArUco board corners
      * @param image input image necesary for corner refinement. Note that markers are not detected and
      * should be sent in corners and ids parameters.
      * @param markerCorners vector of already detected markers corners. For each marker, its four
@@ -73,6 +73,30 @@ public:
      */
     CV_WRAP void detectBoard(InputArray image, InputOutputArrayOfArrays markerCorners, InputOutputArray markerIds,
                              OutputArray charucoCorners, OutputArray charucoIds) const;
+
+    /**
+     * @brief Detect ChArUco Diamond markers
+     *
+     * @param image input image necessary for corner subpixel.
+     * @param markerCorners list of detected marker corners from detectMarkers function.
+     * If markerCorners and markerCorners are empty, the detectDiamonds() will run and detect aruco markers and ids
+     * @param markerIds list of marker ids in markerCorners.
+     * If markerCorners and markerCorners are empty, the detectDiamonds() will run and detect aruco markers and ids
+     * @param diamondCorners output list of detected diamond corners (4 corners per diamond). The order
+     * is the same than in marker corners: top left, top right, bottom right and bottom left. Similar
+     * format than the corners returned by detectMarkers (e.g std::vector<std::vector<cv::Point2f> > ).
+     * @param diamondIds ids of the diamonds in diamondCorners. The id of each diamond is in fact of
+     * type Vec4i, so each diamond has 4 ids, which are the ids of the aruco markers composing the
+     * diamond.
+     *
+     * This function detects Diamond markers from the previous detected ArUco markers. The diamonds
+     * are returned in the diamondCorners and diamondIds parameters. If camera calibration parameters
+     * are provided, the diamond search is based on reprojection. If not, diamond search is based on
+     * homography. Homography is faster than reprojection but can slightly reduce the detection rate.
+     */
+    CV_WRAP void detectDiamonds(InputArray image, InputOutputArrayOfArrays markerCorners,
+                                InputOutputArrayOfArrays markerIds, OutputArrayOfArrays diamondCorners,
+                                OutputArray diamondIds) const;
 protected:
     struct CharucoDetectorImpl;
     Ptr<CharucoDetectorImpl> charucoDetectorImpl;
