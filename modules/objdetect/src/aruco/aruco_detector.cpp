@@ -1009,10 +1009,11 @@ static inline void _projectUndetectedMarkers(const Ptr<Board> &board, InputOutpu
                                              vector<vector<Point2f> >& undetectedMarkersProjectedCorners,
                                              OutputArray undetectedMarkersIds) {
     Mat rvec, tvec; // first estimate board pose with the current avaible markers
-    int boardDetectedMarkers = getBoardPose(detectedCorners, detectedIds, board, cameraMatrix, distCoeffs, rvec, tvec);
-
-    // at least one marker from board so rvec and tvec are valid
-    if(boardDetectedMarkers == 0) return;
+    Mat objPoints, imgPoints; // object and image points for the solvePnP function
+    board->matchImagePoints(detectedCorners, detectedIds, objPoints, imgPoints);
+    if (objPoints.total() < 4ull) // at least one marker from board so rvec and tvec are valid
+        return;
+    solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
 
     // search undetected markers and project them using the previous pose
     vector<vector<Point2f> > undetectedCorners;

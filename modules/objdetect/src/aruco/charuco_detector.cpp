@@ -121,13 +121,16 @@ struct CharucoDetector::CharucoDetectorImpl {
                                               InputArray image, OutputArray charucoCorners, OutputArray charucoIds) {
         CV_Assert(image.getMat().channels() == 1 || image.getMat().channels() == 3);
         CV_Assert(markerCorners.total() == markerIds.getMat().total());
+
         // approximated pose estimation using marker corners
         Mat approximatedRvec, approximatedTvec;
-        int detectedBoardMarkers;
         Ptr<Board> b = board.staticCast<Board>();
-        detectedBoardMarkers = getBoardPose(markerCorners, markerIds, b, charucoParameters.cameraMatrix,
-                                            charucoParameters.distCoeffs, approximatedRvec, approximatedTvec);
-        if (detectedBoardMarkers == 0) return;
+        Mat objPoints, imgPoints; // object and image points for the solvePnP function
+        board->matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);
+        if (objPoints.total() < 4ull)
+            return;
+        solvePnP(objPoints, imgPoints, charucoParameters.cameraMatrix, charucoParameters.distCoeffs, approximatedRvec, approximatedTvec);
+
         // project chessboard corners
         vector<Point2f> allChessboardImgPoints;
         projectPoints(board->getChessboardCorners(), approximatedRvec, approximatedTvec, charucoParameters.cameraMatrix,
