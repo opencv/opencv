@@ -553,7 +553,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
                    .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon),
                    mask, MatrixType::AUTO, VariableType::LINEAR, /* LtoR */ false, solveMethod);
     // geodesic is not supported for normal callbacks
-    solver.optimize();
+    cv::LevMarq::Report report = solver.optimize();
 
     //std::cout << "single camera calib. param after LM: " << param0.t() << "\n";
 
@@ -579,13 +579,15 @@ static double calibrateCameraInternal( const Mat& objectPoints,
         completeSymm(JtJN, false);
         //TODO: try DECOMP_CHOLESKY maybe?
         cv::invert(JtJN, JtJinv, DECOMP_EIG);
-        // sigma2 is deviation of the noise
-        // see any papers about variance of the least squares estimator for
-        // detailed description of the variance estimation methods
-        double sigma2 = norm(allErrors, NORM_L2SQR) / (total - nparams_nz);
+        // Read about Cramer-Rao lower bound to understand how stddevs are calculated:
+        // https://en.wikipedia.org/wiki/Cram%C3%A9r%E2%80%93Rao_bound
+        // Note: these numbers make sense only when the optimization
+        // has converged to the minumum
+        int nErrors = total;
+        double sigma2 = norm(allErrors, NORM_L2SQR) / nErrors;
         int j = 0;
         for ( int s = 0; s < nparams; s++ )
-            if( mask[s] )
+            if( report.found && mask[s] )
             {
                 stdDevs.at<double>(s) = std::sqrt(JtJinv.at<double>(j,j) * sigma2);
                 j++;
