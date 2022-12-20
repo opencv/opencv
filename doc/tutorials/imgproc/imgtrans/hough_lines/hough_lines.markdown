@@ -83,7 +83,7 @@ Arranging the terms: \f$r = x \cos \theta + y \sin \theta\f$
 
 ### Standard and Probabilistic Hough Line Transform
 
-OpenCV implements two kind of Hough Line Transforms:
+OpenCV implements three kind of Hough Line Transforms:
 
 a.  **The Standard Hough Transform**
 
@@ -99,7 +99,7 @@ b.  **The Probabilistic Hough Line Transform**
 
 c.  **The Weighted Hough Transform**
 
--   It can use edge intensity insted of Standard hough can only use binarized edge(0,1) as its input.
+-   Uses edge intensity instead binary 0 or 1 values in standard Hough transform.
 -   In OpenCV it is implemented with the function **HoughLines()** with use_edgeval=true.
 -   See the example in samples/cpp/tutorial_code/ImgTrans/HoughLines_Demo.cpp.
 
