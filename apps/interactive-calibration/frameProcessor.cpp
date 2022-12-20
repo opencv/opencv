@@ -74,17 +74,14 @@ bool CalibProcessor::detectAndParseChessboard(const cv::Mat &frame)
 
 bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
 {
-#ifdef HAVE_OPENCV_ARUCO
+
     cv::Ptr<cv::aruco::Board> board = mCharucoBoard.staticCast<cv::aruco::Board>();
 
     std::vector<std::vector<cv::Point2f> > corners, rejected;
     std::vector<int> ids;
-    cv::aruco::detectMarkers(frame, cv::makePtr<cv::aruco::Dictionary>(mArucoDictionary), corners, ids, cv::makePtr<cv::aruco::DetectorParameters>(), rejected);
-    cv::aruco::refineDetectedMarkers(frame, board, corners, ids, rejected);
+    cv::aruco::CharucoDetector detector(mCharucoBoard);
     cv::Mat currentCharucoCorners, currentCharucoIds;
-    if(ids.size() > 0)
-        cv::aruco::interpolateCornersCharuco(corners, ids, frame, mCharucoBoard, currentCharucoCorners,
-                                         currentCharucoIds);
+    detector.detectBoard(frame, corners, ids, currentCharucoCorners, currentCharucoIds);
     if(ids.size() > 0) cv::aruco::drawDetectedMarkers(frame, corners);
 
     if(currentCharucoCorners.total() > 3) {
@@ -102,9 +99,6 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
         mCurrentCharucoIds = currentCharucoIds;
         return true;
     }
-#else
-    CV_UNUSED(frame);
-#endif
     return false;
 }
 
@@ -260,7 +254,6 @@ bool CalibProcessor::checkLastFrame()
         }
     }
     else {
-#ifdef HAVE_OPENCV_ARUCO
         cv::Mat r, t, angles;
         std::vector<cv::Point3f> allObjPoints;
         allObjPoints.reserve(mCurrentCharucoIds.total());
@@ -278,7 +271,6 @@ bool CalibProcessor::checkLastFrame()
             mCalibData->allCharucoCorners.pop_back();
             mCalibData->allCharucoIds.pop_back();
         }
-#endif
     }
     return isFrameBad;
 }
@@ -299,11 +291,9 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
     switch(mBoardType)
     {
     case chAruco:
-#ifdef HAVE_OPENCV_ARUCO
         mArucoDictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PredefinedDictionaryType(capParams.charucoDictName));
         mCharucoBoard = cv::aruco::CharucoBoard::create(mBoardSize.width, mBoardSize.height, capParams.charucoSquareLength,
                                                         capParams.charucoMarkerSize, mArucoDictionary);
-#endif
         break;
     case CirclesGrid:
     case AcirclesGrid:
