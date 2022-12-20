@@ -28,8 +28,8 @@ const char* weighted_name = "Weighted Hough Lines Demo";
 
 int s_trackbar = max_trackbar;
 int p_trackbar = max_trackbar;
-int e_trackbar = max_trackbar;
-int w_trackbar = weightedhough_max_trackbar;
+int e_trackbar = 60;
+int w_trackbar = 60000;
 
 /// Function Headers
 void help();
@@ -65,13 +65,14 @@ int main( int argc, char** argv )
    /// Create Trackbars for Thresholds
    char thresh_label[50];
    snprintf( thresh_label, sizeof(thresh_label), "Thres: %d + input", min_threshold );
-   char edge_thresh_label[50];
-   sprintf( edge_thresh_label, "Edge Thres: input" );
    namedWindow( standard_name, WINDOW_AUTOSIZE );
    createTrackbar( thresh_label, standard_name, &s_trackbar, max_trackbar, Standard_Hough );
 
    namedWindow( probabilistic_name, WINDOW_AUTOSIZE );
    createTrackbar( thresh_label, probabilistic_name, &p_trackbar, max_trackbar, Probabilistic_Hough );
+
+   char edge_thresh_label[50];
+   sprintf( edge_thresh_label, "Edge Thres: input" );
    namedWindow( weighted_name, WINDOW_AUTOSIZE);
    createTrackbar( edge_thresh_label, weighted_name, &e_trackbar, max_trackbar, Weighted_Hough);
    createTrackbar( thresh_label, weighted_name, &w_trackbar, weightedhough_max_trackbar, Weighted_Hough);
