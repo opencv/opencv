@@ -169,6 +169,7 @@ private:
 
     bool setupReadingAt(CMTime position);
     IplImage* retrieveFramePixelBuffer();
+    int getPreferredOrientationDegrees() const;
 
     CMTime mFrameTimestamp;
     size_t mFrameNum;
@@ -387,6 +388,15 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
         [localpool drain];
         return 0;
     }
+
+    // Preserve devices ordering on the system
+    // see AVCaptureDevice::uniqueID property documentation for more info
+    devices = [devices
+        sortedArrayUsingComparator:^NSComparisonResult(AVCaptureDevice *d1,
+                                                     AVCaptureDevice *d2) {
+          return [d1.uniqueID compare:d2.uniqueID];
+        }
+    ];
 
     mCaptureDevice = devices[cameraNum];
 
@@ -1064,6 +1074,13 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
     return mOutImage;
 }
 
+int CvCaptureFile::getPreferredOrientationDegrees() const {
+    if (mAssetTrack == nil) return 0;
+
+    CGAffineTransform transform = mAssetTrack.preferredTransform;
+    double radians = atan2(transform.b, transform.a);
+    return static_cast<int>(round(radians * 180 / M_PI));
+}
 
 IplImage* CvCaptureFile::retrieveFrame(int) {
     return retrieveFramePixelBuffer();
@@ -1095,6 +1112,8 @@ double CvCaptureFile::getProperty(int property_id) const{
             return mFormat;
         case CV_CAP_PROP_FOURCC:
             return mMode;
+        case cv::CAP_PROP_ORIENTATION_META:
+            return getPreferredOrientationDegrees();
         default:
             break;
     }

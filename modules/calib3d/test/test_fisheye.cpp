@@ -906,7 +906,7 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
 
     std::vector<cv::Point2d> reprojectedImgPts[2] = {std::vector<cv::Point2d>(n_images), std::vector<cv::Point2d>(n_images)};
     size_t totalPoints = 0;
-    float totalMSError[2] = { 0, 0 }, viewMSError[2];
+    double totalMSError[2] = { 0, 0 };
     for( size_t i = 0; i < n_images; i++ )
     {
         cv::Matx33d viewRotMat1, viewRotMat2;
@@ -929,8 +929,10 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
         cv::fisheye::projectPoints(objectPoints[i], reprojectedImgPts[0], viewRotVec1, viewT1, K1, D1, alpha1);
         cv::fisheye::projectPoints(objectPoints[i], reprojectedImgPts[1], viewRotVec2, viewT2, K2, D2, alpha2);
 
-        viewMSError[0] = cv::norm(leftPoints[i], reprojectedImgPts[0], cv::NORM_L2SQR);
-        viewMSError[1] = cv::norm(rightPoints[i], reprojectedImgPts[1], cv::NORM_L2SQR);
+        double viewMSError[2] = {
+            cv::norm(leftPoints[i], reprojectedImgPts[0], cv::NORM_L2SQR),
+            cv::norm(rightPoints[i], reprojectedImgPts[1], cv::NORM_L2SQR)
+        };
 
         size_t n = objectPoints[i].size();
         totalMSError[0] += viewMSError[0];
