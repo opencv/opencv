@@ -1364,9 +1364,10 @@ struct CharucoDetector::CharucoDetectorImpl {
     Ptr<CharucoBoard> board;
     CharucoParameters charucoParameters;
     ArucoDetector arucoDetector;
+
     CharucoDetectorImpl(const Ptr<CharucoBoard>& _board, const CharucoParameters _charucoParameters,
-                        const ArucoDetector& _arucoDetector): board(_board),
-                        charucoParameters(_charucoParameters), arucoDetector(_arucoDetector) {};
+                        const ArucoDetector& _arucoDetector): board(_board), charucoParameters(_charucoParameters),
+                                                              arucoDetector(_arucoDetector) {};
 
     /** Calculate the maximum window sizes for corner refinement for each charuco corner based on the distance
      * to their closest markers */
@@ -1466,8 +1467,7 @@ struct CharucoDetector::CharucoDetectorImpl {
     void interpolateCornersCharucoApproxCalib(InputArrayOfArrays markerCorners, InputArray markerIds,
                                               InputArray image, OutputArray charucoCorners, OutputArray charucoIds) {
         CV_Assert(image.getMat().channels() == 1 || image.getMat().channels() == 3);
-        CV_Assert(markerCorners.total() == markerIds.getMat().total() &&
-                  markerIds.getMat().total() > 0);
+        CV_Assert(markerCorners.total() == markerIds.getMat().total());
         // approximated pose estimation using marker corners
         Mat approximatedRvec, approximatedTvec;
         int detectedBoardMarkers;
@@ -1490,8 +1490,7 @@ struct CharucoDetector::CharucoDetectorImpl {
     void interpolateCornersCharucoLocalHom(InputArrayOfArrays markerCorners, InputArray markerIds, InputArray image,
                                            OutputArray charucoCorners, OutputArray charucoIds) {
         CV_Assert(image.getMat().channels() == 1 || image.getMat().channels() == 3);
-        CV_Assert(markerCorners.total() == markerIds.getMat().total() &&
-                  markerIds.getMat().total() > 0);
+        CV_Assert(markerCorners.total() == markerIds.getMat().total());
         size_t nMarkers = markerIds.getMat().total();
         // calculate local homographies for each marker
         vector<Mat> transformations(nMarkers);
@@ -1628,16 +1627,17 @@ void CharucoDetector::setRefineParameters(const RefineParameters& refineParamete
 }
 
 void CharucoDetector::detectBoard(InputArray image, InputOutputArrayOfArrays markerCorners,
-                                  InputOutputArray markerIds, OutputArray charucoCorners, OutputArray charucoIds) {
+                                  InputOutputArray markerIds, OutputArray charucoCorners, OutputArray charucoIds) const {
     CV_Assert((markerCorners.empty() && markerIds.empty() && !image.empty()) || (markerCorners.size() == markerIds.size()));
     if (markerCorners.empty() && markerIds.empty()) {
         vector<vector<Point2f> > rejectedMarkers;
         charucoDetectorImpl->arucoDetector.detectMarkers(image, markerCorners, markerIds, rejectedMarkers);
         if (charucoDetectorImpl->charucoParameters.tryRefineMarkers)
-            charucoDetectorImpl->arucoDetector.refineDetectedMarkers(image, charucoDetectorImpl->board, markerCorners, markerIds, rejectedMarkers);
+            charucoDetectorImpl->arucoDetector.refineDetectedMarkers(image, charucoDetectorImpl->board, markerCorners,
+                                                                     markerIds, rejectedMarkers);
     }
     // if camera parameters are avaible, use approximated calibration
-    if(charucoDetectorImpl->charucoParameters.cameraMatrix.total() != 0ull)
+    if(!charucoDetectorImpl->charucoParameters.cameraMatrix.empty())
         charucoDetectorImpl->interpolateCornersCharucoApproxCalib(markerCorners, markerIds, image, charucoCorners,
                                                                   charucoIds);
     // else use local homography
@@ -1651,7 +1651,7 @@ void CharucoDetector::detectBoard(InputArray image, InputOutputArrayOfArrays mar
 
 void drawDetectedCornersCharuco(InputOutputArray _image, InputArray _charucoCorners,
                                 InputArray _charucoIds, Scalar cornerColor) {
-    CV_Assert(_image.getMat().total() != 0 &&
+    CV_Assert(!_image.getMat().empty() &&
               (_image.getMat().channels() == 1 || _image.getMat().channels() == 3));
     CV_Assert((_charucoCorners.getMat().total() == _charucoIds.getMat().total()) ||
               _charucoIds.getMat().total() == 0);
@@ -1662,7 +1662,7 @@ void drawDetectedCornersCharuco(InputOutputArray _image, InputArray _charucoCorn
         // draw first corner mark
         rectangle(_image, corner - Point2f(3, 3), corner + Point2f(3, 3), cornerColor, 1, LINE_AA);
         // draw ID
-        if(_charucoIds.total() != 0) {
+        if(!_charucoIds.empty()) {
             int id = _charucoIds.getMat().at<int>((int)i);
             stringstream s;
             s << "id=" << id;

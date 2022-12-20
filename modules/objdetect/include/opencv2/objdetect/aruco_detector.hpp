@@ -448,7 +448,7 @@ public:
      * also returned in charucoIds.
      */
     CV_WRAP void detectBoard(InputArray image, InputOutputArrayOfArrays markerCorners, InputOutputArray markerIds,
-                             OutputArray charucoCorners, OutputArray charucoIds);
+                             OutputArray charucoCorners, OutputArray charucoIds) const;
 protected:
     struct CharucoDetectorImpl;
     Ptr<CharucoDetectorImpl> charucoDetectorImpl;

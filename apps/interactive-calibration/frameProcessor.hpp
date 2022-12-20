@@ -39,6 +39,7 @@ protected:
     cv::Ptr<cv::SimpleBlobDetector> mBlobDetectorPtr;
     cv::aruco::Dictionary mArucoDictionary;
     cv::Ptr<cv::aruco::CharucoBoard> mCharucoBoard;
+    cv::Ptr<cv::aruco::CharucoDetector> detector;
 
     int mNeededFramesNum;
     unsigned mDelayBetweenCaptures;

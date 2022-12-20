@@ -102,9 +102,6 @@ int main(int argc, char** argv)
 
     captureParameters capParams = paramsController.getCaptureParameters();
     internalParameters intParams = paramsController.getInternalParameters();
-    if(capParams.board == chAruco)
-        CV_Error(cv::Error::StsNotImplemented, "Aruco module is disabled in current build configuration."
-                                               " Consider usage of another calibration pattern\n");
 
     cv::TermCriteria solverTermCrit = cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS,
                                                        intParams.solverMaxIters, intParams.solverEps);
@@ -165,29 +162,12 @@ int main(int argc, char** argv)
                 globalData->imageSize = pipeline->getImageSize();
                 calibrationFlags = controller->getNewFlags();
 
-                if(capParams.board != chAruco) {
-                    globalData->totalAvgErr =
-                            cv::calibrateCamera(globalData->objectPoints, globalData->imagePoints,
-                                                    globalData->imageSize, globalData->cameraMatrix,
-                                                    globalData->distCoeffs, cv::noArray(), cv::noArray(),
-                                                    globalData->stdDeviations, cv::noArray(), globalData->perViewErrors,
-                                                    calibrationFlags, solverTermCrit);
-                }
-                else {
-                    cv::aruco::Dictionary dictionary =
-                            cv::aruco::getPredefinedDictionary(cv::aruco::PredefinedDictionaryType(capParams.charucoDictName));
-                    cv::Ptr<cv::aruco::CharucoBoard> charucoboard =
-                                cv::aruco::CharucoBoard::create(capParams.boardSize.width, capParams.boardSize.height,
-                                                                capParams.charucoSquareLength, capParams.charucoMarkerSize, dictionary);
-                    std::vector<cv::Point2f> objPoints, imgPoints;
-                    // TODO: fix CharucoMatchImagePoints
-                    charucoboard->matchImagePoints(globalData->allCharucoCorners, globalData->allCharucoIds, objPoints, imgPoints);
-                    globalData->totalAvgErr =
-                            cv::calibrateCamera(objPoints, imgPoints, globalData->imageSize, globalData->cameraMatrix,
-                                                globalData->distCoeffs, cv::noArray(), cv::noArray(),
-                                                globalData->stdDeviations, cv::noArray(), globalData->perViewErrors,
-                                                calibrationFlags, solverTermCrit);
-                }
+                globalData->totalAvgErr =
+                        cv::calibrateCamera(globalData->objectPoints, globalData->imagePoints,
+                                            globalData->imageSize, globalData->cameraMatrix,
+                                            globalData->distCoeffs, cv::noArray(), cv::noArray(),
+                                            globalData->stdDeviations, cv::noArray(), globalData->perViewErrors,
+                                            calibrationFlags, solverTermCrit);
                 dataController->updateUndistortMap();
                 dataController->printParametersToConsole(std::cout);
                 controller->updateState();

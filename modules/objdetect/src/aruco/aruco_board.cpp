@@ -516,10 +516,10 @@ void CharucoBoard::matchImagePoints(InputArrayOfArrays detectedCorners, InputArr
         vector<Point3f> objPnts(nDetected);
         vector<Point2f> imgPnts(nDetected);
         for(size_t i = 0ull; i < nDetected; i++) {
-            int pointId = detectedIds.getMat().at<int>(i);
+            int pointId = detectedIds.getMat().at<int>((int)i);
             CV_Assert(pointId >= 0 && pointId < (int)getChessboardCorners().size());
             objPnts[i] = getChessboardCorners()[pointId];
-            imgPnts[i] = detectedCorners.getMat().at<Point2f>(i);
+            imgPnts[i] = detectedCorners.getMat().at<Point2f>((int)i);
         }
         Mat(objPnts).copyTo(objPoints);
         Mat(imgPnts).copyTo(imgPoints);

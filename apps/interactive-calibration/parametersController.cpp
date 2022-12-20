@@ -109,6 +109,13 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
 
     std::string templateType = parser.get<std::string>("t");
 
+    if(parser.has("w") && parser.has("h")) {
+        mCapParams.boardSize = cv::Size(parser.get<int>("w"), parser.get<int>("h"));
+        if(!checkAssertion(mCapParams.boardSize.width > 0 || mCapParams.boardSize.height > 0,
+                           "Board size must be positive"))
+            return false;
+    }
+
     if(templateType.find("symcircles", 0) == 0) {
         mCapParams.board = CirclesGrid;
         mCapParams.boardSize = cv::Size(4, 11);
@@ -135,13 +142,6 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
     else {
         std::cerr << "Wrong template name\n";
         return false;
-    }
-
-    if(parser.has("w") && parser.has("h")) {
-        mCapParams.boardSize = cv::Size(parser.get<int>("w"), parser.get<int>("h"));
-        if(!checkAssertion(mCapParams.boardSize.width > 0 || mCapParams.boardSize.height > 0,
-                           "Board size must be positive"))
-            return false;
     }
 
     if(!checkAssertion(parser.get<std::string>("of").find(".xml") > 0,
