@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "../precomp.hpp"
+#include "opencv2/objdetect/aruco_board.hpp"
+
 #include <opencv2/objdetect/aruco_dictionary.hpp>
 #include <numeric>
 
@@ -155,8 +157,8 @@ void Board::generateImage(Size outSize, OutputArray img, int marginSize, int bor
     }
 }
 
-void Board::matchImagePoints(InputArray detectedCorners, InputArray detectedIds,
-                                         OutputArray _objPoints, OutputArray imgPoints) const {
+void Board::matchImagePoints(InputArray detectedCorners, InputArray detectedIds, OutputArray _objPoints,
+                             OutputArray imgPoints) const {
     CV_Assert(getIds().size() == getObjPoints().size());
     CV_Assert(detectedIds.total() == detectedCorners.total());
 

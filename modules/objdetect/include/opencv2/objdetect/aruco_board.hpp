@@ -219,7 +219,6 @@ public:
      * for number of charucoIDs <= 2,the function returns true.
      */
     CV_WRAP bool checkCharucoCornersCollinear(InputArray charucoIds) const;
-
 protected:
     struct CharucoImpl;
     friend struct CharucoImpl;
