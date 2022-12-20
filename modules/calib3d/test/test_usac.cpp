@@ -585,7 +585,7 @@ TEST(usac_testUsacParams, accuracy) {
     // SIM3
     inl_size = generatePoints(rng, pts1, pts2, K1, K2, false, pts_size, TestSolver::SIM3,
     getInlierRatio(usac_params.maxIterations, 3, usac_params.confidence), 0.1, gt_inliers);
-    model = cv::estimateAffine2D(pts1, pts2, mask, usac_params);
+    model = cv::estimateSIM3(pts1, pts2, mask, usac_params);
     cv::vconcat(model, cv::Mat(cv::Matx14d(0,0,0,1)), model);
     checkInliersMask(TestSolver::Homogr, inl_size, usac_params.threshold, pts1, pts2, model, mask);
 }
