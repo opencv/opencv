@@ -169,10 +169,10 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
 
 
 gen_template_prop_init = Template("""
-    {(char*)"${member}", (getter)pyopencv_${name}_get_${member}, NULL, (char*)"${member}", NULL},""")
+    {(char*)"${export_member_name}", (getter)pyopencv_${name}_get_${member}, NULL, (char*)"${export_member_name}", NULL},""")
 
 gen_template_rw_prop_init = Template("""
-    {(char*)"${member}", (getter)pyopencv_${name}_get_${member}, (setter)pyopencv_${name}_set_${member}, (char*)"${member}", NULL},""")
+    {(char*)"${export_member_name}", (getter)pyopencv_${name}_get_${member}, (setter)pyopencv_${name}_set_${member}, (char*)"${export_member_name}", NULL},""")
 
 gen_template_overloaded_function_call = Template("""
     {
@@ -212,6 +212,7 @@ simple_argtype_mapping = {
     "c_string": ArgTypeInfo("char*", FormatStrings.string, '(char*)""'),
     "string": ArgTypeInfo("std::string", FormatStrings.object, None, True),
     "Stream": ArgTypeInfo("Stream", FormatStrings.object, 'Stream::Null()', True),
+    "UMat": ArgTypeInfo("UMat", FormatStrings.object, 'UMat()', True),  # FIXIT: switch to CV_EXPORTS_W_SIMPLE as UMat is already a some kind of smart pointer
 }
 
 # Set of reserved keywords for Python. Can be acquired via the following call
@@ -243,6 +244,13 @@ class ClassProp(object):
         self.readonly = True
         if "/RW" in decl[3]:
             self.readonly = False
+
+    @property
+    def export_name(self):
+        if self.name in python_reserved_keywords:
+            return self.name + "_"
+        return self.name
+
 
 class ClassInfo(object):
     def __init__(self, name, decl=None, codegen=None):
@@ -355,13 +363,13 @@ class ClassInfo(object):
             else:
                 getset_code.write(gen_template_get_prop.substitute(name=self.name, member=pname, membertype=p.tp, access=access_op))
             if p.readonly:
-                getset_inits.write(gen_template_prop_init.substitute(name=self.name, member=pname))
+                getset_inits.write(gen_template_prop_init.substitute(name=self.name, member=pname, export_member_name=p.export_name))
             else:
                 if self.isalgorithm:
                     getset_code.write(gen_template_set_prop_algo.substitute(name=self.name, cname=self.cname, member=pname, membertype=p.tp, access=access_op))
                 else:
                     getset_code.write(gen_template_set_prop.substitute(name=self.name, member=pname, membertype=p.tp, access=access_op))
-                getset_inits.write(gen_template_rw_prop_init.substitute(name=self.name, member=pname))
+                getset_inits.write(gen_template_rw_prop_init.substitute(name=self.name, member=pname, export_member_name=p.export_name))
 
         methods_code = StringIO()
         methods_inits = StringIO()
@@ -420,6 +428,7 @@ class ArgInfo(object):
             self.name += "_"
         self.defval = arg_tuple[2]
         self.isarray = False
+        self.is_smart_ptr = self.tp.startswith('Ptr<')  # FIXIT: handle through modifiers - need to modify parser
         self.arraylen = 0
         self.arraycvt = None
         self.inputarg = True
@@ -713,7 +722,21 @@ class FuncInfo(object):
                 if any(tp in codegen.enums.keys() for tp in tp_candidates):
                     defval0 = "static_cast<%s>(%d)" % (a.tp, 0)
 
-                arg_type_info = simple_argtype_mapping.get(tp, ArgTypeInfo(tp, FormatStrings.object, defval0, True))
+                if tp in simple_argtype_mapping:
+                    arg_type_info = simple_argtype_mapping[tp]
+                else:
+                    if tp in all_classes:
+                        tp_classinfo = all_classes[tp]
+                        cname_of_value = tp_classinfo.cname if tp_classinfo.issimple else "Ptr<{}>".format(tp_classinfo.cname)
+                        arg_type_info = ArgTypeInfo(cname_of_value, FormatStrings.object, defval0, True)
+                        assert not (a.is_smart_ptr and tp_classinfo.issimple), "Can't pass 'simple' type as Ptr<>"
+                        if not a.is_smart_ptr and not tp_classinfo.issimple:
+                            assert amp == ''
+                            amp = '*'
+                    else:
+                        # FIXIT: Ptr_ / vector_ / enums / nested types
+                        arg_type_info = ArgTypeInfo(tp, FormatStrings.object, defval0, True)
+
                 parse_name = a.name
                 if a.py_inputarg:
                     if arg_type_info.strict_conversion:

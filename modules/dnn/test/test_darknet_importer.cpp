@@ -81,6 +81,7 @@ TEST(Test_Darknet, read_yolo_voc_stream)
         Net net = readNetFromDarknet(cfgFile, weightsFile);
         net.setInput(inp);
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.enableWinograd(false);
         ref = net.forward();
     }
     // Import from bytes array.
@@ -92,6 +93,7 @@ TEST(Test_Darknet, read_yolo_voc_stream)
         Net net = readNetFromDarknet(cfg.data(), cfg.size(), weights.data(), weights.size());
         net.setInput(inp);
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.enableWinograd(false);
         Mat out = net.forward();
         normAssert(ref, out);
     }
@@ -178,7 +180,8 @@ public:
                           const std::vector<std::vector<int> >& refClassIds,
                           const std::vector<std::vector<float> >& refConfidences,
                           const std::vector<std::vector<Rect2d> >& refBoxes,
-                          double scoreDiff, double iouDiff, float confThreshold = 0.24, float nmsThreshold = 0.4)
+                          double scoreDiff, double iouDiff, float confThreshold = 0.24,
+                          float nmsThreshold = 0.4, bool useWinograd = true)
     {
         checkBackend();
 
@@ -198,6 +201,7 @@ public:
                           findDataFile("dnn/" + weights, false));
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
+        net.enableWinograd(useWinograd);
         net.setInput(inp);
         std::vector<Mat> outs;
         net.forward(outs, net.getUnconnectedOutLayersNames());
@@ -280,18 +284,19 @@ public:
                           const std::vector<int>& refClassIds,
                           const std::vector<float>& refConfidences,
                           const std::vector<Rect2d>& refBoxes,
-                          double scoreDiff, double iouDiff, float confThreshold = 0.24, float nmsThreshold = 0.4)
+                          double scoreDiff, double iouDiff, float confThreshold = 0.24,
+                          float nmsThreshold = 0.4, bool useWinograd = true)
     {
         testDarknetModel(cfg, weights,
                          std::vector<std::vector<int> >(1, refClassIds),
                          std::vector<std::vector<float> >(1, refConfidences),
                          std::vector<std::vector<Rect2d> >(1, refBoxes),
-                         scoreDiff, iouDiff, confThreshold, nmsThreshold);
+                         scoreDiff, iouDiff, confThreshold, nmsThreshold, useWinograd);
     }
 
     void testDarknetModel(const std::string& cfg, const std::string& weights,
                           const cv::Mat& ref, double scoreDiff, double iouDiff,
-                          float confThreshold = 0.24, float nmsThreshold = 0.4)
+                          float confThreshold = 0.24, float nmsThreshold = 0.4, bool useWinograd = true)
     {
         CV_Assert(ref.cols == 7);
         std::vector<std::vector<int> > refClassIds;
@@ -318,7 +323,7 @@ public:
             refBoxes[batchId].push_back(box);
         }
         testDarknetModel(cfg, weights, refClassIds, refScores, refBoxes,
-                         scoreDiff, iouDiff, confThreshold, nmsThreshold);
+                         scoreDiff, iouDiff, confThreshold, nmsThreshold, useWinograd);
     }
 };
 
@@ -396,7 +401,7 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 
     {
     SCOPED_TRACE("batch size 1");
-    testDarknetModel(config_file, weights_file, ref.rowRange(0, 3), scoreDiff, iouDiff);
+    testDarknetModel(config_file, weights_file, ref.rowRange(0, 3), scoreDiff, iouDiff, 0.24, 0.4, false);
     }
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -410,7 +415,7 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 #endif
     {
     SCOPED_TRACE("batch size 2");
-    testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, 0.24, nmsThreshold);
+    testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, 0.24, nmsThreshold, false);
     }
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -599,7 +604,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 {
     applyTestTag(
             CV_TEST_TAG_LONG,
-            (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+            CV_TEST_TAG_MEMORY_2GB,
             CV_TEST_TAG_DEBUG_VERYLONG
     );
 
@@ -656,7 +661,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 
     {
         SCOPED_TRACE("batch size 1");
-        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff);
+        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff, 0.24, 0.4, false);
     }
 
 #if defined(INF_ENGINE_RELEASE)
@@ -674,7 +679,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 
     {
         SCOPED_TRACE("batch size 2");
-        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
+        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, 0.24, 0.4, false);
     }
 }
 
@@ -682,7 +687,7 @@ TEST_P(Test_Darknet_nets, YOLOv4)
 {
     applyTestTag(
             CV_TEST_TAG_LONG,
-            (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+            CV_TEST_TAG_MEMORY_2GB,
             CV_TEST_TAG_DEBUG_VERYLONG
             );
 
@@ -756,7 +761,7 @@ TEST_P(Test_Darknet_nets, YOLOv4)
 
     {
         SCOPED_TRACE("batch size 1");
-        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff);
+        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff, 0.24, 0.4, false);
     }
 
     {
@@ -792,7 +797,7 @@ TEST_P(Test_Darknet_nets, YOLOv4)
         }
 #endif
 
-        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
+        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, 0.24, 0.4, false);
     }
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -877,7 +882,7 @@ TEST_P(Test_Darknet_nets, YOLOv4x_mish)
 {
     applyTestTag(
             CV_TEST_TAG_LONG,
-            (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+            CV_TEST_TAG_MEMORY_2GB,
             CV_TEST_TAG_DEBUG_VERYLONG
             );
 
@@ -939,7 +944,7 @@ TEST_P(Test_Darknet_nets, YOLOv4x_mish)
 
     {
         SCOPED_TRACE("batch size 1");
-        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff);
+        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff, 0.24, 0.4, false);
     }
 
     {
@@ -958,7 +963,7 @@ TEST_P(Test_Darknet_nets, YOLOv4x_mish)
         }
 #endif
 
-        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
+        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, 0.24, 0.4, false);
     }
 }
 
@@ -975,20 +980,10 @@ TEST_P(Test_Darknet_layers, shortcut_leaky)
 }
 TEST_P(Test_Darknet_layers, shortcut_unequal)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // IE exception: Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
     testDarknetLayer("shortcut_unequal");
 }
 TEST_P(Test_Darknet_layers, shortcut_unequal_2)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // IE exception: Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
     testDarknetLayer("shortcut_unequal_2");
 }
 
