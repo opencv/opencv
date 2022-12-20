@@ -904,23 +904,37 @@ TEST_P(Test_ONNX_layers, Multiplication)
     testONNXModels("mul");
 }
 
-TEST_P(Test_ONNX_layers, MatMul)
+TEST_P(Test_ONNX_layers, MatMul_2d)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
-
     testONNXModels("matmul_2d");
+}
+TEST_P(Test_ONNX_layers, MatMul_3d)
+{
     testONNXModels("matmul_3d");
+}
+TEST_P(Test_ONNX_layers, MatMul_4d)
+{
     testONNXModels("matmul_4d");
 }
 
-TEST_P(Test_ONNX_layers, MatMul_init)
+TEST_P(Test_ONNX_layers, MatMul_2d_init)
 {
     testONNXModels("matmul_2d_init");
+}
+TEST_P(Test_ONNX_layers, MatMul_3d_init)
+{
     testONNXModels("matmul_3d_init");
+}
+TEST_P(Test_ONNX_layers, MatMul_4d_init)
+{
     testONNXModels("matmul_4d_init");
-
+}
+TEST_P(Test_ONNX_layers, MatMul_init_2)
+{
     testONNXModels("matmul_init_2");
+}
+TEST_P(Test_ONNX_layers, MatMul_init_bcast)
+{
     testONNXModels("matmul_init_bcast");
 }
 
