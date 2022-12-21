@@ -44,6 +44,7 @@
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_cann.hpp"
 
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
@@ -198,7 +199,7 @@ public:
         if (backendId == DNN_BACKEND_CUDA)
             return !hasSteps;
 #endif
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CANN;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -588,6 +589,66 @@ public:
             }
         }
     }
+
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(sliceRanges.size() == 1);
+        CV_Assert(sliceSteps.size() == 1);
+        CV_Assert(sliceRanges[0].size() == sliceSteps[0].size());
+
+        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        const int dims = x->host->dims;
+
+        // create operator
+        std::string op_name = cv::format("slice_%d", index);
+        auto op = std::make_shared<ge::op::StridedSliceV2>(op_name);
+
+        // retrieve begins, ends, axes and steps
+        std::vector<int> begins, ends, axes, steps;
+        for (int i = 0; i < sliceRanges[0].size(); i++)
+        {
+            begins.push_back(sliceRanges[0][i].start);
+            ends.push_back(sliceRanges[0][i].end);
+            axes.push_back(i);
+            steps.push_back(sliceSteps[0][i]);
+        }
+        std::vector<int> shape_{dims};
+
+        // set inputs
+        // set inputs : x
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, "y");
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+        // set inputs : begin
+        Mat begin_mat(shape_, CV_32S, &begins[0]);
+        auto op_const_begin = std::make_shared<CannConstOp>(begin_mat.data, begin_mat.type(), shape_, cv::format("%s_begin", op_name.c_str()));
+        op->set_input_begin(*(op_const_begin->getOp()));
+        op->update_input_desc_begin(*(op_const_begin->getTensorDesc()));
+        // set inputs : end
+        Mat end_mat(shape_, CV_32S, &ends[0]);
+        auto op_const_end = std::make_shared<CannConstOp>(end_mat.data, end_mat.type(), shape_, cv::format("%s_end", op_name.c_str()));
+        op->set_input_end(*(op_const_end->getOp()));
+        op->update_input_desc_end(*(op_const_end->getTensorDesc()));
+        // set inputs : axes
+        Mat axes_mat(shape_, CV_32S, &axes[0]);
+        auto op_const_axes = std::make_shared<CannConstOp>(axes_mat.data, axes_mat.type(), shape_, cv::format("%s_axes", op_name.c_str()));
+        op->set_input_axes(*(op_const_axes->getOp()));
+        op->update_input_desc_axes(*(op_const_axes->getTensorDesc()));
+        // set inputs : strides
+        Mat strides_mat(shape_, CV_32S, &steps[0]);
+        auto op_const_strides = std::make_shared<CannConstOp>(strides_mat.data, strides_mat.type(), shape_, cv::format("%s_strides", op_name.c_str()));
+        op->set_input_strides(*(op_const_strides->getOp()));
+        op->update_input_desc_strides(*(op_const_strides->getTensorDesc()));
+
+        // set outputs
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif
 
 
 #ifdef HAVE_DNN_NGRAPH

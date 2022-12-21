@@ -11,6 +11,7 @@
 #include "op_cuda.hpp"
 #include "op_webnn.hpp"
 #include "op_timvx.hpp"
+#include "op_cann.hpp"
 
 #include "halide_scheduler.hpp"
 
@@ -121,6 +122,10 @@ private:
         {
             backends.push_back(std::make_pair(DNN_BACKEND_TIMVX, DNN_TARGET_NPU));
         }
+#endif
+
+#ifdef HAVE_CANN
+        backends.push_back(std::make_pair(DNN_BACKEND_CANN, DNN_TARGET_NPU));
 #endif
     }
 

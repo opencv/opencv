@@ -85,6 +85,10 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
             return Ptr<BackendWrapper>(new TimVXBackendWrapper(baseBuffer, host));
 #endif
         }
+        else if (preferableBackend == DNN_BACKEND_CANN)
+        {
+            CV_Assert(0 && "Internal error: DNN_BACKEND_CANN must be implemented through inheritance");
+        }
         else
             CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
     }
@@ -146,6 +150,10 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of TimVX");
 #endif
     }
+    else if (preferableBackend == DNN_BACKEND_CANN)
+    {
+        CV_Assert(0 && "Internal error: DNN_BACKEND_CANN must be implemented through inheritance");
+    }
     else
     {
         CV_Error(Error::StsNotImplemented, cv::format("Unknown backend identifier: %d", preferableBackend));
@@ -179,6 +187,14 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
             networkBackend.switchBackend(net);
 #else
             CV_Error(Error::StsNotImplemented, "OpenVINO backend is not available in the current OpenCV build");
+#endif
+        }
+        else if (backendId == DNN_BACKEND_CANN)
+        {
+#ifdef HAVE_CANN
+            switchToCannBackend(net);
+#else
+            CV_Error(Error::StsNotImplemented, "CANN backend is not availlable in the current OpenCV build");
 #endif
         }
         else

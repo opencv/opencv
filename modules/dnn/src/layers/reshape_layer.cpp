@@ -47,6 +47,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
 #include "../op_timvx.hpp"
+#include "../op_cann.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -163,8 +164,8 @@ public:
     ReshapeLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        int axis = params.get<int>("axis", 0);
-        int numAxes = params.get<int>("num_axes", -1);
+        axis = params.get<int>("axis", 0);
+        numAxes = params.get<int>("num_axes", -1);
         hasDynamicShapes = params.get<bool>("has_dynamic_shapes", false);
         shapesInitialized = !hasDynamicShapes;
 
@@ -224,7 +225,8 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_WEBNN;
+               backendId == DNN_BACKEND_WEBNN ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -324,6 +326,39 @@ public:
         }
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+
+        // create operator
+        std::string op_name = cv::format("reshape_%d", index);
+        auto op = std::make_shared<ge::op::Reshape>(op_name);
+
+        // set attributes
+        op->set_attr_axis(axis);
+        op->set_attr_num_axes(numAxes);
+
+        // set inputs
+        // set inputs : x
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, "y");
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+        // set inputs : shape
+        std::vector<int> shape_of_shape{(int)newShapeDesc.size()};
+        Mat shape_mat(shape_of_shape, CV_32S, newShapeDesc.data());
+        auto op_const_shape = std::make_shared<CannConstOp>(shape_mat.data, shape_mat.type(), shape_of_shape, cv::format("%s_shape", op_name.c_str()));
+        op->set_input_shape(*(op_const_shape->getOp()));
+        op->update_input_desc_shape(*(op_const_shape->getTensorDesc()));
+
+        // set outputs
+        auto output_y_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_y_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -464,6 +499,8 @@ public:
     }
 
 private:
+    int axis;
+    int numAxes;
     std::vector<MatShape> outShapes;
     std::vector<int> dynamicShapes; // Which axes shapes are dynamic and require reinitialization with new input
     std::vector<int> inputIndices; // Which axes from input are needed to compute correct output shape

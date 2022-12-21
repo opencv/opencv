@@ -12,6 +12,7 @@
 #include "op_cuda.hpp"
 #include "op_webnn.hpp"
 #include "op_timvx.hpp"
+#include "op_cann.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/imgproc.hpp>

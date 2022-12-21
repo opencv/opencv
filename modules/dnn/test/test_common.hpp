@@ -49,6 +49,7 @@
 #define CV_TEST_TAG_DNN_SKIP_PARSER              "dnn_skip_parser"
 
 #define CV_TEST_TAG_DNN_SKIP_TIMVX               "dnn_skip_timvx"
+#define CV_TEST_TAG_DNN_SKIP_CANN                "dnn_skip_cann"
 
 #ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_EQ(2018050000)
@@ -139,7 +140,8 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withVkCom = true,
         bool withCUDA = true,
         bool withNgraph = true,
-        bool withWebnn = true
+        bool withWebnn = true,
+        bool withCann = true
 );
 
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargetsIE();
