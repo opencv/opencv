@@ -774,30 +774,32 @@ class ObjectiveCWrapperGenerator(object):
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
         return classinfo
 
-    const_rename_map = dict()
-
     def add_const(self, decl, scope=None, enumType=None): # [ "const cname", val, [], [] ]
         constinfo = ConstInfo(decl, namespaces=self.namespaces, enumType=enumType)
         if constinfo.isIgnored():
             logging.info('ignored: %s', constinfo)
         else:
             objc_type = enumType.rsplit(".", 1)[-1] if enumType else ""
-            if constinfo.classname in const_fix and objc_type in const_fix[constinfo.classname] and constinfo.name in const_fix[constinfo.classname][objc_type]:
-                fixed_const = const_fix[constinfo.classname][objc_type][constinfo.name]
-                constinfo.name = fixed_const
-                constinfo.cname = fixed_const
+            if constinfo.enumType and constinfo.classpath:
+                new_name = constinfo.classname + '_' + constinfo.name
+                const_fix.setdefault(constinfo.classpath, {}).setdefault(objc_type, {})[constinfo.name] = new_name
+                constinfo.name = new_name
+                logging.info('use outer class prefix: %s', constinfo)
+
+            if constinfo.classpath in const_fix and objc_type in const_fix[constinfo.classpath]:
+                fixed_consts = const_fix[constinfo.classpath][objc_type]
+                if constinfo.name in fixed_consts:
+                    fixed_const = fixed_consts[constinfo.name]
+                    constinfo.name = fixed_const
+                    constinfo.cname = fixed_const
+                if constinfo.value in fixed_consts:
+                    constinfo.value = fixed_consts[constinfo.value]
 
             if not self.isWrapped(constinfo.classname):
                 logging.info('class not found: %s', constinfo)
-                constinfo.name = constinfo.classname + '_' + constinfo.name
+                if not constinfo.name.startswith(constinfo.classname + "_"):
+                    constinfo.name = constinfo.classname + '_' + constinfo.name
                 constinfo.classname = ''
-            elif constinfo.enumType and constinfo.classpath:
-                new_name = constinfo.classname + '_' + constinfo.name
-                self.const_rename_map[constinfo.name] = new_name
-                constinfo.name = new_name
-                if constinfo.value in self.const_rename_map:
-                    constinfo.value = self.const_rename_map[constinfo.value]
-                logging.info('use outer class prefix: %s', constinfo)
 
             ci = self.getClass(constinfo.classname)
             duplicate = ci.getConst(constinfo.name)
