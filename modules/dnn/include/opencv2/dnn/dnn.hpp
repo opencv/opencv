@@ -64,7 +64,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_LAYOUT_NHWC = 3,
         DNN_LAYOUT_NCHWc = 4
     };
-    
+
     typedef std::vector<int> MatShape;
     struct CV_EXPORTS TensorShape
     {
@@ -449,7 +449,7 @@ CV__DNN_INLINE_NS_BEGIN
                                const std::vector<MatShape> &outputs) const {CV_UNUSED(inputs); CV_UNUSED(outputs); return 0;}
 
         virtual bool updateMemoryShapes(const std::vector<MatShape> &inputs);
-        
+
         virtual void inferOutputShapes(const Net2& net,
                                        const std::vector<int>& inpargs,
                                        const std::vector<int>& inptypes,
@@ -899,7 +899,7 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP void getOutputNames(std::vector<String>& outputs) const;
         CV_WRAP void set(int propId, double value);
         CV_WRAP double get(int propId) const;
-        CV_WRAP void getPerfProfile(std::vector<String>& opnames, std::vector<double>& times) const;
+        //CV_WRAP void getPerfProfile(std::vector<String>& opnames, std::vector<double>& times) const;
         CV_WRAP void dump() const;
         CV_WRAP bool empty() const;
 

@@ -151,6 +151,8 @@ struct ModelFusionBasic
                    graph.name.c_str(), (int)nops, (int)j);
             graph.prog = newprog;
         }
+
+        return modified;
     }
 
     Net2::Impl* netimpl;

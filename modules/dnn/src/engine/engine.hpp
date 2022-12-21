@@ -216,7 +216,7 @@ struct Net2::Impl
 
     //template<typename _LayerType> bool isOp(const Node* node) const
     //{ return node && dynamic_cast<_LayerType>(*node->op.get()) != 0; }
-    
+
     void assignBuffers();
     void fuse();
     void foldConstSubexpr();

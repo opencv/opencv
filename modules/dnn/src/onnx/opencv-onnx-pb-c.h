@@ -620,13 +620,13 @@ struct  OpenCVOnnx__ModelProto
    * A list of function protos local to the model.
    * Name of the function "FunctionProto.name" should be unique within the domain "FunctionProto.domain".
    * In case of any conflicts the behavior (whether the model local functions are given higher priority,
-   * or standard opserator sets are given higher priotity or this is treated as error) is defined by 
+   * or standard opserator sets are given higher priotity or this is treated as error) is defined by
    * the runtimes.
-   * 
+   *
    * The operator sets imported by FunctionProto should be compatible with the ones
-   * imported by ModelProto and other model local FunctionProtos. 
-   * Example, if same operator set say 'A' is imported by a FunctionProto and ModelProto 
-   * or by 2 FunctionProtos then versions for the operator set may be different but, 
+   * imported by ModelProto and other model local FunctionProtos.
+   * Example, if same operator set say 'A' is imported by a FunctionProto and ModelProto
+   * or by 2 FunctionProtos then versions for the operator set may be different but,
    * the operator schema returned for op_type, domain, version combination
    * for both the versions should be same for every node in the function body.
    * One FunctionProto can reference other FunctionProto in the model, however, recursive reference
