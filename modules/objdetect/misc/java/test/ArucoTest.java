@@ -80,4 +80,29 @@ public class ArucoTest extends OpenCVTestCase {
         assertArrayEquals(new double[]{size + offset - 1, size + offset - 1}, res.get(0, 2), 0.0);
         assertArrayEquals(new double[]{offset, size + offset - 1}, res.get(0, 3), 0.0);
     }
+
+    public void testCharucoDetector() {
+        Dictionary dictionary = Objdetect.getPredefinedDictionary(0);
+        int boardSizeX = 3, boardSizeY = 3;
+        CharucoBoard board = CharucoBoard.create(3, 3, 1.f, 0.8f, dictionary);
+        CharucoDetector charucoDetector = new CharucoDetector(board);
+
+        int cellSize = 80;
+        Mat boardImage = new Mat();
+        board.generateImage(new Size(cellSize*boardSizeX, cellSize*boardSizeY), boardImage);
+
+        assertTrue(boardImage.total() > 0);
+
+        Mat charucoCorners = new Mat();
+        Mat charucoIds = new Mat();
+        charucoDetector.detectBoard(boardImage, charucoCorners, charucoIds);
+
+        assertEquals(4, charucoCorners.total());
+
+        assertArrayEquals(new double[]{cellSize, cellSize}, charucoCorners.get(0, 0), 0.1);
+        assertArrayEquals(new double[]{2*cellSize, cellSize}, charucoCorners.get(0, 1), 0.1);
+        assertArrayEquals(new double[]{cellSize, 2*cellSize}, charucoCorners.get(0, 2), 0.1);
+        assertArrayEquals(new double[]{2*cellSize, 2*cellSize}, charucoCorners.get(0, 3), 0.1);
+    }
+
 }

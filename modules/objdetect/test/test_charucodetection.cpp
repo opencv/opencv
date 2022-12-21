@@ -201,7 +201,6 @@ CV_CharucoPoseEstimation::CV_CharucoPoseEstimation() {}
 
 
 void CV_CharucoPoseEstimation::run(int) {
-
     int iter = 0;
     Mat cameraMatrix = Mat::eye(3, 3, CV_64FC1);
     Size imgSize(500, 500);
