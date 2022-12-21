@@ -632,7 +632,24 @@ bool GStreamerCapture::grabVideoFrame()
                 if (!gst_app_sink_is_eos(GST_APP_SINK(sink.get())))
                 {
                     CV_LOG_DEBUG(NULL, "videoio(Gstreamer): gst_app_sink_pull_sample() method is not succeeded");
-                    return false;
+                }
+                else
+                {
+                    vEOS = true;
+                    lastFrame = true;
+                    stopFlag = true;
+                    if (audioStream == -1)
+                    {
+                        return false;
+                    }
+                    else if (usedVideoSample)
+                    {
+                        gst_element_query_position(sink.get(), CV_GST_FORMAT(GST_FORMAT_TIME), &impendingVideoSampleTimeNS);
+                        videoSampleDurationNS = impendingVideoSampleTimeNS - usedVideoSampleTimeNS;
+                        requiredAudioTimeNS = impendingVideoSampleTimeNS - givenAudioTimeNS;
+                        givenAudioTimeNS += requiredAudioTimeNS;
+                        returnFlag = true;
+                    }
                 }
             }
             gst_element_query_position(sink.get(), CV_GST_FORMAT(GST_FORMAT_TIME), &impendingVideoSampleTimeNS);
@@ -675,11 +692,6 @@ bool GStreamerCapture::grabAudioFrame()
 
     bool returnFlag = false;
     gint64 audioTimeNS = bufferedAudioDurationNS;
-
-    if (bufferedAudioDurationNS > requiredAudioTimeNS)
-    {
-        return true;
-    }
 
     while ((!vEOS) ? audioTimeNS <= requiredAudioTimeNS : !aEOS)
     {
