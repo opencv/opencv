@@ -490,7 +490,7 @@ bool GStreamerCapture::configureStreamsProperty(const cv::VideoCaptureParameters
             videoStream = static_cast<gint>(value);
         else
         {
-            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_VIDEO_STREAM parameter value is invalid/unsupported: " << value);
+            CV_LOG_ERROR(NULL, "VIDEOIO/Gstreamer: CAP_PROP_VIDEO_STREAM parameter value is invalid/unsupported: " << value);
             return false;
         }
     }
@@ -501,7 +501,7 @@ bool GStreamerCapture::configureStreamsProperty(const cv::VideoCaptureParameters
             audioStream = static_cast<gint>(value);
         else
         {
-            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_STREAM parameter value is invalid/unsupported: " << value);
+            CV_LOG_ERROR(NULL, "VIDEOIO/Gstreamer: CAP_PROP_AUDIO_STREAM parameter value is invalid/unsupported: " << value);
             return false;
         }
     }
@@ -515,7 +515,7 @@ bool GStreamerCapture::setAudioProperties(const cv::VideoCaptureParameters& para
         gint value = static_cast<gint>(params.get<double>(CAP_PROP_AUDIO_DATA_DEPTH));
         if (value != CV_8S && value != CV_16S && value != CV_32S && value != CV_32F)
         {
-            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_DATA_DEPTH parameter value is invalid/unsupported: " << value);
+            CV_LOG_ERROR(NULL, "VIDEOIO/Gstreamer: CAP_PROP_AUDIO_DATA_DEPTH parameter value is invalid/unsupported: " << value);
             return false;
         }
         else
@@ -528,7 +528,7 @@ bool GStreamerCapture::setAudioProperties(const cv::VideoCaptureParameters& para
         int value = static_cast<int>(params.get<double>(CAP_PROP_AUDIO_SAMPLES_PER_SECOND));
         if (value < 0)
         {
-            CV_LOG_ERROR(NULL, "VIDEOIO/MSMF: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter can't be negative: " << value);
+            CV_LOG_ERROR(NULL, "VIDEOIO/Gstreamer: CAP_PROP_AUDIO_SAMPLES_PER_SECOND parameter can't be negative: " << value);
             return false;
         }
         else
@@ -629,9 +629,9 @@ bool GStreamerCapture::grabVideoFrame()
             #endif
             if (!impendingVideoSample)
             {
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): gst_app_sink_pull_sample() method is not succeeded");
                 if (!gst_app_sink_is_eos(GST_APP_SINK(sink.get())))
                 {
+                    CV_LOG_DEBUG(NULL, "videoio(Gstreamer): gst_app_sink_pull_sample() method is not succeeded");
                     return false;
                 }
             }
@@ -697,8 +697,16 @@ bool GStreamerCapture::grabAudioFrame()
             audioSample.attach(gst_app_sink_pull_sample(GST_APP_SINK(audiosink.get())));
             if (!audioSample)
             {
-                CV_LOG_ERROR(NULL, "videoio(MSMF): gst_app_sink_pull_sample() method is not succeeded");
-                return false;
+                if (!gst_app_sink_is_eos(GST_APP_SINK(audiosink.get())))
+                {
+                    CV_LOG_ERROR(NULL, "videoio(Gstreamer): gst_app_sink_pull_sample() method is not succeeded");
+                    return false;
+                }
+                else
+                {
+                    aEOS = true;
+                    break;
+                }
             }
             gst_element_query_position(audiosink.get(), CV_GST_FORMAT(GST_FORMAT_TIME), &audioSampleTimeNS);
 
@@ -782,7 +790,7 @@ bool GStreamerCapture::grabAudioFrame()
             }
             audioSampleDurationNS = 1e9*(((double)audioSampleSize/((audioBitPerSample/8)*nAudioChannels))/audioSamplesPerSecond);
 
-            CV_LOG_DEBUG(NULL, "videoio(MSMF): got audio frame with timestamp=" << audioSampleTimeNS << "  duration=" << audioSampleDurationNS);
+            CV_LOG_DEBUG(NULL, "videoio(Gstreamer): got audio frame with timestamp=" << audioSampleTimeNS << "  duration=" << audioSampleDurationNS);
             audioTimeNS += (int64_t)(audioSampleDurationNS);
 
             returnFlag = true;
