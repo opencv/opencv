@@ -789,6 +789,9 @@ class ObjectiveCWrapperGenerator(object):
                 logging.info('class not found: %s', constinfo)
                 constinfo.name = constinfo.classname + '_' + constinfo.name
                 constinfo.classname = ''
+            elif constinfo.enumType and constinfo.classpath:
+                constinfo.name = constinfo.classname + '_' + constinfo.name
+                logging.info('use outer class prefix: %s', constinfo)
 
             ci = self.getClass(constinfo.classname)
             duplicate = ci.getConst(constinfo.name)
