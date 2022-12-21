@@ -48,6 +48,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
 #include "../op_webnn.hpp"
+#include "../op_cann.hpp"
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -369,6 +370,17 @@ public:
             return true;
         }
 #endif
+#ifdef HAVE_CANN
+        if (backendId == DNN_BACKEND_CANN)
+        {
+            if (ksize != 2)
+            {
+                CV_LOG_WARNING(NULL, "CANN supports Conv2D for now");
+                return false;
+            }
+            return true;
+        }
+#endif // HAVE_CANN
         return false;
     }
 
@@ -767,6 +779,68 @@ public:
 #endif  // HAVE_HALIDE
         return Ptr<BackendNode>();
     }
+
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(!blobs.empty());
+        CV_Assert(inputsWrapper.size() == 1);
+        CV_Assert(nodes.size() == 1);
+
+        bool has_bias = hasBias() || fusedBias;
+
+        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        const int x_in_channel = x->host->size[1];
+        const int filter_out_channel = blobs[0].size[1];
+        const int groups = x_in_channel / filter_out_channel;
+
+        // create operator
+        std::string op_name = cv::format("conv2d_%d", index);
+        auto op = std::make_shared<ge::op::Conv2D>(op_name);
+
+        // set attributes
+        op->set_attr_strides(ge::Operator::OpListInt(
+            {1, 1, (int64_t)strides[0], (int64_t)strides[1]}
+        ));
+        op->set_attr_pads(ge::Operator::OpListInt(
+            {(int64_t)pads_begin[1], (int64_t)pads_end[1], (int64_t)pads_begin[0], (int64_t)pads_end[0]}
+        ));
+        op->set_attr_dilations(ge::Operator::OpListInt(
+            {1, 1, (int64_t)dilations[0], (int64_t)dilations[1]}
+        ));
+        op->set_attr_groups(groups);
+        op->set_attr_data_format("NCHW");
+
+        // set inputs
+        // set inputs : x
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, "y");
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+        // set inputs : weight
+        const Mat& w_mat = blobs[0];
+        auto op_const_weight = std::make_shared<CannConstOp>(w_mat.data, w_mat.type(), shape(w_mat), cv::format("%s_w", op_name.c_str()));
+        op->set_input_filter(*(op_const_weight->getOp()));
+        op->update_input_desc_filter(*(op_const_weight->getTensorDesc()));
+        // set inputs : bias
+        if (has_bias)
+        {
+            int out_channel = blobs[0].size[0];
+            Mat b_mat({out_channel}, CV_32F, &biasvec[0]);
+
+            std::vector<int> bias_shape{out_channel};
+            auto op_const_bias = std::make_shared<CannConstOp>(b_mat.data, b_mat.type(), bias_shape, cv::format("%s_b", op_name.c_str()));
+            op->set_input_bias(*(op_const_bias->getOp()));
+            op->update_input_desc_bias(*(op_const_bias->getTensorDesc()));
+        }
+
+        // set outputs
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif
 
 
 #ifdef HAVE_DNN_NGRAPH
