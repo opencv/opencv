@@ -199,9 +199,11 @@ TEST_P(Test_ONNX_layers, Convolution_variable_weight_bias)
 
 TEST_P(Test_ONNX_layers, Gather)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("gather", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, Gather_Scalar)
+{
     testONNXModels("gather_scalar", npy, 0, 0, false, false);
 }
 
