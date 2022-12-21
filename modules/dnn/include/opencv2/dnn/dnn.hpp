@@ -62,7 +62,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_LAYOUT_ND = 1,
         DNN_LAYOUT_NCHW = 2,
         DNN_LAYOUT_NHWC = 3,
-        DNN_LAYOUT_NCHWс = 4
+        DNN_LAYOUT_NCHWc = 4
     };
     
     typedef std::vector<int> MatShape;

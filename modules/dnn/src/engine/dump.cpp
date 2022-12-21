@@ -36,7 +36,7 @@ static const char* typ2str(int typ)
 
 static const char* layout2str(char* buf, DataLayout layout, int c=0)
 {
-    if (layout == DNN_LAYOUT_NCHWс) {
+    if (layout == DNN_LAYOUT_NCHWc) {
         sprintf(buf, "NCHWc(%d)", c);
         return buf;
     }

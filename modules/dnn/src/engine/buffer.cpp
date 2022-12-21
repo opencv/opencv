@@ -227,7 +227,7 @@ bool TensorShape::empty() const
 
 void TensorShape::updateC()
 {
-    C = layout != DNN_LAYOUT_NCHWс ? 0 : ndims == 1 ? 1 :
+    C = layout != DNN_LAYOUT_NCHWc ? 0 : ndims == 1 ? 1 :
         ndims == 2 ? (int)shape[0] : (int)(shape[0]*shape[ndims-1]);
 }
 
