@@ -85,11 +85,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
 
     /** @brief Write a set of DetectorParameters to FileStorage
      */
-    bool writeDetectorParameters(FileStorage& fs);
-
-    /** @brief simplified API for language bindings
-    */
-    CV_WRAP bool writeDetectorParameters(const Ptr<FileStorage>& fs, const String& name = String());
+    CV_WRAP bool writeDetectorParameters(FileStorage& fs, const String& name = String());
 
     /// minimum window size for adaptive thresholding before finding contours (default 3).
     CV_PROP_RW int adaptiveThreshWinSizeMin;
@@ -237,11 +233,7 @@ struct CV_EXPORTS_W_SIMPLE RefineParameters {
 
     /** @brief Write a set of RefineParameters to FileStorage
      */
-    bool writeRefineParameters(FileStorage& fs);
-
-    /** @brief simplified API for language bindings
-    */
-    CV_WRAP bool writeRefineParameters(const Ptr<FileStorage>& fs, const String& name = String());
+    CV_WRAP bool writeRefineParameters(FileStorage& fs, const String& name = String());
 
     /** @brief minRepDistance minimum distance between the corners of the rejected candidate and the reprojected marker
     in order to consider it as a correspondence.
@@ -347,7 +339,7 @@ public:
 
     /** @brief simplified API for language bindings
     */
-    CV_WRAP inline void write(const Ptr<FileStorage>& fs, const String& name = String()) { Algorithm::write(fs, name); }
+    CV_WRAP inline void write(FileStorage& fs, const String& name) { Algorithm::write(fs, name); }
 
     /** @brief Reads algorithm parameters from a file storage
     */
