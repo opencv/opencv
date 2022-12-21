@@ -176,16 +176,16 @@ public:
 
         parallel_for_(Range(0, static_cast<int>(images.size())), [&](const Range& range) {
             for(int i = range.start; i < range.end; i++) {
-                Mat& img = images[i];
-                Mat gray, contrast, saturation, wellexp;
+                Mat img, gray, contrast, saturation, wellexp;
                 std::vector<Mat> splitted(channels);
 
-                img.convertTo(img, CV_32F, 1.0f/255.0f);
+                images[i].convertTo(img, CV_32F, 1.0f/255.0f);
                 if(channels == 3) {
                     cvtColor(img, gray, COLOR_RGB2GRAY);
                 } else {
                     img.copyTo(gray);
                 }
+                images[i] = img;
                 split(img, splitted);
 
                 Laplacian(gray, contrast, CV_32F);
