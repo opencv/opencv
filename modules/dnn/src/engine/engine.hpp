@@ -10,7 +10,7 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-enum { DNN_ARG_CONST=0, DNN_ARG_INPUT=1, DNN_ARG_OUTPUT=2, DNN_ARG_TEMP=3 };
+enum ArgKind { DNN_ARG_CONST=0, DNN_ARG_INPUT=1, DNN_ARG_OUTPUT=2, DNN_ARG_TEMP=3 };
 enum { DNN_BUF_READONLY=1, DNN_BUF_WRITEONLY=2, DNN_BUF_RW=3 };
 
 size_t totalBytes(const TensorShape& shape, int typ);
@@ -19,7 +19,7 @@ struct LayerArg
 {
     LayerArg();
     std::string name;
-    int kind;
+    ArgKind kind;
     TensorShape shape;
     int typ;
 };
@@ -188,7 +188,7 @@ struct Net2::Impl
     void updateUseCounts(std::vector<int>& usecounts, const Graph& graph) const;
 
     int addConstTensor(const std::string& name, const Tensor& t, int idx=-1);
-    int addArg(int argkind, const ArgInfo& arginfo);
+    int addArg(ArgKind argkind, const ArgInfo& arginfo);
     int64_t findDim(const std::string& dimname);
     int findArg(const std::string& argname);
     int findOutputArg(const std::string& argname);
