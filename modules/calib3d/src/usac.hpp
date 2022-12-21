@@ -801,7 +801,8 @@ bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
 Mat findEssentialMat( InputArray points1, InputArray points2,
                       InputArray cameraMatrix1,
                       int method, double prob,
-                      double threshold, OutputArray mask);
+                      double threshold, OutputArray mask,
+                      int maxIters);
 
 Mat estimateAffine2D(InputArray from, InputArray to, OutputArray inliers,
      int method, double ransacReprojThreshold, int maxIters,
