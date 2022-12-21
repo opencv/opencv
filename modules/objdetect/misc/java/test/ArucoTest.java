@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opencv.test.OpenCVTestCase;
+import org.junit.Assert;
 import org.opencv.core.Scalar;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfInt;
 import org.opencv.core.Size;
 import org.opencv.core.CvType;
 import org.opencv.objdetect.*;
@@ -84,7 +86,7 @@ public class ArucoTest extends OpenCVTestCase {
     public void testCharucoDetector() {
         Dictionary dictionary = Objdetect.getPredefinedDictionary(0);
         int boardSizeX = 3, boardSizeY = 3;
-        CharucoBoard board = CharucoBoard.create(3, 3, 1.f, 0.8f, dictionary);
+        CharucoBoard board = CharucoBoard.create(boardSizeX, boardSizeY, 1.f, 0.8f, dictionary);
         CharucoDetector charucoDetector = new CharucoDetector(board);
 
         int cellSize = 80;
@@ -97,12 +99,15 @@ public class ArucoTest extends OpenCVTestCase {
         Mat charucoIds = new Mat();
         charucoDetector.detectBoard(boardImage, charucoCorners, charucoIds);
 
-        assertEquals(4, charucoCorners.total());
+        assertEquals(4, charucoIds.total());
+        int[] intCharucoIds = (new MatOfInt(charucoIds)).toArray();
+        Assert.assertArrayEquals(new int[]{0, 1, 2, 3}, intCharucoIds);
 
-        assertArrayEquals(new double[]{cellSize, cellSize}, charucoCorners.get(0, 0), 0.1);
-        assertArrayEquals(new double[]{2*cellSize, cellSize}, charucoCorners.get(0, 1), 0.1);
-        assertArrayEquals(new double[]{cellSize, 2*cellSize}, charucoCorners.get(0, 2), 0.1);
-        assertArrayEquals(new double[]{2*cellSize, 2*cellSize}, charucoCorners.get(0, 3), 0.1);
+        double eps = 0.2;
+        assertArrayEquals(new double[]{cellSize, cellSize}, charucoCorners.get(0, 0), eps);
+        assertArrayEquals(new double[]{2*cellSize, cellSize}, charucoCorners.get(1, 0), eps);
+        assertArrayEquals(new double[]{cellSize, 2*cellSize}, charucoCorners.get(2, 0), eps);
+        assertArrayEquals(new double[]{2*cellSize, 2*cellSize}, charucoCorners.get(3, 0), eps);
     }
 
 }
