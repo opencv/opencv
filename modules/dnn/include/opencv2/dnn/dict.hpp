@@ -94,7 +94,7 @@ struct CV_EXPORTS_W DictValue
     CV_WRAP int getIntValue(int idx = -1) const;
     CV_WRAP double getRealValue(int idx = -1) const;
     CV_WRAP String getStringValue(int idx = -1) const;
-    CV_WRAP MatValue getMat() const;
+    MatValue getMat() const;
 
     DictValue &operator=(const DictValue &r);
 
