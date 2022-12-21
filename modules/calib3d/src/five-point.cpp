@@ -433,9 +433,9 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, InputArr
 {
     CV_INSTRUMENT_REGION();
 
-    if (method >= 32 && method <= 38)
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
         return usac::findEssentialMat(_points1, _points2, _cameraMatrix,
-            method, prob, threshold, _mask);
+            method, prob, threshold, _mask, maxIters);
 
     Mat points1, points2, cameraMatrix;
     _points1.getMat().convertTo(points1, CV_64F);
