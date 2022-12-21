@@ -883,8 +883,8 @@ bool CvCaptureCAM_V4L::createBuffers()
     for (unsigned int n_buffers = 0; n_buffers < req.count; ++n_buffers) {
         v4l2_buffer buf = v4l2_buffer();
         v4l2_plane mplanes[VIDEO_MAX_PLANES];
-        size_t length;
-        off_t offset;
+        size_t length = 0;
+        off_t offset = 0;
         buf.type = type;
         buf.memory = V4L2_MEMORY_MMAP;
         buf.index = n_buffers;
