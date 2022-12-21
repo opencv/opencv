@@ -90,5 +90,55 @@ class aruco_objdetect_test(NewOpenCVTests):
         self.assertEqual((1, 4, 2), refine_corners[0].shape)
         np.testing.assert_array_equal(corners, refine_corners)
 
+    def test_write_read_dictionary(self):
+        try:
+            aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_5X5_50)
+            markers_gold = aruco_dict.bytesList
+
+            # write aruco_dict
+            filename = "test_dict.yml"
+            fs_write = cv.FileStorage(filename, cv.FileStorage_WRITE)
+            aruco_dict.writeDictionary(fs_write)
+            fs_write.release()
+
+            # reset aruco_dict
+            aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_250)
+
+            # read aruco_dict
+            fs_read = cv.FileStorage(filename, cv.FileStorage_READ)
+            aruco_dict.readDictionary(fs_read.root())
+            fs_read.release()
+
+            # check equal
+            self.assertEqual(aruco_dict.markerSize, 5)
+            self.assertEqual(aruco_dict.maxCorrectionBits, 3)
+            np.testing.assert_array_equal(aruco_dict.bytesList, markers_gold)
+
+        finally:
+            if os.path.exists(filename):
+                os.remove(filename)
+
+    def test_charuco_detector(self):
+        aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_250)
+        board_size = (3, 3)
+        board = cv.aruco.CharucoBoard_create(board_size[0], board_size[1], 1.0, .8, aruco_dict)
+        charuco_detector = cv.aruco.CharucoDetector(board)
+        cell_size = 100
+
+        image = board.generateImage((cell_size*board_size[0], cell_size*board_size[1]))
+
+        list_gold_corners = []
+        for i in range(1, board_size[0]):
+            for j in range(1, board_size[1]):
+                list_gold_corners.append((j*cell_size, i*cell_size))
+        gold_corners = np.array(list_gold_corners, dtype=np.float32)
+
+        charucoCorners, charucoIds, markerCorners, markerIds = charuco_detector.detectBoard(image)
+
+        self.assertEqual(len(charucoIds), 4)
+        for i in range(0, 4):
+            self.assertEqual(charucoIds[i], i)
+        np.testing.assert_allclose(gold_corners, charucoCorners.reshape(-1, 2), 0.01, 0.1)
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
