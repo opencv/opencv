@@ -196,7 +196,7 @@ void getMarkersPoses(InputArrayOfArrays corners, float markerLength, InputArray 
     Mat rvecs = _rvecs.getMat(), tvecs = _tvecs.getMat();
     for (int i = 0; i < nMarkers; i++)
         solvePnP(markerObjPoints, corners.getMat(i), cameraMatrix, distCoeffs, rvecs.at<Vec3d>(i), tvecs.at<Vec3d>(i),
-                solvePnPMethod);
+                false, solvePnPMethod);
 
     if(objPoints.needed())
         markerObjPoints.convertTo(objPoints, -1);
