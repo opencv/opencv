@@ -111,6 +111,24 @@ public:
     void findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const std::vector<Mat>& dog_pyr,
                                std::vector<KeyPoint>& keypoints ) const;
 
+    void read( const FileNode& fn) CV_OVERRIDE;
+    void write( FileStorage& fs) const CV_OVERRIDE;
+
+    void setNFeatures(int maxFeatures) CV_OVERRIDE { nfeatures = maxFeatures; }
+    int getNFeatures() const CV_OVERRIDE { return nfeatures; }
+
+    void setNOctaveLayers(int nOctaveLayers_) CV_OVERRIDE { nOctaveLayers = nOctaveLayers_; }
+    int getNOctaveLayers() const CV_OVERRIDE { return nOctaveLayers; }
+
+    void setContrastThreshold(double contrastThreshold_) CV_OVERRIDE  { contrastThreshold = contrastThreshold_; }
+    double getContrastThreshold() const CV_OVERRIDE { return contrastThreshold; }
+
+    void setEdgeThreshold(double edgeThreshold_) CV_OVERRIDE  { edgeThreshold = edgeThreshold_; }
+    double getEdgeThreshold() const CV_OVERRIDE { return edgeThreshold; }
+
+    void setSigma(double sigma_) CV_OVERRIDE  { sigma = sigma_; }
+    double getSigma() const CV_OVERRIDE { return sigma; }
+
 protected:
     CV_PROP_RW int nfeatures;
     CV_PROP_RW int nOctaveLayers;
@@ -552,6 +570,36 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
         //t = (double)getTickCount() - t;
         //printf("descriptor extraction time: %g\n", t*1000./tf);
     }
+}
+
+void SIFT_Impl::read( const FileNode& fn)
+{
+  // if node is empty, keep previous value
+  if (!fn["nfeatures"].empty())
+    fn["nfeatures"] >> nfeatures;
+  if (!fn["nOctaveLayers"].empty())
+    fn["nOctaveLayers"] >> nOctaveLayers;
+  if (!fn["contrastThreshold"].empty())
+    fn["contrastThreshold"] >> contrastThreshold;
+  if (!fn["edgeThreshold"].empty())
+    fn["edgeThreshold"] >> edgeThreshold;
+  if (!fn["sigma"].empty())
+    fn["sigma"] >> sigma;
+  if (!fn["descriptorType"].empty())
+    fn["descriptorType"] >> descriptor_type;
+}
+void SIFT_Impl::write( FileStorage& fs) const
+{
+  if(fs.isOpened())
+  {
+    fs << "name" << getDefaultName();
+    fs << "nfeatures" << nfeatures;
+    fs << "nOctaveLayers" << nOctaveLayers;
+    fs << "contrastThreshold" << contrastThreshold;
+    fs << "edgeThreshold" << edgeThreshold;
+    fs << "sigma" << sigma;
+    fs << "descriptorType" << descriptor_type;
+  }
 }
 
 }

@@ -319,6 +319,21 @@ public:
         double sigma, int descriptorType);
 
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+
+    CV_WRAP virtual void setNFeatures(int maxFeatures) = 0;
+    CV_WRAP virtual int getNFeatures() const = 0;
+
+    CV_WRAP virtual void setNOctaveLayers(int nOctaveLayers) = 0;
+    CV_WRAP virtual int getNOctaveLayers() const = 0;
+
+    CV_WRAP virtual void setContrastThreshold(double contrastThreshold) = 0;
+    CV_WRAP virtual double getContrastThreshold() const = 0;
+
+    CV_WRAP virtual void setEdgeThreshold(double edgeThreshold) = 0;
+    CV_WRAP virtual double getEdgeThreshold() const = 0;
+
+    CV_WRAP virtual void setSigma(double sigma) = 0;
+    CV_WRAP virtual double getSigma() const = 0;
 };
 
 typedef SIFT SiftFeatureDetector;
@@ -374,14 +389,20 @@ public:
     /** @brief Set detection threshold.
     @param threshold AGAST detection threshold score.
     */
-    CV_WRAP virtual void setThreshold(int threshold) { CV_UNUSED(threshold); return; }
-    CV_WRAP virtual int getThreshold() const { return -1; }
+    CV_WRAP virtual void setThreshold(int threshold) = 0;
+    CV_WRAP virtual int getThreshold() const = 0;
 
     /** @brief Set detection octaves.
     @param octaves detection octaves. Use 0 to do single scale.
     */
-    CV_WRAP virtual void setOctaves(int octaves) { CV_UNUSED(octaves); return; }
-    CV_WRAP virtual int getOctaves() const { return -1; }
+    CV_WRAP virtual void setOctaves(int octaves) = 0;
+    CV_WRAP virtual int getOctaves() const = 0;
+    /** @brief Set detection patternScale.
+    @param patternScale apply this scale to the pattern used for sampling the neighbourhood of a
+    keypoint.
+    */
+    CV_WRAP virtual void setPatternScale(float patternScale) = 0;
+    CV_WRAP virtual float getPatternScale() const = 0;
 };
 
 /** @brief Class implementing the ORB (*oriented BRIEF*) keypoint detector and descriptor extractor
@@ -514,8 +535,27 @@ public:
     CV_WRAP virtual void setMaxArea(int maxArea) = 0;
     CV_WRAP virtual int getMaxArea() const = 0;
 
+    CV_WRAP virtual void setMaxVariation(double maxVariation) = 0;
+    CV_WRAP virtual double getMaxVariation() const = 0;
+
+    CV_WRAP virtual void setMinDiversity(double minDiversity) = 0;
+    CV_WRAP virtual double getMinDiversity() const = 0;
+
+    CV_WRAP virtual void setMaxEvolution(int maxEvolution) = 0;
+    CV_WRAP virtual int getMaxEvolution() const = 0;
+
+    CV_WRAP virtual void setAreaThreshold(double areaThreshold) = 0;
+    CV_WRAP virtual double getAreaThreshold() const = 0;
+
+    CV_WRAP virtual void setMinMargin(double min_margin) = 0;
+    CV_WRAP virtual double getMinMargin() const = 0;
+
+    CV_WRAP virtual void setEdgeBlurSize(int edge_blur_size) = 0;
+    CV_WRAP virtual int getEdgeBlurSize() const = 0;
+
     CV_WRAP virtual void setPass2Only(bool f) = 0;
     CV_WRAP virtual bool getPass2Only() const = 0;
+
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
@@ -660,6 +700,9 @@ public:
     CV_WRAP virtual void setBlockSize(int blockSize) = 0;
     CV_WRAP virtual int getBlockSize() const = 0;
 
+    CV_WRAP virtual void setGradientSize(int gradientSize_) = 0;
+    CV_WRAP virtual int getGradientSize() = 0;
+
     CV_WRAP virtual void setHarrisDetector(bool val) = 0;
     CV_WRAP virtual bool getHarrisDetector() const = 0;
 
@@ -734,6 +777,10 @@ public:
 
   CV_WRAP static Ptr<SimpleBlobDetector>
     create(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
+
+  CV_WRAP virtual void setParams(const SimpleBlobDetector::Params& params ) = 0;
+  CV_WRAP virtual SimpleBlobDetector::Params getParams() const = 0;
+
   CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
   CV_WRAP virtual const std::vector<std::vector<cv::Point> >& getBlobContours() const;
 };
