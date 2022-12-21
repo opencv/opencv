@@ -774,6 +774,8 @@ class ObjectiveCWrapperGenerator(object):
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
         return classinfo
 
+    const_rename_map = dict()
+
     def add_const(self, decl, scope=None, enumType=None): # [ "const cname", val, [], [] ]
         constinfo = ConstInfo(decl, namespaces=self.namespaces, enumType=enumType)
         if constinfo.isIgnored():
@@ -790,7 +792,11 @@ class ObjectiveCWrapperGenerator(object):
                 constinfo.name = constinfo.classname + '_' + constinfo.name
                 constinfo.classname = ''
             elif constinfo.enumType and constinfo.classpath:
-                constinfo.name = constinfo.classname + '_' + constinfo.name
+                new_name = constinfo.classname + '_' + constinfo.name
+                self.const_rename_map[constinfo.name] = new_name
+                constinfo.name = new_name
+                if constinfo.value in self.const_rename_map:
+                    constinfo.value = self.const_rename_map[constinfo.value]
                 logging.info('use outer class prefix: %s', constinfo)
 
             ci = self.getClass(constinfo.classname)
