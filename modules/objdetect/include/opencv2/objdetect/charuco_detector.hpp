@@ -17,10 +17,10 @@ struct CV_EXPORTS_W_SIMPLE CharucoParameters {
         minMarkers = 2;
         tryRefineMarkers = false;
     }
-    Mat cameraMatrix; // cameraMatrix optional 3x3 floating-point camera matrix
-    Mat distCoeffs; // distCoeffs optional vector of distortion coefficients
-    int minMarkers; // minMarkers number of adjacent markers that must be detected to return a charuco corner, default = 3
-    bool tryRefineMarkers; // try to use refine board
+    CV_WRAP Mat cameraMatrix; // cameraMatrix optional 3x3 floating-point camera matrix
+    CV_WRAP Mat distCoeffs; // distCoeffs optional vector of distortion coefficients
+    CV_WRAP int minMarkers; // minMarkers number of adjacent markers that must be detected to return a charuco corner, default = 3
+    CV_WRAP bool tryRefineMarkers; // try to use refine board
 };
 
 class CV_EXPORTS_W CharucoDetector : public Algorithm {
@@ -53,26 +53,26 @@ public:
      * @brief detect aruco markers and interpolate position of ChArUco board corners
      * @param image input image necesary for corner refinement. Note that markers are not detected and
      * should be sent in corners and ids parameters.
+     * @param charucoCorners interpolated chessboard corners
+     * @param charucoIds interpolated chessboard corners identifiers
      * @param markerCorners vector of already detected markers corners. For each marker, its four
      * corners are provided, (e.g std::vector<std::vector<cv::Point2f> > ). For N detected markers, the
      * dimensions of this array should be Nx4. The order of the corners should be clockwise.
-     * If markerCorners and markerCorners are empty, the detectMarkers() will run and detect aruco markers and ids
+     * If markerCorners and markerCorners are empty, the function detect aruco markers and ids.
      * @param markerIds list of identifiers for each marker in corners.
-     * If markerCorners and markerCorners are empty, the detectMarkers() will run and detect aruco markers and ids
-     * @param charucoCorners interpolated chessboard corners
-     * @param charucoIds interpolated chessboard corners identifiers
+     *  If markerCorners and markerCorners are empty, the function detect aruco markers and ids.
      *
      * This function receives the detected markers and returns the 2D position of the chessboard corners
-     * from a ChArUco board using the detected Aruco markers.
+     * from a ChArUco board using the detected Aruco markers. If
      *
      * If markerCorners and markerCorners are empty, the detectMarkers() will run and detect aruco markers and ids
      *
      * If camera parameters are provided, the process is based in an approximated pose estimation, else it is based on local homography.
-     * Only visible corners are returned. For each corner, its corresponding identifier is
-     * also returned in charucoIds.
+     * Only visible corners are returned. For each corner, its corresponding identifier is also returned in charucoIds.
      */
-    CV_WRAP void detectBoard(InputArray image, InputOutputArrayOfArrays markerCorners, InputOutputArray markerIds,
-                             OutputArray charucoCorners, OutputArray charucoIds) const;
+    CV_WRAP void detectBoard(InputArray image, OutputArray charucoCorners, OutputArray charucoIds,
+                             InputOutputArrayOfArrays markerCorners = noArray(),
+                             InputOutputArray markerIds = noArray()) const;
 
     /**
      * @brief Detect ChArUco Diamond markers

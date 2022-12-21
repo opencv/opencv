@@ -133,13 +133,13 @@ void CV_CharucoDetection::run(int) {
 
                 //detector.detectMarkers(img, corners, ids);
                 if(iter % 2 == 0) {
-                    detector.detectBoard(img, corners, ids, charucoCorners, charucoIds);
+                    detector.detectBoard(img, charucoCorners, charucoIds, corners, ids);
                 } else {
                     aruco::CharucoParameters charucoParameters;
                     charucoParameters.cameraMatrix = cameraMatrix;
                     charucoParameters.distCoeffs = distCoeffs;
                     detector.setCharucoParameters(charucoParameters);
-                    detector.detectBoard(img, corners, ids, charucoCorners, charucoIds);
+                    detector.detectBoard(img, charucoCorners, charucoIds, corners, ids);
                 }
 
                 if(ids.size() == 0) {
@@ -239,13 +239,13 @@ void CV_CharucoPoseEstimation::run(int) {
                 vector<int> charucoIds;
 
                 if(iter % 2 == 0) {
-                    detector.detectBoard(img, corners, ids, charucoCorners, charucoIds);
+                    detector.detectBoard(img, charucoCorners, charucoIds, corners, ids);
                 } else {
                     aruco::CharucoParameters charucoParameters;
                     charucoParameters.cameraMatrix = cameraMatrix;
                     charucoParameters.distCoeffs = distCoeffs;
                     detector.setCharucoParameters(charucoParameters);
-                    detector.detectBoard(img, corners, ids, charucoCorners, charucoIds);
+                    detector.detectBoard(img, charucoCorners, charucoIds, corners, ids);
                 }
                 ASSERT_EQ(ids.size(), board->getIds().size());
                 if(charucoIds.size() == 0) continue;
@@ -632,7 +632,7 @@ TEST(Charuco, testBoardSubpixelCoords)
     std::vector<std::vector<cv::Point2f>> corners;
     cv::Mat c_ids, c_corners;
 
-    detector.detectBoard(gray, corners, ids, c_corners, c_ids);
+    detector.detectBoard(gray, c_corners, c_ids, corners, ids);
 
     ASSERT_EQ(ids.size(), size_t(8));
     ASSERT_EQ(c_corners.rows, expected_corners.rows);

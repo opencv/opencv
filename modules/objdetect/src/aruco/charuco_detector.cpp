@@ -282,8 +282,8 @@ void CharucoDetector::setRefineParameters(const RefineParameters& refineParamete
     charucoDetectorImpl->arucoDetector.setRefineParameters(refineParameters);
 }
 
-void CharucoDetector::detectBoard(InputArray image, InputOutputArrayOfArrays markerCorners,
-                                  InputOutputArray markerIds, OutputArray charucoCorners, OutputArray charucoIds) const {
+void CharucoDetector::detectBoard(InputArray image, OutputArray charucoCorners, OutputArray charucoIds,
+                                  InputOutputArrayOfArrays markerCorners, InputOutputArray markerIds) const {
     CV_Assert((markerCorners.empty() && markerIds.empty() && !image.empty()) || (markerCorners.size() == markerIds.size()));
     if (markerCorners.empty() && markerIds.empty()) {
         vector<vector<Point2f> > rejectedMarkers;
@@ -403,7 +403,7 @@ void CharucoDetector::detectDiamonds(InputArray image, InputOutputArrayOfArrays 
             // interpolate the charuco corners of the diamond
             vector<Point2f> currentMarkerCorners;
             Mat aux;
-            detectBoard(grey, currentMarker, currentMarkerId, currentMarkerCorners, aux);
+            detectBoard(grey, currentMarkerCorners, aux, currentMarker, currentMarkerId);
 
             // if everything is ok, save the diamond
             if(currentMarkerCorners.size() > 0ull) {
