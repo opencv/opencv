@@ -28,9 +28,9 @@ struct MemoryManager;
 
 struct Device
 {
-    enum { DEV_CPU=0, DEV_IGPU=1, DEV_DGPU=2, DEV_NPU=3 };
+    enum Type { DEV_CPU=0, DEV_IGPU=1, DEV_DGPU=2, DEV_NPU=3 };
     virtual ~Device();
-    virtual int kind() const = 0;
+    virtual Type type() const = 0;
     virtual std::string name() const = 0;
     virtual bool supportType(int typ) const = 0;
     virtual bool zeroCopy() const = 0;

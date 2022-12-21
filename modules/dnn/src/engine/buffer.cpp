@@ -24,7 +24,7 @@ Device::~Device() {}
 
 struct CPUDevice : Device
 {
-    virtual string name() const
+    virtual string name() const CV_OVERRIDE
     { return
 #if (defined __SSE2__) || (defined _M_X86) || (defined _M_X64)
         "x86 CPU";
@@ -34,16 +34,16 @@ struct CPUDevice : Device
         "Generic CPU w. SIMD";
 #endif
     }
-    virtual int kind() const { return DEV_CPU; }
-    virtual bool zeroCopy() const { return true; }
-    virtual bool supportType(int typ) const {
+    virtual Type type() const CV_OVERRIDE { return DEV_CPU; }
+    virtual bool zeroCopy() const CV_OVERRIDE { return true; }
+    virtual bool supportType(int typ) const CV_OVERRIDE {
 #if (defined __ARM_NEON) && (defined __ARM_FEATURE_FP16_VECTOR_ARITHMETIC)
         return true;
 #else
         return CV_MAT_DEPTH(typ) != CV_16F;
 #endif
     }
-    virtual MemoryManager* defaultMemoryManager() { return 0; }
+    virtual MemoryManager* defaultMemoryManager() CV_OVERRIDE { return 0; }
 };
 
 Device* getCPUDevice()
@@ -54,13 +54,13 @@ Device* getCPUDevice()
 
 struct CPUMemoryManager : MemoryManager
 {
-    void* allocate(Device*, size_t bufsize) { return malloc(bufsize); }
-    void release(Device*, void* handle) { free(handle); }
-    void* map(Device*, void* handle, size_t, int) { return handle; }
-    void unmap(Device*, void*, void*, size_t, int) {}
-    void copyFromDevice(Device*, void* handle, size_t offset, size_t size, void* dst)
+    void* allocate(Device*, size_t bufsize) CV_OVERRIDE { return malloc(bufsize); }
+    void release(Device*, void* handle) CV_OVERRIDE { free(handle); }
+    void* map(Device*, void* handle, size_t, int) CV_OVERRIDE { return handle; }
+    void unmap(Device*, void*, void*, size_t, int) CV_OVERRIDE {}
+    void copyFromDevice(Device*, void* handle, size_t offset, size_t size, void* dst) CV_OVERRIDE
     { memcpy(dst, (char*)handle + offset, size); }
-    void copyToDevice(Device*, const void* src, void* handle, size_t offset, size_t size)
+    void copyToDevice(Device*, const void* src, void* handle, size_t offset, size_t size) CV_OVERRIDE
     { memcpy((char*)handle + offset, src, size); }
 };
 

@@ -1923,7 +1923,8 @@ repeated_field_pack_to_buffer(const ProtobufCFieldDescriptor *field,
         rv += uint32_pack(payload_len, scratch + rv);
         buffer->append(buffer, rv, scratch);
         tmp = pack_buffer_packed_payload(field, count, array, buffer);
-        assert(tmp == payload_len);
+        if(tmp != payload_len)
+            assert(0);
         return rv + payload_len;
     } else {
         size_t siz;
