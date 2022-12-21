@@ -122,7 +122,7 @@ int64_t Net2::Impl::findDim(const std::string& dimname)
     return dimidx;
 }
 
-int Net2::Impl::addArg(int argkind, const ArgInfo& arginfo)
+int Net2::Impl::addArg(ArgKind argkind, const ArgInfo& arginfo)
 {
     int argidx = (int)args.size();
     LayerArg arg;
