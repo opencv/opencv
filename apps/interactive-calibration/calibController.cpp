@@ -256,6 +256,8 @@ void calib::calibDataController::deleteLastFrame()
     if (!mCalibData->allCharucoCorners.empty()) {
         mCalibData->allCharucoCorners.pop_back();
         mCalibData->allCharucoIds.pop_back();
+        mCalibData->imagePoints.pop_back();
+        mCalibData->objectPoints.pop_back();
     }
 
     if(!mParamsStack.empty()) {
