@@ -69,6 +69,7 @@ public:
      *
      * If camera parameters are provided, the process is based in an approximated pose estimation, else it is based on local homography.
      * Only visible corners are returned. For each corner, its corresponding identifier is also returned in charucoIds.
+     * @sa findChessboardCorners
      */
     CV_WRAP void detectBoard(InputArray image, OutputArray charucoCorners, OutputArray charucoIds,
                              InputOutputArrayOfArrays markerCorners = noArray(),
@@ -78,25 +79,25 @@ public:
      * @brief Detect ChArUco Diamond markers
      *
      * @param image input image necessary for corner subpixel.
-     * @param markerCorners list of detected marker corners from detectMarkers function.
-     * If markerCorners and markerCorners are empty, the detectDiamonds() will run and detect aruco markers and ids
-     * @param markerIds list of marker ids in markerCorners.
-     * If markerCorners and markerCorners are empty, the detectDiamonds() will run and detect aruco markers and ids
      * @param diamondCorners output list of detected diamond corners (4 corners per diamond). The order
      * is the same than in marker corners: top left, top right, bottom right and bottom left. Similar
      * format than the corners returned by detectMarkers (e.g std::vector<std::vector<cv::Point2f> > ).
      * @param diamondIds ids of the diamonds in diamondCorners. The id of each diamond is in fact of
      * type Vec4i, so each diamond has 4 ids, which are the ids of the aruco markers composing the
      * diamond.
+     * @param markerCorners list of detected marker corners from detectMarkers function.
+     * If markerCorners and markerCorners are empty, the function detect aruco markers and ids.
+     * @param markerIds list of marker ids in markerCorners.
+     * If markerCorners and markerCorners are empty, the function detect aruco markers and ids.
      *
      * This function detects Diamond markers from the previous detected ArUco markers. The diamonds
      * are returned in the diamondCorners and diamondIds parameters. If camera calibration parameters
      * are provided, the diamond search is based on reprojection. If not, diamond search is based on
-     * homography. Homography is faster than reprojection but can slightly reduce the detection rate.
+     * homography. Homography is faster than reprojection, but less accurate.
      */
-    CV_WRAP void detectDiamonds(InputArray image, InputOutputArrayOfArrays markerCorners,
-                                InputOutputArrayOfArrays markerIds, OutputArrayOfArrays diamondCorners,
-                                OutputArray diamondIds) const;
+    CV_WRAP void detectDiamonds(InputArray image, OutputArrayOfArrays diamondCorners, OutputArray diamondIds,
+                                InputOutputArrayOfArrays markerCorners = noArray(),
+                                InputOutputArrayOfArrays markerIds = noArray()) const;
 protected:
     struct CharucoDetectorImpl;
     Ptr<CharucoDetectorImpl> charucoDetectorImpl;
@@ -115,6 +116,28 @@ protected:
  */
 CV_EXPORTS_W void drawDetectedCornersCharuco(InputOutputArray image, InputArray charucoCorners,
                                              InputArray charucoIds = noArray(), Scalar cornerColor = Scalar(255, 0, 0));
+
+/**
+ * @brief Draw a set of detected ChArUco Diamond markers
+ *
+ * @param image input/output image. It must have 1 or 3 channels. The number of channels is not
+ * altered.
+ * @param diamondCorners positions of diamond corners in the same format returned by
+ * detectCharucoDiamond(). (e.g std::vector<std::vector<cv::Point2f> > ). For N detected markers,
+ * the dimensions of this array should be Nx4. The order of the corners should be clockwise.
+ * @param diamondIds vector of identifiers for diamonds in diamondCorners, in the same format
+ * returned by detectCharucoDiamond() (e.g. std::vector<Vec4i>).
+ * Optional, if not provided, ids are not painted.
+ * @param borderColor color of marker borders. Rest of colors (text color and first corner color)
+ * are calculated based on this one.
+ *
+ * Given an array of detected diamonds, this functions draws them in the image. The marker borders
+ * are painted and the markers identifiers if provided.
+ * Useful for debugging purposes.
+ */
+CV_EXPORTS_W void drawDetectedDiamonds(InputOutputArray image, InputArrayOfArrays diamondCorners,
+                                       InputArray diamondIds = noArray(),
+                                       Scalar borderColor = Scalar(0, 0, 255));
 
 //! @}
 

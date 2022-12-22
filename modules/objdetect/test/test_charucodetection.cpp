@@ -364,7 +364,7 @@ void CV_CharucoDiamondDetection::run(int) {
                 vector<vector<Point2f>> diamondCorners;
                 vector<Vec4i> diamondIds;
 
-                detector.detectDiamonds(img, corners, ids, diamondCorners, diamondIds);
+                detector.detectDiamonds(img, diamondCorners, diamondIds, corners, ids);
 
                 // check detect
                 if(ids.size() != 4) {

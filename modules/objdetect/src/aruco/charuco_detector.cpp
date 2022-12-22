@@ -30,7 +30,7 @@ struct CharucoDetector::CharucoDetectorImpl {
         vector<Size> winSizes(nCharucoCorners, Size(-1, -1));
         for(size_t i = 0ull; i < nCharucoCorners; i++) {
             if(charucoCorners.getMat().at<Point2f>((int)i) == Point2f(-1.f, -1.f)) continue;
-            if(board->getNearestMarkerIdx()[i].size() == 0ull) continue;
+            if(board->getNearestMarkerIdx()[i].empty()) continue;
                 double minDist = -1;
                 int counter = 0;
                 // calculate the distance to each of the closest corner of each closest marker
@@ -86,7 +86,7 @@ struct CharucoDetector::CharucoDetectorImpl {
             }
         }
         // if none valid, return 0
-        if(filteredChessboardImgPoints.size() == 0) return;
+        if(filteredChessboardImgPoints.empty()) return;
         // corner refinement, first convert input image to grey
         Mat grey;
         if(image.type() == CV_8UC3)
@@ -193,7 +193,7 @@ struct CharucoDetector::CharucoDetectorImpl {
                 }
             }
             // none of the closest markers detected
-            if(interpolatedPositions.size() == 0) continue;
+            if(interpolatedPositions.empty()) continue;
             // more than one closest marker detected, take middle point
             if(interpolatedPositions.size() > 1ull) {
                 allChessboardImgPoints[i] = (interpolatedPositions[0] + interpolatedPositions[1]) / 2.;
@@ -310,14 +310,19 @@ void CharucoDetector::detectBoard(InputArray image, OutputArray charucoCorners, 
                                                         charucoIds);
 }
 
-void CharucoDetector::detectDiamonds(InputArray image, InputOutputArrayOfArrays _markerCorners,
-                                     InputOutputArrayOfArrays _markerIds, OutputArrayOfArrays _diamondCorners,
-                                     OutputArray _diamondIds) const {
+void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diamondCorners, OutputArray _diamondIds,
+                                     InputOutputArrayOfArrays inMarkerCorners, InputOutputArrayOfArrays inMarkerIds) const {
     CV_Assert(getBoard()->getChessboardSize() == Size(3, 3));
-    CV_Assert((_markerCorners.empty() && _markerIds.empty() && !image.empty()) || (_markerCorners.size() == _markerIds.size()));
+    CV_Assert((inMarkerCorners.empty() && inMarkerIds.empty() && !image.empty()) || (inMarkerCorners.size() == inMarkerIds.size()));
+
+    vector<vector<Point2f>> tmpMarkerCorners;
+    vector<int> tmpMarkerIds;
+    InputOutputArrayOfArrays _markerCorners = inMarkerCorners.needed() ? inMarkerCorners : tmpMarkerCorners;
+    InputOutputArray _markerIds = inMarkerIds.needed() ? inMarkerIds : tmpMarkerIds;
     if (_markerCorners.empty() && _markerIds.empty()) {
         charucoDetectorImpl->arucoDetector.detectMarkers(image, _markerCorners, _markerIds);
     }
+
     const float minRepDistanceRate = 1.302455f;
     vector<vector<Point2f>> diamondCorners;
     vector<Vec4i> diamondIds;
@@ -460,6 +465,47 @@ void drawDetectedCornersCharuco(InputOutputArray _image, InputArray _charucoCorn
             s << "id=" << id;
             putText(_image, s.str(), corner + Point2f(5, -5), FONT_HERSHEY_SIMPLEX, 0.5,
                     cornerColor, 2);
+        }
+    }
+}
+
+void drawDetectedDiamonds(InputOutputArray _image, InputArrayOfArrays _corners, InputArray _ids, Scalar borderColor) {
+    CV_Assert(_image.getMat().total() != 0 &&
+              (_image.getMat().channels() == 1 || _image.getMat().channels() == 3));
+    CV_Assert((_corners.total() == _ids.total()) || _ids.total() == 0);
+
+    // calculate colors
+    Scalar textColor, cornerColor;
+    textColor = cornerColor = borderColor;
+    swap(textColor.val[0], textColor.val[1]);     // text color just sawp G and R
+    swap(cornerColor.val[1], cornerColor.val[2]); // corner color just sawp G and B
+
+    int nMarkers = (int)_corners.total();
+    for(int i = 0; i < nMarkers; i++) {
+        Mat currentMarker = _corners.getMat(i);
+        CV_Assert(currentMarker.total() == 4 && currentMarker.type() == CV_32FC2);
+
+        // draw marker sides
+        for(int j = 0; j < 4; j++) {
+            Point2f p0, p1;
+            p0 = currentMarker.at< Point2f >(j);
+            p1 = currentMarker.at< Point2f >((j + 1) % 4);
+            line(_image, p0, p1, borderColor, 1);
+        }
+
+        // draw first corner mark
+        rectangle(_image, currentMarker.at< Point2f >(0) - Point2f(3, 3),
+                  currentMarker.at< Point2f >(0) + Point2f(3, 3), cornerColor, 1, LINE_AA);
+
+        // draw id composed by four numbers
+        if(_ids.total() != 0) {
+            Point2f cent(0, 0);
+            for(int p = 0; p < 4; p++)
+                cent += currentMarker.at< Point2f >(p);
+            cent = cent / 4.;
+            stringstream s;
+            s << "id=" << _ids.getMat().at< Vec4i >(i);
+            putText(_image, s.str(), cent, FONT_HERSHEY_SIMPLEX, 0.5, textColor, 2);
         }
     }
 }
