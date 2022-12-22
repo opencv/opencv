@@ -427,7 +427,7 @@ if(CUDA_FOUND)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fno-finite-math-only)
     endif()
 
-    if(WIN32)
+    if(CUDA_VERSION VERSION_GREATER_EQUAL 11.2 AND WIN32)
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcudafe --display_error_number --diag-suppress 1394,1388)
     endif()
 
