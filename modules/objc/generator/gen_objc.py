@@ -203,6 +203,7 @@ class ConstInfo(GeneralInfo):
     def __init__(self, decl, addedManually=False, namespaces=[], enumType=None):
         GeneralInfo.__init__(self, "const", decl, namespaces)
         self.cname = get_cname(self.name)
+        self.swift_name = None
         self.value = decl[1]
         self.enumType = enumType
         self.addedManually = addedManually
@@ -783,6 +784,7 @@ class ObjectiveCWrapperGenerator(object):
             if constinfo.enumType and constinfo.classpath:
                 new_name = constinfo.classname + '_' + constinfo.name
                 const_fix.setdefault(constinfo.classpath, {}).setdefault(objc_type, {})[constinfo.name] = new_name
+                constinfo.swift_name = constinfo.name
                 constinfo.name = new_name
                 logging.info('use outer class prefix: %s', constinfo)
 
@@ -798,6 +800,7 @@ class ObjectiveCWrapperGenerator(object):
             if not self.isWrapped(constinfo.classname):
                 logging.info('class not found: %s', constinfo)
                 if not constinfo.name.startswith(constinfo.classname + "_"):
+                    constinfo.swift_name = constinfo.name
                     constinfo.name = constinfo.classname + '_' + constinfo.name
                 constinfo.classname = ''
 
@@ -1305,7 +1308,9 @@ $unrefined_call$epilogue$ret
                     ci.enum_declarations.write("""
 // C++: enum {1} ({2})
 typedef NS_ENUM(int, {1}) {{
-    {0}\n}};\n\n""".format(",\n    ".join(["%s = %s" % (c.name, c.value) for c in consts]), typeNameShort, typeName)
+    {0}\n}};\n\n""".format(
+                        ",\n    ".join(["%s = %s" % (c.name + (" NS_SWIFT_NAME(" + c.swift_name + ")" if c.swift_name else ""), c.value) for c in consts]),
+                        typeNameShort, typeName)
                     )
                 else:
                     if not wrote_consts_pragma:
