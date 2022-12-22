@@ -209,9 +209,6 @@ void CV_ArucoRefine::run(int) {
     }
 }
 
-
-
-
 TEST(CV_ArucoBoardPose, accuracy) {
     CV_ArucoBoardPose test(ArucoAlgParams::USE_DEFAULT);
     test.safe_run();
@@ -312,6 +309,23 @@ TEST(CV_ArucoBoardPose, CheckNegativeZ)
     cv::Rodrigues(rvec, rotm);
     out = cv::Point3d(tvec) + rotm*Point3d(board->getObjPoints()[0][0]);
     ASSERT_GT(out.z, 0);
+}
+
+TEST(CV_ArucoGenerateBoard, regression_1226) {
+    int squares_x = 7;
+    int squares_y = 5;
+    int bwidth = 1600;
+    int bheight = 1200;
+
+    cv::aruco::Dictionary dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
+    cv::Ptr<cv::aruco::CharucoBoard> board = cv::aruco::CharucoBoard::create(squares_x, squares_y, 1.0, 0.75, dict);
+    cv::Size sz(bwidth, bheight);
+    cv::Mat mat;
+
+    ASSERT_NO_THROW(
+    {
+        board->generateImage(sz, mat, 0, 1);
+    });
 }
 
 }} // namespace

@@ -17,10 +17,10 @@ struct CV_EXPORTS_W_SIMPLE CharucoParameters {
         minMarkers = 2;
         tryRefineMarkers = false;
     }
-    CV_WRAP Mat cameraMatrix; // cameraMatrix optional 3x3 floating-point camera matrix
-    CV_WRAP Mat distCoeffs; // distCoeffs optional vector of distortion coefficients
-    CV_WRAP int minMarkers; // minMarkers number of adjacent markers that must be detected to return a charuco corner, default = 3
-    CV_WRAP bool tryRefineMarkers; // try to use refine board
+    CV_PROP_RW Mat cameraMatrix; // cameraMatrix optional 3x3 floating-point camera matrix
+    CV_PROP_RW Mat distCoeffs; // distCoeffs optional vector of distortion coefficients
+    CV_PROP_RW int minMarkers; // minMarkers number of adjacent markers that must be detected to return a charuco corner, default = 3
+    CV_PROP_RW bool tryRefineMarkers; // try to use refine board
 };
 
 class CV_EXPORTS_W CharucoDetector : public Algorithm {

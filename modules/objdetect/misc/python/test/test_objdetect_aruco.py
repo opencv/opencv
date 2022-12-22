@@ -3,7 +3,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function
 
-import os, numpy as np
+import os, tempfile, numpy as np
 
 import cv2 as cv
 
@@ -96,7 +96,9 @@ class aruco_objdetect_test(NewOpenCVTests):
             markers_gold = aruco_dict.bytesList
 
             # write aruco_dict
-            filename = "test_dict.yml"
+            fd, filename = tempfile.mkstemp(prefix="opencv_python_aruco_dict_", suffix=".yml")
+            os.close(fd)
+
             fs_write = cv.FileStorage(filename, cv.FileStorage_WRITE)
             aruco_dict.writeDictionary(fs_write)
             fs_write.release()
