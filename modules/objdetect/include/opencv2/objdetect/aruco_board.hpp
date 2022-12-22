@@ -82,8 +82,9 @@ public:
     CV_WRAP virtual void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
                                           OutputArray objPoints, OutputArray imgPoints) const;
     virtual ~Board();
-protected:
+
     struct BoardImpl;
+protected:
     Ptr<BoardImpl> boardImpl;
 };
 
@@ -143,11 +144,6 @@ public:
     CV_WRAP Size getGridSize() const;
     CV_WRAP float getMarkerLength() const;
     CV_WRAP float getMarkerSeparation() const;
-
-protected:
-    struct GridImpl;
-    Ptr<GridImpl> gridImpl;
-    friend class CharucoBoard;
 };
 
 /**
@@ -230,10 +226,6 @@ public:
      */
     CV_WRAP void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
                                   OutputArray objPoints, OutputArray imgPoints) const override;
-protected:
-    struct CharucoImpl;
-    friend struct CharucoImpl;
-    Ptr<CharucoImpl> charucoImpl;
 };
 
 //! @}
