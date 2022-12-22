@@ -11,7 +11,6 @@
 
 #include <vector>
 #include <string>
-#include <algorithm>
 #include <limits>
 
 using namespace calib;
@@ -245,35 +244,13 @@ bool CalibProcessor::checkLastFrame()
     else
         mCalibData->cameraMatrix.copyTo(tmpCamMatrix);
 
-    if(mBoardType != chAruco) {
-        cv::Mat r, t, angles;
-        cv::solvePnP(mCalibData->objectPoints.back(), mCurrentImagePoints, tmpCamMatrix, mCalibData->distCoeffs, r, t);
-        RodriguesToEuler(r, angles, CALIB_DEGREES);
-
-        if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
-            mCalibData->objectPoints.pop_back();
-            mCalibData->imagePoints.pop_back();
-            isFrameBad = true;
-        }
-    }
-    else {
-        cv::Mat r, t, angles;
-        std::vector<cv::Point3f> allObjPoints;
-        allObjPoints.reserve(mCurrentCharucoIds.total());
-        for(size_t i = 0; i < mCurrentCharucoIds.total(); i++) {
-            int pointID = mCurrentCharucoIds.at<int>((int)i);
-            CV_Assert(pointID >= 0 && pointID < (int)mCharucoBoard->getChessboardCorners().size());
-            allObjPoints.push_back(mCharucoBoard->getChessboardCorners()[pointID]);
-        }
-
-        cv::solvePnP(allObjPoints, mCurrentCharucoCorners, tmpCamMatrix, mCalibData->distCoeffs, r, t);
-        RodriguesToEuler(r, angles, CALIB_DEGREES);
-
-        if(180.0 - fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
-            isFrameBad = true;
-            mCalibData->allCharucoCorners.pop_back();
-            mCalibData->allCharucoIds.pop_back();
-        }
+    cv::Mat r, t, angles;
+    cv::solvePnP(mCalibData->objectPoints.back(), mCalibData->imagePoints.back(), tmpCamMatrix, mCalibData->distCoeffs, r, t);
+    RodriguesToEuler(r, angles, CALIB_DEGREES);
+    if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
+        mCalibData->objectPoints.pop_back();
+        mCalibData->imagePoints.pop_back();
+        isFrameBad = true;
     }
     return isFrameBad;
 }
@@ -297,7 +274,7 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
     {
     case chAruco:
         mArucoDictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PredefinedDictionaryType(capParams.charucoDictName));
-        mCharucoBoard = cv::aruco::CharucoBoard::create(mBoardSize.width, mBoardSize.height, capParams.charucoSquareLength,
+        mCharucoBoard = cv::aruco::CharucoBoard::create(mBoardSize.width + 1, mBoardSize.height + 1, capParams.charucoSquareLength,
                                                         capParams.charucoMarkerSize, mArucoDictionary);
         detector = cv::makePtr<cv::aruco::CharucoDetector>(cv::aruco::CharucoDetector(mCharucoBoard, charucoParameters));
         break;
