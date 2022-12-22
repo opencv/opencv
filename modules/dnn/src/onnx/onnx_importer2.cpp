@@ -728,8 +728,10 @@ void OnnxImporter2::parseBatchNormalization(const string& ctx, const OpenCVOnnx_
     bool const_bn = netimpl->isConst(inputs[1]) && netimpl->isConst(inputs[2]) &&
                     netimpl->isConst(inputs[3]) && netimpl->isConst(inputs[4]);
     if (const_bn) {
+        const int reorder[] = {0, 3, 4, 1, 2};
         for (int i = 1; i < 5; i++) {
-            Mat t = netimpl->tensors.at(inputs[i]).getMat();
+            int j = reorder[i];
+            Mat t = netimpl->tensors.at(inputs[j]).getMat();
             layerParams.blobs.push_back(t);
         }
         inputs.resize(1);

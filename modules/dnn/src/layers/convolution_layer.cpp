@@ -555,7 +555,7 @@ public:
         fastWeights = w0.reshape(1, numOutput);
         weightsMat = wm;
         weightsMultipliers.assign(numOutput, 1.0);
-        Mat biasMat = !bias0.empty() ? blobs[1].reshape(1, numOutput) : Mat();
+        Mat biasMat = !bias0.empty() ? bias0.reshape(1, numOutput) : Mat();
         biasvec.assign(numOutput+2, 0.f);
         if( biasMat.empty() )
         {

@@ -71,14 +71,14 @@ public:
         for (auto& blob: blobs) {
             CV_Assert(blob.isContinuous() && blob.type() == CV_32F);
         }
-        size_t n = blobs[0].total();
-        CV_Assert(blobs[1].total() == n);
         if (nblobs == 4) {
-            std::vector<Mat> inputs = {Mat(), blobs[0], blobs[1], blobs[2], blobs[3]};
+            std::vector<Mat> inputs = {
+                Mat(), blobs[2], blobs[3], blobs[0], blobs[1]
+            };
             calcScaleShift(inputs, origin_weights, origin_bias, epsilon);
-            origin_weights.copyTo(weights_);
-            origin_bias.copyTo(bias_);
         } else {
+            size_t n = blobs[0].total();
+            CV_Assert(blobs[1].total() == n);
             float varMeanScale = 1.f;
             if (!hasWeights && !hasBias && blobs.size() > 2 && useGlobalStats) {
                 CV_Assert(nblobs == 3);
@@ -86,35 +86,35 @@ public:
                 if (varMeanScale != 0)
                     varMeanScale = 1/varMeanScale;
             }
-            
+
             const size_t biasBlobIndex = blobs.size() - 1;
             const size_t weightsBlobIndex = biasBlobIndex - hasBias;
-            
+
             if( hasWeights )
             {
                 CV_Assert((size_t)weightsBlobIndex < blobs.size());
                 const Mat& w = blobs[weightsBlobIndex];
                 CV_Assert(w.isContinuous() && w.type() == CV_32F && w.total() == (size_t)n);
             }
-            
+
             if( hasBias )
             {
                 CV_Assert((size_t)biasBlobIndex < blobs.size());
                 const Mat& b = blobs[weightsBlobIndex];
                 CV_Assert(b.isContinuous() && b.type() == CV_32F && b.total() == (size_t)n);
             }
-            
+
             const float* meanData = blobs[0].ptr<float>();
             const float* stdData = blobs[1].ptr<float>();
             const float* weightsData = hasWeights ? blobs[weightsBlobIndex].ptr<float>() : 0;
             const float* biasData = hasBias ? blobs[biasBlobIndex].ptr<float>() : 0;
-            
+
             origin_weights.create(1, (int)n, CV_32F);
             origin_bias.create(1, (int)n, CV_32F);
-            
+
             float* dstWeightsData = origin_weights.ptr<float>();
             float* dstBiasData = origin_bias.ptr<float>();
-            
+
             for (size_t i = 0; i < n; ++i)
             {
                 float w = (hasWeights ? weightsData[i] : 1.0f) / sqrt(stdData[i] * varMeanScale + epsilon);
@@ -122,6 +122,8 @@ public:
                 dstBiasData[i] = (hasBias ? biasData[i] : 0.0f) - w * meanData[i] * varMeanScale;
             }
         }
+        origin_weights.copyTo(weights_);
+        origin_bias.copyTo(bias_);
     }
 
     virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE
@@ -132,7 +134,7 @@ public:
 
     void getScaleShift(Mat& scale, Mat& shift) const CV_OVERRIDE
     {
-        scale = weights_;
+        scale =  weights_;
         shift = bias_;
     }
 
@@ -143,9 +145,9 @@ public:
         if (w.empty() && b.empty())
             return false;
 
-        const int numChannels = weights_.total();
-        const int numFusedWeights = w.total();
-        const int numFusedBias = b.total();
+        const int numChannels = (int)weights_.total();
+        const int numFusedWeights = (int)w.total();
+        const int numFusedBias = (int)b.total();
 
         if ((numFusedWeights != numChannels && numFusedWeights != 1 && !w.empty()) ||
             (numFusedBias != numChannels && numFusedBias != 1 && !b.empty()))
@@ -295,7 +297,7 @@ public:
 
         Mat &inpBlob = inputs[0];
         int planeSize = 1;
-        for (size_t i = 2; i < inpBlob.dims; i++) {
+        for (int i = 2; i < inpBlob.dims; i++) {
             planeSize *= inpBlob.size[i];
         }
         if (blobs.empty())
@@ -484,12 +486,21 @@ void BatchNormLayer::calcScaleShift(InputArrayOfArrays inputs_,
     std::vector<Mat> inputs;
     inputs_.getMatVector(inputs);
     CV_Assert(inputs.size() == 5);
-    int i, C = (int)inputs[1].total();
+    int i, C;
+    C = (int)inputs[1].total();
+    C = std::max(C, (int)inputs[2].total());
+    C = std::max(C, (int)inputs[3].total());
+    C = std::max(C, (int)inputs[4].total());
     for (i = 1; i < 5; i++) {
-        CV_Assert(inputs[i].total() == C);
+        if (inputs[i].empty())
+            continue;
+        if (C < 0)
+            C = (int)inputs[i].total();
+        CV_Assert(inputs[i].total() == C || inputs[i].total() == 1);
         CV_Assert(inputs[i].type() == CV_32F);
         CV_Assert(inputs[i].isContinuous());
     }
+    CV_Assert(C > 0);
     scale_.create(1, C, CV_32F);
     shift_.create(1, C, CV_32F);
     Mat scale = scale_.getMat();
@@ -498,11 +509,15 @@ void BatchNormLayer::calcScaleShift(InputArrayOfArrays inputs_,
     const float* inpbias = inputs[2].ptr<float>();
     const float* inpmean = inputs[3].ptr<float>();
     const float* inpvar = inputs[4].ptr<float>();
+    int vector_scale = inputs[1].total() > 1;
+    int vector_bias = inputs[2].total() > 1;
+    int vector_mean = inputs[3].total() > 1;
+    int vector_var = inputs[4].total() > 1;
     float* wptr = scale.ptr<float>();
     float* bptr = shift.ptr<float>();
     for (i = 0; i < C; i++) {
-        float w = inpscale[i]/sqrtf(inpvar[i] + epsilon);
-        float b = inpbias[i] - inpmean[i]*w;
+        float w = (inpscale ? inpscale[i*vector_scale] : 1.f)/sqrtf((inpvar ? inpvar[i*vector_var] : 1.f) + epsilon);
+        float b = (inpbias ? inpbias[i*vector_bias] : 0.f) - (inpmean ? inpmean[i*vector_mean] : 0.f)*w;
         wptr[i] = w;
         bptr[i] = b;
     }

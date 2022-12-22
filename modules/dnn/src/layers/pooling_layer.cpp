@@ -436,10 +436,11 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
         int ndims = inputs[0].dims;
+        CV_Assert(ndims >= 3);
 
         for (int i = 2; i < ndims; i++) {
-            if (isGlobalPooling.at(i-1))
-                kernel_size.at(i-1) = inputs[0].size[i];
+            if (isGlobalPooling.at(i+3-ndims))
+                kernel_size.at(kernel_size.size() - ndims + i) = inputs[0].size[i];
         }
 
         switch (type)
