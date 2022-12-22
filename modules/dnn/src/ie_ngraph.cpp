@@ -443,7 +443,7 @@ void InfEngineNgraphNet::addOutput(const Ptr<InfEngineNgraphNode>& node)
     CV_Assert(node);
     CV_Assert(node->node);
     const std::string& name = node->node->get_friendly_name();
-    requestedOutputs.insert({name, node});
+    requestedOutputs.insert({name, node.get()});
 }
 
 void InfEngineNgraphNet::setNodePtr(std::shared_ptr<ngraph::Node>* ptr) {
@@ -1161,45 +1161,49 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
 #endif
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
-    reqWrapper->req.set_callback([reqWrapper](std::exception_ptr ex) {
-        CV_LOG_DEBUG(NULL, "DNN(nGraph): completionCallback(" << (int)status << ")");
+    if (isAsync) {
+        bool* isReady = &reqWrapper->isReady;
+        auto* promises = &reqWrapper->outProms;
+        auto* req = &reqWrapper->req;
+        reqWrapper->req.set_callback([isReady, promises, req](std::exception_ptr ex) {
+            CV_LOG_DEBUG(NULL, "DNN(nGraph): completionCallback(" << (int)status << ")");
 
-        size_t processedOutputs = 0;
-        try
-        {
-            for (; processedOutputs < reqWrapper->outProms.size(); ++processedOutputs)
+            size_t processedOutputs = 0;
+            try
             {
-                Mat m = infEngineBlobToMat(reqWrapper->req.get_output_tensor(processedOutputs));
-
-                try
+                for (; processedOutputs < promises->size(); ++processedOutputs)
                 {
-                    reqWrapper->outProms[processedOutputs].setValue(m.clone());
+                    Mat m = infEngineBlobToMat(req->get_output_tensor(processedOutputs));
+
+                    try
+                    {
+                        (*promises)[processedOutputs].setValue(m.clone());
+                    }
+                    catch (...)
+                    {
+                        try {
+                            (*promises)[processedOutputs].setException(std::current_exception());
+                        } catch(...) {
+                            CV_LOG_ERROR(NULL, "DNN: Exception occurred during async inference exception propagation");
+                        }
+                    }
                 }
-                catch (...)
+            }
+            catch (...)
+            {
+                std::exception_ptr e = std::current_exception();
+                for (; processedOutputs < promises->size(); ++processedOutputs)
                 {
                     try {
-                        reqWrapper->outProms[processedOutputs].setException(std::current_exception());
+                        (*promises)[processedOutputs].setException(e);
                     } catch(...) {
                         CV_LOG_ERROR(NULL, "DNN: Exception occurred during async inference exception propagation");
                     }
                 }
             }
-        }
-        catch (...)
-        {
-            std::exception_ptr e = std::current_exception();
-            for (; processedOutputs < reqWrapper->outProms.size(); ++processedOutputs)
-            {
-                try {
-                    reqWrapper->outProms[processedOutputs].setException(e);
-                } catch(...) {
-                    CV_LOG_ERROR(NULL, "DNN: Exception occurred during async inference exception propagation");
-                }
-            }
-        }
-        reqWrapper->isReady = true;
-    });
-
+            *isReady = true;
+        });
+    }
 #else // OpenVINO >= 2022.1
 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2021_4)

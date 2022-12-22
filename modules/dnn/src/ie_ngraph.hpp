@@ -91,7 +91,7 @@ public:
 
     InferenceEngine::CNNNetwork cnn;
     bool hasNetOwner;
-    std::unordered_map<std::string, Ptr<InfEngineNgraphNode> > requestedOutputs;
+    std::unordered_map<std::string, InfEngineNgraphNode*> requestedOutputs;
 };
 
 class InfEngineNgraphNode : public BackendNode
