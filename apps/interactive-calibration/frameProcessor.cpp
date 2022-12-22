@@ -163,6 +163,7 @@ void CalibProcessor::saveFrameData()
         mCalibData->allCharucoIds.push_back(mCurrentCharucoIds);
 
         mCharucoBoard->matchImagePoints(mCurrentCharucoCorners, mCurrentCharucoIds, objectPoints, imagePoints);
+        CV_Assert(mCurrentCharucoIds.total() == imagePoints.size());
         mCalibData->imagePoints.push_back(imagePoints);
         mCalibData->objectPoints.push_back(objectPoints);
         break;
@@ -250,6 +251,10 @@ bool CalibProcessor::checkLastFrame()
     if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
         mCalibData->objectPoints.pop_back();
         mCalibData->imagePoints.pop_back();
+        if (mCalibData->allCharucoCorners.size()) {
+            mCalibData->allCharucoCorners.pop_back();
+            mCalibData->allCharucoIds.pop_back();
+        }
         isFrameBad = true;
     }
     return isFrameBad;
