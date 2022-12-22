@@ -9,7 +9,7 @@
 namespace cv {
 namespace aruco {
 
-//! @addtogroup aruco
+//! @addtogroup objdetect_aruco
 //! @{
 
 struct CV_EXPORTS_W_SIMPLE CharucoParameters {
