@@ -693,6 +693,11 @@ bool GStreamerCapture::grabAudioFrame()
     bool returnFlag = false;
     gint64 audioTimeNS = bufferedAudioDurationNS;
 
+    if (bufferedAudioDurationNS > requiredAudioTimeNS)
+    {
+        return true;
+    }
+
     while ((!vEOS) ? audioTimeNS <= requiredAudioTimeNS : !aEOS)
     {
         if (gst_app_sink_is_eos(GST_APP_SINK(audiosink.get())))
