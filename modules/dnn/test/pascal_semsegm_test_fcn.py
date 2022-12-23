@@ -32,7 +32,7 @@ def eval_segm_result(net_out):
     channels_dim = 1
     y_dim = channels_dim + 1
     x_dim = y_dim + 1
-    res = np.zeros(net_out.shape).astype(np.int)
+    res = np.zeros(net_out.shape).astype(int)
     for i in range(net_out.shape[y_dim]):
         for j in range(net_out.shape[x_dim]):
             max_ch = np.argmax(net_out[..., i, j])
@@ -88,7 +88,7 @@ class DatasetImageFetch(object):
     @staticmethod
     def color_to_gt(color_img, colors):
         num_classes = len(colors)
-        gt = np.zeros((num_classes, color_img.shape[0], color_img.shape[1])).astype(np.int)
+        gt = np.zeros((num_classes, color_img.shape[0], color_img.shape[1])).astype(int)
         for img_y in range(color_img.shape[0]):
             for img_x in range(color_img.shape[1]):
                 c = DatasetImageFetch.pix_to_c(color_img[img_y][img_x])
