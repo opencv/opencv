@@ -2201,6 +2201,72 @@ INSTANTIATE_TEST_CASE_P(Arithm, TransposeND, testing::Combine(
     testing::Values(perf::MatType(CV_8UC1), CV_32FC1)
 ));
 
+class FlipND : public testing::TestWithParam< tuple<std::vector<int>, perf::MatType> >
+{
+public:
+    std::vector<int> m_shape;
+    int m_type;
+
+    void SetUp()
+    {
+        std::tie(m_shape, m_type) = GetParam();
+    }
+};
+
+TEST_P(FlipND, basic)
+{
+    Mat inp(m_shape, m_type);
+    randu(inp, 0, 255);
+
+    int ndim = static_cast<int>(m_shape.size());
+    std::vector<int> axes(ndim*2); // [-shape, shape)
+    std::iota(axes.begin(), axes.end(), -ndim);
+    auto get_flipped_indices = [&inp, ndim] (size_t total, std::vector<int>& indices, int axis)
+    {
+        const int* shape = inp.size.p;
+        size_t t = total, idx;
+        for (int i = ndim - 1; i >= 0; --i)
+        {
+            idx = t / shape[i];
+            indices[i] = int(t - idx * shape[i]);
+            t = idx;
+        }
+
+        int _axis = (axis + ndim) % ndim;
+        std::vector<int> flipped_indices = indices;
+        flipped_indices[_axis] = shape[_axis] - 1 - indices[_axis];
+        return flipped_indices;
+    };
+
+    for (size_t i = 0; i < axes.size(); ++i)
+    {
+        int axis = axes[i];
+        Mat out;
+        cv::flipND(inp, out, axis);
+        // check values
+        std::vector<int> indices(ndim, 0);
+        for (size_t j = 0; j < inp.total(); ++j)
+        {
+            auto flipped_indices = get_flipped_indices(j, indices, axis);
+            switch (inp.type())
+            {
+            case CV_8UC1:
+                ASSERT_EQ(inp.at<uint8_t>(indices.data()), out.at<uint8_t>(flipped_indices.data()));
+                break;
+            case CV_32FC1:
+                ASSERT_EQ(inp.at<float>(indices.data()), out.at<float>(flipped_indices.data()));
+                break;
+            default:
+                FAIL() << "Unsupported type: " << inp.type();
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, FlipND, testing::Combine(
+    testing::Values(std::vector<int>{5, 10}, std::vector<int>{2, 3, 4}),
+    testing::Values(perf::MatType(CV_8UC1), CV_32FC1)
+));
 
 TEST(Core_minMaxIdx, regression_9207_2)
 {
