@@ -553,7 +553,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
                    .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon),
                    mask, MatrixType::AUTO, VariableType::LINEAR, /* LtoR */ false, solveMethod);
     // geodesic is not supported for normal callbacks
-    cv::LevMarq::Report report = solver.optimize();
+    solver.optimize();
 
     //std::cout << "single camera calib. param after LM: " << param0.t() << "\n";
 
@@ -579,21 +579,23 @@ static double calibrateCameraInternal( const Mat& objectPoints,
         completeSymm(JtJN, false);
         //TODO: try DECOMP_CHOLESKY maybe?
         cv::invert(JtJN, JtJinv, DECOMP_EIG);
-        // Read about Cramer-Rao lower bound to understand how stddevs are calculated:
-        // https://en.wikipedia.org/wiki/Cram%C3%A9r%E2%80%93Rao_bound
-        // Note: these numbers make sense only when the optimization
-        // has converged to the minumum
-        int nErrors = total;
-        double sigma2 = norm(allErrors, NORM_L2SQR) / nErrors;
+        // an explanation of that denominator correction can be found here:
+        // R. Hartley, A. Zisserman, Multiple View Geometry in Computer Vision, 2004, section 5.1.3, page 134
+        // see the discussion for more details: https://github.com/opencv/opencv/pull/22992
+        int nErrors = 2 * total - nparams_nz;
+        if (nErrors > 0)
+        {
+            double sigma2 = norm(allErrors, NORM_L2SQR) / nErrors;
         int j = 0;
         for ( int s = 0; s < nparams; s++ )
-            if( report.found && mask[s] )
+            if( mask[s] )
             {
                 stdDevs.at<double>(s) = std::sqrt(JtJinv.at<double>(j,j) * sigma2);
                 j++;
             }
             else
                 stdDevs.at<double>(s) = 0.;
+        }
     }
 
     // 4. store the results
