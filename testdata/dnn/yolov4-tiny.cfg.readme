@@ -1,2 +1,3 @@
-[Origin](https://github.com/AlexeyAB/darknet/blob/3af6781de273fa01f4a535c8e40c5056e809e22f/cfg/yolov4-tiny.cfg)
-[License](https://github.com/AlexeyAB/darknet/blob/3af6781de273fa01f4a535c8e40c5056e809e22f/LICENSE)
+[Origin](https://github.com/AlexeyAB/darknet/blob/0faed3e60e52f742bbef43b83f6be51dd30f373e/cfg/yolov4-tiny.cfg)
+[License](https://github.com/AlexeyAB/darknet/blob/a298f94255a20a3198d80ea512755d9e5dddbf02/LICENSE)
+[Weights](https://github.com/AlexeyAB/darknet/releases/download/yolov4/yolov4-tiny.weights)
