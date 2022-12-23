@@ -943,11 +943,6 @@ models = [
         sha='1b4dd21a6baa5e3523156776970895bd3db6960a',
         filename='onnx/models/DB_TD500_resnet50.onnx'),
     Model(
-        name='YuNet',
-        url='https://github.com/ShiqiYu/libfacedetection.train/raw/1688402dbd9b9fc4a3a6793810f558b7407ff384/tasks/task1/onnx/yunet_120x160.onnx',
-        sha='dfe691ae0c8e38d39d1a437e3f7e5fda7b256bdd',
-        filename='onnx/models/yunet-202202.onnx'),
-    Model(
         name='face_recognizer_fast',
         url='https://drive.google.com/uc?export=dowload&id=1ClK9WiB492c5OZFKveF3XiHCejoOxINW',
         sha='12ff8b1f5c8bff62e8dd91eabdacdfc998be255e',
@@ -1040,6 +1035,11 @@ models = [
         url='https://storage.googleapis.com/mediapipe-assets/hair_segmentation.tflite?generation=1661875756623461',
         sha='bba28400dfc264b1ed7ee95df718fada1879644d',
         filename='tflite/hair_segmentation.tflite'),
+    Model(
+        name='YuNet',
+        url='https://github.com/ShiqiYu/libfacedetection.train/raw/02246e79b1e976c83d1e135a85e0628120c93769/onnx/yunet_s_640_640.onnx',
+        sha='acbe4b5976ade60c4b866a30d0720d71589c8bbc', 
+        filename='onnx/models/yunet-202303.onnx'),
 ]
 
 # Note: models will be downloaded to current working directory
