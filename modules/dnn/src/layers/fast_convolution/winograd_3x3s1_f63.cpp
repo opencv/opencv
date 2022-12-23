@@ -920,7 +920,7 @@ _fx_winograd_AtXA_8x8_f32(const float* inptr, int inpstep,
 #endif
 }
 
-int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv2d>& conv,
+int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv>& conv,
                   int ntasks, float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct)
 {
     Mat input = _input.getMat();
@@ -1144,7 +1144,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 
 #else
 
-int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv2d>& conv,
+int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv>& conv,
                   int ntasks, float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct)
 {
     return 0;
