@@ -59,7 +59,7 @@ class aruco_objdetect_test(NewOpenCVTests):
         img_marker = np.pad(img_marker, pad_width=offset, mode='constant', constant_values=255)
         gold_corners = np.array([[offset, offset],[marker_size+offset-1.0,offset],
                                  [marker_size+offset-1.0,marker_size+offset-1.0],
-                                 [offset, marker_size+offset-1.0]], dtype=float)
+                                 [offset, marker_size+offset-1.0]], dtype=np.float32)
         corners, ids, rejected = aruco_detector.detectMarkers(img_marker)
 
         self.assertEqual(1, len(ids))
@@ -133,7 +133,7 @@ class aruco_objdetect_test(NewOpenCVTests):
         for i in range(1, board_size[0]):
             for j in range(1, board_size[1]):
                 list_gold_corners.append((j*cell_size, i*cell_size))
-        gold_corners = np.array(list_gold_corners, dtype=float)
+        gold_corners = np.array(list_gold_corners, dtype=np.float32)
 
         charucoCorners, charucoIds, markerCorners, markerIds = charuco_detector.detectBoard(image)
 
