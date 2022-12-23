@@ -36,9 +36,9 @@ public:
      *
      * This function return the image of the GridBoard, ready to be printed.
      */
-    CV_WRAP virtual void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const;
+    CV_WRAP void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const;
 
-    /** @brief Provide way to create Board by passing necessary data. Specially needed in Python.
+    /** @brief Provide way to create Board by passing necessary data. Works with GridBoard, CharucoBoard classes.
      *
      * @param objPoints array of object points of all the marker corners in the board
      * @param dictionary the dictionary of markers employed for this board
@@ -75,12 +75,14 @@ public:
      * image points and object points to call solvePnP()
      *
      * @param detectedCorners List of detected marker corners of the board.
-     * @param detectedIds List of identifiers for each marker.
+     * For CharucoBoard class you can set list of charuco corners.
+     * @param detectedIds List of identifiers for each marker or list of charuco identifiers for each corner.
+     * For CharucoBoard class you can set list of charuco identifiers for each corner.
      * @param objPoints Vector of vectors of board marker points in the board coordinate space.
      * @param imgPoints Vector of vectors of the projections of board marker corner points.
      */
-    CV_WRAP virtual void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
-                                          OutputArray objPoints, OutputArray imgPoints) const;
+    CV_WRAP void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
+                                  OutputArray objPoints, OutputArray imgPoints) const;
     virtual ~Board();
 
     struct BoardImpl;
@@ -97,18 +99,6 @@ class CV_EXPORTS_W GridBoard : public Board {
 protected:
     GridBoard();
 public:
-    /** @brief Draw a GridBoard
-     *
-     * @param outSize size of the output image in pixels.
-     * @param img output image with the board. The size of this image will be outSize
-     * and the board will be on the center, keeping the board proportions.
-     * @param marginSize minimum margins (in pixels) of the board in the output image
-     * @param borderBits width of the marker borders.
-     *
-     * This function return the image of the GridBoard, ready to be printed.
-     */
-    CV_WRAP void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const CV_OVERRIDE;
-
     /**
      * @brief Create a GridBoard object
      *
@@ -156,20 +146,6 @@ class CV_EXPORTS_W CharucoBoard : public Board {
 protected:
     CharucoBoard();
 public:
-
-    /** @brief Draw a ChArUco board
-     *
-     * @param outSize size of the output image in pixels.
-     * @param img output image with the board. The size of this image will be outSize
-     * and the board will be on the center, keeping the board proportions.
-     * @param marginSize minimum margins (in pixels) of the board in the output image
-     * @param borderBits width of the marker borders.
-     *
-     * This function return the image of the ChArUco board, ready to be printed.
-     */
-    CV_WRAP void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const CV_OVERRIDE;
-
-
     /** @brief Create a CharucoBoard object
      *
      * @param squaresX number of chessboard squares in X direction
@@ -216,16 +192,6 @@ public:
      */
     CV_WRAP bool checkCharucoCornersCollinear(InputArray charucoIds) const;
 
-    /** @brief Given a board configuration and a set of detected markers, returns the corresponding
-     * image points and object points to call solvePnP()
-     *
-     * @param detectedCorners List of detected marker corners  or list of charuco corners.
-     * @param detectedIds List of identifiers for each marker or list of charuco identifiers for each corner.
-     * @param objPoints Vector of vectors of board marker points in the board coordinate space.
-     * @param imgPoints Vector of vectors of the projections of board marker corner points.
-     */
-    CV_WRAP void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
-                                  OutputArray objPoints, OutputArray imgPoints) const override;
 };
 
 //! @}
