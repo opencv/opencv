@@ -422,19 +422,19 @@ TEST_F(fisheyeTest, stereoRectify)
         0.002076471801477729, 0.006463478587068991, 0.9999769555891836
     );
     cv::Matx34d P1_ref(
-        420.8551870450913, 0, 586.501617798451, 0,
-        0, 420.8551870450913, 374.7667511986098, 0,
+        420.9684016542647, 0, 586.3059567784627, 0,
+        0, 420.9684016542647, 374.8571836462291, 0,
         0, 0, 1, 0
     );
     cv::Matx34d P2_ref(
-        420.8551870450913, 0, 586.501617798451, -41.77758076597302,
-        0, 420.8551870450913, 374.7667511986098, 0,
+        420.9684016542647, 0, 586.3059567784627, -41.78881938824554,
+        0, 420.9684016542647, 374.8571836462291, 0,
         0, 0, 1, 0
     );
     cv::Matx44d Q_ref(
-        1, 0, 0, -586.501617798451,
-        0, 1, 0, -374.7667511986098,
-        0, 0, 0, 420.8551870450913,
+        1, 0, 0, -586.3059567784627,
+        0, 1, 0, -374.8571836462291,
+        0, 0, 0, 420.9684016542647,
         0, 0, 10.07370889670733, -0
     );
 
@@ -489,7 +489,9 @@ TEST_F(fisheyeTest, stereoRectify)
         cv::Mat rectification;
         merge4(l, r, lundist, rundist, rectification);
 
-        cv::imwrite(cv::format("fisheye_rectification_AB_%03d.png", i), rectification);
+        // Add the "--test_debug" to arguments for file output
+        if (cvtest::debugLevel > 0)
+            cv::imwrite(cv::format("fisheye_rectification_AB_%03d.png", i), rectification);
     }
 }
 
@@ -683,13 +685,13 @@ TEST_F(fisheyeTest, estimateNewCameraMatrixForUndistortRectify)
 
     cv::Mat K_new_truth(3, 3, cv::DataType<double>::type);
 
-    K_new_truth.at<double>(0, 0) = 387.4809086880343;
+    K_new_truth.at<double>(0, 0) = 387.5118215642316;
     K_new_truth.at<double>(0, 1) = 0.0;
-    K_new_truth.at<double>(0, 2) = 1036.669802754649;
+    K_new_truth.at<double>(0, 2) = 1033.936556777084;
 
     K_new_truth.at<double>(1, 0) = 0.0;
-    K_new_truth.at<double>(1, 1) = 373.6375700303157;
-    K_new_truth.at<double>(1, 2) = 538.8373261247601;
+    K_new_truth.at<double>(1, 1) = 373.6673784974842;
+    K_new_truth.at<double>(1, 2) = 538.794152656429;
 
     K_new_truth.at<double>(2, 0) = 0.0;
     K_new_truth.at<double>(2, 1) = 0.0;
