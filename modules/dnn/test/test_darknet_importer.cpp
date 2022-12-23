@@ -638,6 +638,11 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     double scoreDiff = 8e-5, iouDiff = 3e-4;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2022010000)
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            scoreDiff = 0.009;
+        else
+#endif
         scoreDiff = 0.006;
         iouDiff = 0.042;
     }
@@ -771,6 +776,7 @@ TEST_P(Test_Darknet_nets, YOLOv4)
     // accuracy (batch 2)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
     {
+        scoreDiff = 0.008f;
         iouDiff = 0.05f;
     }
     // accuracy

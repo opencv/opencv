@@ -275,19 +275,17 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                       (netInputLayer->outNames.size() == ld.outputBlobsWrappers.size()));
             for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
             {
-                InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
                 std::string outputName = netInputLayer->outNames.empty() ? ld.name : netInputLayer->outNames[i];
                 outputName = ld.outputBlobsWrappers.size() > 1 ? (outputName + "." + std::to_string(i)) : outputName;
-                dataPtr->setName(outputName);
+                ld.outputBlobsWrappers[i].dynamicCast<NgraphBackendWrapper>()->name = outputName;
             }
         }
         else
         {
             for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
             {
-                InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
                 std::string outputName = ld.outputBlobsWrappers.size() > 1 ? (ld.name + "." + std::to_string(i)) : ld.name;
-                dataPtr->setName(outputName);
+                ld.outputBlobsWrappers[i].dynamicCast<NgraphBackendWrapper>()->name = outputName;
             }
         }
     }
@@ -311,26 +309,7 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
             {
                 for (int i = 0; i < ld.inputBlobsWrappers.size(); ++i)
                 {
-                    InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.inputBlobsWrappers[i]);
-                    dataPtr->setName(netInputLayer->outNames[i]);
-                }
-            }
-            else
-            {
-                for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
-                {
-                    auto it = ienet.outputsDesc.find(ld.name);
-                    if (it != ienet.outputsDesc.end())
-                    {
-                        const InferenceEngine::TensorDesc& descriptor = it->second;
-                        InferenceEngine::DataPtr dataPtr = ngraphDataOutputNode(ld.outputBlobsWrappers[i], descriptor, ld.name);
-                        dataPtr->setName(ld.name);
-                    }
-                    else
-                    {
-                        InferenceEngine::DataPtr dataPtr = ngraphDataNode(ld.outputBlobsWrappers[i]);
-                        dataPtr->setName(ld.name);
-                    }
+                    ld.inputBlobsWrappers[i].dynamicCast<NgraphBackendWrapper>()->name = netInputLayer->outNames[i];
                 }
             }
             ienet.addBlobs(ld.inputBlobsWrappers);
@@ -456,10 +435,10 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                                                                  dynamicCast<NgraphBackendWrapper>();
                     CV_Assert(!inpWrapper.empty());
                     auto iter = std::find(inputNames.begin(), inputNames.end(),
-                            inpWrapper->dataPtr->getName());
+                            inpWrapper->name);
                     if (iter == inputNames.end())
                     {
-                        inputNames.push_back(inpWrapper->dataPtr->getName());
+                        inputNames.push_back(inpWrapper->name);
                         inputs.push_back(inpLd.outputBlobs[cons_inp]);
                     }
                     curr_pos = cons + 1;
@@ -505,7 +484,12 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 CV_LOG_DEBUG(NULL, "DNN/IE: bind output port " << lid << ":" << oid << " (" << ngraph_input_node->get_friendly_name() << ":" << ngraph_input_node->get_type_info().name << ")");
 
                 // Handle parameters from other subnets. Output port is not used in this case
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
                 if ((ngraph::op::is_parameter(ngraph_input_node) || ngraph::op::is_constant(ngraph_input_node)) &&
+#else
+                if ((ngraph_input_node->is_parameter() || ngraph_input_node->is_constant()) &&
+#endif
+
                         ngraph_input_node->get_output_size() == 1)
                 {
                     inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(ngraph_input_node));
@@ -702,13 +686,32 @@ Net NetImplOpenVINO::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork
 
     CV_TRACE_REGION("register_inputs");
 
+    auto ngraphFunction = ieNet.getFunction();
+    CV_Assert(ngraphFunction);
+
     std::vector<String> inputsNames;
     std::vector<MatShape> inp_shapes;
-    for (auto& it : ieNet.getInputsInfo())
+    for (auto& it : ngraphFunction->get_parameters())
     {
-        inputsNames.push_back(it.first);
-        std::vector<size_t> dims = it.second->getTensorDesc().getDims();
+        inputsNames.push_back(it->get_friendly_name());
+        std::vector<size_t> dims = it->get_shape();
         inp_shapes.push_back(std::vector<int>(dims.begin(), dims.end()));
+    }
+    // nGraph models produce output "Result" layers which have "/sink_port" suffix in their names.
+    // Their inputs are actual model outputs and we change friendly name to it.
+    // By this workaround, we produce similar outputs names comparing to ieNet.getOutputsInfo()
+    for (int i = 0; i < ngraphFunction->get_output_size(); ++i) {
+        auto res = ngraphFunction->output(i);
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+        const std::string& name = res.get_any_name();
+#else
+        auto out = res.get_node()->input(0).get_source_output();
+        std::string name = out.get_node()->get_friendly_name();
+        if (out.get_node()->get_output_size() > 1)
+            name += "." + std::to_string(out.get_index());
+#endif
+        if (res.get_node()->get_friendly_name() != name)
+            res.get_node()->set_friendly_name(name);
     }
 
     Net cvNet;
@@ -736,17 +739,15 @@ Net NetImplOpenVINO::createNetworkFromModelOptimizer(InferenceEngine::CNNNetwork
 
     CV_TRACE_REGION_NEXT("register_outputs");
 
-    auto ngraphFunction = ieNet.getFunction();
-    CV_Assert(ngraphFunction);
     std::vector<std::shared_ptr<ngraph::Node>> ngraphOperations = ngraphFunction->get_ops();
 
-    for (auto& it : ieNet.getOutputsInfo())
+    for (auto& it : ngraphFunction->get_results())
     {
         CV_TRACE_REGION("output");
-        const auto& outputName = it.first;
+        const auto& outputName = it->get_friendly_name();
 
         LayerParams lp;
-        int lid = cvNet.addLayer(it.first, "", lp);
+        int lid = cvNet.addLayer(outputName, "", lp);
 
         LayerData& ld = openvino_impl.layers[lid];
 
@@ -835,10 +836,15 @@ Net openvino_readNetwork(
     InferenceEngine::CNNNetwork ieNet;
     try
     {
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+        ov::Tensor weights_blob(ov::element::u8, {bufferWeightsSize}, (void*)bufferWeightsPtr);
+        ieNet = ie.read_model(model, weights_blob);
+#else
         InferenceEngine::TensorDesc tensorDesc(InferenceEngine::Precision::U8, { bufferWeightsSize }, InferenceEngine::Layout::C);
         InferenceEngine::Blob::CPtr weights_blob = InferenceEngine::make_shared_blob<uint8_t>(tensorDesc, (uint8_t*)bufferWeightsPtr, bufferWeightsSize);
 
         ieNet = ie.ReadNetwork(model, weights_blob);
+#endif
     }
     catch (const std::exception& e)
     {

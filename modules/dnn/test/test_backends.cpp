@@ -531,7 +531,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         l1 = 0.4;
-        lInf = 7.45;
+        lInf = 7.46;
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {

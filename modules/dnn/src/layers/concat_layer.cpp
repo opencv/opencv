@@ -403,8 +403,7 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        InferenceEngine::DataPtr data = ngraphDataNode(inputs[0]);
-        const int numDims = data->getDims().size();
+        const int numDims = nodes[0].dynamicCast<InfEngineNgraphNode>()->node->get_shape().size();
         const int cAxis = normalize_axis(axis, numDims);
         std::vector<size_t> maxDims(numDims, 0);
 
@@ -412,16 +411,17 @@ public:
         ngraph::OutputVector inp_nodes;
         for (int i = 0; i < nodes.size(); ++i)
         {
-            inp_nodes.push_back(nodes[i].dynamicCast<InfEngineNgraphNode>()->node);
+            auto inp = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
+            inp_nodes.push_back(inp);
 
-            std::vector<size_t> inpShape = ngraphDataNode(inputs[i])->getDims();
+            std::vector<size_t> inpShape = inp->get_shape();
             for (int i = 0; i < numDims; ++i)
                 maxDims[i] = std::max(maxDims[i], inpShape[i]);
         }
         for (int i = 0; i < inp_nodes.size(); ++i)
         {
             bool needPadding = false;
-            std::vector<size_t> inpShape = ngraphDataNode(inputs[i])->getDims();
+            std::vector<size_t> inpShape = inp_nodes[i].get_shape();
             std::vector<int64_t> begins(inpShape.size(), 0), ends(inpShape.size(), 0);
             for (int j = 0; j < inpShape.size(); ++j)
             {

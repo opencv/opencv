@@ -438,6 +438,9 @@ TEST_P(DNNTestOpenVINO, models)
     {
         auto dstIt = cvOutputsMap.find(srcIt.first);
         CV_Assert(dstIt != cvOutputsMap.end());
+
+        dstIt->second.convertTo(dstIt->second, srcIt.second.type());
+
         double normInf = cvtest::norm(srcIt.second, dstIt->second, cv::NORM_INF);
         EXPECT_LE(normInf, eps) << "output=" << srcIt.first;
     }

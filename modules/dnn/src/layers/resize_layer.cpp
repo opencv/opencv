@@ -401,6 +401,24 @@ public:
 #else
         ngraph::op::v4::Interpolate::InterpolateAttrs attrs;
 
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+        if (interpolation == "nearest") {
+            attrs.mode = ngraph::op::v4::Interpolate::InterpolateMode::NEAREST;
+            attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::HALF_PIXEL;
+        } else if (interpolation == "bilinear") {
+            attrs.mode = ngraph::op::v4::Interpolate::InterpolateMode::LINEAR_ONNX;
+            attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::ASYMMETRIC;
+        } else {
+            CV_Error(Error::StsNotImplemented, format("Unsupported interpolation: %s", interpolation.c_str()));
+        }
+        attrs.shape_calculation_mode = ngraph::op::v4::Interpolate::ShapeCalcMode::SIZES;
+
+        if (alignCorners) {
+            attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::ALIGN_CORNERS;
+        }
+
+        attrs.nearest_mode = ngraph::op::v4::Interpolate::NearestMode::ROUND_PREFER_FLOOR;
+#else
         if (interpolation == "nearest") {
             attrs.mode = ngraph::op::v4::Interpolate::InterpolateMode::nearest;
             attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::half_pixel;
@@ -417,6 +435,7 @@ public:
         }
 
         attrs.nearest_mode = ngraph::op::v4::Interpolate::NearestMode::round_prefer_floor;
+#endif // OpenVINO >= 2022.1
 
         std::vector<int64_t> shape = {outHeight, outWidth};
         auto out_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, shape.data());

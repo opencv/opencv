@@ -1292,7 +1292,7 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         ASSERT_EQ(net.getLayer(outLayers[0])->type, "Convolution");
     else
-        ASSERT_EQ(net.getLayer(outLayers[0])->type, "Add");
+        ASSERT_EQ(net.getLayer(outLayers[0])->type, "Result");
 }
 
 TEST_P(Layer_Test_Convolution_DLDT, setInput_uint8)
