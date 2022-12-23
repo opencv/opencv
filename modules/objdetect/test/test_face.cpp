@@ -65,20 +65,16 @@ TEST(Objdetect_face_detection, regression)
 {
     // Pre-set params
     float scoreThreshold = 0.7f;
-    float matchThreshold = 0.9f;
-    float l2disThreshold = 5.0f;
+    float matchThreshold = 0.7f;
+    float l2disThreshold = 15.0f;
     int numLM = 5;
     int numCoords = 4 + 2 * numLM;
 
     // Load ground truth labels
     std::map<std::string, Mat> gt = blobFromTXT(findDataFile("dnn_face/detection/cascades_labels.txt"), numCoords);
-    // for (auto item: gt)
-    // {
-    //     std::cout << item.first << " " << item.second.size() << std::endl;
-    // }
 
     // Initialize detector
-    std::string model = findDataFile("dnn/onnx/models/yunet-202202.onnx", false);
+    std::string model = findDataFile("dnn/onnx/models/yunet-202303.onnx", false);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(model, "", Size(300, 300));
     faceDetector->setScoreThreshold(0.7f);
 
@@ -137,6 +133,7 @@ TEST(Objdetect_face_detection, regression)
                         lmMatched[lmIdx] = true;
                     }
                 }
+                break;
             }
             EXPECT_TRUE(boxMatched) << "In image " << item.first << ", cannot match resBox " << resBox << " with any ground truth.";
             if (boxMatched)
@@ -178,7 +175,7 @@ TEST(Objdetect_face_recognition, regression)
     }
 
     // Initialize detector
-    std::string detect_model = findDataFile("dnn/onnx/models/yunet-202202.onnx", false);
+    std::string detect_model = findDataFile("dnn/onnx/models/yunet-202303.onnx", false);
     Ptr<FaceDetectorYN> faceDetector = FaceDetectorYN::create(detect_model, "", Size(150, 150), score_thresh, nms_thresh);
 
     std::string recog_model = findDataFile("dnn/onnx/models/face_recognizer_fast.onnx", false);
