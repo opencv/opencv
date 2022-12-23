@@ -111,13 +111,10 @@ Check @ref tutorial_dnn_face "the corresponding tutorial" for more details.
         Square fiducial markers (also known as Augmented Reality Markers) are useful for easy,
         fast and robust camera pose estimation.
 
-        The main functionality of ArucoDetector class is detection of markers in an image. There are even more
-        functionalities implemented in the aruco contrib module (files aruco.hpp, charuco.hpp, aruco_calib.hpp):
-        - Pose estimation from a single marker or from a board/set of markers
-        - Detection of ChArUco board for high subpixel accuracy
-        - Camera calibration from both, ArUco boards and ChArUco boards.
-        - Detection of ChArUco diamond markers
-        The functionalities from the aruco contrib module is planned to be transferred to the main repository.
+        The main functionality of ArucoDetector class is detection of markers in an image. If the markers are grouped
+        as a board, then you can try to recover the missing markers with ArucoDetector::refineDetectedMarkers().
+        ArUco markers can also be used for advanced chessboard corner finding. To do this, group the markers in the
+        CharucoBoard and find the corners of the chessboard with the CharucoDetector::detectBoard().
 
         The implementation is based on the ArUco Library by R. Muñoz-Salinas and S. Garrido-Jurado @cite Aruco2014.
 

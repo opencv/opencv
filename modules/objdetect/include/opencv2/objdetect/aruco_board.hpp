@@ -72,7 +72,7 @@ public:
     CV_WRAP const Point3f& getRightBottomCorner() const;
 
     /** @brief Given a board configuration and a set of detected markers, returns the corresponding
-     * image points and object points to call solvePnP
+     * image points and object points to call solvePnP()
      *
      * @param detectedCorners List of detected marker corners of the board.
      * @param detectedIds List of identifiers for each marker.
@@ -217,7 +217,7 @@ public:
     CV_WRAP bool checkCharucoCornersCollinear(InputArray charucoIds) const;
 
     /** @brief Given a board configuration and a set of detected markers, returns the corresponding
-     * image points and object points to call solvePnP
+     * image points and object points to call solvePnP()
      *
      * @param detectedCorners List of detected marker corners  or list of charuco corners.
      * @param detectedIds List of identifiers for each marker or list of charuco identifiers for each corner.
