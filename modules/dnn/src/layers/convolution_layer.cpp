@@ -571,12 +571,14 @@ public:
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
+        if (!blobs.empty() && weightsMat.empty())
+            alignWeights(blobs[0], blobs.size() > 1 ? blobs[1] : Mat());
         BaseConvolutionLayerImpl::finalize(inputs_arr, outputs_arr);
 
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
-        if (inputs.size() == 3) {
-            alignWeights(inputs[1], inputs[2]);
+        if (inputs.size() > 1) {
+            alignWeights(inputs[1], (inputs.size() > 2 ? inputs[2] : Mat()));
         }
 #ifdef HAVE_TENGINE
         if(NULL != tengine_graph )
@@ -706,6 +708,8 @@ public:
 
     virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
     {
+        if (!blobs.empty() && weightsMat.empty())
+            alignWeights(blobs[0], blobs.size() > 1 ? blobs[1] : Mat());
 #ifdef HAVE_CUDA
         if(IS_DNN_CUDA_TARGET(preferableTarget))
         {
