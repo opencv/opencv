@@ -251,7 +251,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv4_tiny)
     cvtColor(sample, sample, COLOR_BGR2RGB);
     Mat inp;
     sample.convertTo(inp, CV_32FC3, 1.0f / 255, 0);
-    processNet("dnn/yolov4-tiny.weights", "dnn/yolov4-tiny.cfg", "", inp);
+    processNet("dnn/yolov4-tiny-2020-12.weights", "dnn/yolov4-tiny-2020-12.cfg", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)
