@@ -404,6 +404,12 @@ static double calibrateCameraInternal( const Mat& objectPoints,
         mask[nparams - 1] = 0;
     }
 
+    int nparams_nz = countNonZero(mask);
+
+    if (nparams_nz > 2 * total)
+        CV_Error_(Error::StsBadArg,
+                  ("There should be less vars to optimize (having %d) than the number of residuals (%d = 2 per point)", nparams_nz, 2 * total));
+
     // 2. initialize extrinsic parameters
     for(int i = 0, pos = 0; i < nimages; i++ )
     {
@@ -572,7 +578,6 @@ static double calibrateCameraInternal( const Mat& objectPoints,
 
     if (!stdDevs.empty())
     {
-        int nparams_nz = countNonZero(mask);
         JtJN.create(nparams_nz, nparams_nz, CV_64F);
 
         subMatrix(JtJ, JtJN, mask, mask);
