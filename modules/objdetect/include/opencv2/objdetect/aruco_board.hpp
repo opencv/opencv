@@ -174,9 +174,9 @@ public:
      *
      * @param squaresX number of chessboard squares in X direction
      * @param squaresY number of chessboard squares in Y direction
-     * @param squareLength chessboard square side length (normally in meters)
+     * @param squareLength squareLength chessboard square side length (normally in meters)
      * @param markerLength marker side length (same unit than squareLength)
-     * @param dictionary dictionary of markers indicating the type of markers.
+     * @param dictionary dictionary of markers indicating the type of markers
      * @param ids array of id used markers
      * The first markers in the dictionary are used to fill the white chessboard squares.
      * @return the output CharucoBoard object
@@ -219,8 +219,8 @@ public:
     /** @brief Given a board configuration and a set of detected markers, returns the corresponding
      * image points and object points to call solvePnP
      *
-     * @param detectedCorners List of detected marker corners of the board.
-     * @param detectedIds List of identifiers for each marker.
+     * @param detectedCorners List of detected marker corners  or list of charuco corners.
+     * @param detectedIds List of identifiers for each marker or list of charuco identifiers for each corner.
      * @param objPoints Vector of vectors of board marker points in the board coordinate space.
      * @param imgPoints Vector of vectors of the projections of board marker corner points.
      */
