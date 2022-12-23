@@ -6,6 +6,7 @@
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
 #include "../op_cann.hpp"
+#include "../ie_ngraph.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -104,6 +105,12 @@ public:
             return op == OPERATION::ADD || op == OPERATION::PROD || op == OPERATION::DIV ||
                    op == OPERATION::DIV || op == OPERATION::MAX  || op == OPERATION::MIN;
 #endif
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return (op == OPERATION::ADD ||
+                    op == OPERATION::PROD ||
+                    op == OPERATION::GREATER_EQUAL ||
+                    op == OPERATION::LESS_EQUAL
+            );
         if (op == OPERATION::MAX || op == OPERATION::MIN || op == OPERATION::SUM ||
             op == OPERATION::PROD || op == OPERATION::DIV)
             return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
@@ -743,6 +750,37 @@ public:
         CV_Assert(inputs.size());
         return inputs.size() * total(outputs[0]);
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(inputs.size() == 2);
+        auto& inp0 = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto& inp1 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+
+        if (inp0->get_element_type() != inp1->get_element_type()) {
+            auto dtype = preferableTarget == DNN_TARGET_OPENCL_FP16 || preferableTarget == DNN_TARGET_MYRIAD ?
+                        ngraph::element::f16 : ngraph::element::f32;
+            if (inp0->get_element_type() != dtype)
+                inp0 = std::make_shared<ngraph::op::v0::Convert>(inp0, dtype);
+            if (inp1->get_element_type() != dtype)
+                inp1 = std::make_shared<ngraph::op::v0::Convert>(inp1, dtype);
+        }
+
+        std::shared_ptr<ngraph::Node> node;
+        if (op == OPERATION::ADD)
+            node = std::make_shared<ngraph::op::v1::Add>(inp0, inp1);
+        else if (op == OPERATION::PROD)
+            node = std::make_shared<ngraph::op::v1::Multiply>(inp0, inp1);
+        else if (op == OPERATION::GREATER_EQUAL)
+            node = std::make_shared<ngraph::op::v1::GreaterEqual>(inp0, inp1);
+        else if (op == OPERATION::LESS_EQUAL)
+            node = std::make_shared<ngraph::op::v1::LessEqual>(inp0, inp1);
+        else
+            CV_Error(Error::StsNotImplemented, "Operation is not implemented for nGraph backend");
+        return Ptr<BackendNode>(new InfEngineNgraphNode(node));
+    }
+#endif
 };
 
 Ptr<NaryEltwiseLayer> NaryEltwiseLayer::create(const LayerParams& params)
