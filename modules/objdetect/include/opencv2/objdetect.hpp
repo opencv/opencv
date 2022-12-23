@@ -105,7 +105,7 @@ using a Boosted Cascade of Simple Features. IEEE CVPR, 2001. The paper is availa
     @defgroup objdetect_dnn_face DNN-based face detection and recognition
 Check @ref tutorial_dnn_face "the corresponding tutorial" for more details.
     @defgroup objdetect_common Common functions and classes
-    @defgroup objdetect_aruco Aruco markers and boards detection for robust camera pose estimation.
+    @defgroup objdetect_aruco ArUco markers and boards detection for robust camera pose estimation
     @{
         ArUco Marker Detection
         Square fiducial markers (also known as Augmented Reality Markers) are useful for easy,
