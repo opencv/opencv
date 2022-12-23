@@ -9,7 +9,7 @@ single pose for the camera.
 
 The most popular board is the one with all the markers in the same plane, since it can be easily printed:
 
-![](images/gboriginal.png)
+![](images/gboriginal.jpg)
 
 However, boards are not limited to this arrangement and can represent any 2d or 3d layout.
 
@@ -85,7 +85,7 @@ The ```drawFrameAxes()``` function can be used to check the obtained pose. For i
 
 And this is another example with the board partially occluded:
 
-![Board with occlusions](images/gbocclusion.png)
+![Board with occlusions](images/gbocclusion.jpg)
 @note The center and direction of the axes has been changed
 
 As it can be observed, although some markers have not been detected, the Board pose can still be estimated from the rest of markers.
@@ -103,7 +103,7 @@ easily.
 The ```GridBoard``` class is a specialized class that inherits from the ```Board``` class and which represents a Board
 with all the markers in the same plane and in a grid layout, as in the following image:
 
-![Image with aruco board](images/gboriginal.png)
+![Image with aruco board](images/gboriginal.jpg)
 
 Concretely, the coordinate system in a Grid Board is positioned in the board plane, centered in the bottom left
 corner of the board and with the Z pointing out, like in the following image (X:red, Y:green, Z:blue):
@@ -227,7 +227,7 @@ A full working example is included in the `detect_board.cpp` inside the `modules
 Note: The samples now take input via commandline via the [OpenCV Commandline Parser](http://docs.opencv.org/trunk/d0/d2e/classcv_1_1CommandLineParser.html#gsc.tab=0). For this file the example parameters will look like
 @code{.cpp}
     -w=5 -h=7 -l=100 -s=10
-    -v=/path_to_aruco_tutorials/aruco_board_detection/images/gboriginal.png
+    -v=/path_to_aruco_tutorials/aruco_board_detection/images/gboriginal.jpg
     -c=/path_to_aruco_samples/tutorial_camera_params.yml
     -cd=/path_to_aruco_samples/tutorial_dict.yml
 @endcode
