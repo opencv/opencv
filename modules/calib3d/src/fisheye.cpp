@@ -388,7 +388,7 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
 
         if (theta_d > 1e-8)
         {
-            // compensate distortion iteratively
+            // compensate distortion iteratively using Newton method
             double theta = theta_d;
 
             const double EPS = 1e-8; // or std::numeric_limits<double>::epsilon();
@@ -572,7 +572,7 @@ void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
                                                 : K.getMat().at<double>(0,0)/K.getMat().at<double>(1,1);
 
     // convert to identity ratio
-    cn[0] *= aspect_ratio;
+    cn[1] *= aspect_ratio;
     for(size_t i = 0; i < points.total(); ++i)
         pptr[i][1] *= aspect_ratio;
 
