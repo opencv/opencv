@@ -853,9 +853,9 @@ public:
  *
  *  Nano tracker is much faster and extremely lightweight due to special model structure, the whole model size is about 1.9 MB.
  *  Nano tracker needs two models: one for feature extraction (backbone) and the another for localization (neckhead).
- *  Please download these two onnx models at:https://github.com/HonglinChu/SiamTrackers/tree/master/NanoTrack/models/nanotrackv2.
+ *  Model download link: https://github.com/HonglinChu/SiamTrackers/tree/master/NanoTrack/models/nanotrackv2
  *  Original repo is here: https://github.com/HonglinChu/NanoTrack
- *  Author:HongLinChu, 1628464345@qq.com
+ *  Author: HongLinChu, 1628464345@qq.com
  */
 class CV_EXPORTS_W TrackerNano : public Tracker
 {
