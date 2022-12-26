@@ -228,13 +228,9 @@ public:
             EXPECT_EQ(frame_count, 125);
         Mat img;
 
-#ifdef _WIN32  // handle old FFmpeg wrapper on Windows till rebuild
-        frame_count = 10;
-#else
         // HACK: FFmpeg reports picture_pts = AV_NOPTS_VALUE_ for the last frame for AVI container by some reason
         if ((ext == "avi") && (apiPref == CAP_FFMPEG))
             frame_count--;
-#endif
 
         for (int i = 0; i < frame_count; i++)
         {
