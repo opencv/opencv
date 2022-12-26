@@ -83,8 +83,8 @@ public:
       if (p.thresholdStep <= 0)
           CV_Error(Error::StsBadArg, "thresholdStep>0");
 
-      if (p.minThreshold > p.maxThreshold || p.minThreshold <= 0)
-          CV_Error(Error::StsBadArg, "0<minThreshold<=maxThreshold");
+      if (p.minThreshold > p.maxThreshold || p.minThreshold < 0)
+          CV_Error(Error::StsBadArg, "0<=minThreshold<=maxThreshold");
 
       if (p.minDistBetweenBlobs <=0 )
           CV_Error(Error::StsBadArg, "minDistBetweenBlobs>0");
