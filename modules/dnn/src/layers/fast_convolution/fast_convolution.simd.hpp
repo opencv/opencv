@@ -11,9 +11,132 @@
 namespace cv {
 namespace dnn {
 
-void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool init_c)
+static void convBlockMR1NoSIMD(int np, const float* a, const float* b, float *c, const float bias, bool init_c,
+                               const float minval, const float maxval, bool ifMinMaxAct, const int outLen)
 {
-#if CV_SIMD128 && CONV_MR == 4 && CONV_NR == 24
+    std::vector<float> cbuffer(outLen, 0);
+    float* cbuf = cbuffer.data();
+    for( int p = 0; p < np; p++ )
+    {
+        float ai = a[p];
+        for( int j = 0; j < outLen; j++ )
+            cbuf[j] += b[CONV_NR*p + j] * ai;
+    }
+
+    if (init_c)
+    {
+        for(int j = 0; j < outLen; j++)
+        {
+            c[j] += cbuf[j] + bias;
+            if (ifMinMaxAct)
+                c[j] = std::min(std::max(c[j], minval), maxval);
+        }
+    }
+    else
+    {
+        for(int j = 0; j < outLen; j++)
+        {
+            c[j] = cbuf[j] + bias;
+            if (ifMinMaxAct)
+                c[j] = std::min(std::max(c[j], minval), maxval);
+        }
+    }
+}
+
+void convBlockMR1(int np, const float* a, const float* b, float *c, const float bias, bool init_c,
+                  const float minval, const float maxval, bool ifMinMaxAct, const int outLen)
+{
+#if CV_SIMD128
+    // The outLen represents the valid output value in CONV_NR length.
+    // When outLen is very small, we use the no-SIMD branch.
+    const int CONV_NRby3 = CONV_NR/3;
+    if (outLen > CONV_NRby3)
+    {
+        v_float32x4 c0  = v_setall_f32(bias), c1 = c0, c2 = c0; // CONV_NR == 12
+#if CONV_NR == 28 || CONV_NR == 24
+        v_float32x4 c3 = c0, c4 = c0, c5 = c0;
+#endif
+#if CONV_NR == 28
+        v_float32x4 c6 = c0;
+#endif
+        for (int p = 0; p < np; p++, a++, b += CONV_NR)
+        {
+            v_float32x4 a0 = v_setall_f32(a[0]);
+            v_float32x4 b0 = v_load(b), b1 = v_load(b + 4), b2 = v_load(b + 8);
+#if CONV_NR == 28 || CONV_NR == 24
+            v_float32x4 b3 = v_load(b + 12), b4 = v_load(b + 16), b5 = v_load(b + 20);
+#endif
+#if CONV_NR == 28
+            v_float32x4 b6 = v_load(b + 24);
+#endif
+
+            c0 = v_fma(b0, a0, c0);
+            c1 = v_fma(b1, a0, c1);
+            c2 = v_fma(b2, a0, c2);
+#if CONV_NR == 28 || CONV_NR == 24
+            c3 = v_fma(b3, a0, c3);
+            c4 = v_fma(b4, a0, c4);
+            c5 = v_fma(b5, a0, c5);
+#endif
+#if CONV_NR == 28
+            c6 = v_fma(b6, a0, c6);
+#endif
+        }
+
+        if (init_c)
+        {
+            c0 += v_load(c);
+            c1 += v_load(c + 4);
+            c2 += v_load(c + 8);
+#if CONV_NR == 28 || CONV_NR == 24
+            c3 += v_load(c + 12);
+            c4 += v_load(c + 16);
+            c5 += v_load(c + 20);
+#endif
+#if CONV_NR == 28
+            c6  += v_load(c + 24);
+#endif
+        }
+
+        if (ifMinMaxAct)
+        {
+           v_float32x4 vmax = v_setall_f32(maxval), vmin = v_setall_f32(minval);
+           c0 = v_min(v_max(c0, vmin), vmax);
+           c1 = v_min(v_max(c1, vmin), vmax);
+           c2 = v_min(v_max(c2, vmin), vmax);
+#if CONV_NR == 28 || CONV_NR == 24
+           c3 = v_min(v_max(c3, vmin), vmax);
+           c4 = v_min(v_max(c4, vmin), vmax);
+           c5 = v_min(v_max(c5, vmin), vmax);
+#endif
+#if CONV_NR == 28
+            c6 = v_min(v_max(c6, vmin), vmax);
+#endif
+        }
+
+        v_store(c, c0);
+        v_store(c + 4, c1);
+        v_store(c + 8, c2);
+#if CONV_NR == 28 || CONV_NR == 24
+        v_store(c + 12, c3);
+        v_store(c + 16, c4);
+        v_store(c + 20, c5);
+#endif
+#if CONV_NR == 28
+        v_store(c + 24, c6);
+#endif
+     }
+     else
+         convBlockMR1NoSIMD(np, a, b, c, bias, init_c, minval, maxval, ifMinMaxAct, outLen);
+#else
+    convBlockMR1NoSIMD(np, a, b, c, bias, init_c, minval, maxval, ifMinMaxAct, outLen);
+#endif
+}
+
+#if CV_SIMD128
+#if CONV_MR == 4 && CONV_NR == 24
+static void convBlock4x24(int np, const float* a, const float* b, float* c, int ldc, bool init_c)
+{
     v_float32x4 c0  = v_setzero_f32(), c1 = c0, c2 = c0, c3 = c0, c4 = c0, c5 = c0;
     v_float32x4 c6  = v_setzero_f32(), c7 = c6, c8 = c6, c9 = c6, c10 = c6, c11 = c6;
     v_float32x4 c12 = v_setzero_f32(), c13 = c12, c14 = c12, c15 = c12, c16 = c12, c17 = c12;
@@ -115,29 +238,156 @@ void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool i
     v_store(c + ldc * 3 + 12, c21);
     v_store(c + ldc * 3 + 16, c22);
     v_store(c + ldc * 3 + 20, c23);
-#else
-    float cbuf[CONV_MR * CONV_NR];
-    memset(cbuf, 0, sizeof(cbuf));
+}
+#endif
+
+static void convBlock4x8(int np, const float* a, const float* b, float* c, int ldc, bool init_c)
+{
+    CV_Assert(CONV_NR >= 4);
+    v_float32x4 c0  = v_setzero_f32(), c1 = c0, c2 = c0, c3 = c0;
+    v_float32x4 c4 = c0, c5 = c0, c6 = c0, c7 = c0;
+
+    for (int p = 0; p < np; p++, a += CONV_MR, b += CONV_NR)
+    {
+        v_float32x4 a0 = v_setall_f32(a[0]);
+        v_float32x4 a1 = v_setall_f32(a[1]);
+        v_float32x4 a2 = v_setall_f32(a[2]);
+        v_float32x4 a3 = v_setall_f32(a[3]);
+
+        v_float32x4 b0 = v_load(b), b1 = v_load(b + 4);
+
+        c0 = v_fma(b0, a0, c0);
+        c1 = v_fma(b1, a0, c1);
+
+        c2 = v_fma(b0, a1, c2);
+        c3 = v_fma(b1, a1, c3);
+
+        c4 = v_fma(b0, a2, c4);
+        c5 = v_fma(b1, a2, c5);
+
+        c6  = v_fma(b0, a3, c6);
+        c7  = v_fma(b1, a3, c7);
+    }
+
+    if (!init_c)
+    {
+        c0 += v_load(c);
+        c1 += v_load(c + 4);
+
+        c2  += v_load(c + ldc);
+        c3  += v_load(c + ldc + 4);
+
+        c4 += v_load(c + ldc*2);
+        c5 += v_load(c + ldc*2 + 4);
+
+        c6 += v_load(c + ldc*3);
+        c7 += v_load(c + ldc*3 + 4);
+    }
+
+    v_store(c, c0);
+    v_store(c + 4, c1);
+    v_store(c + ldc, c2);
+    v_store(c + ldc + 4, c3);
+    v_store(c + ldc * 2, c4);
+    v_store(c + ldc * 2 + 4, c5);
+    v_store(c + ldc * 3, c6);
+    v_store(c + ldc * 3 + 4, c7);
+}
+
+static void convBlock4x4(int np, const float* a, const float* b, float* c, int ldc, bool init_c)
+{
+    CV_Assert(CONV_NR >= 4);
+    v_float32x4 c0  = v_setzero_f32(), c1 = c0, c2 = c0, c3 = c0;
+
+    for (int p = 0; p < np; p++, a += CONV_MR, b += CONV_NR)
+    {
+        v_float32x4 a0 = v_setall_f32(a[0]);
+        v_float32x4 a1 = v_setall_f32(a[1]);
+        v_float32x4 a2 = v_setall_f32(a[2]);
+        v_float32x4 a3 = v_setall_f32(a[3]);
+
+        v_float32x4 b0 = v_load(b);
+
+        c0 = v_fma(b0, a0, c0);
+        c1 = v_fma(b0, a1, c1);
+        c2 = v_fma(b0, a2, c2);
+        c3 = v_fma(b0, a3, c3);
+    }
+
+    if (!init_c)
+    {
+        c0 += v_load(c);
+        c1 += v_load(c + ldc);
+        c2 += v_load(c + ldc*2);
+        c3 += v_load(c + ldc*3);
+    }
+
+    v_store(c, c0);
+    v_store(c + ldc, c1);
+    v_store(c + ldc * 2, c2);
+    v_store(c + ldc * 3, c3);
+}
+#endif
+
+static void convBlockNoSIMD(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int outLen)
+{
+    std::vector<float> cbuffer(CONV_MR * outLen, 0);
+    float* cbuf = cbuffer.data();
     for( int p = 0; p < np; p++ )
     {
         for( int i = 0; i < CONV_MR; i++ )
         {
             float ai = a[CONV_MR*p + i];
-            for( int j = 0; j < CONV_NR; j++ )
-                cbuf[i * CONV_NR+j] += b[CONV_NR*p + j] * ai;
+            for( int j = 0; j < outLen; j++ )
+                cbuf[i * outLen+j] += b[CONV_NR*p + j] * ai;
         }
     }
-    if (!init_c) {
-        for(int i = 0; i < CONV_MR; i++) {
-            for(int j = 0; j < CONV_NR; j++)
-                c[i*ldc + j] += cbuf[i*CONV_NR + j];
-        }
-    } else {
-        for(int i = 0; i < CONV_MR; i++) {
-            for(int j = 0; j < CONV_NR; j++)
-                c[i*ldc + j] = cbuf[i*CONV_NR + j];
+
+    if (!init_c)
+    {
+        for(int i = 0; i < CONV_MR; i++)
+        {
+            for(int j = 0; j < outLen; j++)
+                c[i*ldc + j] += cbuf[i*outLen + j];
         }
     }
+    else
+    {
+        for(int i = 0; i < CONV_MR; i++)
+        {
+            for(int j = 0; j < outLen; j++)
+                c[i*ldc + j] = cbuf[i*outLen + j];
+        }
+    }
+}
+
+void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int outLen)
+{
+    // The possible outLen range is [24, 8~1].
+#if CV_SIMD128
+#if CONV_MR == 4 && CONV_NR == 24
+    const int CONV_NRby3 = CONV_NR/3;
+    if (outLen > CONV_NRby3)
+    {
+        convBlock4x24(np, a, b, c, ldc, init_c);
+        return;
+    }
+#endif
+
+    if (outLen <= 8 && outLen > 4)
+    {
+        convBlock4x8(np, a, b, c, ldc, init_c);
+        return;
+    }
+
+    if (outLen <= 4 && outLen > 1)
+    {
+        convBlock4x4(np, a, b, c, ldc, init_c);
+        return;
+    }
+    convBlockNoSIMD(np, a, b, c, ldc, init_c, outLen);
+#else
+    convBlockNoSIMD(np, a, b, c, ldc, init_c, outLen);
 #endif
 }
 } // namespace dnn
