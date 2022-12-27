@@ -1346,9 +1346,9 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
                       + format(" -D WT=%s -D convertToT=%s -D convertToWT=%s"
                                " -D convertToWT2=%s -D WT2=%s",
                                ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
-                               ocl::convertTypeStr(wdepth, depth, cn, cvt[0]),
-                               ocl::convertTypeStr(depth, wdepth, cn, cvt[1]),
-                               ocl::convertTypeStr(CV_32S, wdepth, 2, cvt[2]),
+                               ocl::convertTypeStr(wdepth, depth, cn, cvt[0], sizeof(cvt[0])),
+                               ocl::convertTypeStr(depth, wdepth, cn, cvt[1], sizeof(cvt[1])),
+                               ocl::convertTypeStr(CV_32S, wdepth, 2, cvt[2], sizeof(cvt[2])),
                                ocl::typeToStr(CV_MAKE_TYPE(wdepth, 2)));
     }
     int scalarcn = cn == 3 ? 4 : cn;
@@ -2490,8 +2490,8 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
                       ocl::typeToStr(CV_MAT_DEPTH(type)),
                       ocl::typeToStr(sctype),
                       ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), depth,
-                      ocl::convertTypeStr(depth, wdepth, cn, cvt[0]),
-                      ocl::convertTypeStr(wdepth, depth, cn, cvt[1]),
+                      ocl::convertTypeStr(depth, wdepth, cn, cvt[0], sizeof(cvt[0])),
+                      ocl::convertTypeStr(wdepth, depth, cn, cvt[1], sizeof(cvt[1])),
                       doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                       useDouble ? "double" : "float",
                       cn, rowsPerWI);

@@ -91,7 +91,7 @@ static bool sumTemplate(InputArray _src, UMat & result)
     ocl::Kernel k("calcSum", ocl::imgproc::match_template_oclsrc,
                   format("-D CALC_SUM -D T=%s -D T1=%s -D WT=%s -D cn=%d -D convertToWT=%s -D WGS=%d -D WGS2_ALIGNED=%d",
                          ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype), cn,
-                         ocl::convertTypeStr(depth, wdepth, cn, cvt),
+                         ocl::convertTypeStr(depth, wdepth, cn, cvt, sizeof(cvt)),
                          (int)wgs, wgs2_aligned));
     if (k.empty())
         return false;
@@ -270,8 +270,8 @@ static bool matchTemplateNaive_CCORR(InputArray _image, InputArray _templ, Outpu
 
     char cvt[50];
     char cvt1[50];
-    const char* convertToWT1 = ocl::convertTypeStr(depth, wdepth, cn, cvt);
-    const char* convertToWT = ocl::convertTypeStr(depth, wdepth, rated_cn, cvt1);
+    const char* convertToWT1 = ocl::convertTypeStr(depth, wdepth, cn, cvt, sizeof(cvt));
+    const char* convertToWT = ocl::convertTypeStr(depth, wdepth, rated_cn, cvt1, sizeof(cvt1));
 
     ocl::Kernel k("matchTemplate_Naive_CCORR", ocl::imgproc::match_template_oclsrc,
                   format("-D CCORR -D T=%s -D T1=%s -D WT=%s -D WT1=%s -D convertToWT=%s -D convertToWT1=%s -D cn=%d -D PIX_PER_WI_X=%d", ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype1), ocl::typeToStr(wtype),
@@ -352,7 +352,7 @@ static bool matchTemplateNaive_SQDIFF(InputArray _image, InputArray _templ, Outp
     char cvt[50];
     ocl::Kernel k("matchTemplate_Naive_SQDIFF", ocl::imgproc::match_template_oclsrc,
                   format("-D SQDIFF -D T=%s -D T1=%s -D WT=%s -D convertToWT=%s -D cn=%d", ocl::typeToStr(type), ocl::typeToStr(depth),
-                         ocl::typeToStr(wtype), ocl::convertTypeStr(depth, wdepth, cn, cvt), cn));
+                         ocl::typeToStr(wtype), ocl::convertTypeStr(depth, wdepth, cn, cvt, sizeof(cvt)), cn));
     if (k.empty())
         return false;
 

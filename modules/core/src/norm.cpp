@@ -1313,8 +1313,8 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
         String opts = format("-D srcT=%s -D dstT=%s -D convertToWT=%s -D cn=%d -D rowsPerWI=%d"
                              " -D convertToDT=%s -D workT=%s%s%s%s -D srcT1=%s -D dstT1=%s",
                              ocl::typeToStr(stype), ocl::typeToStr(dtype),
-                             ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]), cn,
-                             rowsPerWI, ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
+                             ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])), cn,
+                             rowsPerWI, ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])),
                              ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
                              doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                              haveScale ? " -D HAVE_SCALE" : "",
