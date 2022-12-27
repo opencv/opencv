@@ -12,7 +12,6 @@ namespace aruco {
 //! @{
 
 class Dictionary;
-struct BoardImpl;
 
 /** @brief Board of ArUco markers
  *
@@ -86,11 +85,12 @@ public:
     CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to “protected” (need to fix bindings first)
     Board();
 
+    struct Impl;
 protected:
-    Board(Ptr<BoardImpl> impl);
-    template<typename T> T& as() { CV_Assert(boardImpl); return static_cast<T&>(*boardImpl); }
-    template<typename T> const T& as() const { CV_Assert(boardImpl); return static_cast<const T&>(*boardImpl); }
-    Ptr<BoardImpl> boardImpl;
+    Board(const Ptr<Impl>& impl);
+    template<typename T> T& as() { CV_Assert(impl); return static_cast<T&>(*impl); }
+    template<typename T> const T& as() const { CV_Assert(impl); return static_cast<const T&>(*impl); }
+    Ptr<Impl> impl;
 };
 
 /** @brief Planar board with grid arrangement of markers
@@ -131,7 +131,6 @@ public:
     /** @brief CharucoBoard constructor
      *
      * @param size number of chessboard squares in x and y directions
-     * @param squaresY number of chessboard squares in Y direction
      * @param squareLength squareLength chessboard square side length (normally in meters)
      * @param markerLength marker side length (same unit than squareLength)
      * @param dictionary dictionary of markers indicating the type of markers
