@@ -3309,7 +3309,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         cv::String compileOpts = format("-D USE_SAMPLER -D depth=%d -D T=%s -D T1=%s "
                         "-D convertToDT=%s -D cn=%d",
                         depth, ocl::typeToStr(type), ocl::typeToStr(depth),
-                        ocl::convertTypeStr(wdepth, depth, cn, buf[1]),
+                        ocl::convertTypeStr(wdepth, depth, cn, buf[1], sizeof(buf[1])),
                         cn);
         k.create("resizeSampler", ocl::imgproc::resize_oclsrc, compileOpts);
 
@@ -3375,8 +3375,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                             "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
                             "-D INTER_RESIZE_COEF_BITS=%d",
                             depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
-                            ocl::convertTypeStr(depth, wdepth, cn, buf[0]),
-                            ocl::convertTypeStr(wdepth, depth, cn, buf[1]),
+                            ocl::convertTypeStr(depth, wdepth, cn, buf[0], sizeof(buf[0])),
+                            ocl::convertTypeStr(wdepth, depth, cn, buf[1], sizeof(buf[1])),
                             cn, INTER_RESIZE_COEF_BITS));
             if (k.empty())
                 return false;
@@ -3393,8 +3393,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                             "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
                             "-D INTER_RESIZE_COEF_BITS=%d",
                             depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
-                            ocl::convertTypeStr(depth, wdepth, cn, buf[0]),
-                            ocl::convertTypeStr(wdepth, depth, cn, buf[1]),
+                            ocl::convertTypeStr(depth, wdepth, cn, buf[0], sizeof(buf[0])),
+                            ocl::convertTypeStr(wdepth, depth, cn, buf[1], sizeof(buf[1])),
                             cn, INTER_RESIZE_COEF_BITS));
             if (k.empty())
                 return false;
@@ -3422,7 +3422,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         char cvt[2][50];
         String buildOption = format("-D INTER_AREA -D T=%s -D T1=%s -D WTV=%s -D convertToWTV=%s -D cn=%d",
                                     ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
-                                    ocl::convertTypeStr(depth, wdepth, cn, cvt[0]), cn);
+                                    ocl::convertTypeStr(depth, wdepth, cn, cvt[0], sizeof(cvt[0])), cn);
 
         UMat alphaOcl, tabofsOcl, mapOcl;
         UMat dmap, smap;
@@ -3432,8 +3432,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
             int wdepth2 = std::max(CV_32F, depth), wtype2 = CV_MAKE_TYPE(wdepth2, cn);
             buildOption = buildOption + format(" -D convertToT=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
                                                 " -D XSCALE=%d -D YSCALE=%d -D SCALE=%ff",
-                                                ocl::convertTypeStr(wdepth2, depth, cn, cvt[0]),
-                                                ocl::typeToStr(wtype2), ocl::convertTypeStr(wdepth, wdepth2, cn, cvt[1]),
+                                                ocl::convertTypeStr(wdepth2, depth, cn, cvt[0], sizeof(cvt[0])),
+                                                ocl::typeToStr(wtype2), ocl::convertTypeStr(wdepth, wdepth2, cn, cvt[1], sizeof(cvt[1])),
                                     iscale_x, iscale_y, 1.0f / (iscale_x * iscale_y));
 
             k.create("resizeAREA_FAST", ocl::imgproc::resize_oclsrc, buildOption);
@@ -3442,7 +3442,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         }
         else
         {
-            buildOption = buildOption + format(" -D convertToT=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0]));
+            buildOption = buildOption + format(" -D convertToT=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0], sizeof(cvt[0])));
             k.create("resizeAREA", ocl::imgproc::resize_oclsrc, buildOption);
             if (k.empty())
                 return false;
