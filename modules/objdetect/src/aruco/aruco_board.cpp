@@ -245,10 +245,17 @@ GridBoard::GridBoard(const Size& size, float markerLength, float markerSeparatio
     Board(new GridBoardImpl(dictionary, size, markerLength, markerSeparation)) {
 
     size_t totalMarkers = (size_t) size.width*size.height;
-    CV_Assert(totalMarkers == ids.total());
+    CV_Assert(ids.empty() || totalMarkers == ids.total());
     vector<vector<Point3f> > objPoints;
     objPoints.reserve(totalMarkers);
-    ids.copyTo(boardImpl->ids);
+
+    if(!ids.empty()) {
+        ids.copyTo(boardImpl->ids);
+    } else {
+        boardImpl->ids = std::vector<int>(totalMarkers);
+        std::iota(boardImpl->ids.begin(), boardImpl->ids.end(), 0);
+    }
+
     // calculate Board objPoints
     for (int y = 0; y < size.height; y++) {
         for (int x = 0; x < size.width; x++) {
@@ -264,31 +271,6 @@ GridBoard::GridBoard(const Size& size, float markerLength, float markerSeparatio
     boardImpl->objPoints = objPoints;
     boardImpl->rightBottomBorder = Point3f(size.width * markerLength + markerSeparation * (size.width - 1),
                                            size.height * markerLength + markerSeparation * (size.height - 1), 0.f);
-}
-
-GridBoard::GridBoard(const Size& size, float markerLength, float markerSeparation,
-                     const Dictionary &dictionary, int firstMarker):
-    Board(new GridBoardImpl(dictionary, size, markerLength, markerSeparation))
-{
-    size_t totalMarkers = (size_t) size.width*size.height;
-    vector<vector<Point3f> > objPoints;
-    objPoints.reserve(totalMarkers);
-    std::iota(boardImpl->ids.begin(), boardImpl->ids.end(), firstMarker);
-    // calculate Board objPoints
-    for (int y = 0; y < size.height; y++) {
-        for (int x = 0; x < size.width; x++) {
-            vector <Point3f> corners(4);
-            corners[0] = Point3f(x * (markerLength + markerSeparation),
-                                 y * (markerLength + markerSeparation), 0);
-            corners[1] = corners[0] + Point3f(markerLength, 0, 0);
-            corners[2] = corners[0] + Point3f(markerLength, markerLength, 0);
-            corners[3] = corners[0] + Point3f(0, markerLength, 0);
-            objPoints.push_back(corners);
-        }
-    }
-    boardImpl->objPoints = objPoints;
-    boardImpl->rightBottomBorder = Point3f(size.width * markerLength + markerSeparation * (size.width - 1),
-                                                 size.height * markerLength + markerSeparation * (size.height - 1), 0.f);
 }
 
 Size GridBoard::getGridSize() const {

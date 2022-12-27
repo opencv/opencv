@@ -31,7 +31,7 @@ public class ArucoTest extends OpenCVTestCase {
         Mat ids = new Mat(1, 1, CvType.CV_32SC1);
         ids.put(row, col, 0);
 
-        Board board = Board.create(objPoints, dictionary, ids);
+        Board board = new Board(objPoints, dictionary, ids);
 
         Mat image = new Mat();
         board.generateImage(new Size(80, 80), image, 2);
@@ -86,7 +86,7 @@ public class ArucoTest extends OpenCVTestCase {
     public void testCharucoDetector() {
         Dictionary dictionary = Objdetect.getPredefinedDictionary(0);
         int boardSizeX = 3, boardSizeY = 3;
-        CharucoBoard board = CharucoBoard.create(boardSizeX, boardSizeY, 1.f, 0.8f, dictionary);
+        CharucoBoard board = new CharucoBoard(new Size(boardSizeX, boardSizeY), 1.f, 0.8f, dictionary);
         CharucoDetector charucoDetector = new CharucoDetector(board);
 
         int cellSize = 80;

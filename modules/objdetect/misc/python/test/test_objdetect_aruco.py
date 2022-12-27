@@ -17,14 +17,14 @@ class aruco_objdetect_test(NewOpenCVTests):
         rev_ids = ids[::-1]
 
         aruco_dict  = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_5X5_250)
-        board = cv.aruco.CharucoBoard_create(7, 5, 1, 0.5, aruco_dict)
+        board = cv.aruco.CharucoBoard((7, 5), 1, 0.5, aruco_dict)
 
         np.testing.assert_array_equal(board.getIds().squeeze(), ids)
 
-        board = cv.aruco.CharucoBoard_create(7, 5, 1, 0.5, aruco_dict, rev_ids)
+        board = cv.aruco.CharucoBoard((7, 5), 1, 0.5, aruco_dict, rev_ids)
         np.testing.assert_array_equal(board.getIds().squeeze(), rev_ids)
 
-        board = cv.aruco.CharucoBoard_create(7, 5, 1, 0.5, aruco_dict, ids)
+        board = cv.aruco.CharucoBoard((7, 5), 1, 0.5, aruco_dict, ids)
         np.testing.assert_array_equal(board.getIds().squeeze(), ids)
 
     def test_identify(self):
@@ -72,7 +72,7 @@ class aruco_objdetect_test(NewOpenCVTests):
         aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_250)
         aruco_detector = cv.aruco.ArucoDetector(aruco_dict, aruco_params)
         board_size = (3, 4)
-        board = cv.aruco.GridBoard_create(board_size[0], board_size[1], 5.0, 1.0, aruco_dict)
+        board = cv.aruco.GridBoard(board_size, 5.0, 1.0, aruco_dict)
         board_image = board.generateImage((board_size[0]*50, board_size[1]*50), marginSize=10)
 
         corners, ids, rejected = aruco_detector.detectMarkers(board_image)
@@ -123,7 +123,7 @@ class aruco_objdetect_test(NewOpenCVTests):
     def test_charuco_detector(self):
         aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_250)
         board_size = (3, 3)
-        board = cv.aruco.CharucoBoard_create(board_size[0], board_size[1], 1.0, .8, aruco_dict)
+        board = cv.aruco.CharucoBoard(board_size, 1.0, .8, aruco_dict)
         charuco_detector = cv.aruco.CharucoDetector(board)
         cell_size = 100
 

@@ -107,22 +107,10 @@ public:
      * @param markerLength marker side length (normally in meters)
      * @param markerSeparation separation between two markers (same unit as markerLength)
      * @param dictionary dictionary of markers indicating the type of markers
-     * @param ids set marker ids in dictionary to use on board.
+     * @param ids set of marker ids in dictionary to use on board.
      */
     CV_WRAP GridBoard(const Size& size, float markerLength, float markerSeparation,
-                      const Dictionary &dictionary, InputArray ids);
-    /**
-     * @brief GridBoard constructor
-     *
-     * @param markersX number of markers in X direction
-     * @param markersY number of markers in Y direction
-     * @param markerLength marker side length (normally in meters)
-     * @param markerSeparation separation between two markers (same unit as markerLength)
-     * @param dictionary dictionary of markers indicating the type of markers
-     * @param firstMarker id of first marker in dictionary to use on board.
-     */
-    CV_WRAP GridBoard(const Size& size, float markerLength, float markerSeparation,
-                      const Dictionary &dictionary, int firstMarker = 0);
+                      const Dictionary &dictionary, InputArray ids = noArray());
 
     CV_WRAP Size getGridSize() const;
     CV_WRAP float getMarkerLength() const;
