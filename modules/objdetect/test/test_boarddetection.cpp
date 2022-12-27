@@ -57,7 +57,7 @@ void CV_ArucoBoardPose::run(int) {
                 vector<int> tmpIds;
                 for(int i = 0; i < sizeX*sizeY; i++)
                     tmpIds.push_back((iter + int(i)) % 250);
-                Ptr<aruco::GridBoard> gridboard = aruco::GridBoard::create(sizeX, sizeY, 0.02f, 0.005f, detector.getDictionary(), tmpIds);
+                aruco::GridBoard gridboard(Size(sizeX, sizeY), 0.02f, 0.005f, detector.getDictionary(), tmpIds);
                 int markerBorder = iter % 2 + 1;
                 iter++;
                 // create synthetic image
@@ -69,35 +69,33 @@ void CV_ArucoBoardPose::run(int) {
                 detector.setDetectorParameters(detectorParameters);
                 detector.detectMarkers(img, corners, ids);
 
-                ASSERT_EQ(ids.size(), gridboard->getIds().size());
+                ASSERT_EQ(ids.size(), gridboard.getIds().size());
 
                 // estimate pose
                 Mat rvec, tvec;
-                Ptr<aruco::Board> board = gridboard.staticCast<aruco::Board>();
-
                 {
                     Mat objPoints, imgPoints; // get object and image points for the solvePnP function
-                    board->matchImagePoints(corners, ids, objPoints, imgPoints);
+                    gridboard.matchImagePoints(corners, ids, objPoints, imgPoints);
                     solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
                 }
 
                 // check axes
-                vector<Point2f> axes = getAxis(cameraMatrix, distCoeffs, rvec, tvec, gridboard->getRightBottomCorner().x);
-                vector<Point2f> topLeft = getMarkerById(gridboard->getIds()[0], corners, ids);
+                vector<Point2f> axes = getAxis(cameraMatrix, distCoeffs, rvec, tvec, gridboard.getRightBottomCorner().x);
+                vector<Point2f> topLeft = getMarkerById(gridboard.getIds()[0], corners, ids);
                 ASSERT_NEAR(topLeft[0].x, axes[0].x, 2.f);
                 ASSERT_NEAR(topLeft[0].y, axes[0].y, 2.f);
-                vector<Point2f> topRight = getMarkerById(gridboard->getIds()[2], corners, ids);
+                vector<Point2f> topRight = getMarkerById(gridboard.getIds()[2], corners, ids);
                 ASSERT_NEAR(topRight[1].x, axes[1].x, 2.f);
                 ASSERT_NEAR(topRight[1].y, axes[1].y, 2.f);
-                vector<Point2f> bottomLeft = getMarkerById(gridboard->getIds()[6], corners, ids);
+                vector<Point2f> bottomLeft = getMarkerById(gridboard.getIds()[6], corners, ids);
                 ASSERT_NEAR(bottomLeft[3].x, axes[2].x, 2.f);
                 ASSERT_NEAR(bottomLeft[3].y, axes[2].y, 2.f);
 
                 // check estimate result
                 for(unsigned int i = 0; i < ids.size(); i++) {
                     int foundIdx = -1;
-                    for(unsigned int j = 0; j < gridboard->getIds().size(); j++) {
-                        if(gridboard->getIds()[j] == ids[i]) {
+                    for(unsigned int j = 0; j < gridboard.getIds().size(); j++) {
+                        if(gridboard.getIds()[j] == ids[i]) {
                             foundIdx = int(j);
                             break;
                         }
@@ -110,7 +108,7 @@ void CV_ArucoBoardPose::run(int) {
                     }
 
                     vector< Point2f > projectedCorners;
-                    projectPoints(gridboard->getObjPoints()[foundIdx], rvec, tvec, cameraMatrix, distCoeffs,
+                    projectPoints(gridboard.getObjPoints()[foundIdx], rvec, tvec, cameraMatrix, distCoeffs,
                                   projectedCorners);
 
                     for(int c = 0; c < 4; c++) {
@@ -157,7 +155,6 @@ void CV_ArucoRefine::run(int) {
     int iter = 0;
     Mat cameraMatrix = Mat::eye(3, 3, CV_64FC1);
     Size imgSize(500, 500);
-    Ptr<aruco::GridBoard> gridboard = aruco::GridBoard::create(3, 3, 0.02f, 0.005f, detector.getDictionary());
     cameraMatrix.at< double >(0, 0) = cameraMatrix.at< double >(1, 1) = 650;
     cameraMatrix.at< double >(0, 2) = imgSize.width / 2;
     cameraMatrix.at< double >(1, 2) = imgSize.height / 2;
@@ -168,10 +165,7 @@ void CV_ArucoRefine::run(int) {
     for(double distance = 0.2; distance <= 0.4; distance += 0.2) {
         for(int yaw = -60; yaw < 60; yaw += 30) {
             for(int pitch = -60; pitch <= 60; pitch += 30) {
-                vector<int> tmpIds;
-                for(unsigned int i = 0; i < gridboard->getIds().size(); i++)
-                    tmpIds.push_back(iter + int(i) % 250);
-                gridboard = aruco::GridBoard::create(3, 3, 0.02f, 0.005f, detector.getDictionary(), tmpIds);
+                aruco::GridBoard gridboard(Size(3, 3), 0.02f, 0.005f, detector.getDictionary());
                 int markerBorder = iter % 2 + 1;
                 iter++;
 
@@ -194,8 +188,7 @@ void CV_ArucoRefine::run(int) {
                 ids.erase(ids.begin(), ids.begin() + 1);
 
                 // try to refind the erased marker
-                Ptr<aruco::Board> board = gridboard.staticCast<aruco::Board>();
-                detector.refineDetectedMarkers(img, board, corners, ids, rejected, cameraMatrix,
+                detector.refineDetectedMarkers(img, gridboard, corners, ids, rejected, cameraMatrix,
                                                distCoeffs, noArray());
 
                 // check result
@@ -239,7 +232,6 @@ TEST(CV_ArucoBoardPose, CheckNegativeZ)
                               0., 0., 1 };
     cv::Mat cameraMatrix = cv::Mat(3, 3, CV_64F, matrixData);
 
-
     vector<cv::Point3f> pts3d1, pts3d2;
     pts3d1.push_back(cv::Point3f(0.326198f, -0.030621f, 0.303620f));
     pts3d1.push_back(cv::Point3f(0.325340f, -0.100594f, 0.301862f));
@@ -253,7 +245,7 @@ TEST(CV_ArucoBoardPose, CheckNegativeZ)
 
     vector<int> tmpIds = {0, 1};
     vector<vector<Point3f> > tmpObjectPoints = {pts3d1, pts3d2};
-    Ptr<aruco::Board> board = aruco::Board::create(tmpObjectPoints, aruco::getPredefinedDictionary(0), tmpIds);
+    aruco::Board board(tmpObjectPoints, aruco::getPredefinedDictionary(0), tmpIds);
 
     vector<vector<Point2f> > corners;
     vector<Point2f> pts2d;
@@ -273,7 +265,7 @@ TEST(CV_ArucoBoardPose, CheckNegativeZ)
     int nUsed = 0;
     {
         Mat objPoints, imgPoints; // get object and image points for the solvePnP function
-        board->matchImagePoints(corners, board->getIds(), objPoints, imgPoints);
+        board.matchImagePoints(corners, board.getIds(), objPoints, imgPoints);
         nUsed = (int)objPoints.total()/4;
         solvePnP(objPoints, imgPoints, cameraMatrix, Mat(), rvec, tvec);
     }
@@ -281,7 +273,7 @@ TEST(CV_ArucoBoardPose, CheckNegativeZ)
 
     cv::Matx33d rotm; cv::Point3d out;
     cv::Rodrigues(rvec, rotm);
-    out = cv::Point3d(tvec) + rotm*Point3d(board->getObjPoints()[0][0]);
+    out = cv::Point3d(tvec) + rotm*Point3d(board.getObjPoints()[0][0]);
     ASSERT_GT(out.z, 0);
 
     corners.clear(); pts2d.clear();
@@ -300,31 +292,29 @@ TEST(CV_ArucoBoardPose, CheckNegativeZ)
     nUsed = 0;
     {
         Mat objPoints, imgPoints; // get object and image points for the solvePnP function
-        board->matchImagePoints(corners, board->getIds(), objPoints, imgPoints);
+        board.matchImagePoints(corners, board.getIds(), objPoints, imgPoints);
         nUsed = (int)objPoints.total()/4;
         solvePnP(objPoints, imgPoints, cameraMatrix, Mat(), rvec, tvec, true);
     }
     ASSERT_EQ(nUsed, 2);
 
     cv::Rodrigues(rvec, rotm);
-    out = cv::Point3d(tvec) + rotm*Point3d(board->getObjPoints()[0][0]);
+    out = cv::Point3d(tvec) + rotm*Point3d(board.getObjPoints()[0][0]);
     ASSERT_GT(out.z, 0);
 }
 
 TEST(CV_ArucoGenerateBoard, regression_1226) {
-    int squares_x = 7;
-    int squares_y = 5;
     int bwidth = 1600;
     int bheight = 1200;
 
     cv::aruco::Dictionary dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
-    cv::Ptr<cv::aruco::CharucoBoard> board = cv::aruco::CharucoBoard::create(squares_x, squares_y, 1.0, 0.75, dict);
+    cv::aruco::CharucoBoard board(Size(7, 5), 1.0, 0.75, dict);
     cv::Size sz(bwidth, bheight);
     cv::Mat mat;
 
     ASSERT_NO_THROW(
     {
-        board->generateImage(sz, mat, 0, 1);
+        board.generateImage(sz, mat, 0, 1);
     });
 }
 

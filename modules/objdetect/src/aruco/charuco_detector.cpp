@@ -14,29 +14,33 @@ namespace aruco {
 using namespace std;
 
 struct CharucoDetector::CharucoDetectorImpl {
-    Ptr<CharucoBoard> board;
+    CharucoBoard board;
     CharucoParameters charucoParameters;
     ArucoDetector arucoDetector;
 
-    CharucoDetectorImpl(const Ptr<CharucoBoard>& _board, const CharucoParameters _charucoParameters,
+    CharucoDetectorImpl(const CharucoBoard& _board, const CharucoParameters _charucoParameters,
                         const ArucoDetector& _arucoDetector): board(_board), charucoParameters(_charucoParameters),
-                                                              arucoDetector(_arucoDetector) {};
+                                                              arucoDetector(_arucoDetector)
+    {}
 
     /** Calculate the maximum window sizes for corner refinement for each charuco corner based on the distance
      * to their closest markers */
     vector<Size> getMaximumSubPixWindowSizes(InputArrayOfArrays markerCorners, InputArray markerIds,
                                                InputArray charucoCorners) {
         size_t nCharucoCorners = charucoCorners.getMat().total();
+
+        CV_Assert(board.getNearestMarkerIdx().size() == nCharucoCorners);
+
         vector<Size> winSizes(nCharucoCorners, Size(-1, -1));
         for(size_t i = 0ull; i < nCharucoCorners; i++) {
             if(charucoCorners.getMat().at<Point2f>((int)i) == Point2f(-1.f, -1.f)) continue;
-            if(board->getNearestMarkerIdx()[i].empty()) continue;
+            if(board.getNearestMarkerIdx()[i].empty()) continue;
                 double minDist = -1;
                 int counter = 0;
                 // calculate the distance to each of the closest corner of each closest marker
-                for(size_t j = 0; j < board->getNearestMarkerIdx()[i].size(); j++) {
+                for(size_t j = 0; j < board.getNearestMarkerIdx()[i].size(); j++) {
                     // find marker
-                    int markerId = board->getIds()[board->getNearestMarkerIdx()[i][j]];
+                    int markerId = board.getIds()[board.getNearestMarkerIdx()[i][j]];
                     int markerIdx = -1;
                     for(size_t k = 0; k < markerIds.getMat().total(); k++) {
                         if(markerIds.getMat().at<int>((int)k) == markerId) {
@@ -46,7 +50,7 @@ struct CharucoDetector::CharucoDetectorImpl {
                         }
                     if(markerIdx == -1) continue;
                     Point2f markerCorner =
-                        markerCorners.getMat(markerIdx).at<Point2f>(board->getNearestMarkerCorners()[i][j]);
+                        markerCorners.getMat(markerIdx).at<Point2f>(board.getNearestMarkerCorners()[i][j]);
                     Point2f charucoCorner = charucoCorners.getMat().at<Point2f>((int)i);
                     double dist = norm(markerCorner - charucoCorner);
                     if(minDist == -1) minDist = dist; // if first distance, just assign it
@@ -124,21 +128,26 @@ struct CharucoDetector::CharucoDetectorImpl {
 
         // approximated pose estimation using marker corners
         Mat approximatedRvec, approximatedTvec;
-        Ptr<Board> b = board.staticCast<Board>();
         Mat objPoints, imgPoints; // object and image points for the solvePnP function
-        board->matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);
+        printf("before board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);\n");
+        board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);
+        printf("after board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);\n");
         if (objPoints.total() < 4ull)  // need, at least, 4 corners
             return;
+
         solvePnP(objPoints, imgPoints, charucoParameters.cameraMatrix, charucoParameters.distCoeffs, approximatedRvec, approximatedTvec);
+        printf("after solvePnP\n");
 
         // project chessboard corners
         vector<Point2f> allChessboardImgPoints;
-        projectPoints(board->getChessboardCorners(), approximatedRvec, approximatedTvec, charucoParameters.cameraMatrix,
+        projectPoints(board.getChessboardCorners(), approximatedRvec, approximatedTvec, charucoParameters.cameraMatrix,
                       charucoParameters.distCoeffs, allChessboardImgPoints);
+        printf("after projectPoints\n");
         // calculate maximum window sizes for subpixel refinement. The size is limited by the distance
         // to the closes marker corner to avoid erroneous displacements to marker corners
         vector<Size> subPixWinSizes = getMaximumSubPixWindowSizes(markerCorners, markerIds, allChessboardImgPoints);
         // filter corners outside the image and subpixel-refine charuco corners
+        printf("before selectAndRefineChessboardCorners\n");
         selectAndRefineChessboardCorners(allChessboardImgPoints, image, charucoCorners, charucoIds, subPixWinSizes);
     }
 
@@ -151,7 +160,7 @@ struct CharucoDetector::CharucoDetectorImpl {
         // calculate local homographies for each marker
         vector<Mat> transformations(nMarkers);
         vector<bool> validTransform(nMarkers, false);
-        const auto& ids = board->getIds();
+        const auto& ids = board.getIds();
         for(size_t i = 0ull; i < nMarkers; i++) {
             vector<Point2f> markerObjPoints2D;
             int markerId = markerIds.getMat().at<int>((int)i);
@@ -161,21 +170,21 @@ struct CharucoDetector::CharucoDetectorImpl {
             markerObjPoints2D.resize(4ull);
             for(size_t j = 0ull; j < 4ull; j++)
                 markerObjPoints2D[j] =
-                    Point2f(board->getObjPoints()[boardIdx][j].x, board->getObjPoints()[boardIdx][j].y);
+                    Point2f(board.getObjPoints()[boardIdx][j].x, board.getObjPoints()[boardIdx][j].y);
             transformations[i] = getPerspectiveTransform(markerObjPoints2D, markerCorners.getMat((int)i));
             // set transform as valid if transformation is non-singular
             double det = determinant(transformations[i]);
             validTransform[i] = std::abs(det) > 1e-6;
         }
-        size_t nCharucoCorners = (size_t)board->getChessboardCorners().size();
+        size_t nCharucoCorners = (size_t)board.getChessboardCorners().size();
         vector<Point2f> allChessboardImgPoints(nCharucoCorners, Point2f(-1, -1));
         // for each charuco corner, calculate its interpolation position based on the closest markers
         // homographies
         for(size_t i = 0ull; i < nCharucoCorners; i++) {
-            Point2f objPoint2D = Point2f(board->getChessboardCorners()[i].x, board->getChessboardCorners()[i].y);
+            Point2f objPoint2D = Point2f(board.getChessboardCorners()[i].x, board.getChessboardCorners()[i].y);
             vector<Point2f> interpolatedPositions;
-            for(size_t j = 0ull; j < board->getNearestMarkerIdx()[i].size(); j++) {
-                int markerId = board->getIds()[board->getNearestMarkerIdx()[i][j]];
+            for(size_t j = 0ull; j < board.getNearestMarkerIdx()[i].size(); j++) {
+                int markerId = board.getIds()[board.getNearestMarkerIdx()[i][j]];
                 int markerIdx = -1;
                 for(size_t k = 0ull; k < markerIds.getMat().total(); k++) {
                     if(markerIds.getMat().at<int>((int)k) == markerId) {
@@ -219,8 +228,8 @@ struct CharucoDetector::CharucoDetectorImpl {
             int currentCharucoId = allCharucoIds.getMat().at<int>(i);
             int totalMarkers = 0; // nomber of closest marker detected
             // look for closest markers
-            for(unsigned int m = 0; m < board->getNearestMarkerIdx()[currentCharucoId].size(); m++) {
-                int markerId = board->getIds()[board->getNearestMarkerIdx()[currentCharucoId][m]];
+            for(unsigned int m = 0; m < board.getNearestMarkerIdx()[currentCharucoId].size(); m++) {
+                int markerId = board.getIds()[board.getNearestMarkerIdx()[currentCharucoId][m]];
                 bool found = false;
                 for(unsigned int k = 0; k < allArucoIds.getMat().total(); k++) {
                     if(allArucoIds.getMat().at<int>(k) == markerId) {
@@ -243,19 +252,18 @@ struct CharucoDetector::CharucoDetectorImpl {
     }
 };
 
-CharucoDetector::CharucoDetector(const Ptr<CharucoBoard> &board, const CharucoParameters &charucoParams,
+CharucoDetector::CharucoDetector(const CharucoBoard &board, const CharucoParameters &charucoParams,
                                  const DetectorParameters &detectorParams, const RefineParameters& refineParams) {
-    this->charucoDetectorImpl = makePtr<CharucoDetectorImpl>(board, charucoParams,
-                                ArucoDetector(board->getDictionary(), detectorParams, refineParams));
+    this->charucoDetectorImpl = makePtr<CharucoDetectorImpl>(board, charucoParams, ArucoDetector(board.getDictionary(), detectorParams, refineParams));
 }
 
-const Ptr<CharucoBoard> &CharucoDetector::getBoard() const {
-    return this->charucoDetectorImpl->board;
+const CharucoBoard& CharucoDetector::getBoard() const {
+    return charucoDetectorImpl->board;
 }
 
-void CharucoDetector::setBoard(const Ptr<CharucoBoard> &board) {
+void CharucoDetector::setBoard(const CharucoBoard& board) {
      this->charucoDetectorImpl->board = board;
-      charucoDetectorImpl->arucoDetector.setDictionary(board->getDictionary());
+      charucoDetectorImpl->arucoDetector.setDictionary(board.getDictionary());
 }
 
 const CharucoParameters &CharucoDetector::getCharucoParameters() const {
@@ -312,7 +320,7 @@ void CharucoDetector::detectBoard(InputArray image, OutputArray charucoCorners, 
 
 void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diamondCorners, OutputArray _diamondIds,
                                      InputOutputArrayOfArrays inMarkerCorners, InputOutputArrayOfArrays inMarkerIds) const {
-    CV_Assert(getBoard()->getChessboardSize() == Size(3, 3));
+    CV_Assert(getBoard().getChessboardSize() == Size(3, 3));
     CV_Assert((inMarkerCorners.empty() && inMarkerIds.empty() && !image.empty()) || (inMarkerCorners.size() == inMarkerIds.size()));
 
     vector<vector<Point2f>> tmpMarkerCorners;
@@ -379,11 +387,10 @@ void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diam
             tmpIds[k] = currentId + 1 + k;
         // current id is assigned to [0], so it is the marker on the top
         tmpIds[0] = currentId;
+
         // create Charuco board layout for diamond (3x3 layout)
-        Ptr<CharucoBoard> _charucoDiamondLayout = CharucoBoard::create(3, 3, board->getSquareLength(),
-                                                                       board->getMarkerLength(), board->getDictionary(),
-                                                                       tmpIds);
-        charucoDetectorImpl->board = _charucoDiamondLayout;
+        charucoDetectorImpl->board = CharucoBoard(Size(3, 3), board.getSquareLength(),
+                                                  board.getMarkerLength(), board.getDictionary(), tmpIds);
 
         // try to find the rest of markers in the diamond
         vector<int> acceptedIdxs;

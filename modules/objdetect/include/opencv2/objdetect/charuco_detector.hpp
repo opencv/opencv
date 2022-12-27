@@ -39,13 +39,13 @@ public:
      * @param detectorParams marker detection parameters
      * @param refineParams marker refine detection parameters
      */
-    CV_WRAP CharucoDetector(const Ptr<CharucoBoard> &board,
+    CV_WRAP CharucoDetector(const CharucoBoard& board,
                             const CharucoParameters& charucoParams = CharucoParameters(),
                             const DetectorParameters &detectorParams = DetectorParameters(),
                             const RefineParameters& refineParams = RefineParameters());
 
-    CV_WRAP const Ptr<CharucoBoard>& getBoard() const;
-    CV_WRAP void setBoard(const Ptr<CharucoBoard>& board);
+    CV_WRAP const CharucoBoard& getBoard() const;
+    CV_WRAP void setBoard(const CharucoBoard& board);
 
     CV_WRAP const CharucoParameters& getCharucoParameters() const;
     CV_WRAP void setCharucoParameters(CharucoParameters& charucoParameters);

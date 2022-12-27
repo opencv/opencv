@@ -22,16 +22,16 @@ void getSyntheticRT(double yaw, double pitch, double distance, Mat& rvec, Mat& t
 /**
  * @brief Project a synthetic marker
  */
-void projectMarker(Mat& img, Ptr<aruco::Board> board, int markerIndex, Mat cameraMatrix, Mat rvec, Mat tvec,
+void projectMarker(Mat& img, const aruco::Board& board, int markerIndex, Mat cameraMatrix, Mat rvec, Mat tvec,
                    int markerBorder);
 
 /**
  * @brief Get a synthetic image of GridBoard in perspective
  */
-Mat projectBoard(Ptr<aruco::GridBoard>& board, Mat cameraMatrix, double yaw, double pitch, double distance,
+Mat projectBoard(const aruco::GridBoard& board, Mat cameraMatrix, double yaw, double pitch, double distance,
                  Size imageSize, int markerBorder);
 
-bool getCharucoBoardPose(InputArray charucoCorners, InputArray charucoIds,  const Ptr<aruco::CharucoBoard> &board,
+bool getCharucoBoardPose(InputArray charucoCorners, InputArray charucoIds,  const aruco::CharucoBoard &board,
                          InputArray cameraMatrix, InputArray distCoeffs, InputOutputArray rvec,
                          InputOutputArray tvec, bool useExtrinsicGuess = false);
 

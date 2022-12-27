@@ -1004,24 +1004,25 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
 /**
   * Project board markers that are not included in the list of detected markers
   */
-static inline void _projectUndetectedMarkers(const Ptr<Board> &board, InputOutputArrayOfArrays detectedCorners,
+static inline void _projectUndetectedMarkers(const Board &board, InputOutputArrayOfArrays detectedCorners,
                                              InputOutputArray detectedIds, InputArray cameraMatrix, InputArray distCoeffs,
                                              vector<vector<Point2f> >& undetectedMarkersProjectedCorners,
                                              OutputArray undetectedMarkersIds) {
     Mat rvec, tvec; // first estimate board pose with the current avaible markers
     Mat objPoints, imgPoints; // object and image points for the solvePnP function
-    board->matchImagePoints(detectedCorners, detectedIds, objPoints, imgPoints);
+    board.matchImagePoints(detectedCorners, detectedIds, objPoints, imgPoints);
     if (objPoints.total() < 4ull) // at least one marker from board so rvec and tvec are valid
         return;
     solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
 
     // search undetected markers and project them using the previous pose
     vector<vector<Point2f> > undetectedCorners;
+    const std::vector<int>& ids = board.getIds();
     vector<int> undetectedIds;
-    for(unsigned int i = 0; i < board->getIds().size(); i++) {
+    for(unsigned int i = 0; i < ids.size(); i++) {
         int foundIdx = -1;
         for(unsigned int j = 0; j < detectedIds.total(); j++) {
-            if(board->getIds()[i] == detectedIds.getMat().ptr<int>()[j]) {
+            if(ids[i] == detectedIds.getMat().ptr<int>()[j]) {
                 foundIdx = j;
                 break;
             }
@@ -1030,8 +1031,8 @@ static inline void _projectUndetectedMarkers(const Ptr<Board> &board, InputOutpu
         // not detected
         if(foundIdx == -1) {
             undetectedCorners.push_back(vector<Point2f>());
-            undetectedIds.push_back(board->getIds()[i]);
-            projectPoints(board->getObjPoints()[i], rvec, tvec, cameraMatrix, distCoeffs,
+            undetectedIds.push_back(ids[i]);
+            projectPoints(board.getObjPoints()[i], rvec, tvec, cameraMatrix, distCoeffs,
                           undetectedCorners.back());
         }
     }
@@ -1044,17 +1045,17 @@ static inline void _projectUndetectedMarkers(const Ptr<Board> &board, InputOutpu
   * Interpolate board markers that are not included in the list of detected markers using
   * global homography
   */
-static void _projectUndetectedMarkers(const Ptr<Board> &_board, InputOutputArrayOfArrays _detectedCorners,
+static void _projectUndetectedMarkers(const Board &_board, InputOutputArrayOfArrays _detectedCorners,
                                InputOutputArray _detectedIds,
                                vector<vector<Point2f> >& _undetectedMarkersProjectedCorners,
                                OutputArray _undetectedMarkersIds) {
     // check board points are in the same plane, if not, global homography cannot be applied
-    CV_Assert(_board->getObjPoints().size() > 0);
-    CV_Assert(_board->getObjPoints()[0].size() > 0);
-    float boardZ = _board->getObjPoints()[0][0].z;
-    for(unsigned int i = 0; i < _board->getObjPoints().size(); i++) {
-        for(unsigned int j = 0; j < _board->getObjPoints()[i].size(); j++)
-            CV_Assert(boardZ == _board->getObjPoints()[i][j].z);
+    CV_Assert(_board.getObjPoints().size() > 0);
+    CV_Assert(_board.getObjPoints()[0].size() > 0);
+    float boardZ = _board.getObjPoints()[0][0].z;
+    for(unsigned int i = 0; i < _board.getObjPoints().size(); i++) {
+        for(unsigned int j = 0; j < _board.getObjPoints()[i].size(); j++)
+            CV_Assert(boardZ == _board.getObjPoints()[i][j].z);
     }
 
     vector<Point2f> detectedMarkersObj2DAll; // Object coordinates (without Z) of all the detected
@@ -1064,14 +1065,14 @@ static void _projectUndetectedMarkers(const Ptr<Board> &_board, InputOutputArray
                                                         // missing markers in different vectors
     vector<int> undetectedMarkersIds; // ids of missing markers
     // find markers included in board, and missing markers from board. Fill the previous vectors
-    for(unsigned int j = 0; j < _board->getIds().size(); j++) {
+    for(unsigned int j = 0; j < _board.getIds().size(); j++) {
         bool found = false;
         for(unsigned int i = 0; i < _detectedIds.total(); i++) {
-            if(_detectedIds.getMat().ptr<int>()[i] == _board->getIds()[j]) {
+            if(_detectedIds.getMat().ptr<int>()[i] == _board.getIds()[j]) {
                 for(int c = 0; c < 4; c++) {
                     imageCornersAll.push_back(_detectedCorners.getMat(i).ptr<Point2f>()[c]);
                     detectedMarkersObj2DAll.push_back(
-                        Point2f(_board->getObjPoints()[j][c].x, _board->getObjPoints()[j][c].y));
+                        Point2f(_board.getObjPoints()[j][c].x, _board.getObjPoints()[j][c].y));
                 }
                 found = true;
                 break;
@@ -1081,9 +1082,9 @@ static void _projectUndetectedMarkers(const Ptr<Board> &_board, InputOutputArray
             undetectedMarkersObj2D.push_back(vector<Point2f>());
             for(int c = 0; c < 4; c++) {
                 undetectedMarkersObj2D.back().push_back(
-                    Point2f(_board->getObjPoints()[j][c].x, _board->getObjPoints()[j][c].y));
+                    Point2f(_board.getObjPoints()[j][c].x, _board.getObjPoints()[j][c].y));
             }
-            undetectedMarkersIds.push_back(_board->getIds()[j]);
+            undetectedMarkersIds.push_back(_board.getIds()[j]);
         }
     }
     if(imageCornersAll.size() == 0) return;
@@ -1100,7 +1101,7 @@ static void _projectUndetectedMarkers(const Ptr<Board> &_board, InputOutputArray
     Mat(undetectedMarkersIds).copyTo(_undetectedMarkersIds);
 }
 
-void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_board,
+void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board,
                                           InputOutputArrayOfArrays _detectedCorners, InputOutputArray _detectedIds,
                                           InputOutputArrayOfArrays _rejectedCorners, InputArray _cameraMatrix,
                                           InputArray _distCoeffs, OutputArray _recoveredIdxs) const {

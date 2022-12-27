@@ -52,21 +52,21 @@ void getSyntheticRT(double yaw, double pitch, double distance, Mat& rvec, Mat& t
     tvec.at<double>(2) = distance;
 }
 
-void projectMarker(Mat& img, Ptr<aruco::Board> board, int markerIndex, Mat cameraMatrix, Mat rvec, Mat tvec,
+void projectMarker(Mat& img, const aruco::Board& board, int markerIndex, Mat cameraMatrix, Mat rvec, Mat tvec,
                    int markerBorder) {
     // canonical image
     Mat markerImg;
     const int markerSizePixels = 100;
-    aruco::generateImageMarker(board->getDictionary(), board->getIds()[markerIndex], markerSizePixels, markerImg, markerBorder);
+    aruco::generateImageMarker(board.getDictionary(), board.getIds()[markerIndex], markerSizePixels, markerImg, markerBorder);
 
     // projected corners
     Mat distCoeffs(5, 1, CV_64FC1, Scalar::all(0));
     vector<Point2f> corners;
 
     // get max coordinate of board
-    Point3f maxCoord = board->getRightBottomCorner();
+    Point3f maxCoord = board.getRightBottomCorner();
     // copy objPoints
-    vector<Point3f> objPoints = board->getObjPoints()[markerIndex];
+    vector<Point3f> objPoints = board.getObjPoints()[markerIndex];
     // move the marker to the origin
     for (size_t i = 0; i < objPoints.size(); i++)
         objPoints[i] -= (maxCoord / 2.f);
@@ -96,14 +96,14 @@ void projectMarker(Mat& img, Ptr<aruco::Board> board, int markerIndex, Mat camer
     }
 }
 
-Mat projectBoard(Ptr<aruco::GridBoard>& board, Mat cameraMatrix, double yaw, double pitch, double distance,
+Mat projectBoard(const aruco::GridBoard& board, Mat cameraMatrix, double yaw, double pitch, double distance,
                  Size imageSize, int markerBorder) {
     Mat rvec, tvec;
     getSyntheticRT(yaw, pitch, distance, rvec, tvec);
 
     Mat img = Mat(imageSize, CV_8UC1, Scalar::all(255));
-    for (unsigned int index = 0; index < board->getIds().size(); index++)
-        projectMarker(img, board.staticCast<aruco::Board>(), index, cameraMatrix, rvec, tvec, markerBorder);
+    for (unsigned int index = 0; index < board.getIds().size(); index++)
+        projectMarker(img, board, index, cameraMatrix, rvec, tvec, markerBorder);
     return img;
 }
 
@@ -140,7 +140,7 @@ static bool _arePointsEnoughForPoseEstimation(const std::vector<Point3f> &points
     return false;
 }
 
-bool getCharucoBoardPose(InputArray charucoCorners, InputArray charucoIds,  const Ptr<aruco::CharucoBoard> &board,
+bool getCharucoBoardPose(InputArray charucoCorners, InputArray charucoIds,  const aruco::CharucoBoard &board,
                          InputArray cameraMatrix, InputArray distCoeffs, InputOutputArray rvec, InputOutputArray tvec,
                          bool useExtrinsicGuess) {
     CV_Assert((charucoCorners.getMat().total() == charucoIds.getMat().total()));
@@ -150,8 +150,8 @@ bool getCharucoBoardPose(InputArray charucoCorners, InputArray charucoIds,  cons
     objPoints.reserve(charucoIds.getMat().total());
     for(unsigned int i = 0; i < charucoIds.getMat().total(); i++) {
         int currId = charucoIds.getMat().at< int >(i);
-        CV_Assert(currId >= 0 && currId < (int)board->getChessboardCorners().size());
-        objPoints.push_back(board->getChessboardCorners()[currId]);
+        CV_Assert(currId >= 0 && currId < (int)board.getChessboardCorners().size());
+        objPoints.push_back(board.getChessboardCorners()[currId]);
     }
 
     // points need to be in different lines, check if detected points are enough

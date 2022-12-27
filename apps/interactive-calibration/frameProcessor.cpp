@@ -279,9 +279,9 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
     {
     case chAruco:
         mArucoDictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PredefinedDictionaryType(capParams.charucoDictName));
-        mCharucoBoard = cv::aruco::CharucoBoard::create(mBoardSize.width + 1, mBoardSize.height + 1, capParams.charucoSquareLength,
-                                                        capParams.charucoMarkerSize, mArucoDictionary);
-        detector = cv::makePtr<cv::aruco::CharucoDetector>(cv::aruco::CharucoDetector(mCharucoBoard, charucoParameters));
+        mCharucoBoard = cv::makePtr<cv::aruco::CharucoBoard>(cv::Size(mBoardSize.width + 1, mBoardSize.height + 1), capParams.charucoSquareLength,
+                                                    capParams.charucoMarkerSize, mArucoDictionary);
+        detector = cv::makePtr<cv::aruco::CharucoDetector>(cv::aruco::CharucoDetector(*mCharucoBoard, charucoParameters));
         break;
     case CirclesGrid:
     case AcirclesGrid:

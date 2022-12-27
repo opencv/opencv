@@ -305,7 +305,7 @@ public:
      * using projectPoint function. If not, missing marker projections are interpolated using global
      * homography, and all the marker corners in the board must have the same Z coordinate.
      */
-    CV_WRAP void refineDetectedMarkers(InputArray image, const Ptr<Board> &board,
+    CV_WRAP void refineDetectedMarkers(InputArray image, const Board &board,
                                        InputOutputArrayOfArrays detectedCorners,
                                        InputOutputArray detectedIds, InputOutputArrayOfArrays rejectedCorners,
                                        InputArray cameraMatrix = noArray(), InputArray distCoeffs = noArray(),

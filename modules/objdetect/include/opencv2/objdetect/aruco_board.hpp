@@ -12,6 +12,7 @@ namespace aruco {
 //! @{
 
 class Dictionary;
+struct BoardImpl;
 
 /** @brief Board of ArUco markers
  *
@@ -22,29 +23,15 @@ class Dictionary;
  * - The dictionary which indicates the type of markers of the board
  * - The identifier of all the markers in the board.
  */
-class CV_EXPORTS_W Board {
-protected:
-    Board(); // use ::create()
+class CV_EXPORTS_W_SIMPLE Board {
 public:
-    /** @brief Draw a planar board
-     *
-     * @param outSize size of the output image in pixels.
-     * @param img output image with the board. The size of this image will be outSize
-     * and the board will be on the center, keeping the board proportions.
-     * @param marginSize minimum margins (in pixels) of the board in the output image
-     * @param borderBits width of the marker borders.
-     *
-     * This function return the image of the GridBoard, ready to be printed.
-     */
-    CV_WRAP void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const;
-
-    /** @brief Provide way to create Board by passing necessary data. Works with GridBoard, CharucoBoard classes.
+    /** @brief Common Board constructor
      *
      * @param objPoints array of object points of all the marker corners in the board
      * @param dictionary the dictionary of markers employed for this board
      * @param ids vector of the identifiers of the markers in the board
      */
-    CV_WRAP static Ptr<Board> create(InputArrayOfArrays objPoints, const Dictionary &dictionary, InputArray ids);
+    CV_WRAP Board(InputArrayOfArrays objPoints, const Dictionary& dictionary, InputArray ids);
 
     /** @brief return the Dictionary of markers employed for this board
      */
@@ -83,10 +70,26 @@ public:
      */
     CV_WRAP void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
                                   OutputArray objPoints, OutputArray imgPoints) const;
-    virtual ~Board();
 
-    struct BoardImpl;
+     /** @brief Draw a planar board
+     *
+     * @param outSize size of the output image in pixels.
+     * @param img output image with the board. The size of this image will be outSize
+     * and the board will be on the center, keeping the board proportions.
+     * @param marginSize minimum margins (in pixels) of the board in the output image
+     * @param borderBits width of the marker borders.
+     *
+     * This function return the image of the GridBoard, ready to be printed.
+     */
+    CV_WRAP void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const;
+
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to “protected” (need to fix bindings first)
+    Board();
+
 protected:
+    Board(Ptr<BoardImpl> impl);
+    template<typename T> T& as() { CV_Assert(boardImpl); return static_cast<T&>(*boardImpl); }
+    template<typename T> const T& as() const { CV_Assert(boardImpl); return static_cast<const T&>(*boardImpl); }
     Ptr<BoardImpl> boardImpl;
 };
 
@@ -95,30 +98,21 @@ protected:
  * More common type of board. All markers are placed in the same plane in a grid arrangement.
  * The board image can be drawn using generateImage() method.
  */
-class CV_EXPORTS_W GridBoard : public Board {
-protected:
-    GridBoard();
+class CV_EXPORTS_W_SIMPLE GridBoard : public Board {
 public:
     /**
-     * @brief Create a GridBoard object
+     * @brief GridBoard constructor
      *
-     * @param markersX number of markers in X direction
-     * @param markersY number of markers in Y direction
+     * @param size number of markers in x and y directions
      * @param markerLength marker side length (normally in meters)
      * @param markerSeparation separation between two markers (same unit as markerLength)
      * @param dictionary dictionary of markers indicating the type of markers
      * @param ids set marker ids in dictionary to use on board.
-     * @return the output GridBoard object
-     *
-     * This functions creates a GridBoard object given the number of markers in each direction and
-     * the marker size and marker separation.
      */
-    CV_WRAP static Ptr<GridBoard> create(int markersX, int markersY, float markerLength, float markerSeparation,
-                                         const Dictionary &dictionary, InputArray ids);
-
+    CV_WRAP GridBoard(const Size& size, float markerLength, float markerSeparation,
+                      const Dictionary &dictionary, InputArray ids);
     /**
-     * @overload
-     * @brief Create a GridBoard object
+     * @brief GridBoard constructor
      *
      * @param markersX number of markers in X direction
      * @param markersY number of markers in Y direction
@@ -126,14 +120,16 @@ public:
      * @param markerSeparation separation between two markers (same unit as markerLength)
      * @param dictionary dictionary of markers indicating the type of markers
      * @param firstMarker id of first marker in dictionary to use on board.
-     * @return the output GridBoard object
      */
-    CV_WRAP static Ptr<GridBoard> create(int markersX, int markersY, float markerLength, float markerSeparation,
-                                         const Dictionary &dictionary, int firstMarker = 0);
+    CV_WRAP GridBoard(const Size& size, float markerLength, float markerSeparation,
+                      const Dictionary &dictionary, int firstMarker = 0);
 
     CV_WRAP Size getGridSize() const;
     CV_WRAP float getMarkerLength() const;
     CV_WRAP float getMarkerSeparation() const;
+
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to “protected” (need to fix bindings first)
+    GridBoard();
 };
 
 /**
@@ -142,26 +138,20 @@ public:
  * The benefits of ChArUco boards is that they provide both, ArUco markers versatility and chessboard corner precision,
  * which is important for calibration and pose estimation. The board image can be drawn using generateImage() method.
  */
-class CV_EXPORTS_W CharucoBoard : public Board {
-protected:
-    CharucoBoard();
+class CV_EXPORTS_W_SIMPLE CharucoBoard : public Board {
 public:
-    /** @brief Create a CharucoBoard object
+    /** @brief CharucoBoard constructor
      *
-     * @param squaresX number of chessboard squares in X direction
+     * @param size number of chessboard squares in x and y directions
      * @param squaresY number of chessboard squares in Y direction
      * @param squareLength squareLength chessboard square side length (normally in meters)
      * @param markerLength marker side length (same unit than squareLength)
      * @param dictionary dictionary of markers indicating the type of markers
      * @param ids array of id used markers
      * The first markers in the dictionary are used to fill the white chessboard squares.
-     * @return the output CharucoBoard object
-     *
-     * This functions creates a CharucoBoard object given the number of squares in each direction
-     * and the size of the markers and chessboard squares.
      */
-    CV_WRAP static Ptr<CharucoBoard> create(int squaresX, int squaresY, float squareLength, float markerLength,
-                                            const Dictionary &dictionary, InputArray ids = noArray());
+    CV_WRAP CharucoBoard(const Size& size, float squareLength, float markerLength,
+                         const Dictionary &dictionary, InputArray ids = noArray());
 
     CV_WRAP Size getChessboardSize() const;
     CV_WRAP float getSquareLength() const;
@@ -192,6 +182,8 @@ public:
      */
     CV_WRAP bool checkCharucoCornersCollinear(InputArray charucoIds) const;
 
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to “protected” (need to fix bindings first)
+    CharucoBoard();
 };
 
 //! @}
