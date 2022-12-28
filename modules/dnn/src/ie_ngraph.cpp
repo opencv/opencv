@@ -1166,7 +1166,7 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
         auto* promises = &reqWrapper->outProms;
         auto* req = &reqWrapper->req;
         reqWrapper->req.set_callback([isReady, promises, req](std::exception_ptr ex) {
-            CV_LOG_DEBUG(NULL, "DNN(nGraph): completionCallback(" << (int)status << ")");
+            CV_LOG_DEBUG(NULL, "DNN(nGraph): completionCallback()");
 
             size_t processedOutputs = 0;
             try
