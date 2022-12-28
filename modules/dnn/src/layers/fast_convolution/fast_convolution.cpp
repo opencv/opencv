@@ -448,7 +448,8 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
     int dilation_d = conv->dilation_d, dilation_h = conv->dilation_h, dilation_w = conv->dilation_w;
 
     int ksize = Dk*Hk*Wk;
-    bool fast_1x1 = stride_d == 1 && stride_w == 1 && stride_h == 1 && ksize == 1;
+    bool fast_1x1 = ksize == 1 && stride_d == 1 && stride_w == 1 && stride_h == 1 &&
+                    pad_front == 0 && pad_top == 0 && pad_left == 0;
     int DkHkWkCg = Dk*Hk*Wk*Cg;
 
     std::vector<int> ofstab_(Hk*Wk*Dk*4, 0);
@@ -736,7 +737,8 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
                                 int d0 = std::max(0, (-in_d + dilation_d - 1) / dilation_d);
                                 int d1 = std::min(Dk, (Di - in_d + dilation_d - 1) / dilation_d);
 
-                                bool ok_i = 0 <= in_h && in_h < Hi - (Hk-1)*dilation_h;
+                                bool ok_i = 0 <= in_d && in_d < Di - (Dk-1)*dilation_d &&
+                                        0 <= in_h && in_h < Hi - (Hk-1)*dilation_h;
                                 int h0 = std::max(0, (-in_h + dilation_h-1)/dilation_h);
                                 int h1 = std::min(Hk, (Hi - in_h + dilation_h-1)/dilation_h);
 
