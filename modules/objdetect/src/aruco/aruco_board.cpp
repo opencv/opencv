@@ -18,7 +18,6 @@ struct Board::Impl {
     std::vector<std::vector<Point3f> > objPoints;
     Point3f rightBottomBorder;
 
-
     explicit Impl(const Dictionary& _dictionary):
         dictionary(_dictionary)
     {}
@@ -274,15 +273,18 @@ GridBoard::GridBoard(const Size& size, float markerLength, float markerSeparatio
 }
 
 Size GridBoard::getGridSize() const {
-    return as<GridBoardImpl>().size;
+    CV_Assert(impl);
+    return static_pointer_cast<GridBoardImpl>(impl)->size;
 }
 
 float GridBoard::getMarkerLength() const {
-    return as<GridBoardImpl>().markerLength;
+    CV_Assert(impl);
+    return static_pointer_cast<GridBoardImpl>(impl)->markerLength;
 }
 
 float GridBoard::getMarkerSeparation() const {
-    return as<GridBoardImpl>().markerSeparation;
+    CV_Assert(impl);
+    return static_pointer_cast<GridBoardImpl>(impl)->markerSeparation;
 }
 
 struct CharucoBoardImpl : Board::Impl {
@@ -486,7 +488,7 @@ CharucoBoard::CharucoBoard(const Size& size, float squareLength, float markerLen
     impl->objPoints = objPoints;
 
     // now fill chessboardCorners
-    std::vector<Point3f>& c = as<CharucoBoardImpl>().chessboardCorners;
+    std::vector<Point3f> & c = static_pointer_cast<CharucoBoardImpl>(impl)->chessboardCorners;
     for(int y = 0; y < size.height - 1; y++) {
         for(int x = 0; x < size.width - 1; x++) {
             Point3f corner;
@@ -497,14 +499,23 @@ CharucoBoard::CharucoBoard(const Size& size, float squareLength, float markerLen
         }
     }
     impl->rightBottomBorder = Point3f(size.width * squareLength, size.height * squareLength, 0.f);
-    as<CharucoBoardImpl>().calcNearestMarkerCorners();
+    static_pointer_cast<CharucoBoardImpl>(impl)->calcNearestMarkerCorners();
 }
 
-Size CharucoBoard::getChessboardSize() const { return as<CharucoBoardImpl>().size; }
+Size CharucoBoard::getChessboardSize() const {
+    CV_Assert(impl);
+    return static_pointer_cast<CharucoBoardImpl>(impl)->size;
+}
 
-float CharucoBoard::getSquareLength() const { return as<CharucoBoardImpl>().squareLength; }
+float CharucoBoard::getSquareLength() const {
+    CV_Assert(impl);
+    return static_pointer_cast<CharucoBoardImpl>(impl)->squareLength;
+}
 
-float CharucoBoard::getMarkerLength() const { return as<CharucoBoardImpl>().markerLength; }
+float CharucoBoard::getMarkerLength() const {
+    CV_Assert(impl);
+    return static_pointer_cast<CharucoBoardImpl>(impl)->markerLength;
+}
 
 bool CharucoBoard::checkCharucoCornersCollinear(InputArray charucoIds) const {
     CV_Assert(impl);
@@ -514,14 +525,14 @@ bool CharucoBoard::checkCharucoCornersCollinear(InputArray charucoIds) const {
         return true;
 
     // only test if there are 3 or more corners
-    const CharucoBoardImpl& board = as<CharucoBoardImpl>();
-    CV_Assert(board.chessboardCorners.size() >= charucoIds.getMat().total());
+    auto board = static_pointer_cast<CharucoBoardImpl>(impl);
+    CV_Assert(board->chessboardCorners.size() >= charucoIds.getMat().total());
 
-    Vec<double, 3> point0(board.chessboardCorners[charucoIds.getMat().at<int>(0)].x,
-                          board.chessboardCorners[charucoIds.getMat().at<int>(0)].y, 1);
+    Vec<double, 3> point0(board->chessboardCorners[charucoIds.getMat().at<int>(0)].x,
+                          board->chessboardCorners[charucoIds.getMat().at<int>(0)].y, 1);
 
-    Vec<double, 3> point1(board.chessboardCorners[charucoIds.getMat().at<int>(1)].x,
-                          board.chessboardCorners[charucoIds.getMat().at<int>(1)].y, 1);
+    Vec<double, 3> point1(board->chessboardCorners[charucoIds.getMat().at<int>(1)].x,
+                          board->chessboardCorners[charucoIds.getMat().at<int>(1)].y, 1);
 
     // create a line from the first two points.
     Vec<double, 3> testLine = point0.cross(point1);
@@ -535,8 +546,8 @@ bool CharucoBoard::checkCharucoCornersCollinear(InputArray charucoIds) const {
 
     double dotProduct;
     for (unsigned int i = 2; i < nCharucoCorners; i++){
-        testPoint(0) = board.chessboardCorners[charucoIds.getMat().at<int>(i)].x;
-        testPoint(1) = board.chessboardCorners[charucoIds.getMat().at<int>(i)].y;
+        testPoint(0) = board->chessboardCorners[charucoIds.getMat().at<int>(i)].x;
+        testPoint(1) = board->chessboardCorners[charucoIds.getMat().at<int>(i)].y;
 
         // if testPoint is on testLine, dotProduct will be zero (or very, very close)
         dotProduct = testPoint.dot(testLine);
@@ -550,15 +561,18 @@ bool CharucoBoard::checkCharucoCornersCollinear(InputArray charucoIds) const {
 }
 
 std::vector<Point3f> CharucoBoard::getChessboardCorners() const {
-    return as<CharucoBoardImpl>().chessboardCorners;
+    CV_Assert(impl);
+    return static_pointer_cast<CharucoBoardImpl>(impl)->chessboardCorners;
 }
 
 std::vector<std::vector<int> > CharucoBoard::getNearestMarkerIdx() const {
-    return as<CharucoBoardImpl>().nearestMarkerIdx;
+    CV_Assert(impl);
+    return static_pointer_cast<CharucoBoardImpl>(impl)->nearestMarkerIdx;
 }
 
 std::vector<std::vector<int> > CharucoBoard::getNearestMarkerCorners() const {
-    return as<CharucoBoardImpl>().nearestMarkerCorners;
+    CV_Assert(impl);
+    return static_pointer_cast<CharucoBoardImpl>(impl)->nearestMarkerCorners;
 }
 
 }

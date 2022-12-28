@@ -88,8 +88,6 @@ public:
     struct Impl;
 protected:
     Board(const Ptr<Impl>& impl);
-    template<typename T> T& as() { CV_Assert(impl); return static_cast<T&>(*impl); }
-    template<typename T> const T& as() const { CV_Assert(impl); return static_cast<const T&>(*impl); }
     Ptr<Impl> impl;
 };
 
