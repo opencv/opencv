@@ -1071,7 +1071,7 @@ double LineSegmentDetectorImpl::nfa(const int& n, const int& k, const double& p)
 
     double p_term = p / (1 - p);
 
-    double log1term = (double(n) + 1) - log_gamma(double(k) + 1)
+    double log1term = log_gamma(double(n) + 1) - log_gamma(double(k) + 1)
                 - log_gamma(double(n-k) + 1)
                 + double(k) * log(p) + double(n-k) * log(1.0 - p);
     double term = exp(log1term);
