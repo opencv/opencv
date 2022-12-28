@@ -9,7 +9,7 @@
 namespace cv {
 namespace aruco {
 
-//! @addtogroup aruco
+//! @addtogroup objdetect_aruco
 //! @{
 
 
