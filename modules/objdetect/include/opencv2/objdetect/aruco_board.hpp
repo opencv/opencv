@@ -78,7 +78,7 @@ public:
      * @param marginSize minimum margins (in pixels) of the board in the output image
      * @param borderBits width of the marker borders.
      *
-     * This function return the image of the GridBoard, ready to be printed.
+     * This function return the image of the board, ready to be printed.
      */
     CV_WRAP void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const;
 

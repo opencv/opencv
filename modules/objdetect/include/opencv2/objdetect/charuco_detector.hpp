@@ -60,8 +60,8 @@ public:
      * @brief detect aruco markers and interpolate position of ChArUco board corners
      * @param image input image necesary for corner refinement. Note that markers are not detected and
      * should be sent in corners and ids parameters.
-     * @param charucoCorners interpolated chessboard corners
-     * @param charucoIds interpolated chessboard corners identifiers
+     * @param charucoCorners interpolated chessboard corners.
+     * @param charucoIds interpolated chessboard corners identifiers.
      * @param markerCorners vector of already detected markers corners. For each marker, its four
      * corners are provided, (e.g std::vector<std::vector<cv::Point2f> > ). For N detected markers, the
      * dimensions of this array should be Nx4. The order of the corners should be clockwise.
@@ -70,9 +70,9 @@ public:
      *  If markerCorners and markerCorners are empty, the function detect aruco markers and ids.
      *
      * This function receives the detected markers and returns the 2D position of the chessboard corners
-     * from a ChArUco board using the detected Aruco markers. If
+     * from a ChArUco board using the detected Aruco markers.
      *
-     * If markerCorners and markerCorners are empty, the detectMarkers() will run and detect aruco markers and ids
+     * If markerCorners and markerCorners are empty, the detectMarkers() will run and detect aruco markers and ids.
      *
      * If camera parameters are provided, the process is based in an approximated pose estimation, else it is based on local homography.
      * Only visible corners are returned. For each corner, its corresponding identifier is also returned in charucoIds.
