@@ -2301,6 +2301,31 @@ gemm_model = helper.make_model(graph)
 output_np = gemm_reference_implementation(weight_np.T, input_np.T)
 save_data_and_model("gemm_first_const", input_np, output_np, gemm_model)
 
+## gemm with bias
+def generate_gemm_bias(name, inputA, inputB, inputC):
+    outputY = gemm_reference_implementation(inputA, inputB, inputC)
+
+    A = onnx.helper.make_tensor_value_info("A", onnx.TensorProto.FLOAT, inputA.shape)
+    B = onnx.helper.make_tensor_value_info("B", onnx.TensorProto.FLOAT, inputB.shape)
+    C = onnx.helper.make_tensor_value_info("C", onnx.TensorProto.FLOAT, inputC.shape)
+    B_INIT = onnx.helper.make_tensor("B", onnx.TensorProto.FLOAT, inputB.shape, inputB)
+    C_INIT = onnx.helper.make_tensor("C", onnx.TensorProto.FLOAT, inputC.shape, inputC)
+    Y = onnx.helper.make_tensor_value_info("Y", onnx.TensorProto.FLOAT, outputY.shape)
+    node = onnx.helper.make_node("Gemm", inputs=["A", "B", "C"], outputs=["Y"])
+    graph = onnx.helper.make_graph([node], name, [A, B, C], [Y], [B_INIT, C_INIT])
+    model = onnx.helper.make_model(graph, producer_name=name)
+    onnx.save(model, os.path.join("models", name + ".onnx"))
+
+    input_files = os.path.join("data", "input_" + name)
+    np.save(input_files, inputA.data)
+    output_files = os.path.join("data", "output_" + name)
+    np.save(output_files, np.ascontiguousarray(outputY.data))
+
+inputA = np.random.ranf([3, 6]).astype(np.float32)
+inputB = np.random.ranf([6, 4]).astype(np.float32)
+inputC = np.random.ranf([1, 4]).astype(np.float32)
+generate_gemm_bias("gemm_vector_bias", inputA, inputB, inputC)
+
 # ########################## ReduceSum with Dynamic Batch ##########################
 input_np = np.random.rand(2, 4, 4, 4).astype("float32")
 inputs = [onnx.helper.make_tensor_value_info("input1", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_np.dtype], shape=('?', 4, 4, 4))]
