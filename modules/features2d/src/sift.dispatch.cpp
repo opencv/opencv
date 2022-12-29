@@ -188,12 +188,16 @@ static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma
     if( doubleImageSize )
     {
         sig_diff = sqrtf( std::max(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA * 4, 0.01f) );
+
         Mat dbl;
-#if DoG_TYPE_SHORT
-        resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR_EXACT);
-#else
-        resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR);
-#endif
+        dbl.create(Size(gray_fpt.cols*2, gray_fpt.rows*2), gray_fpt.type());
+
+        Mat H = Mat::zeros(2, 3, CV_32F);
+        H.at<float>(0, 0) = 0.5f;
+        H.at<float>(1, 1) = 0.5f;
+
+        cv::warpAffine(gray_fpt, dbl, H, dbl.size(), INTER_LINEAR | WARP_INVERSE_MAP, BORDER_REFLECT);
+
         Mat result;
         GaussianBlur(dbl, result, Size(), sig_diff, sig_diff);
         return result;
