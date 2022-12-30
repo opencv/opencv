@@ -648,7 +648,7 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
 }
 
 } // namespace
-CVTEST_GUARD_SYMBOL(inRange);
+CVTEST_GUARD_SYMBOL(inRange)
 
 struct InRangeSOp : public BaseElemWiseOp
 {
