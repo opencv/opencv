@@ -110,6 +110,105 @@ private:
     opencv_onnx::GraphProto& net;
 };
 
+class LayerNormSubGraph : public Subgraph
+{
+public:
+    LayerNormSubGraph() : axis(-1), epsilon(1e-5)
+    {
+        //   -> ReduceMean ->     -> Pow(2) -> ReduceMean -> Add(epsilon) -> Sqrt ->
+        // x                  Sub                                                    Div -> Mul(scale) -> Add(bias)
+        //   --------------->     ------------------------------------------------->
+
+        int input = addNodeToMatch("");                    // 0
+        int mean = addNodeToMatch("ReduceMean", input);    // 1
+
+        int sub = addNodeToMatch("Sub", input, mean);      // 2
+
+        int const_pow = addNodeToMatch("Constant");        // 3
+        int pow = addNodeToMatch("Pow", sub, const_pow);   // 4
+        int mean1 = addNodeToMatch("ReduceMean", pow);     // 5
+        int const_add = addNodeToMatch("Constant");        // 6
+        int add = addNodeToMatch("Add", mean1, const_add); // 7
+        int sqrt = addNodeToMatch("Sqrt", add);            // 8
+
+        int div = addNodeToMatch("Div", sub, sqrt);        // 9
+        int const_mul = addNodeToMatch("Constant");        // 10
+        int mul = addNodeToMatch("Mul", div, const_mul);   // 11
+        int const_add1 = addNodeToMatch("Constant");       // 11
+        addNodeToMatch("Add", mul, const_add1);            // 13
+
+        setFusedNode("LayerNormalization", input, const_mul, const_add1);
+    }
+
+    static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
+    {
+        const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
+        int constant_id = getInputNodeId(net, node, input_id);
+        Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
+        opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
+        opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
+        Mat constant_mat = getMatFromTensor(constant_proto);
+        return *constant_mat.ptr<float>();
+    }
+
+    static float extractAxis(const Ptr<ImportGraphWrapper>& net, int node_id)
+    {
+        Ptr<ImportNodeWrapper> mean_ptr = net->getNode(node_id);
+        opencv_onnx::NodeProto* mean_node = mean_ptr.dynamicCast<ONNXNodeWrapper>()->node;
+        int axis_ = -1;
+        for (int i = 0; i < mean_node->attribute_size(); i++)
+        {
+            opencv_onnx::AttributeProto attr = mean_node->attribute(i);
+            if (attr.name() != "axes")
+                continue;
+            axis_ = static_cast<int>(attr.ints(0));
+        }
+        return axis_;
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds,
+                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+    {
+        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        {
+            float const_exp = extractConstant(net, matchedNodesIds[2], 1);
+            if (const_exp - 2 > 1e-5) // not pow(2)
+                return false;
+
+            int axis_mean1 = extractAxis(net, matchedNodesIds[0]);
+            int axis_mean2 = extractAxis(net, matchedNodesIds[3]);
+            if (axis_mean1 != axis_mean2)
+                return false;
+            axis = axis_mean1;
+
+            epsilon = extractConstant(net, matchedNodesIds[4], 1);
+
+            return true;
+        }
+        return false;
+    }
+
+    virtual void finalize(const Ptr<ImportGraphWrapper>&,
+                          const Ptr<ImportNodeWrapper>& fusedNode,
+                          std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE
+    {
+        opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
+        // axis
+        opencv_onnx::AttributeProto* attr_axis = node->add_attribute();
+        attr_axis->set_name("axis");
+        attr_axis->set_i(axis);
+        // epsilon
+        opencv_onnx::AttributeProto* attr_epsilon = node->add_attribute();
+        attr_epsilon->set_name("epsilon");
+        attr_epsilon->set_f(epsilon);
+    }
+
+protected:
+    int axis;
+    float epsilon;
+};
+
 class SoftMaxSubgraphBase : public Subgraph
 {
 public:
@@ -746,6 +845,7 @@ public:
 void simplifySubgraphs(opencv_onnx::GraphProto& net)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
+    subgraphs.push_back(makePtr<LayerNormSubGraph>());
     subgraphs.push_back(makePtr<GatherCastSubgraph>());
     subgraphs.push_back(makePtr<MulCastSubgraph>());
     subgraphs.push_back(makePtr<UpsampleSubgraph>());

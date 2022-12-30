@@ -494,9 +494,9 @@ struct Layer_LayerNormExpanded : public TestBaseWithParam<tuple<Backend, Target>
         randu(b, 0.f, 1.f);
 
         // sub graph structure:
-        //   -> ReduceMean ->     -> Pow -> ReduceMean -> Add(epsilon) -> Sqrt ->
-        // x                  Sub                                                 Div -> Mul(scale) -> Add(bias)
-        //   --------------->     ---------------------------------------------->
+        //   -> ReduceMean ->     -> Pow(2) -> ReduceMean -> Add(epsilon) -> Sqrt ->
+        // x                  Sub                                                    Div -> Mul(scale) -> Add(bias)
+        //   --------------->     ------------------------------------------------->
 
         Net net;
 
