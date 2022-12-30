@@ -703,7 +703,7 @@ bool QRCodeEncoderImpl::stringToBits(const std::string& input_info)
         default:
             return encodeAuto(input_info, payload);
     }
-};
+}
 
 void QRCodeEncoderImpl::eccGenerate(vector<vector<uint8_t> > &data_blocks, vector<vector<uint8_t> > &ecc_blocks)
 {

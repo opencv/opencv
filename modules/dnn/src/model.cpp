@@ -306,9 +306,9 @@ void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
 }
 
 KeypointsModel::KeypointsModel(const String& model, const String& config)
-    : Model(model, config) {};
+    : Model(model, config) {}
 
-KeypointsModel::KeypointsModel(const Net& network) : Model(network) {};
+KeypointsModel::KeypointsModel(const Net& network) : Model(network) {}
 
 std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
 {
@@ -364,9 +364,9 @@ std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
 }
 
 SegmentationModel::SegmentationModel(const String& model, const String& config)
-    : Model(model, config) {};
+    : Model(model, config) {}
 
-SegmentationModel::SegmentationModel(const Net& network) : Model(network) {};
+SegmentationModel::SegmentationModel(const Net& network) : Model(network) {}
 
 void SegmentationModel::segment(InputArray frame, OutputArray mask)
 {
