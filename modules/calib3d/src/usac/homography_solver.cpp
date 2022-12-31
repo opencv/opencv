@@ -631,6 +631,12 @@ Mat solve_weighted_umeyama(const Mat &points_, const bool is_scale, const std::v
 
     Mat convertedPoints;
     points_.convertTo(convertedPoints, CV_64F);
+    // accumulating squared sums & dot products for further (co)variance calculation
+    // wmean(X) = sum(w_i * x_i)/sum(w_i)
+    // cov(X, Y) = sum(w_i*(x_i - wmean(X))^T*(y_i - wmean(Y)))/sum(w_i) =
+    // sum(w_i*x_i^T*y_i)/sum(w_i) - wmean(X)^T*wmean(Y)
+    // var(X) = tr(cov(X, X))
+    Matxdd covSum;
     Vecdd wsum1, wsum2;
     double wsqsum1 = 0;
     double totalWeight = 0;
@@ -641,35 +647,21 @@ Mat solve_weighted_umeyama(const Mat &points_, const bool is_scale, const std::v
         Vecdd sample1 = convertedPoints.at<Vecdd>(n, 0);
         Vecdd sample2 = convertedPoints.at<Vecdd>(n, 1);
 
-        wsum1 += weight * sample1;
-        wsum2 += weight * sample2;
+        Matxdd covsq = sample2 * sample1.t();
 
+        covSum += weight * covsq;
+        wsum1  += weight * sample1;
+        wsum2  += weight * sample2;
         wsqsum1 += weight * sample1.ddot(sample1);
 
         totalWeight += weight;
     }
 
-    Vecdd center1 = wsum1 / totalWeight;
-    Vecdd center2 = wsum2 / totalWeight;
-
-    double sigma2 = wsqsum1 * (1. / totalWeight) - center1.ddot(center1);
-
-    Matxdd ABt;
-    for (int n = 0; n < N; n++)
-    {
-        double weight = noWeights ? 1. : weights[n];
-
-        Vecdd sample1 = convertedPoints.at<Vecdd>(n, 0);
-        Vecdd sample2 = convertedPoints.at<Vecdd>(n, 1);
-
-        Vecdd centeredSample1 = sample1 - center1;
-        Vecdd centeredSample2 = sample2 - center2;
-
-        Matxdd cov = centeredSample2 * centeredSample1.t();
-        ABt += cov * weight;
-    }
-
-    ABt *= (1. / totalWeight);
+    double invWeight = 1. / totalWeight;
+    Vecdd center1 = wsum1 * invWeight;
+    Vecdd center2 = wsum2 * invWeight;
+    double sigma2 = wsqsum1 * invWeight - center1.ddot(center1);
+    Matxdd ABt = covSum * invWeight - center2 * center1.t();
 
     Matxdd u, vt;
     Vecdd w;
