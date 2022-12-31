@@ -731,11 +731,11 @@ public:
     };
 
     /** @brief QR code encoder parameters.
-     @param version The optional version of QR code (by default - maximum possible depending on
+     @val version The optional version of QR code (by default - maximum possible depending on
                     the length of the string).
-     @param correction_level The optional level of error correction (by default - the lowest).
-     @param mode The optional encoding mode - Numeric, Alphanumeric, Byte, Kanji, ECI or Structured Append.
-     @param structure_number The optional number of QR codes to generate in Structured Append mode.
+     @val correction_level The optional level of error correction (by default - the lowest).
+     @val mode The optional encoding mode - Numeric, Alphanumeric, Byte, Kanji, ECI or Structured Append.
+     @val structure_number The optional number of QR codes to generate in Structured Append mode.
     */
     struct CV_EXPORTS_W_SIMPLE Params
     {
