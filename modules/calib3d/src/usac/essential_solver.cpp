@@ -178,10 +178,7 @@ public:
                 models.emplace_back(E);
             }
         } else {
-#if !defined(HAVE_EIGEN) && !defined(HAVE_LAPACK)
-            CV_Error(cv::Error::StsNotImplemented, "To run essential matrix estimation of Stewenius method you need to have either Eigen or LAPACK installed! Or switch to Nister algorithm");
-            return 0;
-#endif
+#if defined(HAVE_EIGEN) || defined(HAVE_LAPACK)
             for (int i = 0; i < 3; i++)
                 for (int j = 0; j < 3; j++)
                     // compute EE Transpose
@@ -266,7 +263,7 @@ public:
             // back-substitute to obtain the solutions for the essential matrix.
             for (int i = 0; i < 10; i++)
                 // process only real solutions
-    #ifdef HAVE_EIGEN
+#ifdef HAVE_EIGEN
                 if (eigenvalues(i).imag() == 0) {
                     Mat_<double> model(3, 3);
                     auto * model_data = (double *) model.data;
@@ -274,7 +271,7 @@ public:
                     for (int j = 0; j < 9; j++)
                         model_data[j] = ee[j   ] * eig_vecs_[eig_i  ] + ee[j+9 ] * eig_vecs_[eig_i+2] +
                                         ee[j+18] * eig_vecs_[eig_i+4] + ee[j+27] * eig_vecs_[eig_i+6];
-    #else
+#else
                 if (wi[i] == 0) {
                     Mat_<double> model (3,3);
                     auto * model_data = (double *) model.data;
@@ -282,9 +279,13 @@ public:
                     for (int j = 0; j < 9; j++)
                         model_data[j] = ee[j   ]*eig_vecs[eig_i  ] + ee[j+9 ]*eig_vecs[eig_i+1] +
                                         ee[j+18]*eig_vecs[eig_i+2] + ee[j+27]*eig_vecs[eig_i+3];
-    #endif
+#endif
                     models.emplace_back(model);
                 }
+#else
+            CV_Error(cv::Error::StsNotImplemented, "To run essential matrix estimation of Stewenius method you need to have either Eigen or LAPACK installed! Or switch to Nister algorithm");
+            return 0;
+#endif
         }
         return static_cast<int>(models.size());
     }

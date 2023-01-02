@@ -434,7 +434,7 @@ public:
                 num_pts_validatin_or_constr = 0, pt1 = 0;
         const auto * const pts = params->isEssential() ? (float *) image_points.data : (float *) points.data;
         // scale for thresholds should be used
-        const float ep_thr_sqr = 0.000001, line_thr = 0.01, neigh_thr = 4.0;
+        const float ep_thr_sqr = 0.000001f, line_thr = 0.01f, neigh_thr = 4.0f;
         float sign1=0,a1=0, b1=0, c1=0, a2=0, b2=0, c2=0, ep1_x, ep1_y, ep2_x, ep2_y;
         const auto * const m = (float *) model.data;
         Vec3f ep1;
