@@ -407,7 +407,7 @@ bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
     usac::setParameters(model_params, cameraMatrix.empty() ? usac::EstimationMethod::P6P :
         usac::EstimationMethod::P3P, params, inliers.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model_params, imagePoints, objectPoints, model_params->getRandomGeneratorState(),
+    if (usac::run(model_params, imagePoints, objectPoints,
             ransac_output, cameraMatrix, noArray(), distCoeffs, noArray())) {
         if (inliers.needed()) {
             const auto &inliers_mask = ransac_output->getInliersMask();

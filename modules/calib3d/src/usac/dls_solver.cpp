@@ -46,29 +46,24 @@
 #endif
 
 namespace cv { namespace usac {
-// This is the estimator class for estimating a homography matrix between two images. A model estimation method and error calculation method are implemented
 class DLSPnPImpl : public DLSPnP {
 private:
-    const Mat * points_mat, * calib_norm_points_mat;
-    const Matx33d * K_mat;
 #if defined(HAVE_LAPACK) || defined(HAVE_EIGEN)
-    const Matx33d &K;
+    const Mat * points_mat, * calib_norm_points_mat;
+    const Matx33d K;
     const float * const calib_norm_points, * const points;
 #endif
 public:
-    explicit DLSPnPImpl (const Mat &points_, const Mat &calib_norm_points_, const Matx33d &K_) :
-        points_mat(&points_), calib_norm_points_mat(&calib_norm_points_), K_mat (&K_)
+    explicit DLSPnPImpl (const Mat &points_, const Mat &calib_norm_points_, const Mat &K_)
 #if defined(HAVE_LAPACK) || defined(HAVE_EIGEN)
-        , K(K_), calib_norm_points((float*)calib_norm_points_.data), points((float*)points_.data)
+        : points_mat(&points_), calib_norm_points_mat(&calib_norm_points_),
+        K(K_), calib_norm_points((float*)calib_norm_points_.data), points((float*)points_.data)
 #endif
         {}
     // return minimal sample size required for non-minimal estimation.
     int getMinimumRequiredSampleSize() const override { return 3; }
     // return maximum number of possible solutions.
     int getMaxNumberOfSolutions () const override { return 27; }
-    Ptr<NonMinimalSolver> clone () const override {
-        return makePtr<DLSPnPImpl>(*points_mat, *calib_norm_points_mat, *K_mat);
-    }
 #if defined(HAVE_LAPACK) || defined(HAVE_EIGEN)
     int estimate(const std::vector<int> &sample, int sample_number,
         std::vector<Mat> &models_, const std::vector<double> &/*weights_*/) const override {
@@ -170,7 +165,6 @@ public:
         for (int i = 0; i < sample_number; i++)
             pts_random_shuffle[i] = i;
         randShuffle(pts_random_shuffle);
-
         for (int i = 0; i < 27; i++) {
             // If the rotation solutions are real, treat this as a valid candidate
             // rotation.
@@ -871,7 +865,7 @@ protected:
                  2 * D[74] - 2 * D[78]);                              // s1^3
     }
 };
-Ptr<DLSPnP> DLSPnP::create(const Mat &points_, const Mat &calib_norm_pts, const Matx33d &K) {
+Ptr<DLSPnP> DLSPnP::create(const Mat &points_, const Mat &calib_norm_pts, const Mat &K) {
     return makePtr<DLSPnPImpl>(points_, calib_norm_pts, K);
 }
 }}
