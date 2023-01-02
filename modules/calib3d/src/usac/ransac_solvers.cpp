@@ -141,7 +141,7 @@ public:
             if (params->isEssential()) {
                 CV_CheckEQ((int)(!K1_.empty() && !K2_.empty()), 1, "Intrinsic matrix must not be empty!");
                 K1 = K1_.getMat(); K1.convertTo(K1, CV_64F);
-                K2 = K2_.getMat(); K2.convertTo(K2, CV_64F);            
+                K2 = K2_.getMat(); K2.convertTo(K2, CV_64F);
                 if (! dist_coeff1.empty() || ! dist_coeff2.empty()) {
                     // undistortPoints also calibrate points using K
                     if (! dist_coeff1.empty()) undistortPoints(points1.isContinuous() ? points1 : points1.getMat().clone(), undist_points1, K1_, dist_coeff1);
@@ -434,7 +434,7 @@ public:
                 num_pts_validatin_or_constr = 0, pt1 = 0;
         const auto * const pts = params->isEssential() ? (float *) image_points.data : (float *) points.data;
         // scale for thresholds should be used
-        const float ep_thr_sqr = 1e-6, line_thr = .01, neigh_thr = 4;
+        const float ep_thr_sqr = 1e-6, line_thr = 0.01, neigh_thr = 4.0;
         float sign1=0,a1=0, b1=0, c1=0, a2=0, b2=0, c2=0, ep1_x, ep1_y, ep2_x, ep2_y;
         const auto * const m = (float *) model.data;
         Vec3f ep1;
@@ -594,7 +594,7 @@ public:
 
         double lambda_non_random_all_inliers = -1;
         int final_iters, num_total_tested_models = 0;
-    
+
         // non-random
         const int MAX_TEST_MODELS_NONRAND = IS_NON_RAND_TEST ? MAX_MODELS_ADAPT : 0;
         std::vector<Mat> models_for_random_test; models_for_random_test.reserve(MAX_TEST_MODELS_NONRAND);
@@ -808,7 +808,7 @@ public:
                 auto runLO = [&] (int current_ransac_iters) {
                     was_LO_run = true;
                     local_optimization->setCurrentRANSACiter(current_ransac_iters);
-                    if (local_optimization->refineModel(best_model_thread, best_score_thread, lo_model, 
+                    if (local_optimization->refineModel(best_model_thread, best_score_thread, lo_model,
                             lo_score) && lo_score.isBetter(best_score_thread))
                         update_best(lo_score, lo_model, true);
                 };

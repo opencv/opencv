@@ -363,7 +363,7 @@ public:
             swapF(F_calib, F_calib_score);
             return true;
         } else {
-            if (planeAndParallaxRANSAC(H_best, h_outliers, num_h_outliers, max_iters_plane_and_parallax, true, 
+            if (planeAndParallaxRANSAC(H_best, h_outliers, num_h_outliers, max_iters_plane_and_parallax, true,
                     F_best_score, non_planar_support_degen_F, F_pl_par, F_pl_par_score)) {
                 swapF(F_pl_par, F_pl_par_score);
                 return true;
@@ -573,13 +573,13 @@ public:
                 new_score = F_from_K_score;
                 F_from_K.copyTo(F_new);
                 success = true;
-            }            
+            }
         }
         if (!is_F_degen) {
             return false;
         } else if (success) // F is degenerate
             return true; // but successfully recovered
-        
+
         // recover degenerate F using plane-and-parallax
         Score plane_parallax_score; Mat F_plane_parallax;
         if (planeAndParallaxRANSAC(H_best, h_outliers, num_h_outliers, 20, true,
@@ -660,7 +660,7 @@ private:
         if (num_models_used_so_far < MAX_MODELS_TO_TEST)
             // the minimum number of non-planar support has not estimated yet -> use tentative
             return num_f_inliers_h_outliers < std::min(TENT_MIN_NON_PLANAR_SUPP, (int)(0.1 * num_h_outliers_eval));
-        return num_f_inliers_h_outliers < estimated_min_non_planar_support;   
+        return num_f_inliers_h_outliers < estimated_min_non_planar_support;
     }
 };
 Ptr<FundamentalDegeneracy> FundamentalDegeneracy::create (int state, const Ptr<Quality> &quality_,

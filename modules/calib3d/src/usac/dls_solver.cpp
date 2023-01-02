@@ -48,16 +48,16 @@
 namespace cv { namespace usac {
 class DLSPnPImpl : public DLSPnP {
 private:
-#if defined(HAVE_LAPACK) || defined(HAVE_EIGEN)
     const Mat * points_mat, * calib_norm_points_mat;
     const Matx33d K;
+#if defined(HAVE_LAPACK) || defined(HAVE_EIGEN)
     const float * const calib_norm_points, * const points;
 #endif
 public:
     explicit DLSPnPImpl (const Mat &points_, const Mat &calib_norm_points_, const Mat &K_)
+        : points_mat(&points_), calib_norm_points_mat(&calib_norm_points_), K(K_)
 #if defined(HAVE_LAPACK) || defined(HAVE_EIGEN)
-        : points_mat(&points_), calib_norm_points_mat(&calib_norm_points_),
-        K(K_), calib_norm_points((float*)calib_norm_points_.data), points((float*)points_.data)
+        , calib_norm_points((float*)calib_norm_points_.data), points((float*)points_.data)
 #endif
         {}
     // return minimal sample size required for non-minimal estimation.

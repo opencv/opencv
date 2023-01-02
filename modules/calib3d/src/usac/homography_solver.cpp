@@ -443,7 +443,7 @@ public:
             _T2 = T2.getMat();
         } else {
             do_norm = true;
-            normTr = NormTransform::create(points_);            
+            normTr = NormTransform::create(points_);
         }
     }
 

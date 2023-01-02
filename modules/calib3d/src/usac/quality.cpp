@@ -378,7 +378,7 @@ public:
               double time_sample, double avg_num_models, ScoreMethod score_type_,
               double k_mlesac_, bool is_adaptive) : rng(state), err(quality_->getErrorFnc()),
               quality(quality_), points_size(points_size_), inlier_threshold (quality->getThreshold()),
-              norm_thr(inlier_threshold_*k_mlesac_), one_over_thr (1/norm_thr), t_M (time_sample), 
+              norm_thr(inlier_threshold_*k_mlesac_), one_over_thr (1/norm_thr), t_M (time_sample),
               score_type (score_type_), m_S (avg_num_models) {
 
         // Generate array of random points for randomized evaluation
@@ -396,15 +396,16 @@ public:
         if (score_type_ != ScoreMethod::SCORE_METHOD_MSAC)
             errors = std::vector<float>(points_size_);
         IS_ADAPTIVE = is_adaptive;
+        delta_to_epsilon = one_over_complement_alpha = complement_delta_to_complement_epsilon = current_A = -1;
+        avg_num_checked_pts = points_size_;
+        adapt = IS_ADAPTIVE;
+        do_sprt = !IS_ADAPTIVE;
         if (IS_ADAPTIVE) {
-            adapt = true; do_sprt = false;
             // all these variables will be initialized later
             current_epsilon = prob_pt_of_good_model;
-            current_delta = prob_pt_of_bad_model; current_A = -1;
-            delta_to_epsilon = -1; avg_num_checked_pts = points_size_;
-            one_over_complement_alpha = -1; complement_delta_to_complement_epsilon = -1;
+            current_delta = prob_pt_of_bad_model;
         } else {
-            adapt = false; do_sprt = true;
+            current_epsilon = current_delta = 1e-5;
             createTest(prob_pt_of_good_model, prob_pt_of_bad_model);
         }
     }
@@ -559,9 +560,7 @@ private:
 
         if (IS_ADAPTIVE) {
             avg_num_checked_pts = std::min((log(current_A) / C) * one_over_complement_alpha, (double)points_size);
-            // if (1 / current_A > 0.5) do_sprt = false; // if false rejection rate is higher than 50%, do not do SPRT
-            // else 
-                do_sprt = time_ver_corr_sprt * avg_num_checked_pts < time_ver_corr * points_size;
+            do_sprt = time_ver_corr_sprt * avg_num_checked_pts < time_ver_corr * points_size;
         }
         return true;
     }

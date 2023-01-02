@@ -59,8 +59,8 @@ public:
         const std::vector<int> &sample_,
         const int sample_size_,
         const MlesacLoss &l,
-        const double *w = nullptr) : 
-            correspondences(&correspondences_), 
+        const double *w = nullptr) :
+            correspondences(&correspondences_),
             sample(sample_),
             sample_size(sample_size_),
             loss_fn(l),
@@ -161,7 +161,7 @@ public:
             const double nJ_C = norm(J_C);
             const double inv_nJ_C = 1.0 / nJ_C;
             const double r = C * inv_nJ_C;
-            
+
             if (r*r > loss_fn.squared_thr) continue;
 
             // Compute weight from robust loss function (used in the IRLS)
@@ -225,7 +225,7 @@ bool satisfyCheirality (const Matx33d& R, const Vec3d &t, const Vec3d &x1, const
 int refine_relpose(const Mat &correspondences_,
                     const std::vector<int> &sample_,
                     const int sample_size_,
-                    CameraPose *pose, 
+                    CameraPose *pose,
                     const BundleOptions &opt,
                     const double* weights) {
     MlesacLoss loss_fn(opt.loss_scale);
@@ -237,7 +237,7 @@ int refine_relpose(const Mat &correspondences_,
     Matx<double, 3, 2> tangent_basis;
     Matx33d sw = Matx33d::zeros();
     double lambda = opt.initial_lambda;
-    
+
     // Compute initial cost
     double cost = accum.residual(*pose);
     bool recompute_jac = true;

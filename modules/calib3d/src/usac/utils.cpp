@@ -586,10 +586,10 @@ public:
         }
         return subset;
     }
-    void setSubsetSize (int subset_size_) override { 
+    void setSubsetSize (int subset_size_) override {
         if (subset_size < subset_size_)
             subset.resize(subset_size_);
-        subset_size = subset_size_; 
+        subset_size = subset_size_;
     }
     int getSubsetSize () const override { return subset_size; }
 };

@@ -352,7 +352,7 @@ public:
     SimpleLocalOptimizationImpl (const Ptr<Quality> &quality_, const Ptr<NonMinimalSolver> &estimator_,
             const Ptr<Termination> termination_, const Ptr<RandomGenerator> &random_gen, Ptr<WeightFunction> weight_fnc_,
             int max_lo_iters_, double inlier_threshold_sqr_, bool update_lo_) :
-            quality(quality_), error(quality_->getErrorFnc()), estimator(estimator_), termination(termination_), 
+            quality(quality_), error(quality_->getErrorFnc()), estimator(estimator_), termination(termination_),
             random_generator(random_gen), weight_fnc(weight_fnc_) {
         max_lo_iters = max_lo_iters_;
         non_min_sample_size = random_generator->getSubsetSize();

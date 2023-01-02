@@ -646,7 +646,7 @@ namespace Utils {
         std::vector<bool> &good_mask, std::vector<double> &depths1, std::vector<double> &depths2);
     void triangulatePoints (const Mat &E, const Mat &points1, const Mat &points2,  Mat &corr_points1, Mat &corr_points2,
                const Mat &K1, const Mat &K2, Mat &points3D, Mat &R, Mat &t, const std::vector<bool> &good_point_mask);
-    int triangulatePointsRt (const Mat &points, Mat &points3D, const Mat &K1_, const Mat &K2_, 
+    int triangulatePointsRt (const Mat &points, Mat &points3D, const Mat &K1_, const Mat &K2_,
         const cv::Mat &R, const cv::Mat &t_vec, std::vector<bool> &good_mask, std::vector<double> &depths1, std::vector<double> &depths2);
     int decomposeHomography (const Matx33d &Hnorm, std::vector<Matx33d> &R, std::vector<Vec3d> &t);
     double getPoissonCDF (double lambda, int tentative_inliers);
@@ -758,7 +758,7 @@ public:
 
 class SimpleLocalOptimization : public LocalOptimization {
 public:
-    static Ptr<SimpleLocalOptimization> create 
+    static Ptr<SimpleLocalOptimization> create
         (const Ptr<Quality> &quality_, const Ptr<NonMinimalSolver> &estimator_,
          const Ptr<Termination> termination_, const Ptr<RandomGenerator> &random_gen,
          const Ptr<WeightFunction> weight_fnc_,
