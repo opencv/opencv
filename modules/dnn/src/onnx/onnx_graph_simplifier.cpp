@@ -75,6 +75,28 @@ public:
         return makePtr<ONNXNodeWrapper>(node);
     }
 
+    int getInputInitializerId(int node_id, int node_input_id)
+    {
+        auto node = getNode(node_id);
+        std::string node_input_name = node->getInputName(node_input_id);
+        for (int i = 0; i < numInitializers; ++i)
+            if (net.initializer(i).name() == node_input_name)
+                return i;
+        CV_Error(Error::StsParseError, "Initializer with name " + node_input_name + " not found");
+    }
+
+    Mat getMatFromInitializer(int idx)
+    {
+        const opencv_onnx::TensorProto& tensor_proto = net.initializer(idx);
+        return getMatFromTensor(tensor_proto);
+    }
+
+    std::string getNameOfInitializer(int idx) const
+    {
+        const opencv_onnx::TensorProto& tensor_proto = net.initializer(idx);
+        return tensor_proto.name();
+    }
+
     virtual int getNumNodes() const CV_OVERRIDE
     {
         return numInputs + numInitializers + net.node_size();
@@ -118,37 +140,50 @@ public:
         //   -> ReduceMean ->     -> Pow(2) -> ReduceMean -> Add(epsilon) -> Sqrt ->
         // x                  Sub                                                    Div -> Mul(scale) -> Add(bias)
         //   --------------->     ------------------------------------------------->
+        // NOTE: Pow(2), Add(epsilon), Mul(scale), add(bias) can have constants as op_type Constant or Initializer
+        int input = addNodeToMatch("");
+        int mean = addNodeToMatch("ReduceMean", input);
 
-        int input = addNodeToMatch("");                    // 0
-        int mean = addNodeToMatch("ReduceMean", input);    // 1
+        int sub = addNodeToMatch("Sub", input, mean);
 
-        int sub = addNodeToMatch("Sub", input, mean);      // 2
+        int pow = addNodeToMatch("Pow", sub, addNodeToMatch(""));
+        int mean1 = addNodeToMatch("ReduceMean", pow);
+        int add = addNodeToMatch("Add", mean1, addNodeToMatch(""));
+        int sqrt = addNodeToMatch("Sqrt", add);
 
-        int const_pow = addNodeToMatch("Constant");        // 3
-        int pow = addNodeToMatch("Pow", sub, const_pow);   // 4
-        int mean1 = addNodeToMatch("ReduceMean", pow);     // 5
-        int const_add = addNodeToMatch("Constant");        // 6
-        int add = addNodeToMatch("Add", mean1, const_add); // 7
-        int sqrt = addNodeToMatch("Sqrt", add);            // 8
+        int div = addNodeToMatch("Div", sub, sqrt);
+        int mul = addNodeToMatch("Mul", div, addNodeToMatch(""));
+        addNodeToMatch("Add", mul, addNodeToMatch(""));
 
-        int div = addNodeToMatch("Div", sub, sqrt);        // 9
-        int const_mul = addNodeToMatch("Constant");        // 10
-        int mul = addNodeToMatch("Mul", div, const_mul);   // 11
-        int const_add1 = addNodeToMatch("Constant");       // 11
-        addNodeToMatch("Add", mul, const_add1);            // 13
-
-        setFusedNode("LayerNormalization", input, const_mul, const_add1);
+        setFusedNode("LayerNormalization", input);
     }
 
-    static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
+    static bool isWithInitializer(const std::vector<int>& matchedNodesIds)
     {
-        const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
-        int constant_id = getInputNodeId(net, node, input_id);
-        Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
-        opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
-        opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
-        Mat constant_mat = getMatFromTensor(constant_proto);
-        return *constant_mat.ptr<float>();
+        // if node.getType() is Constant, Constant nodes are placed between other nodes
+        if (matchedNodesIds[2] - matchedNodesIds[1] != 1)
+            return false;
+        // if Initializer, there is no nodes for constant between other nodes
+        return true;
+    }
+
+    static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id, bool withInitializer)
+    {
+        if (withInitializer)
+        {
+            auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
+            int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
+            Mat const_mat = onnx_net->getMatFromInitializer(initializer_id);
+            return *const_mat.ptr<float>();
+        } else {
+            const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
+            int constant_id = getInputNodeId(net, node, input_id);
+            Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
+            opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
+            opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
+            Mat constant_mat = getMatFromTensor(constant_proto);
+            return *constant_mat.ptr<float>();
+        }
     }
 
     static float extractAxis(const Ptr<ImportGraphWrapper>& net, int node_id)
@@ -166,14 +201,29 @@ public:
         return axis_;
     }
 
+    static std::string getInputName(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id, bool withInitializer)
+    {
+        if (withInitializer)
+        {
+            auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
+            int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
+            return onnx_net->getNameOfInitializer(initializer_id);
+        } else {
+            const auto node = net->getNode(node_id);
+            return node->getInputName(input_id);
+        }
+    }
+
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
                        std::vector<int>& matchedNodesIds,
                        std::vector<int>& targetNodesIds) CV_OVERRIDE
     {
         if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
         {
-            float const_exp = extractConstant(net, matchedNodesIds[2], 1);
-            if (const_exp - 2 > 1e-5) // not pow(2)
+            withInitializer = isWithInitializer(matchedNodesIds);
+
+            float pow_exp = extractConstant(net, matchedNodesIds[2], 1, withInitializer);
+            if (pow_exp - 2 > 1e-5) // not pow(2)
                 return false;
 
             int axis_mean1 = extractAxis(net, matchedNodesIds[0]);
@@ -182,7 +232,10 @@ public:
                 return false;
             axis = axis_mean1;
 
-            epsilon = extractConstant(net, matchedNodesIds[4], 1);
+            epsilon = extractConstant(net, matchedNodesIds[4], 1, withInitializer);
+
+            weight_name = getInputName(net, matchedNodesIds[7], 1, withInitializer);
+            bias_name = getInputName(net, matchedNodesIds[8], 1, withInitializer);
 
             return true;
         }
@@ -202,11 +255,17 @@ public:
         opencv_onnx::AttributeProto* attr_epsilon = node->add_attribute();
         attr_epsilon->set_name("epsilon");
         attr_epsilon->set_f(epsilon);
+        // add input
+        node->add_input(weight_name);
+        node->add_input(bias_name);
     }
 
 protected:
     int axis;
     float epsilon;
+    bool withInitializer;
+    std::string weight_name;
+    std::string bias_name;
 };
 
 class SoftMaxSubgraphBase : public Subgraph
