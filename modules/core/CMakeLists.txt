@@ -168,6 +168,10 @@ if(HAVE_HPX)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE "${HPX_LIBRARIES}")
 endif()
 
+if(WITH_OPENMP AND OPENMP_FOUND)
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE "${OpenMP_CXX_LIBRARIES}")
+endif()
+
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
 
