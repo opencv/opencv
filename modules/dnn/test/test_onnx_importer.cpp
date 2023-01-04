@@ -2421,6 +2421,7 @@ TEST_P(Test_ONNX_layers, LayerNorm)
 TEST_P(Test_ONNX_layers, LayerNormExpanded)
 {
     testONNXModels("layer_norm_expanded");
+    testONNXModels("layer_norm_expanded_with_initializers");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
