@@ -28,7 +28,7 @@ private:
     const bool use_svd, is_nister;
 public:
     explicit EssentialMinimalSolver5ptsImpl (const Mat &points_, bool use_svd_=false, bool is_nister_=false) :
-        points_mat(&points_), pts((float*)points_.data), use_svd(use_svd_), is_nister(is_nister_) {}
+        points_mat(&points_), pts((float*)points_mat->data), use_svd(use_svd_), is_nister(is_nister_) {}
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         // (1) Extract 4 null vectors from linear equations of epipolar constraint

@@ -187,7 +187,7 @@ public:
 
         if (! std::isinf(predicted_iters) && predicted_iters < predicted_iterations)
             return static_cast<int>(predicted_iters);
-        return predicted_iterations;
+        return std::min(MAX_ITERS, predicted_iterations);
     }
 };
 Ptr<SPRTPNapsacTermination> SPRTPNapsacTermination::create(const Ptr<AdaptiveSPRT> &

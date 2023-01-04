@@ -16,7 +16,7 @@ private:
     const bool use_ge;
 public:
     explicit HomographyMinimalSolver4ptsImpl (const Mat &points_, bool use_ge_) :
-        points_mat(&points_), points ((float*) points_.data), use_ge(use_ge_) {}
+        points_mat(&points_), points ((float*) points_mat->data), use_ge(use_ge_) {}
 
     int estimate (const std::vector<int>& sample, std::vector<Mat> &models) const override {
         int m = 8, n = 9;
@@ -387,7 +387,7 @@ private:
     const float * const points;
 public:
     explicit AffineMinimalSolverImpl (const Mat &points_) :
-            points_mat(&points_), points((float *) points_.data) {}
+            points_mat(&points_), points((float *) points_mat->data) {}
     /*
         Affine transformation
         x1 y1 1 0  0  0   a   u1

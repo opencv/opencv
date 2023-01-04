@@ -47,19 +47,20 @@
 
 namespace cv { namespace usac {
 class DLSPnPImpl : public DLSPnP {
+#if defined(HAVE_LAPACK) || defined(HAVE_EIGEN)
 private:
     const Mat * points_mat, * calib_norm_points_mat;
     const Matx33d K;
-#if defined(HAVE_LAPACK) || defined(HAVE_EIGEN)
     const float * const calib_norm_points, * const points;
-#endif
 public:
     explicit DLSPnPImpl (const Mat &points_, const Mat &calib_norm_points_, const Mat &K_)
-        : points_mat(&points_), calib_norm_points_mat(&calib_norm_points_), K(K_)
-#if defined(HAVE_LAPACK) || defined(HAVE_EIGEN)
-        , calib_norm_points((float*)calib_norm_points_.data), points((float*)points_.data)
+        : points_mat(&points_), calib_norm_points_mat(&calib_norm_points_), K(K_),
+        calib_norm_points((float*)calib_norm_points_mat->data), points((float*)points_mat->data) {}
+#else
+public:
+    explicit DLSPnPImpl (const Mat &, const Mat &, const Mat &) {}
 #endif
-        {}
+
     // return minimal sample size required for non-minimal estimation.
     int getMinimumRequiredSampleSize() const override { return 3; }
     // return maximum number of possible solutions.

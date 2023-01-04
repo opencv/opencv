@@ -13,7 +13,7 @@ private:
     const int min_sample_size;
 public:
     explicit EpipolarGeometryDegeneracyImpl (const Mat &points_, int sample_size_) :
-        points_mat(&points_), points ((float*) points_.data), min_sample_size (sample_size_) {}
+        points_mat(&points_), points ((float*) points_mat->data), min_sample_size (sample_size_) {}
     /*
      * Do oriented constraint to verify if epipolar geometry is in front or behind the camera.
      * Return: true if all points are in front of the camers w.r.t. tested epipolar geometry - satisfies constraint.
@@ -72,7 +72,7 @@ private:
     const float TOLERANCE = 2 * FLT_EPSILON; // 2 from area of triangle
 public:
     explicit HomographyDegeneracyImpl (const Mat &points_) :
-            points_mat(&points_), points ((float *)points_.data) {}
+            points_mat(&points_), points ((float *)points_mat->data) {}
 
     inline bool isSampleGood (const std::vector<int> &sample) const override {
         const int smpl1 = 4*sample[0], smpl2 = 4*sample[1], smpl3 = 4*sample[2], smpl4 = 4*sample[3];
@@ -204,7 +204,7 @@ private:
     std::vector<int> non_planar_supports, h_inliers, h_outliers, h_outliers_eval, f_inliers;
     std::vector<double> weights;
     std::vector<Mat> h_models;
-    const int points_size, sample_size, max_iters_plane_and_parallax, MAX_H_SUBSET = 50, MAX_ITERS_H = 6;
+    const int points_size, max_iters_plane_and_parallax, MAX_H_SUBSET = 50, MAX_ITERS_H = 6;
     int num_h_outliers, num_models_used_so_far = 0, estimated_min_non_planar_support,
         num_h_outliers_eval, TENT_MIN_NON_PLANAR_SUPP;
     const int MAX_MODELS_TO_TEST = 21, H_INLS_DEGEN_SAMPLE = 5; // 5 by DEGENSAC, Chum et al.
@@ -218,7 +218,7 @@ public:
             rng (state), quality(quality_), f_error(quality_->getErrorFnc()), points((float *) points_.data), points_mat(&points_),
             h_reproj_error(ReprojectionErrorForward::create(points_)),
             ep_deg (points_, sample_size_), homography_threshold (homography_threshold_),
-            points_size (quality_->getPointsSize()), sample_size (sample_size_),
+            points_size (quality_->getPointsSize()),
             max_iters_plane_and_parallax(plane_and_parallax_iters) {
         if (sample_size_ == 8) {
             // add more homography samples to test for 8-points F
@@ -673,12 +673,11 @@ Ptr<FundamentalDegeneracy> FundamentalDegeneracy::create (int state, const Ptr<Q
 
 class EssentialDegeneracyImpl : public EssentialDegeneracy {
 private:
-    const Mat * points_mat;
     const int sample_size;
     const EpipolarGeometryDegeneracyImpl ep_deg;
 public:
     explicit EssentialDegeneracyImpl (const Mat &points, int sample_size_) :
-            points_mat(&points), sample_size(sample_size_), ep_deg (points, sample_size_) {}
+        sample_size(sample_size_), ep_deg (points, sample_size_) {}
     inline bool isModelValid(const Mat &E, const std::vector<int> &sample) const override {
         return ep_deg.isModelValid(E, sample);
     }

@@ -23,7 +23,7 @@ public:
     int getMaxNumberOfSolutions () const override { return 1; }
 
     explicit PnPMinimalSolver6PtsImpl (const Mat &points_) :
-        points_mat(&points_), points ((float*)points_.data) {}
+        points_mat(&points_), points ((float*)points_mat->data) {}
     /*
         DLT:
         d x = P X, x = (u, v, 1), X = (X, Y, Z, 1), P = K[R t]
@@ -158,7 +158,7 @@ private:
     const float * const points;
 public:
     explicit PnPNonMinimalSolverImpl (const Mat &points_) :
-        points_mat(&points_), points ((float*)points_.data){}
+        points_mat(&points_), points ((float*)points_mat->data){}
 
     int estimate (const std::vector<int> &sample, int sample_size,
           std::vector<Mat> &models, const std::vector<double> &weights) const override {
@@ -257,16 +257,13 @@ Ptr<PnPNonMinimalSolver> PnPNonMinimalSolver::create(const Mat &points) {
 
 class PnPSVDSolverImpl : public PnPSVDSolver {
 private:
-    const Mat * points_mat;
-    const float * const points;
     std::vector<double> w;
     Ptr<PnPNonMinimalSolver> pnp_solver;
 public:
     int getSampleSize() const override { return 6; }
     int getMaxNumberOfSolutions () const override { return 1; }
 
-    explicit PnPSVDSolverImpl (const Mat &points_) :
-            points_mat(&points_), points ((float*)points_.data) {
+    explicit PnPSVDSolverImpl (const Mat &points_) {
         pnp_solver = PnPNonMinimalSolver::create(points_);
     }
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
@@ -294,7 +291,7 @@ public:
      */
     P3PSolverImpl (const Mat &points_, const Mat &calib_norm_points_, const Mat &K_) :
         points_mat(&points_), calib_norm_points_mat(&calib_norm_points_), K(K_),
-        calib_norm_points((float*)calib_norm_points_.data), points((float*)points_.data) {}
+        calib_norm_points((float*)calib_norm_points_mat->data), points((float*)points_mat->data) {}
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         /*

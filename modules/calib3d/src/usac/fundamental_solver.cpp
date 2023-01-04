@@ -17,7 +17,7 @@ private:
     const bool use_ge;
 public:
     explicit FundamentalMinimalSolver7ptsImpl (const Mat &points_, bool use_ge_) :
-            points_mat (&points_), points ((float *) points_.data), use_ge(use_ge_) {}
+            points_mat (&points_), points ((float *) points_mat->data), use_ge(use_ge_) {}
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         const int m = 7, n = 9; // rows, cols
@@ -162,7 +162,7 @@ private:
     const float * const points;
 public:
     explicit FundamentalMinimalSolver8ptsImpl (const Mat &points_) :
-            points_mat (&points_), points ((float*) points_.data)
+            points_mat (&points_), points ((float*) points_mat->data)
     { CV_DbgAssert(points); }
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {

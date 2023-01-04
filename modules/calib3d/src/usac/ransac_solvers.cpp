@@ -1249,7 +1249,6 @@ private:
 
     // preemptive verification test
     VerificationMethod verifier = VerificationMethod ::ASPRT;
-    const int max_hypothesis_test_before_verification = 30;
 
     // sprt parameters
     // lower bound estimate is 2% of inliers
