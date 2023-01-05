@@ -1077,6 +1077,10 @@ OCL_PERF_TEST_P(PatchNaNsFixture, PatchNaNs,
     SANITY_CHECK(src);
 }
 
+////////////// NaNmask ////////////////////////
+
+
+
 
 ///////////// ScaleAdd ////////////////////////
 

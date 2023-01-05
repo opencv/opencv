@@ -1664,10 +1664,64 @@ void patchNaNs( InputOutputArray _a, double _val )
     }
 }
 
+
+#ifdef HAVE_OPENCL
+
+//TODO: this
+static bool ocl_nanMask( InputArray img, OutputArray mask )
+{
+    /*
+    int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
+    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
+                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=float -D DEPTH_dst=%d -D rowsPerWI=%d",
+                            CV_32F, rowsPerWI));
+    if (k.empty())
+        return false;
+
+    UMat a = _a.getUMat();
+    int cn = a.channels();
+
+    k.args(ocl::KernelArg::ReadOnlyNoSize(a),
+           ocl::KernelArg::WriteOnly(a, cn), (float)value);
+
+    size_t globalsize[2] = { (size_t)a.cols * cn, ((size_t)a.rows + rowsPerWI - 1) / rowsPerWI };
+    return k.run(2, globalsize, NULL, false);
+    */
+}
+
+#endif
+
+//TODO: this
+//TODO: also support CV_64F
+//TODO: simd
+void nanMask(InputArray img, OutputArray mask)
+{
+    CV_INSTRUMENT_REGION();
+    //TODO: also support CV_64F
+    CV_Assert( img.depth() == CV_32F || img.depth() == CV_64F);
+
+    /*
+    CV_OCL_RUN(_a.isUMat() && _a.dims() <= 2,
+               ocl_nanMask(img, mask))
+
+    Mat a = _a.getMat();
+    const Mat* arrays[] = {&a, 0};
+    int* ptrs[1] = {};
+    NAryMatIterator it(arrays, (uchar**)ptrs);
+    size_t len = it.size*a.channels();
+    Cv32suf val;
+    val.f = (float)_val;
+
+    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    {
+        int* tptr = ptrs[0];
+        size_t j = 0;
+
         for( ; j < len; j++ )
             if( (tptr[j] & 0x7fffffff) > 0x7f800000 )
                 tptr[j] = val.i;
     }
+    */
 }
 
 }

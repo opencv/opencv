@@ -1703,6 +1703,16 @@ CV_EXPORTS_W bool checkRange(InputArray a, bool quiet = true, CV_OUT Point* pos 
 */
 CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 
+/**
+ * @brief TODO
+ * 
+ * @param img TODO
+ * @param mask TODO
+ * @return CV_EXPORTS_W TODO
+ */
+CV_EXPORTS_W void nanMask(InputArray img, OutputArray mask);
+
+
 /** @brief Performs generalized matrix multiplication.
 
 The function cv::gemm performs generalized matrix multiplication similar to the
