@@ -1699,8 +1699,9 @@ OCL_TEST_P(ScaleAdd, Mat)
 
 //////////////////////////////// PatchNans ////////////////////////////////////////////////
 
-PARAM_TEST_CASE(PatchNaNs, Channels, bool)
+PARAM_TEST_CASE(PatchNaNs, MatDepth, Channels, bool)
 {
+    int ftype;
     int cn;
     bool use_roi;
     double value;
@@ -1709,8 +1710,9 @@ PARAM_TEST_CASE(PatchNaNs, Channels, bool)
 
     virtual void SetUp()
     {
-        cn = GET_PARAM(0);
-        use_roi = GET_PARAM(1);
+        ftype = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        use_roi = GET_PARAM(2);
     }
 
     void generateTestData()
@@ -1725,9 +1727,17 @@ PARAM_TEST_CASE(PatchNaNs, Channels, bool)
         roiSize.width *= cn;
         for (int y = 0; y < roiSize.height; ++y)
         {
-            float * const ptr = src_roi.ptr<float>(y);
+            float  *const ptrf = src_roi.ptr<float>(y);
+            double *const ptrd = src_roi.ptr<double>(y);
             for (int x = 0; x < roiSize.width; ++x)
-                ptr[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<float>::quiet_NaN() : ptr[x];
+            if (ftype == CV_32F)
+            {
+                    ptrf[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<float>::quiet_NaN() : ptrf[x];
+            }
+            else if (ftype == CV_64F)
+            {
+                    ptrd[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<double>::quiet_NaN() : ptrd[x];
+            }
         }
 
         value = randomDouble(-100, 100);
@@ -1928,7 +1938,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, InRange, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHA
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertScaleAbs, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertFp16, Combine(OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ScaleAdd, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, PatchNaNs, Combine(OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, PatchNaNs, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Psnr, Combine(::testing::Values((MatDepth)CV_8U), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, UMatDot, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 

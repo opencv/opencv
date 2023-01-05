@@ -1576,12 +1576,14 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_patchNaNs( InputOutputArray _a, float value )
+static bool ocl_patchNaNs( InputOutputArray _a, double value )
 {
+    //TODO: this CV_64F
+    int ftype = _a.depth();
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=float -D DEPTH_dst=%d -D rowsPerWI=%d",
-                            CV_32F, rowsPerWI));
+                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d",
+                            ftype == CV_64F ? "double" : "float", ftype, rowsPerWI));
     if (k.empty())
         return false;
 
@@ -1589,7 +1591,7 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
     int cn = a.channels();
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(a),
-           ocl::KernelArg::WriteOnly(a, cn), (float)value);
+           ocl::KernelArg::WriteOnly(a, cn), value);
 
     size_t globalsize[2] = { (size_t)a.cols * cn, ((size_t)a.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
@@ -1600,41 +1602,67 @@ static bool ocl_patchNaNs( InputOutputArray _a, float value )
 void patchNaNs( InputOutputArray _a, double _val )
 {
     CV_INSTRUMENT_REGION();
-
-    CV_Assert( _a.depth() == CV_32F );
+    CV_Assert( _a.depth() == CV_32F || _a.depth() == CV_64F);
 
     CV_OCL_RUN(_a.isUMat() && _a.dims() <= 2,
-               ocl_patchNaNs(_a, (float)_val))
+               ocl_patchNaNs(_a, _val))
 
     Mat a = _a.getMat();
     const Mat* arrays[] = {&a, 0};
     int* ptrs[1] = {};
     NAryMatIterator it(arrays, (uchar**)ptrs);
     size_t len = it.size*a.channels();
-    Cv32suf val;
-    val.f = (float)_val;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    v_int32 v_mask1 = vx_setall_s32(0x7fffffff), v_mask2 = vx_setall_s32(0x7f800000);
-    v_int32 v_val = vx_setall_s32(val.i);
-#endif
-
-    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    if (_a.depth() == CV_32F)
     {
-        int* tptr = ptrs[0];
-        size_t j = 0;
+        Cv32suf val;
+        val.f = (float)_val;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        size_t cWidth = (size_t)VTraits<v_int32>::vlanes();
-        for ( ; j + cWidth <= len; j += cWidth)
-        {
-            v_int32 v_src = vx_load(tptr + j);
-            v_int32 v_cmp_mask = v_lt(v_mask2, v_and(v_src, v_mask1));
-            v_int32 v_dst = v_select(v_cmp_mask, v_val, v_src);
-            v_store(tptr + j, v_dst);
-        }
-        vx_cleanup();
+        v_int32 v_mask1 = vx_setall_s32(0x7fffffff), v_mask2 = vx_setall_s32(0x7f800000);
+        v_int32 v_val = vx_setall_s32(val.i);
 #endif
+
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
+        {
+            int *tptr = ptrs[0];
+            size_t j = 0;
+
+#if CV_SIMD
+            size_t cWidth = (size_t)VTraits<v_int32>::vlanes();;
+            for (; j + cWidth <= len; j += cWidth)
+            {
+                v_int32 v_src = vx_load(tptr + j);
+                v_int32 v_cmp_mask = v_lt(v_mask2, v_and(v_src, v_mask1));
+                v_int32 v_dst = v_select(v_cmp_mask, v_val, v_src);
+                v_store(tptr + j, v_dst);
+            }
+            vx_cleanup();
+#endif
+
+            for (; j < len; j++)
+                if ((tptr[j] & 0x7fffffff) > 0x7f800000)
+                    tptr[j] = val.i;
+        }
+    }
+    else if (_a.depth() == CV_64F)
+    {
+        //TODO: vectorize
+
+        Cv64suf val;
+        val.f = _val;
+
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
+        {
+            int64* tptr = (int64*)ptrs[0];
+            size_t j = 0;
+
+            for (; j < len; j++)
+                if ((tptr[j] & 0x7FFFFFFFFFFFFFFF) > 0x7FF0000000000000)
+                    tptr[j] = val.i;
+        }
+    }
+}
 
         for( ; j < len; j++ )
             if( (tptr[j] & 0x7fffffff) > 0x7f800000 )
