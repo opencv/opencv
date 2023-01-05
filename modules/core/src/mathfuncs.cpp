@@ -1578,7 +1578,6 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
 
 static bool ocl_patchNaNs( InputOutputArray _a, double value )
 {
-    //TODO: this CV_64F
     int ftype = _a.depth();
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
@@ -1654,15 +1653,30 @@ void patchNaNs( InputOutputArray _a, double _val )
     }
     else if (_a.depth() == CV_64F)
     {
-        //TODO: vectorize
-
         Cv64suf val;
         val.f = _val;
+
+#if CV_SIMD
+        v_int64 v_mnt_mask = vx_setall_s64(0x000FFFFFFFFFFFFF), v_exp_mask = vx_setall_s64(0x7FF0000000000000);
+        v_int64 v_val = vx_setall_s64(val.i);
+#endif
 
         for (size_t i = 0; i < it.nplanes; i++, ++it)
         {
             int64* tptr = (int64*)ptrs[0];
             size_t j = 0;
+
+#if CV_SIMD
+            size_t cWidth = (size_t)v_int64::nlanes;
+            for (; j + cWidth <= len; j += cWidth)
+            {
+                v_int64 v_src = vx_load(tptr + j);
+                v_int64 v_isnan = ((v_src & v_exp_mask) == v_exp_mask) & ((v_src & v_mnt_mask) != vx_setzero_s64());
+                v_int64 v_dst = (v_isnan & v_val) | ((~v_isnan) & v_src);
+                v_store(tptr + j, v_dst);
+            }
+            vx_cleanup();
+#endif
 
             for (; j < len; j++)
                 if ((tptr[j] & 0x7FFFFFFFFFFFFFFF) > 0x7FF0000000000000)
