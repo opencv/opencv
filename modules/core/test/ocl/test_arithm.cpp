@@ -1717,7 +1717,7 @@ PARAM_TEST_CASE(PatchNaNs, MatDepth, Channels, bool)
 
     void generateTestData()
     {
-        const int type = CV_MAKE_TYPE(CV_32F, cn);
+        const int type = CV_MAKE_TYPE(ftype, cn);
 
         Size roiSize = randomSize(1, 10);
         Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);

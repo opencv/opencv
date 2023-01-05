@@ -1590,8 +1590,15 @@ static bool ocl_patchNaNs( InputOutputArray _a, double value )
     UMat a = _a.getUMat();
     int cn = a.channels();
 
-    k.args(ocl::KernelArg::ReadOnlyNoSize(a),
-           ocl::KernelArg::WriteOnly(a, cn), value);
+    // to pass float or double to args
+    if (ftype == CV_32F)
+    {
+        k.args(ocl::KernelArg::ReadOnlyNoSize(a), ocl::KernelArg::WriteOnly(a, cn), (float)value);
+    }
+    else // CV_64F
+    {
+        k.args(ocl::KernelArg::ReadOnlyNoSize(a), ocl::KernelArg::WriteOnly(a, cn), value);
+    }
 
     size_t globalsize[2] = { (size_t)a.cols * cn, ((size_t)a.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
