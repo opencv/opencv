@@ -673,11 +673,10 @@ Ptr<FundamentalDegeneracy> FundamentalDegeneracy::create (int state, const Ptr<Q
 
 class EssentialDegeneracyImpl : public EssentialDegeneracy {
 private:
-    const int sample_size;
     const EpipolarGeometryDegeneracyImpl ep_deg;
 public:
     explicit EssentialDegeneracyImpl (const Mat &points, int sample_size_) :
-        sample_size(sample_size_), ep_deg (points, sample_size_) {}
+        ep_deg (points, sample_size_) {}
     inline bool isModelValid(const Mat &E, const std::vector<int> &sample) const override {
         return ep_deg.isModelValid(E, sample);
     }
