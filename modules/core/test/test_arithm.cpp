@@ -729,6 +729,75 @@ struct InRangeOp : public BaseArithmOp
     }
 };
 
+namespace reference {
+
+template<typename _Tp> static void nanMask_(const _Tp* src, uchar* dst, size_t total, int cn)
+{
+    for(size_t i = 0; i < total; i++ )
+    {
+        bool nan = false;
+        for (int c = 0; c < cn; c++)
+        {
+            _Tp val = src[i * cn + c];
+            nan = nan || cvIsNaN(val);
+        }
+        dst[i] = nan ? 255 : 0;
+    }
+}
+
+static void nanMask(const Mat& src, Mat& dst)
+{
+    dst.create(src.dims, &src.size[0], CV_8UC1);
+
+    const Mat *arrays[]={&src, &dst, 0};
+    Mat planes[2];
+    NAryMatIterator it(arrays, planes);
+    size_t total = planes[0].total();
+    size_t i, nplanes = it.nplanes;
+    int depth = src.depth(), cn = src.channels();
+
+    for( i = 0; i < nplanes; i++, ++it )
+    {
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
+
+        switch( depth )
+        {
+        case CV_32F:
+            nanMask_((const float*)sptr, dptr, total, cn);
+            break;
+        case CV_64F:
+            nanMask_((const double*)sptr, dptr, total, cn);
+            break;
+        default:
+            CV_Error(CV_StsUnsupportedFormat, "");
+        }
+    }
+}
+}
+
+
+struct NanMaskOp : public BaseElemWiseOp
+{
+    NanMaskOp() : BaseElemWiseOp(1, 0, 1, 1, Scalar::all(0)) {}
+    void op(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        cv::nanMask(src[0], dst);
+    }
+    void refop(const vector<Mat>& src, Mat& dst, const Mat&)
+    {
+        reference::nanMask(src[0], dst);
+    }
+    int getRandomType(RNG& rng)
+    {
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_FLT, 1, 4);
+    }
+    double getMaxErr(int)
+    {
+        return 0;
+    }
+};
+
 
 struct ConvertScaleOp : public BaseElemWiseOp
 {
@@ -1572,6 +1641,8 @@ INSTANTIATE_TEST_CASE_P(Core_CmpS, ElemWiseTest, ::testing::Values(ElemWiseOpPtr
 
 INSTANTIATE_TEST_CASE_P(Core_InRangeS, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new InRangeSOp)));
 INSTANTIATE_TEST_CASE_P(Core_InRange, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new InRangeOp)));
+
+INSTANTIATE_TEST_CASE_P(Core_NanMask, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new NanMaskOp)));
 
 INSTANTIATE_TEST_CASE_P(Core_Flip, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new FlipOp)));
 INSTANTIATE_TEST_CASE_P(Core_Transpose, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new TransposeOp)));
