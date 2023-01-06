@@ -1079,8 +1079,45 @@ OCL_PERF_TEST_P(PatchNaNsFixture, PatchNaNs,
 
 ////////////// NaNmask ////////////////////////
 
+typedef Size_MatType NanMaskFixture;
 
+OCL_PERF_TEST_P(NanMaskFixture, NanMask,
+                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4, CV_64FC1, CV_64FC4)))
+{
+    const Size_MatType_t params = GetParam();
+    Size srcSize = get<0>(params);
+    const int type = get<1>(params), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type);
 
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type);
+    UMat mask(srcSize, CV_8UC1);
+    declare.in(src, WARMUP_RNG).out(mask);
+
+    // generating NaNs
+    {
+        Mat src_ = src.getMat(ACCESS_RW);
+        srcSize.width *= cn;
+        for (int y = 0; y < srcSize.height; ++y)
+        {
+            float  *const ptrf = src_.ptr<float>(y);
+            double *const ptrd = src_.ptr<double>(y);
+            for (int x = 0; x < srcSize.width; ++x)
+                if (depth == CV_32F)
+                {
+                    ptrf[x] = (x + y) % 2 == 0 ? std::numeric_limits<float>::quiet_NaN() : ptrf[x];
+                }
+                else if (depth == CV_64F)
+                {
+                    ptrd[x] = (x + y) % 2 == 0 ? std::numeric_limits<double>::quiet_NaN() : ptrd[x];
+                }
+        }
+    }
+
+    OCL_TEST_CYCLE() cv::nanMask(src, mask);
+
+    SANITY_CHECK(mask);
+}
 
 ///////////// ScaleAdd ////////////////////////
 
