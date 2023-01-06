@@ -596,33 +596,6 @@ void boundingBoxGrowthTest(bool enableGrowth)
 }
 
 
-static Mat nanMask(Mat img)
-{
-    int depth = img.depth();
-    Mat mask(img.size(), CV_8U);
-    for (int y = 0; y < img.rows; y++)
-    {
-        uchar *maskRow = mask.ptr<uchar>(y);
-        if (depth == CV_32F)
-        {
-            Vec4f *imgrow = img.ptr<Vec4f>(y);
-            for (int x = 0; x < img.cols; x++)
-            {
-                maskRow[x] = (imgrow[x] == imgrow[x]) * 255;
-            }
-        }
-        else if (depth == CV_64F)
-        {
-            Vec4d *imgrow = img.ptr<Vec4d>(y);
-            for (int x = 0; x < img.cols; x++)
-            {
-                maskRow[x] = (imgrow[x] == imgrow[x]) * 255;
-            }
-        }
-    }
-    return mask;
-}
-
 template <typename VT>
 static Mat_<typename VT::value_type> normalsErrorT(Mat_<VT> srcNormals, Mat_<VT> dstNormals)
 {
@@ -734,8 +707,9 @@ void regressionVolPoseRot()
     split(uptsRot, ptsRotCh);
     Mat maskPts0 = ptsCh[2] > 0;
     Mat maskPtsRot = ptsRotCh[2] > 0;
-    Mat maskNrm0 = nanMask(mnrm);
-    Mat maskNrmRot = nanMask(mnrmRot);
+    Mat maskNrm0, maskNrmRot;
+    nanMask(mnrm, maskNrm0);
+    nanMask(mnrmRot, maskNrmRot);
     Mat maskPtsDiff, maskNrmDiff;
     cv::bitwise_xor(maskPts0, maskPtsRot, maskPtsDiff);
     cv::bitwise_xor(maskNrm0, maskNrmRot, maskNrmDiff);
