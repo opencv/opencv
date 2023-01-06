@@ -689,6 +689,26 @@ input = Variable(torch.randn(1, 2, 4, 4, 19))
 model = PoolConv()
 save_data_and_model("pool_conv_3d", input, model)
 
+class DepthWiseAdd(nn.Module):
+
+    def __init__(self):
+        super(DepthWiseAdd, self).__init__()
+        self.dconv1 = nn.Conv2d(8, 8, kernel_size=3, stride=1, padding=0, groups=8)
+        self.dconv2 = nn.Conv2d(8, 8, kernel_size=3, stride=1, padding=0, groups=8)
+
+    def forward(self, x):
+        a = self.dconv1(x)
+        b = self.dconv2(x)
+        z = a + b
+        z = z * 2
+        return z
+
+
+input = Variable(torch.randn(1, 8, 32, 32))
+model = DepthWiseAdd()
+model.eval()
+save_data_and_model("depthwiseconv_add", input, model)
+
 class Clip(nn.Module):
 
     def __init__(self):
