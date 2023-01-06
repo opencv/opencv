@@ -1732,11 +1732,11 @@ PARAM_TEST_CASE(PatchNaNs, MatDepth, Channels, bool)
             for (int x = 0; x < roiSize.width; ++x)
             if (ftype == CV_32F)
             {
-                    ptrf[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<float>::quiet_NaN() : ptrf[x];
+                ptrf[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<float>::quiet_NaN() : ptrf[x];
             }
             else if (ftype == CV_64F)
             {
-                    ptrd[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<double>::quiet_NaN() : ptrd[x];
+                ptrd[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<double>::quiet_NaN() : ptrd[x];
             }
         }
 
@@ -1766,6 +1766,72 @@ OCL_TEST_P(PatchNaNs, Mat)
 
 //////////////////////////////// NaNmask /////////////////////////////////////////////
 
+
+PARAM_TEST_CASE(NaNmask, MatDepth, Channels, bool)
+{
+    int ftype;
+    int cn;
+    bool use_roi;
+
+    TEST_DECLARE_INPUT_PARAMETER(src);
+    TEST_DECLARE_OUTPUT_PARAMETER(mask);
+
+    virtual void SetUp()
+    {
+        ftype = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        use_roi = GET_PARAM(2);
+    }
+
+    void generateTestData()
+    {
+        const int type = CV_MAKE_TYPE(ftype, cn);
+
+        Size roiSize = randomSize(1, MAX_VALUE);
+        Border srcBorder = randomBorder(0, use_roi ? MAX_VALUE : 0);
+        randomSubMat(src, src_roi, roiSize, srcBorder, type, -40, 40);
+
+        randomSubMat(mask, mask_roi, roiSize, srcBorder, CV_8UC1, 5, 16);
+
+        // generating NaNs
+
+        for (int y = 0; y < roiSize.height; ++y)
+        {
+            float  *const ptrf = src_roi.ptr<float> (y);
+            double *const ptrd = src_roi.ptr<double>(y);
+            for (int x = 0; x < roiSize.width * cn; ++x)
+            if (ftype == CV_32F)
+            {
+                ptrf[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<float>::quiet_NaN()  : ptrf[x];
+            }
+            else if (ftype == CV_64F)
+            {
+                ptrd[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<double>::quiet_NaN() : ptrd[x];
+            }
+        }
+
+        UMAT_UPLOAD_INPUT_PARAMETER(src);
+        UMAT_UPLOAD_OUTPUT_PARAMETER(mask);
+    }
+
+    void Near()
+    {
+        OCL_EXPECT_MATS_NEAR(mask, 0);
+    }
+};
+
+OCL_TEST_P(NaNmask, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::nanMask(src_roi, mask_roi));
+        OCL_ON(cv::nanMask(usrc_roi, umask_roi));
+
+        Near();
+    }
+}
 
 
 //////////////////////////////// Psnr ////////////////////////////////////////////////
@@ -1943,6 +2009,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertScaleAbs, Combine(OCL_ALL_DEPTHS, OCL
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertFp16, Combine(OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ScaleAdd, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, PatchNaNs, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, NaNmask, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Psnr, Combine(::testing::Values((MatDepth)CV_8U), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, UMatDot, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 
