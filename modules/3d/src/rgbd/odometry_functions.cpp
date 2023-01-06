@@ -101,9 +101,9 @@ static void extendPyrMaskByPyrNormals(const std::vector<UMat>& pyramidNormals,  
         {
             UMat maski = pyramidMask[i];
             UMat normali = pyramidNormals[i];
-            UMat validNormalMask;
-            // NaN check
-            cv::compare(normali, normali, validNormalMask, CMP_EQ);
+            UMat validNormalMask, nans;
+            nanMask(normali, nans);
+            cv::bitwise_not(nans, validNormalMask);
             CV_Assert(validNormalMask.type() == CV_8UC4);
 
             std::vector<UMat> channelMasks;
