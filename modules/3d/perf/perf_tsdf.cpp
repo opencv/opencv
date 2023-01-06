@@ -361,7 +361,6 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
     Points  points = _points.getMat();
     Colors  colors = _colors.getMat();
 
-    //TODO: use nanMask()
     Mat nanp, nanc, nans;
     nanMask(points, nanp);
     nanMask(colors, nanc);

@@ -295,6 +295,9 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
     Points  points = _points.getMat();
     Normals normals = _normals.getMat();
 
+    Mat nans;
+    nanMask(points, nans);
+
     Mat_<Vec4b> img = image.getMat();
 
     Range range(0, sz.height);
@@ -306,6 +309,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
                 Vec4b* imgRow = img[y];
                 const ptype* ptsRow = points[y];
                 const ptype* nrmRow = normals[y];
+                const uchar* nanRow = nans.ptr<uchar>(y);
 
                 for (int x = 0; x < sz.width; x++)
                 {
@@ -314,7 +318,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 
                     Vec4b color;
 
-                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z))
+                    if (nanRow[x])
                     {
                         color = Vec4b(0, 32, 0, 0);
                     }
@@ -352,6 +356,11 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
     Points  points  = _points.getMat();
     Colors  colors  = _colors.getMat();
 
+    Mat nanp, nanc, nans;
+    nanMask(points, nanp);
+    nanMask(colors, nanc);
+    nans = nanp | nanc;
+
     Mat_<Vec4b> img = image.getMat();
 
     Range range(0, sz.height);
@@ -361,18 +370,18 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
             for (int y = range.start; y < range.end; y++)
             {
                 Vec4b* imgRow = img[y];
-                const ptype* ptsRow = points[y];
+                //const ptype* ptsRow = points[y];
                 const ptype* clrRow = colors[y];
+                const uchar* nanRow = nans.ptr<uchar>(y);
 
                 for (int x = 0; x < sz.width; x++)
                 {
-                    Point3f p = fromPtype(ptsRow[x]);
+                    //Point3f p = fromPtype(ptsRow[x]);
                     Point3f c = fromPtype(clrRow[x]);
 
                     Vec4b color;
 
-                    if (cvIsNaN(p.x) || cvIsNaN(p.y) || cvIsNaN(p.z)
-                        || cvIsNaN(c.x) || cvIsNaN(c.y) || cvIsNaN(c.z))
+                    if (nanRow[x])
                     {
                         color = Vec4b(0, 32, 0, 0);
                     }
