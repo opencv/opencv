@@ -1686,11 +1686,57 @@ void patchNaNs( InputOutputArray _a, double _val )
 }
 
 
+//TODO: simd
+template<typename _Tp> static void nanMask_(const _Tp* src, uchar* dst, size_t total, int cn)
+{
+    for(size_t i = 0; i < total; i++ )
+    {
+        bool nan = false;
+        for (int c = 0; c < cn; c++)
+        {
+            _Tp val = src[i * cn + c];
+            nan = nan || cvIsNaN(val);
+        }
+        dst[i] = nan ? 255 : 0;
+    }
+}
+
 #ifdef HAVE_OPENCL
 
-//TODO: this
-static bool ocl_nanMask( InputArray img, OutputArray mask )
+
+static bool ocl_nanMask(const UMat img, UMat mask )
 {
+
+    //DEBUG
+    int channels = img.channels();
+    int depth = img.depth();
+    Mat mimg = img.getMat(ACCESS_READ);
+    Mat mmask = mask.getMat(ACCESS_WRITE);
+
+    const Mat *arrays[]={&mimg, &mmask, 0};
+    Mat planes[2];
+    NAryMatIterator it(arrays, planes);
+    size_t total = planes[0].total();
+    size_t i, nplanes = it.nplanes;
+
+    for( i = 0; i < nplanes; i++, ++it )
+    {
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
+
+        switch( depth )
+        {
+        case CV_32F:
+            nanMask_((const  float*)sptr, dptr, total, channels);
+            break;
+        case CV_64F:
+            nanMask_((const double*)sptr, dptr, total, channels);
+            break;
+        }
+    }
+    return true;
+
+    //TODO: this
     /*
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
@@ -1712,40 +1758,46 @@ static bool ocl_nanMask( InputArray img, OutputArray mask )
 
 #endif
 
-//TODO: this
-//TODO: also support CV_64F
-//TODO: simd
-void nanMask(InputArray img, OutputArray mask)
+void nanMask(InputArray _img, OutputArray _mask)
 {
     CV_INSTRUMENT_REGION();
-    //TODO: also support CV_64F
-    CV_Assert( img.depth() == CV_32F || img.depth() == CV_64F);
+    int channels = _img.channels();
+    int depth = _img.depth();
+    CV_Assert( depth == CV_32F || depth == CV_64F );
+    std::vector<int> vsz(_img.dims());
+    _img.sizend(vsz.data());
+    _mask.create(_img.dims(), vsz.data(), CV_8UC1);
 
-    /*
-    CV_OCL_RUN(_a.isUMat() && _a.dims() <= 2,
-               ocl_nanMask(img, mask))
+    CV_OCL_RUN(_img.isUMat() && _mask.isUMat() && _img.dims() <= 2,
+               ocl_nanMask(_img.getUMat(), _mask.getUMat()));
 
-    Mat a = _a.getMat();
-    const Mat* arrays[] = {&a, 0};
-    int* ptrs[1] = {};
-    NAryMatIterator it(arrays, (uchar**)ptrs);
-    size_t len = it.size*a.channels();
-    Cv32suf val;
-    val.f = (float)_val;
+    Mat img = _img.getMat();
+    Mat mask = _mask.getMat();
 
-    for( size_t i = 0; i < it.nplanes; i++, ++it )
+    const Mat *arrays[]={&img, &mask, 0};
+    Mat planes[2];
+    NAryMatIterator it(arrays, planes);
+    size_t total = planes[0].total();
+    size_t i, nplanes = it.nplanes;
+
+    for( i = 0; i < nplanes; i++, ++it )
     {
-        int* tptr = ptrs[0];
-        size_t j = 0;
+        const uchar* sptr = planes[0].ptr();
+        uchar* dptr = planes[1].ptr();
 
-        for( ; j < len; j++ )
-            if( (tptr[j] & 0x7fffffff) > 0x7f800000 )
-                tptr[j] = val.i;
+        switch( depth )
+        {
+        case CV_32F:
+            nanMask_((const  float*)sptr, dptr, total, channels);
+            break;
+        case CV_64F:
+            nanMask_((const double*)sptr, dptr, total, channels);
+            break;
+        }
     }
-    */
 }
 
-}
+} // namespace cv
 
 
 #ifndef OPENCV_EXCLUDE_C_API
