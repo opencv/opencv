@@ -175,7 +175,7 @@ public class OpenCVTestCase extends TestCase {
         rgba128 = new Mat(matSize, matSize, CvType.CV_8UC4, Scalar.all(128));
 
         rgbLena = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH);
-        grayChess = Imgcodecs.imread(OpenCVTestRunner.CHESS_PATH, 0);
+        grayChess = Imgcodecs.imread(OpenCVTestRunner.CHESS_PATH, Imgcodecs.IMREAD_GRAYSCALE);
 
         gray255_32f_3d = new Mat(new int[]{matSize, matSize, matSize}, CvType.CV_32F, new Scalar(255.0));
 
