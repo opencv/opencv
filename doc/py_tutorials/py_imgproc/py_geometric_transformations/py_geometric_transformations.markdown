@@ -49,7 +49,7 @@ function. See the below example for a shift of (100,50):
 import numpy as np
 import cv2 as cv
 
-img = cv.imread('messi5.jpg',0)
+img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
 rows,cols = img.shape
 
 M = np.float32([[1,0,100],[0,1,50]])
@@ -87,7 +87,7 @@ where:
 To find this transformation matrix, OpenCV provides a function, **cv.getRotationMatrix2D**. Check out the
 below example which rotates the image by 90 degree with respect to center without any scaling.
 @code{.py}
-img = cv.imread('messi5.jpg',0)
+img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
 rows,cols = img.shape
 
 # cols-1 and rows-1 are the coordinate limits.

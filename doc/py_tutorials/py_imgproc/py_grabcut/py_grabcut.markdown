@@ -122,7 +122,7 @@ remaining background with gray. Then loaded that mask image in OpenCV, edited or
 got with corresponding values in newly added mask image. Check the code below:*
 @code{.py}
 # newmask is the mask image I manually labelled
-newmask = cv.imread('newmask.png',0)
+newmask = cv.imread('newmask.png', cv.IMREAD_GRAYSCALE)
 
 # wherever it is marked white (sure foreground), change mask=1
 # wherever it is marked black (sure background), change mask=0

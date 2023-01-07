@@ -77,7 +77,7 @@ and its parameters :
 So let's start with a sample image. Simply load an image in grayscale mode and find its full
 histogram.
 @code{.py}
-img = cv.imread('home.jpg',0)
+img = cv.imread('home.jpg', cv.IMREAD_GRAYSCALE)
 hist = cv.calcHist([img],[0],None,[256],[0,256])
 @endcode
 hist is a 256x1 array, each value corresponds to number of pixels in that image with its
@@ -121,7 +121,7 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv.imread('home.jpg',0)
+img = cv.imread('home.jpg', cv.IMREAD_GRAYSCALE)
 plt.hist(img.ravel(),256,[0,256]); plt.show()
 @endcode
 You will get a plot as below :
@@ -164,7 +164,7 @@ We used cv.calcHist() to find the histogram of the full image. What if you want 
 of some regions of an image? Just create a mask image with white color on the region you want to
 find histogram and black otherwise. Then pass this as the mask.
 @code{.py}
-img = cv.imread('home.jpg',0)
+img = cv.imread('home.jpg', cv.IMREAD_GRAYSCALE)
 
 # create a mask
 mask = np.zeros(img.shape[:2], np.uint8)

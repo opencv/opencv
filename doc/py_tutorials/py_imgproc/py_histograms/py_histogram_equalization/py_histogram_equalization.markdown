@@ -30,7 +30,7 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv.imread('wiki.jpg',0)
+img = cv.imread('wiki.jpg', cv.IMREAD_GRAYSCALE)
 
 hist,bins = np.histogram(img.flatten(),256,[0,256])
 
@@ -81,7 +81,7 @@ output is our histogram equalized image.
 
 Below is a simple code snippet showing its usage for same image we used :
 @code{.py}
-img = cv.imread('wiki.jpg',0)
+img = cv.imread('wiki.jpg', cv.IMREAD_GRAYSCALE)
 equ = cv.equalizeHist(img)
 res = np.hstack((img,equ)) #stacking images side-by-side
 cv.imwrite('res.png',res)
@@ -124,7 +124,7 @@ Below code snippet shows how to apply CLAHE in OpenCV:
 import numpy as np
 import cv2 as cv
 
-img = cv.imread('tsukuba_l.png',0)
+img = cv.imread('tsukuba_l.png', cv.IMREAD_GRAYSCALE)
 
 # create a CLAHE object (Arguments are optional).
 clahe = cv.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))

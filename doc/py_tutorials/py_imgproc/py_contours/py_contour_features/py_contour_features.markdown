@@ -24,7 +24,7 @@ The function **cv.moments()** gives a dictionary of all moment values calculated
 import numpy as np
 import cv2 as cv
 
-img = cv.imread('star.jpg',0)
+img = cv.imread('star.jpg', cv.IMREAD_GRAYSCALE)
 ret,thresh = cv.threshold(img,127,255,0)
 im2,contours,hierarchy = cv.findContours(thresh, 1, 2)
 

@@ -92,8 +92,8 @@ docs.
 import cv2 as cv
 import numpy as np
 
-img1 = cv.imread('star.jpg',0)
-img2 = cv.imread('star2.jpg',0)
+img1 = cv.imread('star.jpg', cv.IMREAD_GRAYSCALE)
+img2 = cv.imread('star2.jpg', cv.IMREAD_GRAYSCALE)
 
 ret, thresh = cv.threshold(img1, 127, 255,0)
 ret, thresh2 = cv.threshold(img2, 127, 255,0)

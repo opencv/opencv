@@ -23,7 +23,7 @@ explained in the documentation. So we directly go to the code.
 import numpy as np
 import cv2 as cv
 
-img = cv.imread('opencv-logo-white.png',0)
+img = cv.imread('opencv-logo-white.png', cv.IMREAD_GRAYSCALE)
 img = cv.medianBlur(img,5)
 cimg = cv.cvtColor(img,cv.COLOR_GRAY2BGR)
 

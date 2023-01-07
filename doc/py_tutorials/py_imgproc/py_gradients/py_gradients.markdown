@@ -42,7 +42,7 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv.imread('dave.jpg',0)
+img = cv.imread('dave.jpg', cv.IMREAD_GRAYSCALE)
 
 laplacian = cv.Laplacian(img,cv.CV_64F)
 sobelx = cv.Sobel(img,cv.CV_64F,1,0,ksize=5)
@@ -79,7 +79,7 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv.imread('box.png',0)
+img = cv.imread('box.png', cv.IMREAD_GRAYSCALE)
 
 # Output dtype = cv.CV_8U
 sobelx8u = cv.Sobel(img,cv.CV_8U,1,0,ksize=5)
