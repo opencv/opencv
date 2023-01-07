@@ -78,6 +78,7 @@ So let's start with a sample image. Simply load an image in grayscale mode and f
 histogram.
 @code{.py}
 img = cv.imread('home.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 hist = cv.calcHist([img],[0],None,[256],[0,256])
 @endcode
 hist is a 256x1 array, each value corresponds to number of pixels in that image with its
@@ -122,6 +123,7 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 
 img = cv.imread('home.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 plt.hist(img.ravel(),256,[0,256]); plt.show()
 @endcode
 You will get a plot as below :
@@ -136,6 +138,7 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 
 img = cv.imread('home.jpg')
+assert img is not None, "file could not be read, check with os.path.exists()"
 color = ('b','g','r')
 for i,col in enumerate(color):
     histr = cv.calcHist([img],[i],None,[256],[0,256])
@@ -165,6 +168,7 @@ of some regions of an image? Just create a mask image with white color on the re
 find histogram and black otherwise. Then pass this as the mask.
 @code{.py}
 img = cv.imread('home.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 
 # create a mask
 mask = np.zeros(img.shape[:2], np.uint8)

@@ -93,6 +93,7 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 
 img = cv.imread('messi5.jpg')
+assert img is not None, "file could not be read, check with os.path.exists()"
 mask = np.zeros(img.shape[:2],np.uint8)
 
 bgdModel = np.zeros((1,65),np.float64)
@@ -123,6 +124,7 @@ got with corresponding values in newly added mask image. Check the code below:*
 @code{.py}
 # newmask is the mask image I manually labelled
 newmask = cv.imread('newmask.png', cv.IMREAD_GRAYSCALE)
+assert newmask is not None, "file could not be read, check with os.path.exists()"
 
 # wherever it is marked white (sure foreground), change mask=1
 # wherever it is marked black (sure background), change mask=0

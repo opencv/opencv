@@ -43,6 +43,7 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 
 img = cv.imread('dave.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 
 laplacian = cv.Laplacian(img,cv.CV_64F)
 sobelx = cv.Sobel(img,cv.CV_64F,1,0,ksize=5)
@@ -80,6 +81,7 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 
 img = cv.imread('box.png', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 
 # Output dtype = cv.CV_8U
 sobelx8u = cv.Sobel(img,cv.CV_8U,1,0,ksize=5)

@@ -55,6 +55,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 f = np.fft.fft2(img)
 fshift = np.fft.fftshift(f)
 magnitude_spectrum = 20*np.log(np.abs(fshift))
@@ -122,6 +123,7 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 
 img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 
 dft = cv.dft(np.float32(img),flags = cv.DFT_COMPLEX_OUTPUT)
 dft_shift = np.fft.fftshift(dft)
@@ -184,7 +186,8 @@ So how do we find this optimal size ? OpenCV provides a function, **cv.getOptima
 this. It is applicable to both **cv.dft()** and **np.fft.fft2()**. Let's check their performance
 using IPython magic command %timeit.
 @code{.py}
-In [16]: img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
+In [15]: img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
+In [16]: assert img is not None, "file could not be read, check with os.path.exists()"
 In [17]: rows,cols = img.shape
 In [18]: print("{} {}".format(rows,cols))
 342 548
