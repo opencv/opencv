@@ -19,7 +19,7 @@ enum { VEC_ALIGN = 32, DFT_TYPE = CV_32F }; // Memory alignment.
 
 static void
 _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
-                       float* outbuf, int Cg, int iblock, 
+                       float* outbuf, int Cg, int iblock,
                        int iblock_total, int atom_f32, int natoms_f32)
  {
 #if CV_NEON && CV_NEON_AARCH64

@@ -63,7 +63,7 @@ struct FastConv
     int conv_dim;  // Flag for conv1d, conv2d, or conv3d.
 
     int iblock = _FX_WINO_IBLOCK_GENERIC;
-    int atom_f32 = _FX_WINO_ATOM_F32_GENERIC; 
+    int atom_f32 = _FX_WINO_ATOM_F32_GENERIC;
     int natoms_f32 = _FX_WINO_AREA / _FX_WINO_ATOM_F32_GENERIC;
 
 #if CV_SIMD128
