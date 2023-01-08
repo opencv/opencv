@@ -1078,6 +1078,23 @@ inp = tf.placeholder(tf.float32, [2, 3, 4], 'input')
 argmin = tf.argmin(inp, 1)
 save(inp, argmin, 'argmin')
 ################################################################################
+# Generate graph and test data for Reshape permutations check
+stride = 1
+kernel_size = 3
+in_channel = 3
+out_channel = 32
+output_conv_nodename = 'dnn/conv1_1/conv1_1_conv'
+filters = tf.get_variable(name='conv_w',
+                                shape=[kernel_size, kernel_size, in_channel, out_channel])
+inp = tf.placeholder(dtype=tf.float32, shape=(1, 28, 28, 3), name='input_1')
+reshaped = tf.reshape(inp, shape=[1, 28, 28, 3]) / 255
+conv = tf.layers.conv2d(input=reshaped,
+                            filter=filters,
+                            strides=[1, stride, stride, 1],
+                            padding='SAME',
+                            name=output_conv_nodename)
+save(inp, conv, 'tf_reshape_nhwc')
+################################################################################
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb', 'rb') as f:
 #     graph_def = tf.GraphDef()

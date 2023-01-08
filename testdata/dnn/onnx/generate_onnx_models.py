@@ -392,17 +392,22 @@ if torch.__version__ == '1.2.0':
 
 class Unsqueeze(nn.Module):
 
-    def __init__(self):
+    def __init__(self, dim):
         super(Unsqueeze, self).__init__()
+        self.dim = dim
 
     def forward(self, x):
-        return torch.unsqueeze(x, dim=1)
+        return torch.unsqueeze(x, dim = self.dim)
 
 input = Variable(torch.randn(1, 2, 3))
-model = Unsqueeze()
+model = Unsqueeze(1)
 model.eval()
 save_data_and_model("unsqueeze", input, model)
 save_data_and_model("unsqueeze_opset_13", input, model, version=13)
+
+model = Unsqueeze(-2)
+model.eval()
+save_data_and_model("unsqueeze_neg_axes", input, model)
 
 input = Variable(torch.randn(1, 2, 4, 5))
 deconv_adjpad2d = nn.ConvTranspose2d(2, 3, (3, 2), stride=(1, 2), padding=(1, 2), output_padding=(0, 1))
@@ -555,6 +560,92 @@ custom_slice_list_5 = [
 ]
 model_5 = Slice(custom_slice=custom_slice_list_5)
 save_data_and_model("slice_opset_11_steps_5d", input_5, model_5, version=11)
+
+########### Slice with axes ###########
+def generate_slice_with_axes():
+    def generate_model(name, X, Y, starts, ends, axes, steps=None):
+        starts = onnx.numpy_helper.from_array(starts, name='starts')
+        ends = onnx.numpy_helper.from_array(ends, name='ends')
+        axes = onnx.numpy_helper.from_array(axes, name='axes')
+        inputs = ['X', 'starts', 'ends', 'axes']
+        if steps is not None:
+            steps = onnx.numpy_helper.from_array(steps, name='steps')
+            inputs.append('steps')
+
+        node = onnx.helper.make_node(
+            'Slice',
+            inputs,
+            outputs=['Y'],
+        )
+
+        X = onnx.helper.make_tensor_value_info(
+            'X', onnx.TensorProto.FLOAT, list(x.shape))
+        Y = onnx.helper.make_tensor_value_info(
+            'Y', onnx.TensorProto.FLOAT, list(y.shape))
+
+        graph = onnx.helper.make_graph(
+            [node],             # nodes
+            name,               # name
+            [X],                # inputs
+            [Y],                # outputs
+        )
+
+        graph.initializer.append(starts)
+        graph.initializer.append(ends)
+        graph.initializer.append(axes)
+        if steps is not None:
+            graph.initializer.append(steps)
+
+        model = onnx.helper.make_model(graph, producer_name='onnx')
+        onnx.checker.check_model(model)
+
+        input_files = os.path.join("data", "input_" + name)
+        np.save(input_files, x.data)
+
+        output_files = os.path.join("data", "output_" + name)
+        np.save(output_files, np.ascontiguousarray(y.data))
+
+        models_files = os.path.join("models", name + ".onnx")
+        onnx.save(model, models_files)
+
+    x = np.random.randn(20, 10, 5).astype(np.float32)
+    starts = np.array([1, 2, 3], dtype=np.int64)
+    ends = np.array([5, 11, 8], dtype=np.int64)
+    axes = np.array([2, 0, 1], dtype=np.int64)
+    y = x[2:11, 3:8, 1:5]
+    generate_model("slice_nonseq_axes", x, y, starts, ends, axes)
+
+    steps = np.array([1, 4, 2], dtype=np.int64)
+    y = x[2:11:4, 3:8:2, 1:5:1]
+    generate_model("slice_nonseq_axes_steps", x, y, starts, ends, axes, steps)
+
+    starts = np.array([1, 2], dtype=np.int64)
+    ends = np.array([5, 11], dtype=np.int64)
+    axes = np.array([2, 0], dtype=np.int64)
+    steps = np.array([1, 4], dtype=np.int64)
+    y = x[2:11:4, :, 1:5:1]
+    generate_model("slice_nonseq_miss_axes_steps", x, y, starts, ends, axes, steps)
+
+    x = np.random.randn(3, 10, 8, 5).astype(np.float32)
+    starts = np.array([0, 2, 3, 1], dtype=np.int64)
+    ends = np.array([3, 9, 7, 4], dtype=np.int64)
+    axes = np.array([-4, 1, -2, 3], dtype=np.int64)
+    y = x[0:3, 2:9, 3:7, 1:4]
+    generate_model("slice_neg_axes", x, y, starts, ends, axes)
+
+    steps = np.array([1, 4, 3, 2], dtype=np.int64)
+    y = x[0:3:1, 2:9:4, 3:7:3, 1:4:2]
+    generate_model("slice_neg_axes_steps", x, y, starts, ends, axes, steps)
+
+    starts = np.array([0, 3], dtype=np.int64)
+    ends = np.array([3, 7], dtype=np.int64)
+    axes = np.array([-4, -2], dtype=np.int64)
+    steps = np.array([1, 3], dtype=np.int64)
+    y = x[0:3:1, :, 3:7:3, :]
+    generate_model("slice_neg_miss_axes_steps", x, y, starts, ends, axes, steps)
+
+generate_slice_with_axes()
+
 
 class Eltwise(nn.Module):
 
@@ -774,6 +865,7 @@ input = Variable(torch.randn(3, 1, 2, 4))
 model = Squeeze()
 model.eval()
 save_data_and_model("squeeze", input, model)
+save_data_and_model("squeeze_axes_op13", input, model, version=13)
 
 class Div(nn.Module):
 
@@ -1076,6 +1168,78 @@ save_data_and_model("matmul_3d", x, model)
 
 x = Variable(torch.randn(1, 3, 2, 4))
 save_data_and_model("matmul_4d", x, model)
+
+########### MatMul init ###########
+def generate_matmul_init(name, inputA, inputB):
+    output = inputA @ inputB
+    shapeA = inputA.shape
+    shapeB = inputB.shape
+    shapeY = output.shape
+
+    input_files = os.path.join("data", "input_" + name)
+    np.save(input_files, inputA.data)
+    output_files = os.path.join("data", "output_" + name)
+    np.save(output_files, np.ascontiguousarray(output.data))
+
+    A = onnx.helper.make_tensor_value_info('A', onnx.TensorProto.FLOAT, shapeA)
+    B = onnx.helper.make_tensor_value_info('B', onnx.TensorProto.FLOAT, shapeB)
+    Y = onnx.helper.make_tensor_value_info('output', onnx.TensorProto.FLOAT, shapeY)
+    B_INIT = onnx.helper.make_tensor("B", onnx.TensorProto.FLOAT, shapeB, inputB)
+
+
+    node = onnx.helper.make_node("MatMul", inputs=['A', "B",], outputs=['output'])
+    graph = onnx.helper.make_graph([node], name, [A, B], [Y], [B_INIT])
+    model = onnx.helper.make_model(graph, producer_name=name)
+    onnx.save(model, os.path.join("models", name + ".onnx"))
+
+inputA = np.random.randn(2, 3).astype(np.float32)
+inputB = np.random.randn(3, 4).astype(np.float32)
+generate_matmul_init("matmul_2d_init", inputA, inputB)
+
+inputA = np.random.randn(5, 2, 3).astype(np.float32)
+inputB = np.random.randn(5, 3, 4).astype(np.float32)
+generate_matmul_init("matmul_3d_init", inputA, inputB)
+
+inputA = np.random.randn(6, 2, 3, 4).astype(np.float32)
+inputB = np.random.randn(6, 2, 4, 5).astype(np.float32)
+generate_matmul_init("matmul_4d_init", inputA, inputB)
+
+inputA = np.random.randn(2, 3, 4, 5).astype(np.float32)
+inputB = np.random.randn(3, 5, 6).astype(np.float32)
+generate_matmul_init("matmul_init_bcast", inputA, inputB)
+
+def generate_matmul_init_2(name, inputA, inputB):
+    outputY = inputA @ inputB
+    shapeA = inputA.shape
+    shapeB = inputB.shape
+    shapeY = outputY.shape
+
+    A = onnx.helper.make_tensor_value_info('A', onnx.TensorProto.FLOAT, shapeA)
+    B = onnx.helper.make_tensor_value_info('B', onnx.TensorProto.FLOAT, shapeB)
+    A_INIT = onnx.helper.make_tensor("A", onnx.TensorProto.FLOAT, shapeA, inputA)
+    B_INIT = onnx.helper.make_tensor("B", onnx.TensorProto.FLOAT, shapeB, inputB)
+    node1 = onnx.helper.make_node("MatMul", inputs=['A', "B",], outputs=['outputY'])
+
+    input = outputY + np.random.rand()
+    output = input + outputY
+    shapeC = input.shape
+    C = onnx.helper.make_tensor_value_info('input', onnx.TensorProto.FLOAT, shapeC)
+    O = onnx.helper.make_tensor_value_info('output', onnx.TensorProto.FLOAT, shapeY)
+    node2 = onnx.helper.make_node("Add", inputs=['input', "outputY",], outputs=['output'])
+
+    input_files = os.path.join("data", "input_" + name)
+    np.save(input_files, input.data)
+    output_files = os.path.join("data", "output_" + name)
+    np.save(output_files, np.ascontiguousarray(output.data))
+
+    graph = onnx.helper.make_graph([node1, node2], name, [A, B, C], [O], [A_INIT, B_INIT])
+    model = onnx.helper.make_model(graph, producer_name=name)
+    onnx.save(model, os.path.join("models", name + ".onnx"))
+
+
+inputA = np.random.randn(4, 5).astype(np.float32)
+inputB = np.random.randn(5, 6).astype(np.float32)
+generate_matmul_init_2("matmul_init_2", inputA, inputB)
 
 x = np.random.rand(1, 3, 2)
 output = np.mean(x, axis=1, keepdims=True)
@@ -1493,6 +1657,34 @@ class Greater(nn.Module):
 model = Greater()
 input = Variable(torch.rand(1, 3, 4, 5))
 save_data_and_model("greater", input, model, version = 11, export_params=True)
+
+class GreaterOrEqual(nn.Module):
+
+    def __init__(self):
+        super(GreaterOrEqual, self).__init__()
+        self.conv = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+
+    def forward(self, x):
+        x = self.conv(x)
+        return (x >= 0.5)*x
+
+model = GreaterOrEqual()
+input = Variable(torch.rand(1, 3, 4, 5))
+save_data_and_model("greater_or_equal", input, model, version = 13, export_params=True)
+
+class LessOrEqual(nn.Module):
+
+    def __init__(self):
+        super(LessOrEqual, self).__init__()
+        self.conv = nn.Conv2d(3, 3, kernel_size=1, stride=1, padding=0)
+
+    def forward(self, x):
+        x = self.conv(x)
+        return (x <= 0.5)*x
+
+model = LessOrEqual()
+input = Variable(torch.rand(1, 3, 4, 5))
+save_data_and_model("less_or_equal", input, model, version = 13, export_params=True)
 
 class GreaterSameDims(nn.Module):
 
@@ -2089,6 +2281,26 @@ gemm_model2 = onnx.helper.make_model(graph2)
 output_np = gemm_reference_implementation(input_np, weight_np)
 save_data_and_onnx_model("gemm_transB_0", input_np, output_np, gemm_model2)
 
+## gemm with transA = 1, transB = 1 and the first input is constance.
+
+weight_np = np.random.rand(10, 2).astype("float32")
+weight_tensor = helper.make_tensor('weight_tensor', data_type=onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[weight_np.dtype], dims=weight_np.shape, vals=weight_np)
+
+input_np = np.random.rand(3, 10).astype("float32")
+inputs = [helper.make_tensor_value_info("input1", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_np.dtype], shape=input_np.shape)]
+
+outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=(2, 3))]
+
+nodes = [helper.make_node("Gemm", ["weight_tensor", "input1"], ["output"], transA=1, transB=1)]
+
+graph = helper.make_graph(nodes,
+                            "gemm_test",
+                            inputs,
+                            outputs, initializer=[weight_tensor])
+gemm_model = helper.make_model(graph)
+output_np = gemm_reference_implementation(weight_np.T, input_np.T)
+save_data_and_model("gemm_first_const", input_np, output_np, gemm_model)
+
 # ########################## ReduceSum with Dynamic Batch ##########################
 input_np = np.random.rand(2, 4, 4, 4).astype("float32")
 inputs = [onnx.helper.make_tensor_value_info("input1", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_np.dtype], shape=('?', 4, 4, 4))]
@@ -2128,3 +2340,104 @@ onnx_model = onnx.helper.make_model(graph)
 
 output_np = input_np/input2_np
 save_data_and_onnx_model_multy_inputs("div_test_1x1", [input_np, input2_np], output_np, onnx_model)
+
+
+###################### GatherMulti #################################
+N, C, H, W = 2, 3, 8, 7
+axis = 2 # H
+
+input = np.random.rand(N, C, H, W).astype(np.float32)
+idx = np.random.randint(low=1, high=H, size=(3, 4), dtype=np.int32)
+output = np.take(input, idx, axis=axis)
+
+inputs = [onnx.helper.make_tensor_value_info("x", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input.dtype], shape=input.shape)]
+outputs = [onnx.helper.make_tensor_value_info("y", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[output.dtype], shape=output.shape)]
+
+nodes = [onnx.helper.make_node("Constant", [], ["idx"], value=onnx.numpy_helper.from_array(idx)), onnx.helper.make_node("Gather", ["x", "idx"], ["y"], axis=axis)]
+graph = onnx.helper.make_graph(nodes, "gather_multi", inputs, outputs)
+onnx_model = onnx.helper.make_model(graph)
+
+save_data_and_onnx_model("gather_multi", input, output, onnx_model)
+
+###################### Tile #################################
+
+# input & output are taken from onnx conformance test 'test_tile'
+
+def generate_onnx_single_operator(single_op, onnx_name, save_prefix="./models"):
+    # Create inputs (ValueInfoProto)
+    inputs = []
+    input_names = []
+    initializers = []
+    for name, prop in single_op.get("inputs").items():
+        input_names.append(name)
+
+        dtype = prop.get("dtype")
+        shape = prop.get("shape")
+        inputs.append(
+            helper.make_tensor_value_info(name, dtype, shape)
+        )
+        initializer = prop.get("initializer")
+        if initializer is not None:
+            initializers.append(
+                helper.make_tensor(name, dtype, shape, initializer)
+            )
+
+    # Create outputs (ValueInfoProto)
+    outputs = []
+    output_names = []
+    for name, prop in single_op.get("outputs").items():
+        output_names.append(name)
+
+        dtype = prop.get("dtype")
+        shape = prop.get("shape")
+        outputs.append(
+            helper.make_tensor_value_info(name, dtype, shape)
+        )
+
+    # Create a node (NodeProto)
+    attributes = single_op.get("attributes", {})
+    node_def = onnx.helper.make_node(
+        single_op.get("op_name"),
+        inputs=input_names,
+        outputs=output_names,
+        **attributes,
+    )
+
+    # Create the graph (GraphProto)
+    graph_def = helper.make_graph(
+        [node_def],        # nodes
+        onnx_name,         # name
+        inputs,            # inputs
+        outputs,           # outputs
+        initializers       # initializer
+    )
+
+    # Create the model (ModelProto)
+    model_def = helper.make_model(graph_def, producer_name="github.com/opencv/opencv_extra")
+    onnx.checker.check_model(model_def)
+    onnx.save(model_def, "models/{}.onnx".format(onnx_name))
+
+    return True
+
+tile=dict(
+    op_name="Tile",
+    inputs=dict(
+        input=dict(
+            dtype=TensorProto.FLOAT,
+            shape=[2, 3, 4, 5],
+        ),
+        repeats=dict(
+            dtype=TensorProto.INT64,
+            shape=[4],
+            initializer=np.array([7, 6, 4, 2], dtype=np.int64)
+        ),
+    ),
+    outputs=dict(
+        y=dict(
+            dtype=TensorProto.FLOAT,
+            shape=[14, 18, 16, 10]
+        )
+    )
+)
+
+generate_onnx_single_operator(tile, "tile")
