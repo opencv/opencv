@@ -115,8 +115,8 @@ void convBlock_AVX2(int np, const float* a, const float* b, float* c, int ldc, b
 void convBlockMR1(int np, const float* a, const float* b, float *c, const float bias, bool init_c, const float minval,
                   const float maxval, bool ifMinMaxAct);
 
-void _fx_winograd_accum_f32(const float* inwptr, const float* wptr, float* outbuf, int Cg, int iblock);
-void _fx_winograd_BtXB_8x8_f32(const float* inptr, int inpstep, float* outptr, int Cg);
+void _fx_winograd_accum_f32(const float* inwptr, const float* wptr, float* outbuf, int Cg, int iblock, int iblock_total, int atom_f32, int natoms_f32);
+void _fx_winograd_BtXB_8x8_f32(const float* inptr, int inpstep, float* outptr, int Cg, int iblock_total, int atom_f32);
 void _fx_winograd_AtXA_8x8_f32(const float* inptr, int inpstep, float* bpptr, int bpstep, float* outptr, int outstep,
                                float bias, float minval, float maxval, bool ifMinMaxAct);
 
