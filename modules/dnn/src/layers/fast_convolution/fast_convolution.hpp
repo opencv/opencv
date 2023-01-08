@@ -28,21 +28,16 @@ enum {
     _FX_WINO_AREA=_FX_WINO_SIZE*_FX_WINO_SIZE,
 
     _FX_WINO_KBLOCK = 4,
-#if (CV_NEON && CV_NEON_AARCH64)
-    _FX_WINO_IBLOCK = 6,
-#elif CV_SIMD128
-    _FX_WINO_IBLOCK = 3,
-#elif CV_TRY_AVX2
-    _FX_WINO_IBLOCK = 6,
-#endif
 
-#if CV_SIMD128 || (CV_NEON && CV_NEON_AARCH64)
-    _FX_WINO_ATOM_F32 = 4,
-#else CV_TRY_AVX2
-    _FX_WINO_ATOM_F32 = 8,
-#endif
+    _FX_WINO_IBLOCK_AVX2 = 6,
+    _FX_WINO_IBLOCK_NEON = 6,
+    _FX_WINO_IBLOCK_SIMD128 = 3,
+    _FX_WINO_IBLOCK_GENERIC = 3,
 
-    _FX_WINO_NATOMS_F32 = _FX_WINO_AREA / _FX_WINO_ATOM_F32, // for AVX2, it is 8, otherwise, it's 16.
+    _FX_WINO_ATOM_F32_AVX2 = 8,
+    _FX_WINO_ATOM_F32_NEON = 4,
+    _FX_WINO_ATOM_F32_SIMD128 = 4,
+    _FX_WINO_ATOM_F32_GENERIC = 3
 };
 enum { _FX_CONV_TYPE_GENERIC=0, _FX_CONV_TYPE_DEPTHWISE=1, _FX_CONV_TYPE_WINOGRAD3X3=2, _FX_CONV_TYPE_DEPTHWISE_REMAIN=3 };
 enum { CONV_1D = 0, CONV_2D = 1, CONV_3D = 2 };
@@ -66,6 +61,11 @@ struct FastConv
     std::vector<float> biasBuf;
     int conv_type;
     int conv_dim;  // Flag for conv1d, conv2d, or conv3d.
+
+    int iblock = _FX_WINO_IBLOCK_GENERIC;
+    int atom_f32 = _FX_WINO_ATOM_F32_GENERIC; 
+    int natoms_f32 = _FX_WINO_AREA / _FX_WINO_ATOM_F32_GENERIC;
+
 #if CV_SIMD128
     bool useSIMD128 = true;
 #else

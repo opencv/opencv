@@ -117,20 +117,21 @@ void convBlock_AVX2(int np, const float* a, const float* b, float* c, int ldc, b
 }
 
 void _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
-                       float* outbuf, int Cg, int iblock)
+                       float* outbuf, int Cg, int iblock,
+                       int iblock_total, int atom_f32, int natoms_f32)
 {
-    CV_Assert(_FX_WINO_IBLOCK == 6 && _FX_WINO_KBLOCK == 4);// && _FX_WINO_ATOM_F32 == 8);
+    CV_Assert(iblock_total == 6 && _FX_WINO_KBLOCK == 4);// && atom_f32 == 8);
     if (iblock > 3)
     {
-        for (int atom_id = 0; atom_id < _FX_WINO_NATOMS_F32; atom_id++,
-                outbuf += _FX_WINO_ATOM_F32)
+        for (int atom_id = 0; atom_id < natoms_f32; atom_id++,
+                outbuf += atom_f32)
         {
             __m256 s00 = _mm256_set1_ps(0.f), s01 = s00, s02 = s00, s03 = s00, s04 = s00, s05 = s00;
             __m256 s10 = _mm256_set1_ps(0.f), s11 = s00, s12 = s00, s13 = s00, s14 = s00, s15 = s00;
             __m256 s20 = _mm256_set1_ps(0.f), s21 = s00, s22 = s00, s23 = s00, s24 = s00, s25 = s00;
             __m256 s30 = _mm256_set1_ps(0.f), s31 = s00, s32 = s00, s33 = s00, s34 = s00, s35 = s00;
-            for (int c = 0; c < Cg; c++, inwptr += _FX_WINO_IBLOCK*_FX_WINO_ATOM_F32,
-                                         wptr += _FX_WINO_KBLOCK*_FX_WINO_ATOM_F32)
+            for (int c = 0; c < Cg; c++, inwptr += iblock_total*atom_f32,
+                                         wptr += _FX_WINO_KBLOCK*atom_f32)
             {
                 __m256 w0 = _mm256_load_ps(wptr), w1 = _mm256_load_ps(wptr + 8);
                 __m256 w2 = _mm256_load_ps(wptr + 16), w3 = _mm256_load_ps(wptr + 24);
@@ -198,15 +199,15 @@ void _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
     }
     else
     {
-        for (int atom_id = 0; atom_id < _FX_WINO_NATOMS_F32; atom_id++,
-                outbuf += _FX_WINO_ATOM_F32)
+        for (int atom_id = 0; atom_id < natoms_f32; atom_id++,
+                outbuf += atom_f32)
         {
             __m256 s00 = _mm256_set1_ps(0.f), s01 = s00, s02 = s00;
             __m256 s10 = _mm256_set1_ps(0.f), s11 = s00, s12 = s00;
             __m256 s20 = _mm256_set1_ps(0.f), s21 = s00, s22 = s00;
             __m256 s30 = _mm256_set1_ps(0.f), s31 = s00, s32 = s00;
-            for (int c = 0; c < Cg; c++, inwptr += _FX_WINO_IBLOCK*_FX_WINO_ATOM_F32,
-                                         wptr += _FX_WINO_KBLOCK*_FX_WINO_ATOM_F32) {
+            for (int c = 0; c < Cg; c++, inwptr += iblock_total*atom_f32,
+                                         wptr += _FX_WINO_KBLOCK*atom_f32) {
                 __m256 w0 = _mm256_load_ps(wptr), w1 = _mm256_load_ps(wptr + 8);
                 __m256 w2 = _mm256_load_ps(wptr + 16), w3 = _mm256_load_ps(wptr + 24);
                 __m256 x0, x1, x2;
@@ -275,7 +276,7 @@ void transpose8_ps(__m256 &row0, __m256 &row1, __m256 &row2, __m256 &row3, __m25
 }
 
 /*Input transform*/
-void _fx_winograd_BtXB_8x8_f32(const float* inptr, int inpstep, float* outptr, int Cg)
+void _fx_winograd_BtXB_8x8_f32(const float* inptr, int inpstep, float* outptr, int Cg, int iblock_total, int atom_f32)
 {
     __m256 x00 = _mm256_loadu_ps(inptr);
     __m256 x10 = _mm256_loadu_ps(inptr + inpstep);
@@ -368,7 +369,7 @@ void _fx_winograd_BtXB_8x8_f32(const float* inptr, int inpstep, float* outptr, i
         z60 = _mm256_sub_ps(t10, t00);
     }
 
-    const int outstep = _FX_WINO_IBLOCK*_FX_WINO_ATOM_F32*Cg;
+    const int outstep = iblock_total*atom_f32*Cg;
 
     _mm256_storeu_ps(outptr, z00);
     _mm256_storeu_ps(outptr + outstep, z10);

@@ -19,21 +19,22 @@ enum { VEC_ALIGN = 32, DFT_TYPE = CV_32F }; // Memory alignment.
 
 static void
 _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
-                       float* outbuf, int Cg, int iblock)
+                       float* outbuf, int Cg, int iblock, 
+                       int iblock_total, int atom_f32, int natoms_f32)
  {
 #if CV_NEON && CV_NEON_AARCH64
-    CV_Assert(_FX_WINO_IBLOCK == 6 && _FX_WINO_KBLOCK == 4);
+    CV_Assert(iblock_total == 6 && _FX_WINO_KBLOCK == 4);
     if (iblock > 3)
     {
-        for (int atom_id = 0; atom_id < _FX_WINO_NATOMS_F32; atom_id++,
-                outbuf += _FX_WINO_ATOM_F32)
+        for (int atom_id = 0; atom_id < natoms_f32; atom_id++,
+                outbuf += atom_f32)
         {
             float32x4_t s00 = vdupq_n_f32(0.f), s01 = s00, s02 = s00, s03 = s00, s04 = s00, s05 = s00;
             float32x4_t s10 = vdupq_n_f32(0.f), s11 = s00, s12 = s00, s13 = s00, s14 = s00, s15 = s00;
             float32x4_t s20 = vdupq_n_f32(0.f), s21 = s00, s22 = s00, s23 = s00, s24 = s00, s25 = s00;
             float32x4_t s30 = vdupq_n_f32(0.f), s31 = s00, s32 = s00, s33 = s00, s34 = s00, s35 = s00;
-            for (int c = 0; c < Cg; c++, inwptr += _FX_WINO_IBLOCK*_FX_WINO_ATOM_F32,
-                                         wptr += _FX_WINO_KBLOCK*_FX_WINO_ATOM_F32) {
+            for (int c = 0; c < Cg; c++, inwptr += iblock_total*atom_f32,
+                                         wptr += _FX_WINO_KBLOCK*atom_f32) {
                 float32x4_t w0 = vld1q_f32(wptr), w1 = vld1q_f32(wptr + 4);
                 float32x4_t w2 = vld1q_f32(wptr + 8), w3 = vld1q_f32(wptr + 12);
                 float32x4_t x0, x1;
@@ -100,15 +101,15 @@ _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
     }
     else
     {
-        for (int atom_id = 0; atom_id < _FX_WINO_NATOMS_F32; atom_id++,
-                outbuf += _FX_WINO_ATOM_F32)
+        for (int atom_id = 0; atom_id < natoms_f32; atom_id++,
+                outbuf += atom_f32)
         {
             float32x4_t s00 = vdupq_n_f32(0.f), s01 = s00, s02 = s00;
             float32x4_t s10 = vdupq_n_f32(0.f), s11 = s00, s12 = s00;
             float32x4_t s20 = vdupq_n_f32(0.f), s21 = s00, s22 = s00;
             float32x4_t s30 = vdupq_n_f32(0.f), s31 = s00, s32 = s00;
-            for (int c = 0; c < Cg; c++, inwptr += _FX_WINO_IBLOCK*_FX_WINO_ATOM_F32,
-                                         wptr += _FX_WINO_KBLOCK*_FX_WINO_ATOM_F32) {
+            for (int c = 0; c < Cg; c++, inwptr += iblock_total*atom_f32,
+                                         wptr += _FX_WINO_KBLOCK*atom_f32) {
                 float32x4_t w0 = vld1q_f32(wptr), w1 = vld1q_f32(wptr + 4);
                 float32x4_t w2 = vld1q_f32(wptr + 8), w3 = vld1q_f32(wptr + 12);
                 float32x4_t x0, x1, x2;
@@ -144,17 +145,17 @@ _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
         }
     }
 #elif CV_SIMD128
-    CV_Assert(_FX_WINO_IBLOCK == 3 && _FX_WINO_KBLOCK == 4);
-    for (int atom_id = 0; atom_id < _FX_WINO_NATOMS_F32; atom_id++,
-            outbuf += _FX_WINO_ATOM_F32)
+    CV_Assert(iblock_total == 3 && _FX_WINO_KBLOCK == 4);
+    for (int atom_id = 0; atom_id < natoms_f32; atom_id++,
+            outbuf += atom_f32)
     {
         v_float32x4 s00 = v_setzero_f32(), s01 = s00, s02 = s00;
         v_float32x4 s10 = v_setzero_f32(), s11 = s00, s12 = s00;
         v_float32x4 s20 = v_setzero_f32(), s21 = s00, s22 = s00;
         v_float32x4 s30 = v_setzero_f32(), s31 = s00, s32 = s00;
 
-        for (int c = 0; c < Cg; c++, inwptr += _FX_WINO_IBLOCK*_FX_WINO_ATOM_F32,
-                                     wptr += _FX_WINO_KBLOCK*_FX_WINO_ATOM_F32)
+        for (int c = 0; c < Cg; c++, inwptr += iblock_total*atom_f32,
+                                     wptr += _FX_WINO_KBLOCK*atom_f32)
         {
             v_float32x4 x0, x1, x2;
             x0 = v_load(inwptr);
@@ -196,21 +197,21 @@ _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
         v_store(outbuf + 11*64, s32);
     }
 #else
-    for (int atom_id = 0; atom_id < _FX_WINO_NATOMS_F32;
-                    atom_id++, outbuf += _FX_WINO_ATOM_F32)
+    for (int atom_id = 0; atom_id < natoms_f32;
+                    atom_id++, outbuf += atom_f32)
     {
-        float sumbuf[_FX_WINO_IBLOCK*_FX_WINO_KBLOCK*_FX_WINO_ATOM_F32];
+        float sumbuf[iblock_total*_FX_WINO_KBLOCK*atom_f32];
         memset(sumbuf, 0, sizeof(sumbuf));
-        for (int c = 0; c < Cg; c++, inwptr += _FX_WINO_IBLOCK*_FX_WINO_ATOM_F32,
-                                     wptr += _FX_WINO_KBLOCK*_FX_WINO_ATOM_F32)
+        for (int c = 0; c < Cg; c++, inwptr += iblock_total*atom_f32,
+                                     wptr += _FX_WINO_KBLOCK*atom_f32)
         {
             for (int i = 0; i < _FX_WINO_KBLOCK; i++)
             {
-                for (int j = 0; j < _FX_WINO_IBLOCK; j++)
+                for (int j = 0; j < iblock_total; j++)
                 {
-                    int i_ = i*_FX_WINO_ATOM_F32;
-                    int j_ = j*_FX_WINO_ATOM_F32;
-                    int ij_ = i_*_FX_WINO_IBLOCK + j_;
+                    int i_ = i*atom_f32;
+                    int j_ = j*atom_f32;
+                    int ij_ = i_*iblock_total + j_;
                     float s0 = inwptr[j_ + 0]*wptr[i_ + 0];
                     float s1 = inwptr[j_ + 1]*wptr[i_ + 1];
                     float s2 = inwptr[j_ + 2]*wptr[i_ + 2];
@@ -222,9 +223,9 @@ _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
                 }
             }
         }
-        for (int ij = 0; ij < _FX_WINO_KBLOCK*_FX_WINO_IBLOCK; ij++)
+        for (int ij = 0; ij < _FX_WINO_KBLOCK*iblock_total; ij++)
         {
-            int ij_ = ij*_FX_WINO_ATOM_F32;
+            int ij_ = ij*atom_f32;
             int ij_out = ij*_FX_WINO_AREA;
             outbuf[ij_out + 0] = sumbuf[ij_ + 0];
             outbuf[ij_out + 1] = sumbuf[ij_ + 1];
@@ -248,7 +249,8 @@ _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
 /*Input transform*/
 static void
 _fx_winograd_BtXB_8x8_f32(const float* inptr, int inpstep,
-                          float* outptr, int Cg)
+                          float* outptr, int Cg,
+                          int iblock_total, int atom_f32)
 {
 #if CV_NEON && CV_NEON_AARCH64
     float32x4_t x00 = vld1q_f32(inptr), x01 = vld1q_f32(inptr + 4);
@@ -390,7 +392,7 @@ _fx_winograd_BtXB_8x8_f32(const float* inptr, int inpstep,
         z60 = vsubq_f32(t10, t00); z61 = vsubq_f32(t11, t01);
     }
 
-    const int outstep = _FX_WINO_IBLOCK*_FX_WINO_ATOM_F32*Cg;
+    const int outstep = iblock_total*atom_f32*Cg;
 
     vst1q_f32(outptr, z00);
     vst1q_f32(outptr + outstep, z01);
@@ -547,7 +549,7 @@ _fx_winograd_BtXB_8x8_f32(const float* inptr, int inpstep,
         z60 = t10 - t00; z61 = t11 - t01;
     }
 
-    const int outstep = _FX_WINO_IBLOCK*_FX_WINO_ATOM_F32*Cg;
+    const int outstep = iblock_total*atom_f32*Cg;
 
     v_store(outptr, z00);
     v_store(outptr + outstep, z01);
@@ -946,7 +948,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
     int blocks_per_row = (W0+_FX_WINO_STEP-1)/_FX_WINO_STEP;
     int blocks_per_plane = ((H0+_FX_WINO_STEP-1)/_FX_WINO_STEP)*blocks_per_row;
     int blocks_per_plane_aligned = ((blocks_per_plane +
-                                     _FX_WINO_IBLOCK-1)/_FX_WINO_IBLOCK)*_FX_WINO_IBLOCK;
+                                     conv->iblock-1)/conv->iblock)*conv->iblock;
 
     size_t totalbufsize = (size_t)N*C*blocks_per_plane_aligned*_FX_WINO_AREA;
 
@@ -976,13 +978,13 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
             int c = nc0 - n*C;
             int g = c / Cg;
             c -= g*Cg;
-            for (int block_id = 0; block_id < blocks_per_plane; block_id += _FX_WINO_IBLOCK)
+            for (int block_id = 0; block_id < blocks_per_plane; block_id += conv->iblock)
             {
-                for (int db = 0; db < _FX_WINO_IBLOCK; db++)
+                for (int db = 0; db < conv->iblock; db++)
                 {
                     size_t inwofs = ((n*ngroups + g)*blocks_per_plane_aligned +
                                      block_id)*Cg*_FX_WINO_AREA +
-                                    (c*_FX_WINO_IBLOCK + db)*_FX_WINO_ATOM_F32;
+                                    (c*conv->iblock + db)*conv->atom_f32;
                     float* inwptr = (float*)wbuf_all + inwofs;
 
                     if (block_id + db < blocks_per_plane)
@@ -1026,15 +1028,15 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
                         }
 #if CV_TRY_AVX2
                         if (conv->useAVX2)
-                            opt_AVX2::_fx_winograd_BtXB_8x8_f32(inptr, inpstep, inwptr, Cg);
+                            opt_AVX2::_fx_winograd_BtXB_8x8_f32(inptr, inpstep, inwptr, Cg, conv->iblock, conv->atom_f32);
                         else
 #endif
-                        _fx_winograd_BtXB_8x8_f32(inptr, inpstep, inwptr, Cg);
+                        _fx_winograd_BtXB_8x8_f32(inptr, inpstep, inwptr, Cg, conv->iblock, conv->atom_f32);
                     }
                     else
                     {
-                        for (int i = 0; i < _FX_WINO_NATOMS_F32; i++, inwptr += _FX_WINO_IBLOCK*_FX_WINO_ATOM_F32)
-                            memset(inwptr, 0, _FX_WINO_ATOM_F32*sizeof(inwptr[0]));
+                        for (int i = 0; i < conv->natoms_f32; i++, inwptr += conv->iblock*conv->atom_f32)
+                            memset(inwptr, 0, conv->atom_f32*sizeof(inwptr[0]));
                     }
                 }
             }
@@ -1047,7 +1049,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
     parallel_for_(Range(0, ntasks), [&](const Range& r0) {
     for (int task_id = r0.start; task_id < r0.end; task_id++)
     {
-        size_t out_wbuf_size = _FX_WINO_AREA*_FX_WINO_KBLOCK*_FX_WINO_IBLOCK;
+        size_t out_wbuf_size = _FX_WINO_AREA*_FX_WINO_KBLOCK*conv->iblock;
         size_t outbuf_size = _FX_WINO_AREA;
         AutoBuffer<float> out_wbuf_, outbuf_;
         out_wbuf_.allocate(out_wbuf_size + VEC_ALIGN);
@@ -1069,9 +1071,9 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
             int k0 = (gk0 % Kg_nblocks)*_FX_WINO_KBLOCK;
             int k1 = k0 + _FX_WINO_KBLOCK <= Kg ? k0 + _FX_WINO_KBLOCK : Kg;
 
-            for (int block_id0 = 0; block_id0 < blocks_per_plane; block_id0 += _FX_WINO_IBLOCK)
+            for (int block_id0 = 0; block_id0 < blocks_per_plane; block_id0 += conv->iblock)
             {
-                int block_id1 = block_id0 + _FX_WINO_IBLOCK;
+                int block_id1 = block_id0 + conv->iblock;
                 block_id1 = block_id1 < blocks_per_plane ? block_id1 : blocks_per_plane;
                 size_t inwofs = ((n*ngroups + g)*blocks_per_plane_aligned + block_id0)*Cg*_FX_WINO_AREA;
                 size_t wofs = (g*Kg_nblocks*_FX_WINO_KBLOCK + k0)*Cg*_FX_WINO_AREA;
@@ -1081,10 +1083,10 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 
 #if CV_TRY_AVX2
                 if (conv->useAVX2)
-                    opt_AVX2::_fx_winograd_accum_f32(inwptr, wptr, out_wbuf, Cg, block_id1 - block_id0);
+                    opt_AVX2::_fx_winograd_accum_f32(inwptr, wptr, out_wbuf, Cg, block_id1 - block_id0, conv->iblock, conv->atom_f32, conv->natoms_f32);
                 else
 #endif
-                _fx_winograd_accum_f32(inwptr, wptr, out_wbuf, Cg, block_id1 - block_id0);
+                _fx_winograd_accum_f32(inwptr, wptr, out_wbuf, Cg, block_id1 - block_id0, conv->iblock, conv->atom_f32, conv->natoms_f32);
                 for (int k = k0; k < k1; k++)
                 {
                     float biasv = conv->biasBuf[g*Kg + k];
@@ -1121,11 +1123,11 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
                         }
 #if CV_TRY_AVX2
                         if (conv->useAVX2)
-                            opt_AVX2::_fx_winograd_AtXA_8x8_f32(out_wbuf + ((k - k0)*_FX_WINO_IBLOCK + (block_id - block_id0))*_FX_WINO_AREA, _FX_WINO_SIZE,
+                            opt_AVX2::_fx_winograd_AtXA_8x8_f32(out_wbuf + ((k - k0)*conv->iblock + (block_id - block_id0))*_FX_WINO_AREA, _FX_WINO_SIZE,
                                                                 bpptr, outstep, outptr, outstep, biasv, minval, maxval, ifMinMaxAct);
                         else
 #endif
-                        _fx_winograd_AtXA_8x8_f32(out_wbuf + ((k - k0)*_FX_WINO_IBLOCK + (block_id - block_id0))*_FX_WINO_AREA, _FX_WINO_SIZE,
+                        _fx_winograd_AtXA_8x8_f32(out_wbuf + ((k - k0)*conv->iblock + (block_id - block_id0))*_FX_WINO_AREA, _FX_WINO_SIZE,
                                                   bpptr, outstep, outptr, outstep, biasv, minval, maxval, ifMinMaxAct);
                         if (partial)
                         {

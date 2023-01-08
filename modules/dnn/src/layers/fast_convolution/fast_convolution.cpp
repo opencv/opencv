@@ -103,7 +103,23 @@ Ptr<FastConv> initFastConv(
 #if !(CV_NEON || CV_SIMD128 || CV_TRY_AVX2)
     if (conv->conv_type == _FX_CONV_TYPE_WINOGRAD3X3) // Disabel Winograd when CV_NEON, CV_SIMD128 and CV_TRY_AVX2 are not available.
         conv->conv_type = _FX_CONV_TYPE_GENERIC;
+#else
+    if (conv->useAVX2) {
+        conv->iblock = _FX_WINO_IBLOCK_AVX2;
+        conv->atom_f32 = _FX_WINO_ATOM_F32_AVX2;
+    }
+    else if (conv->useNEON)
+    {
+        conv->iblock = _FX_WINO_IBLOCK_NEON;
+        conv->atom_f32 = _FX_WINO_ATOM_F32_NEON;
+    }
+    else if (conv->useSIMD128)
+    {
+        conv->iblock = _FX_WINO_IBLOCK_SIMD128;
+        conv->atom_f32 = _FX_WINO_ATOM_F32_SIMD128;
+    }
 #endif
+    conv->natoms_f32 = _FX_WINO_AREA / conv->atom_f32;
 
     Mat weightsMat = _weightsMat.getMat();
     auto wShape = shape(weightsMat);
@@ -199,12 +215,12 @@ Ptr<FastConv> initFastConv(
 
                 // repack the data.
                 float* wptr = wptrWino + (g*Kg_nblocks + ki) * Cg *_FX_WINO_KBLOCK*_FX_WINO_AREA +
-                              (c*_FX_WINO_KBLOCK + dk)*_FX_WINO_ATOM_F32;
-                for (int i = 0; i < _FX_WINO_NATOMS_F32; i++,
-                        wptr += Cg * _FX_WINO_KBLOCK * _FX_WINO_ATOM_F32)
+                              (c*_FX_WINO_KBLOCK + dk)*conv->atom_f32;
+                for (int i = 0; i < conv->natoms_f32; i++,
+                        wptr += Cg * _FX_WINO_KBLOCK * conv->atom_f32)
                 {
-                    CV_Assert(conv->weightsWinoBufPtr <= wptr && wptr + _FX_WINO_ATOM_F32 <= conv->weightsWinoBufPtr + nweights);
-                    memcpy(wptr, kernelTm + i * _FX_WINO_ATOM_F32, _FX_WINO_ATOM_F32*sizeof (wptr[0]));
+                    CV_Assert(conv->weightsWinoBufPtr <= wptr && wptr + conv->atom_f32 <= conv->weightsWinoBufPtr + nweights);
+                    memcpy(wptr, kernelTm + i * conv->atom_f32, conv->atom_f32*sizeof (wptr[0]));
                 }
             }
         }});
