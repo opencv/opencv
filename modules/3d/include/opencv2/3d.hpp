@@ -613,7 +613,7 @@ public:
 
     param: the current vector of parameters
     err: output vector of errors: err_i = actual_f_i - ideal_f_i
-    J: output Jacobian: J_ij = d(err_i)/d(param_j)
+    J: output Jacobian: J_ij = d(ideal_f_i)/d(param_j)
 
     Param vector values may be changed by the callback only if they are fixed.
     Changing non-fixed variables may lead to incorrect results.
@@ -750,7 +750,7 @@ a vector\<Point2f\> .
 -   @ref RHO - PROSAC-based robust method
 @param ransacReprojThreshold Maximum allowed reprojection error to treat a point pair as an inlier
 (used in the RANSAC and RHO methods only). That is, if
-\f[\| \texttt{dstPoints} _i -  \texttt{convertPointsHomogeneous} ( \texttt{H} * \texttt{srcPoints} _i) \|_2  >  \texttt{ransacReprojThreshold}\f]
+\f[\| \texttt{dstPoints} _i -  \texttt{convertPointsHomogeneous} ( \texttt{H} \cdot \texttt{srcPoints} _i) \|_2  >  \texttt{ransacReprojThreshold}\f]
 then the point \f$i\f$ is considered as an outlier. If srcPoints and dstPoints are measured in pixels,
 it usually makes sense to set this parameter somewhere in the range of 1 to 10.
 @param mask Optional output mask set by a robust method ( RANSAC or LMeDS ). Note that the input
@@ -853,7 +853,7 @@ be used in OpenGL. Note, there is always more than one sequence of rotations abo
 principal axes that results in the same orientation of an object, e.g. see @cite Slabaugh . Returned
 tree rotation matrices and corresponding three Euler angles are only one of the possible solutions.
 
-The function is based on RQDecomp3x3 .
+The function is based on #RQDecomp3x3 .
  */
 CV_EXPORTS_W void decomposeProjectionMatrix( InputArray projMatrix, OutputArray cameraMatrix,
                                              OutputArray rotMatrix, OutputArray transVect,
@@ -899,10 +899,10 @@ The functions compute:
 \f[\begin{array}{l} \texttt{rvec3} =  \mathrm{rodrigues} ^{-1} \left ( \mathrm{rodrigues} ( \texttt{rvec2} )  \cdot \mathrm{rodrigues} ( \texttt{rvec1} ) \right )  \\ \texttt{tvec3} =  \mathrm{rodrigues} ( \texttt{rvec2} )  \cdot \texttt{tvec1} +  \texttt{tvec2} \end{array} ,\f]
 
 where \f$\mathrm{rodrigues}\f$ denotes a rotation vector to a rotation matrix transformation, and
-\f$\mathrm{rodrigues}^{-1}\f$ denotes the inverse transformation. See Rodrigues for details.
+\f$\mathrm{rodrigues}^{-1}\f$ denotes the inverse transformation. See #Rodrigues for details.
 
 Also, the functions can compute the derivatives of the output vectors with regards to the input
-vectors (see matMulDeriv ). The functions are used inside #stereoCalibrate but can also be used in
+vectors (see #matMulDeriv ). The functions are used inside #stereoCalibrate but can also be used in
 your own code where Levenberg-Marquardt or another gradient-based solver is used to optimize a
 function that contains a matrix multiplication.
  */
@@ -1361,7 +1361,7 @@ the found fundamental matrix. Normally just one matrix is found. But in case of 
 algorithm, the function may return up to 3 solutions ( \f$9 \times 3\f$ matrix that stores all 3
 matrices sequentially).
 
-The calculated fundamental matrix may be passed further to computeCorrespondEpilines that finds the
+The calculated fundamental matrix may be passed further to #computeCorrespondEpilines that finds the
 epipolar lines corresponding to the specified points. It can also be passed to
 #stereoRectifyUncalibrated to compute the rectification transformation. :
 @code
@@ -1431,7 +1431,7 @@ This function estimates essential matrix based on the five-point algorithm solve
 
 where \f$E\f$ is an essential matrix, \f$p_1\f$ and \f$p_2\f$ are corresponding points in the first and the
 second images, respectively. The result of this function may be passed further to
-#decomposeEssentialMat or  #recoverPose to recover the relative pose between cameras.
+#decomposeEssentialMat or #recoverPose to recover the relative pose between cameras.
  */
 CV_EXPORTS_W
 Mat findEssentialMat(
@@ -1807,12 +1807,12 @@ CV_EXPORTS_W void triangulatePoints( InputArray projMatr1, InputArray projMatr2,
 @param newPoints1 The optimized points1.
 @param newPoints2 The optimized points2.
 
-The function implements the Optimal Triangulation Method (see Multiple View Geometry for details).
+The function implements the Optimal Triangulation Method (see Multiple View Geometry @cite HartleyZ00 for details).
 For each given point correspondence points1[i] \<-\> points2[i], and a fundamental matrix F, it
 computes the corrected correspondences newPoints1[i] \<-\> newPoints2[i] that minimize the geometric
 error \f$d(points1[i], newPoints1[i])^2 + d(points2[i],newPoints2[i])^2\f$ (where \f$d(a,b)\f$ is the
 geometric distance between points \f$a\f$ and \f$b\f$ ) subject to the epipolar constraint
-\f$newPoints2^T * F * newPoints1 = 0\f$ .
+\f$newPoints2^T \cdot F \cdot newPoints1 = 0\f$ .
  */
 CV_EXPORTS_W void correctMatches( InputArray F, InputArray points1, InputArray points2,
                                   OutputArray newPoints1, OutputArray newPoints2 );
@@ -2236,7 +2236,7 @@ where cameraMatrix can be chosen arbitrarily.
 of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 @param R Optional rectification transformation in the object space (3x3 matrix). R1 or R2 ,
 computed by #stereoRectify can be passed here. If the matrix is empty, the identity transformation
-is assumed. In cvInitUndistortMap R assumed to be an identity matrix.
+is assumed. In #initUndistortRectifyMap R assumed to be an identity matrix.
 @param newCameraMatrix New camera matrix \f$A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}\f$.
 @param size Undistorted image size.
 @param m1type Type of the first output map that can be CV_32FC1, CV_32FC2 or CV_16SC2, see #convertMaps

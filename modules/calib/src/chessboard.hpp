@@ -43,7 +43,7 @@ class FastX : public cv::Feature2D
 
     public:
         FastX(const Parameters &config = Parameters());
-        virtual ~FastX(){};
+        virtual ~FastX(){}
 
         void reconfigure(const Parameters &para);
 
@@ -74,8 +74,8 @@ class FastX : public cv::Feature2D
         std::vector<std::vector<float> > calcAngles(const std::vector<cv::Mat> &rotated_images,
                                                             std::vector<cv::KeyPoint> &keypoints)const;
         // define pure virtual methods
-        virtual int descriptorSize()const override{return 0;};
-        virtual int descriptorType()const override{return 0;};
+        virtual int descriptorSize()const override{return 0;}
+        virtual int descriptorType()const override{return 0;}
         virtual void operator()( cv::InputArray image, cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors, bool useProvidedKeypoints=false )const
         {
             descriptors.clear();
@@ -620,10 +620,10 @@ class Chessboard: public cv::Feature2D
                  */
                 void swap(Chessboard::Board &other);
 
-                bool operator==(const Chessboard::Board& other) const {return rows*cols == other.rows*other.cols;};
-                bool operator< (const Chessboard::Board& other) const {return rows*cols < other.rows*other.cols;};
-                bool operator> (const Chessboard::Board& other) const {return rows*cols > other.rows*other.cols;};
-                bool operator>= (const cv::Size& size)const { return rows*cols >= size.width*size.height; };
+                bool operator==(const Chessboard::Board& other) const {return rows*cols == other.rows*other.cols;}
+                bool operator< (const Chessboard::Board& other) const {return rows*cols < other.rows*other.cols;}
+                bool operator> (const Chessboard::Board& other) const {return rows*cols > other.rows*other.cols;}
+                bool operator>= (const cv::Size& size)const { return rows*cols >= size.width*size.height; }
 
                 /**
                  * \brief Returns a specific corner
@@ -824,8 +824,8 @@ class Chessboard: public cv::Feature2D
         Chessboard::Board detectImpl(const cv::Mat& image,std::vector<cv::Mat> &feature_maps,const cv::Mat& mask)const;
 
         // define pure virtual methods
-        virtual int descriptorSize()const override{return 0;};
-        virtual int descriptorType()const override{return 0;};
+        virtual int descriptorSize()const override{return 0;}
+        virtual int descriptorType()const override{return 0;}
         virtual void operator()( cv::InputArray image, cv::InputArray mask, std::vector<cv::KeyPoint>& keypoints, cv::OutputArray descriptors, bool useProvidedKeypoints=false )const
         {
             descriptors.clear();

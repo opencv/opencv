@@ -113,10 +113,10 @@ class dnn_test(NewOpenCVTests):
         proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')
         model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel')
         net = cv.dnn.readNet(proto, model)
-        net.setPreferableBackend(backend)
-        net.setPreferableTarget(target)
-        inp = np.random.standard_normal([1, 2, 10, 11]).astype(np.float32)
         try:
+            net.setPreferableBackend(backend)
+            net.setPreferableTarget(target)
+            inp = np.random.standard_normal([1, 2, 10, 11]).astype(np.float32)
             net.setInput(inp)
             net.forward()
         except BaseException as e:

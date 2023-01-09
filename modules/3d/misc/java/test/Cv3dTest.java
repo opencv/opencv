@@ -555,4 +555,5 @@ public class Cv3dTest extends OpenCVTestCase {
             assertTrue(src.toList().get(i).equals(dst.toList().get(i)));
         }
     }
+
 }

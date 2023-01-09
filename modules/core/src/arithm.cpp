@@ -168,7 +168,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
 
     if( dims1 <= 2 && dims2 <= 2 && kind1 == kind2 && sz1 == sz2 && type1 == type2 && !haveMask )
     {
-        _dst.create(sz1, type1);
+        _dst.createSameSize(*psrc1, type1);
         CV_OCL_RUN(use_opencl,
                    ocl_binary_op(*psrc1, *psrc2, _dst, _mask, bitwise, oclop, false))
 
@@ -1225,7 +1225,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 && src1.size() == src2.size() && src1.type() == src2.type() )
     {
         int cn = src1.channels();
-        _dst.create(src1.size(), CV_8UC(cn));
+        _dst.createSameSize(src1, CV_8UC(cn));
         Mat dst = _dst.getMat();
         Size sz = getContinuousSize2D(src1, src2, dst, src1.channels());
         BinaryFuncC cmpFn = getCmpFunc(depth1);

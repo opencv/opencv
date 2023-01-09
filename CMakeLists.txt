@@ -264,9 +264,12 @@ OCV_OPTION(WITH_CUBLAS "Include NVidia Cuda Basic Linear Algebra Subprograms (BL
 OCV_OPTION(WITH_CUDNN "Include NVIDIA CUDA Deep Neural Network (cuDNN) library support" WITH_CUDA
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_CUDNN)
-OCV_OPTION(WITH_NVCUVID "Include NVidia Video Decoding library support" OFF  # disabled, details: https://github.com/opencv/opencv/issues/14850
+OCV_OPTION(WITH_NVCUVID "Include NVidia Video Decoding library support" ON
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_NVCUVID)
+OCV_OPTION(WITH_NVCUVENC "Include NVidia Video Encoding library support" ON
+  VISIBLE_IF WITH_CUDA
+  VERIFY HAVE_NVCUVENC)
 OCV_OPTION(WITH_EIGEN "Include Eigen2/Eigen3 support" (NOT CV_DISABLE_OPTIMIZATION AND NOT CMAKE_CROSSCOMPILING)
   VISIBLE_IF NOT WINRT
   VERIFY HAVE_EIGEN)
@@ -331,6 +334,9 @@ OCV_OPTION(WITH_OPENNI2 "Include OpenNI2 support" OFF
 OCV_OPTION(WITH_PNG "Include PNG support" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_PNG)
+OCV_OPTION(WITH_SPNG "Include SPNG support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_SPNG)
 OCV_OPTION(WITH_GDCM "Include DICOM support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_GDCM)
@@ -463,6 +469,9 @@ OCV_OPTION(WITH_TIMVX "Include Tim-VX support" OFF
 OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec RGB-D modules: Astra+/Femto)" ON
   VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT) OR ( UNIX AND NOT APPLE AND NOT ANDROID)
   VERIFY HAVE_OBSENSOR)
+OCV_OPTION(WITH_CANN "Include CANN support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_CANN)
 
 # OpenCV build components
 # ===================================================
@@ -645,7 +654,7 @@ ocv_cmake_hook(POST_COMPILER_OPTIONS)
 # ----------------------------------------------------------------------------
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------
-if(UNIX)
+if(UNIX OR MINGW)
   if(NOT APPLE_FRAMEWORK OR OPENCV_ENABLE_PKG_CONFIG)
     if(CMAKE_CROSSCOMPILING AND NOT DEFINED ENV{PKG_CONFIG_LIBDIR} AND NOT DEFINED ENV{PKG_CONFIG_SYSROOT_DIR}
         AND NOT OPENCV_ENABLE_PKG_CONFIG
@@ -677,6 +686,8 @@ if(UNIX)
       # no need to link to system libs with emscripten
     elseif(QNXNTO)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m)
+    elseif(MINGW)
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} pthread)
     else()
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m pthread rt)
     endif()
@@ -751,6 +762,9 @@ if(WITH_TENGINE)
 endif()
 if(WITH_TIMVX)
   include(cmake/OpenCVFindTIMVX.cmake)
+endif()
+if(WITH_CANN)
+  include(cmake/OpenCVFindCANN.cmake)
 endif()
 
 # ----------------------------------------------------------------------------
@@ -1352,6 +1366,16 @@ if(WITH_JPEG OR HAVE_JPEG)
     status("    JPEG:" NO)
   elseif(BUILD_JPEG)
     status("    JPEG:" "build-${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})")
+    if(ENABLE_LIBJPEG_TURBO_SIMD)
+      status("      SIMD Support Request:" "YES")
+      if(HAVE_LIBJPEG_TURBO_SIMD)
+        status("      SIMD Support:" "YES")
+      else()
+        status("      SIMD Support:" "NO")
+      endif()
+    else()
+      status("      SIMD Support Request:" "NO")
+    endif()
   else()
     status("    JPEG:" "${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})")
   endif()
@@ -1361,8 +1385,12 @@ if(WITH_WEBP OR HAVE_WEBP)
   status("    WEBP:" WEBP_FOUND THEN "${WEBP_LIBRARY} (ver ${WEBP_VERSION})" ELSE "build (ver ${WEBP_VERSION})")
 endif()
 
-if(WITH_PNG OR HAVE_PNG)
-  status("    PNG:"  PNG_FOUND  THEN "${PNG_LIBRARY} (ver ${PNG_VERSION})" ELSE "build (ver ${PNG_VERSION})")
+if(WITH_PNG OR HAVE_PNG OR WITH_SPNG)
+  if(WITH_SPNG)
+    status("    PNG:" "build-${SPNG_LIBRARY} (ver ${SPNG_VERSION})")
+  else()
+    status("    PNG:"  PNG_FOUND  THEN "${PNG_LIBRARY} (ver ${PNG_VERSION})" ELSE "build (ver ${PNG_VERSION})")
+  endif()
 endif()
 
 if(WITH_TIFF OR HAVE_TIFF)
@@ -1433,6 +1461,9 @@ if(WITH_FFMPEG OR HAVE_FFMPEG)
   status("      avutil:"       FFMPEG_libavutil_VERSION     THEN "YES (${FFMPEG_libavutil_VERSION})"     ELSE NO)
   status("      swscale:"      FFMPEG_libswscale_VERSION    THEN "YES (${FFMPEG_libswscale_VERSION})"    ELSE NO)
   status("      avresample:"   FFMPEG_libavresample_VERSION THEN "YES (${FFMPEG_libavresample_VERSION})" ELSE NO)
+  if(OPENCV_FFMPEG_ENABLE_LIBAVDEVICE)
+    status("      avdevice:"     FFMPEG_libavdevice_VERSION   THEN "YES (${FFMPEG_libavdevice_VERSION})"   ELSE NO)
+  endif()
 endif()
 
 if(WITH_GSTREAMER OR HAVE_GSTREAMER)
@@ -1653,6 +1684,7 @@ if(WITH_CUDA OR HAVE_CUDA)
     IF HAVE_CUFFT THEN "CUFFT"
     IF HAVE_CUBLAS THEN "CUBLAS"
     IF HAVE_NVCUVID THEN "NVCUVID"
+    IF HAVE_NVCUVENC THEN "NVCUVENC"
     IF CUDA_FAST_MATH THEN "FAST_MATH"
     ELSE "no extra features")
   status("")
@@ -1718,6 +1750,15 @@ if(WITH_ONNX OR HAVE_ONNX)
   if(HAVE_ONNX)
     status("    Include path:"  ONNX_INCLUDE_DIR THEN "${ONNX_INCLUDE_DIR}" ELSE "NO")
     status("    Link libraries:" ONNX_LIBRARIES THEN "${ONNX_LIBRARIES}" ELSE "NO")
+  endif()
+endif()
+
+if(WITH_CANN)
+  status("")
+  status("  CANN:"    HAVE_CANN THEN "YES" ELSE "NO")
+  if(HAVE_CANN)
+    status("    Include path"     CANN_INCLUDE_DIRS THEN "${CANN_INCLUDE_DIRS}" ELSE "NO")
+    status("    Link libraries:"  CANN_LIBRARIES    THEN "${CANN_LIBRARIES}"    ELSE "NO")
   endif()
 endif()
 

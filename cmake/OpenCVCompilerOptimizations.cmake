@@ -20,6 +20,9 @@
 # VSX  (always available on Power8)
 # VSX3 (always available on Power9)
 
+# RISC-V arch:
+# RVV
+
 # CPU_{opt}_SUPPORTED=ON/OFF - compiler support (possibly with additional flag)
 # CPU_{opt}_IMPLIES=<list>
 # CPU_{opt}_FORCE=<list> - subset of "implies" list
@@ -50,6 +53,7 @@ list(APPEND CPU_ALL_OPTIMIZATIONS NEON VFPV3 FP16 NEON_DOTPROD)
 list(APPEND CPU_ALL_OPTIMIZATIONS MSA)
 list(APPEND CPU_ALL_OPTIMIZATIONS VSX VSX3)
 list(APPEND CPU_ALL_OPTIMIZATIONS RVV)
+list(APPEND CPU_ALL_OPTIMIZATIONS LASX)
 list(REMOVE_DUPLICATES CPU_ALL_OPTIMIZATIONS)
 
 ocv_update(CPU_VFPV3_FEATURE_ALIAS "")
@@ -102,8 +106,6 @@ ocv_optimization_process_obsolete_option(ENABLE_VFPV3 VFPV3 OFF)
 ocv_optimization_process_obsolete_option(ENABLE_NEON NEON OFF)
 
 ocv_optimization_process_obsolete_option(ENABLE_VSX VSX ON)
-
-ocv_optimization_process_obsolete_option(ENABLE_RVV RVV OFF)
 
 macro(ocv_is_optimization_in_list resultvar check_opt)
   set(__checked "")
@@ -374,11 +376,24 @@ elseif(PPC64LE)
   set(CPU_BASELINE "VSX" CACHE STRING "${HELP_CPU_BASELINE}")
 
 elseif(RISCV)
+  option(RISCV_RVV_SCALABLE "Use scalable RVV API on RISC-V" ON)
+
   ocv_update(CPU_RVV_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_rvv.cpp")
   ocv_update(CPU_KNOWN_OPTIMIZATIONS "RVV")
-  ocv_update(CPU_RVV_FLAGS_ON "")
-  set(CPU_DISPATCH "RVV" CACHE STRING "${HELP_CPU_DISPATCH}")
-  set(CPU_BASELINE "RVV" CACHE STRING "${HELP_CPU_BASELINE}")
+  ocv_update(CPU_RVV_FLAGS_ON "-march=rv64gcv")
+  if(RISCV_RVV_SCALABLE)
+    set(CPU_RVV_FLAGS_ON "${CPU_RVV_FLAGS_ON} -DCV_RVV_SCALABLE")
+  endif()
+  ocv_update(CPU_RVV_FLAGS_CONFLICT "-march=[^ ]*")
+
+  set(CPU_DISPATCH "" CACHE STRING "${HELP_CPU_DISPATCH}")
+  set(CPU_BASELINE "DETECT" CACHE STRING "${HELP_CPU_BASELINE}")
+
+elseif(LOONGARCH64)
+  ocv_update(CPU_LASX_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_lasx.cpp")
+  ocv_update(CPU_KNOWN_OPTIMIZATIONS "LASX")
+  ocv_update(CPU_LASX_FLAGS_ON "-mlasx")
+  set(CPU_BASELINE "LASX" CACHE STRING "${HELP_CPU_BASELINE}")
 
 endif()
 
@@ -691,7 +706,7 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
           if(fname_LOWER MATCHES "\\.${OPT_LOWER}\\.cpp$")
 #message("${fname} BASELINE-${OPT}")
             set(__opt_found 1)
-            list(APPEND __result "${fname}")
+            list(APPEND __result_${OPT} "${fname}")
             break()
           endif()
         endforeach()
@@ -725,7 +740,7 @@ macro(ocv_compiler_optimization_process_sources SOURCES_VAR_NAME LIBS_VAR_NAME T
     endif()
   endforeach()
 
-  foreach(OPT ${CPU_DISPATCH_FINAL})
+  foreach(OPT ${CPU_BASELINE_FINAL} ${CPU_DISPATCH_FINAL})
     if(__result_${OPT})
 #message("${OPT}: ${__result_${OPT}}")
       if(CMAKE_GENERATOR MATCHES "^Visual"

@@ -19,14 +19,14 @@
 // GStreamingCompiled private implementation ///////////////////////////////////
 void cv::GStreamingCompiled::Priv::setup(const GMetaArgs &_metaArgs,
                                          const GMetaArgs &_outMetas,
-                                         std::unique_ptr<cv::gimpl::GStreamingExecutor> &&_pE)
+                                         std::unique_ptr<cv::gimpl::GAbstractStreamingExecutor> &&_pE)
 {
     m_metas    = _metaArgs;
     m_outMetas = _outMetas;
     m_exec     = std::move(_pE);
 }
 
-void cv::GStreamingCompiled::Priv::setup(std::unique_ptr<cv::gimpl::GStreamingExecutor> &&_pE)
+void cv::GStreamingCompiled::Priv::setup(std::unique_ptr<cv::gimpl::GAbstractStreamingExecutor> &&_pE)
 {
     m_exec = std::move(_pE);
 }

@@ -471,7 +471,7 @@ coordinate space. In the old interface all the per-view vectors are concatenated
 old interface all the per-view vectors are concatenated.
 @param imageSize Image size in pixels used to initialize the principal point.
 @param aspectRatio If it is zero or negative, both \f$f_x\f$ and \f$f_y\f$ are estimated independently.
-Otherwise, \f$f_x = f_y * \texttt{aspectRatio}\f$ .
+Otherwise, \f$f_x = f_y \cdot \texttt{aspectRatio}\f$ .
 
 The function estimates and returns an initial camera intrinsic matrix for the camera calibration process.
 Currently, the function only supports planar calibration patterns, which are patterns where each
@@ -504,7 +504,7 @@ are found and they are placed in a certain order (row by row, left to right in e
 Otherwise, if the function fails to find all the corners or reorder them, it returns 0. For example,
 a regular chessboard has 8 x 8 squares and 7 x 7 internal corners, that is, points where the black
 squares touch each other. The detected coordinates are approximate, and to determine their positions
-more accurately, the function calls cornerSubPix. You also may use the function cornerSubPix with
+more accurately, the function calls #cornerSubPix. You also may use the function #cornerSubPix with
 different parameters if returned coordinates are not accurate enough.
 
 Sample usage of detecting and drawing chessboard corners: :
@@ -1090,7 +1090,7 @@ CV_EXPORTS_AS(stereoCalibrateExtended) double stereoCalibrate( InputArrayOfArray
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
-                                     Size imageSize, InputOutputArray R,InputOutputArray T, OutputArray E, OutputArray F,
+                                     Size imageSize, InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
                                      OutputArray perViewErrors, int flags = CALIB_FIX_INTRINSIC,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
 
@@ -1606,7 +1606,7 @@ rectified views. And if the flag is not set, the function may still shift the im
 horizontal or vertical direction (depending on the orientation of epipolar lines) to maximize the
 useful image area.
 @param newImageSize New image resolution after rectification. The same size should be passed to
-initUndistortRectifyMap (see the stereo_calib.cpp sample in OpenCV samples directory). When (0,0)
+#initUndistortRectifyMap (see the stereo_calib.cpp sample in OpenCV samples directory). When (0,0)
 is passed (default), it is set to the original imageSize . Setting it to larger value can help you
 preserve details in the original image, especially when there is a big radial distortion.
 @param balance Sets the new focal length in range between the min focal length and the max focal

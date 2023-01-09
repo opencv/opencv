@@ -175,6 +175,17 @@ static PLMode strToPLMode(const std::string& mode_str) {
     }
 }
 
+static cv::gapi::ie::InferMode strToInferMode(const std::string& infer_mode) {
+    if (infer_mode == "async") {
+        return cv::gapi::ie::InferMode::Async;
+    } else if (infer_mode == "sync") {
+        return cv::gapi::ie::InferMode::Sync;
+    } else {
+        throw std::logic_error("Unsupported Infer mode: " + infer_mode +
+                "\nPlease chose between: async and sync");
+    }
+}
+
 template <>
 CallParams read<CallParams>(const cv::FileNode& fn) {
     auto name =
@@ -190,6 +201,15 @@ CallParams read<CallParams>(const cv::FileNode& fn) {
     return CallParams{std::move(name), static_cast<size_t>(call_every_nth)};
 }
 
+template <typename V>
+std::map<std::string, V> readMap(const cv::FileNode& fn) {
+    std::map<std::string, V> map;
+    for (auto item : fn) {
+        map.emplace(item.name(), read<V>(item));
+    }
+    return map;
+}
+
 template <>
 InferParams read<InferParams>(const cv::FileNode& fn) {
     auto name =
@@ -200,7 +220,13 @@ InferParams read<InferParams>(const cv::FileNode& fn) {
     params.device        = check_and_read<std::string>(fn, "device", name);
     params.input_layers  = readList<std::string>(fn, "input_layers", name);
     params.output_layers = readList<std::string>(fn, "output_layers", name);
+    params.config        = readMap<std::string>(fn["config"]);
 
+    auto out_prec_str = readOpt<std::string>(fn["output_precision"]);
+    if (out_prec_str.has_value()) {
+        params.out_precision =
+            cv::optional<int>(strToPrecision(out_prec_str.value()));
+    }
     return params;
 }
 
@@ -273,7 +299,8 @@ int main(int argc, char* argv[]) {
         "{ drop_frames | false     | Drop frames if they come earlier than pipeline is completed. }"
         "{ exec_list   |           | A comma-separated list of pipelines that"
                                    " will be executed. Spaces around commas"
-                                   " are prohibited. }";
+                                   " are prohibited. }"
+        "{ infer_mode  | async     | OpenVINO inference mode (async/sync). }";
 
         cv::CommandLineParser cmd(argc, argv, keys);
         if (cmd.has("help")) {
@@ -289,6 +316,7 @@ int main(int argc, char* argv[]) {
         const auto qc          = cmd.get<int>("qc");
         const auto app_mode    = strToAppMode(cmd.get<std::string>("app_mode"));
         const auto exec_str    = cmd.get<std::string>("exec_list");
+        const auto infer_mode  = strToInferMode(cmd.get<std::string>("infer_mode"));
         const auto drop_frames = cmd.get<bool>("drop_frames");
 
         cv::FileStorage fs;
@@ -309,20 +337,24 @@ int main(int argc, char* argv[]) {
                                       cv::FileStorage::MEMORY);
         }
 
-        std::map<std::string, std::string> config;
+        std::map<std::string, std::string> gconfig;
         if (!load_config.empty()) {
-            loadConfig(load_config, config);
+            loadConfig(load_config, gconfig);
         }
         // NB: Takes priority over config from file
         if (!cached_dir.empty()) {
-            config =
+            gconfig =
                 std::map<std::string, std::string>{{"CACHE_DIR", cached_dir}};
         }
 
-        const double work_time_ms =
-            check_and_read<double>(fs, "work_time", "Config");
-        if (work_time_ms < 0) {
-            throw std::logic_error("work_time must be positive");
+        auto opt_work_time_ms = readOpt<double>(fs["work_time"]);
+        cv::optional<int64_t> opt_work_time_mcs;
+        if (opt_work_time_ms) {
+            const double work_time_ms = opt_work_time_ms.value();
+            if (work_time_ms < 0) {
+                throw std::logic_error("work_time must be positive");
+            }
+            opt_work_time_mcs = cv::optional<int64_t>(utils::ms_to_mcs(work_time_ms));
         }
 
         auto pipelines_fn = check_and_get_fn(fs, "Pipelines", "Config");
@@ -341,6 +373,21 @@ int main(int argc, char* argv[]) {
         for (const auto& name : exec_list) {
             const auto& pl_fn = check_and_get_fn(pipelines_fn, name, "Pipelines");
             builder.setName(name);
+            StopCriterion::Ptr stop_criterion;
+            auto opt_num_iters = readOpt<int>(pl_fn["num_iters"]);
+            // NB: num_iters for specific pipeline takes priority over global work_time.
+            if (opt_num_iters) {
+                stop_criterion.reset(new NumItersCriterion(opt_num_iters.value()));
+            } else if (opt_work_time_mcs) {
+                stop_criterion.reset(new ElapsedTimeCriterion(opt_work_time_mcs.value()));
+            } else {
+                throw std::logic_error(
+                        "Failed: Pipeline " + name + " doesn't have stop criterion!\n"
+                        "Please specify either work_time: <value> in the config root"
+                        " or num_iters: <value> for specific pipeline.");
+            }
+            builder.setStopCriterion(std::move(stop_criterion));
+
             // NB: Set source
             {
                 const auto& src_fn = check_and_get_fn(pl_fn, "source", name);
@@ -371,7 +418,15 @@ int main(int argc, char* argv[]) {
                     builder.addDummy(call_params, read<DummyParams>(node_fn));
                 } else if (node_type == "Infer") {
                     auto infer_params = read<InferParams>(node_fn);
-                    infer_params.config = config;
+                    try {
+                        utils::mergeMapWith(infer_params.config, gconfig);
+                    } catch (std::exception& e) {
+                        std::stringstream ss;
+                        ss << "Failed to merge global and local config for Infer node: "
+                           << call_params.name << std::endl << e.what();
+                        throw std::logic_error(ss.str());
+                    }
+                    infer_params.mode = infer_mode;
                     builder.addInfer(call_params, infer_params);
                 } else {
                     throw std::logic_error("Unsupported node type: " + node_type);
@@ -428,7 +483,7 @@ int main(int argc, char* argv[]) {
         for (size_t i = 0; i < pipelines.size(); ++i) {
             threads[i] = std::thread([&, i]() {
                 try {
-                    pipelines[i]->run(work_time_ms);
+                    pipelines[i]->run();
                 } catch (...) {
                     eptrs[i] = std::current_exception();
                 }

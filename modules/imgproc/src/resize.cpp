@@ -339,7 +339,7 @@ template <typename ET, typename FT, int n, bool mulall, int cncnt>
 static void hlineResizeCn(ET* src, int cn, int *ofst, FT* m, FT* dst, int dst_min, int dst_max, int dst_width)
 {
     hline<ET, FT, n, mulall, cncnt>::ResizeCn(src, cn, ofst, m, dst, dst_min, dst_max, dst_width);
-};
+}
 
 template <>
 void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 1>(uint8_t* src, int, int *ofst, ufixedpoint16* m, ufixedpoint16* dst, int dst_min, int dst_max, int dst_width)
@@ -1096,6 +1096,16 @@ resizeNN( const Mat& src, Mat& dst, double fx, double fy )
             opt_SSE4_1::resizeNN2_SSE4_1(range, src, dst, x_ofs, ify);
         else
             opt_SSE4_1::resizeNN4_SSE4_1(range, src, dst, x_ofs, ify);
+    }
+    else
+#endif
+#if CV_TRY_LASX
+    if(CV_CPU_HAS_SUPPORT_LASX && ((pix_size == 2) || (pix_size == 4)))
+    {
+        if(pix_size == 2)
+            opt_LASX::resizeNN2_LASX(range, src, dst, x_ofs, ify);
+        else
+            opt_LASX::resizeNN4_LASX(range, src, dst, x_ofs, ify);
     }
     else
 #endif

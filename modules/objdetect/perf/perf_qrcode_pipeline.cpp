@@ -55,6 +55,10 @@ PERF_TEST_P_(Perf_Objdetect_QRCode, decode)
 
 typedef ::perf::TestBaseWithParam< std::string > Perf_Objdetect_QRCode_Multi;
 
+static inline bool compareCorners(const Point2f& corner1, const Point2f& corner2) {
+    return corner1.x == corner2.x ? corner1.y < corner2.y : corner1.x < corner2.x;
+}
+
 PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, detectMulti)
 {
     const std::string name_current_image = GetParam();
@@ -66,7 +70,12 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, detectMulti)
     std::vector<Point2f> corners;
     QRCodeDetector qrcode;
     TEST_CYCLE() ASSERT_TRUE(qrcode.detectMulti(src, corners));
+    sort(corners.begin(), corners.end(), compareCorners);
     SANITY_CHECK(corners);
+}
+
+static inline bool compareQR(const pair<string, Mat>& v1, const pair<string, Mat>& v2) {
+    return v1.first < v2.first;
 }
 
 #ifdef HAVE_QUIRC
@@ -74,7 +83,6 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
 {
     const std::string name_current_image = GetParam();
     const std::string root = "cv/qrcode/multiple/";
-
     std::string image_path = findDataFile(root + name_current_image);
     Mat src = imread(image_path);
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
@@ -91,15 +99,21 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
             ASSERT_FALSE(decoded_info[i].empty());
         }
     }
-    std::vector < std::vector< uint8_t > > decoded_info_uint8_t;
-    for(size_t i = 0; i < decoded_info.size(); i++)
-    {
-        std::vector< uint8_t > tmp(decoded_info[i].begin(), decoded_info[i].end());
-        decoded_info_uint8_t.push_back(tmp);
+    ASSERT_EQ(decoded_info.size(), straight_barcode.size());
+    vector<pair<string, Mat> > result;
+    for (size_t i = 0ull;  i < decoded_info.size(); i++) {
+        result.push_back(make_pair(decoded_info[i], straight_barcode[i]));
     }
-    SANITY_CHECK(decoded_info_uint8_t);
-    SANITY_CHECK(straight_barcode);
 
+    sort(result.begin(), result.end(), compareQR);
+    vector<vector<uint8_t> > decoded_info_sort;
+    vector<Mat> straight_barcode_sort;
+    for (size_t i = 0ull;  i < result.size(); i++) {
+        vector<uint8_t> tmp(result[i].first.begin(), result[i].first.end());
+        decoded_info_sort.push_back(tmp);
+        straight_barcode_sort.push_back(result[i].second);
+    }
+    SANITY_CHECK(decoded_info_sort);
 }
 #endif
 

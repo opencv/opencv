@@ -109,6 +109,7 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
 
     std::string templateType = parser.get<std::string>("t");
 
+
     if(templateType.find("symcircles", 0) == 0) {
         mCapParams.board = CirclesGrid;
         mCapParams.boardSize = cv::Size(4, 11);
@@ -127,7 +128,7 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
     }
     else if(templateType.find("charuco", 0) == 0) {
         mCapParams.board = chAruco;
-        mCapParams.boardSize = cv::Size(6, 8);
+        mCapParams.boardSize = cv::Size(5, 7);
         mCapParams.charucoDictName = 0;
         mCapParams.charucoSquareLength = 200;
         mCapParams.charucoMarkerSize = 100;

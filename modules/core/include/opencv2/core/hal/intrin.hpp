@@ -50,6 +50,12 @@
 #include <stdlib.h>
 #include "opencv2/core/cvdef.h"
 
+#if defined(__GNUC__) && __GNUC__ == 12
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 #define OPENCV_HAL_ADD(a, b) ((a) + (b))
 #define OPENCV_HAL_AND(a, b) ((a) & (b))
 #define OPENCV_HAL_NOP(a) (a)
@@ -229,10 +235,19 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #elif CV_WASM_SIMD && !defined(CV_FORCE_SIMD128_CPP)
 #include "opencv2/core/hal/intrin_wasm.hpp"
 
-#elif CV_RVV && !defined(CV_FORCE_SIMD128_CPP) && !defined(CV_RVV_SCALABLE)
-#include "opencv2/core/hal/intrin_rvv.hpp"
-#elif CV_RVV && !defined(CV_FORCE_SIMD128_CPP) && CV_RVV_SCALABLE
+#elif CV_RVV && !defined(CV_FORCE_SIMD128_CPP)
+#if defined(CV_RVV_SCALABLE)
 #include "opencv2/core/hal/intrin_rvv_scalable.hpp"
+#else
+#include "opencv2/core/hal/intrin_rvv.hpp"
+#endif
+
+#elif CV_LASX
+    #if !defined(CV_FORCE_SIMD128_CPP)
+    #define CV_FORCE_SIMD128_CPP 1
+    #endif
+#include "opencv2/core/hal/intrin_cpp.hpp"
+
 #else
 
 #include "opencv2/core/hal/intrin_cpp.hpp"
@@ -264,6 +279,14 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #define CV__SIMD_FORWARD 512
 #include "opencv2/core/hal/intrin_forward.hpp"
 #include "opencv2/core/hal/intrin_avx512.hpp"
+
+#endif
+
+#if CV_LASX
+
+#define CV__SIMD_FORWARD 256
+#include "opencv2/core/hal/intrin_forward.hpp"
+#include "opencv2/core/hal/intrin_lasx.hpp"
 
 #endif
 
@@ -522,6 +545,11 @@ using namespace CV__SIMD_NAMESPACE;
 
 #endif
 
+//! @cond IGNORED
+#ifndef CV_SIMD_64F
+#define CV_SIMD_64F 0
+#endif
+
 namespace CV__SIMD_NAMESPACE {
 //! @addtogroup core_hal_intrin
 //! @{
@@ -537,7 +565,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_setall_f32(float v) { return VXPREFIX(_setall_f32)(v); }
     inline v_int64 vx_setall_s64(int64 v) { return VXPREFIX(_setall_s64)(v); }
     inline v_uint64 vx_setall_u64(uint64 v) { return VXPREFIX(_setall_u64)(v); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_setall_f64(double v) { return VXPREFIX(_setall_f64)(v); }
 #endif
     //! @}
@@ -554,7 +582,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_setzero_f32() { return VXPREFIX(_setzero_f32)(); }
     inline v_int64 vx_setzero_s64() { return VXPREFIX(_setzero_s64)(); }
     inline v_uint64 vx_setzero_u64() { return VXPREFIX(_setzero_u64)(); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_setzero_f64() { return VXPREFIX(_setzero_f64)(); }
 #endif
     //! @}
@@ -571,7 +599,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_load(const float * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_int64 vx_load(const int64 * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_uint64 vx_load(const uint64 * ptr) { return VXPREFIX(_load)(ptr); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_load(const double * ptr) { return VXPREFIX(_load)(ptr); }
 #endif
     //! @}
@@ -588,7 +616,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_load_aligned(const float * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_int64 vx_load_aligned(const int64 * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_uint64 vx_load_aligned(const uint64 * ptr) { return VXPREFIX(_load_aligned)(ptr); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_load_aligned(const double * ptr) { return VXPREFIX(_load_aligned)(ptr); }
 #endif
     //! @}
@@ -605,7 +633,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_load_low(const float * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_int64 vx_load_low(const int64 * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_uint64 vx_load_low(const uint64 * ptr) { return VXPREFIX(_load_low)(ptr); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_load_low(const double * ptr) { return VXPREFIX(_load_low)(ptr); }
 #endif
     //! @}
@@ -622,7 +650,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_load_halves(const float * ptr0, const float * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_int64 vx_load_halves(const int64 * ptr0, const int64 * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_uint64 vx_load_halves(const uint64 * ptr0, const uint64 * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_load_halves(const double * ptr0, const double * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
 #endif
     //! @}
@@ -639,7 +667,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_lut(const float* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_int64 vx_lut(const int64 * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_uint64 vx_lut(const uint64 * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_lut(const double* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
 #endif
     //! @}
@@ -656,7 +684,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_float32 vx_lut_pairs(const float* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_int64 vx_lut_pairs(const int64 * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_uint64 vx_lut_pairs(const uint64 * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
-#if CV_SIMD_64F
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     inline v_float64 vx_lut_pairs(const double* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
 #endif
     //! @}
@@ -757,7 +785,6 @@ namespace CV__SIMD_NAMESPACE {
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int16)
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int32)
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int64)
-
 
     #define OPENCV_HAL_WRAP_BIN_OP_MUL(_Tpvec) \
     inline _Tpvec v_mul(const _Tpvec& a, const _Tpvec& b) \
@@ -886,10 +913,6 @@ namespace CV__SIMD_NAMESPACE {
     #undef VXPREFIX
 } // namespace
 
-//! @cond IGNORED
-#ifndef CV_SIMD_64F
-#define CV_SIMD_64F 0
-#endif
 
 #ifndef CV_SIMD_FP16
 #define CV_SIMD_FP16 0  //!< Defined to 1 on native support of operations with float16x8_t / float16x16_t (SIMD256) types
@@ -908,5 +931,9 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 } // cv::
 
 //! @endcond
+
+#if defined(__GNUC__) && __GNUC__ == 12
+#pragma GCC diagnostic pop
+#endif
 
 #endif

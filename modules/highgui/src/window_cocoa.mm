@@ -439,6 +439,9 @@ void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int 
         slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
         if(slider) {
             [[slider slider] setIntValue:pos];
+            if([slider respondsToSelector:@selector(handleSlider)]) {
+                [slider performSelector:@selector(handleSlider)];
+            }
         }
     }
     [localpool5 drain];
@@ -550,6 +553,8 @@ int namedWindowImpl( const char* name, int flags )
     [window setY0:-1];
 
     [window setContentView:[[CVView alloc] init]];
+
+    [NSApp activateIgnoringOtherApps:YES];
 
     [window setHasShadow:YES];
     [window setAcceptsMouseMovedEvents:YES];
@@ -702,6 +707,31 @@ void cvSetModeWindow_COCOA( const char* name, double prop_value )
     [localpool drain];
 
     __END__;
+}
+
+double cvGetPropVisible_COCOA(const char* name)
+{
+    double    result = -1;
+    CVWindow* window = nil;
+
+    CV_FUNCNAME("cvGetPropVisible_COCOA");
+
+    __BEGIN__;
+    if (name == NULL)
+    {
+        CV_ERROR(CV_StsNullPtr, "NULL name string");
+    }
+
+    window = cvGetWindow(name);
+    if (window == NULL)
+    {
+        CV_ERROR(CV_StsNullPtr, "NULL window");
+    }
+
+    result = window.isVisible ? 1 : 0;
+
+    __END__;
+    return result;
 }
 
 double cvGetPropTopmost_COCOA(const char* name)
@@ -1154,7 +1184,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     [slider setMaxValue:100];
     [slider setContinuous:YES];
     [slider setTarget:self];
-    [slider setAction:@selector(sliderChanged:)];
+    [slider setAction:@selector(handleSliderNotification:)];
     [self addSubview:slider];
 
     [self setAutoresizingMask:NSViewWidthSizable];
@@ -1164,8 +1194,12 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     return self;
 }
 
-- (void)sliderChanged:(NSNotification *)notification {
+- (void)handleSliderNotification:(NSNotification *)notification {
     (void)notification;
+    [self handleSlider];
+}
+
+- (void)handleSlider {
     int pos = [slider intValue];
     NSString *temp = [self initialName];
     NSString *text = [NSString stringWithFormat:@"%@ %d", temp, pos];

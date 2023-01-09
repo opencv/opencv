@@ -12,7 +12,7 @@
 #endif
 
 #ifdef HAVE_TBB
-#ifndef TBB_SUPPRESS_DEPRECATED_MESSAGES  // supress warning
+#ifndef TBB_SUPPRESS_DEPRECATED_MESSAGES
 #define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
 #endif
 #include <tbb/tbb.h>

@@ -9,6 +9,9 @@ For DaSiamRPN:
     network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
     kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
     kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
+For NanoTrack:
+    nanotrack_backbone: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_backbone_sim.onnx
+    nanotrack_headneck: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx
 
 USAGE:
     tracker.py [-h] [--input INPUT] [--tracker_algo TRACKER_ALGO]
@@ -18,6 +21,7 @@ USAGE:
                     [--dasiamrpn_kernel_cls1 DASIAMRPN_KERNEL_CLS1]
                     [--dasiamrpn_backend DASIAMRPN_BACKEND]
                     [--dasiamrpn_target DASIAMRPN_TARGET]
+                    [--nanotrack_backbone NANOTRACK_BACKEND] [--nanotrack_headneck NANOTRACK_TARGET]
 '''
 
 # Python 2/3 compatibility
@@ -52,8 +56,13 @@ class App(object):
             params.kernel_cls1 = self.args.dasiamrpn_kernel_cls1
             params.kernel_r1 = self.args.dasiamrpn_kernel_r1
             tracker = cv.TrackerDaSiamRPN_create(params)
+        elif self.trackerAlgorithm == 'nanotrack':
+            params = cv.TrackerNano_Params()
+            params.backbone = args.nanotrack_backbone
+            params.neckhead = args.nanotrack_headneck
+            tracker = cv.TrackerNano_create(params)
         else:
-            sys.exit("Tracker {} is not recognized. Please use one of three available: mil, goturn, dasiamrpn.".format(self.trackerAlgorithm))
+            sys.exit("Tracker {} is not recognized. Please use one of three available: mil, goturn, dasiamrpn, nanotrack.".format(self.trackerAlgorithm))
         return tracker
 
     def initializeTracker(self, image):
@@ -117,12 +126,14 @@ if __name__ == '__main__':
     print(__doc__)
     parser = argparse.ArgumentParser(description="Run tracker")
     parser.add_argument("--input", type=str, default="vtest.avi", help="Path to video source")
-    parser.add_argument("--tracker_algo", type=str, default="mil", help="One of available tracking algorithms: mil, goturn, dasiamrpn")
+    parser.add_argument("--tracker_algo", type=str, default="nanotrack", help="One of available tracking algorithms: mil, goturn, dasiamrpn, nanotrack")
     parser.add_argument("--goturn", type=str, default="goturn.prototxt", help="Path to GOTURN architecture")
     parser.add_argument("--goturn_model", type=str, default="goturn.caffemodel", help="Path to GOTERN model")
     parser.add_argument("--dasiamrpn_net", type=str, default="dasiamrpn_model.onnx", help="Path to onnx model of DaSiamRPN net")
     parser.add_argument("--dasiamrpn_kernel_r1", type=str, default="dasiamrpn_kernel_r1.onnx", help="Path to onnx model of DaSiamRPN kernel_r1")
     parser.add_argument("--dasiamrpn_kernel_cls1", type=str, default="dasiamrpn_kernel_cls1.onnx", help="Path to onnx model of DaSiamRPN kernel_cls1")
+    parser.add_argument("--nanotrack_backbone", type=str, default="nanotrack_backbone_sim.onnx", help="Path to onnx model of NanoTrack backBone")
+    parser.add_argument("--nanotrack_headneck", type=str, default="nanotrack_head_sim.onnx", help="Path to onnx model of NanoTrack headNeck")
 
     args = parser.parse_args()
     App(args).run()

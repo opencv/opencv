@@ -434,6 +434,8 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX512_ICL] = "AVX512-ICL";
 
         g_hwFeatureNames[CPU_RVV] = "RVV";
+
+        g_hwFeatureNames[CPU_LASX] = "LASX";
     }
 
     void initialize(void)
@@ -687,6 +689,10 @@ struct HWFeatures
 
     #if defined __riscv && defined __riscv_vector
         have[CV_CPU_RVV] = true;
+    #endif
+
+    #if defined __loongarch_asx
+        have[CV_CPU_LASX] = true;
     #endif
 
         bool skip_baseline_check = false;

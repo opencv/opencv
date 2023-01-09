@@ -65,7 +65,7 @@ static surface_ptr_t create_surface_RGB4_(mfxFrameInfo frameInfo,
                                   ", offset: " << out_buf_ptr_offset <<
                                   ", W: " << surfW <<
                                   ", H: " << surfH);
-        GAPI_Assert(false && "Invalid offset");
+        GAPI_Error("Invalid offset");
     }
 
     std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
@@ -98,7 +98,7 @@ static surface_ptr_t create_surface_other_(mfxFrameInfo frameInfo,
                                   ", offset: " << out_buf_ptr_offset <<
                                   ", W: " << surfW <<
                                   ", H: " << surfH);
-        GAPI_Assert(false && "Invalid offset");
+        GAPI_Error("Invalid offset");
     }
 
     std::unique_ptr<mfxFrameSurface1> handle(new mfxFrameSurface1);
@@ -209,7 +209,7 @@ VPLCPUAccelerationPolicy::create_surface_pool(size_t pool_size, size_t surface_s
     if (!pool_table.emplace(preallocated_pool_memory_ptr, std::move(pool)).second) {
         GAPI_LOG_WARNING(nullptr, "Cannot insert pool, table size: " + std::to_string(pool_table.size()) <<
                                   ", key: " << preallocated_pool_memory_ptr << " exists");
-        GAPI_Assert(false && "Cannot create pool in VPLCPUAccelerationPolicy");
+        GAPI_Error("Cannot create pool in VPLCPUAccelerationPolicy");
     }
 
     return preallocated_pool_memory_ptr;
@@ -248,7 +248,7 @@ VPLCPUAccelerationPolicy::surface_weak_ptr_t VPLCPUAccelerationPolicy::get_free_
     if (pool_it == pool_table.end()) {
         GAPI_LOG_WARNING(nullptr, "key is not found, table size: " <<
                                   pool_table.size());
-        GAPI_Assert(false && "Invalid surface key requested in VPLCPUAccelerationPolicy");
+        GAPI_Error("Invalid surface key requested in VPLCPUAccelerationPolicy");
     }
 
     pool_t& requested_pool = pool_it->second;

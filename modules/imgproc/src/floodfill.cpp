@@ -283,7 +283,7 @@ floodFillGrad_CnIR( Mat& image, Mat& msk,
                    Diff diff, ConnectedComp* region, int flags,
                    std::vector<FFillSegment>* buffer )
 {
-    int step = (int)image.step, maskStep = (int)msk.step;
+    size_t step = image.step, maskStep = msk.step;
     uchar* pImage = image.ptr();
     _Tp* img = (_Tp*)(pImage + step*seed.y);
     uchar* pMask = msk.ptr() + maskStep + sizeof(_MTp);

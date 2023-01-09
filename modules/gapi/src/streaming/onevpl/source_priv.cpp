@@ -109,7 +109,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
             GAPI_LOG_WARNING(nullptr, "MFXSetConfigFilterProperty failed, error: " <<
                                       mfxstatus_to_string(sts) <<
                                       " - for \"" << cfg_param_it->get_name() << "\"");
-            GAPI_Assert(false && "MFXSetConfigFilterProperty failed");
+            GAPI_Error("MFXSetConfigFilterProperty failed");
         }
 
         mfx_param.Type     = MFX_VARIANT_TYPE_U32;
@@ -123,7 +123,7 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
             GAPI_LOG_WARNING(nullptr, "MFXSetConfigFilterProperty failed, error: " <<
                                       mfxstatus_to_string(sts) <<
                                       " - for \"mfxImplDescription.mfxVPPDescription.filter.FilterFourCC\"");
-            GAPI_Assert(false && "MFXSetConfigFilterProperty failed");
+            GAPI_Error("MFXSetConfigFilterProperty failed");
         }
 
         ++cfg_param_it;
@@ -227,16 +227,15 @@ GSource::Priv::Priv(std::shared_ptr<IDataProvider> provider,
 
         // TODO  Add factory static method in ProcessingEngineBase
         if (mfx_impl_description->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION) {
-            GAPI_Assert(false &&
+            GAPI_LOG_WARNING(NULL,
                         "GSource mfx_impl_description->ApiVersion.Major >= VPL_NEW_API_MAJOR_VERSION"
-                        " - is not implemented");
+                        " - is not implemented. Rollback to MFX implementation");
+        }
+        const auto& transcode_params = VPLLegacyTranscodeEngine::get_vpp_params(preferred_params);
+        if (!transcode_params.empty()) {
+            engine.reset(new VPLLegacyTranscodeEngine(std::move(acceleration)));
         } else {
-            const auto& transcode_params = VPLLegacyTranscodeEngine::get_vpp_params(preferred_params);
-            if (!transcode_params.empty()) {
-                engine.reset(new VPLLegacyTranscodeEngine(std::move(acceleration)));
-            } else {
-                engine.reset(new VPLLegacyDecodeEngine(std::move(acceleration)));
-            }
+            engine.reset(new VPLLegacyDecodeEngine(std::move(acceleration)));
         }
     }
 
@@ -318,7 +317,7 @@ std::unique_ptr<VPLAccelerationPolicy> GSource::Priv::initializeHWAccel(std::sha
             GAPI_LOG_WARNING(nullptr, "Cannot initialize HW Accel: "
                                       "invalid accelerator type: " <<
                                       std::to_string(accel_mode.Data.U32));
-            GAPI_Assert(false && "Cannot initialize HW Accel");
+            GAPI_Error("Cannot initialize HW Accel");
         }
     }
 

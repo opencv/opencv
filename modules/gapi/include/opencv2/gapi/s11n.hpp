@@ -17,7 +17,8 @@
 #include <opencv2/gapi/util/util.hpp>
 
 // FIXME: caused by deserialize_runarg
-#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
+#if defined _MSC_VER
+#pragma warning(push)
 #pragma warning(disable: 4702)
 #endif
 
@@ -229,6 +230,9 @@ GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Point &pt);
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Point2f &pt);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Point2f &pt);
 
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Point3f &pt);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Point3f &pt);
+
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::Size &sz);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::Size &sz);
 
@@ -332,7 +336,7 @@ IIStream& operator>> (IIStream& is, std::vector<T> &ts) {
 namespace detail {
 template<typename V>
 IOStream& put_v(IOStream&, const V&, std::size_t) {
-    GAPI_Assert(false && "variant>>: requested index is invalid");
+    GAPI_Error("variant>>: requested index is invalid");
 };
 
 template<typename V, typename X, typename... Xs>
@@ -344,7 +348,7 @@ IOStream& put_v(IOStream& os, const V& v, std::size_t x) {
 
 template<typename V>
 IIStream& get_v(IIStream&, V&, std::size_t, std::size_t) {
-    GAPI_Assert(false && "variant<<: requested index is invalid");
+    GAPI_Error("variant<<: requested index is invalid");
 }
 
 template<typename V, typename X, typename... Xs>
@@ -420,7 +424,7 @@ static GRunArg exec(cv::gapi::s11n::IIStream& is) {
 template<typename RA>
 struct deserialize_arg_with_adapter<RA, void> {
 static GRunArg exec(cv::gapi::s11n::IIStream&) {
-    GAPI_Assert(false && "No suitable adapter class found during RMat/MediaFrame deserialization. "
+    GAPI_Error("No suitable adapter class found during RMat/MediaFrame deserialization. "
                          "Please, make sure you've passed them in cv::gapi::deserialize() template");
     return GRunArg{};
 }
@@ -501,5 +505,9 @@ cv::GRunArgs getRunArgsWithAdapters(const std::vector<char> &bytes) {
 
 } // namespace gapi
 } // namespace cv
+
+#if defined _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // OPENCV_GAPI_S11N_HPP

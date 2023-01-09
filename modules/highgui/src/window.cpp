@@ -365,6 +365,8 @@ double cv::getWindowProperty(const String& name, int prop_id)
             return cvGetPropVisible_QT(name.c_str());
         #elif defined(HAVE_WIN32UI)
             return cvGetPropVisible_W32(name.c_str());
+        #elif defined(HAVE_COCOA)
+            return cvGetPropVisible_COCOA(name.c_str());
         #else
             return -1;
         #endif

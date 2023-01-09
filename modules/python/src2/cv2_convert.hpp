@@ -62,6 +62,10 @@ PyObject* pyopencv_from(const T& src) { return PyOpenCV_Converter<T>::from(src);
 template<typename _Tp, int m, int n>
 bool pyopencv_to(PyObject* o, cv::Matx<_Tp, m, n>& mx, const ArgInfo& info)
 {
+    if (!o || o == Py_None) {
+        return true;
+    }
+
     cv::Mat tmp;
     if (!pyopencv_to(o, tmp, info)) {
         return false;
@@ -121,6 +125,7 @@ template<> bool pyopencv_to(PyObject* obj, int& value, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const int& value);
 
 // --- int64
+template<> bool pyopencv_to(PyObject* obj, int64& value, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const int64& value);
 
 // There is conflict between "size_t" and "unsigned int".

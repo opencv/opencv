@@ -187,12 +187,14 @@ void getPoolingKernelParams(const LayerParams &params, std::vector<size_t>& kern
 
 void getConvolutionKernelParams(const LayerParams &params, std::vector<size_t>& kernel, std::vector<size_t>& pads_begin,
                                 std::vector<size_t>& pads_end, std::vector<size_t>& strides,
-                                std::vector<size_t>& dilations, cv::String &padMode, std::vector<size_t>& adjust_pads)
+                                std::vector<size_t>& dilations, cv::String &padMode, std::vector<size_t>& adjust_pads,
+                                bool& useWinograd)
 {
     util::getKernelSize(params, kernel);
     util::getStrideAndPadding(params, pads_begin, pads_end, strides, padMode, kernel.size());
     util::getParameter(params, "dilation", "dilation", dilations, true, std::vector<size_t>(kernel.size(), 1));
     util::getParameter(params, "adj", "adj", adjust_pads, true, std::vector<size_t>(kernel.size(), 0));
+    useWinograd = params.get<bool>("use_winograd", true);
 
     for (int i = 0; i < dilations.size(); i++)
         CV_Assert(dilations[i] > 0);
