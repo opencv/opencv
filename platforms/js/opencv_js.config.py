@@ -112,7 +112,7 @@ objdetect = {'': ['groupRectangles'],
              'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
              'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale'],
              'QRCodeDetector': ['QRCodeDetector', 'decode', 'decodeCurved', 'detect', 'detectAndDecode', 'detectMulti', 'setEpsX', 'setEpsY'],
-             'ArucoDetector': ['getPredefinedDictionary', 'detectMarkers', 'refineDetectedMarkers', 'getDictionary', 'stetDictionary', 'getDetectorParameters', 'setDetectorParameters', 'getRefineParameters', 'setRefineParameters'],
+             'ArucoDetector': ['getPredefinedDictionary', 'detectMarkers', 'refineDetectedMarkers', 'getDictionary', 'setDictionary', 'getDetectorParameters', 'setDetectorParameters', 'getRefineParameters', 'setRefineParameters'],
              'GridBoard': ['create','generateImage', 'getGridSize', 'getMarkerLength', 'getMarkerSeparation'],
              'CharucoBoard': ['create', 'generateImage', 'getChessboardCorners', 'getNearestMarkerCorners', 'checkCharucoCornersCollinear']
 }
