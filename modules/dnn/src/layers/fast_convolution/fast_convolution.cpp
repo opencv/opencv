@@ -105,6 +105,12 @@ Ptr<FastConv> initFastConv(
         conv->conv_type = _FX_CONV_TYPE_GENERIC;
 #endif
 
+#if CV_TRY_AVX2
+    // Disabel Winograd when CV_TRY_AVX2 is true, but conv->useAVX2 is false.
+    if (conv->conv_type == _FX_CONV_TYPE_WINOGRAD3X3 && !conv->useAVX2)
+        conv->conv_type = _FX_CONV_TYPE_GENERIC;
+#endif
+
     Mat weightsMat = _weightsMat.getMat();
     auto wShape = shape(weightsMat);
     const size_t wstep = weightsMat.step1();
@@ -257,7 +263,7 @@ Ptr<FastConv> initFastConv(
     // we can always read MR elements starting from any valid index
     {
         int k = 0, nbias = K + VEC_ALIGN;
-        conv->biasBuf.reserve(nbias);
+        conv->biasBuf.resize(nbias);
         float* biasBufPtr = conv->biasBuf.data();
         for(; k < K; k++)
             biasBufPtr[k] = srcBias ? srcBias[k] : 0.f;

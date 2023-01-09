@@ -119,7 +119,7 @@ void convBlock_AVX2(int np, const float* a, const float* b, float* c, int ldc, b
 void _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
                        float* outbuf, int Cg, int iblock)
 {
-    CV_Assert(_FX_WINO_IBLOCK == 6 && _FX_WINO_KBLOCK == 4);// && _FX_WINO_ATOM_F32 == 8);
+    CV_Assert(_FX_WINO_IBLOCK == 6 && _FX_WINO_KBLOCK == 4 && _FX_WINO_ATOM_F32 == 8);
     if (iblock > 3)
     {
         for (int atom_id = 0; atom_id < _FX_WINO_NATOMS_F32; atom_id++,
