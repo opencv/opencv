@@ -37,6 +37,7 @@ of odd sizes ranging from 5 to 49. (Don't worry about what the result will look 
 goal):
 @code{.py}
 img1 = cv.imread('messi5.jpg')
+assert img1 is not None, "file could not be read, check with os.path.exists()"
 
 e1 = cv.getTickCount()
 for i in range(5,49,2):

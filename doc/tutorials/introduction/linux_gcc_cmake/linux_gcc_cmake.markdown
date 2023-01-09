@@ -35,7 +35,7 @@ int main(int argc, char** argv )
     }
 
     Mat image;
-    image = imread( argv[1], 1 );
+    image = imread( argv[1], IMREAD_COLOR );
 
     if ( !image.data )
     {

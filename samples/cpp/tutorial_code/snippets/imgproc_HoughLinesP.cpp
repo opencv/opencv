@@ -7,7 +7,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
     Mat src, dst, color_dst;
-    if( argc != 2 || !(src=imread(argv[1], 0)).data)
+    if( argc != 2 || !(src=imread(argv[1], IMREAD_GRAYSCALE)).data)
         return -1;
 
     Canny( src, dst, 50, 200, 3 );

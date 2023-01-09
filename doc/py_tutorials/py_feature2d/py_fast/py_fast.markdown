@@ -98,7 +98,7 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv.imread('blox.jpg',0) # `<opencv_root>/samples/data/blox.jpg`
+img = cv.imread('blox.jpg', cv.IMREAD_GRAYSCALE) # `<opencv_root>/samples/data/blox.jpg`
 
 # Initiate FAST object with default values
 fast = cv.FastFeatureDetector_create()

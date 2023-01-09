@@ -250,7 +250,7 @@ int main( int argc, char** argv )
         {
             int k1 = k == 0 ? 2 : k == 1 ? 0 : 1;
             printf("%s\n", imageList[i*3+k].c_str());
-            view = imread(imageList[i*3+k], 1);
+            view = imread(imageList[i*3+k], IMREAD_COLOR);
 
             if(!view.empty())
             {
@@ -338,7 +338,7 @@ int main( int argc, char** argv )
         {
             int k1 = k == 0 ? 2 : k == 1 ? 0 : 1;
             int k2 = k == 0 ? 1 : k == 1 ? 0 : 2;
-            view = imread(imageList[i*3+k], 1);
+            view = imread(imageList[i*3+k], IMREAD_COLOR);
 
             if(view.empty())
                 continue;

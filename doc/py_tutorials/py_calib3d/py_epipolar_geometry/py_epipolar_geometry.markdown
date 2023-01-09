@@ -76,8 +76,8 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img1 = cv.imread('myleft.jpg',0)  #queryimage # left image
-img2 = cv.imread('myright.jpg',0) #trainimage # right image
+img1 = cv.imread('myleft.jpg', cv.IMREAD_GRAYSCALE)  #queryimage # left image
+img2 = cv.imread('myright.jpg', cv.IMREAD_GRAYSCALE) #trainimage # right image
 
 sift = cv.SIFT_create()
 

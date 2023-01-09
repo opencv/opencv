@@ -194,7 +194,7 @@ public:
         {
             string filename = ts->get_data_path() + "readwrite/ordinary.bmp";
             VideoCapture cap(filename, CAP_FFMPEG);
-            Mat img0 = imread(filename, 1);
+            Mat img0 = imread(filename, IMREAD_COLOR);
             Mat img, img_next;
             cap >> img;
             cap >> img_next;
