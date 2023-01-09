@@ -22,7 +22,7 @@ _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
                        float* outbuf, int Cg, int iblock)
  {
 #if CV_NEON && CV_NEON_AARCH64
-    CV_Assert(_FX_WINO_IBLOCK == 6 && _FX_WINO_KBLOCK == 4);
+    CV_Assert(_FX_WINO_IBLOCK == 6 && _FX_WINO_KBLOCK == 4 && _FX_WINO_ATOM_F32 == 4);
     if (iblock > 3)
     {
         for (int atom_id = 0; atom_id < _FX_WINO_NATOMS_F32; atom_id++,
@@ -144,7 +144,7 @@ _fx_winograd_accum_f32(const float* inwptr, const float* wptr,
         }
     }
 #elif CV_SIMD128
-    CV_Assert(_FX_WINO_IBLOCK == 3 && _FX_WINO_KBLOCK == 4);
+    CV_Assert(_FX_WINO_IBLOCK == 3 && _FX_WINO_KBLOCK == 4 && _FX_WINO_ATOM_F32 == 4);
     for (int atom_id = 0; atom_id < _FX_WINO_NATOMS_F32; atom_id++,
             outbuf += _FX_WINO_ATOM_F32)
     {
