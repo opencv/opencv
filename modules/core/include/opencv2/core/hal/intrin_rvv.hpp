@@ -2815,12 +2815,15 @@ OPENCV_HAL_IMPL_RVV_SCAN_FORWOARD_OP(v_float64x2, double, f64)
 
 //////////// Pack triplets ////////////
 
-// use reinterpret instead of c-style casting.
-#ifndef __clang__
 inline v_int8x16 v_pack_triplets(const v_int8x16& vec)
 {
-    uint64 ptr[2] = {0x0908060504020100, 0xFFFFFF0F0E0D0C0A};
-    return v_int8x16(vreinterpret_v_u8m1_i8m1(vrgather_vv_u8m1(vreinterpret_v_i8m1_u8m1(vint8m1_t(vec)), vreinterpret_v_u64m1_u8m1(vle64_v_u64m1(ptr, 2)), 16)));
+    const uint64 ptr[2] = {0x0908060504020100, 0xFFFFFF0F0E0D0C0A};
+    const v_uint64x2 flags(vle64_v_u64m1(ptr, 2));
+    return v_reinterpret_as_s8(v_uint8x16(
+            vrgather_vv_u8m1(
+                v_reinterpret_as_u8(vec),
+                v_reinterpret_as_u8(flags),
+                16)));
 }
 inline v_uint8x16 v_pack_triplets(const v_uint8x16& vec)
 {
@@ -2829,8 +2832,13 @@ inline v_uint8x16 v_pack_triplets(const v_uint8x16& vec)
 
 inline v_int16x8 v_pack_triplets(const v_int16x8& vec)
 {
-    uint64 ptr[2] = {0x0908050403020100, 0xFFFF0F0E0D0C0B0A};
-    return v_int16x8(vreinterpret_v_u8m1_i16m1(vrgather_vv_u8m1(vreinterpret_v_i16m1_u8m1(vint16m1_t(vec)), vreinterpret_v_u64m1_u8m1(vle64_v_u64m1(ptr, 2)), 16)));
+    const uint64 ptr[2] = {0x0908050403020100, 0xFFFF0F0E0D0C0B0A};
+    const v_uint64x2 flags(vle64_v_u64m1(ptr, 2));
+    return v_reinterpret_as_s16(v_uint8x16(
+            vrgather_vv_u8m1(
+                v_reinterpret_as_u8(vec),
+                v_reinterpret_as_u8(flags),
+                16)));
 }
 inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec)
 {
@@ -2840,34 +2848,6 @@ inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec)
 inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
 inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
 inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
-
-#else
-
-inline v_int8x16 v_pack_triplets(const v_int8x16& vec)
-{
-    uint64 ptr[2] = {0x0908060504020100, 0xFFFFFF0F0E0D0C0A};
-    return v_int8x16(vreinterpret_i8m1(vrgather_vv_u8m1(v_reinterpret_as_u8(vec), vreinterpret_u8m1(vle64_v_u64m1(ptr, 2)), 16)));
-}
-inline v_uint8x16 v_pack_triplets(const v_uint8x16& vec)
-{
-    return v_reinterpret_as_u8(v_pack_triplets(v_reinterpret_as_s8(vec)));
-}
-
-inline v_int16x8 v_pack_triplets(const v_int16x8& vec)
-{
-    uint64 ptr[2] = {0x0908050403020100, 0xFFFF0F0E0D0C0B0A};
-    return v_int16x8(v_reinterpret_as_s16(v_uint8x16(vrgather_vv_u8m1(v_reinterpret_as_u8(vec), vreinterpret_u8m1(vle64_v_u64m1(ptr, 2)), 16))));
-}
-inline v_uint16x8 v_pack_triplets(const v_uint16x8& vec)
-{
-    return v_reinterpret_as_u16(v_pack_triplets(v_reinterpret_as_s16(vec)));
-}
-
-inline v_int32x4 v_pack_triplets(const v_int32x4& vec) { return vec; }
-inline v_uint32x4 v_pack_triplets(const v_uint32x4& vec) { return vec; }
-inline v_float32x4 v_pack_triplets(const v_float32x4& vec) { return vec; }
-
-#endif
 
 ////// FP16 support ///////
 
