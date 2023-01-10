@@ -50,4 +50,28 @@ TEST(Imgproc_Subdiv2D_getTriangleList, regression_5788)
     EXPECT_EQ(trig_cnt, 105);
 }
 
+TEST(Imgproc_Subdiv2D_Insert, regression_22902)
+{
+    const float points[10][2] = {
+        { -1.18061450447522,   2.22044604925031E-16 },
+        {  0.199999999989984,  1.38061450446519     },
+        {  1.58061450445518,  -2.22044604925031E-16 },
+        { -1.08061450447519,   1.11022302462516E-16 },
+        {  0.199999999989984, -1.28061450446519     },
+        {  0.199999999989984,  1.28061450446519     },
+        {  1.48061450445516,  -1.11022302462516E-16 },
+        { -1.18061450447522,   0                    },
+        {  1.48061450445516,   0                    },
+        { -0.440307252242633,  1.10904469332167     }
+    };
+    std::vector<cv::Point2f> pts;
+    cv::Rect rect(-5, -5, 10, 10);
+    cv::Subdiv2D subdiv(rect);
+    for( int i = 0; i < 10; i++ )
+    {
+        cv::Point2f pt(points[i][0], points[i][1]);
+        pts.push_back(pt);
+    }
+    ASSERT_NO_THROW(subdiv.insert(pts));
+}
 }};

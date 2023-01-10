@@ -212,7 +212,10 @@ void Subdiv2D::swapEdges( int edge )
 
 static double triangleArea( Point2f a, Point2f b, Point2f c )
 {
-    return ((double)b.x - a.x) * ((double)c.y - a.y) - ((double)b.y - a.y) * ((double)c.x - a.x);
+    Point2f _a(a.x+FLT_EPSILON, a.y+FLT_EPSILON);
+    Point2f _b(b.x+FLT_EPSILON, b.y+FLT_EPSILON);
+    Point2f _c(c.x+FLT_EPSILON, c.y+FLT_EPSILON);
+    return ((double)_b.x - _a.x) * ((double)_c.y - _a.y) - ((double)_b.y - _a.y) * ((double)_c.x - _a.x);
 }
 
 int Subdiv2D::isRightOf(Point2f pt, int edge) const
