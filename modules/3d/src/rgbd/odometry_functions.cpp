@@ -720,7 +720,7 @@ void computeCorresps(const Matx33f& _K, const Mat& rt,
         {
             float ddst = depthDst_row[udst];
 
-            if (maskDst_row[udst] && !cvIsNaN(ddst))
+            if (maskDst_row[udst])
             {
                 float transformed_ddst = static_cast<float>(ddst * (KRK_inv6_u1[udst] + KRK_inv7_v1_plus_KRK_inv8[vdst]) + ktinv.z);
 
