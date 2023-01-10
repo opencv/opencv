@@ -16,11 +16,8 @@ void dilateFrame(Mat& image, Mat& depth)
     CV_Assert(depth.type() == CV_32FC1);
     CV_Assert(depth.size() == image.size());
 
-    Mat mask(image.size(), CV_8UC1, Scalar(255));
-    for(int y = 0; y < depth.rows; y++)
-        for(int x = 0; x < depth.cols; x++)
-            if(cvIsNaN(depth.at<float>(y,x)) || depth.at<float>(y,x) > 10 || depth.at<float>(y,x) <= FLT_EPSILON)
-                mask.at<uchar>(y,x) = 0;
+    Mat mask;
+    inRange(depth, FLT_EPSILON, 10, mask);
 
     image.setTo(255, ~mask);
     Mat minImage;
