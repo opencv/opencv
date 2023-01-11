@@ -201,8 +201,7 @@ CV_EXPORTS_W void fastNlMeansDenoisingColored( InputArray src, OutputArray dst,
 
 /** @brief Modification of fastNlMeansDenoising function for images sequence where consecutive images have been
 captured in small period of time. For example video. This version of the function is for grayscale
-images or for manual manipulation with colorspaces. For more details see
-<https://ieeexplore.ieee.org/document/1577245>
+images or for manual manipulation with colorspaces. See @cite Kannala2006 for more details.
 
 @param srcImgs Input 8-bit 1-channel, 2-channel, 3-channel or
 4-channel images sequence. All images should have the same type and
@@ -228,8 +227,7 @@ CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, OutputA
 
 /** @brief Modification of fastNlMeansDenoising function for images sequence where consecutive images have been
 captured in small period of time. For example video. This version of the function is for grayscale
-images or for manual manipulation with colorspaces. For more details see
-<https://ieeexplore.ieee.org/document/1577245>
+images or for manual manipulation with colorspaces. See @cite Kannala2006 for more details.
 
 @param srcImgs Input 8-bit or 16-bit (only with NORM_L1) 1-channel,
 2-channel, 3-channel or 4-channel images sequence. All images should
