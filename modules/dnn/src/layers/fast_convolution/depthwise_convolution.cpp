@@ -24,7 +24,7 @@ static void depthWiseBlockConv2D(const float* wptr,
                                  const float* inptr_,
                                  int height, int width,
                                  float* outptr_,
-                                 int out_d, int outH, int outW)
+                                 int out_d, int outH, int outW, bool fusedAdd)
 {
     const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
             w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
@@ -57,6 +57,8 @@ static void depthWiseBlockConv2D(const float* wptr,
             out = imgptr0[0]*w01 + imgptr0[dilation_w]*w02 +
                   imgptr1[0]*w11 + imgptr1[dilation_w]*w12 +
                   imgptr2[0]*w21 + imgptr2[dilation_w]*w22 + bias;
+            if (fusedAdd)
+                out += outptr[0];
             if (relu)
                 out = out > 0.f ? out : out*relu_coeff;
             outptr[0] = out;
@@ -65,6 +67,10 @@ static void depthWiseBlockConv2D(const float* wptr,
 
 #if CV_SIMD128
         const int VEC_NLANES = 4;
+
+        if (fusedAdd)
+            outW1 = max(out_j, outW1 - outW1%VEC_NLANES);
+
         v_float32x4 vw00 = v_setall_f32(w00);
         v_float32x4 vw01 = v_setall_f32(w01);
         v_float32x4 vw02 = v_setall_f32(w02);
@@ -104,6 +110,8 @@ static void depthWiseBlockConv2D(const float* wptr,
                     v_float32x4 vout = v00*vw00 + v01*vw01 + v02*vw02 +
                                      v10*vw10 + v11*vw11 + v12*vw12 +
                                      v20*vw20 + v21*vw21 + v22*vw22 + vbias;
+                    if (fusedAdd)
+                        vout = v_load(outptr + out_j) + vout;
                     if (relu)
                         vout = v_select(vout > z, vout, vout*vrc);
                     v_store(outptr + out_j, vout);
@@ -134,6 +142,8 @@ static void depthWiseBlockConv2D(const float* wptr,
                             v10 * vw10 + v11 * vw11 + v12 * vw12 +
                             v20 * vw20 + v21 * vw21 + v22 * vw22 + vbias;
 
+                    if (fusedAdd)
+                        vout = v_load(outptr + out_j) + vout;
                     if (relu)
                         vout = v_select(vout > z, vout, vout*vrc);
                     v_store(outptr + out_j, vout);
@@ -148,6 +158,8 @@ static void depthWiseBlockConv2D(const float* wptr,
             out = imgptr0[in_j]*w00 + imgptr0[in_j + dilation_w]*w01 + imgptr0[in_j + dilation_w*2]*w02 +
                   imgptr1[in_j]*w10 + imgptr1[in_j + dilation_w]*w11 + imgptr1[in_j + dilation_w*2]*w12 +
                   imgptr2[in_j]*w20 + imgptr2[in_j + dilation_w]*w21 + imgptr2[in_j + dilation_w*2]*w22 + bias;
+            if (fusedAdd)
+                out += outptr[out_j];
             if (relu)
                 out = out > 0.f ? out : out*relu_coeff;
             outptr[out_j] = out;
@@ -175,6 +187,8 @@ static void depthWiseBlockConv2D(const float* wptr,
             out = imgptr0[in_j0]*w00*s0 + imgptr0[in_j1]*w01*s1 + imgptr0[in_j2]*w02*s2 +
                   imgptr1[in_j0]*w10*s0 + imgptr1[in_j1]*w11*s1 + imgptr1[in_j2]*w12*s2 +
                   imgptr2[in_j0]*w20*s0 + imgptr2[in_j1]*w21*s1 + imgptr2[in_j2]*w22*s2 + bias;
+            if (fusedAdd)
+                out += outptr[out_j];
             if (relu)
                 out = out > 0.f ? out : out*relu_coeff;
             outptr[out_j] = out;
@@ -187,7 +201,7 @@ static void depthWiseBlockConv1D(const float* wptr,
                                  const float* biasptr, const float* relu,
                                  const float* inptr_, int width,
                                  float* outptr_,
-                                 int out_d, int outW)
+                                 int out_d, int outW, bool fusedAdd)
 {
     const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2];
     int outW1 = min(outW, (width - dilation_w * (kernel_w - 1) + pad_l)/stride_w);
@@ -201,7 +215,8 @@ static void depthWiseBlockConv1D(const float* wptr,
     if (pad_l > 0)
     {
         out = imgptr0[0]*w01 + imgptr0[dilation_w]*w02 + bias;
-
+        if (fusedAdd)
+            out += outptr[0];
         if (relu)
             out = out > 0.f ? out : out*relu_coeff;
         outptr[0] = out;
@@ -210,6 +225,8 @@ static void depthWiseBlockConv1D(const float* wptr,
 
 #if CV_SIMD128
     const int VEC_NLANES = 4;
+    if (fusedAdd)
+        outW1 = max(out_j, outW1 - outW1%VEC_NLANES);
     v_float32x4 vw00 = v_setall_f32(w00);
     v_float32x4 vw01 = v_setall_f32(w01);
     v_float32x4 vw02 = v_setall_f32(w02);
@@ -235,6 +252,8 @@ static void depthWiseBlockConv1D(const float* wptr,
                         v02 = v_load(imgptr0 + in_j + dilation_w*2);
 
                 v_float32x4 vout = v00*vw00 + v01*vw01 + v02*vw02 + vbias;
+                if (fusedAdd)
+                    vout = v_load(outptr + out_j) + vout;
                 if (relu)
                     vout = v_select(vout > z, vout, vout*vrc);
                 v_store(outptr + out_j, vout);
@@ -258,6 +277,9 @@ static void depthWiseBlockConv1D(const float* wptr,
 
                 v_float32x4 vout = v00 * vw00 + v01 * vw01 + v02 * vw02 + vbias;
 
+                if (fusedAdd)
+                    vout = v_load(outptr + out_j) + vout;
+
                 if (relu)
                     vout = v_select(vout > z, vout, vout*vrc);
                 v_store(outptr + out_j, vout);
@@ -270,6 +292,8 @@ static void depthWiseBlockConv1D(const float* wptr,
     {
         int in_j = out_j * stride_w - pad_l;
         out = imgptr0[in_j]*w00 + imgptr0[in_j + dilation_w]*w01 + imgptr0[in_j + dilation_w*2]*w02 + bias;
+        if (fusedAdd)
+            out += outptr[out_j];
         if (relu)
             out = out > 0.f ? out : out*relu_coeff;
         outptr[out_j] = out;
@@ -295,6 +319,8 @@ static void depthWiseBlockConv1D(const float* wptr,
             s2 = 0.f;
         }
         out = imgptr0[in_j0]*w00*s0 + imgptr0[in_j1]*w01*s1 + imgptr0[in_j2]*w02*s2 + bias;
+        if (fusedAdd)
+            out += outptr[out_j];
         if (relu)
             out = out > 0.f ? out : out*relu_coeff;
         outptr[out_j] = out;
@@ -302,7 +328,7 @@ static void depthWiseBlockConv1D(const float* wptr,
 }
 
 void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& conv, ActivationLayer* activ_,
-                  const std::vector<float>& reluslope)
+                  const std::vector<float>& reluslope, bool fusedAdd)
 {
     Mat input = _input.getMat();
     Mat output = _output.getMat();
@@ -349,7 +375,7 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& c
 
 #if CV_TRY_AVX2 || CV_TRY_AVX || CV_TRY_RVV
     // TODO: remove the following limitation, need change code in layers_common.simd.hpp.
-    bool canRunOpt = Wi >= 16 + dilation_w*(Wk - 1);
+    bool canRunOpt = Wi >= 16 + dilation_w*(Wk - 1) && !fusedAdd;
 #endif
     std::vector<int> ofstab_(3 * ksize, 0);
     int *ofstab = ofstab_.data();
@@ -399,11 +425,11 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& c
             else
 #endif
             depthWiseBlockConv2D(weights, Hk, Wk, stride_h, stride_w, dilation_h, dilation_w,
-                                 pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0);
+                                 pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0, fusedAdd);
         }
         else // conv_dim == CONV_1D, spatial branch for depth-wise Conv1D.
         {
-            depthWiseBlockConv1D(weights, Wk, stride_w, dilation_w, pad_left, bias, relu, inptr0, Wi, outptr0, c, W0);
+            depthWiseBlockConv1D(weights, Wk, stride_w, dilation_w, pad_left, bias, relu, inptr0, Wi, outptr0, c, W0, fusedAdd);
         }
 
         if (activ)
