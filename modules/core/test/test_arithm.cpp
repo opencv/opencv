@@ -731,21 +731,27 @@ struct InRangeOp : public BaseArithmOp
 
 namespace reference {
 
-template<typename _Tp> static void nanMask_(const _Tp* src, uchar* dst, size_t total, int cn)
+template <typename _Tp>
+static void nanMask_(const _Tp *src, uchar *dst, size_t total, int cn, bool maskNans, bool maskInfs, bool maskAll, bool invert)
 {
     for(size_t i = 0; i < total; i++ )
     {
-        bool nan = false;
+        bool nan = maskAll ? true : false;
         for (int c = 0; c < cn; c++)
         {
             _Tp val = src[i * cn + c];
-            nan = nan || cvIsNaN(val);
+            bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
+            if (maskAll)
+                nan = nan && v;
+            else
+                nan = nan || v;
         }
+        nan = invert ? !nan : nan;
         dst[i] = nan ? 255 : 0;
     }
 }
 
-static void nanMask(const Mat& src, Mat& dst)
+static void nanMask(const Mat& src, Mat& dst, bool maskNans, bool maskInfs, bool maskAll, bool invert)
 {
     dst.create(src.dims, &src.size[0], CV_8UC1);
 
@@ -763,14 +769,8 @@ static void nanMask(const Mat& src, Mat& dst)
 
         switch( depth )
         {
-        case CV_32F:
-            nanMask_((const float*)sptr, dptr, total, cn);
-            break;
-        case CV_64F:
-            nanMask_((const double*)sptr, dptr, total, cn);
-            break;
-        default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+        case CV_32F: nanMask_<float >((const  float*)sptr, dptr, total, cn, maskNans, maskInfs, maskAll, invert); break;
+        case CV_64F: nanMask_<double>((const double*)sptr, dptr, total, cn, maskNans, maskInfs, maskAll, invert); break;
         }
     }
 }
@@ -782,20 +782,35 @@ struct NanMaskOp : public BaseElemWiseOp
     NanMaskOp() : BaseElemWiseOp(1, 0, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        cv::nanMask(src[0], dst);
+        int f = (maskNans ? MASK_NANS : 0) | (maskInfs ? MASK_INFS : 0) |
+                (maskAll  ? MASK_ALL  : 0) | (invert   ? MASK_INV  : 0);
+        cv::nanMask(src[0], dst, f);
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        reference::nanMask(src[0], dst);
+        reference::nanMask(src[0], dst, maskNans, maskInfs, maskAll, invert);
     }
     int getRandomType(RNG& rng)
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_FLT, 1, 4);
     }
+    void generateScalars(int, RNG& rng)
+    {
+        int ni = rng.uniform(1, 4);
+        maskNans = ni & 1;
+        maskInfs = ni & 2;
+        int ai = rng.uniform(0, 4);
+        maskAll = ai & 1;
+        invert = ai & 2;
+    }
     double getMaxErr(int)
     {
         return 0;
     }
+    bool maskNans;
+    bool maskInfs;
+    bool maskAll;
+    bool invert;
 };
 
 
@@ -2946,5 +2961,58 @@ TEST(Core_CartPolar, inplace)
     EXPECT_THROW(cv::cartToPolar(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
     EXPECT_THROW(cv::cartToPolar(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
 }
+
+
+// Check different flags combinations for nanMask()
+
+typedef std::tuple<int, int, int, bool, bool> NanMaskFixtureParams;
+class NanMaskFixture : public ::testing::TestWithParam<NanMaskFixtureParams> {};
+
+template<typename T>
+Mat generateNanMaskData(int cn, RNG& rng)
+{
+    T inf = std::numeric_limits<T>::infinity();
+    T nan = std::numeric_limits<T>::quiet_NaN();
+
+    const int len = 100;
+    Mat_<T> plainData(1, cn*len);
+    for(int i = 0; i < cn*len; i++)
+    {
+        int r = rng.uniform(0, 3);
+        plainData(i) = r == 0 ? inf : r == 1 ? nan : T(0);
+    }
+
+    return Mat(plainData).reshape(cn);
+}
+
+TEST_P(NanMaskFixture, flags)
+{
+    auto p = GetParam();
+    int depth = get<0>(p);
+    int channels = get<1>(p);
+
+    bool maskNans = get<2>(p) & 1;
+    bool maskInfs = get<2>(p) & 2;
+
+    bool maskAll  = get<3>(p);
+    bool invert   = get<4>(p);
+
+    RNG rng((uint64)ARITHM_RNG_SEED);
+    Mat data = (depth == CV_32F) ? generateNanMaskData<float >(channels, rng)
+                  /* CV_64F */   : generateNanMaskData<double>(channels, rng);
+
+    int f = (maskNans ? MASK_NANS : 0) | (maskInfs ? MASK_INFS : 0) |
+            (maskAll  ? MASK_ALL  : 0) | (invert   ? MASK_INV  : 0);
+    Mat nans, gtNans;
+    cv::nanMask(data, nans, f);
+    reference::nanMask(data, gtNans, maskNans, maskInfs, maskAll, invert);
+    
+    EXPECT_MAT_NEAR(nans, gtNans, 0);
+}
+
+// Params are:
+// depth, channels 1 to 4, maskInfs*2 + maskNans (zeros excluded), maskAll, invert
+INSTANTIATE_TEST_CASE_P(Core_NanMask, NanMaskFixture, ::testing::Combine(::testing::Values(CV_32F, CV_64F), ::testing::Range(1, 5),
+                                                                         ::testing::Range(1, 4), ::testing::Bool(), ::testing::Bool()));
 
 }} // namespace

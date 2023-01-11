@@ -1697,20 +1697,18 @@ elements.
 CV_EXPORTS_W bool checkRange(InputArray a, bool quiet = true, CV_OUT Point* pos = 0,
                             double minVal = -DBL_MAX, double maxVal = DBL_MAX);
 
-/** @brief converts NaNs to the given number
-@param a input/output matrix (CV_32F or CV_64F type).
-@param val value to convert the NaNs
-*/
+/** @brief Replaces NaNs by given number
+ * @param a input/output matrix (CV_32F or CV_64F type).
+ * @param val value to convert the NaNs
+ */
 CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 
-/**
- * @brief TODO
- * 
- * @param img TODO
- * @param mask TODO
- * @return CV_EXPORTS_W TODO
+/** @brief Generates a mask of NaN or Inf values, one value per element.
+ * @param img Input matrix, should contain float or double elements of 1 to 4 channel
+ * @param mask Output matrix of the same size as input containing uchars
+ * @param flags Masking flags, see cv::NanMaskFlags
  */
-CV_EXPORTS_W void nanMask(InputArray img, OutputArray mask);
+CV_EXPORTS_W void nanMask(InputArray img, OutputArray mask, int flags = MASK_NANS);
 
 
 /** @brief Performs generalized matrix multiplication.

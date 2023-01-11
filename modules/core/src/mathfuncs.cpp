@@ -1687,16 +1687,22 @@ void patchNaNs( InputOutputArray _a, double _val )
 
 
 //TODO: simd
-template<typename _Tp> static void nanMask_(const _Tp* src, uchar* dst, size_t total, int cn)
+template <typename _Tp, int cn>
+static void nanMask_(const _Tp *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert)
 {
     for(size_t i = 0; i < total; i++ )
     {
-        bool nan = false;
+        bool nan = maskAll ? true : false;
         for (int c = 0; c < cn; c++)
         {
             _Tp val = src[i * cn + c];
-            nan = nan || cvIsNaN(val);
+            bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
+            if (maskAll)
+                nan = nan && v;
+            else
+                nan = nan || v;
         }
+        nan = invert ? !nan : nan;
         dst[i] = nan ? 255 : 0;
     }
 }
@@ -1704,7 +1710,7 @@ template<typename _Tp> static void nanMask_(const _Tp* src, uchar* dst, size_t t
 #ifdef HAVE_OPENCL
 
 
-static bool ocl_nanMask(const UMat img, UMat mask )
+static bool ocl_nanMask(const UMat img, UMat mask, bool maskNans, bool maskInfs, bool maskAll, bool invert)
 {
 
     //DEBUG
@@ -1727,10 +1733,22 @@ static bool ocl_nanMask(const UMat img, UMat mask )
         switch( depth )
         {
         case CV_32F:
-            nanMask_((const  float*)sptr, dptr, total, channels);
+            switch (channels)
+            {
+            case 1: nanMask_<float, 1>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 2: nanMask_<float, 2>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 3: nanMask_<float, 3>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 4: nanMask_<float, 4>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            }
             break;
         case CV_64F:
-            nanMask_((const double*)sptr, dptr, total, channels);
+            switch (channels)
+            {
+            case 1: nanMask_<double, 1>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 2: nanMask_<double, 2>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 3: nanMask_<double, 3>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 4: nanMask_<double, 4>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            }
             break;
         }
     }
@@ -1758,9 +1776,16 @@ static bool ocl_nanMask(const UMat img, UMat mask )
 
 #endif
 
-void nanMask(InputArray _img, OutputArray _mask)
+void nanMask(InputArray _img, OutputArray _mask, int flags)
 {
     CV_INSTRUMENT_REGION();
+
+    bool maskNans = flags & MASK_NANS;
+    bool maskInfs = flags & MASK_INFS;
+    bool maskAll  = flags & MASK_ALL;
+    bool invert   = flags & MASK_INV;
+    CV_Assert(maskNans || maskInfs);
+
     int channels = _img.channels();
     int depth = _img.depth();
     CV_Assert( depth == CV_32F || depth == CV_64F );
@@ -1769,7 +1794,7 @@ void nanMask(InputArray _img, OutputArray _mask)
     _mask.create(_img.dims(), vsz.data(), CV_8UC1);
 
     CV_OCL_RUN(_img.isUMat() && _mask.isUMat() && _img.dims() <= 2,
-               ocl_nanMask(_img.getUMat(), _mask.getUMat()));
+               ocl_nanMask(_img.getUMat(), _mask.getUMat(), maskNans, maskInfs, maskAll, invert));
 
     Mat img = _img.getMat();
     Mat mask = _mask.getMat();
@@ -1788,10 +1813,22 @@ void nanMask(InputArray _img, OutputArray _mask)
         switch( depth )
         {
         case CV_32F:
-            nanMask_((const  float*)sptr, dptr, total, channels);
+            switch (channels)
+            {
+            case 1: nanMask_<float, 1>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 2: nanMask_<float, 2>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 3: nanMask_<float, 3>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 4: nanMask_<float, 4>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            }
             break;
         case CV_64F:
-            nanMask_((const double*)sptr, dptr, total, channels);
+            switch (channels)
+            {
+            case 1: nanMask_<double, 1>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 2: nanMask_<double, 2>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 3: nanMask_<double, 3>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 4: nanMask_<double, 4>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            }
             break;
         }
     }
