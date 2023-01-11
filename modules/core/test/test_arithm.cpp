@@ -3006,7 +3006,7 @@ TEST_P(NanMaskFixture, flags)
     Mat nans, gtNans;
     cv::nanMask(data, nans, f);
     reference::nanMask(data, gtNans, maskNans, maskInfs, maskAll, invert);
-    
+
     EXPECT_MAT_NEAR(nans, gtNans, 0);
 }
 
