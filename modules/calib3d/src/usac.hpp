@@ -208,10 +208,6 @@ class SE2NonMinimalSolver : public NonMinimalSolver {
 public:
     static Ptr<SE2NonMinimalSolver> create(const Mat &points_);
 };
-// class PartialNdNonMinimalSolver : public NonMinimalSolver {
-// public:
-//     static Ptr<PartialNdNonMinimalSolver> create(const Mat &points_, const int Nd=2, const bool is_similarity=false);
-// };
 class SIM2NonMinimalSolver : public NonMinimalSolver {
 public:
     static Ptr<SIM2NonMinimalSolver> create(const Mat &points_);

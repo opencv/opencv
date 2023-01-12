@@ -1196,6 +1196,18 @@ Mat estimateSE2(InputArray _from, InputArray _to, OutputArray _inliers,
         CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
 }
 
+Mat estimateSE2(InputArray _from, InputArray _to, OutputArray inliers,
+                     const UsacParams &params) {
+    Ptr<usac::Model> model;
+    usac::setParameters(model, usac::EstimationMethod::SE2, params, inliers.needed());
+    Ptr<usac::RansacOutput> ransac_output;
+    if (usac::run(model, _from, _to, model->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        usac::saveMask(inliers, ransac_output->getInliersMask());
+        return ransac_output->getModel().rowRange(0,2);
+    } else return Mat();
+}
+
 Mat estimateSIM2(InputArray _from, InputArray _to, OutputArray _inliers,
                      const int method, const double ransacReprojThreshold,
                      const size_t maxIters, const double confidence,
@@ -1207,6 +1219,18 @@ Mat estimateSIM2(InputArray _from, InputArray _to, OutputArray _inliers,
             ransacReprojThreshold, (int)maxIters, confidence, (int)refineIters);
     else
         CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
+}
+
+Mat estimateSIM2(InputArray _from, InputArray _to, OutputArray inliers,
+                     const UsacParams &params) {
+    Ptr<usac::Model> model;
+    usac::setParameters(model, usac::EstimationMethod::SIM2, params, inliers.needed());
+    Ptr<usac::RansacOutput> ransac_output;
+    if (usac::run(model, _from, _to, model->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        usac::saveMask(inliers, ransac_output->getInliersMask());
+        return ransac_output->getModel().rowRange(0,2);
+    } else return Mat();
 }
 
 Mat estimateSE3(InputArray _from, InputArray _to, OutputArray _inliers,
@@ -1221,6 +1245,18 @@ Mat estimateSE3(InputArray _from, InputArray _to, OutputArray _inliers,
         CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
 }
 
+Mat estimateSE3(InputArray _from, InputArray _to, OutputArray inliers,
+                     const UsacParams &params) {
+    Ptr<usac::Model> model;
+    usac::setParameters(model, usac::EstimationMethod::SE3, params, inliers.needed());
+    Ptr<usac::RansacOutput> ransac_output;
+    if (usac::run(model, _from, _to, model->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        usac::saveMask(inliers, ransac_output->getInliersMask());
+        return ransac_output->getModel().rowRange(0,3);
+    } else return Mat();
+}
+
 Mat estimateSIM3(InputArray _from, InputArray _to, OutputArray _inliers,
                      const int method, const double ransacReprojThreshold,
                      const size_t maxIters, const double confidence,
@@ -1233,6 +1269,19 @@ Mat estimateSIM3(InputArray _from, InputArray _to, OutputArray _inliers,
     else
         CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
 }
+
+Mat estimateSIM3(InputArray _from, InputArray _to, OutputArray inliers,
+                     const UsacParams &params) {
+    Ptr<usac::Model> model;
+    usac::setParameters(model, usac::EstimationMethod::SIM3, params, inliers.needed());
+    Ptr<usac::RansacOutput> ransac_output;
+    if (usac::run(model, _from, _to, model->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        usac::saveMask(inliers, ransac_output->getInliersMask());
+        return ransac_output->getModel().rowRange(0,3);
+    } else return Mat();
+}
+
 
 
 } // namespace cv
