@@ -1712,66 +1712,22 @@ static void nanMask_(const _Tp *src, uchar *dst, size_t total, bool maskNans, bo
 
 static bool ocl_nanMask(const UMat img, UMat mask, bool maskNans, bool maskInfs, bool maskAll, bool invert)
 {
-
-    //DEBUG
+    //TODO: this
     int channels = img.channels();
     int depth = img.depth();
-    Mat mimg = img.getMat(ACCESS_READ);
-    Mat mmask = mask.getMat(ACCESS_WRITE);
-
-    const Mat *arrays[]={&mimg, &mmask, 0};
-    Mat planes[2];
-    NAryMatIterator it(arrays, planes);
-    size_t total = planes[0].total();
-    size_t i, nplanes = it.nplanes;
-
-    for( i = 0; i < nplanes; i++, ++it )
-    {
-        const uchar* sptr = planes[0].ptr();
-        uchar* dptr = planes[1].ptr();
-
-        switch( depth )
-        {
-        case CV_32F:
-            switch (channels)
-            {
-            case 1: nanMask_<float, 1>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            case 2: nanMask_<float, 2>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            case 3: nanMask_<float, 3>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            case 4: nanMask_<float, 4>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            }
-            break;
-        case CV_64F:
-            switch (channels)
-            {
-            case 1: nanMask_<double, 1>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            case 2: nanMask_<double, 2>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            case 3: nanMask_<double, 3>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            case 4: nanMask_<double, 4>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            }
-            break;
-        }
-    }
-    return true;
-
-    //TODO: this
-    /*
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
-    ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                     format("-D UNARY_OP -D OP_PATCH_NANS -D dstT=float -D DEPTH_dst=%d -D rowsPerWI=%d",
-                            CV_32F, rowsPerWI));
+    ocl::Kernel k("nanMask", ocl::core::nanmask_oclsrc,
+                  format("-D srcT=%s -D cn=%d -D rowsPerWI=%d %s %s %s %s",
+                          depth == CV_32F ? "float" : "double", rowsPerWI, channels,
+                          maskNans ? "-D MASK_NANS" : "", maskInfs ? "-D MASK_INFS" : "",
+                          maskAll ? "-D MASK_ALL" : "", invert ? "-D INVERT" : ""));
     if (k.empty())
         return false;
 
-    UMat a = _a.getUMat();
-    int cn = a.channels();
+    k.args(ocl::KernelArg::ReadOnlyNoSize(img), ocl::KernelArg::WriteOnly(mask));
 
-    k.args(ocl::KernelArg::ReadOnlyNoSize(a),
-           ocl::KernelArg::WriteOnly(a, cn), (float)value);
-
-    size_t globalsize[2] = { (size_t)a.cols * cn, ((size_t)a.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)img.cols * channels, ((size_t)img.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
-    */
 }
 
 #endif
