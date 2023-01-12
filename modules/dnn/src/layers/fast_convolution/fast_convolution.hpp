@@ -100,7 +100,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
                    const Ptr<ActivationLayer>& actLayer, const std::vector<float>& reluslope, bool fusedAdd);
 
 void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& conv, ActivationLayer* activ,
-                  const std::vector<float>& reluslope);
+                  const std::vector<float>& reluslope, bool fusedAdd);
 
 int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv>& conv, int ntasks,
                   float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct);
