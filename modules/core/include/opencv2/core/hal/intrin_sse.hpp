@@ -1924,11 +1924,7 @@ OPENCV_HAL_IMPL_SSE_EXPAND(v_int32x4,  v_int64x2,   int,      _v128_cvtepi32_epi
 #define OPENCV_HAL_IMPL_SSE_EXPAND_Q(_Tpvec, _Tp, intrin)  \
     inline _Tpvec v_load_expand_q(const _Tp* ptr)          \
     {                                                      \
-        int tmp;                                           \
-        /* Copy misaligned ptr to aligned &tmp */          \
-        /* (memcpy() should be optimized out) */           \
-        memcpy(&tmp, ptr, 4);                              \
-        __m128i a = _mm_cvtsi32_si128(tmp);                \
+        __m128i a = _mm_loadu_si32(ptr);                   \
         return _Tpvec(intrin(a));                          \
     }
 
