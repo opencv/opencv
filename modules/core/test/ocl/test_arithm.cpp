@@ -1807,16 +1807,21 @@ PARAM_TEST_CASE(NaNmask, MatDepth, Channels, bool, int, bool, bool)
 
         for (int y = 0; y < roiSize.height; ++y)
         {
-            float  *const ptrf = src_roi.ptr<float> (y);
+            float  *const ptrf = src_roi.ptr<float >(y);
             double *const ptrd = src_roi.ptr<double>(y);
             for (int x = 0; x < roiSize.width * cn; ++x)
-            if (ftype == CV_32F)
             {
-                ptrf[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<float>::quiet_NaN()  : ptrf[x];
-            }
-            else if (ftype == CV_64F)
-            {
-                ptrd[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<double>::quiet_NaN() : ptrd[x];
+                int r = randomInt(0, 3);
+                if (ftype == CV_32F)
+                {
+                    ptrf[x] = r == 1 ? std::numeric_limits<float>::quiet_NaN() :
+                              r == 2 ? std::numeric_limits<float>::infinity()  : ptrf[x];
+                }
+                else if (ftype == CV_64F)
+                {
+                    ptrd[x] = r == 1 ? std::numeric_limits<double>::quiet_NaN() :
+                              r == 2 ? std::numeric_limits<double>::infinity()  : ptrd[x];
+                }
             }
         }
 
