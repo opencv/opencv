@@ -1726,6 +1726,11 @@ TEST_P(Test_ONNX_layers, ConvResizePool1d)
     testONNXModels("conv_resize_pool_1d");
 }
 
+TEST_P(Test_ONNX_layers, DepthWiseAdd)
+{
+    testONNXModels("depthwiseconv_add");
+}
+
 TEST_P(Test_ONNX_layers, SubFromConst)
 {
     testONNXModels("sub_from_const1");

@@ -375,8 +375,8 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
     if (conv->conv_type == _FX_CONV_TYPE_DEPTHWISE)
     {
         // Depthwise-Convolution layer should not be followed by Add layer.
-        CV_Assert(fusedAddMat.empty() && (conv_dim == CONV_1D || conv_dim == CONV_2D));
-        return runDepthwise(input, output, conv,actLayer.get(), reluslope);
+        CV_Assert((conv_dim == CONV_1D || conv_dim == CONV_2D));
+        return runDepthwise(input, output, conv, actLayer.get(), reluslope, fusedAdd);
     }
 
     MatShape inputShape = shape(input);
