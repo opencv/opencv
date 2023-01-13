@@ -55,7 +55,7 @@ __kernel void nanMask(__global const uchar * srcptr, int srcstep, int srcoffset,
     if (x < cols)
     {
         int src_index = mad24(y0, srcstep, mad24(x, (int)sizeof(srcT) * cn, srcoffset));
-        int dst_index  = mad24(y0, dststep, x + dstoffset);
+        int dst_index = mad24(y0, dststep, x + dstoffset);
 
         for (int y = y0, y1 = min(rows, y0 + rowsPerWI); y < y1; ++y, src_index += srcstep, dst_index += dststep)
         {
@@ -66,7 +66,7 @@ __kernel void nanMask(__global const uchar * srcptr, int srcstep, int srcoffset,
 #endif
             for (int c = 0; c < cn; c++)
             {
-                srcT val = *(__global srcT *)(srcptr + src_index + c);
+                srcT val = *(__global srcT *)(srcptr + src_index + c * (int)sizeof(srcT));
 
                 bool v = false;
 #ifdef MASK_NANS
@@ -87,7 +87,7 @@ __kernel void nanMask(__global const uchar * srcptr, int srcstep, int srcoffset,
             vnan = !vnan;
 #endif
 
-            *(__global uchar *)(dstptr + dst_index) = vnan ? 255 : 0;
+            *(dstptr + dst_index) = vnan ? 255 : 0;
         }
     }
 }

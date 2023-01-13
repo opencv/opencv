@@ -1712,13 +1712,12 @@ static void nanMask_(const _Tp *src, uchar *dst, size_t total, bool maskNans, bo
 
 static bool ocl_nanMask(const UMat img, UMat mask, bool maskNans, bool maskInfs, bool maskAll, bool invert)
 {
-    //TODO: this
     int channels = img.channels();
     int depth = img.depth();
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("nanMask", ocl::core::nanmask_oclsrc,
                   format("-D srcT=%s -D cn=%d -D rowsPerWI=%d %s %s %s %s",
-                          depth == CV_32F ? "float" : "double", rowsPerWI, channels,
+                          depth == CV_32F ? "float" : "double", channels, rowsPerWI,
                           maskNans ? "-D MASK_NANS" : "", maskInfs ? "-D MASK_INFS" : "",
                           maskAll ? "-D MASK_ALL" : "", invert ? "-D INVERT" : ""));
     if (k.empty())
@@ -1726,7 +1725,7 @@ static bool ocl_nanMask(const UMat img, UMat mask, bool maskNans, bool maskInfs,
 
     k.args(ocl::KernelArg::ReadOnlyNoSize(img), ocl::KernelArg::WriteOnly(mask));
 
-    size_t globalsize[2] = { (size_t)img.cols * channels, ((size_t)img.rows + rowsPerWI - 1) / rowsPerWI };
+    size_t globalsize[2] = { (size_t)img.cols, ((size_t)img.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
 }
 
