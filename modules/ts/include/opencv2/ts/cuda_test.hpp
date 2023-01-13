@@ -212,6 +212,8 @@ namespace cvtest
 
     #define DIFFERENT_SIZES testing::Values(cv::Size(128, 128), cv::Size(113, 113))
 
+    #define DIFFERENT_SIZES_EXTRA testing::Values(cv::Size(13, 1), cv::Size(1, 13), cv::Size(128, 128), cv::Size(113, 113))
+
     // Depth
 
     using perf::MatDepth;
