@@ -1704,7 +1704,7 @@ CV_EXPORTS_W bool checkRange(InputArray a, bool quiet = true, CV_OUT Point* pos 
 CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 
 /** @brief Generates a mask of NaN or Inf values, one value per element.
- * @param img Input matrix, should contain float or double elements of 1 to 4 channel
+ * @param img Input matrix, should contain float or double elements of 1 to 4 channels
  * @param mask Output matrix of the same size as input containing uchars
  * @param flags Masking flags, see cv::NanMaskFlags
  */
