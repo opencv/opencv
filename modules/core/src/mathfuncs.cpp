@@ -1702,7 +1702,14 @@ int nanMaskSIMD_<float, 1>(const float *src, uchar *dst, size_t total, bool mask
             bool nan = maskAll ? true : false;
 
             float val = src[i + j];
-            bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
+
+            Cv32suf ieee754;
+            ieee754.f = val;
+            bool isnan = (ieee754.u & 0x7fffffff) >  0x7f800000;
+            bool isinf = (ieee754.u & 0x7fffffff) == 0x7f800000;
+
+            bool v = (maskNans && isnan) || (maskInfs && isinf);
+
             if (maskAll)
                 nan = nan && v;
             else
@@ -1730,7 +1737,11 @@ int nanMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total, bool ma
             bool nan = maskAll ? true : false;
 
             double val = src[i + j];
-            bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
+            Cv64suf ieee754;
+            ieee754.f = val;
+            bool isnan = (ieee754.u & 0x7fffffffffffffff) >  0x7ff0000000000000;
+            bool isinf = (ieee754.u & 0x7fffffffffffffff) == 0x7ff0000000000000;
+            bool v = (maskNans && isnan) || (maskInfs && isinf);
             if (maskAll)
                 nan = nan && v;
             else
@@ -1760,7 +1771,12 @@ int nanMaskSIMD_<float, 2>(const float *src, uchar *dst, size_t total, bool mask
             for (int c = 0; c < cn; c++)
             {
                 float val = src[i * cn + j * cn + c];
-                bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
+                Cv32suf ieee754;
+                ieee754.f = val;
+                bool isnan = (ieee754.u & 0x7fffffff) >  0x7f800000;
+                bool isinf = (ieee754.u & 0x7fffffff) == 0x7f800000;
+
+                bool v = (maskNans && isnan) || (maskInfs && isinf);
                 if (maskAll)
                     nan = nan && v;
                 else
@@ -1791,7 +1807,11 @@ int nanMaskSIMD_<double, 2>(const double *src, uchar *dst, size_t total, bool ma
             for (int c = 0; c < cn; c++)
             {
                 double val = src[i * cn + j * cn + c];
-                bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
+                Cv64suf ieee754;
+                ieee754.f = val;
+                bool isnan = (ieee754.u & 0x7fffffffffffffff) >  0x7ff0000000000000;
+                bool isinf = (ieee754.u & 0x7fffffffffffffff) == 0x7ff0000000000000;
+                bool v = (maskNans && isnan) || (maskInfs && isinf);
                 if (maskAll)
                     nan = nan && v;
                 else
@@ -1821,7 +1841,11 @@ int nanMaskSIMD_<float, 3>(const float *src, uchar *dst, size_t total, bool mask
             for (int c = 0; c < cn; c++)
             {
                 float val = src[i * cn + j * cn + c];
-                bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
+                Cv32suf ieee754;
+                ieee754.f = val;
+                bool isnan = (ieee754.u & 0x7fffffff) >  0x7f800000;
+                bool isinf = (ieee754.u & 0x7fffffff) == 0x7f800000;
+                bool v = (maskNans && isnan) || (maskInfs && isinf);
                 if (maskAll)
                     nan = nan && v;
                 else
@@ -1852,7 +1876,12 @@ int nanMaskSIMD_<double, 3>(const double *src, uchar *dst, size_t total, bool ma
             for (int c = 0; c < cn; c++)
             {
                 double val = src[i * cn + j * cn + c];
-                bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
+
+                Cv64suf ieee754;
+                ieee754.f = val;
+                bool isnan = (ieee754.u & 0x7fffffffffffffff) >  0x7ff0000000000000;
+                bool isinf = (ieee754.u & 0x7fffffffffffffff) == 0x7ff0000000000000;
+                bool v = (maskNans && isnan) || (maskInfs && isinf);
                 if (maskAll)
                     nan = nan && v;
                 else
@@ -1882,7 +1911,11 @@ int nanMaskSIMD_<float, 4>(const float *src, uchar *dst, size_t total, bool mask
             for (int c = 0; c < cn; c++)
             {
                 float val = src[i * cn + j * cn + c];
-                bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
+                Cv32suf ieee754;
+                ieee754.f = val;
+                bool isnan = (ieee754.u & 0x7fffffff) > 0x7f800000;
+                bool isinf = (ieee754.u & 0x7fffffff) == 0x7f800000;
+                bool v = (maskNans && isnan) || (maskInfs && isinf);
                 if (maskAll)
                     nan = nan && v;
                 else
@@ -1913,7 +1946,11 @@ int nanMaskSIMD_<double, 4>(const double *src, uchar *dst, size_t total, bool ma
             for (int c = 0; c < cn; c++)
             {
                 double val = src[i * cn + j * cn + c];
-                bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
+                Cv64suf ieee754;
+                ieee754.f = val;
+                bool isnan = (ieee754.u & 0x7fffffffffffffff) >  0x7ff0000000000000;
+                bool isinf = (ieee754.u & 0x7fffffffffffffff) == 0x7ff0000000000000;
+                bool v = (maskNans && isnan) || (maskInfs && isinf);
                 if (maskAll)
                     nan = nan && v;
                 else
