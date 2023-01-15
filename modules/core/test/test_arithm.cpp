@@ -731,6 +731,22 @@ struct InRangeOp : public BaseArithmOp
 
 namespace reference {
 
+template<typename _Tp>
+struct SoftType;
+
+template<>
+struct SoftType<float>
+{
+    typedef softfloat type;
+};
+
+template<>
+struct SoftType<double>
+{
+    typedef softdouble type;
+};
+
+
 template <typename _Tp>
 static void nanMask_(const _Tp *src, uchar *dst, size_t total, int cn, bool maskNans, bool maskInfs, bool maskAll, bool invert)
 {
@@ -740,7 +756,9 @@ static void nanMask_(const _Tp *src, uchar *dst, size_t total, int cn, bool mask
         for (int c = 0; c < cn; c++)
         {
             _Tp val = src[i * cn + c];
-            bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
+            typename SoftType<_Tp>::type sval(val);
+
+            bool v = (maskNans && sval.isNaN()) || (maskInfs && sval.isInf());
             if (maskAll)
                 nan = nan && v;
             else
