@@ -37,7 +37,7 @@ if(WITH_OPENMP)
     # 2. OpenMP_CXX_LIBRARIES is defined since CMake >= 3.9.0.
     # 2. For gnu openmp (libgomp, e.g. on Linux), OpenMP_CXX_INCLUDE_DIRS is null
     #      regardless CMake version. Passing flag `-fopenmp` is enough.
-    # 3. For clang openmp (libomp, e.g. on macOS), OpenMP_CXX_INCLUDE_DIRS is not 
+    # 3. For clang openmp (libomp, e.g. on macOS), OpenMP_CXX_INCLUDE_DIRS is not
     #      null and need to include header and link libomp in addition to passing flag.
     if(DEFINED OpenMP_CXX_INCLUDE_DIRS AND OpenMP_CXX_INCLUDE_DIRS)
       ocv_include_directories(${OpenMP_CXX_INCLUDE_DIRS})
