@@ -2965,25 +2965,60 @@ TEST(Core_CartPolar, inplace)
 
 // Check different flags combinations for nanMask()
 
-typedef std::tuple<int, int, int, bool, bool> NanMaskFixtureParams;
-class NanMaskFixture : public ::testing::TestWithParam<NanMaskFixtureParams> {};
+
+template<typename _Tp>
+_Tp randomNan(RNG& rng);
+
+template<>
+float randomNan(RNG& rng)
+{
+    uint32_t r = rng.next();
+    Cv32suf v;
+    // sign
+    v.u = (r & 1) << 31;
+    // exp
+    v.u = v.u | 0x7f800000;
+    // mantissa (set a bit to avoid zero mantissa)
+    v.u = v.u | (r >> 9) | 64;
+
+    return v.f;
+}
+
+template<>
+double randomNan(RNG& rng)
+{
+    uint32_t r0 = rng.next();
+    uint32_t r1 = rng.next();
+    Cv64suf v;
+    // sign
+    v.u = uint64_t(r0 & 1) << 63;
+    // exp
+    v.u = v.u | 0x7ff0000000000000;
+    // mantissa (set a bit to avoid zero mantissa)
+    v.u = v.u | uint64_t(r0 << 20) | uint64_t(r1) | 64UL;
+
+    return v.f;
+}
 
 template<typename T>
 Mat generateNanMaskData(int cn, RNG& rng)
 {
     T inf = std::numeric_limits<T>::infinity();
-    T nan = std::numeric_limits<T>::quiet_NaN();
 
     const int len = 100;
     Mat_<T> plainData(1, cn*len);
     for(int i = 0; i < cn*len; i++)
     {
         int r = rng.uniform(0, 3);
-        plainData(i) = r == 0 ? inf : r == 1 ? nan : T(0);
+        plainData(i) = r == 0 ? inf * (rng.uniform(0, 2) ? T(1.0) : T(-1.0)) :
+                       r == 1 ? randomNan<T>(rng) : T(0);
     }
 
     return Mat(plainData).reshape(cn);
 }
+
+typedef std::tuple<int, int, int, bool, bool> NanMaskFixtureParams;
+class NanMaskFixture : public ::testing::TestWithParam<NanMaskFixtureParams> {};
 
 TEST_P(NanMaskFixture, flags)
 {

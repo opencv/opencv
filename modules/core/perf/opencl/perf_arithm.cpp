@@ -1038,10 +1038,44 @@ OCL_PERF_TEST_P(ConvertScaleAbsFixture, ConvertScaleAbs,
 
 ///////////// PatchNaNs ////////////////////////
 
+template<typename _Tp>
+_Tp randomNan(int seed);
+
+template<>
+float randomNan(int seed)
+{
+    uint32_t r = RNG(seed).next();
+    Cv32suf v;
+    // sign
+    v.u = (r & 1) << 31;
+    // exp
+    v.u = v.u | 0x7f800000;
+    // mantissa (set a bit to avoid zero mantissa)
+    v.u = v.u | (r >> 9) | 64;
+
+    return v.f;
+}
+
+template<>
+double randomNan(int seed)
+{
+    uint32_t r0 = RNG(seed).next();
+    uint32_t r1 = RNG(seed).next();
+    Cv64suf v;
+    // sign
+    v.u = uint64_t(r0 & 1) << 63;
+    // exp
+    v.u = v.u | 0x7ff0000000000000;
+    // mantissa (set a bit to avoid zero mantissa)
+    v.u = v.u | uint64_t(r0 << 20) | uint64_t(r1) | 64UL;
+
+    return v.f;
+}
+
 typedef Size_MatType PatchNaNsFixture;
 
 OCL_PERF_TEST_P(PatchNaNsFixture, PatchNaNs,
-                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4, CV_64FC1, CV_64FC4)))
+                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC3, CV_64FC4)))
 {
     const Size_MatType_t params = GetParam();
     Size srcSize = get<0>(params);
@@ -1061,14 +1095,17 @@ OCL_PERF_TEST_P(PatchNaNsFixture, PatchNaNs,
             float  *const ptrf = src_.ptr<float>(y);
             double *const ptrd = src_.ptr<double>(y);
             for (int x = 0; x < srcSize.width; ++x)
+            {
+                int fseed = (x << 16) + y;
                 if (depth == CV_32F)
                 {
-                    ptrf[x] = (x + y) % 2 == 0 ? std::numeric_limits<float>::quiet_NaN() : ptrf[x];
+                    ptrf[x] = (x + y) % 2 == 0 ? randomNan<float >(fseed) : ptrf[x];
                 }
                 else if (depth == CV_64F)
                 {
-                    ptrd[x] = (x + y) % 2 == 0 ? std::numeric_limits<double>::quiet_NaN() : ptrd[x];
+                    ptrd[x] = (x + y) % 2 == 0 ? randomNan<double>(fseed) : ptrd[x];
                 }
+            }
         }
     }
 
@@ -1082,7 +1119,7 @@ OCL_PERF_TEST_P(PatchNaNsFixture, PatchNaNs,
 typedef Size_MatType NanMaskFixture;
 
 OCL_PERF_TEST_P(NanMaskFixture, NanMask,
-                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC4, CV_64FC1, CV_64FC4)))
+                ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC3, CV_64FC4)))
 {
     const Size_MatType_t params = GetParam();
     Size srcSize = get<0>(params);
@@ -1098,19 +1135,27 @@ OCL_PERF_TEST_P(NanMaskFixture, NanMask,
     {
         Mat src_ = src.getMat(ACCESS_RW);
         srcSize.width *= cn;
+        const float  finf = std::numeric_limits<float >::infinity();
+        const double dinf = std::numeric_limits<double>::infinity();
         for (int y = 0; y < srcSize.height; ++y)
         {
             float  *const ptrf = src_.ptr<float>(y);
             double *const ptrd = src_.ptr<double>(y);
             for (int x = 0; x < srcSize.width; ++x)
+            {
+                int fseed = (x << 16) + y;
+                int rem = (x + y) % 10;
                 if (depth == CV_32F)
                 {
-                    ptrf[x] = (x + y) % 2 == 0 ? std::numeric_limits<float>::quiet_NaN() : ptrf[x];
+                    ptrf[x] = rem <  4 ? randomNan<float >(fseed) :
+                              rem == 5 ? finf*((x + y)%2 ? 1.f : -1.f) : ptrf[x];
                 }
                 else if (depth == CV_64F)
                 {
-                    ptrd[x] = (x + y) % 2 == 0 ? std::numeric_limits<double>::quiet_NaN() : ptrd[x];
+                    ptrd[x] = rem <  4 ? randomNan<double>(fseed) :
+                              rem == 5 ? dinf*((x + y)%2 ? 1.0 : -1.0) : ptrd[x];
                 }
+            }
         }
     }
 
