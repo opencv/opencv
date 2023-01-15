@@ -11,6 +11,6 @@ ocv_define_module(video
       js
 )
 
-if(WITH_OPENMP AND DEFINED OpenMP_CXX_INCLUDE_DIRS AND OpenMP_CXX_INCLUDE_DIRS)
+if(HAVE_OPENMP AND DEFINED OpenMP_CXX_INCLUDE_DIRS AND OpenMP_CXX_LIBRARIES)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE "${OpenMP_CXX_LIBRARIES}")
 endif()

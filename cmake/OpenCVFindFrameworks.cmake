@@ -33,11 +33,12 @@ if(WITH_OPENMP)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     # NOTES:
-    # 1. For CMake <= 3.5.1, OpenMP_CXX_INCLUDE_DIRS is not defined.
-    # 2. For gnu openmp (libgomp, e.g. on Linux), OpenMP_CXX_INCLUDE_DIRS is null and
-    #      passing flags is enough for including and linking.
-    # 3. For clang openmp (libomp, e.g. on macOS), OpenMP_CXX_INCLUDE_DIRS is not null and
-    #      need to include omp include dir and link omp lib.
+    # 1. OpenMP_CXX_INCLUDE_DIRS is defined since CMake >= 3.16.0.
+    # 2. OpenMP_CXX_LIBRARIES is defined since CMake >= 3.9.0.
+    # 2. For gnu openmp (libgomp, e.g. on Linux), OpenMP_CXX_INCLUDE_DIRS is null
+    #      regardless CMake version. Passing flag `-fopenmp` is enough.
+    # 3. For clang openmp (libomp, e.g. on macOS), OpenMP_CXX_INCLUDE_DIRS is not 
+    #      null and need to include header and link libomp in addition to passing flag.
     if(DEFINED OpenMP_CXX_INCLUDE_DIRS AND OpenMP_CXX_INCLUDE_DIRS)
       ocv_include_directories(${OpenMP_CXX_INCLUDE_DIRS})
     endif()
