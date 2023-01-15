@@ -1699,6 +1699,41 @@ OCL_TEST_P(ScaleAdd, Mat)
 
 //////////////////////////////// PatchNans ////////////////////////////////////////////////
 
+template<typename _Tp>
+_Tp randomNan(int seed);
+
+template<>
+float randomNan(int seed)
+{
+    uint32_t r = RNG(seed).next();
+    Cv32suf v;
+    // sign
+    v.u = (r & 1) << 31;
+    // exp
+    v.u = v.u | 0x7f800000;
+    // mantissa (set a bit to avoid zero mantissa)
+    v.u = v.u | (r >> 9) | 64;
+
+    return v.f;
+}
+
+template<>
+double randomNan(int seed)
+{
+    uint32_t r0 = RNG(seed).next();
+    uint32_t r1 = RNG(seed).next();
+    Cv64suf v;
+    // sign
+    v.u = uint64_t(r0 & 1) << 63;
+    // exp
+    v.u = v.u | 0x7ff0000000000000;
+    // mantissa (set a bit to avoid zero mantissa)
+    v.u = v.u | uint64_t(r0 << 20) | uint64_t(r1) | 64UL;
+
+    return v.f;
+}
+
+
 PARAM_TEST_CASE(PatchNaNs, MatDepth, Channels, bool)
 {
     int ftype;
@@ -1727,16 +1762,19 @@ PARAM_TEST_CASE(PatchNaNs, MatDepth, Channels, bool)
         roiSize.width *= cn;
         for (int y = 0; y < roiSize.height; ++y)
         {
-            float  *const ptrf = src_roi.ptr<float>(y);
+            float  *const ptrf = src_roi.ptr<float >(y);
             double *const ptrd = src_roi.ptr<double>(y);
             for (int x = 0; x < roiSize.width; ++x)
-            if (ftype == CV_32F)
             {
-                ptrf[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<float>::quiet_NaN() : ptrf[x];
-            }
-            else if (ftype == CV_64F)
-            {
-                ptrd[x] = randomInt(-1, 1) == 0 ? std::numeric_limits<double>::quiet_NaN() : ptrd[x];
+                int fseed = (x << 16) + y;
+                if (ftype == CV_32F)
+                {
+                    ptrf[x] = randomInt(-1, 1) == 0 ? randomNan<float >(fseed) : ptrf[x];
+                }
+                else if (ftype == CV_64F)
+                {
+                    ptrd[x] = randomInt(-1, 1) == 0 ? randomNan<double>(fseed) : ptrd[x];
+                }
             }
         }
 
@@ -1804,23 +1842,25 @@ PARAM_TEST_CASE(NaNmask, MatDepth, Channels, bool, int, bool, bool)
         randomSubMat(mask, mask_roi, roiSize, srcBorder, CV_8UC1, 5, 16);
 
         // generating NaNs
-
+        const float  finf = std::numeric_limits<float >::infinity();
+        const double dinf = std::numeric_limits<double>::infinity();
         for (int y = 0; y < roiSize.height; ++y)
         {
             float  *const ptrf = src_roi.ptr<float >(y);
             double *const ptrd = src_roi.ptr<double>(y);
             for (int x = 0; x < roiSize.width * cn; ++x)
             {
-                int r = randomInt(0, 3);
+                int fseed = (x << 16) + y;
+                int rem = randomInt(0, 10);
                 if (ftype == CV_32F)
                 {
-                    ptrf[x] = r == 1 ? std::numeric_limits<float>::quiet_NaN() :
-                              r == 2 ? std::numeric_limits<float>::infinity()  : ptrf[x];
+                    ptrf[x] = rem <  4 ? randomNan<float >(fseed) :
+                              rem == 5 ? finf*((x + y)%2 ? 1.f : -1.f) : ptrf[x];
                 }
                 else if (ftype == CV_64F)
                 {
-                    ptrd[x] = r == 1 ? std::numeric_limits<double>::quiet_NaN() :
-                              r == 2 ? std::numeric_limits<double>::infinity()  : ptrd[x];
+                    ptrd[x] = rem <  4 ? randomNan<double>(fseed) :
+                              rem == 5 ? dinf*((x + y)%2 ? 1.0 : -1.0) : ptrd[x];
                 }
             }
         }
