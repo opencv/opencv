@@ -1689,35 +1689,34 @@ void patchNaNs( InputOutputArray _a, double _val )
 template <typename _Tp, int cn>
 int nanMaskSIMD_(const _Tp *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert);
 
-//TODO: make true SIMD code instead
 template <>
-int nanMaskSIMD_<float, 1>(const float *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert)
+int nanMaskSIMD_<float, 1>(const float *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool /*maskAll*/, bool invert)
 {
-    const int vsize = v_float32::nlanes;
+    const int osize = v_uint8::nlanes;
     int i = 0;
-    for(; i <= (int)total - vsize; i += vsize )
+    for(; i <= (int)total - osize; i += osize )
     {
-        for (int j = 0; j < vsize; j++)
+        v_uint32 vmaskPos = vx_setall_u32(0x7fffffff);
+        v_uint32 vmaskExp = vx_setall_u32(0x7f800000);
+        v_uint32 visnan[4], visinf[4];
+        for (int j = 0; j < 4; j++)
         {
-            bool nan = maskAll ? true : false;
-
-            float val = src[i + j];
-
-            Cv32suf ieee754;
-            ieee754.f = val;
-            bool isnan = (ieee754.u & 0x7fffffff) >  0x7f800000;
-            bool isinf = (ieee754.u & 0x7fffffff) == 0x7f800000;
-
-            bool v = (maskNans && isnan) || (maskInfs && isinf);
-
-            if (maskAll)
-                nan = nan && v;
-            else
-                nan = nan || v;
-
-            nan = invert ? !nan : nan;
-            dst[i + j] = nan ? 255 : 0;
+            v_uint32 vu = v_reinterpret_as_u32(vx_load(src + i + j*(osize/4)));
+            v_uint32 vuMasked = vu & vmaskPos;
+            visnan[j] = (vuMasked >  vmaskExp);
+            visinf[j] = (vuMasked == vmaskExp);
         }
+
+        v_uint8 visnan8 = v_pack_b(visnan[0], visnan[1], visnan[2], visnan[3]);
+        v_uint8 visinf8 = v_pack_b(visinf[0], visinf[1], visinf[2], visinf[3]);
+
+        v_uint8 v0 = maskNans ? visnan8 : vx_setzero_u8();
+        v_uint8 v1 = maskInfs ? visinf8 : vx_setzero_u8();
+        v_uint8 v = v0 | v1;
+        if (invert)
+            v = ~v;
+
+        v_store(dst + i, v);
     }
 
     return i;
@@ -1725,30 +1724,28 @@ int nanMaskSIMD_<float, 1>(const float *src, uchar *dst, size_t total, bool mask
 
 //TODO: make true SIMD code instead
 template <>
-int nanMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert)
+int nanMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool /*maskAll*/, bool invert)
 {
-    const int vsize = v_float64::nlanes;
+    const int osize = v_uint16::nlanes;
 
     int i = 0;
-    for(; i <= (int)total - vsize; i += vsize )
+    for(; i <= (int)total - osize; i += osize )
     {
-        for (int j = 0; j < vsize; j++)
+        for (int j = 0; j < osize; j++)
         {
-            bool nan = maskAll ? true : false;
-
+            //TODO: load 4x osize
             double val = src[i + j];
             Cv64suf ieee754;
             ieee754.f = val;
             bool isnan = (ieee754.u & 0x7fffffffffffffff) >  0x7ff0000000000000;
             bool isinf = (ieee754.u & 0x7fffffffffffffff) == 0x7ff0000000000000;
-            bool v = (maskNans && isnan) || (maskInfs && isinf);
-            if (maskAll)
-                nan = nan && v;
-            else
-                nan = nan || v;
 
-            nan = invert ? !nan : nan;
-            dst[i + j] = nan ? 255 : 0;
+            //TODO: make repack 4 to 2 uint16 then to 1 uint8
+            bool v = (maskNans && isnan) || (maskInfs && isinf);
+
+            v = invert ? !v : v;
+            //TODO: use v_store_low
+            dst[i + j] = v ? 255 : 0;
         }
     }
 
