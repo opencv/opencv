@@ -760,7 +760,7 @@ static void nanMask_(const _Tp *src, uchar *dst, size_t total, int cn, bool mask
             //typename SoftType<_Tp>::type sval(val);
 
             //bool v = (maskNans && sval.isNaN()) || (maskInfs && sval.isInf());
-            bool v = (maskNans && cvIsNan(val)) || (maskInfs && cvIsInf(val));
+            bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
             if (maskAll)
                 nan = nan && v;
             else
