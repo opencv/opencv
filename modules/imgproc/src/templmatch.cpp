@@ -315,7 +315,7 @@ static bool matchTemplate_CCORR(InputArray _image, InputArray _templ, OutputArra
 
 static bool matchTemplate_CCORR_NORMED(InputArray _image, InputArray _templ, OutputArray _result)
 {
-    matchTemplate(_image, _templ, _result, CV_TM_CCORR);
+    matchTemplate(_image, _templ, _result, cv::TM_CCORR);
 
     int type = _image.type(), cn = CV_MAT_CN(type);
 
@@ -373,7 +373,7 @@ static bool matchTemplate_SQDIFF(InputArray _image, InputArray _templ, OutputArr
         return( matchTemplateNaive_SQDIFF(_image, _templ, _result));
     else
     {
-        matchTemplate(_image, _templ, _result, CV_TM_CCORR);
+        matchTemplate(_image, _templ, _result, cv::TM_CCORR);
 
         int type = _image.type(), cn = CV_MAT_CN(type);
 
@@ -404,7 +404,7 @@ static bool matchTemplate_SQDIFF(InputArray _image, InputArray _templ, OutputArr
 
 static bool matchTemplate_SQDIFF_NORMED(InputArray _image, InputArray _templ, OutputArray _result)
 {
-    matchTemplate(_image, _templ, _result, CV_TM_CCORR);
+    matchTemplate(_image, _templ, _result, cv::TM_CCORR);
 
     int type = _image.type(), cn = CV_MAT_CN(type);
 
@@ -436,7 +436,7 @@ static bool matchTemplate_SQDIFF_NORMED(InputArray _image, InputArray _templ, Ou
 
 static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArray _result)
 {
-    matchTemplate(_image, _templ, _result, CV_TM_CCORR);
+    matchTemplate(_image, _templ, _result, cv::TM_CCORR);
 
     UMat image_sums, temp;
     integral(_image, image_sums, CV_32F);
@@ -471,7 +471,7 @@ static bool matchTemplate_CCOEFF(InputArray _image, InputArray _templ, OutputArr
 
 static bool matchTemplate_CCOEFF_NORMED(InputArray _image, InputArray _templ, OutputArray _result)
 {
-    matchTemplate(_image, _templ, _result, CV_TM_CCORR);
+    matchTemplate(_image, _templ, _result, cv::TM_CCORR);
 
     UMat temp, image_sums, image_sqsums;
     integral(_image, image_sums, image_sqsums, CV_32F, CV_32F);
@@ -796,7 +796,7 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
         merge(maskChannels.data(), templ.channels(), mask);
     }
 
-    if (method == CV_TM_SQDIFF || method == CV_TM_SQDIFF_NORMED)
+    if (method == cv::TM_SQDIFF || method == cv::TM_SQDIFF_NORMED)
     {
         Mat temp_result(corrSize, CV_32F);
         Mat img2 = img.mul(img);
@@ -810,19 +810,19 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
         // for normalization.
         result = -2 * result + temp_result + templ2_mask2_sum;
 
-        if (method == CV_TM_SQDIFF_NORMED)
+        if (method == cv::TM_SQDIFF_NORMED)
         {
             sqrt(templ2_mask2_sum * temp_result, temp_result);
             result /= temp_result;
         }
     }
-    else if (method == CV_TM_CCORR || method == CV_TM_CCORR_NORMED)
+    else if (method == cv::TM_CCORR || method == cv::TM_CCORR_NORMED)
     {
         // If the mul() is ever unnested, declare MatExpr, *not* Mat, to be more efficient.
         Mat templ_mask2 = templ.mul(mask.mul(mask));
         crossCorr(img, templ_mask2, result, Point(0,0), 0, 0);
 
-        if (method == CV_TM_CCORR_NORMED)
+        if (method == cv::TM_CCORR_NORMED)
         {
             Mat temp_result(corrSize, CV_32F);
             Mat img2 = img.mul(img);
@@ -834,7 +834,7 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
             result /= temp_result;
         }
     }
-    else if (method == CV_TM_CCOEFF || method == CV_TM_CCOEFF_NORMED)
+    else if (method == cv::TM_CCOEFF || method == cv::TM_CCOEFF_NORMED)
     {
         // Do mul() inline or declare MatExpr where possible, *not* Mat, to be more efficient.
 
@@ -864,7 +864,7 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
             // transform back, but now with only one channel
             result -= temp_res.reshape(1, result.rows);
         }
-        if (method == CV_TM_CCOEFF_NORMED)
+        if (method == cv::TM_CCOEFF_NORMED)
         {
             // norm(T')
             double norm_templx = norm(mask.mul(templ - sum(mask.mul(templ)).div(mask_sum)),
@@ -905,14 +905,14 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
 
 static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method, int cn )
 {
-    if( method == CV_TM_CCORR )
+    if( method == cv::TM_CCORR )
         return;
 
-    int numType = method == CV_TM_CCORR || method == CV_TM_CCORR_NORMED ? 0 :
-                  method == CV_TM_CCOEFF || method == CV_TM_CCOEFF_NORMED ? 1 : 2;
-    bool isNormed = method == CV_TM_CCORR_NORMED ||
-                    method == CV_TM_SQDIFF_NORMED ||
-                    method == CV_TM_CCOEFF_NORMED;
+    int numType = method == cv::TM_CCORR || method == cv::TM_CCORR_NORMED ? 0 :
+                  method == cv::TM_CCOEFF || method == cv::TM_CCOEFF_NORMED ? 1 : 2;
+    bool isNormed = method == cv::TM_CCORR_NORMED ||
+                    method == cv::TM_SQDIFF_NORMED ||
+                    method == cv::TM_CCOEFF_NORMED;
 
     double invArea = 1./((double)templ.rows * templ.cols);
 
@@ -921,7 +921,7 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
     double *q0 = 0, *q1 = 0, *q2 = 0, *q3 = 0;
     double templNorm = 0, templSum2 = 0;
 
-    if( method == CV_TM_CCOEFF )
+    if( method == cv::TM_CCOEFF )
     {
         integral(img, sum, CV_64F);
         templMean = mean(templ);
@@ -933,7 +933,7 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
 
         templNorm = templSdv[0]*templSdv[0] + templSdv[1]*templSdv[1] + templSdv[2]*templSdv[2] + templSdv[3]*templSdv[3];
 
-        if( templNorm < DBL_EPSILON && method == CV_TM_CCOEFF_NORMED )
+        if( templNorm < DBL_EPSILON && method == cv::TM_CCOEFF_NORMED )
         {
             result = Scalar::all(1);
             return;
@@ -1020,7 +1020,7 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
                 else if( fabs(num) < t*1.125 )
                     num = num > 0 ? 1 : -1;
                 else
-                    num = method != CV_TM_SQDIFF_NORMED ? 0 : 1;
+                    num = method != cv::TM_SQDIFF_NORMED ? 0 : 1;
             }
 
             rrow[j] = (float)num;
@@ -1116,30 +1116,30 @@ static bool ipp_matchTemplate( Mat& img, Mat& templ, Mat& result, int method)
     if(templ.size().area()*4 > img.size().area())
         return false;
 
-    if(method == CV_TM_SQDIFF)
+    if(method == cv::TM_SQDIFF)
     {
         if(ipp_sqrDistance(img, templ, result))
             return true;
     }
-    else if(method == CV_TM_SQDIFF_NORMED)
+    else if(method == cv::TM_SQDIFF_NORMED)
     {
         if(ipp_crossCorr(img, templ, result, false))
         {
-            common_matchTemplate(img, templ, result, CV_TM_SQDIFF_NORMED, 1);
+            common_matchTemplate(img, templ, result, cv::TM_SQDIFF_NORMED, 1);
             return true;
         }
     }
-    else if(method == CV_TM_CCORR)
+    else if(method == cv::TM_CCORR)
     {
         if(ipp_crossCorr(img, templ, result, false))
             return true;
     }
-    else if(method == CV_TM_CCORR_NORMED)
+    else if(method == cv::TM_CCORR_NORMED)
     {
         if(ipp_crossCorr(img, templ, result, true))
             return true;
     }
-    else if(method == CV_TM_CCOEFF || method == CV_TM_CCOEFF_NORMED)
+    else if(method == cv::TM_CCOEFF || method == cv::TM_CCOEFF_NORMED)
     {
         if(ipp_crossCorr(img, templ, result, false))
         {
@@ -1160,7 +1160,7 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     CV_INSTRUMENT_REGION();
 
     int type = _img.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
+    CV_Assert( cv::TM_SQDIFF <= method && method <= cv::TM_CCOEFF_NORMED );
     CV_Assert( (depth == CV_8U || depth == CV_32F) && type == _templ.type() && _img.dims() <= 2 );
 
     if (!_mask.empty())

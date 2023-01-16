@@ -81,7 +81,7 @@ double TestUtils::checkNorm2(InputArray m1, InputArray m2, InputArray mask)
 double TestUtils::checkSimilarity(InputArray m1, InputArray m2)
 {
     Mat diff;
-    matchTemplate(m1.getMat(), m2.getMat(), diff, CV_TM_CCORR_NORMED);
+    matchTemplate(m1.getMat(), m2.getMat(), diff, cv::TM_CCORR_NORMED);
     return std::abs(diff.at<float>(0, 0) - 1.f);
 }
 
