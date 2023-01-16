@@ -756,11 +756,9 @@ static void nanMask_(const _Tp *src, uchar *dst, size_t total, int cn, bool mask
         for (int c = 0; c < cn; c++)
         {
             _Tp val = src[i * cn + c];
-            //DEBUG: try not to use SoftFloat
-            //typename SoftType<_Tp>::type sval(val);
+            typename SoftType<_Tp>::type sval(val);
 
-            //bool v = (maskNans && sval.isNaN()) || (maskInfs && sval.isInf());
-            bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
+            bool v = (maskNans && sval.isNaN()) || (maskInfs && sval.isInf());
             if (maskAll)
                 nan = nan && v;
             else
@@ -2985,7 +2983,6 @@ TEST(Core_CartPolar, inplace)
 
 // Check different flags combinations for nanMask()
 
-
 template<typename _Tp>
 _Tp randomNan(RNG& rng);
 
@@ -2994,13 +2991,9 @@ float randomNan(RNG& rng)
 {
     uint32_t r = rng.next();
     Cv32suf v;
-    // sign
-    v.u = (r & 1) << 31;
-    // exp
-    v.u = v.u | 0x7f800000;
-    // mantissa (set a bit to avoid zero mantissa)
-    v.u = v.u | (r >> 9) | 64;
-
+    v.u = r;
+    // exp & set a bit to avoid zero mantissa
+    v.u = v.u | 0x7f800001;
     return v.f;
 }
 
@@ -3010,27 +3003,26 @@ double randomNan(RNG& rng)
     uint32_t r0 = rng.next();
     uint32_t r1 = rng.next();
     Cv64suf v;
-    // sign
-    v.u = uint64_t(r0 & 1) << 63;
-    // exp
-    v.u = v.u | 0x7ff0000000000000;
-    // mantissa (set a bit to avoid zero mantissa)
-    v.u = v.u | uint64_t(r0 << 20) | uint64_t(r1) | 64UL;
-
+    v.u = (uint64_t(r0) << 32) | uint64_t(r1);
+    // exp &set a bit to avoid zero mantissa
+    v.u = v.u | 0x7ff0000000000001;
     return v.f;
 }
 
 template<typename T>
 Mat generateNanMaskData(int cn, RNG& rng)
 {
-    T inf = std::numeric_limits<T>::infinity();
+    typedef typename reference::SoftType<T>::type SFT;
+
+    SFT pinf = SFT::inf();
+    SFT ninf = SFT::inf().setSign(true);
 
     const int len = 100;
     Mat_<T> plainData(1, cn*len);
     for(int i = 0; i < cn*len; i++)
     {
         int r = rng.uniform(0, 3);
-        plainData(i) = r == 0 ? inf * (rng.uniform(0, 2) ? T(1.0) : T(-1.0)) :
+        plainData(i) = r == 0 ? T(rng.uniform(0, 2) ? pinf : ninf) :
                        r == 1 ? randomNan<T>(rng) : T(0);
     }
 

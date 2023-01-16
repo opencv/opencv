@@ -1842,8 +1842,10 @@ PARAM_TEST_CASE(NaNmask, MatDepth, Channels, bool, int, bool, bool)
         randomSubMat(mask, mask_roi, roiSize, srcBorder, CV_8UC1, 5, 16);
 
         // generating NaNs
-        const float  finf = std::numeric_limits<float >::infinity();
-        const double dinf = std::numeric_limits<double>::infinity();
+        const softfloat  fpinf = softfloat ::inf();
+        const softfloat  fninf = softfloat ::inf().setSign(true);
+        const softdouble dpinf = softdouble::inf();
+        const softdouble dninf = softdouble::inf().setSign(true);
         for (int y = 0; y < roiSize.height; ++y)
         {
             float  *const ptrf = src_roi.ptr<float >(y);
@@ -1855,12 +1857,12 @@ PARAM_TEST_CASE(NaNmask, MatDepth, Channels, bool, int, bool, bool)
                 if (ftype == CV_32F)
                 {
                     ptrf[x] = rem <  4 ? randomNan<float >(fseed) :
-                              rem == 5 ? finf*((x + y)%2 ? 1.f : -1.f) : ptrf[x];
+                              rem == 5 ? (float )((x + y)%2 ? fpinf : fninf) : ptrf[x];
                 }
                 else if (ftype == CV_64F)
                 {
                     ptrd[x] = rem <  4 ? randomNan<double>(fseed) :
-                              rem == 5 ? dinf*((x + y)%2 ? 1.0 : -1.0) : ptrd[x];
+                              rem == 5 ? (double)((x + y)%2 ? dpinf : dninf) : ptrd[x];
                 }
             }
         }

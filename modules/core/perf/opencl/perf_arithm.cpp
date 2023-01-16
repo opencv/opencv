@@ -1046,13 +1046,9 @@ float randomNan(int seed)
 {
     uint32_t r = RNG(seed).next();
     Cv32suf v;
-    // sign
-    v.u = (r & 1) << 31;
-    // exp
-    v.u = v.u | 0x7f800000;
-    // mantissa (set a bit to avoid zero mantissa)
-    v.u = v.u | (r >> 9) | 64;
-
+    v.u = r;
+    // exp & set a bit to avoid zero mantissa
+    v.u = v.u | 0x7f800001;
     return v.f;
 }
 
@@ -1062,13 +1058,9 @@ double randomNan(int seed)
     uint32_t r0 = RNG(seed).next();
     uint32_t r1 = RNG(seed).next();
     Cv64suf v;
-    // sign
-    v.u = uint64_t(r0 & 1) << 63;
-    // exp
-    v.u = v.u | 0x7ff0000000000000;
-    // mantissa (set a bit to avoid zero mantissa)
-    v.u = v.u | uint64_t(r0 << 20) | uint64_t(r1) | 64UL;
-
+    v.u = (uint64_t(r0) << 32) | uint64_t(r1);
+    // exp &set a bit to avoid zero mantissa
+    v.u = v.u | 0x7ff0000000000001;
     return v.f;
 }
 
@@ -1135,8 +1127,10 @@ OCL_PERF_TEST_P(NanMaskFixture, NanMask,
     {
         Mat src_ = src.getMat(ACCESS_RW);
         srcSize.width *= cn;
-        const float  finf = std::numeric_limits<float >::infinity();
-        const double dinf = std::numeric_limits<double>::infinity();
+        const softfloat  fpinf = softfloat ::inf();
+        const softfloat  fninf = softfloat ::inf().setSign(true);
+        const softdouble dpinf = softdouble::inf();
+        const softdouble dninf = softdouble::inf().setSign(true);
         for (int y = 0; y < srcSize.height; ++y)
         {
             float  *const ptrf = src_.ptr<float>(y);
@@ -1148,12 +1142,12 @@ OCL_PERF_TEST_P(NanMaskFixture, NanMask,
                 if (depth == CV_32F)
                 {
                     ptrf[x] = rem <  4 ? randomNan<float >(fseed) :
-                              rem == 5 ? finf*((x + y)%2 ? 1.f : -1.f) : ptrf[x];
+                              rem == 5 ? (float )((x + y)%2 ? fpinf : fninf) : ptrf[x];
                 }
                 else if (depth == CV_64F)
                 {
                     ptrd[x] = rem <  4 ? randomNan<double>(fseed) :
-                              rem == 5 ? dinf*((x + y)%2 ? 1.0 : -1.0) : ptrd[x];
+                              rem == 5 ? (double)((x + y)%2 ? dpinf : dninf) : ptrd[x];
                 }
             }
         }
