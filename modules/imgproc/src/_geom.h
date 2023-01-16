@@ -42,16 +42,6 @@
 #ifndef _CV_GEOM_H_
 #define _CV_GEOM_H_
 
-/* Finds distance between two points */
-CV_INLINE  float  icvDistanceL2_32f( CvPoint2D32f pt1, CvPoint2D32f pt2 )
-{
-    float dx = pt2.x - pt1.x;
-    float dy = pt2.y - pt1.y;
-
-    return std::sqrt( dx*dx + dy*dy );
-}
-
-
 /* curvature: 0 - 1-curvature, 1 - k-cosine curvature. */
 CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size, CvMemStorage* storage, int method );
 
