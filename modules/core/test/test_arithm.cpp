@@ -756,9 +756,11 @@ static void nanMask_(const _Tp *src, uchar *dst, size_t total, int cn, bool mask
         for (int c = 0; c < cn; c++)
         {
             _Tp val = src[i * cn + c];
-            typename SoftType<_Tp>::type sval(val);
+            //DEBUG: try not to use SoftFloat
+            //typename SoftType<_Tp>::type sval(val);
 
-            bool v = (maskNans && sval.isNaN()) || (maskInfs && sval.isInf());
+            //bool v = (maskNans && sval.isNaN()) || (maskInfs && sval.isInf());
+            bool v = (maskNans && cvIsNan(val)) || (maskInfs && cvIsInf(val));
             if (maskAll)
                 nan = nan && v;
             else
