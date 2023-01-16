@@ -1751,27 +1751,43 @@ int nanMaskSIMD_<float, 1>(const float *src, uchar *dst, size_t total, bool mask
 template <>
 int nanMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool /*maskAll*/, bool invert)
 {
-    const int osize = v_uint16::nlanes;
+    const int size8 = v_uint8::nlanes;
 
     int i = 0;
-    for(; i <= (int)total - osize; i += osize )
+    for(; i <= (int)total - (size8 / 2); i += (size8 / 2) )
     {
-        for (int j = 0; j < osize; j++)
+        v_float64 vval[4];
+        for (int j = 0; j < 4; j++)
+            vval[j] = vx_load(src + i + j*(size8 / 8));
+        
+        v_uint64 vu[4];
+        for (int j = 0; j < 4; j++)
         {
-            //TODO: load 4x osize
-            double val = src[i + j];
-            Cv64suf ieee754;
-            ieee754.f = val;
-            bool isnan = (ieee754.u & 0x7fffffffffffffff) >  0x7ff0000000000000;
-            bool isinf = (ieee754.u & 0x7fffffffffffffff) == 0x7ff0000000000000;
-
-            //TODO: make repack 4 to 2 uint16 then to 1 uint8
-            bool v = (maskNans && isnan) || (maskInfs && isinf);
-
-            v = invert ? !v : v;
-            //TODO: use v_store_low
-            dst[i + j] = v ? 255 : 0;
+            vu[j] = v_reinterpret_as_u64(vval[j]);
         }
+
+        v_uint64 vmaskExp = vx_setall_u64(0x7ff0000000000000);
+        v_uint64 vmaskMnt = vx_setall_u64(0x000fffffffffffff);
+        v_uint64 z = vx_setzero_u64();
+        v_uint64 vv[4];
+        for (int j = 0; j < 4; j++)
+        {
+            v_uint64 ve = (vu[j] & vmaskExp) == vmaskExp;
+            v_uint64 vm = (vu[j] & vmaskMnt) != z;
+
+            vv[j] = ve;
+            if (maskInfs && !maskNans)
+                vv[j] = vv[j] & (~vm);
+            else if (maskNans && !maskInfs)
+                vv[j] = vv[j] & vm;
+        }
+
+        v_uint8 v = v_pack_b(vv[0], vv[1], vv[2], vv[3], z, z, z, z);
+
+        if (invert)
+            v = ~v;
+
+        v_store_low(dst + i, v);
     }
 
     return i;
