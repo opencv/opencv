@@ -1729,6 +1729,7 @@ int nanMaskSIMD_<float, 1>(const float *src, uchar *dst, size_t total, bool mask
         {
             v_uint32 vu = v_reinterpret_as_u32(vx_load(src + i + j*(osize/4)));
             v_uint32 vuMasked = vu & vmaskPos;
+            vv[j] = vuMasked; // assign to prevent "uninitialized" warning
             if (maskNans && maskInfs)
                 vv[j] = (vuMasked >= vmaskExp);
             else if (maskInfs && !maskNans)
