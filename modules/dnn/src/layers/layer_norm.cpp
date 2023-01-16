@@ -78,7 +78,10 @@ public:
 
         static void run(const Mat* src, const Mat* scale, const Mat* b, Mat* dst, int axis, float epsilon, int nstripes)
         {
-            CV_Assert_N( src->isContinuous(), dst->isContinuous(), src->type() == CV_32F, src->type() == dst->type());
+            CV_Assert(src->isContinuous());
+            CV_Assert(dst->isContinuous());
+            CV_CheckType(src->type(), CV_32F, "DNN/LayerNorm: only support float32");
+            CV_Assert(src->type() == dst->type());
 
             LayerNormInvoker p;
 
@@ -136,6 +139,15 @@ public:
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
+
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
