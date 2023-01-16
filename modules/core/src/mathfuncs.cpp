@@ -1686,8 +1686,33 @@ void patchNaNs( InputOutputArray _a, double _val )
 }
 
 #if CV_SIMD
+//TODO: make true SIMD code instead
 template <typename _Tp, int cn>
-int nanMaskSIMD_(const _Tp *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert);
+int nanMaskSIMD_(const _Tp *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert)
+{
+    const int osize = 8;
+    int i = 0;
+    for (; i <= (int)total - osize; i += osize)
+    {
+        for (int j = 0; j < osize; j++)
+        {
+            bool nan = maskAll ? true : false;
+            for (int c = 0; c < cn; c++)
+            {
+                _Tp val = src[i * cn + j * cn + c];
+                bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
+                if (maskAll)
+                    nan = nan && v;
+                else
+                    nan = nan || v;
+            }
+            nan = invert ? !nan : nan;
+            dst[i + j] = nan ? 255 : 0;
+        }
+    }
+
+    return i;
+}
 
 template <>
 int nanMaskSIMD_<float, 1>(const float *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool /*maskAll*/, bool invert)
@@ -1752,214 +1777,6 @@ int nanMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total, bool ma
     return i;
 }
 
-//TODO: make true SIMD code instead
-template <>
-int nanMaskSIMD_<float, 2>(const float *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert)
-{
-    const int cn = 2;
-
-    const int vsize = v_float32::nlanes;
-    int i = 0;
-    for(; i <= (int)total - vsize; i += vsize )
-    {
-        for (int j = 0; j < vsize; j++)
-        {
-            bool nan = maskAll ? true : false;
-            for (int c = 0; c < cn; c++)
-            {
-                float val = src[i * cn + j * cn + c];
-                Cv32suf ieee754;
-                ieee754.f = val;
-                bool isnan = (ieee754.u & 0x7fffffff) >  0x7f800000;
-                bool isinf = (ieee754.u & 0x7fffffff) == 0x7f800000;
-
-                bool v = (maskNans && isnan) || (maskInfs && isinf);
-                if (maskAll)
-                    nan = nan && v;
-                else
-                    nan = nan || v;
-            }
-            nan = invert ? !nan : nan;
-            dst[i + j] = nan ? 255 : 0;
-        }
-    }
-
-    return i;
-}
-
-//TODO: make true SIMD code instead
-template <>
-int nanMaskSIMD_<double, 2>(const double *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert)
-{
-    const int cn = 2;
-
-    const int vsize = v_float64::nlanes;
-
-    int i = 0;
-    for(; i <= (int)total - vsize; i += vsize )
-    {
-        for (int j = 0; j < vsize; j++)
-        {
-            bool nan = maskAll ? true : false;
-            for (int c = 0; c < cn; c++)
-            {
-                double val = src[i * cn + j * cn + c];
-                Cv64suf ieee754;
-                ieee754.f = val;
-                bool isnan = (ieee754.u & 0x7fffffffffffffff) >  0x7ff0000000000000;
-                bool isinf = (ieee754.u & 0x7fffffffffffffff) == 0x7ff0000000000000;
-                bool v = (maskNans && isnan) || (maskInfs && isinf);
-                if (maskAll)
-                    nan = nan && v;
-                else
-                    nan = nan || v;
-            }
-            nan = invert ? !nan : nan;
-            dst[i + j] = nan ? 255 : 0;
-        }
-    }
-
-    return i;
-}
-
-//TODO: make true SIMD code instead
-template <>
-int nanMaskSIMD_<float, 3>(const float *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert)
-{
-    const int cn = 3;
-
-    const int vsize = v_float32::nlanes;
-    int i = 0;
-    for(; i <= (int)total - vsize; i += vsize )
-    {
-        for (int j = 0; j < vsize; j++)
-        {
-            bool nan = maskAll ? true : false;
-            for (int c = 0; c < cn; c++)
-            {
-                float val = src[i * cn + j * cn + c];
-                Cv32suf ieee754;
-                ieee754.f = val;
-                bool isnan = (ieee754.u & 0x7fffffff) >  0x7f800000;
-                bool isinf = (ieee754.u & 0x7fffffff) == 0x7f800000;
-                bool v = (maskNans && isnan) || (maskInfs && isinf);
-                if (maskAll)
-                    nan = nan && v;
-                else
-                    nan = nan || v;
-            }
-            nan = invert ? !nan : nan;
-            dst[i + j] = nan ? 255 : 0;
-        }
-    }
-
-    return i;
-}
-
-//TODO: make true SIMD code instead
-template <>
-int nanMaskSIMD_<double, 3>(const double *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert)
-{
-    const int cn = 3;
-
-    const int vsize = v_float64::nlanes;
-
-    int i = 0;
-    for(; i <= (int)total - vsize; i += vsize )
-    {
-        for (int j = 0; j < vsize; j++)
-        {
-            bool nan = maskAll ? true : false;
-            for (int c = 0; c < cn; c++)
-            {
-                double val = src[i * cn + j * cn + c];
-
-                Cv64suf ieee754;
-                ieee754.f = val;
-                bool isnan = (ieee754.u & 0x7fffffffffffffff) >  0x7ff0000000000000;
-                bool isinf = (ieee754.u & 0x7fffffffffffffff) == 0x7ff0000000000000;
-                bool v = (maskNans && isnan) || (maskInfs && isinf);
-                if (maskAll)
-                    nan = nan && v;
-                else
-                    nan = nan || v;
-            }
-            nan = invert ? !nan : nan;
-            dst[i + j] = nan ? 255 : 0;
-        }
-    }
-
-    return i;
-}
-
-//TODO: make true SIMD code instead
-template <>
-int nanMaskSIMD_<float, 4>(const float *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert)
-{
-    const int cn = 4;
-
-    const int vsize = v_float32::nlanes;
-    int i = 0;
-    for(; i <= (int)total - vsize; i += vsize )
-    {
-        for (int j = 0; j < vsize; j++)
-        {
-            bool nan = maskAll ? true : false;
-            for (int c = 0; c < cn; c++)
-            {
-                float val = src[i * cn + j * cn + c];
-                Cv32suf ieee754;
-                ieee754.f = val;
-                bool isnan = (ieee754.u & 0x7fffffff) > 0x7f800000;
-                bool isinf = (ieee754.u & 0x7fffffff) == 0x7f800000;
-                bool v = (maskNans && isnan) || (maskInfs && isinf);
-                if (maskAll)
-                    nan = nan && v;
-                else
-                    nan = nan || v;
-            }
-            nan = invert ? !nan : nan;
-            dst[i + j] = nan ? 255 : 0;
-        }
-    }
-
-    return i;
-}
-
-//TODO: make true SIMD code instead
-template <>
-int nanMaskSIMD_<double, 4>(const double *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert)
-{
-    const int cn = 4;
-
-    const int vsize = v_float64::nlanes;
-
-    int i = 0;
-    for(; i <= (int)total - vsize; i += vsize )
-    {
-        for (int j = 0; j < vsize; j++)
-        {
-            bool nan = maskAll ? true : false;
-            for (int c = 0; c < cn; c++)
-            {
-                double val = src[i * cn + j * cn + c];
-                Cv64suf ieee754;
-                ieee754.f = val;
-                bool isnan = (ieee754.u & 0x7fffffffffffffff) >  0x7ff0000000000000;
-                bool isinf = (ieee754.u & 0x7fffffffffffffff) == 0x7ff0000000000000;
-                bool v = (maskNans && isnan) || (maskInfs && isinf);
-                if (maskAll)
-                    nan = nan && v;
-                else
-                    nan = nan || v;
-            }
-            nan = invert ? !nan : nan;
-            dst[i + j] = nan ? 255 : 0;
-        }
-    }
-
-    return i;
-}
 #endif
 
 
