@@ -554,6 +554,7 @@ enum LocalOptimMethod {LOCAL_OPTIM_NULL, LOCAL_OPTIM_INNER_LO, LOCAL_OPTIM_INNER
         LOCAL_OPTIM_GC, LOCAL_OPTIM_SIGMA};
 enum ScoreMethod {SCORE_METHOD_RANSAC, SCORE_METHOD_MSAC, SCORE_METHOD_MAGSAC, SCORE_METHOD_LMEDS};
 enum NeighborSearchMethod { NEIGH_FLANN_KNN, NEIGH_GRID, NEIGH_FLANN_RADIUS };
+enum PolishingMethod { NonePolisher, LSQPolisher, MAGSAC, CovPolisher };
 
 struct CV_EXPORTS_W_SIMPLE UsacParams
 { // in alphabetical order
@@ -569,6 +570,8 @@ struct CV_EXPORTS_W_SIMPLE UsacParams
     CV_PROP_RW SamplingMethod sampler;
     CV_PROP_RW ScoreMethod score;
     CV_PROP_RW double threshold;
+    CV_PROP_RW PolishingMethod final_polisher;
+    CV_PROP_RW int final_polisher_iterations;
 };
 
 /** @brief Converts a rotation matrix to a rotation vector or vice versa.

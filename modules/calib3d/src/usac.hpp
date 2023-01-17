@@ -8,7 +8,6 @@
 namespace cv { namespace usac {
 enum EstimationMethod { Homography, Fundamental, Fundamental8, Essential, Affine, P3P, P6P};
 enum VerificationMethod { NullVerifier, SprtVerifier, ASPRT };
-enum PolishingMethod { NonePolisher, LSQPolisher, MAGSAC, CovPolisher };
 enum ErrorMetric {DIST_TO_LINE, SAMPSON_ERR, SGD_ERR, SYMM_REPR_ERR, FORW_REPR_ERR, RERPOJ};
 enum MethodSolver { GEM_SOLVER, SVD_SOLVER };
 enum MODEL_CONFIDENCE {RANDOM, NON_RANDOM, UNKNOWN};
