@@ -1803,8 +1803,7 @@ static void nanMask_(const _Tp *src, uchar *dst, size_t total, bool maskNans, bo
     size_t i = 0;
 
 #if CV_SIMD
-    //DEBUG
-    //i = nanMaskSIMD_<_Tp, cn>(src, dst, total, maskNans, maskInfs, maskAll, invert);
+    i = nanMaskSIMD_<_Tp, cn>(src, dst, total, maskNans, maskInfs, maskAll, invert);
 #endif
 
     for(; i < total; i++ )
