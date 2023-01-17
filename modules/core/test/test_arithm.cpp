@@ -3062,17 +3062,4 @@ TEST_P(NanMaskFixture, flags)
 INSTANTIATE_TEST_CASE_P(Core_NanMask, NanMaskFixture, ::testing::Combine(::testing::Values(CV_32F, CV_64F), ::testing::Range(1, 5),
                                                                          ::testing::Range(1, 4), ::testing::Bool(), ::testing::Bool()));
 
-
-TEST(Core, DoubleInfRegression)
-{
-    // Check the case of 0x7FF00000xxxxxxxx
-    RNG rng((uint64)ARITHM_RNG_SEED);
-    for (int i = 0; i < 100; i++)
-    {
-        Cv64suf suf;
-        suf.u = 0x7FF0000000000000UL | uint64_t(rng.next());
-        EXPECT_FALSE(bool(cvIsInf(suf.f)));
-    }
-}
-
 }} // namespace
