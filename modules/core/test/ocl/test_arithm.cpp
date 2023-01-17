@@ -1892,7 +1892,7 @@ OCL_TEST_P(NaNmask, Mat)
         // DEBUG
         if (ftype == CV_64F && maskInfs && !maskNans)
         {
-            Mat rdata = src_roi.reshape(1, 1);
+            Mat rdata = src_roi.clone().reshape(1, 1);
             for (int i = 0; i < rdata.cols; i++)
             {
                 uint64_t v;
