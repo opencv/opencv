@@ -1889,6 +1889,23 @@ OCL_TEST_P(NaNmask, Mat)
         OCL_OFF(cv::nanMask(src_roi, mask_roi, flags));
         OCL_ON(cv::nanMask(usrc_roi, umask_roi, flags));
 
+        // DEBUG
+        if (ftype == CV_64F && maskInfs && !maskNans)
+        {
+            Mat rdata = src_roi.reshape(1, 1);
+            for (int i = 0; i < rdata.cols; i++)
+            {
+                uint64_t v;
+                Cv64suf u;
+                u.f = rdata.at<double>(i);
+                v = u.u;
+                std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << v << " ";
+            }
+            std::cout << std::endl;
+            std::cout << mask_roi << std::endl
+                      << umask_roi.getMat(ACCESS_READ) << std::endl;
+        }
+
         Near();
     }
 }

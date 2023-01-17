@@ -3054,6 +3054,22 @@ TEST_P(NanMaskFixture, flags)
     cv::nanMask(data, nans, f);
     reference::nanMask(data, gtNans, maskNans, maskInfs, maskAll, invert);
 
+    //DEBUG
+    if (depth == CV_64F && maskInfs && !maskNans)
+    {
+        Mat rdata = data.reshape(1, 1);
+        for (int i = 0; i < rdata.cols; i++)
+        {
+            uint64_t v;
+            Cv64suf u;
+            u.f = rdata.at<double>(i);
+            v = u.u;
+            std::cout << "0x" << std::hex << std::setw(16) << std::setfill('0') << v << " ";
+        }
+        std::cout << std::endl;
+        std::cout << nans << std::endl << gtNans << std::endl;
+    }
+
     EXPECT_MAT_NEAR(nans, gtNans, 0);
 }
 
