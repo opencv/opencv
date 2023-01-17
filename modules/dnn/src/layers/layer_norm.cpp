@@ -34,8 +34,8 @@ public:
     {
         // check shapes of weight and bias if existed
         // inputs >= 2 (X and Weight are requested, bias is optional)
-        CV_CheckGE(inputs.size(), 2ull, "LayerNorm: require at least two inputs (x, weight)");
-        CV_CheckLE(inputs.size(), 3ull, "LayerNorm: have at most three inputs (x, weight, bias)");
+        CV_CheckGE(inputs.size(), (size_t)2, "LayerNorm: require at least two inputs (x, weight)");
+        CV_CheckLE(inputs.size(), (size_t)3, "LayerNorm: have at most three inputs (x, weight, bias)");
 
         auto x_shape = inputs[0];
         int x_ndims = static_cast<int>(x_shape.size());
@@ -76,24 +76,31 @@ public:
 
         LayerNormInvoker() : src(0), scale(0), bias(0), dst(0), epsilon(0.f), nstripes(0), total(0), stripeSize(0), normSize(0) { }
 
-        static void run(const Mat* src, const Mat* scale, const Mat* b, Mat* dst, int axis, float epsilon, int nstripes)
+        static void run(const Mat& src, const Mat& scale, const Mat& b, Mat& dst, int axis, float epsilon, int nstripes)
         {
-            CV_Assert(src->isContinuous());
-            CV_Assert(dst->isContinuous());
-            CV_CheckType(src->type(), CV_32F, "DNN/LayerNorm: only support float32");
-            CV_Assert(src->type() == dst->type());
+            CV_Assert(src.isContinuous());
+            CV_Assert(dst.isContinuous());
+            CV_CheckType(src.type(), CV_32F, "DNN/LayerNorm: only support float32");
+            CV_Assert(src.type() == dst.type());
 
             LayerNormInvoker p;
 
-            p.src = src;
-            p.scale = scale;
-            p.bias = b;
-            p.dst = dst;
+            p.src = &src;
+            p.scale = &scale;
+            if (&scale == &b)
+            {
+                p.bias = nullptr;
+            }
+            else
+            {
+                p.bias = &b;
+            }
+            p.dst = &dst;
 
             p.epsilon = epsilon;
             p.nstripes = nstripes;
 
-            auto dstShape = shape(*dst);
+            auto dstShape = shape(dst);
             p.total = std::accumulate(dstShape.begin(), dstShape.begin() + axis, 1, std::multiplies<int>());
             p.stripeSize = (p.total + nstripes - 1) / nstripes;
             p.normSize = std::accumulate(dstShape.begin() + axis, dstShape.end(), 1, std::multiplies<int>());
@@ -109,28 +116,44 @@ public:
             float *dstData = (float *)dst->data;
             const float *srcData = (const float *)src->data;
             const float *scaleData = (const float *)scale->data;
-            const float *biasData = nullptr;
             if (bias != nullptr)
-                biasData = (const float *)bias->data;
-
-            for (int ofs = stripeStart; ofs < stripeEnd; ++ofs)
             {
-                const float* first = srcData + ofs * normSize;
-                float* dst_first = dstData + ofs * normSize;
+                const float *biasData = (const float *)bias->data;
+                for (int ofs = stripeStart; ofs < stripeEnd; ++ofs)
+                {
+                    const float* first = srcData + ofs * normSize;
+                    float* dst_first = dstData + ofs * normSize;
 
-                float mean = 0;
-                float mean_square = 0;
-                for (int h = 0; h < normSize; ++h) {
-                    mean += first[h];
-                    mean_square += first[h] * first[h];
-                }
-                mean /= normSize;
-                mean_square = std::sqrt(mean_square / normSize - mean * mean + epsilon);
-                for (int h = 0; h < normSize; ++h) {
-                    if (biasData == nullptr) {
-                        dst_first[h] = (first[h] - mean) / mean_square * scaleData[h];
-                    } else {
+                    float mean = 0;
+                    float mean_square = 0;
+                    for (int h = 0; h < normSize; ++h){
+                        mean += first[h];
+                        mean_square += first[h] * first[h];
+                    }
+                    mean /= normSize;
+                    mean_square = std::sqrt(mean_square / normSize - mean * mean + epsilon);
+                    for (int h = 0; h < normSize; ++h) {
                         dst_first[h] = (first[h] - mean) / mean_square * scaleData[h] + biasData[h];
+                    }
+                }
+            }
+            else
+            {
+                for (int ofs = stripeStart; ofs < stripeEnd; ++ofs)
+                {
+                    const float* first = srcData + ofs * normSize;
+                    float* dst_first = dstData + ofs * normSize;
+
+                    float mean = 0;
+                    float mean_square = 0;
+                    for (int h = 0; h < normSize; ++h) {
+                        mean += first[h];
+                        mean_square += first[h] * first[h];
+                    }
+                    mean /= normSize;
+                    mean_square = std::sqrt(mean_square / normSize - mean * mean + epsilon);
+                    for (int h = 0; h < normSize; ++h) {
+                        dst_first[h] = (first[h] - mean) / mean_square * scaleData[h];
                     }
                 }
             }
@@ -155,11 +178,11 @@ public:
 
         if (hasBias)
         {
-            LayerNormInvoker::run(&inputs[0], &inputs[1], &inputs[2], &outputs[0], axis, epsilon, nstripes);
+            LayerNormInvoker::run(inputs[0], inputs[1], inputs[2], outputs[0], axis, epsilon, nstripes);
         }
         else
         {
-            LayerNormInvoker::run(&inputs[0], &inputs[1], nullptr, &outputs[0], axis, epsilon, nstripes);
+            LayerNormInvoker::run(inputs[0], inputs[1], inputs[1], outputs[0], axis, epsilon, nstripes);
         }
     }
 };
