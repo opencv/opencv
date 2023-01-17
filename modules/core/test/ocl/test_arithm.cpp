@@ -1707,13 +1707,9 @@ float randomNan(int seed)
 {
     uint32_t r = RNG(seed).next();
     Cv32suf v;
-    // sign
-    v.u = (r & 1) << 31;
-    // exp
-    v.u = v.u | 0x7f800000;
-    // mantissa (set a bit to avoid zero mantissa)
-    v.u = v.u | (r >> 9) | 64;
-
+    v.u = r;
+    // exp & set a bit to avoid zero mantissa
+    v.u = v.u | 0x7f800001;
     return v.f;
 }
 
@@ -1723,13 +1719,9 @@ double randomNan(int seed)
     uint32_t r0 = RNG(seed).next();
     uint32_t r1 = RNG(seed).next();
     Cv64suf v;
-    // sign
-    v.u = uint64_t(r0 & 1) << 63;
-    // exp
-    v.u = v.u | 0x7ff0000000000000;
-    // mantissa (set a bit to avoid zero mantissa)
-    v.u = v.u | uint64_t(r0 << 20) | uint64_t(r1) | 64UL;
-
+    v.u = (uint64_t(r0) << 32) | uint64_t(r1);
+    // exp &set a bit to avoid zero mantissa
+    v.u = v.u | 0x7ff0000000000001;
     return v.f;
 }
 
