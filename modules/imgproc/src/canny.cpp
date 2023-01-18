@@ -835,9 +835,10 @@ void Canny( InputArray _src, OutputArray _dst,
 
     _dst.create(size, CV_8U);
 
+    // backward compatibility
+    const int CV_CANNY_L2_GRADIENT = (1 << 31);
     if (!L2gradient && (aperture_size & CV_CANNY_L2_GRADIENT) == CV_CANNY_L2_GRADIENT)
     {
-        // backward compatibility
         aperture_size &= ~CV_CANNY_L2_GRADIENT;
         L2gradient = true;
     }

@@ -128,7 +128,7 @@ void CV_DrawingTest_CPP::draw( Mat& img )
 
     p2 = Point(3,imgSize.height+1000);
     if( clipLine(Rect(0,0,imgSize.width,imgSize.height), p1, p2) && clipLine(imgSize, p1, p2) )
-        circle( img, Point(500,300), 50, cvColorToScalar(255,CV_8UC3), 5, 8, 1 ); // draw
+        circle( img, Point(500,300), 50, Scalar(255, 0, 0), 5, 8, 1 ); // draw
 
     p1 = Point(imgSize.width,1), p2 = Point(imgSize.width,3);
     if( clipLine(Rect(0,0,imgSize.width,imgSize.height), p1, p2) && clipLine(imgSize, p1, p2) )
@@ -144,7 +144,7 @@ void CV_DrawingTest_CPP::draw( Mat& img )
     ellipse2Poly( Point(430,180), Size(100,150), 30, 0, 150, 20, polyline );
     pts = &polyline[0];
     n = (int)polyline.size();
-    polylines( img, &pts, &n, 1, false, Scalar(0,0,150), 4, CV_AA );
+    polylines( img, &pts, &n, 1, false, Scalar(0,0,150), 4, cv::LINE_AA );
     n = 0;
     for( vector<Point>::const_iterator it = polyline.begin(); n < (int)polyline.size()-1; ++it, n++ )
     {
@@ -192,43 +192,43 @@ void CV_DrawingTest_CPP::draw( Mat& img )
 
     textSize = getTextSize( text2, FONT_HERSHEY_SIMPLEX, fontScale, thickness, &baseline);
     textOrg = Point(5,5)+Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_SIMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_SIMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     fontScale = 1;
     textSize = getTextSize( text2, FONT_HERSHEY_PLAIN, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_PLAIN, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_PLAIN, fontScale, color, thickness, cv::LINE_AA);
 
     fontScale = 0.5;
     textSize = getTextSize( text2, FONT_HERSHEY_DUPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_DUPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_DUPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize( text2, FONT_HERSHEY_COMPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize( text2, FONT_HERSHEY_TRIPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_TRIPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_TRIPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     fontScale = 1;
     textSize = getTextSize( text2, FONT_HERSHEY_COMPLEX_SMALL, fontScale, thickness, &baseline);
     textOrg += Point(0,180) + Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX_SMALL, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX_SMALL, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize( text2, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize( text2, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     dist = 15, fontScale = 0.5;
     textSize = getTextSize( text2, FONT_ITALIC, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_ITALIC, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_ITALIC, fontScale, color, thickness, cv::LINE_AA);
 }
 
 int CV_DrawingTest_CPP::checkLineIterator( Mat& img )
@@ -321,7 +321,7 @@ void CV_DrawingTest_Far::draw(Mat& img)
 
     p2 = Point(32768 + 3, imgSize.height + 1000);
     if (clipLine(Rect(32768 + 0, 0, imgSize.width, imgSize.height), p1, p2) && clipLine(imgSize, p1, p2))
-        circle(img, Point(65536 + 500, 300), 50, cvColorToScalar(255, CV_8UC3), 5, 8, 1); // draw
+        circle(img, Point(65536 + 500, 300), 50, Scalar(255, 0, 0), 5, 8, 1); // draw
 
     p1 = Point(imgSize.width, 1), p2 = Point(imgSize.width, 3);
     if (clipLine(Rect(32768 + 0, 0, imgSize.width, imgSize.height), p1, p2) && clipLine(imgSize, p1, p2))
@@ -337,7 +337,7 @@ void CV_DrawingTest_Far::draw(Mat& img)
     ellipse2Poly(Point(32768 + 430, 180), Size(100, 150), 30, 0, 150, 20, polyline);
     pts = &polyline[0];
     n = (int)polyline.size();
-    polylines(img, &pts, &n, 1, false, Scalar(0, 0, 150), 4, CV_AA);
+    polylines(img, &pts, &n, 1, false, Scalar(0, 0, 150), 4, cv::LINE_AA);
     n = 0;
     for (vector<Point>::const_iterator it = polyline.begin(); n < (int)polyline.size() - 1; ++it, n++)
     {
@@ -385,43 +385,43 @@ void CV_DrawingTest_Far::draw(Mat& img)
 
     textSize = getTextSize(text2, FONT_HERSHEY_SIMPLEX, fontScale, thickness, &baseline);
     textOrg = Point(32768 + 5, 5) + Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_SIMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_SIMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     fontScale = 1;
     textSize = getTextSize(text2, FONT_HERSHEY_PLAIN, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_PLAIN, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_PLAIN, fontScale, color, thickness, cv::LINE_AA);
 
     fontScale = 0.5;
     textSize = getTextSize(text2, FONT_HERSHEY_DUPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_DUPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_DUPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize(text2, FONT_HERSHEY_COMPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize(text2, FONT_HERSHEY_TRIPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_TRIPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_TRIPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     fontScale = 1;
     textSize = getTextSize(text2, FONT_HERSHEY_COMPLEX_SMALL, fontScale, thickness, &baseline);
     textOrg += Point(0, 180) + Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX_SMALL, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX_SMALL, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize(text2, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize(text2, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     dist = 15, fontScale = 0.5;
     textSize = getTextSize(text2, FONT_ITALIC, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_ITALIC, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_ITALIC, fontScale, color, thickness, cv::LINE_AA);
 
     img = img(Rect(32768, 0, 600, 400)).clone();
 }
@@ -517,7 +517,7 @@ protected:
                     Size textSize = getTextSize(*line, *font | italic, fontScale, thickness, &baseline);
                     Point textOrg(0, textSize.height + 2);
                     Mat img(textSize + Size(0, baseline), CV_8UC3, Scalar(255, 255, 255));
-                    putText(img, *line, textOrg, *font | italic, fontScale, color, thickness, CV_AA);
+                    putText(img, *line, textOrg, *font | italic, fontScale, color, thickness, cv::LINE_AA);
 
                     results.push_back(img);
                     bigSize.width = max(bigSize.width, img.size().width);

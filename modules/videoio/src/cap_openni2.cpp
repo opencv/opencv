@@ -1052,7 +1052,7 @@ IplImage* CvCapture_OpenNI2::retrieveGrayImage()
 
     cv::Mat rgbImage;
     getBGRImageFromMetaData(streamFrames[CV_COLOR_STREAM], rgbImage);
-    cv::cvtColor( rgbImage, outputMaps[CV_CAP_OPENNI_GRAY_IMAGE].mat, CV_BGR2GRAY );
+    cv::cvtColor( rgbImage, outputMaps[CV_CAP_OPENNI_GRAY_IMAGE].mat, cv::COLOR_BGR2GRAY );
 
     return outputMaps[CV_CAP_OPENNI_GRAY_IMAGE].getIplImagePtr();
 }

@@ -274,7 +274,7 @@ int CV_CamShiftTest::validate_test_results( int /*test_case_idx*/ )
         cvIsNaN(box.center.y) || cvIsInf(box.center.y) ||
         cvIsNaN(box.angle) || cvIsInf(box.angle) || box.angle < -180 || box.angle > 180 )
     {
-        ts->printf( cvtest::TS::LOG, "Invalid CvBox2D or CvConnectedComp was returned by cvCamShift\n" );
+        ts->printf( cvtest::TS::LOG, "Invalid RotatedRect was returned by CamShift\n" );
         code = cvtest::TS::FAIL_INVALID_OUTPUT;
         goto _exit_;
     }
@@ -317,19 +317,6 @@ _exit_:
 
     if( code < 0 )
     {
-#if 0 //defined _DEBUG && defined _WIN32
-        IplImage* dst = cvCreateImage( img_size, 8, 3 );
-        cvNamedWindow( "test", 1 );
-        cvCmpS( img, 0, img, CV_CMP_GT );
-        cvCvtColor( img, dst, CV_GRAY2BGR );
-        cvRectangle( dst, cvPoint(init_rect.x, init_rect.y),
-            cvPoint(init_rect.x + init_rect.width, init_rect.y + init_rect.height),
-            CV_RGB(255,0,0), 3, 8, 0 );
-        cvEllipseBox( dst, box, CV_RGB(0,255,0), 3, 8, 0 );
-        cvShowImage( "test", dst );
-        cvReleaseImage( &dst );
-        cvWaitKey();
-#endif
         ts->set_failed_test_info( code );
     }
     return code;
@@ -428,7 +415,7 @@ int CV_MeanShiftTest::validate_test_results( int /*test_case_idx*/ )
         rect.y + rect.height > box0.center.y + delta )
     {
         ts->printf( cvtest::TS::LOG,
-            "Incorrect CvConnectedComp ((%d,%d,%d,%d) is not within (%.1f,%.1f,%.1f,%.1f))\n",
+            "Incorrect ConnectedComp ((%d,%d,%d,%d) is not within (%.1f,%.1f,%.1f,%.1f))\n",
             rect.x, rect.y, rect.x + rect.width, rect.y + rect.height,
             box0.center.x - delta, box0.center.y - delta, box0.center.x + delta, box0.center.y + delta );
         code = cvtest::TS::FAIL_BAD_ACCURACY;
@@ -438,21 +425,6 @@ _exit_:
 
     if( code < 0 )
     {
-#if 0// defined _DEBUG && defined _WIN32
-        IplImage* dst = cvCreateImage( img_size, 8, 3 );
-        cvNamedWindow( "test", 1 );
-        cvCmpS( img, 0, img, CV_CMP_GT );
-        cvCvtColor( img, dst, CV_GRAY2BGR );
-        cvRectangle( dst, cvPoint(init_rect.x, init_rect.y),
-            cvPoint(init_rect.x + init_rect.width, init_rect.y + init_rect.height),
-            CV_RGB(255,0,0), 3, 8, 0 );
-        cvRectangle( dst, cvPoint(comp.rect.x, comp.rect.y),
-            cvPoint(comp.rect.x + comp.rect.width, comp.rect.y + comp.rect.height),
-            CV_RGB(0,255,0), 3, 8, 0 );
-        cvShowImage( "test", dst );
-        cvReleaseImage( &dst );
-        cvWaitKey();
-#endif
         ts->set_failed_test_info( code );
     }
     return code;
