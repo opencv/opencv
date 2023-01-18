@@ -105,6 +105,12 @@ Ptr<FastConv> initFastConv(
         conv->conv_type = _FX_CONV_TYPE_GENERIC;
 #endif
 
+#if CV_TRY_AVX2
+    // Disabel Winograd when CV_TRY_AVX2 is true, but conv->useAVX2 is false.
+    if (conv->conv_type == _FX_CONV_TYPE_WINOGRAD3X3 && !conv->useAVX2)
+        conv->conv_type = _FX_CONV_TYPE_GENERIC;
+#endif
+
     Mat weightsMat = _weightsMat.getMat();
     auto wShape = shape(weightsMat);
     const size_t wstep = weightsMat.step1();
@@ -257,7 +263,7 @@ Ptr<FastConv> initFastConv(
     // we can always read MR elements starting from any valid index
     {
         int k = 0, nbias = K + VEC_ALIGN;
-        conv->biasBuf.reserve(nbias);
+        conv->biasBuf.resize(nbias);
         float* biasBufPtr = conv->biasBuf.data();
         for(; k < K; k++)
             biasBufPtr[k] = srcBias ? srcBias[k] : 0.f;
@@ -369,8 +375,8 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
     if (conv->conv_type == _FX_CONV_TYPE_DEPTHWISE)
     {
         // Depthwise-Convolution layer should not be followed by Add layer.
-        CV_Assert(fusedAddMat.empty() && (conv_dim == CONV_1D || conv_dim == CONV_2D));
-        return runDepthwise(input, output, conv,actLayer.get(), reluslope);
+        CV_Assert((conv_dim == CONV_1D || conv_dim == CONV_2D));
+        return runDepthwise(input, output, conv, actLayer.get(), reluslope, fusedAdd);
     }
 
     MatShape inputShape = shape(input);
