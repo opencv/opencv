@@ -406,7 +406,7 @@ static double calibrateCameraInternal( const Mat& objectPoints,
 
     int nparams_nz = countNonZero(mask);
 
-    if (nparams_nz > 2 * total)
+    if (nparams_nz >= 2 * total)
         CV_Error_(Error::StsBadArg,
                   ("There should be less vars to optimize (having %d) than the number of residuals (%d = 2 per point)", nparams_nz, 2 * total));
 
@@ -587,19 +587,13 @@ static double calibrateCameraInternal( const Mat& objectPoints,
         // an explanation of that denominator correction can be found here:
         // R. Hartley, A. Zisserman, Multiple View Geometry in Computer Vision, 2004, section 5.1.3, page 134
         // see the discussion for more details: https://github.com/opencv/opencv/pull/22992
-        int nErrors = 2 * total - nparams_nz;
-        if (nErrors > 0)
-        {
-            double sigma2 = norm(allErrors, NORM_L2SQR) / nErrors;
+        double sigma2 = norm(allErrors, NORM_L2SQR) / (2 * total - nparams_nz);
         int j = 0;
         for ( int s = 0; s < nparams; s++ )
+        {
+            stdDevs.at<double>(s) = mask[s] ? std::sqrt(JtJinv.at<double>(j, j) * sigma2) : 0.0;
             if( mask[s] )
-            {
-                stdDevs.at<double>(s) = std::sqrt(JtJinv.at<double>(j,j) * sigma2);
                 j++;
-            }
-            else
-                stdDevs.at<double>(s) = 0.;
         }
     }
 
