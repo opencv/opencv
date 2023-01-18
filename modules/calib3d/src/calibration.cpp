@@ -1551,7 +1551,7 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
 
     Mat mask = cvarrToMat(solver.mask);
     int nparams_nz = countNonZero(mask);
-    if (nparams_nz > 2 * total)
+    if (nparams_nz >= 2 * total)
         CV_Error_(CV_StsBadArg,
                   ("There should be less vars to optimize (having %d) than the number of residuals (%d = 2 per point)", nparams_nz, 2 * total));
 
@@ -1666,19 +1666,14 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
                 // R. Hartley, A. Zisserman, Multiple View Geometry in Computer Vision, 2004, section 5.1.3, page 134
                 // see the discussion for more details: https://github.com/opencv/opencv/pull/22992
                 int nErrors = 2 * total - nparams_nz;
-                if (nErrors > 0)
+                double sigma2 = norm(allErrors, NORM_L2SQR) / nErrors;
+                Mat stdDevsM = cvarrToMat(stdDevs);
+                int j = 0;
+                for ( int s = 0; s < nparams; s++ )
                 {
-                    double sigma2 = norm(allErrors, NORM_L2SQR) / nErrors;
-                    Mat stdDevsM = cvarrToMat(stdDevs);
-                    int j = 0;
-                    for ( int s = 0; s < nparams; s++ )
-                        if( mask.data[s] )
-                        {
-                            stdDevsM.at<double>(s) = std::sqrt(JtJinv.at<double>(j,j) * sigma2);
-                            j++;
-                        }
-                        else
-                            stdDevsM.at<double>(s) = 0.;
+                    stdDevsM.at<double>(s) = mask.data[s] ? std::sqrt(JtJinv.at<double>(j,j) * sigma2) : 0.0;
+                    if( mask.data[s] )
+                        j++;
                 }
             }
             break;
