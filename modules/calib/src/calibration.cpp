@@ -1685,7 +1685,6 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
     distCoeffs1.copyTo(_distCoeffs1);
     distCoeffs2.copyTo(_distCoeffs2);
 
-    //TODO: this
     for(int i = 0; i < nimages; i++ )
     {
         if( rvecs_needed && rvecs_mat_vec )
