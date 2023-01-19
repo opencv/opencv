@@ -61,6 +61,7 @@ public:
         return false;
     }
 
+    template<bool hasBias>
     class LayerNormInvoker : public ParallelLoopBody
     {
     public:
@@ -87,13 +88,10 @@ public:
 
             p.src = &src;
             p.scale = &scale;
-            if (&scale == &b)
-            {
-                p.bias = nullptr;
-            }
-            else
-            {
+            if (hasBias) {
                 p.bias = &b;
+            } else {
+                p.bias = nullptr;
             }
             p.dst = &dst;
 
@@ -116,43 +114,28 @@ public:
             float *dstData = (float *)dst->data;
             const float *srcData = (const float *)src->data;
             const float *scaleData = (const float *)scale->data;
-            if (bias != nullptr)
-            {
-                const float *biasData = (const float *)bias->data;
-                for (int ofs = stripeStart; ofs < stripeEnd; ++ofs)
-                {
-                    const float* first = srcData + ofs * normSize;
-                    float* dst_first = dstData + ofs * normSize;
-
-                    float mean = 0;
-                    float mean_square = 0;
-                    for (int h = 0; h < normSize; ++h){
-                        mean += first[h];
-                        mean_square += first[h] * first[h];
-                    }
-                    mean /= normSize;
-                    mean_square = std::sqrt(mean_square / normSize - mean * mean + epsilon);
-                    for (int h = 0; h < normSize; ++h) {
-                        dst_first[h] = (first[h] - mean) / mean_square * scaleData[h] + biasData[h];
-                    }
-                }
+            const float *biasData = nullptr;
+            if (hasBias) {
+                biasData = (const float *)bias->data;
             }
-            else
+            
+            for (int ofs = stripeStart; ofs < stripeEnd; ++ofs)
             {
-                for (int ofs = stripeStart; ofs < stripeEnd; ++ofs)
-                {
-                    const float* first = srcData + ofs * normSize;
-                    float* dst_first = dstData + ofs * normSize;
+                const float* first = srcData + ofs * normSize;
+                float* dst_first = dstData + ofs * normSize;
 
-                    float mean = 0;
-                    float mean_square = 0;
-                    for (int h = 0; h < normSize; ++h) {
-                        mean += first[h];
-                        mean_square += first[h] * first[h];
-                    }
-                    mean /= normSize;
-                    mean_square = std::sqrt(mean_square / normSize - mean * mean + epsilon);
-                    for (int h = 0; h < normSize; ++h) {
+                float mean = 0;
+                float mean_square = 0;
+                for (int h = 0; h < normSize; ++h){
+                    mean += first[h];
+                    mean_square += first[h] * first[h];
+                }
+                mean /= normSize;
+                mean_square = std::sqrt(mean_square / normSize - mean * mean + epsilon);
+                for (int h = 0; h < normSize; ++h) {
+                    if (hasBias) {
+                        dst_first[h] = (first[h] - mean) / mean_square * scaleData[h] + biasData[h];
+                    } else {
                         dst_first[h] = (first[h] - mean) / mean_square * scaleData[h];
                     }
                 }
@@ -176,13 +159,10 @@ public:
         outputs_arr.getMatVector(outputs);
         const int nstripes = getNumThreads();
 
-        if (hasBias)
-        {
-            LayerNormInvoker::run(inputs[0], inputs[1], inputs[2], outputs[0], axis, epsilon, nstripes);
-        }
-        else
-        {
-            LayerNormInvoker::run(inputs[0], inputs[1], inputs[1], outputs[0], axis, epsilon, nstripes);
+        if (hasBias) {
+            LayerNormInvoker<true>::run(inputs[0], inputs[1], inputs[2], outputs[0], axis, epsilon, nstripes);
+        } else {
+            LayerNormInvoker<false>::run(inputs[0], inputs[1], inputs[1], outputs[0], axis, epsilon, nstripes);
         }
     }
 };
