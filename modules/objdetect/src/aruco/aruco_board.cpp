@@ -229,7 +229,8 @@ struct GridBoardImpl : public Board::Impl {
         Board::Impl(_dictionary),
         size(_size),
         markerLength(_markerLength),
-        markerSeparation(_markerSeparation)
+        markerSeparation(_markerSeparation),
+        legacyPattern(false)
     {
         CV_Assert(size.width*size.height > 0 && markerLength > 0 && markerSeparation > 0);
     }
@@ -240,6 +241,8 @@ struct GridBoardImpl : public Board::Impl {
     float markerLength;
     // separation between markers in the grid
     float markerSeparation;
+    // set pre4.6.0 chessboard pattern behavior (even row count patterns have a white box in the upper left corner)
+    bool legacyPattern;
 };
 
 GridBoard::GridBoard() {}
@@ -297,7 +300,8 @@ struct CharucoBoardImpl : Board::Impl {
         Board::Impl(_dictionary),
         size(_size),
         squareLength(_squareLength),
-        markerLength(_markerLength)
+        markerLength(_markerLength),
+        legacyPattern(false)
     {}
 
     // chessboard size
@@ -309,6 +313,9 @@ struct CharucoBoardImpl : Board::Impl {
     // Physical marker side length (normally in meters)
     float markerLength;
 
+    // set pre4.6.0 chessboard pattern behavior (even row count patterns have a white box in the upper left corner)
+    bool legacyPattern;
+
     // vector of chessboard 3D corners precalculated
     std::vector<Point3f> chessboardCorners;
 
@@ -316,6 +323,7 @@ struct CharucoBoardImpl : Board::Impl {
     std::vector<std::vector<int> > nearestMarkerIdx;
     std::vector<std::vector<int> > nearestMarkerCorners;
 
+    void createCharucoBoard();
     void calcNearestMarkerCorners();
 
     void matchImagePoints(InputArrayOfArrays detectedCharuco, InputArray detectedIds,
@@ -324,8 +332,56 @@ struct CharucoBoardImpl : Board::Impl {
     void generateImage(Size outSize, OutputArray img, int marginSize, int borderBits) const override;
 };
 
+void CharucoBoardImpl::createCharucoBoard() {
+    float diffSquareMarkerLength = (squareLength - markerLength) / 2;
+    int totalMarkers = (int)(ids.size());
+    // calculate Board objPoints
+    int nextId = 0;
+    objPoints.clear();
+    for(int y = 0; y < size.height; y++) {
+        for(int x = 0; x < size.width; x++) {
+
+            if(legacyPattern && (size.height % 2 == 0)) { // legacy behavior only for even row count patterns
+                if((y + 1) % 2 == x % 2) continue; // black corner, no marker here
+            } else {
+                if(y % 2 == x % 2) continue; // black corner, no marker here
+            }
+
+            vector<Point3f> corners(4);
+            corners[0] = Point3f(x * squareLength + diffSquareMarkerLength,
+                                 y * squareLength + diffSquareMarkerLength, 0);
+            corners[1] = corners[0] + Point3f(markerLength, 0, 0);
+            corners[2] = corners[0] + Point3f(markerLength, markerLength, 0);
+            corners[3] = corners[0] + Point3f(0, markerLength, 0);
+            objPoints.push_back(corners);
+            // first ids in dictionary
+            if (totalMarkers == 0)
+                ids.push_back(nextId);
+            nextId++;
+        }
+    }
+    if (totalMarkers > 0 && nextId != totalMarkers)
+        CV_Error(cv::Error::StsBadSize, "Size of ids must be equal to the number of markers: "+std::to_string(nextId));
+
+    // now fill chessboardCorners
+    chessboardCorners.clear();
+    for(int y = 0; y < size.height - 1; y++) {
+        for(int x = 0; x < size.width - 1; x++) {
+            Point3f corner;
+            corner.x = (x + 1) * squareLength;
+            corner.y = (y + 1) * squareLength;
+            corner.z = 0;
+            chessboardCorners.push_back(corner);
+        }
+    }
+    rightBottomBorder = Point3f(size.width * squareLength, size.height * squareLength, 0.f);
+    calcNearestMarkerCorners();
+}
+
 /** Fill nearestMarkerIdx and nearestMarkerCorners arrays */
 void CharucoBoardImpl::calcNearestMarkerCorners() {
+    nearestMarkerIdx.clear();
+    nearestMarkerCorners.clear();
     nearestMarkerIdx.resize(chessboardCorners.size());
     nearestMarkerCorners.resize(chessboardCorners.size());
     unsigned int nMarkers = (unsigned int)objPoints.size();
@@ -459,7 +515,11 @@ void CharucoBoardImpl::generateImage(Size outSize, OutputArray img, int marginSi
     for(int y = 0; y < size.height; y++) {
         for(int x = 0; x < size.width; x++) {
 
-            if(y % 2 != x % 2) continue; // white corner, dont do anything
+            if(legacyPattern && (size.height % 2 == 0)) { // legacy behavior only for even row count patterns
+                if((y + 1) % 2 != x % 2) continue; // white corner, dont do anything
+            } else {
+                if(y % 2 != x % 2) continue; // white corner, dont do anything
+            }
 
             double startX, startY;
             startX = squareSizePixels * double(x);
@@ -481,47 +541,9 @@ CharucoBoard::CharucoBoard(const Size& size, float squareLength, float markerLen
 
     CV_Assert(size.width > 1 && size.height > 1 && markerLength > 0 && squareLength > markerLength);
 
-    vector<vector<Point3f> > objPoints;
-    float diffSquareMarkerLength = (squareLength - markerLength) / 2;
-    int totalMarkers = (int)(ids.total());
     ids.copyTo(impl->ids);
-    // calculate Board objPoints
-    int nextId = 0;
-    for(int y = 0; y < size.height; y++) {
-        for(int x = 0; x < size.width; x++) {
 
-            if(y % 2 == x % 2) continue; // black corner, no marker here
-
-            vector<Point3f> corners(4);
-            corners[0] = Point3f(x * squareLength + diffSquareMarkerLength,
-                                 y * squareLength + diffSquareMarkerLength, 0);
-            corners[1] = corners[0] + Point3f(markerLength, 0, 0);
-            corners[2] = corners[0] + Point3f(markerLength, markerLength, 0);
-            corners[3] = corners[0] + Point3f(0, markerLength, 0);
-            objPoints.push_back(corners);
-            // first ids in dictionary
-            if (totalMarkers == 0)
-                impl->ids.push_back(nextId);
-            nextId++;
-        }
-    }
-    if (totalMarkers > 0 && nextId != totalMarkers)
-        CV_Error(cv::Error::StsBadSize, "Size of ids must be equal to the number of markers: "+std::to_string(nextId));
-    impl->objPoints = objPoints;
-
-    // now fill chessboardCorners
-    std::vector<Point3f> & c = static_pointer_cast<CharucoBoardImpl>(impl)->chessboardCorners;
-    for(int y = 0; y < size.height - 1; y++) {
-        for(int x = 0; x < size.width - 1; x++) {
-            Point3f corner;
-            corner.x = (x + 1) * squareLength;
-            corner.y = (y + 1) * squareLength;
-            corner.z = 0;
-            c.push_back(corner);
-        }
-    }
-    impl->rightBottomBorder = Point3f(size.width * squareLength, size.height * squareLength, 0.f);
-    static_pointer_cast<CharucoBoardImpl>(impl)->calcNearestMarkerCorners();
+    static_pointer_cast<CharucoBoardImpl>(impl)->createCharucoBoard();
 }
 
 Size CharucoBoard::getChessboardSize() const {
@@ -537,6 +559,20 @@ float CharucoBoard::getSquareLength() const {
 float CharucoBoard::getMarkerLength() const {
     CV_Assert(impl);
     return static_pointer_cast<CharucoBoardImpl>(impl)->markerLength;
+}
+
+void CharucoBoard::setLegacyPattern(bool legacyPattern) {
+    CV_Assert(impl);
+    if (static_pointer_cast<CharucoBoardImpl>(impl)->legacyPattern != legacyPattern)
+    {
+        static_pointer_cast<CharucoBoardImpl>(impl)->legacyPattern = legacyPattern;
+        static_pointer_cast<CharucoBoardImpl>(impl)->createCharucoBoard();
+    }
+}
+
+bool CharucoBoard::getLegacyPattern() const {
+    CV_Assert(impl);
+    return static_pointer_cast<CharucoBoardImpl>(impl)->legacyPattern;
 }
 
 bool CharucoBoard::checkCharucoCornersCollinear(InputArray charucoIds) const {

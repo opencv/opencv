@@ -146,6 +146,18 @@ public:
     CV_WRAP CharucoBoard(const Size& size, float squareLength, float markerLength,
                          const Dictionary &dictionary, InputArray ids = noArray());
 
+    /** @brief set legacy chessboard pattern.
+     *
+     * Legacy setting creates chessboard patterns starting with a white box in the upper left corner
+     * if there is an even row count of chessboard boxes, otherwise it starts with a black box.
+     * This setting ensures compatibility to patterns created with OpenCV versions prior OpenCV 4.6.0.
+     * See https://github.com/opencv/opencv/issues/23152.
+     *
+     * Default value: false.
+     */
+    CV_WRAP void setLegacyPattern(bool legacyPattern);
+    CV_WRAP bool getLegacyPattern() const;
+
     CV_WRAP Size getChessboardSize() const;
     CV_WRAP float getSquareLength() const;
     CV_WRAP float getMarkerLength() const;
