@@ -1139,12 +1139,8 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
         {
             rvecs.create(3, 1, CV_64F, i, true);
             tvecs.create(3, 1, CV_64F, i, true);
-            //TODO: check this
-            // rvecs1[i].copyTo(rvecs.getMat(i));
-            // tvecs1[i].copyTo(tvecs.getMat(i));
-            memcpy(rvecs.getMat(i).ptr(), rvecs1[i].val, sizeof(Vec3d));
-            memcpy(tvecs.getMat(i).ptr(), tvecs1[i].val, sizeof(Vec3d));
-
+            rvecs1[i].copyTo(rvecs.getMat(i));
+            tvecs1[i].copyTo(tvecs.getMat(i));
         }
     }
     else
