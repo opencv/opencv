@@ -680,25 +680,23 @@ static double stereoCalibrateImpl(
     _objectPoints.convertTo(objectPoints, CV_64F);
     objectPoints = objectPoints.reshape(3, 1);
 
-    //TODO: this
-        if( rvecs )
+    if( !rvecs.empty() )
     {
-        int cn = CV_MAT_CN(rvecs->type);
-        if( !CV_IS_MAT(rvecs) ||
-            (CV_MAT_DEPTH(rvecs->type) != CV_32F && CV_MAT_DEPTH(rvecs->type) != CV_64F) ||
-            ((rvecs->rows != nimages || (rvecs->cols*cn != 3 && rvecs->cols*cn != 9)) &&
-            (rvecs->rows != 1 || rvecs->cols != nimages || cn != 3)) )
+        int cn = rvecs.channels();
+        int depth = rvecs.depth();
+        if( (depth != CV_32F && depth != CV_64F) ||
+            ((rvecs.rows != nimages || (rvecs.cols*cn != 3 && rvecs.cols*cn != 9)) &&
+             (rvecs.rows != 1 || rvecs.cols != nimages || cn != 3)) )
             CV_Error( CV_StsBadArg, "the output array of rotation vectors must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 or nx9 array, where n is the number of views" );
     }
-    //TODO: this
-    if( tvecs )
+    if( !tvecs.empty() )
     {
-        int cn = CV_MAT_CN(tvecs->type);
-        if( !CV_IS_MAT(tvecs) ||
-            (CV_MAT_DEPTH(tvecs->type) != CV_32F && CV_MAT_DEPTH(tvecs->type) != CV_64F) ||
-            ((tvecs->rows != nimages || tvecs->cols*cn != 3) &&
-            (tvecs->rows != 1 || tvecs->cols != nimages || cn != 3)) )
+        int cn = tvecs.channels();
+        int depth = tvecs.depth();
+        if( (depth != CV_32F && depth != CV_64F) ||
+            ((tvecs.rows != nimages || tvecs.cols*cn != 3) &&
+             (tvecs.rows != 1 || tvecs.cols != nimages || cn != 3)) )
             CV_Error( CV_StsBadArg, "the output array of translation vectors must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of views" );
     }
@@ -1147,38 +1145,31 @@ static double stereoCalibrateImpl(
         }
     }
 
-    //TODO: this
-        CvMat tmp = cvMat(3, 3, CV_64F);
-    for( i = 0; i < nimages; i++ )
+    Mat r1d = rvecs.empty() ? Mat() : rvecs.reshape(1, nimages);
+    Mat t1d = tvecs.empty() ? Mat() : tvecs.reshape(1, nimages);
+    for(int i = 0; i < nimages; i++ )
     {
-        CvMat src, dst;
+        int idx = (i + 1) * 6;
 
-        if( rvecs )
+        if( !rvecs.empty() )
         {
-            src = cvMat(3, 1, CV_64F, solver.param->data.db+(i+1)*6);
-            if( rvecs->rows == nimages && rvecs->cols*CV_MAT_CN(rvecs->type) == 9 )
+            Vec3d srcR(param[idx + 0], param[idx + 1], param[idx + 2]);
+            if( rvecs.rows * rvecs.cols * rvecs.channels() == nimages * 9 )
             {
-                dst = cvMat(3, 3, CV_MAT_DEPTH(rvecs->type),
-                    rvecs->data.ptr + rvecs->step*i);
-                cvRodrigues2( &src, &tmp );
-                cvConvert( &tmp, &dst );
+                Matx33d rod;
+                Rodrigues(srcR, rod);
+                rod.convertTo(r1d.row(i).reshape(1, 3), rvecs.depth());
             }
-            else
+            else if (rvecs.rows * rvecs.cols * rvecs.channels() == nimages * 3 )
             {
-                dst = cvMat(3, 1, CV_MAT_DEPTH(rvecs->type), rvecs->rows == 1 ?
-                    rvecs->data.ptr + i*CV_ELEM_SIZE(rvecs->type) :
-                    rvecs->data.ptr + rvecs->step*i);
-                cvConvert( &src, &dst );
+                srcR.convertTo(r1d.row(i), rvecs.depth());
             }
         }
-        if( tvecs )
+        if( !tvecs.empty() )
         {
-            src = cvMat(3, 1,CV_64F,solver.param->data.db+(i+1)*6+3);
-            dst = cvMat(3, 1, CV_MAT_DEPTH(tvecs->type), tvecs->rows == 1 ?
-                    tvecs->data.ptr + i*CV_ELEM_SIZE(tvecs->type) :
-                    tvecs->data.ptr + tvecs->step*i);
-            cvConvert( &src, &dst );
-         }
+            Vec3d srcT(param[idx + 3], param[idx + 4], param[idx + 5]);
+            srcT.convertTo(t1d.row(i), tvecs.depth());
+        }
     }
 
     return std::sqrt(reprojErr/(pointsTotal*2));
@@ -1678,8 +1669,6 @@ double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
         else
             tvecLM = _tvecs.getMat();
     }
-    //TODO: this
-    CvMat c_rvecLM = cvMat(rvecLM), c_tvecLM = cvMat(tvecLM);
 
     if( errors_needed )
     {
@@ -1689,7 +1678,7 @@ double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
 
     double err = stereoCalibrateImpl(objPt, imgPt, imgPt2, npoints, cameraMatrix1,
                                      distCoeffs1, cameraMatrix2, distCoeffs2, imageSize,
-                                     matR, matT, matE, matF, /*TODO: this: rvecs_needed ? &c_rvecLM : NULL, tvecs_needed ? &c_tvecLM : NULL,*/
+                                     matR, matT, matE, matF, rvecLM, tvecLM,
                                      matErr, flags, criteria);
     cameraMatrix1.copyTo(_cameraMatrix1);
     cameraMatrix2.copyTo(_cameraMatrix2);
@@ -1703,13 +1692,13 @@ double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
         {
             _rvecs.create(3, 1, CV_64F, i, true);
             Mat rv = _rvecs.getMat(i);
-            memcpy(rv.ptr(), rvecLM.ptr(i), 3*sizeof(double));
+            rvecLM.row(i).copyTo(rv);
         }
         if( tvecs_needed && tvecs_mat_vec )
         {
             _tvecs.create(3, 1, CV_64F, i, true);
             Mat tv = _tvecs.getMat(i);
-            memcpy(tv.ptr(), tvecLM.ptr(i), 3*sizeof(double));
+            tvecLM.row(i).copyTo(tv);
         }
     }
 
