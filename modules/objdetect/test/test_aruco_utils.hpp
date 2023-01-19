@@ -10,7 +10,7 @@ namespace opencv_test {
 static inline double deg2rad(double deg) { return deg * CV_PI / 180.; }
 
 vector<Point2f> getAxis(InputArray _cameraMatrix, InputArray _distCoeffs, InputArray _rvec, InputArray _tvec,
-                        float length, const float offset = 0.f);
+                        float length, const Point2f offset = Point2f(0, 0));
 
 vector<Point2f> getMarkerById(int id, const vector<vector<Point2f> >& corners, const vector<int>& ids);
 
