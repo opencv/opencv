@@ -1588,16 +1588,16 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
                            noArray(), noArray(), _perViewErrors, flags, criteria);
 }
 
-double cv::stereoCalibrate( InputArrayOfArrays _objectPoints,
-                            InputArrayOfArrays _imagePoints1,
-                            InputArrayOfArrays _imagePoints2,
-                            InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1,
-                            InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2,
-                            Size imageSize, InputOutputArray _Rmat, InputOutputArray _Tmat,
-                            OutputArray _Emat, OutputArray _Fmat,
-                            OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs,
-                            OutputArray _perViewErrors, int flags,
-                            TermCriteria criteria)
+double stereoCalibrate( InputArrayOfArrays _objectPoints,
+                        InputArrayOfArrays _imagePoints1,
+                        InputArrayOfArrays _imagePoints2,
+                        InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1,
+                        InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2,
+                        Size imageSize, InputOutputArray _Rmat, InputOutputArray _Tmat,
+                        OutputArray _Emat, OutputArray _Fmat,
+                        OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs,
+                        OutputArray _perViewErrors, int flags,
+                        TermCriteria criteria)
 {
     int rtype = CV_64F;
     Mat cameraMatrix1 = _cameraMatrix1.getMat();
