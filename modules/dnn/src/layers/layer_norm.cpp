@@ -118,7 +118,7 @@ public:
             if (hasBias) {
                 biasData = (const float *)bias->data;
             }
-            
+
             for (int ofs = stripeStart; ofs < stripeEnd; ++ofs)
             {
                 const float* first = srcData + ofs * normSize;
