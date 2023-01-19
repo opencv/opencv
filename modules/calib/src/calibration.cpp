@@ -1162,13 +1162,13 @@ static double stereoCalibrateImpl(
             }
             else if (rvecs.rows * rvecs.cols * rvecs.channels() == nimages * 3 )
             {
-                srcR.convertTo(r1d.row(i), rvecs.depth());
+                Mat(Mat(srcR).t()).convertTo(r1d.row(i), rvecs.depth());
             }
         }
         if( !tvecs.empty() )
         {
             Vec3d srcT(param[idx + 3], param[idx + 4], param[idx + 5]);
-            srcT.convertTo(t1d.row(i), tvecs.depth());
+            Mat(Mat(srcT).t()).convertTo(t1d.row(i), tvecs.depth());
         }
     }
 
