@@ -12,7 +12,7 @@ namespace opencv_test { namespace {
  * @brief Get a synthetic image of Chessboard in perspective
  */
 static Mat projectChessboard(int squaresX, int squaresY, float squareSize, Size imageSize,
-                             Mat cameraMatrix, Mat rvec, Mat tvec) {
+                             Mat cameraMatrix, Mat rvec, Mat tvec, bool legacyPattern) {
 
     Mat img(imageSize, CV_8UC1, Scalar::all(255));
     Mat distCoeffs(5, 1, CV_64FC1, Scalar::all(0));
@@ -20,7 +20,11 @@ static Mat projectChessboard(int squaresX, int squaresY, float squareSize, Size 
     for(int y = 0; y < squaresY; y++) {
         float startY = float(y) * squareSize;
         for(int x = 0; x < squaresX; x++) {
-            if(y % 2 != x % 2) continue;
+            if(legacyPattern && (squaresY % 2 == 0)) {
+                if((y + 1) % 2 != x % 2) continue;
+            } else {
+                if(y % 2 != x % 2) continue;
+            }
             float startX = float(x) * squareSize;
 
             vector< Point3f > squareCorners;
@@ -66,7 +70,7 @@ static Mat projectCharucoBoard(aruco::CharucoBoard& board, Mat cameraMatrix, dou
     // project chessboard
     Mat chessboard =
         projectChessboard(board.getChessboardSize().width, board.getChessboardSize().height,
-                          board.getSquareLength(), imageSize, cameraMatrix, rvec, tvec);
+                          board.getSquareLength(), imageSize, cameraMatrix, rvec, tvec, board.getLegacyPattern());
 
     for(unsigned int i = 0; i < chessboard.total(); i++) {
         if(chessboard.ptr< unsigned char >()[i] == 0) {
@@ -82,14 +86,13 @@ static Mat projectCharucoBoard(aruco::CharucoBoard& board, Mat cameraMatrix, dou
  */
 class CV_CharucoDetection : public cvtest::BaseTest {
     public:
-    CV_CharucoDetection();
+    CV_CharucoDetection(bool _legacyPattern) : legacyPattern(_legacyPattern) {}
 
     protected:
     void run(int);
+
+    bool legacyPattern;
 };
-
-
-CV_CharucoDetection::CV_CharucoDetection() {}
 
 
 void CV_CharucoDetection::run(int) {
@@ -100,6 +103,7 @@ void CV_CharucoDetection::run(int) {
     aruco::DetectorParameters params;
     params.minDistanceToBorder = 3;
     aruco::CharucoBoard board(Size(4, 4), 0.03f, 0.015f, aruco::getPredefinedDictionary(aruco::DICT_6X6_250));
+    board.setLegacyPattern(legacyPattern);
     aruco::CharucoDetector detector(board, aruco::CharucoParameters(), params);
 
     cameraMatrix.at<double>(0, 0) = cameraMatrix.at<double>(1, 1) = 600;
@@ -140,11 +144,7 @@ void CV_CharucoDetection::run(int) {
                     detector.detectBoard(img, charucoCorners, charucoIds, corners, ids);
                 }
 
-                if(ids.size() == 0) {
-                    ts->printf(cvtest::TS::LOG, "Marker detection failed");
-                    ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-                    return;
-                }
+                ASSERT_GT(ids.size(), std::vector< int >::size_type(0)) << "Marker detection failed";
 
                 // check results
                 vector< Point2f > projectedCharucoCorners;
@@ -161,20 +161,11 @@ void CV_CharucoDetection::run(int) {
 
                     int currentId = charucoIds[i];
 
-                    if(currentId >= (int)board.getChessboardCorners().size()) {
-                        ts->printf(cvtest::TS::LOG, "Invalid Charuco corner id");
-                        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-                        return;
-                    }
+                    ASSERT_LT(currentId, (int)board.getChessboardCorners().size()) << "Invalid Charuco corner id";
 
                     double repError = cv::norm(charucoCorners[i] - projectedCharucoCorners[currentId]);  // TODO cvtest
 
-
-                    if(repError > 5.) {
-                        ts->printf(cvtest::TS::LOG, "Charuco corner reprojection error too high");
-                        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-                        return;
-                    }
+                    ASSERT_LE(repError, 5.) << "Charuco corner reprojection error too high";
                 }
             }
         }
@@ -188,30 +179,31 @@ void CV_CharucoDetection::run(int) {
  */
 class CV_CharucoPoseEstimation : public cvtest::BaseTest {
     public:
-    CV_CharucoPoseEstimation();
+    CV_CharucoPoseEstimation(bool _legacyPattern) : legacyPattern(_legacyPattern) {}
 
     protected:
     void run(int);
+
+    bool legacyPattern;
 };
-
-
-CV_CharucoPoseEstimation::CV_CharucoPoseEstimation() {}
 
 
 void CV_CharucoPoseEstimation::run(int) {
     int iter = 0;
     Mat cameraMatrix = Mat::eye(3, 3, CV_64FC1);
-    Size imgSize(500, 500);
+    Size imgSize(750, 750);
     aruco::DetectorParameters params;
     params.minDistanceToBorder = 3;
     aruco::CharucoBoard board(Size(4, 4), 0.03f, 0.015f, aruco::getPredefinedDictionary(aruco::DICT_6X6_250));
+    board.setLegacyPattern(legacyPattern);
     aruco::CharucoDetector detector(board, aruco::CharucoParameters(), params);
 
-    cameraMatrix.at<double>(0, 0) = cameraMatrix.at< double >(1, 1) = 650;
+    cameraMatrix.at<double>(0, 0) = cameraMatrix.at< double >(1, 1) = 1000;
     cameraMatrix.at<double>(0, 2) = imgSize.width / 2;
     cameraMatrix.at<double>(1, 2) = imgSize.height / 2;
 
     Mat distCoeffs(5, 1, CV_64FC1, Scalar::all(0));
+
     // for different perspectives
     for(double distance : {0.2, 0.25}) {
         for(int yaw = -55; yaw <= 50; yaw += 25) {
@@ -252,12 +244,21 @@ void CV_CharucoPoseEstimation::run(int) {
 
 
                 // check axes
-                const float offset = (board.getSquareLength() - board.getMarkerLength()) / 2.f;
+                const float aruco_offset = (board.getSquareLength() - board.getMarkerLength()) / 2.f;
+                Point2f offset;
+                vector<Point2f> topLeft, bottomLeft;
+                if(legacyPattern) { // white box in upper left corner for even row count chessboard patterns
+                    offset = Point2f(aruco_offset + board.getSquareLength(), aruco_offset);
+                    topLeft = getMarkerById(board.getIds()[1], corners, ids);
+                    bottomLeft = getMarkerById(board.getIds()[2], corners, ids);
+                } else { // always a black box in the upper left corner
+                    offset = Point2f(aruco_offset, aruco_offset);
+                    topLeft = getMarkerById(board.getIds()[0], corners, ids);
+                    bottomLeft = getMarkerById(board.getIds()[2], corners, ids);
+                }
                 vector<Point2f> axes = getAxis(cameraMatrix, distCoeffs, rvec, tvec, board.getSquareLength(), offset);
-                vector<Point2f> topLeft = getMarkerById(board.getIds()[0], corners, ids);
                 ASSERT_NEAR(topLeft[0].x, axes[1].x, 3.f);
                 ASSERT_NEAR(topLeft[0].y, axes[1].y, 3.f);
-                vector<Point2f> bottomLeft = getMarkerById(board.getIds()[2], corners, ids);
                 ASSERT_NEAR(bottomLeft[0].x, axes[2].x, 3.f);
                 ASSERT_NEAR(bottomLeft[0].y, axes[2].y, 3.f);
 
@@ -271,20 +272,11 @@ void CV_CharucoPoseEstimation::run(int) {
 
                     int currentId = charucoIds[i];
 
-                    if(currentId >= (int)board.getChessboardCorners().size()) {
-                        ts->printf(cvtest::TS::LOG, "Invalid Charuco corner id");
-                        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-                        return;
-                    }
+                    ASSERT_LT(currentId, (int)board.getChessboardCorners().size()) << "Invalid Charuco corner id";
 
                     double repError = cv::norm(charucoCorners[i] - projectedCharucoCorners[currentId]);  // TODO cvtest
 
-
-                    if(repError > 5.) {
-                        ts->printf(cvtest::TS::LOG, "Charuco corner reprojection error too high");
-                        ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-                        return;
-                    }
+                    ASSERT_LE(repError, 5.) << "Charuco corner reprojection error too high";
                 }
             }
         }
@@ -490,12 +482,26 @@ void CV_CharucoBoardCreation::run(int)
 
 
 TEST(CV_CharucoDetection, accuracy) {
-    CV_CharucoDetection test;
+    const bool legacyPattern = false;
+    CV_CharucoDetection test(legacyPattern);
+    test.safe_run();
+}
+
+TEST(CV_CharucoDetection, accuracy_legacyPattern) {
+    const bool legacyPattern = true;
+    CV_CharucoDetection test(legacyPattern);
     test.safe_run();
 }
 
 TEST(CV_CharucoPoseEstimation, accuracy) {
-    CV_CharucoPoseEstimation test;
+    const bool legacyPattern = false;
+    CV_CharucoPoseEstimation test(legacyPattern);
+    test.safe_run();
+}
+
+TEST(CV_CharucoPoseEstimation, accuracy_legacyPattern) {
+    const bool legacyPattern = true;
+    CV_CharucoPoseEstimation test(legacyPattern);
     test.safe_run();
 }
 
