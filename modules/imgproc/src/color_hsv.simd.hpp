@@ -421,15 +421,10 @@ inline void HSV2RGB_simd(const v_float32& h, const v_float32& s, const v_float32
 
 // Compute the sector and the new H for HSV and HLS 2 RGB conversions.
 inline void ComputeSectorAndClampedH(float& h, int &sector) {
-    // Do not do the modulo on the cvFloor in case h is above the integer limit.
-    h = fmodf(h, 6.f);
-    // We need both conditions to clamp (e.g. for h == -1e-40).
-    if (h < 0) h += 6;
-    if (h >= 6) h -= 6;
-
-    CV_DbgAssert(0 <= h && h < 6);
     sector = cvFloor(h);
     h -= sector;
+    sector %= 6;
+    sector += sector < 0 ? 6 : 0;
 }
 
 
@@ -446,21 +441,16 @@ inline void HSV2RGB_native(float h, float s, float v,
         float tab[4];
         int sector;
         h *= hscale;
-        if (cvIsNaN(h)) {
-            // Avoid wrong sector computation.
-            b = g = r = h;
-        } else {
-            ComputeSectorAndClampedH(h, sector);
+        ComputeSectorAndClampedH(h, sector);
 
-            tab[0] = v;
-            tab[1] = v*(1.f - s);
-            tab[2] = v*(1.f - s*h);
-            tab[3] = v*(1.f - s*(1.f - h));
+        tab[0] = v;
+        tab[1] = v*(1.f - s);
+        tab[2] = v*(1.f - s*h);
+        tab[3] = v*(1.f - s*(1.f - h));
 
-            b = tab[sector_data[sector][0]];
-            g = tab[sector_data[sector][1]];
-            r = tab[sector_data[sector][2]];
-        }
+        b = tab[sector_data[sector][0]];
+        g = tab[sector_data[sector][1]];
+        r = tab[sector_data[sector][2]];
     }
 }
 
@@ -998,21 +988,16 @@ struct HLS2RGB_f
                 float p1 = 2*l - p2;
 
                 h *= hscale;
-                if (cvIsNaN(h)) {
-                    // Avoid wrong sector computation.
-                    b = g = r = h;
-                } else {
-                    ComputeSectorAndClampedH(h, sector);
+                ComputeSectorAndClampedH(h, sector);
 
-                    tab[0] = p2;
-                    tab[1] = p1;
-                    tab[2] = p1 + (p2 - p1)*(1-h);
-                    tab[3] = p1 + (p2 - p1)*h;
+                tab[0] = p2;
+                tab[1] = p1;
+                tab[2] = p1 + (p2 - p1)*(1-h);
+                tab[3] = p1 + (p2 - p1)*h;
 
-                    b = tab[sector_data[sector][0]];
-                    g = tab[sector_data[sector][1]];
-                    r = tab[sector_data[sector][2]];
-                }
+                b = tab[sector_data[sector][0]];
+                g = tab[sector_data[sector][1]];
+                r = tab[sector_data[sector][2]];
             }
 
             dst[bidx] = b;
