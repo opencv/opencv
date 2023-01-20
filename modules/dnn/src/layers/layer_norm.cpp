@@ -74,34 +74,39 @@ public:
         int total;
         int stripeSize;
         int normSize;
+        float invNormSize;
 
         LayerNormInvoker() : src(0), scale(0), bias(0), dst(0), epsilon(0.f), nstripes(0), total(0), stripeSize(0), normSize(0) { }
 
-        static void run(const Mat& src, const Mat& scale, const Mat& b, Mat& dst, int axis, float epsilon, int nstripes)
+        static void run(const Mat* src, const Mat* scale, const Mat* b, Mat* dst, int axis, float epsilon, int nstripes)
         {
-            CV_Assert(src.isContinuous());
-            CV_Assert(dst.isContinuous());
-            CV_CheckType(src.type(), CV_32F, "DNN/LayerNorm: only support float32");
-            CV_Assert(src.type() == dst.type());
+            CV_Assert(src != nullptr);
+            CV_Assert(scale != nullptr);
+            if (hasBias) {
+                CV_Assert(b != nullptr);
+            }
+            CV_Assert(dst != nullptr);
+
+            CV_Assert(src->isContinuous());
+            CV_Assert(dst->isContinuous());
+            CV_CheckType(src->type(), CV_32F, "DNN/LayerNorm: only support float32");
+            CV_Assert(src->type() == dst->type());
 
             LayerNormInvoker p;
 
-            p.src = &src;
-            p.scale = &scale;
-            if (hasBias) {
-                p.bias = &b;
-            } else {
-                p.bias = nullptr;
-            }
-            p.dst = &dst;
+            p.src = src;
+            p.scale = scale;
+            p.bias = b;
+            p.dst = dst;
 
             p.epsilon = epsilon;
             p.nstripes = nstripes;
 
-            auto dstShape = shape(dst);
+            auto dstShape = shape(*dst);
             p.total = std::accumulate(dstShape.begin(), dstShape.begin() + axis, 1, std::multiplies<int>());
             p.stripeSize = (p.total + nstripes - 1) / nstripes;
             p.normSize = std::accumulate(dstShape.begin() + axis, dstShape.end(), 1, std::multiplies<int>());
+            p.invNormSize = 1.0f / p.normSize;
 
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
@@ -122,21 +127,22 @@ public:
             for (int ofs = stripeStart; ofs < stripeEnd; ++ofs)
             {
                 const float* first = srcData + ofs * normSize;
-                float* dst_first = dstData + ofs * normSize;
+                float* dstFirst = dstData + ofs * normSize;
 
                 float mean = 0;
-                float mean_square = 0;
+                float meanSquare = 0;
                 for (int h = 0; h < normSize; ++h){
                     mean += first[h];
-                    mean_square += first[h] * first[h];
+                    meanSquare += first[h] * first[h];
                 }
-                mean /= normSize;
-                mean_square = std::sqrt(mean_square / normSize - mean * mean + epsilon);
+                mean *= invNormSize;
+                meanSquare = std::sqrt(std::max(0.f, meanSquare * invNormSize - mean * mean) + epsilon);
+                float invMeanSquare = 1.0f / meanSquare;
                 for (int h = 0; h < normSize; ++h) {
                     if (hasBias) {
-                        dst_first[h] = (first[h] - mean) / mean_square * scaleData[h] + biasData[h];
+                        dstFirst[h] = (first[h] - mean) * invMeanSquare * scaleData[h] + biasData[h];
                     } else {
-                        dst_first[h] = (first[h] - mean) / mean_square * scaleData[h];
+                        dstFirst[h] = (first[h] - mean) * invMeanSquare * scaleData[h];
                     }
                 }
             }
@@ -160,9 +166,9 @@ public:
         const int nstripes = getNumThreads();
 
         if (hasBias) {
-            LayerNormInvoker<true>::run(inputs[0], inputs[1], inputs[2], outputs[0], axis, epsilon, nstripes);
+            LayerNormInvoker<true>::run(&inputs[0], &inputs[1], &inputs[2], &outputs[0], axis, epsilon, nstripes);
         } else {
-            LayerNormInvoker<false>::run(inputs[0], inputs[1], inputs[1], outputs[0], axis, epsilon, nstripes);
+            LayerNormInvoker<false>::run(&inputs[0], &inputs[1], nullptr, &outputs[0], axis, epsilon, nstripes);
         }
     }
 };
