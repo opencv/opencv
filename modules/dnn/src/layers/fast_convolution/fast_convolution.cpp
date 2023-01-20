@@ -115,6 +115,8 @@ Ptr<FastConv> initFastConv(
     auto wShape = shape(weightsMat);
     const size_t wstep = weightsMat.step1();
 
+    conv->conv_type = _FX_CONV_TYPE_GENERIC;
+
     float *srcWeights = (float *)weightsMat.data;
     if (conv->conv_type == _FX_CONV_TYPE_DEPTHWISE || conv->conv_type == _FX_CONV_TYPE_DEPTHWISE_REMAIN)
     {

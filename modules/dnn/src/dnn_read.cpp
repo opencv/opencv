@@ -29,6 +29,10 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
             std::swap(model, config);
         return readNetFromTensorflow(model, config);
     }
+    if (framework == "tflite" || modelExt == "tflite")
+    {
+        return readNetFromTFLite(model);
+    }
     if (framework == "torch" || modelExt == "t7" || modelExt == "net" || configExt == "t7" || configExt == "net")
     {
         return readNetFromTorch(model.empty() ? config : model);

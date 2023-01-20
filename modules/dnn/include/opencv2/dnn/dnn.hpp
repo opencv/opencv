@@ -953,6 +953,12 @@ CV__DNN_INLINE_NS_BEGIN
     CV_EXPORTS Net readNetFromTensorflow(const char *bufferModel, size_t lenModel,
                                          const char *bufferConfig = NULL, size_t lenConfig = 0);
 
+    /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
+      * @param model  path to the .tflite file with binary flatbuffers description of the network architecture
+      * @returns Net object.
+      */
+    CV_EXPORTS_W Net readNetFromTFLite(const String &model);
+
     /**
      *  @brief Reads a network model stored in <a href="http://torch.ch">Torch7</a> framework's format.
      *  @param model    path to the file, dumped from Torch by using torch.save() function.

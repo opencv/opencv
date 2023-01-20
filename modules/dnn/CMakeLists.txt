@@ -181,6 +181,9 @@ if(NOT EMSCRIPTEN)
   endif()
 endif()
 
+find_package(flatbuffers REQUIRED)
+list(APPEND libs flatbuffers::flatbuffers)
+
 ocv_module_include_directories(${include_dirs})
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   ocv_append_source_files_cxx_compiler_options(fw_srcs "-Wno-suggest-override")  # GCC
