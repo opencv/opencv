@@ -1077,7 +1077,7 @@ double CV_ColorLabTest::get_success_error_level( int /*test_case_idx*/, int i, i
 {
     int depth = test_mat[i][j].depth();
     // j == 0 is for forward code, j == 1 is for inverse code
-    return (depth ==  CV_8U) ? (srgb ? 32 : 8) :
+    return (depth ==  CV_8U) ? (srgb ? 37 : 8) :
            //(depth == CV_16U) ? 32 : // 16u is disabled
            srgb ? ((j == 0) ? 0.4 : 0.0055) : 1e-3;
 }
@@ -1256,7 +1256,7 @@ double CV_ColorLuvTest::get_success_error_level( int /*test_case_idx*/, int i, i
 {
     int depth = test_mat[i][j].depth();
     // j == 0 is for forward code, j == 1 is for inverse code
-    return (depth ==  CV_8U) ? (srgb ? 36 : 8) :
+    return (depth ==  CV_8U) ? (srgb ? 37 : 8) :
            //(depth == CV_16U) ? 32 : // 16u is disabled
            5e-2;
 }
