@@ -1439,7 +1439,7 @@ void CV_StereoCalibrationTest::run( int )
             + CALIB_FIX_K4 + CALIB_FIX_K5 //+ CV_CALIB_FIX_K6
             );
 
-        rmsErrorFromStereoCalib /= nframes*npoints;
+        /* rmsErrorFromStereoCalib /= nframes*npoints; */
         if (rmsErrorFromStereoCalib > maxReprojErr)
         {
             ts->printf(cvtest::TS::LOG, "The average reprojection error is too big (=%g), testcase %d\n",
