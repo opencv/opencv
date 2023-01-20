@@ -34,8 +34,7 @@ public:
     {
         // check shapes of weight and bias if existed
         // inputs >= 2 (X and Weight are requested, bias is optional)
-        CV_CheckGE(inputs.size(), (size_t)2, "LayerNorm: require at least two inputs (x, weight)");
-        CV_CheckLE(inputs.size(), (size_t)3, "LayerNorm: have at most three inputs (x, weight, bias)");
+        CV_Check(inputs.size(), inputs.size() >= 2 && inputs.size() <= 3, "LayerNorm: require two (x, weight) or three (x, weight, bias) inputs");
 
         auto x_shape = inputs[0];
         int x_ndims = static_cast<int>(x_shape.size());
@@ -49,6 +48,7 @@ public:
             CV_CheckEQ(x_shape[axis+i], w_shape[i], "LayerNorm: weight dimensions does not match with input dimensions");
         if (hasBias)
         {
+            CV_CheckEQ(inputs.size(), (size_t)3, "");
             auto b_shape = inputs[2];
             CV_CheckEQ(w_shape.size(), b_shape.size(), "LayerNorm: shape of weight does not match with shape of bias");
             for (size_t i = 0; i < w_shape.size(); ++i)
@@ -65,64 +65,56 @@ public:
     class LayerNormInvoker : public ParallelLoopBody
     {
     public:
-        const Mat* src, *scale, *bias;
-        Mat *dst;
+        const Mat& src;
+        const float* scaleData;
+        const float* biasData;
+        Mat& dst;
 
         float epsilon;
-        int nstripes;
 
         int total;
-        int stripeSize;
         int normSize;
         float invNormSize;
 
-        LayerNormInvoker() : src(0), scale(0), bias(0), dst(0), epsilon(0.f), nstripes(0), total(0), stripeSize(0), normSize(0) { }
-
-        static void run(const Mat* src, const Mat* scale, const Mat* b, Mat* dst, int axis, float epsilon, int nstripes)
+        LayerNormInvoker(const Mat& src_, const Mat& scale, const Mat* b, Mat& dst_, int axis, float epsilon_)
+            : src(src_), scaleData(scale.ptr<float>()), biasData(nullptr), dst(dst_), epsilon(epsilon_)
         {
-            CV_Assert(src != nullptr);
-            CV_Assert(scale != nullptr);
-            if (hasBias) {
+            if (hasBias)
+            {
                 CV_Assert(b != nullptr);
+                CV_Assert(b->isContinuous());
+                biasData = (const float*)b->ptr<float>();
             }
-            CV_Assert(dst != nullptr);
 
-            CV_Assert(src->isContinuous());
-            CV_Assert(dst->isContinuous());
-            CV_CheckType(src->type(), CV_32F, "DNN/LayerNorm: only support float32");
-            CV_Assert(src->type() == dst->type());
+            auto dstShape = shape(dst);
+            total = std::accumulate(dstShape.begin(), dstShape.begin() + axis, 1, std::multiplies<int>());
+            normSize = std::accumulate(dstShape.begin() + axis, dstShape.end(), 1, std::multiplies<int>());
+            invNormSize = 1.0f / normSize;
+        }
 
-            LayerNormInvoker p;
+        static void run(const Mat& src, const Mat& scale, const Mat* b, Mat& dst, int axis, float epsilon)
+        {
+            CV_Assert(src.isContinuous());
+            CV_Assert(dst.isContinuous());
+            CV_CheckTypeEQ(src.type(), CV_32F, "DNN/LayerNorm: only support float32");
+            CV_CheckTypeEQ(src.type(), dst.type(), "");
+            CV_Assert(scale.isContinuous());
 
-            p.src = src;
-            p.scale = scale;
-            p.bias = b;
-            p.dst = dst;
+            CV_CheckGE(epsilon, 0.0f, "");
 
-            p.epsilon = epsilon;
-            p.nstripes = nstripes;
+            LayerNormInvoker p(src, scale, b, dst, axis, epsilon);
 
-            auto dstShape = shape(*dst);
-            p.total = std::accumulate(dstShape.begin(), dstShape.begin() + axis, 1, std::multiplies<int>());
-            p.stripeSize = (p.total + nstripes - 1) / nstripes;
-            p.normSize = std::accumulate(dstShape.begin() + axis, dstShape.end(), 1, std::multiplies<int>());
-            p.invNormSize = 1.0f / p.normSize;
-
-            parallel_for_(Range(0, nstripes), p, nstripes);
+            double nstripes = ((size_t)p.total * p.normSize) * (1 / 1024.0);
+            parallel_for_(Range(0, p.total), p, nstripes);
         }
 
         void operator()(const Range& r) const CV_OVERRIDE
         {
-            int stripeStart = r.start * stripeSize;
-            int stripeEnd = std::min(r.end * stripeSize, total);
+            int stripeStart = r.start;
+            int stripeEnd = r.end;
 
-            float *dstData = (float *)dst->data;
-            const float *srcData = (const float *)src->data;
-            const float *scaleData = (const float *)scale->data;
-            const float *biasData = nullptr;
-            if (hasBias) {
-                biasData = (const float *)bias->data;
-            }
+            const float* srcData = src.ptr<float>();
+            float* dstData = dst.ptr<float>();
 
             for (int ofs = stripeStart; ofs < stripeEnd; ++ofs)
             {
@@ -131,19 +123,22 @@ public:
 
                 float mean = 0;
                 float meanSquare = 0;
-                for (int h = 0; h < normSize; ++h){
-                    mean += first[h];
-                    meanSquare += first[h] * first[h];
+                for (int h = 0; h < normSize; ++h)
+                {
+                    float v = first[h];
+                    mean += v;
+                    meanSquare += v * v;
                 }
                 mean *= invNormSize;
                 meanSquare = std::sqrt(std::max(0.f, meanSquare * invNormSize - mean * mean) + epsilon);
                 float invMeanSquare = 1.0f / meanSquare;
-                for (int h = 0; h < normSize; ++h) {
+                for (int h = 0; h < normSize; ++h)
+                {
+                    float v = (first[h] - mean) * invMeanSquare * scaleData[h];
                     if (hasBias) {
-                        dstFirst[h] = (first[h] - mean) * invMeanSquare * scaleData[h] + biasData[h];
-                    } else {
-                        dstFirst[h] = (first[h] - mean) * invMeanSquare * scaleData[h];
+                        v = v + biasData[h];
                     }
+                    dstFirst[h] = v;
                 }
             }
         }
@@ -163,12 +158,11 @@ public:
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
-        const int nstripes = getNumThreads();
 
         if (hasBias) {
-            LayerNormInvoker<true>::run(&inputs[0], &inputs[1], &inputs[2], &outputs[0], axis, epsilon, nstripes);
+            LayerNormInvoker<true>::run(inputs[0], inputs[1], &inputs[2], outputs[0], axis, epsilon);
         } else {
-            LayerNormInvoker<false>::run(&inputs[0], &inputs[1], nullptr, &outputs[0], axis, epsilon, nstripes);
+            LayerNormInvoker<false>::run(inputs[0], inputs[1], nullptr, outputs[0], axis, epsilon);
         }
     }
 };
