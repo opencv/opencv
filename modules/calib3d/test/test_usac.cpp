@@ -416,7 +416,7 @@ TEST (usac_Affine2D, accuracy) {
 
 TEST(usac_testUsacParams, accuracy) {
     std::vector<int> gt_inliers;
-    const int pts_size = 1500;
+    const int pts_size = 150000;
     cv::RNG &rng = cv::theRNG();
     const cv::UsacParams usac_params = cv::UsacParams();
     cv::Mat pts1, pts2, K1, K2, mask, model, rvec, tvec, R;

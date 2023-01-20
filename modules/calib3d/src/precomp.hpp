@@ -53,6 +53,8 @@
 
 #include "opencv2/core/ocl.hpp"
 
+#include <set>
+
 #define GET_OPTIMIZED(func) (func)
 
 
