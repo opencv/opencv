@@ -138,7 +138,7 @@ int CV_DetectorTest::prepareData( FileStorage& _fs )
                 String filename;
                 it >> filename;
                 imageFilenames.push_back(filename);
-                Mat img = imread( dataPath+filename, 1 );
+                Mat img = imread( dataPath+filename, IMREAD_COLOR );
                 images.push_back( img );
             }
         }

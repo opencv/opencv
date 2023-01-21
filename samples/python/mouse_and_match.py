@@ -69,7 +69,7 @@ class App():
             if ext == "png" or ext == "jpg" or ext == "bmp" or ext == "tiff" or ext == "pbm":
                 print(infile)
 
-                img = cv.imread(infile,1)
+                img = cv.imread(infile, cv.IMREAD_COLOR)
                 if img is None:
                     continue
                 self.sel = (0,0,0,0)

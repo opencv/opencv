@@ -456,8 +456,8 @@ void CV_StereoMatchingTest::run(int)
         string datasetFullDirName = dataPath + DATASETS_DIR + datasetName + "/";
         Mat leftImg = imread(datasetFullDirName + LEFT_IMG_NAME);
         Mat rightImg = imread(datasetFullDirName + RIGHT_IMG_NAME);
-        Mat trueLeftDisp = imread(datasetFullDirName + TRUE_LEFT_DISP_NAME, 0);
-        Mat trueRightDisp = imread(datasetFullDirName + TRUE_RIGHT_DISP_NAME, 0);
+        Mat trueLeftDisp = imread(datasetFullDirName + TRUE_LEFT_DISP_NAME, IMREAD_GRAYSCALE);
+        Mat trueRightDisp = imread(datasetFullDirName + TRUE_RIGHT_DISP_NAME, IMREAD_GRAYSCALE);
         Rect calcROI;
 
         if( leftImg.empty() || rightImg.empty() || trueLeftDisp.empty() )
@@ -835,9 +835,9 @@ TEST_P(Calib3d_StereoBM_BufferBM, memAllocsTest)
     const int SADWindowSize = get<1>(get<1>(GetParam()));
 
     String path = cvtest::TS::ptr()->get_data_path() + "cv/stereomatching/datasets/teddy/";
-    Mat leftImg = imread(path + "im2.png", 0);
+    Mat leftImg = imread(path + "im2.png", IMREAD_GRAYSCALE);
     ASSERT_FALSE(leftImg.empty());
-    Mat rightImg = imread(path + "im6.png", 0);
+    Mat rightImg = imread(path + "im6.png", IMREAD_GRAYSCALE);
     ASSERT_FALSE(rightImg.empty());
     Mat leftDisp;
     {
@@ -923,9 +923,9 @@ TEST(Calib3d_StereoSGBM, regression) { CV_StereoSGBMTest test; test.safe_run(); 
 TEST(Calib3d_StereoSGBM_HH4, regression)
 {
     String path = cvtest::TS::ptr()->get_data_path() + "cv/stereomatching/datasets/teddy/";
-    Mat leftImg = imread(path + "im2.png", 0);
+    Mat leftImg = imread(path + "im2.png", IMREAD_GRAYSCALE);
     ASSERT_FALSE(leftImg.empty());
-    Mat rightImg = imread(path + "im6.png", 0);
+    Mat rightImg = imread(path + "im6.png", IMREAD_GRAYSCALE);
     ASSERT_FALSE(rightImg.empty());
     Mat testData = imread(path + "disp2_hh4.png",-1);
     ASSERT_FALSE(testData.empty());

@@ -974,6 +974,9 @@ TEST_P(Test_Int8_nets, opencv_face_detector)
 
 TEST_P(Test_Int8_nets, EfficientDet)
 {
+    if (cvtest::skipUnstableTests)
+        throw SkipTestException("Skip unstable test");  // detail: https://github.com/opencv/opencv/pull/23167
+
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
     if (target == DNN_TARGET_OPENCL_FP16 && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);

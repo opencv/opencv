@@ -63,7 +63,7 @@ Making a project
     int main( int argc, char** argv )
     {
       Mat image;
-      image = imread( argv[1], 1 );
+      image = imread( argv[1], IMREAD_COLOR );
 
       if( argc != 2 || !image.data )
         {

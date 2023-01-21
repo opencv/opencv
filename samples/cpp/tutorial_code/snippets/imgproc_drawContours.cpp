@@ -9,7 +9,7 @@ int main( int argc, char** argv )
     Mat src;
     // the first command-line parameter must be a filename of the binary
     // (black-n-white) image
-    if( argc != 2 || !(src=imread(argv[1], 0)).data)
+    if( argc != 2 || !(src=imread(argv[1], IMREAD_GRAYSCALE)).data)
         return -1;
 
     Mat dst = Mat::zeros(src.rows, src.cols, CV_8UC3);

@@ -82,7 +82,7 @@ TEST( Features2d_DescriptorExtractor, batch_ORB )
     for( i = 0; i < n; i++ )
     {
         string imgname = format("%s/img%d.png", path.c_str(), i+1);
-        Mat img = imread(imgname, 0);
+        Mat img = imread(imgname, IMREAD_GRAYSCALE);
         imgs.push_back(img);
     }
 
@@ -110,7 +110,7 @@ TEST( Features2d_DescriptorExtractor, batch_SIFT )
     for( i = 0; i < n; i++ )
     {
         string imgname = format("%s/img%d.png", path.c_str(), i+1);
-        Mat img = imread(imgname, 0);
+        Mat img = imread(imgname, IMREAD_GRAYSCALE);
         imgs.push_back(img);
     }
 

@@ -26,7 +26,6 @@ using namespace perf;
 
 int64 TestBase::timeLimitDefault = 0;
 unsigned int TestBase::iterationsLimitDefault = UINT_MAX;
-int64 TestBase::_timeadjustment = 0;
 
 // Item [0] will be considered the default implementation.
 static std::vector<std::string> available_impls;
@@ -1159,7 +1158,6 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
     iterationsLimitDefault = param_force_samples == 0 ? UINT_MAX : param_force_samples;
-    _timeadjustment = _calibrate();
 }
 
 void TestBase::RecordRunParameters()
@@ -1191,66 +1189,6 @@ enum PERF_STRATEGY TestBase::setModulePerformanceStrategy(enum PERF_STRATEGY str
 enum PERF_STRATEGY TestBase::getCurrentModulePerformanceStrategy()
 {
     return strategyForce == PERF_STRATEGY_DEFAULT ? strategyModule : strategyForce;
-}
-
-
-int64 TestBase::_calibrate()
-{
-    CV_TRACE_FUNCTION();
-    if (iterationsLimitDefault <= 1)
-        return 0;
-
-    class _helper : public ::perf::TestBase
-    {
-    public:
-        _helper() { testStrategy = PERF_STRATEGY_BASE; }
-        performance_metrics& getMetrics() { return calcMetrics(); }
-        virtual void TestBody() {}
-        virtual void PerfTestBody()
-        {
-            //the whole system warmup
-            SetUp();
-            cv::Mat a(2048, 2048, CV_32S, cv::Scalar(1));
-            cv::Mat b(2048, 2048, CV_32S, cv::Scalar(2));
-            declare.time(30);
-            double s = 0;
-            declare.iterations(20);
-            minIters = nIters = 20;
-            for(; next() && startTimer(); stopTimer())
-                s+=a.dot(b);
-            declare.time(s);
-
-            //self calibration
-            SetUp();
-            declare.iterations(1000);
-            minIters = nIters = 1000;
-            for(int iters = 0; next() && startTimer(); iters++, stopTimer()) { /*std::cout << iters << nIters << std::endl;*/ }
-        }
-    };
-
-    // Initialize ThreadPool
-    class _dummyParallel : public ParallelLoopBody
-    {
-    public:
-       void operator()(const cv::Range& range) const
-       {
-           // nothing
-           CV_UNUSED(range);
-       }
-    };
-    parallel_for_(cv::Range(0, 1000), _dummyParallel());
-
-    _timeadjustment = 0;
-    _helper h;
-    h.PerfTestBody();
-    double compensation = h.getMetrics().min;
-    if (getCurrentModulePerformanceStrategy() == PERF_STRATEGY_SIMPLE)
-    {
-        CV_Assert(compensation < 0.01 * cv::getTickFrequency());
-        compensation = 0.0f; // simple strategy doesn't require any compensation
-    }
-    LOGD("Time compensation is %.0f", compensation);
-    return (int64)compensation;
 }
 
 #ifdef _MSC_VER
@@ -1561,9 +1499,8 @@ void TestBase::stopTimer()
     if (lastTime == 0)
         ADD_FAILURE() << "  stopTimer() is called before startTimer()/next()";
     lastTime = time - lastTime;
+    CV_Assert(lastTime >= 0);  // TODO: CV_Check* for int64
     totalTime += lastTime;
-    lastTime -= _timeadjustment;
-    if (lastTime < 0) lastTime = 0;
     times.push_back(lastTime);
     lastTime = 0;
 
