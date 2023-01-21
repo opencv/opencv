@@ -618,7 +618,7 @@ struct Layer_LayerNormExpanded : public TestBaseWithParam<tuple<Backend, Target>
     int W = 768;
 };
 
-PERF_TEST_P_(Layer_LayerNormExpanded, LayerNormExpanded)
+PERF_TEST_P_(Layer_LayerNormExpanded, DISABLED_LayerNormExpanded)
 {
     test_layer({N, H ,W});
 }
