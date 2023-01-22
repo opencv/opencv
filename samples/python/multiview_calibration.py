@@ -231,7 +231,17 @@ def getDetectionMask(image_points):
             detection_mask[i,j] = int(len(image_points[i][j]) != 0)
     return detection_mask
 
-def calibrateFromPoints(pattern_points, image_points, image_sizes, is_fisheye, path_to_save, image_names=None, find_intrinsics_in_python=False, Ks=None, distortions=None):
+
+def calibrateFromPoints(
+        pattern_points,
+        image_points,
+        image_sizes,
+        is_fisheye,
+        image_names=None,
+        find_intrinsics_in_python=False,
+        Ks=None,
+        distortions=None
+    ):
     """
     pattern_points: NUM_POINTS x 3 (numpy array)
     image_points: NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 2
@@ -470,8 +480,11 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
         # plt.show()
         return cam_idx, frame_idx, img_size, np.array([], dtype=np.float32)
 
-def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, dist_m, winsize, points_json_file, debug_corners,
-        path_to_save, RESIZE_IMAGE, find_intrinsics_in_python, is_parallel_detection=True):
+
+def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
+                        dist_m, winsize, points_json_file, debug_corners,
+                        RESIZE_IMAGE, find_intrinsics_in_python,
+                        is_parallel_detection=True):
     """
     files_with_images: NUM_CAMERAS - path to file containing image names (NUM_FRAMES)
     grid_size: [width, height] -- size of grid pattern
@@ -571,7 +584,6 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, 
         image_points_cameras,
         image_sizes,
         is_fisheye,
-        path_to_save, # TODO: Remove unused
         all_images_names,
         find_intrinsics_in_python,
         # Ks=Ks,
@@ -579,7 +591,7 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye, 
     )
 
 
-def calibrateFromJSON(json_file, path_to_save, find_intrinsics_in_python):
+def calibrateFromJSON(json_file, find_intrinsics_in_python):
     assert os.path.exists(json_file)
     data = json.load(open(json_file, 'r'))
 
@@ -597,7 +609,6 @@ def calibrateFromJSON(json_file, path_to_save, find_intrinsics_in_python):
         data['image_sizes'],
         data['is_fisheye'],
         images_names,
-        path_to_save, # TODO: Remove unused
         find_intrinsics_in_python,
         Ks,
         distortions,
@@ -616,7 +627,7 @@ if __name__ == '__main__':
     parser.add_argument('--winsize', type=str, default='5,5', help='window size for corners detection: w,h')
     parser.add_argument('--debug_corners', required=False, action='store_true', help='debug flag for corners detection visualization of images')
     parser.add_argument('--points_json_file', type=str, default='', help='if path is provided then image and object points will be saved to JSON file.')
-    parser.add_argument('--path_to_save', type=str, default='', help='path to save results in pickle file')
+    parser.add_argument('--path_to_save', type=str, default='', help='path and filename to save results in yaml file')
     parser.add_argument('--path_to_visualize', type=str, default='', help='path to results pickle file needed to run visualization')
     parser.add_argument('--visualize', required=False, action='store_true', help='visualization flag. If set, only runs visualization but path_to_visualize must be provided')
     parser.add_argument('--resize_image_detection', required=False, action='store_true', help='If set, an image will be resized to speed-up corners detection')
@@ -629,7 +640,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
     if params.json_file is not None:
-        output = calibrateFromJSON(params.json_file, params.path_to_save, params.find_intrinsics_in_python==1)
+        output = calibrateFromJSON(params.json_file, params.find_intrinsics_in_python)
     else:
         if (params.fisheye is None and params.filenames is None and params.pattern_type is None and \
                 params.pattern_size is None and params.pattern_distance is None):
