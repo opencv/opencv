@@ -333,7 +333,10 @@ def calibrateFromPoints(
         'image_names': image_names,
     }
 
-def visualizeResults(detection_mask, rvecs, Ts, Ks, distortions, is_fisheye, image_points, errors_per_frame, rvecs0, tvecs0, pattern_points, image_sizes, output_pairs, image_names):
+
+def visualizeResults(detection_mask, rvecs, Ts, Ks, distortions, is_fisheye,
+                     image_points, errors_per_frame, rvecs0, tvecs0,
+                     pattern_points, image_sizes, output_pairs, image_names, cam_ids):
     Rs = [cv.Rodrigues(rvec)[0] for rvec in rvecs]
     errors = errors_per_frame[errors_per_frame > 0]
     detection_mask_idxs = np.stack(np.where(detection_mask)) # 2 x M, first row is camera idx, second is frame idx
@@ -342,7 +345,7 @@ def visualizeResults(detection_mask, rvecs, Ts, Ks, distortions, is_fisheye, ima
     frame_idx = detection_mask_idxs[1, 0]
     R_frame = cv.Rodrigues(rvecs0[frame_idx])[0]
     pattern_frame = (R_frame @ pattern_points.T + tvecs0[frame_idx]).T
-    plotCamerasPosition(Rs, Ts, image_sizes, output_pairs, pattern_frame, frame_idx)
+    plotCamerasPosition(Rs, Ts, image_sizes, output_pairs, pattern_frame, frame_idx, cam_ids)
     def plot(cam_idx, frame_idx):
         image = None
         if image_names is not None:
@@ -371,8 +374,11 @@ def visualizeResults(detection_mask, rvecs, Ts, Ks, distortions, is_fisheye, ima
 def visualizeFromFile(file):
     file_read = cv.FileStorage(file, cv.FileStorage_READ)
     assert file_read.isOpened(), file
-    read_keys = ['rvecs', 'distortions', 'Ks', 'Ts', 'rvecs0', 'tvecs0', 'errors_per_frame',
-        'output_pairs', 'image_points', 'is_fisheye', 'image_sizes', 'pattern_points', 'detection_mask']
+    read_keys = [
+        'rvecs', 'distortions', 'Ks', 'Ts', 'rvecs0', 'tvecs0',
+        'errors_per_frame', 'output_pairs', 'image_points', 'is_fisheye',
+        'image_sizes', 'pattern_points', 'detection_mask', 'cam_ids',
+    ]
     input = {}
     for key in read_keys:
         input[key] = file_read.getNode(key).mat()
@@ -403,6 +409,8 @@ def saveToFile(path_to_save, **kwargs):
     for key in kwargs.keys():
         if key == 'image_names':
             save_file.write('image_names', list(np.array(kwargs['image_names']).reshape(-1)))
+        elif key == 'cam_ids':
+            save_file.write('cam_ids', ','.join(cam_ids))
         else:
             save_file.write(key, np.array(kwargs[key]))
     save_file.release()
@@ -484,7 +492,7 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
 def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
                         dist_m, winsize, points_json_file, debug_corners,
                         RESIZE_IMAGE, find_intrinsics_in_python,
-                        is_parallel_detection=True):
+                        is_parallel_detection=True, cam_ids=None):
     """
     files_with_images: NUM_CAMERAS - path to file containing image names (NUM_FRAMES)
     grid_size: [width, height] -- size of grid pattern
@@ -501,10 +509,15 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
         raise NotImplementedError("Pattern type is not implemented!")
 
     assert len(files_with_images) == len(is_fisheye) and len(grid_size) == 2
+    if cam_ids is None:
+        cam_ids = list(range(len(files_with_images)))
+
     all_images_names, input_data = [], []
     criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 50, 0.001)
     for cam_idx, filename in enumerate(files_with_images):
         assert os.path.exists(filename), filename
+        print('cam_id:', cam_ids[cam_idx])
+
         images_names = open(filename, 'r').readlines()
         for i in range(len(images_names)):
             images_names[i] = images_names[i].replace('\n', '')
@@ -639,12 +652,21 @@ if __name__ == '__main__':
         visualizeFromFile(params.path_to_visualize)
         sys.exit(0)
 
+    if params.filenames is None:
+        cam_files = sorted(glob.glob('cam_*.txt'))
+        params.filenames = ','.join(cam_files)
+        print('Found camera filenames:', params.filenames)
+        params.fisheye = ','.join('0' * len(cam_files))
+        print('Fisheye parameters:', params.fisheye)  # TODO: Calculate it automatically
+
     if params.json_file is not None:
         output = calibrateFromJSON(params.json_file, params.find_intrinsics_in_python)
     else:
-        if (params.fisheye is None and params.filenames is None and params.pattern_type is None and \
-                params.pattern_size is None and params.pattern_distance is None):
+        if (params.pattern_type is None and params.pattern_size is None and params.pattern_distance is None):
             assert False and 'Either json file or all other parameters must be set'
+
+        # cam_N.txt --> cam_N --> N
+        cam_ids = [os.path.splitext(f)[0].split('_')[-1] for f in params.filenames.split(',')]
 
         output = calibrateFromImages(
             files_with_images=params.filenames.split(','),
