@@ -497,7 +497,7 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
 def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
                         dist_m, winsize, points_json_file, debug_corners,
                         RESIZE_IMAGE, find_intrinsics_in_python,
-                        is_parallel_detection=True, cam_ids=None):
+                        is_parallel_detection=True, cam_ids=None, intrinsics_dir=''):
     """
     files_with_images: NUM_CAMERAS - path to file containing image names (NUM_FRAMES)
     grid_size: [width, height] -- size of grid pattern
@@ -597,6 +597,20 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
                 'is_fisheye': is_fisheye,
                 }, wf)
 
+    Ks = None
+    distortions = None
+    if intrinsics_dir:
+        # Read camera instrinsic matrices (Ks) and dictortions
+        Ks, distortions = [], []
+        for cam_id in cam_ids:
+            input_file = os.path.join(intrinsics_dir, f"cameraParameters_{cam_id}.xml")
+            storage = cv.FileStorage(input_file, cv.FileStorage_READ)
+            camera_matrix = storage.getNode('cameraMatrix').mat()
+            dist_coeffs = storage.getNode('dist_coeffs').mat()
+            Ks.append(camera_matrix)
+            distortions.append(dist_coeffs)
+        find_intrinsics_in_python = True
+        
     return calibrateFromPoints(
         pattern,
         image_points_cameras,
@@ -604,8 +618,8 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
         is_fisheye,
         all_images_names,
         find_intrinsics_in_python,
-        # Ks=Ks,
-        # distortions=distortions,
+        Ks=Ks,
+        distortions=distortions,
     )
 
 
@@ -649,6 +663,7 @@ if __name__ == '__main__':
     parser.add_argument('--path_to_visualize', type=str, default='', help='path to results pickle file needed to run visualization')
     parser.add_argument('--visualize', required=False, action='store_true', help='visualization flag. If set, only runs visualization but path_to_visualize must be provided')
     parser.add_argument('--resize_image_detection', required=False, action='store_true', help='If set, an image will be resized to speed-up corners detection')
+    parser.add_argument('--intrinsics_dir', type=str, default='', help='Path to measured intrinsics')
 
     params, _ = parser.parse_known_args()
 
@@ -684,6 +699,7 @@ if __name__ == '__main__':
             debug_corners=params.debug_corners,
             RESIZE_IMAGE=params.resize_image_detection,
             find_intrinsics_in_python=params.find_intrinsics_in_python,
+            intrinsics_dir=params.intrinsics_dir,
         )
         output['cam_ids'] = cam_ids
 
