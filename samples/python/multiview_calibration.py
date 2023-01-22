@@ -412,7 +412,12 @@ def saveToFile(path_to_save, **kwargs):
         elif key == 'cam_ids':
             save_file.write('cam_ids', ','.join(cam_ids))
         else:
-            save_file.write(key, np.array(kwargs[key]))
+            value = kwargs[key]
+            if key in ('rvecs0', 'tvecs0'):
+                # Replace None by [0, 0, 0]
+                value = [arr if arr is not None else np.zeros((3, 1)) for arr in value]
+            save_file.write(key, np.array(value))
+
     save_file.release()
 
 
