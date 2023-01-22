@@ -23,7 +23,7 @@ def getDimBox(pts):
     return np.array([[pts[...,k].min(), pts[...,k].max()] for k in range(pts.shape[-1])])
 
 
-def plotCamerasPosition(R, t, image_sizes, pairs, pattern, frame_idx): #, cam_ids):  # TODO: Add cam_ids
+def plotCamerasPosition(R, t, image_sizes, pairs, pattern, frame_idx, cam_ids):
     cam_box = np.array([
         [ 1,  1, 3],
         [ 1, -1, 3],
@@ -705,6 +705,7 @@ if __name__ == '__main__':
             debug_corners=params.debug_corners,
             RESIZE_IMAGE=params.resize_image_detection,
             find_intrinsics_in_python=params.find_intrinsics_in_python,
+            cam_ids=cam_ids,
             intrinsics_dir=params.intrinsics_dir,
         )
         output['cam_ids'] = cam_ids
