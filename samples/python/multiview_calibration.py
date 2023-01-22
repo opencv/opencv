@@ -268,7 +268,7 @@ def calibrateFromPoints(
                     ]
                     repr_err_c, K, dist_coeff, _, _ = cv.fisheye.calibrate(
                         [pattern_points[:, None]] * len(image_points_c),
-                        image_points_c, 
+                        image_points_c,
                         image_sizes[c],
                         None,
                         None
@@ -279,7 +279,7 @@ def calibrateFromPoints(
                     ]
                     repr_err_c, K, dist_coeff, _, _ = cv.calibrateCamera(
                         [pattern_points] * len(image_points_c),
-                        image_points_c, 
+                        image_points_c,
                         image_sizes[c],
                         None,
                         None
@@ -293,13 +293,13 @@ def calibrateFromPoints(
         rmse, rvecs, Ts, Ks, distortions, rvecs0, tvecs0, errors_per_frame, output_pairs = \
             cv.calibrateMultiview(
                 objPoints=pattern_points_all,
-                              imagePoints=image_points,
-                              imageSize=image_sizes,
-                              detection_mask=detection_mask,
-                              Ks=Ks,
-                              distortions=distortions,
-                              is_fisheye=np.array(is_fisheye, dtype=np.uint8),
-                              use_intrinsics_guess=USE_INTRINSICS_GUESS,
+                imagePoints=image_points,
+                imageSize=image_sizes,
+                detection_mask=detection_mask,
+                Ks=Ks,
+                distortions=distortions,
+                is_fisheye=np.array(is_fisheye, dtype=np.uint8),
+                use_intrinsics_guess=USE_INTRINSICS_GUESS,
                 flags_intrinsics=0
             )
     except Exception as e:
@@ -346,6 +346,12 @@ def visualizeResults(detection_mask, rvecs, Ts, Ks, distortions, is_fisheye,
     R_frame = cv.Rodrigues(rvecs0[frame_idx])[0]
     pattern_frame = (R_frame @ pattern_points.T + tvecs0[frame_idx]).T
     plotCamerasPosition(Rs, Ts, image_sizes, output_pairs, pattern_frame, frame_idx, cam_ids)
+
+    save_file = 'cam_poses.png'
+    print('Saving:', save_file)
+    plt.savefig(save_file, dpi=300, bbox_inches='tight')
+
+    # Generate and save undistorted images
     def plot(cam_idx, frame_idx):
         image = None
         if image_names is not None:
@@ -588,7 +594,7 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
                 else:
                     cam_pts.append([])
             image_points_cameras_list.append(cam_pts)
-            
+
         with open(points_json_file, 'w') as wf:
             json.dump({
                 'object_points': pattern.tolist(),
@@ -610,7 +616,7 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
             Ks.append(camera_matrix)
             distortions.append(dist_coeffs)
         find_intrinsics_in_python = True
-        
+
     return calibrateFromPoints(
         pattern,
         image_points_cameras,
