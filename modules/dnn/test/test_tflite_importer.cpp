@@ -24,19 +24,34 @@ static std::string _tf(TString filename)
     return (getOpenCVExtraDir() + "/dnn/tflite/") + filename;
 }
 
+void testModel(const std::string& modelName, const Size& inpSize, double norm) {
+    Net net = readNet(_tf(modelName + ".tflite"));
+
+    Mat input = imread(getOpenCVExtraDir() + "/cv/shared/lena.png");
+    input = blobFromImage(input, 1.0 / 255, inpSize, 0, true);
+    net.setInput(input);
+
+    std::vector<String> outNames = net.getUnconnectedOutLayersNames();
+
+    std::vector<Mat> outs;
+    net.forward(outs, outNames);
+
+    CV_CheckEQ(outs.size(), outNames.size(), "");
+    for (int i = 0; i < outNames.size(); ++i) {
+        Mat ref = blobFromNPY(_tf(format("%s_out_%s.npy", modelName.c_str(), outNames[i].c_str())));
+        normAssert(ref.reshape(1, 1), outs[i].reshape(1, 1), outNames[i].c_str(), norm);
+    }
+}
+
 // TODO: cannot propagate HAVE_FLATBUFFERS definition to the tests
 TEST(Test_TFLite, face_landmark)
 {
-    Net net = readNet(_tf("face_landmark.tflite"));
-
-    Mat input = imread(getOpenCVExtraDir() + "/cv/shared/lena.png");
-    input = blobFromImage(input, 1.0 / 255, Size(192, 192), 0, true);
-    net.setInput(input);
-    Mat out = net.forward();
-
-    Mat ref = blobFromNPY(_tf("face_landmark_out.npy"));
-
-    normAssert(ref.reshape(1, 1), out.reshape(1, 1), "", 2e-5);
+    testModel("face_landmark", Size(192, 192), 2e-5);
 }
 
-} 
+TEST(Test_TFLite, face_detection_short_range)
+{
+    testModel("face_detection_short_range", Size(128, 128), 1e-5);
+}
+
+}

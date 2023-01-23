@@ -23,8 +23,13 @@ public:
 private:
     const tflite::Model* model;
     std::map<int, Mat> allTensors;
+    Net& dstNet;
 
-    void populateNet(Net& net);
+    // This is a vector of pairs (layerId, outputId) where we iterate over
+    // indices from TFLite notation and get created OpenCV layers.
+    std::map<int, std::pair<int, int> > layerIds;
+
+    void populateNet();
 
     // Wrap TFLite Tensor to OpenCV Mat without data copying
     Mat parseTensor(const Tensor* tensor);
@@ -43,6 +48,8 @@ private:
     void parseReshape(const Operator* op, const std::string& opcode, LayerParams& layerParams);
     void parseConcat(const Operator* op, const std::string& opcode, LayerParams& layerParams);
     void parseResize(const Operator* op, const std::string& opcode, LayerParams& layerParams);
+
+    int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId);
 };
 
 Mat TFLiteImporter::parseTensor(const Tensor* tensor) {
@@ -69,7 +76,7 @@ Mat TFLiteImporter::parseTensor(const Tensor* tensor) {
 }
 
 TFLiteImporter::TFLiteImporter(Net& dstNet, const std::string& modelPath)
-    : dispatch(buildDispatchMap())
+    : dstNet(dstNet), dispatch(buildDispatchMap())
 {
     std::vector<char> content;
 
@@ -95,13 +102,10 @@ TFLiteImporter::TFLiteImporter(Net& dstNet, const std::string& modelPath)
         }
     }
 
-    populateNet(dstNet);
+    populateNet();
 }
 
-void TFLiteImporter::populateNet(Net& dstNet) {
-    // This is a vector of pairs (layerId, outputId) where we iterate over
-    // indices from TFLite notation and get created OpenCV layers.
-    std::map<int, std::pair<int, int> > layerIds;
+void TFLiteImporter::populateNet() {
     layerIds[0] = std::make_pair(0, 0);
 
     const SubGraph* subgraph = model->subgraphs()->Get(0);
@@ -167,10 +171,10 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     static DispatchMap dispatch;
     if (!dispatch.empty())
         return dispatch;
-    
+
     dispatch["CONV_2D"] = &TFLiteImporter::parseConvolution;
     dispatch["DEPTHWISE_CONV_2D"] = &TFLiteImporter::parseDWConvolution;
-    dispatch["RELU"] = dispatch["ADD"] = dispatch["MUL"] = dispatch["PRELU"] = 
+    dispatch["RELU"] = dispatch["ADD"] = dispatch["MUL"] = dispatch["PRELU"] =
         dispatch["HARD_SWISH"] = dispatch["LOGISTIC"] = &TFLiteImporter::parseEltwise;
     dispatch["MAX_POOL_2D"] = dispatch["AVERAGE_POOL_2D"] = &TFLiteImporter::parsePooling;
     dispatch["PAD"] = &TFLiteImporter::parsePadding;
@@ -306,10 +310,13 @@ void TFLiteImporter::parsePooling(const Operator* op, const std::string& opcode,
 }
 
 void TFLiteImporter::parseReshape(const Operator* op, const std::string& opcode, LayerParams& layerParams) {
+    int permId = addPermuteLayer({0, 2, 3, 1}, layerParams.name + "/permute", layerIds[op->inputs()->Get(0)]);  // NCHW -> NHWC
+    layerIds[op->inputs()->Get(0)] = std::make_pair(permId, 0);
+
     layerParams.type = "Reshape";
     auto options = reinterpret_cast<const ReshapeOptions*>(op->builtin_options());
     std::vector<int> shape(options->new_shape()->begin(), options->new_shape()->end());
-    std::swap(shape[1], shape[2]);
+    // std::swap(shape[1], shape[2]);
     layerParams.set("dim", DictValue::arrayInt<int*>(shape.data(), shape.size()));
 }
 
@@ -317,7 +324,7 @@ void TFLiteImporter::parseConcat(const Operator* op, const std::string& opcode, 
     layerParams.type = "Concat";
     auto options = reinterpret_cast<const ConcatenationOptions*>(op->builtin_options());
     // options->axis()
-    layerParams.set("axis", -1);
+    // layerParams.set("axis", -1);
 }
 
 void TFLiteImporter::parseResize(const Operator* op, const std::string& opcode, LayerParams& layerParams) {
@@ -332,6 +339,16 @@ void TFLiteImporter::parseResize(const Operator* op, const std::string& opcode, 
     Mat shape = allTensors[op->inputs()->Get(1)].reshape(1, 1);
     layerParams.set("height", shape.at<int>(0, 0));
     layerParams.set("width", shape.at<int>(0, 1));
+}
+
+int TFLiteImporter::addPermuteLayer(const std::vector<int>& order, const std::string& permName,
+                                    const std::pair<int, int>& inpId)
+{
+    LayerParams permLP;
+    permLP.set("order", DictValue::arrayInt<const int*>(order.data(), order.size()));
+    int permId = dstNet.addLayer(permName, "Permute", permLP);
+    dstNet.connect(inpId.first, inpId.second, permId, 0);
+    return permId;
 }
 
 Net readNetFromTFLite(const String &modelPath)
