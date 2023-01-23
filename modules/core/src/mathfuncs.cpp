@@ -1757,15 +1757,9 @@ int nanMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total, bool ma
     int i = 0;
     for(; i <= (int)total - (size8 / 2); i += (size8 / 2) )
     {
-        v_float64 vval[4];
-        for (int j = 0; j < 4; j++)
-            vval[j] = vx_load(src + i + j*(size8 / 8));
-
         v_uint64 vu[4];
         for (int j = 0; j < 4; j++)
-        {
-            vu[j] = v_reinterpret_as_u64(vval[j]);
-        }
+            vu[j] = vx_load((const uint64_t*)src + i + j*(size8 / 8));
 
         v_uint64 vmaskExp = vx_setall_u64(0x7ff0000000000000);
         v_uint64 vmaskMnt = vx_setall_u64(0x000fffffffffffff);
