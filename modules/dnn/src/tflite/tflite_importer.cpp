@@ -4,18 +4,17 @@
 
 #include "../precomp.hpp"
 
+#ifdef HAVE_FLATBUFFERS
 #include "schema_generated.h"
+#endif
 
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
+#ifdef HAVE_FLATBUFFERS
+
 using namespace tflite;
-
-// void parseOperator(Operator* op, LayerParams params) {
-//     std::string type = 
-// }
-
 
 class TFLiteImporter {
 public:
@@ -341,6 +340,15 @@ Net readNetFromTFLite(const String &modelPath)
     TFLiteImporter(net, modelPath);
     return net;
 }
+
+#else
+
+Net readNetFromTFLite(const String &modelPath)
+{
+    CV_Error(Error::StsError, "Build OpenCV with FlatBuffers to import TFLite models");
+}
+
+#endif // HAVE_FLATBUFFERS
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

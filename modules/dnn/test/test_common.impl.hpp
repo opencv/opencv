@@ -495,6 +495,11 @@ void initDNNTests()
         CV_TEST_TAG_DNN_SKIP_CANN
     );
 #endif
+#ifdef HAVE_FLATBUFFERS
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_TFLITE
+    );
+#endif
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE,
         CV_TEST_TAG_DNN_SKIP_PARSER

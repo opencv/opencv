@@ -1,3 +1,4 @@
+// source: https://github.com/tensorflow/tensorflow/blob/b0164f014fd4f1b5af2c7b578aa7687198c5d92e/tensorflow/lite/schema/schema.fbs
 // Copyright 2017 The TensorFlow Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");

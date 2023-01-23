@@ -51,6 +51,8 @@
 #define CV_TEST_TAG_DNN_SKIP_TIMVX               "dnn_skip_timvx"
 #define CV_TEST_TAG_DNN_SKIP_CANN                "dnn_skip_cann"
 
+#define CV_TEST_TAG_DNN_SKIP_TFLITE              "dnn_skip_tflite"
+
 #ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_EQ(2018050000)
 #  define CV_TEST_TAG_DNN_SKIP_IE_VERSION CV_TEST_TAG_DNN_SKIP_IE, CV_TEST_TAG_DNN_SKIP_IE_2018R5

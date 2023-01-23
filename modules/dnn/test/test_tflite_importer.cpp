@@ -24,6 +24,7 @@ static std::string _tf(TString filename)
     return (getOpenCVExtraDir() + "/dnn/tflite/") + filename;
 }
 
+// TODO: cannot propagate HAVE_FLATBUFFERS definition to the tests
 TEST(Test_TFLite, face_landmark)
 {
     Net net = readNet(_tf("face_landmark.tflite"));
