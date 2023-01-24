@@ -30,7 +30,7 @@ enum DataLayout
 
 class TFLiteImporter {
 public:
-    TFLiteImporter(Net& net, const std::string& modelPath);
+    TFLiteImporter(Net& net, const char* modelBuffer);
 
 private:
     const tflite::Model* model;
@@ -91,22 +91,10 @@ Mat TFLiteImporter::parseTensor(const Tensor* tensor) {
     return Mat(shape, dtype, const_cast<void*>(data));
 }
 
-TFLiteImporter::TFLiteImporter(Net& dstNet, const std::string& modelPath)
+TFLiteImporter::TFLiteImporter(Net& dstNet, const char* modelBuffer)
     : dstNet(dstNet), dispatch(buildDispatchMap())
 {
-    std::vector<char> content;
-
-    const std::ios::openmode mode = std::ios::in | std::ios::binary;
-    std::ifstream ifs(modelPath, mode);
-
-    ifs.seekg(0, std::ios::end);
-    const size_t sz = ifs.tellg();
-    content.resize(sz);
-    ifs.seekg(0, std::ios::beg);
-
-    ifs.read((char*)content.data(), sz);
-
-    model = GetModel(content.data());
+    model = GetModel(modelBuffer);
 
     CV_CheckEQ(model->subgraphs()->size(), 1, "");
 
@@ -490,17 +478,46 @@ void TFLiteImporter::parseDeconvolution(const Operator* op, const std::string& o
     }
 }
 
-Net readNetFromTFLite(const String &modelPath)
-{
+Net readNetFromTFLite(const String &modelPath) {
     Net net;
-    TFLiteImporter(net, modelPath);
+
+    std::vector<char> content;
+
+    const std::ios::openmode mode = std::ios::in | std::ios::binary;
+    std::ifstream ifs(modelPath, mode);
+
+    ifs.seekg(0, std::ios::end);
+    const size_t sz = ifs.tellg();
+    content.resize(sz);
+    ifs.seekg(0, std::ios::beg);
+
+    ifs.read(content.data(), sz);
+
+    TFLiteImporter(net, content.data());
+    return net;
+}
+
+Net readNetFromTFLite(const std::vector<uchar>& bufferModel) {
+    return readNetFromTFLite((const char*)(bufferModel.data()));
+}
+
+Net readNetFromTFLite(const char *bufferModel) {
+    Net net;
+    TFLiteImporter(net, bufferModel);
     return net;
 }
 
 #else
 
-Net readNetFromTFLite(const String &modelPath)
-{
+Net readNetFromTFLite(const String &) {
+    CV_Error(Error::StsError, "Build OpenCV with FlatBuffers to import TFLite models");
+}
+
+Net readNetFromTFLite(const std::vector<uchar>&) {
+    CV_Error(Error::StsError, "Build OpenCV with FlatBuffers to import TFLite models");
+}
+
+Net readNetFromTFLite(const char *, size_t) {
     CV_Error(Error::StsError, "Build OpenCV with FlatBuffers to import TFLite models");
 }
 

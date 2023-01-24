@@ -47,16 +47,19 @@ void testModel(const std::string& modelName, const Size& inpSize, double norm = 
     }
 }
 
+// https://google.github.io/mediapipe/solutions/face_mesh
 TEST(Test_TFLite, face_landmark)
 {
     testModel("face_landmark", Size(192, 192), 2e-5);
 }
 
+// https://google.github.io/mediapipe/solutions/face_detection
 TEST(Test_TFLite, face_detection_short_range)
 {
     testModel("face_detection_short_range", Size(128, 128));
 }
 
+// https://google.github.io/mediapipe/solutions/selfie_segmentation
 TEST(Test_TFLite, selfie_segmentation)
 {
     testModel("selfie_segmentation", Size(256, 256));
