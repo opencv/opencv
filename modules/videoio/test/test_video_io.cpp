@@ -388,7 +388,7 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
     {"wmv", "WMV3", 30.f, CAP_MSMF},
     {"wmv", "WVC1", 30.f, CAP_MSMF},
     {"mov", "H264", 30.f, CAP_MSMF},
-    {"mov", "HEVC", 30.f, CAP_MSMF},
+ // {"mov", "HEVC", 30.f, CAP_MSMF},  // excluded due to CI issue: https://github.com/opencv/opencv/pull/23172
 #endif
 
 #ifdef HAVE_AVFOUNDATION
