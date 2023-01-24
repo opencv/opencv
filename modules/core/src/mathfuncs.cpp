@@ -1764,11 +1764,42 @@ int nanMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total, bool ma
         v_uint64 vmaskExp = vx_setall_u64(0x7ff0000000000000);
         v_uint64 vmaskMnt = vx_setall_u64(0x000fffffffffffff);
         v_uint64 z = vx_setzero_u64();
+        #if !CV_SIMD128_64F
+        v_uint64 mask10 = vx_setall_u64(0xffffffff00000000);
+        #endif
         v_uint64 vv[4];
         for (int j = 0; j < 4; j++)
         {
-            v_uint64 ve = (vu[j] & vmaskExp) == vmaskExp;
-            v_uint64 vm = (vu[j] & vmaskMnt) != z;
+            v_uint64 ve, vm;
+
+            v_uint64 vande = vu[j] & vmaskExp;
+            v_uint64 vandm = vu[j] & vmaskMnt;
+
+            #if CV_SIMD128_64F
+            ve = vande == vmaskExp;
+            vm = vandm != z;
+            #else
+            // emulating 64-bit integer eq comparison: ve = (vu[j] & vmaskExp) == vmaskExp
+            {
+                v_int32 vue32 = v_reinterpret_as_s32(vande);
+                v_int32 vme32 = v_reinterpret_as_s32(vmaskExp);
+                v_int32 veq32 = vue32 == vme32;
+                v_int32 sh1 = v_rotate_left<1>(veq32);
+                v_int32 vand = veq32 & sh1;
+                v_int32 sh2 = v_rotate_right<1>(vand);
+                ve = (v_reinterpret_as_u64(vand) & mask10) | (v_reinterpret_as_u64(sh2) & ~mask10);
+            }
+            // emulating 64-bit integer ineq comparison: vm = (vu[j] & vmaskMnt) != z
+            {
+                v_int32 vue32 = v_reinterpret_as_s32(vandm);
+                v_int32 vme32 = vx_setzero_s32();
+                v_int32 veq32 = vue32 != vme32;
+                v_int32 sh1 = v_rotate_left<1>(veq32);
+                v_int32 vor = veq32 | sh1;
+                v_int32 sh2 = v_rotate_right<1>(vor);
+                vm = (v_reinterpret_as_u64(vor) & mask10) | (v_reinterpret_as_u64(sh2) & ~mask10);
+            }
+            #endif
 
             vv[j] = ve;
             if (maskInfs && !maskNans)
