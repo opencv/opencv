@@ -25,6 +25,10 @@ static std::string _tf(TString filename)
 }
 
 void testModel(const std::string& modelName, const Size& inpSize, double norm = 1e-5) {
+#ifndef HAVE_FLATBUFFERS
+    throw SkipTestException("FlatBuffers required for TFLite importer");
+#endif
+
     Net net = readNet(_tf(modelName + ".tflite"));
 
     Mat input = imread(getOpenCVExtraDir() + "/cv/shared/lena.png");
@@ -43,7 +47,6 @@ void testModel(const std::string& modelName, const Size& inpSize, double norm = 
     }
 }
 
-// TODO: cannot propagate HAVE_FLATBUFFERS definition to the tests
 TEST(Test_TFLite, face_landmark)
 {
     testModel("face_landmark", Size(192, 192), 2e-5);
