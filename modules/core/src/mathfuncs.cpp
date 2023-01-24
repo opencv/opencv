@@ -1659,6 +1659,9 @@ void patchNaNs( InputOutputArray _a, double _val )
 #if CV_SIMD
         v_int64 v_mnt_mask = vx_setall_s64(0x000FFFFFFFFFFFFF), v_exp_mask = vx_setall_s64(0x7FF0000000000000);
         v_int64 v_val = vx_setall_s64(val.i);
+#if !CV_SIMD128_64F
+        v_int64 mask10 = vx_setall_s64(0xffffffff00000000);
+#endif
 #endif
 
         for (size_t i = 0; i < it.nplanes; i++, ++it)
@@ -1671,7 +1674,39 @@ void patchNaNs( InputOutputArray _a, double _val )
             for (; j + cWidth <= len; j += cWidth)
             {
                 v_int64 v_src = vx_load(tptr + j);
-                v_int64 v_isnan = ((v_src & v_exp_mask) == v_exp_mask) & ((v_src & v_mnt_mask) != vx_setzero_s64());
+                v_int64 vande = v_src & v_exp_mask;
+                v_int64 vandm = v_src & v_mnt_mask;
+                v_int64 ve, vm;
+                ve = vande == v_exp_mask;
+                vm = vandm != vx_setzero_s64();
+
+                #if CV_SIMD128_64F
+                ve = vande == v_exp_mask;
+                vm = vandm != vx_setzero_s64();
+                #else
+                // emulating 64-bit integer eq comparison: ve = (v_src & v_exp_mask) == v_exp_mask
+                {
+                    v_int32 vue32 = v_reinterpret_as_s32(vande);
+                    v_int32 vme32 = v_reinterpret_as_s32(v_exp_mask);
+                    v_int32 veq32 = vue32 == vme32;
+                    v_int32 sh1 = v_rotate_left<1>(veq32);
+                    v_int32 vand = veq32 & sh1;
+                    v_int32 sh2 = v_rotate_right<1>(vand);
+                    ve = (v_reinterpret_as_s64(vand) & mask10) | (v_reinterpret_as_s64(sh2) & ~mask10);
+                }
+                // emulating 64-bit integer ineq comparison: vm = (v_src & v_mnt_mask) != zero
+                {
+                    v_int32 vue32 = v_reinterpret_as_s32(vandm);
+                    v_int32 vme32 = vx_setzero_s32();
+                    v_int32 veq32 = vue32 != vme32;
+                    v_int32 sh1 = v_rotate_left<1>(veq32);
+                    v_int32 vor = veq32 | sh1;
+                    v_int32 sh2 = v_rotate_right<1>(vor);
+                    vm = (v_reinterpret_as_s64(vor) & mask10) | (v_reinterpret_as_s64(sh2) & ~mask10);
+                }
+                #endif
+
+                v_int64 v_isnan = ve & vm;
                 v_int64 v_dst = (v_isnan & v_val) | ((~v_isnan) & v_src);
                 v_store(tptr + j, v_dst);
             }
