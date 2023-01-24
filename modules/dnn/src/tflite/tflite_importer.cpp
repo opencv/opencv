@@ -63,6 +63,7 @@ private:
     void parseReshape(const Operator* op, const std::string& opcode, LayerParams& layerParams);
     void parseConcat(const Operator* op, const std::string& opcode, LayerParams& layerParams);
     void parseResize(const Operator* op, const std::string& opcode, LayerParams& layerParams);
+    void parseDeconvolution(const Operator* op, const std::string& opcode, LayerParams& layerParams);
 
     int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId);
 };
@@ -145,8 +146,9 @@ void TFLiteImporter::populateNet() {
         layerParams.name = subgraph->tensors()->Get(op->outputs()->Get(0))->name()->str();
 
         std::string type = EnumNameBuiltinOperator(BuiltinOperator(model->operator_codes()->Get(idx)->deprecated_builtin_code()));
-        if (type == "CUSTOM")
-            break;
+        if (type == "CUSTOM") {
+            type = model->operator_codes()->Get(idx)->custom_code()->str();
+        }
 
         if (type == "DEQUANTIZE") {
             // Convert from FP16 to FP32
@@ -228,6 +230,7 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["RESHAPE"] = &TFLiteImporter::parseReshape;
     dispatch["CONCATENATION"] = &TFLiteImporter::parseConcat;
     dispatch["RESIZE_BILINEAR"] = &TFLiteImporter::parseResize;
+    dispatch["Convolution2DTransposeBias"] = &TFLiteImporter::parseDeconvolution;
     return dispatch;
 }
 
@@ -411,6 +414,80 @@ int TFLiteImporter::addPermuteLayer(const std::vector<int>& order, const std::st
     int permId = dstNet.addLayer(permName, "Permute", permLP);
     dstNet.connect(inpId.first, inpId.second, permId, 0);
     return permId;
+}
+
+void TFLiteImporter::parseDeconvolution(const Operator* op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Deconvolution";
+
+    // source: https://github.com/tensorflow/tensorflow/blob/b2f5959ff823a8ed5bf4883e785f8f96d4253a8b/tensorflow/lite/core/c/builtin_op_data.h
+    typedef enum {
+        kTfLitePaddingUnknown = 0,
+        kTfLitePaddingSame,
+        kTfLitePaddingValid,
+    } TfLitePadding;
+
+    typedef struct {
+        TfLitePadding padding;
+        int stride_width;
+        int stride_height;
+    } TfLiteTransposeConvParams;
+
+    CV_CheckEQ(op->custom_options()->size(), sizeof(TfLiteTransposeConvParams), "");
+
+    const auto* params = reinterpret_cast<const TfLiteTransposeConvParams*>(op->custom_options()->Data());
+    if (params->padding != kTfLitePaddingUnknown)
+        layerParams.set("pad_mode", params->padding == kTfLitePaddingSame ? "SAME" : "VALID");
+    layerParams.set("stride_w", params->stride_width);
+    layerParams.set("stride_h", params->stride_height);
+
+    // Get filter size
+    int filterIdx = op->inputs()->Get(1);
+    Mat filter = allTensors[filterIdx];
+    int oc = filter.size[0];
+    int kh = filter.size[1];
+    int kw = filter.size[2];
+    int ic = filter.size[3];
+    layerParams.set("kernel_w", kw);
+    layerParams.set("kernel_h", kh);
+    layerParams.set("num_output", oc);
+
+    // Add adjust padding similar to TensorFlow (see tf_importer)
+    const auto* outShape = model->subgraphs()->Get(0)->tensors()->Get(op->outputs()->Get(0))->shape();
+    const int outH = outShape->Get(1);
+    const int outW = outShape->Get(2);
+    if (params->padding == kTfLitePaddingSame)
+    {
+        layerParams.set("adj_w", (outW - 1) % params->stride_width);
+        layerParams.set("adj_h", (outH - 1) % params->stride_height);
+    }
+    else if (params->padding == kTfLitePaddingValid)
+    {
+        layerParams.set("adj_w", (outW - kw) % params->stride_width);
+        layerParams.set("adj_h", (outH - kh) % params->stride_height);
+    }
+
+    // Reorder filter data from OHWI to IOHW and change shape correspondingly.
+    filter = allTensors[filterIdx] = filter.reshape(1, {ic, oc, kh, kw});
+
+    CV_CheckEQ(filter.type(), CV_32F, "Float weights expected");
+    Mat filterCopy = filter.clone();
+    float* data = filterCopy.ptr<float>();
+    float* dstData = filter.ptr<float>();
+
+    int total = oc * ic * kh * kw;
+    for (int i_oc = 0; i_oc < oc; i_oc++) {
+        for (int i_ic = 0; i_ic < ic; i_ic++) {
+            for (int i_h = 0; i_h < kh; i_h++) {
+                for (int i_w = 0; i_w < kw; i_w++) {
+                    int dst_i = kw * (kh * (oc * i_ic + i_oc) + i_h) + i_w;
+                    int src_i = ic * (kw * (kh * i_oc + i_h) + i_w) + i_ic;
+                    CV_Assert(dst_i < total);
+                    CV_Assert(src_i < total);
+                    dstData[dst_i] = data[src_i];
+                }
+            }
+        }
+    }
 }
 
 Net readNetFromTFLite(const String &modelPath)

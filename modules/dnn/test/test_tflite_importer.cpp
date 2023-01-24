@@ -24,7 +24,7 @@ static std::string _tf(TString filename)
     return (getOpenCVExtraDir() + "/dnn/tflite/") + filename;
 }
 
-void testModel(const std::string& modelName, const Size& inpSize, double norm) {
+void testModel(const std::string& modelName, const Size& inpSize, double norm = 1e-5) {
     Net net = readNet(_tf(modelName + ".tflite"));
 
     Mat input = imread(getOpenCVExtraDir() + "/cv/shared/lena.png");
@@ -51,7 +51,12 @@ TEST(Test_TFLite, face_landmark)
 
 TEST(Test_TFLite, face_detection_short_range)
 {
-    testModel("face_detection_short_range", Size(128, 128), 1e-5);
+    testModel("face_detection_short_range", Size(128, 128));
+}
+
+TEST(Test_TFLite, selfie_segmentation)
+{
+    testModel("selfie_segmentation", Size(256, 256));
 }
 
 }
