@@ -16,6 +16,18 @@ CV__DNN_INLINE_NS_BEGIN
 
 using namespace tflite;
 
+// This values are used to indicate layer output's data layout where it's possible.
+// Approach is similar to TensorFlow importer but TFLite models do not have explicit
+// layout field "data_format". So we consider that all 4D inputs are in NHWC data layout.
+enum DataLayout
+{
+    DATA_LAYOUT_NHWC,
+    DATA_LAYOUT_NCHW,
+    DATA_LAYOUT_NDHWC,
+    DATA_LAYOUT_UNKNOWN,
+    DATA_LAYOUT_PLANAR  // 2-dimensional outputs (matmul, flatten, reshape to 2d)
+};
+
 class TFLiteImporter {
 public:
     TFLiteImporter(Net& net, const std::string& modelPath);
@@ -28,6 +40,9 @@ private:
     // This is a vector of pairs (layerId, outputId) where we iterate over
     // indices from TFLite notation and get created OpenCV layers.
     std::map<int, std::pair<int, int> > layerIds;
+
+    // Tracking of layouts for layers outputs.
+    std::vector<DataLayout> layouts;
 
     void populateNet();
 
@@ -105,10 +120,24 @@ TFLiteImporter::TFLiteImporter(Net& dstNet, const std::string& modelPath)
     populateNet();
 }
 
-void TFLiteImporter::populateNet() {
-    layerIds[0] = std::make_pair(0, 0);
+DataLayout estimateLayout(const Tensor* t) {
+    switch (t->shape()->size()) {
+    case 5: return DATA_LAYOUT_NDHWC;
+    case 4: return DATA_LAYOUT_NHWC;
+    case 2: return DATA_LAYOUT_PLANAR;
+    default: return DATA_LAYOUT_UNKNOWN;
+    }
+}
 
+void TFLiteImporter::populateNet() {
     const SubGraph* subgraph = model->subgraphs()->Get(0);
+
+    layouts.resize(subgraph->tensors()->size(), DATA_LAYOUT_UNKNOWN);
+    for (int i = 0; i < subgraph->inputs()->size(); ++i) {
+        int idx = subgraph->inputs()->Get(i);
+        layerIds[idx] = std::make_pair(0, i);
+        layouts[idx] = estimateLayout(subgraph->tensors()->Get(idx));
+    }
     for (const auto op : *subgraph->operators()) {
         int idx = op->opcode_index();
 
@@ -138,14 +167,16 @@ void TFLiteImporter::populateNet() {
 
         // Collect input blobs
         std::vector<int> layerInputs;
+        std::vector<DataLayout> inpLayouts;
         for (int idx : *op->inputs()) {
             if (layerIds.find(idx) != layerIds.end()) {
                 layerInputs.push_back(idx);
+                inpLayouts.push_back(layouts[idx]);
                 continue;  // Output from a different layer
             }
 
             Mat blob = allTensors[idx];
-            layerParams.blobs.push_back(blob.clone());
+            layerParams.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
         }
 
         int layerId = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
@@ -154,8 +185,24 @@ void TFLiteImporter::populateNet() {
         int i = 0;
         for (int idx : layerInputs) {
             auto it = layerIds.find(idx);
-            // std::cout << "connect " << idx << " " << layerId << " " << i << " " << it->second.first << " " << it->second.second << std::endl;
             dstNet.connect(it->second.first, it->second.second, layerId, i++);
+        }
+
+        // Predict output layout. Some layer-specific parsers may set them explicitly.
+        // Otherwise, propagate input layout.
+        if (layouts[op->outputs()->Get(0)] == DATA_LAYOUT_UNKNOWN) {
+            DataLayout predictedLayout = DATA_LAYOUT_UNKNOWN;
+            for (auto layout : inpLayouts) {
+                if (layout != DATA_LAYOUT_UNKNOWN) {
+                    if (predictedLayout == DATA_LAYOUT_UNKNOWN)
+                        predictedLayout = layout;
+                    else if (predictedLayout != layout) {
+                        predictedLayout = DATA_LAYOUT_UNKNOWN;
+                        break;
+                    }
+                }
+            }
+            layouts[op->outputs()->Get(0)] = predictedLayout;
         }
 
         // Register outputs
@@ -310,8 +357,14 @@ void TFLiteImporter::parsePooling(const Operator* op, const std::string& opcode,
 }
 
 void TFLiteImporter::parseReshape(const Operator* op, const std::string& opcode, LayerParams& layerParams) {
-    int permId = addPermuteLayer({0, 2, 3, 1}, layerParams.name + "/permute", layerIds[op->inputs()->Get(0)]);  // NCHW -> NHWC
-    layerIds[op->inputs()->Get(0)] = std::make_pair(permId, 0);
+    DataLayout inpLayout = layouts[op->inputs()->Get(0)];
+
+    if (inpLayout == DATA_LAYOUT_NHWC) {
+        // Permute to NCHW
+        int permId = addPermuteLayer({0, 2, 3, 1}, layerParams.name + "/permute", layerIds[op->inputs()->Get(0)]);  // NCHW -> NHWC
+        layerIds[op->inputs()->Get(0)] = std::make_pair(permId, 0);
+        layouts[op->outputs()->Get(0)] = DATA_LAYOUT_NCHW;
+    }
 
     layerParams.type = "Reshape";
     auto options = reinterpret_cast<const ReshapeOptions*>(op->builtin_options());
@@ -323,8 +376,17 @@ void TFLiteImporter::parseReshape(const Operator* op, const std::string& opcode,
 void TFLiteImporter::parseConcat(const Operator* op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Concat";
     auto options = reinterpret_cast<const ConcatenationOptions*>(op->builtin_options());
-    // options->axis()
-    // layerParams.set("axis", -1);
+    int axis = options->axis();
+
+    DataLayout inpLayout = layouts[op->inputs()->Get(0)];
+    if (inpLayout == DATA_LAYOUT_NHWC) {
+        // OpenCV works in NCHW data layout. So change the axis correspondingly.
+        CV_Assert(-4 < axis && axis < 4);
+        int remap[] = {0, 2, 3, 1};
+        axis = axis > 0 ? axis : 4 + axis;
+        axis = remap[axis];
+    }
+    layerParams.set("axis", axis);
 }
 
 void TFLiteImporter::parseResize(const Operator* op, const std::string& opcode, LayerParams& layerParams) {
