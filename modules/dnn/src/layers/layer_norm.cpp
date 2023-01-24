@@ -105,6 +105,7 @@ public:
             LayerNormInvoker p(src, scale, b, dst, axis, epsilon);
 
             double nstripes = ((size_t)p.total * p.normSize) * (1 / 1024.0);
+            // double nstripes = ((size_t)p.total) * (1 / 1024.0);
             parallel_for_(Range(0, p.total), p, nstripes);
         }
 
