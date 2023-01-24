@@ -1677,8 +1677,6 @@ void patchNaNs( InputOutputArray _a, double _val )
                 v_int64 vande = v_src & v_exp_mask;
                 v_int64 vandm = v_src & v_mnt_mask;
                 v_int64 ve, vm;
-                ve = vande == v_exp_mask;
-                vm = vandm != vx_setzero_s64();
 
                 #if CV_SIMD128_64F
                 ve = vande == v_exp_mask;
