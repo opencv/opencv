@@ -1532,7 +1532,7 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
     ComputeJacobians(objectPoints, imagePoints, params, omc, Tc, check_cond, thresh_cond, JJ2, ex3);
 
     sqrt(JJ2.inv(), JJ2);
-    
+
     int nParams = JJ2.rows;
     sigma_x  *= sqrt(2.0 * (double)ex.total()/(2.0 * (double)ex.total() - nParams));
 
