@@ -13,11 +13,14 @@ namespace
 class ROISelector
 {
   public:
-    Rect select(const String &windowName, Mat img, bool showCrossair = true, bool fromCenter = true)
+    Rect select(const String &windowName, Mat img, bool showCrossair = true, bool fromCenter = true, bool printNotice = true)
     {
-        // show notice to user
-        printf("Select a ROI and then press SPACE or ENTER button!\n");
-        printf("Cancel the selection process by pressing c button!\n");
+        if (printNotice)
+        {
+            // show notice to user
+            printf("Select a ROI and then press SPACE or ENTER button!\n");
+            printf("Cancel the selection process by pressing c button!\n");
+        }
 
         key = 0;
         imageSize = img.size();
