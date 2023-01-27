@@ -1085,6 +1085,16 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<TileLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS LayerNormLayer : public Layer
+    {
+    public:
+        bool hasBias;
+        int axis;
+        float epsilon;
+
+        static Ptr<LayerNormLayer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END
