@@ -654,8 +654,8 @@ static double stereoCalibrateImpl(
 {
     int NINTRINSIC = CALIB_NINTRINSIC;
 
-    double dk[2][14]={{0}};
-    Mat Dist[2];
+    // initial camera intrinsicss
+    Vec<double, 14> distInitial[2];
     Matx33d A[2];
     int pointsTotal = 0, maxPoints = 0, nparams;
     bool recomputeIntrinsics = false;
@@ -713,8 +713,7 @@ static double stereoCalibrateImpl(
                    ((points.rows == pointsTotal && points.cols*cn == 2) ||
                    (points.rows == 1 && points.cols == pointsTotal && cn == 2)));
 
-        A[k] = Matx33d(1, 0, 0, 0, 1, 0, 0, 0, 1);
-        Dist[k] = Mat(1,14,CV_64F,dk[k]);
+        A[k] = Matx33d::eye();
 
         points.convertTo(imagePoints[k], CV_64F);
         imagePoints[k] = imagePoints[k].reshape(2, 1);
@@ -727,15 +726,16 @@ static double stereoCalibrateImpl(
                      CALIB_FIX_K1|CALIB_FIX_K2|CALIB_FIX_K3|CALIB_FIX_K4|CALIB_FIX_K5|CALIB_FIX_K6|
                      CALIB_FIX_TANGENT_DIST) )
         {
-            Mat tdist( distCoeffs.size(), CV_MAKETYPE(CV_64F, distCoeffs.channels()), dk[k] );
+            Mat tdist( distCoeffs.size(), CV_MAKETYPE(CV_64F, distCoeffs.channels()), distInitial[k].val);
             distCoeffs.convertTo(tdist, CV_64F);
         }
 
         if( !(flags & (CALIB_FIX_INTRINSIC|CALIB_USE_INTRINSIC_GUESS)))
         {
-            Mat matA(A[k], false);
+            Mat mIntr(A[k], /* copyData = */ false);
+            Mat mDist(distInitial[k], /* copyData = */ false);
             calibrateCameraInternal(objectPoints, imagePoints[k],
-                                    _npoints, imageSize, 0, matA, Dist[k],
+                                    _npoints, imageSize, 0, mIntr, mDist,
                                     Mat(), Mat(), Mat(), Mat(), Mat(), flags, termCrit);
         }
     }
@@ -836,7 +836,7 @@ static double stereoCalibrateImpl(
         for(int k = 0; k < 2; k++ )
         {
             Mat imgpt_ik = imagePoints[k].colRange(pos, pos + ni);
-            solvePnP(objpt_i, imgpt_ik, A[k], Dist[k], rv, T[k], false, SOLVEPNP_ITERATIVE );
+            solvePnP(objpt_i, imgpt_ik, A[k], distInitial[k], rv, T[k], false, SOLVEPNP_ITERATIVE );
             Rodrigues(rv, R[k]);
 
             if( k == 0 )
@@ -902,11 +902,11 @@ static double stereoCalibrateImpl(
         {
             size_t idx = (nimages+1)*6 + k*NINTRINSIC;
             if( flags & CALIB_ZERO_TANGENT_DIST )
-                dk[k][2] = dk[k][3] = 0;
+                distInitial[k][2] = distInitial[k][3] = 0;
             param[idx +  0] = A[k](0, 0); param[idx + 1] = A[k](1, 1); param[idx + 2] = A[k](0, 2); param[idx + 3] = A[k](1, 2);
             for (int i = 0; i < 14; i++)
             {
-                param[idx + 4 + i] = dk[k][i];
+                param[idx + 4 + i] = distInitial[k][i];
             }
         }
     }
@@ -961,7 +961,7 @@ static double stereoCalibrateImpl(
             {
                 intrin[k] = A[k];
                 for(int j = 0; j < 14; j++)
-                    distCoeffs[k][j] = dk[k][j];
+                    distCoeffs[k][j] = distInitial[k][j];
             }
         }
 
@@ -1124,7 +1124,12 @@ static double stereoCalibrateImpl(
             Mat& cameraMatrix = k == 0 ? _cameraMatrix1 : _cameraMatrix2;
             Mat& distCoeffs = k == 0 ? _distCoeffs1 : _distCoeffs2;
             A[k].convertTo(cameraMatrix, cameraMatrix.depth());
-            Mat tdist( distCoeffs.size(), CV_MAKETYPE(CV_64F,distCoeffs.channels()), Dist[k].data );
+
+            std::vector<double> vdist(14);
+            for(int j = 0; j < 14; j++)
+                vdist[j] = param[idx + 4 + j];
+
+            Mat tdist( distCoeffs.size(), CV_MAKETYPE(CV_64F, distCoeffs.channels()), vdist.data());
             tdist.convertTo(distCoeffs, distCoeffs.depth());
         }
     }
