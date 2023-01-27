@@ -1793,7 +1793,7 @@ double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<
         perViewErrors2.resize(numImgs);
     }
 
-    for (size_t i = 0; i<numImgs; i++)
+    for (int i = 0; i < (int)numImgs; i++)
     {
         perViewErrors1[i] = perViewErrorsMat.at<double>(i, 0);
         perViewErrors2[i] = perViewErrorsMat.at<double>(i, 1);
