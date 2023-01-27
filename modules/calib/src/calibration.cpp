@@ -1691,13 +1691,13 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
         {
             _rvecs.create(3, 1, CV_64F, i, true);
             Mat rv = _rvecs.getMat(i);
-            rvecLM.row(i).copyTo(rv);
+            Mat(rvecLM.row(i).t()).copyTo(rv);
         }
         if( tvecs_needed && tvecs_mat_vec )
         {
             _tvecs.create(3, 1, CV_64F, i, true);
             Mat tv = _tvecs.getMat(i);
-            tvecLM.row(i).copyTo(tv);
+            Mat(tvecLM.row(i).t()).copyTo(tv);
         }
     }
 
