@@ -8,6 +8,8 @@
 #include "schema_generated.h"
 #endif
 
+#include "builtin_op_data.h"
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -60,6 +62,8 @@ private:
     void parsePadding(const Operator* op, const std::string& opcode, LayerParams& layerParams);
     void parseEltwise(const Operator* op, const std::string& opcode, LayerParams& layerParams);
     void parsePooling(const Operator* op, const std::string& opcode, LayerParams& layerParams);
+    void parsePoolingWithArgmax(const Operator* op, const std::string& opcode, LayerParams& layerParams);
+    void parseUnpooling(const Operator* op, const std::string& opcode, LayerParams& layerParams);
     void parseReshape(const Operator* op, const std::string& opcode, LayerParams& layerParams);
     void parseConcat(const Operator* op, const std::string& opcode, LayerParams& layerParams);
     void parseResize(const Operator* op, const std::string& opcode, LayerParams& layerParams);
@@ -214,6 +218,8 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["RELU"] = dispatch["ADD"] = dispatch["MUL"] = dispatch["PRELU"] =
         dispatch["HARD_SWISH"] = dispatch["LOGISTIC"] = &TFLiteImporter::parseEltwise;
     dispatch["MAX_POOL_2D"] = dispatch["AVERAGE_POOL_2D"] = &TFLiteImporter::parsePooling;
+    dispatch["MaxPoolingWithArgmax2D"] = &TFLiteImporter::parsePoolingWithArgmax;
+    dispatch["MaxUnpooling2D"] = &TFLiteImporter::parseUnpooling;
     dispatch["PAD"] = &TFLiteImporter::parsePadding;
     dispatch["RESHAPE"] = &TFLiteImporter::parseReshape;
     dispatch["CONCATENATION"] = &TFLiteImporter::parseConcat;
@@ -347,6 +353,33 @@ void TFLiteImporter::parsePooling(const Operator* op, const std::string& opcode,
         CV_Error(Error::StsNotImplemented, "Pool type selection for " + opcode);
 }
 
+void TFLiteImporter::parsePoolingWithArgmax(const Operator* op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Pooling";
+
+    CV_CheckLE(op->custom_options()->size(), sizeof(TfLitePoolParams), "");
+    const auto* params = reinterpret_cast<const TfLitePoolParams*>(op->custom_options()->Data());
+    if (params->padding != kTfLitePaddingUnknown)
+        layerParams.set("pad_mode", params->padding == kTfLitePaddingSame ? "SAME" : "VALID");
+    layerParams.set("stride_w", params->stride_width);
+    layerParams.set("stride_h", params->stride_height);
+    layerParams.set("kernel_w", params->filter_width);
+    layerParams.set("kernel_h", params->filter_height);
+    layerParams.set("pool", "max");
+}
+
+void TFLiteImporter::parseUnpooling(const Operator* op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "MaxUnpool";
+
+    CV_CheckLE(op->custom_options()->size(), sizeof(TfLitePoolParams), "");
+    const auto* params = reinterpret_cast<const TfLitePoolParams*>(op->custom_options()->Data());
+    layerParams.set("pool_stride_w", params->stride_width);
+    layerParams.set("pool_stride_h", params->stride_height);
+    layerParams.set("pool_k_w", params->filter_width);
+    layerParams.set("pool_k_h", params->filter_height);
+    layerParams.set("pool_pad_w", 0);
+    layerParams.set("pool_pad_h", 0);
+}
+
 void TFLiteImporter::parseReshape(const Operator* op, const std::string& opcode, LayerParams& layerParams) {
     DataLayout inpLayout = layouts[op->inputs()->Get(0)];
 
@@ -407,21 +440,7 @@ int TFLiteImporter::addPermuteLayer(const std::vector<int>& order, const std::st
 void TFLiteImporter::parseDeconvolution(const Operator* op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Deconvolution";
 
-    // source: https://github.com/tensorflow/tensorflow/blob/b2f5959ff823a8ed5bf4883e785f8f96d4253a8b/tensorflow/lite/core/c/builtin_op_data.h
-    typedef enum {
-        kTfLitePaddingUnknown = 0,
-        kTfLitePaddingSame,
-        kTfLitePaddingValid,
-    } TfLitePadding;
-
-    typedef struct {
-        TfLitePadding padding;
-        int stride_width;
-        int stride_height;
-    } TfLiteTransposeConvParams;
-
-    CV_CheckEQ(op->custom_options()->size(), sizeof(TfLiteTransposeConvParams), "");
-
+    CV_CheckLE(op->custom_options()->size(), sizeof(TfLiteTransposeConvParams), "");
     const auto* params = reinterpret_cast<const TfLiteTransposeConvParams*>(op->custom_options()->Data());
     if (params->padding != kTfLitePaddingUnknown)
         layerParams.set("pad_mode", params->padding == kTfLitePaddingSame ? "SAME" : "VALID");
