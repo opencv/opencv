@@ -1317,23 +1317,17 @@ Mat initCameraMatrix2D( InputArrayOfArrays objectPoints,
     return cameraMatrix;
 }
 
-static Mat prepareDistCoeffs(Mat& distCoeffs0, int rtype, int outputSize = 14)
+static Mat prepareDistCoeffs(Mat& distCoeffs0, int rtype, int outputSize)
 {
+    Size sz = distCoeffs0.size();
+    int n = sz.area();
+    if (n > 0)
+        CV_Assert(sz.width == 1 || sz.height == 1);
     CV_Assert((int)distCoeffs0.total() <= outputSize);
-    Mat distCoeffs = Mat::zeros(distCoeffs0.cols == 1 ? Size(1, outputSize) : Size(outputSize, 1), rtype);
-    if( distCoeffs0.size() == Size(1, 4) ||
-       distCoeffs0.size() == Size(1, 5) ||
-       distCoeffs0.size() == Size(1, 8) ||
-       distCoeffs0.size() == Size(1, 12) ||
-       distCoeffs0.size() == Size(1, 14) ||
-       distCoeffs0.size() == Size(4, 1) ||
-       distCoeffs0.size() == Size(5, 1) ||
-       distCoeffs0.size() == Size(8, 1) ||
-       distCoeffs0.size() == Size(12, 1) ||
-       distCoeffs0.size() == Size(14, 1) )
+    Mat distCoeffs = Mat::zeros(sz.width == 1 ? Size(1, outputSize) : Size(outputSize, 1), rtype);
+    if( n ==  4 || n ==  5 || n ==  8 || n == 12 || n == 14 )
     {
-        Mat dstCoeffs(distCoeffs, Rect(0, 0, distCoeffs0.cols, distCoeffs0.rows));
-        distCoeffs0.convertTo(dstCoeffs, rtype);
+        distCoeffs0.convertTo(distCoeffs(Rect(Point(), sz)), rtype);
     }
     return distCoeffs;
 }
@@ -1404,7 +1398,7 @@ double calibrateCameraRO(InputArrayOfArrays _objectPoints,
         (flags & CALIB_THIN_PRISM_MODEL) &&
         !(flags & CALIB_TILTED_MODEL) ?
             prepareDistCoeffs(distCoeffs, rtype, 12) :
-            prepareDistCoeffs(distCoeffs, rtype);
+            prepareDistCoeffs(distCoeffs, rtype, 14);
     if( !(flags & CALIB_RATIONAL_MODEL) &&
     (!(flags & CALIB_THIN_PRISM_MODEL)) &&
     (!(flags & CALIB_TILTED_MODEL)))
@@ -1612,8 +1606,8 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
     Mat distCoeffs2 = _distCoeffs2.getMat();
     cameraMatrix1 = prepareCameraMatrix(cameraMatrix1, rtype, flags);
     cameraMatrix2 = prepareCameraMatrix(cameraMatrix2, rtype, flags);
-    distCoeffs1 = prepareDistCoeffs(distCoeffs1, rtype);
-    distCoeffs2 = prepareDistCoeffs(distCoeffs2, rtype);
+    distCoeffs1 = prepareDistCoeffs(distCoeffs1, rtype, 14);
+    distCoeffs2 = prepareDistCoeffs(distCoeffs2, rtype, 14);
 
     if( !(flags & CALIB_RATIONAL_MODEL) &&
     (!(flags & CALIB_THIN_PRISM_MODEL)) &&
