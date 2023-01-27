@@ -70,6 +70,9 @@ TEST(Test_TFLite, selfie_segmentation)
 
 TEST(Test_TFLite, max_unpooling)
 {
+#ifndef HAVE_FLATBUFFERS
+    throw SkipTestException("FlatBuffers required for TFLite importer");
+#endif
     // Due Max Unpoling is a numerically unstable operation and small difference between frameworks
     // might lead to positional difference of maximal elements in the tensor, this test checks
     // behavior of Max Unpooling layer only.
