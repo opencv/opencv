@@ -1534,6 +1534,9 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
     sqrt(JJ2.inv(), JJ2);
 
     int nParams = JJ2.rows;
+    // an explanation of that denominator correction can be found here:
+    // R. Hartley, A. Zisserman, Multiple View Geometry in Computer Vision, 2004, section 5.1.3, page 134
+    // see the discussion for more details: https://github.com/opencv/opencv/pull/22992
     sigma_x  *= sqrt(2.0 * (double)ex.total()/(2.0 * (double)ex.total() - nParams));
 
     errors = 3 * sigma_x(0) * JJ2.diag();
