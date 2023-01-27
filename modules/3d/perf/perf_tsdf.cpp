@@ -535,7 +535,7 @@ protected:
         TestBase::SetUp();
 
         auto p = GetParam();
-        gpu = std::get<0>(std::get<0>(p));
+        gpu = (std::get<0>(std::get<0>(p)) == PlatformType::GPU);
         volumeType = std::get<1>(std::get<0>(p));
 
         testSrcType = std::get<1>(p);

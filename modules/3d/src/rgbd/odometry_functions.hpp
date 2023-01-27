@@ -32,7 +32,7 @@ static inline int getTransformDim(OdometryTransformType transformType)
 
 
 static inline
-Vec6d calcRgbdEquationCoeffs(double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
+Vec6d calcRgbdEquationCoeffs(double dIdx, double dIdy, const Point3d& p3d, double fx, double fy)
 {
     double invz = 1. / p3d.z,
            v0 = dIdx * fx * invz,
@@ -45,7 +45,7 @@ Vec6d calcRgbdEquationCoeffs(double dIdx, double dIdy, const Point3f& p3d, doubl
 }
 
 static inline
-Vec3d calcRgbdEquationCoeffsRotation(double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
+Vec3d calcRgbdEquationCoeffsRotation(double dIdx, double dIdy, const Point3d& p3d, double fx, double fy)
 {
     double invz = 1. / p3d.z,
            v0 = dIdx * fx * invz,
@@ -59,7 +59,7 @@ Vec3d calcRgbdEquationCoeffsRotation(double dIdx, double dIdy, const Point3f& p3
 }
 
 static inline
-Vec3d calcRgbdEquationCoeffsTranslation(double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
+Vec3d calcRgbdEquationCoeffsTranslation(double dIdx, double dIdy, const Point3d& p3d, double fx, double fy)
 {
     double invz = 1. / p3d.z,
            v0 = dIdx * fx * invz,
@@ -70,7 +70,7 @@ Vec3d calcRgbdEquationCoeffsTranslation(double dIdx, double dIdy, const Point3f&
 }
 
 static inline void rgbdCoeffsFunc(OdometryTransformType transformType,
-                                  double* C, double dIdx, double dIdy, const Point3f& p3d, double fx, double fy)
+                                  double* C, double dIdx, double dIdy, const Point3d& p3d, double fx, double fy)
 {
     int dim = getTransformDim(transformType);
     Vec6d ret;
@@ -102,7 +102,7 @@ static inline void rgbdCoeffsFunc(OdometryTransformType transformType,
 
 
 static inline
-Vec6d calcICPEquationCoeffs(const Point3f& psrc, const Vec3f& ndst)
+Vec6d calcICPEquationCoeffs(const Point3d& psrc, const Vec3d& ndst)
 {
     Point3d pxv = psrc.cross(Point3d(ndst));
 
@@ -110,7 +110,7 @@ Vec6d calcICPEquationCoeffs(const Point3f& psrc, const Vec3f& ndst)
 }
 
 static inline
-Vec3d calcICPEquationCoeffsRotation(const Point3f& psrc, const Vec3f& ndst)
+Vec3d calcICPEquationCoeffsRotation(const Point3d& psrc, const Vec3d& ndst)
 {
     Point3d pxv = psrc.cross(Point3d(ndst));
 
@@ -118,13 +118,13 @@ Vec3d calcICPEquationCoeffsRotation(const Point3f& psrc, const Vec3f& ndst)
 }
 
 static inline
-Vec3d calcICPEquationCoeffsTranslation( const Point3f& /*p0*/, const Vec3f& ndst)
+Vec3d calcICPEquationCoeffsTranslation( const Point3d& /*p0*/, const Vec3d& ndst)
 {
     return Vec3d(ndst);
 }
 
 static inline
-void icpCoeffsFunc(OdometryTransformType transformType, double* C, const Point3f& p0, const Point3f& /*p1*/, const Vec3f& n1)
+void icpCoeffsFunc(OdometryTransformType transformType, double* C, const Point3d& p0, const Point3d& /*p1*/, const Vec3d& n1)
 {
     int dim = getTransformDim(transformType);
     Vec6d ret;

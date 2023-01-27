@@ -449,7 +449,7 @@ void HashTsdfVolume::getBoundingBox(OutputArray boundingBox, int precision) cons
             std::vector<Point3f> pts;
             for (Vec3i idx : vi)
             {
-                Point3f base = Point3f(idx[0], idx[1], idx[2]) * side;
+                Point3f base = Point3f((float)idx[0], (float)idx[1], (float)idx[2]) * side;
                 pts.push_back(base);
                 pts.push_back(base + Point3f(side, 0, 0));
                 pts.push_back(base + Point3f(0, side, 0));

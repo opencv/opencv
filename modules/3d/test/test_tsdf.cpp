@@ -886,7 +886,7 @@ protected:
     void SetUp() override
     {
         auto p = GetParam();
-        gpu = std::get<0>(std::get<0>(p));
+        gpu = (std::get<0>(std::get<0>(p)) == PlatformType::GPU);
         volumeType = std::get<1>(std::get<0>(p));
 
         testSrcType = std::get<1>(p);
@@ -1160,7 +1160,7 @@ class StaticVolumeBoundingBox : public ::testing::TestWithParam<PlatformVolumeTy
 TEST_P(StaticVolumeBoundingBox, staticBoundingBox)
 {
     auto p = GetParam();
-    bool gpu = bool(std::get<0>(p));
+    bool gpu = (std::get<0>(p) == PlatformType::GPU);
     VolumeType volumeType = std::get<1>(p);
 
     OpenCLStatusRevert oclStatus;
@@ -1182,7 +1182,7 @@ class ReproduceVolPoseRotTest : public ::testing::TestWithParam<PlatformTypeEnum
 
 TEST_P(ReproduceVolPoseRotTest, reproduce_volPoseRot)
 {
-    bool gpu = bool(GetParam());
+    bool gpu = (GetParam() == PlatformType::GPU);
 
     OpenCLStatusRevert oclStatus;
 
@@ -1207,8 +1207,8 @@ class BoundingBoxEnableGrowthTest : public ::testing::TestWithParam<std::tuple<P
 TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
 {
     auto p = GetParam();
-    bool gpu = bool(std::get<0>(p));
-    bool enableGrowth = bool(std::get<1>(p));
+    bool gpu = (std::get<0>(p) == PlatformType::GPU);
+    bool enableGrowth = (std::get<1>(p) == Growth::ON);
 
     OpenCLStatusRevert oclStatus;
 
