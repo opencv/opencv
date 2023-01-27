@@ -1457,10 +1457,8 @@ void CV_StereoCalibrationTest::run( int )
         }
         else
         {
-            vector<Point2f > reprojectedImgPts[2] = {vector<Point2f>(nframes),
-                                                     vector<Point2f>(nframes)};
             size_t totalPoints = 0;
-            double totalErr[2] = { 0, 0 }, viewErr[2];
+            double totalErr[2] = { 0, 0 };
             for (size_t i = 0; i < objpt.size(); ++i) {
                 RotMat r1 = rotMats1[i];
                 Vec3d t1 = transVecs1[i];
@@ -1469,9 +1467,12 @@ void CV_StereoCalibrationTest::run( int )
                 Mat T2t = R * t1;
                 Vec3d t2 = Mat(T2t + T);
 
+                vector<Point2f> reprojectedImgPts[2] = { vector<Point2f>(nframes),
+                                                         vector<Point2f>(nframes) };
                 projectPoints(objpt[i], r1, t1, M1, D1, reprojectedImgPts[0]);
                 projectPoints(objpt[i], r2, t2, M2, D2, reprojectedImgPts[1]);
 
+                double viewErr[2];
                 viewErr[0] = cv::norm(imgpt1[i], reprojectedImgPts[0], cv::NORM_L2SQR);
                 viewErr[1] = cv::norm(imgpt2[i], reprojectedImgPts[1], cv::NORM_L2SQR);
 

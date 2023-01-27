@@ -557,7 +557,8 @@ static double calibrateCameraInternal( const Mat& objectPoints,
 
     //std::cout << "single camera calib. param after LM: " << param0.t() << "\n";
 
-    // If solver failed, then the last calculated perViewErr can be wrong & should be recalculated
+    // If solver failed or last LM iteration was not successful,
+    // then the last calculated perViewErr can be wrong & should be recalculated
     Mat JtErr, JtJ, JtJinv, JtJN;
     double reprojErr = 0;
     if (!stdDevs.empty())
@@ -665,7 +666,7 @@ static double stereoCalibrateImpl(
                _imagePoints1.depth() == _objectPoints.depth() );
 
     CV_Assert( (_npoints.cols == 1 || _npoints.rows == 1) &&
-               _npoints.type() == CV_32S );
+                _npoints.type() == CV_32S );
 
     int nimages = (int)_npoints.total();
     for(int i = 0; i < nimages; i++ )
@@ -718,19 +719,19 @@ static double stereoCalibrateImpl(
         points.convertTo(imagePoints[k], CV_64F);
         imagePoints[k] = imagePoints[k].reshape(2, 1);
 
-        if( flags & (CALIB_FIX_INTRINSIC|CALIB_USE_INTRINSIC_GUESS|
-                     CALIB_FIX_ASPECT_RATIO|CALIB_FIX_FOCAL_LENGTH) )
+        if( flags & ( CALIB_FIX_INTRINSIC | CALIB_USE_INTRINSIC_GUESS |
+                      CALIB_FIX_ASPECT_RATIO | CALIB_FIX_FOCAL_LENGTH ) )
             cameraMatrix.convertTo(A[k], CV_64F);
 
-        if( flags & (CALIB_FIX_INTRINSIC|CALIB_USE_INTRINSIC_GUESS|
-                     CALIB_FIX_K1|CALIB_FIX_K2|CALIB_FIX_K3|CALIB_FIX_K4|CALIB_FIX_K5|CALIB_FIX_K6|
-                     CALIB_FIX_TANGENT_DIST) )
+        if( flags & ( CALIB_FIX_INTRINSIC | CALIB_USE_INTRINSIC_GUESS |
+                      CALIB_FIX_K1 | CALIB_FIX_K2 | CALIB_FIX_K3 | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 |
+                      CALIB_FIX_TANGENT_DIST) )
         {
             Mat tdist( distCoeffs.size(), CV_MAKETYPE(CV_64F, distCoeffs.channels()), distInitial[k].val);
             distCoeffs.convertTo(tdist, CV_64F);
         }
 
-        if( !(flags & (CALIB_FIX_INTRINSIC|CALIB_USE_INTRINSIC_GUESS)))
+        if( !(flags & (CALIB_FIX_INTRINSIC | CALIB_USE_INTRINSIC_GUESS)))
         {
             Mat mIntr(A[k], /* copyData = */ false);
             Mat mDist(distInitial[k], /* copyData = */ false);
@@ -751,7 +752,7 @@ static double stereoCalibrateImpl(
     if( flags & CALIB_FIX_ASPECT_RATIO )
     {
         for(int k = 0; k < 2; k++ )
-            aspectRatio[k] = A[k](0, 0)/A[k](1, 1);
+            aspectRatio[k] = A[k](0, 0) / A[k](1, 1);
     }
 
     recomputeIntrinsics = (flags & CALIB_FIX_INTRINSIC) == 0;
