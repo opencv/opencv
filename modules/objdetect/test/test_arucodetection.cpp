@@ -323,6 +323,148 @@ void CV_ArucoDetectionPerspective::run(int) {
 
 
 /**
+ * @brief Draw 2D synthetic markers, temper with some pixels, detect them and compute their uncertainty.
+ */
+class CV_ArucoDetectionUnc : public cvtest::BaseTest {
+    public:
+    CV_ArucoDetectionUnc(ArucoAlgParams arucoAlgParam) : arucoAlgParams(arucoAlgParam) {}
+
+    protected:
+    void run(int);
+    ArucoAlgParams arucoAlgParams;
+};
+
+
+void CV_ArucoDetectionUnc::run(int) {
+
+    aruco::DetectorParameters params;
+    aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_6X6_250), params);
+
+    // Params to test
+    float ingnoreMarginPerCell[3] = {0.0, 0.1, 0.2};
+    int borderBitsTest[3] = {1,2,3};
+
+    const int markerSidePixels = 150;
+    const int imageSize = (markerSidePixels * 2) + 3 * (markerSidePixels / 2);
+
+    // 25 images containing 4 markers.
+    for(int i = 0; i < 25; i++) {
+
+        // Modify default params
+        params.perspectiveRemovePixelPerCell = 6 + i;
+        params.perspectiveRemoveIgnoredMarginPerCell = ingnoreMarginPerCell[i % 3];
+        params.markerBorderBits = borderBitsTest[i % 3];
+
+        // draw synthetic image
+        vector<float > groundTruthUncs;
+        vector<int> groundTruthIds;
+        Mat img = Mat(imageSize, imageSize, CV_8UC1, Scalar::all(255));
+
+        // Invert the pixel value of a % of each cell [0%, 2%, 4%, ..., 48%]
+        float invertPixelPercent = 2 * i / 100.f;
+        int markerSizeWithBorders = 6 + 2 * params.markerBorderBits;
+        int cellSidePixelsSize = markerSidePixels / markerSizeWithBorders;
+        int cellSidePixelsInvert = int(sqrt(invertPixelPercent) * cellSidePixelsSize);
+        int cellMarginPixels = (cellSidePixelsSize - cellSidePixelsInvert) / 2; // Invert center of the cell
+
+        float groundTruthUnc;
+
+        // Generate 4 markers
+        for(int y = 0; y < 2; y++) {
+            for(int x = 0; x < 2; x++) {
+                Mat marker;
+                int id = i * 4 + y * 2 + x;
+                groundTruthIds.push_back(id);
+
+                // Generate marker
+                aruco::generateImageMarker(detector.getDictionary(), id, markerSidePixels, marker, params.markerBorderBits);
+
+                // Test all 4 rotations: [0, 90, 180, 270]
+                if(y == 0 && x == 0){
+                    // Rotate 90 deg CCW
+                    cv::transpose(marker, marker);
+                    cv::flip(marker, marker,0);
+                } else if (y == 0 && x == 1){
+                    // Rotate 90 deg CW
+                    cv::transpose(marker, marker);
+                    cv::flip(marker, marker,1);
+                } else if (y == 1 && x == 0){
+                    // Rotate 180 deg CCW
+                    cv::flip(marker, marker,-1);
+                }
+
+                // Invert the pixel value of a % of each cell [0%, 2%, 4%, ..., 48%]
+                if(cellSidePixelsInvert > 0){
+                    // loop over each cell
+                    for(int k = 0; k < markerSizeWithBorders; k++) {
+                        for(int p = 0; p < markerSizeWithBorders; p++) {
+                            int Xstart = p * (cellSidePixelsSize) + cellMarginPixels;
+                            int Ystart = k * (cellSidePixelsSize) + cellMarginPixels;
+                            Mat square(marker, Rect(Xstart, Ystart, cellSidePixelsInvert, cellSidePixelsInvert));
+                            square = ~square;
+                        }
+                    }
+                }
+
+                // Assume a perfect marker detection and thus a ground truth equal to the percentage of inverted pixels.
+                groundTruthUnc = markerSizeWithBorders * markerSizeWithBorders * cellSidePixelsInvert * cellSidePixelsInvert / (float)(markerSidePixels * markerSidePixels);
+                groundTruthUncs.push_back(groundTruthUnc);
+
+                // Make sure that the marker is still detected when it was highly tempered.
+                if(groundTruthUnc >= 0.2) params.perspectiveRemoveIgnoredMarginPerCell = 0;
+
+                // Copy marker into full image
+                Point2f firstCorner =
+                    Point2f(markerSidePixels / 2.f + x * (1.5f * markerSidePixels),
+                            markerSidePixels / 2.f + y * (1.5f * markerSidePixels));
+                Mat aux = img.colRange((int)firstCorner.x, (int)firstCorner.x + markerSidePixels)
+                              .rowRange((int)firstCorner.y, (int)firstCorner.y + markerSidePixels);
+
+                marker.copyTo(aux);
+            }
+        }
+
+        // Test inverted markers
+        if(ArucoAlgParams::DETECT_INVERTED_MARKER == arucoAlgParams){
+            img = ~img;
+            params.detectInvertedMarker = true;
+        }
+
+        detector.setDetectorParameters(params);
+
+        // detect markers and compute uncertainty
+        vector<vector<Point2f> > corners, rejected;
+        vector<int> ids;
+        vector<float> markerUnc;
+
+        detector.detectMarkersWithUnc(img, corners, ids, rejected, markerUnc);
+
+        // check detection results
+        for(unsigned int m = 0; m < groundTruthIds.size(); m++) {
+            int idx = -1;
+            for(unsigned int k = 0; k < ids.size(); k++) {
+                if(groundTruthIds[m] == ids[k]) {
+                    idx = (int)k;
+                    break;
+                }
+            }
+            if(idx == -1) {
+                ts->printf(cvtest::TS::LOG, "Marker not detected");
+                ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
+                return;
+            }
+            double dist = (double)cv::abs(groundTruthUncs[m] - markerUnc[idx]);  // TODO cvtest
+            if(dist > 0.05) {
+                ts->printf(cvtest::TS::LOG, "Marker: %d is incorrect: uncertainty: %.2f (GT: %.2f) ", m, markerUnc[idx], groundTruthUncs[m]);
+                ts->printf(cvtest::TS::LOG, "");
+                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                return;
+            }
+        }
+    }
+}
+
+/**
  * @brief Check max and min size in marker detection parameters
  */
 class CV_ArucoDetectionMarkerSize : public cvtest::BaseTest {
@@ -549,6 +691,18 @@ TEST(CV_ArucoDetectionMarkerSize, algorithmic) {
 
 TEST(CV_ArucoBitCorrection, algorithmic) {
     CV_ArucoBitCorrection test;
+    test.safe_run();
+}
+
+typedef CV_ArucoDetectionUnc CV_InvertedArucoDetectionUnc;
+
+TEST(CV_ArucoDetectionUnc, algorithmic) {
+    CV_ArucoDetectionUnc test(ArucoAlgParams::USE_DEFAULT);
+    test.safe_run();
+}
+
+TEST(CV_InvertedArucoDetectionUnc, algorithmic) {
+    CV_InvertedArucoDetectionUnc test(ArucoAlgParams::DETECT_INVERTED_MARKER);
     test.safe_run();
 }
 
