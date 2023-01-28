@@ -709,6 +709,21 @@ model = DepthWiseAdd()
 model.eval()
 save_data_and_model("depthwiseconv_add", input, model)
 
+class DepthWiseStride2(nn.Module):
+
+    def __init__(self):
+        super(DepthWiseStride2, self).__init__()
+        self.dconv1 = nn.Conv2d(8, 8, kernel_size=3, stride=2, padding=1, groups=8)
+
+    def forward(self, x):
+        a = self.dconv1(x)
+        return a
+
+input = Variable(torch.randn(1, 8, 6, 6))
+model = DepthWiseStride2()
+model.eval()
+save_data_and_model("depthwise_stride2", input, model)
+
 class Clip(nn.Module):
 
     def __init__(self):
