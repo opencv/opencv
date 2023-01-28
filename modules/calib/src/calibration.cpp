@@ -404,6 +404,12 @@ static double calibrateCameraInternal( const Mat& objectPoints,
         mask[nparams - 1] = 0;
     }
 
+    int nparams_nz = countNonZero(mask);
+
+    if (nparams_nz >= 2 * total)
+        CV_Error_(Error::StsBadArg,
+                  ("There should be less vars to optimize (having %d) than the number of residuals (%d = 2 per point)", nparams_nz, 2 * total));
+
     // 2. initialize extrinsic parameters
     for(int i = 0, pos = 0; i < nimages; i++ )
     {
@@ -572,26 +578,23 @@ static double calibrateCameraInternal( const Mat& objectPoints,
 
     if (!stdDevs.empty())
     {
-        int nparams_nz = countNonZero(mask);
         JtJN.create(nparams_nz, nparams_nz, CV_64F);
 
         subMatrix(JtJ, JtJN, mask, mask);
         completeSymm(JtJN, false);
         //TODO: try DECOMP_CHOLESKY maybe?
         cv::invert(JtJN, JtJinv, DECOMP_EIG);
-        // sigma2 is deviation of the noise
-        // see any papers about variance of the least squares estimator for
-        // detailed description of the variance estimation methods
-        double sigma2 = norm(allErrors, NORM_L2SQR) / (total - nparams_nz);
+        // an explanation of that denominator correction can be found here:
+        // R. Hartley, A. Zisserman, Multiple View Geometry in Computer Vision, 2004, section 5.1.3, page 134
+        // see the discussion for more details: https://github.com/opencv/opencv/pull/22992
+        double sigma2 = norm(allErrors, NORM_L2SQR) / (2 * total - nparams_nz);
         int j = 0;
         for ( int s = 0; s < nparams; s++ )
+        {
+            stdDevs.at<double>(s) = mask[s] ? std::sqrt(JtJinv.at<double>(j, j) * sigma2) : 0.0;
             if( mask[s] )
-            {
-                stdDevs.at<double>(s) = std::sqrt(JtJinv.at<double>(j,j) * sigma2);
                 j++;
-            }
-            else
-                stdDevs.at<double>(s) = 0.;
+        }
     }
 
     // 4. store the results

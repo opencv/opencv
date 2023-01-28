@@ -38,8 +38,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert((inputs.size() == 2 && constTensor.empty() ||
-                       inputs.size() == 1 && !constTensor.empty()) && outputs.size() == 1);
+            CV_Assert(((inputs.size() == 2 && constTensor.empty()) ||
+                       (inputs.size() == 1 && !constTensor.empty())) && outputs.size() == 1);
 
             auto input1_wrapper = inputs[0].dynamicCast<wrapper_type>();
             auto input1 = input1_wrapper->getView();

@@ -20,7 +20,7 @@ protected:
 
     std::vector<int> labeling_inliers;
     std::vector<double> energies, weights;
-    std::vector<bool> used_edges;
+    std::set<int> used_edges;
     std::vector<Mat> gc_models;
 public:
 
@@ -40,7 +40,7 @@ public:
 
         energies = std::vector<double>(points_size);
         labeling_inliers = std::vector<int>(points_size);
-        used_edges = std::vector<bool>(points_size*points_size);
+        used_edges = std::set<int>();
         gc_models = std::vector<Mat> (estimator->getMaxNumSolutionsNonMinimal());
     }
 
@@ -115,7 +115,7 @@ private:
             energies[pt] = energy > 1 ? 1 : energy;
         }
 
-        std::fill(used_edges.begin(), used_edges.end(), false);
+        used_edges.clear();
 
         bool has_edges = false;
         // Iterate through all points and set their edges
@@ -125,12 +125,12 @@ private:
             // Iterate through  all neighbors
             for (int actual_neighbor_idx : neighborhood_graph->getNeighbors(point_idx)) {
                 if (actual_neighbor_idx == point_idx ||
-                    used_edges[actual_neighbor_idx*points_size + point_idx] ||
-                    used_edges[point_idx*points_size + actual_neighbor_idx])
+                    used_edges.count(actual_neighbor_idx*points_size + point_idx) > 0 ||
+                    used_edges.count(point_idx*points_size + actual_neighbor_idx) > 0)
                     continue;
 
-                used_edges[actual_neighbor_idx*points_size + point_idx] = true;
-                used_edges[point_idx*points_size + actual_neighbor_idx] = true;
+                used_edges.insert(actual_neighbor_idx*points_size + point_idx);
+                used_edges.insert(point_idx*points_size + actual_neighbor_idx);
 
                 double a = (0.5 * (energy + energies[actual_neighbor_idx])) * spatial_coherence,
                        b = spatial_coherence, c = spatial_coherence, d = 0;

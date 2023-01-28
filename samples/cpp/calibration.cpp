@@ -497,7 +497,7 @@ int main( int argc, char** argv )
             view0.copyTo(view);
         }
         else if( i < (int)imageList.size() )
-            view = imread(imageList[i], 1);
+            view = imread(imageList[i], IMREAD_COLOR);
 
         if(view.empty())
         {
@@ -622,7 +622,7 @@ int main( int argc, char** argv )
 
         for( i = 0; i < (int)imageList.size(); i++ )
         {
-            view = imread(imageList[i], 1);
+            view = imread(imageList[i], IMREAD_COLOR);
             if(view.empty())
                 continue;
             remap(view, rview, map1, map2, INTER_LINEAR);

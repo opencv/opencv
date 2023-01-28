@@ -454,9 +454,6 @@ private:
     performance_metrics metrics;
     void validateMetrics();
 
-    static int64 _timeadjustment;
-    static int64 _calibrate();
-
     static void warmup_impl(cv::Mat m, WarmUpType wtype);
     static int getSizeInBytes(cv::InputArray a);
     static cv::Size getSize(cv::InputArray a);

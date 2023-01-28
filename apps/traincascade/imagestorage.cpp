@@ -54,7 +54,7 @@ bool CvCascadeImageReader::NegReader::nextImg()
     size_t count = imgFilenames.size();
     for( size_t i = 0; i < count; i++ )
     {
-        src = imread( imgFilenames[last++], 0 );
+        src = imread( imgFilenames[last++], IMREAD_GRAYSCALE );
         if( src.empty() ){
             last %= count;
             continue;
