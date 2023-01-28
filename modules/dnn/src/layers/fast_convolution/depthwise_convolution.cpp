@@ -29,7 +29,7 @@ static void depthWiseBlockConv2D(const float* wptr,
     const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
             w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
             w20_ = wptr[6], w21_ = wptr[7], w22_ = wptr[8];
-    int outW1 = min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
+    const int outW1 = min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
     float relu_coeff = relu ? relu[out_d] : 1.f, bias = biasptr[out_d];
 
     for (int out_i = 0; out_i < outH; out_i++)
@@ -67,35 +67,37 @@ static void depthWiseBlockConv2D(const float* wptr,
 
 #if CV_SIMD128
         const int VEC_NLANES = 4;
-
-        if (fusedAdd)
-            outW1 = max(out_j, outW1 - outW1%VEC_NLANES);
-
-        v_float32x4 vw00 = v_setall_f32(w00);
-        v_float32x4 vw01 = v_setall_f32(w01);
-        v_float32x4 vw02 = v_setall_f32(w02);
-        v_float32x4 vw10 = v_setall_f32(w10);
-        v_float32x4 vw11 = v_setall_f32(w11);
-        v_float32x4 vw12 = v_setall_f32(w12);
-        v_float32x4 vw20 = v_setall_f32(w20);
-        v_float32x4 vw21 = v_setall_f32(w21);
-        v_float32x4 vw22 = v_setall_f32(w22);
-        v_float32x4 z = v_setzero_f32();
-        v_float32x4 vbias = v_setall_f32(bias);
-        v_float32x4 vrc = v_setall_f32(relu_coeff);
-
-        if (stride_w == 1 || (stride_w == 2 && dilation_w == 1))
+        if ((stride_w == 1 || (stride_w == 2 && dilation_w == 1)) && (outW1 - out_j) >= VEC_NLANES)
         {
-            if( stride_w == 1 )
+            v_float32x4 vw00 = v_setall_f32(w00);
+            v_float32x4 vw01 = v_setall_f32(w01);
+            v_float32x4 vw02 = v_setall_f32(w02);
+            v_float32x4 vw10 = v_setall_f32(w10);
+            v_float32x4 vw11 = v_setall_f32(w11);
+            v_float32x4 vw12 = v_setall_f32(w12);
+            v_float32x4 vw20 = v_setall_f32(w20);
+            v_float32x4 vw21 = v_setall_f32(w21);
+            v_float32x4 vw22 = v_setall_f32(w22);
+            v_float32x4 z = v_setzero_f32();
+            v_float32x4 vbias = v_setall_f32(bias);
+            v_float32x4 vrc = v_setall_f32(relu_coeff);
+
+            if (stride_w == 1)
             {
-                for( ; out_j < outW1; out_j += VEC_NLANES )
+                for (; out_j < outW1; out_j += VEC_NLANES)
                 {
-                    if (out_j + VEC_NLANES > outW1)
+                    // Tail processing.
+                    if (out_j > outW1 - VEC_NLANES)
                     {
-                        if (out_j <= pad_l || outW1 - VEC_NLANES < 0)
+                        // If fusedAdd is true, what is stored in outptr is not a meaningless value,
+                        // but the number being added. And we should avoid use tail processing in this case.
+                        // Because the tail process will make some elements compute twice,
+                        // which will lead to result errors.
+                        if (fusedAdd)
                             break;
                         out_j = outW1 - VEC_NLANES;
                     }
+
                     int in_j = out_j * stride_w - pad_l;
                     v_float32x4 v00 = v_load(imgptr0 + in_j),
                             v01 = v_load(imgptr0 + in_j + dilation_w),
@@ -119,11 +121,12 @@ static void depthWiseBlockConv2D(const float* wptr,
             }
             else // (stride_w == 2 && dilation_w == 1)
             {
-                for( ; out_j < outW1; out_j += VEC_NLANES )
+                for (; out_j < outW1; out_j += VEC_NLANES)
                 {
-                    if (out_j + VEC_NLANES > outW1 && out_j > pad_l)
+                    // Tail processing.
+                    if (out_j > outW1 - VEC_NLANES)
                     {
-                        if (outW1 - VEC_NLANES < 0)
+                        if (fusedAdd)
                             break;
                         out_j = outW1 - VEC_NLANES;
                     }
@@ -204,7 +207,7 @@ static void depthWiseBlockConv1D(const float* wptr,
                                  int out_d, int outW, bool fusedAdd)
 {
     const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2];
-    int outW1 = min(outW, (width - dilation_w * (kernel_w - 1) + pad_l)/stride_w);
+    const int outW1 = min(outW, (width - dilation_w * (kernel_w - 1) + pad_l)/stride_w);
     float relu_coeff = relu ? relu[out_d] : 1.f, bias = biasptr[out_d];
 
     int out_j = 0;
@@ -225,27 +228,27 @@ static void depthWiseBlockConv1D(const float* wptr,
 
 #if CV_SIMD128
     const int VEC_NLANES = 4;
-    if (fusedAdd)
-        outW1 = max(out_j, outW1 - outW1%VEC_NLANES);
-    v_float32x4 vw00 = v_setall_f32(w00);
-    v_float32x4 vw01 = v_setall_f32(w01);
-    v_float32x4 vw02 = v_setall_f32(w02);
-    v_float32x4 z = v_setzero_f32();
-    v_float32x4 vbias = v_setall_f32(bias);
-    v_float32x4 vrc = v_setall_f32(relu_coeff);
-
-    if (stride_w == 1 || (stride_w == 2 && dilation_w == 1))
+    if ((stride_w == 1 || (stride_w == 2 && dilation_w == 1)) && (outW1 - out_j) >= VEC_NLANES)
     {
+        v_float32x4 vw00 = v_setall_f32(w00);
+        v_float32x4 vw01 = v_setall_f32(w01);
+        v_float32x4 vw02 = v_setall_f32(w02);
+        v_float32x4 z = v_setzero_f32();
+        v_float32x4 vbias = v_setall_f32(bias);
+        v_float32x4 vrc = v_setall_f32(relu_coeff);
+
         if( stride_w == 1 )
         {
             for( ; out_j < outW1; out_j += VEC_NLANES )
             {
+                // Tail processing.
                 if (out_j + VEC_NLANES > outW1)
                 {
-                    if (out_j <= pad_l || outW1 - VEC_NLANES < 0)
+                    if (fusedAdd)
                         break;
                     out_j = outW1 - VEC_NLANES;
                 }
+
                 int in_j = out_j * stride_w - pad_l;
                 v_float32x4 v00 = v_load(imgptr0 + in_j),
                         v01 = v_load(imgptr0 + in_j + dilation_w),
@@ -263,12 +266,14 @@ static void depthWiseBlockConv1D(const float* wptr,
         {
             for( ; out_j < outW1; out_j += VEC_NLANES )
             {
+                // Tail processing.
                 if (out_j + VEC_NLANES > outW1)
                 {
-                    if (out_j <= pad_l || outW1 - VEC_NLANES < 0)
+                    if (fusedAdd)
                         break;
                     out_j = outW1 - VEC_NLANES;
                 }
+
                 int in_j = out_j * stride_w - pad_l;
 
                 v_float32x4 v00, v01, v02, unused;

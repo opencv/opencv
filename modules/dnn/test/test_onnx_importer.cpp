@@ -1731,6 +1731,11 @@ TEST_P(Test_ONNX_layers, DepthWiseAdd)
     testONNXModels("depthwiseconv_add");
 }
 
+TEST_P(Test_ONNX_layers, DepthStride2)
+{
+    testONNXModels("depthwise_stride2");
+}
+
 TEST_P(Test_ONNX_layers, SubFromConst)
 {
     testONNXModels("sub_from_const1");
