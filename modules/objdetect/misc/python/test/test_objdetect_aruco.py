@@ -156,7 +156,7 @@ class aruco_objdetect_test(NewOpenCVTests):
         gold_corners = np.array([[offset, offset],[marker_size+offset-1.0,offset],
                                  [marker_size+offset-1.0,marker_size+offset-1.0],
                                  [offset, marker_size+offset-1.0]], dtype=np.float32)
-        corners, ids, rejected = aruco_detector.detectMarkers(img_marker)
+        corners, ids, rejected, marker_unc = aruco_detector.detectMarkers(img_marker)
 
         self.assertEqual(1, len(ids))
         self.assertEqual(id, ids[0])
@@ -171,7 +171,7 @@ class aruco_objdetect_test(NewOpenCVTests):
         board = cv.aruco.GridBoard(board_size, 5.0, 1.0, aruco_dict)
         board_image = board.generateImage((board_size[0]*50, board_size[1]*50), marginSize=10)
 
-        corners, ids, rejected = aruco_detector.detectMarkers(board_image)
+        corners, ids, rejected, marker_unc = aruco_detector.detectMarkers(board_image)
         self.assertEqual(board_size[0]*board_size[1], len(ids))
 
         part_corners, part_ids, part_rejected = corners[:-1], ids[:-1], list(rejected)
