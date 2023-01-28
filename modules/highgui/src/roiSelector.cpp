@@ -198,21 +198,21 @@ class ROISelector
 };
 }
 
-Rect cv::selectROI(InputArray img, bool showCrosshair, bool fromCenter)
+Rect cv::selectROI(InputArray img, bool showCrosshair, bool fromCenter, bool printNotice = true)
 {
     ROISelector selector;
-    return selector.select("ROI selector", img.getMat(), showCrosshair, fromCenter);
+    return selector.select("ROI selector", img.getMat(), showCrosshair, fromCenter, printNotice);
 }
 
-Rect cv::selectROI(const String& windowName, InputArray img, bool showCrosshair, bool fromCenter)
+Rect cv::selectROI(const String& windowName, InputArray img, bool showCrosshair, bool fromCenter, bool printNotice = true)
 {
     ROISelector selector;
-    return selector.select(windowName, img.getMat(), showCrosshair, fromCenter);
+    return selector.select(windowName, img.getMat(), showCrosshair, fromCenter, printNotice);
 }
 
 void cv::selectROIs(const String& windowName, InputArray img,
-                             std::vector<Rect>& boundingBox, bool showCrosshair, bool fromCenter)
+                             std::vector<Rect>& boundingBox, bool showCrosshair, bool fromCenter, bool printNotice = true)
 {
     ROISelector selector;
-    selector.select(windowName, img.getMat(), boundingBox, showCrosshair, fromCenter);
+    selector.select(windowName, img.getMat(), boundingBox, showCrosshair, fromCenter, printNotice);
 }
