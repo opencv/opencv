@@ -1670,6 +1670,12 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
     }
     }
 
+    Mat mask = cvarrToMat(solver.mask);
+    int nparams_nz = countNonZero(mask);
+    if (nparams_nz >= 2 * total)
+        CV_Error_(CV_StsBadArg,
+                  ("There should be less vars to optimize (having %d) than the number of residuals (%d = 2 per point)", nparams_nz, 2 * total));
+
     // 2. initialize extrinsic parameters
     for( i = 0, pos = 0; i < nimages; i++, pos += ni )
     {
@@ -1795,27 +1801,24 @@ static double cvCalibrateCamera2Internal( const CvMat* objectPoints,
         {
             if( stdDevs )
             {
-                Mat mask = cvarrToMat(solver.mask);
-                int nparams_nz = countNonZero(mask);
                 Mat JtJinv, JtJN;
                 JtJN.create(nparams_nz, nparams_nz, CV_64F);
                 subMatrix(cvarrToMat(_JtJ), JtJN, mask, mask);
                 completeSymm(JtJN, false);
                 cv::invert(JtJN, JtJinv, DECOMP_SVD);
-                //sigma2 is deviation of the noise
-                //see any papers about variance of the least squares estimator for
-                //detailed description of the variance estimation methods
-                double sigma2 = norm(allErrors, NORM_L2SQR) / (total - nparams_nz);
+                // an explanation of that denominator correction can be found here:
+                // R. Hartley, A. Zisserman, Multiple View Geometry in Computer Vision, 2004, section 5.1.3, page 134
+                // see the discussion for more details: https://github.com/opencv/opencv/pull/22992
+                int nErrors = 2 * total - nparams_nz;
+                double sigma2 = norm(allErrors, NORM_L2SQR) / nErrors;
                 Mat stdDevsM = cvarrToMat(stdDevs);
                 int j = 0;
                 for ( int s = 0; s < nparams; s++ )
+                {
+                    stdDevsM.at<double>(s) = mask.data[s] ? std::sqrt(JtJinv.at<double>(j,j) * sigma2) : 0.0;
                     if( mask.data[s] )
-                    {
-                        stdDevsM.at<double>(s) = std::sqrt(JtJinv.at<double>(j,j) * sigma2);
                         j++;
-                    }
-                    else
-                        stdDevsM.at<double>(s) = 0.;
+                }
             }
             break;
         }
