@@ -1594,12 +1594,17 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
 
     Vec<double, 1> sigma_x;
     meanStdDev(ex.reshape(1, 1), noArray(), sigma_x);
-    sigma_x  *= sqrt(2.0 * (double)ex.total()/(2.0 * (double)ex.total() - 1.0));
 
     Mat JJ2, ex3;
     ComputeJacobians(objectPoints, imagePoints, params, omc, Tc, check_cond, thresh_cond, JJ2, ex3);
 
     sqrt(JJ2.inv(), JJ2);
+
+    int nParams = JJ2.rows;
+    // an explanation of that denominator correction can be found here:
+    // R. Hartley, A. Zisserman, Multiple View Geometry in Computer Vision, 2004, section 5.1.3, page 134
+    // see the discussion for more details: https://github.com/opencv/opencv/pull/22992
+    sigma_x  *= sqrt(2.0 * (double)ex.total()/(2.0 * (double)ex.total() - nParams));
 
     errors = 3 * sigma_x(0) * JJ2.diag();
     rms = sqrt(norm(ex, NORM_L2SQR)/ex.total());
