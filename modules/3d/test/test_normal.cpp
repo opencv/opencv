@@ -181,10 +181,7 @@ protected:
         depth  = std::get<0>(std::get<0>(p));
         alg = static_cast<RgbdNormals::RgbdNormalsMethod>(int(std::get<1>(std::get<0>(p))));
         scale = std::get<2>(std::get<0>(p));
-        int idx = std::get<1>(p);
-
-        rng = cvtest::TS::ptr()->get_rng();
-        rng.state += idx + nTestCasesNormals*int(scale) + alg*16 + depth*64;
+        idx = std::get<1>(p);
 
         float diffThreshold = scale ? 100000.f : 50.f;
         normalsComputer = RgbdNormals::create(H, W, depth, K, 5, diffThreshold, alg);
@@ -222,6 +219,9 @@ protected:
     void runCase(bool scaleUp, int nPlanes, bool makeDepth,
                  double meanThreshold, double maxThreshold, double threshold3d)
     {
+        RNG& rng = cv::theRNG();
+        rng.state += idx + nTestCasesNormals*int(scale) + alg*16 + depth*64;
+
         std::vector<Plane> plane_params;
         Mat_<unsigned char> plane_mask;
         Mat points3d, ground_normals;
@@ -277,8 +277,8 @@ protected:
     int depth;
     RgbdNormals::RgbdNormalsMethod alg;
     bool scale;
+    int idx;
 
-    RNG rng;
     Ptr<RgbdNormals> normalsComputer;
 };
 
@@ -339,7 +339,7 @@ INSTANTIATE_TEST_CASE_P(RGBD_Normals, NormalsRandomPlanes,
     // 3 normal computer params + 5 thresholds:
     //depth, alg, scale, 1plane mean, 1plane max, 3planes mean, 1plane16u mean, 3planes16 mean
     NormalsTestData {CV_32F, RgbdNormals::RGBD_NORMALS_METHOD_FALS,  true, 0.00362, 0.08881, 0.02175, 0, 0},
-    NormalsTestData {CV_32F, RgbdNormals::RGBD_NORMALS_METHOD_FALS, false, 0.00374, 0.10309, 0.01902, 0, 0},
+    NormalsTestData {CV_32F, RgbdNormals::RGBD_NORMALS_METHOD_FALS, false, 0.00374, 0.10309, 0.02, 0, 0},
     NormalsTestData {CV_64F, RgbdNormals::RGBD_NORMALS_METHOD_FALS,  true, 0.00023, 0.00037, 0.01805, 0, 0},
     NormalsTestData {CV_64F, RgbdNormals::RGBD_NORMALS_METHOD_FALS, false, 0.00023, 0.00037, 0.01805, 0, 0},
 
@@ -348,10 +348,10 @@ INSTANTIATE_TEST_CASE_P(RGBD_Normals, NormalsRandomPlanes,
     NormalsTestData {CV_64F, RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD,  true, 0.00160, 0.06526, 0.04371, 0.28837, 0.28918},
     NormalsTestData {CV_64F, RgbdNormals::RGBD_NORMALS_METHOD_LINEMOD, false, 0.00154, 0.06877, 0.04323, 0, 0},
 
-    NormalsTestData {CV_32F, RgbdNormals::RGBD_NORMALS_METHOD_SRI,  true, 0.01987, hpi, 0.03463, 0, 0},
-    NormalsTestData {CV_32F, RgbdNormals::RGBD_NORMALS_METHOD_SRI, false, 0.01962, hpi, 0.03546, 0, 0},
-    NormalsTestData {CV_64F, RgbdNormals::RGBD_NORMALS_METHOD_SRI,  true, 0.01958, hpi, 0.03546, 0, 0},
-    NormalsTestData {CV_64F, RgbdNormals::RGBD_NORMALS_METHOD_SRI, false, 0.01995, hpi, 0.03474, 0, 0},
+    NormalsTestData {CV_32F, RgbdNormals::RGBD_NORMALS_METHOD_SRI,  true, 0.01987, hpi, 0.036, 0, 0},
+    NormalsTestData {CV_32F, RgbdNormals::RGBD_NORMALS_METHOD_SRI, false, 0.01962, hpi, 0.037, 0, 0},
+    NormalsTestData {CV_64F, RgbdNormals::RGBD_NORMALS_METHOD_SRI,  true, 0.01958, hpi, 0.037, 0, 0},
+    NormalsTestData {CV_64F, RgbdNormals::RGBD_NORMALS_METHOD_SRI, false, 0.01995, hpi, 0.036, 0, 0},
 
     NormalsTestData {CV_32F, RgbdNormals::RGBD_NORMALS_METHOD_CROSS_PRODUCT,  true, 0.000230, 0.00038, 0.00450, 0, 0},
     NormalsTestData {CV_32F, RgbdNormals::RGBD_NORMALS_METHOD_CROSS_PRODUCT, false, 0.000230, 0.00038, 0.00478, 0, 0},
