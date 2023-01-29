@@ -6,7 +6,7 @@
 
 namespace opencv_test { namespace {
 
-enum TestSolver { Homogr, Fundam, Essen, PnP, Affine, SE2, SIM2, SE3, SIM3, };
+enum TestSolver { Homogr, Fundam, Essen, PnP, Affine, SE2, SIM2, SO3, SE3, SIM3, };
 /*
 * rng -- reference to random generator
 * pts1 -- 2xN image points
@@ -112,7 +112,7 @@ static int generatePoints (cv::RNG &rng, cv::Mat &pts1, cv::Mat &pts2, cv::Mat &
         return inl_size;
     } else if (test_case == TestSolver::Affine ||
                test_case == TestSolver::SE2 || test_case == TestSolver::SIM2 ||
-               test_case == TestSolver::SE3 || test_case == TestSolver::SIM3) {
+               test_case == TestSolver::SO3 || test_case == TestSolver::SE3 || test_case == TestSolver::SIM3) {
     } else
         CV_Error(cv::Error::StsBadArg, "Unknown solver!");
 
@@ -134,7 +134,7 @@ static int generatePoints (cv::RNG &rng, cv::Mat &pts1, cv::Mat &pts2, cv::Mat &
             pts2 = A * points3d;
             // get 2D points
             pts1 = pts1.rowRange(0,2); pts2 = pts2.rowRange(0,2);
-        } else if (test_case == TestSolver::SE3 || test_case == TestSolver::SIM3) {
+        } else if (test_case == TestSolver::SO3 || test_case == TestSolver::SE3 || test_case == TestSolver::SIM3) {
             pts1 = cv::Mat(3, inl_size, pts_type);
             rng.fill(pts1, cv::RNG::UNIFORM, 0, 1000);
             cv::Mat sc = cv::Mat::eye(4, 4, pts_type);
@@ -145,7 +145,12 @@ static int generatePoints (cv::RNG &rng, cv::Mat &pts1, cv::Mat &pts2, cv::Mat &
             cv::Mat rot = cv::Mat::eye(4, 4, pts_type);
             cv::Matx31d rvec(rng.uniform(0., CV_PI), rng.uniform(0., CV_PI), rng.uniform(0., CV_PI));
             cv::Rodrigues(rvec, rot(cv::Rect(0,0,3,3)));
-            cv::Mat A = sc * tr * rot;
+            cv::Mat A;
+            if (test_case == TestSolver::SO3) {
+                A = rot;
+            } else {
+                A = sc * tr * rot;
+            }
             cv::vconcat(pts1, cv::Mat::ones(1, pts1.cols, pts1.type()), points3d);
             pts2 = A * points3d;
             // get 3D points
@@ -451,6 +456,25 @@ TEST (usac_SIM2, accuracy) {
     }
 }
 
+TEST (usac_SO3, accuracy) {
+    std::vector<int> gt_inliers;
+    const int pts_size = 2000;
+    cv::Mat pts1, pts2, K1, K2;
+    cv::RNG &rng = cv::theRNG();
+    const std::vector<int> flags = {USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC};
+    for (double inl_ratio = 0.1; inl_ratio < 0.91; inl_ratio += 0.1) {
+        int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
+                  pts_size, TestSolver ::SO3, inl_ratio, 0.15 /*noise std*/, gt_inliers);
+        const double conf = 0.99, thr = 2., max_iters = 1.3 * log(1 - conf) /
+                log(1 - pow(inl_ratio, 3 /* sample size */));
+        for (auto flag : flags) {
+            cv::Mat mask, A = cv::estimateSO3(pts1, pts2, mask, flag, thr, (size_t)max_iters, conf, 0);
+            cv::vconcat(A, cv::Mat(cv::Matx14d(0,0,0,1)), A);
+            checkInliersMask(TestSolver::Homogr /*use homography error*/, inl_size, thr, pts1, pts2, A, mask);
+        }
+    }
+}
+
 TEST (usac_SE3, accuracy) {
     std::vector<int> gt_inliers;
     const int pts_size = 2000;
@@ -573,6 +597,13 @@ TEST(usac_testUsacParams, accuracy) {
     getInlierRatio(usac_params.maxIterations, 3, usac_params.confidence), 0.1, gt_inliers);
     model = cv::estimateSIM2(pts1, pts2, mask, usac_params);
     cv::vconcat(model, cv::Mat(cv::Matx13d(0,0,1)), model);
+    checkInliersMask(TestSolver::Homogr, inl_size, usac_params.threshold, pts1, pts2, model, mask);
+
+    // SO3
+    inl_size = generatePoints(rng, pts1, pts2, K1, K2, false, pts_size, TestSolver::SO3,
+    getInlierRatio(usac_params.maxIterations, 3, usac_params.confidence), 0.1, gt_inliers);
+    model = cv::estimateSO3(pts1, pts2, mask, usac_params);
+    cv::vconcat(model, cv::Mat(cv::Matx14d(0,0,0,1)), model);
     checkInliersMask(TestSolver::Homogr, inl_size, usac_params.threshold, pts1, pts2, model, mask);
 
     // SE3

@@ -408,6 +408,7 @@ int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, EstimationMethod 
             convertPoints(pts1, 2); // pts1 are always image points
             convertPoints(pts2, 2);
             break;
+        case EstimationMethod::SO3:
         case EstimationMethod::SE3:
         case EstimationMethod::SIM3:
             convertPoints(pts1, 3);
@@ -422,7 +423,7 @@ int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, EstimationMethod 
     }
 
     // points are of size [Nx2 Nx2] = Nx4 for H, F, E
-    // points are of size [Nx3 Nx3] = Nx6 for SE3, SIM3
+    // points are of size [Nx3 Nx3] = Nx6 for SO3, SE3, SIM3
     // points are of size [Nx2 Nx3] = Nx5 for PnP
     hconcat(pts1, pts2, pts);
     return pts.rows;
@@ -636,6 +637,23 @@ Mat estimateSIM2(InputArray from, InputArray to, OutputArray mask, int method,
     return Mat();
 }
 
+Mat estimateSO3(InputArray from, InputArray to, OutputArray mask, int method,
+        double thr, int max_iters, double conf, int /*refineIters*/) {
+    Ptr<Model> params;
+    setParameters(method, params, EstimationMethod ::SO3, thr, max_iters, conf, mask.needed());
+    Ptr<RansacOutput> ransac_output;
+    if (run(params, from, to, params->getRandomGeneratorState(),
+            ransac_output, noArray(), noArray(), noArray(), noArray())) {
+        saveMask(mask, ransac_output->getInliersMask());
+        return ransac_output->getModel().rowRange(0,3);
+    }
+    if (mask.needed()){
+        mask.create(std::max(from.getMat().rows, from.getMat().cols), 1, CV_8U);
+        mask.setTo(Scalar::all(0));
+    }
+    return Mat();
+}
+
 Mat estimateSE3(InputArray from, InputArray to, OutputArray mask, int method,
         double thr, int max_iters, double conf, int /*refineIters*/) {
     Ptr<Model> params;
@@ -740,14 +758,11 @@ public:
                 avg_num_models = 1; time_for_model_est = 50;
                 sample_size = 3; est_error = ErrorMetric ::FORW_REPR_ERR; break;
             case (EstimationMethod::SE2):
-                avg_num_models = 1; time_for_model_est = 100;
-                sample_size = 2; est_error = ErrorMetric ::FORW_REPR_ERR; break;
             case (EstimationMethod::SIM2):
                 avg_num_models = 1; time_for_model_est = 100;
                 sample_size = 2; est_error = ErrorMetric ::FORW_REPR_ERR; break;
+            case (EstimationMethod::SO3):
             case (EstimationMethod::SE3):
-                avg_num_models = 1; time_for_model_est = 100;
-                sample_size = 3; est_error = ErrorMetric ::FORW_REPR_ERR; break;
             case (EstimationMethod::SIM3):
                 avg_num_models = 1; time_for_model_est = 100;
                 sample_size = 3; est_error = ErrorMetric ::FORW_REPR_ERR; break;
@@ -984,6 +999,7 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
                 case EstimationMethod::SIM2:
                     error = ReprojectionErrorAffine::create(points);
                     break;
+                case EstimationMethod::SO3:
                 case EstimationMethod::SE3:
                 case EstimationMethod::SIM3:
                     error = ReprojectionErrorAffine3D::create(points);
@@ -1056,6 +1072,11 @@ bool run (const Ptr<const Model> &params, InputArray points1, InputArray points2
         degeneracy = makePtr<Degeneracy>();
         min_solver = SIM2MinimalSolver::create(points);
         non_min_solver = SIM2NonMinimalSolver::create(points);
+        estimator = AffineEstimator::create(min_solver, non_min_solver);
+    } else if (params->getEstimator() == EstimationMethod::SO3) {
+        degeneracy = makePtr<Degeneracy>();
+        min_solver = SO3MinimalSolver::create(points);
+        non_min_solver = SO3NonMinimalSolver::create(points);
         estimator = AffineEstimator::create(min_solver, non_min_solver);
     } else if (params->getEstimator() == EstimationMethod::SE3) {
         degeneracy = makePtr<Degeneracy>();

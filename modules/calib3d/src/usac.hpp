@@ -6,7 +6,7 @@
 #define OPENCV_USAC_USAC_HPP
 
 namespace cv { namespace usac {
-enum EstimationMethod { Homography, Fundamental, Fundamental8, Essential, Affine, SE2, SE3, SIM2, SIM3, P3P, P6P};
+enum EstimationMethod { Homography, Fundamental, Fundamental8, Essential, Affine, SE2, SIM2, SO3, SE3, SIM3, P3P, P6P};
 enum VerificationMethod { NullVerifier, SprtVerifier };
 enum PolishingMethod { NonePolisher, LSQPolisher };
 enum ErrorMetric {DIST_TO_LINE, SAMPSON_ERR, SGD_ERR, SYMM_REPR_ERR, FORW_REPR_ERR, RERPOJ};
@@ -144,6 +144,10 @@ class SIM2MinimalSolver : public MinimalSolver {
 public:
     static Ptr<SIM2MinimalSolver> create(const Mat &points_);
 };
+class SO3MinimalSolver : public MinimalSolver {
+public:
+    static Ptr<SO3MinimalSolver> create(const Mat &points_);
+};
 class SE3MinimalSolver : public MinimalSolver {
 public:
     static Ptr<SE3MinimalSolver> create(const Mat &points_);
@@ -211,6 +215,10 @@ public:
 class SIM2NonMinimalSolver : public NonMinimalSolver {
 public:
     static Ptr<SIM2NonMinimalSolver> create(const Mat &points_);
+};
+class SO3NonMinimalSolver : public NonMinimalSolver {
+public:
+    static Ptr<SO3NonMinimalSolver> create(const Mat &points_);
 };
 class SE3NonMinimalSolver : public NonMinimalSolver {
 public:
@@ -861,6 +869,10 @@ Mat estimateSE2(InputArray from, InputArray to, OutputArray inliers,
      double confidence, int refineIters);
 
 Mat estimateSIM2(InputArray from, InputArray to, OutputArray inliers,
+     int method, double ransacReprojThreshold, int maxIters,
+     double confidence, int refineIters);
+
+Mat estimateSO3(InputArray from, InputArray to, OutputArray inliers,
      int method, double ransacReprojThreshold, int maxIters,
      double confidence, int refineIters);
 
