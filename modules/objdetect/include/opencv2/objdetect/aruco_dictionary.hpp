@@ -9,7 +9,7 @@
 namespace cv {
 namespace aruco {
 
-//! @addtogroup aruco
+//! @addtogroup objdetect_aruco
 //! @{
 
 
@@ -50,11 +50,7 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
 
     /** @brief Write a dictionary to FileStorage, format is the same as in readDictionary().
      */
-     void writeDictionary(FileStorage& fs);
-
-    /** @brief simplified API for language bindings
-    */
-    CV_WRAP void writeDictionary(Ptr<FileStorage>& fs, const String& name = String());
+    CV_WRAP void writeDictionary(FileStorage& fs, const String& name = String());
 
     /** @brief Given a matrix of bits. Returns whether if marker is identified or not.
      *

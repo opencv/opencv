@@ -199,9 +199,11 @@ TEST_P(Test_ONNX_layers, Convolution_variable_weight_bias)
 
 TEST_P(Test_ONNX_layers, Gather)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("gather", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, Gather_Scalar)
+{
     testONNXModels("gather_scalar", npy, 0, 0, false, false);
 }
 
@@ -904,23 +906,37 @@ TEST_P(Test_ONNX_layers, Multiplication)
     testONNXModels("mul");
 }
 
-TEST_P(Test_ONNX_layers, MatMul)
+TEST_P(Test_ONNX_layers, MatMul_2d)
 {
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
-
     testONNXModels("matmul_2d");
+}
+TEST_P(Test_ONNX_layers, MatMul_3d)
+{
     testONNXModels("matmul_3d");
+}
+TEST_P(Test_ONNX_layers, MatMul_4d)
+{
     testONNXModels("matmul_4d");
 }
 
-TEST_P(Test_ONNX_layers, MatMul_init)
+TEST_P(Test_ONNX_layers, MatMul_2d_init)
 {
     testONNXModels("matmul_2d_init");
+}
+TEST_P(Test_ONNX_layers, MatMul_3d_init)
+{
     testONNXModels("matmul_3d_init");
+}
+TEST_P(Test_ONNX_layers, MatMul_4d_init)
+{
     testONNXModels("matmul_4d_init");
-
+}
+TEST_P(Test_ONNX_layers, MatMul_init_2)
+{
     testONNXModels("matmul_init_2");
+}
+TEST_P(Test_ONNX_layers, MatMul_init_bcast)
+{
     testONNXModels("matmul_init_bcast");
 }
 
@@ -1131,6 +1147,7 @@ TEST_P(Test_ONNX_layers, Slice)
     testONNXModels("slice");
     testONNXModels("slice_neg_starts");
     testONNXModels("slice_opset_11");
+    testONNXModels("slice_neg_steps", pb);
 #endif
 }
 
@@ -1707,6 +1724,16 @@ TEST_P(Test_ONNX_layers, ConvResizePool1d)
     }
 #endif
     testONNXModels("conv_resize_pool_1d");
+}
+
+TEST_P(Test_ONNX_layers, DepthWiseAdd)
+{
+    testONNXModels("depthwiseconv_add");
+}
+
+TEST_P(Test_ONNX_layers, DepthStride2)
+{
+    testONNXModels("depthwise_stride2");
 }
 
 TEST_P(Test_ONNX_layers, SubFromConst)
@@ -2392,6 +2419,36 @@ TEST_P(Test_ONNX_layers, YOLOv7)
 TEST_P(Test_ONNX_layers, Tile)
 {
     testONNXModels("tile", pb);
+}
+
+TEST_P(Test_ONNX_layers, LayerNorm)
+{
+    testONNXModels("test_layer_normalization_2d_axis0", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_2d_axis1", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_2d_axis_negative_1", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_2d_axis_negative_2", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_3d_axis0_epsilon", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_3d_axis1_epsilon", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_3d_axis2_epsilon", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_3d_axis_negative_1_epsilon", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_3d_axis_negative_2_epsilon", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_3d_axis_negative_3_epsilon", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_4d_axis0", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_4d_axis1", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_4d_axis2", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_4d_axis3", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_4d_axis_negative_1", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_4d_axis_negative_2", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_4d_axis_negative_3", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_4d_axis_negative_4", pb, 0, 0, false, true, 3);
+    testONNXModels("test_layer_normalization_default_axis", pb, 0, 0, false, true, 3);
+}
+
+// for testing graph simplification
+TEST_P(Test_ONNX_layers, LayerNormExpanded)
+{
+    testONNXModels("layer_norm_expanded");
+    testONNXModels("layer_norm_expanded_with_initializers");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

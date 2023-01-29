@@ -81,6 +81,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_BACKEND_CUDA,
         DNN_BACKEND_WEBNN,
         DNN_BACKEND_TIMVX,
+        DNN_BACKEND_CANN,
 #if defined(__OPENCV_BUILD) || defined(BUILD_PLUGIN)
 #if !defined(OPENCV_BINDING_PARSER)
         DNN_BACKEND_INFERENCE_ENGINE_NGRAPH = 1000000,     // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
@@ -342,6 +343,15 @@ CV__DNN_INLINE_NS_BEGIN
                                            const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
                                            const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
                                            bool isLast);
+
+        /**
+         * @brief Returns a CANN backend node
+         *
+         * @param   inputsWrapper   layer inputs
+         * @param   index           layer id for op name
+         * @param   nodes           inputs of this node
+         */
+        virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes);
 
        /**
         * @brief Automatic Halide scheduling based on layer hyper-parameters.

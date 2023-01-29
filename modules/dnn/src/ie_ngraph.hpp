@@ -68,7 +68,11 @@ public:
     std::unordered_map<std::string, std::shared_ptr<ngraph::Node>* > all_nodes;
 
     InferenceEngine::ExecutableNetwork netExec;
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+    std::map<std::string, ov::Tensor> allBlobs;
+#else
     InferenceEngine::BlobMap allBlobs;
+#endif
     std::string device_name;
     bool isInit = false;
 
@@ -87,9 +91,7 @@ public:
 
     InferenceEngine::CNNNetwork cnn;
     bool hasNetOwner;
-    std::unordered_map<std::string, Ptr<InfEngineNgraphNode> > requestedOutputs;
-
-    std::map<std::string, InferenceEngine::TensorDesc> outputsDesc;
+    std::unordered_map<std::string, InfEngineNgraphNode*> requestedOutputs;
 };
 
 class InfEngineNgraphNode : public BackendNode
@@ -123,16 +125,14 @@ public:
     virtual void setHostDirty() CV_OVERRIDE;
 
     Mat* host;
-    InferenceEngine::DataPtr dataPtr;
+    std::string name;
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+    ov::Tensor blob;
+#else
     InferenceEngine::Blob::Ptr blob;
+#endif
     AsyncArray futureMat;
 };
-
-InferenceEngine::DataPtr ngraphDataNode(const Ptr<BackendWrapper>& ptr);
-InferenceEngine::DataPtr ngraphDataOutputNode(
-        const Ptr<BackendWrapper>& ptr,
-        const InferenceEngine::TensorDesc& description,
-        const std::string name);
 
 // This is a fake class to run networks from Model Optimizer. Objects of that
 // class simulate responses of layers are imported by OpenCV and supported by

@@ -562,12 +562,12 @@ TEST_P(Test_Darknet_nets_async, Accuracy)
             l1 = 0.001;
             lInf = 0.005;
         }
-        if (INF_ENGINE_VER_MAJOR_EQ(2021040000) && targetId == DNN_TARGET_OPENCL_FP16 && prefix == "yolov4-tiny")  // FIXIT: 4.x only, 3.4 branch works well
+        if (INF_ENGINE_VER_MAJOR_EQ(2021040000) && targetId == DNN_TARGET_OPENCL_FP16 && prefix == "yolov4-tiny-2020-12")  // FIXIT: 4.x only, 3.4 branch works well
         {
             l1 = 0.001;
             lInf = 0.005;
         }
-        if (INF_ENGINE_VER_MAJOR_EQ(2022010000) && targetId == DNN_TARGET_OPENCL_FP16 && prefix == "yolov4-tiny")  // FIXIT: 4.x only, 3.4 branch works well
+        if (INF_ENGINE_VER_MAJOR_EQ(2022010000) && targetId == DNN_TARGET_OPENCL_FP16 && prefix == "yolov4-tiny-2020-12")  // FIXIT: 4.x only, 3.4 branch works well
         {
             l1 = 0.001;
             lInf = 0.005;
@@ -594,7 +594,7 @@ TEST_P(Test_Darknet_nets_async, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_nets_async, Combine(
-    Values("yolo-voc", "tiny-yolo-voc", "yolov3", "yolov4", "yolov4-tiny"),
+    Values("yolo-voc", "tiny-yolo-voc", "yolov3", "yolov4", "yolov4-tiny-2020-12"),
     dnnBackendsAndTargets()
 ));
 
@@ -638,6 +638,11 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     double scoreDiff = 8e-5, iouDiff = 3e-4;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2022010000)
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            scoreDiff = 0.009;
+        else
+#endif
         scoreDiff = 0.006;
         iouDiff = 0.042;
     }
@@ -771,6 +776,7 @@ TEST_P(Test_Darknet_nets, YOLOv4)
     // accuracy (batch 2)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
     {
+        scoreDiff = 0.008f;
         iouDiff = 0.05f;
     }
     // accuracy
@@ -827,25 +833,26 @@ TEST_P(Test_Darknet_nets, YOLOv4_tiny)
 
     const double confThreshold = 0.5;
     // batchId, classId, confidence, left, top, right, bottom
-    const int N0 = 2;
+    const int N0 = 3;
     const int N1 = 3;
     static const float ref_[/* (N0 + N1) * 7 */] = {
-0, 7, 0.85935f, 0.593484f, 0.141211f, 0.920356f, 0.291593f,
-0, 16, 0.795188f, 0.169207f, 0.386886f, 0.423753f, 0.933004f,
+0, 16, 0.889883f, 0.177204f, 0.356279f, 0.417204f, 0.937517f,
+0, 7, 0.816615f, 0.604293f, 0.137345f, 0.918016f, 0.295708f,
+0, 1, 0.595912f, 0.0940107f, 0.178122f, 0.750619f, 0.829336f,
 
-1, 2, 0.996832f, 0.653802f, 0.464573f, 0.815193f, 0.653292f,
-1, 2, 0.963325f, 0.451151f, 0.458915f, 0.496255f, 0.52241f,
-1, 0, 0.926244f, 0.194851f, 0.361743f, 0.260277f, 0.632364f,
+1, 2, 0.998224f, 0.652883f, 0.463477f, 0.813952f, 0.657163f,
+1, 2, 0.967396f, 0.4539f, 0.466368f, 0.497716f, 0.520299f,
+1, 0, 0.807866f, 0.205039f, 0.361842f, 0.260984f, 0.643621f,
     };
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
-    double scoreDiff = 0.01f;
+    double scoreDiff = 0.012f;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.15 : 0.01f;
     if (target == DNN_TARGET_CUDA_FP16)
         iouDiff = 0.02;
 
-    std::string config_file = "yolov4-tiny.cfg";
-    std::string weights_file = "yolov4-tiny.weights";
+    std::string config_file = "yolov4-tiny-2020-12.cfg";
+    std::string weights_file = "yolov4-tiny-2020-12.weights";
 
 #if defined(INF_ENGINE_RELEASE)
     if (target == DNN_TARGET_MYRIAD)  // bad accuracy

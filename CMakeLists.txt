@@ -468,6 +468,9 @@ OCV_OPTION(WITH_TIMVX "Include Tim-VX support" OFF
 OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec RGB-D modules: Astra+/Femto)" ON
   VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT) OR ( UNIX AND NOT APPLE AND NOT ANDROID)
   VERIFY HAVE_OBSENSOR)
+OCV_OPTION(WITH_CANN "Include CANN support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_CANN)
 
 # OpenCV build components
 # ===================================================
@@ -752,6 +755,9 @@ if(WITH_TENGINE)
 endif()
 if(WITH_TIMVX)
   include(cmake/OpenCVFindTIMVX.cmake)
+endif()
+if(WITH_CANN)
+  include(cmake/OpenCVFindCANN.cmake)
 endif()
 
 # ----------------------------------------------------------------------------
@@ -1733,6 +1739,15 @@ if(WITH_ONNX OR HAVE_ONNX)
   if(HAVE_ONNX)
     status("    Include path:"  ONNX_INCLUDE_DIR THEN "${ONNX_INCLUDE_DIR}" ELSE "NO")
     status("    Link libraries:" ONNX_LIBRARIES THEN "${ONNX_LIBRARIES}" ELSE "NO")
+  endif()
+endif()
+
+if(WITH_CANN)
+  status("")
+  status("  CANN:"    HAVE_CANN THEN "YES" ELSE "NO")
+  if(HAVE_CANN)
+    status("    Include path"     CANN_INCLUDE_DIRS THEN "${CANN_INCLUDE_DIRS}" ELSE "NO")
+    status("    Link libraries:"  CANN_LIBRARIES    THEN "${CANN_LIBRARIES}"    ELSE "NO")
   endif()
 endif()
 

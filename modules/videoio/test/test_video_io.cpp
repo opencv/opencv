@@ -228,13 +228,9 @@ public:
             EXPECT_EQ(frame_count, 125);
         Mat img;
 
-#ifdef _WIN32  // handle old FFmpeg wrapper on Windows till rebuild
-        frame_count = 10;
-#else
         // HACK: FFmpeg reports picture_pts = AV_NOPTS_VALUE_ for the last frame for AVI container by some reason
         if ((ext == "avi") && (apiPref == CAP_FFMPEG))
             frame_count--;
-#endif
 
         for (int i = 0; i < frame_count; i++)
         {
@@ -392,6 +388,7 @@ static Ext_Fourcc_PSNR synthetic_params[] = {
     {"wmv", "WMV3", 30.f, CAP_MSMF},
     {"wmv", "WVC1", 30.f, CAP_MSMF},
     {"mov", "H264", 30.f, CAP_MSMF},
+ // {"mov", "HEVC", 30.f, CAP_MSMF},  // excluded due to CI issue: https://github.com/opencv/opencv/pull/23172
 #endif
 
 #ifdef HAVE_AVFOUNDATION
@@ -995,6 +992,7 @@ static Ext_Fourcc_PSNR hw_codecs[] = {
 #ifdef _WIN32
         {"mp4", "MPEG", 29.f, CAP_MSMF},
         {"mp4", "H264", 29.f, CAP_MSMF},
+        {"mp4", "HEVC", 29.f, CAP_MSMF},
 #endif
 };
 

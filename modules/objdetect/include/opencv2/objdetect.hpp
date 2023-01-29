@@ -105,6 +105,26 @@ using a Boosted Cascade of Simple Features. IEEE CVPR, 2001. The paper is availa
     @defgroup objdetect_dnn_face DNN-based face detection and recognition
 Check @ref tutorial_dnn_face "the corresponding tutorial" for more details.
     @defgroup objdetect_common Common functions and classes
+    @defgroup objdetect_aruco ArUco markers and boards detection for robust camera pose estimation
+    @{
+        ArUco Marker Detection
+        Square fiducial markers (also known as Augmented Reality Markers) are useful for easy,
+        fast and robust camera pose estimation.
+
+        The main functionality of ArucoDetector class is detection of markers in an image. If the markers are grouped
+        as a board, then you can try to recover the missing markers with ArucoDetector::refineDetectedMarkers().
+        ArUco markers can also be used for advanced chessboard corner finding. To do this, group the markers in the
+        CharucoBoard and find the corners of the chessboard with the CharucoDetector::detectBoard().
+
+        The implementation is based on the ArUco Library by R. Muñoz-Salinas and S. Garrido-Jurado @cite Aruco2014.
+
+        Markers can also be detected based on the AprilTag 2 @cite wang2016iros fiducial detection method.
+
+        @sa @cite Aruco2014
+        This code has been originally developed by Sergio Garrido-Jurado as a project
+        for Google Summer of Code 2015 (GSoC 15).
+    @}
+
 @}
  */
 
@@ -852,5 +872,6 @@ protected:
 #include "opencv2/objdetect/detection_based_tracker.hpp"
 #include "opencv2/objdetect/face.hpp"
 #include "opencv2/objdetect/aruco_detector.hpp"
+#include "opencv2/objdetect/charuco_detector.hpp"
 
 #endif

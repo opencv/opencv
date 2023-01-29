@@ -46,7 +46,13 @@ bool Dictionary::readDictionary(const cv::FileNode& fn) {
     return true;
 }
 
-void Dictionary::writeDictionary(FileStorage &fs) {
+void Dictionary::writeDictionary(FileStorage& fs, const String &name)
+{
+    CV_Assert(fs.isOpened());
+
+    if (!name.empty())
+        fs << name << "{";
+
     fs << "nmarkers" << bytesList.rows;
     fs << "markersize" << markerSize;
     fs << "maxCorrectionBits" << maxCorrectionBits;
@@ -61,14 +67,9 @@ void Dictionary::writeDictionary(FileStorage &fs) {
             marker.push_back(bitMarker.at<uint8_t>(j) + '0');
         fs << markerName << marker;
     }
-}
 
-void Dictionary::writeDictionary(Ptr<FileStorage>& fs, const String &name) {
-    if(name.empty())
-        return writeDictionary(*fs);
-    *fs << name << "{";
-    writeDictionary(*fs);
-    *fs << "}";
+    if (!name.empty())
+        fs << "}";
 }
 
 

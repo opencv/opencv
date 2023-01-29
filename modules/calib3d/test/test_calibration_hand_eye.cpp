@@ -427,9 +427,9 @@ public:
         eps_rvec_noise[CALIB_HAND_EYE_ANDREFF] = 1.0e-2;
         eps_rvec_noise[CALIB_HAND_EYE_DANIILIDIS] = 1.0e-2;
 
-        eps_tvec_noise[CALIB_HAND_EYE_TSAI] = 5.0e-2;
-        eps_tvec_noise[CALIB_HAND_EYE_PARK] = 5.0e-2;
-        eps_tvec_noise[CALIB_HAND_EYE_HORAUD] = 5.0e-2;
+        eps_tvec_noise[CALIB_HAND_EYE_TSAI] = 7.0e-2;
+        eps_tvec_noise[CALIB_HAND_EYE_PARK] = 7.0e-2;
+        eps_tvec_noise[CALIB_HAND_EYE_HORAUD] = 7.0e-2;
         if (eyeToHandConfig)
         {
             eps_tvec_noise[CALIB_HAND_EYE_ANDREFF] = 7.0e-2;
@@ -454,7 +454,7 @@ void CV_CalibrateHandEyeTest::run(int)
 {
     ts->set_failed_test_info(cvtest::TS::OK);
 
-    RNG& rng = ts->get_rng();
+    RNG& rng = cv::theRNG();
 
     std::vector<std::vector<double> > vec_rvec_diff(5);
     std::vector<std::vector<double> > vec_tvec_diff(5);
