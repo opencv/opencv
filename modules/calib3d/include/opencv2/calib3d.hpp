@@ -3330,6 +3330,29 @@ CV_EXPORTS_W cv::Mat estimateSIM2(InputArray pts1, InputArray pts2, OutputArray 
 @return Output \f$SO(3)\f$ transformation (3 degrees of freedom) matrix \f$3 \times 4\f$ or
 empty matrix if transformation could not be estimated.
 
+@param from First input 3D point set containing \f$(X,Y,Z)\f$.
+@param to Second input 3D point set containing \f$(x,y,z)\f$.
+@param inliers Output vector indicating which points are inliers (1-inlier, 0-outlier).
+@param method Robust method used to compute transformation. The following methods are possible:
+-   @ref USAC_DEFAULT – has standard LO-RANSAC.
+-   @ref USAC_PARALLEL – has LO-RANSAC and RANSACs run in parallel.
+-   @ref USAC_ACCURATE – has GC-RANSAC.
+-   @ref USAC_FAST – has LO-RANSAC with smaller number iterations in local optimization step. Uses RANSAC score to maximize number of inliers and terminate earlier.
+-   @ref USAC_PROSAC – has PROSAC sampling. Note, points must be sorted.
+-   @ref USAC_MAGSAC – has MAGSAC++.
+USAC_DEFAULT is the default method.
+The legacy methods of @ref RANSAC and @ref LMEDS are not supported. Use @sa estimateAffine3D for them.
+@param ransacReprojThreshold Maximum reprojection error in the RANSAC algorithm to consider
+a point as an inlier. Applies only to RANSAC.
+@param maxIters The maximum number of robust method iterations.
+@param confidence Confidence level, between 0 and 1, for the estimated transformation. Anything
+between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation
+significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated transformation.
+@param refineIters Maximum number of iterations of refining algorithm (Levenberg-Marquardt).
+Passing 0 will disable refining, so the output matrix will be output of robust method.
+
+@return Output \f$SO(3)\f$ transformation (3 degrees of freedom) matrix \f$3 \times 4\f$ or
+empty matrix if transformation could not be estimated.
 The function estimates an optimal \f$SO(3)\f$ transformation with 3 degrees of freedom limited to
 combinations of translation and rotation.
 @sa estimateAffine3D
