@@ -3287,7 +3287,7 @@ CV_EXPORTS_W cv::Mat estimateSE2(InputArray pts1, InputArray pts2, OutputArray i
                      const UsacParams &params);
 
 
-/** @brief Computes an optimal limited \f$Sim(2)\f$ transformation with 3 degrees of freedom between
+/** @brief Computes an optimal limited \f$Sim(2)\f$ transformation with 4 degrees of freedom between
 two 2D point sets.
 
 @param from First input 2D point set containing \f$(X,Y)\f$.
@@ -3314,7 +3314,7 @@ Passing 0 will disable refining, so the output matrix will be output of robust m
 @return Output \f$Sim(2)\f$ transformation (4 degrees of freedom) matrix \f$2 \times 3\f$ or
 empty matrix if transformation could not be estimated.
 
-The function estimates an optimal \f$Sim(2)\f$ transformation with 3 degrees of freedom limited to
+The function estimates an optimal \f$Sim(2)\f$ transformation with 4 degrees of freedom limited to
 combinations of translation, rotation, and uniform scaling.
 @sa estimateAffine2D
 */
@@ -3326,7 +3326,7 @@ CV_EXPORTS_W cv::Mat estimateSIM2(InputArray from, InputArray to, OutputArray in
 CV_EXPORTS_W cv::Mat estimateSIM2(InputArray pts1, InputArray pts2, OutputArray inliers,
                      const UsacParams &params);
 
-/** @brief Computes an optimal limited \f$SE(3)\f$ transformation with 4 degrees of freedom between
+/** @brief Computes an optimal limited \f$SE(3)\f$ transformation with 6 degrees of freedom between
 two 3D point sets.
 
 @param from First input 3D point set containing \f$(X,Y,Z)\f$.
@@ -3350,10 +3350,10 @@ significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated 
 @param refineIters Maximum number of iterations of refining algorithm (Levenberg-Marquardt).
 Passing 0 will disable refining, so the output matrix will be output of robust method.
 
-@return Output \f$SE(3)\f$ transformation (4 degrees of freedom) matrix \f$3 \times 4\f$ or
+@return Output \f$SE(3)\f$ transformation (6 degrees of freedom) matrix \f$3 \times 4\f$ or
 empty matrix if transformation could not be estimated.
 
-The function estimates an optimal \f$SE(3)\f$ transformation with 3 degrees of freedom limited to
+The function estimates an optimal \f$SE(3)\f$ transformation with 6 degrees of freedom limited to
 combinations of translation and rotation.
 @sa estimateAffine3D
 */
@@ -3365,7 +3365,7 @@ CV_EXPORTS_W cv::Mat estimateSE3(InputArray from, InputArray to, OutputArray inl
 CV_EXPORTS_W cv::Mat estimateSE3(InputArray pts1, InputArray pts2, OutputArray inliers,
                      const UsacParams &params);
 
-/** @brief Computes an optimal limited \f$Sim(3)\f$ transformation with 4 degrees of freedom between
+/** @brief Computes an optimal limited \f$Sim(3)\f$ transformation with 7 degrees of freedom between
 two 3D point sets.
 
 @param from First input 3D point set containing \f$(X,Y,Z)\f$.
@@ -3389,10 +3389,10 @@ significantly. Values lower than 0.8-0.9 can result in an incorrectly estimated 
 @param refineIters Maximum number of iterations of refining algorithm (Levenberg-Marquardt).
 Passing 0 will disable refining, so the output matrix will be output of robust method.
 
-@return Output \f$Sim(3)\f$ transformation (5 degrees of freedom) matrix \f$3 \times 4\f$ or
+@return Output \f$Sim(3)\f$ transformation (7 degrees of freedom) matrix \f$3 \times 4\f$ or
 empty matrix if transformation could not be estimated.
 
-The function estimates an optimal \f$Sim(3)\f$ transformation with 5 degrees of freedom limited to
+The function estimates an optimal \f$Sim(3)\f$ transformation with 7 degrees of freedom limited to
 combinations of translation, rotation, and uniform scaling.
 @sa estimateAffine3D
 */CV_EXPORTS_W cv::Mat estimateSIM3(InputArray from, InputArray to, OutputArray inliers = noArray(),
