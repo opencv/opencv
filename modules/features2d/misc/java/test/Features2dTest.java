@@ -79,8 +79,8 @@ public class Features2dTest extends OpenCVTestCase {
 
     public void testPTOD()
     {
-        String detectorCfg = "%YAML:1.0\n---\nhessianThreshold: 4000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n";
-        String extractorCfg = "%YAML:1.0\n---\nnOctaves: 4\nnOctaveLayers: 2\nextended: 0\nupright: 0\n";
+        String detectorCfg = "%YAML:1.0\n---\nhessianThreshold: 4000.\nextended: 0\nupright: 0\nOctaves: 4\nOctaveLayers: 3\n";
+        String extractorCfg = "%YAML:1.0\n---\nhessianThreshold: 4000.\nextended: 0\nupright: 0\nOctaves: 4\nOctaveLayers: 3\n";
 
         Feature2D detector = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
         Feature2D extractor = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);

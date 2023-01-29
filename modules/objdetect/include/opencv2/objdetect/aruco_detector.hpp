@@ -10,28 +10,7 @@
 namespace cv {
 namespace aruco {
 
-/** @defgroup aruco ArUco Marker Detection
- * Square fiducial markers (also known as Augmented Reality Markers) are useful for easy,
- * fast and robust camera pose estimation.
- *
- * The main functionality of ArucoDetector class is detection of markers in an image. There are even more
- * functionalities implemented in the aruco contrib module (files aruco.hpp, charuco.hpp, aruco_calib.hpp):
- * - Pose estimation from a single marker or from a board/set of markers
- * - Detection of ChArUco board for high subpixel accuracy
- * - Camera calibration from both, ArUco boards and ChArUco boards.
- * - Detection of ChArUco diamond markers
- * The functionalities from the aruco contrib module is planned to be transferred to the main repository.
- *
- * The implementation is based on the ArUco Library by R. Muñoz-Salinas and S. Garrido-Jurado @cite Aruco2014.
- *
- * Markers can also be detected based on the AprilTag 2 @cite wang2016iros fiducial detection method.
- *
- * @sa @cite Aruco2014
- * This code has been originally developed by Sergio Garrido-Jurado as a project
- * for Google Summer of Code 2015 (GSoC 15).
- */
-
-//! @addtogroup aruco
+//! @addtogroup objdetect_aruco
 //! @{
 
 enum CornerRefineMethod{
@@ -85,11 +64,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
 
     /** @brief Write a set of DetectorParameters to FileStorage
      */
-    bool writeDetectorParameters(FileStorage& fs);
-
-    /** @brief simplified API for language bindings
-    */
-    CV_WRAP bool writeDetectorParameters(const Ptr<FileStorage>& fs, const String& name = String());
+    CV_WRAP bool writeDetectorParameters(FileStorage& fs, const String& name = String());
 
     /// minimum window size for adaptive thresholding before finding contours (default 3).
     CV_PROP_RW int adaptiveThreshWinSizeMin;
@@ -237,11 +212,7 @@ struct CV_EXPORTS_W_SIMPLE RefineParameters {
 
     /** @brief Write a set of RefineParameters to FileStorage
      */
-    bool writeRefineParameters(FileStorage& fs);
-
-    /** @brief simplified API for language bindings
-    */
-    CV_WRAP bool writeRefineParameters(const Ptr<FileStorage>& fs, const String& name = String());
+    CV_WRAP bool writeRefineParameters(FileStorage& fs, const String& name = String());
 
     /** @brief minRepDistance minimum distance between the corners of the rejected candidate and the reprojected marker
     in order to consider it as a correspondence.
@@ -302,7 +273,7 @@ public:
      * @sa undistort, estimatePoseSingleMarkers,  estimatePoseBoard
      */
     CV_WRAP void detectMarkers(InputArray image, OutputArrayOfArrays corners, OutputArray ids,
-                               OutputArrayOfArrays rejectedImgPoints = noArray());
+                               OutputArrayOfArrays rejectedImgPoints = noArray()) const;
 
     /** @brief Refind not detected markers based on the already detected and the board layout
      *
@@ -326,11 +297,11 @@ public:
      * using projectPoint function. If not, missing marker projections are interpolated using global
      * homography, and all the marker corners in the board must have the same Z coordinate.
      */
-    CV_WRAP void refineDetectedMarkers(InputArray image, const Ptr<Board> &board,
+    CV_WRAP void refineDetectedMarkers(InputArray image, const Board &board,
                                        InputOutputArrayOfArrays detectedCorners,
                                        InputOutputArray detectedIds, InputOutputArrayOfArrays rejectedCorners,
                                        InputArray cameraMatrix = noArray(), InputArray distCoeffs = noArray(),
-                                       OutputArray recoveredIdxs = noArray());
+                                       OutputArray recoveredIdxs = noArray()) const;
 
     CV_WRAP const Dictionary& getDictionary() const;
     CV_WRAP void setDictionary(const Dictionary& dictionary);
@@ -347,7 +318,7 @@ public:
 
     /** @brief simplified API for language bindings
     */
-    CV_WRAP inline void write(const Ptr<FileStorage>& fs, const String& name = String()) { Algorithm::write(fs, name); }
+    CV_WRAP inline void write(FileStorage& fs, const String& name) { Algorithm::write(fs, name); }
 
     /** @brief Reads algorithm parameters from a file storage
     */

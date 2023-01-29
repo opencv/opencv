@@ -44,6 +44,7 @@
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_cann.hpp"
 
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
@@ -81,6 +82,34 @@ Range normalizeRange(const Range& input_range, int n)
     }
 
     return range;
+}
+
+// TODO: support cv::Range with steps and negative steps to get rid of this transformation
+void tranformForNegSteps(const MatShape& inpShape, std::vector<std::vector<Range> >& sliceRanges, std::vector<std::vector<int> >& sliceSteps)
+{
+    // in case of negative steps,
+    // x of shape [5, 10], x[5:0:-1, 10:1:-3] <=> np.flip(x[1:5:1, 2:10:3], aixs=(0, 1))
+    // new_end_i = start_i + 1 > dim_i ? dim_i : start_i + 1
+    // new_start_i = end + 1
+    // new_start_i = new_end_i - 1 - ((new_end_i - 1 - new_start_i) / abs(step_i)) * abs(step_i)
+    int start, end, new_start, new_end, step;
+    for (int i = 0; i < sliceSteps[0].size(); ++i)
+    {
+        step = sliceSteps[0][i];
+        if (step > 0)
+            continue;
+
+        step = -step;
+        start = sliceRanges[0][i].start;
+        end = sliceRanges[0][i].end;
+        new_end = start >= inpShape[i] ? inpShape[i] : start + 1;
+        new_start = end + 1;
+        new_start = new_end - 1 - ((new_end - 1 - new_start) / step) * step;
+
+        sliceSteps[0][i] = step;
+        sliceRanges[0][i].start = new_start;
+        sliceRanges[0][i].end = new_end;
+    }
 }
 
 std::vector<std::vector<cv::Range> > finalizeSliceRange(const MatShape& inpShape, int& axis,
@@ -148,6 +177,24 @@ public:
             const DictValue &sizesOrEnds = params.has("size") ? params.get("size") : params.get("end");
             CV_Assert(begins.size() == sizesOrEnds.size());
 
+            if (params.has("steps"))
+            {
+                const DictValue &steps = params.get("steps");
+                sliceSteps.resize(1);
+                sliceSteps[0].resize(steps.size());
+
+                for (int i = 0; i < steps.size(); ++i)
+                {
+                    int step = steps.get<int>(i);
+                    CV_Assert(step != 0);
+                    if (step < 0)
+                        neg_step_dims.push_back(i);
+                    if (std::abs(step) > 1)
+                        hasSteps = true;
+                    sliceSteps[0][i] = step;
+                }
+            }
+
             sliceRanges.resize(1);
             sliceRanges[0].resize(begins.size(), Range::all());
             for (int i = 0; i < begins.size(); ++i)
@@ -165,24 +212,11 @@ public:
                 else
                 {
                     int end = sizeOrEnd;
-                    CV_Assert(end < 0 || end > start);  // End index is excluded.
+                    if (hasSteps && !neg_step_dims.empty() && sliceSteps[0][i] < 0)
+                        CV_Assert(end < 0 || end != start); // if current step is negative, end < start is allowed.
+                    else
+                        CV_Assert(end < 0 || end > start);  // End index is excluded.
                     sliceRanges[0][i].end = end;  // We'll finalize a negative value later.
-                }
-            }
-
-            if (params.has("steps"))
-            {
-                const DictValue &steps = params.get("steps");
-                sliceSteps.resize(1);
-                sliceSteps[0].resize(steps.size());
-
-                for (int i = 0; i < steps.size(); ++i)
-                {
-                    int step = steps.get<int>(i);
-                    CV_Assert(step >= 1);
-                    if (step > 1)
-                        hasSteps = true;
-                    sliceSteps[0][i] = step;
                 }
             }
         }
@@ -192,13 +226,13 @@ public:
     {
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-            return sliceRanges.size() == 1 && !hasSteps;
+            return sliceRanges.size() == 1 && !hasSteps && neg_step_dims.empty();
 #endif
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA)
-            return !hasSteps;
+            return !hasSteps && neg_step_dims.empty();
 #endif
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CANN;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -209,8 +243,13 @@ public:
         CV_Assert(inputs.size() == 1);
         MatShape inpShape = inputs[0];
 
+        std::vector<std::vector<int> > sliceSteps_ = sliceSteps;
+        std::vector<std::vector<cv::Range> > sliceRanges_ = sliceRanges;
+        if (hasSteps && !neg_step_dims.empty())
+            tranformForNegSteps(inpShape, sliceRanges_, sliceSteps_);
+
         int axis_rw = axis;
-        std::vector<std::vector<cv::Range> > sliceRanges_rw = finalizeSliceRange(inpShape, axis_rw, sliceRanges);
+        std::vector<std::vector<cv::Range> > sliceRanges_rw = finalizeSliceRange(inpShape, axis_rw, sliceRanges_);
 
         if (!sliceRanges_rw.empty())
         {
@@ -223,8 +262,8 @@ public:
                     if (shapesInitialized || inpShape[j] > 0)
                         outputs[i][j] = normalizeRange(sliceRanges_rw[i][j], inpShape[j]).size();
 
-                    if (!sliceSteps.empty() && (i < sliceSteps.size()) && (j < sliceSteps[i].size()) && (sliceSteps[i][j] > 1))
-                        outputs[i][j] = (outputs[i][j] + sliceSteps[i][j] - 1) / sliceSteps[i][j];
+                    if (!sliceSteps_.empty() && (i < sliceSteps_.size()) && (j < sliceSteps_[i].size()) && (sliceSteps_[i][j] > 1))
+                        outputs[i][j] = (outputs[i][j] + sliceSteps_[i][j] - 1) / sliceSteps_[i][j];
                 }
             }
         }
@@ -256,7 +295,10 @@ public:
         outputs_arr.getMatVector(outputs);
 
         CV_Assert(inputs.size() == 1);
-        const MatSize& inpShape = inputs[0].size;
+        MatShape inpShape = shape(inputs[0]);
+
+        if (hasSteps && !neg_step_dims.empty())
+            tranformForNegSteps(inpShape, sliceRanges, sliceSteps);
 
         finalSliceRanges = finalizeSliceRange(shape(inputs[0]), axis, sliceRanges);
 
@@ -279,9 +321,9 @@ public:
 
         for (int i = 0; i < outputs.size(); ++i)
         {
-            CV_Assert(finalSliceRanges[i].size() <= inpShape.dims());
+            CV_Assert(finalSliceRanges[i].size() <= inpShape.size());
             // Fill the rest of ranges.
-            for (int j = finalSliceRanges[i].size(); j < inpShape.dims(); ++j)
+            for (int j = finalSliceRanges[i].size(); j < inpShape.size(); ++j)
             {
                 finalSliceRanges[i].push_back(Range::all());
             }
@@ -585,10 +627,71 @@ public:
                     getSliceRecursive<int8_t>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
                 else
                     getSliceRecursive<float>(inpMat, inpIdx, finalSliceRanges[i], sliceSteps[i], 0, dimsNum, outputs[i], outIdx);
+                // flip for negative steps
+                flip(outputs[i]);
             }
         }
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(sliceRanges.size() == 1);
+        CV_Assert(sliceSteps.size() == 1);
+        CV_Assert(sliceRanges[0].size() == sliceSteps[0].size());
+
+        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        const int dims = x->host->dims;
+
+        // create operator
+        std::string op_name = cv::format("slice_%d", index);
+        auto op = std::make_shared<ge::op::StridedSliceV2>(op_name);
+
+        // retrieve begins, ends, axes and steps
+        std::vector<int> begins, ends, axes, steps;
+        for (int i = 0; i < sliceRanges[0].size(); i++)
+        {
+            begins.push_back(sliceRanges[0][i].start);
+            ends.push_back(sliceRanges[0][i].end);
+            axes.push_back(i);
+            steps.push_back(sliceSteps[0][i]);
+        }
+        std::vector<int> shape_{dims};
+
+        // set inputs
+        // set inputs : x
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, "y");
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+        // set inputs : begin
+        Mat begin_mat(shape_, CV_32S, &begins[0]);
+        auto op_const_begin = std::make_shared<CannConstOp>(begin_mat.data, begin_mat.type(), shape_, cv::format("%s_begin", op_name.c_str()));
+        op->set_input_begin(*(op_const_begin->getOp()));
+        op->update_input_desc_begin(*(op_const_begin->getTensorDesc()));
+        // set inputs : end
+        Mat end_mat(shape_, CV_32S, &ends[0]);
+        auto op_const_end = std::make_shared<CannConstOp>(end_mat.data, end_mat.type(), shape_, cv::format("%s_end", op_name.c_str()));
+        op->set_input_end(*(op_const_end->getOp()));
+        op->update_input_desc_end(*(op_const_end->getTensorDesc()));
+        // set inputs : axes
+        Mat axes_mat(shape_, CV_32S, &axes[0]);
+        auto op_const_axes = std::make_shared<CannConstOp>(axes_mat.data, axes_mat.type(), shape_, cv::format("%s_axes", op_name.c_str()));
+        op->set_input_axes(*(op_const_axes->getOp()));
+        op->update_input_desc_axes(*(op_const_axes->getTensorDesc()));
+        // set inputs : strides
+        Mat strides_mat(shape_, CV_32S, &steps[0]);
+        auto op_const_strides = std::make_shared<CannConstOp>(strides_mat.data, strides_mat.type(), shape_, cv::format("%s_strides", op_name.c_str()));
+        op->set_input_strides(*(op_const_strides->getOp()));
+        op->update_input_desc_strides(*(op_const_strides->getTensorDesc()));
+
+        // set outputs
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -678,9 +781,15 @@ private:
         }
     }
 
+    void flip(Mat& output) // break if 1d tensor?
+    {
+        for (int i = 0; i < neg_step_dims.size(); ++i)
+                cv::flipND(output, output, neg_step_dims[i]);
+    }
 protected:
     // The actual non-negative values determined from @p sliceRanges depends on input size.
     std::vector<std::vector<Range> > finalSliceRanges;
+    std::vector<int> neg_step_dims;
     bool hasDynamicShapes;
     bool shapesInitialized;
     bool hasSteps;

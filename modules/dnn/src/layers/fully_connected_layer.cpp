@@ -47,6 +47,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
+#include "../op_cann.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -184,7 +185,8 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_CUDA && !tranAorB) ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !tranAorB) ||
-               (backendId == DNN_BACKEND_WEBNN && axis == 1 && !tranAorB);
+               (backendId == DNN_BACKEND_WEBNN && axis == 1 && !tranAorB) ||
+               backendId == DNN_BACKEND_CANN;;
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -510,7 +512,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) && !isMatMul,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         if (inputs_arr.depth() == CV_16S)
@@ -660,6 +662,65 @@ public:
         return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto x1 = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x1_desc = x1->getTensorDesc();
+        auto op_x1 = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+
+        std::string op_name = cv::format("matmul_%d", index);
+        auto op = std::make_shared<ge::op::MatMulV2>(op_name);
+
+        if (!blobs.empty()) // if B is const
+        {
+            // set attributes
+            op->set_attr_transpose_x1(false);
+            // weightMat always needs to be transposed, since CPU backend
+            // implementation is input * weight.im2row
+            op->set_attr_transpose_x2(true);
+
+            // set inputs
+            // set inputs : x2 (weight)
+            auto op_const_weight = std::make_shared<CannConstOp>(weightsMat.data, weightsMat.type(), shape(weightsMat), cv::format("%s_w", op_name.c_str()));
+            op->set_input_x2_by_name(*(op_const_weight->getOp()), "y");
+            op->update_input_desc_x2(*(op_const_weight->getTensorDesc()));
+        }
+        else
+        {
+            // A and B are variable inputs; non-const bias is not considered
+            CV_Assert(inputsWrapper.size() == 2);
+            CV_Assert(nodes.size() == 2);
+
+            // set attributes
+            op->set_attr_transpose_x1(transA);
+            op->set_attr_transpose_x2(transB);
+
+            // set inputs : x2 (weight)
+            auto op_x2 = nodes[1].dynamicCast<CannBackendNode>()->getOp();
+            auto x2_desc = inputsWrapper[1].dynamicCast<CannBackendWrapper>()->getTensorDesc();
+            op->set_input_x2_by_name(*op_x2, "y");
+            op->update_input_desc_x2(*x2_desc);
+        }
+
+        // set inputs
+        // set inputs : x1 (input)
+        op->set_input_x1_by_name(*op_x1, "y");
+        op->update_input_desc_x1(*x1_desc);
+        // set inputs : bias (bias)
+        auto bias_mat = bias ? biasMat : Mat::zeros(1, weightsMat.size[0], weightsMat.type());
+        std::vector<int> bias_shape{weightsMat.size[0]};
+        auto op_const_bias = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), bias_shape, cv::format("%s_b", op_name.c_str()));
+        op->set_input_bias(*(op_const_bias->getOp()));
+        op->update_input_desc_bias(*(op_const_bias->getTensorDesc()));
+
+        // set outputs
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,

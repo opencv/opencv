@@ -2340,9 +2340,8 @@ static inline std::pair<int, int> matchPatternPoints(const vector<Point> &finder
 double QRDecode::getNumModules() {
     vector<vector<Point>> finderPatterns;
     double numModulesX = 0., numModulesY = 0.;
-    bool flag = findPatternsVerticesPoints(finderPatterns);
-    if (flag) {
-        double pattern_distance[4];
+    if (findPatternsVerticesPoints(finderPatterns)) {
+        double pattern_distance[4] = {0.,0.,0.,0.};
         for (auto& pattern : finderPatterns) {
             auto indexes = matchPatternPoints(pattern, original_points);
             if (indexes == std::make_pair(-1, -1))
@@ -2558,8 +2557,9 @@ bool QRDecode::versionDefinition()
     bool useFinderPattern = false;
     const double thresholdFinderPattern = 0.2;
     const double roundingError = abs(numModulesByFinderPattern - cvRound(numModulesByFinderPattern));
-    if (cvRound(versionByFinderPattern) >= 1 && versionByFinderPattern <= 6 && transition_x != transition_y) {
-        if (roundingError < thresholdFinderPattern)
+
+    if (cvRound(versionByFinderPattern) >= 1 && versionByFinderPattern <= 6. &&
+        transition_x != transition_y && roundingError < thresholdFinderPattern) {
             useFinderPattern = true;
     }
 
@@ -2775,7 +2775,12 @@ bool QRDecode::curvedDecodingProcess()
 #endif
 }
 
-QRDecode::QRDecode(bool _useAlignmentMarkers): useAlignmentMarkers(_useAlignmentMarkers) {}
+QRDecode::QRDecode(bool _useAlignmentMarkers):
+    useAlignmentMarkers(_useAlignmentMarkers),
+    version(0),
+    version_size(0),
+    test_perspective_size(0.f)
+    {}
 
 std::string QRCodeDetector::decode(InputArray in, InputArray points,
                                    OutputArray straight_qrcode)

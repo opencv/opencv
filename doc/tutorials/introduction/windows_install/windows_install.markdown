@@ -26,7 +26,7 @@ Installation by Using the Pre-built Libraries {#tutorial_windows_install_prebuil
 =============================================
 
 -#  Launch a web browser of choice and go to our [page on
-    Sourceforge](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/).
+    Sourceforge](http://sourceforge.net/projects/opencvlibrary/files/).
 -#  Choose a build you want to use and download it.
 -#  Make sure you have admin rights. Unpack the self-extracting archive.
 -#  You can check the installation at the chosen path as you can see below.

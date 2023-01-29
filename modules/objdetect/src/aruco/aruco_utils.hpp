@@ -31,10 +31,12 @@ inline bool readParameter(const std::string& name, T& parameter, const FileNode&
 }
 
 template<typename T>
-inline bool readWriteParameter(const std::string& name, T& parameter, const FileNode& readNode, FileStorage& writeStorage) {
-    if (!readNode.empty())
-        return readParameter(name, parameter, readNode);
-    writeStorage << name << parameter;
+inline bool readWriteParameter(const std::string& name, T& parameter, const FileNode* readNode, FileStorage* writeStorage)
+{
+    if (readNode)
+        return readParameter(name, parameter, *readNode);
+    CV_Assert(writeStorage);
+    *writeStorage << name << parameter;
     return true;
 }
 

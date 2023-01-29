@@ -16,77 +16,73 @@ namespace aruco {
 
 using namespace std;
 
-static inline bool readWrite(DetectorParameters &params, const Ptr<FileNode>& readNode,
-                             const Ptr<FileStorage>& writeStorage = nullptr) {
-    CV_Assert(!readNode.empty() || !writeStorage.empty());
+static inline bool readWrite(DetectorParameters &params, const FileNode* readNode,
+                             FileStorage* writeStorage = nullptr)
+{
+    CV_Assert(readNode || writeStorage);
     bool check = false;
 
-    check |= readWriteParameter("adaptiveThreshWinSizeMin", params.adaptiveThreshWinSizeMin, *readNode, *writeStorage);
-    check |= readWriteParameter("adaptiveThreshWinSizeMax", params.adaptiveThreshWinSizeMax, *readNode, *writeStorage);
-    check |= readWriteParameter("adaptiveThreshWinSizeStep", params.adaptiveThreshWinSizeStep, *readNode, *writeStorage);
-    check |= readWriteParameter("adaptiveThreshConstant", params.adaptiveThreshConstant, *readNode, *writeStorage);
-    check |= readWriteParameter("minMarkerPerimeterRate", params.minMarkerPerimeterRate, *readNode, *writeStorage);
-    check |= readWriteParameter("maxMarkerPerimeterRate", params.maxMarkerPerimeterRate, *readNode, *writeStorage);
+    check |= readWriteParameter("adaptiveThreshWinSizeMin", params.adaptiveThreshWinSizeMin, readNode, writeStorage);
+    check |= readWriteParameter("adaptiveThreshWinSizeMax", params.adaptiveThreshWinSizeMax, readNode, writeStorage);
+    check |= readWriteParameter("adaptiveThreshWinSizeStep", params.adaptiveThreshWinSizeStep, readNode, writeStorage);
+    check |= readWriteParameter("adaptiveThreshConstant", params.adaptiveThreshConstant, readNode, writeStorage);
+    check |= readWriteParameter("minMarkerPerimeterRate", params.minMarkerPerimeterRate, readNode, writeStorage);
+    check |= readWriteParameter("maxMarkerPerimeterRate", params.maxMarkerPerimeterRate, readNode, writeStorage);
     check |= readWriteParameter("polygonalApproxAccuracyRate", params.polygonalApproxAccuracyRate,
-                                *readNode, *writeStorage);
-    check |= readWriteParameter("minCornerDistanceRate", params.minCornerDistanceRate, *readNode, *writeStorage);
-    check |= readWriteParameter("minDistanceToBorder", params.minDistanceToBorder, *readNode, *writeStorage);
-    check |= readWriteParameter("minMarkerDistanceRate", params.minMarkerDistanceRate, *readNode, *writeStorage);
-    check |= readWriteParameter("cornerRefinementMethod", params.cornerRefinementMethod, *readNode, *writeStorage);
-    check |= readWriteParameter("cornerRefinementWinSize", params.cornerRefinementWinSize, *readNode, *writeStorage);
+                                readNode, writeStorage);
+    check |= readWriteParameter("minCornerDistanceRate", params.minCornerDistanceRate, readNode, writeStorage);
+    check |= readWriteParameter("minDistanceToBorder", params.minDistanceToBorder, readNode, writeStorage);
+    check |= readWriteParameter("minMarkerDistanceRate", params.minMarkerDistanceRate, readNode, writeStorage);
+    check |= readWriteParameter("cornerRefinementMethod", params.cornerRefinementMethod, readNode, writeStorage);
+    check |= readWriteParameter("cornerRefinementWinSize", params.cornerRefinementWinSize, readNode, writeStorage);
     check |= readWriteParameter("cornerRefinementMaxIterations", params.cornerRefinementMaxIterations,
-                                *readNode, *writeStorage);
+                                readNode, writeStorage);
     check |= readWriteParameter("cornerRefinementMinAccuracy", params.cornerRefinementMinAccuracy,
-                                *readNode, *writeStorage);
-    check |= readWriteParameter("markerBorderBits", params.markerBorderBits, *readNode, *writeStorage);
+                                readNode, writeStorage);
+    check |= readWriteParameter("markerBorderBits", params.markerBorderBits, readNode, writeStorage);
     check |= readWriteParameter("perspectiveRemovePixelPerCell", params.perspectiveRemovePixelPerCell,
-                                *readNode, *writeStorage);
+                                readNode, writeStorage);
     check |= readWriteParameter("perspectiveRemoveIgnoredMarginPerCell", params.perspectiveRemoveIgnoredMarginPerCell,
-                                *readNode, *writeStorage);
+                                readNode, writeStorage);
     check |= readWriteParameter("maxErroneousBitsInBorderRate", params.maxErroneousBitsInBorderRate,
-                                *readNode, *writeStorage);
-    check |= readWriteParameter("minOtsuStdDev", params.minOtsuStdDev, *readNode, *writeStorage);
-    check |= readWriteParameter("errorCorrectionRate", params.errorCorrectionRate, *readNode, *writeStorage);
+                                readNode, writeStorage);
+    check |= readWriteParameter("minOtsuStdDev", params.minOtsuStdDev, readNode, writeStorage);
+    check |= readWriteParameter("errorCorrectionRate", params.errorCorrectionRate, readNode, writeStorage);
     // new aruco 3 functionality
-    check |= readWriteParameter("useAruco3Detection", params.useAruco3Detection, *readNode, *writeStorage);
-    check |= readWriteParameter("minSideLengthCanonicalImg", params.minSideLengthCanonicalImg, *readNode, *writeStorage);
+    check |= readWriteParameter("useAruco3Detection", params.useAruco3Detection, readNode, writeStorage);
+    check |= readWriteParameter("minSideLengthCanonicalImg", params.minSideLengthCanonicalImg, readNode, writeStorage);
     check |= readWriteParameter("minMarkerLengthRatioOriginalImg", params.minMarkerLengthRatioOriginalImg,
-                                *readNode, *writeStorage);
+                                readNode, writeStorage);
     return check;
 }
 
-bool DetectorParameters::readDetectorParameters(const FileNode& fn) {
-    if(fn.empty())
+bool DetectorParameters::readDetectorParameters(const FileNode& fn)
+{
+    if (fn.empty())
         return false;
-    Ptr<FileNode> pfn = makePtr<FileNode>(fn);
-    return readWrite(*this, pfn);
+    return readWrite(*this, &fn);
 }
 
-bool DetectorParameters::writeDetectorParameters(const Ptr<FileStorage>& fs, const String& name) {
-    if (fs.empty())
-        return false;
-    if(name.empty())
-        return writeDetectorParameters(*fs);
-    *fs << name << "{";
-    bool res = writeDetectorParameters(*fs);
-    *fs << "}";
+bool DetectorParameters::writeDetectorParameters(FileStorage& fs, const String& name)
+{
+    CV_Assert(fs.isOpened());
+    if (!name.empty())
+        fs << name << "{";
+    bool res = readWrite(*this, nullptr, &fs);
+    if (!name.empty())
+        fs << "}";
     return res;
 }
 
-bool DetectorParameters::writeDetectorParameters(FileStorage &fs) {
-    if (!fs.isOpened())
-        return false;
-    return readWrite(*this, nullptr, makePtr<FileStorage>(fs));
-}
-
-static inline bool readWrite(RefineParameters& refineParameters, const Ptr<FileNode>& readNode,
-                             const Ptr<FileStorage>& writeStorage = nullptr) {
-    CV_Assert(!readNode.empty() || !writeStorage.empty());
+static inline bool readWrite(RefineParameters& refineParameters, const FileNode* readNode,
+                             FileStorage* writeStorage = nullptr)
+{
+    CV_Assert(readNode || writeStorage);
     bool check = false;
 
-    check |= readWriteParameter("minRepDistance", refineParameters.minRepDistance, *readNode, *writeStorage);
-    check |= readWriteParameter("errorCorrectionRate", refineParameters.errorCorrectionRate, *readNode, *writeStorage);
-    check |= readWriteParameter("checkAllOrders", refineParameters.checkAllOrders, *readNode, *writeStorage);
+    check |= readWriteParameter("minRepDistance", refineParameters.minRepDistance, readNode, writeStorage);
+    check |= readWriteParameter("errorCorrectionRate", refineParameters.errorCorrectionRate, readNode, writeStorage);
+    check |= readWriteParameter("checkAllOrders", refineParameters.checkAllOrders, readNode, writeStorage);
     return check;
 }
 
@@ -94,27 +90,21 @@ RefineParameters::RefineParameters(float _minRepDistance, float _errorCorrection
                                    minRepDistance(_minRepDistance), errorCorrectionRate(_errorCorrectionRate),
                                    checkAllOrders(_checkAllOrders){}
 
-bool RefineParameters::readRefineParameters(const FileNode &fn) {
-    if(fn.empty())
+bool RefineParameters::readRefineParameters(const FileNode &fn)
+{
+    if (fn.empty())
         return false;
-    Ptr<FileNode> pfn = makePtr<FileNode>(fn);
-    return readWrite(*this, pfn);
+    return readWrite(*this, &fn);
 }
 
-bool RefineParameters::writeRefineParameters(FileStorage &fs) {
-    if(!fs.isOpened())
-        return false;
-    return readWrite(*this, nullptr, makePtr<FileStorage>(fs));
-}
-
-bool RefineParameters::writeRefineParameters(const Ptr<FileStorage>& fs, const String& name) {
-    if(fs.empty())
-        return false;
-    if(name.empty())
-        return writeRefineParameters(*fs);
-    *fs << name << "{";
-    bool res = writeRefineParameters(*fs);
-    *fs << "}";
+bool RefineParameters::writeRefineParameters(FileStorage& fs, const String& name)
+{
+    CV_Assert(fs.isOpened());
+    if (!name.empty())
+        fs << name << "{";
+    bool res = readWrite(*this, nullptr, &fs);
+    if (!name.empty())
+        fs << "}";
     return res;
 }
 
@@ -866,7 +856,7 @@ ArucoDetector::ArucoDetector(const Dictionary &_dictionary,
 }
 
 void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids,
-                                  OutputArrayOfArrays _rejectedImgPoints) {
+                                  OutputArrayOfArrays _rejectedImgPoints) const {
     CV_Assert(!_image.empty());
     DetectorParameters& detectorParams = arucoDetectorImpl->detectorParams;
     const Dictionary& dictionary = arucoDetectorImpl->dictionary;
@@ -1004,37 +994,25 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
 /**
   * Project board markers that are not included in the list of detected markers
   */
-static void _projectUndetectedMarkers(const Ptr<Board> &_board, InputOutputArrayOfArrays _detectedCorners,
-                               InputOutputArray _detectedIds, InputArray _cameraMatrix, InputArray _distCoeffs,
-                               vector<vector<Point2f> >& _undetectedMarkersProjectedCorners,
-                               OutputArray _undetectedMarkersIds) {
-    // first estimate board pose with the current avaible markers
-    Mat rvec, tvec;
-    int boardDetectedMarkers = 0;
-    {
-        CV_Assert(_detectedCorners.total() == _detectedIds.total());
-        // get object and image points for the solvePnP function
-        Mat detectedObjPoints, imgPoints;
-        _board->matchImagePoints(_detectedCorners, _detectedIds, detectedObjPoints, imgPoints);
-        CV_Assert(imgPoints.total() == detectedObjPoints.total());
-        if(detectedObjPoints.total() > 0) // 0 of the detected markers in board
-        {
-            solvePnP(detectedObjPoints, imgPoints, _cameraMatrix, _distCoeffs, rvec, tvec);
-            // divide by four since all the four corners are concatenated in the array for each marker
-            boardDetectedMarkers = static_cast<int>(detectedObjPoints.total()) / 4;
-        }
-    }
-
-    // at least one marker from board so rvec and tvec are valid
-    if(boardDetectedMarkers == 0) return;
+static inline void _projectUndetectedMarkers(const Board &board, InputOutputArrayOfArrays detectedCorners,
+                                             InputOutputArray detectedIds, InputArray cameraMatrix, InputArray distCoeffs,
+                                             vector<vector<Point2f> >& undetectedMarkersProjectedCorners,
+                                             OutputArray undetectedMarkersIds) {
+    Mat rvec, tvec; // first estimate board pose with the current avaible markers
+    Mat objPoints, imgPoints; // object and image points for the solvePnP function
+    board.matchImagePoints(detectedCorners, detectedIds, objPoints, imgPoints);
+    if (objPoints.total() < 4ull) // at least one marker from board so rvec and tvec are valid
+        return;
+    solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
 
     // search undetected markers and project them using the previous pose
     vector<vector<Point2f> > undetectedCorners;
+    const std::vector<int>& ids = board.getIds();
     vector<int> undetectedIds;
-    for(unsigned int i = 0; i < _board->getIds().size(); i++) {
+    for(unsigned int i = 0; i < ids.size(); i++) {
         int foundIdx = -1;
-        for(unsigned int j = 0; j < _detectedIds.total(); j++) {
-            if(_board->getIds()[i] == _detectedIds.getMat().ptr<int>()[j]) {
+        for(unsigned int j = 0; j < detectedIds.total(); j++) {
+            if(ids[i] == detectedIds.getMat().ptr<int>()[j]) {
                 foundIdx = j;
                 break;
             }
@@ -1043,31 +1021,31 @@ static void _projectUndetectedMarkers(const Ptr<Board> &_board, InputOutputArray
         // not detected
         if(foundIdx == -1) {
             undetectedCorners.push_back(vector<Point2f>());
-            undetectedIds.push_back(_board->getIds()[i]);
-            projectPoints(_board->getObjPoints()[i], rvec, tvec, _cameraMatrix, _distCoeffs,
+            undetectedIds.push_back(ids[i]);
+            projectPoints(board.getObjPoints()[i], rvec, tvec, cameraMatrix, distCoeffs,
                           undetectedCorners.back());
         }
     }
     // parse output
-    Mat(undetectedIds).copyTo(_undetectedMarkersIds);
-    _undetectedMarkersProjectedCorners = undetectedCorners;
+    Mat(undetectedIds).copyTo(undetectedMarkersIds);
+    undetectedMarkersProjectedCorners = undetectedCorners;
 }
 
 /**
   * Interpolate board markers that are not included in the list of detected markers using
   * global homography
   */
-static void _projectUndetectedMarkers(const Ptr<Board> &_board, InputOutputArrayOfArrays _detectedCorners,
+static void _projectUndetectedMarkers(const Board &_board, InputOutputArrayOfArrays _detectedCorners,
                                InputOutputArray _detectedIds,
                                vector<vector<Point2f> >& _undetectedMarkersProjectedCorners,
                                OutputArray _undetectedMarkersIds) {
     // check board points are in the same plane, if not, global homography cannot be applied
-    CV_Assert(_board->getObjPoints().size() > 0);
-    CV_Assert(_board->getObjPoints()[0].size() > 0);
-    float boardZ = _board->getObjPoints()[0][0].z;
-    for(unsigned int i = 0; i < _board->getObjPoints().size(); i++) {
-        for(unsigned int j = 0; j < _board->getObjPoints()[i].size(); j++)
-            CV_Assert(boardZ == _board->getObjPoints()[i][j].z);
+    CV_Assert(_board.getObjPoints().size() > 0);
+    CV_Assert(_board.getObjPoints()[0].size() > 0);
+    float boardZ = _board.getObjPoints()[0][0].z;
+    for(unsigned int i = 0; i < _board.getObjPoints().size(); i++) {
+        for(unsigned int j = 0; j < _board.getObjPoints()[i].size(); j++)
+            CV_Assert(boardZ == _board.getObjPoints()[i][j].z);
     }
 
     vector<Point2f> detectedMarkersObj2DAll; // Object coordinates (without Z) of all the detected
@@ -1077,14 +1055,14 @@ static void _projectUndetectedMarkers(const Ptr<Board> &_board, InputOutputArray
                                                         // missing markers in different vectors
     vector<int> undetectedMarkersIds; // ids of missing markers
     // find markers included in board, and missing markers from board. Fill the previous vectors
-    for(unsigned int j = 0; j < _board->getIds().size(); j++) {
+    for(unsigned int j = 0; j < _board.getIds().size(); j++) {
         bool found = false;
         for(unsigned int i = 0; i < _detectedIds.total(); i++) {
-            if(_detectedIds.getMat().ptr<int>()[i] == _board->getIds()[j]) {
+            if(_detectedIds.getMat().ptr<int>()[i] == _board.getIds()[j]) {
                 for(int c = 0; c < 4; c++) {
                     imageCornersAll.push_back(_detectedCorners.getMat(i).ptr<Point2f>()[c]);
                     detectedMarkersObj2DAll.push_back(
-                        Point2f(_board->getObjPoints()[j][c].x, _board->getObjPoints()[j][c].y));
+                        Point2f(_board.getObjPoints()[j][c].x, _board.getObjPoints()[j][c].y));
                 }
                 found = true;
                 break;
@@ -1094,9 +1072,9 @@ static void _projectUndetectedMarkers(const Ptr<Board> &_board, InputOutputArray
             undetectedMarkersObj2D.push_back(vector<Point2f>());
             for(int c = 0; c < 4; c++) {
                 undetectedMarkersObj2D.back().push_back(
-                    Point2f(_board->getObjPoints()[j][c].x, _board->getObjPoints()[j][c].y));
+                    Point2f(_board.getObjPoints()[j][c].x, _board.getObjPoints()[j][c].y));
             }
-            undetectedMarkersIds.push_back(_board->getIds()[j]);
+            undetectedMarkersIds.push_back(_board.getIds()[j]);
         }
     }
     if(imageCornersAll.size() == 0) return;
@@ -1113,10 +1091,10 @@ static void _projectUndetectedMarkers(const Ptr<Board> &_board, InputOutputArray
     Mat(undetectedMarkersIds).copyTo(_undetectedMarkersIds);
 }
 
-void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_board,
+void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board,
                                           InputOutputArrayOfArrays _detectedCorners, InputOutputArray _detectedIds,
                                           InputOutputArrayOfArrays _rejectedCorners, InputArray _cameraMatrix,
-                                          InputArray _distCoeffs, OutputArray _recoveredIdxs) {
+                                          InputArray _distCoeffs, OutputArray _recoveredIdxs) const {
     DetectorParameters& detectorParams = arucoDetectorImpl->detectorParams;
     const Dictionary& dictionary = arucoDetectorImpl->dictionary;
     RefineParameters& refineParams = arucoDetectorImpl->refineParams;
@@ -1279,9 +1257,9 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Ptr<Board> &_
     }
 }
 
-void ArucoDetector::write(FileStorage &fs) const {
-    Ptr<FileStorage> pfs = makePtr<FileStorage>(fs);
-    arucoDetectorImpl->dictionary.writeDictionary(pfs);
+void ArucoDetector::write(FileStorage &fs) const
+{
+    arucoDetectorImpl->dictionary.writeDictionary(fs);
     arucoDetectorImpl->detectorParams.writeDetectorParameters(fs);
     arucoDetectorImpl->refineParams.writeRefineParameters(fs);
 }

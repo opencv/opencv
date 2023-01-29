@@ -45,9 +45,8 @@ DECLARE_CV_PAUSE
       static inline void cv_non_sse_mm_pause() { __asm__ __volatile__ ("rep; nop"); }
 #     define _mm_pause cv_non_sse_mm_pause
 #   endif
-// 5 * v is meants for backward compatibility: with pre-Skylake CPUs, _mm_pause took 4 or 5 cycles.
-// With post-Skylake CPUs, _mm_pause takes 140 cycles.
-#   define CV_PAUSE(v) do { const uint64_t __delay = 5 * v; uint64_t __init = __rdtsc(); do { _mm_pause(); } while ((__rdtsc() - __init) < __delay); } while (0)
+// With Skylake CPUs and above, _mm_pause takes 140 cycles so no need for a loop.
+#   define CV_PAUSE(v) do { (void)v; _mm_pause(); } while (0)
 # elif defined __GNUC__ && defined __aarch64__
 #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("yield" ::: "memory"); } } while (0)
 # elif defined __GNUC__ && defined __arm__
