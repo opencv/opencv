@@ -332,14 +332,16 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
         }
         total_num = (uint8_t) struct_num - 1;
     }
-    int segment_len = (int) ceil((int) input.length() / struct_num);
 
-    for (int i = 0; i < struct_num; i++)
+    auto string_itr = input.begin();
+    for (int i = struct_num; i > 0; --i)
     {
         sequence_num = (uint8_t) i;
-        int segment_begin = i * segment_len;
-        int segemnt_end = min((i + 1) * segment_len, (int) input.length()) - 1;
-        std::string input_info = input.substr(segment_begin, segemnt_end - segment_begin + 1);
+        size_t segment_begin = string_itr - input.begin();
+        size_t segment_end = (input.end() - string_itr) / i;
+
+        std::string input_info = input.substr(segment_begin, segment_end);
+        string_itr += segment_end;
         int detected_version = versionAuto(input_info);
         CV_Assert(detected_version != -1);
         if (version_level == 0)
@@ -349,7 +351,6 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
 
         payload.clear();
         payload.reserve(MAX_PAYLOAD_LEN);
-        final_qrcodes.clear();
         format = vector<uint8_t> (15, 255);
         version_reserved = vector<uint8_t> (18, 255);
         version_size = (21 + (version_level - 1) * 4);
@@ -1234,6 +1235,7 @@ void QRCodeEncoderImpl::encode(const String& input, OutputArray output)
     generateQR(input);
     CV_Assert(!final_qrcodes.empty());
     output.assign(final_qrcodes[0]);
+    final_qrcodes.clear();
 }
 
 void QRCodeEncoderImpl::encodeStructuredAppend(const String& input, OutputArrayOfArrays output)
@@ -1250,6 +1252,7 @@ void QRCodeEncoderImpl::encodeStructuredAppend(const String& input, OutputArrayO
     {
         output.getMatRef(i) = final_qrcodes[i];
     }
+    final_qrcodes.clear();
 }
 
 Ptr<QRCodeEncoder> QRCodeEncoder::create(const QRCodeEncoder::Params& parameters)
