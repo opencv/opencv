@@ -4,6 +4,9 @@
 
 namespace opencv_test { namespace {
 
+/****************************************************************************************\
+*                     Regression tests for descriptor extractors.                        *
+\****************************************************************************************/
 static void double_image(Mat& src, Mat& dst) {
 
     dst.create(Size(src.cols*2, src.rows*2), src.type());
@@ -32,9 +35,6 @@ static Mat prepare_img(bool rows_indexed) {
     return img;
 }
 
-/****************************************************************************************\
-*                     Regression tests for descriptor extractors.                        *
-\****************************************************************************************/
 static void writeMatInBin( const Mat& mat, const string& filename )
 {
     FILE* f = fopen( filename.c_str(), "wb");
