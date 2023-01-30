@@ -291,14 +291,14 @@ OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint16x8, vsaddu_vv_u16m1, 8)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint16x8, vssubu_vv_u16m1, 8)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int16x8, vsadd_vv_i16m1, 8)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int16x8, vssub_vv_i16m1, 8)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int32x4, vsadd_vv_i32m1, 4)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int32x4, vssub_vv_i32m1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int32x4, vadd_vv_i32m1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int32x4, vsub_vv_i32m1, 4)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(*, v_int32x4, vmul_vv_i32m1, 4)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint32x4, vadd_vv_u32m1, 4)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint32x4, vsub_vv_u32m1, 4)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(*, v_uint32x4, vmul_vv_u32m1, 4)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int64x2, vsadd_vv_i64m1, 2)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int64x2, vssub_vv_i64m1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int64x2, vadd_vv_i64m1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int64x2, vsub_vv_i64m1, 2)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint64x2, vadd_vv_u64m1, 2)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint64x2, vsub_vv_u64m1, 2)
 OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_float32x4, vfadd_vv_f32m1, 4)
@@ -1909,14 +1909,14 @@ else return trailingZeros32(val); }
 inline bool v_check_all(const v_##_Tpvec& a) \
 { \
     suffix##m1_t v0 = vsrl_vx_##_T(vnot_v_##_T(a.val, num), shift, num); \
-    vuint64m1_t v1 = vuint64m1_t(v0); \
-    return (v1[0] | v1[1]) == 0; \
+    vuint32m1_t v1 = vuint32m1_t(v0); \
+    return (v1[0] | v1[1] | v1[2] | v1[3]) == 0; \
 } \
 inline bool v_check_any(const v_##_Tpvec& a) \
 { \
     suffix##m1_t v0 = vsrl_vx_##_T(a.val, shift, num); \
-    vuint64m1_t v1 = vuint64m1_t(v0); \
-    return (v1[0] | v1[1]) != 0; \
+    vuint32m1_t v1 = vuint32m1_t(v0); \
+    return (v1[0] | v1[1] | v1[2] | v1[3]) != 0; \
 }
 
 OPENCV_HAL_IMPL_RISCVV_CHECK_ALLANY(uint8x16, vuint8,  u8m1, 7, 16)
