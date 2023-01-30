@@ -450,6 +450,32 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, DISABLED_regression)
 
 #endif // UPDATE_QRCODE_TEST_DATA
 
+CV_ENUM(EncodeModes, QRCodeEncoder::EncodeMode::MODE_NUMERIC,
+                     QRCodeEncoder::EncodeMode::MODE_ALPHANUMERIC,
+                     QRCodeEncoder::EncodeMode::MODE_BYTE)
+
+typedef ::testing::TestWithParam<EncodeModes> Objdetect_QRCode_Encode_Decode_Structured_Append_Parameterized;
+TEST_P(Objdetect_QRCode_Encode_Decode_Structured_Append_Parameterized, regression_22205)
+{
+    const std::string input_data = "the quick brown fox jumps over the lazy dog";
+
+    std::vector<cv::Mat> result_qrcodes;
+
+    cv::QRCodeEncoder::Params params;
+    int encode_mode = GetParam();
+    params.mode = static_cast<cv::QRCodeEncoder::EncodeMode>(encode_mode);
+
+    for(size_t struct_num = 2; struct_num < 5; ++struct_num)
+    {
+        params.structure_number = static_cast<int>(struct_num);
+        cv::Ptr<cv::QRCodeEncoder> encoder = cv::QRCodeEncoder::create(params);
+        encoder->encodeStructuredAppend(input_data, result_qrcodes);
+        EXPECT_EQ(result_qrcodes.size(), struct_num) << "The number of QR Codes requested is not equal"<<
+                                                    "to the one returned";
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_Encode_Decode_Structured_Append_Parameterized, EncodeModes::all());
+
 TEST(Objdetect_QRCode_Encode_Decode, regression_issue22029)
 {
     const cv::String msg = "OpenCV";
