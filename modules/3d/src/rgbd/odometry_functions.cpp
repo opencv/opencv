@@ -95,7 +95,7 @@ static void extendPyrMaskByPyrNormals(const std::vector<UMat>& pyramidNormals,  
 {
     if (!pyramidNormals.empty())
     {
-        int nLevels = pyramidNormals.size();
+        int nLevels = (int)pyramidNormals.size();
 
         for (int i = 0; i < nLevels; i++)
         {
@@ -130,7 +130,7 @@ static void buildPyramidCameraMatrix(const Matx33f& cameraMatrix, int levels, st
 
 static void preparePyramidCloud(const std::vector<UMat>& pyramidDepth, const Matx33f& cameraMatrix, std::vector<UMat>& pyramidCloud)
 {
-    int nLevels = pyramidDepth.size();
+    int nLevels = (int)pyramidDepth.size();
 
     std::vector<Matx33f> pyramidCameraMatrix;
     buildPyramidCameraMatrix(cameraMatrix, nLevels, pyramidCameraMatrix);
@@ -150,7 +150,7 @@ static void preparePyramidTexturedMask(const std::vector<UMat>& pyramid_dI_dx, c
                                        std::vector<float> minGradMagnitudes, const std::vector<UMat>& pyramidMask, double maxPointsPart,
                                        std::vector<UMat>& pyramidTexturedMask, double sobelScale)
 {
-    int nLevels = pyramid_dI_dx.size();
+    int nLevels = (int)pyramid_dI_dx.size();
 
     const float sobelScale2_inv = (float)(1. / (sobelScale * sobelScale));
     pyramidTexturedMask.resize(nLevels, UMat());
@@ -183,7 +183,7 @@ static void preparePyramidTexturedMask(const std::vector<UMat>& pyramid_dI_dx, c
 
 static void preparePyramidNormals(const UMat &normals, const std::vector<UMat> &pyramidDepth, std::vector<UMat> &pyramidNormals)
 {
-    int nLevels = pyramidDepth.size();
+    int nLevels = (int)pyramidDepth.size();
 
     buildPyramid(normals, pyramidNormals, nLevels - 1);
     // renormalize normals
@@ -210,7 +210,7 @@ static void preparePyramidNormals(const UMat &normals, const std::vector<UMat> &
 static void preparePyramidNormalsMask(const std::vector<UMat> &pyramidNormals, const std::vector<UMat> &pyramidMask, double maxPointsPart,
                                       std::vector<UMat> &pyramidNormalsMask)
 {
-    int nLevels = pyramidNormals.size();
+    int nLevels = (int)pyramidNormals.size();
     pyramidNormalsMask.resize(nLevels, UMat());
     for (int i = 0; i < nLevels; i++)
     {
@@ -328,7 +328,7 @@ static void prepareRGBFrameDst(OdometryFrame& frame, OdometrySettings settings)
     std::vector<float> minGradientMagnitudes;
     settings.getMinGradientMagnitudes(minGradientMagnitudes);
 
-    int nLevels = ipyramids.size();
+    int nLevels = (int)ipyramids.size();
     dxpyramids.resize(nLevels, UMat());
     dypyramids.resize(nLevels, UMat());
     int sobelSize = settings.getSobelSize();
@@ -375,7 +375,7 @@ static void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
     std::vector<int> iterCounts;
     settings.getIterCounts(iterCounts);
 
-    int maxLevel = iterCounts.size() - 1;
+    int maxLevel = (int)iterCounts.size() - 1;
     std::vector<UMat>& dpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_DEPTH];
     if (dpyramids.empty())
         preparePyramidDepth(scaledDepth, dpyramids, maxLevel);
@@ -400,7 +400,7 @@ static void prepareICPFrameSrc(OdometryFrame& frame, OdometrySettings settings)
     settings.getIterCounts(iterCounts);
     std::vector<UMat>& mpyramids = frame.impl->pyramids[OdometryFramePyramidType::PYR_MASK];
     if (mpyramids.empty())
-        preparePyramidMask(mask, dpyramids, iterCounts.size(), settings.getMinDepth(), settings.getMaxDepth(), mpyramids);
+        preparePyramidMask(mask, dpyramids, (int)iterCounts.size(), settings.getMinDepth(), settings.getMaxDepth(), mpyramids);
 }
 
 
@@ -452,7 +452,7 @@ static void prepareICPFrameDst(OdometryFrame& frame, OdometrySettings settings, 
     {
         std::vector<int> iterCounts;
         settings.getIterCounts(iterCounts);
-        preparePyramidMask(mask, dpyramids, iterCounts.size(), settings.getMinDepth(), settings.getMaxDepth(), mpyramids);
+        preparePyramidMask(mask, dpyramids, (int)iterCounts.size(), settings.getMinDepth(), settings.getMaxDepth(), mpyramids);
         extendPyrMaskByPyrNormals(npyramids, mpyramids);
     }
 
@@ -842,7 +842,7 @@ void calcRgbdLsmMatrices(const Mat& cloud0, const Mat& Rt,
         double w_sobelScale = w * sobelScaleIn;
 
         const Vec4f& p0 = cloud0.at<Vec4f>(v0, u0);
-        Point3f tp0 = rtmat * Point3f(p0[0], p0[1], p0[2]);
+        Point3d tp0 = rtmat * Point3d(p0[0], p0[1], p0[2]);
 
         rgbdCoeffsFunc(transformType,
                        A_ptr,
@@ -928,7 +928,7 @@ void calcICPLsmMatrices(const Mat& cloud0, const Mat& Rt,
         Vec4f p1 = cloud1.at<Vec4f>(v1, u1);
 
         icpCoeffsFunc(transformType,
-                      A_ptr, tps0_ptr[correspIndex], Point3f(p1[0], p1[1], p1[2]), Vec3f(n4[0], n4[1], n4[2]) * w);
+                      A_ptr, tps0_ptr[correspIndex], Point3d(p1[0], p1[1], p1[2]), Vec3d(n4[0], n4[1], n4[2]) * w);
         for (int y = 0; y < transformDim; y++)
         {
             double* AtA_ptr = AtA.ptr<double>(y);

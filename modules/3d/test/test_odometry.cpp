@@ -316,7 +316,7 @@ void OdometryTest::prepareFrameCheck()
 
     std::vector<Mat> gtPyrDepth, gtPyrMask;
     //TODO: this depth calculation would become incorrect when we implement bilateral filtering, fixit
-    buildPyramid(gtDepth, gtPyrDepth, nlevels - 1);
+    buildPyramid(gtDepth, gtPyrDepth, (int)nlevels - 1);
     for (const auto& gd : gtPyrDepth)
     {
         Mat pm = (gd > ods.getMinDepth()) & (gd < ods.getMaxDepth());
@@ -354,7 +354,7 @@ void OdometryTest::prepareFrameCheck()
     if (otype == OdometryType::RGB || otype == OdometryType::RGB_DEPTH)
     {
         std::vector<Mat> gtPyrImage;
-        buildPyramid(gtGray, gtPyrImage, nlevels - 1);
+        buildPyramid(gtGray, gtPyrImage, (int)nlevels - 1);
 
         for (size_t i = 0; i < nlevels; i++)
         {
@@ -389,7 +389,7 @@ void OdometryTest::prepareFrameCheck()
         Mat normals;
         odf.getNormals(normals);
         std::vector<Mat> gtPyrNormals;
-        buildPyramid(normals, gtPyrNormals, nlevels - 1);
+        buildPyramid(normals, gtPyrNormals, (int)nlevels - 1);
         for (size_t i = 0; i < nlevels; i++)
         {
             Mat gtNormal = gtPyrNormals[i];
