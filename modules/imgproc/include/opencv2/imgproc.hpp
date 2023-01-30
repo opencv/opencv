@@ -4786,14 +4786,14 @@ example.
 
 @param img Image.
 @param text Text string to be drawn.
-@param org Bottom-left corner of the text string in the image.
+@param org Top-left corner of the text string in the image if bottomLeftOrigin is false. Otherwise, it is at the bottom-left corner.
 @param fontFace Font type, see #HersheyFonts.
 @param fontScale Font scale factor that is multiplied by the font-specific base size.
 @param color Text color.
 @param thickness Thickness of the lines used to draw a text.
 @param lineType Line type. See #LineTypes
-@param bottomLeftOrigin When true, the image data origin is at the bottom-left corner. Otherwise,
-it is at the top-left corner.
+@param bottomLeftOrigin When false, the image data origin is at the top-left corner. Otherwise,
+it is at the bottom-left corner.
  */
 CV_EXPORTS_W void putText( InputOutputArray img, const String& text, Point org,
                          int fontFace, double fontScale, Scalar color,
