@@ -1114,12 +1114,13 @@ void VolumeTestFixture::valid_points_test()
             displayImage(depth, points2, normals2, depthFactor, lightPose);
     }
 
-    // TODO: why profile == 2*enface ?
-    float percentValidity = float(enface) / float(profile);
-
     ASSERT_GT(profile, 0) << "There are no points in profile";
     ASSERT_GT(enface, 0) << "There are no points in enface";
-    ASSERT_LT(abs(0.5 - percentValidity), 0.05) << "percentValidity should be in range 45-55%, but it's " << percentValidity*100.f << "%";
+
+    // TODO: why profile == 2*enface ?
+    float percentValidity = float(enface) / float(profile) * 100;
+
+    ASSERT_NEAR(percentValidity, 50, 6);
 }
 
 TEST_P(VolumeTestFixture, valid_points)
