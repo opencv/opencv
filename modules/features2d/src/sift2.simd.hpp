@@ -338,7 +338,7 @@ bool adjustLocalExtrema2(
     const Mat &next = dog_pyr[idx + 1];
 
     const int step = (int)img.step1();
-    
+
     for( ; i < SIFT2_MAX_INTERP_STEPS; ++i )
     {
         const sift_wt *currptr = img.ptr<sift_wt>(r);
@@ -370,9 +370,9 @@ bool adjustLocalExtrema2(
         xr = -X[1];
         xc = -X[0];
 
-        dc = ((xc > 0.6f && c < img.cols - SIFT2_IMG_BORDER -1) ? 1 : 0) + 
+        dc = ((xc > 0.6f && c < img.cols - SIFT2_IMG_BORDER -1) ? 1 : 0) +
              ((xc < -0.6f && c > SIFT2_IMG_BORDER) ? -1 : 0);
-        dr = ((xr > 0.6f && r < img.rows - SIFT2_IMG_BORDER -1) ? 1 : 0) + 
+        dr = ((xr > 0.6f && r < img.rows - SIFT2_IMG_BORDER -1) ? 1 : 0) +
              ((xr < -0.6f && r > SIFT2_IMG_BORDER) ? -1 : 0);
 
         if (dc == 0 || dr == 0)
@@ -427,7 +427,7 @@ bool adjustLocalExtrema2(
         }
     }
 
-    kpt.pt.x = ((float)c + xc) * octv_pow; 
+    kpt.pt.x = ((float)c + xc) * octv_pow;
     kpt.pt.y = ((float)r + xr) * octv_pow;
     kpt.octave = octv + (layer << 8) + (cvRound((xi + 0.5f)*255) << 16);
     kpt.size = sigma * powf(2.f, (layer + xi) / (float)nOctaveLayers) * (float)(octv_pow * 2);
@@ -793,7 +793,6 @@ void calcSIFTDescriptor2(
 
     int i, j, k, len = (radius * 2 + 1) * (radius * 2 + 1);
     const int histlen = (d + 2) * (d + 2) * (n + 2);
-    int rows = img.rows, cols = img.cols;
     float half_d = (float)(d / 2);
     const int step = (int)img.step1();
 
@@ -835,9 +834,9 @@ void calcSIFTDescriptor2(
 
             if (rbin > -1 && rbin < d && cbin > -1 && cbin < d)
             {
-                float dx = currptr[j + 1] - currptr[j - 1];
-                float dy = currptr[j - step] - currptr[j + step];
-                X[k] = dx; Y[k] = dy; RBin[k] = rbin; CBin[k] = cbin;
+                X[k] = currptr[j + 1] - currptr[j - 1];
+                Y[k] = currptr[j - step] - currptr[j + step];
+                RBin[k] = rbin; CBin[k] = cbin;
                 W[k] = (c_rot * c_rot + r_rot * r_rot) * exp_scale;
                 k++;
             }
@@ -1059,10 +1058,18 @@ void calcSIFTDescriptor2(
                 v_store(dst + k, __dst);
             }
 #endif
+#if defined(__GNUC__) && __GNUC__ >= 9
+            // avoid warning "iteration 7 invokes undefined behavior" on Linux ARM64
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"
+#endif
             for (; k < len; k++)
             {
                 dst[k] = saturate_cast<uchar>(rawDst[k] * nrm2);
             }
+#if defined(__GNUC__) && __GNUC__ >= 9
+#pragma GCC diagnostic pop
+#endif
         }
         else // CV_8U
         {
@@ -1134,10 +1141,18 @@ void calcSIFTDescriptor2(
                 v_store(dst + k, __dst);
             }
 #endif
+#if defined(__GNUC__) && __GNUC__ >= 9
+            // avoid warning "iteration 7 invokes undefined behavior" on Linux ARM64
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"
+#endif
             for (; k < len; k++)
             {
                 dst[k] = saturate_cast<uchar>(SIFT2_INT_DESCR_FCTR * std::sqrt(rawDst[k] * nrm1));
             }
+#if defined(__GNUC__) && __GNUC__ >= 9
+#pragma GCC diagnostic pop
+#endif
         }
         else // CV_8U
         {

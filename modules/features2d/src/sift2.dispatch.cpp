@@ -114,14 +114,14 @@ public:
 
 protected:
     CV_PROP_RW int nfeatures;
-	CV_PROP_RW int nOctaves;
+    CV_PROP_RW int nOctaves;
     CV_PROP_RW int nOctaveLayers;
     CV_PROP_RW double contrastThreshold;
     CV_PROP_RW double edgeThreshold;
     CV_PROP_RW double sigma;
     CV_PROP_RW int descriptor_type;
     CV_PROP_RW bool rootSift;
-    
+
 };
 
 Ptr<SIFT2> SIFT2::create( int _nfeatures, int _nOctaves, int _nOctaveLayers,
@@ -396,7 +396,7 @@ void SIFT2_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const
     tls_kpts_struct.gather(kpt_vecs);
 
     size_t num_keypoints = 0;
-    for (size_t i = 0; i < kpt_vecs.size(); ++i) 
+    for (size_t i = 0; i < kpt_vecs.size(); ++i)
     {
         num_keypoints += kpt_vecs[i]->size();
     }
@@ -443,8 +443,6 @@ public:
 
         const int begin = range.start;
         const int end = range.end;
-
-        
 
         for ( int i = begin; i<end; i++ )
         {
