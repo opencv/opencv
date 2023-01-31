@@ -114,7 +114,7 @@ inline IE::Precision toIE(int depth) {
     case CV_32S: return IE::Precision::I32;
     case CV_32F: return IE::Precision::FP32;
     case CV_16F: return IE::Precision::FP16;
-    default:     GAPI_Assert(false && "IE. Unsupported data type");
+    default:     GAPI_Error("IE. Unsupported data type");
     }
     return IE::Precision::UNSPECIFIED;
 }
@@ -125,7 +125,7 @@ inline int toCV(IE::Precision prec) {
     case IE::Precision::I32:  return CV_32S;
     case IE::Precision::I64:  return CV_32S;
     case IE::Precision::FP16: return CV_16F;
-    default:     GAPI_Assert(false && "IE. Unsupported data type");
+    default:     GAPI_Error("IE. Unsupported data type");
     }
     return -1;
 }
@@ -167,7 +167,7 @@ inline IE::Blob::Ptr wrapIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
         HANDLE(32S, int);
         HANDLE(16F, int16_t);
 #undef HANDLE
-    default: GAPI_Assert(false && "IE. Unsupported data type");
+    default: GAPI_Error("IE. Unsupported data type");
     }
     return IE::Blob::Ptr{};
 }
@@ -190,9 +190,9 @@ inline IE::Blob::Ptr wrapIE(const cv::MediaFrame::View& view,
             return wrapIE(gray, cv::gapi::ie::TraitAs::IMAGE);
         }
         default:
-            GAPI_Assert(false && "Unsupported media format for IE backend");
+            GAPI_Error("Unsupported media format for IE backend");
     }
-    GAPI_Assert(false);
+    GAPI_Error("InternalError");
 }
 
 template<class MatType>
@@ -225,7 +225,7 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
                                            mat.total());
             break;
         }
-    default: GAPI_Assert(false && "IE. Unsupported data type");
+    default: GAPI_Error("IE. Unsupported data type");
     }
 }
 
@@ -439,7 +439,7 @@ void IEUnit::InputFramesDesc::set_param(const input_name_type &input,
     if (layout != InferenceEngine::NHWC && layout != InferenceEngine::NCHW) {
         GAPI_LOG_WARNING(nullptr, "Unsupported layout for VPP preproc: " << layout <<
                                   ", input name: " << input);
-        GAPI_Assert(false && "Unsupported layout for VPP preproc");
+        GAPI_Error("Unsupported layout for VPP preproc");
     }
     GAPI_Assert(inDims.size() == 4u);
     ret.size.width = static_cast<int>(inDims[3]);
@@ -754,7 +754,7 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
 
                 NV12ParamType* blob_params = cv::util::any_cast<NV12ParamType>(&any_blob_params);
                 if (blob_params == nullptr) {
-                    GAPI_Assert(false && "Incorrect type of blobParams:"
+                    GAPI_Error("Incorrect type of blobParams:"
                                          "expected std::pair<ParamType, ParamType>,"
                                          "with ParamType std::pair<InferenceEngine::TensorDesc,"
                                          "InferenceEngine::ParamMap >>");
@@ -782,7 +782,7 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
         default:
             GAPI_Assert("Unsupported input shape for IE backend");
     }
-    GAPI_Assert(false);
+    GAPI_Error("InternalError");
 }
 
 
@@ -967,7 +967,7 @@ cv::gimpl::ie::RequestPool::RequestPool(cv::gapi::ie::InferMode                 
                                                              std::bind(&RequestPool::release, this, i));
                 break;
             default:
-                GAPI_Assert(false && "Unsupported cv::gapi::ie::InferMode");
+                GAPI_Error("Unsupported cv::gapi::ie::InferMode");
         }
         m_requests.emplace_back(std::move(iexec));
     }
@@ -1144,7 +1144,7 @@ static void configureInputReshapeByImage(const IE::InputInfo::Ptr& ii,
     auto input_dims = ii->getTensorDesc().getDims();
     const auto size = input_dims.size();
     if (size <= 1) {
-        GAPI_Assert(false && "Unsupported number of dimensions for reshape by image");
+        GAPI_Error("Unsupported number of dimensions for reshape by image");
     }
     input_dims.at(size - 2) = static_cast<size_t>(image_sz.height);
     input_dims.at(size - 1) = static_cast<size_t>(image_sz.width);
@@ -1173,7 +1173,7 @@ static void configureInputInfo(const IE::InputInfo::Ptr& ii, const cv::GMetaArg 
                     // NB: Do nothing
                     break;
                 default:
-                    GAPI_Assert(false && "Unsupported media format for IE backend");
+                    GAPI_Error("Unsupported media format for IE backend");
             }
             ii->setPrecision(toIE(CV_8U));
             break;

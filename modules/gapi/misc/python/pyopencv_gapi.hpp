@@ -19,6 +19,7 @@ using gapi_wip_IStreamSource_Ptr    = cv::Ptr<cv::gapi::wip::IStreamSource>;
 using detail_ExtractArgsCallback    = cv::detail::ExtractArgsCallback;
 using detail_ExtractMetaCallback    = cv::detail::ExtractMetaCallback;
 using vector_GNetParam              = std::vector<cv::gapi::GNetParam>;
+using vector_GMat                   = std::vector<cv::GMat>;
 using gapi_streaming_queue_capacity = cv::gapi::streaming::queue_capacity;
 using GStreamerSource_OutputType    = cv::gapi::wip::GStreamerSource::OutputType;
 
@@ -41,6 +42,7 @@ using GArray_float   = cv::GArray<double>;
 using GArray_string  = cv::GArray<std::string>;
 using GArray_Point2i = cv::GArray<cv::Point>;
 using GArray_Point2f = cv::GArray<cv::Point2f>;
+using GArray_Point3f = cv::GArray<cv::Point3f>;
 using GArray_Size    = cv::GArray<cv::Size>;
 using GArray_Rect    = cv::GArray<cv::Rect>;
 using GArray_Scalar  = cv::GArray<cv::Scalar>;
@@ -238,6 +240,7 @@ PyObject* pyopencv_from(const cv::GArg& value)
         HANDLE_CASE(STRING,    std::string);
         HANDLE_CASE(POINT,     cv::Point);
         HANDLE_CASE(POINT2F,   cv::Point2f);
+        HANDLE_CASE(POINT3F,   cv::Point3f);
         HANDLE_CASE(SIZE,      cv::Size);
         HANDLE_CASE(RECT,      cv::Rect);
         HANDLE_CASE(SCALAR,    cv::Scalar);
@@ -295,6 +298,7 @@ PyObject* pyopencv_from(const cv::detail::OpaqueRef& o)
         case cv::detail::OpaqueKind::CV_STRING    : return pyopencv_from(o.rref<std::string>());
         case cv::detail::OpaqueKind::CV_POINT     : return pyopencv_from(o.rref<cv::Point>());
         case cv::detail::OpaqueKind::CV_POINT2F   : return pyopencv_from(o.rref<cv::Point2f>());
+        case cv::detail::OpaqueKind::CV_POINT3F   : return pyopencv_from(o.rref<cv::Point3f>());
         case cv::detail::OpaqueKind::CV_SIZE      : return pyopencv_from(o.rref<cv::Size>());
         case cv::detail::OpaqueKind::CV_RECT      : return pyopencv_from(o.rref<cv::Rect>());
         case cv::detail::OpaqueKind::CV_UNKNOWN   : return pyopencv_from(o.rref<cv::GArg>());
@@ -321,6 +325,7 @@ PyObject* pyopencv_from(const cv::detail::VectorRef& v)
         case cv::detail::OpaqueKind::CV_STRING    : return pyopencv_from_generic_vec(v.rref<std::string>());
         case cv::detail::OpaqueKind::CV_POINT     : return pyopencv_from_generic_vec(v.rref<cv::Point>());
         case cv::detail::OpaqueKind::CV_POINT2F   : return pyopencv_from_generic_vec(v.rref<cv::Point2f>());
+        case cv::detail::OpaqueKind::CV_POINT3F   : return pyopencv_from_generic_vec(v.rref<cv::Point3f>());
         case cv::detail::OpaqueKind::CV_SIZE      : return pyopencv_from_generic_vec(v.rref<cv::Size>());
         case cv::detail::OpaqueKind::CV_RECT      : return pyopencv_from_generic_vec(v.rref<cv::Rect>());
         case cv::detail::OpaqueKind::CV_SCALAR    : return pyopencv_from_generic_vec(v.rref<cv::Scalar>());
@@ -491,6 +496,7 @@ static cv::detail::OpaqueRef extract_opaque_ref(PyObject* from, cv::detail::Opaq
         HANDLE_CASE(STRING,  std::string);
         HANDLE_CASE(POINT,   cv::Point);
         HANDLE_CASE(POINT2F, cv::Point2f);
+        HANDLE_CASE(POINT3F, cv::Point3f);
         HANDLE_CASE(SIZE,    cv::Size);
         HANDLE_CASE(RECT,    cv::Rect);
         HANDLE_CASE(UNKNOWN, cv::GArg);
@@ -523,6 +529,7 @@ static cv::detail::VectorRef extract_vector_ref(PyObject* from, cv::detail::Opaq
         HANDLE_CASE(STRING,    std::string);
         HANDLE_CASE(POINT,     cv::Point);
         HANDLE_CASE(POINT2F,   cv::Point2f);
+        HANDLE_CASE(POINT3F,   cv::Point3f);
         HANDLE_CASE(SIZE,      cv::Size);
         HANDLE_CASE(RECT,      cv::Rect);
         HANDLE_CASE(SCALAR,    cv::Scalar);
@@ -731,7 +738,7 @@ static cv::GRunArgs run_py_kernel(cv::detail::PyObjectHolder kernel,
         else
         {
             // Seems to be impossible case.
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
         }
     }
     catch (...)

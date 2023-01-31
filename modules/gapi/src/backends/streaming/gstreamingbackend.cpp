@@ -42,7 +42,7 @@ class GStreamingIntrinExecutable final: public cv::gimpl::GIslandExecutable
 {
     virtual void run(std::vector<InObj>  &&,
                      std::vector<OutObj> &&) override {
-        GAPI_Assert(false && "Not implemented");
+        GAPI_Error("Not implemented");
     }
 
     virtual void run(GIslandExecutable::IInput &in,
@@ -188,7 +188,7 @@ void Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
         break;
     // FIXME: Add support for remaining types
     default:
-        GAPI_Assert(false && "Copy: unsupported data type");
+        GAPI_Error("Copy: unsupported data type");
     }
     out.meta(out_arg, in_arg.meta);
     out.post(std::move(out_arg));

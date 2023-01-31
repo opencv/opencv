@@ -422,16 +422,16 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS QuantizeLayer : public Layer
     {
     public:
-        float scale;
-        int zeropoint;
+        std::vector<float> scales;
+        std::vector<int> zeropoints;
         static Ptr<QuantizeLayer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS DequantizeLayer : public Layer
     {
     public:
-        float scale;
-        int zeropoint;
+        std::vector<float> scales;
+        std::vector<int> zeropoints;
         static Ptr<DequantizeLayer> create(const LayerParams &params);
     };
 
@@ -1077,6 +1077,22 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<ScatterNDLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS TileLayer : public Layer
+    {
+    public:
+        static Ptr<TileLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS LayerNormLayer : public Layer
+    {
+    public:
+        bool hasBias;
+        int axis;
+        float epsilon;
+
+        static Ptr<LayerNormLayer> create(const LayerParams& params);
     };
 
 //! @}

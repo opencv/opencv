@@ -235,11 +235,12 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #elif CV_WASM_SIMD && !defined(CV_FORCE_SIMD128_CPP)
 #include "opencv2/core/hal/intrin_wasm.hpp"
 
-#elif CV_RVV && !defined(CV_FORCE_SIMD128_CPP) && !defined(CV_RVV_SCALABLE)
-#include "opencv2/core/hal/intrin_rvv.hpp"
-
-#elif CV_RVV && !defined(CV_FORCE_SIMD128_CPP) && CV_RVV_SCALABLE
+#elif CV_RVV && !defined(CV_FORCE_SIMD128_CPP)
+#if defined(CV_RVV_SCALABLE)
 #include "opencv2/core/hal/intrin_rvv_scalable.hpp"
+#else
+#include "opencv2/core/hal/intrin_rvv.hpp"
+#endif
 
 #elif CV_LASX
     #if !defined(CV_FORCE_SIMD128_CPP)
@@ -544,6 +545,11 @@ using namespace CV__SIMD_NAMESPACE;
 
 #endif
 
+//! @cond IGNORED
+#ifndef CV_SIMD_64F
+#define CV_SIMD_64F 0
+#endif
+
 namespace CV__SIMD_NAMESPACE {
 //! @addtogroup core_hal_intrin
 //! @{
@@ -780,7 +786,6 @@ namespace CV__SIMD_NAMESPACE {
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int32)
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int64)
 
-
     #define OPENCV_HAL_WRAP_BIN_OP_MUL(_Tpvec) \
     inline _Tpvec v_mul(const _Tpvec& a, const _Tpvec& b) \
     { \
@@ -908,10 +913,6 @@ namespace CV__SIMD_NAMESPACE {
     #undef VXPREFIX
 } // namespace
 
-//! @cond IGNORED
-#ifndef CV_SIMD_64F
-#define CV_SIMD_64F 0
-#endif
 
 #ifndef CV_SIMD_FP16
 #define CV_SIMD_FP16 0  //!< Defined to 1 on native support of operations with float16x8_t / float16x16_t (SIMD256) types

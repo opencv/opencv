@@ -587,6 +587,8 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
 
     [window setContentView:[[CVView alloc] init]];
 
+    [NSApp activateIgnoringOtherApps:YES];
+
     [window setHasShadow:YES];
     [window setAcceptsMouseMovedEvents:YES];
     [window useOptimizedDrawing:YES];
@@ -738,6 +740,31 @@ void cvSetModeWindow_COCOA( const char* name, double prop_value )
     [localpool drain];
 
     __END__;
+}
+
+double cvGetPropVisible_COCOA(const char* name)
+{
+    double    result = -1;
+    CVWindow* window = nil;
+
+    CV_FUNCNAME("cvGetPropVisible_COCOA");
+
+    __BEGIN__;
+    if (name == NULL)
+    {
+        CV_ERROR(CV_StsNullPtr, "NULL name string");
+    }
+
+    window = cvGetWindow(name);
+    if (window == NULL)
+    {
+        CV_ERROR(CV_StsNullPtr, "NULL window");
+    }
+
+    result = window.isVisible ? 1 : 0;
+
+    __END__;
+    return result;
 }
 
 double cvGetPropTopmost_COCOA(const char* name)

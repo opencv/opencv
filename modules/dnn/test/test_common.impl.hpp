@@ -31,6 +31,7 @@ void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
     case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: *os << "NGRAPH"; return;
     case DNN_BACKEND_WEBNN: *os << "WEBNN"; return;
     case DNN_BACKEND_TIMVX: *os << "TIMVX"; return;
+    case DNN_BACKEND_CANN: *os << "CANN"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_BACKEND_UNKNOWN(" << (int)v << ")";
 }
@@ -251,7 +252,8 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withVkCom /*= true*/,
         bool withCUDA /*= true*/,
         bool withNgraph /*= true*/,
-        bool withWebnn /*= false*/
+        bool withWebnn /*= false*/,
+        bool withCann /*= true*/
 )
 {
     bool withVPU = validateVPUType();
@@ -310,6 +312,16 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 #else
     CV_UNUSED(withWebnn);
 #endif
+
+#ifdef HAVE_CANN
+    if (withCann)
+    {
+        for (auto target : getAvailableTargets(DNN_BACKEND_CANN))
+            targets.push_back(make_tuple(DNN_BACKEND_CANN, target));
+    }
+#else
+    CV_UNUSED(withCann);
+#endif // HAVE_CANN
 
     {
         available = getAvailableTargets(DNN_BACKEND_OPENCV);
@@ -476,6 +488,11 @@ void initDNNTests()
 #ifdef HAVE_TIMVX
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_TIMVX
+    );
+#endif
+#ifdef HAVE_CANN
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_CANN
     );
 #endif
     registerGlobalSkipTag(

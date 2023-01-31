@@ -445,6 +445,30 @@ PyObject* pyopencv_from(const int& value)
 // --- int64
 
 template<>
+bool pyopencv_to(PyObject* obj, int64& value, const ArgInfo& info)
+{
+    if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be integer, not bool", info.name);
+        return false;
+    }
+    if (PyArray_IsIntegerScalar(obj))
+    {
+        value = PyLong_AsLongLong(obj);
+    }
+    else
+    {
+        failmsg("Argument '%s' is required to be an integer", info.name);
+        return false;
+    }
+    return !CV_HAS_CONVERSION_ERROR(value);
+}
+
+template<>
 PyObject* pyopencv_from(const int64& value)
 {
     return PyLong_FromLongLong(value);

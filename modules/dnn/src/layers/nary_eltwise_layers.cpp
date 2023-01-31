@@ -4,11 +4,20 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
+#include "../op_cann.hpp"
+#include "../ie_ngraph.hpp"
+
 #include <opencv2/dnn/shape_utils.hpp>
 
 #include <algorithm>
 #include <iterator>
 #include <numeric>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/eltwise.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -91,6 +100,20 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CANN
+        if (backendId == DNN_BACKEND_CANN)
+            return op == OPERATION::ADD || op == OPERATION::PROD || op == OPERATION::DIV ||
+                   op == OPERATION::DIV || op == OPERATION::MAX  || op == OPERATION::MIN;
+#endif
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return (op == OPERATION::ADD ||
+                    op == OPERATION::PROD ||
+                    op == OPERATION::GREATER_EQUAL ||
+                    op == OPERATION::LESS_EQUAL
+            );
+        if (op == OPERATION::MAX || op == OPERATION::MIN || op == OPERATION::SUM ||
+            op == OPERATION::PROD || op == OPERATION::DIV)
+            return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
         return backendId == DNN_BACKEND_OPENCV;
     }
 
@@ -641,6 +664,80 @@ public:
         };
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        for (int i = 1; i < inputs.size(); i++)
+        {
+            auto from_wrapper = inputs[i].dynamicCast<CUDABackendWrapper>();
+            if (input_wrapper->getShape() != from_wrapper->getShape())
+                return Ptr<BackendNode>();
+        }
+
+        auto op_ = [this] {
+            switch (op) {
+                case OPERATION::MAX: return cuda4dnn::EltwiseOpType::MAX;
+                case OPERATION::MIN: return cuda4dnn::EltwiseOpType::MIN;
+                case OPERATION::SUM: return cuda4dnn::EltwiseOpType::SUM;
+                case OPERATION::PROD: return cuda4dnn::EltwiseOpType::PRODUCT;
+                case OPERATION::DIV: return cuda4dnn::EltwiseOpType::DIV;
+                default: CV_Error(Error::StsNotImplemented, "Other operators except MAX, MIN, SUM, PRODUCT and DIV are not supported with cuda.");
+            }
+        }();
+
+        return make_cuda_node<cuda4dnn::EltwiseOp>(preferableTarget, std::move(context->stream), op_, std::vector<float>());
+    }
+#endif
+
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(inputsWrapper.size() == 2);
+        CV_Assert(nodes.size() == 2);
+
+        auto op_x1 = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto x1 = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x1_desc = x1->getTensorDesc();
+        auto op_x2 = nodes[1].dynamicCast<CannBackendNode>()->getOp();
+        auto x2 = inputsWrapper[1].dynamicCast<CannBackendWrapper>();
+        auto x2_desc = x2->getTensorDesc();
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+
+        std::shared_ptr<ge::Operator> eltwise_operator = nullptr;
+        // add, mul, div, max, min
+        switch (op)
+        {
+#define BUILD_CANN_ELTWISE_OP(op_type, class_name, op_name)      \
+            case op_type: {                                      \
+                auto eltwise_op =                                \
+                  std::make_shared<ge::op::class_name>(op_name); \
+                eltwise_op->set_input_x1_by_name(*op_x1, "y");   \
+                eltwise_op->set_input_x2_by_name(*op_x2, "y");   \
+                eltwise_op->update_input_desc_x1(*x1_desc);      \
+                eltwise_op->update_input_desc_x2(*x2_desc);      \
+                eltwise_op->update_output_desc_y(*output_desc);  \
+                eltwise_operator = eltwise_op;                   \
+            } break;
+            BUILD_CANN_ELTWISE_OP(OPERATION::ADD,  Add,     cv::format("add_%d", index));
+            BUILD_CANN_ELTWISE_OP(OPERATION::PROD, Mul,     cv::format("mul_%d", index));
+            BUILD_CANN_ELTWISE_OP(OPERATION::DIV,  Xdivy,   cv::format("div_%d", index));
+            BUILD_CANN_ELTWISE_OP(OPERATION::MAX,  Maximum, cv::format("max_%d", index));
+            BUILD_CANN_ELTWISE_OP(OPERATION::MIN,  Minimum, cv::format("min_%d", index));
+#undef BUILD_CANN_ELTWISE_OP
+            default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
+        }
+
+        return Ptr<BackendNode>(new CannBackendNode(eltwise_operator));
+    }
+#endif // HAVE_CANN
+
     virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
                              const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
     {
@@ -653,6 +750,37 @@ public:
         CV_Assert(inputs.size());
         return inputs.size() * total(outputs[0]);
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(inputs.size() == 2);
+        auto& inp0 = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto& inp1 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+
+        if (inp0->get_element_type() != inp1->get_element_type()) {
+            auto dtype = preferableTarget == DNN_TARGET_OPENCL_FP16 || preferableTarget == DNN_TARGET_MYRIAD ?
+                        ngraph::element::f16 : ngraph::element::f32;
+            if (inp0->get_element_type() != dtype)
+                inp0 = std::make_shared<ngraph::op::v0::Convert>(inp0, dtype);
+            if (inp1->get_element_type() != dtype)
+                inp1 = std::make_shared<ngraph::op::v0::Convert>(inp1, dtype);
+        }
+
+        std::shared_ptr<ngraph::Node> node;
+        if (op == OPERATION::ADD)
+            node = std::make_shared<ngraph::op::v1::Add>(inp0, inp1);
+        else if (op == OPERATION::PROD)
+            node = std::make_shared<ngraph::op::v1::Multiply>(inp0, inp1);
+        else if (op == OPERATION::GREATER_EQUAL)
+            node = std::make_shared<ngraph::op::v1::GreaterEqual>(inp0, inp1);
+        else if (op == OPERATION::LESS_EQUAL)
+            node = std::make_shared<ngraph::op::v1::LessEqual>(inp0, inp1);
+        else
+            CV_Error(Error::StsNotImplemented, "Operation is not implemented for nGraph backend");
+        return Ptr<BackendNode>(new InfEngineNgraphNode(node));
+    }
+#endif
 };
 
 Ptr<NaryEltwiseLayer> NaryEltwiseLayer::create(const LayerParams& params)

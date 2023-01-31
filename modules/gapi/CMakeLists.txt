@@ -41,6 +41,9 @@ if(MSVC)
     # and IE deprecated code warning C4996
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503 /wd4996)
   endif()
+  if(MSVC_VERSION LESS 1920)  # MSVS 2015/2017
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)  # 'unreachable code'
+  endif()
 endif()
 
 file(GLOB gapi_ext_hdrs
@@ -188,6 +191,7 @@ set(gapi_srcs
     src/streaming/onevpl/cfg_params.cpp
     src/streaming/onevpl/cfg_params_parser.cpp
     src/streaming/onevpl/utils.cpp
+    src/streaming/onevpl/default.cpp
     src/streaming/onevpl/data_provider_interface_exception.cpp
     src/streaming/onevpl/accelerators/surface/base_frame_adapter.cpp
     src/streaming/onevpl/accelerators/surface/cpu_frame_adapter.cpp
@@ -328,18 +332,13 @@ if(HAVE_GAPI_ONEVPL)
     ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
   endif()
 
-  if(UNIX)
-    if(WITH_VA)
-      include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindVA.cmake")
-      if(VA_INCLUDE_DIR)
-        ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${VA_INCLUDE_DIR})
-        ocv_target_include_directories(opencv_test_gapi SYSTEM PRIVATE ${VA_INCLUDE_DIR})
-        ocv_target_link_libraries(${the_module} PRIVATE ${VA_LIBRARIES})
-        ocv_target_link_libraries(opencv_test_gapi PRIVATE ${VA_LIBRARIES})
-      endif()
-    else(WITH_VA)
-      message(FATAL_ERROR "libva not found: building HAVE_GAPI_ONEVPL without libVA support is impossible on UNIX systems")
-    endif(WITH_VA)
+  if(UNIX AND HAVE_VA)
+    ocv_target_include_directories(${the_module} SYSTEM PRIVATE ${VA_INCLUDE_DIR})
+    ocv_target_link_libraries(${the_module} PRIVATE ${VA_LIBRARIES})
+    if(TARGET opencv_test_gapi)
+      ocv_target_include_directories(opencv_test_gapi SYSTEM PRIVATE ${VA_INCLUDE_DIR})
+      ocv_target_link_libraries(opencv_test_gapi PRIVATE ${VA_LIBRARIES})
+    endif()
   endif()
 endif()
 
@@ -372,20 +371,20 @@ ocv_add_samples()
 
 
 # Required for sample with inference on host
-if(TARGET example_gapi_onevpl_infer_single_roi)
+if(TARGET example_gapi_onevpl_infer_with_advanced_device_selection)
   if(TARGET ocv.3rdparty.openvino AND OPENCV_GAPI_WITH_OPENVINO)
-    ocv_target_link_libraries(example_gapi_onevpl_infer_single_roi PRIVATE ocv.3rdparty.openvino)
+    ocv_target_link_libraries(example_gapi_onevpl_infer_with_advanced_device_selection PRIVATE ocv.3rdparty.openvino)
   endif()
   if(HAVE_DIRECTX AND HAVE_D3D11)
-    ocv_target_link_libraries(example_gapi_onevpl_infer_single_roi PRIVATE d3d11 dxgi)
+    ocv_target_link_libraries(example_gapi_onevpl_infer_with_advanced_device_selection PRIVATE d3d11 dxgi)
   endif()
   if(HAVE_D3D11 AND HAVE_OPENCL)
-    ocv_target_include_directories(example_gapi_onevpl_infer_single_roi SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
+    ocv_target_include_directories(example_gapi_onevpl_infer_with_advanced_device_selection SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
   endif()
-  if(WITH_VA AND UNIX)
-    message ("GAPI VPL samples with VAAPI")
-    ocv_target_include_directories(example_gapi_onevpl_infer_single_roi SYSTEM PRIVATE ${VA_INCLUDE_DIR})
-    ocv_target_link_libraries(example_gapi_onevpl_infer_single_roi PRIVATE ${VA_LIBRARIES})
+  if(UNIX AND HAVE_VA)
+    message(STATUS "GAPI VPL samples with VAAPI")
+    ocv_target_include_directories(example_gapi_onevpl_infer_with_advanced_device_selection SYSTEM PRIVATE ${VA_INCLUDE_DIR})
+    ocv_target_link_libraries(example_gapi_onevpl_infer_with_advanced_device_selection PRIVATE ${VA_LIBRARIES})
   endif()
 endif()
 

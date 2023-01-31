@@ -67,6 +67,7 @@ public:
      *
      * @param s a cv::Scalar value to associate with this GScalar object.
      */
+    GAPI_WRAP
     explicit GScalar(const cv::Scalar& s);
 
     /**

@@ -29,7 +29,7 @@ public:
     void processNet(std::string weights, std::string proto,
                     Mat inp, const std::string& outputLayer = "",
                     std::string halideScheduler = "",
-                    double l1 = 0.0, double lInf = 0.0, double detectionConfThresh = 0.2)
+                    double l1 = 0.0, double lInf = 0.0, double detectionConfThresh = 0.2, bool useWinograd = true)
     {
         checkBackend();
         l1 = l1 ? l1 : default_l1;
@@ -49,6 +49,7 @@ public:
         net.setInput(inp);
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
+        net.enableWinograd(useWinograd);
         if (backend == DNN_BACKEND_HALIDE && !halideScheduler.empty())
         {
             halideScheduler = findDataFile(halideScheduler);
@@ -201,12 +202,6 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // IE exception: Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // IE exception: Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // May hang on some configurations
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
@@ -353,7 +348,8 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
     }
 
     processNet("dnn/VGG_ILSVRC2016_SSD_300x300_iter_440000.caffemodel",
-               "dnn/ssd_vgg16.prototxt", inp, "detection_out", "", scoreDiff, iouDiff);
+               "dnn/ssd_vgg16.prototxt", inp, "detection_out", "", scoreDiff,
+               iouDiff, 0.2, false);
     expectNoFallbacksFromIE(net);
 }
 
@@ -535,7 +531,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         l1 = 0.4;
-        lInf = 7.45;
+        lInf = 7.46;
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {

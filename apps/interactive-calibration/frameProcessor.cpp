@@ -11,7 +11,6 @@
 
 #include <vector>
 #include <string>
-#include <algorithm>
 #include <limits>
 
 using namespace calib;
@@ -74,17 +73,12 @@ bool CalibProcessor::detectAndParseChessboard(const cv::Mat &frame)
 
 bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
 {
-#ifdef HAVE_OPENCV_ARUCO
     cv::Ptr<cv::aruco::Board> board = mCharucoBoard.staticCast<cv::aruco::Board>();
 
     std::vector<std::vector<cv::Point2f> > corners, rejected;
     std::vector<int> ids;
-    cv::aruco::detectMarkers(frame, mArucoDictionary, corners, ids, cv::aruco::DetectorParameters::create(), rejected);
-    cv::aruco::refineDetectedMarkers(frame, board, corners, ids, rejected);
     cv::Mat currentCharucoCorners, currentCharucoIds;
-    if(ids.size() > 0)
-        cv::aruco::interpolateCornersCharuco(corners, ids, frame, mCharucoBoard, currentCharucoCorners,
-                                         currentCharucoIds);
+    detector->detectBoard(frame, currentCharucoCorners, currentCharucoIds, corners, ids);
     if(ids.size() > 0) cv::aruco::drawDetectedMarkers(frame, corners);
 
     if(currentCharucoCorners.total() > 3) {
@@ -102,9 +96,6 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
         mCurrentCharucoIds = currentCharucoIds;
         return true;
     }
-#else
-    CV_UNUSED(frame);
-#endif
     return false;
 }
 
@@ -155,6 +146,7 @@ bool CalibProcessor::detectAndParseDualACircles(const cv::Mat &frame)
 void CalibProcessor::saveFrameData()
 {
     std::vector<cv::Point3f> objectPoints;
+    std::vector<cv::Point2f> imagePoints;
 
     switch(mBoardType)
     {
@@ -169,6 +161,11 @@ void CalibProcessor::saveFrameData()
     case chAruco:
         mCalibData->allCharucoCorners.push_back(mCurrentCharucoCorners);
         mCalibData->allCharucoIds.push_back(mCurrentCharucoIds);
+
+        mCharucoBoard->matchImagePoints(mCurrentCharucoCorners, mCurrentCharucoIds, objectPoints, imagePoints);
+        CV_Assert(mCurrentCharucoIds.total() == imagePoints.size());
+        mCalibData->imagePoints.push_back(imagePoints);
+        mCalibData->objectPoints.push_back(objectPoints);
         break;
     case CirclesGrid:
         objectPoints.reserve(mBoardSize.height*mBoardSize.width);
@@ -248,37 +245,17 @@ bool CalibProcessor::checkLastFrame()
     else
         mCalibData->cameraMatrix.copyTo(tmpCamMatrix);
 
-    if(mBoardType != chAruco) {
-        cv::Mat r, t, angles;
-        cv::solvePnP(mCalibData->objectPoints.back(), mCurrentImagePoints, tmpCamMatrix, mCalibData->distCoeffs, r, t);
-        RodriguesToEuler(r, angles, CALIB_DEGREES);
-
-        if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
-            mCalibData->objectPoints.pop_back();
-            mCalibData->imagePoints.pop_back();
-            isFrameBad = true;
-        }
-    }
-    else {
-#ifdef HAVE_OPENCV_ARUCO
-        cv::Mat r, t, angles;
-        std::vector<cv::Point3f> allObjPoints;
-        allObjPoints.reserve(mCurrentCharucoIds.total());
-        for(size_t i = 0; i < mCurrentCharucoIds.total(); i++) {
-            int pointID = mCurrentCharucoIds.at<int>((int)i);
-            CV_Assert(pointID >= 0 && pointID < (int)mCharucoBoard->chessboardCorners.size());
-            allObjPoints.push_back(mCharucoBoard->chessboardCorners[pointID]);
-        }
-
-        cv::solvePnP(allObjPoints, mCurrentCharucoCorners, tmpCamMatrix, mCalibData->distCoeffs, r, t);
-        RodriguesToEuler(r, angles, CALIB_DEGREES);
-
-        if(180.0 - fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
-            isFrameBad = true;
+    cv::Mat r, t, angles;
+    cv::solvePnP(mCalibData->objectPoints.back(), mCalibData->imagePoints.back(), tmpCamMatrix, mCalibData->distCoeffs, r, t);
+    RodriguesToEuler(r, angles, CALIB_DEGREES);
+    if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
+        mCalibData->objectPoints.pop_back();
+        mCalibData->imagePoints.pop_back();
+        if (mCalibData->allCharucoCorners.size()) {
             mCalibData->allCharucoCorners.pop_back();
             mCalibData->allCharucoIds.pop_back();
         }
-#endif
+        isFrameBad = true;
     }
     return isFrameBad;
 }
@@ -295,16 +272,16 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
     mTemplDist = capParams.templDst;
     mSaveFrames = capParams.saveFrames;
     mZoom = capParams.zoom;
+    cv::aruco::CharucoParameters charucoParameters;
+    charucoParameters.tryRefineMarkers = true;
 
     switch(mBoardType)
     {
     case chAruco:
-#ifdef HAVE_OPENCV_ARUCO
-        mArucoDictionary = cv::aruco::getPredefinedDictionary(
-                    cv::aruco::PREDEFINED_DICTIONARY_NAME(capParams.charucoDictName));
-        mCharucoBoard = cv::aruco::CharucoBoard::create(mBoardSize.width, mBoardSize.height, capParams.charucoSquareLength,
-                                                        capParams.charucoMarkerSize, mArucoDictionary);
-#endif
+        mArucoDictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PredefinedDictionaryType(capParams.charucoDictName));
+        mCharucoBoard = cv::makePtr<cv::aruco::CharucoBoard>(cv::Size(mBoardSize.width + 1, mBoardSize.height + 1), capParams.charucoSquareLength,
+                                                    capParams.charucoMarkerSize, mArucoDictionary);
+        detector = cv::makePtr<cv::aruco::CharucoDetector>(cv::aruco::CharucoDetector(*mCharucoBoard, charucoParameters));
         break;
     case CirclesGrid:
     case AcirclesGrid:
