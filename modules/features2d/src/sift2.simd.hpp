@@ -1038,11 +1038,11 @@ void calcSIFTDescriptor2(
         nrm2 += val * val;
     }
 
+    nrm2 = SIFT2_INT_DESCR_FCTR / std::max(std::sqrt(nrm2), FLT_EPSILON);
 
     if (!rootSift)
     {
         k = 0;
-        nrm2 = SIFT2_INT_DESCR_FCTR / std::max(std::sqrt(nrm2), FLT_EPSILON);
         if (dstMat.type() == CV_32F)
         {
             float* dst = dstMat.ptr<float>(row);
@@ -1108,10 +1108,13 @@ void calcSIFTDescriptor2(
 #if CV_SIMD
         {
             v_float32 __nrm1 = vx_setzero_f32();
+            v_float32 __nrm2 = vx_setall_f32(nrm2);
             v_float32 __rawDst;
             for (; k <= len - v_float32::nlanes; k += v_float32::nlanes)
             {
                 __rawDst = vx_load_aligned(rawDst + k);
+                __rawDst *= __nrm2;
+                 v_store_aligned(rawDst + k, __rawDst);
                 __nrm1 += __rawDst;
             }
             nrm1 = (float)v_reduce_sum(__nrm1);
@@ -1119,6 +1122,7 @@ void calcSIFTDescriptor2(
 #endif
         for (; k < len; ++k)
         {
+            rawDst[k] *= nrm2;
             nrm1 += rawDst[k];
         }
 

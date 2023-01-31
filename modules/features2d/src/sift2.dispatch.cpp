@@ -565,6 +565,7 @@ void SIFT2_Impl::detectAndCompute(InputArray _image, InputArray _mask,
         buildDoGPyramid(gpyr, dogpyr);
         //t = (double)getTickCount();
         findScaleSpaceExtrema(gpyr, dogpyr, keypoints);
+        KeyPointsFilter::removeDuplicatedSorted(keypoints);
 
         //t = (double)getTickCount() - t;
         //printf("keypoint detection time: %g\n", t*1000./tf);
