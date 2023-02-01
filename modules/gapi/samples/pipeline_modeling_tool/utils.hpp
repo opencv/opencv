@@ -17,6 +17,8 @@ struct OutputDescr {
 
 namespace utils {
 
+using double_ms_t = std::chrono::duration<double, std::milli>;
+
 inline void createNDMat(cv::Mat& mat, const std::vector<int>& dims, int depth) {
     GAPI_Assert(!dims.empty());
     mat.create(dims, depth);
@@ -50,10 +52,12 @@ inline void generateRandom(cv::Mat& out) {
     }
 }
 
-inline void sleep(double ms) {
+using ns_t = std::chrono::nanoseconds;
+using ns_100_t = std::chrono::duration<ns_t::rep,
+                                       std::ratio_multiply<std::ratio<100>, ns_t::period>>;
+// NB: It takes portions of 100 nanoseconds.
+inline void sleep(ns_100_t units) {
 #if defined(_WIN32)
-    // NB: It takes portions of 100 nanoseconds.
-    int64_t ns_units = static_cast<int64_t>(ms * 1e4);
     // FIXME: Wrap it to RAII and instance only once.
     HANDLE timer = CreateWaitableTimer(NULL, true, NULL);
     if (!timer) {
@@ -61,7 +65,7 @@ inline void sleep(double ms) {
     }
 
     LARGE_INTEGER li;
-    li.QuadPart = -ns_units;
+    li.QuadPart = -units.count();
     if(!SetWaitableTimer(timer, &li, 0, NULL, NULL, false)){
         CloseHandle(timer);
         throw std::logic_error("Failed to set timer");
@@ -72,8 +76,7 @@ inline void sleep(double ms) {
     }
     CloseHandle(timer);
 #else
-    using namespace std::chrono;
-    std::this_thread::sleep_for(duration<double, std::milli>(ms));
+    std::this_thread::sleep_for(units);
 #endif
 }
 
@@ -105,18 +108,18 @@ void mergeMapWith(std::map<K, V>& target, const std::map<K, V>& second) {
 }
 
 template <typename T>
-double avg(const std::vector<T>& vec) {
-    return std::accumulate(vec.begin(), vec.end(), 0.0) / vec.size();
+double avg(const std::vector<T>& vec, int startidx=0) {
+    return std::accumulate(vec.begin()+startidx, vec.end(), 0.0) / vec.size();
 }
 
 template <typename T>
-T max(const std::vector<T>& vec) {
-    return *std::max_element(vec.begin(), vec.end());
+T max(const std::vector<T>& vec, int startidx=0) {
+    return *std::max_element(vec.begin()+startidx, vec.end());
 }
 
 template <typename T>
-T min(const std::vector<T>& vec) {
-    return *std::min_element(vec.begin(), vec.end());
+T min(const std::vector<T>& vec, int startidx=0) {
+    return *std::min_element(vec.begin()+startidx, vec.end());
 }
 
 template <typename T>

@@ -12,26 +12,31 @@
 
 class DummySource final: public cv::gapi::wip::IStreamSource {
 public:
-    using Ptr = std::shared_ptr<DummySource>;
-    DummySource(const double       latency,
+    using Ptr  = std::shared_ptr<DummySource>;
+    using ts_t = std::chrono::microseconds;
+
+    template <typename DurationT>
+    DummySource(const DurationT    latency,
                 const OutputDescr& output,
                 const bool         drop_frames);
+
     bool pull(cv::gapi::wip::Data& data) override;
     cv::GMetaArg descr_of() const override;
-    double latency() const { return m_latency; };
 
 private:
-    double  m_latency;
+    int64_t m_latency;
     cv::Mat m_mat;
     bool    m_drop_frames;
-    double  m_next_tick_ts = -1;
+    int64_t m_next_tick_ts = -1;
     int64_t m_curr_seq_id  = 0;
 };
 
-DummySource::DummySource(const double       latency,
+template <typename DurationT>
+DummySource::DummySource(const DurationT    latency,
                          const OutputDescr& output,
                          const bool         drop_frames)
-    : m_latency(latency), m_drop_frames(drop_frames) {
+    : m_latency(std::chrono::duration_cast<ts_t>(latency).count()),
+      m_drop_frames(drop_frames) {
     utils::createNDMat(m_mat, output.dims, output.precision);
     utils::generateRandom(m_mat);
 }
@@ -42,10 +47,10 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
 
     // NB: Wait m_latency before return the first frame.
     if (m_next_tick_ts == -1) {
-        m_next_tick_ts = utils::timestamp<milliseconds>() + m_latency;
+        m_next_tick_ts = utils::timestamp<ts_t>() + m_latency;
     }
 
-    int64_t curr_ts = utils::timestamp<milliseconds>();
+    int64_t curr_ts = utils::timestamp<ts_t>();
     if (curr_ts < m_next_tick_ts) {
         /*
          *            curr_ts
@@ -57,8 +62,8 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
          *
          * NB: New frame will be produced at the m_next_tick_ts point.
          */
-        utils::sleep(m_next_tick_ts - curr_ts);
-    } else {
+        utils::sleep(ts_t{m_next_tick_ts - curr_ts});
+    } else if (m_latency != 0) {
         /*
          *                                       curr_ts
          *                         +1         +2    |
@@ -75,12 +80,13 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
          */
         int64_t num_frames =
             static_cast<int64_t>((curr_ts - m_next_tick_ts) / m_latency);
+
         m_curr_seq_id  += num_frames;
         m_next_tick_ts += num_frames * m_latency;
         if (m_drop_frames) {
             m_next_tick_ts += m_latency;
             ++m_curr_seq_id;
-            utils::sleep(m_next_tick_ts - curr_ts);
+            utils::sleep(ts_t{m_next_tick_ts - curr_ts});
         }
     }
 
@@ -88,7 +94,7 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
     // after assigning it to the data.
     cv::Mat mat = m_mat;
 
-    data.meta[meta_tag::timestamp] = utils::timestamp<milliseconds>();
+    data.meta[meta_tag::timestamp] = utils::timestamp<ts_t>();
     data.meta[meta_tag::seq_id] = m_curr_seq_id++;
     data = mat;
     m_next_tick_ts += m_latency;

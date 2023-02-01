@@ -401,8 +401,9 @@ int main(int argc, char* argv[]) {
                 if (app_mode == AppMode::BENCHMARK) {
                     latency = 0.0;
                 }
-                auto src = std::make_shared<DummySource>(latency, output, drop_frames);
+                auto src = std::make_shared<DummySource>(utils::double_ms_t{latency}, output, drop_frames);
                 builder.setSource(src_name, src);
+                builder.setLatency(latency);
             }
 
             const auto& nodes_fn = check_and_get_fn(pl_fn, "nodes", name);

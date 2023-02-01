@@ -339,6 +339,7 @@ public:
     void setQueueCapacity(const size_t qc);
     void setName(const std::string& name);
     void setStopCriterion(StopCriterion::Ptr stop_criterion);
+    void setLatency(double latency);
 
     Pipeline::Ptr build();
 
@@ -367,12 +368,18 @@ private:
         PLMode                       mode = PLMode::STREAMING;
         std::string                  name;
         StopCriterion::Ptr           stop_criterion;
+        double                       latency;
     };
 
     std::unique_ptr<State> m_state;
 };
 
+
 PipelineBuilder::PipelineBuilder() : m_state(new State{}) { };
+
+void PipelineBuilder::setLatency(double latency) {
+    m_state->latency = latency;
+}
 
 void PipelineBuilder::addDummy(const CallParams&  call_params,
                                const DummyParams& dummy_params) {
@@ -671,7 +678,8 @@ Pipeline::Ptr PipelineBuilder::construct() {
                                                    std::move(m_state->src),
                                                    std::move(m_state->stop_criterion),
                                                    std::move(m_state->compile_args),
-                                                   graph_outputs.size());
+                                                   graph_outputs.size(),
+                                                   m_state->latency);
     }
     GAPI_Assert(m_state->mode == PLMode::REGULAR);
     return std::make_shared<RegularPipeline>(std::move(m_state->name),
@@ -681,7 +689,8 @@ Pipeline::Ptr PipelineBuilder::construct() {
                                              std::move(m_state->src),
                                              std::move(m_state->stop_criterion),
                                              std::move(m_state->compile_args),
-                                             graph_outputs.size());
+                                             graph_outputs.size(),
+                                             m_state->latency);
 }
 
 Pipeline::Ptr PipelineBuilder::build() {

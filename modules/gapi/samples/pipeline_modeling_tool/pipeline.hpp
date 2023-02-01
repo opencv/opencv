@@ -6,14 +6,14 @@
 struct PerfReport {
     std::string name;
     double  avg_latency        = 0.0;
-    int64_t min_latency        = 0;
-    int64_t max_latency        = 0;
-    int64_t first_latency      = 0;
+    double  min_latency        = 0.0;
+    double  max_latency        = 0.0;
+    double  first_latency      = 0.0;
     double  throughput         = 0.0;
-    int64_t elapsed            = 0;
-    int64_t warmup_time        = 0;
+    double  elapsed            = 0.0;
+    double  warmup_time        = 0.0;
     int64_t num_late_frames    = 0;
-    std::vector<int64_t> latencies;
+    std::vector<double> latencies;
 
     std::string toStr(bool expanded = false) const;
 };
@@ -21,19 +21,19 @@ struct PerfReport {
 std::string PerfReport::toStr(bool expand) const {
     std::stringstream ss;
     ss << name << ": \n"
-       << "  Warm up time:   " << warmup_time << " ms\n"
-       << "  Execution time: " << elapsed << " ms\n"
+       << "  Warm up time:   " << std::fixed << std::setprecision(3) << warmup_time << " ms\n"
+       << "  Execution time: " << std::fixed << std::setprecision(3) << elapsed << " ms\n"
        << "  Frames:         " << num_late_frames << "/" << latencies.size() << " (late/all)\n"
        << "  Latency:\n"
-       << "    first: " << first_latency << " ms\n"
-       << "    min:   " << min_latency   << " ms\n"
-       << "    max:   " << max_latency   << " ms\n"
+       << "    first: " << std::fixed << std::setprecision(3) << first_latency << " ms\n"
+       << "    min:   " << std::fixed << std::setprecision(3) << min_latency   << " ms\n"
+       << "    max:   " << std::fixed << std::setprecision(3) << max_latency   << " ms\n"
        << "    avg:   " << std::fixed << std::setprecision(3) << avg_latency << " ms\n"
        << "  Throughput: " << std::fixed << std::setprecision(3) << throughput << " FPS";
     if (expand) {
         for (size_t i = 0; i < latencies.size(); ++i) {
             ss << "\nFrame:" << i << "\nLatency: "
-               << latencies[i] << " ms";
+               << std::fixed << std::setprecision(3) << latencies[i] << " ms";
         }
     }
 
@@ -59,7 +59,8 @@ public:
              std::shared_ptr<DummySource>&& src,
              StopCriterion::Ptr             stop_criterion,
              cv::GCompileArgs&&             args,
-             const size_t                   num_outputs);
+             const size_t                   num_outputs,
+             const double                   latency);
 
     void compile();
     void run();
@@ -71,7 +72,7 @@ public:
 
 protected:
     virtual void    _compile() = 0;
-    virtual int64_t run_iter() = 0;
+    virtual double  run_iter() = 0;
     virtual void    init() {};
     virtual void    deinit() {};
 
@@ -88,6 +89,7 @@ protected:
     cv::GRunArgsP                m_pipeline_outputs;
     std::vector<cv::Mat>         m_out_mats;
     int64_t                      m_start_ts;
+    double                       m_latency;
 };
 
 Pipeline::Pipeline(std::string&&                  name,
@@ -95,19 +97,21 @@ Pipeline::Pipeline(std::string&&                  name,
                    std::shared_ptr<DummySource>&& src,
                    StopCriterion::Ptr             stop_criterion,
                    cv::GCompileArgs&&             args,
-                   const size_t                   num_outputs)
+                   const size_t                   num_outputs,
+                   const double                   latency)
     : m_name(std::move(name)),
       m_comp(std::move(comp)),
       m_src(std::move(src)),
       m_stop_criterion(std::move(stop_criterion)),
       m_args(std::move(args)),
-      m_num_outputs(num_outputs) {
+      m_num_outputs(num_outputs),
+      m_latency(latency) {
     m_perf.name = m_name;
 }
 
 void Pipeline::compile() {
     m_perf.warmup_time =
-        utils::measure<std::chrono::milliseconds>([this]() {
+        utils::measure<utils::double_ms_t>([this]() {
         _compile();
     });
 }
@@ -141,7 +145,7 @@ void Pipeline::run() {
     m_stop_criterion->start();
     while (true) {
         m_perf.latencies.push_back(run_iter());
-        m_perf.elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
+        m_perf.elapsed = duration_cast<utils::double_ms_t>(high_resolution_clock::now() - start).count();
         m_stop_criterion->iter();
 
         if (m_stop_criterion->done()) {
@@ -152,19 +156,19 @@ void Pipeline::run() {
 
     // NB: Calculating statistics
     m_perf.first_latency = m_perf.latencies[0];
-    m_perf.avg_latency   = utils::avg(m_perf.latencies);
-    m_perf.min_latency   = utils::min(m_perf.latencies);
-    m_perf.max_latency   = utils::max(m_perf.latencies);
+    // NB: Exclude first latency from statistics
+    m_perf.avg_latency = utils::avg(m_perf.latencies, 1);
+    m_perf.min_latency = utils::min(m_perf.latencies, 1);
+    m_perf.max_latency = utils::max(m_perf.latencies, 1);
 
     // NB: Count how many executions don't fit into camera latency interval.
     m_perf.num_late_frames =
         std::count_if(m_perf.latencies.begin(), m_perf.latencies.end(),
                 [this](int64_t latency) {
-                    return static_cast<double>(latency) > m_src->latency();
+                    return latency > m_latency;
                 });
 
-    m_perf.throughput =
-        (m_perf.latencies.size() / static_cast<double>(m_perf.elapsed)) * 1000;
+    m_perf.throughput = (m_perf.latencies.size() / m_perf.elapsed) * 1000;
 }
 
 const PerfReport& Pipeline::report() const {
@@ -191,9 +195,11 @@ private:
         m_compiled.stop();
     }
 
-    virtual int64_t run_iter() override {
+    virtual double run_iter() override {
+        using namespace std::chrono;
         m_compiled.pull(cv::GRunArgsP{m_pipeline_outputs});
-        return utils::timestamp<std::chrono::milliseconds>() - m_start_ts;
+        return utils::double_ms_t{
+            DummySource::ts_t{utils::timestamp<microseconds>() - m_start_ts}}.count();
     }
 
     cv::GStreamingCompiled m_compiled;
@@ -210,11 +216,11 @@ private:
                             cv::GCompileArgs(m_args));
     }
 
-    virtual int64_t run_iter() override {
+    virtual double run_iter() override {
         using namespace std::chrono;
         cv::gapi::wip::Data data;
         m_src->pull(data);
-        return utils::measure<milliseconds>([&]{
+        return utils::measure<utils::double_ms_t>([&]{
             m_compiled({data}, cv::GRunArgsP{m_pipeline_outputs});
         });
     }
