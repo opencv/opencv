@@ -199,7 +199,14 @@ CV_CUDEV_IMPLEMENT_VEC_UNARY_OP(~, uint, uint)
         return VecTraits<output_type ## 4>::make(func (a.x), func (a.y), func (a.z), func (a.w)); \
     }
 
+CV_CUDEV_IMPLEMENT_VEC_UNARY_FUNC(abs, /*::abs*/, uchar, uchar)
+CV_CUDEV_IMPLEMENT_VEC_UNARY_FUNC(abs, ::abs, char, char)
+CV_CUDEV_IMPLEMENT_VEC_UNARY_FUNC(abs, /*::abs*/, ushort, ushort)
+CV_CUDEV_IMPLEMENT_VEC_UNARY_FUNC(abs, ::abs, short, short)
+CV_CUDEV_IMPLEMENT_VEC_UNARY_FUNC(abs, ::abs, int, int)
+CV_CUDEV_IMPLEMENT_VEC_UNARY_FUNC(abs, /*::abs*/, uint, uint)
 CV_CUDEV_IMPLEMENT_VEC_UNARY_FUNC(abs, ::fabsf, float, float)
+CV_CUDEV_IMPLEMENT_VEC_UNARY_FUNC(abs, ::fabs, double, double)
 
 CV_CUDEV_IMPLEMENT_VEC_UNARY_FUNC(sqrt, ::sqrtf, uchar, float)
 CV_CUDEV_IMPLEMENT_VEC_UNARY_FUNC(sqrt, ::sqrtf, char, float)

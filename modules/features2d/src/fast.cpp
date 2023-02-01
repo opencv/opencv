@@ -436,7 +436,7 @@ static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
 
 #endif
 
-static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, FastFeatureDetector::DetectorType type)
+static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
     if (threshold > 20)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -493,7 +493,7 @@ static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int t
     return CV_HAL_ERROR_OK;
 }
 
-void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, FastFeatureDetector::DetectorType type)
+void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
 {
     CV_INSTRUMENT_REGION();
 
@@ -518,6 +518,10 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
         FAST_t<12>(_img, keypoints, threshold, nonmax_suppression);
         break;
     case FastFeatureDetector::TYPE_9_16:
+#ifdef HAVE_TEGRA_OPTIMIZATION
+        if(tegra::useTegra() && tegra::FAST(_img, keypoints, threshold, nonmax_suppression))
+          break;
+#endif
         FAST_t<16>(_img, keypoints, threshold, nonmax_suppression);
         break;
     }
@@ -535,30 +539,9 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 class FastFeatureDetector_Impl CV_FINAL : public FastFeatureDetector
 {
 public:
-    FastFeatureDetector_Impl( int _threshold, bool _nonmaxSuppression, FastFeatureDetector::DetectorType _type )
-    : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type(_type)
+    FastFeatureDetector_Impl( int _threshold, bool _nonmaxSuppression, int _type )
+    : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
     {}
-
-    void read( const FileNode& fn) CV_OVERRIDE
-    {
-      // if node is empty, keep previous value
-      if (!fn["threshold"].empty())
-        fn["threshold"] >> threshold;
-      if (!fn["nonmaxSuppression"].empty())
-        fn["nonmaxSuppression"] >> nonmaxSuppression;
-      if (!fn["type"].empty())
-        fn["type"] >> type;
-    }
-    void write( FileStorage& fs) const CV_OVERRIDE
-    {
-      if(fs.isOpened())
-      {
-        fs << "name" << getDefaultName();
-        fs << "threshold" << threshold;
-        fs << "nonmaxSuppression" << nonmaxSuppression;
-        fs << "type" << type;
-      }
-    }
 
     void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE
     {
@@ -590,7 +573,7 @@ public:
         else if(prop == NONMAX_SUPPRESSION)
             nonmaxSuppression = value != 0;
         else if(prop == FAST_N)
-            type = static_cast<FastFeatureDetector::DetectorType>(cvRound(value));
+            type = cvRound(value);
         else
             CV_Error(Error::StsBadArg, "");
     }
@@ -602,7 +585,7 @@ public:
         if(prop == NONMAX_SUPPRESSION)
             return nonmaxSuppression;
         if(prop == FAST_N)
-            return static_cast<int>(type);
+            return type;
         CV_Error(Error::StsBadArg, "");
         return 0;
     }
@@ -613,15 +596,15 @@ public:
     void setNonmaxSuppression(bool f) CV_OVERRIDE { nonmaxSuppression = f; }
     bool getNonmaxSuppression() const CV_OVERRIDE { return nonmaxSuppression; }
 
-    void setType(FastFeatureDetector::DetectorType type_) CV_OVERRIDE{ type = type_; }
-    FastFeatureDetector::DetectorType getType() const CV_OVERRIDE{ return type; }
+    void setType(int type_) CV_OVERRIDE { type = type_; }
+    int getType() const CV_OVERRIDE { return type; }
 
     int threshold;
     bool nonmaxSuppression;
-    FastFeatureDetector::DetectorType type;
+    int type;
 };
 
-Ptr<FastFeatureDetector> FastFeatureDetector::create( int threshold, bool nonmaxSuppression, FastFeatureDetector::DetectorType type )
+Ptr<FastFeatureDetector> FastFeatureDetector::create( int threshold, bool nonmaxSuppression, int type )
 {
     return makePtr<FastFeatureDetector_Impl>(threshold, nonmaxSuppression, type);
 }

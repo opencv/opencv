@@ -63,7 +63,7 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv.imread('simple.jpg', cv.IMREAD_GRAYSCALE)
+img = cv.imread('simple.jpg',0)
 
 # Initiate FAST detector
 star = cv.xfeatures2d.StarDetector_create()

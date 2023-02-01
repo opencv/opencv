@@ -31,17 +31,12 @@ std::string keys =
                          "0: automatically (by default), "
                          "1: Halide language (http://halide-lang.org/), "
                          "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                         "3: OpenCV implementation, "
-                         "4: VKCOM, "
-                         "5: CUDA }"
+                         "3: OpenCV implementation }"
     "{ target      | 0 | Choose one of target computation devices: "
                          "0: CPU target (by default), "
                          "1: OpenCL, "
                          "2: OpenCL fp16 (half-float precision), "
-                         "3: VPU, "
-                         "4: Vulkan, "
-                         "6: CUDA, "
-                         "7: CUDA fp16 (half-float preprocess) }"
+                         "3: VPU }"
     "{ async       | 0 | Number of asynchronous forwards at the same time. "
                         "Choose 0 for synchronous mode }";
 
@@ -136,7 +131,7 @@ int main(int argc, char** argv)
     bool swapRB = parser.get<bool>("rgb");
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
-    size_t asyncNumReq = parser.get<int>("async");
+    size_t async = parser.get<int>("async");
     CV_Assert(parser.has("model"));
     std::string modelPath = findFile(parser.get<String>("model"));
     std::string configPath = findFile(parser.get<String>("config"));
@@ -206,9 +201,9 @@ int main(int argc, char** argv)
                 if (!framesQueue.empty())
                 {
                     frame = framesQueue.get();
-                    if (asyncNumReq)
+                    if (async)
                     {
-                        if (futureOutputs.size() == asyncNumReq)
+                        if (futureOutputs.size() == async)
                             frame = Mat();
                     }
                     else
@@ -222,7 +217,7 @@ int main(int argc, char** argv)
                 preprocess(frame, net, Size(inpWidth, inpHeight), scale, mean, swapRB);
                 processedFramesQueue.push(frame);
 
-                if (asyncNumReq)
+                if (async)
                 {
                     futureOutputs.push(net.forwardAsync());
                 }
@@ -276,7 +271,7 @@ int main(int argc, char** argv)
     processingThread.join();
 
 #else  // USE_THREADS
-    if (asyncNumReq)
+    if (async)
         CV_Error(Error::StsNotImplemented, "Asynchronous forward is supported only with Inference Engine backend.");
 
     // Process frames.

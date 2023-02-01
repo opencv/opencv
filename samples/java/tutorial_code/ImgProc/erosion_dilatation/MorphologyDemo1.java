@@ -28,7 +28,7 @@ public class MorphologyDemo1 {
     private static final int MAX_KERNEL_SIZE = 21;
     private Mat matImgSrc;
     private Mat matImgDst = new Mat();
-    private int elementType = Imgproc.MORPH_RECT;
+    private int elementType = Imgproc.CV_SHAPE_RECT;
     private int kernelSize = 0;
     private boolean doErosion = true;
     private JFrame frame;
@@ -74,11 +74,11 @@ public class MorphologyDemo1 {
                 @SuppressWarnings("unchecked")
                 JComboBox<String> cb = (JComboBox<String>)e.getSource();
                 if (cb.getSelectedIndex() == 0) {
-                    elementType = Imgproc.MORPH_RECT;
+                    elementType = Imgproc.CV_SHAPE_RECT;
                 } else if (cb.getSelectedIndex() == 1) {
-                    elementType = Imgproc.MORPH_CROSS;
+                    elementType = Imgproc.CV_SHAPE_CROSS;
                 } else if (cb.getSelectedIndex() == 2) {
-                    elementType = Imgproc.MORPH_ELLIPSE;
+                    elementType = Imgproc.CV_SHAPE_ELLIPSE;
                 }
                 update();
             }

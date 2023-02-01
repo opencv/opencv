@@ -111,11 +111,6 @@ class CppHeaderParser(object):
         if npos >= 0:
             modlist.append("/C")
 
-        npos = arg_str.find("&&")
-        if npos >= 0:
-            arg_str = arg_str.replace("&&", '')
-            modlist.append("/RRef")
-
         npos = arg_str.find("&")
         if npos >= 0:
             modlist.append("/Ref")
@@ -733,8 +728,6 @@ class CppHeaderParser(object):
                     return stmt_type, classname, True, decl
 
             if stmt.startswith("enum") or stmt.startswith("namespace"):
-                # NB: Drop inheritance syntax for enum
-                stmt = stmt.split(':')[0]
                 stmt_list = stmt.rsplit(" ", 1)
                 if len(stmt_list) < 2:
                     stmt_list.append("<unnamed>")
@@ -832,17 +825,6 @@ class CppHeaderParser(object):
 
             l = l0.strip()
 
-            # G-API specific aliases
-            l = self.batch_replace(l, [
-                    ("GAPI_EXPORTS", "CV_EXPORTS"),
-                    ("GAPI_EXPORTS_W", "CV_EXPORTS_W"),
-                    ("GAPI_EXPORTS_W_SIMPLE","CV_EXPORTS_W_SIMPLE"),
-                    ("GAPI_WRAP", "CV_WRAP"),
-                    ("GAPI_PROP", "CV_PROP"),
-                    ("GAPI_PROP_RW", "CV_PROP_RW"),
-                    ('defined(GAPI_STANDALONE)', '0'),
-                ])
-
             if state == SCAN and l.startswith("#"):
                 state = DIRECTIVE
                 # fall through to the if state == DIRECTIVE check
@@ -902,12 +884,7 @@ class CppHeaderParser(object):
                 sys.exit(-1)
 
             while 1:
-                # NB: Avoid parsing '{' for case:
-                # foo(Obj&& = {});
-                if re.search(r'=\s*\{\s*\}', l):
-                    token, pos = ';', len(l)
-                else:
-                    token, pos = self.find_next_token(l, [";", "\"", "{", "}", "//", "/*"])
+                token, pos = self.find_next_token(l, [";", "\"", "{", "}", "//", "/*"])
 
                 if not token:
                     block_head += " " + l
@@ -977,11 +954,9 @@ class CppHeaderParser(object):
                         else:
                             decls.append(decl)
 
-                            if self._generate_gpumat_decls and ("cv.cuda" in decl[0] or decl[0] in [
-                                "cv.imshow", # https://github.com/opencv/opencv/issues/18553
-                            ]):
+                            if self._generate_gpumat_decls and "cv.cuda." in decl[0]:
                                 # If function takes as one of arguments Mat or vector<Mat> - we want to create the
-                                # same declaration working with GpuMat
+                                # same declaration working with GpuMat (this is important for T-Api access)
                                 args = decl[3]
                                 has_mat = len(list(filter(lambda x: x[0] in {"Mat", "vector_Mat"}, args))) > 0
                                 if has_mat:
@@ -1002,7 +977,7 @@ class CppHeaderParser(object):
                         docstring = ""
                     if stmt_type == "namespace":
                         chunks = [block[1] for block in self.block_stack if block[0] == 'namespace'] + [name]
-                        self.namespaces.add('.'.join(filter(lambda c: len(c)> 0, chunks)))
+                        self.namespaces.add('.'.join(chunks))
                 else:
                     stmt_type, name, parse_flag = "block", "", False
 
@@ -1041,7 +1016,7 @@ class CppHeaderParser(object):
                     print()
 
 if __name__ == '__main__':
-    parser = CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True)
+    parser = CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=False)
     decls = []
     for hname in opencv_hdr_list:
         decls += parser.parse(hname)

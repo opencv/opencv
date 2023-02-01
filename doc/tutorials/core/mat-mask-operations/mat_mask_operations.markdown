@@ -1,15 +1,8 @@
 Mask operations on matrices {#tutorial_mat_mask_operations}
 ===========================
 
-@tableofcontents
-
 @prev_tutorial{tutorial_how_to_scan_images}
 @next_tutorial{tutorial_mat_operations}
-
-|    |    |
-| -: | :- |
-| Original author | Bernát Gábor |
-| Compatibility | OpenCV >= 3.0 |
 
 Mask operations on matrices are quite simple. The idea is that we recalculate each pixel's value in
 an image according to a mask matrix (also known as kernel). This mask holds values that will adjust
@@ -40,7 +33,7 @@ Code
 
 @add_toggle_cpp
 You can download this source code from [here
-](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp) or look in the
+](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp) or look in the
 OpenCV source code libraries sample directory at
 `samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp`.
 @include samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp
@@ -48,7 +41,7 @@ OpenCV source code libraries sample directory at
 
 @add_toggle_java
 You can download this source code from [here
-](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java) or look in the
+](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java) or look in the
 OpenCV source code libraries sample directory at
 `samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java`.
 @include samples/java/tutorial_code/core/mat_mask_operations/MatMaskOperations.java
@@ -56,7 +49,7 @@ OpenCV source code libraries sample directory at
 
 @add_toggle_python
 You can download this source code from [here
-](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py) or look in the
+](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py) or look in the
 OpenCV source code libraries sample directory at
 `samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py`.
 @include samples/python/tutorial_code/core/mat_mask_operations/mat_mask_operations.py

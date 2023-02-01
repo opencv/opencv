@@ -52,11 +52,10 @@
 
   ### See also:
   - @ref videoio_overview
-  - Tutorials: @ref tutorial_table_of_content_app
+  - Tutorials: @ref tutorial_table_of_content_videoio
   @{
     @defgroup videoio_flags_base Flags for video I/O
     @defgroup videoio_flags_others Additional flags for video I/O API backends
-    @defgroup videoio_hwaccel Hardware-accelerated video decoding and encoding
     @defgroup videoio_c C API for video I/O
     @defgroup videoio_ios iOS glue for video I/O
     @defgroup videoio_winrt WinRT glue for video I/O
@@ -79,7 +78,7 @@ namespace cv
 //! @{
 
 
-/** @brief cv::VideoCapture API backends identifier.
+/** @brief %VideoCapture API backends identifier.
 
 Select preferred API for a capture object.
 To be used in the VideoCapture::VideoCapture() constructor or VideoCapture::open()
@@ -89,16 +88,16 @@ See @ref videoio_overview for more information.
 */
 enum VideoCaptureAPIs {
        CAP_ANY          = 0,            //!< Auto detect == 0
-       CAP_VFW          = 200,          //!< Video For Windows (obsolete, removed)
-       CAP_V4L          = 200,          //!< V4L/V4L2 capturing support
+       CAP_VFW          = 200,          //!< Video For Windows (platform native)
+       CAP_V4L          = 200,          //!< V4L/V4L2 capturing support via libv4l
        CAP_V4L2         = CAP_V4L,      //!< Same as CAP_V4L
        CAP_FIREWIRE     = 300,          //!< IEEE 1394 drivers
-       CAP_FIREWARE     = CAP_FIREWIRE, //!< Same value as CAP_FIREWIRE
-       CAP_IEEE1394     = CAP_FIREWIRE, //!< Same value as CAP_FIREWIRE
-       CAP_DC1394       = CAP_FIREWIRE, //!< Same value as CAP_FIREWIRE
-       CAP_CMU1394      = CAP_FIREWIRE, //!< Same value as CAP_FIREWIRE
-       CAP_QT           = 500,          //!< QuickTime (obsolete, removed)
-       CAP_UNICAP       = 600,          //!< Unicap drivers (obsolete, removed)
+       CAP_FIREWARE     = CAP_FIREWIRE, //!< Same as CAP_FIREWIRE
+       CAP_IEEE1394     = CAP_FIREWIRE, //!< Same as CAP_FIREWIRE
+       CAP_DC1394       = CAP_FIREWIRE, //!< Same as CAP_FIREWIRE
+       CAP_CMU1394      = CAP_FIREWIRE, //!< Same as CAP_FIREWIRE
+       CAP_QT           = 500,          //!< QuickTime
+       CAP_UNICAP       = 600,          //!< Unicap drivers
        CAP_DSHOW        = 700,          //!< DirectShow (via videoInput)
        CAP_PVAPI        = 800,          //!< PvAPI, Prosilica GigE SDK
        CAP_OPENNI       = 900,          //!< OpenNI (for Kinect)
@@ -109,11 +108,9 @@ enum VideoCaptureAPIs {
        CAP_GIGANETIX    = 1300,         //!< Smartek Giganetix GigEVisionSDK
        CAP_MSMF         = 1400,         //!< Microsoft Media Foundation (via videoInput)
        CAP_WINRT        = 1410,         //!< Microsoft Windows Runtime using Media Foundation
-       CAP_INTELPERC    = 1500,         //!< RealSense (former Intel Perceptual Computing SDK)
-       CAP_REALSENSE    = 1500,         //!< Synonym for CAP_INTELPERC
+       CAP_INTELPERC    = 1500,         //!< Intel Perceptual Computing SDK
        CAP_OPENNI2      = 1600,         //!< OpenNI2 (for Kinect)
        CAP_OPENNI2_ASUS = 1610,         //!< OpenNI2 (for Asus Xtion and Occipital Structure sensors)
-       CAP_OPENNI2_ASTRA= 1620,         //!< OpenNI2 (for Orbbec Astra)
        CAP_GPHOTO2      = 1700,         //!< gPhoto2 connection
        CAP_GSTREAMER    = 1800,         //!< GStreamer
        CAP_FFMPEG       = 1900,         //!< Open and record video file or stream using the FFMPEG library
@@ -122,11 +119,9 @@ enum VideoCaptureAPIs {
        CAP_OPENCV_MJPEG = 2200,         //!< Built-in OpenCV MotionJPEG codec
        CAP_INTEL_MFX    = 2300,         //!< Intel MediaSDK
        CAP_XINE         = 2400,         //!< XINE engine (Linux)
-       CAP_UEYE         = 2500,         //!< uEye Camera API
-       CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto)
      };
 
-/** @brief cv::VideoCapture generic properties identifier.
+/** @brief %VideoCapture generic properties identifier.
 
  Reading / writing properties involves many layers. Some unexpected result might happens along this chain.
  Effective behaviour depends from device hardware, driver and API Backend.
@@ -182,82 +177,39 @@ enum VideoCaptureProperties {
        CAP_PROP_WB_TEMPERATURE=45, //!< white-balance color temperature
        CAP_PROP_CODEC_PIXEL_FORMAT =46,    //!< (read-only) codec's pixel format. 4-character code - see VideoWriter::fourcc . Subset of [AV_PIX_FMT_*](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/raw.c) or -1 if unknown
        CAP_PROP_BITRATE       =47, //!< (read-only) Video bitrate in kbits/s
-       CAP_PROP_ORIENTATION_META=48, //!< (read-only) Frame rotation defined by stream meta (applicable for FFmpeg and AVFoundation back-ends only)
-       CAP_PROP_ORIENTATION_AUTO=49, //!< if true - rotates output frames of CvCapture considering video file's metadata  (applicable for FFmpeg and AVFoundation back-ends only) (https://github.com/opencv/opencv/issues/15499)
-       CAP_PROP_HW_ACCELERATION=50, //!< (**open-only**) Hardware acceleration type (see #VideoAccelerationType). Setting supported only via `params` parameter in cv::VideoCapture constructor / .open() method. Default value is backend-specific.
-       CAP_PROP_HW_DEVICE      =51, //!< (**open-only**) Hardware device index (select GPU if multiple available). Device enumeration is acceleration type specific.
-       CAP_PROP_HW_ACCELERATION_USE_OPENCL=52, //!< (**open-only**) If non-zero, create new OpenCL context and bind it to current thread. The OpenCL context created with Video Acceleration context attached it (if not attached yet) for optimized GPU data copy between HW accelerated decoder and cv::UMat.
-       CAP_PROP_OPEN_TIMEOUT_MSEC=53, //!< (**open-only**) timeout in milliseconds for opening a video capture (applicable for FFmpeg and GStreamer back-ends only)
-       CAP_PROP_READ_TIMEOUT_MSEC=54, //!< (**open-only**) timeout in milliseconds for reading from a video capture (applicable for FFmpeg and GStreamer back-ends only)
-       CAP_PROP_STREAM_OPEN_TIME_USEC =55, //<! (read-only) time in microseconds since Jan 1 1970 when stream was opened. Applicable for FFmpeg backend only. Useful for RTSP and other live streams
-       CAP_PROP_VIDEO_TOTAL_CHANNELS = 56, //!< (read-only) Number of video channels
-       CAP_PROP_VIDEO_STREAM = 57, //!< (**open-only**) Specify video stream, 0-based index. Use -1 to disable video stream from file or IP cameras. Default value is 0.
-       CAP_PROP_AUDIO_STREAM = 58, //!< (**open-only**) Specify stream in multi-language media files, -1 - disable audio processing or microphone. Default value is -1.
-       CAP_PROP_AUDIO_POS = 59, //!< (read-only) Audio position is measured in samples. Accurate audio sample timestamp of previous grabbed fragment. See CAP_PROP_AUDIO_SAMPLES_PER_SECOND and CAP_PROP_AUDIO_SHIFT_NSEC.
-       CAP_PROP_AUDIO_SHIFT_NSEC = 60, //!< (read only) Contains the time difference between the start of the audio stream and the video stream in nanoseconds. Positive value means that audio is started after the first video frame. Negative value means that audio is started before the first video frame.
-       CAP_PROP_AUDIO_DATA_DEPTH = 61, //!< (open, read) Alternative definition to bits-per-sample, but with clear handling of 32F / 32S
-       CAP_PROP_AUDIO_SAMPLES_PER_SECOND = 62, //!< (open, read) determined from file/codec input. If not specified, then selected audio sample rate is 44100
-       CAP_PROP_AUDIO_BASE_INDEX = 63, //!< (read-only) Index of the first audio channel for .retrieve() calls. That audio channel number continues enumeration after video channels.
-       CAP_PROP_AUDIO_TOTAL_CHANNELS = 64, //!< (read-only) Number of audio channels in the selected audio stream (mono, stereo, etc)
-       CAP_PROP_AUDIO_TOTAL_STREAMS = 65, //!< (read-only) Number of audio streams.
-       CAP_PROP_AUDIO_SYNCHRONIZE = 66, //!< (open, read) Enables audio synchronization.
-       CAP_PROP_LRF_HAS_KEY_FRAME = 67, //!< FFmpeg back-end only - Indicates whether the Last Raw Frame (LRF), output from VideoCapture::read() when VideoCapture is initialized with VideoCapture::open(CAP_FFMPEG, {CAP_PROP_FORMAT, -1}) or VideoCapture::set(CAP_PROP_FORMAT,-1) is called before the first call to VideoCapture::read(), contains encoded data for a key frame.
-       CAP_PROP_CODEC_EXTRADATA_INDEX = 68, //!< Positive index indicates that returning extra data is supported by the video back end.  This can be retrieved as cap.retrieve(data, <returned index>).  E.g. When reading from a h264 encoded RTSP stream, the FFmpeg backend could return the SPS and/or PPS if available (if sent in reply to a DESCRIBE request), from calls to cap.retrieve(data, <returned index>).
-       CAP_PROP_FRAME_TYPE = 69, //!< (read-only) FFmpeg back-end only - Frame type ascii code (73 = 'I', 80 = 'P', 66 = 'B' or 63 = '?' if unknown) of the most recently read frame.
-       CAP_PROP_N_THREADS = 70, //!< (**open-only**) Set the maximum number of threads to use. Use 0 to use as many threads as CPU cores (applicable for FFmpeg back-end only).
+       CAP_PROP_ORIENTATION_META=48, //!< (read-only) Frame rotation defined by stream meta (applicable for FFmpeg back-end only)
+       CAP_PROP_ORIENTATION_AUTO=49, //!< if true - rotates output frames of CvCapture considering video file's metadata  (applicable for FFmpeg back-end only) (https://github.com/opencv/opencv/issues/15499)
+       CAP_PROP_OPEN_TIMEOUT_MSEC=53,
+       CAP_PROP_READ_TIMEOUT_MSEC=54,
 #ifndef CV_DOXYGEN
        CV__CAP_PROP_LATEST
 #endif
      };
 
-/** @brief cv::VideoWriter generic properties identifier.
+
+/** @brief Generic camera output modes identifier.
+@note Currently, these are supported through the libv4l backend only.
+*/
+enum VideoCaptureModes {
+       CAP_MODE_BGR  = 0, //!< BGR24 (default)
+       CAP_MODE_RGB  = 1, //!< RGB24
+       CAP_MODE_GRAY = 2, //!< Y8
+       CAP_MODE_YUYV = 3  //!< YUYV
+     };
+
+/** @brief %VideoWriter generic properties identifier.
  @sa VideoWriter::get(), VideoWriter::set()
 */
 enum VideoWriterProperties {
   VIDEOWRITER_PROP_QUALITY = 1,    //!< Current quality (0..100%) of the encoded videostream. Can be adjusted dynamically in some codecs.
   VIDEOWRITER_PROP_FRAMEBYTES = 2, //!< (Read-only): Size of just encoded video frame. Note that the encoding order may be different from representation order.
-  VIDEOWRITER_PROP_NSTRIPES = 3,   //!< Number of stripes for parallel encoding. -1 for auto detection.
-  VIDEOWRITER_PROP_IS_COLOR = 4,   //!< If it is not zero, the encoder will expect and encode color frames, otherwise it
-                                   //!< will work with grayscale frames.
-  VIDEOWRITER_PROP_DEPTH = 5,      //!< Defaults to CV_8U.
-  VIDEOWRITER_PROP_HW_ACCELERATION = 6, //!< (**open-only**) Hardware acceleration type (see #VideoAccelerationType). Setting supported only via `params` parameter in VideoWriter constructor / .open() method. Default value is backend-specific.
-  VIDEOWRITER_PROP_HW_DEVICE       = 7, //!< (**open-only**) Hardware device index (select GPU if multiple available). Device enumeration is acceleration type specific.
-  VIDEOWRITER_PROP_HW_ACCELERATION_USE_OPENCL= 8, //!< (**open-only**) If non-zero, create new OpenCL context and bind it to current thread. The OpenCL context created with Video Acceleration context attached it (if not attached yet) for optimized GPU data copy between cv::UMat and HW accelerated encoder.
-#ifndef CV_DOXYGEN
-  CV__VIDEOWRITER_PROP_LATEST
-#endif
+  VIDEOWRITER_PROP_NSTRIPES = 3    //!< Number of stripes for parallel encoding. -1 for auto detection.
 };
 
 //! @} videoio_flags_base
 
 //! @addtogroup videoio_flags_others
 //! @{
-
-/** @name Hardware acceleration support
-    @{
-*/
-
-/** @brief Video Acceleration type
- *
- * Used as value in #CAP_PROP_HW_ACCELERATION and #VIDEOWRITER_PROP_HW_ACCELERATION
- *
- * @note In case of FFmpeg backend, it translated to enum AVHWDeviceType (https://github.com/FFmpeg/FFmpeg/blob/master/libavutil/hwcontext.h)
- */
-enum VideoAccelerationType
-{
-    VIDEO_ACCELERATION_NONE     =  0,  //!< Do not require any specific H/W acceleration, prefer software processing.
-                                       //!< Reading of this value means that special H/W accelerated handling is not added or not detected by OpenCV.
-
-    VIDEO_ACCELERATION_ANY      =  1,  //!< Prefer to use H/W acceleration. If no one supported, then fallback to software processing.
-                                       //!< @note H/W acceleration may require special configuration of used environment.
-                                       //!< @note Results in encoding scenario may differ between software and hardware accelerated encoders.
-
-    VIDEO_ACCELERATION_D3D11    =  2,  //!< DirectX 11
-    VIDEO_ACCELERATION_VAAPI    =  3,  //!< VAAPI
-    VIDEO_ACCELERATION_MFX      =  4,  //!< libmfx (Intel MediaSDK/oneVPL)
-};
-
-//! @} Hardware acceleration support
 
 /** @name IEEE 1394 drivers
     @{
@@ -549,17 +501,6 @@ enum { CAP_PROP_XI_DOWNSAMPLING                                 = 400, //!< Chan
 
 //! @} XIMEA
 
-
-/** @name ARAVIS Camera API
-    @{
-*/
-
-//! Properties of cameras available through ARAVIS backend
-enum { CAP_PROP_ARAVIS_AUTOTRIGGER                              = 600 //!< Automatically trigger frame capture if camera is configured with software trigger
-};
-
-//! @} ARAVIS
-
 /** @name AVFoundation framework for iOS
     @{
 */
@@ -606,8 +547,7 @@ enum { CAP_PROP_INTELPERC_PROFILE_COUNT               = 11001,
 //! Intel Perceptual Streams
 enum { CAP_INTELPERC_DEPTH_GENERATOR = 1 << 29,
        CAP_INTELPERC_IMAGE_GENERATOR = 1 << 28,
-       CAP_INTELPERC_IR_GENERATOR    = 1 << 27,
-       CAP_INTELPERC_GENERATORS_MASK = CAP_INTELPERC_DEPTH_GENERATOR + CAP_INTELPERC_IMAGE_GENERATOR + CAP_INTELPERC_IR_GENERATOR
+       CAP_INTELPERC_GENERATORS_MASK = CAP_INTELPERC_DEPTH_GENERATOR + CAP_INTELPERC_IMAGE_GENERATOR
      };
 
 enum { CAP_INTELPERC_DEPTH_MAP              = 0, //!< Each pixel is a 16-bit integer. The value indicates the distance from an object to the camera's XY plane or the Cartesian depth.
@@ -656,42 +596,10 @@ enum { CAP_PROP_IMAGES_BASE = 18000,
 
 //! @} Images
 
-/** @name OBSENSOR (for Orbbec 3D-Sensor device/module )
-    @{
-*/
-//! OBSENSOR data given from image generator
-enum VideoCaptureOBSensorDataType{
-    CAP_OBSENSOR_DEPTH_MAP = 0, //!< Depth values in mm (CV_16UC1)
-    CAP_OBSENSOR_BGR_IMAGE = 1, //!< Data given from BGR stream generator
-    CAP_OBSENSOR_IR_IMAGE = 2   //!< Data given from IR stream generator(CV_16UC1)
-};
-
-//! OBSENSOR stream generator
-enum VideoCaptureOBSensorGenerators{
-    CAP_OBSENSOR_DEPTH_GENERATOR = 1 << 29,
-    CAP_OBSENSOR_IMAGE_GENERATOR = 1 << 28,
-    CAP_OBSENSOR_IR_GENERATOR    = 1 << 27,
-    CAP_OBSENSOR_GENERATORS_MASK = CAP_OBSENSOR_DEPTH_GENERATOR + CAP_OBSENSOR_IMAGE_GENERATOR + CAP_OBSENSOR_IR_GENERATOR
-};
-
-//!OBSENSOR properties
-enum VideoCaptureOBSensorProperties{
-    // INTRINSIC
-    CAP_PROP_OBSENSOR_INTRINSIC_FX=26001,
-    CAP_PROP_OBSENSOR_INTRINSIC_FY=26002,
-    CAP_PROP_OBSENSOR_INTRINSIC_CX=26003,
-    CAP_PROP_OBSENSOR_INTRINSIC_CY=26004,
-};
-
-//! @} OBSENSOR
-
 //! @} videoio_flags_others
 
 
 class IVideoCapture;
-//! @cond IGNORED
-namespace internal { class VideoCapturePrivateAccessor; }
-//! @endcond IGNORED
 
 /** @brief Class for video capturing from video files, image sequences or cameras.
 
@@ -722,7 +630,14 @@ public:
     CV_WRAP VideoCapture();
 
     /** @overload
-    @brief  Opens a video file or a capturing device or an IP video stream for video capturing with API Preference
+    @brief  Open video file or image file sequence or a capturing device or a IP video stream for video capturing
+
+    Same as VideoCapture(const String& filename, int apiPreference) but using default Capture API backends
+    */
+    CV_WRAP VideoCapture(const String& filename);
+
+    /** @overload
+    @brief  Open video file or a capturing device or a IP video stream for video capturing with API Preference
 
     @param filename it can be:
     - name of video file (eg. `video.avi`)
@@ -736,15 +651,18 @@ public:
 
     @sa cv::VideoCaptureAPIs
     */
-    CV_WRAP explicit VideoCapture(const String& filename, int apiPreference = CAP_ANY);
+    CV_WRAP VideoCapture(const String& filename, int apiPreference);
 
     /** @overload
-    @brief Opens a video file or a capturing device or an IP video stream for video capturing with API Preference and parameters
+    @brief  Open a camera for video capturing
 
-    The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
-    See cv::VideoCaptureProperties
+    @param index camera_id + domain_offset (CAP_*) id of the video capturing device to open. To open default camera using default backend just pass 0.
+    Use a `domain_offset` to enforce a specific reader implementation if multiple are available like cv::CAP_FFMPEG or cv::CAP_IMAGES or cv::CAP_DSHOW.
+    e.g. to open Camera 1 using the MS Media Foundation API use `index = 1 + cv::CAP_MSMF`
+
+    @sa cv::VideoCaptureAPIs
     */
-    CV_WRAP explicit VideoCapture(const String& filename, int apiPreference, const std::vector<int>& params);
+    CV_WRAP VideoCapture(int index);
 
     /** @overload
     @brief  Opens a camera for video capturing
@@ -752,19 +670,11 @@ public:
     @param index id of the video capturing device to open. To open default camera using default backend just pass 0.
     (to backward compatibility usage of camera_id + domain_offset (CAP_*) is valid when apiPreference is CAP_ANY)
     @param apiPreference preferred Capture API backends to use. Can be used to enforce a specific reader
-    implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L.
+    implementation if multiple are available: e.g. cv::CAP_DSHOW or cv::CAP_MSMF or cv::CAP_V4L2.
 
     @sa cv::VideoCaptureAPIs
     */
-    CV_WRAP explicit VideoCapture(int index, int apiPreference = CAP_ANY);
-
-    /** @overload
-    @brief Opens a camera for video capturing with API Preference and parameters
-
-    The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
-    See cv::VideoCaptureProperties
-    */
-    CV_WRAP explicit VideoCapture(int index, int apiPreference, const std::vector<int>& params);
+    CV_WRAP VideoCapture(int index, int apiPreference);
 
     /** @brief Default destructor
 
@@ -772,53 +682,37 @@ public:
     */
     virtual ~VideoCapture();
 
-    /** @brief  Opens a video file or a capturing device or an IP video stream for video capturing.
+    /** @brief  Open video file or a capturing device or a IP video stream for video capturing
 
     @overload
 
-    Parameters are same as the constructor VideoCapture(const String& filename, int apiPreference = CAP_ANY)
+    Parameters are same as the constructor VideoCapture(const String& filename)
     @return `true` if the file has been successfully opened
 
     The method first calls VideoCapture::release to close the already opened file or camera.
      */
-    CV_WRAP virtual bool open(const String& filename, int apiPreference = CAP_ANY);
+    CV_WRAP virtual bool open(const String& filename);
 
-    /** @brief  Opens a video file or a capturing device or an IP video stream for video capturing with API Preference and parameters
-
-    @overload
-
-    The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
-    See cv::VideoCaptureProperties
-
-    @return `true` if the file has been successfully opened
-
-    The method first calls VideoCapture::release to close the already opened file or camera.
-     */
-    CV_WRAP virtual bool open(const String& filename, int apiPreference, const std::vector<int>& params);
-
-    /** @brief  Opens a camera for video capturing
+    /** @brief  Open a camera for video capturing
 
     @overload
 
-    Parameters are same as the constructor VideoCapture(int index, int apiPreference = CAP_ANY)
+    Parameters are same as the constructor VideoCapture(int index)
     @return `true` if the camera has been successfully opened.
 
     The method first calls VideoCapture::release to close the already opened file or camera.
     */
-    CV_WRAP virtual bool open(int index, int apiPreference = CAP_ANY);
+    CV_WRAP virtual bool open(int index);
 
-    /** @brief  Opens a camera for video capturing with API Preference and parameters
+   /** @brief  Open a camera for video capturing
 
     @overload
 
-    The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
-    See cv::VideoCaptureProperties
-
+    Parameters are similar as the constructor VideoCapture(int index),except it takes an additional argument apiPreference.
+    Definitely, is same as open(int index) where `index=cameraNum + apiPreference`
     @return `true` if the camera has been successfully opened.
-
-    The method first calls VideoCapture::release to close the already opened file or camera.
     */
-    CV_WRAP virtual bool open(int index, int apiPreference, const std::vector<int>& params);
+    CV_WRAP bool open(int cameraNum, int apiPreference);
 
     /** @brief Returns true if video capturing has been initialized already.
 
@@ -931,48 +825,26 @@ public:
     */
     CV_WRAP virtual double get(int propId) const;
 
+    /** @brief Open video file or a capturing device or a IP video stream for video capturing with API Preference
+
+    @overload
+
+    Parameters are same as the constructor VideoCapture(const String& filename, int apiPreference)
+    @return `true` if the file has been successfully opened
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
+    */
+    CV_WRAP virtual bool open(const String& filename, int apiPreference);
+
     /** @brief Returns used backend API name
 
      @note Stream should be opened.
      */
     CV_WRAP String getBackendName() const;
 
-    /** Switches exceptions mode
-     *
-     * methods raise exceptions if not successful instead of returning an error code
-     */
-    CV_WRAP void setExceptionMode(bool enable) { throwOnFail = enable; }
-
-    /// query if exception mode is active
-    CV_WRAP bool getExceptionMode() { return throwOnFail; }
-
-
-    /** @brief Wait for ready frames from VideoCapture.
-
-    @param streams input video streams
-    @param readyIndex stream indexes with grabbed frames (ready to use .retrieve() to fetch actual frame)
-    @param timeoutNs number of nanoseconds (0 - infinite)
-    @return `true` if streamReady is not empty
-
-    @throws Exception %Exception on stream errors (check .isOpened() to filter out malformed streams) or VideoCapture type is not supported
-
-    The primary use of the function is in multi-camera environments.
-    The method fills the ready state vector, grabs video frame, if camera is ready.
-
-    After this call use VideoCapture::retrieve() to decode and fetch frame data.
-    */
-    CV_WRAP static
-    bool waitAny(
-            const std::vector<VideoCapture>& streams,
-            CV_OUT std::vector<int>& readyIndex,
-            int64 timeoutNs = 0);
-
 protected:
     Ptr<CvCapture> cap;
     Ptr<IVideoCapture> icap;
-    bool throwOnFail;
-
-    friend class internal::VideoCapturePrivateAccessor;
 };
 
 class IVideoWriter;
@@ -996,8 +868,8 @@ public:
 
     The constructors/functions initialize video writers.
     -   On Linux FFMPEG is used to write videos;
-    -   On Windows FFMPEG or MSWF or DSHOW is used;
-    -   On MacOSX AVFoundation is used.
+    -   On Windows FFMPEG or VFW is used;
+    -   On MacOSX QTKit is used.
      */
     CV_WRAP VideoWriter();
 
@@ -1014,7 +886,7 @@ public:
     @param fps Framerate of the created video stream.
     @param frameSize Size of the video frames.
     @param isColor If it is not zero, the encoder will expect and encode color frames, otherwise it
-    will work with grayscale frames.
+    will work with grayscale frames (the flag is currently supported on Windows only).
 
     @b Tips:
     - With some backends `fourcc=-1` pops up the codec selection dialog from the system.
@@ -1033,18 +905,6 @@ public:
      */
     CV_WRAP VideoWriter(const String& filename, int apiPreference, int fourcc, double fps,
                 Size frameSize, bool isColor = true);
-
-    /** @overload
-     * The `params` parameter allows to specify extra encoder parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .)
-     * see cv::VideoWriterProperties
-     */
-    CV_WRAP VideoWriter(const String& filename, int fourcc, double fps, const Size& frameSize,
-                        const std::vector<int>& params);
-
-    /** @overload
-     */
-    CV_WRAP VideoWriter(const String& filename, int apiPreference, int fourcc, double fps,
-                        const Size& frameSize, const std::vector<int>& params);
 
     /** @brief Default destructor
 
@@ -1068,16 +928,6 @@ public:
     CV_WRAP bool open(const String& filename, int apiPreference, int fourcc, double fps,
                       Size frameSize, bool isColor = true);
 
-    /** @overload
-     */
-    CV_WRAP bool open(const String& filename, int fourcc, double fps, const Size& frameSize,
-                      const std::vector<int>& params);
-
-    /** @overload
-     */
-    CV_WRAP bool open(const String& filename, int apiPreference, int fourcc, double fps,
-                      const Size& frameSize, const std::vector<int>& params);
-
     /** @brief Returns true if video writer has been successfully initialized.
     */
     CV_WRAP virtual bool isOpened() const;
@@ -1094,11 +944,6 @@ public:
     */
     virtual VideoWriter& operator << (const Mat& image);
 
-    /** @overload
-    @sa write
-    */
-    virtual VideoWriter& operator << (const UMat& image);
-
     /** @brief Writes the next video frame
 
     @param image The written frame. In general, color images are expected in BGR format.
@@ -1106,7 +951,7 @@ public:
     The function/method writes the specified image to video file. It must have the same size as has
     been specified when opening the video writer.
      */
-    CV_WRAP virtual void write(InputArray image);
+    CV_WRAP virtual void write(const Mat& image);
 
     /** @brief Sets a property in the VideoWriter.
 
@@ -1152,8 +997,8 @@ protected:
 };
 
 //! @cond IGNORED
-template<> struct DefaultDeleter<CvCapture>{ CV_EXPORTS void operator ()(CvCapture* obj) const; };
-template<> struct DefaultDeleter<CvVideoWriter>{ CV_EXPORTS void operator ()(CvVideoWriter* obj) const; };
+template<> CV_EXPORTS void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const;
+template<> CV_EXPORTS void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const;
 //! @endcond IGNORED
 
 //! @} videoio

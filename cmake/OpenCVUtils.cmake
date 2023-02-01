@@ -1095,18 +1095,6 @@ macro(ocv_list_filterout lst regex)
   endforeach()
 endmacro()
 
-# Usage: ocv_list_filterout_ex(list_name regex1 regex2 ...)
-macro(ocv_list_filterout_ex lst)
-  foreach(regex ${ARGN})
-    foreach(item ${${lst}})
-      if(item MATCHES "${regex}")
-        list(REMOVE_ITEM ${lst} "${item}")
-      endif()
-    endforeach()
-  endforeach()
-endmacro()
-
-
 # filter matching elements from the list
 macro(ocv_list_filter lst regex)
   set(dst ${ARGN})
@@ -1430,6 +1418,15 @@ macro(ocv_parse_header2 LIBNAME HDR_PATH VARNAME)
   endif()
 endmacro()
 
+# TODO remove this
+# read single version info from the pkg file
+macro(ocv_parse_pkg ver_varname LIBNAME PKG_PATH)
+  if(EXISTS "${PKG_PATH}/${LIBNAME}.pc")
+    file(STRINGS "${PKG_PATH}/${LIBNAME}.pc" line_to_parse REGEX "^Version:[ \t]+[0-9.]*.*$" LIMIT_COUNT 1)
+    STRING(REGEX REPLACE ".*Version: ([^ ]+).*" "\\1" ${ver_varname} "${line_to_parse}" )
+  endif()
+endmacro()
+
 ################################################################################################
 # short command to setup source group
 function(ocv_source_group group)
@@ -1564,16 +1561,10 @@ function(ocv_add_library target)
 
     set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG 1)
 
-    if(IOS AND NOT MAC_CATALYST)
-      set(OPENCV_APPLE_INFO_PLIST "${CMAKE_BINARY_DIR}/ios/Info.plist")
-    else()
-      set(OPENCV_APPLE_INFO_PLIST "${CMAKE_BINARY_DIR}/osx/Info.plist")
-    endif()
-
     set_target_properties(${target} PROPERTIES
       FRAMEWORK TRUE
       MACOSX_FRAMEWORK_IDENTIFIER org.opencv
-      MACOSX_FRAMEWORK_INFO_PLIST ${OPENCV_APPLE_INFO_PLIST}
+      MACOSX_FRAMEWORK_INFO_PLIST ${CMAKE_BINARY_DIR}/ios/Info.plist
       # "current version" in semantic format in Mach-O binary file
       VERSION ${OPENCV_LIBVERSION}
       # "compatibility version" in semantic format in Mach-O binary file
@@ -1999,9 +1990,3 @@ if(NOT BUILD_SHARED_LIBS AND (CMAKE_VERSION VERSION_LESS "3.14.0"))
 else()
   ocv_update(OPENCV_3RDPARTY_EXCLUDE_FROM_ALL "EXCLUDE_FROM_ALL")
 endif()
-
-
-#
-# Include configuration override settings
-#
-include("${CMAKE_CURRENT_LIST_DIR}/vars/EnableModeVars.cmake")

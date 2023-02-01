@@ -34,16 +34,10 @@
 #include <google/protobuf/generated_message_reflection.h>
 #include <google/protobuf/map_entry_lite.h>
 #include <google/protobuf/map_type_handler.h>
-#include <google/protobuf/port.h>
+#include <google/protobuf/metadata.h>
 #include <google/protobuf/reflection_ops.h>
 #include <google/protobuf/unknown_field_set.h>
-#include <google/protobuf/wire_format_lite.h>
-
-#include <google/protobuf/port_def.inc>
-
-#ifdef SWIG
-#error "You cannot SWIG proto headers"
-#endif
+#include <google/protobuf/wire_format_lite_inl.h>
 
 namespace google {
 namespace protobuf {
@@ -51,13 +45,11 @@ class Arena;
 namespace internal {
 template <typename Derived, typename Key, typename Value,
           WireFormatLite::FieldType kKeyFieldType,
-          WireFormatLite::FieldType kValueFieldType>
+          WireFormatLite::FieldType kValueFieldType, int default_enum_value>
 class MapField;
 }
-}  // namespace protobuf
-}  // namespace google
+}
 
-namespace google {
 namespace protobuf {
 namespace internal {
 
@@ -78,52 +70,40 @@ namespace internal {
 //                         field.
 //
 // cpp type | proto type  | in-memory type | MapEntry accessor type
-// int32_t    TYPE_INT32    int32_t          int32_t
-// int32_t    TYPE_FIXED32  int32_t          int32_t
+// int32      TYPE_INT32    int32            int32
+// int32      TYPE_FIXED32  int32            int32
 // string     TYPE_STRING   ArenaStringPtr   string
 // FooEnum    TYPE_ENUM     int              int
 // FooMessage TYPE_MESSAGE  FooMessage*      FooMessage
 //
 // The in-memory types of primitive types can be inferred from its proto type,
 // while we need to explicitly specify the cpp type if proto type is
-// TYPE_MESSAGE to infer the in-memory type.
+// TYPE_MESSAGE to infer the in-memory type.  Moreover, default_enum_value is
+// used to initialize enum field in proto2.
 template <typename Derived, typename Key, typename Value,
           WireFormatLite::FieldType kKeyFieldType,
-          WireFormatLite::FieldType kValueFieldType>
-class MapEntry : public MapEntryImpl<Derived, Message, Key, Value,
-                                     kKeyFieldType, kValueFieldType> {
+          WireFormatLite::FieldType kValueFieldType, int default_enum_value>
+class MapEntry
+    : public MapEntryImpl<Derived, Message, Key, Value, kKeyFieldType,
+                          kValueFieldType, default_enum_value> {
  public:
-  constexpr MapEntry() : _internal_metadata_() {}
+  MapEntry() : _internal_metadata_(NULL) {}
   explicit MapEntry(Arena* arena)
       : MapEntryImpl<Derived, Message, Key, Value, kKeyFieldType,
-                     kValueFieldType>(arena),
+                     kValueFieldType, default_enum_value>(arena),
         _internal_metadata_(arena) {}
-  ~MapEntry() {
-    Message::_internal_metadata_.template Delete<UnknownFieldSet>();
-    _internal_metadata_.Delete<UnknownFieldSet>();
-  }
   typedef void InternalArenaConstructable_;
   typedef void DestructorSkippable_;
 
-  typedef typename MapEntryImpl<Derived, Message, Key, Value, kKeyFieldType,
-                                kValueFieldType>::KeyTypeHandler KeyTypeHandler;
-  typedef
-      typename MapEntryImpl<Derived, Message, Key, Value, kKeyFieldType,
-                            kValueFieldType>::ValueTypeHandler ValueTypeHandler;
-  size_t SpaceUsedLong() const override {
-    size_t size = sizeof(Derived);
-    size += KeyTypeHandler::SpaceUsedInMapEntryLong(this->key_);
-    size += ValueTypeHandler::SpaceUsedInMapEntryLong(this->value_);
-    return size;
-  }
-
-  InternalMetadata _internal_metadata_;
+  InternalMetadataWithArena _internal_metadata_;
 
  private:
-  friend class ::PROTOBUF_NAMESPACE_ID::Arena;
+  friend class ::google::protobuf::Arena;
   template <typename C, typename K, typename V,
-            WireFormatLite::FieldType k_wire_type, WireFormatLite::FieldType>
+            WireFormatLite::FieldType k_wire_type, WireFormatLite::FieldType,
+            int default_enum>
   friend class internal::MapField;
+  friend class internal::GeneratedMessageReflection;
 
   GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(MapEntry);
 };
@@ -131,30 +111,30 @@ class MapEntry : public MapEntryImpl<Derived, Message, Key, Value,
 // Specialization for the full runtime
 template <typename Derived, typename Key, typename Value,
           WireFormatLite::FieldType kKeyFieldType,
-          WireFormatLite::FieldType kValueFieldType>
-struct MapEntryHelper<
-    MapEntry<Derived, Key, Value, kKeyFieldType, kValueFieldType> >
-    : MapEntryHelper<
-          MapEntryLite<Derived, Key, Value, kKeyFieldType, kValueFieldType> > {
+          WireFormatLite::FieldType kValueFieldType, int default_enum_value>
+struct MapEntryHelper<MapEntry<Derived, Key, Value, kKeyFieldType,
+                               kValueFieldType, default_enum_value> >
+    : MapEntryHelper<MapEntryLite<Derived, Key, Value, kKeyFieldType,
+                                  kValueFieldType, default_enum_value> > {
   explicit MapEntryHelper(const MapPair<Key, Value>& map_pair)
-      : MapEntryHelper<
-            MapEntryLite<Derived, Key, Value, kKeyFieldType, kValueFieldType> >(
+      : MapEntryHelper<MapEntryLite<Derived, Key, Value, kKeyFieldType,
+                                    kValueFieldType, default_enum_value> >(
             map_pair) {}
 };
 
 template <typename Derived, typename K, typename V,
-          WireFormatLite::FieldType key, WireFormatLite::FieldType value>
-struct DeconstructMapEntry<MapEntry<Derived, K, V, key, value> > {
+          WireFormatLite::FieldType key, WireFormatLite::FieldType value,
+          int default_enum>
+struct DeconstructMapEntry<MapEntry<Derived, K, V, key, value, default_enum> > {
   typedef K Key;
   typedef V Value;
-  static constexpr WireFormatLite::FieldType kKeyFieldType = key;
-  static constexpr WireFormatLite::FieldType kValueFieldType = value;
+  static const WireFormatLite::FieldType kKeyFieldType = key;
+  static const WireFormatLite::FieldType kValueFieldType = value;
+  static const int default_enum_value = default_enum;
 };
 
 }  // namespace internal
 }  // namespace protobuf
+
 }  // namespace google
-
-#include <google/protobuf/port_undef.inc>
-
 #endif  // GOOGLE_PROTOBUF_MAP_ENTRY_H__

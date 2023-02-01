@@ -102,10 +102,10 @@ streams.
 
 @sa Mat
  */
-class CV_EXPORTS_W GpuMat
+class CV_EXPORTS GpuMat
 {
 public:
-    class CV_EXPORTS_W Allocator
+    class CV_EXPORTS Allocator
     {
     public:
         virtual ~Allocator() {}
@@ -116,33 +116,33 @@ public:
     };
 
     //! default allocator
-    CV_WRAP static GpuMat::Allocator* defaultAllocator();
-    CV_WRAP static void setDefaultAllocator(GpuMat::Allocator* allocator);
+    static Allocator* defaultAllocator();
+    static void setDefaultAllocator(Allocator* allocator);
 
     //! default constructor
-    CV_WRAP explicit GpuMat(GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+    explicit GpuMat(Allocator* allocator = defaultAllocator());
 
     //! constructs GpuMat of the specified size and type
-    CV_WRAP GpuMat(int rows, int cols, int type, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
-    CV_WRAP GpuMat(Size size, int type, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+    GpuMat(int rows, int cols, int type, Allocator* allocator = defaultAllocator());
+    GpuMat(Size size, int type, Allocator* allocator = defaultAllocator());
 
     //! constructs GpuMat and fills it with the specified value _s
-    CV_WRAP GpuMat(int rows, int cols, int type, Scalar s, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
-    CV_WRAP GpuMat(Size size, int type, Scalar s, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+    GpuMat(int rows, int cols, int type, Scalar s, Allocator* allocator = defaultAllocator());
+    GpuMat(Size size, int type, Scalar s, Allocator* allocator = defaultAllocator());
 
     //! copy constructor
-    CV_WRAP GpuMat(const GpuMat& m);
+    GpuMat(const GpuMat& m);
 
     //! constructor for GpuMat headers pointing to user-allocated data
     GpuMat(int rows, int cols, int type, void* data, size_t step = Mat::AUTO_STEP);
     GpuMat(Size size, int type, void* data, size_t step = Mat::AUTO_STEP);
 
     //! creates a GpuMat header for a part of the bigger matrix
-    CV_WRAP GpuMat(const GpuMat& m, Range rowRange, Range colRange);
-    CV_WRAP GpuMat(const GpuMat& m, Rect roi);
+    GpuMat(const GpuMat& m, Range rowRange, Range colRange);
+    GpuMat(const GpuMat& m, Rect roi);
 
     //! builds GpuMat from host memory (Blocking call)
-    CV_WRAP explicit GpuMat(InputArray arr, GpuMat::Allocator* allocator = GpuMat::defaultAllocator());
+    explicit GpuMat(InputArray arr, Allocator* allocator = defaultAllocator());
 
     //! destructor - calls release()
     ~GpuMat();
@@ -151,21 +151,21 @@ public:
     GpuMat& operator =(const GpuMat& m);
 
     //! allocates new GpuMat data unless the GpuMat already has specified size and type
-    CV_WRAP void create(int rows, int cols, int type);
-    CV_WRAP void create(Size size, int type);
+    void create(int rows, int cols, int type);
+    void create(Size size, int type);
 
     //! decreases reference counter, deallocate the data when reference counter reaches 0
-    CV_WRAP void release();
+    void release();
 
     //! swaps with other smart pointer
-    CV_WRAP void swap(GpuMat& mat);
+    void swap(GpuMat& mat);
 
     /** @brief Performs data upload to GpuMat (Blocking call)
 
     This function copies data from host memory to device memory. As being a blocking call, it is
     guaranteed that the copy operation is finished when this function returns.
     */
-    CV_WRAP void upload(InputArray arr);
+    void upload(InputArray arr);
 
     /** @brief Performs data upload to GpuMat (Non-Blocking call)
 
@@ -175,14 +175,14 @@ public:
     The copy operation may be overlapped with operations in other non-default streams if \p stream is
     not the default stream and \p dst is HostMem allocated with HostMem::PAGE_LOCKED option.
     */
-    CV_WRAP void upload(InputArray arr, Stream& stream);
+    void upload(InputArray arr, Stream& stream);
 
     /** @brief Performs data download from GpuMat (Blocking call)
 
     This function copies data from device memory to host memory. As being a blocking call, it is
     guaranteed that the copy operation is finished when this function returns.
     */
-    CV_WRAP void download(OutputArray dst) const;
+    void download(OutputArray dst) const;
 
     /** @brief Performs data download from GpuMat (Non-Blocking call)
 
@@ -192,51 +192,51 @@ public:
     The copy operation may be overlapped with operations in other non-default streams if \p stream is
     not the default stream and \p dst is HostMem allocated with HostMem::PAGE_LOCKED option.
     */
-    CV_WRAP void download(OutputArray dst, Stream& stream) const;
+    void download(OutputArray dst, Stream& stream) const;
 
     //! returns deep copy of the GpuMat, i.e. the data is copied
-    CV_WRAP GpuMat clone() const;
+    GpuMat clone() const;
 
     //! copies the GpuMat content to device memory (Blocking call)
-    CV_WRAP void copyTo(OutputArray dst) const;
+    void copyTo(OutputArray dst) const;
 
     //! copies the GpuMat content to device memory (Non-Blocking call)
-    CV_WRAP void copyTo(OutputArray dst, Stream& stream) const;
+    void copyTo(OutputArray dst, Stream& stream) const;
 
     //! copies those GpuMat elements to "m" that are marked with non-zero mask elements (Blocking call)
-    CV_WRAP void copyTo(OutputArray dst, InputArray mask) const;
+    void copyTo(OutputArray dst, InputArray mask) const;
 
     //! copies those GpuMat elements to "m" that are marked with non-zero mask elements (Non-Blocking call)
-    CV_WRAP void copyTo(OutputArray dst, InputArray mask, Stream& stream) const;
+    void copyTo(OutputArray dst, InputArray mask, Stream& stream) const;
 
     //! sets some of the GpuMat elements to s (Blocking call)
-    CV_WRAP GpuMat& setTo(Scalar s);
+    GpuMat& setTo(Scalar s);
 
     //! sets some of the GpuMat elements to s (Non-Blocking call)
-    CV_WRAP GpuMat& setTo(Scalar s, Stream& stream);
+    GpuMat& setTo(Scalar s, Stream& stream);
 
     //! sets some of the GpuMat elements to s, according to the mask (Blocking call)
-    CV_WRAP GpuMat& setTo(Scalar s, InputArray mask);
+    GpuMat& setTo(Scalar s, InputArray mask);
 
     //! sets some of the GpuMat elements to s, according to the mask (Non-Blocking call)
-    CV_WRAP GpuMat& setTo(Scalar s, InputArray mask, Stream& stream);
+    GpuMat& setTo(Scalar s, InputArray mask, Stream& stream);
 
     //! converts GpuMat to another datatype (Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype) const;
+    void convertTo(OutputArray dst, int rtype) const;
 
     //! converts GpuMat to another datatype (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, Stream& stream) const;
+    void convertTo(OutputArray dst, int rtype, Stream& stream) const;
 
     //! converts GpuMat to another datatype with scaling (Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, double beta = 0.0) const;
+    void convertTo(OutputArray dst, int rtype, double alpha, double beta = 0.0) const;
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const;
+    void convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const;
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, double beta, Stream& stream) const;
+    void convertTo(OutputArray dst, int rtype, double alpha, double beta, Stream& stream) const;
 
-    CV_WRAP void assignTo(GpuMat& m, int type = -1) const;
+    void assignTo(GpuMat& m, int type=-1) const;
 
     //! returns pointer to y-th row
     uchar* ptr(int y = 0);
@@ -250,18 +250,18 @@ public:
     template <typename _Tp> operator PtrStep<_Tp>() const;
 
     //! returns a new GpuMat header for the specified row
-    CV_WRAP GpuMat row(int y) const;
+    GpuMat row(int y) const;
 
     //! returns a new GpuMat header for the specified column
-    CV_WRAP GpuMat col(int x) const;
+    GpuMat col(int x) const;
 
     //! ... for the specified row span
-    CV_WRAP GpuMat rowRange(int startrow, int endrow) const;
-    CV_WRAP GpuMat rowRange(Range r) const;
+    GpuMat rowRange(int startrow, int endrow) const;
+    GpuMat rowRange(Range r) const;
 
     //! ... for the specified column span
-    CV_WRAP GpuMat colRange(int startcol, int endcol) const;
-    CV_WRAP GpuMat colRange(Range r) const;
+    GpuMat colRange(int startcol, int endcol) const;
+    GpuMat colRange(Range r) const;
 
     //! extracts a rectangular sub-GpuMat (this is a generalized form of row, rowRange etc.)
     GpuMat operator ()(Range rowRange, Range colRange) const;
@@ -269,47 +269,44 @@ public:
 
     //! creates alternative GpuMat header for the same data, with different
     //! number of channels and/or different number of rows
-    CV_WRAP GpuMat reshape(int cn, int rows = 0) const;
+    GpuMat reshape(int cn, int rows = 0) const;
 
     //! locates GpuMat header within a parent GpuMat
-    CV_WRAP void locateROI(Size& wholeSize, Point& ofs) const;
+    void locateROI(Size& wholeSize, Point& ofs) const;
 
     //! moves/resizes the current GpuMat ROI inside the parent GpuMat
-    CV_WRAP GpuMat& adjustROI(int dtop, int dbottom, int dleft, int dright);
+    GpuMat& adjustROI(int dtop, int dbottom, int dleft, int dright);
 
     //! returns true iff the GpuMat data is continuous
     //! (i.e. when there are no gaps between successive rows)
-    CV_WRAP bool isContinuous() const;
+    bool isContinuous() const;
 
     //! returns element size in bytes
-    CV_WRAP size_t elemSize() const;
+    size_t elemSize() const;
 
     //! returns the size of element channel in bytes
-    CV_WRAP size_t elemSize1() const;
+    size_t elemSize1() const;
 
     //! returns element type
-    CV_WRAP int type() const;
+    int type() const;
 
     //! returns element type
-    CV_WRAP int depth() const;
+    int depth() const;
 
     //! returns number of channels
-    CV_WRAP int channels() const;
+    int channels() const;
 
     //! returns step/elemSize1()
-    CV_WRAP size_t step1() const;
+    size_t step1() const;
 
     //! returns GpuMat size : width == number of columns, height == number of rows
-    CV_WRAP Size size() const;
+    Size size() const;
 
     //! returns true if GpuMat data is NULL
-    CV_WRAP bool empty() const;
-
-    // returns pointer to cuda memory
-    CV_WRAP void* cudaPtr() const;
+    bool empty() const;
 
     //! internal use method: updates the continuity flag
-    CV_WRAP void updateContinuityFlag();
+    void updateContinuityFlag();
 
     /*! includes several bit-fields:
     - the magic signature
@@ -323,7 +320,7 @@ public:
     int rows, cols;
 
     //! a distance between successive rows in bytes; includes the gap if any
-    CV_PROP size_t step;
+    size_t step;
 
     //! pointer to the data
     uchar* data;
@@ -340,209 +337,6 @@ public:
     Allocator* allocator;
 };
 
-struct CV_EXPORTS_W GpuData
-{
-    explicit GpuData(size_t _size);
-     ~GpuData();
-
-    GpuData(const GpuData&) = delete;
-    GpuData& operator=(const GpuData&) = delete;
-
-    GpuData(GpuData&&) = delete;
-    GpuData& operator=(GpuData&&) = delete;
-
-    uchar* data;
-    size_t size;
-};
-
-class CV_EXPORTS_W GpuMatND
-{
-public:
-    using SizeArray = std::vector<int>;
-    using StepArray = std::vector<size_t>;
-    using IndexArray = std::vector<int>;
-
-    //! destructor
-    ~GpuMatND();
-
-    //! default constructor
-    GpuMatND();
-
-    /** @overload
-    @param size Array of integers specifying an n-dimensional array shape.
-    @param type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
-    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
-    */
-    GpuMatND(SizeArray size, int type);
-
-    /** @overload
-    @param size Array of integers specifying an n-dimensional array shape.
-    @param type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
-    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
-    @param data Pointer to the user data. Matrix constructors that take data and step parameters do not
-    allocate matrix data. Instead, they just initialize the matrix header that points to the specified
-    data, which means that no data is copied. This operation is very efficient and can be used to
-    process external data using OpenCV functions. The external data is not automatically deallocated, so
-    you should take care of it.
-    @param step Array of _size.size()-1 steps in case of a multi-dimensional array (the last step is always
-    set to the element size). If not specified, the matrix is assumed to be continuous.
-    */
-    GpuMatND(SizeArray size, int type, void* data, StepArray step = StepArray());
-
-    /** @brief Allocates GPU memory.
-    Suppose there is some GPU memory already allocated. In that case, this method may choose to reuse that
-    GPU memory under the specific condition: it must be of the same size and type, not externally allocated,
-    the GPU memory is continuous(i.e., isContinuous() is true), and is not a sub-matrix of another GpuMatND
-    (i.e., isSubmatrix() is false). In other words, this method guarantees that the GPU memory allocated by
-    this method is always continuous and is not a sub-region of another GpuMatND.
-    */
-    void create(SizeArray size, int type);
-
-    void release();
-
-    void swap(GpuMatND& m) noexcept;
-
-    /** @brief Creates a full copy of the array and the underlying data.
-    The method creates a full copy of the array. It mimics the behavior of Mat::clone(), i.e.
-    the original step is not taken into account. So, the array copy is a continuous array
-    occupying total()\*elemSize() bytes.
-    */
-    GpuMatND clone() const;
-
-    /** @overload
-    This overload is non-blocking, so it may return even if the copy operation is not finished.
-    */
-    GpuMatND clone(Stream& stream) const;
-
-    /** @brief Extracts a sub-matrix.
-    The operator makes a new header for the specified sub-array of \*this.
-    The operator is an O(1) operation, that is, no matrix data is copied.
-    @param ranges Array of selected ranges along each dimension.
-    */
-    GpuMatND operator()(const std::vector<Range>& ranges) const;
-
-    /** @brief Creates a GpuMat header for a 2D plane part of an n-dim matrix.
-    @note The returned GpuMat is constructed with the constructor for user-allocated data.
-    That is, It does not perform reference counting.
-    @note This function does not increment this GpuMatND's reference counter.
-    */
-    GpuMat createGpuMatHeader(IndexArray idx, Range rowRange, Range colRange) const;
-
-    /** @overload
-    Creates a GpuMat header if this GpuMatND is effectively 2D.
-    @note The returned GpuMat is constructed with the constructor for user-allocated data.
-    That is, It does not perform reference counting.
-    @note This function does not increment this GpuMatND's reference counter.
-    */
-    GpuMat createGpuMatHeader() const;
-
-    /** @brief Extracts a 2D plane part of an n-dim matrix.
-    It differs from createGpuMatHeader(IndexArray, Range, Range) in that it clones a part of this
-    GpuMatND to the returned GpuMat.
-    @note This operator does not increment this GpuMatND's reference counter;
-    */
-    GpuMat operator()(IndexArray idx, Range rowRange, Range colRange) const;
-
-    /** @brief Extracts a 2D plane part of an n-dim matrix if this GpuMatND is effectively 2D.
-    It differs from createGpuMatHeader() in that it clones a part of this GpuMatND.
-    @note This operator does not increment this GpuMatND's reference counter;
-    */
-    operator GpuMat() const;
-
-    GpuMatND(const GpuMatND&) = default;
-    GpuMatND& operator=(const GpuMatND&) = default;
-
-#if defined(__GNUC__) && __GNUC__ < 5
-    // error: function '...' defaulted on its first declaration with an exception-specification
-    // that differs from the implicit declaration '...'
-
-    GpuMatND(GpuMatND&&) = default;
-    GpuMatND& operator=(GpuMatND&&) = default;
-#else
-    GpuMatND(GpuMatND&&) noexcept = default;
-    GpuMatND& operator=(GpuMatND&&) noexcept = default;
-#endif
-
-    void upload(InputArray src);
-    void upload(InputArray src, Stream& stream);
-    void download(OutputArray dst) const;
-    void download(OutputArray dst, Stream& stream) const;
-
-    //! returns true iff the GpuMatND data is continuous
-    //! (i.e. when there are no gaps between successive rows)
-    bool isContinuous() const;
-
-    //! returns true if the matrix is a sub-matrix of another matrix
-    bool isSubmatrix() const;
-
-    //! returns element size in bytes
-    size_t elemSize() const;
-
-    //! returns the size of element channel in bytes
-    size_t elemSize1() const;
-
-    //! returns true if data is null
-    bool empty() const;
-
-    //! returns true if not empty and points to external(user-allocated) gpu memory
-    bool external() const;
-
-    //! returns pointer to the first byte of the GPU memory
-    uchar* getDevicePtr() const;
-
-    //! returns the total number of array elements
-    size_t total() const;
-
-    //! returns the size of underlying memory in bytes
-    size_t totalMemSize() const;
-
-    //! returns element type
-    int type() const;
-
-private:
-    //! internal use
-    void setFields(SizeArray size, int type, StepArray step = StepArray());
-
-public:
-    /*! includes several bit-fields:
-    - the magic signature
-    - continuity flag
-    - depth
-    - number of channels
-    */
-    int flags;
-
-    //! matrix dimensionality
-    int dims;
-
-    //! shape of this array
-    SizeArray size;
-
-    /*! step values
-    Their semantics is identical to the semantics of step for Mat.
-    */
-    StepArray step;
-
-private:
-    /*! internal use
-    If this GpuMatND holds external memory, this is empty.
-    */
-    std::shared_ptr<GpuData> data_;
-
-    /*! internal use
-    If this GpuMatND manages memory with reference counting, this value is
-    always equal to data_->data. If this GpuMatND holds external memory,
-    data_ is empty and data points to the external memory.
-    */
-    uchar* data;
-
-    /*! internal use
-    If this GpuMatND is a sub-matrix of a larger matrix, this value is the
-    difference of the first byte between the sub-matrix and the whole matrix.
-    */
-    size_t offset;
-};
-
 /** @brief Creates a continuous matrix.
 
 @param rows Row count.
@@ -554,7 +348,7 @@ private:
 Matrix is called continuous if its elements are stored continuously, that is, without gaps at the
 end of each row.
  */
-CV_EXPORTS_W void createContinuous(int rows, int cols, int type, OutputArray arr);
+CV_EXPORTS void createContinuous(int rows, int cols, int type, OutputArray arr);
 
 /** @brief Ensures that the size of a matrix is big enough and the matrix has a proper type.
 
@@ -565,7 +359,7 @@ CV_EXPORTS_W void createContinuous(int rows, int cols, int type, OutputArray arr
 
 The function does not reallocate memory if the matrix has proper attributes already.
  */
-CV_EXPORTS_W void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr);
+CV_EXPORTS void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr);
 
 /** @brief BufferPool for use with CUDA streams
 
@@ -609,8 +403,8 @@ Below is an example that utilizes BufferPool with StackAllocator:
         GpuMat d_src2 = pool2.getBuffer(1024, 1024, CV_8UC1);   // 1MB
         GpuMat d_dst2 = pool2.getBuffer(1024, 1024, CV_8UC3);   // 3MB
 
-        cvtColor(d_src1, d_dst1, cv::COLOR_GRAY2BGR, 0, stream1);
-        cvtColor(d_src2, d_dst2, cv::COLOR_GRAY2BGR, 0, stream2);
+        cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
+        cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
     }
 @endcode
 
@@ -675,8 +469,8 @@ and the corresponding memory is automatically returned to the pool for later usa
             d_src1.setTo(Scalar(i), stream1);
             d_src2.setTo(Scalar(i), stream2);
 
-            cvtColor(d_src1, d_dst1, cv::COLOR_GRAY2BGR, 0, stream1);
-            cvtColor(d_src2, d_dst2, cv::COLOR_GRAY2BGR, 0, stream2);
+            cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
+            cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
                                                                     // The order of destruction of the local variables is:
                                                                     //   d_dst2 => d_src2 => d_dst1 => d_src1
                                                                     // LIFO rule is satisfied, this code runs without error
@@ -684,15 +478,15 @@ and the corresponding memory is automatically returned to the pool for later usa
     }
 @endcode
  */
-class CV_EXPORTS_W BufferPool
+class CV_EXPORTS BufferPool
 {
 public:
 
     //! Gets the BufferPool for the given stream.
-    CV_WRAP explicit BufferPool(Stream& stream);
+    explicit BufferPool(Stream& stream);
 
     //! Allocates a new GpuMat of given size and type.
-    CV_WRAP GpuMat getBuffer(int rows, int cols, int type);
+    GpuMat getBuffer(int rows, int cols, int type);
 
 // WARNING: unreachable code using Ninja
 #if defined _MSC_VER && _MSC_VER >= 1920
@@ -700,21 +494,21 @@ public:
 #pragma warning(disable: 4702)
 #endif
     //! Allocates a new GpuMat of given size and type.
-    CV_WRAP GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
+    GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
 #if defined _MSC_VER && _MSC_VER >= 1920
 #pragma warning(pop)
 #endif
 
     //! Returns the allocator associated with the stream.
-    CV_WRAP Ptr<GpuMat::Allocator> getAllocator() const { return allocator_; }
+    Ptr<GpuMat::Allocator> getAllocator() const { return allocator_; }
 
 private:
     Ptr<GpuMat::Allocator> allocator_;
 };
 
 //! BufferPool management (must be called before Stream creation)
-CV_EXPORTS_W void setBufferPoolUsage(bool on);
-CV_EXPORTS_W void setBufferPoolConfig(int deviceId, size_t stackSize, int stackCount);
+CV_EXPORTS void setBufferPoolUsage(bool on);
+CV_EXPORTS void setBufferPoolConfig(int deviceId, size_t stackSize, int stackCount);
 
 //===================================================================================
 // HostMem
@@ -735,46 +529,46 @@ Its interface is also Mat-like but with additional memory type parameters.
 @note Allocation size of such memory types is usually limited. For more details, see *CUDA 2.2
 Pinned Memory APIs* document or *CUDA C Programming Guide*.
  */
-class CV_EXPORTS_W HostMem
+class CV_EXPORTS HostMem
 {
 public:
     enum AllocType { PAGE_LOCKED = 1, SHARED = 2, WRITE_COMBINED = 4 };
 
-    static MatAllocator* getAllocator(HostMem::AllocType alloc_type = HostMem::AllocType::PAGE_LOCKED);
+    static MatAllocator* getAllocator(AllocType alloc_type = PAGE_LOCKED);
 
-    CV_WRAP explicit HostMem(HostMem::AllocType alloc_type = HostMem::AllocType::PAGE_LOCKED);
+    explicit HostMem(AllocType alloc_type = PAGE_LOCKED);
 
     HostMem(const HostMem& m);
 
-    CV_WRAP HostMem(int rows, int cols, int type, HostMem::AllocType alloc_type = HostMem::AllocType::PAGE_LOCKED);
-    CV_WRAP HostMem(Size size, int type, HostMem::AllocType alloc_type = HostMem::AllocType::PAGE_LOCKED);
+    HostMem(int rows, int cols, int type, AllocType alloc_type = PAGE_LOCKED);
+    HostMem(Size size, int type, AllocType alloc_type = PAGE_LOCKED);
 
     //! creates from host memory with coping data
-    CV_WRAP explicit HostMem(InputArray arr, HostMem::AllocType alloc_type = HostMem::AllocType::PAGE_LOCKED);
+    explicit HostMem(InputArray arr, AllocType alloc_type = PAGE_LOCKED);
 
     ~HostMem();
 
     HostMem& operator =(const HostMem& m);
 
     //! swaps with other smart pointer
-    CV_WRAP void swap(HostMem& b);
+    void swap(HostMem& b);
 
     //! returns deep copy of the matrix, i.e. the data is copied
-    CV_WRAP HostMem clone() const;
+    HostMem clone() const;
 
     //! allocates new matrix data unless the matrix already has specified size and type.
-    CV_WRAP void create(int rows, int cols, int type);
+    void create(int rows, int cols, int type);
     void create(Size size, int type);
 
     //! creates alternative HostMem header for the same data, with different
     //! number of channels and/or different number of rows
-    CV_WRAP HostMem reshape(int cn, int rows = 0) const;
+    HostMem reshape(int cn, int rows = 0) const;
 
     //! decrements reference counter and released memory if needed.
     void release();
 
     //! returns matrix header with disabled reference counting for HostMem data.
-    CV_WRAP Mat createMatHeader() const;
+    Mat createMatHeader() const;
 
     /** @brief Maps CPU memory to GPU address space and creates the cuda::GpuMat header without reference counting
     for it.
@@ -786,20 +580,20 @@ public:
     GpuMat createGpuMatHeader() const;
 
     // Please see cv::Mat for descriptions
-    CV_WRAP bool isContinuous() const;
-    CV_WRAP size_t elemSize() const;
-    CV_WRAP size_t elemSize1() const;
-    CV_WRAP int type() const;
-    CV_WRAP int depth() const;
-    CV_WRAP int channels() const;
-    CV_WRAP size_t step1() const;
-    CV_WRAP Size size() const;
-    CV_WRAP bool empty() const;
+    bool isContinuous() const;
+    size_t elemSize() const;
+    size_t elemSize1() const;
+    int type() const;
+    int depth() const;
+    int channels() const;
+    size_t step1() const;
+    Size size() const;
+    bool empty() const;
 
     // Please see cv::Mat for descriptions
     int flags;
     int rows, cols;
-    CV_PROP size_t step;
+    size_t step;
 
     uchar* data;
     int* refcount;
@@ -814,13 +608,13 @@ public:
 
 @param m Input matrix.
  */
-CV_EXPORTS_W void registerPageLocked(Mat& m);
+CV_EXPORTS void registerPageLocked(Mat& m);
 
 /** @brief Unmaps the memory of matrix and makes it pageable again.
 
 @param m Input matrix.
  */
-CV_EXPORTS_W void unregisterPageLocked(Mat& m);
+CV_EXPORTS void unregisterPageLocked(Mat& m);
 
 //===================================================================================
 // Stream
@@ -853,7 +647,7 @@ void thread2()
 @note By default all CUDA routines are launched in Stream::Null() object, if the stream is not specified by user.
 In multi-threading environment the stream objects must be passed explicitly (see previous note).
  */
-class CV_EXPORTS_W Stream
+class CV_EXPORTS Stream
 {
     typedef void (Stream::*bool_type)() const;
     void this_type_does_not_support_comparisons() const {}
@@ -862,34 +656,22 @@ public:
     typedef void (*StreamCallback)(int status, void* userData);
 
     //! creates a new asynchronous stream
-    CV_WRAP Stream();
+    Stream();
 
     //! creates a new asynchronous stream with custom allocator
-    CV_WRAP Stream(const Ptr<GpuMat::Allocator>& allocator);
-
-    /** @brief creates a new Stream using the cudaFlags argument to determine the behaviors of the stream
-
-    @note The cudaFlags parameter is passed to the underlying api cudaStreamCreateWithFlags() and
-    supports the same parameter values.
-    @code
-        // creates an OpenCV cuda::Stream that manages an asynchronous, non-blocking,
-        // non-default CUDA stream
-        cv::cuda::Stream cvStream(cudaStreamNonBlocking);
-    @endcode
-     */
-    CV_WRAP Stream(const size_t cudaFlags);
+    Stream(const Ptr<GpuMat::Allocator>& allocator);
 
     /** @brief Returns true if the current stream queue is finished. Otherwise, it returns false.
     */
-    CV_WRAP bool queryIfComplete() const;
+    bool queryIfComplete() const;
 
     /** @brief Blocks the current CPU thread until all operations in the stream are complete.
     */
-    CV_WRAP void waitForCompletion();
+    void waitForCompletion();
 
     /** @brief Makes a compute stream wait on an event.
     */
-    CV_WRAP void waitEvent(const Event& event);
+    void waitEvent(const Event& event);
 
     /** @brief Adds a callback to be called on the host after all currently enqueued items in the stream have
     completed.
@@ -902,13 +684,10 @@ public:
     void enqueueHostCallback(StreamCallback callback, void* userData);
 
     //! return Stream object for default CUDA stream
-    CV_WRAP static Stream& Null();
+    static Stream& Null();
 
     //! returns true if stream object is not default (!= 0)
     operator bool_type() const;
-
-    //! return Pointer to CUDA stream
-    CV_WRAP void* cudaPtr() const;
 
     class Impl;
 
@@ -921,7 +700,7 @@ private:
     friend class DefaultDeviceInitializer;
 };
 
-class CV_EXPORTS_W Event
+class CV_EXPORTS Event
 {
 public:
     enum CreateFlags
@@ -932,19 +711,19 @@ public:
         INTERPROCESS   = 0x04   /**< Event is suitable for interprocess use. DisableTiming must be set */
     };
 
-    CV_WRAP explicit Event(const Event::CreateFlags flags = Event::CreateFlags::DEFAULT);
+    explicit Event(CreateFlags flags = DEFAULT);
 
     //! records an event
-    CV_WRAP void record(Stream& stream = Stream::Null());
+    void record(Stream& stream = Stream::Null());
 
     //! queries an event's status
-    CV_WRAP bool queryIfComplete() const;
+    bool queryIfComplete() const;
 
     //! waits for an event to complete
-    CV_WRAP void waitForCompletion();
+    void waitForCompletion();
 
     //! computes the elapsed time between events
-    CV_WRAP static float elapsedTime(const Event& start, const Event& end);
+    static float elapsedTime(const Event& start, const Event& end);
 
     class Impl;
 
@@ -954,7 +733,6 @@ private:
 
     friend struct EventAccessor;
 };
-CV_ENUM_FLAGS(Event::CreateFlags)
 
 //! @} cudacore_struct
 
@@ -971,7 +749,7 @@ Use this function before any other CUDA functions calls. If OpenCV is compiled w
 this function returns 0. If the CUDA driver is not installed, or is incompatible, this function
 returns -1.
  */
-CV_EXPORTS_W int getCudaEnabledDeviceCount();
+CV_EXPORTS int getCudaEnabledDeviceCount();
 
 /** @brief Sets a device and initializes it for the current thread.
 
@@ -979,18 +757,18 @@ CV_EXPORTS_W int getCudaEnabledDeviceCount();
 
 If the call of this function is omitted, a default device is initialized at the fist CUDA usage.
  */
-CV_EXPORTS_W void setDevice(int device);
+CV_EXPORTS void setDevice(int device);
 
 /** @brief Returns the current device index set by cuda::setDevice or initialized by default.
  */
-CV_EXPORTS_W int getDevice();
+CV_EXPORTS int getDevice();
 
 /** @brief Explicitly destroys and cleans up all resources associated with the current device in the current
 process.
 
 Any subsequent API call to this device will reinitialize the device.
  */
-CV_EXPORTS_W void resetDevice();
+CV_EXPORTS void resetDevice();
 
 /** @brief Enumeration providing CUDA computing features.
  */
@@ -1023,7 +801,7 @@ built for.
 According to the CUDA C Programming Guide Version 3.2: "PTX code produced for some specific compute
 capability can always be compiled to binary code of greater or equal compute capability".
  */
-class CV_EXPORTS_W TargetArchs
+class CV_EXPORTS TargetArchs
 {
 public:
     /** @brief The following method checks whether the module was built with the support of the given feature:
@@ -1038,23 +816,23 @@ public:
     @param major Major compute capability version.
     @param minor Minor compute capability version.
      */
-    CV_WRAP static bool has(int major, int minor);
-    CV_WRAP static bool hasPtx(int major, int minor);
-    CV_WRAP static bool hasBin(int major, int minor);
+    static bool has(int major, int minor);
+    static bool hasPtx(int major, int minor);
+    static bool hasBin(int major, int minor);
 
-    CV_WRAP static bool hasEqualOrLessPtx(int major, int minor);
-    CV_WRAP static bool hasEqualOrGreater(int major, int minor);
-    CV_WRAP static bool hasEqualOrGreaterPtx(int major, int minor);
-    CV_WRAP static bool hasEqualOrGreaterBin(int major, int minor);
+    static bool hasEqualOrLessPtx(int major, int minor);
+    static bool hasEqualOrGreater(int major, int minor);
+    static bool hasEqualOrGreaterPtx(int major, int minor);
+    static bool hasEqualOrGreaterBin(int major, int minor);
 };
 
 /** @brief Class providing functionality for querying the specified GPU properties.
  */
-class CV_EXPORTS_W DeviceInfo
+class CV_EXPORTS DeviceInfo
 {
 public:
     //! creates DeviceInfo object for the current GPU
-    CV_WRAP DeviceInfo();
+    DeviceInfo();
 
     /** @brief The constructors.
 
@@ -1063,68 +841,68 @@ public:
     Constructs the DeviceInfo object for the specified device. If device_id parameter is missed, it
     constructs an object for the current device.
      */
-    CV_WRAP DeviceInfo(int device_id);
+    DeviceInfo(int device_id);
 
     /** @brief Returns system index of the CUDA device starting with 0.
     */
-    CV_WRAP int deviceID() const;
+    int deviceID() const;
 
     //! ASCII string identifying device
     const char* name() const;
 
     //! global memory available on device in bytes
-    CV_WRAP size_t totalGlobalMem() const;
+    size_t totalGlobalMem() const;
 
     //! shared memory available per block in bytes
-    CV_WRAP size_t sharedMemPerBlock() const;
+    size_t sharedMemPerBlock() const;
 
     //! 32-bit registers available per block
-    CV_WRAP int regsPerBlock() const;
+    int regsPerBlock() const;
 
     //! warp size in threads
-    CV_WRAP int warpSize() const;
+    int warpSize() const;
 
     //! maximum pitch in bytes allowed by memory copies
-    CV_WRAP size_t memPitch() const;
+    size_t memPitch() const;
 
     //! maximum number of threads per block
-    CV_WRAP int maxThreadsPerBlock() const;
+    int maxThreadsPerBlock() const;
 
     //! maximum size of each dimension of a block
-    CV_WRAP Vec3i maxThreadsDim() const;
+    Vec3i maxThreadsDim() const;
 
     //! maximum size of each dimension of a grid
-    CV_WRAP Vec3i maxGridSize() const;
+    Vec3i maxGridSize() const;
 
     //! clock frequency in kilohertz
-    CV_WRAP int clockRate() const;
+    int clockRate() const;
 
     //! constant memory available on device in bytes
-    CV_WRAP size_t totalConstMem() const;
+    size_t totalConstMem() const;
 
     //! major compute capability
-    CV_WRAP int majorVersion() const;
+    int majorVersion() const;
 
     //! minor compute capability
-    CV_WRAP int minorVersion() const;
+    int minorVersion() const;
 
     //! alignment requirement for textures
-    CV_WRAP size_t textureAlignment() const;
+    size_t textureAlignment() const;
 
     //! pitch alignment requirement for texture references bound to pitched memory
-    CV_WRAP size_t texturePitchAlignment() const;
+    size_t texturePitchAlignment() const;
 
     //! number of multiprocessors on device
-    CV_WRAP int multiProcessorCount() const;
+    int multiProcessorCount() const;
 
     //! specified whether there is a run time limit on kernels
-    CV_WRAP bool kernelExecTimeoutEnabled() const;
+    bool kernelExecTimeoutEnabled() const;
 
     //! device is integrated as opposed to discrete
-    CV_WRAP bool integrated() const;
+    bool integrated() const;
 
     //! device can map host memory with cudaHostAlloc/cudaHostGetDevicePointer
-    CV_WRAP bool canMapHostMemory() const;
+    bool canMapHostMemory() const;
 
     enum ComputeMode
     {
@@ -1135,108 +913,108 @@ public:
     };
 
     //! compute mode
-    CV_WRAP DeviceInfo::ComputeMode computeMode() const;
+    ComputeMode computeMode() const;
 
     //! maximum 1D texture size
-    CV_WRAP int maxTexture1D() const;
+    int maxTexture1D() const;
 
     //! maximum 1D mipmapped texture size
-    CV_WRAP int maxTexture1DMipmap() const;
+    int maxTexture1DMipmap() const;
 
     //! maximum size for 1D textures bound to linear memory
-    CV_WRAP int maxTexture1DLinear() const;
+    int maxTexture1DLinear() const;
 
     //! maximum 2D texture dimensions
-    CV_WRAP Vec2i maxTexture2D() const;
+    Vec2i maxTexture2D() const;
 
     //! maximum 2D mipmapped texture dimensions
-    CV_WRAP Vec2i maxTexture2DMipmap() const;
+    Vec2i maxTexture2DMipmap() const;
 
     //! maximum dimensions (width, height, pitch) for 2D textures bound to pitched memory
-    CV_WRAP Vec3i maxTexture2DLinear() const;
+    Vec3i maxTexture2DLinear() const;
 
     //! maximum 2D texture dimensions if texture gather operations have to be performed
-    CV_WRAP Vec2i maxTexture2DGather() const;
+    Vec2i maxTexture2DGather() const;
 
     //! maximum 3D texture dimensions
-    CV_WRAP Vec3i maxTexture3D() const;
+    Vec3i maxTexture3D() const;
 
     //! maximum Cubemap texture dimensions
-    CV_WRAP int maxTextureCubemap() const;
+    int maxTextureCubemap() const;
 
     //! maximum 1D layered texture dimensions
-    CV_WRAP Vec2i maxTexture1DLayered() const;
+    Vec2i maxTexture1DLayered() const;
 
     //! maximum 2D layered texture dimensions
-    CV_WRAP Vec3i maxTexture2DLayered() const;
+    Vec3i maxTexture2DLayered() const;
 
     //! maximum Cubemap layered texture dimensions
-    CV_WRAP Vec2i maxTextureCubemapLayered() const;
+    Vec2i maxTextureCubemapLayered() const;
 
     //! maximum 1D surface size
-    CV_WRAP int maxSurface1D() const;
+    int maxSurface1D() const;
 
     //! maximum 2D surface dimensions
-    CV_WRAP Vec2i maxSurface2D() const;
+    Vec2i maxSurface2D() const;
 
     //! maximum 3D surface dimensions
-    CV_WRAP Vec3i maxSurface3D() const;
+    Vec3i maxSurface3D() const;
 
     //! maximum 1D layered surface dimensions
-    CV_WRAP Vec2i maxSurface1DLayered() const;
+    Vec2i maxSurface1DLayered() const;
 
     //! maximum 2D layered surface dimensions
-    CV_WRAP Vec3i maxSurface2DLayered() const;
+    Vec3i maxSurface2DLayered() const;
 
     //! maximum Cubemap surface dimensions
-    CV_WRAP int maxSurfaceCubemap() const;
+    int maxSurfaceCubemap() const;
 
     //! maximum Cubemap layered surface dimensions
-    CV_WRAP Vec2i maxSurfaceCubemapLayered() const;
+    Vec2i maxSurfaceCubemapLayered() const;
 
     //! alignment requirements for surfaces
-    CV_WRAP size_t surfaceAlignment() const;
+    size_t surfaceAlignment() const;
 
     //! device can possibly execute multiple kernels concurrently
-    CV_WRAP bool concurrentKernels() const;
+    bool concurrentKernels() const;
 
     //! device has ECC support enabled
-    CV_WRAP bool ECCEnabled() const;
+    bool ECCEnabled() const;
 
     //! PCI bus ID of the device
-    CV_WRAP int pciBusID() const;
+    int pciBusID() const;
 
     //! PCI device ID of the device
-    CV_WRAP int pciDeviceID() const;
+    int pciDeviceID() const;
 
     //! PCI domain ID of the device
-    CV_WRAP int pciDomainID() const;
+    int pciDomainID() const;
 
     //! true if device is a Tesla device using TCC driver, false otherwise
-    CV_WRAP bool tccDriver() const;
+    bool tccDriver() const;
 
     //! number of asynchronous engines
-    CV_WRAP int asyncEngineCount() const;
+    int asyncEngineCount() const;
 
     //! device shares a unified address space with the host
-    CV_WRAP bool unifiedAddressing() const;
+    bool unifiedAddressing() const;
 
     //! peak memory clock frequency in kilohertz
-    CV_WRAP int memoryClockRate() const;
+    int memoryClockRate() const;
 
     //! global memory bus width in bits
-    CV_WRAP int memoryBusWidth() const;
+    int memoryBusWidth() const;
 
     //! size of L2 cache in bytes
-    CV_WRAP int l2CacheSize() const;
+    int l2CacheSize() const;
 
     //! maximum resident threads per multiprocessor
-    CV_WRAP int maxThreadsPerMultiProcessor() const;
+    int maxThreadsPerMultiProcessor() const;
 
     //! gets free and total device memory
-    CV_WRAP void queryMemory(size_t& totalMemory, size_t& freeMemory) const;
-    CV_WRAP size_t freeMemory() const;
-    CV_WRAP size_t totalMemory() const;
+    void queryMemory(size_t& totalMemory, size_t& freeMemory) const;
+    size_t freeMemory() const;
+    size_t totalMemory() const;
 
     /** @brief Provides information on CUDA feature support.
 
@@ -1251,14 +1029,14 @@ public:
     This function returns true if the CUDA module can be run on the specified device. Otherwise, it
     returns false .
      */
-    CV_WRAP bool isCompatible() const;
+    bool isCompatible() const;
 
 private:
     int device_id_;
 };
 
-CV_EXPORTS_W void printCudaDeviceInfo(int device);
-CV_EXPORTS_W void printShortCudaDeviceInfo(int device);
+CV_EXPORTS void printCudaDeviceInfo(int device);
+CV_EXPORTS void printShortCudaDeviceInfo(int device);
 
 /** @brief Converts an array to half precision floating number.
 

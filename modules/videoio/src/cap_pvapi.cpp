@@ -44,7 +44,6 @@
 //
 
 #include "precomp.hpp"
-#include "cap_interface.hpp"
 
 #ifdef HAVE_PVAPI
 #if !defined _WIN32 && !defined _LINUX
@@ -600,12 +599,12 @@ bool CvCaptureCAM_PvAPI::resizeCaptureFrame (int frameWidth, int frameHeight)
     return true;
 }
 
-cv::Ptr<cv::IVideoCapture> cv::create_PvAPI_capture( int index )
+CvCapture* cvCreateCameraCapture_PvAPI( int index )
 {
     CvCaptureCAM_PvAPI* capture = new CvCaptureCAM_PvAPI;
 
     if ( capture->open( index ))
-        return cv::makePtr<cv::LegacyCapture>(capture);
+        return capture;
 
     delete capture;
     return NULL;

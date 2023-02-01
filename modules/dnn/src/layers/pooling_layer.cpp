@@ -43,11 +43,8 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
-#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
-#include "../op_webnn.hpp"
-#include "../op_cann.hpp"
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
@@ -59,8 +56,6 @@
 #include <ngraph/op/experimental/layers/psroi_pooling.hpp>
 #endif
 #endif
-
-#include "../op_vkcom.hpp"
 
 #include <float.h>
 #include <algorithm>
@@ -80,15 +75,6 @@ typedef size_t HALIDE_DIFF_T;
 typedef int HALIDE_DIFF_T;
 #endif
 #endif
-
-#ifdef HAVE_CUDA
-#include "../cuda4dnn/primitives/pooling.hpp"
-#include "../cuda4dnn/primitives/roi_pooling.hpp"
-#include "../cuda4dnn/primitives/max_unpooling.hpp"
-using namespace cv::dnn::cuda4dnn;
-#endif
-#include <opencv2/core/utils/logger.hpp>
-
 
 namespace cv
 {
@@ -114,7 +100,7 @@ public:
         if (params.has("pool") || params.has("kernel_size") ||
             params.has("kernel_w") || params.has("kernel_h"))
         {
-            String pool = toLowerCase(params.get<String>("pool", "max"));
+            String pool = params.get<String>("pool", "max").toLowerCase();
             if (pool == "max")
                 type = MAX;
             else if (pool == "ave")
@@ -196,16 +182,6 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        if (backendId == DNN_BACKEND_CUDA)
-        {
-            return type == MAX || type == AVE || type == ROI;
-        }
-#ifdef HAVE_CANN
-        if (backendId == DNN_BACKEND_CANN)
-        {
-            return type == MAX || type == AVE;
-        }
-#endif
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
@@ -226,69 +202,6 @@ public:
             if (kernel_size.empty() || kernel_size.size() == 2)
                 return haveHalide() &&
                        (type == MAX || (type == AVE && !pads_begin[0] && !pads_begin[1] && !pads_end[0] && !pads_end[1]));
-        }
-        else if (backendId == DNN_BACKEND_VKCOM)
-        {
-            if (kernel_size.empty() || kernel_size.size() == 2)
-                return haveVulkan() &&
-                           (type == MAX || type == AVE);
-            return false;
-        }
-        else if (backendId == DNN_BACKEND_WEBNN)
-        {
-            if (kernel_size.empty() || kernel_size.size() == 2)
-            {
-                if (!haveWebnn())
-                {
-                    return false;
-                }
-                else
-                {
-                    if (!ceilMode)
-                    {
-                        CV_LOG_WARNING(NULL, "ceilMode is not supported by WebNN backend.");
-                        return false;
-                    }
-                    if (computeMaxIdx)
-                    {
-                        CV_LOG_WARNING(NULL, "Mask is not supported by WebNN backend.");
-                        return false;
-                    }
-                    if (type != MAX && type != AVE)
-                    {
-                        if (type == STOCHASTIC)
-                        {
-                            CV_LOG_WARNING(NULL, "Stochastic Pooling is not supported by WebNN backend.");
-                        }
-                        if (type == SUM)
-                        {
-                            CV_LOG_WARNING(NULL, "Sum Pooling is not supported by WebNN backend.");
-                        }
-                        if (type == ROI)
-                        {
-                            CV_LOG_WARNING(NULL, "ROI Pooling is not supported by WebNN backend.");
-                        }
-                        if (type == PSROI)
-                        {
-                            CV_LOG_WARNING(NULL, "Position-sensitive ROI Pooling is not supported by WebNN backend.");
-                        }
-                        CV_LOG_WARNING(NULL, "WebNN backend only supports MaxPooling and AveragePooling currently.");
-                        return false;
-                    }
-                }
-                return true;
-            }
-        }
-        else if (backendId == DNN_BACKEND_TIMVX)
-        {
-#ifdef HAVE_TIMVX
-            if (kernel_size.size() == 3)
-            {
-                // fallback to CPU implementation.
-                preferableTarget = DNN_TARGET_CPU;
-            }
-#endif
-            return false;
         }
         return false;
     }
@@ -392,151 +305,6 @@ public:
         }
     }
 
-#ifdef HAVE_CUDA
-    Ptr<BackendNode> initCUDA(
-        void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
-    ) override
-    {
-        auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        if (type == ROI)
-            return make_cuda_node<cuda4dnn::ROIPoolingOp>(preferableTarget, std::move(context->stream), spatialScale);
-
-        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
-        auto input_shape = input_wrapper->getShape();
-
-        /* storing max indices is a special case and we deal with it separately */
-        if (computeMaxIdx) {
-            CV_Assert(type == MAX);
-
-            cuda4dnn::MaxPoolingConfiguration config;
-            config.window_size.assign(std::begin(kernel_size), std::end(kernel_size));
-            config.strides.assign(std::begin(strides), std::end(strides));
-
-            if (padMode.empty())
-            {
-                config.padMode = MaxPoolingConfiguration::PaddingMode::MANUAL;
-                config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
-            }
-            else if (padMode == "VALID")
-            {
-                config.padMode = MaxPoolingConfiguration::PaddingMode::VALID;
-            }
-            else if (padMode == "SAME")
-            {
-                config.padMode = MaxPoolingConfiguration::PaddingMode::SAME;
-            }
-            else
-            {
-                CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by PoolingLayer");
-            }
-
-            config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
-
-            return make_cuda_node<cuda4dnn::MaxPoolingOp>(preferableTarget, std::move(context->stream), config);
-        }
-
-        if (input_shape.size() == 3)
-        {
-            // Pool1D
-            // We add an extra dim for input tensor, because CuDNN support pooling only with 2 and 3 spatial dimensions
-            input_shape.insert(std::end(input_shape) - 1, 1);
-
-            // Do the similar thing for the other parameters
-            pads_begin.insert(std::begin(pads_begin), 0);
-            pads_end.insert(std::begin(pads_end), 0);
-            strides.insert(std::begin(strides), 1);
-            kernel_size.insert(std::begin(kernel_size), 1);
-        }
-
-        PoolingConfiguration config;
-        if (type == MAX)
-        {
-            config.poolMode = PoolingConfiguration::PoolingMode::MAX;
-        }
-        else if (type == AVE && !avePoolPaddedArea)
-        {
-            config.poolMode = PoolingConfiguration::PoolingMode::AVERAGE_EXCLUDE_PADDING;
-        }
-        else if (type == AVE && avePoolPaddedArea)
-        {
-            config.poolMode = PoolingConfiguration::PoolingMode::AVERAGE_INCLUDE_PADDING;
-        }
-        else
-        {
-            CV_Error(Error::StsNotImplemented, "Unsupported pooling mode");
-        }
-
-        config.window_size.assign(std::begin(kernel_size), std::end(kernel_size));
-        config.strides.assign(std::begin(strides), std::end(strides));
-
-        if (padMode.empty())
-        {
-            config.padMode = PoolingConfiguration::PaddingMode::MANUAL;
-            config.pads_begin.assign(std::begin(pads_begin), std::end(pads_begin));
-            config.pads_end.assign(std::begin(pads_end), std::end(pads_end));
-        }
-        else if (padMode == "VALID")
-        {
-            config.padMode = PoolingConfiguration::PaddingMode::VALID;
-        }
-        else if (padMode == "SAME")
-        {
-            config.padMode = PoolingConfiguration::PaddingMode::SAME;
-        }
-        else
-        {
-            CV_Error(Error::StsNotImplemented, padMode + " padding mode not supported by PoolingLayer");
-        }
-
-        if (ceilMode)
-            config.roundMode = PoolingConfiguration::RoundingMode::CEIL;
-        else
-            config.roundMode = PoolingConfiguration::RoundingMode::FLOOR;
-
-        config.input_shape.assign(std::begin(input_shape), std::end(input_shape));
-
-        return make_cuda_node<cuda4dnn::PoolingOp>(preferableTarget, std::move(context->cudnn_handle), config);
-    }
-#endif
-
-
-#ifdef HAVE_VULKAN
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-        int padding_mode;
-        vkcom::PoolType pool_type;
-        int filter_size[2] = {static_cast<int>(kernel_size[0]), static_cast<int>(kernel_size[1])};
-        int pad_size[2] = {static_cast<int>(pads_begin[0]), static_cast<int>(pads_begin[1])};
-        int stride_size[2] = {static_cast<int>(strides[0]), static_cast<int>(strides[1])};
-        pool_type = type == MAX ? vkcom::kPoolTypeMax:
-                   (type == AVE ? vkcom::kPoolTypeAvg:
-                            vkcom::kPoolTypeNum);
-
-        if (padMode.empty())
-        {
-            padding_mode = vkcom::kPaddingModeCaffe;
-        }
-        else if (padMode == "VALID")
-        {
-            padding_mode = vkcom::kPaddingModeValid;
-        }
-        else if (padMode == "SAME")
-        {
-            padding_mode = vkcom::kPaddingModeSame;
-        }
-        else
-            CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
-
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPool(filter_size, pad_size,
-                                                            stride_size, padding_mode,
-                                                            pool_type, avePoolPaddedArea));
-        return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
-    }
-#endif
-
-
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
         if (type == MAX)
@@ -547,177 +315,63 @@ public:
             return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
-        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        auto x_desc = x->getTensorDesc();
-        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
 
-        std::string op_name_base = cv::format("pooling_%d", index);
-        if (type == MAX)
-        {
-            std::string op_name = cv::format("max_%s", op_name_base.c_str());
-            auto op = std::make_shared<ge::op::MaxPoolV3>(op_name);
-
-            // set attributes
-            op->set_attr_ksize(ge::Operator::OpListInt(
-                {1, 1, (int64_t)kernel_size[0], (int64_t)kernel_size[1]}
-            ));
-            op->set_attr_strides(ge::Operator::OpListInt(
-                {1, 1, (int64_t)strides[0], (int64_t)strides[1]}
-            ));
-            std::string cann_pad_mode{"CALCULATED"};
-            if (padMode == "SAME" || padMode == "VALID")
-                cann_pad_mode = padMode;
-            op->set_attr_padding_mode(cann_pad_mode.c_str());
-            op->set_attr_pads(ge::Operator::OpListInt(
-                {(int64_t)pads_begin[0], (int64_t)pads_end[0], (int64_t)pads_begin[1], (int64_t)pads_end[1]}
-            ));
-            op->set_attr_data_format("NCHW");
-            op->set_attr_global_pooling(globalPooling);
-            op->set_attr_ceil_mode(ceilMode);
-
-            // set inputs
-            op->set_input_x_by_name(*op_x, "y");
-            op->update_input_desc_x(*x_desc);
-            // set outputs
-            op->update_output_desc_y(*output_desc);
-
-            return Ptr<BackendNode>(new CannBackendNode(op));
-        }
-        else if (type == AVE)
-        {
-            std::string op_name = cv::format("avg_%s", op_name_base.c_str());
-            auto op = std::make_shared<ge::op::AvgPoolV2>(op_name);
-
-            // set attributes
-            op->set_attr_ksize(ge::Operator::OpListInt(
-                {1, 1, (int64_t)kernel_size[0], (int64_t)kernel_size[1]}
-            ));
-            op->set_attr_strides(ge::Operator::OpListInt(
-                {1, 1, (int64_t)strides[0], (int64_t)strides[1]}
-            ));
-            std::string cann_pad_mode{"CALCULATED"};
-            if (padMode == "SAME" || padMode == "VALID")
-                cann_pad_mode = padMode;
-            op->set_attr_padding_mode(cann_pad_mode.c_str());
-            op->set_attr_pads(ge::Operator::OpListInt(
-                {(int64_t)pads_begin[0], (int64_t)pads_end[0], (int64_t)pads_begin[1], (int64_t)pads_end[1]}
-            ));
-            op->set_attr_global_pooling(globalPooling);
-            op->set_attr_ceil_mode(ceilMode);
-            auto cann_exclusive = !avePoolPaddedArea;
-            op->set_attr_exclusive(cann_exclusive);
-
-            // set inputs
-            op->set_input_x_by_name(*op_x, "y");
-            op->update_input_desc_x(*x_desc);
-            // set outputs
-            op->update_output_desc_y(*output_desc);
-
-            return Ptr<BackendNode>(new CannBackendNode(op));
-        }
-        else
-            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
-    }
-#endif
 
 #ifdef HAVE_DNN_NGRAPH
-    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
-                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-        CV_Assert_N((inputs.size() == 1 && (type == MAX || type == AVE || type == SUM)) || inputs.size() == 2, nodes.size() == inputs.size());
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                    const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+{
+    CV_Assert_N((inputs.size() == 1 && (type == MAX || type == AVE || type == SUM)) || inputs.size() == 2, nodes.size() == inputs.size());
+    auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
-        ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;
-        if (!padMode.empty())
-            pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
+    ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;
+    if (!padMode.empty())
+        pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
 
-        auto rounding_type = ceilMode ? ngraph::op::RoundingType::CEIL : ngraph::op::RoundingType::FLOOR;
-        if (type == AVE) {
-            auto exclude_pad = !avePoolPaddedArea;
-            auto ave_pool = std::make_shared<ngraph::op::v1::AvgPool>(ieInpNode, ngraph::Strides(strides),
-                            ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
-                            exclude_pad, rounding_type, pad_type);
-            return Ptr<BackendNode>(new InfEngineNgraphNode(ave_pool));
-        }
-        else if (type == SUM) {
-            ngraph::Shape inpShape = ieInpNode->get_shape();
-            CV_Assert(inpShape.size() == 2 + kernel_size.size());
-            std::vector<int64_t> axes;
-            for (size_t i = 0; i < kernel_size.size(); i++)
-            {
-                if (inpShape[2 + i] == kernel_size[i])
-                    axes.push_back(2 + i);
-            }
-            auto reduction_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes.size()}, axes);
-            auto reduce_sum = std::make_shared<ngraph::op::v1::ReduceSum>(ieInpNode, reduction_axes, true);
-            return Ptr<BackendNode>(new InfEngineNgraphNode(reduce_sum));
-        }
-        else if (type == MAX) {
-            auto max_pool = std::make_shared<ngraph::op::v1::MaxPool>(ieInpNode, ngraph::Strides(strides),
-                            ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
-                            rounding_type, pad_type);
-            return Ptr<BackendNode>(new InfEngineNgraphNode(max_pool));
-        }
-        else if (type == ROI) {
-            auto& coords = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-            auto roi = std::make_shared<ngraph::op::ROIPooling>(ieInpNode, coords,
-                       ngraph::Shape{(size_t)pooledSize.height, (size_t)pooledSize.width}, spatialScale, "max");
-            return Ptr<BackendNode>(new InfEngineNgraphNode(roi));
-        }
-        else if (type == PSROI) {
-            auto& coords = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-            auto psroi = std::make_shared<ngraph::op::PSROIPooling>(ieInpNode, coords,
-                         (size_t)psRoiOutChannels, (size_t)pooledSize.width, spatialScale, 1, 1, "average");
-            return Ptr<BackendNode>(new InfEngineNgraphNode(psroi));
-        }
-        else
-            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
+    auto rounding_type = ceilMode ? ngraph::op::RoundingType::CEIL : ngraph::op::RoundingType::FLOOR;
+    if (type == AVE) {
+        auto exclude_pad = !avePoolPaddedArea;
+        auto ave_pool = std::make_shared<ngraph::op::v1::AvgPool>(ieInpNode, ngraph::Strides(strides),
+                        ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+                        exclude_pad, rounding_type, pad_type);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(ave_pool));
     }
+    else if (type == SUM) {
+        ngraph::Shape inpShape = ieInpNode->get_shape();
+        CV_Assert(inpShape.size() == 2 + kernel_size.size());
+        std::vector<int64_t> axes;
+        for (size_t i = 0; i < kernel_size.size(); i++)
+        {
+            if (inpShape[2 + i] == kernel_size[i])
+                axes.push_back(2 + i);
+        }
+        auto reduction_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes.size()}, axes);
+        auto reduce_sum = std::make_shared<ngraph::op::v1::ReduceSum>(ieInpNode, reduction_axes, true);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(reduce_sum));
+    }
+    else if (type == MAX) {
+        auto max_pool = std::make_shared<ngraph::op::v1::MaxPool>(ieInpNode, ngraph::Strides(strides),
+                        ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+                        rounding_type, pad_type);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(max_pool));
+    }
+    else if (type == ROI) {
+        auto& coords = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto roi = std::make_shared<ngraph::op::ROIPooling>(ieInpNode, coords,
+                   ngraph::Shape{(size_t)pooledSize.height, (size_t)pooledSize.width}, spatialScale, "max");
+        return Ptr<BackendNode>(new InfEngineNgraphNode(roi));
+    }
+    else if (type == PSROI) {
+        auto& coords = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto psroi = std::make_shared<ngraph::op::PSROIPooling>(ieInpNode, coords,
+                     (size_t)psRoiOutChannels, (size_t)pooledSize.width, spatialScale, 1, 1, "average");
+        return Ptr<BackendNode>(new InfEngineNgraphNode(psroi));
+    }
+    else
+        CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
+}
 #endif  // HAVE_DNN_NGRAPH
 
-#ifdef HAVE_WEBNN
-    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-        // std::cout << "Use WebNN Pooling Layer's Implementation." << std::endl;
-        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
-        auto& webnnInpOperand = node->operand;
-        auto& webnnGraphBuilder = node->net->builder;
-        webnn::Pool2dOptions options;
-        std::vector<int32_t> kernelSize(kernel_size.begin(), kernel_size.end());
-        std::vector<int32_t> Strides(strides.begin(), strides.end());
-        std::vector<int32_t> Padding;
-        if (padMode.empty()) {
-            Padding = {static_cast<int32_t>(pads_begin[0]),
-                      static_cast<int32_t>(pads_end[0]),
-                      static_cast<int32_t>(pads_begin[1]),
-                      static_cast<int32_t>(pads_end[1])};
-        } else if (padMode == "VALID") {
-            Padding = {0, 0, 0, 0};
-        } else if (padMode == "SAME") {
-            options.autoPad = ml::AutoPad::SameUpper;
-        }
-        // std::cout << "padMode: " << padMode << std::endl;
-        options.windowDimensions = kernelSize;
-        options.strides = Strides;
-        options.padding = Padding;
-        if (type == MAX)
-        {
-            auto operand = webnnGraphBuilder.MaxPool2d(webnnInpOperand, options.AsPtr());
-            return Ptr<BackendNode>(new WebnnBackendNode(operand));
-        }
-        else if (type == AVE)
-        {
-            auto operand = webnnGraphBuilder.AveragePool2d(webnnInpOperand, options.AsPtr());
-            return Ptr<BackendNode>(new WebnnBackendNode(operand));
-        } else {
-            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
-        }
-    }
-#endif // HAVE_WEBNN
 
     class PoolingInvoker : public ParallelLoopBody
     {
@@ -736,8 +390,7 @@ public:
         std::vector<size_t> kernel_size;
         std::vector<size_t> strides;
 
-        PoolingInvoker() : src(0), rois(0), dst(0), mask(0), pad_l(0), pad_t(0), pad_r(0), pad_b(0),
-                           avePoolPaddedArea(false), nstripes(0),
+        PoolingInvoker() : src(0), rois(0), dst(0), mask(0), avePoolPaddedArea(false), nstripes(0),
                            computeMaxIdx(0), poolingType(MAX), spatialScale(0) {}
 
         static void run(const Mat& src, const Mat& rois, Mat& dst, Mat& mask,
@@ -1256,12 +909,6 @@ public:
         // Halide::argmax returns tuple (r.x, r.y, max).
         Halide::Tuple res = argmax(inputBuffer(kx, ky, c, n));
 
-        if (!computeMaxIdx)
-        {
-            top(x, y, c, n) = res[2];
-            return Ptr<BackendNode>(new HalideBackendNode(top));
-        }
-
         // Compute offset from argmax in range [0, kernel_size).
         Halide::Expr max_index;
         if(paddingLeft || paddingTop)
@@ -1449,23 +1096,6 @@ public:
         CV_Assert(inputs[0][dims - 1] > 0 && inputs[0][dims - 2] > 0);
         shapesInitialized = true;
         return true;
-    }
-
-    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
-    {
-        if (type == MAX && !computeMaxIdx)
-        {
-            return true;
-        }
-        else if (type == AVE || type == SUM)
-        {
-            float multiplier = scales[0][0] / scales[1][0];
-            params.set("multiplier", multiplier);
-            params.set("input_zeropoint", zeropoints[0][0]);
-            return true;
-        }
-        return false;
     }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,

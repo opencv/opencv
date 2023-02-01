@@ -83,6 +83,7 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
 {
     const std::string name_current_image = GetParam();
     const std::string root = "cv/qrcode/multiple/";
+
     std::string image_path = findDataFile(root + name_current_image);
     Mat src = imread(image_path);
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
@@ -104,7 +105,6 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
     for (size_t i = 0ull;  i < decoded_info.size(); i++) {
         result.push_back(make_pair(decoded_info[i], straight_barcode[i]));
     }
-
     sort(result.begin(), result.end(), compareQR);
     vector<vector<uint8_t> > decoded_info_sort;
     vector<Mat> straight_barcode_sort;
@@ -114,6 +114,7 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
         straight_barcode_sort.push_back(result[i].second);
     }
     SANITY_CHECK(decoded_info_sort);
+    SANITY_CHECK(straight_barcode_sort);
 }
 #endif
 

@@ -92,9 +92,7 @@ CASE(test_add_bcast)
     SKIP;
 #endif
 CASE(test_add_uint8)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_and2d)
     // no filter
 CASE(test_and3d)
@@ -112,133 +110,69 @@ CASE(test_and_bcast4v3d)
 CASE(test_and_bcast4v4d)
     // no filter
 CASE(test_argmax_default_axis_example)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_default_axis_example_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_default_axis_random)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_default_axis_random_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_keepdims_example)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_keepdims_example_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_keepdims_random)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_keepdims_random_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_negative_axis_keepdims_example)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_negative_axis_keepdims_example_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_negative_axis_keepdims_random)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_negative_axis_keepdims_random_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_no_keepdims_example)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_no_keepdims_example_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_no_keepdims_random)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmax_no_keepdims_random_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_default_axis_example)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_default_axis_example_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_default_axis_random)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_default_axis_random_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_keepdims_example)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_keepdims_example_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_keepdims_random)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_keepdims_random_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_negative_axis_keepdims_example)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_negative_axis_keepdims_example_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_negative_axis_keepdims_random)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_negative_axis_keepdims_random_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_no_keepdims_example)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_no_keepdims_example_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_no_keepdims_random)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_argmin_no_keepdims_random_select_last_index)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_asin)
     // no filter
 CASE(test_asin_example)
@@ -567,9 +501,7 @@ CASE(test_div_bcast)
 CASE(test_div_example)
     // no filter
 CASE(test_div_uint8)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_dropout_default)
     // no filter
 CASE(test_dropout_default_mask)
@@ -957,9 +889,7 @@ CASE(test_maxpool_2d_strides)
     SKIP_MYRIAD;
 #endif
 CASE(test_maxpool_2d_uint8)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_maxpool_3d_default)
 #if SKIP_SET_1
     SKIP_NON_CPU;
@@ -973,9 +903,7 @@ CASE(test_maxpool_with_argmax_2d_precomputed_strides)
     SKIP;
 #endif
 CASE(test_maxunpool_export_with_output_shape)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_maxunpool_export_without_output_shape)
 #if SKIP_SET_1
     SKIP;
@@ -1053,9 +981,7 @@ CASE(test_mul_bcast)
 CASE(test_mul_example)
     // no filter
 CASE(test_mul_uint8)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_mvn)
     // no filter
 CASE(test_mvn_expanded)
@@ -1267,10 +1193,7 @@ CASE(test_reduce_l1_negative_axes_keep_dims_example)
 CASE(test_reduce_l1_negative_axes_keep_dims_random)
     // no filter
 CASE(test_reduce_l2_default_axes_keepdims_example)
-#if SKIP_SET_1
-    if (target == DNN_TARGET_MYRIAD)
-        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00490189 vs 0.004)
-#endif
+    // no filter
 CASE(test_reduce_l2_default_axes_keepdims_random)
     // no filter
 CASE(test_reduce_l2_do_not_keepdims_example)
@@ -1294,10 +1217,7 @@ CASE(test_reduce_log_sum_default)
 CASE(test_reduce_log_sum_desc_axes)
     // no filter
 CASE(test_reduce_log_sum_exp_default_axes_keepdims_example)
-#if SKIP_SET_1
-    if (target == DNN_TARGET_MYRIAD)
-        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00671387 vs 0.004
-#endif
+    // no filter
 CASE(test_reduce_log_sum_exp_default_axes_keepdims_random)
     // no filter
 CASE(test_reduce_log_sum_exp_do_not_keepdims_example)
@@ -1363,61 +1283,21 @@ CASE(test_reduce_min_negative_axes_keepdims_example)
 CASE(test_reduce_min_negative_axes_keepdims_random)
     // no filter
 CASE(test_reduce_prod_default_axes_keepdims_example)
-#if SKIP_SET_1
-    SKIP_MYRIAD;  // accuracy (Expected: (normL1) <= (l1), actual: inf vs 0.004)
-#endif
+    // no filter
 CASE(test_reduce_prod_default_axes_keepdims_random)
-#if SKIP_SET_1
-    if (target == DNN_TARGET_MYRIAD)
-    {
-        default_l1 = 5;  // Expected: (normL1) <= (l1), actual: 2.66211 vs 0.004  |ref| = 24621.337890625
-        default_lInf = 5;  // Expected: (normInf) <= (lInf), actual: 2.66211 vs 0.02  |ref| = 24621.337890625
-    }
-#endif
+    // no filter
 CASE(test_reduce_prod_do_not_keepdims_example)
     // no filter
 CASE(test_reduce_prod_do_not_keepdims_random)
-#if SKIP_SET_1
-    if (target == DNN_TARGET_MYRIAD)
-    {
-        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00436729 vs 0.004
-        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
-    }
-#endif
+    // no filter
 CASE(test_reduce_prod_keepdims_example)
     // no filter
 CASE(test_reduce_prod_keepdims_random)
-#if SKIP_SET_1
-    if (target == DNN_TARGET_MYRIAD)
-    {
-        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00436729 vs 0.004
-        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
-    }
-#endif
-#if INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    if (target == DNN_TARGET_OPENCL_FP16)
-    {
-        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00436729 vs 0.004
-        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
-    }
-#endif
+    // no filter
 CASE(test_reduce_prod_negative_axes_keepdims_example)
     // no filter
 CASE(test_reduce_prod_negative_axes_keepdims_random)
-#if SKIP_SET_1
-    if (target == DNN_TARGET_MYRIAD)
-    {
-        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00436729 vs 0.004
-        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
-    }
-#endif
-#if INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    if (target == DNN_TARGET_OPENCL_FP16)
-    {
-        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00436729 vs 0.004
-        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
-    }
-#endif
+    // no filter
 CASE(test_reduce_sum_default_axes_keepdims_example)
     // no filter
 CASE(test_reduce_sum_default_axes_keepdims_random)
@@ -1441,61 +1321,19 @@ CASE(test_reduce_sum_negative_axes_keepdims_random)
 CASE(test_reduce_sum_square_default_axes_keepdims_example)
     // no filter
 CASE(test_reduce_sum_square_default_axes_keepdims_random)
-#if SKIP_SET_1
-    if (target == DNN_TARGET_MYRIAD)
-        default_l1 = 0.05f;  // Expected: (normL1) <= (l1), actual: 0.0183411 vs 0.004
-#endif
+    // no filter
 CASE(test_reduce_sum_square_do_not_keepdims_example)
     // no filter
 CASE(test_reduce_sum_square_do_not_keepdims_random)
-#if SKIP_SET_1
-    if (target == DNN_TARGET_MYRIAD)
-    {
-        default_l1 = 0.05f;  // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004
-        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
-    }
-#endif
-#if INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    if (target == DNN_TARGET_OPENCL_FP16)
-    {
-        default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00723048 vs 0.004
-        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0201416 vs 0.02
-    }
-#endif
+    // no filter
 CASE(test_reduce_sum_square_keepdims_example)
     // no filter
 CASE(test_reduce_sum_square_keepdims_random)
-#if SKIP_SET_1
-    if (target == DNN_TARGET_MYRIAD)
-    {
-        default_l1 = 0.05f;  // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004
-        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
-    }
-#endif
-#if INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    if (target == DNN_TARGET_OPENCL_FP16)
-    {
-        default_l1 = 0.05f;  // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004
-        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
-    }
-#endif
+    // no filter
 CASE(test_reduce_sum_square_negative_axes_keepdims_example)
     // no filter
 CASE(test_reduce_sum_square_negative_axes_keepdims_random)
-#if SKIP_SET_1
-    if (target == DNN_TARGET_MYRIAD)
-    {
-        default_l1 = 0.05f;  // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004
-        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
-    }
-#endif
-#if INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    if (target == DNN_TARGET_OPENCL_FP16)
-    {
-        default_l1 = 0.05f;  // Expected: (normL1) <= (l1), actual: 0.010789 vs 0.004
-        default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0290298 vs 0.02
-    }
-#endif
+    // no filter
 CASE(test_reflect_pad)
     // no filter
 CASE(test_relu)
@@ -1588,10 +1426,6 @@ CASE(test_scatter_elements_with_duplicate_indices)
     // no filter
 CASE(test_scatter_elements_with_negative_indices)
     // no filter
-CASE(test_scatter_elements_with_reduction_max)
-    // no filter
-CASE(test_scatter_elements_with_reduction_min)
-    // no filter
 CASE(test_scatter_elements_without_axis)
     // no filter
 CASE(test_scatter_with_axis)
@@ -1601,10 +1435,6 @@ CASE(test_scatter_without_axis)
 CASE(test_scatternd)
     // no filter
 CASE(test_scatternd_add)
-    // no filter
-CASE(test_scatternd_max)
-    // no filter
-CASE(test_scatternd_min)
     // no filter
 CASE(test_scatternd_multiply)
     // no filter
@@ -1915,9 +1745,7 @@ CASE(test_sub_bcast)
 CASE(test_sub_example)
     // no filter
 CASE(test_sub_uint8)
-#if SKIP_SET_1
-    SKIP;
-#endif
+    // no filter
 CASE(test_sum_example)
     // no filter
 CASE(test_sum_one_input)

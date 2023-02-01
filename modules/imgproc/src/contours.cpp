@@ -1473,7 +1473,6 @@ icvFindContoursInInterval( const CvArr* src,
     tmp_prev->link = 0;
 
     // First line. None of runs is binded
-    tmp.pt.x = 0;
     tmp.pt.y = 0;
     CV_WRITE_SEQ_ELEM( tmp, writer );
     upper_line = (CvLinkedRunPoint*)CV_GET_WRITTEN_ELEM( writer );
@@ -1816,7 +1815,7 @@ cvFindContours( void*  img,  CvMemStorage*  storage,
     return cvFindContours_Impl(img, storage, firstContour, cntHeaderSize, mode, method, offset, 1);
 }
 
-void cv::findContours( InputArray _image, OutputArrayOfArrays _contours,
+void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
                    OutputArray _hierarchy, int mode, int method, Point offset )
 {
     CV_INSTRUMENT_REGION();
@@ -1881,7 +1880,7 @@ void cv::findContours( InputArray _image, OutputArrayOfArrays _contours,
     }
 }
 
-void cv::findContours( InputArray _image, OutputArrayOfArrays _contours,
+void cv::findContours( InputOutputArray _image, OutputArrayOfArrays _contours,
                        int mode, int method, Point offset)
 {
     CV_INSTRUMENT_REGION();

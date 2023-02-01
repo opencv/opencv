@@ -67,8 +67,6 @@ class Builder:
         self.options = options
         self.build_dir = check_dir(options.build_dir, create=True)
         self.opencv_dir = check_dir(options.opencv_dir)
-        print('-----------------------------------------------------------')
-        print('options.opencv_dir:', options.opencv_dir)
         self.emscripten_dir = check_dir(options.emscripten_dir)
 
     def get_toolchain_file(self):
@@ -86,12 +84,10 @@ class Builder:
                "-DCMAKE_BUILD_TYPE=Release",
                "-DCMAKE_TOOLCHAIN_FILE='%s'" % self.get_toolchain_file(),
                "-DCPU_BASELINE=''",
-               "-DCMAKE_INSTALL_PREFIX=/usr/local",
                "-DCPU_DISPATCH=''",
                "-DCV_TRACE=OFF",
                "-DBUILD_SHARED_LIBS=OFF",
                "-DWITH_1394=OFF",
-               "-DWITH_ADE=OFF",
                "-DWITH_VTK=OFF",
                "-DWITH_EIGEN=OFF",
                "-DWITH_FFMPEG=OFF",
@@ -124,10 +120,9 @@ class Builder:
                "-DBUILD_opencv_calib3d=ON",
                "-DBUILD_opencv_dnn=ON",
                "-DBUILD_opencv_features2d=ON",
-               "-DBUILD_opencv_flann=ON",  # No bindings provided. This module is used as a dependency for other modules.
-               "-DBUILD_opencv_gapi=OFF",
+               "-DBUILD_opencv_flann=OFF",
                "-DBUILD_opencv_ml=OFF",
-               "-DBUILD_opencv_photo=ON",
+               "-DBUILD_opencv_photo=OFF",
                "-DBUILD_opencv_imgcodecs=OFF",
                "-DBUILD_opencv_shape=OFF",
                "-DBUILD_opencv_videoio=OFF",
@@ -139,10 +134,10 @@ class Builder:
                "-DBUILD_opencv_js=ON",
                "-DBUILD_opencv_python2=OFF",
                "-DBUILD_opencv_python3=OFF",
-               "-DBUILD_EXAMPLES=ON",
+               "-DBUILD_EXAMPLES=OFF",
                "-DBUILD_PACKAGE=OFF",
-               "-DBUILD_TESTS=ON",
-               "-DBUILD_PERF_TESTS=ON"]
+               "-DBUILD_TESTS=OFF",
+               "-DBUILD_PERF_TESTS=OFF"]
         if self.options.cmake_option:
             cmd += self.options.cmake_option
         if self.options.build_doc:
@@ -164,9 +159,6 @@ class Builder:
             cmd.append("-DBUILD_WASM_INTRIN_TESTS=ON")
         else:
             cmd.append("-DBUILD_WASM_INTRIN_TESTS=OFF")
-
-        if self.options.webnn:
-            cmd.append("-DWITH_WEBNN=ON")
 
         flags = self.get_build_flags()
         if flags:
@@ -190,8 +182,6 @@ class Builder:
             flags += "-msimd128 "
         if self.options.build_flags:
             flags += self.options.build_flags
-        if self.options.webnn:
-            flags += "-s USE_WEBNN=1 "
         return flags
 
     def config(self):
@@ -251,7 +241,6 @@ if __name__ == "__main__":
     # Write a path to modify file like argument of this flag
     parser.add_argument('--config', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'opencv_js.config.py'),
                         help="Specify configuration file with own list of exported into JS functions")
-    parser.add_argument('--webnn', action="store_true", help="Enable WebNN Backend")
 
     args = parser.parse_args()
 

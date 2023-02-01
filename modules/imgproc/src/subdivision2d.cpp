@@ -229,7 +229,7 @@ int Subdiv2D::newEdge()
 {
     if( freeQEdge <= 0 )
     {
-        qedges.emplace_back();
+        qedges.push_back(QuadEdge());
         freeQEdge = (int)(qedges.size()-1);
     }
     int edge = freeQEdge*4;

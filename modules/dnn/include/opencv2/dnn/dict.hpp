@@ -50,7 +50,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_INLINE_NS_BEGIN
+CV__DNN_EXPERIMENTAL_NS_BEGIN
 //! @addtogroup dnn
 //! @{
 
@@ -96,7 +96,7 @@ struct CV_EXPORTS_W DictValue
 
 private:
 
-    Param type;
+    int type;
 
     union
     {
@@ -106,7 +106,7 @@ private:
         void *pv;
     };
 
-    DictValue(Param _type, void *_p) : type(_type), pv(_p) {}
+    DictValue(int _type, void *_p) : type(_type), pv(_p) {}
     void release();
 };
 
@@ -153,7 +153,7 @@ public:
 };
 
 //! @}
-CV__DNN_INLINE_NS_END
+CV__DNN_EXPERIMENTAL_NS_END
 }
 }
 

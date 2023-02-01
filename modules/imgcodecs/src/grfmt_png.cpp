@@ -214,6 +214,9 @@ bool  PngDecoder::readHeader()
         }
     }
 
+    if( !result )
+        close();
+
     return result;
 }
 
@@ -301,6 +304,7 @@ bool  PngDecoder::readData( Mat& img )
         }
     }
 
+    close();
     return result;
 }
 

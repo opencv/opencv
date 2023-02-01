@@ -33,10 +33,6 @@
 
 #include <google/protobuf/stubs/macros.h>
 #include <google/protobuf/stubs/port.h>
-#include <google/protobuf/stubs/status.h>
-#include <google/protobuf/stubs/stringpiece.h>
-
-#include <google/protobuf/port_def.inc>
 
 // ===================================================================
 // emulates google3/base/logging.h
@@ -65,12 +61,16 @@ enum LogLevel {
 #endif
 };
 
+class StringPiece;
+namespace util {
+class Status;
+}
 class uint128;
 namespace internal {
 
 class LogFinisher;
 
-class PROTOBUF_EXPORT LogMessage {
+class LIBPROTOBUF_EXPORT LogMessage {
  public:
   LogMessage(LogLevel level, const char* filename, int line);
   ~LogMessage();
@@ -87,7 +87,7 @@ class PROTOBUF_EXPORT LogMessage {
   LogMessage& operator<<(double value);
   LogMessage& operator<<(void* value);
   LogMessage& operator<<(const StringPiece& value);
-  LogMessage& operator<<(const util::Status& status);
+  LogMessage& operator<<(const ::google::protobuf::util::Status& status);
   LogMessage& operator<<(const uint128& value);
 
  private:
@@ -102,7 +102,7 @@ class PROTOBUF_EXPORT LogMessage {
 
 // Used to make the entire "LOG(BLAH) << etc." expression have a void return
 // type and print a newline after each message.
-class PROTOBUF_EXPORT LogFinisher {
+class LIBPROTOBUF_EXPORT LogFinisher {
  public:
   void operator=(LogMessage& other);
 };
@@ -141,10 +141,10 @@ inline bool IsOk(bool status) { return status; }
 #undef GOOGLE_DCHECK_GT
 #undef GOOGLE_DCHECK_GE
 
-#define GOOGLE_LOG(LEVEL)                          \
-  ::google::protobuf::internal::LogFinisher() = \
-      ::google::protobuf::internal::LogMessage( \
-          ::google::protobuf::LOGLEVEL_##LEVEL, __FILE__, __LINE__)
+#define GOOGLE_LOG(LEVEL)                                                 \
+  ::google::protobuf::internal::LogFinisher() =                           \
+    ::google::protobuf::internal::LogMessage(                             \
+      ::google::protobuf::LOGLEVEL_##LEVEL, __FILE__, __LINE__)
 #define GOOGLE_LOG_IF(LEVEL, CONDITION) \
   !(CONDITION) ? (void)0 : GOOGLE_LOG(LEVEL)
 
@@ -162,15 +162,15 @@ namespace internal {
 template<typename T>
 T* CheckNotNull(const char* /* file */, int /* line */,
                 const char* name, T* val) {
-  if (val == nullptr) {
+  if (val == NULL) {
     GOOGLE_LOG(FATAL) << name;
   }
   return val;
 }
 }  // namespace internal
-#define GOOGLE_CHECK_NOTNULL(A)               \
-  ::google::protobuf::internal::CheckNotNull( \
-      __FILE__, __LINE__, "'" #A "' must not be nullptr", (A))
+#define GOOGLE_CHECK_NOTNULL(A) \
+  ::google::protobuf::internal::CheckNotNull(\
+      __FILE__, __LINE__, "'" #A "' must not be NULL", (A))
 
 #ifdef NDEBUG
 
@@ -208,7 +208,7 @@ typedef void LogHandler(LogLevel level, const char* filename, int line,
 // also help end users figure out a problem.  If you would prefer that
 // these messages be sent somewhere other than stderr, call SetLogHandler()
 // to set your own handler.  This returns the old handler.  Set the handler
-// to nullptr to ignore log messages (but see also LogSilencer, below).
+// to NULL to ignore log messages (but see also LogSilencer, below).
 //
 // Obviously, SetLogHandler is not thread-safe.  You should only call it
 // at initialization time, and probably not from library code.  If you
@@ -216,7 +216,7 @@ typedef void LogHandler(LogLevel level, const char* filename, int line,
 // have some code that tends to trigger them frequently and you know
 // the warnings are not important to you), use the LogSilencer class
 // below.
-PROTOBUF_EXPORT LogHandler* SetLogHandler(LogHandler* new_func);
+LIBPROTOBUF_EXPORT LogHandler* SetLogHandler(LogHandler* new_func);
 
 // Create a LogSilencer if you want to temporarily suppress all log
 // messages.  As long as any LogSilencer objects exist, non-fatal
@@ -225,7 +225,7 @@ PROTOBUF_EXPORT LogHandler* SetLogHandler(LogHandler* new_func);
 // accidentally suppress log messages occurring in another thread, but
 // since messages are generally for debugging purposes only, this isn't
 // a big deal.  If you want to intercept log messages, use SetLogHandler().
-class PROTOBUF_EXPORT LogSilencer {
+class LIBPROTOBUF_EXPORT LogSilencer {
  public:
   LogSilencer();
   ~LogSilencer();
@@ -233,7 +233,5 @@ class PROTOBUF_EXPORT LogSilencer {
 
 }  // namespace protobuf
 }  // namespace google
-
-#include <google/protobuf/port_undef.inc>
 
 #endif  // GOOGLE_PROTOBUF_STUBS_LOGGING_H_

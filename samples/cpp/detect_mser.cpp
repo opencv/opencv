@@ -500,7 +500,7 @@ int main(int argc, char *argv[])
             vector<vector <Point> > region;
             Mat desc;
 
-            if (b.dynamicCast<MSER>().get())
+            if (b.dynamicCast<MSER>() != NULL)
             {
                 Ptr<MSER> sbd = b.dynamicCast<MSER>();
                 sbd->detectRegions(img, region, zone);

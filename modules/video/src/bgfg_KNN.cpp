@@ -214,8 +214,6 @@ public:
         }
     }
 
-    virtual String getDefaultName() const CV_OVERRIDE { return "BackgroundSubtractor_KNN"; }
-
     virtual int getHistory() const CV_OVERRIDE { return history; }
     virtual void setHistory(int _nframes) CV_OVERRIDE { history = _nframes; }
 

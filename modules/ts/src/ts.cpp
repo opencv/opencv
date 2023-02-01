@@ -72,9 +72,7 @@
 #if defined _WIN32 || defined WINCE
 # include <windows.h>
 #else
-#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 # include <dirent.h>
-#endif
 # include <sys/stat.h>
 #endif
 
@@ -265,14 +263,14 @@ void BaseTest::clear()
 }
 
 
-cv::FileNode BaseTest::find_param( const cv::FileStorage& fs, const char* param_name )
+const CvFileNode* BaseTest::find_param( CvFileStorage* fs, const char* param_name )
 {
-    cv::FileNode node = fs[get_name()];
-    return node[param_name];
+    CvFileNode* node = cvGetFileNodeByName(fs, 0, get_name().c_str());
+    return node ? cvGetFileNodeByName( fs, node, param_name ) : 0;
 }
 
 
-int BaseTest::read_params( const cv::FileStorage& )
+int BaseTest::read_params( CvFileStorage* )
 {
     return 0;
 }
@@ -312,7 +310,7 @@ void BaseTest::safe_run( int start_from )
             char buf[1 << 16];
 
             const char* delim = exc.err.find('\n') == cv::String::npos ? "" : "\n";
-            snprintf( buf, sizeof(buf), "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d",
+            sprintf( buf, "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d",
                     errorStr, delim, exc.err.c_str(), exc.func.size() > 0 ?
                     exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line );
             ts->printf(TS::LOG, "%s\n", buf);
@@ -603,7 +601,7 @@ void TS::set_gtest_status()
         return SUCCEED();
 
     char seedstr[32];
-    snprintf(seedstr, sizeof(seedstr), "%08x%08x", (unsigned)(current_test_info.rng_seed>>32),
+    sprintf(seedstr, "%08x%08x", (unsigned)(current_test_info.rng_seed>>32),
                                 (unsigned)(current_test_info.rng_seed));
 
     string logs = "";
@@ -623,27 +621,20 @@ void TS::set_gtest_status()
 
 void TS::update_context( BaseTest* test, int test_case_idx, bool update_ts_context )
 {
-    CV_UNUSED(update_ts_context);
-
     if( current_test_info.test != test )
     {
         for( int i = 0; i <= CONSOLE_IDX; i++ )
             output_buf[i] = string();
-    }
-
-    if (test_case_idx >= 0)
-    {
-        current_test_info.rng_seed = param_seed + test_case_idx;
-        current_test_info.rng_seed0 = current_test_info.rng_seed;
-
-        rng = RNG(current_test_info.rng_seed);
-        cv::theRNG() = rng;
+        rng = RNG(params.rng_seed);
+        current_test_info.rng_seed0 = current_test_info.rng_seed = rng.state;
     }
 
     current_test_info.test = test;
     current_test_info.test_case_idx = test_case_idx;
     current_test_info.code = 0;
     cvSetErrStatus( CV_StsOk );
+    if( update_ts_context )
+        current_test_info.rng_seed = rng.state;
 }
 
 

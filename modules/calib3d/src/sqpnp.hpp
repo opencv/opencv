@@ -85,14 +85,13 @@ private:
 
     /*
     * @brief                Computes the 9x9 PSD Omega matrix and supporting matrices.
-    * @param objectPoints   The 3D points in object coordinates.
     */
-    void solveInternal(InputArray objectPoints);
+    void solveInternal();
 
     /*
     * @brief                Produces the distance from being orthogonal for a given 3x3 matrix
-    *                       in row-major order.
-    * @param e              The vector to test representing a 3x3 matrix in row-major order.
+    *                       in row-major form.
+    * @param e              The vector to test representing a 3x3 matrix in row major form.
     * @return               The distance the matrix is from being orthogonal.
     */
     static double orthogonalityError(const cv::Matx<double, 9, 1>& e);
@@ -100,49 +99,31 @@ private:
     /*
     * @brief                Processes a solution and sorts it by error.
     * @param solution       The solution to evaluate.
-    * @param objectPoints   The 3D points in object coordinates.
-    * @param min_error      The current minimum error.
+    * @param min_error          The current minimum error.
     */
-    void checkSolution(SQPSolution& solution, InputArray objectPoints, double& min_error);
+    void checkSolution(SQPSolution& solution, double& min_error);
 
     /*
-    * @brief                Computes the determinant of a matrix stored in row-major order.
-    * @param e              Vector representing a 3x3 matrix stored in row-major order.
+    * @brief                Computes the determinant of a matrix stored in row-major format.
+    * @param e              Vector representing a 3x3 matrix stored in row-major format.
     * @return               The determinant of the matrix.
     */
     static double det3x3(const cv::Matx<double, 9, 1>& e);
 
     /*
-    * @brief                Tests the cheirality on the mean object point for a given solution.
+    * @brief                Tests the chirality for a given solution.
     * @param solution       The solution to evaluate.
     */
     inline bool positiveDepth(const SQPSolution& solution) const;
 
     /*
-    * @brief                Tests the cheirality on all object points for a given solution.
-    * @param solution       The solution to evaluate.
-    * @param objectPoints   The 3D points in object coordinates.
+    * @brief                Determines the nearest rotation matrix to a given rotaiton matrix.
+    *                       Input and output are 9x1 vector representing a vector stored in row-major
+    *                       form.
+    * @param e              The input 3x3 matrix stored in a vector in row-major form.
+    * @param r              The nearest rotation matrix to the input e (again in row-major form).
     */
-    inline bool positiveMajorityDepths(const SQPSolution& solution, InputArray objectPoints) const;
-
-    /*
-    * @brief                Determines the nearest rotation matrix to a given rotation matrix using SVD.
-    *                       Input and output are 9x1 vector representing a matrix stored in row-major
-    *                       order.
-    * @param e              The input 3x3 matrix stored in a vector in row-major order.
-    * @param r              The nearest rotation matrix to the input e (again in row-major order).
-    */
-    static void nearestRotationMatrixSVD(const cv::Matx<double, 9, 1>& e,
-        cv::Matx<double, 9, 1>& r);
-
-    /*
-    * @brief                Determines the nearest rotation matrix to a given rotation matrix using the FOAM algorithm.
-    *                       Input and output are 9x1 vector representing a matrix stored in row-major
-    *                       order.
-    * @param e              The input 3x3 matrix stored in a vector in row-major order.
-    * @param r              The nearest rotation matrix to the input e (again in row-major order).
-    */
-    static void nearestRotationMatrixFOAM(const cv::Matx<double, 9, 1>& e,
+    static void nearestRotationMatrix(const cv::Matx<double, 9, 1>& e,
         cv::Matx<double, 9, 1>& r);
 
     /*

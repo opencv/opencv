@@ -71,38 +71,29 @@ void Feature2D::detect( InputArray image,
 }
 
 
-void Feature2D::detect( InputArrayOfArrays images,
+void Feature2D::detect( InputArrayOfArrays _images,
                         std::vector<std::vector<KeyPoint> >& keypoints,
-                        InputArrayOfArrays masks )
+                        InputArrayOfArrays _masks )
 {
     CV_INSTRUMENT_REGION();
 
-    int nimages = (int)images.total();
+    vector<Mat> images, masks;
 
-    if (!masks.empty())
+    _images.getMatVector(images);
+    size_t i, nimages = images.size();
+
+    if( !_masks.empty() )
     {
-        CV_Assert(masks.total() == (size_t)nimages);
+        _masks.getMatVector(masks);
+        CV_Assert(masks.size() == nimages);
     }
 
     keypoints.resize(nimages);
 
-    if (images.isMatVector())
+    for( i = 0; i < nimages; i++ )
     {
-       for (int i = 0; i < nimages; i++)
-       {
-           detect(images.getMat(i), keypoints[i], masks.empty() ? noArray() : masks.getMat(i));
-       }
+        detect(images[i], keypoints[i], masks.empty() ? Mat() : masks[i] );
     }
-    else
-    {
-        // assume UMats
-        for (int i = 0; i < nimages; i++)
-        {
-            detect(images.getUMat(i), keypoints[i], masks.empty() ? noArray() : masks.getUMat(i));
-        }
-    }
-
-
 }
 
 /*
@@ -125,40 +116,29 @@ void Feature2D::compute( InputArray image,
     detectAndCompute(image, noArray(), keypoints, descriptors, true);
 }
 
-void Feature2D::compute( InputArrayOfArrays images,
+void Feature2D::compute( InputArrayOfArrays _images,
                          std::vector<std::vector<KeyPoint> >& keypoints,
-                         OutputArrayOfArrays descriptors )
+                         OutputArrayOfArrays _descriptors )
 {
     CV_INSTRUMENT_REGION();
 
-    if( !descriptors.needed() )
+    if( !_descriptors.needed() )
         return;
 
-    int nimages = (int)images.total();
+    vector<Mat> images;
 
-    CV_Assert( keypoints.size() == (size_t)nimages );
-    // resize descriptors to appropriate size and compute
-    if (descriptors.isMatVector())
+    _images.getMatVector(images);
+    size_t i, nimages = images.size();
+
+    CV_Assert( keypoints.size() == nimages );
+    CV_Assert( _descriptors.kind() == _InputArray::STD_VECTOR_MAT );
+
+    vector<Mat>& descriptors = *(vector<Mat>*)_descriptors.getObj();
+    descriptors.resize(nimages);
+
+    for( i = 0; i < nimages; i++ )
     {
-        vector<Mat>& vec = *(vector<Mat>*)descriptors.getObj();
-        vec.resize(nimages);
-        for (int i = 0; i < nimages; i++)
-        {
-            compute(images.getMat(i), keypoints[i], vec[i]);
-        }
-    }
-    else if (descriptors.isUMatVector())
-    {
-        vector<UMat>& vec = *(vector<UMat>*)descriptors.getObj();
-        vec.resize(nimages);
-        for (int i = 0; i < nimages; i++)
-        {
-            compute(images.getUMat(i), keypoints[i], vec[i]);
-        }
-    }
-    else
-    {
-        CV_Error(Error::StsBadArg, "descriptors must be vector<Mat> or vector<UMat>");
+        compute(images[i], keypoints[i], descriptors[i]);
     }
 }
 

@@ -3,11 +3,12 @@
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 libdir=@libdir@
-includedir=@includedir@
+includedir_old=@includedir@/opencv
+includedir_new=@includedir@
 
 Name: OpenCV
 Description: Open Source Computer Vision Library
 Version: @OPENCV_VERSION_PLAIN@
 Libs: @OPENCV_PC_LIBS@
 Libs.private: @OPENCV_PC_LIBS_PRIVATE@
-Cflags: -I${includedir}
+Cflags: -I${includedir_old} -I${includedir_new}

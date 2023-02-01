@@ -43,7 +43,6 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
-#include <atomic>
 #include <limits>
 #include <iostream>
 #include "mathfuncs.hpp"
@@ -2133,8 +2132,8 @@ const double* getExpTab64f()
 const float* getExpTab32f()
 {
     static float CV_DECL_ALIGNED(64) expTab_f[EXPTAB_MASK+1];
-    static std::atomic<bool> expTab_f_initialized(false);
-    if (!expTab_f_initialized.load())
+    static volatile bool expTab_f_initialized = false;
+    if (!expTab_f_initialized)
     {
         for( int j = 0; j <= EXPTAB_MASK; j++ )
             expTab_f[j] = (float)expTab[j];
@@ -2415,8 +2414,8 @@ const double* getLogTab64f()
 const float* getLogTab32f()
 {
     static float CV_DECL_ALIGNED(64) logTab_f[(LOGTAB_MASK+1)*2];
-    static std::atomic<bool> logTab_f_initialized(false);
-    if (!logTab_f_initialized.load())
+    static volatile bool logTab_f_initialized = false;
+    if (!logTab_f_initialized)
     {
         for (int j = 0; j < (LOGTAB_MASK+1)*2; j++)
             logTab_f[j] = (float)logTab[j];

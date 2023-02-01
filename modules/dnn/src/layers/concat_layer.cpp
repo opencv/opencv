@@ -42,22 +42,12 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
-#include "../op_vkcom.hpp"
-#include "../op_webnn.hpp"
-#include "../op_timvx.hpp"
-#include "../op_cann.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
-#endif
-
-#ifdef HAVE_CUDA
-#include "../cuda4dnn/primitives/concat.hpp"
-using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -73,10 +63,6 @@ public:
         setParamsFrom(params);
         axis = params.get<int>("axis", 1);
         padding = params.get<bool>("padding", false);
-        paddingValue = params.get<int>("padding_value", 0);
-
-        zeropoint = params.get<int>("zeropoints", 0);
-        scale = params.get<float>("scales", 1.0f);
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -118,41 +104,21 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-#ifdef HAVE_TIMVX
-        if (backendId == DNN_BACKEND_TIMVX && haveTimVX() && !padding)
-        {
-            if (axis == -1)
-                return false;
-            int len = this->type.length();
-            if (len <= 4)
-                return false;
-            if (this->type.substr(len - 4) == "Int8")
-                return true;
-            else
-                return false;
-        }
-#endif
-
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return true;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
-               (backendId == DNN_BACKEND_WEBNN && !padding) ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding) ||
-               (backendId == DNN_BACKEND_CANN && !padding);
+               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding);
     }
 
-    template <class T>
     class ChannelConcatInvoker : public ParallelLoopBody
     {
     public:
         std::vector<Mat>* inputs;
         Mat* output;
         int nstripes;
-        std::vector<const T*> chptrs;
+        std::vector<const float*> chptrs;
 
         static void run(std::vector<Mat>& inputs, Mat& output, int nstripes)
         {
@@ -166,14 +132,14 @@ public:
             for( i = 0; i < ninputs; i++ )
             {
                 Mat& inp = inputs[i];
-                CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16S || inp.type() == CV_8S) &&
+                CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16S) &&
                            inp.dims == 4 && inp.size[0] == output.size[0] &&
                            inp.size[2] == output.size[2] &&
                            inp.size[3] == output.size[3] );
                 nchannels += inp.size[1];
             }
             CV_Assert( nchannels == output.size[1] );
-            CV_Assert( output.isContinuous() && (output.type() == CV_32F || output.type() == CV_16S || output.type() == CV_8S) );
+            CV_Assert( output.isContinuous() && (output.type() == CV_32F || output.type() == CV_16S) );
 
             cc.chptrs.resize(nchannels*batchsz);
 
@@ -184,7 +150,7 @@ public:
                 for( int j = 0; j < batchsz; j++ )
                     for( int k = 0; k < inp.size[1]; k++ )
                     {
-                        const T* ptr = inp.ptr<T>(j, k);
+                        const float* ptr = inp.ptr<float>(j, k);
                         cc.chptrs[ofs + j*nchannels + k] = ptr;
                     }
                 ofs += inp.size[1];
@@ -203,8 +169,8 @@ public:
             size_t stripeSize = (total + nstripes - 1)/nstripes;
             size_t stripeStart = r.start*stripeSize;
             size_t stripeEnd = std::min(total, r.end*stripeSize);
-            const T** ptrs = (const T**)&chptrs[0];
-            T* outptr = output->ptr<T>();
+            const float** ptrs = (const float**)&chptrs[0];
+            float* outptr = output->ptr<float>();
             size_t blockSize0 = 1 << 16;
 
             for( size_t ofs0 = stripeStart; ofs0 < stripeEnd; )
@@ -275,8 +241,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                   inputs_arr.depth() != CV_8S,
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         std::vector<Mat> inputs, outputs;
@@ -287,15 +252,12 @@ public:
         Mat& outMat = outputs[0];
 
         if (padding)
-            outMat.setTo(paddingValue);
+            outMat.setTo(0);
 
         if( cAxis == 1 && outMat.dims == 4 && !padding)
         {
             int nstripes = getNumThreads();
-            if (outMat.type() == CV_8S)
-                ChannelConcatInvoker<int8_t>::run(inputs, outMat, nstripes);
-            else
-                ChannelConcatInvoker<float>::run(inputs, outMat, nstripes);
+            ChannelConcatInvoker::run(inputs, outMat, nstripes);
         }
         else
         {
@@ -315,32 +277,6 @@ public:
                 ranges[cAxis].start = ranges[cAxis].end;
             }
         }
-    }
-
-#ifdef HAVE_CUDA
-    Ptr<BackendNode> initCUDA(
-        void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
-    ) override
-    {
-        auto context = reinterpret_cast<csl::CSLContext*>(context_);
-
-        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
-        auto concat_axis = normalize_axis(axis, input_wrapper->getRank());
-        return make_cuda_node<cuda4dnn::ConcatOp>(preferableTarget, std::move(context->stream), concat_axis, padding);
-    }
-#endif
-
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
-    {
-#ifdef HAVE_VULKAN
-        vkcom::Tensor in = VkComTensor(input[0]);
-        int cAxis = normalize_axis(axis, in.dimNum());
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpConcat(cAxis));
-        return Ptr<BackendNode>(new VkComBackendNode(input, op));
-#endif // HAVE_VULKAN
-        return Ptr<BackendNode>();
     }
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
@@ -366,44 +302,13 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-        CV_Assert(inputsWrapper.size() == nodes.size());
-
-        // create operator
-        std::string op_name = cv::format("concat_%d", index);
-        auto op = std::make_shared<ge::op::ConcatD>(op_name);
-
-        // set attributes
-        int N = inputsWrapper.size();
-        op->set_attr_concat_dim(axis);
-        op->set_attr_N(N);
-
-        // set inputs : x (dynamic)
-        op->create_dynamic_input_x(N);
-        for (int i = 0; i < N; i++)
-        {
-            auto x_i = inputsWrapper[i].dynamicCast<CannBackendWrapper>();
-            auto x_i_desc = x_i->getTensorDesc();
-            auto op_x_i = nodes[i].dynamicCast<CannBackendNode>()->getOp();
-            op->set_dynamic_input_x(i, *op_x_i, "y");
-            op->update_dynamic_input_desc_x(i, *x_i_desc);
-        }
-
-        // set outputs
-        auto output_y_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
-        op->update_output_desc_y(*output_y_desc);
-
-        return Ptr<BackendNode>(new CannBackendNode(op));
-    }
-#endif
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        const int numDims = nodes[0].dynamicCast<InfEngineNgraphNode>()->node->get_shape().size();
+        InferenceEngine::DataPtr data = ngraphDataNode(inputs[0]);
+        const int numDims = data->getDims().size();
         const int cAxis = normalize_axis(axis, numDims);
         std::vector<size_t> maxDims(numDims, 0);
 
@@ -411,17 +316,16 @@ public:
         ngraph::OutputVector inp_nodes;
         for (int i = 0; i < nodes.size(); ++i)
         {
-            auto inp = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
-            inp_nodes.push_back(inp);
+            inp_nodes.push_back(nodes[i].dynamicCast<InfEngineNgraphNode>()->node);
 
-            std::vector<size_t> inpShape = inp->get_shape();
+            std::vector<size_t> inpShape = ngraphDataNode(inputs[i])->getDims();
             for (int i = 0; i < numDims; ++i)
                 maxDims[i] = std::max(maxDims[i], inpShape[i]);
         }
         for (int i = 0; i < inp_nodes.size(); ++i)
         {
             bool needPadding = false;
-            std::vector<size_t> inpShape = inp_nodes[i].get_shape();
+            std::vector<size_t> inpShape = ngraphDataNode(inputs[i])->getDims();
             std::vector<int64_t> begins(inpShape.size(), 0), ends(inpShape.size(), 0);
             for (int j = 0; j < inpShape.size(); ++j)
             {
@@ -445,112 +349,6 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(concat));
     }
 #endif  // HAVE_DNN_NGRAPH
-
-#ifdef HAVE_TIMVX
-    virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,
-                                       const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
-                                       const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
-                                       bool isLast) CV_OVERRIDE
-    {
-        // tvGraph Initialization.
-        auto timVxInfo = reinterpret_cast<TimVXInfo *>(timVXInfo_);
-        CV_Assert(timVxInfo);
-        Ptr<TimVXGraph> tvGraph = timVxInfo->getGraph();
-        CV_Assert(tvGraph);
-        Ptr<tim::vx::Graph> graph = tvGraph->graph;
-
-        Ptr<TimVXBackendWrapper> inputWrapper = inputsWrapper[0].dynamicCast<TimVXBackendWrapper>();
-        // convert axis from OpenCV NCHW toTimVX WHCN.
-        Mat blob0 = inputWrapper->getMat();
-
-        // TODO! support TimVX 5 dim in future.
-        if(blob0.dims >4)
-            return Ptr<TimVXBackendNode>();
-
-        int cAxis = normalize_axis(axis, blob0.dims);
-        int tvAxis = blob0.dims - 1 - cAxis;
-        CV_Assert(tvAxis>= 0);
-        std::vector<int> inputsIndex, outputsIndex;
-        int input_index = -1, output_index = -1;
-
-        // Input
-        Ptr<tim::vx::Quantization> tvQuant = Ptr<tim::vx::Quantization>(
-                new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, scale, zeropoint));
-
-        for (int i = 0; i<inputsWrapper.size(); i++)
-        {
-            inputWrapper = inputsWrapper[i].dynamicCast<TimVXBackendWrapper>();
-            if (inputWrapper->isTensor())
-            {
-                input_index = tvGraph->getTensorIndex(inputWrapper->getTensor());
-                if (input_index == -1)
-                {
-                    // Copy To New inputWrapper
-                    Mat tmp = inputWrapper->getMat();
-                    inputWrapper = Ptr<TimVXBackendWrapper>(new TimVXBackendWrapper(tmp));
-                }
-            }
-
-            if (!inputWrapper->isTensor())
-            {
-                inputWrapper->createTensor(graph,tim::vx::TensorAttribute::INPUT, tvQuant);
-                input_index = tvGraph->addWrapper(inputWrapper);
-            }
-            inputsIndex.push_back(input_index);
-        }
-
-        //Output
-        CV_Assert(outputsWrapper.size() == 1);
-        Ptr<TimVXBackendWrapper> outputWrapper = outputsWrapper[0].dynamicCast<TimVXBackendWrapper>();
-
-        if (isLast)
-        {
-            auto shapeType = getShapeTypeFromMat(outputWrapper->getMat());
-
-            // For Graph Output tensor, we need to set tensor shape before createTensor().
-            outputWrapper->setTensorShape(shapeType);
-            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::OUTPUT, tvQuant);
-        }
-        else
-        {
-            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::TRANSIENT, tvQuant);
-        }
-        output_index = tvGraph->addWrapper(outputWrapper);
-        outputsIndex.push_back(output_index);
-
-        std::shared_ptr<tim::vx::Operation> tvConcate = graph->CreateOperation<tim::vx::ops::Concat>(tvAxis, inputsWrapper.size());
-
-        Ptr<TimVXBackendNode> tvBackendNode = new TimVXBackendNode(tvGraph, tvConcate, inputsIndex, outputsIndex);
-
-        return tvBackendNode;
-    }
-#endif // HAVE_TIMVX
-
-    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
-    {
-        if (padding)
-            params.set("padding_value", zeropoints[1][0]);
-        return true;
-    }
-
-#ifdef HAVE_WEBNN
-    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
-        auto& webnnGraphBuilder = node->net->builder;
-        std::vector<ml::Operand> inputsOperand;
-        for (int i = 0; i < nodes.size(); i++)
-        {
-            inputsOperand.push_back(nodes[i].dynamicCast<WebnnBackendNode>()->operand);
-        }
-        auto operand = webnnGraphBuilder.Concat(inputsOperand.size(), inputsOperand.data(), axis);
-        return Ptr<BackendNode>(new WebnnBackendNode(operand));
-    }
-#endif
-
-    int zeropoint;
-    float scale;
 };
 
 Ptr<ConcatLayer> ConcatLayer::create(const LayerParams& params)

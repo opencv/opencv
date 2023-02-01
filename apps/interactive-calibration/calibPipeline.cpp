@@ -5,8 +5,6 @@
 #include "calibPipeline.hpp"
 
 #include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/core/utils/logger.hpp>
 
 #include <stdexcept>
 
@@ -31,61 +29,37 @@ CalibPipeline::CalibPipeline(captureParameters params) :
 
 PipelineExitStatus CalibPipeline::start(std::vector<cv::Ptr<FrameProcessor> > processors)
 {
-    auto open_camera = [this] () {
-        if(mCaptureParams.source == Camera)
-        {
-            mCapture.open(mCaptureParams.camID);
-            cv::Size maxRes = getCameraResolution();
-            cv::Size neededRes = mCaptureParams.cameraResolution;
+    if(mCaptureParams.source == Camera && !mCapture.isOpened())
+    {
+        mCapture.open(mCaptureParams.camID);
+        cv::Size maxRes = getCameraResolution();
+        cv::Size neededRes = mCaptureParams.cameraResolution;
 
-            if(maxRes.width < neededRes.width) {
-                double aR = (double)maxRes.width / maxRes.height;
-                mCapture.set(cv::CAP_PROP_FRAME_WIDTH, neededRes.width);
-                mCapture.set(cv::CAP_PROP_FRAME_HEIGHT, neededRes.width/aR);
-            }
-            else if(maxRes.height < neededRes.height) {
-                double aR = (double)maxRes.width / maxRes.height;
-                mCapture.set(cv::CAP_PROP_FRAME_HEIGHT, neededRes.height);
-                mCapture.set(cv::CAP_PROP_FRAME_WIDTH, neededRes.height*aR);
-            }
-            else {
-                mCapture.set(cv::CAP_PROP_FRAME_HEIGHT, neededRes.height);
-                mCapture.set(cv::CAP_PROP_FRAME_WIDTH, neededRes.width);
-            }
-            mCapture.set(cv::CAP_PROP_AUTOFOCUS, 0);
+        if(maxRes.width < neededRes.width) {
+            double aR = (double)maxRes.width / maxRes.height;
+            mCapture.set(cv::CAP_PROP_FRAME_WIDTH, neededRes.width);
+            mCapture.set(cv::CAP_PROP_FRAME_HEIGHT, neededRes.width/aR);
         }
-        else if (mCaptureParams.source == File)
-            mCapture.open(mCaptureParams.videoFileName);
-    };
-
-    if(!mCapture.isOpened()) {
-        open_camera();
+        else if(maxRes.height < neededRes.height) {
+            double aR = (double)maxRes.width / maxRes.height;
+            mCapture.set(cv::CAP_PROP_FRAME_HEIGHT, neededRes.height);
+            mCapture.set(cv::CAP_PROP_FRAME_WIDTH, neededRes.height*aR);
+        }
+        else {
+            mCapture.set(cv::CAP_PROP_FRAME_HEIGHT, neededRes.height);
+            mCapture.set(cv::CAP_PROP_FRAME_WIDTH, neededRes.width);
+        }
+        mCapture.set(cv::CAP_PROP_AUTOFOCUS, 0);
     }
+    else if (mCaptureParams.source == File && !mCapture.isOpened())
+        mCapture.open(mCaptureParams.videoFileName);
     mImageSize = cv::Size((int)mCapture.get(cv::CAP_PROP_FRAME_WIDTH), (int)mCapture.get(cv::CAP_PROP_FRAME_HEIGHT));
 
     if(!mCapture.isOpened())
         throw std::runtime_error("Unable to open video source");
 
-    cv::Mat frame, processedFrame, resizedFrame;
-    while (true) {
-        if (!mCapture.grab())
-        {
-            if (!mCaptureParams.forceReopen)
-            {
-                CV_LOG_ERROR(NULL, "VideoCapture error: could not grab the frame.");
-                break;
-            }
-
-            CV_LOG_INFO(NULL, "VideoCapture error: trying to reopen...");
-            do
-            {
-                open_camera();
-            } while (!mCapture.isOpened() || !mCapture.grab());
-
-            CV_LOG_INFO(NULL, "VideoCapture error: reopened successfully.");
-            auto newSize = cv::Size((int)mCapture.get(cv::CAP_PROP_FRAME_WIDTH), (int)mCapture.get(cv::CAP_PROP_FRAME_HEIGHT));
-            CV_CheckEQ(mImageSize, newSize, "Camera image size changed after reopening.");
-        }
+    cv::Mat frame, processedFrame;
+    while(mCapture.grab()) {
         mCapture.retrieve(frame);
         if(mCaptureParams.flipVertical)
             cv::flip(frame, frame, -1);
@@ -93,15 +67,7 @@ PipelineExitStatus CalibPipeline::start(std::vector<cv::Ptr<FrameProcessor> > pr
         frame.copyTo(processedFrame);
         for (std::vector<cv::Ptr<FrameProcessor> >::iterator it = processors.begin(); it != processors.end(); ++it)
             processedFrame = (*it)->processFrame(processedFrame);
-        if (std::fabs(mCaptureParams.zoom - 1.) > 0.001f)
-        {
-            cv::resize(processedFrame, resizedFrame, cv::Size(), mCaptureParams.zoom, mCaptureParams.zoom);
-        }
-        else
-        {
-            resizedFrame = std::move(processedFrame);
-        }
-        cv::imshow(mainWindowName, resizedFrame);
+        cv::imshow(mainWindowName, processedFrame);
         char key = (char)cv::waitKey(CAP_DELAY);
 
         if(key == 27) // esc

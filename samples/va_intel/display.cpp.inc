@@ -10,8 +10,6 @@
 #include <va/va.h>
 # include <va/va_drm.h>
 
-#include "opencv2/core.hpp"  // cv::format()
-
 namespace va {
 
 bool openDisplay();
@@ -72,9 +70,10 @@ static unsigned readId(const char* devName, const char* idName)
 {
     long int id = 0;
 
-    std::string fileName = cv::format("%s/%s/%s", VA_INTEL_PCI_DIR, devName, idName);
+    char fileName[256];
+    snprintf(fileName, sizeof(fileName), "%s/%s/%s", VA_INTEL_PCI_DIR, devName, idName);
 
-    FILE* file = fopen(fileName.c_str(), "r");
+    FILE* file = fopen(fileName, "r");
     if (file)
     {
         char str[16] = "";
@@ -88,6 +87,7 @@ static unsigned readId(const char* devName, const char* idName)
 static int findAdapter(unsigned desiredVendorId)
 {
     int adapterIndex = -1;
+    int numAdapters = 0;
 
     Directory dir(VA_INTEL_PCI_DIR);
 
@@ -101,17 +101,10 @@ static int findAdapter(unsigned desiredVendorId)
             unsigned vendorId = readId(name, "vendor");
             if (vendorId == desiredVendorId)
             {
-                std::string subdirName = cv::format("%s/%s/%s", VA_INTEL_PCI_DIR, name, "drm");
-                Directory subdir(subdirName.c_str());
-                for (int j = 0; j < subdir.count(); ++j)
-                {
-                    if (!strncmp(subdir[j]->d_name, "card", 4))
-                    {
-                        adapterIndex = strtoul(subdir[j]->d_name + 4, NULL, 10);
-                    }
-                }
+                adapterIndex = numAdapters;
                 break;
             }
+            ++numAdapters;
         }
     }
 
@@ -130,12 +123,18 @@ public:
             numbers[1] = adapterIndex;
             for (int i = 0;  i < NUM_NODES;  ++i)
             {
-                paths[i] = cv::format("%s%s%d", VA_INTEL_DRI_DIR, names[i], numbers[i]);
+                int sz = sizeof(VA_INTEL_DRI_DIR) + strlen(names[i]) + 3;
+                paths[i] = new char [sz];
+                snprintf(paths[i], sz, "%s%s%d", VA_INTEL_DRI_DIR, names[i], numbers[i]);
             }
         }
     ~NodeInfo()
         {
-            // nothing
+            for (int i = 0;  i < NUM_NODES;  ++i)
+            {
+                delete paths[i];
+                paths[i] = 0;
+            }
         }
     int count() const
         {
@@ -143,10 +142,10 @@ public:
         }
     const char* path(int index) const
         {
-            return ((index >= 0) && (index < NUM_NODES)) ? paths[index].c_str() : 0;
+            return ((index >= 0) && (index < NUM_NODES)) ? paths[index] : 0;
         }
 private:
-    std::string paths[NUM_NODES];
+    char* paths[NUM_NODES];
 };
 
 static bool openDeviceIntel();

@@ -59,12 +59,6 @@
 #endif
 #endif
 
-#include "../op_cuda.hpp"
-#ifdef HAVE_CUDA
-#include "../cuda4dnn/primitives/reorg.hpp"
-using namespace cv::dnn::cuda4dnn;
-#endif
-
 namespace cv
 {
 namespace dnn
@@ -155,8 +149,7 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return true;
 #endif
-        return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
 #ifdef HAVE_OPENCL
@@ -209,25 +202,6 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(reorg));
     }
 #endif  // HAVE_DNN_NGRAPH
-
-
-#ifdef HAVE_CUDA
-    Ptr<BackendNode> initCUDA(
-        void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
-    ) override
-    {
-        auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        return make_cuda_node<cuda4dnn::ReorgOp>(preferableTarget, std::move(context->stream), reorgStride);
-    }
-#endif
-
-    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
-    {
-        return true;
-    }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

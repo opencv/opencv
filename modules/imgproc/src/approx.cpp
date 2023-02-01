@@ -119,7 +119,7 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
         }
     }
 
-    //CV_Assert( pt.x == chain->origin.x && pt.y == chain->origin.y );
+    //assert( pt.x == chain->origin.x && pt.y == chain->origin.y );
 
     if( method <= CV_CHAIN_APPROX_SIMPLE )
         return cvEndWriteSeq( &writer );

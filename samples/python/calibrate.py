@@ -57,7 +57,7 @@ def main():
 
     def processImage(fn):
         print('processing %s... ' % fn)
-        img = cv.imread(fn, cv.IMREAD_GRAYSCALE)
+        img = cv.imread(fn, 0)
         if img is None:
             print("Failed to load", fn)
             return None

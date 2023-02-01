@@ -41,10 +41,9 @@ import cv2 as cv
 import numpy as np
 
 img = cv.imread('star.jpg')
-assert img is not None, "file could not be read, check with os.path.exists()"
 img_gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
 ret,thresh = cv.threshold(img_gray, 127, 255,0)
-contours,hierarchy = cv.findContours(thresh,2,1)
+im2,contours,hierarchy = cv.findContours(thresh,2,1)
 cnt = contours[0]
 
 hull = cv.convexHull(cnt,returnPoints = False)
@@ -93,16 +92,14 @@ docs.
 import cv2 as cv
 import numpy as np
 
-img1 = cv.imread('star.jpg', cv.IMREAD_GRAYSCALE)
-img2 = cv.imread('star2.jpg', cv.IMREAD_GRAYSCALE)
-assert img1 is not None, "file could not be read, check with os.path.exists()"
-assert img2 is not None, "file could not be read, check with os.path.exists()"
+img1 = cv.imread('star.jpg',0)
+img2 = cv.imread('star2.jpg',0)
 
 ret, thresh = cv.threshold(img1, 127, 255,0)
 ret, thresh2 = cv.threshold(img2, 127, 255,0)
-contours,hierarchy = cv.findContours(thresh,2,1)
+im2,contours,hierarchy = cv.findContours(thresh,2,1)
 cnt1 = contours[0]
-contours,hierarchy = cv.findContours(thresh2,2,1)
+im2,contours,hierarchy = cv.findContours(thresh2,2,1)
 cnt2 = contours[0]
 
 ret = cv.matchShapes(cnt1,cnt2,1,0.0)

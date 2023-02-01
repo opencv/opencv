@@ -43,10 +43,6 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#ifdef BUILD_PLUGIN
-#include "opencv2/core/utility.hpp"
-#else  // BUILD_PLUGIN
-
 #include "opencv2/opencv_modules.hpp"
 #include "cvconfig.h"
 
@@ -62,6 +58,7 @@
 #include "opencv2/core/ocl.hpp"
 #endif
 
+#include <assert.h>
 #include <ctype.h>
 #include <float.h>
 #include <limits.h>
@@ -91,7 +88,11 @@
 #include "opencv2/core/vsx_utils.hpp"
 #include "hal_replacement.hpp"
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+#include "opencv2/core/core_tegra.hpp"
+#else
 #define GET_OPTIMIZED(func) (func)
+#endif
 
 namespace cv
 {
@@ -273,7 +274,7 @@ enum { BLOCK_SIZE = 1024 };
 #define ARITHM_USE_IPP 0
 #endif
 
-inline bool checkScalar(const Mat& sc, int atype, _InputArray::KindFlag sckind, _InputArray::KindFlag akind)
+inline bool checkScalar(const Mat& sc, int atype, int sckind, int akind)
 {
     if( sc.dims > 2 || !sc.isContinuous() )
         return false;
@@ -287,7 +288,7 @@ inline bool checkScalar(const Mat& sc, int atype, _InputArray::KindFlag sckind, 
            (sz == Size(1, 4) && sc.type() == CV_64F && cn <= 4);
 }
 
-inline bool checkScalar(InputArray sc, int atype, _InputArray::KindFlag sckind, _InputArray::KindFlag akind)
+inline bool checkScalar(InputArray sc, int atype, int sckind, int akind)
 {
     if( sc.dims() > 2 || !sc.isContinuous() )
         return false;
@@ -325,10 +326,13 @@ struct CoreTLSData
 {
     CoreTLSData() :
 //#ifdef HAVE_OPENCL
-        oclExecutionContextInitialized(false), useOpenCL(-1),
+        device(0), useOpenCL(-1),
 //#endif
         useIPP(-1),
         useIPP_NE(-1)
+#ifdef HAVE_TEGRA_OPTIMIZATION
+        ,useTegra(-1)
+#endif
 #ifdef HAVE_OPENVX
         ,useOpenVX(-1)
 #endif
@@ -336,12 +340,15 @@ struct CoreTLSData
 
     RNG rng;
 //#ifdef HAVE_OPENCL
-    ocl::OpenCLExecutionContext oclExecutionContext;
-    bool oclExecutionContextInitialized;
+    int device; // device index of an array of devices in a context, see also Device::getDefault
+    ocl::Queue oclQueue; // the queue used for running a kernel, see also getQueue, Kernel::run
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
 //#endif
     int useIPP;    // 1 - use, 0 - do not use, -1 - auto/not initialized
     int useIPP_NE; // 1 - use, 0 - do not use, -1 - auto/not initialized
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    int useTegra; // 1 - use, 0 - do not use, -1 - auto/not initialized
+#endif
 #ifdef HAVE_OPENVX
     int useOpenVX; // 1 - use, 0 - do not use, -1 - auto/not initialized
 #endif
@@ -372,8 +379,15 @@ cv::Mutex& getInitializationMutex();
 int64 getTimestampNS();
 
 
+// TODO Memory barriers?
 #define CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, RET_VALUE) \
-    static TYPE* const instance = INITIALIZER; \
+    static TYPE* volatile instance = NULL; \
+    if (instance == NULL) \
+    { \
+        cv::AutoLock lock(cv::getInitializationMutex()); \
+        if (instance == NULL) \
+            instance = INITIALIZER; \
+    } \
     return RET_VALUE;
 
 #define CV_SINGLETON_LAZY_INIT(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, instance)
@@ -385,5 +399,4 @@ int cv_snprintf(char* buf, int len, const char* fmt, ...);
 int cv_vsnprintf(char* buf, int len, const char* fmt, va_list args);
 }
 
-#endif  // BUILD_PLUGIN
-#endif  // __OPENCV_PRECOMP_H__
+#endif /*_CXCORE_INTERNAL_H_*/

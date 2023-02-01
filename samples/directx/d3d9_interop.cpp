@@ -17,6 +17,7 @@
 
 #include "d3dsample.hpp"
 
+#pragma comment (lib, "d3d9.lib")
 
 
 class D3D9WinApp : public D3DSample
@@ -257,22 +258,22 @@ public:
             int  y = 0;
 
             buf[0] = 0;
-            snprintf(buf, sizeof(buf), "mode: %s", m_modeStr[mode].c_str());
+            sprintf(buf, "mode: %s", m_modeStr[mode].c_str());
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
             buf[0] = 0;
-            snprintf(buf, sizeof(buf), m_demo_processing ? "blur frame" : "copy frame");
+            sprintf(buf, m_demo_processing ? "blur frame" : "copy frame");
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
             buf[0] = 0;
-            snprintf(buf, sizeof(buf), "time: %4.1f msec", time);
+            sprintf(buf, "time: %4.1f msec", time);
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
             buf[0] = 0;
-            snprintf(buf, sizeof(buf), "OpenCL device: %s", oclDevName.c_str());
+            sprintf(buf, "OpenCL device: %s", oclDevName.c_str());
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             ::SelectObject(hDC, hOldFont);

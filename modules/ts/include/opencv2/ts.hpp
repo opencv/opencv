@@ -37,7 +37,6 @@
 #include <iterator>
 #include <limits>
 #include <algorithm>
-#include <set>
 
 
 #ifndef OPENCV_32BIT_CONFIGURATION
@@ -290,7 +289,7 @@ double getMaxVal(int depth);
 
 Size randomSize(RNG& rng, double maxSizeLog);
 void randomSize(RNG& rng, int minDims, int maxDims, double maxSizeLog, vector<int>& sz);
-int randomType(RNG& rng, cv::_OutputArray::DepthMask typeMask, int minChannels, int maxChannels);
+int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels);
 Mat randomMat(RNG& rng, Size size, int type, double minVal, double maxVal, bool useRoi);
 Mat randomMat(RNG& rng, const vector<int>& size, int type, double minVal, double maxVal, bool useRoi);
 void add(const Mat& a, double alpha, const Mat& b, double beta,
@@ -326,8 +325,7 @@ void copyMakeBorder(const Mat& src, Mat& dst, int top, int bottom, int left, int
 Mat calcSobelKernel2D( int dx, int dy, int apertureSize, int origin=0 );
 Mat calcLaplaceKernel2D( int aperture_size );
 
-void initUndistortMap( const Mat& a, const Mat& k, const Mat& R, const Mat& new_a, Size sz, Mat& mapx, Mat& mapy, int map_type );
-void initInverseRectificationMap( const Mat& a, const Mat& k, const Mat& R, const Mat& new_a, Size sz, Mat& mapx, Mat& mapy, int map_type );
+void initUndistortMap( const Mat& a, const Mat& k, Size sz, Mat& mapx, Mat& mapy );
 
 void minMaxLoc(const Mat& src, double* minval, double* maxval,
                           vector<int>* minloc, vector<int>* maxloc, const Mat& mask=Mat());
@@ -424,7 +422,7 @@ protected:
     int test_case_count; // the total number of test cases
 
     // read test params
-    virtual int read_params( const cv::FileStorage& fs );
+    virtual int read_params( CvFileStorage* fs );
 
     // returns the number of tests or -1 if it is unknown a-priori
     virtual int get_test_case_count();
@@ -445,7 +443,7 @@ protected:
     virtual void dump_test_case(int test_case_idx, std::ostream* out);
 
     // finds test parameter
-    cv::FileNode find_param( const cv::FileStorage& fs, const char* param_name );
+    const CvFileNode* find_param( CvFileStorage* fs, const char* param_name );
 
     // name of the test (it is possible to locate a test by its name)
     string name;
@@ -652,7 +650,7 @@ public:
 
 protected:
 
-    virtual int read_params( const cv::FileStorage& fs ) CV_OVERRIDE;
+    virtual int read_params( CvFileStorage* fs ) CV_OVERRIDE;
     virtual int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
     virtual int validate_test_results( int test_case_idx ) CV_OVERRIDE;
 
@@ -704,7 +702,7 @@ protected:
         catch(const cv::Exception& e)
         {
             thrown = true;
-            if( e.code != expected_code && e.code != cv::Error::StsAssert && e.code != cv::Error::StsError )
+            if( e.code != expected_code )
             {
                 ts->printf(TS::LOG, "%s (test case #%d): the error code %d is different from the expected %d\n",
                     descr, test_case_idx, e.code, expected_code);

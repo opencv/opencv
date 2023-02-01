@@ -835,10 +835,9 @@ void Canny( InputArray _src, OutputArray _dst,
 
     _dst.create(size, CV_8U);
 
-    // backward compatibility
-    const int CV_CANNY_L2_GRADIENT = (1 << 31);
     if (!L2gradient && (aperture_size & CV_CANNY_L2_GRADIENT) == CV_CANNY_L2_GRADIENT)
     {
+        // backward compatibility
         aperture_size &= ~CV_CANNY_L2_GRADIENT;
         L2gradient = true;
     }
@@ -878,6 +877,11 @@ void Canny( InputArray _src, OutputArray _dst,
             cvFloor(high_thresh),
             aperture_size,
             L2gradient ) )
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (tegra::useTegra() && tegra::canny(src, dst, low_thresh, high_thresh, aperture_size, L2gradient))
+        return;
+#endif
 
     CV_IPP_RUN_FAST(ipp_Canny(src, Mat(), Mat(), dst, (float)low_thresh, (float)high_thresh, L2gradient, aperture_size))
 

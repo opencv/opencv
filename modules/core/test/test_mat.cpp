@@ -93,7 +93,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
 {
     int srcType = src.type();
     bool support = false;
-    if( opType == REDUCE_SUM || opType == REDUCE_AVG )
+    if( opType == CV_REDUCE_SUM || opType == CV_REDUCE_AVG )
     {
         if( srcType == CV_8U && (dstType == CV_32S || dstType == CV_32F || dstType == CV_64F) )
             support = true;
@@ -106,7 +106,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
         if( srcType == CV_64F && dstType == CV_64F)
             support = true;
     }
-    else if( opType == REDUCE_MAX )
+    else if( opType == CV_REDUCE_MAX )
     {
         if( srcType == CV_8U && dstType == CV_8U )
             support = true;
@@ -115,7 +115,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
         if( srcType == CV_64F && dstType == CV_64F )
             support = true;
     }
-    else if( opType == REDUCE_MIN )
+    else if( opType == CV_REDUCE_MIN )
     {
         if( srcType == CV_8U && dstType == CV_8U)
             support = true;
@@ -128,7 +128,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
         return cvtest::TS::OK;
 
     double eps = 0.0;
-    if ( opType == REDUCE_SUM || opType == REDUCE_AVG )
+    if ( opType == CV_REDUCE_SUM || opType == CV_REDUCE_AVG )
     {
         if ( dstType == CV_32F )
             eps = 1.e-5;
@@ -152,16 +152,16 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
     if( check )
     {
         char msg[100];
-        const char* opTypeStr = opType == REDUCE_SUM ? "REDUCE_SUM" :
-        opType == REDUCE_AVG ? "REDUCE_AVG" :
-        opType == REDUCE_MAX ? "REDUCE_MAX" :
-        opType == REDUCE_MIN ? "REDUCE_MIN" : "unknown operation type";
+        const char* opTypeStr = opType == CV_REDUCE_SUM ? "CV_REDUCE_SUM" :
+        opType == CV_REDUCE_AVG ? "CV_REDUCE_AVG" :
+        opType == CV_REDUCE_MAX ? "CV_REDUCE_MAX" :
+        opType == CV_REDUCE_MIN ? "CV_REDUCE_MIN" : "unknown operation type";
         string srcTypeStr, dstTypeStr;
         getMatTypeStr( src.type(), srcTypeStr );
         getMatTypeStr( dstType, dstTypeStr );
         const char* dimStr = dim == 0 ? "ROWS" : "COLS";
 
-        snprintf( msg, sizeof(msg), "bad accuracy with srcType = %s, dstType = %s, opType = %s, dim = %s",
+        sprintf( msg, "bad accuracy with srcType = %s, dstType = %s, opType = %s, dim = %s",
                 srcTypeStr.c_str(), dstTypeStr.c_str(), opTypeStr, dimStr );
         ts->printf( cvtest::TS::LOG, msg );
         return cvtest::TS::FAIL_BAD_ACCURACY;
@@ -195,19 +195,19 @@ int Core_ReduceTest::checkCase( int srcType, int dstType, int dim, Size sz )
         CV_Assert( 0 );
 
     // 1. sum
-    tempCode = checkOp( src, dstType, REDUCE_SUM, sum, dim );
+    tempCode = checkOp( src, dstType, CV_REDUCE_SUM, sum, dim );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
     // 2. avg
-    tempCode = checkOp( src, dstType, REDUCE_AVG, avg, dim );
+    tempCode = checkOp( src, dstType, CV_REDUCE_AVG, avg, dim );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
     // 3. max
-    tempCode = checkOp( src, dstType, REDUCE_MAX, max, dim );
+    tempCode = checkOp( src, dstType, CV_REDUCE_MAX, max, dim );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
     // 4. min
-    tempCode = checkOp( src, dstType, REDUCE_MIN, min, dim );
+    tempCode = checkOp( src, dstType, CV_REDUCE_MIN, min, dim );
     code = tempCode != cvtest::TS::OK ? tempCode : code;
 
     return code;
@@ -315,7 +315,7 @@ TEST(Core_PCA, accuracy)
     Mat rBackPrjTestPoints = rPCA.backProject( rPrjTestPoints );
 
     Mat avg(1, sz.width, CV_32FC1 );
-    cv::reduce( rPoints, avg, 0, REDUCE_AVG );
+    cv::reduce( rPoints, avg, 0, CV_REDUCE_AVG );
     Mat Q = rPoints - repeat( avg, rPoints.rows, 1 ), Qt = Q.t(), eval, evec;
     Q = Qt * Q;
     Q = Q /(float)rPoints.rows;
@@ -954,7 +954,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
 }
 
 
-template <class T>
+template <class ElemType>
 int calcDiffElemCountImpl(const vector<Mat>& mv, const Mat& m)
 {
     int diffElemCount = 0;
@@ -963,12 +963,12 @@ int calcDiffElemCountImpl(const vector<Mat>& mv, const Mat& m)
     {
         for(int x = 0; x < m.cols; x++)
         {
-            const T* mElem = &m.at<T>(y, x*mChannels);
+            const ElemType* mElem = &m.at<ElemType>(y,x*mChannels);
             size_t loc = 0;
             for(size_t i = 0; i < mv.size(); i++)
             {
                 const size_t mvChannel = mv[i].channels();
-                const T* mvElem = &mv[i].at<T>(y, x*(int)mvChannel);
+                const ElemType* mvElem = &mv[i].at<ElemType>(y,x*(int)mvChannel);
                 for(size_t li = 0; li < mvChannel; li++)
                     if(mElem[loc + li] != mvElem[li])
                         diffElemCount++;
@@ -1352,6 +1352,8 @@ TEST(Core_Matx, fromMat_)
     ASSERT_EQ( cvtest::norm(a, b, NORM_INF), 0.);
 }
 
+#ifdef CV_CXX11
+
 TEST(Core_Matx, from_initializer_list)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
@@ -1365,6 +1367,8 @@ TEST(Core_Mat, regression_9507)
     cv::Mat m2{m};
     EXPECT_EQ(25u, m2.total());
 }
+
+#endif // CXX11
 
 TEST(Core_InputArray, empty)
 {
@@ -1559,10 +1563,10 @@ TEST(Reduce, regression_should_fail_bug_4594)
     cv::Mat src = cv::Mat::eye(4, 4, CV_8U);
     std::vector<int> dst;
 
-    EXPECT_THROW(cv::reduce(src, dst, 0, REDUCE_MIN, CV_32S), cv::Exception);
-    EXPECT_THROW(cv::reduce(src, dst, 0, REDUCE_MAX, CV_32S), cv::Exception);
-    EXPECT_NO_THROW(cv::reduce(src, dst, 0, REDUCE_SUM, CV_32S));
-    EXPECT_NO_THROW(cv::reduce(src, dst, 0, REDUCE_AVG, CV_32S));
+    EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MIN, CV_32S), cv::Exception);
+    EXPECT_THROW(cv::reduce(src, dst, 0, CV_REDUCE_MAX, CV_32S), cv::Exception);
+    EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_SUM, CV_32S));
+    EXPECT_NO_THROW(cv::reduce(src, dst, 0, CV_REDUCE_AVG, CV_32S));
 }
 
 TEST(Mat, push_back_vector)
@@ -1642,6 +1646,7 @@ TEST(Mat, regression_10507_mat_setTo)
     }
 }
 
+#ifdef CV_CXX_STD_ARRAY
 TEST(Core_Mat_array, outputArray_create_getMat)
 {
     cv::Mat_<uchar> src_base(5, 1);
@@ -1730,6 +1735,7 @@ TEST(Core_Mat_array, SplitMerge)
         EXPECT_EQ(0, cvtest::norm(src[i], dst[i], NORM_INF));
     }
 }
+#endif
 
 TEST(Mat, regression_8680)
 {
@@ -1738,6 +1744,8 @@ TEST(Mat, regression_8680)
    mat.release();
    ASSERT_EQ(mat.channels(), 2);
 }
+
+#ifdef CV_CXX11
 
 TEST(Mat_, range_based_for)
 {
@@ -1799,6 +1807,8 @@ TEST(Mat_, template_based_ptr)
     int idx[4] = {1, 0, 0, 1};
     ASSERT_FLOAT_EQ(66.0f, *(mat.ptr<float>(idx)));
 }
+
+#endif
 
 
 BIGDATA_TEST(Mat, push_back_regression_4158)  // memory usage: ~10.6 Gb
@@ -2354,96 +2364,6 @@ TEST(Mat, regression_18473)
     EXPECT_EQ((int)5, (int)m.at<short>(19, 49, 99));
 }
 
-// FITIT: remove DISABLE_ when 1D Mat is supported
-TEST(Mat1D, DISABLED_basic)
-{
-    std::vector<int> sizes { 100 };
-    Mat m1(sizes, CV_8UC1, Scalar::all(5));
-    m1.at<uchar>(50) = 10;
-    EXPECT_FALSE(m1.empty());
-    ASSERT_EQ(1, m1.dims);
-    ASSERT_EQ(1, m1.size.dims());  // hack map on .rows
-    EXPECT_EQ(Size(100, 1), m1.size());
-
-    {
-        SCOPED_TRACE("clone");
-        Mat m = m1.clone();
-        EXPECT_EQ(1, m.dims);
-        EXPECT_EQ(Size(100, 1), m.size());
-    }
-
-    {
-        SCOPED_TRACE("colRange()");
-        Mat m = m1.colRange(Range(10, 30));
-        EXPECT_EQ(1, m.dims);
-        EXPECT_EQ(Size(20, 1), m.size());
-    }
-
-    {
-        SCOPED_TRACE("reshape(1, 1)");
-        Mat m = m1.reshape(1, 1);
-        EXPECT_EQ(1, m.dims);
-        EXPECT_EQ(Size(100, 1), m.size());
-    }
-
-    {
-        SCOPED_TRACE("reshape(1, 100)");
-        Mat m = m1.reshape(1, 100);
-        EXPECT_EQ(2, m.dims);
-        EXPECT_EQ(Size(1, 100), m.size());
-    }
-
-    {
-        SCOPED_TRACE("reshape(1, {1, 100})");
-        Mat m = m1.reshape(1, {1, 100});
-        EXPECT_EQ(2, m.dims);
-        EXPECT_EQ(Size(100, 1), m.size());
-    }
-
-    {
-        SCOPED_TRACE("copyTo(std::vector<uchar>)");
-        std::vector<uchar> dst;
-        m1.copyTo(dst);
-        EXPECT_EQ(100u, dst.size());
-    }
-
-    {
-        SCOPED_TRACE("copyTo(row2D)");
-        Mat m(5, 100, CV_8UC1, Scalar::all(0));
-        const Mat row2D = m.row(2);
-        EXPECT_NO_THROW(m1.copyTo(row2D));
-    }
-
-    {
-        SCOPED_TRACE("convertTo(row2D)");
-        Mat m(5, 100, CV_32FC1, Scalar::all(0));
-        const Mat row2D = m.row(2);
-        EXPECT_NO_THROW(m1.convertTo(row2D, CV_32FC1));
-    }
-
-    {
-        SCOPED_TRACE("CvMat");
-        CvMat c_mat = cvMat(m1);
-        EXPECT_EQ(100, c_mat.cols);
-        EXPECT_EQ(1, c_mat.rows);
-    }
-
-    {
-        SCOPED_TRACE("CvMatND");
-        CvMatND c_mat = cvMatND(m1);
-        EXPECT_EQ(2, c_mat.dims);
-        EXPECT_EQ(100, c_mat.dim[0].size);
-        EXPECT_EQ(1, c_mat.dim[1].size);
-    }
-
-    {
-        SCOPED_TRACE("minMaxLoc");
-        Point pt;
-        minMaxLoc(m1, 0, 0, 0, &pt);
-        EXPECT_EQ(50, pt.x);
-        EXPECT_EQ(0, pt.y);
-    }
-}
 
 TEST(Mat, ptrVecni_20044)
 {
@@ -2461,7 +2381,6 @@ TEST(Mat, ptrVecni_20044)
     EXPECT_EQ(int(6), *(ci));
 }
 
-
 TEST(Mat, VecMatx_4650)
 {
   // Makes sure the following compiles.
@@ -2470,97 +2389,6 @@ TEST(Mat, VecMatx_4650)
   a = cv::Vec3b::zeros();
   a = cv::Vec3b::randn(0, 10);
   a = cv::Vec3b::randu(0, 10);
-}
-
-
-TEST(Mat, reverse_iterator_19967)
-{
-    // empty iterator (#16855)
-    cv::Mat m_empty;
-    EXPECT_NO_THROW(m_empty.rbegin<uchar>());
-    EXPECT_NO_THROW(m_empty.rend<uchar>());
-    EXPECT_TRUE(m_empty.rbegin<uchar>() == m_empty.rend<uchar>());
-
-    // 1D test
-    std::vector<uchar> data{0, 1, 2, 3};
-    const std::vector<int> sizes_1d{4};
-
-    //Base class
-    cv::Mat m_1d(sizes_1d, CV_8U, data.data());
-    auto mismatch_it_pair_1d = std::mismatch(data.rbegin(), data.rend(), m_1d.rbegin<uchar>());
-    EXPECT_EQ(mismatch_it_pair_1d.first, data.rend());  // expect no mismatch
-    EXPECT_EQ(mismatch_it_pair_1d.second, m_1d.rend<uchar>());
-
-    //Templated derived class
-    cv::Mat_<uchar> m_1d_t(static_cast<int>(sizes_1d.size()), sizes_1d.data(), data.data());
-    auto mismatch_it_pair_1d_t = std::mismatch(data.rbegin(), data.rend(), m_1d_t.rbegin());
-    EXPECT_EQ(mismatch_it_pair_1d_t.first, data.rend());  // expect no mismatch
-    EXPECT_EQ(mismatch_it_pair_1d_t.second, m_1d_t.rend());
-
-
-    // 2D test
-    const std::vector<int> sizes_2d{2, 2};
-
-    //Base class
-    cv::Mat m_2d(sizes_2d, CV_8U, data.data());
-    auto mismatch_it_pair_2d = std::mismatch(data.rbegin(), data.rend(), m_2d.rbegin<uchar>());
-    EXPECT_EQ(mismatch_it_pair_2d.first, data.rend());
-    EXPECT_EQ(mismatch_it_pair_2d.second, m_2d.rend<uchar>());
-
-    //Templated derived class
-    cv::Mat_<uchar> m_2d_t(static_cast<int>(sizes_2d.size()),sizes_2d.data(), data.data());
-    auto mismatch_it_pair_2d_t = std::mismatch(data.rbegin(), data.rend(), m_2d_t.rbegin());
-    EXPECT_EQ(mismatch_it_pair_2d_t.first, data.rend());
-    EXPECT_EQ(mismatch_it_pair_2d_t.second, m_2d_t.rend());
-
-    // 3D test
-    std::vector<uchar> data_3d{0, 1, 2, 3, 4, 5, 6, 7};
-    const std::vector<int> sizes_3d{2, 2, 2};
-
-    //Base class
-    cv::Mat m_3d(sizes_3d, CV_8U, data_3d.data());
-    auto mismatch_it_pair_3d = std::mismatch(data_3d.rbegin(), data_3d.rend(), m_3d.rbegin<uchar>());
-    EXPECT_EQ(mismatch_it_pair_3d.first, data_3d.rend());
-    EXPECT_EQ(mismatch_it_pair_3d.second, m_3d.rend<uchar>());
-
-    //Templated derived class
-    cv::Mat_<uchar> m_3d_t(static_cast<int>(sizes_3d.size()),sizes_3d.data(), data_3d.data());
-    auto mismatch_it_pair_3d_t = std::mismatch(data_3d.rbegin(), data_3d.rend(), m_3d_t.rbegin());
-    EXPECT_EQ(mismatch_it_pair_3d_t.first, data_3d.rend());
-    EXPECT_EQ(mismatch_it_pair_3d_t.second, m_3d_t.rend());
-
-    // const test base class
-    const cv::Mat m_1d_const(sizes_1d, CV_8U, data.data());
-
-    auto mismatch_it_pair_1d_const = std::mismatch(data.rbegin(), data.rend(), m_1d_const.rbegin<uchar>());
-    EXPECT_EQ(mismatch_it_pair_1d_const.first, data.rend());  // expect no mismatch
-    EXPECT_EQ(mismatch_it_pair_1d_const.second, m_1d_const.rend<uchar>());
-
-    EXPECT_FALSE((std::is_assignable<decltype(m_1d_const.rend<uchar>()), uchar>::value)) << "Constness of const iterator violated.";
-    EXPECT_FALSE((std::is_assignable<decltype(m_1d_const.rbegin<uchar>()), uchar>::value)) << "Constness of const iterator violated.";
-
-    // const test templated dervied class
-    const cv::Mat_<uchar> m_1d_const_t(static_cast<int>(sizes_1d.size()), sizes_1d.data(), data.data());
-
-    auto mismatch_it_pair_1d_const_t = std::mismatch(data.rbegin(), data.rend(), m_1d_const_t.rbegin());
-    EXPECT_EQ(mismatch_it_pair_1d_const_t.first, data.rend());  // expect no mismatch
-    EXPECT_EQ(mismatch_it_pair_1d_const_t.second, m_1d_const_t.rend());
-
-    EXPECT_FALSE((std::is_assignable<decltype(m_1d_const_t.rend()), uchar>::value)) << "Constness of const iterator violated.";
-    EXPECT_FALSE((std::is_assignable<decltype(m_1d_const_t.rbegin()), uchar>::value)) << "Constness of const iterator violated.";
-
-}
-
-TEST(Mat, Recreate1DMatWithSameMeta)
-{
-    std::vector<int> dims = {100};
-    auto depth = CV_8U;
-    cv::Mat m(dims, depth);
-
-    // By default m has dims: [1, 100]
-    m.dims = 1;
-
-    EXPECT_NO_THROW(m.create(dims, depth));
 }
 
 }} // namespace

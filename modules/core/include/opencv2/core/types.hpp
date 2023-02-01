@@ -57,11 +57,6 @@
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/matx.hpp"
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4459)  // declaration of '...' hides global declaration
-#endif
-
 namespace cv
 {
 
@@ -167,23 +162,11 @@ public:
     //! default constructor
     Point_();
     Point_(_Tp _x, _Tp _y);
-#if (defined(__GNUC__) && __GNUC__ < 5) && !defined(__clang__)  // GCC 4.x bug. Details: https://github.com/opencv/opencv/pull/20837
     Point_(const Point_& pt);
-    Point_(Point_&& pt) CV_NOEXCEPT = default;
-#elif OPENCV_ABI_COMPATIBILITY < 500
-    Point_(const Point_& pt) = default;
-    Point_(Point_&& pt) CV_NOEXCEPT = default;
-#endif
     Point_(const Size_<_Tp>& sz);
     Point_(const Vec<_Tp, 2>& v);
 
-#if (defined(__GNUC__) && __GNUC__ < 5) && !defined(__clang__)  // GCC 4.x bug. Details: https://github.com/opencv/opencv/pull/20837
     Point_& operator = (const Point_& pt);
-    Point_& operator = (Point_&& pt) CV_NOEXCEPT = default;
-#elif OPENCV_ABI_COMPATIBILITY < 500
-    Point_& operator = (const Point_& pt) = default;
-    Point_& operator = (Point_&& pt) CV_NOEXCEPT = default;
-#endif
     //! conversion to another data type
     template<typename _Tp2> operator Point_<_Tp2>() const;
 
@@ -259,21 +242,19 @@ public:
     //! default constructor
     Point3_();
     Point3_(_Tp _x, _Tp _y, _Tp _z);
-#if OPENCV_ABI_COMPATIBILITY < 500
-    Point3_(const Point3_& pt) = default;
-    Point3_(Point3_&& pt) CV_NOEXCEPT = default;
-#endif
+    Point3_(const Point3_& pt);
     explicit Point3_(const Point_<_Tp>& pt);
     Point3_(const Vec<_Tp, 3>& v);
 
-#if OPENCV_ABI_COMPATIBILITY < 500
-    Point3_& operator = (const Point3_& pt) = default;
-    Point3_& operator = (Point3_&& pt) CV_NOEXCEPT = default;
-#endif
+    Point3_& operator = (const Point3_& pt);
     //! conversion to another data type
     template<typename _Tp2> operator Point3_<_Tp2>() const;
     //! conversion to cv::Vec<>
+#if OPENCV_ABI_COMPATIBILITY > 300
+    template<typename _Tp2> operator Vec<_Tp2, 3>() const;
+#else
     operator Vec<_Tp, 3>() const;
+#endif
 
     //! dot product
     _Tp dot(const Point3_& pt) const;
@@ -339,20 +320,12 @@ public:
     //! default constructor
     Size_();
     Size_(_Tp _width, _Tp _height);
-#if OPENCV_ABI_COMPATIBILITY < 500
-    Size_(const Size_& sz) = default;
-    Size_(Size_&& sz) CV_NOEXCEPT = default;
-#endif
+    Size_(const Size_& sz);
     Size_(const Point_<_Tp>& pt);
 
-#if OPENCV_ABI_COMPATIBILITY < 500
-    Size_& operator = (const Size_& sz) = default;
-    Size_& operator = (Size_&& sz) CV_NOEXCEPT = default;
-#endif
+    Size_& operator = (const Size_& sz);
     //! the area (width*height)
     _Tp area() const;
-    //! aspect ratio (width/height)
-    double aspectRatio() const;
     //! true if empty
     bool empty() const;
 
@@ -448,17 +421,11 @@ public:
     //! default constructor
     Rect_();
     Rect_(_Tp _x, _Tp _y, _Tp _width, _Tp _height);
-#if OPENCV_ABI_COMPATIBILITY < 500
-    Rect_(const Rect_& r) = default;
-    Rect_(Rect_&& r) CV_NOEXCEPT = default;
-#endif
+    Rect_(const Rect_& r);
     Rect_(const Point_<_Tp>& org, const Size_<_Tp>& sz);
     Rect_(const Point_<_Tp>& pt1, const Point_<_Tp>& pt2);
 
-#if OPENCV_ABI_COMPATIBILITY < 500
-    Rect_& operator = (const Rect_& r) = default;
-    Rect_& operator = (Rect_&& r) CV_NOEXCEPT = default;
-#endif
+    Rect_& operator = ( const Rect_& r );
     //! the top-left corner
     Point_<_Tp> tl() const;
     //! the bottom-right corner
@@ -667,12 +634,6 @@ public:
     Scalar_();
     Scalar_(_Tp v0, _Tp v1, _Tp v2=0, _Tp v3=0);
     Scalar_(_Tp v0);
-
-    Scalar_(const Scalar_& s);
-    Scalar_(Scalar_&& s) CV_NOEXCEPT;
-
-    Scalar_& operator=(const Scalar_& s);
-    Scalar_& operator=(Scalar_&& s) CV_NOEXCEPT;
 
     template<typename _Tp2, int cn>
     Scalar_(const Vec<_Tp2, cn>& v);
@@ -1191,11 +1152,9 @@ template<typename _Tp> inline
 Point_<_Tp>::Point_(_Tp _x, _Tp _y)
     : x(_x), y(_y) {}
 
-#if (defined(__GNUC__) && __GNUC__ < 5) && !defined(__clang__)  // GCC 4.x bug. Details: https://github.com/opencv/opencv/pull/20837
 template<typename _Tp> inline
 Point_<_Tp>::Point_(const Point_& pt)
     : x(pt.x), y(pt.y) {}
-#endif
 
 template<typename _Tp> inline
 Point_<_Tp>::Point_(const Size_<_Tp>& sz)
@@ -1205,14 +1164,12 @@ template<typename _Tp> inline
 Point_<_Tp>::Point_(const Vec<_Tp,2>& v)
     : x(v[0]), y(v[1]) {}
 
-#if (defined(__GNUC__) && __GNUC__ < 5) && !defined(__clang__)  // GCC 4.x bug. Details: https://github.com/opencv/opencv/pull/20837
 template<typename _Tp> inline
 Point_<_Tp>& Point_<_Tp>::operator = (const Point_& pt)
 {
     x = pt.x; y = pt.y;
     return *this;
 }
-#endif
 
 template<typename _Tp> template<typename _Tp2> inline
 Point_<_Tp>::operator Point_<_Tp2>() const
@@ -1452,6 +1409,10 @@ Point3_<_Tp>::Point3_(_Tp _x, _Tp _y, _Tp _z)
     : x(_x), y(_y), z(_z) {}
 
 template<typename _Tp> inline
+Point3_<_Tp>::Point3_(const Point3_& pt)
+    : x(pt.x), y(pt.y), z(pt.z) {}
+
+template<typename _Tp> inline
 Point3_<_Tp>::Point3_(const Point_<_Tp>& pt)
     : x(pt.x), y(pt.y), z(_Tp()) {}
 
@@ -1465,10 +1426,25 @@ Point3_<_Tp>::operator Point3_<_Tp2>() const
     return Point3_<_Tp2>(saturate_cast<_Tp2>(x), saturate_cast<_Tp2>(y), saturate_cast<_Tp2>(z));
 }
 
+#if OPENCV_ABI_COMPATIBILITY > 300
+template<typename _Tp> template<typename _Tp2> inline
+Point3_<_Tp>::operator Vec<_Tp2, 3>() const
+{
+    return Vec<_Tp2, 3>(x, y, z);
+}
+#else
 template<typename _Tp> inline
 Point3_<_Tp>::operator Vec<_Tp, 3>() const
 {
     return Vec<_Tp, 3>(x, y, z);
+}
+#endif
+
+template<typename _Tp> inline
+Point3_<_Tp>& Point3_<_Tp>::operator = (const Point3_& pt)
+{
+    x = pt.x; y = pt.y; z = pt.z;
+    return *this;
 }
 
 template<typename _Tp> inline
@@ -1684,6 +1660,10 @@ Size_<_Tp>::Size_(_Tp _width, _Tp _height)
     : width(_width), height(_height) {}
 
 template<typename _Tp> inline
+Size_<_Tp>::Size_(const Size_& sz)
+    : width(sz.width), height(sz.height) {}
+
+template<typename _Tp> inline
 Size_<_Tp>::Size_(const Point_<_Tp>& pt)
     : width(pt.x), height(pt.y) {}
 
@@ -1694,18 +1674,19 @@ Size_<_Tp>::operator Size_<_Tp2>() const
 }
 
 template<typename _Tp> inline
+Size_<_Tp>& Size_<_Tp>::operator = (const Size_<_Tp>& sz)
+{
+    width = sz.width; height = sz.height;
+    return *this;
+}
+
+template<typename _Tp> inline
 _Tp Size_<_Tp>::area() const
 {
     const _Tp result = width * height;
     CV_DbgAssert(!std::numeric_limits<_Tp>::is_integer
         || width == 0 || result / width == height); // make sure the result fits in the return value
     return result;
-}
-
-template<typename _Tp> inline
-double Size_<_Tp>::aspectRatio() const
-{
-    return width / static_cast<double>(height);
 }
 
 template<typename _Tp> inline
@@ -1804,6 +1785,10 @@ Rect_<_Tp>::Rect_(_Tp _x, _Tp _y, _Tp _width, _Tp _height)
     : x(_x), y(_y), width(_width), height(_height) {}
 
 template<typename _Tp> inline
+Rect_<_Tp>::Rect_(const Rect_<_Tp>& r)
+    : x(r.x), y(r.y), width(r.width), height(r.height) {}
+
+template<typename _Tp> inline
 Rect_<_Tp>::Rect_(const Point_<_Tp>& org, const Size_<_Tp>& sz)
     : x(org.x), y(org.y), width(sz.width), height(sz.height) {}
 
@@ -1814,6 +1799,16 @@ Rect_<_Tp>::Rect_(const Point_<_Tp>& pt1, const Point_<_Tp>& pt2)
     y = std::min(pt1.y, pt2.y);
     width = std::max(pt1.x, pt2.x) - x;
     height = std::max(pt1.y, pt2.y) - y;
+}
+
+template<typename _Tp> inline
+Rect_<_Tp>& Rect_<_Tp>::operator = ( const Rect_<_Tp>& r )
+{
+    x = r.x;
+    y = r.y;
+    width = r.width;
+    height = r.height;
+    return *this;
 }
 
 template<typename _Tp> inline
@@ -2022,15 +2017,6 @@ double jaccardDistance(const Rect_<_Tp>& a, const Rect_<_Tp>& b) {
     return 1.0 - Aab / (Aa + Ab - Aab);
 }
 
-/** @brief Finds out if there is any intersection between two rectangles
- *
- * mainly useful for language bindings
- * @param rect1 First rectangle
- * @param rect2 Second rectangle
- * @return the area of the intersection
- */
-CV_EXPORTS_W inline double rectangleIntersectionArea(const Rect2d& a, const Rect2d& b) { return (a & b).area(); }
-
 ////////////////////////////// RotatedRect //////////////////////////////
 
 inline
@@ -2040,6 +2026,8 @@ RotatedRect::RotatedRect()
 inline
 RotatedRect::RotatedRect(const Point2f& _center, const Size2f& _size, float _angle)
     : center(_center), size(_size), angle(_angle) {}
+
+
 
 ///////////////////////////////// Range /////////////////////////////////
 
@@ -2138,36 +2126,6 @@ Scalar_<_Tp>::Scalar_(_Tp v0, _Tp v1, _Tp v2, _Tp v3)
     this->val[1] = v1;
     this->val[2] = v2;
     this->val[3] = v3;
-}
-
-template<typename _Tp> inline
-Scalar_<_Tp>::Scalar_(const Scalar_<_Tp>& s) : Vec<_Tp, 4>(s) {
-}
-
-template<typename _Tp> inline
-Scalar_<_Tp>::Scalar_(Scalar_<_Tp>&& s) CV_NOEXCEPT {
-    this->val[0] = std::move(s.val[0]);
-    this->val[1] = std::move(s.val[1]);
-    this->val[2] = std::move(s.val[2]);
-    this->val[3] = std::move(s.val[3]);
-}
-
-template<typename _Tp> inline
-Scalar_<_Tp>& Scalar_<_Tp>::operator=(const Scalar_<_Tp>& s) {
-    this->val[0] = s.val[0];
-    this->val[1] = s.val[1];
-    this->val[2] = s.val[2];
-    this->val[3] = s.val[3];
-    return *this;
-}
-
-template<typename _Tp> inline
-Scalar_<_Tp>& Scalar_<_Tp>::operator=(Scalar_<_Tp>&& s) CV_NOEXCEPT {
-    this->val[0] = std::move(s.val[0]);
-    this->val[1] = std::move(s.val[1]);
-    this->val[2] = std::move(s.val[2]);
-    this->val[3] = std::move(s.val[3]);
-    return *this;
 }
 
 template<typename _Tp> template<typename _Tp2, int cn> inline
@@ -2449,9 +2407,5 @@ TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
 //! @endcond
 
 } // cv
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 #endif //OPENCV_CORE_TYPES_HPP

@@ -16,7 +16,7 @@ def thresh_callback(val):
 
     ## [findContours]
     # Find contours
-    contours, _ = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    _, contours, _ = cv.findContours(canny_output, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     ## [findContours]
 
     ## [allthework]

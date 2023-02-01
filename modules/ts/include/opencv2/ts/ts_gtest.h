@@ -9795,7 +9795,7 @@ class GTEST_API_ ExitedWithCode {
   bool operator()(int exit_status) const;
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ExitedWithCode& other) = delete;
+  void operator=(const ExitedWithCode& other);
 
   const int exit_code_;
 };
@@ -11769,7 +11769,7 @@ class RangeGenerator : public ParamGeneratorInterface<T> {
           step_(other.step_) {}
 
     // No implementation - assignment is unsupported.
-    void operator=(const Iterator& other) = delete;
+    void operator=(const Iterator& other);
 
     const ParamGeneratorInterface<T>* const base_;
     T value_;
@@ -11787,7 +11787,7 @@ class RangeGenerator : public ParamGeneratorInterface<T> {
   }
 
   // No implementation - assignment is unsupported.
-  void operator=(const RangeGenerator& other) = delete;
+  void operator=(const RangeGenerator& other);
 
   const T begin_;
   const T end_;
@@ -11878,7 +11878,7 @@ class ValuesInIteratorRangeGenerator : public ParamGeneratorInterface<T> {
   };  // class ValuesInIteratorRangeGenerator::Iterator
 
   // No implementation - assignment is unsupported.
-  void operator=(const ValuesInIteratorRangeGenerator& other) = delete;
+  void operator=(const ValuesInIteratorRangeGenerator& other);
 
   const ContainerType container_;
 };  // class ValuesInIteratorRangeGenerator
@@ -12329,7 +12329,7 @@ class ValueArray1 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray1& other) = delete;
+  void operator=(const ValueArray1& other);
 
   const T1 v1_;
 };
@@ -12349,7 +12349,7 @@ class ValueArray2 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray2& other) = delete;
+  void operator=(const ValueArray2& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12372,7 +12372,7 @@ class ValueArray3 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray3& other) = delete;
+  void operator=(const ValueArray3& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12397,7 +12397,7 @@ class ValueArray4 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray4& other) = delete;
+  void operator=(const ValueArray4& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12423,7 +12423,7 @@ class ValueArray5 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray5& other) = delete;
+  void operator=(const ValueArray5& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12452,7 +12452,7 @@ class ValueArray6 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray6& other) = delete;
+  void operator=(const ValueArray6& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12483,7 +12483,7 @@ class ValueArray7 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray7& other) = delete;
+  void operator=(const ValueArray7& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12516,7 +12516,7 @@ class ValueArray8 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray8& other) = delete;
+  void operator=(const ValueArray8& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12551,7 +12551,7 @@ class ValueArray9 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray9& other) = delete;
+  void operator=(const ValueArray9& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12587,7 +12587,7 @@ class ValueArray10 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray10& other) = delete;
+  void operator=(const ValueArray10& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12626,7 +12626,7 @@ class ValueArray11 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray11& other) = delete;
+  void operator=(const ValueArray11& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12667,7 +12667,7 @@ class ValueArray12 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray12& other) = delete;
+  void operator=(const ValueArray12& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12710,7 +12710,7 @@ class ValueArray13 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray13& other) = delete;
+  void operator=(const ValueArray13& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12754,7 +12754,7 @@ class ValueArray14 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray14& other) = delete;
+  void operator=(const ValueArray14& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12801,7 +12801,7 @@ class ValueArray15 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray15& other) = delete;
+  void operator=(const ValueArray15& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12851,7 +12851,7 @@ class ValueArray16 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray16& other) = delete;
+  void operator=(const ValueArray16& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12902,7 +12902,7 @@ class ValueArray17 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray17& other) = delete;
+  void operator=(const ValueArray17& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -12955,7 +12955,7 @@ class ValueArray18 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray18& other) = delete;
+  void operator=(const ValueArray18& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13010,7 +13010,7 @@ class ValueArray19 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray19& other) = delete;
+  void operator=(const ValueArray19& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13067,7 +13067,7 @@ class ValueArray20 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray20& other) = delete;
+  void operator=(const ValueArray20& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13127,7 +13127,7 @@ class ValueArray21 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray21& other) = delete;
+  void operator=(const ValueArray21& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13188,7 +13188,7 @@ class ValueArray22 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray22& other) = delete;
+  void operator=(const ValueArray22& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13252,7 +13252,7 @@ class ValueArray23 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray23& other) = delete;
+  void operator=(const ValueArray23& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13318,7 +13318,7 @@ class ValueArray24 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray24& other) = delete;
+  void operator=(const ValueArray24& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13385,7 +13385,7 @@ class ValueArray25 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray25& other) = delete;
+  void operator=(const ValueArray25& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13454,7 +13454,7 @@ class ValueArray26 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray26& other) = delete;
+  void operator=(const ValueArray26& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13527,7 +13527,7 @@ class ValueArray27 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray27& other) = delete;
+  void operator=(const ValueArray27& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13601,7 +13601,7 @@ class ValueArray28 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray28& other) = delete;
+  void operator=(const ValueArray28& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13676,7 +13676,7 @@ class ValueArray29 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray29& other) = delete;
+  void operator=(const ValueArray29& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13754,7 +13754,7 @@ class ValueArray30 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray30& other) = delete;
+  void operator=(const ValueArray30& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13835,7 +13835,7 @@ class ValueArray31 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray31& other) = delete;
+  void operator=(const ValueArray31& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -13917,7 +13917,7 @@ class ValueArray32 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray32& other) = delete;
+  void operator=(const ValueArray32& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -14002,7 +14002,7 @@ class ValueArray33 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray33& other) = delete;
+  void operator=(const ValueArray33& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -14088,7 +14088,7 @@ class ValueArray34 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray34& other) = delete;
+  void operator=(const ValueArray34& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -14176,7 +14176,7 @@ class ValueArray35 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray35& other) = delete;
+  void operator=(const ValueArray35& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -14267,7 +14267,7 @@ class ValueArray36 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray36& other) = delete;
+  void operator=(const ValueArray36& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -14360,7 +14360,7 @@ class ValueArray37 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray37& other) = delete;
+  void operator=(const ValueArray37& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -14454,7 +14454,7 @@ class ValueArray38 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray38& other) = delete;
+  void operator=(const ValueArray38& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -14551,7 +14551,7 @@ class ValueArray39 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray39& other) = delete;
+  void operator=(const ValueArray39& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -14650,7 +14650,7 @@ class ValueArray40 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray40& other) = delete;
+  void operator=(const ValueArray40& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -14751,7 +14751,7 @@ class ValueArray41 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray41& other) = delete;
+  void operator=(const ValueArray41& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -14854,7 +14854,7 @@ class ValueArray42 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray42& other) = delete;
+  void operator=(const ValueArray42& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -14959,7 +14959,7 @@ class ValueArray43 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray43& other) = delete;
+  void operator=(const ValueArray43& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -15066,7 +15066,7 @@ class ValueArray44 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray44& other) = delete;
+  void operator=(const ValueArray44& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -15175,7 +15175,7 @@ class ValueArray45 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray45& other) = delete;
+  void operator=(const ValueArray45& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -15286,7 +15286,7 @@ class ValueArray46 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray46& other) = delete;
+  void operator=(const ValueArray46& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -15400,7 +15400,7 @@ class ValueArray47 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray47& other) = delete;
+  void operator=(const ValueArray47& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -15516,7 +15516,7 @@ class ValueArray48 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray48& other) = delete;
+  void operator=(const ValueArray48& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -15633,7 +15633,7 @@ class ValueArray49 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray49& other) = delete;
+  void operator=(const ValueArray49& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -15751,7 +15751,7 @@ class ValueArray50 {
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const ValueArray50& other) = delete;
+  void operator=(const ValueArray50& other);
 
   const T1 v1_;
   const T2 v2_;
@@ -15904,7 +15904,7 @@ class CartesianProductGenerator2
     }
 
     // No implementation - assignment is unsupported.
-    void operator=(const Iterator& other) = delete;
+    void operator=(const Iterator& other);
 
     const ParamGeneratorInterface<ParamType>* const base_;
     // begin[i]_ and end[i]_ define the i-th range that Iterator traverses.
@@ -15919,7 +15919,7 @@ class CartesianProductGenerator2
   };  // class CartesianProductGenerator2::Iterator
 
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductGenerator2& other) = delete;
+  void operator=(const CartesianProductGenerator2& other);
 
   const ParamGenerator<T1> g1_;
   const ParamGenerator<T2> g2_;
@@ -16032,7 +16032,7 @@ class CartesianProductGenerator3
     }
 
     // No implementation - assignment is unsupported.
-    void operator=(const Iterator& other) = delete;
+    void operator=(const Iterator& other);
 
     const ParamGeneratorInterface<ParamType>* const base_;
     // begin[i]_ and end[i]_ define the i-th range that Iterator traverses.
@@ -16050,7 +16050,7 @@ class CartesianProductGenerator3
   };  // class CartesianProductGenerator3::Iterator
 
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductGenerator3& other) = delete;
+  void operator=(const CartesianProductGenerator3& other);
 
   const ParamGenerator<T1> g1_;
   const ParamGenerator<T2> g2_;
@@ -16179,7 +16179,7 @@ class CartesianProductGenerator4
     }
 
     // No implementation - assignment is unsupported.
-    void operator=(const Iterator& other) = delete;
+    void operator=(const Iterator& other);
 
     const ParamGeneratorInterface<ParamType>* const base_;
     // begin[i]_ and end[i]_ define the i-th range that Iterator traverses.
@@ -16200,7 +16200,7 @@ class CartesianProductGenerator4
   };  // class CartesianProductGenerator4::Iterator
 
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductGenerator4& other) = delete;
+  void operator=(const CartesianProductGenerator4& other);
 
   const ParamGenerator<T1> g1_;
   const ParamGenerator<T2> g2_;
@@ -16342,7 +16342,7 @@ class CartesianProductGenerator5
     }
 
     // No implementation - assignment is unsupported.
-    void operator=(const Iterator& other) = delete;
+    void operator=(const Iterator& other);
 
     const ParamGeneratorInterface<ParamType>* const base_;
     // begin[i]_ and end[i]_ define the i-th range that Iterator traverses.
@@ -16366,7 +16366,7 @@ class CartesianProductGenerator5
   };  // class CartesianProductGenerator5::Iterator
 
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductGenerator5& other) = delete;
+  void operator=(const CartesianProductGenerator5& other);
 
   const ParamGenerator<T1> g1_;
   const ParamGenerator<T2> g2_;
@@ -16524,7 +16524,7 @@ class CartesianProductGenerator6
     }
 
     // No implementation - assignment is unsupported.
-    void operator=(const Iterator& other) = delete;
+    void operator=(const Iterator& other);
 
     const ParamGeneratorInterface<ParamType>* const base_;
     // begin[i]_ and end[i]_ define the i-th range that Iterator traverses.
@@ -16551,7 +16551,7 @@ class CartesianProductGenerator6
   };  // class CartesianProductGenerator6::Iterator
 
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductGenerator6& other) = delete;
+  void operator=(const CartesianProductGenerator6& other);
 
   const ParamGenerator<T1> g1_;
   const ParamGenerator<T2> g2_;
@@ -16723,7 +16723,7 @@ class CartesianProductGenerator7
     }
 
     // No implementation - assignment is unsupported.
-    void operator=(const Iterator& other) = delete;
+    void operator=(const Iterator& other);
 
     const ParamGeneratorInterface<ParamType>* const base_;
     // begin[i]_ and end[i]_ define the i-th range that Iterator traverses.
@@ -16753,7 +16753,7 @@ class CartesianProductGenerator7
   };  // class CartesianProductGenerator7::Iterator
 
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductGenerator7& other) = delete;
+  void operator=(const CartesianProductGenerator7& other);
 
   const ParamGenerator<T1> g1_;
   const ParamGenerator<T2> g2_;
@@ -16941,7 +16941,7 @@ class CartesianProductGenerator8
     }
 
     // No implementation - assignment is unsupported.
-    void operator=(const Iterator& other) = delete;
+    void operator=(const Iterator& other);
 
     const ParamGeneratorInterface<ParamType>* const base_;
     // begin[i]_ and end[i]_ define the i-th range that Iterator traverses.
@@ -16974,7 +16974,7 @@ class CartesianProductGenerator8
   };  // class CartesianProductGenerator8::Iterator
 
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductGenerator8& other) = delete;
+  void operator=(const CartesianProductGenerator8& other);
 
   const ParamGenerator<T1> g1_;
   const ParamGenerator<T2> g2_;
@@ -17176,7 +17176,7 @@ class CartesianProductGenerator9
     }
 
     // No implementation - assignment is unsupported.
-    void operator=(const Iterator& other) = delete;
+    void operator=(const Iterator& other);
 
     const ParamGeneratorInterface<ParamType>* const base_;
     // begin[i]_ and end[i]_ define the i-th range that Iterator traverses.
@@ -17212,7 +17212,7 @@ class CartesianProductGenerator9
   };  // class CartesianProductGenerator9::Iterator
 
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductGenerator9& other) = delete;
+  void operator=(const CartesianProductGenerator9& other);
 
   const ParamGenerator<T1> g1_;
   const ParamGenerator<T2> g2_;
@@ -17428,7 +17428,7 @@ class CartesianProductGenerator10
     }
 
     // No implementation - assignment is unsupported.
-    void operator=(const Iterator& other) = delete;
+    void operator=(const Iterator& other);
 
     const ParamGeneratorInterface<ParamType>* const base_;
     // begin[i]_ and end[i]_ define the i-th range that Iterator traverses.
@@ -17467,7 +17467,7 @@ class CartesianProductGenerator10
   };  // class CartesianProductGenerator10::Iterator
 
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductGenerator10& other) = delete;
+  void operator=(const CartesianProductGenerator10& other);
 
   const ParamGenerator<T1> g1_;
   const ParamGenerator<T2> g2_;
@@ -17503,7 +17503,7 @@ CartesianProductHolder2(const Generator1& g1, const Generator2& g2)
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductHolder2& other) = delete;
+  void operator=(const CartesianProductHolder2& other);
 
   const Generator1 g1_;
   const Generator2 g2_;
@@ -17526,7 +17526,7 @@ CartesianProductHolder3(const Generator1& g1, const Generator2& g2,
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductHolder3& other) = delete;
+  void operator=(const CartesianProductHolder3& other);
 
   const Generator1 g1_;
   const Generator2 g2_;
@@ -17552,7 +17552,7 @@ CartesianProductHolder4(const Generator1& g1, const Generator2& g2,
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductHolder4& other) = delete;
+  void operator=(const CartesianProductHolder4& other);
 
   const Generator1 g1_;
   const Generator2 g2_;
@@ -17580,7 +17580,7 @@ CartesianProductHolder5(const Generator1& g1, const Generator2& g2,
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductHolder5& other) = delete;
+  void operator=(const CartesianProductHolder5& other);
 
   const Generator1 g1_;
   const Generator2 g2_;
@@ -17612,7 +17612,7 @@ CartesianProductHolder6(const Generator1& g1, const Generator2& g2,
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductHolder6& other) = delete;
+  void operator=(const CartesianProductHolder6& other);
 
   const Generator1 g1_;
   const Generator2 g2_;
@@ -17647,7 +17647,7 @@ CartesianProductHolder7(const Generator1& g1, const Generator2& g2,
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductHolder7& other) = delete;
+  void operator=(const CartesianProductHolder7& other);
 
   const Generator1 g1_;
   const Generator2 g2_;
@@ -17686,7 +17686,7 @@ CartesianProductHolder8(const Generator1& g1, const Generator2& g2,
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductHolder8& other) = delete;
+  void operator=(const CartesianProductHolder8& other);
 
   const Generator1 g1_;
   const Generator2 g2_;
@@ -17729,7 +17729,7 @@ CartesianProductHolder9(const Generator1& g1, const Generator2& g2,
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductHolder9& other) = delete;
+  void operator=(const CartesianProductHolder9& other);
 
   const Generator1 g1_;
   const Generator2 g2_;
@@ -17775,7 +17775,7 @@ CartesianProductHolder10(const Generator1& g1, const Generator2& g2,
 
  private:
   // No implementation - assignment is unsupported.
-  void operator=(const CartesianProductHolder10& other) = delete;
+  void operator=(const CartesianProductHolder10& other);
 
   const Generator1 g1_;
   const Generator2 g2_;

@@ -92,7 +92,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     const int dstType1 = CV_MAKETYPE(dstDepth, 1);
     const int scalarType = CV_MAKETYPE(srcdepth, scalarcn);
 
-    snprintf(opts, sizeof(opts), "-D %s%s -D %s%s -D dstT=%s -D DEPTH_dst=%d -D dstT_C1=%s -D workST=%s -D cn=%d -D rowsPerWI=%d",
+    sprintf(opts, "-D %s%s -D %s%s -D dstT=%s -D DEPTH_dst=%d -D dstT_C1=%s -D workST=%s -D cn=%d -D rowsPerWI=%d",
             haveMask ? "MASK_" : "", haveScalar ? "UNARY_OP" : "BINARY_OP", oclop2str[oclop],
             doubleSupport ? " -D DOUBLE_SUPPORT" : "",
             bitwise ? ocl::memopTypeToStr(dstType) : ocl::typeToStr(dstType),
@@ -153,7 +153,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
                        bool bitwise, int oclop )
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
-    _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
+    int kind1 = psrc1->kind(), kind2 = psrc2->kind();
     int type1 = psrc1->type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
     int type2 = psrc2->type(), depth2 = CV_MAT_DEPTH(type2), cn2 = CV_MAT_CN(type2);
     int dims1 = psrc1->dims(), dims2 = psrc2->dims();
@@ -168,7 +168,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
 
     if( dims1 <= 2 && dims2 <= 2 && kind1 == kind2 && sz1 == sz2 && type1 == type2 && !haveMask )
     {
-        _dst.createSameSize(*psrc1, type1);
+        _dst.create(sz1, type1);
         CV_OCL_RUN(use_opencl,
                    ocl_binary_op(*psrc1, *psrc2, _dst, _mask, bitwise, oclop, false))
 
@@ -178,10 +178,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
             cn = (int)CV_ELEM_SIZE(type1);
         }
         else
-        {
             func = tab[depth1];
-        }
-        CV_Assert(func);
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
         Size sz = getContinuousSize2D(src1, src2, dst);
@@ -255,7 +252,6 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     }
     else
         func = tab[depth1];
-    CV_Assert(func);
 
     if( !haveScalar )
     {
@@ -490,7 +486,7 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int scalarcn = kercn == 3 ? 4 : kercn, rowsPerWI = d.isIntel() ? 4 : 1;
 
     char cvtstr[4][32], opts[1024];
-    snprintf(opts, sizeof(opts), "-D %s%s -D %s -D srcT1=%s -D srcT1_C1=%s -D srcT2=%s -D srcT2_C1=%s "
+    sprintf(opts, "-D %s%s -D %s -D srcT1=%s -D srcT1_C1=%s -D srcT2=%s -D srcT2_C1=%s "
             "-D dstT=%s -D DEPTH_dst=%d -D dstT_C1=%s -D workT=%s -D workST=%s -D scaleT=%s -D wdepth=%d -D convertToWT1=%s "
             "-D convertToWT2=%s -D convertToDT=%s%s -D cn=%d -D rowsPerWI=%d -D convertFromU=%s",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"),
@@ -590,7 +586,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                       void* usrdata=0, int oclop=-1 )
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
-    _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
+    int kind1 = psrc1->kind(), kind2 = psrc2->kind();
     bool haveMask = !_mask.empty();
     bool reallocate = false;
     int type1 = psrc1->type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
@@ -732,7 +728,6 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                     (cvtdst ? wsz : 0) +
                     (haveMask ? dsz : 0);
     BinaryFuncC func = tab[CV_MAT_DEPTH(wtype)];
-    CV_Assert(func);
 
     if( !haveScalar )
     {
@@ -923,6 +918,59 @@ void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
 {
     CV_INSTRUMENT_REGION();
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if (tegra::useTegra())
+    {
+        int kind1 = _src1.kind(), kind2 = _src2.kind();
+        Mat src1 = _src1.getMat(), src2 = _src2.getMat();
+        bool src1Scalar = checkScalar(src1, _src2.type(), kind1, kind2);
+        bool src2Scalar = checkScalar(src2, _src1.type(), kind2, kind1);
+
+        if (!src1Scalar && !src2Scalar &&
+            src1.depth() == CV_8U && src2.type() == src1.type() &&
+            src1.dims == 2 && src2.size() == src1.size() &&
+            mask.empty())
+        {
+            if (dtype < 0)
+            {
+                if (_dst.fixedType())
+                {
+                    dtype = _dst.depth();
+                }
+                else
+                {
+                    dtype = src1.depth();
+                }
+            }
+
+            dtype = CV_MAT_DEPTH(dtype);
+
+            if (!_dst.fixedType() || dtype == _dst.depth())
+            {
+                _dst.create(src1.size(), CV_MAKE_TYPE(dtype, src1.channels()));
+
+                if (dtype == CV_16S)
+                {
+                    Mat dst = _dst.getMat();
+                    if(tegra::subtract_8u8u16s(src1, src2, dst))
+                        return;
+                }
+                else if (dtype == CV_32F)
+                {
+                    Mat dst = _dst.getMat();
+                    if(tegra::subtract_8u8u32f(src1, src2, dst))
+                        return;
+                }
+                else if (dtype == CV_8S)
+                {
+                    Mat dst = _dst.getMat();
+                    if(tegra::subtract_8u8u8s(src1, src2, dst))
+                        return;
+                }
+            }
+        }
+    }
+#endif
     arithm_op(_src1, _src2, _dst, mask, dtype, getSubTab(), false, 0, OCL_OP_SUB );
 }
 
@@ -931,13 +979,6 @@ void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
     CV_INSTRUMENT_REGION();
 
     arithm_op(src1, src2, dst, noArray(), -1, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF);
-}
-
-void cv::copyTo(InputArray _src, OutputArray _dst, InputArray _mask)
-{
-    CV_INSTRUMENT_REGION();
-
-    _src.copyTo(_dst, _mask);
 }
 
 /****************************************************************************************\
@@ -1215,26 +1256,20 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_compare(_src1, _src2, _dst, op, haveScalar))
 
-    _InputArray::KindFlag kind1 = _src1.kind(), kind2 = _src2.kind();
+    int kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
-
-    int depth1 = src1.depth(), depth2 = src2.depth();
-    if (depth1 == CV_16F || depth2 == CV_16F)
-        CV_Error(Error::StsNotImplemented, "Unsupported depth value CV_16F");
 
     if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 && src1.size() == src2.size() && src1.type() == src2.type() )
     {
         int cn = src1.channels();
-        _dst.createSameSize(src1, CV_8UC(cn));
+        _dst.create(src1.size(), CV_8UC(cn));
         Mat dst = _dst.getMat();
         Size sz = getContinuousSize2D(src1, src2, dst, src1.channels());
-        BinaryFuncC cmpFn = getCmpFunc(depth1);
-        CV_Assert(cmpFn);
-        cmpFn(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, &op);
+        getCmpFunc(src1.depth())(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, &op);
         return;
     }
 
-    int cn = src1.channels();
+    int cn = src1.channels(), depth1 = src1.depth(), depth2 = src2.depth();
 
     _dst.create(src1.dims, src1.size, CV_8UC(cn));
     src1 = src1.reshape(1); src2 = src2.reshape(1);
@@ -1243,7 +1278,6 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     size_t esz = std::max(src1.elemSize(), (size_t)1);
     size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
     BinaryFuncC func = getCmpFunc(depth1);
-    CV_Assert(func);
 
     if( !haveScalar )
     {
@@ -1272,9 +1306,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         else
         {
             double fval=0;
-            BinaryFunc cvtFn = getConvertFunc(depth2, CV_64F);
-            CV_Assert(cvtFn);
-            cvtFn(src2.ptr(), 1, 0, 1, (uchar*)&fval, 1, Size(1,1), 0);
+            getConvertFunc(depth2, CV_64F)(src2.ptr(), 1, 0, 1, (uchar*)&fval, 1, Size(1,1), 0);
             if( fval < getMinVal(depth1) )
             {
                 dst = Scalar::all(op == CMP_GT || op == CMP_GE || op == CMP_NE ? 255 : 0);
@@ -1604,7 +1636,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
                          InputArray _upperb, OutputArray _dst )
 {
     const ocl::Device & d = ocl::Device::getDefault();
-    _InputArray::KindFlag skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
+    int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Size ssize = _src.size(), lsize = _lowerb.size(), usize = _upperb.size();
     int stype = _src.type(), ltype = _lowerb.type(), utype = _upperb.type();
     int sdepth = CV_MAT_DEPTH(stype), ldepth = CV_MAT_DEPTH(ltype), udepth = CV_MAT_DEPTH(utype);
@@ -1729,7 +1761,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
                _upperb.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_inRange(_src, _lowerb, _upperb, _dst))
 
-    _InputArray::KindFlag skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
+    int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Mat src = _src.getMat(), lb = _lowerb.getMat(), ub = _upperb.getMat();
 
     bool lbScalar = false, ubScalar = false;

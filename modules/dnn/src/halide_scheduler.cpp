@@ -71,17 +71,9 @@ static void applyFuse(const FileNode& directive, Halide::Func& func)
 static void applyParallel(const FileNode& directive, Halide::Func& func)
 {
     std::string varName;
-    if (directive.isSeq())
+    for (int i = 0, n = directive.size(); i < n; ++i)
     {
-        for (int i = 0, n = directive.size(); i < n; ++i)
-        {
-            directive[i] >> varName;
-            func.parallel(Halide::Var(varName));
-        }
-    }
-    else
-    {
-        directive >> varName;
+        directive[i] >> varName;
         func.parallel(Halide::Var(varName));
     }
 }
@@ -89,17 +81,9 @@ static void applyParallel(const FileNode& directive, Halide::Func& func)
 static void applyUnroll(const FileNode& directive, Halide::Func& func)
 {
     std::string varName;
-    if (directive.isSeq())
+    for (int i = 0, n = directive.size(); i < n; ++i)
     {
-        for (int i = 0, n = directive.size(); i < n; ++i)
-        {
-            directive[i] >> varName;
-            func.unroll(Halide::Var(varName));
-        }
-    }
-    else
-    {
-        directive >> varName;
+        directive[i] >> varName;
         func.unroll(Halide::Var(varName));
     }
 }

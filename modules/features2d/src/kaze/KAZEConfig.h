@@ -36,7 +36,7 @@ struct KAZEOptions {
     {
     }
 
-    KAZE::DiffusivityType diffusivity;
+    int diffusivity;
     float soffset;
     int omax;
     int nsublevels;

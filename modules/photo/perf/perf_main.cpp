@@ -8,8 +8,4 @@ static const char * impls[] = {
     "plain"
 };
 
-#if defined(HAVE_HPX)
-    #include <hpx/hpx_main.hpp>
-#endif
-
 CV_PERF_TEST_MAIN_WITH_IMPLS(photo, impls, perf::printCudaInfo())

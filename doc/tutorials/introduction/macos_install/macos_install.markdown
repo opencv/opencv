@@ -2,12 +2,8 @@ Installation in MacOS {#tutorial_macos_install}
 =====================
 
 @prev_tutorial{tutorial_android_ocl_intro}
-@next_tutorial{tutorial_arm_crosscompile_with_cmake}
+@next_tutorial{tutorial_ios_install}
 
-|    |    |
-| -: | :- |
-| Original author | `@sajarindider` |
-| Compatibility | OpenCV >= 3.4 |
 
 The following steps have been tested for MacOSX (Mavericks) but should work with other versions as well.
 

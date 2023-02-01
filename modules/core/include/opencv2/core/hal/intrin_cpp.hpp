@@ -48,7 +48,6 @@
 #include <limits>
 #include <cstring>
 #include <algorithm>
-#include "opencv2/core/utility.hpp"
 #include "opencv2/core/saturate.hpp"
 
 //! @cond IGNORED

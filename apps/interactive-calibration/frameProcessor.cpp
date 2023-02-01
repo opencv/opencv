@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <string>
+#include <algorithm>
 #include <limits>
 
 using namespace calib;
@@ -73,12 +74,17 @@ bool CalibProcessor::detectAndParseChessboard(const cv::Mat &frame)
 
 bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
 {
+#ifdef HAVE_OPENCV_ARUCO
     cv::Ptr<cv::aruco::Board> board = mCharucoBoard.staticCast<cv::aruco::Board>();
 
     std::vector<std::vector<cv::Point2f> > corners, rejected;
     std::vector<int> ids;
+    cv::aruco::detectMarkers(frame, mArucoDictionary, corners, ids, cv::aruco::DetectorParameters::create(), rejected);
+    cv::aruco::refineDetectedMarkers(frame, board, corners, ids, rejected);
     cv::Mat currentCharucoCorners, currentCharucoIds;
-    detector->detectBoard(frame, currentCharucoCorners, currentCharucoIds, corners, ids);
+    if(ids.size() > 0)
+        cv::aruco::interpolateCornersCharuco(corners, ids, frame, mCharucoBoard, currentCharucoCorners,
+                                         currentCharucoIds);
     if(ids.size() > 0) cv::aruco::drawDetectedMarkers(frame, corners);
 
     if(currentCharucoCorners.total() > 3) {
@@ -96,17 +102,10 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
         mCurrentCharucoIds = currentCharucoIds;
         return true;
     }
+#else
+    CV_UNUSED(frame);
+#endif
     return false;
-}
-
-bool CalibProcessor::detectAndParseCircles(const cv::Mat &frame)
-{
-    bool isTemplateFound = findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_SYMMETRIC_GRID, mBlobDetectorPtr);
-    if(isTemplateFound) {
-        mTemplateLocations.insert(mTemplateLocations.begin(), mCurrentImagePoints[0]);
-        cv::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isTemplateFound);
-    }
-    return isTemplateFound;
 }
 
 bool CalibProcessor::detectAndParseACircles(const cv::Mat &frame)
@@ -146,7 +145,6 @@ bool CalibProcessor::detectAndParseDualACircles(const cv::Mat &frame)
 void CalibProcessor::saveFrameData()
 {
     std::vector<cv::Point3f> objectPoints;
-    std::vector<cv::Point2f> imagePoints;
 
     switch(mBoardType)
     {
@@ -161,19 +159,6 @@ void CalibProcessor::saveFrameData()
     case chAruco:
         mCalibData->allCharucoCorners.push_back(mCurrentCharucoCorners);
         mCalibData->allCharucoIds.push_back(mCurrentCharucoIds);
-
-        mCharucoBoard->matchImagePoints(mCurrentCharucoCorners, mCurrentCharucoIds, objectPoints, imagePoints);
-        CV_Assert(mCurrentCharucoIds.total() == imagePoints.size());
-        mCalibData->imagePoints.push_back(imagePoints);
-        mCalibData->objectPoints.push_back(objectPoints);
-        break;
-    case CirclesGrid:
-        objectPoints.reserve(mBoardSize.height*mBoardSize.width);
-        for( int i = 0; i < mBoardSize.height; i++ )
-            for( int j = 0; j < mBoardSize.width; j++ )
-                objectPoints.push_back(cv::Point3f(j*mSquareSize, i*mSquareSize, 0));
-        mCalibData->imagePoints.push_back(mCurrentImagePoints);
-        mCalibData->objectPoints.push_back(objectPoints);
         break;
     case AcirclesGrid:
         objectPoints.reserve(mBoardSize.height*mBoardSize.width);
@@ -216,16 +201,7 @@ void CalibProcessor::showCaptureMessage(const cv::Mat& frame, const std::string 
     double textSize = VIDEO_TEXT_SIZE * frame.cols / (double) IMAGE_MAX_WIDTH;
     cv::bitwise_not(frame, frame);
     cv::putText(frame, message, textOrigin, 1, textSize, cv::Scalar(0,0,255), 2, cv::LINE_AA);
-    cv::Mat resized;
-    if (std::fabs(mZoom - 1.) > 0.001f)
-    {
-        cv::resize(frame, resized, cv::Size(), mZoom, mZoom);
-    }
-    else
-    {
-        resized = frame;
-    }
-    cv::imshow(mainWindowName, resized);
+    cv::imshow(mainWindowName, frame);
     cv::waitKey(300);
 }
 
@@ -245,17 +221,37 @@ bool CalibProcessor::checkLastFrame()
     else
         mCalibData->cameraMatrix.copyTo(tmpCamMatrix);
 
-    cv::Mat r, t, angles;
-    cv::solvePnP(mCalibData->objectPoints.back(), mCalibData->imagePoints.back(), tmpCamMatrix, mCalibData->distCoeffs, r, t);
-    RodriguesToEuler(r, angles, CALIB_DEGREES);
-    if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
-        mCalibData->objectPoints.pop_back();
-        mCalibData->imagePoints.pop_back();
-        if (mCalibData->allCharucoCorners.size()) {
+    if(mBoardType != chAruco) {
+        cv::Mat r, t, angles;
+        cv::solvePnP(mCalibData->objectPoints.back(), mCurrentImagePoints, tmpCamMatrix, mCalibData->distCoeffs, r, t);
+        RodriguesToEuler(r, angles, CALIB_DEGREES);
+
+        if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
+            mCalibData->objectPoints.pop_back();
+            mCalibData->imagePoints.pop_back();
+            isFrameBad = true;
+        }
+    }
+    else {
+#ifdef HAVE_OPENCV_ARUCO
+        cv::Mat r, t, angles;
+        std::vector<cv::Point3f> allObjPoints;
+        allObjPoints.reserve(mCurrentCharucoIds.total());
+        for(size_t i = 0; i < mCurrentCharucoIds.total(); i++) {
+            int pointID = mCurrentCharucoIds.at<int>((int)i);
+            CV_Assert(pointID >= 0 && pointID < (int)mCharucoBoard->chessboardCorners.size());
+            allObjPoints.push_back(mCharucoBoard->chessboardCorners[pointID]);
+        }
+
+        cv::solvePnP(allObjPoints, mCurrentCharucoCorners, tmpCamMatrix, mCalibData->distCoeffs, r, t);
+        RodriguesToEuler(r, angles, CALIB_DEGREES);
+
+        if(180.0 - fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
+            isFrameBad = true;
             mCalibData->allCharucoCorners.pop_back();
             mCalibData->allCharucoIds.pop_back();
         }
-        isFrameBad = true;
+#endif
     }
     return isFrameBad;
 }
@@ -270,20 +266,17 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
                                    static_cast<float>(mCalibData->imageSize.width * mCalibData->imageSize.width)) / 20.0;
     mSquareSize = capParams.squareSize;
     mTemplDist = capParams.templDst;
-    mSaveFrames = capParams.saveFrames;
-    mZoom = capParams.zoom;
-    cv::aruco::CharucoParameters charucoParameters;
-    charucoParameters.tryRefineMarkers = true;
 
     switch(mBoardType)
     {
     case chAruco:
-        mArucoDictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PredefinedDictionaryType(capParams.charucoDictName));
-        mCharucoBoard = cv::makePtr<cv::aruco::CharucoBoard>(cv::Size(mBoardSize.width + 1, mBoardSize.height + 1), capParams.charucoSquareLength,
-                                                    capParams.charucoMarkerSize, mArucoDictionary);
-        detector = cv::makePtr<cv::aruco::CharucoDetector>(cv::aruco::CharucoDetector(*mCharucoBoard, charucoParameters));
+#ifdef HAVE_OPENCV_ARUCO
+        mArucoDictionary = cv::aruco::getPredefinedDictionary(
+                    cv::aruco::PREDEFINED_DICTIONARY_NAME(capParams.charucoDictName));
+        mCharucoBoard = cv::aruco::CharucoBoard::create(mBoardSize.width, mBoardSize.height, capParams.charucoSquareLength,
+                                                        capParams.charucoMarkerSize, mArucoDictionary);
+#endif
         break;
-    case CirclesGrid:
     case AcirclesGrid:
         mBlobDetectorPtr = cv::SimpleBlobDetector::create();
         break;
@@ -298,13 +291,9 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
 cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
 {
     cv::Mat frameCopy;
-    cv::Mat frameCopyToSave;
     frame.copyTo(frameCopy);
     bool isTemplateFound = false;
     mCurrentImagePoints.clear();
-
-    if(mSaveFrames)
-        frame.copyTo(frameCopyToSave);
 
     switch(mBoardType)
     {
@@ -313,9 +302,6 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
         break;
     case chAruco:
         isTemplateFound = detectAndParseChAruco(frameCopy);
-        break;
-    case CirclesGrid:
-        isTemplateFound = detectAndParseCircles(frameCopy);
         break;
     case AcirclesGrid:
         isTemplateFound = detectAndParseACircles(frameCopy);
@@ -332,14 +318,10 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
             saveFrameData();
             bool isFrameBad = checkLastFrame();
             if (!isFrameBad) {
-                std::string displayMessage = cv::format("Frame # %zu captured", std::max(mCalibData->imagePoints.size(),
+                std::string displayMessage = cv::format("Frame # %d captured", std::max(mCalibData->imagePoints.size(),
                                                                                         mCalibData->allCharucoCorners.size()));
                 if(!showOverlayMessage(displayMessage))
                     showCaptureMessage(frame, displayMessage);
-
-                if(mSaveFrames)
-                    mCalibData->allFrames.push_back(frameCopyToSave);
-
                 mCapuredFrames++;
             }
             else {

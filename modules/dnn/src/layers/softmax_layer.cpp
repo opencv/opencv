@@ -42,27 +42,17 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
-#include "../op_vkcom.hpp"
-#include "../op_webnn.hpp"
-#include "../op_cann.hpp"
 
 #include <algorithm>
 #include <stdlib.h>
-#include <opencv2/core/utils/logger.hpp>
 using std::max;
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
-#endif
-
-#ifdef HAVE_CUDA
-#include "../cuda4dnn/primitives/softmax.hpp"
-using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -104,21 +94,8 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return true;
 #endif
-#ifdef HAVE_WEBNN
-        if (backendId == DNN_BACKEND_WEBNN) {
-            // TODO: support logSoftMax
-            if (logSoftMax)
-            {
-                CV_LOG_WARNING(NULL, "logSoftMax is not supported by WebNN backend.")
-            }
-            return !logSoftMax;
-        }
-#endif
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1) ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan()) ||
-               backendId == DNN_BACKEND_CANN;
+               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1);
     }
 
 #ifdef HAVE_OPENCL
@@ -312,33 +289,6 @@ public:
         }
     }
 
-#ifdef HAVE_CUDA
-    Ptr<BackendNode> initCUDA(
-        void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
-    ) override
-    {
-        auto context = reinterpret_cast<csl::CSLContext*>(context_);
-
-        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
-        auto channel_axis = normalize_axis(axisRaw, input_wrapper->getRank());
-        return make_cuda_node<cuda4dnn::SoftmaxOp>(preferableTarget, std::move(context->cudnn_handle), channel_axis, logSoftMax);
-    }
-#endif
-
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_VULKAN
-        vkcom::Tensor in = VkComTensor(inputs[0]);
-        int cAxis = normalize_axis(axisRaw, in.dimNum());
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpSoftmax(cAxis, logSoftMax));
-        return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
-#endif  // HAVE_VULKAN
-        return Ptr<BackendNode>();
-    }
-
-
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
@@ -364,34 +314,6 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
-
-        // create operator
-        std::string op_name = cv::format("softmax_%d", index);
-        auto op = std::make_shared<ge::op::SoftmaxV2>(op_name);
-
-        // set attributes
-        op->set_attr_axes(ge::Operator::OpListInt(
-            {(int64_t)axisRaw}
-        ));
-
-        // set inputs
-        // set inputs : x
-        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        op->set_input_x_by_name(*op_x, "y");
-        auto x_desc = x->getTensorDesc();
-        op->update_input_desc_x(*x_desc);
-
-        // set outputs
-        auto output_y_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
-        op->update_output_desc_y(*output_y_desc);
-
-        return Ptr<BackendNode>(new CannBackendNode(op));
-    }
-#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -406,36 +328,6 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(softmax));
     }
 #endif  // HAVE_DNN_NGRAPH
-
-    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
-    {
-        float inpScale = scales[0][0];
-        Mat lookUpTable(1, 256, CV_32F);
-        float* table = lookUpTable.ptr<float>();
-        for (int i = -128; i < 128; i++)
-        {
-            float x = inpScale*(i - 127); // ensures exp(x) is always between (0, 1)
-            table[i+128] = std::exp(x);
-        }
-        params.blobs.clear();
-        params.blobs.push_back(lookUpTable);
-        params.set("input_scale", inpScale);
-        params.set("input_zeropoint", zeropoints[0][0]);
-        return true;
-    }
-
-#ifdef HAVE_WEBNN
-    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
-        auto& webnnInpOperand = node->operand;
-        auto& webnnGraphBuilder = node->net->builder;
-        auto operand = webnnGraphBuilder.Softmax(webnnInpOperand);
-        return Ptr<BackendNode>(new WebnnBackendNode(operand));
-    }
-
-#endif
 
     int64 getFLOPS(const std::vector<MatShape> &inputs,
                   const std::vector<MatShape> &outputs) const CV_OVERRIDE

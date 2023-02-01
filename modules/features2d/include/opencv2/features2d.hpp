@@ -108,10 +108,6 @@ public:
      */
     static void runByPixelsMask( std::vector<KeyPoint>& keypoints, const Mat& mask );
     /*
-     * Remove objects from some image and a vector of points by mask for pixels of this image
-     */
-    static void runByPixelsMask2VectorPoint(std::vector<KeyPoint> &keypoints, std::vector<std::vector<Point> > &removeFrom, const Mat &mask);
-    /*
      * Remove duplicated keypoints.
      */
     static void removeDuplicated( std::vector<KeyPoint>& keypoints );
@@ -319,21 +315,6 @@ public:
         double sigma, int descriptorType);
 
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
-
-    CV_WRAP virtual void setNFeatures(int maxFeatures) = 0;
-    CV_WRAP virtual int getNFeatures() const = 0;
-
-    CV_WRAP virtual void setNOctaveLayers(int nOctaveLayers) = 0;
-    CV_WRAP virtual int getNOctaveLayers() const = 0;
-
-    CV_WRAP virtual void setContrastThreshold(double contrastThreshold) = 0;
-    CV_WRAP virtual double getContrastThreshold() const = 0;
-
-    CV_WRAP virtual void setEdgeThreshold(double edgeThreshold) = 0;
-    CV_WRAP virtual double getEdgeThreshold() const = 0;
-
-    CV_WRAP virtual void setSigma(double sigma) = 0;
-    CV_WRAP virtual double getSigma() const = 0;
 };
 
 typedef SIFT SiftFeatureDetector;
@@ -385,24 +366,6 @@ public:
         const std::vector<int> &numberList, float dMax=5.85f, float dMin=8.2f,
         const std::vector<int>& indexChange=std::vector<int>());
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
-
-    /** @brief Set detection threshold.
-    @param threshold AGAST detection threshold score.
-    */
-    CV_WRAP virtual void setThreshold(int threshold) = 0;
-    CV_WRAP virtual int getThreshold() const = 0;
-
-    /** @brief Set detection octaves.
-    @param octaves detection octaves. Use 0 to do single scale.
-    */
-    CV_WRAP virtual void setOctaves(int octaves) = 0;
-    CV_WRAP virtual int getOctaves() const = 0;
-    /** @brief Set detection patternScale.
-    @param patternScale apply this scale to the pattern used for sampling the neighbourhood of a
-    keypoint.
-    */
-    CV_WRAP virtual void setPatternScale(float patternScale) = 0;
-    CV_WRAP virtual float getPatternScale() const = 0;
 };
 
 /** @brief Class implementing the ORB (*oriented BRIEF*) keypoint detector and descriptor extractor
@@ -415,8 +378,7 @@ k-tuples) are rotated according to the measured orientation).
 class CV_EXPORTS_W ORB : public Feature2D
 {
 public:
-    enum ScoreType { HARRIS_SCORE=0, FAST_SCORE=1 };
-    static const int kBytes = 32;
+    enum { kBytes = 32, HARRIS_SCORE=0, FAST_SCORE=1 };
 
     /** @brief The ORB constructor
 
@@ -450,7 +412,7 @@ public:
     @param fastThreshold the fast threshold
      */
     CV_WRAP static Ptr<ORB> create(int nfeatures=500, float scaleFactor=1.2f, int nlevels=8, int edgeThreshold=31,
-        int firstLevel=0, int WTA_K=2, ORB::ScoreType scoreType=ORB::HARRIS_SCORE, int patchSize=31, int fastThreshold=20);
+        int firstLevel=0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31, int fastThreshold=20);
 
     CV_WRAP virtual void setMaxFeatures(int maxFeatures) = 0;
     CV_WRAP virtual int getMaxFeatures() const = 0;
@@ -470,8 +432,8 @@ public:
     CV_WRAP virtual void setWTA_K(int wta_k) = 0;
     CV_WRAP virtual int getWTA_K() const = 0;
 
-    CV_WRAP virtual void setScoreType(ORB::ScoreType scoreType) = 0;
-    CV_WRAP virtual ORB::ScoreType getScoreType() const = 0;
+    CV_WRAP virtual void setScoreType(int scoreType) = 0;
+    CV_WRAP virtual int getScoreType() const = 0;
 
     CV_WRAP virtual void setPatchSize(int patchSize) = 0;
     CV_WRAP virtual int getPatchSize() const = 0;
@@ -535,62 +497,8 @@ public:
     CV_WRAP virtual void setMaxArea(int maxArea) = 0;
     CV_WRAP virtual int getMaxArea() const = 0;
 
-    CV_WRAP virtual void setMaxVariation(double maxVariation) = 0;
-    CV_WRAP virtual double getMaxVariation() const = 0;
-
-    CV_WRAP virtual void setMinDiversity(double minDiversity) = 0;
-    CV_WRAP virtual double getMinDiversity() const = 0;
-
-    CV_WRAP virtual void setMaxEvolution(int maxEvolution) = 0;
-    CV_WRAP virtual int getMaxEvolution() const = 0;
-
-    CV_WRAP virtual void setAreaThreshold(double areaThreshold) = 0;
-    CV_WRAP virtual double getAreaThreshold() const = 0;
-
-    CV_WRAP virtual void setMinMargin(double min_margin) = 0;
-    CV_WRAP virtual double getMinMargin() const = 0;
-
-    CV_WRAP virtual void setEdgeBlurSize(int edge_blur_size) = 0;
-    CV_WRAP virtual int getEdgeBlurSize() const = 0;
-
     CV_WRAP virtual void setPass2Only(bool f) = 0;
     CV_WRAP virtual bool getPass2Only() const = 0;
-
-    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
-};
-
-//! @} features2d_main
-
-//! @addtogroup features2d_main
-//! @{
-
-/** @brief Wrapping class for feature detection using the FAST method. :
- */
-class CV_EXPORTS_W FastFeatureDetector : public Feature2D
-{
-public:
-    enum DetectorType
-    {
-        TYPE_5_8 = 0, TYPE_7_12 = 1, TYPE_9_16 = 2
-    };
-    enum
-    {
-        THRESHOLD = 10000, NONMAX_SUPPRESSION=10001, FAST_N=10002
-    };
-
-
-    CV_WRAP static Ptr<FastFeatureDetector> create( int threshold=10,
-                                                    bool nonmaxSuppression=true,
-                                                    FastFeatureDetector::DetectorType type=FastFeatureDetector::TYPE_9_16 );
-
-    CV_WRAP virtual void setThreshold(int threshold) = 0;
-    CV_WRAP virtual int getThreshold() const = 0;
-
-    CV_WRAP virtual void setNonmaxSuppression(bool f) = 0;
-    CV_WRAP virtual bool getNonmaxSuppression() const = 0;
-
-    CV_WRAP virtual void setType(FastFeatureDetector::DetectorType type) = 0;
-    CV_WRAP virtual FastFeatureDetector::DetectorType getType() const = 0;
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
@@ -612,36 +520,32 @@ FastFeatureDetector::TYPE_5_8
 
 Detects corners using the FAST algorithm by @cite Rosten06 .
 
-@note In Python API, types are given as cv.FAST_FEATURE_DETECTOR_TYPE_5_8,
-cv.FAST_FEATURE_DETECTOR_TYPE_7_12 and cv.FAST_FEATURE_DETECTOR_TYPE_9_16. For corner
-detection, use cv.FAST.detect() method.
+@note In Python API, types are given as cv2.FAST_FEATURE_DETECTOR_TYPE_5_8,
+cv2.FAST_FEATURE_DETECTOR_TYPE_7_12 and cv2.FAST_FEATURE_DETECTOR_TYPE_9_16. For corner
+detection, use cv2.FAST.detect() method.
  */
 CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
-                      int threshold, bool nonmaxSuppression, FastFeatureDetector::DetectorType type );
+                      int threshold, bool nonmaxSuppression, int type );
 
 //! @} features2d_main
 
 //! @addtogroup features2d_main
 //! @{
 
-/** @brief Wrapping class for feature detection using the AGAST method. :
+/** @brief Wrapping class for feature detection using the FAST method. :
  */
-class CV_EXPORTS_W AgastFeatureDetector : public Feature2D
+class CV_EXPORTS_W FastFeatureDetector : public Feature2D
 {
 public:
-    enum DetectorType
-    {
-        AGAST_5_8 = 0, AGAST_7_12d = 1, AGAST_7_12s = 2, OAST_9_16 = 3,
-    };
-
     enum
     {
-        THRESHOLD = 10000, NONMAX_SUPPRESSION = 10001,
+        TYPE_5_8 = 0, TYPE_7_12 = 1, TYPE_9_16 = 2,
+        THRESHOLD = 10000, NONMAX_SUPPRESSION=10001, FAST_N=10002,
     };
 
-    CV_WRAP static Ptr<AgastFeatureDetector> create( int threshold=10,
-                                                     bool nonmaxSuppression=true,
-                                                     AgastFeatureDetector::DetectorType type = AgastFeatureDetector::OAST_9_16);
+    CV_WRAP static Ptr<FastFeatureDetector> create( int threshold=10,
+                                                    bool nonmaxSuppression=true,
+                                                    int type=FastFeatureDetector::TYPE_9_16 );
 
     CV_WRAP virtual void setThreshold(int threshold) = 0;
     CV_WRAP virtual int getThreshold() const = 0;
@@ -649,8 +553,8 @@ public:
     CV_WRAP virtual void setNonmaxSuppression(bool f) = 0;
     CV_WRAP virtual bool getNonmaxSuppression() const = 0;
 
-    CV_WRAP virtual void setType(AgastFeatureDetector::DetectorType type) = 0;
-    CV_WRAP virtual AgastFeatureDetector::DetectorType getType() const = 0;
+    CV_WRAP virtual void setType(int type) = 0;
+    CV_WRAP virtual int getType() const = 0;
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
@@ -677,7 +581,37 @@ Detects corners using the AGAST algorithm by @cite mair2010_agast .
 
  */
 CV_EXPORTS void AGAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
-                      int threshold, bool nonmaxSuppression, AgastFeatureDetector::DetectorType type );
+                      int threshold, bool nonmaxSuppression, int type );
+//! @} features2d_main
+
+//! @addtogroup features2d_main
+//! @{
+
+/** @brief Wrapping class for feature detection using the AGAST method. :
+ */
+class CV_EXPORTS_W AgastFeatureDetector : public Feature2D
+{
+public:
+    enum
+    {
+        AGAST_5_8 = 0, AGAST_7_12d = 1, AGAST_7_12s = 2, OAST_9_16 = 3,
+        THRESHOLD = 10000, NONMAX_SUPPRESSION = 10001,
+    };
+
+    CV_WRAP static Ptr<AgastFeatureDetector> create( int threshold=10,
+                                                     bool nonmaxSuppression=true,
+                                                     int type=AgastFeatureDetector::OAST_9_16 );
+
+    CV_WRAP virtual void setThreshold(int threshold) = 0;
+    CV_WRAP virtual int getThreshold() const = 0;
+
+    CV_WRAP virtual void setNonmaxSuppression(bool f) = 0;
+    CV_WRAP virtual bool getNonmaxSuppression() const = 0;
+
+    CV_WRAP virtual void setType(int type) = 0;
+    CV_WRAP virtual int getType() const = 0;
+    CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+};
 
 /** @brief Wrapping class for feature detection using the goodFeaturesToTrack function. :
  */
@@ -699,9 +633,6 @@ public:
 
     CV_WRAP virtual void setBlockSize(int blockSize) = 0;
     CV_WRAP virtual int getBlockSize() const = 0;
-
-    CV_WRAP virtual void setGradientSize(int gradientSize_) = 0;
-    CV_WRAP virtual int getGradientSize() = 0;
 
     CV_WRAP virtual void setHarrisDetector(bool val) = 0;
     CV_WRAP virtual bool getHarrisDetector() const = 0;
@@ -769,20 +700,13 @@ public:
       CV_PROP_RW bool filterByConvexity;
       CV_PROP_RW float minConvexity, maxConvexity;
 
-      CV_PROP_RW bool collectContours;
-
       void read( const FileNode& fn );
       void write( FileStorage& fs ) const;
   };
 
   CV_WRAP static Ptr<SimpleBlobDetector>
     create(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
-
-  CV_WRAP virtual void setParams(const SimpleBlobDetector::Params& params ) = 0;
-  CV_WRAP virtual SimpleBlobDetector::Params getParams() const = 0;
-
   CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
-  CV_WRAP virtual const std::vector<std::vector<cv::Point> >& getBlobContours() const;
 };
 
 //! @} features2d_main
@@ -799,7 +723,7 @@ F. Alcantarilla, Adrien Bartoli and Andrew J. Davison. In European Conference on
 class CV_EXPORTS_W KAZE : public Feature2D
 {
 public:
-    enum DiffusivityType
+    enum
     {
         DIFF_PM_G1 = 0,
         DIFF_PM_G2 = 1,
@@ -820,7 +744,7 @@ public:
     CV_WRAP static Ptr<KAZE> create(bool extended=false, bool upright=false,
                                     float threshold = 0.001f,
                                     int nOctaves = 4, int nOctaveLayers = 4,
-                                    KAZE::DiffusivityType diffusivity = KAZE::DIFF_PM_G2);
+                                    int diffusivity = KAZE::DIFF_PM_G2);
 
     CV_WRAP virtual void setExtended(bool extended) = 0;
     CV_WRAP virtual bool getExtended() const = 0;
@@ -837,8 +761,8 @@ public:
     CV_WRAP virtual void setNOctaveLayers(int octaveLayers) = 0;
     CV_WRAP virtual int getNOctaveLayers() const = 0;
 
-    CV_WRAP virtual void setDiffusivity(KAZE::DiffusivityType diff) = 0;
-    CV_WRAP virtual KAZE::DiffusivityType getDiffusivity() const = 0;
+    CV_WRAP virtual void setDiffusivity(int diff) = 0;
+    CV_WRAP virtual int getDiffusivity() const = 0;
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
@@ -862,7 +786,7 @@ class CV_EXPORTS_W AKAZE : public Feature2D
 {
 public:
     // AKAZE descriptor type
-    enum DescriptorType
+    enum
     {
         DESCRIPTOR_KAZE_UPRIGHT = 2, ///< Upright descriptors, not invariant to rotation
         DESCRIPTOR_KAZE = 3,
@@ -882,13 +806,13 @@ public:
     @param diffusivity Diffusivity type. DIFF_PM_G1, DIFF_PM_G2, DIFF_WEICKERT or
     DIFF_CHARBONNIER
      */
-    CV_WRAP static Ptr<AKAZE> create(AKAZE::DescriptorType descriptor_type = AKAZE::DESCRIPTOR_MLDB,
+    CV_WRAP static Ptr<AKAZE> create(int descriptor_type=AKAZE::DESCRIPTOR_MLDB,
                                      int descriptor_size = 0, int descriptor_channels = 3,
                                      float threshold = 0.001f, int nOctaves = 4,
-                                     int nOctaveLayers = 4, KAZE::DiffusivityType diffusivity = KAZE::DIFF_PM_G2);
+                                     int nOctaveLayers = 4, int diffusivity = KAZE::DIFF_PM_G2);
 
-    CV_WRAP virtual void setDescriptorType(AKAZE::DescriptorType dtype) = 0;
-    CV_WRAP virtual AKAZE::DescriptorType getDescriptorType() const = 0;
+    CV_WRAP virtual void setDescriptorType(int dtype) = 0;
+    CV_WRAP virtual int getDescriptorType() const = 0;
 
     CV_WRAP virtual void setDescriptorSize(int dsize) = 0;
     CV_WRAP virtual int getDescriptorSize() const = 0;
@@ -905,8 +829,8 @@ public:
     CV_WRAP virtual void setNOctaveLayers(int octaveLayers) = 0;
     CV_WRAP virtual int getNOctaveLayers() const = 0;
 
-    CV_WRAP virtual void setDiffusivity(KAZE::DiffusivityType diff) = 0;
-    CV_WRAP virtual KAZE::DiffusivityType getDiffusivity() const = 0;
+    CV_WRAP virtual void setDiffusivity(int diff) = 0;
+    CV_WRAP virtual int getDiffusivity() const = 0;
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
@@ -933,7 +857,7 @@ template<> struct Accumulator<short>  { typedef float Type; };
 template<class T>
 struct CV_EXPORTS SL2
 {
-    static const NormTypes normType = NORM_L2SQR;
+    enum { normType = NORM_L2SQR };
     typedef T ValueType;
     typedef typename Accumulator<T>::Type ResultType;
 
@@ -949,7 +873,7 @@ struct CV_EXPORTS SL2
 template<class T>
 struct L2
 {
-    static const NormTypes normType = NORM_L2;
+    enum { normType = NORM_L2 };
     typedef T ValueType;
     typedef typename Accumulator<T>::Type ResultType;
 
@@ -965,7 +889,7 @@ struct L2
 template<class T>
 struct L1
 {
-    static const NormTypes normType = NORM_L1;
+    enum { normType = NORM_L1 };
     typedef T ValueType;
     typedef typename Accumulator<T>::Type ResultType;
 
@@ -990,7 +914,7 @@ an image set.
 class CV_EXPORTS_W DescriptorMatcher : public Algorithm
 {
 public:
-   enum MatcherType
+   enum
     {
         FLANNBASED            = 1,
         BRUTEFORCE            = 2,
@@ -999,7 +923,6 @@ public:
         BRUTEFORCE_HAMMINGLUT = 5,
         BRUTEFORCE_SL2        = 6
     };
-
     virtual ~DescriptorMatcher();
 
     /** @brief Adds descriptors to train a CPU(trainDescCollectionis) or GPU(utrainDescCollectionis) descriptor
@@ -1177,7 +1100,7 @@ public:
      */
     CV_WRAP static Ptr<DescriptorMatcher> create( const String& descriptorMatcherType );
 
-    CV_WRAP static Ptr<DescriptorMatcher> create( const DescriptorMatcher::MatcherType& matcherType );
+    CV_WRAP static Ptr<DescriptorMatcher> create( int matcherType );
 
 
     // see corresponding cv::Algorithm method
@@ -1203,8 +1126,8 @@ protected:
         virtual void clear();
 
         const Mat& getDescriptors() const;
-        Mat getDescriptor( int imgIdx, int localDescIdx ) const;
-        Mat getDescriptor( int globalDescIdx ) const;
+        const Mat getDescriptor( int imgIdx, int localDescIdx ) const;
+        const Mat getDescriptor( int globalDescIdx ) const;
         void getLocalIdx( int globalDescIdx, int& imgIdx, int& localDescIdx ) const;
 
         int size() const;
@@ -1335,20 +1258,20 @@ protected:
 //! @addtogroup features2d_draw
 //! @{
 
-enum struct DrawMatchesFlags
+struct CV_EXPORTS DrawMatchesFlags
 {
-  DEFAULT = 0, //!< Output image matrix will be created (Mat::create),
-               //!< i.e. existing memory of output image may be reused.
-               //!< Two source image, matches and single keypoints will be drawn.
-               //!< For each keypoint only the center point will be drawn (without
-               //!< the circle around keypoint with keypoint size and orientation).
-  DRAW_OVER_OUTIMG = 1, //!< Output image matrix will not be created (Mat::create).
-                        //!< Matches will be drawn on existing content of output image.
-  NOT_DRAW_SINGLE_POINTS = 2, //!< Single keypoints will not be drawn.
-  DRAW_RICH_KEYPOINTS = 4 //!< For each keypoint the circle around keypoint with keypoint size and
-                          //!< orientation will be drawn.
+    enum{ DEFAULT = 0, //!< Output image matrix will be created (Mat::create),
+                       //!< i.e. existing memory of output image may be reused.
+                       //!< Two source image, matches and single keypoints will be drawn.
+                       //!< For each keypoint only the center point will be drawn (without
+                       //!< the circle around keypoint with keypoint size and orientation).
+          DRAW_OVER_OUTIMG = 1, //!< Output image matrix will not be created (Mat::create).
+                                //!< Matches will be drawn on existing content of output image.
+          NOT_DRAW_SINGLE_POINTS = 2, //!< Single keypoints will not be drawn.
+          DRAW_RICH_KEYPOINTS = 4 //!< For each keypoint the circle around keypoint with keypoint size and
+                                  //!< orientation will be drawn.
+        };
 };
-CV_ENUM_FLAGS(DrawMatchesFlags)
 
 /** @brief Draws keypoints.
 
@@ -1361,12 +1284,12 @@ output image. See possible flags bit values below.
 DrawMatchesFlags. See details above in drawMatches .
 
 @note
-For Python API, flags are modified as cv.DRAW_MATCHES_FLAGS_DEFAULT,
-cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, cv.DRAW_MATCHES_FLAGS_DRAW_OVER_OUTIMG,
-cv.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS
+For Python API, flags are modified as cv2.DRAW_MATCHES_FLAGS_DEFAULT,
+cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS, cv2.DRAW_MATCHES_FLAGS_DRAW_OVER_OUTIMG,
+cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS
  */
 CV_EXPORTS_W void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, InputOutputArray outImage,
-                               const Scalar& color=Scalar::all(-1), DrawMatchesFlags flags=DrawMatchesFlags::DEFAULT );
+                               const Scalar& color=Scalar::all(-1), int flags=DrawMatchesFlags::DEFAULT );
 
 /** @brief Draws the found matches of keypoints from two images.
 
@@ -1394,7 +1317,7 @@ CV_EXPORTS_W void drawMatches( InputArray img1, const std::vector<KeyPoint>& key
                              InputArray img2, const std::vector<KeyPoint>& keypoints2,
                              const std::vector<DMatch>& matches1to2, InputOutputArray outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
-                             const std::vector<char>& matchesMask=std::vector<char>(), DrawMatchesFlags flags=DrawMatchesFlags::DEFAULT );
+                             const std::vector<char>& matchesMask=std::vector<char>(), int flags=DrawMatchesFlags::DEFAULT );
 
 /** @overload */
 CV_EXPORTS_W void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
@@ -1402,13 +1325,13 @@ CV_EXPORTS_W void drawMatches( InputArray img1, const std::vector<KeyPoint>& key
                              const std::vector<DMatch>& matches1to2, InputOutputArray outImg,
                              const int matchesThickness, const Scalar& matchColor=Scalar::all(-1),
                              const Scalar& singlePointColor=Scalar::all(-1), const std::vector<char>& matchesMask=std::vector<char>(),
-                             DrawMatchesFlags flags=DrawMatchesFlags::DEFAULT );
+                             int flags=DrawMatchesFlags::DEFAULT );
 
 CV_EXPORTS_AS(drawMatchesKnn) void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                              InputArray img2, const std::vector<KeyPoint>& keypoints2,
                              const std::vector<std::vector<DMatch> >& matches1to2, InputOutputArray outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
-                             const std::vector<std::vector<char> >& matchesMask=std::vector<std::vector<char> >(), DrawMatchesFlags flags=DrawMatchesFlags::DEFAULT );
+                             const std::vector<std::vector<char> >& matchesMask=std::vector<std::vector<char> >(), int flags=DrawMatchesFlags::DEFAULT );
 
 //! @} features2d_draw
 

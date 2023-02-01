@@ -98,7 +98,7 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-            bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL;
+            bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD;
             return !isMyriad;
         }
 #endif

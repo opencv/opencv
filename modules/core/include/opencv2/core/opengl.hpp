@@ -548,7 +548,7 @@ calling unmapGLBuffer() function.
 @param accessFlags - data access flags (ACCESS_READ|ACCESS_WRITE).
 @return Returns UMat object
  */
-CV_EXPORTS UMat mapGLBuffer(const Buffer& buffer, AccessFlag accessFlags = ACCESS_READ | ACCESS_WRITE);
+CV_EXPORTS UMat mapGLBuffer(const Buffer& buffer, int accessFlags = ACCESS_READ|ACCESS_WRITE);
 
 /** @brief Unmaps Buffer object (releases UMat, previously mapped from Buffer).
 

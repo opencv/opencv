@@ -42,7 +42,6 @@
 
 #include "test_precomp.hpp"
 
-#if 0
 namespace opencv_test { namespace {
 
 class CV_WatershedTest : public cvtest::BaseTest
@@ -60,7 +59,7 @@ CV_WatershedTest::~CV_WatershedTest() {}
 void CV_WatershedTest::run( int /* start_from */)
 {
     string exp_path = string(ts->get_data_path()) + "watershed/wshed_exp.png";
-    Mat exp = imread(exp_path, IMREAD_GRAYSCALE);
+    Mat exp = imread(exp_path, 0);
     Mat orig = imread(string(ts->get_data_path()) + "inpaint/orig.png");
     FileStorage fs(string(ts->get_data_path()) + "watershed/comp.xml", FileStorage::READ);
 
@@ -126,5 +125,3 @@ void CV_WatershedTest::run( int /* start_from */)
 TEST(Imgproc_Watershed, regression) { CV_WatershedTest test; test.safe_run(); }
 
 }} // namespace
-
-#endif

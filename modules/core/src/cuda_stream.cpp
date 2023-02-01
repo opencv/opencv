@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <cstdint>
 
 using namespace cv;
 using namespace cv::cuda;
@@ -294,7 +293,6 @@ public:
 
     Impl();
     Impl(const Ptr<GpuMat::Allocator>& allocator);
-    Impl(const unsigned int cudaFlags);
     explicit Impl(cudaStream_t stream);
 
     ~Impl();
@@ -312,13 +310,6 @@ cv::cuda::Stream::Impl::Impl(const Ptr<GpuMat::Allocator>& allocator) : stream(0
 {
     cudaSafeCall( cudaStreamCreate(&stream) );
     ownStream = true;
-}
-
-cv::cuda::Stream::Impl::Impl(const unsigned int cudaFlags) : stream(0), ownStream(false)
-{
-    cudaSafeCall(cudaStreamCreateWithFlags(&stream, cudaFlags));
-    ownStream = true;
-    allocator = makePtr<StackAllocator>(stream);
 }
 
 cv::cuda::Stream::Impl::Impl(cudaStream_t stream_) : stream(stream_), ownStream(false)
@@ -459,16 +450,6 @@ cv::cuda::Stream::Stream(const Ptr<GpuMat::Allocator>& allocator)
 #endif
 }
 
-cv::cuda::Stream::Stream(const size_t cudaFlags)
-{
-#ifndef HAVE_CUDA
-    CV_UNUSED(cudaFlags);
-    throw_no_cuda();
-#else
-    impl_ = makePtr<Impl>(cudaFlags & UINT_MAX);
-#endif
-}
-
 bool cv::cuda::Stream::queryIfComplete() const
 {
 #ifndef HAVE_CUDA
@@ -551,15 +532,6 @@ Stream& cv::cuda::Stream::Null()
 #else
     const int deviceId = getDevice();
     return initializer.getNullStream(deviceId);
-#endif
-}
-
-void* cv::cuda::Stream::cudaPtr() const
-{
-#ifndef HAVE_CUDA
-    return nullptr;
-#else
-    return impl_->stream;
 #endif
 }
 
@@ -811,7 +783,7 @@ Event cv::cuda::EventAccessor::wrapEvent(cudaEvent_t event)
 
 #endif
 
-cv::cuda::Event::Event(const Event::CreateFlags flags)
+cv::cuda::Event::Event(CreateFlags flags)
 {
 #ifndef HAVE_CUDA
     CV_UNUSED(flags);

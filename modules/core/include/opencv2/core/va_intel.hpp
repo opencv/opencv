@@ -29,11 +29,14 @@ namespace cv { namespace va_intel {
 /** @addtogroup core_va_intel
 This section describes Intel VA-API/OpenCL (CL-VA) interoperability.
 
-To enable basic VA interoperability build OpenCV with libva library integration enabled: `-DWITH_VA=ON` (corresponding dev package should be installed).
+To enable CL-VA interoperability support, configure OpenCV using CMake with WITH_VA_INTEL=ON . Currently VA-API is
+supported on Linux only. You should also install Intel Media Server Studio (MSS) to use this feature. You may
+have to specify the path(s) to MSS components for cmake in environment variables:
 
-To enable advanced CL-VA interoperability support on Intel HW, enable option: `-DWITH_VA_INTEL=ON` (OpenCL integration should be enabled which is the default setting). Special runtime environment should be set up in order to use this feature: correct combination of [libva](https://github.com/intel/libva), [OpenCL runtime](https://github.com/intel/compute-runtime) and [media driver](https://github.com/intel/media-driver) should be installed.
+- VA_INTEL_IOCL_ROOT for Intel OpenCL (default is "/opt/intel/opencl").
 
-Check usage example for details: samples/va_intel/va_intel_interop.cpp
+To use CL-VA interoperability you should first create VADisplay (libva), and then call initializeContextFromVA()
+function to create OpenCL context and set up interoperability.
 */
 //! @{
 

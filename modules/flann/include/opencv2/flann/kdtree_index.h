@@ -203,15 +203,14 @@ public:
      */
     void findNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, const SearchParams& searchParams) CV_OVERRIDE
     {
-        const int maxChecks = get_param(searchParams,"checks", 32);
-        const float epsError = 1+get_param(searchParams,"eps",0.0f);
-        const bool explore_all_trees = get_param(searchParams,"explore_all_trees",false);
+        int maxChecks = get_param(searchParams,"checks", 32);
+        float epsError = 1+get_param(searchParams,"eps",0.0f);
 
         if (maxChecks==FLANN_CHECKS_UNLIMITED) {
             getExactNeighbors(result, vec, epsError);
         }
         else {
-            getNeighbors(result, vec, maxChecks, epsError, explore_all_trees);
+            getNeighbors(result, vec, maxChecks, epsError);
         }
     }
 
@@ -440,30 +439,26 @@ private:
      * because the tree traversal is abandoned after a given number of descends in
      * the tree.
      */
-    void getNeighbors(ResultSet<DistanceType>& result, const ElementType* vec,
-                      int maxCheck, float epsError, bool explore_all_trees = false)
+    void getNeighbors(ResultSet<DistanceType>& result, const ElementType* vec, int maxCheck, float epsError)
     {
         int i;
         BranchSt branch;
-        int checkCount = 0;
-        DynamicBitset checked(size_);
 
-        // Priority queue storing intermediate branches in the best-bin-first search
-        const cv::Ptr<Heap<BranchSt>>& heap = Heap<BranchSt>::getPooledInstance(cv::utils::getThreadID(), (int)size_);
+        int checkCount = 0;
+        Heap<BranchSt>* heap = new Heap<BranchSt>((int)size_);
+        DynamicBitset checked(size_);
 
         /* Search once through each tree down to root. */
         for (i = 0; i < trees_; ++i) {
-            searchLevel(result, vec, tree_roots_[i], 0, checkCount, maxCheck,
-                        epsError, heap, checked, explore_all_trees);
-            if (!explore_all_trees && (checkCount >= maxCheck) && result.full())
-                break;
+            searchLevel(result, vec, tree_roots_[i], 0, checkCount, maxCheck, epsError, heap, checked);
         }
 
         /* Keep searching other branches from heap until finished. */
         while ( heap->popMin(branch) && (checkCount < maxCheck || !result.full() )) {
-            searchLevel(result, vec, branch.node, branch.mindist, checkCount, maxCheck,
-                        epsError, heap, checked, false);
+            searchLevel(result, vec, branch.node, branch.mindist, checkCount, maxCheck, epsError, heap, checked);
         }
+
+        delete heap;
 
         CV_Assert(result.full());
     }
@@ -475,7 +470,7 @@ private:
      *  at least "mindistsq".
      */
     void searchLevel(ResultSet<DistanceType>& result_set, const ElementType* vec, NodePtr node, DistanceType mindist, int& checkCount, int maxCheck,
-                     float epsError, const cv::Ptr<Heap<BranchSt>>& heap, DynamicBitset& checked, bool explore_all_trees = false)
+                     float epsError, Heap<BranchSt>* heap, DynamicBitset& checked)
     {
         if (result_set.worstDist()<mindist) {
             //			printf("Ignoring branch, too far\n");
@@ -489,10 +484,7 @@ private:
                 current checkID.
              */
             int index = node->divfeat;
-            if ( checked.test(index) ||
-                 (!explore_all_trees && (checkCount>=maxCheck) && result_set.full()) ) {
-                return;
-            }
+            if ( checked.test(index) || ((checkCount>=maxCheck)&& result_set.full()) ) return;
             checked.set(index);
             checkCount++;
 

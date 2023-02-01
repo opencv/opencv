@@ -43,9 +43,7 @@
 #include "precomp.hpp"
 
 #include "opencv2/core/utils/filesystem.hpp"
-#include "opencv2/core/utils/filesystem.private.hpp"
 
-#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 #if defined _WIN32 || defined WINCE
 # include <windows.h>
 const char dir_separators[] = "/\\";
@@ -133,15 +131,12 @@ namespace
 
 
 }
-#else // defined _WIN32 || defined WINCE
+#else
 # include <dirent.h>
 # include <sys/stat.h>
 const char dir_separators[] = "/";
-#endif // defined _WIN32 || defined WINCE
-#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
+#endif
 
-
-#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 static bool isDir(const cv::String& path, DIR* dir)
 {
 #if defined _WIN32 || defined _WIN32_WCE
@@ -173,20 +168,13 @@ static bool isDir(const cv::String& path, DIR* dir)
     return is_dir != 0;
 #endif
 }
-#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 bool cv::utils::fs::isDirectory(const cv::String& path)
 {
-#if OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_INSTRUMENT_REGION();
     return isDir(path, NULL);
-#else
-    CV_UNUSED(path);
-    CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
-#endif
 }
 
-#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 static bool wildcmp(const char *string, const char *wild)
 {
     // Based on wildcmp written by Jack Handy - <A href="mailto:jakkhandy@hotmail.com">jakkhandy@hotmail.com</A>
@@ -279,11 +267,9 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
         CV_Error_(CV_StsObjectNotFound, ("could not open directory: %s", directory.c_str()));
     }
 }
-#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 void cv::glob(String pattern, std::vector<String>& result, bool recursive)
 {
-#if OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_INSTRUMENT_REGION();
 
     result.clear();
@@ -317,44 +303,20 @@ void cv::glob(String pattern, std::vector<String>& result, bool recursive)
 
     glob_rec(path, wildchart, result, recursive, false, path);
     std::sort(result.begin(), result.end());
-#else // OPENCV_HAVE_FILESYSTEM_SUPPORT
-    CV_UNUSED(pattern);
-    CV_UNUSED(result);
-    CV_UNUSED(recursive);
-    CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
-#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 }
 
 void cv::utils::fs::glob(const cv::String& directory, const cv::String& pattern,
         std::vector<cv::String>& result,
         bool recursive, bool includeDirectories)
 {
-#if OPENCV_HAVE_FILESYSTEM_SUPPORT
     glob_rec(directory, pattern, result, recursive, includeDirectories, directory);
     std::sort(result.begin(), result.end());
-#else // OPENCV_HAVE_FILESYSTEM_SUPPORT
-    CV_UNUSED(directory);
-    CV_UNUSED(pattern);
-    CV_UNUSED(result);
-    CV_UNUSED(recursive);
-    CV_UNUSED(includeDirectories);
-    CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
-#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 }
 
 void cv::utils::fs::glob_relative(const cv::String& directory, const cv::String& pattern,
         std::vector<cv::String>& result,
         bool recursive, bool includeDirectories)
 {
-#if OPENCV_HAVE_FILESYSTEM_SUPPORT
     glob_rec(directory, pattern, result, recursive, includeDirectories, cv::String());
     std::sort(result.begin(), result.end());
-#else // OPENCV_HAVE_FILESYSTEM_SUPPORT
-    CV_UNUSED(directory);
-    CV_UNUSED(pattern);
-    CV_UNUSED(result);
-    CV_UNUSED(recursive);
-    CV_UNUSED(includeDirectories);
-    CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
-#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 }

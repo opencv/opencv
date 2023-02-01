@@ -14,13 +14,11 @@
 using namespace std;
 using namespace cv;
 
-#ifndef HAVE_ONEVPL
 static mfxIMPL getImpl()
 {
     static const size_t res = utils::getConfigurationParameterSizeT("OPENCV_VIDEOIO_MFX_IMPL", MFX_IMPL_AUTO_ANY);
     return (mfxIMPL)res;
 }
-#endif
 
 static size_t getExtraSurfaceNum()
 {
@@ -34,46 +32,19 @@ static size_t getPoolTimeoutSec()
     return res;
 }
 
-#ifdef HAVE_ONEVPL
-// oneVPL loader singleton (HW implementation only)
-static mfxLoader setupVPLLoader()
-{
-    mfxLoader instance = MFXLoad();
-    mfxConfig cfg = MFXCreateConfig(instance);
-    mfxVariant impl;
-    impl.Type = MFX_VARIANT_TYPE_U32;
-    impl.Data.U32 = MFX_IMPL_TYPE_HARDWARE;
-    MFXSetConfigFilterProperty(cfg, (const mfxU8*)"mfxImplDescription.Impl", impl);
-    DBG(cerr << "MFX Load: " << instance << endl);
-    return instance;
-}
-
-mfxLoader getVPLLoaderInstance()
-{
-    static mfxLoader instance = setupVPLLoader();
-    return instance;
-}
-#endif
-
 //==================================================================================================
 
-bool DeviceHandler::init(MFXVideoSession_WRAP &session)
+bool DeviceHandler::init(MFXVideoSession &session)
 {
     mfxStatus res = MFX_ERR_NONE;
-    mfxVersion ver = { {19, 1} };
-
-#ifdef HAVE_ONEVPL
-    res = session.CreateSession();
-    DBG(cout << "MFX CreateSession: " << res << endl);
-#else
     mfxIMPL impl = getImpl();
+    mfxVersion ver = { {19, 1} };
 
     res = session.Init(impl, &ver);
     DBG(cout << "MFX SessionInit: " << res << endl);
 
     res = session.QueryIMPL(&impl);
     DBG(cout << "MFX QueryIMPL: " << res << " => " << asHex(impl) << endl);
-#endif
 
     res = session.QueryVersion(&ver);
     DBG(cout << "MFX QueryVersion: " << res << " => " << ver.Major << "." << ver.Minor << endl);
@@ -106,7 +77,7 @@ VAHandle::~VAHandle() {
     }
 }
 
-bool VAHandle::initDeviceSession(MFXVideoSession_WRAP &session) {
+bool VAHandle::initDeviceSession(MFXVideoSession &session) {
     int majorVer = 0, minorVer = 0;
     VAStatus va_res = vaInitialize(display, &majorVer, &minorVer);
     DBG(cout << "vaInitialize: " << va_res << endl << majorVer << '.' << minorVer << endl);
@@ -260,3 +231,5 @@ bool WriteBitstream::isOpened() const
 {
     return output.is_open();
 }
+
+//==================================================================================================

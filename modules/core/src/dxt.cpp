@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/opencl/runtime/opencl_clfft.hpp"
+#include "opencv2/core/opencl/runtime/opencl_clamdfft.hpp"
 #include "opencv2/core/opencl/runtime/opencl_core.hpp"
 #include "opencl_kernels_core.hpp"
 #include <map>
@@ -531,14 +531,14 @@ template<typename T> struct DFT_R5
 template<typename T> struct DFT_VecR2
 {
     void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
-        DFT_R2<T>()(dst, c_n, n, dw0, wave);
+        return DFT_R2<T>()(dst, c_n, n, dw0, wave);
     }
 };
 
 template<typename T> struct DFT_VecR3
 {
     void operator()(Complex<T>* dst, const int c_n, const int n, const int dw0, const Complex<T>* wave) const {
-        DFT_R3<T>()(dst, c_n, n, dw0, wave);
+        return DFT_R3<T>()(dst, c_n, n, dw0, wave);
     }
 };
 
@@ -2420,7 +2420,7 @@ namespace cv {
 
 #define CLAMDDFT_Assert(func) \
     { \
-        clfftStatus s = (func); \
+        clAmdFftStatus s = (func); \
         CV_Assert(s == CLFFT_SUCCESS); \
     }
 
@@ -2437,8 +2437,8 @@ class PlanCache
             bool dft_scale = (flags & DFT_SCALE) != 0;
             bool dft_rows = (flags & DFT_ROWS) != 0;
 
-            clfftLayout inLayout = CLFFT_REAL, outLayout = CLFFT_REAL;
-            clfftDim dim = dft_size.height == 1 || dft_rows ? CLFFT_1D : CLFFT_2D;
+            clAmdFftLayout inLayout = CLFFT_REAL, outLayout = CLFFT_REAL;
+            clAmdFftDim dim = dft_size.height == 1 || dft_rows ? CLFFT_1D : CLFFT_2D;
 
             size_t batchSize = dft_rows ? dft_size.height : 1;
             size_t clLengthsIn[3] = { (size_t)dft_size.width, dft_rows ? 1 : (size_t)dft_size.height, 1 };
@@ -2475,30 +2475,28 @@ class PlanCache
             clStridesIn[2] = dft_rows ? clStridesIn[1] : dft_size.width * clStridesIn[1];
             clStridesOut[2] = dft_rows ? clStridesOut[1] : dft_size.width * clStridesOut[1];
 
-            CLAMDDFT_Assert(clfftCreateDefaultPlan(&plHandle, (cl_context)ocl::Context::getDefault().ptr(), dim, clLengthsIn))
+            CLAMDDFT_Assert(clAmdFftCreateDefaultPlan(&plHandle, (cl_context)ocl::Context::getDefault().ptr(), dim, clLengthsIn))
 
             // setting plan properties
-            CLAMDDFT_Assert(clfftSetPlanPrecision(plHandle, doubleFP ? CLFFT_DOUBLE : CLFFT_SINGLE));
-            CLAMDDFT_Assert(clfftSetResultLocation(plHandle, inplace ? CLFFT_INPLACE : CLFFT_OUTOFPLACE))
-            CLAMDDFT_Assert(clfftSetLayout(plHandle, inLayout, outLayout))
-            CLAMDDFT_Assert(clfftSetPlanBatchSize(plHandle, batchSize))
-            CLAMDDFT_Assert(clfftSetPlanInStride(plHandle, dim, clStridesIn))
-            CLAMDDFT_Assert(clfftSetPlanOutStride(plHandle, dim, clStridesOut))
-            CLAMDDFT_Assert(clfftSetPlanDistance(plHandle, clStridesIn[dim], clStridesOut[dim]))
+            CLAMDDFT_Assert(clAmdFftSetPlanPrecision(plHandle, doubleFP ? CLFFT_DOUBLE : CLFFT_SINGLE));
+            CLAMDDFT_Assert(clAmdFftSetResultLocation(plHandle, inplace ? CLFFT_INPLACE : CLFFT_OUTOFPLACE))
+            CLAMDDFT_Assert(clAmdFftSetLayout(plHandle, inLayout, outLayout))
+            CLAMDDFT_Assert(clAmdFftSetPlanBatchSize(plHandle, batchSize))
+            CLAMDDFT_Assert(clAmdFftSetPlanInStride(plHandle, dim, clStridesIn))
+            CLAMDDFT_Assert(clAmdFftSetPlanOutStride(plHandle, dim, clStridesOut))
+            CLAMDDFT_Assert(clAmdFftSetPlanDistance(plHandle, clStridesIn[dim], clStridesOut[dim]))
 
             float scale = dft_scale ? 1.0f / (dft_rows ? dft_size.width : dft_size.area()) : 1.0f;
-            CLAMDDFT_Assert(clfftSetPlanScale(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD, scale))
+            CLAMDDFT_Assert(clAmdFftSetPlanScale(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD, scale))
 
             // ready to bake
             cl_command_queue queue = (cl_command_queue)ocl::Queue::getDefault().ptr();
-            CLAMDDFT_Assert(clfftBakePlan(plHandle, 1, &queue, NULL, NULL))
+            CLAMDDFT_Assert(clAmdFftBakePlan(plHandle, 1, &queue, NULL, NULL))
         }
 
         ~FftPlan()
         {
-            // Do not tear down clFFT.
-            // The user application may still use clFFT even after OpenCV is unloaded.
-            /*clfftDestroyPlan(&plHandle);*/
+//            clAmdFftDestroyPlan(&plHandle);
         }
 
         friend class PlanCache;
@@ -2512,7 +2510,7 @@ class PlanCache
         FftType fftType;
 
         cl_context context;
-        clfftPlanHandle plHandle;
+        clAmdFftPlanHandle plHandle;
     };
 
 public:
@@ -2521,8 +2519,8 @@ public:
         CV_SINGLETON_LAZY_INIT_REF(PlanCache, new PlanCache())
     }
 
-    clfftPlanHandle getPlanHandle(const Size & dft_size, int src_step, int dst_step, bool doubleFP,
-                                  bool inplace, int flags, FftType fftType)
+    clAmdFftPlanHandle getPlanHandle(const Size & dft_size, int src_step, int dst_step, bool doubleFP,
+                                     bool inplace, int flags, FftType fftType)
     {
         cl_context currentContext = (cl_context)ocl::Context::getDefault().ptr();
 
@@ -2622,13 +2620,13 @@ static bool ocl_dft_amdfft(InputArray _src, OutputArray _dst, int flags)
     UMat src = _src.getUMat(), dst = _dst.getUMat();
     bool inplace = src.u == dst.u;
 
-    clfftPlanHandle plHandle = PlanCache::getInstance().
+    clAmdFftPlanHandle plHandle = PlanCache::getInstance().
             getPlanHandle(ssize, (int)src.step, (int)dst.step,
                           depth == CV_64F, inplace, flags, fftType);
 
     // get the bufferSize
     size_t bufferSize = 0;
-    CLAMDDFT_Assert(clfftGetTmpBufSize(plHandle, &bufferSize))
+    CLAMDDFT_Assert(clAmdFftGetTmpBufSize(plHandle, &bufferSize))
     UMat tmpBuffer(1, (int)bufferSize, CV_8UC1);
 
     cl_mem srcarg = (cl_mem)src.handle(ACCESS_READ);
@@ -2637,9 +2635,9 @@ static bool ocl_dft_amdfft(InputArray _src, OutputArray _dst, int flags)
     cl_command_queue queue = (cl_command_queue)ocl::Queue::getDefault().ptr();
     cl_event e = 0;
 
-    CLAMDDFT_Assert(clfftEnqueueTransform(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD,
-                                          1, &queue, 0, NULL, &e,
-                                          &srcarg, &dstarg, (cl_mem)tmpBuffer.handle(ACCESS_RW)))
+    CLAMDDFT_Assert(clAmdFftEnqueueTransform(plHandle, dft_inverse ? CLFFT_BACKWARD : CLFFT_FORWARD,
+                                       1, &queue, 0, NULL, &e,
+                                       &srcarg, &dstarg, (cl_mem)tmpBuffer.handle(ACCESS_RW)))
 
     tmpBuffer.addref();
     clSetEventCallback(e, CL_COMPLETE, oclCleanupCallback, tmpBuffer.u);

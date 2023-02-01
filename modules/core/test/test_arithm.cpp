@@ -2,8 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
-#include "ref_reduce_arg.impl.hpp"
-#include <algorithm>
 
 namespace opencv_test { namespace {
 
@@ -478,7 +476,7 @@ struct CopyOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -500,7 +498,7 @@ struct SetOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -1389,74 +1387,6 @@ struct MinMaxLocOp : public BaseElemWiseOp
     }
 };
 
-struct reduceArgMinMaxOp : public BaseElemWiseOp
-{
-    reduceArgMinMaxOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)),
-                          isLast(false), isMax(false), axis(0)
-    {
-        context = ARITHM_MAX_NDIMS*2 + 2;
-    };
-    int getRandomType(RNG& rng) override
-    {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);
-    }
-    void getRandomSize(RNG& rng, vector<int>& size) override
-    {
-        cvtest::randomSize(rng, 2, ARITHM_MAX_NDIMS, 6, size);
-    }
-    void generateScalars(int depth, RNG& rng) override
-    {
-        BaseElemWiseOp::generateScalars(depth, rng);
-        isLast = (randInt(rng) % 2 == 0);
-        isMax = (randInt(rng) % 2 == 0);
-        axis = randInt(rng);
-    }
-    int getAxis(const Mat& src) const
-    {
-        int dims = src.dims;
-        return static_cast<int>(axis % (2 * dims)) - dims; // [-dims; dims - 1]
-    }
-    void op(const vector<Mat>& src, Mat& dst, const Mat&) override
-    {
-        const Mat& inp = src[0];
-        const int axis_ = getAxis(inp);
-        if (isMax)
-        {
-            cv::reduceArgMax(inp, dst, axis_, isLast);
-        }
-        else
-        {
-            cv::reduceArgMin(inp, dst, axis_, isLast);
-        }
-    }
-    void refop(const vector<Mat>& src, Mat& dst, const Mat&) override
-    {
-        const Mat& inp = src[0];
-        const int axis_ = getAxis(inp);
-
-        if (!isLast && !isMax)
-        {
-            cvtest::MinMaxReducer<std::less>::reduce(inp, dst, axis_);
-        }
-        else if (!isLast && isMax)
-        {
-            cvtest::MinMaxReducer<std::greater>::reduce(inp, dst, axis_);
-        }
-        else if (isLast && !isMax)
-        {
-            cvtest::MinMaxReducer<std::less_equal>::reduce(inp, dst, axis_);
-        }
-        else
-        {
-            cvtest::MinMaxReducer<std::greater_equal>::reduce(inp, dst, axis_);
-        }
-    }
-
-    bool isLast;
-    bool isMax;
-    uint32_t axis;
-};
-
 
 typedef Ptr<BaseElemWiseOp> ElemWiseOpPtr;
 class ElemWiseTest : public ::testing::TestWithParam<ElemWiseOpPtr> {};
@@ -1562,7 +1492,6 @@ INSTANTIATE_TEST_CASE_P(Core_MeanStdDev, ElemWiseTest, ::testing::Values(ElemWis
 INSTANTIATE_TEST_CASE_P(Core_Sum, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new SumOp)));
 INSTANTIATE_TEST_CASE_P(Core_Norm, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new NormOp)));
 INSTANTIATE_TEST_CASE_P(Core_MinMaxLoc, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new MinMaxLocOp)));
-INSTANTIATE_TEST_CASE_P(Core_reduceArgMinMax, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new reduceArgMinMaxOp)));
 INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new CartToPolarToCartOp)));
 
 
@@ -1918,54 +1847,13 @@ INSTANTIATE_TEST_CASE_P(Arithm, SubtractOutputMatNotEmpty, testing::Combine(
     testing::Values(-1, CV_16S, CV_32S, CV_32F),
     testing::Bool()));
 
-TEST(Core_FindNonZero, regression)
+TEST(Core_FindNonZero, singular)
 {
     Mat img(10, 10, CV_8U, Scalar::all(0));
-    vector<Point> pts, pts2(5);
+    vector<Point> pts, pts2(10);
     findNonZero(img, pts);
     findNonZero(img, pts2);
     ASSERT_TRUE(pts.empty() && pts2.empty());
-
-    RNG rng((uint64)-1);
-    size_t nz = 0;
-    for( int i = 0; i < 10; i++ )
-    {
-        int idx = rng.uniform(0, img.rows*img.cols);
-        if( !img.data[idx] ) nz++;
-        img.data[idx] = (uchar)rng.uniform(1, 256);
-    }
-    findNonZero(img, pts);
-    ASSERT_TRUE(pts.size() == nz);
-
-    img.convertTo( img, CV_8S );
-    pts.clear();
-    findNonZero(img, pts);
-    ASSERT_TRUE(pts.size() == nz);
-
-    img.convertTo( img, CV_16U );
-    pts.resize(pts.size()*2);
-    findNonZero(img, pts);
-    ASSERT_TRUE(pts.size() == nz);
-
-    img.convertTo( img, CV_16S );
-    pts.resize(pts.size()*3);
-    findNonZero(img, pts);
-    ASSERT_TRUE(pts.size() == nz);
-
-    img.convertTo( img, CV_32S );
-    pts.resize(pts.size()*4);
-    findNonZero(img, pts);
-    ASSERT_TRUE(pts.size() == nz);
-
-    img.convertTo( img, CV_32F );
-    pts.resize(pts.size()*5);
-    findNonZero(img, pts);
-    ASSERT_TRUE(pts.size() == nz);
-
-    img.convertTo( img, CV_64F );
-    pts.clear();
-    findNonZero(img, pts);
-    ASSERT_TRUE(pts.size() == nz);
 }
 
 TEST(Core_BoolVector, support)
@@ -2092,14 +1980,6 @@ TEST(Compare, regression_8999)
     EXPECT_THROW(cv::compare(A, B, C, CMP_LT), cv::Exception);
 }
 
-TEST(Compare, regression_16F_do_not_crash)
-{
-    cv::Mat mat1(2, 2, CV_16F, cv::Scalar(1));
-    cv::Mat mat2(2, 2, CV_16F, cv::Scalar(2));
-    cv::Mat dst;
-    EXPECT_THROW(cv::compare(mat1, mat2, dst, cv::CMP_EQ), cv::Exception);
-}
-
 
 TEST(Core_minMaxIdx, regression_9207_1)
 {
@@ -2128,145 +2008,6 @@ TEST(Core_minMaxIdx, regression_9207_1)
     EXPECT_EQ(0, maxIdx[1]);
 }
 
-
-class TransposeND : public testing::TestWithParam< tuple<std::vector<int>, perf::MatType> >
-{
-public:
-    std::vector<int> m_shape;
-    int m_type;
-
-    void SetUp()
-    {
-        std::tie(m_shape, m_type) = GetParam();
-    }
-};
-
-
-TEST_P(TransposeND, basic)
-{
-    Mat inp(m_shape, m_type);
-    randu(inp, 0, 255);
-
-    std::vector<int> order(m_shape.size());
-    std::iota(order.begin(), order.end(), 0);
-    auto transposer = [&order] (const std::vector<int>& id)
-    {
-        std::vector<int> ret(id.size());
-        for (size_t i = 0; i < id.size(); ++i)
-        {
-            ret[i] = id[order[i]];
-        }
-        return ret;
-    };
-    auto advancer = [&inp] (std::vector<int>& id)
-    {
-        for (int j = static_cast<int>(id.size() - 1); j >= 0; --j)
-        {
-            ++id[j];
-            if (id[j] != inp.size[j])
-            {
-                break;
-            }
-            id[j] = 0;
-        }
-    };
-
-    do
-    {
-        Mat out;
-        cv::transposeND(inp, order, out);
-        std::vector<int> id(order.size());
-        for (size_t i = 0; i < inp.total(); ++i)
-        {
-            auto new_id = transposer(id);
-            switch (inp.type())
-            {
-            case CV_8UC1:
-                ASSERT_EQ(inp.at<uint8_t>(id.data()), out.at<uint8_t>(new_id.data()));
-                break;
-            case CV_32FC1:
-                ASSERT_EQ(inp.at<float>(id.data()), out.at<float>(new_id.data()));
-                break;
-            default:
-                FAIL() << "Unsupported type: " << inp.type();
-            }
-            advancer(id);
-        }
-    } while (std::next_permutation(order.begin(), order.end()));
-}
-
-
-INSTANTIATE_TEST_CASE_P(Arithm, TransposeND, testing::Combine(
-    testing::Values(std::vector<int>{2, 3, 4}, std::vector<int>{5, 10}),
-    testing::Values(perf::MatType(CV_8UC1), CV_32FC1)
-));
-
-class FlipND : public testing::TestWithParam< tuple<std::vector<int>, perf::MatType> >
-{
-public:
-    std::vector<int> m_shape;
-    int m_type;
-
-    void SetUp()
-    {
-        std::tie(m_shape, m_type) = GetParam();
-    }
-};
-
-TEST_P(FlipND, basic)
-{
-    Mat inp(m_shape, m_type);
-    randu(inp, 0, 255);
-
-    int ndim = static_cast<int>(m_shape.size());
-    std::vector<int> axes(ndim*2); // [-shape, shape)
-    std::iota(axes.begin(), axes.end(), -ndim);
-    auto get_flipped_indices = [&inp, ndim] (size_t total, std::vector<int>& indices, int axis)
-    {
-        const int* shape = inp.size.p;
-        size_t t = total, idx;
-        for (int i = ndim - 1; i >= 0; --i)
-        {
-            idx = t / shape[i];
-            indices[i] = int(t - idx * shape[i]);
-            t = idx;
-        }
-
-        int _axis = (axis + ndim) % ndim;
-        std::vector<int> flipped_indices = indices;
-        flipped_indices[_axis] = shape[_axis] - 1 - indices[_axis];
-        return flipped_indices;
-    };
-
-    for (size_t i = 0; i < axes.size(); ++i)
-    {
-        int axis = axes[i];
-        Mat out;
-        cv::flipND(inp, out, axis);
-        // check values
-        std::vector<int> indices(ndim, 0);
-        for (size_t j = 0; j < inp.total(); ++j)
-        {
-            auto flipped_indices = get_flipped_indices(j, indices, axis);
-            switch (inp.type())
-            {
-            case CV_8UC1:
-                ASSERT_EQ(inp.at<uint8_t>(indices.data()), out.at<uint8_t>(flipped_indices.data()));
-                break;
-            case CV_32FC1:
-                ASSERT_EQ(inp.at<float>(indices.data()), out.at<float>(flipped_indices.data()));
-                break;
-            default:
-                FAIL() << "Unsupported type: " << inp.type();
-            }
-        }
-    }
-}
-
-INSTANTIATE_TEST_CASE_P(Arithm, FlipND, testing::Combine(
-    testing::Values(std::vector<int>{5, 10}, std::vector<int>{2, 3, 4}),
-    testing::Values(perf::MatType(CV_8UC1), CV_32FC1)
-));
 
 TEST(Core_minMaxIdx, regression_9207_2)
 {
@@ -2513,7 +2254,6 @@ template <typename T> static inline
 void testDivideChecks(const Mat& dst)
 {
     ASSERT_FALSE(dst.empty());
-    CV_StaticAssert(std::numeric_limits<T>::is_integer, "");
     for (int y = 0; y < dst.rows; y++)
     {
         for (int x = 0; x < dst.cols; x++)
@@ -2530,36 +2270,6 @@ void testDivideChecks(const Mat& dst)
         }
     }
 }
-
-template <typename T> static inline
-void testDivideChecksFP(const Mat& dst)
-{
-    ASSERT_FALSE(dst.empty());
-    CV_StaticAssert(!std::numeric_limits<T>::is_integer, "");
-    for (int y = 0; y < dst.rows; y++)
-    {
-        for (int x = 0; x < dst.cols; x++)
-        {
-            if ((y % 3) == 0 && (x % 4) == 2)
-            {
-                EXPECT_TRUE(cvIsNaN(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
-            }
-            else if ((x % 4) == 2)
-            {
-                EXPECT_TRUE(cvIsInf(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
-            }
-            else
-            {
-                EXPECT_FALSE(cvIsNaN(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
-                EXPECT_FALSE(cvIsInf(dst.at<T>(y, x))) << "dst(" << y << ", " << x << ") = " << dst.at<T>(y, x);
-            }
-        }
-    }
-}
-
-template <> inline void testDivideChecks<float>(const Mat& dst) { testDivideChecksFP<float>(dst); }
-template <> inline void testDivideChecks<double>(const Mat& dst) { testDivideChecksFP<double>(dst); }
-
 
 template <typename T> static inline
 void testDivide(bool isUMat, double scale, bool largeSize, bool tailProcessing, bool roi)

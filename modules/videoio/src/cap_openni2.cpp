@@ -39,7 +39,6 @@
 //
 //M*/
 #include "precomp.hpp"
-#include "cap_interface.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
 
@@ -103,7 +102,7 @@ private:
 class CvCapture_OpenNI2 : public CvCapture
 {
 public:
-    enum { DEVICE_DEFAULT=0, DEVICE_MS_KINECT=0, DEVICE_ASUS_XTION=1, DEVICE_ORBBEC_ASTRA=2, DEVICE_MAX=2 };
+    enum { DEVICE_DEFAULT=0, DEVICE_MS_KINECT=0, DEVICE_ASUS_XTION=1, DEVICE_MAX=1 };
 
     static const int INVALID_PIXEL_VAL = 0;
     static const int INVALID_COORDINATE_VAL = 0;
@@ -225,7 +224,7 @@ openni::VideoMode CvCapture_OpenNI2::defaultStreamOutputMode(int stream)
 
 
 CvCapture_OpenNI2::CvCapture_OpenNI2(int index) :
-    CvCapture_OpenNI2(index, nullptr)
+    CvCapture_OpenNI2(index, NULL)
 { }
 
 CvCapture_OpenNI2::CvCapture_OpenNI2(const char * filename) :
@@ -262,8 +261,7 @@ CvCapture_OpenNI2::CvCapture_OpenNI2(int index, const char * filename) :
             index %= 10;
         }
         // Asus XTION and Occipital Structure Sensor do not have an image generator
-        // Orbbec Astra cameras don't provide OpenNI interface for color stream reading
-        needColor = (deviceType != DEVICE_ASUS_XTION) && (deviceType != DEVICE_ORBBEC_ASTRA);
+        needColor = (deviceType != DEVICE_ASUS_XTION);
 
         // find appropriate device URI
         openni::Array<openni::DeviceInfo> ldevs;
@@ -302,11 +300,6 @@ CvCapture_OpenNI2::CvCapture_OpenNI2(int index, const char * filename) :
     setProperty(CV_CAP_PROP_OPENNI2_MIRROR, 0.0);
 
     isContextOpened = true;
-
-    CV_LOG_INFO(NULL, cv::format("Opened OpenNI camera: %s %s (%04x:%04x)",
-                      device.getDeviceInfo().getVendor(), device.getDeviceInfo().getName(),
-                      device.getDeviceInfo().getUsbVendorId(), device.getDeviceInfo().getUsbProductId())
-    );
 }
 
 CvCapture_OpenNI2::~CvCapture_OpenNI2()
@@ -1052,7 +1045,7 @@ IplImage* CvCapture_OpenNI2::retrieveGrayImage()
 
     cv::Mat rgbImage;
     getBGRImageFromMetaData(streamFrames[CV_COLOR_STREAM], rgbImage);
-    cv::cvtColor( rgbImage, outputMaps[CV_CAP_OPENNI_GRAY_IMAGE].mat, cv::COLOR_BGR2GRAY );
+    cv::cvtColor( rgbImage, outputMaps[CV_CAP_OPENNI_GRAY_IMAGE].mat, CV_BGR2GRAY );
 
     return outputMaps[CV_CAP_OPENNI_GRAY_IMAGE].getIplImagePtr();
 }
@@ -1108,23 +1101,23 @@ IplImage* CvCapture_OpenNI2::retrieveFrame( int outputType )
     return image;
 }
 
-cv::Ptr<cv::IVideoCapture> cv::create_OpenNI2_capture_cam( int index )
+CvCapture* cvCreateCameraCapture_OpenNI2( int index )
 {
     CvCapture_OpenNI2* capture = new CvCapture_OpenNI2( index );
 
     if( capture->isOpened() )
-        return cv::makePtr<cv::LegacyCapture>(capture);
+        return capture;
 
     delete capture;
     return 0;
 }
 
-cv::Ptr<cv::IVideoCapture> cv::create_OpenNI2_capture_file( const std::string &filename )
+CvCapture* cvCreateFileCapture_OpenNI2( const char* filename )
 {
-    CvCapture_OpenNI2* capture = new CvCapture_OpenNI2( filename.c_str() );
+    CvCapture_OpenNI2* capture = new CvCapture_OpenNI2( filename );
 
     if( capture->isOpened() )
-        return cv::makePtr<cv::LegacyCapture>(capture);
+        return capture;
 
     delete capture;
     return 0;

@@ -56,12 +56,6 @@
 namespace cv
 {
 
-// TODO: To be removed in 5.x branch
-const std::vector<std::vector<cv::Point> >& SimpleBlobDetector::getBlobContours() const
-{
-    CV_Error(Error::StsNotImplemented, "Method SimpleBlobDetector::getBlobContours() is not implemented");
-}
-
 class CV_EXPORTS_W SimpleBlobDetectorImpl : public SimpleBlobDetector
 {
 public:
@@ -70,37 +64,6 @@ public:
 
   virtual void read( const FileNode& fn ) CV_OVERRIDE;
   virtual void write( FileStorage& fs ) const CV_OVERRIDE;
-
-  void setParams(const SimpleBlobDetector::Params& _params ) CV_OVERRIDE {
-    SimpleBlobDetectorImpl::validateParameters(_params);
-    params = _params;
-  }
-
-  SimpleBlobDetector::Params getParams() const CV_OVERRIDE { return params; }
-
-  static void validateParameters(const SimpleBlobDetector::Params& p)
-  {
-      if (p.thresholdStep <= 0)
-          CV_Error(Error::StsBadArg, "thresholdStep>0");
-
-      if (p.minThreshold > p.maxThreshold || p.minThreshold < 0)
-          CV_Error(Error::StsBadArg, "0<=minThreshold<=maxThreshold");
-
-      if (p.minDistBetweenBlobs <=0 )
-          CV_Error(Error::StsBadArg, "minDistBetweenBlobs>0");
-
-      if (p.minArea > p.maxArea || p.minArea <=0)
-          CV_Error(Error::StsBadArg, "0<minArea<=maxArea");
-
-      if (p.minCircularity > p.maxCircularity || p.minCircularity <= 0)
-          CV_Error(Error::StsBadArg, "0<minCircularity<=maxCircularity");
-
-      if (p.minInertiaRatio > p.maxInertiaRatio || p.minInertiaRatio <= 0)
-          CV_Error(Error::StsBadArg, "0<minInertiaRatio<=maxInertiaRatio");
-
-      if (p.minConvexity > p.maxConvexity || p.minConvexity <= 0)
-          CV_Error(Error::StsBadArg, "0<minConvexity<=maxConvexity");
-  }
 
 protected:
   struct CV_EXPORTS Center
@@ -111,12 +74,9 @@ protected:
   };
 
   virtual void detect( InputArray image, std::vector<KeyPoint>& keypoints, InputArray mask=noArray() ) CV_OVERRIDE;
-  virtual void findBlobs(InputArray image, InputArray binaryImage, std::vector<Center> &centers,
-                         std::vector<std::vector<Point> > &contours, std::vector<Moments> &moments) const;
-  virtual const std::vector<std::vector<Point> >& getBlobContours() const CV_OVERRIDE;
+  virtual void findBlobs(InputArray image, InputArray binaryImage, std::vector<Center> &centers) const;
 
   Params params;
-  std::vector<std::vector<Point> > blobContours;
 };
 
 /*
@@ -150,8 +110,6 @@ SimpleBlobDetector::Params::Params()
     //minConvexity = 0.8;
     minConvexity = 0.95f;
     maxConvexity = std::numeric_limits<float>::max();
-
-    collectContours = false;
 }
 
 void SimpleBlobDetector::Params::read(const cv::FileNode& fn )
@@ -181,8 +139,6 @@ void SimpleBlobDetector::Params::read(const cv::FileNode& fn )
     filterByConvexity = (int)fn["filterByConvexity"] != 0 ? true : false;
     minConvexity = fn["minConvexity"];
     maxConvexity = fn["maxConvexity"];
-
-    collectContours = (int)fn["collectContours"] != 0 ? true : false;
 }
 
 void SimpleBlobDetector::Params::write(cv::FileStorage& fs) const
@@ -212,8 +168,6 @@ void SimpleBlobDetector::Params::write(cv::FileStorage& fs) const
     fs << "filterByConvexity" << (int)filterByConvexity;
     fs << "minConvexity" << minConvexity;
     fs << "maxConvexity" << maxConvexity;
-
-    fs << "collectContours" << (int)collectContours;
 }
 
 SimpleBlobDetectorImpl::SimpleBlobDetectorImpl(const SimpleBlobDetector::Params &parameters) :
@@ -223,10 +177,7 @@ params(parameters)
 
 void SimpleBlobDetectorImpl::read( const cv::FileNode& fn )
 {
-    SimpleBlobDetector::Params rp;
-    rp.read(fn);
-    SimpleBlobDetectorImpl::validateParameters(rp);
-    params = rp;
+    params.read(fn);
 }
 
 void SimpleBlobDetectorImpl::write( cv::FileStorage& fs ) const
@@ -235,16 +186,13 @@ void SimpleBlobDetectorImpl::write( cv::FileStorage& fs ) const
     params.write(fs);
 }
 
-void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImage, std::vector<Center> &centers,
-                                       std::vector<std::vector<Point> > &contoursOut, std::vector<Moments> &momentss) const
+void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImage, std::vector<Center> &centers) const
 {
     CV_INSTRUMENT_REGION();
 
     Mat image = _image.getMat(), binaryImage = _binaryImage.getMat();
     CV_UNUSED(image);
     centers.clear();
-    contoursOut.clear();
-    momentss.clear();
 
     std::vector < std::vector<Point> > contours;
     findContours(binaryImage, contours, RETR_LIST, CHAIN_APPROX_NONE);
@@ -343,11 +291,7 @@ void SimpleBlobDetectorImpl::findBlobs(InputArray _image, InputArray _binaryImag
         }
 
         centers.push_back(center);
-        if (params.collectContours)
-        {
-            contoursOut.push_back(contours[contourIdx]);
-            momentss.push_back(moms);
-        }
+
 
 #ifdef DEBUG_BLOB_DETECTOR
         circle( keypointsImage, center.location, 1, Scalar(0,0,255), 1 );
@@ -364,8 +308,6 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
     CV_INSTRUMENT_REGION();
 
     keypoints.clear();
-    blobContours.clear();
-
     CV_Assert(params.minRepeatability != 0);
     Mat grayscaleImage;
     if (image.channels() == 3 || image.channels() == 4)
@@ -391,19 +333,14 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
     }
 
     std::vector < std::vector<Center> > centers;
-    std::vector<Moments> momentss;
     for (double thresh = params.minThreshold; thresh < params.maxThreshold; thresh += params.thresholdStep)
     {
         Mat binarizedImage;
         threshold(grayscaleImage, binarizedImage, thresh, 255, THRESH_BINARY);
 
         std::vector < Center > curCenters;
-        std::vector<std::vector<Point> > curContours;
-        std::vector<Moments> curMomentss;
-        findBlobs(grayscaleImage, binarizedImage, curCenters, curContours, curMomentss);
+        findBlobs(grayscaleImage, binarizedImage, curCenters);
         std::vector < std::vector<Center> > newCenters;
-        std::vector<std::vector<Point> > newContours;
-        std::vector<Moments> newMomentss;
         for (size_t i = 0; i < curCenters.size(); i++)
         {
             bool isNew = true;
@@ -421,37 +358,15 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
                         centers[j][k] = centers[j][k-1];
                         k--;
                     }
-
-                    if (params.collectContours)
-                    {
-                        if (curCenters[i].confidence > centers[j][k].confidence
-                            || (curCenters[i].confidence == centers[j][k].confidence && curMomentss[i].m00 > momentss[j].m00))
-                        {
-                            blobContours[j] = curContours[i];
-                            momentss[j] = curMomentss[i];
-                        }
-                    }
                     centers[j][k] = curCenters[i];
 
                     break;
                 }
             }
             if (isNew)
-            {
                 newCenters.push_back(std::vector<Center> (1, curCenters[i]));
-                if (params.collectContours)
-                {
-                    newContours.push_back(curContours[i]);
-                    newMomentss.push_back(curMomentss[i]);
-                }
-            }
         }
         std::copy(newCenters.begin(), newCenters.end(), std::back_inserter(centers));
-        if (params.collectContours)
-        {
-            std::copy(newContours.begin(), newContours.end(), std::back_inserter(blobContours));
-            std::copy(newMomentss.begin(), newMomentss.end(), std::back_inserter(momentss));
-        }
     }
 
     for (size_t i = 0; i < centers.size(); i++)
@@ -472,24 +387,12 @@ void SimpleBlobDetectorImpl::detect(InputArray image, std::vector<cv::KeyPoint>&
 
     if (!mask.empty())
     {
-        if (params.collectContours)
-        {
-            KeyPointsFilter::runByPixelsMask2VectorPoint(keypoints, blobContours, mask.getMat());
-        }
-        else
-        {
-            KeyPointsFilter::runByPixelsMask(keypoints, mask.getMat());
-        }
+        KeyPointsFilter::runByPixelsMask(keypoints, mask.getMat());
     }
-}
-
-const std::vector<std::vector<Point> >& SimpleBlobDetectorImpl::getBlobContours() const {
-    return blobContours;
 }
 
 Ptr<SimpleBlobDetector> SimpleBlobDetector::create(const SimpleBlobDetector::Params& params)
 {
-    SimpleBlobDetectorImpl::validateParameters(params);
     return makePtr<SimpleBlobDetectorImpl>(params);
 }
 

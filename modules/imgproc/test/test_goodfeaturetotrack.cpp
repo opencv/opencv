@@ -56,7 +56,11 @@ enum { MINEIGENVAL=0, HARRIS=1, EIGENVALSVECS=2 };
 
 /////////////////////ref//////////////////////
 
+#ifdef CV_CXX11
 struct greaterThanPtr
+#else
+struct greaterThanPtr : public std::binary_function<const float *, const float *, bool>
+#endif
 {
     bool operator () (const float * a, const float * b) const
     { return *a > *b; }
@@ -88,13 +92,14 @@ test_cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
     cvtest::filter2D( src, dy2, ftype, kernel*kernel_scale, anchor, 0, borderType,borderValue );
 
     double denom = (1 << (aperture_size-1))*block_size;
+    denom = denom * denom;
 
     if( _aperture_size < 0 )
-        denom *= 2.;
+        denom *= 4;
     if(type != ftype )
         denom *= 255.;
 
-    denom = 1. / (denom * denom);
+    denom = 1./denom;
 
     for( i = 0; i < src.rows; i++ )
     {
@@ -158,8 +163,8 @@ test_cornerEigenValsVecs( const Mat& src, Mat& eigenv, int block_size,
 static void
 test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
                               int maxCorners, double qualityLevel, double minDistance,
-                              InputArray _mask, OutputArray _cornersQuality,
-                              int blockSize, int gradientSize, bool useHarrisDetector, double harrisK)
+                              InputArray _mask, int blockSize, int gradientSize,
+                              bool useHarrisDetector, double harrisK )
 {
 
     CV_Assert( qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0 );
@@ -207,7 +212,6 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     }
 
     vector<Point2f> corners;
-    vector<float> cornersQuality;
     size_t i, j, total = tmpCorners.size(), ncorners = 0;
 
     std::sort( tmpCorners.begin(), tmpCorners.end(), greaterThanPtr() );
@@ -277,8 +281,6 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
             {
                 grid[y_cell*grid_width + x_cell].push_back(Point2f((float)x, (float)y));
 
-                cornersQuality.push_back(*tmpCorners[i]);
-
                 corners.push_back(Point2f((float)x, (float)y));
                 ++ncorners;
 
@@ -291,24 +293,18 @@ test_goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     {
         for( i = 0; i < total; i++ )
         {
-            cornersQuality.push_back(*tmpCorners[i]);
-
             int ofs = (int)((const uchar*)tmpCorners[i] - eig.data);
             int y = (int)(ofs / eig.step);
             int x = (int)((ofs - y*eig.step)/sizeof(float));
 
             corners.push_back(Point2f((float)x, (float)y));
             ++ncorners;
-
             if( maxCorners > 0 && (int)ncorners == maxCorners )
                 break;
         }
     }
 
     Mat(corners).convertTo(_corners, _corners.fixedType() ? _corners.type() : CV_32F);
-    if (_cornersQuality.needed()) {
-        Mat(cornersQuality).convertTo(_cornersQuality, _cornersQuality.fixedType() ? _cornersQuality.type() : CV_32F);
-    }
 
 }
 
@@ -333,8 +329,6 @@ protected:
     int maxCorners;
     vector<Point2f> corners;
     vector<Point2f> Refcorners;
-    vector<float> cornersQuality;
-    vector<float> RefcornersQuality;
     double qualityLevel;
     double minDistance;
     int blockSize;
@@ -406,7 +400,6 @@ void CV_GoodFeatureToTTest::run_func()
                qualityLevel,
                minDistance,
                Mat(),
-               cornersQuality,
                blockSize,
                gradientSize,
                useHarrisDetector,
@@ -425,7 +418,6 @@ void CV_GoodFeatureToTTest::run_func()
                qualityLevel,
                minDistance,
                Mat(),
-               cornersQuality,
                blockSize,
                gradientSize,
                useHarrisDetector,
@@ -451,7 +443,6 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
                qualityLevel,
                minDistance,
                Mat(),
-               RefcornersQuality,
                blockSize,
                gradientSize,
                useHarrisDetector,
@@ -470,7 +461,6 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
                qualityLevel,
                minDistance,
                Mat(),
-               RefcornersQuality,
                blockSize,
                gradientSize,
                useHarrisDetector,
@@ -485,7 +475,7 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
         TEST_MESSAGEL ("                    TestCorners = ", corners.size())
         TEST_MESSAGE ("\n")
 
-        EXPECT_LE(e, eps); // never true
+        ts->printf(cvtest::TS::CONSOLE, "actual error: %g, expected: %g", e, eps);
         ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
 
         for(int i = 0; i < (int)std::min((unsigned int)(corners.size()), (unsigned int)(Refcorners.size())); i++){
@@ -500,19 +490,6 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
         TEST_MESSAGE ("\n")
 
         ts->set_failed_test_info(cvtest::TS::OK);
-    }
-
-    e = cv::norm(cornersQuality, RefcornersQuality, NORM_RELATIVE | NORM_INF);
-
-    if (e > eps)
-    {
-        EXPECT_LE(e, eps); // never true
-        ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-
-        for(int i = 0; i < (int)std::min((unsigned int)(cornersQuality.size()), (unsigned int)(cornersQuality.size())); i++) {
-            if (std::abs(cornersQuality[i] - RefcornersQuality[i]) > eps * std::max(cornersQuality[i], RefcornersQuality[i]))
-                printf("i = %i Quality %2.6f Quality ref %2.6f\n", i, cornersQuality[i], RefcornersQuality[i]);
-        }
     }
 
     return BaseTest::validate_test_results(test_case_idx);

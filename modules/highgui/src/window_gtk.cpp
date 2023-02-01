@@ -40,19 +40,12 @@
 //M*/
 
 #include "precomp.hpp"
-#include "backend.hpp"
+
+#ifndef _WIN32
 
 #if defined (HAVE_GTK)
 
 #include <gtk/gtk.h>
-
-#if (GTK_MAJOR_VERSION == 3) && defined(HAVE_OPENGL)
-  #undef HAVE_OPENGL  // no support with GTK3
-#endif
-#if defined(HAVE_OPENGL) && !defined(HAVE_GTKGLEXT)
-  #undef HAVE_OPENGL  // gtkglext is required
-#endif
-
 #include <gdk/gdkkeysyms.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <stdio.h>
@@ -111,6 +104,9 @@ struct _CvImageWidgetClass
 /** Allocate new image viewer widget */
 GtkWidget*     cvImageWidgetNew      (int flags);
 
+/** Set the image to display in the widget */
+void           cvImageWidgetSetImage(CvImageWidget * widget, const CvArr *arr);
+
 // standard GTK object macros
 #define CV_IMAGE_WIDGET(obj)          G_TYPE_CHECK_INSTANCE_CAST (obj, cvImageWidget_get_type (), CvImageWidget)
 #define CV_IMAGE_WIDGET_CLASS(klass)  GTK_CHECK_CLASS_CAST (klass, cvImageWidget_get_type (), CvImageWidgetClass)
@@ -126,10 +122,7 @@ static GtkWidgetClass * parent_class = NULL;
 // flag to help size initial window
 #define CV_WINDOW_NO_IMAGE 2
 
-/** Set the image to display in the widget */
-static
-void cvImageWidgetSetImage(CvImageWidget * widget, const CvArr *arr)
-{
+void cvImageWidgetSetImage(CvImageWidget * widget, const CvArr *arr){
     CvMat * mat, stub;
     int origin=0;
 
@@ -147,8 +140,8 @@ void cvImageWidgetSetImage(CvImageWidget * widget, const CvArr *arr)
         widget->original_image = cvCreateMat( mat->rows, mat->cols, CV_8UC3 );
         gtk_widget_queue_resize( GTK_WIDGET( widget ) );
     }
-    CV_Assert(origin == 0);
-    convertToShow(cv::cvarrToMat(arr), widget->original_image);
+    cvConvertImage( mat, widget->original_image,
+                            (origin != 0 ? CV_CVTIMG_FLIP : 0) + CV_CVTIMG_SWAP_RB );
     if(widget->scaled_image){
         cvResize( widget->original_image, widget->scaled_image, CV_INTER_AREA );
     }
@@ -163,7 +156,6 @@ cvImageWidgetNew (int flags)
   CvImageWidget *image_widget;
 
   image_widget = CV_IMAGE_WIDGET( gtk_widget_new (cvImageWidget_get_type (), NULL) );
-  CV_Assert(image_widget && "GTK widget creation is failed. Ensure that there is no GTK2/GTK3 libraries conflict");
   image_widget->original_image = 0;
   image_widget->scaled_image = 0;
   image_widget->flags = flags | CV_WINDOW_NO_IMAGE;
@@ -364,7 +356,7 @@ static void cvImageWidget_set_size(GtkWidget * widget, int max_width, int max_he
 
 
     }
-    CV_Assert(image_widget->scaled_image);
+    CV_Assert( image_widget->scaled_image );
 }
 
 static void
@@ -530,13 +522,12 @@ struct CvUIBase {
 
 struct CvTrackbar : CvUIBase
 {
-    CvTrackbar(const std::string& trackbar_name) :
+    CvTrackbar(const char* trackbar_name) :
         CvUIBase(CV_TRACKBAR_MAGIC_VAL),
         widget(NULL), name(trackbar_name),
         parent(NULL), data(NULL),
         pos(0), maxval(0), minval(0),
-        notify(NULL), notify2(NULL),  // deprecated
-        onChangeCallback(NULL), userdata(NULL)
+        notify(NULL), notify2(NULL), userdata(NULL)
     {
         // nothing
     }
@@ -547,21 +538,20 @@ struct CvTrackbar : CvUIBase
 
     GtkWidget* widget;
     std::string name;
-    CvWindow* parent;  // TODO weak_ptr
+    CvWindow* parent;
     int* data;
     int pos;
     int maxval;
     int minval;
-    CvTrackbarCallback notify;  // deprecated
-    CvTrackbarCallback2 notify2;  // deprecated
-    TrackbarCallback onChangeCallback;
+    CvTrackbarCallback notify;
+    CvTrackbarCallback2 notify2;
     void* userdata;
 };
 
 
 struct CvWindow : CvUIBase
 {
-    CvWindow(const std::string& window_name) :
+    CvWindow(const char* window_name) :
         CvUIBase(CV_WINDOW_MAGIC_VAL),
         widget(NULL), frame(NULL), paned(NULL), name(window_name),
         last_key(0), flags(0), status(0),
@@ -570,10 +560,9 @@ struct CvWindow : CvUIBase
         ,useGl(false), glDrawCallback(NULL), glDrawData(NULL)
 #endif
     {
-        CV_LOG_INFO(NULL, "OpenCV/UI: creating GTK window: " << window_name);
+        // nothing
     }
     ~CvWindow();
-    void destroy();
 
     GtkWidget* widget;
     GtkWidget* frame;
@@ -587,7 +576,7 @@ struct CvWindow : CvUIBase
     CvMouseCallback on_mouse;
     void* on_mouse_param;
 
-    std::vector< std::shared_ptr<CvTrackbar> > trackbars;
+    std::vector< Ptr<CvTrackbar> > trackbars;
 
 #ifdef HAVE_OPENGL
     bool useGl;
@@ -611,14 +600,14 @@ GCond*				   cond_have_key = NULL;
 GThread*			   window_thread = NULL;
 #endif
 
-static int             last_key = -1;
-
-static
-std::vector< std::shared_ptr<CvWindow> >& getGTKWindows()
+static cv::Mutex& getWindowMutex()
 {
-    static std::vector< std::shared_ptr<CvWindow> > g_windows;
-    return g_windows;
+    static cv::Mutex* g_window_mutex = new cv::Mutex();
+    return *g_window_mutex;
 }
+
+static int             last_key = -1;
+static std::vector< Ptr<CvWindow> > g_windows;
 
 CV_IMPL int cvInitSystem( int argc, char** argv )
 {
@@ -711,32 +700,19 @@ gpointer icvWindowThreadLoop(gpointer /*data*/)
 
 #define CV_LOCK_MUTEX() cv::AutoLock lock(getWindowMutex())
 
-static
-std::shared_ptr<CvWindow> icvFindWindowByName(const std::string& name)
+static CvWindow* icvFindWindowByName( const char* name )
 {
-    auto& g_windows = getGTKWindows();
     for(size_t i = 0; i < g_windows.size(); ++i)
     {
-        auto window = g_windows[i];
-        if (!window)
-            continue;
+        CvWindow* window = g_windows[i].get();
         if (window->name == name)
             return window;
     }
-    return std::shared_ptr<CvWindow>();
+    return NULL;
 }
-
-static inline
-std::shared_ptr<CvWindow> icvFindWindowByName(const char* name)
-{
-    CV_Assert(name);
-    return icvFindWindowByName(std::string(name));
-}
-
 
 static CvWindow* icvWindowByWidget( GtkWidget* widget )
 {
-    auto& g_windows = getGTKWindows();
     for (size_t i = 0; i < g_windows.size(); ++i)
     {
         CvWindow* window = g_windows[i].get();
@@ -746,29 +722,20 @@ static CvWindow* icvWindowByWidget( GtkWidget* widget )
     return NULL;
 }
 
-static Rect getImageRect_(const std::shared_ptr<CvWindow>& window);
-
 CvRect cvGetWindowRect_GTK(const char* name)
 {
     CV_Assert(name && "NULL name string");
 
     CV_LOCK_MUTEX();
-    const auto window = icvFindWindowByName(name);
+    CvWindow* window = icvFindWindowByName(name);
     if (!window)
         CV_Error( CV_StsNullPtr, "NULL window" );
-
-    return cvRect(getImageRect_(window));
-}
-
-static Rect getImageRect_(const std::shared_ptr<CvWindow>& window)
-{
-    CV_Assert(window);
 
     gint wx, wy;
 #ifdef HAVE_OPENGL
     if (window->useGl) {
         gtk_widget_translate_coordinates(window->widget, gtk_widget_get_toplevel(window->widget), 0, 0, &wx, &wy);
-        return Rect(wx, wy, window->widget->allocation.width, window->widget->allocation.height);
+        return cvRect(wx, wy, window->widget->allocation.width, window->widget->allocation.height);
     }
 #endif
 
@@ -776,23 +743,23 @@ static Rect getImageRect_(const std::shared_ptr<CvWindow>& window)
     gtk_widget_translate_coordinates(&image_widget->widget, gtk_widget_get_toplevel(&image_widget->widget), 0, 0, &wx, &wy);
     if (image_widget->scaled_image) {
 #if defined (GTK_VERSION3)
-      return Rect(wx, wy, MIN(image_widget->scaled_image->cols, gtk_widget_get_allocated_width(window->widget)),
+      return cvRect(wx, wy, MIN(image_widget->scaled_image->cols, gtk_widget_get_allocated_width(window->widget)),
           MIN(image_widget->scaled_image->rows, gtk_widget_get_allocated_height(window->widget)));
 #else
-      return Rect(wx, wy, MIN(image_widget->scaled_image->cols, window->widget->allocation.width),
+      return cvRect(wx, wy, MIN(image_widget->scaled_image->cols, window->widget->allocation.width),
           MIN(image_widget->scaled_image->rows, window->widget->allocation.height));
 #endif //GTK_VERSION3
     } else if (image_widget->original_image) {
 #if defined (GTK_VERSION3)
-      return Rect(wx, wy, MIN(image_widget->original_image->cols, gtk_widget_get_allocated_width(window->widget)),
+      return cvRect(wx, wy, MIN(image_widget->original_image->cols, gtk_widget_get_allocated_width(window->widget)),
           MIN(image_widget->original_image->rows, gtk_widget_get_allocated_height(window->widget)));
 #else
-      return Rect(wx, wy, MIN(image_widget->original_image->cols, window->widget->allocation.width),
+      return cvRect(wx, wy, MIN(image_widget->original_image->cols, window->widget->allocation.width),
           MIN(image_widget->original_image->rows, window->widget->allocation.height));
 #endif //GTK_VERSION3
     }
 
-    return Rect(-1, -1, -1, -1);
+    return cvRect(-1, -1, -1, -1);
 }
 
 double cvGetModeWindow_GTK(const char* name)//YV
@@ -800,7 +767,7 @@ double cvGetModeWindow_GTK(const char* name)//YV
     CV_Assert(name && "NULL name string");
 
     CV_LOCK_MUTEX();
-    const auto window = icvFindWindowByName(name);
+    CvWindow* window = icvFindWindowByName(name);
     if (!window)
         CV_Error( CV_StsNullPtr, "NULL window" );
 
@@ -808,52 +775,42 @@ double cvGetModeWindow_GTK(const char* name)//YV
     return result;
 }
 
-static bool setModeWindow_(const std::shared_ptr<CvWindow>& window, int mode);
+
 void cvSetModeWindow_GTK( const char* name, double prop_value)//Yannick Verdie
 {
     CV_Assert(name && "NULL name string");
 
     CV_LOCK_MUTEX();
 
-    const auto window = icvFindWindowByName(name);
-    if (!window)
+    CvWindow* window = icvFindWindowByName(name);
+    if( !window )
         CV_Error( CV_StsNullPtr, "NULL window" );
 
-    setModeWindow_(window, (int)prop_value);
-}
-
-static bool setModeWindow_(const std::shared_ptr<CvWindow>& window, int mode)
-{
-    if (window->flags & CV_WINDOW_AUTOSIZE) //if the flag CV_WINDOW_AUTOSIZE is set
-        return false;
+    if(window->flags & CV_WINDOW_AUTOSIZE)//if the flag CV_WINDOW_AUTOSIZE is set
+        return;
 
     //so easy to do fullscreen here, Linux rocks !
 
-    if (window->status == mode)
-        return true;
-
-    if (window->status==CV_WINDOW_FULLSCREEN && mode==CV_WINDOW_NORMAL)
+    if (window->status==CV_WINDOW_FULLSCREEN && prop_value==CV_WINDOW_NORMAL)
     {
         gtk_window_unfullscreen(GTK_WINDOW(window->frame));
         window->status=CV_WINDOW_NORMAL;
-        return true;
+        return;
     }
 
-    if (window->status==CV_WINDOW_NORMAL && mode==CV_WINDOW_FULLSCREEN)
+    if (window->status==CV_WINDOW_NORMAL && prop_value==CV_WINDOW_FULLSCREEN)
     {
         gtk_window_fullscreen(GTK_WINDOW(window->frame));
         window->status=CV_WINDOW_FULLSCREEN;
-        return true;
+        return;
     }
-
-    return false;
 }
 
-void setWindowTitle_GTK(const String& winname, const String& title)
+void cv::setWindowTitle(const String& winname, const String& title)
 {
     CV_LOCK_MUTEX();
 
-    auto window = icvFindWindowByName(winname.c_str());
+    CvWindow* window = icvFindWindowByName(winname.c_str());
 
     if (!window)
     {
@@ -871,7 +828,7 @@ double cvGetPropWindowAutoSize_GTK(const char* name)
 
     CV_LOCK_MUTEX();
 
-    const auto window = icvFindWindowByName(name);
+    CvWindow* window = icvFindWindowByName(name);
     if (!window)
         return -1; // keep silence here
 
@@ -879,22 +836,16 @@ double cvGetPropWindowAutoSize_GTK(const char* name)
     return result;
 }
 
-static double getRatioWindow_(const std::shared_ptr<CvWindow>& window);
 double cvGetRatioWindow_GTK(const char* name)
 {
     CV_Assert(name && "NULL name string");
 
     CV_LOCK_MUTEX();
 
-    const auto window = icvFindWindowByName(name);
+    CvWindow* window = icvFindWindowByName(name);
     if (!window)
         return -1; // keep silence here
 
-    return getRatioWindow_(window);
-}
-
-static double getRatioWindow_(const std::shared_ptr<CvWindow>& window)
-{
 #if defined (GTK_VERSION3)
     double result = static_cast<double>(
         gtk_widget_get_allocated_width(window->widget)) / gtk_widget_get_allocated_height(window->widget);
@@ -911,7 +862,7 @@ double cvGetOpenGlProp_GTK(const char* name)
 
     CV_LOCK_MUTEX();
 
-    const auto window = icvFindWindowByName(name);
+    CvWindow* window = icvFindWindowByName(name);
     if (!window)
         return -1; // keep silence here
 
@@ -1097,7 +1048,6 @@ static gboolean cvImageWidget_expose(GtkWidget* widget, GdkEventExpose* event, g
 }
 #endif //GTK_VERSION3
 
-static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags);
 CV_IMPL int cvNamedWindow( const char* name, int flags )
 {
     cvInitSystem(name ? 1 : 0,(char**)&name);
@@ -1110,16 +1060,8 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     {
         return 1;
     }
-    auto window = namedWindow_(name, flags);
-    return window ? 1 : 0;
-}
 
-static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags)
-{
-    cvInitSystem(0, NULL);
-
-    auto window_ptr = std::make_shared<CvWindow>(name);
-    CvWindow* window = window_ptr.get();
+    Ptr<CvWindow> window = makePtr<CvWindow>(name);
     window->flags = flags;
     window->status = CV_WINDOW_NORMAL;//YV
 
@@ -1174,12 +1116,9 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 #endif //GTK_VERSION3_4
 
     gtk_widget_show( window->frame );
-    gtk_window_set_title(GTK_WINDOW(window->frame), name.c_str());
+    gtk_window_set_title( GTK_WINDOW(window->frame), name );
 
-    {
-        AutoLock lock(getWindowMutex());
-        getGTKWindows().push_back(window_ptr);
-    }
+    g_windows.push_back(window);
 
     bool b_nautosize = ((flags & CV_WINDOW_AUTOSIZE) == 0);
     gtk_window_set_resizable( GTK_WINDOW(window->frame), b_nautosize );
@@ -1195,10 +1134,10 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
 #ifdef HAVE_OPENGL
     if (window->useGl)
-        cvSetOpenGlContext(name.c_str());
+        cvSetOpenGlContext(name);
 #endif
 
-    return window_ptr;
+    return 1;
 }
 
 
@@ -1213,7 +1152,7 @@ CV_IMPL void cvSetOpenGlContext(const char* name)
 
     CV_LOCK_MUTEX();
 
-    auto window = icvFindWindowByName(name);
+    CvWindow* window = icvFindWindowByName(name);
     if (!window)
         CV_Error( CV_StsNullPtr, "NULL window" );
 
@@ -1233,7 +1172,7 @@ CV_IMPL void cvUpdateWindow(const char* name)
 
     CV_LOCK_MUTEX();
 
-    auto window = icvFindWindowByName(name);
+    CvWindow* window = icvFindWindowByName(name);
     if (!window)
         return;
 
@@ -1247,7 +1186,7 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback call
 
     CV_LOCK_MUTEX();
 
-    auto window = icvFindWindowByName(name);
+    CvWindow* window = icvFindWindowByName(name);
     if( !window )
         return;
 
@@ -1264,21 +1203,13 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* name, CvOpenGlDrawCallback call
 
 CvWindow::~CvWindow()
 {
-    if (frame)
-        destroy();
-}
-
-inline void CvWindow::destroy()
-{
-    CV_LOG_INFO(NULL, "OpenCV/UI: destroying GTK window: " << name);
     gtk_widget_destroy(frame);
-    frame = nullptr;
 }
 
 static void checkLastWindow()
 {
     // if last window...
-    if (getGTKWindows().empty())
+    if (g_windows.empty())
     {
 #ifdef HAVE_GTHREAD
         if( thread_started )
@@ -1305,13 +1236,11 @@ static void checkLastWindow()
     }
 }
 
-static
-void icvDeleteWindow_( CvWindow* window )
+static void icvDeleteWindow( CvWindow* window )
 {
-    AutoLock lock(getWindowMutex());
-    auto& g_windows = getGTKWindows();
     bool found = false;
-    for (auto i = g_windows.begin(); i != g_windows.end(); ++i)
+    for (std::vector< Ptr<CvWindow> >::iterator i = g_windows.begin();
+         i != g_windows.end(); ++i)
     {
         if (i->get() == window)
         {
@@ -1320,7 +1249,8 @@ void icvDeleteWindow_( CvWindow* window )
             break;
         }
     }
-    CV_LOG_IF_WARNING(NULL, !found, "OpenCV/GTK: Can't destroy non-registered window");
+    CV_Assert(found && "Can't destroy non-registered window");
+
     checkLastWindow();
 }
 
@@ -1329,10 +1259,10 @@ CV_IMPL void cvDestroyWindow( const char* name )
     CV_Assert(name && "NULL name string");
 
     CV_LOCK_MUTEX();
-    auto& g_windows = getGTKWindows();
 
     bool found = false;
-    for (auto i = g_windows.begin(); i != g_windows.end(); ++i)
+    for (std::vector< Ptr<CvWindow> >::iterator i = g_windows.begin();
+         i != g_windows.end(); ++i)
     {
         if (i->get()->name == name)
         {
@@ -1341,7 +1271,7 @@ CV_IMPL void cvDestroyWindow( const char* name )
             break;
         }
     }
-    CV_LOG_IF_ERROR(NULL, !found, "OpenCV/GTK: Can't destroy non-registered window: '" << name << "'");
+    CV_Assert(found && "Can't destroy non-registered window");
 
     checkLastWindow();
 }
@@ -1352,7 +1282,7 @@ cvDestroyAllWindows( void )
 {
     CV_LOCK_MUTEX();
 
-    getGTKWindows().clear();
+    g_windows.clear();
     checkLastWindow();
 }
 
@@ -1375,7 +1305,7 @@ cvShowImage( const char* name, const CvArr* arr )
 
     CV_LOCK_MUTEX();
 
-    auto window = icvFindWindowByName(name);
+    CvWindow* window = icvFindWindowByName(name);
     if(!window)
     {
         cvNamedWindow(name, 1);
@@ -1398,24 +1328,16 @@ cvShowImage( const char* name, const CvArr* arr )
     }
 }
 
-static void resizeWindow_(const std::shared_ptr<CvWindow>& window, int width, int height);
 CV_IMPL void cvResizeWindow(const char* name, int width, int height )
 {
     CV_Assert(name && "NULL name string");
 
     CV_LOCK_MUTEX();
 
-    auto window = icvFindWindowByName(name);
+    CvWindow* window = icvFindWindowByName(name);
     if(!window)
         return;
 
-    return resizeWindow_(window, width, height);
-}
-
-static
-void resizeWindow_(const std::shared_ptr<CvWindow>& window, int width, int height)
-{
-    CV_Assert(window);
     CvImageWidget* image_widget = CV_IMAGE_WIDGET( window->widget );
     //if(image_widget->flags & CV_WINDOW_AUTOSIZE)
         //EXIT;
@@ -1435,29 +1357,25 @@ CV_IMPL void cvMoveWindow( const char* name, int x, int y )
 
     CV_LOCK_MUTEX();
 
-    const auto window = icvFindWindowByName(name);
+    CvWindow* window = icvFindWindowByName(name);
     if(!window)
         return;
 
     gtk_window_move( GTK_WINDOW(window->frame), x, y );
 }
 
-static
-std::shared_ptr<CvTrackbar> icvFindTrackbarByName(const std::shared_ptr<CvWindow>& window, const std::string& name)
+
+static CvTrackbar*
+icvFindTrackbarByName( const CvWindow* window, const char* name )
 {
-    CV_Assert(window);
-    auto& trackbars = window->trackbars;
-    for(size_t i = 0; i < trackbars.size(); ++i)
+    for (size_t i = 0; i < window->trackbars.size(); ++i)
     {
-        auto trackbar = trackbars[i];
-        if (!trackbar)
-            continue;
+        CvTrackbar* trackbar = window->trackbars[i].get();
         if (trackbar->name == name)
             return trackbar;
     }
-    return std::shared_ptr<CvTrackbar>();
+    return NULL;
 }
-
 
 static int
 icvCreateTrackbar( const char* trackbar_name, const char* window_name,
@@ -1472,16 +1390,16 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
 
     CV_LOCK_MUTEX();
 
-    const auto window = icvFindWindowByName(window_name);
+    CvWindow* window = icvFindWindowByName(window_name);
     if(!window)
         return 0;
 
-    auto trackbar_ = icvFindTrackbarByName(window, trackbar_name);
-    if (!trackbar_)
+    CvTrackbar* trackbar = icvFindTrackbarByName(window, trackbar_name);
+    if (!trackbar)
     {
-        trackbar_ = std::make_shared<CvTrackbar>(trackbar_name);
-        CvTrackbar* trackbar = trackbar_.get();
-        trackbar->parent = window.get();
+        Ptr<CvTrackbar> trackbar_ = makePtr<CvTrackbar>(trackbar_name);
+        trackbar = trackbar_.get();
+        trackbar->parent = window;
         window->trackbars.push_back(trackbar_);
 
         GtkWidget* hscale_box = gtk_hbox_new( FALSE, 10 );
@@ -1499,8 +1417,6 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
         gtk_box_pack_start( GTK_BOX(window->paned), hscale_box, FALSE, FALSE, 5 );
         gtk_widget_show( hscale_box );
     }
-
-    CvTrackbar* trackbar = trackbar_.get(); CV_DbgAssert(trackbar);
 
     if( val )
     {
@@ -1528,6 +1444,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     return 1;
 }
 
+
 CV_IMPL int
 cvCreateTrackbar( const char* trackbar_name, const char* window_name,
                   int* val, int count, CvTrackbarCallback on_notify )
@@ -1535,6 +1452,7 @@ cvCreateTrackbar( const char* trackbar_name, const char* window_name,
     return icvCreateTrackbar(trackbar_name, window_name, val, count,
                              on_notify, 0, 0);
 }
+
 
 CV_IMPL int
 cvCreateTrackbar2( const char* trackbar_name, const char* window_name,
@@ -1545,52 +1463,6 @@ cvCreateTrackbar2( const char* trackbar_name, const char* window_name,
                              0, on_notify2, userdata);
 }
 
-static
-std::shared_ptr<CvTrackbar> createTrackbar_(
-    const std::shared_ptr<CvWindow>& window, const std::string& name,
-    int count,
-    TrackbarCallback onChange, void* userdata
-)
-{
-    CV_Assert(window);
-    CV_Assert(!name.empty());
-
-    if (count <= 0)
-        CV_Error(Error::StsOutOfRange, "Bad trackbar maximal value");
-
-    auto trackbar_ = std::make_shared<CvTrackbar>(name);
-    CvTrackbar* trackbar = trackbar_.get();
-    trackbar->parent = window.get();
-    window->trackbars.push_back(trackbar_);
-
-    GtkWidget* hscale_box = gtk_hbox_new( FALSE, 10 );
-    GtkWidget* hscale_label = gtk_label_new(name.c_str());
-    GtkWidget* hscale = gtk_hscale_new_with_range( 0, count, 1 );
-    gtk_scale_set_digits( GTK_SCALE(hscale), 0 );
-    //gtk_scale_set_value_pos( hscale, GTK_POS_TOP );
-    gtk_scale_set_draw_value( GTK_SCALE(hscale), TRUE );
-
-    trackbar->widget = hscale;
-    gtk_box_pack_start( GTK_BOX(hscale_box), hscale_label, FALSE, FALSE, 5 );
-    gtk_widget_show( hscale_label );
-    gtk_box_pack_start( GTK_BOX(hscale_box), hscale, TRUE, TRUE, 5 );
-    gtk_widget_show( hscale );
-    gtk_box_pack_start( GTK_BOX(window->paned), hscale_box, FALSE, FALSE, 5 );
-    gtk_widget_show( hscale_box );
-
-    trackbar->maxval = count;
-    trackbar->onChangeCallback = onChange;
-    trackbar->userdata = userdata;
-    g_signal_connect(trackbar->widget, "value-changed",
-                     G_CALLBACK(icvOnTrackbar), trackbar);
-
-    // queue a widget resize to trigger a window resize to
-    // compensate for the addition of trackbars
-    gtk_widget_queue_resize(GTK_WIDGET(window->widget));
-
-    return trackbar_;
-}
-
 
 CV_IMPL void
 cvSetMouseCallback( const char* window_name, CvMouseCallback on_mouse, void* param )
@@ -1599,7 +1471,7 @@ cvSetMouseCallback( const char* window_name, CvMouseCallback on_mouse, void* par
 
     CV_LOCK_MUTEX();
 
-    const auto window = icvFindWindowByName(window_name);
+    CvWindow* window = icvFindWindowByName(window_name);
     if (!window)
         return;
 
@@ -1615,18 +1487,18 @@ CV_IMPL int cvGetTrackbarPos( const char* trackbar_name, const char* window_name
 
     CV_LOCK_MUTEX();
 
-    const auto window = icvFindWindowByName(window_name);
+    CvWindow* window = icvFindWindowByName(window_name);
     if (!window)
         return -1;
 
-    const auto trackbar = icvFindTrackbarByName(window,trackbar_name);
+    CvTrackbar* trackbar = icvFindTrackbarByName(window,trackbar_name);
     if (!trackbar)
         return -1;
 
     return trackbar->pos;
 }
 
-static void setTrackbarPos_(const std::shared_ptr<CvTrackbar>& trackbar, int pos);
+
 CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_name, int pos )
 {
     CV_Assert(window_name && "NULL window name");
@@ -1634,26 +1506,23 @@ CV_IMPL void cvSetTrackbarPos( const char* trackbar_name, const char* window_nam
 
     CV_LOCK_MUTEX();
 
-    const auto window = icvFindWindowByName(window_name);
+    CvWindow* window = icvFindWindowByName(window_name);
     if(!window)
         return;
 
-    const auto trackbar = icvFindTrackbarByName(window, trackbar_name);
-    if (!trackbar)
+    CvTrackbar* trackbar = icvFindTrackbarByName(window,trackbar_name);
+    if( trackbar )
+    {
+        if( pos < trackbar->minval )
+            pos = trackbar->minval;
+
+        if( pos > trackbar->maxval )
+            pos = trackbar->maxval;
+    }
+    else
     {
         CV_Error( CV_StsNullPtr, "No trackbar found" );
     }
-
-    return setTrackbarPos_(trackbar, pos);
-}
-
-static void setTrackbarPos_(const std::shared_ptr<CvTrackbar>& trackbar, int pos)
-{
-    CV_Assert(trackbar);
-    CV_CheckLE(trackbar->minval, trackbar->maxval, "");
-
-    pos = std::max(pos, trackbar->minval);
-    pos = std::min(pos, trackbar->maxval);
 
     gtk_range_set_value( GTK_RANGE(trackbar->widget), pos );
 }
@@ -1666,11 +1535,11 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
 
     CV_LOCK_MUTEX();
 
-    const auto window = icvFindWindowByName(window_name);
+    CvWindow* window = icvFindWindowByName(window_name);
     if(!window)
         return;
 
-    const auto trackbar = icvFindTrackbarByName(window,trackbar_name);
+    CvTrackbar* trackbar = icvFindTrackbarByName(window,trackbar_name);
     if(!trackbar)
         return;
 
@@ -1687,11 +1556,11 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
 
     CV_LOCK_MUTEX();
 
-    const auto window = icvFindWindowByName(window_name);
+    CvWindow* window = icvFindWindowByName(window_name);
     if(!window)
         return;
 
-    const auto trackbar = icvFindTrackbarByName(window,trackbar_name);
+    CvTrackbar* trackbar = icvFindTrackbarByName(window,trackbar_name);
     if(!trackbar)
         return;
 
@@ -1707,7 +1576,7 @@ CV_IMPL void* cvGetWindowHandle( const char* window_name )
 
     CV_LOCK_MUTEX();
 
-    const auto window = icvFindWindowByName(window_name);
+    CvWindow* window = icvFindWindowByName(window_name);
     if(!window)
         return NULL;
 
@@ -1878,10 +1747,6 @@ static void icvOnTrackbar( GtkWidget* widget, gpointer user_data )
         trackbar->widget == widget )
     {
         trackbar->pos = pos;
-        if (trackbar->onChangeCallback)
-            trackbar->onChangeCallback(pos, trackbar->userdata);
-
-        // deprecated
         if( trackbar->data )
             *trackbar->data = pos;
         if( trackbar->notify2 )
@@ -1897,14 +1762,7 @@ static gboolean icvOnClose( GtkWidget* widget, GdkEvent* /*event*/, gpointer use
     if( window->signature == CV_WINDOW_MAGIC_VAL &&
         window->frame == widget )
     {
-        try
-        {
-            icvDeleteWindow_(window);
-        }
-        catch (...)
-        {
-            CV_LOG_WARNING(NULL, "OpenCV/GTK: unexpected C++ exception in icvDeleteWindow_");
-        }
+        icvDeleteWindow(window);
     }
     return TRUE;
 }
@@ -2071,7 +1929,7 @@ CV_IMPL int cvWaitKey( int delay )
             expired = !g_cond_timed_wait(cond_have_key, last_key_mutex, &timer);
         }
         else{
-            if (getGTKWindows().empty())
+            if (g_windows.empty())
             {
                 CV_LOG_WARNING(NULL, "cv::waitKey() is called without timeout and missing active windows. Ignoring");
             }
@@ -2083,8 +1941,7 @@ CV_IMPL int cvWaitKey( int delay )
         }
         my_last_key = last_key;
         g_mutex_unlock(last_key_mutex);
-        if (expired || getGTKWindows().empty())
-        {
+        if(expired || g_windows.empty()){
             return -1;
         }
         return my_last_key;
@@ -2097,7 +1954,7 @@ CV_IMPL int cvWaitKey( int delay )
         if( delay > 0 )
             timer = g_timeout_add( delay, icvAlarm, &expired );
         last_key = -1;
-        while( gtk_main_iteration_do(TRUE) && last_key < 0 && !expired && (delay > 0 || !getGTKWindows().empty()))
+        while( gtk_main_iteration_do(TRUE) && last_key < 0 && !expired && (delay > 0 || !g_windows.empty()))
             ;
 
         if( delay > 0 && !expired )
@@ -2106,340 +1963,8 @@ CV_IMPL int cvWaitKey( int delay )
     return last_key;
 }
 
-namespace cv { namespace impl {
-
-using namespace cv::highgui_backend;
-
-class GTKTrackbar;
-
-class GTKWindow
-        : public UIWindow
-        , public std::enable_shared_from_this<GTKWindow>
-{
-protected:
-    const std::string name_;
-    std::weak_ptr<CvWindow> window_;
-    std::map<std::string, std::shared_ptr<GTKTrackbar> > trackbars_;
-public:
-    GTKWindow(const std::string& name, const std::shared_ptr<CvWindow>& window)
-        : name_(name)
-        , window_(window)
-    {
-        // nothing
-    }
-
-    ~GTKWindow() CV_OVERRIDE
-    {
-        if (!window_.expired())
-            destroy();
-        CV_LOG_DEBUG(NULL, "OpenCV/UI/GTK: GTKWindow(" << name_ << ") is disposed");
-    }
-
-    const std::string& getID() const CV_OVERRIDE { return name_; }
-
-    bool isActive() const CV_OVERRIDE { return !window_.expired(); }
-
-    void destroy() CV_OVERRIDE
-    {
-        cv::AutoLock lock(getWindowMutex());
-        if (!window_.expired())
-        {
-            auto window = window_.lock();
-            if (window)
-                window->destroy();
-            window_.reset();
-        }
-    }
-
-    void imshow(InputArray image) CV_OVERRIDE
-    {
-        auto window = window_.lock();
-        CV_Assert(window);
-        CvImageWidget* image_widget = CV_IMAGE_WIDGET(window->widget);
-        CV_Assert(image_widget);
-        Mat img = image.getMat();
-        CvMat c_img = cvMat(img);  // TODO Drop C-API
-        cvImageWidgetSetImage(image_widget, &c_img);
-    }
-
-    double getProperty(int prop) const CV_OVERRIDE
-    {
-        auto window = window_.lock();
-        CV_Assert(window);
-        // see cvGetWindowProperty
-        switch (prop)
-        {
-        case CV_WND_PROP_FULLSCREEN:
-            return (double)window->status;
-
-        case CV_WND_PROP_AUTOSIZE:
-            return (window->flags & CV_WINDOW_AUTOSIZE) ? 1.0 : 0.0;
-
-        case CV_WND_PROP_ASPECTRATIO:
-            return getRatioWindow_(window);
-
-#ifdef HAVE_OPENGL
-        case CV_WND_PROP_OPENGL:
-            return window->useGl ? 1.0 : 0.0;
-#endif
-
-        default:
-            break;
-        }
-        return std::numeric_limits<double>::quiet_NaN();
-    }
-
-    bool setProperty(int prop, double value) CV_OVERRIDE
-    {
-        auto window = window_.lock();
-        CV_Assert(window);
-        // see cvSetWindowProperty
-        switch (prop)
-        {
-        case CV_WND_PROP_FULLSCREEN:
-            if (value != CV_WINDOW_NORMAL && value != CV_WINDOW_FULLSCREEN)  // bad arg
-                break;
-            setModeWindow_(window, value);
-            return true;
-
-        default:
-            break;
-        }
-        return false;
-    }
-
-    void resize(int width, int height) CV_OVERRIDE
-    {
-        auto window = window_.lock();
-        CV_Assert(window);
-        resizeWindow_(window, width, height);
-    }
-
-    void move(int x, int y) CV_OVERRIDE
-    {
-        auto window = window_.lock();
-        CV_Assert(window);
-        gtk_window_move(GTK_WINDOW(window->frame), x, y);
-    }
-
-    Rect getImageRect() const CV_OVERRIDE
-    {
-        auto window = window_.lock();
-        CV_Assert(window);
-        return getImageRect_(window);
-    }
-
-    void setTitle(const std::string& title) CV_OVERRIDE
-    {
-        auto window = window_.lock();
-        CV_Assert(window);
-        gtk_window_set_title(GTK_WINDOW(window->frame), title.c_str());
-    }
-
-    void setMouseCallback(MouseCallback onMouse, void* userdata /*= 0*/) CV_OVERRIDE
-    {
-        auto window = window_.lock();
-        CV_Assert(window);
-        window->on_mouse = onMouse;
-        window->on_mouse_param = userdata;
-    }
-
-    std::shared_ptr<UITrackbar> createTrackbar(
-        const std::string& name,
-        int count,
-        TrackbarCallback onChange /*= 0*/,
-        void* userdata /*= 0*/
-    ) CV_OVERRIDE
-    {
-        auto window = window_.lock();
-        CV_Assert(window);
-        CV_LOG_INFO(NULL, "OpenCV/UI: Creating GTK trackbar at '" << name_ << "': '" << name << "'");
-        auto trackbar = createTrackbar_(window, name, count, onChange, userdata);
-        auto ui_trackbar = std::make_shared<GTKTrackbar>(name, trackbar, shared_from_this());
-        {
-            cv::AutoLock lock(getWindowMutex());
-            trackbars_.emplace(name, ui_trackbar);
-        }
-        return std::static_pointer_cast<UITrackbar>(ui_trackbar);
-    }
-
-    std::shared_ptr<UITrackbar> findTrackbar(const std::string& name) CV_OVERRIDE
-    {
-        cv::AutoLock lock(getWindowMutex());
-        auto i = trackbars_.find(name);
-        if (i != trackbars_.end())
-        {
-            return std::static_pointer_cast<UITrackbar>(i->second);
-        }
-        return std::shared_ptr<UITrackbar>();
-    }
-};  // GTKWindow
-
-
-class GTKTrackbar : public UITrackbar
-{
-protected:
-    /*const*/ std::string name_;
-    std::weak_ptr<CvTrackbar> trackbar_;
-    std::weak_ptr<GTKWindow> parent_;
-    std::map<std::string, std::shared_ptr<GTKTrackbar> > trackbars_;
-public:
-    GTKTrackbar(const std::string& name, const std::shared_ptr<CvTrackbar>& trackbar, const std::shared_ptr<GTKWindow>& parent)
-        : trackbar_(trackbar)
-        , parent_(parent)
-    {
-        name_ = std::string("<") + name + ">@" + parent->getID();
-    }
-
-    ~GTKTrackbar() CV_OVERRIDE
-    {
-        if (!trackbar_.expired())
-            destroy();
-        CV_LOG_DEBUG(NULL, "OpenCV/UI/GTK: GTKTrackbar(" << name_ << ") is disposed");
-    }
-
-    const std::string& getID() const CV_OVERRIDE { return name_; }
-
-    bool isActive() const CV_OVERRIDE { return !trackbar_.expired(); }
-
-    void destroy() CV_OVERRIDE
-    {
-        // nothing (destroyed with parent window, dedicated trackbar removal is not supported)
-    }
-
-    int getPos() const CV_OVERRIDE
-    {
-        auto trackbar = trackbar_.lock();
-        CV_Assert(trackbar);
-        return trackbar->pos;
-    }
-    void setPos(int pos) CV_OVERRIDE
-    {
-        auto trackbar = trackbar_.lock();
-        CV_Assert(trackbar);
-        return setTrackbarPos_(trackbar, pos);
-    }
-
-    cv::Range getRange() const CV_OVERRIDE
-    {
-        auto trackbar = trackbar_.lock();
-        CV_Assert(trackbar);
-        return cv::Range(trackbar->minval, trackbar->maxval);
-    }
-
-    void setRange(const cv::Range& range) CV_OVERRIDE
-    {
-        auto trackbar = trackbar_.lock();
-        CV_Assert(trackbar);
-        CV_CheckLE(range.start, range.end, "Invalid trackbar range");
-        gtk_range_set_range(GTK_RANGE(trackbar->widget), range.start, range.end);
-    }
-};  // GTKTrackbar
-
-
-class GTKBackendUI : public UIBackend
-{
-public:
-    GTKBackendUI()
-    {
-        // NB: avoid static initialization order fiasco
-        (void)getGTKWindows();
-    }
-    ~GTKBackendUI() CV_OVERRIDE
-    {
-        destroyAllWindows();
-    }
-
-    void destroyAllWindows() CV_OVERRIDE
-    {
-        cvDestroyAllWindows();
-    }
-
-    // namedWindow
-    virtual std::shared_ptr<UIWindow> createWindow(
-        const std::string& winname,
-        int flags
-    ) CV_OVERRIDE
-    {
-        CV_LOG_INFO(NULL, "OpenCV/UI: Creating GTK window: " << winname << " (" << flags << ")");
-        auto window = namedWindow_(winname, flags);
-        auto ui_window = std::make_shared<GTKWindow>(winname, window);
-        return ui_window;
-    }
-
-    int waitKeyEx(int delay) CV_OVERRIDE
-    {
-        return cvWaitKey(delay);
-    }
-    int pollKey() CV_OVERRIDE
-    {
-        return cvWaitKey(1);  // TODO
-    }
-};  // GTKBackendUI
-
-static
-std::shared_ptr<GTKBackendUI>& getInstance()
-{
-    static std::shared_ptr<GTKBackendUI> g_instance = std::make_shared<GTKBackendUI>();
-    return g_instance;
-}
-
-} // namespace impl
-
-#ifndef BUILD_PLUGIN
-namespace highgui_backend {
-
-std::shared_ptr<UIBackend> createUIBackendGTK()
-{
-    return impl::getInstance();
-}
-
-}  // namespace highgui_backend
-#endif
-
-}  // namespace
-
-#ifdef BUILD_PLUGIN
-
-#define ABI_VERSION 0
-#define API_VERSION 0
-#include "plugin_api.hpp"
-
-static
-CvResult cv_getInstance(CV_OUT CvPluginUIBackend* handle) CV_NOEXCEPT
-{
-    try
-    {
-        if (!handle)
-            return CV_ERROR_FAIL;
-        *handle = cv::impl::getInstance().get();
-        return CV_ERROR_OK;
-    }
-    catch (...)
-    {
-        return CV_ERROR_FAIL;
-    }
-}
-
-static const OpenCV_UI_Plugin_API plugin_api =
-{
-    {
-        sizeof(OpenCV_UI_Plugin_API), ABI_VERSION, API_VERSION,
-        CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
-        "GTK" CVAUX_STR(GTK_MAJOR_VERSION) " OpenCV UI plugin"
-    },
-    {
-        /*  1*/cv_getInstance
-    }
-};
-
-const OpenCV_UI_Plugin_API* CV_API_CALL opencv_ui_plugin_init_v0(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
-{
-    if (requested_abi_version == ABI_VERSION && requested_api_version <= API_VERSION)
-        return &plugin_api;
-    return NULL;
-}
-
-#endif  // BUILD_PLUGIN
 
 #endif  // HAVE_GTK
+#endif  // _WIN32
+
+/* End of file. */

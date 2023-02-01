@@ -71,6 +71,10 @@ void drawPoints(const std::vector<Point2f> &points, Mat &outImage, int radius = 
 
 void CirclesGridClusterFinder::hierarchicalClustering(const std::vector<Point2f> &points, const Size &patternSz, std::vector<Point2f> &patternPoints)
 {
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    if(tegra::useTegra() && tegra::hierarchicalClustering(points, patternSz, patternPoints))
+        return;
+#endif
     int j, n = (int)points.size();
     size_t pn = static_cast<size_t>(patternSz.area());
 
@@ -384,15 +388,15 @@ void CirclesGridClusterFinder::rectifyPatternPoints(const std::vector<cv::Point2
 {
   //indices of corner points in pattern
   std::vector<Point> trueIndices;
-  trueIndices.emplace_back(0, 0);
-  trueIndices.emplace_back(patternSize.width - 1, 0);
+  trueIndices.push_back(Point(0, 0));
+  trueIndices.push_back(Point(patternSize.width - 1, 0));
   if(isAsymmetricGrid)
   {
-    trueIndices.emplace_back(patternSize.width - 1, 1);
-    trueIndices.emplace_back(patternSize.width - 1, patternSize.height - 2);
+    trueIndices.push_back(Point(patternSize.width - 1, 1));
+    trueIndices.push_back(Point(patternSize.width - 1, patternSize.height - 2));
   }
-  trueIndices.emplace_back(patternSize.width - 1, patternSize.height - 1);
-  trueIndices.emplace_back(0, patternSize.height - 1);
+  trueIndices.push_back(Point(patternSize.width - 1, patternSize.height - 1));
+  trueIndices.push_back(Point(0, patternSize.height - 1));
 
   std::vector<Point2f> idealPoints;
   for(size_t idx=0; idx<trueIndices.size(); idx++)
@@ -401,11 +405,11 @@ void CirclesGridClusterFinder::rectifyPatternPoints(const std::vector<cv::Point2
     int j = trueIndices[idx].x;
     if(isAsymmetricGrid)
     {
-      idealPoints.emplace_back((2*j + i % 2)*squareSize, i*squareSize);
+      idealPoints.push_back(Point2f((2*j + i % 2)*squareSize, i*squareSize));
     }
     else
     {
-      idealPoints.emplace_back(j*squareSize, i*squareSize);
+      idealPoints.push_back(Point2f(j*squareSize, i*squareSize));
     }
   }
 
@@ -477,7 +481,7 @@ void Graph::addVertex(size_t id)
 {
   CV_Assert( !doesVertexExist( id ) );
 
-  vertices.emplace(id, Vertex());
+  vertices.insert(std::pair<size_t, Vertex> (id, Vertex()));
 }
 
 void Graph::addEdge(size_t id1, size_t id2)
@@ -590,9 +594,13 @@ CirclesGridFinderParameters::CirclesGridFinderParameters()
 
   minRNGEdgeSwitchDist = 5.f;
   gridType = SYMMETRIC_GRID;
+}
 
-  squareSize = 1.0f;
-  maxRectifiedDistance = squareSize/2.0f;
+CirclesGridFinderParameters2::CirclesGridFinderParameters2()
+: CirclesGridFinderParameters()
+{
+    squareSize = 1.0f;
+    maxRectifiedDistance = squareSize/2.0f;
 }
 
 CirclesGridFinder::CirclesGridFinder(Size _patternSize, const std::vector<Point2f> &testKeypoints,
@@ -887,9 +895,10 @@ Mat CirclesGridFinder::rectifyGrid(Size detectedGridSize, const std::vector<Poin
   convertPointsFromHomogeneous(dstKeypointsMat, dstKeypoints);
 
   warpedKeypoints.clear();
-  for (auto &pt:dstKeypoints)
+  for (size_t i = 0; i < dstKeypoints.size(); i++)
   {
-    warpedKeypoints.emplace_back(std::move(pt));
+    Point2f pt = dstKeypoints[i];
+    warpedKeypoints.push_back(pt);
   }
 
   return H;
@@ -1525,35 +1534,35 @@ void CirclesGridFinder::getCornerSegments(const std::vector<std::vector<size_t> 
 
   //all 8 segments with one end in a corner
   std::vector<Segment> corner;
-  corner.emplace_back(keypoints[points[1][0]], keypoints[points[0][0]]);
-  corner.emplace_back(keypoints[points[0][0]], keypoints[points[0][1]]);
+  corner.push_back(Segment(keypoints[points[1][0]], keypoints[points[0][0]]));
+  corner.push_back(Segment(keypoints[points[0][0]], keypoints[points[0][1]]));
   segments.push_back(corner);
-  cornerIndices.emplace_back(0, 0);
-  firstSteps.emplace_back(1, 0);
-  secondSteps.emplace_back(0, 1);
+  cornerIndices.push_back(Point(0, 0));
+  firstSteps.push_back(Point(1, 0));
+  secondSteps.push_back(Point(0, 1));
   corner.clear();
 
-  corner.emplace_back(keypoints[points[0][w - 2]], keypoints[points[0][w - 1]]);
-  corner.emplace_back(keypoints[points[0][w - 1]], keypoints[points[1][w - 1]]);
+  corner.push_back(Segment(keypoints[points[0][w - 2]], keypoints[points[0][w - 1]]));
+  corner.push_back(Segment(keypoints[points[0][w - 1]], keypoints[points[1][w - 1]]));
   segments.push_back(corner);
-  cornerIndices.emplace_back(w - 1, 0);
-  firstSteps.emplace_back(0, 1);
-  secondSteps.emplace_back(-1, 0);
+  cornerIndices.push_back(Point(w - 1, 0));
+  firstSteps.push_back(Point(0, 1));
+  secondSteps.push_back(Point(-1, 0));
   corner.clear();
 
-  corner.emplace_back(keypoints[points[h - 2][w - 1]], keypoints[points[h - 1][w - 1]]);
-  corner.emplace_back(keypoints[points[h - 1][w - 1]], keypoints[points[h - 1][w - 2]]);
+  corner.push_back(Segment(keypoints[points[h - 2][w - 1]], keypoints[points[h - 1][w - 1]]));
+  corner.push_back(Segment(keypoints[points[h - 1][w - 1]], keypoints[points[h - 1][w - 2]]));
   segments.push_back(corner);
-  cornerIndices.emplace_back(w - 1, h - 1);
-  firstSteps.emplace_back(-1, 0);
-  secondSteps.emplace_back(0, -1);
+  cornerIndices.push_back(Point(w - 1, h - 1));
+  firstSteps.push_back(Point(-1, 0));
+  secondSteps.push_back(Point(0, -1));
   corner.clear();
 
-  corner.emplace_back(keypoints[points[h - 1][1]], keypoints[points[h - 1][0]]);
-  corner.emplace_back(keypoints[points[h - 1][0]], keypoints[points[h - 2][0]]);
-  cornerIndices.emplace_back(0, h - 1);
-  firstSteps.emplace_back(0, -1);
-  secondSteps.emplace_back(1, 0);
+  corner.push_back(Segment(keypoints[points[h - 1][1]], keypoints[points[h - 1][0]]));
+  corner.push_back(Segment(keypoints[points[h - 1][0]], keypoints[points[h - 2][0]]));
+  cornerIndices.push_back(Point(0, h - 1));
+  firstSteps.push_back(Point(0, -1));
+  secondSteps.push_back(Point(1, 0));
   segments.push_back(corner);
   corner.clear();
 

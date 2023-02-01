@@ -44,15 +44,14 @@
 //
 
 #include "precomp.hpp"
-#include "cap_interface.hpp"
 
 #ifdef HAVE_ARAVIS_API
 
 #include <arv.h>
 
 //
-// This file provides wrapper for using Aravis SDK library to access GigE and USB 3 Vision cameras.
-// Aravis library (version 0.8) shall be installed else this code will not be included in build.
+// This file provides wrapper for using Aravis SDK library to access GigE Vision cameras.
+// Aravis library (version 0.4 or 0.6) shall be installed else this code will not be included in build.
 //
 // To include this module invoke cmake with -DWITH_ARAVIS=ON
 //
@@ -148,8 +147,10 @@ protected:
     double          exposureCompensation;
     bool            autoGain;
     double          targetGrey;             // Target grey value (mid grey))
-    bool            softwareTriggered;      // Flag if the camera is software triggered
-    bool            allowAutoTrigger;       // Flag that user allowed to trigger software triggered cameras automatically
+
+    gint64          *pixelFormats;
+    guint           pixelFormatsCnt;
+
 
     int             num_buffers;            // number of payload transmission buffers
 
@@ -187,7 +188,6 @@ CvCaptureCAM_Aravis::CvCaptureCAM_Aravis()
     exposureCompensation = 0;
     targetGrey = 0;
     frameID = prevFrameID = 0;
-    allowAutoTrigger = false;
 
     num_buffers = 10;
     frame = NULL;
@@ -221,7 +221,7 @@ bool CvCaptureCAM_Aravis::create( int index )
     if(!getDeviceNameById(index, deviceName))
         return false;
 
-    return NULL != (camera = arv_camera_new(deviceName.c_str(), NULL));
+    return NULL != (camera = arv_camera_new(deviceName.c_str()));
 }
 
 bool CvCaptureCAM_Aravis::init_buffers()
@@ -230,7 +230,7 @@ bool CvCaptureCAM_Aravis::init_buffers()
         g_object_unref(stream);
         stream = NULL;
     }
-    if( (stream = arv_camera_create_stream(camera, NULL, NULL, NULL)) ) {
+    if( (stream = arv_camera_create_stream(camera, NULL, NULL)) ) {
         if( arv_camera_is_gv_device(camera) ) {
             g_object_set(stream,
                 "socket-buffer", ARV_GV_STREAM_SOCKET_BUFFER_AUTO,
@@ -241,7 +241,7 @@ bool CvCaptureCAM_Aravis::init_buffers()
                 "packet-timeout", (unsigned) 40000,
                 "frame-retention", (unsigned) 200000, NULL);
         }
-        payload = arv_camera_get_payload (camera, NULL);
+        payload = arv_camera_get_payload (camera);
 
         for (int i = 0; i < num_buffers; i++)
             arv_stream_push_buffer(stream, arv_buffer_new(payload, NULL));
@@ -256,23 +256,24 @@ bool CvCaptureCAM_Aravis::open( int index )
 {
     if(create(index)) {
         // fetch properties bounds
-        arv_camera_get_width_bounds(camera, &widthMin, &widthMax, NULL);
-        arv_camera_get_height_bounds(camera, &heightMin, &heightMax, NULL);
-        arv_camera_set_region(camera, 0, 0, widthMax, heightMax, NULL);
+        pixelFormats = arv_camera_get_available_pixel_formats(camera, &pixelFormatsCnt);
 
-        if( (fpsAvailable = arv_camera_is_frame_rate_available(camera, NULL)) )
-            arv_camera_get_frame_rate_bounds(camera, &fpsMin, &fpsMax, NULL);
-        if( (gainAvailable = arv_camera_is_gain_available(camera, NULL)) )
-            arv_camera_get_gain_bounds (camera, &gainMin, &gainMax, NULL);
-        if( (exposureAvailable = arv_camera_is_exposure_time_available(camera, NULL)) )
-            arv_camera_get_exposure_time_bounds (camera, &exposureMin, &exposureMax, NULL);
+        arv_camera_get_width_bounds(camera, &widthMin, &widthMax);
+        arv_camera_get_height_bounds(camera, &heightMin, &heightMax);
+        arv_camera_set_region(camera, 0, 0, widthMax, heightMax);
+
+        if( (fpsAvailable = arv_camera_is_frame_rate_available(camera)) )
+            arv_camera_get_frame_rate_bounds(camera, &fpsMin, &fpsMax);
+        if( (gainAvailable = arv_camera_is_gain_available(camera)) )
+            arv_camera_get_gain_bounds (camera, &gainMin, &gainMax);
+        if( (exposureAvailable = arv_camera_is_exposure_time_available(camera)) )
+            arv_camera_get_exposure_time_bounds (camera, &exposureMin, &exposureMax);
 
         // get initial values
-        pixelFormat = arv_camera_get_pixel_format(camera, NULL);
-        exposure = exposureAvailable ? arv_camera_get_exposure_time(camera, NULL) : 0;
-        gain = gainAvailable ? arv_camera_get_gain(camera, NULL) : 0;
-        fps = arv_camera_get_frame_rate(camera, NULL);
-        softwareTriggered = (strcmp(arv_camera_get_trigger_source(camera, NULL), "Software") == 0);
+        pixelFormat = arv_camera_get_pixel_format(camera);
+        exposure = exposureAvailable ? arv_camera_get_exposure_time(camera) : 0;
+        gain = gainAvailable ? arv_camera_get_gain(camera) : 0;
+        fps = arv_camera_get_frame_rate(camera);
 
         return startCapture();
     }
@@ -288,9 +289,6 @@ bool CvCaptureCAM_Aravis::grabFrame()
         ArvBuffer *arv_buffer = NULL;
         int max_tries = 10;
         int tries = 0;
-        if (softwareTriggered && allowAutoTrigger) {
-            arv_camera_software_trigger (camera, NULL);
-        }
         for(; tries < max_tries; tries ++) {
             arv_buffer = arv_stream_timeout_pop_buffer (stream, 200000);
             if (arv_buffer != NULL && arv_buffer_get_status (arv_buffer) != ARV_BUFFER_STATUS_SUCCESS) {
@@ -396,7 +394,7 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
 
             if( ng < gain ) {
                 // priority 1 - reduce gain
-                arv_camera_set_gain(camera, (gain = ng), NULL);
+                arv_camera_set_gain(camera, (gain = ng));
                 return;
             }
         }
@@ -405,7 +403,7 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
             // priority 2 - control of exposure time
             if(std::fabs(exposure - ne) > 2) {
                 // we have not yet reach the max-e level
-                arv_camera_set_exposure_time(camera, (exposure = ne), NULL);
+                arv_camera_set_exposure_time(camera, (exposure = ne) );
                 return;
             }
         }
@@ -414,12 +412,12 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
             if(exposureAvailable) {
                 // exposure at maximum - increase gain if possible
                 if(ng > gain && ng < gainMax && ne >= maxe) {
-                    arv_camera_set_gain(camera, (gain = ng), NULL);
+                    arv_camera_set_gain(camera, (gain = ng));
                     return;
                 }
             } else {
                 // priority 3 - increase gain
-                arv_camera_set_gain(camera, (gain = ng), NULL);
+                arv_camera_set_gain(camera, (gain = ng));
                 return;
             }
         }
@@ -429,7 +427,7 @@ void CvCaptureCAM_Aravis::autoExposureControl(IplImage* image)
     if(gainAvailable && autoGain && exposureAvailable) {
         if(gain > gainMin && exposure < maxe) {
             exposure = CLIP( ne * 1.05, exposureMin, maxe);
-            arv_camera_set_exposure_time(camera, exposure, NULL);
+            arv_camera_set_exposure_time(camera, exposure );
         }
     }
 }
@@ -455,25 +453,25 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
         case CV_CAP_PROP_EXPOSURE:
             if(exposureAvailable) {
                 /* exposure time in seconds, like 1/100 s */
-                return arv_camera_get_exposure_time(camera, NULL) / 1e6;
+                return arv_camera_get_exposure_time(camera) / 1e6;
             }
             break;
 
         case CV_CAP_PROP_FPS:
             if(fpsAvailable) {
-                return arv_camera_get_frame_rate(camera, NULL);
+                return arv_camera_get_frame_rate(camera);
             }
             break;
 
         case CV_CAP_PROP_GAIN:
             if(gainAvailable) {
-                return arv_camera_get_gain(camera, NULL);
+                return arv_camera_get_gain(camera);
             }
             break;
 
         case CV_CAP_PROP_FOURCC:
             {
-                ArvPixelFormat currFormat = arv_camera_get_pixel_format(camera, NULL);
+                ArvPixelFormat currFormat = arv_camera_get_pixel_format(camera);
                 switch( currFormat ) {
                     case ARV_PIXEL_FORMAT_MONO_8:
                         return MODE_Y800;
@@ -495,12 +493,6 @@ double CvCaptureCAM_Aravis::getProperty( int property_id ) const
                 return out;
             }
             break;
-
-        case cv::CAP_PROP_ARAVIS_AUTOTRIGGER:
-        {
-            return allowAutoTrigger ? 1. : 0.;
-        }
-        break;
     }
     return -1.0;
 }
@@ -511,8 +503,8 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
         case CV_CAP_PROP_AUTO_EXPOSURE:
             if(exposureAvailable || gainAvailable) {
                 if( (controlExposure = (bool)(int)value) ) {
-                    exposure = exposureAvailable ? arv_camera_get_exposure_time(camera, NULL) : 0;
-                    gain = gainAvailable ? arv_camera_get_gain(camera, NULL) : 0;
+                    exposure = exposureAvailable ? arv_camera_get_exposure_time(camera) : 0;
+                    gain = gainAvailable ? arv_camera_get_gain(camera) : 0;
                 }
             }
             break;
@@ -525,13 +517,13 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                 /* exposure time in seconds, like 1/100 s */
                 value *= 1e6; // -> from s to us
 
-                arv_camera_set_exposure_time(camera, exposure = CLIP(value, exposureMin, exposureMax), NULL);
+                arv_camera_set_exposure_time(camera, exposure = CLIP(value, exposureMin, exposureMax));
                 break;
             } else return false;
 
         case CV_CAP_PROP_FPS:
             if(fpsAvailable) {
-                arv_camera_set_frame_rate(camera, fps = CLIP(value, fpsMin, fpsMax), NULL);
+                arv_camera_set_frame_rate(camera, fps = CLIP(value, fpsMin, fpsMax));
                 break;
             } else return false;
 
@@ -540,7 +532,7 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                 if ( (autoGain = (-1 == value) ) )
                     break;
 
-                arv_camera_set_gain(camera, gain = CLIP(value, gainMin, gainMax), NULL);
+                arv_camera_set_gain(camera, gain = CLIP(value, gainMin, gainMax));
                 break;
             } else return false;
 
@@ -568,7 +560,7 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
                 }
                 if(newFormat != pixelFormat) {
                     stopCapture();
-                    arv_camera_set_pixel_format(camera, pixelFormat = newFormat, NULL);
+                    arv_camera_set_pixel_format(camera, pixelFormat = newFormat);
                     startCapture();
                 }
             }
@@ -585,11 +577,6 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
             }
             break;
 
-        case cv::CAP_PROP_ARAVIS_AUTOTRIGGER:
-            {
-                allowAutoTrigger = (bool) value;
-            }
-            break;
 
         default:
             return false;
@@ -600,7 +587,7 @@ bool CvCaptureCAM_Aravis::setProperty( int property_id, double value )
 
 void CvCaptureCAM_Aravis::stopCapture()
 {
-    arv_camera_stop_acquisition(camera, NULL);
+    arv_camera_stop_acquisition(camera);
 
     if(stream) {
         g_object_unref(stream);
@@ -611,20 +598,20 @@ void CvCaptureCAM_Aravis::stopCapture()
 bool CvCaptureCAM_Aravis::startCapture()
 {
     if(init_buffers() ) {
-        arv_camera_set_acquisition_mode(camera, ARV_ACQUISITION_MODE_CONTINUOUS, NULL);
-        arv_camera_start_acquisition(camera, NULL);
+        arv_camera_set_acquisition_mode(camera, ARV_ACQUISITION_MODE_CONTINUOUS);
+        arv_camera_start_acquisition(camera);
 
         return true;
     }
     return false;
 }
 
-cv::Ptr<cv::IVideoCapture> cv::create_Aravis_capture( int index )
+CvCapture* cvCreateCameraCapture_Aravis( int index )
 {
     CvCaptureCAM_Aravis* capture = new CvCaptureCAM_Aravis;
 
     if(capture->open(index)) {
-        return cv::makePtr<cv::LegacyCapture>(capture);
+        return capture;
     }
 
     delete capture;

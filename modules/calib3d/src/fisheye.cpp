@@ -318,8 +318,7 @@ void cv::fisheye::distortPoints(InputArray undistorted, OutputArray distorted, I
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::undistortPoints
 
-void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted, InputArray K, InputArray D,
-                                   InputArray R, InputArray P, TermCriteria criteria)
+void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted, InputArray K, InputArray D, InputArray R, InputArray P)
 {
     CV_INSTRUMENT_REGION();
 
@@ -330,8 +329,6 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
     CV_Assert(P.empty() || P.size() == Size(3, 3) || P.size() == Size(4, 3));
     CV_Assert(R.empty() || R.size() == Size(3, 3) || R.total() * R.channels() == 3);
     CV_Assert(D.total() == 4 && K.size() == Size(3, 3) && (K.depth() == CV_32F || K.depth() == CV_64F));
-
-    CV_Assert(criteria.isValid());
 
     cv::Vec2d f, c;
     if (K.depth() == CV_32F)
@@ -375,19 +372,12 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
     size_t n = distorted.total();
     int sdepth = distorted.depth();
 
-    const bool isEps = (criteria.type & TermCriteria::EPS) != 0;
-
-    /* Define max count for solver iterations */
-    int maxCount = std::numeric_limits<int>::max();
-    if (criteria.type & TermCriteria::MAX_ITER) {
-        maxCount = criteria.maxCount;
-    }
-
-
     for(size_t i = 0; i < n; i++ )
     {
         Vec2d pi = sdepth == CV_32F ? (Vec2d)srcf[i] : srcd[i];  // image point
         Vec2d pw((pi[0] - c[0])/f[0], (pi[1] - c[1])/f[1]);      // world point
+
+        double scale = 1.0;
 
         double theta_d = sqrt(pw[0]*pw[0] + pw[1]*pw[1]);
 
@@ -396,16 +386,13 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
         // clip values so we still get plausible results for super fisheye images > 180 grad
         theta_d = min(max(-CV_PI/2., theta_d), CV_PI/2.);
 
-        bool converged = false;
-        double theta = theta_d;
-
-        double scale = 0.0;
-
-        if (!isEps || fabs(theta_d) > criteria.epsilon)
+        if (theta_d > 1e-8)
         {
             // compensate distortion iteratively using Newton method
+            double theta = theta_d;
 
-            for (int j = 0; j < maxCount; j++)
+            const double EPS = 1e-8; // or std::numeric_limits<double>::epsilon();
+            for (int j = 0; j < 10; j++)
             {
                 double theta2 = theta*theta, theta4 = theta2*theta2, theta6 = theta4*theta2, theta8 = theta6*theta2;
                 double k0_theta2 = k[0] * theta2, k1_theta4 = k[1] * theta4, k2_theta6 = k[2] * theta6, k3_theta8 = k[3] * theta8;
@@ -413,49 +400,23 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
                 double theta_fix = (theta * (1 + k0_theta2 + k1_theta4 + k2_theta6 + k3_theta8) - theta_d) /
                                    (1 + 3*k0_theta2 + 5*k1_theta4 + 7*k2_theta6 + 9*k3_theta8);
                 theta = theta - theta_fix;
-
-                if (isEps && (fabs(theta_fix) < criteria.epsilon))
-                {
-                    converged = true;
+                if (fabs(theta_fix) < EPS)
                     break;
-                }
             }
 
             scale = std::tan(theta) / theta_d;
         }
+
+        Vec2d pu = pw * scale; //undistorted point
+
+        // reproject
+        Vec3d pr = RR * Vec3d(pu[0], pu[1], 1.0); // rotated point optionally multiplied by new camera matrix
+        Vec2d fi(pr[0]/pr[2], pr[1]/pr[2]);       // final
+
+        if( sdepth == CV_32F )
+            dstf[i] = fi;
         else
-        {
-            converged = true;
-        }
-
-        // theta is monotonously increasing or decreasing depending on the sign of theta
-        // if theta has flipped, it might converge due to symmetry but on the opposite of the camera center
-        // so we can check whether theta has changed the sign during the optimization
-        bool theta_flipped = ((theta_d < 0 && theta > 0) || (theta_d > 0 && theta < 0));
-
-        if ((converged || !isEps) && !theta_flipped)
-        {
-            Vec2d pu = pw * scale; //undistorted point
-
-            // reproject
-            Vec3d pr = RR * Vec3d(pu[0], pu[1], 1.0); // rotated point optionally multiplied by new camera matrix
-            Vec2d fi(pr[0]/pr[2], pr[1]/pr[2]);       // final
-
-            if( sdepth == CV_32F )
-                dstf[i] = fi;
-            else
-                dstd[i] = fi;
-        }
-        else
-        {
-            // Vec2d fi(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN());
-            Vec2d fi(-1000000.0, -1000000.0);
-
-            if( sdepth == CV_32F )
-                dstf[i] = fi;
-            else
-                dstd[i] = fi;
-        }
+            dstd[i] = fi;
     }
 }
 
@@ -765,8 +726,8 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
     IntrinsicParams currentParam;
     IntrinsicParams errors;
 
-    finalParam.isEstimate[0] = flags & CALIB_FIX_FOCAL_LENGTH ? 0 : 1;
-    finalParam.isEstimate[1] = flags & CALIB_FIX_FOCAL_LENGTH ? 0 : 1;
+    finalParam.isEstimate[0] = 1;
+    finalParam.isEstimate[1] = 1;
     finalParam.isEstimate[2] = flags & CALIB_FIX_PRINCIPAL_POINT ? 0 : 1;
     finalParam.isEstimate[3] = flags & CALIB_FIX_PRINCIPAL_POINT ? 0 : 1;
     finalParam.isEstimate[4] = flags & CALIB_FIX_SKEW ? 0 : 1;
@@ -885,13 +846,6 @@ double cv::fisheye::calibrate(InputArrayOfArrays objectPoints, InputArrayOfArray
 double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                     InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
                                     OutputArray R, OutputArray T, int flags, TermCriteria criteria)
-{
-    return cv::fisheye::stereoCalibrate(objectPoints, imagePoints1, imagePoints2, K1, D1, K2, D2, imageSize, R, T, noArray(), noArray(), flags, criteria);
-}
-
-double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
-                                    InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
-                                    OutputArray R, OutputArray T, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags, TermCriteria criteria)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1123,27 +1077,6 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
     if (D2.needed()) cv::Mat(intrinsicRight.k).convertTo(D2, D2.empty() ? CV_64FC1 : D2.type());
     if (R.needed()) _R.convertTo(R, R.empty() ? CV_64FC1 : R.type());
     if (T.needed()) cv::Mat(Tcur).convertTo(T, T.empty() ? CV_64FC1 : T.type());
-    if (rvecs.isMatVector())
-    {
-        if(rvecs.empty())
-            rvecs.create(n_images, 1, CV_64FC3);
-
-        if(tvecs.empty())
-            tvecs.create(n_images, 1, CV_64FC3);
-
-        for(int i = 0; i < n_images; i++ )
-        {
-            rvecs.create(3, 1, CV_64F, i, true);
-            tvecs.create(3, 1, CV_64F, i, true);
-            memcpy(rvecs.getMat(i).ptr(), rvecs1[i].val, sizeof(Vec3d));
-            memcpy(tvecs.getMat(i).ptr(), tvecs1[i].val, sizeof(Vec3d));
-        }
-    }
-    else
-    {
-        if (rvecs.needed()) cv::Mat(rvecs1).convertTo(rvecs, rvecs.empty() ? CV_64FC3 : rvecs.type());
-        if (tvecs.needed()) cv::Mat(tvecs1).convertTo(tvecs, tvecs.empty() ? CV_64FC3 : tvecs.type());
-    }
 
     return rms;
 }
@@ -1594,17 +1527,12 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
 
     Vec<double, 1> sigma_x;
     meanStdDev(ex.reshape(1, 1), noArray(), sigma_x);
+    sigma_x  *= sqrt(2.0 * (double)ex.total()/(2.0 * (double)ex.total() - 1.0));
 
     Mat JJ2, ex3;
     ComputeJacobians(objectPoints, imagePoints, params, omc, Tc, check_cond, thresh_cond, JJ2, ex3);
 
     sqrt(JJ2.inv(), JJ2);
-
-    int nParams = JJ2.rows;
-    // an explanation of that denominator correction can be found here:
-    // R. Hartley, A. Zisserman, Multiple View Geometry in Computer Vision, 2004, section 5.1.3, page 134
-    // see the discussion for more details: https://github.com/opencv/opencv/pull/22992
-    sigma_x  *= sqrt(2.0 * (double)ex.total()/(2.0 * (double)ex.total() - nParams));
 
     errors = 3 * sigma_x(0) * JJ2.diag();
     rms = sqrt(norm(ex, NORM_L2SQR)/ex.total());

@@ -38,11 +38,9 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
-assert img is not None, "file could not be read, check with os.path.exists()"
+img = cv.imread('messi5.jpg',0)
 img2 = img.copy()
-template = cv.imread('template.jpg', cv.IMREAD_GRAYSCALE)
-assert template is not None, "file could not be read, check with os.path.exists()"
+template = cv.imread('template.jpg',0)
 w, h = template.shape[::-1]
 
 # All the 6 methods for comparison in a list
@@ -115,10 +113,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 img_rgb = cv.imread('mario.png')
-assert img_rgb is not None, "file could not be read, check with os.path.exists()"
 img_gray = cv.cvtColor(img_rgb, cv.COLOR_BGR2GRAY)
-template = cv.imread('mario_coin.png', cv.IMREAD_GRAYSCALE)
-assert template is not None, "file could not be read, check with os.path.exists()"
+template = cv.imread('mario_coin.png',0)
 w, h = template.shape[::-1]
 
 res = cv.matchTemplate(img_gray,template,cv.TM_CCOEFF_NORMED)

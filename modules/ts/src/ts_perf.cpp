@@ -26,6 +26,7 @@ using namespace perf;
 
 int64 TestBase::timeLimitDefault = 0;
 unsigned int TestBase::iterationsLimitDefault = UINT_MAX;
+int64 TestBase::_timeadjustment = 0;
 
 // Item [0] will be considered the default implementation.
 static std::vector<std::string> available_impls;
@@ -595,11 +596,11 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
     // exit if current test is already failed
     if(::testing::UnitTest::GetInstance()->current_test_info()->result()->Failed()) return *this;
 
-    /*if(!array.empty() && array.depth() == CV_USRTYPE1)
+    if(!array.empty() && array.depth() == CV_USRTYPE1)
     {
         ADD_FAILURE() << "  Can not check regression for CV_USRTYPE1 data type for " << name;
         return *this;
-    }*/
+    }
 
     std::string nodename = getCurrentTestNodeName();
 
@@ -1158,6 +1159,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 
     timeLimitDefault = param_time_limit == 0.0 ? 1 : (int64)(param_time_limit * cv::getTickFrequency());
     iterationsLimitDefault = param_force_samples == 0 ? UINT_MAX : param_force_samples;
+    _timeadjustment = _calibrate();
 }
 
 void TestBase::RecordRunParameters()
@@ -1189,6 +1191,66 @@ enum PERF_STRATEGY TestBase::setModulePerformanceStrategy(enum PERF_STRATEGY str
 enum PERF_STRATEGY TestBase::getCurrentModulePerformanceStrategy()
 {
     return strategyForce == PERF_STRATEGY_DEFAULT ? strategyModule : strategyForce;
+}
+
+
+int64 TestBase::_calibrate()
+{
+    CV_TRACE_FUNCTION();
+    if (iterationsLimitDefault <= 1)
+        return 0;
+
+    class _helper : public ::perf::TestBase
+    {
+    public:
+        _helper() { testStrategy = PERF_STRATEGY_BASE; }
+        performance_metrics& getMetrics() { return calcMetrics(); }
+        virtual void TestBody() {}
+        virtual void PerfTestBody()
+        {
+            //the whole system warmup
+            SetUp();
+            cv::Mat a(2048, 2048, CV_32S, cv::Scalar(1));
+            cv::Mat b(2048, 2048, CV_32S, cv::Scalar(2));
+            declare.time(30);
+            double s = 0;
+            declare.iterations(20);
+            minIters = nIters = 20;
+            for(; next() && startTimer(); stopTimer())
+                s+=a.dot(b);
+            declare.time(s);
+
+            //self calibration
+            SetUp();
+            declare.iterations(1000);
+            minIters = nIters = 1000;
+            for(int iters = 0; next() && startTimer(); iters++, stopTimer()) { /*std::cout << iters << nIters << std::endl;*/ }
+        }
+    };
+
+    // Initialize ThreadPool
+    class _dummyParallel : public ParallelLoopBody
+    {
+    public:
+       void operator()(const cv::Range& range) const
+       {
+           // nothing
+           CV_UNUSED(range);
+       }
+    };
+    parallel_for_(cv::Range(0, 1000), _dummyParallel());
+
+    _timeadjustment = 0;
+    _helper h;
+    h.PerfTestBody();
+    double compensation = h.getMetrics().min;
+    if (getCurrentModulePerformanceStrategy() == PERF_STRATEGY_SIMPLE)
+    {
+        CV_Assert(compensation < 0.01 * cv::getTickFrequency());
+        compensation = 0.0f; // simple strategy doesn't require any compensation
+    }
+    LOGD("Time compensation is %.0f", compensation);
+    return (int64)compensation;
 }
 
 #ifdef _MSC_VER
@@ -1235,7 +1297,7 @@ void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
                 cv::randu(a, -128, 128);
             else if (depth == CV_16U)
                 cv::randu(a, 0, 1024);
-            else if (depth == CV_32F || depth == CV_64F || depth == CV_16F)
+            else if (depth == CV_32F || depth == CV_64F)
                 cv::randu(a, -1.0, 1.0);
             else if (depth == CV_16S || depth == CV_32S)
                 cv::randu(a, -4096, 4096);
@@ -1499,8 +1561,9 @@ void TestBase::stopTimer()
     if (lastTime == 0)
         ADD_FAILURE() << "  stopTimer() is called before startTimer()/next()";
     lastTime = time - lastTime;
-    CV_Assert(lastTime >= 0);  // TODO: CV_Check* for int64
     totalTime += lastTime;
+    lastTime -= _timeadjustment;
+    if (lastTime < 0) lastTime = 0;
     times.push_back(lastTime);
     lastTime = 0;
 
@@ -2105,7 +2168,7 @@ struct KeypointComparator
         return cmp(pts_[idx1], pts_[idx2]);
     }
 private:
-    KeypointComparator& operator=(const KeypointComparator&) = delete;
+    const KeypointComparator& operator=(const KeypointComparator&); // quiet MSVC
 };
 }//namespace
 
@@ -2151,11 +2214,19 @@ namespace perf
 
 void PrintTo(const MatType& t, ::std::ostream* os)
 {
-    String name = typeToString(t);
-    if (name.size() > 3 && name[0] == 'C' && name[1] == 'V' && name[2] == '_')
-        *os << name.substr(3);
-    else
-        *os << name;
+    switch( CV_MAT_DEPTH((int)t) )
+    {
+        case CV_8U:  *os << "8U";  break;
+        case CV_8S:  *os << "8S";  break;
+        case CV_16U: *os << "16U"; break;
+        case CV_16S: *os << "16S"; break;
+        case CV_32S: *os << "32S"; break;
+        case CV_32F: *os << "32F"; break;
+        case CV_64F: *os << "64F"; break;
+        case CV_USRTYPE1: *os << "USRTYPE1"; break;
+        default: *os << "INVALID_TYPE"; break;
+    }
+    *os << 'C' << CV_MAT_CN((int)t);
 }
 
 } //namespace perf

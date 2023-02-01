@@ -37,8 +37,7 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv.imread('gradient.png', cv.IMREAD_GRAYSCALE)
-assert img is not None, "file could not be read, check with os.path.exists()"
+img = cv.imread('gradient.png',0)
 ret,thresh1 = cv.threshold(img,127,255,cv.THRESH_BINARY)
 ret,thresh2 = cv.threshold(img,127,255,cv.THRESH_BINARY_INV)
 ret,thresh3 = cv.threshold(img,127,255,cv.THRESH_TRUNC)
@@ -86,8 +85,7 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv.imread('sudoku.png', cv.IMREAD_GRAYSCALE)
-assert img is not None, "file could not be read, check with os.path.exists()"
+img = cv.imread('sudoku.png',0)
 img = cv.medianBlur(img,5)
 
 ret,th1 = cv.threshold(img,127,255,cv.THRESH_BINARY)
@@ -135,8 +133,7 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv.imread('noisy2.png', cv.IMREAD_GRAYSCALE)
-assert img is not None, "file could not be read, check with os.path.exists()"
+img = cv.imread('noisy2.png',0)
 
 # global thresholding
 ret1,th1 = cv.threshold(img,127,255,cv.THRESH_BINARY)
@@ -186,8 +183,7 @@ where
 It actually finds a value of t which lies in between two peaks such that variances to both classes
 are minimal. It can be simply implemented in Python as follows:
 @code{.py}
-img = cv.imread('noisy2.png', cv.IMREAD_GRAYSCALE)
-assert img is not None, "file could not be read, check with os.path.exists()"
+img = cv.imread('noisy2.png',0)
 blur = cv.GaussianBlur(img,(5,5),0)
 
 # find normalized_histogram, and its cumulative distribution function

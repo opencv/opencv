@@ -44,8 +44,6 @@
 #ifndef __PYCOMPAT_HPP__
 #define __PYCOMPAT_HPP__
 
-#include <string>
-
 #if PY_MAJOR_VERSION >= 3
 
 // Python3 treats all ints as longs, PyInt_X functions have been removed.
@@ -234,7 +232,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     static PyObject* pyopencv_##CLASS_ID##_repr(PyObject* self) \
     { \
         char str[1000]; \
-        snprintf(str, sizeof(str), "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
+        sprintf(str, "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
         return PyString_FromString(str); \
     }
 
@@ -294,7 +292,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     static PyObject* pyopencv_##CLASS_ID##_repr(PyObject* self) \
     { \
         char str[1000]; \
-        snprintf(str, sizeof(str), "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
+        sprintf(str, "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
         return PyString_FromString(str); \
     } \
     static PyType_Slot pyopencv_##CLASS_ID##_Slots[] =  \

@@ -1,8 +1,0 @@
-{
-    "func_arg_fix" : {
-        "Photo": {
-            "(void)fastNlMeansDenoising:(Mat*)src dst:(Mat*)dst h:(FloatVector*)h templateWindowSize:(int)templateWindowSize searchWindowSize:(int)searchWindowSize normType:(int)normType" : { "h" : { "name" : "hVector" } },
-            "(void)fastNlMeansDenoisingMulti:(NSArray<Mat*>*)srcImgs dst:(Mat*)dst imgToDenoiseIndex:(int)imgToDenoiseIndex temporalWindowSize:(int)temporalWindowSize h:(FloatVector*)h templateWindowSize:(int)templateWindowSize searchWindowSize:(int)searchWindowSize normType:(int)normType" : { "h" : { "name" : "hVector" } }
-        }
-    }
-}

@@ -1,5 +1,5 @@
 set(the_description "Image I/O")
-ocv_add_module(imgcodecs opencv_imgproc WRAP java objc python)
+ocv_add_module(imgcodecs opencv_imgproc WRAP java python)
 
 # ----------------------------------------------------------------------------
 #  CMake file for imgcodecs. See root CMakeLists.txt
@@ -24,12 +24,6 @@ if(HAVE_WEBP)
   list(APPEND GRFMT_LIBS ${WEBP_LIBRARIES})
 endif()
 
-if(HAVE_SPNG)
-  add_definitions(${SPNG_DEFINITIONS})
-  ocv_include_directories(${SPNG_INCLUDE_DIR})
-  list(APPEND GRFMT_LIBS ${SPNG_LIBRARY})
-endif()
-
 if(HAVE_PNG)
   add_definitions(${PNG_DEFINITIONS})
   ocv_include_directories(${PNG_INCLUDE_DIR})
@@ -44,11 +38,6 @@ endif()
 if(HAVE_TIFF)
   ocv_include_directories(${TIFF_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${TIFF_LIBRARIES})
-endif()
-
-if(HAVE_OPENJPEG)
-  ocv_include_directories(${OPENJPEG_INCLUDE_DIRS})
-  list(APPEND GRFMT_LIBS ${OPENJPEG_LIBRARIES})
 endif()
 
 if(HAVE_JASPER)
@@ -73,7 +62,7 @@ if(HAVE_OPENEXR)
   endif()
 endif()
 
-if(HAVE_PNG OR HAVE_TIFF OR HAVE_OPENEXR OR HAVE_SPNG)
+if(HAVE_PNG OR HAVE_TIFF OR HAVE_OPENEXR)
   ocv_include_directories(${ZLIB_INCLUDE_DIRS})
   list(APPEND GRFMT_LIBS ${ZLIB_LIBRARIES})
 endif()
@@ -93,10 +82,6 @@ endif()
 
 if(HAVE_IMGCODEC_PXM)
   add_definitions(-DHAVE_IMGCODEC_PXM)
-endif()
-
-if (HAVE_IMGCODEC_PFM)
-  add_definitions(-DHAVE_IMGCODEC_PFM)
 endif()
 
 file(GLOB grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/grfmt*.hpp)
@@ -125,23 +110,14 @@ file(GLOB imgcodecs_ext_hdrs
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
-     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/legacy/*.h"
      )
 
-if(APPLE OR APPLE_FRAMEWORK)
-  list(APPEND imgcodecs_srcs ${CMAKE_CURRENT_LIST_DIR}/src/apple_conversions.h)
-  list(APPEND imgcodecs_srcs ${CMAKE_CURRENT_LIST_DIR}/src/apple_conversions.mm)
-endif()
 if(IOS)
   list(APPEND imgcodecs_srcs ${CMAKE_CURRENT_LIST_DIR}/src/ios_conversions.mm)
-  list(APPEND IMGCODECS_LIBRARIES "-framework UIKit")
-endif()
-if(APPLE AND (NOT IOS))
-  list(APPEND imgcodecs_srcs ${CMAKE_CURRENT_LIST_DIR}/src/macosx_conversions.mm)
-  list(APPEND IMGCODECS_LIBRARIES "-framework AppKit")
+  list(APPEND IMGCODECS_LIBRARIES "-framework Accelerate" "-framework CoreGraphics" "-framework QuartzCore")
 endif()
 if(APPLE_FRAMEWORK)
-  list(APPEND IMGCODECS_LIBRARIES "-framework Accelerate" "-framework CoreGraphics" "-framework QuartzCore")
+  list(APPEND IMGCODECS_LIBRARIES "-framework UIKit")
 endif()
 
 if(TRUE)
@@ -185,7 +161,7 @@ endif()
 if(TARGET opencv_test_imgcodecs AND HAVE_OPENEXR AND "$ENV{OPENCV_IO_ENABLE_OPENEXR}")
   ocv_target_compile_definitions(opencv_test_imgcodecs PRIVATE OPENCV_IMGCODECS_ENABLE_OPENEXR_TESTS=1)
 endif()
-if(TARGET opencv_test_imgcodecs AND ((HAVE_PNG AND NOT (PNG_VERSION VERSION_LESS "1.6.31")) OR HAVE_SPNG))
+if(TARGET opencv_test_imgcodecs AND HAVE_PNG AND NOT (PNG_VERSION VERSION_LESS "1.6.31"))
   # details: https://github.com/glennrp/libpng/commit/68cb0aaee3de6371b81a4613476d9b33e43e95b1
   ocv_target_compile_definitions(opencv_test_imgcodecs PRIVATE OPENCV_IMGCODECS_PNG_WITH_EXIF=1)
 endif()

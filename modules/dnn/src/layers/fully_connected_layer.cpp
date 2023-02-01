@@ -42,12 +42,8 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
-#include "../ie_ngraph.hpp"
-#include "../op_webnn.hpp"
-#include "../op_cann.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -56,10 +52,8 @@
 using namespace cv::dnn::ocl4dnn;
 #endif
 
-#ifdef HAVE_CUDA
-#include "../cuda4dnn/primitives/matmul.hpp"
-#include "../cuda4dnn/primitives/inner_product.hpp"
-using namespace cv::dnn::cuda4dnn;
+#ifdef HAVE_DNN_NGRAPH
+#include "../ie_ngraph.hpp"
 #endif
 
 namespace cv
@@ -81,12 +75,8 @@ public:
     FullyConnectedLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        transA = params.get<bool>("transA", false);
-        transB = params.get<bool>("transB", false);
-
         bias = params.get<bool>("bias_term", true);
         axis = params.get<int>("axis", 1);
-        isMatMul = params.get<bool>("is_matmul", false);
         if (!blobs.empty())
         {
             CV_Assert(1 <= blobs.size() && blobs.size() <= 2);
@@ -96,7 +86,6 @@ public:
             CV_Assert(blobs[0].dims >= 2 && (size_t)(innerSize * numOutput) == blobs[0].total());
             CV_Assert(!bias || (blobs.size() == 2 && (size_t)numOutput == blobs[1].total()));
 
-            blobs[0].copyTo(oriMat);
             weightsMat = blobs[0] = blobs[0].reshape(1, numOutput);
             int vecsize = weightsMat.cols;
             if (vecsize % VEC_ALIGN != 0)
@@ -111,8 +100,6 @@ public:
 
             if (bias)
                 biasMat = blobs[1] = blobs[1].reshape(1, 1);
-            else if(isMatMul)
-                biasMat = Mat::zeros(1, oriMat.size[oriMat.dims - 2], weightsMat.type());
             else
                 biasMat = Mat::zeros(1, numOutput, weightsMat.type());
         }
@@ -124,51 +111,30 @@ public:
                          std::vector<MatShape> &) const CV_OVERRIDE
     {
         int numOutput, cAxis;
-
-        std::vector<MatShape> inputsTmp;
-        inputsTmp.assign(inputs.begin(), inputs.end());
-
         if (blobs.empty())
         {
-            CV_CheckEQ(inputsTmp.size(), (size_t)2, "");
-
-            if (transA)
-            {
-                CV_CheckEQ(inputsTmp[0].size(), (size_t)2, "");
-                std::swap(inputsTmp[0][0], inputsTmp[0][1]);
-            }
-
-            if (transB)
-            {
-                CV_CheckEQ(inputsTmp[1].size(), (size_t)2, "");
-                std::swap(inputsTmp[1][0], inputsTmp[1][1]);
-            }
-
-            numOutput = inputsTmp[1].back();
-            cAxis = inputsTmp[0].size() - 1;
-            int dims = inputsTmp[0].size();
-            CV_CheckEQ(inputsTmp[1].size(), (size_t)dims, "");
+            CV_CheckEQ(inputs.size(), (size_t)2, "");
+            numOutput = inputs[1].back();
+            cAxis = inputs[0].size() - 1;
+            int dims = inputs[0].size();
+            CV_CheckEQ(inputs[1].size(), (size_t)dims, "");
             CV_CheckGE(dims, 2, "");
             for (int i = 0; i < dims - 2; i++)
-                CV_CheckEQ(inputsTmp[0][i], inputsTmp[1][i], "");
-            CV_CheckEQ(inputsTmp[0].back(), inputsTmp[1][dims - 2], "");
+                CV_CheckEQ(inputs[0][i], inputs[1][i], "");
+            CV_CheckEQ(inputs[0].back(), inputs[1][dims - 2], "");
         }
         else
         {
-            CV_Assert(!transA && !transB);
-            CV_CheckEQ(inputsTmp.size(), (size_t)1, "");
+            CV_CheckEQ(inputs.size(), (size_t)1, "");
             CV_CheckEQ(blobs[0].dims, 2, "");
-            if(isMatMul)
-                numOutput = oriMat.size[oriMat.dims - 2];
-            else
-                numOutput = blobs[0].size[0];
+            numOutput = blobs[0].size[0];
             CV_Assert(!bias || (size_t)numOutput == blobs[1].total());
-            cAxis = normalize_axis(axis, inputsTmp[0]);
+            cAxis = normalize_axis(axis, inputs[0]);
         }
 
         MatShape outShape(cAxis + 1);
         for (int i = 0; i < cAxis; ++i)
-            outShape[i] = inputsTmp[0][i];
+            outShape[i] = inputs[0][i];
         outShape.back() = numOutput;
 
         outputs.resize(1, outShape);
@@ -177,16 +143,13 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        bool tranAorB = transA || transB;
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-            return axis == 1 && !tranAorB;
+            return axis == 1;
 #endif
+
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && !tranAorB) ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !tranAorB) ||
-               (backendId == DNN_BACKEND_WEBNN && axis == 1 && !tranAorB) ||
-               backendId == DNN_BACKEND_CANN;;
+               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1);
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -203,7 +166,7 @@ public:
     class FullyConnected : public ParallelLoopBody
     {
     public:
-        FullyConnected() : srcMat(0), weights(0), biasMat(0), activ(0), dstMat(0), nstripes(0), useAVX(false), useAVX2(false), useAVX512(false), useRVV(false), useLASX(false) {}
+        FullyConnected() : srcMat(0), weights(0), biasMat(0), activ(0), dstMat(0), nstripes(0), useAVX(false), useAVX2(false), useAVX512(false) {}
 
         static void run(const Mat& srcMat, const Mat& weights, const Mat& biasMat,
                         Mat& dstMat, const ActivationLayer* activ, int nstripes)
@@ -226,8 +189,6 @@ public:
             p.useAVX = checkHardwareSupport(CPU_AVX);
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
-            p.useRVV = checkHardwareSupport(CPU_RVV);
-            p.useLASX = checkHardwareSupport(CPU_LASX);
 
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
@@ -275,16 +236,6 @@ public:
             #if CV_TRY_AVX
                 if( useAVX )
                     opt_AVX::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize_aligned);
-                else
-            #endif
-            #if CV_TRY_RVV
-                if( useRVV )
-                    opt_RVV::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
-                else
-            #endif
-            #if CV_TRY_LASX
-                if( useLASX )
-                    opt_LASX::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
                 else
             #endif
                 {
@@ -340,8 +291,6 @@ public:
         bool useAVX;
         bool useAVX2;
         bool useAVX512;
-        bool useRVV;
-        bool useLASX;
     };
 
 #ifdef HAVE_OPENCL
@@ -512,7 +461,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) && !isMatMul,
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         if (inputs_arr.depth() == CV_16S)
@@ -527,69 +476,29 @@ public:
 
         if (!blobs.empty())
         {
-            CV_Assert(!transA && !transB);
-            int inp1Dim = input[0].dims;
-            if (isMatMul)
+            int axisCan = normalize_axis(axis, input[0].dims);
+            int outerSize = input[0].total(0, axisCan);
+
+            for (size_t i = 0; i < input.size(); i++)
             {
-                int matNum = input[0].total(0, inp1Dim - 2);
-                int rowMatMul = oriMat.size[oriMat.dims - 2];
-                Mat srcMatTmp = input[0].reshape(1, matNum);
-                Mat dstMatTmp = output[0].reshape(1, matNum);
+                Mat srcMat = input[i].reshape(1, outerSize);
+                Mat dstMat = output[i].reshape(1, outerSize);
 
-                int outerSize = input[0].size[inp1Dim - 2];
-                int rowStart = -rowMatMul;
-                for (int n = 0; n < matNum; ++n)
-                {
-                    Mat srcMat = srcMatTmp.row(n).reshape(1, outerSize);
-                    Mat dstMat = dstMatTmp.row(n).reshape(1, outerSize);
-                    rowStart = (rowStart + rowMatMul) % weightsMat.rows;
-                    Mat weiMat = weightsMat.rowRange(rowStart, rowStart + rowMatMul);
-
-                    const int nstripes = getNumThreads();
-                    FullyConnected::run(srcMat, weiMat, biasMat, dstMat, activ.get(), nstripes);
-                }
-            }
-            else
-            {
-                int axisCan = normalize_axis(axis, inp1Dim);
-                int outerSize = input[0].total(0, axisCan);
-
-                for (size_t i = 0; i < input.size(); i++)
-                {
-                    Mat srcMat = input[i].reshape(1, outerSize);
-                    Mat dstMat = output[i].reshape(1, outerSize);
-
-                    const int nstripes = getNumThreads();
-                    FullyConnected::run(srcMat, weightsMat, biasMat, dstMat, activ.get(), nstripes);
-                }
+                const int nstripes = getNumThreads();
+                FullyConnected::run(srcMat, weightsMat, biasMat, dstMat, activ.get(), nstripes);
             }
         }
         else
         {
-            Mat input0 = input[0];
-            Mat input1 = input[1];
-
-            if (transA)
-            {
-                CV_Assert(input0.dims == 2);
-                input0 = input0.t();
-            }
-
-            if (transB)
-            {
-                CV_Assert(input1.dims == 2);
-                input1 = input1.t();
-            }
-
-            float* inpData = input0.ptr<float>();
-            float* weightData = input1.ptr<float>();
+            float* inpData = input[0].ptr<float>();
+            float* weightData = input[1].ptr<float>();
             float* outData = output[0].ptr<float>();
 
             int dims = output[0].dims;
             int numSlice = output[0].total() / output[0].total(dims - 2);
-            int m = input0.size[dims - 2];
-            int n = input0.size[dims - 1];
-            int k = input1.size[dims - 1];
+            int m = input[0].size[dims - 2];
+            int n = input[0].size[dims - 1];
+            int k = input[1].size[dims - 1];
             for (int i = 0; i < numSlice; i++)
             {
                 Mat inpSlice(m, n, CV_32F, inpData);
@@ -603,40 +512,6 @@ public:
             }
         }
     }
-
-#ifdef HAVE_CUDA
-    Ptr<BackendNode> initCUDA(
-        void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
-    ) override
-    {
-        auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
-
-        if (weightsMat.empty() || isMatMul)
-        {
-            CV_Assert(!bias);
-            int inp2Dim;
-            // broadcast is not supported with CUDA
-            if(weightsMat.empty())
-            {
-                auto input_wrapper2 = inputs[1].dynamicCast<CUDABackendWrapper>();
-                inp2Dim = input_wrapper2->getRank();
-            }else
-                inp2Dim = oriMat.dims;
-
-            if(input_wrapper->getRank() == inp2Dim)
-                return make_cuda_node<cuda4dnn::MatMulOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), oriMat);
-            else
-                return Ptr<BackendNode>();
-        }
-
-        auto flatten_start_axis = normalize_axis(axis, input_wrapper->getRank());
-        auto biasMat_ = bias ? biasMat : Mat();
-        return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, weightsMat, biasMat_);
-    }
-#endif
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
@@ -662,65 +537,6 @@ public:
         return Ptr<BackendNode>();
     }
 
-#ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-        auto x1 = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
-        auto x1_desc = x1->getTensorDesc();
-        auto op_x1 = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
-
-        std::string op_name = cv::format("matmul_%d", index);
-        auto op = std::make_shared<ge::op::MatMulV2>(op_name);
-
-        if (!blobs.empty()) // if B is const
-        {
-            // set attributes
-            op->set_attr_transpose_x1(false);
-            // weightMat always needs to be transposed, since CPU backend
-            // implementation is input * weight.im2row
-            op->set_attr_transpose_x2(true);
-
-            // set inputs
-            // set inputs : x2 (weight)
-            auto op_const_weight = std::make_shared<CannConstOp>(weightsMat.data, weightsMat.type(), shape(weightsMat), cv::format("%s_w", op_name.c_str()));
-            op->set_input_x2_by_name(*(op_const_weight->getOp()), "y");
-            op->update_input_desc_x2(*(op_const_weight->getTensorDesc()));
-        }
-        else
-        {
-            // A and B are variable inputs; non-const bias is not considered
-            CV_Assert(inputsWrapper.size() == 2);
-            CV_Assert(nodes.size() == 2);
-
-            // set attributes
-            op->set_attr_transpose_x1(transA);
-            op->set_attr_transpose_x2(transB);
-
-            // set inputs : x2 (weight)
-            auto op_x2 = nodes[1].dynamicCast<CannBackendNode>()->getOp();
-            auto x2_desc = inputsWrapper[1].dynamicCast<CannBackendWrapper>()->getTensorDesc();
-            op->set_input_x2_by_name(*op_x2, "y");
-            op->update_input_desc_x2(*x2_desc);
-        }
-
-        // set inputs
-        // set inputs : x1 (input)
-        op->set_input_x1_by_name(*op_x1, "y");
-        op->update_input_desc_x1(*x1_desc);
-        // set inputs : bias (bias)
-        auto bias_mat = bias ? biasMat : Mat::zeros(1, weightsMat.size[0], weightsMat.type());
-        std::vector<int> bias_shape{weightsMat.size[0]};
-        auto op_const_bias = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), bias_shape, cv::format("%s_b", op_name.c_str()));
-        op->set_input_bias(*(op_const_bias->getOp()));
-        op->update_input_desc_bias(*(op_const_bias->getTensorDesc()));
-
-        // set outputs
-        op->update_output_desc_y(*output_desc);
-
-        return Ptr<BackendNode>(new CannBackendNode(op));
-    }
-#endif
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -754,91 +570,6 @@ public:
     }
 #endif  // HAVE_DNN_NGRAPH
 
-    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
-    {
-        if (blobs.empty())
-            return false;
-
-        int numOutput = blobs[0].size[0];
-        float inputScale = scales[0][0], outputScale = scales[1][0];
-        int inputZp = zeropoints[0][0];
-
-        Mat weightsQuantized(weightsMat.rows, weightsMat.cols, CV_8S);
-        Mat biasQuantized(1, numOutput, CV_32S);
-        Mat outputMultiplier(1, numOutput, CV_32F);
-        bool perChannel = params.get<bool>("per_channel", true);
-
-        if (perChannel) // per-Channel quantization.
-        {
-            for (int i = 0; i < numOutput; i++)
-            {
-                double weightsScale = getWeightScale(weightsMat.row(i));
-
-                weightsMat.row(i).convertTo(weightsQuantized.row(i), CV_8S, 1.f/weightsScale);
-                float biasScale = inputScale * weightsScale;
-                biasQuantized.at<int>(i) = cvRound(biasMat.at<float>(i)/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
-                outputMultiplier.at<float>(i) = biasScale / outputScale;
-            }
-        }
-        else // per-Tensor quantization.
-        {
-            double weightsScale = getWeightScale(weightsMat);
-
-            weightsMat.convertTo(weightsQuantized, CV_8S, 1.f/weightsScale);
-            float biasScale = inputScale * weightsScale;
-
-            for (int i = 0; i < numOutput; i++)
-            {
-                biasQuantized.at<int>(i) = cvRound(biasMat.at<float>(i)/biasScale) - inputZp*(cv::sum(weightsQuantized.row(i))[0]);
-                outputMultiplier.at<float>(i) = biasScale / outputScale;
-            }
-        }
-
-        params.blobs.clear();
-        params.set("per_channel", perChannel);
-        params.blobs.push_back(weightsQuantized.reshape(1, shape(blobs[0])));
-        params.blobs.push_back(biasQuantized);
-        params.blobs.push_back(outputMultiplier);
-        params.set("input_scale", inputScale);
-        params.set("input_zeropoint", inputZp);
-        return true;
-    }
-
-#ifdef HAVE_WEBNN
-    virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-        Ptr<WebnnBackendNode> node = nodes[0].dynamicCast<WebnnBackendNode>();
-        auto& webnnInpOperand = node->operand;
-        auto& webnnGraphBuilder = node->net->builder;
-        ml::GemmOptions gemmOptions = {};
-        if (bias)
-        {
-            std::vector<int32_t> biasDims = {(int32_t)blobs[1].size[1]};
-            ml::Operand bias = webnn::BuildConstant(webnnGraphBuilder, biasDims, blobs[1].data, blobs[1].total()*blobs[1].elemSize(), ml::OperandType::Float32);
-            gemmOptions.c = bias;
-        }
-        ml::Operand result = nullptr;
-        if (nodes.size() == 2)
-        {
-            auto& inp2 = nodes[1].dynamicCast<WebnnBackendNode>()->operand;
-            result = webnnGraphBuilder.Gemm(webnnInpOperand, inp2, &gemmOptions);
-        }
-        else
-        {
-            std::vector<int32_t> input_shape(2, -1);
-            input_shape[1] = blobs[0].size[1];
-            ml::Operand webnnInpOperand_reshaped = webnnGraphBuilder.Reshape(webnnInpOperand, input_shape.data(), input_shape.size());
-            std::vector<int32_t> weight_shape = {(int32_t)blobs[0].size[0], (int32_t)blobs[0].size[1]};
-            // std::cout<<"weight size: "<<weight_shape[1]<<" "<<weight_shape[0]<<std::endl;
-            ml::Operand inp2 = webnn::BuildConstant(webnnGraphBuilder, weight_shape, blobs[0].data, blobs[0].total()*blobs[0].elemSize(), ml::OperandType::Float32);
-            gemmOptions.bTranspose = true;
-            result = webnnGraphBuilder.Gemm(webnnInpOperand_reshaped, inp2, &gemmOptions);
-        }
-        return Ptr<BackendNode>(new WebnnBackendNode(result));
-    }
-#endif // HAVE_WEBNN
-
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
@@ -856,9 +587,7 @@ public:
     }
 
     bool bias;
-    Mat weightsMat, biasMat, oriMat;
-    bool transA, transB;
-    bool isMatMul = false;
+    Mat weightsMat, biasMat;
     Ptr<ActivationLayer> activ;
 };
 

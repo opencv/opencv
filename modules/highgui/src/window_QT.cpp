@@ -63,7 +63,6 @@
     #endif
 #endif
 
-using namespace cv;
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
 #define Qt_MiddleButton Qt::MiddleButton
@@ -230,7 +229,7 @@ void cvSetPropWindow_QT(const char* name,double prop_value)
         Q_ARG(double, prop_value));
 }
 
-void setWindowTitle_QT(const String& winname, const String& title)
+void cv::setWindowTitle(const String& winname, const String& title)
 {
     if (!guiMainThread)
         CV_Error(Error::StsNullPtr, "NULL guiReceiver (please create a window)");
@@ -529,9 +528,6 @@ static int icvInitSystem(int* c, char** v)
     //"For any GUI application using Qt, there is precisely one QApplication object"
     if (!QApplication::instance())
     {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
-        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
-#endif
         new QApplication(*c, v);
         setlocale(LC_NUMERIC,"C");
 
@@ -1078,7 +1074,7 @@ void GuiReceiver::showImage(QString name, void* arr)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
-    if (!w) //as observed in the previous implementation (W32, GTK), create a new window is the pointer returned is null
+    if (!w) //as observed in the previous implementation (W32, GTK or Carbon), create a new window is the pointer returned is null
     {
         cvNamedWindow(name.toLatin1().data());
         w = icvFindWindowByName(name);
@@ -2131,6 +2127,8 @@ void CvWindow::createToolBar()
 {
     myToolBar = new QToolBar(this);
     myToolBar->setFloatable(false); //is not a window
+    myToolBar->setFixedHeight(28);
+    myToolBar->setMinimumWidth(1);
 
     foreach (QAction *a, vect_QActions)
         myToolBar->addAction(a);
@@ -2639,8 +2637,9 @@ void DefaultViewPort::updateImage(const CvArr* arr)
     }
 
     nbChannelOriginImage = cvGetElemType(mat);
-    CV_Assert(origin == 0);
-    convertToShow(cv::cvarrToMat(mat), image2Draw_mat);
+
+    cvConvertImage(mat, image2Draw_mat, (origin != 0 ? CV_CVTIMG_FLIP : 0) + CV_CVTIMG_SWAP_RB);
+
     viewport()->update();
 }
 
@@ -3098,7 +3097,7 @@ void DefaultViewPort::drawStatusBar()
 
         if (nbChannelOriginImage==CV_8UC1)
         {
-            //all the channel have the same value (because of cv::cvtColor(GRAY=>RGB)), so only the r channel is dsplayed
+            //all the channel have the same value (because of cvconvertimage), so only the r channel is dsplayed
             centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
                 .arg(mouseCoordinate.x())
                 .arg(mouseCoordinate.y())+
@@ -3263,9 +3262,7 @@ void DefaultViewPort::setSize(QSize /*size_*/)
 
 #ifdef HAVE_QT_OPENGL
 
-
-// QOpenGLWidget vs QGLWidget info: https://www.qt.io/blog/2014/09/10/qt-weekly-19-qopenglwidget
-OpenGlViewPort::OpenGlViewPort(QWidget* _parent) : OpenCVQtWidgetBase(_parent), OCVViewPort(), size(-1, -1)
+OpenGlViewPort::OpenGlViewPort(QWidget* _parent) : QGLWidget(_parent), OCVViewPort(), size(-1, -1)
 {
     glDrawCallback = 0;
     glDrawData = 0;
@@ -3319,11 +3316,7 @@ void OpenGlViewPort::makeCurrentOpenGlContext()
 
 void OpenGlViewPort::updateGl()
 {
-    #ifdef HAVE_QT6
-    QOpenGLWidget::update();
-    #else
     QGLWidget::updateGL();
-    #endif
 }
 
 void OpenGlViewPort::initializeGL()
@@ -3350,31 +3343,31 @@ void OpenGlViewPort::paintGL()
 void OpenGlViewPort::wheelEvent(QWheelEvent* evnt)
 {
     icvmouseEvent((QMouseEvent *)evnt, mouse_wheel);
-    OpenCVQtWidgetBase::wheelEvent(evnt);
+    QGLWidget::wheelEvent(evnt);
 }
 
 void OpenGlViewPort::mousePressEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_down);
-    OpenCVQtWidgetBase::mousePressEvent(evnt);
+    QGLWidget::mousePressEvent(evnt);
 }
 
 void OpenGlViewPort::mouseReleaseEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_up);
-    OpenCVQtWidgetBase::mouseReleaseEvent(evnt);
+    QGLWidget::mouseReleaseEvent(evnt);
 }
 
 void OpenGlViewPort::mouseDoubleClickEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_dbclick);
-    OpenCVQtWidgetBase::mouseDoubleClickEvent(evnt);
+    QGLWidget::mouseDoubleClickEvent(evnt);
 }
 
 void OpenGlViewPort::mouseMoveEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_move);
-    OpenCVQtWidgetBase::mouseMoveEvent(evnt);
+    QGLWidget::mouseMoveEvent(evnt);
 }
 
 
@@ -3382,7 +3375,8 @@ QSize OpenGlViewPort::sizeHint() const
 {
     if (size.width() > 0 && size.height() > 0)
         return size;
-    return OpenCVQtWidgetBase::sizeHint();
+
+    return QGLWidget::sizeHint();
 }
 
 void OpenGlViewPort::setSize(QSize size_)
@@ -3391,6 +3385,6 @@ void OpenGlViewPort::setSize(QSize size_)
     updateGeometry();
 }
 
-#endif //HAVE_QT_OPENGL
+#endif
 
 #endif // HAVE_QT

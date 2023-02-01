@@ -55,18 +55,17 @@ struct OCL4DNNConvConfig
 {
     OCL4DNNConvConfig() :
         kernel(1, 1),
+        pad(0, 0),
         stride(1, 1),
         dilation(1, 1),
         group(1),
         bias_term(false),
         use_half(false)
-    {
-        pads = {0, 0, 0, 0};
-    }
+    {}
     MatShape in_shape;
     MatShape out_shape;
     Size kernel;
-    std::vector<int> pads; // [pad_top, pad_bottom, pad_left, pad_right]
+    Size pad;
     Size stride;
     Size dilation;
     int group; // = 1;

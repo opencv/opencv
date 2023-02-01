@@ -260,6 +260,9 @@ bool  JpegDecoder::readHeader()
         }
     }
 
+    if( !result )
+        close();
+
     return result;
 }
 
@@ -491,16 +494,16 @@ bool  JpegDecoder::readData( Mat& img )
                 if( color )
                 {
                     if( cinfo->out_color_components == 3 )
-                        icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, cvSize(m_width,1) );
                     else
-                        icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, cvSize(m_width,1) );
                 }
                 else
                 {
                     if( cinfo->out_color_components == 1 )
                         memcpy( data, buffer[0], m_width );
                     else
-                        icvCvt_CMYK2Gray_8u_C4C1R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        icvCvt_CMYK2Gray_8u_C4C1R( buffer[0], 0, data, 0, cvSize(m_width,1) );
                 }
             }
 
@@ -509,6 +512,7 @@ bool  JpegDecoder::readData( Mat& img )
         }
     }
 
+    close();
     return result;
 }
 
@@ -642,23 +646,23 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 
         for( size_t i = 0; i < params.size(); i += 2 )
         {
-            if( params[i] == IMWRITE_JPEG_QUALITY )
+            if( params[i] == CV_IMWRITE_JPEG_QUALITY )
             {
                 quality = params[i+1];
                 quality = MIN(MAX(quality, 0), 100);
             }
 
-            if( params[i] == IMWRITE_JPEG_PROGRESSIVE )
+            if( params[i] == CV_IMWRITE_JPEG_PROGRESSIVE )
             {
                 progressive = params[i+1];
             }
 
-            if( params[i] == IMWRITE_JPEG_OPTIMIZE )
+            if( params[i] == CV_IMWRITE_JPEG_OPTIMIZE )
             {
                 optimize = params[i+1];
             }
 
-            if( params[i] == IMWRITE_JPEG_LUMA_QUALITY )
+            if( params[i] == CV_IMWRITE_JPEG_LUMA_QUALITY )
             {
                 if (params[i+1] >= 0)
                 {
@@ -673,7 +677,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                 }
             }
 
-            if( params[i] == IMWRITE_JPEG_CHROMA_QUALITY )
+            if( params[i] == CV_IMWRITE_JPEG_CHROMA_QUALITY )
             {
                 if (params[i+1] >= 0)
                 {
@@ -681,7 +685,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                 }
             }
 
-            if( params[i] == IMWRITE_JPEG_RST_INTERVAL )
+            if( params[i] == CV_IMWRITE_JPEG_RST_INTERVAL )
             {
                 rst_interval = params[i+1];
                 rst_interval = MIN(MAX(rst_interval, 0), 65535L);
@@ -756,12 +760,12 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 
             if( _channels == 3 )
             {
-                icvCvt_BGR2RGB_8u_C3R( data, 0, buffer, 0, Size(width,1) );
+                icvCvt_BGR2RGB_8u_C3R( data, 0, buffer, 0, cvSize(width,1) );
                 ptr = buffer;
             }
             else if( _channels == 4 )
             {
-                icvCvt_BGRA2BGR_8u_C4C3R( data, 0, buffer, 0, Size(width,1), 2 );
+                icvCvt_BGRA2BGR_8u_C4C3R( data, 0, buffer, 0, cvSize(width,1), 2 );
                 ptr = buffer;
             }
 

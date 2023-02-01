@@ -40,11 +40,10 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/imgproc/detail/gcgraph.hpp"
+#include "gcgraph.hpp"
 #include <limits>
 
 using namespace cv;
-using namespace detail;
 
 namespace {
 

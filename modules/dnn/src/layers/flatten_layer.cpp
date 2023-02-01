@@ -42,19 +42,12 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
-#include "../op_cann.hpp"
 
 #include <float.h>
 #include <algorithm>
 #include <opencv2/dnn/shape_utils.hpp>
-
-#ifdef HAVE_CUDA
-#include "../cuda4dnn/primitives/reshape.hpp"
-using namespace cv::dnn::cuda4dnn;
-#endif
 
 namespace cv
 {
@@ -77,9 +70,7 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return true;
 #endif
-        return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_CANN;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -175,33 +166,6 @@ public:
         }
     }
 
-#ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
-        auto x_desc = x->getTensorDesc();
-        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
-
-        std::string op_name = cv::format("flatten_%d", index);
-        auto op = std::make_shared<ge::op::FlattenV2>(op_name);
-
-        // set attributes
-        int num_axes = x->host->dims;
-        int start_axis = normalize_axis(_startAxis, num_axes);
-        int end_axis = normalize_axis(_endAxis, num_axes);
-        op->set_attr_axis(start_axis);
-        op->set_attr_end_axis(end_axis);
-
-        // set inputs
-        op->set_input_x_by_name(*op_x, "y");
-        op->update_input_desc_x(*x_desc);
-        // set outputs
-        op->update_output_desc_y(*output_desc);
-
-        return Ptr<BackendNode>(new CannBackendNode(op));
-    }
-#endif
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -229,25 +193,6 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(reshape));
     }
 #endif  // HAVE_DNN_NGRAPH
-
-
-#ifdef HAVE_CUDA
-    Ptr<BackendNode> initCUDA(
-        void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
-    ) override
-    {
-        auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        return make_cuda_node<cuda4dnn::ReshapeOp>(preferableTarget, std::move(context->stream));
-    }
-#endif
-
-    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
-                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
-    {
-        return true;
-    }
 
     int _startAxis;
     int _endAxis;

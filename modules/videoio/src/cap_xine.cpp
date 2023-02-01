@@ -111,7 +111,7 @@ class XINECapture : public IVideoCapture
         char configfile[2048] = {0};
 
         xine = xine_new();
-        snprintf(configfile, sizeof(configfile), "%s%s", xine_get_homedir(), "/.xine/config");
+        sprintf(configfile, "%s%s", xine_get_homedir(), "/.xine/config");
         xine_config_load(xine, configfile);
         xine_init(xine);
         xine_engine_set_param(xine, 0, 0);
@@ -346,10 +346,10 @@ protected:
     }
 };
 
-Ptr<IVideoCapture> cv::createXINECapture(const std::string &filename)
+Ptr<IVideoCapture> cv::createXINECapture(const char *filename)
 {
     Ptr<XINECapture> res = makePtr<XINECapture>();
-    if (res && res->open(filename.c_str()))
+    if (res && res->open(filename))
         return res;
     return Ptr<IVideoCapture>();
 }

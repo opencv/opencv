@@ -39,17 +39,9 @@
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD           CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
 #define CV_TEST_TAG_DNN_SKIP_IE_ARM_CPU          "dnn_skip_ie_arm_cpu"
 
-#define CV_TEST_TAG_DNN_SKIP_VULKAN              "dnn_skip_vulkan"
-
-#define CV_TEST_TAG_DNN_SKIP_CUDA                "dnn_skip_cuda"
-#define CV_TEST_TAG_DNN_SKIP_CUDA_FP16           "dnn_skip_cuda_fp16"
-#define CV_TEST_TAG_DNN_SKIP_CUDA_FP32           "dnn_skip_cuda_fp32"
-
 #define CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE    "dnn_skip_onnx_conformance"
 #define CV_TEST_TAG_DNN_SKIP_PARSER              "dnn_skip_parser"
 
-#define CV_TEST_TAG_DNN_SKIP_TIMVX               "dnn_skip_timvx"
-#define CV_TEST_TAG_DNN_SKIP_CANN                "dnn_skip_cann"
 
 #ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_EQ(2018050000)
@@ -73,7 +65,7 @@
 
 
 namespace cv { namespace dnn {
-CV__DNN_INLINE_NS_BEGIN
+CV__DNN_EXPERIMENTAL_NS_BEGIN
 
 void PrintTo(const cv::dnn::Backend& v, std::ostream* os);
 void PrintTo(const cv::dnn::Target& v, std::ostream* os);
@@ -81,7 +73,7 @@ using opencv_test::tuple;
 using opencv_test::get;
 void PrintTo(const tuple<cv::dnn::Backend, cv::dnn::Target> v, std::ostream* os);
 
-CV__DNN_INLINE_NS_END
+CV__DNN_EXPERIMENTAL_NS_END
 }} // namespace cv::dnn
 
 
@@ -121,27 +113,17 @@ void normAssertDetections(
         double confThreshold = 0.0, double scores_diff = 1e-5,
         double boxes_iou_diff = 1e-4);
 
-// For text detection networks
-// Curved text polygon is not supported in the current version.
-// (concave polygon is invalid input to intersectConvexConvex)
-void normAssertTextDetections(
-        const std::vector<std::vector<Point>>& gtPolys,
-        const std::vector<std::vector<Point>>& testPolys,
-        const char *comment = "", double boxes_iou_diff = 1e-4);
-
 void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content);
 
+#ifdef HAVE_INF_ENGINE
 bool validateVPUType();
+#endif
 
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargets(
         bool withInferenceEngine = true,
         bool withHalide = false,
         bool withCpuOCV = true,
-        bool withVkCom = true,
-        bool withCUDA = true,
-        bool withNgraph = true,
-        bool withWebnn = true,
-        bool withCann = true
+        bool withNgraph = true
 );
 
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargetsIE();
@@ -163,7 +145,7 @@ public:
 
     static void getDefaultThresholds(int backend, int target, double* l1, double* lInf)
     {
-        if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+        if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
         {
             *l1 = 4e-3;
             *lInf = 2e-2;
@@ -222,12 +204,6 @@ public:
             expectNoFallbacks(net);
         if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             expectNoFallbacks(net, false);
-    }
-
-    void expectNoFallbacksFromCUDA(Net& net)
-    {
-        if (backend == DNN_BACKEND_CUDA)
-            expectNoFallbacks(net);
     }
 
 protected:

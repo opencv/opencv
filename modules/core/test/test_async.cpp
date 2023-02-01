@@ -7,7 +7,7 @@
 
 #include <opencv2/core/bindings_utils.hpp>
 
-#if defined(CV_CXX11) && !defined(OPENCV_DISABLE_THREAD_SUPPORT)
+#ifdef CV_CXX11
 #include <thread>
 #include <chrono>
 #endif
@@ -85,8 +85,7 @@ TEST(Core_Async, LikePythonTest)
 }
 
 
-#if defined(CV_CXX11) && !defined(OPENCV_DISABLE_THREAD_SUPPORT)
-
+#ifdef CV_CXX11
 TEST(Core_Async, AsyncThread_Simple)
 {
     Mat m(3, 3, CV_32FC1, Scalar::all(5.0f));

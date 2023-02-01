@@ -1077,7 +1077,7 @@ double CV_ColorLabTest::get_success_error_level( int /*test_case_idx*/, int i, i
 {
     int depth = test_mat[i][j].depth();
     // j == 0 is for forward code, j == 1 is for inverse code
-    return (depth ==  CV_8U) ? (srgb ? 37 : 8) :
+    return (depth ==  CV_8U) ? (srgb ? 32 : 8) :
            //(depth == CV_16U) ? 32 : // 16u is disabled
            srgb ? ((j == 0) ? 0.4 : 0.0055) : 1e-3;
 }
@@ -1256,7 +1256,7 @@ double CV_ColorLuvTest::get_success_error_level( int /*test_case_idx*/, int i, i
 {
     int depth = test_mat[i][j].depth();
     // j == 0 is for forward code, j == 1 is for inverse code
-    return (depth ==  CV_8U) ? (srgb ? 37 : 8) :
+    return (depth ==  CV_8U) ? (srgb ? 36 : 8) :
            //(depth == CV_16U) ? 32 : // 16u is disabled
            5e-2;
 }
@@ -1501,7 +1501,7 @@ void CV_ColorRGBTest::convert_forward( const Mat& src, Mat& dst )
     int g_rshift = dst_bits == 16 ? 2 : 3;
     int r_lshift = dst_bits == 16 ? 11 : 10;
 
-    //CV_Assert( (cn == 3 || cn == 4) && (dst_cn == 3 || (dst_cn == 2 && depth == CV_8U)) );
+    //assert( (cn == 3 || cn == 4) && (dst_cn == 3 || (dst_cn == 2 && depth == CV_8U)) );
 
     for( i = 0; i < src.rows; i++ )
     {
@@ -1587,7 +1587,7 @@ void CV_ColorRGBTest::convert_backward( const Mat& /*src*/, const Mat& src, Mat&
     int g_lshift = dst_bits == 16 ? 2 : 3;
     int r_rshift = dst_bits == 16 ? 11 : 10;
 
-    //CV_Assert( (cn == 3 || cn == 4) && (src_cn == 3 || (src_cn == 2 && depth == CV_8U)) );
+    //assert( (cn == 3 || cn == 4) && (src_cn == 3 || (src_cn == 2 && depth == CV_8U)) );
 
     for( i = 0; i < src.rows; i++ )
     {

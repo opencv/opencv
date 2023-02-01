@@ -56,10 +56,8 @@
 #include "opencv2/core.hpp"
 #include <ostream>
 
+#ifdef CV_CXX11
 #include <functional>
-
-#if !defined(_M_CEE)
-#include <mutex>  // std::mutex, std::lock_guard
 #endif
 
 namespace cv
@@ -570,8 +568,6 @@ static inline size_t getElemSize(int type) { return (size_t)CV_ELEM_SIZE(type); 
 /////////////////////////////// Parallel Primitives //////////////////////////////////
 
 /** @brief Base class for parallel data processors
-
-@ingroup core_parallel
 */
 class CV_EXPORTS ParallelLoopBody
 {
@@ -581,23 +577,18 @@ public:
 };
 
 /** @brief Parallel data processor
-
-@ingroup core_parallel
 */
 CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
 
-//! @ingroup core_parallel
+#ifdef CV_CXX11
 class ParallelLoopBodyLambdaWrapper : public ParallelLoopBody
 {
 private:
     std::function<void(const Range&)> m_functor;
 public:
-    inline
-    ParallelLoopBodyLambdaWrapper(std::function<void(const Range&)> functor)
-        : m_functor(functor)
-    {
-        // nothing
-    }
+    ParallelLoopBodyLambdaWrapper(std::function<void(const Range&)> functor) :
+        m_functor(functor)
+    { }
 
     virtual void operator() (const cv::Range& range) const CV_OVERRIDE
     {
@@ -605,13 +596,11 @@ public:
     }
 };
 
-//! @ingroup core_parallel
-static inline
-void parallel_for_(const Range& range, std::function<void(const Range&)> functor, double nstripes=-1.)
+inline void parallel_for_(const Range& range, std::function<void(const Range&)> functor, double nstripes=-1.)
 {
     parallel_for_(range, ParallelLoopBodyLambdaWrapper(functor), nstripes);
 }
-
+#endif
 
 /////////////////////////////// forEach method of cv::Mat ////////////////////////////
 template<typename _Tp, typename Functor> inline
@@ -713,28 +702,34 @@ void Mat::forEach_impl(const Functor& operation) {
 
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 
-#if !defined(_M_CEE)
-#ifndef OPENCV_DISABLE_THREAD_SUPPORT
-typedef std::recursive_mutex Mutex;
-typedef std::lock_guard<cv::Mutex> AutoLock;
-#else // OPENCV_DISABLE_THREAD_SUPPORT
-// Custom (failing) implementation of `std::recursive_mutex`.
-struct Mutex {
-    void lock(){
-        CV_Error(cv::Error::StsNotImplemented,
-                 "cv::Mutex is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
-    }
-    void unlock(){
-        CV_Error(cv::Error::StsNotImplemented,
-                 "cv::Mutex is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
-    }
+class CV_EXPORTS Mutex
+{
+public:
+    Mutex();
+    ~Mutex();
+    Mutex(const Mutex& m);
+    Mutex& operator = (const Mutex& m);
+
+    void lock();
+    bool trylock();
+    void unlock();
+
+    struct Impl;
+protected:
+    Impl* impl;
 };
-// Stub for cv::AutoLock when threads are disabled.
-struct AutoLock {
-    AutoLock(Mutex &) { }
+
+class CV_EXPORTS AutoLock
+{
+public:
+    AutoLock(Mutex& m) : mutex(&m) { mutex->lock(); }
+    ~AutoLock() { mutex->unlock(); }
+protected:
+    Mutex* mutex;
+private:
+    AutoLock(const AutoLock&);
+    AutoLock& operator = (const AutoLock&);
 };
-#endif // OPENCV_DISABLE_THREAD_SUPPORT
-#endif // !defined(_M_CEE)
 
 
 /** @brief Designed for command line parsing
@@ -954,8 +949,8 @@ public:
     void printErrors() const;
 
 protected:
-    void getByName(const String& name, bool space_delete, Param type, void* dst) const;
-    void getByIndex(int index, bool space_delete, Param type, void* dst) const;
+    void getByName(const String& name, bool space_delete, int type, void* dst) const;
+    void getByIndex(int index, bool space_delete, int type, void* dst) const;
 
     struct Impl;
     Impl* impl;
@@ -1063,6 +1058,15 @@ AutoBuffer<_Tp, fixed_size>::resize(size_t _size)
 template<typename _Tp, size_t fixed_size> inline size_t
 AutoBuffer<_Tp, fixed_size>::size() const
 { return sz; }
+
+template<> inline std::string CommandLineParser::get<std::string>(int index, bool space_delete) const
+{
+    return get<String>(index, space_delete);
+}
+template<> inline std::string CommandLineParser::get<std::string>(const String& name, bool space_delete) const
+{
+    return get<String>(name, space_delete);
+}
 
 //! @endcond
 
@@ -1224,6 +1228,10 @@ CV_EXPORTS int getThreadID();
 #else
 /// Collect implementation data on OpenCV function call. Requires ENABLE_IMPL_COLLECTION build option.
 #define CV_IMPL_ADD(impl)
+#endif
+
+#ifndef DISABLE_OPENCV_24_COMPATIBILITY
+#include "opencv2/core/core_c.h"
 #endif
 
 #endif //OPENCV_CORE_UTILITY_H

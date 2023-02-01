@@ -42,23 +42,23 @@ private:
 
 /**********************************************************************************/
 
-cv::Ptr<cv::IVideoCapture> cv::create_XIMEA_capture_cam( int index )
+CvCapture* cvCreateCameraCapture_XIMEA( int index )
 {
     CvCaptureCAM_XIMEA* capture = new CvCaptureCAM_XIMEA;
 
     if( capture->open( index ))
-        return cv::makePtr<cv::LegacyCapture>(capture);
+        return capture;
 
     delete capture;
     return 0;
 }
 
-cv::Ptr<cv::IVideoCapture> cv::create_XIMEA_capture_file( const std::string &serialNumber )
+CvCapture* cvCreateCameraCapture_XIMEA( const char* serialNumber )
 {
     CvCaptureCAM_XIMEA* capture = new CvCaptureCAM_XIMEA;
 
-    if( capture->open( serialNumber.c_str() ))
-        return cv::makePtr<cv::LegacyCapture>(capture);
+    if( capture->open( serialNumber ))
+        return capture;
 
     delete capture;
     return 0;
@@ -1784,7 +1784,7 @@ void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum) const
 
     #if defined _WIN32
     char buf[512]="";
-    snprintf( buf, sizeof(buf), "%s : %d, %s\n", msg, errNum, error_message.c_str());
+    sprintf( buf, "%s : %d, %s\n", msg, errNum, error_message.c_str());
     OutputDebugString(buf);
     #else
     fprintf(stderr, "%s : %d, %s\n", msg, errNum, error_message.c_str());

@@ -42,12 +42,9 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
-#include "../op_vkcom.hpp"
-#include "../op_cann.hpp"
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/dnn/shape_utils.hpp"
@@ -57,11 +54,6 @@
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
-#endif
-
-#ifdef HAVE_CUDA
-#include "../cuda4dnn/primitives/lrn.hpp"
-using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -105,10 +97,7 @@ public:
             return bias == (int)bias;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && (size % 2 == 1) && (type == CHANNEL_NRM)) ||
-               backendId == DNN_BACKEND_CANN;
+               backendId == DNN_BACKEND_HALIDE;
     }
 
 #ifdef HAVE_OPENCL
@@ -322,55 +311,6 @@ public:
         }
     }
 
-#ifdef HAVE_CUDA
-    Ptr<BackendNode> initCUDA(
-        void *context_,
-        const std::vector<Ptr<BackendWrapper>>& inputs,
-        const std::vector<Ptr<BackendWrapper>>& outputs
-    ) override
-    {
-        auto context = reinterpret_cast<csl::CSLContext*>(context_);
-
-        cuda4dnn::LRNType type_;
-        if (type == CHANNEL_NRM)
-            type_ = cuda4dnn::LRNType::ACROSS_CHANNELS;
-        else if (type == SPATIAL_NRM)
-            type_ = cuda4dnn::LRNType::WITHIN_CHANNEL;
-        else
-            CV_Error(Error::StsNotImplemented, "Unknown normalization region");
-
-        float alphaSize = alpha;
-        if (!normBySize) {
-            switch (type) {
-            case CHANNEL_NRM: alphaSize = alpha * size; break;
-            case SPATIAL_NRM: alphaSize = alpha * size * size; break;
-            }
-        }
-
-        std::size_t largestInputSize = 0;
-        for(auto& wrapper : inputs) {
-            auto input_wrapper = wrapper.dynamicCast<CUDABackendWrapper>();
-            auto shape = input_wrapper->getShape();
-            largestInputSize = std::max<std::size_t>(
-                largestInputSize,
-                std::accumulate(std::begin(shape), std::end(shape), 1, std::multiplies<int>())
-            );
-        }
-
-        return make_cuda_node<cuda4dnn::LRNOp>(preferableTarget,
-            std::move(context->cudnn_handle), type_, size, alphaSize, beta, bias, largestInputSize);
-    }
-#endif
-
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_VULKAN
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpLRN(size / 2, bias, alpha, beta, normBySize));
-        return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
-#endif
-        return Ptr<BackendNode>();
-    }
-
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
@@ -444,38 +384,6 @@ public:
 #endif  // HAVE_HALIDE
     }
 
-#ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
-
-        // create operator
-        std::string op_name = cv::format("lrn_%d", index);
-        auto op = std::make_shared<ge::op::LRN>(op_name);
-
-        // set attributes
-        op->set_attr_depth_radius(size);
-        op->set_attr_bias(bias);
-        op->set_attr_alpha(alpha);
-        op->set_attr_beta(beta);
-        op->set_attr_norm_region("ACROSS_CHANNELS");
-        if (type == SPATIAL_NRM)
-            op->set_attr_norm_region("WITHIN_CHANNEL");
-
-        // set inputs
-        // set inputs : x
-        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        op->set_input_x_by_name(*op_x, "y");
-        auto x_desc = x->getTensorDesc();
-        op->update_input_desc_x(*x_desc);
-
-        // set outputs
-        auto output_y_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
-        op->update_output_desc_y(*output_y_desc);
-
-        return Ptr<BackendNode>(new CannBackendNode(op));
-    }
-#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE

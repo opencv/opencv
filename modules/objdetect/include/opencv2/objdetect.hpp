@@ -49,8 +49,8 @@
 /**
 @defgroup objdetect Object Detection
 
-@{
-    @defgroup objdetect_cascade_classifier Cascade Classifier for Object Detection
+Haar Feature-based Cascade Classifier for Object Detection
+----------------------------------------------------------
 
 The object detector described below has been initially proposed by Paul Viola @cite Viola01 and
 improved by Rainer Lienhart @cite Lienhart02 .
@@ -90,7 +90,8 @@ middle) and the sum of the image pixels under the black stripe multiplied by 3 i
 compensate for the differences in the size of areas. The sums of pixel values over a rectangular
 regions are calculated rapidly using integral images (see below and the integral description).
 
-Check @ref tutorial_cascade_classifier "the corresponding tutorial" for more details.
+To see the object detector at work, have a look at the facedetect demo:
+<https://github.com/opencv/opencv/tree/3.4/samples/cpp/dbt_face_detection.cpp>
 
 The following reference is for the detection part only. There is a separate application called
 opencv_traincascade that can train a cascade of boosted classifiers from a set of samples.
@@ -98,33 +99,10 @@ opencv_traincascade that can train a cascade of boosted classifiers from a set o
 @note In the new C++ interface it is also possible to use LBP (local binary pattern) features in
 addition to Haar-like features. .. [Viola01] Paul Viola and Michael J. Jones. Rapid Object Detection
 using a Boosted Cascade of Simple Features. IEEE CVPR, 2001. The paper is available online at
-<https://github.com/SvHey/thesis/blob/master/Literature/ObjectDetection/violaJones_CVPR2001.pdf>
+<http://research.microsoft.com/en-us/um/people/viola/Pubs/Detect/violaJones_CVPR2001.pdf>
 
-    @defgroup objdetect_hog HOG (Histogram of Oriented Gradients) descriptor and object detector
-    @defgroup objdetect_qrcode QRCode detection and encoding
-    @defgroup objdetect_dnn_face DNN-based face detection and recognition
-Check @ref tutorial_dnn_face "the corresponding tutorial" for more details.
-    @defgroup objdetect_common Common functions and classes
-    @defgroup objdetect_aruco ArUco markers and boards detection for robust camera pose estimation
-    @{
-        ArUco Marker Detection
-        Square fiducial markers (also known as Augmented Reality Markers) are useful for easy,
-        fast and robust camera pose estimation.
-
-        The main functionality of ArucoDetector class is detection of markers in an image. If the markers are grouped
-        as a board, then you can try to recover the missing markers with ArucoDetector::refineDetectedMarkers().
-        ArUco markers can also be used for advanced chessboard corner finding. To do this, group the markers in the
-        CharucoBoard and find the corners of the chessboard with the CharucoDetector::detectBoard().
-
-        The implementation is based on the ArUco Library by R. Muñoz-Salinas and S. Garrido-Jurado @cite Aruco2014.
-
-        Markers can also be detected based on the AprilTag 2 @cite wang2016iros fiducial detection method.
-
-        @sa @cite Aruco2014
-        This code has been originally developed by Sergio Garrido-Jurado as a project
-        for Google Summer of Code 2015 (GSoC 15).
-    @}
-
+@{
+    @defgroup objdetect_c C API
 @}
  */
 
@@ -133,15 +111,13 @@ typedef struct CvHaarClassifierCascade CvHaarClassifierCascade;
 namespace cv
 {
 
-//! @addtogroup objdetect_common
+//! @addtogroup objdetect
 //! @{
 
 ///////////////////////////// Object Detection ////////////////////////////
 
-/** @brief This class is used for grouping object candidates detected by Cascade Classifier, HOG etc.
-
-instance of the class is to be passed to cv::partition
- */
+//! class for grouping object candidates, detected by Cascade Classifier, HOG etc.
+//! instance of the class is to be passed to cv::partition (see cxoperations.hpp)
 class CV_EXPORTS SimilarRects
 {
 public:
@@ -186,12 +162,8 @@ CV_EXPORTS   void groupRectangles(std::vector<Rect>& rectList, std::vector<int>&
 CV_EXPORTS   void groupRectangles_meanshift(std::vector<Rect>& rectList, std::vector<double>& foundWeights,
                                             std::vector<double>& foundScales,
                                             double detectThreshold = 0.0, Size winDetSize = Size(64, 128));
-//! @}
 
-//! @addtogroup objdetect_cascade_classifier
-//! @{
-
-template<> struct DefaultDeleter<CvHaarClassifierCascade>{ CV_EXPORTS void operator ()(CvHaarClassifierCascade* obj) const; };
+template<> CV_EXPORTS void DefaultDeleter<CvHaarClassifierCascade>::operator ()(CvHaarClassifierCascade* obj) const;
 
 enum { CASCADE_DO_CANNY_PRUNING    = 1,
        CASCADE_SCALE_IMAGE         = 2,
@@ -271,7 +243,7 @@ public:
     CV_WRAP bool load( const String& filename );
     /** @brief Reads a classifier from a FileStorage node.
 
-    @note The file may contain a new cascade classifier (trained by the traincascade application) only.
+    @note The file may contain a new cascade classifier (trained traincascade application) only.
      */
     CV_WRAP bool read( const FileNode& node );
 
@@ -288,6 +260,12 @@ public:
     cvHaarDetectObjects. It is not used for a new cascade.
     @param minSize Minimum possible object size. Objects smaller than that are ignored.
     @param maxSize Maximum possible object size. Objects larger than that are ignored. If `maxSize == minSize` model is evaluated on single scale.
+
+    The function is parallelized with the TBB library.
+
+    @note
+       -   (Python) A face detection example using cascade classifiers can be found at
+            opencv_source_code/samples/python/facedetect.py
     */
     CV_WRAP void detectMultiScale( InputArray image,
                           CV_OUT std::vector<Rect>& objects,
@@ -360,10 +338,7 @@ public:
 };
 
 CV_EXPORTS Ptr<BaseCascadeClassifier::MaskGenerator> createFaceDetectionMaskGenerator();
-//! @}
 
-//! @addtogroup objdetect_hog
-//! @{
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
 
 //! struct for detection region of interest (ROI)
@@ -397,15 +372,13 @@ http://www.learnopencv.com/handwritten-digits-classification-an-opencv-c-python-
 struct CV_EXPORTS_W HOGDescriptor
 {
 public:
-    enum HistogramNormType { L2Hys = 0 //!< Default histogramNormType
+    enum { L2Hys = 0 //!< Default histogramNormType
          };
     enum { DEFAULT_NLEVELS = 64 //!< Default nlevels value.
          };
-    enum DescriptorStorageFormat { DESCR_FORMAT_COL_BY_COL, DESCR_FORMAT_ROW_BY_ROW };
-
     /**@brief Creates the HOG descriptor and detector with default parameters.
 
-    aqual to HOGDescriptor(Size(64,128), Size(16,16), Size(8,8), Size(8,8), 9 )
+    aqual to HOGDescriptor(Size(64,128), Size(16,16), Size(8,8), Size(8,8), 9, 1 )
     */
     CV_WRAP HOGDescriptor() : winSize(64,128), blockSize(16,16), blockStride(8,8),
         cellSize(8,8), nbins(9), derivAperture(1), winSigma(-1),
@@ -429,7 +402,7 @@ public:
     */
     CV_WRAP HOGDescriptor(Size _winSize, Size _blockSize, Size _blockStride,
                   Size _cellSize, int _nbins, int _derivAperture=1, double _winSigma=-1,
-                  HOGDescriptor::HistogramNormType _histogramNormType=HOGDescriptor::L2Hys,
+                  int _histogramNormType=HOGDescriptor::L2Hys,
                   double _L2HysThreshold=0.2, bool _gammaCorrection=false,
                   int _nlevels=HOGDescriptor::DEFAULT_NLEVELS, bool _signedGradient=false)
     : winSize(_winSize), blockSize(_blockSize), blockStride(_blockStride), cellSize(_cellSize),
@@ -441,7 +414,7 @@ public:
     /** @overload
 
     Creates the HOG descriptor and detector and loads HOGDescriptor parameters and coefficients for the linear SVM classifier from a file.
-    @param filename The file name containing HOGDescriptor properties and coefficients for the linear SVM classifier.
+    @param filename the file name containing  HOGDescriptor properties and coefficients of the trained classifier
     */
     CV_WRAP HOGDescriptor(const String& filename)
     {
@@ -475,9 +448,9 @@ public:
     /**@example samples/cpp/peopledetect.cpp
     */
     /**@brief Sets coefficients for the linear SVM classifier.
-    @param svmdetector coefficients for the linear SVM classifier.
+    @param _svmdetector coefficients for the linear SVM classifier.
     */
-    CV_WRAP virtual void setSVMDetector(InputArray svmdetector);
+    CV_WRAP virtual void setSVMDetector(InputArray _svmdetector);
 
     /** @brief Reads HOGDescriptor parameters and coefficients for the linear SVM classifier from a file node.
     @param fn File node
@@ -532,7 +505,7 @@ public:
     @param padding Padding
     @param searchLocations Vector of Point includes set of requested locations to be evaluated.
     */
-    CV_WRAP virtual void detect(InputArray img, CV_OUT std::vector<Point>& foundLocations,
+    CV_WRAP virtual void detect(const Mat& img, CV_OUT std::vector<Point>& foundLocations,
                         CV_OUT std::vector<double>& weights,
                         double hitThreshold = 0, Size winStride = Size(),
                         Size padding = Size(),
@@ -548,7 +521,7 @@ public:
     @param padding Padding
     @param searchLocations Vector of Point includes locations to search.
     */
-    virtual void detect(InputArray img, CV_OUT std::vector<Point>& foundLocations,
+    virtual void detect(const Mat& img, CV_OUT std::vector<Point>& foundLocations,
                         double hitThreshold = 0, Size winStride = Size(),
                         Size padding = Size(),
                         const std::vector<Point>& searchLocations=std::vector<Point>()) const;
@@ -599,7 +572,7 @@ public:
     @param paddingTL Padding from top-left
     @param paddingBR Padding from bottom-right
     */
-    CV_WRAP virtual void computeGradient(InputArray img, InputOutputArray grad, InputOutputArray angleOfs,
+    CV_WRAP virtual void computeGradient(const Mat& img, CV_OUT Mat& grad, CV_OUT Mat& angleOfs,
                                  Size paddingTL = Size(), Size paddingBR = Size()) const;
 
     /** @brief Returns coefficients of the classifier trained for people detection (for 64x128 windows).
@@ -634,7 +607,7 @@ public:
     CV_PROP double winSigma;
 
     //! histogramNormType
-    CV_PROP HOGDescriptor::HistogramNormType histogramNormType;
+    CV_PROP int histogramNormType;
 
     //! L2-Hys normalization method shrinkage.
     CV_PROP double L2HysThreshold;
@@ -668,7 +641,7 @@ public:
     @param winStride winStride
     @param padding padding
     */
-    virtual void detectROI(InputArray img, const std::vector<cv::Point> &locations,
+    virtual void detectROI(const cv::Mat& img, const std::vector<cv::Point> &locations,
                                    CV_OUT std::vector<cv::Point>& foundLocations, CV_OUT std::vector<double>& confidences,
                                    double hitThreshold = 0, cv::Size winStride = Size(),
                                    cv::Size padding = Size()) const;
@@ -681,11 +654,16 @@ public:
     in the detector coefficients (as the last free coefficient). But if the free coefficient is omitted (which is allowed), you can specify it manually here.
     @param groupThreshold Minimum possible number of rectangles minus 1. The threshold is used in a group of rectangles to retain it.
     */
-    virtual void detectMultiScaleROI(InputArray img,
+    virtual void detectMultiScaleROI(const cv::Mat& img,
                                      CV_OUT std::vector<cv::Rect>& foundLocations,
                                      std::vector<DetectionROI>& locations,
                                      double hitThreshold = 0,
                                      int groupThreshold = 0) const;
+
+    /** @brief read/parse Dalal's alt model file
+    @param modelfile Path of Dalal's alt model file.
+    */
+    void readALTModel(String modelfile);
 
     /** @brief Groups the object candidate rectangles.
     @param rectList  Input/output vector of rectangles. Output vector includes retained and grouped rectangles. (The Python list is not modified in place.)
@@ -695,10 +673,6 @@ public:
     */
     void groupRectangles(std::vector<cv::Rect>& rectList, std::vector<double>& weights, int groupThreshold, double eps) const;
 };
-//! @}
-
-//! @addtogroup objdetect_qrcode
-//! @{
 
 class CV_EXPORTS_W QRCodeEncoder {
 protected:
@@ -780,12 +754,6 @@ public:
      */
     CV_WRAP void setEpsY(double epsY);
 
-    /** @brief use markers to improve the position of the corners of the QR code
-     *
-     * alignmentMarkers using by default
-     */
-    CV_WRAP void setUseAlignmentMarkers(bool useAlignmentMarkers);
-
     /** @brief Detects QR code in image and returns the quadrangle containing the code.
      @param img grayscale or color (BGR) image containing (or not) QR code.
      @param points Output vector of vertices of the minimum-area quadrangle containing the code.
@@ -799,7 +767,7 @@ public:
      @param points Quadrangle vertices found by detect() method (or some other algorithm).
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
-    CV_WRAP std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
+    CV_WRAP cv::String decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
 
     /** @brief Decodes QR code on a curved surface in image once it's found by the detect() method.
 
@@ -816,8 +784,8 @@ public:
      @param points optional output array of vertices of the found QR code quadrangle. Will be empty if not found.
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
-    CV_WRAP std::string detectAndDecode(InputArray img, OutputArray points=noArray(),
-                                        OutputArray straight_qrcode = noArray());
+    CV_WRAP cv::String detectAndDecode(InputArray img, OutputArray points=noArray(),
+                                       OutputArray straight_qrcode = noArray());
 
     /** @brief Both detects and decodes QR code on a curved surface
 
@@ -825,8 +793,8 @@ public:
      @param points optional output array of vertices of the found QR code quadrangle. Will be empty if not found.
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
-    CV_WRAP std::string detectAndDecodeCurved(InputArray img, OutputArray points=noArray(),
-                                              OutputArray straight_qrcode = noArray());
+    CV_WRAP cv::String detectAndDecodeCurved(InputArray img, OutputArray points=noArray(),
+                                             OutputArray straight_qrcode = noArray());
 
     /** @brief Detects QR codes in image and returns the vector of the quadrangles containing the codes.
      @param img grayscale or color (BGR) image containing (or not) QR codes.
@@ -844,7 +812,7 @@ public:
     CV_WRAP
     bool decodeMulti(
             InputArray img, InputArray points,
-            CV_OUT std::vector<std::string>& decoded_info,
+            CV_OUT std::vector<cv::String>& decoded_info,
             OutputArrayOfArrays straight_qrcode = noArray()
     ) const;
 
@@ -856,22 +824,84 @@ public:
     */
     CV_WRAP
     bool detectAndDecodeMulti(
-            InputArray img, CV_OUT std::vector<std::string>& decoded_info,
+            InputArray img, CV_OUT std::vector<cv::String>& decoded_info,
             OutputArray points = noArray(),
             OutputArrayOfArrays straight_qrcode = noArray()
     ) const;
+
+
+#ifndef CV_DOXYGEN  // COMPATIBILITY
+    inline bool decodeMulti(
+            InputArray img, InputArray points,
+            CV_OUT std::vector<std::string>& decoded_info,
+            OutputArrayOfArrays straight_qrcode = noArray()
+        ) const
+    {
+        std::vector<cv::String> decoded_info_;
+        bool res = decodeMulti(img, points, decoded_info_, straight_qrcode);
+        decoded_info.resize(decoded_info_.size());
+        for (size_t i = 0; i < decoded_info.size(); ++i)
+        {
+            cv::String s; std::swap(s, decoded_info_[i]);
+            decoded_info[i] = s;
+        }
+        return res;
+    }
+
+    inline bool detectAndDecodeMulti(
+            InputArray img, CV_OUT std::vector<std::string>& decoded_info,
+            OutputArray points = noArray(),
+            OutputArrayOfArrays straight_qrcode = noArray()
+        ) const
+    {
+        std::vector<cv::String> decoded_info_;
+        bool res = detectAndDecodeMulti(img, decoded_info_, points, straight_qrcode);
+        decoded_info.resize(decoded_info_.size());
+        for (size_t i = 0; i < decoded_info.size(); ++i)
+        {
+            cv::String s; std::swap(s, decoded_info_[i]);
+            decoded_info[i] = s;
+        }
+        return res;
+    }
+#endif
 
 protected:
     struct Impl;
     Ptr<Impl> p;
 };
 
-//! @}
+/** @brief Detect QR code in image and return minimum area of quadrangle that describes QR code.
+    @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.
+    @param points Output vector of vertices of a quadrangle of minimal area that describes QR code.
+    @param eps_x Epsilon neighborhood, which allows you to determine the horizontal pattern of the scheme 1:1:3:1:1 according to QR code standard.
+    @param eps_y Epsilon neighborhood, which allows you to determine the vertical pattern of the scheme 1:1:3:1:1 according to QR code standard.
+    */
+CV_EXPORTS bool detectQRCode(InputArray in, std::vector<Point> &points, double eps_x = 0.2, double eps_y = 0.1);
+
+/** @brief Decode QR code in image and return text that is encrypted in QR code.
+    @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.
+    @param points Input vector of vertices of a quadrangle of minimal area that describes QR code.
+    @param decoded_info String information that is encrypted in QR code.
+    @param straight_qrcode Matrix of the type CV_8UC1 containing an binary straight QR code.
+    */
+CV_EXPORTS bool decodeQRCode(InputArray in, InputArray points, std::string &decoded_info, OutputArray straight_qrcode = noArray());
+
+/** @brief Decode QR code on a curved surface in image and return text that is encrypted in QR code.
+    @param in  Matrix of the type CV_8UC1 containing an image where QR code are detected.
+    @param points Input vector of vertices of a quadrangle of minimal area that describes QR code.
+    @param decoded_info String information that is encrypted in QR code.
+    @param straight_qrcode Matrix of the type CV_8UC1 containing an binary straight QR code.
+    */
+CV_EXPORTS bool decodeCurvedQRCode(InputArray in, InputArray points, std::string &decoded_info, OutputArray straight_qrcode = noArray());
+
+//! @} objdetect
 }
 
 #include "opencv2/objdetect/detection_based_tracker.hpp"
-#include "opencv2/objdetect/face.hpp"
-#include "opencv2/objdetect/aruco_detector.hpp"
-#include "opencv2/objdetect/charuco_detector.hpp"
+
+#ifndef DISABLE_OPENCV_24_COMPATIBILITY
+#include "opencv2/objdetect/objdetect_c.h"
+#endif
 
 #endif

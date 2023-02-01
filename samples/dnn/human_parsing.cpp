@@ -78,17 +78,12 @@ int main(int argc, char**argv)
                                          "0: automatically (by default), "
                                          "1: Halide language (http://halide-lang.org/), "
                                          "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                                         "3: OpenCV implementation, "
-                                         "4: VKCOM, "
-                                         "5: CUDA }"
+                                         "3: OpenCV implementation }"
         "{target  t | 0               | Choose one of target computation devices: "
                                          "0: CPU target (by default), "
                                          "1: OpenCL, "
                                          "2: OpenCL fp16 (half-float precision), "
-                                         "3: VPU, "
-                                         "4: Vulkan, "
-                                         "6: CUDA, "
-                                         "7: CUDA fp16 (half-float preprocess) }"
+                                         "3: VPU }"
     );
     if (argc == 1 || parser.has("help"))
     {

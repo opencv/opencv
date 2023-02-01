@@ -53,4 +53,8 @@
 
 #include <algorithm>
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+#include "opencv2/features2d/features2d_tegra.hpp"
+#endif
+
 #endif
