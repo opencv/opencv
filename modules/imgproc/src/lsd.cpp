@@ -949,16 +949,21 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
     double dyhw = rec.dy * half_width;
     double dxhw = rec.dx * half_width;
 
-    cv::Point2d ordered_y[4];
-    ordered_y[0] = cv::Point2d(rec.x1 - dyhw, rec.y1 + dxhw);
-    ordered_y[1] = cv::Point2d(rec.x2 - dyhw, rec.y2 + dxhw);
-    ordered_y[2] = cv::Point2d(rec.x2 + dyhw, rec.y2 - dxhw);
-    ordered_y[3] = cv::Point2d(rec.x1 + dyhw, rec.y1 - dxhw);
+    cv::Point2d tmp[4];
+    tmp[0] = cv::Point2d(rec.x1 - dyhw, rec.y1 + dxhw);
+    tmp[1] = cv::Point2d(rec.x2 - dyhw, rec.y2 + dxhw);
+    tmp[2] = cv::Point2d(rec.x2 + dyhw, rec.y2 - dxhw);
+    tmp[3] = cv::Point2d(rec.x1 + dyhw, rec.y1 - dxhw);
 
     // Rotate the vertices so that the first one is the one with the smallest y coordinate (or the smallest x if there is a tie).
     // The rest will be then ordered counterclockwise.
-    auto offset = std::min_element(ordered_y, ordered_y + 4, AsmallerB_YoverX) - ordered_y;
-    std::rotate(ordered_y, ordered_y + offset, ordered_y + 4);
+    auto offset = std::min_element(tmp, tmp + 4, AsmallerB_YoverX) - tmp;
+
+    // Rotate the values without using std::rotate
+    cv::Point2d ordered_y[4];
+    for (int i = 0; i < 4; ++i) {
+        ordered_y[i] = tmp[(i + offset) % 4];
+    }
 
     double flstep = get_slope(ordered_y[0], ordered_y[1]); //first left step
     double slstep = get_slope(ordered_y[1], ordered_y[2]); //second left step
