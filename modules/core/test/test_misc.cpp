@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+#include <cmath>
 
 #include "opencv2/core/utils/logger.hpp"
 
@@ -848,6 +849,42 @@ TEST(Core_Check, testSize_1)
     }
 }
 
+TEST(Core_Allocation, alignedAllocation)
+{
+    // iterate from size=1 to approximate byte size of 8K 32bpp image buffer
+    for (int i = 0; i < 200; i++) {
+        const size_t size = static_cast<size_t>(std::pow(1.091, (double)i));
+        void * const buf = cv::fastMalloc(size);
+        ASSERT_NE((uintptr_t)0, (uintptr_t)buf)
+            << "failed to allocate memory";
+        ASSERT_EQ((uintptr_t)0, (uintptr_t)buf % CV_MALLOC_ALIGN)
+            << "memory not aligned to " << CV_MALLOC_ALIGN;
+        cv::fastFree(buf);
+    }
+}
+
+
+#if !(defined(__GNUC__) && __GNUC__ < 5)  // GCC 4.8 emits: 'is_trivially_copyable' is not a member of 'std'
+TEST(Core_Types, trivially_copyable)
+{
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Complexd>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Point>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Point3f>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Size>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Range>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Rect>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::RotatedRect>::value);
+    //EXPECT_TRUE(std::is_trivially_copyable<cv::Scalar>::value);  // derived from Vec (Matx)
+}
+
+TEST(Core_Types, trivially_copyable_extra)
+{
+    EXPECT_TRUE(std::is_trivially_copyable<cv::KeyPoint>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::DMatch>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::TermCriteria>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Moments>::value);
+}
+#endif
 
 template <typename T> class Rect_Test : public testing::Test {};
 

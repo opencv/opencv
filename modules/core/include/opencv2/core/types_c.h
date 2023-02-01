@@ -1711,7 +1711,7 @@ typedef CvContour CvPoint2DSeq;
 #define CV_SEQ_ELTYPE_POINT          CV_32SC2  /**< (x,y) */
 #define CV_SEQ_ELTYPE_CODE           CV_8UC1   /**< freeman code: 0..7 */
 #define CV_SEQ_ELTYPE_GENERIC        0
-#define CV_SEQ_ELTYPE_PTR            CV_USRTYPE1
+#define CV_SEQ_ELTYPE_PTR            CV_MAKE_TYPE(CV_8U, 8 /*sizeof(void*)*/)
 #define CV_SEQ_ELTYPE_PPOINT         CV_SEQ_ELTYPE_PTR  /**< &(x,y) */
 #define CV_SEQ_ELTYPE_INDEX          CV_32SC1  /**< #(x,y) */
 #define CV_SEQ_ELTYPE_GRAPH_EDGE     0  /**< &next_o, &next_d, &vtx_o, &vtx_d */
@@ -1963,6 +1963,8 @@ CvSeqReader;
 *             Data structures for persistence (a.k.a serialization) functionality        *
 \****************************************************************************************/
 
+#if 0
+
 /** "black box" file storage */
 typedef struct CvFileStorage CvFileStorage;
 
@@ -2115,28 +2117,7 @@ typedef struct CvTypeInfo
     CvCloneFunc clone; /**< creates a copy of the object */
 }
 CvTypeInfo;
-
-
-/**** System data types ******/
-
-typedef struct CvPluginFuncInfo
-{
-    void** func_addr;
-    void* default_func_addr;
-    const char* func_names;
-    int search_modules;
-    int loaded_from;
-}
-CvPluginFuncInfo;
-
-typedef struct CvModuleInfo
-{
-    struct CvModuleInfo* next;
-    const char* name;
-    const char* version;
-    CvPluginFuncInfo* func_tab;
-}
-CvModuleInfo;
+#endif
 
 /** @} */
 

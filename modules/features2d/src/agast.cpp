@@ -7446,7 +7446,7 @@ static void OAST_9_16(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
 
 #else // !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
 
-static void AGAST_ALL(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, int agasttype)
+static void AGAST_ALL(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, AgastFeatureDetector::DetectorType agasttype)
 {
     cv::Mat img;
     if(!_img.getMat().isContinuous())
@@ -7944,9 +7944,30 @@ void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, boo
 class AgastFeatureDetector_Impl CV_FINAL : public AgastFeatureDetector
 {
 public:
-    AgastFeatureDetector_Impl( int _threshold, bool _nonmaxSuppression, int _type )
-    : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type((short)_type)
+    AgastFeatureDetector_Impl( int _threshold, bool _nonmaxSuppression, DetectorType _type )
+    : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type(_type)
     {}
+
+    void read( const FileNode& fn) CV_OVERRIDE
+    {
+        // if node is empty, keep previous value
+        if (!fn["threshold"].empty())
+            fn["threshold"] >> threshold;
+        if (!fn["nonmaxSuppression"].empty())
+            fn["nonmaxSuppression"] >> nonmaxSuppression;
+        if (!fn["type"].empty())
+            fn["type"] >> type;
+    }
+    void write( FileStorage& fs) const CV_OVERRIDE
+    {
+        if(fs.isOpened())
+        {
+            fs << "name" << getDefaultName();
+            fs << "threshold" << threshold;
+            fs << "nonmaxSuppression" << nonmaxSuppression;
+            fs << "type" << type;
+        }
+    }
 
     void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE
     {
@@ -7998,20 +8019,20 @@ public:
     void setNonmaxSuppression(bool f) CV_OVERRIDE { nonmaxSuppression = f; }
     bool getNonmaxSuppression() const CV_OVERRIDE { return nonmaxSuppression; }
 
-    void setType(int type_) CV_OVERRIDE { type = type_; }
-    int getType() const CV_OVERRIDE { return type; }
+    void setType(DetectorType type_) CV_OVERRIDE{ type = type_; }
+    DetectorType getType() const CV_OVERRIDE{ return type; }
 
     int threshold;
     bool nonmaxSuppression;
-    int type;
+    DetectorType type;
 };
 
-Ptr<AgastFeatureDetector> AgastFeatureDetector::create( int threshold, bool nonmaxSuppression, int type )
+Ptr<AgastFeatureDetector> AgastFeatureDetector::create( int threshold, bool nonmaxSuppression, AgastFeatureDetector::DetectorType type )
 {
     return makePtr<AgastFeatureDetector_Impl>(threshold, nonmaxSuppression, type);
 }
 
-void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int type)
+void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, AgastFeatureDetector::DetectorType type)
 {
     CV_INSTRUMENT_REGION();
 

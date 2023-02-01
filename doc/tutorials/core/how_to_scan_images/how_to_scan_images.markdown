@@ -1,8 +1,15 @@
 How to scan images, lookup tables and time measurement with OpenCV {#tutorial_how_to_scan_images}
 ==================================================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_mat_the_basic_image_container}
 @next_tutorial{tutorial_mat_mask_operations}
+
+|    |    |
+| -: | :- |
+| Original author | Bernát Gábor |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -54,7 +61,7 @@ three major ways of going through an image pixel by pixel. To make things a litt
 we'll make the scanning of the image using each of these methods, and print out how long it took.
 
 You can download the full source code [here
-](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp) or look it up in
+](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp) or look it up in
 the samples directory of OpenCV at the cpp tutorial code for the core section. Its basic usage is:
 @code{.bash}
 how_to_scan_images imageName.jpg intValueToReduce [G]

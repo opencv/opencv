@@ -1,8 +1,15 @@
 Eroding and Dilating {#tutorial_erosion_dilatation}
 ====================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_gausian_median_blur_bilateral_filter}
 @next_tutorial{tutorial_opening_closing_hats}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -65,19 +72,19 @@ Code
 
 @add_toggle_cpp
 This tutorial's code is shown below. You can also download it
-[here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp)
 @include samples/cpp/tutorial_code/ImgProc/Morphology_1.cpp
 @end_toggle
 
 @add_toggle_java
 This tutorial's code is shown below. You can also download it
-[here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ImgProc/erosion_dilatation/MorphologyDemo1.java)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/ImgProc/erosion_dilatation/MorphologyDemo1.java)
 @include samples/java/tutorial_code/ImgProc/erosion_dilatation/MorphologyDemo1.java
 @end_toggle
 
 @add_toggle_python
 This tutorial's code is shown below. You can also download it
-[here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/imgProc/erosion_dilatation/morphology_1.py)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/imgProc/erosion_dilatation/morphology_1.py)
 @include samples/python/tutorial_code/imgProc/erosion_dilatation/morphology_1.py
 @end_toggle
 
@@ -197,9 +204,9 @@ receives three arguments:
 
     We can choose any of three shapes for our kernel:
 
-    -   Rectangular box: CV_SHAPE_RECT
-    -   Cross: CV_SHAPE_CROSS
-    -   Ellipse: CV_SHAPE_ELLIPSE
+    -   Rectangular box: Imgproc.SHAPE_RECT
+    -   Cross: Imgproc.SHAPE_CROSS
+    -   Ellipse: Imgproc.SHAPE_ELLIPSE
 
     Together with the shape we specify the size of our kernel and the *anchor point*. If the anchor point is not
     specified, it is assumed to be in the center.
@@ -273,7 +280,7 @@ Results
 
 Compile the code above and execute it (or run the script if using python) with an image as argument.
 If you do not provide an image as argument the default sample image
-([LinuxLogo.jpg](https://github.com/opencv/opencv/tree/3.4/samples/data/LinuxLogo.jpg)) will be used.
+([LinuxLogo.jpg](https://github.com/opencv/opencv/tree/4.x/samples/data/LinuxLogo.jpg)) will be used.
 
 For instance, using this image:
 

@@ -15,7 +15,7 @@ endif()
 if(INSTALL_TO_MANGLED_PATHS)
   ocv_update(OPENCV_SETUPVARS_FILENAME "setup_vars_opencv-${OPENCV_VERSION}${OPENCV_SCRIPT_EXTENSION}")
 else()
-  ocv_update(OPENCV_SETUPVARS_FILENAME setup_vars_opencv3${OPENCV_SCRIPT_EXTENSION})
+  ocv_update(OPENCV_SETUPVARS_FILENAME setup_vars_opencv4${OPENCV_SCRIPT_EXTENSION})
 endif()
 
 ##### build directory

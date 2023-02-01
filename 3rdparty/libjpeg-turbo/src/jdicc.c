@@ -18,10 +18,6 @@
 #include "jpeglib.h"
 #include "jerror.h"
 
-#ifndef HAVE_STDLIB_H           /* <stdlib.h> should declare malloc() */
-extern void *malloc(size_t size);
-#endif
-
 
 #define ICC_MARKER  (JPEG_APP0 + 2)     /* JPEG marker code for ICC */
 #define ICC_OVERHEAD_LEN  14            /* size of non-profile data in APP2 */

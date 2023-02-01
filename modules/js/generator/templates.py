@@ -153,6 +153,9 @@ overload_class_static_function_template = Template("""
 class_property_template = Template("""
         .property("$js_name", &$cpp_name)""")
 
+class_property_enum_template = Template("""
+        .property("$js_name", binding_utils::underlying_ptr(&$cpp_name))""")
+
 ctr_template = Template("""
         .constructor(select_overload<$ret($args)$const>(&$cpp_name)$optional)""")
 
@@ -176,7 +179,7 @@ enum_template = Template("""
 """)
 
 const_template = Template("""
-    constant("$js_name", +$value);
+    constant("$js_name", static_cast<long>($value));
 """)
 
 vector_template = Template("""

@@ -6,9 +6,35 @@
 #include "opencv2/core/base.hpp"
 #include "cap_mfx_common.hpp"
 #include "opencv2/imgproc/hal/hal.hpp"
+#include "cap_interface.hpp"
 
 using namespace std;
 using namespace cv;
+
+static float estimateBitrate(int codecId, size_t pixelNum, float fps)
+{
+    float bitrate = 0.f;
+    const float mp = pixelNum / 1000000.f;
+    if (codecId == MFX_CODEC_MPEG2)
+    {
+        bitrate = (mp * 43) * fps + 360;
+    }
+    else if (codecId == MFX_CODEC_AVC)
+    {
+        bitrate = (mp * 140 + 19) * pow(fps, 0.60f);
+    }
+    else if (codecId == MFX_CODEC_HEVC)
+    {
+        bitrate = (mp * 63 + 45) * pow(fps, 0.60f);
+    }
+    else
+    {
+        MSG(cerr << "MFX encoder Bitrate estimation FAILED" << endl);
+    }
+    DBG(cout << "MFX encoder Bitrate estimation (" << mp << " MP x " << fps << " fps): " << bitrate << endl);
+    return bitrate;
+
+}
 
 static size_t getBitrateDivisor()
 {
@@ -60,7 +86,7 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
 
     // Init device and session
     deviceHandler = createDeviceHandler();
-    session = new MFXVideoSession();
+    session = new MFXVideoSession_WRAP();
     if (!deviceHandler->init(*session))
     {
         MSG(cerr << "MFX: Can't initialize session" << endl);
@@ -89,7 +115,7 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
     memset(&params, 0, sizeof(params));
     params.mfx.CodecId = codecId;
     params.mfx.TargetUsage = MFX_TARGETUSAGE_BALANCED;
-    params.mfx.TargetKbps = saturate_cast<mfxU16>((frameSize.area() * fps) / (42.6666 * getBitrateDivisor())); // TODO: set in options
+    params.mfx.TargetKbps = saturate_cast<mfxU16>(estimateBitrate(codecId, frameSize.area(), (float)fps) * 300 / getBitrateDivisor()); // TODO: set in options
     params.mfx.RateControlMethod = MFX_RATECONTROL_VBR;
     params.mfx.FrameInfo.FrameRateExtN = cvRound(fps * 1000);
     params.mfx.FrameInfo.FrameRateExtD = 1000;
@@ -121,7 +147,7 @@ VideoWriter_IntelMFX::VideoWriter_IntelMFX(const String &filename, int _fourcc, 
 
     // Init encoder
     res = encoder->Init(&params);
-    DBG(cout << "MFX Init: " << res << endl << params.mfx.FrameInfo);
+    DBG(cout << "MFX encoder Init: " << res << endl << params.mfx.FrameInfo);
     if (res < MFX_ERR_NONE)
     {
         MSG(cerr << "MFX: Failed to init encoder: " << res << endl);
@@ -262,10 +288,12 @@ bool VideoWriter_IntelMFX::write_one(cv::InputArray bgr)
     }
 }
 
-Ptr<VideoWriter_IntelMFX> VideoWriter_IntelMFX::create(const String &filename, int _fourcc, double fps, Size frameSize, bool isColor)
+Ptr<IVideoWriter> cv::create_MFX_writer(const std::string& filename, int _fourcc, double fps,
+                                        const Size& frameSize, const VideoWriterParameters& params)
 {
     if (codecIdByFourCC(_fourcc) > 0)
     {
+        const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
         Ptr<VideoWriter_IntelMFX> a = makePtr<VideoWriter_IntelMFX>(filename, _fourcc, fps, frameSize, isColor);
         if (a->isOpened())
             return a;

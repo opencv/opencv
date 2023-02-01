@@ -202,7 +202,8 @@ enum WindowPropertyFlags {
        WND_PROP_ASPECT_RATIO = 2, //!< window's aspect ration (can be set to WINDOW_FREERATIO or WINDOW_KEEPRATIO).
        WND_PROP_OPENGL       = 3, //!< opengl support.
        WND_PROP_VISIBLE      = 4, //!< checks whether the window exists and is visible
-       WND_PROP_TOPMOST      = 5  //!< property to toggle normal window being topmost or not
+       WND_PROP_TOPMOST      = 5, //!< property to toggle normal window being topmost or not
+       WND_PROP_VSYNC        = 6  //!< enable or disable VSYNC (in OpenGL mode)
      };
 
 //! Mouse Events see cv::MouseCallback
@@ -347,22 +348,33 @@ The function waitKey waits for a key event infinitely (when \f$\texttt{delay}\le
 milliseconds, when it is positive. Since the OS has a minimum time between switching threads, the
 function will not wait exactly delay ms, it will wait at least delay ms, depending on what else is
 running on your computer at that time. It returns the code of the pressed key or -1 if no key was
-pressed before the specified time had elapsed.
+pressed before the specified time had elapsed. To check for a key press but not wait for it, use
+#pollKey.
 
-@note
+@note The functions #waitKey and #pollKey are the only methods in HighGUI that can fetch and handle
+GUI events, so one of them needs to be called periodically for normal event processing unless
+HighGUI is used within an environment that takes care of event processing.
 
-This function is the only method in HighGUI that can fetch and handle events, so it needs to be
-called periodically for normal event processing unless HighGUI is used within an environment that
-takes care of event processing.
-
-@note
-
-The function only works if there is at least one HighGUI window created and the window is active.
-If there are several HighGUI windows, any of them can be active.
+@note The function only works if there is at least one HighGUI window created and the window is
+active. If there are several HighGUI windows, any of them can be active.
 
 @param delay Delay in milliseconds. 0 is the special value that means "forever".
  */
 CV_EXPORTS_W int waitKey(int delay = 0);
+
+/** @brief Polls for a pressed key.
+
+The function pollKey polls for a key event without waiting. It returns the code of the pressed key
+or -1 if no key was pressed since the last invocation. To wait until a key was pressed, use #waitKey.
+
+@note The functions #waitKey and #pollKey are the only methods in HighGUI that can fetch and handle
+GUI events, so one of them needs to be called periodically for normal event processing unless
+HighGUI is used within an environment that takes care of event processing.
+
+@note The function only works if there is at least one HighGUI window created and the window is
+active. If there are several HighGUI windows, any of them can be active.
+ */
+CV_EXPORTS_W int pollKey();
 
 /** @brief Displays an image in the specified window.
 
@@ -371,10 +383,12 @@ cv::WINDOW_AUTOSIZE flag, the image is shown with its original size, however it 
 Otherwise, the image is scaled to fit the window. The function may scale the image, depending on its depth:
 
 -   If the image is 8-bit unsigned, it is displayed as is.
--   If the image is 16-bit unsigned or 32-bit integer, the pixels are divided by 256. That is, the
+-   If the image is 16-bit unsigned, the pixels are divided by 256. That is, the
     value range [0,255\*256] is mapped to [0,255].
 -   If the image is 32-bit or 64-bit floating-point, the pixel values are multiplied by 255. That is, the
     value range [0,1] is mapped to [0,255].
+-   32-bit integer images are not processed anymore due to ambiguouty of required transform.
+    Convert to 8-bit unsigned matrix using a custom preprocessing specific to image's context.
 
 If window was created with OpenGL support, cv::imshow also support ogl::Buffer , ogl::Texture2D and
 cuda::GpuMat as input.
@@ -383,11 +397,12 @@ If the window was not created before this function, it is assumed creating a win
 
 If you need to show an image that is bigger than the screen resolution, you will need to call namedWindow("", WINDOW_NORMAL) before the imshow.
 
-@note This function should be followed by cv::waitKey function which displays the image for specified
-milliseconds. Otherwise, it won't display the image. For example, **waitKey(0)** will display the window
-infinitely until any keypress (it is suitable for image display). **waitKey(25)** will display a frame
-for 25 ms, after which display will be automatically closed. (If you put it in a loop to read
-videos, it will display the video frame-by-frame)
+@note This function should be followed by a call to cv::waitKey or cv::pollKey to perform GUI
+housekeeping tasks that are necessary to actually show the given image and make the window respond
+to mouse and keyboard events. Otherwise, it won't display the image and the window might lock up.
+For example, **waitKey(0)** will display the window infinitely until any keypress (it is suitable
+for image display). **waitKey(25)** will display a frame and wait approximately 25 ms for a key
+press (suitable for displaying a video frame-by-frame). To remove the window, use cv::destroyWindow.
 
 @note
 
@@ -544,7 +559,7 @@ displayed in the specified window winname.
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar should be attached to the
+[__Qt Backend Only__] winname can be empty if the trackbar should be attached to the
 control panel.
 
 Clicking the label of each trackbar enables editing the trackbar values manually.
@@ -572,7 +587,7 @@ The function returns the current position of the specified trackbar.
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -586,7 +601,7 @@ The function sets the position of the specified trackbar in the specified window
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -601,7 +616,7 @@ The function sets the maximum position of the specified trackbar in the specifie
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -616,7 +631,7 @@ The function sets the minimum position of the specified trackbar in the specifie
 
 @note
 
-[__Qt Backend Only__] winname can be empty (or NULL) if the trackbar is attached to the control
+[__Qt Backend Only__] winname can be empty if the trackbar is attached to the control
 panel.
 
 @param trackbarname Name of the trackbar.
@@ -823,7 +838,7 @@ QT_NEW_BUTTONBAR flag is added to the type.
 
 See below various examples of the cv::createButton function call: :
 @code
-    createButton(NULL,callbackButton);//create a push button "button 0", that will call callbackButton.
+    createButton("",callbackButton);//create a push button "button 0", that will call callbackButton.
     createButton("button2",callbackButton,NULL,QT_CHECKBOX,0);
     createButton("button3",callbackButton,&value);
     createButton("button5",callbackButton1,NULL,QT_RADIOBOX);
@@ -849,9 +864,5 @@ CV_EXPORTS int createButton( const String& bar_name, ButtonCallback on_change,
 //! @} highgui
 
 } // cv
-
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/highgui/highgui_c.h"
-#endif
 
 #endif

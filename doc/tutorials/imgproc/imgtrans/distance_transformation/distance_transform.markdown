@@ -1,8 +1,15 @@
 Image Segmentation with Distance Transform and Watershed Algorithm {#tutorial_distance_transform}
 =============
 
+@tableofcontents
+
 @prev_tutorial{tutorial_point_polygon_test}
 @next_tutorial{tutorial_out_of_focus_deblur_filter}
+
+|    |    |
+| -: | :- |
+| Original author | Theodore Tsesmelis |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -21,19 +28,19 @@ Code
 
 @add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ImgTrans/imageSegmentation.cpp).
+[here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/ImgTrans/imageSegmentation.cpp).
 @include samples/cpp/tutorial_code/ImgTrans/imageSegmentation.cpp
 @end_toggle
 
 @add_toggle_java
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ImgTrans/distance_transformation/ImageSegmentationDemo.java)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/ImgTrans/distance_transformation/ImageSegmentationDemo.java)
 @include samples/java/tutorial_code/ImgTrans/distance_transformation/ImageSegmentationDemo.java
 @end_toggle
 
 @add_toggle_python
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/ImgTrans/distance_transformation/imageSegmentation.py)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/ImgTrans/distance_transformation/imageSegmentation.py)
 @include samples/python/tutorial_code/ImgTrans/distance_transformation/imageSegmentation.py
 @end_toggle
 

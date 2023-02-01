@@ -4,6 +4,13 @@ Android Development with OpenCV {#tutorial_dev_with_OCV_on_Android}
 @prev_tutorial{tutorial_O4A_SDK}
 @next_tutorial{tutorial_android_ocl_intro}
 
+|    |    |
+| -: | :- |
+| Original author | Vsevolod Glumov |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial is deprecated.
 
 This tutorial has been created to help you use OpenCV library within your Android project.
 
@@ -233,7 +240,7 @@ taken:
 Hello OpenCV Sample
 -------------------
 
-Here are basic steps to guide you trough the process of creating a simple OpenCV-centric
+Here are basic steps to guide you through the process of creating a simple OpenCV-centric
 application. It will be capable of accessing camera output, processing it and displaying the result.
 
 -#  Open Eclipse IDE, create a new clean workspace, create a new Android project

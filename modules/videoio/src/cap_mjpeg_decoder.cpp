@@ -166,7 +166,7 @@ bool MotionJpegCapture::retrieveFrame(int, OutputArray output_frame)
 
         if(data.size())
         {
-            m_current_frame = imdecode(data, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_COLOR | IMREAD_IGNORE_ORIENTATION);
+            m_current_frame = imdecode(data, IMREAD_ANYDEPTH | IMREAD_COLOR | IMREAD_IGNORE_ORIENTATION);
         }
 
         m_current_frame.copyTo(output_frame);

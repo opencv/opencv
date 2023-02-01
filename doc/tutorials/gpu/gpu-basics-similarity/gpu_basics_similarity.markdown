@@ -1,5 +1,9 @@
+@cond CUDA_MODULES
 Similarity check (PNSR and SSIM) on the GPU {#tutorial_gpu_basics_similarity}
 ===========================================
+
+@tableofcontents
+
 @todo update this tutorial
 
 @next_tutorial{tutorial_gpu_thrust_interop}
@@ -26,7 +30,7 @@ The source code
 
 You may also find the source code and the video file in the
 `samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity` directory of the OpenCV
-source library or download it from [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp).
+source library or download it from [here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/gpu/gpu-basics-similarity/gpu-basics-similarity.cpp).
 The full source code is quite long (due to the controlling of the application via the command line
 arguments and performance measurement). Therefore, to avoid cluttering up these sections with those
 you'll find here only the functions itself.
@@ -204,3 +208,4 @@ It may be just the improvement needed for your application to work. You may obse
 instance of this on the [YouTube here](https://www.youtube.com/watch?v=3_ESXmFlnvY).
 
 @youtube{3_ESXmFlnvY}
+@endcond

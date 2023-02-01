@@ -8,10 +8,10 @@
 
 using namespace cv;
 
-namespace opencv_test
-{
+namespace opencv_test { namespace {
 
-TEST(videoio_avi, good_MJPG) {
+TEST(videoio_builtin, basic_avi)
+{
     String filename = BunnyParameters::getFilename(".mjpg.avi");
     AVIReadContainer in;
     in.initStream(filename);
@@ -23,7 +23,8 @@ TEST(videoio_avi, good_MJPG) {
     EXPECT_EQ(in.getFps(), static_cast<unsigned>(BunnyParameters::getFps()));
 }
 
-TEST(videoio_avi, bad_MJPG) {
+TEST(videoio_builtin, invalid_avi)
+{
     String filename = BunnyParameters::getFilename(".avi");
     AVIReadContainer in;
     in.initStream(filename);
@@ -32,7 +33,7 @@ TEST(videoio_avi, bad_MJPG) {
     EXPECT_EQ(frames.size(), static_cast<unsigned>(0));
 }
 
-TEST(videoio_avi, basic)
+TEST(videoio_builtin, read_write_avi)
 {
     const String filename = cv::tempfile("test.avi");
     const double fps = 100;
@@ -84,4 +85,4 @@ TEST(videoio_avi, basic)
     remove(filename.c_str());
 }
 
-}
+}} // opencv_test::<anonymous>::

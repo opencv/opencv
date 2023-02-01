@@ -3,11 +3,11 @@
 //
 //  it can be used for body pose detection, using either the COCO model(18 parts):
 //  http://posefs1.perception.cs.cmu.edu/OpenPose/models/pose/coco/pose_iter_440000.caffemodel
-//  https://raw.githubusercontent.com/opencv/opencv_extra/3.4/testdata/dnn/openpose_pose_coco.prototxt
+//  https://raw.githubusercontent.com/opencv/opencv_extra/4.x/testdata/dnn/openpose_pose_coco.prototxt
 //
 //  or the MPI model(16 parts):
 //  http://posefs1.perception.cs.cmu.edu/OpenPose/models/pose/mpi/pose_iter_160000.caffemodel
-//  https://raw.githubusercontent.com/opencv/opencv_extra/3.4/testdata/dnn/openpose_pose_mpi_faster_4_stages.prototxt
+//  https://raw.githubusercontent.com/opencv/opencv_extra/4.x/testdata/dnn/openpose_pose_mpi_faster_4_stages.prototxt
 //
 //  (to simplify this sample, the body models are restricted to a single person.)
 //

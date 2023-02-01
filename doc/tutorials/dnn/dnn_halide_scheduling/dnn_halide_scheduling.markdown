@@ -1,7 +1,14 @@
 # How to schedule your network for Halide backend {#tutorial_dnn_halide_scheduling}
 
+@tableofcontents
+
 @prev_tutorial{tutorial_dnn_halide}
-@next_tutorial{tutorial_dnn_android}
+@next_tutorial{tutorial_dnn_openvino}
+
+|    |    |
+| -: | :- |
+| Original author | Dmitry Kurtaev |
+| Compatibility | OpenCV >= 3.3 |
 
 ## Introduction
 Halide code is the same for every device we use. But for achieving the satisfied
@@ -38,7 +45,7 @@ correspondingly. In example, for variable `x` in range `[0, 10)` directive
 `split: { x: 2 }` gives new ones `xo` in range `[0, 5)` and `xi` in range `[0, 2)`.
 Variable name `x` is no longer available in the same scheduling node.
 
-You can find scheduling examples at [opencv_extra/testdata/dnn](https://github.com/opencv/opencv_extra/tree/3.4/testdata/dnn)
+You can find scheduling examples at [opencv_extra/testdata/dnn](https://github.com/opencv/opencv_extra/tree/4.x/testdata/dnn)
 and use it for schedule your networks.
 
 ## Layers fusing
@@ -63,7 +70,7 @@ Sometimes networks built using blocked structure that means some layer are
 identical or quite similar. If you want to apply the same scheduling for
 different layers accurate to tiling or vectorization factors, define scheduling
 patterns in section `patterns` at the beginning of scheduling file.
-Also, your patters may use some parametric variables.
+Also, your patterns may use some parametric variables.
 @code
 # At the beginning of the file
 patterns:

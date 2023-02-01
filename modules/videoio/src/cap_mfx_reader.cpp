@@ -6,6 +6,7 @@
 #include "opencv2/core/base.hpp"
 #include "cap_mfx_common.hpp"
 #include "opencv2/imgproc/hal/hal.hpp"
+#include "cap_interface.hpp"
 
 using namespace cv;
 using namespace std;
@@ -40,7 +41,7 @@ VideoCapture_IntelMFX::VideoCapture_IntelMFX(const cv::String &filename)
 
     // Init device and session
     deviceHandler = createDeviceHandler();
-    session = new MFXVideoSession();
+    session = new MFXVideoSession_WRAP();
     if (!deviceHandler->init(*session))
     {
         MSG(cerr << "MFX: Can't initialize session" << endl);
@@ -86,11 +87,11 @@ VideoCapture_IntelMFX::VideoCapture_IntelMFX(const cv::String &filename)
         return;
     }
 
-    // Adjust parameters
+    // Adjust parameters - COMMENTED: h265 decoder resets crop size to 0 (oneVPL/Win)
 
-    res = decoder->Query(&params, &params);
-    DBG(cout << "MFX Query: " << res << endl << params.mfx << params.mfx.FrameInfo);
-    CV_Assert(res >= MFX_ERR_NONE);
+    //res = decoder->Query(&params, &params);
+    //DBG(cout << "MFX Query: " << res << endl << params.mfx << params.mfx.FrameInfo);
+    //CV_Assert(res >= MFX_ERR_NONE);
 
     // Init surface pool
 
@@ -104,7 +105,7 @@ VideoCapture_IntelMFX::VideoCapture_IntelMFX(const cv::String &filename)
     // Init decoder
 
     res = decoder->Init(&params);
-    DBG(cout << "MFX Init: " << res << endl << params.mfx.FrameInfo);
+    DBG(cout << "MFX decoder Init: " << res << endl << params.mfx.FrameInfo);
     if (res < MFX_ERR_NONE)
     {
         MSG(cerr << "MFX: Failed to init decoder: " << res << endl);
@@ -112,6 +113,10 @@ VideoCapture_IntelMFX::VideoCapture_IntelMFX(const cv::String &filename)
     }
 
     frameSize = Size(params.mfx.FrameInfo.CropW, params.mfx.FrameInfo.CropH);
+    if (frameSize == Size(0, 0)) // sometimes Crop size is 0
+    {
+        frameSize = Size(params.mfx.FrameInfo.Width, params.mfx.FrameInfo.Height);
+    }
     good = true;
 }
 
@@ -278,3 +283,8 @@ int VideoCapture_IntelMFX::getCaptureDomain()
 }
 
 //==================================================================================================
+
+cv::Ptr<IVideoCapture> cv::create_MFX_capture(const std::string &filename)
+{
+    return cv::makePtr<VideoCapture_IntelMFX>(filename);
+}

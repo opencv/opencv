@@ -9,11 +9,6 @@
 # OPENEXR_LIBRARIES = libraries that are needed to use OpenEXR.
 #
 
-if(NOT HAVE_CXX11)
-  message(STATUS "OpenEXR: enable C++11 to use external OpenEXR")
-  return()
-endif()
-
 if(NOT OPENCV_SKIP_OPENEXR_FIND_PACKAGE)
   find_package(OpenEXR 3 QUIET)
   #ocv_cmake_dump_vars(EXR)

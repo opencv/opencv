@@ -32,7 +32,9 @@ endif()
 #         Define the library target:
 # ----------------------------------------------------------------------------------
 
-add_definitions(-DWEBP_USE_THREAD)
+if(NOT OPENCV_DISABLE_THREAD_SUPPORT)
+  add_definitions(-DWEBP_USE_THREAD)
+endif()
 
 add_library(${WEBP_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs} ${lib_hdrs})
 if(ANDROID)
@@ -43,6 +45,7 @@ ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable -Wunused-function -Wshadow 
     -Wmissing-prototypes  # clang
     -Wmissing-declarations # gcc
     -Wimplicit-fallthrough
+    -Wunused-but-set-variable # clang15
 )
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4244 /wd4267) # vs2005
 

@@ -656,7 +656,7 @@ public:
 
         // Update weights
         // not normalized first
-        reduce(trainProbs, weights, 0, CV_REDUCE_SUM);
+        reduce(trainProbs, weights, 0, REDUCE_SUM);
 
         // Update means
         means.create(nclusters, dim, CV_64FC1);

@@ -15,7 +15,7 @@ int main( int argc, const char** argv )
 
     cout << "This program demonstrates the use of template matching with mask." << endl
          << endl
-         << "Available methods: https://docs.opencv.org/3.4/df/dfb/group__imgproc__object.html#ga3a7850640f1fe1f58fe91a2d7583695d" << endl
+         << "Available methods: https://docs.opencv.org/4.x/df/dfb/group__imgproc__object.html#ga3a7850640f1fe1f58fe91a2d7583695d" << endl
          << "    TM_SQDIFF = " << (int)TM_SQDIFF << endl
          << "    TM_SQDIFF_NORMED = " << (int)TM_SQDIFF_NORMED << endl
          << "    TM_CCORR = " << (int)TM_CCORR << endl
@@ -52,7 +52,7 @@ int main( int argc, const char** argv )
         return -1;
     }
 
-    int method = parser.get<int>("cm"); // default 3 (CV_TM_CCORR_NORMED)
+    int method = parser.get<int>("cm"); // default 3 (cv::TM_CCORR_NORMED)
     matchTemplate(img, tmpl, res, method, mask);
 
     double minVal, maxVal;

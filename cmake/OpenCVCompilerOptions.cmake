@@ -131,7 +131,9 @@ if(CV_GCC OR CV_CLANG)
   add_extra_compiler_option(-Wundef)
   add_extra_compiler_option(-Winit-self)
   add_extra_compiler_option(-Wpointer-arith)
-  add_extra_compiler_option(-Wshadow)
+  if(NOT (CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0"))
+    add_extra_compiler_option(-Wshadow)  # old GCC emits warnings for variables + methods combination
+  endif()
   add_extra_compiler_option(-Wsign-promo)
   add_extra_compiler_option(-Wuninitialized)
   if(CV_GCC AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 6.0) AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0 OR ARM))
@@ -176,14 +178,17 @@ if(CV_GCC OR CV_CLANG)
     add_extra_compiler_option(-Wno-long-long)
   endif()
 
-  # We need pthread's
-  if((UNIX
+  # We need pthread's, unless we have explicitly disabled multi-thread execution.
+  if(NOT OPENCV_DISABLE_THREAD_SUPPORT
+      AND (
+        (UNIX
           AND NOT ANDROID
           AND NOT (APPLE AND CV_CLANG)
           AND NOT EMSCRIPTEN
+        )
+        OR (EMSCRIPTEN AND WITH_PTHREADS_PF)  # https://github.com/opencv/opencv/issues/20285
       )
-      OR (EMSCRIPTEN AND WITH_PTHREADS_PF)  # https://github.com/opencv/opencv/issues/20285
-  )
+  ) # TODO
     add_extra_compiler_option(-pthread)
   endif()
 
@@ -309,9 +314,15 @@ if(MSVC)
     set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /FS")
     set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /FS")
   endif()
+
+  if(AARCH64 AND NOT MSVC_VERSION LESS 1930)
+    set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /D _ARM64_DISTINCT_NEON_TYPES")
+  endif()
 endif()
 
-include(cmake/OpenCVCompilerOptimizations.cmake)
+if(PROJECT_NAME STREQUAL "OpenCV")
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVCompilerOptimizations.cmake")
+endif()
 if(COMMAND ocv_compiler_optimization_options)
   ocv_compiler_optimization_options()
 endif()
@@ -442,11 +453,11 @@ if(APPLE AND NOT CMAKE_CROSSCOMPILING AND NOT DEFINED ENV{LDFLAGS} AND EXISTS "/
 endif()
 
 if(ENABLE_BUILD_HARDENING)
-  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVCompilerDefenses.cmake)
+  include("${CMAKE_CURRENT_LIST_DIR}/OpenCVCompilerDefenses.cmake")
 endif()
 
 if(MSVC)
-  include(cmake/OpenCVCRTLinkage.cmake)
+  include("${CMAKE_CURRENT_LIST_DIR}/OpenCVCRTLinkage.cmake")
   add_definitions(-D_VARIADIC_MAX=10)
 endif()
 

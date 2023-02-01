@@ -148,7 +148,7 @@ public class NonLinearSVMsDemo {
         // ----------------------- 5. Show the training data--------------------------------------------
         //! [show_data]
         int thick = -1;
-        int lineType = Core.LINE_8;
+        int lineType = Imgproc.LINE_8;
         float px, py;
         // Class 1
         float[] trainDataData = new float[(int) (trainData.total() * trainData.channels())];

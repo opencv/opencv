@@ -42,6 +42,7 @@
 /* Haar features calculation */
 
 #include "precomp.hpp"
+#include "cascadedetect.hpp"
 #include <stdio.h>
 
 namespace cv
@@ -113,13 +114,8 @@ struct HaarStageClassifier
     std::vector<HaarClassifier> weaks;
 };
 
-static bool convert(const String& oldcascade, const String& newcascade)
+bool convert(const FileNode& oldroot, FileStorage& newfs)
 {
-    FileStorage oldfs(oldcascade, FileStorage::READ);
-    if( !oldfs.isOpened() )
-        return false;
-    FileNode oldroot = oldfs.getFirstTopLevelNode();
-
     FileNode sznode = oldroot[ICV_HAAR_SIZE_NAME];
     if( sznode.empty() )
         return false;
@@ -196,10 +192,6 @@ static bool convert(const String& oldcascade, const String& newcascade)
         }
     }
 
-    FileStorage newfs(newcascade, FileStorage::WRITE);
-    if( !newfs.isOpened() )
-        return false;
-
     int maxWeakCount = 0, nfeatures = (int)features.size();
     for( i = 0; i < nstages; i++ )
         maxWeakCount = std::max(maxWeakCount, (int)stages[i].weaks.size());
@@ -227,12 +219,12 @@ static bool convert(const String& oldcascade, const String& newcascade)
         for( j = 0; j < nweaks; j++ )
         {
             const HaarClassifier& c = stages[i].weaks[j];
-            newfs << "{" << "internalNodes" << "[";
+            newfs << "{" << "internalNodes" << "[:";
             int nnodes = (int)c.nodes.size(), nleaves = (int)c.leaves.size();
             for( k = 0; k < nnodes; k++ )
                 newfs << c.nodes[k].left << c.nodes[k].right
                     << c.nodes[k].f << c.nodes[k].threshold;
-            newfs << "]" << "leafValues" << "[";
+            newfs << "]" << "leafValues" << "[:";
             for( k = 0; k < nleaves; k++ )
                 newfs << c.leaves[k];
             newfs << "]" << "}";
@@ -251,7 +243,7 @@ static bool convert(const String& oldcascade, const String& newcascade)
         {
             if( j >= 2 && fabs(f.rect[j].weight) < FLT_EPSILON )
                 break;
-            newfs << "[" << f.rect[j].r.x << f.rect[j].r.y <<
+            newfs << "[:" << f.rect[j].r.x << f.rect[j].r.y <<
                 f.rect[j].r.width << f.rect[j].r.height << f.rect[j].weight << "]";
         }
         newfs << "]";
@@ -268,7 +260,13 @@ static bool convert(const String& oldcascade, const String& newcascade)
 
 bool CascadeClassifier::convert(const String& oldcascade, const String& newcascade)
 {
-    bool ok = haar_cvt::convert(oldcascade, newcascade);
+    FileStorage oldfs(oldcascade, FileStorage::READ);
+    FileStorage newfs(newcascade, FileStorage::WRITE);
+    if( !oldfs.isOpened() || !newfs.isOpened() )
+        return false;
+    FileNode oldroot = oldfs.getFirstTopLevelNode();
+
+    bool ok = haar_cvt::convert(oldroot, newfs);
     if( !ok && newcascade.size() > 0 )
         remove(newcascade.c_str());
     return ok;

@@ -442,7 +442,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
                         val = cvRound(t);
                         if( fabs(t - val) > FLT_EPSILON )
                         {
-                            sprintf( err, "%d-th value of %d-th (categorical) "
+                            snprintf( err, sizeof(err), "%d-th value of %d-th (categorical) "
                                 "variable is not an integer", i, vi );
                             CV_ERROR( CV_StsBadArg, err );
                         }
@@ -450,7 +450,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
                     if( val == INT_MAX )
                     {
-                        sprintf( err, "%d-th value of %d-th (categorical) "
+                        snprintf( err, sizeof(err), "%d-th value of %d-th (categorical) "
                             "variable is too large", i, vi );
                         CV_ERROR( CV_StsBadArg, err );
                     }
@@ -557,7 +557,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
 
                     if( fabs(val) >= ord_nan )
                     {
-                        sprintf( err, "%d-th value of %d-th (ordered) "
+                        snprintf( err, sizeof(err), "%d-th value of %d-th (ordered) "
                             "variable (=%g) is too large", i, vi, val );
                         CV_ERROR( CV_StsBadArg, err );
                     }
@@ -1880,10 +1880,7 @@ double CvDTree::calc_node_dir( CvDTreeNode* node )
 namespace cv
 {
 
-template<> void DefaultDeleter<CvDTreeSplit>::operator ()(CvDTreeSplit* obj) const
-{
-    fastFree(obj);
-}
+void DefaultDeleter<CvDTreeSplit>::operator ()(CvDTreeSplit* obj) const { fastFree(obj); }
 
 DTreeBestSplitFinder::DTreeBestSplitFinder( CvDTree* _tree, CvDTreeNode* _node)
 {

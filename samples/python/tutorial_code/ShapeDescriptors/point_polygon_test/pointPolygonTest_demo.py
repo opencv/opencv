@@ -21,7 +21,7 @@ for i in range(6):
     cv.line(src, vert[i],  vert[(i+1)%6], ( 255 ), 3)
 
 # Get the contours
-_, contours, _ = cv.findContours(src, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+contours, _ = cv.findContours(src, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
 # Calculate the distances to the contour
 raw_dist = np.empty(src.shape, dtype=np.float32)

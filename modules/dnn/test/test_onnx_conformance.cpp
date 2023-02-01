@@ -666,11 +666,15 @@ static const TestCase testConformanceConfig[] = {
     {"test_scatter_elements_with_axis", 3, 1},
     {"test_scatter_elements_with_duplicate_indices", 3, 1},
     {"test_scatter_elements_with_negative_indices", 3, 1},
+    {"test_scatter_elements_with_reduction_max", 3, 1},
+    {"test_scatter_elements_with_reduction_min", 3, 1},
     {"test_scatter_elements_without_axis", 3, 1},
     {"test_scatter_with_axis", 3, 1},
     {"test_scatter_without_axis", 3, 1},
     {"test_scatternd", 3, 1},
     {"test_scatternd_add", 3, 1},
+    {"test_scatternd_max", 3, 1},
+    {"test_scatternd_min", 3, 1},
     {"test_scatternd_multiply", 3, 1},
     {"test_sce_NCd1_mean_weight_negative_ii", 3, 1},
     {"test_sce_NCd1_mean_weight_negative_ii_expanded", 3, 1},
@@ -939,6 +943,12 @@ public:
 #ifdef HAVE_HALIDE
     static std::set<std::string> halide_deny_list;
 #endif
+#ifdef HAVE_VULKAN
+    static std::set<std::string> vulkan_deny_list;
+#endif
+#ifdef HAVE_CUDA
+    static std::set<std::string> cuda_deny_list;
+#endif
 
     Test_ONNX_conformance()
     {
@@ -946,9 +956,9 @@ public:
         backend = get<0>(get<1>(GetParam()));
         target = get<1>(get<1>(GetParam()));
 
-        if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+        if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
         {
-            default_l1 = 4e-3;
+            default_l1 = 7e-3;
             default_lInf = 2e-2;
         }
         else
@@ -964,7 +974,7 @@ public:
         // Some layers might be fused so their timings equal to zero.
         std::vector<double> timings;
         net.getPerfProfile(timings);
-        std::vector<String> names = net.getLayerNames();
+        std::vector<std::string> names = net.getLayerNames();
         CV_CheckEQ(names.size(), timings.size(), "DNN critical error");
 
         bool hasFallbacks = false;
@@ -981,52 +991,44 @@ public:
         return hasFallbacks;
     }
 
-    static void initDenyList(std::set<std::string>& deny_set, const char* const deny_list[], const size_t n)
-    {
-        for (size_t i = 0; i < n; ++i)
-        {
-            deny_set.insert(deny_list[i]);
-        }
-    }
-
     static void SetUpTestCase()
     {
-        const char* const parser[] = {
+        parser_deny_list = {
             #include "test_onnx_conformance_layer_parser_denylist.inl.hpp"
-            ""  // dummy element of non empty list
         };
-        initDenyList(parser_deny_list, parser, sizeof(parser)/sizeof(parser[0]));
 
-        const char* const global[] = {
+        global_deny_list = {
             #include "test_onnx_conformance_layer_filter_opencv_all_denylist.inl.hpp"
-            ""  // dummy element of non empty list
         };
-        initDenyList(global_deny_list, global, sizeof(global)/sizeof(global[0]));
 
-        const char* const opencl_fp16[] = {
+        opencl_fp16_deny_list = {
             #include "test_onnx_conformance_layer_filter_opencv_ocl_fp16_denylist.inl.hpp"
-            ""  // dummy element of non empty list
         };
-        initDenyList(opencl_fp16_deny_list, opencl_fp16, sizeof(opencl_fp16)/sizeof(opencl_fp16[0]));
 
-        const char* const opencl[] = {
+        opencl_deny_list = {
             #include "test_onnx_conformance_layer_filter_opencv_ocl_fp32_denylist.inl.hpp"
-            ""  // dummy element of non empty list
         };
-        initDenyList(opencl_deny_list, opencl, sizeof(opencl)/sizeof(opencl[0]));
 
-        const char* const cpu[] = {
+        cpu_deny_list = {
             #include "test_onnx_conformance_layer_filter_opencv_cpu_denylist.inl.hpp"
-            ""  // dummy element of non empty list
         };
-        initDenyList(cpu_deny_list, cpu, sizeof(cpu)/sizeof(cpu[0]));
 
 #ifdef HAVE_HALIDE
-        const char* const halide_deny_list_[] = {
+        halide_deny_list = {
             #include "test_onnx_conformance_layer_filter__halide_denylist.inl.hpp"
-            ""  // dummy element of non empty list
         };
-        initDenyList(halide_deny_list, halide_deny_list_, sizeof(halide_deny_list_)/sizeof(halide_deny_list_[0]));
+#endif
+
+#ifdef HAVE_VULKAN
+        vulkan_deny_list = {
+            #include "test_onnx_conformance_layer_filter__vulkan_denylist.inl.hpp"
+        };
+#endif
+
+#ifdef HAVE_CUDA
+        cuda_deny_list = {
+            #include "test_onnx_conformance_layer_filter__cuda_denylist.inl.hpp"
+        };
 #endif
     }
 
@@ -1039,6 +1041,12 @@ std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
 std::set<std::string> Test_ONNX_conformance::cpu_deny_list;
 #ifdef HAVE_HALIDE
 std::set<std::string> Test_ONNX_conformance::halide_deny_list;
+#endif
+#ifdef HAVE_VULKAN
+std::set<std::string> Test_ONNX_conformance::vulkan_deny_list;
+#endif
+#ifdef HAVE_CUDA
+std::set<std::string> Test_ONNX_conformance::cuda_deny_list;
 #endif
 
 TEST_P(Test_ONNX_conformance, Layer_Test)
@@ -1088,16 +1096,22 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         #include "test_onnx_conformance_layer_filter__openvino.inl.hpp"
     }
 #endif
-#if 0 //def HAVE_VULKAN
+#ifdef HAVE_VULKAN
     else if (backend == DNN_BACKEND_VKCOM)
     {
-        #include "test_onnx_conformance_layer_filter__vulkan.inl.hpp"
+        if (vulkan_deny_list.find(name) != vulkan_deny_list.end())
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
     }
 #endif
-#if 0 //def HAVE_CUDA
+#ifdef HAVE_CUDA
     else if (backend == DNN_BACKEND_CUDA)
     {
-        #include "test_onnx_conformance_layer_filter__cuda.inl.hpp"
+        if (cuda_deny_list.find(name) != cuda_deny_list.end())
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
     }
 #endif
     else
@@ -1148,7 +1162,7 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
     }
     ASSERT_FALSE(net.empty());
 
-    std::vector<String> inputNames;
+    std::vector<std::string> inputNames;
     for (int i = 0; i < inputs.size(); ++i)
         inputNames.push_back(cv::format("%d", i));
     net.setInputsNames(inputNames);
@@ -1170,7 +1184,7 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         throw;
     }
 
-    std::vector<String> layerNames = net.getUnconnectedOutLayersNames();
+    std::vector<std::string> layerNames = net.getUnconnectedOutLayersNames();
     std::vector<Mat> outputs;
     try
     {

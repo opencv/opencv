@@ -48,6 +48,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     protected int mPreviewFormat = RGBA;
     protected int mCameraIndex = CAMERA_ID_ANY;
     protected boolean mEnabled;
+    protected boolean mCameraPermissionGranted = false;
     protected FpsMeter mFpsMeter = null;
 
     public static final int CAMERA_ID_ANY   = -1;
@@ -219,9 +220,24 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         }
     }
 
+
+    /**
+     * This method is provided for clients, so they can signal camera permission has been granted.
+     * The actual onCameraViewStarted callback will be delivered only after setCameraPermissionGranted
+     * and enableView have been called and surface is available
+     */
+    public void setCameraPermissionGranted() {
+        synchronized(mSyncObject) {
+            mCameraPermissionGranted = true;
+            checkCurrentState();
+        }
+    }
+
+
     /**
      * This method is provided for clients, so they can enable the camera connection.
-     * The actual onCameraViewStarted callback will be delivered only after both this method is called and surface is available
+     * The actual onCameraViewStarted callback will be delivered only after setCameraPermissionGranted
+     * and enableView have been called and surface is available
      */
     public void enableView() {
         synchronized(mSyncObject) {
@@ -300,7 +316,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         Log.d(TAG, "call checkCurrentState");
         int targetState;
 
-        if (mEnabled && mSurfaceExist && getVisibility() == VISIBLE) {
+        if (mEnabled && mCameraPermissionGranted && mSurfaceExist && getVisibility() == VISIBLE) {
             targetState = STARTED;
         } else {
             targetState = STOPPED;
@@ -360,7 +376,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         if (!connectCamera(getWidth(), getHeight())) {
             AlertDialog ad = new AlertDialog.Builder(getContext()).create();
             ad.setCancelable(false); // This blocks the 'BACK' button
-            ad.setMessage("It seems that you device does not support camera (or it is locked). Application will be closed.");
+            ad.setMessage("It seems that your device does not support camera (or it is locked). Application will be closed.");
             ad.setButton(DialogInterface.BUTTON_NEUTRAL,  "OK", new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int which) {
                     dialog.dismiss();

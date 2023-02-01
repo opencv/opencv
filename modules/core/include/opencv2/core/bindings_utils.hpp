@@ -36,6 +36,14 @@ String dumpInt(int argument)
 }
 
 CV_WRAP static inline
+String dumpInt64(int64 argument)
+{
+    std::ostringstream oss("Int64: ", std::ios::ate);
+    oss << argument;
+    return oss.str();
+}
+
+CV_WRAP static inline
 String dumpSizeT(size_t argument)
 {
     std::ostringstream oss("size_t: ", std::ios::ate);
@@ -132,6 +140,12 @@ String dumpRange(const Range& argument)
 }
 
 CV_WRAP static inline
+int testOverwriteNativeMethod(int argument)
+{
+    return argument;
+}
+
+CV_WRAP static inline
 String testReservedKeywordConversion(int positional_argument, int lambda = 2, int from = 3)
 {
     return format("arg=%d, lambda=%d, from=%d", positional_argument, lambda, from);
@@ -213,6 +227,11 @@ AsyncArray testAsyncException()
     return p.getArrayResult();
 }
 
+CV_WRAP static inline
+String dumpVec2i(const cv::Vec2i value = cv::Vec2i(42, 24)) {
+    return format("Vec2i(%d, %d)", value[0], value[1]);
+}
+
 struct CV_EXPORTS_W_SIMPLE ClassWithKeywordProperties {
     CV_PROP_RW int lambda;
     CV_PROP int except;
@@ -276,6 +295,10 @@ private:
 
 typedef OriginalClassName::Params OriginalClassName_Params;
 } // namespace nested
+
+namespace fs {
+    CV_EXPORTS_W cv::String getCacheDirectoryForDownloads();
+} // namespace fs
 
 //! @}  // core_utils
 }  // namespace cv::utils

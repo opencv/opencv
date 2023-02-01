@@ -59,6 +59,7 @@
 #include <iostream>
 #include <stdexcept>
 
+#include <ImfFrameBuffer.h>
 #include <ImfHeader.h>
 #include <ImfInputFile.h>
 #include <ImfOutputFile.h>
@@ -66,6 +67,7 @@
 #include <ImfStandardAttributes.h>
 #include <half.h>
 #include "grfmt_exr.hpp"
+#include "OpenEXRConfig.h"
 
 #if defined _WIN32
 
@@ -635,7 +637,7 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
 
     for( size_t i = 0; i < params.size(); i += 2 )
     {
-        if( params[i] == CV_IMWRITE_EXR_TYPE )
+        if( params[i] == IMWRITE_EXR_TYPE )
         {
             switch( params[i+1] )
             {
@@ -646,8 +648,56 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
                 type = FLOAT;
                 break;
             default:
-                throw std::runtime_error( "IMWRITE_EXR_TYPE is invalid or not supported" );
+                CV_Error(Error::StsBadArg, "IMWRITE_EXR_TYPE is invalid or not supported");
             }
+        }
+        if ( params[i] == IMWRITE_EXR_COMPRESSION )
+        {
+            switch ( params[i + 1] )
+            {
+            case IMWRITE_EXR_COMPRESSION_NO:
+                header.compression() = NO_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_RLE:
+                header.compression() = RLE_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_ZIPS:
+                header.compression() = ZIPS_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_ZIP:
+                header.compression() = ZIP_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_PIZ:
+                header.compression() = PIZ_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_PXR24:
+                header.compression() = PXR24_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_B44:
+                header.compression() = B44_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_B44A:
+                header.compression() = B44A_COMPRESSION;
+                break;
+#if ((OPENEXR_VERSION_MAJOR * 1000 + OPENEXR_VERSION_MINOR) >= (2 * 1000 + 2)) // available since version 2.2.0
+            case IMWRITE_EXR_COMPRESSION_DWAA:
+                header.compression() = DWAA_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_DWAB:
+                header.compression() = DWAB_COMPRESSION;
+                break;
+#endif
+            default:
+                CV_Error(Error::StsBadArg, "IMWRITE_EXR_COMPRESSION is invalid or not supported");
+            }
+        }
+        if (params[i] == IMWRITE_EXR_DWA_COMPRESSION_LEVEL)
+        {
+#if OPENEXR_VERSION_MAJOR >= 3
+            header.dwaCompressionLevel() = params[i + 1];
+#else
+            CV_LOG_ONCE_WARNING(NULL, "Setting `IMWRITE_EXR_DWA_COMPRESSION_LEVEL` not supported in OpenEXR version " + std::to_string(OPENEXR_VERSION_MAJOR) + " (version 3 is required)");
+#endif
         }
     }
 

@@ -6,7 +6,7 @@
  * Modified 2002-2010 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
  * Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
- * Copyright (C) 2010, 2015, D. R. Commander.
+ * Copyright (C) 2010, 2015, 2022, D. R. Commander.
  * Copyright (C) 2013, MIPS Technologies, Inc., California.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
@@ -345,7 +345,7 @@ jinit_inverse_dct(j_decompress_ptr cinfo)
     compptr->dct_table =
       (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_IMAGE,
                                   sizeof(multiplier_table));
-    MEMZERO(compptr->dct_table, sizeof(multiplier_table));
+    memset(compptr->dct_table, 0, sizeof(multiplier_table));
     /* Mark multiplier table not yet set up for any method */
     idct->cur_method[ci] = -1;
   }

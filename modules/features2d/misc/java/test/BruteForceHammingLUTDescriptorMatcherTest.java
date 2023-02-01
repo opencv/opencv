@@ -11,7 +11,7 @@ import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.DMatch;
 import org.opencv.features2d.DescriptorMatcher;
-import org.opencv.features2d.FeatureDetector;
+import org.opencv.features2d.FastFeatureDetector;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
@@ -45,7 +45,7 @@ public class BruteForceHammingLUTDescriptorMatcherTest extends OpenCVTestCase {
         MatOfKeyPoint keypoints = new MatOfKeyPoint();
         Mat descriptors = new Mat();
 
-        FeatureDetector detector = FeatureDetector.create(FeatureDetector.FAST);
+        Feature2D detector = FastFeatureDetector.create();
         Feature2D extractor = createClassInstance(XFEATURES2D+"BriefDescriptorExtractor", DEFAULT_FACTORY, null, null);
 
         detector.detect(img, keypoints);

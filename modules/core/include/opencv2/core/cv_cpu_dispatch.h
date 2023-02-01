@@ -146,6 +146,11 @@
 #  define CV_NEON 1
 #endif
 
+#if defined(__riscv) && defined(__riscv_vector) && defined(__riscv_vector_071)
+# include<riscv-vector.h>
+# define CV_RVV071 1
+#endif
+
 #if defined(__ARM_NEON__) || defined(__aarch64__)
 #  include <arm_neon.h>
 #endif
@@ -167,9 +172,19 @@
 #  define CV_MSA 1
 #endif
 
+#ifdef CV_CPU_COMPILE_LASX
+#  include <lasxintrin.h>
+#  define CV_LASX 1
+#endif
+
 #ifdef __EMSCRIPTEN__
 #  define CV_WASM_SIMD 1
 #  include <wasm_simd128.h>
+#endif
+
+#if defined CV_CPU_COMPILE_RVV
+#  define CV_RVV 1
+#  include <riscv_vector.h>
 #endif
 
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
@@ -337,6 +352,10 @@ struct VZeroUpperGuard {
 #  define CV_NEON 0
 #endif
 
+#ifndef CV_RVV071
+#  define CV_RVV071 0
+#endif
+
 #ifndef CV_VSX
 #  define CV_VSX 0
 #endif
@@ -351,4 +370,12 @@ struct VZeroUpperGuard {
 
 #ifndef CV_WASM_SIMD
 #  define CV_WASM_SIMD 0
+#endif
+
+#ifndef CV_RVV
+#  define CV_RVV 0
+#endif
+
+#ifndef CV_LASX
+#  define CV_LASX 0
 #endif

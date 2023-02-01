@@ -24,7 +24,7 @@ public class CameraCalibrator {
     private final int mCornersSize = (int)(mPatternSize.width * mPatternSize.height);
     private boolean mPatternWasFound = false;
     private MatOfPoint2f mCorners = new MatOfPoint2f();
-    private List<Mat> mCornersBuffer = new ArrayList<Mat>();
+    private List<Mat> mCornersBuffer = new ArrayList<>();
     private boolean mIsCalibrated = false;
 
     private Mat mCameraMatrix = new Mat();
@@ -53,10 +53,10 @@ public class CameraCalibrator {
     }
 
     public void calibrate() {
-        ArrayList<Mat> rvecs = new ArrayList<Mat>();
-        ArrayList<Mat> tvecs = new ArrayList<Mat>();
+        ArrayList<Mat> rvecs = new ArrayList<>();
+        ArrayList<Mat> tvecs = new ArrayList<>();
         Mat reprojectionErrors = new Mat();
-        ArrayList<Mat> objectPoints = new ArrayList<Mat>();
+        ArrayList<Mat> objectPoints = new ArrayList<>();
         objectPoints.add(Mat.zeros(mCornersSize, 1, CvType.CV_32FC3));
         calcBoardCornerPositions(objectPoints.get(0));
         for (int i = 1; i < mCornersBuffer.size(); i++) {
@@ -141,7 +141,7 @@ public class CameraCalibrator {
         drawPoints(rgbaFrame);
 
         Imgproc.putText(rgbaFrame, "Captured: " + mCornersBuffer.size(), new Point(rgbaFrame.cols() / 3 * 2, rgbaFrame.rows() * 0.1),
-                Core.FONT_HERSHEY_SIMPLEX, 1.0, new Scalar(255, 255, 0));
+                Imgproc.FONT_HERSHEY_SIMPLEX, 1.0, new Scalar(255, 255, 0));
     }
 
     public Mat getCameraMatrix() {

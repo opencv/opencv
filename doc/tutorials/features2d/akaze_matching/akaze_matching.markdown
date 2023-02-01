@@ -1,8 +1,15 @@
 AKAZE local features matching {#tutorial_akaze_matching}
 =============================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_detection_of_planar_objects}
 @next_tutorial{tutorial_akaze_tracking}
+
+|    |    |
+| -: | :- |
+| Original author | Fedor Morozov |
+| Compatibility | OpenCV >= 3.0 |
 
 Introduction
 ------------
@@ -35,7 +42,7 @@ You can find the images (*graf1.png*, *graf3.png*) and homography (*H1to3p.xml*)
 
 @add_toggle_cpp
 -   **Downloadable code**: Click
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/features2D/AKAZE_match.cpp)
+    [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/features2D/AKAZE_match.cpp)
 
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/features2D/AKAZE_match.cpp
@@ -43,7 +50,7 @@ You can find the images (*graf1.png*, *graf3.png*) and homography (*H1to3p.xml*)
 
 @add_toggle_java
 -   **Downloadable code**: Click
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/features2D/akaze_matching/AKAZEMatchDemo.java)
+    [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/features2D/akaze_matching/AKAZEMatchDemo.java)
 
 -   **Code at glance:**
     @include samples/java/tutorial_code/features2D/akaze_matching/AKAZEMatchDemo.java
@@ -51,7 +58,7 @@ You can find the images (*graf1.png*, *graf3.png*) and homography (*H1to3p.xml*)
 
 @add_toggle_python
 -   **Downloadable code**: Click
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/features2D/akaze_matching/AKAZE_match.py)
+    [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/features2D/akaze_matching/AKAZE_match.py)
 
 -   **Code at glance:**
     @include samples/python/tutorial_code/features2D/akaze_matching/AKAZE_match.py

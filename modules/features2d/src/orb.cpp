@@ -660,11 +660,14 @@ class ORB_Impl CV_FINAL : public ORB
 {
 public:
     explicit ORB_Impl(int _nfeatures, float _scaleFactor, int _nlevels, int _edgeThreshold,
-             int _firstLevel, int _WTA_K, int _scoreType, int _patchSize, int _fastThreshold) :
+             int _firstLevel, int _WTA_K, ORB::ScoreType _scoreType, int _patchSize, int _fastThreshold) :
         nfeatures(_nfeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
         edgeThreshold(_edgeThreshold), firstLevel(_firstLevel), wta_k(_WTA_K),
         scoreType(_scoreType), patchSize(_patchSize), fastThreshold(_fastThreshold)
     {}
+
+    void read( const FileNode& fn) CV_OVERRIDE;
+    void write( FileStorage& fs) const CV_OVERRIDE;
 
     void setMaxFeatures(int maxFeatures) CV_OVERRIDE { nfeatures = maxFeatures; }
     int getMaxFeatures() const CV_OVERRIDE { return nfeatures; }
@@ -684,8 +687,8 @@ public:
     void setWTA_K(int wta_k_) CV_OVERRIDE { wta_k = wta_k_; }
     int getWTA_K() const CV_OVERRIDE { return wta_k; }
 
-    void setScoreType(int scoreType_) CV_OVERRIDE { scoreType = scoreType_; }
-    int getScoreType() const CV_OVERRIDE { return scoreType; }
+    void setScoreType(ORB::ScoreType scoreType_) CV_OVERRIDE{ scoreType = scoreType_; }
+    ORB::ScoreType getScoreType() const CV_OVERRIDE{ return scoreType; }
 
     void setPatchSize(int patchSize_) CV_OVERRIDE { patchSize = patchSize_; }
     int getPatchSize() const CV_OVERRIDE { return patchSize; }
@@ -712,10 +715,49 @@ protected:
     int edgeThreshold;
     int firstLevel;
     int wta_k;
-    int scoreType;
+    ORB::ScoreType scoreType;
     int patchSize;
     int fastThreshold;
 };
+
+void ORB_Impl::read( const FileNode& fn)
+{
+  // if node is empty, keep previous value
+  if (!fn["nfeatures"].empty())
+    fn["nfeatures"] >> nfeatures;
+  if (!fn["scaleFactor"].empty())
+    fn["scaleFactor"] >> scaleFactor;
+  if (!fn["nlevels"].empty())
+    fn["nlevels"] >> nlevels;
+  if (!fn["edgeThreshold"].empty())
+    fn["edgeThreshold"] >> edgeThreshold;
+  if (!fn["firstLevel"].empty())
+    fn["firstLevel"] >> firstLevel;
+  if (!fn["wta_k"].empty())
+    fn["wta_k"] >> wta_k;
+  if (!fn["scoreType"].empty())
+    fn["scoreType"] >> scoreType;
+  if (!fn["patchSize"].empty())
+    fn["patchSize"] >> patchSize;
+  if (!fn["fastThreshold"].empty())
+    fn["fastThreshold"] >> fastThreshold;
+}
+void ORB_Impl::write( FileStorage& fs) const
+{
+  if(fs.isOpened())
+  {
+    fs << "name" << getDefaultName();
+    fs << "nfeatures" << nfeatures;
+    fs << "scaleFactor" << scaleFactor;
+    fs << "nlevels" << nlevels;
+    fs << "edgeThreshold" << edgeThreshold;
+    fs << "firstLevel" << firstLevel;
+    fs << "wta_k" << wta_k;
+    fs << "scoreType" << scoreType;
+    fs << "patchSize" << patchSize;
+    fs << "fastThreshold" << fastThreshold;
+  }
+}
 
 int ORB_Impl::descriptorSize() const
 {
@@ -789,7 +831,7 @@ static void computeKeyPoints(const Mat& imagePyramid,
                              const std::vector<float>& layerScale,
                              std::vector<KeyPoint>& allKeypoints,
                              int nfeatures, double scaleFactor,
-                             int edgeThreshold, int patchSize, int scoreType,
+                             int edgeThreshold, int patchSize, ORB::ScoreType scoreType,
                              bool useOCL, int fastThreshold  )
 {
 #ifndef HAVE_OPENCL
@@ -1218,7 +1260,7 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
 }
 
 Ptr<ORB> ORB::create(int nfeatures, float scaleFactor, int nlevels, int edgeThreshold,
-           int firstLevel, int wta_k, int scoreType, int patchSize, int fastThreshold)
+           int firstLevel, int wta_k, ORB::ScoreType scoreType, int patchSize, int fastThreshold)
 {
     CV_Assert(firstLevel >= 0);
     return makePtr<ORB_Impl>(nfeatures, scaleFactor, nlevels, edgeThreshold,

@@ -47,12 +47,26 @@ struct SearchParams : public IndexParams
 {
     SearchParams(int checks = 32, float eps = 0, bool sorted = true )
     {
+        init(checks, eps, sorted, false);
+    }
+
+    SearchParams(int checks, float eps, bool sorted, bool explore_all_trees )
+    {
+        init(checks, eps, sorted, explore_all_trees);
+    }
+
+    void init(int checks = 32, float eps = 0, bool sorted = true, bool explore_all_trees = false )
+    {
         // how many leafs to visit when searching for neighbours (-1 for unlimited)
         (*this)["checks"] = checks;
         // search for eps-approximate neighbours (default: 0)
         (*this)["eps"] = eps;
         // only for radius search, require neighbours sorted by distance (default: true)
         (*this)["sorted"] = sorted;
+        // if false, search stops at the tree reaching the number of  max checks (original behavior).
+        // When true, we do a descent in each tree and. Like before the alternative paths
+        // stored in the heap are not be processed further when max checks is reached.
+        (*this)["explore_all_trees"] = explore_all_trees;
     }
 };
 

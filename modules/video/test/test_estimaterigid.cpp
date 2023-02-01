@@ -42,6 +42,15 @@
 
 #include "test_precomp.hpp"
 
+// this is test for a deprecated function. let's ignore deprecated warnings in this file
+#if defined(__clang__)
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(__GNUC__)
+    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+    #pragma warning( disable : 4996)
+#endif
+
 namespace opencv_test { namespace {
 
 class CV_RigidTransform_Test : public cvtest::BaseTest
@@ -74,7 +83,7 @@ struct WrapAff2D
 
 bool CV_RigidTransform_Test::testNPoints(int from)
 {
-    cv::RNG rng = ts->get_rng();
+    cv::RNG rng = cv::theRNG();
 
     int progress = 0;
     int k, ntests = 10000;

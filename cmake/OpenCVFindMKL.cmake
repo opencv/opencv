@@ -111,23 +111,21 @@ foreach(MKL_ARCH ${MKL_ARCH_LIST})
   )
 endforeach()
 
-if(MKL_USE_SINGLE_DYNAMIC_LIBRARY AND NOT (MKL_VERSION_STR VERSION_LESS "10.3.0"))
+if(DEFINED OPENCV_MKL_LIBRARIES)
+  # custom list, user specified
+  set(mkl_lib_list ${OPENCV_MKL_LIBRARIES})
+
+elseif(MKL_USE_SINGLE_DYNAMIC_LIBRARY AND NOT (MKL_VERSION_STR VERSION_LESS "10.3.0"))
 
   # https://software.intel.com/content/www/us/en/develop/articles/a-new-linking-model-single-dynamic-library-mkl_rt-since-intel-mkl-103.html
   set(mkl_lib_list "mkl_rt")
 
 elseif(NOT (MKL_VERSION_STR VERSION_LESS "11.3.0"))
 
-  foreach(MKL_ARCH ${MKL_ARCH_LIST})
-    list(APPEND mkl_lib_find_paths
-      ${MKL_ROOT_DIR}/../tbb/lib/${MKL_ARCH}
-    )
-  endforeach()
-
   set(mkl_lib_list "mkl_intel_${MKL_ARCH_SUFFIX}")
 
   if(MKL_WITH_TBB)
-    list(APPEND mkl_lib_list mkl_tbb_thread tbb)
+    list(APPEND mkl_lib_list mkl_tbb_thread)
   elseif(MKL_WITH_OPENMP)
     if(MSVC)
       list(APPEND mkl_lib_list mkl_intel_thread libiomp5md)
@@ -155,6 +153,15 @@ if(NOT MKL_LIBRARIES)
     endif()
     list(APPEND MKL_LIBRARIES ${${lib_var_name}})
   endforeach()
+  list(APPEND MKL_LIBRARIES ${OPENCV_EXTRA_MKL_LIBRARIES})
+endif()
+
+if(MKL_WITH_TBB)
+  if(BUILD_TBB)
+    message(STATUS "MKL: reusing builtin TBB binaries is not supported. Consider disabling MKL_WITH_TBB flag to prevent build/runtime errors")
+  else()
+    list(APPEND MKL_LIBRARIES tbb)  # tbb target is expected
+  endif()
 endif()
 
 message(STATUS "Found MKL ${MKL_VERSION_STR} at: ${MKL_ROOT_DIR}")

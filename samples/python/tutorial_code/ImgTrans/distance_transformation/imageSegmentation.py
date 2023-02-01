@@ -91,7 +91,7 @@ cv.imshow('Peaks', dist)
 dist_8u = dist.astype('uint8')
 
 # Find total markers
-_, contours, _ = cv.findContours(dist_8u, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+contours, _ = cv.findContours(dist_8u, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
 # Create the marker image for the watershed algorithm
 markers = np.zeros(dist.shape, dtype=np.int32)

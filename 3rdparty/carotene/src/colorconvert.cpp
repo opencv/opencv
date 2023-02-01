@@ -49,12 +49,12 @@ namespace {
 
 enum
 {
-    SHIFT = 14,
+    SHIFT = 15,
     SHIFT_DELTA = 1 << (SHIFT - 1),
 
-    R2Y_BT601   = 4899,
-    G2Y_BT601   = 9617,
-    B2Y_BT601   = 1868,
+    R2Y_BT601   = 9798,
+    G2Y_BT601   = 19235,
+    B2Y_BT601   = 3735,
 
     R2Y_BT709   = 3483,
     G2Y_BT709   = 11718,

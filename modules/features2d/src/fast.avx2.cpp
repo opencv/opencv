@@ -165,7 +165,7 @@ public:
         _mm256_zeroupper();
     }
 
-    virtual ~FAST_t_patternSize16_AVX2_Impl() CV_OVERRIDE {};
+    virtual ~FAST_t_patternSize16_AVX2_Impl() CV_OVERRIDE {}
 
 private:
     int cols;

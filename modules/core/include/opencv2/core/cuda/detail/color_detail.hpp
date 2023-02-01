@@ -92,13 +92,51 @@ namespace cv { namespace cuda { namespace device
             return vec.w;
         }
 
+        //constants for conversion from/to RGB and Gray, YUV, YCrCb according to BT.601
+        constexpr float B2YF = 0.114f;
+        constexpr float G2YF = 0.587f;
+        constexpr float R2YF = 0.299f;
+
+        //to YCbCr
+        constexpr float YCBF = 0.564f; // == 1/2/(1-B2YF)
+        constexpr float YCRF = 0.713f; // == 1/2/(1-R2YF)
+        const     int   YCBI = 9241;  // == YCBF*16384
+        const     int   YCRI = 11682; // == YCRF*16384
+        //to YUV
+        constexpr float B2UF = 0.492f;
+        constexpr float R2VF = 0.877f;
+        const     int   B2UI = 8061;  // == B2UF*16384
+        const     int   R2VI = 14369; // == R2VF*16384
+        //from YUV
+        constexpr float U2BF = 2.032f;
+        constexpr float U2GF = -0.395f;
+        constexpr float V2GF = -0.581f;
+        constexpr float V2RF = 1.140f;
+        const     int   U2BI = 33292;
+        const     int   U2GI = -6472;
+        const     int   V2GI = -9519;
+        const     int   V2RI = 18678;
+        //from YCrCb
+        constexpr float CB2BF = 1.773f;
+        constexpr float CB2GF = -0.344f;
+        constexpr float CR2GF = -0.714f;
+        constexpr float CR2RF = 1.403f;
+        const     int   CB2BI = 29049;
+        const     int   CB2GI = -5636;
+        const     int   CR2GI = -11698;
+        const     int   CR2RI = 22987;
+
         enum
         {
             yuv_shift  = 14,
             xyz_shift  = 12,
+            gray_shift = 15,
             R2Y        = 4899,
             G2Y        = 9617,
             B2Y        = 1868,
+            RY15 =  9798, // == R2YF*32768 + 0.5
+            GY15 = 19235, // == G2YF*32768 + 0.5
+            BY15 =  3735, // == B2YF*32768 + 0.5
             BLOCK_SIZE = 256
         };
     }
@@ -406,7 +444,7 @@ namespace cv { namespace cuda { namespace device
         {
             static __device__ __forceinline__ uchar cvt(uint t)
             {
-                return (uchar)CV_DESCALE(((t << 3) & 0xf8) * B2Y + ((t >> 3) & 0xfc) * G2Y + ((t >> 8) & 0xf8) * R2Y, yuv_shift);
+                return (uchar)CV_DESCALE(((t << 3) & 0xf8) * BY15 + ((t >> 3) & 0xfc) * GY15 + ((t >> 8) & 0xf8) * RY15, gray_shift);
             }
         };
 
@@ -414,7 +452,7 @@ namespace cv { namespace cuda { namespace device
         {
             static __device__ __forceinline__ uchar cvt(uint t)
             {
-                return (uchar)CV_DESCALE(((t << 3) & 0xf8) * B2Y + ((t >> 2) & 0xf8) * G2Y + ((t >> 7) & 0xf8) * R2Y, yuv_shift);
+                return (uchar)CV_DESCALE(((t << 3) & 0xf8) * BY15 + ((t >> 2) & 0xf8) * GY15 + ((t >> 7) & 0xf8) * RY15, gray_shift);
             }
         };
 
@@ -443,7 +481,7 @@ namespace cv { namespace cuda { namespace device
     {
         template <int bidx, typename T> static __device__ __forceinline__ T RGB2GrayConvert(const T* src)
         {
-            return (T)CV_DESCALE((unsigned)(src[bidx] * B2Y + src[1] * G2Y + src[bidx^2] * R2Y), yuv_shift);
+            return (T)CV_DESCALE((unsigned)(src[bidx] * BY15 + src[1] * GY15 + src[bidx^2] * RY15), gray_shift);
         }
 
         template <int bidx> static __device__ __forceinline__ uchar RGB2GrayConvert(uint src)
@@ -451,12 +489,12 @@ namespace cv { namespace cuda { namespace device
             uint b = 0xffu & (src >> (bidx * 8));
             uint g = 0xffu & (src >> 8);
             uint r = 0xffu & (src >> ((bidx ^ 2) * 8));
-            return CV_DESCALE((uint)(b * B2Y + g * G2Y + r * R2Y), yuv_shift);
+            return CV_DESCALE((uint)(b * BY15 + g * GY15 + r * RY15), gray_shift);
         }
 
         template <int bidx> static __device__ __forceinline__ float RGB2GrayConvert(const float* src)
         {
-            return src[bidx] * 0.114f + src[1] * 0.587f + src[bidx^2] * 0.299f;
+            return src[bidx] * B2YF + src[1] * G2YF + src[bidx^2] * R2YF;
         }
 
         template <typename T, int scn, int bidx> struct RGB2Gray : unary_function<typename TypeVec<T, scn>::vec_type, T>
@@ -494,8 +532,8 @@ namespace cv { namespace cuda { namespace device
 
     namespace color_detail
     {
-        __constant__ float c_RGB2YUVCoeffs_f[5] = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
-        __constant__ int   c_RGB2YUVCoeffs_i[5] = { B2Y, G2Y, R2Y, 8061, 14369 };
+        __constant__ float c_RGB2YUVCoeffs_f[5] = { B2YF, G2YF, R2YF, B2UF, R2VF };
+        __constant__ int   c_RGB2YUVCoeffs_i[5] = { B2Y, G2Y, R2Y, B2UI, R2VI };
 
         template <int bidx, typename T, typename D> static __device__ void RGB2YUVConvert(const T* src, D& dst)
         {
@@ -543,8 +581,8 @@ namespace cv { namespace cuda { namespace device
 
     namespace color_detail
     {
-        __constant__ float c_YUV2RGBCoeffs_f[5] = { 2.032f, -0.395f, -0.581f, 1.140f };
-        __constant__ int   c_YUV2RGBCoeffs_i[5] = { 33292, -6472, -9519, 18678 };
+        __constant__ float c_YUV2RGBCoeffs_f[5] = { U2BF, U2GF, V2GF, V2RF };
+        __constant__ int   c_YUV2RGBCoeffs_i[5] = { U2BI, U2GI, V2GI, V2RI };
 
         template <int bidx, typename T, typename D> static __device__ void YUV2RGBConvert(const T& src, D* dst)
         {
@@ -633,8 +671,8 @@ namespace cv { namespace cuda { namespace device
 
     namespace color_detail
     {
-        __constant__ float c_RGB2YCrCbCoeffs_f[5] = {0.299f, 0.587f, 0.114f, 0.713f, 0.564f};
-        __constant__ int   c_RGB2YCrCbCoeffs_i[5] = {R2Y, G2Y, B2Y, 11682, 9241};
+        __constant__ float c_RGB2YCrCbCoeffs_f[5] = {R2YF, G2YF, B2YF, YCRF, YCBF};
+        __constant__ int   c_RGB2YCrCbCoeffs_i[5] = {R2Y, G2Y, B2Y, YCRI, YCBI};
 
         template <int bidx, typename T, typename D> static __device__ void RGB2YCrCbConvert(const T* src, D& dst)
         {
@@ -710,8 +748,8 @@ namespace cv { namespace cuda { namespace device
 
     namespace color_detail
     {
-        __constant__ float c_YCrCb2RGBCoeffs_f[5] = {1.403f, -0.714f, -0.344f, 1.773f};
-        __constant__ int   c_YCrCb2RGBCoeffs_i[5] = {22987, -11698, -5636, 29049};
+        __constant__ float c_YCrCb2RGBCoeffs_f[5] = {CR2RF, CR2GF, CB2GF, CB2BF};
+        __constant__ int   c_YCrCb2RGBCoeffs_i[5] = {CR2RI, CR2GI, CB2GI, CB2BI};
 
         template <int bidx, typename T, typename D> static __device__ void YCrCb2RGBConvert(const T& src, D* dst)
         {

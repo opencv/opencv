@@ -1,9 +1,17 @@
 Adding (blending) two images using OpenCV {#tutorial_adding_images}
 =========================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_mat_operations}
 @next_tutorial{tutorial_basic_linear_transform}
 
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
+
+We will learn how to blend two images!
 Goal
 ----
 
@@ -33,19 +41,19 @@ Source Code
 
 @add_toggle_cpp
 Download the source code from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/core/AddingImages/AddingImages.cpp).
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/core/AddingImages/AddingImages.cpp).
 @include cpp/tutorial_code/core/AddingImages/AddingImages.cpp
 @end_toggle
 
 @add_toggle_java
 Download the source code from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/core/AddingImages/AddingImages.java).
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/core/AddingImages/AddingImages.java).
 @include java/tutorial_code/core/AddingImages/AddingImages.java
 @end_toggle
 
 @add_toggle_python
 Download the source code from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/core/AddingImages/adding_images.py).
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/core/AddingImages/adding_images.py).
 @include python/tutorial_code/core/AddingImages/adding_images.py
 @end_toggle
 
@@ -69,7 +77,7 @@ We need two source images (\f$f_{0}(x)\f$ and \f$f_{1}(x)\f$). So, we load them 
 @snippet python/tutorial_code/core/AddingImages/adding_images.py load
 @end_toggle
 
-We used the following images: [LinuxLogo.jpg](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/data/LinuxLogo.jpg) and [WindowsLogo.jpg](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/data/WindowsLogo.jpg)
+We used the following images: [LinuxLogo.jpg](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/LinuxLogo.jpg) and [WindowsLogo.jpg](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/WindowsLogo.jpg)
 
 @warning Since we are *adding* *src1* and *src2*, they both have to be of the same size
 (width and height) and type.

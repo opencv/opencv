@@ -45,7 +45,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 //! @addtogroup dnn
 //! @{
 //!
@@ -66,6 +66,9 @@ public:
     //! Unregisters registered layer with specified type name. Thread-safe.
     static void unregisterLayer(const String &type);
 
+    //! Check if layer is registered.
+    static bool isLayerRegistered(const std::string& type);
+
     /** @brief Creates instance of registered layer.
      *  @param type type name of creating layer.
      *  @param params parameters which will be used for layer initialization.
@@ -79,7 +82,7 @@ private:
 
 //! @}
 //! @}
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }
 }
 #endif

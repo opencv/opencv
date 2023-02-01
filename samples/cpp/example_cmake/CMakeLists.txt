@@ -1,5 +1,5 @@
 # cmake needs this line
-cmake_minimum_required(VERSION 2.8.12.2)
+cmake_minimum_required(VERSION 3.1)
 
 # Define project name
 project(opencv_example_project)
@@ -14,14 +14,10 @@ find_package(OpenCV REQUIRED)
 # in the OpenCVConfig.cmake file.
 # Print some message showing some of them
 message(STATUS "OpenCV library status:")
+message(STATUS "    config: ${OpenCV_DIR}")
 message(STATUS "    version: ${OpenCV_VERSION}")
 message(STATUS "    libraries: ${OpenCV_LIBS}")
 message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
-
-if(CMAKE_VERSION VERSION_LESS "2.8.11")
-  # Add OpenCV headers location to your include paths
-  include_directories(${OpenCV_INCLUDE_DIRS})
-endif()
 
 # Declare the executable target built from your sources
 add_executable(opencv_example example.cpp)

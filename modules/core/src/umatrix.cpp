@@ -56,17 +56,13 @@ void setSize(UMat& m, int _dims, const int* _sz, const size_t* _steps,
 void updateContinuityFlag(UMat& m);
 void finalizeHdr(UMat& m);
 
-// it should be a prime number for the best hash function
-enum { UMAT_NLOCKS = 31 };
-static Mutex umatLocks[UMAT_NLOCKS];
-
 UMatData::UMatData(const MatAllocator* allocator)
 {
     prevAllocator = currAllocator = allocator;
     urefcount = refcount = mapcount = 0;
     data = origdata = 0;
     size = 0;
-    flags = 0;
+    flags = static_cast<UMatData::MemoryFlag>(0);
     handle = 0;
     userdata = 0;
     allocatorFlags_ = 0;
@@ -81,7 +77,7 @@ UMatData::~UMatData()
     data = origdata = 0;
     size = 0;
     bool isAsyncCleanup = !!(flags & UMatData::ASYNC_CLEANUP);
-    flags = 0;
+    flags = static_cast<UMatData::MemoryFlag>(0);
     handle = 0;
     userdata = 0;
     allocatorFlags_ = 0;
@@ -130,6 +126,12 @@ UMatData::~UMatData()
         originalUMatData = NULL;
     }
 }
+
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
+
+// it should be a prime number for the best hash function
+enum { UMAT_NLOCKS = 31 };
+static Mutex umatLocks[UMAT_NLOCKS];
 
 static size_t getUMatDataLockIndex(const UMatData* u)
 {
@@ -228,6 +230,33 @@ UMatDataAutoLock::~UMatDataAutoLock()
     getUMatDataAutoLocker().release(u1, u2);
 }
 
+#else
+
+void UMatData::lock()
+{
+    // nothing in OPENCV_DISABLE_THREAD_SUPPORT mode
+}
+
+void UMatData::unlock()
+{
+    // nothing in OPENCV_DISABLE_THREAD_SUPPORT mode
+}
+
+UMatDataAutoLock::UMatDataAutoLock(UMatData* u) : u1(u), u2(NULL)
+{
+    // nothing in OPENCV_DISABLE_THREAD_SUPPORT mode
+}
+UMatDataAutoLock::UMatDataAutoLock(UMatData* u1_, UMatData* u2_) : u1(u1_), u2(u2_)
+{
+    // nothing in OPENCV_DISABLE_THREAD_SUPPORT mode
+}
+UMatDataAutoLock::~UMatDataAutoLock()
+{
+    // nothing in OPENCV_DISABLE_THREAD_SUPPORT mode
+}
+
+#endif  // OPENCV_DISABLE_THREAD_SUPPORT
+
 //////////////////////////////// UMat ////////////////////////////////
 
 UMat::UMat(UMatUsageFlags _usageFlags) CV_NOEXCEPT
@@ -307,8 +336,7 @@ UMat& UMat::operator=(const UMat& m)
         else
             copySize(m);
         allocator = m.allocator;
-        if (usageFlags == USAGE_DEFAULT)
-            usageFlags = m.usageFlags;
+        usageFlags = m.usageFlags;
         u = m.u;
         offset = m.offset;
     }
@@ -332,9 +360,6 @@ void UMat::assignTo(UMat& m, int _type) const
 
 void UMat::create(int _rows, int _cols, int _type, UMatUsageFlags _usageFlags)
 {
-    _type &= TYPE_MASK;
-    if( dims <= 2 && rows == _rows && cols == _cols && type() == _type && u )
-        return;
     int sz[] = {_rows, _cols};
     create(2, sz, _type, _usageFlags);
 }
@@ -372,6 +397,67 @@ size_t UMat::total() const
     for( int i = 0; i < dims; i++ )
         p *= size[i];
     return p;
+}
+
+
+UMat::UMat(UMat&& m)
+: flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), allocator(m.allocator),
+  usageFlags(m.usageFlags), u(m.u), offset(m.offset), size(&rows)
+{
+    if (m.dims <= 2)  // move new step/size info
+    {
+        step[0] = m.step[0];
+        step[1] = m.step[1];
+    }
+    else
+    {
+        CV_DbgAssert(m.step.p != m.step.buf);
+        step.p = m.step.p;
+        size.p = m.size.p;
+        m.step.p = m.step.buf;
+        m.size.p = &m.rows;
+    }
+    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.allocator = NULL;
+    m.u = NULL;
+    m.offset = 0;
+}
+
+UMat& UMat::operator=(UMat&& m)
+{
+    if (this == &m)
+      return *this;
+    release();
+    flags = m.flags; dims = m.dims; rows = m.rows; cols = m.cols;
+    allocator = m.allocator; usageFlags = m.usageFlags;
+    u = m.u;
+    offset = m.offset;
+    if (step.p != step.buf) // release self step/size
+    {
+        fastFree(step.p);
+        step.p = step.buf;
+        size.p = &rows;
+    }
+    if (m.dims <= 2) // move new step/size info
+    {
+        step[0] = m.step[0];
+        step[1] = m.step[1];
+    }
+    else
+    {
+        CV_DbgAssert(m.step.p != m.step.buf);
+        step.p = m.step.p;
+        size.p = m.size.p;
+        m.step.p = m.step.buf;
+        m.size.p = &m.rows;
+    }
+    m.flags = MAGIC_VAL;
+    m.usageFlags = USAGE_DEFAULT;
+    m.dims = m.rows = m.cols = 0;
+    m.allocator = NULL;
+    m.u = NULL;
+    m.offset = 0;
+    return *this;
 }
 
 
@@ -482,7 +568,7 @@ void finalizeHdr(UMat& m)
 }
 
 
-UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
+UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
 {
     UMat hdr;
     if(!data)
@@ -543,6 +629,7 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
     try
     {
         hdr.flags = flags;
+        hdr.usageFlags = usageFlags;
         setSize(hdr, dims, size.p, step.p);
         finalizeHdr(hdr);
         hdr.u = new_u;
@@ -560,20 +647,26 @@ UMat Mat::getUMat(int accessFlags, UMatUsageFlags usageFlags) const
         new_u->currAllocator->deallocate(new_u);
         throw;
     }
+
 }
 
 void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlags)
 {
-    this->usageFlags = _usageFlags;
-
     int i;
     CV_Assert(0 <= d && d <= CV_MAX_DIM && _sizes);
     _type = CV_MAT_TYPE(_type);
 
-    if( u && (d == dims || (d == 1 && dims <= 2)) && _type == type() )
+    // if param value is USAGE_DEFAULT by implicit default param value -or- explicit value
+    // ...then don't change the existing usageFlags
+    // it is not possible to change usage from non-default to USAGE_DEFAULT through create()
+    // ...instead must construct UMat()
+    if (_usageFlags == cv::USAGE_DEFAULT)
     {
-        if( d == 2 && rows == _sizes[0] && cols == _sizes[1] )
-            return;
+        _usageFlags = usageFlags;
+    }
+
+    if( u && (d == dims || (d == 1 && dims <= 2)) && _type == type() && _usageFlags == usageFlags )
+    {
         for( i = 0; i < d; i++ )
             if( size[i] != _sizes[i] )
                 break;
@@ -590,6 +683,7 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
     }
 
     release();
+    usageFlags = _usageFlags;
     if( d == 0 )
         return;
     flags = (_type & CV_MAT_TYPE_MASK) | MAGIC_VAL;
@@ -606,13 +700,13 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
         }
         try
         {
-            u = a->allocate(dims, size, _type, 0, step.p, 0, usageFlags);
+            u = a->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, usageFlags);
             CV_Assert(u != 0);
         }
         catch(...)
         {
             if(a != a0)
-                u = a0->allocate(dims, size, _type, 0, step.p, 0, usageFlags);
+                u = a0->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, usageFlags);
             CV_Assert(u != 0);
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
@@ -899,11 +993,11 @@ UMat UMat::reshape(int new_cn, int new_rows) const
     return hdr;
 }
 
-UMat UMat::diag(const UMat& d)
+UMat UMat::diag(const UMat& d, UMatUsageFlags usageFlags)
 {
     CV_Assert( d.cols == 1 || d.rows == 1 );
     int len = d.rows + d.cols - 1;
-    UMat m(len, len, d.type(), Scalar(0));
+    UMat m(len, len, d.type(), Scalar(0), usageFlags);
     UMat md = m.diag();
     if( d.cols == 1 )
         d.copyTo(md);
@@ -974,7 +1068,7 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
     CV_Error(CV_StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
 }
 
-Mat UMat::getMat(int accessFlags) const
+Mat UMat::getMat(AccessFlag accessFlags) const
 {
     if(!u)
         return Mat();
@@ -1006,7 +1100,7 @@ Mat UMat::getMat(int accessFlags) const
     return Mat();
 }
 
-void* UMat::handle(int accessFlags) const
+void* UMat::handle(AccessFlag accessFlags) const
 {
     if( !u )
         return 0;
@@ -1018,7 +1112,7 @@ void* UMat::handle(int accessFlags) const
         u->currAllocator->unmap(u);
     }
 
-    if ((accessFlags & ACCESS_WRITE) != 0)
+    if (!!(accessFlags & ACCESS_WRITE))
         u->markHostCopyObsolete(true);
 
     return u->handle;
@@ -1276,34 +1370,34 @@ UMat UMat::t() const
     return m;
 }
 
-UMat UMat::zeros(int rows, int cols, int type)
+UMat UMat::zeros(int rows, int cols, int type, UMatUsageFlags usageFlags)
 {
-    return UMat(rows, cols, type, Scalar::all(0));
+    return UMat(rows, cols, type, Scalar::all(0), usageFlags);
 }
 
-UMat UMat::zeros(Size size, int type)
+UMat UMat::zeros(Size size, int type, UMatUsageFlags usageFlags)
 {
-    return UMat(size, type, Scalar::all(0));
+    return UMat(size, type, Scalar::all(0), usageFlags);
 }
 
-UMat UMat::zeros(int ndims, const int* sz, int type)
+UMat UMat::zeros(int ndims, const int* sz, int type, UMatUsageFlags usageFlags)
 {
-    return UMat(ndims, sz, type, Scalar::all(0));
+    return UMat(ndims, sz, type, Scalar::all(0), usageFlags);
 }
 
-UMat UMat::ones(int rows, int cols, int type)
+UMat UMat::ones(int rows, int cols, int type, UMatUsageFlags usageFlags)
 {
-    return UMat::ones(Size(cols, rows), type);
+    return UMat(rows, cols, type, Scalar(1), usageFlags);
 }
 
-UMat UMat::ones(Size size, int type)
+UMat UMat::ones(Size size, int type, UMatUsageFlags usageFlags)
 {
-    return UMat(size, type, Scalar(1));
+    return UMat(size, type, Scalar(1), usageFlags);
 }
 
-UMat UMat::ones(int ndims, const int* sz, int type)
+UMat UMat::ones(int ndims, const int* sz, int type, UMatUsageFlags usageFlags)
 {
-    return UMat(ndims, sz, type, Scalar(1));
+    return UMat(ndims, sz, type, Scalar(1), usageFlags);
 }
 
 }

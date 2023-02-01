@@ -394,7 +394,6 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
         dst_pyramid[level].create( src_pyramid[level].rows,
                         src_pyramid[level].cols, src_pyramid[level].type() );
         cv::pyrDown( src_pyramid[level-1], src_pyramid[level], src_pyramid[level].size() );
-        //CV_CALL( cvResize( src_pyramid[level-1], src_pyramid[level], CV_INTER_AREA ));
     }
 
     mask0.create(src0.rows, src0.cols, CV_8UC1);
@@ -419,7 +418,6 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
             m = cv::Mat(size.height, size.width, CV_8UC1, mask0.ptr());
             dstep = (int)dst_pyramid[level+1].step;
             dptr = dst_pyramid[level+1].ptr() + dstep + cn;
-            //cvResize( dst_pyramid[level+1], dst_pyramid[level], CV_INTER_CUBIC );
             cv::pyrUp( dst_pyramid[level+1], dst_pyramid[level], dst_pyramid[level].size() );
             m.setTo(cv::Scalar::all(0));
 

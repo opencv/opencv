@@ -8,8 +8,7 @@
 
     <application
         android:icon="@drawable/icon"
-        android:label="@string/app_name"
-        android:theme="@android:style/Theme.NoTitleBar.Fullscreen" >
+        android:label="@string/app_name" >
 
         <activity
             android:name=".Puzzle15Activity"

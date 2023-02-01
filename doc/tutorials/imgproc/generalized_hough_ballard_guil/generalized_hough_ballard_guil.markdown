@@ -6,6 +6,11 @@ Object detection with Generalized Ballard and Guil Hough Transform {#tutorial_ge
 @prev_tutorial{tutorial_hough_circle}
 @next_tutorial{tutorial_remap}
 
+|    |    |
+| -: | :- |
+| Original author | Markus Heck |
+| Compatibility | OpenCV >= 3.4 |
+
 Goal
 ----
 

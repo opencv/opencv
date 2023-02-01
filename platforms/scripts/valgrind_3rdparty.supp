@@ -204,3 +204,27 @@
    fun:start_thread
    fun:clone
 }
+
+{
+   clone-unknown-leak
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:_Znwm
+   obj:*
+   obj:*
+   fun:start_thread
+   fun:clone
+}
+
+{
+   avcodec57-ffv1-16bit-ubuntu18
+   Memcheck:Cond
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/libavcodec.so.57.107.100
+   fun:avcodec_default_execute
+   obj:/usr/lib/x86_64-linux-gnu/libavcodec.so.57.107.100
+   fun:avcodec_encode_video2
+   obj:/usr/lib/x86_64-linux-gnu/libavcodec.so.57.107.100
+   fun:avcodec_send_frame
+   ...
+}

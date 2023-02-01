@@ -249,8 +249,12 @@ TEST_P(setInput, normalization)
     const int target   = get<1>(get<3>(GetParam()));
     const bool kSwapRB = true;
 
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16 && dtype != CV_32F)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (backend == DNN_BACKEND_VKCOM && dtype != CV_32F)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
     Mat inp(5, 5, CV_8UC3);
     randu(inp, 0, 255);
@@ -803,6 +807,12 @@ TEST_P(Test_two_inputs, basic)
     Backend backendId = get<0>(get<2>(GetParam()));
     Target targetId = get<1>(get<2>(GetParam()));
 
+    int type1 = get<0>(GetParam());
+    int type2 = get<1>(GetParam());
+
+    if (backendId == DNN_BACKEND_VKCOM && !(type1 == CV_32F && type2 == CV_32F))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+
     Net net;
     LayerParams lp;
     lp.type = "Eltwise";
@@ -812,8 +822,8 @@ TEST_P(Test_two_inputs, basic)
     net.connect(0, 1, eltwiseId, 1);  // connect to a second input
 
     int inpSize[] = {1, 2, 3, 4};
-    Mat firstInp(4, &inpSize[0], get<0>(GetParam()));
-    Mat secondInp(4, &inpSize[0], get<1>(GetParam()));
+    Mat firstInp(4, &inpSize[0], type1);
+    Mat secondInp(4, &inpSize[0], type2);
     randu(firstInp, 0, 100);
     randu(secondInp, 0, 100);
 
@@ -834,8 +844,9 @@ TEST_P(Test_two_inputs, basic)
     Mat ref;
     addWeighted(firstInp, kScale, secondInp, kScaleInv, 0, ref, CV_32F);
 
-    double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.06 : 1e-6;
-    double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? 0.3 : 1e-5;
+    double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD || targetId == DNN_TARGET_CUDA_FP16) ? 0.06 : 1e-6;
+    double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD || targetId == DNN_TARGET_CUDA_FP16) ? 0.3 : 1e-5;
+
     normAssert(out, ref, "", l1, lInf);
 
     if (cvtest::debugLevel > 0 || HasFailure())

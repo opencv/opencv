@@ -81,7 +81,7 @@ _, bw = cv.threshold(gray, 50, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
 
 ## [contours]
 # Find all the contours in the thresholded image
-_, contours, _ = cv.findContours(bw, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
+contours, _ = cv.findContours(bw, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
 
 for i, c in enumerate(contours):
     # Calculate the area of each contour

@@ -21,12 +21,17 @@ std::string keys =
                         "0: automatically (by default), "
                         "1: Halide language (http://halide-lang.org/), "
                         "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                        "3: OpenCV implementation }"
+                        "3: OpenCV implementation, "
+                        "4: VKCOM, "
+                        "5: CUDA }"
     "{ target      | 0 | Choose one of target computation devices: "
                         "0: CPU target (by default), "
                         "1: OpenCL, "
                         "2: OpenCL fp16 (half-float precision), "
-                        "3: VPU }";
+                        "3: VPU, "
+                        "4: Vulkan, "
+                        "6: CUDA, "
+                        "7: CUDA fp16 (half-float preprocess) }";
 
 using namespace cv;
 using namespace dnn;
@@ -187,7 +192,7 @@ void colorizeSegmentation(const Mat &score, Mat &segm)
     else if (chns != (int)colors.size())
     {
         CV_Error(Error::StsError, format("Number of output classes does not match "
-                                         "number of colors (%d != %d)", chns, colors.size()));
+                                         "number of colors (%d != %zu)", chns, colors.size()));
     }
 
     Mat maxCl = Mat::zeros(rows, cols, CV_8UC1);
@@ -232,7 +237,7 @@ void showLegend()
         if ((int)colors.size() != numClasses)
         {
             CV_Error(Error::StsError, format("Number of output classes does not match "
-                                             "number of labels (%d != %d)", colors.size(), classes.size()));
+                                             "number of labels (%zu != %zu)", colors.size(), classes.size()));
         }
         legend.create(kBlockHeight * numClasses, 200, CV_8UC3);
         for (int i = 0; i < numClasses; i++)

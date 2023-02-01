@@ -46,7 +46,7 @@ def hist_lines(im):
         im = cv.cvtColor(im,cv.COLOR_BGR2GRAY)
     hist_item = cv.calcHist([im],[0],None,[256],[0,256])
     cv.normalize(hist_item,hist_item,0,255,cv.NORM_MINMAX)
-    hist=np.int32(np.around(hist_item))
+    hist = np.int32(np.around(hist_item))
     for x,y in enumerate(hist):
         cv.line(h,(x,0),(x,y[0]),(255,255,255))
     y = np.flipud(h)

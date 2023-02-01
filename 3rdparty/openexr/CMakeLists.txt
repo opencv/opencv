@@ -109,6 +109,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow -Wunused -Wsign-compare -Wundef -W
                                      -Wmissing-prototypes  # gcc/clang
                                      -Wreorder
                                      -Wunused-result
+                                     -Wimplicit-const-int-float-conversion  # clang
 )
 if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wclass-memaccess)

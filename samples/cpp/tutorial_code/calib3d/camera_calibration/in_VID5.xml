@@ -39,6 +39,8 @@
   <Write_DetectedFeaturePoints>1</Write_DetectedFeaturePoints>
   <!-- If true (non-zero) we write to the output file the extrinsic camera parameters.-->
   <Write_extrinsicParameters>1</Write_extrinsicParameters>
+  <!-- If true (non-zero) we write to the output file the refined 3D target grid points.-->
+  <Write_gridPoints>1</Write_gridPoints>
   <!-- If true (non-zero) we show after calibration the undistorted images.-->
   <Show_UndistortedImage>1</Show_UndistortedImage>
   <!-- If true (non-zero) will be used fisheye camera model.-->

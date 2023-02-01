@@ -7,7 +7,7 @@
 
 /**
 Helper header to support SIMD intrinsics (universal intrinsics) in user code.
-Intrinsics documentation: https://docs.opencv.org/3.4/df/d91/group__core__hal__intrin.html
+Intrinsics documentation: https://docs.opencv.org/4.x/df/d91/group__core__hal__intrin.html
 
 
 Checks of target CPU instruction set based on compiler definitions don't work well enough.

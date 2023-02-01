@@ -6,6 +6,8 @@
 #include "opencv2/core/bindings_utils.hpp"
 #include <sstream>
 #include <iomanip>
+#include <opencv2/core/utils/filesystem.hpp>
+#include <opencv2/core/utils/filesystem.private.hpp>
 
 namespace cv { namespace utils {
 
@@ -254,5 +256,17 @@ String dumpVectorOfRect(const std::vector<Rect>& vec)
 {
     return dumpVector(vec, &noFormat);
 }
+
+
+namespace fs {
+cv::String getCacheDirectoryForDownloads()
+{
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
+    return cv::utils::fs::getCacheDirectory("downloads", "OPENCV_DOWNLOADS_CACHE_DIR");
+#else
+    CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
+#endif
+}
+} // namespace fs
 
 }} // namespace

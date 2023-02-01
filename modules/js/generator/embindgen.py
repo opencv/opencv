@@ -105,7 +105,8 @@ def makeWhiteList(module_list):
 
 white_list = None
 namespace_prefix_override = {
-    'dnn' : ''
+    'dnn' : '',
+    'aruco' : '',
 }
 
 # Features to be exported

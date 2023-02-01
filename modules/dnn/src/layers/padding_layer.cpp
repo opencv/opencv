@@ -11,11 +11,18 @@ Implementation of padding layer, which adds paddings to input blob.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_cann.hpp"
 
 #include <vector>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/padding.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -98,7 +105,7 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-            bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD;
+            bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL;
             if (isMyriad)
                 return dstRanges.size() == 4 && paddings[0].first == 0 && paddings[0].second == 0;
 
@@ -106,7 +113,9 @@ public:
         }
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() && dstRanges.size() == 4);
+               backendId == DNN_BACKEND_CUDA ||
+               (backendId == DNN_BACKEND_HALIDE && haveHalide() && dstRanges.size() == 4) ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -127,6 +136,8 @@ public:
                 cv::convertFp16(paddingValue_fp32, paddingValue_fp16);
                 outputs[0].setTo(paddingValue_fp16[0]);
             }
+            else if (inputs_arr.depth() == CV_8S)
+                outputs[0].setTo(saturate_cast<int8_t>(paddingValue));
             else
                 outputs[0].setTo(paddingValue);
             inputs[0].copyTo(outputs[0](dstRanges));
@@ -168,6 +179,27 @@ public:
             CV_Error(Error::StsNotImplemented, "Unknown padding type: " + paddingType);
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        cuda4dnn::PaddingType ptype;
+        if (paddingType == "constant")
+            ptype = PaddingType::CONSTANT;
+        else if (paddingType == "reflect")
+            ptype = PaddingType::REFLECTION101;
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported padding mode");
+
+        return make_cuda_node<cuda4dnn::PaddingOp>(preferableTarget, std::move(context->stream), ptype, paddingValue, dstRanges);
+    }
+#endif
+
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
@@ -189,6 +221,50 @@ public:
         return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+
+        // create operator
+        std::string op_name = cv::format("pad_%d", index);
+        auto op = std::make_shared<ge::op::PadV3>(op_name);
+
+        // set attributes
+        op->set_attr_mode(paddingType.c_str());
+
+        // set inputs
+        // set inputs : x
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, "y");
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+        // set inputs : paddings
+        std::vector<int> pads;
+        for (int i = 0; i < paddings.size(); i++)
+        {
+            pads.push_back(paddings[i].first);
+            pads.push_back(paddings[i].second);
+        }
+        std::vector<int> pads_shape{(int)pads.size()};
+        Mat paddings_mat(pads_shape, CV_32S, &pads[0]);
+        auto op_const_paddings = std::make_shared<CannConstOp>(paddings_mat.data, paddings_mat.type(), pads_shape, cv::format("%s_paddings", op_name.c_str()));
+        op->set_input_paddings(*(op_const_paddings->getOp()));
+        op->update_input_desc_paddings(*(op_const_paddings->getTensorDesc()));
+        // set inputs : constant_values
+        std::vector<int> constant_values_shape{1};
+        Mat constant_values_mat(1, 1, CV_32F, Scalar(paddingValue));
+        auto op_const_constant_values = std::make_shared<CannConstOp>(constant_values_mat.data, constant_values_mat.type(), constant_values_shape, cv::format("%s_constant_values", op_name.c_str()));
+        op->set_input_constant_values(*(op_const_constant_values->getOp()));
+        op->update_input_desc_constant_values(*(op_const_constant_values->getTensorDesc()));
+
+        // set outputs
+        auto output_y_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_y_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -212,6 +288,16 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(pad));
     }
 #endif
+
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        float outputScale = scales[1][0];
+        int outputZp = zeropoints[1][0];
+        float padValue = outputZp + std::round(params.get<float>("value", 0)/outputScale);
+        params.set("value", padValue);
+        return true;
+    }
 
 private:
     std::vector<std::pair<int, int> > paddings;  // Pairs pad before, pad after.

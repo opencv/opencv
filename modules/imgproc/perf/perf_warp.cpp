@@ -290,4 +290,23 @@ PERF_TEST(Transform, getPerspectiveTransform_1000)
     SANITY_CHECK_NOTHING();
 }
 
+PERF_TEST(Transform, getPerspectiveTransform_QR_1000)
+{
+    unsigned int size = 8;
+    Mat source(1, size/2, CV_32FC2);
+    Mat destination(1, size/2, CV_32FC2);
+    Mat transformCoefficient;
+
+    declare.in(source, destination, WARMUP_RNG);
+
+    PERF_SAMPLE_BEGIN()
+    for (int i = 0; i < 1000; i++)
+    {
+        transformCoefficient = getPerspectiveTransform(source, destination, DECOMP_QR);
+    }
+    PERF_SAMPLE_END()
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace

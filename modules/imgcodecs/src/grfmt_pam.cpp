@@ -111,12 +111,12 @@ static bool rgb_convert (void *src, void *target, int width, int target_channels
     int target_depth);
 
 const static struct pam_format formats[] = {
-    {CV_IMWRITE_PAM_FORMAT_NULL, "", NULL, {0, 0, 0, 0} },
-    {CV_IMWRITE_PAM_FORMAT_BLACKANDWHITE, "BLACKANDWHITE", NULL, {0, 0, 0, 0} },
-    {CV_IMWRITE_PAM_FORMAT_GRAYSCALE, "GRAYSCALE", NULL, {0, 0, 0, 0} },
-    {CV_IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA, "GRAYSCALE_ALPHA", NULL, {0, 0, 0, 0} },
-    {CV_IMWRITE_PAM_FORMAT_RGB, "RGB", rgb_convert, {0, 1, 2, 0} },
-    {CV_IMWRITE_PAM_FORMAT_RGB_ALPHA, "RGB_ALPHA", NULL, {0, 1, 2, 0} },
+    {IMWRITE_PAM_FORMAT_NULL, "", NULL, {0, 0, 0, 0} },
+    {IMWRITE_PAM_FORMAT_BLACKANDWHITE, "BLACKANDWHITE", NULL, {0, 0, 0, 0} },
+    {IMWRITE_PAM_FORMAT_GRAYSCALE, "GRAYSCALE", NULL, {0, 0, 0, 0} },
+    {IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA, "GRAYSCALE_ALPHA", NULL, {0, 0, 0, 0} },
+    {IMWRITE_PAM_FORMAT_RGB, "RGB", rgb_convert, {0, 1, 2, 0} },
+    {IMWRITE_PAM_FORMAT_RGB_ALPHA, "RGB_ALPHA", NULL, {0, 1, 2, 0} },
 };
 #define PAM_FORMATS_NO (sizeof (fields) / sizeof ((fields)[0]))
 
@@ -132,12 +132,12 @@ rgb_convert (void *src, void *target, int width, int target_channels, int target
         switch (target_depth) {
             case CV_8U:
                 icvCvt_RGB2BGR_8u_C3R( (uchar*) src, 0, (uchar*) target, 0,
-                    cvSize(width,1) );
+                    Size(width,1) );
                 ret = true;
                 break;
             case CV_16U:
                 icvCvt_RGB2BGR_16u_C3R( (ushort *)src, 0, (ushort *)target, 0,
-                    cvSize(width,1) );
+                    Size(width,1) );
                 ret = true;
                 break;
             default:
@@ -147,12 +147,12 @@ rgb_convert (void *src, void *target, int width, int target_channels, int target
         switch (target_depth) {
             case CV_8U:
                 icvCvt_BGR2Gray_8u_C3C1R( (uchar*) src, 0, (uchar*) target, 0,
-                    cvSize(width,1), 2 );
+                    Size(width,1), 2 );
                 ret = true;
                 break;
             case CV_16U:
                 icvCvt_BGRA2Gray_16u_CnC1R( (ushort *)src, 0, (ushort *)target, 0,
-                    cvSize(width,1), 3, 2 );
+                    Size(width,1), 3, 2 );
                 ret = true;
                 break;
             default:
@@ -341,7 +341,7 @@ PAMDecoder::PAMDecoder()
     m_offset = -1;
     m_buf_supported = true;
     bit_mode = false;
-    selected_fmt = CV_IMWRITE_PAM_FORMAT_NULL;
+    selected_fmt = IMWRITE_PAM_FORMAT_NULL;
     m_maxval = 0;
     m_channels = 0;
     m_sampledepth = 0;
@@ -462,14 +462,14 @@ bool PAMDecoder::readHeader()
 
         if (flds_endhdr && flds_height && flds_width && flds_depth && flds_maxval)
         {
-            if (selected_fmt == CV_IMWRITE_PAM_FORMAT_NULL)
+            if (selected_fmt == IMWRITE_PAM_FORMAT_NULL)
             {
                 if (m_channels == 1 && m_maxval == 1)
-                    selected_fmt = CV_IMWRITE_PAM_FORMAT_BLACKANDWHITE;
+                    selected_fmt = IMWRITE_PAM_FORMAT_BLACKANDWHITE;
                 else if (m_channels == 1 && m_maxval < 256)
-                    selected_fmt = CV_IMWRITE_PAM_FORMAT_GRAYSCALE;
+                    selected_fmt = IMWRITE_PAM_FORMAT_GRAYSCALE;
                 else if (m_channels == 3 && m_maxval < 256)
-                    selected_fmt = CV_IMWRITE_PAM_FORMAT_RGB;
+                    selected_fmt = IMWRITE_PAM_FORMAT_RGB;
                 else
                     CV_Error(Error::StsError, "Can't determine selected_fmt (IMWRITE_PAM_FORMAT_NULL)");
             }
@@ -516,7 +516,7 @@ bool PAMDecoder::readData(Mat& img)
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
 
-    if (selected_fmt != CV_IMWRITE_PAM_FORMAT_NULL)
+    if (selected_fmt != IMWRITE_PAM_FORMAT_NULL)
         fmt = &formats[selected_fmt];
     else {
         /* default layout handling */
@@ -670,8 +670,8 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
 
     /* parse save file type */
     for( size_t i = 0; i < params.size(); i += 2 )
-        if( params[i] == CV_IMWRITE_PAM_TUPLETYPE ) {
-            if ( params[i+1] > CV_IMWRITE_PAM_FORMAT_NULL &&
+        if( params[i] == IMWRITE_PAM_TUPLETYPE ) {
+            if ( params[i+1] > IMWRITE_PAM_FORMAT_NULL &&
                  params[i+1] < (int) PAM_FORMATS_NO)
                 fmt = &formats[params[i+1]];
         }

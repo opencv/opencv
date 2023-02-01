@@ -42,8 +42,87 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_stitching.hpp"
-
+#include <iostream>
 namespace cv {
+
+PyRotationWarper::PyRotationWarper(String warp_type, float scale)
+{
+    Ptr<WarperCreator> warper_creator;
+    if (warp_type == "plane")
+        warper_creator = makePtr<cv::PlaneWarper>();
+    else if (warp_type == "affine")
+        warper_creator = makePtr<cv::AffineWarper>();
+    else if (warp_type == "cylindrical")
+        warper_creator = makePtr<cv::CylindricalWarper>();
+    else if (warp_type == "spherical")
+        warper_creator = makePtr<cv::SphericalWarper>();
+    else if (warp_type == "fisheye")
+        warper_creator = makePtr<cv::FisheyeWarper>();
+    else if (warp_type == "stereographic")
+        warper_creator = makePtr<cv::StereographicWarper>();
+    else if (warp_type == "compressedPlaneA2B1")
+        warper_creator = makePtr<cv::CompressedRectilinearWarper>(2.0f, 1.0f);
+    else if (warp_type == "compressedPlaneA1.5B1")
+        warper_creator = makePtr<cv::CompressedRectilinearWarper>(1.5f, 1.0f);
+    else if (warp_type == "compressedPlanePortraitA2B1")
+        warper_creator = makePtr<cv::CompressedRectilinearPortraitWarper>(2.0f, 1.0f);
+    else if (warp_type == "compressedPlanePortraitA1.5B1")
+        warper_creator = makePtr<cv::CompressedRectilinearPortraitWarper>(1.5f, 1.0f);
+    else if (warp_type == "paniniA2B1")
+        warper_creator = makePtr<cv::PaniniWarper>(2.0f, 1.0f);
+    else if (warp_type == "paniniA1.5B1")
+        warper_creator = makePtr<cv::PaniniWarper>(1.5f, 1.0f);
+    else if (warp_type == "paniniPortraitA2B1")
+        warper_creator = makePtr<cv::PaniniPortraitWarper>(2.0f, 1.0f);
+    else if (warp_type == "paniniPortraitA1.5B1")
+        warper_creator = makePtr<cv::PaniniPortraitWarper>(1.5f, 1.0f);
+    else if (warp_type == "mercator")
+        warper_creator = makePtr<cv::MercatorWarper>();
+    else if (warp_type == "transverseMercator")
+        warper_creator = makePtr<cv::TransverseMercatorWarper>();
+    if (warper_creator.get() != nullptr)
+    {
+        rw = warper_creator->create(scale);
+
+    }
+    else
+        CV_Error(Error::StsError, "unknown warper :" + warp_type);
+}
+Point2f PyRotationWarper::warpPoint(const Point2f &pt, InputArray K, InputArray R)
+{
+    return rw.get()->warpPoint(pt, K, R);
+}
+
+#if CV_VERSION_MAJOR != 4
+Point2f PyRotationWarper::warpPointBackward(const Point2f& pt, InputArray K, InputArray R)
+{
+    return rw.get()->warpPointBackward(pt, K, R);
+}
+#endif
+
+Rect PyRotationWarper::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
+{
+    return rw.get()->buildMaps(src_size, K, R, xmap, ymap);
+}
+Point PyRotationWarper::warp(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
+    OutputArray dst)
+{
+    if (rw.get() == nullptr)
+        CV_Error(Error::StsError, "Warper is null");
+    Point p = rw.get()->warp(src, K, R, interp_mode, border_mode, dst);
+    return p;
+
+}
+void PyRotationWarper::warpBackward(InputArray src, InputArray K, InputArray R, int interp_mode, int border_mode,
+    Size dst_size, OutputArray dst)
+{
+    return rw.get()->warpBackward(src, K, R, interp_mode, border_mode, dst_size, dst);
+}
+Rect PyRotationWarper::warpRoi(Size src_size, InputArray K, InputArray R)
+{
+    return rw.get()->warpRoi(src_size, K, R);
+}
+
 namespace detail {
 
 void ProjectorBase::setCameraParams(InputArray _K, InputArray _R, InputArray _T)
@@ -92,6 +171,20 @@ Point2f PlaneWarper::warpPoint(const Point2f &pt, InputArray K, InputArray R)
     float tz[] = {0.f, 0.f, 0.f};
     Mat_<float> T(3, 1, tz);
     return warpPoint(pt, K, R, T);
+}
+Point2f PlaneWarper::warpPointBackward(const Point2f& pt, InputArray K, InputArray R, InputArray T)
+{
+    projector_.setCameraParams(K, R, T);
+    Point2f xy;
+    projector_.mapBackward(pt.x, pt.y, xy.x, xy.y);
+    return xy;
+}
+
+Point2f PlaneWarper::warpPointBackward(const Point2f& pt, InputArray K, InputArray R)
+{
+    float tz[] = { 0.f, 0.f, 0.f };
+    Mat_<float> T(3, 1, tz);
+    return warpPointBackward(pt, K, R, T);
 }
 
 Rect PlaneWarper::buildMaps(Size src_size, InputArray K, InputArray R, OutputArray xmap, OutputArray ymap)
@@ -157,7 +250,6 @@ Point PlaneWarper::warp(InputArray src, InputArray K, InputArray R, InputArray T
 {
     UMat uxmap, uymap;
     Rect dst_roi = buildMaps(src.size(), K, R, T, uxmap, uymap);
-
     dst.create(dst_roi.height + 1, dst_roi.width + 1, src.type());
     remap(src, dst, uxmap, uymap, interp_mode, border_mode);
 
@@ -229,6 +321,12 @@ Point2f AffineWarper::warpPoint(const Point2f &pt, InputArray K, InputArray H)
     return PlaneWarper::warpPoint(pt, K, R, T);
 }
 
+Point2f AffineWarper::warpPointBackward(const Point2f& pt, InputArray K, InputArray H)
+{
+    Mat R, T;
+    getRTfromHomogeneous(H, R, T);
+    return PlaneWarper::warpPointBackward(pt, K, R, T);
+}
 
 Rect AffineWarper::buildMaps(Size src_size, InputArray K, InputArray H, OutputArray xmap, OutputArray ymap)
 {

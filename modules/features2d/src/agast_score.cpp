@@ -47,7 +47,7 @@ The references are:
 namespace cv
 {
 
-void makeAgastOffsets(int pixel[16], int rowStride, int type)
+void makeAgastOffsets(int pixel[16], int rowStride, AgastFeatureDetector::DetectorType type)
 {
     static const int offsets16[][2] =
     {
@@ -9400,7 +9400,7 @@ int agast_tree_search(const uint32_t table_struct32[], int pixel_[], const unsig
 }
 
 // universal pixel mask
-int AGAST_ALL_SCORE(const uchar* ptr, const int pixel[], int threshold, int agasttype)
+int AGAST_ALL_SCORE(const uchar* ptr, const int pixel[], int threshold, AgastFeatureDetector::DetectorType agasttype)
 {
     int bmin = threshold;
     int bmax = 255;

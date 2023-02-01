@@ -54,7 +54,7 @@ public:
     void clear();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     int prepare_test_case( int test_case_idx );
     int validate_test_results( int test_case_idx );
     void run_func();
@@ -125,7 +125,7 @@ void CV_FindContourTest::clear()
 }
 
 
-int CV_FindContourTest::read_params( CvFileStorage* fs )
+int CV_FindContourTest::read_params( const cv::FileStorage& fs )
 {
     int t;
     int code = cvtest::BaseTest::read_params( fs );
@@ -133,13 +133,13 @@ int CV_FindContourTest::read_params( CvFileStorage* fs )
     if( code < 0 )
         return code;
 
-    min_blob_size      = cvReadInt( find_param( fs, "min_blob_size" ), min_blob_size );
-    max_blob_size      = cvReadInt( find_param( fs, "max_blob_size" ), max_blob_size );
-    max_log_blob_count = cvReadInt( find_param( fs, "max_log_blob_count" ), max_log_blob_count );
-    min_log_img_width  = cvReadInt( find_param( fs, "min_log_img_width" ), min_log_img_width );
-    max_log_img_width  = cvReadInt( find_param( fs, "max_log_img_width" ), max_log_img_width );
-    min_log_img_height = cvReadInt( find_param( fs, "min_log_img_height"), min_log_img_height );
-    max_log_img_height = cvReadInt( find_param( fs, "max_log_img_height"), max_log_img_height );
+    read( find_param( fs, "min_blob_size" ), min_blob_size, min_blob_size );
+    read( find_param( fs, "max_blob_size" ), max_blob_size, max_blob_size );
+    read( find_param( fs, "max_log_blob_count" ), max_log_blob_count, max_log_blob_count );
+    read( find_param( fs, "min_log_img_width" ), min_log_img_width, min_log_img_width );
+    read( find_param( fs, "max_log_img_width" ), max_log_img_width, max_log_img_width );
+    read( find_param( fs, "min_log_img_height"), min_log_img_height, min_log_img_height );
+    read( find_param( fs, "max_log_img_height"), max_log_img_height, max_log_img_height );
 
     min_blob_size = cvtest::clipInt( min_blob_size, 1, 100 );
     max_blob_size = cvtest::clipInt( max_blob_size, 1, 100 );

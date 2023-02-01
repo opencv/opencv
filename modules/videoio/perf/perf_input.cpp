@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_VIDEO_INPUT
+#include "perf_camera.impl.hpp"
 
 namespace opencv_test
 {
@@ -35,5 +35,3 @@ PERF_TEST_P(VideoCapture_Reading, ReadFile, testing::ValuesIn(bunny_files) )
 }
 
 } // namespace
-
-#endif // HAVE_VIDEO_INPUT

@@ -39,12 +39,19 @@
 //
 //M*////////////////////////////////////////////////////////////////////////////////////////
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 #include "precomp.hpp"
 #include "opencv2/imgproc.hpp"
 #include <stdio.h>
 #include <Availability.h>
 #import <AVFoundation/AVFoundation.h>
+
+#define CV_CAP_MODE_BGR CV_FOURCC_MACRO('B','G','R','3')
+#define CV_CAP_MODE_RGB CV_FOURCC_MACRO('R','G','B','3')
+#define CV_CAP_MODE_GRAY CV_FOURCC_MACRO('G','R','E','Y')
+#define CV_CAP_MODE_YUYV CV_FOURCC_MACRO('Y', 'U', 'Y', 'V')
 
 /********************** Declaration of class headers ************************/
 
@@ -157,11 +164,12 @@ private:
     uint8_t  *mOutImagedata;
     IplImage *mOutImage;
     size_t    currSize;
-    int       mMode;
+    uint32_t  mMode;
     int       mFormat;
 
     bool setupReadingAt(CMTime position);
     IplImage* retrieveFramePixelBuffer();
+    int getPreferredOrientationDegrees() const;
 
     CMTime mFrameTimestamp;
     size_t mFrameNum;
@@ -207,30 +215,35 @@ class CvVideoWriter_AVFoundation : public CvVideoWriter {
 
 /****************** Implementation of interface functions ********************/
 
-
-CvCapture* cvCreateFileCapture_AVFoundation(const char* filename) {
-    CvCaptureFile *retval = new CvCaptureFile(filename);
-
+cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_file(const std::string &filename)
+{
+    CvCaptureFile *retval = new CvCaptureFile(filename.c_str());
     if(retval->didStart())
-        return retval;
+        return makePtr<LegacyCapture>(retval);
     delete retval;
     return NULL;
+
 }
 
-CvCapture* cvCreateCameraCapture_AVFoundation(int index ) {
-    CvCapture* retval = new CvCaptureCAM(index);
-    if (!((CvCaptureCAM *)retval)->didStart())
-        cvReleaseCapture(&retval);
-    return retval;
+cv::Ptr<cv::IVideoCapture> cv::create_AVFoundation_capture_cam(int index)
+{
+    CvCaptureCAM* retval = new CvCaptureCAM(index);
+    if (retval->didStart())
+        return cv::makePtr<cv::LegacyCapture>(retval);
+    delete retval;
+    return 0;
 }
 
-CvVideoWriter* cvCreateVideoWriter_AVFoundation(const char* filename, int fourcc,
-                                     double fps, CvSize frame_size,
-                                     int is_color) {
-    CvVideoWriter_AVFoundation* wrt = new CvVideoWriter_AVFoundation(filename, fourcc, fps, frame_size, is_color);
+cv::Ptr<cv::IVideoWriter> cv::create_AVFoundation_writer(const std::string& filename, int fourcc,
+                                                         double fps, const cv::Size& frameSize,
+                                                         const cv::VideoWriterParameters& params)
+{
+    CvSize sz = { frameSize.width, frameSize.height };
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
+    CvVideoWriter_AVFoundation* wrt = new CvVideoWriter_AVFoundation(filename, fourcc, fps, sz, isColor);
     if (wrt->isOpened())
     {
-        return wrt;
+        return cv::makePtr<cv::LegacyWriter>(wrt);
     }
     delete wrt;
     return NULL;
@@ -684,7 +697,7 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
         mDeviceImage->imageData = reinterpret_cast<char *>(baseaddress);
         mDeviceImage->imageSize = int(rowBytes*height);
 
-        cvCvtColor(mDeviceImage, mOutImage, CV_BGRA2BGR);
+        cvtColor(cv::cvarrToMat(mDeviceImage), cv::cvarrToMat(mOutImage), cv::COLOR_BGRA2BGR);
     } else if ( pixelFormat == kCVPixelFormatType_422YpCbCr8 ) {
         if ( currSize != width*3*height ) {
             currSize = width*3*height;
@@ -703,7 +716,7 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
         mDeviceImage->imageData = reinterpret_cast<char *>(baseaddress);
         mDeviceImage->imageSize = int(rowBytes*height);
 
-        cvCvtColor(mDeviceImage, mOutImage, CV_YUV2BGR_UYVY);
+        cvtColor(cv::cvarrToMat(mDeviceImage), cv::cvarrToMat(mOutImage), cv::COLOR_YUV2BGR_UYVY);
     } else {
         fprintf(stderr, "OpenCV: unknown pixel format 0x%08X\n", pixelFormat);
         CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
@@ -814,7 +827,7 @@ bool CvCaptureFile::setupReadingAt(CMTime position) {
     // Capture in a pixel format that can be converted efficiently to the output mode.
     OSType pixelFormat;
     if (mMode == CV_CAP_MODE_BGR || mMode == CV_CAP_MODE_RGB) {
-        // For CV_CAP_MODE_BGR, read frames as BGRA (AV Foundation's YUV->RGB conversion is slightly faster than OpenCV's CV_YUV2BGR_YV12)
+        // For CV_CAP_MODE_BGR, read frames as BGRA (AV Foundation's YUV->RGB conversion is slightly faster than OpenCV's cv::COLOR_YUV2BGR_YV12)
         // kCVPixelFormatType_32ABGR is reportedly faster on OS X, but OpenCV doesn't have a CV_ABGR2BGR conversion.
         // kCVPixelFormatType_24RGB is significantly slower than kCVPixelFormatType_32BGRA.
         pixelFormat = kCVPixelFormatType_32BGRA;
@@ -959,11 +972,11 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         deviceChannels = 4;
 
         if (mMode == CV_CAP_MODE_BGR) {
-            cvtCode = CV_BGRA2BGR;
+            cvtCode = cv::COLOR_BGRA2BGR;
         } else if (mMode == CV_CAP_MODE_RGB) {
-            cvtCode = CV_BGRA2RGB;
+            cvtCode = cv::COLOR_BGRA2RGB;
         } else if (mMode == CV_CAP_MODE_GRAY) {
-            cvtCode = CV_BGRA2GRAY;
+            cvtCode = cv::COLOR_BGRA2GRAY;
         } else {
             CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
             CVBufferRelease(mGrabbedPixels);
@@ -975,11 +988,11 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         deviceChannels = 3;
 
         if (mMode == CV_CAP_MODE_BGR) {
-            cvtCode = CV_RGB2BGR;
+            cvtCode = cv::COLOR_RGB2BGR;
         } else if (mMode == CV_CAP_MODE_RGB) {
             cvtCode = 0;
         } else if (mMode == CV_CAP_MODE_GRAY) {
-            cvtCode = CV_RGB2GRAY;
+            cvtCode = cv::COLOR_RGB2GRAY;
         } else {
             CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
             CVBufferRelease(mGrabbedPixels);
@@ -991,11 +1004,11 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         deviceChannels = 2;
 
         if (mMode == CV_CAP_MODE_BGR) {
-            cvtCode = CV_YUV2BGR_UYVY;
+            cvtCode = cv::COLOR_YUV2BGR_UYVY;
         } else if (mMode == CV_CAP_MODE_RGB) {
-            cvtCode = CV_YUV2RGB_UYVY;
+            cvtCode = cv::COLOR_YUV2RGB_UYVY;
         } else if (mMode == CV_CAP_MODE_GRAY) {
-            cvtCode = CV_YUV2GRAY_UYVY;
+            cvtCode = cv::COLOR_YUV2GRAY_UYVY;
         } else if (mMode == CV_CAP_MODE_YUYV) {
             cvtCode = -1;    // Copy
         } else {
@@ -1007,17 +1020,17 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         }
     } else if ( pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange ||   // 420v
                 pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange ) {   // 420f
-        // cvCvtColor(CV_YUV2GRAY_420) is expecting a single buffer with both the Y plane and the CrCb planes.
-        // So, lie about the height of the buffer.  cvCvtColor(CV_YUV2GRAY_420) will only read the first 2/3 of it.
+        // cvtColor(cv::COLOR_YUV2GRAY_420) is expecting a single buffer with both the Y plane and the CrCb planes.
+        // So, lie about the height of the buffer.  cvtColor(cv::COLOR_YUV2GRAY_420) will only read the first 2/3 of it.
         height = height * 3 / 2;
         deviceChannels = 1;
 
         if (mMode == CV_CAP_MODE_BGR) {
-            cvtCode = CV_YUV2BGR_YV12;
+            cvtCode = cv::COLOR_YUV2BGR_YV12;
         } else if (mMode == CV_CAP_MODE_RGB) {
-            cvtCode = CV_YUV2RGB_YV12;
+            cvtCode = cv::COLOR_YUV2RGB_YV12;
         } else if (mMode == CV_CAP_MODE_GRAY) {
-            cvtCode = CV_YUV2GRAY_420;
+            cvtCode = cv::COLOR_YUV2GRAY_420;
         } else {
             CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
             CVBufferRelease(mGrabbedPixels);
@@ -1050,7 +1063,7 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         // Copy.
         cv::cvarrToMat(mDeviceImage).copyTo(cv::cvarrToMat(mOutImage));
     } else {
-        cvCvtColor(mDeviceImage, mOutImage, cvtCode);
+        cvtColor(cv::cvarrToMat(mDeviceImage), cv::cvarrToMat(mOutImage), cvtCode);
     }
 
 
@@ -1061,6 +1074,13 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
     return mOutImage;
 }
 
+int CvCaptureFile::getPreferredOrientationDegrees() const {
+    if (mAssetTrack == nil) return 0;
+
+    CGAffineTransform transform = mAssetTrack.preferredTransform;
+    double radians = atan2(transform.b, transform.a);
+    return static_cast<int>(round(radians * 180 / M_PI));
+}
 
 IplImage* CvCaptureFile::retrieveFrame(int) {
     return retrieveFramePixelBuffer();
@@ -1090,8 +1110,10 @@ double CvCaptureFile::getProperty(int property_id) const{
             return round((t.value * mAssetTrack.nominalFrameRate) / double(t.timescale));
         case CV_CAP_PROP_FORMAT:
             return mFormat;
-        case CV_CAP_PROP_MODE:
+        case CV_CAP_PROP_FOURCC:
             return mMode;
+        case cv::CAP_PROP_ORIENTATION_META:
+            return getPreferredOrientationDegrees();
         default:
             break;
     }
@@ -1121,8 +1143,8 @@ bool CvCaptureFile::setProperty(int property_id, double value) {
             t.value = round(t.value * value);
             retval = setupReadingAt(t);
             break;
-        case CV_CAP_PROP_MODE:
-            int mode;
+        case CV_CAP_PROP_FOURCC:
+            uint32_t mode;
             mode = cvRound(value);
             if (mMode == mode) {
                 retval = true;
@@ -1198,13 +1220,23 @@ CvVideoWriter_AVFoundation::CvVideoWriter_AVFoundation(const std::string &filena
         is_good = false;
     }
 
-    // Two codec supported AVVideoCodecH264 AVVideoCodecJPEG
+    // Three codec supported AVVideoCodecH264 AVVideoCodecJPEG AVVideoCodecTypeHEVC
     // On iPhone 3G H264 is not supported.
     if (fourcc == CV_FOURCC('J','P','E','G') || fourcc == CV_FOURCC('j','p','e','g') ||
-            fourcc == CV_FOURCC('M','J','P','G') || fourcc == CV_FOURCC('m','j','p','g') ){
+            fourcc == CV_FOURCC('M','J','P','G') || fourcc == CV_FOURCC('m','j','p','g')){
         codec = [AVVideoCodecJPEG copy]; // Use JPEG codec if specified, otherwise H264
     }else if(fourcc == CV_FOURCC('H','2','6','4') || fourcc == CV_FOURCC('a','v','c','1')){
             codec = [AVVideoCodecH264 copy];
+    // Available since macOS 10.13
+#if defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300
+    }else if(fourcc == CV_FOURCC('H','2','6','5') || fourcc == CV_FOURCC('h','v','c','1') ||
+            fourcc == CV_FOURCC('H','E','V','C') || fourcc == CV_FOURCC('h','e','v','c')){
+        if (@available(macOS 10.13, *)) {
+            codec = [AVVideoCodecTypeHEVC copy];
+        } else {
+            is_good = false;
+        }
+#endif
     }else{
         is_good = false;
     }
@@ -1320,10 +1352,10 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
 
     if (movieColor) {
         //assert(iplimage->nChannels == 3);
-        cvCvtColor(iplimage, argbimage, CV_BGR2BGRA);
+        cvtColor(cv::cvarrToMat(iplimage), cv::cvarrToMat(argbimage), cv::COLOR_BGR2BGRA);
     }else{
         //assert(iplimage->nChannels == 1);
-        cvCvtColor(iplimage, argbimage, CV_GRAY2BGRA);
+        cvtColor(cv::cvarrToMat(iplimage), cv::cvarrToMat(argbimage), cv::COLOR_GRAY2BGRA);
     }
     //IplImage -> CGImage conversion
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
@@ -1370,3 +1402,5 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
     }
 
 }
+
+#pragma clang diagnostic pop

@@ -305,11 +305,6 @@ void medianBlur( InputArray _src0, OutputArray _dst, int ksize )
 
     //CV_IPP_RUN_FAST(ipp_medianFilter(src0, dst, ksize));
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::medianBlur(src0, dst, ksize))
-        return;
-#endif
-
     CV_CPU_DISPATCH(medianBlur, (src0, dst, ksize),
         CV_CPU_DISPATCH_MODES_ALL);
 }

@@ -1,8 +1,15 @@
 Convex Hull {#tutorial_hull}
 ===========
 
+@tableofcontents
+
 @prev_tutorial{tutorial_find_contours}
 @next_tutorial{tutorial_bounding_rects_circles}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -19,19 +26,19 @@ Code
 
 @add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ShapeDescriptors/hull_demo.cpp)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/ShapeDescriptors/hull_demo.cpp)
 @include samples/cpp/tutorial_code/ShapeDescriptors/hull_demo.cpp
 @end_toggle
 
 @add_toggle_java
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ShapeDescriptors/hull/HullDemo.java)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/ShapeDescriptors/hull/HullDemo.java)
 @include samples/java/tutorial_code/ShapeDescriptors/hull/HullDemo.java
 @end_toggle
 
 @add_toggle_python
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/ShapeDescriptors/hull/hull_demo.py)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/ShapeDescriptors/hull/hull_demo.py)
 @include samples/python/tutorial_code/ShapeDescriptors/hull/hull_demo.py
 @end_toggle
 

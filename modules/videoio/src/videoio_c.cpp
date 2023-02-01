@@ -3,65 +3,22 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "precomp.hpp"
-
+#include "opencv2/videoio/registry.hpp"
 #include "videoio_registry.hpp"
 
 using namespace cv;
 
 // Legacy C-like API
 
-CV_IMPL CvCapture* cvCreateCameraCapture(int index)
+CV_IMPL CvCapture* cvCreateCameraCapture(int)
 {
-    // interpret preferred interface (0 = autodetect)
-    int apiPreference = (index / 100) * 100;
-    if (apiPreference)
-    {
-        index %= 100;
-    }
-
-    const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByIndex();
-    for (size_t i = 0; i < backends.size(); i++)
-    {
-        const VideoBackendInfo& info = backends[i];
-        if (apiPreference == CAP_ANY || apiPreference == info.id)
-        {
-            CvCapture* capture = NULL;
-            Ptr<IVideoCapture> icap; // unused
-            VideoCapture_create(capture, icap, info.id, index);
-            if (capture)
-            {
-                return capture;
-            }
-            if (!icap.empty())
-            {
-                CV_LOG_WARNING(NULL, "cvCreateFileCaptureWithPreference: backend " << info.name << " doesn't support legacy API anymore.")
-            }
-        }
-    }
+    CV_LOG_WARNING(NULL, "cvCreateCameraCapture doesn't support legacy API anymore.")
     return NULL;
 }
 
-CV_IMPL CvCapture* cvCreateFileCaptureWithPreference(const char* filename, int apiPreference)
+CV_IMPL CvCapture* cvCreateFileCaptureWithPreference(const char*, int)
 {
-    const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByFilename();
-    for (size_t i = 0; i < backends.size(); i++)
-    {
-        const VideoBackendInfo& info = backends[i];
-        if (apiPreference == CAP_ANY || apiPreference == info.id)
-        {
-            CvCapture* capture = NULL;
-            Ptr<IVideoCapture> icap; // unused
-            VideoCapture_create(capture, icap, info.id, filename);
-            if (capture)
-            {
-                return capture;
-            }
-            if (!icap.empty())
-            {
-                CV_LOG_WARNING(NULL, "cvCreateFileCaptureWithPreference: backend " << info.name << " doesn't support legacy API anymore.")
-            }
-        }
-    }
+    CV_LOG_WARNING(NULL, "cvCreateFileCaptureWithPreference doesn't support legacy API anymore.")
     return NULL;
 }
 
@@ -70,27 +27,9 @@ CV_IMPL CvCapture* cvCreateFileCapture(const char * filename)
     return cvCreateFileCaptureWithPreference(filename, CAP_ANY);
 }
 
-CV_IMPL CvVideoWriter* cvCreateVideoWriter(const char* filename, int fourcc,
-                                           double fps, CvSize frameSize, int is_color)
+CV_IMPL CvVideoWriter* cvCreateVideoWriter(const char*, int, double, CvSize, int)
 {
-    const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_Writer();
-    for (size_t i = 0; i < backends.size(); i++)
-    {
-        const VideoBackendInfo& info = backends[i];
-        {
-            CvVideoWriter* writer_ = NULL;
-            Ptr<IVideoWriter> iwriter;  // unused
-            VideoWriter_create(writer_, iwriter, info.id, filename, fourcc, fps, frameSize, is_color != 0);
-            if (writer_)
-            {
-                return writer_;
-            }
-            if (!iwriter.empty())
-            {
-                CV_LOG_WARNING(NULL, "cvCreateVideoWriter: backend " << info.name << " doesn't support legacy API anymore.")
-            }
-        }
-    }
+    CV_LOG_WARNING(NULL, "cvCreateVideoWriter doesn't support legacy API anymore.")
     return NULL;
 }
 

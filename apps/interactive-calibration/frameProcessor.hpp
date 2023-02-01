@@ -7,9 +7,7 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
-#ifdef HAVE_OPENCV_ARUCO
-#include <opencv2/aruco/charuco.hpp>
-#endif
+#include <opencv2/objdetect.hpp>
 
 #include "calibCommon.hpp"
 #include "calibController.hpp"
@@ -39,10 +37,9 @@ protected:
     cv::Mat mCurrentCharucoIds;
 
     cv::Ptr<cv::SimpleBlobDetector> mBlobDetectorPtr;
-#ifdef HAVE_OPENCV_ARUCO
-    cv::Ptr<cv::aruco::Dictionary> mArucoDictionary;
+    cv::aruco::Dictionary mArucoDictionary;
     cv::Ptr<cv::aruco::CharucoBoard> mCharucoBoard;
-#endif
+    cv::Ptr<cv::aruco::CharucoDetector> detector;
 
     int mNeededFramesNum;
     unsigned mDelayBetweenCaptures;
@@ -50,9 +47,12 @@ protected:
     double mMaxTemplateOffset;
     float mSquareSize;
     float mTemplDist;
+    bool mSaveFrames;
+    float mZoom;
 
     bool detectAndParseChessboard(const cv::Mat& frame);
     bool detectAndParseChAruco(const cv::Mat& frame);
+    bool detectAndParseCircles(const cv::Mat& frame);
     bool detectAndParseACircles(const cv::Mat& frame);
     bool detectAndParseDualACircles(const cv::Mat& frame);
     void saveFrameData();

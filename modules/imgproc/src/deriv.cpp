@@ -384,7 +384,7 @@ static bool ocl_sepFilter3x3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
     char build_opts[1024];
-    sprintf(build_opts, "-D %s %s%s", borderMap[borderType],
+    snprintf(build_opts, sizeof(build_opts), "-D %s %s%s", borderMap[borderType],
             ocl::kernelToStr(kernelX, CV_32F, "KERNEL_MATRIX_X").c_str(),
             ocl::kernelToStr(kernelY, CV_32F, "KERNEL_MATRIX_Y").c_str());
 
@@ -684,7 +684,7 @@ static bool ocl_Laplacian3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
     char build_opts[1024];
-    sprintf(build_opts, "-D %s %s", borderMap[borderType],
+    snprintf(build_opts, sizeof(build_opts), "-D %s %s", borderMap[borderType],
             ocl::kernelToStr(kernel, CV_32F, "KERNEL_MATRIX").c_str());
 
     ocl::Kernel k("laplacian3_8UC1_cols16_rows2", cv::ocl::imgproc::laplacian3_oclsrc, build_opts);
@@ -813,20 +813,6 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
     }
 
     CV_IPP_RUN(!(cv::ocl::isOpenCLActivated() && _dst.isUMat()), ipp_Laplacian(_src, _dst, ksize, scale, delta, borderType));
-
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && scale == 1.0 && delta == 0)
-    {
-        Mat src = _src.getMat(), dst = _dst.getMat();
-        if (ksize == 1 && tegra::laplace1(src, dst, borderType))
-            return;
-        if (ksize == 3 && tegra::laplace3(src, dst, borderType))
-            return;
-        if (ksize == 5 && tegra::laplace5(src, dst, borderType))
-            return;
-    }
-#endif
 
     if( ksize == 1 || ksize == 3 )
     {

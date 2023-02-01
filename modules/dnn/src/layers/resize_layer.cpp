@@ -6,7 +6,9 @@
 // Third party copyrights are property of their respective owners.
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
+#include "../op_cann.hpp"
 #include <opencv2/imgproc.hpp>
 
 #ifdef HAVE_DNN_NGRAPH
@@ -16,6 +18,11 @@
 #else
 #include <ngraph/op/experimental/layers/interpolate.hpp>
 #endif
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/resize.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv { namespace dnn {
@@ -43,6 +50,8 @@ public:
 
         alignCorners = params.get<bool>("align_corners", false);
         halfPixelCenters = params.get<bool>("half_pixel_centers", false);
+        if (interpolation == "opencv_linear")
+            halfPixelCenters = true;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -56,6 +65,7 @@ public:
             outputs[0][2] = zoomFactorHeight > 0 ? (outputs[0][2] * zoomFactorHeight) : outHeight;
             outputs[0][3] = zoomFactorWidth > 0 ? (outputs[0][3] * zoomFactorWidth) : outWidth;
         } else {
+            CV_CheckGE(inputs[1].size(), (size_t)4, "");
             outputs[0][2] = inputs[1][2];
             outputs[0][3] = inputs[1][3];
         }
@@ -65,6 +75,12 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_CUDA)
+            return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
+
+        if (backendId == DNN_BACKEND_CANN)
+            return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
+
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
@@ -122,8 +138,11 @@ public:
 
         Mat& inp = inputs[0];
         Mat& out = outputs[0];
-        if ((interpolation == "nearest" && !alignCorners && !halfPixelCenters) || interpolation == "opencv_linear" || (interpolation == "bilinear" && halfPixelCenters))
+        int depth = inp.depth();
+        if ((interpolation == "nearest" && !alignCorners && !halfPixelCenters) || (interpolation == "opencv_linear" && depth != CV_8S) ||
+            (interpolation == "bilinear" && halfPixelCenters && depth != CV_8S))
         {
+            // INTER_LINEAR Resize mode does not support INT8 inputs
             InterpolationFlags mode = interpolation == "nearest" ? INTER_NEAREST : INTER_LINEAR;
             for (size_t n = 0; n < inputs[0].size[0]; ++n)
             {
@@ -155,34 +174,66 @@ public:
                 widthOffset = 0.5f * scaleWidth;
             }
 
-            for (int y = 0; y < outHeight; ++y)
+            if (depth == CV_8S)
             {
-                float input_y = y * scaleHeight + heightOffset;
-                int y0 = halfPixelCenters ? std::floor(input_y) : lroundf(input_y);
-                y0 = std::min(y0, inpHeight - 1);
-
-                const float* inpData_row = inpPlanes.ptr<float>(y0);
-
-                for (int x = 0; x < outWidth; ++x)
+                for (int y = 0; y < outHeight; ++y)
                 {
-                    float input_x = x * scaleWidth + widthOffset;
-                    int x0 = halfPixelCenters ? std::floor(input_x) : lroundf(input_x);
-                    x0 = std::min(x0, inpWidth - 1);
+                    float input_y = y * scaleHeight + heightOffset;
+                    int y0 = halfPixelCenters ? std::floor(input_y) : lroundf(input_y);
+                    y0 = std::min(y0, inpHeight - 1);
 
-                    float* outData = outPlanes.ptr<float>(y, x);
-                    const float* inpData_row_c = inpData_row;
+                    const int8_t* inpData_row = inpPlanes.ptr<int8_t>(y0);
 
-                    for (int c = 0; c < numPlanes; ++c)
+                    for (int x = 0; x < outWidth; ++x)
                     {
-                        *outData = inpData_row_c[x0];
+                        float input_x = x * scaleWidth + widthOffset;
+                        int x0 = halfPixelCenters ? std::floor(input_x) : lroundf(input_x);
+                        x0 = std::min(x0, inpWidth - 1);
 
-                        inpData_row_c += inpSpatialSize;
-                        outData += outSpatialSize;
+                        int8_t* outData = outPlanes.ptr<int8_t>(y, x);
+                        const int8_t* inpData_row_c = inpData_row;
+
+                        for (int c = 0; c < numPlanes; ++c)
+                        {
+                            *outData = inpData_row_c[x0];
+
+                            inpData_row_c += inpSpatialSize;
+                            outData += outSpatialSize;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (int y = 0; y < outHeight; ++y)
+                {
+                    float input_y = y * scaleHeight + heightOffset;
+                    int y0 = halfPixelCenters ? std::floor(input_y) : lroundf(input_y);
+                    y0 = std::min(y0, inpHeight - 1);
+
+                    const float* inpData_row = inpPlanes.ptr<float>(y0);
+
+                    for (int x = 0; x < outWidth; ++x)
+                    {
+                        float input_x = x * scaleWidth + widthOffset;
+                        int x0 = halfPixelCenters ? std::floor(input_x) : lroundf(input_x);
+                        x0 = std::min(x0, inpWidth - 1);
+
+                        float* outData = outPlanes.ptr<float>(y, x);
+                        const float* inpData_row_c = inpData_row;
+
+                        for (int c = 0; c < numPlanes; ++c)
+                        {
+                            *outData = inpData_row_c[x0];
+
+                            inpData_row_c += inpSpatialSize;
+                            outData += outSpatialSize;
+                        }
                     }
                 }
             }
         }
-        else if (interpolation == "bilinear")
+        else if (interpolation == "bilinear" || interpolation == "opencv_linear")
         {
             const int inpHeight = inp.size[2];
             const int inpWidth = inp.size[3];
@@ -193,31 +244,65 @@ public:
 
             Mat inpPlanes = inp.reshape(1, numPlanes * inpHeight);
             Mat outPlanes = out.reshape(1, numPlanes * outHeight);
-            for (int y = 0; y < outHeight; ++y)
+            if (depth == CV_8S)
             {
-                float input_y = y * scaleHeight;
-                int y0 = static_cast<int>(input_y);
-                const float* inpData_row0 = inpPlanes.ptr<float>(y0);
-                const float* inpData_row1 = inpPlanes.ptr<float>(std::min(y0 + 1, inpHeight - 1));
-                for (int x = 0; x < outWidth; ++x)
+                for (int y = 0; y < outHeight; ++y)
                 {
-                    float input_x = x * scaleWidth;
-                    int x0 = static_cast<int>(input_x);
-                    int x1 = std::min(x0 + 1, inpWidth - 1);
-
-                    float* outData = outPlanes.ptr<float>(y, x);
-                    const float* inpData_row0_c = inpData_row0;
-                    const float* inpData_row1_c = inpData_row1;
-                    for (int c = 0; c < numPlanes; ++c)
+                    float input_y = halfPixelCenters ? std::max((y + 0.5f) * scaleHeight - 0.5f, 0.0f) : y * scaleHeight;
+                    int y0 = static_cast<int>(input_y);
+                    const int8_t* inpData_row0 = inpPlanes.ptr<int8_t>(y0);
+                    const int8_t* inpData_row1 = inpPlanes.ptr<int8_t>(std::min(y0 + 1, inpHeight - 1));
+                    for (int x = 0; x < outWidth; ++x)
                     {
-                        *outData = inpData_row0_c[x0] +
-                            (input_y - y0) * (inpData_row1_c[x0] - inpData_row0_c[x0]) +
-                            (input_x - x0) * (inpData_row0_c[x1] - inpData_row0_c[x0] +
-                            (input_y - y0) * (inpData_row1_c[x1] - inpData_row0_c[x1] - inpData_row1_c[x0] + inpData_row0_c[x0]));
+                        float input_x = halfPixelCenters ? std::max((x + 0.5f) * scaleWidth - 0.5f, 0.0f) : x * scaleWidth;
+                        int x0 = static_cast<int>(input_x);
+                        int x1 = std::min(x0 + 1, inpWidth - 1);
 
-                        inpData_row0_c += inpSpatialSize;
-                        inpData_row1_c += inpSpatialSize;
-                        outData += outSpatialSize;
+                        int8_t* outData = outPlanes.ptr<int8_t>(y, x);
+                        const int8_t* inpData_row0_c = inpData_row0;
+                        const int8_t* inpData_row1_c = inpData_row1;
+                        for (int c = 0; c < numPlanes; ++c)
+                        {
+                            *outData = static_cast<int8_t>(inpData_row0_c[x0] +
+                                (input_y - y0) * (inpData_row1_c[x0] - inpData_row0_c[x0]) +
+                                (input_x - x0) * (inpData_row0_c[x1] - inpData_row0_c[x0] +
+                                (input_y - y0) * (inpData_row1_c[x1] - inpData_row0_c[x1] - inpData_row1_c[x0] + inpData_row0_c[x0])));
+
+                            inpData_row0_c += inpSpatialSize;
+                            inpData_row1_c += inpSpatialSize;
+                            outData += outSpatialSize;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (int y = 0; y < outHeight; ++y)
+                {
+                    float input_y = y * scaleHeight;
+                    int y0 = static_cast<int>(input_y);
+                    const float* inpData_row0 = inpPlanes.ptr<float>(y0);
+                    const float* inpData_row1 = inpPlanes.ptr<float>(std::min(y0 + 1, inpHeight - 1));
+                    for (int x = 0; x < outWidth; ++x)
+                    {
+                        float input_x = x * scaleWidth;
+                        int x0 = static_cast<int>(input_x);
+                        int x1 = std::min(x0 + 1, inpWidth - 1);
+
+                        float* outData = outPlanes.ptr<float>(y, x);
+                        const float* inpData_row0_c = inpData_row0;
+                        const float* inpData_row1_c = inpData_row1;
+                        for (int c = 0; c < numPlanes; ++c)
+                        {
+                            *outData = inpData_row0_c[x0] +
+                                (input_y - y0) * (inpData_row1_c[x0] - inpData_row0_c[x0]) +
+                                (input_x - x0) * (inpData_row0_c[x1] - inpData_row0_c[x0] +
+                                (input_y - y0) * (inpData_row1_c[x1] - inpData_row0_c[x1] - inpData_row1_c[x0] + inpData_row0_c[x0]));
+
+                            inpData_row0_c += inpSpatialSize;
+                            inpData_row1_c += inpSpatialSize;
+                            outData += outSpatialSize;
+                        }
                     }
                 }
             }
@@ -226,6 +311,67 @@ public:
             CV_Error(Error::StsNotImplemented, "Unknown interpolation: " + interpolation);
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x_desc = x->getTensorDesc();
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto output_y_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+
+        // create operator
+        std::string op_name = cv::format("resize_%d", index);
+
+        if (interpolation == "nearest")
+        {
+            auto op = std::make_shared<ge::op::ResizeNearestNeighborV2>(op_name);
+
+            // set attributes
+            op->set_attr_align_corners(alignCorners);
+            op->set_attr_half_pixel_centers(halfPixelCenters);
+
+            // set inputs : x
+            op->set_input_x_by_name(*op_x, "y");
+            op->update_input_desc_x(*x_desc);
+            // set inputs : size
+            std::vector<int> shape_of_size_mat{2};
+            Mat size_mat(2, 1, CV_32S, Scalar(outHeight, outWidth));
+            auto op_const_size = std::make_shared<CannConstOp>(size_mat.data, size_mat.type(), shape_of_size_mat, cv::format("%s_size", op_name.c_str()));
+            op->set_input_size(*(op_const_size->getOp()));
+            op->update_input_desc_size(*(op_const_size->getTensorDesc()));
+
+            // set outputs
+            op->update_output_desc_y(*output_y_desc);
+
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
+        else if (interpolation == "opencv_linear" || interpolation == "bilinear")
+        {
+            auto op = std::make_shared<ge::op::ResizeBilinearV2>(op_name);
+
+            // set attributes
+            op->set_attr_align_corners(alignCorners);
+            op->set_attr_half_pixel_centers(halfPixelCenters);
+
+            // set inputs : x
+            op->set_input_x_by_name(*op_x, "y");
+            op->update_input_desc_x(*x_desc);
+            // set inputs : size
+            std::vector<int> shape_of_size_mat{2};
+            Mat size_mat(2, 1, CV_32S, Scalar(outHeight, outWidth));
+            auto op_const_size = std::make_shared<CannConstOp>(size_mat.data, size_mat.type(), shape_of_size_mat, cv::format("%s_size", op_name.c_str()));
+            op->set_input_size(*(op_const_size->getOp()));
+            op->update_input_desc_size(*(op_const_size->getTensorDesc()));
+
+            // set outputs
+            op->update_output_desc_y(*output_y_desc);
+
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported interpolation by CANN backend: " + interpolation);
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -255,6 +401,24 @@ public:
 #else
         ngraph::op::v4::Interpolate::InterpolateAttrs attrs;
 
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+        if (interpolation == "nearest") {
+            attrs.mode = ngraph::op::v4::Interpolate::InterpolateMode::NEAREST;
+            attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::HALF_PIXEL;
+        } else if (interpolation == "bilinear") {
+            attrs.mode = ngraph::op::v4::Interpolate::InterpolateMode::LINEAR_ONNX;
+            attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::ASYMMETRIC;
+        } else {
+            CV_Error(Error::StsNotImplemented, format("Unsupported interpolation: %s", interpolation.c_str()));
+        }
+        attrs.shape_calculation_mode = ngraph::op::v4::Interpolate::ShapeCalcMode::SIZES;
+
+        if (alignCorners) {
+            attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::ALIGN_CORNERS;
+        }
+
+        attrs.nearest_mode = ngraph::op::v4::Interpolate::NearestMode::ROUND_PREFER_FLOOR;
+#else
         if (interpolation == "nearest") {
             attrs.mode = ngraph::op::v4::Interpolate::InterpolateMode::nearest;
             attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::half_pixel;
@@ -271,6 +435,7 @@ public:
         }
 
         attrs.nearest_mode = ngraph::op::v4::Interpolate::NearestMode::round_prefer_floor;
+#endif // OpenVINO >= 2022.1
 
         std::vector<int64_t> shape = {outHeight, outWidth};
         auto out_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, shape.data());
@@ -286,6 +451,47 @@ public:
         return Ptr<BackendNode>(new InfEngineNgraphNode(interp));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        cuda4dnn::ResizeConfiguration config;
+        if (interpolation == "nearest")
+        {
+            config.type = InterpolationType::NEAREST_NEIGHBOUR;
+            config.align_corners = alignCorners;
+            config.half_pixel_centers = halfPixelCenters;
+        }
+        else if (interpolation == "bilinear")
+        {
+            config.type = InterpolationType::BILINEAR;
+            config.align_corners = alignCorners;
+            config.half_pixel_centers = halfPixelCenters;
+        }
+        else if (interpolation == "opencv_linear")
+        {
+            config.type = InterpolationType::BILINEAR;
+            config.align_corners = false;
+            config.half_pixel_centers = true;
+        }
+        else
+            CV_Error(Error::StsNotImplemented, "Requested interpolation mode is not available in resize layer.");
+        return make_cuda_node<cuda4dnn::ResizeOp>(preferableTarget, std::move(context->stream), config);
+    }
+#endif
+
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        return true;
+    }
 
 protected:
     int outWidth, outHeight;

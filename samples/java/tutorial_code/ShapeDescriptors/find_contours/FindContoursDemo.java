@@ -112,7 +112,7 @@ class FindContours {
         Mat drawing = Mat.zeros(cannyOutput.size(), CvType.CV_8UC3);
         for (int i = 0; i < contours.size(); i++) {
             Scalar color = new Scalar(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256));
-            Imgproc.drawContours(drawing, contours, i, color, 2, Core.LINE_8, hierarchy, 0, new Point());
+            Imgproc.drawContours(drawing, contours, i, color, 2, Imgproc.LINE_8, hierarchy, 0, new Point());
         }
 
         imgContoursLabel.setIcon(new ImageIcon(HighGui.toBufferedImage(drawing)));

@@ -76,9 +76,27 @@ OCL_TEST_P(UMatExpr, Ones)
     }
 }
 
+//////////////////////////////// with usageFlags /////////////////////////////////////////////////
+
+OCL_TEST_P(UMatExpr, WithUsageFlags)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        UMat u0 = UMat::zeros(size, type, cv::USAGE_ALLOCATE_HOST_MEMORY);
+        UMat u1 = UMat::ones(size, type, cv::USAGE_ALLOCATE_HOST_MEMORY);
+        UMat u8 = UMat::eye(size, type, cv::USAGE_ALLOCATE_HOST_MEMORY);
+
+        EXPECT_EQ(cv::USAGE_ALLOCATE_HOST_MEMORY, u0.usageFlags);
+        EXPECT_EQ(cv::USAGE_ALLOCATE_HOST_MEMORY, u1.usageFlags);
+        EXPECT_EQ(cv::USAGE_ALLOCATE_HOST_MEMORY, u8.usageFlags);
+    }
+}
+
 //////////////////////////////// Instantiation /////////////////////////////////////////////////
 
-OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, UMatExpr, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS));
+OCL_INSTANTIATE_TEST_CASE_P(MatrixOperation, UMatExpr, Combine(OCL_ALL_DEPTHS_16F, OCL_ALL_CHANNELS));
 
 } } // namespace opencv_test::ocl
 

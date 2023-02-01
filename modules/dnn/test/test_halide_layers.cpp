@@ -196,6 +196,9 @@ TEST_P(Deconvolution, Accuracy)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
 #endif
 
+    if (targetId == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+
     int sz[] = {inChannels, outChannels / group, kernel.height, kernel.width};
     Mat weights(4, &sz[0], CV_32F);
     randu(weights, -1.0f, 1.0f);
@@ -460,11 +463,14 @@ TEST_P(FullyConnected, Accuracy)
         l1 = 0.015;
         lInf = 0.025;
     }
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL_FP16)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL_FP16)
     {
         l1 = 0.01;
     }
 #endif
+    if (targetId == DNN_TARGET_CUDA_FP16)
+        l1 = 0.015;
+
     test(lp, input, backendId, targetId, false, l1, lInf);
 }
 
@@ -548,7 +554,7 @@ TEST_P(Test_Halide_layers, MaxPoolUnpool)
 ////////////////////////////////////////////////////////////////////////////////
 static const int kNumChannels = 3;
 
-void testInPlaceActivation(LayerParams& lp, Backend backendId, Target targetId)
+void testInPlaceActivation(LayerParams& lp, Backend backendId, Target targetId, double l1 = 0.0, double lInf = 0.0)
 {
     EXPECT_FALSE(lp.name.empty());
 
@@ -568,7 +574,7 @@ void testInPlaceActivation(LayerParams& lp, Backend backendId, Target targetId)
 
     int sz[] = {1, kNumChannels, 10, 10};
     Mat input(4, &sz[0], CV_32F);
-    test(input, net, backendId, targetId);
+    test(input, net, backendId, targetId, false, true, l1, lInf);
 }
 
 typedef TestWithParam<tuple<bool, bool, float, tuple<Backend, Target> > > BatchNorm;
@@ -933,7 +939,7 @@ TEST_P(Eltwise, Accuracy)
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Eltwise, Combine(
 /*input size*/ Values(Vec3i(1, 4, 5), Vec3i(2, 8, 6)),
-/*operation*/  Values("prod", "sum", "div", "max"),
+/*operation*/  Values("prod", "sum", "div", "max", "min"),
 /*num convs*/  Values(1, 2, 3),
 /*weighted(for sum only)*/ Bool(),
                dnnBackendsAndTargetsWithHalide()

@@ -49,8 +49,4 @@
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core.hpp"
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "opencv2/video/video_tegra.hpp"
-#endif
-
 #endif

@@ -130,7 +130,7 @@ PERF_TEST_P_(DNNTestNetwork, OpenFace)
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_HDDL))
         throw SkipTestException("");
 #endif
     processNet("dnn/openface_nn4.small2.v1.t7", "", "",
@@ -172,7 +172,7 @@ PERF_TEST_P_(DNNTestNetwork, DenseNet_121)
 PERF_TEST_P_(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
 {
     if (backend == DNN_BACKEND_HALIDE ||
-        (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD))
+        (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_HDDL)))
         throw SkipTestException("");
     // The same .caffemodel but modified .prototxt
     // See https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/src/openpose/pose/poseParameters.cpp
@@ -198,6 +198,7 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
@@ -220,6 +221,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv4)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     if (target == DNN_TARGET_MYRIAD)  // not enough resources
@@ -249,7 +251,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv4_tiny)
     cvtColor(sample, sample, COLOR_BGR2RGB);
     Mat inp;
     sample.convertTo(inp, CV_32FC3, 1.0f / 255, 0);
-    processNet("dnn/yolov4-tiny.weights", "dnn/yolov4-tiny.cfg", "", inp);
+    processNet("dnn/yolov4-tiny-2020-12.weights", "dnn/yolov4-tiny-2020-12.cfg", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)

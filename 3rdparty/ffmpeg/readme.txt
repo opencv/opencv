@@ -13,10 +13,10 @@
 
 * On Windows OpenCV uses pre-built ffmpeg binaries, built with proper flags (without GPL components) and
   wrapped with simple, stable OpenCV-compatible API.
-  The binaries are opencv_ffmpeg.dll (version for 32-bit Windows) and
-  opencv_ffmpeg_64.dll (version for 64-bit Windows).
+  The binaries are opencv_videoio_ffmpeg.dll (version for 32-bit Windows) and
+  opencv_videoio_ffmpeg_64.dll (version for 64-bit Windows).
 
-  The pre-built opencv_ffmpeg*.dll is:
+  The pre-built opencv_videoio_ffmpeg*.dll is:
   * LGPL library, not BSD libraries.
   * Loaded at runtime by opencv_videoio module.
     If it succeeds, ffmpeg can be used to decode/encode videos;
@@ -30,7 +30,7 @@
   Or you can specify location of binary file via OPENH264_LIBRARY environment variable.
 
   If LGPL/GPL software can not be supplied with your OpenCV-based product, simply exclude
-  opencv_ffmpeg*.dll from your distribution; OpenCV will stay fully functional except for the ability to
+  opencv_videoio_ffmpeg*.dll from your distribution; OpenCV will stay fully functional except for the ability to
   decode/encode videos using FFMPEG (though, it may still be able to do that using other API,
   such as Video for Windows, Windows Media Foundation or our self-contained motion jpeg codec).
 
