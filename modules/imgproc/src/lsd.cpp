@@ -955,11 +955,16 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
     v_tmp[2] = cv::Point2d(rec.x2 + dyhw, rec.y2 - dxhw);
     v_tmp[3] = cv::Point2d(rec.x1 + dyhw, rec.y1 - dxhw);
 
+    // Find the vertex with the smallest y coordinate (or the smallest x if there is a tie).
+    int offset = 0;
+    for (int i = 1; i < 4; ++i) {
+        if (AsmallerB_YoverX(v_tmp[i], v_tmp[offset])){
+            offset = i;
+        }
+    }
+
     // Rotate the vertices so that the first one is the one with the smallest y coordinate (or the smallest x if there is a tie).
     // The rest will be then ordered counterclockwise.
-    auto offset = std::min_element(v_tmp, v_tmp + 4, AsmallerB_YoverX) - v_tmp;
-
-    // Rotate the values without using std::rotate
     cv::Point2d ordered_y[4];
     for (int i = 0; i < 4; ++i) {
         ordered_y[i] = v_tmp[(i + offset) % 4];
