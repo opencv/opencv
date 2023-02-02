@@ -1256,10 +1256,8 @@ protected:
     virtual void correct( const Mat& F,
         const Mat &points1, const Mat &points2,
         Mat &newPoints1, Mat &newPoints2 ) = 0;
-#if 0  // not ported: #22519
     int compare(double* val, double* refVal, int len,
                 double eps, const char* paramName);
-#endif
 
     void run(int);
 };
@@ -1326,13 +1324,11 @@ bool CV_StereoCalibrationTest::checkPandROI( int test_case_idx, const Mat& M, co
     return true;
 }
 
-#if 0  // not ported: #22519
 int CV_StereoCalibrationTest::compare(double* val, double* ref_val, int len,
                                       double eps, const char* param_name )
 {
     return cvtest::cmpEps2_64f( ts, val, ref_val, len, eps, param_name );
 }
-#endif
 
 void CV_StereoCalibrationTest::run( int )
 {
@@ -1340,9 +1336,7 @@ void CV_StereoCalibrationTest::run( int )
     const double maxReprojErr = 2;
     const double maxScanlineDistErr_c = 3;
     const double maxScanlineDistErr_uc = 4;
-#if 0  // not ported: #22519
     const double maxDiffBtwRmsErrors = 1e-4;
-#endif
     FILE* f = 0;
 
     for(int testcase = 1; testcase <= ntests; testcase++)
@@ -1399,7 +1393,7 @@ void CV_StereoCalibrationTest::run( int )
             if(left.empty() || right.empty())
             {
                 ts->printf( cvtest::TS::LOG, "Can not load images %s and %s, testcase %d\n",
-                    imglist[i*2].c_str(), imglist[i*2+1].c_str(), testcase );
+                            imglist[i*2].c_str(), imglist[i*2+1].c_str(), testcase );
                 ts->set_failed_test_info( cvtest::TS::FAIL_MISSING_TEST_DATA );
                 return;
             }
@@ -1409,8 +1403,8 @@ void CV_StereoCalibrationTest::run( int )
             if(!found1 || !found2)
             {
                 ts->printf( cvtest::TS::LOG, "The function could not detect boards (%d x %d) on the images %s and %s, testcase %d\n",
-                    patternSize.width, patternSize.height,
-                    imglist[i*2].c_str(), imglist[i*2+1].c_str(), testcase );
+                            patternSize.width, patternSize.height,
+                            imglist[i*2].c_str(), imglist[i*2+1].c_str(), testcase );
                 ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
                 return;
             }
@@ -1444,17 +1438,16 @@ void CV_StereoCalibrationTest::run( int )
             + CALIB_FIX_K3
             + CALIB_FIX_K4 + CALIB_FIX_K5 //+ CV_CALIB_FIX_K6
             );
-#if 1  // not ported: #22519
-        rmsErrorFromStereoCalib /= nframes*npoints;
-#endif
+
+        /* rmsErrorFromStereoCalib /= nframes*npoints; */
         if (rmsErrorFromStereoCalib > maxReprojErr)
         {
             ts->printf(cvtest::TS::LOG, "The average reprojection error is too big (=%g), testcase %d\n",
-                rmsErrorFromStereoCalib, testcase);
+                       rmsErrorFromStereoCalib, testcase);
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
             return;
         }
-#if 0  // not ported: #22519
+
         double rmsErrorFromReprojectedImgPts = 0.0f;
         if (rotMats1.empty() || transVecs1.empty())
         {
@@ -1464,9 +1457,8 @@ void CV_StereoCalibrationTest::run( int )
         }
         else
         {
-            vector<Point2f > reprojectedImgPts[2] = {vector<Point2f>(nframes), vector<Point2f>(nframes)};
             size_t totalPoints = 0;
-            double totalErr[2] = { 0, 0 }, viewErr[2];
+            double totalErr[2] = { 0, 0 };
             for (size_t i = 0; i < objpt.size(); ++i) {
                 RotMat r1 = rotMats1[i];
                 Vec3d t1 = transVecs1[i];
@@ -1475,9 +1467,12 @@ void CV_StereoCalibrationTest::run( int )
                 Mat T2t = R * t1;
                 Vec3d t2 = Mat(T2t + T);
 
+                vector<Point2f> reprojectedImgPts[2] = { vector<Point2f>(nframes),
+                                                         vector<Point2f>(nframes) };
                 projectPoints(objpt[i], r1, t1, M1, D1, reprojectedImgPts[0]);
                 projectPoints(objpt[i], r2, t2, M2, D2, reprojectedImgPts[1]);
 
+                double viewErr[2];
                 viewErr[0] = cv::norm(imgpt1[i], reprojectedImgPts[0], cv::NORM_L2SQR);
                 viewErr[1] = cv::norm(imgpt2[i], reprojectedImgPts[1], cv::NORM_L2SQR);
 
@@ -1490,16 +1485,15 @@ void CV_StereoCalibrationTest::run( int )
                 rmsErrorPerViewFromReprojectedImgPts2[i] = sqrt(viewErr[1] / n);
             }
             rmsErrorFromReprojectedImgPts = std::sqrt((totalErr[0] + totalErr[1]) / (2 * totalPoints));
-
         }
 
         if (abs(rmsErrorFromStereoCalib - rmsErrorFromReprojectedImgPts) > maxDiffBtwRmsErrors)
         {
             ts->printf(cvtest::TS::LOG,
-                "The difference of the average reprojection error from the calibration function and from the "
-                "reprojected image points is too big (|%g - %g| = %g), testcase %d\n",
-                rmsErrorFromStereoCalib, rmsErrorFromReprojectedImgPts,
-                (rmsErrorFromStereoCalib - rmsErrorFromReprojectedImgPts), testcase);
+                       "The difference of the average reprojection error from the calibration function and from the "
+                       "reprojected image points is too big (|%g - %g| = %g), testcase %d\n",
+                       rmsErrorFromStereoCalib, rmsErrorFromReprojectedImgPts,
+                       (rmsErrorFromStereoCalib - rmsErrorFromReprojectedImgPts), testcase);
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
             return;
         }
@@ -1510,28 +1504,27 @@ void CV_StereoCalibrationTest::run( int )
         CV_Assert(rmsErrorPerView2.size() == (size_t)nframes);
         CV_Assert(rmsErrorPerViewFromReprojectedImgPts2.size() == (size_t)nframes);
         int code1 = compare(&rmsErrorPerView1[0], &rmsErrorPerViewFromReprojectedImgPts1[0], nframes,
-            maxDiffBtwRmsErrors, "per view errors vector");
+                            maxDiffBtwRmsErrors, "per view errors vector");
         int code2 = compare(&rmsErrorPerView2[0], &rmsErrorPerViewFromReprojectedImgPts2[0], nframes,
-            maxDiffBtwRmsErrors, "per view errors vector");
+                            maxDiffBtwRmsErrors, "per view errors vector");
         if (code1 < 0)
         {
             ts->printf(cvtest::TS::LOG,
-                "Some of the per view rms reprojection errors differ between calibration function and reprojected "
-                "points, for the first camera, testcase %d\n",
-                testcase);
+                       "Some of the per view rms reprojection errors differ between calibration function and reprojected "
+                       "points, for the first camera, testcase %d\n",
+                       testcase);
             ts->set_failed_test_info(code1);
             return;
         }
         if (code2 < 0)
         {
             ts->printf(cvtest::TS::LOG,
-                "Some of the per view rms reprojection errors differ between calibration function and reprojected "
-                "points, for the second camera, testcase %d\n",
-                testcase);
+                       "Some of the per view rms reprojection errors differ between calibration function and reprojected "
+                       "points, for the second camera, testcase %d\n",
+                       testcase);
             ts->set_failed_test_info(code2);
             return;
         }
-#endif
 
         Mat R1, R2, P1, P2, Q;
         Rect roi1, roi2;
@@ -1771,33 +1764,23 @@ protected:
 };
 
 double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<Point3f> >& objectPoints,
-                                             const vector<vector<Point2f> >& imagePoints1,
-                                             const vector<vector<Point2f> >& imagePoints2,
-                                             Mat& cameraMatrix1, Mat& distCoeffs1,
-                                             Mat& cameraMatrix2, Mat& distCoeffs2,
-                                             Size imageSize, Mat& R, Mat& T,
-                                             Mat& E, Mat& F,
-                                             std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
-                                             vector<double>& perViewErrors1, vector<double>& perViewErrors2,
-                                             TermCriteria criteria, int flags )
+                                                            const vector<vector<Point2f> >& imagePoints1,
+                                                            const vector<vector<Point2f> >& imagePoints2,
+                                                            Mat& cameraMatrix1, Mat& distCoeffs1,
+                                                            Mat& cameraMatrix2, Mat& distCoeffs2,
+                                                            Size imageSize, Mat& R, Mat& T,
+                                                            Mat& E, Mat& F,
+                                                            std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
+                                                            vector<double>& perViewErrors1, vector<double>& perViewErrors2,
+                                                            TermCriteria criteria, int flags )
 {
-#if 1  // not ported: #22519
-    CV_UNUSED(rotationMatrices);
-    CV_UNUSED(translationVectors);
-    CV_UNUSED(perViewErrors1);
-    CV_UNUSED(perViewErrors2);
-    return stereoCalibrate( objectPoints, imagePoints1, imagePoints2,
-                    cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2,
-                    imageSize, R, T, E, F, flags, criteria );
-#else
     vector<Mat> rvecs, tvecs;
     Mat perViewErrorsMat;
-
     double avgErr = stereoCalibrate( objectPoints, imagePoints1, imagePoints2,
-                    cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2,
-                    imageSize, R, T, E, F,
-                    rvecs, tvecs, perViewErrorsMat,
-                    flags, criteria );
+                                     cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2,
+                                     imageSize, R, T, E, F,
+                                     rvecs, tvecs, perViewErrorsMat,
+                                     flags, criteria );
 
     size_t numImgs = imagePoints1.size();
 
@@ -1810,10 +1793,10 @@ double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<
         perViewErrors2.resize(numImgs);
     }
 
-    for (size_t i = 0; i < numImgs; i++)
+    for (int i = 0; i < (int)numImgs; i++)
     {
-        perViewErrors1[i] = perViewErrorsMat.at<double>((int)i, 0);
-        perViewErrors2[i] = perViewErrorsMat.at<double>((int)i, 1);
+        perViewErrors1[i] = perViewErrorsMat.at<double>(i, 0);
+        perViewErrors2[i] = perViewErrorsMat.at<double>(i, 1);
     }
 
     if (rotationMatrices.size() != numImgs)
@@ -1825,7 +1808,7 @@ double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<
         translationVectors.resize(numImgs);
     }
 
-    for (size_t i = 0; i < numImgs; i++)
+    for( size_t i = 0; i < numImgs; i++ )
     {
         Mat r9;
         cv::Rodrigues( rvecs[i], r9 );
@@ -1833,7 +1816,6 @@ double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<
         tvecs[i].convertTo(translationVectors[i], CV_64F);
     }
     return avgErr;
-#endif
 }
 
 void CV_StereoCalibrationTest_CPP::rectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,

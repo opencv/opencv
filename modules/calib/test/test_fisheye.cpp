@@ -883,7 +883,7 @@ TEST_F(fisheyeTest, CalibrationWithDifferentPointsNumber)
         cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
 }
 
-#if 0  // not ported: #22519
+
 TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
 {
     const int n_images = 34;
@@ -924,10 +924,11 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
     flag |= cv::fisheye::CALIB_FIX_SKEW;
 
     double rmsErrorStereoCalib = cv::fisheye::stereoCalibrate(objectPoints, leftPoints, rightPoints,
-                    K1, D1, K2, D2, imageSize, theR, theT, rvecs, tvecs, flag,
-                    cv::TermCriteria(3, 12, 0));
+                                                              K1, D1, K2, D2, imageSize, theR, theT, rvecs, tvecs, flag,
+                                                              cv::TermCriteria(3, 12, 0));
 
-    std::vector<cv::Point2d> reprojectedImgPts[2] = {std::vector<cv::Point2d>(n_images), std::vector<cv::Point2d>(n_images)};
+    std::vector<cv::Point2d> reprojectedImgPts[2] = { std::vector<cv::Point2d>(n_images),
+                                                      std::vector<cv::Point2d>(n_images) };
     size_t totalPoints = 0;
     double totalMSError[2] = { 0, 0 };
     for( size_t i = 0; i < n_images; i++ )
@@ -969,12 +970,12 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
                           -0.006071257768382089, -0.006271040135405457, 0.9999619062167968);
     cv::Vec3d T_correct(-0.099402724724121, 0.00270812139265413, 0.00129330292472699);
     cv::Matx33d K1_correct (561.195925927249,                0, 621.282400272412,
-                                   0, 562.849402029712, 380.555455380889,
-                                   0,                0,                1);
+                                           0, 562.849402029712, 380.555455380889,
+                                           0,                0,                1);
 
-    cv::Matx33d K2_correct (560.395452535348,                0, 678.971652040359,
-                                   0,  561.90171021422, 380.401340535339,
-                                   0,                0,                1);
+    cv::Matx33d K2_correct (560.395452535348,               0, 678.971652040359,
+                                           0, 561.90171021422, 380.401340535339,
+                                           0,               0,                1);
 
     cv::Vec4d D1_correct (-7.44253716539556e-05, -0.00702662033932424, 0.00737569823650885, -0.00342230256441771);
     cv::Vec4d D2_correct (-0.0130785435677431, 0.0284434505383497, -0.0360333869900506, 0.0144724062347222);
@@ -990,7 +991,7 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
 
     EXPECT_NEAR(rmsErrorStereoCalib, rmsErrorFromReprojectedImgPts, 1e-4);
 }
-#endif
+
 
 TEST_F(fisheyeTest, estimateNewCameraMatrixForUndistortRectify)
 {
