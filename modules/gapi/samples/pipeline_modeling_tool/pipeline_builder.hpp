@@ -163,13 +163,10 @@ struct DummyCall {
                         cv::Mat&           out_mat,
                         DummyState&        state) {
             using namespace std::chrono;
-            double total = 0;
-            auto   start = high_resolution_clock::now();
+            auto start_ts = utils::timestamp<utils::double_ms_t>();
             state.mat.copyTo(out_mat);
-            while (total < time) {
-                total = duration_cast<duration<double, std::milli>>(
-                            high_resolution_clock::now() - start).count();
-            }
+            auto elapsed = utils::timestamp<utils::double_ms_t>() - start_ts;
+            utils::busyWait(duration_cast<microseconds>(utils::double_ms_t{time-elapsed}));
         }
     };
 

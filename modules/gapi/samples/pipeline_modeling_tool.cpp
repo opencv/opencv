@@ -35,6 +35,22 @@ static AppMode strToAppMode(const std::string& mode_str) {
     }
 }
 
+enum class WaitMode {
+    BUSY,
+    SLEEP
+};
+
+static WaitMode strToWaitMode(const std::string& mode_str) {
+    if (mode_str == "sleep") {
+        return WaitMode::SLEEP;
+    } else if (mode_str == "busy") {
+        return WaitMode::BUSY;
+    } else {
+        throw std::logic_error("Unsupported wait mode: " + mode_str +
+                "\nPlease chose between: busy (default) and sleep");
+    }
+}
+
 template <typename T>
 T read(const cv::FileNode& node) {
     return static_cast<T>(node);
@@ -401,7 +417,12 @@ int main(int argc, char* argv[]) {
                 if (app_mode == AppMode::BENCHMARK) {
                     latency = 0.0;
                 }
-                auto src = std::make_shared<DummySource>(utils::double_ms_t{latency}, output, drop_frames);
+
+                const auto wait_mode =
+                    strToWaitMode(readOpt<std::string>(pl_fn["wait_mode"]).value_or("busy"));
+                auto wait_strategy = (wait_mode == WaitMode::SLEEP) ? utils::sleep : utils::busyWait;
+                auto src = std::make_shared<DummySource>(
+                        utils::double_ms_t{latency}, output, drop_frames, std::move(wait_strategy));
                 builder.setSource(src_name, src);
                 builder.setLatency(latency);
             }

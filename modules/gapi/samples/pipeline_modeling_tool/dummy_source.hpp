@@ -12,31 +12,36 @@
 
 class DummySource final: public cv::gapi::wip::IStreamSource {
 public:
-    using Ptr  = std::shared_ptr<DummySource>;
+    using WaitStrategy = std::function<void(std::chrono::microseconds)>;
+    using Ptr = std::shared_ptr<DummySource>;
     using ts_t = std::chrono::microseconds;
 
     template <typename DurationT>
     DummySource(const DurationT    latency,
                 const OutputDescr& output,
-                const bool         drop_frames);
+                const bool         drop_frames,
+                WaitStrategy&&     wait);
 
     bool pull(cv::gapi::wip::Data& data) override;
     cv::GMetaArg descr_of() const override;
 
 private:
-    int64_t m_latency;
-    cv::Mat m_mat;
-    bool    m_drop_frames;
-    int64_t m_next_tick_ts = -1;
-    int64_t m_curr_seq_id  = 0;
+    int64_t       m_latency;
+    cv::Mat       m_mat;
+    bool          m_drop_frames;
+    int64_t       m_next_tick_ts = -1;
+    int64_t       m_curr_seq_id  = 0;
+    WaitStrategy  m_wait;
 };
 
 template <typename DurationT>
 DummySource::DummySource(const DurationT    latency,
                          const OutputDescr& output,
-                         const bool         drop_frames)
+                         const bool         drop_frames,
+                         WaitStrategy&&     wait)
     : m_latency(std::chrono::duration_cast<ts_t>(latency).count()),
-      m_drop_frames(drop_frames) {
+      m_drop_frames(drop_frames),
+      m_wait(std::move(wait)) {
     utils::createNDMat(m_mat, output.dims, output.precision);
     utils::generateRandom(m_mat);
 }
@@ -62,7 +67,7 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
          *
          * NB: New frame will be produced at the m_next_tick_ts point.
          */
-        utils::sleep(ts_t{m_next_tick_ts - curr_ts});
+        m_wait(ts_t{m_next_tick_ts - curr_ts});
     } else if (m_latency != 0) {
         /*
          *                                       curr_ts
@@ -86,7 +91,7 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
         if (m_drop_frames) {
             m_next_tick_ts += m_latency;
             ++m_curr_seq_id;
-            utils::sleep(ts_t{m_next_tick_ts - curr_ts});
+            m_wait(ts_t{m_next_tick_ts - curr_ts});
         }
     }
 
