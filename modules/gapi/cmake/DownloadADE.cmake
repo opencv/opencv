@@ -24,6 +24,12 @@ add_library(ade STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL}
     ${ADE_include}
     ${ADE_sources}
 )
+
+# https://github.com/opencv/ade/issues/32
+if(CV_CLANG AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.1)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wdeprecated-copy)
+endif()
+
 target_include_directories(ade PUBLIC $<BUILD_INTERFACE:${ADE_root}/include>)
 set_target_properties(ade PROPERTIES
   POSITION_INDEPENDENT_CODE True
