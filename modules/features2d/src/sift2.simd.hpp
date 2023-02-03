@@ -486,9 +486,6 @@ public:
         const Mat& prev = dog_pyr[idx-1];
         const Mat& next = dog_pyr[idx+1];
 
-        v_float32 vthreshold =  vx_setall_f32((float)threshold);
-        v_float32 v0 = vx_setzero_f32();
-
         static float bins_per_rad = 360.f / n;
         int octv_pow = 1 << o;
         float inv_octv = 1.0f / (float)octv_pow;
@@ -502,6 +499,8 @@ public:
             int c = SIFT2_IMG_BORDER;
 
 #if CV_SIMD && !(DoG_TYPE_SHORT)
+            v_float32 vthreshold =  vx_setall_f32((float)threshold);
+            v_float32 v0 = vx_setzero_f32();
             const int vecsize = v_float32::nlanes;
             for( ; c <= cols-SIFT2_IMG_BORDER - vecsize; c += vecsize)
             {
