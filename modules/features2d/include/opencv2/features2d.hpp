@@ -348,7 +348,7 @@ public:
     /**
     @param nfeatures The number of best features to retain. The features are ranked by their scores
     (measured in SIFT algorithm as the local contrast)
-    
+
     @param nOctaves The number octaves.
 
     @param nOctaveLayers The number of layers in each octave. 3 is the value used in D. Lowe paper. The
@@ -375,7 +375,7 @@ public:
     /** @brief Create SIFT with specified descriptorType.
     @param nfeatures The number of best features to retain. The features are ranked by their scores
     (measured in SIFT algorithm as the local contrast)
-    
+
     @param nOctaves The number octaves.
 
     @param nOctaveLayers The number of layers in each octave. 3 is the value used in D. Lowe paper. The
