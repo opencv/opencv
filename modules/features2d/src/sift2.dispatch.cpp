@@ -347,10 +347,10 @@ void SIFT2_Impl::findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const
 {
     CV_TRACE_FUNCTION();
 
-    float contrastThreshold2 = contrastThreshold / nOctaveLayers;
+    double contrastThreshold2 = contrastThreshold / nOctaveLayers;
 
     const int num_octaves = (int)gauss_pyr.size()/(nOctaveLayers + 3);
-    const int threshold = cvFloor(0.8f * contrastThreshold2 * (255 * SIFT2_FIXPT_SCALE));
+    const int threshold = cvFloor(0.8 * contrastThreshold2 * (255 * SIFT2_FIXPT_SCALE));
 
     keypoints.clear();
     TLSDataAccumulator<std::vector<KeyPoint> > tls_kpts_struct;
