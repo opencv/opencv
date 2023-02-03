@@ -2047,7 +2047,10 @@ protected:
         Mat& cameraMatrix1, Mat& distCoeffs1,
         Mat& cameraMatrix2, Mat& distCoeffs2,
         Size imageSize, Mat& R, Mat& T,
-        Mat& E, Mat& F, TermCriteria criteria, int flags );
+        Mat& E, Mat& F,
+        std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
+        vector<double>& perViewErrors1, vector<double>& perViewErrors2,
+        TermCriteria criteria, int flags );
     virtual void rectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
         const Mat& cameraMatrix2, const Mat& distCoeffs2,
         Size imageSize, const Mat& R, const Mat& T,
@@ -2071,33 +2074,73 @@ double CV_MultiviewCalibrationTest_CPP::calibrateStereoCamera( const vector<vect
                                              Mat& cameraMatrix1, Mat& distCoeffs1,
                                              Mat& cameraMatrix2, Mat& distCoeffs2,
                                              Size imageSize, Mat& R, Mat& T,
-                                             Mat& E, Mat& F, TermCriteria /*criteria*/, int flags )
+                                             Mat& E, Mat& F,
+                                             std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
+                                             vector<double>& perViewErrors1, vector<double>& perViewErrors2,
+                                             TermCriteria /*criteria*/, int flags )
 {
-
+    std::vector<cv::Mat> rvecs, tvecs;
     std::vector<cv::Mat> Ks, distortions, Rs, Ts;
     cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
-    std::vector<std::vector<cv::Mat>> image_points_all(2, std::vector<Mat>(objectPoints.size()));
-    for (int i = 0; i < (int)objectPoints.size(); i++) {
-        Mat img_pts1 = Mat(imagePoints1[i], false), img_pts2 = Mat(imagePoints2[i], false);
+    int numImgs = (int)objectPoints.size();
+    std::vector<std::vector<cv::Mat>> image_points_all(2, std::vector<Mat>(numImgs));
+    for (int i = 0; i < numImgs; i++)
+    {
+        Mat img_pts1 = Mat(imagePoints1[i], false);
+        Mat img_pts2 = Mat(imagePoints2[i], false);
         img_pts1.copyTo(image_points_all[0][i]);
         img_pts2.copyTo(image_points_all[1][i]);
     }
     std::vector<Size> image_sizes (2, imageSize);
-    Mat visibility_mat = Mat_<bool>::ones(2, (int)objectPoints.size());
+    Mat visibility_mat = Mat_<bool>::ones(2, numImgs);
     std::vector<bool> is_fisheye(2, false);
-    calibrateMultiview (objectPoints, image_points_all, image_sizes, visibility_mat,
-       Rs, Ts, Ks, distortions, noArray(), noArray(), is_fisheye, errors_mat, noArray(), false, flags);
+    double rms = calibrateMultiview(objectPoints, image_points_all, image_sizes, visibility_mat,
+                                    Rs, Ts, Ks, distortions, rvecs, tvecs, is_fisheye, errors_mat, noArray(), false, flags);
+
+    if (perViewErrors1.size() != (size_t)numImgs)
+    {
+        perViewErrors1.resize(numImgs);
+    }
+    if (perViewErrors2.size() != (size_t)numImgs)
+    {
+        perViewErrors2.resize(numImgs);
+    }
+
+    for (int i = 0; i < numImgs; i++)
+    {
+        perViewErrors1[i] = errors_mat.at<double>(0, i);
+        perViewErrors2[i] = errors_mat.at<double>(1, i);
+    }
+
+    if (rotationMatrices.size() != (size_t)numImgs)
+    {
+        rotationMatrices.resize(numImgs);
+    }
+    if (translationVectors.size() != (size_t)numImgs)
+    {
+        translationVectors.resize(numImgs);
+    }
+
+    for( int i = 0; i < numImgs; i++ )
+    {
+        Mat r9;
+        cv::Rodrigues( rvecs[i], r9 );
+        r9.convertTo(rotationMatrices[i], CV_64F);
+        tvecs[i].convertTo(translationVectors[i], CV_64F);
+    }
+
     cv::Rodrigues(Rs[1], R);
     Ts[1].copyTo(T);
     distortions[0].copyTo(distCoeffs1);
     distortions[1].copyTo(distCoeffs2);
     Ks[0].copyTo(cameraMatrix1);
     Ks[1].copyTo(cameraMatrix2);
-    E = Mat(Matx33d(0, -T.at<double>(2), T.at<double>(1),
-         T.at<double>(2), 0,  -T.at<double>(0),
-          -T.at<double>(1), T.at<double>(0), 0) * R);
+    Matx33d skewT(               0, -T.at<double>(2),   T.at<double>(1),
+                   T.at<double>(2),                0,  -T.at<double>(0),
+                  -T.at<double>(1),  T.at<double>(0),                 0);
+    E = Mat(skewT * R);
     F = Ks[1].inv().t() * E * Ks[0].inv();
-    return cv::mean(errors_mat).val[0];
+    return rms;
 }
 
 void CV_MultiviewCalibrationTest_CPP::rectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
