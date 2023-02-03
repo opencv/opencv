@@ -435,6 +435,7 @@ static void checkConnected (const std::vector<std::vector<bool>> &detection_mask
 }
 }
 
+//TODO: use Input/OutputArrays for imagePoints, imageSize(?), Ks, distortions
 double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
         const std::vector<Size> &imageSize, InputArray detection_mask,
         OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, std::vector<Mat> &Ks, std::vector<Mat> &distortions,

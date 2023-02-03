@@ -1126,7 +1126,7 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
 Multiview calibraton.
 
 @param[in] objPoints   of size NUM_FRAMES x NUM_POINTS x 3 -- object points
-@param[in] imagePoints of size NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 3 -- image points
+@param[in] imagePoints of size NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 2 -- image points
 @param[in] imageSize   of size NUM_CAMERAS x 2 -- size of images
 @param[in] detection_mask - detection mask of size NUM_CAMERAS x NUM_FRAMES - boolean
 @param[in] is_fisheye of size NUM_CAMERAS -- indicates whether i-th camera is fisheye. Currently supported either all or none.
@@ -1134,7 +1134,7 @@ Multiview calibraton.
 @param[in] flags_intrinsics -- flags that are used for intrinsics calibration.
 @param[out] Rs Output of size NUM_CAMERAS x 3 x 1 -- rotation matrices wrt camera 0, where Rs[0] = 0
 @param[out] Ts Output of size NUM_CAMERAS x 3 x 1 -- translation vectors wrt camera 0, where Ts[0] = 0
-@param[out] rvecs0 Output of size NUM_FRAMES x 3 x 3 -- rotation vectors for camera 0 (may contain null Mat, if frame is not valid)
+@param[out] rvecs0 Output of size NUM_FRAMES x 3 x 1 -- rotation vectors for camera 0 (may contain null Mat, if frame is not valid)
 @param[out] tvecs0 Output of size NUM_FRAMES x 3 x 1 -- translation vectors for camera 0  (may contain null Mat, if frame is not valid)
 @param[out] Ks Output of size NUM_CAMERAS x 3 x 3 -- intrinsic matrices
 @param[out] distortions Output of size NUM_CAMERAS x NUM_PARAMS
