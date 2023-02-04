@@ -307,6 +307,22 @@ __kernel void ThresholdedReluForward(const int n, __global T* in, __global T* ou
         out[index] = (in[index] > alpha ? in[index] : 0.f);
 }
 
+__kernel void GeluForward(const int n, __global T* in, __global T* out)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = (T)0.5f * in[index] * ( (T)1.f + erf(in[index] * M_SQRT1_2) );
+}
+
+__kernel void GeluApproximationForward(const int n, __global T* in, __global T* out,
+                                       const KERNEL_ARG_DTYPE sqrt_2_pi,
+                                       const KERNEL_ARG_DTYPE coef_sqrt_2_pi)
+{
+  int index = get_global_id(0);
+    if(index < n)
+        out[index] = (T)0.5f * in[index] * ( (T)1.f + tanh(in[index] * (sqrt_2_pi + coef_sqrt_2_pi * in[index] * in[index])) );
+}
+
 __kernel void ShrinkForward(const int n, __global T* in, __global T* out,
                             const KERNEL_ARG_DTYPE bias,
                             const KERNEL_ARG_DTYPE lambd)
