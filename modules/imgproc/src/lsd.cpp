@@ -985,7 +985,7 @@ double LineSegmentDetectorImpl::rect_nfa(const rect& rec) const
     {
         if (y < 0 || y >= img_height) continue;
 
-        if(y < int(ceil(ordered_y[1].y)))
+        if(y <= int(ceil(ordered_y[1].y)))
             left_limit = get_limit(ordered_y[0], y, flstep);
         else
             left_limit = get_limit(ordered_y[1], y, slstep);
