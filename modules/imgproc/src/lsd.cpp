@@ -122,7 +122,7 @@ inline bool AsmallerB_YoverX(const cv::Point2d &a, const cv::Point2d &b) {
 
 // function to get the slope of the rectangle for a specific row
 inline double get_slope(cv::Point2d p1, cv::Point2d p2) {
-    return (p2.y != p1.y) ? (p2.x - p1.x) / (p2.y - p1.y) : 0;
+    return ((int) ceil(p2.y) != (int) ceil(p1.y)) ? (p2.x - p1.x) / (p2.y - p1.y) : 0;
 }
 
 // function to get the limit of the rectangle for a specific row
