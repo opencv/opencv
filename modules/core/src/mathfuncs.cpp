@@ -1786,16 +1786,17 @@ int finiteMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total)
         {
             v_uint64 vande = vu[j] & vmaskExp;
 
+            v_uint64 ve;
             #if CV_SIMD128_64F
-            v_uint64 ve = vande == vmaskExp;
+            ve = vande != vmaskExp;
             #else
             // emulating 64-bit integer eq comparison: ve = (vu[j] & vmaskExp) == vmaskExp
             {
                 v_int32 vue32 = v_reinterpret_as_s32(vande);
                 v_int32 vme32 = v_reinterpret_as_s32(vmaskExp);
-                v_int32 veq32 = vue32 == vme32;
+                v_int32 veq32 = vue32 != vme32;
                 v_int32 sh1 = v_rotate_left<1>(veq32);
-                v_int32 vand = veq32 & sh1;
+                v_int32 vand = veq32 | sh1;
                 v_int32 sh2 = v_rotate_right<1>(vand);
                 ve = (v_reinterpret_as_u64(vand) & mask10) | (v_reinterpret_as_u64(sh2) & ~mask10);
             }
@@ -1805,8 +1806,6 @@ int finiteMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total)
         }
 
         v_uint8 v = v_pack_b(vv[0], vv[1], vv[2], vv[3], z, z, z, z);
-        //TODO: remove it + check it
-        v = ~v;
 
         v_store_low(dst + i, v);
     }
