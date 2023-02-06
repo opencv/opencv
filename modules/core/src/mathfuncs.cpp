@@ -1722,7 +1722,7 @@ void patchNaNs( InputOutputArray _a, double _val )
 
 //TODO: make true SIMD code instead
 template <typename _Tp, int cn>
-int nanMaskSIMD_(const _Tp *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert)
+int finiteMaskSIMD_(const _Tp *src, uchar *dst, size_t total)
 {
     const int osize = 8;
     int i = 0;
@@ -1730,18 +1730,13 @@ int nanMaskSIMD_(const _Tp *src, uchar *dst, size_t total, bool maskNans, bool m
     {
         for (int j = 0; j < osize; j++)
         {
-            bool nan = maskAll ? true : false;
+            bool finite = true;
             for (int c = 0; c < cn; c++)
             {
                 _Tp val = src[i * cn + j * cn + c];
-                bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
-                if (maskAll)
-                    nan = nan && v;
-                else
-                    nan = nan || v;
+                finite = finite && !cvIsNaN(val) && !cvIsInf(val);
             }
-            nan = invert ? !nan : nan;
-            dst[i + j] = nan ? 255 : 0;
+            dst[i + j] = finite ? 255 : 0;
         }
     }
 
@@ -1749,7 +1744,7 @@ int nanMaskSIMD_(const _Tp *src, uchar *dst, size_t total, bool maskNans, bool m
 }
 
 template <>
-int nanMaskSIMD_<float, 1>(const float *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool /*maskAll*/, bool invert)
+int finiteMaskSIMD_<float, 1>(const float *src, uchar *dst, size_t total)
 {
     const int osize = v_uint8::nlanes;
     int i = 0;
@@ -1761,32 +1756,19 @@ int nanMaskSIMD_<float, 1>(const float *src, uchar *dst, size_t total, bool mask
         for (int j = 0; j < 4; j++)
         {
             v_uint32 vu = v_reinterpret_as_u32(vx_load(src + i + j*(osize/4)));
-            v_uint32 vuMasked = vu & vmaskPos;
-            vv[j] = vuMasked; // assign to prevent "uninitialized" warning
-            if (maskNans && maskInfs)
-                vv[j] = (vuMasked >= vmaskExp);
-            else if (maskInfs && !maskNans)
-                vv[j] = (vuMasked == vmaskExp);
-            else if (maskNans && !maskInfs)
-                vv[j] = (vuMasked >  vmaskExp);
+            vv[j] = ((vu & vmaskPos) < vmaskExp);
         }
 
-        v_uint8 v = v_pack_b(vv[0], vv[1], vv[2], vv[3]);
-
-        if (invert)
-            v = ~v;
-
-        v_store(dst + i, v);
+        v_store(dst + i, v_pack_b(vv[0], vv[1], vv[2], vv[3]));
     }
 
     return i;
 }
 
 template <>
-int nanMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool /*maskAll*/, bool invert)
+int finiteMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total)
 {
     const int size8 = v_uint8::nlanes;
-
     int i = 0;
     for(; i <= (int)total - (size8 / 2); i += (size8 / 2) )
     {
@@ -1795,7 +1777,6 @@ int nanMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total, bool ma
             vu[j] = vx_load((const uint64_t*)src + i + j*(size8 / 8));
 
         v_uint64 vmaskExp = vx_setall_u64(0x7ff0000000000000);
-        v_uint64 vmaskMnt = vx_setall_u64(0x000fffffffffffff);
         v_uint64 z = vx_setzero_u64();
         #if !CV_SIMD128_64F
         v_uint64 mask10 = vx_setall_u64(0xffffffff00000000);
@@ -1803,14 +1784,10 @@ int nanMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total, bool ma
         v_uint64 vv[4];
         for (int j = 0; j < 4; j++)
         {
-            v_uint64 ve, vm;
-
             v_uint64 vande = vu[j] & vmaskExp;
-            v_uint64 vandm = vu[j] & vmaskMnt;
 
             #if CV_SIMD128_64F
-            ve = vande == vmaskExp;
-            vm = vandm != z;
+            v_uint64 ve = vande == vmaskExp;
             #else
             // emulating 64-bit integer eq comparison: ve = (vu[j] & vmaskExp) == vmaskExp
             {
@@ -1822,29 +1799,14 @@ int nanMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total, bool ma
                 v_int32 sh2 = v_rotate_right<1>(vand);
                 ve = (v_reinterpret_as_u64(vand) & mask10) | (v_reinterpret_as_u64(sh2) & ~mask10);
             }
-            // emulating 64-bit integer ineq comparison: vm = (vu[j] & vmaskMnt) != z
-            {
-                v_int32 vue32 = v_reinterpret_as_s32(vandm);
-                v_int32 vme32 = vx_setzero_s32();
-                v_int32 veq32 = vue32 != vme32;
-                v_int32 sh1 = v_rotate_left<1>(veq32);
-                v_int32 vor = veq32 | sh1;
-                v_int32 sh2 = v_rotate_right<1>(vor);
-                vm = (v_reinterpret_as_u64(vor) & mask10) | (v_reinterpret_as_u64(sh2) & ~mask10);
-            }
             #endif
 
             vv[j] = ve;
-            if (maskInfs && !maskNans)
-                vv[j] = vv[j] & (~vm);
-            else if (maskNans && !maskInfs)
-                vv[j] = vv[j] & vm;
         }
 
         v_uint8 v = v_pack_b(vv[0], vv[1], vv[2], vv[3], z, z, z, z);
-
-        if (invert)
-            v = ~v;
+        //TODO: remove it + check it
+        v = ~v;
 
         v_store_low(dst + i, v);
     }
@@ -1856,27 +1818,22 @@ int nanMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total, bool ma
 
 
 template <typename _Tp, int cn>
-static void nanMask_(const _Tp *src, uchar *dst, size_t total, bool maskNans, bool maskInfs, bool maskAll, bool invert)
+static void finiteMask_(const _Tp *src, uchar *dst, size_t total)
 {
     size_t i = 0;
 
 #if CV_SIMD
-    i = nanMaskSIMD_<_Tp, cn>(src, dst, total, maskNans, maskInfs, maskAll, invert);
+    i = finiteMaskSIMD_<_Tp, cn>(src, dst, total);
 #endif
 
     for(; i < total; i++ )
     {
-        bool nan = maskAll ? true : false;
+        bool nan = true;
         for (int c = 0; c < cn; c++)
         {
             _Tp val = src[i * cn + c];
-            bool v = (maskNans && cvIsNaN(val)) || (maskInfs && cvIsInf(val));
-            if (maskAll)
-                nan = nan && v;
-            else
-                nan = nan || v;
+            nan = nan && !cvIsNaN(val) && !cvIsInf(val);
         }
-        nan = invert ? !nan : nan;
         dst[i] = nan ? 255 : 0;
     }
 }
@@ -1884,14 +1841,14 @@ static void nanMask_(const _Tp *src, uchar *dst, size_t total, bool maskNans, bo
 #ifdef HAVE_OPENCL
 
 
-static bool ocl_nanMask(const UMat img, UMat mask)
+static bool ocl_finiteMask(const UMat img, UMat mask)
 {
     int channels = img.channels();
     int depth = img.depth();
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
     ocl::Kernel k("finiteMask", ocl::core::finitemask_oclsrc,
                   format("-D srcT=%s -D cn=%d -D rowsPerWI=%d",
-                          depth == CV_32F ? "float" : "double", channels, rowsPerWI));
+                         depth == CV_32F ? "float" : "double", channels, rowsPerWI));
     if (k.empty())
         return false;
 
@@ -1906,9 +1863,6 @@ static bool ocl_nanMask(const UMat img, UMat mask)
 void finiteMask(InputArray _img, OutputArray _mask)
 {
     CV_INSTRUMENT_REGION();
-
-
-    CV_Assert(maskNans || maskInfs);
 
     int channels = _img.channels();
     int depth = _img.depth();
@@ -1934,29 +1888,24 @@ void finiteMask(InputArray _img, OutputArray _mask)
         const uchar* sptr = planes[0].ptr();
         uchar* dptr = planes[1].ptr();
 
-    bool maskNans = true;
-    bool maskInfs = true;
-    bool maskAll  = false;
-    bool invert   = true;
-
         switch( depth )
         {
         case CV_32F:
             switch (channels)
             {
-            case 1: nanMask_<float, 1>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            case 2: nanMask_<float, 2>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            case 3: nanMask_<float, 3>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            case 4: nanMask_<float, 4>((const float*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 1: finiteMask_<float, 1>((const float*)sptr, dptr, total); break;
+            case 2: finiteMask_<float, 2>((const float*)sptr, dptr, total); break;
+            case 3: finiteMask_<float, 3>((const float*)sptr, dptr, total); break;
+            case 4: finiteMask_<float, 4>((const float*)sptr, dptr, total); break;
             }
             break;
         case CV_64F:
             switch (channels)
             {
-            case 1: nanMask_<double, 1>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            case 2: nanMask_<double, 2>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            case 3: nanMask_<double, 3>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
-            case 4: nanMask_<double, 4>((const double*)sptr, dptr, total, maskNans, maskInfs, maskAll, invert); break;
+            case 1: finiteMask_<double, 1>((const double*)sptr, dptr, total); break;
+            case 2: finiteMask_<double, 2>((const double*)sptr, dptr, total); break;
+            case 3: finiteMask_<double, 3>((const double*)sptr, dptr, total); break;
+            case 4: finiteMask_<double, 4>((const double*)sptr, dptr, total); break;
             }
             break;
         }
