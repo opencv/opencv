@@ -102,7 +102,7 @@ static void extendPyrMaskByPyrNormals(const std::vector<UMat>& pyramidNormals,  
             UMat maski = pyramidMask[i];
             UMat normali = pyramidNormals[i];
             UMat validNormalMask;
-            nanMask(normali, validNormalMask, MASK_NANS | MASK_INFS | MASK_INV);
+            finiteMask(normali, validNormalMask);
             cv::bitwise_and(maski, validNormalMask, maski);
         }
     }
