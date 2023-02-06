@@ -65,7 +65,7 @@ void CV_OptFlowPyrLKTest::run( int )
     const int bad_points_max = 8;
 
     /* test parameters */
-    double  max_err = 0., sum_err = 0;
+    double  max_err = 0.;
     int     pt_cmpd = 0;
     int     pt_exceed = 0;
     int     merr_i = 0, merr_j = 0, merr_k = 0, merr_nan = 0;
@@ -175,7 +175,6 @@ void CV_OptFlowPyrLKTest::run( int )
             }
 
             pt_exceed += err > success_error_level;
-            sum_err += err;
             pt_cmpd++;
         }
         else

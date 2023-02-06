@@ -120,16 +120,13 @@ medianPartition( size_t* ofs, int a, int b, const float* vals )
     }
 
     float pivot = vals[ofs[middle]];
-    int less = 0, more = 0;
     for( k = a0; k < middle; k++ )
     {
         CV_Assert(vals[ofs[k]] <= pivot);
-        less += vals[ofs[k]] < pivot;
     }
     for( k = b0; k > middle; k-- )
     {
         CV_Assert(vals[ofs[k]] >= pivot);
-        more += vals[ofs[k]] > pivot;
     }
 
     return vals[ofs[middle]];

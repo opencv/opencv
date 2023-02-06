@@ -559,12 +559,9 @@ void CV_CameraCalibrationTest::run( int start_from )
         i = 0;
         double dx,dy;
         double rx,ry;
-        double meanDx,meanDy;
         double maxDx = 0.0;
         double maxDy = 0.0;
 
-        meanDx = 0;
-        meanDy = 0;
         for( currImage = 0; currImage < numImages; currImage++ )
         {
             double imageMeanDx = 0;
@@ -575,9 +572,6 @@ void CV_CameraCalibrationTest::run( int start_from )
                 ry = reprojectPoints[i].y;
                 dx = rx - imagePoints[i].x;
                 dy = ry - imagePoints[i].y;
-
-                meanDx += dx;
-                meanDy += dy;
 
                 imageMeanDx += dx*dx;
                 imageMeanDy += dy*dy;
@@ -600,9 +594,6 @@ void CV_CameraCalibrationTest::run( int start_from )
             if(perViewErrors[currImage] == 0.0)
                 perViewErrors[currImage] = goodPerViewErrors[currImage];
         }
-
-        meanDx /= numImages * etalonSize.width * etalonSize.height;
-        meanDy /= numImages * etalonSize.width * etalonSize.height;
 
         /* ========= Compare parameters ========= */
 
