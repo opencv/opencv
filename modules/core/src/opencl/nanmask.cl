@@ -45,9 +45,9 @@
 //
 //M*/
 
-__kernel void nanMask(__global const uchar * srcptr, int srcstep, int srcoffset,
-                      __global uchar * dstptr, int dststep, int dstoffset,
-                      int rows, int cols )
+__kernel void finiteMask(__global const uchar * srcptr, int srcstep, int srcoffset,
+                         __global uchar * dstptr, int dststep, int dstoffset,
+                         int rows, int cols )
 {
     int x = get_global_id(0);
     int y0 = get_global_id(1) * rowsPerWI;
@@ -59,35 +59,16 @@ __kernel void nanMask(__global const uchar * srcptr, int srcstep, int srcoffset,
 
         for (int y = y0, y1 = min(rows, y0 + rowsPerWI); y < y1; ++y, src_index += srcstep, dst_index += dststep)
         {
-#ifdef MASK_ALL
-            bool vnan = true;
-#else
-            bool vnan = false;
-#endif
+            bool vfinite = true;
+
             for (int c = 0; c < cn; c++)
             {
                 srcT val = *(__global srcT *)(srcptr + src_index + c * (int)sizeof(srcT));
 
-                bool v = false;
-#ifdef MASK_NANS
-                v = v || isnan(val);
-#endif
-
-#ifdef MASK_INFS
-                v = v || isinf(val);
-#endif
-
-#ifdef MASK_ALL
-                vnan = vnan && v;
-#else
-                vnan = vnan || v;
-#endif
+                vfinite = vfinite && !isnan(val) & !isinf(val);
             }
-#ifdef INVERT
-            vnan = !vnan;
-#endif
 
-            *(dstptr + dst_index) = vnan ? 255 : 0;
+            *(dstptr + dst_index) = vfinite ? 255 : 0;
         }
     }
 }

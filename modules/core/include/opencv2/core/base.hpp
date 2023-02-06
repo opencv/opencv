@@ -278,15 +278,6 @@ enum BorderTypes {
     BORDER_ISOLATED    = 16 //!< do not look outside of ROI
 };
 
-//! Flags for nanMask() function
-enum NanMaskFlags {
-    MASK_ANY = 0,  //!< Mark element if any channel is NaN
-    MASK_NANS = 1, //!< Make mask for NaN values
-    MASK_INFS = 2, //!< Make mask for Inf values
-    MASK_ALL = 4,  //!< Mark element only if all channels are NaNs, exclusive with MASK_ANY
-    MASK_INV = 8   //!< Negate output (i.e. for marking good values)
-};
-
 //! @} core_array
 
 //! @addtogroup core_utils

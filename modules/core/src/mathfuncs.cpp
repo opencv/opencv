@@ -1884,16 +1884,14 @@ static void nanMask_(const _Tp *src, uchar *dst, size_t total, bool maskNans, bo
 #ifdef HAVE_OPENCL
 
 
-static bool ocl_nanMask(const UMat img, UMat mask, bool maskNans, bool maskInfs, bool maskAll, bool invert)
+static bool ocl_nanMask(const UMat img, UMat mask)
 {
     int channels = img.channels();
     int depth = img.depth();
     int rowsPerWI = ocl::Device::getDefault().isIntel() ? 4 : 1;
-    ocl::Kernel k("nanMask", ocl::core::nanmask_oclsrc,
-                  format("-D srcT=%s -D cn=%d -D rowsPerWI=%d %s %s %s %s",
-                          depth == CV_32F ? "float" : "double", channels, rowsPerWI,
-                          maskNans ? "-D MASK_NANS" : "", maskInfs ? "-D MASK_INFS" : "",
-                          maskAll ? "-D MASK_ALL" : "", invert ? "-D INVERT" : ""));
+    ocl::Kernel k("finiteMask", ocl::core::finitemask_oclsrc,
+                  format("-D srcT=%s -D cn=%d -D rowsPerWI=%d",
+                          depth == CV_32F ? "float" : "double", channels, rowsPerWI));
     if (k.empty())
         return false;
 
@@ -1905,14 +1903,11 @@ static bool ocl_nanMask(const UMat img, UMat mask, bool maskNans, bool maskInfs,
 
 #endif
 
-void nanMask(InputArray _img, OutputArray _mask, int flags)
+void finiteMask(InputArray _img, OutputArray _mask)
 {
     CV_INSTRUMENT_REGION();
 
-    bool maskNans = flags & MASK_NANS;
-    bool maskInfs = flags & MASK_INFS;
-    bool maskAll  = flags & MASK_ALL;
-    bool invert   = flags & MASK_INV;
+
     CV_Assert(maskNans || maskInfs);
 
     int channels = _img.channels();
@@ -1923,7 +1918,7 @@ void nanMask(InputArray _img, OutputArray _mask, int flags)
     _mask.create(_img.dims(), vsz.data(), CV_8UC1);
 
     CV_OCL_RUN(_img.isUMat() && _mask.isUMat() && _img.dims() <= 2,
-               ocl_nanMask(_img.getUMat(), _mask.getUMat(), maskNans, maskInfs, maskAll, invert));
+               ocl_finiteMask(_img.getUMat(), _mask.getUMat()));
 
     Mat img = _img.getMat();
     Mat mask = _mask.getMat();
@@ -1938,6 +1933,11 @@ void nanMask(InputArray _img, OutputArray _mask, int flags)
     {
         const uchar* sptr = planes[0].ptr();
         uchar* dptr = planes[1].ptr();
+
+    bool maskNans = true;
+    bool maskInfs = true;
+    bool maskAll  = false;
+    bool invert   = true;
 
         switch( depth )
         {
