@@ -1108,7 +1108,7 @@ static OPJ_BOOL opj_jp2_apply_pclr(opj_image_t *image,
         pcol = cmap[i].pcol;
         src = old_comps[cmp].data;
         assert(src); /* verified above */
-        max = new_comps[pcol].w * new_comps[pcol].h;
+        max = new_comps[i].w * new_comps[i].h;
 
         /* Direct use: */
         if (cmap[i].mtyp == 0) {
