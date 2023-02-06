@@ -129,25 +129,25 @@ struct CharucoDetector::CharucoDetectorImpl {
         // approximated pose estimation using marker corners
         Mat approximatedRvec, approximatedTvec;
         Mat objPoints, imgPoints; // object and image points for the solvePnP function
-        printf("before board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);\n");
+        // printf("before board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);\n");
         board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);
-        printf("after board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);\n");
+        // printf("after board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);\n");
         if (objPoints.total() < 4ull)  // need, at least, 4 corners
             return;
 
         solvePnP(objPoints, imgPoints, charucoParameters.cameraMatrix, charucoParameters.distCoeffs, approximatedRvec, approximatedTvec);
-        printf("after solvePnP\n");
+        // printf("after solvePnP\n");
 
         // project chessboard corners
         vector<Point2f> allChessboardImgPoints;
         projectPoints(board.getChessboardCorners(), approximatedRvec, approximatedTvec, charucoParameters.cameraMatrix,
                       charucoParameters.distCoeffs, allChessboardImgPoints);
-        printf("after projectPoints\n");
+        // printf("after projectPoints\n");
         // calculate maximum window sizes for subpixel refinement. The size is limited by the distance
         // to the closes marker corner to avoid erroneous displacements to marker corners
         vector<Size> subPixWinSizes = getMaximumSubPixWindowSizes(markerCorners, markerIds, allChessboardImgPoints);
         // filter corners outside the image and subpixel-refine charuco corners
-        printf("before selectAndRefineChessboardCorners\n");
+        // printf("before selectAndRefineChessboardCorners\n");
         selectAndRefineChessboardCorners(allChessboardImgPoints, image, charucoCorners, charucoIds, subPixWinSizes);
     }
 
