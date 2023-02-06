@@ -738,6 +738,29 @@ class Arguments(NewOpenCVTests):
             )
         )
 
+    def test_named_arguments_without_parameters(self):
+        src = np.ones((5, 5, 3), dtype=np.uint8)
+        arguments_dump, src_copy = cv.utils.copyMatAndDumpNamedArguments(src)
+        np.testing.assert_equal(src, src_copy)
+        self.assertEqual(arguments_dump, 'lambda=-1, sigma=0.0')
+
+    def test_named_arguments_without_output_argument(self):
+        src = np.zeros((2, 2, 3), dtype=np.uint8)
+        arguments_dump, src_copy = cv.utils.copyMatAndDumpNamedArguments(
+            src, lambda_=15, sigma=3.5
+        )
+        np.testing.assert_equal(src, src_copy)
+        self.assertEqual(arguments_dump, 'lambda=15, sigma=3.5')
+
+    def test_named_arguments_with_output_argument(self):
+        src = np.zeros((3, 3, 3), dtype=np.uint8)
+        dst = np.ones_like(src)
+        arguments_dump, src_copy = cv.utils.copyMatAndDumpNamedArguments(
+            src, dst, lambda_=25, sigma=5.5
+        )
+        np.testing.assert_equal(src, src_copy)
+        np.testing.assert_equal(dst, src_copy)
+        self.assertEqual(arguments_dump, 'lambda=25, sigma=5.5')
 
 
 class CanUsePurePythonModuleFunction(NewOpenCVTests):
