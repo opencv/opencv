@@ -295,8 +295,8 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
     Points  points = _points.getMat();
     Normals normals = _normals.getMat();
 
-    Mat nans;
-    nanMask(points, nans);
+    Mat goods;
+    finiteMask(points, goods);
 
     Mat_<Vec4b> img = image.getMat();
 
@@ -309,7 +309,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
                 Vec4b* imgRow = img[y];
                 const ptype* ptsRow = points[y];
                 const ptype* nrmRow = normals[y];
-                const uchar* nanRow = nans.ptr<uchar>(y);
+                const uchar* goodRow = goods.ptr<uchar>(y);
 
                 for (int x = 0; x < sz.width; x++)
                 {
@@ -318,7 +318,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 
                     Vec4b color;
 
-                    if (nanRow[x])
+                    if (!goodRow[x])
                     {
                         color = Vec4b(0, 32, 0, 0);
                     }
@@ -356,10 +356,10 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
     Points  points  = _points.getMat();
     Colors  colors  = _colors.getMat();
 
-    Mat nanp, nanc, nans;
-    nanMask(points, nanp);
-    nanMask(colors, nanc);
-    nans = nanp | nanc;
+    Mat goods, goodc, goodp;
+    finiteMask(points, goodp);
+    finiteMask(colors, goodc);
+    goods = goodp & goodc;
 
     Mat_<Vec4b> img = image.getMat();
 
@@ -372,7 +372,7 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
                 Vec4b* imgRow = img[y];
                 //const ptype* ptsRow = points[y];
                 const ptype* clrRow = colors[y];
-                const uchar* nanRow = nans.ptr<uchar>(y);
+                const uchar* goodRow = goods.ptr<uchar>(y);
 
                 for (int x = 0; x < sz.width; x++)
                 {
@@ -381,7 +381,7 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
 
                     Vec4b color;
 
-                    if (nanRow[x])
+                    if (!goodRow[x])
                     {
                         color = Vec4b(0, 32, 0, 0);
                     }
@@ -708,8 +708,8 @@ void regressionVolPoseRot()
     Mat maskPts0 = ptsCh[2] > 0;
     Mat maskPtsRot = ptsRotCh[2] > 0;
     Mat maskNrm0, maskNrmRot;
-    nanMask(mnrm, maskNrm0);
-    nanMask(mnrmRot, maskNrmRot);
+    finiteMask(mnrm, maskNrm0);
+    finiteMask(mnrmRot, maskNrmRot);
     Mat maskPtsDiff, maskNrmDiff;
     cv::bitwise_xor(maskPts0, maskPtsRot, maskPtsDiff);
     cv::bitwise_xor(maskNrm0, maskNrmRot, maskNrmDiff);

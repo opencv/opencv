@@ -1794,18 +1794,14 @@ OCL_TEST_P(PatchNaNs, Mat)
     }
 }
 
-//////////////////////////////// NaNmask /////////////////////////////////////////////
+//////////////////////////////// finiteMask /////////////////////////////////////////////
 
 
-PARAM_TEST_CASE(NaNmask, MatDepth, Channels, bool, int, bool, bool)
+PARAM_TEST_CASE(FiniteMask, MatDepth, Channels, bool)
 {
     int ftype;
     int cn;
     bool use_roi;
-    bool maskNans;
-    bool maskInfs;
-    bool maskAll;
-    bool invert;
 
     TEST_DECLARE_INPUT_PARAMETER(src);
     TEST_DECLARE_OUTPUT_PARAMETER(mask);
@@ -1815,12 +1811,6 @@ PARAM_TEST_CASE(NaNmask, MatDepth, Channels, bool, int, bool, bool)
         ftype = GET_PARAM(0);
         cn = GET_PARAM(1);
         use_roi = GET_PARAM(2);
-
-        int ni = GET_PARAM(3);
-        maskNans = ni & 1;
-        maskInfs = ni & 2;
-        maskAll = GET_PARAM(4);
-        invert = GET_PARAM(5);
     }
 
     void generateTestData()
@@ -1869,17 +1859,14 @@ PARAM_TEST_CASE(NaNmask, MatDepth, Channels, bool, int, bool, bool)
     }
 };
 
-OCL_TEST_P(NaNmask, Mat)
+OCL_TEST_P(FiniteMask, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
         generateTestData();
 
-        int flags = (maskNans ? MASK_NANS : 0) | (maskInfs ? MASK_INFS : 0) |
-                    (maskAll  ? MASK_ALL  : 0) | (invert   ? MASK_INV  : 0);
-
-        OCL_OFF(cv::nanMask(src_roi, mask_roi, flags));
-        OCL_ON(cv::nanMask(usrc_roi, umask_roi, flags));
+        OCL_OFF(cv::finiteMask(src_roi, mask_roi));
+        OCL_ON(cv::finiteMask(usrc_roi, umask_roi));
 
         Near();
     }
@@ -2061,7 +2048,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertScaleAbs, Combine(OCL_ALL_DEPTHS, OCL
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ConvertFp16, Combine(OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, ScaleAdd, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, PatchNaNs, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, NaNmask, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool(), Values(1, 2, 3), Bool(), Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, FiniteMask, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Psnr, Combine(::testing::Values((MatDepth)CV_8U), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, UMatDot, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 

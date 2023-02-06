@@ -1106,11 +1106,11 @@ OCL_PERF_TEST_P(PatchNaNsFixture, PatchNaNs,
     SANITY_CHECK(src);
 }
 
-////////////// NaNmask ////////////////////////
+////////////// finiteMask ////////////////////////
 
-typedef Size_MatType NanMaskFixture;
+typedef Size_MatType FiniteMaskFixture;
 
-OCL_PERF_TEST_P(NanMaskFixture, NanMask,
+OCL_PERF_TEST_P(FiniteMaskFixture, FiniteMask,
                 ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32FC1, CV_32FC3, CV_32FC4, CV_64FC1, CV_64FC3, CV_64FC4)))
 {
     const Size_MatType_t params = GetParam();
@@ -1153,7 +1153,7 @@ OCL_PERF_TEST_P(NanMaskFixture, NanMask,
         }
     }
 
-    OCL_TEST_CYCLE() cv::nanMask(src, mask);
+    OCL_TEST_CYCLE() cv::finiteMask(src, mask);
 
     SANITY_CHECK(mask);
 }

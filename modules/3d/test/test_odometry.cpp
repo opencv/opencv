@@ -724,7 +724,7 @@ TEST(RGBD_Odometry_WarpFrame, nansAreMasked)
     ASSERT_EQ(0, rgbDiff);
 
     Mat goodVals;
-    nanMask(w.warpedDepth, goodVals, MASK_NANS | MASK_INV);
+    finiteMask(w.warpedDepth, goodVals);
 
     double l2diff = cv::norm(w.dstDepth, w.warpedDepth, NORM_L2, goodVals);
     double lidiff = cv::norm(w.dstDepth, w.warpedDepth, NORM_INF, goodVals);

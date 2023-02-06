@@ -302,8 +302,8 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 
     Mat_<Vec4b> img = image.getMat();
 
-    Mat nans;
-    nanMask(points, nans);
+    Mat goods;
+    finiteMask(points, goods);
 
     Range range(0, sz.height);
     const int nstripes = -1;
@@ -314,7 +314,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
                 Vec4b* imgRow = img[y];
                 const ptype* ptsRow = points[y];
                 const ptype* nrmRow = normals[y];
-                const uchar* nanRow = nans.ptr<uchar>(y);
+                const uchar* goodRow = goods.ptr<uchar>(y);
 
                 for (int x = 0; x < sz.width; x++)
                 {
@@ -323,7 +323,7 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 
                     Vec4b color;
 
-                    if ( nanRow[x] )
+                    if ( !goodRow[x] )
                     {
                         color = Vec4b(0, 32, 0, 0);
                     }
@@ -361,10 +361,10 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
     Points  points = _points.getMat();
     Colors  colors = _colors.getMat();
 
-    Mat nanp, nanc, nans;
-    nanMask(points, nanp);
-    nanMask(colors, nanc);
-    nans = nanp | nanc;
+    Mat goods, goodp, goodc;
+    finiteMask(points, goodp);
+    finiteMask(colors, goodc);
+    goods = goodp & goodc;
 
     Mat_<Vec4b> img = image.getMat();
 
@@ -377,7 +377,7 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
                 Vec4b* imgRow = img[y];
                 //const ptype* ptsRow = points[y];
                 const ptype* clrRow = colors[y];
-                const uchar* nanRow = nans.ptr<uchar>(y);
+                const uchar* goodRow = goods.ptr<uchar>(y);
 
                 for (int x = 0; x < sz.width; x++)
                 {
@@ -386,7 +386,7 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
 
                     Vec4b color;
 
-                    if ( nanRow[x] )
+                    if ( !goodRow[x] )
                     {
                         color = Vec4b(0, 32, 0, 0);
                     }

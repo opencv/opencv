@@ -748,28 +748,23 @@ struct SoftType<double>
 
 
 template <typename _Tp>
-static void nanMask_(const _Tp *src, uchar *dst, size_t total, int cn, bool maskNans, bool maskInfs, bool maskAll, bool invert)
+static void finiteMask_(const _Tp *src, uchar *dst, size_t total, int cn)
 {
     for(size_t i = 0; i < total; i++ )
     {
-        bool nan = maskAll ? true : false;
+        bool good = true;
         for (int c = 0; c < cn; c++)
         {
             _Tp val = src[i * cn + c];
             typename SoftType<_Tp>::type sval(val);
 
-            bool v = (maskNans && sval.isNaN()) || (maskInfs && sval.isInf());
-            if (maskAll)
-                nan = nan && v;
-            else
-                nan = nan || v;
+            good = good && !sval.isNaN() && !sval.isInf();
         }
-        nan = invert ? !nan : nan;
-        dst[i] = nan ? 255 : 0;
+        dst[i] = good ? 255 : 0;
     }
 }
 
-static void nanMask(const Mat& src, Mat& dst, bool maskNans, bool maskInfs, bool maskAll, bool invert)
+static void finiteMask(const Mat& src, Mat& dst)
 {
     dst.create(src.dims, &src.size[0], CV_8UC1);
 
@@ -787,48 +782,33 @@ static void nanMask(const Mat& src, Mat& dst, bool maskNans, bool maskInfs, bool
 
         switch( depth )
         {
-        case CV_32F: nanMask_<float >((const  float*)sptr, dptr, total, cn, maskNans, maskInfs, maskAll, invert); break;
-        case CV_64F: nanMask_<double>((const double*)sptr, dptr, total, cn, maskNans, maskInfs, maskAll, invert); break;
+        case CV_32F: finiteMask_<float >((const  float*)sptr, dptr, total, cn); break;
+        case CV_64F: finiteMask_<double>((const double*)sptr, dptr, total, cn); break;
         }
     }
 }
 }
 
 
-struct NanMaskOp : public BaseElemWiseOp
+struct FiniteMaskOp : public BaseElemWiseOp
 {
-    NanMaskOp() : BaseElemWiseOp(1, 0, 1, 1, Scalar::all(0)) {}
+    FiniteMaskOp() : BaseElemWiseOp(1, 0, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        int f = (maskNans ? MASK_NANS : 0) | (maskInfs ? MASK_INFS : 0) |
-                (maskAll  ? MASK_ALL  : 0) | (invert   ? MASK_INV  : 0);
-        cv::nanMask(src[0], dst, f);
+        cv::finiteMask(src[0], dst);
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
-        reference::nanMask(src[0], dst, maskNans, maskInfs, maskAll, invert);
+        reference::finiteMask(src[0], dst);
     }
     int getRandomType(RNG& rng)
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_FLT, 1, 4);
     }
-    void generateScalars(int, RNG& rng)
-    {
-        int ni = rng.uniform(1, 4);
-        maskNans = ni & 1;
-        maskInfs = ni & 2;
-        int ai = rng.uniform(0, 4);
-        maskAll = ai & 1;
-        invert = ai & 2;
-    }
     double getMaxErr(int)
     {
         return 0;
     }
-    bool maskNans;
-    bool maskInfs;
-    bool maskAll;
-    bool invert;
 };
 
 
@@ -1675,7 +1655,7 @@ INSTANTIATE_TEST_CASE_P(Core_CmpS, ElemWiseTest, ::testing::Values(ElemWiseOpPtr
 INSTANTIATE_TEST_CASE_P(Core_InRangeS, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new InRangeSOp)));
 INSTANTIATE_TEST_CASE_P(Core_InRange, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new InRangeOp)));
 
-INSTANTIATE_TEST_CASE_P(Core_NanMask, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new NanMaskOp)));
+INSTANTIATE_TEST_CASE_P(Core_FiniteMask, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new FiniteMaskOp)));
 
 INSTANTIATE_TEST_CASE_P(Core_Flip, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new FlipOp)));
 INSTANTIATE_TEST_CASE_P(Core_Transpose, ElemWiseTest, ::testing::Values(ElemWiseOpPtr(new TransposeOp)));
@@ -2981,7 +2961,7 @@ TEST(Core_CartPolar, inplace)
 }
 
 
-// Check different flags combinations for nanMask()
+// Check different values for finiteMask()
 
 template<typename _Tp>
 _Tp randomNan(RNG& rng);
@@ -3010,7 +2990,7 @@ double randomNan(RNG& rng)
 }
 
 template<typename T>
-Mat generateNanMaskData(int cn, RNG& rng)
+Mat generateFiniteMaskData(int cn, RNG& rng)
 {
     typedef typename reference::SoftType<T>::type SFT;
 
@@ -3029,37 +3009,27 @@ Mat generateNanMaskData(int cn, RNG& rng)
     return Mat(plainData).reshape(cn);
 }
 
-typedef std::tuple<int, int, int, bool, bool> NanMaskFixtureParams;
-class NanMaskFixture : public ::testing::TestWithParam<NanMaskFixtureParams> {};
+typedef std::tuple<int, int> FiniteMaskFixtureParams;
+class FiniteMaskFixture : public ::testing::TestWithParam<FiniteMaskFixtureParams> {};
 
-TEST_P(NanMaskFixture, flags)
+TEST_P(FiniteMaskFixture, flags)
 {
     auto p = GetParam();
     int depth = get<0>(p);
     int channels = get<1>(p);
 
-    bool maskNans = get<2>(p) & 1;
-    bool maskInfs = get<2>(p) & 2;
-
-    bool maskAll  = get<3>(p);
-    bool invert   = get<4>(p);
-
     RNG rng((uint64)ARITHM_RNG_SEED);
-    Mat data = (depth == CV_32F) ? generateNanMaskData<float >(channels, rng)
-                  /* CV_64F */   : generateNanMaskData<double>(channels, rng);
+    Mat data = (depth == CV_32F) ? generateFiniteMaskData<float >(channels, rng)
+                  /* CV_64F */   : generateFiniteMaskData<double>(channels, rng);
 
-    int f = (maskNans ? MASK_NANS : 0) | (maskInfs ? MASK_INFS : 0) |
-            (maskAll  ? MASK_ALL  : 0) | (invert   ? MASK_INV  : 0);
     Mat nans, gtNans;
-    cv::nanMask(data, nans, f);
-    reference::nanMask(data, gtNans, maskNans, maskInfs, maskAll, invert);
+    cv::finiteMask(data, nans);
+    reference::finiteMask(data, gtNans);
 
     EXPECT_MAT_NEAR(nans, gtNans, 0);
 }
 
-// Params are:
-// depth, channels 1 to 4, maskInfs*2 + maskNans (zeros excluded), maskAll, invert
-INSTANTIATE_TEST_CASE_P(Core_NanMask, NanMaskFixture, ::testing::Combine(::testing::Values(CV_32F, CV_64F), ::testing::Range(1, 5),
-                                                                         ::testing::Range(1, 4), ::testing::Bool(), ::testing::Bool()));
+// Params are: depth, channels 1 to 4
+INSTANTIATE_TEST_CASE_P(Core_FiniteMask, FiniteMaskFixture, ::testing::Combine(::testing::Values(CV_32F, CV_64F), ::testing::Range(1, 5)));
 
 }} // namespace
