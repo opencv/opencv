@@ -664,7 +664,6 @@ static cv::GRunArgs run_py_kernel(cv::detail::PyObjectHolder kernel,
     cv::GRunArgs outs;
     try
     {
-        int in_idx = 0;
         // NB: Doesn't increase reference counter (false),
         // because PyObject already have ownership.
         // In case exception decrement reference counter.
@@ -697,7 +696,6 @@ static cv::GRunArgs run_py_kernel(cv::detail::PyObjectHolder kernel,
                     util::throw_error(std::logic_error("GFrame isn't supported for custom operation"));
                     break;
             }
-            ++in_idx;
         }
 
         if (ctx.m_state.has_value())
