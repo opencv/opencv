@@ -247,7 +247,7 @@ void CV_ArucoDetectionPerspective::run(int) {
     aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_6X6_250), params);
 
     // detect from different positions
-    for(double distance = 0.1; distance < 0.7; distance += 0.2) {
+    for(double distance : {0.1, 0.3, 0.5, 0.7}) {
         for(int pitch = 0; pitch < 360; pitch += (distance == 0.1? 60:180)) {
             for(int yaw = 70; yaw <= 120; yaw += 40){
                 int currentId = iter % 250;
