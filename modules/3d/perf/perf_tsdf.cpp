@@ -375,13 +375,11 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
             for (int y = range.start; y < range.end; y++)
             {
                 Vec4b* imgRow = img[y];
-                //const ptype* ptsRow = points[y];
                 const ptype* clrRow = colors[y];
                 const uchar* goodRow = goods.ptr<uchar>(y);
 
                 for (int x = 0; x < sz.width; x++)
                 {
-                    //Point3f p = fromPtype(ptsRow[x]);
                     Point3f c = fromPtype(clrRow[x]);
 
                     Vec4b color;
