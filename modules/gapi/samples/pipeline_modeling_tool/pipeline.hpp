@@ -164,8 +164,8 @@ void Pipeline::run() {
     // NB: Count how many executions don't fit into camera latency interval.
     m_perf.num_late_frames =
         std::count_if(m_perf.latencies.begin(), m_perf.latencies.end(),
-                [this](int64_t latency) {
-                    return latency > m_latency;
+                [this](double latency) {
+                    return std::isgreater(latency, m_latency);
                 });
 
     m_perf.throughput = (m_perf.latencies.size() / m_perf.elapsed) * 1000;
