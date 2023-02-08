@@ -135,13 +135,21 @@ void Pipeline::run() {
     // NB: Allocate outputs for execution
     prepareOutputs();
 
-    // NB: Warm-up
+    // NB: Warm-up iteration invalidates source state
+    // so need to copy it
+    auto orig_src = m_src;
+    auto copy_src = std::make_shared<DummySource>(*m_src);
+
+    // NB: Use copy for warm-up iteration
+    m_src = copy_src;
+
+    // NB: Warm-up iteration
     init();
     run_iter();
     deinit();
 
-    // NB: Reset source
-    m_src = std::make_shared<DummySource>(*m_src);
+    // NB: Now use original source
+    m_src = orig_src;
 
     // NB: Start measuring execution
     init();
