@@ -1755,6 +1755,11 @@ TEST_P(Test_ONNX_layers, Gemm)
     testONNXModels("gemm_first_const");
 }
 
+TEST_P(Test_ONNX_layers, Gemm_bias)
+{
+    testONNXModels("gemm_vector_bias");
+}
+
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {
     // The difference of QOperator and QDQ format:
