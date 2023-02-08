@@ -2057,6 +2057,7 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
     }
 
     layerParams.set("bias_term", node_proto.input_size() == 3);
+    layerParams.set("is_matmul", true);
     addLayer(layerParams, node_proto);
 }
 

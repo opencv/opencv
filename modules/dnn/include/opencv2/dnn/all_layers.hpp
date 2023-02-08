@@ -374,6 +374,10 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SoftmaxLayerInt8> create(const LayerParams& params);
     };
 
+    /**
+     * `InnerProduct`, `MatMul` and `Gemm` operations are all implemented by Fully Connected Layer.
+     * Parameter `is_matmul` is used to distinguish `MatMul` and `Gemm` from `InnerProduct`.
+     */
     class CV_EXPORTS InnerProductLayer : public Layer
     {
     public:
