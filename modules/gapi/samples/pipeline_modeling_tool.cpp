@@ -419,7 +419,7 @@ int main(int argc, char* argv[]) {
                 }
 
                 const auto wait_mode =
-                    strToWaitMode(readOpt<std::string>(pl_fn["wait_mode"]).value_or("busy"));
+                    strToWaitMode(readOpt<std::string>(src_fn["wait_mode"]).value_or("busy"));
                 auto wait_strategy = (wait_mode == WaitMode::SLEEP) ? utils::sleep : utils::busyWait;
                 auto src = std::make_shared<DummySource>(
                         utils::double_ms_t{latency}, output, drop_frames, std::move(wait_strategy));
