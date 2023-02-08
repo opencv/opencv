@@ -19,21 +19,25 @@ struct PerfReport {
 };
 
 std::string PerfReport::toStr(bool expand) const {
+    const auto to_double_str = [](double val) {
+        std::stringstream ss;
+        ss << std::fixed << std::setprecision(3) << val;
+        return ss.str();
+    };
+
     std::stringstream ss;
-    ss << name << ": \n"
-       << "  Warm up time:   " << std::fixed << std::setprecision(3) << warmup_time << " ms\n"
-       << "  Execution time: " << std::fixed << std::setprecision(3) << elapsed << " ms\n"
-       << "  Frames:         " << num_late_frames << "/" << latencies.size() << " (late/all)\n"
-       << "  Latency:\n"
-       << "    first: " << std::fixed << std::setprecision(3) << first_latency << " ms\n"
-       << "    min:   " << std::fixed << std::setprecision(3) << min_latency   << " ms\n"
-       << "    max:   " << std::fixed << std::setprecision(3) << max_latency   << " ms\n"
-       << "    avg:   " << std::fixed << std::setprecision(3) << avg_latency << " ms\n"
-       << "  Throughput: " << std::fixed << std::setprecision(3) << throughput << " FPS";
+    ss << name << ": warm-up: " << to_double_str(warmup_time)
+       << " ms, execution time: " << to_double_str(elapsed)
+       << " ms, throughput: " << to_double_str(throughput)
+       << " FPS, latency: first: " << to_double_str(first_latency)
+       << " ms, min: " << to_double_str(min_latency)
+       << " ms, avg: " << to_double_str(avg_latency)
+       << " ms, max: " << to_double_str(max_latency)
+       << " ms, frames: " << num_late_frames << "/" << latencies.size() << " (late/all)";
     if (expand) {
         for (size_t i = 0; i < latencies.size(); ++i) {
             ss << "\nFrame:" << i << "\nLatency: "
-               << std::fixed << std::setprecision(3) << latencies[i] << " ms";
+               << to_double_str(latencies[i]) << " ms";
         }
     }
 
