@@ -21,7 +21,7 @@ CV__DNN_INLINE_NS_BEGIN
 
 #ifdef HAVE_FLATBUFFERS
 
-using namespace tflite;
+using namespace opencv_tflite;
 
 // This values are used to indicate layer output's data layout where it's possible.
 // Approach is similar to TensorFlow importer but TFLite models do not have explicit
@@ -40,8 +40,8 @@ public:
     TFLiteImporter(Net& net, const char* modelBuffer, size_t bufSize);
 
 private:
-    const tflite::Model* model;
-    const flatbuffers::Vector<flatbuffers::Offset<tflite::Tensor> >* modelTensors;
+    const opencv_tflite::Model* model;
+    const flatbuffers::Vector<flatbuffers::Offset<opencv_tflite::Tensor> >* modelTensors;
     std::map<int, Mat> allTensors;
     Net& dstNet;
 

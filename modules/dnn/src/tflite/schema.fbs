@@ -23,7 +23,7 @@
 // Version 3b: Rename fields in SignatureDef. Has backward compatibility with
 //             version 3 and 3a.
 
-namespace tflite;
+namespace opencv_tflite;
 
 // This corresponds to the version.
 file_identifier "TFL3";

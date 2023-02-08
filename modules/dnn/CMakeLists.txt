@@ -135,7 +135,12 @@ endif()
 
 if(HAVE_FLATBUFFERS)
   list(APPEND libs flatbuffers::flatbuffers)
-  list(APPEND include_dirs "${CMAKE_CURRENT_LIST_DIR}/misc/tflite")
+  list(APPEND fw_srcs "${CMAKE_CURRENT_BINARY_DIR}/schema_generated.h")
+
+  add_custom_command(
+        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/schema_generated.h"
+        COMMAND flatbuffers::flatc --cpp -o "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_LIST_DIR}/src/tflite/schema.fbs")
+
   ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_FLATBUFFERS=1")
 endif()
 
