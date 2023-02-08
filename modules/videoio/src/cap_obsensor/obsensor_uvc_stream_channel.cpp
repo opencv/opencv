@@ -198,7 +198,7 @@ DepthFrameUnpacker::DepthFrameUnpacker(){
     outputDataBuf_ = new uint8_t[OUT_DATA_SIZE];
 }
 
-DepthFrameUnpacker::~DepthFrameUnpacker(){
+DepthFrameUnpacker::~DepthFrameUnpacker() {
     delete[] outputDataBuf_;
 }
 
