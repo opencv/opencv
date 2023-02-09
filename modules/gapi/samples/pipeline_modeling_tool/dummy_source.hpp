@@ -68,7 +68,7 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
          * NB: New frame will be produced at the m_next_tick_ts point.
          */
         m_wait(ts_t{m_next_tick_ts - curr_ts});
-    } else if (m_latency != 0) {
+    } else if (m_drop_frames && m_latency != 0) {
         /*
          *                                       curr_ts
          *                         +1         +2    |
@@ -85,14 +85,11 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
          */
         int64_t num_frames =
             static_cast<int64_t>((curr_ts - m_next_tick_ts) / m_latency);
-
         m_curr_seq_id  += num_frames;
         m_next_tick_ts += num_frames * m_latency;
-        if (m_drop_frames) {
-            m_next_tick_ts += m_latency;
-            ++m_curr_seq_id;
-            m_wait(ts_t{m_next_tick_ts - curr_ts});
-        }
+        m_next_tick_ts += m_latency;
+        ++m_curr_seq_id;
+        m_wait(ts_t{m_next_tick_ts - curr_ts});
     }
 
     // NB: Just increase reference counter not to release mat memory

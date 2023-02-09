@@ -119,18 +119,18 @@ void mergeMapWith(std::map<K, V>& target, const std::map<K, V>& second) {
 }
 
 template <typename T>
-double avg(const std::vector<T>& vec, int startidx=0) {
-    return std::accumulate(vec.begin()+startidx, vec.end(), 0.0) / vec.size();
+double avg(const std::vector<T>& vec) {
+    return std::accumulate(vec.begin(), vec.end(), 0.0) / vec.size();
 }
 
 template <typename T>
-T max(const std::vector<T>& vec, int startidx=0) {
-    return *std::max_element(vec.begin()+startidx, vec.end());
+T max(const std::vector<T>& vec) {
+    return *std::max_element(vec.begin(), vec.end());
 }
 
 template <typename T>
-T min(const std::vector<T>& vec, int startidx=0) {
-    return *std::min_element(vec.begin()+startidx, vec.end());
+T min(const std::vector<T>& vec) {
+    return *std::min_element(vec.begin(), vec.end());
 }
 
 template <typename T>

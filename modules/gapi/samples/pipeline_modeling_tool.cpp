@@ -424,7 +424,6 @@ int main(int argc, char* argv[]) {
                 auto src = std::make_shared<DummySource>(
                         utils::double_ms_t{latency}, output, drop_frames, std::move(wait_strategy));
                 builder.setSource(src_name, src);
-                builder.setLatency(latency);
             }
 
             const auto& nodes_fn = check_and_get_fn(pl_fn, "nodes", name);

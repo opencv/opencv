@@ -13,7 +13,8 @@ struct PerfReport {
     double  elapsed            = 0.0;
     double  warmup_time        = 0.0;
     int64_t num_late_frames    = 0;
-    std::vector<double> latencies;
+    std::vector<double>  latencies;
+    std::vector<int64_t> seq_ids;
 
     std::string toStr(bool expanded = false) const;
 };
@@ -33,7 +34,7 @@ std::string PerfReport::toStr(bool expand) const {
        << " ms, min: " << to_double_str(min_latency)
        << " ms, avg: " << to_double_str(avg_latency)
        << " ms, max: " << to_double_str(max_latency)
-       << " ms, frames: " << num_late_frames << "/" << latencies.size() << " (late/all)";
+       << " ms, frames: " << num_late_frames << "/" << seq_ids.back()+1 << " (dropped/all)";
     if (expand) {
         for (size_t i = 0; i < latencies.size(); ++i) {
             ss << "\nFrame:" << i << "\nLatency: "
@@ -63,8 +64,7 @@ public:
              std::shared_ptr<DummySource>&& src,
              StopCriterion::Ptr             stop_criterion,
              cv::GCompileArgs&&             args,
-             const size_t                   num_outputs,
-             const double                   latency);
+             const size_t                   num_outputs);
 
     void compile();
     void run();
@@ -75,10 +75,10 @@ public:
     virtual ~Pipeline() = default;
 
 protected:
-    virtual void    _compile() = 0;
-    virtual double  run_iter() = 0;
-    virtual void    init() {};
-    virtual void    deinit() {};
+    virtual void  _compile() = 0;
+    virtual void  run_iter() = 0;
+    virtual void  init() {};
+    virtual void  deinit() {};
 
     void prepareOutputs();
 
@@ -93,7 +93,7 @@ protected:
     cv::GRunArgsP                m_pipeline_outputs;
     std::vector<cv::Mat>         m_out_mats;
     int64_t                      m_start_ts;
-    double                       m_latency;
+    int64_t                      m_seq_id;
 };
 
 Pipeline::Pipeline(std::string&&                  name,
@@ -101,15 +101,13 @@ Pipeline::Pipeline(std::string&&                  name,
                    std::shared_ptr<DummySource>&& src,
                    StopCriterion::Ptr             stop_criterion,
                    cv::GCompileArgs&&             args,
-                   const size_t                   num_outputs,
-                   const double                   latency)
+                   const size_t                   num_outputs)
     : m_name(std::move(name)),
       m_comp(std::move(comp)),
       m_src(std::move(src)),
       m_stop_criterion(std::move(stop_criterion)),
       m_args(std::move(args)),
-      m_num_outputs(num_outputs),
-      m_latency(latency) {
+      m_num_outputs(num_outputs) {
     m_perf.name = m_name;
 }
 
@@ -121,12 +119,13 @@ void Pipeline::compile() {
 }
 
 void Pipeline::prepareOutputs() {
-    // NB: N-1 buffers + timestamp.
-    m_out_mats.resize(m_num_outputs - 1);
+    // NB: N-2 buffers + timestamp + ueq_id.
+    m_out_mats.resize(m_num_outputs - 2);
     for (auto& m : m_out_mats) {
         m_pipeline_outputs += cv::gout(m);
     }
     m_pipeline_outputs += cv::gout(m_start_ts);
+    m_pipeline_outputs += cv::gout(m_seq_id);
 }
 
 void Pipeline::run() {
@@ -148,6 +147,10 @@ void Pipeline::run() {
     run_iter();
     deinit();
 
+    // NB: Calculate first latency
+    m_perf.first_latency = utils::double_ms_t{
+        microseconds{utils::timestamp<microseconds>() - m_start_ts}}.count();
+
     // NB: Now use original source
     m_src = orig_src;
 
@@ -155,30 +158,36 @@ void Pipeline::run() {
     init();
     auto start = high_resolution_clock::now();
     m_stop_criterion->start();
+
     while (true) {
-        m_perf.latencies.push_back(run_iter());
-        m_perf.elapsed = duration_cast<utils::double_ms_t>(high_resolution_clock::now() - start).count();
+        run_iter();
+
+        m_perf.seq_ids.push_back(m_seq_id);
+        const auto latency = utils::double_ms_t{
+            microseconds{utils::timestamp<microseconds>() - m_start_ts}}.count();
+        m_perf.latencies.push_back(latency);
+
         m_stop_criterion->iter();
 
         if (m_stop_criterion->done()) {
+            m_perf.elapsed = duration_cast<utils::double_ms_t>(
+                    high_resolution_clock::now() - start).count();
             deinit();
             break;
         }
     }
 
-    // NB: Calculating statistics
-    m_perf.first_latency = m_perf.latencies[0];
     // NB: Exclude first latency from statistics
-    m_perf.avg_latency = utils::avg(m_perf.latencies, 1);
-    m_perf.min_latency = utils::min(m_perf.latencies, 1);
-    m_perf.max_latency = utils::max(m_perf.latencies, 1);
+    m_perf.avg_latency = utils::avg(m_perf.latencies);
+    m_perf.min_latency = utils::min(m_perf.latencies);
+    m_perf.max_latency = utils::max(m_perf.latencies);
 
-    // NB: Count how many executions don't fit into camera latency interval.
-    m_perf.num_late_frames =
-        std::count_if(m_perf.latencies.begin(), m_perf.latencies.end(),
-                [this](double latency) {
-                    return std::isgreater(latency, m_latency);
-                });
+    // NB: Count the number of dropped frames
+    int64_t prev_seq_id = m_perf.seq_ids[0];
+    for (size_t i = 1; i < m_perf.seq_ids.size(); ++i) {
+        m_perf.num_late_frames += m_perf.seq_ids[i] - prev_seq_id - 1;
+        prev_seq_id = m_perf.seq_ids[i];
+    }
 
     m_perf.throughput = (m_perf.latencies.size() / m_perf.elapsed) * 1000;
 }
@@ -207,11 +216,8 @@ private:
         m_compiled.stop();
     }
 
-    virtual double run_iter() override {
-        using namespace std::chrono;
+    virtual void run_iter() override {
         m_compiled.pull(cv::GRunArgsP{m_pipeline_outputs});
-        return utils::double_ms_t{
-            DummySource::ts_t{utils::timestamp<microseconds>() - m_start_ts}}.count();
     }
 
     cv::GStreamingCompiled m_compiled;
@@ -228,13 +234,10 @@ private:
                             cv::GCompileArgs(m_args));
     }
 
-    virtual double run_iter() override {
-        using namespace std::chrono;
+    virtual void run_iter() override {
         cv::gapi::wip::Data data;
         m_src->pull(data);
-        return utils::measure<utils::double_ms_t>([&]{
-            m_compiled({data}, cv::GRunArgsP{m_pipeline_outputs});
-        });
+        m_compiled({data}, cv::GRunArgsP{m_pipeline_outputs});
     }
 
     cv::GCompiled m_compiled;
