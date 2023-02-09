@@ -4,16 +4,15 @@
 
 #include "../precomp.hpp"
 
+#ifdef HAVE_FLATBUFFERS
+#include "schema_generated.h"
+#include "builtin_op_data.h"
+#endif
+
 #include <opencv2/core/utils/logger.defines.hpp>
 #undef CV_LOG_STRIP_LEVEL
 #define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
 #include <opencv2/core/utils/logger.hpp>
-
-#ifdef HAVE_FLATBUFFERS
-#include "schema_generated.h"
-#endif
-
-#include "builtin_op_data.h"
 
 namespace cv {
 namespace dnn {
@@ -78,14 +77,18 @@ private:
     int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId);
 };
 
-Mat TFLiteImporter::parseTensor(const Tensor& tensor) {
-    CV_Assert(tensor.shape());
-    std::vector<int> shape(tensor.shape()->begin(), tensor.shape()->end());
+Mat TFLiteImporter::parseTensor(const Tensor& tensor)
+{
+    const auto tensor_shape = tensor.shape();
+    CV_Assert(tensor_shape);
+    std::vector<int> shape(tensor_shape->begin(), tensor_shape->end());
     int bufferIdx = tensor.buffer();
     CV_Assert(bufferIdx != 0);  // 0th buffer is a no-data buffer
     const Buffer* buffer = model->buffers()->Get(bufferIdx);
-    CV_Assert(buffer && buffer->data());
-    const void* data = buffer->data()->data();
+    CV_Assert(buffer);
+    const auto buffer_data = buffer->data();
+    CV_Assert(buffer_data);
+    const void* data = buffer_data->data();
 
     int dtype = -1;
     switch (tensor.type()) {
@@ -109,11 +112,13 @@ TFLiteImporter::TFLiteImporter(Net& dstNet, const char* modelBuffer, size_t bufS
 {
     flatbuffers::Verifier verifier((const uint8_t*)modelBuffer, bufSize);
     if (!VerifyModelBuffer(verifier)) {
-        CV_Error(Error::StsError, "TFLite model is incorrect");
+        CV_Error(Error::StsError, "DNN/TFLite: model is incorrect");
     }
 
     model = GetModel(modelBuffer);
-    CV_Assert(model && model->subgraphs() && model->buffers());
+    CV_Assert(model);
+    CV_Assert(model->subgraphs());
+    CV_Assert(model->buffers());
     CV_CheckEQ(model->subgraphs()->size(), 1, "");
 
     modelTensors = model->subgraphs()->Get(0)->tensors();
@@ -129,9 +134,11 @@ TFLiteImporter::TFLiteImporter(Net& dstNet, const char* modelBuffer, size_t bufS
     populateNet();
 }
 
-DataLayout estimateLayout(const Tensor* t) {
-    CV_Assert(t && t->shape());
-    switch (t->shape()->size()) {
+DataLayout estimateLayout(const Tensor& t)
+{
+    const auto t_shape = t.shape();
+    CV_Assert(t_shape);
+    switch (t_shape->size()) {
     case 5: return DATA_LAYOUT_NDHWC;
     case 4: return DATA_LAYOUT_NHWC;
     case 2: return DATA_LAYOUT_PLANAR;
@@ -139,53 +146,76 @@ DataLayout estimateLayout(const Tensor* t) {
     }
 }
 
-void TFLiteImporter::populateNet() {
-    const SubGraph* subgraph = model->subgraphs()->Get(0);
-    const auto* opCodes = model->operator_codes();
-    CV_Assert(subgraph && subgraph->inputs() && subgraph->operators());
+void TFLiteImporter::populateNet()
+{
+    CV_Assert(model);
+    const auto model_subgraphs = model->subgraphs();
+    CV_Assert(model_subgraphs);
+    const SubGraph* subgraph = model_subgraphs->Get(0);
+    CV_Assert(subgraph);
+    const auto subgraph_inputs = subgraph->inputs();
+    CV_Assert(subgraph_inputs);
+    const auto subgraph_operators = subgraph->operators();
+    CV_Assert(subgraph_operators);
+    const auto opCodes = model->operator_codes();
     CV_Assert(opCodes);
 
+    CV_Assert(modelTensors);
     layouts.resize(modelTensors->size(), DATA_LAYOUT_UNKNOWN);
-    for (int i = 0; i < subgraph->inputs()->size(); ++i) {
-        int idx = subgraph->inputs()->Get(i);
+    size_t subgraph_inputs_size = subgraph_inputs->size();
+    for (size_t i = 0; i < subgraph_inputs_size; ++i)
+    {
+        int idx = subgraph_inputs->Get(i);
         layerIds[idx] = std::make_pair(0, i);
-        layouts[idx] = estimateLayout(modelTensors->Get(idx));
+        const auto tensor = modelTensors->Get(idx);
+        if (!tensor)
+            CV_Error(Error::StsError, cv::format("DNN/TFLite: subgraph input %d (%d) is NULL", (int)i, idx));
+        layouts[idx] = estimateLayout(*tensor);
     }
-    for (const auto op : *subgraph->operators()) {
-        CV_Assert(op && op->inputs() && op->outputs());
+    const auto& all_operators = *subgraph_operators;
+    const size_t all_operators_size = all_operators.size();
+    for (size_t op_idx = 0; op_idx < all_operators_size; ++op_idx)
+    {
+        const auto op = all_operators[op_idx];
+        CV_Assert(op);
+        const auto op_inputs = op->inputs();
+        CV_Assert(op_inputs);
+        const auto op_outputs = op->outputs();
+        CV_Assert(op_outputs);
         int idx = op->opcode_index();
 
         LayerParams layerParams;
-        layerParams.name = modelTensors->Get(op->outputs()->Get(0))->name()->str();
+        layerParams.name = modelTensors->Get(op_outputs->Get(0))->name()->str();
 
         std::string type = EnumNameBuiltinOperator(BuiltinOperator(opCodes->Get(idx)->deprecated_builtin_code()));
         if (type == "CUSTOM") {
             type = opCodes->Get(idx)->custom_code()->str();
         }
 
+        CV_LOG_DEBUG(NULL, "DNN/TFLite: processing operator (" << op_idx << "/" << all_operators_size << ") with " << op_inputs->size() << " inputs: "
+                           << cv::format("[%s]:(%s)", type.c_str(), layerParams.name.c_str()));
+
         try
         {
             if (type == "DEQUANTIZE") {
                 // Convert from FP16 to FP32
-                Mat data = allTensors[op->inputs()->Get(0)];
+                Mat data = allTensors[op_inputs->Get(0)];
                 Mat dataFP32;
                 convertFp16(data, dataFP32);
-                allTensors[op->outputs()->Get(0)] = dataFP32;
+                allTensors[op_outputs->Get(0)] = dataFP32;
                 continue;
             }
 
             DispatchMap::const_iterator iter = dispatch.find(type);
-            if (iter != dispatch.end()) {
-                CALL_MEMBER_FN(*this, iter->second)(*op, type, layerParams);
-            }
-            else {
-                CV_Error(Error::StsNotImplemented, "Unsupported layer type " + type);
-            }
+            if (iter == dispatch.end())
+                CV_Error(Error::StsNotImplemented, "Unsupported operator type " + type);
+
+            CALL_MEMBER_FN(*this, iter->second)(*op, type, layerParams);
 
             // Collect input blobs
             std::vector<int> layerInputs;
             std::vector<DataLayout> inpLayouts;
-            for (int idx : *op->inputs()) {
+            for (int idx : *op_inputs) {
                 if (layerIds.find(idx) != layerIds.end()) {
                     layerInputs.push_back(idx);
                     inpLayouts.push_back(layouts[idx]);
@@ -202,12 +232,13 @@ void TFLiteImporter::populateNet() {
             int i = 0;
             for (int idx : layerInputs) {
                 auto it = layerIds.find(idx);
+                CV_Assert(it != layerIds.end());
                 dstNet.connect(it->second.first, it->second.second, layerId, i++);
             }
 
             // Predict output layout. Some layer-specific parsers may set them explicitly.
             // Otherwise, propagate input layout.
-            if (layouts[op->outputs()->Get(0)] == DATA_LAYOUT_UNKNOWN) {
+            if (layouts[op_outputs->Get(0)] == DATA_LAYOUT_UNKNOWN) {
                 DataLayout predictedLayout = DATA_LAYOUT_UNKNOWN;
                 for (auto layout : inpLayouts) {
                     if (layout != DATA_LAYOUT_UNKNOWN) {
@@ -219,21 +250,22 @@ void TFLiteImporter::populateNet() {
                         }
                     }
                 }
-                layouts[op->outputs()->Get(0)] = predictedLayout;
+                layouts[op_outputs->Get(0)] = predictedLayout;
             }
 
             // Register outputs
             i = 0;
-            for (int idx : *op->outputs()) {
+            for (int idx : *op_outputs) {
                 layerIds[idx] = std::make_pair(layerId, i++);
             }
         }
         catch (const cv::Exception& e)
         {
-            CV_UNUSED(e);
+            CV_LOG_ERROR(NULL, "DNN/TFLite: Problem during import of operator "
+                               << cv::format("[%s]:(%s)", type.c_str(), layerParams.name.c_str())
+                               << " (" << op_idx << "/" << all_operators_size << "). Exception: " << e.what());
             if (DNN_DIAGNOSTICS_RUN)
             {
-                CV_LOG_ERROR(NULL, "DNN/TFLite: Problem during import of layer " << layerParams.name.c_str() << " with type " << type.c_str());
                 continue;
             }
             throw;
@@ -439,7 +471,7 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
     DataLayout inpLayout = layouts[op.inputs()->Get(0)];
     if (inpLayout == DATA_LAYOUT_NHWC) {
         // OpenCV works in NCHW data layout. So change the axis correspondingly.
-        CV_Assert(-4 < axis && axis < 4);
+        CV_Check(axis, -4 < axis && axis < 4, "");
         int remap[] = {0, 2, 3, 1};
         axis = axis > 0 ? axis : 4 + axis;
         axis = remap[axis];
@@ -522,8 +554,8 @@ void TFLiteImporter::parseDeconvolution(const Operator& op, const std::string& o
                 for (int i_w = 0; i_w < kw; i_w++) {
                     int dst_i = kw * (kh * (oc * i_ic + i_oc) + i_h) + i_w;
                     int src_i = ic * (kw * (kh * i_oc + i_h) + i_w) + i_ic;
-                    CV_Assert(dst_i < total);
-                    CV_Assert(src_i < total);
+                    CV_CheckLT(dst_i, total, "");
+                    CV_CheckLT(src_i, total, "");
                     dstData[dst_i] = data[src_i];
                 }
             }
@@ -538,7 +570,8 @@ Net readNetFromTFLite(const String &modelPath) {
 
     const std::ios::openmode mode = std::ios::in | std::ios::binary;
     std::ifstream ifs(modelPath, mode);
-    CV_Assert(ifs.is_open());
+    if (!ifs.is_open())
+        CV_Error(Error::StsError, cv::format("DNN/TFLite: can't open model file '%s'", modelPath.c_str()));
 
     ifs.seekg(0, std::ios::end);
     const size_t sz = ifs.tellg();
@@ -547,6 +580,7 @@ Net readNetFromTFLite(const String &modelPath) {
     ifs.seekg(0, std::ios::beg);
 
     ifs.read(content.data(), sz);
+    CV_Assert(!ifs.bad());
 
     TFLiteImporter(net, content.data(), content.size());
     return net;
@@ -562,21 +596,23 @@ Net readNetFromTFLite(const char *bufferModel, size_t bufSize) {
     return net;
 }
 
-#else
+#else  // HAVE_FLATBUFFERS
+
+#define DNN_TFLITE_UNSUPPORTED() CV_Error(Error::StsError, "DNN/TFLite: Build OpenCV with FlatBuffers to import TFLite models: https://github.com/opencv/opencv/pull/23161")
 
 Net readNetFromTFLite(const String &) {
-    CV_Error(Error::StsError, "Build OpenCV with FlatBuffers to import TFLite models");
+    DNN_TFLITE_UNSUPPORTED();
 }
 
 Net readNetFromTFLite(const std::vector<uchar>&) {
-    CV_Error(Error::StsError, "Build OpenCV with FlatBuffers to import TFLite models");
+    DNN_TFLITE_UNSUPPORTED();
 }
 
 Net readNetFromTFLite(const char *, size_t) {
-    CV_Error(Error::StsError, "Build OpenCV with FlatBuffers to import TFLite models");
+    DNN_TFLITE_UNSUPPORTED();
 }
 
-#endif // HAVE_FLATBUFFERS
+#endif  // HAVE_FLATBUFFERS
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn
