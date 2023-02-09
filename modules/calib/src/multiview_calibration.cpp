@@ -40,7 +40,7 @@ static double robustWrapper (InputArray errors, const RobustFunction &fnc) {
     return sqrt(robust_sum_sqr_errs);
 }
 
-static double computeReprojectionRMSE(const Mat &obj_points_, const Mat &img_points_, const Matx33d &K, const Mat &distortion,
+static double computeReprojectionMSE(const Mat &obj_points_, const Mat &img_points_, const Matx33d &K, const Mat &distortion,
                const Mat &rvec, const Mat &tvec, InputArray rvec2, InputArray tvec2, bool is_fisheye) {
     Mat r, t;
     if (!rvec2.empty() && !tvec2.empty()) {
@@ -59,7 +59,7 @@ static double computeReprojectionRMSE(const Mat &obj_points_, const Mat &img_poi
     if (img_points.rows != tmpImagePoints.rows)
         img_points = img_points.t();
     subtract (tmpImagePoints, img_points, tmpImagePoints);
-    return sqrt(norm(tmpImagePoints, NORM_L2SQR) / tmpImagePoints.rows);
+    return norm(tmpImagePoints, NORM_L2SQR) / tmpImagePoints.rows;
 }
 
 static bool maximumSpanningTree (int NUM_CAMERAS, int NUM_FRAMES, const std::vector<std::vector<bool>> &detection_mask,
@@ -556,8 +556,9 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                 // calibrate does not compute error per view, so compute it manually
                 errors_per_view = std::vector<double>(obj_points_.size());
                 for (int f = 0; f < (int) obj_points_.size(); f++) {
-                    errors_per_view[f] = multiview::computeReprojectionRMSE(obj_points_[f],
+                    double err2 = multiview::computeReprojectionMSE(obj_points_[f],
                         img_points_[f], Ks[camera], distortions[camera], rvecs.row(f), tvecs.row(f), noArray(), noArray(), true);
+                    errors_per_view[f] = sqrt(err2);
                 }
             } else {
                 repr_err = calibrateCamera(obj_points_, img_points_, imageSize[camera], Ks[camera], distortions[camera],
@@ -586,7 +587,8 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                 solvePnP(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], rvec, tvec, false, SOLVEPNP_ITERATIVE);
                 rvecs_all[k][i] = rvec;
                 tvecs_all[k][i] = tvec;
-                const auto err = multiview::computeReprojectionRMSE(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], Mat(rvec), Mat(tvec), noArray(), noArray(), is_fisheye_vec[k]);
+                const double err2 = multiview::computeReprojectionMSE(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], Mat(rvec), Mat(tvec), noArray(), noArray(), is_fisheye_vec[k]);
+                const double err = sqrt(err2);
                 if (camera_rt_errors[i] > err) {
                     camera_rt_errors[i] = err;
                     camera_rt_best[i] = k;
@@ -781,16 +783,17 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                 if (detection_mask_mat[c][f]) {
                     const Mat rvec0 = rvecs_mat_vec ? rvecs0.getMat(f) : rvecs0_.row(f).t();
                     const Mat tvec0 = tvecs_mat_vec ? tvecs0.getMat(f) : tvecs0_.row(f).t();
-                    const double err = multiview::computeReprojectionRMSE(objPoints.getMat(f), imagePoints[c][f], Ks[c],
+                    const double err2 = multiview::computeReprojectionMSE(objPoints.getMat(f), imagePoints[c][f], Ks[c],
                          distortions[c], rvec0, tvec0, rvec, tvec, is_fisheye_vec[c]);
-                    (*errs_ptr++) = err;
-                    sum_errors += err;
+                    (*errs_ptr++) = sqrt(err2);
+                    sum_errors += err2;
                     cnt_errors += 1;
                 } else (*errs_ptr++) = -1.0;
             }
         }
         errs.copyTo(errors_per_frame);
     }
-    return sum_errors / cnt_errors;
+
+    return sqrt(sum_errors / cnt_errors);
 }
 }
