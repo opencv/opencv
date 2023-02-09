@@ -467,12 +467,6 @@ int main(int argc, char* argv[]) {
             // NB: Pipeline mode from config takes priority over cmd.
             auto pl_mode = cfg_pl_mode.has_value()
                 ? strToPLMode(cfg_pl_mode.value()) : cmd_pl_mode;
-            // NB: Using drop_frames with streaming pipelines will follow to
-            // incorrect performance results.
-            if (drop_frames && pl_mode == PLMode::STREAMING) {
-                throw std::logic_error(
-                        "--drop_frames option is supported only for pipelines in \"regular\" mode");
-            }
 
             builder.setMode(pl_mode);
 
