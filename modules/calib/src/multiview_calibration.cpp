@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/utils/logger.hpp"
+#include "opencv2/core/softfloat.hpp"
 
 namespace cv {
 namespace multiview {
@@ -19,11 +20,11 @@ public:
     explicit RobustExpFunction (float scale_=30.0f) : over_scale(-1.442695040f /scale_) {}
     // err > 0
     float getError(float err) const override {
-        const auto under_exp = err * over_scale;
+        const float under_exp = err * over_scale;
         if (under_exp < -20) return 0; // prevent overflow further
         // http://www.machinedlearnings.com/2011/06/fast-approximate-logarithm-exponential.html
-        union { uint32_t i; float f; } exp_val = { static_cast<uint32_t>(pow_23 * (under_exp + 126.94269504f)) };
-        return err * exp_val.f;
+        softfloat vexp = softfloat::fromRaw(static_cast<uint32_t>(pow_23 * (under_exp + 126.94269504f)));
+        return err * float(vexp);
     }
 };
 
