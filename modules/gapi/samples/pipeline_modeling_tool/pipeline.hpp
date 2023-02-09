@@ -161,11 +161,11 @@ void Pipeline::run() {
 
     while (true) {
         run_iter();
-
-        m_perf.seq_ids.push_back(m_seq_id);
         const auto latency = utils::double_ms_t{
             microseconds{utils::timestamp<microseconds>() - m_start_ts}}.count();
+
         m_perf.latencies.push_back(latency);
+        m_perf.seq_ids.push_back(m_seq_id);
 
         m_stop_criterion->iter();
 
@@ -177,7 +177,6 @@ void Pipeline::run() {
         }
     }
 
-    // NB: Exclude first latency from statistics
     m_perf.avg_latency = utils::avg(m_perf.latencies);
     m_perf.min_latency = utils::min(m_perf.latencies);
     m_perf.max_latency = utils::max(m_perf.latencies);
