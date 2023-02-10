@@ -2456,6 +2456,12 @@ TEST_P(Test_ONNX_layers, LayerNormExpanded)
     testONNXModels("layer_norm_expanded_with_initializers");
 }
 
+TEST_P(Test_ONNX_layers, Gelu)
+{
+    testONNXModels("gelu");
+    testONNXModels("gelu_approximation");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace

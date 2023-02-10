@@ -806,6 +806,18 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SeluLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS GeluLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<GeluLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS GeluApproximationLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<GeluApproximationLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ThresholdedReluLayer : public ActivationLayer
     {
     public:
