@@ -298,6 +298,9 @@ void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opc
     layerParams.type = "Convolution";
 
     auto options = reinterpret_cast<const Conv2DOptions*>(op.builtin_options());
+    if (options->fused_activation_function() != ActivationFunctionType_NONE) {
+        CV_Error(Error::StsNotImplemented, "Convolution with fused activation");
+    }
     layerParams.set("pad_mode", EnumNamePadding(options->padding()));
     layerParams.set("stride_w", options->stride_w());
     layerParams.set("stride_h", options->stride_h());
@@ -343,6 +346,9 @@ void TFLiteImporter::parseDWConvolution(const Operator& op, const std::string& o
     layerParams.type = "Convolution";
 
     auto options = reinterpret_cast<const DepthwiseConv2DOptions*>(op.builtin_options());
+    if (options->fused_activation_function() != ActivationFunctionType_NONE) {
+        CV_Error(Error::StsNotImplemented, "Depthwise convolution with fused activation");
+    }
     layerParams.set("pad_mode", EnumNamePadding(options->padding()));
     layerParams.set("stride_w", options->stride_w());
     layerParams.set("stride_h", options->stride_h());
@@ -388,9 +394,17 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
     } else if (opcode == "RELU") {
         layerParams.type = "ReLU";
     } else if (opcode == "ADD") {
+        auto options = reinterpret_cast<const AddOptions*>(op.builtin_options());
+        if (options->fused_activation_function() != ActivationFunctionType_NONE) {
+            CV_Error(Error::StsNotImplemented, "Add with fused activation");
+        }
         layerParams.type = "Eltwise";
         layerParams.set("operation", "sum");
     } else if (opcode == "MUL") {
+        auto options = reinterpret_cast<const MulOptions*>(op.builtin_options());
+        if (options->fused_activation_function() != ActivationFunctionType_NONE) {
+            CV_Error(Error::StsNotImplemented, "Mul with fused activation");
+        }
         layerParams.type = "Eltwise";
         layerParams.set("operation", "prod");
     } else if (opcode == "HARD_SWISH") {
@@ -406,6 +420,9 @@ void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode,
     layerParams.type = "Pooling";
 
     auto options = reinterpret_cast<const Pool2DOptions*>(op.builtin_options());
+    if (options->fused_activation_function() != ActivationFunctionType_NONE) {
+        CV_Error(Error::StsNotImplemented, "Pooling with fused activation");
+    }
     layerParams.set("pad_mode", EnumNamePadding(options->padding()));
     layerParams.set("stride_w", options->stride_w());
     layerParams.set("stride_h", options->stride_h());
@@ -424,6 +441,9 @@ void TFLiteImporter::parsePoolingWithArgmax(const Operator& op, const std::strin
 
     CV_CheckLE(op.custom_options()->size(), sizeof(TfLitePoolParams), "");
     const auto* params = reinterpret_cast<const TfLitePoolParams*>(op.custom_options()->Data());
+    if (params->activation != kTfLiteActNone) {
+        CV_Error(Error::StsNotImplemented, "Argmax pooling with fused activation");
+    }
     if (params->padding != kTfLitePaddingUnknown)
         layerParams.set("pad_mode", params->padding == kTfLitePaddingSame ? "SAME" : "VALID");
     layerParams.set("stride_w", params->stride_width);
@@ -438,6 +458,9 @@ void TFLiteImporter::parseUnpooling(const Operator& op, const std::string& opcod
 
     CV_CheckLE(op.custom_options()->size(), sizeof(TfLitePoolParams), "");
     const auto* params = reinterpret_cast<const TfLitePoolParams*>(op.custom_options()->Data());
+    if (params->activation != kTfLiteActNone) {
+        CV_Error(Error::StsNotImplemented, "Unpooling with fused activation");
+    }
     layerParams.set("pool_stride_w", params->stride_width);
     layerParams.set("pool_stride_h", params->stride_height);
     layerParams.set("pool_k_w", params->filter_width);
@@ -466,6 +489,9 @@ void TFLiteImporter::parseReshape(const Operator& op, const std::string& opcode,
 void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Concat";
     auto options = reinterpret_cast<const ConcatenationOptions*>(op.builtin_options());
+    if (options->fused_activation_function() != ActivationFunctionType_NONE) {
+        CV_Error(Error::StsNotImplemented, "Concat with fused activation");
+    }
     int axis = options->axis();
 
     DataLayout inpLayout = layouts[op.inputs()->Get(0)];

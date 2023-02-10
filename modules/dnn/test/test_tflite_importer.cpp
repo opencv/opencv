@@ -18,18 +18,12 @@ namespace opencv_test
 using namespace cv;
 using namespace cv::dnn;
 
-template<typename TString>
-static std::string _tf(TString filename)
-{
-    return findDataFile(std::string("dnn/tflite/") + filename);
-}
-
 void testModel(const std::string& modelName, const Mat& input, double norm = 1e-5) {
 #ifndef HAVE_FLATBUFFERS
     throw SkipTestException("FlatBuffers required for TFLite importer");
 #endif
 
-    Net net = readNet(_tf(modelName + ".tflite"));
+    Net net = readNet(findDataFile("dnn/tflite/" + modelName + ".tflite", false));
     net.setInput(input);
 
     std::vector<String> outNames = net.getUnconnectedOutLayersNames();
@@ -39,7 +33,7 @@ void testModel(const std::string& modelName, const Mat& input, double norm = 1e-
 
     ASSERT_EQ(outs.size(), outNames.size());
     for (int i = 0; i < outNames.size(); ++i) {
-        Mat ref = blobFromNPY(_tf(format("%s_out_%s.npy", modelName.c_str(), outNames[i].c_str())));
+        Mat ref = blobFromNPY(findDataFile(format("dnn/tflite/%s_out_%s.npy", modelName.c_str(), outNames[i].c_str())));
         normAssert(ref.reshape(1, 1), outs[i].reshape(1, 1), outNames[i].c_str(), norm);
     }
 }
@@ -76,7 +70,7 @@ TEST(Test_TFLite, max_unpooling)
     // Due Max Unpoling is a numerically unstable operation and small difference between frameworks
     // might lead to positional difference of maximal elements in the tensor, this test checks
     // behavior of Max Unpooling layer only.
-    Net net = readNet(_tf("hair_segmentation.tflite"));
+    Net net = readNet(findDataFile("dnn/tflite/hair_segmentation.tflite", false));
 
     Mat input = imread(findDataFile("cv/shared/lena.png"));
     cvtColor(input, input, COLOR_BGR2RGBA);
