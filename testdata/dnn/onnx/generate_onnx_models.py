@@ -2598,3 +2598,12 @@ def gen_layer_norm_expanded(input_shape=[1, 4, 5], axis=-1, constant_as_initiali
 
 gen_layer_norm_expanded()
 gen_layer_norm_expanded(constant_as_initializers=True)
+
+################# GELU #################
+
+x = torch.randn(1, 5, 20)
+gelu = nn.GELU()
+save_data_and_model("gelu", x, gelu)
+
+gelu_approximation = nn.GELU('tanh')
+save_data_and_model("gelu_approximation", x, gelu_approximation)
