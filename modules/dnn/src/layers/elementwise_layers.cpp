@@ -837,6 +837,57 @@ private:
     static const char* const ocl_kernel_name;
 };
 
+struct GeluFunctor : public BaseDefaultFunctor<GeluFunctor>
+{
+    typedef GeluLayer Layer;
+
+    explicit GeluFunctor() {}
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV;
+    }
+
+    inline float calculate(float x) const
+    {
+        return 0.5f * x * (1.0f + erf(x * M_SQRT1_2));
+    }
+
+    int64 getFLOPSPerElement() const { return 100; }
+};
+
+template<>
+const char* const BaseDefaultFunctor<GeluFunctor>::ocl_kernel_name = "GeluForward";
+
+namespace GeluApproximationConstants
+{
+    static constexpr float sqrt_2_pi = 0.7978845834732056f;
+    static constexpr float coef_sqrt_2_pi = 0.044714998453855515f * sqrt_2_pi;
+}
+
+struct GeluApproximationFunctor : public BaseDefaultFunctor<GeluApproximationFunctor>
+{
+    typedef GeluApproximationLayer Layer;
+
+    explicit GeluApproximationFunctor() {}
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV;
+    }
+
+    inline float calculate(float x) const
+    {
+        return 0.5f * x * (1.f + tanh(x * (GeluApproximationConstants::sqrt_2_pi +
+                                           GeluApproximationConstants::coef_sqrt_2_pi * x * x)));
+    }
+
+    int64 getFLOPSPerElement() const { return 100; }
+};
+
+template<>
+const char* const BaseDefaultFunctor<GeluApproximationFunctor>::ocl_kernel_name = "GeluApproximationForward";
+
 struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
 {
     typedef TanHLayer Layer;
@@ -2690,6 +2741,22 @@ Ptr<ReLU6Layer> ReLU6Layer::create(const LayerParams& params)
     l->setParamsFrom(params);
     l->minValue = minValue;
     l->maxValue = maxValue;
+
+    return l;
+}
+
+Ptr<GeluLayer> GeluLayer::create(const LayerParams& params)
+{
+    Ptr<GeluLayer> l(new ElementWiseLayer<GeluFunctor>(GeluFunctor()));
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<GeluApproximationLayer> GeluApproximationLayer::create(const LayerParams& params)
+{
+    Ptr<GeluApproximationLayer> l(new ElementWiseLayer<GeluApproximationFunctor>(GeluApproximationFunctor()));
+    l->setParamsFrom(params);
 
     return l;
 }
