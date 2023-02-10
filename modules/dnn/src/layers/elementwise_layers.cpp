@@ -882,12 +882,6 @@ struct GeluApproximationFunctor : public BaseDefaultFunctor<GeluApproximationFun
                                            GeluApproximationConstants::coef_sqrt_2_pi * x * x)));
     }
 
-    inline void setKernelParams(ocl::Kernel& kernel) const
-    {
-        kernel.set(3, GeluApproximationConstants::sqrt_2_pi);
-        kernel.set(4, GeluApproximationConstants::coef_sqrt_2_pi);
-    }
-
     int64 getFLOPSPerElement() const { return 100; }
 };
 

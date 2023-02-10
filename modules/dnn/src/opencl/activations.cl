@@ -310,17 +310,25 @@ __kernel void ThresholdedReluForward(const int n, __global T* in, __global T* ou
 __kernel void GeluForward(const int n, __global T* in, __global T* out)
 {
     int index = get_global_id(0);
-    if(index < n)
-        out[index] = (T)0.5f * in[index] * ( (T)1.f + erf(in[index] * M_SQRT1_2) );
+    if (index < n)
+    {
+        T x = in[index];
+        out[index] = (T)0.5f * x * ( (T)1.f + erf(x * M_SQRT1_2) );
+    }
 }
 
-__kernel void GeluApproximationForward(const int n, __global T* in, __global T* out,
-                                       const KERNEL_ARG_DTYPE sqrt_2_pi,
-                                       const KERNEL_ARG_DTYPE coef_sqrt_2_pi)
+__kernel void GeluApproximationForward(const int n, __global T* in, __global T* out)
 {
-  int index = get_global_id(0);
+    // see GeluApproximationConstants from modules/dnn/src/layers/elementwise_layers.cpp
+    const T sqrt_2_pi = 0.7978845834732056f;
+    const T coef_sqrt_2_pi = 0.044714998453855515f * sqrt_2_pi;
+
+    int index = get_global_id(0);
     if(index < n)
-        out[index] = (T)0.5f * in[index] * ( (T)1.f + tanh(in[index] * (sqrt_2_pi + coef_sqrt_2_pi * in[index] * in[index])) );
+    {
+        T x = in[index];
+        out[index] = (T)0.5f * x * ( (T)1.f + tanh(x * (sqrt_2_pi + coef_sqrt_2_pi * x * x)) );
+    }
 }
 
 __kernel void ShrinkForward(const int n, __global T* in, __global T* out,
