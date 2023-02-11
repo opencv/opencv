@@ -34,8 +34,10 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
 {
     static const obsensor::StreamProfile colorProfile = { 640, 480, 30, obsensor::FRAME_FORMAT_MJPG };
     static const obsensor::StreamProfile depthProfile = {640, 480, 30, obsensor::FRAME_FORMAT_Y16};
-    static const obsensor::StreamProfile gemini2depthProfile = {1280, 800, 30, obsensor::FRAME_FORMAT_Y14};
-    static const obsensor::StreamProfile astra2depthProfile = {640, 480, 30, obsensor::FRAME_FORMAT_Y14};
+    static const obsensor::StreamProfile gemini2DepthProfile = {1280, 800, 30, obsensor::FRAME_FORMAT_Y14};
+    static const obsensor::StreamProfile astra2DepthProfile = {640, 480, 30, obsensor::FRAME_FORMAT_Y14};
+    static const obsensor::StreamProfile megaColorProfile = {1280, 720, 30, obsensor::FRAME_FORMAT_MJPG};
+    static const obsensor::StreamProfile megaDepthProfile = {640, 576, 30, obsensor::FRAME_FORMAT_Y16};
 
     streamChannelGroup_ = obsensor::getStreamChannelGroup(index);
     if (!streamChannelGroup_.empty())
@@ -46,11 +48,17 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
             switch (streamType)
             {
             case obsensor::OBSENSOR_STREAM_COLOR:
-                channel->start(colorProfile, [&](obsensor::Frame* frame) {
+            {
+                auto profile = colorProfile;
+                if(OBSENSOR_FEMTO_MEGA_PID == channel->getPid()){
+                    profile = megaColorProfile;
+                }
+                channel->start(profile, [&](obsensor::Frame* frame) {
                     std::unique_lock<std::mutex> lk(frameMutex_);
                     colorFrame_ = Mat(1, frame->dataSize, CV_8UC1, frame->data).clone();
                     frameCv_.notify_all();
                 });
+            }
                 break;
             case obsensor::OBSENSOR_STREAM_DEPTH:
             {
@@ -59,11 +67,13 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
 
                 obsensor::StreamProfile profile = depthProfile;
                 if(OBSENSOR_GEMINI2_PID == channel->getPid()){
-                    profile = gemini2depthProfile;
+                    profile = gemini2DepthProfile;
                 }
                 else if(OBSENSOR_ASTRA2_PID == channel->getPid()){
-
-                    profile = astra2depthProfile;
+                    profile = astra2DepthProfile;
+                }
+                else if(OBSENSOR_FEMTO_MEGA_PID == channel->getPid()){
+                    profile = megaDepthProfile;
                 }
 
                 channel->start(profile, [&](obsensor::Frame* frame) {
@@ -126,6 +136,10 @@ bool VideoCapture_obsensor::retrieveFrame(int outputType, OutputArray frame)
             else if(OBSENSOR_ASTRA2_PID == streamChannelGroup_.front()->getPid()){
                 grabbedDepthFrame_ = grabbedDepthFrame_*0.8;
                 grabbedDepthFrame_.copyTo(frame);
+            }
+            else if(OBSENSOR_FEMTO_MEGA_PID == streamChannelGroup_.front()->getPid()){
+                Rect rect(0, 0, 640, 360);
+                grabbedDepthFrame_(rect).copyTo(frame);
             }
             else{
                 grabbedDepthFrame_.copyTo(frame);
