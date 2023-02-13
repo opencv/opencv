@@ -1020,6 +1020,26 @@ models = [
         url='https://raw.githubusercontent.com/zihaomu/opencv_extra_data_backup/main/NanoTrackV2/models/nanotrack_head_sim_v2.onnx',
         sha='39f168489671700cf739e402dfc67d41ce648aef',
         filename='onnx/models/nanotrack_head_sim_v2.onnx'),
+    Model(
+        name='Face Mesh (TFLite)',
+        url='https://storage.googleapis.com/mediapipe-assets/face_landmark.tflite',
+        sha='eb01d1d88c833aaea64c880506da72e4a4f43154',
+        filename='tflite/face_landmark.tflite'),
+    Model(
+        name='Face Detection (TFLite)',
+        url='https://storage.googleapis.com/mediapipe-assets/face_detection_short_range.tflite',
+        sha='e8f749fafc23bb88daac85bc9f7e0698436f29a0',
+        filename='tflite/face_detection_short_range.tflite'),
+    Model(
+        name='Selfie Segmentation (TFLite)',
+        url='https://storage.googleapis.com/mediapipe-assets/selfie_segmentation.tflite',
+        sha='8d497f51bd678fa5fb95c3871be72eb5d722b831',
+        filename='tflite/selfie_segmentation.tflite'),
+    Model(
+        name='Hair Segmentation (TFLite)',
+        url='https://storage.googleapis.com/mediapipe-assets/hair_segmentation.tflite',
+        sha='bba28400dfc264b1ed7ee95df718fada1879644d',
+        filename='tflite/hair_segmentation.tflite'),
 ]
 
 # Note: models will be downloaded to current working directory
