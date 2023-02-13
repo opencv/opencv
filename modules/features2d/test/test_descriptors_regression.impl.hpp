@@ -183,7 +183,7 @@ protected:
             resize(dbl, downsized_back, Size(dbl.cols/2, dbl.rows/2), 0, 0, INTER_NEAREST);
 
             cv::Mat diff = (image != downsized_back);
-            ASSERT_TRUE(cv::countNonZero(diff) == 0);
+            ASSERT_EQ(0, cv::norm(image, downsized_back, NORM_INF));
         }
         catch(...)
         {
