@@ -102,9 +102,9 @@ int main (int argc, char **argv) {
     const cv::String is_fisheye_str = parser.get<cv::String>("is_fisheye");
     for (char i : is_fisheye_str) {
         if (i == '0') {
-            is_fisheye.emplace_back(false);
+            is_fisheye.push_back(false);
         } else if (i == '1') {
-            is_fisheye.emplace_back(true);
+            is_fisheye.push_back(true);
         }
     }
     const cv::String files_with_images_str = parser.get<cv::String>("files_with_images");
