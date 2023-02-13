@@ -551,7 +551,7 @@ void PrintTo(const Size& sz, ::std::ostream* os);
 //     EXPECT_TRUE(foo.StatusIsOK());
 //   }
 #define PERF_TEST(test_case_name, test_name)\
-    TEST_(test_case_name, test_name, ::perf::TestBase, PerfTestBody, CV__PERF_TEST_BODY_IMPL)
+    TEST_(test_case_name, test_name, ::perf::TestBase, PerfTestBody, CV_OVERRIDE, CV__PERF_TEST_BODY_IMPL)
 
 // Defines a performance test that uses a test fixture.
 //
@@ -595,7 +595,7 @@ void PrintTo(const Size& sz, ::std::ostream* os);
 //
 // @Note PERF_TEST_P() below violates behavior of original Google Tests - there is no tests instantiation in original TEST_P()
 // This macro is intended for usage with separate INSTANTIATE_TEST_CASE_P macro
-#define PERF_TEST_P_(test_case_name, test_name) CV__TEST_P(test_case_name, test_name, PerfTestBody, CV__PERF_TEST_BODY_IMPL)
+#define PERF_TEST_P_(test_case_name, test_name) CV__TEST_P(test_case_name, test_name, PerfTestBody, CV_OVERRIDE, CV__PERF_TEST_BODY_IMPL)
 
 // Defines a parametrized performance test.
 //
@@ -628,7 +628,7 @@ void PrintTo(const Size& sz, ::std::ostream* os);
      protected:\
       virtual void PerfTestBody();\
     };\
-    CV__TEST_P(fixture##_##name, name, PerfTestBodyDummy, CV__PERF_TEST_BODY_IMPL){} \
+    CV__TEST_P(fixture##_##name, name, PerfTestBodyDummy,, CV__PERF_TEST_BODY_IMPL){} \
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
     void fixture##_##name::PerfTestBody()
 

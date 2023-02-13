@@ -115,6 +115,8 @@ public:
                 biasMat = Mat::zeros(1, oriMat.size[oriMat.dims - 2], weightsMat.type());
             else
                 biasMat = Mat::zeros(1, numOutput, weightsMat.type());
+
+            transB = !transB;
         }
     }
 
@@ -155,7 +157,6 @@ public:
         }
         else
         {
-            CV_Assert(!transA && !transB);
             CV_CheckEQ(inputsTmp.size(), (size_t)1, "");
             CV_CheckEQ(blobs[0].dims, 2, "");
             if(isMatMul)
@@ -183,7 +184,7 @@ public:
             return axis == 1 && !tranAorB;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && !tranAorB) ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !tranAorB) ||
                (backendId == DNN_BACKEND_WEBNN && axis == 1 && !tranAorB) ||
                backendId == DNN_BACKEND_CANN;;
@@ -527,7 +528,6 @@ public:
 
         if (!blobs.empty())
         {
-            CV_Assert(!transA && !transB);
             int inp1Dim = input[0].dims;
             if (isMatMul)
             {
@@ -611,12 +611,12 @@ public:
         const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        auto biasMat_ = bias ? biasMat : Mat();
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
 
         if (weightsMat.empty() || isMatMul)
         {
-            CV_Assert(!bias);
             int inp2Dim;
             // broadcast is not supported with CUDA
             if(weightsMat.empty())
@@ -627,13 +627,12 @@ public:
                 inp2Dim = oriMat.dims;
 
             if(input_wrapper->getRank() == inp2Dim)
-                return make_cuda_node<cuda4dnn::MatMulOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), oriMat);
+                return make_cuda_node<cuda4dnn::MatMulOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), oriMat, biasMat_, transA, transB);
             else
                 return Ptr<BackendNode>();
         }
 
         auto flatten_start_axis = normalize_axis(axis, input_wrapper->getRank());
-        auto biasMat_ = bias ? biasMat : Mat();
         return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, weightsMat, biasMat_);
     }
 #endif
