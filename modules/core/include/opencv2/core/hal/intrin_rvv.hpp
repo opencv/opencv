@@ -10,13 +10,27 @@
 
 #include <algorithm>
 
+// Building for T-Head C906 core with RVV 0.7.1 using toolchain
+// https://github.com/T-head-Semi/xuantie-gnu-toolchain
+// with option '-march=rv64gcv0p7'
+#ifdef __THEAD_VERSION__
+#   if __riscv_v == 7000
+#       include <fenv.h>
+#       define CV_RVV_THEAD_0_7
+#   endif
+#endif
+
 namespace cv
 {
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
 #define CV_SIMD128 1
-#define CV_SIMD128_64F 1
+#ifndef CV_RVV_THEAD_0_7
+#   define CV_SIMD128_64F 1
+#else
+#   define CV_SIMD128_64F 0
+#endif
 
 //////////// Unsupported native intrinsics in C++ ////////////
 // The following types have been defined in clang, but not in GCC yet.
@@ -1001,14 +1015,17 @@ OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint64x2, float32x4, u64, f32, u, f, 6
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int8x16, float32x4, s8, f32, i, f, 8, 32)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int16x8, float32x4, s16, f32, i, f, 16, 32)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int64x2, float32x4, s64, f32, i, f, 64, 32)
+#if CV_SIMD128_64F
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint8x16, float64x2, u8, f64, u, f, 8, 64)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint16x8, float64x2, u16, f64, u, f, 16, 64)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(uint32x4, float64x2, u32, f64, u, f, 32, 64)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int8x16, float64x2, s8, f64, i, f, 8, 64)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int16x8, float64x2, s16, f64, i, f, 16, 64)
 OPENCV_HAL_IMPL_RVV_TWO_TIMES_REINTERPRET(int32x4, float64x2, s32, f64, i, f, 32, 64)
+#endif
 
 // Three times reinterpret
+#if CV_SIMD128_64F
 inline v_float32x4 v_reinterpret_as_f32(const v_float64x2& v) \
 { \
     return v_float32x4(vreinterpret_v_u32m1_f32m1(vreinterpret_v_u64m1_u32m1(vreinterpret_v_f64m1_u64m1(v))));\
@@ -1017,6 +1034,7 @@ inline v_float64x2 v_reinterpret_as_f64(const v_float32x4& v) \
 { \
     return v_float64x2(vreinterpret_v_u64m1_f64m1(vreinterpret_v_u32m1_u64m1(vreinterpret_v_f32m1_u32m1(v))));\
 }
+#endif
 
 ////////////// Extract //////////////
 
@@ -1920,13 +1938,15 @@ inline v_float64x2 v_muladd(const v_float64x2& a, const v_float64x2& b, const v_
 #define OPENCV_HAL_IMPL_RVV_CHECK_ALLANY(_Tpvec, suffix, shift, vl) \
 inline bool v_check_all(const _Tpvec& a) \
 { \
-    v_uint64x2 v = v_uint64x2(vreinterpret_v_##suffix##m1_u64m1(vsrl_vx_##suffix##m1(vnot_v_##suffix##m1(a, vl), shift, vl))); \
-    return (v.val[0] | v.val[1]) == 0; \
+    auto v0 = vsrl_vx_##suffix##m1(vnot_v_##suffix##m1(a, vl), shift, vl); \
+    v_uint32x4 v = v_uint32x4(v_reinterpret_as_u32(_Tpvec(v0))); \
+    return (v.val[0] | v.val[1] | v.val[2] | v.val[3]) == 0; \
 } \
 inline bool v_check_any(const _Tpvec& a) \
 { \
-    v_uint64x2 v = v_uint64x2(vreinterpret_v_##suffix##m1_u64m1(vsrl_vx_##suffix##m1(a, shift, vl))); \
-    return (v.val[0] | v.val[1]) != 0; \
+    auto v0 = vsrl_vx_##suffix##m1(a, shift, vl); \
+    v_uint32x4 v = v_uint32x4(v_reinterpret_as_u32(_Tpvec(v0))); \
+    return (v.val[0] | v.val[1] | v.val[2] | v.val[3]) != 0; \
 }
 
 OPENCV_HAL_IMPL_RVV_CHECK_ALLANY(v_uint8x16, u8, 7, 16)
@@ -2042,28 +2062,18 @@ OPENCV_HAL_IMPL_RVV_ABSDIFF(v_float64x2, absdiff)
 OPENCV_HAL_IMPL_RVV_ABSDIFF(v_int8x16, absdiffs)
 OPENCV_HAL_IMPL_RVV_ABSDIFF(v_int16x8, absdiffs)
 
-// use reinterpret instead of c-style casting.
-#ifndef __clang__
-#define OPENCV_HAL_IMPL_RVV_ABSDIFF_S(_Tpvec, _rTpvec, _nwTpvec, sub, rshr, width, vl) \
-inline _rTpvec v_absdiff(const _Tpvec& a, const _Tpvec& b) \
+#define OPENCV_HAL_IMPL_RVV_ABSDIFF_S(ivec, uvec, itype, utype, isuf, usuf, vlen) \
+inline uvec v_absdiff(const ivec& a, const ivec& b) \
 { \
-    return _rTpvec(rshr(vreinterpret_v_i##width##m2_u##width##m2(sub(v_max(a, b), v_min(a, b), vl)), 0, vl)); \
+    itype max = vmax_vv_##isuf(a, b, vlen); \
+    itype min = vmin_vv_##isuf(a, b, vlen); \
+    return uvec(vreinterpret_v_##isuf##_##usuf(vsub_vv_##isuf(max, min, vlen))); \
 }
 
-OPENCV_HAL_IMPL_RVV_ABSDIFF_S(v_int8x16, v_uint8x16, vuint16m2_t, vwsub_vv_i16m2, vnclipu_wx_u8m1, 16, 16)
-OPENCV_HAL_IMPL_RVV_ABSDIFF_S(v_int16x8, v_uint16x8, vuint32m2_t, vwsub_vv_i32m2, vnclipu_wx_u16m1, 32, 8)
-OPENCV_HAL_IMPL_RVV_ABSDIFF_S(v_int32x4, v_uint32x4, vuint64m2_t, vwsub_vv_i64m2, vnclipu_wx_u32m1, 64, 4)
-#else
-#define OPENCV_HAL_IMPL_RVV_ABSDIFF_S(_Tpvec, _rTpvec, _nwTpvec, sub, rshr, width, vl) \
-inline _rTpvec v_absdiff(const _Tpvec& a, const _Tpvec& b) \
-{ \
-    return _rTpvec(rshr(vreinterpret_u##width##m2(sub(v_max(a, b), v_min(a, b), vl)), 0, vl)); \
-}
+OPENCV_HAL_IMPL_RVV_ABSDIFF_S(v_int8x16, v_uint8x16, vint8m1_t, vuint8m1_t, i8m1, u8m1, 16)
+OPENCV_HAL_IMPL_RVV_ABSDIFF_S(v_int16x8, v_uint16x8, vint16m1_t, vuint16m1_t, i16m1, u16m1, 8)
+OPENCV_HAL_IMPL_RVV_ABSDIFF_S(v_int32x4, v_uint32x4, vint32m1_t, vuint32m1_t, i32m1, u32m1, 4)
 
-OPENCV_HAL_IMPL_RVV_ABSDIFF_S(v_int8x16, v_uint8x16, vuint16m2_t, vwsub_vv_i16m2, vnclipu_wx_u8m1, 16, 16)
-OPENCV_HAL_IMPL_RVV_ABSDIFF_S(v_int16x8, v_uint16x8, vuint32m2_t, vwsub_vv_i32m2, vnclipu_wx_u16m1, 32, 8)
-OPENCV_HAL_IMPL_RVV_ABSDIFF_S(v_int32x4, v_uint32x4, vuint64m2_t, vwsub_vv_i64m2, vnclipu_wx_u32m1, 64, 4)
-#endif
 #define OPENCV_HAL_IMPL_RVV_ABS(_Tprvec, _Tpvec, suffix) \
 inline _Tprvec v_abs(const _Tpvec& a) \
 { \
@@ -2902,7 +2912,14 @@ inline v_int32x4 v_ceil(const v_float32x4& a)
 
 inline v_int32x4 v_trunc(const v_float32x4& a)
 {
+#ifndef CV_RVV_THEAD_0_7
     return v_int32x4(vfcvt_rtz_x_f_v_i32m1(a, 4));
+#else
+    const int old_round = fesetround(FE_TOWARDZERO);
+    vint32m1_t val = vfcvt_x_f_v_i32m1(a, 4);
+    fesetround(old_round);
+    return v_int32x4(val);
+#endif
 }
 #if CV_SIMD128_64F
 #ifndef __clang__
@@ -2938,7 +2955,14 @@ inline v_int32x4 v_trunc(const v_float64x2& a)
 {
     double arr[4] = {a.val[0], a.val[1], 0, 0};
     vfloat64m2_t tmp = vle64_v_f64m2(arr, 4);
+#ifndef CV_RVV_THEAD_0_7
     return v_int32x4(vfncvt_rtz_x_f_w_i32m1(tmp, 4));
+#else
+    const int old_round = fesetround(FE_TOWARDZERO);
+    vint32m1_t val = vfncvt_x_f_w_i32m1(tmp, 4);
+    fesetround(old_round);
+    return v_int32x4(val);
+#endif
 }
 
 #else
