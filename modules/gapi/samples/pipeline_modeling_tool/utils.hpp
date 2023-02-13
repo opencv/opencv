@@ -61,10 +61,10 @@ inline void sleep(std::chrono::microseconds delay) {
     }
 
     LARGE_INTEGER li;
-    // NB: It takes portions of 100 nanoseconds.
     using ns_t = std::chrono::nanoseconds;
     using ns_100_t = std::chrono::duration<ns_t::rep,
                                            std::ratio_multiply<std::ratio<100>, ns_t::period>>;
+    // NB: QuadPart takes portions of 100 nanoseconds.
     li.QuadPart = -std::chrono::duration_cast<ns_100_t>(delay).count();
 
     if(!SetWaitableTimer(timer, &li, 0, NULL, NULL, false)){

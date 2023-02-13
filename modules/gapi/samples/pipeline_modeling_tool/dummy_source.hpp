@@ -76,28 +76,27 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
          *               ^                     ^
          *         m_next_tick_ts ------------->
          *
-         *
-         *  NB: Shift m_next_tick_ts to the nearest tick before curr_ts and
-         *  update current seq_id correspondingly.
-         *
-         *  if drop_frames is enabled, wait for the next tick, otherwise
-         *  return last written frame (+2 at the picture above) immediately.
          */
+
+        // NB: Count how many frames have been produced since last pull (m_next_tick_ts).
         int64_t num_frames =
             static_cast<int64_t>((curr_ts - m_next_tick_ts) / m_latency);
-        m_curr_seq_id  += num_frames;
+        // NB: Shift m_next_tick_ts to the nearest tick before curr_ts.
         m_next_tick_ts += num_frames * m_latency;
+        // NB: if drop_frames is enabled, update currect seq_id and wait for the next tick, otherwise
+        // return last written frame (+2 at the picture above) immediately.
         if (m_drop_frames) {
+            // NB: Shift to tick to the next frame.
             m_next_tick_ts += m_latency;
-            ++m_curr_seq_id;
+            // NB: Wait for the next frame.
             m_wait(ts_t{m_next_tick_ts - curr_ts});
+            // NB: Drop already already produced frames + current.
+            m_curr_seq_id += num_frames + 1;
         }
     }
-
     // NB: Just increase reference counter not to release mat memory
     // after assigning it to the data.
     cv::Mat mat = m_mat;
-
     data.meta[meta_tag::timestamp] = utils::timestamp<ts_t>();
     data.meta[meta_tag::seq_id] = m_curr_seq_id++;
     data = mat;
