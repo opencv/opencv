@@ -133,6 +133,17 @@ if(NOT BUILD_PROTOBUF)
   list(APPEND include_dirs ${Protobuf_INCLUDE_DIRS})
 endif()
 
+if(HAVE_FLATBUFFERS)
+  list(APPEND libs flatbuffers::flatbuffers)
+  list(APPEND fw_srcs "${CMAKE_CURRENT_BINARY_DIR}/schema_generated.h")
+
+  add_custom_command(
+        OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/schema_generated.h"
+        COMMAND flatbuffers::flatc --cpp -o "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_LIST_DIR}/src/tflite/schema.fbs")
+
+  ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_FLATBUFFERS=1")
+endif()
+
 set(sources_options "")
 
 list(APPEND libs ${LAPACK_LIBRARIES})
@@ -278,5 +289,11 @@ ocv_option(OPENCV_TEST_DNN_CANN "Build test with CANN" (TARGET ocv.3rdparty.cann
 if(TARGET ocv.3rdparty.cann AND OPENCV_TEST_DNN_CANN)
   if(TARGET opencv_test_dnn)
     ocv_target_link_libraries(opencv_test_dnn ocv.3rdparty.cann)
+  endif()
+endif()
+
+if(HAVE_FLATBUFFERS)
+  if(TARGET opencv_test_dnn)
+    ocv_target_compile_definitions(opencv_test_dnn PRIVATE "HAVE_FLATBUFFERS=1")
   endif()
 endif()
