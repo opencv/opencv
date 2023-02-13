@@ -28,17 +28,22 @@ public:
     }
 };
 
-static double robustWrapper (InputArray errors, const RobustFunction &fnc) {
-    Mat errs = errors.getMat();
-    errs.convertTo(errs, CV_32F);
-    auto * errs_ptr = (float *) errs.data;
+static double robustWrapper (const Mat& ptsErrors, Mat& weights, const RobustFunction &fnc) {
+    Mat errs;
+    ptsErrors.convertTo(errs, CV_32F);
+    weights.create(ptsErrors.total()*ptsErrors.channels(), 1, CV_32FC1);
+    const Point2f * errs_ptr = errs.ptr<Point2f>();
+    float * weights_ptr = weights.ptr<float>();
     double robust_sum_sqr_errs = 0.0;
-    for (int pt = 0; pt < (int)errs.total()*2; pt++) {
-        auto sqr_err = errs_ptr[pt];
-        sqr_err *= sqr_err;
-        robust_sum_sqr_errs += fnc.getError(sqr_err);
+    for (int pt = 0; pt < (int)errs.total(); pt++) {
+        Point2f p = errs_ptr[pt];
+        float sqr_err = p.dot(p);
+        float w = fnc.getError(sqr_err);
+        weights_ptr[pt*2 + 0] = w;
+        weights_ptr[pt*2 + 1] = w;
+        robust_sum_sqr_errs += w * sqr_err;
     }
-    return sqrt(robust_sum_sqr_errs);
+    return robust_sum_sqr_errs;
 }
 
 static double computeReprojectionMSE(const Mat &obj_points_, const Mat &img_points_, const Matx33d &K, const Mat &distortion,
@@ -346,7 +351,8 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
                         projectPoints(objpt_i, om[1], T[1], Ks[k], distortions[k], tmpImagePoints);
                 }
                 subtract( tmpImagePoints, imgpt_ik, tmpImagePoints);
-                const double robust_l2_norm = multiview::robustWrapper(tmpImagePoints, robust_fnc);
+                Mat weights;
+                const double robust_l2_norm = multiview::robustWrapper(tmpImagePoints, weights, robust_fnc);
                 errnorm += robust_l2_norm;
 
                 if (JtJ_.needed()) {
@@ -376,12 +382,15 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
                             Mat(de3dt1).copyTo(de3dt3);
                         }
 
-                        JtJ(Rect((k-1)*6, (k-1)*6, 6, 6)) += J_0ToK.t()*J_0ToK; // 6 x ni * ni x 6
-                        JtJ(Rect(eofs, (k-1)*6, 6, 6)) = J_0ToK.t()*Je; // 6 x ni * ni x 6
-                        JtErr.rowRange((k-1)*6, (k-1)*6+6) += J_0ToK.t()*err;
-                    }
-                    JtJ(Rect(eofs, eofs, 6, 6)) += Je.t()*Je;
-                    JtErr.rowRange(eofs, eofs + 6) += Je.t()*err;
+                    Mat wd;
+                    Mat::diag(weights).convertTo(wd, CV_64F);
+                    // 6 x (ni*2) * (ni*2 x ni*2) * (ni*2) x 6
+                    JtJ(Rect((k - 1) * 6, (k - 1) * 6, 6, 6)) += (J_0ToK.t() * wd * J_0ToK);
+                    JtJ(Rect(eofs, (k - 1) * 6, 6, 6)) = (J_0ToK.t() * wd * Je);
+                    JtErr.rowRange((k - 1) * 6, (k - 1) * 6 + 6) += (J_0ToK.t() * wd * err);
+
+                    JtJ(Rect(eofs, eofs, 6, 6)) += Je.t() * wd * Je;
+                    JtErr.rowRange(eofs, eofs + 6) += Je.t() * wd * err;
                 }
             }
             cnt_valid_frame++;
