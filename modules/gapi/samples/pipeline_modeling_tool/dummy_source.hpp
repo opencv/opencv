@@ -83,14 +83,14 @@ bool DummySource::pull(cv::gapi::wip::Data& data) {
             static_cast<int64_t>((curr_ts - m_next_tick_ts) / m_latency);
         // NB: Shift m_next_tick_ts to the nearest tick before curr_ts.
         m_next_tick_ts += num_frames * m_latency;
-        // NB: if drop_frames is enabled, update currect seq_id and wait for the next tick, otherwise
+        // NB: if drop_frames is enabled, update current seq_id and wait for the next tick, otherwise
         // return last written frame (+2 at the picture above) immediately.
         if (m_drop_frames) {
-            // NB: Shift to tick to the next frame.
+            // NB: Shift tick to the next frame.
             m_next_tick_ts += m_latency;
             // NB: Wait for the next frame.
             m_wait(ts_t{m_next_tick_ts - curr_ts});
-            // NB: Drop already already produced frames + current.
+            // NB: Drop already produced frames + update seq_id for the current.
             m_curr_seq_id += num_frames + 1;
         }
     }
