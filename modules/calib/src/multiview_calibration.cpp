@@ -13,6 +13,9 @@ public:
     virtual float getError(float err) const = 0;
 };
 
+#define USE_FAST_EXP 0
+
+#if USE_FAST_EXP
 class RobustExpFunction : public RobustFunction {
 private:
     const float over_scale, pow_23 = 1 << 23;
@@ -24,9 +27,22 @@ public:
         if (under_exp < -20) return 0; // prevent overflow further
         // http://www.machinedlearnings.com/2011/06/fast-approximate-logarithm-exponential.html
         softfloat vexp = softfloat::fromRaw(static_cast<uint32_t>(pow_23 * (under_exp + 126.94269504f)));
-        return err * float(vexp);
+        return float(vexp);
     }
 };
+#else
+class RobustExpFunction : public RobustFunction {
+private:
+    const float minvScale;
+public:
+    explicit RobustExpFunction (float scale_=30.0f) : minvScale(-1.f / scale_) {}
+    // err > 0
+    float getError(float err) const override
+    {
+        return exp(minvScale * err);
+    }
+};
+#endif
 
 static double robustWrapper (const Mat& ptsErrors, Mat& weights, const RobustFunction &fnc) {
     Mat errs;
