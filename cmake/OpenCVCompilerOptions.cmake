@@ -529,3 +529,7 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio" AND CMAKE_CXX_COMPILER_ID MATCHES "MS
     endif()
   endif()
 endif()
+
+if(OPENCV_DUMP_PREPROCESSOR_MACROS)
+  include(cmake/OpenCVCompilerDumpPreprocessorMacros.cmake)
+endif()
