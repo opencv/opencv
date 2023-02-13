@@ -119,7 +119,7 @@ void Pipeline::compile() {
 }
 
 void Pipeline::prepareOutputs() {
-    // NB: N-2 buffers + timestamp + ueq_id.
+    // NB: N-2 buffers + timestamp + seq_id.
     m_out_mats.resize(m_num_outputs - 2);
     for (auto& m : m_out_mats) {
         m_pipeline_outputs += cv::gout(m);

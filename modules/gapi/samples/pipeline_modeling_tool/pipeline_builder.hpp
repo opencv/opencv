@@ -369,7 +369,6 @@ private:
     std::unique_ptr<State> m_state;
 };
 
-
 PipelineBuilder::PipelineBuilder() : m_state(new State{}) { };
 
 void PipelineBuilder::addDummy(const CallParams&  call_params,
