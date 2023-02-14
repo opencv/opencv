@@ -89,12 +89,18 @@ struct DataQueue {
         GAPI_Assert(t == DESYNC);
     }
 
+    explicit DataQueue(tag t, cv::gapi::own::DropStrategy<Cmd>&& strategy)
+        : q(new cv::gimpl::stream::DesyncQueue(std::move(strategy))) {
+        GAPI_Assert(t == DESYNC);
+    }
+
     // FIXME: ADE metadata requires types to be copiable
     std::shared_ptr<cv::gimpl::stream::Q> q;
 };
 
 struct DesyncSpecialCase {
     static const char *name() { return "DesyncSpecialCase"; }
+    bool drop_last;
 };
 
 std::vector<cv::gimpl::stream::Q*> reader_queues(      ade::Graph &g,
@@ -1397,6 +1403,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                 // Initialize queues for every operation's input
                 ade::TypedGraph<DataQueue, DesyncSpecialCase> qgr(*m_island_graph);
                 bool is_desync_start = false;
+                bool drop_last = false;
                 for (auto eh : nh->inEdges())
                 {
                     // ...only if the data is not compile-const
@@ -1404,10 +1411,20 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                         if (m_gim.metadata(eh).contains<DesyncIslEdge>()) {
                             qgr.metadata(eh).set(DataQueue(DataQueue::DESYNC));
                             is_desync_start = true;
+                            drop_last = m_gim.metadata(eh).get<DesyncIslEdge>().drop_last;
                         } else if (qgr.metadata(eh).contains<DesyncSpecialCase>()) {
-                            // See comment below
-                            // Limit queue size to 1 in this case
-                            qgr.metadata(eh).set(DataQueue(1u));
+                            if (qgr.metadata(eh).get<DesyncSpecialCase>().drop_last) {
+                                qgr.metadata(eh).set(
+                                        DataQueue(DataQueue::DESYNC,
+                                                  [](const Cmd& cmd) {
+                                                      // NB: Need to filter "data" messages from others.
+                                                      return cv::util::holds_alternative<cv::GRunArg>(cmd);
+                                                  }));
+                            } else {
+                                // See comment below
+                                // Limit queue size to 1 in this case
+                                qgr.metadata(eh).set(DataQueue(1u));
+                            }
                         } else {
                             qgr.metadata(eh).set(DataQueue(queue_capacity));
                         }
@@ -1432,7 +1449,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                                 .k.name == cv::gimpl::streaming::GCopy::id());
                     for (auto out_nh : nh->outNodes()) {
                         for (auto out_eh : out_nh->outEdges()) {
-                            qgr.metadata(out_eh).set(DesyncSpecialCase{});
+                            qgr.metadata(out_eh).set(DesyncSpecialCase{drop_last});
                         }
                     }
                 }

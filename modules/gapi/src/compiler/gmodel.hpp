@@ -224,7 +224,7 @@ struct HasIntrinsics
 
 struct DesyncCfg {
     int index;
-    bool drop;
+    bool drop_last;
 };
 
 // This is a special tag for both DATA and OP nodes indicating

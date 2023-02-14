@@ -10,6 +10,7 @@
 #include "../common/gapi_streaming_tests_common.hpp"
 
 #include <thread> // sleep_for (Delay)
+#include <chrono>
 
 #include <opencv2/gapi/cpu/core.hpp>
 #include <opencv2/gapi/cpu/imgproc.hpp>
@@ -362,6 +363,55 @@ GAPI_OCV_KERNEL(GThrowExceptionKernel, GThrowExceptionOp)
     {
         throw std::logic_error(GThrowExceptionKernel::exception_msg());
     }
+};
+
+class DummySource : public cv::gapi::wip::IStreamSource {
+public:
+    DummySource(int64_t num_frames, int64_t latency)
+        : m_mat(1, 1, CV_8UC1),
+          m_num_frames(num_frames),
+          m_latency(latency),
+          m_curr_seq_id(0),
+          m_next_tick_ts(-1) {
+    }
+
+    bool pull(cv::gapi::wip::Data& data) {
+        using namespace std::chrono;
+
+        if (m_curr_seq_id == m_num_frames) {
+            return false;
+        }
+
+        if (m_next_tick_ts == -1) {
+            m_next_tick_ts = duration_cast<milliseconds>(
+                    high_resolution_clock::now().time_since_epoch()).count() + m_latency;
+        }
+        int64_t curr_ts = duration_cast<milliseconds>(
+                high_resolution_clock::now().time_since_epoch()).count();
+
+        if (curr_ts < m_next_tick_ts) {
+            std::this_thread::sleep_for(milliseconds{m_next_tick_ts - curr_ts});
+        }
+
+        cv::Mat mat = m_mat;
+        data.meta[cv::gapi::streaming::meta_tag::seq_id] = int64_t{m_curr_seq_id};
+        data = mat;
+
+        m_next_tick_ts += m_latency;
+        ++m_curr_seq_id;
+        return true;
+    }
+
+    cv::GMetaArg descr_of() const override {
+        return cv::GMetaArg{cv::descr_of(m_mat)};
+    }
+
+private:
+    cv::Mat m_mat;
+    int64_t  m_num_frames;
+    int64_t  m_latency;
+    int64_t  m_curr_seq_id;
+    int64_t  m_next_tick_ts;
 };
 
 } // anonymous namespace
@@ -2680,5 +2730,39 @@ TEST(GAPI_Streaming_Exception, SourceThrowEverySecondFrame) {
     // NB: Pull was called num_frames + 1(stop).
     EXPECT_EQ(num_frames, curr_frame - 1);
 }
+
+TEST(Desync, DropFrames) {
+    const int64_t kNumFrames = 20;
+    const int64_t kLatencyMs = 10;
+    const int64_t kDelayMs   = 15;
+
+    cv::GMat in;
+    auto desync = cv::gapi::streaming::desync(in, true);
+    auto out    = Delay::on(desync, kDelayMs);
+    auto seq_id = cv::gapi::streaming::seq_id(out);
+
+    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
+    auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out, seq_id))
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<OCVDelay>()));
+
+    pipeline.setSource(std::make_shared<DummySource>(kNumFrames, kLatencyMs));
+    pipeline.start();
+
+    cv::optional<cv::Mat> out_mat;
+    cv::optional<int64_t> out_seq_id;
+
+    std::vector<int64_t> seq_id_vec;
+    seq_id_vec.reserve(kNumFrames);
+    while (pipeline.pull(cv::gout(out_mat, out_seq_id))) {
+        seq_id_vec.push_back(out_seq_id.value());
+    }
+
+    for (size_t i = 0; i < seq_id_vec.size()-1; ++i) {
+        // Since camera produces frames every 10ms but execution takes 15ms
+        // so every second frame will be dropped
+        // e.g seq_ids 0,2,4,6,8...
+        EXPECT_EQ(2, seq_id_vec[i+1] - seq_id_vec[i]);
+    }
+};
 
 } // namespace opencv_test
