@@ -55,7 +55,7 @@ struct Layer_Slice : public TestBaseWithParam<tuple<Backend, Target> >
     }
 };
 
-static std::set<std::string> nary_eltwise_cuda_deny_ops = {"add", "equal", "greater", "less", "mean", "mul", "pow", "sub"};
+static std::set<std::string> nary_eltwise_cuda_deny_ops = {"equal", "greater", "less", "mean", "pow", "sub"};
 
 struct Layer_NaryEltwise : public TestBaseWithParam<tuple<Backend, Target> >
 {
