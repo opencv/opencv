@@ -43,16 +43,6 @@ docker run \
     "$@"
 }
 
-build_gtk2_ubuntu()
-{
-VER=$1
-shift 1
-TAG=opencv_highgui_ubuntu_gtk2_builder:${VER}
-do_build $TAG "${DIR}/plugin_gtk" Dockerfile-ubuntu-gtk2 --build-arg VER=${VER}
-do_run $TAG /opencv/modules/highgui/misc/plugins/plugin_gtk/build.sh /dst gtk2_ubuntu${VER} ${CFG} "$@"
-
-}
-
 build_gtk3_ubuntu()
 {
 VER=$1
@@ -65,8 +55,5 @@ do_run $TAG /opencv/modules/highgui/misc/plugins/plugin_gtk/build.sh /dst gtk3_u
 echo "OpenCV: ${OCV}"
 echo "Destination: ${DST}"
 
-build_gtk2_ubuntu 16.04
-build_gtk2_ubuntu 16.04 -DOPENCV_PLUGIN_NAME=opencv_highgui_gtk2-opengl_ubuntu16.04 -DWITH_OPENGL=ON -DWITH_GTK_2_X=ON
-build_gtk2_ubuntu 18.04
 build_gtk3_ubuntu 18.04
 build_gtk3_ubuntu 20.04

@@ -281,9 +281,6 @@ OCV_OPTION(WITH_GSTREAMER "Include Gstreamer support" ON
 OCV_OPTION(WITH_GTK "Include GTK support" ON
   VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
   VERIFY HAVE_GTK)
-OCV_OPTION(WITH_GTK_2_X "Use GTK version 2" OFF
-  VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
-  VERIFY HAVE_GTK AND NOT HAVE_GTK3)
 OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
         VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
         VERIFY HAVE_WAYLAND)
@@ -1327,17 +1324,12 @@ if(HAVE_COCOA)  # APPLE
   status("    Cocoa:"  YES)
 endif()
 
-if(WITH_GTK OR HAVE_GTK)
-  if(HAVE_GTK3)
+if(WITH_GTK)
+  if(HAVE_GTK)
     status("    GTK+:" "YES (ver ${GTK3_VERSION})")
-  elseif(HAVE_GTK)
-    status("    GTK+:" "YES (ver ${GTK2_VERSION})")
+    status("      GThread :" HAVE_GTHREAD THEN "YES (ver ${GTHREAD_VERSION})" ELSE NO)
   else()
     status("    GTK+:" "NO")
-  endif()
-  if(HAVE_GTK)
-    status(  "      GThread :" HAVE_GTHREAD THEN "YES (ver ${GTHREAD_VERSION})" ELSE NO)
-    status(  "      GtkGlExt:" HAVE_GTKGLEXT THEN "YES (ver ${GTKGLEXT_VERSION})" ELSE NO)
   endif()
 endif()
 

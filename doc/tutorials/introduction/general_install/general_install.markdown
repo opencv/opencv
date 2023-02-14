@@ -130,7 +130,7 @@ Build procedure is similar to the main OpenCV build, but you have to use special
 | module | backends | location |
 | ------ | -------- | -------- |
 | core | parallel_tbb, parallel_onetbb, parallel_openmp | _opencv/modules/core/misc/plugins_ |
-| highgui | gtk, gtk2, gtk3 | _opencv/modules/highgui/misc/plugins_ |
+| highgui | gtk, gtk3 | _opencv/modules/highgui/misc/plugins_ |
 | videoio | ffmpeg, gstreamer, intel_mfx, msmf | _opencv/modules/videoio/misc_ |
 
 Example:

@@ -82,15 +82,6 @@ Next we need **GTK** support for GUI features, Camera support (v4l), Media Suppo
 ```
 sudo apt-get install libavcodec-dev libavformat-dev libswscale-dev
 sudo apt-get install libgstreamer-plugins-base1.0-dev libgstreamer1.0-dev
-```
-
-to support gtk2:
-```
-sudo apt-get install libgtk2.0-dev
-```
-
-to support gtk3:
-```
 sudo apt-get install libgtk-3-dev
 ```
 

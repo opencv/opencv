@@ -440,7 +440,7 @@ OpenCV relies on various GUI libraries for window drawing.
 
 | Option | Default | Platform | Description |
 | ------ | ------- | -------- | ----------- |
-| `WITH_GTK` | _ON_ | Linux | [GTK](https://en.wikipedia.org/wiki/GTK) is a common toolkit in Linux and Unix-like OS-es. By default version 3 will be used if found, version 2 can be forced with the `WITH_GTK_2_X` option. |
+| `WITH_GTK` | _ON_ | Linux | [GTK](https://en.wikipedia.org/wiki/GTK) is a common toolkit in Linux and Unix-like OS-es. Version 3 will be used if found. |
 | `WITH_WIN32UI` | _ON_ | Windows | [WinAPI](https://en.wikipedia.org/wiki/Windows_API) is a standard GUI API in Windows. |
 | N/A | _ON_ | macOS | [Cocoa](https://en.wikipedia.org/wiki/Cocoa_(API)) is a framework used in macOS. |
 | `WITH_QT` | _OFF_ | Cross-platform | [Qt](https://en.wikipedia.org/wiki/Qt_(software)) is a cross-platform GUI framework. |
@@ -452,7 +452,7 @@ OpenCV relies on various GUI libraries for window drawing.
 
 `WITH_OPENGL` (default: _OFF_)
 
-OpenGL integration can be used to draw HW-accelerated windows with following backends: GTK, WIN32 and Qt. And enables basic interoperability with OpenGL, see @ref core_opengl and @ref highgui_opengl for details.
+OpenGL integration can be used to draw HW-accelerated windows with following backends: WIN32 and Qt. And enables basic interoperability with OpenGL, see @ref core_opengl and @ref highgui_opengl for details.
 
 
 ### highgui plugins
@@ -462,7 +462,7 @@ Since OpenCV 4.5.3 GTK backend can be build as a dynamically loaded plugin. Foll
 | Option | Default | Description |
 | --------| ------ | ------- |
 | `HIGHGUI_ENABLE_PLUGINS` | _ON_ | Enable or disable plugins completely. |
-| `HIGHGUI_PLUGIN_LIST` | _empty_ | Comma- or semicolon-separated list of backend names to be compiled as plugins. Supported names are _gtk_, _gtk2_, _gtk3_, and _all_. |
+| `HIGHGUI_PLUGIN_LIST` | _empty_ | Comma- or semicolon-separated list of backend names to be compiled as plugins. Supported names are _gtk_, _gtk3_, and _all_. |
 
 Check @ref tutorial_general_install for standalone plugins build instructions.
 

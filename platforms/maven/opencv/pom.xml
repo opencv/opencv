@@ -75,7 +75,6 @@
                                 <argument>build-essential</argument>
                                 <argument>cmake</argument>
                                 <argument>git</argument>
-                                <argument>libgtk2.0-dev</argument>
                                 <argument>pkg-config</argument>
                                 <argument>libavcodec-dev</argument>
                                 <argument>libavformat-dev</argument>

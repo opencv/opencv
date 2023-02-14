@@ -33,15 +33,12 @@ std::vector<BackendInfo>& getBuiltinBackendsInfo()
         DECLARE_STATIC_BACKEND("GTK", createUIBackendGTK)
 #if defined(HAVE_GTK3)
         DECLARE_STATIC_BACKEND("GTK3", createUIBackendGTK)
-#elif defined(HAVE_GTK2)
-        DECLARE_STATIC_BACKEND("GTK2", createUIBackendGTK)
 #else
 #warning "HAVE_GTK definition issue. Register new GTK backend"
 #endif
 #elif defined(ENABLE_PLUGINS)
         DECLARE_DYNAMIC_BACKEND("GTK")
         DECLARE_DYNAMIC_BACKEND("GTK3")
-        DECLARE_DYNAMIC_BACKEND("GTK2")
 #endif
 
 #if 0  // TODO
