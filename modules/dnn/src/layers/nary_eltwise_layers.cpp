@@ -112,7 +112,7 @@ public:
                     op == OPERATION::LESS_EQUAL
             );
         if (op == OPERATION::MAX || op == OPERATION::MIN || op == OPERATION::SUM ||
-            op == OPERATION::PROD || op == OPERATION::DIV)
+            op == OPERATION::PROD || op == OPERATION::DIV || op == OPERATION::ADD)
             return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
         return backendId == DNN_BACKEND_OPENCV;
     }
@@ -688,6 +688,7 @@ public:
                 case OPERATION::SUM: return cuda4dnn::EltwiseOpType::SUM;
                 case OPERATION::PROD: return cuda4dnn::EltwiseOpType::PRODUCT;
                 case OPERATION::DIV: return cuda4dnn::EltwiseOpType::DIV;
+                case OPERATION::ADD: return cuda4dnn::EltwiseOpType::SUM;
                 default: CV_Error(Error::StsNotImplemented, "Other operators except MAX, MIN, SUM, PRODUCT and DIV are not supported with cuda.");
             }
         }();
