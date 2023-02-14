@@ -54,6 +54,24 @@ TEST(LastValue, Overwrite) {
     EXPECT_EQ(0, x);
 }
 
+TEST(LastValue, WithDropStrategy) {
+    own::last_written_value<int> v([](int){ return /*always drop*/true; });
+    v.push(42);
+
+    auto t = std::thread([&] {
+        std::this_thread::sleep_for(std::chrono::milliseconds{100});
+        v.push(0);
+    });
+
+    // NB: 42 can't be popped since because it was pushed before pop is called.
+    int x = -1;
+    v.pop(x);
+
+    t.join();
+
+    EXPECT_EQ(0, x);
+}
+
 // In this test, every writer thread produces its own range of integer
 // numbers, writing those to a shared queue.
 //

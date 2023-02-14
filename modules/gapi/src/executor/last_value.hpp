@@ -25,17 +25,29 @@ namespace own {
 // if there was no value written since the last read).
 //
 // Again, the implementation is highly inefficient right now.
+
+template <typename T>
+using DropStrategy = std::function<bool(const T& t)>;
+template <typename T>
+using OptDropStrategy = cv::optional<DropStrategy<T>>;
+
 template<class T>
 class last_written_value {
     cv::util::optional<T> m_data;
 
     std::mutex m_mutex;
     std::condition_variable m_cond_empty;
+    OptDropStrategy<T> m_drop_strategy;
 
     void unsafe_pop(T &t);
 
 public:
-    last_written_value() {}
+    last_written_value() {};
+
+    last_written_value(DropStrategy<T>&& drop_strategy)
+        : m_drop_strategy(std::move(drop_strategy)) {
+    }
+
     last_written_value(const last_written_value<T> &cc)
         : m_data(cc.m_data) {
         // FIXME: what to do with all that locks, etc?
@@ -75,6 +87,12 @@ void last_written_value<T>::push(const T& t) {
 template<typename T>
 void last_written_value<T>::pop(T &t) {
     std::unique_lock<std::mutex> lock(m_mutex);
+    if (m_data.has_value() && m_drop_strategy.has_value()) {
+        auto&& strategy = m_drop_strategy.value();
+        if (strategy(m_data.value())) {
+            m_data.reset();
+        }
+    }
     if (!m_data.has_value()) {
         // if there is no data, wait
         m_cond_empty.wait(lock, [&](){return m_data.has_value();});
