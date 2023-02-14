@@ -222,6 +222,11 @@ struct HasIntrinsics
     static const char *name() { return "HasIntrinsicsFlag"; }
 };
 
+struct DesyncCfg {
+    int index;
+    bool drop;
+};
+
 // This is a special tag for both DATA and OP nodes indicating
 // which desynchronized path this node belongs to.
 // This tag is set by a special complex pass intrinDesync/accept.
@@ -231,7 +236,7 @@ struct DesyncPath
 
     // A zero-based index of the desynchronized path in the graph.
     // Set by intrinDesync() compiler pass
-    int index;
+    DesyncCfg cfg;
 };
 
 // This is a special tag for graph Edges indicating that this
@@ -247,7 +252,7 @@ struct DesyncEdge
 
     // A zero-based index of the desynchronized path in the graph.
     // Set by intrinDesync/apply() compiler pass
-    int index;
+    DesyncCfg cfg;
 };
 
 // This flag marks the island graph as "desynchronized"

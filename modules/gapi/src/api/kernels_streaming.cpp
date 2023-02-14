@@ -11,7 +11,7 @@
 
 #include <opencv2/gapi/core.hpp>
 
-cv::GMat cv::gapi::streaming::desync(const cv::GMat &g) {
+cv::GMat cv::gapi::streaming::desync(const cv::GMat &g, bool drop) {
     // FIXME: this is a limited implementation of desync
     // The real implementation must be generic (template) and
     // reside in desync.hpp (and it is detail::desync<>())
@@ -20,7 +20,7 @@ cv::GMat cv::gapi::streaming::desync(const cv::GMat &g) {
     // FIXME: Because of the copy, the desync functionality is limited
     // to GMat only (we don't have generic copy kernel for other
     // object types)
-    return cv::gapi::copy(detail::desync(g));
+    return cv::gapi::copy(detail::desync(g, drop));
 
     // FIXME
     //
@@ -76,8 +76,8 @@ cv::GMat cv::gapi::streaming::desync(const cv::GMat &g) {
 }
 
 // All notes from the above desync(GMat) are also applicable here
-cv::GFrame cv::gapi::streaming::desync(const cv::GFrame &f) {
-    return cv::gapi::copy(detail::desync(f));
+cv::GFrame cv::gapi::streaming::desync(const cv::GFrame &f, bool drop) {
+    return cv::gapi::copy(detail::desync(f, drop));
 }
 
 cv::GMat cv::gapi::streaming::BGR(const cv::GFrame& in) {

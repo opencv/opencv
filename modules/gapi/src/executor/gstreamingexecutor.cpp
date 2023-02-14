@@ -1474,7 +1474,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                 const auto sink_out_nh = gm.metadata().get<Protocol>().out_nhs[sink_idx];
                 if (gm.metadata(sink_out_nh).contains<DesyncPath>()) {
                     // metadata().get_or<> could make this thing better
-                    m_sink_sync[sink_idx] = gm.metadata(sink_out_nh).get<DesyncPath>().index;
+                    m_sink_sync[sink_idx] = gm.metadata(sink_out_nh).get<DesyncPath>().cfg.index;
                 }
             }
             break;
