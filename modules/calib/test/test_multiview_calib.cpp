@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
+#include <opencv2/core/utils/logger.hpp>
 #include <opencv2/ts/cuda_test.hpp> // EXPECT_MAT_NEAR
 
 namespace opencv_test { namespace {
@@ -16,7 +17,7 @@ TEST(multiview_calibration, accuracy) {
         return cv::Mat(R_z * R_y * R_x);
     };
     const cv::Size board_size (5,4);
-    cv::RNG &rng = cv::theRNG();
+    cv::RNG rng(0);
     const double board_len = 0.08, noise_std = 0.04;
     const int num_cameras = 4, num_pts = board_size.area();
     std::vector<cv::Vec3f> board_pattern (num_pts);
@@ -140,8 +141,8 @@ TEST(multiview_calibration, accuracy) {
         cv::Mat R;
         cv::Rodrigues(Rs[c], R);
         EXPECT_MAT_NEAR(Ks_gt[c], Ks[c], K_err_tol);
-        std::cout << distortions_gt[c] << "\n";
-        std::cout << distortions[c] << "\n";
+        CV_LOG_INFO(NULL, "true  distortions: " << distortions_gt[c]);
+        CV_LOG_INFO(NULL, "found distortions: " << distortions[c]);
         EXPECT_MAT_NEAR(distortions_gt[c], distortions[c], dist_tol);
         EXPECT_MAT_NEAR(Rs_gt[c], R, R_tol);
         EXPECT_MAT_NEAR(Ts_gt[c], Ts[c], T_tol);
