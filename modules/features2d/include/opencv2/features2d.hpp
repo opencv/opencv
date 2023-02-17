@@ -320,11 +320,11 @@ public:
 
     @param enable_precise_upscale Whether to enable precise upscaling in the scale pyramid, which maps
     index \f$\texttt{x}\f$ to \f$\texttt{2x}\f$. This prevents localization bias. The option
-    to disable it (which is deprecated and issues a warning) is provided to keep the original behavior.
+    is disabled by default.
     */
     CV_WRAP static Ptr<SIFT> create(int nfeatures, int nOctaveLayers,
         double contrastThreshold, double edgeThreshold,
-        double sigma, int descriptorType, bool enable_precise_upscale = true);
+        double sigma, int descriptorType, bool enable_precise_upscale = false);
 
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 
