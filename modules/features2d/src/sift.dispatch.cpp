@@ -478,7 +478,7 @@ SIFT_Impl::SIFT_Impl( int _nfeatures, int _nOctaveLayers,
     enable_precise_upscale(_enable_precise_upscale)
 {
     if (!enable_precise_upscale) {
-        CV_LOG_WARNING(NULL, "precise upscale disabled, this is now deprecated as it was found to induce a location bias");
+        CV_LOG_ONCE_INFO(NULL, "precise upscale disabled, this is now deprecated as it was found to induce a location bias");
     }
 }
 
