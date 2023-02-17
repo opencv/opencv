@@ -289,11 +289,11 @@ public:
 
     @param enable_precise_upscale Whether to enable precise upscaling in the scale pyramid, which maps
     index \f$\texttt{x}\f$ to \f$\texttt{2x}\f$. This prevents localization bias. The option
-    to disable it (which is deprecated and issues a warning) is provided to keep the original behavior.
+    is disabled by default.
     */
     CV_WRAP static Ptr<SIFT> create(int nfeatures = 0, int nOctaveLayers = 3,
         double contrastThreshold = 0.04, double edgeThreshold = 10,
-        double sigma = 1.6, bool enable_precise_upscale = true);
+        double sigma = 1.6, bool enable_precise_upscale = false);
 
     /** @brief Create SIFT with specified descriptorType.
     @param nfeatures The number of best features to retain. The features are ranked by their scores
