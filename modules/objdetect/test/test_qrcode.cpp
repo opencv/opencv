@@ -708,6 +708,38 @@ TEST(Objdetect_QRCode_detect, detect_regression_21287)
 #endif
 }
 
+TEST(Objdetect_QRCode_detect_flipped, regression_23249)
+{
+
+    const std::vector<std::pair<std::string, std::string>> flipped_images =
+    // image name , expected result
+    {{"flipped_1.png", "The key is /qrcod_OMevpf"},
+     {"flipped_2.png", "A26"}};
+
+    const std::string root = "qrcode/flipped/";
+
+    for(const auto &flipped_image : flipped_images){
+        const std::string &image_name = flipped_image.first;
+        const std::string &expect_msg = flipped_image.second;
+
+        std::string image_path = findDataFile(root + image_name);
+        Mat src = imread(image_path);
+        ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
+        QRCodeDetector qrcode;
+        std::vector<Point> corners;
+        Mat straight_barcode;
+        cv::String decoded_info;
+        EXPECT_TRUE(qrcode.detect(src, corners));
+        EXPECT_TRUE(!corners.empty());
+        std::string decoded_msg;
+        #ifdef HAVE_QUIRC
+            EXPECT_NO_THROW(decoded_msg = qrcode.decode(src, corners, straight_barcode));
+            ASSERT_FALSE(straight_barcode.empty()) << "Can't decode qrimage.";
+            EXPECT_EQ(expect_msg, decoded_msg);
+        #endif
+    }
+}
+
 // @author Kumataro, https://github.com/Kumataro
 TEST(Objdetect_QRCode_decode, decode_regression_21929)
 {
