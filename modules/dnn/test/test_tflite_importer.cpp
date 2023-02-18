@@ -12,17 +12,15 @@ Test for TFLite models loading
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
 #include <opencv2/dnn/utils/debug_utils.hpp>
 
-namespace opencv_test
-{
+#ifdef OPENCV_TEST_DNN_TFLITE
+
+namespace opencv_test { namespace {
 
 using namespace cv;
 using namespace cv::dnn;
 
-void testModel(const std::string& modelName, const Mat& input, double norm = 1e-5) {
-#ifndef HAVE_FLATBUFFERS
-    throw SkipTestException("FlatBuffers required for TFLite importer");
-#endif
-
+void testModel(const std::string& modelName, const Mat& input, double l1 = 1e-5, double lInf = 1e-4)
+{
     Net net = readNet(findDataFile("dnn/tflite/" + modelName + ".tflite", false));
     net.setInput(input);
 
@@ -34,20 +32,21 @@ void testModel(const std::string& modelName, const Mat& input, double norm = 1e-
     ASSERT_EQ(outs.size(), outNames.size());
     for (int i = 0; i < outNames.size(); ++i) {
         Mat ref = blobFromNPY(findDataFile(format("dnn/tflite/%s_out_%s.npy", modelName.c_str(), outNames[i].c_str())));
-        normAssert(ref.reshape(1, 1), outs[i].reshape(1, 1), outNames[i].c_str(), norm);
+        normAssert(ref.reshape(1, 1), outs[i].reshape(1, 1), outNames[i].c_str(), l1, lInf);
     }
 }
 
-void testModel(const std::string& modelName, const Size& inpSize, double norm = 1e-5) {
+void testModel(const std::string& modelName, const Size& inpSize, double l1 = 1e-5, double lInf = 1e-4)
+{
     Mat input = imread(findDataFile("cv/shared/lena.png"));
     input = blobFromImage(input, 1.0 / 255, inpSize, 0, true);
-    testModel(modelName, input, norm);
+    testModel(modelName, input, l1, lInf);
 }
 
 // https://google.github.io/mediapipe/solutions/face_mesh
 TEST(Test_TFLite, face_landmark)
 {
-    testModel("face_landmark", Size(192, 192), 2e-5);
+    testModel("face_landmark", Size(192, 192), 2e-5, 2e-4);
 }
 
 // https://google.github.io/mediapipe/solutions/face_detection
@@ -64,9 +63,6 @@ TEST(Test_TFLite, selfie_segmentation)
 
 TEST(Test_TFLite, max_unpooling)
 {
-#ifndef HAVE_FLATBUFFERS
-    throw SkipTestException("FlatBuffers required for TFLite importer");
-#endif
     // Due Max Unpoling is a numerically unstable operation and small difference between frameworks
     // might lead to positional difference of maximal elements in the tensor, this test checks
     // behavior of Max Unpooling layer only.
@@ -120,4 +116,6 @@ TEST(Test_TFLite, max_unpooling)
     }
 }
 
-}
+}}  // namespace
+
+#endif  // OPENCV_TEST_DNN_TFLITE

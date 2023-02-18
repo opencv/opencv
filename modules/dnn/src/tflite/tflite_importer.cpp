@@ -119,7 +119,7 @@ TFLiteImporter::TFLiteImporter(Net& dstNet, const char* modelBuffer, size_t bufS
     CV_Assert(model);
     CV_Assert(model->subgraphs());
     CV_Assert(model->buffers());
-    CV_CheckEQ(model->subgraphs()->size(), 1, "");
+    CV_CheckEQ((size_t)model->subgraphs()->size(), 1u, "");
 
     modelTensors = model->subgraphs()->Get(0)->tensors();
     CV_Assert(modelTensors);
