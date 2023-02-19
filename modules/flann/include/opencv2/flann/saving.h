@@ -112,10 +112,12 @@ inline IndexHeader load_header(FILE* stream)
     size_t read_size = fread(&header,sizeof(header),1,stream);
 
     if (read_size!=(size_t)1) {
+        fclose(stream);
         FLANN_THROW(cv::Error::StsError, "Invalid index file, cannot read");
     }
 
     if (strcmp(header.signature,FLANN_SIGNATURE_)!=0) {
+        fclose(stream);
         FLANN_THROW(cv::Error::StsError, "Invalid index file, wrong signature");
     }
 
