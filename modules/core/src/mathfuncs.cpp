@@ -1865,6 +1865,7 @@ void finiteMask(InputArray _img, OutputArray _mask)
 
     int channels = _img.channels();
     int depth = _img.depth();
+    CV_Assert( channels > 0 && channels <= 4);
     CV_Assert( depth == CV_32F || depth == CV_64F );
     std::vector<int> vsz(_img.dims());
     _img.sizend(vsz.data());
