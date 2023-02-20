@@ -1678,10 +1678,10 @@ void patchNaNs( InputOutputArray _a, double _val )
                 v_int64 vandm = v_src & v_mnt_mask;
                 v_int64 ve, vm;
 
-                #if CV_SIMD128_64F
+#if CV_SIMD128_64F
                 ve = vande == v_exp_mask;
                 vm = vandm != vx_setzero_s64();
-                #else
+#else
                 // emulating 64-bit integer eq comparison: ve = (v_src & v_exp_mask) == v_exp_mask
                 {
                     v_int32 vue32 = v_reinterpret_as_s32(vande);
@@ -1702,7 +1702,7 @@ void patchNaNs( InputOutputArray _a, double _val )
                     v_int32 sh2 = v_rotate_right<1>(vor);
                     vm = (v_reinterpret_as_s64(vor) & mask10) | (v_reinterpret_as_s64(sh2) & ~mask10);
                 }
-                #endif
+#endif
 
                 v_int64 v_isnan = ve & vm;
                 v_int64 v_dst = (v_isnan & v_val) | ((~v_isnan) & v_src);
@@ -1778,18 +1778,18 @@ int finiteMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total)
 
         v_uint64 vmaskExp = vx_setall_u64(0x7ff0000000000000);
         v_uint64 z = vx_setzero_u64();
-        #if !CV_SIMD128_64F
+#if !CV_SIMD128_64F
         v_uint64 mask10 = vx_setall_u64(0xffffffff00000000);
-        #endif
+#endif
         v_uint64 vv[4];
         for (int j = 0; j < 4; j++)
         {
             v_uint64 vande = vu[j] & vmaskExp;
 
             v_uint64 ve;
-            #if CV_SIMD128_64F
+#if CV_SIMD128_64F
             ve = vande != vmaskExp;
-            #else
+#else
             // emulating 64-bit integer eq comparison: ve = (vu[j] & vmaskExp) == vmaskExp
             {
                 v_int32 vue32 = v_reinterpret_as_s32(vande);
@@ -1800,7 +1800,7 @@ int finiteMaskSIMD_<double, 1>(const double *src, uchar *dst, size_t total)
                 v_int32 sh2 = v_rotate_right<1>(vand);
                 ve = (v_reinterpret_as_u64(vand) & mask10) | (v_reinterpret_as_u64(sh2) & ~mask10);
             }
-            #endif
+#endif
 
             vv[j] = ve;
         }
@@ -1838,7 +1838,6 @@ static void finiteMask_(const _Tp *src, uchar *dst, size_t total)
 }
 
 #ifdef HAVE_OPENCL
-
 
 static bool ocl_finiteMask(const UMat img, UMat mask)
 {
