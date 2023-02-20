@@ -41,6 +41,7 @@
 
 #include "../perf_precomp.hpp"
 #include "opencv2/ts/ocl_perf.hpp"
+#include "opencv2/core/softfloat.hpp"
 
 #ifdef HAVE_OPENCL
 
