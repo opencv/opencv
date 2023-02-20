@@ -1698,16 +1698,17 @@ CV_EXPORTS_W bool checkRange(InputArray a, bool quiet = true, CV_OUT Point* pos 
                             double minVal = -DBL_MAX, double maxVal = DBL_MAX);
 
 /** @brief Replaces NaNs by given number
- * @param a input/output matrix (CV_32F or CV_64F type).
- * @param val value to convert the NaNs
- */
+@param a input/output matrix (CV_32F or CV_64F type)
+@param val value to convert the NaNs
+*/
 CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 
 /** @brief Generates a mask of finite float values, i.e. not NaNs nor Infs.
- * An element is set to to 255 (all 1 -bits) if all channels are finite.
- * @param img Input matrix, should contain float or double elements of 1 to 4 channels
- * @param mask Output matrix of the same size as input of type CV_8UC1
- */
+
+An element is set to to 255 (all 1-bits) if all channels are finite.
+@param img Input matrix, should contain float or double elements of 1 to 4 channels
+@param mask Output matrix of the same size as input of type CV_8UC1
+*/
 CV_EXPORTS_W void finiteMask(InputArray img, OutputArray mask);
 
 
