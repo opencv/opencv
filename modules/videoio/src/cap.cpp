@@ -212,6 +212,19 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
         CV_Error_(Error::StsError, ("could not open '%s'", filename.c_str()));
     }
 
+    if (cv::videoio_registry::checkDeprecatedBackend(apiPreference))
+    {
+        CV_LOG_DEBUG(NULL,
+            cv::format("VIDEOIO(%s): backend is removed from OpenCV",
+                cv::videoio_registry::getBackendName((VideoCaptureAPIs) apiPreference).c_str()));
+    }
+    else
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong. "
+            "Please make sure that your computer support chosen backend and OpenCV built "
+            "with right flags.");
+    }
+
     return false;
 }
 
@@ -335,6 +348,19 @@ bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>
     if (throwOnFail)
     {
         CV_Error_(Error::StsError, ("could not open camera %d", cameraNum));
+    }
+
+    if (cv::videoio_registry::checkDeprecatedBackend(apiPreference))
+    {
+        CV_LOG_DEBUG(NULL,
+            cv::format("VIDEOIO(%s): backend is removed from OpenCV",
+                cv::videoio_registry::getBackendName((VideoCaptureAPIs) apiPreference).c_str()));
+    }
+    else
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong."
+            "Please make sure that your computer support chosen backend and OpenCV built "
+            "with right flags.");
     }
 
     return false;
@@ -640,6 +666,20 @@ bool VideoWriter::open(const String& filename, int apiPreference, int fourcc, do
             }
         }
     }
+
+    if (cv::videoio_registry::checkDeprecatedBackend(apiPreference))
+    {
+        CV_LOG_DEBUG(NULL,
+            cv::format("VIDEOIO(%s): backend is removed from OpenCV",
+                cv::videoio_registry::getBackendName((VideoCaptureAPIs) apiPreference).c_str()));
+    }
+    else
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong."
+            "Please make sure that your computer support chosen backend and OpenCV built "
+            "with right flags.");
+    }
+
     return false;
 }
 
