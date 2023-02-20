@@ -1198,6 +1198,18 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SpaceToDepthLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS TopKLayer : public Layer
+    {
+    public:
+        int axis;
+        bool largest;
+        bool sorted;
+
+        int K; // FIXIT: make it layer input once dynamic shape is supported
+
+        static Ptr<TopKLayer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END

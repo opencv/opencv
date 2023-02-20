@@ -194,6 +194,7 @@ private:
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTile                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseTopK                 (LayerParams& LayerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimpleLayers         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseEinsum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
@@ -3121,6 +3122,36 @@ void ONNXImporter::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::N
     }
 }
 
+void ONNXImporter::parseTopK(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    // TODO: support opset 1 & 10. Opset 11 is supported currently.
+
+    // Opset 11 has two inputs: X & K.
+    CV_CheckEQ(node_proto.input_size(), 2, "DNN/ONNXImporter: TopK requires two inputs.");
+    // Currently only support the case when K is constant.
+    bool is_K_const = false;
+    if (layer_id.find(node_proto.input(1)) == layer_id.end())
+        is_K_const = true;
+    CV_CheckEQ(is_K_const, true, "DNN/ONNXImporter: TopK requires constant K.");
+
+    // Retrieve K and set it as parameter
+    int K;
+    Mat input_K = getBlob(node_proto, 1);
+    K = input_K.at<int>(0);
+    layerParams.set("K", K);
+
+    // Preprocess axis
+    auto inputDims = static_cast<int>(outShapes[node_proto.input(0)].size());
+    int axis = layerParams.get<int>("axis", -1);
+    // axis: [-dims, dims)
+    CV_CheckGE(axis, -inputDims, "DNN/ONNXImporter: axis of TopK is out of range");
+    CV_CheckLT(axis,  inputDims, "DNN/ONNXImporter: axis of TopK is out of range");
+    axis = (axis + inputDims) % inputDims;
+    layerParams.set("axis", axis);
+
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     bool is_all_input_const = true;
@@ -3931,6 +3962,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Tile"] = &ONNXImporter::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter::parseLayerNorm;
     dispatch["GroupNormalization"] = &ONNXImporter::parseInstanceNormalization;
+    dispatch["TopK"] = &ONNXImporter::parseTopK;
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =
