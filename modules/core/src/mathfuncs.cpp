@@ -1827,13 +1827,13 @@ static void finiteMask_(const _Tp *src, uchar *dst, size_t total)
 
     for(; i < total; i++ )
     {
-        bool nan = true;
+        bool finite = true;
         for (int c = 0; c < cn; c++)
         {
             _Tp val = src[i * cn + c];
-            nan = nan && !cvIsNaN(val) && !cvIsInf(val);
+            finite = finite && !cvIsNaN(val) && !cvIsInf(val);
         }
-        dst[i] = nan ? 255 : 0;
+        dst[i] = finite ? 255 : 0;
     }
 }
 
