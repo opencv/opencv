@@ -226,9 +226,11 @@ def plotProjection(points_2d, pattern_points, rvec0, tvec0, rvec1, tvec1,
 
 def getDetectionMask(image_points):
     detection_mask = np.zeros((len(image_points), len(image_points[0])), dtype=np.uint8)
+# [detection_matrix]
     for i in range(len(image_points)):
         for j in range(len(image_points[0])):
             detection_mask[i,j] = int(len(image_points[i][j]) != 0)
+# [detection_matrix]
     return detection_mask
 
 
@@ -290,6 +292,7 @@ def calibrateFromPoints(
 
     start_time = time.time()
     try:
+# [multiview_calib]
         rmse, rvecs, Ts, Ks, distortions, rvecs0, tvecs0, errors_per_frame, output_pairs = \
             cv.calibrateMultiview(
                 objPoints=pattern_points_all,
@@ -302,6 +305,7 @@ def calibrateFromPoints(
                 use_intrinsics_guess=USE_INTRINSICS_GUESS,
                 flags_intrinsics=0
             )
+# [multiview_calib]
     except Exception as e:
         print("Multi-view calibration failed with the following exception:", e.__class__)
         sys.exit(0)
@@ -469,7 +473,7 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
                 (int(scale * img.shape[1]), int(scale * img.shape[0])),
                 interpolation=cv.INTER_AREA
             )
-
+# [calib_init]
     if pattern_type.lower() == 'checkerboard':
         ret, corners = cv.findChessboardCorners(
             cv.cvtColor(img_detection, cv.COLOR_BGR2GRAY), grid_size, None
@@ -484,6 +488,7 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
         )
     else:
         raise ValueError("Calibration pattern is not supported!")
+# [calib_init]
 
     if ret:
         if scale < 1.0:

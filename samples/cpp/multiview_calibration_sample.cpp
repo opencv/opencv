@@ -10,8 +10,12 @@
 #include <iostream>
 #include <fstream>
 
+// ! [detectPointsAndCalibrate_signature]
 static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scale, const std::string &pattern_type,
-           const std::vector<bool> &is_fisheye, const std::vector<std::string> &filenames) {
+           const std::vector<bool> &is_fisheye, const std::vector<std::string> &filenames)
+// ! [detectPointsAndCalibrate_signature]
+{
+// ! [calib_init]
     std::vector<cv::Vec3f> board (pattern_size.area());
     const int num_cameras = (int)is_fisheye.size();
     std::vector<std::vector<cv::Mat>> image_points_all;
@@ -27,6 +31,8 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
     } else {
         CV_Error(cv::Error::StsNotImplemented, "pattern_type is not implemented!");
     }
+// ! [calib_init]
+// ! [detect_pattern]
     int num_frames = -1;
     for (const auto &filename : filenames) {
         std::fstream file(filename);
@@ -59,17 +65,21 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
             CV_Assert(num_frames == (int)image_points_cameras.size());
         image_points_all.emplace_back(image_points_cameras);
     }
-
+// ! [detect_pattern]
+// ! [detection_matrix]
     cv::Mat visibility = cv::Mat_<int>(num_cameras, num_frames);
     for (int i = 0; i < num_cameras; i++) {
         for (int j = 0; j < num_frames; j++) {
             visibility.at<int>(i,j) = (int)(!image_points_all[i][j].empty());
         }
     }
+// ! [detection_matrix]
     CV_Assert(num_frames != -1);
     std::vector<std::vector<cv::Vec3f>> objPoints(num_frames, board);
+// ! [multiview_calib]
     const double rmse = calibrateMultiview (objPoints, image_points_all, image_sizes, visibility,
        Rs, Ts, Ks, distortions, cv::noArray(), cv::noArray(), is_fisheye, errors_mat, output_pairs, false/*use intrinsics guess*/);
+// ! [multiview_calib]
     std::cout << "average RMSE over detection mask " << rmse << "\n";
     for (int c = 0; c < (int)Rs.size(); c++) {
         std::cout << "camera " << c << '\n';
@@ -95,8 +105,11 @@ int main (int argc, char **argv) {
         parser.printMessage();
         return 0;
     }
-    CV_Assert(parser.has("pattern_width") && parser.has("pattern_width") && parser.has("pattern_height") && parser.has("pattern_type") &&
+
+    CV_Assert(parser.has("pattern_width") && parser.has("pattern_height") && parser.has("pattern_type") &&
         parser.has("is_fisheye") && parser.has("files_with_images"));
+    CV_Assert(parser.get<cv::String>("pattern_type") == "checkerboard");
+
     const cv::Size pattern_size (parser.get<int>("pattern_width"), parser.get<int>("pattern_height"));
     std::vector<bool> is_fisheye;
     const cv::String is_fisheye_str = parser.get<cv::String>("is_fisheye");

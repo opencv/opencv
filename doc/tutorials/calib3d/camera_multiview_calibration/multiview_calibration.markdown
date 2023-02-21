@@ -139,7 +139,7 @@ Details Of The Algorithm:
 * * iii. @ref cv::CALIB_FIX_K5, @ref cv::CALIB_FIX_K6 - it zeroes out the fifth and sixth parameter, so in total 4 parameters are returned.
 * b. Output of intrinsic calibration is also rotation, translation vectors (transform of pattern points to camera frame), and errors per frame.
 * * i. For each frame, the index of the camera with the lowest error among all cameras is saved.
-2. Otherwise, if intrinsics are known, then the proposed algorithm runs perspective-n-point estimation @ref cv::solvePnP) to estimate rotation / translation vectors, and reprojection error for each frame.
+2. Otherwise, if intrinsics are known, then the proposed algorithm runs perspective-n-point estimation (@ref cv::solvePnP) to estimate rotation and translation vectors, and reprojection error for each frame.
 3. Assume that cameras can be represented as nodes of a connected graph. An edge between two cameras is created if there is any image overlap over all frames. If the graph does not connect all cameras (i.e., exists a camera that has no overlap with other cameras) then calibration is not possible. Otherwise, the next step consists of finding the [maximum spanning tree](https://en.wikipedia.org/wiki/Minimum_spanning_tree) (MST) of this graph. The MST captures all best pairwise camera connections. The weight of edges across all frames is a weighted combination of multiple factors:
 * a. The main contribution is a number of pattern points detected in both images (cameras).
 * b. Ratio of area of convex hull of projected points in the image to the image resolution.
@@ -147,8 +147,8 @@ Details Of The Algorithm:
 * d. Angle between the camera's optical axis and the pattern's normal vector (found from 3 non-collinear pattern's points).
 4. The initial estimate of cameras' extrinsics is found by pairwise stereo calibration (see @ref cv::stereoCalibrate). Without loss of generality, the 0-th camera’s rotation is fixed to identity and translation to zero vector, and the 0-th node becomes the root of the MST. The order of stereo calibration is selected by traversing MST in breadth first search, starting from the root. The total number of pairs (also number of edges of tree) is NUM_CAMERAS - 1, which is property of a tree graph.
 5. Given the initial estimate of extrinsics the aim is to polish results using global optimization (via Levenberq-Marquardt method, see @ref cv::LevMarq class).
-* a. To reduce the total number of parameters, all rotation / translation vectors estimated in the first step from intrinsics calibration with the lowest error are transformed to be relative with respect to the root camera.
-* b. The total number of parameters is (NUM_CAMERAS - 1) x (3 + 3) + NUM_FRAMES x (3 + 3), where 3 stands for a rotation vector and 3 for a translation vector. The first part of parameters are extrinsics, and the second part is for rotation / translation vectors per frame.
+* a. To reduce the total number of parameters, all rotation and translation vectors estimated in the first step from intrinsics calibration with the lowest error are transformed to be relative with respect to the root camera.
+* b. The total number of parameters is (NUM_CAMERAS - 1) x (3 + 3) + NUM_FRAMES x (3 + 3), where 3 stands for a rotation vector and 3 for a translation vector. The first part of parameters are extrinsics, and the second part is for rotation and translation vectors per frame.
 * c. Robust function is additionally applied to mitigate impact of outlier points during the optimization. The function has the shape of derivative of Gaussian, or it is $x * exp(-x/s)$ (efficiently implemented by approximation of the `exp`), where `x` is a square pixel error, and `s` is manually pre-defined scale. The choice of this function is that it is increasing on the interval of `0` to `y` pixel error, and it’s decreasing thereafter. The idea is that the function slightly decreases errors until it reaches `y`, and if error is too high (more than `y`) then its robust value limits to `0`. The value of scale factor was found by exhaustive evaluation that forces robust function to almost linearly increase until the robust value of an error is 10 px and decrease afterwards (see graph of the function below). The value itself is equal to 30, but could be modified in OpenCV source code.
 ![](images/exp.png)
 
@@ -170,10 +170,10 @@ Method Output:
 The high-level output of the proposed method is the following:
 
 * Boolean indicator of success
-* Rotation / Translation vectors of extrinsics parameters with respect to camera (relative) 0. Number of vectors is `NUM_CAMERAS-1`, for the first camera rotation / translation vectors are zero.
+* Rotation and translation vectors of extrinsics parameters with respect to camera (relative) 0. Number of vectors is `NUM_CAMERAS-1`, for the first camera rotation and translation vectors are zero.
 * Intrinsic matrix for each camera.
 * Distortion coefficients for each camera.
-* Rotation / Translation vectors of each frame pattern with respect to camera 0. The combination of rotation and translation is able to tranform the pattern points to the camera coordinate space, and hence with intrinsics parameters project 3D points to image.
+* Rotation and translation vectors of each frame pattern with respect to camera 0. The combination of rotation and translation is able to tranform the pattern points to the camera coordinate space, and hence with intrinsics parameters project 3D points to image.
 * Matrix of reprojection errors of size NUM_CAMERAS x NUM_FRAMES
 * Output pairs used for initial estimation of extrinsics, number of pairs is `NUM_CAMERAS-1`.
 
@@ -188,8 +188,7 @@ def mutiviewCalibration (pattern_points, image_points, detection_mask):
       K_i, distortion_i, rvecs_i, tvecs_i = calibrateCamera(pattern_points, image_points[cam_i])
     else:
       rvecs_i, tvecs_i = solvePnP(pattern_points, image_points[cam_i], K_i, distortion_i)
-  Select best rvecs, tvecs based on reprojection errors.
-  Process data:
+    # Select best rvecs, tvecs based on reprojection errors. Process data:
     pattern_img_area[cam_i][frame] = area(convexHull(image_points[cam_i][frame]
     angle_to_board[cam_i][frame] = arccos(pattern_normal_frame * optical_axis_cam_i)
     angle_cam_to_cam[cam_i][cam_j] = arccos(optical_axis_cam_i * optical_axis_cam_j)
@@ -204,113 +203,48 @@ def mutiviewCalibration (pattern_points, image_points, detection_mask):
 Python sample API:
 ----
 
-```python
-if pattern_type.lower() == 'checkerboard':
-    ret, corners = cv.findChessboardCorners(img_detection, grid_size, None)
-elif pattern_type.lower() == 'circles':
-    ret, corners = cv.findCirclesGrid(img_detection, patternSize=grid_size, flags=cv.CALIB_CB_SYMMETRIC_GRID)
-elif pattern_type.lower() == 'acircles':
-    ret, corners = cv.findCirclesGrid(img_detection, patternSize=grid_size, flags=cv.CALIB_CB_ASYMMETRIC_GRID)
-```
+To run the calibration procedure in Python follow the following steps (see sample code in `samples/python/multiview_calibration.py`):
+
+1. Prepare data:
+
+@snippet samples/python/multiview_calibration.py calib_init
 
 The detection mask matrix is later built by checking the size of image points after detection:
 
-```python
-for i in range(num_cameras):
-    for j in range(num_frames):
-        detection_mask[i,j] = int(len(image_points[i][j]) != 0)
-```
+3. Detect pattern points on images:
 
-Finally, the calibration function is run as follows:
-```python
-rmse, rvecs, Ts, Ks, distortions, rvecs0, tvecs0, errors_per_frame, output_pairs = \
-    cv.calibrateMultiview(objPoints=pattern_points_all,
-                          imagePoints=image_points,
-                          imageSize=image_sizes,
-                          detection_mask=detection_mask,
-                          Ks=Ks,
-                          distortions=distortions,
-                          is_fisheye=np.array(is_fisheye, dtype=int),
-                          use_intrinsics_guess=USE_INTRINSICS_GUESS,
-                          flags_intrinsics=0)
-```
+@snippet samples/python/multiview_calibration.py detect_pattern
+
+4. Build detection mask matrix:
+
+@snippet samples/python/multiview_calibration.py detection_matrix
+
+5. Finally, the calibration function is run as follows:
+
+@snippet samples/python/multiview_calibration.py multiview_calib
+
 
 C++ sample API
---
+----
 
-To run the calibration procedure in C++ follow the steps (see sample script in `opencv/samples/cpp/multiview_calibration_sample.cpp`):
+To run the calibration procedure in C++ follow the following steps (see sample code in `opencv/samples/cpp/multiview_calibration_sample.cpp`):
+
 1. Prepare data similarly to Python sample, ie., pattern size and scale, fisheye camera mask, files containing image filenames, and pass them to function:
-```cpp
-void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scale, const std::string &pattern_type,
-           const std::vector<bool> &is_fisheye, const std::vector<std::string> &filenames);
-```
-2. Initialize data.
 
-```cpp
-std::vector<cv::Vec3f> board (pattern_size.area());
-const int num_cameras = (int)is_fisheye.size();
-std::vector<std::vector<cv::Mat>> image_points_all;
-std::vector<cv::Size> image_sizes;
-std::vector<std::vector<cv::Vec3f>> objPoints(num_frames, board);
-std::vector<cv::Mat> Ks, distortions, Ts, Rs;
-cv::Mat rvecs0, tvecs0, errors_mat, output_pairs;
-if (pattern_type == "checkerboard") {
-    for (int i = 0; i < pattern_size.height; i++) {
-        for (int j = 0; j < pattern_size.width; j++) {
-            board[i*pattern_size.width+j] = cv::Vec3f((float)j, (float)i, 0) * pattern_scale;
-        }
-    }
-}
-```
+@snippet samples/cpp/multiview_calibration_sample.cpp detectPointsAndCalibrate_signature
 
-3. Detect pattern points on images.
-```cpp
-int num_frames = -1;
-for (const auto &filename : filenames) {
-    std::fstream file(filename);
-    std::string img_file;
-    std::vector<cv::Mat> image_points_cameras;
-    bool save_img_size = true;
-    while (std::getline(file, img_file)) {
-        if (img_file.empty())
-            break;
-        std::cout << img_file << "\n";
-        cv::Mat img = cv::imread(img_file), corners;
-        if (save_img_size) {
-            image_sizes.emplace_back(cv::Size(img.cols, img.rows));
-            save_img_size = false;
-        }
-        cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
-        bool success = false;
-        if (pattern_type == "checkerboard") {
-            success = cv::findChessboardCorners(img, pattern_size, corners);
-        }
-        if (success && corners.rows == pattern_size.area())
-            image_points_cameras.emplace_back(corners);
-        else
-            image_points_cameras.emplace_back(cv::Mat());
-    }
-    if (num_frames == -1)
-        num_frames = (int)image_points_cameras.size();
-    else
-        assert(num_frames == (int)image_points_cameras.size());
-    image_points_all.emplace_back(image_points_cameras);
-}
+2. Initialize data:
 
-```
-4. Build detection mask matrix.
+@snippet samples/cpp/multiview_calibration_sample.cpp calib_init
 
-```cpp
-cv::Mat visibility = cv::Mat_<int>(num_cameras, num_frames);
-for (int i = 0; i < num_cameras; i++) {
-    for (int j = 0; j < num_frames; j++) {
-        visibility.at<int>(i,j) = (int)(!image_points_all[i][j].empty());
-    }
-}
-```
+3. Detect pattern points on images:
 
-5. Run calibration.
-```cpp
-double rmse = calibrateMultiview (objPoints, image_points_all, image_sizes, visibility,
-   Rs, Ts, Ks, distortions, cv::noArray(), cv::noArray(), is_fisheye, errors_mat, output_pairs, false/*use intrinsics guess*/));
-```
+@snippet samples/cpp/multiview_calibration_sample.cpp detect_pattern
+
+4. Build detection mask matrix:
+
+@snippet samples/cpp/multiview_calibration_sample.cpp detection_matrix
+
+5. Run calibration:
+
+@snippet samples/cpp/multiview_calibration_sample.cpp multiview_calib
