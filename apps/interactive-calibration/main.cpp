@@ -32,6 +32,12 @@ const std::string keys  =
         "{dst      | 295     | Distance between white and black parts of daulCircles template}"
         "{w        |         | Width of template (in corners or circles)}"
         "{h        |         | Height of template (in corners or circles)}"
+        "{ad       | DICT_4X4_50 | Name of predefined ArUco dictionary. Available ArUco dictionaries: "
+        "DICT_4X4_50, DICT_4X4_100, DICT_4X4_250, DICT_4X4_1000, DICT_5X5_50, DICT_5X5_100, DICT_5X5_250, "
+        "DICT_5X5_1000, DICT_6X6_50, DICT_6X6_100, DICT_6X6_250, DICT_6X6_1000, DICT_7X7_50, DICT_7X7_100, "
+        "DICT_7X7_250, DICT_7X7_1000, DICT_ARUCO_ORIGINAL, DICT_APRILTAG_16h5, DICT_APRILTAG_25h9, "
+        "DICT_APRILTAG_36h10, DICT_APRILTAG_36h11 }"
+        "{fad      | None    | name of file with ArUco dictionary}"
         "{of       | cameraParameters.xml | Output file name}"
         "{ft       | true    | Auto tuning of calibration flags}"
         "{vis      | grid    | Captured boards visualisation (grid, window)}"
@@ -117,6 +123,7 @@ int main(int argc, char** argv)
     dataController->setParametersFileName(parser.get<std::string>("of"));
 
     cv::Ptr<FrameProcessor> capProcessor, showProcessor;
+
     capProcessor = cv::Ptr<FrameProcessor>(new CalibProcessor(globalData, capParams));
     showProcessor = cv::Ptr<FrameProcessor>(new ShowProcessor(globalData, controller, capParams.board));
 
