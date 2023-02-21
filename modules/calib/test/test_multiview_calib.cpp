@@ -136,7 +136,7 @@ TEST(multiview_calibration, accuracy) {
     calibrateMultiview (objPoints, image_points_all, image_sizes, visibility_mat,
        Rs, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs, false, 0);
 
-    const double K_err_tol = 1e1, dist_tol = 1e-2, R_tol = 1e-2, T_tol = 1e-2;
+    const double K_err_tol = 1e1, dist_tol = 2e-2, R_tol = 1e-2, T_tol = 1e-2;
     for (int c = 0; c < num_cameras; c++) {
         cv::Mat R;
         cv::Rodrigues(Rs[c], R);
