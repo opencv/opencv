@@ -123,8 +123,6 @@ int main( int argc, char* argv[] )
     else
     {
         capture.open( CAP_OPENNI2 );
-        if( !capture.isOpened() )
-            capture.open( CAP_OPENNI );
     }
 
     cout << "done." << endl;
