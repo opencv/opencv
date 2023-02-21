@@ -473,7 +473,7 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
                 (int(scale * img.shape[1]), int(scale * img.shape[0])),
                 interpolation=cv.INTER_AREA
             )
-# [calib_init]
+# [detect_pattern]
     if pattern_type.lower() == 'checkerboard':
         ret, corners = cv.findChessboardCorners(
             cv.cvtColor(img_detection, cv.COLOR_BGR2GRAY), grid_size, None
@@ -488,7 +488,7 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
         )
     else:
         raise ValueError("Calibration pattern is not supported!")
-# [calib_init]
+# [detect_pattern]
 
     if ret:
         if scale < 1.0:
@@ -515,6 +515,7 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
     dist_m: length of a grid cell
     is_fisheye: NUM_CAMERAS (bool)
     """
+# [calib_init]
     if pattern_type.lower() == 'checkerboard':
         pattern = chessboard_points(grid_size, dist_m)
     elif pattern_type.lower() == 'circles':
@@ -523,6 +524,7 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
         pattern = asym_circles_grid_points(grid_size, dist_m)
     else:
         raise NotImplementedError("Pattern type is not implemented!")
+# [calib_init]
 
     assert len(files_with_images) == len(is_fisheye) and len(grid_size) == 2
     if cam_ids is None:

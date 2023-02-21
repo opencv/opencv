@@ -28,17 +28,17 @@ This tutorial consists of the following sections:
 
 Introduction
 ----
-Multiview calibration is a very important task in computer vision. It is widely used in 3D reconstruction, structure from motion, autonomous driving etc. The calibration procedure is often the first step for any vision task that must be done to obtain intrinsics and extrinsics parameters of the cameras. The accuracy of camera calibration parameters directly influence all further computations and results, hence, estimating precise intrinsincs / extrinsics is crucial.
+Multiview calibration is a very important task in computer vision. It is widely used in 3D reconstruction, structure from motion, autonomous driving etc. The calibration procedure is often the first step for any vision task that must be done to obtain intrinsics and extrinsics parameters of the cameras. The accuracy of camera calibration parameters directly influence all further computations and results, hence, estimating precise intrinsincs and extrinsics is crucial.
 
 The calibration algorithms require a set of images for each camera, where on the images a calibration pattern (e.g., checkerboard, aruco etc) is visible and detected. Additionally, to get results with a real scale, the 3D distance between two neighbor points of the calibration pattern grid should be measured. For extrinsics calibration, images must share the calibration pattern obtained from different views, i.e., overlap of cameras' field of view. Moreover, images that share the pattern grid have to be taken at the same moment of time, or in other words, cameras must be synchronized. Otherwise, the extrinsics calibration will fail.
 
-The intrinsics calibration incorporates estimation of focal lengths, skew, and principal point of the camera; these parameters are combined in the intrinsic upper triangular matrix of size 3x3. Additionally, intrinsic calibration includes finding distortion parameters of the camera. The extrinsics parameters represent a relative rotation and translation between two cameras. Therefore, for `N` cameras, a sufficient amount of correctly selected pairs of estimated relative rotations / translations is `N-1`, while extrinsics parameters for all possible pairs $(N over 2) = N(N-1)/2$ could be derived from those that are estimated. More details about intrinsics calibration could be found in this tutorial @ref tutorial_camera_calibration_pattern, and its implementation @ref cv::calibrateCamera.
+The intrinsics calibration incorporates estimation of focal lengths, skew, and principal point of the camera; these parameters are combined in the intrinsic upper triangular matrix of size 3x3. Additionally, intrinsic calibration includes finding distortion parameters of the camera. The extrinsics parameters represent a relative rotation and translation between two cameras. Therefore, for \f$N\f$ cameras, a sufficient amount of correctly selected pairs of estimated relative rotations and translations is \f$N-1\f$, while extrinsics parameters for all possible pairs \f$N^2 = N * (N-1) / 2\f$ could be derived from those that are estimated. More details about intrinsics calibration could be found in this tutorial @ref tutorial_camera_calibration_pattern, and its implementation @ref cv::calibrateCamera.
 
 After intrinsics and extrinsics calibration, the projection matrices of cameras are found by combing intrinsic, rotation matrices and translation. The projection matrices enable doing triangulation (3D reconstruction), rectification, finding epipolar geometry etc.
 
 The following sections describes the individual algorithmic steps of the overall multi-camera calibration pipeline:
 
-Briefly:
+Briefly
 ----
 The algorithm consists of three major steps that could be enumerated as follows:
 
@@ -101,36 +101,38 @@ python3 multiview_calibration.py --help
 ```
 
 The expected output in Linux terminal for `multiview_calibration_images` data (from `opencv_extra/testdata/python/` generated in Blender) should be the following:
-![](images/terminal-demo.png)
+![](images/terminal-demo.jpg)
 
 The expected output for real-life calibration images in `opencv_extra/testdata/python/real_multiview_calibration_images` is the following:
 ![](images/terminal-real-demo.jpg)
 
-Python visualization:
+
+Python visualization
 ----
+
 Apart from estimated extrinsics / intrinsics, the python sample provides a comprehensive visualization.
 Firstly, the sample shows positions of cameras, checkerboard (of a random frame), and pairs of cameras connected by black lines explicitly demonstrating tuples that were used in the initial stage of stereo calibration.
 If images are not known, then a simple plot with arrows (from given point to the back-projected one) visualizing errors is shown. The color of arrows highlights the error values. Additionally, the title reports mean error on this frame, and its accuracy among other frames used in calibration.
 The following test instances were synthetically generated (see `opencv/apps/python-calibration-generator/calibration_generator.py`):
 
-![](images/1.png)
+![](images/1.jpg)
 
-![](images/2.png)
+![](images/2.jpg)
 
 This instance has large Gaussian points noise.
 
-![](images/3.png)
+![](images/3.jpg)
 
 Another example, with more complex tree structure is here, it shows a weak connection between two groups of cameras.
 
-![](images/4.png)
+![](images/4.jpg)
 
 If files to images are provided, then the output is an image with plotted arrows:
 
 ![](images/checkerboard.png)
 
 
-Details Of The Algorithm:
+Details Of The Algorithm
 ----
 1. If the intrinsics are not provided, the calibration procedure starts intrinsics calibration independently for each camera using OpenCV function @ref cv::calibrateCamera.
 * a. If input is a combination of fisheye and pinhole cameras, then fisheye images are calibrated with the default OpenCV calibrate function. The reason is that stereo calibration in OpenCV does not support a mix of fisheye and pinhole cameras. The following flags are used in this scenario;
@@ -150,9 +152,9 @@ Details Of The Algorithm:
 * a. To reduce the total number of parameters, all rotation and translation vectors estimated in the first step from intrinsics calibration with the lowest error are transformed to be relative with respect to the root camera.
 * b. The total number of parameters is (NUM_CAMERAS - 1) x (3 + 3) + NUM_FRAMES x (3 + 3), where 3 stands for a rotation vector and 3 for a translation vector. The first part of parameters are extrinsics, and the second part is for rotation and translation vectors per frame.
 * c. Robust function is additionally applied to mitigate impact of outlier points during the optimization. The function has the shape of derivative of Gaussian, or it is $x * exp(-x/s)$ (efficiently implemented by approximation of the `exp`), where `x` is a square pixel error, and `s` is manually pre-defined scale. The choice of this function is that it is increasing on the interval of `0` to `y` pixel error, and it’s decreasing thereafter. The idea is that the function slightly decreases errors until it reaches `y`, and if error is too high (more than `y`) then its robust value limits to `0`. The value of scale factor was found by exhaustive evaluation that forces robust function to almost linearly increase until the robust value of an error is 10 px and decrease afterwards (see graph of the function below). The value itself is equal to 30, but could be modified in OpenCV source code.
-![](images/exp.png)
+![](images/exp.jpg)
 
-Method Input:
+Method Input
 ----
 The high-level input of the proposed method is as follows:
 
@@ -165,7 +167,7 @@ The high-level input of the proposed method is as follows:
 * use_intrinsics_guess - indicates whether intrinsics are provided.
 * Flags_intrinsics - flag for intrinsics estimation.
 
-Method Output:
+Method Output
 ----
 The high-level output of the proposed method is the following:
 
@@ -177,7 +179,7 @@ The high-level output of the proposed method is the following:
 * Matrix of reprojection errors of size NUM_CAMERAS x NUM_FRAMES
 * Output pairs used for initial estimation of extrinsics, number of pairs is `NUM_CAMERAS-1`.
 
-Pseudocode:
+Pseudocode
 ----
 The idea of the method could be demonstrated in a high-level pseudocode whereas the whole C++ implementation of the proposed approach is implemented in `opencv/modules/calib/src/multiview_calibration.cpp` file.
 
@@ -200,7 +202,7 @@ def mutiviewCalibration (pattern_points, image_points, detection_mask):
   R*, t* = optimizeLevenbergMarquardt(R, t, pattern_points, image_points, K, distortion)
 ```
 
-Python sample API:
+Python sample API
 ----
 
 To run the calibration procedure in Python follow the following steps (see sample code in `samples/python/multiview_calibration.py`):
