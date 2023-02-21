@@ -471,7 +471,7 @@ OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec RGB-D modules: Astra+
 OCV_OPTION(WITH_CANN "Include CANN support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_CANN)
-OCV_OPTION(WITH_FLATBUFFERS "Include FlatBuffers support" OFF
+OCV_OPTION(WITH_FLATBUFFERS "Include Flatbuffers support (required by DNN/TFLite importer)" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_FLATBUFFERS)
 
@@ -753,7 +753,7 @@ include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
 include(cmake/OpenCVFindLAPACK.cmake)
 include(cmake/OpenCVFindProtobuf.cmake)
-include(cmake/OpenCVFindFlatBuffers.cmake)
+include(cmake/OpenCVDetectFlatbuffers.cmake)
 if(WITH_TENGINE)
   include(cmake/OpenCVFindTengine.cmake)
 endif()
