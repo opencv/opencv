@@ -79,7 +79,18 @@ NNIndex<Distance>* load_saved_index(const Matrix<typename Distance::ElementType>
     if (fin == NULL) {
         return NULL;
     }
-    IndexHeader header = load_header(fin);
+
+    IndexHeader header;
+    try
+    {
+        header = load_header(fin);
+    }
+    catch (const FLANNException &)
+    {
+        fclose(fin);
+        throw;
+    }
+
     if (header.data_type != Datatype<ElementType>::type()) {
         fclose(fin);
         FLANN_THROW(cv::Error::StsError, "Datatype of saved index is different than of the one to be created.");
