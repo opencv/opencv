@@ -497,9 +497,8 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
     DataLayout inpLayout = layouts[op.inputs()->Get(0)];
     if (inpLayout == DATA_LAYOUT_NHWC) {
         // OpenCV works in NCHW data layout. So change the axis correspondingly.
-        CV_Check(axis, -4 < axis && axis < 4, "");
-        int remap[] = {0, 2, 3, 1};
-        axis = axis > 0 ? axis : 4 + axis;
+        axis = normalize_axis(axis, 4);
+        static const int remap[] = {0, 2, 3, 1};
         axis = remap[axis];
     }
     layerParams.set("axis", axis);
