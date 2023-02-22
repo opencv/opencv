@@ -47,7 +47,7 @@ public:
 static double robustWrapper (const Mat& ptsErrors, Mat& weights, const RobustFunction &fnc) {
     Mat errs;
     ptsErrors.convertTo(errs, CV_32F);
-    weights.create(ptsErrors.total()*ptsErrors.channels(), 1, CV_32FC1);
+    weights.create((int)ptsErrors.total()*ptsErrors.channels(), 1, CV_32FC1);
     const Point2f * errs_ptr = errs.ptr<Point2f>();
     float * weights_ptr = weights.ptr<float>();
     double robust_sum_sqr_errs = 0.0;
@@ -508,6 +508,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
               (obj_pts_0.type() == CV_32FC3 && (obj_pts_0.rows == 1 || obj_pts_0.cols == 1)));
     const bool obj_points_in_rows = obj_pts_0.cols == 3;
     const int NUM_CAMERAS = (int)detection_mask_.rows, NUM_FRAMES = (int)detection_mask_.cols;
+    CV_Assert((NUM_CAMERAS > 1) && (NUM_FRAMES > 0));
     const int NUM_PATTERN_PTS = obj_points_in_rows ? obj_pts_0.rows : obj_pts_0.cols;
     const double scale_3d_pts = multiview::getScaleOfObjPoints(NUM_PATTERN_PTS, obj_pts_0, obj_points_in_rows);
 
@@ -531,11 +532,11 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     const auto * const detection_mask_ptr = detection_mask_.data, * const is_fisheye_ptr = is_fisheye_mat.data;
     int num_fisheye_cameras = 0;
     for (int c = 0; c < NUM_CAMERAS; c++) {
-        is_fisheye_vec[c] = is_fisheye_ptr[c];
+        is_fisheye_vec[c] = (bool)is_fisheye_ptr[c];
         if (is_fisheye_vec[c]) num_fisheye_cameras++;
         int num_visible_frames = 0;
         for (int f = 0; f < NUM_FRAMES; f++) {
-            detection_mask_mat[c][f] = detection_mask_ptr[c*NUM_FRAMES + f];
+            detection_mask_mat[c][f] = (bool)detection_mask_ptr[c*NUM_FRAMES + f];
             if (detection_mask_mat[c][f]) {
                 num_visible_frames++;
                 valid_frames[f] = true; // if frame is visible by at least one camera then count is as a valid one
@@ -646,16 +647,6 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     std::vector<Vec3d> Ts_vec(NUM_CAMERAS);
     Rs_vec[0] = Matx33d ::eye();
     Ts_vec[0] = Vec3d::zeros();
-
-    if (NUM_CAMERAS == 1) {
-        double sum_errors = 0, cnt_errors = 0;
-        for (int f = 0; f < NUM_FRAMES; f++) {
-            if (detection_mask_mat[0][f]) {
-                sum_errors += camera_rt_errors[f];
-            }
-        }
-        return sqrt(sum_errors / cnt_errors);
-    }
 
     std::vector<int> parent;
     std::vector<std::vector<int>> overlaps;
