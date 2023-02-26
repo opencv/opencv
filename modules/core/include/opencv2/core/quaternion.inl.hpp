@@ -754,7 +754,7 @@ Quat<T> Quat<T>::slerp(const Quat<T> &q0, const Quat<T> &q1, const T t, QuatAssu
     }
     T cosTheta = v0.dot(v1);
     constexpr T DOT_THRESHOLD = 0.995;
-    if (abs(cosTheta) > DOT_THRESHOLD)
+    if (std::abs(cosTheta) > DOT_THRESHOLD)
     {
         return nlerp(v0, v1, t, QUAT_ASSUME_UNIT);
     }
