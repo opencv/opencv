@@ -948,16 +948,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
                             memcpy(cptr0, cptr, outLen * sizeof(cptr[0]));
                             cptr = cptr0;
                         }
-#if CV_TRY_AVX2
-                        if (conv->useAVX2 && outLen > CONV_NR/3)
-                                opt_AVX2::convBlockMR1(DkHkWkCg, weights, inptr, cptr, biasVal, fusedAdd, minval, maxval, ifMinMaxAct, CONV_NR);
-                        else
-#endif
-#if CV_TRY_AVX
-                        if (conv->useAVX && outLen > CONV_NR/3)
-                                opt_AVX::convBlockMR1(DkHkWkCg, weights, inptr, cptr, biasVal, fusedAdd, minval, maxval, ifMinMaxAct, CONV_NR);
-                        else
-#endif
+
                         convBlockMR1(DkHkWkCg, weights, inptr, cptr, biasVal, fusedAdd, minval, maxval, ifMinMaxAct, outLen, CONV_NR);
 
                         if (ifBuffer)
@@ -1008,7 +999,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
 #endif
 #if CV_NEON
                                 if (conv->useNEON && runOpt)
-                                    cpu_baseline::convBlock_NEON(c1 - c0, wptr, inptr, cptr, ldc, c0 == 0, CONV_MR, CONV_NR);
+                                    opt_NEON::convBlock(c1 - c0, wptr, inptr, cptr, ldc, c0 == 0, CONV_MR, CONV_NR);
                                 else
 #endif
                                 // The possible outLen range is 24 or 8~1.
@@ -1197,7 +1188,7 @@ static void convBlockMR1x24(int np, const float* a, const float* b, float *c, co
                             const float minval, const float maxval, bool ifMinMaxAct, const int outLen, const int convNR)
 {
     CV_Assert(convNR == 24);
-    v_float32x4 c0  = v_setall_f32(bias), c1 = c0, c2 = c0; // CONV_NR == 12
+    v_float32x4 c0  = v_setall_f32(bias), c1 = c0, c2 = c0;
     v_float32x4 c3 = c0, c4 = c0, c5 = c0;
 
     for (int p = 0; p < np; p++, a++, b += convNR)

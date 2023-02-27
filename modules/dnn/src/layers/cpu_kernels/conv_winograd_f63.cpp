@@ -148,7 +148,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 #endif
 #if CV_NEON && CV_NEON_AARCH64
                         if (conv->useNEON)
-                            cpu_baseline::winofunc_BtXB_8x8_f32_NEON(inptr, inpstep, inwptr, Cg, CONV_WINO_IBLOCK, CONV_WINO_ATOM_F32);
+                            opt_NEON::winofunc_BtXB_8x8_f32(inptr, inpstep, inwptr, Cg, CONV_WINO_IBLOCK, CONV_WINO_ATOM_F32);
                         else
 #endif
                         winofunc_BtXB_8x8_f32(inptr, inpstep, inwptr, Cg, CONV_WINO_IBLOCK, CONV_WINO_ATOM_F32);
@@ -215,7 +215,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 #endif
 #if CV_NEON && CV_NEON_AARCH64
                 if (conv->useNEON)
-                    cpu_baseline::winofunc_accum_f32_NEON(inwptr, wptr, out_wbuf, Cg, block_id1 - block_id0, CONV_WINO_IBLOCK,
+                    opt_NEON::winofunc_accum_f32(inwptr, wptr, out_wbuf, Cg, block_id1 - block_id0, CONV_WINO_IBLOCK,
                                        CONV_WINO_KBLOCK, CONV_WINO_ATOM_F32, CONV_WINO_NATOMS_F32);
                 else
 #endif
@@ -270,7 +270,8 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 #endif
 #if CV_NEON && CV_NEON_AARCH64
                         if (conv->useNEON)
-                            cpu_baseline::winofunc_AtXA_8x8_f32_NEON(out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
+                            // NEON optimization is only for ARMv8 device, and for ARMv7 device, we use the Universal intrinsics.
+                            opt_NEON::winofunc_AtXA_8x8_f32(out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
                                                                 bpptr, outstep, outptr, outstep, biasv, minval, maxval, ifMinMaxAct);
                         else
 #endif

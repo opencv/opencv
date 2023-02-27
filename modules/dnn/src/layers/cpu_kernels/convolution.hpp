@@ -107,22 +107,6 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& c
 int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv>& conv, int ntasks,
                   float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct);
 
-// namespace opt_AVX2
-// {
-// #if CV_TRY_AVX2
-// void convBlock_AVX2(int np, const float* a, const float* b, float* c, int ldc, bool init_c);
-
-// void convBlockMR1(int np, const float* a, const float* b, float *c, const float bias, bool init_c, const float minval,
-//                   const float maxval, bool ifMinMaxAct);
-
-// void winofunc_accum_f32(const float* inwptr, const float* wptr, float* outbuf, int Cg, int iblock);
-// void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep, float* outptr, int Cg);
-// void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep, float* bpptr, int bpstep, float* outptr, int outstep,
-//                                float bias, float minval, float maxval, bool ifMinMaxAct);
-
-// #endif
-// } // namespace opt_AVX2
-
 } // namespace dnn
 } // namespace cv
 

@@ -75,7 +75,7 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& c
     float *out = output.ptr<float>();
 
 #if CV_TRY_AVX2 || CV_TRY_AVX || CV_TRY_RVV
-    // TODO: remove the following limitation, need change code in layers_common.simd.hpp.
+    // TODO: remove the following limitation, need change code in conv_depthwise.simd.hpp.
     bool canRunOpt = Wi >= 16 + dilation_w*(Wk - 1) && !fusedAdd;
 #endif
     std::vector<int> ofstab_(3 * ksize, 0);
