@@ -45,6 +45,37 @@
 
 namespace cvflann
 {
+class FILEScopeGuard {
+
+public:
+    FILEScopeGuard& operator=(FILEScopeGuard&&) = default;
+    FILEScopeGuard() = default;
+    FILEScopeGuard(FILEScopeGuard&&) = default;
+
+    ~FILEScopeGuard() {
+        fclose(file_);
+        std::cout << "FILEScopeGuard: file is closed\n";
+    };
+
+    FILEScopeGuard(FILE* file)
+        : file_{ file }
+    { }
+
+    FILEScopeGuard fopen(const char * filename, char const* mode) {
+        FILE * file = ::fopen(filename, mode);
+        return FILEScopeGuard(file);
+    }
+
+    FILE* get_file() {
+        return file_;
+    }
+
+private:
+    FILEScopeGuard& operator=(FILEScopeGuard const&) = delete;
+    FILEScopeGuard(FILEScopeGuard const &) = delete;
+    FILE* file_;
+};
+
 
 /**
  * Sets the log level used for all flann functions
@@ -69,34 +100,24 @@ struct SavedIndexParams : public IndexParams
     }
 };
 
-
 template<typename Distance>
 NNIndex<Distance>* load_saved_index(const Matrix<typename Distance::ElementType>& dataset, const cv::String& filename, Distance distance)
 {
     typedef typename Distance::ElementType ElementType;
 
     FILE* fin = fopen(filename.c_str(), "rb");
+    FILEScopeGuard fscgd(fin);
+
     if (fin == NULL) {
         return NULL;
     }
 
-    IndexHeader header;
-    try
-    {
-        header = load_header(fin);
-    }
-    catch (const FLANNException &)
-    {
-        fclose(fin);
-        throw;
-    }
+    IndexHeader header = load_header(fin);
 
     if (header.data_type != Datatype<ElementType>::type()) {
-        fclose(fin);
         FLANN_THROW(cv::Error::StsError, "Datatype of saved index is different than of the one to be created.");
     }
     if ((size_t(header.rows) != dataset.rows)||(size_t(header.cols) != dataset.cols)) {
-        fclose(fin);
         FLANN_THROW(cv::Error::StsError, "The index saved belongs to a different dataset");
     }
 
@@ -104,8 +125,7 @@ NNIndex<Distance>* load_saved_index(const Matrix<typename Distance::ElementType>
     params["algorithm"] = header.index_type;
     NNIndex<Distance>* nnIndex = create_index_by_type<Distance>(dataset, params, distance);
     nnIndex->loadIndex(fin);
-    fclose(fin);
-
+    
     return nnIndex;
 }
 
