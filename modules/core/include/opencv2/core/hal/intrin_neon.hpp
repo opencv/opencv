@@ -1036,18 +1036,6 @@ OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float64x2, v_min, vminq_f64)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float64x2, v_max, vmaxq_f64)
 #endif
 
-#if CV_SIMD128_64F
-inline int64x2_t vmvnq_s64(int64x2_t a)
-{
-    int64x2_t vx = vreinterpretq_s64_u32(vdupq_n_u32(0xFFFFFFFF));
-    return veorq_s64(a, vx);
-}
-inline uint64x2_t vmvnq_u64(uint64x2_t a)
-{
-    uint64x2_t vx = vreinterpretq_u64_u32(vdupq_n_u32(0xFFFFFFFF));
-    return veorq_u64(a, vx);
-}
-#endif
 #define OPENCV_HAL_IMPL_NEON_INT_CMP_OP(_Tpvec, cast, suffix, not_suffix) \
 inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(cast(vceqq_##suffix(a.val, b.val))); } \
@@ -1069,9 +1057,47 @@ OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int16x8, vreinterpretq_s16_u16, s16, u16)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint32x4, OPENCV_HAL_NOP, u32, u32)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int32x4, vreinterpretq_s32_u32, s32, u32)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float32x4, vreinterpretq_f32_u32, f32, u32)
+#if defined(__aarch64__) || defined(_M_ARM64)
+static inline uint64x2_t vmvnq_u64(uint64x2_t a)
+{
+    uint64x2_t vx = vreinterpretq_u64_u32(vdupq_n_u32(0xFFFFFFFF));
+    return veorq_u64(a, vx);
+}
+//OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint64x2, OPENCV_HAL_NOP, u64, u64)
+//OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int64x2, vreinterpretq_s64_u64, s64, u64)
+static inline v_uint64x2 operator == (const v_uint64x2& a, const v_uint64x2& b)
+{ return v_uint64x2(vceqq_u64(a.val, b.val)); }
+static inline v_uint64x2 operator != (const v_uint64x2& a, const v_uint64x2& b)
+{ return v_uint64x2(vmvnq_u64(vceqq_u64(a.val, b.val))); }
+static inline v_int64x2 operator == (const v_int64x2& a, const v_int64x2& b)
+{ return v_int64x2(vreinterpretq_s64_u64(vceqq_s64(a.val, b.val))); }
+static inline v_int64x2 operator != (const v_int64x2& a, const v_int64x2& b)
+{ return v_int64x2(vreinterpretq_s64_u64(vmvnq_u64(vceqq_s64(a.val, b.val)))); }
+#else
+static inline v_uint64x2 operator == (const v_uint64x2& a, const v_uint64x2& b)
+{
+    uint32x4_t cmp = vceqq_u32(vreinterpretq_u32_u64(a.val), vreinterpretq_u32_u64(b.val));
+    uint32x4_t swapped = vrev64q_u32(cmp);
+    return v_uint64x2(vreinterpretq_u64_u32(vandq_u32(cmp, swapped)));
+}
+static inline v_uint64x2 operator != (const v_uint64x2& a, const v_uint64x2& b)
+{
+    uint32x4_t cmp = vceqq_u32(vreinterpretq_u32_u64(a.val), vreinterpretq_u32_u64(b.val));
+    uint32x4_t swapped = vrev64q_u32(cmp);
+    uint64x2_t v_eq = vreinterpretq_u64_u32(vandq_u32(cmp, swapped));
+    uint64x2_t vx = vreinterpretq_u64_u32(vdupq_n_u32(0xFFFFFFFF));
+    return v_uint64x2(veorq_u64(v_eq, vx));
+}
+static inline v_int64x2 operator == (const v_int64x2& a, const v_int64x2& b)
+{
+    return v_reinterpret_as_s64(v_reinterpret_as_u64(a) == v_reinterpret_as_u64(b));
+}
+static inline v_int64x2 operator != (const v_int64x2& a, const v_int64x2& b)
+{
+    return v_reinterpret_as_s64(v_reinterpret_as_u64(a) != v_reinterpret_as_u64(b));
+}
+#endif
 #if CV_SIMD128_64F
-OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint64x2, OPENCV_HAL_NOP, u64, u64)
-OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int64x2, vreinterpretq_s64_u64, s64, u64)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float64x2, vreinterpretq_f64_u64, f64, u64)
 #endif
 
