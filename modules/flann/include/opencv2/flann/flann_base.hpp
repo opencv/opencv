@@ -48,18 +48,21 @@ namespace cvflann
 class FILEScopeGuard {
 
 public:
-    FILEScopeGuard& operator=(FILEScopeGuard&&) = default;
-    FILEScopeGuard() = default;
-    FILEScopeGuard(FILEScopeGuard&&) = default;
+    FILEScopeGuard& operator=(FILEScopeGuard&& that) {
+        file_ = that.file_;
+    };
+    FILEScopeGuard() { };
+    FILEScopeGuard(FILEScopeGuard&& that) {
+        file_ = that.file_;
+    };
 
     ~FILEScopeGuard() {
         fclose(file_);
-        std::cout << "FILEScopeGuard: file is closed\n";
     };
 
     FILEScopeGuard(FILE* file)
         : file_{ file }
-    { }
+    {}
 
     FILEScopeGuard fopen(const char * filename, char const* mode) {
         FILE * file = ::fopen(filename, mode);
@@ -71,8 +74,6 @@ public:
     }
 
 private:
-    FILEScopeGuard& operator=(FILEScopeGuard const&) = delete;
-    FILEScopeGuard(FILEScopeGuard const &) = delete;
     FILE* file_;
 };
 
