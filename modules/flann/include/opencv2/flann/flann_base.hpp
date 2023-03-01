@@ -48,24 +48,13 @@ namespace cvflann
 class FILEScopeGuard {
 
 public:
-    FILEScopeGuard() {};
+    FILEScopeGuard(FILE* file) {
+        file_ = file;
+    };
 
     ~FILEScopeGuard() {
         fclose(file_);
     };
-
-    FILEScopeGuard(FILE* file){
-        file_ = file;
-    };
-
-    FILEScopeGuard fopen(const char * filename, char const* mode) {
-        FILE * file = ::fopen(filename, mode);
-        return FILEScopeGuard(file);
-    }
-
-    FILE* get_file() {
-        return file_;
-    }
 
 private:
     FILE* file_;
@@ -106,9 +95,7 @@ NNIndex<Distance>* load_saved_index(const Matrix<typename Distance::ElementType>
     if (fin == NULL) {
         return NULL;
     }
-
     IndexHeader header = load_header(fin);
-
     if (header.data_type != Datatype<ElementType>::type()) {
         FLANN_THROW(cv::Error::StsError, "Datatype of saved index is different than of the one to be created.");
     }
