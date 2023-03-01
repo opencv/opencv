@@ -120,7 +120,7 @@ public:
     typedef typename Distance::ResultType DistanceType;
 
     Index(const Matrix<ElementType>& features, const IndexParams& params, Distance distance = Distance() )
-        : index_params_(params)
+        :index_params_(params)
     {
         flann_algorithm_t index_type = get_param<flann_algorithm_t>(params,"algorithm");
         loaded_ = false;

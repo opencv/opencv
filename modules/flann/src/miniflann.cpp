@@ -774,7 +774,7 @@ bool Index::load(InputArray _data, const String& filename)
         return false;
 
     ::cvflann::IndexHeader header = ::cvflann::load_header(fin);
-    
+
     algo = header.index_type;
     featureType = header.data_type == FLANN_UINT8 ? CV_8U :
                   header.data_type == FLANN_INT8 ? CV_8S :
