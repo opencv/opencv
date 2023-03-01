@@ -782,7 +782,9 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::string& name,
+                                      const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(!blobs.empty());
         CV_Assert(inputsWrapper.size() == 1);
@@ -796,8 +798,7 @@ public:
         const int groups = x_in_channel / filter_out_channel;
 
         // create operator
-        std::string op_name = cv::format("conv2d_%d", index);
-        auto op = std::make_shared<ge::op::Conv2D>(op_name);
+        auto op = std::make_shared<ge::op::Conv2D>(name);
 
         // set attributes
         op->set_attr_strides(ge::Operator::OpListInt(
@@ -815,12 +816,13 @@ public:
         // set inputs
         // set inputs : x
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        op->set_input_x_by_name(*op_x, "y");
+        std::cout << name << " input: " << x->name.c_str() << std::endl;
+        op->set_input_x_by_name(*op_x, x->name.c_str());
         auto x_desc = x->getTensorDesc();
         op->update_input_desc_x(*x_desc);
         // set inputs : weight
         const Mat& w_mat = blobs[0];
-        auto op_const_weight = std::make_shared<CannConstOp>(w_mat.data, w_mat.type(), shape(w_mat), cv::format("%s_w", op_name.c_str()));
+        auto op_const_weight = std::make_shared<CannConstOp>(w_mat.data, w_mat.type(), shape(w_mat), cv::format("%s_w", name.c_str()));
         op->set_input_filter(*(op_const_weight->getOp()));
         op->update_input_desc_filter(*(op_const_weight->getTensorDesc()));
         // set inputs : bias
@@ -830,7 +832,7 @@ public:
             Mat b_mat({out_channel}, CV_32F, &biasvec[0]);
 
             std::vector<int> bias_shape{out_channel};
-            auto op_const_bias = std::make_shared<CannConstOp>(b_mat.data, b_mat.type(), bias_shape, cv::format("%s_b", op_name.c_str()));
+            auto op_const_bias = std::make_shared<CannConstOp>(b_mat.data, b_mat.type(), bias_shape, cv::format("%s_b", name.c_str()));
             op->set_input_bias(*(op_const_bias->getOp()));
             op->update_input_desc_bias(*(op_const_bias->getTensorDesc()));
         }

@@ -124,6 +124,28 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
     if (!newWasSupported)
         return ;
 
+    // initialize each blob wrappers' names
+    for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); ++it)
+    {
+        const LayerData& ld = it->second;
+        if (ld.id == 0)
+        {
+            for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+            {
+                std::string outputName = netInputLayer->outNames.empty() ? cv::format("%s_%d", ld.name.c_str(), i) : netInputLayer->outNames[i];
+                ld.outputBlobsWrappers[i].dynamicCast<CannBackendWrapper>()->name = outputName;
+            }
+        }
+        else
+        {
+            for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+            {
+                std::string outputName = ld.outputBlobsWrappers.size() > 1 ? (ld.name + ":" + std::to_string(i)) : ld.name;
+                ld.outputBlobsWrappers[i].dynamicCast<CannBackendWrapper>()->name = outputName;
+            }
+        }
+    }
+
     // convert layers to CANN operators,
     // collect graph input and output operators,
     // collect and input and output wrappers
@@ -141,14 +163,14 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         {
             for (int i = 0; i < ld.outputBlobsWrappers.size(); i++)
             {
-                std::string inputName = netInputLayer->outNames.empty() ? cv::format("%s_%d", ld.name.c_str(), i) : netInputLayer->outNames[i];
-                auto inputOp = std::make_shared<ge::op::Data>(inputName);
-
                 // retrieve tensor description
                 auto wrapper = ld.outputBlobsWrappers[i];
                 graphInputWrappers.push_back(wrapper);
                 auto cannWrapper = wrapper.dynamicCast<CannBackendWrapper>();
                 CV_Assert(!cannWrapper.empty());
+
+                // create graph input op
+                auto inputOp = std::make_shared<ge::op::Data>(cannWrapper->name);
 
                 inputOp->update_input_desc_x(*(cannWrapper->desc_));
                 inputOp->update_output_desc_y(*(cannWrapper->desc_));
@@ -170,14 +192,14 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 {
                     layerInputNodes.push_back(netInputNodes[layerInputOid]);
                 }
-                else // here we do not consider an op with multiple outputs
+                else
                 {
                     layerInputNodes.push_back(layers[layerInputLid].backendNodes[preferableBackend]);
                 }
             }
 
             CV_LOG_INFO(NULL, "DNN/CANN: converting layer " << ld.name << "@" << ld.type << "@" << ld.id << " to CANN operator");
-            auto backendNode = layer->initCann(ld.inputBlobsWrappers, ld.id, layerInputNodes);
+            auto backendNode = layer->initCann(ld.name, ld.inputBlobsWrappers, layerInputNodes);
 
             // collect outputs
             bool isOutputNode = ld.consumers.size() == 0 ? true : false;
@@ -264,72 +286,100 @@ void NetImplCann::forwardLayer(LayerData& ld)
     ld.flag = 1;
 }
 
+// std::shared_ptr<ge::ModelBufferData> compileCannGraph(std::shared_ptr<ge::Graph> graph)
+// {
+//     const size_t hdrsize = 32;
+//     std::shared_ptr<ge::ModelBufferData> out_buffer = std::make_shared<ge::ModelBufferData>();
+//     size_t buf_size = (1 << 27), model_size; // default buf_size 128 MB
+//     for (int iter = 0; iter < 2; ++iter)
+//     {
+//         size_t* shared_buf = (size_t*)mmap(NULL, buf_size + hdrsize, PROT_READ|PROT_WRITE,
+//                                         MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+//         uint8_t* model_data = (uint8_t*)(shared_buf + 1);
+//         pid_t child;
+//         int childstate = 0;
+//         bool ok;
+//         if ((child=fork()) == 0)
+//         {
+//             // initialize engine
+//             std::map<ge::AscendString, ge::AscendString> options = {
+//                 {ge::AscendString(ge::ir_option::SOC_VERSION), ge::AscendString("Ascend310")},
+//             };
+//             ACL_CHECK_GRAPH_RET(ge::aclgrphBuildInitialize(options));
+
+//             // build
+//             std::shared_ptr<ge::ModelBufferData> om_model = std::make_shared<ge::ModelBufferData>();
+//             std::map<ge::AscendString, ge::AscendString> build_options;
+//             ACL_CHECK_GRAPH_RET(aclgrphBuildModel(*graph, build_options, *om_model));
+
+// #if 1
+//             // (optional). Dump model
+//             ge::AscendString graph_name;
+//             graph->GetName(graph_name);
+//             aclgrphDumpGraph(*graph, graph_name.GetString(), 7);
+//             // (optional). Save model
+//             aclgrphSaveModel(graph_name.GetString(), *om_model);
+// #endif
+
+//             // finalize engine
+//             ge::aclgrphBuildFinalize();
+
+//             // send model from child to parent
+//             size_t model_size = om_model->length;
+//             *shared_buf = model_size;
+//             if (model_size > buf_size)
+//             {
+//                 exit(1);
+//             }
+//             else
+//             {
+//                 memcpy(model_data, om_model->data.get(), model_size);
+//                 exit(0);
+//             }
+//         }
+//         waitpid (child, &childstate, 0);
+//         model_size = *shared_buf;
+//         ok = WIFEXITED(childstate) && WEXITSTATUS(childstate) == 0;
+//         if (ok)
+//         {
+//             CV_LOG_INFO(NULL, "Compile success, model size = " << model_size);
+//             out_buffer->data = std::shared_ptr<uint8_t>(new uint8_t[model_size]);
+//             memcpy(out_buffer->data.get(), model_data, model_size);
+//             out_buffer->length = model_size;
+//         }
+//         munmap(shared_buf, buf_size + hdrsize);
+//         if (ok) break;
+//         buf_size = model_size;
+//     }
+//     return out_buffer;
+// }
+
 std::shared_ptr<ge::ModelBufferData> compileCannGraph(std::shared_ptr<ge::Graph> graph)
 {
-    const size_t hdrsize = 32;
-    std::shared_ptr<ge::ModelBufferData> out_buffer = std::make_shared<ge::ModelBufferData>();
-    size_t buf_size = (1 << 27), model_size; // default buf_size 128 MB
-    for (int iter = 0; iter < 2; ++iter)
-    {
-        size_t* shared_buf = (size_t*)mmap(NULL, buf_size + hdrsize, PROT_READ|PROT_WRITE,
-                                        MAP_SHARED|MAP_ANONYMOUS, -1, 0);
-        uint8_t* model_data = (uint8_t*)(shared_buf + 1);
-        pid_t child;
-        int childstate = 0;
-        bool ok;
-        if ((child=fork()) == 0)
-        {
-            // initialize engine
-            std::map<ge::AscendString, ge::AscendString> options = {
-                {ge::AscendString(ge::ir_option::SOC_VERSION), ge::AscendString("Ascend310")},
-            };
-            ACL_CHECK_GRAPH_RET(ge::aclgrphBuildInitialize(options));
+    // initialize engine
+    std::map<ge::AscendString, ge::AscendString> options = {
+        {ge::AscendString(ge::ir_option::SOC_VERSION), ge::AscendString("Ascend310")},
+    };
+    ACL_CHECK_GRAPH_RET(ge::aclgrphBuildInitialize(options));
 
-            // build
-            std::shared_ptr<ge::ModelBufferData> om_model = std::make_shared<ge::ModelBufferData>();
-            std::map<ge::AscendString, ge::AscendString> build_options;
-            ACL_CHECK_GRAPH_RET(aclgrphBuildModel(*graph, build_options, *om_model));
+    // build
+    std::shared_ptr<ge::ModelBufferData> om_model = std::make_shared<ge::ModelBufferData>();
+    std::map<ge::AscendString, ge::AscendString> build_options;
+    ACL_CHECK_GRAPH_RET(aclgrphBuildModel(*graph, build_options, *om_model));
 
-#if 0
-            // (optional). Dump model
-            AscendString graph_name;
-            graph.GetName(graph_name);
-            aclgrphDumpGraph(graph, graph_name.GetString(), 7);
-            // (optional). Save model
-            aclgrphSaveModel(graph_name.GetString(), *om_model);
+#if 1
+    // (optional). Dump model
+    ge::AscendString graph_name;
+    graph->GetName(graph_name);
+    aclgrphDumpGraph(*graph, graph_name.GetString(), 7);
+    // (optional). Save model
+    aclgrphSaveModel(graph_name.GetString(), *om_model);
 #endif
 
-            // finalize engine
-            ge::aclgrphBuildFinalize();
+    // finalize engine
+    ge::aclgrphBuildFinalize();
 
-            // send model from child to parent
-            size_t model_size = om_model->length;
-            *shared_buf = model_size;
-            if (model_size > buf_size)
-            {
-                exit(1);
-            }
-            else
-            {
-                memcpy(model_data, om_model->data.get(), model_size);
-                exit(0);
-            }
-        }
-        waitpid (child, &childstate, 0);
-        model_size = *shared_buf;
-        ok = WIFEXITED(childstate) && WEXITSTATUS(childstate) == 0;
-        if (ok)
-        {
-            CV_LOG_INFO(NULL, "Compile success, model size = " << model_size);
-            out_buffer->data = std::shared_ptr<uint8_t>(new uint8_t[model_size]);
-            memcpy(out_buffer->data.get(), model_data, model_size);
-            out_buffer->length = model_size;
-        }
-        munmap(shared_buf, buf_size + hdrsize);
-        if (ok) break;
-        buf_size = model_size;
-    }
-    return out_buffer;
+    return om_model;
 }
 
 void switchToCannBackend(Net& net)
