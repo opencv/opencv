@@ -499,7 +499,7 @@ STDMETHODIMP MSMFStreamChannel::OnEvent(DWORD /*sidx*/, IMFMediaEvent* /*event*/
 
 STDMETHODIMP MSMFStreamChannel::OnFlush(DWORD)
 {
-    if (streamState_ == STREAM_STARTING)
+    if (streamState_ != STREAM_STOPED)
     {
         std::unique_lock<std::mutex> lock(streamStateMutex_);
         streamState_ = STREAM_STOPED;
