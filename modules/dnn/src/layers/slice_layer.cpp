@@ -220,15 +220,6 @@ public:
                 }
             }
         }
-
-        // for (int j = 0; j < sliceRanges.size(); ++j)
-        // {
-        //     for (int i = 0; i < sliceRanges[j].size(); ++i)
-        //     {
-        //         std::cout << cv::format("j=%d, i=%d, start=%d, end=%d\n", j, i, sliceRanges[j][i].start, sliceRanges[j][i].end);
-        //     }
-        // }
-        // std::cout << "Another one!" << std::endl;
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -662,18 +653,6 @@ public:
             // set inputs
             // set inputs : x
             auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-            // if (nodes_oid[0] != 0)
-            // {
-            //     ge::AscendString name_op_x;
-            //     op_x->GetName(name_op_x);
-            //     std::cout << "Slice's Input Name=" << name_op_x.GetString() << std::endl;
-            //     std::string output_name_op_x = name_op_x.GetString() + std::to_string(nodes_oid[0]);
-            //     op->set_input_x_by_name(*op_x, output_name_op_x.c_str());
-            // }
-            // else
-            // {
-            //     op->set_input_x_by_name(*op_x, "y");
-            // }
             op->set_input_x_by_name(*op_x, x->name.c_str());
             auto desc_x = x->getTensorDesc();
             op->update_input_desc_x(*desc_x);
