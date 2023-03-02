@@ -58,7 +58,7 @@ VideoCapture can retrieve the following data:
 
 In order to get depth map from depth sensor use VideoCapture::operator \>\>, e. g. :
 @code{.cpp}
-    VideoCapture capture( CAP_OPENNI );
+    VideoCapture capture( CAP_OPENNI2 );
     for(;;)
     {
         Mat depthMap;
@@ -70,7 +70,7 @@ In order to get depth map from depth sensor use VideoCapture::operator \>\>, e. 
 @endcode
 For getting several data maps use VideoCapture::grab and VideoCapture::retrieve, e.g. :
 @code{.cpp}
-    VideoCapture capture(0); // or CAP_OPENNI
+    VideoCapture capture(0); // or CAP_OPENNI2
     for(;;)
     {
         Mat depthMap;
@@ -88,7 +88,7 @@ For getting several data maps use VideoCapture::grab and VideoCapture::retrieve,
 For setting and getting some property of sensor\` data generators use VideoCapture::set and
 VideoCapture::get methods respectively, e.g. :
 @code{.cpp}
-    VideoCapture capture( CAP_OPENNI );
+    VideoCapture capture( CAP_OPENNI2 );
     capture.set( CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_VGA_30HZ );
     cout << "FPS    " << capture.get( CAP_OPENNI_IMAGE_GENERATOR+CAP_PROP_FPS ) << endl;
 @endcode
