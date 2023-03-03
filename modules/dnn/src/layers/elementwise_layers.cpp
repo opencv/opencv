@@ -676,8 +676,8 @@ struct ReLU6Functor : public BaseFunctor
 
         Mat max_value_mat(1, 1, CV_32F, Scalar(maxValue));
         auto op_const_maxv = std::make_shared<CannConstOp>(max_value_mat.data, max_value_mat.type(), shape_, cv::format("%s_max_value", name.c_str()));
-        op->set_input_clip_value_min(*(op_const_maxv->getOp()));
-        op->update_input_desc_clip_value_min(*(op_const_maxv->getTensorDesc()));
+        op->set_input_clip_value_max(*(op_const_maxv->getOp()));
+        op->update_input_desc_clip_value_max(*(op_const_maxv->getTensorDesc()));
 
         auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
         op->update_output_desc_y(*output_desc);
