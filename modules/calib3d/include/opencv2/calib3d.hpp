@@ -548,17 +548,31 @@ enum RobotWorldHandEyeCalibrationMethod
     CALIB_ROBOT_WORLD_HAND_EYE_LI   = 1  //!< Simultaneous robot-world and hand-eye calibration using dual-quaternions and kronecker product @cite Li2010SimultaneousRA
 };
 
-enum SamplingMethod { SAMPLING_UNIFORM, SAMPLING_PROGRESSIVE_NAPSAC, SAMPLING_NAPSAC,
-        SAMPLING_PROSAC };
-enum LocalOptimMethod {LOCAL_OPTIM_NULL, LOCAL_OPTIM_INNER_LO, LOCAL_OPTIM_INNER_AND_ITER_LO,
-        LOCAL_OPTIM_GC, LOCAL_OPTIM_SIGMA};
-enum ScoreMethod {SCORE_METHOD_RANSAC, SCORE_METHOD_MSAC, SCORE_METHOD_MAGSAC, SCORE_METHOD_LMEDS};
-enum NeighborSearchMethod { NEIGH_FLANN_KNN, NEIGH_GRID, NEIGH_FLANN_RADIUS };
-enum PolishingMethod { NonePolisher, LSQPolisher, MAGSAC, CovPolisher };
+enum SamplingMethod { SAMPLING_UNIFORM=0, SAMPLING_PROGRESSIVE_NAPSAC=1, SAMPLING_NAPSAC=2,
+        SAMPLING_PROSAC=3 };
+enum LocalOptimMethod {LOCAL_OPTIM_NULL=0, LOCAL_OPTIM_INNER_LO=1, LOCAL_OPTIM_INNER_AND_ITER_LO=2,
+        LOCAL_OPTIM_GC=3, LOCAL_OPTIM_SIGMA=4};
+enum ScoreMethod {SCORE_METHOD_RANSAC=0, SCORE_METHOD_MSAC=1, SCORE_METHOD_MAGSAC=2, SCORE_METHOD_LMEDS=3};
+enum NeighborSearchMethod { NEIGH_FLANN_KNN=0, NEIGH_GRID=1, NEIGH_FLANN_RADIUS=2 };
+enum PolishingMethod { NONE_POLISHER=0, LSQ_POLISHER=1, MAGSAC=2, COV_POLISHER=3 };
 
 struct CV_EXPORTS_W_SIMPLE UsacParams
 { // in alphabetical order
-    CV_WRAP UsacParams();
+    CV_WRAP UsacParams() {
+        confidence=0.99;
+        isParallel=false;
+        loIterations=5;
+        loMethod=LOCAL_OPTIM_INNER_LO;
+        loSampleSize=14;
+        maxIterations=5000;
+        neighborsSearch=NEIGH_GRID;
+        randomGeneratorState=0;
+        sampler=SAMPLING_UNIFORM;
+        score=SCORE_METHOD_MSAC;
+        threshold=1.5;
+        final_polisher=COV_POLISHER;
+        final_polisher_iterations=3;
+    };
     CV_PROP_RW double confidence;
     CV_PROP_RW bool isParallel;
     CV_PROP_RW int loIterations;

@@ -1086,7 +1086,7 @@ Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray _inliers,
 Mat estimateAffine2D(InputArray _from, InputArray _to, OutputArray inliers,
                      const UsacParams &params) {
     Ptr<usac::Model> model;
-    usac::setParameters(model, usac::EstimationMethod::Affine, params, inliers.needed());
+    usac::setParameters(model, usac::EstimationMethod::AFFINE, params, inliers.needed());
     Ptr<usac::RansacOutput> ransac_output;
     if (usac::run(model, _from, _to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {

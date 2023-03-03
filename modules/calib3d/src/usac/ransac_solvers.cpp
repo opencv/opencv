@@ -215,7 +215,7 @@ public:
         threshold *= threshold;
 
         if ((params->isHomography() || (params->isFundamental() && (K1.empty() || K2.empty() || !params->isLarssonOptimization())) ||
-             params->getEstimator() == EstimationMethod::Affine) && (params->getLO() != LOCAL_OPTIM_NULL || params->getFinalPolisher() == CovPolisher)) {
+             params->getEstimator() == EstimationMethod::AFFINE) && (params->getLO() != LOCAL_OPTIM_NULL || params->getFinalPolisher() == COV_POLISHER)) {
             const auto normTr = NormTransform::create(points);
             std::vector<int> sample (points_size);
             for (int i = 0; i < points_size; i++) sample[i] = i;
@@ -226,7 +226,7 @@ public:
             _gamma_generator = GammaValues::create(params->getDegreesOfFreedom()); // is thread safe
         initialize (_state, _min_solver, _lo_solver, _error, _estimator, _degeneracy, _quality,
                 _model_verifier, _local_optimization, _termination, _sampler, _lo_sampler, _weight_fnc, false/*parallel*/);
-        if (params->getFinalPolisher() != NonePolisher) {
+        if (params->getFinalPolisher() != NONE_POLISHER) {
             polisher = NonMinimalPolisher::create(_quality, _fo_solver,
                 params->getFinalPolisher() == MAGSAC ? _weight_fnc : nullptr, params->getFinalLSQIterations(), 0.99);
         }
@@ -252,7 +252,7 @@ public:
             case ErrorMetric::SYMM_REPR_ERR:
                 error = ReprojectionErrorSymmetric::create(points); break;
             case ErrorMetric::FORW_REPR_ERR:
-                if (params->getEstimator() == EstimationMethod::Affine)
+                if (params->getEstimator() == EstimationMethod::AFFINE)
                     error = ReprojectionErrorAffine::create(points);
                 else error = ReprojectionErrorForward::create(points);
                 break;
@@ -286,8 +286,8 @@ public:
             min_solver = HomographyMinimalSolver4pts::create(points, is_ge_solver);
             non_min_solver = HomographyNonMinimalSolver::create(norm_points, T1, T2, true);
             estimator = HomographyEstimator::create(min_solver, non_min_solver, degeneracy);
-            if (!parallel_call && params->getFinalPolisher() != NonePolisher) {
-                if (params->getFinalPolisher() == CovPolisher)
+            if (!parallel_call && params->getFinalPolisher() != NONE_POLISHER) {
+                if (params->getFinalPolisher() == COV_POLISHER)
                      _fo_solver = CovarianceHomographySolver::create(norm_points, T1, T2);
                 else _fo_solver = HomographyNonMinimalSolver::create(points);
             }
@@ -308,21 +308,21 @@ public:
                     non_min_solver = EpipolarNonMinimalSolver::create(norm_points, T1, T2, true);
             }
             estimator = FundamentalEstimator::create(min_solver, non_min_solver, degeneracy);
-            if (!parallel_call && params->getFinalPolisher() != NonePolisher) {
+            if (!parallel_call && params->getFinalPolisher() != NONE_POLISHER) {
                 if (params->isLarssonOptimization() && !K1.empty() && !K2.empty())
                      _fo_solver = LarssonOptimizer::create(calib_points, K1, K2, params->getLevMarqIters(), true/*F*/);
-                else if (params->getFinalPolisher() == CovPolisher)
+                else if (params->getFinalPolisher() == COV_POLISHER)
                      _fo_solver = CovarianceEpipolarSolver::create(norm_points, T1, T2);
                 else _fo_solver = EpipolarNonMinimalSolver::create(points, true);
             }
         } else if (params->isEssential()) {
-            if (params->getEstimator() == EstimationMethod::Essential) {
+            if (params->getEstimator() == EstimationMethod::ESSENTIAL) {
                 min_solver = EssentialMinimalSolver5pts::create(points, !is_ge_solver, true/*Nister*/);
                 degeneracy = EssentialDegeneracy::create(points, min_sample_size);
             }
             non_min_solver = LarssonOptimizer::create(calib_points, K1, K2, params->getLevMarqItersLO(), false/*E*/);
             estimator = EssentialEstimator::create(min_solver, non_min_solver, degeneracy);
-            if (!parallel_call && params->getFinalPolisher() != NonePolisher)
+            if (!parallel_call && params->getFinalPolisher() != NONE_POLISHER)
                 _fo_solver = LarssonOptimizer::create(calib_points, K1, K2, params->getLevMarqIters(), false/*E*/);
         } else if (params->isPnP()) {
             degeneracy = makePtr<Degeneracy>();
@@ -336,14 +336,14 @@ public:
                 non_min_solver = PnPNonMinimalSolver::create(points);
             }
             estimator = PnPEstimator::create(min_solver, non_min_solver);
-            if (!parallel_call && params->getFinalPolisher() != NonePolisher) _fo_solver = non_min_solver;
-        } else if (params->getEstimator() == EstimationMethod::Affine) {
+            if (!parallel_call && params->getFinalPolisher() != NONE_POLISHER) _fo_solver = non_min_solver;
+        } else if (params->getEstimator() == EstimationMethod::AFFINE) {
             degeneracy = makePtr<Degeneracy>();
             min_solver = AffineMinimalSolver::create(points);
             non_min_solver = AffineNonMinimalSolver::create(points, cv::noArray(), cv::noArray());
             estimator = AffineEstimator::create(min_solver, non_min_solver);
-            if (!parallel_call && params->getFinalPolisher() != NonePolisher) {
-                if (params->getFinalPolisher() == CovPolisher)
+            if (!parallel_call && params->getFinalPolisher() != NONE_POLISHER) {
+                if (params->getFinalPolisher() == COV_POLISHER)
                     _fo_solver = CovarianceAffineSolver::create(points);
                 else _fo_solver = non_min_solver;
             }
@@ -364,12 +364,12 @@ public:
             default: CV_Error(cv::Error::StsNotImplemented, "Sampler is not implemented!");
         }
 
-        const bool is_sprt = params->getVerifier() == VerificationMethod::SprtVerifier || params->getVerifier() == VerificationMethod::ASPRT;
+        const bool is_sprt = params->getVerifier() == VerificationMethod::SPRT_VERIFIER || params->getVerifier() == VerificationMethod::ASPRT;
         if (is_sprt)
             verifier = AdaptiveSPRT::create(state++, quality, points_size, params->getScore() == ScoreMethod ::SCORE_METHOD_MAGSAC ? max_thr : threshold,
                 params->getSPRTepsilon(), params->getSPRTdelta(), params->getTimeForModelEstimation(),
                 params->getSPRTavgNumModels(), params->getScore(), k_mlesac, params->getVerifier() == VerificationMethod::ASPRT);
-        else if (params->getVerifier() == VerificationMethod::NullVerifier)
+        else if (params->getVerifier() == VerificationMethod::NULL_VERIFIER)
             verifier = ModelVerifier::create(quality);
         else CV_Error(cv::Error::StsNotImplemented, "Verifier is not imeplemented!");
 
@@ -425,7 +425,7 @@ public:
             // convert E to F
             model = Mat(Matx33d(K2).inv().t() * Matx33d(model) * Matx33d(K1).inv());
             sample_size = 5;
-        } else if (params->isPnP() || params->getEstimator() == EstimationMethod::Affine) sample_size = 3;
+        } else if (params->isPnP() || params->getEstimator() == EstimationMethod::AFFINE) sample_size = 3;
         else
             CV_Error(cv::Error::StsNotImplemented, "Method for independent inliers is not implemented for this problem");
         if (num_inliers_ <= sample_size) return 0; // minimal sample size generates model
@@ -965,7 +965,7 @@ public:
                 }
             }
         }
-        if (params->getFinalPolisher() != PolishingMethod::NonePolisher) {
+        if (params->getFinalPolisher() != PolishingMethod::NONE_POLISHER) {
             Mat polished_model;
             Score polisher_score;
             if (polisher->polishSoFarTheBestModel(best_model, best_score, // polish final model
@@ -1098,7 +1098,7 @@ void setParameters (int flag, Ptr<Model> &params, EstimationMethod estimator, do
             params->setLocalOptimization(LocalOptimMethod ::LOCAL_OPTIM_INNER_LO);
             break;
         case USAC_FM_8PTS:
-            params = Model::create(thr, EstimationMethod::Fundamental8,SamplingMethod::SAMPLING_UNIFORM,
+            params = Model::create(thr, EstimationMethod::FUNDAMENTAL8,SamplingMethod::SAMPLING_UNIFORM,
                     conf, max_iters,ScoreMethod::SCORE_METHOD_MSAC);
             params->setLocalOptimization(LocalOptimMethod ::LOCAL_OPTIM_INNER_LO);
             break;
@@ -1118,7 +1118,7 @@ void setParameters (int flag, Ptr<Model> &params, EstimationMethod estimator, do
 Mat findHomography (InputArray srcPoints, InputArray dstPoints, int method, double thr,
         OutputArray mask, const int max_iters, const double confidence) {
     Ptr<Model> params;
-    setParameters(method, params, EstimationMethod::Homography, thr, max_iters, confidence, mask.needed());
+    setParameters(method, params, EstimationMethod::HOMOGRAPHY, thr, max_iters, confidence, mask.needed());
     Ptr<RansacOutput> ransac_output;
     if (run(params, srcPoints, dstPoints,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
@@ -1135,7 +1135,7 @@ Mat findHomography (InputArray srcPoints, InputArray dstPoints, int method, doub
 Mat findFundamentalMat( InputArray points1, InputArray points2, int method, double thr,
         double confidence, int max_iters, OutputArray mask ) {
     Ptr<Model> params;
-    setParameters(method, params, EstimationMethod::Fundamental, thr, max_iters, confidence, mask.needed());
+    setParameters(method, params, EstimationMethod::FUNDAMENTAL, thr, max_iters, confidence, mask.needed());
     Ptr<RansacOutput> ransac_output;
     if (run(params, points1, points2,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
@@ -1152,7 +1152,7 @@ Mat findFundamentalMat( InputArray points1, InputArray points2, int method, doub
 Mat findEssentialMat (InputArray points1, InputArray points2, InputArray cameraMatrix1,
         int method, double prob, double thr, OutputArray mask, int maxIters) {
     Ptr<Model> params;
-    setParameters(method, params, EstimationMethod::Essential, thr, maxIters, prob, mask.needed());
+    setParameters(method, params, EstimationMethod::ESSENTIAL, thr, maxIters, prob, mask.needed());
     Ptr<RansacOutput> ransac_output;
     if (run(params, points1, points2,
             ransac_output, cameraMatrix1, cameraMatrix1, noArray(), noArray())) {
@@ -1195,7 +1195,7 @@ bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
 Mat estimateAffine2D(InputArray from, InputArray to, OutputArray mask, int method,
         double thr, int max_iters, double conf, int /*refineIters*/) {
     Ptr<Model> params;
-    setParameters(method, params, EstimationMethod ::Affine, thr, max_iters, conf, mask.needed());
+    setParameters(method, params, EstimationMethod::AFFINE, thr, max_iters, conf, mask.needed());
     Ptr<RansacOutput> ransac_output;
     if (run(params, from, to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
@@ -1245,7 +1245,7 @@ private:
     const double spatial_coherence_term = 0.975;
 
     // apply polisher for final RANSAC model
-    PolishingMethod polisher = PolishingMethod ::CovPolisher;
+    PolishingMethod polisher = PolishingMethod ::COV_POLISHER;
 
     // preemptive verification test
     VerificationMethod verifier = VerificationMethod ::ASPRT;
@@ -1287,21 +1287,21 @@ public:
             int max_iterations_, ScoreMethod score_) :
            threshold(threshold_), estimator(estimator_), sampler(sampler_), confidence(confidence_), max_iterations(max_iterations_), score(score_) {
         switch (estimator_) {
-            case (EstimationMethod::Affine):
+            case (EstimationMethod::AFFINE):
                 avg_num_models = 1; model_est_to_ver_time = 50;
                 sample_size = 3; est_error = ErrorMetric ::FORW_REPR_ERR; break;
-            case (EstimationMethod::Homography):
+            case (EstimationMethod::HOMOGRAPHY):
                 avg_num_models = 0.8; model_est_to_ver_time = 200;
                 sample_size = 4; est_error = ErrorMetric ::FORW_REPR_ERR; break;
-            case (EstimationMethod::Fundamental):
+            case (EstimationMethod::FUNDAMENTAL):
                 DoF = 4; C = 0.25; sigma_quantile = 3.64, upper_incomplete_of_sigma_quantile = 0.003657; lower_incomplete_of_sigma_quantile = 1.3012;
                 maximum_thr = 2.5;
                 avg_num_models = 1.5; model_est_to_ver_time = 200;
                 sample_size = 7; est_error = ErrorMetric ::SAMPSON_ERR; break;
-            case (EstimationMethod::Fundamental8):
+            case (EstimationMethod::FUNDAMENTAL8):
                 avg_num_models = 1; model_est_to_ver_time = 100; maximum_thr = 2.5;
                 sample_size = 8; est_error = ErrorMetric ::SAMPSON_ERR; break;
-            case (EstimationMethod::Essential):
+            case (EstimationMethod::ESSENTIAL):
                 DoF = 4; C = 0.25; sigma_quantile = 3.64, upper_incomplete_of_sigma_quantile = 0.003657; lower_incomplete_of_sigma_quantile = 1.3012;
                 avg_num_models = 3.93; model_est_to_ver_time = 1000; maximum_thr = 2;
                 sample_size = 5; est_error = ErrorMetric ::SAMPSON_ERR; break;
@@ -1319,7 +1319,7 @@ public:
 
         // for PnP problem we can use only KNN graph
         if (estimator_ == EstimationMethod::P3P || estimator_ == EstimationMethod::P6P) {
-            polisher = LSQPolisher;
+            polisher = LSQ_POLISHER;
             neighborsType = NeighborSearchMethod::NEIGH_FLANN_KNN;
             k_nearest_neighbors = 2;
         }
@@ -1393,11 +1393,11 @@ public:
     bool isLarssonOptimization () const override { return is_larsson_optimization; }
     bool isParallel () const override { return is_parallel; }
     bool isFundamental () const override {
-        return estimator == EstimationMethod ::Fundamental ||
-               estimator == EstimationMethod ::Fundamental8;
+        return estimator == EstimationMethod::FUNDAMENTAL ||
+               estimator == EstimationMethod::FUNDAMENTAL8;
     }
-    bool isHomography () const override { return estimator == EstimationMethod ::Homography; }
-    bool isEssential () const override { return estimator == EstimationMethod ::Essential; }
+    bool isHomography () const override { return estimator == EstimationMethod::HOMOGRAPHY; }
+    bool isEssential () const override { return estimator == EstimationMethod::ESSENTIAL; }
     bool isPnP() const override {
         return estimator == EstimationMethod ::P3P || estimator == EstimationMethod ::P6P;
     }

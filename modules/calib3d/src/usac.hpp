@@ -6,11 +6,11 @@
 #define OPENCV_USAC_USAC_HPP
 
 namespace cv { namespace usac {
-enum EstimationMethod { Homography, Fundamental, Fundamental8, Essential, Affine, P3P, P6P};
-enum VerificationMethod { NullVerifier, SprtVerifier, ASPRT };
-enum ErrorMetric {DIST_TO_LINE, SAMPSON_ERR, SGD_ERR, SYMM_REPR_ERR, FORW_REPR_ERR, RERPOJ};
-enum MethodSolver { GEM_SOLVER, SVD_SOLVER };
-enum MODEL_CONFIDENCE {RANDOM, NON_RANDOM, UNKNOWN};
+enum EstimationMethod { HOMOGRAPHY=0, FUNDAMENTAL=1, FUNDAMENTAL8=2, ESSENTIAL=3, AFFINE=4, P3P=5, P6P=6};
+enum VerificationMethod { NULL_VERIFIER=0, SPRT_VERIFIER=1, ASPRT=2 };
+enum ErrorMetric {DIST_TO_LINE=0, SAMPSON_ERR=1, SGD_ERR=2, SYMM_REPR_ERR=3, FORW_REPR_ERR=4, RERPOJ=5};
+enum MethodSolver { GEM_SOLVER=0, SVD_SOLVER=1 };
+enum MODEL_CONFIDENCE {RANDOM=0, NON_RANDOM=1, UNKNOWN=2};
 
 // Abstract Error class
 class Error : public Algorithm {
@@ -458,14 +458,14 @@ struct SPRT_history {
     /*
      * delta:
      * The probability of a data point being consistent
-     * with a ‘bad’ model is modeled as a probability of
+     * with a 'bad' model is modeled as a probability of
      * a random event with Bernoulli distribution with parameter
-     * δ : p(1|Hb) = δ.
+     * delta : p(1|Hb) = delta.
 
      * epsilon:
-     * The probability p(1|Hg) = ε
-     * that any randomly chosen data point is consistent with a ‘good’ model
-     * is approximated by the fraction of inliers ε among the data
+     * The probability p(1|Hg) = epsilon
+     * that any randomly chosen data point is consistent with a 'good' model
+     * is approximated by the fraction of inliers epsilon among the data
      * points
 
      * A is the decision threshold, the only parameter of the Adapted SPRT
