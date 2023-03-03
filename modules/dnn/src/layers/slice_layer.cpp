@@ -693,8 +693,11 @@ public:
 
         // ONNX-Slice
         CV_CheckEQ(sliceRanges.size(), (size_t)1, "");
-        CV_Assert(sliceSteps.size() == 1);
-        CV_Assert(sliceRanges[0].size() == sliceSteps[0].size());
+        if (hasSteps)
+        {
+            CV_CheckEQ(sliceSteps.size(), (size_t)1, "DNN/CANN/Slice: no support to multiple slices");
+            CV_CheckEQ(sliceRanges[0].size(), sliceSteps[0].size(), "DNN/CANN/Slice: number of slice ranges does not match number of slice steps");
+        }
 
         const int dims = x->host->dims;
 
@@ -708,7 +711,10 @@ public:
             begins.push_back(sliceRanges[0][i].start);
             ends.push_back(sliceRanges[0][i].end);
             axes.push_back(i);
-            steps.push_back(sliceSteps[0][i]);
+            if (hasSteps)
+                steps.push_back(sliceSteps[0][i]);
+            else
+                steps.push_back(1); // put 1 by default
         }
         std::vector<int> shape_{dims};
 

@@ -315,7 +315,7 @@ std::shared_ptr<ge::ModelBufferData> compileCannGraph(std::shared_ptr<ge::Graph>
             std::map<ge::AscendString, ge::AscendString> build_options;
             ACL_CHECK_GRAPH_RET(aclgrphBuildModel(*graph, build_options, *om_model));
 
-#if 1
+#if 0
             // (optional). Dump model
             ge::AscendString graph_name;
             graph->GetName(graph_name);
@@ -356,34 +356,6 @@ std::shared_ptr<ge::ModelBufferData> compileCannGraph(std::shared_ptr<ge::Graph>
     }
     return out_buffer;
 }
-
-// std::shared_ptr<ge::ModelBufferData> compileCannGraph(std::shared_ptr<ge::Graph> graph)
-// {
-//     // initialize engine
-//     std::map<ge::AscendString, ge::AscendString> options = {
-//         {ge::AscendString(ge::ir_option::SOC_VERSION), ge::AscendString("Ascend310")},
-//     };
-//     ACL_CHECK_GRAPH_RET(ge::aclgrphBuildInitialize(options));
-
-//     // build
-//     std::shared_ptr<ge::ModelBufferData> om_model = std::make_shared<ge::ModelBufferData>();
-//     std::map<ge::AscendString, ge::AscendString> build_options;
-//     ACL_CHECK_GRAPH_RET(aclgrphBuildModel(*graph, build_options, *om_model));
-
-// #if 1
-//     // (optional). Dump model
-//     ge::AscendString graph_name;
-//     graph->GetName(graph_name);
-//     aclgrphDumpGraph(*graph, graph_name.GetString(), 7);
-//     // (optional). Save model
-//     aclgrphSaveModel(graph_name.GetString(), *om_model);
-// #endif
-
-//     // finalize engine
-//     ge::aclgrphBuildFinalize();
-
-//     return om_model;
-// }
 
 void switchToCannBackend(Net& net)
 {
