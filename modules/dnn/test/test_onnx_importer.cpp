@@ -30,6 +30,27 @@ public:
         pb
     };
 
+    void testInputShapes(const Net& net, const std::vector<Mat>& inps)
+    {
+        std::vector<MatShape> inLayerShapes;
+        std::vector<MatShape> outLayerShapes;
+        net.getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+        ASSERT_EQ(inLayerShapes.size(), inps.size());
+
+        for (int i = 0; i < inps.size(); ++i) {
+            bool hasDynamicShapes = inLayerShapes[i].empty();
+            if (hasDynamicShapes)
+                continue;
+            if (inLayerShapes[i].size() == 1) {  // 1D input
+                ASSERT_EQ(shape(inLayerShapes[i][0], 1), shape(inps[i]));
+            } else {
+                // Compare all axes except batch dimension which is variable.
+                inLayerShapes[i][0] = inps[i].size[0];
+                ASSERT_EQ(inLayerShapes[i], shape(inps[i]));
+            }
+        }
+    }
+
     void testONNXModels(const String& basename, const Extension ext = npy,
                         const double l1 = 0, const float lInf = 0, const bool useSoftmax = false,
                         bool checkNoFallbacks = true, int numInps = 1)
@@ -53,6 +74,8 @@ public:
         checkBackend(&inps[0], &ref);
         Net net = readNetFromONNX(onnxmodel);
         ASSERT_FALSE(net.empty());
+
+        testInputShapes(net, inps);
 
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
@@ -2314,6 +2337,8 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
         l1 = 0.01;
         lInf = 0.06;
     }
+
+    testInputShapes(net, {input0});
 
     checkBackend(&input0, &ref0);
     net.setInput(input0);

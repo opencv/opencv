@@ -1410,8 +1410,8 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
             const MatShape& inputShapeLimitation = netInputLayer.shapes[pin.oid];
             if (!inputShapeLimitation.empty())
             {
-                CV_CheckEQ(inputShapeLimitation.size(), blobShape.size(), "");
 #if 0  // TODO: DNNTestNetwork.MobileNet_SSD_Caffe_Different_Width_Height/0
+                CV_CheckEQ(inputShapeLimitation.size(), blobShape.size(), "");
                 const size_t dims = inputShapeLimitation.size();
                 for (size_t dim = 0; dim < dims; dim++)
                 {
