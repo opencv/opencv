@@ -25,10 +25,23 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
     if (pattern_type == "checkerboard") {
         for (int i = 0; i < pattern_size.height; i++) {
             for (int j = 0; j < pattern_size.width; j++) {
-                board[i*pattern_size.width+j] = cv::Vec3f((float)j, (float)i, 0) * pattern_scale;
+                board[i*pattern_size.width+j] = cv::Vec3f((float)j, (float)i, 0.f) * pattern_scale;
             }
         }
-    } else {
+    } else if (pattern_type == "circles") {
+        for (int i = 0; i < pattern_size.height; i++) {
+            for (int j = 0; j < pattern_size.width; j++) {
+                board[i*pattern_size.width+j] = cv::Vec3f((float)j, (float)i, 0.f) * pattern_scale;
+            }
+        }
+    } else if (pattern_type == "acircles") {
+        for (int i = 0; i < pattern_size.height; i++) {
+            for (int j = 0; j < pattern_size.width; j++) {
+                board[i*pattern_size.width+j] = cv::Vec3f((float)(2*j + i % 2), (float)i, 0.f) * pattern_scale;
+            }
+        }
+    }
+    else {
         CV_Error(cv::Error::StsNotImplemented, "pattern_type is not implemented!");
     }
 // ! [calib_init]
@@ -49,11 +62,21 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
                 image_sizes.emplace_back(cv::Size(img.cols, img.rows));
                 save_img_size = false;
             }
-            cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
+
             bool success = false;
             if (pattern_type == "checkerboard") {
+                cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
                 success = cv::findChessboardCorners(img, pattern_size, corners);
             }
+            else if (pattern_type == "circles")
+            {
+                success = cv::findCirclesGrid(img, pattern_size, corners, cv::CALIB_CB_SYMMETRIC_GRID);
+            }
+            else if (pattern_type == "acircles")
+            {
+                success = cv::findCirclesGrid(img, pattern_size, corners, cv::CALIB_CB_ASYMMETRIC_GRID);
+            }
+
             if (success && corners.rows == pattern_size.area())
                 image_points_cameras.emplace_back(corners);
             else
@@ -96,7 +119,7 @@ int main (int argc, char **argv) {
             "{pattern_width || pattern grid width}"
             "{pattern_height || pattern grid height}"
             "{pattern_scale || pattern scale}"
-            "{pattern_type |  checkerboard  | pattern type, e.g., checkerboard}"
+            "{pattern_type |  checkerboard  | pattern type, e.g., checkerboard or acircles}"
             "{is_fisheye || cameras type fisheye (1), pinhole(0), separated by comma (no space)}"
             "{files_with_images || files containing path to image names separated by comma (no space)}";
 
@@ -108,7 +131,9 @@ int main (int argc, char **argv) {
 
     CV_Assert(parser.has("pattern_width") && parser.has("pattern_height") && parser.has("pattern_type") &&
         parser.has("is_fisheye") && parser.has("files_with_images"));
-    CV_Assert(parser.get<cv::String>("pattern_type") == "checkerboard");
+    CV_Assert(parser.get<cv::String>("pattern_type") == "checkerboard" ||
+              parser.get<cv::String>("pattern_type") == "circles" ||
+              parser.get<cv::String>("pattern_type") == "acircles");
 
     const cv::Size pattern_size (parser.get<int>("pattern_width"), parser.get<int>("pattern_height"));
     std::vector<bool> is_fisheye;
