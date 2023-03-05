@@ -454,6 +454,11 @@ AVHWDeviceType hw_check_opencl_context(AVHWDeviceContext* ctx) {
 #ifdef HAVE_VA_INTEL
     VADisplay vadisplay_ocl = ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
     VADisplay vadisplay_ctx = hw_get_va_display(ctx);
+
+    if(!vadisplay_ocl && vadisplay_ctx) {
+        va_intel::ocl::initializeContextFromVA(vadisplay_ctx);
+    }
+
     if (vadisplay_ocl && vadisplay_ocl == vadisplay_ctx)
         return AV_HWDEVICE_TYPE_VAAPI;
     else
@@ -585,6 +590,8 @@ AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::
                             CV_LOG_INFO(NULL, "FFMPEG: Created OpenCL context with " << hw_child_name <<
                                 " video acceleration on OpenCL device: " << ocl_context.getDevice().name());
                         }
+                    } catch (std::exception& ex) {
+                        std::cerr << ex.what() << std::endl;
                     } catch (...) {
                         CV_LOG_INFO(NULL, "FFMPEG: Exception creating OpenCL context with " << hw_child_name << " video acceleration");
                     }
