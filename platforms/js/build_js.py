@@ -222,10 +222,10 @@ if __name__ == "__main__":
 
     opencv_dir = os.path.abspath(os.path.join(SCRIPT_DIR, '../..'))
     emscripten_dir = None
-    if "EMSCRIPTEN" in os.environ:
-        emscripten_dir = os.environ["EMSCRIPTEN"]
+    if "EMSDK" in os.environ:
+        emscripten_dir = os.environ["EMSDK"] + "/upstream/emscripten/"
     else:
-        log.warning("EMSCRIPTEN environment variable is not available. Please properly activate Emscripten SDK and consider using 'emcmake' launcher")
+        log.warning("EMSDK environment variable is not available. Please properly activate Emscripten SDK and consider using 'emcmake' launcher")
 
     parser = argparse.ArgumentParser(description='Build OpenCV.js by Emscripten')
     parser.add_argument("build_dir", help="Building directory (and output)")
@@ -263,7 +263,7 @@ if __name__ == "__main__":
         del os.environ['EMMAKEN_JUST_CONFIGURE']  # avoid linker errors with NODERAWFS message then using 'emcmake' launcher
 
     if args.emscripten_dir is None:
-        log.error("Cannot get Emscripten path, please use 'emcmake' launcher or specify it either by EMSCRIPTEN environment variable or --emscripten_dir option.")
+        log.error("Cannot get Emscripten path, please use 'emcmake' launcher or specify it either by EMSDK environment variable or --emscripten_dir option.")
         sys.exit(-1)
 
     builder = Builder(args)
