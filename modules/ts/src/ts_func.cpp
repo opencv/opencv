@@ -3061,7 +3061,7 @@ void threshold( const Mat& _src, Mat& _dst,
 
     switch( thresh_type )
     {
-    case CV_THRESH_BINARY:
+    case cv::THRESH_BINARY:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -3087,7 +3087,7 @@ void threshold( const Mat& _src, Mat& _dst,
             }
         }
         break;
-    case CV_THRESH_BINARY_INV:
+    case cv::THRESH_BINARY_INV:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -3113,7 +3113,7 @@ void threshold( const Mat& _src, Mat& _dst,
             }
         }
         break;
-    case CV_THRESH_TRUNC:
+    case cv::THRESH_TRUNC:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -3148,7 +3148,7 @@ void threshold( const Mat& _src, Mat& _dst,
             }
         }
         break;
-    case CV_THRESH_TOZERO:
+    case cv::THRESH_TOZERO:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -3183,7 +3183,7 @@ void threshold( const Mat& _src, Mat& _dst,
             }
         }
         break;
-    case CV_THRESH_TOZERO_INV:
+    case cv::THRESH_TOZERO_INV:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )

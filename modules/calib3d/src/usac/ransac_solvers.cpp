@@ -520,9 +520,9 @@ Mat findFundamentalMat( InputArray points1, InputArray points2, int method, doub
 }
 
 Mat findEssentialMat (InputArray points1, InputArray points2, InputArray cameraMatrix1,
-        int method, double prob, double thr, OutputArray mask) {
+        int method, double prob, double thr, OutputArray mask, int maxIters) {
     Ptr<Model> params;
-    setParameters(method, params, EstimationMethod::Essential, thr, 1000, prob, mask.needed());
+    setParameters(method, params, EstimationMethod::Essential, thr, maxIters, prob, mask.needed());
     Ptr<RansacOutput> ransac_output;
     if (run(params, points1, points2, params->getRandomGeneratorState(),
             ransac_output, cameraMatrix1, cameraMatrix1, noArray(), noArray())) {

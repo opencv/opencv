@@ -518,8 +518,8 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
     for (int i = 0; i < ld.outputBlobs.size(); ++i)
         ld.outputBlobsWrappers[i] = wrap(ld.outputBlobs[i]);
 
-    /* CUDA backend has its own system for internal blobs; we don't need these */
-    ld.internalBlobsWrappers.resize((preferableBackend == DNN_BACKEND_CUDA || preferableBackend == DNN_BACKEND_TIMVX) ? 0 : ld.internals.size());
+    /* CUDA & CANN backend has its own system for internal blobs; we don't need these */
+    ld.internalBlobsWrappers.resize((preferableBackend == DNN_BACKEND_CUDA || preferableBackend == DNN_BACKEND_TIMVX || preferableBackend == DNN_BACKEND_CANN) ? 0 : ld.internals.size());
     for (int i = 0; i < ld.internalBlobsWrappers.size(); ++i)
         ld.internalBlobsWrappers[i] = wrap(ld.internals[i]);
 
@@ -1566,6 +1566,7 @@ string Net::Impl::dump(bool forceAllocation) const
     case DNN_BACKEND_CUDA: backend = "CUDA/"; break;
     case DNN_BACKEND_WEBNN: backend = "WEBNN/"; break;
     case DNN_BACKEND_TIMVX: backend = "TIMVX/"; break;
+    case DNN_BACKEND_CANN: backend = "CANN/"; break;
         // don't use default:
     }
     out << "digraph G {\n";

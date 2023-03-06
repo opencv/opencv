@@ -198,6 +198,7 @@ PERF_TEST_P_(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
@@ -220,6 +221,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv3)
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv4)
 {
+    applyTestTag(CV_TEST_TAG_MEMORY_2GB);
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
     if (target == DNN_TARGET_MYRIAD)  // not enough resources
@@ -249,7 +251,7 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv4_tiny)
     cvtColor(sample, sample, COLOR_BGR2RGB);
     Mat inp;
     sample.convertTo(inp, CV_32FC3, 1.0f / 255, 0);
-    processNet("dnn/yolov4-tiny.weights", "dnn/yolov4-tiny.cfg", "", inp);
+    processNet("dnn/yolov4-tiny-2020-12.weights", "dnn/yolov4-tiny-2020-12.cfg", "", inp);
 }
 
 PERF_TEST_P_(DNNTestNetwork, EAST_text_detection)

@@ -55,6 +55,39 @@ public:
     {
     }
 
+    void read( const FileNode& fn) CV_OVERRIDE
+    {
+      // if node is empty, keep previous value
+      if (!fn["nfeatures"].empty())
+        fn["nfeatures"] >> nfeatures;
+      if (!fn["qualityLevel"].empty())
+        fn["qualityLevel"] >> qualityLevel;
+      if (!fn["minDistance"].empty())
+        fn["minDistance"] >> minDistance;
+      if (!fn["blockSize"].empty())
+        fn["blockSize"] >> blockSize;
+      if (!fn["gradSize"].empty())
+        fn["gradSize"] >> gradSize;
+      if (!fn["useHarrisDetector"].empty())
+        fn["useHarrisDetector"] >> useHarrisDetector;
+      if (!fn["k"].empty())
+        fn["k"] >> k;
+    }
+    void write( FileStorage& fs) const CV_OVERRIDE
+    {
+      if(fs.isOpened())
+      {
+        fs << "name" << getDefaultName();
+        fs << "nfeatures" << nfeatures;
+        fs << "qualityLevel" << qualityLevel;
+        fs << "minDistance" << minDistance;
+        fs << "blockSize" << blockSize;
+        fs << "gradSize" << gradSize;
+        fs << "useHarrisDetector" << useHarrisDetector;
+        fs << "k" << k;
+      }
+    }
+
     void setMaxFeatures(int maxFeatures) CV_OVERRIDE { nfeatures = maxFeatures; }
     int getMaxFeatures() const CV_OVERRIDE { return nfeatures; }
 
@@ -67,8 +100,8 @@ public:
     void setBlockSize(int blockSize_) CV_OVERRIDE { blockSize = blockSize_; }
     int getBlockSize() const CV_OVERRIDE { return blockSize; }
 
-    //void setGradientSize(int gradientSize_) { gradSize = gradientSize_; }
-    //int getGradientSize() { return gradSize; }
+    void setGradientSize(int gradientSize_) CV_OVERRIDE { gradSize = gradientSize_; }
+    int getGradientSize() CV_OVERRIDE { return gradSize; }
 
     void setHarrisDetector(bool val) CV_OVERRIDE { useHarrisDetector = val; }
     bool getHarrisDetector() const CV_OVERRIDE { return useHarrisDetector; }
