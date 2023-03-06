@@ -125,6 +125,7 @@ template<> bool pyopencv_to(PyObject* obj, int& value, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const int& value);
 
 // --- int64
+template<> bool pyopencv_to(PyObject* obj, int64& value, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const int64& value);
 
 // There is conflict between "size_t" and "unsigned int".

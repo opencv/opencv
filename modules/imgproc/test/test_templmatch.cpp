@@ -125,7 +125,7 @@ void CV_TemplMatchTest::get_test_array_types_and_sizes( int test_case_idx,
 double CV_TemplMatchTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
     if( test_mat[INPUT][1].depth() == CV_8U ||
-        (method >= CV_TM_CCOEFF && test_mat[INPUT][1].cols*test_mat[INPUT][1].rows <= 2) )
+        (method >= cv::TM_CCOEFF && test_mat[INPUT][1].cols*test_mat[INPUT][1].rows <= 2) )
         return 1e-2;
     else
         return 1e-3;
@@ -162,7 +162,7 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
 
     if( b_sdv.val[0]*b_sdv.val[0] + b_sdv.val[1]*b_sdv.val[1] +
         b_sdv.val[2]*b_sdv.val[2] + b_sdv.val[3]*b_sdv.val[3] < DBL_EPSILON &&
-        method == CV_TM_CCOEFF_NORMED )
+        method == cv::TM_CCOEFF_NORMED )
     {
         cvSet( result, cvScalarAll(1.) );
         return;
@@ -171,7 +171,7 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
     if( method & 1 )
     {
         b_denom = 0;
-        if( method != CV_TM_CCOEFF_NORMED )
+        if( method != cv::TM_CCOEFF_NORMED )
         {
             b_denom = b_sum2;
         }
@@ -185,7 +185,7 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
             b_denom = 1.;
     }
 
-    CV_Assert( CV_TM_SQDIFF <= method && method <= CV_TM_CCOEFF_NORMED );
+    CV_Assert( cv::TM_SQDIFF <= method && method <= cv::TM_CCOEFF_NORMED );
 
     for( i = 0; i < result->rows; i++ )
     {
@@ -200,7 +200,7 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
                 const uchar* a = img->data.ptr + i*img->step + j*cn;
                 const uchar* b = templ->data.ptr;
 
-                if( cn == 1 || method < CV_TM_CCOEFF )
+                if( cn == 1 || method < cv::TM_CCOEFF )
                 {
                     for( k = 0; k < height; k++, a += a_step, b += b_step )
                         for( l = 0; l < width_n; l++ )
@@ -232,7 +232,7 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
                 const float* a = (const float*)(img->data.ptr + i*img->step) + j*cn;
                 const float* b = (const float*)templ->data.ptr;
 
-                if( cn == 1 || method < CV_TM_CCOEFF )
+                if( cn == 1 || method < cv::TM_CCOEFF )
                 {
                     for( k = 0; k < height; k++, a += a_step, b += b_step )
                         for( l = 0; l < width_n; l++ )
@@ -262,12 +262,12 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
 
             switch( method )
             {
-            case CV_TM_CCORR:
-            case CV_TM_CCORR_NORMED:
+            case cv::TM_CCORR:
+            case cv::TM_CCORR_NORMED:
                 value = ccorr.val[0];
                 break;
-            case CV_TM_SQDIFF:
-            case CV_TM_SQDIFF_NORMED:
+            case cv::TM_SQDIFF:
+            case cv::TM_SQDIFF_NORMED:
                 value = (a_sum2.val[0] + b_sum2 - 2*ccorr.val[0]);
                 break;
             default:
@@ -281,7 +281,7 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
                 double denom;
 
                 // calc denominator
-                if( method != CV_TM_CCOEFF_NORMED )
+                if( method != cv::TM_CCOEFF_NORMED )
                 {
                     denom = a_sum2.val[0] + a_sum2.val[1] + a_sum2.val[2];
                 }
@@ -297,7 +297,7 @@ static void cvTsMatchTemplate( const CvMat* img, const CvMat* templ, CvMat* resu
                 else if( fabs(value) < denom*1.125 )
                     value = value > 0 ? 1 : -1;
                 else
-                    value = method != CV_TM_SQDIFF_NORMED ? 0 : 1;
+                    value = method != cv::TM_SQDIFF_NORMED ? 0 : 1;
             }
 
             ((float*)(result->data.ptr + result->step*i))[j] = (float)value;
@@ -323,7 +323,7 @@ void CV_TemplMatchTest::prepare_to_validation( int /*test_case_idx*/ )
         cvReleaseFileStorage( &fs );
     }*/
 
-    if( method >= CV_TM_CCOEFF )
+    if( method >= cv::TM_CCOEFF )
     {
         // avoid numerical stability problems in singular cases (when the results are near to 0)
         const double delta = 10.;
@@ -420,7 +420,7 @@ TEST(Imgproc_MatchTemplate, bug_9597) {
         cv::Mat cvimg(cv::Size(61, 82), CV_8UC1, (void*)img, cv::Mat::AUTO_STEP);
         cv::Mat cvtmpl(cv::Size(17, 17), CV_8UC1, (void*)tmpl, cv::Mat::AUTO_STEP);
         cv::Mat result;
-        cv::matchTemplate(cvimg, cvtmpl, result, CV_TM_SQDIFF);
+        cv::matchTemplate(cvimg, cvtmpl, result, cv::TM_SQDIFF);
         double minValue;
         cv::minMaxLoc(result, &minValue, NULL, NULL, NULL);
         ASSERT_GE(minValue, 0);

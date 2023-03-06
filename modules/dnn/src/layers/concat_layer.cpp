@@ -49,6 +49,7 @@
 #include "../op_vkcom.hpp"
 #include "../op_webnn.hpp"
 #include "../op_timvx.hpp"
+#include "../op_cann.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -140,7 +141,8 @@ public:
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
                (backendId == DNN_BACKEND_WEBNN && !padding) ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding);
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding) ||
+               (backendId == DNN_BACKEND_CANN && !padding);
     }
 
     template <class T>
@@ -364,13 +366,44 @@ public:
         return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(inputsWrapper.size() == nodes.size());
+
+        // create operator
+        std::string op_name = cv::format("concat_%d", index);
+        auto op = std::make_shared<ge::op::ConcatD>(op_name);
+
+        // set attributes
+        int N = inputsWrapper.size();
+        op->set_attr_concat_dim(axis);
+        op->set_attr_N(N);
+
+        // set inputs : x (dynamic)
+        op->create_dynamic_input_x(N);
+        for (int i = 0; i < N; i++)
+        {
+            auto x_i = inputsWrapper[i].dynamicCast<CannBackendWrapper>();
+            auto x_i_desc = x_i->getTensorDesc();
+            auto op_x_i = nodes[i].dynamicCast<CannBackendNode>()->getOp();
+            op->set_dynamic_input_x(i, *op_x_i, "y");
+            op->update_dynamic_input_desc_x(i, *x_i_desc);
+        }
+
+        // set outputs
+        auto output_y_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_y_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        InferenceEngine::DataPtr data = ngraphDataNode(inputs[0]);
-        const int numDims = data->getDims().size();
+        const int numDims = nodes[0].dynamicCast<InfEngineNgraphNode>()->node->get_shape().size();
         const int cAxis = normalize_axis(axis, numDims);
         std::vector<size_t> maxDims(numDims, 0);
 
@@ -378,16 +411,17 @@ public:
         ngraph::OutputVector inp_nodes;
         for (int i = 0; i < nodes.size(); ++i)
         {
-            inp_nodes.push_back(nodes[i].dynamicCast<InfEngineNgraphNode>()->node);
+            auto inp = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
+            inp_nodes.push_back(inp);
 
-            std::vector<size_t> inpShape = ngraphDataNode(inputs[i])->getDims();
+            std::vector<size_t> inpShape = inp->get_shape();
             for (int i = 0; i < numDims; ++i)
                 maxDims[i] = std::max(maxDims[i], inpShape[i]);
         }
         for (int i = 0; i < inp_nodes.size(); ++i)
         {
             bool needPadding = false;
-            std::vector<size_t> inpShape = ngraphDataNode(inputs[i])->getDims();
+            std::vector<size_t> inpShape = inp_nodes[i].get_shape();
             std::vector<int64_t> begins(inpShape.size(), 0), ends(inpShape.size(), 0);
             for (int j = 0; j < inpShape.size(); ++j)
             {

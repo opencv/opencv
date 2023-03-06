@@ -85,7 +85,7 @@ class TestSceneRender():
             img[self.currentCenter[0]:self.currentCenter[0]+self.foreground.shape[0],
              self.currentCenter[1]:self.currentCenter[1]+self.foreground.shape[1]] = self.foreground
         else:
-            self.currentRect = self.initialRect + np.int( 30*cos(self.time) + 50*sin(self.time/3))
+            self.currentRect = self.initialRect + int( 30*cos(self.time) + 50*sin(self.time/3))
             if self.deformation:
                 self.currentRect[1:3] += int(self.h/20*cos(self.time))
             cv.fillConvexPoly(img, self.currentRect, (0, 0, 255))

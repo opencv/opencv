@@ -41,6 +41,9 @@ if(MSVC)
     # and IE deprecated code warning C4996
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503 /wd4996)
   endif()
+  if(MSVC_VERSION LESS 1920)  # MSVS 2015/2017
+    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)  # 'unreachable code'
+  endif()
 endif()
 
 file(GLOB gapi_ext_hdrs
@@ -379,7 +382,7 @@ if(TARGET example_gapi_onevpl_infer_with_advanced_device_selection)
     ocv_target_include_directories(example_gapi_onevpl_infer_with_advanced_device_selection SYSTEM PRIVATE ${OPENCL_INCLUDE_DIRS})
   endif()
   if(UNIX AND HAVE_VA)
-    message ("GAPI VPL samples with VAAPI")
+    message(STATUS "GAPI VPL samples with VAAPI")
     ocv_target_include_directories(example_gapi_onevpl_infer_with_advanced_device_selection SYSTEM PRIVATE ${VA_INCLUDE_DIR})
     ocv_target_link_libraries(example_gapi_onevpl_infer_with_advanced_device_selection PRIVATE ${VA_LIBRARIES})
   endif()
