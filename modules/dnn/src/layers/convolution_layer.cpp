@@ -793,9 +793,9 @@ public:
         bool has_bias = hasBias() || fusedBias;
 
         auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
-        const int x_in_channel = x->host->size[1];
+        const auto shape_x = x->host->size; // [b, c, h, w]
         const int filter_out_channel = blobs[0].size[1];
-        const int groups = x_in_channel / filter_out_channel;
+        const int groups = shape_x[1] / filter_out_channel;
 
         // create operator
         auto op = std::make_shared<ge::op::Conv2D>(name);
@@ -804,6 +804,24 @@ public:
         op->set_attr_strides(ge::Operator::OpListInt(
             {1, 1, (int64_t)strides[0], (int64_t)strides[1]}
         ));
+        // recalculate pads in case of "SAME" padMode with odd pads
+        // since in 'getConvPoolPaddings' pads are divided equally 
+        // leading to the loss of one pad
+        if (padMode == "SAME")
+        {
+            for (int i = 0; i < pads_begin.size(); i++) {
+                if (strides[i] <= kernel_size[i])
+                {
+                    int pads_at_i = kernel_size[i] - 1 - (shape_x[i+2] - 1 + strides[i]) % strides[i];
+                    pads_begin[i] = pads_at_i / 2;
+                    // if odd, add extra padding to the end for SAME_UPPER
+                    // or to the beginning for SAME_LOWER. Since here we cannot
+                    // identity SAME_UPPER and SAME_LOWER, extra padding is always
+                    // added to the end.
+                    pads_end[i] = pads_at_i - pads_begin[i];
+                }
+            }
+        }
         op->set_attr_pads(ge::Operator::OpListInt(
             {(int64_t)pads_begin[1], (int64_t)pads_end[1], (int64_t)pads_begin[0], (int64_t)pads_end[0]}
         ));
