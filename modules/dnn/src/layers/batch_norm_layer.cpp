@@ -392,8 +392,7 @@ public:
 #endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::string& name,
-                                      const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(nodes.size() == 1);

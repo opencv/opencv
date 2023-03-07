@@ -782,8 +782,7 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::string& name,
-                                      const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(!blobs.empty());
@@ -805,7 +804,7 @@ public:
             {1, 1, (int64_t)strides[0], (int64_t)strides[1]}
         ));
         // recalculate pads in case of "SAME" padMode with odd pads
-        // since in 'getConvPoolPaddings' pads are divided equally 
+        // since in 'getConvPoolPaddings' pads are divided equally
         // leading to the loss of one pad
         if (padMode == "SAME")
         {

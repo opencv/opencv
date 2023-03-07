@@ -347,12 +347,10 @@ CV__DNN_INLINE_NS_BEGIN
         /**
          * @brief Returns a CANN backend node
          *
-         * @param   name            name of this CANN operator
          * @param   inputsWrapper   input tensors of this CANN operator
          * @param   nodes           nodes of input tensors
          */
-        virtual Ptr<BackendNode> initCann(const std::string& name,
-                                          const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+        virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
                                           const std::vector<Ptr<BackendNode> >& nodes);
 
        /**

@@ -202,7 +202,7 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
             }
 
             CV_LOG_INFO(NULL, "DNN/CANN: converting layer " << ld.name << "@" << ld.type << "@" << ld.id << " to CANN operator");
-            auto backendNode = layer->initCann(ld.name, ld.inputBlobsWrappers, layerInputNodes);
+            auto backendNode = layer->initCann(ld.inputBlobsWrappers, layerInputNodes); // it's ok if ld.name is empty
 
             // collect outputs
             bool isOutputNode = ld.consumers.size() == 0 ? true : false;
@@ -315,7 +315,7 @@ std::shared_ptr<ge::ModelBufferData> compileCannGraph(std::shared_ptr<ge::Graph>
             std::map<ge::AscendString, ge::AscendString> build_options;
             ACL_CHECK_GRAPH_RET(aclgrphBuildModel(*graph, build_options, *om_model));
 
-#if 0
+#if 1
             // (optional). Dump model
             ge::AscendString graph_name;
             graph->GetName(graph_name);
