@@ -226,7 +226,7 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 
     // build graph from collected graph inputs and outputs
     CV_LOG_INFO(NULL, "DNN/CANN: building ge::Graph");
-    std::string graphName = cv::format("graph_%d", 0);
+    std::string graphName = cv::format("graph_%d", networkId);
     std::shared_ptr<ge::Graph> graph = std::make_shared<ge::Graph>(graphName.c_str());
     (void)graph->SetInputs(graphInputOps);
     (void)graph->SetOutputs(graphOutputOps);
@@ -315,7 +315,7 @@ std::shared_ptr<ge::ModelBufferData> compileCannGraph(std::shared_ptr<ge::Graph>
             std::map<ge::AscendString, ge::AscendString> build_options;
             ACL_CHECK_GRAPH_RET(aclgrphBuildModel(*graph, build_options, *om_model));
 
-#if 1
+#if 0
             // (optional). Dump model
             ge::AscendString graph_name;
             graph->GetName(graph_name);
