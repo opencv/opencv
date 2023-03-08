@@ -1739,6 +1739,11 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
     state = State::READY;
 }
 
+int cv::gimpl::GStreamingExecutor::addSource(GRunArgs &&ins)
+{
+    return 0;
+}
+
 void cv::gimpl::GStreamingExecutor::start()
 {
     if (state == State::STOPPED)
@@ -1854,6 +1859,11 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
         }
     }
     GAPI_Error("Unreachable code");
+}
+
+bool cv::gimpl::GStreamingExecutor::pull(int &stream_id, cv::GRunArgsP &&outs)
+{
+    return false;
 }
 
 cv::gimpl::GAbstractStreamingExecutor::PyPullResult cv::gimpl::GStreamingExecutor::pull()

@@ -194,9 +194,11 @@ public:
                                 const cv::GCompileArgs &comp_args);
     ~GStreamingExecutor();
     void setSource(GRunArgs &&args) override;
+    int addSource(GRunArgs &&args) override;
     void start() override;
     bool pull(cv::GRunArgsP &&outs) override;
     bool pull(cv::GOptRunArgsP &&outs) override;
+    bool pull(int &stream_id, cv::GRunArgsP &&outs) override;
     PyPullResult pull() override;
     bool try_pull(cv::GRunArgsP &&outs) override;
     void stop() override;

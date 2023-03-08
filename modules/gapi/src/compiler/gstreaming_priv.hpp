@@ -43,9 +43,11 @@ public:
     const GMetaArgs& outMetas() const;
 
     void setSource(GRunArgs &&args);
+    int addSource(GRunArgs &&args);
     void start();
     bool pull(cv::GRunArgsP &&outs);
     bool pull(cv::GOptRunArgsP &&outs);
+    bool pull(int &stream_id, cv::GRunArgsP &&outs);
     std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> pull();
     bool try_pull(cv::GRunArgsP &&outs);
     void stop();

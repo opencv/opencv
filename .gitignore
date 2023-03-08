@@ -21,6 +21,7 @@ bin/
 *.suo
 *.log
 *.tlog
+*.eps
 build
 node_modules
 CMakeSettings.json

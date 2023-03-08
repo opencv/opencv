@@ -31,9 +31,11 @@ public:
                                         const cv::GCompileArgs &comp_args);
     virtual ~GAbstractStreamingExecutor() = default;
     virtual void setSource(GRunArgs &&args) = 0;
+    virtual int addSource(GRunArgs &&args) = 0;
     virtual void start() = 0;
     virtual bool pull(cv::GRunArgsP &&outs) = 0;
     virtual bool pull(cv::GOptRunArgsP &&outs) = 0;
+    virtual bool pull(int &stream_id, cv::GRunArgsP &&outs) = 0;
 
     using PyPullResult = std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>>;
     virtual PyPullResult pull() = 0;

@@ -234,6 +234,24 @@ public:
     }
 
     /**
+     * TBD
+     */
+    int addSource(GRunArgs &&ins);
+
+    /**
+     * TBD
+     */
+    int addSource(const gapi::wip::IStreamSource::Ptr& s);
+
+    /**
+     * TBD
+     */
+    template<typename T, typename... Args>
+    int addSource(Args&&... args) {
+        return addSource(cv::gapi::wip::make_src<T>(std::forward<Args>(args)...));
+    }
+
+    /**
      * @brief Start the pipeline execution.
      *
      * Use pull()/try_pull() to obtain data. Throws an exception if
@@ -271,6 +289,11 @@ public:
      *    false marks end of the stream.
      */
     bool pull(cv::GRunArgsP &&outs);
+
+    /**
+     * TBD
+     */
+    bool pull(int &stream_id, cv::GRunArgsP &&outs);
 
     // NB: Used from python
     /// @private -- Exclude this function from OpenCV documentation
