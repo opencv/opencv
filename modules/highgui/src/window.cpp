@@ -547,6 +547,35 @@ void cv::resizeWindow( const String& winname, int width, int height )
 #endif
 }
 
+void * cv::getWindowHandle( const String& winname )
+{
+    CV_TRACE_FUNCTION();
+
+    {
+        auto window = findWindow_(winname);
+        if (window)
+        {
+            return window->getWindowHandle();
+        }
+    }
+
+#if defined(OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND) && defined(ENABLE_PLUGINS)
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        CV_LOG_WARNING(NULL, "Can't find window with name: '" << winname << "'. Do nothing");
+        CV_NOT_FOUND_DEPRECATION;
+    }
+    else
+    {
+        CV_LOG_WARNING(NULL, "No UI backends available. Use OPENCV_LOG_LEVEL=DEBUG for investigation");
+    }
+    return;
+#else
+  return cvGetWindowHandle( winname.c_str() );
+#endif
+}
+
 void cv::resizeWindow(const String& winname, const cv::Size& size)
 {
    CV_TRACE_FUNCTION();

@@ -876,6 +876,16 @@ GuiReceiver::~GuiReceiver()
     }
 }
 
+void * GuiReceiver::getWindowHandle(QString name) {
+  
+  QPointer<CvWindow> w = icvFindWindowByName(name);
+
+  if (w) return w->getWindowHandle();
+  
+  return NULL;
+  
+}
+
 
 void GuiReceiver::putText(void* arr, QString text, QPoint org, void* arg2)
 {
@@ -1772,6 +1782,11 @@ void CvWindow::writeSettings()
     }
 }
 
+void * CvWindow::getWindowHandle() {
+  
+   return myView->getWidget();
+  
+}
 
 
 //TODO: load CV_GUI flag (done) and act accordingly (create win property if needed and attach trackbars)

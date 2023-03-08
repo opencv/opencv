@@ -33,6 +33,8 @@ public:
 
     virtual void imshow(InputArray image) = 0;
 
+    virtual void * getWindowHandle() = 0;
+  
     virtual double getProperty(int prop) const = 0;
     virtual bool setProperty(int prop, double value) = 0;
 

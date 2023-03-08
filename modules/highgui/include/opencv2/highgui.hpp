@@ -415,6 +415,12 @@ press (suitable for displaying a video frame-by-frame). To remove the window, us
  */
 CV_EXPORTS_W void imshow(const String& winname, InputArray mat);
 
+/** @brief xxxxxxxxxxxxxxxxx
+
+@param winname xxxxxxxxxxxxx
+ */
+CV_EXPORTS_W void * getWindowHandle(const String& winname);
+
 /** @brief Resizes the window to the specified size
 
 @note

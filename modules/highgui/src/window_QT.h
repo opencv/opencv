@@ -151,6 +151,7 @@ public slots:
     void setRatioWindow(QString name, double arg2 );
     void saveWindowParameters(QString name);
     void loadWindowParameters(QString name);
+    void * getWindowHandle(QString name);
     void putText(void* arg1, QString text, QPoint org, void* font);
     void addButton(QString button_name, int button_type, int initial_button_state , void* on_change, void* userdata);
     void enablePropertiesButtonEachWindow();
@@ -300,6 +301,8 @@ public:
     CvWindow(QString arg2, int flag = CV_WINDOW_NORMAL);
     ~CvWindow();
 
+    void * getWindowHandle();
+  
     void setMouseCallBack(CvMouseCallback m, void* param);
 
     void writeSettings();
