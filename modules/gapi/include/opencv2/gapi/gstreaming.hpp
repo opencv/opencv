@@ -16,6 +16,7 @@
 #include <opencv2/gapi/util/optional.hpp>
 #include <opencv2/gapi/garg.hpp>
 #include <opencv2/gapi/streaming/source.hpp>
+#include <opencv2/gapi/streaming/tag.hpp>
 
 namespace cv {
 
@@ -293,7 +294,7 @@ public:
     /**
      * TBD
      */
-    bool pull(int &stream_id, cv::GRunArgsP &&outs);
+    bool pull(cv::gapi::streaming::tag &tag, cv::GRunArgsP &&outs);
 
     // NB: Used from python
     /// @private -- Exclude this function from OpenCV documentation
@@ -411,7 +412,6 @@ protected:
     /// @private
     std::shared_ptr<Priv> m_priv;
 };
-/** @} */
 
 namespace gapi {
 
@@ -436,9 +436,11 @@ struct GAPI_EXPORTS_W_SIMPLE queue_capacity
     GAPI_PROP_RW
     size_t capacity;
 };
-/** @} */
+
 } // namespace streaming
+
 } // namespace gapi
+/** @} */
 
 namespace detail
 {

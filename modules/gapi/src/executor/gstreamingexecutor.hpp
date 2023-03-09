@@ -198,7 +198,7 @@ public:
     void start() override;
     bool pull(cv::GRunArgsP &&outs) override;
     bool pull(cv::GOptRunArgsP &&outs) override;
-    bool pull(int &stream_id, cv::GRunArgsP &&outs) override;
+    bool pull(cv::gapi::streaming::tag &stream_tag, cv::GRunArgsP &&outs) override;
     PyPullResult pull() override;
     bool try_pull(cv::GRunArgsP &&outs) override;
     void stop() override;

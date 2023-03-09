@@ -88,9 +88,9 @@ bool cv::GStreamingCompiled::Priv::pull(cv::GOptRunArgsP &&outs)
     return m_exec->pull(std::move(outs));
 }
 
-bool cv::GStreamingCompiled::Priv::pull(int &stream_id, cv::GRunArgsP &&outs)
+bool cv::GStreamingCompiled::Priv::pull(cv::gapi::streaming::tag &stream_tag, cv::GRunArgsP &&outs)
 {
-    return m_exec->pull(stream_id, std::move(outs));
+    return m_exec->pull(stream_tag, std::move(outs));
 }
 
 std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> cv::GStreamingCompiled::Priv::pull()
@@ -166,9 +166,9 @@ bool cv::GStreamingCompiled::pull(cv::GOptRunArgsP &&outs)
     return m_priv->pull(std::move(outs));
 }
 
-bool cv::GStreamingCompiled::pull(int &stream_id, cv::GRunArgsP &&outs)
+bool cv::GStreamingCompiled::pull(cv::gapi::streaming::tag &stream_tag, cv::GRunArgsP &&outs)
 {
-    return m_priv->pull(stream_id, std::move(outs));
+    return m_priv->pull(stream_tag, std::move(outs));
 }
 
 bool cv::GStreamingCompiled::try_pull(cv::GRunArgsP &&outs)

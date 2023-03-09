@@ -28,52 +28,71 @@ namespace opencv_test
 namespace
 {
 
-TEST(GAPI_Streaming, Multi_Simple)
+struct GAPI_Streaming_Multi_Base {
+    GAPI_Streaming_Multi_Base() {
+        // Define a simple image processing graph
+        cv::GMat in;
+        cv::GMat tmp = cv::gapi::resize(in, cv::Size(320, 240));
+        cv::GMat out = tmp + 1.0; // Add C
+        cv::GOpaque<int64_t> out_id = cv::gapi::streaming::seq_id(out);
+
+        // Compile graph for streaming & add multiple sources
+        ccomp = cv::GComputation(cv::GIn(in), cv::GOut(out, out_id))
+            .compileStreaming();
+    }
+
+    cv::GStreamingCompiled ccomp;
+
+    cv::gapi::streaming::tag out_tag{};
+    cv::Mat out_mat;
+    int64_t out_seq_id = 0;
+};
+
+struct GAPI_Streaming_Multi_Completion:
+        public GAPI_Streaming_Multi_Base,
+        public TestWithParam<int>
+{ };
+
+TEST_P(GAPI_Streaming_Multi_Completion, TestEOS)
 {
-    // Define a simple image processing graph
-    cv::GMat in;
-    cv::GMat tmp = cv::gapi::resize(in, cv::Size(320, 240));
-    cv::GMat out = tmp + 1.0; // Add C
-    cv::GOpaque<int64_t> out_id = cv::gapi::streaming::seq_id(out);
-
-    // Compile graph for streaming & add multiple sources
-    auto ccomp = cv::GComputation(cv::GIn(in), cv::GOut(out, out_id))
-        .compileStreaming();
-
-    auto path = findDataFile("cv/video/768x576.avi");
-    int stream_tag[2] = {0,0};
+    const auto num_streams = GetParam();
+    const auto path = findDataFile("cv/video/768x576.avi");
+    std::vector<int> stream_ids;
     try {
-        std::cout << path << std::endl;
-        stream_tag[0] = ccomp.addSource<cv::gapi::wip::GCaptureSource>(path);
-        stream_tag[1] = ccomp.addSource<cv::gapi::wip::GCaptureSource>(path);
+        for (int i = 0; i < num_streams; i++) {
+            stream_ids.push_back(ccomp.addSource<cv::gapi::wip::GCaptureSource>(path));
+        }
     } catch(...) {
         throw SkipTestException("Video file can not be opened");
     }
 
-    // Start the execution & collect the outputs
     ccomp.start();
-    EXPECT_TRUE(ccomp.running());
 
-    int out_tag{};
-    cv::Mat out_mat;
-    int64_t out_seq_id{};
-
-    std::unordered_map<int, std::unordered_set<int64_t> > ids;
-
-    // FIXME: How to check individual stream completion status??
+    std::unordered_map<int, int> frames;
+    std::unordered_set<int> end_of_streams;
 
     while (ccomp.pull(out_tag, cv::gout(out_mat, out_seq_id))) {
-        // The output must be tagged by either stream
-        EXPECT_TRUE(out_tag == stream_tag[0] || out_tag == stream_tag[1]);
-        ids[out_tag].insert(out_seq_id);
+        if (out_tag.eos) {
+            // end-of-stream received
+            end_of_streams.insert(out_tag.id);
+        } else {
+            // data received. just increment frame counter
+            frames[out_tag.id]++;
+        }
     }
 
-    // We should get frames for each stream
-    EXPECT_GT(ids[stream_tag[0]].size(), 0u);
-    EXPECT_GT(ids[stream_tag[1]].size(), 0u);
-    EXPECT_EQ(ids[stream_tag[0]], ids[stream_tag[1]]);
-    std::cout << ids[stream_tag[0]].size() << std::endl;
+    // Should receive EOS for every stream
+    EXPECT_EQ(num_streams, static_cast<int>(end_of_streams.size()));
+
+    // Every stream should complete the same number of frames
+    EXPECT_GT(frames[stream_ids[0]], 0);
+    for (int i = 1; i < num_streams; i++) {
+        EXPECT_EQ(frames.at(stream_ids[0]), frames.at(stream_ids[i]));
+    }
 }
+
+INSTANTIATE_TEST_CASE_P(TestEOS, GAPI_Streaming_Multi_Completion,
+                        Values(1, 2, 3));
 
 } // namespace
 

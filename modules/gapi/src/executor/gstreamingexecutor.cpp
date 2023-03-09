@@ -1861,7 +1861,7 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
     GAPI_Error("Unreachable code");
 }
 
-bool cv::gimpl::GStreamingExecutor::pull(int &stream_id, cv::GRunArgsP &&outs)
+bool cv::gimpl::GStreamingExecutor::pull(cv::gapi::streaming::tag &stream_tag, cv::GRunArgsP &&outs)
 {
     return false;
 }

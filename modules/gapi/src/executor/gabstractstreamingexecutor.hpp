@@ -35,7 +35,7 @@ public:
     virtual void start() = 0;
     virtual bool pull(cv::GRunArgsP &&outs) = 0;
     virtual bool pull(cv::GOptRunArgsP &&outs) = 0;
-    virtual bool pull(int &stream_id, cv::GRunArgsP &&outs) = 0;
+    virtual bool pull(cv::gapi::streaming::tag &stream_tag, cv::GRunArgsP &&outs) = 0;
 
     using PyPullResult = std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>>;
     virtual PyPullResult pull() = 0;

@@ -47,7 +47,7 @@ public:
     void start();
     bool pull(cv::GRunArgsP &&outs);
     bool pull(cv::GOptRunArgsP &&outs);
-    bool pull(int &stream_id, cv::GRunArgsP &&outs);
+    bool pull(cv::gapi::streaming::tag &stream_tag, cv::GRunArgsP &&outs);
     std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> pull();
     bool try_pull(cv::GRunArgsP &&outs);
     void stop();
