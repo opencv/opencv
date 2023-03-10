@@ -16,7 +16,7 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
 // ! [detectPointsAndCalibrate_signature]
 {
 // ! [calib_init]
-    std::vector<cv::Vec3f> board (pattern_size.area());
+    std::vector<cv::Point3f> board (pattern_size.area());
     const int num_cameras = (int)is_fisheye.size();
     std::vector<std::vector<cv::Mat>> image_points_all;
     std::vector<cv::Size> image_sizes;
@@ -25,19 +25,23 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
     if (pattern_type == "checkerboard") {
         for (int i = 0; i < pattern_size.height; i++) {
             for (int j = 0; j < pattern_size.width; j++) {
-                board[i*pattern_size.width+j] = cv::Vec3f((float)j, (float)i, 0.f) * pattern_scale;
+                board[i*pattern_size.width+j] = cv::Point3f((float)j, (float)i, 0.f) * pattern_scale;
             }
         }
     } else if (pattern_type == "circles") {
         for (int i = 0; i < pattern_size.height; i++) {
             for (int j = 0; j < pattern_size.width; j++) {
-                board[i*pattern_size.width+j] = cv::Vec3f((float)j, (float)i, 0.f) * pattern_scale;
+                board[i*pattern_size.width+j] = cv::Point3f((float)j, (float)i, 0.f) * pattern_scale;
             }
         }
     } else if (pattern_type == "acircles") {
         for (int i = 0; i < pattern_size.height; i++) {
             for (int j = 0; j < pattern_size.width; j++) {
-                board[i*pattern_size.width+j] = cv::Vec3f((float)(2*j + i % 2), (float)i, 0.f) * pattern_scale;
+                if (i % 2 == 1) {
+                    board[i*pattern_size.width+j] = cv::Point3f((j + .5)*pattern_scale, (i/2 + .5) * pattern_scale, 0);
+                } else{
+                    board[i*pattern_size.width+j] = cv::Point3f(j*pattern_scale, (i/2)*pattern_scale, 0);
+                }
             }
         }
     }
@@ -57,8 +61,7 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
             if (img_file.empty())
                 break;
             std::cout << img_file << "\n";
-            cv::Mat img = cv::imread(img_file);
-            std::vector<cv::Point2f> corners;
+            cv::Mat img = cv::imread(img_file), corners;
             if (save_img_size) {
                 image_sizes.emplace_back(cv::Size(img.cols, img.rows));
                 save_img_size = false;
@@ -78,8 +81,11 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
                 success = cv::findCirclesGrid(img, pattern_size, corners, cv::CALIB_CB_ASYMMETRIC_GRID);
             }
 
-            if (success && corners.size() == pattern_size.area())
-                image_points_cameras.emplace_back(corners);
+            cv::Mat corners2;
+            corners.convertTo(corners2, CV_32FC2);
+
+            if (success && corners.rows == pattern_size.area())
+                image_points_cameras.emplace_back(corners2);
             else
                 image_points_cameras.emplace_back(cv::Mat());
         }
@@ -94,15 +100,18 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
     cv::Mat visibility(num_cameras, num_frames, CV_8UC1);
     for (int i = 0; i < num_cameras; i++) {
         for (int j = 0; j < num_frames; j++) {
-            visibility.at<unsigned char>(i,j) = (unsigned char)(!image_points_all[i][j].empty());
+            visibility.at<unsigned char>(i,j) = image_points_all[i][j].empty() ? 0 : 1;
         }
     }
 // ! [detection_matrix]
     CV_Assert(num_frames != -1);
-    std::vector<std::vector<cv::Vec3f>> objPoints(num_frames, board);
+
+    std::vector<std::vector<cv::Point3f>> objPoints(num_frames, board);
+
 // ! [multiview_calib]
-    const double rmse = calibrateMultiview (objPoints, image_points_all, image_sizes, visibility,
-       Rs, Ts, Ks, distortions, cv::noArray(), cv::noArray(), is_fisheye, errors_mat, output_pairs, false/*use intrinsics guess*/);
+    const double rmse = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility,
+                                           Rs, Ts, Ks, distortions, cv::noArray(), cv::noArray(),
+                                           is_fisheye, errors_mat, output_pairs);
 // ! [multiview_calib]
     std::cout << "average RMSE over detection mask " << rmse << "\n";
     for (int c = 0; c < (int)Rs.size(); c++) {
