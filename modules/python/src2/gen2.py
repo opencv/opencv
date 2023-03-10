@@ -448,6 +448,15 @@ class ArgInfo(object):
         self.py_outputarg = False
         self.enclosing_arg = enclosing_arg
 
+    def __str__(self):
+        return 'ArgInfo("{}", tp="{}", default="{}", in={}, out={})'.format(
+            self.name, self.tp, self.defval, self.inputarg,
+            self.outputarg
+        )
+
+    def __repr__(self):
+        return str(self)
+
     @property
     def export_name(self):
         if self.name in python_reserved_keywords:
