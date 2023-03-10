@@ -57,7 +57,8 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
             if (img_file.empty())
                 break;
             std::cout << img_file << "\n";
-            cv::Mat img = cv::imread(img_file), corners;
+            cv::Mat img = cv::imread(img_file);
+            std::vector<cv::Point2f> corners;
             if (save_img_size) {
                 image_sizes.emplace_back(cv::Size(img.cols, img.rows));
                 save_img_size = false;
@@ -77,7 +78,7 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
                 success = cv::findCirclesGrid(img, pattern_size, corners, cv::CALIB_CB_ASYMMETRIC_GRID);
             }
 
-            if (success && corners.rows == pattern_size.area())
+            if (success && corners.size() == pattern_size.area())
                 image_points_cameras.emplace_back(corners);
             else
                 image_points_cameras.emplace_back(cv::Mat());
@@ -90,10 +91,10 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
     }
 // ! [detect_pattern]
 // ! [detection_matrix]
-    cv::Mat visibility = cv::Mat_<int>(num_cameras, num_frames);
+    cv::Mat visibility(num_cameras, num_frames, CV_8UC1);
     for (int i = 0; i < num_cameras; i++) {
         for (int j = 0; j < num_frames; j++) {
-            visibility.at<int>(i,j) = (int)(!image_points_all[i][j].empty());
+            visibility.at<unsigned char>(i,j) = (unsigned char)(!image_points_all[i][j].empty());
         }
     }
 // ! [detection_matrix]
