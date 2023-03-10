@@ -545,7 +545,8 @@ public:
      */
     RotatedRect(const Point2f& point1, const Point2f& point2, const Point2f& point3);
 
-    /** returns 4 vertices of the rectangle
+    /** returns 4 vertices of the original up-right(angle=0) rectangle with the same center and size.
+    ![image](pics/rotatedrect_points_angle.png)
     @param pts The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
     */
     void points(Point2f pts[]) const;
@@ -557,7 +558,9 @@ public:
     Point2f center;
     //! returns width and height of the rectangle
     Size2f size;
-    //! returns the rotation angle. When the angle is 0, 90, 180, 270 etc., the rectangle becomes an up-right rectangle.
+    /** returns the rotation angle, based on the top edge(topLeft-topRight) of the rectangle.
+    When the angle is 0, 90, 180, 270 etc., the rectangle becomes an up-right rectangle.
+    */
     float angle;
 };
 
