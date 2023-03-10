@@ -3530,11 +3530,14 @@ STBTT_DEF unsigned char* stbtt_GetGlyphBitmapSubpixelRealloc(const stbtt_fontinf
                  iy1 = STBTT_max(iy1, y);
              }
          }
-         int w = ix1 - ix0 + 1, h = iy1 - iy0 + 1;
+         int w, h;
          if (ix0 == INT_MAX || iy0 == INT_MAX || ix1 == INT_MIN || iy1 == INT_MIN ) {
              w = h = 0;
              ix0 = pad_x;
              iy0 = pad_y;
+         } else {
+             w = ix1 - ix0 + 1;
+             h = iy1 - iy0 + 1;
          }
          if (width) *width = w;
          if (height) *height = h;
