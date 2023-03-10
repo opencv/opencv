@@ -72,7 +72,7 @@ using namespace cv::dnn::ocl4dnn;
 using namespace cv::dnn::cuda4dnn;
 #endif
 
-#include "fast_convolution/fast_convolution.hpp"
+#include "cpu_kernels/convolution.hpp"
 
 namespace cv
 {

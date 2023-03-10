@@ -22,27 +22,29 @@
 
 // Winograd Params
 enum {
-    _FX_WINO_STEP=6,
-    _FX_WINO_KSIZE=3,
-    _FX_WINO_SIZE=_FX_WINO_STEP+_FX_WINO_KSIZE-1,
-    _FX_WINO_AREA=_FX_WINO_SIZE*_FX_WINO_SIZE,
+    CONV_WINO_STEP=6,
+    CONV_WINO_KSIZE=3,
+    CONV_WINO_SIZE=CONV_WINO_STEP+CONV_WINO_KSIZE-1, // 8
+    CONV_WINO_AREA=CONV_WINO_SIZE*CONV_WINO_SIZE,
 
-    _FX_WINO_KBLOCK = 4,
+    CONV_WINO_KBLOCK = 4,
 #if (CV_NEON && CV_NEON_AARCH64) || CV_TRY_AVX2
-    _FX_WINO_IBLOCK = 6,
+    CONV_WINO_IBLOCK = 6,
 #else
-    _FX_WINO_IBLOCK = 3,
+    CONV_WINO_IBLOCK = 3,
 #endif
 
 #if CV_TRY_AVX2
-    _FX_WINO_ATOM_F32 = 8,
+    CONV_WINO_ATOM_F32 = 8,
 #else
-    _FX_WINO_ATOM_F32 = 4,
+    CONV_WINO_ATOM_F32 = 4,
 #endif
 
-    _FX_WINO_NATOMS_F32 = _FX_WINO_AREA / _FX_WINO_ATOM_F32, // for AVX2, it is 8, otherwise, it's 16.
+    CONV_WINO_NATOMS_F32 = CONV_WINO_AREA / CONV_WINO_ATOM_F32, // for AVX2, it is 8, otherwise, it's 16.
 };
-enum { _FX_CONV_TYPE_GENERIC=0, _FX_CONV_TYPE_DEPTHWISE=1, _FX_CONV_TYPE_WINOGRAD3X3=2, _FX_CONV_TYPE_DEPTHWISE_REMAIN=3 };
+
+// NOTE that: CONV_TYPE_DEPTHWISE is for 3x3 depthwise conv, and others depthwise will be set as CONV_TYPE_DEPTHWISE_REMAIN.
+enum { CONV_TYPE_GENERIC=0, CONV_TYPE_DEPTHWISE=1, CONV_TYPE_WINOGRAD3X3=2, CONV_TYPE_DEPTHWISE_REMAIN=3 };
 enum { CONV_1D = 0, CONV_2D = 1, CONV_3D = 2 };
 #endif
 
@@ -104,22 +106,6 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& c
 
 int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv>& conv, int ntasks,
                   float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct);
-
-namespace opt_AVX2
-{
-#if CV_TRY_AVX2
-void convBlock_AVX2(int np, const float* a, const float* b, float* c, int ldc, bool init_c);
-
-void convBlockMR1(int np, const float* a, const float* b, float *c, const float bias, bool init_c, const float minval,
-                  const float maxval, bool ifMinMaxAct);
-
-void _fx_winograd_accum_f32(const float* inwptr, const float* wptr, float* outbuf, int Cg, int iblock);
-void _fx_winograd_BtXB_8x8_f32(const float* inptr, int inpstep, float* outptr, int Cg);
-void _fx_winograd_AtXA_8x8_f32(const float* inptr, int inpstep, float* bpptr, int bpstep, float* outptr, int outstep,
-                               float bias, float minval, float maxval, bool ifMinMaxAct);
-
-#endif
-} // namespace opt_AVX2
 
 } // namespace dnn
 } // namespace cv

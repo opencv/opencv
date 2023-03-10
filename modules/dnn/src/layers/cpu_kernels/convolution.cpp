@@ -10,11 +10,19 @@
 */
 
 #include "../../precomp.hpp"
-#include "fast_convolution.hpp"
-#include "fast_convolution.simd.hpp"
+#include "convolution.hpp"
+
+#include "conv_block.simd.hpp"
+#include "layers/cpu_kernels/conv_block.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
 namespace cv { namespace dnn {
 enum { VEC_ALIGN = 32, DFT_TYPE = CV_32F }; // Memory alignment.
+
+void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int outLen,
+               const int convMR, const int convNR);
+void convBlockMR1(int np, const float* a, const float* b, float *c, const float bias, bool init_c,
+                  const float minval, const float maxval, bool ifMinMaxAct, const int outLen, const int convNR);
+
 Ptr<FastConv> initFastConv(
         InputArray _weightsMat,
         float* srcBias,
@@ -94,21 +102,15 @@ Ptr<FastConv> initFastConv(
         }
     }
 
-    conv->conv_type = ifRunDepthWise && conv_dim != CONV_3D ? _FX_CONV_TYPE_DEPTHWISE :
+    conv->conv_type = ifRunDepthWise && conv_dim != CONV_3D ? CONV_TYPE_DEPTHWISE :
             useWinograd && (conv_dim == CONV_2D && (conv->useSIMD128 || conv->useAVX2 || conv->useNEON) &&
             Hk == 3 && Wk == 3 && dilation_h == 1 && dilation_w == 1 && stride_h == 1 && stride_w == 1) ?
-            _FX_CONV_TYPE_WINOGRAD3X3 :
-            (ifRunDepthWiseRemain ? _FX_CONV_TYPE_DEPTHWISE_REMAIN : _FX_CONV_TYPE_GENERIC);
+            CONV_TYPE_WINOGRAD3X3 :
+            (ifRunDepthWiseRemain ? CONV_TYPE_DEPTHWISE_REMAIN : CONV_TYPE_GENERIC);
 
 #if !(CV_NEON || CV_SIMD128 || CV_TRY_AVX2)
-    if (conv->conv_type == _FX_CONV_TYPE_WINOGRAD3X3) // Disabel Winograd when CV_NEON, CV_SIMD128 and CV_TRY_AVX2 are not available.
-        conv->conv_type = _FX_CONV_TYPE_GENERIC;
-#endif
-
-#if CV_TRY_AVX2
-    // Disabel Winograd when CV_TRY_AVX2 is true, but conv->useAVX2 is false.
-    if (conv->conv_type == _FX_CONV_TYPE_WINOGRAD3X3 && !conv->useAVX2)
-        conv->conv_type = _FX_CONV_TYPE_GENERIC;
+    if (conv->conv_type == CONV_TYPE_WINOGRAD3X3) // Disabel Winograd when CV_NEON, CV_SIMD128 and CV_TRY_AVX2 are not available.
+        conv->conv_type = CONV_TYPE_GENERIC;
 #endif
 
     Mat weightsMat = _weightsMat.getMat();
@@ -116,7 +118,7 @@ Ptr<FastConv> initFastConv(
     const size_t wstep = weightsMat.step1();
 
     float *srcWeights = (float *)weightsMat.data;
-    if (conv->conv_type == _FX_CONV_TYPE_DEPTHWISE || conv->conv_type == _FX_CONV_TYPE_DEPTHWISE_REMAIN)
+    if (conv->conv_type == CONV_TYPE_DEPTHWISE || conv->conv_type == CONV_TYPE_DEPTHWISE_REMAIN)
     {
         // Handle the Conv1D, Conv2D and Conv3D depth-wise.
         // for depth-wise convolutions on NCHW data we just preserve the weights in KCHW layout,
@@ -138,7 +140,7 @@ Ptr<FastConv> initFastConv(
                 weightsBufPtr[c*padded_ksize + k] = srcWeights[c*wstep + k];
         }});
     }
-    else if(conv->conv_type == _FX_CONV_TYPE_WINOGRAD3X3) // winograd
+    else if(conv->conv_type == CONV_TYPE_WINOGRAD3X3) // winograd
     {
         static const float ktm[8][3] = {
                 {1.0f,      0.0f,      0.0f},
@@ -156,24 +158,24 @@ Ptr<FastConv> initFastConv(
         // where W is the size of Winograd-transformed kernel (8x8),
         // ATOM_SIZE is number of lanes in SIMD register (4 for NEON and FP32),
         // KBLOCK is some platform-dependent constant dependent on the number of SIMD registers.
-        int ksize = _FX_WINO_KSIZE * _FX_WINO_KSIZE;
+        int ksize = CONV_WINO_KSIZE * CONV_WINO_KSIZE;
         int Cg = C/ngroups;
         int Kg = K/ngroups;
-        int Kg_nblocks = (Kg + _FX_WINO_KBLOCK - 1)/_FX_WINO_KBLOCK;
-        size_t nweights = ngroups*Kg_nblocks*Cg*_FX_WINO_KBLOCK*_FX_WINO_AREA;
+        int Kg_nblocks = (Kg + CONV_WINO_KBLOCK - 1)/CONV_WINO_KBLOCK;
+        size_t nweights = ngroups*Kg_nblocks*Cg*CONV_WINO_KBLOCK*CONV_WINO_AREA;
         conv->weightsWinoBuf.reserve(nweights + VEC_ALIGN);
         conv->weightsWinoBufPtr = alignPtr(conv->weightsWinoBuf.data(), VEC_ALIGN);
         float* wptrWino = conv->weightsWinoBufPtr;
         memset(wptrWino, 0, nweights * sizeof(wptrWino[0]));
 
         parallel_for_(Range(0, K), [&](const Range& r0){
-        float kernelTm[_FX_WINO_AREA];
+        float kernelTm[CONV_WINO_AREA];
         for (int k = r0.start; k < r0.end; k++)
         {
             int g = k / Kg;
             int k_ = k - g*Kg;
-            int ki = k_ / _FX_WINO_KBLOCK;
-            int dk = k_ - ki*_FX_WINO_KBLOCK;
+            int ki = k_ / CONV_WINO_KBLOCK;
+            int dk = k_ - ki*CONV_WINO_KBLOCK;
 
             for (int c = 0; c < Cg; c++)
             {
@@ -204,18 +206,18 @@ Ptr<FastConv> initFastConv(
                 }
 
                 // repack the data.
-                float* wptr = wptrWino + (g*Kg_nblocks + ki) * Cg *_FX_WINO_KBLOCK*_FX_WINO_AREA +
-                              (c*_FX_WINO_KBLOCK + dk)*_FX_WINO_ATOM_F32;
-                for (int i = 0; i < _FX_WINO_NATOMS_F32; i++,
-                        wptr += Cg * _FX_WINO_KBLOCK * _FX_WINO_ATOM_F32)
+                float* wptr = wptrWino + (g*Kg_nblocks + ki) * Cg *CONV_WINO_KBLOCK*CONV_WINO_AREA +
+                              (c*CONV_WINO_KBLOCK + dk)*CONV_WINO_ATOM_F32;
+                for (int i = 0; i < CONV_WINO_NATOMS_F32; i++,
+                        wptr += Cg * CONV_WINO_KBLOCK * CONV_WINO_ATOM_F32)
                 {
-                    CV_Assert(conv->weightsWinoBufPtr <= wptr && wptr + _FX_WINO_ATOM_F32 <= conv->weightsWinoBufPtr + nweights);
-                    memcpy(wptr, kernelTm + i * _FX_WINO_ATOM_F32, _FX_WINO_ATOM_F32*sizeof (wptr[0]));
+                    CV_Assert(conv->weightsWinoBufPtr <= wptr && wptr + CONV_WINO_ATOM_F32 <= conv->weightsWinoBufPtr + nweights);
+                    memcpy(wptr, kernelTm + i * CONV_WINO_ATOM_F32, CONV_WINO_ATOM_F32*sizeof (wptr[0]));
                 }
             }
         }});
     }
-    else if (conv->conv_type == _FX_CONV_TYPE_GENERIC)
+    else if (conv->conv_type == CONV_TYPE_GENERIC)
     {
         // The weights are packed as
         // ngroups x (ceil((K/ngroups)/CONV_MR)*CONV_MR) x (Cg*Hk*Wk*Dk) x CONV_MR tensor
@@ -372,7 +374,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
         fusedAddMat = _output.getMat();
     }
 
-    if (conv->conv_type == _FX_CONV_TYPE_DEPTHWISE)
+    if (conv->conv_type == CONV_TYPE_DEPTHWISE)
     {
         // Depthwise-Convolution layer should not be followed by Add layer.
         CV_Assert((conv_dim == CONV_1D || conv_dim == CONV_2D));
@@ -420,7 +422,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
     else
         activ = nullptr;
 
-    if (conv->conv_type == _FX_CONV_TYPE_WINOGRAD3X3) // winograd
+    if (conv->conv_type == CONV_TYPE_WINOGRAD3X3) // winograd
     {
         CV_Assert(conv->weightsWinoBufPtr && input.dims == 4 && conv_dim == CONV_2D);
         if (runWinograd63(input, fusedAddMat, output, conv, ntasks, minval, maxval, activ, ifMinMaxAct))
@@ -454,8 +456,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
     int dilation_d = conv->dilation_d, dilation_h = conv->dilation_h, dilation_w = conv->dilation_w;
 
     int ksize = Dk*Hk*Wk;
-    bool fast_1x1 = ksize == 1 && stride_d == 1 && stride_w == 1 && stride_h == 1 &&
-                    pad_front == 0 && pad_top == 0 && pad_left == 0;
+    bool fast_1x1 = ksize == 1 && stride_d == 1 && stride_w == 1 && stride_h == 1;
     int DkHkWkCg = Dk*Hk*Wk*Cg;
 
     std::vector<int> ofstab_(Hk*Wk*Dk*4, 0);
@@ -504,14 +505,14 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
     int MAX_STRIPES = (56 + CONV_NR - 1)/CONV_NR;
 
     // Friendly to L1 cache
-    const int K_BLOCK_SIZE = conv->conv_type == _FX_CONV_TYPE_DEPTHWISE_REMAIN ? 1 : 32;
+    const int K_BLOCK_SIZE = conv->conv_type == CONV_TYPE_DEPTHWISE_REMAIN ? 1 : 32;
     const int C_BLOCK_SIZE = 256;
 
     int Kg_nblocks = (Kg + CONV_MR-1)/CONV_MR, Kg_aligned = Kg_nblocks * CONV_MR;
 
     int stripes_per_sample = ((int)out_planesize + CONV_NR - 1) / CONV_NR;
 
-    if (stripes_per_sample < ntasks * 4 && conv->conv_type != _FX_CONV_TYPE_DEPTHWISE_REMAIN)
+    if (stripes_per_sample < ntasks * 4 && conv->conv_type != CONV_TYPE_DEPTHWISE_REMAIN)
     {
         MAX_STRIPES = 1;
         stripes_per_sample = 1;
@@ -555,7 +556,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
             int k0, k1;
             int zyx0, zyx_limit, zyx_block_limit = 0;
 
-            if (stripes_per_sample == 1 && conv->conv_type != _FX_CONV_TYPE_DEPTHWISE_REMAIN)
+            if (stripes_per_sample == 1 && conv->conv_type != CONV_TYPE_DEPTHWISE_REMAIN)
             {
                 k0 = kzyx0 * CONV_MR;
                 k1 = kzyx1 * CONV_MR;
@@ -618,7 +619,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
                             }
                         }
                     }
-                    else if (conv->conv_type == _FX_CONV_TYPE_DEPTHWISE_REMAIN)
+                    else if (conv->conv_type == CONV_TYPE_DEPTHWISE_REMAIN)
                     {
                         CV_Assert(Cg == 1);
                         const int HW0 = H0 * W0;
@@ -928,7 +929,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
 
                 // spacial branch for depth-wise convolution implemented using generic convolution.
                 // In this case, CONV_MR is 1, and CONV_NR is the same.
-                if (conv->conv_type == _FX_CONV_TYPE_DEPTHWISE_REMAIN)
+                if (conv->conv_type == CONV_TYPE_DEPTHWISE_REMAIN)
                 {
                     size_t outofs = (n * ngroups + g) * out_planesize + zyx0;
                     float *cptr0 = cbuf_task;
@@ -947,12 +948,8 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
                             memcpy(cptr0, cptr, outLen * sizeof(cptr[0]));
                             cptr = cptr0;
                         }
-#if CV_TRY_AVX2
-                        if (conv->useAVX2 && outLen > CONV_NR/3)
-                                opt_AVX2::convBlockMR1(DkHkWkCg, weights, inptr, cptr, biasVal, fusedAdd, minval, maxval, ifMinMaxAct);
-                        else
-#endif
-                        convBlockMR1(DkHkWkCg, weights, inptr, cptr, biasVal, fusedAdd, minval, maxval, ifMinMaxAct, outLen);
+
+                        convBlockMR1(DkHkWkCg, weights, inptr, cptr, biasVal, fusedAdd, minval, maxval, ifMinMaxAct, outLen, CONV_NR);
 
                         if (ifBuffer)
                         {
@@ -980,7 +977,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
                         {
                             const int outLen = std::min(out_width - stripe * CONV_NR, CONV_NR);
 
-#if CV_TRY_AVX2 || CV_TRY_NEON
+#if CV_TRY_AVX || CV_TRY_AVX2 || CV_NEON
                             // The possible CONV_NR is 28, 24, 12, so the possible CONV_NR/3 is 9, 8, 4.
                             bool runOpt = outLen > std::min(8, CONV_NR/3);
 #endif
@@ -992,16 +989,21 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
                             {
 #if CV_TRY_AVX2
                                 if (conv->useAVX2 && runOpt)
-                                    opt_AVX2::convBlock_AVX2(c1 - c0, wptr, inptr, cptr, ldc, c0 == 0);
+                                    opt_AVX2::convBlock(c1 - c0, wptr, inptr, cptr, ldc, c0 == 0, CONV_MR, CONV_NR);
                                 else
 #endif
-#if CV_TRY_NEON
+#if CV_TRY_AVX
+                                if (conv->useAVX && runOpt)
+                                    opt_AVX::convBlock(c1 - c0, wptr, inptr, cptr, ldc, c0 == 0, CONV_MR, CONV_NR);
+                                else
+#endif
+#if CV_NEON
                                 if (conv->useNEON && runOpt)
-                                    opt_NEON::convBlock_NEON(c1 - c0, wptr, inptr, cptr, ldc, c0 == 0);
+                                    opt_NEON::convBlock(c1 - c0, wptr, inptr, cptr, ldc, c0 == 0, CONV_MR, CONV_NR);
                                 else
 #endif
                                 // The possible outLen range is 24 or 8~1.
-                                convBlock(c1 - c0, wptr, inptr, cptr, ldc, c0 == 0, outLen);
+                                convBlock(c1 - c0, wptr, inptr, cptr, ldc, c0 == 0, outLen, CONV_MR, CONV_NR);
                             }
                         }
                     }
@@ -1087,4 +1089,466 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
     }
     });
 }
+
+
+/****************************************************************************************\
+                                    SIMD and no-SIMD code for convBlock
+\****************************************************************************************/
+
+static void convBlockMR1NoSIMD(int np, const float* a, const float* b, float *c, const float bias, bool init_c,
+                               const float minval, const float maxval, bool ifMinMaxAct, const int outLen, const int convNR)
+{
+    std::vector<float> cbuffer(outLen, 0);
+    float* cbuf = cbuffer.data();
+    for( int p = 0; p < np; p++ )
+    {
+        float ai = a[p];
+        for( int j = 0; j < outLen; j++ )
+            cbuf[j] += b[convNR*p + j] * ai;
+    }
+
+    if (init_c)
+    {
+        for(int j = 0; j < outLen; j++)
+        {
+            c[j] += cbuf[j] + bias;
+            if (ifMinMaxAct)
+                c[j] = std::min(std::max(c[j], minval), maxval);
+        }
+    }
+    else
+    {
+        for(int j = 0; j < outLen; j++)
+        {
+            c[j] = cbuf[j] + bias;
+            if (ifMinMaxAct)
+                c[j] = std::min(std::max(c[j], minval), maxval);
+        }
+    }
+}
+
+#if CV_SIMD128
+static void convBlockMR1x28(int np, const float* a, const float* b, float *c, const float bias, bool init_c,
+                               const float minval, const float maxval, bool ifMinMaxAct, const int outLen, const int convNR)
+{
+    CV_Assert(convNR == 28);
+    v_float32x4 c0  = v_setall_f32(bias), c1 = c0, c2 = c0;
+    v_float32x4 c3 = c0, c4 = c0, c5 = c0;
+    v_float32x4 c6 = c0;
+
+    for (int p = 0; p < np; p++, a++, b += convNR)
+    {
+        v_float32x4 a0 = v_setall_f32(a[0]);
+        v_float32x4 b0 = v_load(b), b1 = v_load(b + 4), b2 = v_load(b + 8);
+        v_float32x4 b3 = v_load(b + 12), b4 = v_load(b + 16), b5 = v_load(b + 20);
+        v_float32x4 b6 = v_load(b + 24);
+
+        c0 = v_fma(b0, a0, c0);
+        c1 = v_fma(b1, a0, c1);
+        c2 = v_fma(b2, a0, c2);
+        c3 = v_fma(b3, a0, c3);
+        c4 = v_fma(b4, a0, c4);
+        c5 = v_fma(b5, a0, c5);
+        c6 = v_fma(b6, a0, c6);
+    }
+
+    if (init_c)
+    {
+        c0 += v_load(c);
+        c1 += v_load(c + 4);
+        c2 += v_load(c + 8);
+        c3 += v_load(c + 12);
+        c4 += v_load(c + 16);
+        c5 += v_load(c + 20);
+        c6  += v_load(c + 24);
+    }
+
+    if (ifMinMaxAct)
+    {
+        v_float32x4 vmax = v_setall_f32(maxval), vmin = v_setall_f32(minval);
+        c0 = v_min(v_max(c0, vmin), vmax);
+        c1 = v_min(v_max(c1, vmin), vmax);
+        c2 = v_min(v_max(c2, vmin), vmax);
+        c3 = v_min(v_max(c3, vmin), vmax);
+        c4 = v_min(v_max(c4, vmin), vmax);
+        c5 = v_min(v_max(c5, vmin), vmax);
+        c6 = v_min(v_max(c6, vmin), vmax);
+    }
+
+    v_store(c, c0);
+    v_store(c + 4, c1);
+    v_store(c + 8, c2);
+    v_store(c + 12, c3);
+    v_store(c + 16, c4);
+    v_store(c + 20, c5);
+    v_store(c + 24, c6);
+}
+
+static void convBlockMR1x24(int np, const float* a, const float* b, float *c, const float bias, bool init_c,
+                            const float minval, const float maxval, bool ifMinMaxAct, const int outLen, const int convNR)
+{
+    CV_Assert(convNR == 24);
+    v_float32x4 c0  = v_setall_f32(bias), c1 = c0, c2 = c0;
+    v_float32x4 c3 = c0, c4 = c0, c5 = c0;
+
+    for (int p = 0; p < np; p++, a++, b += convNR)
+    {
+        v_float32x4 a0 = v_setall_f32(a[0]);
+        v_float32x4 b0 = v_load(b), b1 = v_load(b + 4), b2 = v_load(b + 8);
+        v_float32x4 b3 = v_load(b + 12), b4 = v_load(b + 16), b5 = v_load(b + 20);
+
+        c0 = v_fma(b0, a0, c0);
+        c1 = v_fma(b1, a0, c1);
+        c2 = v_fma(b2, a0, c2);
+        c3 = v_fma(b3, a0, c3);
+        c4 = v_fma(b4, a0, c4);
+        c5 = v_fma(b5, a0, c5);
+    }
+
+    if (init_c)
+    {
+        c0 += v_load(c);
+        c1 += v_load(c + 4);
+        c2 += v_load(c + 8);
+        c3 += v_load(c + 12);
+        c4 += v_load(c + 16);
+        c5 += v_load(c + 20);
+    }
+
+    if (ifMinMaxAct)
+    {
+        v_float32x4 vmax = v_setall_f32(maxval), vmin = v_setall_f32(minval);
+        c0 = v_min(v_max(c0, vmin), vmax);
+        c1 = v_min(v_max(c1, vmin), vmax);
+        c2 = v_min(v_max(c2, vmin), vmax);
+        c3 = v_min(v_max(c3, vmin), vmax);
+        c4 = v_min(v_max(c4, vmin), vmax);
+        c5 = v_min(v_max(c5, vmin), vmax);
+    }
+
+    v_store(c, c0);
+    v_store(c + 4, c1);
+    v_store(c + 8, c2);
+    v_store(c + 12, c3);
+    v_store(c + 16, c4);
+    v_store(c + 20, c5);
+}
+
+static void convBlockMR1x12(int np, const float* a, const float* b, float *c, const float bias, bool init_c,
+                            const float minval, const float maxval, bool ifMinMaxAct, const int outLen, const int convNR)
+{
+    CV_Assert(convNR == 12);
+    v_float32x4 c0  = v_setall_f32(bias), c1 = c0, c2 = c0;
+    for (int p = 0; p < np; p++, a++, b += convNR)
+    {
+        v_float32x4 a0 = v_setall_f32(a[0]);
+        v_float32x4 b0 = v_load(b), b1 = v_load(b + 4), b2 = v_load(b + 8);
+
+        c0 = v_fma(b0, a0, c0);
+        c1 = v_fma(b1, a0, c1);
+        c2 = v_fma(b2, a0, c2);
+    }
+
+    if (init_c)
+    {
+        c0 += v_load(c);
+        c1 += v_load(c + 4);
+        c2 += v_load(c + 8);
+    }
+
+    if (ifMinMaxAct)
+    {
+        v_float32x4 vmax = v_setall_f32(maxval), vmin = v_setall_f32(minval);
+        c0 = v_min(v_max(c0, vmin), vmax);
+        c1 = v_min(v_max(c1, vmin), vmax);
+        c2 = v_min(v_max(c2, vmin), vmax);
+    }
+
+    v_store(c, c0);
+    v_store(c + 4, c1);
+    v_store(c + 8, c2);
+}
+#endif
+
+void convBlockMR1(int np, const float* a, const float* b, float *c, const float bias, bool init_c,
+                  const float minval, const float maxval, bool ifMinMaxAct, const int outLen, const int convNR)
+{
+#if CV_SIMD128
+    // The outLen represents the valid output value in CONV_NR length.
+    // When outLen is very small, we use the no-SIMD branch.
+    const int convNRby3 = convNR/3;
+    if (outLen > convNRby3)
+    {
+        if (convNR == 28)
+            convBlockMR1x28(np, a, b, c, bias, init_c, minval, maxval, ifMinMaxAct, outLen, convNR);
+        else if (convNR == 24)
+            convBlockMR1x24(np, a, b, c, bias, init_c, minval, maxval, ifMinMaxAct, outLen, convNR);
+        else if (convNR == 12)
+            convBlockMR1x12(np, a, b, c, bias, init_c, minval, maxval, ifMinMaxAct, outLen, convNR);
+        else
+            convBlockMR1NoSIMD(np, a, b, c, bias, init_c, minval, maxval, ifMinMaxAct, outLen, convNR);
+    }
+     else
+        convBlockMR1NoSIMD(np, a, b, c, bias, init_c, minval, maxval, ifMinMaxAct, outLen, convNR);
+#else
+    convBlockMR1NoSIMD(np, a, b, c, bias, init_c, minval, maxval, ifMinMaxAct, outLen, convNR);
+#endif
+}
+
+#if CV_SIMD128
+static void convBlock4x24(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int convMR, const int convNR)
+{
+    v_float32x4 c0  = v_setzero_f32(), c1 = c0, c2 = c0, c3 = c0, c4 = c0, c5 = c0;
+    v_float32x4 c6  = v_setzero_f32(), c7 = c6, c8 = c6, c9 = c6, c10 = c6, c11 = c6;
+    v_float32x4 c12 = v_setzero_f32(), c13 = c12, c14 = c12, c15 = c12, c16 = c12, c17 = c12;
+    v_float32x4 c18 = v_setzero_f32(), c19 = c18, c20 = c18, c21 = c18, c22 = c18, c23 = c18;
+
+    for (int p = 0; p < np; p++, a += convMR, b += convNR)
+    {
+        v_float32x4 a0 = v_setall_f32(a[0]);
+        v_float32x4 b0 = v_load(b), b1 = v_load(b + 4), b2 = v_load(b + 8);
+        v_float32x4 b3 = v_load(b + 12), b4 = v_load(b + 16), b5 = v_load(b + 20);
+
+        c0 = v_fma(b0, a0, c0);
+        c1 = v_fma(b1, a0, c1);
+        c2 = v_fma(b2, a0, c2);
+        c3 = v_fma(b3, a0, c3);
+        c4 = v_fma(b4, a0, c4);
+        c5 = v_fma(b5, a0, c5);
+
+        a0  = v_setall_f32(a[1]);
+        c6  = v_fma(b0, a0, c6);
+        c7  = v_fma(b1, a0, c7);
+        c8  = v_fma(b2, a0, c8);
+        c9  = v_fma(b3, a0, c9);
+        c10 = v_fma(b4, a0, c10);
+        c11 = v_fma(b5, a0, c11);
+
+        a0 = v_setall_f32(a[2]);
+        c12 = v_fma(b0, a0, c12);
+        c13 = v_fma(b1, a0, c13);
+        c14 = v_fma(b2, a0, c14);
+        c15 = v_fma(b3, a0, c15);
+        c16 = v_fma(b4, a0, c16);
+        c17 = v_fma(b5, a0, c17);
+
+        a0 = v_setall_f32(a[3]);
+        c18 = v_fma(b0, a0, c18);
+        c19 = v_fma(b1, a0, c19);
+        c20 = v_fma(b2, a0, c20);
+        c21 = v_fma(b3, a0, c21);
+        c22 = v_fma(b4, a0, c22);
+        c23 = v_fma(b5, a0, c23);
+    }
+
+    if (!init_c)
+    {
+        c0 += v_load(c);
+        c1 += v_load(c + 4);
+        c2 += v_load(c + 8);
+        c3 += v_load(c + 12);
+        c4 += v_load(c + 16);
+        c5 += v_load(c + 20);
+
+        c6  += v_load(c + ldc);
+        c7  += v_load(c + ldc + 4);
+        c8  += v_load(c + ldc + 8);
+        c9  += v_load(c + ldc + 12);
+        c10 += v_load(c + ldc + 16);
+        c11 += v_load(c + ldc + 20);
+
+        c12 += v_load(c + ldc*2);
+        c13 += v_load(c + ldc*2 + 4);
+        c14 += v_load(c + ldc*2 + 8);
+        c15 += v_load(c + ldc*2 + 12);
+        c16 += v_load(c + ldc*2 + 16);
+        c17 += v_load(c + ldc*2 + 20);
+
+        c18 += v_load(c + ldc*3);
+        c19 += v_load(c + ldc*3 + 4);
+        c20 += v_load(c + ldc*3 + 8);
+        c21 += v_load(c + ldc*3 + 12);
+        c22 += v_load(c + ldc*3 + 16);
+        c23 += v_load(c + ldc*3 + 20);
+    }
+
+    v_store(c, c0);
+    v_store(c + 4, c1);
+    v_store(c + 8, c2);
+    v_store(c + 12, c3);
+    v_store(c + 16, c4);
+    v_store(c + 20, c5);
+
+    v_store(c + ldc, c6);
+    v_store(c + ldc + 4, c7);
+    v_store(c + ldc + 8, c8);
+    v_store(c + ldc + 12, c9);
+    v_store(c + ldc + 16, c10);
+    v_store(c + ldc + 20, c11);
+
+    v_store(c + ldc * 2, c12);
+    v_store(c + ldc * 2 + 4, c13);
+    v_store(c + ldc * 2 + 8, c14);
+    v_store(c + ldc * 2 + 12, c15);
+    v_store(c + ldc * 2 + 16, c16);
+    v_store(c + ldc * 2 + 20, c17);
+
+    v_store(c + ldc * 3, c18);
+    v_store(c + ldc * 3 + 4, c19);
+    v_store(c + ldc * 3 + 8, c20);
+    v_store(c + ldc * 3 + 12, c21);
+    v_store(c + ldc * 3 + 16, c22);
+    v_store(c + ldc * 3 + 20, c23);
+}
+
+static void convBlock4x8(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int convMR, const int convNR)
+{
+    CV_Assert(convNR >= 4);
+    v_float32x4 c0  = v_setzero_f32(), c1 = c0, c2 = c0, c3 = c0;
+    v_float32x4 c4 = c0, c5 = c0, c6 = c0, c7 = c0;
+
+    for (int p = 0; p < np; p++, a += convMR, b += convNR)
+    {
+        v_float32x4 a0 = v_setall_f32(a[0]);
+        v_float32x4 a1 = v_setall_f32(a[1]);
+        v_float32x4 a2 = v_setall_f32(a[2]);
+        v_float32x4 a3 = v_setall_f32(a[3]);
+
+        v_float32x4 b0 = v_load(b), b1 = v_load(b + 4);
+
+        c0 = v_fma(b0, a0, c0);
+        c1 = v_fma(b1, a0, c1);
+
+        c2 = v_fma(b0, a1, c2);
+        c3 = v_fma(b1, a1, c3);
+
+        c4 = v_fma(b0, a2, c4);
+        c5 = v_fma(b1, a2, c5);
+
+        c6  = v_fma(b0, a3, c6);
+        c7  = v_fma(b1, a3, c7);
+    }
+
+    if (!init_c)
+    {
+        c0 += v_load(c);
+        c1 += v_load(c + 4);
+
+        c2  += v_load(c + ldc);
+        c3  += v_load(c + ldc + 4);
+
+        c4 += v_load(c + ldc*2);
+        c5 += v_load(c + ldc*2 + 4);
+
+        c6 += v_load(c + ldc*3);
+        c7 += v_load(c + ldc*3 + 4);
+    }
+
+    v_store(c, c0);
+    v_store(c + 4, c1);
+    v_store(c + ldc, c2);
+    v_store(c + ldc + 4, c3);
+    v_store(c + ldc * 2, c4);
+    v_store(c + ldc * 2 + 4, c5);
+    v_store(c + ldc * 3, c6);
+    v_store(c + ldc * 3 + 4, c7);
+}
+
+static void convBlock4x4(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int convMR, const int convNR)
+{
+    CV_Assert(convNR >= 4);
+    v_float32x4 c0  = v_setzero_f32(), c1 = c0, c2 = c0, c3 = c0;
+
+    for (int p = 0; p < np; p++, a += convMR, b += convNR)
+    {
+        v_float32x4 a0 = v_setall_f32(a[0]);
+        v_float32x4 a1 = v_setall_f32(a[1]);
+        v_float32x4 a2 = v_setall_f32(a[2]);
+        v_float32x4 a3 = v_setall_f32(a[3]);
+
+        v_float32x4 b0 = v_load(b);
+
+        c0 = v_fma(b0, a0, c0);
+        c1 = v_fma(b0, a1, c1);
+        c2 = v_fma(b0, a2, c2);
+        c3 = v_fma(b0, a3, c3);
+    }
+
+    if (!init_c)
+    {
+        c0 += v_load(c);
+        c1 += v_load(c + ldc);
+        c2 += v_load(c + ldc*2);
+        c3 += v_load(c + ldc*3);
+    }
+
+    v_store(c, c0);
+    v_store(c + ldc, c1);
+    v_store(c + ldc * 2, c2);
+    v_store(c + ldc * 3, c3);
+}
+#endif
+
+static void convBlockNoSIMD(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int outLen,
+                            const int convMR, const int convNR)
+{
+    std::vector<float> cbuffer(convMR * outLen, 0);
+    float* cbuf = cbuffer.data();
+    for( int p = 0; p < np; p++ )
+    {
+        for( int i = 0; i < convMR; i++ )
+        {
+            float ai = a[convMR*p + i];
+            for( int j = 0; j < outLen; j++ )
+                cbuf[i * outLen+j] += b[convNR*p + j] * ai;
+        }
+    }
+
+    if (!init_c)
+    {
+        for(int i = 0; i < convMR; i++)
+        {
+            for(int j = 0; j < outLen; j++)
+                c[i*ldc + j] += cbuf[i*outLen + j];
+        }
+    }
+    else
+    {
+        for(int i = 0; i < convMR; i++)
+        {
+            for(int j = 0; j < outLen; j++)
+                c[i*ldc + j] = cbuf[i*outLen + j];
+        }
+    }
+}
+
+void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int outLen,
+               const int convMR, const int convNR)
+{
+    // The possible outLen range is [24, 8~1].
+#if CV_SIMD128
+    CV_Assert(convMR == 4);
+    if (outLen > 8 && convNR == 24)
+    {
+        convBlock4x24(np, a, b, c, ldc, init_c, convMR, convNR);
+        return;
+    }
+
+    if (outLen <= 8 && outLen > 4)
+    {
+        convBlock4x8(np, a, b, c, ldc, init_c, convMR, convNR);
+        return;
+    }
+
+    if (outLen <= 4 && outLen > 1)
+    {
+        convBlock4x4(np, a, b, c, ldc, init_c, convMR, convNR);
+        return;
+    }
+    convBlockNoSIMD(np, a, b, c, ldc, init_c, outLen, convMR, convNR);
+#else
+    convBlockNoSIMD(np, a, b, c, ldc, init_c, outLen, convMR, convNR);
+#endif
+}
+
 }} // namespace cv::dnn
