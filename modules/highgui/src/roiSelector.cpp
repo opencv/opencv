@@ -88,7 +88,10 @@ class ROISelector
     void select(const String &windowName, Mat img, std::vector<Rect> &boundingBoxes,
                 bool showCrosshair = true, bool fromCenter = true, bool printNotice = true)
     {
-        printf("Finish the selection process by pressing ESC button!\n");
+        if(printNotice)
+        {
+            printf("Finish the selection process by pressing ESC button!\n");
+        }
         boundingBoxes.clear();
         key = 0;
 
