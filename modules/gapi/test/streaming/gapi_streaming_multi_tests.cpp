@@ -83,33 +83,36 @@ struct GAPI_Streaming_Multi_Base {
         // Define a simple image processing graph
         cv::GMat in;
         cv::GMat tmp = cv::gapi::resize(in, cv::Size(320, 240));
-        cv::GMat out = tmp + 1.0; // Add C
-        cv::GOpaque<int64_t> out_id = cv::gapi::streaming::seq_id(out);
+        cv::GMat outg = tmp + 1.0; // Add C
+        cv::GOpaque<int64_t> out_id = cv::gapi::streaming::seq_id(outg);
 
         // Compile graph for streaming & add multiple sources
-        ccomp = cv::GComputation(cv::GIn(in), cv::GOut(out, out_id))
+        ccomp = cv::GComputation(cv::GIn(in), cv::GOut(outg, out_id))
             .compileStreaming();
     }
 
     cv::GStreamingCompiled ccomp;
 
-    cv::gapi::streaming::tag out_tag{};
-    cv::Mat out_mat;
-    int64_t out_seq_id = 0;
 
-    std::unordered_map<int, int> frames;
-    std::unordered_set<int> end_of_streams;
+    struct Output {
+        cv::gapi::streaming::tag tag{};
+        cv::Mat mat;
+        int64_t seq_id = 0;
+
+        std::unordered_map<int, int> frames;
+        std::unordered_set<int> eos;
+    } out;
 
     template<typename F>
     void run_with_check(F f) {
         ccomp.start();
         // Process and count frames we use
-        while (ccomp.pull(out_tag, cv::gout(out_mat, out_seq_id))) {
-            if (out_tag.eos) {
-                end_of_streams.insert(out_tag.id); // end-of-stream received
+        while (ccomp.pull(out.tag, cv::gout(out.mat, out.seq_id))) {
+            if (out.tag.eos) {
+                out.eos.insert(out.tag.id); // end-of-stream received
             } else {
-                frames[out_tag.id]++;              // data received
-                f();                               // run check
+                out.frames[out.tag.id]++;   // data received
+                f();                        // run user-defined check
             }
         }
     }
@@ -140,12 +143,12 @@ TEST_P(GAPI_Streaming_Multi_Completion, TestEOS)
     run();
 
     // Should receive EOS for every stream
-    EXPECT_EQ(num_streams, static_cast<int>(end_of_streams.size()));
+    EXPECT_EQ(num_streams, static_cast<int>(out.eos.size()));
 
     // Every stream should complete the same number of frames
-    EXPECT_GT(frames[stream_ids[0]], 0);
+    EXPECT_LT(0, out.frames[stream_ids[0]]);
     for (int i = 1; i < num_streams; i++) {
-        EXPECT_EQ(frames.at(stream_ids[0]), frames.at(stream_ids[i]));
+        EXPECT_EQ(out.frames.at(stream_ids[0]), out.frames.at(stream_ids[i]));
     }
 }
 
@@ -155,7 +158,8 @@ INSTANTIATE_TEST_CASE_P(TestEOS, GAPI_Streaming_Multi_Completion,
 struct GAPI_Streaming_Multi: public GAPI_Streaming_Multi_Base,
                              public ::testing::Test {};
 
-TEST_F(GAPI_Streaming_Multi, TestDifferentCompletionTime_Frames) {
+TEST_F(GAPI_Streaming_Multi, TestDifferentCompletionTime_Frames)
+{
     // Add streams with a different completion time (based on num frames)
     cv::Mat proto = cv::Mat::eye(cv::Size(320, 240), CV_8UC3);
     int stream_ids[2] = {
@@ -166,17 +170,18 @@ TEST_F(GAPI_Streaming_Multi, TestDifferentCompletionTime_Frames) {
     run_with_check([this](){
         // As one stream finishes earlier than other, check
         // if finished stream's messages don't pop up here
-        if (end_of_streams.size() > 0u) {
-            EXPECT_EQ(0u, end_of_streams.count(out_tag.id));
+        if (out.eos.size() > 0u) {
+            EXPECT_EQ(0u, out.eos.count(out.tag.id));
         }
     });
 
     // Check completions
-    EXPECT_EQ(50, frames.at(stream_ids[0]));
-    EXPECT_EQ(75, frames.at(stream_ids[1]));
+    EXPECT_EQ(50, out.frames.at(stream_ids[0]));
+    EXPECT_EQ(75, out.frames.at(stream_ids[1]));
 }
 
-TEST_F(GAPI_Streaming_Multi, TestDifferentCompletionTime_Rate) {
+TEST_F(GAPI_Streaming_Multi, TestDifferentCompletionTime_Rate)
+{
     // Same test as before but now use sources with different
     // latency
     cv::Mat proto = cv::Mat::eye(cv::Size(320, 240), CV_8UC3);
@@ -188,17 +193,18 @@ TEST_F(GAPI_Streaming_Multi, TestDifferentCompletionTime_Rate) {
     run_with_check([this](){
         // As one stream finishes earlier than other, check
         // if finished stream's messages don't pop up here
-        if (end_of_streams.size() > 0u) {
-            EXPECT_EQ(0u, end_of_streams.count(out_tag.id));
+        if (out.eos.size() > 0u) {
+            EXPECT_EQ(0u, out.eos.count(out.tag.id));
         }
     });
 
     // Check completions
-    EXPECT_EQ(50, frames.at(stream_ids[0]));
-    EXPECT_EQ(50, frames.at(stream_ids[1]));
+    EXPECT_EQ(50, out.frames.at(stream_ids[0]));
+    EXPECT_EQ(50, out.frames.at(stream_ids[1]));
 }
 
-TEST_F(GAPI_Streaming_Multi, TestAddStreamDuringExecution) {
+TEST_F(GAPI_Streaming_Multi, TestAddStreamDuringExecution)
+{
     // The idea of this test is to add more streams to the running
     // G-API pipeline like this:
     //
@@ -216,25 +222,60 @@ TEST_F(GAPI_Streaming_Multi, TestAddStreamDuringExecution) {
     int stream_idx = 1; // next id to use
     int stream_ids[3] = {
         ccomp.addSource<MockSource>(proto, 30, 90), // 30 fps 90 frames
-        0,
-        0
+        -1,
+        -1
     };
 
     run_with_check([&](){
         // Start new streams on 30's and 60's frame of the first stream
-        if (out_tag.id == stream_ids[0]
-            && (out_seq_id == 0 || out_seq_id == 59)) {
+        if (out.tag.id == stream_ids[0]
+            && (out.seq_id == 0 || out.seq_id == 59)) {
             stream_ids[stream_idx++] = ccomp.addSource<MockSource>(proto, 30, 90);
         }
     });
 
     // Test that all streams have been completed
-    EXPECT_EQ(90, frames.at(stream_ids[0]));
-    EXPECT_EQ(90, frames.at(stream_ids[1]));
-    EXPECT_EQ(90, frames.at(stream_ids[2]));
+    EXPECT_EQ(90, out.frames.at(stream_ids[0]));
+    EXPECT_EQ(90, out.frames.at(stream_ids[1]));
+    EXPECT_EQ(90, out.frames.at(stream_ids[2]));
 }
 
-TEST_F(GAPI_Streaming_Multi, TestStop) {
+TEST_F(GAPI_Streaming_Multi, TestStopAll)
+{
+    // Run two streams in parallel, then stop the 2nd one.
+    cv::Mat proto = cv::Mat::eye(cv::Size(320, 240), CV_8UC3);
+    const int stream_ids[2] = {
+        // 30 fps, 50 frames
+        ccomp.addSource<MockSource>(proto, 30, 50),
+        ccomp.addSource<MockSource>(proto, 30, 50),
+    };
+
+    bool stop_called = false;
+    run_with_check([&]() {
+        ASSERT_FALSE(stop_called); // Should never enter this place after stop
+        if (out.frames.at(stream_ids[0]) >= 10
+            && out.frames.at(stream_ids[1]) >= 10) {
+            ccomp.stop();
+            stop_called = true;
+        }
+    });
+
+    // Completions for both streams has been registered
+    EXPECT_EQ(1u, out.eos.count(stream_ids[0]));
+    EXPECT_EQ(1u, out.eos.count(stream_ids[1]));
+
+    // NB: this check may be scheduler-dependant (as well as the
+    // condition under run_with_check()
+    // In theory with multi-stream G-API could complete the first stream
+    // first, and then run the second one. All contracts still satisfy,
+    // but in this case completed frames for #0 will be 50, and
+    // for #1 it should be >= 10 to trigger stop.
+    EXPECT_GT(50, out.frames.at(stream_ids[0]));
+    EXPECT_GT(50, out.frames.at(stream_ids[1]));
+}
+
+TEST_F(GAPI_Streaming_Multi, TestStopOne)
+{
     // Run two streams in parallel, then stop the 2nd one.
     cv::Mat proto = cv::Mat::eye(cv::Size(320, 240), CV_8UC3);
     const int stream_ids[2] = {
@@ -245,7 +286,7 @@ TEST_F(GAPI_Streaming_Multi, TestStop) {
 
     bool called_stop = false;
     run_with_check([&](){
-        if (out_tag.id == stream_ids[1] && out_seq_id == 24) {
+        if (out.tag.id == stream_ids[1] && out.seq_id == 24) {
             ccomp.stop(stream_ids[1]);
             called_stop = true;
         }
@@ -254,15 +295,93 @@ TEST_F(GAPI_Streaming_Multi, TestStop) {
             // frames.  As it is legit to continue calling pull(),
             // pull() will receive stop signal for S[1] (checked at
             // the end).
-            EXPECT_NE(stream_ids[1], out_tag.id);
+            EXPECT_NE(stream_ids[1], out.tag.id);
         }
     });
-    EXPECT_EQ(50, frames.at(stream_ids[0]));
-    EXPECT_EQ(25, frames.at(stream_ids[1]));
-    EXPECT_EQ(1u, end_of_streams.count(stream_ids[0]));
-    EXPECT_EQ(1u, end_of_streams.count(stream_ids[1])); // Even for stopped one!
+    EXPECT_EQ(50, out.frames.at(stream_ids[0]));
+    EXPECT_EQ(25, out.frames.at(stream_ids[1]));
+    EXPECT_EQ(1u, out.eos.count(stream_ids[0]));
+    EXPECT_EQ(1u, out.eos.count(stream_ids[1])); // Even for stopped one!
+}
+
+TEST_F(GAPI_Streaming_Multi, TwoConsecutiveRuns)
+{
+    cv::Mat proto = cv::Mat::eye(cv::Size(320, 240), CV_8UC3);
+    int stream_id[2] = {-1,-1};
+
+    stream_id[0] = ccomp.addSource<MockSource>(proto, 30, 50);
+    run();
+    EXPECT_EQ(50, out.frames.at(stream_id[0]));
+
+    // Reset counters after run
+    out = {};
+
+    // Note: since the stream #0 has completed, a new stream
+    // added after that _can_ get the same ID.
+    // But so far it is not specified so relying on this is UB.
+    stream_id[1] = ccomp.addSource<MockSource>(proto, 60, 25);
+    run();
+    EXPECT_EQ(25, out.frames.at(stream_id[1]));
+}
+
+TEST_F(GAPI_Streaming_Multi, TwoConsecutiveRunsNoAddSource)
+{
+    cv::Mat proto = cv::Mat::eye(cv::Size(320, 240), CV_8UC3);
+    const int stream_id = ccomp.addSource<MockSource>(proto, 30, 50);
+    run();
+    EXPECT_EQ(50, out.frames.at(stream_id));
+
+    // Just calling start should throw
+    EXPECT_ANY_THROW(ccomp.start());
+}
+
+TEST_F(GAPI_Streaming_Multi, TestRunAfterStop)
+{
+    // Like in the single-stream case, a new addSource<> needs to be called
+    // if the pipeline was stopped using stop().
+    cv::Mat proto = cv::Mat::eye(cv::Size(320, 240), CV_8UC3);
+    int stream_id[] = {-1, -1};
+
+    stream_id[0] = ccomp.addSource<MockSource>(proto, 30, 50);
+    run_with_check([&](){
+        if (out.seq_id > 10) {
+            ccomp.stop();
+        }
+    });
+    EXPECT_GT(50, out.frames.at(stream_id[0]));
+
+    // Reset counters after fist run & run again
+    out = {};
+    stream_id[1] = ccomp.addSource<MockSource>(proto, 30, 50);
+    run();
+    EXPECT_EQ(50, out.frames.at(stream_id[1]));
+}
+
+TEST_F(GAPI_Streaming_Multi, TestRunAfterStopNoAddSource)
+{
+    cv::Mat proto = cv::Mat::eye(cv::Size(320, 240), CV_8UC3);
+    const int stream_id = ccomp.addSource<MockSource>(proto, 30, 50);
+    run_with_check([&](){
+        if (out.seq_id > 10) {
+            ccomp.stop();
+        }
+    });
+    EXPECT_GT(50, out.frames.at(stream_id));
+
+    // Reset counters after fist run & run again
+    out = {};
+    EXPECT_ANY_THROW(ccomp.start()); // no addSource<> - throw
+}
+
+TEST_F(GAPI_Streaming_Multi, TestDifferentMeta) {
+    // Sources must produce identical image formats, otherwise
+    // this will throw
+    cv::Mat p1 = cv::Mat::eye(cv::Size(640, 480), CV_8UC1);
+    ccomp.addSource<MockSource>(p1, 30, 50);
+
+    cv::Mat p2 = cv::Mat::eye(cv::Size(320, 240), CV_8UC3);
+    EXPECT_ANY_THROW(ccomp.addSource<MockSource>(p2, 30, 50));
 }
 
 } // namespace
-
 } // namespace opencv_test
