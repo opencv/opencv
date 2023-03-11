@@ -198,6 +198,71 @@ TEST_F(GAPI_Streaming_Multi, TestDifferentCompletionTime_Rate) {
     EXPECT_EQ(50, frames.at(stream_ids[1]));
 }
 
+TEST_F(GAPI_Streaming_Multi, TestAddStreamDuringExecution) {
+    // The idea of this test is to add more streams to the running
+    // G-API pipeline like this:
+    //
+    //  ...................................(time)
+    // | stream 0  |
+    //       | stream 1  |
+    //              | stream 2 |
+    //
+    // Assuming a stream is running at 30 fps for 90 frames, we'll add
+    // stream 1 at stream 0's 30th frame, and stream 2 at stream 0's
+    // 60th frame.
+
+    cv::Mat proto = cv::Mat::eye(cv::Size(320, 240), CV_8UC3);
+
+    int stream_idx = 1; // next id to use
+    int stream_ids[3] = {
+        ccomp.addSource<MockSource>(proto, 30, 90), // 30 fps 90 frames
+        0,
+        0
+    };
+
+    run_with_check([&](){
+        // Start new streams on 30's and 60's frame of the first stream
+        if (out_tag.id == stream_ids[0]
+            && (out_seq_id == 0 || out_seq_id == 59)) {
+            stream_ids[stream_idx++] = ccomp.addSource<MockSource>(proto, 30, 90);
+        }
+    });
+
+    // Test that all streams have been completed
+    EXPECT_EQ(90, frames.at(stream_ids[0]));
+    EXPECT_EQ(90, frames.at(stream_ids[1]));
+    EXPECT_EQ(90, frames.at(stream_ids[2]));
+}
+
+TEST_F(GAPI_Streaming_Multi, TestStop) {
+    // Run two streams in parallel, then stop the 2nd one.
+    cv::Mat proto = cv::Mat::eye(cv::Size(320, 240), CV_8UC3);
+    const int stream_ids[2] = {
+        // 30 fps, 50 frames
+        ccomp.addSource<MockSource>(proto, 30, 50),
+        ccomp.addSource<MockSource>(proto, 30, 50),
+    };
+
+    bool called_stop = false;
+    run_with_check([&](){
+        if (out_tag.id == stream_ids[1] && out_seq_id == 24) {
+            ccomp.stop(stream_ids[1]);
+            called_stop = true;
+        }
+        if (called_stop) {
+            // Note: this code repeats for all streams' received
+            // frames.  As it is legit to continue calling pull(),
+            // pull() will receive stop signal for S[1] (checked at
+            // the end).
+            EXPECT_NE(stream_ids[1], out_tag.id);
+        }
+    });
+    EXPECT_EQ(50, frames.at(stream_ids[0]));
+    EXPECT_EQ(25, frames.at(stream_ids[1]));
+    EXPECT_EQ(1u, end_of_streams.count(stream_ids[0]));
+    EXPECT_EQ(1u, end_of_streams.count(stream_ids[1])); // Even for stopped one!
+}
+
 } // namespace
 
 } // namespace opencv_test

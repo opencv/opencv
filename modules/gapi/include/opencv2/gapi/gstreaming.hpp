@@ -363,6 +363,11 @@ public:
     GAPI_WRAP void stop();
 
     /**
+     * TBD
+     */
+    void stop(int stream_id);
+
+    /**
      * @brief Test if the pipeline is running.
      *
      * @note This method is not thread-safe (with respect to the user

@@ -181,6 +181,11 @@ void cv::GStreamingCompiled::stop()
     m_priv->stop();
 }
 
+void cv::GStreamingCompiled::stop(int stream_id) {
+    // Implementation TBD
+    (void) stream_id;
+}
+
 bool cv::GStreamingCompiled::running() const
 {
     return m_priv->running();
