@@ -48,7 +48,7 @@ namespace cvflann
 class FILEScopeGuard {
 
 public:
-    FILEScopeGuard(FILE* file) {
+    explicit FILEScopeGuard(FILE* file) {
         file_ = file;
     };
 
