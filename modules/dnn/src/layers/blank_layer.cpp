@@ -121,7 +121,8 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
         auto x_desc = x->getTensorDesc();
@@ -129,11 +130,10 @@ public:
         auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
 
         // create operator
-        std::string op_name = cv::format("identity_%d", index);
-        auto op = std::make_shared<ge::op::Identity>(op_name);
+        auto op = std::make_shared<ge::op::Identity>(name);
 
         // set inputs
-        op->set_input_x_by_name(*op_x, "y");
+        op->set_input_x_by_name(*op_x, x->name.c_str());
         op->update_input_desc_x(*x_desc);
 
         // set output
