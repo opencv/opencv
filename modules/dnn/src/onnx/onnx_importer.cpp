@@ -2024,7 +2024,7 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
     {
         Mat weights = getBlob(node_proto, 1);
 
-        if (transA == 0) // optimized barnch, for now, we can only optimize the Gemm when transA = 0.
+        if (transA == 0) // optimized branch, for now, we can only optimize the Gemm when transA = 0.
         {
             if (transB == 0)
             {

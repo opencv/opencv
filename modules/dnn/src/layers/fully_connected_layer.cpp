@@ -842,16 +842,27 @@ public:
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
         CV_UNUSED(inputs); // suppress unused variable warning
-        long flops = 0;
+        int64 flops = 0;
+        int innerSize = 0;
 
-        int innerSize = blobs[0].size[1];
+        if (!blobs.empty())
+        {
+            innerSize = blobs[0].size[1];
+        }
+        else
+        {
+            CV_Assert(inputs.size() == 2);
+            if (transB)
+                innerSize = inputs[1][1];
+            else
+                innerSize = inputs[1][0];
+        }
+
         for(int i = 0; i < outputs.size(); i++)
         {
             flops += CV_BIG_INT(3)*innerSize*total(outputs[i]);
         }
-
         return flops;
-
     }
 
     bool bias;
