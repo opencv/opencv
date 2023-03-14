@@ -247,7 +247,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                     {
                         // fuse naryEltwise layer
                         // bias must already be computed to fuse => bias layer must appear before convolution
-                        if (biasLayerData->id < ld.id)
+                        if (biasLayerData->id < ld.id && biasLayerData->consumers.size() == 1)
                         {
                             // conv + naryEltwise.
                             CV_Assert_N(biasLayerData->outputBlobs.size() == 1, ld.inputBlobs.size() == 1);
