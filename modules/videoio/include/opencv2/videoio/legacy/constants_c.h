@@ -11,7 +11,6 @@ enum
 
     CV_CAP_MIL      =100,   // MIL proprietary drivers
 
-    CV_CAP_VFW      =200,   // platform native
     CV_CAP_V4L      =200,
     CV_CAP_V4L2     =200,
 
@@ -28,17 +27,10 @@ enum
     CV_TYZX_COLOR   =402,
     CV_TYZX_Z       =403,
 
-    CV_CAP_QT       =500,   // QuickTime
-
-    CV_CAP_UNICAP   =600,   // Unicap drivers
-
     CV_CAP_DSHOW    =700,   // DirectShow (via videoInput)
     CV_CAP_MSMF     =1400,  // Microsoft Media Foundation (via videoInput)
 
     CV_CAP_PVAPI    =800,   // PvAPI, Prosilica GigE SDK
-
-    CV_CAP_OPENNI   =900,   // OpenNI (for Kinect)
-    CV_CAP_OPENNI_ASUS =910,   // OpenNI (for Asus Xtion)
 
     CV_CAP_ANDROID  =1000,  // Android - not used
     CV_CAP_ANDROID_BACK =CV_CAP_ANDROID+99, // Android back camera - not used
