@@ -163,8 +163,8 @@ void TFLiteImporter::populateNet()
     CV_Assert(modelTensors);
     layouts.resize(modelTensors->size(), DATA_LAYOUT_UNKNOWN);
     size_t subgraph_inputs_size = subgraph_inputs->size();
-    std::vector<std::string> inputsNames;
-    std::vector<MatShape> inputsShapes;
+    std::vector<std::string> inputsNames(subgraph_inputs_size);
+    std::vector<MatShape> inputsShapes(subgraph_inputs_size);
     for (size_t i = 0; i < subgraph_inputs_size; ++i)
     {
         int idx = subgraph_inputs->Get(i);
@@ -175,14 +175,14 @@ void TFLiteImporter::populateNet()
         layouts[idx] = estimateLayout(*tensor);
 
         // Keep info about origin inputs names and shapes
-        inputsNames.push_back(tensor->name()->str());
+        inputsNames[i] = tensor->name()->str();
         std::vector<int> shape(tensor->shape()->begin(), tensor->shape()->end());
         if (layouts[idx] == DATA_LAYOUT_NHWC) {
             CV_CheckEQ(shape.size(), (size_t)4, "");
             std::swap(shape[2], shape[3]);
             std::swap(shape[1], shape[2]);
         }
-        inputsShapes.push_back(shape);
+        inputsShapes[i] = shape;
     }
 
     dstNet.setInputsNames(inputsNames);
