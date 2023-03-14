@@ -284,6 +284,7 @@ static bool init_submodule(PyObject * root, const char * name, PyMethodDef * met
 static inline
 bool registerTypeInModuleScope(PyObject* module, const char* type_name, PyObject* type_obj)
 {
+    Py_INCREF(type_obj); /// Give PyModule_AddObject a reference to steal.
     if (PyModule_AddObject(module, type_name, type_obj) < 0)
     {
         PyErr_Format(PyExc_ImportError,
