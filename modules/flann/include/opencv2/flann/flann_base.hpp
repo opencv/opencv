@@ -90,11 +90,11 @@ NNIndex<Distance>* load_saved_index(const Matrix<typename Distance::ElementType>
     typedef typename Distance::ElementType ElementType;
 
     FILE* fin = fopen(filename.c_str(), "rb");
-    FILEScopeGuard fscgd(fin);
-
     if (fin == NULL) {
         return NULL;
     }
+    FILEScopeGuard fscgd(fin);
+
     IndexHeader header = load_header(fin);
     if (header.data_type != Datatype<ElementType>::type()) {
         FLANN_THROW(cv::Error::StsError, "Datatype of saved index is different than of the one to be created.");

@@ -767,11 +767,12 @@ bool Index::load(InputArray _data, const String& filename)
     Mat data = _data.getMat();
     bool ok = true;
     release();
-    FILE* fin = fopen(filename.c_str(), "rb");
-    FILEScopeGuard fscgd(fin);
 
-    if (fin == NULL)
+    FILE* fin = fopen(filename.c_str(), "rb");
+    if (fin == NULL) {
         return false;
+    }
+    FILEScopeGuard fscgd(fin);
 
     ::cvflann::IndexHeader header = ::cvflann::load_header(fin);
 
