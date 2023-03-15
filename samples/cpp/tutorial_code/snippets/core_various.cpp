@@ -45,14 +45,14 @@ int main()
     Point2f vertices[4];
     rRect.points(vertices);
 
-    putText(test_image, "1", vertices[1], FONT_HERSHEY_SIMPLEX, 2, Scalar(255,255,255));
-    putText(test_image, "2", vertices[2], FONT_HERSHEY_SIMPLEX, 2, Scalar(0,0,255));
-    putText(test_image, "3", vertices[3], FONT_HERSHEY_SIMPLEX, 2, Scalar(0,255,0));
-    putText(test_image, "4", vertices[4], FONT_HERSHEY_SIMPLEX, 2, Scalar(255,0,0));
-    line(test_image, vertices[0], vertices[1], Scalar(255,255,255), 2);
-    line(test_image, vertices[1], vertices[2], Scalar(0,0,255), 2);
-    line(test_image, vertices[2], vertices[3], Scalar(0,255,0), 2);
-    line(test_image, vertices[3], vertices[4], Scalar(255,0,0), 2);
+    putText(test_image, "0", vertices[0], FONT_HERSHEY_SIMPLEX, 2, Scalar(255,255,255));
+    putText(test_image, "1", vertices[1], FONT_HERSHEY_SIMPLEX, 2, Scalar(0,0,255));
+    putText(test_image, "2", vertices[2], FONT_HERSHEY_SIMPLEX, 2, Scalar(0,255,0));
+    putText(test_image, "3", vertices[3], FONT_HERSHEY_SIMPLEX, 2, Scalar(255,0,0));
+    line(test_image, vertices[0], vertices[0], Scalar(255,255,255), 2);
+    line(test_image, vertices[1], vertices[1], Scalar(0,0,255), 2);
+    line(test_image, vertices[2], vertices[2], Scalar(0,255,0), 2);
+    line(test_image, vertices[3], vertices[3], Scalar(255,0,0), 2);
 
     Rect brect = rRect.boundingRect();
     rectangle(test_image, brect, Scalar(255,0,0), 2);
