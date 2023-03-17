@@ -389,6 +389,12 @@ public:
     // Compare norm
     static inline bool compare_norm( const normPoint& n1, const normPoint& n2 )
     {
+        if (n1.norm == n2.norm) {
+          if (n1.p.x == n2.p.x) {
+            return n1.p.y > n2.p.y;
+          }
+          return n1.p.x > n2.p.x;
+        }
         return (n1.norm > n2.norm);
     }
 };
