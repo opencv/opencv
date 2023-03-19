@@ -1036,8 +1036,6 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
         // Newton PnP:
         // -----------------------------------------
         NewtonPnP NewtonPnP(cameraMatrix, distCoeffs);
-        bool success_optimal = NewtonPnP.newton_pnp(ipoints, opoints, frame_pose);
-
         Rodrigues(frame_pose.R, rot_vec);
 
         vec_rvecs.push_back(rot_vec);
