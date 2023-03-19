@@ -1028,7 +1028,6 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     }
     else if (flags == SOLVEPNP_NPNP)
     {
-        // std::cout<<"this is newton pnp solver:"<<std::endl;
         FramePose frame_pose;
 
         cv::Mat rot_vec = Mat::zeros(1,3,CV_64F), rot_mat = Mat::zeros(3,3,CV_64F);
@@ -1036,16 +1035,13 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
         // -----------------------------------------
         // Newton PnP:
         // -----------------------------------------
+        #ifdef HAVE_EIGEN
         NewtonPnP NewtonPnP(cameraMatrix, distCoeffs);
-        bool success_optimal = NewtonPnP.newton_pnp(ipoints, opoints, frame_pose);
-
+        #endif
         Rodrigues(frame_pose.R, rot_vec);
 
         vec_rvecs.push_back(rot_vec);
         vec_tvecs.push_back(frame_pose.t);
-
-        // std::cout << "R: " << std::endl << rot_vec << std::endl << std::endl;
-        // std::cout << "t: " << std::endl << frame_pose.t << std::endl;
 
         // -----------------------------------------
     }

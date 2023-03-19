@@ -1,7 +1,3 @@
-//
-// Created by yuval on 6/10/20.
-//
-
 #ifndef PNP_USING_EIGEN_LIBRARY_PARSING_H
 #define PNP_USING_EIGEN_LIBRARY_PARSING_H
 

@@ -1,7 +1,3 @@
-//
-// Created by yuval on 6/14/20.
-//
-
 #include "GeneralUtils.h"
 
 namespace NPnP {

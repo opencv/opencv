@@ -1,7 +1,3 @@
-//
-// Created by yuval on 6/14/20.
-//
-
 #ifndef PNP_USING_EIGEN_LIBRARY_GENERALUTILS_H
 #define PNP_USING_EIGEN_LIBRARY_GENERALUTILS_H
 

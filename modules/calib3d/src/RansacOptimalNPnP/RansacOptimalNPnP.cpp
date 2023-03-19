@@ -212,7 +212,6 @@ bool RansacOptimalPnP::ransac_solve_pnp(const vector<Point2d> &scene,
     vector<int> available_index(nPnts);
     std::iota(begin(available_index), end(available_index), 0);
 
-    uint64_t total_t = 0;
 
     while (curr_iter < this->max_iterations)
     {
@@ -233,11 +232,8 @@ bool RansacOptimalPnP::ransac_solve_pnp(const vector<Point2d> &scene,
 
         int curr_inliers_cnt;
 
-        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
         bool res = this->optimal_pnp(scene, obj, curr_inliers, curr_inliers_cnt, frame_pose);
-        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
-        total_t += std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
 
         if (res)
         {
@@ -258,11 +254,7 @@ bool RansacOptimalPnP::ransac_solve_pnp(const vector<Point2d> &scene,
     if (max_inliers_cnt >= success_inliers_cnt)
     {
 
-        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
         bool res = this->optimal_pnp(scene, obj, max_inliers, max_inliers_cnt, frame_pose);
-        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-
-        total_t += std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
 
         if (res && max_inliers_cnt >= success_inliers_cnt)
         {
@@ -277,13 +269,9 @@ bool RansacOptimalPnP::ransac_solve_pnp(const vector<Point2d> &scene,
             {
                 refine_inliers = max_inliers;
                 refine_inliers_cnt = max_inliers_cnt;
-                std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-                bool res = this->optimal_pnp(scene, obj, refine_inliers, refine_inliers_cnt, refined_frame_pose);
-                std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+                bool resu = this->optimal_pnp(scene, obj, refine_inliers, refine_inliers_cnt, refined_frame_pose);
 
-                total_t += std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
-
-                if (res && refine_inliers_cnt > max_inliers_cnt)
+                if (resu && refine_inliers_cnt > max_inliers_cnt)
                 {
                     max_inliers = refine_inliers;
                     max_inliers_cnt = refine_inliers_cnt;

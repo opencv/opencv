@@ -24,12 +24,12 @@ class RansacOptimalPnP
 {
 public:
   // Ransac optimal PnP constructor, initialize options
-  RansacOptimalPnP(int min_iterations, int max_iterations, int min_inliers,
-                   int max_error_threshold, const cv::Mat &camera_matrix,
-                   const cv::Mat &dist_coeffs)
-      : min_iterations(min_iterations), max_iterations(max_iterations),
-        min_inliers(min_inliers), max_error_threshold(max_error_threshold),
-        camera_matrix(camera_matrix), dist_coeffs(dist_coeffs)
+  RansacOptimalPnP(int a_min_iterations, int a_max_iterations, int a_min_inliers,
+                   int a_max_error_threshold, const cv::Mat &a_camera_matrix,
+                   const cv::Mat &a_dist_coeffs)
+      : min_iterations(a_min_iterations), max_iterations(a_max_iterations),
+        min_inliers(a_min_inliers), max_error_threshold(a_max_error_threshold),
+        camera_matrix(a_camera_matrix), dist_coeffs(a_dist_coeffs)
   {
 
     this->pnp = PnpProblemSolver::init();

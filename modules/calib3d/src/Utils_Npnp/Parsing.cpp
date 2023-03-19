@@ -1,6 +1,3 @@
-//
-// Created by yuval on 6/10/20.
-//
 #include "Parsing.h"
 #include "Definitions.h"
 #include <fstream>
