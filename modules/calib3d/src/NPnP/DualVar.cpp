@@ -9,43 +9,6 @@
 #include <memory>
 
 namespace NPnP {
-/*std::experimental::optional<std::tuple<Eigen::Matrix3d, Eigen::Vector3d, double>>
-DualVar::convert_to_rotation_translation_cost(
-    std::shared_ptr<PnpObjective> objective,
-    std::shared_ptr<BarrierMethodSettings> settings) {
-  auto &M = objective->M;
-  auto &T = objective->T;
-  double sum_weights = objective->sum_weights;
-
-  auto q11 = y_vec[4];
-  auto q12 = y_vec[5];
-  auto q13 = y_vec[6];
-  auto q14 = y_vec[7];
-  auto q22 = y_vec[8];
-  auto q23 = y_vec[9];
-  auto q24 = y_vec[10];
-  auto q33 = y_vec[11];
-  auto q34 = y_vec[12];
-  auto q44 = y_vec[13];
-  Eigen::Matrix3d rotation;
-  rotation << q11 + q22 - q33 - q44, 2 * q23 - 2 * q14, 2 * q24 + 2 * q13,
-      2 * q23 + 2 * q14, q11 + q33 - q22 - q44, 2 * q34 - 2 * q12,
-      2 * q24 - 2 * q13, 2 * q34 + 2 * q12, q11 + q44 - q22 - q33;
-
-  auto rotation_error =
-      (rotation * rotation.transpose() - ColMatrix<3, 3>::Identity())
-          .lpNorm<1>();
-
-  if (rotation_error > settings->valid_result_threshold)
-    return std::nullopt;
-
-  Eigen::Map<ColVector<9>> rotation_vec(rotation.data(), 9);
-
-  auto translation = T * rotation_vec;
-  auto sum_cost = (rotation_vec.transpose() * M * rotation_vec).eval()(0, 0);
-  return std::make_optional(
-      std::make_tuple(rotation, translation, sum_cost / sum_weights));
-}*/
 
 Eigen::Vector4d DualVar::extract_quaternions() {
   const double eps = 1E-3;
@@ -129,8 +92,6 @@ Eigen::VectorXd *DualVar::cone_barrier_gradient(const PnpProblemSolver &pnp) {
 }
 
 Eigen::MatrixXd *DualVar::cone_barrier_hessian(const PnpProblemSolver &pnp) {
-  // hessian_helper_mat.block(0, 0, A_ROWS, NUM_CONSTRAINTS).setZero();
-  // hessian_helper_mat.block(0, 0, NUM_CONSTRAINTS, A_ROWS).setZero();
 
   hessian_helper_mat
       .block(NUM_CONSTRAINTS, NUM_CONSTRAINTS, A_ROWS - NUM_CONSTRAINTS,

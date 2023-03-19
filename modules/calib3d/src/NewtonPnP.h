@@ -81,10 +81,6 @@ private:
                     vector<bool> &is_inliers);
 
 private:
-  // const int min_iterations, max_iterations;
-  // const int min_inliers;
-  // // const double min_inliers_ratio, max_inliers_ratio;
-  // const double max_error_threshold;
   const cv::Mat camera_matrix;
   cv::Mat dist_coeffs;
   cv::Mat dist_coeffs_float;

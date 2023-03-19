@@ -56,11 +56,6 @@ void PnpProblemSolver::line_search(
   Eigen::Map<ColMatrix<M_MATRIX_DIM, M_MATRIX_DIM>> B_15_15(
       dual_var->B_vec.data() + NUM_CONSTRAINTS, M_MATRIX_DIM, M_MATRIX_DIM);
 
-  // auto L_15 =
-  // dual_var->matrix_15_15.llt().matrixL().toDenseMatrix().inverse().eval();
-  // auto eigs = (L_15 * B_15_15 *
-  // L_15.transpose()).selfadjointView<Eigen::Upper>().eigenvalues().eval();
-
   double eigs_pow_minus1[M_MATRIX_DIM];
   Eigen::LLT<Eigen::Ref<ColMatrix<M_MATRIX_DIM, M_MATRIX_DIM>>>
       llt_of_matrix_15_15(dual_var->matrix_15_15);
@@ -103,11 +98,8 @@ void PnpProblemSolver::centering_step(
     std::shared_ptr<PnpObjective> pnp_objective,
     std::shared_ptr<BarrierMethodSettings> barrier_method_settings) {
   int inner_iteration = 1;
-  // static long sum1 = 0, sum2 = 0, sum3=0;
 
   while (true) {
-    // std::cout << inner_iteration << std::endl;
-
     auto &y = *(this->dual_var);
     auto &mat = y.equation_mat;
     auto &const_vec = y.equation_result;
@@ -143,10 +135,6 @@ void PnpProblemSolver::centering_step(
     }
     inner_iteration++;
   }
-
-  // if(barrier_method_settings->verbose)
-  //   std::cout << outer_iteration << ") " << inner_iteration << " iterations"
-  //   << std::endl;
 }
 
 PnpResult PnpProblemSolver::solve_pnp(
@@ -155,9 +143,6 @@ PnpResult PnpProblemSolver::solve_pnp(
   double t = 1000; // 1/t is the barrier weight
   bool is_last_iter = false;
   Eigen::VectorXd gradient = Eigen::VectorXd::Zero(Y_SIZE);
-
-  // if (barrier_method_settings->verbose)
-  //    std::cout << "Newton Iterations:" << std::endl;
 
   std::function<double(const ColVector<Y_SIZE> &)> obj_func =
       [&pnp_objective, &t](const ColVector<Y_SIZE> &y_vec) -> double {

@@ -68,10 +68,6 @@ public:
 
   Eigen::Vector4d extract_quaternions();
 
-  /*std::experimental::optional<std::tuple<Eigen::Matrix3d, Eigen::Vector3d, double>>
-      convert_to_rotation_translation_cost(
-          std::shared_ptr<PnpObjective>,
-          std::shared_ptr<BarrierMethodSettings>);*/
 };
 } // namespace PnP
 
