@@ -13,6 +13,14 @@
 #include <vector>
 #include <opencv2/core/check.hpp>
 
+// RVV intrinsics have been renamed in version 0.11, so we need to include
+// compatibility headers:
+// https://github.com/riscv-non-isa/rvv-intrinsic-doc/tree/master/auto-generated/rvv-v0p10-compatible-headers
+#if defined(__riscv_v_intrinsic) &&  __riscv_v_intrinsic>10999
+#include "intrin_rvv_010_compat_non-policy.hpp"
+#include "intrin_rvv_010_compat_overloaded-non-policy.hpp"
+#endif
+
 #if defined(__GNUC__) && !defined(__clang__)
 // FIXIT: eliminate massive warnigs from templates
 // GCC from 'rvv-next': riscv64-unknown-linux-gnu-g++ (g42df3464463) 12.0.1 20220505 (prerelease)
@@ -52,88 +60,92 @@ using uint = unsigned int;
 using uint64 = unsigned long int;
 using int64 = long int;
 
-static const int __cv_rvv_e8_nlanes = vsetvlmax_e8m1();
-static const int __cv_rvv_e16_nlanes = vsetvlmax_e16m1();
-static const int __cv_rvv_e32_nlanes = vsetvlmax_e32m1();
-static const int __cv_rvv_e64_nlanes = vsetvlmax_e64m1();
+static const int __cv_rvv_e8m1_nlanes = vsetvlmax_e8m1();
+static const int __cv_rvv_e16m1_nlanes = vsetvlmax_e16m1();
+static const int __cv_rvv_e32m1_nlanes = vsetvlmax_e32m1();
+static const int __cv_rvv_e64m1_nlanes = vsetvlmax_e64m1();
+static const int __cv_rvv_e8m2_nlanes = vsetvlmax_e8m2();
+static const int __cv_rvv_e16m2_nlanes = vsetvlmax_e16m2();
+static const int __cv_rvv_e32m2_nlanes = vsetvlmax_e32m2();
+static const int __cv_rvv_e64m2_nlanes = vsetvlmax_e64m2();
+static const int __cv_rvv_e8m4_nlanes = vsetvlmax_e8m4();
+static const int __cv_rvv_e16m4_nlanes = vsetvlmax_e16m4();
+static const int __cv_rvv_e32m4_nlanes = vsetvlmax_e32m4();
+static const int __cv_rvv_e64m4_nlanes = vsetvlmax_e64m4();
+static const int __cv_rvv_e8m8_nlanes = vsetvlmax_e8m8();
+static const int __cv_rvv_e16m8_nlanes = vsetvlmax_e16m8();
+static const int __cv_rvv_e32m8_nlanes = vsetvlmax_e32m8();
+static const int __cv_rvv_e64m8_nlanes = vsetvlmax_e64m8();
 
 template <class T>
 struct VTraits;
 
-template <>
-struct VTraits<v_uint8>
-{
-    static inline int vlanes() { return __cv_rvv_e8_nlanes; }
-    using lane_type = uchar;
-    static const int max_nlanes = CV_RVV_MAX_VLEN/8;
+#define OPENCV_HAL_IMPL_RVV_TRAITS(REG, TYP, SUF, SZ) \
+template <> \
+struct VTraits<REG> \
+{ \
+    static inline int vlanes() { return __cv_rvv_##SUF##_nlanes; } \
+    using lane_type = TYP; \
+    static const int max_nlanes = CV_RVV_MAX_VLEN/SZ; \
 };
 
-template <>
-struct VTraits<v_int8>
-{
-    static inline int vlanes() { return __cv_rvv_e8_nlanes; }
-    using lane_type = schar;
-    static const int max_nlanes = CV_RVV_MAX_VLEN/8;
-};
-template <>
-struct VTraits<v_uint16>
-{
-    static inline int vlanes() { return __cv_rvv_e16_nlanes; }
-    using lane_type = ushort;
-    static const int max_nlanes = CV_RVV_MAX_VLEN/16;
-};
-template <>
-struct VTraits<v_int16>
-{
-    static inline int vlanes() { return __cv_rvv_e16_nlanes; }
-    using lane_type = short;
-    static const int max_nlanes = CV_RVV_MAX_VLEN/16;
-};
-template <>
-struct VTraits<v_uint32>
-{
-    static inline int vlanes() { return __cv_rvv_e32_nlanes; }
-    using lane_type = uint;
-    static const int max_nlanes = CV_RVV_MAX_VLEN/32;
-};
-template <>
-struct VTraits<v_int32>
-{
-    static inline int vlanes() { return __cv_rvv_e32_nlanes; }
-    using lane_type = int;
-    static const int max_nlanes = CV_RVV_MAX_VLEN/32;
-};
+OPENCV_HAL_IMPL_RVV_TRAITS(vint8m1_t, int8_t, e8m1, 8)
+OPENCV_HAL_IMPL_RVV_TRAITS(vint8m2_t, int8_t, e8m2, 8)
+OPENCV_HAL_IMPL_RVV_TRAITS(vint8m4_t, int8_t, e8m4, 8)
+OPENCV_HAL_IMPL_RVV_TRAITS(vint8m8_t, int8_t, e8m8, 8)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint8m1_t, uint8_t, e8m1, 8)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint8m2_t, uint8_t, e8m2, 8)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint8m4_t, uint8_t, e8m4, 8)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint8m8_t, uint8_t, e8m8, 8)
 
-template <>
-struct VTraits<v_float32>
-{
-    static inline int vlanes() { return __cv_rvv_e32_nlanes; }
-    using lane_type = float;
-    static const int max_nlanes = CV_RVV_MAX_VLEN/32;
-};
-template <>
-struct VTraits<v_uint64>
-{
-    static inline int vlanes() { return __cv_rvv_e64_nlanes; }
-    using lane_type = uint64;
-    static const int max_nlanes = CV_RVV_MAX_VLEN/64;
-};
-template <>
-struct VTraits<v_int64>
-{
-    static inline int vlanes() { return __cv_rvv_e64_nlanes; }
-    using lane_type = int64;
-    static const int max_nlanes = CV_RVV_MAX_VLEN/64;
-};
+OPENCV_HAL_IMPL_RVV_TRAITS(vint16m1_t, int16_t, e16m1, 16)
+OPENCV_HAL_IMPL_RVV_TRAITS(vint16m2_t, int16_t, e16m2, 16)
+OPENCV_HAL_IMPL_RVV_TRAITS(vint16m4_t, int16_t, e16m4, 16)
+OPENCV_HAL_IMPL_RVV_TRAITS(vint16m8_t, int16_t, e16m8, 16)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint16m1_t, uint16_t, e16m1, 16)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint16m2_t, uint16_t, e16m2, 16)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint16m4_t, uint16_t, e16m4, 16)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint16m8_t, uint16_t, e16m8, 16)
+
+OPENCV_HAL_IMPL_RVV_TRAITS(vint32m1_t, int32_t, e32m1, 32)
+OPENCV_HAL_IMPL_RVV_TRAITS(vint32m2_t, int32_t, e32m2, 32)
+OPENCV_HAL_IMPL_RVV_TRAITS(vint32m4_t, int32_t, e32m4, 32)
+OPENCV_HAL_IMPL_RVV_TRAITS(vint32m8_t, int32_t, e32m8, 32)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint32m1_t, uint32_t, e32m1, 32)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint32m2_t, uint32_t, e32m2, 32)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint32m4_t, uint32_t, e32m4, 32)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint32m8_t, uint32_t, e32m8, 32)
+
+OPENCV_HAL_IMPL_RVV_TRAITS(vint64m1_t, int64_t, e64m1, 64)
+OPENCV_HAL_IMPL_RVV_TRAITS(vint64m2_t, int64_t, e64m2, 64)
+OPENCV_HAL_IMPL_RVV_TRAITS(vint64m4_t, int64_t, e64m4, 64)
+OPENCV_HAL_IMPL_RVV_TRAITS(vint64m8_t, int64_t, e64m8, 64)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint64m1_t, uint64_t, e64m1, 64)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint64m2_t, uint64_t, e64m2, 64)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint64m4_t, uint64_t, e64m4, 64)
+OPENCV_HAL_IMPL_RVV_TRAITS(vuint64m8_t, uint64_t, e64m8, 64)
+
+OPENCV_HAL_IMPL_RVV_TRAITS(vfloat32m1_t, float, e32m1, 32)
+OPENCV_HAL_IMPL_RVV_TRAITS(vfloat32m2_t, float, e32m2, 32)
+OPENCV_HAL_IMPL_RVV_TRAITS(vfloat32m4_t, float, e32m4, 32)
+OPENCV_HAL_IMPL_RVV_TRAITS(vfloat32m8_t, float, e32m8, 32)
+
 #if CV_SIMD_SCALABLE_64F
-template <>
-struct VTraits<v_float64>
-{
-    static inline int vlanes() { return __cv_rvv_e64_nlanes; }
-    using lane_type = double;
-    static const int max_nlanes = CV_RVV_MAX_VLEN/64;
-};
+OPENCV_HAL_IMPL_RVV_TRAITS(vfloat64m1_t, double, e64m1, 64)
+OPENCV_HAL_IMPL_RVV_TRAITS(vfloat64m2_t, double, e64m2, 64)
+OPENCV_HAL_IMPL_RVV_TRAITS(vfloat64m4_t, double, e64m4, 64)
+OPENCV_HAL_IMPL_RVV_TRAITS(vfloat64m8_t, double, e64m8, 64)
 #endif
+
+
+// LLVM/Clang defines "overloaded intrinsics" e.g. 'vand(op1, op2)'
+// GCC does not have these functions, so we need to implement them manually
+// We implement only selected subset required to build current state of the code
+// Included inside namespace cv::
+#ifndef __riscv_v_intrinsic_overloading
+#include "intrin_rvv_compat_overloaded.hpp"
+#endif // __riscv_v_intrinsic_overloading
+
 
 //////////// get0 ////////////
 #define OPENCV_HAL_IMPL_RVV_GRT0_INT(_Tpvec, _Tp) \
@@ -435,7 +447,7 @@ inline _Tpvec v_lut(const _Tp* tab, const int* idx) \
 inline _Tpvec v_lut_pairs(const _Tp* tab, const int* idx) \
 { \
     std::vector<uint> idx_; \
-    for (size_t i = 0; i < VTraits<v_int16>::vlanes(); ++i) { \
+    for (int i = 0; i < VTraits<v_int16>::vlanes(); ++i) { \
         idx_.push_back(idx[i]); \
         idx_.push_back(idx[i]+1); \
     } \
@@ -445,7 +457,7 @@ inline _Tpvec v_lut_pairs(const _Tp* tab, const int* idx) \
 inline _Tpvec v_lut_quads(const _Tp* tab, const int* idx) \
 { \
     std::vector<uint> idx_; \
-    for (size_t i = 0; i < VTraits<v_int32>::vlanes(); ++i) { \
+    for (int i = 0; i < VTraits<v_int32>::vlanes(); ++i) { \
         idx_.push_back(idx[i]); \
         idx_.push_back(idx[i]+1); \
         idx_.push_back(idx[i]+2); \
@@ -479,7 +491,7 @@ inline v_uint64 v_lut_quads(const uint64* tab, const int* idx) { return v_reinte
 ////////////// Pack boolean ////////////////////
 inline v_uint8 v_pack_b(const v_uint16& a, const v_uint16& b)
 {
-    return vnsrl(vset(vlmul_ext_u16m2(a),1,b), 0, VTraits<v_uint8>::vlanes());
+    return vnsrl(vset(vlmul_ext_v_u16m1_u16m2(a),1,b), 0, VTraits<v_uint8>::vlanes());
 }
 
 inline v_uint8 v_pack_b(const v_uint32& a, const v_uint32& b,
@@ -1074,11 +1086,11 @@ inline v_float64 v_muladd(const v_float64& a, const v_float64& b, const v_float6
 #define OPENCV_HAL_IMPL_RVV_CHECK_ALLANY(_Tpvec, vl) \
 inline bool v_check_all(const _Tpvec& a) \
 { \
-    return vcpop(vmslt(a, 0, vl), vl) == vl; \
+    return (int)vcpop(vmslt(a, 0, vl), vl) == vl; \
 } \
 inline bool v_check_any(const _Tpvec& a) \
 { \
-    return vcpop(vmslt(a, 0, vl), vl) != 0; \
+    return (int)vcpop(vmslt(a, 0, vl), vl) != 0; \
 }
 
 OPENCV_HAL_IMPL_RVV_CHECK_ALLANY(v_int8, VTraits<v_int8>::vlanes())
