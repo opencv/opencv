@@ -37,7 +37,7 @@ class PatternMaker:
         self.markers = markers
         self.aruco_marker_size = aruco_marker_size #only for aruco markers
         self.aruco_dict = aruco_dict
-        
+
         self.g = SVG("g")  # the svg group container
 
     def make_circles_pattern(self):
@@ -50,7 +50,7 @@ class PatternMaker:
         for x in range(0, self.cols):
             for y in range(0, self.rows):
                 dot = SVG("circle", cx=(x * spacing) + x_spacing + r,
-                          cy=(y * spacing) + y_spacing + r, r=r, fill="black", stroke="black", stroke_width = r*0.01)
+                          cy=(y * spacing) + y_spacing + r, r=r, fill="black", stroke="none")
                 self.g.append(dot)
 
     def make_acircles_pattern(self):
@@ -63,7 +63,7 @@ class PatternMaker:
         for x in range(0, self.cols):
             for y in range(0, self.rows):
                 dot = SVG("circle", cx=(2 * x * spacing) + (y % 2)*spacing + x_spacing + r,
-                          cy=(y * spacing) + y_spacing + r, r=r, fill="black", stroke="black", stroke_width = r*0.01)
+                          cy=(y * spacing) + y_spacing + r, r=r, fill="black", stroke="none")
                 self.g.append(dot)
 
     def make_checkerboard_pattern(self):
@@ -74,7 +74,7 @@ class PatternMaker:
             for y in range(0, self.rows):
                 if x % 2 == y % 2:
                     square = SVG("rect", x=x * spacing + xspacing, y=y * spacing + yspacing, width=spacing,
-                                 height=spacing, fill="black", stroke="black", stroke_width = spacing*0.01)
+                                 height=spacing, fill="black", stroke="none")
                     self.g.append(square)
 
     @staticmethod
@@ -126,10 +126,10 @@ class PatternMaker:
                     corner_types, is_inside = self._get_type(x, y)
                     if is_inside:
                         square = SVG("rect", x=x * spacing + xspacing, y=y * spacing + yspacing, width=spacing,
-                                     height=spacing, fill="black", stroke="black", stroke_width = spacing*0.01)
+                                     height=spacing, fill="black", stroke="none")
                     else:
                         square = SVG("path", d=self._make_round_rect(x * spacing + xspacing, y * spacing + yspacing,
-                                      spacing, corner_types), fill="black", stroke="black", stroke_width = spacing*0.01)
+                                      spacing, corner_types), fill="black", stroke="none")
                     self.g.append(square)
         if self.markers is not None:
             r = self.square_size * 0.17
@@ -142,9 +142,9 @@ class PatternMaker:
                 if x % 2 == y % 2:
                     color = "white"
                 dot = SVG("circle", cx=(x * spacing) + x_spacing + r,
-                          cy=(y * spacing) + y_spacing + r, r=r, fill=color, stroke=color, stroke_width = spacing*0.01)
+                          cy=(y * spacing) + y_spacing + r, r=r, fill=color, stroke="none")
                 self.g.append(dot)
-                
+
     @staticmethod
     def _get_aruco_marker_size(aruco_dict):
         marker_size_bits_for_dicts = {
@@ -158,9 +158,9 @@ class PatternMaker:
          'DICT_APRILTAG_36h10':6,
          'DICT_APRILTAG_36h11':6
         }
-        
+
         return marker_size_bits_for_dicts[aruco_dict]
-        
+
     @staticmethod
     def _create_marker_bits(markerSize_bits, byteList):
         marker = np.zeros((markerSize_bits+2, markerSize_bits+2))
@@ -184,12 +184,20 @@ class PatternMaker:
                     else:
                         currentBit = 0 # // ok, bits enough for next byte
         return marker
-                 
+
     def make_charuco_board(self):
+        if (self.aruco_marker_size>self.square_size):
+            print("Error: Aruco marker can not be more than square size!")
+            return
         arucoDictBytesList = np.load("arucoDictBytesList.npz")
         byteLists = arucoDictBytesList[self.aruco_dict]
+
+        if (len(byteLists) < int(self.cols*self.rows/2)):
+            print("Error: Aruco dictionary contains less markers than it needs for chosen board. Please choose another dictionary or use smaller board")
+            return
+
         markerSize_bits = self._get_aruco_marker_size(self.aruco_dict)
-        
+
         side = self.aruco_marker_size / (markerSize_bits+2)
         spacing = self.square_size
         xspacing = (self.width - self.cols * self.square_size) / 2.0
@@ -202,7 +210,7 @@ class PatternMaker:
 
                 if x % 2 == y % 2:
                     square = SVG("rect", x=x * spacing + xspacing, y=y * spacing + yspacing, width=spacing,
-                                 height=spacing, fill="black", stroke="black", stroke_width = spacing*0.01)
+                                 height=spacing, fill="black", stroke="none")
                     self.g.append(square)
                 if x % 2 != y % 2:
                     list_size = np.size(byteLists[marker_id:marker_id+1])
@@ -210,11 +218,15 @@ class PatternMaker:
                     marker_id +=1
                     x_pos = x * spacing + xspacing
                     y_pos = y * spacing + yspacing
+                    
+                    square = SVG("rect", x=x_pos+ch_ar_border, y=y_pos+ch_ar_border, width=self.aruco_marker_size, 
+                                             height=self.aruco_marker_size, fill="black", stroke="none")
+                    self.g.append(square)    
                     for x_ in range(len(img_mark[0])):
                         for y_ in range(len(img_mark)):
-                            if (img_mark[y_][x_] == 0):
+                            if (img_mark[y_][x_] != 0):
                                 square = SVG("rect", x=x_pos+ch_ar_border+(x_)*side, y=y_pos+ch_ar_border+(y_)*side, width=side, 
-                                             height=side, fill="black", stroke="black", stroke_width = spacing*0.01)
+                                             height=side, fill="white", stroke="white", stroke_width = spacing*0.01)
                                 self.g.append(square)        
 
     def save(self):
@@ -268,7 +280,7 @@ def main():
     radius_rate = args.radius_rate
     aruco_dict = args.aruco_dict
     aruco_marker_size = args.aruco_marker_size
-    
+
     if 'page_width' and 'page_height' in args:
         page_width = args.page_width
         page_height = args.page_height
