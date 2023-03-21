@@ -662,14 +662,6 @@ CV_IMPL int cvStartWindowThread(){
     cvInitSystem(0,NULL);
     if (!thread_started)
     {
-#if !GLIB_CHECK_VERSION(2, 32, 0)  // https://github.com/GNOME/glib/blame/b4d58a7105bb9d75907233968bb534b38f9a6e43/glib/deprecated/gthread.h#L274
-       if (!g_thread_supported ())
-       {
-           /* the GThread system wasn't inited, so init it */
-           g_thread_init(NULL);
-       }
-#endif
-
        (void)getWindowMutex();  // force mutex initialization
 
        // protects the 'last key pressed' variable
@@ -678,13 +670,7 @@ CV_IMPL int cvStartWindowThread(){
        // conditional that indicates a key has been pressed
        cond_have_key = g_cond_new();
 
-   #if !GLIB_CHECK_VERSION(2, 32, 0)
-       // this is the window update thread
-       window_thread = g_thread_create(icvWindowThreadLoop,
-                       NULL, TRUE, NULL);
-   #else
        window_thread = g_thread_new("OpenCV window update", icvWindowThreadLoop, NULL);
-   #endif
     }
     thread_started = window_thread!=NULL;
     return thread_started;
