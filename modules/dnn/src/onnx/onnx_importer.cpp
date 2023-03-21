@@ -891,6 +891,11 @@ void ONNXImporter::populateNet()
     }
 
     dstNet.setInputsNames(netInputs);
+    if (!hasDynamicShapes)
+    {
+        for (int i = 0; i < netInputs.size(); ++i)
+            dstNet.setInputShape(netInputs[i], outShapes[netInputs[i]]);
+    }
 
     // dump outputs
     for (int i = 0; i < graph_proto.output_size(); ++i)

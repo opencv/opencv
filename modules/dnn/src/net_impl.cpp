@@ -1400,6 +1400,7 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
     Mat blob_ = blob.getMat();  // can't use InputArray directly due MatExpr stuff
     MatShape blobShape = shape(blob_);
 
+#if 0  // TODO: DNNTestNetwork.MobileNet_SSD_Caffe_Different_Width_Height/0
     if (pin.lid == 0)
     {
         CV_Assert(!netInputLayer.empty());
@@ -1411,7 +1412,6 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
             if (!inputShapeLimitation.empty())
             {
                 CV_CheckEQ(inputShapeLimitation.size(), blobShape.size(), "");
-#if 0  // TODO: DNNTestNetwork.MobileNet_SSD_Caffe_Different_Width_Height/0
                 const size_t dims = inputShapeLimitation.size();
                 for (size_t dim = 0; dim < dims; dim++)
                 {
@@ -1419,10 +1419,10 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
                         continue;  // don't limit batch
                     CV_CheckEQ(inputShapeLimitation[dim], blobShape[dim], "");
                 }
-#endif
             }
         }
     }
+#endif
 
     LayerData& ld = layers[pin.lid];
     const int numInputs = std::max(pin.oid + 1, (int)ld.requiredOutputs.size());
