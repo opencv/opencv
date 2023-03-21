@@ -15,17 +15,19 @@ python gen_pattern.py -o out.svg -r 11 -c 8 -T circles -s 20.0 -R 5.0 -u mm -w 2
 -a, --page_size - page size (default A4), supersedes -h -w arguments
 -m, --markers - list of cells with markers for the radon checkerboard
 -p, --aruco_marker_size - aruco_marker_size (default 10.0)
--d, --aruco_dict - name one of predefined dictionary (default )
+-d, --aruco_dict - name one of predefined dictionary (default)
+-f, --dict_file - name of file which contains predefined dictionary
 -H, --help - show help
 """
 
 import argparse
 import numpy as np
+import json
 from svgfig import *
 
 
 class PatternMaker:
-    def __init__(self, cols, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, aruco_dict):
+    def __init__(self, cols, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, aruco_dict, aruco_dict_file):
         self.cols = cols
         self.rows = rows
         self.output = output
@@ -37,6 +39,7 @@ class PatternMaker:
         self.markers = markers
         self.aruco_marker_size = aruco_marker_size #only for aruco markers
         self.aruco_dict = aruco_dict
+        self.aruco_dict_file = aruco_dict_file
 
         self.g = SVG("g")  # the svg group container
 
@@ -146,22 +149,6 @@ class PatternMaker:
                 self.g.append(dot)
 
     @staticmethod
-    def _get_aruco_marker_size(aruco_dict):
-        marker_size_bits_for_dicts = {
-         'DICT_4X4_1000':4,
-         'DICT_5X5_1000':5,
-         'DICT_6X6_1000':6,
-         'DICT_7X7_1000':7,
-         'DICT_ARUCO_ORIGINAL':5,
-         'DICT_APRILTAG_16h5':4,
-         'DICT_APRILTAG_25h9':5,
-         'DICT_APRILTAG_36h10':6,
-         'DICT_APRILTAG_36h11':6
-        }
-
-        return marker_size_bits_for_dicts[aruco_dict]
-
-    @staticmethod
     def _create_marker_bits(markerSize_bits, byteList):
         marker = np.zeros((markerSize_bits+2, markerSize_bits+2))
         bits = marker[1:markerSize_bits+1, 1:markerSize_bits+1]
@@ -189,14 +176,15 @@ class PatternMaker:
         if (self.aruco_marker_size>self.square_size):
             print("Error: Aruco marker can not be more than square size!")
             return
-        arucoDictBytesList = np.load("arucoDictBytesList.npz")
-        byteLists = arucoDictBytesList[self.aruco_dict]
+        f = open('arucoDictBytesList.json')
+        arucoDictBytesList = json.load(f)
+        byteLists = np.array(arucoDictBytesList[self.aruco_dict])
 
         if (len(byteLists) < int(self.cols*self.rows/2)):
             print("Error: Aruco dictionary contains less markers than it needs for chosen board. Please choose another dictionary or use smaller board")
             return
 
-        markerSize_bits = self._get_aruco_marker_size(self.aruco_dict)
+        markerSize_bits = arucoDictBytesList["size_bits"][self.aruco_dict]
 
         side = self.aruco_marker_size / (markerSize_bits+2)
         spacing = self.square_size
@@ -265,6 +253,8 @@ def main():
                         action="store", dest="aruco_marker_size", type=float)
     parser.add_argument("-d", "--aruco_dict", help="name one of predefined dictionary", default='DICT_ARUCO_ORIGINAL',
                         action="store", dest="aruco_dict", type=str)
+    parser.add_argument("-f", "--dict_file", help="filename of predefined dictionary", default='arucoDictBytesList.json',
+                        action="store", dest="aruco_dict_file", type=str)
     args = parser.parse_args()
 
     show_help = args.show_help
@@ -280,6 +270,7 @@ def main():
     radius_rate = args.radius_rate
     aruco_dict = args.aruco_dict
     aruco_marker_size = args.aruco_marker_size
+    aruco_dict_file = args.aruco_dict_file
 
     if 'page_width' and 'page_height' in args:
         page_width = args.page_width
@@ -302,7 +293,7 @@ def main():
             else:
                 raise ValueError("The marker {},{} is outside the checkerboard".format(x, y))
 
-    pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, aruco_dict)
+    pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, aruco_dict, aruco_dict_file)
     # dict for easy lookup of pattern type
     mp = {"circles": pm.make_circles_pattern, "acircles": pm.make_acircles_pattern,
           "checkerboard": pm.make_checkerboard_pattern, "radon_checkerboard": pm.make_radon_checkerboard_pattern, 
