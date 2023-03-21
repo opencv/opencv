@@ -79,8 +79,9 @@ Below is the list of contributors who submitted tutorials to OpenCV-Python.
 Additional Resources
 --------------------
 
+-#  A Quick guide to Python - [A Byte of Python](https://python.swaroopch.com/)
 1.  [A Quick guide to Python](https://www.freecodecamp.org/news/the-python-guide-for-beginners/)
 2.  [NumPy Quickstart tutorial](https://numpy.org/doc/stable/user/quickstart.html)
 3.  [NumPy Reference](https://numpy.org/doc/stable/reference/index.html)
-4.  [OpenCV Documentation](https://docs.opencv.org/4.x/index.html)
+4.  [OpenCV Documentation](https://docs.opencv.org/)
 5.  [OpenCV Forum](https://forum.opencv.org/)
