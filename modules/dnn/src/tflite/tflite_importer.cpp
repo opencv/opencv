@@ -163,6 +163,8 @@ void TFLiteImporter::populateNet()
     CV_Assert(modelTensors);
     layouts.resize(modelTensors->size(), DATA_LAYOUT_UNKNOWN);
     size_t subgraph_inputs_size = subgraph_inputs->size();
+    std::vector<std::string> inputsNames(subgraph_inputs_size);
+    std::vector<MatShape> inputsShapes(subgraph_inputs_size);
     for (size_t i = 0; i < subgraph_inputs_size; ++i)
     {
         int idx = subgraph_inputs->Get(i);
@@ -171,7 +173,24 @@ void TFLiteImporter::populateNet()
         if (!tensor)
             CV_Error(Error::StsError, cv::format("DNN/TFLite: subgraph input %d (%d) is NULL", (int)i, idx));
         layouts[idx] = estimateLayout(*tensor);
+
+        // Keep info about origin inputs names and shapes
+        inputsNames[i] = tensor->name()->str();
+        std::vector<int> shape(tensor->shape()->begin(), tensor->shape()->end());
+        if (layouts[idx] == DATA_LAYOUT_NHWC) {
+            CV_CheckEQ(shape.size(), (size_t)4, "");
+            std::swap(shape[2], shape[3]);
+            std::swap(shape[1], shape[2]);
+        }
+        inputsShapes[i] = shape;
     }
+
+    dstNet.setInputsNames(inputsNames);
+    for (size_t i = 0; i < subgraph_inputs_size; ++i)
+    {
+        dstNet.setInputShape(inputsNames[i], inputsShapes[i]);
+    }
+
     const auto& all_operators = *subgraph_operators;
     const size_t all_operators_size = all_operators.size();
     for (size_t op_idx = 0; op_idx < all_operators_size; ++op_idx)
