@@ -1859,7 +1859,7 @@ bool videoInput::setVideoSettingFilter(int deviceID, long Property, long lValue,
     DebugPrintOut("Current value: %ld Flags %ld (%s)\n", CurrVal, CapsFlags, (CapsFlags == 1 ? "Auto" : (CapsFlags == 2 ? "Manual" : "Unknown")));
 
     if (useDefaultValue) {
-        hr = pAMVideoProcAmp->Set(Property, Default, VideoProcAmp_Flags_Auto);
+        hr = pAMVideoProcAmp->Set(Property, Default, Flags);
     }
     else{
         // Perhaps add a check that lValue and Flags are within the range acquired from GetRange above
@@ -2389,6 +2389,9 @@ int videoInput::getVideoPropertyFromCV(int cv_property){
             return VideoProcAmp_ColorEnable;
 
         case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+            return VideoProcAmp_WhiteBalance;
+
+        case cv::VideoCaptureProperties::CAP_PROP_AUTO_WB:
             return VideoProcAmp_WhiteBalance;
 
         case  CV_CAP_PROP_BACKLIGHT:
@@ -3397,6 +3400,11 @@ double VideoCapture_DShow::getProperty(int propIdx) const
             return (double)current_value;
         break;
 
+    case cv::VideoCaptureProperties::CAP_PROP_AUTO_WB:
+        if (g_VI.getVideoSettingFilter(m_index, g_VI.getVideoPropertyFromCV(propIdx), min_value, max_value, stepping_delta, current_value, flags, defaultValue))
+            return (double)flags == CameraControl_Flags_Auto ? 1.0 : 0.0;
+        break;
+
     // camera properties
     case CV_CAP_PROP_PAN:
     case CV_CAP_PROP_TILT:
@@ -3539,6 +3547,24 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
         return true;
     }
 
+    // set the same as setVideoSettingFilter default arguments.
+    long flags = 0L;
+    bool useDefaultValue = false;
+    switch (propIdx)
+    {
+        case cv::VideoCaptureProperties::CAP_PROP_AUTO_WB:
+        case CV_CAP_PROP_AUTO_EXPOSURE:
+            useDefaultValue = true;
+            if (cvRound(propVal) == 1)
+                flags = VideoProcAmp_Flags_Auto;
+            else
+                flags = VideoProcAmp_Flags_Manual;
+            break;
+        case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+            flags = VideoProcAmp_Flags_Manual;
+            break;
+    }
+
     //video Filter properties
     switch (propIdx)
     {
@@ -3550,9 +3576,10 @@ bool VideoCapture_DShow::setProperty(int propIdx, double propVal)
     case CV_CAP_PROP_GAMMA:
     case CV_CAP_PROP_MONOCHROME:
     case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
+    case cv::VideoCaptureProperties::CAP_PROP_AUTO_WB:
     case CV_CAP_PROP_BACKLIGHT:
     case CV_CAP_PROP_GAIN:
-        return g_VI.setVideoSettingFilter(m_index, g_VI.getVideoPropertyFromCV(propIdx), (long)propVal);
+        return g_VI.setVideoSettingFilter(m_index, g_VI.getVideoPropertyFromCV(propIdx), (long)propVal, flags, useDefaultValue);
     }
 
     //camera properties
