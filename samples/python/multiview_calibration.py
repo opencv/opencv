@@ -302,8 +302,7 @@ def calibrateFromPoints(
                 Ks=Ks,
                 distortions=distortions,
                 is_fisheye=np.array(is_fisheye, dtype=np.uint8),
-                use_intrinsics_guess=USE_INTRINSICS_GUESS,
-                flags_intrinsics=0
+                use_intrinsics_guess=USE_INTRINSICS_GUESS
             )
 # [multiview_calib]
     except Exception as e:

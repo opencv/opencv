@@ -481,7 +481,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         const std::vector<Size> &imageSize, InputArray detectionMask,
         OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, std::vector<Mat> &Ks, std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray isFisheye,
-        OutputArray perFrameErrors, OutputArray initializationPairs, bool useIntrinsicsGuess, int flagsForIntrinsics) {
+        OutputArray perFrameErrors, OutputArray initializationPairs, bool useIntrinsicsGuess, InputArray flagsForIntrinsics) {
 
     CV_CheckEQ((int)objPoints.empty(), 0, "Objects points must not be empty!");
     CV_CheckEQ((int)imagePoints.empty(), 0, "Image points must not be empty!");
@@ -511,6 +511,17 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     CV_Assert((NUM_CAMERAS > 1) && (NUM_FRAMES > 0));
     const int NUM_PATTERN_PTS = obj_points_in_rows ? obj_pts_0.rows : obj_pts_0.cols;
     const double scale_3d_pts = multiview::getScaleOfObjPoints(NUM_PATTERN_PTS, obj_pts_0, obj_points_in_rows);
+
+    Mat flagsForIntrinsics_mat = flagsForIntrinsics.getMat();
+    if (flagsForIntrinsics_mat.empty())
+    {
+        flagsForIntrinsics_mat = Mat(Size(1, NUM_CAMERAS), CV_32SC1, cv::Scalar(0));
+    }
+
+    std::cout << "flagsForIntrinsics_mat.total() " << flagsForIntrinsics_mat.total() << std::endl;
+    CV_Assert(flagsForIntrinsics_mat.total() == size_t(NUM_CAMERAS));
+    CV_CheckEQ(flagsForIntrinsics_mat.type(), CV_32S, "flagsForIntrinsics should be of type 32SC1");
+    CV_CheckEQ(flagsForIntrinsics_mat.channels(), 1, "flagsForIntrinsics should be of type 32SC1");
 
     std::vector<Mat> objPoints_norm;
     objPoints_norm.reserve(NUM_FRAMES);
@@ -552,11 +563,12 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     if (num_fisheye_cameras != 0 && num_fisheye_cameras != NUM_CAMERAS) {
         // cameras are mixed (fisheye and pinhole)
         // use standard pinhole calibration for this case
+        // update flags, use rational model and no tangential coefficients
         for (int i = 0; i < NUM_CAMERAS; i++) {
             is_fisheye_vec[i] = false;
+            flagsForIntrinsics_mat.at<int>(i) = CALIB_RATIONAL_MODEL+CALIB_ZERO_TANGENT_DIST+CALIB_FIX_K5+CALIB_FIX_K6;
+
         }
-        // update flags, use rational model and no tangential coefficients
-        flagsForIntrinsics = CALIB_RATIONAL_MODEL+CALIB_ZERO_TANGENT_DIST+CALIB_FIX_K5+CALIB_FIX_K6;
         flags_extrinsics += CALIB_RATIONAL_MODEL;
     }
 
@@ -594,7 +606,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
             double repr_err;
             if (is_fisheye_vec[camera]) {
                 repr_err = fisheye::calibrate(obj_points_, img_points_, imageSize[camera],
-                    Ks[camera], distortions[camera], rvecs, tvecs, flagsForIntrinsics);
+                    Ks[camera], distortions[camera], rvecs, tvecs, flagsForIntrinsics_mat.at<int>(camera));
                 // calibrate does not compute error per view, so compute it manually
                 errors_per_view = std::vector<double>(obj_points_.size());
                 for (int f = 0; f < (int) obj_points_.size(); f++) {
@@ -604,7 +616,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                 }
             } else {
                 repr_err = calibrateCamera(obj_points_, img_points_, imageSize[camera], Ks[camera], distortions[camera],
-                   rvecs, tvecs, noArray(), noArray(), errors_per_view, flagsForIntrinsics);
+                   rvecs, tvecs, noArray(), noArray(), errors_per_view, flagsForIntrinsics_mat.at<int>(camera));
             }
             CV_LOG_IF_WARNING(NULL, repr_err > WARNING_RMSE, "Warning! Mean RMSE of intrinsics calibration is higher than "+std::to_string(WARNING_RMSE)+" pixels!");
             int cnt_visible_frame = 0;

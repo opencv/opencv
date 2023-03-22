@@ -134,7 +134,7 @@ TEST(multiview_calibration, accuracy) {
     std::vector<cv::Mat> Ks, distortions, Rs, Ts;
     cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
     calibrateMultiview (objPoints, image_points_all, image_sizes, visibility_mat,
-       Rs, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs, false, 0);
+       Rs, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs, false);
 
     const double K_err_tol = 1e1, dist_tol = 5e-2, R_tol = 1e-2, T_tol = 1e-2;
     for (int c = 0; c < num_cameras; c++) {

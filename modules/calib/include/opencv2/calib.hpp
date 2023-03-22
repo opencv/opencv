@@ -1134,7 +1134,7 @@ mix of pinhole and fisheye cameras Rational distortion model is used. See @ref C
 for details. Expected type: CV_8U.
 @param[in] useIntrinsicsGuess Use user specified intrinsic parameters (internal camera matrix and distortion).
 If true intrinsics are not estimated during calibration.
-@param[in] flagsForIntrinsics Flags used for all cameras intrinsics calibration.
+@param[in] flagsForIntrinsics Flags used for each camera intrinsics calibration.
 Use per-camera call and `useIntrinsicsGuess` flag to get custom intrinsics calibration for each camera.
 See @ref CALIB_USE_INTRINSIC_GUESS and other `CALIB_` constants.
 @param[out] Rs Rotation vectors relative to camera 0, where Rs[0] = 0. Output size: NUM_CAMERAS x 3 x 1. See @ref Rodrigues.
@@ -1160,7 +1160,7 @@ CV_EXPORTS_W double calibrateMultiview (InputArrayOfArrays objPoints, const std:
         OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, CV_OUT std::vector<Mat> &Ks, CV_OUT std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray isFisheye,
         OutputArray perFrameErrors, OutputArray initializationPairs,
-        bool useIntrinsicsGuess=false, int flagsForIntrinsics=0);
+        bool useIntrinsicsGuess=false, InputArray flagsForIntrinsics=noArray());
 
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$

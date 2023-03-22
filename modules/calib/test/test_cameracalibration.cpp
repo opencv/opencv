@@ -2094,8 +2094,9 @@ double CV_MultiviewCalibrationTest_CPP::calibrateStereoCamera( const vector<vect
     std::vector<Size> image_sizes (2, imageSize);
     Mat visibility_mat = Mat_<bool>::ones(2, numImgs);
     std::vector<bool> is_fisheye(2, false);
+    std::vector<int> all_flags(2, flags);
     double rms = calibrateMultiview(objectPoints, image_points_all, image_sizes, visibility_mat,
-                                    Rs, Ts, Ks, distortions, rvecs, tvecs, is_fisheye, errors_mat, noArray(), false, flags);
+                                    Rs, Ts, Ks, distortions, rvecs, tvecs, is_fisheye, errors_mat, noArray(), false, all_flags);
 
     if (perViewErrors1.size() != (size_t)numImgs)
     {
