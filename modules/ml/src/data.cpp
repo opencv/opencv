@@ -904,7 +904,7 @@ public:
             if( s )
             {
                 j = s[i];
-                CV_Assert( 0 <= j && j < nsamples );
+                CV_Assert( 0 <= j && j < ((layout == ROW_SAMPLE) ? samples.rows : samples.cols) );
             }
             values[i] = src[j*sstep];
             if( values[i] == MISSED_VAL )
