@@ -618,7 +618,7 @@ CV_IMPL int cvWaitKey (int maxWait)
          inMode:NSDefaultRunLoopMode
          dequeue:YES];
 
-        if([event type] == NSKeyDown) {
+        if([event type] == NSKeyDown && [[event characters] length]) {
             returnCode = [[event characters] characterAtIndex:0];
             break;
         }
