@@ -485,23 +485,29 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
         ret, corners = cv.findChessboardCorners(
             cv.cvtColor(img_detection, cv.COLOR_BGR2GRAY), grid_size, None
         )
+        if ret:
+            if scale < 1.0:
+                corners /= scale
+            corners2 = cv.cornerSubPix(cv.cvtColor(img, cv.COLOR_BGR2GRAY),
+                                       corners, winsize, (-1,-1), criteria)
+
     elif pattern_type.lower() == 'circles':
         ret, corners = cv.findCirclesGrid(
             img_detection, patternSize=grid_size, flags=cv.CALIB_CB_SYMMETRIC_GRID
         )
+        if ret:
+            corners /= scale
+
     elif pattern_type.lower() == 'acircles':
         ret, corners = cv.findCirclesGrid(
             img_detection, patternSize=grid_size, flags=cv.CALIB_CB_ASYMMETRIC_GRID
         )
+        if ret:
+            corners /= scale
     else:
         raise ValueError("Calibration pattern is not supported!")
 # [detect_pattern]
 
-    if ret:
-        if scale < 1.0:
-            corners /= scale
-        corners2 = cv.cornerSubPix(cv.cvtColor(img, cv.COLOR_BGR2GRAY),
-                                   corners, winsize, (-1,-1), criteria)
         # cv.drawChessboardCorners(img, grid_size, corners2, ret)
         # plt.imshow(img)
         # plt.show()
