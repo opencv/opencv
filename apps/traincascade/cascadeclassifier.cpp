@@ -370,7 +370,7 @@ void CvCascadeClassifier::writeStages( FileStorage &fs, const Mat& featureMap ) 
         it != stageClassifiers.end();++it, ++i )
     {
         snprintf( cmnt, sizeof(cmnt), "stage %d", i );
-        cvWriteComment( fs.fs, cmnt, 0 );
+        fs.writeComment(cmnt);
         fs << "{";
         (*it)->write( fs, featureMap );
         fs << "}";
