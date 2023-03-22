@@ -261,7 +261,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
         const std::vector<std::vector<Mat>> &imagePoints, const std::vector<std::vector<int>> &overlaps,
         const std::vector<std::vector<bool>> &detection_mask_mat, const std::vector<Mat> &Ks,
         const std::vector<Mat> &distortions, std::vector<Matx33d> &Rs_vec, std::vector<Vec3d> &Ts_vec,
-        int flags_extrinsics) {
+        Mat &flags) {
     const int NUM_FRAMES = (int) objPoints_norm.size();
     for (const auto &pair : pairs) {
         const int c1 = pair.first, c2 = pair.second, overlap = overlaps[c1][c2];
@@ -288,8 +288,14 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
             fisheye::stereoCalibrate(grid_points, image_points1, image_points2,
                             Ks[c1], distortions[c1],
                             Ks[c2], distortions[c2],
-                            Size(), R, T, flags_extrinsics);
+                            Size(), R, T, CALIB_FIX_INTRINSIC);
         } else {
+            int flags_extrinsics = CALIB_FIX_INTRINSIC;
+            if ((flags.at<int>(c1) & CALIB_RATIONAL_MODEL) || (flags.at<int>(c2) & CALIB_RATIONAL_MODEL))
+                flags_extrinsics += CALIB_RATIONAL_MODEL;
+            if ((flags.at<int>(c1) & CALIB_THIN_PRISM_MODEL) || (flags.at<int>(c2) & CALIB_THIN_PRISM_MODEL))
+                flags_extrinsics += CALIB_THIN_PRISM_MODEL;
+
             stereoCalibrate(grid_points, image_points1, image_points2,
                             Ks[c1], distortions[c1],
                             Ks[c2], distortions[c2],
@@ -493,6 +499,18 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     CV_CheckEQ(detection_mask_.type(), CV_8U, "detectionMask must be of type CV_8U");
     CV_CheckEQ(is_fisheye_mat.type(), CV_8U, "isFisheye must be of type CV_8U");
 
+    bool is_fisheye = false;
+    bool is_pinhole = false;
+
+    for  (size_t i = 0; i < is_fisheye_mat.total(); i++) {
+        if (is_fisheye_mat.at<uchar>(i)) {
+            is_fisheye = true;
+        } else {
+            is_pinhole = true;
+        }
+    }
+    CV_CheckEQ(is_fisheye && is_pinhole, false, "Mix of pinhole and fisheye cameras is not supported for now");
+
     // equal number of cameras
     CV_Assert(imageSize.size() == imagePoints.size());
     CV_Assert(detection_mask_.rows == std::max(isFisheye.rows(), isFisheye.cols()));
@@ -518,7 +536,6 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         flagsForIntrinsics_mat = Mat(Size(1, NUM_CAMERAS), CV_32SC1, cv::Scalar(0));
     }
 
-    std::cout << "flagsForIntrinsics_mat.total() " << flagsForIntrinsics_mat.total() << std::endl;
     CV_Assert(flagsForIntrinsics_mat.total() == size_t(NUM_CAMERAS));
     CV_CheckEQ(flagsForIntrinsics_mat.type(), CV_32S, "flagsForIntrinsics should be of type 32SC1");
     CV_CheckEQ(flagsForIntrinsics_mat.channels(), 1, "flagsForIntrinsics should be of type 32SC1");
@@ -541,10 +558,8 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     std::vector<bool> is_fisheye_vec(NUM_CAMERAS);
     std::vector<std::vector<bool>> detection_mask_mat(NUM_CAMERAS, std::vector<bool>(NUM_FRAMES));
     const auto * const detection_mask_ptr = detection_mask_.data, * const is_fisheye_ptr = is_fisheye_mat.data;
-    int num_fisheye_cameras = 0;
     for (int c = 0; c < NUM_CAMERAS; c++) {
         is_fisheye_vec[c] = (bool)is_fisheye_ptr[c];
-        if (is_fisheye_vec[c]) num_fisheye_cameras++;
         int num_visible_frames = 0;
         for (int f = 0; f < NUM_FRAMES; f++) {
             detection_mask_mat[c][f] = (bool)detection_mask_ptr[c*NUM_FRAMES + f];
@@ -558,19 +573,8 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         }
         num_visible_frames_per_camera[c] = num_visible_frames;
     }
-    multiview::checkConnected(detection_mask_mat);
-    int flags_extrinsics = CALIB_FIX_INTRINSIC;
-    if (num_fisheye_cameras != 0 && num_fisheye_cameras != NUM_CAMERAS) {
-        // cameras are mixed (fisheye and pinhole)
-        // use standard pinhole calibration for this case
-        // update flags, use rational model and no tangential coefficients
-        for (int i = 0; i < NUM_CAMERAS; i++) {
-            is_fisheye_vec[i] = false;
-            flagsForIntrinsics_mat.at<int>(i) = CALIB_RATIONAL_MODEL+CALIB_ZERO_TANGENT_DIST+CALIB_FIX_K5+CALIB_FIX_K6;
 
-        }
-        flags_extrinsics += CALIB_RATIONAL_MODEL;
-    }
+    multiview::checkConnected(detection_mask_mat);
 
     std::vector<std::vector<float>> points_ratio_area(NUM_CAMERAS, std::vector<float>(NUM_FRAMES));
     multiview::imagePointsArea(imageSize, detection_mask_mat, imagePoints, points_ratio_area);
@@ -684,7 +688,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         pairs_mat.copyTo(initializationPairs);
     }
     multiview::pairwiseStereoCalibration(pairs, is_fisheye_vec, objPoints_norm, imagePoints,
-         overlaps, detection_mask_mat, Ks, distortions, Rs_vec, Ts_vec, flags_extrinsics);
+         overlaps, detection_mask_mat, Ks, distortions, Rs_vec, Ts_vec, flagsForIntrinsics_mat);
 
     const int NUM_VALID_FRAMES = countNonZero(valid_frames);
     const int nparams = (NUM_VALID_FRAMES + NUM_CAMERAS - 1) * 6; // rvecs + tvecs (6)

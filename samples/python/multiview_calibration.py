@@ -290,6 +290,13 @@ def calibrateFromPoints(
                 Ks.append(K)
                 distortions.append(dist_coeff)
 
+    #HACK: OpenCV API does not well support mix of fisheye and pinhole models.
+    # Pinhole models with rational distortion model is used instead
+    fisheyes = np.count_nonzero(is_fisheye)
+    intrinsic_flag = 0
+    if (fisheyes > 0) and (fisheyes != num_cameras):
+        intrinsic_flag = cv.CALIB_RATIONAL_MODEL+ cv.CALIB_ZERO_TANGENT_DIST + cv.CALIB_FIX_K5+CALIB_FIX_K6
+
     start_time = time.time()
     try:
 # [multiview_calib]
@@ -303,6 +310,7 @@ def calibrateFromPoints(
                 distortions=distortions,
                 is_fisheye=np.array(is_fisheye, dtype=np.uint8),
                 use_intrinsics_guess=USE_INTRINSICS_GUESS
+                flagsForIntrinsics=np.array([intrinsic_flag]*num_cameras, dtype=int)
             )
 # [multiview_calib]
     except Exception as e:
