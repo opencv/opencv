@@ -293,29 +293,29 @@ def calibrateFromPoints(
     #HACK: OpenCV API does not well support mix of fisheye and pinhole models.
     # Pinhole models with rational distortion model is used instead
     fisheyes = np.count_nonzero(is_fisheye)
-    intrinsic_flag = 0
+    intrinsics_flag = 0
     if (fisheyes > 0) and (fisheyes != num_cameras):
-        intrinsic_flag = cv.CALIB_RATIONAL_MODEL+ cv.CALIB_ZERO_TANGENT_DIST + cv.CALIB_FIX_K5+CALIB_FIX_K6
+        intrinsics_flag = cv.CALIB_RATIONAL_MODEL+ cv.CALIB_ZERO_TANGENT_DIST + cv.CALIB_FIX_K5+CALIB_FIX_K6
 
     start_time = time.time()
-    try:
+#    try:
 # [multiview_calib]
-        rmse, rvecs, Ts, Ks, distortions, rvecs0, tvecs0, errors_per_frame, output_pairs = \
+    rmse, rvecs, Ts, Ks, distortions, rvecs0, tvecs0, errors_per_frame, output_pairs = \
             cv.calibrateMultiview(
                 objPoints=pattern_points_all,
                 imagePoints=image_points,
                 imageSize=image_sizes,
-                detection_mask=detection_mask,
+                detectionMask=detection_mask,
                 Ks=Ks,
                 distortions=distortions,
-                is_fisheye=np.array(is_fisheye, dtype=np.uint8),
-                use_intrinsics_guess=USE_INTRINSICS_GUESS
-                flagsForIntrinsics=np.array([intrinsic_flag]*num_cameras, dtype=int)
+                isFisheye=np.array(is_fisheye, dtype=np.uint8),
+                useIntrinsicsGuess=USE_INTRINSICS_GUESS,
+                flagsForIntrinsics=np.full((num_cameras), intrinsics_flag, dtype=int)
             )
 # [multiview_calib]
-    except Exception as e:
-        print("Multi-view calibration failed with the following exception:", e.__class__)
-        sys.exit(0)
+#    except Exception as e:
+#        print("Multi-view calibration failed with the following exception:", e.__class__)
+#        sys.exit(0)
 
     print('calibration time', time.time() - start_time, 'seconds')
     print('rvecs', rvecs)
@@ -496,18 +496,18 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
             img_detection, patternSize=grid_size, flags=cv.CALIB_CB_SYMMETRIC_GRID
         )
         if ret:
-            corners /= scale
+            corners2 = corners / scale
 
     elif pattern_type.lower() == 'acircles':
         ret, corners = cv.findCirclesGrid(
             img_detection, patternSize=grid_size, flags=cv.CALIB_CB_ASYMMETRIC_GRID
         )
         if ret:
-            corners /= scale
+            corners2 = corners / scale
     else:
         raise ValueError("Calibration pattern is not supported!")
 # [detect_pattern]
-
+    if ret:
         # cv.drawChessboardCorners(img, grid_size, corners2, ret)
         # plt.imshow(img)
         # plt.show()
