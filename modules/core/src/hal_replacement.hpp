@@ -531,7 +531,7 @@ inline int hal_ni_dftFree1D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEME
 /**
 @param context double pointer to context storing all necessary data
 @param width,height image dimensions
-@param depth image type (CV_32F or CV64F)
+@param depth image type (CV_32F or CV_64F)
 @param src_channels number of channels in input image
 @param dst_channels number of channels in output image
 @param flags algorithm options (combination of CV_HAL_DFT_INVERSE, ...)
@@ -558,7 +558,7 @@ inline int hal_ni_dftFree2D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEME
 /**
 @param context double pointer to context storing all necessary data
 @param width,height image dimensions
-@param depth image type (CV_32F or CV64F)
+@param depth image type (CV_32F or CV_64F)
 @param flags algorithm options (combination of CV_HAL_DFT_INVERSE, ...)
  */
 inline int hal_ni_dctInit2D(cvhalDFT **context, int width, int height, int depth, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
