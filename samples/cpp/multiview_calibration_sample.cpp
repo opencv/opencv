@@ -11,7 +11,7 @@
 #include <fstream>
 
 // ! [detectPointsAndCalibrate_signature]
-static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scale, const std::string &pattern_type,
+static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_scale, const std::string &pattern_type,
            const std::vector<bool> &is_fisheye, const std::vector<std::string> &filenames)
 // ! [detectPointsAndCalibrate_signature]
 {
@@ -38,7 +38,7 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, double pattern_scal
         for (int i = 0; i < pattern_size.height; i++) {
             for (int j = 0; j < pattern_size.width; j++) {
                 if (i % 2 == 1) {
-                    board[i*pattern_size.width+j] = cv::Point3f((j + .5)*pattern_scale, (i/2 + .5) * pattern_scale, 0);
+                    board[i*pattern_size.width+j] = cv::Point3f((j + .5f)*pattern_scale, (i/2 + .5f) * pattern_scale, 0.f);
                 } else{
                     board[i*pattern_size.width+j] = cv::Point3f(j*pattern_scale, (i/2)*pattern_scale, 0);
                 }
@@ -168,6 +168,6 @@ int main (int argc, char **argv) {
     }
     filenames.emplace_back(temp_str);
     CV_CheckEQ(filenames.size(), is_fisheye.size(), "filenames size must be equal to number of cameras!");
-    detectPointsAndCalibrate (pattern_size, parser.get<double>("pattern_scale"), parser.get<cv::String>("pattern_type"), is_fisheye, filenames);
+    detectPointsAndCalibrate (pattern_size, parser.get<float>("pattern_scale"), parser.get<cv::String>("pattern_type"), is_fisheye, filenames);
     return 0;
 }

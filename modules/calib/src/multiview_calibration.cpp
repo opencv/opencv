@@ -502,7 +502,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     bool is_fisheye = false;
     bool is_pinhole = false;
 
-    for  (size_t i = 0; i < is_fisheye_mat.total(); i++) {
+    for  (int i = 0; i < (int)is_fisheye_mat.total(); i++) {
         if (is_fisheye_mat.at<uchar>(i)) {
             is_fisheye = true;
         } else {
@@ -559,10 +559,10 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     std::vector<std::vector<bool>> detection_mask_mat(NUM_CAMERAS, std::vector<bool>(NUM_FRAMES));
     const auto * const detection_mask_ptr = detection_mask_.data, * const is_fisheye_ptr = is_fisheye_mat.data;
     for (int c = 0; c < NUM_CAMERAS; c++) {
-        is_fisheye_vec[c] = (bool)is_fisheye_ptr[c];
+        is_fisheye_vec[c] = is_fisheye_ptr[c] != 0;
         int num_visible_frames = 0;
         for (int f = 0; f < NUM_FRAMES; f++) {
-            detection_mask_mat[c][f] = (bool)detection_mask_ptr[c*NUM_FRAMES + f];
+            detection_mask_mat[c][f] = detection_mask_ptr[c*NUM_FRAMES + f] != 0;
             if (detection_mask_mat[c][f]) {
                 num_visible_frames++;
                 valid_frames[f] = true; // if frame is visible by at least one camera then count is as a valid one
