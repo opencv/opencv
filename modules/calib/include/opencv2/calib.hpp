@@ -1136,7 +1136,7 @@ for details. Expected type: CV_8U.
 If true intrinsics are not estimated during calibration.
 @param[in] flagsForIntrinsics Flags used for each camera intrinsics calibration.
 Use per-camera call and `useIntrinsicsGuess` flag to get custom intrinsics calibration for each camera.
-See @ref CALIB_USE_INTRINSIC_GUESS and other `CALIB_` constants.
+See @ref CALIB_USE_INTRINSIC_GUESS and other `CALIB_` constants. Expected shape: NUM_CAMERAS x 1. Supported data type: CV_32S.
 @param[out] Rs Rotation vectors relative to camera 0, where Rs[0] = 0. Output size: NUM_CAMERAS x 3 x 1. See @ref Rodrigues.
 @param[out] Ts Estimated translation vectors relative to camera 0, where Ts[0] = 0. Output size: NUM_CAMERAS x 3 x 1.
 @param[out] rvecs0 Estimated rotation vectors for camera 0. Output size: NUM_FRAMES x 3 x 1 (may contain null Mat, if frame is not valid). See @ref Rodrigues.
@@ -1157,7 +1157,7 @@ points in all the available views from all cameras.
 
 CV_EXPORTS_W double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
         const std::vector<Size> &imageSize, InputArray detectionMask,
-        OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, CV_OUT std::vector<Mat> &Ks, CV_OUT std::vector<Mat> &distortions,
+        OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, CV_IN_OUT std::vector<Mat> &Ks, CV_IN_OUT std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray isFisheye,
         OutputArray perFrameErrors, OutputArray initializationPairs,
         bool useIntrinsicsGuess=false, InputArray flagsForIntrinsics=noArray());

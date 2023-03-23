@@ -85,8 +85,6 @@ def plotCamerasPosition(R, t, image_sizes, pairs, pattern, frame_idx, cam_ids):
 
     # Plot lines between cameras
     for (i, j) in pairs:
-        dist = np.linalg.norm(t[i] - t[j])
-        print(f"Cam_{cam_ids[i]} -> Cam_{cam_ids[j]}: {dist:.2f} m")
         xs = [t[i][0,0], t[j][0,0]]
         ys = [t[i][1,0], t[j][1,0]]
         zs = [t[i][2,0], t[j][2,0]]
@@ -257,6 +255,13 @@ def calibrateFromPoints(
     with np.printoptions(threshold=np.inf):  # type: ignore
         print("detection mask Matrix:\n", str(detection_mask).replace('0\n ', '0').replace('1\n ', '1'))
 
+    #HACK: OpenCV API does not well support mix of fisheye and pinhole models.
+    # Pinhole models with rational distortion model is used instead
+    fisheyes = np.count_nonzero(is_fisheye)
+    intrinsics_flag = 0
+    if (fisheyes > 0) and (fisheyes != num_cameras):
+        intrinsics_flag = cv.CALIB_RATIONAL_MODEL + cv.CALIB_ZERO_TANGENT_DIST + cv.CALIB_FIX_K5 + cv.CALIB_FIX_K6
+
     if Ks is not None and distortions is not None:
         USE_INTRINSICS_GUESS = True
     else:
@@ -284,18 +289,12 @@ def calibrateFromPoints(
                         image_points_c,
                         image_sizes[c],
                         None,
-                        None
+                        None,
+                        flags=intrinsics_flag
                     )
                 print(f'Intrinsics calibration for camera {c}, reproj error {repr_err_c:.2f} (px)')
                 Ks.append(K)
                 distortions.append(dist_coeff)
-
-    #HACK: OpenCV API does not well support mix of fisheye and pinhole models.
-    # Pinhole models with rational distortion model is used instead
-    fisheyes = np.count_nonzero(is_fisheye)
-    intrinsics_flag = 0
-    if (fisheyes > 0) and (fisheyes != num_cameras):
-        intrinsics_flag = cv.CALIB_RATIONAL_MODEL+ cv.CALIB_ZERO_TANGENT_DIST + cv.CALIB_FIX_K5+CALIB_FIX_K6
 
     start_time = time.time()
 #    try:
@@ -630,6 +629,7 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
         Ks, distortions = [], []
         for cam_id in cam_ids:
             input_file = os.path.join(intrinsics_dir, f"cameraParameters_{cam_id}.xml")
+            print("Reading intrinsics from", input_file)
             storage = cv.FileStorage(input_file, cv.FileStorage_READ)
             camera_matrix = storage.getNode('cameraMatrix').mat()
             dist_coeffs = storage.getNode('dist_coeffs').mat()
