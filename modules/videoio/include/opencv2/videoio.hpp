@@ -87,7 +87,10 @@ To be used in the VideoCapture::VideoCapture() constructor or VideoCapture::open
 @note
 -   Backends are available only if they have been built with your OpenCV binaries.
 See @ref videoio_overview for more information.
--   For CAP_MSMF setting environment flag "OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS" to 0 may improve speed initialization
+-   Microsoft Media Foundation backend tries to use hardware accelerated transformations
+if possible. Environment flag "OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS" set to 0
+disables it and may improve initialization time. More details:
+https://learn.microsoft.com/en-us/windows/win32/medfound/mf-readwrite-enable-hardware-transforms
 */
 enum VideoCaptureAPIs {
        CAP_ANY          = 0,            //!< Auto detect == 0
@@ -109,7 +112,7 @@ enum VideoCaptureAPIs {
        CAP_XIAPI        = 1100,         //!< XIMEA Camera API
        CAP_AVFOUNDATION = 1200,         //!< AVFoundation framework for iOS (OS X Lion will have the same API)
        CAP_GIGANETIX    = 1300,         //!< Smartek Giganetix GigEVisionSDK
-       CAP_MSMF         = 1400,         //!< Microsoft Media Foundation (via videoInput) read note above
+       CAP_MSMF         = 1400,         //!< Microsoft Media Foundation (via videoInput). See platform specific notes above.
        CAP_WINRT        = 1410,         //!< Microsoft Windows Runtime using Media Foundation
        CAP_INTELPERC    = 1500,         //!< RealSense (former Intel Perceptual Computing SDK)
        CAP_REALSENSE    = 1500,         //!< Synonym for CAP_INTELPERC
