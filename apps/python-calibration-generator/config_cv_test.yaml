@@ -1,0 +1,57 @@
+NAME : "cv_test"
+NUM_SAMPLES : 1
+SEED : 0
+MAX_FRAMES : 50
+MAX_RANDOM_ITERS : 100000
+NUM_CAMERAS : 4
+BOARD :
+  WIDTH : 9
+  HEIGHT : 7
+  SQUARE_LEN : 0.08
+  T_LIMIT : [[-0.2, 0.2], [-0.2, 0.2], [-0.1, 0.1]]
+  EULER_LIMIT : [[-45, 45], [-180, 180], [-45, 45]]
+  T_ORIGIN : [-0.3, 0, 1.5]
+
+CAMERA1 :
+  FX : [1200, 1200]
+  FY_DEVIATION : null
+  IMG_WIDTH : 1500
+  IMG_HEIGHT : 1080
+  EULER_LIMIT : null
+  T_LIMIT : null
+  NOISE_SCALE : 0.0003
+  FISHEYE : False
+  DIST : [[0.52, 0.52], [0, 0], [0, 0], [0, 0], [0, 0]]
+
+CAMERA2 :
+  FX : [1000, 1000]
+  FY_DEVIATION : null
+  IMG_WIDTH : 1300
+  IMG_HEIGHT : 1000
+  EULER_LIMIT : [[0, 0], [90, 90], [0, 0]]
+  T_LIMIT : [[-2.0, -2.0], [0.0, 0.0], [1.5, 1.5]]
+  NOISE_SCALE : 0.00035
+  FISHEYE : False
+  DIST : [[0.32, 0.32], [0, 0], [0, 0], [0, 0], [0, 0]]
+
+CAMERA3 :
+  FX : [1000, 1000]
+  FY_DEVIATION : null
+  IMG_WIDTH : 1300
+  IMG_HEIGHT : 1000
+  EULER_LIMIT : [[0, 0], [-90, -90], [0, 0]]
+  T_LIMIT : [[2.0, 2.0], [0.0, 0.0], [1.5, 1.5]]
+  NOISE_SCALE : 0.0004
+  FISHEYE : False
+  DIST : [[0.62, 0.62], [0, 0], [0, 0], [0, 0], [0, 0]]
+
+CAMERA4 :
+  FX : [1000, 1000]
+  FY_DEVIATION : null
+  IMG_WIDTH : 1300
+  IMG_HEIGHT : 1000
+  EULER_LIMIT : [[0, 0], [180, 180], [0, 0]]
+  T_LIMIT : [[0.0, 0.0], [0.0, 0.0], [3.0, 3.0]]
+  NOISE_SCALE : 0.00032
+  FISHEYE : False
+  DIST : [[0.42, 0.42], [0, 0], [0, 0], [0, 0], [0, 0]]

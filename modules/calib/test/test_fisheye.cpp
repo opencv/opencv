@@ -1038,6 +1038,83 @@ TEST_F(fisheyeTest, estimateNewCameraMatrixForUndistortRectify)
     EXPECT_MAT_NEAR(K_new, K_new_truth, 1e-6);
 }
 
+
+TEST_F(fisheyeTest, multiview_calibration)
+{
+    const int n_images = 34;
+
+    const std::string folder = combine(datasets_repository_path, "calib-3_stereo_from_JY");
+
+    std::vector<std::vector<cv::Point2f> > leftPoints(n_images);
+    std::vector<std::vector<cv::Point2f> > rightPoints(n_images);
+    std::vector<std::vector<cv::Point3f> > objectPoints(n_images);
+
+    cv::FileStorage fs_left(combine(folder, "left.xml"), cv::FileStorage::READ);
+    CV_Assert(fs_left.isOpened());
+    for(int i = 0; i < n_images; ++i)
+        fs_left[cv::format("image_%d", i )] >> leftPoints[i];
+    fs_left.release();
+
+    cv::FileStorage fs_right(combine(folder, "right.xml"), cv::FileStorage::READ);
+    CV_Assert(fs_right.isOpened());
+    for(int i = 0; i < n_images; ++i)
+        fs_right[cv::format("image_%d", i )] >> rightPoints[i];
+    fs_right.release();
+
+    cv::FileStorage fs_object(combine(folder, "object.xml"), cv::FileStorage::READ);
+    CV_Assert(fs_object.isOpened());
+    for(int i = 0; i < n_images; ++i)
+        fs_object[cv::format("image_%d", i )] >> objectPoints[i];
+    fs_object.release();
+
+    std::vector<std::vector<cv::Mat>> image_points_all(2, std::vector<cv::Mat>(leftPoints.size()));
+    for (int i = 0; i < (int)leftPoints.size(); i++) {
+        cv::Mat left_pts(leftPoints[i], false) , right_pts(rightPoints[i], false);
+        left_pts.copyTo(image_points_all[0][i]);
+        right_pts.copyTo(image_points_all[1][i]);
+    }
+    std::vector<cv::Size> image_sizes(2, imageSize);
+    cv::Mat visibility_mat = cv::Mat_<bool>::ones(2, (int)leftPoints.size()), errors_mat, output_pairs;
+    std::vector<cv::Mat> Rs, Ts, Ks, distortions, rvecs0, tvecs0;
+    std::vector<bool> is_fisheye(2, true);
+    int flag = 0;
+    flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
+    flag |= cv::fisheye::CALIB_CHECK_COND;
+    flag |= cv::fisheye::CALIB_FIX_SKEW;
+
+    std::vector<int> all_flags(2, flag);
+
+    calibrateMultiview (objectPoints, image_points_all, image_sizes, visibility_mat,
+       Rs, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs, false, all_flags);
+    cv::Matx33d R_correct(   0.9975587205950972,   0.06953016383322372, 0.006492709911733523,
+                           -0.06956823121068059,    0.9975601387249519, 0.005833595226966235,
+                          -0.006071257768382089, -0.006271040135405457, 0.9999619062167968);
+    cv::Vec3d T_correct(-0.099402724724121, 0.00270812139265413, 0.00129330292472699);
+    cv::Matx33d K1_correct (561.195925927249,                0, 621.282400272412,
+                                   0, 562.849402029712, 380.555455380889,
+                                   0,                0,                1);
+
+    cv::Matx33d K2_correct (560.395452535348,                0, 678.971652040359,
+                                   0,  561.90171021422, 380.401340535339,
+                                   0,                0,                1);
+
+    cv::Vec4d D1_correct (-7.44253716539556e-05, -0.00702662033932424, 0.00737569823650885, -0.00342230256441771);
+    cv::Vec4d D2_correct (-0.0130785435677431, 0.0284434505383497, -0.0360333869900506, 0.0144724062347222);
+
+    cv::Mat theR;
+    cv::Rodrigues(Rs[1], theR);
+
+    EXPECT_MAT_NEAR(theR, R_correct, 1e-2);
+    EXPECT_MAT_NEAR(Ts[1], T_correct, 5e-3);
+
+    EXPECT_MAT_NEAR(Ks[0], K1_correct, 4);
+    EXPECT_MAT_NEAR(Ks[1], K2_correct, 5);
+
+    EXPECT_MAT_NEAR(distortions[0], D1_correct, 1e-2);
+    EXPECT_MAT_NEAR(distortions[1], D2_correct, 5e-2);
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///  fisheyeTest::
 

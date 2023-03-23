@@ -2034,6 +2034,152 @@ TEST(Calib3d_ProjectPoints_CPP, outputShape)
 TEST(Calib3d_StereoCalibrate_CPP, regression) { CV_StereoCalibrationTest_CPP test; test.safe_run(); }
 
 
+//-------------------------------- CV_MultiviewCalibrationTest_CPP ------------------------------
+
+class CV_MultiviewCalibrationTest_CPP : public CV_StereoCalibrationTest
+{
+public:
+    CV_MultiviewCalibrationTest_CPP() {}
+protected:
+    virtual double calibrateStereoCamera( const vector<vector<Point3f> >& objectPoints,
+        const vector<vector<Point2f> >& imagePoints1,
+        const vector<vector<Point2f> >& imagePoints2,
+        Mat& cameraMatrix1, Mat& distCoeffs1,
+        Mat& cameraMatrix2, Mat& distCoeffs2,
+        Size imageSize, Mat& R, Mat& T,
+        Mat& E, Mat& F,
+        std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
+        vector<double>& perViewErrors1, vector<double>& perViewErrors2,
+        TermCriteria criteria, int flags );
+    virtual void rectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
+        const Mat& cameraMatrix2, const Mat& distCoeffs2,
+        Size imageSize, const Mat& R, const Mat& T,
+        Mat& R1, Mat& R2, Mat& P1, Mat& P2, Mat& Q,
+        double alpha, Size newImageSize,
+        Rect* validPixROI1, Rect* validPixROI2, int flags );
+    virtual bool rectifyUncalibrated( const Mat& points1,
+        const Mat& points2, const Mat& F, Size imgSize,
+        Mat& H1, Mat& H2, double threshold=5 );
+    virtual void triangulate( const Mat& P1, const Mat& P2,
+        const Mat &points1, const Mat &points2,
+        Mat &points4D );
+    virtual void correct( const Mat& F,
+        const Mat &points1, const Mat &points2,
+        Mat &newPoints1, Mat &newPoints2 );
+};
+
+double CV_MultiviewCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<Point3f> >& objectPoints,
+                                             const vector<vector<Point2f> >& imagePoints1,
+                                             const vector<vector<Point2f> >& imagePoints2,
+                                             Mat& cameraMatrix1, Mat& distCoeffs1,
+                                             Mat& cameraMatrix2, Mat& distCoeffs2,
+                                             Size imageSize, Mat& R, Mat& T,
+                                             Mat& E, Mat& F,
+                                             std::vector<RotMat>& rotationMatrices, std::vector<Vec3d>& translationVectors,
+                                             vector<double>& perViewErrors1, vector<double>& perViewErrors2,
+                                             TermCriteria /*criteria*/, int flags )
+{
+    std::vector<cv::Mat> rvecs, tvecs;
+    std::vector<cv::Mat> Ks, distortions, Rs, Ts;
+    cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
+    int numImgs = (int)objectPoints.size();
+    std::vector<std::vector<cv::Mat>> image_points_all(2, std::vector<Mat>(numImgs));
+    for (int i = 0; i < numImgs; i++)
+    {
+        Mat img_pts1 = Mat(imagePoints1[i], false);
+        Mat img_pts2 = Mat(imagePoints2[i], false);
+        img_pts1.copyTo(image_points_all[0][i]);
+        img_pts2.copyTo(image_points_all[1][i]);
+    }
+    std::vector<Size> image_sizes (2, imageSize);
+    Mat visibility_mat = Mat_<bool>::ones(2, numImgs);
+    std::vector<bool> is_fisheye(2, false);
+    std::vector<int> all_flags(2, flags);
+    double rms = calibrateMultiview(objectPoints, image_points_all, image_sizes, visibility_mat,
+                                    Rs, Ts, Ks, distortions, rvecs, tvecs, is_fisheye, errors_mat, noArray(), false, all_flags);
+
+    if (perViewErrors1.size() != (size_t)numImgs)
+    {
+        perViewErrors1.resize(numImgs);
+    }
+    if (perViewErrors2.size() != (size_t)numImgs)
+    {
+        perViewErrors2.resize(numImgs);
+    }
+
+    for (int i = 0; i < numImgs; i++)
+    {
+        perViewErrors1[i] = errors_mat.at<double>(0, i);
+        perViewErrors2[i] = errors_mat.at<double>(1, i);
+    }
+
+    if (rotationMatrices.size() != (size_t)numImgs)
+    {
+        rotationMatrices.resize(numImgs);
+    }
+    if (translationVectors.size() != (size_t)numImgs)
+    {
+        translationVectors.resize(numImgs);
+    }
+
+    for( int i = 0; i < numImgs; i++ )
+    {
+        Mat r9;
+        cv::Rodrigues( rvecs[i], r9 );
+        r9.convertTo(rotationMatrices[i], CV_64F);
+        tvecs[i].convertTo(translationVectors[i], CV_64F);
+    }
+
+    cv::Rodrigues(Rs[1], R);
+    Ts[1].copyTo(T);
+    distortions[0].copyTo(distCoeffs1);
+    distortions[1].copyTo(distCoeffs2);
+    Ks[0].copyTo(cameraMatrix1);
+    Ks[1].copyTo(cameraMatrix2);
+    Matx33d skewT(               0, -T.at<double>(2),   T.at<double>(1),
+                   T.at<double>(2),                0,  -T.at<double>(0),
+                  -T.at<double>(1),  T.at<double>(0),                 0);
+    E = Mat(skewT * R);
+    F = Ks[1].inv().t() * E * Ks[0].inv();
+    return rms;
+}
+
+void CV_MultiviewCalibrationTest_CPP::rectify( const Mat& cameraMatrix1, const Mat& distCoeffs1,
+                                         const Mat& cameraMatrix2, const Mat& distCoeffs2,
+                                         Size imageSize, const Mat& R, const Mat& T,
+                                         Mat& R1, Mat& R2, Mat& P1, Mat& P2, Mat& Q,
+                                         double alpha, Size newImageSize,
+                                         Rect* validPixROI1, Rect* validPixROI2, int flags )
+{
+    stereoRectify( cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2,
+                imageSize, R, T, R1, R2, P1, P2, Q, flags, alpha, newImageSize,validPixROI1, validPixROI2 );
+}
+
+bool CV_MultiviewCalibrationTest_CPP::rectifyUncalibrated( const Mat& points1,
+                       const Mat& points2, const Mat& F, Size imgSize, Mat& H1, Mat& H2, double threshold )
+{
+    return stereoRectifyUncalibrated( points1, points2, F, imgSize, H1, H2, threshold );
+}
+
+void CV_MultiviewCalibrationTest_CPP::triangulate( const Mat& P1, const Mat& P2,
+        const Mat &points1, const Mat &points2,
+        Mat &points4D )
+{
+    triangulatePoints(P1, P2, points1, points2, points4D);
+}
+
+void CV_MultiviewCalibrationTest_CPP::correct( const Mat& F,
+        const Mat &points1, const Mat &points2,
+        Mat &newPoints1, Mat &newPoints2 )
+{
+    correctMatches(F, points1, points2, newPoints1, newPoints2);
+}
+
+TEST(Calib3d_MultiviewCalibrate_CPP, regression) { CV_MultiviewCalibrationTest_CPP test; test.safe_run(); }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 TEST(Calib3d_StereoCalibrate_CPP, extended)
 {
     cvtest::TS* ts = cvtest::TS::ptr();

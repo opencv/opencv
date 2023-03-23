@@ -1122,6 +1122,47 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      OutputArray perViewErrors, int flags = CALIB_FIX_INTRINSIC,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
 
+/** @brief Estimates intrinsics and extrinsics (camera pose) for multi-camera system a.k.a multiview calibraton.
+
+@param[in] objPoints Calibration pattern object points. Expected shape: NUM_FRAMES x NUM_POINTS x 3. Supported data type: CV_32F.
+@param[in] imagePoints Detected pattern points on camera images. Expected shape: NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 2.
+@param[in] imageSize   Images resolution.
+@param[in] detectionMask Pattern detection mask. Each value defines if i-camera observes calibration pattern in j moment of time.
+Expected size: NUM_CAMERAS x NUM_FRAMES. Expected type: CV_8U.
+@param[in] isFisheye indicates whether i-th camera is fisheye. In case if the input data contains
+mix of pinhole and fisheye cameras Rational distortion model is used. See @ref CALIB_RATIONAL_MODEL
+for details. Expected type: CV_8U.
+@param[in] useIntrinsicsGuess Use user specified intrinsic parameters (internal camera matrix and distortion).
+If true intrinsics are not estimated during calibration.
+@param[in] flagsForIntrinsics Flags used for each camera intrinsics calibration.
+Use per-camera call and `useIntrinsicsGuess` flag to get custom intrinsics calibration for each camera.
+See @ref CALIB_USE_INTRINSIC_GUESS and other `CALIB_` constants. Expected shape: NUM_CAMERAS x 1. Supported data type: CV_32S.
+@param[out] Rs Rotation vectors relative to camera 0, where Rs[0] = 0. Output size: NUM_CAMERAS x 3 x 1. See @ref Rodrigues.
+@param[out] Ts Estimated translation vectors relative to camera 0, where Ts[0] = 0. Output size: NUM_CAMERAS x 3 x 1.
+@param[out] rvecs0 Estimated rotation vectors for camera 0. Output size: NUM_FRAMES x 3 x 1 (may contain null Mat, if frame is not valid). See @ref Rodrigues.
+@param[out] tvecs0 Translation vectors for camera 0. Output size: NUM_FRAMES x 3 x 1. (may contain null Mat, if frame is not valid).
+@param[out] Ks Estimated floating-point camera intrinsic matrix. Output size: NUM_CAMERAS x 3 x 3.
+@param[out] distortions Distortion coefficients. Output size: NUM_CAMERAS x NUM_PARAMS.
+@param[out] perFrameErrors RMSE value for each visible frame, (-1 for non-visible). Output size: NUM_CAMERAS x NUM_FRAMES.
+@param[out] initializationPairs Pairs with camera indices that were used for initial pairwise stereo calibration.
+Output size: (NUM_CAMERAS-1) x 2.
+
+Similarly to #calibrateCamera, the function minimizes the total re-projection error for all the
+points in all the available views from all cameras.
+
+@return Overall RMS re-projection error over detectionMask.
+
+@sa findChessboardCorners, findCirclesGrid, calibrateCamera, fisheye::calibrate
+*/
+
+CV_EXPORTS_W double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
+        const std::vector<Size> &imageSize, InputArray detectionMask,
+        OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, CV_IN_OUT std::vector<Mat> &Ks, CV_IN_OUT std::vector<Mat> &distortions,
+        OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray isFisheye,
+        OutputArray perFrameErrors, OutputArray initializationPairs,
+        bool useIntrinsicsGuess=false, InputArray flagsForIntrinsics=noArray());
+
+
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$
 
 @param[in] R_gripper2base Rotation part extracted from the homogeneous matrix that transforms a point

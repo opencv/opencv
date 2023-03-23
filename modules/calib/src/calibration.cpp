@@ -561,8 +561,6 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     // geodesic is not supported for normal callbacks
     solver.optimize();
 
-    //std::cout << "single camera calib. param after LM: " << param0.t() << "\n";
-
     // If solver failed or last LM iteration was not successful,
     // then the last calculated perViewErr can be wrong & should be recalculated
     Mat JtErr, JtJ, JtJinv, JtJN;
