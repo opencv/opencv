@@ -2498,7 +2498,8 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE;
+               backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
