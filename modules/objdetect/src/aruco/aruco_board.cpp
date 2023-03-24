@@ -157,7 +157,6 @@ Board::Board():
 
 Board::Board(InputArrayOfArrays objPoints, const Dictionary &dictionary, InputArray ids):
     Board(new Board::Impl(dictionary)) {
-    CV_Assert(ids.size() == objPoints.size());
     CV_Assert(objPoints.total() == ids.total());
     CV_Assert(objPoints.type() == CV_32FC3 || objPoints.type() == CV_32FC1);
 
