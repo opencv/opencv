@@ -906,7 +906,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     } else if( mp.x >= 0 && mp.y >= 0 && mp.x < imageSize.width && mp.y < imageSize.height ) {
       mouseCallback(type, mp.x, mp.y, flags, mouseParam);
     }
-  
+
 }
 
 - (void)cvMouseEvent:(NSEvent *)event {
@@ -933,7 +933,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 }
 
 -(void)scrollWheel:(NSEvent *)theEvent {
-  [self cvMouseEvent:theEvent];
+    [self cvMouseEvent:theEvent];
 }
 - (void)keyDown:(NSEvent *)theEvent {
     //cout << "keyDown" << endl;
