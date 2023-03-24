@@ -11,6 +11,17 @@ from tests_common import NewOpenCVTests
 
 class aruco_objdetect_test(NewOpenCVTests):
 
+    def test_board(self):
+        p1 = np.array([[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0]], dtype=np.float32)
+        p2 = np.array([[1, 0, 0], [1, 1, 0], [2, 1, 0], [2, 0, 0]], dtype=np.float32)
+        objPoints = np.array([p1, p2])
+        dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_50)
+        ids = np.array([0, 1])
+
+        board = cv.aruco.Board(objPoints, dictionary, ids)
+        np.testing.assert_array_equal(board.getIds().squeeze(), ids)
+        np.testing.assert_array_equal(np.ravel(np.array(board.getObjPoints())), np.ravel(np.concatenate([p1, p2])))
+
     def test_idsAccessibility(self):
 
         ids = np.arange(17)
