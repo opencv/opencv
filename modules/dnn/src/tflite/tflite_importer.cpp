@@ -522,7 +522,7 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
         parseActivation(op, opcode, layerParams, /*isFused*/ false);
     }
 
-    if (layerParams.type == "Eltwise") {
+    if (layerParams.type == "Eltwise" && isInt8(op)) {
         const Tensor* out = modelTensors->Get(op.outputs()->Get(0));
         float outScale = out->quantization()->scale()->Get(0);
         int outZero = out->quantization()->zero_point()->Get(0);
@@ -621,7 +621,7 @@ void TFLiteImporter::parseReshape(const Operator& op, const std::string& opcode,
     if (op.inputs()->size() > 1) {
         shape = allTensors[op.inputs()->Get(1)];
     } else {
-        auto options = reinterpret_cast<const ReshapeOptions*>(op.builtin_options());
+        auto options = op.builtin_options_as_ReshapeOptions();
         CV_Assert(options);
         shape.assign(options->new_shape()->begin(), options->new_shape()->end());
     }
@@ -756,7 +756,27 @@ void TFLiteImporter::parseDequantize(const Operator& op, const std::string& opco
 }
 
 void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::string& opcode, LayerParams& layerParams, LayerParams& activParams) {
-    layerParams.type = "Identity";
+    layerParams.type = "DetectionOutput";
+    layerParams.set("num_classes", 90);
+    layerParams.set("share_location", true);
+    layerParams.set("background_label_id", 91);
+    layerParams.set("nms_threshold", 0.5);
+    layerParams.set("confidence_threshold", 0.0);
+    layerParams.set("top_k", 100);
+    layerParams.set("keep_top_k", 100);
+    layerParams.set("code_type", "CENTER_SIZE");
+    layerParams.set("variance_encoded_in_target", true);
+    // layerParams.set("loc_pred_transposed", true);
+
+    // Replace third input from tensor to Const layer with the priors
+    Mat priors = allTensors[op.inputs()->Get(2)];
+    LayerParams priorsLP;
+    priorsLP.name = layerParams.name + "/priors";
+    priorsLP.type = "Const";
+    priorsLP.blobs.resize(1, priors.reshape(1, {1, 1, (int)priors.total()}));
+
+    int priorsId = dstNet.addLayer(priorsLP.name, priorsLP.type, priorsLP);
+    layerIds[op.inputs()->Get(2)] = std::make_pair(priorsId, 0);
 }
 
 void TFLiteImporter::parseActivation(const Operator& op, ActivationFunctionType type, LayerParams& activParams) {
