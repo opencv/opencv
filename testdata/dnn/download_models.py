@@ -1038,8 +1038,13 @@ models = [
     Model(
         name='YuNet',
         url='https://github.com/ShiqiYu/libfacedetection.train/raw/02246e79b1e976c83d1e135a85e0628120c93769/onnx/yunet_s_640_640.onnx',
-        sha='acbe4b5976ade60c4b866a30d0720d71589c8bbc', 
+        sha='acbe4b5976ade60c4b866a30d0720d71589c8bbc',
         filename='onnx/models/yunet-202303.onnx'),
+    Model(
+        name='EfficientDet (TFLite)',
+        url='https://storage.googleapis.com/mediapipe-assets/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite?generation=1661875692679200',
+        sha='200217d746d58e68028a64ad0472631060e6affb',
+        filename='tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite'),
 ]
 
 # Note: models will be downloaded to current working directory
