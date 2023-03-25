@@ -66,8 +66,10 @@ private:
     void parseDetectionPostProcess(const Operator& op, const std::string& opcode, LayerParams& layerParams, LayerParams& activParams);
 
     int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId, int dtype);
-    void parseActivation(const Operator& op, ActivationFunctionType type, LayerParams& activParams);
+    inline void parseActivation(const Operator& op, ActivationFunctionType type, LayerParams& activParams);
+    void parseActivation(const Operator& op, const std::string& opcode, LayerParams& activParams, bool isFused = true);
     inline bool isInt8(const Operator& op);
+    inline void getQuantParams(const Operator& op, float& inpScale, int& inpZero, float& outScale, int& outZero);
 };
 
 Mat TFLiteImporter::parseTensor(const Tensor& tensor)
@@ -261,6 +263,17 @@ void TFLiteImporter::populateNet()
                 dtype = CV_8S;
                 if (layerParams.type != "Quantize")
                     layerParams.type += "Int8";
+
+                if (!layerParams.has("zeropoints")) {
+                    float inpScale, outScale;
+                    int inpZero, outZero;
+                    getQuantParams(*op, inpScale, inpZero, outScale, outZero);
+
+                    layerParams.set("input_scale", inpScale);
+                    layerParams.set("input_zeropoint", inpZero);
+                    layerParams.set("scales", outScale);
+                    layerParams.set("zeropoints", outZero);
+                }
             }
             int layerId = dstNet.addLayer(layerParams.name, layerParams.type, dtype, layerParams);
 
@@ -386,17 +399,9 @@ void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opc
     transposeND(filter, {0, 3, 1, 2}, layerParams.blobs[0]);
 
     if (isInt8) {
-        const Tensor* inp = modelTensors->Get(op.inputs()->Get(0));
-        const Tensor* out = modelTensors->Get(op.outputs()->Get(0));
-        float inpScale = inp->quantization()->scale()->Get(0);
-        int inpZero = inp->quantization()->zero_point()->Get(0);
-        float outScale = out->quantization()->scale()->Get(0);
-        int outZero = out->quantization()->zero_point()->Get(0);
-
-        layerParams.set("input_scale", inpScale);
-        layerParams.set("input_zeropoint", inpZero);
-        layerParams.set("scales", outScale);
-        layerParams.set("zeropoints", outZero);
+        float inpScale, outScale;
+        int inpZero, outZero;
+        getQuantParams(op, inpScale, inpZero, outScale, outZero);
 
         layerParams.blobs[2] = Mat(oc, 1, CV_32F);
         auto filterScales = modelTensors->Get(filterIdx)->quantization()->scale();
@@ -457,17 +462,9 @@ void TFLiteImporter::parseDWConvolution(const Operator& op, const std::string& o
     transposeND(filter, {3, 0, 1, 2}, layerParams.blobs[0]);
 
     if (isInt8) {
-        const Tensor* inp = modelTensors->Get(op.inputs()->Get(0));
-        const Tensor* out = modelTensors->Get(op.outputs()->Get(0));
-        float inpScale = inp->quantization()->scale()->Get(0);
-        int inpZero = inp->quantization()->zero_point()->Get(0);
-        float outScale = out->quantization()->scale()->Get(0);
-        int outZero = out->quantization()->zero_point()->Get(0);
-
-        layerParams.set("input_scale", inpScale);
-        layerParams.set("input_zeropoint", inpZero);
-        layerParams.set("scales", outScale);
-        layerParams.set("zeropoints", outZero);
+        float inpScale, outScale;
+        int inpZero, outZero;
+        getQuantParams(op, inpScale, inpZero, outScale, outZero);
 
         layerParams.blobs[2] = Mat(oc, 1, CV_32F);
         auto filterScales = modelTensors->Get(filterIdx)->quantization()->scale();
@@ -510,54 +507,26 @@ void TFLiteImporter::parsePadding(const Operator& op, const std::string& opcode,
 }
 
 void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode, LayerParams& layerParams, LayerParams& activParams) {
-    if (opcode == "PRELU") {
-        layerParams.type = "PReLU";
-    } else if (opcode == "RELU") {
-        layerParams.type = "ReLU";
-    } else if (opcode == "ADD") {
+    if (opcode == "ADD") {
         auto options = reinterpret_cast<const AddOptions*>(op.builtin_options());
+        parseActivation(op, options->fused_activation_function(), activParams);
         layerParams.type = "Eltwise";
         layerParams.set("operation", "sum");
-
-        parseActivation(op, options->fused_activation_function(), activParams);
-    } else if (opcode == "MUL") {
+    }
+    else if (opcode == "MUL") {
         auto options = reinterpret_cast<const MulOptions*>(op.builtin_options());
         parseActivation(op, options->fused_activation_function(), activParams);
         layerParams.type = "Eltwise";
         layerParams.set("operation", "prod");
-    } else if (opcode == "HARD_SWISH") {
-        layerParams.type = "HardSwish";
-    } else if (opcode == "LOGISTIC") {
-        layerParams.type = "Sigmoid";
     } else {
-        CV_Error(Error::StsNotImplemented, "Unknown eltwise operator opcode: " + opcode);
+        parseActivation(op, opcode, layerParams, /*isFused*/ false);
     }
 
-    const Tensor* out = modelTensors->Get(op.outputs()->Get(0));
-    float outScale = out->quantization()->scale()->Get(0);
-    int outZero = out->quantization()->zero_point()->Get(0);
+    if (layerParams.type == "Eltwise") {
+        const Tensor* out = modelTensors->Get(op.outputs()->Get(0));
+        float outScale = out->quantization()->scale()->Get(0);
+        int outZero = out->quantization()->zero_point()->Get(0);
 
-    if (layerParams.type == "Sigmoid") {
-        const Tensor* inp = modelTensors->Get(op.inputs()->Get(0));
-        float inpScale = inp->quantization()->scale()->Get(0);
-        int inpZero = inp->quantization()->zero_point()->Get(0);
-
-        layerParams.set("input_scale", inpScale);
-        layerParams.set("input_zeropoint", inpZero);
-        layerParams.set("scales", outScale);
-        layerParams.set("zeropoints", outZero);
-
-        Mat lookUpTable(1, 256, CV_8S);
-        int8_t* table = lookUpTable.ptr<int8_t>();
-        for (int i = -128; i < 128; i++) {
-            float x = inpScale * (i - inpZero);
-            float y = 1.0f / (1.0f + std::exp(-x));
-            int quantized = outZero + cvRound(y / outScale);
-            table[i + 128] = saturate_cast<int8_t>(quantized);
-        }
-        layerParams.blobs.resize(1, lookUpTable);
-
-    } else if (layerParams.type == "Eltwise") {
         const size_t numInps = op.inputs()->size();
         std::vector<float> inputScales(numInps);
         std::vector<int> inputZeros(numInps);
@@ -772,21 +741,18 @@ void TFLiteImporter::parseQuantize(const Operator& op, const std::string& opcode
     // float outScale = out->quantization()->scale()->Get(0);
     // int outZero = out->quantization()->zero_point()->Get(0);
     // std::cout << outScale << " " << outZero << std::endl;
-    // layerParams.set("scales", outScale);
-    // layerParams.set("zeropoints", outZero);
+    layerParams.set("scales", 1);
+    layerParams.set("zeropoints", 0);
 }
 
 void TFLiteImporter::parseDequantize(const Operator& op, const std::string& opcode, LayerParams& layerParams, LayerParams& activParams) {
     layerParams.type = "Dequantize";
 
-    const Tensor* inp = modelTensors->Get(op.inputs()->Get(0));
-    CV_Assert(inp->quantization());
-    CV_Assert(inp->quantization()->scale());
-    CV_Assert(inp->quantization()->zero_point());
-    float scale = inp->quantization()->scale()->Get(0);
-    int zero = inp->quantization()->zero_point()->Get(0);
-    layerParams.set("scales", scale);
-    layerParams.set("zeropoints", zero);
+    float inpScale, outScale;
+    int inpZero, outZero;
+    getQuantParams(op, inpScale, inpZero, outScale, outZero);
+    layerParams.set("scales", inpScale);
+    layerParams.set("zeropoints", inpZero);
 }
 
 void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::string& opcode, LayerParams& layerParams, LayerParams& activParams) {
@@ -794,31 +760,54 @@ void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::st
 }
 
 void TFLiteImporter::parseActivation(const Operator& op, ActivationFunctionType type, LayerParams& activParams) {
-    if (type == ActivationFunctionType_NONE)
-        return;
-    else if (type == ActivationFunctionType_RELU6)
-        activParams.type = "ReLU6";
-    else {
-        CV_Error(Error::StsNotImplemented, format("Unsupported activation %s", EnumNameActivationFunctionType(type)));
-    }
-    if (isInt8(op)) {
-        const Tensor* out = modelTensors->Get(op.outputs()->Get(0));
-        float outScale = out->quantization()->scale()->Get(0);
-        int outZero = out->quantization()->zero_point()->Get(0);
+    parseActivation(op, EnumNameActivationFunctionType(type), activParams);
+}
 
-        activParams.type += "Int8";
-        activParams.set("input_scale", outScale);
-        activParams.set("input_zeropoint", outZero);
-        activParams.set("scales", outScale);
-        activParams.set("zeropoints", outZero);
+void TFLiteImporter::parseActivation(const Operator& op, const std::string& opcode, LayerParams& activParams, bool isFused) {
+    if (opcode == "NONE")
+        return;
+    else if (opcode == "RELU6")
+        activParams.type = "ReLU6";
+    else if (opcode == "PRELU")
+        activParams.type = "PReLU";
+    else if (opcode == "RELU")
+        activParams.type = "ReLU";
+    else if (opcode == "HARD_SWISH")
+        activParams.type = "HardSwish";
+    else if (opcode == "LOGISTIC")
+        activParams.type = "Sigmoid";
+    else
+        CV_Error(Error::StsNotImplemented, "Unsupported activation " + opcode);
+
+    if (isInt8(op)) {
+        float inpScale, outScale;
+        int inpZero, outZero;
+        getQuantParams(op, inpScale, inpZero, outScale, outZero);
+
+        if (isFused) {
+            activParams.type += "Int8";
+            activParams.set("input_scale", outScale);
+            activParams.set("input_zeropoint", outZero);
+            activParams.set("scales", outScale);
+            activParams.set("zeropoints", outZero);
+        }
 
         Mat lookUpTable(1, 256, CV_8S);
         int8_t* table = lookUpTable.ptr<int8_t>();
         for (int i = -128; i < 128; i++) {
-            float y, x = outScale * (i - outZero);
-            if (type == ActivationFunctionType_RELU6) {
+            float x, y = i;
+            if (isFused)
+                x = outScale * (i - outZero);
+            else
+                x = inpScale * (i - inpZero);
+
+            if (opcode == "RELU6")
                 y = std::min(std::max(x, 0.f), 6.f);
-            }
+            else if (opcode == "LOGISTIC")
+                y = 1.0f / (1.0f + std::exp(-x));
+            else
+                CV_Error(Error::StsNotImplemented, "Lookup table for " + opcode);
+
             int quantized = outZero + cvRound(y / outScale);
             table[i + 128] = saturate_cast<int8_t>(quantized);
         }
@@ -829,6 +818,32 @@ void TFLiteImporter::parseActivation(const Operator& op, ActivationFunctionType 
 bool TFLiteImporter::isInt8(const Operator& op) {
     const Tensor* out = modelTensors->Get(op.outputs()->Get(0));
     return out->type() == TensorType_INT8;
+}
+
+void TFLiteImporter::getQuantParams(const Operator& op, float& inpScale, int& inpZero, float& outScale, int& outZero) {
+    const Tensor* inp = modelTensors->Get(op.inputs()->Get(0));
+    const Tensor* out = modelTensors->Get(op.outputs()->Get(0));
+    inpScale = outScale = inpZero = outZero = 0;
+    if (inp->quantization()) {
+        if (inp->quantization()->scale()) {
+            CV_Assert(inp->quantization()->scale()->size() == 1);
+            inpScale = inp->quantization()->scale()->Get(0);
+        }
+        if (inp->quantization()->zero_point()) {
+            CV_Assert(inp->quantization()->zero_point()->size() == 1);
+            inpZero = inp->quantization()->zero_point()->Get(0);
+        }
+    }
+    if (out->quantization()) {
+        if (out->quantization()->scale()) {
+            CV_Assert(out->quantization()->scale()->size() == 1);
+            outScale = out->quantization()->scale()->Get(0);
+        }
+        if (out->quantization()->zero_point()) {
+            CV_Assert(out->quantization()->zero_point()->size() == 1);
+            outZero = out->quantization()->zero_point()->Get(0);
+        }
+    }
 }
 
 Net readNetFromTFLite(const String &modelPath) {
