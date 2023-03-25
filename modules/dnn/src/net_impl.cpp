@@ -1431,6 +1431,7 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
     netInputLayer->inputsData.resize(numInputs);
     netInputLayer->scaleFactors.resize(numInputs);
     netInputLayer->means.resize(numInputs);
+    // ld.dtype = CV_8S;
 
     MatShape prevShape = shape(netInputLayer->inputsData[pin.oid]);
     bool oldShape = prevShape == blobShape;

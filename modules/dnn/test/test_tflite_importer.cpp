@@ -130,6 +130,16 @@ TEST(Test_TFLite, max_unpooling)
     }
 }
 
+TEST(Test_TFLite, quant) {
+    Net net = readNet("/home/dkurt/lite-model_ssd_mobilenet_v2_100_int8_default_1.tflite");
+
+    Mat inp({1, 3, 16, 16}, CV_8S);
+    net.setInput(inp);
+    Mat out = net.forward();
+
+    std::cout << out.size << std::endl;
+}
+
 }}  // namespace
 
 #endif  // OPENCV_TEST_DNN_TFLITE
