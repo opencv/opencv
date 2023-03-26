@@ -229,7 +229,7 @@ DISOpticalFlowImpl::DISOpticalFlowImpl()
     int max_possible_scales = 10;
     ws = hs = w = h = 0;
     for (int i = 0; i < max_possible_scales; i++)
-        variational_refinement_processors.push_back(VariationalRefinement::create());
+        variational_refinement_processors.emplace_back(VariationalRefinement::create());
 }
 
 void DISOpticalFlowImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &flow, bool use_flow)
