@@ -1068,7 +1068,7 @@ void Mat::push_back(const Mat& elems)
         return;
     }
 
-
+    size.p[0] = elems.size.p[0];
     bool eq = size == elems.size;
     size.p[0] = int(r);
     if( !eq )
