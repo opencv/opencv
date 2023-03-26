@@ -256,18 +256,26 @@ CV_EXPORTS_W size_t imcount(const String& filename, int flags = IMREAD_ANYCOLOR)
 /** @brief Saves an image to a specified file.
 
 The function imwrite saves the image to the specified file. The image format is chosen based on the
-filename extension (see cv::imread for the list of extensions). In general, only 8-bit
+filename extension (see cv::imread for the list of extensions). In general, only 8-bit unsigned (CV_8U)
 single-channel or 3-channel (with 'BGR' channel order) images
 can be saved using this function, with these exceptions:
 
-- 16-bit unsigned (CV_16U) images can be saved in the case of PNG, JPEG 2000, and TIFF formats
-- 32-bit float (CV_32F) images can be saved in PFM, TIFF, OpenEXR, and Radiance HDR formats;
-  3-channel (CV_32FC3) TIFF images will be saved using the LogLuv high dynamic range encoding
-  (4 bytes per pixel)
-- PNG images with an alpha channel can be saved using this function. To do this, create
-8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels
-should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535 (see the code sample below).
-- Multiple images (vector of Mat) can be saved in TIFF format (see the code sample below).
+- With OpenEXR encoder, only 32-bit float (CV_32F) images can be saved.
+  - 8-bit unsigned (CV_8U) images are not supported.
+- With Radiance HDR encoder, non 64-bit float (CV_64F) images can be saved.
+  - All images will be converted to 32-bit float (CV_32F).
+- With JPEG 2000 encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
+- With PAM encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
+- With PNG encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
+  - PNG images with an alpha channel can be saved using this function. To do this, create
+    8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels
+    should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535 (see the code sample below).
+- With PGM/PPM encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
+- With TIFF encoder, 8-bit unsigned (CV_8U), 16-bit unsigned (CV_16U), 
+                     32-bit float (CV_32F) and 64-bit float (CV_64F) images can be saved.
+  - Multiple images (vector of Mat) can be saved in TIFF format (see the code sample below).
+  - 32-bit float 3-channel (CV_32FC3) TIFF images will be saved
+    using the LogLuv high dynamic range encoding (4 bytes per pixel)
 
 If the image format is not supported, the image will be converted to 8-bit unsigned (CV_8U) and saved that way.
 
