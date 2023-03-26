@@ -13,7 +13,7 @@ python gen_pattern.py -o out.svg -r 11 -c 8 -T circles -s 20.0 -R 5.0 -u mm -w 2
 -w, --page_width - page width in units (default 216)
 -h, --page_height - page height in units (default 279)
 -a, --page_size - page size (default A4), supersedes -h -w arguments
--m, --markers - list of cells with markers for the radon checkerboard
+-m, --markers - list of cells with markers for the radon checkerboard and checkerboard patterns
 -H, --help - show help
 """
 
@@ -61,6 +61,20 @@ class PatternMaker:
                           cy=(y * spacing) + y_spacing + r, r=r, fill="black", stroke="none")
                 self.g.append(dot)
 
+    def _make_markers(self):
+        r = self.square_size * 0.17
+        pattern_width = ((self.cols - 1.0) * self.square_size) + (2.0 * r)
+        pattern_height = ((self.rows - 1.0) * self.square_size) + (2.0 * r)
+        x_spacing = (self.width - pattern_width) / 2.0
+        y_spacing = (self.height - pattern_height) / 2.0
+        for x, y in self.markers:
+            color = "black"
+            if x % 2 == y % 2:
+                color = "white"
+            dot = SVG("circle", cx=(x * self.square_size) + x_spacing + r,
+                      cy=(y * self.square_size) + y_spacing + r, r=r, fill=color, stroke="none")
+            self.g.append(dot)
+
     def make_checkerboard_pattern(self):
         spacing = self.square_size
         xspacing = (self.width - self.cols * self.square_size) / 2.0
@@ -71,6 +85,7 @@ class PatternMaker:
                     square = SVG("rect", x=x * spacing + xspacing, y=y * spacing + yspacing, width=spacing,
                                  height=spacing, fill="black", stroke="none")
                     self.g.append(square)
+        self._make_markers()
 
     @staticmethod
     def _make_round_rect(x, y, diam, corners=("right", "right", "right", "right")):
@@ -126,19 +141,7 @@ class PatternMaker:
                         square = SVG("path", d=self._make_round_rect(x * spacing + xspacing, y * spacing + yspacing,
                                                                      spacing, corner_types), fill="black", stroke="none")
                     self.g.append(square)
-        if self.markers is not None:
-            r = self.square_size * 0.17
-            pattern_width = ((self.cols - 1.0) * spacing) + (2.0 * r)
-            pattern_height = ((self.rows - 1.0) * spacing) + (2.0 * r)
-            x_spacing = (self.width - pattern_width) / 2.0
-            y_spacing = (self.height - pattern_height) / 2.0
-            for x, y in self.markers:
-                color = "black"
-                if x % 2 == y % 2:
-                    color = "white"
-                dot = SVG("circle", cx=(x * spacing) + x_spacing + r,
-                          cy=(y * spacing) + y_spacing + r, r=r, fill=color, stroke="none")
-                self.g.append(dot)
+        self._make_markers()
 
     def save(self):
         c = canvas(self.g, width="%d%s" % (self.width, self.units), height="%d%s" % (self.height, self.units),
@@ -196,7 +199,7 @@ def main():
         page_width = page_sizes[page_size][0]
         page_height = page_sizes[page_size][1]
     markers = None
-    if p_type == "radon_checkerboard" and "markers" in args:
+    if p_type in ["radon_checkerboard","checkerboard"] and "markers" in args:
         if len(args.markers) % 2 == 1:
             raise ValueError("The length of the markers array={} must be even".format(len(args.markers)))
         markers = set()
