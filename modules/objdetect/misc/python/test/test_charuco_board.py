@@ -71,7 +71,7 @@ class aruco_objdetect_test(NewOpenCVTests):
 
             #draw desk using svg
             pm = gen_pattern.PatternMaker(cols, rows, "out.svg", "px", square_size, 0, board_width,
-                              board_height, "charuco_checkboard", marker_size, aruco_type_str)
+                              board_height, "charuco_checkboard", marker_size, aruco_type_str+".json")
             pm.make_charuco_board()
             pm.save()
 

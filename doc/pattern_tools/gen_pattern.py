@@ -6,7 +6,7 @@ python gen_pattern.py -o out.svg -r 11 -c 8 -T circles -s 20.0 -R 5.0 -u mm -w 2
 -o, --output - output file (default out.svg)
 -r, --rows - pattern rows (default 11)
 -c, --columns - pattern columns (default 8)
--T, --type - type of pattern, circles, acircles, checkerboard, radon_checkerboard, charuco_board (default circles)
+-T, --type - type of pattern: circles, acircles, checkerboard, radon_checkerboard, charuco_board. default circles.
 -s, --square_size - size of squares in pattern (default 20.0)
 -R, --radius_rate - circles_radius = square_size/radius_rate (default 5.0)
 -u, --units - mm, inches, px, m (default mm)
@@ -27,7 +27,7 @@ from svgfig import *
 
 
 class PatternMaker:
-    def __init__(self, cols, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, aruco_dict, aruco_dict_file):
+    def __init__(self, cols, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, dict_file):
         self.cols = cols
         self.rows = rows
         self.output = output
@@ -38,8 +38,7 @@ class PatternMaker:
         self.height = page_height
         self.markers = markers
         self.aruco_marker_size = aruco_marker_size #only for aruco markers
-        self.aruco_dict = aruco_dict
-        self.aruco_dict_file = aruco_dict_file
+        self.dict_file = dict_file
 
         self.g = SVG("g")  # the svg group container
 
@@ -150,41 +149,29 @@ class PatternMaker:
 
     @staticmethod
     def _create_marker_bits(markerSize_bits, byteList):
+        
         marker = np.zeros((markerSize_bits+2, markerSize_bits+2))
         bits = marker[1:markerSize_bits+1, 1:markerSize_bits+1]
-
-        base2List = [128, 64, 32, 16, 8, 4, 2, 1]
-        currentByteIdx = 0
-        currentByte = byteList[0]
-        currentBit = int(0)
-        for row in range(len(bits)):
-            for col in range(len(bits[0])):
-                if (currentByte >= base2List[currentBit]):
-                    bits[row, col] = 1
-                    currentByte -= base2List[currentBit]
-                currentBit = currentBit + 1
-                if(currentBit == 8):
-                    currentByteIdx = currentByteIdx + 1
-                    currentByte = byteList[currentByteIdx]
-                    if(8 * (currentByteIdx + 1) > int(markerSize_bits*markerSize_bits)):
-                        currentBit = 8 * (currentByteIdx + 1) - int(markerSize_bits*markerSize_bits)
-                    else:
-                        currentBit = 0 # // ok, bits enough for next byte
+            
+        for i in range(markerSize_bits):
+            for j in range(markerSize_bits):
+                bits[i][j] = int(byteList[i*markerSize_bits+j])
+     
         return marker
 
     def make_charuco_board(self):
         if (self.aruco_marker_size>self.square_size):
             print("Error: Aruco marker can not be more than square size!")
             return
-        f = open('arucoDictBytesList.json')
-        arucoDictBytesList = json.load(f)
-        byteLists = np.array(arucoDictBytesList[self.aruco_dict])
 
-        if (len(byteLists) < int(self.cols*self.rows/2)):
+        f = open(self.dict_file)
+        dictionary = json.load(f)
+        
+        if (dictionary["nmarkers"] < int(self.cols*self.rows/2)):
             print("Error: Aruco dictionary contains less markers than it needs for chosen board. Please choose another dictionary or use smaller board")
             return
 
-        markerSize_bits = arucoDictBytesList["size_bits"][self.aruco_dict]
+        markerSize_bits = dictionary["markersize"]
 
         side = self.aruco_marker_size / (markerSize_bits+2)
         spacing = self.square_size
@@ -201,8 +188,7 @@ class PatternMaker:
                                  height=spacing, fill="black", stroke="none")
                     self.g.append(square)
                 if x % 2 != y % 2:
-                    list_size = np.size(byteLists[marker_id:marker_id+1])
-                    img_mark = self._create_marker_bits(markerSize_bits, byteLists[marker_id:marker_id+1].reshape(1,list_size)[0])
+                    img_mark = self._create_marker_bits(markerSize_bits, dictionary["marker_"+str(marker_id)])
                     marker_id +=1
                     x_pos = x * spacing + xspacing
                     y_pos = y * spacing + yspacing
@@ -251,10 +237,8 @@ def main():
                         default=argparse.SUPPRESS, action="store", dest="markers", nargs="+", type=int)
     parser.add_argument("-p", "--aruco_marker_size", help="size of aruco marker", default="10.0",
                         action="store", dest="aruco_marker_size", type=float)
-    parser.add_argument("-d", "--aruco_dict", help="name one of predefined dictionary", default='DICT_ARUCO_ORIGINAL',
-                        action="store", dest="aruco_dict", type=str)
-    parser.add_argument("-f", "--dict_file", help="filename of predefined dictionary", default='arucoDictBytesList.json',
-                        action="store", dest="aruco_dict_file", type=str)
+    parser.add_argument("-f", "--dict_file", help="filename of predefined dictionary", default="DICT_ARUCO_ORIGINAL.json",
+                        action="store", dest="dict_file", type=str)
     args = parser.parse_args()
 
     show_help = args.show_help
@@ -268,9 +252,8 @@ def main():
     units = args.units
     square_size = args.square_size
     radius_rate = args.radius_rate
-    aruco_dict = args.aruco_dict
     aruco_marker_size = args.aruco_marker_size
-    aruco_dict_file = args.aruco_dict_file
+    dict_file = args.dict_file
 
     if 'page_width' and 'page_height' in args:
         page_width = args.page_width
@@ -293,7 +276,7 @@ def main():
             else:
                 raise ValueError("The marker {},{} is outside the checkerboard".format(x, y))
 
-    pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, aruco_dict, aruco_dict_file)
+    pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, dict_file)
     # dict for easy lookup of pattern type
     mp = {"circles": pm.make_circles_pattern, "acircles": pm.make_acircles_pattern,
           "checkerboard": pm.make_checkerboard_pattern, "radon_checkerboard": pm.make_radon_checkerboard_pattern, 
