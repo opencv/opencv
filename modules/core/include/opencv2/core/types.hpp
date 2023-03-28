@@ -545,7 +545,7 @@ public:
      */
     RotatedRect(const Point2f& point1, const Point2f& point2, const Point2f& point3);
 
-    /** returns 4 vertices of the original up-right(angle=0) rectangle with the same center and size.
+    /** returns 4 vertices of the rotated rectangle
     ![image](pics/rotatedrect_points_angle.png)
     @param pts The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
     */
