@@ -547,7 +547,8 @@ public:
 
     /** returns 4 vertices of the rotated rectangle
     ![image](pics/rotatedrect_points_angle.png)
-    @param pts The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
+    @param pts The points array for storing rectangle vertices with an order of bottomLeft, topLeft, topRight, bottomRight.
+    @note These directions(bottom, top, left, right) only refers to the original up-right rectangle with `angle=0`, so with a rotated but still up-right rectangle that has `angle=180`, the first point in the `pts` array will be the bottomLeft point being rotated to topRight corner.
     */
     void points(Point2f pts[]) const;
     //! returns the minimal up-right integer rectangle containing the rotated rectangle
