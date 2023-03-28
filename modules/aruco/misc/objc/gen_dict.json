@@ -1,0 +1,10 @@
+{
+    "AdditionalImports" : {
+        "*" : [ "\"aruco.hpp\"", "\"aruco/charuco.hpp\"" ]
+    },
+    "func_arg_fix" : {
+        "Aruco" : {
+            "estimatePoseSingleMarkers" : { "estimateParameters" : {"defval" : "cv::makePtr<cv::aruco::EstimateParameters>()"} }
+        }
+    }
+}
