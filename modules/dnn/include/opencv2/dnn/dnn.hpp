@@ -351,6 +351,7 @@ CV__DNN_INLINE_NS_BEGIN
          * @param   nodes           nodes of input tensors
          */
         virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                          const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
                                           const std::vector<Ptr<BackendNode> >& nodes);
 
        /**

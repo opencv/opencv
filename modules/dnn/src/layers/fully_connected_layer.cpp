@@ -663,6 +663,7 @@ public:
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                      const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto x1 = inputsWrapper[0].dynamicCast<CannBackendWrapper>();

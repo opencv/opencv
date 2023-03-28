@@ -85,6 +85,7 @@ Ptr<BackendNode> Layer::initTimVX(void* timVxInfo,
 }
 
 Ptr<BackendNode> Layer::initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                 const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
                                  const std::vector<Ptr<BackendNode> >& nodes)
 {
     CV_Error(Error::StsNotImplemented, "CANN pipeline of " + type + " layers is not defined.");

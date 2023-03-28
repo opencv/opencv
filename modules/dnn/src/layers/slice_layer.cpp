@@ -635,6 +635,7 @@ public:
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                      const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         bool isSplit = sliceRanges.size() > 1;

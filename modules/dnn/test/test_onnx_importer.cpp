@@ -2487,6 +2487,168 @@ TEST_P(Test_ONNX_layers, Gelu)
     testONNXModels("gelu_approximation");
 }
 
+TEST_P(Test_ONNX_nets, SFace) // Fixed
+{
+    std::string model_path = "/home/test_user01/fytao/opencv_zoo/models/face_recognition_sface/face_recognition_sface_2021dec.onnx";
+    auto net = readNet(model_path);
+    net.setPreferableBackend(DNN_BACKEND_CANN);
+
+    std::vector<int> shape{1, 3, 112, 112};
+    Mat input(shape, CV_32FC1);
+    randn(input, 0.f, 1.f);
+
+    net.setInput(input);
+    auto out = net.forward();
+    std::cout << out.size << std::endl;
+}
+
+TEST_P(Test_ONNX_nets, FER) // Fixed
+{
+    std::string model_path = "/home/test_user01/fytao/opencv_zoo/models/facial_expression_recognition/facial_expression_recognition_mobilefacenet_2022july.onnx";
+    auto net = readNet(model_path);
+    net.setPreferableBackend(DNN_BACKEND_CANN);
+
+    std::vector<int> shape{1, 3, 112, 112};
+    Mat input(shape, CV_32FC1);
+    randn(input, 0.f, 1.f);
+
+    net.setInput(input);
+    auto out = net.forward();
+    std::cout << out.size << std::endl;
+}
+
+TEST_P(Test_ONNX_nets, HandPose) // Fixed
+{
+    std::string model_path = "/home/test_user01/fytao/opencv_zoo/models/handpose_estimation_mediapipe/handpose_estimation_mediapipe_2023feb.onnx";
+    auto net = readNet(model_path);
+    net.setPreferableBackend(DNN_BACKEND_CANN);
+
+    std::vector<int> shape{1, 256, 256, 3};
+    Mat input(shape, CV_32FC1);
+    randn(input, 0.f, 1.f);
+
+    net.setInput(input);
+    auto out = net.forward();
+    std::cout << out.size << std::endl;
+}
+
+TEST_P(Test_ONNX_nets, MNETV1) // Fixed
+{
+    std::string model_path = "/home/test_user01/fytao/opencv_zoo/models/image_classification_mobilenet/image_classification_mobilenetv1_2022apr.onnx";
+    auto net = readNet(model_path);
+    net.setPreferableBackend(DNN_BACKEND_CANN);
+
+    std::vector<int> shape{1, 3, 224, 224};
+    Mat input(shape, CV_32FC1);
+    randn(input, 0.f, 1.f);
+
+    net.setInput(input);
+    auto out = net.forward();
+    std::cout << out.size << std::endl;
+}
+
+TEST_P(Test_ONNX_nets, MNETV2) // Fixed
+{
+    std::string model_path = "/home/test_user01/fytao/opencv_zoo/models/image_classification_mobilenet/image_classification_mobilenetv2_2022apr.onnx";
+    auto net = readNet(model_path);
+    net.setPreferableBackend(DNN_BACKEND_CANN);
+
+    std::vector<int> shape{1, 3, 224, 224};
+    Mat input(shape, CV_32FC1);
+    randn(input, 0.f, 1.f);
+
+    net.setInput(input);
+    auto out = net.forward();
+    std::cout << out.size << std::endl;
+}
+
+TEST_P(Test_ONNX_nets, PalmDet) // Fixed
+{
+    std::string model_path = "/home/test_user01/fytao/opencv_zoo/models/palm_detection_mediapipe/palm_detection_mediapipe_2023feb.onnx";
+    auto net = readNet(model_path);
+    net.setPreferableBackend(DNN_BACKEND_CANN);
+
+    std::vector<int> shape{1, 192, 192, 3};
+    Mat input(shape, CV_32FC1);
+    randn(input, 0.f, 1.f);
+
+    net.setInput(input);
+    auto out = net.forward();
+    std::cout << out.size << std::endl;
+}
+
+TEST_P(Test_ONNX_nets, DB_IC15) // Fixed
+{
+    std::string model_path = "/home/test_user01/fytao/opencv_zoo/models/text_detection_db/text_detection_DB_IC15_resnet18_2021sep.onnx";
+    auto net = readNet(model_path);
+    net.setPreferableBackend(DNN_BACKEND_CANN);
+
+    std::vector<int> shape{1, 3, 768, 768};
+    Mat input(shape, CV_32FC1);
+    randn(input, 0.f, 1.f);
+
+    net.setInput(input);
+    auto out = net.forward();
+    std::cout << out.size << std::endl;
+}
+TEST_P(Test_ONNX_nets, DB_TD500)
+{
+    std::string model_path = "/home/test_user01/fytao/opencv_zoo/models/text_detection_db/text_detection_DB_TD500_resnet18_2021sep.onnx";
+    auto net = readNet(model_path);
+    net.setPreferableBackend(DNN_BACKEND_CANN);
+
+    std::vector<int> shape{1, 3, 768, 768};
+    Mat input(shape, CV_32FC1);
+    randn(input, 0.f, 1.f);
+
+    net.setInput(input);
+    auto out = net.forward();
+    std::cout << out.size << std::endl;
+}
+
+TEST_P(Test_ONNX_nets, CRNN_CH)
+{
+    std::string model_path = "/home/test_user01/fytao/opencv_zoo/models/text_recognition_crnn/text_recognition_CRNN_CH_2021sep.onnx";
+    auto net = readNet(model_path);
+    net.setPreferableBackend(DNN_BACKEND_CANN);
+
+    std::vector<int> shape{1, 3, 32, 100};
+    Mat input(shape, CV_32FC1);
+    randn(input, 0.f, 1.f);
+
+    net.setInput(input);
+    auto out = net.forward();
+    std::cout << out.size << std::endl;
+}
+TEST_P(Test_ONNX_nets, CRNN_CN)
+{
+    std::string model_path = "/home/test_user01/fytao/opencv_zoo/models/text_recognition_crnn/text_recognition_CRNN_CN_2021nov.onnx";
+    auto net = readNet(model_path);
+    net.setPreferableBackend(DNN_BACKEND_CANN);
+
+    std::vector<int> shape{1, 3, 32, 100};
+    Mat input(shape, CV_32FC1);
+    randn(input, 0.f, 1.f);
+
+    net.setInput(input);
+    auto out = net.forward();
+    std::cout << out.size << std::endl;
+}
+TEST_P(Test_ONNX_nets, CRNN_EN)
+{
+    std::string model_path = "/home/test_user01/fytao/opencv_zoo/models/text_recognition_crnn/text_recognition_CRNN_EN_2021sep.onnx";
+    auto net = readNet(model_path);
+    net.setPreferableBackend(DNN_BACKEND_CANN);
+
+    std::vector<int> shape{1, 3, 32, 100};
+    Mat input(shape, CV_32FC1);
+    randn(input, 0.f, 1.f);
+
+    net.setInput(input);
+    auto out = net.forward();
+    std::cout << out.size << std::endl;
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
