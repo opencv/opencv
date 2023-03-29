@@ -17,6 +17,8 @@ You can find a chessboard pattern in https://github.com/opencv/opencv/blob/4.x/d
 
 You can find a circleboard pattern in https://github.com/opencv/opencv/blob/4.x/doc/acircles_pattern.png
 
+You can find a charuco board pattern in https://github.com/opencv/opencv/blob/4.x/doc/charuco_board_pattern.png
+
 Create your own pattern
 ---------------
 
@@ -40,13 +42,18 @@ create a radon checkerboard for findChessboardCornersSB() with markers in (7 4),
 
         python gen_pattern.py -o radon_checkerboard.svg --rows 10 --columns 15 --type radon_checkerboard -s 12.1 -m 7 4 7 5 8 5
 
+create a charuco board pattern in charuco_board.svg with 7 rows, 5 columns, square size 10 mm, aruco marker size 7 mm and using DICT_5X5_100 as dictionary for aruco markers (it contains in DICT_ARUCO.json file):
+
+        python gen_pattern.py -o charuco_board.svg --rows 7 --columns 5 --T charuco_checkerboard --square_size 50 --marker_size 30 -f DICT_5X5_100.json
+
 If you want to change unit use -u option (mm inches, px, m)
 
 If you want to change page size use -w and -h options
 
-@cond HAVE_opencv_aruco
-If you want to create a ChArUco board read @ref tutorial_charuco_detection "tutorial Detection of ChArUco Corners" in opencv_contrib tutorial.
-@endcond
-@cond !HAVE_opencv_aruco
-If you want to create a ChArUco board read tutorial Detection of ChArUco Corners in opencv_contrib tutorial.
-@endcond
+If you want to use your own dictionary for ChAruco board your should write name of file with your dictionary. For example 
+
+        python gen_pattern.py -o charuco_board.svg --rows 7 --columns 5 --T charuco_checkerboard  -f my_dictionary.json
+
+You can generate your dictionary in my_dictionary.json file with number of markers 30 and markers size 5 bits by using opencv/samples/cpp/aruco_dict_utils.cpp. 
+
+        bin/example_cpp_aruco_dict_utils.exe my_dict.json -nMarkers=30 -markerSize=5
