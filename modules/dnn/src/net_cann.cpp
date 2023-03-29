@@ -315,7 +315,7 @@ std::shared_ptr<ge::ModelBufferData> compileCannGraph(std::shared_ptr<ge::Graph>
             std::map<ge::AscendString, ge::AscendString> build_options;
             ACL_CHECK_GRAPH_RET(aclgrphBuildModel(*graph, build_options, *om_model));
 
-#if 1
+#if 0
             // (optional). Dump model
             ge::AscendString graph_name;
             graph->GetName(graph_name);
