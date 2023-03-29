@@ -1279,13 +1279,17 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
                 break;
             }
 
-            case CV_32F:
-                sample_format = SAMPLEFORMAT_IEEEFP;
-                /* FALLTHRU */
             case CV_32S:
             {
                 bitsPerChannel = 32;
+                sample_format = SAMPLEFORMAT_UINT;
+                break;
+            }
+            case CV_32F:
+            {
+                bitsPerChannel = 32;
                 page_compression = COMPRESSION_NONE;
+                sample_format = SAMPLEFORMAT_IEEEFP;
                 break;
             }
             case CV_64F:
