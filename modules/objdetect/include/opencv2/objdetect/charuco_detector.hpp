@@ -48,7 +48,7 @@ public:
     CV_WRAP void setBoard(const CharucoBoard& board);
 
     CV_WRAP const CharucoParameters& getCharucoParameters() const;
-    CV_WRAP void setCharucoParameters(CharucoParameters& charucoParameters);
+    CV_WRAP void setCharucoParameters(const CharucoParameters& charucoParameters);
 
     CV_WRAP const DetectorParameters& getDetectorParameters() const;
     CV_WRAP void setDetectorParameters(const DetectorParameters& detectorParameters);
