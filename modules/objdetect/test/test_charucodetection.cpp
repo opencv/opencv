@@ -213,7 +213,7 @@ void CV_CharucoPoseEstimation::run(int) {
 
     Mat distCoeffs(5, 1, CV_64FC1, Scalar::all(0));
     // for different perspectives
-    for(double distance : {0.2, 0.3}) {
+    for(double distance : {0.2, 0.25}) {
         for(int yaw = -55; yaw <= 50; yaw += 25) {
             for(int pitch = -55; pitch <= 50; pitch += 25) {
 
@@ -244,18 +244,6 @@ void CV_CharucoPoseEstimation::run(int) {
                     detector.setCharucoParameters(charucoParameters);
                     detector.detectBoard(img, charucoCorners, charucoIds, corners, ids);
                 }
-
-                // // create debug images
-                // Mat rgb_image;
-                // cv::cvtColor(img, rgb_image, COLOR_GRAY2RGB);
-                // aruco::drawDetectedCornersCharuco(rgb_image, charucoCorners, charucoIds);
-                // aruco::drawDetectedMarkers(rgb_image, corners, ids);
-                // cv::imwrite("Debug_CV_CharucoPoseEstimation"
-                //  + (legacyPattern ? std::string("_legacy") : std::string(""))
-                //  + "_dist" + std::to_string(distance)
-                //  + "_yaw" + std::to_string(yaw)
-                //  + "_pitch" + std::to_string(pitch) + ".png", rgb_image);
-
                 ASSERT_EQ(ids.size(), board.getIds().size());
                 if(charucoIds.size() == 0) continue;
 
@@ -323,7 +311,7 @@ void CV_CharucoDiamondDetection::run(int) {
 
     int iter = 0;
     Mat cameraMatrix = Mat::eye(3, 3, CV_64FC1);
-    Size imgSize(750, 750);
+    Size imgSize(500, 500);
     aruco::DetectorParameters params;
     params.minDistanceToBorder = 0;
     float squareLength = 0.03f;
@@ -333,7 +321,7 @@ void CV_CharucoDiamondDetection::run(int) {
     aruco::CharucoDetector detector(board);
 
 
-    cameraMatrix.at<double>(0, 0) = cameraMatrix.at< double >(1, 1) = 1000;
+    cameraMatrix.at<double>(0, 0) = cameraMatrix.at< double >(1, 1) = 650;
     cameraMatrix.at<double>(0, 2) = imgSize.width / 2;
     cameraMatrix.at<double>(1, 2) = imgSize.height / 2;
 
@@ -344,7 +332,7 @@ void CV_CharucoDiamondDetection::run(int) {
     detector.setCharucoParameters(charucoParameters);
 
     // for different perspectives
-    for(double distance : {0.2, 0.3}) {
+    for(double distance : {0.2, 0.22}) {
         for(int yaw = -50; yaw <= 50; yaw += 25) {
             for(int pitch = -50; pitch <= 50; pitch += 25) {
 
@@ -375,16 +363,6 @@ void CV_CharucoDiamondDetection::run(int) {
                 vector<Vec4i> diamondIds;
 
                 detector.detectDiamonds(img, diamondCorners, diamondIds, corners, ids);
-
-                // // create debug images
-                // Mat rgb_image;
-                // cv::cvtColor(img, rgb_image, COLOR_GRAY2RGB);
-                // aruco::drawDetectedDiamonds(rgb_image, diamondCorners, diamondIds);
-                // aruco::drawDetectedMarkers(rgb_image, corners, ids);
-                // cv::imwrite(std::string("Debug_CV_CharucoDiamondDetection")
-                //  + "_dist" + std::to_string(distance)
-                //  + "_yaw" + std::to_string(yaw)
-                //  + "_pitch" + std::to_string(pitch) + ".png", rgb_image);
 
                 // check detect
                 if(ids.size() != 4) {
