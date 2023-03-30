@@ -62,18 +62,18 @@ namespace NPnP
         return std::move(quats);
     }
 
-    DualVar::DualVar(ColVector<Y_SIZE> y_vec, ColVector<NUM_CONSTRAINTS> zero_vars,
-                     ColVector<A_ROWS> slack,
-                     ColMatrix<M_MATRIX_DIM, M_MATRIX_DIM> matrix_15_15,
-                     ColMatrix<M_MATRIX_DIM, M_MATRIX_DIM> matrix_15_15_inv,
-                     ColVector<M_MATRIX_DIM * M_MATRIX_DIM> matrix_15_15_inv_vec,
-                     Eigen::Array<double, M_MATRIX_DIM, 1> eigenvals,
+    DualVar::DualVar(ColVector<Y_SIZE> a_y_vec, ColVector<NUM_CONSTRAINTS> a_zero_vars,
+                     ColVector<A_ROWS> a_slack,
+                     ColMatrix<M_MATRIX_DIM, M_MATRIX_DIM> a_matrix_15_15,
+                     ColMatrix<M_MATRIX_DIM, M_MATRIX_DIM> a_matrix_15_15_inv,
+                     ColVector<M_MATRIX_DIM * M_MATRIX_DIM> a_matrix_15_15_inv_vec,
+                     Eigen::Array<double, M_MATRIX_DIM, 1> a_eigenvals,
                      const RowMatrix<NUM_CONSTRAINTS, Y_SIZE> &A_sub_rows)
-        : y_vec(std::move(y_vec)), zero_vars(std::move(zero_vars)),
-          slack(std::move(slack)), matrix_15_15(std::move(matrix_15_15)),
-          matrix_15_15_inv(std::move(matrix_15_15_inv)),
-          matrix_15_15_inv_vec(std::move(matrix_15_15_inv_vec)),
-          eigenvals(std::move(eigenvals))
+        : y_vec(std::move(a_y_vec)), zero_vars(std::move(a_zero_vars)),
+          slack(std::move(a_slack)), matrix_15_15(std::move(a_matrix_15_15)),
+          matrix_15_15_inv(std::move(a_matrix_15_15_inv)),
+          matrix_15_15_inv_vec(std::move(a_matrix_15_15_inv_vec)),
+          eigenvals(std::move(a_eigenvals))
     {
         this->gradient_helper_vec = Eigen::VectorXd(A_ROWS);
         this->gradient_vec = Eigen::VectorXd(Y_SIZE);

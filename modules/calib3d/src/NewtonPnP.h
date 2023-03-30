@@ -24,9 +24,9 @@ class NewtonPnP
 {
 public:
   // Ransac optimal PnP constructor, initialize options
-  NewtonPnP(const cv::Mat &camera_matrix,
-            const cv::Mat &dist_coeffs)
-      : camera_matrix(camera_matrix), dist_coeffs(dist_coeffs)
+  NewtonPnP( cv::Mat &cameramatrix,
+            cv::Mat &distcoeffs)
+      : camera_matrix(cameramatrix), dist_coeffs(distcoeffs)
   {
 
     this->pnp = PnpProblemSolver::init();
@@ -81,7 +81,7 @@ private:
                     vector<bool> &is_inliers);
 
 private:
-  const cv::Mat camera_matrix;
+  cv::Mat camera_matrix;
   cv::Mat dist_coeffs;
   cv::Mat dist_coeffs_float;
   cv::Mat K;

@@ -19,12 +19,12 @@ namespace NPnP
         double miu;
         double valid_result_threshold;
 
-        BarrierMethodSettings(double epsilon, int binary_search_depth, bool verbose,
-                              int max_inner_iterations, double miu,
-                              double valid_result_threshold)
-            : epsilon(epsilon), binary_search_depth(binary_search_depth),
-              verbose(verbose), max_inner_iterations(max_inner_iterations), miu(miu),
-              valid_result_threshold(valid_result_threshold) {}
+        BarrierMethodSettings(double a_epsilon, int a_binary_search_depth, bool a_verbose,
+                              int a_max_inner_iterations, double a_miu,
+                              double a_valid_result_threshold)
+            : epsilon(a_epsilon), binary_search_depth(a_binary_search_depth),
+              verbose(a_verbose), max_inner_iterations(a_max_inner_iterations), miu(a_miu),
+              valid_result_threshold(a_valid_result_threshold) {}
 
         static std::shared_ptr<BarrierMethodSettings>
         init(double epsilon = 4E-8, int binary_search_depth = 20, bool verbose = true,

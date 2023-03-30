@@ -17,8 +17,8 @@ namespace NPnP
         const inv_mat_15_15_type &inv_mat;
 
     public:
-        explicit log_det_hessian_matrix_functor(const inv_mat_15_15_type &inv_mat)
-            : inv_mat(inv_mat) {}
+        explicit log_det_hessian_matrix_functor(const inv_mat_15_15_type &invmat)
+            : inv_mat(invmat) {}
 
         double operator()(int row, int col) const
         {

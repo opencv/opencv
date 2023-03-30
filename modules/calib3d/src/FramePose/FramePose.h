@@ -10,13 +10,13 @@ class FramePose {
 public:
   FramePose() {}
 
-  FramePose(Eigen::Matrix3d &rmat, Eigen::Vector3d &tvec) {
-    set_values(rmat, tvec);
+  FramePose(Eigen::Matrix3d &r_mat, Eigen::Vector3d &t_vec) {
+    set_values(r_mat, t_vec);
   }
 
-  void set_values(Eigen::Matrix3d &rmat, Eigen::Vector3d &tvec) {
-    this->rmat = rmat;
-    this->tvec = tvec;
+  void set_values(Eigen::Matrix3d &r_mat, Eigen::Vector3d &t_vec) {
+    this->rmat = r_mat;
+    this->tvec = t_vec;
 
     calculate_values();
   }
