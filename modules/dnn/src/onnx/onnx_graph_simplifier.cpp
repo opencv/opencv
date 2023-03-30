@@ -188,17 +188,17 @@ public:
         {
             // Check Div[B=sqrt(2)]
             float divisor = extractConstant(net, matchedNodesIds[0], 1);
-            if (divisor - M_SQRT2 >= 1e-6)
+            if (std::fabs(divisor - M_SQRT2) >= std::numeric_limits<float>::epsilon())
                 return false;
 
             // Check Add[B=1]
             float add_const = extractConstant(net, matchedNodesIds[2], 1);
-            if (add_const - 1.f >= 1e-6)
+            if (std::fabs(add_const - 1.f) >= std::numeric_limits<float>::epsilon())
                 return false;
 
             // Check Mul[B=0.5]
             float mul_const = extractConstant(net, matchedNodesIds[4], 1);
-            if (mul_const - 0.5f >= 1e-6)
+            if (std::fabs(mul_const - 0.5f) >= std::numeric_limits<float>::epsilon())
                 return false;
 
             return true;
