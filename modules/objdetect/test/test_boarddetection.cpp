@@ -51,7 +51,7 @@ void CV_ArucoBoardPose::run(int) {
     aruco::DetectorParameters detectorParameters = detector.getDetectorParameters();
 
     // for different perspectives
-    for(double distance = 0.2; distance <= 0.4; distance += 0.15) {
+    for(double distance : {0.2, 0.35}) {
         for(int yaw = -55; yaw <= 50; yaw += 25) {
             for(int pitch = -55; pitch <= 50; pitch += 25) {
                 vector<int> tmpIds;
@@ -162,7 +162,7 @@ void CV_ArucoRefine::run(int) {
     aruco::DetectorParameters detectorParameters = detector.getDetectorParameters();
 
     // for different perspectives
-    for(double distance = 0.2; distance <= 0.4; distance += 0.2) {
+    for(double distance : {0.2, 0.4}) {
         for(int yaw = -60; yaw < 60; yaw += 30) {
             for(int pitch = -60; pitch <= 60; pitch += 30) {
                 aruco::GridBoard gridboard(Size(3, 3), 0.02f, 0.005f, detector.getDictionary());
