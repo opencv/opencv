@@ -2,6 +2,10 @@ from __future__ import print_function
 
 import os, tempfile, numpy as np
 
+import sys
+sys.path.append("../../../../../doc/pattern_tools")
+import gen_pattern
+
 import cv2 as cv
 
 from tests_common import NewOpenCVTests
