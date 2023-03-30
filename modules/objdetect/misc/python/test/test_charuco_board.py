@@ -32,18 +32,25 @@ class aruco_objdetect_test(NewOpenCVTests):
             board = cv.aruco.CharucoBoard((cols, rows), square_size, marker_size, aruco_dict)
             charuco_detector = cv.aruco.CharucoDetector(board)
             markerImage = board.generateImage((cols*square_size*10, rows*square_size*10))
+            fd, filepng = tempfile.mkstemp(prefix="cv_marker", suffix=".png")
+            os.close(fd)
             cv.imwrite("cv_marker.png", markerImage)
             from_cv_img = cv.imread('cv_marker.png')
 
             #draw desk using svg
-            pm = gen_pattern.PatternMaker(cols, rows, "out.svg", "px", square_size, 0, board_width,
-                              board_height, "charuco_checkboard", marker_size, aruco_type_str_[aruco_type_i])
+            fd1, filesvg = tempfile.mkstemp(prefix="out", suffix=".svg")
+            os.close(fd1)
+            fd2, filepng2 = tempfile.mkstemp(prefix="svg_marker", suffix=".png")
+            os.close(fd2)
+            pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width, 
+                        board_height, "charuco_checkboard", marker_size, 'DICT_5X5_1000.json')
             pm.make_charuco_board()
             pm.save()
 
-            drawing = svg2rlg('out.svg')
-            renderPM.drawToFile(drawing, 'svg_marker.png', fmt='PNG', dpi=720)
-            from_svg_img = cv.imread('svg_marker.png')
+            drawing = svg2rlg(filesvg)
+
+            renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=720)
+            from_svg_img = cv.imread(filepng2)
 
             #test
             _charucoCorners, _charucoIds, markerCorners_svg, markerIds_svg = charuco_detector.detectBoard(from_svg_img)
@@ -70,18 +77,25 @@ class aruco_objdetect_test(NewOpenCVTests):
             board = cv.aruco.CharucoBoard((cols, rows), square_size, marker_size, aruco_dict)
             charuco_detector = cv.aruco.CharucoDetector(board)
             markerImage = board.generateImage((cols*square_size*10, rows*square_size*10))
-            cv.imwrite("cv_marker.png", markerImage)
-            from_cv_img = cv.imread('cv_marker.png')
+            fd, filepng = tempfile.mkstemp(prefix="cv_marker", suffix=".png")
+            os.close(fd)
+            cv.imwrite(filepng, markerImage)
+            from_cv_img = cv.imread(filepng)
 
             #draw desk using svg
-            pm = gen_pattern.PatternMaker(cols, rows, "out.svg", "px", square_size, 0, board_width,
-                              board_height, "charuco_checkboard", marker_size, aruco_type_str+".json")
+            fd1, filesvg = tempfile.mkstemp(prefix="out", suffix=".svg")
+            os.close(fd1)
+            fd2, filepng2 = tempfile.mkstemp(prefix="svg_marker", suffix=".png")
+            os.close(fd2)
+            pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width, 
+                        board_height, "charuco_checkboard", marker_size, 'DICT_5X5_1000.json')
             pm.make_charuco_board()
             pm.save()
 
-            drawing = svg2rlg('out.svg')
-            renderPM.drawToFile(drawing, 'svg_marker.png', fmt='PNG', dpi=720)
-            from_svg_img = cv.imread('svg_marker.png')
+            drawing = svg2rlg(filesvg)
+
+            renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=720)
+            from_svg_img = cv.imread(filepng2)
 
             #test
             _charucoCorners, _charucoIds, markerCorners_svg, markerIds_svg = charuco_detector.detectBoard(from_svg_img)
