@@ -50,10 +50,10 @@ If you want to change unit use -u option (mm inches, px, m)
 
 If you want to change page size use -w and -h options
 
-If you want to use your own dictionary for ChAruco board your should write name of file with your dictionary. For example 
+If you want to use your own dictionary for ChAruco board your should write name of file with your dictionary. For example
 
         python gen_pattern.py -o charuco_board.svg --rows 7 --columns 5 --T charuco_checkerboard  -f my_dictionary.json
 
-You can generate your dictionary in my_dictionary.json file with number of markers 30 and markers size 5 bits by using opencv/samples/cpp/aruco_dict_utils.cpp. 
+You can generate your dictionary in my_dictionary.json file with number of markers 30 and markers size 5 bits by using opencv/samples/cpp/aruco_dict_utils.cpp.
 
         bin/example_cpp_aruco_dict_utils.exe my_dict.json -nMarkers=30 -markerSize=5
