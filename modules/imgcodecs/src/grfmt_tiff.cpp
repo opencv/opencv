@@ -51,7 +51,6 @@
 #include <opencv2/core/utils/logger.hpp>
 
 #include "grfmt_tiff.hpp"
-#include <cstdint>
 #include <limits>
 
 namespace tiff_dummy_namespace {
