@@ -51,9 +51,9 @@
 #include <opencv2/core/utils/logger.hpp>
 
 #include "grfmt_tiff.hpp"
+#include <cstdint>
 #include <limits>
 
-// TODO FIXIT Conflict declarations for common types like int64/uint64
 namespace tiff_dummy_namespace {
 #include "tiff.h"
 #include "tiffio.h"
@@ -262,8 +262,8 @@ bool TiffDecoder::readHeader()
 
     if (tif)
     {
-        uint32 wdth = 0, hght = 0;
-        uint16 photometric = 0;
+        uint32_t wdth = 0, hght = 0;
+        uint16_t photometric = 0;
 
         CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &wdth));
         CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &hght));
@@ -271,7 +271,7 @@ bool TiffDecoder::readHeader()
 
         {
             bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
-            uint16 bpp = 8, ncn = isGrayScale ? 1 : 3;
+            uint16_t bpp = 8, ncn = isGrayScale ? 1 : 3;
             CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp));
             CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
 
@@ -333,7 +333,7 @@ bool TiffDecoder::nextPage()
            readHeader();
 }
 
-static void fixOrientationPartial(Mat &img, uint16 orientation)
+static void fixOrientationPartial(Mat &img, uint16_t orientation)
 {
     switch(orientation) {
         case ORIENTATION_RIGHTTOP:
@@ -389,7 +389,7 @@ static void fixOrientationFull(Mat &img, int orientation)
  * For 8 bit some corrections are done by TIFFReadRGBAStrip/Tile already.
  * Not so for 16/32/64 bit.
  */
-static void fixOrientation(Mat &img, uint16 orientation, bool isOrientationFull)
+static void fixOrientation(Mat &img, uint16_t orientation, bool isOrientationFull)
 {
     if( isOrientationFull )
     {
@@ -409,7 +409,7 @@ bool  TiffDecoder::readData( Mat& img )
     CV_Assert(!m_tif.empty());
     TIFF* tif = (TIFF*)m_tif.get();
 
-    uint16 photometric = (uint16)-1;
+    uint16_t photometric = (uint16_t)-1;
     CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photometric));
 
     if (m_hdr && depth >= CV_32F)
@@ -425,10 +425,10 @@ bool  TiffDecoder::readData( Mat& img )
     {
         int is_tiled = TIFFIsTiled(tif) != 0;
         bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
-        uint16 bpp = 8, ncn = isGrayScale ? 1 : 3;
+        uint16_t bpp = 8, ncn = isGrayScale ? 1 : 3;
         CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp));
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
-        uint16 img_orientation = ORIENTATION_TOPLEFT;
+        uint16_t img_orientation = ORIENTATION_TOPLEFT;
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));
         const int bitsPerByte = 8;
         int dst_bpp = (int)(img.elemSize1() * bitsPerByte);
@@ -438,7 +438,7 @@ bool  TiffDecoder::readData( Mat& img )
         int wanted_channels = normalizeChannelsNumber(img.channels());
         bool doReadScanline = false;
 
-        uint32 tile_width0 = m_width, tile_height0 = 0;
+        uint32_t tile_width0 = m_width, tile_height0 = 0;
 
         if (is_tiled)
         {
@@ -456,7 +456,7 @@ bool  TiffDecoder::readData( Mat& img )
                 tile_width0 = m_width;
 
             if (tile_height0 == 0 ||
-                    (!is_tiled && tile_height0 == std::numeric_limits<uint32>::max()) )
+                    (!is_tiled && tile_height0 == std::numeric_limits<uint32_t>::max()) )
                 tile_height0 = m_height;
 
             const int TILE_MAX_WIDTH = (1 << 24);
@@ -481,7 +481,7 @@ bool  TiffDecoder::readData( Mat& img )
                     ( (uint64_t) MAX_TILE_SIZE * 95 / 100)
                 )
                 {
-                    uint16_t planerConfig = (uint16)-1;
+                    uint16_t planerConfig = (uint16_t)-1;
                     CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &planerConfig));
 
                     doReadScanline = (!is_tiled) // no tile
@@ -537,7 +537,7 @@ bool  TiffDecoder::readData( Mat& img )
                     MAX_TILE_SIZE * 95 / 100
                 )
                 {
-                    uint16_t planerConfig = (uint16)-1;
+                    uint16_t planerConfig = (uint16_t)-1;
                     CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PLANARCONFIG, &planerConfig));
 
                     doReadScanline = (!is_tiled) // no tile
@@ -616,7 +616,7 @@ bool  TiffDecoder::readData( Mat& img )
                             uchar* bstart = buffer;
                             if (doReadScanline)
                             {
-                                CV_TIFF_CHECK_CALL((int)TIFFReadScanline(tif, (uint32*)buffer, y) >= 0);
+                                CV_TIFF_CHECK_CALL((int)TIFFReadScanline(tif, (uint32_t*)buffer, y) >= 0);
 
                                 if ( isNeedConvert16to8 )
                                 {
@@ -638,11 +638,11 @@ bool  TiffDecoder::readData( Mat& img )
                             }
                             else if (!is_tiled)
                             {
-                                CV_TIFF_CHECK_CALL(TIFFReadRGBAStrip(tif, y, (uint32*)buffer));
+                                CV_TIFF_CHECK_CALL(TIFFReadRGBAStrip(tif, y, (uint32_t*)buffer));
                             }
                             else
                             {
-                                CV_TIFF_CHECK_CALL(TIFFReadRGBATile(tif, x, y, (uint32*)buffer));
+                                CV_TIFF_CHECK_CALL(TIFFReadRGBATile(tif, x, y, (uint32_t*)buffer));
                                 // Tiles fill the buffer from the bottom up
                                 bstart += (tile_height0 - tile_height) * tile_width0 * 4;
                             }
@@ -736,15 +736,15 @@ bool  TiffDecoder::readData( Mat& img )
                         {
                             if (doReadScanline)
                             {
-                                CV_TIFF_CHECK_CALL((int)TIFFReadScanline(tif, (uint32*)buffer, y) >= 0);
+                                CV_TIFF_CHECK_CALL((int)TIFFReadScanline(tif, (uint32_t*)buffer, y) >= 0);
                             }
                             else if (!is_tiled)
                             {
-                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedStrip(tif, tileidx, (uint32*)buffer, buffer_size) >= 0);
+                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedStrip(tif, tileidx, (uint32_t*)buffer, buffer_size) >= 0);
                             }
                             else
                             {
-                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedTile(tif, tileidx, (uint32*)buffer, buffer_size) >= 0);
+                                CV_TIFF_CHECK_CALL((int)TIFFReadEncodedTile(tif, tileidx, (uint32_t*)buffer, buffer_size) >= 0);
                             }
 
                             for (int i = 0; i < tile_height; i++)
