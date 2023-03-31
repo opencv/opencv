@@ -63,6 +63,9 @@ using namespace tiff_dummy_namespace;
 namespace cv
 {
 
+// to extend cvtColor() to support CV_8S, CV_16S, CV_32S and CV_64F.
+static void extend_cvtColor( InputArray _src, OutputArray _dst, int code );
+
 #define CV_TIFF_CHECK_CALL(call) \
     if (0 == (call)) { \
         CV_LOG_WARNING(NULL, "OpenCV TIFF(line " << __LINE__ << "): failed " #call); \
@@ -1039,9 +1042,9 @@ bool  TiffDecoder::readData( Mat& img )
                             Rect roi_tile(0, 0, tile_width, tile_height);
                             Rect roi_img(x, img_y, tile_width, tile_height);
                             if (!m_hdr && ncn == 3)
-                                cvtColor(m_tile(roi_tile), img(roi_img), COLOR_RGB2BGR);
+                                extend_cvtColor(m_tile(roi_tile), img(roi_img), COLOR_RGB2BGR);
                             else if (!m_hdr && ncn == 4)
-                                cvtColor(m_tile(roi_tile), img(roi_img), COLOR_RGBA2BGRA);
+                                extend_cvtColor(m_tile(roi_tile), img(roi_img), COLOR_RGBA2BGRA);
                             else
                                 m_tile(roi_tile).copyTo(img(roi_img));
                             break;
@@ -1282,7 +1285,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
             case CV_32S:
             {
                 bitsPerChannel = 32;
-                sample_format = SAMPLEFORMAT_UINT;
+                sample_format = SAMPLEFORMAT_INT;
                 break;
             }
             case CV_32F:
@@ -1360,13 +1363,13 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
 
                 case 3:
                 {
-                    cvtColor(img(Rect(0, y, width, 1)), (const Mat&)m_buffer, COLOR_BGR2RGB);
+                    extend_cvtColor(img(Rect(0, y, width, 1)), (const Mat&)m_buffer, COLOR_BGR2RGB);
                     break;
                 }
 
                 case 4:
                 {
-                    cvtColor(img(Rect(0, y, width, 1)), (const Mat&)m_buffer, COLOR_BGRA2RGBA);
+                    extend_cvtColor(img(Rect(0, y, width, 1)), (const Mat&)m_buffer, COLOR_BGRA2RGBA);
                     break;
                 }
 
@@ -1426,6 +1429,169 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
     std::vector<Mat> img_vec;
     img_vec.push_back(img);
     return writeLibTiff(img_vec, params);
+}
+
+static void extend_cvtColor( InputArray _src, OutputArray _dst, int code )
+{
+    CV_Assert( !_src.empty() );
+
+    const int stype = _src.type();
+    const int depth = CV_MAT_DEPTH ( stype );
+
+    if (!((depth == CV_8S) || (depth == CV_16S) || (depth == CV_32S) || (depth == CV_64F)) )
+    {
+        cvtColor( _src, _dst, code );
+        return;
+    }
+
+    CV_Assert( _src.dims() == 2 );
+    CV_Assert( (code == COLOR_BGR2RGB) || (code == COLOR_BGRA2RGBA) );
+
+    Mat src = _src.getMat();
+    int height = src.rows;
+    int width  = src.cols;
+
+    _dst.create( _src.size(), stype );
+    Mat dst = _dst.getMat();
+
+    for (int y = 0; y < height; ++ y)
+    {
+        switch ( depth )
+        {
+        case CV_8S:
+        {
+            int8_t *pSrc = (int8_t*) src.ptr(y);
+            int8_t *pDst = (int8_t*) dst.ptr(y);
+
+            switch (code)
+            {
+            case COLOR_BGR2RGB: //  COLOR_RGB2BGR:
+                for (int x = 0; x < width; ++ x)
+                {
+                    pDst [ x * 3 + 0 ] = pSrc [ x * 3 + 2 ] ;
+                    pDst [ x * 3 + 1 ] = pSrc [ x * 3 + 1 ] ;
+                    pDst [ x * 3 + 2 ] = pSrc [ x * 3 + 0 ] ;
+                }
+                break;
+
+            case COLOR_BGRA2RGBA: //  COLOR_RGBA2BGRA:
+                for (int x = 0; x < width; ++ x)
+                {
+                    pDst [ x * 4 + 0 ] = pSrc [ x * 4 + 2 ] ;
+                    pDst [ x * 4 + 1 ] = pSrc [ x * 4 + 1 ] ;
+                    pDst [ x * 4 + 2 ] = pSrc [ x * 4 + 0 ] ;
+                    pDst [ x * 4 + 3 ] = pSrc [ x * 4 + 3 ] ;
+                }
+                break;
+
+            default:
+                CV_Assert(0);
+            break;
+            }
+        }
+        break;
+
+        case CV_16S:
+        {
+            int16_t *pSrc = (int16_t*) src.ptr(y);
+            int16_t *pDst = (int16_t*) dst.ptr(y);
+
+            switch (code)
+            {
+            case COLOR_BGR2RGB: //  COLOR_RGB2BGR:
+                for (int x = 0; x < width; ++ x)
+                {
+                    pDst [ x * 3 + 0 ] = pSrc [ x * 3 + 2 ] ;
+                    pDst [ x * 3 + 1 ] = pSrc [ x * 3 + 1 ] ;
+                    pDst [ x * 3 + 2 ] = pSrc [ x * 3 + 0 ] ;
+                }
+                break;
+            case COLOR_BGRA2RGBA: //  COLOR_RGBA2BGRA:
+                for (int x = 0; x < width; ++ x)
+                {
+                    pDst [ x * 4 + 0 ] = pSrc [ x * 4 + 2 ] ;
+                    pDst [ x * 4 + 1 ] = pSrc [ x * 4 + 1 ] ;
+                    pDst [ x * 4 + 2 ] = pSrc [ x * 4 + 0 ] ;
+                    pDst [ x * 4 + 3 ] = pSrc [ x * 4 + 3 ] ;
+                }
+                break;
+
+            default:
+                CV_Assert(0);
+            break;
+            }
+        }
+        break;
+
+        case CV_32S:
+        {
+            int32_t *pSrc = (int32_t*) src.ptr(y);
+            int32_t *pDst = (int32_t*) dst.ptr(y);
+
+            switch (code)
+            {
+            case COLOR_BGR2RGB: //  COLOR_RGB2BGR:
+                for (int x = 0; x < width; ++ x)
+                {
+                    pDst [ x * 3 + 0 ] = pSrc [ x * 3 + 2 ] ;
+                    pDst [ x * 3 + 1 ] = pSrc [ x * 3 + 1 ] ;
+                    pDst [ x * 3 + 2 ] = pSrc [ x * 3 + 0 ] ;
+                }
+                break;
+            case COLOR_BGRA2RGBA: //  COLOR_RGBA2BGRA:
+                for (int x = 0; x < width; ++ x)
+                {
+                    pDst [ x * 4 + 0 ] = pSrc [ x * 4 + 2 ] ;
+                    pDst [ x * 4 + 1 ] = pSrc [ x * 4 + 1 ] ;
+                    pDst [ x * 4 + 2 ] = pSrc [ x * 4 + 0 ] ;
+                    pDst [ x * 4 + 3 ] = pSrc [ x * 4 + 3 ] ;
+                }
+                break;
+
+            default:
+                CV_Assert(0);
+            break;
+            }
+        }
+        break;
+
+        case CV_64F:
+        {
+            double *pSrc = (double*) src.ptr(y);
+            double *pDst = (double*) dst.ptr(y);
+
+            switch (code)
+            {
+            case COLOR_BGR2RGB: //  COLOR_RGB2BGR:
+                for (int x = 0; x < width; ++ x)
+                {
+                    pDst [ x * 3 + 0 ] = pSrc [ x * 3 + 2 ] ;
+                    pDst [ x * 3 + 1 ] = pSrc [ x * 3 + 1 ] ;
+                    pDst [ x * 3 + 2 ] = pSrc [ x * 3 + 0 ] ;
+                }
+                break;
+            case COLOR_BGRA2RGBA: //  COLOR_RGBA2BGRA:
+                for (int x = 0; x < width; ++ x)
+                {
+                    pDst [ x * 4 + 0 ] = pSrc [ x * 4 + 2 ] ;
+                    pDst [ x * 4 + 1 ] = pSrc [ x * 4 + 1 ] ;
+                    pDst [ x * 4 + 2 ] = pSrc [ x * 4 + 0 ] ;
+                    pDst [ x * 4 + 3 ] = pSrc [ x * 4 + 3 ] ;
+                }
+                break;
+
+            default:
+                CV_Assert(0);
+            break;
+            }
+        }
+        break;
+
+        default:
+            CV_Assert(0);
+        break;
+        } // switch( depth )
+    }
 }
 
 } // namespace

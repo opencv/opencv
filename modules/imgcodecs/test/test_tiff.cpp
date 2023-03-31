@@ -840,6 +840,81 @@ TEST(Imgcodecs_Tiff, readWrite_predictor)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/23416
+TEST(Imgcodecs_Tiff, readWrite_all_types)
+{
+    int typesList[] = {
+        CV_8UC1,  CV_8UC3,  CV_8UC4,
+        CV_8SC1,  CV_8SC3,  CV_8SC4,
+        CV_16UC1, CV_16UC3, CV_16UC4,
+        CV_16SC1, CV_16SC3, CV_16SC4,
+        CV_32SC1, CV_32SC3, CV_32SC4,
+        CV_32FC1, CV_32FC3, CV_32FC4,
+        CV_64FC1, CV_64FC3, CV_64FC4
+    };
+
+    for (size_t i = 0; i < sizeof(typesList) / sizeof(int); i++)
+    {
+        const Mat img = cv::Mat::zeros( 120, 160, typesList[i] );
+        ASSERT_FALSE(img.empty());
+        {
+            // Add noise to test compression.
+            cv::Mat roi = cv::Mat(img, cv::Rect(0, 0, img.cols, img.rows/2));
+            cv::randu(roi, cv::Scalar(0), cv::Scalar(256));
+        }
+
+        std::vector<uchar> bufLZW;
+        {
+            std::vector<int> params;
+            params.push_back(IMWRITE_TIFF_COMPRESSION);
+            params.push_back(COMPRESSION_LZW);
+
+            EXPECT_NO_THROW(cv::imencode(".tiff", img, bufLZW, params));
+        }
+
+        const Mat imgLZW = cv::imdecode( bufLZW, IMREAD_UNCHANGED);
+        {
+            ASSERT_FALSE(imgLZW.empty());
+            ASSERT_EQ(imgLZW.type(), img.type());
+            ASSERT_EQ(imgLZW.size(), img.size());
+        }
+
+        std::vector<uchar> bufRAW;
+        {
+            std::vector<int> params;
+            params.push_back(IMWRITE_TIFF_COMPRESSION);
+            params.push_back(COMPRESSION_NONE);
+
+            EXPECT_NO_THROW(cv::imencode(".tiff", img, bufRAW, params));
+        }
+
+        const Mat imgRAW = cv::imdecode( bufRAW, IMREAD_UNCHANGED);
+        {
+            ASSERT_FALSE(imgRAW.empty());
+            ASSERT_EQ(imgRAW.type(), img.type());
+            ASSERT_EQ(imgRAW.size(), img.size());
+        }
+
+        switch( CV_MAT_DEPTH(img.type()) )
+        {
+            case CV_8U:  case CV_8S:
+            case CV_16U: case CV_16S:
+                         case CV_32S:
+                EXPECT_NE(bufLZW, bufRAW);
+                break;
+            case CV_32F: case CV_64F:
+                // For float data, data compression is disabled.
+                EXPECT_EQ(bufLZW, bufRAW);
+                break;
+            default:
+                CV_Assert(0);
+                break;
+        }
+
+        EXPECT_LE(cvtest::norm(imgRAW, img, NORM_INF | NORM_RELATIVE), 1e-3);
+        EXPECT_LE(cvtest::norm(imgLZW, img, NORM_INF | NORM_RELATIVE), 1e-3);
+    }
+}
 
 //==================================================================================================
 
@@ -950,63 +1025,6 @@ TEST(Imgcodecs_Tiff_Modes, write_multipage)
     {
         EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), read_pages[i], pages[i]);
     }
-}
-
-// See https://github.com/opencv/opencv/issues/23416
-TEST(Imgcodecs_Tiff, write_COMPRESSION)
-{
-    // Tiff Encoder convert BGR to RGB using cvtColor().
-    // cvtColor() supports only CV_8U, CV_16U and CV_32F.
-    // => Tiff Encoder cannot handle BGR/BGRA images with CV_8S, CV_16S, CV_32S, CV_64F.
-    int typesList[] = {
-        CV_8UC1,  CV_8UC3, CV_8UC4,
-        CV_8SC1,  // CV_8SC3, CV_8SC4,
-        CV_16UC1, CV_16UC3, CV_16UC4,
-        CV_16SC1, // CV_16SC3, CV_16SC4,
-        CV_32SC1, // CV_32SC3, CV_32SC4,
-        CV_32FC1, CV_32FC3, CV_32FC4,
-        CV_64FC1  // CV_64FC3, CV_64FC4
-    };
-
-    for (size_t i = 0; i < sizeof(typesList) / sizeof(int); i++)
-    {
-        const Mat img = cv::Mat::zeros( 100, 100, typesList[i] );
-        ASSERT_FALSE(img.empty());
-
-        std::vector<uchar> bufLZW;
-        {
-            std::vector<int> params;
-            params.push_back(IMWRITE_TIFF_COMPRESSION);
-            params.push_back(COMPRESSION_LZW);
-
-            EXPECT_NO_THROW(cv::imencode(".tiff", img, bufLZW, params));
-        }
-
-        std::vector<uchar> bufRAW;
-        {
-            std::vector<int> params;
-            params.push_back(IMWRITE_TIFF_COMPRESSION);
-            params.push_back(COMPRESSION_NONE);
-
-            EXPECT_NO_THROW(cv::imencode(".tiff", img, bufRAW, params));
-        }
-
-        switch( CV_MAT_DEPTH(img.type()) )
-        {
-            case CV_8U:  case CV_8S:
-            case CV_16U: case CV_16S:
-                         case CV_32S:
-                EXPECT_LT(bufLZW.size(), bufRAW.size() );
-                break;
-            case CV_32F: case CV_64F:
-                // Force to COMPRESSION_NONE.
-                EXPECT_EQ(bufLZW.size(), bufRAW.size() );
-                break;
-            default:
-                break;
-        }
-    }
-
 }
 
 //==================================================================================================
