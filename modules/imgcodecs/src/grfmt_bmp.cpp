@@ -127,6 +127,7 @@ bool  BmpDecoder::readHeader()
                             ++bit_count;
                         }
                         m_rgba_bit_offset[index_rgba] = bit_count;
+                        m_rgba_scale_factor[index_rgba] = 255.0f / mask;
                     }
                 }
                 m_strm.skip( size - 56 );
@@ -510,12 +511,19 @@ decode_rle8_bad: ;
                 if( !color )
                     icvCvt_BGRA2Gray_8u_C4C1R( src, 0, data, 0, Size(m_width,1) );
                 else if( img.channels() == 3 )
-                    icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, Size(m_width, 1));
+                {
+
+                    bool has_bit_mask = (m_rgba_bit_offset[0] >= 0) && (m_rgba_bit_offset[1] >= 0) && (m_rgba_bit_offset[2] >= 0);
+                    if ( has_bit_mask )
+                        maskBGRA(data, src, m_width, false);
+                    else
+                        icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, Size(m_width, 1));
+                }
                 else if ( img.channels() == 4 )
                 {
                     bool has_bit_mask = (m_rgba_bit_offset[0] >= 0) && (m_rgba_bit_offset[1] >= 0) && (m_rgba_bit_offset[2] >= 0);
                     if ( has_bit_mask )
-                        maskBGRA(data, src, m_width);
+                        maskBGRA(data, src, m_width, true);
                     else
                         memcpy(data, src, m_width * 4);
                 }
@@ -538,20 +546,27 @@ void  BmpDecoder::initMask()
 {
     memset(m_rgba_mask, 0, sizeof(m_rgba_mask));
     memset(m_rgba_bit_offset, -1, sizeof(m_rgba_bit_offset));
+    for (size_t i = 0; i < 4; i++) {
+        m_rgba_scale_factor[i] = 1.0f;
+    }
 }
 
-void  BmpDecoder::maskBGRA(uchar* des, uchar* src, int num)
+void  BmpDecoder::maskBGRA(uchar* des, const uchar* src, int num, bool alpha_required)
 {
-    for( int i = 0; i < num; i++, des += 4, src += 4 )
+    int dest_stride = alpha_required ? 4 : 3;
+    for( int i = 0; i < num; i++, des += dest_stride, src += 4 )
     {
         uint data = *((uint*)src);
-        des[0] = (uchar)((m_rgba_mask[2] & data) >> m_rgba_bit_offset[2]);
-        des[1] = (uchar)((m_rgba_mask[1] & data) >> m_rgba_bit_offset[1]);
-        des[2] = (uchar)((m_rgba_mask[0] & data) >> m_rgba_bit_offset[0]);
-        if (m_rgba_bit_offset[3] >= 0)
-            des[3] = (uchar)((m_rgba_mask[3] & data) >> m_rgba_bit_offset[3]);
-        else
-            des[3] = 255;
+        des[0] = (uchar)(((m_rgba_mask[2] & data) >> m_rgba_bit_offset[2]) * m_rgba_scale_factor[2]);
+        des[1] = (uchar)(((m_rgba_mask[1] & data) >> m_rgba_bit_offset[1]) * m_rgba_scale_factor[1]);
+        des[2] = (uchar)(((m_rgba_mask[0] & data) >> m_rgba_bit_offset[0]) * m_rgba_scale_factor[0]);
+        if (alpha_required)
+        {
+            if (m_rgba_bit_offset[3] >= 0)
+                des[3] = (uchar)(((m_rgba_mask[3] & data) >> m_rgba_bit_offset[3]) * m_rgba_scale_factor[3]);
+            else
+                des[3] = 255;
+        }
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////
