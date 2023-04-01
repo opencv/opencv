@@ -82,6 +82,14 @@ foreach(fname ${GRADLE_WRAPPER_FILES})
   install(FILES "${OpenCV_SOURCE_DIR}/platforms/android/gradle-wrapper/${fname}" DESTINATION "${ANDROID_INSTALL_SAMPLES_DIR}/${__dir}" COMPONENT samples ${__permissions})
 endforeach()
 
+# set build.gradle namespace
+if(ANDROID_GRADLE_PLUGIN_VERSION VERSION_GREATER_EQUAL "7.3.0")
+  ocv_update(OPENCV_NAMESPACE_DECLARATION "namespace 'org.opencv'")
+else()
+  ocv_update(OPENCV_NAMESPACE_DECLARATION "")
+endif()
+
+
 # force reusing of the same CMake version
 if(NOT OPENCV_SKIP_ANDROID_FORCE_CMAKE)
   if(NOT DEFINED _CMAKE_INSTALL_DIR)
