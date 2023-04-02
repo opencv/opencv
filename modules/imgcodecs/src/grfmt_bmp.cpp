@@ -504,28 +504,33 @@ decode_rle8_bad: ;
             break;
         /************************* 32 BPP ************************/
         case 32:
-            for( y = 0; y < m_height; y++, data += step )
             {
-                m_strm.getBytes( src, src_pitch );
-
-                if( !color )
-                    icvCvt_BGRA2Gray_8u_C4C1R( src, 0, data, 0, Size(m_width,1) );
-                else if( img.channels() == 3 )
+                bool has_bit_mask = (m_rgba_bit_offset[0] >= 0) && (m_rgba_bit_offset[1] >= 0) && (m_rgba_bit_offset[2] >= 0);
+                for( y = 0; y < m_height; y++, data += step )
                 {
+                    m_strm.getBytes( src, src_pitch );
 
-                    bool has_bit_mask = (m_rgba_bit_offset[0] >= 0) && (m_rgba_bit_offset[1] >= 0) && (m_rgba_bit_offset[2] >= 0);
-                    if ( has_bit_mask )
-                        maskBGRA(data, src, m_width, false);
-                    else
-                        icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, Size(m_width, 1));
-                }
-                else if ( img.channels() == 4 )
-                {
-                    bool has_bit_mask = (m_rgba_bit_offset[0] >= 0) && (m_rgba_bit_offset[1] >= 0) && (m_rgba_bit_offset[2] >= 0);
-                    if ( has_bit_mask )
-                        maskBGRA(data, src, m_width, true);
-                    else
-                        memcpy(data, src, m_width * 4);
+                    if( !color )
+                    {
+                        if ( has_bit_mask )
+                            maskBGRAtoGray(data, src, m_width);
+                        else
+                            icvCvt_BGRA2Gray_8u_C4C1R( src, 0, data, 0, Size(m_width,1) );
+                    }
+                    else if( img.channels() == 3 )
+                    {
+                        if ( has_bit_mask )
+                            maskBGRA(data, src, m_width, false);
+                        else
+                            icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, Size(m_width, 1));
+                    }
+                    else if ( img.channels() == 4 )
+                    {
+                        if ( has_bit_mask )
+                            maskBGRA(data, src, m_width, true);
+                        else
+                            memcpy(data, src, m_width * 4);
+                    }
                 }
             }
             result = true;
@@ -567,6 +572,19 @@ void  BmpDecoder::maskBGRA(uchar* des, const uchar* src, int num, bool alpha_req
             else
                 des[3] = 255;
         }
+    }
+}
+
+void  BmpDecoder::maskBGRAtoGray(uchar* des, const uchar* src, int num)
+{
+    for( int i = 0; i < num; i++, des++, src += 4 )
+    {
+        uint data = *((uint*)src);
+        int red = (uchar)(((m_rgba_mask[0] & data) >> m_rgba_bit_offset[0]) * m_rgba_scale_factor[0]);
+        int green = (uchar)(((m_rgba_mask[1] & data) >> m_rgba_bit_offset[1]) * m_rgba_scale_factor[1]);
+        int blue = (uchar)(((m_rgba_mask[2] & data) >> m_rgba_bit_offset[2]) * m_rgba_scale_factor[2]);
+
+        *des = (uchar)(0.299f * red + 0.587f * green + 0.114f * blue);
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////

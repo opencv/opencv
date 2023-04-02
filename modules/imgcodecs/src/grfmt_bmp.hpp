@@ -75,6 +75,7 @@ protected:
 
     void  initMask();
     void  maskBGRA(uchar* des, const uchar* src, int num, bool alpha_required);
+    void  maskBGRAtoGray(uchar* des, const uchar* src, int num);
 
     enum Origin
     {
