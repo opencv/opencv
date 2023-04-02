@@ -1918,7 +1918,7 @@ def postprocess_model(model_path, inputs_shapes):
 
         onnx.checker.check_model(model)
         return model
-    
+
     onnx_model = update_inputs_dims(onnx_model, inputs_shapes)
     onnx.save(onnx_model, model_path)
 
@@ -2517,7 +2517,7 @@ def gen_layer_norm_expanded(input_shape=[1, 4, 5], axis=-1, constant_as_initiali
                 self.name_dict[op_type] += 1
             else:
                 self.name_dict[op_type] = 0
-            
+
             return "{}.{}".format(op_type, self.name_dict[op_type])
 
     node_name_manager = NodeNameManager()
@@ -2607,3 +2607,42 @@ save_data_and_model("gelu", x, gelu)
 
 gelu_approximation = nn.GELU('tanh')
 save_data_and_model("gelu_approximation", x, gelu_approximation)
+
+# Test data for a part of model: https://huggingface.co/openai/clip-vit-base-patch32
+input = np.random.standard_normal((1, 1, 3)).astype(np.float32)
+embedding = np.array([4, 5, 6], dtype=np.float32)
+data = np.random.standard_normal((2, 3)).astype(np.float32)
+indices = np.array([[0, 1]], dtype=np.int64)
+
+output = np.concatenate((embedding.reshape(1, 1, 3), input), axis=1) + np.take(data, indices, axis=0)
+
+embedding = onnx.numpy_helper.from_array(embedding, name='embedding')
+X = onnx.helper.make_tensor_value_info('input', onnx.TensorProto.FLOAT, input.shape)
+Y = onnx.helper.make_tensor_value_info('output', onnx.TensorProto.FLOAT, output.shape)
+
+shape = np.array([1, 1, -1], dtype=np.int32)
+shape = onnx.numpy_helper.from_array(shape, name='shape')
+expand = onnx.helper.make_node("Expand", inputs=['embedding', 'shape'], outputs=['expand'])
+
+one = np.array([1, 1, 1], dtype=np.float32)
+one = onnx.numpy_helper.from_array(one, name='one')
+mul = onnx.helper.make_node("Mul", inputs=['input', 'one'], outputs=['input_mul'])
+
+concat = onnx.helper.make_node("Concat", inputs=['expand', 'input_mul'], outputs=['concat'], axis=1)
+
+data = onnx.numpy_helper.from_array(data, name='data')
+indices = onnx.numpy_helper.from_array(indices, name='indices')
+
+gather = onnx.helper.make_node("Gather", inputs=['data', 'indices'], outputs=['gather'])
+add = onnx.helper.make_node("Add", inputs=['concat', 'gather'], outputs=['output'])
+
+name = "clip-vit-base-head"
+graph = onnx.helper.make_graph([mul, expand, concat, gather, add], name, [X], [Y], [embedding, data, indices, shape, one])
+
+model = onnx.helper.make_model(graph, producer_name=name)
+onnx.save(model, os.path.join("models", name + ".onnx"))
+
+input_files = os.path.join("data", "input_" + name)
+np.save(input_files, input.data)
+output_files = os.path.join("data", "output_" + name)
+np.save(output_files, np.ascontiguousarray(output.data))
