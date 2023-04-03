@@ -338,8 +338,10 @@ PyObject* pyopencv_from(const TYPE& src)                                        
         if (!registerNewType(m, #EXPORT_NAME, (PyObject*)pyopencv_##CLASS_ID##_TypePtr, SCOPE)) \
         { \
             printf("Failed to register a new type: " #EXPORT_NAME  ", base (" #BASE ") in " SCOPE " \n"); \
+            Py_DECREF(pyopencv_##CLASS_ID##_TypePtr); \
             ERROR_HANDLER; \
         } \
+        Py_DECREF(pyopencv_##CLASS_ID##_TypePtr); \
     }
 
 // Debug module load:
