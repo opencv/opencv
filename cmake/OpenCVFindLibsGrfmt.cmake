@@ -140,6 +140,7 @@ if(WITH_WEBP)
   endif()
 endif()
 
+
 # --- Add libwebp to 3rdparty/libwebp and compile it if not available ---
 if(WITH_WEBP AND NOT WEBP_FOUND
     AND (NOT ANDROID OR HAVE_CPUFEATURES)
@@ -168,6 +169,34 @@ if(NOT WEBP_VERSION AND WEBP_INCLUDE_DIR)
     endif()
   endif()
 endif()
+
+# --- libraw (optional) ---
+
+if(WITH_RAW)
+  if(BUILD_RAW)
+    ocv_clear_vars(RAW_FOUND RAW_LIBRARY RAW_LIBRARIES RAW_INCLUDE_DIR)
+  else()
+    ocv_clear_internal_cache_vars(RAW_LIBRARY RAW_INCLUDE_DIR)
+    include(cmake/OpenCVFindLibRaw.cmake)
+    if(RAW_FOUND)
+      set(HAVE_RAW 1)
+    endif()
+  endif()
+endif()
+
+# --- Add libwebp to 3rdparty/libwebp and compile it if not available ---
+if(WITH_RAW AND NOT RAW_FOUND
+    AND (NOT ANDROID OR HAVE_CPUFEATURES)
+)
+  ocv_clear_vars(RAW_LIBRARY RAW_INCLUDE_DIR)
+  set(RAW_LIBRARY libraw CACHE INTERNAL "")
+  set(RAW_LIBRARIES ${RAW_LIBRARY})
+
+  add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libraw")
+  set(RAW_INCLUDE_DIR "${${RAW_LIBRARY}_SOURCE_DIR}/src" CACHE INTERNAL "")
+  set(HAVE_RAW 1)
+endif()
+
 
 # --- libopenjp2 (optional, check before libjasper) ---
 if(WITH_OPENJPEG)

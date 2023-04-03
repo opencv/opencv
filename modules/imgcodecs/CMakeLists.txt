@@ -36,6 +36,12 @@ if(HAVE_PNG)
   list(APPEND GRFMT_LIBS ${PNG_LIBRARIES})
 endif()
 
+if(HAVE_RAW)
+  add_definitions(${RAW_DEFINITIONS})
+  ocv_include_directories(${RAW_INCLUDE_DIR})
+  list(APPEND GRFMT_LIBS ${RAW_LIBRARIES})
+endif()
+
 if(HAVE_GDCM)
   ocv_include_directories(${GDCM_INCLUDE_DIRS})
   list(APPEND GRFMT_LIBS ${GDCM_LIBRARIES})

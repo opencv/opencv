@@ -40,10 +40,10 @@ void mouseHandler(int event, int x, int y, int, void*)
             circle(img1, point, 2, Scalar(0, 0, 255), -1, 8, 0);
             pts.push_back(point);
             var++;
-            drag  = 1;
+            drag = 1;
 
             if (var > 1)
-                line(img1,pts[var-2], point, Scalar(0, 0, 255), 2, 8, 0);
+                line(img1, pts[var - 2], point, Scalar(0, 0, 255), 2, 8, 0);
 
             imshow("Source", img1);
         }
@@ -62,7 +62,7 @@ void mouseHandler(int event, int x, int y, int, void*)
 
         if (var != 0)
         {
-            polylines( img1, pts, 1, Scalar(0,0,0), 2, 8, 0);
+            polylines(img1, pts, 1, Scalar(0, 0, 0), 2, 8, 0);
         }
 
         imshow("Source", img1);
@@ -91,7 +91,7 @@ void mouseHandler(int event, int x, int y, int, void*)
     }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, "{@input | lena.jpg | input image}");
     parser.about("This program demonstrates using mouse events\n");
