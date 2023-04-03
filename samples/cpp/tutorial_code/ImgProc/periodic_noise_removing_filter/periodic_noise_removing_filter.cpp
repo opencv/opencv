@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
 {
     CommandLineParser parser(argc, argv, keys);
     string strInFileName = parser.get<String>("@image");
-    samples::addSamplesDataSearchSubDirectory("./doc/tutorials/imgproc/periodic_noise_removing_filter/images");
+    samples::addSamplesDataSearchSubDirectory("doc/tutorials/imgproc/periodic_noise_removing_filter/images");
 
     Mat imgIn = imread(samples::findFile(strInFileName), IMREAD_GRAYSCALE);
     if (imgIn.empty()) //check whether the image is loaded or not

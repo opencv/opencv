@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     int R = parser.get<int>("R");
     int snr = parser.get<int>("SNR");
     string strInFileName = parser.get<String>("image");
-    samples::addSamplesDataSearchSubDirectory("./doc/tutorials/imgproc/out_of_focus_deblur_filter/images");
+    samples::addSamplesDataSearchSubDirectory("doc/tutorials/imgproc/out_of_focus_deblur_filter/images");
 
     if (!parser.check())
     {

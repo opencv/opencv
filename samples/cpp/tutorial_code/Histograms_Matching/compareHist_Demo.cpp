@@ -25,7 +25,7 @@ int main( int argc, char** argv )
 {
     //! [Load three images with different environment settings]
     CommandLineParser parser( argc, argv, keys );
-    samples::addSamplesDataSearchSubDirectory( "./doc/tutorials/imgproc/histograms/histogram_comparison/images" );
+    samples::addSamplesDataSearchSubDirectory( "doc/tutorials/imgproc/histograms/histogram_comparison/images" );
     Mat src_base = imread(samples::findFile( parser.get<String>( "@input1" ) ) );
     Mat src_test1 = imread(samples::findFile( parser.get<String>( "@input2" ) ) );
     Mat src_test2 = imread(samples::findFile( parser.get<String>( "@input3" ) ) );

@@ -38,7 +38,7 @@ const char* keys =
 int main( int argc, char** argv )
 {
   CommandLineParser parser( argc, argv, keys );
-  samples::addSamplesDataSearchSubDirectory( "./doc/tutorials/imgproc/histograms/template_matching/images" );
+  samples::addSamplesDataSearchSubDirectory( "doc/tutorials/imgproc/histograms/template_matching/images" );
 
   //! [load_image]
   /// Load image and template

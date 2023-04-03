@@ -27,7 +27,7 @@ int main( int argc, char* argv[] )
 {
     //! [Read the image]
     CommandLineParser parser( argc, argv, "{@input |Back_Projection_Theory0.jpg| input image}" );
-    samples::addSamplesDataSearchSubDirectory("./doc/tutorials/imgproc/histograms/back_projection/images");
+    samples::addSamplesDataSearchSubDirectory("doc/tutorials/imgproc/histograms/back_projection/images");
     Mat src = imread(samples::findFile(parser.get<String>( "@input" )) );
     if( src.empty() )
     {

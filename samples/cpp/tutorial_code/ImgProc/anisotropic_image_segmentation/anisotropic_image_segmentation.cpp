@@ -22,7 +22,7 @@ int main()
     int LowThr = 35;        // threshold1 for orientation, it ranges from 0 to 180
     int HighThr = 57;       // threshold2 for orientation, it ranges from 0 to 180
 
-    samples::addSamplesDataSearchSubDirectory("./doc/tutorials/imgproc/anisotropic_image_segmentation/images");
+    samples::addSamplesDataSearchSubDirectory("doc/tutorials/imgproc/anisotropic_image_segmentation/images");
     Mat imgIn = imread(samples::findFile("gst_input.jpg"), IMREAD_GRAYSCALE);
     if (imgIn.empty()) //check whether the image is loaded or not
     {
