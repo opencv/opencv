@@ -2732,6 +2732,12 @@ bool QRDecode::decodingProcess()
 
     quirc_data qr_code_data;
     quirc_decode_error_t errorCode = quirc_decode(&qr_code, &qr_code_data);
+
+    if(errorCode ==  QUIRC_ERROR_DATA_ECC){
+        quirc_flip(&qr_code);
+        errorCode = quirc_decode(&qr_code, &qr_code_data);
+    }
+
     if (errorCode != 0) { return false; }
 
     for (int i = 0; i < qr_code_data.payload_len; i++)
