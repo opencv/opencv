@@ -1,15 +1,13 @@
 cmake_minimum_required(VERSION 3.9)
 
-project(parallel_backend_example CXX)
-
 find_package(OpenCV REQUIRED COMPONENTS opencv_core)
 
 if(NOT OPENCV_EXAMPLES_SKIP_PARALLEL_BACKEND_OPENMP
     AND NOT OPENCV_EXAMPLES_SKIP_OPENMP
 )
+  project(opencv_example_openmp_backend)
   find_package(OpenMP)
   if(OpenMP_FOUND)
-    project(opencv_example_openmp_backend)
     add_executable(opencv_example_openmp_backend example-openmp.cpp)
     target_link_libraries(opencv_example_openmp_backend PRIVATE
         opencv_core
