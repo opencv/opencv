@@ -39,7 +39,7 @@ endif()
 if(HAVE_RAW)
   add_definitions(${RAW_DEFINITIONS})
   ocv_include_directories(${RAW_INCLUDE_DIR})
-  list(APPEND GRFMT_LIBS ${RAW_LIBRARIES})
+  list(APPEND GRFMT_LIBS ${RAW_LIBRARY})
 endif()
 
 if(HAVE_GDCM)

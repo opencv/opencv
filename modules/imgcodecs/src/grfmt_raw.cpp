@@ -40,6 +40,8 @@
 //
 //M*/
 
+#include "precomp.hpp"
+
 #ifdef HAVE_RAW
 #define LIBRAW_NO_WINSOCK2
 #define LIBRAW_NODLL
