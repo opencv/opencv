@@ -43,7 +43,7 @@ class aruco_objdetect_test(NewOpenCVTests):
             fd2, filepng2 = tempfile.mkstemp(prefix="svg_marker", suffix=".png")
             os.close(fd2)
             pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
-                        board_height, "charuco_checkboard", marker_size, 'DICT_5X5_1000.json')
+                        board_height, "charuco_checkboard", marker_size, aruco_type_str_[aruco_type_i]+'.json.gz')
             pm.make_charuco_board()
             pm.save()
 
@@ -87,7 +87,7 @@ class aruco_objdetect_test(NewOpenCVTests):
             fd2, filepng2 = tempfile.mkstemp(prefix="svg_marker", suffix=".png")
             os.close(fd2)
             pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
-                        board_height, "charuco_checkboard", marker_size, 'DICT_5X5_1000.json')
+                        board_height, "charuco_checkboard", marker_size, aruco_type_str+'.json.gz')
             pm.make_charuco_board()
             pm.save()
 
