@@ -826,7 +826,8 @@ void videoDevice::setSize(int w, int h){
         {
             videoSize      = w * h;
         }
-        else if (pAmMediaType->subtype == MEDIASUBTYPE_Y16)
+        else if (pAmMediaType->subtype == MEDIASUBTYPE_Y16 ||
+            pAmMediaType->subtype == MEDIASUBTYPE_YUY2)
         {
             videoSize      = w * h * 2;
         }
@@ -1573,6 +1574,12 @@ bool videoInput::getPixels(int id, unsigned char * dstBuffer, bool flipRedAndBlu
                     else {
                         processPixels(src, dst, width, height, flipRedAndBlue, flipImage, 2);
                     }
+                }
+                else if (VDList[id]->pAmMediaType->subtype == MEDIASUBTYPE_YUY2)
+                {
+                    cv::Mat srcMat(height, width, CV_8UC2, src);
+                    cv::Mat dstMat(height, width, CV_8UC3, dst);
+                    cv::cvtColor(srcMat, dstMat, cv::COLOR_YUV2BGR_YUY2);
                 }
                 else
                 {
@@ -2758,6 +2765,14 @@ int videoInput::start(int deviceID, videoDevice *VD){
     if(customSize){
         DebugPrintOut("SETUP: Default Format is set to %ix%i\n", currentWidth, currentHeight);
 
+        if (strcmp("OBS Virtual Camera", VD->nDeviceName) == 0)
+        {
+            // OBS Virtual Camera always returns S_OK on SetFormat(), even if it doesn't support
+            // the actual format. So we have to choose a format that it supports manually, e.g. YUY2.
+            // https://github.com/opencv/opencv/issues/19746#issuecomment-1383056787
+            VD->tryVideoType = MEDIASUBTYPE_YUY2;
+        }
+
         char guidStr[8];
             // try specified format and size
             getMediaSubtypeAsString(VD->tryVideoType, guidStr);
@@ -2869,7 +2884,9 @@ int videoInput::start(int deviceID, videoDevice *VD){
     mt.majortype     = MEDIATYPE_Video;
 
     // Disable format conversion if using 8/16-bit data (e-Con systems)
-    if (checkSingleByteFormat(VD->pAmMediaType->subtype) || (VD->pAmMediaType->subtype == MEDIASUBTYPE_Y16)) {
+    if (checkSingleByteFormat(VD->pAmMediaType->subtype) ||
+        (VD->pAmMediaType->subtype == MEDIASUBTYPE_Y16 || VD->pAmMediaType->subtype == MEDIASUBTYPE_YUY2))
+    {
         DebugPrintOut("SETUP: Not converting frames to RGB.\n");
         mt.subtype = VD->pAmMediaType->subtype;
     }
