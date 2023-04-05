@@ -1,0 +1,17 @@
+======================= LibRaw demosaic pack(s) ===============================
+
+We were forced to stop supporting LibRaw demosaic packs: the contributed code
+is out of date for several years, initial contributors has no interest in it.
+
+We too: we (LibRaw team) focused on RAW decode and metadata extraction, but not
+on postprocessing (demosaic, noise suppression, etc).
+
+So, LibRaw-demosaic-pack-GPLn are abandoned now. We will be happy to convey 
+their support and development to any developer who will show interest.
+
+LibRaw 0.19 contains callback calls placed instead of calls to demosaic pack routines.
+So, adaptation of demosaic packs to new LibRaw should be easy (and, of course, we'll
+provide some support and/or implement additional callbacks if needed).
+
+
+                                                              

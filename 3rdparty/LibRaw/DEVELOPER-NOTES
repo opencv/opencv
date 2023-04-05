@@ -1,0 +1,20 @@
+
+=== Notes for LibRaw contributor ===
+
+0. Repository
+   LibRaw public repository is located on GitHub
+   URL: 
+    http://github.com/LibRaw/LibRaw - main page
+    git://github.com/LibRaw/LibRaw.git - git URL
+
+If you wish to participate in LibRaw development please use GitHub fork.
+
+LibRaw distribution files are prepared by ./mkdist.sh script
+   This script
+     - generates ./configure script from autotools stuff
+     - removes developer Makefile
+     - fetches 'Official' dcraw.c from Dave Coffin's site
+     - removes itself
+
+Feel free to contact us (info@libraw.org or Contact form on www.libraw.org) if
+you have any questions or suggestions.
