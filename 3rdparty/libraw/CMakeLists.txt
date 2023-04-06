@@ -14,12 +14,16 @@ file(GLOB lib_hdrs *.h)
 # ----------------------------------------------------------------------------------
 
 add_library(${RAW_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs} ${lib_hdrs})
-ocv_warnings_disable(CMAKE_CPP_FLAGS /wd4146 /wd4703) 
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-field-initializers -Wmisleading-indentation -Wsuggest-override 
-                                     -Wunused-result -Wimplicit-fallthrough -Wtype-limits
-									                   -Wformat-overflow -Wrestrict -Wmissing-declarations
-									                   -Wsign-compare -Wstringop-truncation -Wformat-truncation
-									                   -Wunused-parameter -Wunused-variable -Wshift-negative-value) 
+#ocv_warnings_disable(CMAKE_CPP_FLAGS /wd4146 /wd4703 /wd4244 /wd4244 /wd4018 /wd4101 /wd4267) 
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Warray-bounds -Wimplicit-fallthrough
+                                     -Wmisleading-indentation -Wmissing-field-initializers
+									                   -Wformat-overflow -Wformat-truncation  -Wmissing-declarations
+                                     -Wrestrict
+									                   -Wsign-compare -Wshift-negative-value -Wstringop-truncation
+                                     -Wsuggest-override  -Wtype-limits
+									                   -Wunused-parameter -Wunused-result -Wunused-variable 
+                                     /wd4146 /wd4703 /wd4244 /wd4244 /wd4018 /wd4101 /wd4267 /wd4800
+) 
 
 add_definitions(-DLIBRAW_NOTHREADS -DLIBRAW_BUILDLIB -DLIBRAW_NODLL)
 

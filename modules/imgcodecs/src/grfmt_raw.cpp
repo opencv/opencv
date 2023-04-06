@@ -70,8 +70,6 @@ namespace cv
 
     bool LibRawDecoder::checkSignature(const String& signature) const
     {
-        bool ret = false;
-        int status = ((LibRaw*)rawProcessor)->open_buffer( (&signature[0]), 128);
 
         return true;
     }
