@@ -73,5 +73,20 @@ TEST(Imgproc_Subdiv2D_Insert, regression_22902)
         pts.push_back(pt);
     }
     ASSERT_NO_THROW(subdiv.insert(pts));
+
+    std::vector<cv::Vec6f> triangles;
+    subdiv.getTriangleList(triangles);
+
+    int trig_cnt = 0;
+    for( std::vector<cv::Vec6f>::const_iterator it = triangles.begin(); it != triangles.end(); it++, trig_cnt++ )
+    {
+        EXPECT_TRUE( (-5 <= triangles.at(trig_cnt).val[0] && triangles.at(trig_cnt).val[0] < 10) &&
+                     (-5 <= triangles.at(trig_cnt).val[1] && triangles.at(trig_cnt).val[1] < 10) &&
+                     (-5 <= triangles.at(trig_cnt).val[2] && triangles.at(trig_cnt).val[2] < 10) &&
+                     (-5 <= triangles.at(trig_cnt).val[3] && triangles.at(trig_cnt).val[3] < 10) &&
+                     (-5 <= triangles.at(trig_cnt).val[4] && triangles.at(trig_cnt).val[4] < 10) &&
+                     (-5 <= triangles.at(trig_cnt).val[5] && triangles.at(trig_cnt).val[5] < 10) );
+    }
+    EXPECT_EQ(trig_cnt, 9);
 }
 }};
