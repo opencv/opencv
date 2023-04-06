@@ -1,9 +1,10 @@
-﻿/**
+/**
 * @brief You will learn how to segment an anisotropic image with a single local orientation by a gradient structure tensor (GST)
 * @author Karpushin Vladislav, karpushin@ngs.ru, https://github.com/VladKarpushin
 */
 
 #include <iostream>
+#include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 
@@ -21,7 +22,8 @@ int main()
     int LowThr = 35;        // threshold1 for orientation, it ranges from 0 to 180
     int HighThr = 57;       // threshold2 for orientation, it ranges from 0 to 180
 
-    Mat imgIn = imread("input.jpg", IMREAD_GRAYSCALE);
+    samples::addSamplesDataSearchSubDirectory("doc/tutorials/imgproc/anisotropic_image_segmentation/images");
+    Mat imgIn = imread(samples::findFile("gst_input.jpg"), IMREAD_GRAYSCALE);
     if (imgIn.empty()) //check whether the image is loaded or not
     {
         cout << "ERROR : Image cannot be loaded..!!" << endl;
@@ -46,13 +48,18 @@ int main()
     //! [combining]
     //! [main]
 
-    normalize(imgCoherency, imgCoherency, 0, 255, NORM_MINMAX);
-    normalize(imgOrientation, imgOrientation, 0, 255, NORM_MINMAX);
+    normalize(imgCoherency, imgCoherency, 0, 255, NORM_MINMAX, CV_8U);
+    normalize(imgOrientation, imgOrientation, 0, 255, NORM_MINMAX, CV_8U);
 
+    imshow("Original", imgIn);
+    imshow("Result", 0.5 * (imgIn + imgBin));
+    imshow("Coherency", imgCoherency);
+    imshow("Orientation", imgOrientation);
     imwrite("result.jpg", 0.5*(imgIn + imgBin));
     imwrite("Coherency.jpg", imgCoherency);
     imwrite("Orientation.jpg", imgOrientation);
-    //! [main_extra]
+     waitKey(0);
+   //! [main_extra]
     return 0;
 }
 //! [calcGST]
