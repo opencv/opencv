@@ -40,6 +40,9 @@
 //
 //M*/
 
+#if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#endif
 #include "precomp.hpp"
 
 #ifdef HAVE_RAW
@@ -70,6 +73,7 @@ namespace cv
 
     bool LibRawDecoder::checkSignature(const String& signature) const
     {
+        int status = ((LibRaw*)rawProcessor)->open_buffer((&signature[0]), 128);
 
         return true;
     }
