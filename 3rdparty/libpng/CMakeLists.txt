@@ -66,6 +66,11 @@ if(PPC64LE OR PPC64)
   endif()
 endif()
 
+if(APPLE AND CV_CLANG AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.1)
+  ocv_warnings_disable(CMAKE_C_FLAGS -Wnull-pointer-subtraction)
+  ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-but-set-variable)
+endif()
+
 # ----------------------------------------------------------------------------------
 #         Define the library target:
 # ----------------------------------------------------------------------------------
