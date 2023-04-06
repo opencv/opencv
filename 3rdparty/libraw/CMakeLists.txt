@@ -43,4 +43,4 @@ if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(${RAW_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev OPTIONAL)
 endif()
 
-ocv_install_3rdparty_licenses(libraw README)
+ocv_install_3rdparty_licenses(libraw COPYRIGHT)

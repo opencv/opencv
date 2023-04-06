@@ -115,7 +115,7 @@ namespace cv
         int status = ((LibRaw*)rawProcessor)->dcraw_process();
         if (status != LIBRAW_SUCCESS)
             CV_Error(Error::StsNotImplemented, libraw_strerror(status));
-        status = ((LibRaw*)rawProcessor)->copy_mem_image(img.data, img.step, 1);
+        status = ((LibRaw*)rawProcessor)->copy_mem_image(img.data, int(img.step), 1);
         if (status != LIBRAW_SUCCESS)
             CV_Error(Error::StsNotImplemented, libraw_strerror(status));
         return status == LIBRAW_SUCCESS;
