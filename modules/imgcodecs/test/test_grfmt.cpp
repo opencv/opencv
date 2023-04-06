@@ -331,6 +331,37 @@ TEST(Imgcodecs_Bmp, read_32bit_xrgb)
     ASSERT_EQ(data[3], 255);
 }
 
+TEST(Imgcodecs_Bmp, rgba_scale)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_rgba_scale.bmp";
+
+    Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC4, img.type());
+
+    uchar* data = img.ptr();
+    ASSERT_EQ(data[0], 255);
+    ASSERT_EQ(data[1], 255);
+    ASSERT_EQ(data[2], 255);
+    ASSERT_EQ(data[3], 255);
+
+    img = cv::imread(filenameInput, IMREAD_COLOR);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+
+    data = img.ptr();
+    ASSERT_EQ(data[0], 255);
+    ASSERT_EQ(data[1], 255);
+    ASSERT_EQ(data[2], 255);
+
+    img = cv::imread(filenameInput, IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC1, img.type());
+
+    data = img.ptr();
+    ASSERT_EQ(data[0], 255);
+}
 
 #ifdef HAVE_IMGCODEC_HDR
 TEST(Imgcodecs_Hdr, regression)
