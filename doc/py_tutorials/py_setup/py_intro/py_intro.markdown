@@ -30,7 +30,7 @@ programmer to express ideas in fewer lines of code without reducing readability.
 Compared to languages like C/C++, Python is slower. That said, Python can be easily extended with
 C/C++, which allows us to write computationally intensive code in C/C++ and create Python wrappers
 that can be used as Python modules. This gives us two advantages: first, the code is as fast as the
-original C/C++ code (since it is the actual C++ code working in background) and second, it easier to
+original C/C++ code (since it is the actual C++ code working in background) and second, it is easier to
 code in Python than C/C++. OpenCV-Python is a Python wrapper for the original OpenCV C++
 implementation.
 
