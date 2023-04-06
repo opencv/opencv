@@ -223,7 +223,7 @@ OCV_OPTION(BUILD_OPENJPEG           "Build OpenJPEG from source"         (WIN32 
 OCV_OPTION(BUILD_JASPER             "Build libjasper from source"        (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_JPEG               "Build libjpeg from source"          (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_PNG                "Build libpng from source"           (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
-OCV_OPTION(BUILD_RAW                "Build libraw from source"          (OPENCV_FORCE_3RDPARTY_BUILD) )
+OCV_OPTION(BUILD_RAW                "Build libraw from source"           ON )
 OCV_OPTION(BUILD_OPENEXR            "Build openexr from source"          (OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_WEBP               "Build WebP from source"             (((WIN32 OR ANDROID OR APPLE) AND NOT WINRT) OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_TBB                "Download and build TBB from source" (ANDROID OR OPENCV_FORCE_3RDPARTY_BUILD) )
@@ -319,7 +319,7 @@ OCV_OPTION(WITH_WEBP "Include WebP support" ON
 OCV_OPTION(WITH_OPENEXR "Include ILM support via OpenEXR" ((WIN32 OR ANDROID OR APPLE) OR BUILD_OPENEXR) OR NOT CMAKE_CROSSCOMPILING
   VISIBLE_IF NOT APPLE_FRAMEWORK AND NOT WINRT
   VERIFY HAVE_OPENEXR)
-OCV_OPTION(WITH_RAW "Include RAW support" OFF
+OCV_OPTION(WITH_RAW "Include RAW support" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_RAW)
 OCV_OPTION(WITH_OPENGL "Include OpenGL support" OFF
