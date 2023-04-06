@@ -13,7 +13,6 @@
 unset(WEBP_FOUND)
 
 FIND_PATH(WEBP_INCLUDE_DIR NAMES webp/decode.h)
-message("WEBP Include ${WEBP_INCLUDE_DIR}")
 if(NOT WEBP_INCLUDE_DIR)
     unset(WEBP_FOUND)
 else()
