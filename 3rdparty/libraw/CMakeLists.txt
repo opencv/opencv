@@ -14,7 +14,12 @@ file(GLOB lib_hdrs *.h)
 # ----------------------------------------------------------------------------------
 
 add_library(${RAW_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs} ${lib_hdrs})
-ocv_warnings_disable(CMAKE_CPP_FLAGS /wd4146 /wd4703) # vs2005
+ocv_warnings_disable(CMAKE_CPP_FLAGS /wd4146 /wd4703) 
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-field-initializers -Wmisleading-indentation -Wsuggest-override 
+                                     -Wunused-result -Wimplicit-fallthrough -Wtype-limits
+									                   -Wformat-overflow -Wrestrict -Wmissing-declarations
+									                   -Wsign-compare -Wstringop-truncation -Wformat-truncation
+									                   -Wunused-parameter -Wunused-variable -Wshift-negative-value) 
 
 add_definitions(-DLIBRAW_NOTHREADS -DLIBRAW_BUILDLIB -DLIBRAW_NODLL)
 
