@@ -72,7 +72,7 @@ using namespace cv::dnn::ocl4dnn;
 using namespace cv::dnn::cuda4dnn;
 #endif
 
-#include "fast_convolution/fast_convolution.hpp"
+#include "cpu_kernels/convolution.hpp"
 
 namespace cv
 {
@@ -782,7 +782,8 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(!blobs.empty());
         CV_Assert(inputsWrapper.size() == 1);
@@ -791,18 +792,35 @@ public:
         bool has_bias = hasBias() || fusedBias;
 
         auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
-        const int x_in_channel = x->host->size[1];
+        const auto shape_x = x->host->size; // [b, c, h, w]
         const int filter_out_channel = blobs[0].size[1];
-        const int groups = x_in_channel / filter_out_channel;
+        const int groups = shape_x[1] / filter_out_channel;
 
         // create operator
-        std::string op_name = cv::format("conv2d_%d", index);
-        auto op = std::make_shared<ge::op::Conv2D>(op_name);
+        auto op = std::make_shared<ge::op::Conv2D>(name);
 
         // set attributes
         op->set_attr_strides(ge::Operator::OpListInt(
             {1, 1, (int64_t)strides[0], (int64_t)strides[1]}
         ));
+        // recalculate pads in case of "SAME" padMode with odd pads
+        // since in 'getConvPoolPaddings' pads are divided equally
+        // leading to the loss of one pad
+        if (padMode == "SAME")
+        {
+            for (int i = 0; i < pads_begin.size(); i++) {
+                if (strides[i] <= kernel_size[i])
+                {
+                    int pads_at_i = kernel_size[i] - 1 - (shape_x[i+2] - 1 + strides[i]) % strides[i];
+                    pads_begin[i] = pads_at_i / 2;
+                    // if odd, add extra padding to the end for SAME_UPPER
+                    // or to the beginning for SAME_LOWER. Since here we cannot
+                    // identity SAME_UPPER and SAME_LOWER, extra padding is always
+                    // added to the end.
+                    pads_end[i] = pads_at_i - pads_begin[i];
+                }
+            }
+        }
         op->set_attr_pads(ge::Operator::OpListInt(
             {(int64_t)pads_begin[1], (int64_t)pads_end[1], (int64_t)pads_begin[0], (int64_t)pads_end[0]}
         ));
@@ -815,12 +833,12 @@ public:
         // set inputs
         // set inputs : x
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        op->set_input_x_by_name(*op_x, "y");
+        op->set_input_x_by_name(*op_x, x->name.c_str());
         auto x_desc = x->getTensorDesc();
         op->update_input_desc_x(*x_desc);
         // set inputs : weight
         const Mat& w_mat = blobs[0];
-        auto op_const_weight = std::make_shared<CannConstOp>(w_mat.data, w_mat.type(), shape(w_mat), cv::format("%s_w", op_name.c_str()));
+        auto op_const_weight = std::make_shared<CannConstOp>(w_mat.data, w_mat.type(), shape(w_mat), cv::format("%s_w", name.c_str()));
         op->set_input_filter(*(op_const_weight->getOp()));
         op->update_input_desc_filter(*(op_const_weight->getTensorDesc()));
         // set inputs : bias
@@ -830,7 +848,7 @@ public:
             Mat b_mat({out_channel}, CV_32F, &biasvec[0]);
 
             std::vector<int> bias_shape{out_channel};
-            auto op_const_bias = std::make_shared<CannConstOp>(b_mat.data, b_mat.type(), bias_shape, cv::format("%s_b", op_name.c_str()));
+            auto op_const_bias = std::make_shared<CannConstOp>(b_mat.data, b_mat.type(), bias_shape, cv::format("%s_b", name.c_str()));
             op->set_input_bias(*(op_const_bias->getOp()));
             op->update_input_desc_bias(*(op_const_bias->getTensorDesc()));
         }

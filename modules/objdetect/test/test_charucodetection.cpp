@@ -109,7 +109,7 @@ void CV_CharucoDetection::run(int) {
     Mat distCoeffs(5, 1, CV_64FC1, Scalar::all(0));
 
     // for different perspectives
-    for(double distance = 0.2; distance <= 0.4; distance += 0.2) {
+    for(double distance : {0.2, 0.4}) {
         for(int yaw = -55; yaw <= 50; yaw += 25) {
             for(int pitch = -55; pitch <= 50; pitch += 25) {
 
@@ -213,7 +213,7 @@ void CV_CharucoPoseEstimation::run(int) {
 
     Mat distCoeffs(5, 1, CV_64FC1, Scalar::all(0));
     // for different perspectives
-    for(double distance = 0.2; distance <= 0.3; distance += 0.1) {
+    for(double distance : {0.2, 0.25}) {
         for(int yaw = -55; yaw <= 50; yaw += 25) {
             for(int pitch = -55; pitch <= 50; pitch += 25) {
 
@@ -332,7 +332,7 @@ void CV_CharucoDiamondDetection::run(int) {
     detector.setCharucoParameters(charucoParameters);
 
     // for different perspectives
-    for(double distance = 0.2; distance <= 0.3; distance += 0.1) {
+    for(double distance : {0.2, 0.22}) {
         for(int yaw = -50; yaw <= 50; yaw += 25) {
             for(int pitch = -50; pitch <= 50; pitch += 25) {
 

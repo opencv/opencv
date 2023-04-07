@@ -26,26 +26,28 @@ int max_Trackbar = 5;
 /// Function Headers
 void MatchingMethod( int, void* );
 
+const char* keys =
+"{ help  h| | Print help message. }"
+"{ @input1 | Template_Matching_Original_Image.jpg | image_name }"
+"{ @input2 | Template_Matching_Template_Image.jpg | template_name }"
+"{ @input3 |  | mask_name }";
+
 /**
  * @function main
  */
 int main( int argc, char** argv )
 {
-  if (argc < 3)
-  {
-    cout << "Not enough parameters" << endl;
-    cout << "Usage:\n" << argv[0] << " <image_name> <template_name> [<mask_name>]" << endl;
-    return -1;
-  }
+  CommandLineParser parser( argc, argv, keys );
+  samples::addSamplesDataSearchSubDirectory( "doc/tutorials/imgproc/histograms/template_matching/images" );
 
   //! [load_image]
   /// Load image and template
-  img = imread( argv[1], IMREAD_COLOR );
-  templ = imread( argv[2], IMREAD_COLOR );
+  img = imread( samples::findFile( parser.get<String>("@input1") ) );
+  templ = imread( samples::findFile( parser.get<String>("@input2") ), IMREAD_COLOR );
 
   if(argc > 3) {
     use_mask = true;
-    mask = imread( argv[3], IMREAD_COLOR );
+    mask = imread(samples::findFile( parser.get<String>("@input3") ), IMREAD_COLOR );
   }
 
   if(img.empty() || templ.empty() || (use_mask && mask.empty()))
