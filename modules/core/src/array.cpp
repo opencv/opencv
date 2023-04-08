@@ -234,7 +234,7 @@ cvInitMatNDHeader( CvMatND* mat, int dims, const int* sizes,
                    int type, void* data )
 {
     type = CV_MAT_TYPE(type);
-    int64 step = CV_ELEM_SIZE(type);
+    int64 esz = CV_ELEM_SIZE(type), step = esz;
 
     if( !mat )
         CV_Error( CV_StsNullPtr, "NULL matrix header pointer" );
@@ -262,6 +262,13 @@ cvInitMatNDHeader( CvMatND* mat, int dims, const int* sizes,
 
     mat->type = CV_MATND_MAGIC_VAL | (step <= INT_MAX ? CV_MAT_CONT_FLAG : 0) | type;
     mat->dims = dims;
+    if (dims < 2) {
+        mat->dims = 2;
+        for (int i = dims; i < 2; i++) {
+            mat->dim[i].size = 1;
+            mat->dim[i].step = (int)esz;
+        }
+    }
     mat->data.ptr = (uchar*)data;
     mat->refcount = 0;
     mat->hdr_refcount = 0;

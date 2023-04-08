@@ -1780,7 +1780,8 @@ TEST(Mat_, range_based_for)
 TEST(Mat, from_initializer_list)
 {
     Mat A({1.f, 2.f, 3.f});
-    Mat_<float> B(3, 1); B << 1, 2, 3;
+    int n = 3;
+    Mat_<float> B(1, &n); B << 1, 2, 3;
     Mat_<float> C({3}, {1,2,3});
 
     ASSERT_EQ(A.type(), CV_32F);
@@ -1796,7 +1797,8 @@ TEST(Mat, from_initializer_list)
 TEST(Mat_, from_initializer_list)
 {
     Mat_<float> A = {1, 2, 3};
-    Mat_<float> B(3, 1); B << 1, 2, 3;
+    int n = 3;
+    Mat_<float> B(1, &n); B << 1, 2, 3;
     Mat_<float> C({3}, {1,2,3});
 
     ASSERT_DOUBLE_EQ(cvtest::norm(A, B, NORM_INF), 0.);
@@ -2375,34 +2377,35 @@ TEST(Mat, regression_18473)
 }
 
 // FITIT: remove DISABLE_ when 1D Mat is supported
-TEST(Mat1D, DISABLED_basic)
+TEST(Mat1D, basic)
 {
     std::vector<int> sizes { 100 };
     Mat m1(sizes, CV_8UC1, Scalar::all(5));
+    Mat m1_copy(sizes, CV_8UC1, Scalar::all(5));
     m1.at<uchar>(50) = 10;
     EXPECT_FALSE(m1.empty());
     ASSERT_EQ(1, m1.dims);
     ASSERT_EQ(1, m1.size.dims());  // hack map on .rows
-    EXPECT_EQ(Size(100, 1), m1.size());
+    EXPECT_EQ(Size(1, 100), m1.size());
 
     {
         SCOPED_TRACE("clone");
         Mat m = m1.clone();
         EXPECT_EQ(1, m.dims);
-        EXPECT_EQ(Size(100, 1), m.size());
+        EXPECT_EQ(Size(1, 100), m.size());
     }
 
     {
         SCOPED_TRACE("colRange()");
-        Mat m = m1.colRange(Range(10, 30));
+        Mat m = m1.rowRange(Range(10, 30));
         EXPECT_EQ(1, m.dims);
-        EXPECT_EQ(Size(20, 1), m.size());
+        EXPECT_EQ(Size(1, 20), m.size());
     }
 
     {
         SCOPED_TRACE("reshape(1, 1)");
         Mat m = m1.reshape(1, 1);
-        EXPECT_EQ(1, m.dims);
+        EXPECT_EQ(2, m.dims);
         EXPECT_EQ(Size(100, 1), m.size());
     }
 
@@ -2432,6 +2435,7 @@ TEST(Mat1D, DISABLED_basic)
         Mat m(5, 100, CV_8UC1, Scalar::all(0));
         const Mat row2D = m.row(2);
         EXPECT_NO_THROW(m1.copyTo(row2D));
+        EXPECT_NO_THROW(row2D.copyTo(m1_copy));
     }
 
     {
@@ -2444,8 +2448,8 @@ TEST(Mat1D, DISABLED_basic)
     {
         SCOPED_TRACE("CvMat");
         CvMat c_mat = cvMat(m1);
-        EXPECT_EQ(100, c_mat.cols);
-        EXPECT_EQ(1, c_mat.rows);
+        EXPECT_EQ(1, c_mat.cols);
+        EXPECT_EQ(100, c_mat.rows);
     }
 
     {
@@ -2460,8 +2464,11 @@ TEST(Mat1D, DISABLED_basic)
         SCOPED_TRACE("minMaxLoc");
         Point pt;
         minMaxLoc(m1, 0, 0, 0, &pt);
-        EXPECT_EQ(50, pt.x);
+        EXPECT_EQ(50, pt.y);
+        EXPECT_EQ(0, pt.x);
+        minMaxLoc(m1_copy, 0, 0, 0, &pt);
         EXPECT_EQ(0, pt.y);
+        EXPECT_EQ(50, pt.x);
     }
 }
 

@@ -636,7 +636,7 @@ int _InputArray::dims(int i) const
     if( k == STD_VECTOR || k == STD_BOOL_VECTOR )
     {
         CV_Assert( i < 0 );
-        return 2;
+        return 1;
     }
 
     if( k == NONE )
@@ -1268,14 +1268,7 @@ void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTran
 void _OutputArray::create(int d, const int* sizes, int mtype, int i,
                           bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {
-    int sizebuf[2];
-    if(d == 1)
-    {
-        d = 2;
-        sizebuf[0] = sizes[0];
-        sizebuf[1] = 1;
-        sizes = sizebuf;
-    }
+    int size0 = d > 0 ? sizes[0] : 1, size1 = d > 1 ? sizes[1] : 1;
     _InputArray::KindFlag k = kind();
     mtype = CV_MAT_TYPE(mtype);
 
@@ -1284,10 +1277,10 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         CV_Assert( i < 0 );
         Mat& m = *(Mat*)obj;
         CV_Assert(!(m.empty() && fixedType() && fixedSize()) && "Can't reallocate empty Mat with locked layout (probably due to misused 'const' modifier)");
-        if (allowTransposed && !m.empty() &&
-            d == 2 && m.dims == 2 &&
-            m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] &&
-            m.isContinuous())
+        if (!m.empty() && d <= 2 && m.dims <= 2 &&
+            m.type() == mtype &&
+            ((m.rows == size0 && m.cols == size1) ||
+            (allowTransposed && m.rows == size1 && m.cols == size0 && m.isContinuous())))
         {
             return;
         }
@@ -1314,10 +1307,10 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         CV_Assert( i < 0 );
         UMat& m = *(UMat*)obj;
         CV_Assert(!(m.empty() && fixedType() && fixedSize()) && "Can't reallocate empty UMat with locked layout (probably due to misused 'const' modifier)");
-        if (allowTransposed && !m.empty() &&
-            d == 2 && m.dims == 2 &&
-            m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] &&
-            m.isContinuous())
+        if (!m.empty() && d <= 2 && m.dims <= 2 &&
+            m.type() == mtype &&
+            ((m.rows == size0 && m.cols == size1) ||
+            (allowTransposed && m.rows == size1 && m.cols == size0 && m.isContinuous())))
         {
             return;
         }
@@ -1370,8 +1363,8 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
 
     if( k == STD_VECTOR || k == STD_VECTOR_VECTOR )
     {
-        CV_Assert( d == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
-        size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0;
+        CV_Assert( d <= 2 && (size0 == 1 || size1 == 1 || size0*size1 == 0) );
+        size_t len = size0*size1 > 0 ? size0 + size1 - 1 : 0;
         std::vector<uchar>* v = (std::vector<uchar>*)obj;
 
         if( k == STD_VECTOR_VECTOR )

@@ -1010,7 +1010,7 @@ int UMat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) co
 {
     return (depth() == _depth || _depth <= 0) &&
         (isContinuous() || !_requireContinuous) &&
-        ((dims == 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) ||
+        ((dims <= 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) ||
                         (cols == _elemChannels && channels() == 1))) ||
         (dims == 3 && channels() == 1 && size.p[2] == _elemChannels && (size.p[0] == 1 || size.p[1] == 1) &&
          (isContinuous() || step.p[1] == step.p[2]*size.p[2])))

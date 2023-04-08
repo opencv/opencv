@@ -857,8 +857,8 @@ namespace reference {
 
 static void flip(const Mat& src, Mat& dst, int flipcode)
 {
-    CV_Assert(src.dims == 2);
-    dst.create(src.size(), src.type());
+    CV_Assert(src.dims <= 2);
+    dst.create(src.dims, src.size.p, src.type());
     int i, j, k, esz = (int)src.elemSize(), width = src.cols*esz;
 
     for( i = 0; i < dst.rows; i++ )

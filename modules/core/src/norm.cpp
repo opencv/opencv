@@ -475,7 +475,7 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
     size_t total_size = src.total();
     int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
 
-    if( (src.dims == 2 || (src.isContinuous() && mask.isContinuous()))
+    if( (src.dims <= 2 || (src.isContinuous() && mask.isContinuous()))
         && cols > 0 && (size_t)rows*cols == total_size )
     {
         if( !mask.empty() )
@@ -858,7 +858,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
 
         size_t total_size = src1.total();
         int rows = src1.size[0], cols = rows ? (int)(total_size/rows) : 0;
-        if( (src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous()))
+        if( (src1.dims <= 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous()))
             && cols > 0 && (size_t)rows*cols == total_size )
         {
             if( !mask.empty() )
@@ -944,7 +944,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
 
     size_t total_size = src1.total();
     int rows = src1.size[0], cols = rows ? (int)(total_size/rows) : 0;
-    if( (src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous()))
+    if( (src1.dims <= 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous()))
         && cols > 0 && (size_t)rows*cols == total_size )
     {
         if( !mask.empty() )

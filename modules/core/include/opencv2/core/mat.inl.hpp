@@ -479,8 +479,9 @@ template<typename _Tp, typename> inline
 Mat::Mat(const std::initializer_list<_Tp> list)
     : Mat()
 {
-    CV_Assert(list.size() != 0);
-    Mat((int)list.size(), 1, traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
+    int nelems = (int)list.size();
+    CV_Assert(nelems != 0);
+    Mat(1, &nelems, traits::Type<_Tp>::value, (uchar*)list.begin()).copyTo(*this);
 }
 
 template<typename _Tp> inline
@@ -724,7 +725,6 @@ const _Tp* Mat::ptr(int y) const
 inline
 uchar* Mat::ptr(int i0, int i1)
 {
-    CV_DbgAssert(dims >= 2);
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)i1 < (unsigned)size.p[1]);
@@ -734,7 +734,6 @@ uchar* Mat::ptr(int i0, int i1)
 inline
 const uchar* Mat::ptr(int i0, int i1) const
 {
-    CV_DbgAssert(dims >= 2);
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)i1 < (unsigned)size.p[1]);
@@ -744,7 +743,6 @@ const uchar* Mat::ptr(int i0, int i1) const
 template<typename _Tp> inline
 _Tp* Mat::ptr(int i0, int i1)
 {
-    CV_DbgAssert(dims >= 2);
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)i1 < (unsigned)size.p[1]);
@@ -754,7 +752,6 @@ _Tp* Mat::ptr(int i0, int i1)
 template<typename _Tp> inline
 const _Tp* Mat::ptr(int i0, int i1) const
 {
-    CV_DbgAssert(dims >= 2);
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)i1 < (unsigned)size.p[1]);
@@ -1146,8 +1143,7 @@ void Mat::push_back(const _Tp& elem)
         *this = Mat(1, 1, traits::Type<_Tp>::value, (void*)&elem).clone();
         return;
     }
-    CV_Assert(traits::Type<_Tp>::value == type() && cols == 1
-              /* && dims == 2 (cols == 1 implies dims == 2) */);
+    CV_Assert(traits::Type<_Tp>::value == type() && cols == 1);
     const uchar* tmp = dataend + step[0];
     if( !isSubmatrix() && isContinuous() && tmp <= datalimit )
     {

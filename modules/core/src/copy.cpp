@@ -343,9 +343,12 @@ void Mat::copyTo( OutputArray _dst ) const
         return;
     }
 
+    bool allowTransposed = dims == 1 ||
+        _dst.kind() == _InputArray::STD_VECTOR ||
+        (_dst.fixedSize() && _dst.dims() == 1);
     if( _dst.isUMat() )
     {
-        _dst.create( dims, size.p, type() );
+        _dst.create( dims, size.p, type(), -1, allowTransposed );
         UMat dst = _dst.getUMat();
         CV_Assert(dst.u != NULL);
         size_t i, sz[CV_MAX_DIM] = {0}, dstofs[CV_MAX_DIM], esz = elemSize();
@@ -361,7 +364,7 @@ void Mat::copyTo( OutputArray _dst ) const
 
     if( dims <= 2 )
     {
-        _dst.create( rows, cols, type() );
+        _dst.create( dims, size.p, type(), -1, allowTransposed );
         Mat dst = _dst.getMat();
         if( data == dst.data )
             return;

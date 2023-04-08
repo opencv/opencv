@@ -592,7 +592,7 @@ void extract(const Mat& src, Mat& dst, int coi)
 void transpose(const Mat& src, Mat& dst)
 {
     CV_Assert(src.data != dst.data && "Inplace is not support in cvtest::transpose");
-    CV_Assert(src.dims == 2);
+    CV_Assert(src.dims <= 2);
     dst.create(src.cols, src.rows, src.type());
     int i, j, k, esz = (int)src.elemSize();
 
@@ -2264,7 +2264,7 @@ int cmpEps2( TS* ts, const Mat& a, const Mat& b, double success_err_level,
         {
             ts->printf( TS::LOG, "%s\n", msg );
         }
-        else if( a.dims == 2 && (a.rows == 1 || a.cols == 1) )
+        else if( a.dims <= 2 && (a.rows == 1 || a.cols == 1) )
         {
             ts->printf( TS::LOG, "%s at element %d\n", msg, idx[0] + idx[1] );
         }
@@ -2365,7 +2365,7 @@ void gemm( const Mat& _a, const Mat& _b, double alpha,
     int b_step = (int)b.step1(), b_delta = cn;
     int c_rows = 0, c_cols = 0, c_step = 0, c_delta = 0;
 
-    CV_Assert( a.type() == b.type() && a.dims == 2 && b.dims == 2 && cn <= 2 );
+    CV_Assert( a.type() == b.type() && a.dims <= 2 && b.dims <= 2 && cn <= 2 );
 
     if( flags & cv::GEMM_1_T )
     {
@@ -2392,7 +2392,7 @@ void gemm( const Mat& _a, const Mat& _b, double alpha,
             std::swap( c_step, c_delta );
         }
 
-        CV_Assert( c.dims == 2 && c.type() == a.type() && c_rows == a_rows && c_cols == b_cols );
+        CV_Assert( c.dims <= 2 && c.type() == a.type() && c_rows == a_rows && c_cols == b_cols );
     }
 
     d.create(a_rows, b_cols, a.type());

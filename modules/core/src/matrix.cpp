@@ -272,11 +272,10 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
         }
     }
 
-    if( _dims == 1 )
+    if( _dims < 2 )
     {
-        m.dims = 2;
         m.cols = 1;
-        m.step[1] = esz;
+        m.step[0] = m.step[1] = esz;
     }
 }
 
@@ -662,16 +661,12 @@ void Mat::create(int d, const int* _sizes, int _type)
     CV_Assert(0 <= d && d <= CV_MAX_DIM && _sizes);
     _type = CV_MAT_TYPE(_type);
 
-    if( data && (d == dims || (d == 1 && dims <= 2)) && _type == type() )
+    if( data && d == dims && _type == type() )
     {
-        if ( dims == 1 && (d == 1 && _sizes[0] == size[0]) )
-            return;
-        if( d == 2 && rows == _sizes[0] && cols == _sizes[1] )
-            return;
         for( i = 0; i < d; i++ )
             if( size[i] != _sizes[i] )
                 break;
-        if( i == d && (d > 1 || size[1] == 1))
+        if( i == d )
             return;
     }
 
@@ -746,7 +741,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
-    CV_Assert( m.dims >= 2 );
+    CV_Assert( m.dims >= 2 || (m.dims == 1 && _colRange == Range::all()));
     if( m.dims > 2 )
     {
         AutoBuffer<Range> rs(m.dims);
@@ -1192,6 +1187,7 @@ Mat Mat::reshape(int new_cn, int new_rows) const
         CV_Error( CV_BadNumChannels,
         "The total width is not divisible by the new number of channels" );
 
+    hdr.dims = 2;
     hdr.cols = new_width;
     hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
     hdr.step[1] = CV_ELEM_SIZE(hdr.flags);
@@ -1278,7 +1274,7 @@ int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) con
 {
     return data && (depth() == _depth || _depth <= 0) &&
         (isContinuous() || !_requireContinuous) &&
-        ((dims == 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) ||
+        ((dims <= 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) ||
                         (cols == _elemChannels && channels() == 1))) ||
         (dims == 3 && channels() == 1 && size.p[2] == _elemChannels && (size.p[0] == 1 || size.p[1] == 1) &&
          (isContinuous() || step.p[1] == step.p[2]*size.p[2])))
