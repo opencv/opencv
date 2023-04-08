@@ -1434,164 +1434,52 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
 static void extend_cvtColor( InputArray _src, OutputArray _dst, int code )
 {
     CV_Assert( !_src.empty() );
+    CV_Assert( _src.dims() == 2 );
+
+    // This function extend_cvtColor reorders the src channels with only thg limited condition.
+    // Otherwise, it calls cvtColor.
 
     const int stype = _src.type();
-    const int depth = CV_MAT_DEPTH ( stype );
-
-    if (!((depth == CV_8S) || (depth == CV_16S) || (depth == CV_32S) || (depth == CV_64F)) )
+    if(!
+        (
+            (
+                ( stype == CV_8SC3  ) || ( stype == CV_8SC4  ) ||
+                ( stype == CV_16SC3 ) || ( stype == CV_16SC4 ) ||
+                ( stype == CV_32SC3 ) || ( stype == CV_32SC4 ) ||
+                ( stype == CV_64FC3 ) || ( stype == CV_64FC4 )
+            )
+            &&
+            (
+                ( code == COLOR_BGR2RGB ) || ( code == COLOR_BGRA2RGBA )
+            )
+        )
+    )
     {
         cvtColor( _src, _dst, code );
         return;
     }
 
-    CV_Assert( _src.dims() == 2 );
-    CV_Assert( (code == COLOR_BGR2RGB) || (code == COLOR_BGRA2RGBA) );
-
     Mat src = _src.getMat();
-    int height = src.rows;
-    int width  = src.cols;
 
+    // cv::mixChannels requires the output arrays to be pre-allocated before calling the function.
     _dst.create( _src.size(), stype );
     Mat dst = _dst.getMat();
 
-    for (int y = 0; y < height; ++ y)
+    // BGR to RGB or BGRA to RGBA
+    //   src[0] -> dst[2]
+    //   src[1] -> dst[1]
+    //   src[2] -> dst[0]
+    //   src[3] -> dst[3] if src has alpha channel.
+    std::vector<int> fromTo;
+    fromTo.push_back(0); fromTo.push_back(2);
+    fromTo.push_back(1); fromTo.push_back(1);
+    fromTo.push_back(2); fromTo.push_back(0);
+    if ( code == COLOR_BGRA2RGBA )
     {
-        switch ( depth )
-        {
-        case CV_8S:
-        {
-            int8_t *pSrc = (int8_t*) src.ptr(y);
-            int8_t *pDst = (int8_t*) dst.ptr(y);
-
-            switch (code)
-            {
-            case COLOR_BGR2RGB: //  COLOR_RGB2BGR:
-                for (int x = 0; x < width; ++ x)
-                {
-                    pDst [ x * 3 + 0 ] = pSrc [ x * 3 + 2 ] ;
-                    pDst [ x * 3 + 1 ] = pSrc [ x * 3 + 1 ] ;
-                    pDst [ x * 3 + 2 ] = pSrc [ x * 3 + 0 ] ;
-                }
-                break;
-
-            case COLOR_BGRA2RGBA: //  COLOR_RGBA2BGRA:
-                for (int x = 0; x < width; ++ x)
-                {
-                    pDst [ x * 4 + 0 ] = pSrc [ x * 4 + 2 ] ;
-                    pDst [ x * 4 + 1 ] = pSrc [ x * 4 + 1 ] ;
-                    pDst [ x * 4 + 2 ] = pSrc [ x * 4 + 0 ] ;
-                    pDst [ x * 4 + 3 ] = pSrc [ x * 4 + 3 ] ;
-                }
-                break;
-
-            default:
-                CV_Assert(0);
-            break;
-            }
-        }
-        break;
-
-        case CV_16S:
-        {
-            int16_t *pSrc = (int16_t*) src.ptr(y);
-            int16_t *pDst = (int16_t*) dst.ptr(y);
-
-            switch (code)
-            {
-            case COLOR_BGR2RGB: //  COLOR_RGB2BGR:
-                for (int x = 0; x < width; ++ x)
-                {
-                    pDst [ x * 3 + 0 ] = pSrc [ x * 3 + 2 ] ;
-                    pDst [ x * 3 + 1 ] = pSrc [ x * 3 + 1 ] ;
-                    pDst [ x * 3 + 2 ] = pSrc [ x * 3 + 0 ] ;
-                }
-                break;
-            case COLOR_BGRA2RGBA: //  COLOR_RGBA2BGRA:
-                for (int x = 0; x < width; ++ x)
-                {
-                    pDst [ x * 4 + 0 ] = pSrc [ x * 4 + 2 ] ;
-                    pDst [ x * 4 + 1 ] = pSrc [ x * 4 + 1 ] ;
-                    pDst [ x * 4 + 2 ] = pSrc [ x * 4 + 0 ] ;
-                    pDst [ x * 4 + 3 ] = pSrc [ x * 4 + 3 ] ;
-                }
-                break;
-
-            default:
-                CV_Assert(0);
-            break;
-            }
-        }
-        break;
-
-        case CV_32S:
-        {
-            int32_t *pSrc = (int32_t*) src.ptr(y);
-            int32_t *pDst = (int32_t*) dst.ptr(y);
-
-            switch (code)
-            {
-            case COLOR_BGR2RGB: //  COLOR_RGB2BGR:
-                for (int x = 0; x < width; ++ x)
-                {
-                    pDst [ x * 3 + 0 ] = pSrc [ x * 3 + 2 ] ;
-                    pDst [ x * 3 + 1 ] = pSrc [ x * 3 + 1 ] ;
-                    pDst [ x * 3 + 2 ] = pSrc [ x * 3 + 0 ] ;
-                }
-                break;
-            case COLOR_BGRA2RGBA: //  COLOR_RGBA2BGRA:
-                for (int x = 0; x < width; ++ x)
-                {
-                    pDst [ x * 4 + 0 ] = pSrc [ x * 4 + 2 ] ;
-                    pDst [ x * 4 + 1 ] = pSrc [ x * 4 + 1 ] ;
-                    pDst [ x * 4 + 2 ] = pSrc [ x * 4 + 0 ] ;
-                    pDst [ x * 4 + 3 ] = pSrc [ x * 4 + 3 ] ;
-                }
-                break;
-
-            default:
-                CV_Assert(0);
-            break;
-            }
-        }
-        break;
-
-        case CV_64F:
-        {
-            double *pSrc = (double*) src.ptr(y);
-            double *pDst = (double*) dst.ptr(y);
-
-            switch (code)
-            {
-            case COLOR_BGR2RGB: //  COLOR_RGB2BGR:
-                for (int x = 0; x < width; ++ x)
-                {
-                    pDst [ x * 3 + 0 ] = pSrc [ x * 3 + 2 ] ;
-                    pDst [ x * 3 + 1 ] = pSrc [ x * 3 + 1 ] ;
-                    pDst [ x * 3 + 2 ] = pSrc [ x * 3 + 0 ] ;
-                }
-                break;
-            case COLOR_BGRA2RGBA: //  COLOR_RGBA2BGRA:
-                for (int x = 0; x < width; ++ x)
-                {
-                    pDst [ x * 4 + 0 ] = pSrc [ x * 4 + 2 ] ;
-                    pDst [ x * 4 + 1 ] = pSrc [ x * 4 + 1 ] ;
-                    pDst [ x * 4 + 2 ] = pSrc [ x * 4 + 0 ] ;
-                    pDst [ x * 4 + 3 ] = pSrc [ x * 4 + 3 ] ;
-                }
-                break;
-
-            default:
-                CV_Assert(0);
-            break;
-            }
-        }
-        break;
-
-        default:
-            CV_Assert(0);
-        break;
-        } // switch( depth )
+        fromTo.push_back(3); fromTo.push_back(3);
     }
+
+    cv::mixChannels( src, dst, fromTo );
 }
 
 } // namespace
