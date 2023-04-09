@@ -86,7 +86,8 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibRaw
                                   REQUIRED_VARS LibRaw_LIBRARIES LibRaw_INCLUDE_DIR
                                   VERSION_VAR LibRaw_VERSION_STRING
                                  )
-set(RAW_FOUND ON)
+if (LibRaw_FOUND)
+	set(HAVE_RAW ON)
 MARK_AS_ADVANCED(LibRaw_VERSION_STRING
                  LibRaw_INCLUDE_DIR
                  LibRaw_LIBRARIES
