@@ -395,7 +395,9 @@ imread_( const String& filename, int flags, Mat& mat )
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
+#ifdef HAVE_RAW
     bool rawDecoder = false;
+#endif
 #ifdef HAVE_GDAL
     if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
         decoder = GdalDecoder().newDecoder();
@@ -437,7 +439,7 @@ imread_( const String& filename, int flags, Mat& mat )
         // read the header to make sure it succeeds
         if (!decoder->readHeader())
         {
- #ifdef HAVE_RAW
+#ifdef HAVE_RAW
             if (rawDecoder)
                 return 0;
             decoder = makePtr<LibRawDecoder>();
