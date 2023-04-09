@@ -88,6 +88,7 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibRaw
                                  )
 if (LibRaw_FOUND)
 	set(HAVE_RAW ON)
+ENDIF()
 MARK_AS_ADVANCED(LibRaw_VERSION_STRING
                  LibRaw_INCLUDE_DIR
                  LibRaw_LIBRARIES

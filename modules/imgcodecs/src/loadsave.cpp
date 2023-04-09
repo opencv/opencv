@@ -408,10 +408,13 @@ imread_( const String& filename, int flags, Mat& mat )
 
     /// if no decoder was found, return nothing.
     if( !decoder ){
+#ifdef HAVE_RAW
         decoder = makePtr<LibRawDecoder>();
         rawDecoder = true;
+#else
+        return 0;
+#endif
     }
-
     int scale_denom = 1;
     if( flags > IMREAD_LOAD_GDAL )
     {
@@ -434,6 +437,7 @@ imread_( const String& filename, int flags, Mat& mat )
         // read the header to make sure it succeeds
         if (!decoder->readHeader())
         {
+ #ifdef HAVE_RAW
             if (rawDecoder)
                 return 0;
             decoder = makePtr<LibRawDecoder>();
@@ -441,6 +445,9 @@ imread_( const String& filename, int flags, Mat& mat )
             decoder->setSource(filename);
             if (!decoder->readHeader())
                 return 0;
+#else
+            return 0;
+#endif
         }
     }
     catch (const cv::Exception& e)
@@ -483,6 +490,9 @@ imread_( const String& filename, int flags, Mat& mat )
     }
     catch (const cv::Exception& e)
     {
+#ifndef HAVE_RAW
+        std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+#else
         if (!rawDecoder)
             std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
         else
@@ -500,7 +510,7 @@ imread_( const String& filename, int flags, Mat& mat )
                 std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
             }
         }
-
+#endif
     }
     catch (...)
     {
@@ -508,6 +518,10 @@ imread_( const String& filename, int flags, Mat& mat )
     }
     if (!success)
     {
+#ifndef HAVE_RAW
+        mat.release();
+        return false;
+#else
         if (rawDecoder)
         {
             mat.release();
@@ -536,6 +550,7 @@ imread_( const String& filename, int flags, Mat& mat )
                 return false;
             }
         }
+#endif
     }
 
     if( decoder->setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
