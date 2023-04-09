@@ -1579,8 +1579,15 @@ void ONNXImporter::lstm_extractConsts(LayerParams& layerParams, const opencv_onn
         Mat blob;
         if (idx < lstm_proto.input_size() && !lstm_proto.input(idx).empty())
         {
-            blob = getBlob(lstm_proto, idx);
-            CV_Assert(shape(blob) == blobShape);
+            if ((idx == 5 or idx == 6) and (constBlobs.find(lstm_proto.input(idx)) == constBlobs.end()))
+            {
+                blob = Mat(blobShape, CV_32FC1, 0.);
+            }
+            else 
+            {
+                blob = getBlob(lstm_proto, idx);
+                CV_Assert(shape(blob) == blobShape);
+            }
         }
         else
         {
@@ -1759,8 +1766,27 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     bool need_y = lstm_proto.output_size() > 0 && !lstm_proto.output(0).empty();
 
     const std::string y_name = need_y ? lstm_proto.output(0) : "";
-    const std::string yh_name = need_yh ? lstm_proto.output(1) : "";
-    const std::string yc_name = need_yc ? lstm_proto.output(2) : "";
+    const std::string yh_name = [&](){
+        if(constBlobs.find(lstm_proto.input(5)) == constBlobs.end() &&
+           constBlobs.find(lstm_proto.input(6)) == constBlobs.end() && 
+           num_directions == 1)
+           {
+                return need_yh ? lstm_proto.output(2) : "";
+           } else {
+                return need_yh ? lstm_proto.output(1) : "";
+           }
+    }();
+
+    const std::string yc_name = [&](){
+        if(constBlobs.find(lstm_proto.input(5)) == constBlobs.end() &&
+           constBlobs.find(lstm_proto.input(6)) == constBlobs.end() && 
+           num_directions == 1)
+           {
+                return need_yc ? lstm_proto.output(1) : "";
+           } else {
+                return need_yc ? lstm_proto.output(2) : "";
+           }
+    }();
 
     layerParams.set("produce_cell_output", need_yc);
 
