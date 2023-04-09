@@ -68,14 +68,14 @@ namespace cv
 
     size_t LibRawDecoder::signatureLength() const
     {
-        return 2048;
+        return 0;
     }
 
     bool LibRawDecoder::checkSignature(const String& signature) const
     {
-        ((LibRaw*)rawProcessor)->open_buffer((&signature[0]), 128);
+        ((LibRaw*)rawProcessor)->open_buffer((&signature[0]), signature.length());
 
-        return true;
+        return false;
     }
 
     ImageDecoder LibRawDecoder::newDecoder() const

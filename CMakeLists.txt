@@ -1414,8 +1414,8 @@ if(WITH_OPENEXR OR HAVE_OPENEXR)
   endif()
 endif()
 
-if(WITH_RAW OR HAVE_RAW)
-  status("    RAW:" RAW_FOUND THEN "${RAW_LIBRARY} (ver ${RAW_VERSION})" ELSE "build (ver ${RAW_VERSION})")
+if(HAVE_RAW)
+  status("    RAW:" HAVE_RAW THEN "${RAW_LIBRARY} (ver ${LibRaw_VERSION_STRING})" )
 endif()
 
 
