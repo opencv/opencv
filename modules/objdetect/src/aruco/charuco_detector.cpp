@@ -270,7 +270,7 @@ const CharucoParameters &CharucoDetector::getCharucoParameters() const {
     return charucoDetectorImpl->charucoParameters;
 }
 
-void CharucoDetector::setCharucoParameters(CharucoParameters &charucoParameters) {
+void CharucoDetector::setCharucoParameters(const CharucoParameters &charucoParameters) {
     charucoDetectorImpl->charucoParameters = charucoParameters;
 }
 
