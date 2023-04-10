@@ -13,7 +13,7 @@ namespace aruco {
 //! @{
 
 struct CV_EXPORTS_W_SIMPLE CharucoParameters {
-    CharucoParameters() {
+    CV_WRAP CharucoParameters() {
         minMarkers = 2;
         tryRefineMarkers = false;
     }
@@ -48,7 +48,7 @@ public:
     CV_WRAP void setBoard(const CharucoBoard& board);
 
     CV_WRAP const CharucoParameters& getCharucoParameters() const;
-    CV_WRAP void setCharucoParameters(const CharucoParameters& charucoParameters);
+    CV_WRAP void setCharucoParameters(CharucoParameters& charucoParameters);
 
     CV_WRAP const DetectorParameters& getDetectorParameters() const;
     CV_WRAP void setDetectorParameters(const DetectorParameters& detectorParameters);

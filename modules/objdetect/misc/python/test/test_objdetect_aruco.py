@@ -238,8 +238,28 @@ class aruco_objdetect_test(NewOpenCVTests):
             self.assertEqual(charucoIds[i], i)
         np.testing.assert_allclose(gold_corners, charucoCorners.reshape(-1, 2), 0.01, 0.1)
 
+    # check no segfault when cameraMatrix or distCoeffs are not initialized
+    def test_charuco_no_segfault_params(self):
+        dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_1000)
+        board = cv.aruco.CharucoBoard((10, 10), 0.019, 0.015, dictionary)
+        charuco_parameters = cv.aruco.CharucoParameters()
+        detector = cv.aruco.CharucoDetector(board)
+        detector.setCharucoParameters(charuco_parameters)
+
+        self.assertIsNone(detector.getCharucoParameters().cameraMatrix)
+        self.assertIsNone(detector.getCharucoParameters().distCoeffs)
+
+    def test_charuco_no_segfault_params_constructor(self):
+        dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_1000)
+        board = cv.aruco.CharucoBoard((10, 10), 0.019, 0.015, dictionary)
+        charuco_parameters = cv.aruco.CharucoParameters()
+        detector = cv.aruco.CharucoDetector(board, charucoParams=charuco_parameters)
+
+        self.assertIsNone(detector.getCharucoParameters().cameraMatrix)
+        self.assertIsNone(detector.getCharucoParameters().distCoeffs)
+
     # similar to C++ test CV_CharucoDetection.accuracy
-    def test_charuco_detector_params(self):
+    def test_charuco_detector_accuracy(self):
         iteration = 0
         cameraMatrix = np.eye(3, 3, dtype=np.float64)
         imgSize = (500, 500)
@@ -281,6 +301,10 @@ class aruco_objdetect_test(NewOpenCVTests):
                     copyChessboardCorners -= np.array(board.getRightBottomCorner()) / 2
 
                     projectedCharucoCorners, _ = cv.projectPoints(copyChessboardCorners, rvec, tvec, cameraMatrix, distCoeffs)
+
+                    if charucoIds is None:
+                        self.assertEqual(iteration, 46)
+                        continue
 
                     for i in range(len(charucoIds)):
                         currentId = charucoIds[i]
