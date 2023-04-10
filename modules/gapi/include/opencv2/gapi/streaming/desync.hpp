@@ -38,18 +38,17 @@ struct GDesync {
 };
 
 template<typename G>
-G desync(const G &g, bool drop) {
+G desync(const G &g) {
     cv::GKernel k{
           GDesync::id()                                     // kernel id
         , ""                                                // kernel tag
         , [](const GMetaArgs &a, const GArgs &) {return a;} // outMeta callback
         , {cv::detail::GTypeTraits<G>::shape}               // output Shape
-        , {cv::detail::GTypeTraits<G>::op_kind,
-           cv::detail::GTypeTraits<bool>::op_kind}          // input data kinds
+        , {cv::detail::GTypeTraits<G>::op_kind}             // input data kinds
         , {cv::detail::GObtainCtor<G>::get()}               // output template ctors
     };
     cv::GCall call(std::move(k));
-    call.pass(g, drop);
+    call.pass(g);
     return std::get<0>(GDesync::yield<G>(call, cv::detail::MkSeq<1>::type()));
 }
 } // namespace detail
@@ -76,8 +75,8 @@ G desync(const G &g, bool drop) {
  * @note This feature is highly experimental now and is currently
  * limited to a single GMat/GFrame argument only.
  */
-GAPI_EXPORTS GMat desync(const GMat &g, bool drop = false);
-GAPI_EXPORTS GFrame desync(const GFrame &f, bool drop = false);
+GAPI_EXPORTS GMat desync(const GMat &g);
+GAPI_EXPORTS GFrame desync(const GFrame &f);
 
 /**
  * TODO

@@ -182,8 +182,8 @@ void GIslandModel::generateInitial(GIslandModel::Graph &g,
             // (since it is duplicated in the below code block)
             if (src_g.metadata(in_edge).contains<DesyncEdge>())
             {
-                const auto cfg = src_g.metadata(in_edge).get<DesyncEdge>().cfg;
-                g.metadata(isl_new_eh).set(DesyncIslEdge{cfg.index, cfg.drop_last});
+                const auto idx = src_g.metadata(in_edge).get<DesyncEdge>().index;
+                g.metadata(isl_new_eh).set(DesyncIslEdge{idx});
             }
         }
         for (auto out_edge : src_op_nh->outEdges())
@@ -193,8 +193,8 @@ void GIslandModel::generateInitial(GIslandModel::Graph &g,
             auto isl_new_eh  = g.link(nh, isl_slot_nh);
             if (src_g.metadata(out_edge).contains<DesyncEdge>())
             {
-                const auto cfg = src_g.metadata(out_edge).get<DesyncEdge>().cfg;
-                g.metadata(isl_new_eh).set(DesyncIslEdge{cfg.index, cfg.drop_last});
+                const auto idx = src_g.metadata(out_edge).get<DesyncEdge>().index;
+                g.metadata(isl_new_eh).set(DesyncIslEdge{idx});
             }
         }
     } // for(all_operations)

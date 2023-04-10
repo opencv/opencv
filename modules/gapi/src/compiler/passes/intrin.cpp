@@ -127,7 +127,7 @@ void traceUp(cv::gimpl::GModel::Graph &g,
         // We may face nodes which have DesyncPath already visited during
         // this recursive process (e.g. via some other output or branch in the
         // subgraph)
-        if (g.metadata(nh).get<DesyncPath>().cfg.index != desync_id) {
+        if (g.metadata(nh).get<DesyncPath>().index != desync_id) {
             GAPI_Error("Desynchronization can't be nested!");
         }
         return; // This object belongs to the desync path - exit early.
@@ -144,7 +144,7 @@ void traceUp(cv::gimpl::GModel::Graph &g,
             // We may face nodes which have DesyncPath already visited during
             // this recursive process (e.g. via some other output or branch in the
             // subgraph)
-            GAPI_Assert(g.metadata(in_nh).get<DesyncPath>().cfg.index == desync_id
+            GAPI_Assert(g.metadata(in_nh).get<DesyncPath>().index == desync_id
                         && "Desynchronization can't be nested!");
         } else {
             nodes_to_trace.push_back(in_nh);
@@ -165,17 +165,17 @@ void traceUp(cv::gimpl::GModel::Graph &g,
 // uncertainty (as described in the comment above).
 void traceDown(cv::gimpl::GModel::Graph &g,
                const ade::NodeHandle &nh,
-               const cv::gimpl::DesyncCfg& cfg) {
+               int desync_id) {
     using namespace cv::gimpl;
 
     if (g.metadata(nh).contains<DesyncPath>()) {
         // We may face nodes which have DesyncPath already visited during
         // this recursive process (e.g. via some other output or branch in the
         // subgraph)
-        GAPI_Assert(g.metadata(nh).get<DesyncPath>().cfg.index == cfg.index
+        GAPI_Assert(g.metadata(nh).get<DesyncPath>().index == desync_id
                     && "Desynchronization can't be nested!");
     } else {
-        g.metadata(nh).set(DesyncPath{cfg});
+        g.metadata(nh).set(DesyncPath{desync_id});
     }
 
     // All inputs of this data object must belong to the same
@@ -185,17 +185,17 @@ void traceDown(cv::gimpl::GModel::Graph &g,
         // it does not means that the object doesn't belong to
         // this path. Check it.
         std::vector<ade::NodeHandle> path_up;
-        traceUp(g, in_nh, cfg.index, path_up);
+        traceUp(g, in_nh, desync_id, path_up);
         // We get here on success. Just set the proper tags for
         // the identified input path.
         for (auto &&up_nh : path_up) {
-            g.metadata(up_nh).set(DesyncPath{cfg});
+            g.metadata(up_nh).set(DesyncPath{desync_id});
         }
     }
 
     // Propagate the tag & check down
     for (auto &&out_nh : nh->outNodes()) {
-        traceDown(g, out_nh, cfg);
+        traceDown(g, out_nh, desync_id);
     }
 }
 
@@ -214,12 +214,10 @@ void apply(cv::gimpl::GModel::Graph &g) {
             if (op.k.name == cv::gapi::streaming::detail::GDesync::id()) {
                 GAPI_Assert(!g.metadata(nh).contains<DesyncPath>()
                             && "Desynchronization can't be nested!");
-                ++total_desync;
-                cv::gimpl::DesyncCfg cfg{total_desync, op.args[1].get<bool>()};
-
-                g.metadata(nh).set(DesyncPath{cfg});
+                const int this_desync_id = total_desync++;
+                g.metadata(nh).set(DesyncPath{this_desync_id});
                 for (auto &&out_nh: nh->outNodes()) {
-                    traceDown(g, out_nh, cfg);
+                    traceDown(g, out_nh, this_desync_id);
                 }
             } // if (desync)
         } // if(OP)
@@ -240,10 +238,10 @@ void apply(cv::gimpl::GModel::Graph &g) {
         if (g.metadata(nh).get<NodeType>().t == NodeType::OP) {
             const auto &op = g.metadata(nh).get<Op>();
             if (op.k.name == cv::gapi::streaming::detail::GDesync::id()) {
-                auto cfg = g.metadata(nh).get<DesyncPath>().cfg;
+                auto index = g.metadata(nh).get<DesyncPath>().index;
                 auto new_links = drop(g, nh);
                 for (auto &&eh : new_links) {
-                    g.metadata(eh).set(DesyncEdge{cfg});
+                    g.metadata(eh).set(DesyncEdge{index});
                 }
             } // if (desync)
         } // if (Op)

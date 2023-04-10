@@ -249,7 +249,6 @@ struct DesyncIslEdge
 
     // Projection from GModel/DesyncEdge.index
     int index;
-    bool drop_last;
 };
 
 namespace GIslandModel
