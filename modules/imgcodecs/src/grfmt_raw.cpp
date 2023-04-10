@@ -71,13 +71,6 @@ namespace cv
         return 0;
     }
 
-    bool LibRawDecoder::checkSignature(const String& signature) const
-    {
-        ((LibRaw*)rawProcessor)->open_buffer((&signature[0]), signature.length());
-
-        return false;
-    }
-
     ImageDecoder LibRawDecoder::newDecoder() const
     {
         return makePtr<LibRawDecoder>();
