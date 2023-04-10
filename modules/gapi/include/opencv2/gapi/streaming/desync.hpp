@@ -79,7 +79,12 @@ GAPI_EXPORTS GMat desync(const GMat &g);
 GAPI_EXPORTS GFrame desync(const GFrame &f);
 
 /**
- * TODO
+ * Drops data after desync operation.
+ *
+ * In the streaming mode the pipeline steps are connected with queues.
+ * If compile arg is passed it will force the queue after desync drops
+ * data if such exists and wait for the fresh one, so that readers will always
+ * get the latest available data.
  */
 struct GAPI_EXPORTS_W_SIMPLE drop_frames { };
 /** @} */

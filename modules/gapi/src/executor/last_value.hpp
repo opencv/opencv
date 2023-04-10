@@ -88,8 +88,9 @@ template<typename T>
 void last_written_value<T>::pop(T &t) {
     std::unique_lock<std::mutex> lock(m_mutex);
     if (m_data.has_value() && m_drop_strategy.has_value()) {
-        auto& strategy = m_drop_strategy.value();
+        auto& strategy = *m_drop_strategy;
         if (strategy(m_data.value())) {
+            // NB: Drop the old data.
             m_data.reset();
         }
     }
