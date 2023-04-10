@@ -79,8 +79,23 @@ G desync(const G &g, bool drop) {
 GAPI_EXPORTS GMat desync(const GMat &g, bool drop = false);
 GAPI_EXPORTS GFrame desync(const GFrame &f, bool drop = false);
 
+/**
+ * TODO
+ */
+struct GAPI_EXPORTS_W_SIMPLE drop_frames { };
+/** @} */
+
 } // namespace streaming
 } // namespace gapi
+
+namespace detail
+{
+template<> struct CompileArgTag<cv::gapi::streaming::drop_frames>
+{
+    static const char* tag() { return "gapi.drop_frames"; }
+};
+}
+
 } // namespace cv
 
 #endif // OPENCV_GAPI_GSTREAMING_DESYNC_HPP

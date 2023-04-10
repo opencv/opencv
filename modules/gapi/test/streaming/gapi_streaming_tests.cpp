@@ -2737,13 +2737,14 @@ TEST(Desync, DropFrames) {
     const int64_t kDelayMs   = 15;
 
     cv::GMat in;
-    auto desync = cv::gapi::streaming::desync(in, true);
+    auto desync = cv::gapi::streaming::desync(in);
     auto out    = Delay::on(desync, kDelayMs);
     auto seq_id = cv::gapi::streaming::seq_id(out);
 
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
     auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out, seq_id))
-        .compileStreaming(cv::compile_args(cv::gapi::kernels<OCVDelay>()));
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<OCVDelay>(),
+                                           cv::gapi::streaming::drop_frames{}));
 
     pipeline.setSource(std::make_shared<DummySource>(kNumFrames, kLatencyMs));
     pipeline.start();

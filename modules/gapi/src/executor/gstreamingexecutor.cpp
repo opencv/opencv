@@ -74,7 +74,7 @@ public:
 
 struct DataQueue {
     static const char *name() { return "StreamingDataQueue"; }
-    enum tag { DESYNC }; // Enum of 1 element: purely a syntax sugar
+    enum tag { DESYNC, DROP };
 
     explicit DataQueue(std::size_t capacity) {
         // Note: `ptr` is shared<SyncQueue>, while the `q` is a shared<Q>
@@ -84,23 +84,25 @@ struct DataQueue {
         }
         q = std::move(ptr);
     }
-    explicit DataQueue(tag t)
-        : q(new cv::gimpl::stream::DesyncQueue()) {
-        GAPI_Assert(t == DESYNC);
-    }
 
-    explicit DataQueue(tag t, cv::gapi::own::DropStrategy<Cmd>&& strategy)
-        : q(new cv::gimpl::stream::DesyncQueue(std::move(strategy))) {
-        GAPI_Assert(t == DESYNC);
+    explicit DataQueue(tag t) {
+        if (t == DESYNC) {
+            q.reset(new cv::gimpl::stream::DesyncQueue());
+        } else {
+            GAPI_Assert(t == DROP);
+            q.reset(new cv::gimpl::stream::DesyncQueue(
+                    [](const Cmd &cmd) {
+                        // NB: Need to filter "data" messages from others.
+                        return cv::util::holds_alternative<cv::GRunArg>(cmd);
+                    }));
+        }
     }
-
     // FIXME: ADE metadata requires types to be copiable
     std::shared_ptr<cv::gimpl::stream::Q> q;
 };
 
 struct DesyncSpecialCase {
     static const char *name() { return "DesyncSpecialCase"; }
-    bool drop_last;
 };
 
 std::vector<cv::gimpl::stream::Q*> reader_queues(      ade::Graph &g,
@@ -1328,6 +1330,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                        .value_or(cv::gapi::streaming::sync_policy::dont_sync);
     m_sync.reset(new Synchronizer(sync_policy, *m_island_graph, queue_capacity));
 
+    auto drop_frames = cv::gapi::getCompileArg<cv::gapi::streaming::drop_frames>(m_comp_args);
     // If metadata was not passed to compileStreaming, Islands are not compiled at this point.
     // It is fine -- Islands are then compiled in setSource (at the first valid call).
     const bool islands_compiled = m_gim.metadata().contains<IslandsCompiled>();
@@ -1403,7 +1406,6 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                 // Initialize queues for every operation's input
                 ade::TypedGraph<DataQueue, DesyncSpecialCase> qgr(*m_island_graph);
                 bool is_desync_start = false;
-                bool drop_last = false;
                 for (auto eh : nh->inEdges())
                 {
                     // ...only if the data is not compile-const
@@ -1411,15 +1413,9 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                         if (m_gim.metadata(eh).contains<DesyncIslEdge>()) {
                             qgr.metadata(eh).set(DataQueue(DataQueue::DESYNC));
                             is_desync_start = true;
-                            drop_last = m_gim.metadata(eh).get<DesyncIslEdge>().drop_last;
                         } else if (qgr.metadata(eh).contains<DesyncSpecialCase>()) {
-                            if (qgr.metadata(eh).get<DesyncSpecialCase>().drop_last) {
-                                qgr.metadata(eh).set(
-                                        DataQueue(DataQueue::DESYNC,
-                                                  [](const Cmd& cmd) {
-                                                      // NB: Need to filter "data" messages from others.
-                                                      return cv::util::holds_alternative<cv::GRunArg>(cmd);
-                                                  }));
+                            if (drop_frames) {
+                                qgr.metadata(eh).set(DataQueue(DataQueue::DROP));
                             } else {
                                 // See comment below
                                 // Limit queue size to 1 in this case
@@ -1449,7 +1445,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                                 .k.name == cv::gimpl::streaming::GCopy::id());
                     for (auto out_nh : nh->outNodes()) {
                         for (auto out_eh : out_nh->outEdges()) {
-                            qgr.metadata(out_eh).set(DesyncSpecialCase{drop_last});
+                            qgr.metadata(out_eh).set(DesyncSpecialCase{});
                         }
                     }
                 }
