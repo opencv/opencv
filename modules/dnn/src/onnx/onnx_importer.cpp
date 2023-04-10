@@ -1579,7 +1579,7 @@ void ONNXImporter::lstm_extractConsts(LayerParams& layerParams, const opencv_onn
         Mat blob;
         if (idx < lstm_proto.input_size() && !lstm_proto.input(idx).empty())
         {
-            if ((idx == 5 or idx == 6) and (constBlobs.find(lstm_proto.input(idx)) == constBlobs.end()))
+            if ((idx == 5 || idx == 6) && (constBlobs.find(lstm_proto.input(idx)) == constBlobs.end()))
             {
                 blob = Mat(blobShape, CV_32FC1, 0.);
             }

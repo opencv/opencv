@@ -266,7 +266,7 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert((!usePeephole && blobs.size() == 5) || (usePeephole && blobs.size() == 8));
-        CV_Assert(inputs.size() <= 3);
+        CV_Assert((inputs.size() == 1 || inputs.size() == 3));
         const MatShape& inp0 = inputs[0];
 
         const Mat &Wh = blobs[0], &Wx = blobs[1];
@@ -326,7 +326,7 @@ public:
         inputs_arr.getMatVector(input);
 
         CV_Assert((!usePeephole && blobs.size() == 5) || (usePeephole && blobs.size() == 8));
-        CV_Assert(input.size() <= 3);
+        CV_Assert((input.size() == 1 || input.size() == 3));
         const Mat& inp0 = input[0];
 
         Mat &Wh = blobs[0], &Wx = blobs[1];
@@ -385,7 +385,7 @@ public:
             Mat bias = blobs[2];
 
             Mat h_0, c_0;  
-            // input hx and cx are prodived as input, replace with zeros
+            // input hx and cx are not prodived as input, replace with zeros
             if (input.size() == 3){
                 h_0 = input[1].reshape(1, input[1].size[0] * input[1].size[1]);
                 c_0 = input[2].reshape(1, input[2].size[0] * input[2].size[1]);
