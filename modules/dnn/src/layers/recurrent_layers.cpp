@@ -384,7 +384,7 @@ public:
             Mat Wx = blobs[1];
             Mat bias = blobs[2];
 
-            Mat h_0, c_0;  
+            Mat h_0, c_0;
             // input hx and cx are not prodived as input, replace with zeros
             if (input.size() == 3){
                 h_0 = input[1].reshape(1, input[1].size[0] * input[1].size[1]);
@@ -394,7 +394,7 @@ public:
                 c_0 = blobs[4];
             }
 
-            
+
             Mat pI, pF, pO;
 
             Wh = Wh.rowRange(i * Wh.rows / numDirs, (i + 1) * Wh.rows / numDirs);

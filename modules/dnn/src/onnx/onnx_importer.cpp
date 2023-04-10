@@ -1583,7 +1583,7 @@ void ONNXImporter::lstm_extractConsts(LayerParams& layerParams, const opencv_onn
             {
                 blob = Mat(blobShape, CV_32FC1, 0.);
             }
-            else 
+            else
             {
                 blob = getBlob(lstm_proto, idx);
                 CV_Assert(shape(blob) == blobShape);
@@ -1768,7 +1768,7 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     const std::string y_name = need_y ? lstm_proto.output(0) : "";
     const std::string yh_name = [&](){
         if(constBlobs.find(lstm_proto.input(5)) == constBlobs.end() &&
-           constBlobs.find(lstm_proto.input(6)) == constBlobs.end() && 
+           constBlobs.find(lstm_proto.input(6)) == constBlobs.end() &&
            num_directions == 1)
            {
                 return need_yh ? lstm_proto.output(2) : "";
@@ -1779,7 +1779,7 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
 
     const std::string yc_name = [&](){
         if(constBlobs.find(lstm_proto.input(5)) == constBlobs.end() &&
-           constBlobs.find(lstm_proto.input(6)) == constBlobs.end() && 
+           constBlobs.find(lstm_proto.input(6)) == constBlobs.end() &&
            num_directions == 1)
            {
                 return need_yc ? lstm_proto.output(1) : "";
