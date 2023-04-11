@@ -54,7 +54,10 @@ public:
 
     CV_WRAP virtual int getTopK() = 0;
 
-    /** @brief A simple interface to detect face from given image
+    /** @brief Detects faces in the input image. Following is an example output.
+
+    ![image](pics/lena-face-detection.jpg)
+
      *
      *  @param image an image to detect
      *  @param faces detection results stored in a 2D cv::Mat of shape [num_faces, 15]
