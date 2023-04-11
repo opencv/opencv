@@ -900,8 +900,13 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     mp.x *= (imageSize.width / std::max(viewSize.width, 1.));
 
     if( [event type] == NSEventTypeScrollWheel ) {
-      mp.x = int(event.scrollingDeltaX / 0.100006);
-      mp.y = int(event.scrollingDeltaY / 0.100006);
+      if( event.hasPreciseScrollingDeltas ) {
+        mp.x = int(event.scrollingDeltaX);
+        mp.y = int(event.scrollingDeltaY);
+      } else {
+        mp.x = int(event.scrollingDeltaX / 0.100006);
+        mp.y = int(event.scrollingDeltaY / 0.100006);
+     }
       mouseCallback(type, mp.x, mp.y, flags, mouseParam);
     } else if( mp.x >= 0 && mp.y >= 0 && mp.x < imageSize.width && mp.y < imageSize.height ) {
       mouseCallback(type, mp.x, mp.y, flags, mouseParam);
