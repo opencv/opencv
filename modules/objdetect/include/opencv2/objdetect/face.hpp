@@ -57,7 +57,15 @@ public:
     /** @brief A simple interface to detect face from given image
      *
      *  @param image an image to detect
-     *  @param faces detection results stored in a 2D cv::Mat of shape [num_faces, 15] (0-3: bbox top left corner and width and height, 4-13: landmark points starting from right eye to left eye, nose tip, right and left corners of mouth, 14: face score)
+     *  @param faces detection results stored in a 2D cv::Mat of shape [num_faces, 15]
+     - 0-1: x, y of bbox top left corner
+     - 2-3: width, height of bbox
+     - 4-5: x, y of right eye
+     - 6-7: x, y of left eye,
+     - 8-9: x, y of nose tip
+     - 10-11: x, y of right corner of mouth
+     - 12-13: x, y of left corner of mouth
+     - 14: face score
      */
     CV_WRAP virtual int detect(InputArray image, OutputArray faces) = 0;
 
