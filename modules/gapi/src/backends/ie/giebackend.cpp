@@ -1489,7 +1489,8 @@ struct InferROI: public cv::detail::KernelTag {
         // only in the loadNetwork case.
         if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             // 0th is ROI, 1st is input image
-            auto ii = uu.net.getInputsInfo().at(input_name);
+            auto inputs = uu.net.getInputsInfo();
+            auto ii = inputs.at(input_name);
             configureInputInfo(ii, mm);
             if (uu.params.layer_names_to_reshape.find(input_name) !=
                 uu.params.layer_names_to_reshape.end()) {
@@ -1513,8 +1514,7 @@ struct InferROI: public cv::detail::KernelTag {
             }
 
             for (auto &&p : uu.params.const_inputs) {
-                const auto ii = inputs.at(p.first);
-                ii->setPrecision(toIE(p.second.first.depth()));
+                inputs.at(p.first)->setPrecision(toIE(p.second.first.depth()));
             }
 
             configureOutputPrecision(uu.net.getOutputsInfo(), uu.params.output_precision);
@@ -1778,8 +1778,9 @@ struct InferList2: public cv::detail::KernelTag {
                 // NB: Configuring input precision and network reshape must be done
                 // only in the loadNetwork case.
                 if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
+                    auto inputs = uu.net.getInputsInfo();
                     // This is a cv::Rect -- configure the IE preprocessing
-                    auto ii = uu.net.getInputsInfo().at(input_name);
+                    auto ii = inputs.at(input_name);
                     configureInputInfo(ii, mm_0);
                     if (uu.params.layer_names_to_reshape.find(input_name) !=
                         uu.params.layer_names_to_reshape.end()) {
@@ -1790,8 +1791,7 @@ struct InferList2: public cv::detail::KernelTag {
                     }
 
                     for (auto &&p : uu.params.const_inputs) {
-                        const auto ii = inputs.at(p.first);
-                        ii->setPrecision(toIE(p.second.first.depth()));
+                        inputs.at(p.first)->setPrecision(toIE(p.second.first.depth()));
                     }
 
                     // FIXME: This isn't the best place to call reshape function.
