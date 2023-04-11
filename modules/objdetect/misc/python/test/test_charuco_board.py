@@ -34,8 +34,7 @@ class aruco_objdetect_test(NewOpenCVTests):
             markerImage = board.generateImage((cols*square_size*10, rows*square_size*10))
             fd, filepng = tempfile.mkstemp(prefix="cv_marker", suffix=".png")
             os.close(fd)
-            cv.imwrite("cv_marker.png", markerImage)
-            from_cv_img = cv.imread('cv_marker.png')
+            from_cv_img = markerImage
 
             #draw desk using svg
             fd1, filesvg = tempfile.mkstemp(prefix="out", suffix=".svg")
@@ -78,8 +77,7 @@ class aruco_objdetect_test(NewOpenCVTests):
             markerImage = board.generateImage((cols*square_size*10, rows*square_size*10))
             fd, filepng = tempfile.mkstemp(prefix="cv_marker", suffix=".png")
             os.close(fd)
-            cv.imwrite(filepng, markerImage)
-            from_cv_img = cv.imread(filepng)
+            from_cv_img = markerImage
 
             #draw desk using svg
             fd1, filesvg = tempfile.mkstemp(prefix="out", suffix=".svg")

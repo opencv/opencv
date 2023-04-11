@@ -14,9 +14,8 @@ python gen_pattern.py -o out.svg -r 11 -c 8 -T circles -s 20.0 -R 5.0 -u mm -w 2
 -h, --page_height - page height in units (default 279)
 -a, --page_size - page size (default A4), supersedes -h -w arguments
 -m, --markers - list of cells with markers for the radon checkerboard
--p, --aruco_marker_size - aruco_marker_size (default 10.0)
--d, --aruco_dict - name one of predefined dictionary (default)
--f, --dict_file - name of file which contains predefined dictionary
+-p, --aruco_marker_size - aruco markers size for charuco pattern (default 10.0)
+-f, --dict_file - file name of custom aruco dictionary for charuco pattern
 -H, --help - show help
 """
 
@@ -38,7 +37,7 @@ class PatternMaker:
         self.width = page_width
         self.height = page_height
         self.markers = markers
-        self.aruco_marker_size = aruco_marker_size #only for aruco markers
+        self.aruco_marker_size = aruco_marker_size #for charuco boards only
         self.dict_file = dict_file
 
         self.g = SVG("g")  # the svg group container
@@ -166,10 +165,10 @@ class PatternMaker:
             return
 
         if (self.dict_file.split(".")[-1] == "gz"):
-            fin = gzip.open(self.dict_file, 'r')
-            json_bytes = fin.read()
-            json_str = json_bytes.decode('utf-8')
-            dictionary = json.loads(json_str)
+            with gzip.open(self.dict_file, 'r') as fin:
+                json_bytes = fin.read()
+                json_str = json_bytes.decode('utf-8')
+                dictionary = json.loads(json_str)
 
         else:
             f = open(self.dict_file)
@@ -195,7 +194,7 @@ class PatternMaker:
                     square = SVG("rect", x=x * spacing + xspacing, y=y * spacing + yspacing, width=spacing,
                                  height=spacing, fill="black", stroke="none")
                     self.g.append(square)
-                if x % 2 != y % 2:
+                else:
                     img_mark = self._create_marker_bits(markerSize_bits, dictionary["marker_"+str(marker_id)])
                     marker_id +=1
                     x_pos = x * spacing + xspacing
@@ -243,9 +242,9 @@ def main():
                                                 "coordinates as list of numbers: -m 1 2 3 4 means markers in cells "
                                                 "[1, 2] and [3, 4]",
                         default=argparse.SUPPRESS, action="store", dest="markers", nargs="+", type=int)
-    parser.add_argument("-p", "--aruco_marker_size", help="size of aruco marker", default="10.0",
+    parser.add_argument("-p", "--marker_size", help="aruco markers size for charuco pattern (default 10.0)", default="10.0",
                         action="store", dest="aruco_marker_size", type=float)
-    parser.add_argument("-f", "--dict_file", help="filename of predefined dictionary", default="DICT_ARUCO_ORIGINAL.json",
+    parser.add_argument("-f", "--dict_file", help="file name of custom aruco dictionary for charuco pattern", default="DICT_ARUCO_ORIGINAL.json",
                         action="store", dest="dict_file", type=str)
     args = parser.parse_args()
 
