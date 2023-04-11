@@ -1384,6 +1384,11 @@ struct Infer: public cv::detail::KernelTag {
                     }
             }
 
+            for (auto &&p : uu.params.const_inputs) {
+                const auto ii = inputs.at(p.first);
+                ii->setPrecision(toIE(p.second.first.depth()));
+            }
+
             // FIXME: This isn't the best place to call reshape function.
             // Сorrect solution would be to do this in compile() method of network,
             // but now input meta isn't passed to compile() method.
@@ -1506,6 +1511,12 @@ struct InferROI: public cv::detail::KernelTag {
                 const_cast<IEUnit::InputFramesDesc &>(uu.net_input_params)
                             .set_param(input_name, ii->getTensorDesc());
             }
+
+            for (auto &&p : uu.params.const_inputs) {
+                const auto ii = inputs.at(p.first);
+                ii->setPrecision(toIE(p.second.first.depth()));
+            }
+
             configureOutputPrecision(uu.net.getOutputsInfo(), uu.params.output_precision);
         } else {
             GAPI_Assert(uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
@@ -1624,6 +1635,12 @@ struct InferList: public cv::detail::KernelTag {
             if (!input_reshape_table.empty()) {
                 const_cast<IE::CNNNetwork *>(&uu.net)->reshape(input_reshape_table);
             }
+
+            for (auto &&p : uu.params.const_inputs) {
+                const auto ii = inputs.at(p.first);
+                ii->setPrecision(toIE(p.second.first.depth()));
+            }
+
             configureOutputPrecision(uu.net.getOutputsInfo(), uu.params.output_precision);
         } else {
             GAPI_Assert(uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
@@ -1770,6 +1787,11 @@ struct InferList2: public cv::detail::KernelTag {
                     }
                     if (isApplicableForResize(ii->getTensorDesc())) {
                         ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+                    }
+
+                    for (auto &&p : uu.params.const_inputs) {
+                        const auto ii = inputs.at(p.first);
+                        ii->setPrecision(toIE(p.second.first.depth()));
                     }
 
                     // FIXME: This isn't the best place to call reshape function.
