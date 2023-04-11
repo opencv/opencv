@@ -1149,6 +1149,8 @@ TEST_P(Test_ONNX_layers, Split)
     testONNXModels("split_2");
     testONNXModels("split_3");
     testONNXModels("split_4");
+    testONNXModels("split_5");
+    testONNXModels("split_6");
     testONNXModels("split_neg_axis");
 }
 
