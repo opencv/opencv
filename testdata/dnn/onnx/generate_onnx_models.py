@@ -845,6 +845,13 @@ save_data_and_model("split_3", input, model)
 model = Split(dim=0, split_size_sections=[1, 1])
 save_data_and_model("split_4", input, model)
 
+input2 = Variable(torch.tensor([1., 2., 3.], dtype=torch.float32))
+model = Split(dim=0, split_size_sections=[1, 2])
+save_data_and_model("split_5", input2, model, version=13)
+
+model = Split(dim=-1, split_size_sections=[1, 2])
+save_data_and_model("split_6", input2, model, version=13)
+
 class SplitSizes(nn.Module):
     def __init__(self, *args, **kwargs):
         super(SplitSizes, self).__init__()
