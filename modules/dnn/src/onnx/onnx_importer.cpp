@@ -1517,10 +1517,16 @@ void transformBlobs(std::vector<Mat>& blobs)
 
     const int numHidden = Wh.size[2];
 
-    Mat h0 = blobs[3];
-    h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
-    Mat c0 = blobs[4];
-    c0 = c0.reshape(1, c0.size[0] * c0.size[1]);
+    Mat h0, c0;
+    // check weather input is dynamic or not: hx, cx are given by user.
+    // Resahpe if only they are given
+    bool dyn_input = (blobs[3].empty() && blobs[4].empty()) ? true : false;
+    if (!dyn_input){
+        h0 = blobs[3];
+        h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
+        c0 = blobs[4];
+        c0 = c0.reshape(1, c0.size[0] * c0.size[1]);
+    }
 
     b = b.reshape(1, b.size[0]);
     Mat bx = b.colRange(0, b.cols / 2);
@@ -1547,8 +1553,11 @@ void transformBlobs(std::vector<Mat>& blobs)
     blobs[0] = Wh;
     blobs[1] = Wx;
     blobs[2] = b.reshape(1, 1);
-    blobs[3] = h0;
-    blobs[4] = c0;
+    // assing reshpaed state of they are given
+    if(!dyn_input){
+        blobs[3] = h0;
+        blobs[4] = c0;
+    }
 
     if (blobs.size() == 5) {
         // so that future patch removing copies can leave all indexing as is
@@ -1581,7 +1590,7 @@ void ONNXImporter::lstm_extractConsts(LayerParams& layerParams, const opencv_onn
         {
             if ((idx == 5 || idx == 6) && (constBlobs.find(lstm_proto.input(idx)) == constBlobs.end()))
             {
-                blob = Mat(blobShape, CV_32FC1, 0.);
+                blob = Mat();
             }
             else
             {
@@ -1766,27 +1775,8 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     bool need_y = lstm_proto.output_size() > 0 && !lstm_proto.output(0).empty();
 
     const std::string y_name = need_y ? lstm_proto.output(0) : "";
-    const std::string yh_name = [&](){
-        if(constBlobs.find(lstm_proto.input(5)) == constBlobs.end() &&
-           constBlobs.find(lstm_proto.input(6)) == constBlobs.end() &&
-           num_directions == 1)
-           {
-                return need_yh ? lstm_proto.output(2) : "";
-           } else {
-                return need_yh ? lstm_proto.output(1) : "";
-           }
-    }();
-
-    const std::string yc_name = [&](){
-        if(constBlobs.find(lstm_proto.input(5)) == constBlobs.end() &&
-           constBlobs.find(lstm_proto.input(6)) == constBlobs.end() &&
-           num_directions == 1)
-           {
-                return need_yc ? lstm_proto.output(1) : "";
-           } else {
-                return need_yc ? lstm_proto.output(2) : "";
-           }
-    }();
+    const std::string yh_name = need_yh ? lstm_proto.output(1) : "";
+    const std::string yc_name = need_yc ? lstm_proto.output(2) : "";
 
     layerParams.set("produce_cell_output", need_yc);
 

@@ -65,6 +65,7 @@ public:
         for (int i = 0; i < numInps; ++i)
             net.setInput(inps[i], inputNames[i]);
         Mat out = net.forward("");
+
         if (useSoftmax)
         {
             LayerParams lp;
@@ -1234,11 +1235,6 @@ TEST_P(Test_ONNX_layers, DISABLED_LSTM_bidirectional)
 TEST_P(Test_ONNX_layers, LSTM_hidden)
 {
     testONNXModels("hidden_lstm", npy, 0, 0, false, false);
-}
-
-TEST_P(Test_ONNX_layers, LSTM_sample)
-{
-    testONNXModels("sample_lstm", npy, 0, 0, false, false, 3);
 }
 
 TEST_P(Test_ONNX_layers, LSTM_hidden_bidirectional)

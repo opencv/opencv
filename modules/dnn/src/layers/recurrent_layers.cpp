@@ -173,9 +173,14 @@ public:
             CV_CheckEQ(Wh.rows, Wx.rows, "");
             CV_CheckEQ(Wh.rows, (1 + static_cast<int>(bidirectional))*4*Wh.cols, "");
             CV_CheckEQ(Wh.rows, (int)bias.total(), "");
-            CV_CheckEQ(hInternal.cols, Wh.cols, "");
-            CV_CheckEQ(hInternal.cols, cInternal.cols, "");
-            CV_CheckEQ(hInternal.rows, cInternal.rows, "");
+            // Only perform these checks if hInternal and cInternal are not empty matrices
+            // e.g. inputs are not given by a user
+            if (!hInternal.empty() && !cInternal.empty())
+            {
+                CV_CheckEQ(hInternal.cols, Wh.cols, "");
+                CV_CheckEQ(hInternal.cols, cInternal.cols, "");
+                CV_CheckEQ(hInternal.rows, cInternal.rows, "");
+            }
             CV_Assert(Wh.type() == Wx.type() && Wx.type() == bias.type());
 
             // Peephole weights.
