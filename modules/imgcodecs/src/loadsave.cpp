@@ -507,9 +507,9 @@ imread_( const String& filename, int flags, Mat& mat )
                 if (!decoder->readHeader())
                     return 0;
             }
-            catch (const cv::Exception& e)
+            catch (const cv::Exception& eraw)
             {
-                std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+                std::cerr << "imread_('" << filename << "'): can't read data: " << eraw.what() << std::endl << std::flush;
             }
         }
 #endif
