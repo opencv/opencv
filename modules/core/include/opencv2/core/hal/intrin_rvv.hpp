@@ -10,6 +10,15 @@
 
 #include <algorithm>
 
+// RVV intrinsics have been renamed in version 0.11, so we need to include
+// compatibility headers:
+// https://github.com/riscv-non-isa/rvv-intrinsic-doc/tree/master/auto-generated/rvv-v0p10-compatible-headers
+#if defined(__riscv_v_intrinsic) &&  __riscv_v_intrinsic>10999
+#include "intrin_rvv_010_compat_non-policy.hpp"
+#include "intrin_rvv_010_compat_overloaded-non-policy.hpp"
+#endif
+
+
 // Building for T-Head C906 core with RVV 0.7.1 using toolchain
 // https://github.com/T-head-Semi/xuantie-gnu-toolchain
 // with option '-march=rv64gcv0p7'
