@@ -1028,11 +1028,10 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
                         {
                             for (; j + 7 < out_width; j += 8)
                             {
-                                v_float32x4 v0 = v_load(cptr + j) + vbias;
-                                v_float32x4 v1 = v_load(cptr + j + 4) + vbias;
-
-                                v0 += v_load(pbptr + j);
-                                v1 += v_load(pbptr + j + 4);
+                                v_float32x4 v0 = v_add(v_load(cptr + j), vbias);
+                                v_float32x4 v1 = v_add(v_load(cptr + j + 4), vbias);
+                                v0 = v_add(v0, v_load(pbptr + j));
+                                v1 = v_add(v1, v_load(pbptr + j + 4));
 
                                 if (ifMinMaxAct)
                                 {
@@ -1048,8 +1047,8 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
                         {
                             for (; j + 7 < out_width; j += 8)
                             {
-                                v_float32x4 v0 = v_load(cptr + j) + vbias;
-                                v_float32x4 v1 = v_load(cptr + j + 4) + vbias;
+                                v_float32x4 v0 = v_add(v_load(cptr + j), vbias);
+                                v_float32x4 v1 = v_add(v_load(cptr + j + 4), vbias);
 
                                 if (ifMinMaxAct)
                                 {
@@ -1154,13 +1153,13 @@ static void convBlockMR1x28(int np, const float* a, const float* b, float *c, co
 
     if (init_c)
     {
-        c0 += v_load(c);
-        c1 += v_load(c + 4);
-        c2 += v_load(c + 8);
-        c3 += v_load(c + 12);
-        c4 += v_load(c + 16);
-        c5 += v_load(c + 20);
-        c6  += v_load(c + 24);
+        c0 = v_add(c0, v_load(c));
+        c1 = v_add(c1, v_load(c + 4));
+        c2 = v_add(c2, v_load(c + 8));
+        c3 = v_add(c3, v_load(c + 12));
+        c4 = v_add(c4, v_load(c + 16));
+        c5 = v_add(c5, v_load(c + 20));
+        c6 = v_add(c6, v_load(c + 24));
     }
 
     if (ifMinMaxAct)
@@ -1207,12 +1206,12 @@ static void convBlockMR1x24(int np, const float* a, const float* b, float *c, co
 
     if (init_c)
     {
-        c0 += v_load(c);
-        c1 += v_load(c + 4);
-        c2 += v_load(c + 8);
-        c3 += v_load(c + 12);
-        c4 += v_load(c + 16);
-        c5 += v_load(c + 20);
+        c0 = v_add(c0, v_load(c));
+        c1 = v_add(c1, v_load(c + 4));
+        c2 = v_add(c2, v_load(c + 8));
+        c3 = v_add(c3, v_load(c + 12));
+        c4 = v_add(c4, v_load(c + 16));
+        c5 = v_add(c5, v_load(c + 20));
     }
 
     if (ifMinMaxAct)
@@ -1251,9 +1250,9 @@ static void convBlockMR1x12(int np, const float* a, const float* b, float *c, co
 
     if (init_c)
     {
-        c0 += v_load(c);
-        c1 += v_load(c + 4);
-        c2 += v_load(c + 8);
+        c0 = v_add(c0, v_load(c));
+        c1 = v_add(c1, v_load(c + 4));
+        c2 = v_add(c2, v_load(c + 8));
     }
 
     if (ifMinMaxAct)
@@ -1343,33 +1342,33 @@ static void convBlock4x24(int np, const float* a, const float* b, float* c, int 
 
     if (!init_c)
     {
-        c0 += v_load(c);
-        c1 += v_load(c + 4);
-        c2 += v_load(c + 8);
-        c3 += v_load(c + 12);
-        c4 += v_load(c + 16);
-        c5 += v_load(c + 20);
+        c0 = v_add(c0, v_load(c));
+        c1 = v_add(c1, v_load(c + 4));
+        c2 = v_add(c2, v_load(c + 8));
+        c3 = v_add(c3, v_load(c + 12));
+        c4 = v_add(c4, v_load(c + 16));
+        c5 = v_add(c5, v_load(c + 20));
 
-        c6  += v_load(c + ldc);
-        c7  += v_load(c + ldc + 4);
-        c8  += v_load(c + ldc + 8);
-        c9  += v_load(c + ldc + 12);
-        c10 += v_load(c + ldc + 16);
-        c11 += v_load(c + ldc + 20);
+        c6  = v_add(c6 , v_load(c + ldc));
+        c7  = v_add(c7 , v_load(c + ldc + 4));
+        c8  = v_add(c8 , v_load(c + ldc + 8));
+        c9  = v_add(c9 , v_load(c + ldc + 12));
+        c10 = v_add(c10, v_load(c + ldc + 16));
+        c11 = v_add(c11, v_load(c + ldc + 20));
 
-        c12 += v_load(c + ldc*2);
-        c13 += v_load(c + ldc*2 + 4);
-        c14 += v_load(c + ldc*2 + 8);
-        c15 += v_load(c + ldc*2 + 12);
-        c16 += v_load(c + ldc*2 + 16);
-        c17 += v_load(c + ldc*2 + 20);
+        c12 = v_add(c12, v_load(c + ldc*2));
+        c13 = v_add(c13, v_load(c + ldc*2 + 4));
+        c14 = v_add(c14, v_load(c + ldc*2 + 8));
+        c15 = v_add(c15, v_load(c + ldc*2 + 12));
+        c16 = v_add(c16, v_load(c + ldc*2 + 16));
+        c17 = v_add(c17, v_load(c + ldc*2 + 20));
 
-        c18 += v_load(c + ldc*3);
-        c19 += v_load(c + ldc*3 + 4);
-        c20 += v_load(c + ldc*3 + 8);
-        c21 += v_load(c + ldc*3 + 12);
-        c22 += v_load(c + ldc*3 + 16);
-        c23 += v_load(c + ldc*3 + 20);
+        c18 = v_add(c18, v_load(c + ldc*3));
+        c19 = v_add(c19, v_load(c + ldc*3 + 4));
+        c20 = v_add(c20, v_load(c + ldc*3 + 8));
+        c21 = v_add(c21, v_load(c + ldc*3 + 12));
+        c22 = v_add(c22, v_load(c + ldc*3 + 16));
+        c23 = v_add(c23, v_load(c + ldc*3 + 20));
     }
 
     v_store(c, c0);
@@ -1431,17 +1430,17 @@ static void convBlock4x8(int np, const float* a, const float* b, float* c, int l
 
     if (!init_c)
     {
-        c0 += v_load(c);
-        c1 += v_load(c + 4);
+        c0 = v_add(c0, v_load(c));
+        c1 = v_add(c1, v_load(c + 4));
 
-        c2  += v_load(c + ldc);
-        c3  += v_load(c + ldc + 4);
+        c2 = v_add(c2, v_load(c + ldc));
+        c3 = v_add(c3, v_load(c + ldc + 4));
 
-        c4 += v_load(c + ldc*2);
-        c5 += v_load(c + ldc*2 + 4);
+        c4 = v_add(c4, v_load(c + ldc*2));
+        c5 = v_add(c5, v_load(c + ldc*2 + 4));
 
-        c6 += v_load(c + ldc*3);
-        c7 += v_load(c + ldc*3 + 4);
+        c6 = v_add(c6, v_load(c + ldc*3));
+        c7 = v_add(c7, v_load(c + ldc*3 + 4));
     }
 
     v_store(c, c0);
@@ -1476,10 +1475,10 @@ static void convBlock4x4(int np, const float* a, const float* b, float* c, int l
 
     if (!init_c)
     {
-        c0 += v_load(c);
-        c1 += v_load(c + ldc);
-        c2 += v_load(c + ldc*2);
-        c3 += v_load(c + ldc*3);
+        c0 = v_add(c0, v_load(c));
+        c1 = v_add(c1, v_load(c + ldc));
+        c2 = v_add(c2, v_load(c + ldc*2));
+        c3 = v_add(c3, v_load(c + ldc*3));
     }
 
     v_store(c, c0);
