@@ -408,10 +408,10 @@ public:
 
 private:
     cv::Mat m_mat;
-    int64_t  m_num_frames;
-    int64_t  m_latency;
-    int64_t  m_curr_seq_id;
-    int64_t  m_next_tick_ts;
+    int64_t m_num_frames;
+    int64_t m_latency;
+    int64_t m_curr_seq_id;
+    int64_t m_next_tick_ts;
 };
 
 } // anonymous namespace
