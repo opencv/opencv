@@ -782,17 +782,17 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
-                                      const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(!blobs.empty());
-        CV_Assert(inputsWrapper.size() == 1);
+        CV_Assert(inputs.size() == 1);
         CV_Assert(nodes.size() == 1);
 
         bool has_bias = hasBias() || fusedBias;
 
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
         const auto shape_x = x->host->size; // [b, c, h, w]
         const int filter_out_channel = blobs[0].size[1];
         const int groups = shape_x[1] / filter_out_channel;
@@ -2275,18 +2275,18 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
-                                      const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(!blobs.empty());
-        CV_Assert(inputsWrapper.size() == 1);
+        CV_Assert(inputs.size() == 1);
         CV_Assert(nodes.size() == 1);
 
         bool has_bias = hasBias() || fusedBias;
 
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
-        auto y = outputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto y = outputs[0].dynamicCast<CannBackendWrapper>();
         const auto shape_x = x->host->size; // [N, C, H, W]
         const auto shape_y = y->host->size; // [N, C, H, W]
         const int filter_out_channel = blobs[0].size[0];

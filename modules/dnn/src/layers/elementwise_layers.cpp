@@ -188,11 +188,11 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
-                                      const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        return func.initCannOp(Layer::name, inputsWrapper, nodes);
+        return func.initCannOp(Layer::name, inputs, nodes);
     }
 #endif // HAVE_CANN
 
@@ -462,10 +462,10 @@ struct ReLUFunctor : public BaseFunctor
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
         auto x_desc = x->getTensorDesc();
 
@@ -656,10 +656,10 @@ struct ReLU6Functor : public BaseFunctor
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::ClipByValue>(name);
 
@@ -809,7 +809,7 @@ struct BaseDefaultFunctor : public BaseFunctor
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
         CV_Error(Error::StsNotImplemented, "");
@@ -931,10 +931,10 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Tanh>(name);
 
@@ -998,10 +998,10 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Swish>(name);
 
@@ -1076,10 +1076,10 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Mish>(name);
 
@@ -1152,10 +1152,10 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Sigmoid>(name);
 
@@ -1230,10 +1230,10 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Elu>(name);
 
@@ -1302,10 +1302,10 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Abs>(name);
 
@@ -1364,10 +1364,10 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::BNLL>(name);
 
@@ -1421,10 +1421,10 @@ struct CeilFunctor : public BaseDefaultFunctor<CeilFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::BNLL>(name);
 
@@ -1480,10 +1480,10 @@ struct FloorFunctor : public BaseDefaultFunctor<FloorFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Floor>(name);
 
@@ -2335,7 +2335,7 @@ struct PowerFunctor : public BaseFunctor
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
         CV_Error(Error::StsNotImplemented, "");
@@ -2592,10 +2592,10 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
         auto x_desc = x->getTensorDesc();
 
