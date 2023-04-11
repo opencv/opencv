@@ -2732,9 +2732,9 @@ TEST(GAPI_Streaming_Exception, SourceThrowEverySecondFrame) {
 }
 
 TEST(Desync, DropFrames) {
-    const int64_t kNumFrames = 20;
-    const int64_t kLatencyMs = 10;
-    const int64_t kDelayMs   = 15;
+    const int64_t kNumFrames = 5;
+    const int64_t kLatencyMs = 50;
+    const int64_t kDelayMs   = 75;
 
     cv::GMat in;
     auto desync = cv::gapi::streaming::desync(in);
@@ -2759,7 +2759,7 @@ TEST(Desync, DropFrames) {
     }
 
     for (size_t i = 0; i < seq_id_vec.size()-1; ++i) {
-        // Since camera produces frames every 10ms but execution takes 15ms
+        // Since camera produces frames every 50ms but execution takes 75ms
         // so every second frame will be dropped
         // e.g seq_ids 0,2,4,6,8...
         EXPECT_EQ(2, seq_id_vec[i+1] - seq_id_vec[i]);
