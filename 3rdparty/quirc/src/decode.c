@@ -920,10 +920,14 @@ quirc_decode_error_t quirc_decode(const struct quirc_code *code,
 
 void quirc_flip(struct quirc_code *code)
 {
-	struct quirc_code flipped = {0};
+	struct quirc_code flipped;
 	unsigned int offset = 0;
-	for (int y = 0; y < code->size; y++) {
-		for (int x = 0; x < code->size; x++) {
+	int y;
+	int x;
+
+	memset(&flipped, 0, sizeof(flipped));
+	for (y = 0; y < code->size; y++) {
+		for (x = 0; x < code->size; x++) {
 			if (grid_bit(code, y, x)) {
 				flipped.cell_bitmap[offset >> 3u] |= (1u << (offset & 7u));
 			}
