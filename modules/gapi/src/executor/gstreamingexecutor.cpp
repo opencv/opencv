@@ -74,6 +74,10 @@ public:
 
 struct DataQueue {
     static const char *name() { return "StreamingDataQueue"; }
+    // NB: DROP means that queue returns only the latest data
+    // in the pipeline. E.g if some data already "pulled" (available)
+    // by the time of pull is called, queue will drop this data and start
+    // waiting for the new one.
     enum tag { DESYNC, DROP };
 
     explicit DataQueue(std::size_t capacity) {
@@ -90,9 +94,16 @@ struct DataQueue {
             q.reset(new cv::gimpl::stream::DesyncQueue());
         } else {
             GAPI_Assert(t == DROP);
+            // NB: DesyncQueue with filter (lambda) passed to the constructor
+            // will drop the cmd when pull is callled if the following
+            // conditions are met:
+            // 1. Cmd exists by the time of pull called.
+            // 2. filter(cmd) returns true - this is needed to filter
+            // what kind of cmd's should be dropped. E.g don't drop Cmd::Stop
+            // because it's crucial for stopping execution.
             q.reset(new cv::gimpl::stream::DesyncQueue(
                     [](const Cmd &cmd) {
-                        // NB: Need to filter "data" messages from others.
+                        // NB: Filter "data" messages from others.
                         return cv::util::holds_alternative<cv::GRunArg>(cmd);
                     }));
         }
