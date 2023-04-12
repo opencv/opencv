@@ -28,23 +28,21 @@ namespace own {
 
 template <typename T>
 using DropStrategy = std::function<bool(const T& t)>;
-template <typename T>
-using OptDropStrategy = cv::optional<DropStrategy<T>>;
 
-template<class T>
+template<class T, class Strategy = DropStrategy<T>>
 class last_written_value {
     cv::util::optional<T> m_data;
 
     std::mutex m_mutex;
     std::condition_variable m_cond_empty;
-    OptDropStrategy<T> m_drop_strategy;
+    cv::optional<Strategy> m_drop_strategy;
 
     void unsafe_pop(T &t);
 
 public:
     last_written_value() {};
 
-    last_written_value(DropStrategy<T>&& drop_strategy)
+    last_written_value(Strategy&& drop_strategy)
         : m_drop_strategy(std::move(drop_strategy)) {
     }
 
@@ -67,16 +65,16 @@ public:
 };
 
 // Internal: do shared pop things assuming the lock is already there
-template<typename T>
-void last_written_value<T>::unsafe_pop(T &t) {
+template<typename T, typename S>
+void last_written_value<T, S>::unsafe_pop(T &t) {
     GAPI_Assert(m_data.has_value());
     t = std::move(m_data.value());
     m_data.reset();
 }
 
 // Push an element to the queue. Blocking if there's no space left
-template<typename T>
-void last_written_value<T>::push(const T& t) {
+template<typename T, typename S>
+void last_written_value<T, S>::push(const T& t) {
     std::unique_lock<std::mutex> lock(m_mutex);
     m_data = cv::util::make_optional(t);
     lock.unlock();
@@ -84,8 +82,8 @@ void last_written_value<T>::push(const T& t) {
 }
 
 // Pop an element from the queue. Blocking if there's no items
-template<typename T>
-void last_written_value<T>::pop(T &t) {
+template<typename T, typename S>
+void last_written_value<T, S>::pop(T &t) {
     std::unique_lock<std::mutex> lock(m_mutex);
     if (m_data.has_value() && m_drop_strategy.has_value()) {
         auto& strategy = *m_drop_strategy;
@@ -102,8 +100,8 @@ void last_written_value<T>::pop(T &t) {
 }
 
 // Try pop an element from the queue. Returns false if queue is empty
-template<typename T>
-bool last_written_value<T>::try_pop(T &t) {
+template<typename T, typename S>
+bool last_written_value<T, S>::try_pop(T &t) {
     std::unique_lock<std::mutex> lock(m_mutex);
     if (!m_data.has_value()) {
         // if there is no data, return
@@ -114,8 +112,8 @@ bool last_written_value<T>::try_pop(T &t) {
 }
 
 // Clear the value holder. This method is not thread-safe.
-template<typename T>
-void last_written_value<T>::clear() {
+template<typename T, typename S>
+void last_written_value<T, S>::clear() {
     m_data.reset();
 }
 

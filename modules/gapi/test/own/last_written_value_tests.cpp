@@ -55,7 +55,7 @@ TEST(LastValue, Overwrite) {
 }
 
 TEST(LastValue, WithDropStrategy) {
-    own::last_written_value<int> v([](int){ return /*always drop*/true; });
+    own::last_written_value<int> v([](int){ return /*always drop*/ true; });
     v.push(42);
 
     auto t = std::thread([&] {
