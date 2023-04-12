@@ -45,7 +45,7 @@ create a radon checkerboard for findChessboardCornersSB() with markers in (7 4),
 
 create a charuco board pattern in charuco_board.svg with 7 rows, 5 columns, square size 30 mm, aruco marker size 15 mm and using DICT_5X5_100 as dictionary for aruco markers (it contains in DICT_ARUCO.json file):
 
-        python gen_pattern.py -o charuco_board.svg --rows 7 --columns 5 -T charuco_board --square_size 30 --marker_size 15 -f DICT_5X5_100.json
+        python gen_pattern.py -o charuco_board.svg --rows 7 --columns 5 -T charuco_board --square_size 30 --marker_size 15 -f DICT_5X5_100.json.gz
 
 If you want to change unit use -u option (mm inches, px, m)
 
@@ -53,7 +53,7 @@ If you want to change page size use -w and -h options
 
 If you want to use your own dictionary for ChAruco board your should write name of file with your dictionary. For example
 
-        python gen_pattern.py -o charuco_board.svg --rows 7 --columns 5 --T charuco_checkerboard  -f my_dictionary.json
+        python gen_pattern.py -o charuco_board.svg --rows 7 --columns 5 -T charuco_board -f my_dictionary.json
 
 You can generate your dictionary in my_dictionary.json file with number of markers 30 and markers size 5 bits by using opencv/samples/cpp/aruco_dict_utils.cpp.
 
