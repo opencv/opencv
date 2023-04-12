@@ -130,14 +130,23 @@ TEST(Test_TFLite, max_unpooling)
     }
 }
 
-TEST(Test_TFLite, quant) {
-    Net net = readNet("/home/dkurt/lite-model_ssd_mobilenet_v2_100_int8_default_1.tflite");
+TEST(Test_TFLite, EfficientDet_int8) {
+    Net net = readNet(findDataFile("dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", false));
 
-    Mat inp({1, 3, 16, 16}, CV_8S);
-    net.setInput(inp);
+    Mat img = imread(findDataFile("dnn/dog416.png"));
+    resize(img, img, Size(320, 320));
+    Mat blob = img.reshape(1, {1, 320, 320, 3});
+    transposeND(blob, {0, 3, 1, 2}, blob);
+    blob.convertTo(blob, CV_32S);
+    blob -= 128;
+    blob.convertTo(blob, CV_8S);
+
+    net.setInput(blob);
     Mat out = net.forward();
-
-    std::cout << out.size << std::endl;
+    Mat ref = (Mat_<float>(3, 7) << 0, 7, 0.5859375, 0.60760677, 0.1344434, 0.90391827, 0.2909466,
+                                    0, 17, 0.56640625, 0.16271245, 0.35905322, 0.52498263, 0.9409467,
+                                    0, 1, 0.5, 0.14357102, 0.21772164, 0.7183101, 0.9203972);
+    normAssertDetections(ref, out, "", 0.5);
 }
 
 }}  // namespace
