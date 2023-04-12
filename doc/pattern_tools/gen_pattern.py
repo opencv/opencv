@@ -149,14 +149,14 @@ class PatternMaker:
 
     @staticmethod
     def _create_marker_bits(markerSize_bits, byteList):
-        
+
         marker = np.zeros((markerSize_bits+2, markerSize_bits+2))
         bits = marker[1:markerSize_bits+1, 1:markerSize_bits+1]
-            
+
         for i in range(markerSize_bits):
             for j in range(markerSize_bits):
                 bits[i][j] = int(byteList[i*markerSize_bits+j])
-     
+
         return marker
 
     def make_charuco_board(self):
@@ -173,7 +173,7 @@ class PatternMaker:
         else:
             f = open(self.dict_file)
             dictionary = json.load(f)
-        
+
         if (dictionary["nmarkers"] < int(self.cols*self.rows/2)):
             print("Error: Aruco dictionary contains less markers than it needs for chosen board. Please choose another dictionary or use smaller board")
             return
@@ -184,8 +184,8 @@ class PatternMaker:
         spacing = self.square_size
         xspacing = (self.width - self.cols * self.square_size) / 2.0
         yspacing = (self.height - self.rows * self.square_size) / 2.0
-        
-        ch_ar_border = (self.square_size - self.aruco_marker_size)/2 
+
+        ch_ar_border = (self.square_size - self.aruco_marker_size)/2
         marker_id = 0 
         for y in range(0, self.rows):
             for x in range(0, self.cols):
@@ -199,16 +199,16 @@ class PatternMaker:
                     marker_id +=1
                     x_pos = x * spacing + xspacing
                     y_pos = y * spacing + yspacing
-                    
-                    square = SVG("rect", x=x_pos+ch_ar_border, y=y_pos+ch_ar_border, width=self.aruco_marker_size, 
+
+                    square = SVG("rect", x=x_pos+ch_ar_border, y=y_pos+ch_ar_border, width=self.aruco_marker_size,
                                              height=self.aruco_marker_size, fill="black", stroke="none")
-                    self.g.append(square)    
+                    self.g.append(square)
                     for x_ in range(len(img_mark[0])):
                         for y_ in range(len(img_mark)):
                             if (img_mark[y_][x_] != 0):
-                                square = SVG("rect", x=x_pos+ch_ar_border+(x_)*side, y=y_pos+ch_ar_border+(y_)*side, width=side, 
+                                square = SVG("rect", x=x_pos+ch_ar_border+(x_)*side, y=y_pos+ch_ar_border+(y_)*side, width=side,
                                              height=side, fill="white", stroke="white", stroke_width = spacing*0.01)
-                                self.g.append(square)        
+                                self.g.append(square)
 
     def save(self):
         c = canvas(self.g, width="%d%s" % (self.width, self.units), height="%d%s" % (self.height, self.units),
@@ -286,7 +286,7 @@ def main():
     pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, dict_file)
     # dict for easy lookup of pattern type
     mp = {"circles": pm.make_circles_pattern, "acircles": pm.make_acircles_pattern,
-          "checkerboard": pm.make_checkerboard_pattern, "radon_checkerboard": pm.make_radon_checkerboard_pattern, 
+          "checkerboard": pm.make_checkerboard_pattern, "radon_checkerboard": pm.make_radon_checkerboard_pattern,
          "charuco_board": pm.make_charuco_board}
     mp[p_type]()
     # this should save pattern to output
