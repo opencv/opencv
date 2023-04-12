@@ -766,10 +766,21 @@ void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::st
     layerParams.set("keep_top_k", 100);
     layerParams.set("code_type", "CENTER_SIZE");
     layerParams.set("variance_encoded_in_target", true);
-    // layerParams.set("loc_pred_transposed", true);
+    layerParams.set("loc_pred_transposed", true);
 
     // Replace third input from tensor to Const layer with the priors
-    Mat priors = allTensors[op.inputs()->Get(2)];
+    Mat priors = allTensors[op.inputs()->Get(2)].clone();
+
+    // Change priors data from (ycenter, xcenter, h, w) to (xmin, ymin, xmax, ymax)
+    priors = priors.reshape(1, priors.total() / 4);
+    Mat tmp = priors.col(0).clone();
+    priors.col(0) = priors.col(1) - 0.5 * priors.col(3);
+    priors.col(1) = tmp - 0.5 * priors.col(2);
+
+    tmp = priors.col(2).clone();
+    priors.col(2) = priors.col(0) + priors.col(3);
+    priors.col(3) = priors.col(1) + tmp;
+
     LayerParams priorsLP;
     priorsLP.name = layerParams.name + "/priors";
     priorsLP.type = "Const";
