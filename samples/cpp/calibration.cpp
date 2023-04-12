@@ -5,6 +5,8 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
+//#include <opencv2/objdetect/aruco_detector.hpp>
+#include <opencv2/aruco/charuco.hpp>
 
 #include <cctype>
 #include <stdio.h>
@@ -50,13 +52,16 @@ static void help(char** argv)
         "Usage: %s\n"
         "     -w=<board_width>         # the number of inner corners per one of board dimension\n"
         "     -h=<board_height>        # the number of inner corners per another board dimension\n"
-        "     [-pt=<pattern>]          # the type of pattern: chessboard or circles' grid\n"
+        "     [-pt=<pattern>]          # the type of pattern: chessboard or charucoboard or circles' grid\n"
         "     [-n=<number_of_frames>]  # the number of frames to use for calibration\n"
         "                              # (if not specified, it will be set to the number\n"
         "                              #  of board views actually available)\n"
         "     [-d=<delay>]             # a minimum delay in ms between subsequent attempts to capture a next view\n"
         "                              # (used only for video capturing)\n"
         "     [-s=<squareSize>]        # square size in some user-defined units (1 by default)\n"
+        "     [-ms=<markerSize>]       # marker size in some user-defined units (0.5 by default)\n"
+        "     [-ad=<arucoDict>]        # number of predefined aruco dictionary"
+        "     [-adf=<dictFilename>]   # filename of aruco dictionary"
         "     [-o=<out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
         "     [-op]                    # write detected feature points\n"
         "     [-oe]                    # write extrinsic parameters\n"
@@ -90,7 +95,7 @@ static void help(char** argv)
 }
 
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
-enum Pattern { CHESSBOARD, CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID };
+enum Pattern { CHESSBOARD, CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID, CHARUCOBOARD};
 
 static double computeReprojectionErrors(
         const vector<vector<Point3f> >& objectPoints,
@@ -125,6 +130,7 @@ static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point
     switch(patternType)
     {
       case CHESSBOARD:
+      case CHARUCOBOARD:
       case CIRCLES_GRID:
         for( int i = 0; i < boardSize.height; i++ )
             for( int j = 0; j < boardSize.width; j++ )
@@ -350,10 +356,12 @@ static bool runAndSave(const string& outputFilename,
 int main( int argc, char** argv )
 {
     Size boardSize, imageSize;
-    float squareSize, aspectRatio = 1;
+    float squareSize, markerSize, aspectRatio = 1;
     Mat cameraMatrix, distCoeffs;
     string outputFilename;
     string inputFilename = "";
+    int arucoDict;
+    string dictFilename;
 
     int i, nframes;
     bool writeExtrinsics, writePoints;
@@ -372,7 +380,7 @@ int main( int argc, char** argv )
     Pattern pattern = CHESSBOARD;
 
     cv::CommandLineParser parser(argc, argv,
-        "{help ||}{w||}{h||}{pt|chessboard|}{n|10|}{d|1000|}{s|1|}{o|out_camera_data.yml|}"
+        "{help ||}{w||}{h||}{pt|chessboard|}{n|10|}{d|1000|}{s|1|}{ms|0.5|}{ad|0|}{adf|None|}{o|out_camera_data.yml|}"
         "{op||}{oe||}{zt||}{a||}{p||}{v||}{V||}{su||}"
         "{oo||}{ws|11|}{dt||}"
         "{fx||}{fy||}{cx||}{cy||}"
@@ -394,10 +402,16 @@ int main( int argc, char** argv )
             pattern = ASYMMETRIC_CIRCLES_GRID;
         else if( val == "chessboard" )
             pattern = CHESSBOARD;
+        else if (val == "charucoboard") {
+            pattern = CHARUCOBOARD;
+        }
         else
             return fprintf( stderr, "Invalid pattern type: must be chessboard or circles\n" ), -1;
     }
     squareSize = parser.get<float>("s");
+    markerSize = parser.get<float>("ms");
+    arucoDict = parser.get<int>("ad");
+    dictFilename = parser.get<std::string>("adf");
     nframes = parser.get<int>("n");
     delay = parser.get<int>("d");
     writePoints = parser.has("op");
@@ -529,6 +543,40 @@ int main( int argc, char** argv )
             case ASYMMETRIC_CIRCLES_GRID:
                 found = findCirclesGrid( view, boardSize, pointbuf, CALIB_CB_ASYMMETRIC_GRID );
                 break;
+            case CHARUCOBOARD:
+            {
+                cv::aruco::Dictionary dictionary;
+                if (dictFilename == "None") {
+                    dictionary = cv::aruco::getPredefinedDictionary(arucoDict);
+                }
+                else {
+                    cv::FileStorage dict_file(dictFilename, cv::FileStorage::Mode::FORMAT_JSON && cv::FileStorage::Mode::READ);
+                    cv::FileNode fn(dict_file.root());
+                    dictionary.readDictionary(fn);
+                }
+                cv::Ptr <cv::aruco::CharucoBoard> board =
+                    cv::makePtr<cv::aruco::CharucoBoard>(cv::aruco::CharucoBoard({ boardSize.width + 1,boardSize.height + 1 },
+                                                squareSize, markerSize, dictionary));
+                std::vector<int> markerIds;
+                std::vector<std::vector<cv::Point2f>> markerCorners;
+                cv::aruco::ArucoDetector detector(dictionary);
+                detector.detectMarkers(view, markerCorners, markerIds);
+
+                // if at least one marker detected
+                if (markerIds.size() > 0) {
+                    std::vector<cv::Point2f> charucoCorners;
+                    std::vector<int> charucoIds;
+                    found = cv::aruco::interpolateCornersCharuco(markerCorners, markerIds, view, board, pointbuf, charucoIds);
+                    
+                    if (pointbuf.size() < boardSize.height*boardSize.width) {
+                        found = false;
+                    }
+                }
+                else {
+                    found = false;
+                }
+                break;
+            }
             default:
                 return fprintf( stderr, "Unknown pattern type\n" ), -1;
         }
