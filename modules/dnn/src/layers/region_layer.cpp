@@ -317,6 +317,7 @@ public:
                                 dstData[box_index + 1] = (y + y_tmp) / rows;
                                 dstData[box_index + 2] = (srcData[box_index + 2]) * (srcData[box_index + 2]) * 4 * biasData[2 * a] / wNorm;
                                 dstData[box_index + 3] = (srcData[box_index + 3]) * (srcData[box_index + 3]) * 4 * biasData[2 * a + 1] / hNorm;
+                                dstData[box_index + 4] = srcData[p_index];
 
                                 scale = srcData[p_index];
                                 if (classfix == -1 && scale < thresh)
