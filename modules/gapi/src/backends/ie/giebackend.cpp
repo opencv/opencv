@@ -456,6 +456,7 @@ public:
                   cv::gimpl::GIslandExecutable::IOutput             &  output,
                   const cv::GArgs                                   &  args,
                   const std::vector<cv::gimpl::RcDesc>              &  outs,
+                  cv::GRunArg::Meta                                 && meta,
                   std::vector<cv::gimpl::GIslandExecutable::InObj>  && input_objs,
                   std::vector<cv::gimpl::GIslandExecutable::OutObj> && output_objs);
 
@@ -477,9 +478,8 @@ public:
     const cv::Mat&        inMat  (std::size_t input) const;
     const cv::MediaFrame& inFrame(std::size_t input) const;
 
-    const cv::GRunArg& input  (std::size_t idx) const;
-          cv::GRunArgP output (std::size_t idx);
-          cv::Mat&     outMatR(std::size_t idx);
+    cv::GRunArgP output (std::size_t idx);
+    cv::Mat&     outMatR(std::size_t idx);
 
     const IEUnit                          &uu;
     cv::gimpl::GIslandExecutable::IOutput &out;
@@ -491,6 +491,8 @@ public:
     // To store exception appeared in callback.
     std::exception_ptr eptr;
 
+    const cv::GRunArg::Meta& getMeta() { return m_meta; };
+
     using req_key_t = void*;
     cv::MediaFrame* prepareKeepAliveFrameSlot(req_key_t key);
     size_t releaseKeepAliveFrame(req_key_t key);
@@ -498,6 +500,9 @@ private:
     cv::detail::VectorRef& outVecRef(std::size_t idx);
 
     cv::GArg packArg(const cv::GArg &arg);
+
+    // To propagate accumulated meta from all inputs to output.
+    cv::GRunArg::Meta m_meta;
 
     // To store input/output data from frames
     std::vector<cv::gimpl::GIslandExecutable::InObj>  m_input_objs;
@@ -525,9 +530,11 @@ IECallContext::IECallContext(const IEUnit                                      &
                              cv::gimpl::GIslandExecutable::IOutput             &  output,
                              const cv::GArgs                                   &  args,
                              const std::vector<cv::gimpl::RcDesc>              &  outs,
+                             cv::GRunArg::Meta                                 && meta,
                              std::vector<cv::gimpl::GIslandExecutable::InObj>  && input_objs,
                              std::vector<cv::gimpl::GIslandExecutable::OutObj> && output_objs)
-: uu(unit), out(output), m_input_objs(std::move(input_objs)), m_output_objs(std::move(output_objs))
+: uu(unit), out(output), m_meta(std::move(meta)),
+  m_input_objs(std::move(input_objs)), m_output_objs(std::move(output_objs))
 {
     for (auto& it : m_input_objs)  cv::gimpl::magazine::bindInArg (m_res, it.first, it.second);
     for (auto& it : m_output_objs) cv::gimpl::magazine::bindOutArg(m_res, it.first, it.second);
@@ -574,10 +581,6 @@ cv::Mat& IECallContext::outMatR(std::size_t idx) {
 cv::GRunArgP IECallContext::output(std::size_t idx) {
     return m_output_objs[idx].second;
 };
-
-const cv::GRunArg& IECallContext::input(std::size_t idx) const {
-    return m_input_objs[idx].second;
-}
 
 cv::detail::VectorRef& IECallContext::outVecRef(std::size_t idx) {
     return cv::util::get<cv::detail::VectorRef>(m_results.at(idx));
@@ -1062,6 +1065,12 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
 
     GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
     const auto in_vector = cv::util::get<cv::GRunArgs>(in_msg);
+    // NB: Collect meta from all inputs.
+    cv::GRunArg::Meta stub_meta;
+    for (auto &&in_arg : in_vector)
+    {
+        stub_meta.insert(in_arg.meta.begin(), in_arg.meta.end());
+    }
 
     // (1) Collect island inputs/outputs
     input_objs.reserve(in_desc.size());
@@ -1084,7 +1093,7 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     const auto &op = m_gm.metadata(this_nh).get<Op>();
     // (2) Create kernel context
     auto ctx = std::make_shared<IECallContext>(uu, out, op.args, op.outs,
-            std::move(input_objs), std::move(output_objs));
+            std::move(stub_meta), std::move(input_objs), std::move(output_objs));
 
     const auto &kk = giem.metadata(this_nh).get<IECallable>();
 
@@ -1096,6 +1105,7 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
         for (auto i : ade::util::iota(ctx->uu.params.num_out))
         {
             auto output = ctx->output(i);
+            ctx->out.meta(output, ctx->getMeta());
             ctx->out.post(std::move(output), eptr);
         }
         return;
@@ -1247,7 +1257,7 @@ static void PostOutputs(InferenceEngine::InferRequest &request,
         IE::Blob::Ptr this_blob = request.GetBlob(ctx->uu.params.output_names[i]);
         copyFromIE(this_blob, out_mat);
         auto output = ctx->output(i);
-        ctx->out.meta(output, ctx->input(0).meta);
+        ctx->out.meta(output, ctx->getMeta());
         ctx->out.post(std::move(output), ctx->eptr);
     }
 
@@ -1314,7 +1324,7 @@ void PostOutputsList::operator()(InferenceEngine::InferRequest &req,
     if (finished == size) {
         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
             auto output = ctx->output(i);
-            ctx->out.meta(output, ctx->input(0).meta);
+            ctx->out.meta(output, ctx->getMeta());
             ctx->out.post(std::move(output), ctx->eptr);
         }
     }
@@ -1372,6 +1382,11 @@ struct Infer: public cv::detail::KernelTag {
                         const_cast<IEUnit::InputFramesDesc &>(uu.net_input_params)
                                 .set_param(input_name, ii->getTensorDesc());
                     }
+            }
+
+            for (auto &&p : uu.params.const_inputs) {
+                const auto ii = inputs.at(p.first);
+                ii->setPrecision(toIE(p.second.first.depth()));
             }
 
             // FIXME: This isn't the best place to call reshape function.
@@ -1474,7 +1489,8 @@ struct InferROI: public cv::detail::KernelTag {
         // only in the loadNetwork case.
         if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             // 0th is ROI, 1st is input image
-            auto ii = uu.net.getInputsInfo().at(input_name);
+            auto inputs = uu.net.getInputsInfo();
+            auto ii = inputs.at(input_name);
             configureInputInfo(ii, mm);
             if (uu.params.layer_names_to_reshape.find(input_name) !=
                 uu.params.layer_names_to_reshape.end()) {
@@ -1496,6 +1512,11 @@ struct InferROI: public cv::detail::KernelTag {
                 const_cast<IEUnit::InputFramesDesc &>(uu.net_input_params)
                             .set_param(input_name, ii->getTensorDesc());
             }
+
+            for (auto &&p : uu.params.const_inputs) {
+                inputs.at(p.first)->setPrecision(toIE(p.second.first.depth()));
+            }
+
             configureOutputPrecision(uu.net.getOutputsInfo(), uu.params.output_precision);
         } else {
             GAPI_Assert(uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
@@ -1614,6 +1635,12 @@ struct InferList: public cv::detail::KernelTag {
             if (!input_reshape_table.empty()) {
                 const_cast<IE::CNNNetwork *>(&uu.net)->reshape(input_reshape_table);
             }
+
+            for (auto &&p : uu.params.const_inputs) {
+                const auto ii = inputs.at(p.first);
+                ii->setPrecision(toIE(p.second.first.depth()));
+            }
+
             configureOutputPrecision(uu.net.getOutputsInfo(), uu.params.output_precision);
         } else {
             GAPI_Assert(uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Import);
@@ -1642,7 +1669,7 @@ struct InferList: public cv::detail::KernelTag {
         if (in_roi_vec.empty()) {
             for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
                 auto output = ctx->output(i);
-                ctx->out.meta(output, ctx->input(0).meta);
+                ctx->out.meta(output, ctx->getMeta());
                 ctx->out.post(std::move(output));
             }
             return;
@@ -1751,8 +1778,9 @@ struct InferList2: public cv::detail::KernelTag {
                 // NB: Configuring input precision and network reshape must be done
                 // only in the loadNetwork case.
                 if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
+                    auto inputs = uu.net.getInputsInfo();
                     // This is a cv::Rect -- configure the IE preprocessing
-                    auto ii = uu.net.getInputsInfo().at(input_name);
+                    auto ii = inputs.at(input_name);
                     configureInputInfo(ii, mm_0);
                     if (uu.params.layer_names_to_reshape.find(input_name) !=
                         uu.params.layer_names_to_reshape.end()) {
@@ -1760,6 +1788,10 @@ struct InferList2: public cv::detail::KernelTag {
                     }
                     if (isApplicableForResize(ii->getTensorDesc())) {
                         ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+                    }
+
+                    for (auto &&p : uu.params.const_inputs) {
+                        inputs.at(p.first)->setPrecision(toIE(p.second.first.depth()));
                     }
 
                     // FIXME: This isn't the best place to call reshape function.
@@ -1806,7 +1838,7 @@ struct InferList2: public cv::detail::KernelTag {
         if (list_size == 0u) {
             for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
                 auto output = ctx->output(i);
-                ctx->out.meta(output, ctx->input(0).meta);
+                ctx->out.meta(output, ctx->getMeta());
                 ctx->out.post(std::move(output));
             }
             return;
