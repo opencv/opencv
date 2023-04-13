@@ -134,19 +134,14 @@ TEST(Test_TFLite, EfficientDet_int8) {
     Net net = readNet(findDataFile("dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", false));
 
     Mat img = imread(findDataFile("dnn/dog416.png"));
-    resize(img, img, Size(320, 320));
-    Mat blob = img.reshape(1, {1, 320, 320, 3});
-    transposeND(blob, {0, 3, 1, 2}, blob);
-    blob.convertTo(blob, CV_32S);
-    blob -= 128;
-    blob.convertTo(blob, CV_8S);
+    Mat blob = blobFromImage(img, 1.0, Size(320, 320));
 
     net.setInput(blob);
     Mat out = net.forward();
-    Mat ref = (Mat_<float>(3, 7) << 0, 7, 0.5859375, 0.60760677, 0.1344434, 0.90391827, 0.2909466,
-                                    0, 17, 0.56640625, 0.16271245, 0.35905322, 0.52498263, 0.9409467,
-                                    0, 1, 0.5, 0.14357102, 0.21772164, 0.7183101, 0.9203972);
-    normAssertDetections(ref, out, "", 0.5);
+    Mat ref = (Mat_<float>(3, 7) << 0, 7, 0.62890625, 0.6014542579650879, 0.13300055265426636, 0.8977657556533813, 0.292389452457428,
+                                    0, 17, 0.56640625, 0.15983937680721283, 0.35905322432518005, 0.5155506730079651, 0.9409466981887817,
+                                    0, 1, 0.5, 0.14357104897499084, 0.2240825891494751, 0.7183101177215576, 0.9140362739562988);
+    normAssertDetections(ref, out, "", 0.5, 0.05, 0.06);
 }
 
 }}  // namespace

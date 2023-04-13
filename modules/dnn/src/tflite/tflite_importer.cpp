@@ -85,7 +85,6 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
     if (!buffer_data)
         return Mat();
 
-    CV_Assert(buffer_data);
     const void* data = buffer_data->data();
 
     int dtype = -1;
@@ -192,18 +191,6 @@ void TFLiteImporter::populateNet()
         dstNet.setInputShape(inputsNames[i], inputsShapes[i]);
     }
 
-        // For INT8 models with INT8 input tensor, insert a dummy Quantize layer because
-        // dnn converts INT8 from net.setInput() to FP32
-        // if (tensor->type() == TensorType_INT8) {
-        //     LayerParams params;
-        //     params.type = "Quantize";
-        //     // params.dtype = CV_8S;
-        //     int layerId = dstNet.addLayer(params.name, params.type, params);
-        //     dstNet.connect(0, i, layerId, 0);
-        //     layerIds[idx] = std::make_pair(layerId, 0);
-        //     layerParams.set("depth", CV_8S);
-        // }
-
     const auto& all_operators = *subgraph_operators;
     const size_t all_operators_size = all_operators.size();
     for (size_t op_idx = 0; op_idx < all_operators_size; ++op_idx)
@@ -293,7 +280,7 @@ void TFLiteImporter::populateNet()
 
             if (!activParams.type.empty()) {
                 activParams.name = layerParams.name + "/activ";
-                layerId = dstNet.addLayerToPrev(activParams.name, activParams.type, CV_8S, activParams);
+                layerId = dstNet.addLayerToPrev(activParams.name, activParams.type, dtype, activParams);
             }
 
             // Predict output layout. Some layer-specific parsers may set them explicitly.
@@ -330,9 +317,6 @@ void TFLiteImporter::populateNet()
             }
             throw;
         }
-        // if (op_outputs->Get(0) == 597) {
-        //     break;
-        // }
     }
 }
 
@@ -737,12 +721,8 @@ void TFLiteImporter::parseDeconvolution(const Operator& op, const std::string& o
 void TFLiteImporter::parseQuantize(const Operator& op, const std::string& opcode, LayerParams& layerParams, LayerParams& activParams) {
     layerParams.type = "Quantize";
 
-    // const Tensor* out = modelTensors->Get(op.inputs()->Get(0));
-    // float outScale = out->quantization()->scale()->Get(0);
-    // int outZero = out->quantization()->zero_point()->Get(0);
-    // std::cout << outScale << " " << outZero << std::endl;
     layerParams.set("scales", 1);
-    layerParams.set("zeropoints", 0);
+    layerParams.set("zeropoints", -128);
 }
 
 void TFLiteImporter::parseDequantize(const Operator& op, const std::string& opcode, LayerParams& layerParams, LayerParams& activParams) {
@@ -756,14 +736,38 @@ void TFLiteImporter::parseDequantize(const Operator& op, const std::string& opco
 }
 
 void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::string& opcode, LayerParams& layerParams, LayerParams& activParams) {
+    // Parse parameters;
+    std::vector<std::string> keys(1, "");
+    const uint8_t* data = op.custom_options()->Data();
+    int offset = 0;
+
+    // Read zero delimited keys
+    while (data[offset] != 10 && offset < op.custom_options()->size()) {
+        if (data[offset]) {
+            keys.back() += data[offset];
+        } else {
+            keys.emplace_back("");
+        }
+        offset += 1;
+    }
+    keys.pop_back();
+    std::sort(keys.begin(), keys.end());
+
+    // TODO: Replace empirical offset to something more reliable.
+    offset += 25;
+    std::map<std::string, uint32_t> parameters;
+    for (int i = 0; i < keys.size(); ++i) {
+        parameters[keys[i]] = *reinterpret_cast<const uint32_t*>(data + offset + i * 4);
+    }
+
     layerParams.type = "DetectionOutput";
-    layerParams.set("num_classes", 90);
+    layerParams.set("num_classes", parameters["num_classes"]);
     layerParams.set("share_location", true);
-    layerParams.set("background_label_id", 91);
-    layerParams.set("nms_threshold", 0.5);
-    layerParams.set("confidence_threshold", 0.0);
-    layerParams.set("top_k", 100);
-    layerParams.set("keep_top_k", 100);
+    layerParams.set("background_label_id", parameters["num_classes"] + 1);
+    layerParams.set("nms_threshold", *(float*)&parameters["nms_iou_threshold"]);
+    layerParams.set("confidence_threshold", *(float*)&parameters["nms_score_threshold"]);
+    layerParams.set("top_k", parameters["max_detections"]);
+    layerParams.set("keep_top_k", parameters["max_detections"]);
     layerParams.set("code_type", "CENTER_SIZE");
     layerParams.set("variance_encoded_in_target", true);
     layerParams.set("loc_pred_transposed", true);
