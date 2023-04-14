@@ -2565,8 +2565,11 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
         node_proto.set_input(0, constParams.name);
         node_proto.set_input(1, srcName);
     }
-    else if (broadcast_axes.size() == 1 && broadcast_axes[0] <= 1)
+    else if (broadcast_axes.size() == 1)
     {
+        // FIXME: this will end up creating massive amount of Identity nodes for broadcasting,
+        //        for example, broadcast 1 to 256 needs 256 Identity nodes and 1 Concat node.
+        //        Possible improvement is to use "Scale".
         expandMid(layerParams.name, node_proto, srcName, targetShape[broadcast_axes[0]]);
 
         layerParams.set("axis", broadcast_axes[0]);
