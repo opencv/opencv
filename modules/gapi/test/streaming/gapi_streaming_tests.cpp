@@ -375,7 +375,7 @@ public:
           m_next_tick_ts(-1) {
     }
 
-    bool pull(cv::gapi::wip::Data& data) {
+    bool pull(cv::gapi::wip::Data& data) override {
         using namespace std::chrono;
 
         if (m_curr_seq_id == m_num_frames) {
