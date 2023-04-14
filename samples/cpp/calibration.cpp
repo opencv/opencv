@@ -5,8 +5,7 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
-//#include <opencv2/objdetect/aruco_detector.hpp>
-#include <opencv2/aruco/charuco.hpp>
+#include <opencv2/objdetect/charuco_detector.hpp>
 
 #include <cctype>
 #include <stdio.h>
@@ -60,8 +59,8 @@ static void help(char** argv)
         "                              # (used only for video capturing)\n"
         "     [-s=<squareSize>]        # square size in some user-defined units (1 by default)\n"
         "     [-ms=<markerSize>]       # marker size in some user-defined units (0.5 by default)\n"
-        "     [-ad=<arucoDict>]        # number of predefined aruco dictionary"
-        "     [-adf=<dictFilename>]   # filename of aruco dictionary"
+        "     [-ad=<arucoDict>]        # Aruco dictionary name for charuco board"
+        "     [-adf=<dictFilename>]    # Custom aruco dictionary file for charuco board"
         "     [-o=<out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
         "     [-op]                    # write detected feature points\n"
         "     [-oe]                    # write extrinsic parameters\n"
@@ -554,22 +553,24 @@ int main( int argc, char** argv )
                     cv::FileNode fn(dict_file.root());
                     dictionary.readDictionary(fn);
                 }
-                cv::Ptr <cv::aruco::CharucoBoard> board =
-                    cv::makePtr<cv::aruco::CharucoBoard>(cv::aruco::CharucoBoard({ boardSize.width + 1,boardSize.height + 1 },
-                                                squareSize, markerSize, dictionary));
+
+                cv::aruco::CharucoBoard ch_board ({ boardSize.width + 1, boardSize.height + 1 },
+                    squareSize, markerSize, dictionary);
+
                 std::vector<int> markerIds;
                 std::vector<std::vector<cv::Point2f>> markerCorners;
-                cv::aruco::ArucoDetector detector(dictionary);
-                detector.detectMarkers(view, markerCorners, markerIds);
+                
+                cv::aruco::ArucoDetector aruco_detector(dictionary);
+                cv::aruco::CharucoDetector ch_detector(ch_board);
+                ch_detector.detectBoard(view, pointbuf, markerIds);
 
                 // if at least one marker detected
                 if (markerIds.size() > 0) {
-                    std::vector<cv::Point2f> charucoCorners;
-                    std::vector<int> charucoIds;
-                    found = cv::aruco::interpolateCornersCharuco(markerCorners, markerIds, view, board, pointbuf, charucoIds);
-                    
                     if (pointbuf.size() < boardSize.height*boardSize.width) {
                         found = false;
+                    }
+                    else {
+                        found = true;
                     }
                 }
                 else {
