@@ -24,7 +24,7 @@ IF(PKG_CONFIG_FOUND)
    SET(LibRaw_r_DEFINITIONS ${PC_LIBRAW_R_CFLAGS_OTHER})
 ENDIF()
 
-FIND_PATH(LibRaw_INCLUDE_DIR libraw.h
+FIND_PATH(LibRaw_INCLUDE_DIR libraw/libraw.h
           HINTS
           ${PC_LIBRAW_INCLUDEDIR}
           ${PC_LibRaw_INCLUDE_DIRS}
@@ -61,7 +61,7 @@ FIND_LIBRARY(LibRaw_r_LIBRARY_DEBUG NAMES raw_rd
 select_library_configurations(LibRaw_r)
 
 IF(LibRaw_INCLUDE_DIR)
-   FILE(READ ${LibRaw_INCLUDE_DIR}/libraw_version.h _libraw_version_content)
+   FILE(READ ${LibRaw_INCLUDE_DIR}/libraw/libraw_version.h _libraw_version_content)
 
    STRING(REGEX MATCH "#define LIBRAW_MAJOR_VERSION[ \t]*([0-9]*)\n" _version_major_match ${_libraw_version_content})
    SET(_libraw_version_major "${CMAKE_MATCH_1}")

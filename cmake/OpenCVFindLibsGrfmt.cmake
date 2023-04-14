@@ -127,7 +127,6 @@ if(WITH_TIFF)
 endif()
 
 # --- libwebp (optional) ---
-
 if(WITH_WEBP)
   if(BUILD_WEBP)
     ocv_clear_vars(WEBP_FOUND WEBP_LIBRARY WEBP_LIBRARIES WEBP_INCLUDE_DIR)
@@ -139,7 +138,6 @@ if(WITH_WEBP)
     endif()
   endif()
 endif()
-
 
 # --- Add libwebp to 3rdparty/libwebp and compile it if not available ---
 if(WITH_WEBP AND NOT WEBP_FOUND
@@ -171,7 +169,6 @@ if(NOT WEBP_VERSION AND WEBP_INCLUDE_DIR)
 endif()
 
 # --- libraw (optional) ---
-
 if(WITH_RAW)
 	ocv_clear_internal_cache_vars(RAW_LIBRARY RAW_INCLUDE_DIR)
 	include(cmake/OpenCVFindLibRaw.cmake)
@@ -179,8 +176,6 @@ if(WITH_RAW)
 	  set(HAVE_RAW 1)
 	endif()
 endif()
-
-
 
 # --- libopenjp2 (optional, check before libjasper) ---
 if(WITH_OPENJPEG)

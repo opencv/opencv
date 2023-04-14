@@ -408,12 +408,12 @@ imread_( const String& filename, int flags, Mat& mat )
     }
 #endif
 
-    /// if no decoder was found, return nothing.
     if( !decoder ){
 #ifdef HAVE_RAW
         decoder = makePtr<LibRawDecoder>();
         rawDecoder = true;
 #else
+    /// if no decoder was found, return nothing.
         return 0;
 #endif
     }

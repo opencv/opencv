@@ -48,17 +48,12 @@
 #ifdef HAVE_RAW
 #define LIBRAW_NO_WINSOCK2
 #define LIBRAW_NODLL
-#include <../libraw/libraw.h>
-
-
-
+#include <libraw/libraw.h>
 #include "grfmt_raw.hpp"
 
 
 namespace cv
 {
-
-
     LibRawDecoder::LibRawDecoder()
     {
         rawProcessor = new LibRaw;
@@ -78,7 +73,6 @@ namespace cv
 
     bool LibRawDecoder::readHeader()
     {
-
         int status = ((LibRaw*)rawProcessor)->open_file(this->m_filename.c_str());
         if (status == LIBRAW_SUCCESS)
         {
@@ -113,8 +107,6 @@ namespace cv
             CV_Error(Error::StsNotImplemented, libraw_strerror(status));
         return status == LIBRAW_SUCCESS;
     }
-
-
 }
 
 #endif
