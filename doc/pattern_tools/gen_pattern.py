@@ -14,8 +14,8 @@ python gen_pattern.py -o out.svg -r 11 -c 8 -T circles -s 20.0 -R 5.0 -u mm -w 2
 -h, --page_height - page height in units (default 279)
 -a, --page_size - page size (default A4), supersedes -h -w arguments
 -m, --markers - list of cells with markers for the radon checkerboard
--p, --aruco_marker_size - aruco markers size for charuco pattern (default 10.0)
--f, --dict_file - file name of custom aruco dictionary for charuco pattern
+-p, --aruco_marker_size - aruco markers size for ChAruco pattern (default 10.0)
+-f, --dict_file - file name of custom aruco dictionary for ChAruco pattern
 -H, --help - show help
 """
 
@@ -161,7 +161,7 @@ class PatternMaker:
 
     def make_charuco_board(self):
         if (self.aruco_marker_size>self.square_size):
-            print("Error: Aruco marker can not be more than square size!")
+            print("Error: Aruco marker cannot be lager than chessboard square!")
             return
 
         if (self.dict_file.split(".")[-1] == "gz"):
@@ -175,7 +175,7 @@ class PatternMaker:
             dictionary = json.load(f)
 
         if (dictionary["nmarkers"] < int(self.cols*self.rows/2)):
-            print("Error: Aruco dictionary contains less markers than it needs for chosen board. Please choose another dictionary or use smaller board")
+            print("Error: Aruco dictionary contains less markers than it needs for chosen board. Please choose another dictionary or use smaller board than required for chosen board")
             return
 
         markerSize_bits = dictionary["markersize"]
@@ -242,9 +242,9 @@ def main():
                                                 "coordinates as list of numbers: -m 1 2 3 4 means markers in cells "
                                                 "[1, 2] and [3, 4]",
                         default=argparse.SUPPRESS, action="store", dest="markers", nargs="+", type=int)
-    parser.add_argument("-p", "--marker_size", help="aruco markers size for charuco pattern (default 10.0)", default="10.0",
+    parser.add_argument("-p", "--marker_size", help="aruco markers size for ChAruco pattern (default 10.0)", default="10.0",
                         action="store", dest="aruco_marker_size", type=float)
-    parser.add_argument("-f", "--dict_file", help="file name of custom aruco dictionary for charuco pattern", default="DICT_ARUCO_ORIGINAL.json",
+    parser.add_argument("-f", "--dict_file", help="file name of custom aruco dictionary for ChAruco pattern", default="DICT_ARUCO_ORIGINAL.json",
                         action="store", dest="dict_file", type=str)
     args = parser.parse_args()
 

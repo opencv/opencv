@@ -3,18 +3,22 @@ from __future__ import print_function
 import os, tempfile, numpy as np
 
 import sys
-sys.path.append("../../../../../doc/pattern_tools")
-import gen_pattern
-
 import cv2 as cv
-from svglib.svglib import svg2rlg
-from reportlab.graphics import renderPM
-
 from tests_common import NewOpenCVTests
+
+sys.path.append(NewOpenCVTests.repo+"/../doc/pattern_tools")
+import gen_pattern
 
 class aruco_objdetect_test(NewOpenCVTests):
 
     def test_aruco_dicts(self):
+        try:
+            from svglib.svglib import svg2rlg
+            from reportlab.graphics import renderPM
+        except:
+            print("libraies svglib and reportlab not found")
+            return
+
         cols = 3
         rows = 5
         square_size = 100
@@ -47,9 +51,7 @@ class aruco_objdetect_test(NewOpenCVTests):
                         board_height, "charuco_checkboard", marker_size, aruco_type_str_[aruco_type_i]+'.json.gz')
             pm.make_charuco_board()
             pm.save()
-
             drawing = svg2rlg(filesvg)
-
             renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=720)
             from_svg_img = cv.imread(filepng2)
 
@@ -61,6 +63,13 @@ class aruco_objdetect_test(NewOpenCVTests):
             np.testing.assert_allclose(markerIds_svg, markerIds_cv, 0.1, 0.1)
 
     def test_aruco_marker_sizes(self):
+        try:
+            from svglib.svglib import svg2rlg
+            from reportlab.graphics import renderPM
+        except:
+            print("libraies svglib and reportlab not found")
+            return
+
         cols = 3
         rows = 5
         square_size = 100
@@ -90,9 +99,7 @@ class aruco_objdetect_test(NewOpenCVTests):
                         board_height, "charuco_checkboard", marker_size, aruco_type_str+'.json.gz')
             pm.make_charuco_board()
             pm.save()
-
             drawing = svg2rlg(filesvg)
-
             renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=720)
             from_svg_img = cv.imread(filepng2)
 

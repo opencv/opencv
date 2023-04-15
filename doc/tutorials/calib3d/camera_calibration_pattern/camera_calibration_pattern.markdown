@@ -17,13 +17,13 @@ You can find a chessboard pattern in https://github.com/opencv/opencv/blob/4.x/d
 
 You can find a circleboard pattern in https://github.com/opencv/opencv/blob/4.x/doc/acircles_pattern.png
 
-You can find a charuco board pattern in https://github.com/opencv/opencv/blob/4.x/doc/charuco_board_pattern.png
-()
+You can find a ChAruco board pattern in https://github.com/opencv/opencv/blob/4.x/doc/charuco_board_pattern.png
+(7X5 ChAruco board, square size: 30 mm , marker size: 15 mm, aruco dict: DICT_5X5_100, page width: 210 mm, page height: 297 mm)
+
 Create your own pattern
 ---------------
 
 Now, if you want to create your own pattern, you will need python to use https://github.com/opencv/opencv/blob/4.x/doc/pattern_tools/gen_pattern.py
-(7X5 ChAruco board, square size: 30 mm , marker size: 15 mm, aruco dict: DICT_5X5_100, page width: 210 mm, page height: 297 mm)
 
 Example
 
@@ -43,7 +43,7 @@ create a radon checkerboard for findChessboardCornersSB() with markers in (7 4),
 
         python gen_pattern.py -o radon_checkerboard.svg --rows 10 --columns 15 --type radon_checkerboard -s 12.1 -m 7 4 7 5 8 5
 
-create a charuco board pattern in charuco_board.svg with 7 rows, 5 columns, square size 30 mm, aruco marker size 15 mm and using DICT_5X5_100 as dictionary for aruco markers (it contains in DICT_ARUCO.json file):
+create a ChAruco board pattern in charuco_board.svg with 7 rows, 5 columns, square size 30 mm, aruco marker size 15 mm and using DICT_5X5_100 as dictionary for aruco markers (it contains in DICT_ARUCO.json file):
 
         python gen_pattern.py -o charuco_board.svg --rows 7 --columns 5 -T charuco_board --square_size 30 --marker_size 15 -f DICT_5X5_100.json.gz
 
