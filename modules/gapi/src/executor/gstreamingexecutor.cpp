@@ -101,7 +101,7 @@ struct DataQueue {
             // 2. filter(cmd) returns true - this is needed to filter
             // what kind of cmd's should be dropped. E.g don't drop Cmd::Stop
             // because it's crucial for stopping execution.
-            q.reset(new cv::gimpl::stream::DesyncQueue(
+            q.reset(new cv::gimpl::stream::DropQueue(
                     [](const Cmd &cmd) {
                         // NB: Filter "data" messages from others.
                         return cv::util::holds_alternative<cv::GRunArg>(cmd);
@@ -1341,7 +1341,6 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                        .value_or(cv::gapi::streaming::sync_policy::dont_sync);
     m_sync.reset(new Synchronizer(sync_policy, *m_island_graph, queue_capacity));
 
-    auto drop_frames = cv::gapi::getCompileArg<cv::gapi::streaming::drop_frames>(m_comp_args);
     // If metadata was not passed to compileStreaming, Islands are not compiled at this point.
     // It is fine -- Islands are then compiled in setSource (at the first valid call).
     const bool islands_compiled = m_gim.metadata().contains<IslandsCompiled>();
@@ -1425,13 +1424,9 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
                             qgr.metadata(eh).set(DataQueue(DataQueue::DESYNC));
                             is_desync_start = true;
                         } else if (qgr.metadata(eh).contains<DesyncSpecialCase>()) {
-                            if (drop_frames) {
-                                qgr.metadata(eh).set(DataQueue(DataQueue::DROP));
-                            } else {
-                                // See comment below
-                                // Limit queue size to 1 in this case
-                                qgr.metadata(eh).set(DataQueue(1u));
-                            }
+                            // See comment below
+                            // Limit queue size to 1 in this case
+                            qgr.metadata(eh).set(DataQueue(1u));
                         } else {
                             qgr.metadata(eh).set(DataQueue(queue_capacity));
                         }
@@ -1616,6 +1611,8 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
     }
     // Metadata handling is done!
 
+    auto drop_frames =
+        cv::gapi::getCompileArg<cv::gapi::streaming::drop_frames>(m_comp_args);
     // Walk through the protocol, set-up emitters appropriately
     // There's a 1:1 mapping between emitters and corresponding data inputs.
     // Also collect video emitter nodes to use them later in synchronization
@@ -1640,6 +1637,27 @@ void cv::gimpl::GStreamingExecutor::setSource(GRunArgs &&ins)
             // Currently all video inputs are synchronized if sync policy is to drop,
             // there is no different fps branches etc, so all video emitters are registered
             video_emitters.emplace_back(emit_nh);
+            // NB: If drop_frames enabled, need to replace out queue
+            // for the emitter to the new one which drops frames.
+            if (drop_frames) {
+                // NB: emitter always has single output node.
+                GAPI_Assert(emit_nh->outNodes().size() == 1u);
+                auto nh = emit_nh->outNodes().front();
+                // NB: Multiple readers with "drop" queue may lead to confusion
+                // when some of readers dropped frame but some didn't.
+                if (nh->outEdges().size() > 1u) {
+                    throw std::logic_error("IStreamSource must have only single "
+                                           "reader if drop_frames is enabled!");
+                }
+                auto eh = nh->outEdges().front();
+                ade::TypedGraph<DataQueue> qgr(*m_island_graph);
+                // NB: Since queues have been already created in executor ctor,
+                // need to replace and update m_internal_queues properly.
+                m_internal_queues.erase(qgr.metadata(eh).get<DataQueue>().q.get());
+                qgr.metadata(eh).set(DataQueue(DataQueue::DROP));
+                m_internal_queues.insert(qgr.metadata(eh).get<DataQueue>().q.get());
+            }
+
 #else
             util::throw_error(std::logic_error("Video is not supported in the "
                                                "standalone mode"));

@@ -126,6 +126,23 @@ GAPI_OCV_KERNEL(OCVDelay, Delay) {
     }
 };
 
+G_API_OP(Delay2, <cv::GMat(cv::GMat, cv::GMat, int)>, "org.opencv.test.delay2") {
+    static cv::GMatDesc outMeta(const cv::GMatDesc &in1,
+                                const cv::GMatDesc &,
+                                int) {
+        return in1;
+    }
+};
+GAPI_OCV_KERNEL(OCVDelay2, Delay2) {
+    static void run(const cv::Mat &in1,
+                    const cv::Mat &/*in2*/,
+                    int           ms,
+                    cv::Mat &out) {
+        std::this_thread::sleep_for(std::chrono::milliseconds{ms});
+        in1.copyTo(out);
+    }
+};
+
 class TestMediaBGR final: public cv::MediaFrame::IAdapter {
     cv::Mat m_mat;
     using Cb = cv::MediaFrame::View::Callback;
@@ -2731,22 +2748,20 @@ TEST(GAPI_Streaming_Exception, SourceThrowEverySecondFrame) {
     EXPECT_EQ(num_frames, curr_frame - 1);
 }
 
-TEST(Desync, DropFrames) {
-    const int64_t kNumFrames = 5;
+TEST(DropFrames, SingleSource) {
+    const int64_t kNumFrames = 20;
     const int64_t kLatencyMs = 50;
     const int64_t kDelayMs   = 75;
 
     cv::GMat in;
-    auto desync = cv::gapi::streaming::desync(in);
-    auto out    = Delay::on(desync, kDelayMs);
+    auto out    = Delay::on(in, kDelayMs);
     auto seq_id = cv::gapi::streaming::seq_id(out);
 
-    cv::GComputation comp(cv::GIn(in), cv::GOut(out));
     auto pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out, seq_id))
         .compileStreaming(cv::compile_args(cv::gapi::kernels<OCVDelay>(),
                                            cv::gapi::streaming::drop_frames{}));
 
-    pipeline.setSource(std::make_shared<DummySource>(kNumFrames, kLatencyMs));
+    pipeline.setSource(cv::gapi::wip::make_src<DummySource>(kNumFrames, kLatencyMs));
     pipeline.start();
 
     cv::optional<cv::Mat> out_mat;
@@ -2754,6 +2769,46 @@ TEST(Desync, DropFrames) {
 
     std::vector<int64_t> seq_id_vec;
     seq_id_vec.reserve(kNumFrames);
+    while (pipeline.pull(cv::gout(out_mat, out_seq_id))) {
+        seq_id_vec.push_back(out_seq_id.value());
+    }
+
+    for (size_t i = 0; i < seq_id_vec.size()-1; ++i) {
+        // Since camera produces frames every 50ms but execution takes 75ms
+        // so every second frame will be dropped
+        // e.g seq_ids 0,2,4,6,8...
+        EXPECT_EQ(2, seq_id_vec[i+1] - seq_id_vec[i]);
+    }
+};
+
+TEST(DropFrames, VideoAndConstSources) {
+    const int64_t kNumFrames = 20;
+    const int64_t kLatencyMs = 50;
+    const int64_t kDelayMs   = 75;
+
+    cv::GMat in1;
+    cv::GMat in2;
+
+    // NB: First input will be from source with
+    // drop_frames enabled but second is common constant source.
+    auto out    = Delay2::on(in1, in2, kDelayMs);
+    auto seq_id = cv::gapi::streaming::seq_id(out);
+
+    auto pipeline = cv::GComputation(cv::GIn(in1, in2), cv::GOut(out, seq_id))
+        .compileStreaming(cv::compile_args(cv::gapi::kernels<OCVDelay2>(),
+                                           cv::gapi::streaming::drop_frames{}));
+
+    cv::Mat const_mat(1, 1, CV_8UC1);
+    pipeline.setSource(
+            cv::gin(cv::gapi::wip::make_src<DummySource>(kNumFrames, kLatencyMs), const_mat));
+
+    cv::optional<cv::Mat> out_mat;
+    cv::optional<int64_t> out_seq_id;
+
+    std::vector<int64_t> seq_id_vec;
+    seq_id_vec.reserve(kNumFrames);
+
+    pipeline.start();
     while (pipeline.pull(cv::gout(out_mat, out_seq_id))) {
         seq_id_vec.push_back(out_seq_id.value());
     }

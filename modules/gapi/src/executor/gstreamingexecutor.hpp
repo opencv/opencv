@@ -90,8 +90,21 @@ class DesyncQueue final: public Q {
     cv::gapi::own::last_written_value<Cmd> m_v;
 
 public:
-    DesyncQueue() = default;
-    DesyncQueue(cv::gapi::own::DropStrategy<Cmd>&& strategy) : m_v(std::move(strategy)) { };
+
+    virtual void push(const Cmd &cmd) override { m_v.push(cmd); }
+    virtual void pop(Cmd &cmd)        override { m_v.pop(cmd);  }
+    virtual bool try_pop(Cmd &cmd)    override { return m_v.try_pop(cmd); }
+    virtual void clear()              override { m_v.clear(); }
+};
+
+// Queue with "drop" property.
+// Every pull drops the current value if such exists
+// and wait for the new one.
+class DropQueue final: public Q {
+    cv::gapi::own::last_written_value<Cmd> m_v;
+
+public:
+    DropQueue(cv::gapi::own::DropStrategy<Cmd>&& strategy) : m_v(std::move(strategy)) { };
 
     virtual void push(const Cmd &cmd) override { m_v.push(cmd); }
     virtual void pop(Cmd &cmd)        override { m_v.pop(cmd);  }
