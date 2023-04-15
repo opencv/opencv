@@ -965,7 +965,7 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
     /// STEP 3, Optional : Corner refinement :: use contour container
     if (detectorParams.cornerRefinementMethod == CORNER_REFINE_CONTOUR){
 
-        if (!_ids.empty()) {
+        if (!ids.empty()) {
 
             // do corner refinement using the contours for each detected markers
             parallel_for_(Range(0, (int)candidates.size()), [&](const Range& range) {
