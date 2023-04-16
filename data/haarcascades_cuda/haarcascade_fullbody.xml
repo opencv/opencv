@@ -138,7 +138,7 @@ Thanks to Martin Spengler, ETH Zurich, for providing the demo movie.
 -->
 <opencv_storage>
 <haarcascade_fullbody type_id="opencv-haar-classifier">
-  <size>14 28</size>
+  <size>28 14</size>
   <stages>
     <_>
       <!-- stage 0 -->
