@@ -89,7 +89,6 @@ else()
   ocv_update(OPENCV_NAMESPACE_DECLARATION "")
 endif()
 
-
 # force reusing of the same CMake version
 if(NOT OPENCV_SKIP_ANDROID_FORCE_CMAKE)
   if(NOT DEFINED _CMAKE_INSTALL_DIR)

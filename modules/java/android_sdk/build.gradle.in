@@ -115,6 +115,10 @@ android {
         }
     }
 
+    buildFeatures {
+        aidl true
+    }
+
     buildTypes {
         debug {
             packagingOptions {
