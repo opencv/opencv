@@ -4,10 +4,95 @@
 from __future__ import print_function
 
 import os, tempfile, numpy as np
+from math import pi
 
 import cv2 as cv
 
 from tests_common import NewOpenCVTests
+
+def getSyntheticRT(yaw, pitch, distance):
+    rvec = np.zeros((3, 1), np.float64)
+    tvec = np.zeros((3, 1), np.float64)
+
+    rotPitch = np.array([[-pitch], [0], [0]])
+    rotYaw = np.array([[0], [yaw], [0]])
+
+    rvec, tvec = cv.composeRT(rotPitch, np.zeros((3, 1), np.float64),
+                              rotYaw, np.zeros((3, 1), np.float64))[:2]
+
+    tvec = np.array([[0], [0], [distance]])
+    return rvec, tvec
+
+# see test_aruco_utils.cpp
+def projectMarker(img, board, markerIndex, cameraMatrix, rvec, tvec, markerBorder):
+    markerSizePixels = 100
+    markerImg = cv.aruco.generateImageMarker(board.getDictionary(), board.getIds()[markerIndex], markerSizePixels, borderBits=markerBorder)
+
+    distCoeffs = np.zeros((5, 1), np.float64)
+    maxCoord = board.getRightBottomCorner()
+    objPoints = board.getObjPoints()[markerIndex]
+    for i in range(len(objPoints)):
+        objPoints[i][0] -= maxCoord[0] / 2
+        objPoints[i][1] -= maxCoord[1] / 2
+        objPoints[i][2] -= maxCoord[2] / 2
+
+    corners, _ = cv.projectPoints(objPoints, rvec, tvec, cameraMatrix, distCoeffs)
+
+    originalCorners = np.array([
+        [0, 0],
+        [markerSizePixels, 0],
+        [markerSizePixels, markerSizePixels],
+        [0, markerSizePixels],
+    ], np.float32)
+
+    transformation = cv.getPerspectiveTransform(originalCorners, corners)
+
+    borderValue = 127
+    aux = cv.warpPerspective(markerImg, transformation, img.shape, None, cv.INTER_NEAREST, cv.BORDER_CONSTANT, borderValue)
+
+    assert(img.shape == aux.shape)
+    mask = (aux == borderValue).astype(np.uint8)
+    img = img * mask + aux * (1 - mask)
+    return img
+
+def projectChessboard(squaresX, squaresY, squareSize, imageSize, cameraMatrix, rvec, tvec):
+    img = np.ones(imageSize, np.uint8) * 255
+    distCoeffs = np.zeros((5, 1), np.float64)
+    for y in range(squaresY):
+        startY = y * squareSize
+        for x in range(squaresX):
+            if (y % 2 != x % 2):
+                continue
+            startX = x * squareSize
+
+            squareCorners = np.array([[startX - squaresX*squareSize/2,
+                                       startY - squaresY*squareSize/2,
+                                       0]], np.float32)
+            squareCorners = np.stack((squareCorners[0],
+                                      squareCorners[0] + [squareSize, 0, 0],
+                                      squareCorners[0] + [squareSize, squareSize, 0],
+                                      squareCorners[0] + [0, squareSize, 0]))
+
+            projectedCorners, _ = cv.projectPoints(squareCorners, rvec, tvec, cameraMatrix, distCoeffs)
+            projectedCorners = projectedCorners.astype(np.int64)
+            projectedCorners = projectedCorners.reshape(1, 4, 2)
+            img = cv.fillPoly(img, [projectedCorners], 0)
+
+    return img
+
+def projectCharucoBoard(board, cameraMatrix, yaw, pitch, distance, imageSize, markerBorder):
+    rvec, tvec = getSyntheticRT(yaw, pitch, distance)
+
+    img = np.ones(imageSize, np.uint8) * 255
+    for indexMarker in range(len(board.getIds())):
+        img = projectMarker(img, board, indexMarker, cameraMatrix, rvec, tvec, markerBorder)
+
+    chessboard = projectChessboard(board.getChessboardSize()[0], board.getChessboardSize()[1],
+                                   board.getSquareLength(), imageSize, cameraMatrix, rvec, tvec)
+
+    chessboard = (chessboard != 0).astype(np.uint8)
+    img = img * chessboard
+    return img, rvec, tvec
 
 class aruco_objdetect_test(NewOpenCVTests):
 
@@ -152,6 +237,81 @@ class aruco_objdetect_test(NewOpenCVTests):
         for i in range(0, 4):
             self.assertEqual(charucoIds[i], i)
         np.testing.assert_allclose(gold_corners, charucoCorners.reshape(-1, 2), 0.01, 0.1)
+
+    # check no segfault when cameraMatrix or distCoeffs are not initialized
+    def test_charuco_no_segfault_params(self):
+        dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_1000)
+        board = cv.aruco.CharucoBoard((10, 10), 0.019, 0.015, dictionary)
+        charuco_parameters = cv.aruco.CharucoParameters()
+        detector = cv.aruco.CharucoDetector(board)
+        detector.setCharucoParameters(charuco_parameters)
+
+        self.assertIsNone(detector.getCharucoParameters().cameraMatrix)
+        self.assertIsNone(detector.getCharucoParameters().distCoeffs)
+
+    def test_charuco_no_segfault_params_constructor(self):
+        dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_1000)
+        board = cv.aruco.CharucoBoard((10, 10), 0.019, 0.015, dictionary)
+        charuco_parameters = cv.aruco.CharucoParameters()
+        detector = cv.aruco.CharucoDetector(board, charucoParams=charuco_parameters)
+
+        self.assertIsNone(detector.getCharucoParameters().cameraMatrix)
+        self.assertIsNone(detector.getCharucoParameters().distCoeffs)
+
+    # similar to C++ test CV_CharucoDetection.accuracy
+    def test_charuco_detector_accuracy(self):
+        iteration = 0
+        cameraMatrix = np.eye(3, 3, dtype=np.float64)
+        imgSize = (500, 500)
+        params = cv.aruco.DetectorParameters()
+        params.minDistanceToBorder = 3
+
+        board = cv.aruco.CharucoBoard((4, 4), 0.03, 0.015, cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_250))
+        detector = cv.aruco.CharucoDetector(board, detectorParams=params)
+
+        cameraMatrix[0, 0] = cameraMatrix[1, 1] = 600
+        cameraMatrix[0, 2] = imgSize[0] / 2
+        cameraMatrix[1, 2] = imgSize[1] / 2
+
+        # for different perspectives
+        distCoeffs = np.zeros((5, 1), dtype=np.float64)
+        for distance in [0.2, 0.4]:
+            for yaw in range(-55, 51, 25):
+                for pitch in range(-55, 51, 25):
+                    markerBorder = iteration % 2 + 1
+                    iteration += 1
+
+                    # create synthetic image
+                    img, rvec, tvec = projectCharucoBoard(board, cameraMatrix, yaw * pi / 180, pitch * pi / 180, distance, imgSize, markerBorder)
+
+                    params.markerBorderBits = markerBorder
+                    detector.setDetectorParameters(params)
+
+                    if (iteration % 2 != 0):
+                        charucoParameters = cv.aruco.CharucoParameters()
+                        charucoParameters.cameraMatrix = cameraMatrix
+                        charucoParameters.distCoeffs = distCoeffs
+                        detector.setCharucoParameters(charucoParameters)
+
+                    charucoCorners, charucoIds, corners, ids = detector.detectBoard(img)
+
+                    self.assertGreater(len(ids), 0)
+
+                    copyChessboardCorners = board.getChessboardCorners()
+                    copyChessboardCorners -= np.array(board.getRightBottomCorner()) / 2
+
+                    projectedCharucoCorners, _ = cv.projectPoints(copyChessboardCorners, rvec, tvec, cameraMatrix, distCoeffs)
+
+                    if charucoIds is None:
+                        self.assertEqual(iteration, 46)
+                        continue
+
+                    for i in range(len(charucoIds)):
+                        currentId = charucoIds[i]
+                        self.assertLess(currentId, len(board.getChessboardCorners()))
+
+                        reprErr = cv.norm(charucoCorners[i] - projectedCharucoCorners[currentId])
+                        self.assertLessEqual(reprErr, 5)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
