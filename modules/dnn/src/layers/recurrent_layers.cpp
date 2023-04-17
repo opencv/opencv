@@ -175,10 +175,13 @@ public:
             CV_CheckEQ(Wh.rows, (int)bias.total(), "");
             // Only perform these checks if hInternal and cInternal are not empty matrices
             // e.g. inputs are not given by a user
-            if (!hInternal.empty() && !cInternal.empty())
-            {
+            if(!hInternal.empty()){
                 CV_CheckEQ(hInternal.cols, Wh.cols, "");
-                CV_CheckEQ(hInternal.cols, cInternal.cols, "");
+            }
+            if(!cInternal.empty()){
+                CV_CheckEQ(cInternal.cols, Wh.cols, "");
+            }
+            if (!hInternal.empty() && !cInternal.empty()){ //otherwise check in forward
                 CV_CheckEQ(hInternal.rows, cInternal.rows, "");
             }
             CV_Assert(Wh.type() == Wx.type() && Wx.type() == bias.type());
@@ -390,13 +393,16 @@ public:
             Mat bias = blobs[2];
 
             Mat h_0, c_0;
-            // input hx and cx are not prodived as input, replace with zeros
-            if (input.size() == 3){
-                h_0 = input[1].reshape(1, input[1].size[0] * input[1].size[1]);
-                c_0 = input[2].reshape(1, input[2].size[0] * input[2].size[1]);
-            } else {
-                h_0 = blobs[3];
-                c_0 = blobs[4];
+            // // input hx and cx are not prodived as input, replace with zeros
+            // Handle h_0 and c_0 based on input size
+            h_0 = (input.size() >= 2) ? input[1].reshape(1, input[1].size[0] * input[1].size[1]) : blobs[3];
+            c_0 = (input.size() == 3) ? input[2].reshape(1, input[2].size[0] * input[2].size[1]) : blobs[4];
+
+            // Perform checks if input size is 2 or 3
+            if (input.size() >= 2) {
+                CV_CheckEQ(h_0.cols, Wh.cols, "");
+                CV_CheckEQ(h_0.cols, c_0.cols, "");
+                CV_CheckEQ(h_0.rows, c_0.rows, "");
             }
 
 

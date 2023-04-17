@@ -1520,10 +1520,11 @@ void transformBlobs(std::vector<Mat>& blobs)
     Mat h0, c0;
     // check weather input is dynamic or not: hx, cx are given by user.
     // Resahpe if only they are given
-    bool dyn_input = (blobs[3].empty() && blobs[4].empty()) ? true : false;
-    if (!dyn_input){
+    if (!blobs[3].empty()){
         h0 = blobs[3];
         h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
+    }
+    if (!blobs[4].empty()){
         c0 = blobs[4];
         c0 = c0.reshape(1, c0.size[0] * c0.size[1]);
     }
@@ -1554,8 +1555,10 @@ void transformBlobs(std::vector<Mat>& blobs)
     blobs[1] = Wx;
     blobs[2] = b.reshape(1, 1);
     // assing reshpaed state of they are given
-    if(!dyn_input){
+    if (!blobs[3].empty()){
         blobs[3] = h0;
+    }
+    if (!blobs[4].empty()){
         blobs[4] = c0;
     }
 
