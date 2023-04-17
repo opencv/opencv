@@ -6,7 +6,7 @@ import sys
 import cv2 as cv
 from tests_common import NewOpenCVTests
 
-sys.path.append(NewOpenCVTests.repo+"/../doc/pattern_tools")
+sys.path.append(NewOpenCVTests.repoPath+"/../doc/pattern_tools")
 import gen_pattern
 
 class aruco_objdetect_test(NewOpenCVTests):
