@@ -13,7 +13,7 @@ namespace aruco {
 //! @{
 
 struct CV_EXPORTS_W_SIMPLE CharucoParameters {
-    CharucoParameters() {
+    CV_WRAP CharucoParameters() {
         minMarkers = 2;
         tryRefineMarkers = false;
     }
