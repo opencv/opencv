@@ -10,14 +10,14 @@ namespace cv
 
 void write( FileStorage& fs, const String& name, const Mat& m )
 {
-    char dt[16];
+    char dt[22];
 
     if( m.dims <= 2 )
     {
         fs.startWriteStruct(name, FileNode::MAP, String("opencv-matrix"));
         fs << "rows" << m.rows;
         fs << "cols" << m.cols;
-        fs << "dt" << fs::encodeFormat( m.type(), dt );
+        fs << "dt" << fs::encodeFormat( m.type(), dt, sizeof(dt) );
         fs << "data" << "[:";
         for( int i = 0; i < m.rows; i++ )
             fs.writeRaw(dt, m.ptr(i), m.cols*m.elemSize());
@@ -30,7 +30,7 @@ void write( FileStorage& fs, const String& name, const Mat& m )
         fs << "sizes" << "[:";
         fs.writeRaw( "i", m.size.p, m.dims*sizeof(int) );
         fs << "]";
-        fs << "dt" << fs::encodeFormat( m.type(), dt );
+        fs << "dt" << fs::encodeFormat( m.type(), dt, sizeof(dt) );
         fs << "data" << "[:";
         const Mat* arrays[] = {&m, 0};
         uchar* ptrs[1] = {};
@@ -63,7 +63,7 @@ struct SparseNodeCmp
 
 void write( FileStorage& fs, const String& name, const SparseMat& m )
 {
-    char dt[16];
+    char dt[22];
 
     fs.startWriteStruct(name, FileNode::MAP, String("opencv-sparse-matrix"));
     fs << "sizes" << "[:";
@@ -71,7 +71,7 @@ void write( FileStorage& fs, const String& name, const SparseMat& m )
     if( dims > 0 )
         fs.writeRaw("i", m.hdr->size, dims*sizeof(int) );
     fs << "]";
-    fs << "dt" << fs::encodeFormat( m.type(), dt );
+    fs << "dt" << fs::encodeFormat( m.type(), dt, sizeof(dt) );
     fs << "data" << "[:";
 
     size_t i = 0, n = m.nzcount();
