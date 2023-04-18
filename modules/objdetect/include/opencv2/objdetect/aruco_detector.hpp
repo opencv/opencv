@@ -269,13 +269,13 @@ public:
      * and its corresponding identifier.
      * Note that this function does not perform pose estimation.
      * @note The function does not correct lens distortion or takes it into account. It's recommended to undistort
-     * input image with corresponging camera model, if camera parameters are known
+     * input image with corresponding camera model, if camera parameters are known
      * @sa undistort, estimatePoseSingleMarkers,  estimatePoseBoard
      */
     CV_WRAP void detectMarkers(InputArray image, OutputArrayOfArrays corners, OutputArray ids,
                                OutputArrayOfArrays rejectedImgPoints = noArray()) const;
 
-    /** @brief Refind not detected markers based on the already detected and the board layout
+    /** @brief Refine not detected markers based on the already detected and the board layout
      *
      * @param image input image
      * @param board layout of markers in the board.

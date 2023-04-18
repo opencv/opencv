@@ -152,7 +152,7 @@ public:
                         *data++ = 't';
                     else
                     {
-                        sprintf( data, "x%02x", c );
+                        snprintf( data, sizeof(buf) - (data - buf), "x%02x", c );
                         data += 3;
                     }
                 }

@@ -1041,7 +1041,7 @@ static bool ocl_dot( InputArray _src1, InputArray _src2, double & res )
         wgs2_aligned <<= 1;
     wgs2_aligned >>= 1;
 
-    char cvt[40];
+    char cvt[50];
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc,
                   format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstTK=%s -D ddepth=%d -D convertToDT=%s -D OP_DOT "
                          "-D WGS=%d -D WGS2_ALIGNED=%d%s%s%s -D kercn=%d",
