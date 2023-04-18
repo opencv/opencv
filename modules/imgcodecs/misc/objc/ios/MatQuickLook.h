@@ -1,5 +1,5 @@
 //
-//  Mat+QuickLook.h
+//  MatQuickLook.h
 //
 //  Created by Giles Payne on 2021/07/18.
 //
@@ -18,9 +18,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-CV_EXPORTS @interface Mat (QuickLook)
+CV_EXPORTS @interface MatQuickLook : NSObject
 
-- (id)debugQuickLookObject;
++ (id)matDebugQuickLookObject:(Mat*)mat;
 
 @end
 
