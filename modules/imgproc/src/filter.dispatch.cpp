@@ -590,7 +590,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     size_t tryWorkItems = device.maxWorkGroupSize();
     if (device.isIntel() && 128 < tryWorkItems)
         tryWorkItems = 128;
-    char cvt[2][40];
+    char cvt[2][50];
 
     // For smaller filter kernels, there is a special kernel that is more
     // efficient than the general one.
@@ -764,7 +764,7 @@ static bool ocl_sepRowFilter2D(const UMat & src, UMat & buf, const Mat & kernelX
     extra_extrapolation |= src.cols < (int)((-radiusX + globalsize[0] + 8 * localsize[0] + 3) >> 1) + 1;
     extra_extrapolation |= src.cols < radiusX;
 
-    char cvt[40];
+    char cvt[50];
     cv::String build_options = cv::format("-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D %s -D %s"
                                           " -D srcT=%s -D dstT=%s -D convertToDstT=%s -D srcT1=%s -D dstT1=%s%s%s",
                                           radiusX, (int)localsize[0], (int)localsize[1], cn, btype,
@@ -825,7 +825,7 @@ static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY
     globalsize[1] = DIVUP(sz.height, localsize[1]) * localsize[1];
     globalsize[0] = DIVUP(sz.width, localsize[0]) * localsize[0];
 
-    char cvt[2][40];
+    char cvt[2][50];
     int floatT = std::max(CV_32F, bdepth);
     cv::String build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d"
                                           " -D srcT=%s -D dstT=%s -D convertToFloatT=%s -D floatT=%s -D convertToDstT=%s"
@@ -891,7 +891,7 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
     size_t lt2[2] = { optimizedSepFilterLocalWidth, optimizedSepFilterLocalHeight };
     size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1]};
 
-    char cvt[2][40];
+    char cvt[2][50];
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
                                        "BORDER_REFLECT_101" };
 

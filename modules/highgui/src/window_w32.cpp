@@ -2030,7 +2030,7 @@ static void icvUpdateTrackbar(CvTrackbar& trackbar, int pos)
             memcpy(pos_text, trackbar.name.c_str(), name_len + 1);
         }
 
-        sprintf(pos_text + strlen(pos_text), "%s: %d\n", suffix, pos);
+        snprintf(pos_text + strlen(pos_text), sizeof(pos_text) - strlen(pos_text), "%s: %d\n", suffix, pos);
         SetWindowText(trackbar.buddy, pos_text);
     }
 }

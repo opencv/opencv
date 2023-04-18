@@ -497,7 +497,7 @@ static string idx2string(const int* idx, int dims)
     char* ptr = buf;
     for( int k = 0; k < dims; k++ )
     {
-        sprintf(ptr, "%4d ", idx[k]);
+        snprintf(ptr, sizeof(buf) - (ptr - buf), "%4d ", idx[k]);
         ptr += strlen(ptr);
     }
     ptr[-1] = '\0';

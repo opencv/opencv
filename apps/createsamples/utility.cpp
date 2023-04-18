@@ -1167,7 +1167,7 @@ void cvCreateTestSamples( const char* infoname,
             }
             else
             {
-                filename++;
+                filename++; // character after last / or \
             }
 
             count = MIN( count, cvbgdata->count );
@@ -1199,8 +1199,8 @@ void cvCreateTestSamples( const char* infoname,
                                          1, 0.0, 0.0, &data );
 
 
-                sprintf( filename, "%04d_%04d_%04d_%04d_%04d.jpg",
-                         (i + 1), x, y, width, height );
+                snprintf( filename, sizeof(fullname) - (filename - fullname), "%04d_%04d_%04d_%04d_%04d.jpg",
+                          (i + 1), x, y, width, height );
 
                 if( info )
                 {

@@ -467,12 +467,12 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
     const int code = ((mode == PXM_TYPE_PBM) ? 1 : (mode == PXM_TYPE_PGM) ? 2 : 3)
          + (isBinary ? 3 : 0);
 
-    int header_sz = sprintf(buffer, "P%c\n%d %d\n",
+    int header_sz = snprintf(buffer, bufferSize, "P%c\n%d %d\n",
             (char)('0' + code), width, height);
     CV_Assert(header_sz > 0);
     if (mode != PXM_TYPE_PBM)
     {
-        int sz = sprintf(&buffer[header_sz], "%d\n", (1 << depth) - 1);
+        int sz = snprintf(&buffer[header_sz], bufferSize - header_sz, "%d\n", (1 << depth) - 1);
         CV_Assert(sz > 0);
         header_sz += sz;
     }
@@ -560,11 +560,11 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
                     {
                         for( x = 0; x < width*channels; x += channels )
                         {
-                            sprintf( ptr, "% 4d", data[x + 2] );
+                            snprintf( ptr, bufferSize - (ptr - buffer), "% 4d", data[x + 2] );
                             ptr += 4;
-                            sprintf( ptr, "% 4d", data[x + 1] );
+                            snprintf( ptr, bufferSize - (ptr - buffer), "% 4d", data[x + 1] );
                             ptr += 4;
-                            sprintf( ptr, "% 4d", data[x] );
+                            snprintf( ptr, bufferSize - (ptr - buffer), "% 4d", data[x] );
                             ptr += 4;
                             *ptr++ = ' ';
                             *ptr++ = ' ';
@@ -574,11 +574,11 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
                     {
                         for( x = 0; x < width*channels; x += channels )
                         {
-                            sprintf( ptr, "% 6d", ((const ushort *)data)[x + 2] );
+                            snprintf( ptr, bufferSize - (ptr - buffer), "% 6d", ((const ushort *)data)[x + 2] );
                             ptr += 6;
-                            sprintf( ptr, "% 6d", ((const ushort *)data)[x + 1] );
+                            snprintf( ptr, bufferSize - (ptr - buffer), "% 6d", ((const ushort *)data)[x + 1] );
                             ptr += 6;
-                            sprintf( ptr, "% 6d", ((const ushort *)data)[x] );
+                            snprintf( ptr, bufferSize - (ptr - buffer), "% 6d", ((const ushort *)data)[x] );
                             ptr += 6;
                             *ptr++ = ' ';
                             *ptr++ = ' ';
@@ -591,7 +591,7 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
                     {
                         for( x = 0; x < width; x++ )
                         {
-                            sprintf( ptr, "% 4d", data[x] );
+                            snprintf( ptr, bufferSize - (ptr - buffer), "% 4d", data[x] );
                             ptr += 4;
                         }
                     }
@@ -599,7 +599,7 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
                     {
                         for( x = 0; x < width; x++ )
                         {
-                            sprintf( ptr, "% 6d", ((const ushort *)data)[x] );
+                            snprintf( ptr, bufferSize - (ptr - buffer), "% 6d", ((const ushort *)data)[x] );
                             ptr += 6;
                         }
                     }

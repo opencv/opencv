@@ -1319,7 +1319,7 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
         if ((sdepth == CV_64F || ddepth == CV_64F) && !doubleSupport)
             return false;
 
-        char cvt[2][40];
+        char cvt[2][50];
         String opts = format("-D srcT=%s -D dstT=%s -D convertToWT=%s -D cn=%d -D rowsPerWI=%d"
                              " -D convertToDT=%s -D workT=%s%s%s%s -D srcT1=%s -D dstT1=%s",
                              ocl::typeToStr(stype), ocl::typeToStr(dtype),
