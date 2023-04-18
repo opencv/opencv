@@ -463,9 +463,9 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 
 }
 
-#define reduceSumR8u32s  reduceR_<uchar, int,   OpAdd<int> >
-#define reduceSumR8u32f  reduceR_<uchar, float, OpAdd<int> >
-#define reduceSumR8u64f  reduceR_<uchar, double,OpAdd<int> >
+#define reduceSumR8u32s  reduceR_<uchar, int,   OpAdd<int>, OpNop<int> >
+#define reduceSumR8u32f  reduceR_<uchar, float, OpAdd<int>, OpNop<int> >
+#define reduceSumR8u64f  reduceR_<uchar, double,OpAdd<int>, OpNop<int> >
 #define reduceSumR16u32f reduceR_<ushort,float, OpAdd<float> >
 #define reduceSumR16u64f reduceR_<ushort,double,OpAdd<double> >
 #define reduceSumR16s32f reduceR_<short, float, OpAdd<float> >
@@ -572,8 +572,8 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 
 #endif
 
-#define reduceSumC8u32s  reduceC_<uchar, int,   OpAdd<int> >
-#define reduceSumC8u32f  reduceC_<uchar, float, OpAdd<int> >
+#define reduceSumC8u32s  reduceC_<uchar, int,   OpAdd<int>, OpNop<int> >
+#define reduceSumC8u32f  reduceC_<uchar, float, OpAdd<int>, OpNop<int> >
 #define reduceSumC16u32f reduceC_<ushort,float, OpAdd<float> >
 #define reduceSumC16s32f reduceC_<short, float, OpAdd<float> >
 #define reduceSumC32f32f reduceC_<float, float, OpAdd<float> >
@@ -592,7 +592,7 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSumC16s64f reduceSumC_8u16u16s32f_64f
 #define reduceSumC32f64f reduceSumC_8u16u16s32f_64f
 #else
-#define reduceSumC8u64f  reduceC_<uchar, double,OpAdd<int> >
+#define reduceSumC8u64f  reduceC_<uchar, double,OpAdd<int>, OpNop<int> >
 #define reduceSumC16u64f reduceC_<ushort,double,OpAdd<double> >
 #define reduceSumC16s64f reduceC_<short, double,OpAdd<double> >
 #define reduceSumC32f64f reduceC_<float, double,OpAdd<double> >
