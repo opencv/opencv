@@ -158,7 +158,7 @@ int Core_ReduceTest::checkOp( const Mat& src, int dstType, int opType, const Mat
     if( check )
     {
         char msg[100];
-        const char* opTypeStr = 
+        const char* opTypeStr =
           opType == REDUCE_SUM ? "REDUCE_SUM" :
           opType == REDUCE_AVG ? "REDUCE_AVG" :
           opType == REDUCE_MAX ? "REDUCE_MAX" :
