@@ -208,7 +208,7 @@ public:
                     }
                     else
                     {
-                        sprintf( data, "#x%02x", (uchar)c );
+                        snprintf( data, sizeof(buf) - (data - buf), "#x%02x", (uchar)c );
                         data += 4;
                     }
                     *data++ = ';';

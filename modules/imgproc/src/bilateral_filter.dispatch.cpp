@@ -111,7 +111,7 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
             space_ofs[maxk++] = (int)(i * temp.step + j * cn);
         }
 
-    char cvt[3][40];
+    char cvt[3][50];
     String cnstr = cn > 1 ? format("%d", cn) : "";
     String kernelName("bilateral");
     size_t sizeDiv = 1;

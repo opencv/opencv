@@ -3305,7 +3305,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     if (useSampler)
     {
         int wdepth = std::max(depth, CV_32S);
-        char buf[2][32];
+        char buf[2][50];
         cv::String compileOpts = format("-D USE_SAMPLER -D depth=%d -D T=%s -D T1=%s "
                         "-D convertToDT=%s -D cn=%d",
                         depth, ocl::typeToStr(type), ocl::typeToStr(depth),
@@ -3327,7 +3327,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
     if (interpolation == INTER_LINEAR && !useSampler)
     {
-        char buf[2][32];
+        char buf[2][50];
 
         // integer path is slower because of CPU part, so it's disabled
         if (depth == CV_8U && ((void)0, 0))
@@ -3419,7 +3419,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         int wdepth = std::max(depth, is_area_fast ? CV_32S : CV_32F);
         int wtype = CV_MAKE_TYPE(wdepth, cn);
 
-        char cvt[2][40];
+        char cvt[2][50];
         String buildOption = format("-D INTER_AREA -D T=%s -D T1=%s -D WTV=%s -D convertToWTV=%s -D cn=%d",
                                     ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
                                     ocl::convertTypeStr(depth, wdepth, cn, cvt[0]), cn);

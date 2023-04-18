@@ -195,7 +195,7 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         const int wgRound = 256;
         globalsize[0] = roundUp(globalsize[0], wgRound);
 
-        char build_options[1024], cvt[2][40];
+        char build_options[1024], cvt[2][50];
         snprintf(build_options, sizeof(build_options), "-D cn=%d "
                 "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
                 "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d "

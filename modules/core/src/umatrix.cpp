@@ -1259,7 +1259,7 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
     {
         int wdepth = std::max(CV_32F, sdepth), rowsPerWI = 4;
 
-        char cvt[2][40];
+        char cvt[2][50];
         ocl::Kernel k("convertTo", ocl::core::convert_oclsrc,
                       format("-D srcT=%s -D WT=%s -D dstT=%s -D convertToWT=%s -D convertToDT=%s%s%s",
                              ocl::typeToStr(sdepth), ocl::typeToStr(wdepth), ocl::typeToStr(ddepth),

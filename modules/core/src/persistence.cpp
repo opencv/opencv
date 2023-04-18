@@ -161,12 +161,19 @@ static int symbolToType(char c)
     return static_cast<int>(pos - symbols);
 }
 
-char* encodeFormat(int elem_type, char* dt)
+char* encodeFormat(int elem_type, char* dt, size_t dt_len)
 {
     int cn = (elem_type == CV_SEQ_ELTYPE_PTR/*CV_USRTYPE1*/) ? 1 : CV_MAT_CN(elem_type);
     char symbol = (elem_type == CV_SEQ_ELTYPE_PTR/*CV_USRTYPE1*/) ? 'r' : typeSymbol(CV_MAT_DEPTH(elem_type));
-    sprintf(dt, "%d%c", cn, symbol);
+    snprintf(dt, dt_len, "%d%c", cn, symbol);
     return dt + (cn == 1 ? 1 : 0);
+}
+
+// Deprecated due to size of dt buffer being unknowable.
+char* encodeFormat(int elem_type, char* dt)
+{
+    constexpr size_t max = 20+1+1; // UINT64_MAX + one char + nul termination.
+    return encodeFormat(elem_type, dt, max);
 }
 
 int decodeFormat( const char* dt, int* fmt_pairs, int max_len )
