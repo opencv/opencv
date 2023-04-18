@@ -399,48 +399,10 @@ reduceR_( const Mat& srcmat, Mat& dstmat)
     typedef typename Op::rtype WT;
     Op op;
     OpInit opInit;
-  
+
     ReduceR_Invoker<T, ST, WT, Op, OpInit> body(srcmat, dstmat, op, opInit);
     //group columns by 64 bytes for data locality
     parallel_for_(Range(0, srcmat.size().width*srcmat.channels()), body, srcmat.size().width*CV_ELEM_SIZE(srcmat.depth())/64);
-
-    /*
-    Size size = srcmat.size();
-    size.width *= srcmat.channels();
-    AutoBuffer<WT> buffer(size.width);
-    WT* buf = buffer.data();
-    ST* dst = dstmat.ptr<ST>();
-    const T* src = srcmat.ptr<T>();
-    size_t srcstep = srcmat.step/sizeof(src[0]);
-    int i;
-
-    for( i = 0; i < size.width; i++ )
-        buf[i] = opInit(src[i]);
-
-    for( ; --size.height; )
-    {
-        src += srcstep;
-        i = 0;
-        #if CV_ENABLE_UNROLLED
-        for(; i <= size.width - 4; i += 4 )
-        {
-            WT s0, s1;
-            s0 = op(buf[i], (WT)src[i]);
-            s1 = op(buf[i+1], (WT)src[i+1]);
-            buf[i] = s0; buf[i+1] = s1;
-
-            s0 = op(buf[i+2], (WT)src[i+2]);
-            s1 = op(buf[i+3], (WT)src[i+3]);
-            buf[i+2] = s0; buf[i+3] = s1;
-        }
-        #endif
-        for( ; i < size.width; i++ )
-            buf[i] = op(buf[i], (WT)src[i]);
-    }
-
-    for( i = 0; i < size.width; i++ )
-        dst[i] = (ST)buf[i];
-    */
 }
 
 template<typename T, typename ST, typename WT, class Op, class OpInit>
@@ -493,39 +455,8 @@ reduceC_( const Mat& srcmat, Mat& dstmat)
     Op op;
     OpInit opInit;
 
-    /**/
     ReduceC_Invoker<T, ST, WT, Op, OpInit> body(srcmat, dstmat, op, opInit);
     parallel_for_(Range(0, srcmat.size().height), body);
-    /**/
-
-    /*
-    Size size = srcmat.size();
-    int cn = srcmat.channels();
-    size.width *= cn;
-    AutoBuffer<WT> cumul(cn);
-    for( int y = 0; y < size.height; y++ )
-    {
-        const T* src = srcmat.ptr<T>(y);
-        ST* dst = dstmat.ptr<ST>(y);
-        if( size.width == cn )
-        {
-          for( int k = 0; k < cn; k++ )
-              dst[k] = (ST)opInit(src[k]);
-        }
-        else
-        {
-            for(int k = 0; k < cn ; ++k )
-              cumul[k] = opInit(src[k]);
-            for(int k = cn ; k < size.width ; k += cn )
-            {
-                for (int c = 0 ; c < cn ; ++c)
-                  cumul[c] = op(cumul[c], src[k+c]);
-            }
-            for(int k = 0 ; k < cn ; ++k )
-              dst[k] = (ST)cumul[k];
-        }
-    }
-    */
 }
 
 typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
