@@ -559,9 +559,7 @@ public:
     Point2f center;
     //! returns width and height of the rectangle
     Size2f size;
-    /** returns the rotation angle, based on the top edge(topLeft-topRight) of the rectangle.
-    When the angle is 0, 90, 180, 270 etc., the rectangle becomes an up-right rectangle.
-    */
+    //! returns the rotation angle. When the angle is 0, 90, 180, 270 etc., the rectangle becomes an up-right rectangle.
     float angle;
 };
 
