@@ -145,7 +145,7 @@ rgbe2float(float *red, float *green, float *blue, unsigned char rgbe[4])
 /* default minimal header. modify if you want more information in header */
 int RGBE_WriteHeader(FILE *fp, int width, int height, rgbe_header_info *info)
 {
-  const char *programtype = "RGBE";
+  const char *programtype = "RADIANCE";
 
   if (info && (info->valid & RGBE_VALID_PROGRAMTYPE))
     programtype = info->programtype;

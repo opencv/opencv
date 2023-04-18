@@ -1835,8 +1835,8 @@ OCL_TEST_P(ReduceMax, Mat)
     {
         generateTestData();
 
-        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, CV_REDUCE_MAX, dtype));
-        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, CV_REDUCE_MAX, dtype));
+        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, REDUCE_MAX, dtype));
+        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, REDUCE_MAX, dtype));
 
         OCL_EXPECT_MATS_NEAR(dst, 0);
     }
@@ -1921,7 +1921,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(::testing::Values(CV_32F,
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, MinMaxIdx, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, MinMaxIdx_Mask, Combine(OCL_ALL_DEPTHS, ::testing::Values(Channels(1)), Bool()));
-OCL_INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool()));
+OCL_INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(OCL_ALL_DEPTHS_16F, OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Sqrt, Combine(::testing::Values(CV_32F, CV_64F), OCL_ALL_CHANNELS, Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Normalize, Combine(OCL_ALL_DEPTHS, Values(Channels(1)), Bool()));
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, InRange, Combine(OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));

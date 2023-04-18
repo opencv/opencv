@@ -603,7 +603,7 @@ public:
     virtual void operator ()(const Range& range) const CV_OVERRIDE
     {
         SIMDInterpolator vecOp;
-        const int G2Y = 9617;
+        const unsigned G2Y = 9617;
         const int SHIFT = 14;
 
         const T* bayer0 = srcmat.ptr<T>();
@@ -1566,9 +1566,9 @@ public:
             int x = 1;
             if (start_with_green)
             {
-                D[blue<<1] = (S[-sstep] + S[sstep]) >> 1;
+                D[blue<<1] = (S[-sstep] + S[sstep] + 1) >> 1;
                 D[1] = S[0];
-                D[2-(blue<<1)] = (S[-1] + S[1]) >> 1;
+                D[2-(blue<<1)] = (S[-1] + S[1] + 1) >> 1;
                 D += dcn;
                 ++S;
                 ++x;
@@ -1584,7 +1584,7 @@ public:
                 {
                     D[0] = S[0];
                     D[1] = (std::abs(S[-1] - S[1]) > std::abs(S[sstep] - S[-sstep]) ? (S[sstep] + S[-sstep] + 1) : (S[-1] + S[1] + 1)) >> 1;
-                    D[2] = (S[-sstep-1] + S[-sstep+1] + S[sstep-1] + S[sstep+1]) >> 2;
+                    D[2] = (S[-sstep-1] + S[-sstep+1] + S[sstep-1] + S[sstep+1] + 2) >> 2;
 
                     D[3] = (S[0] + S[2] + 1) >> 1;
                     D[4] = S[1];

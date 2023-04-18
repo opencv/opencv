@@ -165,8 +165,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void generate_prior_boxes(const Stream&, Span<__half>, View<float>, View<float>, View<float>, View<float>, float, float,
         std::vector<float>, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool, bool);
+#endif
 
     template void generate_prior_boxes(const Stream&, Span<float>, View<float>, View<float>, View<float>, View<float>, float, float,
         std::vector<float>, std::size_t, std::size_t, std::size_t, std::size_t, std::size_t, bool, bool);

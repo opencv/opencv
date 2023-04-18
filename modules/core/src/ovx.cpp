@@ -8,6 +8,7 @@
 // OpenVX related functions
 
 #include "precomp.hpp"
+#include "opencv2/core/utils/tls.hpp"
 #include "opencv2/core/ovx.hpp"
 #include "opencv2/core/openvx/ovx_defs.hpp"
 

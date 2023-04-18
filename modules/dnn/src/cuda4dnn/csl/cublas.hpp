@@ -8,7 +8,6 @@
 #include "error.hpp"
 #include "stream.hpp"
 #include "pointer.hpp"
-#include "fp16.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -52,22 +51,30 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         }
     }
 
-    /** noncopyable cuBLAS smart handle
+    /** non-copyable cuBLAS smart handle
      *
      * UniqueHandle is a smart non-sharable wrapper for cuBLAS handle which ensures that the handle
-     * is destroyed after use. The handle can be associated with a CUDA stream by specifying the
-     * stream during construction. By default, the handle is associated with the default stream.
+     * is destroyed after use. The handle must always be associated with a non-default stream. The stream
+     * must be specified during construction.
+     *
+     * Refer to stream API for more information for the choice of forcing non-default streams.
      */
     class UniqueHandle {
     public:
-        UniqueHandle() { CUDA4DNN_CHECK_CUBLAS(cublasCreate(&handle)); }
+        UniqueHandle() noexcept : handle{ nullptr } { }
         UniqueHandle(UniqueHandle&) = delete;
-        UniqueHandle(UniqueHandle&& other) noexcept
-            : stream(std::move(other.stream)), handle{ other.handle } {
+        UniqueHandle(UniqueHandle&& other) noexcept {
+            stream = std::move(other.stream);
+            handle = other.handle;
             other.handle = nullptr;
         }
 
+        /** creates a cuBLAS handle and associates it with the stream specified
+         *
+         * Exception Guarantee: Basic
+         */
         UniqueHandle(Stream strm) : stream(std::move(strm)) {
+            CV_Assert(stream);
             CUDA4DNN_CHECK_CUBLAS(cublasCreate(&handle));
             try {
                 CUDA4DNN_CHECK_CUBLAS(cublasSetStream(handle, stream.get()));
@@ -79,7 +86,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         }
 
         ~UniqueHandle() noexcept {
-            if (handle != nullptr) {
+            if (handle) {
                 /* cublasDestroy won't throw if a valid handle is passed */
                 CUDA4DNN_CHECK_CUBLAS(cublasDestroy(handle));
             }
@@ -87,14 +94,24 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         UniqueHandle& operator=(const UniqueHandle&) = delete;
         UniqueHandle& operator=(UniqueHandle&& other) noexcept {
-            stream = std::move(other.stream);
-            handle = other.handle;
-            other.handle = nullptr;
+            CV_Assert(other);
+            if (&other != this) {
+                UniqueHandle(std::move(*this)); /* destroy current handle */
+                stream = std::move(other.stream);
+                handle = other.handle;
+                other.handle = nullptr;
+            }
             return *this;
         }
 
-        /** @brief returns the raw cuBLAS handle */
-        cublasHandle_t get() const noexcept { return handle; }
+        /** returns the raw cuBLAS handle */
+        cublasHandle_t get() const noexcept {
+            CV_Assert(handle);
+            return handle;
+        }
+
+        /** returns true if the handle is valid */
+        explicit operator bool() const noexcept { return static_cast<bool>(handle); }
 
     private:
         Stream stream;
@@ -104,17 +121,21 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
     /** @brief sharable cuBLAS smart handle
      *
      * Handle is a smart sharable wrapper for cuBLAS handle which ensures that the handle
-     * is destroyed after all references to the handle are destroyed. The handle can be
-     * associated with a CUDA stream by specifying the stream during construction. By default,
-     * the handle is associated with the default stream.
+     * is destroyed after all references to the handle are destroyed. The handle must always
+     * be associated with a non-default stream. The stream must be specified during construction.
      *
      * @note Moving a Handle object to another invalidates the former
      */
     class Handle {
     public:
-        Handle() : handle(std::make_shared<UniqueHandle>()) { }
+        Handle() = default;
         Handle(const Handle&) = default;
         Handle(Handle&&) = default;
+
+        /** creates a cuBLAS handle and associates it with the stream specified
+         *
+         * Exception Guarantee: Basic
+         */
         Handle(Stream strm) : handle(std::make_shared<UniqueHandle>(std::move(strm))) { }
 
         Handle& operator=(const Handle&) = default;
@@ -123,6 +144,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         /** returns true if the handle is valid */
         explicit operator bool() const noexcept { return static_cast<bool>(handle); }
 
+        /** returns the raw cuBLAS handle */
         cublasHandle_t get() const noexcept {
             CV_Assert(handle);
             return handle->get();
@@ -221,6 +243,122 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
                 &alpha, A.get(), ilda,
                 B.get(), ildb,
                 &beta, C.get(), ildc
+            )
+        );
+    }
+
+    /** @brief Strided batched GEMM for colummn-major matrices
+     *
+     * \f$ C_i = \alpha A_i B_i + \beta C_i \f$ for a stack of matrices A, B and C indexed by i
+     *
+     * @tparam          T           matrix element type (must be `half` or `float`)
+     *
+     * @param           handle      valid cuBLAS Handle
+     * @param           transa      use transposed matrix of A_i for computation
+     * @param           transb      use transposed matrix of B_i for computation
+     * @param           rows_c      number of rows in C_i
+     * @param           cols_c      number of columns in C_i
+     * @param           common_dim  common dimension of A_i (or trans A_i) and B_i (or trans B_i)
+     * @param           alpha       scale factor for A_i B_i
+     * @param[in]       A           pointer to stack of column-major matrices A in device memory
+     * @param           lda         leading dimension of matrix A_i
+     * @param           strideA     stride between matrices in A
+     * @param[in]       B           pointer to stack of column-major matrices B in device memory
+     * @param           ldb         leading dimension of matrix B_i
+     * @param           strideB     stride between matrices in B
+     * @param           beta        scale factor for C_i
+     * @param[in,out]   C           pointer to stack of column-major matrices C in device memory
+     * @param           ldc         leading dimension of matrix C_i
+     * @param           strideC     stride between matrices in C
+     * @param           batchCount  number of matrices in the batch
+     *
+     * Exception Guarantee: Basic
+     */
+    template <class T>
+    void gemmStridedBatched(const Handle& handle,
+        bool transa, bool transb,
+        std::size_t rows_c, std::size_t cols_c, std::size_t common_dim,
+        T alpha, const DevicePtr<const T> A, std::size_t lda, std::size_t strideA,
+        const DevicePtr<const T> B, std::size_t ldb, std::size_t strideB,
+        T beta, const DevicePtr<T> C, std::size_t ldc, std::size_t strideC,
+        std::size_t batchCount);
+
+    template <> inline
+    void gemmStridedBatched<half>(const Handle& handle,
+        bool transa, bool transb,
+        std::size_t rows_c, std::size_t cols_c, std::size_t common_dim,
+        half alpha, const DevicePtr<const half> A, std::size_t lda, std::size_t strideA,
+        const DevicePtr<const half> B, std::size_t ldb, std::size_t strideB,
+        half beta, const DevicePtr<half> C, std::size_t ldc, std::size_t strideC,
+        std::size_t batchCount)
+    {
+        CV_Assert(handle);
+
+        const auto opa = transa ? CUBLAS_OP_T : CUBLAS_OP_N,
+                   opb = transb ? CUBLAS_OP_T : CUBLAS_OP_N;
+        const auto irows_c = static_cast<int>(rows_c),
+                   icols_c = static_cast<int>(cols_c),
+                   icommon_dim = static_cast<int>(common_dim),
+                   ilda = static_cast<int>(lda),
+                   ildb = static_cast<int>(ldb),
+                   ildc = static_cast<int>(ldc);
+
+        const auto batch_count = static_cast<int>(batchCount);
+        const auto stride_a = static_cast<long long int>(strideA),
+                   stride_b = static_cast<long long int>(strideB),
+                   stride_c = static_cast<long long int>(strideC);
+
+        CV_Assert(stride_c >= irows_c * icols_c); // output matrices must not overlap
+
+        CUDA4DNN_CHECK_CUBLAS(
+            cublasHgemmStridedBatched(
+                handle.get(),
+                opa, opb,
+                irows_c, icols_c, icommon_dim,
+                &alpha, A.get(), ilda, stride_a,
+                B.get(), ildb, stride_b,
+                &beta, C.get(), ildc, stride_c,
+                batch_count
+            )
+        );
+    }
+
+    template <> inline
+    void gemmStridedBatched<float>(const Handle& handle,
+        bool transa, bool transb,
+        std::size_t rows_c, std::size_t cols_c, std::size_t common_dim,
+        float alpha, const DevicePtr<const float> A, std::size_t lda, std::size_t strideA,
+        const DevicePtr<const float> B, std::size_t ldb, std::size_t strideB,
+        float beta, const DevicePtr<float> C, std::size_t ldc, std::size_t strideC,
+        std::size_t batchCount)
+    {
+        CV_Assert(handle);
+
+        const auto opa = transa ? CUBLAS_OP_T : CUBLAS_OP_N,
+                   opb = transb ? CUBLAS_OP_T : CUBLAS_OP_N;
+        const auto irows_c = static_cast<int>(rows_c),
+                   icols_c = static_cast<int>(cols_c),
+                   icommon_dim = static_cast<int>(common_dim),
+                   ilda = static_cast<int>(lda),
+                   ildb = static_cast<int>(ldb),
+                   ildc = static_cast<int>(ldc);
+
+        const auto batch_count = static_cast<int>(batchCount);
+        const auto stride_a = static_cast<long long int>(strideA),
+                   stride_b = static_cast<long long int>(strideB),
+                   stride_c = static_cast<long long int>(strideC);
+
+        CV_Assert(stride_c >= irows_c * icols_c); // output matrices must not overlap
+
+        CUDA4DNN_CHECK_CUBLAS(
+            cublasSgemmStridedBatched(
+                handle.get(),
+                opa, opb,
+                irows_c, icols_c, icommon_dim,
+                &alpha, A.get(), ilda, stride_a,
+                B.get(), ildb, stride_b,
+                &beta, C.get(), ildc, stride_c,
+                batch_count
             )
         );
     }

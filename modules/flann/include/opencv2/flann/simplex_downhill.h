@@ -72,7 +72,7 @@ float optimizeSimplexDownhill(T* points, int n, F func, float* vals = NULL )
 {
     const int MAX_ITERATIONS = 10;
 
-    assert(n>0);
+    CV_DbgAssert(n>0);
 
     T* p_o = new T[n];
     T* p_r = new T[n];
@@ -131,7 +131,7 @@ float optimizeSimplexDownhill(T* points, int n, F func, float* vals = NULL )
         }
 
         if (val_r<vals[0]) {
-            // value is smaller than smalest in simplex
+            // value is smaller than smallest in simplex
 
             // expand some more to see if it drops further
             for (int i=0; i<n; ++i) {

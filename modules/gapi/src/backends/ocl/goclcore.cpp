@@ -2,14 +2,35 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
+#include "logger.hpp"
 
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/ocl/core.hpp>
+#include <opencv2/gapi/util/throw.hpp>
+
 #include "backends/ocl/goclcore.hpp"
+
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
+#pragma comment(lib,"d3d11.lib")
+
+// get rid of generate macro max/min/etc from DX side
+#define D3D11_NO_HELPERS
+#define NOMINMAX
+#include <d3d11.h>
+#pragma comment(lib, "dxgi")
+#undef NOMINMAX
+#undef D3D11_NO_HELPERS
+#include <opencv2/core/directx.hpp>
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
+
+#include <opencv2/core/ocl.hpp>
+#include "streaming/onevpl/accelerators/surface/dx11_frame_adapter.hpp"
 
 GAPI_OCL_KERNEL(GOCLAdd, cv::gapi::core::GAdd)
 {
@@ -337,6 +358,14 @@ GAPI_OCL_KERNEL(GOCLSum, cv::gapi::core::GSum)
     }
 };
 
+GAPI_OCL_KERNEL(GOCLCountNonZero, cv::gapi::core::GCountNonZero)
+{
+    static void run(const cv::UMat& in, int& out)
+    {
+        out = cv::countNonZero(in);
+    }
+};
+
 GAPI_OCL_KERNEL(GOCLAddW, cv::gapi::core::GAddW)
 {
     static void run(const cv::UMat& in1, double alpha, const cv::UMat& in2, double beta, double gamma, int dtype, cv::UMat& out)
@@ -450,14 +479,6 @@ GAPI_OCL_KERNEL(GOCLMerge4, cv::gapi::core::GMerge4)
     }
 };
 
-GAPI_OCL_KERNEL(GOCLResize, cv::gapi::core::GResize)
-{
-    static void run(const cv::UMat& in, cv::Size sz, double fx, double fy, int interp, cv::UMat &out)
-    {
-        cv::resize(in, out, sz, fx, fy, interp);
-    }
-};
-
 GAPI_OCL_KERNEL(GOCLRemap, cv::gapi::core::GRemap)
 {
     static void run(const cv::UMat& in, const cv::Mat& x, const cv::Mat& y, int a, int b, cv::Scalar s, cv::UMat& out)
@@ -479,14 +500,6 @@ GAPI_OCL_KERNEL(GOCLCrop, cv::gapi::core::GCrop)
     static void run(const cv::UMat& in, cv::Rect rect, cv::UMat& out)
     {
         cv::UMat(in, rect).copyTo(out);
-    }
-};
-
-GAPI_OCL_KERNEL(GOCLCopy, cv::gapi::core::GCopy)
-{
-    static void run(const cv::UMat& in, cv::UMat& out)
-    {
-        in.copyTo(out);
     }
 };
 
@@ -522,7 +535,89 @@ GAPI_OCL_KERNEL(GOCLConvertTo, cv::gapi::core::GConvertTo)
     }
 };
 
-cv::gapi::GKernelPackage cv::gapi::core::ocl::kernels()
+
+GAPI_OCL_KERNEL(GOCLTranspose, cv::gapi::core::GTranspose)
+{
+    static void run(const cv::UMat& in,  cv::UMat& out)
+    {
+        cv::transpose(in, out);
+    }
+};
+
+GAPI_OCL_KERNEL(GOCLBGR, cv::gapi::streaming::GBGR)
+{
+    static void run(const cv::MediaFrame& in, cv::UMat& out)
+    {
+        cv::util::suppress_unused_warning(in);
+        cv::util::suppress_unused_warning(out);
+#ifdef HAVE_DIRECTX
+#ifdef HAVE_D3D11
+#ifdef HAVE_ONEVPL
+        auto d = in.desc();
+        if (d.fmt != cv::MediaFormat::NV12)
+        {
+            GAPI_LOG_FATAL(nullptr, "Unsupported format provided: " << static_cast<int>(d.fmt) <<
+                           ". Expected cv::MediaFormat::NV12.");
+            cv::util::throw_error(std::logic_error("Unsupported MediaFrame format provided"));
+        }
+
+        // FIXME: consider a better solution.
+        // Current approach cannot be easily extended for other adapters (getHandle).
+        auto adapterPtr = in.get<cv::gapi::wip::onevpl::VPLMediaFrameDX11Adapter>();
+        if (adapterPtr == nullptr)
+        {
+            GAPI_LOG_FATAL(nullptr, "Unsupported adapter type. Only VPLMediaFrameDX11Adapter is supported");
+            cv::util::throw_error(std::logic_error("Unsupported adapter type. Only VPLMediaFrameDX11Adapter is supported"));
+        }
+
+        auto params = adapterPtr->getHandle();
+        auto handle = cv::util::any_cast<mfxHDLPair>(params);
+        ID3D11Texture2D* texture = reinterpret_cast<ID3D11Texture2D*>(handle.first);
+        if (texture == nullptr)
+        {
+            GAPI_LOG_FATAL(nullptr, "mfxHDLPair contains ID3D11Texture2D that is nullptr. Handle address" <<
+                           reinterpret_cast<uint64_t>(handle.first));
+            cv::util::throw_error(std::logic_error("mfxHDLPair contains ID3D11Texture2D that is nullptr"));
+        }
+
+        // FIXME: Assuming here that we only have 1 device
+        // TODO: Textures are reusable, so to improve the peroformance here
+        //       consider creating a hash map texture <-> device/ctx
+        static thread_local ID3D11Device* pD3D11Device = nullptr;
+        if (pD3D11Device == nullptr)
+        {
+            texture->GetDevice(&pD3D11Device);
+        }
+        if (pD3D11Device == nullptr)
+        {
+            GAPI_LOG_FATAL(nullptr, "D3D11Texture2D::GetDevice returns pD3D11Device that is nullptr");
+            cv::util::throw_error(std::logic_error("D3D11Texture2D::GetDevice returns pD3D11Device that is nullptr"));
+        }
+
+        // FIXME: assuming here that the context is always the same
+        // TODO: Textures are reusable, so to improve the peroformance here
+        //       consider creating a hash map texture <-> device/ctx
+        static thread_local cv::ocl::Context ctx = cv::directx::ocl::initializeContextFromD3D11Device(pD3D11Device);
+        if (ctx.ptr() == nullptr)
+        {
+            GAPI_LOG_FATAL(nullptr, "initializeContextFromD3D11Device returned null context");
+            cv::util::throw_error(std::logic_error("initializeContextFromD3D11Device returned null context"));
+        }
+
+        cv::directx::convertFromD3D11Texture2D(texture, out);
+#else
+        GAPI_LOG_FATAL(nullptr, "HAVE_ONEVPL is not set. Please, check your cmake flags");
+        cv::util::throw_error(std::logic_error("HAVE_ONEVPL is not set. Please, check your cmake flags"));
+#endif // HAVE_ONEVPL
+#else
+        GAPI_LOG_FATAL(nullptr, "HAVE_D3D11 or HAVE_DIRECTX is not set. Please, check your cmake flags");
+        cv::util::throw_error(std::logic_error("HAVE_D3D11 or HAVE_DIRECTX is not set. Please, check your cmake flags"));
+#endif // HAVE_D3D11
+#endif // HAVE_DIRECTX
+    }
+};
+
+cv::GKernelPackage cv::gapi::core::ocl::kernels()
 {
     static auto pkg = cv::gapi::kernels
         <  GOCLAdd
@@ -565,6 +660,7 @@ cv::gapi::GKernelPackage cv::gapi::core::ocl::kernels()
          , GOCLAbsDiff
          , GOCLAbsDiffC
          , GOCLSum
+         , GOCLCountNonZero
          , GOCLAddW
          , GOCLNormL1
          , GOCLNormL2
@@ -575,17 +671,17 @@ cv::gapi::GKernelPackage cv::gapi::core::ocl::kernels()
          , GOCLInRange
          , GOCLSplit3
          , GOCLSplit4
-         , GOCLResize
          , GOCLMerge3
          , GOCLMerge4
          , GOCLRemap
          , GOCLFlip
          , GOCLCrop
-         , GOCLCopy
          , GOCLConcatHor
          , GOCLConcatVert
          , GOCLLUT
          , GOCLConvertTo
+         , GOCLTranspose
+         , GOCLBGR
          >();
     return pkg;
 }

@@ -2,7 +2,6 @@
 
 #include <stdexcept>
 
-#include <opencv2/imgproc.hpp>
 #include <opencv2/gapi/render/render.hpp>
 #include <opencv2/gapi/own/assert.hpp>
 
@@ -33,6 +32,20 @@ void cv::gapi::wip::draw::render(cv::Mat& y_plane,
     comp.apply(cv::gin(y_plane, uv_plane, prims),
                cv::gout(y_plane, uv_plane), std::move(args));
 }
+
+void cv::gapi::wip::draw::render(cv::MediaFrame& frame,
+                                 const Prims& prims,
+                                 cv::GCompileArgs&& args)
+{
+    cv::GFrame in, out;
+    cv::GArray<cv::gapi::wip::draw::Prim> arr;
+    out = cv::gapi::wip::draw::renderFrame(in, arr);
+
+    cv::GComputation comp(cv::GIn(in, arr), cv::GOut(out));
+    comp.apply(cv::gin(frame, prims),
+               cv::gout(frame), std::move(args));
+}
+
 
 void cv::gapi::wip::draw::cvtYUVToNV12(const cv::Mat& yuv,
                                        cv::Mat& y,
@@ -69,4 +82,10 @@ cv::gapi::wip::draw::renderNV12(const cv::GMat& y,
                                 const cv::GArray<cv::gapi::wip::draw::Prim>& prims)
 {
     return cv::gapi::wip::draw::GRenderNV12::on(y, uv, prims);
+}
+
+cv::GFrame cv::gapi::wip::draw::renderFrame(const cv::GFrame& frame,
+                                                const cv::GArray<cv::gapi::wip::draw::Prim>& prims)
+{
+    return cv::gapi::wip::draw::GRenderFrame::on(frame, prims);
 }

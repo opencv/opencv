@@ -81,7 +81,7 @@ static WEBP_INLINE uint32_t ClampedAddSubtractHalf(uint32_t c0, uint32_t c1,
 
 // gcc <= 4.9 on ARM generates incorrect code in Select() when Sub3() is
 // inlined.
-#if defined(__arm__) && LOCAL_GCC_VERSION <= 0x409
+#if defined(__arm__) && defined(__GNUC__) && LOCAL_GCC_VERSION <= 0x409
 # define LOCAL_INLINE __attribute__ ((noinline))
 #else
 # define LOCAL_INLINE WEBP_INLINE
@@ -107,88 +107,93 @@ static WEBP_INLINE uint32_t Select(uint32_t a, uint32_t b, uint32_t c) {
 //------------------------------------------------------------------------------
 // Predictors
 
-static uint32_t Predictor0_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor0_C(uint32_t left, const uint32_t* const top) {
   (void)top;
   (void)left;
   return ARGB_BLACK;
 }
-static uint32_t Predictor1_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor1_C(uint32_t left, const uint32_t* const top) {
   (void)top;
   return left;
 }
-static uint32_t Predictor2_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor2_C(uint32_t left, const uint32_t* const top) {
   (void)left;
   return top[0];
 }
-static uint32_t Predictor3_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor3_C(uint32_t left, const uint32_t* const top) {
   (void)left;
   return top[1];
 }
-static uint32_t Predictor4_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor4_C(uint32_t left, const uint32_t* const top) {
   (void)left;
   return top[-1];
 }
-static uint32_t Predictor5_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor5_C(uint32_t left, const uint32_t* const top) {
   const uint32_t pred = Average3(left, top[0], top[1]);
   return pred;
 }
-static uint32_t Predictor6_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor6_C(uint32_t left, const uint32_t* const top) {
   const uint32_t pred = Average2(left, top[-1]);
   return pred;
 }
-static uint32_t Predictor7_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor7_C(uint32_t left, const uint32_t* const top) {
   const uint32_t pred = Average2(left, top[0]);
   return pred;
 }
-static uint32_t Predictor8_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor8_C(uint32_t left, const uint32_t* const top) {
   const uint32_t pred = Average2(top[-1], top[0]);
   (void)left;
   return pred;
 }
-static uint32_t Predictor9_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor9_C(uint32_t left, const uint32_t* const top) {
   const uint32_t pred = Average2(top[0], top[1]);
   (void)left;
   return pred;
 }
-static uint32_t Predictor10_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor10_C(uint32_t left, const uint32_t* const top) {
   const uint32_t pred = Average4(left, top[-1], top[0], top[1]);
   return pred;
 }
-static uint32_t Predictor11_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor11_C(uint32_t left, const uint32_t* const top) {
   const uint32_t pred = Select(top[0], left, top[-1]);
   return pred;
 }
-static uint32_t Predictor12_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor12_C(uint32_t left, const uint32_t* const top) {
   const uint32_t pred = ClampedAddSubtractFull(left, top[0], top[-1]);
   return pred;
 }
-static uint32_t Predictor13_C(uint32_t left, const uint32_t* const top) {
+uint32_t VP8LPredictor13_C(uint32_t left, const uint32_t* const top) {
   const uint32_t pred = ClampedAddSubtractHalf(left, top[0], top[-1]);
   return pred;
 }
 
-GENERATE_PREDICTOR_ADD(Predictor0_C, PredictorAdd0_C)
+static void PredictorAdd0_C(const uint32_t* in, const uint32_t* upper,
+                            int num_pixels, uint32_t* out) {
+  int x;
+  (void)upper;
+  for (x = 0; x < num_pixels; ++x) out[x] = VP8LAddPixels(in[x], ARGB_BLACK);
+}
 static void PredictorAdd1_C(const uint32_t* in, const uint32_t* upper,
                             int num_pixels, uint32_t* out) {
   int i;
   uint32_t left = out[-1];
+  (void)upper;
   for (i = 0; i < num_pixels; ++i) {
     out[i] = left = VP8LAddPixels(in[i], left);
   }
-  (void)upper;
 }
-GENERATE_PREDICTOR_ADD(Predictor2_C, PredictorAdd2_C)
-GENERATE_PREDICTOR_ADD(Predictor3_C, PredictorAdd3_C)
-GENERATE_PREDICTOR_ADD(Predictor4_C, PredictorAdd4_C)
-GENERATE_PREDICTOR_ADD(Predictor5_C, PredictorAdd5_C)
-GENERATE_PREDICTOR_ADD(Predictor6_C, PredictorAdd6_C)
-GENERATE_PREDICTOR_ADD(Predictor7_C, PredictorAdd7_C)
-GENERATE_PREDICTOR_ADD(Predictor8_C, PredictorAdd8_C)
-GENERATE_PREDICTOR_ADD(Predictor9_C, PredictorAdd9_C)
-GENERATE_PREDICTOR_ADD(Predictor10_C, PredictorAdd10_C)
-GENERATE_PREDICTOR_ADD(Predictor11_C, PredictorAdd11_C)
-GENERATE_PREDICTOR_ADD(Predictor12_C, PredictorAdd12_C)
-GENERATE_PREDICTOR_ADD(Predictor13_C, PredictorAdd13_C)
+GENERATE_PREDICTOR_ADD(VP8LPredictor2_C, PredictorAdd2_C)
+GENERATE_PREDICTOR_ADD(VP8LPredictor3_C, PredictorAdd3_C)
+GENERATE_PREDICTOR_ADD(VP8LPredictor4_C, PredictorAdd4_C)
+GENERATE_PREDICTOR_ADD(VP8LPredictor5_C, PredictorAdd5_C)
+GENERATE_PREDICTOR_ADD(VP8LPredictor6_C, PredictorAdd6_C)
+GENERATE_PREDICTOR_ADD(VP8LPredictor7_C, PredictorAdd7_C)
+GENERATE_PREDICTOR_ADD(VP8LPredictor8_C, PredictorAdd8_C)
+GENERATE_PREDICTOR_ADD(VP8LPredictor9_C, PredictorAdd9_C)
+GENERATE_PREDICTOR_ADD(VP8LPredictor10_C, PredictorAdd10_C)
+GENERATE_PREDICTOR_ADD(VP8LPredictor11_C, PredictorAdd11_C)
+GENERATE_PREDICTOR_ADD(VP8LPredictor12_C, PredictorAdd12_C)
+GENERATE_PREDICTOR_ADD(VP8LPredictor13_C, PredictorAdd13_C)
 
 //------------------------------------------------------------------------------
 
@@ -557,7 +562,6 @@ VP8LPredictorFunc VP8LPredictors[16];
 
 // exposed plain-C implementations
 VP8LPredictorAddSubFunc VP8LPredictorsAdd_C[16];
-VP8LPredictorFunc VP8LPredictors_C[16];
 
 VP8LTransformColorInverseFunc VP8LTransformColorInverse;
 
@@ -595,8 +599,7 @@ extern void VP8LDspInitMSA(void);
 } while (0);
 
 WEBP_DSP_INIT_FUNC(VP8LDspInit) {
-  COPY_PREDICTOR_ARRAY(Predictor, VP8LPredictors)
-  COPY_PREDICTOR_ARRAY(Predictor, VP8LPredictors_C)
+  COPY_PREDICTOR_ARRAY(VP8LPredictor, VP8LPredictors)
   COPY_PREDICTOR_ARRAY(PredictorAdd, VP8LPredictorsAdd)
   COPY_PREDICTOR_ARRAY(PredictorAdd, VP8LPredictorsAdd_C)
 

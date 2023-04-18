@@ -874,7 +874,7 @@ static quirc_decode_error_t decode_payload(struct quirc_data *data,
 done:
 
 	/* Add nul terminator to all payloads */
-	if ((unsigned)data->payload_len >= sizeof(data->payload))
+	if (data->payload_len >= (int) sizeof(data->payload))
 		data->payload_len--;
 	data->payload[data->payload_len] = 0;
 
@@ -916,4 +916,23 @@ quirc_decode_error_t quirc_decode(const struct quirc_code *code,
 		return err;
 
 	return QUIRC_SUCCESS;
+}
+
+void quirc_flip(struct quirc_code *code)
+{
+	struct quirc_code flipped;
+	unsigned int offset = 0;
+	int y;
+	int x;
+
+	memset(&flipped, 0, sizeof(flipped));
+	for (y = 0; y < code->size; y++) {
+		for (x = 0; x < code->size; x++) {
+			if (grid_bit(code, y, x)) {
+				flipped.cell_bitmap[offset >> 3u] |= (1u << (offset & 7u));
+			}
+			offset++;
+		}
+	}
+	memcpy(&code->cell_bitmap, &flipped.cell_bitmap, sizeof(flipped.cell_bitmap));
 }

@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Developed 1997-2015 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2015-2018, D. R. Commander.
+ * Copyright (C) 2015-2020, 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -80,7 +80,7 @@ get_byte(j_decompress_ptr cinfo)
     if (!(*src->fill_input_buffer) (cinfo))
       ERREXIT(cinfo, JERR_CANT_SUSPEND);
   src->bytes_in_buffer--;
-  return GETJOCTET(*src->next_input_byte++);
+  return *src->next_input_byte++;
 }
 
 
@@ -210,13 +210,13 @@ process_restart(j_decompress_ptr cinfo)
   for (ci = 0; ci < cinfo->comps_in_scan; ci++) {
     compptr = cinfo->cur_comp_info[ci];
     if (!cinfo->progressive_mode || (cinfo->Ss == 0 && cinfo->Ah == 0)) {
-      MEMZERO(entropy->dc_stats[compptr->dc_tbl_no], DC_STAT_BINS);
+      memset(entropy->dc_stats[compptr->dc_tbl_no], 0, DC_STAT_BINS);
       /* Reset DC predictions to 0 */
       entropy->last_dc_val[ci] = 0;
       entropy->dc_context[ci] = 0;
     }
     if (!cinfo->progressive_mode || cinfo->Ss) {
-      MEMZERO(entropy->ac_stats[compptr->ac_tbl_no], AC_STAT_BINS);
+      memset(entropy->ac_stats[compptr->ac_tbl_no], 0, AC_STAT_BINS);
     }
   }
 
@@ -471,17 +471,17 @@ decode_mcu_AC_refine(j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
       if (*thiscoef) {                          /* previously nonzero coef */
         if (arith_decode(cinfo, st + 2)) {
           if (*thiscoef < 0)
-            *thiscoef += m1;
+            *thiscoef += (JCOEF)m1;
           else
-            *thiscoef += p1;
+            *thiscoef += (JCOEF)p1;
         }
         break;
       }
       if (arith_decode(cinfo, st + 1)) {        /* newly nonzero coef */
         if (arith_decode(cinfo, entropy->fixed_bin))
-          *thiscoef = m1;
+          *thiscoef = (JCOEF)m1;
         else
-          *thiscoef = p1;
+          *thiscoef = (JCOEF)p1;
         break;
       }
       st += 3;  k++;
@@ -665,8 +665,16 @@ bad:
     for (ci = 0; ci < cinfo->comps_in_scan; ci++) {
       int coefi, cindex = cinfo->cur_comp_info[ci]->component_index;
       int *coef_bit_ptr = &cinfo->coef_bits[cindex][0];
+      int *prev_coef_bit_ptr =
+        &cinfo->coef_bits[cindex + cinfo->num_components][0];
       if (cinfo->Ss && coef_bit_ptr[0] < 0) /* AC without prior DC scan */
         WARNMS2(cinfo, JWRN_BOGUS_PROGRESSION, cindex, 0);
+      for (coefi = MIN(cinfo->Ss, 1); coefi <= MAX(cinfo->Se, 9); coefi++) {
+        if (cinfo->input_scan_number > 1)
+          prev_coef_bit_ptr[coefi] = coef_bit_ptr[coefi];
+        else
+          prev_coef_bit_ptr[coefi] = 0;
+      }
       for (coefi = cinfo->Ss; coefi <= cinfo->Se; coefi++) {
         int expected = (coef_bit_ptr[coefi] < 0) ? 0 : coef_bit_ptr[coefi];
         if (cinfo->Ah != expected)
@@ -690,8 +698,8 @@ bad:
     /* Check that the scan parameters Ss, Se, Ah/Al are OK for sequential JPEG.
      * This ought to be an error condition, but we make it a warning.
      */
-    if (cinfo->Ss != 0 || cinfo->Ah != 0 || cinfo->Al != 0 ||
-        (cinfo->Se < DCTSIZE2 && cinfo->Se != DCTSIZE2 - 1))
+    if (cinfo->Ss != 0 || cinfo->Se != DCTSIZE2 - 1 ||
+        cinfo->Ah != 0 || cinfo->Al != 0)
       WARNMS(cinfo, JWRN_NOT_SEQUENTIAL);
     /* Select MCU decoding routine */
     entropy->pub.decode_mcu = decode_mcu;
@@ -707,7 +715,7 @@ bad:
       if (entropy->dc_stats[tbl] == NULL)
         entropy->dc_stats[tbl] = (unsigned char *)(*cinfo->mem->alloc_small)
           ((j_common_ptr)cinfo, JPOOL_IMAGE, DC_STAT_BINS);
-      MEMZERO(entropy->dc_stats[tbl], DC_STAT_BINS);
+      memset(entropy->dc_stats[tbl], 0, DC_STAT_BINS);
       /* Initialize DC predictions to 0 */
       entropy->last_dc_val[ci] = 0;
       entropy->dc_context[ci] = 0;
@@ -719,7 +727,7 @@ bad:
       if (entropy->ac_stats[tbl] == NULL)
         entropy->ac_stats[tbl] = (unsigned char *)(*cinfo->mem->alloc_small)
           ((j_common_ptr)cinfo, JPOOL_IMAGE, AC_STAT_BINS);
-      MEMZERO(entropy->ac_stats[tbl], AC_STAT_BINS);
+      memset(entropy->ac_stats[tbl], 0, AC_STAT_BINS);
     }
   }
 
@@ -727,6 +735,7 @@ bad:
   entropy->c = 0;
   entropy->a = 0;
   entropy->ct = -16;    /* force reading 2 initial bytes to fill C */
+  entropy->pub.insufficient_data = FALSE;
 
   /* Initialize restart counter */
   entropy->restarts_to_go = cinfo->restart_interval;
@@ -763,7 +772,7 @@ jinit_arith_decoder(j_decompress_ptr cinfo)
     int *coef_bit_ptr, ci;
     cinfo->coef_bits = (int (*)[DCTSIZE2])
       (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_IMAGE,
-                                  cinfo->num_components * DCTSIZE2 *
+                                  cinfo->num_components * 2 * DCTSIZE2 *
                                   sizeof(int));
     coef_bit_ptr = &cinfo->coef_bits[0][0];
     for (ci = 0; ci < cinfo->num_components; ci++)

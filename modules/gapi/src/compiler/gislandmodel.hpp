@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GISLANDMODEL_HPP
@@ -21,7 +21,6 @@
 #include "compiler/gobjref.hpp"
 
 namespace cv { namespace gimpl {
-
 
 // FIXME: GAPI_EXPORTS only because of tests!
 class GAPI_EXPORTS GIsland
@@ -89,31 +88,101 @@ protected:
     util::optional<std::string> m_user_tag;
 };
 
-
-
 // GIslandExecutable - a backend-specific thing which executes
 // contents of an Island
 // * Is instantiated by the last step of the Islands fusion procedure;
 // * Is orchestrated by a GExecutor instance.
 //
-
-class GIslandExecutable
+// GAPI_EXPORTS is here since this class comes with the default
+// implementation to some methods and it needs to be exported to allow
+// it to use in the external (extra) backends.
+class GAPI_EXPORTS GIslandExecutable
 {
 public:
     using InObj  = std::pair<RcDesc, cv::GRunArg>;
     using OutObj = std::pair<RcDesc, cv::GRunArgP>;
 
+    class  IODesc;
+    struct IInput;
+    struct IOutput;
+
     // FIXME: now run() requires full input vector to be available.
     // actually, parts of subgraph may execute even if there's no all data
     // slots in place.
     // TODO: Add partial execution capabilities
+    // TODO: This method is now obsolette and is here for backwards
+    //       compatibility only.  Use (implement) the new run instead.
     virtual void run(std::vector<InObj>  &&input_objs,
                      std::vector<OutObj> &&output_objs) = 0;
 
+    // Let the island execute. I/O data is obtained from/submitted to
+    // in/out objects.
+    virtual void run(IInput &in, IOutput &out);
+
     virtual bool canReshape() const = 0;
     virtual void reshape(ade::Graph& g, const GCompileArgs& args) = 0;
+    virtual bool allocatesOutputs() const { return false; }
+    virtual cv::RMat allocate(const cv::GMatDesc&) const { GAPI_Error("should never be called"); }
+
+    // This method is called when the GStreamingCompiled gets a new
+    // input source to process. Normally this method is called once
+    // per stream execution.
+    //
+    // The idea of this method is to reset backend's stream-associated
+    // internal state, if there is any.
+    //
+    // The regular GCompiled invocation doesn't call this, there may
+    // be reset() introduced there but it is completely unnecessary at
+    // this moment.
+    //
+    // FIXME: The design on this and so-called "stateful" kernels is not
+    // closed yet.
+    // FIXME: This thing will likely break stuff once we introduce
+    // "multi-source streaming", a better design needs to be proposed
+    // at that stage.
+    virtual void handleNewStream() {} // do nothing here by default
+
+    // This method is called for every IslandExecutable when
+    // the stream-based execution is stopped.
+    // All processing is guaranteed to be stopped by this moment,
+    // with no pending or running 'run()' processes ran in background.
+    // FIXME: This method is tightly bound to the GStreamingExecutor
+    // now.
+    virtual void handleStopStream() {} // do nothing here by default
 
     virtual ~GIslandExecutable() = default;
+};
+
+class GIslandExecutable::IODesc {
+    std::vector<cv::gimpl::RcDesc> d;
+public:
+    void set(std::vector<cv::gimpl::RcDesc> &&newd)      { d = std::move(newd); }
+    void set(const std::vector<cv::gimpl::RcDesc> &newd) { d = newd; }
+    const std::vector<cv::gimpl::RcDesc> &desc() const   { return d; }
+};
+struct EndOfStream {};
+
+struct Exception {
+    std::exception_ptr eptr;
+};
+
+using StreamMsg = cv::util::variant<EndOfStream, cv::GRunArgs, Exception>;
+struct GIslandExecutable::IInput: public GIslandExecutable::IODesc {
+    virtual ~IInput() = default;
+    virtual StreamMsg get() = 0;     // Get a new input vector (blocking)
+    virtual StreamMsg try_get() = 0; // Get a new input vector (non-blocking)
+};
+struct GIslandExecutable::IOutput: public GIslandExecutable::IODesc {
+    virtual ~IOutput() = default;
+    virtual GRunArgP get(int idx) = 0;                                 // Allocate (wrap) a new data object for output idx
+    virtual void post(GRunArgP&&, const std::exception_ptr& = {}) = 0; // Release the object back to the framework (mark available)
+    virtual void post(EndOfStream&&) = 0;                              // Post end-of-stream marker back to the framework
+    virtual void post(Exception&&) = 0;
+
+
+    // Assign accumulated metadata to the given output object.
+    // This method can only be called after get() and before post().
+    virtual void meta(const GRunArgP&, const GRunArg::Meta &) = 0;
 };
 
 // GIslandEmitter - a backend-specific thing which feeds data into
@@ -172,8 +241,19 @@ struct IslandsCompiled
     static const char *name() { return "IslandsCompiled"; }
 };
 
+// This flag marks an edge in an GIslandModel as "desynchronized"
+// i.e. it starts a new desynchronized subgraph
+struct DesyncIslEdge
+{
+    static const char *name() { return "DesynchronizedIslandEdge"; }
+
+    // Projection from GModel/DesyncEdge.index
+    int index;
+};
+
 namespace GIslandModel
 {
+
     using Graph = ade::TypedGraph
         < NodeKind
         , FusedIsland
@@ -182,6 +262,7 @@ namespace GIslandModel
         , Emitter
         , Sink
         , IslandsCompiled
+        , DesyncIslEdge
         , ade::passes::TopologicalSortData
         >;
 
@@ -194,6 +275,7 @@ namespace GIslandModel
         , Emitter
         , Sink
         , IslandsCompiled
+        , DesyncIslEdge
         , ade::passes::TopologicalSortData
         >;
 
@@ -215,7 +297,11 @@ namespace GIslandModel
     //     from the original model (! don't mix with DataSlot)
     // FIXME: GAPI_EXPORTS because of tests only!
     ade::NodeHandle GAPI_EXPORTS producerOf(const ConstGraph &g, ade::NodeHandle &data_nh);
-
+    // traceIslandName - returns pretty island name for passed island node.
+    //     Function uses RTTI to assembly name.
+    //     In case if name of backend implementation class doesn't fit *G[Name]BackendImpl* pattern,
+    //     raw mangled name of class will be used.
+    std::string traceIslandName(const ade::NodeHandle& op_nh, const Graph& g);
 } // namespace GIslandModel
 
 }} // namespace cv::gimpl

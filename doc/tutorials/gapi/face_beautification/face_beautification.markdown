@@ -1,5 +1,7 @@
 # Implementing a face beautification algorithm with G-API {#tutorial_gapi_face_beautification}
 
+@prev_tutorial{tutorial_gapi_anisotropic_segmentation}
+
 [TOC]
 
 # Introduction {#gapi_fb_intro}
@@ -427,7 +429,7 @@ the ROI, which will lead to accuracy improvement.
 Unfortunately, another problem occurs if we do that:
 if the rectangular ROI is near the border, a describing square will probably go
 out of the frame --- that leads to errors of the landmarks detector.
-To aviod such a mistake, we have to implement an algorithm that, firstly,
+To avoid such a mistake, we have to implement an algorithm that, firstly,
 describes every rectangle by a square, then counts the farthest coordinates
 turned up to be outside of the frame and, finally, pads the source image by
 borders (e.g. single-colored) with the size counted. It will be safe to take

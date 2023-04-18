@@ -2,7 +2,7 @@
  * jdct.h
  *
  * Copyright (C) 1994-1996, Thomas G. Lane.
- * Modified 2002-2017 by Guido Vollbeding.
+ * Modified 2002-2019 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -357,13 +357,6 @@ EXTERN(void) jpeg_idct_1x2
  */
 
 #define FIX(x)	((INT32) ((x) * CONST_SCALE + 0.5))
-
-/* Descale and correctly round an INT32 value that's scaled by N bits.
- * We assume RIGHT_SHIFT rounds towards minus infinity, so adding
- * the fudge factor is correct for either sign of X.
- */
-
-#define DESCALE(x,n)  RIGHT_SHIFT((x) + (ONE << ((n)-1)), n)
 
 /* Multiply an INT32 variable by an INT32 constant to yield an INT32 result.
  * This macro is used only when the two inputs will actually be no more than

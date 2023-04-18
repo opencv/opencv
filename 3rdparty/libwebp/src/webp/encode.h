@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-#define WEBP_ENCODER_ABI_VERSION 0x020e    // MAJOR(8b) + MINOR(8b)
+#define WEBP_ENCODER_ABI_VERSION 0x020f    // MAJOR(8b) + MINOR(8b)
 
 // Note: forward declaring enumerations is not allowed in (strict) C and C++,
 // the types are left here for reference.
@@ -78,9 +78,6 @@ WEBP_EXTERN size_t WebPEncodeLosslessRGBA(const uint8_t* rgba,
 WEBP_EXTERN size_t WebPEncodeLosslessBGRA(const uint8_t* bgra,
                                           int width, int height, int stride,
                                           uint8_t** output);
-
-// Releases memory returned by the WebPEncode*() functions above.
-WEBP_EXTERN void WebPFree(void* ptr);
 
 //------------------------------------------------------------------------------
 // Coding parameters
@@ -151,7 +148,8 @@ struct WebPConfig {
   int use_delta_palette;  // reserved for future lossless feature
   int use_sharp_yuv;      // if needed, use sharp (and slow) RGB->YUV conversion
 
-  uint32_t pad[2];        // padding for later use
+  int qmin;               // minimum permissible quality factor
+  int qmax;               // maximum permissible quality factor
 };
 
 // Enumerate some predefined settings for WebPConfig, depending on the type
@@ -294,6 +292,11 @@ typedef enum WebPEncodingError {
 #define WEBP_MAX_DIMENSION 16383
 
 // Main exchange structure (input samples, output bytes, statistics)
+//
+// Once WebPPictureInit() has been called, it's ok to make all the INPUT fields
+// (use_argb, y/u/v, argb, ...) point to user-owned data, even if
+// WebPPictureAlloc() has been called. Depending on the value use_argb,
+// it's guaranteed that either *argb or *y/*u/*v content will be kept untouched.
 struct WebPPicture {
   //   INPUT
   //////////////
@@ -306,7 +309,7 @@ struct WebPPicture {
   // YUV input (mostly used for input to lossy compression)
   WebPEncCSP colorspace;     // colorspace: should be YUV420 for now (=Y'CbCr).
   int width, height;         // dimensions (less or equal to WEBP_MAX_DIMENSION)
-  uint8_t *y, *u, *v;        // pointers to luma/chroma planes.
+  uint8_t* y, *u, *v;        // pointers to luma/chroma planes.
   int y_stride, uv_stride;   // luma/chroma strides.
   uint8_t* a;                // pointer to the alpha plane
   int a_stride;              // stride of the alpha plane
@@ -350,7 +353,7 @@ struct WebPPicture {
   uint32_t pad3[3];       // padding for later use
 
   // Unused for now
-  uint8_t *pad4, *pad5;
+  uint8_t* pad4, *pad5;
   uint32_t pad6[8];       // padding for later use
 
   // PRIVATE FIELDS

@@ -4,7 +4,7 @@
 #  Toolchains with 'img' in the name are for MIPS R6 instruction sets.
 #  It is recommended to use cmake-gui application for build scripts configuration and generation:
 #  1. Run cmake-gui
-#  2. Specifiy toolchain file for cross-compiling, mips32r5el-gnu.toolchian.cmake or mips64r6el-gnu.toolchain.cmake
+#  2. Specify toolchain file for cross-compiling, mips32r5el-gnu.toolchian.cmake or mips64r6el-gnu.toolchain.cmake
 #     can be selected.
 #  3. Configure and Generate makefiles.
 #  4. make -j4 & make install

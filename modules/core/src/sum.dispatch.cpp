@@ -46,6 +46,9 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
     if ( (!doubleSupport && depth == CV_64F) || cn > 4 )
         return false;
 
+    if (depth >= CV_16F)
+        return false;
+
     int ngroups = dev.maxComputeUnits(), dbsize = ngroups * (calc2 ? 2 : 1);
     size_t wgs = dev.maxWorkGroupSize();
 
@@ -59,7 +62,7 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
     wgs2_aligned >>= 1;
 
     static const char * const opMap[3] = { "OP_SUM", "OP_SUM_ABS", "OP_SUM_SQR" };
-    char cvt[2][40];
+    char cvt[2][50];
     String opts = format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstTK=%s -D dstT1=%s -D ddepth=%d -D cn=%d"
                          " -D convertToDT=%s -D %s -D WGS=%d -D WGS2_ALIGNED=%d%s%s%s%s -D kercn=%d%s%s%s -D convertFromU=%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, mcn)), ocl::typeToStr(depth),

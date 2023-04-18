@@ -29,10 +29,14 @@
 #define USE_INVERSE_ALPHA_TABLE
 
 #ifdef WORDS_BIGENDIAN
-#define ALPHA_OFFSET 0   // uint32_t 0xff000000 is 0xff,00,00,00 in memory
+// uint32_t 0xff000000 is 0xff,00,00,00 in memory
+#define CHANNEL_OFFSET(i) (i)
 #else
-#define ALPHA_OFFSET 3   // uint32_t 0xff000000 is 0x00,00,00,ff in memory
+// uint32_t 0xff000000 is 0x00,00,00,ff in memory
+#define CHANNEL_OFFSET(i) (3-(i))
 #endif
+
+#define ALPHA_OFFSET CHANNEL_OFFSET(0)
 
 //------------------------------------------------------------------------------
 // Detection of non-trivial transparency
@@ -57,16 +61,14 @@ static int CheckNonOpaque(const uint8_t* alpha, int width, int height,
 // Checking for the presence of non-opaque alpha.
 int WebPPictureHasTransparency(const WebPPicture* picture) {
   if (picture == NULL) return 0;
-  if (!picture->use_argb) {
-    return CheckNonOpaque(picture->a, picture->width, picture->height,
-                          1, picture->a_stride);
-  } else {
+  if (picture->use_argb) {
     const int alpha_offset = ALPHA_OFFSET;
     return CheckNonOpaque((const uint8_t*)picture->argb + alpha_offset,
                           picture->width, picture->height,
                           4, picture->argb_stride * sizeof(*picture->argb));
   }
-  return 0;
+  return CheckNonOpaque(picture->a, picture->width, picture->height,
+                        1, picture->a_stride);
 }
 
 //------------------------------------------------------------------------------
@@ -86,8 +88,9 @@ int WebPPictureHasTransparency(const WebPPicture* picture) {
 static int kLinearToGammaTab[kGammaTabSize + 1];
 static uint16_t kGammaToLinearTab[256];
 static volatile int kGammaTablesOk = 0;
+static void InitGammaTables(void);
 
-static WEBP_TSAN_IGNORE_FUNCTION void InitGammaTables(void) {
+WEBP_DSP_INIT_FUNC(InitGammaTables) {
   if (!kGammaTablesOk) {
     int v;
     const double scale = (double)(1 << kGammaTabFix) / kGammaScale;
@@ -177,8 +180,9 @@ static uint32_t kLinearToGammaTabS[kGammaTabSize + 2];
 #define GAMMA_TO_LINEAR_BITS 14
 static uint32_t kGammaToLinearTabS[MAX_Y_T + 1];   // size scales with Y_FIX
 static volatile int kGammaTablesSOk = 0;
+static void InitGammaTablesS(void);
 
-static WEBP_TSAN_IGNORE_FUNCTION void InitGammaTablesS(void) {
+WEBP_DSP_INIT_FUNC(InitGammaTablesS) {
   assert(2 * GAMMA_TO_LINEAR_BITS < 32);  // we use uint32_t intermediate values
   if (!kGammaTablesSOk) {
     int v;
@@ -997,10 +1001,10 @@ static int PictureARGBToYUVA(WebPPicture* picture, WebPEncCSP colorspace,
     return WebPEncodingSetError(picture, VP8_ENC_ERROR_INVALID_CONFIGURATION);
   } else {
     const uint8_t* const argb = (const uint8_t*)picture->argb;
-    const uint8_t* const a = argb + (0 ^ ALPHA_OFFSET);
-    const uint8_t* const r = argb + (1 ^ ALPHA_OFFSET);
-    const uint8_t* const g = argb + (2 ^ ALPHA_OFFSET);
-    const uint8_t* const b = argb + (3 ^ ALPHA_OFFSET);
+    const uint8_t* const a = argb + CHANNEL_OFFSET(0);
+    const uint8_t* const r = argb + CHANNEL_OFFSET(1);
+    const uint8_t* const g = argb + CHANNEL_OFFSET(2);
+    const uint8_t* const b = argb + CHANNEL_OFFSET(3);
 
     picture->colorspace = WEBP_YUV420;
     return ImportYUVAFromRGBA(r, g, b, a, 4, 4 * picture->argb_stride,
@@ -1050,7 +1054,7 @@ int WebPPictureYUVAToARGB(WebPPicture* picture) {
     const int height = picture->height;
     const int argb_stride = 4 * picture->argb_stride;
     uint8_t* dst = (uint8_t*)picture->argb;
-    const uint8_t *cur_u = picture->u, *cur_v = picture->v, *cur_y = picture->y;
+    const uint8_t* cur_u = picture->u, *cur_v = picture->v, *cur_y = picture->y;
     WebPUpsampleLinePairFunc upsample =
         WebPGetLinePairConverter(ALPHA_OFFSET > 0);
 

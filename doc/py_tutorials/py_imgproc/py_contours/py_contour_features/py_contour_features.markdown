@@ -1,6 +1,9 @@
 Contour Features {#tutorial_py_contour_features}
 ================
 
+@prev_tutorial{tutorial_py_contours_begin}
+@next_tutorial{tutorial_py_contour_properties}
+
 Goal
 ----
 
@@ -21,7 +24,8 @@ The function **cv.moments()** gives a dictionary of all moment values calculated
 import numpy as np
 import cv2 as cv
 
-img = cv.imread('star.jpg',0)
+img = cv.imread('star.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 ret,thresh = cv.threshold(img,127,255,0)
 contours,hierarchy = cv.findContours(thresh, 1, 2)
 
@@ -91,7 +95,7 @@ convexity defects, which are the local maximum deviations of hull from contours.
 
 There is a little bit things to discuss about it its syntax:
 @code{.py}
-hull = cv.convexHull(points[, hull[, clockwise[, returnPoints]]
+hull = cv.convexHull(points[, hull[, clockwise[, returnPoints]]])
 @endcode
 Arguments details:
 
@@ -144,7 +148,7 @@ cv.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
 ### 7.b. Rotated Rectangle
 
 Here, bounding rectangle is drawn with minimum area, so it considers the rotation also. The function
-used is **cv.minAreaRect()**. It returns a Box2D structure which contains following detals - (
+used is **cv.minAreaRect()**. It returns a Box2D structure which contains following details - (
 center (x,y), (width, height), angle of rotation ). But to draw this rectangle, we need 4 corners of
 the rectangle. It is obtained by the function **cv.boxPoints()**
 @code{.py}

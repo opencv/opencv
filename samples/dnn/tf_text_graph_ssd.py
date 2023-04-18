@@ -62,9 +62,9 @@ class MultiscaleAnchorGenerator:
 
 def createSSDGraph(modelPath, configPath, outputPath):
     # Nodes that should be kept.
-    keepOps = ['Conv2D', 'BiasAdd', 'Add', 'Relu', 'Relu6', 'Placeholder', 'FusedBatchNorm',
+    keepOps = ['Conv2D', 'BiasAdd', 'Add', 'AddV2', 'Relu', 'Relu6', 'Placeholder', 'FusedBatchNorm',
                'DepthwiseConv2dNative', 'ConcatV2', 'Mul', 'MaxPool', 'AvgPool', 'Identity',
-               'Sub', 'ResizeNearestNeighbor', 'Pad', 'FusedBatchNormV3']
+               'Sub', 'ResizeNearestNeighbor', 'Pad', 'FusedBatchNormV3', 'Mean']
 
     # Node with which prefixes should be removed
     prefixesToRemove = ('MultipleGridAnchorGenerator/', 'Concatenate/', 'Postprocessor/', 'Preprocessor/map')
@@ -122,7 +122,6 @@ def createSSDGraph(modelPath, configPath, outputPath):
     print('Input image size: %dx%d' % (image_width, image_height))
 
     # Read the graph.
-    _inpNames = ['image_tensor']
     outNames = ['num_detections', 'detection_scores', 'detection_boxes', 'detection_classes']
 
     writeTextGraph(modelPath, outputPath, outNames)
@@ -151,6 +150,9 @@ def createSSDGraph(modelPath, configPath, outputPath):
         subgraphBatchNorm = ['Add',
             ['Mul', 'input', ['Mul', ['Rsqrt', ['Add', 'moving_variance', 'add_y']], 'gamma']],
             ['Sub', 'beta', ['Mul', 'moving_mean', 'Mul_0']]]
+        subgraphBatchNormV2 = ['AddV2',
+            ['Mul', 'input', ['Mul', ['Rsqrt', ['AddV2', 'moving_variance', 'add_y']], 'gamma']],
+            ['Sub', 'beta', ['Mul', 'moving_mean', 'Mul_0']]]
         # Detect unfused nearest neighbor resize.
         subgraphResizeNN = ['Reshape',
             ['Mul', ['Reshape', 'input', ['Pack', 'shape_1', 'shape_2', 'shape_3', 'shape_4', 'shape_5']],
@@ -177,7 +179,8 @@ def createSSDGraph(modelPath, configPath, outputPath):
         for node in graph_def.node:
             inputs = {}
             fusedNodes = []
-            if checkSubgraph(node, subgraphBatchNorm, inputs, fusedNodes):
+            if checkSubgraph(node, subgraphBatchNorm, inputs, fusedNodes) or \
+               checkSubgraph(node, subgraphBatchNormV2, inputs, fusedNodes):
                 name = node.name
                 node.Clear()
                 node.name = name
@@ -230,12 +233,27 @@ def createSSDGraph(modelPath, configPath, outputPath):
 
     # Connect input node to the first layer
     assert(graph_def.node[0].op == 'Placeholder')
+    try:
+        input_shape = graph_def.node[0].attr['shape']['shape'][0]['dim']
+        input_shape[1]['size'] = image_height
+        input_shape[2]['size'] = image_width
+    except:
+        print("Input shapes are undefined")
     # assert(graph_def.node[1].op == 'Conv2D')
-    weights = graph_def.node[1].input[0]
+    weights = graph_def.node[1].input[-1]
     for i in range(len(graph_def.node[1].input)):
         graph_def.node[1].input.pop()
     graph_def.node[1].input.append(graph_def.node[0].name)
     graph_def.node[1].input.append(weights)
+
+    # check and correct the case when preprocessing block is after input
+    preproc_id = "Preprocessor/"
+    if graph_def.node[2].name.startswith(preproc_id) and \
+        graph_def.node[2].input[0].startswith(preproc_id):
+
+        if not any(preproc_id in inp for inp in graph_def.node[3].input):
+            graph_def.node[3].input.insert(0, graph_def.node[2].name)
+
 
     # Create SSD postprocessing head ###############################################
 
@@ -252,12 +270,12 @@ def createSSDGraph(modelPath, configPath, outputPath):
     addConstNode('concat/axis_flatten', [-1], graph_def)
     addConstNode('PriorBox/concat/axis', [-2], graph_def)
 
-    for label in ['ClassPredictor', 'BoxEncodingPredictor' if box_predictor is 'convolutional' else 'BoxPredictor']:
+    for label in ['ClassPredictor', 'BoxEncodingPredictor' if box_predictor == 'convolutional' else 'BoxPredictor']:
         concatInputs = []
         for i in range(num_layers):
             # Flatten predictions
             flatten = NodeDef()
-            if box_predictor is 'convolutional':
+            if box_predictor == 'convolutional':
                 inpName = 'BoxPredictor_%d/%s/BiasAdd' % (i, label)
             else:
                 if i == 0:
@@ -290,7 +308,7 @@ def createSSDGraph(modelPath, configPath, outputPath):
         priorBox = NodeDef()
         priorBox.name = 'PriorBox_%d' % i
         priorBox.op = 'PriorBox'
-        if box_predictor is 'convolutional':
+        if box_predictor == 'convolutional':
             priorBox.input.append('BoxPredictor_%d/BoxEncodingPredictor/BiasAdd' % i)
         else:
             if i == 0:

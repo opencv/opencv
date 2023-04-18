@@ -216,7 +216,7 @@
 #endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */
-//disabled for OpenCV CMakeLists.txt: #define _FILE_OFFSET_BITS @FILE_OFFSET_BITS@
+#define _FILE_OFFSET_BITS @FILE_OFFSET_BITS@
 
 /* Define to `__inline__' or `__inline' if that's what the C compiler
    calls it, or to nothing if 'inline' is not supported under any name.  */

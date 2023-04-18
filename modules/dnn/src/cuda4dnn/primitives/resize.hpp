@@ -20,14 +20,23 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         BILINEAR
     };
 
+    struct ResizeConfiguration {
+        InterpolationType type;
+        bool align_corners;
+        bool half_pixel_centers;
+    };
+
     template <class T>
     class ResizeOp final : public CUDABackendNode {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        ResizeOp(csl::Stream stream_, InterpolationType type_, float scaleHeight_, float scaleWidth_)
-            : stream(std::move(stream_)), type{ type_ }, scaleHeight{ scaleHeight_ }, scaleWidth{ scaleWidth_ }
+        ResizeOp(csl::Stream stream_, const ResizeConfiguration& config)
+            : stream(std::move(stream_))
         {
+            type = config.type;
+            align_corners = config.align_corners;
+            half_pixel_centers = config.half_pixel_centers;
         }
 
         void forward(
@@ -35,7 +44,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert(inputs.size() == 1 && outputs.size() == 1);
+            // sometimes the target shape is taken from the second input; we don't use it however
+            CV_Assert((inputs.size() == 1 || inputs.size() == 2) && outputs.size() == 1);
 
             auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
             auto input = input_wrapper->getView();
@@ -43,16 +53,27 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
+            const auto compute_scale = [this](std::size_t input_size, std::size_t output_size) {
+                return (align_corners && output_size > 1) ?
+                            static_cast<float>(input_size - 1) / (output_size - 1) :
+                            static_cast<float>(input_size) / output_size;
+            };
+
+            auto out_height = output.get_axis_size(-2), out_width = output.get_axis_size(-1);
+            auto in_height = input.get_axis_size(-2), in_width = input.get_axis_size(-1);
+            float scale_height = compute_scale(in_height, out_height),
+                  scale_width = compute_scale(in_width, out_width);
+
             if (type == InterpolationType::NEAREST_NEIGHBOUR)
-                kernels::resize_nn<T>(stream, output, input);
+                kernels::resize_nn<T>(stream, output, input, scale_height, scale_width, align_corners, half_pixel_centers);
             else if (type == InterpolationType::BILINEAR)
-                kernels::resize_bilinear<T>(stream, output, input, scaleHeight, scaleWidth);
+                kernels::resize_bilinear<T>(stream, output, input, scale_height, scale_width, half_pixel_centers);
         }
 
     private:
         csl::Stream stream;
         InterpolationType type;
-        float scaleHeight, scaleWidth; /* for bilinear interpolation */
+        bool align_corners, half_pixel_centers;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */

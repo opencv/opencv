@@ -27,6 +27,22 @@ TEST(Point, CreateWithParams)
     EXPECT_EQ(2, p.y);
 }
 
+TEST(Point2f, CreateEmpty)
+{
+    cv::gapi::own::Point2f p;
+
+    EXPECT_EQ(0.f, p.x);
+    EXPECT_EQ(0.f, p.y);
+}
+
+TEST(Point2f, CreateWithParams)
+{
+    cv::gapi::own::Point2f p = {3.14f, 2.71f};
+
+    EXPECT_EQ(3.14f, p.x);
+    EXPECT_EQ(2.71f, p.y);
+}
+
 TEST(Rect, CreateEmpty)
 {
     cv::gapi::own::Rect r;

@@ -48,19 +48,19 @@ namespace cv { namespace dnn { namespace cuda4dnn {
          *
          * actual class probability = conditional_class_prob * object_prob
          */
+        std::size_t classes, boxes_per_cell;
+        std::size_t width_norm, height_norm;
+        T scale_x_y;
 
         /* method for reducing class scores to probabilities */
         SquashMethod squash_method;
-
-        std::size_t classes, boxes_per_cell;
-
-        std::size_t width_norm, height_norm;
 
         /* prob cutoffs below which the prediction is nulled */
         T object_prob_cutoff;
         T class_prob_cutoff;
 
         T nms_iou_threshold;
+        bool new_coords;
     };
 
     template <class T>
@@ -81,12 +81,14 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             width_norm = config.width_norm;
             height_norm = config.height_norm;
 
-            squash_type = config.squash_method;
+            scale_x_y = config.scale_x_y;
 
+            squash_type = config.squash_method;
             object_prob_cutoff = config.object_prob_cutoff;
             class_prob_cutoff = config.class_prob_cutoff;
 
             nms_iou_threshold = config.nms_iou_threshold;
+            new_coords = config.new_coords;
         }
 
         void forward(
@@ -113,9 +115,10 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             kernels::region<T>(stream, output, input, biasTensor,
                 object_prob_cutoff, class_prob_cutoff,
                 boxes_per_cell, cell_box_size,
-                rows, cols,
+                rows, cols, scale_x_y,
                 height_norm, width_norm,
-                if_true_sigmoid_else_softmax
+                if_true_sigmoid_else_softmax,
+                new_coords
             );
 
             if (nms_iou_threshold > 0) {
@@ -170,10 +173,13 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         csl::Tensor<T> biasTensor;
         std::size_t classes, boxes_per_cell;
         std::size_t width_norm, height_norm;
-        SquashMethod squash_type;
+        T scale_x_y;
 
+        SquashMethod squash_type;
         T object_prob_cutoff, class_prob_cutoff;
+
         T nms_iou_threshold;
+        bool new_coords;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */

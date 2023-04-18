@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -35,11 +35,14 @@
 #include "executor/gexecutor.hpp"
 #include "executor/gstreamingexecutor.hpp"
 #include "backends/common/gbackend.hpp"
+#include "backends/common/gmetabackend.hpp"
+#include "backends/streaming/gstreamingbackend.hpp" // cv::gimpl::streaming::kernels()
 
 // <FIXME:>
 #if !defined(GAPI_STANDALONE)
-#include <opencv2/gapi/cpu/core.hpp>    // Also directly refer to Core
-#include <opencv2/gapi/cpu/imgproc.hpp> // ...and Imgproc kernel implementations
+#include <opencv2/gapi/cpu/core.hpp>    // Also directly refer to Core,
+#include <opencv2/gapi/cpu/imgproc.hpp> // ...Imgproc
+#include <opencv2/gapi/cpu/video.hpp>   // ...and Video kernel implementations
 #include <opencv2/gapi/render/render.hpp>   // render::ocv::backend()
 #endif // !defined(GAPI_STANDALONE)
 // </FIXME:>
@@ -50,44 +53,49 @@
 
 namespace
 {
-    cv::gapi::GKernelPackage getKernelPackage(cv::GCompileArgs &args)
+    cv::GKernelPackage getKernelPackage(cv::GCompileArgs &args)
     {
-        auto withAuxKernels = [](const cv::gapi::GKernelPackage& pkg) {
-            cv::gapi::GKernelPackage aux_pkg;
+        auto withAuxKernels = [](const cv::GKernelPackage& pkg) {
+            cv::GKernelPackage aux_pkg;
             for (const auto &b : pkg.backends()) {
-                aux_pkg = combine(aux_pkg, b.priv().auxiliaryKernels());
+                aux_pkg = cv::gapi::combine(aux_pkg, b.priv().auxiliaryKernels());
             }
-            return combine(pkg, aux_pkg);
+            // Always include built-in meta<> and copy implementation
+            return cv::gapi::combine(pkg,
+                                     aux_pkg,
+                                     cv::gimpl::meta::kernels(),
+                                     cv::gimpl::streaming::kernels());
         };
 
-        auto has_use_only = cv::gimpl::getCompileArg<cv::gapi::use_only>(args);
+        auto has_use_only = cv::gapi::getCompileArg<cv::gapi::use_only>(args);
         if (has_use_only)
             return withAuxKernels(has_use_only.value().pkg);
 
         static auto ocv_pkg =
 #if !defined(GAPI_STANDALONE)
-            // FIXME add N-arg version combine
-            combine(combine(cv::gapi::core::cpu::kernels(),
-                    cv::gapi::imgproc::cpu::kernels()),
-                    cv::gapi::render::ocv::kernels());
+            cv::gapi::combine(cv::gapi::core::cpu::kernels(),
+                              cv::gapi::imgproc::cpu::kernels(),
+                              cv::gapi::video::cpu::kernels(),
+                              cv::gapi::render::ocv::kernels(),
+                              cv::gapi::streaming::kernels());
 #else
-            cv::gapi::GKernelPackage();
+            cv::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)
 
-        auto user_pkg = cv::gimpl::getCompileArg<cv::gapi::GKernelPackage>(args);
-        auto user_pkg_with_aux = withAuxKernels(user_pkg.value_or(cv::gapi::GKernelPackage{}));
-        return combine(ocv_pkg, user_pkg_with_aux);
+        auto user_pkg = cv::gapi::getCompileArg<cv::GKernelPackage>(args);
+        auto user_pkg_with_aux = withAuxKernels(user_pkg.value_or(cv::GKernelPackage{}));
+        return cv::gapi::combine(ocv_pkg, user_pkg_with_aux);
     }
 
     cv::gapi::GNetPackage getNetworkPackage(cv::GCompileArgs &args)
     {
-        return cv::gimpl::getCompileArg<cv::gapi::GNetPackage>(args)
+        return cv::gapi::getCompileArg<cv::gapi::GNetPackage>(args)
             .value_or(cv::gapi::GNetPackage{});
     }
 
     cv::util::optional<std::string> getGraphDumpDirectory(cv::GCompileArgs& args)
     {
-        auto dump_info = cv::gimpl::getCompileArg<cv::graph_dump_path>(args);
+        auto dump_info = cv::gapi::getCompileArg<cv::graph_dump_path>(args);
         if (!dump_info.has_value())
         {
             const char* path = std::getenv("GRAPH_DUMP_PATH");
@@ -102,36 +110,18 @@ namespace
     }
 
     template<typename C>
-    cv::gapi::GKernelPackage auxKernelsFrom(const C& c) {
-        cv::gapi::GKernelPackage result;
+    cv::GKernelPackage auxKernelsFrom(const C& c) {
+        cv::GKernelPackage result;
         for (const auto &b : c) {
             result = cv::gapi::combine(result, b.priv().auxiliaryKernels());
         }
         return result;
     }
 
-    // Creates ADE graph from input/output proto args
-    std::unique_ptr<ade::Graph> makeGraph(const cv::GProtoArgs &ins, const cv::GProtoArgs &outs) {
-        std::unique_ptr<ade::Graph> pG(new ade::Graph);
-        ade::Graph& g = *pG;
-
-        cv::gimpl::GModel::Graph gm(g);
-        cv::gimpl::GModel::init(gm);
-        cv::gimpl::GModelBuilder builder(g);
-        auto proto_slots = builder.put(ins, outs);
-
-        // Store Computation's protocol in metadata
-        cv::gimpl::Protocol p;
-        std::tie(p.inputs, p.outputs, p.in_nhs, p.out_nhs) = proto_slots;
-        gm.metadata().set(p);
-
-        return pG;
-    }
-
     using adeGraphs = std::vector<std::unique_ptr<ade::Graph>>;
 
     // Creates ADE graphs (patterns and substitutes) from pkg's transformations
-    void makeTransformationGraphs(const cv::gapi::GKernelPackage& pkg,
+    void makeTransformationGraphs(const cv::GKernelPackage& pkg,
                                   adeGraphs& patterns,
                                   adeGraphs& substitutes) {
         const auto& transforms = pkg.get_transformations();
@@ -145,18 +135,14 @@ namespace
                                       ade::util::toRange(patterns),
                                       ade::util::toRange(substitutes))) {
             const auto& t = std::get<0>(it);
-            auto& p = std::get<1>(it);
-            auto& s = std::get<2>(it);
-
-            auto pattern_comp = t.pattern();
-            p = makeGraph(pattern_comp.priv().m_ins, pattern_comp.priv().m_outs);
-
-            auto substitute_comp = t.substitute();
-            s = makeGraph(substitute_comp.priv().m_ins, substitute_comp.priv().m_outs);
+            auto&       p = std::get<1>(it);
+            auto&       s = std::get<2>(it);
+            p = cv::gimpl::GCompiler::makeGraph(t.pattern().priv());
+            s = cv::gimpl::GCompiler::makeGraph(t.substitute().priv());
         }
     }
 
-    void checkTransformations(const cv::gapi::GKernelPackage& pkg,
+    void checkTransformations(const cv::GKernelPackage& pkg,
                               const adeGraphs& patterns,
                               const adeGraphs& substitutes) {
         const auto& transforms = pkg.get_transformations();
@@ -259,6 +245,11 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
                                                       // (no compound backend present here)
     m_e.addPass("kernels", "check_islands_content", passes::checkIslandsContent);
 
+    // Special stage for intrinsics handling
+    m_e.addPassStage("intrin");
+    m_e.addPass("intrin", "desync",         passes::intrinDesync);
+    m_e.addPass("intrin", "finalizeIntrin", passes::intrinFinalize);
+
     //Input metas may be empty when a graph is compiled for streaming
     m_e.addPassStage("meta");
     if (!m_metas.empty())
@@ -310,11 +301,19 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
 
 void cv::gimpl::GCompiler::validateInputMeta()
 {
-    if (m_metas.size() != m_c.priv().m_ins.size())
+    // FIXME: implement testing/accessor methods at the Priv's API level?
+    if (!util::holds_alternative<GComputation::Priv::Expr>(m_c.priv().m_shape))
+    {
+        GAPI_LOG_WARNING(NULL, "Metadata validation is not implemented yet for"
+                               " deserialized graphs!");
+        return;
+    }
+    const auto &c_expr = util::get<cv::GComputation::Priv::Expr>(m_c.priv().m_shape);
+    if (m_metas.size() != c_expr.m_ins.size())
     {
         util::throw_error(std::logic_error
                     ("COMPILE: GComputation interface / metadata mismatch! "
-                     "(expected " + std::to_string(m_c.priv().m_ins.size()) + ", "
+                     "(expected " + std::to_string(c_expr.m_ins.size()) + ", "
                      "got " + std::to_string(m_metas.size()) + " meta arguments)"));
     }
 
@@ -326,38 +325,59 @@ void cv::gimpl::GCompiler::validateInputMeta()
         case GProtoArg::index_of<cv::GMatP>():
             return util::holds_alternative<cv::GMatDesc>(meta);
 
+        case GProtoArg::index_of<cv::GFrame>():
+            return util::holds_alternative<cv::GFrameDesc>(meta);
+
         case GProtoArg::index_of<cv::GScalar>():
             return util::holds_alternative<cv::GScalarDesc>(meta);
 
         case GProtoArg::index_of<cv::detail::GArrayU>():
             return util::holds_alternative<cv::GArrayDesc>(meta);
 
+        case GProtoArg::index_of<cv::detail::GOpaqueU>():
+            return util::holds_alternative<cv::GOpaqueDesc>(meta);
+
         default:
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
         }
         return false; // should never happen
     };
 
-    for (const auto &meta_arg_idx : ade::util::indexed(ade::util::zip(m_metas, m_c.priv().m_ins)))
+    GAPI_LOG_DEBUG(nullptr, "Total count: " << m_metas.size());
+    for (const auto meta_arg_idx : ade::util::indexed(ade::util::zip(m_metas, c_expr.m_ins)))
     {
         const auto &meta  = std::get<0>(ade::util::value(meta_arg_idx));
         const auto &proto = std::get<1>(ade::util::value(meta_arg_idx));
 
+        const auto index = ade::util::index(meta_arg_idx);
+        GAPI_LOG_DEBUG(nullptr, "Process index: " << index);
+
+        // check types validity
         if (!meta_matches(meta, proto))
         {
-            const auto index  = ade::util::index(meta_arg_idx);
             util::throw_error(std::logic_error
                         ("GComputation object type / metadata descriptor mismatch "
                          "(argument " + std::to_string(index) + ")"));
             // FIXME: report what we've got and what we've expected
         }
+
+        // check value consistency
+        gimpl::proto::validate_input_meta_arg(meta); //may throw
     }
     // All checks are ok
 }
 
 void cv::gimpl::GCompiler::validateOutProtoArgs()
 {
-    for (const auto &out_pos : ade::util::indexed(m_c.priv().m_outs))
+    // FIXME: implement testing/accessor methods at the Priv's API level?
+    if (!util::holds_alternative<GComputation::Priv::Expr>(m_c.priv().m_shape))
+    {
+        GAPI_LOG_WARNING(NULL, "Output parameter validation is not implemented yet for"
+                               " deserialized graphs!");
+        return;
+    }
+    const auto &c_expr = util::get<cv::GComputation::Priv::Expr>(m_c.priv().m_shape);
+    for (const auto out_pos : ade::util::indexed(c_expr.m_outs))
     {
         const auto &node = proto::origin_of(ade::util::value(out_pos)).node;
         if (node.shape() != cv::GNode::NodeShape::CALL)
@@ -378,11 +398,14 @@ cv::gimpl::GCompiler::GPtr cv::gimpl::GCompiler::generateGraph()
         validateInputMeta();
     }
     validateOutProtoArgs();
-    auto g = makeGraph(m_c.priv().m_ins, m_c.priv().m_outs);
+    auto g = makeGraph(m_c.priv());
     if (!m_metas.empty())
     {
         GModel::Graph(*g).metadata().set(OriginalInputMeta{m_metas});
     }
+    // FIXME: remove m_args, remove GCompileArgs from backends' method signatures,
+    // rework backends to access GCompileArgs from graph metadata
+    GModel::Graph(*g).metadata().set(CompileArgs{m_args});
     return g;
 }
 
@@ -424,14 +447,16 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     //     an execution plan for it (backend-specific execution)
     // ...before call to produceCompiled();
 
+    GModel::ConstGraph cgr(*pg);
     const auto &outMetas = GModel::ConstGraph(*pg).metadata()
         .get<OutputMeta>().outMeta;
-    std::unique_ptr<GExecutor> pE(new GExecutor(std::move(pg)));
     // FIXME: select which executor will be actually used,
     // make GExecutor abstract.
+    std::unique_ptr<GExecutor> pE(new GExecutor(std::move(pg)));
 
     GCompiled compiled;
     compiled.priv().setup(m_metas, outMetas, std::move(pE));
+
     return compiled;
 }
 
@@ -447,7 +472,10 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
         outMetas = GModel::ConstGraph(*pg).metadata().get<OutputMeta>().outMeta;
     }
 
-    std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg)));
+    GModel::ConstGraph cgr(*pg);
+
+    std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg),
+                                                                  m_args));
     if (!m_metas.empty() && !outMetas.empty())
     {
         compiled.priv().setup(m_metas, outMetas, std::move(pE));
@@ -457,7 +485,7 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
         // Otherwise, set it up with executor object only
         compiled.priv().setup(std::move(pE));
     }
-    else GAPI_Assert(false && "Impossible happened -- please report a bug");
+    else GAPI_Error("Impossible happened -- please report a bug");
     return compiled;
 }
 
@@ -505,4 +533,28 @@ void cv::gimpl::GCompiler::runMetaPasses(ade::Graph &g, const cv::GMetaArgs &met
         b.priv().addMetaSensitiveBackendPasses(ectx);
     }
     engine.runPasses(g);
+}
+
+// Creates ADE graph from input/output proto args OR from its
+// deserialized form
+cv::gimpl::GCompiler::GPtr cv::gimpl::GCompiler::makeGraph(const cv::GComputation::Priv &priv) {
+    std::unique_ptr<ade::Graph> pG(new ade::Graph);
+    ade::Graph& g = *pG;
+
+    if (cv::util::holds_alternative<cv::GComputation::Priv::Expr>(priv.m_shape)) {
+        auto c_expr = cv::util::get<cv::GComputation::Priv::Expr>(priv.m_shape);
+        cv::gimpl::GModel::Graph gm(g);
+        cv::gimpl::GModel::init(gm);
+        cv::gimpl::GModelBuilder builder(g);
+        auto proto_slots = builder.put(c_expr.m_ins, c_expr.m_outs);
+
+        // Store Computation's protocol in metadata
+        cv::gimpl::Protocol p;
+        std::tie(p.inputs, p.outputs, p.in_nhs, p.out_nhs) = proto_slots;
+        gm.metadata().set(p);
+    } else if (cv::util::holds_alternative<cv::GComputation::Priv::Dump>(priv.m_shape)) {
+        auto c_dump = cv::util::get<cv::GComputation::Priv::Dump>(priv.m_shape);
+        cv::gapi::s11n::reconstruct(c_dump, g);
+    }
+    return pG;
 }

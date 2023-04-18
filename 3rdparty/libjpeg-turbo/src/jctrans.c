@@ -4,8 +4,8 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1995-1998, Thomas G. Lane.
  * Modified 2000-2009 by Guido Vollbeding.
- * It was modified by The libjpeg-turbo Project to include only code relevant
- * to libjpeg-turbo.
+ * libjpeg-turbo Modifications:
+ * Copyright (C) 2020, 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -17,6 +17,7 @@
 #define JPEG_INTERNALS
 #include "jinclude.h"
 #include "jpeglib.h"
+#include "jpegcomp.h"
 
 
 /* Forward declarations */
@@ -99,8 +100,8 @@ jpeg_copy_critical_parameters(j_decompress_ptr srcinfo, j_compress_ptr dstinfo)
       qtblptr = &dstinfo->quant_tbl_ptrs[tblno];
       if (*qtblptr == NULL)
         *qtblptr = jpeg_alloc_quant_table((j_common_ptr)dstinfo);
-      MEMCOPY((*qtblptr)->quantval, srcinfo->quant_tbl_ptrs[tblno]->quantval,
-              sizeof((*qtblptr)->quantval));
+      memcpy((*qtblptr)->quantval, srcinfo->quant_tbl_ptrs[tblno]->quantval,
+             sizeof((*qtblptr)->quantval));
       (*qtblptr)->sent_table = FALSE;
     }
   }

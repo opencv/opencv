@@ -12,11 +12,6 @@ file(TO_CMAKE_PATH "${EXAMPLE_FILE}" EXAMPLE_FILE)
 message(STATUS "Project: ${EXAMPLE_NAME}")
 message(STATUS "File   : ${EXAMPLE_FILE}")
 
-# Enable C++11
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-
-
 # Define project name
 project(${EXAMPLE_NAME})
 

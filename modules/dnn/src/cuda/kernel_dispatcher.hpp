@@ -33,7 +33,7 @@
  * template <class T, std::size_t Rank>
  * void launch_some_kernel(...);
  *
- * // creates the dispatcher named "some_dispatcher" which invokves the correct instantiation of "launch_some_kernel"
+ * // creates the dispatcher named "some_dispatcher" which invokes the correct instantiation of "launch_some_kernel"
  * GENERATE_KERNEL_DISPATCHER(some_dispatcher, launch_some_kernel);
  *
  * // internal API function
@@ -71,6 +71,24 @@
             func<T, start>(std::forward<Args>(args)...);                                \
         else                                                                            \
             name<T, start + 1, end, Args...>(selector, std::forward<Args>(args)...);    \
+    }
+
+// Same as GENERATE_KERNEL_DISPATCHER but takes two class template parameters T and TP1 instead of just T
+#define GENERATE_KERNEL_DISPATCHER_2TP(name,func);                                              \
+    template <class TP1, class TP2, std::size_t start, std::size_t end, class... Args> static   \
+    typename std::enable_if<start == end, void>                                                 \
+    ::type name(int selector, Args&& ...args) {                                                 \
+        if(selector == start)                                                                   \
+            func<TP1, TP2, start>(std::forward<Args>(args)...);                                 \
+    }                                                                                           \
+                                                                                                \
+    template <class TP1, class TP2, std::size_t start, std::size_t end, class... Args> static   \
+    typename std::enable_if<start != end, void>                                                 \
+    ::type name(int selector, Args&& ...args) {                                                 \
+        if(selector == start)                                                                   \
+            func<TP1, TP2, start>(std::forward<Args>(args)...);                                 \
+        else                                                                                    \
+            name<TP1, TP2, start + 1, end, Args...>(selector, std::forward<Args>(args)...);     \
     }
 
 #endif /* OPENCV_DNN_SRC_CUDA_KERNEL_DISPATCHER_HPP */

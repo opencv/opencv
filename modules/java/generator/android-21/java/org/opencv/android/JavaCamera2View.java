@@ -43,17 +43,17 @@ public class JavaCamera2View extends CameraBridgeViewBase {
 
     private static final String LOGTAG = "JavaCamera2View";
 
-    private ImageReader mImageReader;
-    private int mPreviewFormat = ImageFormat.YUV_420_888;
+    protected ImageReader mImageReader;
+    protected int mPreviewFormat = ImageFormat.YUV_420_888;
 
-    private CameraDevice mCameraDevice;
-    private CameraCaptureSession mCaptureSession;
-    private CaptureRequest.Builder mPreviewRequestBuilder;
-    private String mCameraID;
-    private android.util.Size mPreviewSize = new android.util.Size(-1, -1);
+    protected CameraDevice mCameraDevice;
+    protected CameraCaptureSession mCaptureSession;
+    protected CaptureRequest.Builder mPreviewRequestBuilder;
+    protected String mCameraID;
+    protected android.util.Size mPreviewSize = new android.util.Size(-1, -1);
 
     private HandlerThread mBackgroundThread;
-    private Handler mBackgroundHandler;
+    protected Handler mBackgroundHandler;
 
     public JavaCamera2View(Context context, int cameraId) {
         super(context, cameraId);
@@ -230,7 +230,7 @@ public class JavaCamera2View extends CameraBridgeViewBase {
 
     @Override
     protected void disconnectCamera() {
-        Log.i(LOGTAG, "closeCamera");
+        Log.i(LOGTAG, "close camera");
         try {
             CameraDevice c = mCameraDevice;
             mCameraDevice = null;
@@ -241,13 +241,14 @@ public class JavaCamera2View extends CameraBridgeViewBase {
             if (null != c) {
                 c.close();
             }
+        } finally {
+            stopBackgroundThread();
             if (null != mImageReader) {
                 mImageReader.close();
                 mImageReader = null;
             }
-        } finally {
-            stopBackgroundThread();
         }
+        Log.i(LOGTAG, "camera closed!");
     }
 
     public static class JavaCameraSizeAccessor implements ListItemAccessor {

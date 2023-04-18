@@ -5,8 +5,6 @@
 // Copyright (C) 2019 Intel Corporation
 
 
-#ifdef HAVE_PLAIDML
-
 #include "test_precomp.hpp"
 
 #include <stdexcept>
@@ -18,6 +16,8 @@
 
 namespace opencv_test
 {
+
+#ifdef HAVE_PLAIDML
 
 inline cv::gapi::plaidml::config getConfig()
 {
@@ -173,6 +173,13 @@ TEST(GAPI_PlaidML_Pipelines, TwoOutputOperations)
     EXPECT_EQ(0, cv::norm(out_mat[1], ref_mat[1]));
 }
 
-} // namespace opencv_test
+#else // HAVE_PLAIDML
+
+TEST(GAPI_PlaidML_Pipelines, ThrowIfPlaidMLNotFound)
+{
+    ASSERT_ANY_THROW(cv::gapi::core::plaidml::kernels());
+}
 
 #endif // HAVE_PLAIDML
+
+} // namespace opencv_test

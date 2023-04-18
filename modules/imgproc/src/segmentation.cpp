@@ -155,7 +155,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
         dr = std::abs((ptr1)[2] - (ptr2)[2]);\
         diff = ws_max(db,dg);                \
         diff = ws_max(diff,dr);              \
-        assert( 0 <= diff && diff <= 255 );  \
+        CV_Assert( 0 <= diff && diff <= 255 );  \
     }
 
     CV_Assert( src.type() == CV_8UC3 && dst.type() == CV_32SC1 );
@@ -215,7 +215,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
                 }
 
                 // Add to according queue
-                assert( 0 <= idx && idx <= 255 );
+                CV_Assert( 0 <= idx && idx <= 255 );
                 ws_push( idx, i*mstep + j, i*istep + j*3 );
                 m[0] = IN_QUEUE;
             }
@@ -286,7 +286,7 @@ void cv::watershed( InputArray _src, InputOutputArray _markers )
         }
 
         // Set label to current pixel in marker image
-        assert( lab != 0 );
+        CV_Assert( lab != 0 );
         m[0] = lab;
 
         if( lab == WSHED )
@@ -394,7 +394,6 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
         dst_pyramid[level].create( src_pyramid[level].rows,
                         src_pyramid[level].cols, src_pyramid[level].type() );
         cv::pyrDown( src_pyramid[level-1], src_pyramid[level], src_pyramid[level].size() );
-        //CV_CALL( cvResize( src_pyramid[level-1], src_pyramid[level], CV_INTER_AREA ));
     }
 
     mask0.create(src0.rows, src0.cols, CV_8UC1);
@@ -419,7 +418,6 @@ void cv::pyrMeanShiftFiltering( InputArray _src, OutputArray _dst,
             m = cv::Mat(size.height, size.width, CV_8UC1, mask0.ptr());
             dstep = (int)dst_pyramid[level+1].step;
             dptr = dst_pyramid[level+1].ptr() + dstep + cn;
-            //cvResize( dst_pyramid[level+1], dst_pyramid[level], CV_INTER_CUBIC );
             cv::pyrUp( dst_pyramid[level+1], dst_pyramid[level], dst_pyramid[level].size() );
             m.setTo(cv::Scalar::all(0));
 

@@ -1,8 +1,15 @@
 Template Matching {#tutorial_template_matching}
 =================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_back_projection}
 @next_tutorial{tutorial_find_contours}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -31,7 +38,7 @@ that should be used to find the match.
 -   We need two primary components:
 
     -#  **Source image (I):** The image in which we expect to find a match to the template image
-    -#  **Template image (T):** The patch image which will be compared to the template image
+    -#  **Template image (T):** The patch image which will be compared to the source image
 
     our goal is to detect the highest matching area:
 
@@ -61,7 +68,7 @@ that should be used to find the match.
 - If masking is needed for the match, three components are required:
 
     -#  **Source image (I):** The image in which we expect to find a match to the template image
-    -#  **Template image (T):** The patch image which will be compared to the template image
+    -#  **Template image (T):** The patch image which will be compared to the source image
     -#  **Mask image (M):** The mask, a grayscale image that masks the template
 
 
@@ -130,7 +137,7 @@ Code
 @add_toggle_cpp
 
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp)
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp
 
@@ -139,7 +146,7 @@ Code
 @add_toggle_java
 
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java)
 -   **Code at glance:**
     @include samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java
 
@@ -148,7 +155,7 @@ Code
 @add_toggle_python
 
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/master/samples/python/tutorial_code/imgProc/match_template/match_template.py)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/imgProc/match_template/match_template.py)
 -   **Code at glance:**
     @include samples/python/tutorial_code/imgProc/match_template/match_template.py
 

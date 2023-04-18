@@ -243,7 +243,7 @@ Context::Context()
     queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queueCreateInfo.queueFamilyIndex = kQueueFamilyIndex;
     queueCreateInfo.queueCount = 1; // create one queue in this family. We don't need more.
-    float queuePriorities = 1.0;  // we only have one queue, so this is not that imporant.
+    float queuePriorities = 1.0;  // we only have one queue, so this is not that important.
     queueCreateInfo.pQueuePriorities = &queuePriorities;
 
     VkDeviceCreateInfo deviceCreateInfo = {};

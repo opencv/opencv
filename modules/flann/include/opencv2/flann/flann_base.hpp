@@ -34,7 +34,6 @@
 //! @cond IGNORED
 
 #include <vector>
-#include <cassert>
 #include <cstdio>
 
 #include "general.h"
@@ -83,11 +82,11 @@ NNIndex<Distance>* load_saved_index(const Matrix<typename Distance::ElementType>
     IndexHeader header = load_header(fin);
     if (header.data_type != Datatype<ElementType>::type()) {
         fclose(fin);
-        throw FLANNException("Datatype of saved index is different than of the one to be created.");
+        FLANN_THROW(cv::Error::StsError, "Datatype of saved index is different than of the one to be created.");
     }
     if ((size_t(header.rows) != dataset.rows)||(size_t(header.cols) != dataset.cols)) {
         fclose(fin);
-        throw FLANNException("The index saved belongs to a different dataset");
+        FLANN_THROW(cv::Error::StsError, "The index saved belongs to a different dataset");
     }
 
     IndexParams params;
@@ -141,7 +140,7 @@ public:
     {
         FILE* fout = fopen(filename.c_str(), "wb");
         if (fout == NULL) {
-            throw FLANNException("Cannot open file");
+            FLANN_THROW(cv::Error::StsError, "Cannot open file");
         }
         save_header(fout, *nnIndex_);
         saveIndex(fout);
@@ -283,7 +282,7 @@ private:
  * of the form (branching-1)*K+1 smaller than clusters.rows).
  */
 template <typename Distance>
-int hierarchicalClustering(const Matrix<typename Distance::ElementType>& points, Matrix<typename Distance::ResultType>& centers,
+int hierarchicalClustering(const Matrix<typename Distance::ElementType>& points, Matrix<typename Distance::CentersType>& centers,
                            const KMeansIndexParams& params, Distance d = Distance())
 {
     KMeansIndex<Distance> kmeans(points, params, d);

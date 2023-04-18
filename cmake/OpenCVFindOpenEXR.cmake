@@ -9,6 +9,22 @@
 # OPENEXR_LIBRARIES = libraries that are needed to use OpenEXR.
 #
 
+if(NOT OPENCV_SKIP_OPENEXR_FIND_PACKAGE)
+  find_package(OpenEXR 3 QUIET)
+  #ocv_cmake_dump_vars(EXR)
+  if(OpenEXR_FOUND)
+    if(TARGET OpenEXR::OpenEXR)  # OpenEXR 3+
+      set(OPENEXR_LIBRARIES OpenEXR::OpenEXR)
+      set(OPENEXR_INCLUDE_PATHS "")
+      set(OPENEXR_VERSION "${OpenEXR_VERSION}")
+      set(OPENEXR_FOUND 1)
+      return()
+    else()
+      message(STATUS "Unsupported find_package(OpenEXR) - missing OpenEXR::OpenEXR target (version ${OpenEXR_VERSION})")
+    endif()
+  endif()
+endif()
+
 SET(OPENEXR_LIBRARIES "")
 SET(OPENEXR_LIBSEARCH_SUFFIXES "")
 file(TO_CMAKE_PATH "$ENV{ProgramFiles}" ProgramFiles_ENV_PATH)
@@ -20,6 +36,8 @@ if(WIN32)
     elseif(MSVC)
         SET(OPENEXR_LIBSEARCH_SUFFIXES Win32/Release Win32 Win32/Debug)
     endif()
+elseif(UNIX)
+    SET(OPENEXR_LIBSEARCH_SUFFIXES ${CMAKE_LIBRARY_ARCHITECTURE})
 endif()
 
 SET(SEARCH_PATHS
@@ -37,6 +55,25 @@ MACRO(FIND_OPENEXR_LIBRARY LIBRARY_NAME LIBRARY_SUFFIX)
         PATH_SUFFIXES ${OPENEXR_LIBSEARCH_SUFFIXES}
         NO_DEFAULT_PATH
         PATHS "${SEARCH_PATH}/lib" "${SEARCH_PATH}/lib/static")
+ENDMACRO()
+
+MACRO(ocv_find_openexr LIBRARY_SUFFIX)
+    IF(NOT OPENEXR_FOUND)
+        FIND_OPENEXR_LIBRARY("Half" "${LIBRARY_SUFFIX}")
+        FIND_OPENEXR_LIBRARY("Iex" "${LIBRARY_SUFFIX}")
+        FIND_OPENEXR_LIBRARY("Imath" "${LIBRARY_SUFFIX}")
+        FIND_OPENEXR_LIBRARY("IlmImf" "${LIBRARY_SUFFIX}")
+        FIND_OPENEXR_LIBRARY("IlmThread" "${LIBRARY_SUFFIX}")
+        IF (OPENEXR_INCLUDE_PATH AND OPENEXR_IMATH_LIBRARY AND OPENEXR_ILMIMF_LIBRARY AND OPENEXR_IEX_LIBRARY AND OPENEXR_HALF_LIBRARY AND OPENEXR_ILMTHREAD_LIBRARY)
+            SET(OPENEXR_FOUND TRUE)
+        ELSE()
+            UNSET(OPENEXR_IMATH_LIBRARY)
+            UNSET(OPENEXR_ILMIMF_LIBRARY)
+            UNSET(OPENEXR_IEX_LIBRARY)
+            UNSET(OPENEXR_ILMTHREAD_LIBRARY)
+            UNSET(OPENEXR_HALF_LIBRARY)
+        ENDIF()
+    ENDIF()
 ENDMACRO()
 
 FOREACH(SEARCH_PATH ${SEARCH_PATHS})
@@ -64,32 +101,14 @@ FOREACH(SEARCH_PATH ${SEARCH_PATHS})
         set(OPENEXR_VERSION "${OPENEXR_VERSION_MAJOR}_${OPENEXR_VERSION_MINOR}")
     ENDIF ()
 
-    SET(LIBRARY_SUFFIXES
-        "-${OPENEXR_VERSION}"
-        "-${OPENEXR_VERSION}_s"
-        "-${OPENEXR_VERSION}_d"
-        "-${OPEXEXR_VERSION}_s_d"
-        ""
-        "_s"
-        "_d"
-        "_s_d")
-
-    FOREACH(LIBRARY_SUFFIX ${LIBRARY_SUFFIXES})
-        FIND_OPENEXR_LIBRARY("Half" ${LIBRARY_SUFFIX})
-        FIND_OPENEXR_LIBRARY("Iex" ${LIBRARY_SUFFIX})
-        FIND_OPENEXR_LIBRARY("Imath" ${LIBRARY_SUFFIX})
-        FIND_OPENEXR_LIBRARY("IlmImf" ${LIBRARY_SUFFIX})
-        FIND_OPENEXR_LIBRARY("IlmThread" ${LIBRARY_SUFFIX})
-        IF (OPENEXR_INCLUDE_PATH AND OPENEXR_IMATH_LIBRARY AND OPENEXR_ILMIMF_LIBRARY AND OPENEXR_IEX_LIBRARY AND OPENEXR_HALF_LIBRARY)
-            SET(OPENEXR_FOUND TRUE)
-            BREAK()
-        ENDIF()
-        UNSET(OPENEXR_IMATH_LIBRARY)
-        UNSET(OPENEXR_ILMIMF_LIBRARY)
-        UNSET(OPENEXR_IEX_LIBRARY)
-        UNSET(OPENEXR_ILMTHREAD_LIBRARY)
-        UNSET(OPENEXR_HALF_LIBRARY)
-    ENDFOREACH()
+    ocv_find_openexr("-${OPENEXR_VERSION}")
+    ocv_find_openexr("-${OPENEXR_VERSION}_s")
+    ocv_find_openexr("-${OPENEXR_VERSION}_d")
+    ocv_find_openexr("-${OPENEXR_VERSION}_s_d")
+    ocv_find_openexr("")
+    ocv_find_openexr("_s")
+    ocv_find_openexr("_d")
+    ocv_find_openexr("_s_d")
 
     IF (OPENEXR_FOUND)
         BREAK()

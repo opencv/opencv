@@ -618,6 +618,8 @@ public:
 
     virtual void calc(InputArray I0, InputArray I1, InputOutputArray flow) CV_OVERRIDE;
 
+    virtual String getDefaultName() const CV_OVERRIDE { return "DenseOpticalFlow.FarnebackOpticalFlow"; }
+
 private:
     int numLevels_;
     double pyrScale_;

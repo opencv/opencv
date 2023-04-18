@@ -16,6 +16,8 @@
 #include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/span.hpp"
 
+#include "../cuda4dnn/kernels/fill_copy.hpp"
+
 #include <cstddef>
 #include <vector>
 
@@ -95,6 +97,20 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         TensorSpan<T> output, std::size_t output_axis_offset,
         TensorView<T> input, std::size_t axis)
     {
+        CV_Assert(output.rank() == input.rank());
+        CV_Assert(output_axis_offset < output.get_axis_size(axis));
+
+        /* if axes preceding the concat axis are all singleton, the concat blocks are contiguous
+         * in the output and we can copy each block directly
+         */
+        if (output.size_range(0, axis) == 1)
+        {
+            auto stride = output.size_range(axis + 1, output.rank());
+            auto sliced_output = Span<T>(output.get() + output_axis_offset * stride, input.size());
+            kernels::copy<T>(stream, sliced_output, input);
+            return;
+        }
+
         /* let's call the axis of interest as the channel axis for the purpose of the following discussion
          * even though it can be any axis
          *
@@ -132,7 +148,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void concat<__half>(const Stream&, TensorSpan<__half>, std::size_t, TensorView<__half>, std::size_t);
+#endif
     template void concat<float>(const Stream&, TensorSpan<float>, std::size_t, TensorView<float>,  std::size_t);
 
     template <class T, std::size_t Rank> static

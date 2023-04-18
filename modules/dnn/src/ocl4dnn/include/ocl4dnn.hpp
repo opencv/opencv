@@ -55,17 +55,18 @@ struct OCL4DNNConvConfig
 {
     OCL4DNNConvConfig() :
         kernel(1, 1),
-        pad(0, 0),
         stride(1, 1),
         dilation(1, 1),
         group(1),
         bias_term(false),
         use_half(false)
-    {}
+    {
+        pads = {0, 0, 0, 0};
+    }
     MatShape in_shape;
     MatShape out_shape;
     Size kernel;
-    Size pad;
+    std::vector<int> pads; // [pad_top, pad_bottom, pad_left, pad_right]
     Size stride;
     Size dilation;
     int group; // = 1;
@@ -222,8 +223,6 @@ class OCL4DNNConvSpatial
         bool createDWConvKernel(int32_t blockWidth,
                                 int32_t blockHeight,
                                 int32_t blockDepth);
-        void CreateSubBuffer(const UMat& buffer, UMat& sub_buffer,
-                             int32_t offset, int32_t size, bool write_only);
         bool convolve(const UMat &bottom, UMat &top,
                       const UMat &weight, const UMat &bias,
                       int32_t numImages,
@@ -269,13 +268,11 @@ class OCL4DNNConvSpatial
         void generate_idlf_tuneritems(std::vector< cv::Ptr<tunerParam> > &tunerItems,
                                       int blockM, int blockK, int simd_size);
         void setFusionDefine(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise);
-        void setFusionArg(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise, ocl::Kernel &kernel, cl_uint &argIdx);
+        void setFusionArg(ocl4dnnFusedActiv_t fused_activ, bool fused_eltwise, int fused_eltwise_offset, ocl::Kernel &kernel, cl_uint &argIdx);
 
         int32_t group_;
         bool bias_term_;
         UMat swizzled_weights_umat;
-        UMat weights_half;
-        UMat bias_half;
         UMat bottom_data2_;
 
         int32_t bottom_index_;
@@ -433,7 +430,7 @@ class OCL4DNNInnerProduct
                      UMat& top_data);
     private:
         OCL4DNNInnerProductConfig config_;
-        int32_t axis_;
+        //int32_t axis_;
         int32_t num_output_;
         int32_t M_;
         int32_t N_;

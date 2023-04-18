@@ -68,7 +68,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                     }
                 }
             });
-            /* std::shared_ptr<T>::reset invokves the deleter if an exception occurs; hence, we don't
+            /* std::shared_ptr<T>::reset invokes the deleter if an exception occurs; hence, we don't
              * need to have a try-catch block to free the allocated device memory
              */
 
@@ -266,7 +266,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
         /** page-locks \p size_in_bytes bytes of memory starting from \p ptr_
          *
-         * Pre-conditons:
+         * Pre-conditions:
          * - host memory should be unregistered
          */
         MemoryLockGuard(void* ptr_, std::size_t size_in_bytes) {
@@ -276,14 +276,22 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
         MemoryLockGuard& operator=(const MemoryLockGuard&) = delete;
         MemoryLockGuard& operator=(MemoryLockGuard&& other) noexcept {
-            ptr = other.ptr;
-            other.ptr = nullptr;
+            if (&other != this) {
+                if(ptr != nullptr) {
+                    /* cudaHostUnregister does not throw for a valid ptr */
+                    CUDA4DNN_CHECK_CUDA(cudaHostUnregister(ptr));
+                }
+                ptr = other.ptr;
+                other.ptr = nullptr;
+            }
             return *this;
         }
 
         ~MemoryLockGuard() {
-            if(ptr != nullptr)
+            if(ptr != nullptr) {
+                /* cudaHostUnregister does not throw for a valid ptr */
                 CUDA4DNN_CHECK_CUDA(cudaHostUnregister(ptr));
+            }
         }
 
     private:

@@ -15,11 +15,14 @@
 #include "../cuda4dnn/csl/tensor.hpp"
 #include "../cuda4dnn/csl/span.hpp"
 
+#include "../cuda4dnn/kernels/fill_copy.hpp"
+
 #include <opencv2/core.hpp>
 
 #include <cstddef>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
 using namespace cv::dnn::cuda4dnn::csl;
 using namespace cv::dnn::cuda4dnn::csl::device;
@@ -79,12 +82,20 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         CV_Assert(output.rank() == input.rank());
         CV_Assert(output.rank() == offsets.size());
 
+        /* copy directly if no slicing is required */
+        if (is_shape_same(output, input))
+        {
+            CV_Assert(std::all_of(std::begin(offsets), std::end(offsets), [] (std::size_t x) { return x == 0; }));
+            kernels::copy<T>(stream, output, input);
+            return;
+        }
+
         /* squeezable axes at the beginning of both tensors can be eliminated
          *
          * Reasoning:
          * ----------
          * Suppose an item's indices in the output tensor is [o1, o2, ...]. The indices in the input
-         * tensor will be [o1 + off1, o2 + off2, ...]. The rest of the elements in the input are igored.
+         * tensor will be [o1 + off1, o2 + off2, ...]. The rest of the elements in the input are ignored.
          *
          * If the size of the first axis of the input and output tensor is unity, the input and output indices
          * for all the elements will be of the form be [0, o2 + off2, ...] and [0, o2, ...] respectively. Note that
@@ -146,6 +157,27 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
         auto rank = inShape.size();
 
+        /* We can do a copy if the reduced rank is two and only the first axis is sliced.
+         * The general requirement is that only one axis is sliced and all the axes that
+         * precede the sliced axis are singleton. However, the reductions above will remove
+         * all the leading singleton axes and merge the trailing unsliced axes into one, or
+         * zero if there are no trailing unsliced axes. The latter is handled separately.
+         */
+        if (rank == 2 && offsets[0] != 0 && offsets[1] == 0)
+        {
+            auto stride = inShape[1];
+            auto sliced_input = View<T>(input.get() + offsets[0] * stride, output.size());
+            kernels::copy<T>(stream, output, sliced_input);
+            return;
+        }
+
+        if (rank == 1)
+        {
+            auto sliced_input = View<T>(input.get() + offsets[0], output.size());
+            kernels::copy<T>(stream, output, sliced_input);
+            return;
+        }
+
         std::vector<std::size_t> inStride(rank), outStride(rank);
         inStride.back() = 1;
         outStride.back() = 1;
@@ -163,7 +195,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         slice_dispatcher<T, 1, CSL_MAX_TENSOR_RANK>(rank, stream, output, outStride, input, inStride, offsets);
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void slice(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
+#endif
     template void slice(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

@@ -103,7 +103,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 CV_Assert(pooling_order == pads_end.size());
 
                 /* cuDNN rounds down by default; hence, if ceilMode is false, we do nothing
-                 * otherwise, we add extra padding towards the end so that the convolution arithmetic yeilds
+                 * otherwise, we add extra padding towards the end so that the convolution arithmetic yields
                  * the correct output size without having to deal with fancy fractional sizes
                  */
                 auto pads_end_modified = pads_end;

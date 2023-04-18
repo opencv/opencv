@@ -17,7 +17,6 @@
    OPENCV WEBSITES:
      Homepage:      http://opencv.org
      Online docs:   http://docs.opencv.org
-     Q&A forum:     http://answers.opencv.org
      GitHub:        https://github.com/opencv/opencv/
    ************************************************** */
 
@@ -38,7 +37,7 @@
 using namespace cv;
 using namespace std;
 
-static int print_help()
+static int print_help(char** argv)
 {
     cout <<
             " Given a list of chessboard images, the number of corners (nx, ny)\n"
@@ -49,7 +48,7 @@ static int print_help()
             "         matrix separately) stereo. \n"
             " Calibrate the cameras and display the\n"
             " rectified results along with the computed disparity images.   \n" << endl;
-    cout << "Usage:\n ./stereo_calib -w=<board_width default=9> -h=<board_height default=6> -s=<square_size default=1.0> <image list XML/YML file default=stereo_calib.xml>\n" << endl;
+    cout << "Usage:\n " << argv[0] << " -w=<board_width default=9> -h=<board_height default=6> -s=<square_size default=1.0> <image list XML/YML file default=stereo_calib.xml>\n" << endl;
     return 0;
 }
 
@@ -81,7 +80,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
         for( k = 0; k < 2; k++ )
         {
             const string& filename = imagelist[i*2+k];
-            Mat img = imread(filename, 0);
+            Mat img = imread(filename, IMREAD_GRAYSCALE);
             if(img.empty())
                 break;
             if( imageSize == Size() )
@@ -299,7 +298,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
     {
         for( k = 0; k < 2; k++ )
         {
-            Mat img = imread(goodImageList[i*2+k], 0), rimg, cimg;
+            Mat img = imread(goodImageList[i*2+k], IMREAD_GRAYSCALE), rimg, cimg;
             remap(img, rimg, rmap[k][0], rmap[k][1], INTER_LINEAR);
             cvtColor(rimg, cimg, COLOR_GRAY2BGR);
             Mat canvasPart = !isVerticalStereo ? canvas(Rect(w*k, 0, w, h)) : canvas(Rect(0, h*k, w, h));
@@ -348,7 +347,7 @@ int main(int argc, char** argv)
     bool showRectified;
     cv::CommandLineParser parser(argc, argv, "{w|9|}{h|6|}{s|1.0|}{nr||}{help||}{@input|stereo_calib.xml|}");
     if (parser.has("help"))
-        return print_help();
+        return print_help(argv);
     showRectified = !parser.has("nr");
     imagelistfn = samples::findFile(parser.get<string>("@input"));
     boardSize.width = parser.get<int>("w");
@@ -364,7 +363,7 @@ int main(int argc, char** argv)
     if(!ok || imagelist.empty())
     {
         cout << "can not open " << imagelistfn << " or the string list is empty" << endl;
-        return print_help();
+        return print_help(argv);
     }
 
     StereoCalib(imagelist, boardSize, squareSize, false, true, showRectified);

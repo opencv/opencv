@@ -44,12 +44,18 @@
 #include "layers_common.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_cuda.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
 #include "../ocl4dnn/include/math_functions.hpp"
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/mvn.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -119,11 +125,12 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
 #ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-            return !zeroDev && (preferableTarget != DNN_TARGET_MYRIAD || eps <= 1e-7f);
-        else
-#endif  // HAVE_INF_ENGINE
-            return backendId == DNN_BACKEND_OPENCV;
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return true;
+#endif
+        {
+            return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        }
     }
 
 #ifdef HAVE_OPENCL
@@ -186,7 +193,7 @@ public:
             k1.set(argId++, ocl::KernelArg::PtrReadOnly(bnorm_weight));
             k1.set(argId++, ocl::KernelArg::PtrReadOnly(bnorm_bias));
             k1.set(argId++, ocl::KernelArg::PtrWriteOnly(outMat));
-            ret = k1.run(1, globalsize, localsize, false);
+            ret = k1.run_(1, globalsize, localsize, false);
             if (!ret)
                 return false;
         }
@@ -373,26 +380,49 @@ public:
         }
     }
 
-#ifdef HAVE_INF_ENGINE
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::MVNLayer ieLayer(name);
-        ieLayer.setAcrossChannels(acrossChannels);
-        ieLayer.setNormalize(normVariance);
-        ieLayer.setEpsilon(eps);
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_INF_ENGINE
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2021_2)
         auto mvn = std::make_shared<ngraph::op::MVN>(ieInpNode, acrossChannels, normVariance, eps);
+#else
+        int64_t start_axis = acrossChannels ? 1 : 2;
+        std::vector<int64_t> axes_v(ieInpNode->get_shape().size() - start_axis);
+        std::iota(axes_v.begin(), axes_v.end(), start_axis);
+        auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_v.size()}, axes_v.data());
+        auto mvn = std::make_shared<ngraph::op::v6::MVN>(ieInpNode, axes, normVariance, eps, ngraph::op::MVNEpsMode::INSIDE_SQRT);
+#endif
         return Ptr<BackendNode>(new InfEngineNgraphNode(mvn));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        cuda4dnn::MVNConfiguration config;
+        config.split_axis = acrossChannels ? 1 : 2;
+        config.normalize_variance = normVariance;
+        config.epsilon = eps;
+        config.input_shapes.resize(inputs.size());
+        for (int i = 0; i < inputs.size(); i++)
+        {
+            auto wrapper = inputs[i].dynamicCast<CUDABackendWrapper>();
+            auto shape = wrapper->getShape();
+            config.input_shapes[i].assign(std::begin(shape), std::end(shape));
+        }
+
+        return make_cuda_node<cuda4dnn::MVNOp>(preferableTarget, std::move(context->stream), config);
+    }
+#endif
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

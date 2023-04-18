@@ -1294,6 +1294,15 @@ public:
     */
     CV_WRAP virtual void getVotes(InputArray samples, OutputArray results, int flags) const = 0;
 
+    /** Returns the OOB error value, computed at the training stage when calcOOBError is set to true.
+     * If this flag was set to false, 0 is returned. The OOB error is also scaled by sample weighting.
+     */
+#if CV_VERSION_MAJOR == 4
+    CV_WRAP virtual double getOOBError() const { return 0; }
+#else
+    /*CV_WRAP*/ virtual double getOOBError() const = 0;
+#endif
+
     /** Creates the empty model.
     Use StatModel::train to train the model, StatModel::train to create and train the model,
     Algorithm::load to load the pre-trained model.
@@ -1683,7 +1692,7 @@ public:
 
     /** @brief This function returns the trained parameters arranged across rows.
 
-    For a two class classifcation problem, it returns a row matrix. It returns learnt parameters of
+    For a two class classification problem, it returns a row matrix. It returns learnt parameters of
     the Logistic Regression as a matrix of type CV_32F.
      */
     CV_WRAP virtual Mat get_learnt_thetas() const = 0;

@@ -62,6 +62,8 @@ static std::vector<std::string>& getTestTagsSkipList()
 
 void registerGlobalSkipTag(const std::string& skipTag)
 {
+    if (skipTag.empty())
+        return;  // do nothing
     std::vector<std::string>& skipTags = getTestTagsSkipList();
     for (size_t i = 0; i < skipTags.size(); ++i)
     {

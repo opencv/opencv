@@ -17,8 +17,8 @@ In short, we found locations of some parts of an object in another cluttered ima
 is sufficient to find the object exactly on the trainImage.
 
 For that, we can use a function from calib3d module, ie **cv.findHomography()**. If we pass the set
-of points from both the images, it will find the perpective transformation of that object. Then we
-can use **cv.perspectiveTransform()** to find the object. It needs atleast four correct points to
+of points from both the images, it will find the perspective transformation of that object. Then we
+can use **cv.perspectiveTransform()** to find the object. It needs at least four correct points to
 find the transformation.
 
 We have seen that there can be some possible errors while matching which may affect the result. To
@@ -40,11 +40,11 @@ from matplotlib import pyplot as plt
 
 MIN_MATCH_COUNT = 10
 
-img1 = cv.imread('box.png',0)          # queryImage
-img2 = cv.imread('box_in_scene.png',0) # trainImage
+img1 = cv.imread('box.png', cv.IMREAD_GRAYSCALE)          # queryImage
+img2 = cv.imread('box_in_scene.png', cv.IMREAD_GRAYSCALE) # trainImage
 
 # Initiate SIFT detector
-sift = cv.xfeatures2d.SIFT_create()
+sift = cv.SIFT_create()
 
 # find the keypoints and descriptors with SIFT
 kp1, des1 = sift.detectAndCompute(img1,None)
@@ -64,11 +64,11 @@ for m,n in matches:
     if m.distance < 0.7*n.distance:
         good.append(m)
 @endcode
-Now we set a condition that atleast 10 matches (defined by MIN_MATCH_COUNT) are to be there to
+Now we set a condition that at least 10 matches (defined by MIN_MATCH_COUNT) are to be there to
 find the object. Otherwise simply show a message saying not enough matches are present.
 
 If enough matches are found, we extract the locations of matched keypoints in both the images. They
-are passed to find the perpective transformation. Once we get this 3x3 transformation matrix, we use
+are passed to find the perspective transformation. Once we get this 3x3 transformation matrix, we use
 it to transform the corners of queryImage to corresponding points in trainImage. Then we draw it.
 @code{.py}
 if len(good)>MIN_MATCH_COUNT:
@@ -78,7 +78,7 @@ if len(good)>MIN_MATCH_COUNT:
     M, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC,5.0)
     matchesMask = mask.ravel().tolist()
 
-    h,w,d = img1.shape
+    h,w = img1.shape
     pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
     dst = cv.perspectiveTransform(pts,M)
 

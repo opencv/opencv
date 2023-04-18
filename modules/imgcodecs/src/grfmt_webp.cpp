@@ -126,6 +126,8 @@ bool WebPDecoder::readHeader()
     WebPBitstreamFeatures features;
     if (VP8_STATUS_OK == WebPGetFeatures(header, sizeof(header), &features))
     {
+        CV_CheckEQ(features.has_animation, 0, "WebP backend does not support animated webp images");
+
         m_width  = features.width;
         m_height = features.height;
 
@@ -243,7 +245,7 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
 
     if (params.size() > 1)
     {
-        if (params[0] == CV_IMWRITE_WEBP_QUALITY)
+        if (params[0] == IMWRITE_WEBP_QUALITY)
         {
             comp_lossless = false;
             quality = static_cast<float>(params[1]);

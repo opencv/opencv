@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2020 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -14,11 +14,12 @@
 
 #include "compiler/gcompiled_priv.hpp"
 #include "backends/common/gbackend.hpp"
+#include "executor/gexecutor.hpp"
 
 // GCompiled private implementation ////////////////////////////////////////////
 void cv::GCompiled::Priv::setup(const GMetaArgs &_metaArgs,
                                 const GMetaArgs &_outMetas,
-                                std::unique_ptr<cv::gimpl::GExecutor> &&_pE)
+                                std::unique_ptr<cv::gimpl::GAbstractExecutor> &&_pE)
 {
     m_metas    = _metaArgs;
     m_outMetas = _outMetas;
@@ -56,6 +57,12 @@ void cv::GCompiled::Priv::checkArgs(const cv::gimpl::GRuntimeArgs &args) const
                                            "for different metadata!"));
         // FIXME: Add details on what is actually wrong
     }
+    validate_input_args(args.inObjs);
+    // FIXME: Actually, the passed parameter vector is never checked
+    // against its shapes - so if you compile with GScalarDesc passed
+    // for GMat argument, you will get your compilation right (!!)
+    // Probably it was there but somehow that olds checks (if they
+    // exist) are bypassed now.
 }
 
 bool cv::GCompiled::Priv::canReshape() const
@@ -69,6 +76,12 @@ void cv::GCompiled::Priv::reshape(const GMetaArgs& inMetas, const GCompileArgs& 
     GAPI_Assert(m_exec);
     m_exec->reshape(inMetas, args);
     m_metas = inMetas;
+}
+
+void cv::GCompiled::Priv::prepareForNewStream()
+{
+    GAPI_Assert(m_exec);
+    m_exec->prepareForNewStream();
 }
 
 const cv::gimpl::GModel::Graph& cv::GCompiled::Priv::model() const
@@ -90,6 +103,7 @@ cv::GCompiled::operator bool() const
 
 void cv::GCompiled::operator() (GRunArgs &&ins, GRunArgsP &&outs)
 {
+    // FIXME: Check that <ins> matches the protocol!!!
     // FIXME: Check that <outs> matches the protocol
     m_priv->run(cv::gimpl::GRuntimeArgs{std::move(ins),std::move(outs)});
 }
@@ -153,4 +167,9 @@ bool cv::GCompiled::canReshape() const
 void cv::GCompiled::reshape(const GMetaArgs& inMetas, const GCompileArgs& args)
 {
     m_priv->reshape(inMetas, args);
+}
+
+void cv::GCompiled::prepareForNewStream()
+{
+    m_priv->prepareForNewStream();
 }

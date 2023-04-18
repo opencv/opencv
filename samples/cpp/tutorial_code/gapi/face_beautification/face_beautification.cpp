@@ -438,21 +438,21 @@ GAPI_OCV_KERNEL(GCPUGetContours, GGetContours)
             // Approximating the lower eye contour by half-ellipse (using eye points) and storing in cntLeftEye:
             cntLeftEye = getEyeEllipse(vctPtsFaceElems[i][1], vctPtsFaceElems[i][0]);
             // Pushing the left eyebrow clock-wise:
-            cntLeftEye.insert(cntLeftEye.cend(), {vctPtsFaceElems[i][12], vctPtsFaceElems[i][13],
-                                                  vctPtsFaceElems[i][14]});
+            cntLeftEye.insert(cntLeftEye.end(), {vctPtsFaceElems[i][12], vctPtsFaceElems[i][13],
+                                                 vctPtsFaceElems[i][14]});
 
             // A right eye:
             // Approximating the lower eye contour by half-ellipse (using eye points) and storing in vctRightEye:
             cntRightEye = getEyeEllipse(vctPtsFaceElems[i][2], vctPtsFaceElems[i][3]);
             // Pushing the right eyebrow clock-wise:
-            cntRightEye.insert(cntRightEye.cend(), {vctPtsFaceElems[i][15], vctPtsFaceElems[i][16],
-                                                    vctPtsFaceElems[i][17]});
+            cntRightEye.insert(cntRightEye.end(), {vctPtsFaceElems[i][15], vctPtsFaceElems[i][16],
+                                                   vctPtsFaceElems[i][17]});
 
             // A nose:
             // Storing the nose points clock-wise
             cntNose.clear();
-            cntNose.insert(cntNose.cend(), {vctPtsFaceElems[i][4], vctPtsFaceElems[i][7],
-                                            vctPtsFaceElems[i][5], vctPtsFaceElems[i][6]});
+            cntNose.insert(cntNose.end(), {vctPtsFaceElems[i][4], vctPtsFaceElems[i][7],
+                                           vctPtsFaceElems[i][5], vctPtsFaceElems[i][6]});
 
             // A mouth:
             // Approximating the mouth contour by two half-ellipses (using mouth points) and storing in vctMouth:
@@ -460,7 +460,7 @@ GAPI_OCV_KERNEL(GCPUGetContours, GGetContours)
                                          vctPtsFaceElems[i][10], vctPtsFaceElems[i][11]);
 
             // Storing all the elements in a vector:
-            vctElemsContours.insert(vctElemsContours.cend(), {cntLeftEye, cntRightEye, cntNose, cntMouth});
+            vctElemsContours.insert(vctElemsContours.end(), {cntLeftEye, cntRightEye, cntNose, cntMouth});
 
             // The face contour:
             // Approximating the forehead contour by half-ellipse (using jaw points) and storing in vctFace:

@@ -446,7 +446,7 @@ struct RemapVec_8u
     {
         int cn = _src.channels(), x = 0, sstep = (int)_src.step;
 
-        if( (cn != 1 && cn != 3 && cn != 4) || sstep > 0x8000 )
+        if( (cn != 1 && cn != 3 && cn != 4) || sstep >= 0x8000 )
             return 0;
 
         const uchar *S0 = _src.ptr(), *S1 = _src.ptr(1);
@@ -1340,7 +1340,7 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
 
     if (interpolation != INTER_NEAREST)
     {
-        char cvt[3][40];
+        char cvt[3][50];
         int wdepth = std::max(CV_32F, depth);
         buildOptions = buildOptions
                       + format(" -D WT=%s -D convertToT=%s -D convertToWT=%s"
@@ -2167,7 +2167,8 @@ public:
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         const int BLOCK_SZ = 64;
-        short XY[BLOCK_SZ*BLOCK_SZ*2], A[BLOCK_SZ*BLOCK_SZ];
+        AutoBuffer<short, 0> __XY(BLOCK_SZ * BLOCK_SZ * 2), __A(BLOCK_SZ * BLOCK_SZ);
+        short *XY = __XY.data(), *A = __A.data();
         const int AB_BITS = MAX(10, (int)INTER_BITS);
         const int AB_SCALE = 1 << AB_BITS;
         int round_delta = interpolation == INTER_NEAREST ? AB_SCALE/2 : AB_SCALE/INTER_TAB_SIZE/2, x, y, x1, y1;
@@ -2176,6 +2177,9 @@ public:
     #endif
     #if CV_TRY_SSE4_1
         bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
+    #endif
+    #if CV_TRY_LASX
+        bool useLASX = CV_CPU_HAS_SUPPORT_LASX;
     #endif
 
         int bh0 = std::min(BLOCK_SZ/2, dst.rows);
@@ -2189,7 +2193,7 @@ public:
                 int bw = std::min( bw0, dst.cols - x);
                 int bh = std::min( bh0, range.end - y);
 
-                Mat _XY(bh, bw, CV_16SC2, XY), matA;
+                Mat _XY(bh, bw, CV_16SC2, XY);
                 Mat dpart(dst, Rect(x, y, bw, bh));
 
                 for( y1 = 0; y1 < bh; y1++ )
@@ -2239,6 +2243,10 @@ public:
                         #if CV_TRY_AVX2
                         if ( useAVX2 )
                             x1 = opt_AVX2::warpAffineBlockline(adelta + x, bdelta + x, xy, alpha, X0, Y0, bw);
+                        #endif
+                        #if CV_TRY_LASX
+                        if ( useLASX )
+                            x1 = opt_LASX::warpAffineBlockline(adelta + x, bdelta + x, xy, alpha, X0, Y0, bw);
                         #endif
                         #if CV_SIMD128
                         {
@@ -2534,6 +2542,127 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
 
 #endif
 
+#ifdef HAVE_IPP
+#define IPP_WARPAFFINE_PARALLEL 1
+
+#ifdef HAVE_IPP_IW
+
+class ipp_warpAffineParallel: public ParallelLoopBody
+{
+public:
+    ipp_warpAffineParallel(::ipp::IwiImage &src, ::ipp::IwiImage &dst, IppiInterpolationType _inter, double (&_coeffs)[2][3], ::ipp::IwiBorderType _borderType, IwTransDirection _iwTransDirection, bool *_ok):m_src(src), m_dst(dst)
+    {
+        pOk = _ok;
+
+        inter          = _inter;
+        borderType     = _borderType;
+        iwTransDirection = _iwTransDirection;
+
+        for( int i = 0; i < 2; i++ )
+            for( int j = 0; j < 3; j++ )
+                coeffs[i][j] = _coeffs[i][j];
+
+        *pOk = true;
+    }
+    ~ipp_warpAffineParallel() {}
+
+    virtual void operator() (const Range& range) const CV_OVERRIDE
+    {
+        CV_INSTRUMENT_REGION_IPP();
+
+        if(*pOk == false)
+            return;
+
+        try
+        {
+            ::ipp::IwiTile tile = ::ipp::IwiRoi(0, range.start, m_dst.m_size.width, range.end - range.start);
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiWarpAffine, m_src, m_dst, coeffs, iwTransDirection, inter, ::ipp::IwiWarpAffineParams(), borderType, tile);
+        }
+        catch(const ::ipp::IwException &)
+        {
+            *pOk = false;
+            return;
+        }
+    }
+private:
+    ::ipp::IwiImage &m_src;
+    ::ipp::IwiImage &m_dst;
+
+    IppiInterpolationType inter;
+    double coeffs[2][3];
+    ::ipp::IwiBorderType borderType;
+    IwTransDirection iwTransDirection;
+
+    bool  *pOk;
+    const ipp_warpAffineParallel& operator= (const ipp_warpAffineParallel&);
+};
+
+#endif
+
+static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation, int borderType, InputArray _M, int flags )
+{
+#ifdef HAVE_IPP_IW
+    CV_INSTRUMENT_REGION_IPP();
+
+    if (!cv::ipp::useIPP_NotExact())
+        return false;
+
+    IppiInterpolationType ippInter    = ippiGetInterpolation(interpolation);
+    if((int)ippInter < 0)
+        return false;
+
+    // Acquire data and begin processing
+    try
+    {
+        Mat src = _src.getMat();
+        Mat dst = _dst.getMat();
+        ::ipp::IwiImage        iwSrc = ippiGetImage(src);
+        ::ipp::IwiImage        iwDst = ippiGetImage(dst);
+        ::ipp::IwiBorderType   ippBorder(ippiGetBorderType(borderType));
+        IwTransDirection       iwTransDirection;
+        if(!ippBorder)
+            return false;
+
+        if( !(flags & WARP_INVERSE_MAP) )
+            iwTransDirection = iwTransForward;
+        else
+            iwTransDirection = iwTransInverse;
+
+        Mat M = _M.getMat();
+        double coeffs[2][3];
+        for( int i = 0; i < 2; i++ )
+            for( int j = 0; j < 3; j++ )
+                coeffs[i][j] = M.at<double>(i, j);
+
+        const int threads = ippiSuggestThreadsNum(iwDst, 2);
+
+        if(IPP_WARPAFFINE_PARALLEL && threads > 1)
+        {
+            bool  ok      = true;
+            Range range(0, (int)iwDst.m_size.height);
+            ipp_warpAffineParallel invoker(iwSrc, iwDst, ippInter, coeffs, ippBorder, iwTransDirection, &ok);
+            if(!ok)
+                return false;
+
+            parallel_for_(range, invoker, threads*4);
+
+            if(!ok)
+                return false;
+        } else {
+            CV_INSTRUMENT_FUN_IPP(::ipp::iwiWarpAffine, iwSrc, iwDst, coeffs, iwTransDirection, ippInter, ::ipp::IwiWarpAffineParams(), ippBorder);
+        }
+
+    }
+    catch (const ::ipp::IwException &)
+    {
+        return false;
+    }
+
+    return true;
+#endif
+}
+#endif
+
 namespace hal {
 
 void warpAffine(int src_type,
@@ -2602,6 +2731,8 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
 
     CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 2 && M0.cols == 3 );
     M0.convertTo(matM, matM.type());
+
+    CV_IPP_RUN_FAST(ipp_warpAffine(src, dst, interpolation, borderType, matM, flags));
 
     if( !(flags & WARP_INVERSE_MAP) )
     {
@@ -2978,7 +3109,7 @@ public:
                 int bw = std::min( bw0, width - x);
                 int bh = std::min( bh0, range.end - y); // height
 
-                Mat _XY(bh, bw, CV_16SC2, XY), matA;
+                Mat _XY(bh, bw, CV_16SC2, XY);
                 Mat dpart(dst, Rect(x, y, bw, bh));
 
                 for( y1 = 0; y1 < bh; y1++ )

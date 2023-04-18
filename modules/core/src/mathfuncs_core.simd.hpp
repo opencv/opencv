@@ -725,7 +725,7 @@ void log32f( const float *_x, float *y, int n )
 
         yf0 = v_fma(v_cvt_f32(yi0), vln2, yf0);
 
-        v_float32 delta = v_reinterpret_as_f32(h0 == vx_setall_s32(510)) & vshift;
+        v_float32 delta = v_select(v_reinterpret_as_f32(h0 == vx_setall_s32(510)), vshift, vx_setall<float>(0));
         xf0 = v_fma((v_reinterpret_as_f32(xi0) - v1), xf0, delta);
 
         v_float32 zf0 = v_fma(xf0, vA0, vA1);

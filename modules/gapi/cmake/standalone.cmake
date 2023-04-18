@@ -6,6 +6,13 @@ if (NOT TARGET ade )
   find_package(ade 0.1.0 REQUIRED)
 endif()
 
+if (WITH_GAPI_ONEVPL)
+    find_package(VPL)
+    if(VPL_FOUND)
+        set(HAVE_GAPI_ONEVPL TRUE)
+    endif()
+endif()
+
 set(FLUID_TARGET fluid)
 set(FLUID_ROOT "${CMAKE_CURRENT_LIST_DIR}/../")
 
@@ -15,10 +22,13 @@ file(GLOB FLUID_includes "${FLUID_ROOT}/include/opencv2/*.hpp"
                          "${FLUID_ROOT}/include/opencv2/gapi/own/*.hpp"
                          "${FLUID_ROOT}/include/opencv2/gapi/fluid/*.hpp")
 file(GLOB FLUID_sources  "${FLUID_ROOT}/src/api/g*.cpp"
+                         "${FLUID_ROOT}/src/api/rmat.cpp"
+                         "${FLUID_ROOT}/src/api/media.cpp"
                          "${FLUID_ROOT}/src/compiler/*.cpp"
                          "${FLUID_ROOT}/src/compiler/passes/*.cpp"
                          "${FLUID_ROOT}/src/executor/*.cpp"
                          "${FLUID_ROOT}/src/backends/fluid/*.cpp"
+                         "${FLUID_ROOT}/src/backends/streaming/*.cpp"
                          "${FLUID_ROOT}/src/backends/common/*.cpp")
 
 add_library(${FLUID_TARGET} STATIC ${FLUID_includes} ${FLUID_sources})
@@ -45,3 +55,8 @@ if(MSVC)
 endif()
 
 target_link_libraries(${FLUID_TARGET} PRIVATE ade)
+
+if(WIN32)
+  # Required for htonl/ntohl on Windows
+  target_link_libraries(${FLUID_TARGET} PRIVATE wsock32 ws2_32)
+endif()

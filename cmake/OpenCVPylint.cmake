@@ -122,7 +122,6 @@ function(ocv_pylint_finalize)
 
   list(LENGTH PYLINT_TARGET_ID __total)
   set(PYLINT_TOTAL_TARGETS "${__total}" CACHE INTERNAL "")
-  message(STATUS "Pylint: registered ${__total} targets. Build 'check_pylint' target to run checks (\"cmake --build . --target check_pylint\" or \"make check_pylint\")")
   configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/pylint.cmake.in" "${CMAKE_BINARY_DIR}/pylint.cmake" @ONLY)
 
   add_custom_target(check_pylint

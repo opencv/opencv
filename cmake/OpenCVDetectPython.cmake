@@ -78,10 +78,10 @@ if(NOT ${found})
         AND NOT DEFINED ${executable}
     )
       if(NOT OPENCV_SKIP_PYTHON_WARNING)
-        message(WARNING "CMake's 'find_host_package(PythonInterp ${__python_package_version})' founds wrong Python version:\n"
+        message(WARNING "CMake's 'find_host_package(PythonInterp ${__python_package_version})' found wrong Python version:\n"
                         "PYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}\n"
                         "PYTHON_VERSION_STRING=${PYTHON_VERSION_STRING}\n"
-                        "Consider specify '${executable}' variable via CMake command line or environment variables\n")
+                        "Consider providing the '${executable}' variable via CMake command line or environment variables\n")
       endif()
       ocv_clear_vars(PYTHONINTERP_FOUND PYTHON_EXECUTABLE PYTHON_VERSION_STRING PYTHON_VERSION_MAJOR PYTHON_VERSION_MINOR PYTHON_VERSION_PATCH)
       if(NOT CMAKE_VERSION VERSION_LESS "3.12")
@@ -177,7 +177,7 @@ if(NOT ${found})
 
     if(NOT ANDROID AND NOT IOS)
       if(CMAKE_HOST_UNIX)
-        execute_process(COMMAND ${_executable} -c "from distutils.sysconfig import *; print(get_python_lib())"
+        execute_process(COMMAND ${_executable} -c "from sysconfig import *; print(get_path('purelib'))"
                         RESULT_VARIABLE _cvpy_process
                         OUTPUT_VARIABLE _std_packages_path
                         OUTPUT_STRIP_TRAILING_WHITESPACE)

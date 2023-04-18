@@ -465,6 +465,49 @@ struct RowVec_8u32s
     bool smallValues;
 };
 
+struct RowVec_8u32f
+{
+    RowVec_8u32f() {}
+    RowVec_8u32f( const Mat& _kernel ) : kernel(_kernel) {}
+
+    int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
+    {
+        CV_INSTRUMENT_REGION();
+
+        int i = 0, k, _ksize = kernel.rows + kernel.cols - 1;
+        float* dst = (float*)_dst;
+        const float* _kx = kernel.ptr<float>();
+        width *= cn;
+        for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
+        {
+            v_float32 s0 = vx_setzero_f32();
+            v_float32 s1 = vx_setzero_f32();
+            v_float32 s2 = vx_setzero_f32();
+            v_float32 s3 = vx_setzero_f32();
+            k = 0;
+            for( ; k < _ksize ; k++ )
+            {
+                v_float32 f = vx_setall_f32(_kx[k]);
+                const uchar* src = (const uchar*)_src + i + k * cn;
+                v_float32 vs_ll = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src)));
+                v_float32 vs_lh = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + v_float32::nlanes)));
+                v_float32 vs_hl = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + 2*v_float32::nlanes)));
+                v_float32 vs_hh = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + 3*v_float32::nlanes)));
+                s0 = v_muladd(vs_ll, f, s0);
+                s1 = v_muladd(vs_lh, f, s1);
+                s2 = v_muladd(vs_hl, f, s2);
+                s3 = v_muladd(vs_hh, f, s3);
+            }
+            v_store(dst + i, s0);
+            v_store(dst + i + v_float32::nlanes, s1);
+            v_store(dst + i + 2*v_float32::nlanes, s2);
+            v_store(dst + i + 3*v_float32::nlanes, s3);
+        }
+        return i;
+    }
+
+    Mat kernel;
+};
 
 struct SymmRowSmallVec_8u32s
 {
@@ -1112,6 +1155,81 @@ struct SymmColumnVec_32s8u
         return i;
     }
 
+    int symmetryType;
+    float delta;
+    Mat kernel;
+};
+
+struct SymmColumnVec_32f8u
+{
+    SymmColumnVec_32f8u() { symmetryType = 0; delta = 0; }
+    SymmColumnVec_32f8u(const Mat& _kernel, int _symmetryType, int, double _delta)
+    {
+        symmetryType = _symmetryType;
+        kernel = _kernel;
+        delta = (float)_delta;
+        CV_Assert( (symmetryType & (KERNEL_SYMMETRICAL | KERNEL_ASYMMETRICAL)) != 0 );
+    }
+
+    int operator()(const uchar** _src, uchar* _dst, int width) const
+    {
+        CV_INSTRUMENT_REGION();
+
+        int _ksize = kernel.rows + kernel.cols - 1;
+        if( _ksize == 1 ) return 0;
+        const int ksize2 = _ksize / 2;
+        const float* ky = kernel.ptr<float>() + ksize2;
+        int i = 0, k;
+        bool symmetrical = (symmetryType & KERNEL_SYMMETRICAL) != 0;
+        const float** src = (const float**)_src;
+
+        if( symmetrical )
+        {
+            for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
+            {
+                v_float32 v_ky0 = vx_setall_f32(ky[0]);
+                v_float32 v32_delta = vx_setall_f32(delta);
+                const float* S = src[0] + i;
+                v_float32 s0 = v_muladd(v_ky0, vx_load(S), v32_delta);
+                v_float32 s1 = v_muladd(v_ky0, vx_load(S + v_float32::nlanes), v32_delta);
+                v_float32 s2 = v_muladd(v_ky0, vx_load(S + 2*v_float32::nlanes), v32_delta);
+                v_float32 s3 = v_muladd(v_ky0, vx_load(S + 3*v_float32::nlanes), v32_delta);
+                for( k = 1; k <= ksize2; k++ )
+                {
+                    v_float32 v_kyk = vx_setall_f32(ky[k]);
+                    const float* S0 = src[k] + i;
+                    const float* S1 = src[-k] + i;
+                    s0 = v_muladd(v_kyk, vx_load(S0) + vx_load(S1), s0);
+                    s1 = v_muladd(v_kyk, vx_load(S0 + v_float32::nlanes) + vx_load(S1 + v_float32::nlanes), s1);
+                    s2 = v_muladd(v_kyk, vx_load(S0 + 2*v_float32::nlanes) + vx_load(S1 + 2*v_float32::nlanes), s2);
+                    s3 = v_muladd(v_kyk, vx_load(S0 + 3*v_float32::nlanes) + vx_load(S1 + 3*v_float32::nlanes), s3);
+                }
+                v_store(_dst + i, v_pack_u(v_pack(v_round(s0), v_round(s1)), v_pack(v_round(s2), v_round(s3))));
+            }
+        }
+        else
+        {
+            for( ; i <= width - v_uint8::nlanes; i += v_uint8::nlanes )
+            {
+                v_float32 s0 = vx_setall_f32(delta);
+                v_float32 s1 = vx_setall_f32(delta);
+                v_float32 s2 = vx_setall_f32(delta);
+                v_float32 s3 = vx_setall_f32(delta);
+                for( k = 1; k <= ksize2; k++ )
+                {
+                    v_float32 v_kyk = vx_setall_f32(ky[k]);
+                    const float* S0 = src[k] + i;
+                    const float* S1 = src[-k] + i;
+                    s0 = v_muladd(v_kyk, vx_load(S0) - vx_load(S1), s0);
+                    s1 = v_muladd(v_kyk, vx_load(S0 + v_float32::nlanes) - vx_load(S1 + v_float32::nlanes), s1);
+                    s2 = v_muladd(v_kyk, vx_load(S0 + 2*v_float32::nlanes) - vx_load(S1 + 2*v_float32::nlanes), s2);
+                    s3 = v_muladd(v_kyk, vx_load(S0 + 3*v_float32::nlanes) - vx_load(S1 + 3*v_float32::nlanes), s3);
+                }
+                v_store(_dst + i, v_pack_u(v_pack(v_round(s0), v_round(s1)), v_pack(v_round(s2), v_round(s3))));
+            }
+        }
+        return i;
+    }
     int symmetryType;
     float delta;
     Mat kernel;
@@ -2292,11 +2410,13 @@ struct FilterVec_32f
 #else
 
 typedef RowNoVec RowVec_8u32s;
+typedef RowNoVec RowVec_8u32f;
 typedef RowNoVec RowVec_16s32f;
 typedef RowNoVec RowVec_32f;
 typedef SymmRowSmallNoVec SymmRowSmallVec_8u32s;
 typedef SymmRowSmallNoVec SymmRowSmallVec_32f;
 typedef ColumnNoVec SymmColumnVec_32s8u;
+typedef ColumnNoVec SymmColumnVec_32f8u;
 typedef ColumnNoVec SymmColumnVec_32f16s;
 typedef ColumnNoVec SymmColumnVec_32f;
 typedef SymmColumnSmallNoVec SymmColumnSmallVec_32s16s;
@@ -2899,7 +3019,8 @@ Ptr<BaseRowFilter> getLinearRowFilter(
         return makePtr<RowFilter<uchar, int, RowVec_8u32s> >
             (kernel, anchor, RowVec_8u32s(kernel));
     if( sdepth == CV_8U && ddepth == CV_32F )
-        return makePtr<RowFilter<uchar, float, RowNoVec> >(kernel, anchor);
+        return makePtr<RowFilter<uchar, float, RowVec_8u32f> >
+            (kernel, anchor, RowVec_8u32f(kernel));
     if( sdepth == CV_8U && ddepth == CV_64F )
         return makePtr<RowFilter<uchar, double, RowNoVec> >(kernel, anchor);
     if( sdepth == CV_16U && ddepth == CV_32F )
@@ -2986,8 +3107,9 @@ Ptr<BaseColumnFilter> getLinearColumnFilter(
                 (kernel, anchor, delta, symmetryType, FixedPtCastEx<int, uchar>(bits),
                 SymmColumnVec_32s8u(kernel, symmetryType, bits, delta));
         if( ddepth == CV_8U && sdepth == CV_32F )
-            return makePtr<SymmColumnFilter<Cast<float, uchar>, ColumnNoVec> >
-                (kernel, anchor, delta, symmetryType);
+            return makePtr<SymmColumnFilter<Cast<float, uchar>, SymmColumnVec_32f8u> >
+                (kernel, anchor, delta, symmetryType, Cast<float, uchar>(),
+                SymmColumnVec_32f8u(kernel, symmetryType, 0, delta));
         if( ddepth == CV_8U && sdepth == CV_64F )
             return makePtr<SymmColumnFilter<Cast<double, uchar>, ColumnNoVec> >
                 (kernel, anchor, delta, symmetryType);

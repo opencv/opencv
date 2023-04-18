@@ -19,24 +19,50 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn {
 
+    struct ScaleShiftConfiguration {
+        enum class OpMode {
+            NONE,
+            TRAINABLE, /* use a pretrained blob */
+            UNTRAINABLE /* use another input */
+        };
+
+        OpMode scaleMode;
+        OpMode shiftMode;
+
+        std::size_t axis;
+    };
+
     template <class T>
     class ScaleShiftOp final : public CUDABackendNode {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        ScaleShiftOp(csl::Stream stream_, std::size_t axis, const cv::Mat& weights, const cv::Mat& bias)
-            : stream(std::move(stream_)), axis{ axis }
+        ScaleShiftOp(csl::Stream stream_, const ScaleShiftConfiguration& config, const cv::Mat& weights, const cv::Mat& bias)
+            : stream(std::move(stream_)), axis{ config.axis }
         {
-            if (!weights.empty())
+            scaleMode = config.scaleMode;
+            if (scaleMode == ScaleShiftConfiguration::OpMode::TRAINABLE)
             {
+                CV_Assert(!weights.empty());
                 weightsTensor = csl::makeTensorHeader<T>(weights);
                 csl::copyMatToTensor<T>(weights, weightsTensor, stream);
             }
 
-            if (!bias.empty())
+            shiftMode = config.shiftMode;
+            if (shiftMode == ScaleShiftConfiguration::OpMode::TRAINABLE)
             {
+                CV_Assert(!bias.empty());
                 biasTensor = csl::makeTensorHeader<T>(bias);
                 csl::copyMatToTensor<T>(bias, biasTensor, stream);
+            }
+
+            CV_Assert(scaleMode != ScaleShiftConfiguration::OpMode::NONE ||
+                      shiftMode != ScaleShiftConfiguration::OpMode::NONE);
+
+            if (scaleMode == ScaleShiftConfiguration::OpMode::UNTRAINABLE &&
+                shiftMode == ScaleShiftConfiguration::OpMode::UNTRAINABLE)
+            {
+                CV_Error(cv::Error::StsNotImplemented, "scale and shift both in untrainable mode is not supported");
             }
         }
 
@@ -53,40 +79,60 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
+            /* number of batches in the weights/bias
+             * trainable mode: same for all batches
+             * untrainable mode: could be different for different batch samples
+             */
+            std::size_t parameter_batch_size = 1;
+
             csl::TensorView<T> weights;
-            if (weightsTensor.empty() && biasTensor.empty())
+            if (scaleMode == ScaleShiftConfiguration::OpMode::TRAINABLE)
+            {
+                CV_Assert(!weightsTensor.empty());
+                weights = csl::TensorView<T>(weightsTensor);
+            }
+            else if (scaleMode == ScaleShiftConfiguration::OpMode::UNTRAINABLE)
             {
                 CV_Assert(inputs.size() == 2);
-
-                /* no explicit scale/shift values provided; use the second input as weights */
                 auto wrapper = inputs[1].dynamicCast<wrapper_type>();
                 weights = wrapper->getView();
-            }
-            else if (!weightsTensor.empty())
-            {
-                weights = csl::TensorSpan<T>(weightsTensor);
+
+                parameter_batch_size = weights.get_axis_size(0);
+                CV_Assert(parameter_batch_size == input.get_axis_size(0));
             }
 
             csl::TensorView<T> bias;
-            if (!biasTensor.empty())
-                bias = csl::TensorSpan<T>(biasTensor);
-
-            const auto numParams = !weights.empty() ? weights.size() : bias.size();
-            CV_Assert(numParams != 0);
-            if (!weightsTensor.empty() && !biasTensor.empty())
+            if (shiftMode == ScaleShiftConfiguration::OpMode::TRAINABLE)
             {
-                CV_CheckEQ(weights.size(), bias.size(), "weights and bias size are not equal");
+                CV_Assert(!biasTensor.empty());
+                bias = csl::TensorView<T>(biasTensor);
+            }
+            else if (shiftMode == ScaleShiftConfiguration::OpMode::UNTRAINABLE)
+            {
+                CV_Assert(inputs.size() == 2);
+                auto wrapper = inputs[1].dynamicCast<wrapper_type>();
+                bias = wrapper->getView();
+
+                parameter_batch_size = bias.get_axis_size(0);
+                CV_Assert(parameter_batch_size == input.get_axis_size(0));
             }
 
-            /* the weights/bias might require broadcasting to scale/shift */
+            CV_Assert(!weights.empty() || !bias.empty());
+            if (!weights.empty() && !bias.empty())
+            {
+                CV_CheckEQ(weights.size(), bias.size(), "different broadcasting options for weights and bias is not supported");
+            }
+
+            const auto num_parameters = !weights.empty() ? weights.size() : bias.size();
+            const auto mid_size = num_parameters / parameter_batch_size;
+
+            /* the scale shift operation might require broadcasting */
             const int end_axis = [&] {
-                for (int endAxis = axis + 1; endAxis <= input.rank(); endAxis++)
-                {
-                    std::size_t size = input.size_range(axis, endAxis);
-                    if (size == numParams)
+                for (int endAxis = axis + 1; endAxis <= input.rank(); endAxis++) {
+                    if (input.size_range(axis, endAxis) == mid_size)
                         return endAxis;
                 }
-                CV_Assert(0 /* invalid weights matrix */);
+                CV_Assert(0 /* failed to find a broadcast config */);
             }();
 
             std::size_t inner_size = input.size_range(end_axis, input.rank());
@@ -103,6 +149,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         csl::Stream stream;
         csl::Tensor<T> weightsTensor, biasTensor;
         std::size_t axis;
+
+        ScaleShiftConfiguration::OpMode scaleMode, shiftMode;
     };
 
 }}} /* namespace cv::dnn::cuda4dnn */

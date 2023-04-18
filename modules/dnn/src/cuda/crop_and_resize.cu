@@ -9,6 +9,7 @@
 #include "types.hpp"
 #include "grid_stride_range.hpp"
 #include "execution.hpp"
+#include "memory.hpp"
 
 #include "../cuda4dnn/csl/stream.hpp"
 #include "../cuda4dnn/csl/tensor.hpp"
@@ -102,10 +103,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
                 #pragma unroll 1 /* disable unrolling */
                 for (int i = 0; i < CHANNELS_PER_ITER; i++) {
-                    auto v_00 = input[in_offset_r0 + in_x0],
-                         v_01 = input[in_offset_r0 + in_x1],
-                         v_10 = input[in_offset_r1 + in_x0],
-                         v_11 = input[in_offset_r1 + in_x1];
+                    auto v_00 = load_ldg(input[in_offset_r0 + in_x0]),
+                         v_01 = load_ldg(input[in_offset_r0 + in_x1]),
+                         v_10 = load_ldg(input[in_offset_r1 + in_x0]),
+                         v_11 = load_ldg(input[in_offset_r1 + in_x1]);
 
                     output[out_idx] =
                         v_00 +
@@ -162,7 +163,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
         }
     }
 
+#if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void crop_and_resize<__half>(const Stream&, TensorSpan<__half>, TensorView<__half>, View<__half> boxes);
+#endif
     template void crop_and_resize<float>(const Stream&, TensorSpan<float>, TensorView<float>, View<float> boxes);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

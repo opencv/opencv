@@ -159,3 +159,44 @@ QUnit.test('Cascade classification', function(assert) {
         locations.delete();
     }
 });
+QUnit.test('QR code detect and decode', function (assert) {
+    {
+        const detector = new cv.QRCodeDetector();
+        let mat = cv.Mat.ones(800, 600, cv.CV_8U);
+        assert.ok(mat);
+
+        // test detect
+        let points = new cv.Mat();
+        let qrCodeFound = detector.detect(mat, points);
+        assert.equal(points.rows, 0)
+        assert.equal(points.cols, 0)
+        assert.equal(qrCodeFound, false);
+
+        // test detectMult
+        qrCodeFound = detector.detectMulti(mat, points);
+        assert.equal(points.rows, 0)
+        assert.equal(points.cols, 0)
+        assert.equal(qrCodeFound, false);
+
+        // test decode (with random numbers)
+        let decodeTestPoints = cv.matFromArray(1, 4, cv.CV_32FC2, [10, 20, 30, 40, 60, 80, 90, 100]);
+        let qrCodeContent = detector.decode(mat, decodeTestPoints);
+        assert.equal(typeof qrCodeContent, 'string');
+        assert.equal(qrCodeContent, '');
+
+        //test detectAndDecode
+        qrCodeContent = detector.detectAndDecode(mat);
+        assert.equal(typeof qrCodeContent, 'string');
+        assert.equal(qrCodeContent, '');
+
+        // test decodeCurved
+        qrCodeContent = detector.decodeCurved(mat, decodeTestPoints);
+        assert.equal(typeof qrCodeContent, 'string');
+        assert.equal(qrCodeContent, '');
+
+        decodeTestPoints.delete();
+        points.delete();
+        mat.delete();
+
+    }
+});

@@ -10,11 +10,13 @@
 #include "../csl/stream.hpp"
 
 #include "../kernels/slice.hpp"
+#include "../kernels/fill_copy.hpp"
 
 #include <opencv2/core.hpp>
 
 #include <cstddef>
 #include <vector>
+#include <algorithm>
 #include <utility>
 
 namespace cv { namespace dnn { namespace cuda4dnn {
@@ -42,6 +44,8 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
             auto input_wrapper = inputs[0].dynamicCast<wrapper_type>();
             auto input = input_wrapper->getView();
+
+            CV_Assert(offsets.size() == outputs.size());
 
             for (int i = 0; i < outputs.size(); ++i)
             {

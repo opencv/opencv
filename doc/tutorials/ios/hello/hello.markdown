@@ -1,6 +1,16 @@
 OpenCV iOS Hello {#tutorial_hello}
 ================
 
+@tableofcontents
+
+@prev_tutorial{tutorial_ios_install}
+@next_tutorial{tutorial_image_manipulation}
+
+|    |    |
+| -: | :- |
+| Original author | Charu Hans |
+| Compatibility | OpenCV >= 3.0 |
+
 Goal
 ----
 

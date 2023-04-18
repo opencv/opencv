@@ -56,7 +56,10 @@ scaled to fit the 0 to 1 range.
 
 \f[V  \leftarrow max(R,G,B)\f]
 \f[S  \leftarrow \fork{\frac{V-min(R,G,B)}{V}}{if \(V \neq 0\)}{0}{otherwise}\f]
-\f[H  \leftarrow \forkthree{{60(G - B)}/{(V-min(R,G,B))}}{if \(V=R\)}{{120+60(B - R)}/{(V-min(R,G,B))}}{if \(V=G\)}{{240+60(R - G)}/{(V-min(R,G,B))}}{if \(V=B\)}\f]
+\f[H  \leftarrow \forkfour{{60(G - B)}/{(V-min(R,G,B))}}{if \(V=R\)}
+  {{120+60(B - R)}/{(V-min(R,G,B))}}{if \(V=G\)}
+  {{240+60(R - G)}/{(V-min(R,G,B))}}{if \(V=B\)}
+  {0}{if  \(R=G=B\)}\f]
 If \f$H<0\f$ then \f$H \leftarrow H+360\f$ . On output \f$0 \leq V \leq 1\f$, \f$0 \leq S \leq 1\f$,
 \f$0 \leq H \leq 360\f$ .
 
@@ -78,9 +81,10 @@ scaled to fit the 0 to 1 range.
 \f[L  \leftarrow \frac{V_{max} + V_{min}}{2}\f]
 \f[S  \leftarrow \fork { \frac{V_{max} - V_{min}}{V_{max} + V_{min}} }{if  \(L < 0.5\) }
     { \frac{V_{max} - V_{min}}{2 - (V_{max} + V_{min})} }{if  \(L \ge 0.5\) }\f]
-\f[H  \leftarrow \forkthree {{60(G - B)}/{(V_{max}-V_{min})}}{if  \(V_{max}=R\) }
+\f[H  \leftarrow \forkfour {{60(G - B)}/{(V_{max}-V_{min})}}{if  \(V_{max}=R\) }
   {{120+60(B - R)}/{(V_{max}-V_{min})}}{if  \(V_{max}=G\) }
-  {{240+60(R - G)}/{(V_{max}-V_{min})}}{if  \(V_{max}=B\) }\f]
+  {{240+60(R - G)}/{(V_{max}-V_{min})}}{if  \(V_{max}=B\) }
+  {0}{if  \(R=G=B\) }\f]
 If \f$H<0\f$ then \f$H \leftarrow H+360\f$ . On output \f$0 \leq L \leq 1\f$, \f$0 \leq S \leq
 1\f$, \f$0 \leq H \leq 360\f$ .
 
@@ -147,16 +151,23 @@ sources on the web, primarily from the Charles Poynton site <http://www.poynton.
 Bayer \f$\rightarrow\f$ RGB
 ---------------------------
 The Bayer pattern is widely used in CCD and CMOS cameras. It enables you to get color pictures
-from a single plane where R,G, and B pixels (sensors of a particular component) are interleaved
+from a single plane where R, G, and B pixels (sensors of a particular component) are interleaved
 as follows:
+
+![Bayer patterns (BGGR, GBRG, GRGB, RGGB)](pics/Bayer_patterns.png)
+
+The output RGB components of a pixel are interpolated from 1, 2, or 4 neighbors of the pixel
+having the same color.
+
+@note See the following for information about correspondences between OpenCV Bayer pattern naming and classical Bayer pattern naming.
 
 ![Bayer pattern](pics/bayer.png)
 
-The output RGB components of a pixel are interpolated from 1, 2, or 4 neighbors of the pixel
-having the same color. There are several modifications of the above pattern that can be achieved
+There are several modifications of the above pattern that can be achieved
 by shifting the pattern one pixel left and/or one pixel up. The two letters \f$C_1\f$ and \f$C_2\f$ in
 the conversion constants CV_Bayer \f$C_1 C_2\f$ 2BGR and CV_Bayer \f$C_1 C_2\f$ 2RGB indicate the
 particular pattern type. These are components from the second row, second and third columns,
 respectively. For example, the above pattern has a very popular "BG" type.
 
-@see cv::COLOR_BayerBG2BGR, cv::COLOR_BayerGB2BGR, cv::COLOR_BayerRG2BGR, cv::COLOR_BayerGR2BGR, cv::COLOR_BayerBG2RGB, cv::COLOR_BayerGB2RGB, cv::COLOR_BayerRG2RGB, cv::COLOR_BayerGR2RGB
+@see cv::COLOR_BayerRGGB2BGR, cv::COLOR_BayerGRBG2BGR, cv::COLOR_BayerBGGR2BGR, cv::COLOR_BayerGBRG2BGR, cv::COLOR_BayerRGGB2RGB, cv::COLOR_BayerGRBG2RGB, cv::COLOR_BayerBGGR2RGB, cv::COLOR_BayerGBRG2RGB
+cv::COLOR_BayerBG2BGR, cv::COLOR_BayerGB2BGR, cv::COLOR_BayerRG2BGR, cv::COLOR_BayerGR2BGR, cv::COLOR_BayerBG2RGB, cv::COLOR_BayerGB2RGB, cv::COLOR_BayerRG2RGB, cv::COLOR_BayerGR2RGB

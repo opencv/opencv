@@ -37,6 +37,7 @@
 #include <iterator>
 #include <limits>
 #include <algorithm>
+#include <set>
 
 
 #ifndef OPENCV_32BIT_CONFIGURATION
@@ -115,16 +116,21 @@
 # endif
 #endif
 
-#if defined(__OPENCV_BUILD) && defined(__clang__)
-#pragma clang diagnostic ignored "-Winconsistent-missing-override"
-#endif
 #if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 //#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
+#if defined(__OPENCV_BUILD) && defined(__clang__) && ((__clang_major__*100 + __clang_minor__) >= 1301)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-copy"
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
 #include "opencv2/ts/ts_gtest.h"
 #if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 //#pragma GCC diagnostic pop
+#endif
+#if defined(__OPENCV_BUILD) && defined(__clang__) && ((__clang_major__*100 + __clang_minor__) >= 1301)
+#pragma clang diagnostic pop
 #endif
 #include "opencv2/ts/ts_ext.hpp"
 
@@ -326,6 +332,7 @@ Mat calcSobelKernel2D( int dx, int dy, int apertureSize, int origin=0 );
 Mat calcLaplaceKernel2D( int aperture_size );
 
 void initUndistortMap( const Mat& a, const Mat& k, const Mat& R, const Mat& new_a, Size sz, Mat& mapx, Mat& mapy, int map_type );
+void initInverseRectificationMap( const Mat& a, const Mat& k, const Mat& R, const Mat& new_a, Size sz, Mat& mapx, Mat& mapy, int map_type );
 
 void minMaxLoc(const Mat& src, double* minval, double* maxval,
                           vector<int>* minloc, vector<int>* maxloc, const Mat& mask=Mat());

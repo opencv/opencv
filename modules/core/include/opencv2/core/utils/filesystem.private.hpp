@@ -16,8 +16,8 @@
 #      define OPENCV_HAVE_FILESYSTEM_SUPPORT 1
 #  elif defined(__APPLE__)
 #    include <TargetConditionals.h>
-#    if (defined(TARGET_OS_OSX) && TARGET_OS_OSX) || (!defined(TARGET_OS_OSX) && !TARGET_OS_IPHONE)
-#      define OPENCV_HAVE_FILESYSTEM_SUPPORT 1 // OSX only
+#    if (defined(TARGET_OS_OSX) && TARGET_OS_OSX) || (defined(TARGET_OS_IOS) && TARGET_OS_IOS)
+#      define OPENCV_HAVE_FILESYSTEM_SUPPORT 1 // OSX, iOS only
 #    endif
 #  else
      /* unknown */
@@ -36,7 +36,7 @@ namespace cv { namespace utils { namespace fs {
  * Provides interprocess synchronization mechanism.
  * Platform dependent.
  *
- * Supports multiple readers / single writer access pattern (RW / readers–writer / shared-exclusive lock).
+ * Supports multiple readers / single writer access pattern (RW / readers-writer / shared-exclusive lock).
  *
  * File must exist.
  * File can't be re-used (for example, I/O operations via std::fstream is not safe)

@@ -46,10 +46,6 @@ namespace cv {
 namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-void fastConv( const float* weights, size_t wstep, const float* bias,
-               const float* rowbuf, float* output, const int* outShape,
-               int blockSize, int vecsize, int vecsize_aligned,
-               const float* relu, bool initOutput );
 void fastGEMM1T( const float* vec, const float* weights,
                  size_t wstep, const float* bias,
                  float* dst, int nvecs, int vecsize );
@@ -64,242 +60,23 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
 #define _mm256_fmadd_ps(a, b, c) _mm256_add_ps(c, _mm256_mul_ps(a, b))
 #endif
 
-void fastConv( const float* weights, size_t wstep, const float* bias,
-               const float* rowbuf, float* output, const int* outShape,
-               int blockSize, int vecsize, int vecsize_aligned,
-               const float* relu, bool initOutput )
-{
-    int outCn = outShape[1];
-    size_t outPlaneSize = outShape[2]*outShape[3];
-    float r0 = 1.f, r1 = 1.f, r2 = 1.f;
-    __m128 vr0 = _mm_set1_ps(1.f), vr1 = vr0, vr2 = vr0, z = _mm_setzero_ps();
-
-    // now compute dot product of the weights
-    // and im2row-transformed part of the tensor
-    for( int i = 0; i < outCn; i += 3 )
-    {
-        const float* wptr0 = weights + i*wstep;
-        const float* wptr1 = wptr0 + wstep;
-        const float* wptr2 = wptr1 + wstep;
-        float* outptr0 = output + i*outPlaneSize;
-        float* outptr1 = outptr0 + outPlaneSize;
-        float* outptr2 = outptr1 + outPlaneSize;
-        float bias0 = bias[i], bias1 = bias[i+1], bias2 = bias[i+2];
-
-        if( i+2 >= outCn )
-        {
-            wptr2 = wptr1;
-            outptr2 = outptr1;
-            bias2 = bias1;
-            if( i+1 >= outCn )
-            {
-                wptr2 = wptr1 = wptr0;
-                outptr2 = outptr1 = outptr0;
-                bias2 = bias1 = bias0;
-            }
-        }
-
-        if( relu )
-        {
-            r0 = relu[i]; r1 = relu[i+1]; r2 = relu[i+2];
-            if( i+2 >= outCn )
-            {
-                r2 = r1;
-                if( i+1 >= outCn )
-                    r2 = r1 = r0;
-            }
-            vr0 = _mm_set1_ps(r0);
-            vr1 = _mm_set1_ps(r1);
-            vr2 = _mm_set1_ps(r2);
-        }
-
-        int j = 0;
-        for( ; j <= blockSize - 4; j += 4 )
-        {
-            int k = 0;
-            const float* rptr = rowbuf + j*vecsize_aligned;
-
-            __m256 vs00 = _mm256_setzero_ps(), vs01 = _mm256_setzero_ps(),
-                   vs02 = _mm256_setzero_ps(), vs03 = _mm256_setzero_ps(),
-                   vs10 = _mm256_setzero_ps(), vs11 = _mm256_setzero_ps(),
-                   vs12 = _mm256_setzero_ps(), vs13 = _mm256_setzero_ps(),
-                   vs20 = _mm256_setzero_ps(), vs21 = _mm256_setzero_ps(),
-                   vs22 = _mm256_setzero_ps(), vs23 = _mm256_setzero_ps();
-
-#if CV_AVX512_SKX // AVX512VL is necessary to avoid register spilling
-            if (vecsize >= 32)
-            {
-                __m512 vs00_5 = _mm512_setzero_ps(), vs01_5 = _mm512_setzero_ps(),
-                       vs02_5 = _mm512_setzero_ps(), vs03_5 = _mm512_setzero_ps(),
-                       vs10_5 = _mm512_setzero_ps(), vs11_5 = _mm512_setzero_ps(),
-                       vs12_5 = _mm512_setzero_ps(), vs13_5 = _mm512_setzero_ps(),
-                       vs20_5 = _mm512_setzero_ps(), vs21_5 = _mm512_setzero_ps(),
-                       vs22_5 = _mm512_setzero_ps(), vs23_5 = _mm512_setzero_ps();
-
-                for (; k <= vecsize - 16; k += 16, rptr += 16)
-                {
-                    __m512 w0 = _mm512_loadu_ps(wptr0 + k);
-                    __m512 w1 = _mm512_loadu_ps(wptr1 + k);
-                    __m512 w2 = _mm512_loadu_ps(wptr2 + k);
-                    __m512 r0 = _mm512_loadu_ps(rptr);
-
-                    vs00_5 = _mm512_fmadd_ps(w0, r0, vs00_5);
-                    vs10_5 = _mm512_fmadd_ps(w1, r0, vs10_5);
-                    vs20_5 = _mm512_fmadd_ps(w2, r0, vs20_5);
-
-                    r0 = _mm512_loadu_ps(rptr + vecsize_aligned);
-                    vs01_5 = _mm512_fmadd_ps(w0, r0, vs01_5);
-                    vs11_5 = _mm512_fmadd_ps(w1, r0, vs11_5);
-                    vs21_5 = _mm512_fmadd_ps(w2, r0, vs21_5);
-
-                    r0 = _mm512_loadu_ps(rptr + vecsize_aligned*2);
-                    vs02_5 = _mm512_fmadd_ps(w0, r0, vs02_5);
-                    vs12_5 = _mm512_fmadd_ps(w1, r0, vs12_5);
-                    vs22_5 = _mm512_fmadd_ps(w2, r0, vs22_5);
-
-                    r0 = _mm512_loadu_ps(rptr + vecsize_aligned*3);
-                    vs03_5 = _mm512_fmadd_ps(w0, r0, vs03_5);
-                    vs13_5 = _mm512_fmadd_ps(w1, r0, vs13_5);
-                    vs23_5 = _mm512_fmadd_ps(w2, r0, vs23_5);
-                }
-                /*
-                 * now fold the 512 bit accumulator vectors into 256 bit vectors so that the AVX2 code can finish
-                 * the tail of the vector
-                 */
-                vs00 = _mm256_add_ps( _mm512_extractf32x8_ps(vs00_5, 0), _mm512_extractf32x8_ps(vs00_5, 1));
-                vs10 = _mm256_add_ps( _mm512_extractf32x8_ps(vs10_5, 0), _mm512_extractf32x8_ps(vs10_5, 1));
-                vs20 = _mm256_add_ps( _mm512_extractf32x8_ps(vs20_5, 0), _mm512_extractf32x8_ps(vs20_5, 1));
-
-                vs01 = _mm256_add_ps( _mm512_extractf32x8_ps(vs01_5, 0), _mm512_extractf32x8_ps(vs01_5, 1));
-                vs11 = _mm256_add_ps( _mm512_extractf32x8_ps(vs11_5, 0), _mm512_extractf32x8_ps(vs11_5, 1));
-                vs21 = _mm256_add_ps( _mm512_extractf32x8_ps(vs21_5, 0), _mm512_extractf32x8_ps(vs21_5, 1));
-
-                vs02 = _mm256_add_ps( _mm512_extractf32x8_ps(vs02_5, 0), _mm512_extractf32x8_ps(vs02_5, 1));
-                vs12 = _mm256_add_ps( _mm512_extractf32x8_ps(vs12_5, 0), _mm512_extractf32x8_ps(vs12_5, 1));
-                vs22 = _mm256_add_ps( _mm512_extractf32x8_ps(vs22_5, 0), _mm512_extractf32x8_ps(vs22_5, 1));
-
-                vs03 = _mm256_add_ps( _mm512_extractf32x8_ps(vs03_5, 0), _mm512_extractf32x8_ps(vs03_5, 1));
-                vs13 = _mm256_add_ps( _mm512_extractf32x8_ps(vs13_5, 0), _mm512_extractf32x8_ps(vs13_5, 1));
-                vs23 = _mm256_add_ps( _mm512_extractf32x8_ps(vs23_5, 0), _mm512_extractf32x8_ps(vs23_5, 1));
-            }
-#endif
-
-            for (; k < vecsize; k += 8, rptr += 8 )
-            {
-                __m256 w0 = _mm256_load_ps(wptr0 + k);
-                __m256 w1 = _mm256_load_ps(wptr1 + k);
-                __m256 w2 = _mm256_load_ps(wptr2 + k);
-                __m256 r0 = _mm256_load_ps(rptr);
-
-                vs00 = _mm256_fmadd_ps(w0, r0, vs00);
-                vs10 = _mm256_fmadd_ps(w1, r0, vs10);
-                vs20 = _mm256_fmadd_ps(w2, r0, vs20);
-
-                r0 = _mm256_load_ps(rptr + vecsize_aligned);
-                vs01 = _mm256_fmadd_ps(w0, r0, vs01);
-                vs11 = _mm256_fmadd_ps(w1, r0, vs11);
-                vs21 = _mm256_fmadd_ps(w2, r0, vs21);
-
-                r0 = _mm256_load_ps(rptr + vecsize_aligned*2);
-                vs02 = _mm256_fmadd_ps(w0, r0, vs02);
-                vs12 = _mm256_fmadd_ps(w1, r0, vs12);
-                vs22 = _mm256_fmadd_ps(w2, r0, vs22);
-
-                r0 = _mm256_load_ps(rptr + vecsize_aligned*3);
-                vs03 = _mm256_fmadd_ps(w0, r0, vs03);
-                vs13 = _mm256_fmadd_ps(w1, r0, vs13);
-                vs23 = _mm256_fmadd_ps(w2, r0, vs23);
-            }
-
-            __m256 t0 = _mm256_hadd_ps(_mm256_hadd_ps(vs00, vs01), _mm256_hadd_ps(vs02, vs03));
-            __m256 t1 = _mm256_hadd_ps(_mm256_hadd_ps(vs10, vs11), _mm256_hadd_ps(vs12, vs13));
-            __m256 t2 = _mm256_hadd_ps(_mm256_hadd_ps(vs20, vs21), _mm256_hadd_ps(vs22, vs23));
-
-            t0 = _mm256_add_ps(t0, _mm256_permute2f128_ps(t0, t0, 1));
-            t1 = _mm256_add_ps(t1, _mm256_permute2f128_ps(t1, t1, 1));
-            t2 = _mm256_add_ps(t2, _mm256_permute2f128_ps(t2, t2, 1));
-
-            __m128 s0, s1, s2;
-
-            if( initOutput )
-            {
-                s0 = _mm_set1_ps(bias0);
-                s1 = _mm_set1_ps(bias1);
-                s2 = _mm_set1_ps(bias2);
-            }
-            else
-            {
-                s0 = _mm_loadu_ps(outptr0 + j);
-                s1 = _mm_loadu_ps(outptr1 + j);
-                s2 = _mm_loadu_ps(outptr2 + j);
-            }
-
-            s0 = _mm_add_ps(s0, _mm256_castps256_ps128(t0));
-            s1 = _mm_add_ps(s1, _mm256_castps256_ps128(t1));
-            s2 = _mm_add_ps(s2, _mm256_castps256_ps128(t2));
-
-            if( relu )
-            {
-                __m128 m0 = _mm_cmp_ps(s0, z, _CMP_GT_OS);
-                __m128 m1 = _mm_cmp_ps(s1, z, _CMP_GT_OS);
-                __m128 m2 = _mm_cmp_ps(s2, z, _CMP_GT_OS);
-                s0 = _mm_xor_ps(s0, _mm_andnot_ps(m0, _mm_xor_ps(_mm_mul_ps(s0, vr0), s0)));
-                s1 = _mm_xor_ps(s1, _mm_andnot_ps(m1, _mm_xor_ps(_mm_mul_ps(s1, vr1), s1)));
-                s2 = _mm_xor_ps(s2, _mm_andnot_ps(m2, _mm_xor_ps(_mm_mul_ps(s2, vr2), s2)));
-            }
-
-            _mm_storeu_ps(outptr0 + j, s0);
-            _mm_storeu_ps(outptr1 + j, s1);
-            _mm_storeu_ps(outptr2 + j, s2);
-        }
-
-        for( ; j < blockSize; j++ )
-        {
-            const float* rptr = rowbuf + j*vecsize_aligned;
-            float s00, s10, s20;
-
-            if( initOutput )
-            {
-                s00 = bias0;
-                s10 = bias1;
-                s20 = bias2;
-            }
-            else
-            {
-                s00 = outptr0[j];
-                s10 = outptr1[j];
-                s20 = outptr2[j];
-            }
-
-            for( int k = 0; k < vecsize; k++ )
-            {
-                float r0 = rptr[k];
-                s00 += wptr0[k]*r0;
-                s10 += wptr1[k]*r0;
-                s20 += wptr2[k]*r0;
-            }
-
-            if( relu )
-            {
-                s00 = s00 > 0.f ? s00 : s00*r0;
-                s10 = s10 > 0.f ? s10 : s10*r1;
-                s20 = s20 > 0.f ? s20 : s20*r2;
-            }
-
-            outptr0[j] = s00;
-            outptr1[j] = s10;
-            outptr2[j] = s20;
-        }
-    }
-    _mm256_zeroupper();
-}
+// Used to generate the mask used when calculating tails
+static const uint32_t tailMaskArray[15] = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0xffffffffUL, 0xffffffffUL, 0xffffffffUL, 0xffffffffUL, 0xffffffffUL, 0xffffffffUL, 0xffffffffUL
+};
 
 // dst = vec * weights^t + bias
+// Requires that vecsize is at least 8 or equal to 0 to avoid memory access problems. Does not require alignment.
 void fastGEMM1T( const float* vec, const float* weights,
                  size_t wstep, const float* bias,
                  float* dst, int nvecs, int vecsize )
 {
     int i = 0;
+
+    CV_Assert(vecsize >= 8 || vecsize == 0);
+
+    __m256 tailMask = _mm256_loadu_ps(reinterpret_cast<const float*>(tailMaskArray) + (vecsize % 8));
 
     for( ; i <= nvecs - 8; i += 8 )
     {
@@ -309,18 +86,36 @@ void fastGEMM1T( const float* vec, const float* weights,
                vs4 = _mm256_setzero_ps(), vs5 = _mm256_setzero_ps(),
                vs6 = _mm256_setzero_ps(), vs7 = _mm256_setzero_ps();
 
-        for( int k = 0; k < vecsize; k += 8, wptr += 8 )
+        int k = 0;
+        for( ; k <= vecsize-8; k += 8, wptr += 8 )
         {
-            __m256 v = _mm256_load_ps(vec + k);
+            __m256 v = _mm256_loadu_ps(vec + k);
 
-            vs0 = _mm256_fmadd_ps(_mm256_load_ps(wptr), v, vs0);
-            vs1 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep), v, vs1);
-            vs2 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep*2), v, vs2);
-            vs3 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep*3), v, vs3);
-            vs4 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep*4), v, vs4);
-            vs5 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep*5), v, vs5);
-            vs6 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep*6), v, vs6);
-            vs7 = _mm256_fmadd_ps(_mm256_load_ps(wptr + wstep*7), v, vs7);
+            vs0 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr), v, vs0);
+            vs1 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep), v, vs1);
+            vs2 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep*2), v, vs2);
+            vs3 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep*3), v, vs3);
+            vs4 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep*4), v, vs4);
+            vs5 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep*5), v, vs5);
+            vs6 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep*6), v, vs6);
+            vs7 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr + wstep*7), v, vs7);
+        }
+
+        if (k != vecsize) {
+            // Tail
+            k = vecsize - 8;
+            wptr = weights + i * wstep + k;
+            __m256 v = _mm256_loadu_ps(vec + k);
+            v = _mm256_and_ps(v, tailMask);
+
+            vs0 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr), tailMask), v, vs0);
+            vs1 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep), tailMask), v, vs1);
+            vs2 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep * 2), tailMask), v, vs2);
+            vs3 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep * 3), tailMask), v, vs3);
+            vs4 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep * 4), tailMask), v, vs4);
+            vs5 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep * 5), tailMask), v, vs5);
+            vs6 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep * 6), tailMask), v, vs6);
+            vs7 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr + wstep * 7), tailMask), v, vs7);
         }
 
         __m256 s0 = _mm256_hadd_ps(_mm256_hadd_ps(vs0, vs1), _mm256_hadd_ps(vs2, vs3));
@@ -342,10 +137,20 @@ void fastGEMM1T( const float* vec, const float* weights,
         const float* wptr = weights + i*wstep;
         __m256 vs0 = _mm256_setzero_ps();
 
-        for( int k = 0; k < vecsize; k += 8, wptr += 8 )
+        int k = 0;
+        for( ; k <= vecsize-8; k += 8, wptr += 8 )
         {
-            __m256 v = _mm256_load_ps(vec + k);
-            vs0 = _mm256_fmadd_ps(_mm256_load_ps(wptr), v, vs0);
+            __m256 v = _mm256_loadu_ps(vec + k);
+            vs0 = _mm256_fmadd_ps(_mm256_loadu_ps(wptr), v, vs0);
+        }
+
+        if (k != vecsize) {
+            // Tail
+            k = vecsize - 8;
+            wptr = weights + i * wstep + k;
+            __m256 v = _mm256_loadu_ps(vec + k);
+            v = _mm256_and_ps(v, tailMask);
+            vs0 = _mm256_fmadd_ps(_mm256_and_ps(_mm256_loadu_ps(wptr), tailMask), v, vs0);
         }
 
         __m256 s0 = _mm256_hadd_ps(_mm256_hadd_ps(vs0, vs0), vs0);
@@ -480,6 +285,375 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
 }
 
 #endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
+#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_RVV
+
+void fastGEMM( const float* aptr, size_t astep, const float* bptr,
+               size_t bstep, float* cptr, size_t cstep,
+               int ma, int na, int nb )
+{
+    int avl = nb, vl;
+    for(int n = 0; n < nb; n += vl, avl -= vl)
+    {
+        vl = vsetvl_e32m4(avl);
+        for( int m = 0; m < ma; m += 7 )
+        {
+            const float* aptr0 = aptr + astep*m;
+            const float* aptr1 = aptr + astep*std::min(m+1, ma-1);
+            const float* aptr2 = aptr + astep*std::min(m+2, ma-1);
+            const float* aptr3 = aptr + astep*std::min(m+3, ma-1);
+            const float* aptr4 = aptr + astep*std::min(m+4, ma-1);
+            const float* aptr5 = aptr + astep*std::min(m+5, ma-1);
+            const float* aptr6 = aptr + astep*std::min(m+6, ma-1);
+
+            float* cptr0 = cptr + cstep*m;
+            float* cptr1 = cptr + cstep*std::min(m+1, ma-1);
+            float* cptr2 = cptr + cstep*std::min(m+2, ma-1);
+            float* cptr3 = cptr + cstep*std::min(m+3, ma-1);
+            float* cptr4 = cptr + cstep*std::min(m+4, ma-1);
+            float* cptr5 = cptr + cstep*std::min(m+5, ma-1);
+            float* cptr6 = cptr + cstep*std::min(m+6, ma-1);
+
+            vfloat32m4_t d0 = vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d1 = vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d2 = vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d3 = vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d4 = vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d5 = vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d6 = vfmv_v_f_f32m4(0, vl);
+
+            for( int k = 0; k < na; k++ )
+            {
+                float a0 = aptr0[k];
+                float a1 = aptr1[k];
+                float a2 = aptr2[k];
+                float a3 = aptr3[k];
+                float a4 = aptr4[k];
+                float a5 = aptr5[k];
+                float a6 = aptr6[k];
+
+                vfloat32m4_t b = vle32_v_f32m4(bptr + k*bstep + n, vl);
+                d0 = vfmacc_vf_f32m4(d0, a0, b, vl);
+                d1 = vfmacc_vf_f32m4(d1, a1, b, vl);
+                d2 = vfmacc_vf_f32m4(d2, a2, b, vl);
+                d3 = vfmacc_vf_f32m4(d3, a3, b, vl);
+                d4 = vfmacc_vf_f32m4(d4, a4, b, vl);
+                d5 = vfmacc_vf_f32m4(d5, a5, b, vl);
+                d6 = vfmacc_vf_f32m4(d6, a6, b, vl);
+            }
+            vse32_v_f32m4(cptr0 + n, d0, vl);
+            vse32_v_f32m4(cptr1 + n, d1, vl);
+            vse32_v_f32m4(cptr2 + n, d2, vl);
+            vse32_v_f32m4(cptr3 + n, d3, vl);
+            vse32_v_f32m4(cptr4 + n, d4, vl);
+            vse32_v_f32m4(cptr5 + n, d5, vl);
+            vse32_v_f32m4(cptr6 + n, d6, vl);
+        }
+    }
+}
+
+void fastGEMM1T( const float* vec, const float* weights,
+                 size_t wstep, const float* bias,
+                 float* dst, int nvecs, int vecsize )
+{
+    const int vlm2 = vsetvlmax_e32m2();
+    int i = 0;
+    for( ; i <= nvecs - 15; i += 15 )
+    {
+        const float* wptr = weights + i*wstep;
+        vfloat32m2_t
+               vs0 = vfmv_v_f_f32m2(0, vlm2), vs1 = vfmv_v_f_f32m2(0, vlm2), vs2 = vfmv_v_f_f32m2(0, vlm2),
+               vs3 = vfmv_v_f_f32m2(0, vlm2), vs4 = vfmv_v_f_f32m2(0, vlm2), vs5 = vfmv_v_f_f32m2(0, vlm2),
+               vs6 = vfmv_v_f_f32m2(0, vlm2), vs7 = vfmv_v_f_f32m2(0, vlm2), vs8 = vfmv_v_f_f32m2(0, vlm2),
+               vs9 = vfmv_v_f_f32m2(0, vlm2), vs10 = vfmv_v_f_f32m2(0, vlm2), vs11 = vfmv_v_f_f32m2(0, vlm2),
+               vs12 = vfmv_v_f_f32m2(0, vlm2), vs13 = vfmv_v_f_f32m2(0, vlm2), vs14 = vfmv_v_f_f32m2(0, vlm2);
+        int avl = vecsize, vl;
+        for(int k = 0 ; k < vecsize; k += vl, wptr += vl, avl -= vl)
+        {
+            vl = vsetvl_e32m2(avl);
+            vfloat32m2_t v = vle32_v_f32m2(vec + k, vl);
+            vs0 = vfmacc_vv_f32m2(vs0, vle32_v_f32m2(wptr, vl), v, vl);
+            vs1 = vfmacc_vv_f32m2(vs1, vle32_v_f32m2(wptr + wstep, vl), v, vl);
+            vs2 = vfmacc_vv_f32m2(vs2, vle32_v_f32m2(wptr + wstep*2, vl), v, vl);
+            vs3 = vfmacc_vv_f32m2(vs3, vle32_v_f32m2(wptr + wstep*3, vl), v, vl);
+            vs4 = vfmacc_vv_f32m2(vs4, vle32_v_f32m2(wptr + wstep*4, vl), v, vl);
+            vs5 = vfmacc_vv_f32m2(vs5, vle32_v_f32m2(wptr + wstep*5, vl), v, vl);
+            vs6 = vfmacc_vv_f32m2(vs6, vle32_v_f32m2(wptr + wstep*6, vl), v, vl);
+            vs7 = vfmacc_vv_f32m2(vs7, vle32_v_f32m2(wptr + wstep*7, vl), v, vl);
+            vs8 = vfmacc_vv_f32m2(vs8, vle32_v_f32m2(wptr + wstep*8, vl), v, vl);
+            vs9 = vfmacc_vv_f32m2(vs9, vle32_v_f32m2(wptr + wstep*9, vl), v, vl);
+            vs10 = vfmacc_vv_f32m2(vs10, vle32_v_f32m2(wptr + wstep*10, vl), v, vl);
+            vs11 = vfmacc_vv_f32m2(vs11, vle32_v_f32m2(wptr + wstep*11, vl), v, vl);
+            vs12 = vfmacc_vv_f32m2(vs12, vle32_v_f32m2(wptr + wstep*12, vl), v, vl);
+            vs13 = vfmacc_vv_f32m2(vs13, vle32_v_f32m2(wptr + wstep*13, vl), v, vl);
+            vs14 = vfmacc_vv_f32m2(vs14, vle32_v_f32m2(wptr + wstep*14, vl), v, vl);
+        }
+
+        // Calculate the sum of each vector
+        float sum[15];
+        vfloat32m1_t zero = vfmv_v_f_f32m1(0, vlm2);
+        sum[0] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs0, zero, vlm2));
+        sum[1] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs1, zero, vlm2));
+        sum[2] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs2, zero, vlm2));
+        sum[3] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs3, zero, vlm2));
+        sum[4] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs4, zero, vlm2));
+        sum[5] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs5, zero, vlm2));
+        sum[6] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs6, zero, vlm2));
+        sum[7] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs7, zero, vlm2));
+        sum[8] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs8, zero, vlm2));
+        sum[9] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs9, zero, vlm2));
+        sum[10] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs10, zero, vlm2));
+        sum[11] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs11, zero, vlm2));
+        sum[12] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs12, zero, vlm2));
+        sum[13] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs13, zero, vlm2));
+        sum[14] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs14, zero, vlm2));
+
+        vfloat32m4_t s0 = vfadd_vv_f32m4(vle32_v_f32m4(sum, 15), vle32_v_f32m4(bias + i, 15), 15);
+        vse32_v_f32m4(dst + i, s0, 15);
+    }
+    int unroll_tail = nvecs - i;
+    if (unroll_tail > 0)
+    {
+        const float* wptr = weights + i*wstep;
+        vfloat32m2_t
+               vs0 = vfmv_v_f_f32m2(0, vlm2), vs1 = vfmv_v_f_f32m2(0, vlm2), vs2 = vfmv_v_f_f32m2(0, vlm2),
+               vs3 = vfmv_v_f_f32m2(0, vlm2), vs4 = vfmv_v_f_f32m2(0, vlm2), vs5 = vfmv_v_f_f32m2(0, vlm2),
+               vs6 = vfmv_v_f_f32m2(0, vlm2), vs7 = vfmv_v_f_f32m2(0, vlm2), vs8 = vfmv_v_f_f32m2(0, vlm2),
+               vs9 = vfmv_v_f_f32m2(0, vlm2), vs10 = vfmv_v_f_f32m2(0, vlm2), vs11 = vfmv_v_f_f32m2(0, vlm2),
+               vs12 = vfmv_v_f_f32m2(0, vlm2), vs13 = vfmv_v_f_f32m2(0, vlm2);
+        int avl = vecsize, vl;
+        for(int k = 0; k < vecsize; k += vl, wptr += vl, avl -= vl)
+        {
+            vl = vsetvl_e32m2(avl);
+            vfloat32m2_t v = vle32_v_f32m2(vec + k, vl);
+            vs0 = vfmacc_vv_f32m2(vs0, vle32_v_f32m2(wptr, vl), v, vl);
+            vs1 = vfmacc_vv_f32m2(vs1, vle32_v_f32m2(wptr + wstep*std::min(1, unroll_tail-1), vl), v, vl);
+            vs2 = vfmacc_vv_f32m2(vs2, vle32_v_f32m2(wptr + wstep*std::min(2, unroll_tail-1), vl), v, vl);
+            vs3 = vfmacc_vv_f32m2(vs3, vle32_v_f32m2(wptr + wstep*std::min(3, unroll_tail-1), vl), v, vl);
+            vs4 = vfmacc_vv_f32m2(vs4, vle32_v_f32m2(wptr + wstep*std::min(4, unroll_tail-1), vl), v, vl);
+            vs5 = vfmacc_vv_f32m2(vs5, vle32_v_f32m2(wptr + wstep*std::min(5, unroll_tail-1), vl), v, vl);
+            vs6 = vfmacc_vv_f32m2(vs6, vle32_v_f32m2(wptr + wstep*std::min(6, unroll_tail-1), vl), v, vl);
+            vs7 = vfmacc_vv_f32m2(vs7, vle32_v_f32m2(wptr + wstep*std::min(7, unroll_tail-1), vl), v, vl);
+            vs8 = vfmacc_vv_f32m2(vs8, vle32_v_f32m2(wptr + wstep*std::min(8, unroll_tail-1), vl), v, vl);
+            vs9 = vfmacc_vv_f32m2(vs9, vle32_v_f32m2(wptr + wstep*std::min(9, unroll_tail-1), vl), v, vl);
+            vs10 = vfmacc_vv_f32m2(vs10, vle32_v_f32m2(wptr + wstep*std::min(10, unroll_tail-1), vl), v, vl);
+            vs11 = vfmacc_vv_f32m2(vs11, vle32_v_f32m2(wptr + wstep*std::min(11, unroll_tail-1), vl), v, vl);
+            vs12 = vfmacc_vv_f32m2(vs12, vle32_v_f32m2(wptr + wstep*std::min(12, unroll_tail-1), vl), v, vl);
+            vs13 = vfmacc_vv_f32m2(vs13, vle32_v_f32m2(wptr + wstep*std::min(13, unroll_tail-1), vl), v, vl);
+        }
+
+        // Calculate the sum of each vector
+        float sum[14];
+        vfloat32m1_t zero = vfmv_v_f_f32m1(0, vlm2);
+        sum[0] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs0, zero, vlm2));
+        sum[1] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs1, zero, vlm2));
+        sum[2] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs2, zero, vlm2));
+        sum[3] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs3, zero, vlm2));
+        sum[4] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs4, zero, vlm2));
+        sum[5] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs5, zero, vlm2));
+        sum[6] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs6, zero, vlm2));
+        sum[7] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs7, zero, vlm2));
+        sum[8] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs8, zero, vlm2));
+        sum[9] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs9, zero, vlm2));
+        sum[10] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs10, zero, vlm2));
+        sum[11] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs11, zero, vlm2));
+        sum[12] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs12, zero, vlm2));
+        sum[13] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs13, zero, vlm2));
+
+        vfloat32m4_t s0 = vfadd_vv_f32m4(vle32_v_f32m4(sum, unroll_tail), vle32_v_f32m4(bias + i, unroll_tail), unroll_tail);
+        vse32_v_f32m4(dst + i, s0, unroll_tail);
+    }
+}
+
+#endif // CV_RVV
+
+#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_LASX
+
+// dst = vec * weights^t + bias
+void fastGEMM1T( const float* vec, const float* weights,
+                 size_t wstep, const float* bias,
+                 float* dst, int nvecs, int vecsize )
+{
+    int i = 0;
+    __m256i v256_tmp;
+
+    for( ; i <= nvecs - 8; i += 8 )
+    {
+        const float* wptr = weights + i*wstep;
+        __m256 vs0 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp), vs1 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp),
+               vs2 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp), vs3 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp),
+               vs4 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp), vs5 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp),
+               vs6 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp), vs7 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp);
+
+        for( int k = 0; k < vecsize; k += 8, wptr += 8 )
+        {
+            __m256 v = (__m256)__lasx_xvld(vec + k, 0);
+
+            vs0 = __lasx_xvfmadd_s((__m256)__lasx_xvld(wptr, 0), v, vs0);
+            vs1 = __lasx_xvfmadd_s((__m256)__lasx_xvld(wptr + wstep, 0), v, vs1);
+            vs2 = __lasx_xvfmadd_s((__m256)__lasx_xvld(wptr + wstep*2, 0), v, vs2);
+            vs3 = __lasx_xvfmadd_s((__m256)__lasx_xvld(wptr + wstep*3, 0), v, vs3);
+            vs4 = __lasx_xvfmadd_s((__m256)__lasx_xvld(wptr + wstep*4, 0), v, vs4);
+            vs5 = __lasx_xvfmadd_s((__m256)__lasx_xvld(wptr + wstep*5, 0), v, vs5);
+            vs6 = __lasx_xvfmadd_s((__m256)__lasx_xvld(wptr + wstep*6, 0), v, vs6);
+            vs7 = __lasx_xvfmadd_s((__m256)__lasx_xvld(wptr + wstep*7, 0), v, vs7);
+        }
+
+        /*s0*/
+        __m256  vs00_perm   = (__m256)__lasx_xvpermi_d(vs0, (2<<6) + (3<<4) + (0<<2) + 1);
+        __m256  vs00_add_2w = __lasx_xvfadd_s(vs0, vs00_perm);
+        __m256  tmp00_srl   = (__m256)__lasx_xvsrli_d(vs00_add_2w, 32);
+        __m256  vs00_add_4w = __lasx_xvfadd_s(vs00_add_2w, tmp00_srl);
+
+        __m256  vs01_perm   = (__m256)__lasx_xvpermi_d(vs1, (2<<6) + (3<<4) + (0<<2) + 1);
+        __m256  vs01_add_2w = __lasx_xvfadd_s(vs1, vs01_perm);
+        __m256  tmp01_srl   = (__m256)__lasx_xvsrli_d(vs01_add_2w, 32);
+        __m256  vs01_add_4w = __lasx_xvfadd_s(vs01_add_2w, tmp01_srl);
+
+        __m256  vs02_perm   = (__m256)__lasx_xvpermi_d(vs2, (2<<6) + (3<<4) + (0<<2) + 1);
+        __m256  vs02_add_2w = __lasx_xvfadd_s(vs2, vs02_perm);
+        __m256  tmp02_srl   = (__m256)__lasx_xvsrli_d(vs02_add_2w, 32);
+        __m256  vs02_add_4w = __lasx_xvfadd_s(vs02_add_2w, tmp02_srl);
+
+        __m256  vs03_perm   = (__m256)__lasx_xvpermi_d(vs3, (2<<6) + (3<<4) + (0<<2) + 1);
+        __m256  vs03_add_2w = __lasx_xvfadd_s(vs3, vs03_perm);
+        __m256  tmp03_srl   = (__m256)__lasx_xvsrli_d(vs03_add_2w, 32);
+        __m256  vs03_add_4w = __lasx_xvfadd_s(vs03_add_2w, tmp03_srl);
+
+        __m256i  vs01_vs00 = __lasx_xvpackev_w((__m256i)vs01_add_4w, (__m256i)vs00_add_4w);
+        __m256i  vs03_vs02 = __lasx_xvpackev_w((__m256i)vs03_add_4w, (__m256i)vs02_add_4w);
+        __m256          s0 = (__m256)__lasx_xvpackev_d(vs03_vs02, vs01_vs00);
+
+        /*s1*/
+        __m256  vs10_perm   = (__m256)__lasx_xvpermi_d(vs4, (2<<6) + (3<<4) + (0<<2) + 1);
+        __m256  vs10_add_2w = __lasx_xvfadd_s(vs4, vs10_perm);
+        __m256  tmp10_srl   = (__m256)__lasx_xvsrli_d(vs10_add_2w, 32);
+        __m256  vs10_add_4w = __lasx_xvfadd_s(vs10_add_2w, tmp10_srl);
+
+        __m256  vs11_perm   = (__m256)__lasx_xvpermi_d(vs5, (2<<6) + (3<<4) + (0<<2) + 1);
+        __m256  vs11_add_2w = __lasx_xvfadd_s(vs5, vs11_perm);
+        __m256  tmp11_srl   = (__m256)__lasx_xvsrli_d(vs11_add_2w, 32);
+        __m256  vs11_add_4w = __lasx_xvfadd_s(vs11_add_2w, tmp11_srl);
+
+        __m256  vs12_perm   = (__m256)__lasx_xvpermi_d(vs6, (2<<6) + (3<<4) + (0<<2) + 1);
+        __m256  vs12_add_2w = __lasx_xvfadd_s(vs6, vs12_perm);
+        __m256  tmp12_srl   = (__m256)__lasx_xvsrli_d(vs12_add_2w, 32);
+        __m256  vs12_add_4w = __lasx_xvfadd_s(vs12_add_2w, tmp12_srl);
+
+        __m256  vs13_perm   = (__m256)__lasx_xvpermi_d(vs7, (2<<6) + (3<<4) + (0<<2) + 1);
+        __m256  vs13_add_2w = __lasx_xvfadd_s(vs7, vs13_perm);
+        __m256  tmp13_srl   = (__m256)__lasx_xvsrli_d(vs13_add_2w, 32);
+        __m256  vs13_add_4w = __lasx_xvfadd_s(vs13_add_2w, tmp13_srl);
+
+        __m256i vs11_vs10 = __lasx_xvpackev_w((__m256i)vs11_add_4w, (__m256i)vs10_add_4w);
+        __m256i vs13_vs12 = __lasx_xvpackev_w((__m256i)vs13_add_4w, (__m256i)vs12_add_4w);
+        __m256         s1 = (__m256)__lasx_xvpackev_d(vs13_vs12, vs11_vs10);
+
+        s0 = __lasx_xvfadd_s(s0, (__m256)__lasx_xvpermi_q(s0, s0, 1));
+        s1 = __lasx_xvfadd_s(s1, (__m256)__lasx_xvpermi_q(s1, s1, 1));
+
+        s0 = __lasx_xvfadd_s(s0, (__m256)__lasx_xvld(bias + i, 0));
+        s1 = __lasx_xvfadd_s(s1, (__m256)__lasx_xvld(bias + i, 4*4));
+
+        __lsx_vst(*(__m128*)&s0, dst + i, 0);
+        __lsx_vst(*(__m128*)&s1, dst + i, 4*4);
+    }
+
+    float temp = 0.f;
+    for( ; i < nvecs; i++ )
+    {
+        const float* wptr = weights + i*wstep;
+        __m256 vs0 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp);
+
+        for( int k = 0; k < vecsize; k += 8, wptr += 8 )
+        {
+            __m256 v = (__m256)__lasx_xvld(vec + k, 0);
+            vs0 = __lasx_xvfmadd_s((__m256)__lasx_xvld(wptr, 0), v, vs0);
+        }
+
+        __m256i vs0_perm   = __lasx_xvpermi_d(vs0, (2<<6) + (3<<4) + (0<<2) + 1);
+        __m256  vs0_add_2w = __lasx_xvfadd_s(vs0, (__m256)vs0_perm);
+        __m256i tmp_srl    = __lasx_xvsrli_d(vs0_add_2w, 32);
+        __m256  vs0_add_4w = __lasx_xvfadd_s(vs0_add_2w, (__m256)tmp_srl);
+        temp = ((v8f32)vs0_add_4w)[0] + ((v8f32)vs0_add_4w)[4];
+        dst[i] = temp + bias[i];
+    }
+}
+
+
+void fastGEMM( const float* aptr, size_t astep, const float* bptr,
+               size_t bstep, float* cptr, size_t cstep,
+               int ma, int na, int nb )
+{
+    int n = 0;
+
+    for( ; n <= nb - 16; n += 16 )
+    {
+        for( int m = 0; m < ma; m += 4 )
+        {
+            const float* aptr0 = aptr + astep*m;
+            const float* aptr1 = aptr + astep*std::min(m+1, ma-1);
+            const float* aptr2 = aptr + astep*std::min(m+2, ma-1);
+            const float* aptr3 = aptr + astep*std::min(m+3, ma-1);
+
+            float* cptr0 = cptr + cstep*m;
+            float* cptr1 = cptr + cstep*std::min(m+1, ma-1);
+            float* cptr2 = cptr + cstep*std::min(m+2, ma-1);
+            float* cptr3 = cptr + cstep*std::min(m+3, ma-1);
+
+            __m256i v256_tmp;
+            __m256 d00 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp), d01 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp);
+            __m256 d10 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp), d11 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp);
+            __m256 d20 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp), d21 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp);
+            __m256 d30 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp), d31 = (__m256)__lasx_xvxor_v(v256_tmp, v256_tmp);
+
+            for( int k = 0; k < na; k++ )
+            {
+                __m256 a0 = _v256_setall_ps(aptr0[k]);
+                __m256 a1 = _v256_setall_ps(aptr1[k]);
+                __m256 a2 = _v256_setall_ps(aptr2[k]);
+                __m256 a3 = _v256_setall_ps(aptr3[k]);
+
+                __m256 b0 = (__m256)__lasx_xvld(bptr + k*bstep + n, 0);
+                __m256 b1 = (__m256)__lasx_xvld(bptr + k*bstep + n + 8, 0);
+                d00 = __lasx_xvfmadd_s(a0, b0, d00);
+                d01 = __lasx_xvfmadd_s(a0, b1, d01);
+                d10 = __lasx_xvfmadd_s(a1, b0, d10);
+                d11 = __lasx_xvfmadd_s(a1, b1, d11);
+                d20 = __lasx_xvfmadd_s(a2, b0, d20);
+                d21 = __lasx_xvfmadd_s(a2, b1, d21);
+                d30 = __lasx_xvfmadd_s(a3, b0, d30);
+                d31 = __lasx_xvfmadd_s(a3, b1, d31);
+            }
+
+            __lasx_xvst(d00, cptr0 + n, 0);
+            __lasx_xvst(d01, cptr0 + n, 8*4);
+            __lasx_xvst(d10, cptr1 + n, 0);
+            __lasx_xvst(d11, cptr1 + n, 8*4);
+            __lasx_xvst(d20, cptr2 + n, 0);
+            __lasx_xvst(d21, cptr2 + n, 8*4);
+            __lasx_xvst(d30, cptr3 + n, 0);
+            __lasx_xvst(d31, cptr3 + n, 8*4);
+        }
+    }
+
+    for( ; n < nb; n++ )
+    {
+        for( int m = 0; m < ma; m++ )
+        {
+            const float* aptr0 = aptr + astep*m;
+            float* cptr0 = cptr + cstep*m;
+            float d0 = 0.f;
+
+            for( int k = 0; k < na; k++ )
+                d0 += aptr0[k]*bptr[k*bstep + n];
+
+            cptr0[n] = d0;
+        }
+    }
+}
+
+#endif // CV_LASX
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 }} // namespace

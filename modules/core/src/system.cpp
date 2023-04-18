@@ -53,6 +53,23 @@
 #include <opencv2/core/utils/tls.hpp>
 #include <opencv2/core/utils/instrumentation.hpp>
 
+#include <opencv2/core/utils/filesystem.private.hpp>
+
+#include <opencv2/core/utils/fp_control_utils.hpp>
+#include <opencv2/core/utils/fp_control.private.hpp>
+
+#ifndef OPENCV_WITH_THREAD_SANITIZER
+  #if defined(__clang__) && defined(__has_feature)
+  #if __has_feature(thread_sanitizer)
+      #define OPENCV_WITH_THREAD_SANITIZER 1
+      #include <atomic>  // assume C++11
+  #endif
+  #endif
+#endif
+#ifndef OPENCV_WITH_THREAD_SANITIZER
+    #define OPENCV_WITH_THREAD_SANITIZER 0
+#endif
+
 namespace cv {
 
 static void _initSystem()
@@ -114,10 +131,14 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #include <cstdlib>        // std::abort
 #endif
 
-#if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __HAIKU__ || defined __Fuchsia__
+#if defined __ANDROID__ || defined __unix__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __HAIKU__ || defined __Fuchsia__
 #  include <unistd.h>
 #  include <fcntl.h>
+#if defined __QNX__
+#  include <sys/elf.h>
+#else
 #  include <elf.h>
+#endif
 #if defined __ANDROID__ || defined __linux__
 #  include <linux/auxvec.h>
 #endif
@@ -128,13 +149,19 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #endif
 
 
-#if CV_VSX && defined __linux__
+#if (defined __ppc64__ || defined __PPC64__) && defined __unix__
 # include "sys/auxv.h"
 # ifndef AT_HWCAP2
 #   define AT_HWCAP2 26
 # endif
+# ifndef PPC_FEATURE2_ARCH_2_07
+#   define PPC_FEATURE2_ARCH_2_07 0x80000000
+# endif
 # ifndef PPC_FEATURE2_ARCH_3_00
 #   define PPC_FEATURE2_ARCH_3_00 0x00800000
+# endif
+# ifndef PPC_FEATURE_HAS_VSX
+#   define PPC_FEATURE_HAS_VSX 0x00000080
 # endif
 #endif
 
@@ -211,13 +238,16 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 
 #endif
 #else
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 #include <pthread.h>
+#endif
 #include <sys/time.h>
 #include <time.h>
 
 #if defined __MACH__ && defined __APPLE__
 #include <mach/mach.h>
 #include <mach/mach_time.h>
+#include <sys/sysctl.h>
 #endif
 
 #endif
@@ -226,7 +256,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 #include "omp.h"
 #endif
 
-#if defined __linux__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ || defined __GLIBC__ || defined __HAIKU__
+#if defined __unix__ || defined __APPLE__ || defined __EMSCRIPTEN__ || defined __FreeBSD__ || defined __GLIBC__ || defined __HAIKU__
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -276,6 +306,9 @@ DECLARE_CV_CPUID_X86
   #endif
 #endif
 
+#if defined CV_CXX11
+  #include <chrono>
+#endif
 
 namespace cv
 {
@@ -345,7 +378,6 @@ struct HWFeatures
 
     HWFeatures(bool run_initialize = false)
     {
-        memset( have, 0, sizeof(have[0]) * MAX_FEATURE );
         if (run_initialize)
             initialize();
     }
@@ -386,11 +418,13 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX_5124FMAPS] = "AVX5124FMAPS";
 
         g_hwFeatureNames[CPU_NEON] = "NEON";
+        g_hwFeatureNames[CPU_NEON_DOTPROD] = "NEON_DOTPROD";
 
         g_hwFeatureNames[CPU_VSX] = "VSX";
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
 
         g_hwFeatureNames[CPU_MSA] = "CPU_MSA";
+        g_hwFeatureNames[CPU_RISCVV] = "RISCVV";
 
         g_hwFeatureNames[CPU_AVX512_COMMON] = "AVX512-COMMON";
         g_hwFeatureNames[CPU_AVX512_SKX] = "AVX512-SKX";
@@ -399,6 +433,10 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX512_CNL] = "AVX512-CNL";
         g_hwFeatureNames[CPU_AVX512_CLX] = "AVX512-CLX";
         g_hwFeatureNames[CPU_AVX512_ICL] = "AVX512-ICL";
+
+        g_hwFeatureNames[CPU_RVV] = "RVV";
+
+        g_hwFeatureNames[CPU_LASX] = "LASX";
     }
 
     void initialize(void)
@@ -526,10 +564,28 @@ struct HWFeatures
         }
     #endif // CV_CPUID_X86
 
-    #if defined __ANDROID__ || defined __linux__
+    #if defined __ANDROID__ || defined __linux__ || defined __FreeBSD__ || defined __QNX__
     #ifdef __aarch64__
         have[CV_CPU_NEON] = true;
         have[CV_CPU_FP16] = true;
+        int cpufile = open("/proc/self/auxv", O_RDONLY);
+
+        if (cpufile >= 0)
+        {
+            Elf64_auxv_t auxv;
+            const size_t size_auxv_t = sizeof(auxv);
+
+            while ((size_t)read(cpufile, &auxv, size_auxv_t) == size_auxv_t)
+            {
+                if (auxv.a_type == AT_HWCAP)
+                {
+                    have[CV_CPU_NEON_DOTPROD] = (auxv.a_un.a_val & (1 << 20)) != 0;
+                    break;
+                }
+            }
+
+            close(cpufile);
+        }
     #elif defined __arm__ && defined __ANDROID__
       #if defined HAVE_CPUFEATURES
         CV_LOG_INFO(NULL, "calling android_getCpuFeatures() ...");
@@ -552,7 +608,7 @@ struct HWFeatures
         CV_LOG_INFO(NULL, "- FP16 instructions is NOT enabled via build flags");
         #endif
       #endif
-    #elif defined __arm__
+    #elif defined __arm__ && !defined __FreeBSD__
         int cpufile = open("/proc/self/auxv", O_RDONLY);
 
         if (cpufile >= 0)
@@ -573,28 +629,79 @@ struct HWFeatures
             close(cpufile);
         }
     #endif
-    #elif (defined __clang__ || defined __APPLE__)
+    #elif (defined __APPLE__)
     #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
         have[CV_CPU_NEON] = true;
     #endif
     #if (defined __ARM_FP  && (((__ARM_FP & 0x2) != 0) && defined __ARM_NEON__))
         have[CV_CPU_FP16] = true;
     #endif
+    #if (defined __ARM_FEATURE_DOTPROD)
+        int has_feat_dotprod = 0;
+        size_t has_feat_dotprod_size = sizeof(has_feat_dotprod);
+        sysctlbyname("hw.optional.arm.FEAT_DotProd", &has_feat_dotprod, &has_feat_dotprod_size, NULL, 0);
+        if (has_feat_dotprod) {
+            have[CV_CPU_NEON_DOTPROD] = true;
+        }
+    #endif
+    #elif (defined __clang__)
+    #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
+        have[CV_CPU_NEON] = true;
+        #if (defined __ARM_FP  && ((__ARM_FP & 0x2) != 0))
+        have[CV_CPU_FP16] = true;
+        #endif
+    #endif
     #endif
     #if defined _ARM_ && (defined(_WIN32_WCE) && _WIN32_WCE >= 0x800)
         have[CV_CPU_NEON] = true;
     #endif
+    #if defined _M_ARM64
+        have[CV_CPU_NEON] = true;
+    #endif
+    #ifdef __riscv_vector
+        have[CV_CPU_RISCVV] = true;
+    #endif
     #ifdef __mips_msa
         have[CV_CPU_MSA] = true;
     #endif
-    // there's no need to check VSX availability in runtime since it's always available on ppc64le CPUs
-    have[CV_CPU_VSX] = (CV_VSX);
-    // TODO: Check VSX3 availability in runtime for other platforms
-    #if CV_VSX && defined __linux__
-        uint64 hwcap2 = getauxval(AT_HWCAP2);
-        have[CV_CPU_VSX3] = (hwcap2 & PPC_FEATURE2_ARCH_3_00);
+
+    #if (defined __ppc64__ || defined __PPC64__) && defined __linux__
+        unsigned int hwcap = getauxval(AT_HWCAP);
+        if (hwcap & PPC_FEATURE_HAS_VSX) {
+            hwcap = getauxval(AT_HWCAP2);
+            if (hwcap & PPC_FEATURE2_ARCH_3_00) {
+                have[CV_CPU_VSX] = have[CV_CPU_VSX3] = true;
+            } else {
+                have[CV_CPU_VSX] = (hwcap & PPC_FEATURE2_ARCH_2_07) != 0;
+            }
+        }
+    #elif (defined __ppc64__ || defined __PPC64__) && defined __FreeBSD__
+        unsigned long hwcap = 0;
+        elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
+        if (hwcap & PPC_FEATURE_HAS_VSX) {
+            elf_aux_info(AT_HWCAP2, &hwcap, sizeof(hwcap));
+            if (hwcap & PPC_FEATURE2_ARCH_3_00) {
+                have[CV_CPU_VSX] = have[CV_CPU_VSX3] = true;
+            } else {
+                have[CV_CPU_VSX] = (hwcap & PPC_FEATURE2_ARCH_2_07) != 0;
+            }
+        }
     #else
-        have[CV_CPU_VSX3] = (CV_VSX3);
+        // TODO: AIX, OpenBSD
+        #if CV_VSX || defined _ARCH_PWR8 || defined __POWER9_VECTOR__
+            have[CV_CPU_VSX] = true;
+        #endif
+        #if CV_VSX3 || defined __POWER9_VECTOR__
+            have[CV_CPU_VSX3] = true;
+        #endif
+    #endif
+
+    #if defined __riscv && defined __riscv_vector
+        have[CV_CPU_RVV] = true;
+    #endif
+
+    #if defined __loongarch_asx
+        have[CV_CPU_LASX] = true;
     #endif
 
         bool skip_baseline_check = false;
@@ -724,7 +831,7 @@ struct HWFeatures
         }
     }
 
-    bool have[MAX_FEATURE+1];
+    bool have[MAX_FEATURE+1]{};
 };
 
 static HWFeatures  featuresEnabled(true), featuresDisabled = HWFeatures(false);
@@ -783,16 +890,19 @@ bool useOptimized(void)
 
 int64 getTickCount(void)
 {
-#if defined _WIN32 || defined WINCE
+#if defined CV_CXX11
+    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    return (int64)now.time_since_epoch().count();
+#elif defined _WIN32 || defined WINCE
     LARGE_INTEGER counter;
     QueryPerformanceCounter( &counter );
     return (int64)counter.QuadPart;
-#elif defined __linux || defined __linux__
+#elif defined __MACH__ && defined __APPLE__
+    return (int64)mach_absolute_time();
+#elif defined __unix__
     struct timespec tp;
     clock_gettime(CLOCK_MONOTONIC, &tp);
     return (int64)tp.tv_sec*1000000000 + tp.tv_nsec;
-#elif defined __MACH__ && defined __APPLE__
-    return (int64)mach_absolute_time();
 #else
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -802,12 +912,14 @@ int64 getTickCount(void)
 
 double getTickFrequency(void)
 {
-#if defined _WIN32 || defined WINCE
+#if defined CV_CXX11
+    using clock_period_t = std::chrono::steady_clock::duration::period;
+    double clock_freq = clock_period_t::den / clock_period_t::num;
+    return clock_freq;
+#elif defined _WIN32 || defined WINCE
     LARGE_INTEGER freq;
     QueryPerformanceFrequency(&freq);
     return (double)freq.QuadPart;
-#elif defined __linux || defined __linux__
-    return 1e9;
 #elif defined __MACH__ && defined __APPLE__
     static double freq = 0;
     if( freq == 0 )
@@ -817,6 +929,8 @@ double getTickFrequency(void)
         freq = sTimebaseInfo.denom*1e9/sTimebaseInfo.numer;
     }
     return freq;
+#elif defined __unix__
+    return 1e9;
 #else
     return 1e6;
 #endif
@@ -887,6 +1001,51 @@ int64 getCPUTickCount(void)
 
 #endif
 
+
+namespace internal {
+
+class Timestamp
+{
+public:
+    const int64 zeroTickCount;
+    const double ns_in_ticks;
+
+    Timestamp()
+        : zeroTickCount(getTickCount())
+        , ns_in_ticks(1e9 / getTickFrequency())
+    {
+        // nothing
+    }
+
+    int64 getTimestamp()
+    {
+        int64 t = getTickCount();
+        return (int64)((t - zeroTickCount) * ns_in_ticks);
+    }
+
+    static Timestamp& getInstance()
+    {
+        static Timestamp g_timestamp;
+        return g_timestamp;
+    }
+};
+
+class InitTimestamp {
+public:
+    InitTimestamp() {
+        Timestamp::getInstance();
+    }
+};
+static InitTimestamp g_initialize_timestamp;  // force zero timestamp initialization
+
+}  // namespace
+
+int64 getTimestampNS()
+{
+    return internal::Timestamp::getInstance().getTimestamp();
+}
+
+
 const String& getBuildInformation()
 {
     static String build_info =
@@ -928,6 +1087,7 @@ String format( const char* fmt, ... )
 
 String tempfile( const char* suffix )
 {
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
     String fname;
 #ifndef NO_GETENV
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
@@ -1014,6 +1174,10 @@ String tempfile( const char* suffix )
             return fname + suffix;
     }
     return fname;
+#else // OPENCV_HAVE_FILESYSTEM_SUPPORT
+    CV_UNUSED(suffix);
+    CV_Error(Error::StsNotImplemented, "File system support is disabled in this OpenCV build!");
+#endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 }
 
 static ErrorCallback customErrorCallback = 0;
@@ -1265,7 +1429,7 @@ CV_IMPL const char* cvErrorStr( int status )
     case CV_OpenGlApiCallError :     return "OpenGL API call";
     };
 
-    sprintf(buf, "Unknown %s code %d", status >= 0 ? "status":"error", status);
+    snprintf(buf, sizeof(buf), "Unknown %s code %d", status >= 0 ? "status":"error", status);
     return buf;
 }
 
@@ -1336,6 +1500,8 @@ bool __termination = false;
 
 namespace details {
 
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
+
 #ifdef _WIN32
 #ifdef _MSC_VER
 #pragma warning(disable:4505) // unreferenced local function has been removed
@@ -1345,64 +1511,62 @@ namespace details {
 #endif
 #endif
 
-template <class T>
-class DisposedSingletonMark
-{
-private:
-    static bool mark;
-protected:
-    DisposedSingletonMark() {}
-    ~DisposedSingletonMark()
-    {
-        mark = true;
-    }
-public:
-    static bool isDisposed() { return mark; }
-};
-
 // TLS platform abstraction layer
-class TlsAbstraction : public DisposedSingletonMark<TlsAbstraction>
+class TlsAbstraction
 {
 public:
     TlsAbstraction();
-    ~TlsAbstraction();
-    void* getData() const
+    ~TlsAbstraction()
     {
-        if (isDisposed())  // guard: static initialization order fiasco
-            return NULL;
-        return getData_();
-    }
-    void setData(void *pData)
-    {
-        if (isDisposed())  // guard: static initialization order fiasco
-            return;
-        return setData_(pData);
+        // TlsAbstraction singleton should not be released
+        // There is no reliable way to avoid problems caused by static initialization order fiasco
+        // NB: Do NOT use logging here
+        fprintf(stderr, "OpenCV FATAL: TlsAbstraction::~TlsAbstraction() call is not expected\n");
+        fflush(stderr);
     }
 
+    void* getData() const;
+    void setData(void *pData);
+
+    void releaseSystemResources();
+
 private:
-    void* getData_() const;
-    void setData_(void *pData);
 
 #ifdef _WIN32
 #ifndef WINRT
     DWORD tlsKey;
+    bool disposed;
 #endif
 #else // _WIN32
     pthread_key_t  tlsKey;
+#if OPENCV_WITH_THREAD_SANITIZER
+    std::atomic<bool> disposed;
+#else
+    bool disposed;
+#endif
 #endif
 };
 
-template<> bool DisposedSingletonMark<TlsAbstraction>::mark = false;
-
-static TlsAbstraction& getTlsAbstraction_()
+class TlsAbstractionReleaseGuard
 {
-    static TlsAbstraction g_tls;  // disposed in atexit() handlers (required for unregistering our callbacks)
-    return g_tls;
-}
+    TlsAbstraction& tls_;
+public:
+    TlsAbstractionReleaseGuard(TlsAbstraction& tls) : tls_(tls)
+    {
+        /* nothing */
+    }
+    ~TlsAbstractionReleaseGuard()
+    {
+        tls_.releaseSystemResources();
+    }
+};
+
+// TODO use reference
 static TlsAbstraction* getTlsAbstraction()
 {
-    static TlsAbstraction* instance = &getTlsAbstraction_();
-    return DisposedSingletonMark<TlsAbstraction>::isDisposed() ? NULL : instance;
+    static TlsAbstraction *g_tls = new TlsAbstraction();  // memory leak is intended here to avoid disposing of TLS container
+    static TlsAbstractionReleaseGuard g_tlsReleaseGuard(*g_tls);
+    return g_tls;
 }
 
 
@@ -1410,12 +1574,15 @@ static TlsAbstraction* getTlsAbstraction()
 #ifdef WINRT
 static __declspec( thread ) void* tlsData = NULL; // using C++11 thread attribute for local thread data
 TlsAbstraction::TlsAbstraction() {}
-TlsAbstraction::~TlsAbstraction() {}
-void* TlsAbstraction::getData_() const
+void TlsAbstraction::releaseSystemResources()
+{
+    cv::__termination = true;  // DllMain is missing in static builds
+}
+void* TlsAbstraction::getData() const
 {
     return tlsData;
 }
-void TlsAbstraction::setData_(void *pData)
+void TlsAbstraction::setData(void *pData)
 {
     tlsData = pData;
 }
@@ -1424,6 +1591,7 @@ void TlsAbstraction::setData_(void *pData)
 static void NTAPI opencv_fls_destructor(void* pData);
 #endif // CV_USE_FLS
 TlsAbstraction::TlsAbstraction()
+    : disposed(false)
 {
 #ifndef CV_USE_FLS
     tlsKey = TlsAlloc();
@@ -1432,8 +1600,10 @@ TlsAbstraction::TlsAbstraction()
 #endif // CV_USE_FLS
     CV_Assert(tlsKey != TLS_OUT_OF_INDEXES);
 }
-TlsAbstraction::~TlsAbstraction()
+void TlsAbstraction::releaseSystemResources()
 {
+    cv::__termination = true;  // DllMain is missing in static builds
+    disposed = true;
 #ifndef CV_USE_FLS
     TlsFree(tlsKey);
 #else // CV_USE_FLS
@@ -1441,16 +1611,20 @@ TlsAbstraction::~TlsAbstraction()
 #endif // CV_USE_FLS
     tlsKey = TLS_OUT_OF_INDEXES;
 }
-void* TlsAbstraction::getData_() const
+void* TlsAbstraction::getData() const
 {
+    if (disposed)
+        return NULL;
 #ifndef CV_USE_FLS
     return TlsGetValue(tlsKey);
 #else // CV_USE_FLS
     return FlsGetValue(tlsKey);
 #endif // CV_USE_FLS
 }
-void TlsAbstraction::setData_(void *pData)
+void TlsAbstraction::setData(void *pData)
 {
+    if (disposed)
+        return;  // no-op
 #ifndef CV_USE_FLS
     CV_Assert(TlsSetValue(tlsKey, pData) == TRUE);
 #else // CV_USE_FLS
@@ -1461,11 +1635,14 @@ void TlsAbstraction::setData_(void *pData)
 #else // _WIN32
 static void opencv_tls_destructor(void* pData);
 TlsAbstraction::TlsAbstraction()
+    : disposed(false)
 {
     CV_Assert(pthread_key_create(&tlsKey, opencv_tls_destructor) == 0);
 }
-TlsAbstraction::~TlsAbstraction()
+void TlsAbstraction::releaseSystemResources()
 {
+    cv::__termination = true;  // DllMain is missing in static builds
+    disposed = true;
     if (pthread_key_delete(tlsKey) != 0)
     {
         // Don't use logging here
@@ -1473,12 +1650,16 @@ TlsAbstraction::~TlsAbstraction()
         fflush(stderr);
     }
 }
-void* TlsAbstraction::getData_() const
+void* TlsAbstraction::getData() const
 {
+    if (disposed)
+        return NULL;
     return pthread_getspecific(tlsKey);
 }
-void TlsAbstraction::setData_(void *pData)
+void TlsAbstraction::setData(void *pData)
 {
+    if (disposed)
+        return;  // no-op
     CV_Assert(pthread_setspecific(tlsKey, pData) == 0);
 }
 #endif
@@ -1496,6 +1677,9 @@ struct ThreadData
     size_t idx;               // Thread index in TLS storage. This is not OS thread ID!
 };
 
+
+static bool g_isTlsStorageInitialized = false;
+
 // Main TLS storage class
 class TlsStorage
 {
@@ -1503,8 +1687,10 @@ public:
     TlsStorage() :
         tlsSlotsSize(0)
     {
+        (void)getTlsAbstraction();  // ensure singeton initialization (for correct order of atexit calls)
         tlsSlots.reserve(32);
         threads.reserve(32);
+        g_isTlsStorageInitialized = true;
     }
     ~TlsStorage()
     {
@@ -1519,7 +1705,7 @@ public:
     {
         TlsAbstraction* tls = getTlsAbstraction();
         if (NULL == tls)
-            return;  // TLS signleton is not available (terminated)
+            return;  // TLS singleton is not available (terminated)
         ThreadData *pTD = tlsValue == NULL ? (ThreadData*)tls->getData() : (ThreadData*)tlsValue;
         if (pTD == NULL)
             return;  // no OpenCV TLS data for this thread
@@ -1610,7 +1796,7 @@ public:
 
         TlsAbstraction* tls = getTlsAbstraction();
         if (NULL == tls)
-            return NULL;  // TLS signleton is not available (terminated)
+            return NULL;  // TLS singleton is not available (terminated)
 
         ThreadData* threadData = (ThreadData*)tls->getData();
         if(threadData && threadData->slots.size() > slotIdx)
@@ -1646,7 +1832,7 @@ public:
 
         TlsAbstraction* tls = getTlsAbstraction();
         if (NULL == tls)
-            return;  // TLS signleton is not available (terminated)
+            return;  // TLS singleton is not available (terminated)
 
         ThreadData* threadData = (ThreadData*)tls->getData();
         if(!threadData)
@@ -1709,19 +1895,160 @@ static TlsStorage &getTlsStorage()
 #ifndef _WIN32  // pthread key destructor
 static void opencv_tls_destructor(void* pData)
 {
+    if (!g_isTlsStorageInitialized)
+        return;  // nothing to release, so prefer to avoid creation of new global structures
     getTlsStorage().releaseThread(pData);
 }
 #else // _WIN32
 #ifdef CV_USE_FLS
 static void WINAPI opencv_fls_destructor(void* pData)
 {
+    // Empiric detection of ExitProcess call
+    DWORD code = STILL_ACTIVE/*259*/;
+    BOOL res = GetExitCodeProcess(GetCurrentProcess(), &code);
+    if (res && code != STILL_ACTIVE)
+    {
+        // Looks like we are in ExitProcess() call
+        // This is FLS specific only because their callback is called before DllMain.
+        // TLS doesn't have similar problem, DllMain() is called first which mark __termination properly.
+        // Note: this workaround conflicts with ExitProcess() steps order described in documentation, however it works:
+        // 3. ... called with DLL_PROCESS_DETACH
+        // 7. The termination status of the process changes from STILL_ACTIVE to the exit value of the process.
+        // (ref: https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-exitprocess)
+        cv::__termination = true;
+    }
+
+    if (!g_isTlsStorageInitialized)
+        return;  // nothing to release, so prefer to avoid creation of new global structures
     getTlsStorage().releaseThread(pData);
 }
 #endif // CV_USE_FLS
 #endif // _WIN32
 
+static TlsStorage* const g_force_initialization_of_TlsStorage
+#if defined __GNUC__
+    __attribute__((unused))
+#endif
+    = &getTlsStorage();
+
+
+#else  // OPENCV_DISABLE_THREAD_SUPPORT
+
+// no threading (OPENCV_DISABLE_THREAD_SUPPORT=ON)
+class TlsStorage
+{
+public:
+    TlsStorage()
+    {
+        slots.reserve(32);
+    }
+    ~TlsStorage()
+    {
+        for (size_t slotIdx = 0; slotIdx < slots.size(); slotIdx++)
+        {
+            SlotInfo& s = slots[slotIdx];
+            TLSDataContainer* container = s.container;
+            if (container && s.data)
+            {
+                container->deleteDataInstance(s.data);  // Can't use from SlotInfo destructor
+                s.data = nullptr;
+            }
+        }
+    }
+
+    // Reserve TLS storage index
+    size_t reserveSlot(TLSDataContainer* container)
+    {
+        size_t slotsSize = slots.size();
+        for (size_t slot = 0; slot < slotsSize; slot++)
+        {
+            SlotInfo& s = slots[slot];
+            if (s.container == NULL)
+            {
+                CV_Assert(!s.data);
+                s.container = container;
+                return slot;
+            }
+        }
+
+        // create new slot
+        slots.push_back(SlotInfo(container));
+        return slotsSize;
+    }
+
+    // Release TLS storage index and pass associated data to caller
+    void releaseSlot(size_t slotIdx, std::vector<void*> &dataVec, bool keepSlot = false)
+    {
+        CV_Assert(slotIdx < slots.size());
+        SlotInfo& s = slots[slotIdx];
+        void* data = s.data;
+        if (data)
+        {
+            dataVec.push_back(data);
+            s.data = nullptr;
+        }
+        if (!keepSlot)
+        {
+            s.container = NULL;  // mark slot as free (see reserveSlot() implementation)
+        }
+    }
+
+    // Get data by TLS storage index
+    void* getData(size_t slotIdx) const
+    {
+        CV_Assert(slotIdx < slots.size());
+        const SlotInfo& s = slots[slotIdx];
+        return s.data;
+    }
+
+    // Gather data from threads by TLS storage index
+    void gather(size_t slotIdx, std::vector<void*> &dataVec)
+    {
+        CV_Assert(slotIdx < slots.size());
+        SlotInfo& s = slots[slotIdx];
+        void* data = s.data;
+        if (data)
+            dataVec.push_back(data);
+        return;
+    }
+
+    // Set data to storage index
+    void setData(size_t slotIdx, void* pData)
+    {
+        CV_Assert(slotIdx < slots.size());
+        SlotInfo& s = slots[slotIdx];
+        s.data = pData;
+    }
+
+private:
+    struct SlotInfo
+    {
+        SlotInfo(TLSDataContainer* _container) : container(_container), data(nullptr) {}
+        TLSDataContainer* container;  // attached container (to dispose data)
+        void* data;
+    };
+    std::vector<struct SlotInfo> slots;
+};
+
+static TlsStorage& getTlsStorage()
+{
+    static TlsStorage g_storage;  // no threading
+    return g_storage;
+}
+
+#endif  // OPENCV_DISABLE_THREAD_SUPPORT
+
 } // namespace details
 using namespace details;
+
+void releaseTlsStorageThread()
+{
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
+    if (!g_isTlsStorageInitialized)
+        return;  // nothing to release, so prefer to avoid creation of new global structures
+    getTlsStorage().releaseThread();
+#endif
+}
 
 TLSDataContainer::TLSDataContainer()
 {
@@ -1770,7 +2097,15 @@ void* TLSDataContainer::getData() const
     {
         // Create new data instance and save it to TLS storage
         pData = createDataInstance();
-        getTlsStorage().setData(key_, pData);
+        try
+        {
+            getTlsStorage().setData(key_, pData);
+        }
+        catch (...)
+        {
+            deleteDataInstance(pData);
+            throw;
+        }
     }
     return pData;
 }
@@ -1806,7 +2141,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved)
         {
             // Not allowed to free resources if lpReserved is non-null
             // http://msdn.microsoft.com/en-us/library/windows/desktop/ms682583.aspx
-            cv::getTlsStorage().releaseThread();
+            releaseTlsStorageThread();
         }
     }
     return TRUE;
@@ -1851,7 +2186,7 @@ class ParseError
 {
     std::string bad_value;
 public:
-    ParseError(const std::string bad_value_) :bad_value(bad_value_) {}
+    ParseError(const std::string &bad_value_) :bad_value(bad_value_) {}
     std::string toString(const std::string &param) const
     {
         std::ostringstream out;
@@ -1888,7 +2223,7 @@ inline size_t parseOption(const std::string &value)
     }
     cv::String valueStr = value.substr(0, pos);
     cv::String suffixStr = value.substr(pos, value.length() - pos);
-    int v = atoi(valueStr.c_str());
+    size_t v = (size_t)std::stoull(valueStr);
     if (suffixStr.length() == 0)
         return v;
     else if (suffixStr == "MB" || suffixStr == "Mb" || suffixStr == "mb")
@@ -2354,6 +2689,13 @@ public:
             ippTopFeatures = ippCPUID_SSE42;
 
         pIppLibInfo = ippiGetLibVersion();
+
+        // workaround: https://github.com/opencv/opencv/issues/12959
+        std::string ippName(pIppLibInfo->Name ? pIppLibInfo->Name : "");
+        if (ippName.find("SSE4.2") != std::string::npos)
+        {
+            ippTopFeatures = ippCPUID_SSE42;
+        }
     }
 
 public:
@@ -2385,16 +2727,12 @@ unsigned long long getIppFeatures()
 #endif
 }
 
-unsigned long long getIppTopFeatures();
-
+#ifdef HAVE_IPP
 unsigned long long getIppTopFeatures()
 {
-#ifdef HAVE_IPP
     return getIPPSingleton().ippTopFeatures;
-#else
-    return 0;
-#endif
 }
+#endif
 
 void setIppStatus(int status, const char * const _funcname, const char * const _filename, int _line)
 {
@@ -2490,6 +2828,82 @@ void setUseIPP_NotExact(bool flag)
 }
 
 } // namespace ipp
+
+
+namespace details {
+
+#if OPENCV_IMPL_FP_HINTS_X86
+#ifndef _MM_DENORMALS_ZERO_ON  // requires pmmintrin.h (SSE3)
+#define _MM_DENORMALS_ZERO_ON 0x0040
+#endif
+#ifndef _MM_DENORMALS_ZERO_MASK  // requires pmmintrin.h (SSE3)
+#define _MM_DENORMALS_ZERO_MASK 0x0040
+#endif
+#endif
+
+void setFPDenormalsIgnoreHint(bool ignore, CV_OUT FPDenormalsModeState& state)
+{
+#if OPENCV_IMPL_FP_HINTS_X86
+    unsigned mask = _MM_FLUSH_ZERO_MASK;
+    unsigned value = ignore ? _MM_FLUSH_ZERO_ON : 0;
+    if (featuresEnabled.have[CPU_SSE3])
+    {
+        mask |= _MM_DENORMALS_ZERO_MASK;
+        value |= ignore ? _MM_DENORMALS_ZERO_ON : 0;
+    }
+    const unsigned old_flags = _mm_getcsr();
+    const unsigned old_value = old_flags & mask;
+    unsigned flags = (old_flags & ~mask) | value;
+    CV_LOG_DEBUG(NULL, "core: update FP mxcsr flags = " << cv::format("0x%08x", flags));
+    // save state
+    state.reserved[0] = (uint32_t)mask;
+    state.reserved[1] = (uint32_t)old_value;
+    _mm_setcsr(flags);
+#else
+    CV_UNUSED(ignore); CV_UNUSED(state);
+#endif
+}
+
+int saveFPDenormalsState(CV_OUT FPDenormalsModeState& state)
+{
+#if OPENCV_IMPL_FP_HINTS_X86
+    unsigned mask = _MM_FLUSH_ZERO_MASK;
+    if (featuresEnabled.have[CPU_SSE3])
+    {
+        mask |= _MM_DENORMALS_ZERO_MASK;
+    }
+    const unsigned old_flags = _mm_getcsr();
+    const unsigned old_value = old_flags & mask;
+    // save state
+    state.reserved[0] = (uint32_t)mask;
+    state.reserved[1] = (uint32_t)old_value;
+    return 2;
+#else
+    CV_UNUSED(state);
+    return 0;
+#endif
+}
+
+bool restoreFPDenormalsState(const FPDenormalsModeState& state)
+{
+#if OPENCV_IMPL_FP_HINTS_X86
+    const unsigned mask = (unsigned)state.reserved[0];
+    CV_DbgAssert(mask != 0); // invalid state (ensure that state is properly saved earlier)
+    const unsigned value = (unsigned)state.reserved[1];
+    CV_DbgCheck((int)value, value == (value & mask), "invalid SSE FP state");
+    const unsigned old_flags = _mm_getcsr();
+    unsigned flags = (old_flags & ~mask) | value;
+    CV_LOG_DEBUG(NULL, "core: restore FP mxcsr flags = " << cv::format("0x%08x", flags));
+    _mm_setcsr(flags);
+    return true;
+#else
+    CV_UNUSED(state);
+    return false;
+#endif
+}
+
+}  // namespace details
+
 
 } // namespace cv
 

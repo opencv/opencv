@@ -113,7 +113,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
              */
             if (weight != 1.0)
             {
-                kernels::scale1<T>(stream, output, input, weight);
+                kernels::scale1_with_bias1<T>(stream, output, input, weight, 1.0);
             }
             else if (!weightsTensor.empty())
             {

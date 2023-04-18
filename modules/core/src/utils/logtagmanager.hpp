@@ -37,8 +37,8 @@ private:
     // also, extensible functions (accepting user-provided callback) are not allowed
     // to call LogTagManger (to prevent iterator invalidation), which needs enforced
     // with a non-recursive mutex.
-    using MutexType = std::mutex;
-    using LockType = std::lock_guard<MutexType>;
+    using MutexType = cv::Mutex;
+    using LockType = cv::AutoLock;
 
     enum class MatchingScope
     {

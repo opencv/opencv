@@ -30,6 +30,7 @@ def main():
     circles = cv.HoughCircles(img, cv.HOUGH_GRADIENT, 1, 10, np.array([]), 100, 30, 1, 30)
 
     if circles is not None: # Check if circles have been found and only then iterate over these and add them to the image
+        circles = np.uint16(np.around(circles))
         _a, b, _c = circles.shape
         for i in range(b):
             cv.circle(cimg, (circles[0][i][0], circles[0][i][1]), circles[0][i][2], (0, 0, 255), 3, cv.LINE_AA)

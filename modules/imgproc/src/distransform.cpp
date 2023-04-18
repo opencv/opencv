@@ -270,7 +270,7 @@ distanceTransformEx_5x5( const Mat& _src, Mat& _temp, Mat& _dist, Mat& _labels, 
             if( !s[j] )
             {
                 tmp[j] = 0;
-                //assert( lls[j] != 0 );
+                //CV_Assert( lls[j] != 0 );
             }
             else
             {
@@ -740,10 +740,8 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     if( maskSize != CV_DIST_MASK_3 && maskSize != CV_DIST_MASK_5 && maskSize != CV_DIST_MASK_PRECISE )
         CV_Error( CV_StsBadSize, "Mask size should be 3 or 5 or 0 (precise)" );
 
-    if( distType == CV_DIST_C || distType == CV_DIST_L1 )
-        maskSize = !need_labels ? CV_DIST_MASK_3 : CV_DIST_MASK_5;
-    else if( distType == CV_DIST_L2 && need_labels )
-        maskSize = CV_DIST_MASK_5;
+    if ((distType == CV_DIST_C || distType == CV_DIST_L1) && !need_labels)
+        maskSize = CV_DIST_MASK_3;
 
     if( maskSize == CV_DIST_MASK_PRECISE )
     {

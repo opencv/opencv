@@ -8,6 +8,8 @@
 #include "pointer.hpp"
 #include "nvcc_defs.hpp"
 
+#include "../../cuda/types.hpp"
+
 #include <cstddef>
 #include <type_traits>
 
@@ -24,16 +26,13 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
 
     public:
         using value_type = T;
-        using size_type = std::size_t;
-        using difference_type = std::ptrdiff_t;
+        using size_type = device::size_type;
+        using index_type = device::index_type;
 
         using pointer = DevicePtr<value_type>;
         using const_pointer = DevicePtr<typename std::add_const<value_type>::type>;
         using reference = typename std::add_lvalue_reference<value_type>::type;
         using const_reference = typename std::add_lvalue_reference<typename std::add_const<value_type>::type>;
-
-        using iterator = pointer;
-        using const_iterator = const_pointer;
 
         Span() noexcept : ptr{ nullptr }, sz{ 0 } { }
         CUDA4DNN_HOST_DEVICE Span(pointer first, pointer last) noexcept : ptr{ first }, sz{ last - first } { }
@@ -42,7 +41,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         CUDA4DNN_HOST_DEVICE size_type size() const noexcept { return sz; }
         CUDA4DNN_HOST_DEVICE bool empty() const noexcept { return size() == 0; }
 
-        CUDA4DNN_DEVICE reference operator[](difference_type index) const { return ptr[index]; }
+        CUDA4DNN_DEVICE reference operator[](index_type index) const { return ptr[index]; }
         CUDA4DNN_HOST_DEVICE pointer data() const noexcept { return ptr; }
 
         template<class U = T, class V = typename std::add_const<U>::type,

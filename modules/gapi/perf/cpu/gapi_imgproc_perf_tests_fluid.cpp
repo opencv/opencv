@@ -9,6 +9,7 @@
 #include "../common/gapi_imgproc_perf_tests.hpp"
 
 #define IMGPROC_FLUID cv::gapi::imgproc::fluid::kernels()
+#define CORE_FLUID cv::gapi::core::fluid::kernels()
 
 namespace opencv_test
 {
@@ -198,4 +199,36 @@ INSTANTIATE_TEST_CASE_P(RGB2LabPerfTestFluid, RGB2LabPerfTest,
             Values(szVGA, sz720p, sz1080p),
             Values(cv::compile_args(IMGPROC_FLUID))));
 
+INSTANTIATE_TEST_CASE_P(ResizePerfTestFluid, ResizePerfTest,
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
+            Values(CV_8UC3, CV_32FC1),
+            Values(cv::INTER_LINEAR),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(cv::Size(64, 64),
+                   cv::Size(30, 30)),
+            Values(cv::compile_args(IMGPROC_FLUID))));
+
+#define IMGPROC_FLUID cv::gapi::imgproc::fluid::kernels()
+INSTANTIATE_TEST_CASE_P(BottleneckKernelsPerfTestFluid, BottleneckKernelsConstInputPerfTest,
+    Combine(Values(AbsSimilarPoints(0, 1).to_compare_f()),
+            Values("cv/optflow/frames/1080p_00.png", "cv/optflow/frames/720p_00.png",
+                   "cv/optflow/frames/VGA_00.png", "cv/dnn_face/recognition/Aaron_Tippin_0001.jpg"),
+            Values(cv::compile_args(IMGPROC_FLUID))));
+
+INSTANTIATE_TEST_CASE_P(ResizeInSimpleGraphPerfTestFluid, ResizeInSimpleGraphPerfTest,
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
+            Values(CV_8UC3, CV_32FC1),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(0.5),
+            Values(0.5),
+            Values(cv::compile_args(cv::gapi::combine(IMGPROC_FLUID, CORE_FLUID)))));
+
+INSTANTIATE_TEST_CASE_P(ResizeFxFyPerfTestFluid, ResizeFxFyPerfTest,
+    Combine(Values(Tolerance_FloatRel_IntAbs(1e-5, 1).to_compare_f()),
+            Values(CV_8UC3, CV_32FC1),
+            Values(cv::INTER_LINEAR),
+            Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(0.5, 0.25, 2),
+            Values(0.5, 0.25, 2),
+            Values(cv::compile_args(IMGPROC_FLUID))));
 }

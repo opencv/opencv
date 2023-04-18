@@ -31,7 +31,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             : stream(std::move(stream_)), cublasHandle(std::move(handle)), axis{ axis }
         {
             weightsTensor = csl::makeTensorHeader<T>(weights);
-            CV_Assert(get_effective_rank(weightsTensor) == 2);
+            CV_Assert(get_effective_rank(weightsTensor) <= 2);
             csl::copyMatToTensor<T>(weights, weightsTensor, stream);
 
             if (!bias.empty())

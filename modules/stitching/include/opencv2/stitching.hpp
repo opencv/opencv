@@ -205,12 +205,12 @@ public:
     void setWaveCorrectKind(detail::WaveCorrectKind kind) { wave_correct_kind_ = kind; }
 
     Ptr<Feature2D> featuresFinder() { return features_finder_; }
-    const Ptr<Feature2D> featuresFinder() const { return features_finder_; }
+    Ptr<Feature2D> featuresFinder() const { return features_finder_; }
     void setFeaturesFinder(Ptr<Feature2D> features_finder)
         { features_finder_ = features_finder; }
 
     Ptr<detail::FeaturesMatcher> featuresMatcher() { return features_matcher_; }
-    const Ptr<detail::FeaturesMatcher> featuresMatcher() const { return features_matcher_; }
+    Ptr<detail::FeaturesMatcher> featuresMatcher() const { return features_matcher_; }
     void setFeaturesMatcher(Ptr<detail::FeaturesMatcher> features_matcher)
         { features_matcher_ = features_matcher; }
 
@@ -259,6 +259,20 @@ public:
      */
     CV_WRAP Status estimateTransform(InputArrayOfArrays images, InputArrayOfArrays masks = noArray());
 
+    /** @brief These function restors camera rotation and camera intrinsics of each camera
+     *  that can be got with @ref Stitcher::cameras call
+
+    @param images Input images.
+    @param cameras Estimated rotation of cameras for each of the input images.
+    @param component Indices (0-based) of images constituting the final panorama (optional).
+    @return Status code.
+     */
+    Status setTransform(InputArrayOfArrays images,
+                        const std::vector<detail::CameraParams> &cameras,
+                        const std::vector<int> &component);
+    /** @overload */
+    Status setTransform(InputArrayOfArrays images, const std::vector<detail::CameraParams> &cameras);
+
     /** @overload */
     CV_WRAP Status composePanorama(OutputArray pano);
     /** @brief These functions try to compose the given images (or images stored internally from the other function
@@ -272,7 +286,7 @@ public:
     @param pano Final pano.
     @return Status code.
      */
-    Status composePanorama(InputArrayOfArrays images, OutputArray pano);
+    CV_WRAP Status composePanorama(InputArrayOfArrays images, OutputArray pano);
 
     /** @overload */
     CV_WRAP Status stitch(InputArrayOfArrays images, OutputArray pano);
@@ -288,6 +302,14 @@ public:
     std::vector<int> component() const { return indices_; }
     std::vector<detail::CameraParams> cameras() const { return cameras_; }
     CV_WRAP double workScale() const { return work_scale_; }
+
+    /** @brief Return the mask of the panorama.
+
+    The mask is a 8U UMat with the values: 0xFF (white) for pixels filled by the input images,
+    0 (black) for unused pixels. It can be used as the mask for inpaint.
+
+    @return The mask.
+     */
     UMat resultMask() const { return result_mask_; }
 
 private:

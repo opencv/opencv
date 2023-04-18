@@ -4,6 +4,7 @@
   "version": "1.0.1",
   "dependencies": {
     "ansi-colors": "^4.1.1",
+    "cli-table": "0.3.6",
     "minimist": "^1.2.0",
     "node-qunit": "latest"
   },
@@ -20,7 +21,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "BSD-3-Clause",
+  "license": "Apache 2.0 License",
   "bugs": {
     "url": "https://github.com/opencv/opencv/issues"
   },

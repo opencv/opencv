@@ -108,12 +108,13 @@ macro(ippiw_setup PATH BUILD)
           message(STATUS "found Intel IPP Integration Wrappers binaries: ${IW_VERSION_MAJOR}.${IW_VERSION_MINOR}.${IW_VERSION_UPDATE}")
           message(STATUS "at: ${IPP_IW_PATH}")
 
-          add_library(ippiw STATIC IMPORTED)
-          set_target_properties(ippiw PROPERTIES
+          add_library(ipp_iw STATIC IMPORTED)
+          set_target_properties(ipp_iw PROPERTIES
             IMPORTED_LINK_INTERFACE_LIBRARIES ""
             IMPORTED_LOCATION "${FILE}"
           )
-          if (NOT BUILD_SHARED_LIBS)
+
+          if (NOT BUILD_SHARED_LIBS AND ";${OPENCV_INSTALL_EXTERNAL_DEPENDENCIES};" MATCHES ";ipp;")
             # CMake doesn't support "install(TARGETS ${name} ...)" command with imported targets
             install(FILES "${FILE}"
                     DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
@@ -122,7 +123,7 @@ macro(ippiw_setup PATH BUILD)
           endif()
 
           set(IPP_IW_INCLUDES "${IPP_IW_PATH}/include")
-          set(IPP_IW_LIBRARIES ippiw)
+          set(IPP_IW_LIBRARIES ipp_iw)
 
           set(HAVE_IPP_IW 1)
           set(BUILD_IPP_IW 0)

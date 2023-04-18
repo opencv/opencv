@@ -6,6 +6,9 @@
 
 
 #include "test_precomp.hpp"
+
+#include <opencv2/gapi/s11n.hpp>
+
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <ade/util/zip_range.hpp>
 
@@ -19,13 +22,13 @@ namespace opencv_test
           static cv::GMatDesc outMeta(cv::GMatDesc in, cv::Size sz, double fx, double fy, int) {
               if (sz.width != 0 && sz.height != 0)
               {
-                  return in.withSize(to_own(sz));
+                  return in.withSize(sz);
               }
               else
               {
                   GAPI_Assert(fx != 0. && fy != 0.);
                   return in.withSize
-                    (cv::gapi::own::Size(static_cast<int>(std::round(in.size.width  * fx)),
+                    (cv::Size(static_cast<int>(std::round(in.size.width  * fx)),
                                          static_cast<int>(std::round(in.size.height * fy))));
               }
           }
@@ -78,15 +81,71 @@ namespace opencv_test
 
           void check(const std::vector<cv::Mat>& out_mats)
           {
-              for (const auto& it : ade::util::zip(ref_mats, out_mats))
+              for (const auto it : ade::util::zip(ref_mats, out_mats))
               {
                   const auto& ref_mat = std::get<0>(it);
                   const auto& out_mat = std::get<1>(it);
 
-                  EXPECT_EQ(0, cv::countNonZero(ref_mat != out_mat));
+                  EXPECT_EQ(0, cvtest::norm(ref_mat, out_mat, NORM_INF));
               }
           }
       };
+
+      struct GComputationPythonApplyTest: public ::testing::Test
+      {
+          cv::Size sz;
+          MatType type;
+          cv::Mat in_mat1, in_mat2, out_mat_ocv;
+          cv::GComputation m_c;
+
+          GComputationPythonApplyTest() : sz(cv::Size(300,300)), type(CV_8UC1),
+          in_mat1(sz, type), in_mat2(sz, type), out_mat_ocv(sz, type),
+          m_c([&](){
+                  cv::GMat in1, in2;
+                  cv::GMat out = in1 + in2;
+                  return cv::GComputation(cv::GIn(in1, in2), cv::GOut(out));
+                  })
+          {
+              cv::randu(in_mat1, cv::Scalar::all(0), cv::Scalar::all(255));
+              cv::randu(in_mat2, cv::Scalar::all(0), cv::Scalar::all(255));
+              out_mat_ocv = in_mat1 + in_mat2;
+          }
+      };
+  }
+
+  TEST_F(GComputationPythonApplyTest, WithoutSerialization)
+  {
+      auto output = m_c.apply(cv::detail::ExtractArgsCallback{[this](const cv::GTypesInfo& info)
+                                  {
+                                      GAPI_Assert(info[0].shape == cv::GShape::GMAT);
+                                      GAPI_Assert(info[1].shape == cv::GShape::GMAT);
+                                      return cv::GRunArgs{in_mat1, in_mat2};
+                                  }
+                              });
+
+      EXPECT_EQ(1u, output.size());
+
+      const auto& out_mat_gapi = cv::util::get<cv::Mat>(output[0]);
+      EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
+  }
+
+  TEST_F(GComputationPythonApplyTest, WithSerialization)
+  {
+      auto p = cv::gapi::serialize(m_c);
+      auto c = cv::gapi::deserialize<cv::GComputation>(p);
+
+      auto output = c.apply(cv::detail::ExtractArgsCallback{[this](const cv::GTypesInfo& info)
+                                  {
+                                      GAPI_Assert(info[0].shape == cv::GShape::GMAT);
+                                      GAPI_Assert(info[1].shape == cv::GShape::GMAT);
+                                      return cv::GRunArgs{in_mat1, in_mat2};
+                                  }
+                              });
+
+      EXPECT_EQ(1u, output.size());
+
+      const auto& out_mat_gapi = cv::util::get<cv::Mat>(output[0]);
+      EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
   }
 
   TEST_F(GComputationApplyTest, ThrowDontPassCustomKernel)

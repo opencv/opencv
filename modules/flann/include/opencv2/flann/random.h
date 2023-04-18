@@ -37,8 +37,6 @@
 #include <cstdlib>
 #include <vector>
 
-#include "general.h"
-
 namespace cvflann
 {
 

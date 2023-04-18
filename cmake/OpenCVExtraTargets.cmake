@@ -1,16 +1,21 @@
 # ----------------------------------------------------------------------------
 #   Uninstall target, for "make uninstall"
 # ----------------------------------------------------------------------------
-CONFIGURE_FILE(
-  "${OpenCV_SOURCE_DIR}/cmake/templates/cmake_uninstall.cmake.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-  @ONLY)
+if(NOT TARGET uninstall)  # avoid conflicts with parent projects
+  configure_file(
+      "${OpenCV_SOURCE_DIR}/cmake/templates/cmake_uninstall.cmake.in"
+      "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+      @ONLY
+  )
 
-ADD_CUSTOM_TARGET(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
-if(ENABLE_SOLUTION_FOLDERS)
-  set_target_properties(uninstall PROPERTIES FOLDER "CMakeTargets")
+  add_custom_target(uninstall
+      COMMAND "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+  )
+
+  if(ENABLE_SOLUTION_FOLDERS)
+    set_target_properties(uninstall PROPERTIES FOLDER "CMakeTargets")
+  endif()
 endif()
-
 
 # ----------------------------------------------------------------------------
 # target building all OpenCV modules

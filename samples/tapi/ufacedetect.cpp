@@ -206,7 +206,7 @@ void detectAndDraw( UMat& img, Mat& canvas, CascadeClassifier& cascade,
     double alpha = nframes > 50 ? 0.01 : 1./nframes;
     avgfps = avgfps*(1-alpha) + fps*alpha;
 
-    putText(canvas, format("OpenCL: %s, fps: %.1f", ocl::useOpenCL() ? "ON" : "OFF", avgfps), Point(50, 30),
+    putText(canvas, cv::format("OpenCL: %s, fps: %.1f", ocl::useOpenCL() ? "ON" : "OFF", avgfps), Point(50, 30),
             FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0,255,0), 2);
 
     for ( size_t i = 0; i < faces.size(); i++ )

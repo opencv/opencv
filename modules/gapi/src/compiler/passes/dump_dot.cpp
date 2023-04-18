@@ -32,6 +32,8 @@ void dumpDot(const ade::Graph &g, std::ostream& os)
         {cv::GShape::GMAT,    "GMat"},
         {cv::GShape::GSCALAR, "GScalar"},
         {cv::GShape::GARRAY,  "GArray"},
+        {cv::GShape::GOPAQUE, "GOpaque"},
+        {cv::GShape::GFRAME,  "GFrame"},
     };
 
     auto format_op_label  = [&gr](ade::NodeHandle nh) -> std::string {
@@ -147,7 +149,7 @@ void dumpDot(const ade::Graph &g, std::ostream& os)
             }
         }
         break;
-        default: GAPI_Assert(false);
+        default: GAPI_Error("InternalError");
         }
     }
 
@@ -207,7 +209,7 @@ void dumpDot(const ade::Graph &g, std::ostream& os)
             }
             break;
         default:
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
             break;
         }
     }

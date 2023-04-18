@@ -50,7 +50,7 @@ typedef double v1f64 __attribute__ ((vector_size(8), aligned(8)));
 #define msa_ld1q_f32(__a) ((v4f32)__builtin_msa_ld_w(__a, 0))
 #define msa_ld1q_f64(__a) ((v2f64)__builtin_msa_ld_d(__a, 0))
 
-/* Store 64bits vector elments values to the given memory address. */
+/* Store 64bits vector elements values to the given memory address. */
 #define msa_st1_s8(__a, __b)  (*((v8i8*)(__a)) = __b)
 #define msa_st1_s16(__a, __b) (*((v4i16*)(__a)) = __b)
 #define msa_st1_s32(__a, __b) (*((v2i32*)(__a)) = __b)
@@ -377,7 +377,7 @@ typedef double v1f64 __attribute__ ((vector_size(8), aligned(8)));
 })
 
 /* Right shift elements in a 128 bits vector by an immediate value, saturate the results and them in a 64 bits vector.
-   Input is signed and outpus is unsigned. */
+   Input is signed and output is unsigned. */
 #define msa_qrshrun_n_s16(__a, __b) \
 ({ \
   v8i16 __d = __builtin_msa_srlri_h(__builtin_msa_max_s_h(__builtin_msa_fill_h(0), (v8i16)(__a)), (int)(__b)); \
@@ -719,7 +719,7 @@ typedef double v1f64 __attribute__ ((vector_size(8), aligned(8)));
   v2i64 _c;                                     \
   _b = __builtin_msa_hadd_s_w(__a, __a);        \
   _c = __builtin_msa_hadd_s_d(_b, _b);          \
-  (int16_t)(_c[0] + _c[1]);                     \
+  (int32_t)(_c[0] + _c[1]);                     \
 })
 
 
@@ -736,7 +736,7 @@ typedef double v1f64 __attribute__ ((vector_size(8), aligned(8)));
 ({                                             \
   v2i64 _b;                                    \
   _b = __builtin_msa_hadd_s_d(__a, __a);       \
-  (int32_t)(_b[0] + _b[1]);                    \
+  (int64_t)(_b[0] + _b[1]);                    \
 })
 
 /* uint8_t msa_sum_u8(v16u8 __a)*/
@@ -756,7 +756,7 @@ typedef double v1f64 __attribute__ ((vector_size(8), aligned(8)));
   v4i32 _c32;                                    \
   _b16 = __builtin_msa_hadd_s_h(__a, __a);       \
   _c32 = __builtin_msa_hadd_s_w(_b16, _b16);         \
-  (int8_t)msa_sum_s32(_c32);                     \
+  (int16_t)msa_sum_s32(_c32);                     \
 })
 
 /* float msa_sum_f32(v4f32 __a)*/

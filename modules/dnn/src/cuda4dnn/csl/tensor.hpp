@@ -67,7 +67,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
      */
     template <class T>
     class Tensor {
-        static_assert(std::is_standard_layout<T>::value, "T must staisfy StandardLayoutType");
+        static_assert(std::is_standard_layout<T>::value, "T must satisfy StandardLayoutType");
 
     public:
         using value_type    = typename ManagedPtr<T>::element_type;
@@ -369,6 +369,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             shape.erase(std::begin(shape) + axis);
         }
 
+        /** @brief squeezes the tensor
+         *
+         * removes leading singleton axes until the tensor's rank is equal to the requested rank
+         *
+         * Pre-conditions:
+         * - the tensor must be non-empty
+         * - the tensor's rank must be at least two
+         * - the tensor's rank must be at least the requested rank
+         * - the tensor must be squeezable up to the requested rank
+         *
+         * Exception Guarantee: Strong
+         */
+        void squeeze_to(int r) {
+            CV_Assert(!empty());
+            CV_Assert(rank() >= r);
+            CV_Assert(std::all_of(std::begin(shape), std::end(shape) - r, [](size_type x){ return x == 1; }));
+            std::copy(std::end(shape) - r, std::end(shape), std::begin(shape));
+            shape.resize(r);
+        }
+
         /** @brief unsqueezes the tensor
          *
          * adds a axis of unit size at the requested before the specified axis
@@ -553,7 +573,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - [start, end) represents a forward range containing the length of the axes in order
          * - the number of axis lengths must be less than or equal to the rank
          * - at most one axis length is allowed for length deduction
-         * - the lengths provided must ensure that the total number of elements remains unchnged
+         * - the lengths provided must ensure that the total number of elements remains unchanged
          *
          * Exception Guarantee: Strong
          */
@@ -663,6 +683,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             axis = clamp_axis(axis, rank());
             CV_Assert(axis >= 0 && axis < rank());
             shape.erase(std::begin(shape) + axis);
+        }
+
+        /** @brief squeezes the tensor
+         *
+         * removes leading singleton axes until the tensor's rank is equal to the requested rank
+         *
+         * Pre-conditions:
+         * - the tensor must be non-empty
+         * - the tensor's rank must be at least two
+         * - the tensor's rank must be at least the requested rank
+         * - the tensor must be squeezable up to the requested rank
+         *
+         * Exception Guarantee: Strong
+         */
+        void squeeze_to(int r) {
+            CV_Assert(!empty());
+            CV_Assert(rank() >= r);
+            CV_Assert(std::all_of(std::begin(shape), std::end(shape) - r, [](size_type x){ return x == 1; }));
+            std::copy(std::end(shape) - r, std::end(shape), std::begin(shape));
+            shape.resize(r);
         }
 
         /** @brief unsqueezes the tensor
@@ -780,7 +820,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         }
 
         template <class ForwardItr>
-        TensorView(pointer ptr_, ForwardItr start, ForwardItr end) : ptr{ ptr_ } {
+        TensorView(const_pointer ptr_, ForwardItr start, ForwardItr end) : ptr{ ptr_ } {
             CV_Assert(start != end);
             CV_Assert(std::distance(start, end) <= CSL_MAX_TENSOR_RANK);
 
@@ -898,7 +938,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          * - [start, end) represents a forward range containing length of the axes in order starting from axis zero
          * - the number of axis lengths must be less than or equal to the tensor rank
          * - at most one axis length is allowed for length deduction
-         * - the lengths provided must ensure that the total number of elements remains unchnged
+         * - the lengths provided must ensure that the total number of elements remains unchanged
          *
          * Exception Guarantee: Strong
          */
@@ -1008,6 +1048,26 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
             axis = clamp_axis(axis, rank());
             CV_Assert(axis >= 0 && axis < rank());
             shape.erase(std::begin(shape) + axis);
+        }
+
+        /** @brief squeezes the tensor
+         *
+         * removes leading singleton axes until the tensor's rank is equal to the requested rank
+         *
+         * Pre-conditions:
+         * - the tensor must be non-empty
+         * - the tensor's rank must be at least two
+         * - the tensor's rank must be at least the requested rank
+         * - the tensor must be squeezable up to the requested rank
+         *
+         * Exception Guarantee: Strong
+         */
+        void squeeze_to(int r) {
+            CV_Assert(!empty());
+            CV_Assert(rank() >= r);
+            CV_Assert(std::all_of(std::begin(shape), std::end(shape) - r, [](size_type x){ return x == 1; }));
+            std::copy(std::end(shape) - r, std::end(shape), std::begin(shape));
+            shape.resize(r);
         }
 
         /** @brief unsqueezes the tensor

@@ -16,6 +16,9 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template <class T>
     void permute(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> input, std::vector<std::size_t> order);
 
+    template <class T>
+    void transpose(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, std::size_t in_width, std::size_t out_width);
+
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 
 #endif /* OPENCV_DNN_SRC_CUDA4DNN_KERNELS_PERMUTE_HPP */

@@ -32,12 +32,15 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
 
     if(!reader.isOpened()) {
         std::cerr << "Warning: Unable to open " << inputFileName <<
-                     " Applicatioin stated with default advanced parameters" << std::endl;
+                     " Application started with default advanced parameters" << std::endl;
         return true;
     }
 
     readFromNode(reader["charuco_dict"], mCapParams.charucoDictName);
-    readFromNode(reader["charuco_square_lenght"], mCapParams.charucoSquareLenght);
+    if (readFromNode(reader["charuco_square_lenght"], mCapParams.charucoSquareLength)) {
+        std::cout << "DEPRECATION: Parameter 'charuco_square_lenght' has been deprecated (typo). Use 'charuco_square_length' instead." << std::endl;
+    }
+    readFromNode(reader["charuco_square_length"], mCapParams.charucoSquareLength);
     readFromNode(reader["charuco_marker_size"], mCapParams.charucoMarkerSize);
     readFromNode(reader["camera_resolution"], mCapParams.cameraResolution);
     readFromNode(reader["calibration_step"], mCapParams.calibrationStep);
@@ -51,7 +54,7 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
     bool retValue =
             checkAssertion(mCapParams.charucoDictName >= 0, "Dict name must be >= 0") &&
             checkAssertion(mCapParams.charucoMarkerSize > 0, "Marker size must be positive") &&
-            checkAssertion(mCapParams.charucoSquareLenght > 0, "Square size must be positive") &&
+            checkAssertion(mCapParams.charucoSquareLength > 0, "Square size must be positive") &&
             checkAssertion(mCapParams.minFramesNum > 1, "Minimal number of frames for calibration < 1") &&
             checkAssertion(mCapParams.calibrationStep > 0, "Calibration step must be positive") &&
             checkAssertion(mCapParams.maxFramesNum > mCapParams.minFramesNum, "maxFramesNum < minFramesNum") &&
@@ -86,6 +89,9 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
     mCapParams.captureDelay = parser.get<float>("d");
     mCapParams.squareSize = parser.get<float>("sz");
     mCapParams.templDst = parser.get<float>("dst");
+    mCapParams.saveFrames = parser.get<bool>("save_frames");
+    mCapParams.zoom = parser.get<float>("zoom");
+    mCapParams.forceReopen = parser.get<bool>("force_reopen");
 
     if(!checkAssertion(mCapParams.squareSize > 0, "Distance between corners or circles must be positive"))
         return false;
@@ -103,7 +109,12 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
 
     std::string templateType = parser.get<std::string>("t");
 
-    if(templateType.find("circles", 0) == 0) {
+
+    if(templateType.find("symcircles", 0) == 0) {
+        mCapParams.board = CirclesGrid;
+        mCapParams.boardSize = cv::Size(4, 11);
+    }
+    else if(templateType.find("circles", 0) == 0) {
         mCapParams.board = AcirclesGrid;
         mCapParams.boardSize = cv::Size(4, 11);
     }
@@ -117,9 +128,9 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
     }
     else if(templateType.find("charuco", 0) == 0) {
         mCapParams.board = chAruco;
-        mCapParams.boardSize = cv::Size(6, 8);
+        mCapParams.boardSize = cv::Size(5, 7);
         mCapParams.charucoDictName = 0;
-        mCapParams.charucoSquareLenght = 200;
+        mCapParams.charucoSquareLength = 200;
         mCapParams.charucoMarkerSize = 100;
     }
     else {

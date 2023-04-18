@@ -2,11 +2,11 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
+#include <algorithm>
 
 #include "test_precomp.hpp"
-#include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include "gapi_mock_kernels.hpp"
 
 #include <opencv2/gapi/cpu/gcpukernel.hpp>     // cpu::backend
@@ -101,7 +101,7 @@ namespace
         GAPI_FLUID_KERNEL(GClone, I::GClone, false)
         {
             static const int Window = 1;
-            static void run(const cv::gapi::fluid::View&, cv::gapi::fluid::Buffer)
+            static void run(const cv::gapi::fluid::View&, cv::gapi::fluid::Buffer&)
             {
                 HeteroGraph::registerCallKernel(KernelTags::FLUID_CUSTOM_CLONE);
             }
@@ -145,6 +145,29 @@ TEST(KernelPackage, Includes)
     EXPECT_TRUE (pkg.includes<J::Bar>());
     EXPECT_TRUE (pkg.includes<J::Baz>());
     EXPECT_FALSE(pkg.includes<J::Qux>());
+}
+
+TEST(KernelPackage, Include)
+{
+    namespace J = Jupiter;
+    auto pkg = cv::gapi::kernels();
+    pkg.include(J::backend(), "test.kernels.foo");
+    pkg.include(J::backend(), "test.kernels.bar");
+    EXPECT_TRUE (pkg.includes<J::Foo>());
+    EXPECT_TRUE (pkg.includes<J::Bar>());
+}
+
+TEST(KernelPackage, GetIds)
+{
+    namespace J = Jupiter;
+    auto pkg = cv::gapi::kernels();
+    pkg.include(J::backend(), "test.kernels.foo");
+    pkg.include(J::backend(), "test.kernels.bar");
+    pkg.include<J::Baz>();
+    auto ids = pkg.get_kernel_ids();
+    EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), "test.kernels.foo"));
+    EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), "test.kernels.bar"));
+    EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), "test.kernels.baz"));
 }
 
 TEST(KernelPackage, IncludesAPI)

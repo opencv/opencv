@@ -1,7 +1,6 @@
 #include <windows.h>
 
 #include <d3d11.h>
-#pragma comment (lib, "d3d11.lib")
 
 HINSTANCE g_hInst = NULL;
 D3D_DRIVER_TYPE g_driverType = D3D_DRIVER_TYPE_NULL;

@@ -56,7 +56,10 @@ TEST(imagesFromBlob, Regression)
 
     for (int i = 0; i < nbOfImages; i++)
     {
-        ASSERT_EQ(cv::countNonZero(inputImgs[i] != outputImgs[i]), 0);
+        EXPECT_EQ(0, cvtest::norm(inputImgs[i], outputImgs[i], NORM_INF))
+            << "i=" << i
+            << " inputImgs[i]=" << inputImgs[i].size
+            << " outputImgs[i]=" << outputImgs[i].size;
     }
 }
 
@@ -77,6 +80,73 @@ TEST(readNet, Regression)
                   findDataFile("dnn/ssd_mobilenet_v1_coco.pb", false));
     EXPECT_FALSE(net.empty());
 }
+
+TEST(readNet, do_not_call_setInput)  // https://github.com/opencv/opencv/issues/16618
+{
+    // 1. load network
+    const string proto = findDataFile("dnn/squeezenet_v1.1.prototxt");
+    const string model = findDataFile("dnn/squeezenet_v1.1.caffemodel", false);
+    Net net = readNetFromCaffe(proto, model);
+
+    // 2. mistake: no inputs are specified through .setInput()
+
+    // 3. try inference
+    Mat res;
+    EXPECT_THROW(
+    {
+        res = net.forward();  // no inputs after loading => should fail
+    }, cv::Exception);
+    EXPECT_TRUE(res.empty()) << res.size;
+}
+
+TEST(Net, empty_forward_18392)
+{
+    cv::dnn::Net net;
+    Mat image(Size(512, 512), CV_8UC3, Scalar::all(0));
+    Mat inputBlob = cv::dnn::blobFromImage(image, 1.0, Size(512, 512), Scalar(0,0,0), true, false);
+    net.setInput(inputBlob);
+    EXPECT_ANY_THROW(Mat output = net.forward());
+}
+
+#ifdef HAVE_INF_ENGINE
+static
+void test_readNet_IE_do_not_call_setInput(Backend backendId)
+{
+    const Target targetId = DNN_TARGET_CPU;
+
+    const std::string& model = findDataFile("dnn/layers/layer_convolution.bin");
+    const std::string& proto = findDataFile("dnn/layers/layer_convolution.xml");
+
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
+
+    Net net = readNet(model, proto);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+
+    // 2. mistake: no inputs are specified through .setInput()
+
+    // 3. try inference
+    Mat res;
+    EXPECT_THROW(
+    {
+        res = net.forward();  // no inputs after loading => should fail
+    }, cv::Exception);
+    EXPECT_TRUE(res.empty()) << res.size;
+}
+
+#ifdef HAVE_DNN_IE_NN_BUILDER_2019
+TEST(readNet, do_not_call_setInput_IE_NN_BUILDER_2019)
+{
+    test_readNet_IE_do_not_call_setInput(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
+}
+#endif
+#ifdef HAVE_DNN_NGRAPH
+TEST(readNet, do_not_call_setInput_IE_NGRAPH)
+{
+    test_readNet_IE_do_not_call_setInput(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
+}
+#endif
+#endif  // HAVE_INF_ENGINE
 
 typedef testing::TestWithParam<tuple<Backend, Target> > dump;
 TEST_P(dump, Regression)
@@ -378,19 +448,16 @@ TEST_P(Async, model_optimizer_pipeline_set_and_forward_single)
     const Backend backendId = get<0>(get<1>(GetParam()));
     const Target targetId = get<1>(get<1>(GetParam()));
 
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
-    const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
-    const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
+    const std::string& model = findDataFile("dnn/layers/layer_convolution.bin");
+    const std::string& proto = findDataFile("dnn/layers/layer_convolution.xml");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
 
     Net netSync = readNet(model, proto);
     netSync.setPreferableBackend(backendId);
@@ -437,19 +504,16 @@ TEST_P(Async, model_optimizer_pipeline_set_and_forward_all)
     const Backend backendId = get<0>(get<1>(GetParam()));
     const Target targetId = get<1>(get<1>(GetParam()));
 
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
-    const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
-    const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
+    const std::string& model = findDataFile("dnn/layers/layer_convolution.bin");
+    const std::string& proto = findDataFile("dnn/layers/layer_convolution.xml");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
 
     Net netSync = readNet(model, proto);
     netSync.setPreferableBackend(backendId);
@@ -503,12 +567,11 @@ TEST_P(Async, create_layer_pipeline_set_and_forward_all)
     if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         throw SkipTestException("No support for async forward");
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    // Exception: Default implementation fallbacks in asynchronous mode
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && dtype == CV_8U)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
 
     Net netSync;
     Net netAsync;
@@ -608,16 +671,13 @@ TEST_P(Test_Model_Optimizer, forward_two_nets)
     const Backend backendId = get<0>(GetParam());
     const Target targetId = get<1>(GetParam());
 
-    const std::string suffix = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD) ? "_fp16" : "";
-    const std::string& model = findDataFile("dnn/layers/layer_convolution" + suffix + ".bin");
-    const std::string& proto = findDataFile("dnn/layers/layer_convolution" + suffix + ".xml");
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
 
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_API);
-    else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        setInferenceEngineBackendType(CV_DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-    else
-        FAIL() << "Unknown backendId";
+    const std::string& model = findDataFile("dnn/layers/layer_convolution.bin");
+    const std::string& proto = findDataFile("dnn/layers/layer_convolution.xml");
+
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
 
     Net net0 = readNet(model, proto);
     net0.setPreferableTarget(targetId);
@@ -641,10 +701,168 @@ TEST_P(Test_Model_Optimizer, forward_two_nets)
 
     normAssert(ref0, ref2, 0, 0);
 }
+
+TEST_P(Test_Model_Optimizer, readFromBuffer)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
+    if (backendId != DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        throw SkipTestException("No support for async forward");
+
+    const std::string& weightsFile = findDataFile("dnn/layers/layer_convolution.bin");
+    const std::string& modelFile = findDataFile("dnn/layers/layer_convolution.xml");
+
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
+
+    Net net1 = readNetFromModelOptimizer(modelFile, weightsFile);
+    net1.setPreferableBackend(backendId);
+    net1.setPreferableTarget(targetId);
+
+
+    std::vector<char> modelConfig;
+    readFileContent(modelFile, modelConfig);
+    std::vector<char> weights;
+    readFileContent(weightsFile, weights);
+
+    Net net2 = readNetFromModelOptimizer(
+            (const uchar*)modelConfig.data(), modelConfig.size(),
+            (const uchar*)weights.data(), weights.size()
+    );
+    net2.setPreferableBackend(backendId);
+    net2.setPreferableTarget(targetId);
+
+    int blobSize[] = {2, 6, 75, 113};
+    Mat input(4, &blobSize[0], CV_32F);
+    randu(input, 0, 255);
+
+    Mat ref, actual;
+    {
+        net1.setInput(input);
+        ref = net1.forward();
+    }
+    {
+        net2.setInput(input);
+        actual = net2.forward();
+    }
+
+    normAssert(ref, actual, "", 0, 0);
+}
+
+TEST_P(Test_Model_Optimizer, flexible_inputs)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+
+    const std::string& model = findDataFile("dnn/layers/layer_convolution.bin");
+    const std::string& proto = findDataFile("dnn/layers/layer_convolution.xml");
+
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
+
+    Net net0 = readNet(model, proto);
+    net0.setPreferableTarget(targetId);
+
+    Net net1 = readNet(model, proto);
+    net1.setPreferableTarget(targetId);
+
+    // Generate inputs.
+    int blobSize0[] = {2, 6, 75, 113};
+    Mat input0(4, &blobSize0[0], CV_32F);
+    randu(input0, 0, 255);
+
+    net0.setInput(input0);
+    Mat ref = net0.forward().clone();
+
+    int blobSize1[] = {1, 6, 10, 9};
+    Mat input1(4, &blobSize1[0], CV_32F);
+    randu(input1, 0, 255);
+
+    net1.setInput(input1);
+    Mat out = net1.forward();
+    EXPECT_NE(out.size, ref.size);
+
+    net1.setInput(input0);
+    out = net1.forward();
+    normAssert(ref, out, 0, 0);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model_Optimizer,
     dnnBackendsAndTargetsIE()
 );
 
 #endif  // HAVE_INF_ENGINE
+
+typedef testing::TestWithParam<tuple<MatDepth, MatDepth, tuple<Backend, Target> > > Test_two_inputs;
+TEST_P(Test_two_inputs, basic)
+{
+    static const float kScale = 0.5f;
+    static const float kScaleInv = 1.0f / kScale;
+
+    Backend backendId = get<0>(get<2>(GetParam()));
+    Target targetId = get<1>(get<2>(GetParam()));
+
+    int type1 = get<0>(GetParam());
+    int type2 = get<1>(GetParam());
+
+    if (backendId == DNN_BACKEND_VKCOM && !(type1 == CV_32F && type2 == CV_32F))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+
+    Net net;
+    LayerParams lp;
+    lp.type = "Eltwise";
+    lp.name = "testLayer";
+    lp.set("operation", "sum");
+    int eltwiseId = net.addLayerToPrev(lp.name, lp.type, lp);  // connect to a first input
+    net.connect(0, 1, eltwiseId, 1);  // connect to a second input
+
+    int inpSize[] = {1, 2, 3, 4};
+    Mat firstInp(4, &inpSize[0], type1);
+    Mat secondInp(4, &inpSize[0], type2);
+    randu(firstInp, 0, 100);
+    randu(secondInp, 0, 100);
+
+#ifndef CV_CXX11
+    std::vector<String> input_names;
+    input_names.push_back("data");
+    input_names.push_back("second_input");
+    net.setInputsNames(input_names);
+#else
+    net.setInputsNames({"data", "second_input"});
+#endif
+    net.setInput(firstInp, "data", kScale);
+    net.setInput(secondInp, "second_input", kScaleInv);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+    Mat out = net.forward();
+
+    Mat ref;
+    addWeighted(firstInp, kScale, secondInp, kScaleInv, 0, ref, CV_32F);
+
+    double l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD || targetId == DNN_TARGET_CUDA_FP16) ? 0.06 : 1e-6;
+    double lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD || targetId == DNN_TARGET_CUDA_FP16) ? 0.3 : 1e-5;
+
+    normAssert(out, ref, "", l1, lInf);
+
+    if (cvtest::debugLevel > 0 || HasFailure())
+    {
+        std::cout << "input1 scale=" << kScale << " input2 scale=" << kScaleInv << std::endl;
+        std::cout << "input1: " << firstInp.size << " " << firstInp.reshape(1, 1) << std::endl;
+        std::cout << "input2: " << secondInp.size << " " << secondInp.reshape(1, 1) << std::endl;
+        std::cout << "ref: " << ref.reshape(1, 1) << std::endl;
+        std::cout << "out: " << out.reshape(1, 1) << std::endl;
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_two_inputs, Combine(
+    Values(CV_32F, CV_8U),
+    Values(CV_32F, CV_8U),
+    dnnBackendsAndTargets()
+));
 
 }} // namespace

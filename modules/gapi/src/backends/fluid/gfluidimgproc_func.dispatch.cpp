@@ -209,7 +209,7 @@ RUN_MEDBLUR3X3_IMPL( float)
 
 #undef RUN_MEDBLUR3X3_IMPL
 
-} // namespace fliud
+} // namespace fluid
 } // namespace gapi
 } // namespace cv
 

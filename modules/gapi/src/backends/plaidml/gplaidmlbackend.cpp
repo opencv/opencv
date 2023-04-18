@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019 Intel Corporation
+// Copyright (C) 2019-2020 Intel Corporation
 
 
 #ifdef HAVE_PLAIDML
@@ -57,7 +57,7 @@ namespace
                              const std::vector<cv::gimpl::Data>& ins_data,
                              const std::vector<cv::gimpl::Data>& outs_data) const override
         {
-            auto has_config = cv::gimpl::getCompileArg<cv::gapi::plaidml::config>(args);
+            auto has_config = cv::gapi::getCompileArg<cv::gapi::plaidml::config>(args);
 
             if (!has_config)
             {
@@ -212,20 +212,14 @@ void cv::gimpl::GPlaidMLExecutable::bindInArg(const RcDesc &rc, const GRunArg  &
 
         switch (arg.index())
         {
-        case GRunArg::index_of<cv::gapi::own::Mat>():
+        case GRunArg::index_of<cv::RMat>():
         {
-            auto& arg_mat = util::get<cv::gapi::own::Mat>(arg);
-            binder_->input(it->second).copy_from(arg_mat.data);
+            auto& rmat = cv::util::get<cv::RMat>(arg);
+            auto  view = rmat.access(cv::RMat::Access::R);
+            auto  mat  = cv::gimpl::asMat(view);
+            binder_->input(it->second).copy_from(mat.data);
         }
         break;
-#if !defined(GAPI_STANDALONE)
-        case GRunArg::index_of<cv::Mat>() :
-        {
-            auto& arg_mat = util::get<cv::Mat>(arg);
-            binder_->input(it->second).copy_from(arg_mat.data);
-        }
-        break;
-#endif //  !defined(GAPI_STANDALONE)
         default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
     }
@@ -248,20 +242,14 @@ void cv::gimpl::GPlaidMLExecutable::bindOutArg(const RcDesc &rc, const GRunArgP 
 
         switch (arg.index())
         {
-        case GRunArgP::index_of<cv::gapi::own::Mat*>():
+        case GRunArgP::index_of<cv::RMat*>() :
         {
-            auto& arg_mat = *util::get<cv::gapi::own::Mat*>(arg);
-            binder_->output(it->second).copy_into(arg_mat.data);
+            auto& rmat = *cv::util::get<cv::RMat*>(arg);
+            auto  view = rmat.access(cv::RMat::Access::W);
+            auto  mat  = cv::gimpl::asMat(view);
+            binder_->output(it->second).copy_into(mat.data);
         }
         break;
-#if !defined(GAPI_STANDALONE)
-        case GRunArgP::index_of<cv::Mat*>() :
-        {
-            auto& arg_mat = *util::get<cv::Mat*>(arg);
-            binder_->output(it->second).copy_into(arg_mat.data);
-        }
-        break;
-#endif //  !defined(GAPI_STANDALONE)
         default: util::throw_error(std::logic_error("content type of the runtime argument does not match to resource description ?"));
         }
     }
@@ -276,7 +264,8 @@ cv::GArg cv::gimpl::GPlaidMLExecutable::packArg(const GArg &arg)
 {
     GAPI_Assert(   arg.kind != cv::detail::ArgKind::GMAT
               && arg.kind != cv::detail::ArgKind::GSCALAR
-              && arg.kind != cv::detail::ArgKind::GARRAY);
+              && arg.kind != cv::detail::ArgKind::GARRAY
+              && arg.kind != cv::detail::ArgKind::GOPAQUE);
 
     if (arg.kind != cv::detail::ArgKind::GOBJREF)
     {

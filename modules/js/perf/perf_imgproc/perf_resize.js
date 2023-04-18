@@ -11,18 +11,21 @@ if　(isNodeJs)　{
   var logElement = document.getElementById('log');
 }
 
-cv.onRuntimeInitialized = () => {
+function perf() {
+
   console.log('opencv.js loaded');
   if (isNodeJs) {
     global.cv = cv;
     global.combine = HelpFunc.combine;
     global.fillGradient = HelpFunc.fillGradient;
-    global.cvtStr2cvSize = HelpFunc.cvtStr2cvSize;
-    global.cvSize = Base.cvSize;
+    global.log = HelpFunc.log;
+    global.decodeParams2Case = HelpFunc.decodeParams2Case;
+    global.setBenchmarkSuite = HelpFunc.setBenchmarkSuite;
+    global.addKernelCase = HelpFunc.addKernelCase;
+    global.cvSize = Base.getCvSize();
   } else {
-    runButton.removeAttribute('disabled');
-    runButton.setAttribute('class', 'btn btn-primary');
-    runButton.innerHTML = 'Run';
+    enableButton();
+    cvSize = getCvSize();
   }
   let totalCaseNum, currentCaseId;
 
@@ -59,164 +62,50 @@ cv.onRuntimeInitialized = () => {
   const scalesAreaFast = [2];
   const combiAreaFast = combine(matTypesAreaFast, sizesAreaFast, scalesAreaFast);
 
-  function addResizeUpLinearCase(suite, combination) {
-    totalCaseNum += combination.length;
-    for (let i = 0; i < combination.length; ++i) {
-      let matType = combination[i][0];
-      let from = combination[i][1];
-      let to = combination[i][2];
-
-      suite.add('resize', function() {
-        cv.resize(src, dst, to, 0, 0, cv.INTER_LINEAR_EXACT);
-        }, {
-          'setup': function() {
-            let from = this.params.from;
-            let to = this.params.to;
-            let matType = cv[this.params.matType];
-            let src = new cv.Mat(from, matType);
-            let dst = new cv.Mat(to, matType);
-            fillGradient(cv, src);
-              },
-          'teardown': function() {
-            src.delete();
-            dst.delete();
-          }
-      });
-
-      // set init params
-      let index = suite.length - 1;
-      suite[index].params = {
-        from: from,
-        to: to,
-        matType: matType
-      };
-    }
-  }
-
-  function addResizeDownLinearCase(suite, combination) {
-    totalCaseNum += combination.length;
-    for (let i = 0; i < combination.length; ++i) {
-      let matType = combination[i][0];
-      let from = combination[i][1];
-      let to = combination[i][2];
-
-      suite.add('resize', function() {
-        cv.resize(src, dst, to, 0, 0, cv.INTER_LINEAR_EXACT);
-        }, {
-          'setup': function() {
-            let from = this.params.from;
-            let to = this.params.to;
-            let matType = cv[this.params.matType];
-            let src = new cv.Mat(from, matType);
-            let dst = new cv.Mat(to, matType);
-            fillGradient(cv, src);
-              },
-          'teardown': function() {
-            src.delete();
-            dst.delete();
-          }
-      });
-
-      // set init params
-      let index = suite.length - 1;
-      suite[index].params = {
-        from: from,
-        to: to,
-        matType: matType
-      };
-    }
-  }
-
-  function addResizeAreaFastCase(suite, combination) {
-    totalCaseNum += combination.length;
-    for (let i = 0; i < combination.length; ++i) {
-      let matType = combination[i][0];
-      let from = combination[i][1];
-      let scale = combination[i][2];
-      from.width = (Math.floor(from.width/scale))*scale;
-      from.height = (Math.floor(from.height/scale))*scale;
-      let to = {
-        width: from.width/scale,
-        height: from.height/scale};  // for params print
-
-      suite.add('resize', function() {
+  function addResizeCase(suite, type) {
+    suite.add('resize', function() {
+      if (type == "area") {
         cv.resize(src, dst, dst.size(), 0, 0, cv.INTER_AREA);
-        }, {
-          'setup': function() {
-            let from = this.params.from;
-            let scale = this.params.scale;
-            let matType = cv[this.params.matType];
-            let src = new cv.Mat(from, matType);
-            let dst = new cv.Mat(from.height/scale, from.width/scale, matType);
-              },
-          'teardown': function() {
-            src.delete();
-            dst.delete();
+      } else {
+        cv.resize(src, dst, to, 0, 0, cv.INTER_LINEAR_EXACT);
+      }
+    }, {
+        'setup': function() {
+          let from = this.params.from;
+          let to = this.params.to;
+          let matType = cv[this.params.matType];
+          let src = new cv.Mat(from, matType);
+          let type = this.params.modeType;
+          let dst;
+          if (type == "area") {
+            dst = new cv.Mat(from.height/scale, from.width/scale, matType);
+          } else {
+            dst = new cv.Mat(to, matType);
+            fillGradient(cv, src);
           }
-      });
-      // set init params
-      let index = suite.length - 1;
-      suite[index].params = {
-        from: from,
-        scale: scale,
-        matType: matType
-      };
-    }
-  }
-
-  function decodeParams2Case(suite, params) {
-    let sizeString = (params.match(/[0-9]+x[0-9]+/g) || []).slice(0, 2).toString();
-    let sizes = (sizeString.match(/[0-9]+/g) || []);
-    let size1Str = sizes.slice(0, 2).toString();
-    let size2Str = sizes.slice(2, 5).toString();
-    let matType = (params.match(/CV\_[0-9]+[A-z][A-z][0-9]/) || []).toString();
-    let size1 = cvtStr2cvSize(size1Str);
-    let size2 = cvtStr2cvSize(size2Str);
-    // check if the params match and add case
-    for (let i = 0; i < combinations.length; ++i) {
-      let combination = combinations[i];
-      for (let j = 0; j < combination.length; ++j) {
-        if (matType === combination[j][0] && size1 === combination[j][1] && size2 === combination[j][2]) {
-          resizeFunc[i](suite, [combination[j]]);
+          },
+        'teardown': function() {
+          src.delete();
+          dst.delete();
         }
-      }
-    }
-  }
-
-  function log(message) {
-    console.log(message);
-    if (!isNodeJs) {
-      logElement.innerHTML += `\n${'\t'.repeat(1) + message}`;
-    }
-  }
-
-  function setBenchmarkSuite(suite) {
-    suite
-    // add listeners
-    .on('cycle', function(event) {
-      ++currentCaseId;
-      let params = event.target.params;
-      let matType = params.matType;
-      let size1 = params.from;
-      let size2 = params.to;
-      log(`=== ${event.target.name} ${currentCaseId} ===`);
-      log(`params: (${matType},${parseInt(size1.width)}x${parseInt(size1.height)},`+
-          `${parseInt(size2.width)}x${parseInt(size2.height)})`);
-      log('elapsed time:' +String(event.target.times.elapsed*1000)+' ms');
-      log('mean time:' +String(event.target.stats.mean*1000)+' ms');
-      log('stddev time:' +String(event.target.stats.deviation*1000)+' ms');
-      log(String(event.target));
-    })
-    .on('error', function(event) { log(`test case ${event.target.name} failed`); })
-    .on('complete', function(event) {
-      log(`\n ###################################`)
-      log(`Finished testing ${event.currentTarget.length} cases \n`);
-      if (!isNodeJs) {
-        runButton.removeAttribute('disabled');
-        runButton.setAttribute('class', 'btn btn-primary');
-        runButton.innerHTML = 'Run';
-      }
     });
+  }
+
+  function addResizeModeCase(suite, combination, type) {
+    totalCaseNum += combination.length;
+    for (let i = 0; i < combination.length; ++i) {
+      let matType = combination[i][0];
+      let from = combination[i][1];
+      let params;
+      if (type == "area") {
+        let scale = combination[i][2];
+        params = { from: from, scale: scale, matType: matType, modeType: type };
+      } else {
+        let to = combination[i][2];
+        params = { from: from, to: to, matType: matType, modeType: type};
+      }
+      addKernelCase(suite, params, type, addResizeCase)
+    }
   }
 
   function genBenchmarkCase(paramsContent) {
@@ -225,19 +114,28 @@ cv.onRuntimeInitialized = () => {
     currentCaseId = 0;
     if (/\(\w+,[\ ]*[0-9]+x[0-9]+,[\ ]*[0-9]+x[0-9]+\)/g.test(paramsContent.toString())) {
       let params = paramsContent.toString().match(/\(\w+,[\ ]*[0-9]+x[0-9]+,[\ ]*[0-9]+x[0-9]+\)/g)[0];
-      decodeParams2Case(suite, params);
+      let paramObjs = [];
+      paramObjs.push({name:"matType", value:"", reg:["/CV\_[0-9]+[A-z][A-z][0-9]/"], index:0});
+      paramObjs.push({name:"size1", value:"", reg:[""], index:1});
+      paramObjs.push({name:"size2", value:"", reg:[""], index:2});
+      let locationList = decodeParams2Case(params, paramObjs,combinations);
+
+      for (let i = 0; i < locationList.length; i++){
+        let first = locationList[i][0];
+        let second = locationList[i][1];
+        addResizeModeCase(suite, [combinations[first][second]], "linear");
+      }
     } else {
       log("no filter or getting invalid params, run all the cases");
-      addResizeUpLinearCase(suite, combiUpLinear);
-      addResizeDownLinearCase(suite, combiDownLinear);
+      addResizeModeCase(suite, combiUpLinear, "linear");
+      addResizeModeCase(suite, combiDownLinear, "linear");
     }
-    setBenchmarkSuite(suite);
+    setBenchmarkSuite(suite, "resize", currentCaseId);
     log(`Running ${totalCaseNum} tests from Resize`);
     suite.run({ 'async': true }); // run the benchmark
   }
 
   // init
-  let resizeFunc = [addResizeUpLinearCase, addResizeDownLinearCase];//, addResizeAreaFastCase];
   let combinations = [combiUpLinear, combiDownLinear];//, combiAreaFast];
 
   // set test filter params
@@ -253,10 +151,19 @@ cv.onRuntimeInitialized = () => {
       let paramsContent = paramsElement.value;
       genBenchmarkCase(paramsContent);
       if (totalCaseNum !== 0) {
-        runButton.setAttribute("disabled", "disabled");
-        runButton.setAttribute('class', 'btn btn-primary disabled');
-        runButton.innerHTML = "Running";
+        disableButton();
       }
     }
   }
 };
+
+async function main() {
+  if (cv instanceof Promise) {
+    cv = await cv;
+    perf();
+  } else {
+    cv.onRuntimeInitialized = perf;
+  }
+}
+
+main();

@@ -10,7 +10,11 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
+#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
+#include <ngraph/op/proposal.hpp>
+#else
 #include <ngraph/op/experimental/layers/proposal.hpp>
+#endif
 #endif
 
 namespace cv { namespace dnn {
@@ -50,11 +54,11 @@ public:
             for (int i = 0; i < ratios.size(); ++i)
             {
                 float ratio = ratios.get<float>(i);
+                float width = std::floor(baseSize / sqrt(ratio) + 0.5f);
+                float height = std::floor(width * ratio + 0.5f);
                 for (int j = 0; j < scales.size(); ++j)
                 {
                     float scale = scales.get<float>(j);
-                    float width = std::floor(baseSize / sqrt(ratio) + 0.5f);
-                    float height = std::floor(width * ratio + 0.5f);
                     widths.push_back(scale * width);
                     heights.push_back(scale * height);
                 }
@@ -91,8 +95,14 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && preferableTarget != DNN_TARGET_MYRIAD);
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        {
+            bool isMyriad = preferableTarget == DNN_TARGET_MYRIAD || preferableTarget == DNN_TARGET_HDDL;
+            return !isMyriad;
+        }
+#endif
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -282,7 +292,8 @@ public:
 
         CV_Assert(imInfo.total() >= 2);
         // We've chosen the smallest data type because we need just a shape from it.
-        fakeImageBlob.create(shape(1, 1, imInfo.at<float>(0), imInfo.at<float>(1)), CV_8UC1);
+        // We don't allocate memory but just need the shape is correct.
+        Mat fakeImageBlob(shape(1, 1, imInfo.at<float>(0), imInfo.at<float>(1)), CV_8UC1, NULL);
 
         // Generate prior boxes.
         std::vector<Mat> layerInputs(2), layerOutputs(1, priorBoxes);
@@ -326,32 +337,6 @@ public:
         dst = outputs[1].rowRange(0, numDets);
         layerOutputs[0].col(2).copyTo(dst);
     }
-
-#ifdef HAVE_INF_ENGINE
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::ProposalLayer ieLayer(name);
-
-        ieLayer.setBaseSize(baseSize);
-        ieLayer.setFeatStride(featStride);
-        ieLayer.setMinSize(16);
-        ieLayer.setNMSThresh(nmsThreshold);
-        ieLayer.setPostNMSTopN(keepTopAfterNMS);
-        ieLayer.setPreNMSTopN(keepTopBeforeNMS);
-
-        std::vector<float> scalesVec(scales.size());
-        for (int i = 0; i < scales.size(); ++i)
-            scalesVec[i] = scales.get<float>(i);
-        ieLayer.setScale(scalesVec);
-
-        std::vector<float> ratiosVec(ratios.size());
-        for (int i = 0; i < ratios.size(); ++i)
-            ratiosVec[i] = ratios.get<float>(i);
-        ieLayer.setRatio(ratiosVec);
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
-    }
-#endif  // HAVE_INF_ENGINE
 
 
 #ifdef HAVE_DNN_NGRAPH
@@ -423,7 +408,6 @@ private:
     Ptr<PermuteLayer> deltasPermute;
     Ptr<PermuteLayer> scoresPermute;
     uint32_t keepTopBeforeNMS, keepTopAfterNMS, featStride, baseSize;
-    Mat fakeImageBlob;
     float nmsThreshold;
     DictValue ratios, scales;
 #ifdef HAVE_OPENCL

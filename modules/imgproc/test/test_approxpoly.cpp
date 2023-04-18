@@ -182,7 +182,7 @@ int CV_ApproxPolyTest::check_slice( CvPoint StartPt, CvPoint EndPt,
     ////////////////////////////////
     if( SrcReader == NULL )
     {
-        assert( false );
+        CV_Assert( false );
         return 0;
     }
 
@@ -220,6 +220,7 @@ int CV_ApproxPolyTest::check_slice( CvPoint StartPt, CvPoint EndPt,
 
     *_j = j;
 
+    (void) TotalErrors; // To avoid -Wunused-but-set-variable warning
     //return TotalErrors;
     return 0;
 }
@@ -237,7 +238,7 @@ int CV_ApproxPolyTest::check( CvSeq* SrcSeq, CvSeq* DstSeq, float Eps )
     int Count;
     int i,j;
 
-    assert( SrcSeq && DstSeq );
+    CV_Assert( SrcSeq && DstSeq );
 
     ////////// init ////////////////////
     Count = SrcSeq->total;
@@ -325,7 +326,7 @@ void CV_ApproxPolyTest::run( int /*start_from*/ )
             if( DstSeq == NULL )
             {
                 ts->printf( cvtest::TS::LOG,
-                    "cvApproxPoly returned NULL for contour #%d, espilon = %g\n", i, Eps );
+                    "cvApproxPoly returned NULL for contour #%d, epsilon = %g\n", i, Eps );
                 code = cvtest::TS::FAIL_INVALID_OUTPUT;
                 goto _exit_;
             } // if( DstSeq == NULL )

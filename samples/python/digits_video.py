@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+'''
+Digit recognition from video.
+
+Run digits.py before, to train and save the SVM.
+
+Usage:
+  digits_video.py [{camera_id|video_file}]
+'''
 
 # Python 2/3 compatibility
 from __future__ import print_function
@@ -21,18 +29,14 @@ def main():
         src = sys.argv[1]
     except:
         src = 0
-    cap = video.create_capture(src)
+    cap = video.create_capture(src, fallback='synth:bg={}:noise=0.05'.format(cv.samples.findFile('sudoku.png')))
 
     classifier_fn = 'digits_svm.dat'
     if not os.path.exists(classifier_fn):
         print('"%s" not found, run digits.py first' % classifier_fn)
         return
 
-    if True:
-        model = cv.ml.SVM_load(classifier_fn)
-    else:
-        model = cv.ml.SVM_create()
-        model.load_(classifier_fn) #Known bug: https://github.com/opencv/opencv/issues/4969
+    model = cv.ml.SVM_load(classifier_fn)
 
     while True:
         _ret, frame = cap.read()
