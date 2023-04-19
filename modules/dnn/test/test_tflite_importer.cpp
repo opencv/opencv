@@ -11,6 +11,7 @@ Test for TFLite models loading
 
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
 #include <opencv2/dnn/utils/debug_utils.hpp>
+#include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef OPENCV_TEST_DNN_TFLITE
 
@@ -19,9 +20,21 @@ namespace opencv_test { namespace {
 using namespace cv;
 using namespace cv::dnn;
 
+void testInputShapes(const Net& net, const std::vector<Mat>& inps) {
+    std::vector<MatShape> inLayerShapes;
+    std::vector<MatShape> outLayerShapes;
+    net.getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+    ASSERT_EQ(inLayerShapes.size(), inps.size());
+
+    for (int i = 0; i < inps.size(); ++i) {
+        ASSERT_EQ(inLayerShapes[i], shape(inps[i]));
+    }
+}
+
 void testModel(const std::string& modelName, const Mat& input, double l1 = 1e-5, double lInf = 1e-4)
 {
     Net net = readNet(findDataFile("dnn/tflite/" + modelName + ".tflite", false));
+    testInputShapes(net, {input});
     net.setInput(input);
 
     std::vector<String> outNames = net.getUnconnectedOutLayersNames();
@@ -72,6 +85,7 @@ TEST(Test_TFLite, max_unpooling)
     cvtColor(input, input, COLOR_BGR2RGBA);
     input = input.mul(Scalar(1, 1, 1, 0));
     input = blobFromImage(input, 1.0 / 255);
+    testInputShapes(net, {input});
     net.setInput(input);
 
     std::vector<std::vector<Mat> > outs;

@@ -937,6 +937,7 @@ public:
 
     static std::set<std::string> parser_deny_list;
     static std::set<std::string> global_deny_list;
+    static std::set<std::string> opencv_deny_list;
     static std::set<std::string> opencl_fp16_deny_list;
     static std::set<std::string> opencl_deny_list;
     static std::set<std::string> cpu_deny_list;
@@ -1001,6 +1002,10 @@ public:
             #include "test_onnx_conformance_layer_filter_opencv_all_denylist.inl.hpp"
         };
 
+        opencv_deny_list = {
+            #include "test_onnx_conformance_layer_filter_opencv_denylist.inl.hpp"
+        };
+
         opencl_fp16_deny_list = {
             #include "test_onnx_conformance_layer_filter_opencv_ocl_fp16_denylist.inl.hpp"
         };
@@ -1036,6 +1041,7 @@ public:
 
 std::set<std::string> Test_ONNX_conformance::parser_deny_list;
 std::set<std::string> Test_ONNX_conformance::global_deny_list;
+std::set<std::string> Test_ONNX_conformance::opencv_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_fp16_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
 std::set<std::string> Test_ONNX_conformance::cpu_deny_list;
@@ -1057,14 +1063,21 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
     bool checkLayersFallbacks = true;
     bool checkAccuracy = true;
 
+    // SKIP when the test case is in the parser deny list.
     if (parser_deny_list.find(name) != parser_deny_list.end())
     {
         applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
     }
 
+    // SKIP when the test case is in the global deny list.
+    if (global_deny_list.find(name) != global_deny_list.end())
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_GLOBAL, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+    }
+
     if (backend == DNN_BACKEND_OPENCV)
     {
-        if (global_deny_list.find(name) != global_deny_list.end())
+        if (opencv_deny_list.find(name) != opencv_deny_list.end())
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
         }

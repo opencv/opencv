@@ -80,7 +80,7 @@ if(WITH_OPENGL)
         ocv_include_directories(${OPENGL_INCLUDE_DIR})
       endif()
     endif()
-  endif()
+##  endif()
 endif(WITH_OPENGL)
 
 # --- Cocoa ---

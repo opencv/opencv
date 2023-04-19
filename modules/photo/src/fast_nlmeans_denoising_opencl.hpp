@@ -57,7 +57,7 @@ static bool ocl_calcAlmostDist2Weight(UMat & almostDist2Weight,
 
     almostDist2Weight.create(1, almostMaxDist, CV_32SC(hn == 3 ? 4 : hn));
 
-    char buf[40];
+    char buf[50];
     ocl::Kernel k("calcAlmostDist2Weight", ocl::photo::nlmeans_oclsrc,
                   format("-D OP_CALC_WEIGHTS -D FT=%s -D w_t=%s"
                          " -D wlut_t=%s -D convert_wlut_t=%s%s%s",

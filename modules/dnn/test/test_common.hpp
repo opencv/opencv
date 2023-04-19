@@ -47,6 +47,7 @@
 
 #define CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE    "dnn_skip_onnx_conformance"
 #define CV_TEST_TAG_DNN_SKIP_PARSER              "dnn_skip_parser"
+#define CV_TEST_TAG_DNN_SKIP_GLOBAL              "dnn_skip_global"
 
 #define CV_TEST_TAG_DNN_SKIP_TIMVX               "dnn_skip_timvx"
 #define CV_TEST_TAG_DNN_SKIP_CANN                "dnn_skip_cann"

@@ -1340,7 +1340,7 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
 
     if (interpolation != INTER_NEAREST)
     {
-        char cvt[3][40];
+        char cvt[3][50];
         int wdepth = std::max(CV_32F, depth);
         buildOptions = buildOptions
                       + format(" -D WT=%s -D convertToT=%s -D convertToWT=%s"
