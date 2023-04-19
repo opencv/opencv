@@ -6,7 +6,7 @@ import sys
 import cv2 as cv
 from tests_common import NewOpenCVTests
 
-sys.path.append(NewOpenCVTests.repoPath+"/../doc/pattern_tools")
+sys.path.append(NewOpenCVTests.repoPath+"/doc/pattern_tools")
 import gen_pattern
 
 class aruco_objdetect_test(NewOpenCVTests):
@@ -16,8 +16,7 @@ class aruco_objdetect_test(NewOpenCVTests):
             from svglib.svglib import svg2rlg
             from reportlab.graphics import renderPM
         except:
-            print("libraies svglib and reportlab not found")
-            return
+            raise self.skipTest("libraies svglib and reportlab not found")
 
         cols = 3
         rows = 5
@@ -67,8 +66,7 @@ class aruco_objdetect_test(NewOpenCVTests):
             from svglib.svglib import svg2rlg
             from reportlab.graphics import renderPM
         except:
-            print("libraies svglib and reportlab not found")
-            return
+            raise self.skipTest("libraies svglib and reportlab not found")
 
         cols = 3
         rows = 5

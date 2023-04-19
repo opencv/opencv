@@ -5,7 +5,7 @@
 using namespace cv;
 using namespace std;
 
-static inline int _getSelfDistance(const Mat &marker) {
+static int _getSelfDistance(const Mat &marker) {
     Mat bytes = aruco::Dictionary::getByteListFromBits(marker);
     int minHamming = (int)marker.total() + 1;
     for(int r = 1; r < 4; r++) {
