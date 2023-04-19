@@ -1271,6 +1271,8 @@ TEST_P(Test_ONNX_layers, gru_cell_batchsize_50_seqlen_1)
             CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
         );
 #endif
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("gru_cell_batchsize_50_seqlen_1", npy, 0, 0, false, false);
 }
 
@@ -1283,6 +1285,8 @@ TEST_P(Test_ONNX_layers, gru_cell_batchsize_5_seqlen_5)
             CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
         );
 #endif
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("gru_cell_batchsize_5_seqlen_5", npy, 0, 0, false, false);
 }
 
@@ -1295,6 +1299,8 @@ TEST_P(Test_ONNX_layers, gru_cell_batchsize_1_seqlen_50)
             CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
         );
 #endif
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("gru_cell_batchsize_1_seqlen_50", npy, 0, 0, false, false);
 }
 
