@@ -1337,7 +1337,6 @@ TEST_P(Test_ONNX_layers, LSTM_cell_bidirectional)
 }
 TEST_P(Test_ONNX_layers, LSTM_cell_with_peepholes)
 {
-    //TODO: CHECK IF THIS TEST IS SKIPPED
     testONNXModels("lstm_cell_with_peepholes", npy, 0, 0, false, false);
 }
 
