@@ -59,8 +59,8 @@ static void help(char** argv)
         "                              # (used only for video capturing)\n"
         "     [-s=<squareSize>]        # square size in some user-defined units (1 by default)\n"
         "     [-ms=<markerSize>]       # marker size in some user-defined units (0.5 by default)\n"
-        "     [-ad=<arucoDict>]        # Aruco dictionary name for charuco board"
-        "     [-adf=<dictFilename>]    # Custom aruco dictionary file for charuco board"
+        "     [-ad=<arucoDict>]        # Aruco dictionary name for charuco board\n"
+        "     [-adf=<dictFilename>]    # Custom aruco dictionary file for charuco board\n"
         "     [-o=<out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
         "     [-op]                    # write detected feature points\n"
         "     [-oe]                    # write extrinsic parameters\n"
@@ -476,6 +476,20 @@ int main( int argc, char** argv )
     if ( boardSize.height <= 0 )
         return fprintf( stderr, "Invalid board height\n" ), -1;
 
+    cv::aruco::Dictionary dictionary;
+    if (dictFilename == "None") {
+        dictionary = aruco::getPredefinedDictionary(aruco::PredefinedDictionaryType(arucoDict));
+    }
+    else {
+        cv::FileStorage dict_file(dictFilename, cv::FileStorage::Mode::READ);
+        cv::FileNode fn(dict_file.root());
+        dictionary.readDictionary(fn);
+    }
+    cv::aruco::CharucoBoard ch_board({ boardSize.width + 1, boardSize.height + 1 },
+        squareSize, markerSize, dictionary);
+    std::vector<int> markerIds;
+    cv::aruco::CharucoDetector ch_detector(ch_board);
+
     if( !inputFilename.empty() )
     {
         if( !videofile && readStringList(samples::findFile(inputFilename), imageList) )
@@ -544,25 +558,9 @@ int main( int argc, char** argv )
                 break;
             case CHARUCOBOARD:
             {
-                cv::aruco::Dictionary dictionary;
-                if (dictFilename == "None") {
-                    dictionary = cv::aruco::getPredefinedDictionary(arucoDict);
-                }
-                else {
-                    cv::FileStorage dict_file(dictFilename, cv::FileStorage::Mode::FORMAT_JSON && cv::FileStorage::Mode::READ);
-                    cv::FileNode fn(dict_file.root());
-                    dictionary.readDictionary(fn);
-                }
-
-                cv::aruco::CharucoBoard ch_board ({ boardSize.width + 1, boardSize.height + 1 },
-                    squareSize, markerSize, dictionary);
-
-                std::vector<int> markerIds;
-                cv::aruco::CharucoDetector ch_detector(ch_board);
                 ch_detector.detectBoard(view, pointbuf, markerIds);
 
-                // if at least one marker detected
-                if (pointbuf.size() < boardSize.height*boardSize.width) {
+                if (pointbuf.size() < (int) boardSize.height*boardSize.width) {
                     found = false;
                 }
                 else {
