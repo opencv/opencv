@@ -1262,6 +1262,42 @@ TEST_P(Test_ONNX_layers, GRU)
     testONNXModels("gru", npy, 0, 0, false, false);
 }
 
+TEST_P(Test_ONNX_layers, gru_cell_batchsize_50_seqlen_1)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    // IE exception: Node GRU_22 was not assigned on any pointed device
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
+    testONNXModels("gru_cell_batchsize_50_seqlen_1", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, gru_cell_batchsize_5_seqlen_5)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    // IE exception: Node GRU_22 was not assigned on any pointed device
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
+    testONNXModels("gru_cell_batchsize_5_seqlen_5", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, gru_cell_batchsize_1_seqlen_50)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    // IE exception: Node GRU_22 was not assigned on any pointed device
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
+    testONNXModels("gru_cell_batchsize_1_seqlen_50", npy, 0, 0, false, false);
+}
+
 TEST_P(Test_ONNX_layers, GRU_bidirectional)
 {
     testONNXModels("gru_bi", npy, 0, 0, false, false);
