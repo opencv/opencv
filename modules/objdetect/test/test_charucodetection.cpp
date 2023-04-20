@@ -656,4 +656,31 @@ TEST(Charuco, issue_14014)
     EXPECT_EQ(Size(4, 1), rejectedPoints[0].size()); // check dimension of rejected corners after successfully refine
 }
 
+
+TEST(Charuco, testmatchImagePoints)
+{
+    aruco::CharucoBoard board(Size(2, 3), 1.f, 0.5f, aruco::getPredefinedDictionary(aruco::DICT_4X4_50));
+    auto chessboardPoints = board.getChessboardCorners();
+
+    vector<int> detectedIds;
+    vector<Point2f> detectedCharucoCorners;
+    for (const Point3f& point : chessboardPoints) {
+        detectedIds.push_back((int)detectedCharucoCorners.size());
+        detectedCharucoCorners.push_back({2.f*point.x, 2.f*point.y});
+    }
+
+    vector<Point3f> objPoints;
+    vector<Point2f> imagePoints;
+    board.matchImagePoints(detectedCharucoCorners, detectedIds, objPoints, imagePoints);
+
+    ASSERT_EQ(detectedCharucoCorners.size(), objPoints.size());
+    ASSERT_EQ(detectedCharucoCorners.size(), imagePoints.size());
+
+    for (size_t i = 0ull; i < detectedCharucoCorners.size(); i++) {
+        EXPECT_EQ(detectedCharucoCorners[i], imagePoints[i]);
+        EXPECT_EQ(chessboardPoints[i].x, objPoints[i].x);
+        EXPECT_EQ(chessboardPoints[i].y, objPoints[i].y);
+    }
+}
+
 }} // namespace
