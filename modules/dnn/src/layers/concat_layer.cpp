@@ -367,16 +367,17 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        CV_Assert(inputsWrapper.size() == nodes.size());
+        CV_Assert(inputs.size() == nodes.size());
 
         // create operator
         auto op = std::make_shared<ge::op::ConcatD>(name);
 
         // set attributes
-        int N = inputsWrapper.size();
+        int N = inputs.size();
         op->set_attr_concat_dim(axis);
         op->set_attr_N(N);
 
@@ -384,7 +385,7 @@ public:
         op->create_dynamic_input_x(N);
         for (int i = 0; i < N; i++)
         {
-            auto x_i = inputsWrapper[i].dynamicCast<CannBackendWrapper>();
+            auto x_i = inputs[i].dynamicCast<CannBackendWrapper>();
             auto x_i_desc = x_i->getTensorDesc();
             auto op_x_i = nodes[i].dynamicCast<CannBackendNode>()->getOp();
             op->set_dynamic_input_x(i, *op_x_i, x_i->name.c_str());

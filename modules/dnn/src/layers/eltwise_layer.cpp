@@ -849,17 +849,18 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        CV_Assert(inputsWrapper.size() == 2);
+        CV_Assert(inputs.size() == 2);
         CV_Assert(nodes.size() == 2);
 
         auto op_x1 = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        auto x1 = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x1 = inputs[0].dynamicCast<CannBackendWrapper>();
         auto x1_desc = x1->getTensorDesc();
         auto op_x2 = nodes[1].dynamicCast<CannBackendNode>()->getOp();
-        auto x2 = inputsWrapper[1].dynamicCast<CannBackendWrapper>();
+        auto x2 = inputs[1].dynamicCast<CannBackendWrapper>();
         auto x2_desc = x2->getTensorDesc();
         auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
 

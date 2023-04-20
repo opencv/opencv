@@ -662,10 +662,11 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto x1 = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x1 = inputs[0].dynamicCast<CannBackendWrapper>();
         auto x1_desc = x1->getTensorDesc();
         auto op_x1 = nodes[0].dynamicCast<CannBackendNode>()->getOp();
         auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
@@ -689,7 +690,7 @@ public:
         else
         {
             // A and B are variable inputs; non-const bias is not considered
-            CV_Assert(inputsWrapper.size() == 2);
+            CV_Assert(inputs.size() == 2);
             CV_Assert(nodes.size() == 2);
 
             // set attributes
@@ -698,7 +699,7 @@ public:
 
             // set inputs : x2 (weight)
             auto op_x2 = nodes[1].dynamicCast<CannBackendNode>()->getOp();
-            auto x2_desc = inputsWrapper[1].dynamicCast<CannBackendWrapper>()->getTensorDesc();
+            auto x2_desc = inputs[1].dynamicCast<CannBackendWrapper>()->getTensorDesc();
             op->set_input_x2_by_name(*op_x2, "y");
             op->update_input_desc_x2(*x2_desc);
         }
