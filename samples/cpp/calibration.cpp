@@ -60,6 +60,12 @@ static void help(char** argv)
         "     [-s=<squareSize>]        # square size in some user-defined units (1 by default)\n"
         "     [-ms=<markerSize>]       # marker size in some user-defined units (0.5 by default)\n"
         "     [-ad=<arucoDict>]        # Aruco dictionary name for charuco board\n"
+        "Available ArUco dictionaries: DICT_4X4_50, DICT_4X4_100, DICT_4X4_250, "
+        "DICT_4X4_1000, DICT_5X5_50, DICT_5X5_100, DICT_5X5_250, DICT_5X5_1000, "
+        "DICT_6X6_50, DICT_6X6_100, DICT_6X6_250, DICT_6X6_1000, DICT_7X7_50,"
+        "DICT_7X7_100, DICT_7X7_250, DICT_7X7_1000, DICT_ARUCO_ORIGINAL"
+        "DICT_APRILTAG_16h5, DICT_APRILTAG_25h9, DICT_APRILTAG_36h10, "
+        "DICT_APRILTAG_36h11\n"
         "     [-adf=<dictFilename>]    # Custom aruco dictionary file for charuco board\n"
         "     [-o=<out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
         "     [-op]                    # write detected feature points\n"
@@ -379,7 +385,7 @@ int main( int argc, char** argv )
     Pattern pattern = CHESSBOARD;
 
     cv::CommandLineParser parser(argc, argv,
-        "{help ||}{w||}{h||}{pt|chessboard|}{n|10|}{d|1000|}{s|1|}{ms|0.5|}{ad|0|}{adf|None|}{o|out_camera_data.yml|}"
+        "{help ||}{w||}{h||}{pt|chessboard|}{n|10|}{d|1000|}{s|1|}{ms|0.5|}{ad|DICT_4X4_50|}{adf|None|}{o|out_camera_data.yml|}"
         "{op||}{oe||}{zt||}{a||}{p||}{v||}{V||}{su||}"
         "{oo||}{ws|11|}{dt||}"
         "{fx||}{fy||}{cx||}{cy||}"
@@ -409,7 +415,30 @@ int main( int argc, char** argv )
     }
     squareSize = parser.get<float>("s");
     markerSize = parser.get<float>("ms");
-    arucoDict = parser.get<int>("ad");
+
+    string arucoDictName = parser.get<string>("ad");
+    if (arucoDictName == "DICT_4X4_50") { arucoDict = 0; }
+    if (arucoDictName == "DICT_4X4_100") { arucoDict = 1; }
+    if (arucoDictName == "DICT_4X4_250") { arucoDict = 2; }
+    if (arucoDictName == "DICT_4X4_1000") { arucoDict = 3; }
+    if (arucoDictName == "DICT_5X5_50") { arucoDict = 4; }
+    if (arucoDictName == "DICT_5X5_100") { arucoDict = 5; }
+    if (arucoDictName == "DICT_5X5_250") { arucoDict = 6; }
+    if (arucoDictName == "DICT_5X5_1000") { arucoDict = 7; }
+    if (arucoDictName == "DICT_6X6_50") { arucoDict = 8; }
+    if (arucoDictName == "DICT_6X6_100") { arucoDict = 9; }
+    if (arucoDictName == "DICT_6X6_250") { arucoDict = 10; }
+    if (arucoDictName == "DICT_6X6_1000") { arucoDict = 11; }
+    if (arucoDictName == "DICT_7X7_50") { arucoDict = 12; }
+    if (arucoDictName == "DICT_7X7_100") { arucoDict = 13; }
+    if (arucoDictName == "DICT_7X7_250") { arucoDict = 14; }
+    if (arucoDictName == "DICT_7X7_1000") { arucoDict = 15; }
+    if (arucoDictName == "DICT_ARUCO_ORIGINAL") { arucoDict = 16; }
+    if (arucoDictName == "DICT_APRILTAG_16h5") { arucoDict = 17; }
+    if (arucoDictName == "DICT_APRILTAG_25h9") { arucoDict = 18; }
+    if (arucoDictName == "DICT_APRILTAG_36h10") { arucoDict = 19; }
+    if (arucoDictName == "DICT_APRILTAG_36h11") { arucoDict = 20; }
+
     dictFilename = parser.get<std::string>("adf");
     nframes = parser.get<int>("n");
     delay = parser.get<int>("d");
