@@ -129,25 +129,21 @@ struct CharucoDetector::CharucoDetectorImpl {
         // approximated pose estimation using marker corners
         Mat approximatedRvec, approximatedTvec;
         Mat objPoints, imgPoints; // object and image points for the solvePnP function
-        // printf("before board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);\n");
-        board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);
-        // printf("after board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);\n");
+        Board simpleBoard(board.getObjPoints(), board.getDictionary(), board.getIds());
+        simpleBoard.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);
         if (objPoints.total() < 4ull)  // need, at least, 4 corners
             return;
 
         solvePnP(objPoints, imgPoints, charucoParameters.cameraMatrix, charucoParameters.distCoeffs, approximatedRvec, approximatedTvec);
-        // printf("after solvePnP\n");
 
         // project chessboard corners
         vector<Point2f> allChessboardImgPoints;
         projectPoints(board.getChessboardCorners(), approximatedRvec, approximatedTvec, charucoParameters.cameraMatrix,
                       charucoParameters.distCoeffs, allChessboardImgPoints);
-        // printf("after projectPoints\n");
         // calculate maximum window sizes for subpixel refinement. The size is limited by the distance
         // to the closes marker corner to avoid erroneous displacements to marker corners
         vector<Size> subPixWinSizes = getMaximumSubPixWindowSizes(markerCorners, markerIds, allChessboardImgPoints);
         // filter corners outside the image and subpixel-refine charuco corners
-        // printf("before selectAndRefineChessboardCorners\n");
         selectAndRefineChessboardCorners(allChessboardImgPoints, image, charucoCorners, charucoIds, subPixWinSizes);
     }
 
@@ -292,7 +288,7 @@ void CharucoDetector::setRefineParameters(const RefineParameters& refineParamete
 
 void CharucoDetector::detectBoard(InputArray image, OutputArray charucoCorners, OutputArray charucoIds,
                                   InputOutputArrayOfArrays markerCorners, InputOutputArray markerIds) const {
-    CV_Assert((markerCorners.empty() && markerIds.empty() && !image.empty()) || (markerCorners.size() == markerIds.size()));
+    CV_Assert((markerCorners.empty() && markerIds.empty() && !image.empty()) || (markerCorners.total() == markerIds.total()));
     vector<vector<Point2f>> tmpMarkerCorners;
     vector<int> tmpMarkerIds;
     InputOutputArrayOfArrays _markerCorners = markerCorners.needed() ? markerCorners : tmpMarkerCorners;
@@ -321,7 +317,7 @@ void CharucoDetector::detectBoard(InputArray image, OutputArray charucoCorners, 
 void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diamondCorners, OutputArray _diamondIds,
                                      InputOutputArrayOfArrays inMarkerCorners, InputOutputArrayOfArrays inMarkerIds) const {
     CV_Assert(getBoard().getChessboardSize() == Size(3, 3));
-    CV_Assert((inMarkerCorners.empty() && inMarkerIds.empty() && !image.empty()) || (inMarkerCorners.size() == inMarkerIds.size()));
+    CV_Assert((inMarkerCorners.empty() && inMarkerIds.empty() && !image.empty()) || (inMarkerCorners.total() == inMarkerIds.total()));
 
     vector<vector<Point2f>> tmpMarkerCorners;
     vector<int> tmpMarkerIds;
