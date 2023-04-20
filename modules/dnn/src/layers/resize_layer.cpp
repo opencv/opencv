@@ -312,10 +312,11 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
         auto x_desc = x->getTensorDesc();
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
         auto output_y_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
@@ -334,7 +335,8 @@ public:
             op->update_input_desc_x(*x_desc);
             // set inputs : size
             std::vector<int> shape_of_size_mat{2};
-            Mat size_mat(2, 1, CV_32S, Scalar(outHeight, outWidth));
+            std::vector<int> size_vec{outHeight, outWidth};
+            Mat size_mat(shape_of_size_mat, CV_32S, size_vec.data());
             auto op_const_size = std::make_shared<CannConstOp>(size_mat.data, size_mat.type(), shape_of_size_mat, cv::format("%s_size", name.c_str()));
             op->set_input_size(*(op_const_size->getOp()));
             op->update_input_desc_size(*(op_const_size->getTensorDesc()));

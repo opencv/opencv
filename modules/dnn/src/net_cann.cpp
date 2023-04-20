@@ -117,7 +117,7 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
             if (ld.id != 0 && !layer->supportBackend(preferableBackend))
             {
                 newWasSupported = false;
-                CV_LOG_INFO(NULL, "DNN/CANN: layer (name=" << ld.name << ", type=" << ld.type << ") is not supported by CANN backend. Going back to CPU backend");
+                CV_LOG_ONCE_WARNING(NULL, "DNN/CANN: layer (name=" << ld.name << ", type=" << ld.type << ") is not supported by CANN backend. Going back to default backend on CPU target");
             }
         }
     }
@@ -202,7 +202,7 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
             }
 
             CV_LOG_INFO(NULL, "DNN/CANN: converting layer " << ld.name << "@" << ld.type << "@" << ld.id << " to CANN operator");
-            auto backendNode = layer->initCann(ld.inputBlobsWrappers, layerInputNodes); // it's ok if ld.name is empty
+            auto backendNode = layer->initCann(ld.inputBlobsWrappers, ld.outputBlobsWrappers, layerInputNodes); // it's ok if ld.name is empty
 
             // collect outputs
             bool isOutputNode = ld.consumers.size() == 0 ? true : false;
