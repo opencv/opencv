@@ -1169,7 +1169,7 @@ bidirectional=True
 
 class LSTM(nn.Module):
 
-    def __init__(self):
+    def __init__(self, features, hidden, batch, num_layers, bidirectional):
         super(LSTM, self).__init__()
         self.lstm = nn.LSTM(features, hidden, num_layers, bidirectional=bidirectional)
         self.h0 = torch.from_numpy(np.ones((num_layers + int(bidirectional), batch, hidden), dtype=np.float32))
@@ -1184,14 +1184,28 @@ class LSTM(nn.Module):
 
 
 input_ = Variable(torch.randn(seq_len, batch, features))
-lstm = LSTM()
+lstm = LSTM(features, hidden, batch, num_layers, bidirectional)
 save_data_and_model("lstm_cell_bidirectional", input_, lstm, export_params=True)
 
 bidirectional = False
 input_ = Variable(torch.randn(seq_len, batch, features))
-lstm = LSTM()
+lstm = LSTM(features, hidden, batch, num_layers, bidirectional)
 save_data_and_model("lstm_cell_forward", input_, lstm, export_params=True)
 
+
+## Test for various sequence lengths and batch sizes
+tup_bs_sl = [(1, 50), (50, 1), (5, 5)]
+features = 4
+hidden = 3
+num_layers = 1
+bidirectional = False
+
+for sl, bs in tup_bs_sl:
+    input_ = Variable(torch.randn(sl, bs, features))
+    lstm = LSTM(features, hidden, bs, num_layers, bidirectional)
+    gru  = GRU(features, hidden, num_layers, bidirectional)
+    save_data_and_model(f"lstm_cell_batchsize_{bs}_seqlen_{sl}", input_, lstm, export_params=True)
+    save_data_and_model(f"gru_cell_batchsize_{bs}_seqlen_{sl}", input_, lstm, export_params=True)
 
 class MatMul(nn.Module):
     def __init__(self):
