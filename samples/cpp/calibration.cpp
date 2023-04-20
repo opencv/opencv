@@ -417,27 +417,27 @@ int main( int argc, char** argv )
     markerSize = parser.get<float>("ms");
 
     string arucoDictName = parser.get<string>("ad");
-    if (arucoDictName == "DICT_4X4_50") { arucoDict = 0; }
-    if (arucoDictName == "DICT_4X4_100") { arucoDict = 1; }
-    if (arucoDictName == "DICT_4X4_250") { arucoDict = 2; }
-    if (arucoDictName == "DICT_4X4_1000") { arucoDict = 3; }
-    if (arucoDictName == "DICT_5X5_50") { arucoDict = 4; }
-    if (arucoDictName == "DICT_5X5_100") { arucoDict = 5; }
-    if (arucoDictName == "DICT_5X5_250") { arucoDict = 6; }
-    if (arucoDictName == "DICT_5X5_1000") { arucoDict = 7; }
-    if (arucoDictName == "DICT_6X6_50") { arucoDict = 8; }
-    if (arucoDictName == "DICT_6X6_100") { arucoDict = 9; }
-    if (arucoDictName == "DICT_6X6_250") { arucoDict = 10; }
-    if (arucoDictName == "DICT_6X6_1000") { arucoDict = 11; }
-    if (arucoDictName == "DICT_7X7_50") { arucoDict = 12; }
-    if (arucoDictName == "DICT_7X7_100") { arucoDict = 13; }
-    if (arucoDictName == "DICT_7X7_250") { arucoDict = 14; }
-    if (arucoDictName == "DICT_7X7_1000") { arucoDict = 15; }
-    if (arucoDictName == "DICT_ARUCO_ORIGINAL") { arucoDict = 16; }
-    if (arucoDictName == "DICT_APRILTAG_16h5") { arucoDict = 17; }
-    if (arucoDictName == "DICT_APRILTAG_25h9") { arucoDict = 18; }
-    if (arucoDictName == "DICT_APRILTAG_36h10") { arucoDict = 19; }
-    if (arucoDictName == "DICT_APRILTAG_36h11") { arucoDict = 20; }
+    if (arucoDictName == "DICT_4X4_50") { arucoDict = cv::aruco::DICT_4X4_50; }
+    if (arucoDictName == "DICT_4X4_100") { arucoDict = cv::aruco::DICT_4X4_100; }
+    if (arucoDictName == "DICT_4X4_250") { arucoDict = cv::aruco::DICT_4X4_250; }
+    if (arucoDictName == "DICT_4X4_1000") { arucoDict = cv::aruco::DICT_4X4_1000; }
+    if (arucoDictName == "DICT_5X5_50") { arucoDict = cv::aruco::DICT_5X5_50; }
+    if (arucoDictName == "DICT_5X5_100") { arucoDict = cv::aruco::DICT_5X5_100; }
+    if (arucoDictName == "DICT_5X5_250") { arucoDict = cv::aruco::DICT_5X5_250; }
+    if (arucoDictName == "DICT_5X5_1000") { arucoDict = cv::aruco::DICT_5X5_1000; }
+    if (arucoDictName == "DICT_6X6_50") { arucoDict = cv::aruco::DICT_6X6_50; }
+    if (arucoDictName == "DICT_6X6_100") { arucoDict = cv::aruco::DICT_6X6_100; }
+    if (arucoDictName == "DICT_6X6_250") { arucoDict = cv::aruco::DICT_6X6_250; }
+    if (arucoDictName == "DICT_6X6_1000") { arucoDict = cv::aruco::DICT_6X6_1000; }
+    if (arucoDictName == "DICT_7X7_50") { arucoDict = cv::aruco::DICT_7X7_50; }
+    if (arucoDictName == "DICT_7X7_100") { arucoDict = cv::aruco::DICT_7X7_100; }
+    if (arucoDictName == "DICT_7X7_250") { arucoDict = cv::aruco::DICT_7X7_250; }
+    if (arucoDictName == "DICT_7X7_1000") { arucoDict = cv::aruco::DICT_7X7_1000; }
+    if (arucoDictName == "DICT_ARUCO_ORIGINAL") { arucoDict = cv::aruco::DICT_ARUCO_ORIGINAL; }
+    if (arucoDictName == "DICT_APRILTAG_16h5") { arucoDict = cv::aruco::DICT_APRILTAG_16h5; }
+    if (arucoDictName == "DICT_APRILTAG_25h9") { arucoDict = cv::aruco::DICT_APRILTAG_25h9; }
+    if (arucoDictName == "DICT_APRILTAG_36h10") { arucoDict = cv::aruco::DICT_APRILTAG_36h10; }
+    if (arucoDictName == "DICT_APRILTAG_36h11") { arucoDict = cv::aruco::DICT_APRILTAG_36h11; }
 
     dictFilename = parser.get<std::string>("adf");
     nframes = parser.get<int>("n");
@@ -507,7 +507,7 @@ int main( int argc, char** argv )
 
     cv::aruco::Dictionary dictionary;
     if (dictFilename == "None") {
-        dictionary = aruco::getPredefinedDictionary(aruco::PredefinedDictionaryType(arucoDict));
+        dictionary = aruco::getPredefinedDictionary(arucoDict);
     }
     else {
         cv::FileStorage dict_file(dictFilename, cv::FileStorage::Mode::READ);
@@ -589,7 +589,7 @@ int main( int argc, char** argv )
             {
                 ch_detector.detectBoard(view, pointbuf, markerIds);
 
-                if (pointbuf.size() < (int) boardSize.height*boardSize.width) {
+                if ((int) pointbuf.size() < boardSize.height*boardSize.width) {
                     found = false;
                 }
                 else {
