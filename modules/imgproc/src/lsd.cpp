@@ -592,8 +592,8 @@ void LineSegmentDetectorImpl::ll_angle(const double& threshold,
         }
     }
 
-    // Sort
-    std::sort(ordered_points.begin(), ordered_points.end(), compare_norm);
+    // Use stable sort to ensure deterministic region growing and thus overall LSD result determinism.
+    std::stable_sort(ordered_points.begin(), ordered_points.end(), compare_norm);
 }
 
 void LineSegmentDetectorImpl::region_grow(const Point2i& s, std::vector<RegionPoint>& reg,
