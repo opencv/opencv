@@ -30,7 +30,7 @@ programmer to express ideas in fewer lines of code without reducing readability.
 Compared to languages like C/C++, Python is slower. That said, Python can be easily extended with
 C/C++, which allows us to write computationally intensive code in C/C++ and create Python wrappers
 that can be used as Python modules. This gives us two advantages: first, the code is as fast as the
-original C/C++ code (since it is the actual C++ code working in background) and second, it easier to
+original C/C++ code (since it is the actual C++ code working in background) and second, it is easier to
 code in Python than C/C++. OpenCV-Python is a Python wrapper for the original OpenCV C++
 implementation.
 
@@ -79,8 +79,9 @@ Below is the list of contributors who submitted tutorials to OpenCV-Python.
 Additional Resources
 --------------------
 
--#  A Quick guide to Python - [A Byte of Python](http://swaroopch.com/notes/python/)
-2.  [NumPy Quickstart tutorial](https://numpy.org/devdocs/user/quickstart.html)
-3.  [NumPy Reference](https://numpy.org/devdocs/reference/index.html#reference)
-4.  [OpenCV Documentation](http://docs.opencv.org/)
+-#  A Quick guide to Python - [A Byte of Python](https://python.swaroopch.com/)
+1.  [A Quick guide to Python](https://www.freecodecamp.org/news/the-python-guide-for-beginners/)
+2.  [NumPy Quickstart tutorial](https://numpy.org/doc/stable/user/quickstart.html)
+3.  [NumPy Reference](https://numpy.org/doc/stable/reference/index.html)
+4.  [OpenCV Documentation](https://docs.opencv.org/)
 5.  [OpenCV Forum](https://forum.opencv.org/)
