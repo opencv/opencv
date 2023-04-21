@@ -22,18 +22,6 @@ CV__DNN_INLINE_NS_BEGIN
 
 using namespace opencv_tflite;
 
-// This values are used to indicate layer output's data layout where it's possible.
-// Approach is similar to TensorFlow importer but TFLite models do not have explicit
-// layout field "data_format". So we consider that all 4D inputs are in NHWC data layout.
-enum DataLayout
-{
-    DATA_LAYOUT_NHWC,
-    DATA_LAYOUT_NCHW,
-    DATA_LAYOUT_NDHWC,
-    DATA_LAYOUT_UNKNOWN,
-    DATA_LAYOUT_PLANAR  // 2-dimensional outputs (matmul, flatten, reshape to 2d)
-};
-
 class TFLiteImporter {
 public:
     TFLiteImporter(Net& net, const char* modelBuffer, size_t bufSize);
@@ -139,10 +127,10 @@ DataLayout estimateLayout(const Tensor& t)
     const auto t_shape = t.shape();
     CV_Assert(t_shape);
     switch (t_shape->size()) {
-    case 5: return DATA_LAYOUT_NDHWC;
-    case 4: return DATA_LAYOUT_NHWC;
-    case 2: return DATA_LAYOUT_PLANAR;
-    default: return DATA_LAYOUT_UNKNOWN;
+    case 5: return DNN_LAYOUT_NDHWC;
+    case 4: return DNN_LAYOUT_NHWC;
+    case 2: return DNN_LAYOUT_PLANAR;
+    default: return DNN_LAYOUT_UNKNOWN;
     }
 }
 
@@ -161,7 +149,7 @@ void TFLiteImporter::populateNet()
     CV_Assert(opCodes);
 
     CV_Assert(modelTensors);
-    layouts.resize(modelTensors->size(), DATA_LAYOUT_UNKNOWN);
+    layouts.resize(modelTensors->size(), DNN_LAYOUT_UNKNOWN);
     size_t subgraph_inputs_size = subgraph_inputs->size();
     std::vector<std::string> inputsNames(subgraph_inputs_size);
     std::vector<MatShape> inputsShapes(subgraph_inputs_size);
@@ -177,7 +165,7 @@ void TFLiteImporter::populateNet()
         // Keep info about origin inputs names and shapes
         inputsNames[i] = tensor->name()->str();
         std::vector<int> shape(tensor->shape()->begin(), tensor->shape()->end());
-        if (layouts[idx] == DATA_LAYOUT_NHWC) {
+        if (layouts[idx] == DNN_LAYOUT_NHWC) {
             CV_CheckEQ(shape.size(), (size_t)4, "");
             std::swap(shape[2], shape[3]);
             std::swap(shape[1], shape[2]);
@@ -257,14 +245,14 @@ void TFLiteImporter::populateNet()
 
             // Predict output layout. Some layer-specific parsers may set them explicitly.
             // Otherwise, propagate input layout.
-            if (layouts[op_outputs->Get(0)] == DATA_LAYOUT_UNKNOWN) {
-                DataLayout predictedLayout = DATA_LAYOUT_UNKNOWN;
+            if (layouts[op_outputs->Get(0)] == DNN_LAYOUT_UNKNOWN) {
+                DataLayout predictedLayout = DNN_LAYOUT_UNKNOWN;
                 for (auto layout : inpLayouts) {
-                    if (layout != DATA_LAYOUT_UNKNOWN) {
-                        if (predictedLayout == DATA_LAYOUT_UNKNOWN)
+                    if (layout != DNN_LAYOUT_UNKNOWN) {
+                        if (predictedLayout == DNN_LAYOUT_UNKNOWN)
                             predictedLayout = layout;
                         else if (predictedLayout != layout) {
-                            predictedLayout = DATA_LAYOUT_UNKNOWN;
+                            predictedLayout = DNN_LAYOUT_UNKNOWN;
                             break;
                         }
                     }
@@ -491,11 +479,11 @@ void TFLiteImporter::parseUnpooling(const Operator& op, const std::string& opcod
 void TFLiteImporter::parseReshape(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     DataLayout inpLayout = layouts[op.inputs()->Get(0)];
 
-    if (inpLayout == DATA_LAYOUT_NHWC) {
+    if (inpLayout == DNN_LAYOUT_NHWC) {
         // Permute to NCHW
         int permId = addPermuteLayer({0, 2, 3, 1}, layerParams.name + "/permute", layerIds[op.inputs()->Get(0)]);  // NCHW -> NHWC
         layerIds[op.inputs()->Get(0)] = std::make_pair(permId, 0);
-        layouts[op.outputs()->Get(0)] = DATA_LAYOUT_NCHW;
+        layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NCHW;
     }
 
     layerParams.type = "Reshape";
@@ -514,7 +502,7 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
     int axis = options->axis();
 
     DataLayout inpLayout = layouts[op.inputs()->Get(0)];
-    if (inpLayout == DATA_LAYOUT_NHWC) {
+    if (inpLayout == DNN_LAYOUT_NHWC) {
         // OpenCV works in NCHW data layout. So change the axis correspondingly.
         axis = normalize_axis(axis, 4);
         static const int remap[] = {0, 2, 3, 1};
