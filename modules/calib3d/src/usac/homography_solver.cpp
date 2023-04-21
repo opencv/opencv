@@ -259,9 +259,13 @@ public:
                 h[8] + h[6]*t1[2] + h[7]*t1[5])) };
         return 1;
     }
-
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+            const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
     int getMinimumRequiredSampleSize() const override { return 4; }
     int getMaxNumberOfSolutions () const override { return 1; }
+    void enforceRankConstraint (bool /*enforce*/) override {}
 };
 Ptr<HomographyNonMinimalSolver> HomographyNonMinimalSolver::create(const Mat &points_, bool use_ge_) {
     return makePtr<HomographyNonMinimalSolverImpl>(points_, use_ge_);
@@ -371,6 +375,7 @@ public:
 
         return 1;
     }
+    void enforceRankConstraint (bool /*enforce*/) override {}
     int getMinimumRequiredSampleSize() const override { return 4; }
     int getMaxNumberOfSolutions () const override { return 1; }
 };
@@ -527,6 +532,11 @@ public:
                 h[8] + h[6]*t1[2] + h[7]*t1[5])) };
         return 1;
     }
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+            const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
+    void enforceRankConstraint (bool /*enforce*/) override {}
 
     int getMinimumRequiredSampleSize() const override { return 3; }
     int getMaxNumberOfSolutions () const override { return 1; }
@@ -620,6 +630,7 @@ public:
            a[8] + a[6]*t1[2] + a[7]*t1[5])) };
         return 1;
     }
+    void enforceRankConstraint (bool /*enforce*/) override {}
     int getMinimumRequiredSampleSize() const override { return 3; }
     int getMaxNumberOfSolutions () const override { return 1; }
 };

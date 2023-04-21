@@ -222,6 +222,12 @@ public:
 #endif
     }
 
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+            const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
+    void enforceRankConstraint (bool /*enforce*/) override {}
+
 protected:
 #if defined(HAVE_LAPACK) || defined(HAVE_EIGEN)
     const int indices[1968] = {

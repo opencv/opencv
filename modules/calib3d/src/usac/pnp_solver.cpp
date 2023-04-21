@@ -247,7 +247,11 @@ public:
 #endif
         return 1;
     }
-
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+            const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
+    void enforceRankConstraint (bool /*enforce*/) override {}
     int getMinimumRequiredSampleSize() const override { return 6; }
     int getMaxNumberOfSolutions () const override { return 1; }
 };

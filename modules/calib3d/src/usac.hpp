@@ -154,8 +154,8 @@ public:
     // return maximum number of possible solutions.
     virtual int getMaxNumberOfSolutions () const = 0;
     virtual int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
-            const std::vector<double> &/*weights*/) { return 0; }
-    virtual void enforceRankConstraint (bool /*enforce*/) {}
+            const std::vector<double> &/*weights*/) = 0;
+    virtual void enforceRankConstraint (bool /*enforce*/) = 0;
 };
 
 //-------------------------- HOMOGRAPHY MATRIX -----------------------
@@ -406,7 +406,7 @@ public:
     virtual int getMaxNumSolutions () const = 0;
     // return maximum number of possible solutions of non-minimal estimation.
     virtual int getMaxNumSolutionsNonMinimal () const = 0;
-    virtual void enforceRankConstraint (bool /*enforce*/) {}
+    virtual void enforceRankConstraint (bool /*enforce*/) = 0;
 };
 
 class HomographyEstimator : public Estimator {
@@ -447,9 +447,8 @@ public:
     // Return true if model is good, false - otherwise.
     virtual bool isModelGood(const Mat &model, Score &score) = 0;
     // update verifier by given inlier number
-    virtual void update (const Score &/*score*/, int /*iteration*/) {}
-    virtual void update (const Mat &/*model*/) {}
-    virtual void reset() {}
+    virtual void update (const Score &/*score*/, int /*iteration*/) = 0;
+    virtual void reset() = 0;
     virtual void updateSPRT (double time_model_est, double time_corr_ver, double new_avg_models, double new_delta, double new_epsilon, const Score &best_score) = 0;
     static Ptr<ModelVerifier> create(const Ptr<Quality> &qualtiy);
 };

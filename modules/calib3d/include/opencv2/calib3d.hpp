@@ -558,21 +558,7 @@ enum PolishingMethod { NONE_POLISHER=0, LSQ_POLISHER=1, MAGSAC=2, COV_POLISHER=3
 
 struct CV_EXPORTS_W_SIMPLE UsacParams
 { // in alphabetical order
-    CV_WRAP UsacParams() {
-        confidence=0.99;
-        isParallel=false;
-        loIterations=5;
-        loMethod=LOCAL_OPTIM_INNER_LO;
-        loSampleSize=14;
-        maxIterations=5000;
-        neighborsSearch=NEIGH_GRID;
-        randomGeneratorState=0;
-        sampler=SAMPLING_UNIFORM;
-        score=SCORE_METHOD_MSAC;
-        threshold=1.5;
-        final_polisher=COV_POLISHER;
-        final_polisher_iterations=3;
-    };
+    CV_WRAP UsacParams();
     CV_PROP_RW double confidence;
     CV_PROP_RW bool isParallel;
     CV_PROP_RW int loIterations;

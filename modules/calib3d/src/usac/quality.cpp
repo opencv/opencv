@@ -342,6 +342,8 @@ public:
         score = quality->getScore(model);
         return true;
     }
+    void update (const Score &/*score*/, int /*iteration*/) override {}
+    void reset() override {}
     void updateSPRT (double , double , double , double , double , const Score &) override {}
 };
 Ptr<ModelVerifier> ModelVerifier::create(const Ptr<Quality> &quality) {

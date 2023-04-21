@@ -214,6 +214,7 @@ public:
             MAX_ITERATIONS(max_iterations), points_size (points_size_),
             min_termination_length (min_termination_length_), sample_size(sample_size_),
             sampler(sampler_), error (error_) {
+        CV_Assert(min_termination_length_ <= points_size_ && min_termination_length_ >= 0);
         if (non_rand_inliers.empty())
             init();
         else non_random_inliers = non_rand_inliers;
@@ -232,7 +233,7 @@ public:
         // see probabilities description below.
 
         non_random_inliers = std::vector<int>(points_size, 0);
-        std::vector<double> pn_i_arr(points_size);
+        std::vector<double> pn_i_arr(points_size, 0);
         const double beta2compl_beta = beta / (1-beta);
         const int step_n = 50, max_n = std::min(points_size, 1200);
         for (int n = sample_size; n < points_size; n+=step_n) {
@@ -284,13 +285,13 @@ public:
      * The PROSAC algorithm terminates if the number of inliers I_n*
      * within the set U_n* satisfies the following conditions:
      *
-     * • non-randomness – the probability that I_n* out of n* (termination_length)
+     * non-randomness – the probability that I_n* out of n* (termination_length)
      * data points are by chance inliers to an arbitrary incorrect model
-     * is smaller than Ψ (typically set to 5%)
+     * is smaller than Sigma (typically set to 5%)
      *
-     * • maximality – the probability that a solution with more than
+     * maximality – the probability that a solution with more than
      * In* inliers in U_n* exists and was not found after k
-     * samples is smaller than η0 (typically set to 5%).
+     * samples is smaller than eta_0 (typically set to 5%).
      */
     int update (const Mat &model, int inliers_size) const override {
         int t; return updateTerminationLength(model, inliers_size, t);

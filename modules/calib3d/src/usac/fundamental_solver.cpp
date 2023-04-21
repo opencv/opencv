@@ -397,7 +397,10 @@ public:
         }
         return 1;
     }
-
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+            const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
     int getMinimumRequiredSampleSize() const override { return 8; }
     int getMaxNumberOfSolutions () const override { return 1; }
 };
@@ -581,6 +584,11 @@ public:
     int estimate (const std::vector<int>&, int, std::vector<Mat>&, const std::vector<double>&) const override {
         return 0;
     }
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+            const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
+    void enforceRankConstraint (bool /*enforce*/) override {}
     int getMinimumRequiredSampleSize() const override { return 5; }
     int getMaxNumberOfSolutions () const override { return 1; }
 };

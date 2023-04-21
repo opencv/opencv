@@ -36,6 +36,7 @@ public:
     int getNonMinimalSampleSize () const override {
         return non_min_solver->getMinimumRequiredSampleSize();
     }
+    void enforceRankConstraint (bool /*enforce*/) override {}
 };
 Ptr<HomographyEstimator> HomographyEstimator::create (const Ptr<MinimalSolver> &min_solver_,
         const Ptr<NonMinimalSolver> &non_min_solver_, const Ptr<Degeneracy> &degeneracy_) {
@@ -168,6 +169,7 @@ public:
     int getMaxNumSolutionsNonMinimal () const override {
         return non_min_solver->getMaxNumberOfSolutions();
     }
+    void enforceRankConstraint (bool /*enforce*/) override {}
 };
 Ptr<AffineEstimator> AffineEstimator::create (const Ptr<MinimalSolver> &min_solver_,
         const Ptr<NonMinimalSolver> &non_min_solver_) {
@@ -203,6 +205,7 @@ public:
     int getMaxNumSolutionsNonMinimal () const override {
         return non_min_solver->getMaxNumberOfSolutions();
     }
+    void enforceRankConstraint (bool /*enforce*/) override {}
 };
 Ptr<PnPEstimator> PnPEstimator::create (const Ptr<MinimalSolver> &min_solver_,
         const Ptr<NonMinimalSolver> &non_min_solver_) {

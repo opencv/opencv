@@ -6,7 +6,24 @@
 #include "../usac.hpp"
 #include <atomic>
 
-namespace cv { namespace usac {
+namespace cv {
+UsacParams::UsacParams() {
+    confidence=0.99;
+    isParallel=false;
+    loIterations=5;
+    loMethod=LOCAL_OPTIM_INNER_LO;
+    loSampleSize=14;
+    maxIterations=5000;
+    neighborsSearch=NEIGH_GRID;
+    randomGeneratorState=0;
+    sampler=SAMPLING_UNIFORM;
+    score=SCORE_METHOD_MSAC;
+    threshold=1.5;
+    final_polisher=COV_POLISHER;
+    final_polisher_iterations=3;
+}
+
+namespace usac {
 int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, bool ispnp);
 void setParameters (int flag, Ptr<Model> &params, EstimationMethod estimator, double thr,
                     int max_iters, double conf, bool mask_needed);
@@ -374,9 +391,15 @@ public:
         else CV_Error(cv::Error::StsNotImplemented, "Verifier is not imeplemented!");
 
         if (params->getSampler() == SamplingMethod::SAMPLING_PROSAC) {
-            termination = ProsacTerminationCriteria::create(parallel_call ? nullptr : sampler.dynamicCast<ProsacSampler>(), error,
-                points_size, min_sample_size, params->getConfidence(), params->getMaxIters(), prosac_termination_length, 0.05, 0.05, threshold,
-                parallel_call ? _termination.dynamicCast<ProsacTerminationCriteria>()->getNonRandomInliers() : std::vector<int>());
+            if (parallel_call) {
+                termination = ProsacTerminationCriteria::create(nullptr, error,
+                    points_size, min_sample_size, params->getConfidence(), params->getMaxIters(), prosac_termination_length, 0.05, 0.05, threshold,
+                    _termination.dynamicCast<ProsacTerminationCriteria>()->getNonRandomInliers());
+            } else {
+                termination = ProsacTerminationCriteria::create(sampler.dynamicCast<ProsacSampler>(), error,
+                    points_size, min_sample_size, params->getConfidence(), params->getMaxIters(), prosac_termination_length, 0.05, 0.05, threshold,
+                    std::vector<int>());
+            }
         } else if (params->getSampler() == SamplingMethod::SAMPLING_PROGRESSIVE_NAPSAC) {
             if (is_sprt)
                  termination = SPRTPNapsacTermination::create(verifier.dynamicCast<AdaptiveSPRT>(),
