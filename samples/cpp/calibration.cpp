@@ -365,7 +365,7 @@ int main( int argc, char** argv )
     Mat cameraMatrix, distCoeffs;
     string outputFilename;
     string inputFilename = "";
-    int arucoDict;
+    cv::aruco::PredefinedDictionaryType arucoDict;
     string dictFilename;
 
     int i, nframes;
