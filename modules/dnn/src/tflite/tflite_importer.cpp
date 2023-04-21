@@ -67,6 +67,7 @@ private:
     void parseDequantize(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseDetectionPostProcess(const Operator& op, const std::string& opcode, LayerParams& layerParams);
 
+    void addLayer(LayerParams& layerParams, const Operator& op);
     int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId, int dtype);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& activParams, bool isFused = true);
     inline bool isInt8(const Operator& op);
@@ -234,81 +235,6 @@ void TFLiteImporter::populateNet()
                 CV_Error(Error::StsNotImplemented, "Unsupported operator type " + type);
 
             CALL_MEMBER_FN(*this, iter->second)(*op, type, layerParams);
-
-            // Collect input blobs
-            if (layerParams.blobs.empty()) {
-                for (int idx : *op_inputs) {
-                    if (layerIds.find(idx) != layerIds.end()) {
-                        continue;  // Output from a different layer
-                    }
-                    Mat blob = allTensors[idx];
-                    layerParams.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
-                }
-            }
-
-            int dtype = CV_32F;
-            if (isInt8(*op)) {
-                dtype = CV_8S;
-                if (layerParams.type != "Quantize")
-                    layerParams.type += "Int8";
-
-                if (!layerParams.has("zeropoints")) {
-                    float inpScale, outScale;
-                    int inpZero, outZero;
-                    getQuantParams(*op, inpScale, inpZero, outScale, outZero);
-
-                    layerParams.set("input_scale", inpScale);
-                    layerParams.set("input_zeropoint", inpZero);
-                    layerParams.set("scales", outScale);
-                    layerParams.set("zeropoints", outZero);
-                }
-            }
-            int layerId = dstNet.addLayer(layerParams.name, layerParams.type, dtype, layerParams);
-
-            // Connect layer to inputs
-            int i = 0;
-            std::vector<DataLayout> inpLayouts;
-            for (int idx : *op_inputs) {
-                if (layerIds.find(idx) == layerIds.end()) {
-                    continue;  // Const input
-                }
-                inpLayouts.push_back(layouts[idx]);
-
-                auto it = layerIds.find(idx);
-                CV_Assert(it != layerIds.end());
-                dstNet.connect(it->second.first, it->second.second, layerId, i++);
-            }
-
-            auto activ = (ActivationFunctionType)layerParams.get(fused_activation, (int)ActivationFunctionType_NONE);
-            if (activ != ActivationFunctionType_NONE) {
-                LayerParams activParams;
-                parseActivation(*op, EnumNameActivationFunctionType(activ), activParams);
-                activParams.name = layerParams.name + "/activ";
-                layerId = dstNet.addLayerToPrev(activParams.name, activParams.type, dtype, activParams);
-            }
-
-            // Predict output layout. Some layer-specific parsers may set them explicitly.
-            // Otherwise, propagate input layout.
-            if (layouts[op_outputs->Get(0)] == DNN_LAYOUT_UNKNOWN) {
-                DataLayout predictedLayout = DNN_LAYOUT_UNKNOWN;
-                for (auto layout : inpLayouts) {
-                    if (layout != DNN_LAYOUT_UNKNOWN) {
-                        if (predictedLayout == DNN_LAYOUT_UNKNOWN)
-                            predictedLayout = layout;
-                        else if (predictedLayout != layout) {
-                            predictedLayout = DNN_LAYOUT_UNKNOWN;
-                            break;
-                        }
-                    }
-                }
-                layouts[op_outputs->Get(0)] = predictedLayout;
-            }
-
-            // Register outputs
-            i = 0;
-            for (int idx : *op_outputs) {
-                layerIds[idx] = std::make_pair(layerId, i++);
-            }
         }
         catch (const cv::Exception& e)
         {
@@ -346,6 +272,86 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["DEQUANTIZE"] = &TFLiteImporter::parseDequantize;
     dispatch["TFLite_Detection_PostProcess"] = &TFLiteImporter::parseDetectionPostProcess;
     return dispatch;
+}
+
+void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op) {
+    const auto op_inputs = op.inputs();
+    const auto op_outputs = op.outputs();
+
+    // Collect input blobs
+    if (layerParams.blobs.empty()) {
+        for (int idx : *op_inputs) {
+            if (layerIds.find(idx) != layerIds.end()) {
+                continue;  // Output from a different layer
+            }
+            Mat blob = allTensors[idx];
+            layerParams.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
+        }
+    }
+
+    int dtype = CV_32F;
+    if (isInt8(op)) {
+        dtype = CV_8S;
+        if (layerParams.type != "Quantize")
+            layerParams.type += "Int8";
+
+        if (!layerParams.has("zeropoints")) {
+            float inpScale, outScale;
+            int inpZero, outZero;
+            getQuantParams(op, inpScale, inpZero, outScale, outZero);
+
+            layerParams.set("input_scale", inpScale);
+            layerParams.set("input_zeropoint", inpZero);
+            layerParams.set("scales", outScale);
+            layerParams.set("zeropoints", outZero);
+        }
+    }
+    int layerId = dstNet.addLayer(layerParams.name, layerParams.type, dtype, layerParams);
+
+    // Connect layer to inputs
+    int i = 0;
+    std::vector<DataLayout> inpLayouts;
+    for (int idx : *op_inputs) {
+        if (layerIds.find(idx) == layerIds.end()) {
+            continue;  // Const input
+        }
+        inpLayouts.push_back(layouts[idx]);
+
+        auto it = layerIds.find(idx);
+        CV_Assert(it != layerIds.end());
+        dstNet.connect(it->second.first, it->second.second, layerId, i++);
+    }
+
+    auto activ = (ActivationFunctionType)layerParams.get(fused_activation, (int)ActivationFunctionType_NONE);
+    if (activ != ActivationFunctionType_NONE) {
+        LayerParams activParams;
+        parseActivation(op, EnumNameActivationFunctionType(activ), activParams);
+        activParams.name = layerParams.name + "/activ";
+        layerId = dstNet.addLayerToPrev(activParams.name, activParams.type, dtype, activParams);
+    }
+
+    // Predict output layout. Some layer-specific parsers may set them explicitly.
+    // Otherwise, propagate input layout.
+    if (layouts[op_outputs->Get(0)] == DATA_LAYOUT_UNKNOWN) {
+        DataLayout predictedLayout = DATA_LAYOUT_UNKNOWN;
+        for (auto layout : inpLayouts) {
+            if (layout != DATA_LAYOUT_UNKNOWN) {
+                if (predictedLayout == DATA_LAYOUT_UNKNOWN)
+                    predictedLayout = layout;
+                else if (predictedLayout != layout) {
+                    predictedLayout = DATA_LAYOUT_UNKNOWN;
+                    break;
+                }
+            }
+        }
+        layouts[op_outputs->Get(0)] = predictedLayout;
+    }
+
+    // Register outputs
+    i = 0;
+    for (int idx : *op_outputs) {
+        layerIds[idx] = std::make_pair(layerId, i++);
+    }
 }
 
 void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -410,6 +416,7 @@ void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opc
             }
         }
     }
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseDWConvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -473,6 +480,7 @@ void TFLiteImporter::parseDWConvolution(const Operator& op, const std::string& o
             }
         }
     }
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parsePadding(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -492,6 +500,7 @@ void TFLiteImporter::parsePadding(const Operator& op, const std::string& opcode,
     // 0 1  2 3  4 5  6 7
 
     layerParams.set("paddings", DictValue::arrayInt<int32_t*>((int32_t*)paddings.data, paddings.total()));
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -537,6 +546,7 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
         layerParams.set("scales", outScale);
         layerParams.set("zeropoints", outZero);
     }
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -557,6 +567,7 @@ void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode,
         layerParams.set("pool", "ave");
     else
         CV_Error(Error::StsNotImplemented, "Pool type selection for " + opcode);
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parsePoolingWithArgmax(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -574,6 +585,7 @@ void TFLiteImporter::parsePoolingWithArgmax(const Operator& op, const std::strin
     layerParams.set("kernel_w", params->filter_width);
     layerParams.set("kernel_h", params->filter_height);
     layerParams.set("pool", "max");
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseUnpooling(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -590,6 +602,7 @@ void TFLiteImporter::parseUnpooling(const Operator& op, const std::string& opcod
     layerParams.set("pool_k_h", params->filter_height);
     layerParams.set("pool_pad_w", 0);
     layerParams.set("pool_pad_h", 0);
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseReshape(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -615,6 +628,7 @@ void TFLiteImporter::parseReshape(const Operator& op, const std::string& opcode,
         shape.assign(options->new_shape()->begin(), options->new_shape()->end());
     }
     layerParams.set("dim", DictValue::arrayInt<int*>(shape.data(), shape.size()));
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -632,6 +646,7 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
         axis = remap[axis];
     }
     layerParams.set("axis", axis);
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseResize(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -651,6 +666,7 @@ void TFLiteImporter::parseResize(const Operator& op, const std::string& opcode, 
     Mat shape = allTensors[op.inputs()->Get(1)].reshape(1, 1);
     layerParams.set("height", shape.at<int>(0, 0));
     layerParams.set("width", shape.at<int>(0, 1));
+    addLayer(layerParams, op);
 }
 
 int TFLiteImporter::addPermuteLayer(const std::vector<int>& order, const std::string& permName,
@@ -721,6 +737,7 @@ void TFLiteImporter::parseDeconvolution(const Operator& op, const std::string& o
             }
         }
     }
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseQuantize(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -728,6 +745,7 @@ void TFLiteImporter::parseQuantize(const Operator& op, const std::string& opcode
 
     layerParams.set("scales", 1);
     layerParams.set("zeropoints", -128);
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseDequantize(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -738,6 +756,7 @@ void TFLiteImporter::parseDequantize(const Operator& op, const std::string& opco
     getQuantParams(op, inpScale, inpZero, outScale, outZero);
     layerParams.set("scales", inpScale);
     layerParams.set("zeropoints", inpZero);
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -797,6 +816,7 @@ void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::st
 
     int priorsId = dstNet.addLayer(priorsLP.name, priorsLP.type, priorsLP);
     layerIds[op.inputs()->Get(2)] = std::make_pair(priorsId, 0);
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseActivation(const Operator& op, const std::string& opcode, LayerParams& activParams, bool isFused) {
