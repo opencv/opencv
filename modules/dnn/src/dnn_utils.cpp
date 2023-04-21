@@ -11,7 +11,7 @@ namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-Image2BlobParams::Image2BlobParams():scalefactor(1.0), size(Size()), mean(Scalar()), swapRB(false), ddepth(CV_32F),
+Image2BlobParams::Image2BlobParams():scalefactor(Scalar::all(1.0)), size(Size()), mean(Scalar()), swapRB(false), ddepth(CV_32F),
                            datalayout(DNN_LAYOUT_NCHW), paddingmode(DNN_PMODE_NULL)
 {}
 
@@ -51,7 +51,7 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
         Size size, const Scalar& mean_, bool swapRB, bool crop, int ddepth)
 {
     CV_TRACE_FUNCTION();
-    Image2BlobParams param(scalefactor, size, mean_, swapRB, ddepth);
+    Image2BlobParams param(Scalar::all(scalefactor), size, mean_, swapRB, ddepth);
     if (crop)
         param.paddingmode = DNN_PMODE_CROP_CENTER;
     blobFromImagesWithParams(images_, blob_, param);
@@ -93,14 +93,6 @@ void blobFromImagesWithParams(InputArrayOfArrays images_, OutputArray blob_, con
 
     int nch = images[0].channels();
     Scalar scalefactor = param.scalefactor;
-
-    // Because 0 is meaningless in scalefactor.
-    // If the scalefactor is (x, 0, 0, 0), we convert it to (x, x, x, x).
-    if (scalefactor[1] == 0 && scalefactor[2] == 0 && scalefactor[3] == 0)
-    {
-        CV_Assert(scalefactor[0] != 0 && "Scalefactor of 0 is meaningless.");
-        scalefactor = Scalar::all(scalefactor[0]);
-    }
 
     if (param.ddepth == CV_8U)
     {

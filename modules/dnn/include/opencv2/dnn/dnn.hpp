@@ -115,11 +115,12 @@ CV__DNN_INLINE_NS_BEGIN
     enum DataLayout
     {
         DNN_LAYOUT_UNKNOWN = 0,
-        DNN_LAYOUT_ND = 1,
-        DNN_LAYOUT_NCHW = 2,      //!< OpenCV and ONNX data layout.
-        DNN_LAYOUT_NHWC = 3,      //!< Tensorflow-like data layout.
-        DNN_LAYOUT_NDHWC = 4,      //!< Tensorflow-like data layout.
-        DNN_LAYOUT_PLANAR = 5,      //!< 2-dimensional outputs (matmul, flatten, reshape to 2d)
+        DNN_LAYOUT_ND = 1,        //!< OpenCV data layout for 2D data.
+        DNN_LAYOUT_NCHW = 2,      //!< OpenCV data layout for 4D data.
+        DNN_LAYOUT_NCDHW = 3,      //!< OpenCV data layout for 5D data.
+        DNN_LAYOUT_NHWC = 4,      //!< Tensorflow-like data layout for 4D data.
+        DNN_LAYOUT_NDHWC = 5,      //!< Tensorflow-like data layout for 5D data.
+        DNN_LAYOUT_PLANAR = 6,     //!< Tensorflow-like data layout, it should only be used at tf or tflite model parsing.
     };
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
