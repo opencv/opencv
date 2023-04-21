@@ -3169,6 +3169,189 @@ static void resizeArea_( const Mat& src, Mat& dst,
                  dst.total()/((double)(1 << 16)));
 }
 
+template <typename VT>
+VT vx_setall_local(double coeff);
+template <>
+v_float32 vx_setall_local(double coeff) {
+    return v_setall_f32(coeff);
+}
+#if CV_SIMD128_64F
+template <>
+v_float64 vx_setall_local(double coeff) {
+    return v_setall_f64(coeff);
+}
+#endif
+
+template <typename T, typename WT, typename VT>
+class VResizeArea_Invoker : public ParallelLoopBody
+{
+public:
+    VResizeArea_Invoker( const Mat& _src, Mat& _dst,
+                         const DecimateAlpha* _xtab, int _xtab_size,
+                         const DecimateAlpha* _ytab, int _ytab_size,
+                         const int* _tabofs )
+    {
+        src = &_src;
+        dst = &_dst;
+        xtab0 = _xtab;
+        xtab_size0 = _xtab_size;
+        ytab = _ytab;
+        ytab_size = _ytab_size;
+        tabofs = _tabofs;
+    }
+
+    virtual void operator() (const Range& range) const CV_OVERRIDE
+    {
+        Size dsize = dst->size();
+        int cn = dst->channels();
+        dsize.width *= cn;
+        AutoBuffer<WT> _buffer(src->cols * cn + std::max(src->cols * cn, dst->rows * cn));
+        const DecimateAlpha* xtab = xtab0;
+        int xtab_size = xtab_size0;
+        WT *buf = _buffer.data(), *sum = buf + src->cols * cn;
+        int j_start = tabofs[range.start], j_end = tabofs[range.end], j, dx;
+
+        static_assert(
+            std::is_same<WT, float>::value || std::is_same<WT, double>::value,
+            "Must convert to float or double type");
+        static_assert(std::is_same<typename VTraits<VT>::lane_type, WT>::value,
+                      "Lane type mismatch");
+        const int step = VT().nlanes;
+        cv::Mat tmp(ytab[j_end - 1].di - ytab[j_start].di + 1, src->cols,
+                    CV_MAKETYPE(cv::DataType<WT>::type, cn));
+        int prev_di = -1;
+
+        // iter == 0 reduces the number of lines and stores the result in tmp.
+        // tmp is then transposed and its number of lines is then reduced.
+        for (int iter = 0; iter < 2; ++iter)
+        {
+            int row_start, row_end, col_end, start_di;
+            if (iter == 0)
+            {
+                row_start = j_start;
+                row_end = j_end;
+                col_end = src->cols * cn;
+                // Blend lines together first.
+                start_di = ytab[j_start].di;
+            }
+            else
+            {
+                row_start = 0;
+                row_end = xtab_size;
+                col_end = dst->rows * cn;
+                start_di = xtab[0].di;
+            }
+            prev_di = start_di;
+            for (dx = 0; dx < col_end; dx++) sum[dx] = (WT)0;
+            int di;
+            for (j = row_start; j < row_end; ++j)
+            {
+                WT coeff;
+                int si;
+                if (iter == 0)
+                {
+                    coeff = ytab[j].alpha;
+                    di = ytab[j].di;
+                    si = ytab[j].si;
+                    // Convert the line to the proper float/double type.
+                    const T* S = src->template ptr<T>(si);
+                    std::copy(S, S + src->cols * cn, buf);
+                }
+                else
+                {
+                    coeff = xtab[j].alpha;
+                    di = xtab[j].di / cn;
+                    si = xtab[j].si / cn;
+                    buf = tmp.template ptr<WT>(si);
+                }
+                const VT v_coeff = vx_setall_local<VT>(coeff);
+
+                if (di != prev_di)
+                {
+                    int x;
+                    if (iter == 0)
+                    {
+                        WT* D = tmp.template ptr<WT>(prev_di - start_di);
+                        for (x = 0; x < col_end; ++x) D[x] = sum[x];
+                    }
+                    else
+                    {
+                        T* D = dst->template ptr<T>(prev_di);
+                        for (x = 0; x < col_end; ++x)
+                        {
+                            D[x] = saturate_cast<T>(sum[x]);
+                        }
+                    }
+                    for (x = 0; x + step < col_end; x += step)
+                    {
+                        const VT line = vx_load(buf + x);
+                        v_store(sum + x, line * v_coeff);
+                    }
+                    for (; x < col_end; ++x) sum[x] = buf[x] * coeff;
+                    prev_di = di;
+                }
+                else
+                {
+                    int x;
+                    for (x = 0; x + step < col_end; x += step)
+                    {
+                        const VT line = vx_load(buf + x);
+                        VT sum_x = vx_load(sum + x);
+                        v_store(sum + x, sum_x + line * v_coeff);
+                    }
+                    for (; x < col_end; ++x) sum[x] += buf[x] * coeff;
+                }
+            }
+            // Re-define di to please the compiler.
+            if (iter == 0) {
+                di = ytab[row_end - 1].di;
+            }
+            else
+            {
+                di = xtab[row_end - 1].di / cn;
+            }
+            // Deal with the last row.
+            if (iter == 0)
+            {
+                WT* D = tmp.template ptr<WT>(di - start_di);
+                for (int x = 0; x < col_end; ++x) D[x] = sum[x];
+            }
+            else
+            {
+                T* D = dst->template ptr<T>(di);
+                for (int x = 0; x < col_end; ++x)
+                {
+                     D[x] = saturate_cast<T>(sum[x]);
+                }
+            }
+
+            if (iter == 0)
+            {
+                cv::Mat tmp_t;
+                transpose(tmp, tmp_t);
+                tmp = tmp_t;
+            }
+        }
+    }
+
+private:
+    const Mat* src;
+    Mat* dst;
+    const DecimateAlpha* xtab0;
+    const DecimateAlpha* ytab;
+    int xtab_size0, ytab_size;
+    const int* tabofs;
+};
+
+template <typename T, typename WT, typename VT>
+static void vresizeArea_(const Mat& src, Mat& dst, const DecimateAlpha* xtab,
+                        int xtab_size, const DecimateAlpha* ytab, int ytab_size,
+                        const int* tabofs) {
+    parallel_for_(Range(0, dst.rows),
+                  VResizeArea_Invoker<T, WT, VT>(src, dst, xtab, xtab_size, ytab,
+                                                 ytab_size, tabofs),
+                  dst.total() / ((double)(1 << 16)));
+}
 
 typedef void (*ResizeFunc)( const Mat& src, Mat& dst,
                             const int* xofs, const void* alpha,
@@ -3797,12 +3980,18 @@ void resize(int src_type,
         0
     };
 
-    static ResizeAreaFunc area_tab[] =
-    {
-        resizeArea_<uchar, float>, 0, resizeArea_<ushort, float>,
-        resizeArea_<short, float>, 0, resizeArea_<float, float>,
-        resizeArea_<double, double>, 0
-    };
+    static ResizeAreaFunc area_tab[] = {vresizeArea_<uchar, float, v_float32>,
+                                        0,
+                                        vresizeArea_<ushort, float, v_float32>,
+                                        vresizeArea_<short, float, v_float32>,
+                                        0,
+                                        vresizeArea_<float, float, v_float32>,
+#if CV_SIMD128_64F
+                                        vresizeArea_<double, double, v_float64>,
+#else
+                                        resizeArea_<double, double>,
+#endif
+                                        0};
 
     static be_resize_func linear_exact_tab[] =
     {
