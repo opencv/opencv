@@ -592,7 +592,7 @@ int main( int argc, char** argv )
             case CHARUCOBOARD:
             {
                 ch_detector.detectBoard(view, pointbuf, markerIds);
-                if (pointbuf.size() < (long int) (boardSize.height*boardSize.width)) {
+                if (pointbuf.size() < (size_t) (boardSize.height*boardSize.width)) {
                     found = false;
                 }
                 else {
