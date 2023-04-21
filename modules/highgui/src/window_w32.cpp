@@ -2420,21 +2420,6 @@ std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string&
     /* Retrieve current buttons count */
     int bcount = (int)SendMessage(window.toolbar.toolbar, TB_BUTTONCOUNT, 0, 0);
 
-    if (bcount > 0)
-    {
-        /* If this is not the first button then we need to
-        separate it from the previous one */
-        tbs.iBitmap = 0;
-        tbs.idCommand = bcount; // Set button id to it's number
-        tbs.iString = 0;
-        tbs.fsStyle = TBSTYLE_SEP;
-        tbs.fsState = TBSTATE_ENABLED;
-        SendMessage(window.toolbar.toolbar, TB_ADDBUTTONS, 1, (LPARAM)&tbs);
-
-        // Retrieve current buttons count
-        bcount = (int)SendMessage(window.toolbar.toolbar, TB_BUTTONCOUNT, 0, 0);
-    }
-
     /* Add a button which we're going to cover with the slider */
     tbs.iBitmap = 0;
     tbs.idCommand = bcount; // Set button id to it's number
