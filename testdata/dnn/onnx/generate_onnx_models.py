@@ -421,6 +421,10 @@ input = Variable(torch.randn(1, 2, 3, 4, 5))
 conv3d = nn.Conv3d(2, 3, (2, 3, 3), stride=(1, 2, 3), padding=(0, 1, 2), groups=1, dilation=(1, 2, 3), bias=True)
 save_data_and_model("conv3d_bias", input, conv3d)
 
+input = Variable(torch.randn(1, 8, 1, 10, 10))
+conv3d = nn.Conv3d(8, 8, (1, 1, 1), stride=(1, 1, 1), padding=(1, 1, 1), groups=8, dilation=(1, 1, 1), bias=True)
+save_data_and_model("conv3d_depthwise_bias", input, conv3d, export_params=True)
+
 input = torch.randn(1, 2, 3, 4, 6)
 maxpool3d = nn.MaxPool3d((3, 2, 5), stride=(2, 1, 2), padding=(1, 0, 2))
 save_data_and_model("max_pool3d", input, maxpool3d)
