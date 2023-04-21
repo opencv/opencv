@@ -32,8 +32,6 @@ private:
     std::map<int, Mat> allTensors;
     Net& dstNet;
 
-    const String fused_activation = "tflite.fused_activation_function";
-
     // This is a vector of pairs (layerId, outputId) where we iterate over
     // indices from TFLite notation and get created OpenCV layers.
     std::map<int, std::pair<int, int> > layerIds;
@@ -66,10 +64,12 @@ private:
     void parseQuantize(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseDequantize(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseDetectionPostProcess(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams);
 
+    void parseFusedActivation(const Operator& op, ActivationFunctionType activ);
+    void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams, bool isFused);
     void addLayer(LayerParams& layerParams, const Operator& op);
     int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId, int dtype);
-    void parseActivation(const Operator& op, const std::string& opcode, LayerParams& activParams, bool isFused = true);
     inline bool isInt8(const Operator& op);
     inline void getQuantParams(const Operator& op, float& inpScale, int& inpZero, float& outScale, int& outZero);
 };
@@ -258,8 +258,9 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
 
     dispatch["CONV_2D"] = &TFLiteImporter::parseConvolution;
     dispatch["DEPTHWISE_CONV_2D"] = &TFLiteImporter::parseDWConvolution;
-    dispatch["RELU"] = dispatch["ADD"] = dispatch["MUL"] = dispatch["PRELU"] =
-        dispatch["HARD_SWISH"] = dispatch["LOGISTIC"] = &TFLiteImporter::parseEltwise;
+    dispatch["ADD"] = dispatch["MUL"] = &TFLiteImporter::parseEltwise;
+    dispatch["RELU"] = dispatch["PRELU"] = dispatch["HARD_SWISH"] =
+        dispatch["LOGISTIC"] = &TFLiteImporter::parseActivation;
     dispatch["MAX_POOL_2D"] = dispatch["AVERAGE_POOL_2D"] = &TFLiteImporter::parsePooling;
     dispatch["MaxPoolingWithArgmax2D"] = &TFLiteImporter::parsePoolingWithArgmax;
     dispatch["MaxUnpooling2D"] = &TFLiteImporter::parseUnpooling;
@@ -322,24 +323,16 @@ void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op) {
         dstNet.connect(it->second.first, it->second.second, layerId, i++);
     }
 
-    auto activ = (ActivationFunctionType)layerParams.get(fused_activation, (int)ActivationFunctionType_NONE);
-    if (activ != ActivationFunctionType_NONE) {
-        LayerParams activParams;
-        parseActivation(op, EnumNameActivationFunctionType(activ), activParams);
-        activParams.name = layerParams.name + "/activ";
-        layerId = dstNet.addLayerToPrev(activParams.name, activParams.type, dtype, activParams);
-    }
-
     // Predict output layout. Some layer-specific parsers may set them explicitly.
     // Otherwise, propagate input layout.
-    if (layouts[op_outputs->Get(0)] == DATA_LAYOUT_UNKNOWN) {
-        DataLayout predictedLayout = DATA_LAYOUT_UNKNOWN;
+    if (layouts[op_outputs->Get(0)] == DNN_LAYOUT_UNKNOWN) {
+        DataLayout predictedLayout = DNN_LAYOUT_UNKNOWN;
         for (auto layout : inpLayouts) {
-            if (layout != DATA_LAYOUT_UNKNOWN) {
-                if (predictedLayout == DATA_LAYOUT_UNKNOWN)
+            if (layout != DNN_LAYOUT_UNKNOWN) {
+                if (predictedLayout == DNN_LAYOUT_UNKNOWN)
                     predictedLayout = layout;
                 else if (predictedLayout != layout) {
-                    predictedLayout = DATA_LAYOUT_UNKNOWN;
+                    predictedLayout = DNN_LAYOUT_UNKNOWN;
                     break;
                 }
             }
@@ -358,9 +351,6 @@ void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opc
     layerParams.type = "Convolution";
 
     auto options = reinterpret_cast<const Conv2DOptions*>(op.builtin_options());
-
-    layerParams.set<int>(fused_activation, options->fused_activation_function());
-
     layerParams.set("pad_mode", EnumNamePadding(options->padding()));
     layerParams.set("stride_w", options->stride_w());
     layerParams.set("stride_h", options->stride_h());
@@ -417,15 +407,13 @@ void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opc
         }
     }
     addLayer(layerParams, op);
+    parseFusedActivation(op, options->fused_activation_function());
 }
 
 void TFLiteImporter::parseDWConvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Convolution";
 
     auto options = reinterpret_cast<const DepthwiseConv2DOptions*>(op.builtin_options());
-
-    layerParams.set<int>(fused_activation, options->fused_activation_function());
-
     layerParams.set("pad_mode", EnumNamePadding(options->padding()));
     layerParams.set("stride_w", options->stride_w());
     layerParams.set("stride_h", options->stride_h());
@@ -481,6 +469,7 @@ void TFLiteImporter::parseDWConvolution(const Operator& op, const std::string& o
         }
     }
     addLayer(layerParams, op);
+    parseFusedActivation(op, options->fused_activation_function());
 }
 
 void TFLiteImporter::parsePadding(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -504,22 +493,22 @@ void TFLiteImporter::parsePadding(const Operator& op, const std::string& opcode,
 }
 
 void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    ActivationFunctionType activ = ActivationFunctionType_NONE;
+    layerParams.type = "Eltwise";
     if (opcode == "ADD") {
         auto options = reinterpret_cast<const AddOptions*>(op.builtin_options());
-        layerParams.set<int>(fused_activation, options->fused_activation_function());
-        layerParams.type = "Eltwise";
+        activ = options->fused_activation_function();
         layerParams.set("operation", "sum");
     }
     else if (opcode == "MUL") {
         auto options = reinterpret_cast<const MulOptions*>(op.builtin_options());
-        layerParams.set<int>(fused_activation, options->fused_activation_function());
-        layerParams.type = "Eltwise";
+        activ = options->fused_activation_function();
         layerParams.set("operation", "prod");
     } else {
-        parseActivation(op, opcode, layerParams, /*isFused*/ false);
+        CV_Error(Error::StsNotImplemented, "Unknown opcode for Eltwise layer: " + opcode);
     }
 
-    if (layerParams.type == "Eltwise" && isInt8(op)) {
+    if (isInt8(op)) {
         const Tensor* out = modelTensors->Get(op.outputs()->Get(0));
         float outScale = out->quantization()->scale()->Get(0);
         int outZero = out->quantization()->zero_point()->Get(0);
@@ -547,15 +536,13 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
         layerParams.set("zeropoints", outZero);
     }
     addLayer(layerParams, op);
+    parseFusedActivation(op, activ);
 }
 
 void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Pooling";
 
     auto options = reinterpret_cast<const Pool2DOptions*>(op.builtin_options());
-
-    layerParams.set<int>(fused_activation, options->fused_activation_function());
-
     layerParams.set("pad_mode", EnumNamePadding(options->padding()));
     layerParams.set("stride_w", options->stride_w());
     layerParams.set("stride_h", options->stride_h());
@@ -568,6 +555,7 @@ void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode,
     else
         CV_Error(Error::StsNotImplemented, "Pool type selection for " + opcode);
     addLayer(layerParams, op);
+    parseFusedActivation(op, options->fused_activation_function());
 }
 
 void TFLiteImporter::parsePoolingWithArgmax(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -634,8 +622,6 @@ void TFLiteImporter::parseReshape(const Operator& op, const std::string& opcode,
 void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Concat";
     auto options = reinterpret_cast<const ConcatenationOptions*>(op.builtin_options());
-    layerParams.set<int>(fused_activation, options->fused_activation_function());
-
     int axis = options->axis();
 
     DataLayout inpLayout = layouts[op.inputs()->Get(0)];
@@ -647,6 +633,7 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
     }
     layerParams.set("axis", axis);
     addLayer(layerParams, op);
+    parseFusedActivation(op, options->fused_activation_function());
 }
 
 void TFLiteImporter::parseResize(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -819,6 +806,16 @@ void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::st
     addLayer(layerParams, op);
 }
 
+void TFLiteImporter::parseFusedActivation(const Operator& op, ActivationFunctionType activ) {
+    LayerParams activParams;
+    activParams.name = modelTensors->Get(op.outputs()->Get(0))->name()->str() + "/activ";
+    parseActivation(op, EnumNameActivationFunctionType(activ), activParams, true);
+}
+
+void TFLiteImporter::parseActivation(const Operator& op, const std::string& opcode, LayerParams& activParams) {
+    parseActivation(op, opcode, activParams, false);
+}
+
 void TFLiteImporter::parseActivation(const Operator& op, const std::string& opcode, LayerParams& activParams, bool isFused) {
     if (opcode == "NONE")
         return;
@@ -868,6 +865,19 @@ void TFLiteImporter::parseActivation(const Operator& op, const std::string& opco
             table[i + 128] = saturate_cast<int8_t>(quantized);
         }
         activParams.blobs.resize(1, lookUpTable);
+    }
+
+    if (isFused) {
+        int dtype = isInt8(op) ? CV_8S : CV_32F;
+        int layerId = dstNet.addLayerToPrev(activParams.name, activParams.type, dtype, activParams);
+
+        // Override layer ids mapping
+        int i = 0;
+        for (int idx : *op.outputs()) {
+            layerIds[idx] = std::make_pair(layerId, i++);
+        }
+    } else {
+        addLayer(activParams, op);
     }
 }
 
