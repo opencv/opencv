@@ -63,6 +63,63 @@ TEST(imagesFromBlob, Regression)
     }
 }
 
+TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
+{
+    Mat img(10, 10, CV_8UC4, cv::Scalar(0,1,2,3));
+    std::vector<double> factorVec = {0.1, 0.2, 0.3, 0.4};
+
+    Scalar scalefactor(factorVec[0], factorVec[1], factorVec[2], factorVec[3]);
+
+    Image2BlobParams param;
+    param.scalefactor = scalefactor;
+    param.datalayout = DNN_LAYOUT_NHWC;
+    Mat blob = dnn::blobFromImageWithParams(img, param); // [1, 10, 10, 4]
+
+    float* blobPtr = blob.ptr<float>(0);
+    std::vector<float> targetVec = {(float )factorVec[0] * 0, (float )factorVec[1] * 1, (float )factorVec[2] * 2, (float )factorVec[3] * 3}; // Target Value.
+    for (int hi = 0; hi < 10; hi++)
+    {
+        for (int wi = 0; wi < 10; wi++)
+        {
+            float* hwPtr = blobPtr + hi * 10 * 4 + wi * 4;
+
+            // Check equal
+            EXPECT_NEAR(hwPtr[0], targetVec[0], 1e-5);
+            EXPECT_NEAR(hwPtr[1], targetVec[1], 1e-5);
+            EXPECT_NEAR(hwPtr[2], targetVec[2], 1e-5);
+            EXPECT_NEAR(hwPtr[3], targetVec[3], 1e-5);
+        }
+    }
+}
+
+TEST(blobFromImageWithParams_4ch, letter_box)
+{
+    Mat img(40, 20, CV_8UC4, cv::Scalar(0,1,2,3));
+
+    // Construct target mat.
+    Mat targetCh[4];
+    // The letterbox will add zero at the left and right of output blob.
+    // After the letterbox, every row data would have same value showing as valVec.
+    std::vector<uint8_t> valVec = {0,0,0,0,0, 1,1,1,1,1,1,1,1,1,1, 0,0,0,0,0};
+    Mat rowM(1, 20, CV_8UC1, valVec.data());
+
+    for(int i = 0; i < 4; i++)
+    {
+        targetCh[i] = rowM * i;
+    }
+
+    Mat targetImg;
+    merge(targetCh, 4, targetImg);
+    Size targeSize(20, 20);
+
+    Image2BlobParams param;
+    param.size = targeSize;
+    param.paddingmode = DNN_PMODE_LETTERBOX;
+    Mat blob = dnn::blobFromImageWithParams(img, param);
+    Mat targetBlob = dnn::blobFromImage(targetImg, 1.0, targeSize); // only convert data from uint8 to float32.
+    EXPECT_EQ(0, cvtest::norm(targetBlob, blob, NORM_INF));
+}
+
 TEST(readNet, Regression)
 {
     Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),

@@ -108,6 +108,21 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_NPU,
     };
 
+    /**
+     * @brief Enum of data layout for model inference.
+     * @see Image2BlobParams
+     */
+    enum DataLayout
+    {
+        DNN_LAYOUT_UNKNOWN = 0,
+        DNN_LAYOUT_ND = 1,        //!< OpenCV data layout for 2D data.
+        DNN_LAYOUT_NCHW = 2,      //!< OpenCV data layout for 4D data.
+        DNN_LAYOUT_NCDHW = 3,      //!< OpenCV data layout for 5D data.
+        DNN_LAYOUT_NHWC = 4,      //!< Tensorflow-like data layout for 4D data.
+        DNN_LAYOUT_NDHWC = 5,      //!< Tensorflow-like data layout for 5D data.
+        DNN_LAYOUT_PLANAR = 6,     //!< Tensorflow-like data layout, it should only be used at tf or tflite model parsing.
+    };
+
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
     CV_EXPORTS_W std::vector<Target> getAvailableTargets(dnn::Backend be);
 
@@ -1111,10 +1126,10 @@ CV__DNN_INLINE_NS_BEGIN
     /** @brief Creates 4-dimensional blob from image. Optionally resizes and crops @p image from center,
      *  subtract @p mean values, scales values by @p scalefactor, swap Blue and Red channels.
      *  @param image input image (with 1-, 3- or 4-channels).
+     *  @param scalefactor multiplier for @p images values.
      *  @param size spatial size for output image
      *  @param mean scalar with mean values which are subtracted from channels. Values are intended
      *  to be in (mean-R, mean-G, mean-B) order if @p image has BGR ordering and @p swapRB is true.
-     *  @param scalefactor multiplier for @p image values.
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
      *  @param crop flag which indicates whether image will be cropped after resize or not
@@ -1123,6 +1138,9 @@ CV__DNN_INLINE_NS_BEGIN
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimensional Mat with NCHW dimensions order.
+     *
+     * @note
+     * The order and usage of `scalefactor` and `mean` are (input - mean) * scalefactor.
      */
     CV_EXPORTS_W Mat blobFromImage(InputArray image, double scalefactor=1.0, const Size& size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
@@ -1153,6 +1171,9 @@ CV__DNN_INLINE_NS_BEGIN
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimensional Mat with NCHW dimensions order.
+     *
+     * @note
+     * The order and usage of `scalefactor` and `mean` are (input - mean) * scalefactor.
      */
     CV_EXPORTS_W Mat blobFromImages(InputArrayOfArrays images, double scalefactor=1.0,
                                     Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
@@ -1166,6 +1187,74 @@ CV__DNN_INLINE_NS_BEGIN
                                    double scalefactor=1.0, Size size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
                                    int ddepth=CV_32F);
+
+    /**
+     * @brief Enum of image processing mode.
+     * To facilitate the specialization pre-processing requirements of the dnn model.
+     * For example, the `letter box` often used in the Yolo series of models.
+     * @see Image2BlobParams
+     */
+    enum ImagePaddingMode
+    {
+        DNN_PMODE_NULL = 0,        // !< Default. Resize to required input size without extra processing.
+        DNN_PMODE_CROP_CENTER = 1, // !< Image will be cropped after resize.
+        DNN_PMODE_LETTERBOX = 2,   // !< Resize image to the desired size while preserving the aspect ratio of original image.
+    };
+
+    /** @brief Processing params of image to blob.
+     *
+     * It includes all possible image processing operations and corresponding parameters.
+     *
+     * @see blobFromImageWithParams
+     *
+     * @note
+     * The order and usage of `scalefactor` and `mean` are (input - mean) * scalefactor.
+     * The order and usage of `scalefactor`, `size`, `mean`, `swapRB`, and `ddepth` are consistent
+     * with the function of @ref blobFromImage.
+    */
+    struct CV_EXPORTS_W_SIMPLE Image2BlobParams
+    {
+        CV_WRAP Image2BlobParams();
+        CV_WRAP Image2BlobParams(const Scalar& scalefactor, const Size& size = Size(), const Scalar& mean = Scalar(),
+                            bool swapRB = false, int ddepth = CV_32F, DataLayout datalayout = DNN_LAYOUT_NCHW,
+                            ImagePaddingMode mode = DNN_PMODE_NULL);
+
+        CV_PROP_RW Scalar scalefactor; //!< scalefactor multiplier for input image values.
+        CV_PROP_RW Size size;    //!< Spatial size for output image.
+        CV_PROP_RW Scalar mean;  //!< Scalar with mean values which are subtracted from channels.
+        CV_PROP_RW bool swapRB;  //!< Flag which indicates that swap first and last channels
+        CV_PROP_RW int ddepth;   //!< Depth of output blob. Choose CV_32F or CV_8U.
+        CV_PROP_RW DataLayout datalayout; //!< Order of output dimensions. Choose DNN_LAYOUT_NCHW or DNN_LAYOUT_NHWC.
+        CV_PROP_RW ImagePaddingMode paddingmode;   //!< Image padding mode. @see ImagePaddingMode.
+    };
+
+    /** @brief Creates 4-dimensional blob from image with given params.
+     *
+     *  @details This function is an extension of @ref blobFromImage to meet more image preprocess needs.
+     *  Given input image and preprocessing parameters, and function outputs the blob.
+     *
+     *  @param image input image (all with 1-, 3- or 4-channels).
+     *  @param param struct of Image2BlobParams, contains all parameters needed by processing of image to blob.
+     *  @return 4-dimensional Mat.
+     */
+    CV_EXPORTS_W Mat blobFromImageWithParams(InputArray image, const Image2BlobParams& param = Image2BlobParams());
+
+    /** @overload */
+    CV_EXPORTS_W void blobFromImageWithParams(InputArray image, OutputArray blob, const Image2BlobParams& param = Image2BlobParams());
+
+    /** @brief Creates 4-dimensional blob from series of images with given params.
+     *
+     *  @details This function is an extension of @ref blobFromImages to meet more image preprocess needs.
+     *  Given input image and preprocessing parameters, and function outputs the blob.
+     *
+     *  @param images input image (all with 1-, 3- or 4-channels).
+     *  @param param struct of Image2BlobParams, contains all parameters needed by processing of image to blob.
+     *  @returns 4-dimensional Mat.
+     */
+    CV_EXPORTS_W Mat blobFromImagesWithParams(InputArrayOfArrays images, const Image2BlobParams& param = Image2BlobParams());
+
+    /** @overload */
+    CV_EXPORTS_W void blobFromImagesWithParams(InputArrayOfArrays images, OutputArray blob, const Image2BlobParams& param = Image2BlobParams());
 
     /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
      *  (std::vector<cv::Mat>).
