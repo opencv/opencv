@@ -256,6 +256,7 @@ TEST_P(Test_ONNX_layers, Convolution3D_bias)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
     }
     testONNXModels("conv3d_bias");
+    testONNXModels("conv3d_depthwise_bias"); // kernel 1x1
 }
 
 TEST_P(Test_ONNX_layers, Two_convolution)
