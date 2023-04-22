@@ -456,7 +456,8 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
     int dilation_d = conv->dilation_d, dilation_h = conv->dilation_h, dilation_w = conv->dilation_w;
 
     int ksize = Dk*Hk*Wk;
-    bool fast_1x1 = ksize == 1 && stride_d == 1 && stride_w == 1 && stride_h == 1;
+    bool fast_1x1 = ksize == 1 && stride_d == 1 && stride_w == 1 && stride_h == 1
+            && pad_front == 0 && pad_left == 0 && pad_top == 0;
     int DkHkWkCg = Dk*Hk*Wk*Cg;
 
     std::vector<int> ofstab_(Hk*Wk*Dk*4, 0);
@@ -502,7 +503,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
             }
     }
 
-    int MAX_STRIPES = (56 + CONV_NR - 1)/CONV_NR;
+    int MAX_STRIPES = conv->conv_type == CONV_TYPE_DEPTHWISE_REMAIN ? 1 : (56 + CONV_NR - 1)/CONV_NR;
 
     // Friendly to L1 cache
     const int K_BLOCK_SIZE = conv->conv_type == CONV_TYPE_DEPTHWISE_REMAIN ? 1 : 32;
