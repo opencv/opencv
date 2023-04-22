@@ -44,7 +44,8 @@ static std::string pdims(const std::vector<int64_t> &dims) {
 
 struct TensorInfo {
     TensorInfo() = default;
-    explicit TensorInfo(const Ort::TensorTypeAndShapeInfo& info)
+
+    explicit TensorInfo(const Ort::ConstTensorTypeAndShapeInfo &info)
         : dims(info.GetShape())
         , type(info.GetElementType())
         , is_dynamic(ade::util::find(dims, -1) != dims.end()) {
@@ -688,11 +689,10 @@ std::vector<TensorInfo> ONNXCompiled::getTensorInfo(TensorPosition pos) {
             : this_session.GetOutputTypeInfo(i);
         tensor_info.emplace_back(info.GetTensorTypeAndShapeInfo());
 
-        char *name_p = pos == INPUT
-            ? this_session.GetInputName(i, allocator)
-            : this_session.GetOutputName(i, allocator);
-        tensor_info.back().name = name_p;
-        allocator.Free(name_p);
+        Ort::AllocatedStringPtr name_p = pos == INPUT
+            ? this_session.GetInputNameAllocated(i, allocator)
+            : this_session.GetOutputNameAllocated(i, allocator);
+        tensor_info.back().name = std::string(name_p.get());
     }
 
     return tensor_info;
