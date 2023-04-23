@@ -26,7 +26,7 @@ function(find_python preferred_version min_version library_env include_dir_env
          libs_found libs_version_string libraries library debug_libraries
          debug_library include_path include_dir include_dir2 packages_path
          numpy_include_dirs numpy_version)
-if(NOT ${found})
+if(${found})
   if(" ${executable}" STREQUAL " PYTHON_EXECUTABLE")
     set(__update_python_vars 0)
   else()
