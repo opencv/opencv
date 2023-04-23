@@ -3023,173 +3023,72 @@ struct DecimateAlpha
     float alpha;
 };
 
-
-template<typename T, typename WT> class ResizeArea_Invoker :
-    public ParallelLoopBody
-{
-public:
-    ResizeArea_Invoker( const Mat& _src, Mat& _dst,
-                        const DecimateAlpha* _xtab, int _xtab_size,
-                        const DecimateAlpha* _ytab, int _ytab_size,
-                        const int* _tabofs )
-    {
-        src = &_src;
-        dst = &_dst;
-        xtab0 = _xtab;
-        xtab_size0 = _xtab_size;
-        ytab = _ytab;
-        ytab_size = _ytab_size;
-        tabofs = _tabofs;
-    }
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        Size dsize = dst->size();
-        int cn = dst->channels();
-        dsize.width *= cn;
-        AutoBuffer<WT> _buffer(dsize.width*2);
-        const DecimateAlpha* xtab = xtab0;
-        int xtab_size = xtab_size0;
-        WT *buf = _buffer.data(), *sum = buf + dsize.width;
-        int j_start = tabofs[range.start], j_end = tabofs[range.end], j, k, dx, prev_dy = ytab[j_start].di;
-
-        for( dx = 0; dx < dsize.width; dx++ )
-            sum[dx] = (WT)0;
-
-        for( j = j_start; j < j_end; j++ )
-        {
-            WT beta = ytab[j].alpha;
-            int dy = ytab[j].di;
-            int sy = ytab[j].si;
-
-            {
-                const T* S = src->template ptr<T>(sy);
-                for( dx = 0; dx < dsize.width; dx++ )
-                    buf[dx] = (WT)0;
-
-                if( cn == 1 )
-                    for( k = 0; k < xtab_size; k++ )
-                    {
-                        int dxn = xtab[k].di;
-                        WT alpha = xtab[k].alpha;
-                        buf[dxn] += S[xtab[k].si]*alpha;
-                    }
-                else if( cn == 2 )
-                    for( k = 0; k < xtab_size; k++ )
-                    {
-                        int sxn = xtab[k].si;
-                        int dxn = xtab[k].di;
-                        WT alpha = xtab[k].alpha;
-                        WT t0 = buf[dxn] + S[sxn]*alpha;
-                        WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                        buf[dxn] = t0; buf[dxn+1] = t1;
-                    }
-                else if( cn == 3 )
-                    for( k = 0; k < xtab_size; k++ )
-                    {
-                        int sxn = xtab[k].si;
-                        int dxn = xtab[k].di;
-                        WT alpha = xtab[k].alpha;
-                        WT t0 = buf[dxn] + S[sxn]*alpha;
-                        WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                        WT t2 = buf[dxn+2] + S[sxn+2]*alpha;
-                        buf[dxn] = t0; buf[dxn+1] = t1; buf[dxn+2] = t2;
-                    }
-                else if( cn == 4 )
-                {
-                    for( k = 0; k < xtab_size; k++ )
-                    {
-                        int sxn = xtab[k].si;
-                        int dxn = xtab[k].di;
-                        WT alpha = xtab[k].alpha;
-                        WT t0 = buf[dxn] + S[sxn]*alpha;
-                        WT t1 = buf[dxn+1] + S[sxn+1]*alpha;
-                        buf[dxn] = t0; buf[dxn+1] = t1;
-                        t0 = buf[dxn+2] + S[sxn+2]*alpha;
-                        t1 = buf[dxn+3] + S[sxn+3]*alpha;
-                        buf[dxn+2] = t0; buf[dxn+3] = t1;
-                    }
-                }
-                else
-                {
-                    for( k = 0; k < xtab_size; k++ )
-                    {
-                        int sxn = xtab[k].si;
-                        int dxn = xtab[k].di;
-                        WT alpha = xtab[k].alpha;
-                        for( int c = 0; c < cn; c++ )
-                            buf[dxn + c] += S[sxn + c]*alpha;
-                    }
-                }
-            }
-
-            if( dy != prev_dy )
-            {
-                T* D = dst->template ptr<T>(prev_dy);
-
-                for( dx = 0; dx < dsize.width; dx++ )
-                {
-                    D[dx] = saturate_cast<T>(sum[dx]);
-                    sum[dx] = beta*buf[dx];
-                }
-                prev_dy = dy;
-            }
-            else
-            {
-                for( dx = 0; dx < dsize.width; dx++ )
-                    sum[dx] += beta*buf[dx];
-            }
-        }
-
-        {
-        T* D = dst->template ptr<T>(prev_dy);
-        for( dx = 0; dx < dsize.width; dx++ )
-            D[dx] = saturate_cast<T>(sum[dx]);
-        }
-    }
-
-private:
-    const Mat* src;
-    Mat* dst;
-    const DecimateAlpha* xtab0;
-    const DecimateAlpha* ytab;
-    int xtab_size0, ytab_size;
-    const int* tabofs;
-};
-
-
-template <typename T, typename WT>
-static void resizeArea_( const Mat& src, Mat& dst,
-                         const DecimateAlpha* xtab, int xtab_size,
-                         const DecimateAlpha* ytab, int ytab_size,
-                         const int* tabofs )
-{
-    parallel_for_(Range(0, dst.rows),
-                 ResizeArea_Invoker<T, WT>(src, dst, xtab, xtab_size, ytab, ytab_size, tabofs),
-                 dst.total()/((double)(1 << 16)));
-}
-
 template <typename VT>
 VT vx_setall_local(double coeff);
 template <>
 v_float32 vx_setall_local(double coeff) {
     return v_setall_f32(coeff);
 }
+template <typename WT, typename VT>
+void v_inter_area_set_sum(int step, int col_end, const WT *const buf, const VT &v_coeff,
+                          WT *sum, int &x) {
+    for (x = 0; x + step < col_end; x += step)
+    {
+        const VT line = vx_load(buf + x);
+        v_store(sum + x, line * v_coeff);
+    }
+}
+template <typename WT, typename VT>
+void v_inter_area_update_sum(int step, int col_end, const WT *const buf, const VT &v_coeff,
+                             WT *sum, int &x) {
+    for (x = 0; x + step < col_end; x += step)
+    {
+        const VT line = vx_load(buf + x);
+        VT sum_x = vx_load(sum + x);
+        v_store(sum + x, sum_x + line * v_coeff);
+    }
+}
 #if CV_SIMD128_64F
 template <>
 v_float64 vx_setall_local(double coeff) {
     return v_setall_f64(coeff);
 }
+#else
+template <>
+v_uint8 vx_setall_local(double coeff) {
+    (void)coeff;
+    return v_setall_u8(0);
+}
+template <>
+void v_inter_area_set_sum(int step, int col_end, const double *const buf, const v_uint8 &v_coeff,
+                          double *sum, int &x) {
+    (void)step;
+    (void)col_end;
+    (void)buf;
+    (void)v_coeff;
+    (void)sum;
+    x = 0;
+}
+template <>
+void v_inter_area_update_sum(int step, int col_end, const double *const buf, const v_uint8 &v_coeff,
+                             double *sum, int &x) {
+    (void)step;
+    (void)col_end;
+    (void)buf;
+    (void)v_coeff;
+    (void)sum;
+    x = 0;
+}
 #endif
 
 template <typename T, typename WT, typename VT>
-class VResizeArea_Invoker : public ParallelLoopBody
+class ResizeArea_Invoker : public ParallelLoopBody
 {
 public:
-    VResizeArea_Invoker( const Mat& _src, Mat& _dst,
-                         const DecimateAlpha* _xtab, int _xtab_size,
-                         const DecimateAlpha* _ytab, int _ytab_size,
-                         const int* _tabofs )
+    ResizeArea_Invoker( const Mat& _src, Mat& _dst,
+                        const DecimateAlpha* _xtab, int _xtab_size,
+                        const DecimateAlpha* _ytab, int _ytab_size,
+                        const int* _tabofs )
     {
         src = &_src;
         dst = &_dst;
@@ -3214,9 +3113,13 @@ public:
         static_assert(
             std::is_same<WT, float>::value || std::is_same<WT, double>::value,
             "Must convert to float or double type");
-        static_assert(std::is_same<typename VTraits<VT>::lane_type, WT>::value,
-                      "Lane type mismatch");
-        const int step = VT().nlanes;
+        static_assert(std::is_same<typename VTraits<VT>::lane_type, WT>::value
+#if !CV_SIMD128_64F
+                      || (std::is_same<WT, double>::value
+                      && std::is_same<typename VTraits<VT>::lane_type, uint8_t>::value)
+#endif
+                      , "Lane type mismatch");
+        int step = VT().nlanes;
         cv::Mat tmp(ytab[j_end - 1].di - ytab[j_start].di + 1, src->cols,
                     CV_MAKETYPE(cv::DataType<WT>::type, cn));
         int prev_di = -1;
@@ -3271,23 +3174,14 @@ public:
                     int x;
                     WT* D = tmp.template ptr<WT>(prev_di - start_di);
                     for (x = 0; x < col_end; ++x) D[x] = sum[x];
-                    for (x = 0; x + step < col_end; x += step)
-                    {
-                        const VT line = vx_load(buf + x);
-                        v_store(sum + x, line * v_coeff);
-                    }
+                    v_inter_area_set_sum(step, col_end, buf, v_coeff, sum, x);
                     for (; x < col_end; ++x) sum[x] = buf[x] * coeff;
                     prev_di = di;
                 }
                 else
                 {
                     int x;
-                    for (x = 0; x + step < col_end; x += step)
-                    {
-                        const VT line = vx_load(buf + x);
-                        VT sum_x = vx_load(sum + x);
-                        v_store(sum + x, sum_x + line * v_coeff);
-                    }
+                    v_inter_area_update_sum(step, col_end, buf, v_coeff, sum, x);
                     for (; x < col_end; ++x) sum[x] += buf[x] * coeff;
                 }
             }
@@ -3327,12 +3221,12 @@ private:
 };
 
 template <typename T, typename WT, typename VT>
-static void vresizeArea_(const Mat& src, Mat& dst, const DecimateAlpha* xtab,
+static void resizeArea_(const Mat& src, Mat& dst, const DecimateAlpha* xtab,
                         int xtab_size, const DecimateAlpha* ytab, int ytab_size,
                         const int* tabofs) {
     parallel_for_(Range(0, dst.rows),
-                  VResizeArea_Invoker<T, WT, VT>(src, dst, xtab, xtab_size, ytab,
-                                                 ytab_size, tabofs),
+                  ResizeArea_Invoker<T, WT, VT>(src, dst, xtab, xtab_size, ytab,
+                                                ytab_size, tabofs),
                   dst.total() / ((double)(1 << 16)));
 }
 
@@ -3963,16 +3857,18 @@ void resize(int src_type,
         0
     };
 
-    static ResizeAreaFunc area_tab[] = {vresizeArea_<uchar, float, v_float32>,
+    static ResizeAreaFunc area_tab[] = {resizeArea_<uchar, float, v_float32>,
                                         0,
-                                        vresizeArea_<ushort, float, v_float32>,
-                                        vresizeArea_<short, float, v_float32>,
+                                        resizeArea_<ushort, float, v_float32>,
+                                        resizeArea_<short, float, v_float32>,
                                         0,
-                                        vresizeArea_<float, float, v_float32>,
+                                        resizeArea_<float, float, v_float32>,
 #if CV_SIMD128_64F
-                                        vresizeArea_<double, double, v_float64>,
+                                        resizeArea_<double, double, v_float64>,
 #else
-                                        resizeArea_<double, double>,
+                                        // The vector type is chosen to be a bogus one.
+                                        // No vectorization will be performed.
+                                        resizeArea_<double, double, v_uint8>,
 #endif
                                         0};
 
