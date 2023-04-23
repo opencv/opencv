@@ -3269,19 +3269,8 @@ public:
                 if (di != prev_di)
                 {
                     int x;
-                    if (iter == 0)
-                    {
-                        WT* D = tmp.template ptr<WT>(prev_di - start_di);
-                        for (x = 0; x < col_end; ++x) D[x] = sum[x];
-                    }
-                    else
-                    {
-                        T* D = dst->template ptr<T>(prev_di);
-                        for (x = 0; x < col_end; ++x)
-                        {
-                            D[x] = saturate_cast<T>(sum[x]);
-                        }
-                    }
+                    WT* D = tmp.template ptr<WT>(prev_di - start_di);
+                    for (x = 0; x < col_end; ++x) D[x] = sum[x];
                     for (x = 0; x + step < col_end; x += step)
                     {
                         const VT line = vx_load(buf + x);
@@ -3311,25 +3300,19 @@ public:
                 di = xtab[row_end - 1].di / cn;
             }
             // Deal with the last row.
-            if (iter == 0)
-            {
-                WT* D = tmp.template ptr<WT>(di - start_di);
-                for (int x = 0; x < col_end; ++x) D[x] = sum[x];
-            }
-            else
-            {
-                T* D = dst->template ptr<T>(di);
-                for (int x = 0; x < col_end; ++x)
-                {
-                     D[x] = saturate_cast<T>(sum[x]);
-                }
-            }
+            WT* D = tmp.template ptr<WT>(di - start_di);
+            for (int x = 0; x < col_end; ++x) D[x] = sum[x];
 
-            if (iter == 0)
-            {
-                cv::Mat tmp_t;
-                transpose(tmp, tmp_t);
-                tmp = tmp_t;
+            cv::Mat tmp_t;
+            transpose(tmp, tmp_t);
+            tmp = tmp_t;
+        }
+        // Saturate_cast to dst.
+        for(int y = 0; y < tmp.rows; ++y) {
+            T* D = dst->template ptr<T>(ytab[j_start].di + y);
+            const WT* S = tmp.template ptr<WT>(y);
+            for(int x = 0; x < dst->cols * cn; ++x) {
+                D[x] = saturate_cast<T>(S[x]);
             }
         }
     }
