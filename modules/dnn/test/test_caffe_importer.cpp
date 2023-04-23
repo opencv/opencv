@@ -153,7 +153,7 @@ TEST_P(Test_Caffe_nets, Axpy)
         }
     }
     float l1 = 1e-5, lInf = 1e-4;
-    if (target == DNN_TARGET_OPENCL_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         l1 = 2e-4;
         lInf = 1e-3;
@@ -180,7 +180,7 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
 #else
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
 #endif
-    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
 
     bool readFromMemory = get<0>(GetParam());
     Net net;
@@ -214,7 +214,7 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
     ASSERT_EQ(inLayerShapes[0][3], 227);
 
     const float l1 = 1e-5;
-    const float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 4e-3 : 1e-4;
+    const float lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16) ? 4e-3 : 1e-4;
 
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
@@ -308,7 +308,7 @@ TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
     ASSERT_EQ(out.size[2], 100);
 
     float scores_diff = 1e-5, boxes_iou_diff = 1e-4;
-    if (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD)
+    if (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_MYRIAD || targetId == DNN_TARGET_CPU_FP16)
     {
         scores_diff = 1.5e-2;
         boxes_iou_diff = 6.3e-2;
@@ -375,7 +375,7 @@ TEST_P(Reproducibility_ResNet50, Accuracy)
 {
     Target targetId = GetParam();
     applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
 
     Net net = readNetFromCaffe(findDataFile("dnn/ResNet-50-deploy.prototxt"),
                                findDataFile("dnn/ResNet-50-model.caffemodel", false));
@@ -383,8 +383,8 @@ TEST_P(Reproducibility_ResNet50, Accuracy)
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
-    float l1 = (targetId == DNN_TARGET_OPENCL_FP16) ? 3e-5 : 1e-5;
-    float lInf = (targetId == DNN_TARGET_OPENCL_FP16) ? 6e-3 : 1e-4;
+    float l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16) ? 3e-5 : 1e-5;
+    float lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16) ? 6e-3 : 1e-4;
 
     Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(224,224), Scalar(), false);
     ASSERT_TRUE(!input.empty());
@@ -415,6 +415,8 @@ TEST_P(Reproducibility_SqueezeNet_v1_1, Accuracy)
     int targetId = GetParam();
     if(targetId == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if(targetId == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
     Net net = readNetFromCaffe(findDataFile("dnn/squeezenet_v1.1.prototxt"),
                                findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
@@ -509,7 +511,7 @@ TEST_P(Test_Caffe_nets, Colorization)
 
     // Reference output values are in range [-29.1, 69.5]
     double l1 = 4e-4, lInf = 3e-3;
-    if (target == DNN_TARGET_OPENCL_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.25;
         lInf = 5.3;
@@ -566,7 +568,7 @@ TEST_P(Test_Caffe_nets, DenseNet_121)
     {
         l1 = 0.11; lInf = 0.5;
     }
-    else if (target == DNN_TARGET_CUDA_FP16)
+    else if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.04; lInf = 0.2;
     }
@@ -635,6 +637,8 @@ TEST_P(opencv_face_detector, Accuracy)
 
     if (targetId == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (targetId == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 
     Net net = readNetFromCaffe(proto, model);
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png"));
@@ -665,6 +669,8 @@ TEST_P(opencv_face_detector, issue_15106)
 
     if (targetId == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (targetId == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 
     Net net = readNetFromCaffe(proto, model);
     Mat img = imread(findDataFile("cv/shared/lena.png"));
@@ -768,6 +774,8 @@ TEST_P(Test_Caffe_nets, FasterRCNN_zf)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
     if (target == DNN_TARGET_CUDA_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    if (target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
     static Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
                                            0, 7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
                                            0, 12, 0.967198, 138.588, 206.843, 329.766, 553.176);
@@ -783,7 +791,7 @@ TEST_P(Test_Caffe_nets, RFCN)
     );
 
     float scoreDiff = default_l1, iouDiff = default_lInf;
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+    if (backend == DNN_BACKEND_OPENCV && (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16))
     {
         scoreDiff = 4e-3;
         iouDiff = 8e-2;
