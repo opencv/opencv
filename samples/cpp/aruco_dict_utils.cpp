@@ -6,11 +6,31 @@ using namespace cv;
 using namespace std;
 
 static int _getSelfDistance(const Mat &marker) {
+
+    std::cout << marker << "\n";
     Mat bytes = aruco::Dictionary::getByteListFromBits(marker);
+    std::cout << bytes << "\n" << "\n";
     int minHamming = (int)marker.total() + 1;
     for(int r = 1; r < 4; r++) {
+        
         int currentHamming = cv::hal::normHamming(bytes.ptr(), bytes.ptr() + bytes.cols*r, bytes.cols);
         if(currentHamming < minHamming) minHamming = currentHamming;
+
+        //std::cout << bytes.cols*r << " " << bytes.cols*r + bytes.cols << "\n";
+        cv::Mat tmp1;
+        bytes(cv::Rect(0, 0, 2, 1)).copyTo(tmp1);
+        cv::Mat tmp2 = bytes(Range(0, 1), Range(0, 2)).clone();
+        std::cout << tmp1 <<" " << tmp1.cols <<" " << tmp1.rows << "\n";
+        std::cout << tmp2 << " " << tmp2.cols << " " << tmp2.rows << "\n";
+        //std::cout << tmp1.cols<<" "<< tmp1.rows<<" "<<"\n";
+        //std::cout << tmp2.cols << " " << tmp2.rows << " " "\n";
+        int tmpHamming = 0;// cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
+        if (tmpHamming == currentHamming) {
+            std::cout << "hamming distance is equal\n";
+        }
+        else {
+            std::cout << "hamming distance is not equal\n";
+        }
     }
     Mat b;
     flip(marker, b, 0);
@@ -18,12 +38,34 @@ static int _getSelfDistance(const Mat &marker) {
     for(int r = 0; r < 4; r++) {
         int currentHamming = cv::hal::normHamming(flipBytes.ptr(), bytes.ptr() + bytes.cols*r, bytes.cols);
         if(currentHamming < minHamming) minHamming = currentHamming;
+        /*
+        cv::Mat tmp1 = flipBytes.colRange(0, bytes.cols);
+        cv::Mat tmp2 = bytes.colRange(bytes.cols*r, bytes.cols*r + bytes.cols);
+        int tmpHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
+        if (tmpHamming != currentHamming) {
+            std::cout << "hamming distance is equal\n";
+        }
+        else {
+            std::cout << "hamming distance is not equal\n";
+        }
+        */
     }
     flip(marker, b, 1);
     flipBytes = aruco::Dictionary::getByteListFromBits(b);
     for(int r = 0; r < 4; r++) {
         int currentHamming = cv::hal::normHamming(flipBytes.ptr(), bytes.ptr() + bytes.cols*r, bytes.cols);
         if(currentHamming < minHamming) minHamming = currentHamming;
+        /*
+        cv::Mat tmp1 = flipBytes.colRange(0, bytes.cols);
+        cv::Mat tmp2 = bytes.colRange(bytes.cols*r, bytes.cols*r + bytes.cols);
+        int tmpHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
+        if (tmpHamming != currentHamming) {
+            std::cout << "hamming distance is equal\n";
+        }
+        else {
+            std::cout << "hamming distance is not equal\n";
+        }
+        */
     }
     return minHamming;
 }
@@ -89,6 +131,7 @@ static inline aruco::Dictionary generateCustomAsymmetricDictionary(int nMarkers,
     int C = (int)std::floor(float(markerSize * markerSize) / 4.f);
     int tau = 2 * (int)std::floor(float(C) * 4.f / 3.f);
 
+    std::cout << baseDictionary.bytesList.rows <<"\n";
     // if baseDictionary is provided, calculate its intermarker distance
     if(baseDictionary.bytesList.rows > 0) {
         CV_Assert(baseDictionary.markerSize == markerSize);
@@ -222,7 +265,6 @@ int main(int argc, char *argv[])
 {
     CommandLineParser parser(argc, argv, keys);
     parser.about(about);
-
     if(argc < 2) {
         parser.printMessage();
         return 0;
@@ -254,9 +296,9 @@ int main(int argc, char *argv[])
     {
         FileStorage fs(outputFile, FileStorage::WRITE);
         if (checkFlippedMarkers)
-            dictionary = generateCustomAsymmetricDictionary(nMarkers, markerSize, aruco::Dictionary(), 0);
+            dictionary = generateCustomAsymmetricDictionary(nMarkers, markerSize, dictionary, 0);
         else
-            dictionary = aruco::extendDictionary(nMarkers, markerSize, aruco::Dictionary(), 0);
+            dictionary = aruco::extendDictionary(nMarkers, markerSize, dictionary, 0);
         dictionary.writeDictionary(fs);
     }
 
