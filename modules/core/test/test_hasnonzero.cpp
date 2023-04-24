@@ -95,6 +95,8 @@ void CV_HasNonZeroTest::generate_src_data(cv::Size size, int type)
             case CV_32S: { src.at<int>(i, j) = cv::randu<int>(); break; }
             case CV_32F: { src.at<float>(i, j) = cv::randu<float>(); break; }
             case CV_64F: { src.at<double>(i, j) = cv::randu<double>(); break; }
+            /*case CV_32F: { src.at<float>(i, j) = -0.f ; break;}
+            case CV_64F: { src.at<double>(i, j) = -0. ; break;}*/
             default: break;
             }
 }
