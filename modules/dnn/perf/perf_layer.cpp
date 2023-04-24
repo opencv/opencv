@@ -66,8 +66,13 @@ struct Layer_NaryEltwise : public TestBaseWithParam<tuple<Backend, Target> >
 
         if (!isRef && backendId == DNN_BACKEND_CUDA)
         {
-            if (a_shape != b_shape)
-                throw SkipTestException("The test is skipped because inputs with different shapes are not supported.");
+            if (a_shape.size() != b_shape.size())
+                throw SkipTestException("The test is skipped because inputs with different shape size are not supported.");
+
+            for(int i = 0; i < a_shape.size(); i++)
+                if (a_shape[i] != b_shape[i] && a_shape[i] != 1 && b_shape[i] != 1)
+                    throw SkipTestException("The test is skipped because inputs are not supported.");
+
             if (nary_eltwise_cuda_deny_ops.find(op) != nary_eltwise_cuda_deny_ops.end())
                 throw SkipTestException("The operator '" + op + "' is skipped because is not support with cuda currently.");
         }
@@ -213,6 +218,11 @@ PERF_TEST_P_(Layer_NaryEltwise, NCHW_C_sum)
 PERF_TEST_P_(Layer_NaryEltwise, NHWC_C)
 {
     test_layer({N, H, W, C}, {1, C}, "sum");
+}
+
+PERF_TEST_P_(Layer_NaryEltwise, NHWC_H)
+{
+    test_layer({N, H, W, C}, {1, H, 1, 1}, "sum");
 }
 
 PERF_TEST_P_(Layer_Slice, YOLOv4_tiny_1)
