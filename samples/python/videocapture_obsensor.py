@@ -22,8 +22,9 @@ def main():
             # depth data
             ret_depth, depth_map = orbbec_cap.retrieve(None, cv.CAP_OBSENSOR_DEPTH_MAP)
             if ret_depth:
-                norm_depth_map = cv.normalize(depth_map, None, 0, 255, cv.NORM_MINMAX, cv.CV_8UC1)
-                cv.imshow("DEPTH", norm_depth_map)
+                color_depth_map = cv.normalize(depth_map, None, 0, 255, cv.NORM_MINMAX, cv.CV_8UC1)
+                color_depth_map = cv.applyColorMap(color_depth_map, cv.COLORMAP_JET)
+                cv.imshow("DEPTH", color_depth_map)
         else:
             print("Fail to grab data from the camera.")
 
