@@ -1554,7 +1554,7 @@ void transformBlobs(std::vector<Mat>& blobs)
     blobs[0] = Wh;
     blobs[1] = Wx;
     blobs[2] = b.reshape(1, 1);
-    // assing reshpaed state of they are given
+
     if (!blobs[3].empty()){
         blobs[3] = h0;
     }

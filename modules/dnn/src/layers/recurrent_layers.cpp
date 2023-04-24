@@ -393,7 +393,6 @@ public:
             Mat bias = blobs[2];
 
             Mat h_0, c_0;
-            // // input hx and cx are not prodived as input, replace with zeros
             // Handle h_0 and c_0 based on input size
             h_0 = (input.size() >= 2) ? input[1].reshape(1, input[1].size[0] * input[1].size[1]) : blobs[3];
             c_0 = (input.size() == 3) ? input[2].reshape(1, input[2].size[0] * input[2].size[1]) : blobs[4];
