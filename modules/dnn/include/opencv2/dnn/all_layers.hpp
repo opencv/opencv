@@ -374,6 +374,10 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SoftmaxLayerInt8> create(const LayerParams& params);
     };
 
+    /**
+     * `InnerProduct`, `MatMul` and `Gemm` operations are all implemented by Fully Connected Layer.
+     * Parameter `is_matmul` is used to distinguish `MatMul` and `Gemm` from `InnerProduct`.
+     */
     class CV_EXPORTS InnerProductLayer : public Layer
     {
     public:
@@ -802,6 +806,18 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SeluLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS GeluLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<GeluLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS GeluApproximationLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<GeluApproximationLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ThresholdedReluLayer : public ActivationLayer
     {
     public:
@@ -1077,6 +1093,22 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<ScatterNDLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS TileLayer : public Layer
+    {
+    public:
+        static Ptr<TileLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS LayerNormLayer : public Layer
+    {
+    public:
+        bool hasBias;
+        int axis;
+        float epsilon;
+
+        static Ptr<LayerNormLayer> create(const LayerParams& params);
     };
 
 //! @}

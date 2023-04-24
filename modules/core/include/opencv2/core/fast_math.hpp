@@ -306,7 +306,7 @@ CV_INLINE int cvIsInf( double value )
 #elif defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64) || defined(__PPC64__) || defined(__loongarch64)
     Cv64suf ieee754;
     ieee754.f = value;
-    return (ieee754.u & 0x7fffffff00000000) ==
+    return (ieee754.u & 0x7fffffffffffffff) ==
                         0x7ff0000000000000;
 #else
     Cv64suf ieee754;

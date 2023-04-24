@@ -95,6 +95,9 @@ extern "C" {
 
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
+#ifdef HAVE_FFMPEG_LIBAVDEVICE
+#include <libavdevice/avdevice.h>
+#endif
 
 // https://github.com/FFmpeg/FFmpeg/blob/b6af56c034759b81985f8ea094e41cbd5f7fecfb/doc/APIchanges#L602-L605
 #if LIBAVFORMAT_BUILD < CALC_FFMPEG_VERSION(58, 9, 100)
@@ -110,6 +113,8 @@ extern "C" {
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(58, 87, 100)
 #include <libavcodec/bsf.h>
 #endif
+
+#include <libavutil/pixdesc.h>
 
 // https://github.com/FFmpeg/FFmpeg/blob/b6af56c034759b81985f8ea094e41cbd5f7fecfb/doc/APIchanges#L208-L210
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(59, 0, 100)
@@ -368,42 +373,6 @@ inline double get_monotonic_time_diff_ms(timespec time1, timespec time2)
 }
 #endif // USE_AV_INTERRUPT_CALLBACK
 
-static int get_number_of_cpus(void)
-{
-#if defined _WIN32
-    SYSTEM_INFO sysinfo;
-    GetSystemInfo( &sysinfo );
-
-    return (int)sysinfo.dwNumberOfProcessors;
-#elif defined __linux__ || defined __HAIKU__
-    return (int)sysconf( _SC_NPROCESSORS_ONLN );
-#elif defined __APPLE__
-    int numCPU=0;
-    int mib[4];
-    size_t len = sizeof(numCPU);
-
-    // set the mib for hw.ncpu
-    mib[0] = CTL_HW;
-    mib[1] = HW_AVAILCPU;  // alternatively, try HW_NCPU;
-
-    // get the number of CPUs from the system
-    sysctl(mib, 2, &numCPU, &len, NULL, 0);
-
-    if( numCPU < 1 )
-    {
-        mib[1] = HW_NCPU;
-        sysctl( mib, 2, &numCPU, &len, NULL, 0 );
-
-        if( numCPU < 1 )
-            numCPU = 1;
-    }
-
-    return (int)numCPU;
-#else
-    return 1;
-#endif
-}
-
 
 struct Image_FFMPEG
 {
@@ -411,7 +380,6 @@ struct Image_FFMPEG
     int step;
     int width;
     int height;
-    int cn;
 };
 
 
@@ -553,7 +521,7 @@ struct CvCapture_FFMPEG
     double getProperty(int) const;
     bool setProperty(int, double);
     bool grabFrame();
-    bool retrieveFrame(int flag, unsigned char** data, int* step, int* width, int* height, int* cn);
+    bool retrieveFrame(int flag, unsigned char** data, int* step, int* width, int* height, int* cn, int* depth);
     bool retrieveHWFrame(cv::OutputArray output);
     void rotateFrame(cv::Mat &mat) const;
 
@@ -611,6 +579,7 @@ struct CvCapture_FFMPEG
     bool processRawPacket();
     bool rawMode;
     bool rawModeInitialized;
+    bool convertRGB;
     AVPacket packet_filtered;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
     AVBSFContext* bsfc;
@@ -625,6 +594,10 @@ struct CvCapture_FFMPEG
 
 void CvCapture_FFMPEG::init()
 {
+#ifdef HAVE_FFMPEG_LIBAVDEVICE
+    //libavdevice is available, so let's register all input and output devices (e.g v4l2)
+    avdevice_register_all();
+#endif
     ic = 0;
     video_stream = -1;
     video_st = 0;
@@ -659,6 +632,7 @@ void CvCapture_FFMPEG::init()
 
     rawMode = false;
     rawModeInitialized = false;
+    convertRGB = true;
     memset(&packet_filtered, 0, sizeof(packet_filtered));
     av_init_packet(&packet_filtered);
     bsfc = NULL;
@@ -988,12 +962,17 @@ public:
 
 inline void fill_codec_context(AVCodecContext * enc, AVDictionary * dict)
 {
-//#ifdef FF_API_THREAD_INIT
-//  avcodec_thread_init(enc, get_number_of_cpus());
-//#else
-    const int nCpus = get_number_of_cpus();
-    enc->thread_count = enc->thread_count ? enc->thread_count: nCpus;
-//#endif
+    if (!enc->thread_count)
+    {
+        int nCpus = cv::getNumberOfCPUs();
+        int requestedThreads = std::min(nCpus, 16);  // [OPENCV:FFMPEG:24] Application has requested XX threads. Using a thread count greater than 16 is not recommended.
+        char* threads_option = getenv("OPENCV_FFMPEG_THREADS");
+        if (threads_option != NULL)
+        {
+            requestedThreads = atoi(threads_option);
+        }
+        enc->thread_count = requestedThreads;
+    }
 
     AVDictionaryEntry* avdiscard_entry = av_dict_get(dict, "avdiscard", NULL, 0);
 
@@ -1035,6 +1014,15 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
 
     if (!params.empty())
     {
+        convertRGB = params.get<bool>(CAP_PROP_CONVERT_RGB, true);
+        if (!convertRGB)
+        {
+            CV_LOG_WARNING(NULL, "VIDEOIO/FFMPEG: BGR conversion turned OFF, decoded frame will be "
+                                 "returned in its original format. "
+                                 "Multiplanar formats are not supported by the backend. "
+                                 "Only GRAY8/GRAY16LE pixel formats have been tested. "
+                                 "Use at your own risk.");
+        }
         if (params.has(CAP_PROP_FORMAT))
         {
             int value = params.get<int>(CAP_PROP_FORMAT);
@@ -1302,7 +1290,6 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
 
             frame.width = context->width;
             frame.height = context->height;
-            frame.cn = 3;
             frame.step = 0;
             frame.data = NULL;
             get_rotation_angle();
@@ -1553,7 +1540,7 @@ bool CvCapture_FFMPEG::grabFrame()
     return valid;
 }
 
-bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, int* width, int* height, int* cn)
+bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, int* width, int* height, int* cn, int* depth)
 {
     if (!video_st || !context)
         return false;
@@ -1574,6 +1561,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         *width = *step;
         *height = 1;
         *cn = 1;
+        *depth = CV_8U;
         return  ret;
     }
 
@@ -1593,6 +1581,21 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
     if (!sw_picture || !sw_picture->data[0])
         return false;
 
+    CV_LOG_DEBUG(NULL, "Input picture format: " << av_get_pix_fmt_name((AVPixelFormat)sw_picture->format));
+    const AVPixelFormat result_format = convertRGB ? AV_PIX_FMT_BGR24 : (AVPixelFormat)sw_picture->format;
+    switch (result_format)
+    {
+    case AV_PIX_FMT_BGR24: *depth = CV_8U; *cn = 3; break;
+    case AV_PIX_FMT_GRAY8: *depth = CV_8U; *cn = 1; break;
+    case AV_PIX_FMT_GRAY16LE: *depth = CV_16U; *cn = 1; break;
+    default:
+        CV_LOG_WARNING(NULL, "Unknown/unsupported picture format: " << av_get_pix_fmt_name(result_format)
+                       << ", will be treated as 8UC1.");
+        *depth = CV_8U;
+        *cn = 1;
+        break; // TODO: return false?
+    }
+
     if( img_convert_ctx == NULL ||
         frame.width != video_st->CV_FFMPEG_CODEC_FIELD->width ||
         frame.height != video_st->CV_FFMPEG_CODEC_FIELD->height ||
@@ -1607,7 +1610,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
                 buffer_width, buffer_height,
                 (AVPixelFormat)sw_picture->format,
                 buffer_width, buffer_height,
-                AV_PIX_FMT_BGR24,
+                result_format,
                 SWS_BICUBIC,
                 NULL, NULL, NULL
                 );
@@ -1617,7 +1620,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
 
 #if USE_AV_FRAME_GET_BUFFER
         av_frame_unref(&rgb_picture);
-        rgb_picture.format = AV_PIX_FMT_BGR24;
+        rgb_picture.format = result_format;
         rgb_picture.width = buffer_width;
         rgb_picture.height = buffer_height;
         if (0 != av_frame_get_buffer(&rgb_picture, 32))
@@ -1629,14 +1632,13 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         int aligns[AV_NUM_DATA_POINTERS];
         avcodec_align_dimensions2(video_st->codec, &buffer_width, &buffer_height, aligns);
         rgb_picture.data[0] = (uint8_t*)realloc(rgb_picture.data[0],
-                _opencv_ffmpeg_av_image_get_buffer_size( AV_PIX_FMT_BGR24,
+                _opencv_ffmpeg_av_image_get_buffer_size( result_format,
                                     buffer_width, buffer_height ));
         _opencv_ffmpeg_av_image_fill_arrays(&rgb_picture, rgb_picture.data[0],
-                        AV_PIX_FMT_BGR24, buffer_width, buffer_height );
+                        result_format, buffer_width, buffer_height );
 #endif
         frame.width = video_st->CV_FFMPEG_CODEC_FIELD->width;
         frame.height = video_st->CV_FFMPEG_CODEC_FIELD->height;
-        frame.cn = 3;
         frame.data = rgb_picture.data[0];
         frame.step = rgb_picture.linesize[0];
     }
@@ -1654,7 +1656,6 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
     *step = frame.step;
     *width = frame.width;
     *height = frame.height;
-    *cn = frame.cn;
 
 #if USE_AV_HW_CODECS
     if (sw_picture != picture)
@@ -1759,6 +1760,8 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         if (rawMode)
             return -1;
         break;
+    case CAP_PROP_CONVERT_RGB:
+        return convertRGB;
     case CAP_PROP_LRF_HAS_KEY_FRAME: {
         const AVPacket& p = bsfc ? packet_filtered : packet;
         return ((p.flags & AV_PKT_FLAG_KEY) != 0) ? 1 : 0;
@@ -1977,6 +1980,9 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
         if (value == -1)
             return setRaw();
         return false;
+    case CAP_PROP_CONVERT_RGB:
+        convertRGB = (value != 0);
+        return true;
     case CAP_PROP_ORIENTATION_AUTO:
 #if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)
         rotation_auto = value != 0 ? true : false;
@@ -2211,7 +2217,6 @@ static AVCodecContext * icv_configure_video_stream_FFMPEG(AVFormatContext *oc,
 
     c->gop_size = 12; /* emit one intra frame every twelve frames at most */
     c->pix_fmt = pixel_format;
-
     if (c->codec_id == CV_CODEC(CODEC_ID_MPEG2VIDEO)) {
         c->max_b_frames = 2;
     }
@@ -2344,12 +2349,15 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
             return false;
         }
     }
-    else if (input_pix_fmt == AV_PIX_FMT_GRAY8) {
+    else if (input_pix_fmt == AV_PIX_FMT_GRAY8 || input_pix_fmt == AV_PIX_FMT_GRAY16LE) {
         if (cn != 1) {
             return false;
         }
     }
     else {
+        CV_LOG_WARNING(NULL, "Input data does not match selected pixel format: "
+                       << av_get_pix_fmt_name(input_pix_fmt)
+                       << ", number of channels: " << cn);
         CV_Assert(false);
     }
 
@@ -2649,6 +2657,14 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     close();
 
     const bool is_color = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
+    const int depth = params.get(VIDEOWRITER_PROP_DEPTH, CV_8U);
+    const bool is_supported = depth == CV_8U || (depth == CV_16U && !is_color);
+    if (!is_supported)
+    {
+        CV_LOG_WARNING(NULL, "Unsupported depth/isColor combination is selected, "
+                             "only CV_8UC1/CV_8UC3/CV_16UC1 are supported.");
+        return false;
+    }
     if (params.has(VIDEOWRITER_PROP_HW_ACCELERATION))
     {
         va_type = params.get<VideoAccelerationType>(VIDEOWRITER_PROP_HW_ACCELERATION, VIDEO_ACCELERATION_NONE);
@@ -2706,12 +2722,28 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
         return false;
 
     /* determine optimal pixel format */
-    if (is_color) {
-        input_pix_fmt = AV_PIX_FMT_BGR24;
+    if (is_color)
+    {
+        switch (depth)
+        {
+        case CV_8U: input_pix_fmt = AV_PIX_FMT_BGR24; break;
+        default:
+            CV_LOG_WARNING(NULL, "Unsupported input depth for color image: " << depth);
+            return false;
+        }
     }
-    else {
-        input_pix_fmt = AV_PIX_FMT_GRAY8;
+    else
+    {
+        switch (depth)
+        {
+        case CV_8U: input_pix_fmt = AV_PIX_FMT_GRAY8; break;
+        case CV_16U: input_pix_fmt = AV_PIX_FMT_GRAY16LE; break;
+        default:
+            CV_LOG_WARNING(NULL, "Unsupported input depth for grayscale image: " << depth);
+            return false;
+        }
     }
+    CV_LOG_DEBUG(NULL, "Selected pixel format: " << av_get_pix_fmt_name(input_pix_fmt));
 
     if (fourcc == -1)
     {
@@ -3151,7 +3183,13 @@ int cvGrabFrame_FFMPEG(CvCapture_FFMPEG* capture)
 
 int cvRetrieveFrame_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int* step, int* width, int* height, int* cn)
 {
-    return capture->retrieveFrame(0, data, step, width, height, cn);
+    int depth = CV_8U;
+    return cvRetrieveFrame2_FFMPEG(capture, data, step, width, height, cn, &depth);
+}
+
+int cvRetrieveFrame2_FFMPEG(CvCapture_FFMPEG* capture, unsigned char** data, int* step, int* width, int* height, int* cn, int* depth)
+{
+    return capture->retrieveFrame(0, data, step, width, height, cn, depth);
 }
 
 static CvVideoWriter_FFMPEG* cvCreateVideoWriterWithParams_FFMPEG( const char* filename, int fourcc, double fps,

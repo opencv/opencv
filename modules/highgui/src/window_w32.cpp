@@ -2067,28 +2067,23 @@ static LRESULT CALLBACK HGToolbarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
     case WM_NCCALCSIZE:
         {
             LRESULT ret = CallWindowProc(window.toolbar.toolBarProc, hwnd, uMsg, wParam, lParam);
-            int rows = (int)SendMessage(hwnd, TB_GETROWS, 0, 0);
 
-            if (window.toolbar.rows != rows)
+            auto& trakbars = window.toolbar.trackbars;
+
+            for (auto it = trakbars.begin(); it != trakbars.end(); ++it)
             {
-                SendMessage(window.toolbar.toolbar, TB_BUTTONCOUNT, 0, 0);
-                auto& trakbars = window.toolbar.trackbars;
-
-                for (auto it = trakbars.begin(); it != trakbars.end(); ++it)
-                {
-                    auto trackbar = *it;
-                    CV_Assert(trackbar);
-                    RECT rect = { 0 };
-                    SendMessage(window.toolbar.toolbar, TB_GETITEMRECT,
-                               (WPARAM)trackbar->id, (LPARAM)&rect);
-                    MoveWindow(trackbar->hwnd, rect.left + HG_BUDDY_WIDTH, rect.top,
-                               rect.right - rect.left - HG_BUDDY_WIDTH,
-                               rect.bottom - rect.top, FALSE);
-                    MoveWindow(trackbar->buddy, rect.left, rect.top,
-                               HG_BUDDY_WIDTH, rect.bottom - rect.top, FALSE);
-                }
-                window.toolbar.rows = rows;
+                auto trackbar = *it;
+                CV_Assert(trackbar);
+                RECT rect = { 0 };
+                SendMessage(window.toolbar.toolbar, TB_GETITEMRECT,
+                           (WPARAM)trackbar->id, (LPARAM)&rect);
+                MoveWindow(trackbar->hwnd, rect.left + HG_BUDDY_WIDTH, rect.top,
+                           rect.right - rect.left - HG_BUDDY_WIDTH,
+                           rect.bottom - rect.top, FALSE);
+                MoveWindow(trackbar->buddy, rect.left, rect.top,
+                           HG_BUDDY_WIDTH, rect.bottom - rect.top, FALSE);
             }
+            window.toolbar.rows = static_cast<int>(SendMessage(hwnd, TB_GETROWS, 0, 0));
             return ret;
         }
     }
@@ -2337,12 +2332,6 @@ std::shared_ptr<CvTrackbar> icvFindTrackbarByName(CvWindow& window, const std::s
     }
     return std::shared_ptr<CvTrackbar>();
 }
-static inline
-std::shared_ptr<CvTrackbar> icvFindTrackbarByName(const std::shared_ptr<CvWindow>& window, const std::string& name)
-{
-    CV_Assert(window);
-    return icvFindTrackbarByName(window, name);
-}
 
 static
 std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string& trackbar_name,
@@ -2431,7 +2420,7 @@ std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string&
     /* Retrieve current buttons count */
     int bcount = (int)SendMessage(window.toolbar.toolbar, TB_BUTTONCOUNT, 0, 0);
 
-    if (bcount > 1)
+    if (bcount > 0)
     {
         /* If this is not the first button then we need to
         separate it from the previous one */
@@ -2475,7 +2464,7 @@ std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string&
     tbis.dwMask = TBIF_SIZE;
 
     RECT rect = { 0 };
-    GetClientRect(window.hwnd, &rect);
+    GetClientRect(window.toolbar.toolbar, &rect);
     tbis.cx = (unsigned short)(rect.right - rect.left);
 
     SendMessage(window.toolbar.toolbar, TB_SETBUTTONINFO,
@@ -2487,7 +2476,7 @@ std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string&
 
     /* Create a slider */
     auto trackbar = std::make_shared<CvTrackbar>(window, trackbar_name);
-    trackbar->id = bcount;
+    trackbar->id = tbs.idCommand;
     window.toolbar.trackbars.push_back(trackbar);
 
     auto slider_name = cv::format("Trackbar%p", trackbar.get());
@@ -2586,7 +2575,7 @@ CV_IMPL int cvGetTrackbarPos(const char* trackbar_name, const char* window_name)
     if (!window)
         CV_Error_(Error::StsNullPtr, ("NULL window: '%s'", window_name));
 
-    auto trackbar = icvFindTrackbarByName(window, trackbar_name);
+    auto trackbar = icvFindTrackbarByName(*window, trackbar_name);
     if (!trackbar)
         CV_Error_(Error::StsNullPtr, ("NULL trackbar: '%s'", trackbar_name));
 
@@ -2607,7 +2596,7 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
     if (!window)
         CV_Error_(Error::StsNullPtr, ("NULL window: '%s'", window_name));
 
-    auto trackbar = icvFindTrackbarByName(window, trackbar_name);
+    auto trackbar = icvFindTrackbarByName(*window, trackbar_name);
     if (!trackbar)
         CV_Error_(Error::StsNullPtr, ("NULL trackbar: '%s'", trackbar_name));
 
@@ -2639,7 +2628,7 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
     if (!window)
         CV_Error_(Error::StsNullPtr, ("NULL window: '%s'", window_name));
 
-    auto trackbar = icvFindTrackbarByName(window, trackbar_name);
+    auto trackbar = icvFindTrackbarByName(*window, trackbar_name);
     if (!trackbar)
         CV_Error_(Error::StsNullPtr, ("NULL trackbar: '%s'", trackbar_name));
 
@@ -2668,7 +2657,7 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
     if (!window)
         CV_Error_(Error::StsNullPtr, ("NULL window: '%s'", window_name));
 
-    auto trackbar = icvFindTrackbarByName(window, trackbar_name);
+    auto trackbar = icvFindTrackbarByName(*window, trackbar_name);
     if (!trackbar)
         CV_Error_(Error::StsNullPtr, ("NULL trackbar: '%s'", trackbar_name));
 

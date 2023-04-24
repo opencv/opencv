@@ -80,7 +80,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
         for( k = 0; k < 2; k++ )
         {
             const string& filename = imagelist[i*2+k];
-            Mat img = imread(filename, 0);
+            Mat img = imread(filename, IMREAD_GRAYSCALE);
             if(img.empty())
                 break;
             if( imageSize == Size() )
@@ -298,7 +298,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
     {
         for( k = 0; k < 2; k++ )
         {
-            Mat img = imread(goodImageList[i*2+k], 0), rimg, cimg;
+            Mat img = imread(goodImageList[i*2+k], IMREAD_GRAYSCALE), rimg, cimg;
             remap(img, rimg, rmap[k][0], rmap[k][1], INTER_LINEAR);
             cvtColor(rimg, cimg, COLOR_GRAY2BGR);
             Mat canvasPart = !isVerticalStereo ? canvas(Rect(w*k, 0, w, h)) : canvas(Rect(0, h*k, w, h));

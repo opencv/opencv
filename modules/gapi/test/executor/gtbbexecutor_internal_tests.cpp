@@ -50,7 +50,7 @@ TEST(TBBExecutor, Basic) {
     });
     q.push(&n);
     execute(q);
-    EXPECT_EQ(true, executed);
+    EXPECT_TRUE(executed);
 }
 
 TEST(TBBExecutor, SerialExecution) {
@@ -117,8 +117,8 @@ TEST(TBBExecutor, AsyncBasic) {
 
     async_thread.join();
 
-    EXPECT_EQ(true, callback_called);
-    EXPECT_EQ(true, master_was_blocked_until_callback_called);
+    EXPECT_TRUE(callback_called);
+    EXPECT_TRUE(master_was_blocked_until_callback_called);
 }
 
 TEST(TBBExecutor, Dependencies) {

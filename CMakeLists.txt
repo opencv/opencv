@@ -263,10 +263,10 @@ OCV_OPTION(WITH_CUBLAS "Include NVidia Cuda Basic Linear Algebra Subprograms (BL
 OCV_OPTION(WITH_CUDNN "Include NVIDIA CUDA Deep Neural Network (cuDNN) library support" WITH_CUDA
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_CUDNN)
-OCV_OPTION(WITH_NVCUVID "Include NVidia Video Decoding library support" OFF  # disabled, details: https://github.com/opencv/opencv/issues/14850
+OCV_OPTION(WITH_NVCUVID "Include NVidia Video Decoding library support" ON
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_NVCUVID)
-OCV_OPTION(WITH_NVCUVENC "Include NVidia Video Encoding library support" OFF
+OCV_OPTION(WITH_NVCUVENC "Include NVidia Video Encoding library support" ON
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_NVCUVENC)
 OCV_OPTION(WITH_EIGEN "Include Eigen2/Eigen3 support" (NOT CV_DISABLE_OPTIMIZATION AND NOT CMAKE_CROSSCOMPILING)
@@ -468,6 +468,12 @@ OCV_OPTION(WITH_TIMVX "Include Tim-VX support" OFF
 OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec RGB-D modules: Astra+/Femto)" ON
   VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT) OR ( UNIX AND NOT APPLE AND NOT ANDROID)
   VERIFY HAVE_OBSENSOR)
+OCV_OPTION(WITH_CANN "Include CANN support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_CANN)
+OCV_OPTION(WITH_FLATBUFFERS "Include Flatbuffers support (required by DNN/TFLite importer)" ON
+  VISIBLE_IF TRUE
+  VERIFY HAVE_FLATBUFFERS)
 
 # OpenCV build components
 # ===================================================
@@ -747,11 +753,15 @@ include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
 include(cmake/OpenCVFindLAPACK.cmake)
 include(cmake/OpenCVFindProtobuf.cmake)
+include(cmake/OpenCVDetectFlatbuffers.cmake)
 if(WITH_TENGINE)
   include(cmake/OpenCVFindTengine.cmake)
 endif()
 if(WITH_TIMVX)
   include(cmake/OpenCVFindTIMVX.cmake)
+endif()
+if(WITH_CANN)
+  include(cmake/OpenCVFindCANN.cmake)
 endif()
 
 # ----------------------------------------------------------------------------
@@ -906,7 +916,7 @@ foreach(hal ${OpenCV_HAL})
     endif()
   endif()
 endforeach()
-configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${CMAKE_BINARY_DIR}/custom_hal.hpp" @ONLY)
+configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/custom_hal.hpp" @ONLY)
 unset(_hal_includes)
 
 
@@ -1444,6 +1454,9 @@ if(WITH_FFMPEG OR HAVE_FFMPEG)
   status("      avutil:"       FFMPEG_libavutil_VERSION     THEN "YES (${FFMPEG_libavutil_VERSION})"     ELSE NO)
   status("      swscale:"      FFMPEG_libswscale_VERSION    THEN "YES (${FFMPEG_libswscale_VERSION})"    ELSE NO)
   status("      avresample:"   FFMPEG_libavresample_VERSION THEN "YES (${FFMPEG_libavresample_VERSION})" ELSE NO)
+  if(OPENCV_FFMPEG_ENABLE_LIBAVDEVICE)
+    status("      avdevice:"     FFMPEG_libavdevice_VERSION   THEN "YES (${FFMPEG_libavdevice_VERSION})"   ELSE NO)
+  endif()
 endif()
 
 if(WITH_GSTREAMER OR HAVE_GSTREAMER)
@@ -1730,6 +1743,15 @@ if(WITH_ONNX OR HAVE_ONNX)
   if(HAVE_ONNX)
     status("    Include path:"  ONNX_INCLUDE_DIR THEN "${ONNX_INCLUDE_DIR}" ELSE "NO")
     status("    Link libraries:" ONNX_LIBRARIES THEN "${ONNX_LIBRARIES}" ELSE "NO")
+  endif()
+endif()
+
+if(WITH_CANN)
+  status("")
+  status("  CANN:"    HAVE_CANN THEN "YES" ELSE "NO")
+  if(HAVE_CANN)
+    status("    Include path"     CANN_INCLUDE_DIRS THEN "${CANN_INCLUDE_DIRS}" ELSE "NO")
+    status("    Link libraries:"  CANN_LIBRARIES    THEN "${CANN_LIBRARIES}"    ELSE "NO")
   endif()
 endif()
 
