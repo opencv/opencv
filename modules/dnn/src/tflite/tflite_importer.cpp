@@ -61,8 +61,17 @@ private:
     void parseConcat(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseResize(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseDeconvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseQuantize(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseDequantize(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseDetectionPostProcess(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams);
 
-    int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId);
+    void parseFusedActivation(const Operator& op, ActivationFunctionType activ);
+    void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams, bool isFused);
+    void addLayer(LayerParams& layerParams, const Operator& op);
+    int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId, int dtype);
+    inline bool isInt8(const Operator& op);
+    inline void getQuantParams(const Operator& op, float& inpScale, int& inpZero, float& outScale, int& outZero);
 };
 
 Mat TFLiteImporter::parseTensor(const Tensor& tensor)
@@ -75,7 +84,9 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
     const Buffer* buffer = model->buffers()->Get(bufferIdx);
     CV_Assert(buffer);
     const auto buffer_data = buffer->data();
-    CV_Assert(buffer_data);
+    if (!buffer_data)
+        return Mat();
+
     const void* data = buffer_data->data();
 
     int dtype = -1;
@@ -88,6 +99,9 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
         break;
     case TensorType_FLOAT16:
         dtype = CV_16S;
+        break;
+    case TensorType_INT8:
+        dtype = CV_8S;
         break;
     default:
         CV_Error(Error::StsNotImplemented, format("Parse tensor with type %s", EnumNameTensorType(tensor.type())));
@@ -207,10 +221,13 @@ void TFLiteImporter::populateNet()
             if (type == "DEQUANTIZE") {
                 // Convert from FP16 to FP32
                 Mat data = allTensors[op_inputs->Get(0)];
-                Mat dataFP32;
-                convertFp16(data, dataFP32);
-                allTensors[op_outputs->Get(0)] = dataFP32;
-                continue;
+                if (!data.empty()) {
+                    // Dequantize a buffer
+                    Mat dataFP32;
+                    convertFp16(data, dataFP32);
+                    allTensors[op_outputs->Get(0)] = dataFP32;
+                    continue;
+                }
             }
 
             DispatchMap::const_iterator iter = dispatch.find(type);
@@ -218,53 +235,6 @@ void TFLiteImporter::populateNet()
                 CV_Error(Error::StsNotImplemented, "Unsupported operator type " + type);
 
             CALL_MEMBER_FN(*this, iter->second)(*op, type, layerParams);
-
-            // Collect input blobs
-            std::vector<int> layerInputs;
-            std::vector<DataLayout> inpLayouts;
-            for (int idx : *op_inputs) {
-                if (layerIds.find(idx) != layerIds.end()) {
-                    layerInputs.push_back(idx);
-                    inpLayouts.push_back(layouts[idx]);
-                    continue;  // Output from a different layer
-                }
-
-                Mat blob = allTensors[idx];
-                layerParams.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
-            }
-
-            int layerId = dstNet.addLayer(layerParams.name, layerParams.type, layerParams);
-
-            // Connect layer to inputs
-            int i = 0;
-            for (int idx : layerInputs) {
-                auto it = layerIds.find(idx);
-                CV_Assert(it != layerIds.end());
-                dstNet.connect(it->second.first, it->second.second, layerId, i++);
-            }
-
-            // Predict output layout. Some layer-specific parsers may set them explicitly.
-            // Otherwise, propagate input layout.
-            if (layouts[op_outputs->Get(0)] == DNN_LAYOUT_UNKNOWN) {
-                DataLayout predictedLayout = DNN_LAYOUT_UNKNOWN;
-                for (auto layout : inpLayouts) {
-                    if (layout != DNN_LAYOUT_UNKNOWN) {
-                        if (predictedLayout == DNN_LAYOUT_UNKNOWN)
-                            predictedLayout = layout;
-                        else if (predictedLayout != layout) {
-                            predictedLayout = DNN_LAYOUT_UNKNOWN;
-                            break;
-                        }
-                    }
-                }
-                layouts[op_outputs->Get(0)] = predictedLayout;
-            }
-
-            // Register outputs
-            i = 0;
-            for (int idx : *op_outputs) {
-                layerIds[idx] = std::make_pair(layerId, i++);
-            }
         }
         catch (const cv::Exception& e)
         {
@@ -288,26 +258,99 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
 
     dispatch["CONV_2D"] = &TFLiteImporter::parseConvolution;
     dispatch["DEPTHWISE_CONV_2D"] = &TFLiteImporter::parseDWConvolution;
-    dispatch["RELU"] = dispatch["ADD"] = dispatch["MUL"] = dispatch["PRELU"] =
-        dispatch["HARD_SWISH"] = dispatch["LOGISTIC"] = &TFLiteImporter::parseEltwise;
+    dispatch["ADD"] = dispatch["MUL"] = &TFLiteImporter::parseEltwise;
+    dispatch["RELU"] = dispatch["PRELU"] = dispatch["HARD_SWISH"] =
+        dispatch["LOGISTIC"] = &TFLiteImporter::parseActivation;
     dispatch["MAX_POOL_2D"] = dispatch["AVERAGE_POOL_2D"] = &TFLiteImporter::parsePooling;
     dispatch["MaxPoolingWithArgmax2D"] = &TFLiteImporter::parsePoolingWithArgmax;
     dispatch["MaxUnpooling2D"] = &TFLiteImporter::parseUnpooling;
     dispatch["PAD"] = &TFLiteImporter::parsePadding;
     dispatch["RESHAPE"] = &TFLiteImporter::parseReshape;
     dispatch["CONCATENATION"] = &TFLiteImporter::parseConcat;
-    dispatch["RESIZE_BILINEAR"] = &TFLiteImporter::parseResize;
+    dispatch["RESIZE_BILINEAR"] = dispatch["RESIZE_NEAREST_NEIGHBOR"] = &TFLiteImporter::parseResize;
     dispatch["Convolution2DTransposeBias"] = &TFLiteImporter::parseDeconvolution;
+    dispatch["QUANTIZE"] = &TFLiteImporter::parseQuantize;
+    dispatch["DEQUANTIZE"] = &TFLiteImporter::parseDequantize;
+    dispatch["TFLite_Detection_PostProcess"] = &TFLiteImporter::parseDetectionPostProcess;
     return dispatch;
+}
+
+void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op) {
+    const auto op_inputs = op.inputs();
+    const auto op_outputs = op.outputs();
+
+    // Collect input blobs
+    if (layerParams.blobs.empty()) {
+        for (int idx : *op_inputs) {
+            if (layerIds.find(idx) != layerIds.end()) {
+                continue;  // Output from a different layer
+            }
+            Mat blob = allTensors[idx];
+            layerParams.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
+        }
+    }
+
+    int dtype = CV_32F;
+    if (isInt8(op)) {
+        dtype = CV_8S;
+        if (layerParams.type != "Quantize")
+            layerParams.type += "Int8";
+
+        if (!layerParams.has("zeropoints")) {
+            float inpScale, outScale;
+            int inpZero, outZero;
+            getQuantParams(op, inpScale, inpZero, outScale, outZero);
+
+            layerParams.set("input_scale", inpScale);
+            layerParams.set("input_zeropoint", inpZero);
+            layerParams.set("scales", outScale);
+            layerParams.set("zeropoints", outZero);
+        }
+    }
+    int layerId = dstNet.addLayer(layerParams.name, layerParams.type, dtype, layerParams);
+
+    // Connect layer to inputs
+    int i = 0;
+    std::vector<DataLayout> inpLayouts;
+    for (int idx : *op_inputs) {
+        if (layerIds.find(idx) == layerIds.end()) {
+            continue;  // Const input
+        }
+        inpLayouts.push_back(layouts[idx]);
+
+        auto it = layerIds.find(idx);
+        CV_Assert(it != layerIds.end());
+        dstNet.connect(it->second.first, it->second.second, layerId, i++);
+    }
+
+    // Predict output layout. Some layer-specific parsers may set them explicitly.
+    // Otherwise, propagate input layout.
+    if (layouts[op_outputs->Get(0)] == DNN_LAYOUT_UNKNOWN) {
+        DataLayout predictedLayout = DNN_LAYOUT_UNKNOWN;
+        for (auto layout : inpLayouts) {
+            if (layout != DNN_LAYOUT_UNKNOWN) {
+                if (predictedLayout == DNN_LAYOUT_UNKNOWN)
+                    predictedLayout = layout;
+                else if (predictedLayout != layout) {
+                    predictedLayout = DNN_LAYOUT_UNKNOWN;
+                    break;
+                }
+            }
+        }
+        layouts[op_outputs->Get(0)] = predictedLayout;
+    }
+
+    // Register outputs
+    i = 0;
+    for (int idx : *op_outputs) {
+        layerIds[idx] = std::make_pair(layerId, i++);
+    }
 }
 
 void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Convolution";
 
     auto options = reinterpret_cast<const Conv2DOptions*>(op.builtin_options());
-    if (options->fused_activation_function() != ActivationFunctionType_NONE) {
-        CV_Error(Error::StsNotImplemented, "Convolution with fused activation");
-    }
     layerParams.set("pad_mode", EnumNamePadding(options->padding()));
     layerParams.set("stride_w", options->stride_w());
     layerParams.set("stride_h", options->stride_h());
@@ -320,42 +363,57 @@ void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opc
     int oc = filter.size[0];
     int kh = filter.size[1];
     int kw = filter.size[2];
-    int ic = filter.size[3];
     layerParams.set("kernel_w", kw);
     layerParams.set("kernel_h", kh);
     layerParams.set("num_output", oc);
 
+    bool isInt8 = filter.depth() == CV_8S;
+
+    // Fill convolutions blobs here because of two reasons:
+    // 1. Kernel transposition
+    // 2. Extra blob with kernel scales in case of INT8 mode
+    bool hasBias = op.inputs()->size() > 2;
+    layerParams.blobs.resize(1 + (int)hasBias + (int)isInt8);
+    if (hasBias) {
+        Mat bias = allTensors[op.inputs()->Get(2)];
+        layerParams.blobs[1] = bias.u ? bias : bias.clone();
+    }
+
     // Reorder filter data from OHWI to OIHW and change shape correspondingly.
-    filter = allTensors[filterIdx] = filter.reshape(1, {oc, ic, kh, kw});
+    transposeND(filter, {0, 3, 1, 2}, layerParams.blobs[0]);
 
-    CV_CheckTypeEQ(filter.type(), CV_32F, "");
-    Mat filterCopy = filter.clone();
-    float* data = filterCopy.ptr<float>();
-    float* dstData = filter.ptr<float>();
+    if (isInt8) {
+        float inpScale, outScale;
+        int inpZero, outZero;
+        getQuantParams(op, inpScale, inpZero, outScale, outZero);
 
-    int total = oc * ic * kh * kw;
-    for (int i_oc = 0; i_oc < oc; i_oc++) {
-        for (int i_ic = 0; i_ic < ic; i_ic++) {
-            for (int i_h = 0; i_h < kh; i_h++) {
-                for (int i_w = 0; i_w < kw; i_w++) {
-                    int dst_i = kw * (kh * (ic * i_oc + i_ic) + i_h) + i_w;
-                    int src_i = ic * (kw * (kh * i_oc + i_h) + i_w) + i_ic;
-                    CV_CheckLT(dst_i, total, "");
-                    CV_CheckLT(src_i, total, "");
-                    dstData[dst_i] = data[src_i];
-                }
+        layerParams.blobs[2] = Mat(oc, 1, CV_32F);
+        auto filterScales = modelTensors->Get(filterIdx)->quantization()->scale();
+        if (filterScales->size() == 1) {
+            layerParams.blobs[2].setTo(inpScale * filterScales->Get(0) / outScale);
+        } else {
+            for (size_t i = 0; i < filterScales->size(); ++i) {
+                layerParams.blobs[2].at<float>(i) = inpScale * filterScales->Get(i) / outScale;
+            }
+        }
+
+        if (hasBias) {
+            Mat bias = layerParams.blobs[1].reshape(1, oc);
+            Mat weights_2d = layerParams.blobs[0].reshape(1, oc);
+            for (int i = 0; i < oc; i++)
+            {
+                bias.at<int>(i) -= inpZero * (cv::sum(weights_2d.row(i))[0]);
             }
         }
     }
+    addLayer(layerParams, op);
+    parseFusedActivation(op, options->fused_activation_function());
 }
 
 void TFLiteImporter::parseDWConvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Convolution";
 
     auto options = reinterpret_cast<const DepthwiseConv2DOptions*>(op.builtin_options());
-    if (options->fused_activation_function() != ActivationFunctionType_NONE) {
-        CV_Error(Error::StsNotImplemented, "Depthwise convolution with fused activation");
-    }
     layerParams.set("pad_mode", EnumNamePadding(options->padding()));
     layerParams.set("stride_w", options->stride_w());
     layerParams.set("stride_h", options->stride_h());
@@ -372,13 +430,51 @@ void TFLiteImporter::parseDWConvolution(const Operator& op, const std::string& o
     layerParams.set("num_output", oc);
     layerParams.set("group", oc);
 
-    filter = allTensors[filterIdx] = filter.reshape(1, {oc, 1, kh, kw});
-    cv::transpose(filter.reshape(1, kh * kw).clone(), filter.reshape(1, oc));
+    bool isInt8 = filter.depth() == CV_8S;
+
+    // Fill convolutions blobs here because of two reasons:
+    // 1. Kernel transposition
+    // 2. Extra blob with kernel scales in case of INT8 mode
+    bool hasBias = op.inputs()->size() > 2;
+    layerParams.blobs.resize(1 + (int)hasBias + (int)isInt8);
+    if (hasBias) {
+        Mat bias = allTensors[op.inputs()->Get(2)];
+        layerParams.blobs[1] = bias.u ? bias : bias.clone();
+    }
+
+    transposeND(filter, {3, 0, 1, 2}, layerParams.blobs[0]);
+
+    if (isInt8) {
+        float inpScale, outScale;
+        int inpZero, outZero;
+        getQuantParams(op, inpScale, inpZero, outScale, outZero);
+
+        layerParams.blobs[2] = Mat(oc, 1, CV_32F);
+        auto filterScales = modelTensors->Get(filterIdx)->quantization()->scale();
+        if (filterScales->size() == 1) {
+            layerParams.blobs[2].setTo(inpScale * filterScales->Get(0) / outScale);
+        } else {
+            for (size_t i = 0; i < filterScales->size(); ++i) {
+                layerParams.blobs[2].at<float>(i) = inpScale * filterScales->Get(i) / outScale;
+            }
+        }
+
+        if (hasBias) {
+            Mat bias = layerParams.blobs[1].reshape(1, oc);
+            Mat weights_2d = layerParams.blobs[0].reshape(1, oc);
+            for (int i = 0; i < oc; i++)
+            {
+                bias.at<int>(i) -= inpZero * (cv::sum(weights_2d.row(i))[0]);
+            }
+        }
+    }
+    addLayer(layerParams, op);
+    parseFusedActivation(op, options->fused_activation_function());
 }
 
 void TFLiteImporter::parsePadding(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Padding";
-    Mat paddings = allTensors[op.inputs()->Get(1)];
+    Mat paddings = allTensors[op.inputs()->Get(1)].clone();
 
     CV_CheckTypeEQ(paddings.type(), CV_32S, "");
     //  N    H    W    C
@@ -393,43 +489,60 @@ void TFLiteImporter::parsePadding(const Operator& op, const std::string& opcode,
     // 0 1  2 3  4 5  6 7
 
     layerParams.set("paddings", DictValue::arrayInt<int32_t*>((int32_t*)paddings.data, paddings.total()));
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
-    if (opcode == "PRELU") {
-        layerParams.type = "PReLU";
-    } else if (opcode == "RELU") {
-        layerParams.type = "ReLU";
-    } else if (opcode == "ADD") {
+    ActivationFunctionType activ = ActivationFunctionType_NONE;
+    layerParams.type = "Eltwise";
+    if (opcode == "ADD") {
         auto options = reinterpret_cast<const AddOptions*>(op.builtin_options());
-        if (options->fused_activation_function() != ActivationFunctionType_NONE) {
-            CV_Error(Error::StsNotImplemented, "Add with fused activation");
-        }
-        layerParams.type = "Eltwise";
+        activ = options->fused_activation_function();
         layerParams.set("operation", "sum");
-    } else if (opcode == "MUL") {
-        auto options = reinterpret_cast<const MulOptions*>(op.builtin_options());
-        if (options->fused_activation_function() != ActivationFunctionType_NONE) {
-            CV_Error(Error::StsNotImplemented, "Mul with fused activation");
-        }
-        layerParams.type = "Eltwise";
-        layerParams.set("operation", "prod");
-    } else if (opcode == "HARD_SWISH") {
-        layerParams.type = "HardSwish";
-    } else if (opcode == "LOGISTIC") {
-        layerParams.type = "Sigmoid";
-    } else {
-        CV_Error(Error::StsNotImplemented, "Unknown eltwise operator opcode: " + opcode);
     }
+    else if (opcode == "MUL") {
+        auto options = reinterpret_cast<const MulOptions*>(op.builtin_options());
+        activ = options->fused_activation_function();
+        layerParams.set("operation", "prod");
+    } else {
+        CV_Error(Error::StsNotImplemented, "Unknown opcode for Eltwise layer: " + opcode);
+    }
+
+    if (isInt8(op)) {
+        const Tensor* out = modelTensors->Get(op.outputs()->Get(0));
+        float outScale = out->quantization()->scale()->Get(0);
+        int outZero = out->quantization()->zero_point()->Get(0);
+
+        const size_t numInps = op.inputs()->size();
+        std::vector<float> inputScales(numInps);
+        std::vector<int> inputZeros(numInps);
+        std::vector<float> coeffs(numInps);
+        float offset = outZero;
+        for (int i = 0; i < numInps; ++i) {
+            const Tensor* inp = modelTensors->Get(op.inputs()->Get(i));
+            float inpScale = inp->quantization()->scale()->Get(0);
+            int inpZero = inp->quantization()->zero_point()->Get(0);
+            inputScales[i] = inpScale;
+            inputZeros[i] = inpZero;
+            coeffs[i] = inpScale / outScale;
+            offset -= coeffs[i] * inpZero;
+        }
+
+        layerParams.set("input_scales", DictValue::arrayReal(inputScales.data(), numInps));
+        layerParams.set("input_zeropoints", DictValue::arrayInt(inputZeros.data(), numInps));
+        layerParams.set("coeff", DictValue::arrayReal(coeffs.data(), numInps));
+        layerParams.set("offset", offset);
+        layerParams.set("scales", outScale);
+        layerParams.set("zeropoints", outZero);
+    }
+    addLayer(layerParams, op);
+    parseFusedActivation(op, activ);
 }
 
 void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Pooling";
 
     auto options = reinterpret_cast<const Pool2DOptions*>(op.builtin_options());
-    if (options->fused_activation_function() != ActivationFunctionType_NONE) {
-        CV_Error(Error::StsNotImplemented, "Pooling with fused activation");
-    }
     layerParams.set("pad_mode", EnumNamePadding(options->padding()));
     layerParams.set("stride_w", options->stride_w());
     layerParams.set("stride_h", options->stride_h());
@@ -441,6 +554,8 @@ void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode,
         layerParams.set("pool", "ave");
     else
         CV_Error(Error::StsNotImplemented, "Pool type selection for " + opcode);
+    addLayer(layerParams, op);
+    parseFusedActivation(op, options->fused_activation_function());
 }
 
 void TFLiteImporter::parsePoolingWithArgmax(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -458,6 +573,7 @@ void TFLiteImporter::parsePoolingWithArgmax(const Operator& op, const std::strin
     layerParams.set("kernel_w", params->filter_width);
     layerParams.set("kernel_h", params->filter_height);
     layerParams.set("pool", "max");
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseUnpooling(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -474,6 +590,7 @@ void TFLiteImporter::parseUnpooling(const Operator& op, const std::string& opcod
     layerParams.set("pool_k_h", params->filter_height);
     layerParams.set("pool_pad_w", 0);
     layerParams.set("pool_pad_h", 0);
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseReshape(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -481,24 +598,30 @@ void TFLiteImporter::parseReshape(const Operator& op, const std::string& opcode,
 
     if (inpLayout == DNN_LAYOUT_NHWC) {
         // Permute to NCHW
-        int permId = addPermuteLayer({0, 2, 3, 1}, layerParams.name + "/permute", layerIds[op.inputs()->Get(0)]);  // NCHW -> NHWC
+        std::vector<int> order = {0, 2, 3, 1};
+        const std::string name = layerParams.name + "/permute";
+        auto inpId = layerIds[op.inputs()->Get(0)];
+        int permId = addPermuteLayer(order, name, inpId, isInt8(op) ? CV_8S : CV_32F);  // NCHW -> NHWC
         layerIds[op.inputs()->Get(0)] = std::make_pair(permId, 0);
         layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NCHW;
     }
 
     layerParams.type = "Reshape";
-    auto options = reinterpret_cast<const ReshapeOptions*>(op.builtin_options());
-    std::vector<int> shape(options->new_shape()->begin(), options->new_shape()->end());
-    // std::swap(shape[1], shape[2]);
+    std::vector<int> shape;
+    if (op.inputs()->size() > 1) {
+        shape = allTensors[op.inputs()->Get(1)];
+    } else {
+        auto options = op.builtin_options_as_ReshapeOptions();
+        CV_Assert(options);
+        shape.assign(options->new_shape()->begin(), options->new_shape()->end());
+    }
     layerParams.set("dim", DictValue::arrayInt<int*>(shape.data(), shape.size()));
+    addLayer(layerParams, op);
 }
 
 void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Concat";
     auto options = reinterpret_cast<const ConcatenationOptions*>(op.builtin_options());
-    if (options->fused_activation_function() != ActivationFunctionType_NONE) {
-        CV_Error(Error::StsNotImplemented, "Concat with fused activation");
-    }
     int axis = options->axis();
 
     DataLayout inpLayout = layouts[op.inputs()->Get(0)];
@@ -509,28 +632,36 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
         axis = remap[axis];
     }
     layerParams.set("axis", axis);
+    addLayer(layerParams, op);
+    parseFusedActivation(op, options->fused_activation_function());
 }
 
 void TFLiteImporter::parseResize(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Resize";
 
-    auto options = reinterpret_cast<const ResizeBilinearOptions*>(op.builtin_options());
-
-    layerParams.set("interpolation", "bilinear");
-    layerParams.set("align_corners", options->align_corners());
-    layerParams.set("half_pixel_centers", options->half_pixel_centers());
-
+    if (opcode == "RESIZE_BILINEAR") {
+        auto options = op.builtin_options_as_ResizeBilinearOptions();
+        layerParams.set("interpolation", "bilinear");
+        layerParams.set("align_corners", options->align_corners());
+        layerParams.set("half_pixel_centers", options->half_pixel_centers());
+    } else if (opcode == "RESIZE_NEAREST_NEIGHBOR") {
+        auto options = op.builtin_options_as_ResizeNearestNeighborOptions();
+        layerParams.set("interpolation", "nearest");
+        layerParams.set("align_corners", options->align_corners());
+        layerParams.set("half_pixel_centers", options->half_pixel_centers());
+    }
     Mat shape = allTensors[op.inputs()->Get(1)].reshape(1, 1);
     layerParams.set("height", shape.at<int>(0, 0));
     layerParams.set("width", shape.at<int>(0, 1));
+    addLayer(layerParams, op);
 }
 
 int TFLiteImporter::addPermuteLayer(const std::vector<int>& order, const std::string& permName,
-                                    const std::pair<int, int>& inpId)
+                                    const std::pair<int, int>& inpId, int dtype)
 {
     LayerParams permLP;
     permLP.set("order", DictValue::arrayInt<const int*>(order.data(), order.size()));
-    int permId = dstNet.addLayer(permName, "Permute", permLP);
+    int permId = dstNet.addLayer(permName, "Permute", dtype, permLP);
     dstNet.connect(inpId.first, inpId.second, permId, 0);
     return permId;
 }
@@ -591,6 +722,192 @@ void TFLiteImporter::parseDeconvolution(const Operator& op, const std::string& o
                     dstData[dst_i] = data[src_i];
                 }
             }
+        }
+    }
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseQuantize(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Quantize";
+
+    layerParams.set("scales", 1);
+    layerParams.set("zeropoints", -128);
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseDequantize(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Dequantize";
+
+    float inpScale, outScale;
+    int inpZero, outZero;
+    getQuantParams(op, inpScale, inpZero, outScale, outZero);
+    layerParams.set("scales", inpScale);
+    layerParams.set("zeropoints", inpZero);
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    // Parse parameters;
+    std::vector<std::string> keys(1, "");
+    const uint8_t* data = op.custom_options()->Data();
+    int offset = 0;
+
+    // Read zero delimited keys
+    while (data[offset] != 10 && offset < op.custom_options()->size()) {
+        if (data[offset]) {
+            keys.back() += data[offset];
+        } else {
+            keys.emplace_back("");
+        }
+        offset += 1;
+    }
+    keys.pop_back();
+    std::sort(keys.begin(), keys.end());
+
+    // TODO: Replace empirical offset to something more reliable.
+    offset += 25;
+    std::map<std::string, uint32_t> parameters;
+    for (int i = 0; i < keys.size(); ++i) {
+        parameters[keys[i]] = *reinterpret_cast<const uint32_t*>(data + offset + i * 4);
+    }
+
+    layerParams.type = "DetectionOutput";
+    layerParams.set("num_classes", parameters["num_classes"]);
+    layerParams.set("share_location", true);
+    layerParams.set("background_label_id", parameters["num_classes"] + 1);
+    layerParams.set("nms_threshold", *(float*)&parameters["nms_iou_threshold"]);
+    layerParams.set("confidence_threshold", *(float*)&parameters["nms_score_threshold"]);
+    layerParams.set("top_k", parameters["max_detections"]);
+    layerParams.set("keep_top_k", parameters["max_detections"]);
+    layerParams.set("code_type", "CENTER_SIZE");
+    layerParams.set("variance_encoded_in_target", true);
+    layerParams.set("loc_pred_transposed", true);
+
+    // Replace third input from tensor to Const layer with the priors
+    Mat priors = allTensors[op.inputs()->Get(2)].clone();
+
+    // Change priors data from (ycenter, xcenter, h, w) to (xmin, ymin, xmax, ymax)
+    priors = priors.reshape(1, priors.total() / 4);
+    Mat tmp = priors.col(0).clone();
+    priors.col(0) = priors.col(1) - 0.5 * priors.col(3);
+    priors.col(1) = tmp - 0.5 * priors.col(2);
+
+    tmp = priors.col(2).clone();
+    priors.col(2) = priors.col(0) + priors.col(3);
+    priors.col(3) = priors.col(1) + tmp;
+
+    LayerParams priorsLP;
+    priorsLP.name = layerParams.name + "/priors";
+    priorsLP.type = "Const";
+    priorsLP.blobs.resize(1, priors.reshape(1, {1, 1, (int)priors.total()}));
+
+    int priorsId = dstNet.addLayer(priorsLP.name, priorsLP.type, priorsLP);
+    layerIds[op.inputs()->Get(2)] = std::make_pair(priorsId, 0);
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseFusedActivation(const Operator& op, ActivationFunctionType activ) {
+    LayerParams activParams;
+    activParams.name = modelTensors->Get(op.outputs()->Get(0))->name()->str() + "/activ";
+    parseActivation(op, EnumNameActivationFunctionType(activ), activParams, true);
+}
+
+void TFLiteImporter::parseActivation(const Operator& op, const std::string& opcode, LayerParams& activParams) {
+    parseActivation(op, opcode, activParams, false);
+}
+
+void TFLiteImporter::parseActivation(const Operator& op, const std::string& opcode, LayerParams& activParams, bool isFused) {
+    if (opcode == "NONE")
+        return;
+    else if (opcode == "RELU6")
+        activParams.type = "ReLU6";
+    else if (opcode == "PRELU")
+        activParams.type = "PReLU";
+    else if (opcode == "RELU")
+        activParams.type = "ReLU";
+    else if (opcode == "HARD_SWISH")
+        activParams.type = "HardSwish";
+    else if (opcode == "LOGISTIC")
+        activParams.type = "Sigmoid";
+    else
+        CV_Error(Error::StsNotImplemented, "Unsupported activation " + opcode);
+
+    if (isInt8(op)) {
+        float inpScale, outScale;
+        int inpZero, outZero;
+        getQuantParams(op, inpScale, inpZero, outScale, outZero);
+
+        if (isFused) {
+            activParams.type += "Int8";
+            activParams.set("input_scale", outScale);
+            activParams.set("input_zeropoint", outZero);
+            activParams.set("scales", outScale);
+            activParams.set("zeropoints", outZero);
+        }
+
+        Mat lookUpTable(1, 256, CV_8S);
+        int8_t* table = lookUpTable.ptr<int8_t>();
+        for (int i = -128; i < 128; i++) {
+            float x, y = i;
+            if (isFused)
+                x = outScale * (i - outZero);
+            else
+                x = inpScale * (i - inpZero);
+
+            if (opcode == "RELU6")
+                y = std::min(std::max(x, 0.f), 6.f);
+            else if (opcode == "LOGISTIC")
+                y = 1.0f / (1.0f + std::exp(-x));
+            else
+                CV_Error(Error::StsNotImplemented, "Lookup table for " + opcode);
+
+            int quantized = outZero + cvRound(y / outScale);
+            table[i + 128] = saturate_cast<int8_t>(quantized);
+        }
+        activParams.blobs.resize(1, lookUpTable);
+    }
+
+    if (isFused) {
+        int dtype = isInt8(op) ? CV_8S : CV_32F;
+        int layerId = dstNet.addLayerToPrev(activParams.name, activParams.type, dtype, activParams);
+
+        // Override layer ids mapping
+        int i = 0;
+        for (int idx : *op.outputs()) {
+            layerIds[idx] = std::make_pair(layerId, i++);
+        }
+    } else {
+        addLayer(activParams, op);
+    }
+}
+
+bool TFLiteImporter::isInt8(const Operator& op) {
+    const Tensor* out = modelTensors->Get(op.outputs()->Get(0));
+    return out->type() == TensorType_INT8;
+}
+
+void TFLiteImporter::getQuantParams(const Operator& op, float& inpScale, int& inpZero, float& outScale, int& outZero) {
+    const Tensor* inp = modelTensors->Get(op.inputs()->Get(0));
+    const Tensor* out = modelTensors->Get(op.outputs()->Get(0));
+    inpScale = outScale = inpZero = outZero = 0;
+    if (inp->quantization()) {
+        if (inp->quantization()->scale()) {
+            CV_Assert(inp->quantization()->scale()->size() == 1);
+            inpScale = inp->quantization()->scale()->Get(0);
+        }
+        if (inp->quantization()->zero_point()) {
+            CV_Assert(inp->quantization()->zero_point()->size() == 1);
+            inpZero = inp->quantization()->zero_point()->Get(0);
+        }
+    }
+    if (out->quantization()) {
+        if (out->quantization()->scale()) {
+            CV_Assert(out->quantization()->scale()->size() == 1);
+            outScale = out->quantization()->scale()->Get(0);
+        }
+        if (out->quantization()->zero_point()) {
+            CV_Assert(out->quantization()->zero_point()->size() == 1);
+            outZero = out->quantization()->zero_point()->Get(0);
         }
     }
 }
