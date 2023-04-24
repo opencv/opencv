@@ -173,9 +173,17 @@ public:
             CV_CheckEQ(Wh.rows, Wx.rows, "");
             CV_CheckEQ(Wh.rows, (1 + static_cast<int>(bidirectional))*4*Wh.cols, "");
             CV_CheckEQ(Wh.rows, (int)bias.total(), "");
-            CV_CheckEQ(hInternal.cols, Wh.cols, "");
-            CV_CheckEQ(hInternal.cols, cInternal.cols, "");
-            CV_CheckEQ(hInternal.rows, cInternal.rows, "");
+            // Only perform these checks if hInternal and cInternal are not empty matrices
+            // e.g. inputs are not given by a user
+            if(!hInternal.empty()){
+                CV_CheckEQ(hInternal.cols, Wh.cols, "");
+            }
+            if(!cInternal.empty()){
+                CV_CheckEQ(cInternal.cols, Wh.cols, "");
+            }
+            if (!hInternal.empty() && !cInternal.empty()){ //otherwise check in forward
+                CV_CheckEQ(hInternal.rows, cInternal.rows, "");
+            }
             CV_Assert(Wh.type() == Wx.type() && Wx.type() == bias.type());
 
             // Peephole weights.
@@ -266,7 +274,7 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert((!usePeephole && blobs.size() == 5) || (usePeephole && blobs.size() == 8));
-        CV_Assert(inputs.size() == 1);
+        CV_Assert((inputs.size() == 1 || inputs.size() == 3));
         const MatShape& inp0 = inputs[0];
 
         const Mat &Wh = blobs[0], &Wx = blobs[1];
@@ -326,7 +334,7 @@ public:
         inputs_arr.getMatVector(input);
 
         CV_Assert((!usePeephole && blobs.size() == 5) || (usePeephole && blobs.size() == 8));
-        CV_Assert(input.size() == 1);
+        CV_Assert((input.size() == 1 || input.size() == 3));
         const Mat& inp0 = input[0];
 
         Mat &Wh = blobs[0], &Wx = blobs[1];
@@ -383,8 +391,20 @@ public:
             Mat Wh = blobs[0];
             Mat Wx = blobs[1];
             Mat bias = blobs[2];
-            Mat h_0 = blobs[3];
-            Mat c_0 = blobs[4];
+
+            Mat h_0, c_0;
+            // Handle h_0 and c_0 based on input size
+            h_0 = (input.size() >= 2) ? input[1].reshape(1, input[1].size[0] * input[1].size[1]) : blobs[3];
+            c_0 = (input.size() == 3) ? input[2].reshape(1, input[2].size[0] * input[2].size[1]) : blobs[4];
+
+            // Perform checks if input size is 2 or 3
+            if (input.size() >= 2) {
+                CV_CheckEQ(h_0.cols, Wh.cols, "");
+                CV_CheckEQ(h_0.cols, c_0.cols, "");
+                CV_CheckEQ(h_0.rows, c_0.rows, "");
+            }
+
+
             Mat pI, pF, pO;
 
             Wh = Wh.rowRange(i * Wh.rows / numDirs, (i + 1) * Wh.rows / numDirs);
