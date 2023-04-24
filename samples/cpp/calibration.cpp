@@ -50,7 +50,9 @@ static void help(char** argv)
     printf( "This is a camera calibration sample.\n"
         "Usage: %s\n"
         "     -w=<board_width>         # the number of inner corners per one of board dimension\n"
+        "IMPORTANT: for ChArUco board pattern this is number of squares.\n"
         "     -h=<board_height>        # the number of inner corners per another board dimension\n"
+        "IMPORTANT: for ChArUco board pattern this is number of squares.\n"
         "     [-pt=<pattern>]          # the type of pattern: chessboard or charucoboard or circles' grid\n"
         "     [-n=<number_of_frames>]  # the number of frames to use for calibration\n"
         "                              # (if not specified, it will be set to the number\n"
@@ -134,8 +136,14 @@ static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point
 
     switch(patternType)
     {
-      case CHESSBOARD:
+
       case CHARUCOBOARD:
+        for (int i = 0; i < boardSize.height-1; i++)
+            for (int j = 0; j < boardSize.width-1; j++)
+                corners.push_back(Point3f(float(j*squareSize),
+                    float(i*squareSize), 0));
+        break;
+      case CHESSBOARD:
       case CIRCLES_GRID:
         for( int i = 0; i < boardSize.height; i++ )
             for( int j = 0; j < boardSize.width; j++ )
@@ -518,7 +526,7 @@ int main( int argc, char** argv )
         cv::FileNode fn(dict_file.root());
         dictionary.readDictionary(fn);
     }
-    cv::aruco::CharucoBoard ch_board({ boardSize.width + 1, boardSize.height + 1 },
+    cv::aruco::CharucoBoard ch_board({boardSize.width, boardSize.height},
         squareSize, markerSize, dictionary);
     std::vector<int> markerIds;
     cv::aruco::CharucoDetector ch_detector(ch_board);
