@@ -1539,10 +1539,17 @@ void transformBlobs(std::vector<Mat>& blobs)
 
     const int numHidden = Wh.size[2];
 
-    Mat h0 = blobs[3];
-    h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
-    Mat c0 = blobs[4];
-    c0 = c0.reshape(1, c0.size[0] * c0.size[1]);
+    Mat h0, c0;
+    // check weather input is dynamic or not: hx, cx are given by user.
+    // Resahpe if only they are given
+    if (!blobs[3].empty()){
+        h0 = blobs[3];
+        h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
+    }
+    if (!blobs[4].empty()){
+        c0 = blobs[4];
+        c0 = c0.reshape(1, c0.size[0] * c0.size[1]);
+    }
 
     b = b.reshape(1, b.size[0]);
     Mat bx = b.colRange(0, b.cols / 2);
@@ -1569,8 +1576,13 @@ void transformBlobs(std::vector<Mat>& blobs)
     blobs[0] = Wh;
     blobs[1] = Wx;
     blobs[2] = b.reshape(1, 1);
-    blobs[3] = h0;
-    blobs[4] = c0;
+
+    if (!blobs[3].empty()){
+        blobs[3] = h0;
+    }
+    if (!blobs[4].empty()){
+        blobs[4] = c0;
+    }
 
     if (blobs.size() == 5) {
         // so that future patch removing copies can leave all indexing as is
@@ -1601,8 +1613,15 @@ void ONNXImporter::lstm_extractConsts(LayerParams& layerParams, const opencv_onn
         Mat blob;
         if (idx < lstm_proto.input_size() && !lstm_proto.input(idx).empty())
         {
-            blob = getBlob(lstm_proto, idx);
-            CV_Assert(shape(blob) == blobShape);
+            if ((idx == 5 || idx == 6) && (constBlobs.find(lstm_proto.input(idx)) == constBlobs.end()))
+            {
+                blob = Mat();
+            }
+            else
+            {
+                blob = getBlob(lstm_proto, idx);
+                CV_Assert(shape(blob) == blobShape);
+            }
         }
         else
         {
