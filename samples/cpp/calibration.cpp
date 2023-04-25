@@ -382,7 +382,7 @@ int main( int argc, char** argv )
     clock_t prevTimestamp = 0;
     int mode = DETECTION;
     int cameraId = 0;
-    vector<vector<Point2f> > imagePoints;
+    vector<vector<Point2f>> imagePoints;
     vector<string> imageList;
     Pattern pattern = CHESSBOARD;
 
@@ -522,10 +522,10 @@ int main( int argc, char** argv )
         return printf( "Invalid aspect ratio\n" ), -1;
     if ( delay <= 0 )
         return printf( "Invalid delay\n" ), -1;
-    //if ( boardSize.width <= 0 )
-    //    return fprintf( stderr, "Invalid board width\n" ), -1;
-    //if ( boardSize.height <= 0 )
-    //    return fprintf( stderr, "Invalid board height\n" ), -1;
+    if ( boardSize.width <= 0 )
+        return fprintf( stderr, "Invalid board width\n" ), -1;
+    if ( boardSize.height <= 0 )
+        return fprintf( stderr, "Invalid board height\n" ), -1;
 
     cv::aruco::Dictionary dictionary;
     if (dictFilename == "None") {
@@ -610,7 +610,7 @@ int main( int argc, char** argv )
             case CHARUCOBOARD:
             {
                 ch_detector.detectBoard(view, pointbuf, markerIds);
-                if (pointbuf.size() < (long int) (boardSizeInnerCorners.height*boardSizeInnerCorners.width)) {
+                if (pointbuf.size() < (size_t) (boardSizeInnerCorners.height*boardSizeInnerCorners.width)) {
                     found = false;
                 }
                 else {
