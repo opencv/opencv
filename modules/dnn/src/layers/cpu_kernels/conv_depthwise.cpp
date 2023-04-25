@@ -2,20 +2,147 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-// This file is modified from the ficus (https://github.com/vpisarev/ficus/blob/master/lib/NN/OpConv.fx).
-// Here is the original license:
-/*
-    This file is a part of ficus language project.
-    See ficus/LICENSE for the licensing terms
-*/
-
 #include "../../precomp.hpp"
-#include "fast_convolution.hpp"
-#include "../layers_common.hpp"
+#include "convolution.hpp"
+
+#include "conv_depthwise.simd.hpp"
+#include "layers/cpu_kernels/conv_depthwise.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
 namespace cv { namespace dnn {
 
-static void depthWiseBlockConv2D(const float* wptr,
+void depthWiseBlockConv2D(const float* wptr,
+                                 int kernel_h, int kernel_w,
+                                 int stride_h, int stride_w,
+                                 int dilation_h, int dilation_w,
+                                 int pad_t, int pad_l,
+                                 const float* biasptr, const float* relu,
+                                 const float* inptr_,
+                                 int height, int width,
+                                 float* outptr_,
+                                 int out_d, int outH, int outW, bool fusedAdd);
+
+void depthWiseBlockConv1D(const float* wptr,
+                                 int kernel_w, int stride_w, int dilation_w, int pad_l,
+                                 const float* biasptr, const float* relu,
+                                 const float* inptr_, int width,
+                                 float* outptr_,
+                                 int out_d, int outW, bool fusedAdd);
+
+void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& conv, ActivationLayer* activ_,
+                  const std::vector<float>& reluslope, bool fusedAdd)
+{
+    Mat input = _input.getMat();
+    Mat output = _output.getMat();
+    MatShape inputShape = shape(input);
+    MatShape outputShape = shape(output);
+
+    CV_Assert(inputShape.size() == 3 || inputShape.size() == 4);
+    CV_Assert(inputShape.size() == outputShape.size());
+
+    int conv_dim = conv->conv_dim;
+    CV_Assert((conv_dim == CONV_2D || conv_dim == CONV_1D) &&
+            "DNN: Currently we do not support depth-wise for Convolution 3D!");
+
+    ActivationLayer* activ = reluslope.empty() ? activ_ : nullptr;
+    int N = inputShape[0], C = inputShape[1];
+
+    int Hi = conv_dim == CONV_1D ? 1 : inputShape[inputShape.size() - 2];
+    int Wi = inputShape[inputShape.size() - 1];
+
+    int K = conv->K, Hk = conv->Hk, Wk = conv->Wk;
+
+    int H0 = conv_dim == CONV_1D ? 1 : outputShape[outputShape.size() - 2];
+    int W0 = outputShape[outputShape.size() - 1];
+    int ngroups = conv->ngroups;
+
+    const size_t inp_planesize = (size_t) Hi * Wi;
+    const size_t out_planesize = (size_t) H0 * W0;
+
+    CV_Assert(ngroups > 1 && ngroups == K && ngroups == C);
+
+    int stride_h = conv->stride_h, stride_w = conv->stride_w;
+    int dilation_h = conv->dilation_h, dilation_w = conv->dilation_w;
+
+    int pad_top = conv->pad_top, pad_bottom = conv->pad_bottom;
+    int pad_left = conv->pad_left, pad_right = conv->pad_right;
+
+    int ksize = Hk * Wk;
+
+    const int VEC_NLANES = 32;
+    int padded_ksize = ((ksize + VEC_NLANES-1) / VEC_NLANES) * VEC_NLANES;
+
+    const float *inp = input.ptr<float>();
+    float *out = output.ptr<float>();
+
+#if CV_TRY_AVX2 || CV_TRY_AVX || CV_TRY_RVV
+    // TODO: remove the following limitation, need change code in conv_depthwise.simd.hpp.
+    bool canRunOpt = Wi >= 16 + dilation_w*(Wk - 1) && !fusedAdd;
+#endif
+    std::vector<int> ofstab_(3 * ksize, 0);
+    int *ofstab = ofstab_.data();
+    int *yxtab = ofstab + ksize;
+
+    for (int k = 0; k < ksize; k++)
+    {
+        int y = k < ksize ? k / Wk : 0;
+        int x = k < ksize ? k % Wk : 0;
+        int dy = y * dilation_h, dx = x * dilation_w;
+        yxtab[k * 2] = dy;
+        yxtab[k * 2 + 1] = dx;
+        ofstab[k] = dy * Wi + dx;
+    }
+
+    const float *weights0 = conv->weightsBufPtr, *bias = conv->biasBuf.data();
+    const float* relu = reluslope.data();
+    CV_Assert(ksize > 1 || (pad_left == 0 && pad_right == 0 && pad_top == 0 && pad_bottom == 0));
+
+    parallel_for_(Range(0, N * C), [&](const Range &r0) {
+    for (int nc = r0.start; nc < r0.end; nc++)
+    {
+        int c = nc % C;
+        const float *inptr0 = inp + inp_planesize * nc;
+        float *outptr0 = out + out_planesize * nc;
+
+        const float *weights = weights0 + c * padded_ksize;
+
+        if (conv_dim == CONV_2D)
+        {
+#if CV_TRY_AVX2
+            if(canRunOpt && conv->useAVX2)
+                opt_AVX2::fastDepthwiseConv(weights, Hk, Wk, stride_h, stride_w, dilation_h, dilation_w,
+                                            pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0);
+            else
+#endif
+#if CV_TRY_AVX
+            if(canRunOpt && conv->useAVX)
+                opt_AVX::fastDepthwiseConv(weights, Hk, Wk, stride_h, stride_w, dilation_h, dilation_w,
+                                            pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0);
+            else
+#endif
+#if CV_TRY_RVV
+            if(canRunOpt && conv->useRVV)
+                opt_RVV::fastDepthwiseConv(weights, Hk, Wk, stride_h, stride_w, dilation_h, dilation_w,
+                                            pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0);
+            else
+#endif
+            depthWiseBlockConv2D(weights, Hk, Wk, stride_h, stride_w, dilation_h, dilation_w,
+                                 pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0, fusedAdd);
+        }
+        else // conv_dim == CONV_1D, spatial branch for depth-wise Conv1D.
+        {
+            depthWiseBlockConv1D(weights, Wk, stride_w, dilation_w, pad_left, bias, relu, inptr0, Wi, outptr0, c, W0, fusedAdd);
+        }
+
+        if (activ)
+            activ->forwardSlice(outptr0, outptr0, (int) out_planesize, out_planesize, c, c+1);
+    }});
+}
+
+/****************************************************************************************\
+                                    SIMD and no-SIMD code for depthWiseBlockConv
+\****************************************************************************************/
+
+void depthWiseBlockConv2D(const float* wptr,
                                  int kernel_h, int kernel_w,
                                  int stride_h, int stride_w,
                                  int dilation_h, int dilation_w,
@@ -199,7 +326,7 @@ static void depthWiseBlockConv2D(const float* wptr,
     }
 }
 
-static void depthWiseBlockConv1D(const float* wptr,
+void depthWiseBlockConv1D(const float* wptr,
                                  int kernel_w, int stride_w, int dilation_w, int pad_l,
                                  const float* biasptr, const float* relu,
                                  const float* inptr_, int width,
@@ -332,114 +459,5 @@ static void depthWiseBlockConv1D(const float* wptr,
     }
 }
 
-void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& conv, ActivationLayer* activ_,
-                  const std::vector<float>& reluslope, bool fusedAdd)
-{
-    Mat input = _input.getMat();
-    Mat output = _output.getMat();
-    MatShape inputShape = shape(input);
-    MatShape outputShape = shape(output);
-
-    CV_Assert(inputShape.size() == 3 || inputShape.size() == 4);
-    CV_Assert(inputShape.size() == outputShape.size());
-
-    int conv_dim = conv->conv_dim;
-    CV_Assert((conv_dim == CONV_2D || conv_dim == CONV_1D) &&
-            "DNN: Currently we do not support depth-wise for Convolution 3D!");
-
-    ActivationLayer* activ = reluslope.empty() ? activ_ : nullptr;
-    int N = inputShape[0], C = inputShape[1];
-
-    int Hi = conv_dim == CONV_1D ? 1 : inputShape[inputShape.size() - 2];
-    int Wi = inputShape[inputShape.size() - 1];
-
-    int K = conv->K, Hk = conv->Hk, Wk = conv->Wk;
-
-    int H0 = conv_dim == CONV_1D ? 1 : outputShape[outputShape.size() - 2];
-    int W0 = outputShape[outputShape.size() - 1];
-    int ngroups = conv->ngroups;
-
-    const size_t inp_planesize = (size_t) Hi * Wi;
-    const size_t out_planesize = (size_t) H0 * W0;
-
-    CV_Assert(ngroups > 1 && ngroups == K && ngroups == C);
-
-    int stride_h = conv->stride_h, stride_w = conv->stride_w;
-    int dilation_h = conv->dilation_h, dilation_w = conv->dilation_w;
-
-    int pad_top = conv->pad_top, pad_bottom = conv->pad_bottom;
-    int pad_left = conv->pad_left, pad_right = conv->pad_right;
-
-    int ksize = Hk * Wk;
-
-    const int VEC_NLANES = 32;
-    int padded_ksize = ((ksize + VEC_NLANES-1) / VEC_NLANES) * VEC_NLANES;
-
-    const float *inp = input.ptr<float>();
-    float *out = output.ptr<float>();
-
-#if CV_TRY_AVX2 || CV_TRY_AVX || CV_TRY_RVV
-    // TODO: remove the following limitation, need change code in layers_common.simd.hpp.
-    bool canRunOpt = Wi >= 16 + dilation_w*(Wk - 1) && !fusedAdd;
-#endif
-    std::vector<int> ofstab_(3 * ksize, 0);
-    int *ofstab = ofstab_.data();
-    int *yxtab = ofstab + ksize;
-
-    for (int k = 0; k < ksize; k++)
-    {
-        int y = k < ksize ? k / Wk : 0;
-        int x = k < ksize ? k % Wk : 0;
-        int dy = y * dilation_h, dx = x * dilation_w;
-        yxtab[k * 2] = dy;
-        yxtab[k * 2 + 1] = dx;
-        ofstab[k] = dy * Wi + dx;
-    }
-
-    const float *weights0 = conv->weightsBufPtr, *bias = conv->biasBuf.data();
-    const float* relu = reluslope.data();
-    CV_Assert(ksize > 1 || (pad_left == 0 && pad_right == 0 && pad_top == 0 && pad_bottom == 0));
-
-    parallel_for_(Range(0, N * C), [&](const Range &r0) {
-    for (int nc = r0.start; nc < r0.end; nc++)
-    {
-        int c = nc % C;
-        const float *inptr0 = inp + inp_planesize * nc;
-        float *outptr0 = out + out_planesize * nc;
-
-        const float *weights = weights0 + c * padded_ksize;
-
-        if (conv_dim == CONV_2D)
-        {
-#if CV_TRY_AVX2
-            if(canRunOpt && conv->useAVX2)
-                opt_AVX2::fastDepthwiseConv(weights, Hk, Wk, stride_h, stride_w, dilation_h, dilation_w,
-                                            pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0);
-            else
-#endif
-#if CV_TRY_AVX
-            if(canRunOpt && conv->useAVX)
-                opt_AVX::fastDepthwiseConv(weights, Hk, Wk, stride_h, stride_w, dilation_h, dilation_w,
-                                            pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0);
-            else
-#endif
-#if CV_TRY_RVV
-            if(canRunOpt && conv->useRVV)
-                opt_RVV::fastDepthwiseConv(weights, Hk, Wk, stride_h, stride_w, dilation_h, dilation_w,
-                                            pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0);
-            else
-#endif
-            depthWiseBlockConv2D(weights, Hk, Wk, stride_h, stride_w, dilation_h, dilation_w,
-                                 pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0, fusedAdd);
-        }
-        else // conv_dim == CONV_1D, spatial branch for depth-wise Conv1D.
-        {
-            depthWiseBlockConv1D(weights, Wk, stride_w, dilation_w, pad_left, bias, relu, inptr0, Wi, outptr0, c, W0, fusedAdd);
-        }
-
-        if (activ)
-            activ->forwardSlice(outptr0, outptr0, (int) out_planesize, out_planesize, c, c+1);
-    }});
-}
 
 }} // namespace cv::dnn

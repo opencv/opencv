@@ -616,6 +616,8 @@ class CppHeaderParser(object):
                                                              ("InputOutputArray", mat),
                                                              ("OutputArray", mat),
                                                              ("noArray", arg_type)]).strip()
+                    if '/IO' in modlist and '/O' in modlist:
+                        modlist.remove('/O')
                     args.append([arg_type, arg_name, defval, modlist])
                 npos = arg_start-1
 

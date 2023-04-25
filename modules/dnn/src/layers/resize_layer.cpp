@@ -312,31 +312,32 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
         auto x_desc = x->getTensorDesc();
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
         auto output_y_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
 
         // create operator
-        std::string op_name = cv::format("resize_%d", index);
-
         if (interpolation == "nearest")
         {
-            auto op = std::make_shared<ge::op::ResizeNearestNeighborV2>(op_name);
+            auto op = std::make_shared<ge::op::ResizeNearestNeighborV2>(name);
 
             // set attributes
             op->set_attr_align_corners(alignCorners);
             op->set_attr_half_pixel_centers(halfPixelCenters);
 
             // set inputs : x
-            op->set_input_x_by_name(*op_x, "y");
+            op->set_input_x_by_name(*op_x, x->name.c_str());
             op->update_input_desc_x(*x_desc);
             // set inputs : size
             std::vector<int> shape_of_size_mat{2};
-            Mat size_mat(2, 1, CV_32S, Scalar(outHeight, outWidth));
-            auto op_const_size = std::make_shared<CannConstOp>(size_mat.data, size_mat.type(), shape_of_size_mat, cv::format("%s_size", op_name.c_str()));
+            std::vector<int> size_vec{outHeight, outWidth};
+            Mat size_mat(shape_of_size_mat, CV_32S, size_vec.data());
+            auto op_const_size = std::make_shared<CannConstOp>(size_mat.data, size_mat.type(), shape_of_size_mat, cv::format("%s_size", name.c_str()));
             op->set_input_size(*(op_const_size->getOp()));
             op->update_input_desc_size(*(op_const_size->getTensorDesc()));
 
@@ -347,21 +348,17 @@ public:
         }
         else if (interpolation == "opencv_linear" || interpolation == "bilinear")
         {
-            auto op = std::make_shared<ge::op::ResizeBilinearV2>(op_name);
+            auto op = std::make_shared<ge::op::ResizeBilinearV2D>(name);
 
             // set attributes
             op->set_attr_align_corners(alignCorners);
             op->set_attr_half_pixel_centers(halfPixelCenters);
+            std::vector<int64_t> taget_size{(int64_t)outHeight, (int64_t)outWidth};
+            op->set_attr_size(taget_size);
 
             // set inputs : x
-            op->set_input_x_by_name(*op_x, "y");
+            op->set_input_x_by_name(*op_x, x->name.c_str());
             op->update_input_desc_x(*x_desc);
-            // set inputs : size
-            std::vector<int> shape_of_size_mat{2};
-            Mat size_mat(2, 1, CV_32S, Scalar(outHeight, outWidth));
-            auto op_const_size = std::make_shared<CannConstOp>(size_mat.data, size_mat.type(), shape_of_size_mat, cv::format("%s_size", op_name.c_str()));
-            op->set_input_size(*(op_const_size->getOp()));
-            op->update_input_desc_size(*(op_const_size->getTensorDesc()));
 
             // set outputs
             op->update_output_desc_y(*output_y_desc);

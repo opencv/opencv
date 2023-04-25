@@ -1632,6 +1632,17 @@ function(ocv_add_external_target name inc link def)
   endif()
 endfunction()
 
+function(ocv_install_used_external_targets)
+  if(NOT BUILD_SHARED_LIBS
+      AND NOT (CMAKE_VERSION VERSION_LESS "3.13.0")  # upgrade CMake: https://gitlab.kitware.com/cmake/cmake/-/merge_requests/2152
+  )
+    foreach(tgt in ${ARGN})
+      if(tgt MATCHES "^ocv\.3rdparty\.")
+        install(TARGETS ${tgt} EXPORT OpenCVModules)
+      endif()
+    endforeach()
+  endif()
+endfunction()
 
 # Returns the first non-interface target
 function(ocv_get_imported_target imported interface)

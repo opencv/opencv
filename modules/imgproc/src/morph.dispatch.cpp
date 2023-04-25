@@ -617,7 +617,7 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
         wdepth = CV_32S;
         wtype = CV_MAKETYPE(wdepth, cn);
     }
-    char cvt[2][40];
+    char cvt[2][50];
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE",
                                        "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };

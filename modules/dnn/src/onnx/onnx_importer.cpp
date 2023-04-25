@@ -891,6 +891,11 @@ void ONNXImporter::populateNet()
     }
 
     dstNet.setInputsNames(netInputs);
+    if (!hasDynamicShapes)
+    {
+        for (int i = 0; i < netInputs.size(); ++i)
+            dstNet.setInputShape(netInputs[i], outShapes[netInputs[i]]);
+    }
 
     // dump outputs
     for (int i = 0; i < graph_proto.output_size(); ++i)
@@ -1462,6 +1467,10 @@ void ONNXImporter::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeP
 
 void ONNXImporter::parseSplit(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    int axis = layerParams.get<int>("axis", 0);
+    MatShape inpShape = outShapes[node_proto.input(0)];
+    axis = normalize_axis(axis, inpShape.size());
+
     if (layerParams.has("split"))
     {
         DictValue splits = layerParams.get("split");
@@ -1475,13 +1484,26 @@ void ONNXImporter::parseSplit(LayerParams& layerParams, const opencv_onnx::NodeP
         }
         layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
     }
+    else if (node_proto.input_size() == 2) // opset >= 13, the split will be stored at the second input, instead of the attribute.
+    {
+        CV_Assert(constBlobs.find(node_proto.input(1)) != constBlobs.end());
+        Mat splitsBlob = getBlob(node_proto, 1);
+        int splitSize = splitsBlob.total();
+
+        std::vector<int> slicePoints(splitSize - 1, splitsBlob.at<int>(0));
+        for (int i = 1; i < splitSize - 1; ++i)
+        {
+            slicePoints[i] = slicePoints[i - 1] + splitsBlob.at<int>(i);
+        }
+        layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
+    }
     else
     {
         layerParams.set("num_split", node_proto.output_size());
     }
     int depth = layerParams.get<int>("depth", CV_32F);
     layerParams.type = (depth == CV_8S) ? "SliceInt8" : "Slice";
-    layerParams.set("axis", layerParams.get<float>("axis", 0));
+    layerParams.set("axis", axis);
     addLayer(layerParams, node_proto);
 }
 
@@ -1517,10 +1539,17 @@ void transformBlobs(std::vector<Mat>& blobs)
 
     const int numHidden = Wh.size[2];
 
-    Mat h0 = blobs[3];
-    h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
-    Mat c0 = blobs[4];
-    c0 = c0.reshape(1, c0.size[0] * c0.size[1]);
+    Mat h0, c0;
+    // check weather input is dynamic or not: hx, cx are given by user.
+    // Resahpe if only they are given
+    if (!blobs[3].empty()){
+        h0 = blobs[3];
+        h0 = h0.reshape(1, h0.size[0] * h0.size[1]);
+    }
+    if (!blobs[4].empty()){
+        c0 = blobs[4];
+        c0 = c0.reshape(1, c0.size[0] * c0.size[1]);
+    }
 
     b = b.reshape(1, b.size[0]);
     Mat bx = b.colRange(0, b.cols / 2);
@@ -1547,8 +1576,13 @@ void transformBlobs(std::vector<Mat>& blobs)
     blobs[0] = Wh;
     blobs[1] = Wx;
     blobs[2] = b.reshape(1, 1);
-    blobs[3] = h0;
-    blobs[4] = c0;
+
+    if (!blobs[3].empty()){
+        blobs[3] = h0;
+    }
+    if (!blobs[4].empty()){
+        blobs[4] = c0;
+    }
 
     if (blobs.size() == 5) {
         // so that future patch removing copies can leave all indexing as is
@@ -1579,8 +1613,15 @@ void ONNXImporter::lstm_extractConsts(LayerParams& layerParams, const opencv_onn
         Mat blob;
         if (idx < lstm_proto.input_size() && !lstm_proto.input(idx).empty())
         {
-            blob = getBlob(lstm_proto, idx);
-            CV_Assert(shape(blob) == blobShape);
+            if ((idx == 5 || idx == 6) && (constBlobs.find(lstm_proto.input(idx)) == constBlobs.end()))
+            {
+                blob = Mat();
+            }
+            else
+            {
+                blob = getBlob(lstm_proto, idx);
+                CV_Assert(shape(blob) == blobShape);
+            }
         }
         else
         {
@@ -2430,12 +2471,18 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
     }
     else
     {
-        inpShape = shape(getBlob(input0));
+        Mat blob = getBlob(input0);
+        if (constBlobsExtraInfo.find(node_proto.input(0)) != constBlobsExtraInfo.end() &&
+            getBlobExtraInfo(node_proto, 0).real_ndims == 1) {
+            inpShape = {(int)blob.total()};
+        } else {
+            inpShape = shape(blob);
+        }
     }
 
     String srcName = input0;
     // Unsqueeze and repeat along new axis
-    if (targetShape.size() == inpShape.size() + 1)
+    if (targetShape.size() > inpShape.size())
     {
         inpShape.insert(inpShape.begin(), targetShape.size() - inpShape.size(), 1);
         for (int i = 0; i < targetShape.size(); i++)
@@ -2481,7 +2528,7 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
     {
         if (broadcast_axes.empty())
         {
-            addConstant(output_name, getBlob(node_proto, 0));
+            addConstant(output_name, getBlob(node_proto, 0).reshape(1, targetShape));
             return;
         }
 
@@ -2714,7 +2761,8 @@ void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::Node
 
             runLayer(layerParams, inputs, output);
             output.back().convertTo(output.back(), type);
-            output.back().dims = std::max(input_real_ndims - real_ndims, 1);
+            if (real_ndims < 2)  // In case of scalars or 1D vectors, OpenCV initializes 2D cv::Mat
+                output.back().dims = std::max(input_real_ndims - real_ndims, 1);
             addConstant(node_proto.output(0), output.back());
             return;
         }

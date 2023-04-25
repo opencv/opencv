@@ -106,6 +106,7 @@ CV__DNN_INLINE_NS_END
 
         Mat* host;
         std::shared_ptr<ge::TensorDesc> desc_;
+        std::string name;
     };
 
     class CannNet
