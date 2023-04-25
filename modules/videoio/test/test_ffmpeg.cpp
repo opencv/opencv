@@ -196,7 +196,7 @@ TEST_P(videoio_container, read)
             file.write(reinterpret_cast<char*>(raw_data.data), size);
             ASSERT_FALSE(file.fail());
         }
-        ASSERT_GE(totalBytes, (size_t)65536) << "Encoded stream is too small";
+        ASSERT_GE(totalBytes, (size_t)39775) << "Encoded stream is too small";
     }
 
     std::cout << "Checking extracted video stream: " << fileNameOut << " (size: " << totalBytes << " bytes)" << std::endl;
@@ -226,6 +226,7 @@ const videoio_container_params_t videoio_container_params[] =
     videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264", "h264", "h264", "I420"),
     videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265", "h265", "hevc", "I420"),
     videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "mjpg.avi", "mjpg", "MJPG", "I420"),
+    videoio_container_params_t(CAP_FFMPEG, "video/sample_322x242_15frames.yuv420p.libx264", "mp4", "h264", "avc1", "I420")
     //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264.mkv", "mkv.h264", "h264", "I420"),
     //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h265.mkv", "mkv.h265", "hevc", "I420"),
     //videoio_container_params_t(CAP_FFMPEG, "video/big_buck_bunny", "h264.mp4", "mp4.avc1", "avc1", "I420"),
