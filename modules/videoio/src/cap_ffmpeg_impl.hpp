@@ -1707,13 +1707,35 @@ bool CvCapture_FFMPEG::retrieveHWFrame(cv::OutputArray output)
 #endif
 }
 
+static inline double getCodecTag(const AVCodecID codec_id) {
+    const struct AVCodecTag* fallback_tags[] = {
+        // APIchanges:
+        // 2012-01-31 - dd6d3b0 - lavf 54.01.0
+        //   Add avformat_get_riff_video_tags() and avformat_get_riff_audio_tags().
+        avformat_get_riff_video_tags(),
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 25, 100) && defined LIBAVFORMAT_VERSION_MICRO && LIBAVFORMAT_VERSION_MICRO >= 100
+        // APIchanges: ffmpeg only
+        // 2014-01-19 - 1a193c4 - lavf 55.25.100 - avformat.h
+        //   Add avformat_get_mov_video_tags() and avformat_get_mov_audio_tags().
+        avformat_get_mov_video_tags(),
+#endif
+        codec_bmp_tags, // fallback for avformat < 54.1
+        NULL };
+    return av_codec_get_tag(fallback_tags, codec_id);
+}
+
+static inline double getCodecIdFourcc(const AVCodecID codec_id)
+{
+    if (codec_id == AV_CODEC_ID_NONE) return -1;
+    const char* codec_fourcc = _opencv_avcodec_get_name(codec_id);
+    if (!codec_fourcc || strcmp(codec_fourcc, "unknown_codec") == 0 || strlen(codec_fourcc) != 4)
+        return getCodecTag(codec_id);
+    return (double)CV_FOURCC(codec_fourcc[0], codec_fourcc[1], codec_fourcc[2], codec_fourcc[3]);
+}
+
 double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
     if( !video_st || !context ) return 0;
-
-    double codec_tag = 0;
-    CV_CODEC_ID codec_id = AV_CODEC_ID_NONE;
-    const char* codec_fourcc = NULL;
 
     switch( property_id )
     {
@@ -1738,34 +1760,11 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CAP_PROP_FPS:
         return get_fps();
     case CAP_PROP_FOURCC: {
-        codec_id = video_st->CV_FFMPEG_CODEC_FIELD->codec_id;
-        codec_tag = (double) video_st->CV_FFMPEG_CODEC_FIELD->codec_tag;
-
-        if(codec_tag || codec_id == AV_CODEC_ID_NONE)
-        {
-            return codec_tag;
-        }
-
-        codec_fourcc = _opencv_avcodec_get_name(codec_id);
-        if (!codec_fourcc || strcmp(codec_fourcc, "unknown_codec") == 0 || strlen(codec_fourcc) != 4)
-        {
-            const struct AVCodecTag* fallback_tags[] = {
-            // APIchanges:
-            // 2012-01-31 - dd6d3b0 - lavf 54.01.0
-            //   Add avformat_get_riff_video_tags() and avformat_get_riff_audio_tags().
-                avformat_get_riff_video_tags(),
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 25, 100) && defined LIBAVFORMAT_VERSION_MICRO && LIBAVFORMAT_VERSION_MICRO >= 100
-            // APIchanges: ffmpeg only
-            // 2014-01-19 - 1a193c4 - lavf 55.25.100 - avformat.h
-            //   Add avformat_get_mov_video_tags() and avformat_get_mov_audio_tags().
-                avformat_get_mov_video_tags(),
-#endif
-                codec_bmp_tags, // fallback for avformat < 54.1
-                NULL };
-            return av_codec_get_tag(fallback_tags, codec_id);
-        }
-
-        return (double) CV_FOURCC(codec_fourcc[0], codec_fourcc[1], codec_fourcc[2], codec_fourcc[3]);
+        const double fourcc = getCodecIdFourcc(video_st->CV_FFMPEG_CODEC_FIELD->codec_id);
+        if (fourcc != -1) return fourcc;
+        const double codec_tag = (double)video_st->CV_FFMPEG_CODEC_FIELD->codec_tag;
+        if (codec_tag) return codec_tag;
+        else return -1;
     }
     case CAP_PROP_SAR_NUM:
         return _opencv_ffmpeg_get_sample_aspect_ratio(ic->streams[video_stream]).num;
