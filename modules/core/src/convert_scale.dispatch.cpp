@@ -59,8 +59,8 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
                          ocl::typeToStr(CV_8UC(kercn)), CV_8U,
                          ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
                          ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)), wdepth,
-                         ocl::convertTypeStr(depth, wdepth, kercn, cvt[0]),
-                         ocl::convertTypeStr(wdepth, CV_8U, kercn, cvt[1]),
+                         ocl::convertTypeStr(depth, wdepth, kercn, cvt[0], sizeof(cvt[0])),
+                         ocl::convertTypeStr(wdepth, CV_8U, kercn, cvt[1], sizeof(cvt[1])),
                          ocl::typeToStr(wdepth), rowsPerWI,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "");
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc, build_opt);
