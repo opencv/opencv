@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cann.hpp"
 
 namespace cv { namespace dnn {
 
@@ -24,7 +25,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -166,6 +168,54 @@ public:
             LayerNormInvoker<false>::run(inputs[0], inputs[1], nullptr, outputs[0], axis, epsilon);
         }
     }
+
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_CheckEQ(inputs.size(), (size_t)3, "DNN/CANN: LayerNorm should have 3 inputs (x, gamma, beta)");
+
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto gamma = inputs[1].dynamicCast<CannBackendWrapper>();
+        auto beta = inputs[2].dynamicCast<CannBackendWrapper>();
+
+        // create operator
+        auto op = std::make_shared<ge::op::LayerNorm>(name);
+
+        // set attrs
+        op->set_attr_begin_norm_axis(axis);
+        op->set_attr_begin_params_axis(axis);
+        op->set_attr_epsilon(epsilon);
+
+        // set inputs
+        // set inputs : x
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto desc_x = x->getTensorDesc();
+        op->update_input_desc_x(*desc_x);
+        // set inputs : gamma
+        auto op_gamma = nodes[1].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_gamma_by_name(*op_gamma, gamma->name.c_str());
+        auto desc_gamma = x->getTensorDesc();
+        op->update_input_desc_gamma(*desc_gamma);
+        // set inputs : beta
+        auto op_beta = nodes[2].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_beta_by_name(*op_beta, beta->name.c_str());
+        auto desc_beta = x->getTensorDesc();
+        op->update_input_desc_beta(*desc_beta);
+
+        // set outputs
+        auto desc_output_y = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*desc_output_y);
+        auto desc_output_mean = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_mean(*desc_output_mean);
+        auto desc_output_variance = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_variance(*desc_output_variance);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 };
 
 Ptr<LayerNormLayer> LayerNormLayer::create(const LayerParams& params)
