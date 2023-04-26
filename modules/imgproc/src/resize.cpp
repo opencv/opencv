@@ -3023,6 +3023,17 @@ struct DecimateAlpha
     float alpha;
 };
 
+namespace
+{
+static inline void vx_load_as(const uchar* ptr, v_float32& a)
+{ a = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(ptr))); }
+
+static inline void vx_load_as(const ushort* ptr, v_float32& a)
+{ a = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(ptr))); }
+
+static inline void vx_load_as(const short* ptr, v_float32& a)
+{ a = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(ptr))); }
+
 template <typename VT>
 VT vx_setall_local(double coeff);
 template <>
@@ -3030,8 +3041,9 @@ v_float32 vx_setall_local(double coeff) {
     return v_setall_f32(coeff);
 }
 template <typename WT, typename VT>
-void v_inter_area_set_sum(int step, int col_end, const WT *const buf, const VT &v_coeff,
+void v_inter_area_set_sum(int col_end, const WT *const buf, const VT &v_coeff,
                           WT *sum, int &x) {
+    constexpr int step = VT::nlanes;
     for (x = 0; x + step < col_end; x += step)
     {
         const VT line = vx_load(buf + x);
@@ -3039,15 +3051,44 @@ void v_inter_area_set_sum(int step, int col_end, const WT *const buf, const VT &
     }
 }
 template <typename WT, typename VT>
-void v_inter_area_update_sum(int step, int col_end, const WT *const buf, const VT &v_coeff,
+void v_inter_area_update_sum(int col_end, const WT *const buf, const VT &v_coeff,
                              WT *sum, int &x) {
+    constexpr int step = VT::nlanes;
     for (x = 0; x + step < col_end; x += step)
     {
         const VT line = vx_load(buf + x);
-        VT sum_x = vx_load(sum + x);
+        const VT sum_x = vx_load(sum + x);
         v_store(sum + x, sum_x + line * v_coeff);
     }
 }
+template <typename S>
+void v_inter_area_copy_or_not(const S* s, int n, float *d, float const**buf)
+{
+    static_assert(!std::is_same<S, float>::value, "Do not specialize for float");
+    constexpr int step = v_float32::nlanes;
+    int x = 0;
+    for(; x + step < n; x += step)
+    {
+        v_float32 a;
+        vx_load_as(s + x, a);
+        v_store(d + x, a);
+    }
+    for(; x < n; ++x) d[x] = saturate_cast<float>(s[x]);
+    *buf = d;
+}
+void v_inter_area_copy_or_not(const double* s, int n, double *d, const double **buf)
+{
+    (void)n;
+    (void)d;
+    *buf = s;
+}
+void v_inter_area_copy_or_not(const float* s, int n, float *d, const float **buf)
+{
+    (void)n;
+    (void)d;
+    *buf = s;
+}
+
 #if CV_SIMD128_64F
 template <>
 v_float64 vx_setall_local(double coeff) {
@@ -3060,9 +3101,8 @@ v_uint8 vx_setall_local(double coeff) {
     return v_setall_u8(0);
 }
 template <>
-void v_inter_area_set_sum(int step, int col_end, const double *const buf, const v_uint8 &v_coeff,
+void v_inter_area_set_sum(int col_end, const double *const buf, const v_uint8 &v_coeff,
                           double *sum, int &x) {
-    (void)step;
     (void)col_end;
     (void)buf;
     (void)v_coeff;
@@ -3070,9 +3110,8 @@ void v_inter_area_set_sum(int step, int col_end, const double *const buf, const 
     x = 0;
 }
 template <>
-void v_inter_area_update_sum(int step, int col_end, const double *const buf, const v_uint8 &v_coeff,
+void v_inter_area_update_sum(int col_end, const double *const buf, const v_uint8 &v_coeff,
                              double *sum, int &x) {
-    (void)step;
     (void)col_end;
     (void)buf;
     (void)v_coeff;
@@ -3080,6 +3119,7 @@ void v_inter_area_update_sum(int step, int col_end, const double *const buf, con
     x = 0;
 }
 #endif
+}
 
 template <typename T, typename WT, typename VT>
 class ResizeArea_Invoker : public ParallelLoopBody
@@ -3102,13 +3142,13 @@ public:
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
         Size dsize = dst->size();
-        int cn = dst->channels();
+        const int cn = dst->channels();
         dsize.width *= cn;
-        AutoBuffer<WT> _buffer(src->cols * cn + std::max(src->cols * cn, dst->rows * cn));
+        AutoBuffer<WT> _buffer(std::max(src->cols * cn, range.size() * cn));
         const DecimateAlpha* xtab = xtab0;
-        int xtab_size = xtab_size0;
-        WT *buf = _buffer.data(), *sum = buf + src->cols * cn;
-        int j_start = tabofs[range.start], j_end = tabofs[range.end], j, dx;
+        const int xtab_size = xtab_size0;
+        WT *buf = _buffer.data();
+        const int j_start = tabofs[range.start], j_end = tabofs[range.end];
 
         static_assert(
             std::is_same<WT, float>::value || std::is_same<WT, double>::value,
@@ -3119,10 +3159,7 @@ public:
                       && std::is_same<typename VTraits<VT>::lane_type, uint8_t>::value)
 #endif
                       , "Lane type mismatch");
-        int step = VT().nlanes;
-        cv::Mat tmp(ytab[j_end - 1].di - ytab[j_start].di + 1, src->cols,
-                    CV_MAKETYPE(cv::DataType<WT>::type, cn));
-        int prev_di = -1;
+        cv::Mat tmp(range.size(), src->cols, CV_MAKETYPE(cv::DataType<WT>::type, cn));
 
         // iter == 0 reduces the number of lines and stores the result in tmp.
         // tmp is then transposed and its number of lines is then reduced.
@@ -3141,13 +3178,14 @@ public:
             {
                 row_start = 0;
                 row_end = xtab_size;
-                col_end = dst->rows * cn;
+                col_end = range.size() * cn;
                 start_di = xtab[0].di;
             }
-            prev_di = start_di;
-            for (dx = 0; dx < col_end; dx++) sum[dx] = (WT)0;
-            int di;
-            for (j = row_start; j < row_end; ++j)
+            int prev_di = -1;
+            int di = 0;
+            const WT* buf_local;
+            WT* sum = nullptr;
+            for (int j = row_start; j < row_end; ++j)
             {
                 WT coeff;
                 int si;
@@ -3156,59 +3194,44 @@ public:
                     coeff = ytab[j].alpha;
                     di = ytab[j].di;
                     si = ytab[j].si;
-                    // Convert the line to the proper float/double type.
                     const T* S = src->template ptr<T>(si);
-                    std::copy(S, S + src->cols * cn, buf);
+                    // Convert the line to the proper float/double type.
+                    v_inter_area_copy_or_not(S, col_end, buf, &buf_local);
                 }
                 else
                 {
                     coeff = xtab[j].alpha;
                     di = xtab[j].di / cn;
                     si = xtab[j].si / cn;
-                    buf = tmp.template ptr<WT>(si);
+                    buf_local = tmp.template ptr<WT>(si);
                 }
                 const VT v_coeff = vx_setall_local<VT>(coeff);
 
                 if (di != prev_di)
                 {
+                    sum = tmp.template ptr<WT>(di - start_di);
                     int x;
-                    WT* D = tmp.template ptr<WT>(prev_di - start_di);
-                    for (x = 0; x < col_end; ++x) D[x] = sum[x];
-                    v_inter_area_set_sum(step, col_end, buf, v_coeff, sum, x);
-                    for (; x < col_end; ++x) sum[x] = buf[x] * coeff;
+                    v_inter_area_set_sum(col_end, buf_local, v_coeff, sum, x);
+                    for (; x < col_end; ++x) sum[x] = buf_local[x] * coeff;
                     prev_di = di;
                 }
                 else
                 {
                     int x;
-                    v_inter_area_update_sum(step, col_end, buf, v_coeff, sum, x);
-                    for (; x < col_end; ++x) sum[x] += buf[x] * coeff;
+                    v_inter_area_update_sum(col_end, buf_local, v_coeff, sum, x);
+                    for (; x < col_end; ++x) sum[x] += buf_local[x] * coeff;
                 }
-            }
-            // Re-define di to please the compiler.
-            if (iter == 0) {
-                di = ytab[row_end - 1].di;
-            }
-            else
-            {
-                di = xtab[row_end - 1].di / cn;
             }
             // Deal with the last row.
             WT* D = tmp.template ptr<WT>(di - start_di);
             for (int x = 0; x < col_end; ++x) D[x] = sum[x];
 
-            cv::Mat tmp_t;
-            transpose(tmp, tmp_t);
-            tmp = tmp_t;
+            tmp = tmp(cv::Range(0, di - start_di + 1), cv::Range(0, col_end / cn)).t();
         }
         // Saturate_cast to dst.
-        for(int y = 0; y < tmp.rows; ++y) {
-            T* D = dst->template ptr<T>(ytab[j_start].di + y);
-            const WT* S = tmp.template ptr<WT>(y);
-            for(int x = 0; x < dst->cols * cn; ++x) {
-                D[x] = saturate_cast<T>(S[x]);
-            }
-        }
+        cv::Mat dst_tmp = dst->rowRange(range);
+        assert(tmp.size() == dst_tmp.size());
+        tmp.convertTo(dst_tmp, dst_tmp.type());
     }
 
 private:
