@@ -49,11 +49,11 @@ static void help(char** argv)
 {
     printf( "This is a camera calibration sample.\n"
         "Usage: %s\n"
-        "     -w=<board_width>         # the number of inner corners per one of board dimension\n"
-        "IMPORTANT: for ChArUco board pattern this is number of squares.\n"
-        "     -h=<board_height>        # the number of inner corners per another board dimension\n"
-        "IMPORTANT: for ChArUco board pattern this is number of squares.\n"
-        "     [-pt=<pattern>]          # the type of pattern: chessboard or charucoboard or circles' grid\n"
+        "     -w=<board_width>         # the calibration board horizontal size in inner corners "
+        "for chessboard and in squares or circles for others like ChArUco or circles grid\n"
+        "     -h=<board_height>        # the calibration board verical size in inner corners "
+        "for chessboard and in squares or circles for others like ChArUco or circles grid\n"
+        "     [-pt=<pattern>]          # the type of pattern: chessboard, charuco, circles, acircles\n"
         "     [-n=<number_of_frames>]  # the number of frames to use for calibration\n"
         "                              # (if not specified, it will be set to the number\n"
         "                              #  of board views actually available)\n"
@@ -61,14 +61,13 @@ static void help(char** argv)
         "                              # (used only for video capturing)\n"
         "     [-s=<squareSize>]        # square size in some user-defined units (1 by default)\n"
         "     [-ms=<markerSize>]       # marker size in some user-defined units (0.5 by default)\n"
-        "     [-ad=<arucoDict>]        # Aruco dictionary name for charuco board\n"
+        "     [-ad=<arucoDict>]        # Aruco dictionary name for ChArUco board. "
         "Available ArUco dictionaries: DICT_4X4_50, DICT_4X4_100, DICT_4X4_250, "
         "DICT_4X4_1000, DICT_5X5_50, DICT_5X5_100, DICT_5X5_250, DICT_5X5_1000, "
-        "DICT_6X6_50, DICT_6X6_100, DICT_6X6_250, DICT_6X6_1000, DICT_7X7_50,"
-        "DICT_7X7_100, DICT_7X7_250, DICT_7X7_1000, DICT_ARUCO_ORIGINAL"
-        "DICT_APRILTAG_16h5, DICT_APRILTAG_25h9, DICT_APRILTAG_36h10, "
-        "DICT_APRILTAG_36h11\n"
-        "     [-adf=<dictFilename>]    # Custom aruco dictionary file for charuco board\n"
+        "DICT_6X6_50, DICT_6X6_100, DICT_6X6_250, DICT_6X6_1000, DICT_7X7_50, "
+        "DICT_7X7_100, DICT_7X7_250, DICT_7X7_1000, DICT_ARUCO_ORIGINAL, "
+        "DICT_APRILTAG_16h5, DICT_APRILTAG_25h9, DICT_APRILTAG_36h10, DICT_APRILTAG_36h11\n"
+        "     [-adf=<dictFilename>]    # Custom aruco dictionary file for ChArUco board\n"
         "     [-o=<out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
         "     [-op]                    # write detected feature points\n"
         "     [-oe]                    # write extrinsic parameters\n"
@@ -136,7 +135,6 @@ static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point
 
     switch(patternType)
     {
-      case CHARUCOBOARD:
       case CHESSBOARD:
       case CIRCLES_GRID:
         for( int i = 0; i < boardSize.height; i++ )
@@ -152,6 +150,12 @@ static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point
                                           float(i*squareSize), 0));
         break;
 
+      case CHARUCOBOARD:
+        for( int i = 0; i < boardSize.height-1; i++ )
+            for( int j = 0; j < boardSize.width-1; j++ )
+                corners.push_back(Point3f(float(j*squareSize),
+                                          float(i*squareSize), 0));
+        break;
       default:
         CV_Error(Error::StsBadArg, "Unknown pattern type\n");
     }
@@ -174,7 +178,8 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
 
     vector<vector<Point3f> > objectPoints(1);
     calcChessboardCorners(boardSize, squareSize, objectPoints[0], patternType);
-    objectPoints[0][boardSize.width - 1].x = objectPoints[0][0].x + grid_width;
+    int offset = patternType != CHARUCOBOARD ? boardSize.width - 1: boardSize.width - 2;
+    objectPoints[0][offset].x = objectPoints[0][0].x + grid_width;
     newObjPoints = objectPoints[0];
 
     objectPoints.resize(imagePoints.size(),objectPoints[0]);
@@ -362,7 +367,7 @@ static bool runAndSave(const string& outputFilename,
 
 int main( int argc, char** argv )
 {
-    Size boardSize, boardSizeInnerCorners, boardSizeSquares, imageSize;
+    Size boardSize, imageSize;
     float squareSize, markerSize, aspectRatio = 1;
     Mat cameraMatrix, distCoeffs;
     string outputFilename;
@@ -403,30 +408,14 @@ int main( int argc, char** argv )
     if ( parser.has("pt") )
     {
         string val = parser.get<string>("pt");
-        if (val == "circles") {
-            boardSizeSquares.width = boardSize.width + 1;
-            boardSizeSquares.height = boardSize.height + 1;
-            boardSizeInnerCorners = boardSize;
+        if( val == "circles" )
             pattern = CIRCLES_GRID;
-        }
-        else if (val == "acircles") {
+        else if( val == "acircles" )
             pattern = ASYMMETRIC_CIRCLES_GRID;
-            boardSizeSquares.width = boardSize.width + 1;
-            boardSizeSquares.height = boardSize.height + 1;
-            boardSizeInnerCorners = boardSize;
-        }
-        else if (val == "chessboard") {
+        else if( val == "chessboard" )
             pattern = CHESSBOARD;
-            boardSizeSquares.width = boardSize.width + 1;
-            boardSizeSquares.height = boardSize.height + 1;
-            boardSizeInnerCorners = boardSize;
-        }
-        else if (val == "charucoboard") {
+        else if( val == "charuco" )
             pattern = CHARUCOBOARD;
-            boardSizeInnerCorners.width = boardSize.width - 1;
-            boardSizeInnerCorners.height = boardSize.height - 1;
-            boardSizeSquares = boardSize;
-        }
         else
             return fprintf( stderr, "Invalid pattern type: must be chessboard or circles\n" ), -1;
     }
@@ -457,10 +446,10 @@ int main( int argc, char** argv )
     else if (arucoDictName == "DICT_APRILTAG_36h10") { arucoDict = cv::aruco::DICT_APRILTAG_36h10; }
     else if (arucoDictName == "DICT_APRILTAG_36h11") { arucoDict = cv::aruco::DICT_APRILTAG_36h11; }
     else {
-        cout << "incorrect name of aruco dictionary \n";
+        cout << "Incorrect Aruco dictionary name " <<  arucoDictName << std::endl;
         return 1;
     }
-    std::cout << "number of dict: " << arucoDict << "\n";
+
     dictFilename = parser.get<std::string>("adf");
     nframes = parser.get<int>("n");
     delay = parser.get<int>("d");
@@ -502,7 +491,8 @@ int main( int argc, char** argv )
     {
         flags |= CALIB_FIX_K3;
     }
-    float grid_width = squareSize * (boardSizeInnerCorners.width - 1);
+
+    float grid_width = squareSize *(pattern != CHARUCOBOARD ? (boardSize.width - 1): (boardSize.width - 2) );
     bool release_object = false;
     if (parser.has("dt")) {
         grid_width = parser.get<float>("dt");
@@ -529,15 +519,17 @@ int main( int argc, char** argv )
 
     cv::aruco::Dictionary dictionary;
     if (dictFilename == "None") {
+        std::cout << "Using predefined dictionary with id: " << arucoDict << std::endl;
         dictionary = aruco::getPredefinedDictionary(arucoDict);
     }
     else {
+        std::cout << "Using custom dictionary from file: " << dictFilename << std::endl;
         cv::FileStorage dict_file(dictFilename, cv::FileStorage::Mode::READ);
         cv::FileNode fn(dict_file.root());
         dictionary.readDictionary(fn);
     }
-    cv::aruco::CharucoBoard ch_board(boardSizeSquares,
-        squareSize, markerSize, dictionary);
+
+    cv::aruco::CharucoBoard ch_board(boardSize, squareSize, markerSize, dictionary);
     std::vector<int> markerIds;
     cv::aruco::CharucoDetector ch_detector(ch_board);
 
@@ -580,7 +572,7 @@ int main( int argc, char** argv )
         {
             if( imagePoints.size() > 0 )
                 runAndSave(outputFilename, imagePoints, imageSize,
-                           boardSizeInnerCorners, pattern, squareSize, grid_width, release_object, aspectRatio,
+                           boardSize, pattern, squareSize, grid_width, release_object, aspectRatio,
                            flags, cameraMatrix, distCoeffs,
                            writeExtrinsics, writePoints, writeGrid);
             break;
@@ -598,24 +590,19 @@ int main( int argc, char** argv )
         switch( pattern )
         {
             case CHESSBOARD:
-                found = findChessboardCorners( view, boardSizeInnerCorners, pointbuf,
+                found = findChessboardCorners( view, boardSize, pointbuf,
                     CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_FAST_CHECK | CALIB_CB_NORMALIZE_IMAGE);
                 break;
             case CIRCLES_GRID:
-                found = findCirclesGrid( view, boardSizeInnerCorners, pointbuf );
+                found = findCirclesGrid( view, boardSize, pointbuf );
                 break;
             case ASYMMETRIC_CIRCLES_GRID:
-                found = findCirclesGrid( view, boardSizeInnerCorners, pointbuf, CALIB_CB_ASYMMETRIC_GRID );
+                found = findCirclesGrid( view, boardSize, pointbuf, CALIB_CB_ASYMMETRIC_GRID );
                 break;
             case CHARUCOBOARD:
             {
                 ch_detector.detectBoard(view, pointbuf, markerIds);
-                if (pointbuf.size() < (size_t) (boardSizeInnerCorners.height*boardSizeInnerCorners.width)) {
-                    found = false;
-                }
-                else {
-                    found = true;
-                }
+                found = pointbuf.size() == (size_t)(boardSize.width-1)*(boardSize.height-1);
                 break;
             }
             default:
@@ -635,7 +622,12 @@ int main( int argc, char** argv )
         }
 
         if(found)
-            drawChessboardCorners( view, boardSizeInnerCorners, Mat(pointbuf), found );
+        {
+            if(pattern != CHARUCOBOARD)
+                drawChessboardCorners( view, boardSize, Mat(pointbuf), found );
+            else
+                drawChessboardCorners( view, Size(boardSize.width-1, boardSize.height-1), Mat(pointbuf), found );
+        }
 
         string msg = mode == CAPTURING ? "100/100" :
             mode == CALIBRATED ? "Calibrated" : "Press 'g' to start";
@@ -690,7 +682,7 @@ int main( int argc, char** argv )
         if( mode == CAPTURING && imagePoints.size() >= (unsigned)nframes )
         {
             if( runAndSave(outputFilename, imagePoints, imageSize,
-                       boardSizeInnerCorners, pattern, squareSize, grid_width, release_object, aspectRatio,
+                       boardSize, pattern, squareSize, grid_width, release_object, aspectRatio,
                        flags, cameraMatrix, distCoeffs,
                        writeExtrinsics, writePoints, writeGrid))
                 mode = CALIBRATED;
