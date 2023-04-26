@@ -763,29 +763,8 @@ public:
 
 };
 
-class CV_EXPORTS_W QRCodeDetector
-{
+class CV_EXPORTS_W QRCodeDetectorBase {
 public:
-    CV_WRAP QRCodeDetector();
-    ~QRCodeDetector();
-
-    /** @brief sets the epsilon used during the horizontal scan of QR code stop marker detection.
-     @param epsX Epsilon neighborhood, which allows you to determine the horizontal pattern
-     of the scheme 1:1:3:1:1 according to QR code standard.
-    */
-    CV_WRAP void setEpsX(double epsX);
-    /** @brief sets the epsilon used during the vertical scan of QR code stop marker detection.
-     @param epsY Epsilon neighborhood, which allows you to determine the vertical pattern
-     of the scheme 1:1:3:1:1 according to QR code standard.
-     */
-    CV_WRAP void setEpsY(double epsY);
-
-    /** @brief use markers to improve the position of the corners of the QR code
-     *
-     * alignmentMarkers using by default
-     */
-    CV_WRAP void setUseAlignmentMarkers(bool useAlignmentMarkers);
-
     /** @brief Detects QR code in image and returns the quadrangle containing the code.
      @param img grayscale or color (BGR) image containing (or not) QR code.
      @param points Output vector of vertices of the minimum-area quadrangle containing the code.
@@ -801,15 +780,6 @@ public:
      */
     CV_WRAP std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
 
-    /** @brief Decodes QR code on a curved surface in image once it's found by the detect() method.
-
-     Returns UTF8-encoded output string or empty string if the code cannot be decoded.
-     @param img grayscale or color (BGR) image containing QR code.
-     @param points Quadrangle vertices found by detect() method (or some other algorithm).
-     @param straight_qrcode The optional output image containing rectified and binarized QR code
-     */
-    CV_WRAP cv::String decodeCurved(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
-
     /** @brief Both detects and decodes QR code
 
      @param img grayscale or color (BGR) image containing QR code.
@@ -819,14 +789,6 @@ public:
     CV_WRAP std::string detectAndDecode(InputArray img, OutputArray points=noArray(),
                                         OutputArray straight_qrcode = noArray());
 
-    /** @brief Both detects and decodes QR code on a curved surface
-
-     @param img grayscale or color (BGR) image containing QR code.
-     @param points optional output array of vertices of the found QR code quadrangle. Will be empty if not found.
-     @param straight_qrcode The optional output image containing rectified and binarized QR code
-     */
-    CV_WRAP std::string detectAndDecodeCurved(InputArray img, OutputArray points=noArray(),
-                                              OutputArray straight_qrcode = noArray());
 
     /** @brief Detects QR codes in image and returns the vector of the quadrangles containing the codes.
      @param img grayscale or color (BGR) image containing (or not) QR codes.
@@ -860,10 +822,91 @@ public:
             OutputArray points = noArray(),
             OutputArrayOfArrays straight_qrcode = noArray()
     ) const;
-
-protected:
     struct Impl;
+protected:
     Ptr<Impl> p;
+};
+
+class CV_EXPORTS_W QRCodeDetector : public QRCodeDetectorBase
+{
+public:
+    CV_WRAP QRCodeDetector();
+    ~QRCodeDetector();
+
+
+    /** @brief sets the epsilon used during the horizontal scan of QR code stop marker detection.
+     @param epsX Epsilon neighborhood, which allows you to determine the horizontal pattern
+     of the scheme 1:1:3:1:1 according to QR code standard.
+    */
+    CV_WRAP void setEpsX(double epsX);
+    /** @brief sets the epsilon used during the vertical scan of QR code stop marker detection.
+     @param epsY Epsilon neighborhood, which allows you to determine the vertical pattern
+     of the scheme 1:1:3:1:1 according to QR code standard.
+     */
+    CV_WRAP void setEpsY(double epsY);
+
+    /** @brief use markers to improve the position of the corners of the QR code
+     *
+     * alignmentMarkers using by default
+     */
+    CV_WRAP void setUseAlignmentMarkers(bool useAlignmentMarkers);
+
+    /** @brief Decodes QR code on a curved surface in image once it's found by the detect() method.
+
+     Returns UTF8-encoded output string or empty string if the code cannot be decoded.
+     @param img grayscale or color (BGR) image containing QR code.
+     @param points Quadrangle vertices found by detect() method (or some other algorithm).
+     @param straight_qrcode The optional output image containing rectified and binarized QR code
+     */
+    CV_WRAP cv::String decodeCurved(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
+
+    /** @brief Both detects and decodes QR code on a curved surface
+
+     @param img grayscale or color (BGR) image containing QR code.
+     @param points optional output array of vertices of the found QR code quadrangle. Will be empty if not found.
+     @param straight_qrcode The optional output image containing rectified and binarized QR code
+     */
+    CV_WRAP std::string detectAndDecodeCurved(InputArray img, OutputArray points=noArray(),
+                                              OutputArray straight_qrcode = noArray());
+};
+
+class CV_EXPORTS_W QRCodeDetectorAruco : public QRCodeDetectorBase {
+public:
+    struct CV_EXPORTS_W_SIMPLE Params {
+        CV_WRAP Params();
+
+        /** @brief The minimum allowed pixel size of a QR module in the smallest image in the image pyramid, default 4.f */
+        CV_PROP_RW float minModuleSizeInPyramid;
+
+        /** @brief The maximum allowed relative rotation for finder patterns in the same QR code, default pi/12 */
+        CV_PROP_RW float maxRotation;
+
+        /** @brief The maximum allowed relative mismatch in module sizes for finder patterns in the same QR code, default 1.75f */
+        CV_PROP_RW float maxModuleSizeMismatch;
+
+        /** @brief The maximum allowed module relative mismatch for timing pattern module, default 2.f
+         *
+         * If relative mismatch of timing pattern module more this value, penalty points will be added.
+         * If a lot of penalty points are added, QR code will be rejected. */
+        CV_PROP_RW float maxTimingPatternMismatch;
+
+        /** @brief The maximum allowed percentage of penalty points out of total pins in timing pattern, default 0.4f */
+        CV_PROP_RW float maxPenalties;
+
+        /** @brief The maximum allowed relative color mismatch in the timing pattern, default 0.2f*/
+        CV_PROP_RW float maxColorsMismatch;
+
+        /** @brief The algorithm find QR codes with almost minimum timing pattern score and minimum size, default 0.9f
+         *
+         * The QR code with the minimum "timing pattern score" and minimum "size" is selected as the best QR code.
+         * If for the current QR code "timing pattern score" * scaleTimingPatternScore < "previous timing pattern score" and "size" < "previous size", then
+         * current QR code set as the best QR code. */
+        CV_PROP_RW float scaleTimingPatternScore;
+};
+
+    CV_WRAP QRCodeDetectorAruco(const QRCodeDetectorAruco::Params& detectorParameters = QRCodeDetectorAruco::Params());
+    CV_WRAP const QRCodeDetectorAruco::Params& getDetectorParameters() const;
+    CV_WRAP void setDetectorParameters(const QRCodeDetectorAruco::Params& detectorParameters);
 };
 
 //! @}
