@@ -336,14 +336,14 @@ computeECC, estimateAffine2D, estimateAffinePartial2D, findHomography
 CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
                                       InputOutputArray warpMatrix, int motionType,
                                       TermCriteria criteria,
-                                      InputArray inputMask, int gaussFiltSize, InputArray templateMask = cv::noArray() );
+                                      InputArray inputMask, InputArray templateMask, int gaussFiltSize);
 
 /** @overload */
 CV_EXPORTS_W
 double findTransformECC(InputArray templateImage, InputArray inputImage,
     InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
-    InputArray inputMask = cv::noArray(),  InputArray templateMask = cv::noArray());
+    InputArray inputMask = cv::noArray(),  InputArray templateMask = cv::noArray() );
 
 /** @example samples/cpp/kalman.cpp
 An example using the standard Kalman filter

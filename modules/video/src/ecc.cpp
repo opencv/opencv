@@ -40,7 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
-
+#include <iostream>
 
 /****************************************************************************************\
 *                                       Image Alignment (ECC algorithm)                  *
@@ -363,10 +363,10 @@ double cv::findTransformECC(InputArray templateImage,
                             int motionType,
                             TermCriteria criteria,
                             InputArray inputMask,
-                            int gaussFiltSize,
-                            InputArray templateMask)
+                            InputArray templateMask,
+                            int gaussFiltSize 
+                            )
 {
-
 
     Mat src = templateImage.getMat();//template image
     Mat dst = inputImage.getMat(); //input image (to be warped)
@@ -472,7 +472,7 @@ double cv::findTransformECC(InputArray templateImage,
     Mat tempMask;
     if(templateMask.empty())
 	{
-		tempMask = Mat::ones(hd, wd, CV_8U);}
+		tempMask = Mat::ones(hs, ws, CV_8U);}
     else{
         threshold(templateMask, tempMask, 0, 1, THRESH_BINARY);
         tempMask.convertTo(tempMask, preMask.type());}
@@ -498,8 +498,7 @@ double cv::findTransformECC(InputArray templateImage,
     Mat gradientY = Mat::zeros(hd, wd, CV_32FC1);
     Mat gradientXWarped = Mat(hs, ws, CV_32FC1);
     Mat gradientYWarped = Mat(hs, ws, CV_32FC1);
-
-
+    
     // calculate first order image derivatives
     Matx13f dx(-0.5f, 0.0f, 0.5f);
 
@@ -508,11 +507,10 @@ double cv::findTransformECC(InputArray templateImage,
 
     //combine 2 mask here
     Mat mattwo; 
-    mattwo = Mat::ones(hd, wd, CV_8U); 
+    mattwo = Mat::ones(hs, ws, CV_8U); 
     mattwo *= 2;
     Mat sumMask;
     
-
     gradientX = gradientX.mul(preMaskFloat);
     gradientY = gradientY.mul(preMaskFloat);
 
@@ -555,11 +553,13 @@ double cv::findTransformECC(InputArray templateImage,
             warpPerspective(gradientY,  gradientYWarped, map, gradientYWarped.size(), imageFlags);
             warpPerspective(preMask,    imageMask,       map, imageMask.size(),       maskFlags);
         }
+        
         //combine 2 mask here in imageMask
-        sumMask = Mat::zeros(hd, wd, CV_8U);
+        sumMask = Mat::zeros(hs, ws, CV_8U);
         add(imageMask, tempMask, sumMask);
-        combinedMask = Mat::zeros(hd, wd, CV_8U);
+        combinedMask = Mat::zeros(hs, ws, CV_8U);
         divide( sumMask, mattwo, combinedMask);
+    
     
 	    Mat combinedMaskFloat;
 		combinedMask.convertTo(combinedMaskFloat, CV_32F);
@@ -647,8 +647,9 @@ double cv::findTransformECC(InputArray templateImage, InputArray inputImage,
     InputArray templateMask)
 {
     // Use default value of 5 for gaussFiltSize to maintain backward compatibility.
-    return findTransformECC(templateImage, inputImage, warpMatrix, motionType, criteria, inputMask, 5, templateMask);
+    return findTransformECC(templateImage, inputImage, warpMatrix, motionType, criteria, inputMask, templateMask, 5);
 }
+
 
 /* End of file. */
 
