@@ -10,7 +10,7 @@ body:
 
 - type: textarea
   attributes:
-    label: Descripe the feature and motivation
+    label: Describe the feature and motivation
     description: |
       Please provide a clear and concise proposal of the feature and outline the motivation.
   validations:
