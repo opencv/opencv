@@ -83,10 +83,10 @@ foreach(fname ${GRADLE_WRAPPER_FILES})
 endforeach()
 
 # set build.gradle namespace
-if(ANDROID_GRADLE_PLUGIN_VERSION VERSION_GREATER_EQUAL "7.3.0")
-  ocv_update(OPENCV_NAMESPACE_DECLARATION "namespace 'org.opencv'")
+if(NOT (ANDROID_GRADLE_PLUGIN_VERSION VERSION_LESS "7.3.0"))
+  ocv_update(OPENCV_ANDROID_NAMESPACE_DECLARATION "namespace 'org.opencv'")
 else()
-  ocv_update(OPENCV_NAMESPACE_DECLARATION "")
+  ocv_update(OPENCV_ANDROID_NAMESPACE_DECLARATION "")
 endif()
 
 # force reusing of the same CMake version
