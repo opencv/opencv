@@ -7037,11 +7037,17 @@ const char* vecopTypeToStr(int type)
     return result;
 }
 
+// Deprecated due to size of buf buffer being unknowable.
 const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
 {
     // Since the size of buf is not given, we assume 50 because that's what all callers use.
     constexpr size_t buf_max = 50;
 
+    return convertTypeStr(sdepth, ddepth, cn, buf, buf_max);
+}
+
+const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf, size_t buf_size)
+{
     if( sdepth == ddepth )
         return "noconvert";
     const char *typestr = typeToStr(CV_MAKETYPE(ddepth, cn));
@@ -7050,12 +7056,12 @@ const char* convertTypeStr(int sdepth, int ddepth, int cn, char* buf)
         (ddepth == CV_16S && sdepth <= CV_8S) ||
         (ddepth == CV_16U && sdepth == CV_8U))
     {
-        snprintf(buf, buf_max, "convert_%s", typestr);
+        snprintf(buf, buf_size, "convert_%s", typestr);
     }
     else if( sdepth >= CV_32F )
-        snprintf(buf, buf_max, "convert_%s%s_rte", typestr, (ddepth < CV_32S ? "_sat" : ""));
+        snprintf(buf, buf_size, "convert_%s%s_rte", typestr, (ddepth < CV_32S ? "_sat" : ""));
     else
-        snprintf(buf, buf_max, "convert_%s_sat", typestr);
+        snprintf(buf, buf_size, "convert_%s_sat", typestr);
 
     return buf;
 }

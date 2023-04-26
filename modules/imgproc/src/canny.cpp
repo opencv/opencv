@@ -187,7 +187,7 @@ static bool ocl_Canny(InputArray _src, const UMat& dx_, const UMat& dy_, OutputA
         ocl::Kernel with_sobel("stage1_with_sobel", ocl::imgproc::canny_oclsrc,
                                format("-D WITH_SOBEL -D cn=%d -D TYPE=%s -D convert_floatN=%s -D floatN=%s -D GRP_SIZEX=%d -D GRP_SIZEY=%d%s",
                                       cn, ocl::memopTypeToStr(_src.depth()),
-                                      ocl::convertTypeStr(_src.depth(), CV_32F, cn, cvt),
+                                      ocl::convertTypeStr(_src.depth(), CV_32F, cn, cvt, sizeof(cvt)),
                                       ocl::typeToStr(CV_MAKE_TYPE(CV_32F, cn)),
                                       lSizeX, lSizeY,
                                       L2gradient ? " -D L2GRAD" : ""));

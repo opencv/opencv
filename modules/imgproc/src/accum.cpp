@@ -132,7 +132,7 @@ static bool ocl_accumulate( InputArray _src, InputArray _src2, InputOutputArray 
                          opMap[op_type], haveMask ? " -D HAVE_MASK" : "",
                          ocl::typeToStr(sdepth), kercn, ocl::typeToStr(ddepth),
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "", rowsPerWI,
-                         ocl::convertTypeStr(sdepth, ddepth, 1, cvt)));
+                         ocl::convertTypeStr(sdepth, ddepth, 1, cvt, sizeof(cvt))));
     if (k.empty())
         return false;
 
