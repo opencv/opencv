@@ -89,6 +89,17 @@ else()
   ocv_update(OPENCV_ANDROID_NAMESPACE_DECLARATION "")
 endif()
 
+# set android gradle java version in build.gradle
+if(NOT (ANDROID_GRADLE_PLUGIN_VERSION VERSION_LESS "8.0.0"))
+  # AGP-8.0 requires a minimum JDK version of JDK17
+  ocv_update(ANDROID_GRADLE_JAVA_VERSION_INIT "17")
+else()
+  ocv_update(ANDROID_GRADLE_JAVA_VERSION_INIT "1_8")
+endif()
+
+set(ANDROID_GRADLE_JAVA_VERSION "${ANDROID_GRADLE_JAVA_VERSION_INIT}" CACHE STRING "Android Gradle Java version")
+message(STATUS "Android Gradle Java version: ${ANDROID_GRADLE_JAVA_VERSION}")
+
 # force reusing of the same CMake version
 if(NOT OPENCV_SKIP_ANDROID_FORCE_CMAKE)
   if(NOT DEFINED _CMAKE_INSTALL_DIR)

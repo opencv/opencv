@@ -115,8 +115,9 @@ android {
         }
     }
 
-    buildFeatures {
-        aidl true
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_@ANDROID_GRADLE_JAVA_VERSION_INIT@
+        targetCompatibility JavaVersion.VERSION_@ANDROID_GRADLE_JAVA_VERSION_INIT@
     }
 
     buildTypes {
