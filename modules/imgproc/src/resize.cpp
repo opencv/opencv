@@ -3040,6 +3040,10 @@ static inline void vx_load_as(const float* ptr, v_float32& a)
 v_float32 vx_setall_local(float coeff) {
     return v_setall_f32(coeff);
 }
+template <typename T>
+struct VInterArea {};
+template<>
+struct VInterArea<float> { using T = v_float32; };
 #if CV_SIMD128_64F
 static inline void vx_load_as(const double* ptr, v_float64& a)
 { a = v_load(ptr); }
@@ -3047,10 +3051,13 @@ static inline void vx_load_as(const double* ptr, v_float64& a)
 v_float64 vx_setall_local(double coeff) {
     return v_setall_f64(coeff);
 }
+template<>
+struct VInterArea<double> { using T = v_float64; };
 #endif
-template <typename T, typename WT, typename VT>
+template <typename T, typename WT>
 void v_inter_area_set_or_update_sum(const T *const src, int n, bool do_set,
                                     WT coeff, WT *sum) {
+    using VT = typename VInterArea<WT>::T;
     constexpr int step = VT::nlanes;
     const VT v_coeff = vx_setall_local(coeff);
     int x;
@@ -3094,8 +3101,8 @@ void v_inter_area_set_or_update_sum<double, double, v_uint8>(const double *const
 #endif
 }
 
-template <typename T, typename WT, typename VT>
-class ResizeArea_Invoker : public ParallelLoopBody
+template<typename T, typename WT> class ResizeArea_Invoker :
+    public ParallelLoopBody
 {
 public:
     ResizeArea_Invoker( const Mat& _src, Mat& _dst,
@@ -3124,24 +3131,17 @@ public:
         static_assert(
             std::is_same<WT, float>::value || std::is_same<WT, double>::value,
             "Must convert to float or double type");
-        static_assert(std::is_same<typename VTraits<VT>::lane_type, WT>::value
-#if !CV_SIMD128_64F
-                      || (std::is_same<WT, double>::value
-                      && std::is_same<typename VTraits<VT>::lane_type, uint8_t>::value)
-#endif
-                      , "Lane type mismatch");
         cv::Mat tmp(range.size(), src->cols, CV_MAKETYPE(cv::DataType<WT>::type, cn));
 
         // iter == 0 reduces the number of lines and stores the result in tmp.
         // tmp is then transposed and its number of lines is then reduced.
         for (int iter = 0; iter < 2; ++iter)
         {
-            int row_start, row_end, col_end, start_di;
+            int row_start, row_end, start_di;
             if (iter == 0)
             {
                 row_start = j_start;
                 row_end = j_end;
-                col_end = src->cols * cn;
                 // Blend lines together first.
                 start_di = ytab[j_start].di;
             }
@@ -3149,48 +3149,41 @@ public:
             {
                 row_start = 0;
                 row_end = xtab_size;
-                col_end = range.size() * cn;
-                start_di = xtab[0].di;
+                start_di = xtab[0].di / cn;
             }
             int prev_di = -1;
             int di = 0;
             WT* sum = nullptr;
             for (int j = row_start; j < row_end; ++j)
             {
-                WT coeff;
-                int si;
-                if (iter == 0)
-                {
-                    coeff = ytab[j].alpha;
-                    di = ytab[j].di;
-                    si = ytab[j].si;
-                }
-                else
-                {
-                    coeff = xtab[j].alpha;
-                    di = xtab[j].di / cn;
-                    si = xtab[j].si / cn;
-                }
+                di = (iter == 0) ? ytab[j].di : xtab[j].di / cn;
 
-                if (di != prev_di) sum = tmp.template ptr<WT>(di - start_di);
+                const bool start_new_line = (di != prev_di);
+                if (start_new_line)
+                {
+                    sum = tmp.template ptr<WT>(di - start_di);
+                    prev_di = di;
+                }
 
                 if (iter == 0)
                 {
+                    const WT coeff = ytab[j].alpha;
+                    const int si = ytab[j].si;
                     const T* s = src->template ptr<T>(si);
-                    v_inter_area_set_or_update_sum<T, WT, VT>(s, col_end, di != prev_di,
-                                                              coeff, sum);
+                    v_inter_area_set_or_update_sum<T, WT>(s, tmp.cols * cn,
+                                                          start_new_line, coeff, sum);
                 }
                 else
                 {
+                    const WT coeff = xtab[j].alpha;
+                    const int si = xtab[j].si / cn;
                     const WT* s = tmp.template ptr<WT>(si);
-                    v_inter_area_set_or_update_sum<WT, WT, VT>(s, col_end, di != prev_di,
-                                                               coeff, sum);
+                    v_inter_area_set_or_update_sum<WT, WT>(s, tmp.cols * cn,
+                                                           start_new_line, coeff, sum);
                 }
-
-                if (di != prev_di) prev_di = di;
             }
 
-            tmp = tmp(cv::Range(0, di - start_di + 1), cv::Range(0, col_end / cn)).t();
+            tmp = tmp.rowRange(0, di - start_di + 1).t();
         }
         // Saturate_cast to dst.
         cv::Mat dst_tmp = dst->rowRange(range);
@@ -3207,15 +3200,18 @@ private:
     const int* tabofs;
 };
 
-template <typename T, typename WT, typename VT>
-static void resizeArea_(const Mat& src, Mat& dst, const DecimateAlpha* xtab,
-                        int xtab_size, const DecimateAlpha* ytab, int ytab_size,
-                        const int* tabofs) {
+
+template <typename T, typename WT>
+static void resizeArea_( const Mat& src, Mat& dst,
+                         const DecimateAlpha* xtab, int xtab_size,
+                         const DecimateAlpha* ytab, int ytab_size,
+                         const int* tabofs )
+{
     parallel_for_(Range(0, dst.rows),
-                  ResizeArea_Invoker<T, WT, VT>(src, dst, xtab, xtab_size, ytab,
-                                                ytab_size, tabofs),
-                  dst.total() / ((double)(1 << 16)));
+                 ResizeArea_Invoker<T, WT>(src, dst, xtab, xtab_size, ytab, ytab_size, tabofs),
+                 dst.total()/((double)(1 << 16)));
 }
+
 
 typedef void (*ResizeFunc)( const Mat& src, Mat& dst,
                             const int* xofs, const void* alpha,
@@ -3844,20 +3840,12 @@ void resize(int src_type,
         0
     };
 
-    static ResizeAreaFunc area_tab[] = {resizeArea_<uchar, float, v_float32>,
-                                        0,
-                                        resizeArea_<ushort, float, v_float32>,
-                                        resizeArea_<short, float, v_float32>,
-                                        0,
-                                        resizeArea_<float, float, v_float32>,
-#if CV_SIMD128_64F
-                                        resizeArea_<double, double, v_float64>,
-#else
-                                        // The vector type is chosen to be a bogus one.
-                                        // No vectorization will be performed.
-                                        resizeArea_<double, double, v_uint8>,
-#endif
-                                        0};
+    static ResizeAreaFunc area_tab[] =
+    {
+        resizeArea_<uchar, float>, 0, resizeArea_<ushort, float>,
+        resizeArea_<short, float>, 0, resizeArea_<float, float>,
+        resizeArea_<double, double>, 0
+    };
 
     static be_resize_func linear_exact_tab[] =
     {
