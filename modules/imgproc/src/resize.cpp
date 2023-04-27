@@ -3085,9 +3085,9 @@ void v_inter_area_set_or_update_sum(const T *const src, int n, bool do_set,
 }
 #if !CV_SIMD128_64F
 template <>
-void v_inter_area_set_or_update_sum<double, double, v_uint8>(const double *const src,
-                                                             int n, bool do_set,
-                                                             double coeff, double *sum) {
+void v_inter_area_set_or_update_sum<double, double>(const double *const src,
+                                                    int n, bool do_set,
+                                                    double coeff, double *sum) {
     int x;
     if (do_set)
     {
@@ -3183,12 +3183,21 @@ public:
                 }
             }
 
-            tmp = tmp.rowRange(0, di - start_di + 1).t();
+            tmp = tmp.rowRange(0, di - start_di + 1);
+            if (iter == 0) tmp = tmp.t();
         }
-        // Saturate_cast to dst.
         cv::Mat dst_tmp = dst->rowRange(range);
-        assert(tmp.size() == dst_tmp.size());
-        tmp.convertTo(dst_tmp, dst_tmp.type());
+        if (tmp.type() == dst_tmp.type())
+        {
+            transpose(tmp, dst_tmp);
+        }
+        else
+        {
+            // Saturate_cast to dst.
+            cv::Mat tmp_type;
+            tmp.convertTo(tmp_type, dst_tmp.type());
+            transpose(tmp_type, dst_tmp);
+        }
     }
 
 private:
