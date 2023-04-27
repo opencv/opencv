@@ -27,17 +27,17 @@ struct Board::Impl {
     Impl(const Impl&) = delete;
     Impl& operator=(const Impl&) = delete;
 
-    virtual void matchImagePoints(InputArray detectedCorners, InputArray detectedIds, OutputArray _objPoints,
+    virtual void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds, OutputArray _objPoints,
                                   OutputArray imgPoints) const;
 
     virtual void generateImage(Size outSize, OutputArray img, int marginSize, int borderBits) const;
 };
 
-void Board::Impl::matchImagePoints(InputArray detectedCorners, InputArray detectedIds, OutputArray _objPoints,
-                                        OutputArray imgPoints) const {
-
-    CV_Assert(ids.size() == objPoints.size());
+void Board::Impl::matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds, OutputArray _objPoints,
+                                   OutputArray imgPoints) const {
     CV_Assert(detectedIds.total() == detectedCorners.total());
+    CV_Assert(detectedIds.total() > 0ull);
+    CV_Assert(detectedCorners.depth() == CV_32F);
 
     size_t nDetectedMarkers = detectedIds.total();
 
@@ -48,13 +48,19 @@ void Board::Impl::matchImagePoints(InputArray detectedCorners, InputArray detect
     imgPnts.reserve(nDetectedMarkers);
 
     // look for detected markers that belong to the board and get their information
+    Mat detectedIdsMat = detectedIds.getMat();
+    vector<Mat> detectedCornersVecMat;
+
+    detectedCorners.getMatVector(detectedCornersVecMat);
+    CV_Assert((int)detectedCornersVecMat.front().total()*detectedCornersVecMat.front().channels() == 8);
+
     for(unsigned int i = 0; i < nDetectedMarkers; i++) {
-        int currentId = detectedIds.getMat().ptr< int >(0)[i];
+        int currentId = detectedIdsMat.at<int>(i);
         for(unsigned int j = 0; j < ids.size(); j++) {
             if(currentId == ids[j]) {
                 for(int p = 0; p < 4; p++) {
                     objPnts.push_back(objPoints[j][p]);
-                    imgPnts.push_back(detectedCorners.getMat(i).ptr<Point2f>(0)[p]);
+                    imgPnts.push_back(detectedCornersVecMat[i].ptr<Point2f>(0)[p]);
                 }
             }
         }
@@ -212,7 +218,7 @@ void Board::generateImage(Size outSize, OutputArray img, int marginSize, int bor
     impl->generateImage(outSize, img, marginSize, borderBits);
 }
 
-void Board::matchImagePoints(InputArray detectedCorners, InputArray detectedIds, OutputArray objPoints,
+void Board::matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds, OutputArray objPoints,
                              OutputArray imgPoints) const {
     CV_Assert(this->impl);
     impl->matchImagePoints(detectedCorners, detectedIds, objPoints, imgPoints);
@@ -312,7 +318,7 @@ struct CharucoBoardImpl : Board::Impl {
 
     void calcNearestMarkerCorners();
 
-    void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
+    void matchImagePoints(InputArrayOfArrays detectedCharuco, InputArray detectedIds,
                           OutputArray objPoints, OutputArray imgPoints) const override;
 
     void generateImage(Size outSize, OutputArray img, int marginSize, int borderBits) const override;
@@ -367,25 +373,42 @@ void CharucoBoardImpl::calcNearestMarkerCorners() {
     }
 }
 
-void CharucoBoardImpl::matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
-                                   OutputArray _objPoints, OutputArray imgPoints) const {
-    if (detectedCorners.kind() == _InputArray::STD_VECTOR_VECTOR ||
-        detectedCorners.isMatVector() || detectedCorners.isUMatVector())
-        Board::Impl::matchImagePoints(detectedCorners, detectedIds, _objPoints, imgPoints);
-    else {
-        CV_Assert(detectedCorners.isMat() || detectedCorners.isVector());
-        size_t nDetected = detectedCorners.total();
-        vector<Point3f> objPnts(nDetected);
-        vector<Point2f> imgPnts(nDetected);
-        for(size_t i = 0ull; i < nDetected; i++) {
-            int pointId = detectedIds.getMat().at<int>((int)i);
-            CV_Assert(pointId >= 0 && pointId < (int)chessboardCorners.size());
-            objPnts[i] = chessboardCorners[pointId];
-            imgPnts[i] = detectedCorners.getMat().at<Point2f>((int)i);
-        }
-        Mat(objPnts).copyTo(_objPoints);
-        Mat(imgPnts).copyTo(imgPoints);
+void CharucoBoardImpl::matchImagePoints(InputArrayOfArrays detectedCharuco, InputArray detectedIds,
+                                        OutputArray outObjPoints, OutputArray outImgPoints) const {
+    CV_CheckEQ(detectedIds.total(), detectedCharuco.total(), "Number of corners and ids must be equal");
+    CV_Assert(detectedIds.total() > 0ull);
+    CV_Assert(detectedCharuco.depth() == CV_32F);
+    // detectedCharuco includes charuco corners as vector<Point2f> or Mat.
+    // Python bindings could add extra dimension to detectedCharuco and therefore vector<Mat> case is additionally processed.
+    CV_Assert((detectedCharuco.isMat() || detectedCharuco.isVector() || detectedCharuco.isMatVector() || detectedCharuco.isUMatVector())
+               && detectedCharuco.depth() == CV_32F);
+    size_t nDetected = detectedCharuco.total();
+    vector<Point3f> objPnts(nDetected);
+    vector<Point2f> imgPnts(nDetected);
+    Mat detectedCharucoMat, detectedIdsMat = detectedIds.getMat();
+    if (!detectedCharuco.isMatVector()) {
+        detectedCharucoMat = detectedCharuco.getMat();
+        CV_Assert(detectedCharucoMat.checkVector(2));
     }
+
+    std::vector<Mat> detectedCharucoVecMat;
+    if (detectedCharuco.isMatVector()) {
+        detectedCharuco.getMatVector(detectedCharucoVecMat);
+    }
+
+    for(size_t i = 0ull; i < nDetected; i++) {
+        int pointId = detectedIdsMat.at<int>((int)i);
+        CV_Assert(pointId >= 0 && pointId < (int)chessboardCorners.size());
+        objPnts[i] = chessboardCorners[pointId];
+        if (detectedCharuco.isMatVector()) {
+            CV_Assert((int)detectedCharucoVecMat[i].total() * detectedCharucoVecMat[i].channels() == 2);
+            imgPnts[i] = detectedCharucoVecMat[i].ptr<Point2f>(0)[0];
+        }
+        else
+            imgPnts[i] = detectedCharucoMat.ptr<Point2f>(0)[i];
+    }
+    Mat(objPnts).copyTo(outObjPoints);
+    Mat(imgPnts).copyTo(outImgPoints);
 }
 
 void CharucoBoardImpl::generateImage(Size outSize, OutputArray img, int marginSize, int borderBits) const {
@@ -518,20 +541,21 @@ float CharucoBoard::getMarkerLength() const {
 
 bool CharucoBoard::checkCharucoCornersCollinear(InputArray charucoIds) const {
     CV_Assert(impl);
+    Mat charucoIdsMat = charucoIds.getMat();
 
-    unsigned int nCharucoCorners = (unsigned int)charucoIds.getMat().total();
+    unsigned int nCharucoCorners = (unsigned int)charucoIdsMat.total();
     if (nCharucoCorners <= 2)
         return true;
 
     // only test if there are 3 or more corners
     auto board = static_pointer_cast<CharucoBoardImpl>(impl);
-    CV_Assert(board->chessboardCorners.size() >= charucoIds.getMat().total());
+    CV_Assert(board->chessboardCorners.size() >= charucoIdsMat.total());
 
-    Vec<double, 3> point0(board->chessboardCorners[charucoIds.getMat().at<int>(0)].x,
-                          board->chessboardCorners[charucoIds.getMat().at<int>(0)].y, 1);
+    Vec<double, 3> point0(board->chessboardCorners[charucoIdsMat.at<int>(0)].x,
+                          board->chessboardCorners[charucoIdsMat.at<int>(0)].y, 1);
 
-    Vec<double, 3> point1(board->chessboardCorners[charucoIds.getMat().at<int>(1)].x,
-                          board->chessboardCorners[charucoIds.getMat().at<int>(1)].y, 1);
+    Vec<double, 3> point1(board->chessboardCorners[charucoIdsMat.at<int>(1)].x,
+                          board->chessboardCorners[charucoIdsMat.at<int>(1)].y, 1);
 
     // create a line from the first two points.
     Vec<double, 3> testLine = point0.cross(point1);
@@ -545,8 +569,8 @@ bool CharucoBoard::checkCharucoCornersCollinear(InputArray charucoIds) const {
 
     double dotProduct;
     for (unsigned int i = 2; i < nCharucoCorners; i++){
-        testPoint(0) = board->chessboardCorners[charucoIds.getMat().at<int>(i)].x;
-        testPoint(1) = board->chessboardCorners[charucoIds.getMat().at<int>(i)].y;
+        testPoint(0) = board->chessboardCorners[charucoIdsMat.at<int>(i)].x;
+        testPoint(1) = board->chessboardCorners[charucoIdsMat.at<int>(i)].y;
 
         // if testPoint is on testLine, dotProduct will be zero (or very, very close)
         dotProduct = testPoint.dot(testLine);
