@@ -1145,7 +1145,33 @@ input = Variable(torch.randn(seq_len, batch, features))
 lstm = LSTM(features, hidden, batch, bidirectional=True)
 save_data_and_model("lstm_bidirectional", input, lstm)
 
+class LSTM_hidden_state_inputs(nn.Module):
 
+    def __init__(self, features, hidden, batch, num_layers=1, bidirectional=False):
+        super(LSTM_hidden_state_inputs, self).__init__()
+        self.lstm = nn.LSTM(features, hidden, num_layers, bidirectional=bidirectional)
+
+    def forward(self, x, h, c):
+        return self.lstm(x, (h, c))[0]
+
+batch = 1
+features = 16
+hidden = 8
+seq_len = 2
+num_layers = 1
+bidirectional = False
+
+lstm = LSTM_hidden_state_inputs(
+    features,
+    hidden,
+    batch,
+    num_layers=num_layers,
+    bidirectional=bidirectional
+)
+input = torch.randn(seq_len, batch, features)
+h0 = torch.randn(num_layers + int(bidirectional), batch, hidden)
+c0 = torch.randn(num_layers + int(bidirectional), batch, hidden)
+save_data_and_model_multy_inputs("lstm_init_h0_c0", lstm, input, h0, c0, export_params=True)
 
 class HiddenLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, is_bidirectional=False):
