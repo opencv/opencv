@@ -120,6 +120,8 @@ android {
         targetCompatibility JavaVersion.VERSION_@ANDROID_GRADLE_JAVA_VERSION_INIT@
     }
 
+    @ANDROID_GRADLE_BUILD_FEATURE_AIDL@
+
     buildTypes {
         debug {
             packagingOptions {
