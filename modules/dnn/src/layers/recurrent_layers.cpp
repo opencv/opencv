@@ -119,6 +119,8 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     bool useCellClip, usePeephole;
     bool reverse;   // If true, go in negative direction along the time axis
     bool bidirectional;  // If true, produces both forward and reversed directions along time axis
+    bool layout;  // If true, uses batch_size x seq_length x num_hidden for input and output, else
+                  // uses seq_length x batch_size x num_hidden
 
     ActivationFunction f_activation;
     ActivationFunction g_activation;
@@ -198,6 +200,7 @@ public:
                 }
             }
         }
+        layout = params.get<bool>("layout", false);
         useTimestampDim = params.get<bool>("use_timestamp_dim", true);
         produceCellOutput = params.get<bool>("produce_cell_output", false);
         forgetBias = params.get<float>("forget_bias", 0.0f);
@@ -382,6 +385,13 @@ public:
         inputs_arr.getMatVector(input);
         outputs_arr.getMatVector(output);
         internals_arr.getMatVector(internals);
+
+        if (layout){
+            //swap axis 0 and 1 input x
+            cv::Mat tmp;
+            cv::transposeND(input[0], {1, 0, 2}, tmp); //back to seq_len, batch_size, hidden_size format
+            input[0] = tmp;
+        }
 
         Mat cOut = produceCellOutput ? output[0].clone() : Mat();
         const bool needYcTransform = !originalBlobs.empty(); // if the producer is onnx
@@ -618,7 +628,10 @@ public:
 
         // permute to {0, 2, 1, 3};
         cv::Mat newCellState;
-        cv::transposeND(cOut, {0, 2, 1, 3}, newCellState);
+        if (layout)
+            cv::transposeND(cOut, {2, 0, 1, 3}, newCellState);
+        else
+            cv::transposeND(cOut, {0, 2, 1, 3}, newCellState);
         cOut = newCellState;
 
         if (numDirs == 1)
