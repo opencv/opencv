@@ -103,7 +103,8 @@ public:
 #ifdef HAVE_CANN
         if (backendId == DNN_BACKEND_CANN)
             return op == OPERATION::ADD || op == OPERATION::PROD || op == OPERATION::SUB ||
-                   op == OPERATION::DIV || op == OPERATION::MAX  || op == OPERATION::MIN;
+                   op == OPERATION::DIV || op == OPERATION::MAX  || op == OPERATION::MIN ||
+                   op == OPERATION::POW;
 #endif
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return (op == OPERATION::ADD ||
@@ -730,7 +731,6 @@ public:
         auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
 
         std::shared_ptr<ge::Operator> eltwise_operator = nullptr;
-        // add, mul, sub, div, max, min
         switch (op)
         {
 #define BUILD_CANN_ELTWISE_OP(op_type, class_name, op_name)                 \
@@ -750,6 +750,7 @@ public:
             BUILD_CANN_ELTWISE_OP(OPERATION::DIV,  Xdivy,   name);
             BUILD_CANN_ELTWISE_OP(OPERATION::MAX,  Maximum, name);
             BUILD_CANN_ELTWISE_OP(OPERATION::MIN,  Minimum, name);
+            BUILD_CANN_ELTWISE_OP(OPERATION::POW,  Pow,     name);
 #undef BUILD_CANN_ELTWISE_OP
             default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
         }
