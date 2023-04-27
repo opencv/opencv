@@ -850,13 +850,35 @@ struct GeluFunctor : public BaseDefaultFunctor<GeluFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     inline float calculate(float x) const
     {
         return 0.5f * x * (1.0f + erf(x * M_SQRT1_2));
     }
+
+    #ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::Gelu>(name);
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto desc_x = x->getTensorDesc();
+        op->update_input_desc_x(*desc_x);
+
+        auto desc_output = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*desc_output);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
     int64 getFLOPSPerElement() const { return 100; }
 };
@@ -878,6 +900,7 @@ struct GeluApproximationFunctor : public BaseDefaultFunctor<GeluApproximationFun
 
     bool supportBackend(int backendId, int)
     {
+        // CANN does not have GeluApproximation operator for now (2023/04)
         return backendId == DNN_BACKEND_OPENCV;
     }
 
