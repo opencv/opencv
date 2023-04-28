@@ -1228,11 +1228,15 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
         {
             Mat axesMat = getBlob(node_proto, 1);
             int axesNum = axesMat.total();
+            std::vector<int> axesVec(axesNum);
             for (int i = 0; i < axesNum; i++)
             {
                 int axis = normalize_axis(axesMat.at<int>(i), inpShape.size());
                 shouldDelete[axis] = true;
+                axesVec[i] = axis;
             }
+            // save axes in layerParams for the sake of other backends
+            layerParams.set("axes", DictValue::arrayInt(&axesVec[0], axesNum));
         }
         else
             //  in opset 13, the ReduceSum has two input, it takes axes as input instead of attribute

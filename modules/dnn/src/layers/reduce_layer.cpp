@@ -6,6 +6,7 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "../op_cuda.hpp"
 #include "../op_webnn.hpp"
+#include "../op_cann.hpp"
 
 #include <float.h>
 #include <algorithm>
@@ -26,6 +27,7 @@ public:
     ReduceLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
+
         // set reduce type
         CV_Assert(params.has("reduce"));
         String typeString = toLowerCase(params.get<String>("reduce"));
@@ -70,15 +72,33 @@ public:
         {
             targetDims[i] = tempDims.get<int>(i);
         }
+
+        // save original axes
+        if (params.has("axes"))
+        {
+            DictValue tempAxes = params.get("axes");
+            int axesNum = tempAxes.size();
+            axes.resize(axesNum);
+            for (int j = 0; j < axesNum; ++j)
+            {
+                axes[j] = tempAxes.get<int>(j);
+            }
+        }
+
+        // save keepdims
+        keepdims = params.get<int>("keepdims", 1) == 1;
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        if (backendId == DNN_BACKEND_OPENCV)
-        {
-            return true;
-        }
-        return false;
+#ifdef HAVE_CANN
+        if (backendId == DNN_BACKEND_CANN)
+            return reduceType == ReduceType::MAX  || reduceType == ReduceType::MIN     ||
+                   reduceType == ReduceType::AVE  || reduceType == ReduceType::SUM     ||
+                   reduceType == ReduceType::PROD || reduceType == ReduceType::LOG_SUM ||
+                   reduceType == ReduceType::LOG_SUM_EXP;
+#endif
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     // reduceType == MIN
@@ -362,6 +382,53 @@ public:
         return false;
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_CheckFalse(axes.empty(), "DNN/CANN: Reduce layers need axes to build CANN operators");
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto desc_x = x->getTensorDesc();
+
+        std::vector<int> axes_shape{(int)axes.size()};
+        Mat axes_mat(axes_shape, CV_32SC1, &axes[0]);
+        auto op_const_axes = std::make_shared<CannConstOp>(axes_mat.data, axes_mat.type(), axes_shape, cv::format("%s_axes", name.c_str()));
+        auto desc_axes = op_const_axes->getTensorDesc();
+
+        auto desc_y = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+
+        std::shared_ptr<ge::Operator> reduce_op = nullptr;
+        switch (reduceType)
+        {
+#define BUILD_CANN_REDUCE_OP(op_type, class_name, op_name)               \
+            case op_type: {                                              \
+                auto op = std::make_shared<ge::op::class_name>(op_name); \
+                op->set_input_x_by_name(*op_x, x->name.c_str());         \
+                op->set_input_axes(*(op_const_axes)->getOp());           \
+                op->set_attr_keep_dims(keepdims);                        \
+                op->update_input_desc_x(*desc_x);                        \
+                op->update_input_desc_axes(*desc_axes);                  \
+                op->update_output_desc_y(*desc_y);                       \
+                reduce_op = op;                                          \
+            } break;
+            BUILD_CANN_REDUCE_OP(ReduceType::MAX,         ReduceMax,       name);
+            BUILD_CANN_REDUCE_OP(ReduceType::MIN,         ReduceMin,       name);
+            BUILD_CANN_REDUCE_OP(ReduceType::AVE,         ReduceMean,      name);
+            BUILD_CANN_REDUCE_OP(ReduceType::SUM,         ReduceSum,       name);
+            BUILD_CANN_REDUCE_OP(ReduceType::PROD,        ReduceProd,      name);
+            BUILD_CANN_REDUCE_OP(ReduceType::LOG_SUM,     ReduceLogSum,    name);
+            BUILD_CANN_REDUCE_OP(ReduceType::LOG_SUM_EXP, ReduceLogSumExp, name);
+#undef BUILD_CANN_REDUCE_OP
+            default: CV_Error(Error::StsNotImplemented, "Unsupported reduce operation");
+        }
+
+        return Ptr<BackendNode>(new CannBackendNode(reduce_op));
+    }
+#endif // HAVE_CANN
+
     virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
                              const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
     {
@@ -398,6 +465,9 @@ private:
         LOG_SUM,
         LOG_SUM_EXP
     };
+
+    std::vector<int> axes;
+    bool keepdims;
 };
 
 Ptr<ReduceLayer> ReduceLayer::create(const LayerParams& params)
