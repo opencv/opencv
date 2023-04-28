@@ -709,7 +709,7 @@ public:
         op->set_input_x1_by_name(*op_x1, x1->name.c_str());
         op->update_input_desc_x1(*x1_desc);
         // set inputs : bias (bias)
-        auto bias_mat = bias ? biasMat : Mat::zeros(1, weightsMat.size[0], weightsMat.type());
+        auto bias_mat = bias ? biasMat : (blobs.empty() ? Mat::zeros(1, 1, CV_32F) : Mat::zeros(1, weightsMat.size[0], weightsMat.type()));
         std::vector<int> bias_shape{weightsMat.size[0]};
         auto op_const_bias = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), bias_shape, cv::format("%s_b", name.c_str()));
         op->set_input_bias(*(op_const_bias->getOp()));
