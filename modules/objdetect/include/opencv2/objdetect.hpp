@@ -45,6 +45,7 @@
 #define OPENCV_OBJDETECT_HPP
 
 #include "opencv2/core.hpp"
+#include "opencv2/objdetect/aruco_detector.hpp"
 
 /**
 @defgroup objdetect Object Detection
@@ -870,43 +871,46 @@ public:
                                               OutputArray straight_qrcode = noArray());
 };
 
-class CV_EXPORTS_W QRCodeDetectorAruco : public QRCodeDetectorBase {
-public:
-    struct CV_EXPORTS_W_SIMPLE Params {
-        CV_WRAP Params();
+struct CV_EXPORTS_W_SIMPLE QrWithArucoParams {
+    CV_WRAP QrWithArucoParams();
 
-        /** @brief The minimum allowed pixel size of a QR module in the smallest image in the image pyramid, default 4.f */
-        CV_PROP_RW float minModuleSizeInPyramid;
+    /** @brief The minimum allowed pixel size of a QR module in the smallest image in the image pyramid, default 4.f */
+    CV_PROP_RW float minModuleSizeInPyramid;
 
-        /** @brief The maximum allowed relative rotation for finder patterns in the same QR code, default pi/12 */
-        CV_PROP_RW float maxRotation;
+    /** @brief The maximum allowed relative rotation for finder patterns in the same QR code, default pi/12 */
+    CV_PROP_RW float maxRotation;
 
-        /** @brief The maximum allowed relative mismatch in module sizes for finder patterns in the same QR code, default 1.75f */
-        CV_PROP_RW float maxModuleSizeMismatch;
+    /** @brief The maximum allowed relative mismatch in module sizes for finder patterns in the same QR code, default 1.75f */
+    CV_PROP_RW float maxModuleSizeMismatch;
 
-        /** @brief The maximum allowed module relative mismatch for timing pattern module, default 2.f
-         *
-         * If relative mismatch of timing pattern module more this value, penalty points will be added.
-         * If a lot of penalty points are added, QR code will be rejected. */
-        CV_PROP_RW float maxTimingPatternMismatch;
+    /** @brief The maximum allowed module relative mismatch for timing pattern module, default 2.f
+     *
+     * If relative mismatch of timing pattern module more this value, penalty points will be added.
+     * If a lot of penalty points are added, QR code will be rejected. */
+    CV_PROP_RW float maxTimingPatternMismatch;
 
-        /** @brief The maximum allowed percentage of penalty points out of total pins in timing pattern, default 0.4f */
-        CV_PROP_RW float maxPenalties;
+    /** @brief The maximum allowed percentage of penalty points out of total pins in timing pattern, default 0.4f */
+    CV_PROP_RW float maxPenalties;
 
-        /** @brief The maximum allowed relative color mismatch in the timing pattern, default 0.2f*/
-        CV_PROP_RW float maxColorsMismatch;
+    /** @brief The maximum allowed relative color mismatch in the timing pattern, default 0.2f*/
+    CV_PROP_RW float maxColorsMismatch;
 
-        /** @brief The algorithm find QR codes with almost minimum timing pattern score and minimum size, default 0.9f
-         *
-         * The QR code with the minimum "timing pattern score" and minimum "size" is selected as the best QR code.
-         * If for the current QR code "timing pattern score" * scaleTimingPatternScore < "previous timing pattern score" and "size" < "previous size", then
-         * current QR code set as the best QR code. */
-        CV_PROP_RW float scaleTimingPatternScore;
+    /** @brief The algorithm find QR codes with almost minimum timing pattern score and minimum size, default 0.9f
+     *
+     * The QR code with the minimum "timing pattern score" and minimum "size" is selected as the best QR code.
+     * If for the current QR code "timing pattern score" * scaleTimingPatternScore < "previous timing pattern score" and "size" < "previous size", then
+     * current QR code set as the best QR code. */
+    CV_PROP_RW float scaleTimingPatternScore;
+
+    /** @brief Aruco detector parameters are used to search for the finder patterns. */
+    aruco::DetectorParameters arucoParams;
 };
 
-    CV_WRAP QRCodeDetectorAruco(const QRCodeDetectorAruco::Params& detectorParameters = QRCodeDetectorAruco::Params());
-    CV_WRAP const QRCodeDetectorAruco::Params& getDetectorParameters() const;
-    CV_WRAP void setDetectorParameters(const QRCodeDetectorAruco::Params& detectorParameters);
+class CV_EXPORTS_W QRCodeDetectorAruco : public QRCodeDetectorBase {
+public:
+    CV_WRAP QRCodeDetectorAruco(const QrWithArucoParams& params = QrWithArucoParams());
+    CV_WRAP QrWithArucoParams getDetectorParameters();
+    CV_WRAP void setDetectorParameters(const QrWithArucoParams& params);
 };
 
 //! @}
@@ -914,7 +918,6 @@ public:
 
 #include "opencv2/objdetect/detection_based_tracker.hpp"
 #include "opencv2/objdetect/face.hpp"
-#include "opencv2/objdetect/aruco_detector.hpp"
 #include "opencv2/objdetect/charuco_detector.hpp"
 
 #endif

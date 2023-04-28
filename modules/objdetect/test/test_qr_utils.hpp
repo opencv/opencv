@@ -71,8 +71,8 @@ void check_qr(const string& root, const string& name_current_image, const string
             return; // done
         }
     }
-    TS::ptr()->printf(cvtest::TS::LOG, "Not found results for '%s", name_current_image.c_str(), "' image in config file:%s",
-                      dataset_config.c_str(), "Re-run tests with enabled UPDATE_QRCODE_TEST_DATA macro to update test data.\n");
+    FAIL() << "Not found results for '" << name_current_image << "' image in config file:" << dataset_config <<
+              "Re-run tests with enabled UPDATE_QRCODE_TEST_DATA macro to update test data.\n";
 }
 
 }
