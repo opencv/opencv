@@ -61,10 +61,10 @@
 #  define CV_FORMAT_PRINTF(A, B)
 #endif
 
-//! @cond IGNORED
-
 namespace cv
 {
+//! @cond IGNORED
+
 
 ////////////////////////////// Matx methods depending on core API /////////////////////////////
 
@@ -424,26 +424,6 @@ template<typename _Tp> static inline _Tp randu()
   return (_Tp)theRNG();
 }
 
-///////////////////////////////// Formatted string generation /////////////////////////////////
-
-/** @brief Returns a text string formatted using the printf-like expression.
-
-The function acts like sprintf but forms and returns an STL string. It can be used to form an error
-message in the Exception constructor.
-@param fmt printf-compatible formatting specifiers.
-
-**Note**:
-|Type|Specifier|
-|-|-|
-|`const char*`|`%s`|
-|`char`|`%c`|
-|`float` / `double`|`%f`,`%g`|
-|`int`, `long`, `long long`|`%d`, `%ld`, ``%lld`|
-|`unsigned`, `unsigned long`, `unsigned long long`|`%u`, `%lu`, `%llu`|
-|`uint64` -> `uintmax_t`, `int64` -> `intmax_t`|`%ju`, `%jd`|
-|`size_t`|`%zu`|
- */
-CV_EXPORTS String format( const char* fmt, ... ) CV_FORMAT_PRINTF(1, 2);
 
 ///////////////////////////////// Formatted output of cv::Mat /////////////////////////////////
 
@@ -495,6 +475,28 @@ int print(const Matx<_Tp, m, n>& matx, FILE* stream = stdout)
 }
 
 //! @endcond
+
+///////////////////////////////// Formatted string generation /////////////////////////////////
+
+/** @brief Returns a text string formatted using the printf-like expression.
+
+The function acts like sprintf but forms and returns an STL string. It can be used to form an error
+message in the Exception constructor.
+@param fmt printf-compatible formatting specifiers.
+
+**Note**:
+|Type|Specifier|
+|-|-|
+|`const char*`|`%s`|
+|`char`|`%c`|
+|`float` / `double`|`%f`,`%g`|
+|`int`, `long`, `long long`|`%d`, `%ld`, ``%lld`|
+|`unsigned`, `unsigned long`, `unsigned long long`|`%u`, `%lu`, `%llu`|
+|`uint64` -> `uintmax_t`, `int64` -> `intmax_t`|`%ju`, `%jd`|
+|`size_t`|`%zu`|
+@ingroup core_utils
+ */
+CV_EXPORTS String format(const char* fmt, ...) CV_FORMAT_PRINTF(1, 2);
 
 /****************************************************************************************\
 *                                  Auxiliary algorithms                                  *
