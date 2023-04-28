@@ -3025,35 +3025,40 @@ struct DecimateAlpha
 
 namespace
 {
-static inline void vx_load_as(const uchar* ptr, v_float32& a)
+inline void vx_load_as(const uchar* ptr, v_float32& a)
 { a = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(ptr))); }
 
-static inline void vx_load_as(const ushort* ptr, v_float32& a)
+inline void vx_load_as(const ushort* ptr, v_float32& a)
 { a = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(ptr))); }
 
-static inline void vx_load_as(const short* ptr, v_float32& a)
+inline void vx_load_as(const short* ptr, v_float32& a)
 { a = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(ptr))); }
 
-static inline void vx_load_as(const float* ptr, v_float32& a)
+inline void vx_load_as(const float* ptr, v_float32& a)
 { a = v_load(ptr); }
 
 v_float32 vx_setall_local(float coeff) {
     return v_setall_f32(coeff);
 }
+
 template <typename T>
 struct VInterArea {};
+
 template<>
 struct VInterArea<float> { using T = v_float32; };
+
 #if CV_SIMD128_64F
-static inline void vx_load_as(const double* ptr, v_float64& a)
+inline void vx_load_as(const double* ptr, v_float64& a)
 { a = v_load(ptr); }
 
 v_float64 vx_setall_local(double coeff) {
     return v_setall_f64(coeff);
 }
+
 template<>
 struct VInterArea<double> { using T = v_float64; };
 #endif
+
 template <typename T, typename WT>
 void v_inter_area_set_or_update_sum(const T *const src, int n, bool do_set,
                                     WT coeff, WT *sum) {
@@ -3078,11 +3083,12 @@ void v_inter_area_set_or_update_sum(const T *const src, int n, bool do_set,
             VT line;
             vx_load_as(src + x, line);
             const VT sum_x = vx_load(sum + x);
-            v_store(sum + x, sum_x + line * v_coeff);
+            v_store(sum + x, v_fma(line, v_coeff, sum_x));
         }
         for(; x < n; ++x) sum[x] += saturate_cast<WT>(src[x]) * coeff;
     }
 }
+
 #if !CV_SIMD128_64F
 template <>
 void v_inter_area_set_or_update_sum<double, double>(const double *const src,
@@ -3121,9 +3127,7 @@ public:
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
-        Size dsize = dst->size();
         const int cn = dst->channels();
-        dsize.width *= cn;
         const DecimateAlpha* xtab = xtab0;
         const int xtab_size = xtab_size0;
         const int j_start = tabofs[range.start], j_end = tabofs[range.end];
@@ -3149,14 +3153,14 @@ public:
             {
                 row_start = 0;
                 row_end = xtab_size;
-                start_di = xtab[0].di / cn;
+                start_di = xtab[0].di;
             }
             int prev_di = -1;
             int di = 0;
             WT* sum = nullptr;
             for (int j = row_start; j < row_end; ++j)
             {
-                di = (iter == 0) ? ytab[j].di : xtab[j].di / cn;
+                di = (iter == 0) ? ytab[j].di : xtab[j].di;
 
                 const bool start_new_line = (di != prev_di);
                 if (start_new_line)
@@ -3176,7 +3180,7 @@ public:
                 else
                 {
                     const WT coeff = xtab[j].alpha;
-                    const int si = xtab[j].si / cn;
+                    const int si = xtab[j].si;
                     const WT* s = tmp.template ptr<WT>(si);
                     v_inter_area_set_or_update_sum<WT, WT>(s, tmp.cols * cn,
                                                            start_new_line, coeff, sum);
@@ -3237,7 +3241,7 @@ typedef void (*ResizeAreaFunc)( const Mat& src, Mat& dst,
                                 const int* yofs);
 
 
-static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, DecimateAlpha* tab )
+static int computeResizeAreaTab( int ssize, int dsize, double scale, DecimateAlpha* tab )
 {
     int k = 0;
     for(int dx = 0; dx < dsize; dx++ )
@@ -3254,24 +3258,24 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
         if( sx1 - fsx1 > 1e-3 )
         {
             CV_Assert( k < ssize*2 );
-            tab[k].di = dx * cn;
-            tab[k].si = (sx1 - 1) * cn;
+            tab[k].di = dx;
+            tab[k].si = sx1 - 1;
             tab[k++].alpha = (float)((sx1 - fsx1) / cellWidth);
         }
 
         for(int sx = sx1; sx < sx2; sx++ )
         {
             CV_Assert( k < ssize*2 );
-            tab[k].di = dx * cn;
-            tab[k].si = sx * cn;
+            tab[k].di = dx;
+            tab[k].si = sx;
             tab[k++].alpha = float(1.0 / cellWidth);
         }
 
         if( fsx2 - sx2 > 1e-3 )
         {
             CV_Assert( k < ssize*2 );
-            tab[k].di = dx * cn;
-            tab[k].si = sx2 * cn;
+            tab[k].di = dx;
+            tab[k].si = sx2;
             tab[k++].alpha = (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
         }
     }
@@ -3953,8 +3957,8 @@ void resize(int src_type,
             AutoBuffer<DecimateAlpha> _xytab((src_width + src_height)*2);
             DecimateAlpha* xtab = _xytab.data(), *ytab = xtab + src_width*2;
 
-            int xtab_size = computeResizeAreaTab(src_width, dsize.width, cn, scale_x, xtab);
-            int ytab_size = computeResizeAreaTab(src_height, dsize.height, 1, scale_y, ytab);
+            int xtab_size = computeResizeAreaTab(src_width, dsize.width, scale_x, xtab);
+            int ytab_size = computeResizeAreaTab(src_height, dsize.height, scale_y, ytab);
 
             AutoBuffer<int> _tabofs(dsize.height + 1);
             int* tabofs = _tabofs.data();
