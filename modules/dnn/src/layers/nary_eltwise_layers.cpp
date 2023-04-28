@@ -50,6 +50,8 @@ public:
         DIV,
     } op;
 
+    // If the eltwise implementation is modified, you need to force enable the 'Layer_Test_Eltwise_bcast'
+    // test in the 'test_layers.cpp' file to make sure it all passes
     NaryEltwiseLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
@@ -347,7 +349,6 @@ public:
         size_t dp1 = steps[1][ndims-1]/sizeof(T);
         size_t dp2 = steps[2][ndims-1]/sizeof(T);
 
-        CV_Assert(dp == 1);
         enum { BLOCK_SIZE = 1024 };
         T blck[BLOCK_SIZE];
 
