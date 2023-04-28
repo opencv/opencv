@@ -3035,10 +3035,10 @@ inline void vx_load_as(const short* ptr, v_float32& a)
 { a = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand(ptr))); }
 
 inline void vx_load_as(const float* ptr, v_float32& a)
-{ a = v_load(ptr); }
+{ a = vx_load(ptr); }
 
 v_float32 vx_setall_local(float coeff) {
-    return v_setall_f32(coeff);
+    return vx_setall_f32(coeff);
 }
 
 template <typename T>
@@ -3049,10 +3049,10 @@ struct VInterArea<float> { using T = v_float32; };
 
 #if CV_SIMD128_64F
 inline void vx_load_as(const double* ptr, v_float64& a)
-{ a = v_load(ptr); }
+{ a = vx_load(ptr); }
 
 v_float64 vx_setall_local(double coeff) {
-    return v_setall_f64(coeff);
+    return vx_setall_f64(coeff);
 }
 
 template<>
