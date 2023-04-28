@@ -332,9 +332,8 @@ public:
         // Inputs Run params
         std::vector<Ort::Value> in_tensors;
         for(size_t i = 0; i < num_in; ++i) {
-            char* in_node_name_p = session.GetInputName(i, allocator);
-            in_node_names.emplace_back(in_node_name_p);
-            allocator.Free(in_node_name_p);
+            auto in_node_name_p = session.GetInputNameAllocated(i, allocator);
+            in_node_names.emplace_back(in_node_name_p.get());
             in_node_dims = toORT(ins[i].size);
             in_tensors.emplace_back(Ort::Value::CreateTensor<T>(memory_info,
                                                                 const_cast<T*>(ins[i].ptr<T>()),
@@ -345,9 +344,8 @@ public:
         // Outputs Run params
         if (custom_out_names.empty()) {
             for(size_t i = 0; i < num_out; ++i) {
-                char* out_node_name_p = session.GetOutputName(i, allocator);
-                out_node_names.emplace_back(out_node_name_p);
-                allocator.Free(out_node_name_p);
+                auto out_node_name_p = session.GetOutputNameAllocated(i, allocator);
+                out_node_names.emplace_back(out_node_name_p.get());
             }
         } else {
             out_node_names = std::move(custom_out_names);
