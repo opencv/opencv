@@ -61,10 +61,10 @@
 #  define CV_FORMAT_PRINTF(A, B)
 #endif
 
-//! @cond IGNORED
-
 namespace cv
 {
+//! @cond IGNORED
+
 
 ////////////////////////////// Matx methods depending on core API /////////////////////////////
 
