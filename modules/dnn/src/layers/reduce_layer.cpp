@@ -394,7 +394,7 @@ public:
         auto desc_x = x->getTensorDesc();
 
         std::vector<int> axes_shape{(int)axes.size()};
-        Mat axes_mat(axes_shape, CV_32SC1, &axes[0]);
+        Mat axes_mat(axes_shape, CV_32S, &axes[0]);
         auto op_const_axes = std::make_shared<CannConstOp>(axes_mat.data, axes_mat.type(), axes_shape, cv::format("%s_axes", name.c_str()));
         auto desc_axes = op_const_axes->getTensorDesc();
 
