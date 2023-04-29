@@ -36,6 +36,7 @@ Code
 ----
 
 Below code snippet shows a simple procedure to create a disparity map.
+
 @code{.py}
 import numpy as np
 import cv2 as cv
@@ -44,18 +45,27 @@ from matplotlib import pyplot as plt
 imgL = cv.imread('tsukuba_l.png', cv.IMREAD_GRAYSCALE)
 imgR = cv.imread('tsukuba_r.png', cv.IMREAD_GRAYSCALE)
 
-stereo = cv.StereoBM_create(numDisparities=16, blockSize=15)
+block_size = 9
+stereo = cv2.StereoSGBM.create(
+    numDisparities=64,
+    blockSize=block_size,
+    P1=8*(block_size**2),
+    P2 =32*(block_size**2),
+    uniquenessRatio=5,
+)
+
 disparity = stereo.compute(imgL,imgR)
 plt.imshow(disparity,'gray')
 plt.show()
 @endcode
+
 Below image contains the original image (left) and its disparity map (right). As you can see, the result
 is contaminated with high degree of noise. By adjusting the values of numDisparities and blockSize,
 you can get a better result.
 
-![image](images/disparity_map.jpg)
+![image](images/disparity_map.png)
 
-There are some parameters when you get familiar with StereoBM, and you may need to fine tune the parameters to get better and smooth results. Parameters:
+There are some parameters when you get familiar with **cv.StereoSGBM**, and you may need to fine tune the parameters to get better and smooth results. Parameters:
 - texture_threshold: filters out areas that don't have enough texture for reliable matching
 - Speckle range and size: Block-based matchers often produce "speckles" near the boundaries of objects, where the matching window catches the foreground on one side and the background on the other. In this scene it appears that the matcher is also finding small spurious matches in the projected texture on the table. To get rid of these artifacts we post-process the disparity image with a speckle filter controlled by the speckle_size and speckle_range parameters. speckle_size is the number of pixels below which a disparity blob is dismissed as "speckle." speckle_range controls how close in value disparities must be to be considered part of the same blob.
 - Number of disparities: How many pixels to slide the window over. The larger it is, the larger the range of visible depths, but more computation is required.
