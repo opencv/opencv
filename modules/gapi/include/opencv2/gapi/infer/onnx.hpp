@@ -300,6 +300,20 @@ public:
     Params(const std::string& tag, const std::string& model_path)
          : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true}, m_tag(tag) {}
 
+    void cfgMeanStdDev(const std::string &layer,
+                       const cv::Scalar &m,
+                       const cv::Scalar &s) {
+        auto new_m_idx = desc.mean.size();
+        auto new_s_idx = desc.stdev.size();
+        GAPI_Assert(new_m_idx == new_s_idx);
+        desc.mean.push_back(m);
+        desc.stdev.push_back(s);
+    }
+
+    void cfgNormalize(const std::string &layer, bool flag) {
+        desc.normalize.push_back(flag);
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend() const { return cv::gapi::onnx::backend(); }
     std::string   tag()     const { return m_tag; }

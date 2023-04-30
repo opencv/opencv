@@ -284,6 +284,7 @@ inline void preprocess(const cv::Mat& src,
         cv::resize(csc, rsz, cv::Size(new_w, new_h));
         if (src.depth() == CV_8U && type == CV_32F) {
             rsz.convertTo(pp, type, ti.normalize ? 1.f / 255 : 1.f);
+
             if (ti.mstd.has_value()) {
                 pp -= ti.mstd->mean;
                 pp /= ti.mstd->stdev;
