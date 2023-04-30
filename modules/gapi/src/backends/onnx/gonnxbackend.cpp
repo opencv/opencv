@@ -1144,12 +1144,27 @@ namespace {
             if (pp.is_generic) {
                 auto& info = cv::util::any_cast<cv::detail::InOutInfo>(op.params);
 
-                for (const auto& a : info.in_names)
+                for (const auto& a : info.in_names) // FIXME: not 'a' but 'layer_name'!
                 {
                     pp.input_names.push_back(a);
+                    if (!pp.generic_mstd.empty()) {
+                        const auto &ms = pp.generic_mstd.at(a);
+                        pp.mean.push_back(ms.first);
+                        pp.stdev.push_back(ms.second);
+                    }
+                    if (!pp.generic_norm.empty()) {
+                        pp.normalize.push_back(pp.generic_norm.at(a));
+                    }
                 }
+
+                // Incorporate extra parameters associated with input layer names
+                // FIXME(DM): The current form assumes ALL input layers require
+                // this information, this is obviously not correct
+
+
                 // Adding const input is necessary because the definition of input_names
                 // includes const input.
+                // FIXME(DM): This is actually questionable!
                 for (const auto& a : pp.const_inputs)
                 {
                     pp.input_names.push_back(a.first);

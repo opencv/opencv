@@ -70,6 +70,14 @@ struct ParamDesc {
     std::vector<std::string> names_to_remap; //!< Names of output layers that will be processed in PostProc function.
 
     bool is_generic;
+
+    // TODO: Needs to modify the rest of ParamDesc accordingly to support
+    // both generic and non-generic options without duplication
+    // (as it was done for the OV IE backend)
+    // These values are pushed into the respective vector<> fields above
+    // when the generic infer parameters are unpacked (see GONNXBackendImpl::unpackKernel)
+    std::unordered_map<std::string, std::pair<cv::Scalar, cv::Scalar> > generic_mstd;
+    std::unordered_map<std::string, bool> generic_norm;
 };
 } // namespace detail
 
@@ -303,15 +311,11 @@ public:
     void cfgMeanStdDev(const std::string &layer,
                        const cv::Scalar &m,
                        const cv::Scalar &s) {
-        auto new_m_idx = desc.mean.size();
-        auto new_s_idx = desc.stdev.size();
-        GAPI_Assert(new_m_idx == new_s_idx);
-        desc.mean.push_back(m);
-        desc.stdev.push_back(s);
+        desc.generic_mstd[layer] = std::make_pair(m, s);
     }
 
     void cfgNormalize(const std::string &layer, bool flag) {
-        desc.normalize.push_back(flag);
+        desc.generic_norm[layer] = flag;
     }
 
     // BEGIN(G-API's network parametrization API)
