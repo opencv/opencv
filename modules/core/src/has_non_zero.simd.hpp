@@ -37,8 +37,24 @@ template<>
 inline bool hasNonZero_(const float* src, size_t len )
 {
     bool res = false;
-    for(size_t i = 0; !res && (i < len) ; ++i)
-        res |= (*src++ != 0);//no bitwise "or" to support -0 and avoid breaking strict-aliasing rules
+    if (len > 0)
+    {
+        size_t i=0;
+        if constexpr(sizeof(float) == sizeof(unsigned int))
+        {
+            typedef unsigned int float_as_uint_t;
+            #if CV_ENABLE_UNROLLED
+            const float_as_uint_t* src_as_ui = reinterpret_cast<const float_as_uint_t*>(src);
+            for(; !res && (i+4 <= len); i += 4 )
+            {
+                const float_as_uint_t gathered = (src_as_ui[i] | src_as_ui[i+1] | src_as_ui[i+2] | src_as_ui[i+3]);
+                res |= ((gathered<<1) != 0);//remove what would be the sign bit
+            }
+            #endif
+        }
+        for( ; !res && (i < len); i++ )
+            res |= (src[i] != 0);
+    }
     return res;
 }
 
@@ -46,8 +62,24 @@ template<>
 inline bool hasNonZero_(const double* src, size_t len )
 {
     bool res = false;
-    for(size_t i = 0; !res && (i < len) ; ++i)
-        res |= (*src++ != 0);//no bitwise "or" to support -0 and avoid breaking strict-aliasing rules
+    if (len > 0)
+    {
+        size_t i=0;
+        if constexpr(sizeof(double) == sizeof(uint64_t))
+        {
+            typedef uint64_t double_as_uint_t;
+            #if CV_ENABLE_UNROLLED
+            const double_as_uint_t* src_as_ui = reinterpret_cast<const double_as_uint_t*>(src);
+            for(; !res && (i+4 <= len); i += 4 )
+            {
+                const double_as_uint_t gathered = (src_as_ui[i] | src_as_ui[i+1] | src_as_ui[i+2] | src_as_ui[i+3]);
+                res |= ((gathered<<1) != 0);//remove what would be the sign bit
+            }
+            #endif
+        }
+        for( ; !res && (i < len); i++ )
+            res |= (src[i] != 0);
+    }
     return res;
 }
 
