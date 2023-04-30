@@ -37,20 +37,8 @@ template<>
 inline bool hasNonZero_(const float* src, size_t len )
 {
     bool res = false;
-    if (len > 0)
-    {
-        const uint32_t* src_as_ui32 = reinterpret_cast<const uint32_t*>(src);
-        size_t i=0;
-        #if CV_ENABLE_UNROLLED
-        for(; !res && (i+4 <= len); i += 4 )
-        {
-            const uint32_t src_or = src_as_ui32[i] | src_as_ui32[i+1] | src_as_ui32[i+2] | src_as_ui32[i+3];
-            res |= (*reinterpret_cast<const float*>(&src_or) != 0);
-        }
-        #endif
-        for( ; !res && (i < len); i++ )
-            res |= (*reinterpret_cast<const float*>(&src_as_ui32[i]) != 0);
-    }
+    for(size_t i = 0; !res && (i < len) ; ++i)
+        res |= (*src++ != 0);//no bitwise "or" to support -0 and avoid breaking strict-aliasing rules
     return res;
 }
 
@@ -58,23 +46,10 @@ template<>
 inline bool hasNonZero_(const double* src, size_t len )
 {
     bool res = false;
-    if (len > 0)
-    {
-        const uint64_t* src_as_ui64 = reinterpret_cast<const uint64_t*>(src);
-        size_t i=0;
-        #if CV_ENABLE_UNROLLED
-        for(; !res && (i+4 <= len); i += 4 )
-        {
-            const uint64_t src_or = src_as_ui64[i] | src_as_ui64[i+1] | src_as_ui64[i+2] | src_as_ui64[i+3];
-            res |= (*reinterpret_cast<const double*>(&src_or) != 0);
-        }
-        #endif
-        for( ; !res && (i < len); i++ )
-            res |= (*reinterpret_cast<const double*>(&src_as_ui64[i]) != 0);
-    }
+    for(size_t i = 0; !res && (i < len) ; ++i)
+        res |= (*src++ != 0);//no bitwise "or" to support -0 and avoid breaking strict-aliasing rules
     return res;
 }
-
 
 static bool hasNonZero8u( const uchar* src, size_t len )
 {
