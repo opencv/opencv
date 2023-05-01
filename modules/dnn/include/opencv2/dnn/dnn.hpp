@@ -1422,7 +1422,7 @@ CV__DNN_INLINE_NS_BEGIN
          /** @brief Set scalefactor value for frame.
           *  @param[in] scale Multiplier for frame values.
          */
-         CV_WRAP Model& setInputScale(double scale);
+         CV_WRAP Model& setInputScale(const Scalar& scale);
 
          /** @brief Set flag crop for frame.
           *  @param[in] crop Flag which indicates whether image will be cropped after resize or not.
