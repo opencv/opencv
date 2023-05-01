@@ -1045,6 +1045,17 @@ models = [
         url='https://storage.googleapis.com/mediapipe-assets/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite?generation=1661875692679200',
         sha='200217d746d58e68028a64ad0472631060e6affb',
         filename='tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite'),
+    Model(
+        name='PP_OCRv3_DB_text_det (ONNX)',
+        url='https://github.com/zihaomu/zihaomu/files/9740907/PP_OCRv3_DB_text_det.tar.gz',
+        sha='a2a008361d785fbe32a22ec2106621ecd1576f48',
+        filename='PP_OCRv3_DB_text_det.tar.gz'),
+    Model(
+        name='PP_OCRv3_DB_text_det (ONNX)',
+        archive='PP_OCRv3_DB_text_det.tar.gz',
+        member='PP_OCRv3_DB_text_det/PP_OCRv3_DB_text_det.onnx',
+        sha='f541f0b448561c7ad919ba9fffa72ff105062934',
+        filename='onnx/models/PP_OCRv3_DB_text_det.onnx'),
 ]
 
 # Note: models will be downloaded to current working directory
