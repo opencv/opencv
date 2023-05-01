@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <atomic>
 #include <iostream>
 #include <ostream>
 
@@ -57,18 +58,6 @@
 
 #include <opencv2/core/utils/fp_control_utils.hpp>
 #include <opencv2/core/utils/fp_control.private.hpp>
-
-#ifndef OPENCV_WITH_THREAD_SANITIZER
-  #if defined(__clang__) && defined(__has_feature)
-  #if __has_feature(thread_sanitizer)
-      #define OPENCV_WITH_THREAD_SANITIZER 1
-      #include <atomic>  // assume C++11
-  #endif
-  #endif
-#endif
-#ifndef OPENCV_WITH_THREAD_SANITIZER
-    #define OPENCV_WITH_THREAD_SANITIZER 0
-#endif
 
 namespace cv {
 
@@ -1539,11 +1528,7 @@ private:
 #endif
 #else // _WIN32
     pthread_key_t  tlsKey;
-#if OPENCV_WITH_THREAD_SANITIZER
     std::atomic<bool> disposed;
-#else
-    bool disposed;
-#endif
 #endif
 };
 
