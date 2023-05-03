@@ -13,6 +13,12 @@ if(HAVE_WINRT_CX AND NOT WINRT)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 
+if (HAVE_AVIF)
+  add_definitions(-DHAVE_AVIF)
+  ocv_include_directories(${AVIF_INCLUDE_DIR})
+  list(APPEND GRFMT_LIBS ${AVIF_LIBRARY})
+endif()
+
 if(HAVE_JPEG)
   ocv_include_directories(${JPEG_INCLUDE_DIR} ${${JPEG_LIBRARY}_BINARY_DIR})
   list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
@@ -108,6 +114,12 @@ list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/rgbe.hpp)
 list(APPEND grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/rgbe.cpp)
 list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/exif.hpp)
 list(APPEND grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/exif.cpp)
+
+if (HAVE_AVIF)
+  # These files come from https://aomedia.googlesource.com/libavifinfo/.
+  list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/avifinfo.h)
+  list(APPEND grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/avifinfo.c)
+endif()
 
 source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 
