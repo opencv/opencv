@@ -38,21 +38,19 @@ int main()
     waitKey(0);
     //! [Algorithm]
 
+    const char * vertex_names[4] {"0", "1", "2", "3"};
+
     //! [RotatedRect_demo]
-    Mat test_image(400, 400, CV_8UC3, Scalar(0));
+    Mat test_image(200, 200, CV_8UC3, Scalar(0));
     RotatedRect rRect = RotatedRect(Point2f(100,100), Size2f(100,50), 30);
 
     Point2f vertices[4];
     rRect.points(vertices);
-
-    putText(test_image, "0", vertices[0], FONT_HERSHEY_SIMPLEX, 2, Scalar(255,255,255));
-    putText(test_image, "1", vertices[1], FONT_HERSHEY_SIMPLEX, 2, Scalar(0,0,255));
-    putText(test_image, "2", vertices[2], FONT_HERSHEY_SIMPLEX, 2, Scalar(0,255,0));
-    putText(test_image, "3", vertices[3], FONT_HERSHEY_SIMPLEX, 2, Scalar(255,0,0));
-    line(test_image, vertices[0], vertices[0], Scalar(255,255,255), 2);
-    line(test_image, vertices[1], vertices[1], Scalar(0,0,255), 2);
-    line(test_image, vertices[2], vertices[2], Scalar(0,255,0), 2);
-    line(test_image, vertices[3], vertices[3], Scalar(255,0,0), 2);
+    for (int i = 0; i < 4; i++)
+    {
+        line(test_image, vertices[i], vertices[(i+1)%4], Scalar(0,255,0), 2);
+        putText(test_image, vertex_names[i], vertices[i], FONT_HERSHEY_SIMPLEX, 1, Scalar(255,255,255));
+    }
 
     Rect brect = rRect.boundingRect();
     rectangle(test_image, brect, Scalar(255,0,0), 2);
