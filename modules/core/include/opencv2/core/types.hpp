@@ -545,8 +545,11 @@ public:
      */
     RotatedRect(const Point2f& point1, const Point2f& point2, const Point2f& point3);
 
-    /** returns 4 vertices of the rectangle
-    @param pts The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
+    /** returns 4 vertices of the rotated rectangle
+    @param pts The points array for storing rectangle vertices. The order is _bottomLeft_, _topLeft_, topRight, bottomRight.
+    @note _Bottom_, _Top_, _Left_ and _Right_ sides refer to the original rectangle (angle is 0),
+    so after 180 degree rotation _bottomLeft_ point will be located at the top right corner of the
+    rectangle.
     */
     void points(Point2f pts[]) const;
     //! returns the minimal up-right integer rectangle containing the rotated rectangle
