@@ -60,6 +60,7 @@ done through basic geometrical equations. The equations used depend on the chose
 objects. Currently OpenCV supports three types of objects for calibration:
 
 -   Classical black-white chessboard
+-   ChArUco board pattern
 -   Symmetrical circle pattern
 -   Asymmetrical circle pattern
 
