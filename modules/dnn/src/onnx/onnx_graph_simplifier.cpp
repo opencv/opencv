@@ -292,41 +292,10 @@ public:
     }
 };
 
-/*  Fusion for LayerNormalization.
-
-    Graph before fusion
-           +-> ReduceMean ->+
-           |                |
-        [Input]  ------->  Sub  ----------------------------------------------->  Div -> Mul(B=weight) -> Add(B=bias) -> [Output]
-                            |                                                      |
-                            +-> Pow(Y=2) -> ReduceMean -> Add(B=epsilon) -> Sqrt ->+
-
-    Graph after fusion
-        [Input] -> LayerNorm -> [Output]
-                        \
-                    [weight], [bias]
-*/
-class LayerNormSubGraph : public Subgraph
+class LayerNormSubGraphBase : public Subgraph
 {
 public:
-    LayerNormSubGraph() : axis(-1), epsilon(1e-5)
-    {
-        int input = addNodeToMatch("");
-        int mean = addNodeToMatch("ReduceMean", input);
-
-        int sub = addNodeToMatch("Sub", input, mean);
-
-        int pow = addNodeToMatch("Pow", sub, addNodeToMatch(""));
-        int mean1 = addNodeToMatch("ReduceMean", pow);
-        int add = addNodeToMatch("Add", mean1, addNodeToMatch(""));
-        int sqrt = addNodeToMatch("Sqrt", add);
-
-        int div = addNodeToMatch("Div", sub, sqrt);
-        int mul = addNodeToMatch("Mul", div, addNodeToMatch(""));
-        addNodeToMatch("Add", mul, addNodeToMatch(""));
-
-        setFusedNode("LayerNormalization", input);
-    }
+    LayerNormSubGraphBase() : axis(-1), epsilon(1e-5) {}
 
     static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
     {
@@ -397,8 +366,8 @@ public:
 
             epsilon = extractConstant(net, matchedNodesIds[4], 1);
 
-            weight_name = getInputName(net, matchedNodesIds[7], 1);
-            bias_name = getInputName(net, matchedNodesIds[8], 1);
+            weight_name = getInputName(net, matchedNodesIds[7], index_weight);
+            bias_name = getInputName(net, matchedNodesIds[8], index_bias);
 
             return true;
         }
@@ -426,8 +395,90 @@ public:
 protected:
     int axis;
     float epsilon;
+    int index_weight;
+    int index_bias;
     std::string weight_name;
     std::string bias_name;
+};
+
+/*  Fusion for LayerNormalization.
+
+    Graph before fusion
+           +-> ReduceMean ->+
+           |                |
+        [Input]  ------->  Sub  ----------------------------------------------->  Div -> Mul(B=weight) -> Add(B=bias) -> [Output]
+                            |                                                      |
+                            +-> Pow(Y=2) -> ReduceMean -> Add(B=epsilon) -> Sqrt ->+
+
+    Graph after fusion
+        [Input] -> LayerNorm -> [Output]
+                        \
+                    [weight], [bias]
+*/
+class LayerNormSubGraph_MulB_AddB : public LayerNormSubGraphBase
+{
+public:
+    LayerNormSubGraph_MulB_AddB()
+    {
+        int input = addNodeToMatch("");
+        int mean = addNodeToMatch("ReduceMean", input);
+
+        int sub = addNodeToMatch("Sub", input, mean);
+
+        int pow = addNodeToMatch("Pow", sub, addNodeToMatch(""));
+        int mean1 = addNodeToMatch("ReduceMean", pow);
+        int add = addNodeToMatch("Add", mean1, addNodeToMatch(""));
+        int sqrt = addNodeToMatch("Sqrt", add);
+
+        int div = addNodeToMatch("Div", sub, sqrt);
+        int mul = addNodeToMatch("Mul", div, addNodeToMatch(""));
+        addNodeToMatch("Add", mul, addNodeToMatch(""));
+
+        index_weight = 1;
+        index_bias = 1;
+
+        setFusedNode("LayerNormalization", input);
+    }
+};
+
+/*  Fusion for LayerNormalization.
+
+    Graph before fusion
+           +-> ReduceMean ->+
+           |                |
+        [Input]  ------->  Sub  ----------------------------------------------->  Div -> Mul(A=weight) -> Add(B=bias) -> [Output]
+                            |                                                      |
+                            +-> Pow(Y=2) -> ReduceMean -> Add(B=epsilon) -> Sqrt ->+
+
+    Graph after fusion
+        [Input] -> LayerNorm -> [Output]
+                        \
+                    [weight], [bias]
+*/
+class LayerNormSubGraph_MulA_AddB : public LayerNormSubGraphBase
+{
+public:
+    LayerNormSubGraph_MulA_AddB()
+    {
+        int input = addNodeToMatch("");
+        int mean = addNodeToMatch("ReduceMean", input);
+
+        int sub = addNodeToMatch("Sub", input, mean);
+
+        int pow = addNodeToMatch("Pow", sub, addNodeToMatch(""));
+        int mean1 = addNodeToMatch("ReduceMean", pow);
+        int add = addNodeToMatch("Add", mean1, addNodeToMatch(""));
+        int sqrt = addNodeToMatch("Sqrt", add);
+
+        int div = addNodeToMatch("Div", sub, sqrt);
+        int mul = addNodeToMatch("Mul", addNodeToMatch(""), div);
+        addNodeToMatch("Add", mul, addNodeToMatch(""));
+
+        index_weight = 0;
+        index_bias = 1;
+
+        setFusedNode("LayerNormalization", input);
+    }
 };
 
 class SoftMaxSubgraphBase : public Subgraph
@@ -1068,7 +1119,8 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     std::vector<Ptr<Subgraph> > subgraphs;
     subgraphs.push_back(makePtr<GeluSubGraph>());
     subgraphs.push_back(makePtr<GeluApproximationSubGraph>());
-    subgraphs.push_back(makePtr<LayerNormSubGraph>());
+    subgraphs.push_back(makePtr<LayerNormSubGraph_MulB_AddB>());
+    subgraphs.push_back(makePtr<LayerNormSubGraph_MulA_AddB>());
     subgraphs.push_back(makePtr<GatherCastSubgraph>());
     subgraphs.push_back(makePtr<MulCastSubgraph>());
     subgraphs.push_back(makePtr<UpsampleSubgraph>());
