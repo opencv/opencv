@@ -42,8 +42,8 @@ inline bool hasNonZero_(const float* src, size_t len )
         size_t i=0;
         if (sizeof(float) == sizeof(unsigned int))
         {
-            typedef unsigned int float_as_uint_t;
             #if CV_ENABLE_UNROLLED
+            typedef unsigned int float_as_uint_t;
             const float_as_uint_t* src_as_ui = reinterpret_cast<const float_as_uint_t*>(src);
             for(; !res && (i+4 <= len); i += 4 )
             {
@@ -67,8 +67,8 @@ inline bool hasNonZero_(const double* src, size_t len )
         size_t i=0;
         if (sizeof(double) == sizeof(uint64_t))
         {
-            typedef uint64_t double_as_uint_t;
             #if CV_ENABLE_UNROLLED
+            typedef uint64_t double_as_uint_t;
             const double_as_uint_t* src_as_ui = reinterpret_cast<const double_as_uint_t*>(src);
             for(; !res && (i+4 <= len); i += 4 )
             {
