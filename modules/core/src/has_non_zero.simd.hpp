@@ -40,7 +40,7 @@ inline bool hasNonZero_(const float* src, size_t len )
     if (len > 0)
     {
         size_t i=0;
-        if constexpr(sizeof(float) == sizeof(unsigned int))
+        if (sizeof(float) == sizeof(unsigned int))
         {
             typedef unsigned int float_as_uint_t;
             #if CV_ENABLE_UNROLLED
@@ -65,7 +65,7 @@ inline bool hasNonZero_(const double* src, size_t len )
     if (len > 0)
     {
         size_t i=0;
-        if constexpr(sizeof(double) == sizeof(uint64_t))
+        if (sizeof(double) == sizeof(uint64_t))
         {
             typedef uint64_t double_as_uint_t;
             #if CV_ENABLE_UNROLLED
