@@ -30,7 +30,8 @@ class CalibProcessor : public FrameProcessor
 protected:
     cv::Ptr<calibrationData> mCalibData;
     TemplateType mBoardType;
-    cv::Size mBoardSize;
+    cv::Size mBoardSizeUnits;
+    cv::Size mBoardSizeInnerCorners;
     std::vector<cv::Point2f> mTemplateLocations;
     std::vector<cv::Point2f> mCurrentImagePoints;
     cv::Mat mCurrentCharucoCorners;
