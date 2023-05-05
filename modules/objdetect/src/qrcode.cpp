@@ -4052,7 +4052,7 @@ QrWithArucoParams::QrWithArucoParams() {
     maxPenalties = 0.4f;
     maxColorsMismatch = 0.2f;
     scaleTimingPatternScore = 0.9f;
-    arucoParams.minMarkerPerimeterRate = 0.02;
+    //arucoParams.minMarkerPerimeterRate = 0.02;
 }
 
 struct FinderPatternInfo {
@@ -4475,14 +4475,16 @@ vector<QRCode> analyzeFinderPatterns(const vector<vector<Point2f> > &corners, Ma
 
 struct PimplQRAruco : public ImplContour {
     QrWithArucoParams qrParams;
+    aruco::DetectorParameters arucoParams;
     aruco::ArucoDetector arucoDetector;
 
-    PimplQRAruco() {
+    PimplQRAruco(const QrWithArucoParams& _params, const aruco::DetectorParameters& _arucoParams):
+        qrParams(_params), arucoParams(_arucoParams) {
         Mat bits = Mat::ones(Size(5, 5), CV_8UC1);
         Mat(bits, Rect(1, 1, 3, 3)).setTo(Scalar(0));
         Mat byteList = aruco::Dictionary::getByteListFromBits(bits);
         aruco::Dictionary dictionary = aruco::Dictionary(byteList, 5, 4);
-        arucoDetector = aruco::ArucoDetector(dictionary, qrParams.arucoParams);
+        arucoDetector = aruco::ArucoDetector(dictionary, arucoParams);
     }
 
     bool detectMulti(InputArray in, OutputArray points) const override {
@@ -4515,9 +4517,8 @@ struct PimplQRAruco : public ImplContour {
 };
 
 
-QRCodeDetectorAruco::QRCodeDetectorAruco(const QrWithArucoParams& params) {
-    p = new PimplQRAruco();
-    (std::static_pointer_cast<PimplQRAruco>(p))->qrParams = params;
+QRCodeDetectorAruco::QRCodeDetectorAruco(const QrWithArucoParams& params, const aruco::DetectorParameters& arucoParams) {
+    p = new PimplQRAruco(params, arucoParams);
 }
 
 QrWithArucoParams QRCodeDetectorAruco::getDetectorParameters() {

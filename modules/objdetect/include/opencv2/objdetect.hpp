@@ -902,13 +902,13 @@ struct CV_EXPORTS_W_SIMPLE QrWithArucoParams {
      * current QR code set as the best QR code. */
     CV_PROP_RW float scaleTimingPatternScore;
 
-    /** @brief Aruco detector parameters are used to search for the finder patterns. */
-    aruco::DetectorParameters arucoParams;
+
 };
 
 class CV_EXPORTS_W QRCodeDetectorAruco : public QRCodeDetectorBase {
 public:
-    CV_WRAP QRCodeDetectorAruco(const QrWithArucoParams& params = QrWithArucoParams());
+    CV_WRAP QRCodeDetectorAruco(const QrWithArucoParams& params = QrWithArucoParams(),
+                                const aruco::DetectorParameters& arucoParams = aruco::DetectorParameters());
     CV_WRAP QrWithArucoParams getDetectorParameters();
     CV_WRAP void setDetectorParameters(const QrWithArucoParams& params);
 };
