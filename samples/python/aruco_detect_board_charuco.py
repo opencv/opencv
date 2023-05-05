@@ -51,7 +51,7 @@ def main():
         sys.exit()
     width = args.w
     height = args.h
-    sqruare_len = args.sl
+    square_len = args.sl
     marker_len = args.ml
     dict = args.d
     video = args.v
@@ -66,7 +66,7 @@ def main():
 
     aruco_dict = cv.aruco.getPredefinedDictionary(dict)
     board_size = (width, height)
-    board = cv.aruco.CharucoBoard(board_size, sqruare_len, marker_len, aruco_dict)
+    board = cv.aruco.CharucoBoard(board_size, square_len, marker_len, aruco_dict)
     charuco_detector = cv.aruco.CharucoDetector(board)
 
     image = None
