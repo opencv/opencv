@@ -183,6 +183,18 @@ static const struct VideoBackendInfo builtin_backends[] =
     // dropped backends: MIL, TYZX
 };
 
+static const struct VideoDeprecatedBackendInfo deprecated_backends[] =
+{
+#ifdef _WIN32
+    {CAP_VFW, "Video for Windows"},
+#endif
+    {CAP_QT, "QuickTime"},
+    {CAP_UNICAP, "Unicap"},
+    {CAP_OPENNI, "OpenNI"},
+    {CAP_OPENNI_ASUS, "OpenNI"},
+    {CAP_GIGANETIX, "GigEVisionSDK"}
+};
+
 bool sortByPriority(const VideoBackendInfo &lhs, const VideoBackendInfo &rhs)
 {
     return lhs.priority > rhs.priority;
@@ -351,6 +363,16 @@ std::vector<VideoBackendInfo> getAvailableBackends_Writer()
     return result;
 }
 
+bool checkDeprecatedBackend(int api) {
+    const int M = sizeof(deprecated_backends) / sizeof(deprecated_backends[0]);
+    for (size_t i = 0; i < M; i++)
+    {
+        if (deprecated_backends[i].id == api)
+            return true;
+    }
+    return false;
+}
+
 cv::String getBackendName(VideoCaptureAPIs api)
 {
     if (api == CAP_ANY)
@@ -362,6 +384,14 @@ cv::String getBackendName(VideoCaptureAPIs api)
         if (backend.id == api)
             return backend.name;
     }
+
+    const int M = sizeof(deprecated_backends) / sizeof(deprecated_backends[0]);
+    for (size_t i = 0; i < M; i++)
+    {
+        if (deprecated_backends[i].id == api)
+            return deprecated_backends[i].name;
+    }
+
     return cv::format("UnknownVideoAPI(%d)", (int)api);
 }
 
