@@ -36,6 +36,34 @@ struct ParamDesc {
 
     std::vector<std::string> input_names;
     std::vector<std::string> output_names;
+
+    using PluginConfigT = std::map<std::string, std::string>;
+    PluginConfigT config;
+
+    using PrecisionT = int;
+    using PrecisionMapT = std::unordered_map<std::string, PrecisionT>;
+    // NB: This parameter can contain:
+    // 1. cv::util::monostate - Don't specify precision, but use default from IR/Blob.
+    // 2. PrecisionT (CV_8U, CV_32F, ...) - Specifies precision for all layers.
+    // 3. PrecisionMapT ({{"layer0", CV_32F}, {"layer1", CV_16F}} - Specifies per-layer precision.
+    // cv::util::monostate is default value that means precision wasn't specified.
+    using PrecisionVariantT = cv::util::variant<cv::util::monostate,
+                                                PrecisionT,
+                                                PrecisionMapT>;
+    using LayoutT = std::string;
+    // NB: This parameter can contain:
+    // 1. cv::util::monostate - Don't specify layout, but use default from IR/Blob.
+    // 2. LayoutT ("NCHW", "NHWC", "?CHW", etc) - Specifies layout for all layers.
+    // 3. LayoutMapT ({{"layer0", "NCHW"}, {"layer1", "NC"}} - Specifies per-layer layout.
+    // cv::util::monostate is default value that means layout wasn't specified.
+    using LayoutMapT = std::unordered_map<std::string, LayoutT>;
+    using LayoutVariantT = cv::util::variant<cv::util::monostate,
+                                             LayoutT,
+                                             LayoutMapT>;
+
+    PrecisionVariantT output_precision;
+    LayoutVariantT    input_tensor_layout;
+    LayoutVariantT    input_model_layout;
 };
 
 } // namespace detail
@@ -50,8 +78,12 @@ public:
               , device
               , std::tuple_size<typename Net::InArgs>::value
               , std::tuple_size<typename Net::OutArgs>::value
-              , {}
-              , {} } {
+              , {} /* output_names */
+              , {} /* input_names */
+              , {} /* config */
+              , {} /* output_precision */
+              , {} /* input_tensor_layout */
+              , {} /* input_model_layout */ } {
     }
 
     Params<Net>& cfgInputLayers(const std::vector<std::string> &input_names) {
@@ -61,6 +93,86 @@ public:
 
     Params<Net>& cfgOutputLayers(const std::vector<std::string> &output_names) {
         desc.output_names = output_names;
+        return *this;
+    }
+
+    Params<Net>& cfgPluginConfig(const detail::ParamDesc::PluginConfigT &config) {
+        desc.config = config;
+        return *this;
+    }
+
+    /** @brief Specifies the output precision for model.
+
+    The function is used to set an output precision for model.
+
+    @param precision Precision in OpenCV format (CV_8U, CV_32F, ...)
+    will be applied to all output layers.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgOutTensorPrecision(detail::ParamDesc::PrecisionT precision) {
+        desc.output_precision = precision;
+        return *this;
+    }
+
+    /** @overload
+
+    @param precision_map Map of pairs: name of corresponding output layer
+    and its precision in OpenCV format (CV_8U, CV_32F, ...)
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgOutTensorPrecision(detail::ParamDesc::PrecisionMapT precision_map) {
+        desc.output_precision = precision_map;
+        return *this;
+    }
+
+    /** @brief Specifies the output layout for model.
+
+    The function is used to set an output layout for model.
+
+    @param layout Precision in OpenCV format (CV_8U, CV_32F, ...)
+    will be applied to all output layers.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgInTensorLayout(detail::ParamDesc::LayoutT layout) {
+        desc.input_tensor_layout = layout;
+        return *this;
+    }
+
+    /** @overload
+
+    @param layout_map Map of pairs: name of corresponding output layer
+    and its layout in OpenCV format (CV_8U, CV_32F, ...)
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgInTensorLayout(detail::ParamDesc::LayoutMapT layout_map) {
+        desc.input_tensor_layout = layout_map;
+        return *this;
+    }
+
+    /** @brief Specifies the output layout for model.
+
+    The function is used to set an output layout for model.
+
+    @param layout Precision in OpenCV format (CV_8U, CV_32F, ...)
+    will be applied to all output layers.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgInModelLayout(detail::ParamDesc::LayoutT layout) {
+        desc.input_model_layout = layout;
+        return *this;
+    }
+
+    /** @overload
+
+    @param layout_map Map of pairs: name of corresponding output layer
+    and its layout in OpenCV format (CV_8U, CV_32F, ...)
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgInModelLayout(detail::ParamDesc::LayoutMapT layout_map) {
+        desc.input_model_layout = layout_map;
         return *this;
     }
 

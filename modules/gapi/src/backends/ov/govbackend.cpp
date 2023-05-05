@@ -1,15 +1,15 @@
 // needs to be included regardless if IE is present or not
 // (cv::gapi::ov::backend() is still there and is defined always)
 #include "backends/ov/govbackend.hpp"
+#include "backends/ov/util.hpp"
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
 #include <opencv2/gapi/gcommon.hpp>
-// Include anyway - cv::gapi::ov::backend() still needs to be defined
 #include <opencv2/gapi/infer/ov.hpp>
 
-#include <openvino/openvino.hpp>
-
 #include <ade/util/zip_range.hpp>
+
+#include <openvino/openvino.hpp>
 
 static ov::Core getCore() {
     static ov::Core core;
@@ -46,6 +46,62 @@ static int toCV(const ov::element::Type &type) {
         default: GAPI_Error("OV. Unsupported data type");
     }
     return -1;
+}
+
+static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
+    if (tensor.get_byte_size() != mat.total() * mat.elemSize()) {
+        cv::util::throw_error(std::logic_error
+            ("OVBackend: Failed to copy data from ov::Tensor to cv::Mat! "
+             "Number of bytes mismatch. "
+             "(cv::Mat " + std::to_string(mat.total() * mat.elemSize()) + ", "
+             "ov::Tensor: " + std::to_string(tensor.get_byte_size()) + ")"));
+    }
+    std::copy_n(reinterpret_cast<uint8_t*>(tensor.data()),
+                tensor.get_byte_size(),
+                mat.ptr<uint8_t>());
+}
+
+static void copyToOV(const cv::Mat &mat, ov::Tensor &tensor) {
+    if (tensor.get_byte_size() != mat.total() * mat.elemSize()) {
+        cv::util::throw_error(std::logic_error
+            ("OVBackend: Failed to copy data from cv::Mat to ov::Tensor! "
+             "Number of bytes mismatch. "
+             "(cv::Mat " + std::to_string(mat.total() * mat.elemSize()) + ", "
+             "ov::Tensor: " + std::to_string(tensor.get_byte_size()) + ")"));
+    }
+    std::copy_n(mat.ptr<uint8_t>(),
+                tensor.get_byte_size(),
+                reinterpret_cast<uint8_t*>(tensor.data()));
+}
+
+using namespace cv::gapi::ie::detail;
+//static void configureOutputPrecision(const IE::OutputsDataMap           &outputs_info,
+                                     //const ParamDesc::PrecisionVariantT &output_precision) {
+    //cv::util::visit(cv::util::overload_lambdas(
+            //[&outputs_info](ParamDesc::PrecisionT cvdepth) {
+                //auto precision = toIE(cvdepth);
+                //for (auto it : outputs_info) {
+                    //it.second->setPrecision(precision);
+                //}
+            //},
+            //[&outputs_info](const ParamDesc::PrecisionMapT& precision_map) {
+                //for (auto it : precision_map) {
+                    //outputs_info.at(it.first)->setPrecision(toIE(it.second));
+                //}
+            //},
+            //[&outputs_info](cv::util::monostate) {
+                //// Do nothing.
+            //}
+        //), output_precision
+    //);
+//}
+
+std::vector<int> cv::gapi::ov::util::to_ocv(const ::ov::Shape &shape) {
+    return toCV(shape);
+}
+
+int cv::gapi::ov::util::to_ocv(const ::ov::element::Type &type) {
+    return toCV(type);
 }
 
 struct OVUnit {
@@ -110,18 +166,10 @@ public:
     const OVUnit                          &uu;
     cv::gimpl::GIslandExecutable::IOutput &out;
 
-    // NB: Need to guarantee that MediaFrame::View doesn't die until request is over.
-    using Views = std::vector<std::unique_ptr<cv::MediaFrame::View>>;
-    Views views;
-
     // To store exception appeared in callback.
     std::exception_ptr eptr;
 
     const cv::GRunArg::Meta& getMeta() { return m_meta; };
-
-    using req_key_t = void*;
-    cv::MediaFrame* prepareKeepAliveFrameSlot(req_key_t key);
-    size_t releaseKeepAliveFrame(req_key_t key);
 private:
     cv::detail::VectorRef& outVecRef(std::size_t idx);
 
@@ -146,10 +194,6 @@ private:
     // Input parameters passed to an inference operation.
     cv::GArgs m_args;
     cv::GShapes m_in_shapes;
-
-    // keep alive preprocessed frames
-    std::mutex keep_alive_frames_mutex;
-    std::unordered_map<req_key_t, cv::MediaFrame> keep_alive_pp_frames;
 };
 
 OVCallContext::OVCallContext(const OVUnit                                      &  unit,
@@ -294,7 +338,6 @@ struct Infer: public cv::detail::KernelTag {
                                  const ade::NodeHandle &nh,
                                  const cv::GMetaArgs   &in_metas,
                                  const cv::GArgs       &/*in_args*/) {
-        std::cout << "cv::gimpl::ov::Infer::outMeta" << std::endl;
         cv::GMetaArgs result;
 
         GConstGOVModel gm(gr);
@@ -304,10 +347,37 @@ struct Infer: public cv::detail::KernelTag {
         // meta order.
         GAPI_Assert(uu.params.input_names.size() == in_metas.size()
                     && "Known input layers count doesn't match input meta count");
-        // NB: Configuring input/output precision and network reshape must be done
-        // only in the loadNetwork case.
+
         using namespace cv::gapi::ie::detail;
         {
+            using PP = cv::gapi::ov::detail::ParamDesc;
+
+            PP::LayoutMapT input_tensor_layout;
+            if (cv::util::holds_alternative<PP::LayoutMapT>(
+                        uu.params.input_tensor_layout)) {
+                input_tensor_layout =
+                    cv::util::get<PP::LayoutMapT>(uu.params.input_tensor_layout);
+            } else if (cv::util::holds_alternative<PP::LayoutT>(
+                        uu.params.input_tensor_layout)) {
+                auto layout = cv::util::get<PP::LayoutT>(uu.params.input_tensor_layout);
+                for (auto &&layer_name : uu.params.input_names) {
+                    input_tensor_layout.emplace(layer_name, layout);
+                }
+            }
+
+            PP::LayoutMapT input_model_layout;
+            if (cv::util::holds_alternative<PP::LayoutMapT>(
+                        uu.params.input_model_layout)) {
+                input_model_layout =
+                    cv::util::get<PP::LayoutMapT>(uu.params.input_model_layout);
+            } else if (cv::util::holds_alternative<PP::LayoutT>(
+                        uu.params.input_model_layout)) {
+                auto layout = cv::util::get<PP::LayoutT>(uu.params.input_model_layout);
+                for (auto &&layer_name : uu.params.input_names) {
+                    input_model_layout.emplace(layer_name, layout);
+                }
+            }
+
             PrePostProcessor ppp(uu.model);
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                             ade::util::toRange(in_metas))) {
@@ -318,7 +388,10 @@ struct Infer: public cv::detail::KernelTag {
                 const auto &input_name = std::get<0>(it);
                 auto &input_info = ppp.input(input_name);
                 input_info.tensor().set_element_type(toOV(matdesc.depth));
-                // NB: For some reason RGB image is 2D image
+                // NB: Image case - all necessary preprocessng:
+                // layout conversion, resize is configure automatically.
+                //
+                // For some reason RGB image is 2D image
                 // (since channel component is not counted here).
                 // Note: regular 2D vectors also fall into this category
                 //
@@ -349,9 +422,20 @@ struct Infer: public cv::detail::KernelTag {
                                                    matdesc.size.width,
                                                    matdesc.chan});
                     input_info.model().set_layout(::ov::Layout("NCHW"));
-                    // NB: Failing with DNN models (obsolete models ???)
-                    //input_info.preprocess()
-                        //.resize(::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR);
+                    input_info.preprocess()
+                        .resize(::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR);
+
+                // NB: Tensor case - preprocessing is configured only if user asked.
+                } else {
+                    auto layout_it = input_tensor_layout.find(input_name);
+                    if (layout_it != input_tensor_layout.end()) {
+                        input_info.tensor().set_layout(::ov::Layout(layout_it->second));
+                    }
+
+                    layout_it = input_model_layout.find(input_name);
+                    if (layout_it != input_model_layout.end()) {
+                        input_info.model().set_layout(::ov::Layout(layout_it->second));
+                    }
                 }
             }
             // FIXME: There must be separate flow to change
@@ -375,24 +459,15 @@ struct Infer: public cv::detail::KernelTag {
         for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
             const auto& input_name = ctx->uu.params.input_names[i];
             auto input_tensor = infer_request.get_tensor(input_name);
-
-            cv::Mat mat = ctx->inMat(i);
-            std::copy_n(reinterpret_cast<uint8_t*>(mat.ptr<uint8_t>()),
-                        input_tensor.get_byte_size(),
-                        reinterpret_cast<uint8_t*>(input_tensor.data()));
+            copyToOV(ctx->inMat(i), input_tensor);
         }
 
         infer_request.infer();
 
         for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
             const auto& out_name = ctx->uu.params.output_names[i];
-            auto out_tensor = infer_request.get_tensor(out_name);
-
-            auto& out_mat = ctx->outMatR(i);
-            std::copy_n(reinterpret_cast<uint8_t*>(out_tensor.data()),
-                        out_tensor.get_byte_size(),
-                        out_mat.data);
-
+            copyFromOV(infer_request.get_tensor(out_name),
+                       ctx->outMatR(i));
             auto output = ctx->output(i);
             ctx->out.meta(output, ctx->getMeta());
             ctx->out.post(std::move(output), ctx->eptr);
@@ -457,7 +532,6 @@ cv::gapi::GBackend cv::gapi::ov::backend() {
 cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
                                             const std::vector<ade::NodeHandle> &nodes)
     : m_g(g), m_gm(m_g) {
-    std::cout << "cv::gimpl::ov::GOVExecutable::GOVExecutable" << std::endl;
 
     // FIXME: Currently this backend is capable to run a single inference node only.
     // Need to extend our island fusion with merge/not-to-merge decision making parametrization

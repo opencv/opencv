@@ -8,6 +8,8 @@
 
 #include "../test_precomp.hpp"
 
+#include "backends/ov/util.hpp"
+
 #include <opencv2/gapi/infer/ov.hpp>
 
 #include <openvino/openvino.hpp>
@@ -42,6 +44,24 @@ static const std::string SUBDIR = "intel/age-gender-recognition-retail-0013/FP32
 static const std::string SUBDIR = "Retail/object_attributes/age_gender/dldt/";
 #endif
 
+static void copyFromOV(ov::Tensor &tensor, cv::Mat &mat) {
+    GAPI_Assert(tensor.get_byte_size() == mat.total() * mat.elemSize1());
+    std::copy_n(reinterpret_cast<uint8_t*>(tensor.data()),
+                tensor.get_byte_size(),
+                mat.ptr<uint8_t>());
+}
+
+// FIXME: taken from the DNN module
+static void normAssert(cv::InputArray ref, cv::InputArray test,
+                       const char *comment /*= ""*/,
+                       double l1 = 0.00001, double lInf = 0.0001) {
+    double normL1 = cvtest::norm(ref, test, cv::NORM_L1) / ref.getMat().total();
+    EXPECT_LE(normL1, l1) << comment;
+
+    double normInf = cvtest::norm(ref, test, cv::NORM_INF);
+    EXPECT_LE(normInf, lInf) << comment;
+}
+
 TEST(TestAgeGenderOV, InferTensor)
 {
     initDLDTDataPath();
@@ -50,38 +70,32 @@ TEST(TestAgeGenderOV, InferTensor)
     const std::string bin_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
     const std::string device   = "CPU";
 
-    //cv::Mat img = cv::imread(Configure);
-    ///home/atalaman/workspace/opencv_extra/testdata/cv/face/david2.jpg
-    //
-    //cv::Mat in_mat(62, 62, CV_8UC3);
     cv::Mat in_mat({1, 3, 62, 62}, CV_32F);
     cv::randu(in_mat, -1, 1);
 
     cv::Mat ov_age, ov_gender;
-    //cv::Mat in_mat(120, 120, CV_8UC3);
+    {
+        ov::Core core;
+        auto model = core.read_model(xml_path, bin_path);
+        auto compiled_model = core.compile_model(model, device);
+        auto infer_request  = compiled_model.create_infer_request();
+        infer_request.set_input_tensor(
+                ov::Tensor(ov::element::f32,
+                    {1, 3, 62, 62},
+                    in_mat.ptr<void>()));
 
-    //{
-    ov::Core core;
-    auto model = core.read_model(xml_path, bin_path);
-    auto compiled_model = core.compile_model(model, device);
-    auto infer_request  = compiled_model.create_infer_request();
-    infer_request.set_input_tensor(
-            ov::Tensor(ov::element::f32,
-                      {1, 3, 62, 62},
-                      in_mat.ptr<void>()));
+        infer_request.infer();
 
-    infer_request.infer();
+        auto age_tensor = infer_request.get_tensor("age_conv3");
+        ov_age.create(cv::gapi::ov::util::to_ocv(age_tensor.get_shape()),
+                cv::gapi::ov::util::to_ocv(age_tensor.get_element_type()));
+        copyFromOV(age_tensor, ov_age);
 
-    auto age_tensor = infer_request.get_tensor("age_conv3");
-    auto shape = age_tensor.get_shape();
-    std::vector<int> dims{shape.begin(), shape.end()};
-    ov_age = cv::Mat(dims, CV_32F, age_tensor.data());
-
-    auto gender_tensor = infer_request.get_tensor("prob");
-    shape = gender_tensor.get_shape();
-    std::vector<int> dims2{shape.begin(), shape.end()};
-    ov_gender = cv::Mat(dims2, CV_32F, gender_tensor.data());
-    //}
+        auto gender_tensor = infer_request.get_tensor("prob");
+        ov_gender.create(cv::gapi::ov::util::to_ocv(gender_tensor.get_shape()),
+                cv::gapi::ov::util::to_ocv(gender_tensor.get_element_type()));
+        copyFromOV(gender_tensor, ov_gender);
+    }
 
     // Configure & run G-API
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
@@ -101,22 +115,12 @@ TEST(TestAgeGenderOV, InferTensor)
      //.cfgModelInputLayout("NCHW"),
      //
 
-    //comp.compile(cv::descr_of(img), cv::compile_args(cv::gapi::networks(pp)));
-
     cv::Mat gapi_age, gapi_gender;
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
 
-    std::cout << "G-API Age: " << gapi_age.ptr<float>()[0] << std::endl;
-    std::cout << "OV Age: "    << ov_age.ptr<float>()[0] << std::endl;
-
-    std::cout << std::endl;
-
-    std::cout << "G-API Gender: " << gapi_gender.ptr<float>()[0] << " "
-                                  << gapi_gender.ptr<float>()[1] << std::endl;
-
-    std::cout << "OV Gender: " << ov_gender.ptr<float>()[0] << " "
-                               << ov_gender.ptr<float>()[1] << std::endl;
+    normAssert(ov_age,    gapi_age,    "Test age output"   );
+    normAssert(ov_gender, gapi_gender, "Test gender output");
 }
 
 TEST(TestAgeGenderOV, InferImage)
@@ -127,38 +131,40 @@ TEST(TestAgeGenderOV, InferImage)
     const std::string bin_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
     const std::string device   = "CPU";
 
-    cv::Mat in_mat(62, 62, CV_8UC3);
+    cv::Mat in_mat(300, 300, CV_8UC3);
     cv::randu(in_mat, 0, 255);
 
     cv::Mat ov_age, ov_gender;
+    {
+        ov::Core core;
+        auto model = core.read_model(xml_path, bin_path);
 
-    ov::Core core;
-    auto model = core.read_model(xml_path, bin_path);
+        ov::preprocess::PrePostProcessor ppp(model);
+        ppp.input().tensor().set_layout(ov::Layout("NHWC"));
+        ppp.input().tensor().set_element_type(ov::element::u8);
+        ppp.input().model().set_layout(ov::Layout("NCHW"));
+        ppp.input().preprocess().resize(::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR);
+        model = ppp.build();
 
-    ov::preprocess::PrePostProcessor ppp(model);
-    ppp.input().tensor().set_layout(ov::Layout("NHWC"));
-    ppp.input().tensor().set_element_type(ov::element::u8);
-    ppp.input().model().set_layout(ov::Layout("NCHW"));
-    model = ppp.build();
+        auto compiled_model = core.compile_model(model, device);
+        auto infer_request  = compiled_model.create_infer_request();
+        infer_request.set_input_tensor(
+                ov::Tensor(ov::element::u8,
+                    {1, 62, 62, 3},
+                    in_mat.ptr<void>()));
 
-    auto compiled_model = core.compile_model(model, device);
-    auto infer_request  = compiled_model.create_infer_request();
-    infer_request.set_input_tensor(
-            ov::Tensor(ov::element::u8,
-                      {1, 62, 62, 3},
-                      in_mat.ptr<void>()));
+        infer_request.infer();
 
-    infer_request.infer();
+        auto age_tensor = infer_request.get_tensor("age_conv3");
+        ov_age.create(cv::gapi::ov::util::to_ocv(age_tensor.get_shape()),
+                cv::gapi::ov::util::to_ocv(age_tensor.get_element_type()));
+        copyFromOV(age_tensor, ov_age);
 
-    auto age_tensor = infer_request.get_tensor("age_conv3");
-    auto shape = age_tensor.get_shape();
-    std::vector<int> dims{shape.begin(), shape.end()};
-    ov_age = cv::Mat(dims, CV_32F, age_tensor.data());
-
-    auto gender_tensor = infer_request.get_tensor("prob");
-    shape = gender_tensor.get_shape();
-    std::vector<int> dims2{shape.begin(), shape.end()};
-    ov_gender = cv::Mat(dims2, CV_32F, gender_tensor.data());
+        auto gender_tensor = infer_request.get_tensor("prob");
+        ov_gender.create(cv::gapi::ov::util::to_ocv(gender_tensor.get_shape()),
+                cv::gapi::ov::util::to_ocv(gender_tensor.get_element_type()));
+        copyFromOV(gender_tensor, ov_gender);
+    }
 
     // Configure & run G-API
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
@@ -173,27 +179,9 @@ TEST(TestAgeGenderOV, InferImage)
         xml_path, bin_path, device
     }.cfgOutputLayers({ "age_conv3", "prob" });
 
-     //.cfgTensorOutputPrecision(CV_32F),
-     //.cfgTensorInputLayout("NHWC"),
-     //.cfgModelInputLayout("NCHW"),
-     //
-
-    //comp.compile(cv::descr_of(img), cv::compile_args(cv::gapi::networks(pp)));
-
     cv::Mat gapi_age, gapi_gender;
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
-
-    std::cout << "G-API Age: " << gapi_age.ptr<float>()[0] << std::endl;
-    std::cout << "OV Age: "    << ov_age.ptr<float>()[0] << std::endl;
-
-    std::cout << std::endl;
-
-    std::cout << "G-API Gender: " << gapi_gender.ptr<float>()[0] << " "
-                                  << gapi_gender.ptr<float>()[1] << std::endl;
-
-    std::cout << "OV Gender: " << ov_gender.ptr<float>()[0] << " "
-                               << ov_gender.ptr<float>()[1] << std::endl;
 }
 
 } // namespace opencv_test
