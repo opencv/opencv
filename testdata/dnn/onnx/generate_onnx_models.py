@@ -2164,6 +2164,21 @@ save_data_and_model("cumsum_2d_dim_1", x, CumSum(dim=1), version=11)
 x = torch.randn(2, 3, 4)
 save_data_and_model("cumsum_3d_dim_2", x, CumSum(dim=2), version=11)
 
+# where layer
+class Where(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(Where, self).__init__()
+
+    def forward(self, x):
+        a = torch.ones((6,6))
+        b = torch.zeros((2, 6, 6))
+        
+        return torch.where(x > 0, a, b)
+
+input = Variable(torch.randn(1, 2, 6, 6))
+model = Where(input)
+save_data_and_model("where_layer", input, model, 13)
+
 # tf2onnx models
 def save_data_and_tf_function(tf_function, name, input):
     input = input.astype(np.float32)
