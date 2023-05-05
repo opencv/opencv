@@ -1168,8 +1168,12 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
     else if (datatype == opencv_onnx::TensorProto_DataType_DOUBLE)
     {
         const ::google::protobuf::RepeatedField<double> field = tensor_proto.double_data();
-        CV_Assert(!field.empty());
-        char* val = (char *)field.data();
+        char* val = nullptr;
+        if (!field.empty())
+            val = (char *)field.data();
+        else
+            val = const_cast<char*>(tensor_proto.raw_data().c_str()); // sometime, the double will be stored at raw_data.
+
 #if CV_STRONG_ALIGNMENT
         // Aligned pointer is required.
         AutoBuffer<double, 16> aligned_val;
