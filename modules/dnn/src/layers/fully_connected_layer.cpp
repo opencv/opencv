@@ -666,59 +666,100 @@ public:
                                       const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+        CV_CheckGE(inputs.size(), (size_t)1, "DNN/CANN: InnerProduct should have at least one input");
         auto x1 = inputs[0].dynamicCast<CannBackendWrapper>();
-        auto x1_desc = x1->getTensorDesc();
-        auto op_x1 = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
-
-        auto op = std::make_shared<ge::op::MatMulV2>(name);
-
-        if (!blobs.empty()) // if B is const
+        auto dims_x1 = x1->host->dims;
+        int dims_x2;
+        if (!blobs.empty()) // operand B is a const
         {
-            // set attributes
-            op->set_attr_transpose_x1(false);
-            // weightMat always needs to be transposed, since CPU backend
-            // implementation is input * weight.im2row
-            op->set_attr_transpose_x2(true);
-
-            // set inputs
-            // set inputs : x2 (weight)
-            auto op_const_weight = std::make_shared<CannConstOp>(weightsMat.data, weightsMat.type(), shape(weightsMat), cv::format("%s_w", name.c_str()));
-            op->set_input_x2_by_name(*(op_const_weight->getOp()), "y");
-            op->update_input_desc_x2(*(op_const_weight->getTensorDesc()));
+            dims_x2 = weightsMat.dims;
         }
         else
         {
-            // A and B are variable inputs; non-const bias is not considered
-            CV_Assert(inputs.size() == 2);
-            CV_Assert(nodes.size() == 2);
-
-            // set attributes
-            op->set_attr_transpose_x1(transA);
-            op->set_attr_transpose_x2(transB);
-
-            // set inputs : x2 (weight)
-            auto op_x2 = nodes[1].dynamicCast<CannBackendNode>()->getOp();
-            auto x2_desc = inputs[1].dynamicCast<CannBackendWrapper>()->getTensorDesc();
-            op->set_input_x2_by_name(*op_x2, "y");
-            op->update_input_desc_x2(*x2_desc);
+            CV_CheckGE(inputs.size(), (size_t)2, "DNN/CANN: InnerProduct should have two inputs");
+            auto x2 = inputs[1].dynamicCast<CannBackendWrapper>();
+            dims_x2 = x2->host->dims;
         }
+        // support 2D & 3D MatMat for now
+        CV_CheckEQ(dims_x1, dims_x2, "DNN/CANN: InnerProduct should have inputs of the same dimension");
+        CV_CheckGE(dims_x1, 2, "DNN/CANN: InnerProduct should have inputs of at least 2 dimensions");
+        CV_CheckLE(dims_x1, 3, "DNN/CANN: InnerProduct should have inputs of at most 3 dimensions");
+        bool isBatchMatMul = dims_x1 == 3;
 
-        // set inputs
-        // set inputs : x1 (input)
-        op->set_input_x1_by_name(*op_x1, x1->name.c_str());
-        op->update_input_desc_x1(*x1_desc);
-        // set inputs : bias (bias)
+        // std::cout << cv::format("Node name: %s, isMatmul=%d, bias=%d, isBatchMatMul=%d\n", name.c_str(), isMatMul, bias, isBatchMatMul);
+        auto op_x1 = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto desc_x1 = x1->getTensorDesc();
+        std::shared_ptr<ge::Operator> op_x2;
+        std::shared_ptr<ge::TensorDesc> desc_x2;
+        bool trans_x1 = blobs.empty() ? transA : false;
+        bool trans_x2 = blobs.empty() ? transB : true;
+        if (!blobs.empty())
+        {
+            auto op_const_w = std::make_shared<CannConstOp>(weightsMat.data, weightsMat.type(), shape(weightsMat), cv::format("%s_w", name.c_str()));
+            op_x2 = op_const_w->getOp();
+            desc_x2 = op_const_w->getTensorDesc();
+        }
+        else
+        {
+            op_x2 = nodes[1].dynamicCast<CannBackendNode>()->getOp();
+            desc_x2 = inputs[1].dynamicCast<CannBackendWrapper>()->getTensorDesc();
+        }
         auto bias_mat = bias ? biasMat : (blobs.empty() ? Mat::zeros(1, 1, CV_32F) : Mat::zeros(1, weightsMat.size[0], weightsMat.type()));
         std::vector<int> bias_shape{weightsMat.size[0]};
         auto op_const_bias = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), bias_shape, cv::format("%s_b", name.c_str()));
-        op->set_input_bias(*(op_const_bias->getOp()));
-        op->update_input_desc_bias(*(op_const_bias->getTensorDesc()));
+        auto op_b = op_const_bias->getOp();
+        auto desc_b = op_const_bias->getTensorDesc();
+        auto desc_output = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
 
-        // set outputs
-        op->update_output_desc_y(*output_desc);
+        if (isBatchMatMul)
+        {
+            auto op = std::make_shared<ge::op::BatchMatMul>(name);
 
-        return Ptr<BackendNode>(new CannBackendNode(op));
+            // set attributes
+            op->set_attr_adj_x1(false);
+            // weightMat always needs to be transposed, since CPU backend
+            // implementation is input * weight.im2row
+            op->set_attr_adj_x2(trans_x2);
+
+            // set inputs:
+            // set inputs : x1 (input)
+            op->set_input_x1_by_name(*op_x1, x1->name.c_str());
+            op->update_input_desc_x1(*desc_x1);
+            // set inputs : x2 (weight)
+            op->set_input_x2_by_name(*op_x2, "y");
+            op->update_input_desc_x2(*desc_x2);
+
+            // set outputs
+            op->update_output_desc_y(*desc_output);
+
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
+        else
+        {
+            auto op = std::make_shared<ge::op::MatMulV2>(name);
+
+            // set attributes
+            op->set_attr_transpose_x1(trans_x1);
+            // weightMat always needs to be transposed, since CPU backend
+            // implementation is input * weight.im2row
+            op->set_attr_transpose_x2(trans_x2);
+
+            // set inputs:
+            // set inputs : x1 (input)
+            op->set_input_x1_by_name(*op_x1, x1->name.c_str());
+            op->update_input_desc_x1(*desc_x1);
+            // set inputs : x2 (weight)
+            op->set_input_x2_by_name(*op_x2, "y");
+            op->update_input_desc_x2(*desc_x2);
+            // set inputs : bias
+            op->set_input_bias(*op_b);
+            op->update_input_desc_bias(*desc_b);
+
+            // set outputs
+            op->update_output_desc_y(*desc_output);
+
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
     }
 #endif
 
