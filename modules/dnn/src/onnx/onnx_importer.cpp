@@ -4058,6 +4058,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
             dispatch["LessOrEqual"] = &ONNXImporter::parseElementWise;
 
     dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = &ONNXImporter::parseElementWise;
+    dispatch["Where"] = &ONNXImporter::parseElementWise;
     dispatch["Range"] = &ONNXImporter::parseRange;
 
     std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
