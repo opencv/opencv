@@ -33,4 +33,3 @@ GAPI_EXPORTS int to_ocv(const ::ov::element::Type &type);
 //#endif //HAVE_OPENVINO
 
 #endif // OPENCV_GAPI_INFER_OV_UTIL_HPP
-
