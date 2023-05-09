@@ -157,7 +157,7 @@ def main():
     for (corners, pattern_points) in chessboards:
         img_points.append(corners)
         obj_points.append(pattern_points)
-        
+
     # calculate camera distortion
     rms, camera_matrix, dist_coefs, _rvecs, _tvecs = cv.calibrateCamera(obj_points, img_points, (w, h), None, None)
 
