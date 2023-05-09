@@ -95,11 +95,6 @@ int cv::gapi::ov::util::to_ocv(const ::ov::element::Type &type) {
     return toCV(type);
 }
 
-//struct IUnit {
-    //virtual std::string get_any_input_name() = 0;
-    //virtual std::string get_any_output_name() = 0;
-//}
-
 using ParamDesc = cv::gapi::ov::detail::ParamDesc;
 struct OVUnit {
     static const char *name() { return "OVUnit"; }
@@ -345,20 +340,15 @@ namespace ov {
 template <typename T>
 using Map = std::unordered_map<std::string, T>;
 
-template <typename... T>
-using Var = cv::util::variant<T...>;
-
-template <typename ElemT>
-Map<ElemT> broadCastIfValue(const Var<cv::util::monostate, ElemT, Map<ElemT>> &variant,
-                            const std::vector<std::string>                    &layer_names) {
-    using M = Map<ElemT>;
-    M map;
-
-    if (cv::util::holds_alternative<M>(variant)) {
-        map = cv::util::get<M>(variant);
-    } else if (cv::util::holds_alternative<ElemT>(variant)) {
+template <typename T>
+Map<T> broadCastIfValue(const ParamDesc::VariantMapT<T> &variant,
+                        const std::vector<std::string>  &layer_names) {
+    Map<T> map;
+    if (cv::util::holds_alternative<Map<T>>(variant)) {
+        map = cv::util::get<Map<T>>(variant);
+    } else if (cv::util::holds_alternative<T>(variant)) {
         // NB: Broadcast value to all layers.
-        auto elem = cv::util::get<ElemT>(variant);
+        auto elem = cv::util::get<T>(variant);
         for (auto &&layer_name : layer_names) {
             map.emplace(layer_name, elem);
         }

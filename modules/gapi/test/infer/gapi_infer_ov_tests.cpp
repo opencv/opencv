@@ -76,7 +76,7 @@ ov::Core getCore() {
     return core;
 }
 
-// TODO AGNetGenComp, AGNetTypedComp, AGNetOVComp, AGNetOVCompiled
+// TODO: AGNetGenComp, AGNetTypedComp, AGNetOVComp, AGNetOVCompiled
 // can be generalized to work with any model and used as parameters for tests.
 
 struct AGNetGenComp {

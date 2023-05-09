@@ -50,30 +50,22 @@ struct ParamDesc {
     using PluginConfigT = std::map<std::string, std::string>;
     PluginConfigT config;
 
-    using PrecisionT = int;
-    using PrecisionMapT = std::unordered_map<std::string, PrecisionT>;
-    // NB: This parameter can contain:
-    // 1. cv::util::monostate - Don't specify precision, but use default from IR/Blob.
-    // 2. PrecisionT (CV_8U, CV_32F, ...) - Specifies precision for all layers.
-    // 3. PrecisionMapT ({{"layer0", CV_32F}, {"layer1", CV_16F}} - Specifies per-layer precision.
-    // cv::util::monostate is default value that means precision wasn't specified.
-    using PrecisionVariantT = cv::util::variant<cv::util::monostate,
-                                                PrecisionT,
-                                                PrecisionMapT>;
-    using LayoutT = std::string;
-    // NB: This parameter can contain:
-    // 1. cv::util::monostate - Don't specify layout, but use default from IR/Blob.
-    // 2. LayoutT ("NCHW", "NHWC", "?CHW", etc) - Specifies layout for all layers.
-    // 3. LayoutMapT ({{"layer0", "NCHW"}, {"layer1", "NC"}} - Specifies per-layer layout.
-    // cv::util::monostate is default value that means layout wasn't specified.
-    using LayoutMapT = std::unordered_map<std::string, LayoutT>;
-    using LayoutVariantT = cv::util::variant<cv::util::monostate,
-                                             LayoutT,
-                                             LayoutMapT>;
+    template <typename T>
+    using Map = std::unordered_map<std::string, T>;
 
-    PrecisionVariantT output_precision;
-    LayoutVariantT    input_tensor_layout;
-    LayoutVariantT    input_model_layout;
+    // NB: This type is supposed to be used to hold in/out layers
+    // attributes such as precision, layout, shape etc.
+    //
+    // Because user can provide attributes either:
+    // 1. cv::util::monostate - No value specified explicitly.
+    // 2. T - value specified explicitly that should be broadcasted to all layers.
+    // 3. Map[str->T] - map specifies value for particular layer.
+    template <typename T>
+    using VariantMapT = cv::util::variant<cv::util::monostate, Map<T>, T>;
+
+    VariantMapT<std::string> input_tensor_layout;
+    VariantMapT<std::string> input_model_layout;
+    VariantMapT<int>         output_precision;
 };
 
 } // namespace detail
@@ -134,7 +126,7 @@ public:
     will be applied to all output layers.
     @return reference to this parameter structure.
     */
-    Params<Net>& cfgOutTensorPrecision(detail::ParamDesc::PrecisionT precision) {
+    Params<Net>& cfgOutTensorPrecision(int precision) {
         desc.output_precision = precision;
         return *this;
     }
@@ -146,8 +138,8 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>&
-    cfgOutTensorPrecision(detail::ParamDesc::PrecisionMapT precision_map) {
-        desc.output_precision = precision_map;
+    cfgOutTensorPrecision(detail::ParamDesc::Map<int> precision_map) {
+        desc.output_precision = std::move(precision_map);
         return *this;
     }
 
@@ -159,8 +151,8 @@ public:
     will be applied to all output layers.
     @return reference to this parameter structure.
     */
-    Params<Net>& cfgInTensorLayout(detail::ParamDesc::LayoutT layout) {
-        desc.input_tensor_layout = layout;
+    Params<Net>& cfgInTensorLayout(std::string layout) {
+        desc.input_tensor_layout = std::move(layout);
         return *this;
     }
 
@@ -171,8 +163,8 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>&
-    cfgInTensorLayout(detail::ParamDesc::LayoutMapT layout_map) {
-        desc.input_tensor_layout = layout_map;
+    cfgInTensorLayout(detail::ParamDesc::Map<std::string> layout_map) {
+        desc.input_tensor_layout = std::move(layout_map);
         return *this;
     }
 
@@ -184,7 +176,7 @@ public:
     will be applied to all output layers.
     @return reference to this parameter structure.
     */
-    Params<Net>& cfgInModelLayout(detail::ParamDesc::LayoutT layout) {
+    Params<Net>& cfgInModelLayout(const std::string &layout) {
         desc.input_model_layout = layout;
         return *this;
     }
@@ -196,8 +188,8 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>&
-    cfgInModelLayout(detail::ParamDesc::LayoutMapT layout_map) {
-        desc.input_model_layout = layout_map;
+    cfgInModelLayout(detail::ParamDesc::Map<std::string> layout_map) {
+        desc.input_model_layout = std::move(layout_map);
         return *this;
     }
 
@@ -277,7 +269,7 @@ public:
     will be applied to all output layers.
     @return reference to this parameter structure.
     */
-    Params& cfgOutTensorPrecision(detail::ParamDesc::PrecisionT precision) {
+    Params& cfgOutTensorPrecision(int precision) {
         m_desc.output_precision = precision;
         return *this;
     }
@@ -289,8 +281,8 @@ public:
     @return reference to this parameter structure.
     */
     Params&
-    cfgOutTensorPrecision(detail::ParamDesc::PrecisionMapT precision_map) {
-        m_desc.output_precision = precision_map;
+    cfgOutTensorPrecision(detail::ParamDesc::Map<int> precision_map) {
+        m_desc.output_precision = std::move(precision_map);
         return *this;
     }
 
@@ -302,8 +294,8 @@ public:
     will be applied to all output layers.
     @return reference to this parameter structure.
     */
-    Params& cfgInTensorLayout(detail::ParamDesc::LayoutT layout) {
-        m_desc.input_tensor_layout = layout;
+    Params& cfgInTensorLayout(std::string layout) {
+        m_desc.input_tensor_layout = std::move(layout);
         return *this;
     }
 
@@ -314,8 +306,8 @@ public:
     @return reference to this parameter structure.
     */
     Params&
-    cfgInTensorLayout(detail::ParamDesc::LayoutMapT layout_map) {
-        m_desc.input_tensor_layout = layout_map;
+    cfgInTensorLayout(detail::ParamDesc::Map<std::string> layout_map) {
+        m_desc.input_tensor_layout = std::move(layout_map);
         return *this;
     }
 
@@ -327,8 +319,8 @@ public:
     will be applied to all output layers.
     @return reference to this parameter structure.
     */
-    Params& cfgInModelLayout(detail::ParamDesc::LayoutT layout) {
-        m_desc.input_model_layout = layout;
+    Params& cfgInModelLayout(std::string layout) {
+        m_desc.input_model_layout = std::move(layout);
         return *this;
     }
 
@@ -339,8 +331,8 @@ public:
     @return reference to this parameter structure.
     */
     Params&
-    cfgInModelLayout(detail::ParamDesc::LayoutMapT layout_map) {
-        m_desc.input_model_layout = layout_map;
+    cfgInModelLayout(detail::ParamDesc::Map<std::string> layout_map) {
+        m_desc.input_model_layout = std::move(layout_map);
         return *this;
     }
 
