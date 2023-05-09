@@ -1387,6 +1387,13 @@ TEST_P(Test_ONNX_layers, LSTM_cell_batchsize_5_seqlen_5)
     testONNXModels("lstm_cell_batchsize_5_seqlen_5", npy, 0, 0, false, false);
 }
 
+TEST_P(Test_ONNX_layers, LSTM_init_h0_c0)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("lstm_init_h0_c0", npy, 0, 0, false, false, 3);
+}
+
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 {
     testONNXModels("ReflectionPad2d");
@@ -2556,6 +2563,11 @@ TEST_P(Test_ONNX_layers, Gelu)
 TEST_P(Test_ONNX_layers, OpenAI_CLIP_head)
 {
     testONNXModels("clip-vit-base-head");
+}
+
+TEST_P(Test_ONNX_layers, where_node)
+{
+    testONNXModels("where_layer");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

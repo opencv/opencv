@@ -1327,6 +1327,10 @@ bool CvCapture_FFMPEG::setRaw()
     return true;
 }
 
+static inline bool h26xContainer(const char* formatLongName) {
+    return !strcmp(formatLongName, "QuickTime / MOV") || !strcmp(formatLongName, "FLV (Flash Video)") || !strcmp(formatLongName, "Matroska / WebM");
+}
+
 bool CvCapture_FFMPEG::processRawPacket()
 {
     if (packet.data == NULL)  // EOF
@@ -1350,14 +1354,8 @@ bool CvCapture_FFMPEG::processRawPacket()
 #endif
         )
         {
-            // check start code prefixed mode (as defined in the Annex B H.264 / H.265 specification)
-            if (packet.size >= 5
-                 && !(packet.data[0] == 0 && packet.data[1] == 0 && packet.data[2] == 0 && packet.data[3] == 1)
-                 && !(packet.data[0] == 0 && packet.data[1] == 0 && packet.data[2] == 1)
-            )
-            {
+            if(h26xContainer(ic->iformat->long_name))
                 filterName = eVideoCodec == CV_CODEC(CODEC_ID_H264) ? "h264_mp4toannexb" : "hevc_mp4toannexb";
-            }
         }
         if (filterName)
         {

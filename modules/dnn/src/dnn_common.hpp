@@ -154,6 +154,21 @@ static inline std::string toString(const Mat& blob, const std::string& name = st
     return ss.str();
 }
 
+// Scalefactor is a common parameter used for data scaling. In OpenCV, we often use Scalar to represent it.
+// Because 0 is meaningless in scalefactor.
+// If the scalefactor is (x, 0, 0, 0), we convert it to (x, x, x, x). The following func will do this hack.
+static inline Scalar_<double> broadcastRealScalar(const Scalar_<double>& _scale)
+{
+    Scalar_<double> scale = _scale;
+    if (scale[1] == 0 && scale[2] == 0 && scale[3] == 0)
+    {
+        CV_Assert(scale[0] != 0 && "Scalefactor of 0 is meaningless.");
+        scale = Scalar_<double>::all(scale[0]);
+    }
+
+    return scale;
+}
+
 
 CV__DNN_INLINE_NS_END
 
