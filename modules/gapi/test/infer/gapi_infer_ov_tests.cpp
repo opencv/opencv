@@ -439,7 +439,7 @@ TEST(TestAgeGenderOV, ThrowCfgOutputPrecForBlob) {
     const std::string blob_path = "age-gender-recognition-retail-0013.blob";
     const std::string device   = "CPU";
 
-    // OpenVINO (Just from blob compilation)
+    // OpenVINO (Just for blob compilation)
     AGNetOVComp ref(xml_path, bin_path, device);
     auto cc_ref = ref.compile();
     cc_ref.export_model(blob_path);
@@ -448,6 +448,42 @@ TEST(TestAgeGenderOV, ThrowCfgOutputPrecForBlob) {
     auto comp = AGNetGenComp::create();
     auto pp   = AGNetGenComp::params(blob_path, device);
     pp.cfgOutTensorPrecision(CV_16F);
+    EXPECT_ANY_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
+                                  cv::compile_args(cv::gapi::networks(pp))));
+}
+
+TEST(TestAgeGenderOV, ThrowInvalidConfigIR) {
+    initDLDTDataPath();
+    const std::string xml_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    const std::string bin_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    const std::string device   = "CPU";
+
+    // G-API
+    auto comp = AGNetGenComp::create();
+    auto pp   = AGNetGenComp::params(xml_path, bin_path, device);
+    pp.cfgPluginConfig({{"some_key", "some_value"}});
+
+    EXPECT_ANY_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
+                                  cv::compile_args(cv::gapi::networks(pp))));
+}
+
+TEST(TestAgeGenderOV, ThrowInvalidConfigBlob) {
+    initDLDTDataPath();
+    const std::string xml_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    const std::string bin_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    const std::string blob_path = "age-gender-recognition-retail-0013.blob";
+    const std::string device   = "CPU";
+
+    // OpenVINO (Just for blob compilation)
+    AGNetOVComp ref(xml_path, bin_path, device);
+    auto cc_ref = ref.compile();
+    cc_ref.export_model(blob_path);
+
+    // G-API
+    auto comp = AGNetGenComp::create();
+    auto pp   = AGNetGenComp::params(blob_path, device);
+    pp.cfgPluginConfig({{"some_key", "some_value"}});
+
     EXPECT_ANY_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
                                   cv::compile_args(cv::gapi::networks(pp))));
 }

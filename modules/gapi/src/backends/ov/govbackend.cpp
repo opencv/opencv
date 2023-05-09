@@ -24,9 +24,15 @@
 
 #include <fstream>
 
+using ParamDesc = cv::gapi::ov::detail::ParamDesc;
+
 static ov::Core getCore() {
     static ov::Core core;
     return core;
+}
+
+static ov::AnyMap toOV(const ParamDesc::PluginConfigT &config) {
+    return {config.begin(), config.end()};
 }
 
 static ov::element::Type toOV(int depth) {
@@ -95,7 +101,6 @@ int cv::gapi::ov::util::to_ocv(const ::ov::element::Type &type) {
     return toCV(type);
 }
 
-using ParamDesc = cv::gapi::ov::detail::ParamDesc;
 struct OVUnit {
     static const char *name() { return "OVUnit"; }
 
@@ -119,7 +124,7 @@ struct OVUnit {
             std::ifstream file(cv::util::get<ParamDesc::Blob>(params.kind).blob_path,
                                std::ios_base::in | std::ios_base::binary);
             GAPI_Assert(file.is_open());
-            compiled_model = getCore().import_model(file, params.device);
+            compiled_model = getCore().import_model(file, params.device, toOV(params.config));
 
             if (params.num_in == 1u && params.input_names.empty()) {
                 params.input_names = { compiled_model.inputs().begin()->get_any_name() };
@@ -132,7 +137,9 @@ struct OVUnit {
 
     cv::gimpl::ov::OVCompiled compile() {
         if (cv::util::holds_alternative<ParamDesc::IR>(params.kind)) {
-            compiled_model = getCore().compile_model(model, params.device);
+            compiled_model = getCore().compile_model(model,
+                                                     params.device,
+                                                     toOV(params.config));
         }
         return {compiled_model.create_infer_request()};
     }
