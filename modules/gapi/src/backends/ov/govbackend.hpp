@@ -7,9 +7,13 @@
 #ifndef OPENCV_GAPI_GOVBACKEND_HPP
 #define OPENCV_GAPI_GOVBACKEND_HPP
 
+// Include anyway - cv::gapi::ov::backend() still needs to be defined
+#include "opencv2/gapi/infer/ie.hpp"
+
+#ifdef HAVE_INF_ENGINE
+
 #include <openvino/openvino.hpp>
 
-#include "opencv2/gapi/infer/ie.hpp"
 #include "backends/common/gbackend.hpp"
 
 namespace cv {
@@ -53,4 +57,5 @@ public:
 
 }}}
 
+#endif // HAVE_INF_ENGINE
 #endif // OPENCV_GAPI_GOVBACKEND_HPP

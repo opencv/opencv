@@ -27,9 +27,19 @@ GAPI_EXPORTS cv::gapi::GBackend backend();
 namespace detail {
 
 struct ParamDesc {
-    std::string xml_path;
-    std::string bin_path;
+    struct IR {
+        std::string xml_path;
+        std::string bin_path;
+    };
+    struct Blob {
+        std::string blob_path;
+    };
+    using Kind = cv::util::variant<IR, Blob>;
+    Kind kind;
+
     std::string device;
+
+    bool is_generic;
 
     std::size_t num_in;
     std::size_t num_out;
@@ -73,9 +83,24 @@ public:
     Params(const std::string &xml,
            const std::string &bin,
            const std::string &device)
-        : desc{ xml
-              , bin
+        : desc{ detail::ParamDesc::Kind{detail::ParamDesc::IR{xml, bin}}
               , device
+              , false /* is generic */
+              , std::tuple_size<typename Net::InArgs>::value
+              , std::tuple_size<typename Net::OutArgs>::value
+              , {} /* output_names */
+              , {} /* input_names */
+              , {} /* config */
+              , {} /* output_precision */
+              , {} /* input_tensor_layout */
+              , {} /* input_model_layout */ } {
+    }
+
+    Params(const std::string &blob,
+           const std::string &device)
+        : desc{ detail::ParamDesc::Kind{detail::ParamDesc::Blob{blob}}
+              , device
+              , false /* is generic */
               , std::tuple_size<typename Net::InArgs>::value
               , std::tuple_size<typename Net::OutArgs>::value
               , {} /* output_names */
@@ -184,6 +209,150 @@ public:
 
 protected:
     detail::ParamDesc desc;
+};
+
+/*
+* @brief This structure provides functions for generic network type that
+* fill inference parameters.
+* @see struct Generic
+*/
+template<>
+class Params<cv::gapi::Generic> {
+public:
+    Params(const std::string &tag,
+           const std::string &xml,
+           const std::string &bin,
+           const std::string &device)
+        : m_tag(tag),
+          m_desc{ detail::ParamDesc::Kind{detail::ParamDesc::IR{xml, bin}}
+                , device
+                , true /* is generic */
+                , 0u
+                , 0u
+                , {} /* output_names */
+                , {} /* input_names */
+                , {} /* config */
+                , {} /* output_precision */
+                , {} /* input_tensor_layout */
+                , {} /* input_model_layout */ } {
+    }
+
+    Params(const std::string &tag,
+           const std::string &blob,
+           const std::string &device)
+        : m_tag(tag),
+          m_desc{ detail::ParamDesc::Kind{detail::ParamDesc::Blob{blob}}
+                , device
+                , true /* is generic */
+                , 0u
+                , 0u
+                , {} /* output_names */
+                , {} /* input_names */
+                , {} /* config */
+                , {} /* output_precision */
+                , {} /* input_tensor_layout */
+                , {} /* input_model_layout */ } {
+    }
+
+    Params& cfgInputLayers(const std::vector<std::string> &input_names) {
+        m_desc.input_names = input_names;
+        return *this;
+    }
+
+    Params& cfgOutputLayers(const std::vector<std::string> &output_names) {
+        m_desc.output_names = output_names;
+        return *this;
+    }
+
+    Params& cfgPluginConfig(const detail::ParamDesc::PluginConfigT &config) {
+        m_desc.config = config;
+        return *this;
+    }
+
+    /** @brief Specifies the output precision for model.
+
+    The function is used to set an output precision for model.
+
+    @param precision Precision in OpenCV format (CV_8U, CV_32F, ...)
+    will be applied to all output layers.
+    @return reference to this parameter structure.
+    */
+    Params& cfgOutTensorPrecision(detail::ParamDesc::PrecisionT precision) {
+        m_desc.output_precision = precision;
+        return *this;
+    }
+
+    /** @overload
+
+    @param precision_map Map of pairs: name of corresponding output layer
+    and its precision in OpenCV format (CV_8U, CV_32F, ...)
+    @return reference to this parameter structure.
+    */
+    Params&
+    cfgOutTensorPrecision(detail::ParamDesc::PrecisionMapT precision_map) {
+        m_desc.output_precision = precision_map;
+        return *this;
+    }
+
+    /** @brief Specifies the output layout for model.
+
+    The function is used to set an output layout for model.
+
+    @param layout Precision in OpenCV format (CV_8U, CV_32F, ...)
+    will be applied to all output layers.
+    @return reference to this parameter structure.
+    */
+    Params& cfgInTensorLayout(detail::ParamDesc::LayoutT layout) {
+        m_desc.input_tensor_layout = layout;
+        return *this;
+    }
+
+    /** @overload
+
+    @param layout_map Map of pairs: name of corresponding output layer
+    and its layout in OpenCV format (CV_8U, CV_32F, ...)
+    @return reference to this parameter structure.
+    */
+    Params&
+    cfgInTensorLayout(detail::ParamDesc::LayoutMapT layout_map) {
+        m_desc.input_tensor_layout = layout_map;
+        return *this;
+    }
+
+    /** @brief Specifies the output layout for model.
+
+    The function is used to set an output layout for model.
+
+    @param layout Precision in OpenCV format (CV_8U, CV_32F, ...)
+    will be applied to all output layers.
+    @return reference to this parameter structure.
+    */
+    Params& cfgInModelLayout(detail::ParamDesc::LayoutT layout) {
+        m_desc.input_model_layout = layout;
+        return *this;
+    }
+
+    /** @overload
+
+    @param layout_map Map of pairs: name of corresponding output layer
+    and its layout in OpenCV format (CV_8U, CV_32F, ...)
+    @return reference to this parameter structure.
+    */
+    Params&
+    cfgInModelLayout(detail::ParamDesc::LayoutMapT layout_map) {
+        m_desc.input_model_layout = layout_map;
+        return *this;
+    }
+
+    // BEGIN(G-API's network parametrization API)
+    GBackend      backend() const { return cv::gapi::ov::backend(); }
+    std::string   tag()     const { return m_tag; }
+    cv::util::any params()  const { return { m_desc }; }
+    // END(G-API's network parametrization API)
+
+protected:
+    std::string m_tag;
+    detail::ParamDesc m_desc;
 };
 
 } // namespace ov

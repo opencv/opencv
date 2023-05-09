@@ -1,6 +1,17 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Copyright (C) 2023 Intel Corporation
+
+#include "precomp.hpp"
+
 // needs to be included regardless if IE is present or not
 // (cv::gapi::ov::backend() is still there and is defined always)
 #include "backends/ov/govbackend.hpp"
+
+#ifdef HAVE_INF_ENGINE
+
 #include "backends/ov/util.hpp"
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
@@ -10,6 +21,8 @@
 #include <ade/util/zip_range.hpp>
 
 #include <openvino/openvino.hpp>
+
+#include <fstream>
 
 static ov::Core getCore() {
     static ov::Core core;
@@ -74,28 +87,6 @@ static void copyToOV(const cv::Mat &mat, ov::Tensor &tensor) {
                 reinterpret_cast<uint8_t*>(tensor.data()));
 }
 
-using namespace cv::gapi::ie::detail;
-//static void configureOutputPrecision(const IE::OutputsDataMap           &outputs_info,
-                                     //const ParamDesc::PrecisionVariantT &output_precision) {
-    //cv::util::visit(cv::util::overload_lambdas(
-            //[&outputs_info](ParamDesc::PrecisionT cvdepth) {
-                //auto precision = toIE(cvdepth);
-                //for (auto it : outputs_info) {
-                    //it.second->setPrecision(precision);
-                //}
-            //},
-            //[&outputs_info](const ParamDesc::PrecisionMapT& precision_map) {
-                //for (auto it : precision_map) {
-                    //outputs_info.at(it.first)->setPrecision(toIE(it.second));
-                //}
-            //},
-            //[&outputs_info](cv::util::monostate) {
-                //// Do nothing.
-            //}
-        //), output_precision
-    //);
-//}
-
 std::vector<int> cv::gapi::ov::util::to_ocv(const ::ov::Shape &shape) {
     return toCV(shape);
 }
@@ -104,31 +95,56 @@ int cv::gapi::ov::util::to_ocv(const ::ov::element::Type &type) {
     return toCV(type);
 }
 
+//struct IUnit {
+    //virtual std::string get_any_input_name() = 0;
+    //virtual std::string get_any_output_name() = 0;
+//}
+
+using ParamDesc = cv::gapi::ov::detail::ParamDesc;
 struct OVUnit {
     static const char *name() { return "OVUnit"; }
 
-    explicit OVUnit(const cv::gapi::ov::detail::ParamDesc &_params)
-        : params(_params) {
-        model = getCore().read_model(params.xml_path, params.bin_path);
-        GAPI_Assert(model);
+    explicit OVUnit(const ParamDesc &pd)
+        : params(pd) {
 
-        if (params.num_in == 1u && params.input_names.empty()) {
-            params.input_names = { model->inputs().begin()->get_any_name() };
-        }
+        if (cv::util::holds_alternative<ParamDesc::IR>(params.kind)) {
+            const auto ir = cv::util::get<ParamDesc::IR>(params.kind);
+            model = getCore().read_model(ir.xml_path, ir.bin_path);
+            GAPI_Assert(model);
 
-        if (params.num_out == 1u && params.output_names.empty()) {
-            params.output_names = { model->outputs().begin()->get_any_name() };
+            if (params.num_in == 1u && params.input_names.empty()) {
+                params.input_names = { model->inputs().begin()->get_any_name() };
+            }
+            if (params.num_out == 1u && params.output_names.empty()) {
+                params.output_names = { model->outputs().begin()->get_any_name() };
+            }
+
+        } else {
+            GAPI_Assert(cv::util::holds_alternative<ParamDesc::Blob>(params.kind));
+            std::ifstream file(cv::util::get<ParamDesc::Blob>(params.kind).blob_path,
+                               std::ios_base::in | std::ios_base::binary);
+            GAPI_Assert(file.is_open());
+            compiled_model = getCore().import_model(file, params.device);
+
+            if (params.num_in == 1u && params.input_names.empty()) {
+                params.input_names = { compiled_model.inputs().begin()->get_any_name() };
+            }
+            if (params.num_out == 1u && params.output_names.empty()) {
+                params.output_names = { compiled_model.outputs().begin()->get_any_name() };
+            }
         }
     };
 
     cv::gimpl::ov::OVCompiled compile() {
-        ov::CompiledModel compiled =
-            getCore().compile_model(model, params.device);
-        return {compiled.create_infer_request()};
+        if (cv::util::holds_alternative<ParamDesc::IR>(params.kind)) {
+            compiled_model = getCore().compile_model(model, params.device);
+        }
+        return {compiled_model.create_infer_request()};
     }
 
     cv::gapi::ov::detail::ParamDesc params;
     std::shared_ptr<ov::Model> model;
+    ov::CompiledModel compiled_model;
 };
 
 class OVCallContext
@@ -326,8 +342,29 @@ namespace cv {
 namespace gimpl {
 namespace ov {
 
-// NB: To avoid namespaces conflict
-using ::ov::preprocess::PrePostProcessor;
+template <typename T>
+using Map = std::unordered_map<std::string, T>;
+
+template <typename... T>
+using Var = cv::util::variant<T...>;
+
+template <typename ElemT>
+Map<ElemT> broadCastIfValue(const Var<cv::util::monostate, ElemT, Map<ElemT>> &variant,
+                            const std::vector<std::string>                    &layer_names) {
+    using M = Map<ElemT>;
+    M map;
+
+    if (cv::util::holds_alternative<M>(variant)) {
+        map = cv::util::get<M>(variant);
+    } else if (cv::util::holds_alternative<ElemT>(variant)) {
+        // NB: Broadcast value to all layers.
+        auto elem = cv::util::get<ElemT>(variant);
+        for (auto &&layer_name : layer_names) {
+            map.emplace(layer_name, elem);
+        }
+    }
+    return map;
+}
 
 struct Infer: public cv::detail::KernelTag {
     using API = cv::GInferBase;
@@ -348,37 +385,16 @@ struct Infer: public cv::detail::KernelTag {
         GAPI_Assert(uu.params.input_names.size() == in_metas.size()
                     && "Known input layers count doesn't match input meta count");
 
-        using namespace cv::gapi::ie::detail;
-        {
-            using PP = cv::gapi::ov::detail::ParamDesc;
 
-            PP::LayoutMapT input_tensor_layout;
-            if (cv::util::holds_alternative<PP::LayoutMapT>(
-                        uu.params.input_tensor_layout)) {
-                input_tensor_layout =
-                    cv::util::get<PP::LayoutMapT>(uu.params.input_tensor_layout);
-            } else if (cv::util::holds_alternative<PP::LayoutT>(
-                        uu.params.input_tensor_layout)) {
-                auto layout = cv::util::get<PP::LayoutT>(uu.params.input_tensor_layout);
-                for (auto &&layer_name : uu.params.input_names) {
-                    input_tensor_layout.emplace(layer_name, layout);
-                }
-            }
-
-            PP::LayoutMapT input_model_layout;
-            if (cv::util::holds_alternative<PP::LayoutMapT>(
-                        uu.params.input_model_layout)) {
-                input_model_layout =
-                    cv::util::get<PP::LayoutMapT>(uu.params.input_model_layout);
-            } else if (cv::util::holds_alternative<PP::LayoutT>(
-                        uu.params.input_model_layout)) {
-                auto layout = cv::util::get<PP::LayoutT>(uu.params.input_model_layout);
-                for (auto &&layer_name : uu.params.input_names) {
-                    input_model_layout.emplace(layer_name, layout);
-                }
-            }
-
-            PrePostProcessor ppp(uu.model);
+        auto input_tensor_layout = broadCastIfValue(uu.params.input_tensor_layout,
+                                                    uu.params.input_names);
+        auto input_model_layout  = broadCastIfValue(uu.params.input_model_layout,
+                                                    uu.params.input_names);
+        auto output_precision    = broadCastIfValue(uu.params.output_precision,
+                                                    uu.params.output_names);
+        // NB: Pre/Post processing configuration avaiable only for models read from IR.
+        if (cv::util::holds_alternative<ParamDesc::IR>(uu.params.kind)) {
+            ::ov::preprocess::PrePostProcessor ppp(uu.model);
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                             ade::util::toRange(in_metas))) {
                 const auto &mm = std::get<1>(it);
@@ -388,6 +404,9 @@ struct Infer: public cv::detail::KernelTag {
                 const auto &input_name = std::get<0>(it);
                 auto &input_info = ppp.input(input_name);
                 input_info.tensor().set_element_type(toOV(matdesc.depth));
+
+                auto explicit_tensor_layout = input_tensor_layout.find(input_name);
+                auto explicit_model_layout  = input_model_layout.find(input_name);
                 // NB: Image case - all necessary preprocessng:
                 // layout conversion, resize is configure automatically.
                 //
@@ -411,46 +430,81 @@ struct Infer: public cv::detail::KernelTag {
                 // 1. If matdesc is ND - definitely not image. Cases: (c) and (d)
                 // 2. If ov::Model expects 4D tensor for that input and user
                 // provided U8 data (matdesc.dept) - most likely this is the image case...
+                // 3. If user explicitly provided "tensor" layout.
                 //
                 // Corner case - model with 4D & U8 input (don't recall any)
                 if (!matdesc.isND()        &&
                     matdesc.depth == CV_8U &&
-                    uu.model->input(input_name).get_shape().size() == 4u ) {
+                    uu.model->input(input_name).get_shape().size() == 4u &&
+                    explicit_tensor_layout == input_tensor_layout.end() ) {
+
                     input_info.tensor().set_layout(::ov::Layout("NHWC"))
                                        .set_shape({1,
                                                    matdesc.size.height,
                                                    matdesc.size.width,
                                                    matdesc.chan});
-                    input_info.model().set_layout(::ov::Layout("NCHW"));
+
+                    if (explicit_model_layout != input_model_layout.end()) {
+                        input_info.model().set_layout(::ov::Layout(explicit_model_layout->second));
+                    } else {
+                        // NB: Must have some "default" otherwise no conversion
+                        // from NHWC -> model layout will be added.
+                        input_info.model().set_layout(::ov::Layout("NCHW"));
+                    }
+                    // NB: Configure resize since image input may has bigger size
+                    // than model expects.
                     input_info.preprocess()
                         .resize(::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR);
-
                 // NB: Tensor case - preprocessing is configured only if user asked.
                 } else {
-                    auto layout_it = input_tensor_layout.find(input_name);
-                    if (layout_it != input_tensor_layout.end()) {
-                        input_info.tensor().set_layout(::ov::Layout(layout_it->second));
+                    if (explicit_tensor_layout != input_tensor_layout.end()) {
+                        input_info.tensor().set_layout(::ov::Layout(explicit_tensor_layout->second));
                     }
-
-                    layout_it = input_model_layout.find(input_name);
-                    if (layout_it != input_model_layout.end()) {
-                        input_info.model().set_layout(::ov::Layout(layout_it->second));
+                    if (explicit_model_layout != input_model_layout.end()) {
+                        input_info.model().set_layout(::ov::Layout(explicit_model_layout->second));
                     }
                 }
             }
-            // FIXME: There must be separate flow to change
-            // ov::Model outside outMeta method.
+
+            for (const auto &output_name : uu.params.output_names) {
+                auto explicit_output_prec = output_precision.find(output_name);
+                if (explicit_output_prec != output_precision.end()) {
+                    ppp.output(output_name).tensor()
+                        .set_element_type(toOV(explicit_output_prec->second));
+                }
+            }
+            // FIXME: outMeta is the only method now
+            // where pre/post processing can be configured.
             const_cast<std::shared_ptr<::ov::Model>&>(uu.model) = ppp.build();
+        } else {
+            GAPI_Assert(cv::util::holds_alternative<ParamDesc::Blob>(uu.params.kind));
+            for (const auto &output_name : uu.params.output_names) {
+                auto explicit_output_prec = output_precision.find(output_name);
+                if (explicit_output_prec != output_precision.end()) {
+                    std::stringstream ss;
+                    ss << toOV(explicit_output_prec->second);
+                    cv::util::throw_error(std::logic_error
+                        ("OVBackend: Output tensor precision cannot be specified for model in blob format"
+                         " but " + output_name + " -> " + ss.str() + " is provided!"));
+                }
+            }
         }
 
         for (const auto &out_name : uu.params.output_names) {
-            // NOTE: our output_names vector follows the API order
-            // of this operation's outputs
-            const auto &out = uu.model->output(out_name);
-            cv::GMatDesc outm(toCV(out.get_element_type()),
-                              toCV(out.get_shape()));
+            cv::GMatDesc outm;
+            if (cv::util::holds_alternative<ParamDesc::IR>(uu.params.kind)) {
+                const auto &out = uu.model->output(out_name);
+                outm = cv::GMatDesc(toCV(out.get_element_type()),
+                                    toCV(out.get_shape()));
+            } else {
+                GAPI_Assert(cv::util::holds_alternative<ParamDesc::Blob>(uu.params.kind));
+                const auto &out = uu.compiled_model.output(out_name);
+                outm = cv::GMatDesc(toCV(out.get_element_type()),
+                                    toCV(out.get_shape()));
+            }
             result.emplace_back(std::move(outm));
         }
+
         return result;
     }
 
@@ -494,6 +548,17 @@ namespace {
             const auto &ki = cv::util::any_cast<KImpl>(ii.opaque);
 
             GModel::Graph model(gr);
+            auto& op = model.metadata(nh).get<Op>();
+
+            // NB: In case generic infer, info about in/out names is stored in operation (op.params)
+            if (pp.is_generic)
+            {
+                auto& info      = cv::util::any_cast<cv::detail::InOutInfo>(op.params);
+                pp.input_names  = info.in_names;
+                pp.output_names = info.out_names;
+                pp.num_in       = info.in_names.size();
+                pp.num_out      = info.out_names.size();
+            }
 
             gm.metadata(nh).set(OVUnit{pp});
             gm.metadata(nh).set(OVCallable{ki.run});
@@ -580,14 +645,12 @@ void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
 
     GAPI_Assert(cv::util::holds_alternative<cv::GRunArgs>(in_msg));
     const auto in_vector = cv::util::get<cv::GRunArgs>(in_msg);
-    // NB: Collect meta from all inputs.
     cv::GRunArg::Meta stub_meta;
     for (auto &&in_arg : in_vector)
     {
         stub_meta.insert(in_arg.meta.begin(), in_arg.meta.end());
     }
 
-    // (1) Collect island inputs/outputs
     input_objs.reserve(in_desc.size());
     for (auto &&it: ade::util::zip(ade::util::toRange(in_desc),
                     ade::util::toRange(in_vector)))
@@ -612,7 +675,6 @@ void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
 
     const auto &kk = giem.metadata(this_nh).get<OVCallable>();
 
-    // (5) Run the kernel.
     try {
         kk.run(ctx, compiled.infer_request);
     } catch (...) {
@@ -626,3 +688,12 @@ void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
         return;
     }
 }
+
+#else // HAVE_INF_ENGINE
+
+cv::gapi::GBackend cv::gapi::ov::backend() {
+    // Still provide this symbol to avoid linking issues
+    util::throw_error(std::runtime_error("G-API has been compiled without OpenVINO support"));
+}
+
+#endif // HAVE_INF_ENGINE
