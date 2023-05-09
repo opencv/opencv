@@ -80,7 +80,7 @@ typedef signed char schar;
 #define CV_16F  7
 #define CV_64S  8
 #define CV_64U  9
-#define CV_BOOL 10
+#define CV_1BOOL 10
 #define CV_32U  11
 //#define CV_16BF 12 // TODO! support bf16.
 
@@ -150,11 +150,11 @@ typedef signed char schar;
 #define CV_64UC4 CV_MAKETYPE(CV_64U,4)
 #define CV_64UC(n) CV_MAKETYPE(CV_64U,(n))
 
-#define CV_BOOLC1 CV_MAKETYPE(CV_BOOL,1)
-#define CV_BOOLC2 CV_MAKETYPE(CV_BOOL,2)
-#define CV_BOOLC3 CV_MAKETYPE(CV_BOOL,3)
-#define CV_BOOLC4 CV_MAKETYPE(CV_BOOL,4)
-#define CV_BOOLC(n) CV_MAKETYPE(CV_BOOL,(n))
+#define CV_1BOOLC1 CV_MAKETYPE(CV_1BOOL,1)
+#define CV_1BOOLC2 CV_MAKETYPE(CV_1BOOL,2)
+#define CV_1BOOLC3 CV_MAKETYPE(CV_1BOOL,3)
+#define CV_1BOOLC4 CV_MAKETYPE(CV_1BOOL,4)
+#define CV_1BOOLC(n) CV_MAKETYPE(CV_1BOOL,(n))
 
 #define CV_32UC1 CV_MAKETYPE(CV_32U,1)
 #define CV_32UC2 CV_MAKETYPE(CV_32U,2)
