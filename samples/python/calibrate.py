@@ -119,9 +119,9 @@ def main():
         if pattern_type == 'chessboard':
             found, corners = cv.findChessboardCorners(img, pattern_size)
         elif pattern_type == 'charucoboard':
-            corners, _charucoIds, markerCorners_svg, markerIds_svg = charuco_detector.detectBoard(img)
+            corners, _charucoIds, _markerCorners_svg, _markerIds_svg = charuco_detector.detectBoard(img)
             if (len(corners) == (height-1)*(width-1)):
-                found = True;
+                found = True
         else:
             print("unknown pattern type", pattern_type)
             return None
