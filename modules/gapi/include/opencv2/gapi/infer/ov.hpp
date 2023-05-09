@@ -10,8 +10,9 @@
 #include <string>
 
 #include <opencv2/gapi/util/any.hpp>
-#include <opencv2/gapi/own/exports.hpp>  // GAPI_EXPORTS
-#include <opencv2/gapi/gkernel.hpp>   // GKernelType[M], GBackend
+#include <opencv2/gapi/own/exports.hpp> // GAPI_EXPORTS
+#include <opencv2/gapi/gkernel.hpp>     // GKernelType[M], GBackend
+#include <opencv2/gapi/infer.hpp>       // Generic
 
 namespace cv {
 namespace gapi {
@@ -47,7 +48,7 @@ struct ParamDesc {
     std::vector<std::string> input_names;
     std::vector<std::string> output_names;
 
-    using PluginConfigT = std::map<std::string, std::string>;
+    using PluginConfigT = std::unordered_map<std::string, std::string>;
     PluginConfigT config;
 
     template <typename T>

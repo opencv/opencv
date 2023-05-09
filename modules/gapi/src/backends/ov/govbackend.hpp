@@ -8,7 +8,7 @@
 #define OPENCV_GAPI_GOVBACKEND_HPP
 
 // Include anyway - cv::gapi::ov::backend() still needs to be defined
-#include "opencv2/gapi/infer/ie.hpp"
+#include "opencv2/gapi/infer/ov.hpp"
 
 #ifdef HAVE_INF_ENGINE
 
