@@ -358,7 +358,7 @@ Map<T> broadCastIfValue(const ParamDesc::VariantMapT<T> &variant,
 
 struct Infer: public cv::detail::KernelTag {
     using API = cv::GInferBase;
-    static cv::gapi::GBackend backend()  { return cv::gapi::ie::backend(); }
+    static cv::gapi::GBackend backend()  { return cv::gapi::ov::backend(); }
     static KImpl kernel()                { return KImpl{outMeta, run}; }
 
     static cv::GMetaArgs outMeta(const ade::Graph      &gr,
