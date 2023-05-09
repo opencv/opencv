@@ -1705,7 +1705,7 @@ typedef CvContour CvPoint2DSeq;
 #define CV_IS_SET(set) \
     ((set) != NULL && (((CvSeq*)(set))->flags & CV_MAGIC_MASK) == CV_SET_MAGIC_VAL)
 
-#define CV_SEQ_ELTYPE_BITS           12
+#define CV_SEQ_ELTYPE_BITS           13
 #define CV_SEQ_ELTYPE_MASK           ((1 << CV_SEQ_ELTYPE_BITS) - 1)
 
 #define CV_SEQ_ELTYPE_POINT          CV_32SC2  /**< (x,y) */
