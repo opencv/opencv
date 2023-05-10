@@ -290,7 +290,7 @@ class ClassInfo(GeneralInfo):
         self.member_classes = [] # Only relevant for modules
         self.member_enums = [] # Only relevant for modules
         if decl[1]:
-            self.base = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip().replace(self.objc_name, "")
+            self.base = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip()
             if self.base:
                 self.is_base_class = False
                 self.native_ptr_name = "nativePtr" + self.objc_name
