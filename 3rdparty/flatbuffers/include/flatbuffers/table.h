@@ -47,14 +47,24 @@ class Table {
     return field_offset ? ReadScalar<T>(data_ + field_offset) : defaultval;
   }
 
-  template<typename P> P GetPointer(voffset_t field) {
+  template<typename P, typename OffsetSize = uoffset_t>
+  P GetPointer(voffset_t field) {
     auto field_offset = GetOptionalFieldOffset(field);
     auto p = data_ + field_offset;
-    return field_offset ? reinterpret_cast<P>(p + ReadScalar<uoffset_t>(p))
+    return field_offset ? reinterpret_cast<P>(p + ReadScalar<OffsetSize>(p))
                         : nullptr;
   }
-  template<typename P> P GetPointer(voffset_t field) const {
-    return const_cast<Table *>(this)->GetPointer<P>(field);
+  template<typename P, typename OffsetSize = uoffset_t>
+  P GetPointer(voffset_t field) const {
+    return const_cast<Table *>(this)->GetPointer<P, OffsetSize>(field);
+  }
+
+  template<typename P> P GetPointer64(voffset_t field) {
+    return GetPointer<P, uoffset64_t>(field);
+  }
+
+  template<typename P> P GetPointer64(voffset_t field) const {
+    return GetPointer<P, uoffset64_t>(field);
   }
 
   template<typename P> P GetStruct(voffset_t field) const {
@@ -131,15 +141,25 @@ class Table {
   }
 
   // Versions for offsets.
+  template<typename OffsetT = uoffset_t>
   bool VerifyOffset(const Verifier &verifier, voffset_t field) const {
     auto field_offset = GetOptionalFieldOffset(field);
-    return !field_offset || verifier.VerifyOffset(data_, field_offset);
+    return !field_offset || verifier.VerifyOffset<OffsetT>(data_, field_offset);
   }
 
+  template<typename OffsetT = uoffset_t>
   bool VerifyOffsetRequired(const Verifier &verifier, voffset_t field) const {
     auto field_offset = GetOptionalFieldOffset(field);
     return verifier.Check(field_offset != 0) &&
-           verifier.VerifyOffset(data_, field_offset);
+           verifier.VerifyOffset<OffsetT>(data_, field_offset);
+  }
+ 
+  bool VerifyOffset64(const Verifier &verifier, voffset_t field) const {
+    return VerifyOffset<uoffset64_t>(verifier, field);
+  }
+
+  bool VerifyOffset64Required(const Verifier &verifier, voffset_t field) const {
+    return VerifyOffsetRequired<uoffset64_t>(verifier, field);
   }
 
  private:
