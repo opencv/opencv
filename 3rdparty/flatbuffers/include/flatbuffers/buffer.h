@@ -25,13 +25,32 @@ namespace flatbuffers {
 
 // Wrapper for uoffset_t to allow safe template specialization.
 // Value is allowed to be 0 to indicate a null object (see e.g. AddOffset).
-template<typename T> struct Offset {
-  uoffset_t o;
+template<typename T = void> struct Offset {
+  // The type of offset to use.
+  typedef uoffset_t offset_type;
+
+  offset_type o;
   Offset() : o(0) {}
-  Offset(uoffset_t _o) : o(_o) {}
-  Offset<void> Union() const { return Offset<void>(o); }
+  Offset(const offset_type _o) : o(_o) {}
+  Offset<> Union() const { return o; }
   bool IsNull() const { return !o; }
 };
+
+// Wrapper for uoffset64_t Offsets.
+template<typename T = void> struct Offset64 {
+  // The type of offset to use.
+  typedef uoffset64_t offset_type;
+
+  offset_type o;
+  Offset64() : o(0) {}
+  Offset64(const offset_type offset) : o(offset) {}
+  Offset64<> Union() const { return o; }
+  bool IsNull() const { return !o; }
+};
+
+// Litmus check for ensuring the Offsets are the expected size.
+static_assert(sizeof(Offset<>) == 4, "Offset has wrong size");
+static_assert(sizeof(Offset64<>) == 8, "Offset64 has wrong size");
 
 inline void EndianCheck() {
   int endiantest = 1;
@@ -75,35 +94,59 @@ template<typename T> struct IndirectHelper {
   typedef T return_type;
   typedef T mutable_return_type;
   static const size_t element_stride = sizeof(T);
-  static return_type Read(const uint8_t *p, uoffset_t i) {
+
+  static return_type Read(const uint8_t *p, const size_t i) {
     return EndianScalar((reinterpret_cast<const T *>(p))[i]);
   }
-  static return_type Read(uint8_t *p, uoffset_t i) {
-    return Read(const_cast<const uint8_t *>(p), i);
+  static mutable_return_type Read(uint8_t *p, const size_t i) {
+    return reinterpret_cast<mutable_return_type>(
+        Read(const_cast<const uint8_t *>(p), i));
   }
 };
-template<typename T> struct IndirectHelper<Offset<T>> {
+
+// For vector of Offsets.
+template<typename T, template<typename> class OffsetT>
+struct IndirectHelper<OffsetT<T>> {
   typedef const T *return_type;
   typedef T *mutable_return_type;
-  static const size_t element_stride = sizeof(uoffset_t);
-  static return_type Read(const uint8_t *p, uoffset_t i) {
-    p += i * sizeof(uoffset_t);
-    return reinterpret_cast<return_type>(p + ReadScalar<uoffset_t>(p));
+  typedef typename OffsetT<T>::offset_type offset_type;
+  static const offset_type element_stride = sizeof(offset_type);
+
+  static return_type Read(const uint8_t *const p, const offset_type i) {
+    // Offsets are relative to themselves, so first update the pointer to
+    // point to the offset location.
+    const uint8_t *const offset_location = p + i * element_stride;
+
+    // Then read the scalar value of the offset (which may be 32 or 64-bits) and
+    // then determine the relative location from the offset location.
+    return reinterpret_cast<return_type>(
+        offset_location + ReadScalar<offset_type>(offset_location));
   }
-  static mutable_return_type Read(uint8_t *p, uoffset_t i) {
-    p += i * sizeof(uoffset_t);
-    return reinterpret_cast<mutable_return_type>(p + ReadScalar<uoffset_t>(p));
+  static mutable_return_type Read(uint8_t *const p, const offset_type i) {
+    // Offsets are relative to themselves, so first update the pointer to
+    // point to the offset location.
+    uint8_t *const offset_location = p + i * element_stride;
+
+    // Then read the scalar value of the offset (which may be 32 or 64-bits) and
+    // then determine the relative location from the offset location.
+    return reinterpret_cast<mutable_return_type>(
+        offset_location + ReadScalar<offset_type>(offset_location));
   }
 };
+
+// For vector of structs.
 template<typename T> struct IndirectHelper<const T *> {
   typedef const T *return_type;
   typedef T *mutable_return_type;
   static const size_t element_stride = sizeof(T);
-  static return_type Read(const uint8_t *p, uoffset_t i) {
-    return reinterpret_cast<return_type>(p + i * sizeof(T));
+
+  static return_type Read(const uint8_t *const p, const size_t i) {
+    // Structs are stored inline, relative to the first struct pointer.
+    return reinterpret_cast<return_type>(p + i * element_stride);
   }
-  static mutable_return_type Read(uint8_t *p, uoffset_t i) {
-    return reinterpret_cast<mutable_return_type>(p + i * sizeof(T));
+  static mutable_return_type Read(uint8_t *const p, const size_t i) {
+    // Structs are stored inline, relative to the first struct pointer.
+    return reinterpret_cast<mutable_return_type>(p + i * element_stride);
   }
 };
 
@@ -130,23 +173,25 @@ inline bool BufferHasIdentifier(const void *buf, const char *identifier,
 /// @cond FLATBUFFERS_INTERNAL
 // Helpers to get a typed pointer to the root object contained in the buffer.
 template<typename T> T *GetMutableRoot(void *buf) {
+  if (!buf) return nullptr;
   EndianCheck();
   return reinterpret_cast<T *>(
       reinterpret_cast<uint8_t *>(buf) +
       EndianScalar(*reinterpret_cast<uoffset_t *>(buf)));
 }
 
-template<typename T> T *GetMutableSizePrefixedRoot(void *buf) {
-  return GetMutableRoot<T>(reinterpret_cast<uint8_t *>(buf) +
-                           sizeof(uoffset_t));
+template<typename T, typename SizeT = uoffset_t>
+T *GetMutableSizePrefixedRoot(void *buf) {
+  return GetMutableRoot<T>(reinterpret_cast<uint8_t *>(buf) + sizeof(SizeT));
 }
 
 template<typename T> const T *GetRoot(const void *buf) {
   return GetMutableRoot<T>(const_cast<void *>(buf));
 }
 
-template<typename T> const T *GetSizePrefixedRoot(const void *buf) {
-  return GetRoot<T>(reinterpret_cast<const uint8_t *>(buf) + sizeof(uoffset_t));
+template<typename T, typename SizeT = uoffset_t>
+const T *GetSizePrefixedRoot(const void *buf) {
+  return GetRoot<T>(reinterpret_cast<const uint8_t *>(buf) + sizeof(SizeT));
 }
 
 }  // namespace flatbuffers

@@ -43,6 +43,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <limits>
 #include <iterator>
 #include <memory>
 
@@ -139,8 +140,8 @@
 #endif // !defined(FLATBUFFERS_LITTLEENDIAN)
 
 #define FLATBUFFERS_VERSION_MAJOR 23
-#define FLATBUFFERS_VERSION_MINOR 1
-#define FLATBUFFERS_VERSION_REVISION 21
+#define FLATBUFFERS_VERSION_MINOR 5
+#define FLATBUFFERS_VERSION_REVISION 9
 #define FLATBUFFERS_STRING_EXPAND(X) #X
 #define FLATBUFFERS_STRING(X) FLATBUFFERS_STRING_EXPAND(X)
 namespace flatbuffers {
@@ -233,12 +234,17 @@ namespace flatbuffers {
       }
       #define FLATBUFFERS_HAS_STRING_VIEW 1
     // Check for absl::string_view
-    #elif __has_include("absl/strings/string_view.h")
-      #include "absl/strings/string_view.h"
-      namespace flatbuffers {
-        typedef absl::string_view string_view;
-      }
-      #define FLATBUFFERS_HAS_STRING_VIEW 1
+    #elif __has_include("absl/strings/string_view.h") && \
+          __has_include("absl/base/config.h") && \
+          (__cplusplus >= 201411)
+      #include "absl/base/config.h"
+      #if !defined(ABSL_USES_STD_STRING_VIEW)
+        #include "absl/strings/string_view.h"
+        namespace flatbuffers {
+          typedef absl::string_view string_view;
+        }
+        #define FLATBUFFERS_HAS_STRING_VIEW 1
+      #endif
     #endif
   #endif // __has_include
 #endif // !FLATBUFFERS_HAS_STRING_VIEW
@@ -318,9 +324,11 @@ namespace flatbuffers {
 // Also, using a consistent offset type maintains compatibility of serialized
 // offset values between 32bit and 64bit systems.
 typedef uint32_t uoffset_t;
+typedef uint64_t uoffset64_t;
 
 // Signed offsets for references that can go in both directions.
 typedef int32_t soffset_t;
+typedef int64_t soffset64_t;
 
 // Offset/index used in v-tables, can be changed to uint8_t in
 // format forks to save a bit of space if desired.
@@ -329,7 +337,8 @@ typedef uint16_t voffset_t;
 typedef uintmax_t largest_scalar_t;
 
 // In 32bits, this evaluates to 2GB - 1
-#define FLATBUFFERS_MAX_BUFFER_SIZE ((1ULL << (sizeof(::flatbuffers::soffset_t) * 8 - 1)) - 1)
+#define FLATBUFFERS_MAX_BUFFER_SIZE std::numeric_limits<::flatbuffers::soffset_t>::max()
+#define FLATBUFFERS_MAX_64_BUFFER_SIZE std::numeric_limits<::flatbuffers::soffset64_t>::max()
 
 // The minimum size buffer that can be a valid flatbuffer.
 // Includes the offset to the root table (uoffset_t), the offset to the vtable
