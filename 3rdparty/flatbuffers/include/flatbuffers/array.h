@@ -17,6 +17,7 @@
 #ifndef FLATBUFFERS_ARRAY_H_
 #define FLATBUFFERS_ARRAY_H_
 
+#include <cstdint>
 #include <memory>
 
 #include "flatbuffers/base.h"
@@ -37,7 +38,7 @@ template<typename T, uint16_t length> class Array {
  public:
   typedef uint16_t size_type;
   typedef typename IndirectHelper<IndirectHelperType>::return_type return_type;
-  typedef VectorConstIterator<T, return_type> const_iterator;
+  typedef VectorConstIterator<T, return_type, uoffset_t> const_iterator;
   typedef VectorReverseIterator<const_iterator> const_reverse_iterator;
 
   // If T is a LE-scalar or a struct (!scalar_tag::value).
@@ -158,11 +159,13 @@ template<typename T, uint16_t length> class Array {
 
 // Specialization for Array[struct] with access using Offset<void> pointer.
 // This specialization used by idl_gen_text.cpp.
-template<typename T, uint16_t length> class Array<Offset<T>, length> {
+template<typename T, uint16_t length, template<typename> class OffsetT>
+class Array<OffsetT<T>, length> {
   static_assert(flatbuffers::is_same<T, void>::value, "unexpected type T");
 
  public:
   typedef const void *return_type;
+  typedef uint16_t size_type;
 
   const uint8_t *Data() const { return data_; }
 
