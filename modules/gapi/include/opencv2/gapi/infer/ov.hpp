@@ -14,6 +14,8 @@
 #include <opencv2/gapi/gkernel.hpp>     // GKernelType[M], GBackend
 #include <opencv2/gapi/infer.hpp>       // Generic
 
+#include <map>
+
 namespace cv {
 namespace gapi {
 
@@ -48,7 +50,7 @@ struct ParamDesc {
     std::vector<std::string> input_names;
     std::vector<std::string> output_names;
 
-    using PluginConfigT = std::unordered_map<std::string, std::string>;
+    using PluginConfigT = std::map<std::string, std::string>;
     PluginConfigT config;
 
     template <typename T>
