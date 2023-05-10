@@ -32,7 +32,6 @@ class AvifDecoder CV_FINAL : public BaseImageDecoder {
   int channels_;
   int bit_depth_;
   avifDecoder* decoder_;
-  bool is_io_set_;
 };
 
 class AvifEncoder CV_FINAL : public BaseImageEncoder {

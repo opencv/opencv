@@ -105,11 +105,11 @@ TEST_P(Imgcodecs_Avif_Image_EncodeDecodeSuite, encode_decode) {
 
   EXPECT_EQ(0, remove(output.c_str()));
 
-  const cv::Mat anim_decode = cv::imdecode(buf, imread_mode);
+  const cv::Mat img_decode = cv::imdecode(buf, imread_mode);
 
   // Test resulting images.
-  ASSERT_EQ(img_imread.type(), anim_decode.type());
-  for (const cv::Mat& img : {img_imread, anim_decode}) {
+  ASSERT_EQ(img_imread.type(), img_decode.type());
+  for (const cv::Mat& img : {img_imread, img_decode}) {
     ASSERT_FALSE(img.empty());
     EXPECT_EQ(Imgcodecs_Avif_Image_EncodeDecodeSuite::kWidth, img.cols);
     EXPECT_EQ(Imgcodecs_Avif_Image_EncodeDecodeSuite::kHeight, img.rows);

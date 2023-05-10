@@ -115,12 +115,6 @@ list(APPEND grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/rgbe.cpp)
 list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/exif.hpp)
 list(APPEND grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/exif.cpp)
 
-if (HAVE_AVIF)
-  # These files come from https://aomedia.googlesource.com/libavifinfo/.
-  list(APPEND grfmt_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/avifinfo.h)
-  list(APPEND grfmt_srcs ${CMAKE_CURRENT_LIST_DIR}/src/avifinfo.c)
-endif()
-
 source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 
 set(imgcodecs_hdrs

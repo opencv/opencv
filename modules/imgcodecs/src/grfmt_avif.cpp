@@ -9,8 +9,6 @@
 #include <avif/avif.h>
 #include <fstream>
 
-#include "avifinfo.h"
-
 #include <opencv2/core/utils/configuration.private.hpp>
 #include "opencv2/imgproc.hpp"
 #include "grfmt_avif.hpp"
@@ -126,76 +124,29 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless,
 static const size_t kParamMaxFileSize = utils::getConfigurationParameterSizeT(
     "OPENCV_IMGCODECS_AVIF_MAX_FILE_SIZE", 64 * 1024 * 1024);
 
-static constexpr size_t kAvifSignatureSize = 12;
+static constexpr size_t kAvifSignatureSize = 500;
 
-AvifDecoder::AvifDecoder() : is_io_set_(false) {
+AvifDecoder::AvifDecoder() {
   m_buf_supported = true;
   channels_ = 0;
   decoder_ = avifDecoderCreate();
   if (decoder_) decoder_->allowIncremental = AVIF_TRUE;
 }
 
-AvifDecoder::~AvifDecoder() { avifDecoderDestroy(decoder_); }
+AvifDecoder::~AvifDecoder() {
+  if (decoder_ != nullptr) avifDecoderDestroy(decoder_);
+}
 
 size_t AvifDecoder::signatureLength() const { return kAvifSignatureSize; }
 
 bool AvifDecoder::checkSignature(const String &signature) const {
-  return (AvifInfoIdentify(reinterpret_cast<const uint8_t *>(signature.c_str()),
-                           signature.size()) == kAvifInfoOk);
-}
-
-ImageDecoder AvifDecoder::newDecoder() const { return makePtr<AvifDecoder>(); }
-
-bool AvifDecoder::readHeader() {
-  uint8_t header[500] = {0};
-  uint8_t *header_ptr;
-  size_t header_size;
-  if (m_buf.empty()) {
-    std::ifstream fs;
-    // Read enough of the file to fill the header.
-    fs.open(m_filename.c_str(), std::ios::binary);
-    fs.seekg(0, std::ios::end);
-    const size_t fs_size = safeCastToSizeT(fs.tellg(), "File is too large");
-    fs.seekg(0, std::ios::beg);
-    CV_Assert(fs && "File stream error");
-    CV_CheckLE(
-        fs_size, kParamMaxFileSize,
-        "File is too large. Increase OPENCV_IMGCODECS_AVIF_MAX_FILE_SIZE "
-        "parameter if you want to process large files");
-
-    fs.read((char *)header, std::min(fs_size, sizeof(header)));
-    CV_Assert(fs && "Can't read 500 bytes");
-    header_ptr = header;
-    header_size = sizeof(header);
-    fs.close();
-  } else {
-    header_ptr = m_buf.ptr();
-    header_size = m_buf.total();
-  }
-  // It is necessary to go through AvifInfoGetFeatures to get alpha information
-  // as it is not filled by avifDecoderParse yet.
-  AvifInfoFeatures features;
-  const AvifInfoStatus status =
-      AvifInfoGetFeatures(header_ptr, header_size, &features);
-  switch (status) {
-    case kAvifInfoInvalidFile:
-    case kAvifInfoTooComplex:
-      return false;
-    case kAvifInfoOk:
-      m_width = features.width;
-      m_height = features.height;
-      channels_ = features.num_channels;
-      bit_depth_ = features.bit_depth;
-      CV_Assert(bit_depth_ == 8 || bit_depth_ == 10 || bit_depth_ == 12);
-      m_type = CV_MAKETYPE(bit_depth_ == 8 ? CV_8U : CV_32F, channels_);
-      return true;
-    case kAvifInfoNotEnoughData:
-      // The buffer is incomplete.
-      // TODO(vrabaud) we could load more data from the file.
-      return false;
-    default:
-      return false;
-  }
+  avifDecoderSetIOMemory(decoder_,
+                         reinterpret_cast<const uint8_t *>(signature.c_str()),
+                         signature.size());
+  decoder_->io->sizeHint = 1e9;
+  const avifResult status = avifDecoderParse(decoder_);
+  return (status != AVIF_RESULT_INVALID_FTYP &&
+          status != AVIF_RESULT_BMFF_PARSE_FAILED);
 }
 
 #define OPENCV_AVIF_CHECK_STATUS(X)                                       \
@@ -207,6 +158,27 @@ bool AvifDecoder::readHeader() {
       return false;                                                       \
     }                                                                     \
   }
+
+ImageDecoder AvifDecoder::newDecoder() const { return makePtr<AvifDecoder>(); }
+
+bool AvifDecoder::readHeader() {
+  OPENCV_AVIF_CHECK_STATUS(
+      m_buf.empty()
+          ? avifDecoderSetIOFile(decoder_, m_filename.c_str())
+          : avifDecoderSetIOMemory(
+                decoder_, reinterpret_cast<const uint8_t *>(m_buf.data),
+                m_buf.total()));
+  OPENCV_AVIF_CHECK_STATUS(avifDecoderParse(decoder_));
+
+  m_width = decoder_->image->width;
+  m_height = decoder_->image->height;
+  channels_ = (decoder_->image->yuvFormat == AVIF_PIXEL_FORMAT_YUV400) ? 1 : 3;
+  if (decoder_->alphaPresent) ++channels_;
+  bit_depth_ = decoder_->image->depth;
+  CV_Assert(bit_depth_ == 8 || bit_depth_ == 10 || bit_depth_ == 12);
+  m_type = CV_MAKETYPE(bit_depth_ == 8 ? CV_8U : CV_32F, channels_);
+  return true;
+}
 
 bool AvifDecoder::readData(Mat &img) {
   CV_CheckGE(m_width, 0, "");
@@ -236,17 +208,6 @@ bool AvifDecoder::readData(Mat &img) {
     read_img = img;  // copy header
   }
 
-  // Make sure the IO is properly set.
-  if (!is_io_set_) {
-    OPENCV_AVIF_CHECK_STATUS(
-        m_buf.empty()
-            ? avifDecoderSetIOFile(decoder_, m_filename.c_str())
-            : avifDecoderSetIOMemory(
-                  decoder_, reinterpret_cast<const uint8_t *>(m_buf.data),
-                  m_buf.total()));
-    OPENCV_AVIF_CHECK_STATUS(avifDecoderParse(decoder_));
-    is_io_set_ = true;
-  }
   OPENCV_AVIF_CHECK_STATUS(avifDecoderNextImage(decoder_));
 
   if (CopyToMat(decoder_->image, channels_, &read_img) != AVIF_RESULT_OK) {
@@ -289,7 +250,9 @@ AvifEncoder::AvifEncoder() {
   encoder_ = avifEncoderCreate();
 }
 
-AvifEncoder::~AvifEncoder() { avifEncoderDestroy(encoder_); }
+AvifEncoder::~AvifEncoder() {
+  if (encoder_) avifEncoderDestroy(encoder_);
+}
 
 bool AvifEncoder::isFormatSupported(int depth) const {
   return (depth == CV_8U || depth == CV_32F);
