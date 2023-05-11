@@ -215,6 +215,10 @@ bool AvifDecoder::readData(Mat &img) {
     return false;
   }
 
+  if (decoder_->image->exif.size > 0) {
+    m_exif.parseExif(decoder_->image->exif.data, decoder_->image->exif.size);
+  }
+
   if (read_img.data == img.data && img.type() == m_type) {
     // We already wrote to the right buffer.
   } else if (img.channels() == channels_) {
