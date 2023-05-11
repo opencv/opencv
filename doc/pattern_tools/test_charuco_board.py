@@ -5,8 +5,6 @@ import os, tempfile, numpy as np
 import sys
 import cv2 as cv
 from tests_common import NewOpenCVTests
-
-sys.path.append(NewOpenCVTests.repoPath+"/doc/pattern_tools")
 import gen_pattern
 
 class aruco_objdetect_test(NewOpenCVTests):
@@ -21,19 +19,19 @@ class aruco_objdetect_test(NewOpenCVTests):
         cols = 3
         rows = 5
         square_size = 100
-        aruco_type_ = [cv.aruco.DICT_4X4_1000, cv.aruco.DICT_5X5_1000, cv.aruco.DICT_6X6_1000,
+        aruco_type = [cv.aruco.DICT_4X4_1000, cv.aruco.DICT_5X5_1000, cv.aruco.DICT_6X6_1000,
                        cv.aruco.DICT_7X7_1000, cv.aruco.DICT_ARUCO_ORIGINAL, cv.aruco.DICT_APRILTAG_16h5,
                        cv.aruco.DICT_APRILTAG_25h9, cv.aruco.DICT_APRILTAG_36h10, cv.aruco.DICT_APRILTAG_36h11]
-        aruco_type_str_ = ['DICT_4X4_1000','DICT_5X5_1000', 'DICT_6X6_1000',
+        aruco_type_str = ['DICT_4X4_1000','DICT_5X5_1000', 'DICT_6X6_1000',
                        'DICT_7X7_1000', 'DICT_ARUCO_ORIGINAL', 'DICT_APRILTAG_16h5',
                        'DICT_APRILTAG_25h9', 'DICT_APRILTAG_36h10', 'DICT_APRILTAG_36h11']
         marker_size = 0.8*square_size
         board_width = cols*square_size
         board_height = rows*square_size
 
-        for aruco_type_i in range(len(aruco_type_)):
+        for aruco_type_i in range(len(aruco_type)):
             #draw desk using opencv
-            aruco_dict = cv.aruco.getPredefinedDictionary(aruco_type_[aruco_type_i])
+            aruco_dict = cv.aruco.getPredefinedDictionary(aruco_type[aruco_type_i])
             board = cv.aruco.CharucoBoard((cols, rows), square_size, marker_size, aruco_dict)
             charuco_detector = cv.aruco.CharucoDetector(board)
             markerImage = board.generateImage((cols*square_size*10, rows*square_size*10))
@@ -46,8 +44,10 @@ class aruco_objdetect_test(NewOpenCVTests):
             os.close(fd1)
             fd2, filepng2 = tempfile.mkstemp(prefix="svg_marker", suffix=".png")
             os.close(fd2)
+            basedir = os.path.abspath(os.path.dirname(__file__))
             pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
-                        board_height, "charuco_checkboard", marker_size, aruco_type_str_[aruco_type_i]+'.json.gz')
+                        board_height, "charuco_checkboard", marker_size,
+                        os.path.join(basedir, aruco_type_str[aruco_type_i]+'.json.gz'))
             pm.make_charuco_board()
             pm.save()
             drawing = svg2rlg(filesvg)
@@ -93,8 +93,9 @@ class aruco_objdetect_test(NewOpenCVTests):
             os.close(fd1)
             fd2, filepng2 = tempfile.mkstemp(prefix="svg_marker", suffix=".png")
             os.close(fd2)
+            basedir = os.path.abspath(os.path.dirname(__file__))
             pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
-                        board_height, "charuco_checkboard", marker_size, aruco_type_str+'.json.gz')
+                        board_height, "charuco_checkboard", marker_size, os.path.join(basedir, aruco_type_str+'.json.gz'))
             pm.make_charuco_board()
             pm.save()
             drawing = svg2rlg(filesvg)
