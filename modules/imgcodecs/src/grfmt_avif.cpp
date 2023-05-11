@@ -36,10 +36,17 @@ avifResult CopyToMat(const avifImage *image, int channels, Mat *mat) {
   CV_Assert((int)image->height == mat->rows);
   CV_Assert((int)image->width == mat->cols);
   if (channels == 1) {
-    cv::Mat(image->height, image->width,
-            CV_MAKE_TYPE((image->depth == 8) ? CV_8U : CV_16U, 1),
-            image->yuvPlanes[0], image->yuvRowBytes[0])
-        .copyTo(*mat);
+    const cv::Mat image_wrap =
+        cv::Mat(image->height, image->width,
+                CV_MAKE_TYPE((image->depth == 8) ? CV_8U : CV_16U, 1),
+                image->yuvPlanes[0], image->yuvRowBytes[0]);
+    if ((image->depth == 8 && mat->depth() == CV_8U) ||
+        (image->depth > 8 && mat->depth() == CV_16U)) {
+      image_wrap.copyTo(*mat);
+    } else {
+      CV_Assert(image->depth > 8 && mat->depth() == CV_8U);
+      image_wrap.convertTo(*mat, CV_8U, 1. / (1 << (image->depth - 8)));
+    }
     return AVIF_RESULT_OK;
   }
   avifRGBImage rgba;
@@ -51,14 +58,13 @@ avifResult CopyToMat(const avifImage *image, int channels, Mat *mat) {
     rgba.format = AVIF_RGB_FORMAT_BGRA;
   }
   rgba.rowBytes = mat->step[0];
-  rgba.depth = image->depth;
+  rgba.depth = (mat->depth() == CV_16U) ? image->depth : 8;
   rgba.pixels = reinterpret_cast<uint8_t *>(mat->data);
   return avifImageYUVToRGB(image, &rgba);
 }
 
 AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless,
                                  int bit_depth) {
-  // img must be 8 bit or 16 bit (rescaled float image).
   CV_Assert(img.depth() == CV_8U || img.depth() == CV_16U);
 
   const int width = img.cols;
@@ -162,6 +168,11 @@ bool AvifDecoder::checkSignature(const String &signature) const {
 ImageDecoder AvifDecoder::newDecoder() const { return makePtr<AvifDecoder>(); }
 
 bool AvifDecoder::readHeader() {
+  if (!m_buf.empty()) {
+    CV_Assert(m_buf.type() == CV_8UC1);
+    CV_Assert(m_buf.rows == 1);
+  }
+
   OPENCV_AVIF_CHECK_STATUS(
       m_buf.empty()
           ? avifDecoderSetIOFile(decoder_, m_filename.c_str())
@@ -176,7 +187,7 @@ bool AvifDecoder::readHeader() {
   if (decoder_->alphaPresent) ++channels_;
   bit_depth_ = decoder_->image->depth;
   CV_Assert(bit_depth_ == 8 || bit_depth_ == 10 || bit_depth_ == 12);
-  m_type = CV_MAKETYPE(bit_depth_ == 8 ? CV_8U : CV_32F, channels_);
+  m_type = CV_MAKETYPE(bit_depth_ == 8 ? CV_8U : CV_16U, channels_);
   return true;
 }
 
@@ -189,23 +200,16 @@ bool AvifDecoder::readData(Mat &img) {
   CV_CheckType(
       img.type(),
       (img.channels() == 1 || img.channels() == 3 || img.channels() == 4) &&
-          (img.depth() == CV_8U || img.depth() == CV_32F),
-      "AVIF only supports 1,3,4 channels and CV_8U and CV_32F");
-
-  if (!m_buf.empty()) {
-    CV_Assert(m_buf.type() == CV_8UC1);
-    CV_Assert(m_buf.rows == 1);
-  }
+          (img.depth() == CV_8U || img.depth() == CV_16U),
+      "AVIF only supports 1, 3, 4 channels and CV_8U and CV_16U");
 
   Mat read_img;
-  if (bit_depth_ > 8) {
-    // For higher bit depth, a temporary is needed to store uint16_t, that
-    // will then be converted to float.
-    read_img.create(m_height, m_width, CV_MAKE_TYPE(CV_16U, channels_));
-  } else if (img.type() != m_type) {
-    read_img.create(m_height, m_width, m_type);
+  if (img.channels() == channels_) {
+    read_img = img;
   } else {
-    read_img = img;  // copy header
+    // Use the asked depth but keep the number of channels. OpenCV and not
+    // libavif will do the color conversion.
+    read_img.create(m_height, m_width, CV_MAKE_TYPE(img.depth(), channels_));
   }
 
   OPENCV_AVIF_CHECK_STATUS(avifDecoderNextImage(decoder_));
@@ -219,24 +223,21 @@ bool AvifDecoder::readData(Mat &img) {
     m_exif.parseExif(decoder_->image->exif.data, decoder_->image->exif.size);
   }
 
-  if (read_img.data == img.data && img.type() == m_type) {
+  if (img.channels() == channels_) {
     // We already wrote to the right buffer.
-  } else if (img.channels() == channels_) {
-    if (bit_depth_ > 8) {
-      read_img.convertTo(img, CV_32F, 1. / ((1 << bit_depth_) - 1));
-    }
   } else {
-    if (bit_depth_ > 8) {
-      read_img.convertTo(read_img, CV_32F, 1. / ((1 << bit_depth_) - 1));
-    }
-    if (img.channels() == 1 && channels_ == 3) {
-      cvtColor(read_img, img, COLOR_BGR2GRAY);
-    } else if (img.channels() == 3 && channels_ == 1) {
+    if (channels_ == 1 && img.channels() == 3) {
       cvtColor(read_img, img, COLOR_GRAY2BGR);
-    } else if (img.channels() == 3 && channels_ == 4) {
-      cvtColor(read_img, img, COLOR_BGRA2BGR);
-    } else if (img.channels() == 4 && channels_ == 3) {
+    } else if (channels_ == 1 && img.channels() == 4) {
+      cvtColor(read_img, img, COLOR_GRAY2BGRA);
+    } else if (channels_ == 3 && img.channels() == 1) {
+      cvtColor(read_img, img, COLOR_BGR2GRAY);
+    } else if (channels_ == 3 && img.channels() == 4) {
       cvtColor(read_img, img, COLOR_BGR2BGRA);
+    } else if (channels_ == 4 && img.channels() == 1) {
+      cvtColor(read_img, img, COLOR_BGRA2GRAY);
+    } else if (channels_ == 4 && img.channels() == 3) {
+      cvtColor(read_img, img, COLOR_BGRA2BGR);
     } else {
       CV_Error(Error::StsInternal, "");
     }
@@ -259,7 +260,7 @@ AvifEncoder::~AvifEncoder() {
 }
 
 bool AvifEncoder::isFormatSupported(int depth) const {
-  return (depth == CV_8U || depth == CV_32F);
+  return (depth == CV_8U || depth == CV_16U);
 }
 
 bool AvifEncoder::write(const Mat &img, const std::vector<int> &params) {
@@ -315,24 +316,16 @@ bool AvifEncoder::writeToOutput(const std::vector<Mat> &img_vec,
   std::vector<cv::Mat> imgs_scaled;
   for (const cv::Mat &img : img_vec) {
     CV_CheckType(
-        CV_MAKE_TYPE(bit_depth, img.channels()),
+        img.type(),
         (bit_depth == 8 && img.depth() == CV_8U) ||
-            ((bit_depth == 10 || bit_depth == 12) && img.depth() == CV_32F),
+            ((bit_depth == 10 || bit_depth == 12) && img.depth() == CV_16U),
         "AVIF only supports bit depth of 8 with CV_8U input or "
-        "bit depth of 10 or 12 with CV_32F input");
+        "bit depth of 10 or 12 with CV_16U input");
     CV_Check(img.channels(),
              img.channels() == 1 || img.channels() == 3 || img.channels() == 4,
              "AVIF only supports 1, 3, 4 channels");
 
-    cv::Mat img_scaled;
-    if (img.depth() == CV_32F) {
-      img.convertTo(img_scaled, CV_16U, (1 << bit_depth) - 1);
-    } else {
-      img_scaled = img;
-    }
-    imgs_scaled.push_back(img_scaled);
-
-    images.push_back(ConvertToAvif(img_scaled, do_lossless, bit_depth));
+    images.push_back(ConvertToAvif(img, do_lossless, bit_depth));
   }
   for (const AvifImageUniquePtr &image : images) {
     const avifResult status = avifEncoderAddImage(
