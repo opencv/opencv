@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 namespace opencv_test { namespace {
 
@@ -2255,6 +2256,53 @@ TEST(Calib3d_SolvePnP, inputShape)
             EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-3);
             EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-3);
         }
+    }
+}
+
+bool hasNan(const cv::Mat& mat)
+{
+    bool has = false;
+    if (mat.type() == CV_32F)
+    {
+        for(size_t i = 0; i < mat.total(); i++)
+            has |= cvIsNaN(mat.at<float>(i));
+    }
+    else if (mat.type() == CV_64F)
+    {
+        for(size_t i = 0; i < mat.total(); i++)
+            has |= cvIsNaN(mat.at<double>(i));
+    }
+    else
+    {
+        has = true;
+        CV_LOG_ERROR(NULL, "check hasNan called with unsupported type!");
+    }
+
+    return has;
+}
+
+TEST(AP3P, ctheta1p_nan_23607)
+{
+    // the task is not well defined and may not converge (empty R, t) or should
+    // converge to some non-NaN solution
+    const std::array<cv::Point2d, 3> cameraPts = {
+        cv::Point2d{0.042784865945577621, 0.59844839572906494},
+        cv::Point2d{-0.028428621590137482, 0.60354739427566528},
+        cv::Point2d{0.0046037044376134872, 0.70674681663513184}
+    };
+    const std::array<cv::Point3d, 3> modelPts = {
+        cv::Point3d{-0.043258000165224075, 0.020459245890378952, -0.0069921980611979961},
+        cv::Point3d{-0.045648999512195587, 0.0029820732306689024, 0.0079000638797879219},
+        cv::Point3d{-0.043276999145746231, -0.013622495345771313, 0.0080113131552934647}
+    };
+
+    std::vector<Mat> R, t;
+    solveP3P(modelPts, cameraPts, Mat::eye(3, 3, CV_64F), Mat(), R, t, SOLVEPNP_AP3P);
+
+    for (size_t i = 0; i < R.size(); i++)
+    {
+        EXPECT_TRUE(!hasNan(R[i]));
+        EXPECT_TRUE(!hasNan(t[i]));
     }
 }
 

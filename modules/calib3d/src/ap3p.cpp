@@ -256,6 +256,8 @@ int ap3p::computePoses(const double featureVectors[3][4],
     int nb_solutions = 0;
     for (int i = 0; i < 4; ++i) {
         double ctheta1p = s[i];
+        if (cvIsNaN(ctheta1p))
+            continue;
         if (abs(ctheta1p) > 1)
             continue;
         double stheta1p = sqrt(1 - ctheta1p * ctheta1p);
