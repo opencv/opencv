@@ -346,9 +346,6 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS ReduceLayer : public Layer
     {
     public:
-        int reduceType;
-        // reduceDims contains the dimensions that need to be reduced, targetDims is the target output dimension.
-        std::vector<size_t> reduceDims, targetDims;
         static Ptr<ReduceLayer> create(const LayerParams& params);
     };
 
