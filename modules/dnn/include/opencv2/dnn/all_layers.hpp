@@ -349,12 +349,6 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ReduceLayer> create(const LayerParams& params);
     };
 
-    class CV_EXPORTS ReduceLayerInt8 : public ReduceLayer
-    {
-    public:
-        static Ptr<ReduceLayerInt8> create(const LayerParams& params);
-    };
-
     class CV_EXPORTS SoftmaxLayer : public Layer
     {
     public:

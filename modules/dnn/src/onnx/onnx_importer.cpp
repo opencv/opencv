@@ -912,7 +912,7 @@ void ONNXImporter::populateNet()
     for(int li = 0; li < layersSize; li++)
     {
         const opencv_onnx::NodeProto& node_proto = graph_proto.node(li);
-        handleNode(node_proto);
+         handleNode(node_proto);
     }
 
     // register outputs
@@ -1180,46 +1180,47 @@ void ONNXImporter::parseGlobalPool(LayerParams &layerParams, const opencv_onnx::
 void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     const auto& op_type = node_proto.op_type();
-    String reduceType;
+    String reduce_type;
     if (op_type == "ReduceMax")
-        reduceType = "MAX";
+        reduce_type = "MAX";
     else if (op_type == "ReduceMean")
-        reduceType = "MEAN";
+        reduce_type = "MEAN";
     else if (op_type == "ReduceMin")
-        reduceType = "MIN";
+        reduce_type = "MIN";
     else if (op_type == "ReduceProd")
-        reduceType = "PROD";
+        reduce_type = "PROD";
     else if (op_type == "ReduceSum")
-        reduceType = "SUM";
+        reduce_type = "SUM";
     else if (op_type == "ReduceL1")
-        reduceType = "L1";
+        reduce_type = "L1";
     else if (op_type == "ReduceL2")
-        reduceType = "L2";
+        reduce_type = "L2";
     else if (op_type == "ReduceLogSum")
-        reduceType = "LOG_SUM";
+        reduce_type = "LOG_SUM";
     else if (op_type == "ReduceLogSumExp")
-        reduceType = "LOG_SUM_EXP";
+        reduce_type = "LOG_SUM_EXP";
     else if (op_type == "ReduceSumSquare")
-        reduceType = "SUM_SQUARE";
+        reduce_type = "SUM_SQUARE";
     else
         CV_Error(Error::StsNotImplemented, "DNN/ONNX: " + op_type + " is not supported.");
+    layerParams.set("reduce", reduce_type);
 
     int num_inputs = node_proto.input_size();
     CV_Check(num_inputs, num_inputs >= 1 && num_inputs <= 2, "DNN/ONNX: Reduce layers should have at least one input and at most two inputs");
 
     // "axes" is turned to one of the inputs since opset 18,
     // except for ReduceSum, which has "axes" input since opset 13.
-    std::vector<int> axes;
     if (!layerParams.has("axes") && num_inputs == 2 && constBlobs.find(node_proto.input(1)) != constBlobs.end())
     {
         Mat mat_axes = getBlob(node_proto, 1);
         int num_axes = mat_axes.total();
-        axes.resize(num_axes);
+        std::vector<int> axes(num_axes);
         for (int i = 0; i < num_axes; ++i)
             axes[i] = mat_axes.at<int>(i);
         layerParams.set("axes", DictValue::arrayInt(&axes[0], num_axes));
     }
 
+    layerParams.type = "Reduce";
     addLayer(layerParams, node_proto);
 }
 
