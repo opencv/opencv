@@ -1,4 +1,3 @@
-#include <opencv2/core/hal/hal.hpp>
 #include <opencv2/objdetect/aruco_detector.hpp>
 #include <iostream>
 
@@ -7,65 +6,55 @@ using namespace std;
 
 static int _getSelfDistance(const Mat &marker) {
 
-    std::cout << marker << "\n";
     Mat bytes = aruco::Dictionary::getByteListFromBits(marker);
-    std::cout << bytes << "\n" << "\n";
+
     int minHamming = (int)marker.total() + 1;
     for(int r = 1; r < 4; r++) {
-        
-        int currentHamming = cv::hal::normHamming(bytes.ptr(), bytes.ptr() + bytes.cols*r, bytes.cols);
-        if(currentHamming < minHamming) minHamming = currentHamming;
+        cv::Mat tmp1(1, bytes.cols, CV_8UC1, Scalar::all(0));
+        cv::Mat tmp2(1, bytes.cols, CV_8UC1, Scalar::all(0));
+        uchar* rot0 = tmp1.ptr();
+        uchar* rot1 = tmp2.ptr();
 
-        //std::cout << bytes.cols*r << " " << bytes.cols*r + bytes.cols << "\n";
-        cv::Mat tmp1;
-        bytes(cv::Rect(0, 0, 2, 1)).copyTo(tmp1);
-        cv::Mat tmp2 = bytes(Range(0, 1), Range(0, 2)).clone();
-        std::cout << tmp1 <<" " << tmp1.cols <<" " << tmp1.rows << "\n";
-        std::cout << tmp2 << " " << tmp2.cols << " " << tmp2.rows << "\n";
-        //std::cout << tmp1.cols<<" "<< tmp1.rows<<" "<<"\n";
-        //std::cout << tmp2.cols << " " << tmp2.rows << " " "\n";
-        int tmpHamming = 0;// cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
-        if (tmpHamming == currentHamming) {
-            std::cout << "hamming distance is equal\n";
+        for (int i = 0; i < bytes.cols; ++i) {
+            rot0[i] = bytes.ptr()[i];
+            rot1[i] = bytes.ptr()[bytes.cols*r + i];
         }
-        else {
-            std::cout << "hamming distance is not equal\n";
-        }
+        
+        int currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
+        if (currentHamming < minHamming) minHamming = currentHamming;
     }
     Mat b;
     flip(marker, b, 0);
     Mat flipBytes = aruco::Dictionary::getByteListFromBits(b);
     for(int r = 0; r < 4; r++) {
-        int currentHamming = cv::hal::normHamming(flipBytes.ptr(), bytes.ptr() + bytes.cols*r, bytes.cols);
+        cv::Mat tmp1(1, flipBytes.cols, CV_8UC1, Scalar::all(0));
+        cv::Mat tmp2(1, bytes.cols, CV_8UC1, Scalar::all(0));
+        uchar* rot0 = tmp1.ptr();
+        uchar* rot1 = tmp2.ptr();
+
+        for (int i = 0; i < bytes.cols; ++i) {
+            rot0[i] = flipBytes.ptr()[i];
+            rot1[i] = bytes.ptr()[bytes.cols*r + i];
+        }
+
+        int currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
         if(currentHamming < minHamming) minHamming = currentHamming;
-        /*
-        cv::Mat tmp1 = flipBytes.colRange(0, bytes.cols);
-        cv::Mat tmp2 = bytes.colRange(bytes.cols*r, bytes.cols*r + bytes.cols);
-        int tmpHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
-        if (tmpHamming != currentHamming) {
-            std::cout << "hamming distance is equal\n";
-        }
-        else {
-            std::cout << "hamming distance is not equal\n";
-        }
-        */
     }
     flip(marker, b, 1);
     flipBytes = aruco::Dictionary::getByteListFromBits(b);
     for(int r = 0; r < 4; r++) {
-        int currentHamming = cv::hal::normHamming(flipBytes.ptr(), bytes.ptr() + bytes.cols*r, bytes.cols);
+        cv::Mat tmp1(1, flipBytes.cols, CV_8UC1, Scalar::all(0));
+        cv::Mat tmp2(1, bytes.cols, CV_8UC1, Scalar::all(0));
+        uchar* rot0 = tmp1.ptr();
+        uchar* rot1 = tmp2.ptr();
+
+        for (int i = 0; i < bytes.cols; ++i) {
+            rot0[i] = flipBytes.ptr()[i];
+            rot1[i] = bytes.ptr()[bytes.cols*r + i];
+        }
+
+        int currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
         if(currentHamming < minHamming) minHamming = currentHamming;
-        /*
-        cv::Mat tmp1 = flipBytes.colRange(0, bytes.cols);
-        cv::Mat tmp2 = bytes.colRange(bytes.cols*r, bytes.cols*r + bytes.cols);
-        int tmpHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
-        if (tmpHamming != currentHamming) {
-            std::cout << "hamming distance is equal\n";
-        }
-        else {
-            std::cout << "hamming distance is not equal\n";
-        }
-        */
     }
     return minHamming;
 }
@@ -80,11 +69,18 @@ static inline int getFlipDistanceToId(const aruco::Dictionary& dict, InputArray 
     Mat candidateBytes = aruco::Dictionary::getByteListFromBits(bits.getMat());
     int currentMinDistance = int(bits.total() * bits.total());
     for(unsigned int r = 0; r < nRotations; r++) {
-        int currentHamming = cv::hal::normHamming(
-                bytesList.ptr(id) + r*candidateBytes.cols,
-                candidateBytes.ptr(),
-                candidateBytes.cols);
 
+        cv::Mat tmp1(1, candidateBytes.cols, CV_8UC1, Scalar::all(0));
+        cv::Mat tmp2(1, candidateBytes.cols, CV_8UC1, Scalar::all(0));
+        uchar* rot0 = tmp1.ptr();
+        uchar* rot1 = tmp2.ptr();
+
+        for (int i = 0; i < candidateBytes.cols; ++i) {
+            rot0[i] = bytesList.ptr(id)[r*candidateBytes.cols + i];
+            rot1[i] = candidateBytes.ptr()[i];
+        }
+
+        int currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
         if(currentHamming < currentMinDistance) {
             currentMinDistance = currentHamming;
         }
@@ -93,10 +89,17 @@ static inline int getFlipDistanceToId(const aruco::Dictionary& dict, InputArray 
     flip(bits.getMat(), b, 0);
     candidateBytes = aruco::Dictionary::getByteListFromBits(b);
     for(unsigned int r = 0; r < nRotations; r++) {
-        int currentHamming = cv::hal::normHamming(
-                bytesList.ptr(id) + r * candidateBytes.cols,
-                candidateBytes.ptr(),
-                candidateBytes.cols);
+        cv::Mat tmp1(1, candidateBytes.cols, CV_8UC1, Scalar::all(0));
+        cv::Mat tmp2(1, candidateBytes.cols, CV_8UC1, Scalar::all(0));
+        uchar* rot0 = tmp1.ptr();
+        uchar* rot1 = tmp2.ptr();
+
+        for (int i = 0; i < candidateBytes.cols; ++i) {
+            rot0[i] = bytesList.ptr(id)[r*candidateBytes.cols + i];
+            rot1[i] = candidateBytes.ptr()[i];
+        }
+
+        int currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
         if (currentHamming < currentMinDistance) {
             currentMinDistance = currentHamming;
         }
@@ -105,10 +108,18 @@ static inline int getFlipDistanceToId(const aruco::Dictionary& dict, InputArray 
     flip(bits.getMat(), b, 1);
     candidateBytes = aruco::Dictionary::getByteListFromBits(b);
     for(unsigned int r = 0; r < nRotations; r++) {
-        int currentHamming = cv::hal::normHamming(
-                bytesList.ptr(id) + r * candidateBytes.cols,
-                candidateBytes.ptr(),
-                candidateBytes.cols);
+        cv::Mat tmp1(1, candidateBytes.cols, CV_8UC1, Scalar::all(0));
+        cv::Mat tmp2(1, candidateBytes.cols, CV_8UC1, Scalar::all(0));
+        uchar* rot0 = tmp1.ptr();
+        uchar* rot1 = tmp2.ptr();
+
+        for (int i = 0; i < candidateBytes.cols; ++i) {
+            rot0[i] = bytesList.ptr(id)[r*candidateBytes.cols + i];
+            rot1[i] = candidateBytes.ptr()[i];
+        }
+
+        int currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
+
         if (currentHamming < currentMinDistance) {
             currentMinDistance = currentHamming;
         }
@@ -131,7 +142,6 @@ static inline aruco::Dictionary generateCustomAsymmetricDictionary(int nMarkers,
     int C = (int)std::floor(float(markerSize * markerSize) / 4.f);
     int tau = 2 * (int)std::floor(float(C) * 4.f / 3.f);
 
-    std::cout << baseDictionary.bytesList.rows <<"\n";
     // if baseDictionary is provided, calculate its intermarker distance
     if(baseDictionary.bytesList.rows > 0) {
         CV_Assert(baseDictionary.markerSize == markerSize);
@@ -246,12 +256,12 @@ static inline int getMinAsymDistForDict(const aruco::Dictionary& dict) {
 const char* keys  =
         "{@outfile   |<none> | Output file with custom dict }"
         "{r          | false | Calculate the metric considering flipped markers }"
-        "{d          |       | Dictionary: DICT_4X4_50=0, DICT_4X4_100=1, DICT_4X4_250=2,"
-        "DICT_4X4_1000=3, DICT_5X5_50=4, DICT_5X5_100=5, DICT_5X5_250=6, DICT_5X5_1000=7, "
-        "DICT_6X6_50=8, DICT_6X6_100=9, DICT_6X6_250=10, DICT_6X6_1000=11, DICT_7X7_50=12,"
-        "DICT_7X7_100=13, DICT_7X7_250=14, DICT_7X7_1000=15, DICT_ARUCO_ORIGINAL = 16,"
-        "DICT_APRILTAG_16h5 = 17, DICT_APRILTAG_25h9 = 18, DICT_APRILTAG_36h10 = 19,"
-        "DICT_APRILTAG_36h11 = 20 }"
+        "{d          |       | Dictionary Name: DICT_4X4_50, DICT_4X4_100, DICT_4X4_250,"
+        "DICT_4X4_1000, DICT_5X5_50, DICT_5X5_100, DICT_5X5_250, DICT_5X5_1000, "
+        "DICT_6X6_50, DICT_6X6_100, DICT_6X6_250, DICT_6X6_1000, DICT_7X7_50,"
+        "DICT_7X7_100, DICT_7X7_250, DICT_7X7_1000, DICT_ARUCO_ORIGINAL,"
+        "DICT_APRILTAG_16h5, DICT_APRILTAG_25h9, DICT_APRILTAG_36h10,"
+        "DICT_APRILTAG_36h11}"
         "{nMarkers   |       | Number of markers in the dictionary }"
         "{markerSize |       | Marker size }"
         "{cd         |       | Input file with custom dictionary }";
@@ -275,9 +285,37 @@ int main(int argc, char *argv[])
     bool checkFlippedMarkers = parser.get<bool>("r");
 
     aruco::Dictionary dictionary = aruco::getPredefinedDictionary(0);
+
     if (parser.has("d")) {
-        int dictionaryId = parser.get<int>("d");
-        dictionary = aruco::getPredefinedDictionary(aruco::PredefinedDictionaryType(dictionaryId));
+        string arucoDictName = parser.get<string>("d");
+        cv::aruco::PredefinedDictionaryType arucoDict;
+        if (arucoDictName == "DICT_4X4_50") { arucoDict = cv::aruco::DICT_4X4_50; }
+        else if (arucoDictName == "DICT_4X4_100") { arucoDict = cv::aruco::DICT_4X4_100; }
+        else if (arucoDictName == "DICT_4X4_250") { arucoDict = cv::aruco::DICT_4X4_250; }
+        else if (arucoDictName == "DICT_4X4_1000") { arucoDict = cv::aruco::DICT_4X4_1000; }
+        else if (arucoDictName == "DICT_5X5_50") { arucoDict = cv::aruco::DICT_5X5_50; }
+        else if (arucoDictName == "DICT_5X5_100") { arucoDict = cv::aruco::DICT_5X5_100; }
+        else if (arucoDictName == "DICT_5X5_250") { arucoDict = cv::aruco::DICT_5X5_250; }
+        else if (arucoDictName == "DICT_5X5_1000") { arucoDict = cv::aruco::DICT_5X5_1000; }
+        else if (arucoDictName == "DICT_6X6_50") { arucoDict = cv::aruco::DICT_6X6_50; }
+        else if (arucoDictName == "DICT_6X6_100") { arucoDict = cv::aruco::DICT_6X6_100; }
+        else if (arucoDictName == "DICT_6X6_250") { arucoDict = cv::aruco::DICT_6X6_250; }
+        else if (arucoDictName == "DICT_6X6_1000") { arucoDict = cv::aruco::DICT_6X6_1000; }
+        else if (arucoDictName == "DICT_7X7_50") { arucoDict = cv::aruco::DICT_7X7_50; }
+        else if (arucoDictName == "DICT_7X7_100") { arucoDict = cv::aruco::DICT_7X7_100; }
+        else if (arucoDictName == "DICT_7X7_250") { arucoDict = cv::aruco::DICT_7X7_250; }
+        else if (arucoDictName == "DICT_7X7_1000") { arucoDict = cv::aruco::DICT_7X7_1000; }
+        else if (arucoDictName == "DICT_ARUCO_ORIGINAL") { arucoDict = cv::aruco::DICT_ARUCO_ORIGINAL; }
+        else if (arucoDictName == "DICT_APRILTAG_16h5") { arucoDict = cv::aruco::DICT_APRILTAG_16h5; }
+        else if (arucoDictName == "DICT_APRILTAG_25h9") { arucoDict = cv::aruco::DICT_APRILTAG_25h9; }
+        else if (arucoDictName == "DICT_APRILTAG_36h10") { arucoDict = cv::aruco::DICT_APRILTAG_36h10; }
+        else if (arucoDictName == "DICT_APRILTAG_36h11") { arucoDict = cv::aruco::DICT_APRILTAG_36h11; }
+        else {
+            cout << "incorrect name of aruco dictionary \n";
+            return 1;
+        }
+
+        dictionary = aruco::getPredefinedDictionary(arucoDict);
     }
     else if (parser.has("cd")) {
         FileStorage fs(parser.get<std::string>("cd"), FileStorage::READ);
@@ -291,14 +329,13 @@ int main(int argc, char *argv[])
         cerr << "Dictionary not specified" << endl;
         return 0;
     }
-
     if (!outputFile.empty() && nMarkers > 0 && markerSize > 0)
     {
         FileStorage fs(outputFile, FileStorage::WRITE);
         if (checkFlippedMarkers)
-            dictionary = generateCustomAsymmetricDictionary(nMarkers, markerSize, dictionary, 0);
+            dictionary = generateCustomAsymmetricDictionary(nMarkers, markerSize, aruco::Dictionary(), 0);
         else
-            dictionary = aruco::extendDictionary(nMarkers, markerSize, dictionary, 0);
+            dictionary = aruco::extendDictionary(nMarkers, markerSize, aruco::Dictionary(), 0);
         dictionary.writeDictionary(fs);
     }
 
