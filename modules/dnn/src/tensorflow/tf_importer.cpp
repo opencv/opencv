@@ -3290,6 +3290,10 @@ Net readNetFromTensorflow(const std::vector<uchar>&, const std::vector<uchar>&) 
     DNN_PROTOBUF_UNSUPPORTED();
 }
 
+void writeTextGraph(const String& _model, const String& output) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
 #endif  // HAVE_PROTOBUF
 
 CV__DNN_INLINE_NS_END
