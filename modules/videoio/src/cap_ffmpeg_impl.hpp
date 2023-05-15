@@ -1429,9 +1429,9 @@ bool CvCapture_FFMPEG::grabFrame()
 {
     bool valid = false;
 
-    static const size_t max_stream_attempts = cv::utils::getConfigurationParameterSizeT("OPENCV_FFMPEG_READ_ATTEMPTS", 4096);
+    static const size_t max_read_attempts = cv::utils::getConfigurationParameterSizeT("OPENCV_FFMPEG_READ_ATTEMPTS", 4096);
     static const size_t max_decode_attempts = cv::utils::getConfigurationParameterSizeT("OPENCV_FFMPEG_DECODE_ATTEMPTS", 64);
-    size_t cur_stream_attempts = 0;
+    size_t cur_read_attempts = 0;
     size_t cur_decode_attempts = 0;
 
     if( !ic || !video_st || !context )  return false;
@@ -1487,13 +1487,13 @@ bool CvCapture_FFMPEG::grabFrame()
         if( packet.stream_index != video_stream )
         {
             _opencv_ffmpeg_av_packet_unref (&packet);
-            if (++cur_stream_attempts > max_stream_attempts)
+            if (++cur_read_attempts > max_read_attempts)
             {
                 CV_LOG_WARNING(NULL,
                     "packet read max attempts exceeded, if your video have "
                     "multiple streams (video, audio) try to increase attempt "
                     "limit by setting environment variable OPENCV_FFMPEG_READ_ATTEMPTS "
-                    "(current value is " << max_stream_attempts << ")");
+                    "(current value is " << max_read_attempts << ")");
                 break;
             }
             continue;
