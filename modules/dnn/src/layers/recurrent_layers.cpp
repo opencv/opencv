@@ -294,8 +294,13 @@ public:
         if (useTimestampDim)
         {
             CV_Assert(inp0.size() >= 2 && total(inp0, 2) == _numInp);
-            _numSamples = inp0[1];
-            outResShape.push_back(inp0[0]);
+            if (!layout){
+                _numSamples = inp0[1];
+                outResShape.push_back(inp0[0]);
+            }else{
+                _numSamples = inp0[0];
+                outResShape.push_back(inp0[1]);
+            }
         }
         else
         {
@@ -352,8 +357,13 @@ public:
         if (useTimestampDim)
         {
             CV_Assert(inp0.dims >= 2 && (int)inp0.total(2) == numInp);
-            numTimeStamps = inp0.size[0];
-            numSamples = inp0.size[1];
+            if (!layout){
+                numTimeStamps = inp0.size[0];
+                numSamples = inp0.size[1];
+            }else{
+                numTimeStamps = inp0.size[1];
+                numSamples = inp0.size[0];
+            }
         }
         else
         {
@@ -389,7 +399,15 @@ public:
         if (layout){
             //swap axis 0 and 1 input x
             cv::Mat tmp;
-            cv::transposeND(input[0], {1, 0, 2}, tmp); //back to seq_len, batch_size, hidden_size format
+            // Since python input is 4 dimentional and C++ input 3 dimentinal
+            // we need to proccess each differently
+            if (input[0].dims == 4){
+                // here !!!
+                CV_Assert(input[0].size[3] == 1);
+                cv::transposeND(input[0], {1, 0, 2, 3}, tmp); //back to seq_len, batch_size, hidden_size format
+            }else{
+                cv::transposeND(input[0], {1, 0, 2}, tmp); //back to seq_len, batch_size, hidden_size format
+            }
             input[0] = tmp;
         }
 
@@ -609,7 +627,12 @@ public:
                     cInternal.copyTo(cOutTs.rowRange(curRowRange));
             }
         }
-
+        // transpose to match batch first output
+        if (layout){
+            cv::Mat tmp;
+            cv::transposeND(output[0], {1, 0, 2}, tmp);
+            output[0] = tmp;
+        }
         if (needYcTransform && produceCellOutput)
         {
             fixCellState(cOut, numDirs);
@@ -628,10 +651,13 @@ public:
 
         // permute to {0, 2, 1, 3};
         cv::Mat newCellState;
-        if (layout)
+        // transpose to match batch first output
+        if (layout){
             cv::transposeND(cOut, {2, 0, 1, 3}, newCellState);
-        else
+        }
+        else{
             cv::transposeND(cOut, {0, 2, 1, 3}, newCellState);
+        }
         cOut = newCellState;
 
         if (numDirs == 1)

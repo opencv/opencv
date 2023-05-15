@@ -1683,6 +1683,7 @@ std::string ONNXImporter::lstm_fix_dims(LayerParams& layerParams, const opencv_o
     permuteLP.type = "Permute";
     CV_Assert(layer_id.find(permuteLP.name) == layer_id.end());
 
+    const int layout = layerParams.get<int>("layout", false);
     int order[] = {0, 2, 1, 3};
     permuteLP.set("order", DictValue::arrayInt(order, 4));
 
@@ -1753,8 +1754,16 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     CV_Assert(shapeIt != outShapes.end());
     const MatShape x_shape = shapeIt->second;
 
-    const int seq_length = x_shape[0];
-    const int batch_size = x_shape[1];
+    //if layout is 1, change batch and sequence dims
+    const int layout = layerParams.get<int>("layout", false);
+    int batch_size, seq_length;
+    if (layout == 1){
+        batch_size = x_shape[0];
+        seq_length = x_shape[1];
+    }else{
+        seq_length = x_shape[0];
+        batch_size = x_shape[1];
+    }
     const int input_size = x_shape[2];
     const int hidden_size = layerParams.get<int>("hidden_size");
     const int num_directions = constBlobs[lstm_proto.input(1)].size[0];
@@ -1799,7 +1808,7 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
 
     bool need_yc = lstm_proto.output_size() > 2 && !lstm_proto.output(2).empty();
     bool need_yh = lstm_proto.output_size() > 1 && !lstm_proto.output(1).empty();
-    bool need_y = lstm_proto.output_size() > 0 && !lstm_proto.output(0).empty();
+    bool need_y  = lstm_proto.output_size() > 0 && !lstm_proto.output(0).empty();
 
     const std::string y_name = need_y ? lstm_proto.output(0) : "";
     const std::string yh_name = need_yh ? lstm_proto.output(1) : "";
