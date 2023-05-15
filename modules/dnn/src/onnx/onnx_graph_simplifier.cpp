@@ -7,6 +7,7 @@
 
 #include "../precomp.hpp"
 
+#ifdef HAVE_PROTOBUF
 #include "../graph_simplifier.hpp"
 #include "onnx_graph_simplifier.hpp"
 
@@ -1265,3 +1266,4 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn
+#endif  // HAVE_PROTOBUF

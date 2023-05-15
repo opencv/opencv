@@ -43,6 +43,7 @@
 #endif
 
 #include "onnx_graph_simplifier.hpp"
+#endif
 
 namespace cv {
 namespace dnn {
@@ -50,6 +51,7 @@ CV__DNN_INLINE_NS_BEGIN
 
 extern bool DNN_DIAGNOSTICS_RUN;
 
+#ifdef HAVE_PROTOBUF
 class ONNXLayerHandler;
 
 template <typename T>
@@ -4170,7 +4172,27 @@ Mat readTensorFromONNX(const String& path)
     return mat;
 }
 
+#else  // HAVE_PROTOBUF
+
+#define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/ONNX: Build OpenCV with Protobuf to import ONNX models")
+
+Net readNetFromONNX(const String&) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Net readNetFromONNX(const char*, size_t) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Net readNetFromONNX(const std::vector<uchar>&) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Mat readTensorFromONNX(const String&) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+#endif  // HAVE_PROTOBUF
+
 CV__DNN_INLINE_NS_END
 }} // namespace
-
-#endif
