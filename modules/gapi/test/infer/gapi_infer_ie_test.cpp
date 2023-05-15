@@ -2238,7 +2238,7 @@ TEST(TestAgeGenderIE, InferWithBatch)
     params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
     params.device_id = "CPU";
 
-    cv::Mat in_mat({batch_size, 3, 320, 240}, CV_8U);
+    cv::Mat in_mat({batch_size, 3, 62, 62}, CV_8U);
     cv::randu(in_mat, 0, 255);
 
     cv::Mat gapi_age, gapi_gender;
@@ -2247,8 +2247,9 @@ TEST(TestAgeGenderIE, InferWithBatch)
     IE::Blob::Ptr ie_age, ie_gender;
     {
         auto plugin = cv::gimpl::ie::wrap::getPlugin(params);
-        auto net    = cv::gimpl::ie::wrap::readNetwork(params);
-        setNetParameters(net);
+        auto net = cv::gimpl::ie::wrap::readNetwork(params);
+        auto ii = net.getInputsInfo().at("data");
+        ii->setPrecision(IE::Precision::U8);
         net.setBatchSize(batch_size);
         auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
         auto infer_request = this_network.CreateInferRequest();
