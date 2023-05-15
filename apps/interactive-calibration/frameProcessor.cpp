@@ -75,7 +75,7 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
 {
     cv::Ptr<cv::aruco::Board> board = mCharucoBoard.staticCast<cv::aruco::Board>();
 
-    std::vector<std::vector<cv::Point2f> > corners, rejected;
+    std::vector<std::vector<cv::Point2f> > corners;
     std::vector<int> ids;
     cv::Mat currentCharucoCorners, currentCharucoIds;
     detector->detectBoard(frame, currentCharucoCorners, currentCharucoIds, corners, ids);
