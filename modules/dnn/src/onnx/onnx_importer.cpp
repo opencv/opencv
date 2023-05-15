@@ -1683,7 +1683,6 @@ std::string ONNXImporter::lstm_fix_dims(LayerParams& layerParams, const opencv_o
     permuteLP.type = "Permute";
     CV_Assert(layer_id.find(permuteLP.name) == layer_id.end());
 
-    const int layout = layerParams.get<int>("layout", false);
     int order[] = {0, 2, 1, 3};
     permuteLP.set("order", DictValue::arrayInt(order, 4));
 
