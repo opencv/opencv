@@ -1210,8 +1210,7 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
 
     // "axes" is turned to one of the inputs since opset 18,
     // except for ReduceSum, which has "axes" input since opset 13.
-    if (!layerParams.has("axes") && num_inputs == 2 && constBlobs.find(node_proto.input(1)) != constBlobs.end())
-    {
+    if (!layerParams.has("axes") && num_inputs == 2 && constBlobs.find(node_proto.input(1)) != constBlobs.end()) {
         Mat mat_axes = getBlob(node_proto, 1);
         int num_axes = mat_axes.total();
         std::vector<int> axes(num_axes);

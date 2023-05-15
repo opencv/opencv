@@ -11,8 +11,7 @@ namespace cv { namespace dnn {
 class ReduceLayerImpl CV_FINAL : public ReduceLayer
 {
 public:
-    ReduceLayerImpl(const LayerParams& params)
-    {
+    ReduceLayerImpl(const LayerParams& params) {
         setParamsFrom(params);
 
         // set reduce type
@@ -34,8 +33,8 @@ public:
             reduce_type = ReduceType::L2;
         else if (op_type == "log_sum")
             reduce_type = ReduceType::LOG_SUM;
-        // else if (op_type == "log_sum_exp")
-        //     reduce_type = ReduceType::LOG_SUM_EXP;
+        else if (op_type == "log_sum_exp")
+            reduce_type = ReduceType::LOG_SUM_EXP;
         else if (op_type == "prod")
             reduce_type = ReduceType::PROD;
         else
@@ -44,8 +43,8 @@ public:
         keepdims = params.get<bool>("keepdims", true);
         noop_with_empty_axes = params.get<bool>("noop_with_empty_axes", false);
 
-        if (params.has("axes"))
-        {
+        // get axes if it is existed, otherwise reduce all
+        if (params.has("axes")) {
             auto param_axes = params.get("axes");
             int num_axes = param_axes.size();
             axes.resize(num_axes);
@@ -54,9 +53,35 @@ public:
         }
     }
 
-    virtual bool supportBackend(int backendId) CV_OVERRIDE
-    {
+    virtual bool supportBackend(int backendId) CV_OVERRIDE {
         return backendId == DNN_BACKEND_OPENCV;
+    }
+
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
+        if (axes.empty()) {
+            return;
+        }
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        auto shape_input = shape(inputs[0]);
+        for (auto i = 0; i < axes.size(); ++i) {
+            auto norm_axis = normalize_axis(axes[i], shape_input);
+            axes[i] = norm_axis;
+        }
+
+        bool do_nothing = true;
+        for (auto axis : axes) {
+            if (shape_input[axis] != 1) {
+                do_nothing = false;
+            }
+        }
+        if (do_nothing) {
+            axes.clear();
+            noop_with_empty_axes = true;
+        }
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -64,41 +89,42 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        if (axes.empty()) // empty axes
-        {
-            if (noop_with_empty_axes) // do nothing
-            {
+        // empty axes
+        if (axes.empty()) {
+            if (noop_with_empty_axes) {
+                // do nothing
                 outputs.assign(1, inputs[0]);
-            }
-            else // reduce all axes
-            {
-                MatShape shape_output{1};
+            } else {
+                // reduce all axes
+                MatShape shape_output;
+                if (keepdims) {
+                    shape_output = inputs[0];
+                    for (auto i = 0; i < shape_output.size(); ++i)
+                        shape_output[i] = 1;
+                } else {
+                    shape_output.push_back(1);
+                }
                 outputs.assign(1, shape_output);
             }
-        }
-        else
-        {
+        } else {
             auto shape_output_ = inputs[0];
-            for (size_t i = 0; i < axes.size(); ++i)
-            {
+            for (size_t i = 0; i < axes.size(); ++i) {
                 auto norm_axis = normalize_axis(axes[i], inputs[0]);
                 shape_output_[norm_axis] = -1;
             }
             MatShape shape_output;
-            for (size_t i = 0; i < shape_output_.size(); ++i)
-            {
-                if (shape_output_[i] == -1)
-                {
+            for (size_t i = 0; i < shape_output_.size(); ++i) {
+                if (shape_output_[i] == -1) {
                     if (keepdims)
                         shape_output.push_back(1);
                     else
                         continue;
-                }
-                else
+                } else
                     shape_output.push_back(shape_output_[i]);
             }
             if (shape_output.empty())
                 shape_output.push_back(1);
+
             outputs.assign(1, shape_output);
         }
 
@@ -113,9 +139,10 @@ public:
         ReduceBase(size_t n, const T& init) : n_(n), accumulator_(init) {}
         virtual void update(const T& a) = 0;
         virtual T get_value() { return accumulator_; }
+        virtual ~ReduceBase() = default;
     protected:
-        T accumulator_;
         size_t n_;
+        T accumulator_;
     };
 
     template <typename T>
@@ -139,7 +166,7 @@ public:
     template <typename T>
     class ReduceSum : public ReduceBase<T> {
     public:
-        ReduceSum(size_t n, const T& init) : ReduceBase<T>(n, init) {}
+        ReduceSum(size_t n, const T& init) : ReduceBase<T>(n, 0) {}
         void update(const T& a) override {
             this->accumulator_ += a;
         }
@@ -157,7 +184,7 @@ public:
     template <typename T>
     class ReduceSumSquare : public ReduceBase<T> {
     public:
-        ReduceSumSquare(size_t n, const T& init) : ReduceBase<T>(n, init) {}
+        ReduceSumSquare(size_t n, const T& init) : ReduceBase<T>(n, 0) {}
         void update(const T& a) override {
             this->accumulator_ += a * a;
         }
@@ -205,17 +232,63 @@ public:
         }
     };
 
-    // // TODO
-    // template <typename T>
-    // class ReduceLogSumExp : public ReduceBase<T> {
-    // public:
-    //     ReduceLogSumExp(size_t n, const T& init) : ReduceBase<T>(n, 0) {}
-    // };
+    // FIXME: overflow caution
+    template <typename T>
+    class ReduceLogSumExp : public ReduceBase<T> {
+    public:
+        ReduceLogSumExp(size_t n, const T& init) : ReduceBase<T>(n, 0) {}
+        void update(const T& a) override {
+            this->accumulator_ += static_cast<T>(std::exp(a));
+        }
+        T get_value() override {
+            return static_cast<T>(std::log(this->accumulator_));
+        }
+    };
 
 
     template <typename Op>
-    class ReduceInvoker : public ParallelLoopBody
-    {
+    class ReduceAllInvoker : public ParallelLoopBody {
+    public:
+        using dtype = typename Op::dtype_input;
+
+        const Mat& src;
+        Mat& dst;
+
+        int n_reduce;
+        int loop_size;
+
+        int total;
+        int cost_per_thread;
+
+        ReduceAllInvoker(const Mat& src_, Mat& dst_) : src(src_), dst(dst_) {
+            auto shape_src = shape(src);
+
+            n_reduce = std::accumulate(shape_src.begin(), shape_src.end(), 1, std::multiplies<int>());
+            loop_size = n_reduce;
+
+            total = 1;
+            cost_per_thread = 1;
+        }
+
+        void operator()(const Range& r) const CV_OVERRIDE {
+            int start = r.start;
+            int end = r.end;
+
+            const dtype* p_src = src.ptr<const dtype>();
+            dtype* p_dst = dst.ptr<dtype>();
+
+            for (int i = start; i < end; ++i) {
+                Op accumulator(n_reduce, *p_src);
+                for (int l = 0; l < loop_size; ++l) {
+                    accumulator.update(p_src[l]);
+                }
+                p_dst[i] = accumulator.get_value();
+            }
+        }
+    };
+
+    template <typename Op>
+    class ReduceInvoker : public ParallelLoopBody {
     public:
         using dtype = typename Op::dtype_input;
 
@@ -224,7 +297,7 @@ public:
 
         std::vector<int> reduced_axes; // assume in ascending order
 
-        int times_reduce;
+        int n_reduce;
         int loop_size;
 
         int last_reduced_dim;
@@ -243,14 +316,14 @@ public:
 
             auto steps_src = shape_src;
             steps_src[steps_src.size() - 1] = 1;
-            for (auto i = steps_src.size() - 2; i >= 0; ++i)
+            for (int i = static_cast<int>(steps_src.size()) - 2; i >= 0; --i)
                 steps_src[i] = steps_src[i + 1] * shape_src[i + 1];
 
             size_t projection_size = 1;
             for (auto axis : reduced_axes) {
                 projection_size *= shape_src[axis];
             }
-            times_reduce = projection_size;
+            n_reduce = projection_size;
 
             last_reduced_dim = shape_src[reduced_axes.back()];
             last_reduced_step = steps_src[reduced_axes.back()];
@@ -293,7 +366,7 @@ public:
             last_unreduced_dim = shape_src[unreduced_axes.back()];
             last_unreduced_step = steps_src[unreduced_axes.back()];
             unprojection_size /= last_unreduced_dim;
-            // TODO: all reduce?
+
             std::vector<int> unprojected_indices(unreduced_axes.size(), 0);
             unprojected_steps.reserve(unprojection_size);
             if (unprojected_indices.size() <= 1) {
@@ -314,20 +387,34 @@ public:
                 }
             }
 
-            // threads
             auto shape_dst = shape(dst);
             total = std::accumulate(shape_dst.begin(), shape_dst.end(), 1, std::multiplies<int>());
             cost_per_thread = static_cast<int>(projected_steps.size() * last_reduced_step);
         }
 
-        static void run(const Mat& src, Mat& dst, std::vector<int> axes) {
+        static void run(const Mat& src, Mat& dst, std::vector<int> axes, bool noop_with_empty_axes) {
             CV_Assert(src.isContinuous());
             CV_Assert(dst.isContinuous());
 
-            ReduceInvoker<Op> p(src, dst, axes);
+            if (axes.empty()) {
+                if (noop_with_empty_axes) {
+                    // copyTo is not used here for the reason that we want a
+                    // copy for the case when dims at all axes are 1
+                    const auto p_src = src.ptr<const dtype>();
+                    auto p_dst = dst.ptr<dtype>();
+                    std::memcpy(p_dst, p_src, sizeof(dtype) * dst.total());
+                    return;
+                }
 
+                ReduceAllInvoker<Op> p(src, dst);
+                double nstripes = (size_t)p.total * (size_t)p.cost_per_thread * (1 / 1024.0);
+                parallel_for_(Range(0, p.total), p, nstripes);
+                return;
+            }
+
+            ReduceInvoker<Op> p(src, dst, axes);
             double nstripes = (size_t)p.total * (size_t)p.cost_per_thread * (1 / 1024.0);
-            parallel_for_(Range(0, nstripes), p, nstripes);
+            parallel_for_(Range(0, p.total), p, nstripes);
         }
 
         void operator()(const Range& r) const CV_OVERRIDE {
@@ -341,7 +428,7 @@ public:
             size_t loop = start / last_unreduced_dim;
             size_t origin = unprojected_steps[main_index] + loop * last_unreduced_step;
             for (int i = start; i < end; ++i) {
-                Op accumulator(times_reduce, p_src[origin + projected_steps[0]]);
+                Op accumulator(n_reduce, p_src[origin + projected_steps[0]]);
                 for (auto projected_step : projected_steps) {
                     const dtype* loop_p_src = p_src + origin + projected_step;
                     for (auto l = 0; l < loop_size; l += last_reduced_step) {
@@ -379,27 +466,22 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        if (axes.empty() && noop_with_empty_axes) {
-            inputs[0].copyTo(outputs[0]);
-            return;
-        }
-
-        typeDispatch(outputs[0].type(), inputs[0], outputs[0], axes);
+        typeDispatch(outputs[0].type(), inputs[0], outputs[0], axes, noop_with_empty_axes);
     }
 
     template <typename T, typename... Args>
     inline void opDispatch(Args&&... args) {
         switch (reduce_type) {
-            case ReduceType::MAX: ReduceInvoker<ReduceMax<T>>::run(std::forward<Args>(args)...); break;
-            case ReduceType::MIN: ReduceInvoker<ReduceMin<T>>::run(std::forward<Args>(args)...); break;
-            case ReduceType::MEAN: ReduceInvoker<ReduceMean<T>>::run(std::forward<Args>(args)...); break;
-            case ReduceType::SUM: ReduceInvoker<ReduceSum<T>>::run(std::forward<Args>(args)...); break;
-            case ReduceType::L1: ReduceInvoker<ReduceL1<T>>::run(std::forward<Args>(args)...); break;
-            case ReduceType::L2: ReduceInvoker<ReduceL2<T>>::run(std::forward<Args>(args)...); break;
-            case ReduceType::PROD: ReduceInvoker<ReduceProd<T>>::run(std::forward<Args>(args)...); break;
-            case ReduceType::SUM_SQUARE: ReduceInvoker<ReduceSumSquare<T>>::run(std::forward<Args>(args)...); break;
-            case ReduceType::LOG_SUM: ReduceInvoker<ReduceLogSum<T>>::run(std::forward<Args>(args)...); break;
-            // case ReduceType::LOG_SUM_EXP: ReduceInvoker<ReduceLogSumExp<T>>::run(std::forward<Args>(args)...); break;
+            case ReduceType::MAX:         ReduceInvoker<ReduceMax<T>>::run(std::forward<Args>(args)...);       break;
+            case ReduceType::MIN:         ReduceInvoker<ReduceMin<T>>::run(std::forward<Args>(args)...);       break;
+            case ReduceType::MEAN:        ReduceInvoker<ReduceMean<T>>::run(std::forward<Args>(args)...);      break;
+            case ReduceType::SUM:         ReduceInvoker<ReduceSum<T>>::run(std::forward<Args>(args)...);       break;
+            case ReduceType::L1:          ReduceInvoker<ReduceL1<T>>::run(std::forward<Args>(args)...);        break;
+            case ReduceType::L2:          ReduceInvoker<ReduceL2<T>>::run(std::forward<Args>(args)...);        break;
+            case ReduceType::PROD:        ReduceInvoker<ReduceProd<T>>::run(std::forward<Args>(args)...);      break;
+            case ReduceType::SUM_SQUARE:  ReduceInvoker<ReduceSumSquare<T>>::run(std::forward<Args>(args)...); break;
+            case ReduceType::LOG_SUM:     ReduceInvoker<ReduceLogSum<T>>::run(std::forward<Args>(args)...);    break;
+            case ReduceType::LOG_SUM_EXP: ReduceInvoker<ReduceLogSumExp<T>>::run(std::forward<Args>(args)...); break;
             default: CV_Error(Error::StsBadArg, "DNN/Reduce: Unsupported operation.");
         }
     }
