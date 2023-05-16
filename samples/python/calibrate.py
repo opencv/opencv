@@ -5,8 +5,11 @@ camera calibration for distorted images with chess board samples
 reads distorted images, calculates the calibration and write undistorted images
 
 usage:
-    calibrate.py [--debug <output path>] [-w <width>] [-h <height>] [-t <pattern type>] [--square_size]
+    calibrate.py [--debug <output path>] [--w <width>] [--h <height>] [--t <pattern type>] [--square_size]
     [--marker_size] [--dict_name <aruco dictionary name>] [--dict_file_name <aruco dictionary file name>] [<image mask>]
+
+usage example:
+    calibrate.py --w=6 --h=4 --t=chessboard --square_size=50 ../data/left*.jpg
 
 default values:
     --debug:    ./output/
@@ -26,7 +29,6 @@ from __future__ import print_function
 import numpy as np
 import cv2 as cv
 
-import json
 # local modules
 from common import splitfn
 
@@ -66,13 +68,17 @@ def main():
     aruco_dict_name = str(args.get('--aruco_dict'))
 
     pattern_size = (height, width)
-    pattern_points = np.zeros((np.prod(pattern_size), 3), np.float32)
-    pattern_points[:, :2] = np.indices(pattern_size).T.reshape(-1, 2)
-    pattern_points *= square_size
-    if pattern_type == 'charucoboard':
+    if pattern_type == 'chessboard':
+        pattern_points = np.zeros((np.prod(pattern_size), 3), np.float32)
+        pattern_points[:, :2] = np.indices(pattern_size).T.reshape(-1, 2)
+        pattern_points *= square_size
+    elif pattern_type == 'charucoboard':
         pattern_points = np.zeros((np.prod((height-1, width-1)), 3), np.float32)
         pattern_points[:, :2] = np.indices((height-1, width-1)).T.reshape(-1, 2)
         pattern_points *= square_size
+    else:
+        print("unknown pattern")
+        return None
 
     obj_points = []
     img_points = []
