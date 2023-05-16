@@ -6,7 +6,6 @@
 // Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
-#include "opencv2/core/check.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 #include <opencv2/dnn/layer_reg.private.hpp>
@@ -912,7 +911,7 @@ void ONNXImporter::populateNet()
     for(int li = 0; li < layersSize; li++)
     {
         const opencv_onnx::NodeProto& node_proto = graph_proto.node(li);
-         handleNode(node_proto);
+        handleNode(node_proto);
     }
 
     // register outputs
