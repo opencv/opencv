@@ -1949,6 +1949,9 @@ public:
         int backend = get<0>(backend_target);
         int target = get<1>(backend_target);
 
+        if (backend == DNN_BACKEND_CUDA && dim > 4)
+            applyTestTag(CV_TEST_TAG_LONG);
+
         vector<vector<int>> dim_shape_list;
         get_all_arr(dim_shape_list, dim);
         replace(dim_shape_list, 1, 3);
@@ -2028,7 +2031,7 @@ private:
     }
 };
 
-TEST_P(Layer_Test_Eltwise_bcast, DISABLED_brute_force)
+TEST_P(Layer_Test_Eltwise_bcast, brute_force)
 {
     test_bcast();
 }
