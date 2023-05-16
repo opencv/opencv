@@ -2059,4 +2059,12 @@ public class CoreTest extends OpenCVTestCase {
         assertEquals(Core.VERSION, Core.getVersionString());
     }
 
+    public void testHardwareOptions() {
+        Core.checkHardwareSupport(0);
+        boolean original_status = Core.useOptimized();
+        Core.setUseOptimized(!original_status);
+        assertEquals(!original_status, Core.useOptimized());
+        Core.setUseOptimized(original_status);
+        assertEquals(original_status, Core.useOptimized());
+    }
 }
