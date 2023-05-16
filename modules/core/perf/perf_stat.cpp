@@ -107,12 +107,12 @@ PERF_TEST_P(Size_MatType, hasNonZero, testing::Combine( testing::Values( TYPICAL
     int matType = get<1>(GetParam());
 
     Mat src(sz, matType);
-    bool hnz = false;
+    /*bool hnz = false;*/
 
     declare.in(src, WARMUP_RNG);
 
     int runs = (sz.width <= 640) ? 8 : 1;
-    TEST_CYCLE_MULTIRUN(runs) hnz = hasNonZero(src);
+    TEST_CYCLE_MULTIRUN(runs) /*hnz =*/ hasNonZero(src);
 
     SANITY_CHECK_NOTHING();
 }
