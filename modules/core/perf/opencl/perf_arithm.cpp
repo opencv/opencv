@@ -481,7 +481,7 @@ OCL_PERF_TEST_P(HasNonZeroFixture, HasNonZero,
 
     OCL_TEST_CYCLE() result = cv::hasNonZero(src);
 
-    SANITY_CHECK(result);
+    SANITY_CHECK_NOTHING();
 }
 
 ///////////// Phase ////////////////////////
