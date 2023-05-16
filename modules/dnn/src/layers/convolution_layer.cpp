@@ -116,9 +116,6 @@ public:
 
         fusedWeights = false;
         fusedBias = false;
-
-        if (kernel_size.size() == 2)
-            isConv2D = true;
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
