@@ -1394,14 +1394,14 @@ TEST_P(Test_ONNX_layers, LSTM_init_h0_c0)
     testONNXModels("lstm_init_h0_c0", npy, 0, 0, false, false, 3);
 }
 // epsilon is larger because onnx does not match with torch/opencv exactly
-TEST_P(Test_ONNX_layers, LSTM_layout_0)
+TEST_P(Test_ONNX_layers, LSTM_layout_seq)
 {
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("lstm_layout_0", npy, 0.005, 0.005, false, false, 3);
 }
 // epsilon is larger because onnx does not match with torch/opencv exactly
-TEST_P(Test_ONNX_layers, LSTM_layout_1)
+TEST_P(Test_ONNX_layers, LSTM_layout_batch)
 {
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);

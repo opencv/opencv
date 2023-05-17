@@ -1754,7 +1754,7 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     const MatShape x_shape = shapeIt->second;
 
     //if layout is 1, change batch and sequence dims
-    const int layout = layerParams.get<int>("layout", false);
+    const int layout = layerParams.get<int>("layout", 0);
     int batch_size, seq_length;
     if (layout == 1){
         batch_size = x_shape[0];
@@ -1807,7 +1807,7 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
 
     bool need_yc = lstm_proto.output_size() > 2 && !lstm_proto.output(2).empty();
     bool need_yh = lstm_proto.output_size() > 1 && !lstm_proto.output(1).empty();
-    bool need_y  = lstm_proto.output_size() > 0 && !lstm_proto.output(0).empty();
+    bool need_y = lstm_proto.output_size() > 0 && !lstm_proto.output(0).empty();
 
     const std::string y_name = need_y ? lstm_proto.output(0) : "";
     const std::string yh_name = need_yh ? lstm_proto.output(1) : "";

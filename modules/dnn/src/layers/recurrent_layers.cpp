@@ -113,14 +113,19 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     MatShape outTailShape;  //shape of single output sample
     MatShape outTsShape;    //shape of N output samples
 
+    enum layout_t : int {
+        SEQ_BATCH_HID = 0,
+        BATCH_SEQ_HID = 1
+    };
+
     bool useTimestampDim;
     bool produceCellOutput;
     float forgetBias, cellClip;
     bool useCellClip, usePeephole;
     bool reverse;   // If true, go in negative direction along the time axis
     bool bidirectional;  // If true, produces both forward and reversed directions along time axis
-    bool layout;  // If true, uses batch_size x seq_length x num_hidden for input and output, else
-                  // uses seq_length x batch_size x num_hidden
+    layout_t layout;  // If true, uses batch_size x seq_length x num_hidden for input and output, else
+                      // uses seq_length x batch_size x num_hidden
 
     ActivationFunction f_activation;
     ActivationFunction g_activation;
@@ -200,7 +205,7 @@ public:
                 }
             }
         }
-        layout = params.get<bool>("layout", false);
+        layout = (layout_t) params.get<int>("layout", SEQ_BATCH_HID);
         useTimestampDim = params.get<bool>("use_timestamp_dim", true);
         produceCellOutput = params.get<bool>("produce_cell_output", false);
         forgetBias = params.get<float>("forget_bias", 0.0f);
@@ -297,7 +302,7 @@ public:
             if (!layout){
                 _numSamples = inp0[1];
                 outResShape.push_back(inp0[0]);
-            }else{
+            } else {
                 _numSamples = inp0[0];
                 outResShape.push_back(inp0[1]);
             }
