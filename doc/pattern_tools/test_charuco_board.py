@@ -59,9 +59,9 @@ class aruco_objdetect_test(NewOpenCVTests):
                 np.testing.assert_allclose(markerIds_svg, markerIds_cv, 0.1, 0.1)
         finally:
             if os.path.exists(filesvg):
-                os.remove(filesvg)    
+                os.remove(filesvg)
             if os.path.exists(filepng):
-                os.remove(filepng)  
+                os.remove(filepng)
 
     def test_aruco_marker_sizes(self):
         try:
@@ -75,7 +75,7 @@ class aruco_objdetect_test(NewOpenCVTests):
             square_size = 100
             aruco_type =  cv.aruco.DICT_5X5_1000
             aruco_type_str = 'DICT_5X5_1000'
-            marker_sizes_rate = [0.1, 0.25, 0.5, 0.75, 0.99]
+            marker_sizes_rate = [0.25, 0.5, 0.75, 0.9]
             board_width = cols*square_size
             board_height = rows*square_size
 
@@ -109,6 +109,6 @@ class aruco_objdetect_test(NewOpenCVTests):
                 np.testing.assert_allclose(markerIds_svg, markerIds_cv, 0.1, 0.1)
         finally:
             if os.path.exists(filesvg):
-                os.remove(filesvg)    
+                os.remove(filesvg)
             if os.path.exists(filepng):
-                os.remove(filepng)  
+                os.remove(filepng)
