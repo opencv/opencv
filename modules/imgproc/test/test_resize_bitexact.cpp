@@ -194,7 +194,7 @@ TEST(Resize_Bitexact, Nearest8U)
 
     // 2x decimation
     src[0] = (Mat_<uint8_t>(1, 6) << 0, 1, 2, 3, 4, 5);
-    dst[0] = (Mat_<uint8_t>(1, 3) << 0, 2, 4);
+    dst[0] = (Mat_<uint8_t>(1, 3) << 1, 3, 5);
 
     // decimation odd to 1
     src[1] = (Mat_<uint8_t>(1, 5) << 0, 1, 2, 3, 4);
