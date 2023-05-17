@@ -5,19 +5,19 @@ camera calibration for distorted images with chess board samples
 reads distorted images, calculates the calibration and write undistorted images
 
 usage:
-    calibrate.py [--debug <output path>] [--w <width>] [--h <height>] [--t <pattern type>] [--square_size]
-    [--marker_size] [--dict_name <aruco dictionary name>] [--dict_file_name <aruco dictionary file name>] [<image mask>]
+    calibrate.py [--debug <output path>] [-w <width>] [-h <height>] [-t <pattern type>] [--square_size=<square size>]
+    [--marker_size=<aruco marker size>] [--aruco_dict=<aruco dictionary name>] [<image mask>]
 
 usage example:
-    calibrate.py --w=6 --h=4 --t=chessboard --square_size=50 ../data/left*.jpg
+    calibrate.py -w 4 -h 6 -t chessboard --square_size=50 ../data/left*.jpg
 
 default values:
     --debug:    ./output/
-    --w: 4
-    --h: 6
-    --t: chessboard
-    --square_size: 10
-    --marker_size: 5
+    -w: 4
+    -h: 6
+    -t: chessboard
+    --square_size: 50
+    --marker_size: 25
     --aruco_dict: DICT_4X4_50
     --threads: 4
     <image mask> defaults to ../data/left*.jpg
@@ -40,13 +40,13 @@ def main():
     import getopt
     from glob import glob
 
-    args, img_names = getopt.getopt(sys.argv[1:], '', ['debug=', 'w=', 'h=', 't=','square_size=', 'marker_size=',
+    args, img_names = getopt.getopt(sys.argv[1:], 'w:h:t:', ['debug=','square_size=', 'marker_size=',
                                                       'aruco_dict=', 'threads=', ])
     args = dict(args)
     args.setdefault('--debug', './output/')
-    args.setdefault('--w', 4)
-    args.setdefault('--h', 6)
-    args.setdefault('--t', 'chessboard')
+    args.setdefault('-w', 4)
+    args.setdefault('-h', 6)
+    args.setdefault('-t', 'chessboard')
     args.setdefault('--square_size', 10)
     args.setdefault('--marker_size', 5)
     args.setdefault('--aruco_dict', 'DICT_4X4_50')
@@ -60,9 +60,9 @@ def main():
     if debug_dir and not os.path.isdir(debug_dir):
         os.mkdir(debug_dir)
 
-    height = int(args.get('--h'))
-    width = int(args.get('--w'))
-    pattern_type = str(args.get('--t'))
+    height = int(args.get('-h'))
+    width = int(args.get('-w'))
+    pattern_type = str(args.get('-t'))
     square_size = float(args.get('--square_size'))
     marker_size = float(args.get('--marker_size'))
     aruco_dict_name = str(args.get('--aruco_dict'))
@@ -108,6 +108,9 @@ def main():
         'DICT_APRILTAG_36h11':cv.aruco.DICT_APRILTAG_36h11
     }
 
+    if (aruco_dict_name not in set(aruco_dicts.keys())):
+        print("unknown aruco dictionary name")
+        return None
     aruco_dict = cv.aruco.getPredefinedDictionary(aruco_dicts[aruco_dict_name])
     board = cv.aruco.CharucoBoard(pattern_size, square_size, marker_size, aruco_dict)
     charuco_detector = cv.aruco.CharucoDetector(board)
@@ -124,6 +127,9 @@ def main():
         corners = 0
         if pattern_type == 'chessboard':
             found, corners = cv.findChessboardCorners(img, pattern_size)
+            if found:
+                term = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_COUNT, 30, 0.1)
+                cv.cornerSubPix(img, corners, (5, 5), (-1, -1), term)
         elif pattern_type == 'charucoboard':
             corners, _charucoIds, _markerCorners_svg, _markerIds_svg = charuco_detector.detectBoard(img)
             if (len(corners) == (height-1)*(width-1)):
@@ -131,10 +137,6 @@ def main():
         else:
             print("unknown pattern type", pattern_type)
             return None
-
-        if found:
-            term = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_COUNT, 30, 0.1)
-            cv.cornerSubPix(img, corners, (5, 5), (-1, -1), term)
 
         if debug_dir:
             vis = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
