@@ -124,8 +124,8 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     bool useCellClip, usePeephole;
     bool reverse;   // If true, go in negative direction along the time axis
     bool bidirectional;  // If true, produces both forward and reversed directions along time axis
-    layout_t layout;  // If true, uses batch_size x seq_length x num_hidden for input and output, else
-                      // uses seq_length x batch_size x num_hidden
+    layout_t layout;  // If layout == BATCH_SEQ_HID, uses batch_size x seq_length x num_hidden for input and output
+                      // else uses seq_length x batch_size x num_hidden
 
     ActivationFunction f_activation;
     ActivationFunction g_activation;
@@ -299,7 +299,7 @@ public:
         if (useTimestampDim)
         {
             CV_Assert(inp0.size() >= 2 && total(inp0, 2) == _numInp);
-            if (!layout) {
+            if (layout == SEQ_BATCH_HID) {
                 _numSamples = inp0[1];
                 outResShape.push_back(inp0[0]);
             } else {
@@ -362,7 +362,7 @@ public:
         if (useTimestampDim)
         {
             CV_Assert(inp0.dims >= 2 && (int)inp0.total(2) == numInp);
-            if (!layout){
+            if (layout == SEQ_BATCH_HID){
                 numTimeStamps = inp0.size[0];
                 numSamples = inp0.size[1];
             }else{
@@ -401,7 +401,7 @@ public:
         outputs_arr.getMatVector(output);
         internals_arr.getMatVector(internals);
 
-        if (layout){
+        if (layout == BATCH_SEQ_HID){
             //swap axis 0 and 1 input x
             cv::Mat tmp;
             // Since python input is 4 dimentional and C++ input 3 dimentinal
@@ -633,7 +633,7 @@ public:
             }
         }
         // transpose to match batch first output
-        if (layout){
+        if (layout == BATCH_SEQ_HID){
             cv::Mat tmp;
             cv::transposeND(output[0], {1, 0, 2}, tmp);
             output[0] = tmp;
@@ -657,7 +657,7 @@ public:
         // permute to {0, 2, 1, 3};
         cv::Mat newCellState;
         // transpose to match batch first output
-        if (layout){
+        if (layout == BATCH_SEQ_HID){
             cv::transposeND(cOut, {2, 0, 1, 3}, newCellState);
         }
         else{
