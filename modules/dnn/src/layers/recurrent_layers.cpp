@@ -299,7 +299,7 @@ public:
         if (useTimestampDim)
         {
             CV_Assert(inp0.size() >= 2 && total(inp0, 2) == _numInp);
-            if (!layout){
+            if (!layout) {
                 _numSamples = inp0[1];
                 outResShape.push_back(inp0[0]);
             } else {
