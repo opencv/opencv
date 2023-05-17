@@ -61,6 +61,11 @@ private:
         }
 #endif
 
+        bool haveBackendCPU_FP16 = false;
+#if defined(__arm64__) && __arm64__
+        haveBackendCPU_FP16 = true;
+#endif
+
         if (haveBackendOpenVINO && openvino::checkTarget(DNN_TARGET_CPU))
         {
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_CPU));
@@ -103,6 +108,9 @@ private:
 #endif
 
         backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
+
+        if (haveBackendCPU_FP16)
+            backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU_FP16));
 
 #ifdef HAVE_VULKAN
         if (haveVulkan())

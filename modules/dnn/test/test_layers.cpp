@@ -212,6 +212,8 @@ TEST_P(Test_Caffe_layers, InnerProduct)
 
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 
     testLayerUsingCaffeModels("layer_inner_product", true);
 }
@@ -378,7 +380,7 @@ TEST_P(Test_Caffe_layers, Eltwise)
 
 TEST_P(Test_Caffe_layers, PReLU)
 {
-    double lInf = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.021 : 0.0;
+    double lInf = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16) ? 0.021 : 0.0;
     testLayerUsingCaffeModels("layer_prelu", true, true, 0.0, lInf);
 }
 
@@ -2459,7 +2461,7 @@ TEST_P(ConvolutionActivationFusion, Accuracy)
     std::vector<int> expectedFusedLayers;
     if (backendId == DNN_BACKEND_OPENCV)
     {
-        if (targetId == DNN_TARGET_CPU)
+        if (targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16)
             expectedFusedLayers.push_back(activId); // all activations are fused
         else if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
         {
@@ -2594,7 +2596,7 @@ TEST_P(ConvolutionEltwiseActivationFusion, Accuracy)
     std::vector<int> expectedFusedLayers;
     if (backendId == DNN_BACKEND_OPENCV)
     {
-        if (targetId == DNN_TARGET_CPU)
+        if (targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16)
             expectedFusedLayers.push_back(activId); // activation is fused with eltwise layer
         else if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
         {
@@ -2683,7 +2685,7 @@ TEST_P(ConvolutionActivationEltwiseFusion, Accuracy)
     std::vector<int> expectedFusedLayers;
     if (backendId == DNN_BACKEND_OPENCV)
     {
-        if (targetId == DNN_TARGET_CPU)
+        if (targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16)
             expectedFusedLayers.push_back(activId); // activation fused with convolution
         else if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
         {
