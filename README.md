@@ -13,6 +13,8 @@
 
 ### Contributing
 
+![https://github.com/monoclehq](https://open-source-assets.middlewarehq.com/svgs/opencv-opencv-contributor-metrics-dark-widget.svg)
+
 Please read the [contribution guidelines](https://github.com/opencv/opencv/wiki/How_to_contribute) before starting work on a pull request.
 
 #### Summary of the guidelines:
