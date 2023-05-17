@@ -2179,7 +2179,7 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
 
     // output range: [-11; 8]
     double l1 =  default_l1, lInf = default_lInf;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.02;
         lInf = 0.2;

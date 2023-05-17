@@ -215,7 +215,7 @@ public:
         if (backendId == DNN_BACKEND_OPENCV)
         {
             if (kernel_size.size() == 3)
-                return preferableTarget == DNN_TARGET_CPU;
+                return IS_DNN_CPU_TARGET(preferableTarget);
             if (kernel_size.size() <= 2)
                 return true;
             else

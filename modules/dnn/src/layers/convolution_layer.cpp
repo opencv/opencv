@@ -428,7 +428,6 @@ public:
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
         BaseConvolutionLayerImpl::finalize(inputs_arr, outputs_arr);
-
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
         // prepare weightsMat where each row is aligned and has enough zero padding on the right to
@@ -1405,7 +1404,8 @@ public:
 
                 CV_Assert(outputs[0].size[1] % ngroups == 0);
                 fastConvImpl = initFastConv(weightsMat, &biasvec[0], ngroups, K, C, kernel_size, strides,
-                                            dilations, pads_begin, pads_end, conv_dim, canUseWinograd);
+                                            dilations, pads_begin, pads_end, conv_dim,
+                                            preferableTarget == DNN_TARGET_CPU_FP16, canUseWinograd);
             }
 
             runFastConv(inputs[0], outputs[0], fastConvImpl, nstripes, activ, reluslope, fusedAdd);
