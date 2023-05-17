@@ -1178,165 +1178,49 @@ void ONNXImporter::parseGlobalPool(LayerParams &layerParams, const opencv_onnx::
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
+void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    opencv_onnx::NodeProto node_proto = node_proto_;
-    const std::string& layer_type = node_proto.op_type();
-    const std::string output_name = node_proto.output(0);
-    int depth = layerParams.get<int>("depth", CV_32F);
-
-    CV_Assert(node_proto.input_size() <= 2);
-    String reduceType;
-
-    if (layer_type == "ReduceMax")
-        reduceType = "MAX";
-    else if (layer_type == "ReduceMin")
-        reduceType = "MIN";
-    else if (layer_type == "ReduceSum")
-        reduceType = "SUM";
-    else if (layer_type == "ReduceSumSquare")
-        reduceType = "SUM_SQUARE";
-    else if (layer_type == "ReduceProd")
-        reduceType = "PROD";
-    else if (layer_type == "ReduceL1")
-        reduceType = "L1";
-    else if (layer_type == "ReduceL2")
-        reduceType = "L2";
-    else if (layer_type == "ReduceLogSum")
-        reduceType = "LOG_SUM";
-    else if (layer_type == "ReduceLogSumExp")
-        reduceType = "LOG_SUM_EXP";
-    else if (layer_type == "ReduceMean")
-        reduceType = "AVE";
+    const auto& op_type = node_proto.op_type();
+    String reduce_type;
+    if (op_type == "ReduceMax")
+        reduce_type = "MAX";
+    else if (op_type == "ReduceMean")
+        reduce_type = "MEAN";
+    else if (op_type == "ReduceMin")
+        reduce_type = "MIN";
+    else if (op_type == "ReduceProd")
+        reduce_type = "PROD";
+    else if (op_type == "ReduceSum")
+        reduce_type = "SUM";
+    else if (op_type == "ReduceL1")
+        reduce_type = "L1";
+    else if (op_type == "ReduceL2")
+        reduce_type = "L2";
+    else if (op_type == "ReduceLogSum")
+        reduce_type = "LOG_SUM";
+    else if (op_type == "ReduceLogSumExp")
+        reduce_type = "LOG_SUM_EXP";
+    else if (op_type == "ReduceSumSquare")
+        reduce_type = "SUM_SQUARE";
     else
-        CV_Error(Error::StsNotImplemented, "Unsupported Pooling type of " + layer_type + " operation.");
+        CV_Error(Error::StsNotImplemented, "DNN/ONNX: " + op_type + " is not supported.");
+    layerParams.set("reduce", reduce_type);
 
-    // The ReduceInt8 can only support "MAX" and "MIN".
-    if (depth == CV_8S)
-    {
-        CV_Assert(reduceType == "MAX" || reduceType == "MIN");
+    int num_inputs = node_proto.input_size();
+    CV_Check(num_inputs, num_inputs >= 1 && num_inputs <= 2, "DNN/ONNX: Reduce layers should have at least one input and at most two inputs");
+
+    // "axes" is turned to one of the inputs since opset 18,
+    // except for ReduceSum, which has "axes" input since opset 13.
+    if (!layerParams.has("axes") && num_inputs == 2 && constBlobs.find(node_proto.input(1)) != constBlobs.end()) {
+        Mat mat_axes = getBlob(node_proto, 1);
+        int num_axes = mat_axes.total();
+        std::vector<int> axes(num_axes);
+        for (int i = 0; i < num_axes; ++i)
+            axes[i] = mat_axes.at<int>(i);
+        layerParams.set("axes", DictValue::arrayInt(&axes[0], num_axes));
     }
 
-    layerParams.type = (depth == CV_8S) ? "ReduceInt8" : "Reduce";
-    layerParams.set("reduce", reduceType);
-    bool keepdims = layerParams.get<int>("keepdims", 1) == 1;
-
-    MatShape inpShape = outShapes[node_proto.input(0)];
-    std::vector<bool> shouldDelete(inpShape.size(), false);
-
-    if (layer_type == "ReduceSum" && node_proto.input_size() == 2)
-    {
-        if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
-        {
-            Mat axesMat = getBlob(node_proto, 1);
-            int axesNum = axesMat.total();
-            for (int i = 0; i < axesNum; i++)
-            {
-                int axis = normalize_axis(axesMat.at<int>(i), inpShape.size());
-                shouldDelete[axis] = true;
-            }
-        }
-        else
-            //  in opset 13, the ReduceSum has two input, it takes axes as input instead of attribute
-            //  details:https://github.com/onnx/onnx/issues/3420#issuecomment-844295687
-            CV_Error(Error::StsNotImplemented, "Non-constant axis values in ReduceSum are not supported.");
-    }
-    else
-    {
-        if (layerParams.has("axes"))
-        {
-            DictValue axes = layerParams.get("axes");
-            for (int i = 0; i < axes.size(); i++)
-            {
-                int axis = normalize_axis(axes.get<int>(i), inpShape.size());
-                shouldDelete[axis] = true;
-            }
-        }
-        else
-        {
-            for (int i = 0; i < inpShape.size(); i++)
-            {
-                shouldDelete[i] = true;
-            }
-        }
-    }
-
-    std::vector<int> targetShape;
-    for (int i = 0; i < inpShape.size(); ++i)
-    {
-        if (!shouldDelete[i])
-        {
-            targetShape.push_back(inpShape[i]);
-        }
-        else if (keepdims)
-        {
-            targetShape.push_back(1);
-        }
-    }
-
-    if (targetShape.empty())
-        targetShape.push_back(1);
-
-    // Using PermuteLayer to move the deleted axis to the last.
-    std::vector<int> perm(inpShape.size(), 0);
-    for (int i = 0; i < inpShape.size(); i++)
-        perm[i] = i;
-
-    bool needPermuet = false;
-    for (int i = 0; i < inpShape.size(); i++)
-    {
-        if (shouldDelete[i])
-        {
-            // find the first not deleted element.
-            std::vector<bool>::iterator iter = std::find(shouldDelete.begin() + i, shouldDelete.end(), false);
-
-            if (iter != shouldDelete.end())
-            {
-                int index = iter - shouldDelete.begin();
-
-                bool temp = shouldDelete[index];
-                shouldDelete[index] = shouldDelete[i];
-                shouldDelete[i] = temp;
-
-                std::swap(perm[index], perm[i]);
-                std::swap(inpShape[index], inpShape[i]);
-                needPermuet = true;
-            }
-            else
-                break;
-        }
-    }
-
-    auto inputString= node_proto.input(0);
-    if (needPermuet)
-    {
-        LayerParams permuteLp;
-        permuteLp.name = layerParams.name + "/permute";
-        permuteLp.type = (depth == CV_8S) ? "PermuteInt8" : "Permute";
-        permuteLp.set("order", DictValue::arrayInt(perm.data(), perm.size()));
-
-        opencv_onnx::NodeProto protoPermute;
-        protoPermute.add_input(inputString);
-        protoPermute.add_output(permuteLp.name);
-        addLayer(permuteLp, protoPermute);
-        inputString = permuteLp.name;
-    }
-
-    std::vector<int> deletedDims;
-    for (int axis_i = 0; axis_i < inpShape.size(); ++axis_i)
-    {
-        if (shouldDelete[axis_i])
-        {
-            deletedDims.push_back(inpShape[axis_i]);
-        }
-    }
-
-    layerParams.set("deleted_dims", DictValue::arrayInt(&deletedDims[0], deletedDims.size()));
-    layerParams.set("target_dims", DictValue::arrayInt(&targetShape[0], targetShape.size()));
-
-    node_proto.set_input(0, inputString);
-    node_proto.set_output(0, output_name);
-
+    layerParams.type = "Reduce";
     addLayer(layerParams, node_proto);
 }
 
