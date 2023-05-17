@@ -332,7 +332,7 @@ TEST_P(Test_Model, DetectRegion)
     double confThreshold = 0.24;
     double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.397 : 0.4;
     double scoreDiff = 8e-5, iouDiff = 1e-5;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 1e-2;
         iouDiff = 1.6e-2;
@@ -392,7 +392,7 @@ TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
     double confThreshold = 0.24;
     double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.15: 0.15;
     double scoreDiff = 8e-5, iouDiff = 1e-5;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 1e-2;
         iouDiff = 1.6e-2;
@@ -443,7 +443,7 @@ TEST_P(Test_Model, DetectionOutput)
     double scoreDiff = default_l1, iouDiff = 1e-5;
     float confThreshold = 0.8;
     double nmsThreshold = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CUDA_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         if (backend == DNN_BACKEND_OPENCV)
             scoreDiff = 4e-3;
@@ -495,7 +495,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     Size size{300, 300};
 
     double scoreDiff = 1e-5, iouDiff = 1e-5;
-    if (target == DNN_TARGET_OPENCL_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 1.7e-2;
         iouDiff = 6.91e-2;
@@ -522,6 +522,8 @@ TEST_P(Test_Model, Keypoints_pose)
 {
     if (target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 #ifdef HAVE_INF_ENGINE
     if (target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -569,7 +571,7 @@ TEST_P(Test_Model, Keypoints_face)
 
     // Ref. Range: [-1.1784188, 1.7758257]
     float norm = 1e-4;
-    if (target == DNN_TARGET_OPENCL_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
         norm = 5e-3;
     if (target == DNN_TARGET_MYRIAD)
     {
@@ -605,7 +607,7 @@ TEST_P(Test_Model, Detection_normalized)
         scoreDiff = 3e-4;
         iouDiff = 0.018;
     }
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 5e-3;
         iouDiff = 0.09;
@@ -654,7 +656,7 @@ TEST_P(Test_Model, Segmentation)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
-    if ((backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+    if ((backend == DNN_BACKEND_OPENCV && (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16))
         || (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16))
     {
         norm = 2.0f;  // l1 = 0.01 lInf = 2
@@ -741,6 +743,8 @@ TEST_P(Test_Model, TextDetectionByDB)
 {
     if (target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 
     std::string imgPath = _tf("text_det_test1.png");
     std::string weightPathDB = _tf("onnx/models/DB_TD500_resnet50.onnx", false);
@@ -801,7 +805,7 @@ TEST_P(Test_Model, TextDetectionByEAST)
     double eps_size = 5/*pixels*/;
     double eps_angle = 1;
 
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         eps_center = 10;
         eps_size = 25;

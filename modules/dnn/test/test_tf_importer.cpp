@@ -486,6 +486,11 @@ TEST_P(Test_TensorFlow_layers, slim_batch_norm)
         l1 = 0.005;
         lInf = 0.33;
     }
+    else if (target == DNN_TARGET_CPU_FP16)
+    {
+        l1 = 0.041;
+        lInf = 0.37;
+    }
 
     runTensorFlowNet("slim_batch_norm", false, l1, lInf);
 }
@@ -710,6 +715,9 @@ TEST_P(Test_TensorFlow_layers, matmul)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
+
     runTensorFlowNet("matmul");
     runTensorFlowNet("nhwc_transpose_reshape_matmul");
     // Reference output values are in range [-5.688, 4.484]
@@ -723,6 +731,8 @@ TEST_P(Test_TensorFlow_layers, batch_matmul)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
     runTensorFlowNet("batch_matmul");
 }
 
@@ -730,6 +740,8 @@ TEST_P(Test_TensorFlow_layers, square)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
     runTensorFlowNet("square");
 }
 
@@ -924,7 +936,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_SSD)
     Mat out = net.forward();
 
     double scoreDiff = default_l1, iouDiff = default_lInf;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.01;
         iouDiff = 0.1;
@@ -971,7 +983,7 @@ TEST_P(Test_TensorFlow_nets, Inception_v2_SSD)
                                     0, 10, 0.93973452, 0.66561931, 0.37841269, 0.68074018, 0.42907384);
 
     double scoreDiff = default_l1, iouDiff = default_lInf;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.0097;
         iouDiff = 0.09;
@@ -1004,7 +1016,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD)
     Mat ref = blobFromNPY(findDataFile("dnn/tensorflow/ssd_mobilenet_v1_coco_2017_11_17.detection_out.npy"));
     float scoreDiff = 1.5e-5, iouDiff = 1e-3;
     float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.35 : 0.3;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.011;
         iouDiff = 0.012;
@@ -1053,6 +1065,8 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN_inception_v2_coco_2018_01_28)
 
     if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    if (target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 
     checkBackend();
 
@@ -1084,6 +1098,9 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN_inception_v2_coco_2018_01_28)
         // accuracy (both OpenCV & IE)
         if (target == DNN_TARGET_OPENCL_FP16)
             applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+        if (target == DNN_TARGET_CPU_FP16)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 
         normAssertDetections(ref, out, name.c_str(), 0.3, scoresDiff, iouDiff);
     }
@@ -1164,6 +1181,9 @@ TEST_P(Test_TensorFlow_nets, Faster_RCNN_resnet50_coco_2018_01_28)
         if (target == DNN_TARGET_OPENCL_FP16)
             applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
+        if (target == DNN_TARGET_CPU_FP16)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
+
         normAssertDetections(ref, out, name.c_str(), 0.3, scoresDiff, iouDiff);
     }
 }
@@ -1191,7 +1211,7 @@ TEST_P(Test_TensorFlow_nets, MobileNet_v1_SSD_PPN)
     Mat out = net.forward();
 
     double scoreDiff = 1.1e-5, iouDiff = default_lInf;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.048;
         iouDiff = 0.058;
@@ -1230,7 +1250,7 @@ TEST_P(Test_TensorFlow_nets, opencv_face_detector_uint8)
                                     0, 1, 0.97203469, 0.67965847, 0.06876482, 0.73999709, 0.1513494,
                                     0, 1, 0.95097077, 0.51901293, 0.45863652, 0.5777427, 0.5347801);
     double scoreDiff = 3.4e-3, iouDiff = 1e-2;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 4e-3;
         iouDiff = 0.024;
@@ -1317,6 +1337,11 @@ TEST_P(Test_TensorFlow_nets, EAST_text_detection)
         lInf_scores = 0.1;
         l1_geometry = 0.3; lInf_geometry = 7;
     }
+    else if (target == DNN_TARGET_CPU_FP16)
+    {
+        lInf_scores = 0.1;
+        l1_geometry = 0.28; lInf_geometry = 5.94;
+    }
     else
     {
         l1_geometry = 1e-4, lInf_geometry = 4.3e-3;
@@ -1360,6 +1385,10 @@ TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_pad_and_concat)
 TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_padding_valid)
 {
     float l1 = 0.00078, lInf = 0.012;
+
+    if (target == DNN_TARGET_CPU_FP16)
+        l1 = 0.00083;
+
     runTensorFlowNet("fp16_padding_valid", false, l1, lInf);
 }
 TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_max_pool_even)
@@ -1407,8 +1436,13 @@ TEST_P(Test_TensorFlow_layers, fp16_weights_fp16_max_pool_odd_valid)
 
 TEST_P(Test_TensorFlow_layers, fp16_padding_same)
 {
+    float l1 = 7e-4, lInf = 4e-3;
+
+    if (target == DNN_TARGET_CPU_FP16)
+        lInf = 5e-3;
+
     // Reference output values are in range [-3.504, -0.002]
-    runTensorFlowNet("fp16_padding_same", false, 7e-4, 4e-3);
+    runTensorFlowNet("fp16_padding_same", false, l1, lInf);
 }
 
 TEST_P(Test_TensorFlow_layers, defun)
@@ -1449,6 +1483,9 @@ TEST_P(Test_TensorFlow_layers, lstm)
 #endif
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 
     runTensorFlowNet("lstm", true);
     runTensorFlowNet("lstm", true, 0.0, 0.0, true);
@@ -1771,8 +1808,8 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
     Mat outDetections = outs[0];
     Mat outMasks = outs[1];
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.2 : 2e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.018 : default_lInf;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.2 : 2e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.018 : default_lInf;
     normAssertDetections(refDetections, outDetections, "", /*threshold for zero confidence*/1e-5, scoreDiff, iouDiff);
 
     // Output size of masks is NxCxHxW where
@@ -1805,7 +1842,7 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
 
     double inter = cv::countNonZero(masks & refMasks);
     double area = cv::countNonZero(masks | refMasks);
-    EXPECT_GE(inter / area, (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.98 : 0.99);
+    EXPECT_GE(inter / area, (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.98 : 0.99);
 
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         expectNoFallbacks(net);
@@ -1815,6 +1852,7 @@ TEST_P(Test_TensorFlow_nets, EfficientDet)
 {
     if (target != DNN_TARGET_CPU)
     {
+        if (target == DNN_TARGET_CPU_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
         if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
         if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
         if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);

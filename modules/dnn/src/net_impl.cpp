@@ -98,6 +98,7 @@ void Net::Impl::validateBackendAndTarget()
 
     CV_Assert(preferableBackend != DNN_BACKEND_OPENCV ||
               preferableTarget == DNN_TARGET_CPU ||
+              preferableTarget == DNN_TARGET_CPU_FP16 ||
               preferableTarget == DNN_TARGET_OPENCL ||
               preferableTarget == DNN_TARGET_OPENCL_FP16);
     CV_Assert(preferableBackend != DNN_BACKEND_HALIDE ||
@@ -972,7 +973,8 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
     }
     else if (outputBlobs.isMatVector())
     {
-        if (preferableTarget != DNN_TARGET_CPU)
+        // The DNN_TARGET_CPU and DNN_TARGET_CPU_FP16 both use the CPU memory, do not need the copyToHost.
+        if (preferableTarget != DNN_TARGET_CPU && preferableTarget != DNN_TARGET_CPU_FP16)
         {
             for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
             {
@@ -1336,7 +1338,7 @@ Mat Net::Impl::getBlob(const LayerPin& pin) const
                                               "the #%d was requested",
                                                ld.name.c_str(), ld.outputBlobs.size(), pin.oid));
     }
-    if (preferableTarget != DNN_TARGET_CPU)
+    if (preferableTarget != DNN_TARGET_CPU && preferableTarget != DNN_TARGET_CPU_FP16)
     {
         CV_Assert(!ld.outputBlobsWrappers.empty() && !ld.outputBlobsWrappers[pin.oid].empty());
         // Transfer data to CPU if it's require.
@@ -1552,7 +1554,7 @@ string Net::Impl::dump(bool forceAllocation) const
             prevNode = itBackend->second;
         }
     }
-    std::vector<string> colors = { "#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151", "#b266ff", "#b266ff", "#3cb371"};
+    std::vector<string> colors = { "#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151", "#b266ff", "#b266ff", "#3cb371", "#ffcab3"};
     string backend;
     switch (prefBackend)
     {
@@ -1754,6 +1756,10 @@ string Net::Impl::dump(bool forceAllocation) const
         case DNN_TARGET_NPU:
             out << "NPU";
             colorId = 9;
+            break;
+        case DNN_TARGET_CPU_FP16:
+            out << "CPU_FP16";
+            colorId = 10;
             break;
             // don't use default:
         }
