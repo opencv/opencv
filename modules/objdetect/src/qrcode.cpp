@@ -4498,7 +4498,7 @@ struct PimplQRAruco : public ImplContour {
         vector<int> ids;
         arucoDetector.detectMarkers(gray, corners, ids);
         if (corners.size() >= 3ull) {
-            vector<QRCode> qrCodes = analyzeFinderPatterns(corners, gray.clone(), qrParams);
+            vector<QRCode> qrCodes = analyzeFinderPatterns(corners, gray, qrParams);
             if (qrCodes.size() == 0ull)
                 return false;
             for (auto& qr : qrCodes) {

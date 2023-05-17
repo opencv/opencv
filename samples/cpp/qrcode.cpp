@@ -234,9 +234,9 @@ int liveQRCodeDetect()
     cout << "Press 'ESC' to exit" << endl;
     Ptr<QRCodeDetectorBase> qrcode;
     if (g_useArucoBased)
-        qrcode = new QRCodeDetectorAruco();
+        qrcode = makePtr<QRCodeDetectorAruco>();
     else
-        qrcode = new QRCodeDetector();
+        qrcode = makePtr<QRCodeDetector>();
 
     for (;;)
     {
@@ -319,9 +319,9 @@ int imageQRCodeDetect(const string& in_file)
 
     Ptr<QRCodeDetectorBase> qrcode;
     if (g_useArucoBased)
-        qrcode = new QRCodeDetectorAruco();
+        qrcode = makePtr<QRCodeDetectorAruco>();
     else
-        qrcode = new QRCodeDetector();
+        qrcode = makePtr<QRCodeDetector>();
 
     vector<Point> corners;
     vector<cv::String> decode_info;

@@ -905,12 +905,18 @@ struct CV_EXPORTS_W_SIMPLE QrWithArucoParams {
 
 class CV_EXPORTS_W QRCodeDetectorAruco : public QRCodeDetectorBase {
 public:
+    /** @brief QR code detector constructor for Aruco-based algorithm. See #cv::QrWithArucoParams */
     CV_WRAP QRCodeDetectorAruco(const QrWithArucoParams& params = QrWithArucoParams());
+
+    /** @brief Detector parameters setter. See #cv::QrWithArucoParams */
     CV_WRAP QrWithArucoParams getDetectorParameters();
+
+    /** @brief Detector parameters getter. See #cv::QrWithArucoParams */
     CV_WRAP void setDetectorParameters(const QrWithArucoParams& params);
 
     /** @brief Aruco detector parameters are used to search for the finder patterns. */
     CV_WRAP aruco::DetectorParameters getArucoParameters();
+
     /** @brief Aruco detector parameters are used to search for the finder patterns. */
     CV_WRAP void setArucoParameters(const aruco::DetectorParameters& params);
 };
