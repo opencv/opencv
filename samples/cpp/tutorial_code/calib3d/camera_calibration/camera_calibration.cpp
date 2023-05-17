@@ -293,9 +293,6 @@ int main(int argc, char* argv[])
     fs["Settings"] >> s;
     fs.release();                                         // close Settings file
     //! [file_read]
-
-    //FileStorage fout("settings.yml", FileStorage::WRITE); // write config as YAML
-    //fout << "Settings" << s;
     
     if (!s.goodInput)
     {
@@ -363,11 +360,9 @@ int main(int argc, char* argv[])
     clock_t prevTimestamp = 0;
     const Scalar RED(0,0,255), GREEN(0,255,0);
     const char ESC_KEY = 27;
-    int jj = 0;
     //! [get_input]
     for(;;)
     {
-        jj++;
         Mat view;
         bool blinkOutput = false;
 
@@ -596,21 +591,25 @@ static void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Po
     {
     case Settings::CHESSBOARD:
     case Settings::CIRCLES_GRID:
-        for( int i = 0; i < boardSize.height; ++i )
+        for (int i = 0; i < boardSize.height; ++i) {
             for (int j = 0; j < boardSize.width; ++j) {
                 corners.push_back(Point3f(j*squareSize, i*squareSize, 0));
             }
+        }
         break;
     case Settings::CHARUCOBOARD:
-        for (int i = 0; i < boardSize.height - 1; ++i)
+        for (int i = 0; i < boardSize.height - 1; ++i) {
             for (int j = 0; j < boardSize.width - 1; ++j) {
                 corners.push_back(Point3f(j*squareSize, i*squareSize, 0));
             }
+        }
         break;
     case Settings::ASYMMETRIC_CIRCLES_GRID:
-        for( int i = 0; i < boardSize.height; i++ )
-            for( int j = 0; j < boardSize.width; j++ )
-                corners.push_back(Point3f((2*j + i % 2)*squareSize, i*squareSize, 0));
+        for (int i = 0; i < boardSize.height; i++) {
+            for (int j = 0; j < boardSize.width; j++) {
+                corners.push_back(Point3f((2 * j + i % 2)*squareSize, i*squareSize, 0));
+            }
+        }
         break;
     default:
         break;
@@ -647,7 +646,6 @@ static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat
 
     //Find intrinsic and extrinsic camera parameters
     double rms;
-
 
     if (s.useFisheye) {
         Mat _rvecs, _tvecs;
