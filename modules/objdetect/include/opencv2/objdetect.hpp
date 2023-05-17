@@ -908,7 +908,10 @@ public:
     CV_WRAP QRCodeDetectorAruco(const QrWithArucoParams& params = QrWithArucoParams());
     CV_WRAP QrWithArucoParams getDetectorParameters();
     CV_WRAP void setDetectorParameters(const QrWithArucoParams& params);
+
+    /** @brief Aruco detector parameters are used to search for the finder patterns. */
     CV_WRAP aruco::DetectorParameters getArucoParameters();
+    /** @brief Aruco detector parameters are used to search for the finder patterns. */
     CV_WRAP void setArucoParameters(const aruco::DetectorParameters& params);
 };
 

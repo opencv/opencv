@@ -4395,7 +4395,8 @@ struct QRCode {
 };
 
 static
-vector<QRCode> analyzeFinderPatterns(const vector<vector<Point2f> > &corners, Mat img, const QrWithArucoParams& qrDetectorParameters) {
+vector<QRCode> analyzeFinderPatterns(const vector<vector<Point2f> > &corners, const Mat& img,
+                                     const QrWithArucoParams& qrDetectorParameters) {
     vector<QRCode> qrCodes;
     vector<FinderPatternInfo> patterns;
     if (img.empty())
@@ -4494,9 +4495,8 @@ struct PimplQRAruco : public ImplContour {
         }
         vector<Point2f> result;
         vector<vector<Point2f> > corners;
-        vector<vector<Point2f> > rejectedCorners;
         vector<int> ids;
-        arucoDetector.detectMarkers(gray, corners, ids, rejectedCorners);
+        arucoDetector.detectMarkers(gray, corners, ids);
         if (corners.size() >= 3ull) {
             vector<QRCode> qrCodes = analyzeFinderPatterns(corners, gray.clone(), qrParams);
             if (qrCodes.size() == 0ull)
@@ -4512,6 +4512,29 @@ struct PimplQRAruco : public ImplContour {
             return true;
         }
         return false;
+    }
+
+    bool detect(InputArray img, OutputArray points) const override {
+        vector<Point2f> corners, result;
+        bool flag = detectMulti(img, corners);
+        CV_Assert((int)corners.size() % 4 == 0);
+
+        Point2f imageCenter(((float)img.cols())/2.f, ((float)img.rows())/2.f);
+        size_t minQrId = 0ull;
+        float minDist = std::numeric_limits<float>::max();
+        for (size_t i = 0ull; i < corners.size(); i += 4ull) {
+            Point2f qrCenter((corners[i] + corners[i+1ull] + corners[i+2ull] + corners[i+3ull]) / 4.f);
+            float dist = sqrt(normL2Sqr<float>(qrCenter - imageCenter));
+            if (dist < minDist) {
+                minQrId = i;
+                minDist = dist;
+            }
+        }
+        if (flag) {
+            result = {corners[minQrId], corners[minQrId+1ull], corners[minQrId+2ull], corners[minQrId+3ull]};
+            updatePointsResult(points, result);
+        }
+        return flag;
     }
 };
 
