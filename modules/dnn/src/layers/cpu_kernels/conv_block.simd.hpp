@@ -670,10 +670,6 @@ void convBlock_FP16(int np, const char * _a, const char * _b, char * _c, int ldc
 #endif
 }
 
-#ifndef __ARM_FEATURE_FMA // Work around without FMA support.
-#define vfmaq_f16(a, b, c) (a + b * c)
-#endif
-
 void convBlockMR1_FP16(int np, const char* _a, const char* _b, float *c, const float _bias, bool init_c,
                             const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR_FP16)
 {
