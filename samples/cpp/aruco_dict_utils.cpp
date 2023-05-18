@@ -19,8 +19,8 @@ static int _getSelfDistance(const Mat &marker) {
             rot0[i] = bytes.ptr()[i];
             rot1[i] = bytes.ptr()[bytes.cols*r + i];
         }
-        
-        int currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
+
+        double currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
         if (currentHamming < minHamming) minHamming = currentHamming;
     }
     Mat b;
@@ -37,7 +37,7 @@ static int _getSelfDistance(const Mat &marker) {
             rot1[i] = bytes.ptr()[bytes.cols*r + i];
         }
 
-        int currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
+        double currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
         if(currentHamming < minHamming) minHamming = currentHamming;
     }
     flip(marker, b, 1);
@@ -53,7 +53,7 @@ static int _getSelfDistance(const Mat &marker) {
             rot1[i] = bytes.ptr()[bytes.cols*r + i];
         }
 
-        int currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
+        double currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
         if(currentHamming < minHamming) minHamming = currentHamming;
     }
     return minHamming;
@@ -80,7 +80,7 @@ static inline int getFlipDistanceToId(const aruco::Dictionary& dict, InputArray 
             rot1[i] = candidateBytes.ptr()[i];
         }
 
-        int currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
+        double currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
         if(currentHamming < currentMinDistance) {
             currentMinDistance = currentHamming;
         }
@@ -99,7 +99,7 @@ static inline int getFlipDistanceToId(const aruco::Dictionary& dict, InputArray 
             rot1[i] = candidateBytes.ptr()[i];
         }
 
-        int currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
+        double currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
         if (currentHamming < currentMinDistance) {
             currentMinDistance = currentHamming;
         }
@@ -118,8 +118,7 @@ static inline int getFlipDistanceToId(const aruco::Dictionary& dict, InputArray 
             rot1[i] = candidateBytes.ptr()[i];
         }
 
-        int currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
-
+        double currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
         if (currentHamming < currentMinDistance) {
             currentMinDistance = currentHamming;
         }
