@@ -234,6 +234,9 @@ TEST(Resize_Bitexact, Nearest8U)
         Mat calc;
         resize(src[i], calc, dst[i].size(), 0, 0, INTER_NEAREST_EXACT);
         EXPECT_EQ(cvtest::norm(calc, dst[i], cv::NORM_L1), 0);
+
+        resize(src[i].t(), calc, dst[i].t().size(), 0, 0, INTER_NEAREST_EXACT);
+        EXPECT_EQ(cvtest::norm(calc, dst[i].t(), cv::NORM_L1), 0);
     }
 }
 
