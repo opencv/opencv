@@ -41,27 +41,29 @@ class aruco_objdetect_test(NewOpenCVTests):
                 os.close(fd1)
                 fd2, filepng = tempfile.mkstemp(prefix="svg_marker", suffix=".png")
                 os.close(fd2)
-                basedir = os.path.abspath(os.path.dirname(__file__))
-                pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
-                            board_height, "charuco_checkboard", marker_size,
-                            os.path.join(basedir, aruco_type_str[aruco_type_i]+'.json.gz'))
-                pm.make_charuco_board()
-                pm.save()
-                drawing = svg2rlg(filesvg)
-                renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=720)
-                from_svg_img = cv.imread(filepng)
 
-                #test
-                _charucoCorners, _charucoIds, markerCorners_svg, markerIds_svg = charuco_detector.detectBoard(from_svg_img)
-                _charucoCorners, _charucoIds, markerCorners_cv, markerIds_cv = charuco_detector.detectBoard(from_cv_img)
+                try:
+                    basedir = os.path.abspath(os.path.dirname(__file__))
+                    pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
+                                board_height, "charuco_checkboard", marker_size,
+                                os.path.join(basedir, aruco_type_str[aruco_type_i]+'.json.gz'))
+                    pm.make_charuco_board()
+                    pm.save()
+                    drawing = svg2rlg(filesvg)
+                    renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=720)
+                    from_svg_img = cv.imread(filepng)
 
-                np.testing.assert_allclose(markerCorners_svg, markerCorners_cv, 0.1, 0.1)
-                np.testing.assert_allclose(markerIds_svg, markerIds_cv, 0.1, 0.1)
-                
-                if os.path.exists(filesvg):
-                    os.remove(filesvg)
-                if os.path.exists(filepng):
-                    os.remove(filepng)
+                    #test
+                    _charucoCorners, _charucoIds, markerCorners_svg, markerIds_svg = charuco_detector.detectBoard(from_svg_img)
+                    _charucoCorners, _charucoIds, markerCorners_cv, markerIds_cv = charuco_detector.detectBoard(from_cv_img)
+
+                    np.testing.assert_allclose(markerCorners_svg, markerCorners_cv, 0.1, 0.1)
+                    np.testing.assert_allclose(markerIds_svg, markerIds_cv, 0.1, 0.1)
+                finally:
+                    if os.path.exists(filesvg):
+                        os.remove(filesvg)
+                    if os.path.exists(filepng):
+                        os.remove(filepng)
 
     def test_aruco_marker_sizes(self):
         try:
@@ -92,23 +94,25 @@ class aruco_objdetect_test(NewOpenCVTests):
                 os.close(fd1)
                 fd2, filepng = tempfile.mkstemp(prefix="svg_marker", suffix=".png")
                 os.close(fd2)
-                basedir = os.path.abspath(os.path.dirname(__file__))
-                pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
-                            board_height, "charuco_checkboard", marker_size, os.path.join(basedir, aruco_type_str+'.json.gz'))
-                pm.make_charuco_board()
-                pm.save()
-                drawing = svg2rlg(filesvg)
-                renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=720)
-                from_svg_img = cv.imread(filepng)
 
-                #test
-                _charucoCorners, _charucoIds, markerCorners_svg, markerIds_svg = charuco_detector.detectBoard(from_svg_img)
-                _charucoCorners, _charucoIds, markerCorners_cv, markerIds_cv = charuco_detector.detectBoard(from_cv_img)
+                try:
+                    basedir = os.path.abspath(os.path.dirname(__file__))
+                    pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
+                                board_height, "charuco_checkboard", marker_size, os.path.join(basedir, aruco_type_str+'.json.gz'))
+                    pm.make_charuco_board()
+                    pm.save()
+                    drawing = svg2rlg(filesvg)
+                    renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=720)
+                    from_svg_img = cv.imread(filepng)
 
-                np.testing.assert_allclose(markerCorners_svg, markerCorners_cv, 0.1, 0.1)
-                np.testing.assert_allclose(markerIds_svg, markerIds_cv, 0.1, 0.1)
-                
-                if os.path.exists(filesvg):
-                    os.remove(filesvg)
-                if os.path.exists(filepng):
-                    os.remove(filepng)
+                    #test
+                    _charucoCorners, _charucoIds, markerCorners_svg, markerIds_svg = charuco_detector.detectBoard(from_svg_img)
+                    _charucoCorners, _charucoIds, markerCorners_cv, markerIds_cv = charuco_detector.detectBoard(from_cv_img)
+
+                    np.testing.assert_allclose(markerCorners_svg, markerCorners_cv, 0.1, 0.1)
+                    np.testing.assert_allclose(markerIds_svg, markerIds_cv, 0.1, 0.1)
+                finally:
+                    if os.path.exists(filesvg):
+                        os.remove(filesvg)
+                    if os.path.exists(filepng):
+                        os.remove(filepng)
