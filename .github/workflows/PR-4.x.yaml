@@ -22,11 +22,17 @@ jobs:
   Windows10-x64:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10.yaml@main
 
+  Windows10-x64-Vulkan:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10-Vulkan.yaml@main
+
   macOS-ARM64:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64.yaml@main
 
   macOS-x64:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-x86_64.yaml@main
+
+  macOS-ARM64-Vulkan:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64-Vulkan.yaml@main
 
   iOS:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-iOS.yaml@main
