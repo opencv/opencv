@@ -57,11 +57,11 @@ class aruco_objdetect_test(NewOpenCVTests):
 
                 np.testing.assert_allclose(markerCorners_svg, markerCorners_cv, 0.1, 0.1)
                 np.testing.assert_allclose(markerIds_svg, markerIds_cv, 0.1, 0.1)
-        finally:
-            if os.path.exists(filesvg):
-                os.remove(filesvg)
-            if os.path.exists(filepng):
-                os.remove(filepng)
+                
+                if os.path.exists(filesvg):
+                    os.remove(filesvg)
+                if os.path.exists(filepng):
+                    os.remove(filepng)
 
     def test_aruco_marker_sizes(self):
         try:
@@ -107,8 +107,8 @@ class aruco_objdetect_test(NewOpenCVTests):
 
                 np.testing.assert_allclose(markerCorners_svg, markerCorners_cv, 0.1, 0.1)
                 np.testing.assert_allclose(markerIds_svg, markerIds_cv, 0.1, 0.1)
-        finally:
-            if os.path.exists(filesvg):
-                os.remove(filesvg)
-            if os.path.exists(filepng):
-                os.remove(filepng)
+                
+                if os.path.exists(filesvg):
+                    os.remove(filesvg)
+                if os.path.exists(filepng):
+                    os.remove(filepng)
