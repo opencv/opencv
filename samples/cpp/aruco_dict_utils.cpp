@@ -8,7 +8,7 @@ static int _getSelfDistance(const Mat &marker) {
 
     Mat bytes = aruco::Dictionary::getByteListFromBits(marker);
 
-    int minHamming = (int)marker.total() + 1;
+    double minHamming = (double)marker.total() + 1;
     for(int r = 1; r < 4; r++) {
         cv::Mat tmp1(1, bytes.cols, CV_8UC1, Scalar::all(0));
         cv::Mat tmp2(1, bytes.cols, CV_8UC1, Scalar::all(0));
@@ -56,7 +56,7 @@ static int _getSelfDistance(const Mat &marker) {
         double currentHamming = cv::norm(tmp1, tmp2, cv::NORM_HAMMING);
         if(currentHamming < minHamming) minHamming = currentHamming;
     }
-    return minHamming;
+    return cvRound(minHamming);
 }
 
 static inline int getFlipDistanceToId(const aruco::Dictionary& dict, InputArray bits, int id, bool allRotations = true) {
@@ -67,7 +67,7 @@ static inline int getFlipDistanceToId(const aruco::Dictionary& dict, InputArray 
     if(!allRotations) nRotations = 1;
 
     Mat candidateBytes = aruco::Dictionary::getByteListFromBits(bits.getMat());
-    int currentMinDistance = int(bits.total() * bits.total());
+    double currentMinDistance = int(bits.total() * bits.total());
     for(unsigned int r = 0; r < nRotations; r++) {
 
         cv::Mat tmp1(1, candidateBytes.cols, CV_8UC1, Scalar::all(0));
@@ -123,7 +123,7 @@ static inline int getFlipDistanceToId(const aruco::Dictionary& dict, InputArray 
             currentMinDistance = currentHamming;
         }
     }
-    return currentMinDistance;
+    return cvRound(currentMinDistance);
 }
 
 static inline aruco::Dictionary generateCustomAsymmetricDictionary(int nMarkers, int markerSize,
