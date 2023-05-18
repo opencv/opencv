@@ -32,7 +32,10 @@ std::string detail::NetImplBase::getDumpFileNameBase() const
 
 Net::Impl::~Impl()
 {
-    // nothing
+#ifdef HAVE_VULKAN
+    if (context)
+        context->reset();
+#endif
 }
 
 
@@ -1538,10 +1541,14 @@ string Net::Impl::dump(bool forceAllocation) const
         else
         {
             if (itBackend->second == prevNode)
-                skipId.push_back(idPrev);
+            {
+                if (idPrev != -1)
+                    skipId.push_back(idPrev);
+            }
             else if (!skipId.empty())
             {
-                skipId.push_back(idPrev);
+                if (idPrev != -1)
+                    skipId.push_back(idPrev);
                 std::sort(skipId.begin(), skipId.end());
                 for (int i = 0; i < skipId.size(); i++)
                 {

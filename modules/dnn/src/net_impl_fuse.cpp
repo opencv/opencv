@@ -39,7 +39,8 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
     if(!fusion || (preferableBackend != DNN_BACKEND_OPENCV &&
                     preferableBackend != DNN_BACKEND_CUDA &&
                     preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
-                    preferableBackend != DNN_BACKEND_TIMVX))
+                    preferableBackend != DNN_BACKEND_TIMVX &&
+                    preferableBackend != DNN_BACKEND_VKCOM))
        return;
 
 #if 0  // FIXIT mode without fusion is broken due to unsupported layers and handling of "custom" nodes
@@ -111,7 +112,8 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                     break;
             }
 
-            if (preferableBackend != DNN_BACKEND_OPENCV && preferableBackend != DNN_BACKEND_CUDA)
+            if (preferableBackend != DNN_BACKEND_OPENCV && preferableBackend != DNN_BACKEND_CUDA
+                && preferableBackend != DNN_BACKEND_VKCOM)
                 continue;  // Go to the next layer.
 
             // TODO: OpenCL target support more fusion styles.
@@ -140,6 +142,28 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                 Ptr<ActivationLayer> nextActivLayer = nextData->layerInstance.dynamicCast<ActivationLayer>();
                 if (nextActivLayer.empty())
                     break;
+
+                // For now, Vulkan target support fusion with activation of ReLU/ReLU6
+                if (IS_DNN_VULKAN_TARGET(preferableTarget))
+                {
+                    if (nextData->type == "ReLU")
+                    {
+                        Ptr<ReLULayer> nextReLULayer = nextData->layerInstance.dynamicCast<ReLULayer>();
+                        CV_Assert(nextReLULayer);
+                        if (nextReLULayer->negativeSlope != 0.0f)
+                            break; // Skip LeakyReLU
+                    }
+                    else if (nextData->type == "ReLU6")
+                    {
+                        Ptr<ReLU6Layer> nextReLU6Layer = nextData->layerInstance.dynamicCast<ReLU6Layer>();
+                        CV_Assert(nextReLU6Layer);
+
+                        if( fabs(nextReLU6Layer->minValue) > FLT_EPSILON || fabs(nextReLU6Layer->maxValue - 6.0f) > FLT_EPSILON)
+                            break; // Skip ReLU6 if the minValue != 0 or maxValue != 6.
+                    }
+                    else
+                        break;
+                }
 
                 if (currLayer->setActivation(nextActivLayer))
                 {

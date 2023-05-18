@@ -545,6 +545,11 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
         l1 = 0.4;
         lInf = 19.;
     }
+    else if (target == DNN_TARGET_VULKAN)
+    {
+        l1 = 0.4;
+        lInf = 7.46;
+    }
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)

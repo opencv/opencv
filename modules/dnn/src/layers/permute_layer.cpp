@@ -144,7 +144,6 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_WEBNN ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan()) ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -510,15 +509,6 @@ public:
     }
 #endif
 
-
-#ifdef HAVE_VULKAN
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
-    {
-        CV_Assert(!_order.empty());
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPermute(_order));
-        return Ptr<BackendNode>(new VkComBackendNode(input, op));
-    }
-#endif // HAVE_VULKAN
 
 #ifdef HAVE_TIMVX
   virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,
