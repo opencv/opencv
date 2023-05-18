@@ -179,6 +179,7 @@ struct Net::Impl : public detail::NetImplBase
 #endif
 
 #ifdef HAVE_VULKAN
+    Ptr<vkcom::Context> context;
     void initVkComBackend();
 #endif
 

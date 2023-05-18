@@ -50,7 +50,8 @@ Ptr<BackendNode> Layer::initCUDA(
     return Ptr<BackendNode>();
 }
 
-Ptr<BackendNode> Layer::initVkCom(const std::vector<Ptr<BackendWrapper>>&)
+Ptr<BackendNode> Layer::initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                  std::vector<Ptr<BackendWrapper> > &outputs)
 {
     CV_Error(Error::StsNotImplemented, "VkCom pipeline of " + type + " layers is not defined.");
     return Ptr<BackendNode>();

@@ -93,7 +93,8 @@ public:
         CV_Error(Error::StsNotImplemented, msg);
     }
 
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                       std::vector<Ptr<BackendWrapper> > &outputs) CV_OVERRIDE
     {
         CV_Error(Error::StsNotImplemented, msg);
     }

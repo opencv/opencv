@@ -87,11 +87,11 @@ public:
         CV_Assert(inputs[0].dims == outputs[0].dims);
         if (weightShape.dims() == 3)
         {
-            kernel_size.assign(1, kernel_size[0]);
-            strides.assign(1, strides[0]);
-            dilations.assign(1, dilations[0]);
-            pads_begin.assign(1, pads_begin[0]);
-            pads_end.assign(1, pads_end[0]);
+            kernel_size.resize(1, kernel_size[0]);
+            strides.resize(1, strides[0]);
+            dilations.resize(1, dilations[0]);
+            pads_begin.resize(1, pads_begin[0]);
+            pads_end.resize(1, pads_end[0]);
         }
         CV_Assert(weightShape.dims() == kernel_size.size() + 2);
         for (int i = 0; i < kernel_size.size(); i++) {
