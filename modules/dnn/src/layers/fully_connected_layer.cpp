@@ -48,6 +48,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
+#include "../op_vkcom.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -187,7 +188,8 @@ public:
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !tranAorB) ||
                (backendId == DNN_BACKEND_WEBNN && axis == 1 && !tranAorB) ||
-               backendId == DNN_BACKEND_CANN;;
+               backendId == DNN_BACKEND_CANN ||
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !tranAorB);
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -637,6 +639,72 @@ public:
     }
 #endif
 
+#ifdef HAVE_VULKAN
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                       std::vector<Ptr<BackendWrapper> > &outputs) CV_OVERRIDE
+    {
+        auto biasMat_ = bias ? biasMat : Mat();
+        auto input_wrapper = inputs[0].dynamicCast<VkComBackendWrapper>();
+
+        CV_Assert((inputs.size() == 2 || inputs.size() == 1) && outputs.size() == 1);
+        std::vector<Mat> vkBlobs;
+        Ptr<vkcom::OpBase> op;
+
+        if (!biasMat_.empty() || !activ.empty())
+        {
+            return Ptr<BackendNode>();
+        }
+
+        Ptr<VkComBackendWrapper> outputWrap = outputs[0].dynamicCast<VkComBackendWrapper>();
+        CV_Assert(outputWrap);
+        // TODO: Currently, we only support the 2D MatMul. Need support the FC layer and bias case in the future.
+
+        if (inputs.size() == 2)
+        {
+            Ptr<VkComBackendWrapper> inputWrap0 = inputs[0].dynamicCast<VkComBackendWrapper>();
+            Ptr<VkComBackendWrapper> inputWrap1 = inputs[1].dynamicCast<VkComBackendWrapper>();
+            CV_Assert(inputWrap0 && inputWrap1);
+
+            MatShape inpShape0 = shape(*inputWrap0->getMat());
+            MatShape inpShape1 = shape(*inputWrap1->getMat());
+            MatShape outShape = shape(*outputWrap->getMat());
+
+            // TODO Currently, vulkan only support 2D matmul. Try to support 3D and 4D matmul.
+            if (inpShape0.size() != 2 || inpShape1.size() != 2)
+                return Ptr<BackendNode>();
+
+            op = (new vkcom::OpMatMul(vkBlobs, inpShape0[0], inpShape0[1], outShape[1]));
+        }
+        else
+        {
+            CV_Assert(!weightsMat.empty());
+            Mat wm;
+            weightsMat.copyTo(wm); // to handle the case of isContinuous() == false
+            wm = wm.reshape(1, blobs[0].dims, blobs[0].size);
+            vkBlobs.push_back(wm.t());
+
+            Ptr<VkComBackendWrapper> inputWrap = inputs[0].dynamicCast<VkComBackendWrapper>();
+            CV_Assert(inputWrap);
+
+            MatShape inpShape = shape(*inputWrap->getMat());
+            MatShape outShape = shape(*outputWrap->getMat());
+            MatShape wShape = shape(weightsMat);
+
+            // TODO Currently, vulkan only support 2D matmul. Try to support 3D and 4D matmul.
+            if (inpShape.size() != 2 || wShape.size() != 2)
+                return Ptr<BackendNode>();
+
+            // TODO: Currently, only focus on 2D MatMul.
+            CV_Assert(inpShape.size() == 2 && outShape.size() == 2 && wShape.size() == 2);
+            CV_Assert(inpShape[1] == outShape[0]);
+            op = (new vkcom::OpMatMul(vkBlobs, inpShape[0], inpShape[1], outShape[1]));
+        }
+
+        return Ptr<BackendNode>(new VkComBackendNode(inputs, op, outputs));
+    }
+#endif
+
+
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
@@ -844,15 +912,27 @@ public:
     {
         CV_UNUSED(inputs); // suppress unused variable warning
         long flops = 0;
+        int innerSize = 0;
 
-        int innerSize = blobs[0].size[1];
+        if (!blobs.empty())
+        {
+            innerSize = blobs[0].size[1];
+        }
+        else
+        {
+            CV_Assert(inputs.size() == 2);
+            if (transB)
+                innerSize = inputs[1][1];
+            else
+                innerSize = inputs[1][0];
+        }
+
         for(int i = 0; i < outputs.size(); i++)
         {
             flops += CV_BIG_INT(3)*innerSize*total(outputs[i]);
         }
 
         return flops;
-
     }
 
     bool bias;
