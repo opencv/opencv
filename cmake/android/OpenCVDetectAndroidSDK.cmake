@@ -53,6 +53,50 @@ macro(ocv_detect_android_sdk)
   endif()
 endmacro()
 
+macro(ocv_detect_android_sdk_tools)
+  # https://developer.android.com/studio/releases/sdk-tools.html
+  if(NOT DEFINED ANDROID_SDK_TOOLS)
+    if(DEFINED ANDROID_SDK)
+      if (EXISTS "${ANDROID_SDK}/cmdline-tools")
+        set(ANDROID_SDK_TOOLS "${ANDROID_SDK}/cmdline-tools" CACHE INTERNAL "Android SDK Tools path")
+        set(ANDROID_SDK_CMDLINE_TOOLS "${ANDROID_SDK_TOOLS}" CACHE INTERNAL "Android SDK Command-line Tools path")
+      elseif(EXISTS "${ANDROID_SDK}/tools")
+        set(ANDROID_SDK_TOOLS "${ANDROID_SDK}/tools" CACHE INTERNAL "Android SDK Tools path")
+      endif()
+    endif()
+  endif()
+  if(NOT DEFINED ANDROID_SDK_TOOLS)
+    message(FATAL_ERROR "Android SDK Tools: can't automatically find Android SDK Tools. Specify path via ANDROID_SDK_TOOLS variable")
+  endif()
+  if(NOT EXISTS "${ANDROID_SDK_TOOLS}")
+    message(FATAL_ERROR "Android SDK Tools: specified path doesn't exist: ${ANDROID_SDK_TOOLS}")
+  endif()
+
+  if(NOT DEFINED ANDROID_SDK_TOOLS_VERSION)
+    ocv_parse_properties_file("${ANDROID_SDK_TOOLS}/source.properties"
+        ANDROID_TOOLS CACHE Pkg_Revision
+        MSG_PREFIX "Android SDK Tools: "
+    )
+
+    if(NOT DEFINED ANDROID_TOOLS_Pkg_Revision)
+      message(FATAL_ERROR "Android SDK Tools: Can't determine package version: ANDROID_SDK_TOOLS=${ANDROID_SDK_TOOLS}\n"
+                          "Check specified parameters or force version via 'ANDROID_SDK_TOOLS_VERSION' variable.\n"
+                          "${__msg_BUILD_ANDROID_PROJECTS}")
+    elseif(NOT ANDROID_SDK_DETECT_QUIET)
+      set(__info "")
+      if(DEFINED ANDROID_TOOLS_Pkg_Desc)
+        set(__info " (description: '${ANDROID_TOOLS_Pkg_Desc}')")
+      endif()
+      message(STATUS "Android SDK Tools: ver. ${ANDROID_TOOLS_Pkg_Revision}${__info}")
+    endif()
+    set(ANDROID_SDK_TOOLS_VERSION "${ANDROID_TOOLS_Pkg_Revision}" CACHE INTERNAL "Android SDK Tools version")
+  endif()
+  if(NOT DEFINED ANDROID_TOOLS_Pkg_Revision)
+    set(ANDROID_TOOLS_Pkg_Revision "${ANDROID_SDK_TOOLS_VERSION}" CACHE INTERNAL "Android SDK Tools version (deprecated)")
+  endif()
+  set(ANDROID_SDK_TOOLS_PATH "${ANDROID_SDK_TOOLS}" CACHE INTERNAL "Android SDK Tools path (deprecated)")
+endmacro()  # ocv_detect_android_sdk_tools
+
 macro(ocv_detect_android_sdk_build_tools)
   # https://developer.android.com/studio/releases/build-tools.html
   if(NOT DEFINED ANDROID_SDK_BUILD_TOOLS_VERSION)
@@ -131,18 +175,28 @@ endmacro()  # ocv_detect_android_sdk_build_tools
 
 if(BUILD_ANDROID_PROJECTS)
   ocv_detect_android_sdk()
+  ocv_detect_android_sdk_tools()
   ocv_detect_android_sdk_build_tools()
 
-  if (ANDROID_SDK_BUILD_TOOLS_VERSION VERSION_GREATER 30.0.0)
-    # https://developer.android.com/studio/releases/gradle-plugin.html
-    message(STATUS "Android SDK Build Tools: Gradle 3.0.0+ builds support is available")
-    ocv_update(ANDROID_PROJECTS_SUPPORT_GRADLE ON)
+  if(NOT DEFINED ANDROID_SDK_CMDLINE_TOOLS AND ANDROID_SDK_TOOLS_VERSION VERSION_LESS 14)
+    message(FATAL_ERROR "Android SDK Tools: OpenCV requires Android SDK Tools revision 14 or newer.\n"
+                        "${__msg_BUILD_ANDROID_PROJECTS}")
   endif()
 
-  include(${CMAKE_CURRENT_LIST_DIR}/../OpenCVDetectApacheAnt.cmake)
-  if(ANT_EXECUTABLE AND NOT ANT_VERSION VERSION_LESS 1.7)
-    message(STATUS "Android SDK Tools: Ant (Eclipse) builds are supported")
-    ocv_update(ANDROID_PROJECTS_SUPPORT_ANT ON)
+  if(DEFINED ANDROID_SDK_CMDLINE_TOOLS OR NOT ANDROID_SDK_TOOLS_VERSION VERSION_LESS 25.3.0)
+    message(STATUS "Android SDK Tools: Ant (Eclipse) builds are NOT supported by Android SDK")
+    ocv_update(ANDROID_PROJECTS_SUPPORT_ANT OFF)
+    if(NOT ANDROID_SDK_BUILD_TOOLS_VERSION VERSION_LESS 26.0.2)
+      # https://developer.android.com/studio/releases/gradle-plugin.html
+      message(STATUS "Android SDK Build Tools: Gradle 3.0.0+ builds support is available")
+      ocv_update(ANDROID_PROJECTS_SUPPORT_GRADLE ON)
+    endif()
+  else()
+    include(${CMAKE_CURRENT_LIST_DIR}/../OpenCVDetectApacheAnt.cmake)
+    if(ANT_EXECUTABLE AND NOT ANT_VERSION VERSION_LESS 1.7)
+      message(STATUS "Android SDK Tools: Ant (Eclipse) builds are supported")
+      ocv_update(ANDROID_PROJECTS_SUPPORT_ANT ON)
+    endif()
   endif()
 
   if(NOT DEFINED ANDROID_PROJECTS_BUILD_TYPE)
