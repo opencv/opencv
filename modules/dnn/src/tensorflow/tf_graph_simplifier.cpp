@@ -815,6 +815,7 @@ void RemoveIdentityOps(tensorflow::GraphDef& net)
 
         if (type == "Identity" || type == "Dropout" || type == "PlaceholderWithDefault") {
             identity_ops_idx.push_back(li);
+            CV_Assert(layer.input_size() != 0);
             identity_ops[layer.name()] = layer.input(0);
         }
     }
