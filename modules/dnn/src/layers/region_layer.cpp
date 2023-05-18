@@ -526,14 +526,14 @@ public:
 
             std::vector<float> x_indices(w * h * anchors);
             auto begin = x_indices.begin();
-            for (int i = 0; i < h; i++)
+            for (int i = 0; i < w; i++)
             {
                 std::fill(begin + i * anchors, begin + (i + 1) * anchors, i);
             }
 
-            for (int j = 1; j < w; j++)
+            for (int j = 1; j < h; j++)
             {
-                std::copy(begin, begin + h * anchors, begin + j * h * anchors);
+                std::copy(begin, begin + w * anchors, begin + j * w * anchors);
             }
             auto horiz = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, box_broad_shape, x_indices.data());
             box_x = std::make_shared<ngraph::op::v1::Add>(box_x, horiz, ngraph::op::AutoBroadcastType::NUMPY);
