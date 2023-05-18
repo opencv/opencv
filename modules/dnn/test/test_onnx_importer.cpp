@@ -2570,6 +2570,11 @@ TEST_P(Test_ONNX_layers, where_node)
     testONNXModels("where_layer");
 }
 
+TEST_P(Test_ONNX_layers, QLinearSoftmax)
+{
+    testONNXModels("qlinearsoftmax_11");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace

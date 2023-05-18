@@ -22,7 +22,9 @@ public:
 
     SoftMaxLayerInt8Impl(const LayerParams& params)
     {
-        axisRaw = params.get<int>("axis", 1);
+        setParamsFrom(params);
+
+        axis = params.get<int>("axis", 1);
         logSoftMax = params.get<bool>("log_softmax", false);
 
         input_sc = params.get<float>("input_scale");
@@ -30,7 +32,18 @@ public:
 
         output_sc = params.get<float>("scales");
         output_zp = params.get<int>("zeropoints");
-        setParamsFrom(params);
+
+        if (blobs.empty()) // if no lookUpTable is found
+        {
+            Mat lookUpTable(1, 256, CV_32F);
+            float* table = lookUpTable.ptr<float>();
+            for (int i = -128; i < 128; i++)
+            {
+                float x = input_sc * (i - 127); // ensures exp(x) is always between (0, 1)
+                table[i+128] = std::exp(x);
+            }
+            blobs.push_back(lookUpTable);
+        }
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -40,10 +53,17 @@ public:
     {
         bool inplace = Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         MatShape shape = inputs[0];
-        int cAxis = normalize_axis(axisRaw, shape.size());
-        shape[cAxis] = 1;
         internals.assign(1, shape);
         return inplace;
+    }
+
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+        auto src = inputs[0];
+        axis = normalize_axis(axis, inputs[0].dims);
+        N = src.total(0, axis);
+        D = src.total(axis + 1);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -52,11 +72,11 @@ public:
             (backendId == DNN_BACKEND_TIMVX && haveTimVX());
     }
 
-    virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
-    {
-        Ptr<DequantizeLayer> dequantize_layer = top.dynamicCast<DequantizeLayer>();
-        return !dequantize_layer.empty() && preferableTarget != DNN_TARGET_OPENCL_FP16;
-    }
+    // virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
+    // {
+    //     Ptr<DequantizeLayer> dequantize_layer = top.dynamicCast<DequantizeLayer>();
+    //     return !dequantize_layer.empty() && preferableTarget != DNN_TARGET_OPENCL_FP16;
+    // }
 
    virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,
                                        const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
@@ -154,103 +174,97 @@ public:
         return Ptr<BackendNode>();
     }
 
+    template <bool with_log>
+    class SoftmaxInt8Invoker : public ParallelLoopBody {
+    public:
+        const Mat& src_;
+        Mat& dst_;
+
+        const Mat& lookup_table_;
+
+        int N_;
+        int D_;
+
+        float y_scale_;
+        int y_zero_point_;
+
+        int threads;
+        int cost_per_thread;
+
+        SoftmaxInt8Invoker(const Mat& src, Mat& dst, const Mat& lookup_table, int N, int D, float y_scale, int y_zero_point)
+            : src_(src), dst_(dst), lookup_table_(lookup_table), N_(N), D_(D), y_scale_(y_scale), y_zero_point_(y_zero_point) {
+            threads = N_;
+            cost_per_thread = D_;
+        }
+
+        static void run(const Mat& src, Mat& dst, const Mat& lookup_table, int N, int D, float y_scale, int y_zero_point) {
+            CV_Assert(src.isContinuous());
+            CV_Assert(dst.isContinuous());
+            CV_CheckTypeEQ(src.type(), CV_8S, "DNN/SoftmaxInt8: type of input must be int8");
+            CV_CheckTypeEQ(dst.type(), CV_8S, "DNN/SoftmaxInt8: type of output must be int8");
+
+            SoftmaxInt8Invoker p(src, dst, lookup_table, N, D, y_scale, y_zero_point);
+
+            double nstripes = ((size_t)p.threads * p.cost_per_thread) * (1 / 1024.0);
+            parallel_for_(Range(0, p.threads), p, nstripes);
+        }
+
+        void operator()(const Range& r) const CV_OVERRIDE {
+            int start = r.start;
+            int end = r.end;
+
+            const int8_t* p_src = src_.ptr<int8_t>();
+            int8_t* p_dst = dst_.ptr<int8_t>();
+            const float* table = lookup_table_.ptr<float>();
+
+            for (int i = start; i < end; ++i) {
+                const int8_t* x = p_src + i * D_;
+                int8_t* y = p_dst + i * D_;
+
+                float this_sum = 0;
+                for (int j = 0; j < D_; ++j) {
+                    const uint8_t idx = uint8_t(*x++ + 128);
+                    this_sum += table[idx];
+                }
+
+                // FIXME: avoid divide by this_sum==0
+
+                x = p_src + i * D_;
+                if (with_log) {
+                    for (int j = 0; j < D_; ++j) {
+                        const uint8_t idx = uint8_t(*x++ + 128);
+                        const float v = table[idx];
+                        const int vout = static_cast<int>(std::nearbyintf(std::log((v * y_scale_) / this_sum))) + y_zero_point_;
+                        *y++ = vout > 255 ? static_cast<int8_t>(255) : static_cast<int8_t>(vout);
+                    }
+                } else {
+                    for (int j = 0; j < D_; ++j) {
+                        const uint8_t idx = uint8_t(*x++ + 128);
+                        const float v = table[idx];
+                        const int vout = static_cast<int>(std::nearbyintf((v * y_scale_) / this_sum)) + y_zero_point_;
+                        *y++ = vout > 255 ? static_cast<int8_t>(255) : static_cast<int8_t>(vout);
+                    }
+                }
+            }
+        }
+    };
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        std::vector<Mat> inputs, outputs, internals;
+        std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
-        internals_arr.getMatVector(internals);
 
         const Mat &src = inputs[0];
         Mat &dst = outputs[0];
 
-        int axis = normalize_axis(axisRaw, src.dims);
-        size_t outerSize = src.total(0, axis), channels = src.size[axis],
-               innerSize = src.total(axis + 1);
-
-        CV_Assert(src.type() == CV_8S && (dst.type() == CV_8S || dst.type() == CV_32F));
-        CV_Assert(src.isContinuous() && dst.isContinuous());
-
-        size_t outerStep = src.total(axis);
-        size_t cnStep = src.total(axis + 1);
-        const int8_t *srcPtr = src.ptr<int8_t>();
-        const float *expPtr = blobs[0].ptr<float>();
-
-        if (dst.type() == CV_32F)
-        {
-            float *dstPtr = dst.ptr<float>();
-            for (size_t outerDim = 0; outerDim < outerSize; outerDim++)
-            {
-                size_t srcOffset = outerDim * outerStep;
-                std::vector<float> expSum(innerSize, 0.f);
-
-                // sum exp along axis
-                for (size_t cnDim = 0; cnDim < channels; cnDim++)
-                {
-                    const int offset = srcOffset + cnDim * cnStep;
-                    for (size_t i = 0; i < innerSize; i++)
-                        expSum[i] += expPtr[srcPtr[offset + i] + 128];
-                }
-
-                // divide by computed sum
-                for (size_t cnDim = 0; cnDim < channels; cnDim++)
-                {
-                    const int offset = srcOffset + cnDim * cnStep;
-                    for (size_t i = 0; i < innerSize; i++)
-                        dstPtr[offset + i] = expPtr[srcPtr[offset + i] + 128]/expSum[i];
-                }
-
-                if (logSoftMax)
-                {
-                    for (size_t cnDim = 0; cnDim < channels; cnDim++)
-                    {
-                        const int offset = srcOffset + cnDim * cnStep;
-                        for (size_t i = 0; i < innerSize; i++)
-                            dstPtr[offset + i] = log(dstPtr[offset + i]);
-                    }
-                }
-            }
-        }
-        else
-        {
-            const float inv_scale = 1.f/output_sc;
-            int8_t *dstPtr = dst.ptr<int8_t>();
-            for (size_t outerDim = 0; outerDim < outerSize; outerDim++)
-            {
-                size_t srcOffset = outerDim * outerStep;
-                std::vector<float> expSum(innerSize, 0.f);
-
-                // sum exp along axis
-                for (size_t cnDim = 0; cnDim < channels; cnDim++)
-                {
-                    const int offset = srcOffset + cnDim * cnStep;
-                    for (size_t i = 0; i < innerSize; i++)
-                        expSum[i] += expPtr[srcPtr[offset + i] + 128];
-                }
-
-                // divide by computed sum and quantize to int8
-                if (logSoftMax)
-                {
-                    for (size_t cnDim = 0; cnDim < channels; cnDim++)
-                    {
-                        const int offset = srcOffset + cnDim * cnStep;
-                        for (size_t i = 0; i < innerSize; i++)
-                            dstPtr[offset + i] = saturate_cast<int8_t>(output_zp + std::round(inv_scale*log(expPtr[srcPtr[offset + i] + 128]/expSum[i])));
-                    }
-                }
-                else
-                {
-                    for (size_t cnDim = 0; cnDim < channels; cnDim++)
-                    {
-                        const int offset = srcOffset + cnDim * cnStep;
-                        for (size_t i = 0; i < innerSize; i++)
-                            dstPtr[offset + i] = saturate_cast<int8_t>(output_zp + std::round(inv_scale*(expPtr[srcPtr[offset + i] + 128]/expSum[i])));
-                    }
-                }
-            }
+        if (logSoftMax) {
+            SoftmaxInt8Invoker<true>::run(src, dst, blobs[0], N, D, output_sc, output_zp);
+        } else {
+            SoftmaxInt8Invoker<false>::run(src, dst, blobs[0], N, D, output_sc, output_zp);
         }
     }
 
@@ -268,7 +282,10 @@ public:
         return flops;
     }
 
-    int axisRaw;
+private:
+    int axis;
+    int N;
+    int D;
 };
 
 Ptr<SoftmaxLayerInt8> SoftmaxLayerInt8::create(const LayerParams& params)
