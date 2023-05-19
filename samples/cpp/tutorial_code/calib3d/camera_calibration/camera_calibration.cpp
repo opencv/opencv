@@ -452,7 +452,10 @@ int main(int argc, char* argv[])
                 }
 
                 // Draw the corners.
-                drawChessboardCorners( view, s.boardSize, Mat(pointBuf), found );
+                if(s.calibrationPattern == Settings::CHARUCOBOARD)
+                    drawChessboardCorners( view, cv::Size(s.boardSize.width-1, s.boardSize.height-1), Mat(pointBuf), found );
+                else
+                    drawChessboardCorners( view, s.boardSize, Mat(pointBuf), found );
         }
         //! [pattern_found]
         //----------------------------- Output Text ------------------------------------------------
