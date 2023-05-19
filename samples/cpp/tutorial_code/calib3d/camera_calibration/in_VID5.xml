@@ -2,15 +2,16 @@
 <opencv_storage>
 <Settings>
   <!-- Number of inner corners per a item row and column. (square, circle) -->
-  <BoardSize_Width> 9</BoardSize_Width>
+  <BoardSize_Width>9</BoardSize_Width>
   <BoardSize_Height>6</BoardSize_Height>
   
   <!-- The size of a square in some user defined metric system (pixel, millimeter)-->
   <Square_Size>50</Square_Size>
-  
-  <!-- The type of input used for camera calibration. One of: CHESSBOARD CIRCLES_GRID ASYMMETRIC_CIRCLES_GRID -->
+  <Marker_Size>25</Marker_Size>
+  <!-- The type of input used for camera calibration. One of: CHESSBOARD CHARUCOBOARD CIRCLES_GRID ASYMMETRIC_CIRCLES_GRID -->
   <Calibrate_Pattern>"CHESSBOARD"</Calibrate_Pattern>
-  
+  <ArUco_Dict_Name>DICT_4X4_50</ArUco_Dict_Name>
+  <ArUco_Dict_File_Name></ArUco_Dict_File_Name>
   <!-- The input to use for calibration. 
 		To use an input camera -> give the ID of the camera, like "1"
 		To use an input video  -> give the path of the input video, like "/tmp/x.avi"
