@@ -52,7 +52,9 @@
 #include "opencv2/core.hpp"
 
 #if defined _MSC_VER && _MSC_VER >= 1200
+#ifndef NOMINMAX
 #define NOMINMAX // fix https://github.com/opencv/opencv/issues/17548
+#endif
 #pragma warning( disable: 4714 ) //__forceinline is not inlined
 #pragma warning( disable: 4127 ) //conditional expression is constant
 #pragma warning( disable: 4244 ) //conversion from '__int64' to 'int', possible loss of data
