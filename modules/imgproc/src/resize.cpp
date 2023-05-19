@@ -1212,9 +1212,9 @@ static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /
 {
     Size ssize = src.size(), dsize = dst.size();
     int ifx = ((ssize.width << 16) + dsize.width / 2) / dsize.width; // 16bit fixed-point arithmetic
-    int ifx0 = ifx / 2 - 1;                                     // This method uses center pixel coordinate as Pillow and scikit-images do.
+    int ifx0 = ifx / 2 - ssize.width % 2;                       // This method uses center pixel coordinate as Pillow and scikit-images do.
     int ify = ((ssize.height << 16) + dsize.height / 2) / dsize.height;
-    int ify0 = ify / 2 - 1;
+    int ify0 = ify / 2 - ssize.height % 2;
 
     cv::utils::BufferArea area;
     int* x_ofse = 0;
