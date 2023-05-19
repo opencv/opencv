@@ -139,13 +139,14 @@ Explanation
     For all of them you pass the current image and the size of the board and you'll get the positions
     of the patterns. cv::findChessboardCorners and cv::findCirclesGrid return a boolean variable
     which states if the pattern was found in the input (we only need to take into account
-    those images where this is true!). `CharucoDetector::detectBoard` may detect hartially visible
+    those images where this is true!). `CharucoDetector::detectBoard` may detect partially visible
     pattern and returns coordunates and ids of visible inner corners.
 
-    **NOTE: ** Board size and amount of matched points is different for chessboard, circles grid and ChArUco.
-    All Chessboard related algorithm expects amount of inner corners as board width and height.
+    @note Board size and amount of matched points is different for chessboard, circles grid and ChArUco.
+    All chessboard related algorithm expects amount of inner corners as board width and height.
     Board size of circles grid is just amount of circles by both grid dimentions. ChArUco board size
-    is defined in squares, but detection result is list of inner corners and that's why is smaller by 1 in both dimentions.
+    is defined in squares, but detection result is list of inner corners and that's why is smaller
+    by 1 in both dimentions.
 
     Then again in case of cameras we only take camera images when an input delay time is passed.
     This is done in order to allow user moving the chessboard around and getting different images.
