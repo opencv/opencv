@@ -1,3 +1,8 @@
+if (NOT CMAKE_CROSSCOMPILING)
+  file(RELATIVE_PATH __loc_relative "${OpenCV_BINARY_DIR}" "${CMAKE_CURRENT_LIST_DIR}/pattern_tools\n")
+  file(APPEND "${OpenCV_BINARY_DIR}/opencv_apps_python_tests.cfg" "${__loc_relative}")
+endif()
+
 if(NOT BUILD_DOCS)
   return()
 endif()
