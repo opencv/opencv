@@ -909,9 +909,11 @@ static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list v
 class InternalFFMpegRegister
 {
 public:
-    static void init()
+    static void init(const bool threadSafe)
     {
-        AutoLock lock(_mutex);
+        std::unique_lock<cv::Mutex> lock(_mutex, std::defer_lock);
+        if(!threadSafe)
+            lock.lock();
         static InternalFFMpegRegister instance;
         initLogger_();  // update logger setup unconditionally (GStreamer's libav plugin may override these settings)
     }
@@ -1001,11 +1003,22 @@ inline void fill_codec_context(AVCodecContext * enc, AVDictionary * dict)
     }
 }
 
+static bool isThreadSafe() {
+    const bool threadSafe = utils::getConfigurationParameterBool("OPENCV_FFMPEG_IS_THREAD_SAFE", false);
+    if (threadSafe) {
+        CV_LOG_WARNING(NULL, "VIDEOIO/FFMPEG: OPENCV_FFMPEG_IS_THREAD_SAFE == 1, all OpenCV locks removed, relying on FFmpeg to provide thread safety.  If FFmpeg is not thread safe isOpened() may return false when multiple threads try to call open() at the same time.");
+    }
+    return threadSafe;
+}
+
 bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters& params)
 {
-    InternalFFMpegRegister::init();
+    const bool threadSafe = isThreadSafe();
+    InternalFFMpegRegister::init(threadSafe);
 
-    AutoLock lock(_mutex);
+    std::unique_lock<cv::Mutex> lock(_mutex, std::defer_lock);
+    if(!threadSafe)
+        lock.lock();
 
     unsigned i;
     bool valid = false;
@@ -2658,9 +2671,12 @@ static inline void cv_ff_codec_tag_dump(const AVCodecTag *const *tags)
 bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                                  double fps, int width, int height, const VideoWriterParameters& params)
 {
-    InternalFFMpegRegister::init();
+    const bool threadSafe = isThreadSafe();
+    InternalFFMpegRegister::init(threadSafe);
 
-    AutoLock lock(_mutex);
+    std::unique_lock<cv::Mutex> lock(_mutex, std::defer_lock);
+    if (!threadSafe)
+        lock.lock();
 
     CV_CODEC_ID codec_id = CV_CODEC(CODEC_ID_NONE);
     AVPixelFormat codec_pix_fmt;
