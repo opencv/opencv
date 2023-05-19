@@ -293,7 +293,7 @@ int main(int argc, char* argv[])
     fs["Settings"] >> s;
     fs.release();                                         // close Settings file
     //! [file_read]
-    
+
     if (!s.goodInput)
     {
         cout << "Invalid input detected. Application stopping. " << endl;
@@ -306,6 +306,7 @@ int main(int argc, char* argv[])
     if (s.calibrationPattern == Settings::Pattern::CHARUCOBOARD) {
         grid_width = s.squareSize * (s.boardSize.width - 2);
     }
+
     bool release_object = false;
     if (parser.has("d")) {
         grid_width = parser.get<float>("d");
@@ -314,40 +315,46 @@ int main(int argc, char* argv[])
 
     //create CharucoBoard
     cv::aruco::Dictionary dictionary;
-    if (s.arucoDictFileName == "") {
-        cv::aruco::PredefinedDictionaryType arucoDict;
-        if (s.arucoDictName == "DICT_4X4_50") { arucoDict = cv::aruco::DICT_4X4_50; }
-        else if (s.arucoDictName == "DICT_4X4_100") { arucoDict = cv::aruco::DICT_4X4_100; }
-        else if (s.arucoDictName == "DICT_4X4_250") { arucoDict = cv::aruco::DICT_4X4_250; }
-        else if (s.arucoDictName == "DICT_4X4_1000") { arucoDict = cv::aruco::DICT_4X4_1000; }
-        else if (s.arucoDictName == "DICT_5X5_50") { arucoDict = cv::aruco::DICT_5X5_50; }
-        else if (s.arucoDictName == "DICT_5X5_100") { arucoDict = cv::aruco::DICT_5X5_100; }
-        else if (s.arucoDictName == "DICT_5X5_250") { arucoDict = cv::aruco::DICT_5X5_250; }
-        else if (s.arucoDictName == "DICT_5X5_1000") { arucoDict = cv::aruco::DICT_5X5_1000; }
-        else if (s.arucoDictName == "DICT_6X6_50") { arucoDict = cv::aruco::DICT_6X6_50; }
-        else if (s.arucoDictName == "DICT_6X6_100") { arucoDict = cv::aruco::DICT_6X6_100; }
-        else if (s.arucoDictName == "DICT_6X6_250") { arucoDict = cv::aruco::DICT_6X6_250; }
-        else if (s.arucoDictName == "DICT_6X6_1000") { arucoDict = cv::aruco::DICT_6X6_1000; }
-        else if (s.arucoDictName == "DICT_7X7_50") { arucoDict = cv::aruco::DICT_7X7_50; }
-        else if (s.arucoDictName == "DICT_7X7_100") { arucoDict = cv::aruco::DICT_7X7_100; }
-        else if (s.arucoDictName == "DICT_7X7_250") { arucoDict = cv::aruco::DICT_7X7_250; }
-        else if (s.arucoDictName == "DICT_7X7_1000") { arucoDict = cv::aruco::DICT_7X7_1000; }
-        else if (s.arucoDictName == "DICT_ARUCO_ORIGINAL") { arucoDict = cv::aruco::DICT_ARUCO_ORIGINAL; }
-        else if (s.arucoDictName == "DICT_APRILTAG_16h5") { arucoDict = cv::aruco::DICT_APRILTAG_16h5; }
-        else if (s.arucoDictName == "DICT_APRILTAG_25h9") { arucoDict = cv::aruco::DICT_APRILTAG_25h9; }
-        else if (s.arucoDictName == "DICT_APRILTAG_36h10") { arucoDict = cv::aruco::DICT_APRILTAG_36h10; }
-        else if (s.arucoDictName == "DICT_APRILTAG_36h11") { arucoDict = cv::aruco::DICT_APRILTAG_36h11; }
-        else {
-            cout << "incorrect name of aruco dictionary \n";
-            return 1;
-        }
+    if (s.calibrationPattern == Settings::CHARUCOBOARD) {
+        if (s.arucoDictFileName == "") {
+            cv::aruco::PredefinedDictionaryType arucoDict;
+            if (s.arucoDictName == "DICT_4X4_50") { arucoDict = cv::aruco::DICT_4X4_50; }
+            else if (s.arucoDictName == "DICT_4X4_100") { arucoDict = cv::aruco::DICT_4X4_100; }
+            else if (s.arucoDictName == "DICT_4X4_250") { arucoDict = cv::aruco::DICT_4X4_250; }
+            else if (s.arucoDictName == "DICT_4X4_1000") { arucoDict = cv::aruco::DICT_4X4_1000; }
+            else if (s.arucoDictName == "DICT_5X5_50") { arucoDict = cv::aruco::DICT_5X5_50; }
+            else if (s.arucoDictName == "DICT_5X5_100") { arucoDict = cv::aruco::DICT_5X5_100; }
+            else if (s.arucoDictName == "DICT_5X5_250") { arucoDict = cv::aruco::DICT_5X5_250; }
+            else if (s.arucoDictName == "DICT_5X5_1000") { arucoDict = cv::aruco::DICT_5X5_1000; }
+            else if (s.arucoDictName == "DICT_6X6_50") { arucoDict = cv::aruco::DICT_6X6_50; }
+            else if (s.arucoDictName == "DICT_6X6_100") { arucoDict = cv::aruco::DICT_6X6_100; }
+            else if (s.arucoDictName == "DICT_6X6_250") { arucoDict = cv::aruco::DICT_6X6_250; }
+            else if (s.arucoDictName == "DICT_6X6_1000") { arucoDict = cv::aruco::DICT_6X6_1000; }
+            else if (s.arucoDictName == "DICT_7X7_50") { arucoDict = cv::aruco::DICT_7X7_50; }
+            else if (s.arucoDictName == "DICT_7X7_100") { arucoDict = cv::aruco::DICT_7X7_100; }
+            else if (s.arucoDictName == "DICT_7X7_250") { arucoDict = cv::aruco::DICT_7X7_250; }
+            else if (s.arucoDictName == "DICT_7X7_1000") { arucoDict = cv::aruco::DICT_7X7_1000; }
+            else if (s.arucoDictName == "DICT_ARUCO_ORIGINAL") { arucoDict = cv::aruco::DICT_ARUCO_ORIGINAL; }
+            else if (s.arucoDictName == "DICT_APRILTAG_16h5") { arucoDict = cv::aruco::DICT_APRILTAG_16h5; }
+            else if (s.arucoDictName == "DICT_APRILTAG_25h9") { arucoDict = cv::aruco::DICT_APRILTAG_25h9; }
+            else if (s.arucoDictName == "DICT_APRILTAG_36h10") { arucoDict = cv::aruco::DICT_APRILTAG_36h10; }
+            else if (s.arucoDictName == "DICT_APRILTAG_36h11") { arucoDict = cv::aruco::DICT_APRILTAG_36h11; }
+            else {
+                cout << "incorrect name of aruco dictionary \n";
+                return 1;
+            }
 
-        dictionary = cv::aruco::getPredefinedDictionary(arucoDict);
+            dictionary = cv::aruco::getPredefinedDictionary(arucoDict);
+        }
+        else {
+            cv::FileStorage dict_file(s.arucoDictFileName, cv::FileStorage::Mode::READ);
+            cv::FileNode fn(dict_file.root());
+            dictionary.readDictionary(fn);
+        }
     }
     else {
-        cv::FileStorage dict_file(s.arucoDictFileName, cv::FileStorage::Mode::READ);
-        cv::FileNode fn(dict_file.root());
-        dictionary.readDictionary(fn);
+        // default dictionary
+        dictionary = cv::aruco::getPredefinedDictionary(0);
     }
     cv::aruco::CharucoBoard ch_board({s.boardSize.width, s.boardSize.height}, s.squareSize, s.markerSize, dictionary);
     cv::aruco::CharucoDetector ch_detector(ch_board);
@@ -361,6 +368,7 @@ int main(int argc, char* argv[])
     const Scalar RED(0,0,255), GREEN(0,255,0);
     const char ESC_KEY = 27;
     //! [get_input]
+
     for(;;)
     {
         Mat view;
@@ -409,12 +417,7 @@ int main(int argc, char* argv[])
             break;
         case Settings::CHARUCOBOARD:
             ch_detector.detectBoard( view, pointBuf, markerIds);
-            if (pointBuf.size() < (size_t)((s.boardSize.height - 1)*(s.boardSize.width - 1))) {
-                found = false;
-            }
-            else {
-                found = true;
-            }
+            found = pointBuf.size() == (size_t)((s.boardSize.height - 1)*(s.boardSize.width - 1));
             break;
         case Settings::CIRCLES_GRID:
             found = findCirclesGrid( view, s.boardSize, pointBuf );
@@ -426,8 +429,8 @@ int main(int argc, char* argv[])
             found = false;
             break;
         }
-
         //! [find_pattern]
+
         //! [pattern_found]
         if (found)                // If done with success,
         {
