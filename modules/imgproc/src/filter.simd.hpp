@@ -44,6 +44,8 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "filter.hpp"
 
+#include <cstddef>
+
 #if defined(CV_CPU_BASELINE_MODE)
 #if IPP_VERSION_X100 >= 710
 #define USE_IPP_SEP_FILTERS 1
@@ -304,7 +306,7 @@ void FilterEngine__apply(FilterEngine& this_, const Mat& src, Mat& dst, const Si
     FilterEngine__start(this_, wsz, src.size(), ofs);
     int y = this_.startY - ofs.y;
     FilterEngine__proceed(this_,
-            src.ptr() + y*src.step,
+            src.ptr() + y * (ptrdiff_t)src.step,
             (int)src.step,
             this_.endY - this_.startY,
             dst.ptr(),
