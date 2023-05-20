@@ -796,11 +796,12 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
         merge(maskChannels.data(), templ.channels(), mask);
     }
 
+    Mat mask2 = _mask.depth() == CV_8U ? mask : mask.mul(mask);
+
     if (method == cv::TM_SQDIFF || method == cv::TM_SQDIFF_NORMED)
     {
         Mat temp_result(corrSize, CV_32F);
         Mat img2 = img.mul(img);
-        Mat mask2 = mask.mul(mask);
         // If the mul() is ever unnested, declare MatExpr, *not* Mat, to be more efficient.
         // NORM_L2SQR calculates sum of squares
         double templ2_mask2_sum = norm(templ.mul(mask), NORM_L2SQR);
@@ -819,14 +820,13 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
     else if (method == cv::TM_CCORR || method == cv::TM_CCORR_NORMED)
     {
         // If the mul() is ever unnested, declare MatExpr, *not* Mat, to be more efficient.
-        Mat templ_mask2 = templ.mul(mask.mul(mask));
+        Mat templ_mask2 = templ.mul(mask2);
         crossCorr(img, templ_mask2, result, Point(0,0), 0, 0);
 
         if (method == cv::TM_CCORR_NORMED)
         {
             Mat temp_result(corrSize, CV_32F);
             Mat img2 = img.mul(img);
-            Mat mask2 = mask.mul(mask);
             // NORM_L2SQR calculates sum of squares
             double templ2_mask2_sum = norm(templ.mul(mask), NORM_L2SQR);
             crossCorr( img2, mask2, temp_result, Point(0,0), 0, 0 );
@@ -840,7 +840,7 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
 
         Scalar mask_sum = sum(mask);
         // T' * M where T' = M * (T - 1/sum(M)*sum(M*T))
-        Mat templx_mask = mask.mul(mask.mul(templ - sum(mask.mul(templ)).div(mask_sum)));
+        Mat templx_mask = mask2.mul(templ - sum(mask.mul(templ)).div(mask_sum));
         Mat img_mask_corr(corrSize, img.type()); // Needs separate channels
 
         // CCorr(I, T'*M)
@@ -876,7 +876,6 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
             //                  - 2 * CCorr(I, M^2) } }
             Mat norm_imgx(corrSize, CV_32F);
             Mat img2 = img.mul(img);
-            Mat mask2 = mask.mul(mask);
             Scalar mask2_sum = sum(mask2);
             Mat img_mask2_corr(corrSize, img.type());
             crossCorr(img2, mask2, norm_imgx, Point(0,0), 0, 0);

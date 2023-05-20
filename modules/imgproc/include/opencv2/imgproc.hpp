@@ -3866,9 +3866,12 @@ is \f$W \times H\f$ and templ is \f$w \times h\f$ , then result is \f$(W-w+1) \t
 @param method Parameter specifying the comparison method, see #TemplateMatchModes
 @param mask Optional mask. It must have the same size as templ. It must either have the same number
             of channels as template or only one channel, which is then used for all template and
-            image channels. If the data type is #CV_8U, the mask is interpreted as a binary mask,
+            image channels.
+            - If the data type is #CV_8U, the mask is interpreted as a binary mask,
             meaning only elements where mask is nonzero are used and are kept unchanged independent
-            of the actual mask value (weight equals 1). For data tpye #CV_32F, the mask values are
+            of the actual mask value (weight equals 1). To keep compatibility to other masks in OpenCV,
+            all nonzero values are converted to ones inplace.
+            - For data type #CV_32F, the mask values are
             used as weights. The exact formulas are documented in #TemplateMatchModes.
  */
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
