@@ -40,7 +40,7 @@ public:
             for (int i = -128; i < 128; i++)
             {
                 float x = input_sc * (i - 127); // ensures exp(x) is always between (0, 1)
-                table[i+128] = std::exp(x);
+                table[i + 128] = std::exp(x);
             }
             blobs.push_back(lookUpTable);
         }
@@ -63,7 +63,7 @@ public:
         auto src = inputs[0];
         axis = normalize_axis(axis, inputs[0].dims);
         N = src.total(0, axis);
-        D = src.total(axis + 1);
+        D = src.total(axis);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -192,7 +192,7 @@ public:
         int cost_per_thread;
 
         SoftmaxInt8Invoker(const Mat& src, Mat& dst, const Mat& lookup_table, int N, int D, float y_scale, int y_zero_point)
-            : src_(src), dst_(dst), lookup_table_(lookup_table), N_(N), D_(D), y_scale_(y_scale), y_zero_point_(y_zero_point) {
+            : src_(src), dst_(dst), lookup_table_(lookup_table), N_(N), D_(D), y_scale_(1.f / y_scale), y_zero_point_(y_zero_point) {
             threads = N_;
             cost_per_thread = D_;
         }
@@ -221,27 +221,27 @@ public:
                 const int8_t* x = p_src + i * D_;
                 int8_t* y = p_dst + i * D_;
 
-                float this_sum = 0;
+                float vsum = 0;
                 for (int j = 0; j < D_; ++j) {
-                    const uint8_t idx = uint8_t(*x++ + 128);
-                    this_sum += table[idx];
+                    const uint8_t idx = uint8_t((*x++) + 128);
+                    vsum += table[idx];
                 }
 
-                // FIXME: avoid divide by this_sum==0
+                // FIXME: avoid divide by vsum==0
 
                 x = p_src + i * D_;
                 if (with_log) {
                     for (int j = 0; j < D_; ++j) {
-                        const uint8_t idx = uint8_t(*x++ + 128);
+                        const uint8_t idx = uint8_t((*x++) + 128);
                         const float v = table[idx];
-                        const int vout = static_cast<int>(std::nearbyintf(std::log((v * y_scale_) / this_sum))) + y_zero_point_;
+                        const int vout = static_cast<int>(std::nearbyintf(std::log((v * y_scale_) / vsum))) + y_zero_point_;
                         *y++ = vout > 255 ? static_cast<int8_t>(255) : static_cast<int8_t>(vout);
                     }
                 } else {
                     for (int j = 0; j < D_; ++j) {
-                        const uint8_t idx = uint8_t(*x++ + 128);
+                        const uint8_t idx = uint8_t((*x++) + 128);
                         const float v = table[idx];
-                        const int vout = static_cast<int>(std::nearbyintf((v * y_scale_) / this_sum)) + y_zero_point_;
+                        const int vout = static_cast<int>(std::nearbyintf((v * y_scale_) / vsum)) + y_zero_point_;
                         *y++ = vout > 255 ? static_cast<int8_t>(255) : static_cast<int8_t>(vout);
                     }
                 }
