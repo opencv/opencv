@@ -670,19 +670,9 @@ void Mat::forEach_impl(const Functor& operation) {
         }
         // ! Call operator for each elements in this row. 2d mat special version.
         inline void rowCall2(const int row, const int COLS) const {
-            union Index{
-                int body[2];
-                operator const int*() const {
-                    return reinterpret_cast<const int*>(this);
-                }
-                int& operator[](const int i) {
-                    return body[i];
-                }
-            } idx = {{row, 0}};
-            // Special union is needed to avoid
-            // "error: array subscript is above array bounds [-Werror=array-bounds]"
-            // when call the functor `op` such that access idx[3].
+            CV_Assert(mat->dims <= 2);
 
+            int idx[2] = {row, 0};
             _Tp* pixel = &(mat->template at<_Tp>(idx));
             const _Tp* const pixel_end = pixel + COLS;
             while(pixel < pixel_end) {
