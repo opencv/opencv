@@ -181,12 +181,21 @@ public:
                           const std::vector<std::vector<float> >& refConfidences,
                           const std::vector<std::vector<Rect2d> >& refBoxes,
                           double scoreDiff, double iouDiff, float confThreshold = 0.24,
-                          float nmsThreshold = 0.4, bool useWinograd = true)
+                          float nmsThreshold = 0.4, bool useWinograd = true,
+                          int zeroPadW = 0)
     {
         checkBackend();
 
         Mat img1 = imread(_tf("dog416.png"));
         Mat img2 = imread(_tf("street.png"));
+        cv::resize(img2, img2, Size(416, 416));
+
+        // Pad images by black pixel at the right to test not equal width and height sizes
+        if (zeroPadW) {
+            cv::copyMakeBorder(img1, img1, 0, 0, 0, zeroPadW, BORDER_CONSTANT);
+            cv::copyMakeBorder(img2, img2, 0, 0, 0, zeroPadW, BORDER_CONSTANT);
+        }
+
         std::vector<Mat> samples(2);
         samples[0] = img1; samples[1] = img2;
 
@@ -195,7 +204,7 @@ public:
         CV_Assert(batch_size == 1 || batch_size == 2);
         samples.resize(batch_size);
 
-        Mat inp = blobFromImages(samples, 1.0/255, Size(416, 416), Scalar(), true, false);
+        Mat inp = blobFromImages(samples, 1.0/255, Size(), Scalar(), true, false);
 
         Net net = readNet(findDataFile("dnn/" + cfg),
                           findDataFile("dnn/" + weights, false));
@@ -275,6 +284,14 @@ public:
                 continue;
             }
 
+            // Return predictions from padded image to the origin
+            if (zeroPadW) {
+                float scale = static_cast<float>(inp.size[3]) / (inp.size[3] - zeroPadW);
+                for (auto& box : nms_boxes) {
+                    box.x *= scale;
+                    box.width *= scale;
+                }
+            }
             normAssertDetections(refClassIds[b], refConfidences[b], refBoxes[b], nms_classIds,
                              nms_confidences, nms_boxes, format("batch size %d, sample %d\n", batch_size, b).c_str(), confThreshold, scoreDiff, iouDiff);
         }
@@ -285,18 +302,20 @@ public:
                           const std::vector<float>& refConfidences,
                           const std::vector<Rect2d>& refBoxes,
                           double scoreDiff, double iouDiff, float confThreshold = 0.24,
-                          float nmsThreshold = 0.4, bool useWinograd = true)
+                          float nmsThreshold = 0.4, bool useWinograd = true,
+                          int zeroPadW = 0)
     {
         testDarknetModel(cfg, weights,
                          std::vector<std::vector<int> >(1, refClassIds),
                          std::vector<std::vector<float> >(1, refConfidences),
                          std::vector<std::vector<Rect2d> >(1, refBoxes),
-                         scoreDiff, iouDiff, confThreshold, nmsThreshold, useWinograd);
+                         scoreDiff, iouDiff, confThreshold, nmsThreshold, useWinograd, zeroPadW);
     }
 
     void testDarknetModel(const std::string& cfg, const std::string& weights,
                           const cv::Mat& ref, double scoreDiff, double iouDiff,
-                          float confThreshold = 0.24, float nmsThreshold = 0.4, bool useWinograd = true)
+                          float confThreshold = 0.24, float nmsThreshold = 0.4, bool useWinograd = true,
+                          int zeroPadW = 0)
     {
         CV_Assert(ref.cols == 7);
         std::vector<std::vector<int> > refClassIds;
@@ -323,7 +342,7 @@ public:
             refBoxes[batchId].push_back(box);
         }
         testDarknetModel(cfg, weights, refClassIds, refScores, refBoxes,
-                         scoreDiff, iouDiff, confThreshold, nmsThreshold, useWinograd);
+                         scoreDiff, iouDiff, confThreshold, nmsThreshold, useWinograd, zeroPadW);
     }
 };
 
@@ -767,6 +786,8 @@ TEST_P(Test_Darknet_nets, YOLOv4)
     {
         SCOPED_TRACE("batch size 1");
         testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff, 0.24, 0.4, false);
+        // Test not equal width and height applying zero padding
+        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), 0.006, 0.008, 0.24, 0.4, false, /*zeroPadW*/ 32);
     }
 
     {
