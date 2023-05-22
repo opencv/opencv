@@ -724,4 +724,13 @@ INSTANTIATE_TEST_CASE_P(cvt422, Imgproc_ColorYUV,
                       (int)COLOR_YUV2RGBA_YUY2, (int)COLOR_YUV2BGRA_YUY2, (int)COLOR_YUV2RGBA_YVYU, (int)COLOR_YUV2BGRA_YVYU,
                       (int)COLOR_YUV2GRAY_UYVY, (int)COLOR_YUV2GRAY_YUY2));
 
-}} // namespace
+}
+
+TEST(cvtColorUYVY, size_issue_21035)
+{
+    Mat input = Mat::zeros(1, 1, CV_8UC2);
+    Mat output;
+    EXPECT_THROW(cv::cvtColor(input, output, cv::COLOR_YUV2BGR_UYVY), cv::Exception);
+}
+
+} // namespace
