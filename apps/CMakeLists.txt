@@ -53,7 +53,7 @@ macro(ocv_add_app directory)
   endif()
 endmacro()
 
-ocv_add_app(traincascade)
+#ocv_add_app(traincascade)
 #ocv_add_app(createsamples)
 ocv_add_app(annotation)
 ocv_add_app(visualisation)
