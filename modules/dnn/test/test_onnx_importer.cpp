@@ -1985,6 +1985,12 @@ TEST_P(Test_ONNX_layers, OutputRegistration)
     testONNXModels("output_registration", npy, 0, 0, false, true, 2);
 }
 
+TEST_P(Test_ONNX_layers, QLinearSoftmax)
+{
+    // threshold is set for fusion with dequantization
+    testONNXModels("qlinearsoftmax_11", npy, 0.001, 0.002);
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public Test_ONNX_layers
@@ -2568,11 +2574,6 @@ TEST_P(Test_ONNX_layers, OpenAI_CLIP_head)
 TEST_P(Test_ONNX_layers, where_node)
 {
     testONNXModels("where_layer");
-}
-
-TEST_P(Test_ONNX_layers, QLinearSoftmax)
-{
-    testONNXModels("qlinearsoftmax_11");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

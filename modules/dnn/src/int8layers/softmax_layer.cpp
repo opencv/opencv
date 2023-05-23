@@ -72,11 +72,11 @@ public:
             (backendId == DNN_BACKEND_TIMVX && haveTimVX());
     }
 
-    // virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
-    // {
-    //     Ptr<DequantizeLayer> dequantize_layer = top.dynamicCast<DequantizeLayer>();
-    //     return !dequantize_layer.empty() && preferableTarget != DNN_TARGET_OPENCL_FP16;
-    // }
+    virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
+    {
+        Ptr<DequantizeLayer> dequantize_layer = top.dynamicCast<DequantizeLayer>();
+        return !dequantize_layer.empty() && preferableTarget != DNN_TARGET_OPENCL_FP16;
+    }
 
    virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,
                                        const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
@@ -249,6 +249,76 @@ public:
         }
     };
 
+    template <bool with_log>
+    class SoftmaxInt8OutputFloatInvoker : public ParallelLoopBody {
+    public:
+        const Mat& src_;
+        Mat& dst_;
+
+        const Mat& lookup_table_;
+
+        int N_;
+        int D_;
+
+        int threads;
+        int cost_per_thread;
+
+        SoftmaxInt8OutputFloatInvoker(const Mat& src, Mat& dst, const Mat& lookup_table, int N, int D)
+            : src_(src), dst_(dst), lookup_table_(lookup_table), N_(N), D_(D) {
+            threads = N_;
+            cost_per_thread = D_;
+        }
+
+        static void run(const Mat& src, Mat& dst, const Mat& lookup_table, int N, int D) {
+            CV_Assert(src.isContinuous());
+            CV_Assert(dst.isContinuous());
+            CV_CheckTypeEQ(src.type(), CV_8S, "DNN/SoftmaxInt8: type of input must be int8");
+            CV_CheckTypeEQ(dst.type(), CV_32F, "DNN/SoftmaxInt8: type of input must be float32 since Dequantization is fused");
+
+            SoftmaxInt8OutputFloatInvoker p(src, dst, lookup_table, N, D);
+
+            double nstripes = ((size_t)p.threads * p.cost_per_thread) * (1 / 1024.0);
+            parallel_for_(Range(0, p.threads), p, nstripes);
+        }
+
+        void operator()(const Range& r) const CV_OVERRIDE {
+            int start = r.start;
+            int end = r.end;
+
+            const int8_t* p_src = src_.ptr<int8_t>();
+            float* p_dst = dst_.ptr<float>();
+            const float* table = lookup_table_.ptr<float>();
+
+            for (int i = start; i < end; ++i) {
+                const int8_t* x = p_src + i * D_;
+                float* y = p_dst + i * D_;
+
+                float vsum = 0;
+                for (int j = 0; j < D_; ++j) {
+                    const uint8_t idx = uint8_t((*x++) + 128);
+                    vsum += table[idx];
+                }
+
+                // FIXME: avoid divide by vsum==0
+
+                x = p_src + i * D_;
+                if (with_log) {
+                    for (int j = 0; j < D_; ++j) {
+                        const uint8_t idx = uint8_t((*x++) + 128);
+                        const float v = table[idx];
+                        *y++ = std::log(v / vsum);
+                    }
+                } else {
+                    for (int j = 0; j < D_; ++j) {
+                        const uint8_t idx = uint8_t((*x++) + 128);
+                        const float v = table[idx];
+                        *y++ = v / vsum;
+                    }
+                }
+            }
+        }
+    };
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
@@ -261,10 +331,22 @@ public:
         const Mat &src = inputs[0];
         Mat &dst = outputs[0];
 
-        if (logSoftMax) {
-            SoftmaxInt8Invoker<true>::run(src, dst, blobs[0], N, D, output_sc, output_zp);
-        } else {
-            SoftmaxInt8Invoker<false>::run(src, dst, blobs[0], N, D, output_sc, output_zp);
+        switch (dst.type()) {
+            case CV_8S: {
+                if (logSoftMax) {
+                    SoftmaxInt8Invoker<true>::run(src, dst, blobs[0], N, D, output_sc, output_zp);
+                } else {
+                    SoftmaxInt8Invoker<false>::run(src, dst, blobs[0], N, D, output_sc, output_zp);
+                }
+            } break;
+            case CV_32F: {
+                if (logSoftMax) {
+                    SoftmaxInt8OutputFloatInvoker<true>::run(src, dst, blobs[0], N, D);
+                } else {
+                    SoftmaxInt8OutputFloatInvoker<false>::run(src, dst, blobs[0], N, D);
+                }
+            } break;
+            default: CV_Error(cv::Error::BadDepth, "DNN/SoftmaxInt8: Unsupported output type");
         }
     }
 
