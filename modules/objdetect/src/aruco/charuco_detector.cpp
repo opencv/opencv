@@ -48,7 +48,16 @@ struct CharucoDetector::CharucoDetectorImpl {
                 if (nearestMarkerIdx[chId][0] == idMaker || nearestMarkerIdx[chId][1] == idMaker) {
                     int nearestCornerId =  nearestMarkerIdx[chId][0] == idMaker ? board.getNearestMarkerCorners()[chId][0] : board.getNearestMarkerCorners()[chId][1];
                     Point2f nearestCorner = mCorners[j].ptr<Point2f>(0)[nearestCornerId];
-                    distance[chId].x = max(distance[chId].x, sqrt(normL2Sqr<float>(nearestCorner - charucoCorner)));
+                    float distToNearest = sqrt(normL2Sqr<float>(nearestCorner - charucoCorner));
+                    distance[chId].x = max(distance[chId].x, distToNearest);
+                    // check that nearestCorner is nearest point
+                    {
+                        Point2f mid1 = (mCorners[j].ptr<Point2f>(0)[(nearestCornerId + 1) % 4]+nearestCorner)*0.5f;
+                        Point2f mid2 = (mCorners[j].ptr<Point2f>(0)[(nearestCornerId + 3) % 4]+nearestCorner)*0.5f;
+                        float tmpDist = min(sqrt(normL2Sqr<float>(mid1 - charucoCorner)), sqrt(normL2Sqr<float>(mid2 - charucoCorner)));
+                        if (tmpDist < distToNearest)
+                            return false;
+                    }
                 }
                 // check distance from the charuco corner to other markers
                 else
