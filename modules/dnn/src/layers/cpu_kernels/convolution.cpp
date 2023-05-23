@@ -445,7 +445,7 @@ static inline void packData8(char*& inpbuf, float*& inptrIn, int& in_w, int& x0,
             {
                 int k1 = ofstab[k];
 #if CV_SIMD256
-                vx_store(inpbufC_FP32 + k*CONV_NR, vx_load(inptrInC + k1));
+                vx_store(inpbufC_FP32 + k*CONV_NR_FP32, vx_load(inptrInC + k1));
 #elif CV_SIMD128
                 v_float32x4 vv0 = v_load(inptrInC + k1);
                 v_float32x4 vv1 = v_load(inptrInC + k1 + 4);
