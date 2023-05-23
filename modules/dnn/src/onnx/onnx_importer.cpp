@@ -4042,7 +4042,9 @@ void ONNXImporter::parseQSoftmax(LayerParams& layerParams, const opencv_onnx::No
     CV_CheckEQ(node_proto.input_size(), 5, "DNN/ONNX: QLinearSoftmax requires 5 inputs, X, X_scale, X_zero_point, Y_scale, Y_zero_point");
 
     int opset = layerParams.get<int>("opset");
-    CV_CheckLT(opset, 13, "DNN/ONNX: Implementation of QLinearSoftmax currently only supports opset < 13.");
+    if (opset < 13) {
+        layerParams.set("coerced_2d", true);
+    }
 
     float x_scale = getScalarFromMat<float>(getBlob(node_proto, 1));
     int8_t x_zero_point = getScalarFromMat<int8_t>(getBlob(node_proto, 2));

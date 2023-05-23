@@ -26,6 +26,7 @@ public:
 
         axis = params.get<int>("axis", 1);
         logSoftMax = params.get<bool>("log_softmax", false);
+        coerced_2d = params.get<bool>("coerced_2d", false);
 
         input_sc = params.get<float>("input_scale");
         input_zp = params.get<int>("input_zeropoint");
@@ -61,7 +62,27 @@ public:
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
         auto src = inputs[0];
-        axis = normalize_axis(axis, inputs[0].dims);
+        auto dims_src = src.dims;
+        auto shape_src = shape(src);
+        axis = normalize_axis(axis, dims_src);
+
+        if (!coerced_2d) {
+            is_transpose_needed = (axis == dims_src - 1) ? false : true;
+            if (is_transpose_needed) {
+                permutation.resize(dims_src);
+                std::iota(permutation.begin(), permutation.end(), 0);
+                permutation[axis] = dims_src - 1;
+                permutation[dims_src - 1] = axis;
+
+                transposed_shape.resize(dims_src);
+                std::transform(permutation.begin(), permutation.end(), transposed_shape.begin(), [&shape_src](int axis) { return shape_src[axis]; });
+                N = std::accumulate(transposed_shape.begin(), transposed_shape.end() - 1, 1, std::multiplies<int>());
+                D = transposed_shape.back();
+
+                return;
+            }
+        }
+
         N = src.total(0, axis);
         D = src.total(axis);
     }
@@ -100,8 +121,7 @@ public:
         const Mat &src = inputWrapper->getMat();
 
         // convert axis from OpenCV NCHW toTimVX WHCN.
-        int axis = normalize_axis(axisRaw, src.dims);
-        int tvAxis = src.dims - 1 - axis;
+        int tvAxis = src.dims - 1 - normalize_axis(axis, src.dims);
         if(tvAxis < 0)
             tvAxis = 0; // default value is 0.
 
@@ -328,8 +348,15 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        const Mat &src = inputs[0];
-        Mat &dst = outputs[0];
+        Mat src, dst;
+
+        if (!coerced_2d && is_transpose_needed) {
+            transposeND(inputs[0], permutation, src);
+            dst = Mat::zeros(transposed_shape.size(), transposed_shape.data(), outputs[0].type());
+        } else {
+            src = inputs[0];
+            dst = outputs[0];
+        }
 
         switch (dst.type()) {
             case CV_8S: {
@@ -347,6 +374,11 @@ public:
                 }
             } break;
             default: CV_Error(cv::Error::BadDepth, "DNN/SoftmaxInt8: Unsupported output type");
+        }
+
+        if (!coerced_2d && is_transpose_needed) {
+            transposeND(dst, permutation, dst);
+            dst.copyTo(outputs[0]);
         }
     }
 
@@ -368,6 +400,10 @@ private:
     int axis;
     int N;
     int D;
+    bool coerced_2d;
+    bool is_transpose_needed;
+    std::vector<int> permutation;
+    std::vector<int> transposed_shape;
 };
 
 Ptr<SoftmaxLayerInt8> SoftmaxLayerInt8::create(const LayerParams& params)
