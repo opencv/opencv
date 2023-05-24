@@ -571,10 +571,11 @@ bool QRDetect::computeTransformationPoints()
     {
         Mat mask = Mat::zeros(bin_barcode.rows + 2, bin_barcode.cols + 2, CV_8UC1);
         uint8_t next_pixel, future_pixel = 255;
-        int count_test_lines = 0, index = cvRound(localization_points[i].x);
-        for (; index < bin_barcode.cols - 1; index++)
+        int count_test_lines = 0, index_c = max(0, min(cvRound(localization_points[i].x), bin_barcode.cols - 1));
+        const int index_r = max(0, min(cvRound(localization_points[i].y), bin_barcode.rows - 1));
+        for (; index_c < bin_barcode.cols - 1; index_c++)
         {
-            next_pixel = bin_barcode.ptr<uint8_t>(cvRound(localization_points[i].y))[index + 1];
+            next_pixel = bin_barcode.ptr<uint8_t>(index_r)[index_c + 1];
             if (next_pixel == future_pixel)
             {
                 future_pixel = static_cast<uint8_t>(~future_pixel);
@@ -582,7 +583,7 @@ bool QRDetect::computeTransformationPoints()
                 if (count_test_lines == 2)
                 {
                     floodFill(bin_barcode, mask,
-                              Point(index + 1, cvRound(localization_points[i].y)), 255,
+                              Point(index_c + 1, index_r), 255,
                               0, Scalar(), Scalar(), FLOODFILL_MASK_ONLY);
                     break;
                 }
