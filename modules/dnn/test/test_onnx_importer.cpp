@@ -1987,8 +1987,8 @@ TEST_P(Test_ONNX_layers, OutputRegistration)
 
 TEST_P(Test_ONNX_layers, QLinearSoftmax)
 {
-    // threshold is set for fusion with dequantization
-    testONNXModels("qlinearsoftmax_11", npy, 0.001, 0.002);
+    testONNXModels("qlinearsoftmax_v11", npy, 0.002, 0.002); // 2D coerced
+    testONNXModels("qlinearsoftmax_v13", npy, 0.002, 0.002);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
