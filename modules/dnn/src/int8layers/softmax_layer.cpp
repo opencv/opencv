@@ -377,8 +377,7 @@ public:
         }
 
         if (!coerced_2d && is_transpose_needed) {
-            transposeND(dst, permutation, dst);
-            dst.copyTo(outputs[0]);
+            transposeND(dst, permutation, outputs[0]);
         }
     }
 
