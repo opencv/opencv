@@ -54,8 +54,8 @@ Ptr<FastConv> initFastConv(
     conv->pad_bottom = conv_dim == CONV_1D ? 0 : (int)pads_end[pads_end.size() - 2];
     conv->pad_right = (int)pads_end.back();
 
-    int stride_d = conv_dim == CONV_3D ? (int)strides[0] : 0;
-    int stride_h = conv_dim == CONV_1D ? 0 : (int)strides[strides.size() - 2];
+    int stride_d = conv_dim == CONV_3D ? (int)strides[0] : 1;
+    int stride_h = conv_dim == CONV_1D ? 1 : (int)strides[strides.size() - 2];
     int stride_w = (int)strides.back();
 
     int dilation_d = conv_dim == CONV_3D ? (int)dilations[0] : 1;
