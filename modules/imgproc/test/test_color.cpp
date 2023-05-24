@@ -3154,6 +3154,13 @@ TEST(ImgProc_BGR2RGBA, 3ch24ch)
     EXPECT_DOUBLE_EQ(cvtest::norm(expected - dst, NORM_INF), 0.);
 }
 
+TEST(ImgProc_YUV2RGB, even_dimensions)
+{
+    cv::Mat2b mat(1, 1);
+    cv::Mat out;
+    EXPECT_THROW(cv::cvtColor(mat, out, cv::COLOR_YUV2RGB_UYVY), cv::Exception);
+}
+
 TEST(ImgProc_RGB2YUV, regression_13668)
 {
     Mat src(Size(32, 4), CV_8UC3, Scalar(9, 250,  82));  // Ensure that SIMD code path works
