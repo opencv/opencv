@@ -457,7 +457,7 @@ void opj_calculate_norms(OPJ_FLOAT64 * pNorms,
         for (j = 0; j < pNbComps; ++j) {
             lCurrentValue = lMatrix[lIndex];
             lIndex += pNbComps;
-            lNorms[i] += lCurrentValue * lCurrentValue;
+            lNorms[i] += (OPJ_FLOAT64) lCurrentValue * lCurrentValue;
         }
         lNorms[i] = sqrt(lNorms[i]);
     }
