@@ -254,15 +254,13 @@ public:
                     for (int j = 0; j < D_; ++j) {
                         const uint8_t idx = uint8_t((*x++) + 128);
                         const float v = table[idx];
-                        const int vout = static_cast<int>(std::nearbyintf(y_scale_ * std::log(v / vsum))) + y_zero_point_;
-                        *y++ = vout > 255 ? static_cast<int8_t>(255) : static_cast<int8_t>(vout);
+                        *y++ = saturate_cast<int8_t>(std::nearbyintf(y_scale_ * std::log(v / vsum)) + y_zero_point_);
                     }
                 } else {
                     for (int j = 0; j < D_; ++j) {
                         const uint8_t idx = uint8_t((*x++) + 128);
                         const float v = table[idx];
-                        const int vout = static_cast<int>(std::nearbyintf((v * y_scale_) / vsum)) + y_zero_point_;
-                        *y++ = vout > 255 ? static_cast<int8_t>(255) : static_cast<int8_t>(vout);
+                        *y++ = saturate_cast<int8_t>(std::nearbyintf(y_scale_ * v / vsum) + y_zero_point_);
                     }
                 }
             }
