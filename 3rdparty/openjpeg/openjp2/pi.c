@@ -943,7 +943,7 @@ static void opj_get_all_encoding_parameters(const opj_image_t *p_image,
     *p_dy_min = 0x7fffffff;
 
     for (compno = 0; compno < p_image->numcomps; ++compno) {
-        /* aritmetic variables to calculate*/
+        /* arithmetic variables to calculate*/
         OPJ_UINT32 l_level_no;
         OPJ_UINT32 l_rx0, l_ry0, l_rx1, l_ry1;
         OPJ_UINT32 l_px0, l_py0, l_px1, py1;
@@ -1225,7 +1225,7 @@ static void opj_pi_update_decode_poc(opj_pi_iterator_t * p_pi,
     /* loop*/
     OPJ_UINT32 pino;
 
-    /* encoding prameters to set*/
+    /* encoding parameters to set*/
     OPJ_UINT32 l_bound;
 
     opj_pi_iterator_t * l_current_pi = 00;
@@ -1272,7 +1272,7 @@ static void opj_pi_update_decode_not_poc(opj_pi_iterator_t * p_pi,
     /* loop*/
     OPJ_UINT32 pino;
 
-    /* encoding prameters to set*/
+    /* encoding parameters to set*/
     OPJ_UINT32 l_bound;
 
     opj_pi_iterator_t * l_current_pi = 00;
@@ -1312,7 +1312,7 @@ static OPJ_BOOL opj_pi_check_next_level(OPJ_INT32 pos,
     opj_poc_t *tcp = &tcps->pocs[pino];
 
     if (pos >= 0) {
-        for (i = pos; pos >= 0; i--) {
+        for (i = pos; i >= 0; i--) {
             switch (prog[i]) {
             case 'R':
                 if (tcp->res_t == tcp->resE) {
@@ -1401,11 +1401,11 @@ opj_pi_iterator_t *opj_pi_create_decode(opj_image_t *p_image,
     OPJ_UINT32 pino;
     OPJ_UINT32 compno, resno;
 
-    /* to store w, h, dx and dy fro all components and resolutions */
+    /* to store w, h, dx and dy for all components and resolutions */
     OPJ_UINT32 * l_tmp_data;
     OPJ_UINT32 ** l_tmp_ptr;
 
-    /* encoding prameters to set */
+    /* encoding parameters to set */
     OPJ_UINT32 l_max_res;
     OPJ_UINT32 l_max_prec;
     OPJ_UINT32 l_tx0, l_tx1, l_ty0, l_ty1;
@@ -1624,11 +1624,11 @@ opj_pi_iterator_t *opj_pi_initialise_encode(const opj_image_t *p_image,
     OPJ_UINT32 pino;
     OPJ_UINT32 compno, resno;
 
-    /* to store w, h, dx and dy fro all components and resolutions*/
+    /* to store w, h, dx and dy for all components and resolutions*/
     OPJ_UINT32 * l_tmp_data;
     OPJ_UINT32 ** l_tmp_ptr;
 
-    /* encoding prameters to set*/
+    /* encoding parameters to set*/
     OPJ_UINT32 l_max_res;
     OPJ_UINT32 l_max_prec;
     OPJ_UINT32 l_tx0, l_tx1, l_ty0, l_ty1;
