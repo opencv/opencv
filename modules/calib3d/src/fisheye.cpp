@@ -460,7 +460,7 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::fisheye::undistortPoints
+/// cv::fisheye::initUndistortRectifyMap
 
 void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArray R, InputArray P,
     const cv::Size& size, int m1type, OutputArray map1, OutputArray map2 )
