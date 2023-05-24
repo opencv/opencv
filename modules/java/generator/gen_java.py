@@ -1353,7 +1353,7 @@ def sanitize_java_documentation_string(doc, type):
                 indexDiff += 1
             lines[index + indexDiff] = lines[index + indexDiff][0:i] + lines[index + indexDiff][i + 1:]
         else:
-            if listInd and (not line or line == "*" or line.startswith("@note")):
+            if listInd and (not line or line == "*" or line.strip().startswith("@note") or line.strip().startswith("@param")):
                 lines.insert(index + indexDiff, "  "*len(listInd) + "</li>")
                 indexDiff += 1
                 del listInd[-1]
