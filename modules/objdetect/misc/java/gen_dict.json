@@ -1,0 +1,12 @@
+{
+  "type_dict": {
+    "vector_BarcodeType": {
+      "j_type": "List<Integer>",
+      "jn_type": "List<Integer>",
+      "jni_type": "jobject",
+      "jni_var": "std::vector< cv::barcode::BarcodeType > %(n)s",
+      "suffix": "Ljava_util_List",
+      "v_type": "vector_BarcodeType"
+    }
+  }
+}
