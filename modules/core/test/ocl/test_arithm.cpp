@@ -1873,6 +1873,22 @@ OCL_TEST_P(ReduceAvg, Mat)
     }
 }
 
+typedef Reduce ReduceSum2;
+
+OCL_TEST_P(ReduceSum2, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        generateTestData();
+
+        OCL_OFF(cv::reduce(src_roi, dst_roi, dim, REDUCE_SUM2, dtype));
+        OCL_ON(cv::reduce(usrc_roi, udst_roi, dim, REDUCE_SUM2, dtype));
+
+        double eps = ddepth <= CV_32S ? 1 : 6e-6;
+        OCL_EXPECT_MATS_NEAR(dst, eps);
+    }
+}
+
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(::testing::Values(CV_8U, CV_8S), OCL_ALL_DEPTHS, OCL_ALL_CHANNELS, Bool(), Bool()));

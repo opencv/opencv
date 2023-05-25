@@ -42,7 +42,7 @@
 #include "precomp.hpp"
 #include <opencv2/dnn/layer.details.hpp>
 
-#if !defined(BUILD_PLUGIN)
+#if defined(HAVE_PROTOBUF) && !defined(BUILD_PLUGIN)
 #include <google/protobuf/stubs/common.h>
 #endif
 
@@ -60,7 +60,7 @@ Mutex& getInitializationMutex()
 // force initialization (single-threaded environment)
 Mutex* __initialization_mutex_initializer = &getInitializationMutex();
 
-#if !defined(BUILD_PLUGIN)
+#if defined(HAVE_PROTOBUF) && !defined(BUILD_PLUGIN)
 namespace {
 using namespace google::protobuf;
 class ProtobufShutdown {
@@ -80,7 +80,7 @@ void initializeLayerFactory()
 {
     CV_TRACE_FUNCTION();
 
-#if !defined(BUILD_PLUGIN)
+#if defined(HAVE_PROTOBUF) && !defined(BUILD_PLUGIN)
     static ProtobufShutdown protobufShutdown; CV_UNUSED(protobufShutdown);
 #endif
 
@@ -194,7 +194,6 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(ConvolutionInt8,  ConvolutionLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(InnerProductInt8, InnerProductLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(PoolingInt8,      PoolingLayerInt8);
-    CV_DNN_REGISTER_LAYER_CLASS(ReduceInt8,       ReduceLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(EltwiseInt8,      EltwiseLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(BatchNormInt8,    BatchNormLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(ScaleInt8,        ScaleLayerInt8);

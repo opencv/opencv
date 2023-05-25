@@ -36,7 +36,7 @@ CV__DNN_INLINE_NS_BEGIN
 
 extern bool DNN_DIAGNOSTICS_RUN;
 
-#if HAVE_PROTOBUF
+#ifdef HAVE_PROTOBUF
 
 using ::google::protobuf::RepeatedField;
 using ::google::protobuf::RepeatedPtrField;
@@ -3225,8 +3225,6 @@ void TFLayerHandler::handleFailed(const tensorflow::NodeDef& layer)
 
 } // namespace
 
-#endif //HAVE_PROTOBUF
-
 Net readNetFromTensorflow(const String &model, const String &config)
 {
     return detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str());
@@ -3275,6 +3273,28 @@ void writeTextGraph(const String& _model, const String& output)
     ofs << content;
     ofs.close();
 }
+
+#else  // HAVE_PROTOBUF
+
+#define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/TF: Build OpenCV with Protobuf to import TensorFlow models")
+
+Net readNetFromTensorflow(const String &, const String &) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Net readNetFromTensorflow(const char*, size_t, const char*, size_t) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Net readNetFromTensorflow(const std::vector<uchar>&, const std::vector<uchar>&) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+void writeTextGraph(const String& _model, const String& output) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+#endif  // HAVE_PROTOBUF
 
 CV__DNN_INLINE_NS_END
 }} // namespace
