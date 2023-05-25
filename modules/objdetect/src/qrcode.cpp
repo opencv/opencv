@@ -4543,7 +4543,7 @@ QRCodeDetectorAruco::QRCodeDetectorAruco(const QRCodeDetectorAruco::Params& para
     (std::static_pointer_cast<PimplQRAruco>(p))->qrParams = params;
 }
 
-QRCodeDetectorAruco::Params QRCodeDetectorAruco::getDetectorParameters() {
+const QRCodeDetectorAruco::Params& QRCodeDetectorAruco::getDetectorParameters() const {
     return (std::static_pointer_cast<PimplQRAruco>(p))->qrParams;
 }
 

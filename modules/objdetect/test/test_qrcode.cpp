@@ -369,18 +369,18 @@ TEST_P(Objdetect_QRCode_Multi, regression)
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
     if (disabled_samples.find({name_current_image, method}) != disabled_samples.end())
         throw SkipTestException(name_current_image + " is disabled sample for method " + method);
-    Ptr<QRCodeDetectorBase> qrcode;
+    QRCodeDetectorBase qrcode;
     if (method == "aruco_based") {
-        qrcode = makePtr<QRCodeDetectorAruco>();
+        qrcode = QRCodeDetectorAruco();
     }
     else {
-        qrcode = makePtr<QRCodeDetector>();
+        qrcode = QRCodeDetector();
     }
     std::vector<Point> corners;
 #ifdef HAVE_QUIRC
     std::vector<cv::String> decoded_info;
     std::vector<Mat> straight_barcode;
-    EXPECT_TRUE(qrcode->detectAndDecodeMulti(src, decoded_info, corners, straight_barcode));
+    EXPECT_TRUE(qrcode.detectAndDecodeMulti(src, decoded_info, corners, straight_barcode));
     ASSERT_FALSE(corners.empty());
     ASSERT_FALSE(decoded_info.empty());
     int expected_barcode_type = CV_8UC1;
@@ -430,15 +430,15 @@ TEST_P(Objdetect_QRCode_detectMulti, detect_regression_16961)
     Mat src = imread(image_path);
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 
-    Ptr<QRCodeDetectorBase> qrcode;
+    QRCodeDetectorBase qrcode;
     if (method == "aruco_based") {
-        qrcode = makePtr<QRCodeDetectorAruco>();
+        qrcode = QRCodeDetectorAruco();
     }
     else {
-        qrcode = makePtr<QRCodeDetector>();
+        qrcode = QRCodeDetector();
     }
     std::vector<Point> corners;
-    EXPECT_TRUE(qrcode->detectMulti(src, corners));
+    EXPECT_TRUE(qrcode.detectMulti(src, corners));
     ASSERT_FALSE(corners.empty());
     size_t expect_corners_size = 36;
     EXPECT_EQ(corners.size(), expect_corners_size);
@@ -456,12 +456,12 @@ TEST_P(Objdetect_QRCode_detectAndDecodeMulti, check_output_parameters_type_19363
     Mat src = imread(image_path);
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 #ifdef HAVE_QUIRC
-    Ptr<QRCodeDetectorBase> qrcode;
+    QRCodeDetectorBase qrcode;
     if (method == "aruco_based") {
-        qrcode = makePtr<QRCodeDetectorAruco>();
+        qrcode = QRCodeDetectorAruco();
     }
     else {
-        qrcode = makePtr<QRCodeDetector>();
+        qrcode = QRCodeDetector();
     }
     std::vector<Point> corners;
     std::vector<cv::String> decoded_info;
@@ -472,7 +472,7 @@ TEST_P(Objdetect_QRCode_detectAndDecodeMulti, check_output_parameters_type_19363
 
     int expected_barcode_type = CV_8UC1;
     std::vector<Mat1b> straight_barcode;
-    EXPECT_TRUE(qrcode->detectAndDecodeMulti(src, decoded_info, corners, straight_barcode));
+    EXPECT_TRUE(qrcode.detectAndDecodeMulti(src, decoded_info, corners, straight_barcode));
     ASSERT_FALSE(corners.empty());
     for(size_t i = 0; i < straight_barcode.size(); i++)
         EXPECT_EQ(expected_barcode_type, straight_barcode[i].type());
@@ -628,18 +628,18 @@ TEST_P(Objdetect_QRCode_detectAndDecodeMulti, decode_9_qrcodes_version7)
     std::string image_path = findDataFile(root + name_current_image);
     Mat src = imread(image_path);
     const std::string method = GetParam();
-    Ptr<QRCodeDetectorBase> qrcode;
+    QRCodeDetectorBase qrcode;
     if (method == "aruco_based") {
-        qrcode = makePtr<QRCodeDetectorAruco>();
+        qrcode = QRCodeDetectorAruco();
     }
     else {
-        qrcode = makePtr<QRCodeDetector>();
+        qrcode = QRCodeDetector();
     }
     std::vector<Point> corners;
     std::vector<cv::String> decoded_info;
 
     std::vector<Mat1b> straight_barcode;
-    qrcode->detectAndDecodeMulti(src, decoded_info, corners, straight_barcode);
+    qrcode.detectAndDecodeMulti(src, decoded_info, corners, straight_barcode);
     EXPECT_EQ(9ull, decoded_info.size());
     const string gold_info = "I love OpenCV, QR Code version = 7, error correction = level Quartile";
     for (const auto& info : decoded_info) {
