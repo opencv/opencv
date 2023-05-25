@@ -475,11 +475,11 @@ OCL_PERF_TEST_P(HasNonZeroFixture, HasNonZero,
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
     UMat src(srcSize, type);
-    bool result = false;
+    /*bool result = false;*/
     randu(src, 0, 10);
     declare.in(src);
 
-    OCL_TEST_CYCLE() result = cv::hasNonZero(src);
+    OCL_TEST_CYCLE() /*result =*/ cv::hasNonZero(src);
 
     SANITY_CHECK_NOTHING();
 }
