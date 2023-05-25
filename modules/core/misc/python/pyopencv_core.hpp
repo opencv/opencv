@@ -6,11 +6,11 @@
 static PyObject* pycvMakeType(PyObject* , PyObject* args, PyObject* kw) {
     const char *keywords[] = { "depth", "channels", NULL };
 
-    int64_t depth, channels;
-    if (!PyArg_ParseTupleAndKeywords(args, kw, "ll", (char**)keywords, &depth, &channels))
+    int depth, channels;
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "ii", (char**)keywords, &depth, &channels))
         return NULL;
 
-    int64_t type = CV_MAKETYPE(depth, channels);
+    int type = CV_MAKETYPE(depth, channels);
     return PyInt_FromLong(type);
 }
 
