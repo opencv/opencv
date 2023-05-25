@@ -9,13 +9,10 @@
 #include <opencv2/core.hpp>
 #include <ostream>
 
-/** @defgroup barcode Barcode detecting and decoding methods
-*/
-
 namespace cv {
 namespace barcode {
 
-//! @addtogroup barcode
+//! @addtogroup objdetect_barcode
 //! @{
 
 enum BarcodeType
@@ -96,6 +93,6 @@ protected:
     Ptr<Impl> p;
 };
 //! @}
-}
-} // cv::barcode::
+
+}} // cv::barcode::
 #endif //__OPENCV_BARCODE_HPP__
