@@ -206,6 +206,7 @@ private:
     void parseQAvgPool             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQConcat              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQGemm                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseQSoftmax             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // '???' domain or '???' layer type
     void parseCustomLayer          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -758,6 +759,7 @@ static bool ifInt8Output(const String& layerType)
             "QLinearSigmoid",
             "QLinearConcat",
             "QGemm",
+            "QLinearSoftmax",
             "QLinearConv",
             "QLinearMatMul",
             "MaxPool",
@@ -3929,6 +3931,29 @@ void ONNXImporter::parseQConcat(LayerParams& layerParams, const opencv_onnx::Nod
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter::parseQSoftmax(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    CV_CheckEQ(node_proto.input_size(), 5, "DNN/ONNX: QLinearSoftmax requires 5 inputs, X, X_scale, X_zero_point, Y_scale, Y_zero_point");
+
+    int opset = layerParams.get<int>("opset");
+    if (opset < 13) {
+        layerParams.set("coerced_2d", true);
+    }
+
+    float x_scale = getScalarFromMat<float>(getBlob(node_proto, 1));
+    int8_t x_zero_point = getScalarFromMat<int8_t>(getBlob(node_proto, 2));
+    float y_scale = getScalarFromMat<float>(getBlob(node_proto, 3));
+    int8_t y_zero_point = getScalarFromMat<int8_t>(getBlob(node_proto, 4));
+
+    layerParams.type = "SoftmaxInt8";
+    // layerParams also has "axis" and "opset" attrs
+    layerParams.set("input_scale", x_scale);
+    layerParams.set("input_zeropoint", x_zero_point);
+    layerParams.set("scales", y_scale);
+    layerParams.set("zeropoints", y_zero_point);
+    addLayer(layerParams, node_proto);
+}
+
 // Domain: ai.onnx (default)
 // URL: https://github.com/onnx/onnx/blob/master/docs/Operators.md
 void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
@@ -4026,6 +4051,7 @@ void ONNXImporter::buildDispatchMap_COM_MICROSOFT(int opset_version)
     dispatch["QLinearSigmoid"] = &ONNXImporter::parseQSigmoid;
     dispatch["QLinearConcat"] = &ONNXImporter::parseQConcat;
     dispatch["QGemm"] = &ONNXImporter::parseQGemm;
+    dispatch["QLinearSoftmax"] = &ONNXImporter::parseQSoftmax;
 
     domain_dispatch_map["com.microsoft"] = dispatch;
 }
