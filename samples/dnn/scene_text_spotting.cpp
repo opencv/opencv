@@ -103,6 +103,7 @@ int main(int argc, char** argv)
     // Inference
     std::vector< std::vector<Point> > detResults;
     detector.detect(frame, detResults);
+    Mat frame2 = frame.clone();
 
     if (detResults.size() > 0) {
         // Text Recognition
@@ -131,13 +132,13 @@ int main(int argc, char** argv)
             std::string recognitionResult = recognizer.recognize(cropped);
             std::cout << i << ": '" << recognitionResult << "'" << std::endl;
 
-            putText(frame, recognitionResult, quadrangle[3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
+            putText(frame2, recognitionResult, quadrangle[3], FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
         }
-        polylines(frame, contours, true, Scalar(0, 255, 0), 2);
+        polylines(frame2, contours, true, Scalar(0, 255, 0), 2);
     } else {
         std::cout << "No Text Detected." << std::endl;
     }
-    imshow(winName, frame);
+    imshow(winName, frame2);
     waitKey();
 
     return 0;
