@@ -189,7 +189,7 @@ template<> bool pyopencv_to(PyObject* obj, cv::Rect2d& r, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Rect2d& r);
 
 // --- RotatedRect
-// template<> bool pyopencv_to(PyObject* obj, cv::RotatedRect& dst, const ArgInfo& info);
+template<> bool pyopencv_to(PyObject* obj, cv::RotatedRect& dst, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::RotatedRect& src);
 
 // --- Range

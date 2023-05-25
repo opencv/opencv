@@ -39,7 +39,6 @@
 //
 //M*/
 #include "precomp.hpp"
-#include <iostream>
 
 namespace cv
 {
@@ -2461,8 +2460,6 @@ void cv::polylines(InputOutputArray img, InputArrayOfArrays pts,
             npts[i] = 0;
             continue;
         }
-        std::cout << p.size() << std::endl;
-        std::cout << p.type() << std::endl;
         CV_Assert(p.checkVector(2, CV_32S) >= 0);
         ptsptr[i] = p.ptr<Point>();
         npts[i] = p.rows*p.cols*p.channels()/2;

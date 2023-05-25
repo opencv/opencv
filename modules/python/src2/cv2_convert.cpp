@@ -727,56 +727,68 @@ PyObject* pyopencv_from(const Rect2d& r)
 
 // --- RotatedRect
 
-// template<>
-// bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
-// {
-//     if (!obj || obj == Py_None)
-//     {
-//         return true;
-//     }
-//     if (!PySequence_Check(obj))
-//     {
-//         failmsg("Can't parse '%s' as RotatedRect."
-//                 "Input argument doesn't provide sequence protocol",
-//                 info.name);
-//         return false;
-//     }
-//     const std::size_t sequenceSize = PySequence_Size(obj);
-//     if (sequenceSize != 3)
-//     {
-//         failmsg("Can't parse '%s' as RotatedRect. Expected sequence length 3, got %lu",
-//                 info.name, sequenceSize);
-//         return false;
-//     }
-//     {
-//         const String centerItemName = format("'%s' center point", info.name);
-//         const ArgInfo centerItemInfo(centerItemName.c_str(), false);
-//         SafeSeqItem centerItem(obj, 0);
-//         if (!pyopencv_to(centerItem.item, dst.center, centerItemInfo))
-//         {
-//             return false;
-//         }
-//     }
-//     {
-//         const String sizeItemName = format("'%s' size", info.name);
-//         const ArgInfo sizeItemInfo(sizeItemName.c_str(), false);
-//         SafeSeqItem sizeItem(obj, 1);
-//         if (!pyopencv_to(sizeItem.item, dst.size, sizeItemInfo))
-//         {
-//             return false;
-//         }
-//     }
-//     {
-//         const String angleItemName = format("'%s' angle", info.name);
-//         const ArgInfo angleItemInfo(angleItemName.c_str(), false);
-//         SafeSeqItem angleItem(obj, 2);
-//         if (!pyopencv_to(angleItem.item, dst.angle, angleItemInfo))
-//         {
-//             return false;
-//         }
-//     }
-//     return true;
-// }
+struct pyopencv_RotatedRect_t
+{
+    PyObject_HEAD
+    cv::RotatedRect v;
+};
+
+template<>
+bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
+{
+    if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+    // This is a workaround for compatibility
+    if (Py_TYPE(obj)->tp_name == "cv2.RotatedRect")
+    {
+        dst = ((pyopencv_RotatedRect_t*)obj)->v;
+        return true;
+    }
+    if (!PySequence_Check(obj))
+    {
+        failmsg("Can't parse '%s' as RotatedRect."
+                "Input argument doesn't provide sequence protocol",
+                info.name);
+        return false;
+    }
+    const std::size_t sequenceSize = PySequence_Size(obj);
+    if (sequenceSize != 3)
+    {
+        failmsg("Can't parse '%s' as RotatedRect. Expected sequence length 3, got %lu",
+                info.name, sequenceSize);
+        return false;
+    }
+    {
+        const String centerItemName = format("'%s' center point", info.name);
+        const ArgInfo centerItemInfo(centerItemName.c_str(), false);
+        SafeSeqItem centerItem(obj, 0);
+        if (!pyopencv_to(centerItem.item, dst.center, centerItemInfo))
+        {
+            return false;
+        }
+    }
+    {
+        const String sizeItemName = format("'%s' size", info.name);
+        const ArgInfo sizeItemInfo(sizeItemName.c_str(), false);
+        SafeSeqItem sizeItem(obj, 1);
+        if (!pyopencv_to(sizeItem.item, dst.size, sizeItemInfo))
+        {
+            return false;
+        }
+    }
+    {
+        const String angleItemName = format("'%s' angle", info.name);
+        const ArgInfo angleItemInfo(angleItemName.c_str(), false);
+        SafeSeqItem angleItem(obj, 2);
+        if (!pyopencv_to(angleItem.item, dst.angle, angleItemInfo))
+        {
+            return false;
+        }
+    }
+    return true;
+}
 
 template<>
 PyObject* pyopencv_from(const RotatedRect& src)
