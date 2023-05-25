@@ -142,6 +142,15 @@ class Bindings(NewOpenCVTests):
         with self.assertRaises(AttributeError):
             obj.except_ = 32
 
+    def test_maketype(self):
+        data = {
+            cv.CV_8UC3: [cv.CV_8U, 3],
+            cv.CV_16SC1: [cv.CV_16S, 1],
+            cv.CV_32FC4: [cv.CV_32F, 4],
+            cv.CV_64FC2: [cv.CV_64F, 2],
+        }
+        for ref, (depth, channels) in data.items():
+            self.assertEqual(ref, cv.CV_MAKETYPE(depth, channels))
 
 
 class Arguments(NewOpenCVTests):
