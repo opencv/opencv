@@ -194,8 +194,8 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                 // To avoid the order like: conv + activ + add, if we found the conv has been fused with activ, we break.
                 Ptr<ConvolutionLayer> convLayer = ld.layerInstance.dynamicCast<ConvolutionLayer>();
 
-                // Only Conv2D without fusion Activation supports this fusion, other-wise, we skip.
-                if (!convLayer->isConv2D || convLayer->fusedActivation)
+                // Only Convolution layer without fusion Activation supports this fusion, other-wise, we skip.
+                if (convLayer->fusedActivation)
                     break;
 
                 // For now, there are currently two layers in OpenCV that run the Add operator.
