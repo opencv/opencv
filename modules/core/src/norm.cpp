@@ -771,9 +771,9 @@ double norm( InputArray _src, int normType, InputArray _mask )
 
     if( normType == NORM_INF )
     {
-        if(depth == CV_64F || depth == CV_16F)
+        if(depth == CV_64F)
             return result.d;
-        else if (depth == CV_32F)
+        else if (depth == CV_32F || depth == CV_16F)
             return result.f;
         else
             return result.i;
@@ -1243,9 +1243,9 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
 
     if( normType == NORM_INF )
     {
-        if (depth == CV_64F || depth == CV_16F)
+        if (depth == CV_64F)
             return result.d;
-        else if (depth == CV_32F)
+        else if (depth == CV_32F || depth == CV_16F)
             return result.f;
         else
             return result.u;
