@@ -47,11 +47,6 @@
 namespace cv
 {
 
-static inline float adjustToZero(float value, float epsilon)
-{
-    return (std::fabs(value)<epsilon) ? 0 : value;
-}
-
 static int _rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, std::vector<Point2f> &intersection )
 {
     CV_INSTRUMENT_REGION();
@@ -127,19 +122,10 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             float vx2 = vec2[j].x;
             float vy2 = vec2[j].y;
 
-            float normalizationScale  = std::min(vx1*vx1+vy1*vy1, vx2*vx2+vy2*vy2);//sum of squares : this is >= 0
-            //normalizationScale is a square, and we usually limit accuracy around 1e-6, so normalizationScale should be rather limited by ((1e-6)^2)=1e-12
-            normalizationScale  = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
-
-            vx1 *= normalizationScale;
-            vy1 *= normalizationScale;
-            vx2 *= normalizationScale;
-            vy2 *= normalizationScale;
-
             const float det = vx2*vy1 - vx1*vy2;
-            if (std::abs(det) < 1e-12)//like normalizationScale, we consider accuracy around 1e-6, i.e. 1e-12 when squared
+            if (std::abs(det) < 1e-12)//we consider accuracy around 1e-6, i.e. 1e-12 when squared
               continue;
-            const float detInvScaled = normalizationScale/det;
+            const float detInvScaled = 1.f/det;
 
             const float t1 = (vx2*y21 - vy2*x21)*detInvScaled;
             const float t2 = (vx1*y21 - vy1*x21)*detInvScaled;
@@ -179,15 +165,14 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
 
         for( int j = 0; j < 4; j++ )
         {
-            float normalizationScale  = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
-            normalizationScale  = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
             // line equation: Ax + By + C = 0
             // see which side of the line this point is at
-            const float A = -vec2[j].y*normalizationScale ;
-            const float B = vec2[j].x*normalizationScale ;
+            /*const float A = -vec2[j].y;
+            const float B = vec2[j].x;
             const float C = -(A*pts2[j].x + B*pts2[j].y);
 
-            const float s = adjustToZero(A*x + B*y + C, 1e-6f);
+            const float s = adjustToZero(A*x + B*y + C, 1e-6f);*/
+            const float s = vec2[j].y*(pts2[j].x-x)+vec2[j].x*(y-pts2[j].y);
 
             if( s >= 0 )
             {
@@ -221,15 +206,12 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         {
             // line equation: Ax + By + C = 0
             // see which side of the line this point is at
-            float normalizationScale  = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
-            normalizationScale  = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
-            if (std::isinf(normalizationScale ))
-                normalizationScale  = 1.f;
-            const float A = -vec1[j].y*normalizationScale ;
-            const float B = vec1[j].x*normalizationScale ;
+            /*const float A = -vec1[j].y ;
+            const float B = vec1[j].x ;
             const float C = -(A*pts1[j].x + B*pts1[j].y);
 
-            const float s = adjustToZero(A*x + B*y + C, 1e-6f);
+            const float s = adjustToZero(A*x+B*y+C, 1e-6f);*/
+            const float s = vec1[j].y*(pts1[j].x-x)+vec1[j].x*(y-pts1[j].y);
 
             if( s >= 0 )
             {
