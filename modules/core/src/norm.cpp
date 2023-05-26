@@ -753,7 +753,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
             {
                 int bsz = std::min(total - j, blockSize);
                 hal::cvt16f32f((const float16_t*)ptrs[0], data0, bsz * cn);
-                func((uchar*)data0, ptrs[1], (uchar*)&result.d, bsz, cn);
+                func((uchar*)data0, ptrs[1], (uchar*)&result.f, bsz, cn);
                 ptrs[0] += bsz*esz;
                 if (ptrs[1])
                     ptrs[1] += bsz;
@@ -771,9 +771,9 @@ double norm( InputArray _src, int normType, InputArray _mask )
 
     if( normType == NORM_INF )
     {
-        if(depth == CV_64F || depth == CV_16F)
+        if(depth == CV_64F)
             return result.d;
-        else if (depth == CV_32F)
+        else if (depth == CV_32F || depth == CV_16F)
             return result.f;
         else
             return result.i;
@@ -1224,7 +1224,7 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
                 int bsz = std::min(total - j, blockSize);
                 hal::cvt16f32f((const float16_t*)ptrs[0], data0, bsz * cn);
                 hal::cvt16f32f((const float16_t*)ptrs[1], data1, bsz * cn);
-                func((uchar*)data0, (uchar*)data1, ptrs[2], (uchar*)&result.d, bsz, cn);
+                func((uchar*)data0, (uchar*)data1, ptrs[2], (uchar*)&result.f, bsz, cn);
                 ptrs[0] += bsz*esz;
                 ptrs[1] += bsz*esz;
                 if (ptrs[2])
@@ -1243,9 +1243,9 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
 
     if( normType == NORM_INF )
     {
-        if (depth == CV_64F || depth == CV_16F)
+        if (depth == CV_64F)
             return result.d;
-        else if (depth == CV_32F)
+        else if (depth == CV_32F || depth == CV_16F)
             return result.f;
         else
             return result.u;
