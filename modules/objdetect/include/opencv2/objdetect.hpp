@@ -905,7 +905,7 @@ public:
         CV_PROP_RW float scaleTimingPatternScore;
     };
 
-    /** @brief QR code detector constructor for Aruco-based algorithm. See #cv::QrWithArucoParams */
+    /** @brief QR code detector constructor for Aruco-based algorithm. See cv::QRCodeDetectorAruco::Params */
     CV_WRAP explicit QRCodeDetectorAruco(const QRCodeDetectorAruco::Params& params = QRCodeDetectorAruco::Params());
 
     /** @brief Detector parameters setter. See cv::QRCodeDetectorAruco::Params */
