@@ -195,7 +195,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             const float B = vec2[j].x*normalizationScale ;
             const float C = -(A*pts2[j].x + B*pts2[j].y);
 
-            const float s = adjustToZero(A*x + B*y + C, 1e-6);
+            const float s = adjustToZero(A*x + B*y + C, 1e-6f);
 
             if( s >= 0 )
             {
@@ -238,7 +238,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             const float B = vec1[j].x*normalizationScale ;
             const float C = -(A*pts1[j].x + B*pts1[j].y);
 
-            const float s = adjustToZero(A*x + B*y + C, 1e-6);
+            const float s = adjustToZero(A*x + B*y + C, 1e-6f);
 
             if( s >= 0 )
             {
