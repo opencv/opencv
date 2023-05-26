@@ -51,14 +51,28 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
 {
     CV_INSTRUMENT_REGION();
 
-    Point2f vec1[4], vec2[4];
-    Point2f pts1[4], pts2[4];
+    typedef double precision_t;
+    typedef cv::Point_<precision_t> point_t;
 
-    rect1.points(pts1);
-    rect2.points(pts2);
+    std::vector<point_t> __highPrecisionIntersections;
+    const bool useHighPrecisionIntersections = !std::is_same<point_t, cv::Point2f>();
+    std::vector<point_t>& _intersection = useHighPrecisionIntersections ? __highPrecisionIntersections : *reinterpret_cast<std::vector<point_t>*>(&intersection);
+
+
+    cv::Point2f _pts1[4], _pts2[4];
+    rect1.points(_pts1);
+    rect2.points(_pts2);
+
+    point_t vec1[4], vec2[4];
+    point_t pts1[4], pts2[4];
+    for(int i = 0 ; i<4 ;++i)
+    {
+        pts1[i] = _pts1[i];
+        pts2[i] = _pts2[i];
+    }
 
     // L2 metric
-    float samePointEps = 1e-6f * (float)std::max(rect1.size.area(), rect2.size.area());
+    precision_t samePointEps = static_cast<precision_t>(1e-6) * static_cast<precision_t>(std::max(rect1.size.area(), rect2.size.area()));
 
     int ret = INTERSECT_FULL;
 
@@ -77,11 +91,17 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
 
         if(same)
         {
-            intersection.resize(4);
+            _intersection.resize(4);
 
             for( int i = 0; i < 4; i++ )
             {
-                intersection[i] = pts1[i];
+                _intersection[i] = pts1[i];
+            }
+
+            if (useHighPrecisionIntersections)
+            {
+                intersection.resize(_intersection.size());
+                std::copy(_intersection.begin(), _intersection.end(), intersection.begin());
             }
 
             return INTERSECT_FULL;
@@ -105,7 +125,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         samePointEps = std::min(samePointEps, std::sqrt(vec1[i].x*vec1[i].x+vec1[i].y*vec1[i].y));
         samePointEps = std::min(samePointEps, std::sqrt(vec2[i].x*vec2[i].x+vec2[i].y*vec2[i].y));
     }
-    samePointEps = std::max(1e-16f, samePointEps);
+    samePointEps = std::max(static_cast<precision_t>(1e-16), samePointEps);
 
     // Line test - test all line combos for intersection
     for( int i = 0; i < 4; i++ )
@@ -113,31 +133,31 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         for( int j = 0; j < 4; j++ )
         {
             // Solve for 2x2 Ax=b
-            const float x21 = pts2[j].x - pts1[i].x;
-            const float y21 = pts2[j].y - pts1[i].y;
+            const precision_t x21 = pts2[j].x - pts1[i].x;
+            const precision_t y21 = pts2[j].y - pts1[i].y;
 
-            float vx1 = vec1[i].x;
-            float vy1 = vec1[i].y;
+            precision_t vx1 = vec1[i].x;
+            precision_t vy1 = vec1[i].y;
 
-            float vx2 = vec2[j].x;
-            float vy2 = vec2[j].y;
+            precision_t vx2 = vec2[j].x;
+            precision_t vy2 = vec2[j].y;
 
-            float normalizationScale  = std::min(vx1*vx1+vy1*vy1, vx2*vx2+vy2*vy2);//sum of squares : this is >= 0
+            precision_t normalizationScale  = std::min(vx1*vx1+vy1*vy1, vx2*vx2+vy2*vy2);//sum of squares : this is >= 0
             //normalizationScale is a square, and we usually limit accuracy around 1e-6, so normalizationScale should be rather limited by ((1e-6)^2)=1e-12
-            normalizationScale  = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
+            normalizationScale  = (normalizationScale < static_cast<precision_t>(1e-12)) ? static_cast<precision_t>(1.) : static_cast<precision_t>(1.)/normalizationScale;
 
             vx1 *= normalizationScale;
             vy1 *= normalizationScale;
             vx2 *= normalizationScale;
             vy2 *= normalizationScale;
 
-            const float det = vx2*vy1 - vx1*vy2;
-            if (std::abs(det) < 1e-12)//like normalizationScale, we consider accuracy around 1e-6, i.e. 1e-12 when squared
+            const precision_t det = vx2*vy1 - vx1*vy2;
+            if (std::abs(det) < static_cast<precision_t>(1e-12))//like normalizationScale, we consider accuracy around 1e-6, i.e. 1e-12 when squared
               continue;
-            const float detInvScaled = normalizationScale/det;
+            const precision_t detInvScaled = normalizationScale/det;
 
-            const float t1 = (vx2*y21 - vy2*x21)*detInvScaled;
-            const float t2 = (vx1*y21 - vy1*x21)*detInvScaled;
+            const precision_t t1 = (vx2*y21 - vy2*x21)*detInvScaled;
+            const precision_t t2 = (vx1*y21 - vy1*x21)*detInvScaled;
 
             // This takes care of parallel lines
             if( cvIsInf(t1) || cvIsInf(t2) || cvIsNaN(t1) || cvIsNaN(t2) )
@@ -145,17 +165,17 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
                 continue;
             }
 
-            if( t1 >= 0.0f && t1 <= 1.0f && t2 >= 0.0f && t2 <= 1.0f )
+            if( t1 >= static_cast<precision_t>(0.) && t1 <= static_cast<precision_t>(1.) && t2 >= static_cast<precision_t>(0.) && t2 <= static_cast<precision_t>(1.) )
             {
-                const float xi = pts1[i].x + vec1[i].x*t1;
-                const float yi = pts1[i].y + vec1[i].y*t1;
+                const precision_t xi = pts1[i].x + vec1[i].x*t1;
+                const precision_t yi = pts1[i].y + vec1[i].y*t1;
 
-                intersection.push_back(Point2f(xi,yi));
+                _intersection.push_back(point_t(xi,yi));
             }
         }
     }
 
-    if( !intersection.empty() )
+    if( !_intersection.empty() )
     {
         ret = INTERSECT_PARTIAL;
     }
@@ -169,20 +189,20 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         int posSign = 0;
         int negSign = 0;
 
-        const float x = pts1[i].x;
-        const float y = pts1[i].y;
+        const precision_t x = pts1[i].x;
+        const precision_t y = pts1[i].y;
 
         for( int j = 0; j < 4; j++ )
         {
-            float normalizationScale  = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
-            normalizationScale  = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
+            precision_t normalizationScale  = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
+            normalizationScale  = (normalizationScale < static_cast<precision_t>(1e-12)) ? static_cast<precision_t>(1.) : static_cast<precision_t>(1.)/normalizationScale;
             // line equation: Ax + By + C = 0
             // see which side of the line this point is at
-            const float A = -vec2[j].y*normalizationScale ;
-            const float B = vec2[j].x*normalizationScale ;
-            const float C = -(A*pts2[j].x + B*pts2[j].y);
+            const precision_t A = -vec2[j].y*normalizationScale ;
+            const precision_t B = vec2[j].x*normalizationScale ;
+            const precision_t C = -(A*pts2[j].x + B*pts2[j].y);
 
-            const float s = A*x + B*y + C;
+            const precision_t s = A*x + B*y + C;
 
             if( s >= 0 )
             {
@@ -196,7 +216,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
 
         if( posSign == 4 || negSign == 4 )
         {
-            intersection.push_back(pts1[i]);
+            _intersection.push_back(pts1[i]);
         }
     }
 
@@ -209,22 +229,22 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         int posSign = 0;
         int negSign = 0;
 
-        const float x = pts2[i].x;
-        const float y = pts2[i].y;
+        const precision_t x = pts2[i].x;
+        const precision_t y = pts2[i].y;
 
         for( int j = 0; j < 4; j++ )
         {
             // line equation: Ax + By + C = 0
             // see which side of the line this point is at
-            float normalizationScale  = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
-            normalizationScale  = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
+            precision_t normalizationScale  = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
+            normalizationScale  = (normalizationScale < static_cast<precision_t>(1e-12)) ? static_cast<precision_t>(1.) : static_cast<precision_t>(1.)/normalizationScale;
             if (std::isinf(normalizationScale ))
-                normalizationScale  = 1.f;
-            const float A = -vec1[j].y*normalizationScale ;
-            const float B = vec1[j].x*normalizationScale ;
-            const float C = -(A*pts1[j].x + B*pts1[j].y);
+                normalizationScale = static_cast<precision_t>(1.);
+            const precision_t A = -vec1[j].y*normalizationScale ;
+            const precision_t B = vec1[j].x*normalizationScale ;
+            const precision_t C = -(A*pts1[j].x + B*pts1[j].y);
 
-            const float s = A*x + B*y + C;
+            const precision_t s = A*x + B*y + C;
 
             if( s >= 0 )
             {
@@ -238,32 +258,34 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
 
         if( posSign == 4 || negSign == 4 )
         {
-            intersection.push_back(pts2[i]);
+            _intersection.push_back(pts2[i]);
         }
     }
 
-    int N = (int)intersection.size();
+    int N = (int)_intersection.size();
     if (N == 0)
     {
+        if (useHighPrecisionIntersections)
+          intersection.resize(0);
         return INTERSECT_NONE;
     }
 
     // Get rid of duplicated points
     const int Nstride = N;
-    cv::AutoBuffer<float, 100> distPt(N * N);
+    cv::AutoBuffer<precision_t, 100> distPt(N * N);
     cv::AutoBuffer<int> ptDistRemap(N);
     for (int i = 0; i < N; ++i)
     {
-        const Point2f pt0 = intersection[i];
+        const point_t pt0 = _intersection[i];
         ptDistRemap[i] = i;
         for (int j = i + 1; j < N; )
         {
-            const Point2f pt1 = intersection[j];
-            const float d2 = normL2Sqr<float>(pt1 - pt0);
+            const point_t pt1 = _intersection[j];
+            const precision_t d2 = normL2Sqr<precision_t>(pt1 - pt0);
             if(d2 <= samePointEps)
             {
                 if (j < N - 1)
-                    intersection[j] =  intersection[N - 1];
+                    _intersection[j] =  _intersection[N - 1];
                 N--;
                 continue;
             }
@@ -275,13 +297,13 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
     {
         int minI = 0;
         int minJ = 1;
-        float minD = distPt[1];
+        precision_t minD = distPt[1];
         for (int i = 0; i < N - 1; ++i)
         {
-            const float* pDist = distPt.data() + Nstride * ptDistRemap[i];
+            const precision_t* pDist = distPt.data() + Nstride * ptDistRemap[i];
             for (int j = i + 1; j < N; ++j)
             {
-                const float d = pDist[ptDistRemap[j]];
+                const precision_t d = pDist[ptDistRemap[j]];
                 if (d < minD)
                 {
                     minD = d;
@@ -290,11 +312,11 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
                 }
             }
         }
-        CV_Assert(fabs(normL2Sqr<float>(intersection[minI] - intersection[minJ]) - minD) < 1e-6);  // ptDistRemap is not corrupted
+        CV_Assert(fabs(normL2Sqr<precision_t>(_intersection[minI] - _intersection[minJ]) - minD) < static_cast<precision_t>(1e-6));  // ptDistRemap is not corrupted
         // drop minJ point
         if (minJ < N - 1)
         {
-            intersection[minJ] =  intersection[N - 1];
+            _intersection[minJ] =  _intersection[N - 1];
             ptDistRemap[minJ] = ptDistRemap[N - 1];
         }
         N--;
@@ -303,19 +325,24 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
     // order points
     for (int i = 0; i < N - 1; ++i)
     {
-        Point2f diffI = intersection[i + 1] - intersection[i];
+        point_t diffI = _intersection[i + 1] - _intersection[i];
         for (int j = i + 2; j < N; ++j)
         {
-            Point2f diffJ = intersection[j] - intersection[i];
+            point_t diffJ = _intersection[j] - _intersection[i];
             if (diffI.cross(diffJ) < 0)
             {
-                std::swap(intersection[i + 1], intersection[j]);
+                std::swap(_intersection[i + 1], _intersection[j]);
                 diffI = diffJ;
             }
         }
     }
 
-    intersection.resize(N);
+    _intersection.resize(N);
+    if (useHighPrecisionIntersections)
+    {
+        intersection.resize(_intersection.size());
+        std::copy(_intersection.begin(), _intersection.end(), intersection.begin());
+    }
 
     return ret;
 }
