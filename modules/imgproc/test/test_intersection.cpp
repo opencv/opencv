@@ -486,4 +486,20 @@ TEST(Imgproc_RotatedRectangleIntersection, regression_19824)
     EXPECT_LE(intersections.size(), (size_t)7);
 }
 
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_23546)
+{
+    RotatedRect r1(
+        Point2f(824.6421183672817, 280.28737007069833),
+        Size2f(565.0, 140.0),
+        -177.80506896972656);
+    RotatedRect r2(
+        Point2f(567.3310438828003, 270.42527355719545),
+        Size2f(275.0, 50.0),
+        92.19493103027344);
+
+    std::vector<Point2f> intersections;
+    int interType = cv::rotatedRectangleIntersection(r1, r2, intersections);
+    EXPECT_EQ(INTERSECT_PARTIAL, interType);
+    EXPECT_EQ(intersections.size(), (size_t)4);
+}
 }} // namespace
