@@ -47,12 +47,6 @@
 namespace cv
 {
 
-static inline float adjustNormalizationScale(float value)
-{
-  float result = std::exp2(std::round(std::log2(value)));//force normalizationScale to be a power of 2 (even negative power)
-  return result;
-}
-
 static inline float adjustToZero(float value, float epsilon)
 {
     return (std::abs(value)<epsilon) ? 0 : value;
@@ -136,7 +130,6 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             float normalizationScale = std::min(vx1*vx1+vy1*vy1, vx2*vx2+vy2*vy2);//sum of squares : this is >= 0
             //normalizationScale is a square, and we usually limit accuracy around 1e-6, so normalizationScale should be rather limited by ((1e-6)^2)=1e-12
             normalizationScale = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
-            normalizationScale = adjustNormalizationScale(normalizationScale);
 
             vx1 *= normalizationScale;
             vy1 *= normalizationScale;
@@ -188,7 +181,6 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         {
             float normalizationScale = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
             normalizationScale = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
-            normalizationScale = adjustNormalizationScale(normalizationScale);
             // line equation: Ax + By + C = 0
             // see which side of the line this point is at
             const float A = -vec2[j].y*normalizationScale ;
@@ -231,7 +223,6 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             // see which side of the line this point is at
             float normalizationScale = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
             normalizationScale = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
-            normalizationScale = adjustNormalizationScale(normalizationScale);
             if (std::isinf(normalizationScale ))
                 normalizationScale  = 1.f;
             const float A = -vec1[j].y*normalizationScale ;
