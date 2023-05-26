@@ -53,6 +53,11 @@ static inline float adjustNormalizationScale(float value)
   return result;
 }
 
+static inline float adjustToZero(float value, float epsilon)
+{
+    return (std::abs(value)<epsilon) ? 0 : value;
+}
+
 static int _rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, std::vector<Point2f> &intersection )
 {
     CV_INSTRUMENT_REGION();
@@ -190,7 +195,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             const float B = vec2[j].x*normalizationScale ;
             const float C = -(A*pts2[j].x + B*pts2[j].y);
 
-            const float s = A*x + B*y + C;
+            const float s = adjustToZero(A*x + B*y + C, 1e-6);
 
             if( s >= 0 )
             {
@@ -233,7 +238,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             const float B = vec1[j].x*normalizationScale ;
             const float C = -(A*pts1[j].x + B*pts1[j].y);
 
-            const float s = A*x + B*y + C;
+            const float s = adjustToZero(A*x + B*y + C, 1e-6);
 
             if( s >= 0 )
             {
