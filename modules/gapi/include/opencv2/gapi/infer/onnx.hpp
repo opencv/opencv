@@ -306,7 +306,7 @@ public:
     @param model_path path to model file (.onnx file).
     */
     Params(const std::string& tag, const std::string& model_path)
-         : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true}, m_tag(tag) {}
+        : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true, {}, {} }, m_tag(tag) {}
 
     void cfgMeanStdDev(const std::string &layer,
                        const cv::Scalar &m,
