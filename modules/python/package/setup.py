@@ -1,9 +1,19 @@
 import os
-import sys
-import platform
 import setuptools
 
-SCRIPT_DIR=os.path.dirname(os.path.abspath(__file__))
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def collect_module_typing_stub_files(root_module_path):
+    stub_files = []
+    for module_path, _, files in os.walk(root_module_path):
+        stub_files.extend(
+            map(lambda p: os.path.join(module_path, p),
+                filter(lambda f: f.endswith(".pyi"), files))
+        )
+    return stub_files
+
 
 def main():
     os.chdir(SCRIPT_DIR)
@@ -12,6 +22,13 @@ def main():
     package_version = os.environ.get('OPENCV_VERSION', '4.7.0')  # TODO
 
     long_description = 'Open Source Computer Vision Library Python bindings'  # TODO
+
+    root_module_path = os.path.join(SCRIPT_DIR, "cv2")
+    py_typed_path = os.path.join(root_module_path, "py.typed")
+    if os.path.isfile(py_typed_path):
+        typing_stub_files = collect_module_typing_stub_files(root_module_path)
+        if len(typing_stub_files) > 0:
+            typing_stub_files.append(py_typed_path)
 
     setuptools.setup(
         name=package_name,
@@ -22,6 +39,9 @@ def main():
         long_description=long_description,
         long_description_content_type="text/markdown",
         packages=setuptools.find_packages(),
+        package_data={
+            "cv2": typing_stub_files
+        },
         maintainer="OpenCV Team",
         install_requires="numpy",
         classifiers=[
@@ -54,6 +74,7 @@ def main():
           'Topic :: Software Development :: Libraries',
         ],
     )
+
 
 if __name__ == '__main__':
     main()
