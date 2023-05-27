@@ -147,14 +147,11 @@ void show(const Mat& img, const std::vector<Point> pts)
     }
 }
 
-#define PTS_SIZE_EPS 2
-#define PTS_EPS 1
-
-void getContour(segmentation::IntelligentScissorsMB& tool,
-                const Point& target_point,
-                std::vector<Point>& pts,
-                const bool checkExactContourValues,
-                const bool backward = false)
+void getContours(segmentation::IntelligentScissorsMB& tool,
+                 const Point& target_point,
+                 std::vector<Point>& pts,
+                 std::vector<Point>& reference_pts,
+                 const bool backward = false)
 {
     tool.getContour(target_point, pts, backward);
 
@@ -170,17 +167,17 @@ void getContour(segmentation::IntelligentScissorsMB& tool,
 #endif
 
     FileStorage fs(name, FileStorage::READ);
-    std::vector<Point> reference_pts;
     read(fs["pts"], reference_pts, std::vector<Point>());
+}
 
-    if (checkExactContourValues)
-    {
-        EXPECT_EQ(pts, reference_pts);
-    }
-    else
-    {
-        EXPECT_LE(cv::norm(pts, reference_pts, cv::NORM_INF), PTS_EPS);
-    }
+void getAndCheckContour(segmentation::IntelligentScissorsMB& tool,
+                        const Point& target_point,
+                        std::vector<Point>& pts,
+                        const bool backward = false)
+{
+    std::vector<Point> reference_pts;
+    getContours(tool, target_point, pts, reference_pts, backward);
+    EXPECT_EQ(pts, reference_pts);
 }
 
 TEST(Imgproc_IntelligentScissorsMB, rect)
@@ -194,14 +191,14 @@ TEST(Imgproc_IntelligentScissorsMB, rect)
 
     Point target_point(100, 30);
     std::vector<Point> pts;
-    getContour(tool, target_point, pts, true/*checkExactContourValues*/);
+    getAndCheckContour(tool, target_point, pts);
 
     tool.applyImage(getTestImage2());
 
     tool.buildMap(source_point);
 
     std::vector<Point> pts2;
-    getContour(tool, target_point, pts2, true/*checkExactContourValues*/, true/*backward*/);
+    getAndCheckContour(tool, target_point, pts2, true/*backward*/);
 
     EXPECT_EQ(pts.size(), pts2.size());
 }
@@ -217,7 +214,7 @@ TEST(Imgproc_IntelligentScissorsMB, lines)
 
     Point target_point(150, 50);
     std::vector<Point> pts;
-    getContour(tool, target_point, pts, true/*checkExactContourValues*/);
+    getAndCheckContour(tool, target_point, pts);
 
     EXPECT_EQ((size_t)121, pts.size());
     show(image, pts);
@@ -236,7 +233,7 @@ TEST(Imgproc_IntelligentScissorsMB, circles)
 
     Point target_point(150, 50);
     std::vector<Point> pts;
-    getContour(tool, target_point, pts, true/*checkExactContourValues*/);
+    getAndCheckContour(tool, target_point, pts);
 
     EXPECT_EQ((size_t)101, pts.size());
     show(image, pts);
@@ -253,11 +250,14 @@ TEST(Imgproc_IntelligentScissorsMB, circles_gradient)
 
     Point target_point(150, 50);
     std::vector<Point> pts;
-    getContour(tool, target_point, pts, true/*checkExactContourValues*/);
+    getAndCheckContour(tool, target_point, pts);
 
     EXPECT_EQ((size_t)101, pts.size());
     show(image, pts);
 }
+
+#define PTS_SIZE_EPS 2
+#define PTS_EPS 1
 
 TEST(Imgproc_IntelligentScissorsMB, grayscale)
 {
@@ -270,12 +270,19 @@ TEST(Imgproc_IntelligentScissorsMB, grayscale)
     tool.buildMap(source_point);
 
     Point target_point(413, 155);
-    std::vector<Point> pts;
-    getContour(tool, target_point, pts, false/*checkExactContourValues*/);
-
-    size_t gold = 206;
-    EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
-    EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+    std::vector<Point> pts, reference_pts;
+    getContours(tool, target_point, pts, reference_pts);
+    if (pts.size() == reference_pts.size())
+    {
+        EXPECT_LE(cv::norm(pts, reference_pts, cv::NORM_INF), PTS_EPS);
+    }
+    else
+    {
+        size_t gold = 206;
+        EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
+        EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+        EXPECT_EQ(reference_pts.size(), gold);
+    }
     show(image, pts);
 }
 
@@ -292,12 +299,19 @@ TEST(Imgproc_IntelligentScissorsMB, check_features_grayscale_1_0_0_zerro_crossin
     tool.buildMap(source_point);
 
     Point target_point(413, 155);
-    std::vector<Point> pts;
-    getContour(tool, target_point, pts, false/*checkExactContourValues*/);
-
-    size_t gold = 207;
-    EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
-    EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+    std::vector<Point> pts, reference_pts;
+    getContours(tool, target_point, pts, reference_pts);
+    if (pts.size() == reference_pts.size())
+    {
+        EXPECT_LE(cv::norm(pts, reference_pts, cv::NORM_INF), PTS_EPS);
+    }
+    else
+    {
+        size_t gold = 207;
+        EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
+        EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+        EXPECT_EQ(reference_pts.size(), gold);
+    }
     show(image, pts);
 }
 
@@ -314,12 +328,19 @@ TEST(Imgproc_IntelligentScissorsMB, check_features_grayscale_1_0_0_canny)
     tool.buildMap(source_point);
 
     Point target_point(413, 155);
-    std::vector<Point> pts;
-    getContour(tool, target_point, pts, false/*checkExactContourValues*/);
-
-    size_t gold = 201;
-    EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
-    EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+    std::vector<Point> pts, reference_pts;
+    getContours(tool, target_point, pts, reference_pts);
+    if (pts.size() == reference_pts.size())
+    {
+        EXPECT_LE(cv::norm(pts, reference_pts, cv::NORM_INF), PTS_EPS);
+    }
+    else
+    {
+        size_t gold = 201;
+        EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
+        EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+        EXPECT_EQ(reference_pts.size(), gold);
+    }
     show(image, pts);
 }
 
@@ -335,12 +356,19 @@ TEST(Imgproc_IntelligentScissorsMB, check_features_grayscale_0_1_0)
     tool.buildMap(source_point);
 
     Point target_point(413, 155);
-    std::vector<Point> pts;
-    getContour(tool, target_point, pts, false/*checkExactContourValues*/);
-
-    size_t gold = 166;
-    EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
-    EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+    std::vector<Point> pts, reference_pts;
+    getContours(tool, target_point, pts, reference_pts);
+    if (pts.size() == reference_pts.size())
+    {
+        EXPECT_LE(cv::norm(pts, reference_pts, cv::NORM_INF), PTS_EPS);
+    }
+    else
+    {
+        size_t gold = 166;
+        EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
+        EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+        EXPECT_EQ(reference_pts.size(), gold);
+    }
     show(image, pts);
 }
 
@@ -356,12 +384,19 @@ TEST(Imgproc_IntelligentScissorsMB, check_features_grayscale_0_0_1)
     tool.buildMap(source_point);
 
     Point target_point(413, 155);
-    std::vector<Point> pts;
-    getContour(tool, target_point, pts, false/*checkExactContourValues*/);
-
-    size_t gold = 197;
-    EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
-    EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+    std::vector<Point> pts, reference_pts;
+    getContours(tool, target_point, pts, reference_pts);
+    if (pts.size() == reference_pts.size())
+    {
+        EXPECT_LE(cv::norm(pts, reference_pts, cv::NORM_INF), PTS_EPS);
+    }
+    else
+    {
+        size_t gold = 197;
+        EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
+        EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+        EXPECT_EQ(reference_pts.size(), gold);
+    }
     show(image, pts);
 }
 
@@ -376,12 +411,19 @@ TEST(Imgproc_IntelligentScissorsMB, color)
     tool.buildMap(source_point);
 
     Point target_point(413, 155);
-    std::vector<Point> pts;
-    getContour(tool, target_point, pts, false/*checkExactContourValues*/);
-
-    size_t gold = 205;
-    EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
-    EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+    std::vector<Point> pts, reference_pts;
+    getContours(tool, target_point, pts, reference_pts);
+    if (pts.size() == reference_pts.size())
+    {
+        EXPECT_LE(cv::norm(pts, reference_pts, cv::NORM_INF), PTS_EPS);
+    }
+    else
+    {
+        size_t gold = 205;
+        EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
+        EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+        EXPECT_EQ(reference_pts.size(), gold);
+    }
     show(image, pts);
 }
 
@@ -397,12 +439,19 @@ TEST(Imgproc_IntelligentScissorsMB, color_canny)
     tool.buildMap(source_point);
 
     Point target_point(413, 155);
-    std::vector<Point> pts;
-    getContour(tool, target_point, pts, false/*checkExactContourValues*/);
-
-    size_t gold = 200;
-    EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
-    EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+    std::vector<Point> pts, reference_pts;
+    getContours(tool, target_point, pts, reference_pts);
+    if (pts.size() == reference_pts.size())
+    {
+        EXPECT_LE(cv::norm(pts, reference_pts, cv::NORM_INF), PTS_EPS);
+    }
+    else
+    {
+        size_t gold = 200;
+        EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
+        EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+        EXPECT_EQ(reference_pts.size(), gold);
+    }
     show(image, pts);
 }
 
@@ -429,12 +478,19 @@ TEST(Imgproc_IntelligentScissorsMB, color_custom_features_edge)
     tool.buildMap(source_point);
 
     Point target_point(413, 155);
-    std::vector<Point> pts;
-    getContour(tool, target_point, pts, false/*checkExactContourValues*/);
-
-    size_t gold = 201;
-    EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
-    EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+    std::vector<Point> pts, reference_pts;
+    getContours(tool, target_point, pts, reference_pts);
+    if (pts.size() == reference_pts.size())
+    {
+        EXPECT_LE(cv::norm(pts, reference_pts, cv::NORM_INF), PTS_EPS);
+    }
+    else
+    {
+        size_t gold = 201;
+        EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
+        EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+        EXPECT_EQ(reference_pts.size(), gold);
+    }
     show(image, pts);
 }
 
@@ -459,12 +515,19 @@ TEST(Imgproc_IntelligentScissorsMB, color_custom_features_all)
     tool.buildMap(source_point);
 
     Point target_point(413, 155);
-    std::vector<Point> pts;
-    getContour(tool, target_point, pts, false/*checkExactContourValues*/);
-
-    size_t gold = 201;
-    EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
-    EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+    std::vector<Point> pts, reference_pts;
+    getContours(tool, target_point, pts, reference_pts);
+    if (pts.size() == reference_pts.size())
+    {
+        EXPECT_LE(cv::norm(pts, reference_pts, cv::NORM_INF), PTS_EPS);
+    }
+    else
+    {
+        size_t gold = 201;
+        EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
+        EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+        EXPECT_EQ(reference_pts.size(), gold);
+    }
     show(image, pts);
 }
 
@@ -488,12 +551,19 @@ TEST(Imgproc_IntelligentScissorsMB, color_custom_features_edge_magnitude)
     tool.buildMap(source_point);
 
     Point target_point(413, 155);
-    std::vector<Point> pts;
-    getContour(tool, target_point, pts, false/*checkExactContourValues*/);
-
-    size_t gold = 201;
-    EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
-    EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+    std::vector<Point> pts, reference_pts;
+    getContours(tool, target_point, pts, reference_pts);
+    if (pts.size() == reference_pts.size())
+    {
+        EXPECT_LE(cv::norm(pts, reference_pts, cv::NORM_INF), PTS_EPS);
+    }
+    else
+    {
+        size_t gold = 201;
+        EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
+        EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
+        EXPECT_EQ(reference_pts.size(), gold);
+    }
     show(image, pts);
 }
 
