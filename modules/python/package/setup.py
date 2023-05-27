@@ -25,6 +25,7 @@ def main():
 
     root_module_path = os.path.join(SCRIPT_DIR, "cv2")
     py_typed_path = os.path.join(root_module_path, "py.typed")
+    typing_stub_files = []
     if os.path.isfile(py_typed_path):
         typing_stub_files = collect_module_typing_stub_files(root_module_path)
         if len(typing_stub_files) > 0:
