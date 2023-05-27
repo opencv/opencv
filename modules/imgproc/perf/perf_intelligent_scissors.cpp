@@ -16,7 +16,7 @@ Mat getTestImage(int flags = IMREAD_COLOR)
     return m.clone();
 }
 
-typedef perf::TestBaseWithParam<bool> TestIntelligentScissorsMB;
+typedef perf::TestBaseWithParam<int> TestIntelligentScissorsMB;
 
 PERF_TEST_P(TestIntelligentScissorsMB, buildMap, testing::Values( IMREAD_GRAYSCALE, IMREAD_COLOR ))
 {
