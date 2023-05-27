@@ -779,9 +779,9 @@ static void matchTemplateMask( InputArray _img, InputArray _templ, OutputArray _
     }
     if (mask.depth() == CV_8U)
     {
-        // To keep compatibility to other masks in OpenCV: CV_8U masks are binary masks
-        threshold(mask, mask, 0/*threshold*/, 1.0/*maxVal*/, THRESH_BINARY);
-        mask.convertTo(mask, CV_32F);
+        Mat maskBin;
+        threshold(mask, maskBin, 0/*threshold*/, 1.0/*maxVal*/, THRESH_BINARY);
+        maskBin.convertTo(mask, CV_32F);
     }
 
     Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
