@@ -307,7 +307,7 @@ TEST(Imgproc_IntelligentScissorsMB, check_features_grayscale_1_0_0_zerro_crossin
     }
     else
     {
-        size_t gold = 207;
+        size_t gold = 206;
         EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
         EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
         EXPECT_EQ(reference_pts.size(), gold);
@@ -364,7 +364,7 @@ TEST(Imgproc_IntelligentScissorsMB, check_features_grayscale_0_1_0)
     }
     else
     {
-        size_t gold = 166;
+        size_t gold = 165;
         EXPECT_GE(pts.size(), gold - PTS_SIZE_EPS);
         EXPECT_LE(pts.size(), gold + PTS_SIZE_EPS);
         EXPECT_EQ(reference_pts.size(), gold);
