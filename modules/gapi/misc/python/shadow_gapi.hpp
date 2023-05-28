@@ -74,11 +74,13 @@ namespace streaming
 
     GAPI_EXPORTS_W cv::GMat desync(const cv::GMat &g);
 } // namespace streaming
+
 } // namespace gapi
 
 namespace detail
 {
     gapi::GNetParam GAPI_EXPORTS_W strip(gapi::ie::PyParams params);
     gapi::GNetParam GAPI_EXPORTS_W strip(gapi::onnx::PyParams params);
+    gapi::GNetParam GAPI_EXPORTS_W strip(gapi::ov::PyParams params);
 } // namespace detail
 } // namespace cv
