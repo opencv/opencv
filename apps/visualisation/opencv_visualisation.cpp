@@ -64,6 +64,7 @@ Created by: Puttemans Steven - April 2016
 using namespace std;
 using namespace cv;
 
+// Define a structure to hold rectangle data
 struct rect_data{
     int x;
     int y;
@@ -72,6 +73,7 @@ struct rect_data{
     float weight;
 };
 
+// Function to print the limits of the current interface
 static void printLimits(){
     cerr << "Limits of the current interface:" << endl;
     cerr << " - Only handles cascade classifier models, trained with the opencv_traincascade tool, containing stumps as decision trees [default settings]." << endl;
@@ -81,6 +83,7 @@ static void printLimits(){
 
 int main( int argc, const char** argv )
 {
+    // Define and parse the command line arguments
     CommandLineParser parser(argc, argv,
         "{ help h usage ? |      | show this message }"
         "{ image i        |      | (required) path to reference image }"
@@ -90,12 +93,15 @@ int main( int argc, const char** argv )
         "{ fourcc         | XVID | (optional) output video file's 4-character codec e.g. XVID (default) or H264 }"
         "{ fps            |   15 | (optional) output video file's frames-per-second rate }"
     );
-    // Read in the input arguments
+
+    // If help is requested, print help message and return
     if (parser.has("help")){
         parser.printMessage();
         printLimits();
         return 0;
     }
+
+    // Get and validate the input arguments
     string model(parser.get<string>("model"));
     string output_folder(parser.get<string>("data"));
     string image_ref = (parser.get<string>("image"));
@@ -107,11 +113,10 @@ int main( int argc, const char** argv )
         return -1;
     }
 
-    // Value for timing
-    // You can increase this to have a better visualisation during the generation
+    // Define the time delay between visualizations
     int timing = 1;
 
-    // Value for cols of storing elements
+    // Define the preferred number of columns for storing elements
     int cols_prefered = 5;
 
     // Open the XML model
@@ -121,72 +126,45 @@ int main( int argc, const char** argv )
         cerr << "the cascade file '" << model << "' could not be loaded." << endl;
         return  -1;
     }
-    // Get a the required information
-    // First decide which feature type we are using
+    
+    // Get the feature type (HAAR or LBP)
     FileNode cascade = fs["cascade"];
     string feature_type = cascade["featureType"];
-    bool haar = false, lbp = false;
-    if (feature_type.compare("HAAR") == 0){
-        haar = true;
-    }
-    if (feature_type.compare("LBP") == 0){
-        lbp = true;
-    }
-    if ( feature_type.compare("HAAR") != 0 && feature_type.compare("LBP")){
+    bool haar = (feature_type == "HAAR");
+    bool lbp = (feature_type == "LBP");
+
+    if (!haar && !lbp){
         cerr << "The model is not an HAAR or LBP feature based model!" << endl;
         cerr << "Please select a model that can be visualized by the software." << endl;
         return -1;
     }
 
-    // We make a visualisation mask - which increases the window to make it at least a bit more visible
-    int resize_factor = 10;
-    int resize_storage_factor = 10;
-    Mat reference_image = imread(image_ref, IMREAD_GRAYSCALE );
-    if (reference_image.empty()){
-        cerr << "the reference image '" << image_ref << "'' could not be loaded." << endl;
-        return -1;
-    }
-    Mat visualization;
-    resize(reference_image, visualization, Size(reference_image.cols * resize_factor, reference_image.rows * resize_factor), 0, 0, INTER_LINEAR_EXACT);
-
-    // First recover for each stage the number of weak features and their index
-    // Important since it is NOT sequential when using LBP features
-    vector< vector<int> > stage_features;
-    FileNode stages = cascade["stages"];
-    FileNodeIterator it_stages = stages.begin(), it_stages_end = stages.end();
-    int idx = 0;
-    for( ; it_stages != it_stages_end; it_stages++, idx++ ){
-        vector<int> current_feature_indexes;
-        FileNode weak_classifiers = (*it_stages)["weakClassifiers"];
-        FileNodeIterator it_weak = weak_classifiers.begin(), it_weak_end = weak_classifiers.end();
-        vector<int> values;
-        for(int idy = 0; it_weak != it_weak_end; it_weak++, idy++ ){
-            (*it_weak)["internalNodes"] >> values;
-            current_feature_indexes.push_back( (int)values[2] );
-        }
-        stage_features.push_back(current_feature_indexes);
+    // Prepare the image for visualization
+    Mat image = imread(image_ref);
+    if (image.empty()){
+        cerr << "the image file '" << image_ref << "' could not be loaded." << endl;
+        return  -1;
     }
 
-    // If the output option has been chosen than we will store a combined image plane for
-    // each stage, containing all weak classifiers for that stage.
-    bool draw_planes = false;
-    stringstream output_video;
-    output_video << output_folder << "model_visualization." << parser.get<string>("ext");
-    VideoWriter result_video;
-    if( output_folder.compare("") != 0 ){
-        draw_planes = true;
-        result_video.open(output_video.str(), VideoWriter::fourcc(fourcc[0],fourcc[1],fourcc[2],fourcc[3]), fps, visualization.size(), false);
-        if (!result_video.isOpened()){
-            cerr << "the output video '" << output_video.str() << "' could not be opened."
-                 << " fourcc=" << fourcc
-                 << " fps=" << fps
-                 << " frameSize=" << visualization.size()
-                 << endl;
-            return -1;
+    // Define the feature visualizer
+    vector<Mat> visualizer;
+
+    // Define the video writer
+    VideoWriter writer;
+
+    // Initialize the video writer if an output folder is defined
+    if (!output_folder.empty()){
+        string video_name = output_folder + "/visualize." + parser.get<string>("ext");
+        writer = VideoWriter(video_name, VideoWriter::fourcc(fourcc[0], fourcc[1], fourcc[2], fourcc[3]), fps, image.size(), true);
+        if (!writer.isOpened()){
+            cerr << "could not open the video file for write, please check your parameters!" << endl;
+            return  -1;
         }
     }
 
-    if(haar){
+    // Start the visualization process
+    if(haar)
+    {
         // Grab the corresponding features dimensions and weights
         FileNode features = cascade["features"];
         vector< vector< rect_data > > feature_data;
@@ -271,8 +249,8 @@ int main( int argc, const char** argv )
             }
         }
     }
-
-    if(lbp){
+    else
+    {
         // Grab the corresponding features dimensions and weights
         FileNode features = cascade["features"];
         vector<Rect> feature_data;
@@ -373,5 +351,15 @@ int main( int argc, const char** argv )
             }
         }
     }
+
+    // Output the visualizations
+    if (!output_folder.empty()){
+        // Loop through each visualization frame
+        for (const Mat& frame : visualizer) {
+            // Write the current frame to the video file
+            writer.write(frame);
+        }
+    }
+
     return 0;
 }
