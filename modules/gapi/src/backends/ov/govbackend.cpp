@@ -25,6 +25,8 @@
 #include <fstream>
 
 using ParamDesc = cv::gapi::ov::detail::ParamDesc;
+using ParamsM   = ParamDesc::Model;
+using ParamsCM  = ParamDesc::CompiledModel;
 
 static ov::Core getCore() {
     static ov::Core core;
@@ -41,7 +43,7 @@ static ov::element::Type toOV(int depth) {
         case CV_32S: return ov::element::i32;
         case CV_32F: return ov::element::f32;
         case CV_16F: return ov::element::f16;
-        default: GAPI_Error("OV. Unsupported data type");
+        default: GAPI_Error("OV Backend: Unsupported data type");
     }
     return ov::element::undefined;
 }
@@ -62,7 +64,7 @@ static int toCV(const ov::element::Type &type) {
         case ov::element::i32: return CV_32S;
         case ov::element::i64: return CV_32S;
         case ov::element::f16: return CV_16F;
-        default: GAPI_Error("OV. Unsupported data type");
+        default: GAPI_Error("OV Backend: Unsupported data type");
     }
     return -1;
 }
@@ -70,7 +72,7 @@ static int toCV(const ov::element::Type &type) {
 static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
     if (tensor.get_byte_size() != mat.total() * mat.elemSize()) {
         cv::util::throw_error(std::logic_error
-            ("OVBackend: Failed to copy data from ov::Tensor to cv::Mat! "
+            ("OV Backend: Failed to copy data from ov::Tensor to cv::Mat! "
              "Number of bytes mismatch. "
              "(cv::Mat " + std::to_string(mat.total() * mat.elemSize()) + ", "
              "ov::Tensor: " + std::to_string(tensor.get_byte_size()) + ")"));
@@ -83,7 +85,7 @@ static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
 static void copyToOV(const cv::Mat &mat, ov::Tensor &tensor) {
     if (tensor.get_byte_size() != mat.total() * mat.elemSize()) {
         cv::util::throw_error(std::logic_error
-            ("OVBackend: Failed to copy data from cv::Mat to ov::Tensor! "
+            ("OV Backend: Failed to copy data from cv::Mat to ov::Tensor! "
              "Number of bytes mismatch. "
              "(cv::Mat " + std::to_string(mat.total() * mat.elemSize()) + ", "
              "ov::Tensor: " + std::to_string(tensor.get_byte_size()) + ")"));
@@ -107,9 +109,9 @@ struct OVUnit {
     explicit OVUnit(const ParamDesc &pd)
         : params(pd) {
 
-        if (cv::util::holds_alternative<ParamDesc::IR>(params.kind)) {
-            const auto ir = cv::util::get<ParamDesc::IR>(params.kind);
-            model = getCore().read_model(ir.xml_path, ir.bin_path);
+        if (cv::util::holds_alternative<ParamDesc::Model>(params.kind)) {
+            const auto desc = cv::util::get<ParamDesc::Model>(params.kind);
+            model = getCore().read_model(desc.model_path, desc.bin_path);
             GAPI_Assert(model);
 
             if (params.num_in == 1u && params.input_names.empty()) {
@@ -120,11 +122,13 @@ struct OVUnit {
             }
 
         } else {
-            GAPI_Assert(cv::util::holds_alternative<ParamDesc::Blob>(params.kind));
-            std::ifstream file(cv::util::get<ParamDesc::Blob>(params.kind).blob_path,
+            GAPI_Assert(cv::util::holds_alternative<ParamDesc::CompiledModel>(params.kind));
+            std::ifstream file(cv::util::get<ParamDesc::CompiledModel>(params.kind).blob_path,
                                std::ios_base::in | std::ios_base::binary);
             GAPI_Assert(file.is_open());
-            compiled_model = getCore().import_model(file, params.device, toOV(params.config));
+            compiled_model = getCore().import_model(file,
+                                                    params.device,
+                                                    toOV(params.config));
 
             if (params.num_in == 1u && params.input_names.empty()) {
                 params.input_names = { compiled_model.inputs().begin()->get_any_name() };
@@ -136,7 +140,7 @@ struct OVUnit {
     };
 
     cv::gimpl::ov::OVCompiled compile() {
-        if (cv::util::holds_alternative<ParamDesc::IR>(params.kind)) {
+        if (cv::util::holds_alternative<ParamDesc::Model>(params.kind)) {
             compiled_model = getCore().compile_model(model,
                                                      params.device,
                                                      toOV(params.config));
@@ -348,8 +352,8 @@ template <typename T>
 using Map = std::unordered_map<std::string, T>;
 
 template <typename T>
-Map<T> broadCastIfValue(const ParamDesc::VariantMapT<T> &variant,
-                        const std::vector<std::string>  &layer_names) {
+Map<T> broadCastIfValue(const ParamDesc::Model::VariantMapT<T> &variant,
+                        const std::vector<std::string> &layer_names) {
     Map<T> map;
     if (cv::util::holds_alternative<Map<T>>(variant)) {
         map = cv::util::get<Map<T>>(variant);
@@ -361,6 +365,24 @@ Map<T> broadCastIfValue(const ParamDesc::VariantMapT<T> &variant,
         }
     }
     return map;
+}
+
+template <typename K, typename V>
+cv::optional<V> lookUp(const std::unordered_map<K, V> &map, const K& key) {
+    const auto it = map.find(key);
+    if (it == map.end()) {
+        return {};
+    }
+    return cv::util::make_optional(std::move(it->second));
+}
+
+static bool isImage(const cv::GMatDesc &desc,
+                    const ::ov::Shape  &input_shape) {
+    return (input_shape.size() == 4u)                      &&
+           (!desc.isND())  /* dims == 2 */                 &&
+           (desc.chan == 1 || desc.chan == 3)              &&
+           (desc.size.height != 1 && desc.size.width != 1) &&
+           (desc.depth == CV_8U);
 }
 
 struct Infer: public cv::detail::KernelTag {
@@ -382,15 +404,17 @@ struct Infer: public cv::detail::KernelTag {
         GAPI_Assert(uu.params.input_names.size() == in_metas.size()
                     && "Known input layers count doesn't match input meta count");
 
-
-        auto input_tensor_layout = broadCastIfValue(uu.params.input_tensor_layout,
-                                                    uu.params.input_names);
-        auto input_model_layout  = broadCastIfValue(uu.params.input_model_layout,
-                                                    uu.params.input_names);
-        auto output_precision    = broadCastIfValue(uu.params.output_precision,
-                                                    uu.params.output_names);
         // NB: Pre/Post processing configuration avaiable only for models read from IR.
-        if (cv::util::holds_alternative<ParamDesc::IR>(uu.params.kind)) {
+        if (cv::util::holds_alternative<ParamsM>(uu.params.kind)) {
+            const auto &model_info = cv::util::get<ParamsM>(uu.params.kind);
+
+            auto input_tensor_layout = broadCastIfValue(model_info.input_tensor_layout,
+                                                        uu.params.input_names);
+            auto input_model_layout  = broadCastIfValue(model_info.input_model_layout,
+                                                        uu.params.input_names);
+            auto output_precision    = broadCastIfValue(model_info.output_precision,
+                                                        uu.params.output_names);
+
             ::ov::preprocess::PrePostProcessor ppp(uu.model);
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                             ade::util::toRange(in_metas))) {
@@ -402,99 +426,61 @@ struct Infer: public cv::detail::KernelTag {
                 auto &input_info = ppp.input(input_name);
                 input_info.tensor().set_element_type(toOV(matdesc.depth));
 
-                auto explicit_tensor_layout = input_tensor_layout.find(input_name);
-                auto explicit_model_layout  = input_model_layout.find(input_name);
+                auto explicit_model_layout  = lookUp(input_model_layout , input_name);
+                if (explicit_model_layout) {
+                    input_info.model().set_layout(::ov::Layout(*explicit_model_layout));
+                }
+
+                auto explicit_tensor_layout = lookUp(input_tensor_layout, input_name);
+                if (explicit_tensor_layout) {
+                    input_info.model().set_layout(::ov::Layout(*explicit_tensor_layout));
+                }
                 // NB: Image case - all necessary preprocessng:
                 // layout conversion, resize is configure automatically.
-                //
-                // For some reason RGB image is 2D image
-                // (since channel component is not counted here).
-                // Note: regular 2D vectors also fall into this category
-                //
-                // Need to somehow distinguish 2D tensor from image
-                // in order to decide whether configure resize or not.
-                //
-                // Image (not tensor) isND -> false
-                // a) cv::Mat(H, W, CV_8UC3) -> GMatDesc{CV_8U, 3, H, W}
-                //
-                // Must be tensor as well but dims == 2. isND -> false
-                // b) cv::Mat({32, 32}, CV_8U) -> GMatDesc{CV_8U, 1, 32, 32}
-                //
-                // Tensors isND -> true:
-                // c) cv::Mat({32, 32, 32}, CV_8U) -> GMatDesc{CV_8U, {32, 32, 32}}
-                // d) cv::Mat({32}, CV_8U)         -> GMatDesc{CV_8U, {32}}
-                //
-                // 1. If matdesc is ND - definitely not image. Cases: (c) and (d)
-                // 2. If ov::Model expects 4D tensor for that input and user
-                // provided U8 data (matdesc.dept) - most likely this is the image case...
-                // 3. If user explicitly provided "tensor" layout.
-                //
-                // Corner case - model with 4D & U8 input (don't recall any)
-                if (!matdesc.isND()        &&
-                    matdesc.depth == CV_8U &&
-                    uu.model->input(input_name).get_shape().size() == 4u &&
-                    explicit_tensor_layout == input_tensor_layout.end() ) {
-
+                // If user provided explicitly layout not equal to NHWC
+                // don't treat input as "image".
+                const auto &input_shape = uu.model->input(input_name).get_shape();
+                if (isImage(matdesc, input_shape) &&
+                    ((!explicit_tensor_layout) ||
+                     (explicit_tensor_layout && (*explicit_tensor_layout == "NHWC")))) {
+                    // NB: If user didn't provide model layout explicitly set it to
+                    // "NCHW" in order to perform conversion to image layout (NHWC).
+                    if (!explicit_model_layout) {
+                        input_info.model().set_layout(::ov::Layout("NCHW"));
+                    }
+                    // Image has NHWC layout.
                     input_info.tensor().set_layout(::ov::Layout("NHWC"))
                                        .set_shape({1,
                                                    matdesc.size.height,
                                                    matdesc.size.width,
                                                    matdesc.chan});
-
-                    if (explicit_model_layout != input_model_layout.end()) {
-                        input_info.model().set_layout(::ov::Layout(explicit_model_layout->second));
-                    } else {
-                        // NB: Must have some "default" otherwise no conversion
-                        // from NHWC -> model layout will be added.
-                        input_info.model().set_layout(::ov::Layout("NCHW"));
-                    }
                     // NB: Configure resize since image input may has bigger size
                     // than model expects.
                     input_info.preprocess()
                         .resize(::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR);
-                // NB: Tensor case - preprocessing is configured only if user asked.
-                } else {
-                    if (explicit_tensor_layout != input_tensor_layout.end()) {
-                        input_info.tensor().set_layout(::ov::Layout(explicit_tensor_layout->second));
-                    }
-                    if (explicit_model_layout != input_model_layout.end()) {
-                        input_info.model().set_layout(::ov::Layout(explicit_model_layout->second));
-                    }
                 }
             }
 
             for (const auto &output_name : uu.params.output_names) {
-                auto explicit_output_prec = output_precision.find(output_name);
-                if (explicit_output_prec != output_precision.end()) {
+                auto explicit_output_prec = lookUp(output_precision, output_name);
+                if (explicit_output_prec) {
                     ppp.output(output_name).tensor()
-                        .set_element_type(toOV(explicit_output_prec->second));
+                        .set_element_type(toOV(*explicit_output_prec));
                 }
             }
             // FIXME: outMeta is the only method now
             // where pre/post processing can be configured.
             const_cast<std::shared_ptr<::ov::Model>&>(uu.model) = ppp.build();
-        } else {
-            GAPI_Assert(cv::util::holds_alternative<ParamDesc::Blob>(uu.params.kind));
-            for (const auto &output_name : uu.params.output_names) {
-                auto explicit_output_prec = output_precision.find(output_name);
-                if (explicit_output_prec != output_precision.end()) {
-                    std::stringstream ss;
-                    ss << toOV(explicit_output_prec->second);
-                    cv::util::throw_error(std::logic_error
-                        ("OVBackend: Output tensor precision cannot be specified for model in blob format"
-                         " but " + output_name + " -> " + ss.str() + " is provided!"));
-                }
-            }
         }
 
         for (const auto &out_name : uu.params.output_names) {
             cv::GMatDesc outm;
-            if (cv::util::holds_alternative<ParamDesc::IR>(uu.params.kind)) {
+            if (cv::util::holds_alternative<ParamsM>(uu.params.kind)) {
                 const auto &out = uu.model->output(out_name);
                 outm = cv::GMatDesc(toCV(out.get_element_type()),
                                     toCV(out.get_shape()));
             } else {
-                GAPI_Assert(cv::util::holds_alternative<ParamDesc::Blob>(uu.params.kind));
+                GAPI_Assert(cv::util::holds_alternative<ParamsCM>(uu.params.kind));
                 const auto &out = uu.compiled_model.output(out_name);
                 outm = cv::GMatDesc(toCV(out.get_element_type()),
                                     toCV(out.get_shape()));

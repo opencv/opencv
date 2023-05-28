@@ -447,9 +447,8 @@ TEST(TestAgeGenderOV, ThrowCfgOutputPrecForBlob) {
     // G-API
     auto comp = AGNetGenComp::create();
     auto pp   = AGNetGenComp::params(blob_path, device);
-    pp.cfgOutTensorPrecision(CV_16F);
-    EXPECT_ANY_THROW(comp.compile(cv::GMatDesc{CV_8U,3,cv::Size{320, 240}},
-                                  cv::compile_args(cv::gapi::networks(pp))));
+
+    EXPECT_ANY_THROW(pp.cfgOutTensorPrecision(CV_16F));
 }
 
 TEST(TestAgeGenderOV, ThrowInvalidConfigIR) {
