@@ -6,23 +6,15 @@
 namespace opencv_test { namespace {
 
 
-Mat getTestImage(int flags = IMREAD_COLOR)
-{
-    static Mat m;
-    if (m.empty())
-    {
-        m = imread(findDataFile("cv/shared/lena.png"), flags);
-    }
-    return m.clone();
-}
-
 typedef perf::TestBaseWithParam<int> TestIntelligentScissorsMB;
 
 PERF_TEST_P(TestIntelligentScissorsMB, buildMap, testing::Values( IMREAD_GRAYSCALE, IMREAD_COLOR ))
 {
     const int flags = GetParam();
 
-    const Mat image = getTestImage(flags);
+    const Mat image = imread(findDataFile("cv/shared/lena.png"), flags);
+    ASSERT_TRUE(!image.empty());
+
     const Point source_point(275, 63);
 
     segmentation::IntelligentScissorsMB tool;
