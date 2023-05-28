@@ -167,15 +167,18 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         {
             // line equation: Ax + By + C = 0
             // see which side of the line this point is at
-            /*const float A = -vec2[j].y;
-            const float B = vec2[j].x;
-            const float C = -(A*pts2[j].x + B*pts2[j].y);
+            ////base algorithm
+            //const float A = -vec2[j].y;
+            //const float B = vec2[j].x;
+            //const float C = -(A*pts2[j].x + B*pts2[j].y);
+            //float s = A*x + B*y + C;//then compare to 0
+            //s = (std::fabs(s)<1e-6) ? 0 : s;//trick for numeric stability
+            ////computation reordering for better numerical stability
+            //const float s = vec2[j].y*(pts2[j].x-x)+vec2[j].x*(y-pts2[j].y);
 
-            float s = A*x + B*y + C;
-            s = (std::fabs(s)<1e-6) ? 0 : s;*/
-            const float s = vec2[j].y*(pts2[j].x-x)+vec2[j].x*(y-pts2[j].y);
+            const bool isSPositive = (vec2[j].y*(pts2[j].x-x) >= vec2[j].x*(pts2[j].y-y));
 
-            if( s >= 0 )
+            if( isSPositive )
             {
                 posSign++;
             }
@@ -207,15 +210,18 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         {
             // line equation: Ax + By + C = 0
             // see which side of the line this point is at
-            /*const float A = -vec1[j].y ;
-            const float B = vec1[j].x ;
-            const float C = -(A*pts1[j].x + B*pts1[j].y);
+            ////base algorithm
+            //const float A = -vec1[j].y ;
+            //const float B = vec1[j].x ;
+            //const float C = -(A*pts1[j].x + B*pts1[j].y);
+            //float s = A*x + B*y + C;//then compare to 0
+            //s = (std::fabs(s)<1e-6) ? 0 : s;//trick for numeric stability
+            ////computation reordering for better numerical stability
+            //const float s = vec1[j].y*(pts1[j].x-x)+vec1[j].x*(y-pts1[j].y);
 
-            float s = A*x + B*y + C;
-            s = (std::fabs(s)<1e-6) ? 0 : s;*/
-            const float s = vec1[j].y*(pts1[j].x-x)+vec1[j].x*(y-pts1[j].y);
+            const bool isSPositive = (vec1[j].y*(pts1[j].x-x) >= vec1[j].x*(pts1[j].y-y));
 
-            if( s >= 0 )
+            if( isSPositive )
             {
                 posSign++;
             }
