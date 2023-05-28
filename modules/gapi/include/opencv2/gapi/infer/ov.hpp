@@ -31,27 +31,36 @@ namespace detail {
 
 struct ParamDesc {
     struct Model {
+
         Model(const std::string &model_path_,
-              const std::string &bin_path_);
+              const std::string &bin_path_)
+            : model_path(model_path_), bin_path(bin_path_) {
+        }
 
         std::string model_path;
         std::string bin_path;
 
         template <typename T>
-        using Map = std::unordered_map<std::string, T>;
+        using AttrMap = std::unordered_map<std::string, T>;
         // NB: This type is supposed to be used to hold in/out layers
         // attributes such as precision, layout, shape etc.
         //
         // User can provide attributes either:
         // 1. cv::util::monostate - No value specified explicitly.
-        // 2. T - value specified explicitly that should be broadcasted to all layers.
-        // 3. Map[str->T] - map specifies value for particular layer.
-        template <typename T>
-        using VariantMapT = cv::util::variant<cv::util::monostate, Map<T>, T>;
+        // 2. Attr - value specified explicitly that should be broadcasted to all layers.
+        // 3. AttrMap[str->T] - map specifies value for particular layer.
+        template <typename Attr>
+        using LayerVariantAttr = cv::util::variant< cv::util::monostate
+                                                  , AttrMap<Attr>
+                                                  , Attr>;
 
-        VariantMapT<std::string> input_tensor_layout;
-        VariantMapT<std::string> input_model_layout;
-        VariantMapT<int>         output_precision;
+        LayerVariantAttr<std::string> input_tensor_layout;
+        LayerVariantAttr<std::string> input_model_layout;
+
+        LayerVariantAttr<std::string> output_tensor_layout;
+        LayerVariantAttr<std::string> output_model_layout;
+
+        LayerVariantAttr<int> output_tensor_precision;
     };
 
     struct CompiledModel {
@@ -64,7 +73,11 @@ struct ParamDesc {
               const std::string &device_,
               const bool        is_generic_,
               const size_t      num_in_,
-              const size_t      num_out_);
+              const size_t      num_out_)
+        : kind(std::move(kind_)), device(device_),
+          is_generic(is_generic_),
+          num_in(num_in_), num_out(num_out_) {
+    }
 
     Kind kind;
 
@@ -80,21 +93,6 @@ struct ParamDesc {
     using PluginConfigT = std::map<std::string, std::string>;
     PluginConfigT config;
 };
-
-ParamDesc::Model::Model(const std::string &model_path_,
-                        const std::string &bin_path_)
-    : model_path(model_path_), bin_path(bin_path_) {
-}
-
-ParamDesc::ParamDesc(ParamDesc::Kind   &&kind_,
-                     const std::string &device_,
-                     const bool        is_generic_,
-                     const size_t      num_in_,
-                     const size_t      num_out_)
-    : kind(std::move(kind_)), device(device_),
-      is_generic(is_generic_),
-      num_in(num_in_), num_out(num_out_) {
-}
 
 } // namespace detail
 
@@ -120,11 +118,11 @@ public:
     Params(const std::string &model_path,
            const std::string &bin_path,
            const std::string &device)
-        : desc( detail::ParamDesc::Kind{detail::ParamDesc::Model{model_path, bin_path}}
-              , device
-              , false /* is generic */
-              , std::tuple_size<typename Net::InArgs>::value
-              , std::tuple_size<typename Net::OutArgs>::value) {
+        : m_desc( detail::ParamDesc::Kind{detail::ParamDesc::Model{model_path, bin_path}}
+                 , device
+                 , false /* is generic */
+                 , std::tuple_size<typename Net::InArgs>::value
+                 , std::tuple_size<typename Net::OutArgs>::value) {
     }
 
     /** @overload
@@ -136,11 +134,11 @@ public:
     */
     Params(const std::string &blob_path,
            const std::string &device)
-        : desc( detail::ParamDesc::Kind{detail::ParamDesc::CompiledModel{blob_path}}
-              , device
-              , false /* is generic */
-              , std::tuple_size<typename Net::InArgs>::value
-              , std::tuple_size<typename Net::OutArgs>::value) {
+        : m_desc( detail::ParamDesc::Kind{detail::ParamDesc::CompiledModel{blob_path}}
+                 , device
+                 , false /* is generic */
+                 , std::tuple_size<typename Net::InArgs>::value
+                 , std::tuple_size<typename Net::OutArgs>::value) {
     }
 
     /** @brief Specifies sequence of network input layers names for inference.
@@ -154,7 +152,7 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgInputLayers(const std::vector<std::string> &input_names) {
-        desc.input_names = input_names;
+        m_desc.input_names = input_names;
         return *this;
     }
 
@@ -169,7 +167,7 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgOutputLayers(const std::vector<std::string> &output_names) {
-        desc.output_names = output_names;
+        m_desc.output_names = output_names;
         return *this;
     }
 
@@ -183,65 +181,26 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgPluginConfig(const detail::ParamDesc::PluginConfigT &config) {
-        desc.config = config;
+        m_desc.config = config;
         return *this;
     }
 
-    /** @brief Specifies the output precision for a model.
+    /** @brief Specifies tensor layout for an input layer.
 
-    The function is used to set an output precision for model.
-
-    @param precision Precision in OpenCV format (CV_8U, CV_32F, ...)
-    will be applied to all output layers.
-    @return reference to this parameter structure.
-    */
-    Params<Net>& cfgOutTensorPrecision(int precision) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output tensor precision isn't"
-                                     " possible for ov::CompiledModel."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(desc.kind);
-        model.output_precision = precision;
-        return *this;
-    }
-
-    /** @overload
-
-    @param precision_map Map of pairs: name of corresponding output layer
-    and its precision in OpenCV format (CV_8U, CV_32F, ...)
-    @return reference to this parameter structure.
-    */
-    Params<Net>&
-    cfgOutTensorPrecision(detail::ParamDesc::Model::Map<int> precision_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output tensor precision isn't"
-                                     " possible for ov::CompiledModel."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(desc.kind);
-        model.output_precision = precision_map;
-        return *this;
-    }
-
-    /** @brief Specifies the layout for an input tensor.
-
-    The function is used to set layot for an input tensor.
+    The function is used to set tensor layout for an input layer.
 
     @param layout Tensor layout ("NCHW", "NWHC", etc)
     will be applied to all input layers.
     @return reference to this parameter structure.
     */
-    Params<Net>& cfgInTensorLayout(std::string layout) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(desc.kind)) {
+    Params<Net>& cfgInputTensorLayout(std::string layout) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input tensor layout isn't"
-                                     " possible for ov::CompiledModel."));
+                                     " possible for compiled model."));
         }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(desc.kind);
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
         model.input_tensor_layout = std::move(layout);
         return *this;
     }
@@ -252,34 +211,34 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>&
-    cfgInTensorLayout(detail::ParamDesc::Model::Map<std::string> layout_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(desc.kind)) {
+    cfgInputTensorLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input tensor layout isn't"
-                                     " possible for ov::CompiledModel."));
+                                     " possible for compiled model."));
         }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(desc.kind);
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
         model.input_tensor_layout = std::move(layout_map);
         return *this;
     }
 
-    /** @brief Specifies an input layout for a model.
+    /** @brief Specifies model layout for an input layer.
 
-    The function is used to set an input layout for a model.
+    The function is used to set model layout for an input layer.
 
     @param layout Model layout ("NCHW", "NHWC", etc)
     will be applied to all input layers.
     @return reference to this parameter structure.
     */
-    Params<Net>& cfgInModelLayout(std::string model_layout) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(desc.kind)) {
+    Params<Net>& cfgInputModelLayout(std::string model_layout) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input model layout isn't"
-                                     " possible for ov::CompiledModel."));
+                                     " possible for compiled model."));
         }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(desc.kind);
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
         model.input_model_layout = std::move(model_layout);
         return *this;
     }
@@ -290,26 +249,141 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>&
-    cfgInModelLayout(detail::ParamDesc::Model::Map<std::string> layout_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(desc.kind)) {
+    cfgInputModelLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input model layout isn't"
-                                     " possible for ov::CompiledModel."));
+                                     " possible for compiled model."));
         }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(desc.kind);
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
         model.input_model_layout = std::move(layout_map);
+        return *this;
+    }
+
+    /** @brief Specifies tensor layout for an output layer.
+
+    The function is used to set tensor layout for an output layer.
+
+    @param layout Tensor layout ("NCHW", "NWHC", etc)
+    will be applied to all output layers.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgOutputTensorLayout(std::string layout) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying output tensor layout isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.output_tensor_layout = std::move(layout);
+        return *this;
+    }
+
+    /** @overload
+    @param layout_map Map of pairs: name of corresponding input layer
+    and its tensor layout represented in std::string ("NCHW", "NHWC", etc)
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgOutputTensorLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying input tensor layout isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.output_tensor_layout = std::move(layout_map);
+        return *this;
+    }
+
+    /** @brief Specifies model layout for an output layer.
+
+    The function is used to set model layout for an output layer.
+
+    @param layout Model layout ("NCHW", "NHWC", etc)
+    will be applied to all output layers.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgOutputModelLayout(std::string model_layout) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying output model layout isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.output_model_layout = std::move(model_layout);
+        return *this;
+    }
+
+    /** @overload
+    @param layout_map Map of pairs: name of corresponding output layer
+    and its model layout ("NCHW", "NHWC", etc)
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgOutputModelLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying output model layout isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.output_model_layout = std::move(layout_map);
+        return *this;
+    }
+
+    /** @brief Specifies tensor precision for an output layer.
+
+    The function is used to set tensor precision for an output layer..
+
+    @param precision Precision in OpenCV format (CV_8U, CV_32F, ...)
+    will be applied to all output layers.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgOutputTensorPrecision(int precision) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying output tensor precision isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.output_tensor_precision = precision;
+        return *this;
+    }
+
+    /** @overload
+
+    @param precision_map Map of pairs: name of corresponding output layer
+    and its precision in OpenCV format (CV_8U, CV_32F, ...)
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgOutputTensorPrecision(detail::ParamDesc::Model::AttrMap<int> precision_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying output tensor precision isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.output_tensor_precision = precision_map;
         return *this;
     }
 
     // BEGIN(G-API's network parametrization API)
     GBackend      backend() const { return cv::gapi::ov::backend(); }
     std::string   tag()     const { return Net::tag(); }
-    cv::util::any params()  const { return { desc }; }
+    cv::util::any params()  const { return { m_desc }; }
     // END(G-API's network parametrization API)
 
 protected:
-    detail::ParamDesc desc;
+    detail::ParamDesc m_desc;
 };
 
 /*
@@ -366,57 +440,18 @@ public:
                 , 0u) {
     }
 
-    /** @see ov::Params::cfgInputLayers. */
-    Params& cfgInputLayers(const std::vector<std::string> &input_names) {
-        m_desc.input_names = input_names;
-        return *this;
-    }
-
-    /** @overload */
-    Params& cfgOutputLayers(const std::vector<std::string> &output_names) {
-        m_desc.output_names = output_names;
-        return *this;
-    }
-
     /** @see ov::Params::cfgPluginConfig. */
     Params& cfgPluginConfig(const detail::ParamDesc::PluginConfigT &config) {
         m_desc.config = config;
         return *this;
     }
 
-    /** @see ov::Params::cfgOutTensorPrecision. */
-    Params& cfgOutTensorPrecision(int precision) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output tensor precision isn't"
-                                     " possible for ov::CompiledModel."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_precision = precision;
-        return *this;
-    }
-
-    /** @overload */
-    Params&
-    cfgOutTensorPrecision(detail::ParamDesc::Model::Map<int> precision_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output tensor precision isn't"
-                                     " possible for ov::CompiledModel."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_precision = precision_map;
-        return *this;
-    }
-
-    /** @see ov::Params::cfgInTensorLayout. */
-    Params& cfgInTensorLayout(std::string tensor_layout) {
+    /** @see ov::Params::cfgInputTensorLayout. */
+    Params& cfgInputTensorLayout(std::string tensor_layout) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input tensor layout isn't"
-                                     " possible for ov::CompiledModel."));
+                                     " possible for compiled model."));
         }
         GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
         auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
@@ -426,11 +461,11 @@ public:
 
     /** @overload */
     Params&
-    cfgInTensorLayout(detail::ParamDesc::Model::Map<std::string> layout_map) {
+    cfgInputTensorLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input tensor layout isn't"
-                                     " possible for ov::CompiledModel."));
+                                     " possible for compiled model."));
         }
         GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
         auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
@@ -438,12 +473,12 @@ public:
         return *this;
     }
 
-    /** @see ov::Params::cfgInModelLayout. */
-    Params& cfgInModelLayout(std::string model_layout) {
+    /** @see ov::Params::cfgInputModelLayout. */
+    Params& cfgInputModelLayout(std::string model_layout) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input model layout isn't"
-                                     " possible for ov::CompiledModel."));
+                                     " possible for compiled model."));
         }
         GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
         auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
@@ -453,15 +488,96 @@ public:
 
     /** @overload */
     Params&
-    cfgInModelLayout(detail::ParamDesc::Model::Map<std::string> layout_map) {
+    cfgInputModelLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input model layout isn't"
-                                     " possible for ov::CompiledModel."));
+                                     " possible for compiled model."));
         }
         GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
         auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
         model.input_model_layout = std::move(layout_map);
+        return *this;
+    }
+
+    /** @see ov::Params::cfgOutputTensorLayout. */
+    Params& cfgOutputTensorLayout(std::string layout) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying output tensor layout isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.output_tensor_layout = std::move(layout);
+        return *this;
+    }
+
+    /** @overload */
+    Params&
+    cfgOutputTensorLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying input tensor layout isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.output_tensor_layout = std::move(layout_map);
+        return *this;
+    }
+
+    /** @see ov::Params::cfgOutputModelLayout. */
+    Params& cfgOutputModelLayout(std::string model_layout) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying output model layout isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.output_model_layout = std::move(model_layout);
+        return *this;
+    }
+
+    /** @overload */
+    Params&
+    cfgOutputModelLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying output model layout isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.output_model_layout = std::move(layout_map);
+        return *this;
+    }
+
+    /** @see ov::Params::cfgOutputTensorPrecision. */
+    Params& cfgOutputTensorPrecision(int precision) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying output tensor precision isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.output_tensor_precision = precision;
+        return *this;
+    }
+
+    /** @overload */
+    Params&
+    cfgOutputTensorPrecision(detail::ParamDesc::Model::AttrMap<int> precision_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying output tensor precision isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.output_tensor_precision = precision_map;
         return *this;
     }
 

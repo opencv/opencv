@@ -391,7 +391,7 @@ TEST(TestAgeGenderOV, InferBothOutputsFP16) {
     // G-API
     auto comp = AGNetGenComp::create();
     auto pp   = AGNetGenComp::params(xml_path, bin_path, device);
-    pp.cfgOutTensorPrecision(CV_16F);
+    pp.cfgOutputTensorPrecision(CV_16F);
 
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -422,7 +422,7 @@ TEST(TestAgeGenderOV, InferOneOutputFP16) {
     // G-API
     auto comp = AGNetGenComp::create();
     auto pp   = AGNetGenComp::params(xml_path, bin_path, device);
-    pp.cfgOutTensorPrecision({{fp16_output_name, CV_16F}});
+    pp.cfgOutputTensorPrecision({{fp16_output_name, CV_16F}});
 
     comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
@@ -448,7 +448,7 @@ TEST(TestAgeGenderOV, ThrowCfgOutputPrecForBlob) {
     auto comp = AGNetGenComp::create();
     auto pp   = AGNetGenComp::params(blob_path, device);
 
-    EXPECT_ANY_THROW(pp.cfgOutTensorPrecision(CV_16F));
+    EXPECT_ANY_THROW(pp.cfgOutputTensorPrecision(CV_16F));
 }
 
 TEST(TestAgeGenderOV, ThrowInvalidConfigIR) {

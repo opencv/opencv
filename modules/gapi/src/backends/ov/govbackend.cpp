@@ -348,18 +348,15 @@ namespace cv {
 namespace gimpl {
 namespace ov {
 
-template <typename T>
-using Map = std::unordered_map<std::string, T>;
-
-template <typename T>
-Map<T> broadCastIfValue(const ParamDesc::Model::VariantMapT<T> &variant,
-                        const std::vector<std::string> &layer_names) {
-    Map<T> map;
-    if (cv::util::holds_alternative<Map<T>>(variant)) {
-        map = cv::util::get<Map<T>>(variant);
-    } else if (cv::util::holds_alternative<T>(variant)) {
+template <typename Attr> ParamsM::AttrMap<Attr>
+broadcastLayerAttr(const ParamsM::LayerVariantAttr<Attr> &layer_attr,
+                   const std::vector<std::string>        &layer_names) {
+    ParamsM::AttrMap<Attr> map;
+    if (cv::util::holds_alternative<ParamsM::AttrMap<Attr>>(layer_attr)) {
+        map = cv::util::get<ParamsM::AttrMap<Attr>>(layer_attr);
+    } else if (cv::util::holds_alternative<Attr>(layer_attr)) {
         // NB: Broadcast value to all layers.
-        auto elem = cv::util::get<T>(variant);
+        auto elem = cv::util::get<Attr>(layer_attr);
         for (auto &&layer_name : layer_names) {
             map.emplace(layer_name, elem);
         }
@@ -407,13 +404,13 @@ struct Infer: public cv::detail::KernelTag {
         // NB: Pre/Post processing configuration avaiable only for models read from IR.
         if (cv::util::holds_alternative<ParamsM>(uu.params.kind)) {
             const auto &model_info = cv::util::get<ParamsM>(uu.params.kind);
+            const auto input_tensor_layout =
+                broadcastLayerAttr(model_info.input_tensor_layout,
+                                   uu.params.input_names);
 
-            auto input_tensor_layout = broadCastIfValue(model_info.input_tensor_layout,
-                                                        uu.params.input_names);
-            auto input_model_layout  = broadCastIfValue(model_info.input_model_layout,
-                                                        uu.params.input_names);
-            auto output_precision    = broadCastIfValue(model_info.output_precision,
-                                                        uu.params.output_names);
+            const auto input_model_layout =
+                broadcastLayerAttr(model_info.input_model_layout,
+                                   uu.params.input_names);
 
             ::ov::preprocess::PrePostProcessor ppp(uu.model);
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
@@ -426,26 +423,27 @@ struct Infer: public cv::detail::KernelTag {
                 auto &input_info = ppp.input(input_name);
                 input_info.tensor().set_element_type(toOV(matdesc.depth));
 
-                auto explicit_model_layout  = lookUp(input_model_layout , input_name);
-                if (explicit_model_layout) {
-                    input_info.model().set_layout(::ov::Layout(*explicit_model_layout));
+                const auto explicit_in_model_layout = lookUp(input_model_layout , input_name);
+                if (explicit_in_model_layout) {
+                    input_info.model().set_layout(::ov::Layout(*explicit_in_model_layout));
                 }
 
-                auto explicit_tensor_layout = lookUp(input_tensor_layout, input_name);
-                if (explicit_tensor_layout) {
-                    input_info.model().set_layout(::ov::Layout(*explicit_tensor_layout));
+                const auto explicit_in_tensor_layout = lookUp(input_tensor_layout, input_name);
+                if (explicit_in_tensor_layout) {
+                    input_info.model().set_layout(::ov::Layout(*explicit_in_tensor_layout));
                 }
+
                 // NB: Image case - all necessary preprocessng:
-                // layout conversion, resize is configure automatically.
-                // If user provided explicitly layout not equal to NHWC
-                // don't treat input as "image".
+                // layout conversion, resize is configured automatically.
+                // FIXME: What if user provided tensor layout that isn't equal to NHWC?
+                // Current solution just disable all automatic preprocessing...
                 const auto &input_shape = uu.model->input(input_name).get_shape();
                 if (isImage(matdesc, input_shape) &&
-                    ((!explicit_tensor_layout) ||
-                     (explicit_tensor_layout && (*explicit_tensor_layout == "NHWC")))) {
-                    // NB: If user didn't provide model layout explicitly set it to
+                    ((!explicit_in_tensor_layout) ||
+                     (explicit_in_tensor_layout && (*explicit_in_tensor_layout == "NHWC")))) {
+                    // NB: If user didn't provide input model layout explicitly set it to
                     // "NCHW" in order to perform conversion to image layout (NHWC).
-                    if (!explicit_model_layout) {
+                    if (!explicit_in_model_layout) {
                         input_info.model().set_layout(::ov::Layout("NCHW"));
                     }
                     // Image has NHWC layout.
@@ -454,18 +452,45 @@ struct Infer: public cv::detail::KernelTag {
                                                    matdesc.size.height,
                                                    matdesc.size.width,
                                                    matdesc.chan});
-                    // NB: Configure resize since image input may has bigger size
-                    // than model expects.
+                    // NB: Configure resize since image may has
+                    // different size than model expects.
                     input_info.preprocess()
                         .resize(::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR);
                 }
             }
 
+            const auto output_tensor_layout =
+                broadcastLayerAttr(model_info.output_tensor_layout,
+                                   uu.params.input_names);
+
+            const auto output_model_layout =
+                broadcastLayerAttr(model_info.output_model_layout,
+                                   uu.params.input_names);
+
+            const auto output_tensor_precision =
+                broadcastLayerAttr(model_info.output_tensor_precision,
+                                   uu.params.input_names);
+
             for (const auto &output_name : uu.params.output_names) {
-                auto explicit_output_prec = lookUp(output_precision, output_name);
-                if (explicit_output_prec) {
+                const auto explicit_out_tensor_layout =
+                    lookUp(output_tensor_layout, output_name);
+                if (explicit_out_tensor_layout) {
                     ppp.output(output_name).tensor()
-                        .set_element_type(toOV(*explicit_output_prec));
+                        .set_layout(::ov::Layout(*explicit_out_tensor_layout));
+                }
+
+                const auto explicit_out_model_layout =
+                    lookUp(output_model_layout, output_name);
+                if (explicit_out_model_layout) {
+                    ppp.output(output_name).model()
+                        .set_layout(::ov::Layout(*explicit_out_model_layout));
+                }
+
+                const auto explicit_out_tensor_prec =
+                    lookUp(output_tensor_precision, output_name);
+                if (explicit_out_tensor_prec) {
+                    ppp.output(output_name).tensor()
+                        .set_element_type(toOV(*explicit_out_tensor_prec));
                 }
             }
             // FIXME: outMeta is the only method now
@@ -527,7 +552,7 @@ namespace {
             // the framework for this???
             GOVModel gm(gr);
             auto &np = gm.metadata(nh).get<NetworkParams>();
-            auto &pp = cv::util::any_cast<cv::gapi::ov::detail::ParamDesc>(np.opaque);
+            auto &pp = cv::util::any_cast<ParamDesc>(np.opaque);
             const auto &ki = cv::util::any_cast<KImpl>(ii.opaque);
 
             GModel::Graph model(gr);
