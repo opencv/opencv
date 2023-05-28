@@ -11,19 +11,33 @@ from glob import glob
 import cv2 as cv
 import re
 
-if __name__ == '__main__':
-    cv2_callable = set(['cv.'+name for name in dir(cv) if callable( getattr(cv, name) )])
+def main():
+    '''
+    The main function that performs the operation of checking the cv API coverage.
+    '''
+
+    # Create a set of all callable functions in cv
+    cv_callable = set(['cv.' + name for name in dir(cv) if callable(getattr(cv, name))])
 
     found = set()
+    # Iterate over all python files in the current directory
     for fn in glob('*.py'):
-        print(' --- ', fn)
-        code = open(fn).read()
-        found |= set(re.findall('cv2?\.\w+', code))
+        print(f' --- {fn}')
+        with open(fn, 'r') as file:
+            code = file.read()
+        found |= set(re.findall('cv\.\w+', code))
 
-    cv2_used = found & cv2_callable
-    cv2_unused = cv2_callable - cv2_used
+    # Check for used and unused cv functions
+    cv_used = found & cv_callable
+    cv_unused = cv_callable - cv_used
+    
+    # Write the unused functions to a file
     with open('unused_api.txt', 'w') as f:
-        f.write('\n'.join(sorted(cv2_unused)))
+        f.write('\n'.join(sorted(cv_unused)))
 
-    r = 1.0 * len(cv2_used) / len(cv2_callable)
-    print('\ncv api coverage: %d / %d  (%.1f%%)' % ( len(cv2_used), len(cv2_callable), r*100 ))
+    r = len(cv_used) / len(cv_callable)
+    print(f'\ncv api coverage: {len(cv_used)} / {len(cv_callable)}  ({r*100:.1f}%)')
+
+
+if __name__ == '__main__':
+    main()
