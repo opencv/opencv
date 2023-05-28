@@ -10,16 +10,27 @@ from __future__ import print_function
 
 from glob import glob
 
-if __name__ == '__main__':
+def main():
+    '''
+    The main function that performs the operation of checking for python files
+    without docstrings in the current directory.
+    '''
+
     print('--- undocumented files:')
     for fn in glob('*.py'):
         loc = {}
         try:
+            # Compatibility for Python 2 and 3
             try:
-                execfile(fn, loc)           # Python 2
-            except NameError:
-                exec(open(fn).read(), loc)  # Python 3
+                with open(fn) as file:
+                    exec(file.read(), loc)  # Python 2/3
+            except Exception:
+                pass
         except Exception:
             pass
         if '__doc__' not in loc:
             print(fn)
+
+
+if __name__ == '__main__':
+    main()
