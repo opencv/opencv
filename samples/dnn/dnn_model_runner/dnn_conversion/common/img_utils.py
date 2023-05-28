@@ -1,17 +1,33 @@
 import cv2
 import numpy as np
-
 from .test.configs.default_preprocess_config import BASE_IMG_SCALE_FACTOR
 
-
 def read_rgb_img(img_file, is_bgr_to_rgb=True):
+    '''
+    Reads an image file and returns an RGB image.
+    
+    Parameters:
+        img_file (str): Path to the image file.
+        is_bgr_to_rgb (bool): If True, convert the image from BGR to RGB. Default is True.
+        
+    Returns:
+        np.array: RGB image.
+    '''
     img = cv2.imread(img_file, cv2.IMREAD_COLOR)
     if is_bgr_to_rgb:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     return img
 
-
 def get_pytorch_preprocess(img):
+    '''
+    Preprocesses an image for PyTorch model input.
+    
+    Parameters:
+        img (np.array): Image to preprocess.
+        
+    Returns:
+        np.array: Preprocessed image.
+    '''
     img = img.astype(np.float32)
     img *= BASE_IMG_SCALE_FACTOR
     img -= [0.485, 0.456, 0.406]
