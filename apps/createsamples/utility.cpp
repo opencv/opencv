@@ -1392,72 +1392,87 @@ int icvGetTraininDataFromVec( Mat& img, CvVecFile& userdata )
 
     return 1;
 }
-void cvShowVecSamples( const char* filename, int winwidth, int winheight,
-                       double scale )
-{
+
+// cvShowVecSamples function
+void cvShowVecSamples( const std::string& filename, int winwidth, int winheight, double scale ) {
     CvVecFile file;
-    short tmp;
+    short tmp = 0;
     int i;
 
-    tmp = 0;
-    file.input = fopen( filename, "rb" );
+    std::ifstream input_file(filename, std::ios::binary);
 
-    if( file.input != NULL )
-    {
-        size_t elements_read1 = fread( &file.count, sizeof( file.count ), 1, file.input );
-        size_t elements_read2 = fread( &file.vecsize, sizeof( file.vecsize ), 1, file.input );
-        size_t elements_read3 = fread( &tmp, sizeof( tmp ), 1, file.input );
-        size_t elements_read4 = fread( &tmp, sizeof( tmp ), 1, file.input );
-        CV_Assert(elements_read1 == 1 && elements_read2 == 1 && elements_read3 == 1 && elements_read4 == 1);
-
-        if( file.vecsize != winwidth * winheight )
-        {
-            int guessed_w = 0;
-            int guessed_h = 0;
-
-            fprintf( stderr, "Warning: specified sample width=%d and height=%d "
-                "does not correspond to .vec file vector size=%d.\n",
-                winwidth, winheight, file.vecsize );
-            if( file.vecsize > 0 )
-            {
-                guessed_w = cvFloor( sqrt( (float) file.vecsize ) );
-                if( guessed_w > 0 )
-                {
-                    guessed_h = file.vecsize / guessed_w;
-                }
-            }
-
-            if( guessed_w <= 0 || guessed_h <= 0 || guessed_w * guessed_h != file.vecsize)
-            {
-                fprintf( stderr, "Error: failed to guess sample width and height\n" );
-                fclose( file.input );
-
-                return;
-            }
-            else
-            {
-                winwidth = guessed_w;
-                winheight = guessed_h;
-                fprintf( stderr, "Guessed width=%d, guessed height=%d\n",
-                    winwidth, winheight );
-            }
-        }
-
-        if( !feof( file.input ) && scale > 0 )
-        {
-            file.last = 0;
-            namedWindow( "Sample", WINDOW_AUTOSIZE );
-            for( i = 0; i < file.count; i++ )
-            {
-                Mat sample(winheight, winwidth, CV_8UC1);
-                icvGetTraininDataFromVec( sample, file );
-                if( scale != 1.0 )
-                    resize( sample, sample,
-                            Size(MAX(1, cvCeil(scale * winwidth)), MAX(1, cvCeil(scale * winheight))), 0, 0, INTER_LINEAR_EXACT);
-                imshow( "Sample", sample );
-                if( waitKey( 0 ) == 27 ) break;
-            }
-        }
-        fclose( file.input );
+    if (!input_file) {
+        std::cerr << "Error opening file: " << filename << '\n';
+        return;
     }
+
+    file.input = &input_file;
+
+    if(!readVecFileHeader(file, tmp)) {
+        return;
+    }
+
+    if(!checkVecSize(file, winwidth, winheight)) {
+        return;
+    }
+
+    if( !input_file.eof() && scale > 0 ) {
+        file.last = 0;
+        cv::namedWindow( "Sample", cv::WINDOW_AUTOSIZE );
+        for( i = 0; i < file.count; i++ ) {
+            cv::Mat sample(winheight, winwidth, CV_8UC1);
+            if(!icvGetTraininDataFromVec( sample, file )) {
+                break;
+            }
+            showSampleImage("Sample", sample, scale);
+            if( cv::waitKey( 0 ) == 27 ) break;
+        }
+    }
+}
+
+// helper functions
+bool readVecFileHeader(CvVecFile& file, short& tmp) {
+    size_t elements_read1 = fread( &file.count, sizeof( file.count ), 1, file.input );
+    size_t elements_read2 = fread( &file.vecsize, sizeof( file.vecsize ), 1, file.input );
+    size_t elements_read3 = fread( &tmp, sizeof( tmp ), 1, file.input );
+    size_t elements_read4 = fread( &tmp, sizeof( tmp ), 1, file.input );
+    if (!(elements_read1 == 1 && elements_read2 == 1 && elements_read3 == 1 && elements_read4 == 1)) {
+        std::cerr << "Error reading file header\n";
+        return false;
+    }
+    return true;
+}
+
+bool checkVecSize(CvVecFile& file, int& winwidth, int& winheight) {
+    if( file.vecsize != winwidth * winheight ) {
+        int guessed_w = 0;
+        int guessed_h = 0;
+
+        std::cerr << "Warning: specified sample width=" << winwidth << " and height=" << winheight
+                  << " does not correspond to .vec file vector size=" << file.vecsize << ".\n";
+
+        if( file.vecsize > 0 ) {
+            guessed_w = std::floor( std::sqrt( static_cast<float>(file.vecsize) ));
+            if( guessed_w > 0 ) {
+                guessed_h = file.vecsize / guessed_w;
+            }
+        }
+
+        if( guessed_w <= 0 || guessed_h <= 0 || guessed_w * guessed_h != file.vecsize) {
+            std::cerr << "Error: failed to guess sample width and height\n";
+            return false;
+        }
+        else {
+            winwidth = guessed_w;
+            winheight = guessed_h;
+            std::cerr << "Guessed width=" << winwidth << ", guessed height=" << winheight << ".\n";
+        }
+    }
+    return true;
+}
+
+void showSampleImage(const std::string& window_name, cv::Mat& sample, double scale) {
+    cv::Mat img;
+    cv::resize(sample, img, cv::Size(), scale, scale, cv::INTER_LINEAR);
+    cv::imshow(window_name, img);
 }
