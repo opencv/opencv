@@ -171,7 +171,8 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             const float B = vec2[j].x;
             const float C = -(A*pts2[j].x + B*pts2[j].y);
 
-            const float s = adjustToZero(A*x + B*y + C, 1e-6f);*/
+            float s = A*x + B*y + C;
+            s = (std::fabs(s)<1e-6) ? 0 : s;*/
             const float s = vec2[j].y*(pts2[j].x-x)+vec2[j].x*(y-pts2[j].y);
 
             if( s >= 0 )
@@ -210,7 +211,8 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             const float B = vec1[j].x ;
             const float C = -(A*pts1[j].x + B*pts1[j].y);
 
-            const float s = adjustToZero(A*x+B*y+C, 1e-6f);*/
+            float s = A*x + B*y + C;
+            s = (std::fabs(s)<1e-6) ? 0 : s;*/
             const float s = vec1[j].y*(pts1[j].x-x)+vec1[j].x*(y-pts1[j].y);
 
             if( s >= 0 )
