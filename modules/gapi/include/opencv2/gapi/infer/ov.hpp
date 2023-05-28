@@ -56,11 +56,11 @@ struct ParamDesc {
 
         LayerVariantAttr<std::string> input_tensor_layout;
         LayerVariantAttr<std::string> input_model_layout;
-
         LayerVariantAttr<std::string> output_tensor_layout;
         LayerVariantAttr<std::string> output_model_layout;
+        LayerVariantAttr<int>         output_tensor_precision;
 
-        LayerVariantAttr<int> output_tensor_precision;
+        LayerVariantAttr<std::vector<size_t>> new_shapes;
     };
 
     struct CompiledModel {
@@ -372,7 +372,44 @@ public:
         }
         GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
         auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_tensor_precision = precision_map;
+        model.output_tensor_precision = std::move(precision_map);
+        return *this;
+    }
+
+    /** @brief Specifies the new shape for input layers.
+
+    The function is used to set new shape for input layers.
+
+    @param shape New shape will be applied to all input layers.
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgReshape(std::vector<size_t> new_shape) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Reshape isn't possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.new_shapes = std::move(new_shape);
+        return *this;
+    }
+
+    /** @overload
+
+    @param new_shape_map Map of pairs: name of corresponding output layer
+    and its new shape.
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgReshape(detail::ParamDesc::Model::AttrMap<std::vector<size_t>> new_shape_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Reshape isn't possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.new_shapes = std::move(new_shape_map);
         return *this;
     }
 
@@ -577,7 +614,32 @@ public:
         }
         GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
         auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_tensor_precision = precision_map;
+        model.output_tensor_precision = std::move(precision_map);
+        return *this;
+    }
+
+    /** @see ov::Params::cfgReshape. */
+    Params& cfgReshape(std::vector<size_t> shape) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Reshape isn't possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.new_shapes = std::move(shape);
+        return *this;
+    }
+
+    /** @overload */
+    Params&
+    cfgReshape(detail::ParamDesc::Model::AttrMap<std::vector<size_t>> new_shape_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Reshape isn't possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.new_shapes = std::move(new_shape_map);
         return *this;
     }
 

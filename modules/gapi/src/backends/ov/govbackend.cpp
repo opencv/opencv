@@ -37,6 +37,15 @@ static ov::AnyMap toOV(const ParamDesc::PluginConfigT &config) {
     return {config.begin(), config.end()};
 }
 
+static std::map<std::string, ::ov::PartialShape>
+toOV(const std::unordered_map<std::string, std::vector<size_t>> &shapes) {
+    std::map<std::string, ::ov::PartialShape> ov_shapes;
+    for (const auto &it : shapes) {
+        ov_shapes.emplace(it.first, ::ov::Shape(it.second));
+    }
+    return ov_shapes;
+}
+
 static ov::element::Type toOV(int depth) {
     switch (depth) {
         case CV_8U:  return ov::element::u8;
@@ -354,6 +363,17 @@ broadcastLayerAttr(const ParamsM::LayerVariantAttr<Attr> &layer_attr,
     ParamsM::AttrMap<Attr> map;
     if (cv::util::holds_alternative<ParamsM::AttrMap<Attr>>(layer_attr)) {
         map = cv::util::get<ParamsM::AttrMap<Attr>>(layer_attr);
+        // NB: Validate map:
+        std::unordered_set<std::string> existing_layers =
+            {layer_names.begin(), layer_names.end()};
+        for (const auto &p : map) {
+            const auto it = existing_layers.find(p.first);
+            if (it == existing_layers.end()) {
+                cv::util::throw_error(
+                        std::logic_error("OV Backend: Failed to"
+                                         " find layer with name: " + p.first));
+            }
+        }
     } else if (cv::util::holds_alternative<Attr>(layer_attr)) {
         // NB: Broadcast value to all layers.
         auto elem = cv::util::get<Attr>(layer_attr);
@@ -401,13 +421,18 @@ struct Infer: public cv::detail::KernelTag {
         GAPI_Assert(uu.params.input_names.size() == in_metas.size()
                     && "Known input layers count doesn't match input meta count");
 
-        // NB: Pre/Post processing configuration avaiable only for models read from IR.
+        // NB: Pre/Post processing configuration avaiable only for read models.
         if (cv::util::holds_alternative<ParamsM>(uu.params.kind)) {
             const auto &model_info = cv::util::get<ParamsM>(uu.params.kind);
+
+            const auto new_shapes =
+                broadcastLayerAttr(model_info.new_shapes,
+                                   uu.params.input_names);
+            const_cast<std::shared_ptr<::ov::Model>&>(uu.model)->reshape(toOV(new_shapes));
+
             const auto input_tensor_layout =
                 broadcastLayerAttr(model_info.input_tensor_layout,
                                    uu.params.input_names);
-
             const auto input_model_layout =
                 broadcastLayerAttr(model_info.input_model_layout,
                                    uu.params.input_names);
@@ -461,15 +486,13 @@ struct Infer: public cv::detail::KernelTag {
 
             const auto output_tensor_layout =
                 broadcastLayerAttr(model_info.output_tensor_layout,
-                                   uu.params.input_names);
-
+                                   uu.params.output_names);
             const auto output_model_layout =
                 broadcastLayerAttr(model_info.output_model_layout,
-                                   uu.params.input_names);
-
+                                   uu.params.output_names);
             const auto output_tensor_precision =
                 broadcastLayerAttr(model_info.output_tensor_precision,
-                                   uu.params.input_names);
+                                   uu.params.output_names);
 
             for (const auto &output_name : uu.params.output_names) {
                 const auto explicit_out_tensor_layout =
