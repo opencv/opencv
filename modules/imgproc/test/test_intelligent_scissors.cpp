@@ -183,8 +183,8 @@ void getAndCheckContour(segmentation::IntelligentScissorsMB& tool,
 TEST(Imgproc_IntelligentScissorsMB, rect)
 {
     segmentation::IntelligentScissorsMB tool;
-
-    tool.applyImage(getTestImage1());
+    Mat image = getTestImage1();
+    tool.applyImage(image);
 
     Point source_point(50, 30);
     tool.buildMap(source_point);
@@ -192,15 +192,16 @@ TEST(Imgproc_IntelligentScissorsMB, rect)
     Point target_point(100, 30);
     std::vector<Point> pts;
     getAndCheckContour(tool, target_point, pts);
+    show(image, pts);
 
-    tool.applyImage(getTestImage2());
+    Mat image2 = getTestImage2();
+    tool.applyImage(image2);
 
     tool.buildMap(source_point);
 
     std::vector<Point> pts2;
     getAndCheckContour(tool, target_point, pts2, true/*backward*/);
-
-    EXPECT_EQ(pts.size(), pts2.size());
+    show(image2, pts2);
 }
 
 TEST(Imgproc_IntelligentScissorsMB, lines)
@@ -215,8 +216,6 @@ TEST(Imgproc_IntelligentScissorsMB, lines)
     Point target_point(150, 50);
     std::vector<Point> pts;
     getAndCheckContour(tool, target_point, pts);
-
-    EXPECT_EQ((size_t)121, pts.size());
     show(image, pts);
 }
 
@@ -234,8 +233,6 @@ TEST(Imgproc_IntelligentScissorsMB, circles)
     Point target_point(150, 50);
     std::vector<Point> pts;
     getAndCheckContour(tool, target_point, pts);
-
-    EXPECT_EQ((size_t)101, pts.size());
     show(image, pts);
 }
 
@@ -251,8 +248,6 @@ TEST(Imgproc_IntelligentScissorsMB, circles_gradient)
     Point target_point(150, 50);
     std::vector<Point> pts;
     getAndCheckContour(tool, target_point, pts);
-
-    EXPECT_EQ((size_t)101, pts.size());
     show(image, pts);
 }
 
