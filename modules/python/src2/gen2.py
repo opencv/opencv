@@ -768,7 +768,7 @@ class FuncInfo(object):
         # Convert unicode chars to xml representation, but keep as string instead of bytes
         full_docstring = full_docstring.encode('ascii', errors='xmlcharrefreplace').decode()
 
-        return Template('    {"$py_funcname", CV_PY_FN_WITH_KW_($wrap_funcname, $flags),\n    $py_docstring},\n'
+        return Template('    {"$py_funcname", CV_PY_FN_WITH_KW_($wrap_funcname, $flags),\n    "$py_docstring"},\n'
                         ).substitute(py_funcname = self.variants[0].wname, wrap_funcname=self.get_wrapper_name(),
                                      flags = 'METH_STATIC' if self.is_static else '0', py_docstring = full_docstring)
 
