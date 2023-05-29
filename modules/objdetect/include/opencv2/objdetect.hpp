@@ -908,10 +908,10 @@ public:
     /** @brief QR code detector constructor for Aruco-based algorithm. See cv::QRCodeDetectorAruco::Params */
     CV_WRAP explicit QRCodeDetectorAruco(const QRCodeDetectorAruco::Params& params = QRCodeDetectorAruco::Params());
 
-    /** @brief Detector parameters setter. See cv::QRCodeDetectorAruco::Params */
+    /** @brief Detector parameters getter. See cv::QRCodeDetectorAruco::Params */
     CV_WRAP const QRCodeDetectorAruco::Params& getDetectorParameters() const;
 
-    /** @brief Detector parameters getter. See cv::QRCodeDetectorAruco::Params */
+    /** @brief Detector parameters setter. See cv::QRCodeDetectorAruco::Params */
     CV_WRAP void setDetectorParameters(const QRCodeDetectorAruco::Params& params);
 
     /** @brief Aruco detector parameters are used to search for the finder patterns. */
