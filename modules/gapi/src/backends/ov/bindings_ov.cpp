@@ -40,7 +40,7 @@ cv::gapi::ov::PyParams::cfgInputTensorLayout(std::string tensor_layout) {
 
 cv::gapi::ov::PyParams&
 cv::gapi::ov::PyParams::cfgInputTensorLayout(
-        std::unordered_map<std::string, std::string> layout_map) {
+        std::map<std::string, std::string> layout_map) {
     m_priv->cfgInputTensorLayout(std::move(layout_map));
     return *this;
 }
@@ -53,7 +53,7 @@ cv::gapi::ov::PyParams::cfgInputModelLayout(std::string tensor_layout) {
 
 cv::gapi::ov::PyParams&
 cv::gapi::ov::PyParams::cfgInputModelLayout(
-        std::unordered_map<std::string, std::string> layout_map) {
+        std::map<std::string, std::string> layout_map) {
     m_priv->cfgInputModelLayout(std::move(layout_map));
     return *this;
 }
@@ -66,7 +66,7 @@ cv::gapi::ov::PyParams::cfgOutputTensorLayout(std::string tensor_layout) {
 
 cv::gapi::ov::PyParams&
 cv::gapi::ov::PyParams::cfgOutputTensorLayout(
-        std::unordered_map<std::string, std::string> layout_map) {
+        std::map<std::string, std::string> layout_map) {
     m_priv->cfgOutputTensorLayout(std::move(layout_map));
     return *this;
 }
@@ -79,7 +79,7 @@ cv::gapi::ov::PyParams::cfgOutputModelLayout(std::string tensor_layout) {
 
 cv::gapi::ov::PyParams&
 cv::gapi::ov::PyParams::cfgOutputModelLayout(
-        std::unordered_map<std::string, std::string> layout_map) {
+        std::map<std::string, std::string> layout_map) {
     m_priv->cfgOutputModelLayout(std::move(layout_map));
     return *this;
 }
@@ -92,7 +92,7 @@ cv::gapi::ov::PyParams::cfgOutputTensorPrecision(int precision) {
 
 cv::gapi::ov::PyParams&
 cv::gapi::ov::PyParams::cfgOutputTensorPrecision(
-        std::unordered_map<std::string, int> precision_map) {
+        std::map<std::string, int> precision_map) {
     m_priv->cfgOutputTensorPrecision(precision_map);
     return *this;
 }
@@ -105,7 +105,7 @@ cv::gapi::ov::PyParams::cfgReshape(std::vector<size_t> new_shape) {
 
 cv::gapi::ov::PyParams&
 cv::gapi::ov::PyParams::cfgReshape(
-        std::unordered_map<std::string, std::vector<size_t>> new_shape_map) {
+        std::map<std::string, std::vector<size_t>> new_shape_map) {
     m_priv->cfgReshape(std::move(new_shape_map));
     return *this;
 }

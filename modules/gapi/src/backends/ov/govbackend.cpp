@@ -38,7 +38,7 @@ static ov::AnyMap toOV(const ParamDesc::PluginConfigT &config) {
 }
 
 static std::map<std::string, ::ov::PartialShape>
-toOV(const std::unordered_map<std::string, std::vector<size_t>> &shapes) {
+toOV(const std::map<std::string, std::vector<size_t>> &shapes) {
     std::map<std::string, ::ov::PartialShape> ov_shapes;
     for (const auto &it : shapes) {
         ov_shapes.emplace(it.first, ::ov::Shape(it.second));
@@ -385,7 +385,7 @@ broadcastLayerAttr(const ParamsM::LayerVariantAttr<Attr> &layer_attr,
 }
 
 template <typename K, typename V>
-cv::optional<V> lookUp(const std::unordered_map<K, V> &map, const K& key) {
+cv::optional<V> lookUp(const std::map<K, V> &map, const K& key) {
     const auto it = map.find(key);
     if (it == map.end()) {
         return {};

@@ -265,8 +265,8 @@ PyObject* pyopencv_from(const std::vector<Tp>& value)
     return pyopencvVecConverter<Tp>::from(value);
 }
 
-template<template<typename, typename> class Map, typename K, typename V>
-bool pyopencv_to(PyObject *obj, Map<K,V> &map, const ArgInfo& info)
+template<typename K, typename V>
+bool pyopencv_to(PyObject *obj, std::map<K,V> &map, const ArgInfo& info)
 {
     PyObject* py_key = nullptr;
     PyObject* py_value = nullptr;
@@ -280,13 +280,13 @@ bool pyopencv_to(PyObject *obj, Map<K,V> &map, const ArgInfo& info)
 
     while(PyDict_Next(obj, &pos, &py_key, &py_value))
     {
-        std::string cpp_key;
+        K cpp_key;
         if (!pyopencv_to(py_key, cpp_key, ArgInfo("key", false))) {
             failmsg("Can't parse dict key. Key on position %lu has a wrong type", pos);
             return false;
         }
 
-        int cpp_value;
+        V cpp_value;
         if (!pyopencv_to(py_value, cpp_value, ArgInfo("value", false))) {
             failmsg("Can't parse dict value. Value on position %lu has a wrong type", pos);
             return false;
@@ -295,20 +295,6 @@ bool pyopencv_to(PyObject *obj, Map<K,V> &map, const ArgInfo& info)
         map.emplace(cpp_key, cpp_value);
     }
     return true;
-}
-
-// --- unordered_map
-template<typename K, typename V>
-bool pyopencv_to(PyObject *obj, std::unordered_map<K, V> &map, const ArgInfo& info)
-{
-    return pyopencv_to(obj, map, info);
-}
-
-// --- map
-template<typename K, typename V>
-bool pyopencv_to(PyObject *obj, std::map<K, V> &map, const ArgInfo& info)
-{
-    return pyopencv_to(obj, map, info);
 }
 
 template <typename Tp>

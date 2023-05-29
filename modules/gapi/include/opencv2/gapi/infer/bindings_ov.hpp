@@ -45,42 +45,42 @@ public:
 
     GAPI_WRAP
     PyParams& cfgInputTensorLayout(
-            std::unordered_map<std::string, std::string> layout_map);
+            std::map<std::string, std::string> layout_map);
 
     GAPI_WRAP
     PyParams& cfgInputModelLayout(std::string tensor_layout);
 
     GAPI_WRAP
     PyParams& cfgInputModelLayout(
-            std::unordered_map<std::string, std::string> layout_map);
+            std::map<std::string, std::string> layout_map);
 
     GAPI_WRAP
     PyParams& cfgOutputTensorLayout(std::string tensor_layout);
 
     GAPI_WRAP
     PyParams& cfgOutputTensorLayout(
-            std::unordered_map<std::string, std::string> layout_map);
+            std::map<std::string, std::string> layout_map);
 
     GAPI_WRAP
     PyParams& cfgOutputModelLayout(std::string tensor_layout);
 
     GAPI_WRAP
     PyParams& cfgOutputModelLayout(
-            std::unordered_map<std::string, std::string> layout_map);
+            std::map<std::string, std::string> layout_map);
 
     GAPI_WRAP
     PyParams& cfgOutputTensorPrecision(int precision);
 
     GAPI_WRAP
     PyParams& cfgOutputTensorPrecision(
-            std::unordered_map<std::string, int> precision_map);
+            std::map<std::string, int> precision_map);
 
     GAPI_WRAP
     PyParams& cfgReshape(std::vector<size_t> new_shape);
 
     GAPI_WRAP
     PyParams& cfgReshape(
-            std::unordered_map<std::string, std::vector<size_t>> new_shape_map);
+            std::map<std::string, std::vector<size_t>> new_shape_map);
 
     GBackend      backend() const;
     std::string   tag()     const;

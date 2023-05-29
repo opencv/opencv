@@ -11,22 +11,22 @@
 #include <opencv2/gapi/python/python.hpp>
 
 // NB: Python wrapper replaces :: with _ for classes
-using gapi_GKernelPackage             = cv::GKernelPackage;
-using gapi_GNetPackage                = cv::gapi::GNetPackage;
-using gapi_ie_PyParams                = cv::gapi::ie::PyParams;
-using gapi_onnx_PyParams              = cv::gapi::onnx::PyParams;
-using gapi_ov_PyParams                = cv::gapi::ov::PyParams;
-using gapi_wip_IStreamSource_Ptr      = cv::Ptr<cv::gapi::wip::IStreamSource>;
-using detail_ExtractArgsCallback      = cv::detail::ExtractArgsCallback;
-using detail_ExtractMetaCallback      = cv::detail::ExtractMetaCallback;
-using vector_GNetParam                = std::vector<cv::gapi::GNetParam>;
-using vector_GMat                     = std::vector<cv::GMat>;
-using gapi_streaming_queue_capacity   = cv::gapi::streaming::queue_capacity;
-using GStreamerSource_OutputType      = cv::gapi::wip::GStreamerSource::OutputType;
-using unordered_map_string_and_int    = std::unordered_map<std::string, int>;
-using unordered_map_string_and_string = std::unordered_map<std::string, std::string>;
-using map_string_and_string           = std::map<std::string, std::string>;
-using unordered_map_string_and_vector_size_t = std::unordered_map<std::string, std::vector<size_t>>;
+using gapi_GKernelPackage           = cv::GKernelPackage;
+using gapi_GNetPackage              = cv::gapi::GNetPackage;
+using gapi_ie_PyParams              = cv::gapi::ie::PyParams;
+using gapi_onnx_PyParams            = cv::gapi::onnx::PyParams;
+using gapi_ov_PyParams              = cv::gapi::ov::PyParams;
+using gapi_wip_IStreamSource_Ptr    = cv::Ptr<cv::gapi::wip::IStreamSource>;
+using detail_ExtractArgsCallback    = cv::detail::ExtractArgsCallback;
+using detail_ExtractMetaCallback    = cv::detail::ExtractMetaCallback;
+using vector_GNetParam              = std::vector<cv::gapi::GNetParam>;
+using vector_GMat                   = std::vector<cv::GMat>;
+using gapi_streaming_queue_capacity = cv::gapi::streaming::queue_capacity;
+using GStreamerSource_OutputType    = cv::gapi::wip::GStreamerSource::OutputType;
+using map_string_and_int            = std::map<std::string, int>;
+using map_string_and_string         = std::map<std::string, std::string>;
+using map_string_and_string         = std::map<std::string, std::string>;
+using map_string_and_vector_size_t  = std::map<std::string, std::vector<size_t>>;
 
 // NB: Python wrapper generate T_U for T<U>
 // This behavior is only observed for inputs

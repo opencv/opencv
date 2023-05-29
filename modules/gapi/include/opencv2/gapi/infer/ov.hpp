@@ -41,7 +41,7 @@ struct ParamDesc {
         std::string bin_path;
 
         template <typename T>
-        using AttrMap = std::unordered_map<std::string, T>;
+        using AttrMap = std::map<std::string, T>;
         // NB: This type is supposed to be used to hold in/out layers
         // attributes such as precision, layout, shape etc.
         //
