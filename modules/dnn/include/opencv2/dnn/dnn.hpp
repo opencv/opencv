@@ -52,6 +52,11 @@
 
 namespace cv {
 namespace dnn {
+
+namespace accessor {
+class DnnNetAccessor;  // forward declaration
+}
+
 CV__DNN_INLINE_NS_BEGIN
 //! @addtogroup dnn
 //! @{
@@ -65,19 +70,23 @@ CV__DNN_INLINE_NS_BEGIN
     enum Backend
     {
         //! DNN_BACKEND_DEFAULT equals to DNN_BACKEND_INFERENCE_ENGINE if
-        //! OpenCV is built with Intel's Inference Engine library or
+        //! OpenCV is built with Intel OpenVINO or
         //! DNN_BACKEND_OPENCV otherwise.
         DNN_BACKEND_DEFAULT = 0,
         DNN_BACKEND_HALIDE,
-        DNN_BACKEND_INFERENCE_ENGINE,            //!< Intel's Inference Engine computational backend
-                                                 //!< @sa setInferenceEngineBackendType
+        DNN_BACKEND_INFERENCE_ENGINE,            //!< Intel OpenVINO computational backend
+                                                 //!< @note Tutorial how to build OpenCV with OpenVINO: @ref tutorial_dnn_openvino
         DNN_BACKEND_OPENCV,
         DNN_BACKEND_VKCOM,
         DNN_BACKEND_CUDA,
         DNN_BACKEND_WEBNN,
-#ifdef __OPENCV_BUILD
+        DNN_BACKEND_TIMVX,
+        DNN_BACKEND_CANN,
+#if defined(__OPENCV_BUILD) || defined(BUILD_PLUGIN)
+#if !defined(OPENCV_BINDING_PARSER)
         DNN_BACKEND_INFERENCE_ENGINE_NGRAPH = 1000000,     // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
         DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019,      // internal - use DNN_BACKEND_INFERENCE_ENGINE + setInferenceEngineBackendType()
+#endif
 #endif
     };
 
@@ -95,7 +104,24 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_FPGA,  //!< FPGA device with CPU fallbacks using Inference Engine's Heterogeneous plugin.
         DNN_TARGET_CUDA,
         DNN_TARGET_CUDA_FP16,
-        DNN_TARGET_HDDL
+        DNN_TARGET_HDDL,
+        DNN_TARGET_NPU,
+        DNN_TARGET_CPU_FP16, // Only the ARM platform is supported. Low precision computing, accelerate model inference.
+    };
+
+    /**
+     * @brief Enum of data layout for model inference.
+     * @see Image2BlobParams
+     */
+    enum DataLayout
+    {
+        DNN_LAYOUT_UNKNOWN = 0,
+        DNN_LAYOUT_ND = 1,        //!< OpenCV data layout for 2D data.
+        DNN_LAYOUT_NCHW = 2,      //!< OpenCV data layout for 4D data.
+        DNN_LAYOUT_NCDHW = 3,      //!< OpenCV data layout for 5D data.
+        DNN_LAYOUT_NHWC = 4,      //!< Tensorflow-like data layout for 4D data.
+        DNN_LAYOUT_NDHWC = 5,      //!< Tensorflow-like data layout for 5D data.
+        DNN_LAYOUT_PLANAR = 6,     //!< Tensorflow-like data layout, it should only be used at tf or tflite model parsing.
     };
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
@@ -304,7 +330,7 @@ CV__DNN_INLINE_NS_BEGIN
 
         virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs, const std::vector<Ptr<BackendNode> >& nodes);
 
-        virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs);
+        virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs, std::vector<Ptr<BackendWrapper> > &outputs);
 
         virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> > &inputs, const std::vector<Ptr<BackendNode> >& nodes);
 
@@ -320,6 +346,30 @@ CV__DNN_INLINE_NS_BEGIN
             const std::vector<Ptr<BackendWrapper>>& inputs,
             const std::vector<Ptr<BackendWrapper>>& outputs
         );
+
+        /**
+         * @brief Returns a TimVX backend node
+         *
+         * @param   timVxInfo  void pointer to CSLContext object
+         * @param   inputsWrapper   layer inputs
+         * @param   outputsWrapper  layer outputs
+         * @param   isLast if the node is the last one of the TimVX Graph.
+         */
+        virtual Ptr<BackendNode> initTimVX(void* timVxInfo,
+                                           const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                           const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
+                                           bool isLast);
+
+        /**
+         * @brief Returns a CANN backend node
+         *
+         * @param   inputs   input tensors of CANN operator
+         * @param   outputs  output tensors of CANN operator
+         * @param   nodes           nodes of input tensors
+         */
+        virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                          const std::vector<Ptr<BackendWrapper> > &outputs,
+                                          const std::vector<Ptr<BackendNode> >& nodes);
 
        /**
         * @brief Automatic Halide scheduling based on layer hyper-parameters.
@@ -606,8 +656,10 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param calibData Calibration data to compute the quantization parameters.
          *  @param inputsDtype Datatype of quantized net's inputs. Can be CV_32F or CV_8S.
          *  @param outputsDtype Datatype of quantized net's outputs. Can be CV_32F or CV_8S.
+         *  @param perChannel Quantization granularity of quantized Net. The default is true, that means quantize model
+         *  in per-channel way (channel-wise). Set it false to quantize model in per-tensor way (or tensor-wise).
          */
-        CV_WRAP Net quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype);
+        CV_WRAP Net quantize(InputArrayOfArrays calibData, int inputsDtype, int outputsDtype, bool perChannel=true);
 
         /** @brief Returns input scale and zeropoint for a quantized Net.
          *  @param scales output parameter for returning input scales.
@@ -813,6 +865,12 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP void enableFusion(bool fusion);
 
+        /** @brief Enables or disables the Winograd compute branch. The Winograd compute branch can speed up
+         * 3x3 Convolution at a small loss of accuracy.
+        * @param useWinograd true to enable the Winograd compute branch. The default is true.
+        */
+        CV_WRAP void enableWinograd(bool useWinograd);
+
         /** @brief Returns overall time for inference and timings (in ticks) for layers.
          *
          * Indexes in returned vector correspond to layers ids. Some layers can be fused with others,
@@ -823,8 +881,12 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
 
-    private:
+
         struct Impl;
+        inline Impl* getImpl() const { return impl.get(); }
+        inline Impl& getImplRef() const { CV_DbgAssert(impl); return *impl.get(); }
+        friend class accessor::DnnNetAccessor;
+    protected:
         Ptr<Impl> impl;
     };
 
@@ -908,6 +970,26 @@ CV__DNN_INLINE_NS_BEGIN
       */
     CV_EXPORTS Net readNetFromTensorflow(const char *bufferModel, size_t lenModel,
                                          const char *bufferConfig = NULL, size_t lenConfig = 0);
+
+    /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
+      * @param model  path to the .tflite file with binary flatbuffers description of the network architecture
+      * @returns Net object.
+      */
+    CV_EXPORTS_W Net readNetFromTFLite(const String &model);
+
+    /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
+      * @param bufferModel buffer containing the content of the tflite file
+      * @returns Net object.
+      */
+    CV_EXPORTS_W Net readNetFromTFLite(const std::vector<uchar>& bufferModel);
+
+    /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
+      * @details This is an overloaded member function, provided for convenience.
+      * It differs from the above function only in what argument(s) it accepts.
+      * @param bufferModel buffer containing the content of the tflite file
+      * @param lenModel length of bufferModel
+      */
+    CV_EXPORTS Net readNetFromTFLite(const char *bufferModel, size_t lenModel);
 
     /**
      *  @brief Reads a network model stored in <a href="http://torch.ch">Torch7</a> framework's format.
@@ -1045,10 +1127,10 @@ CV__DNN_INLINE_NS_BEGIN
     /** @brief Creates 4-dimensional blob from image. Optionally resizes and crops @p image from center,
      *  subtract @p mean values, scales values by @p scalefactor, swap Blue and Red channels.
      *  @param image input image (with 1-, 3- or 4-channels).
+     *  @param scalefactor multiplier for @p images values.
      *  @param size spatial size for output image
      *  @param mean scalar with mean values which are subtracted from channels. Values are intended
      *  to be in (mean-R, mean-G, mean-B) order if @p image has BGR ordering and @p swapRB is true.
-     *  @param scalefactor multiplier for @p image values.
      *  @param swapRB flag which indicates that swap first and last channels
      *  in 3-channel image is necessary.
      *  @param crop flag which indicates whether image will be cropped after resize or not
@@ -1057,6 +1139,9 @@ CV__DNN_INLINE_NS_BEGIN
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimensional Mat with NCHW dimensions order.
+     *
+     * @note
+     * The order and usage of `scalefactor` and `mean` are (input - mean) * scalefactor.
      */
     CV_EXPORTS_W Mat blobFromImage(InputArray image, double scalefactor=1.0, const Size& size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
@@ -1087,6 +1172,9 @@ CV__DNN_INLINE_NS_BEGIN
      *  dimension in @p size and another one is equal or larger. Then, crop from the center is performed.
      *  If @p crop is false, direct resize without cropping and preserving aspect ratio is performed.
      *  @returns 4-dimensional Mat with NCHW dimensions order.
+     *
+     * @note
+     * The order and usage of `scalefactor` and `mean` are (input - mean) * scalefactor.
      */
     CV_EXPORTS_W Mat blobFromImages(InputArrayOfArrays images, double scalefactor=1.0,
                                     Size size = Size(), const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
@@ -1100,6 +1188,74 @@ CV__DNN_INLINE_NS_BEGIN
                                    double scalefactor=1.0, Size size = Size(),
                                    const Scalar& mean = Scalar(), bool swapRB=false, bool crop=false,
                                    int ddepth=CV_32F);
+
+    /**
+     * @brief Enum of image processing mode.
+     * To facilitate the specialization pre-processing requirements of the dnn model.
+     * For example, the `letter box` often used in the Yolo series of models.
+     * @see Image2BlobParams
+     */
+    enum ImagePaddingMode
+    {
+        DNN_PMODE_NULL = 0,        // !< Default. Resize to required input size without extra processing.
+        DNN_PMODE_CROP_CENTER = 1, // !< Image will be cropped after resize.
+        DNN_PMODE_LETTERBOX = 2,   // !< Resize image to the desired size while preserving the aspect ratio of original image.
+    };
+
+    /** @brief Processing params of image to blob.
+     *
+     * It includes all possible image processing operations and corresponding parameters.
+     *
+     * @see blobFromImageWithParams
+     *
+     * @note
+     * The order and usage of `scalefactor` and `mean` are (input - mean) * scalefactor.
+     * The order and usage of `scalefactor`, `size`, `mean`, `swapRB`, and `ddepth` are consistent
+     * with the function of @ref blobFromImage.
+    */
+    struct CV_EXPORTS_W_SIMPLE Image2BlobParams
+    {
+        CV_WRAP Image2BlobParams();
+        CV_WRAP Image2BlobParams(const Scalar& scalefactor, const Size& size = Size(), const Scalar& mean = Scalar(),
+                            bool swapRB = false, int ddepth = CV_32F, DataLayout datalayout = DNN_LAYOUT_NCHW,
+                            ImagePaddingMode mode = DNN_PMODE_NULL);
+
+        CV_PROP_RW Scalar scalefactor; //!< scalefactor multiplier for input image values.
+        CV_PROP_RW Size size;    //!< Spatial size for output image.
+        CV_PROP_RW Scalar mean;  //!< Scalar with mean values which are subtracted from channels.
+        CV_PROP_RW bool swapRB;  //!< Flag which indicates that swap first and last channels
+        CV_PROP_RW int ddepth;   //!< Depth of output blob. Choose CV_32F or CV_8U.
+        CV_PROP_RW DataLayout datalayout; //!< Order of output dimensions. Choose DNN_LAYOUT_NCHW or DNN_LAYOUT_NHWC.
+        CV_PROP_RW ImagePaddingMode paddingmode;   //!< Image padding mode. @see ImagePaddingMode.
+    };
+
+    /** @brief Creates 4-dimensional blob from image with given params.
+     *
+     *  @details This function is an extension of @ref blobFromImage to meet more image preprocess needs.
+     *  Given input image and preprocessing parameters, and function outputs the blob.
+     *
+     *  @param image input image (all with 1-, 3- or 4-channels).
+     *  @param param struct of Image2BlobParams, contains all parameters needed by processing of image to blob.
+     *  @return 4-dimensional Mat.
+     */
+    CV_EXPORTS_W Mat blobFromImageWithParams(InputArray image, const Image2BlobParams& param = Image2BlobParams());
+
+    /** @overload */
+    CV_EXPORTS_W void blobFromImageWithParams(InputArray image, OutputArray blob, const Image2BlobParams& param = Image2BlobParams());
+
+    /** @brief Creates 4-dimensional blob from series of images with given params.
+     *
+     *  @details This function is an extension of @ref blobFromImages to meet more image preprocess needs.
+     *  Given input image and preprocessing parameters, and function outputs the blob.
+     *
+     *  @param images input image (all with 1-, 3- or 4-channels).
+     *  @param param struct of Image2BlobParams, contains all parameters needed by processing of image to blob.
+     *  @returns 4-dimensional Mat.
+     */
+    CV_EXPORTS_W Mat blobFromImagesWithParams(InputArrayOfArrays images, const Image2BlobParams& param = Image2BlobParams());
+
+    /** @overload */
+    CV_EXPORTS_W void blobFromImagesWithParams(InputArrayOfArrays images, OutputArray blob, const Image2BlobParams& param = Image2BlobParams());
 
     /** @brief Parse a 4D blob and output the images it contains as 2D arrays through a simpler data structure
      *  (std::vector<cv::Mat>).
@@ -1159,6 +1315,27 @@ CV__DNN_INLINE_NS_BEGIN
                              const float score_threshold, const float nms_threshold,
                              CV_OUT std::vector<int>& indices,
                              const float eta = 1.f, const int top_k = 0);
+
+    /** @brief Performs batched non maximum suppression on given boxes and corresponding scores across different classes.
+
+     * @param bboxes a set of bounding boxes to apply NMS.
+     * @param scores a set of corresponding confidences.
+     * @param class_ids a set of corresponding class ids. Ids are integer and usually start from 0.
+     * @param score_threshold a threshold used to filter boxes by score.
+     * @param nms_threshold a threshold used in non maximum suppression.
+     * @param indices the kept indices of bboxes after NMS.
+     * @param eta a coefficient in adaptive threshold formula: \f$nms\_threshold_{i+1}=eta\cdot nms\_threshold_i\f$.
+     * @param top_k if `>0`, keep at most @p top_k picked indices.
+     */
+    CV_EXPORTS void NMSBoxesBatched(const std::vector<Rect>& bboxes, const std::vector<float>& scores, const std::vector<int>& class_ids,
+                                    const float score_threshold, const float nms_threshold,
+                                    CV_OUT std::vector<int>& indices,
+                                    const float eta = 1.f, const int top_k = 0);
+
+    CV_EXPORTS_W void NMSBoxesBatched(const std::vector<Rect2d>& bboxes, const std::vector<float>& scores, const std::vector<int>& class_ids,
+                                      const float score_threshold, const float nms_threshold,
+                                      CV_OUT std::vector<int>& indices,
+                                      const float eta = 1.f, const int top_k = 0);
 
     /**
      * @brief Enum of Soft NMS methods.
@@ -1246,7 +1423,7 @@ CV__DNN_INLINE_NS_BEGIN
          /** @brief Set scalefactor value for frame.
           *  @param[in] scale Multiplier for frame values.
          */
-         CV_WRAP Model& setInputScale(double scale);
+         CV_WRAP Model& setInputScale(const Scalar& scale);
 
          /** @brief Set flag crop for frame.
           *  @param[in] crop Flag which indicates whether image will be cropped after resize or not.

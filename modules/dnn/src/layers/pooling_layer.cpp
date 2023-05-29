@@ -47,6 +47,7 @@
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_webnn.hpp"
+#include "../op_cann.hpp"
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
@@ -181,10 +182,10 @@ public:
         if (inputs[0].dims == 3)
         {
             // Pool1D
-            kernel_size.assign(1, kernel_size[0]);
-            strides.assign(1, strides[0]);
-            pads_begin.assign(1, pads_begin[0]);
-            pads_end.assign(1, pads_end[0]);
+            kernel_size.resize(1, kernel_size[0]);
+            strides.resize(1, strides[0]);
+            pads_begin.resize(1, pads_begin[0]);
+            pads_end.resize(1, pads_end[0]);
         }
 
 #ifdef HAVE_OPENCL
@@ -199,6 +200,12 @@ public:
         {
             return type == MAX || type == AVE || type == ROI;
         }
+#ifdef HAVE_CANN
+        if (backendId == DNN_BACKEND_CANN)
+        {
+            return type == MAX || type == AVE;
+        }
+#endif
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
@@ -208,7 +215,7 @@ public:
         if (backendId == DNN_BACKEND_OPENCV)
         {
             if (kernel_size.size() == 3)
-                return preferableTarget == DNN_TARGET_CPU;
+                return IS_DNN_CPU_TARGET(preferableTarget);
             if (kernel_size.size() <= 2)
                 return true;
             else
@@ -219,13 +226,6 @@ public:
             if (kernel_size.empty() || kernel_size.size() == 2)
                 return haveHalide() &&
                        (type == MAX || (type == AVE && !pads_begin[0] && !pads_begin[1] && !pads_end[0] && !pads_end[1]));
-        }
-        else if (backendId == DNN_BACKEND_VKCOM)
-        {
-            if (kernel_size.empty() || kernel_size.size() == 2)
-                return haveVulkan() &&
-                           (type == MAX || type == AVE);
-            return false;
         }
         else if (backendId == DNN_BACKEND_WEBNN)
         {
@@ -271,6 +271,17 @@ public:
                 }
                 return true;
             }
+        }
+        else if (backendId == DNN_BACKEND_TIMVX)
+        {
+#ifdef HAVE_TIMVX
+            if (kernel_size.size() == 3)
+            {
+                // fallback to CPU implementation.
+                preferableTarget = DNN_TARGET_CPU;
+            }
+#endif
+            return false;
         }
         return false;
     }
@@ -483,42 +494,6 @@ public:
     }
 #endif
 
-
-#ifdef HAVE_VULKAN
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-        int padding_mode;
-        vkcom::PoolType pool_type;
-        int filter_size[2] = {static_cast<int>(kernel_size[0]), static_cast<int>(kernel_size[1])};
-        int pad_size[2] = {static_cast<int>(pads_begin[0]), static_cast<int>(pads_begin[1])};
-        int stride_size[2] = {static_cast<int>(strides[0]), static_cast<int>(strides[1])};
-        pool_type = type == MAX ? vkcom::kPoolTypeMax:
-                   (type == AVE ? vkcom::kPoolTypeAvg:
-                            vkcom::kPoolTypeNum);
-
-        if (padMode.empty())
-        {
-            padding_mode = vkcom::kPaddingModeCaffe;
-        }
-        else if (padMode == "VALID")
-        {
-            padding_mode = vkcom::kPaddingModeValid;
-        }
-        else if (padMode == "SAME")
-        {
-            padding_mode = vkcom::kPaddingModeSame;
-        }
-        else
-            CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
-
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPool(filter_size, pad_size,
-                                                            stride_size, padding_mode,
-                                                            pool_type, avePoolPaddedArea));
-        return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
-    }
-#endif
-
-
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
         if (type == MAX)
@@ -529,6 +504,81 @@ public:
             return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto x_desc = x->getTensorDesc();
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+
+        if (type == MAX)
+        {
+            auto op = std::make_shared<ge::op::MaxPoolV3>(name);
+
+            // set attributes
+            op->set_attr_ksize(ge::Operator::OpListInt(
+                {1, 1, (int64_t)kernel_size[0], (int64_t)kernel_size[1]}
+            ));
+            op->set_attr_strides(ge::Operator::OpListInt(
+                {1, 1, (int64_t)strides[0], (int64_t)strides[1]}
+            ));
+            std::string cann_pad_mode{"CALCULATED"};
+            if (padMode == "SAME" || padMode == "VALID")
+                cann_pad_mode = padMode;
+            op->set_attr_padding_mode(cann_pad_mode.c_str());
+            op->set_attr_pads(ge::Operator::OpListInt(
+                {(int64_t)pads_begin[0], (int64_t)pads_end[0], (int64_t)pads_begin[1], (int64_t)pads_end[1]}
+            ));
+            op->set_attr_data_format("NCHW");
+            op->set_attr_global_pooling(globalPooling);
+            op->set_attr_ceil_mode(ceilMode);
+
+            // set inputs
+            op->set_input_x_by_name(*op_x, x->name.c_str());
+            op->update_input_desc_x(*x_desc);
+            // set outputs
+            op->update_output_desc_y(*output_desc);
+
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
+        else if (type == AVE)
+        {
+            auto op = std::make_shared<ge::op::AvgPoolV2>(name);
+
+            // set attributes
+            op->set_attr_ksize(ge::Operator::OpListInt(
+                {1, 1, (int64_t)kernel_size[0], (int64_t)kernel_size[1]}
+            ));
+            op->set_attr_strides(ge::Operator::OpListInt(
+                {1, 1, (int64_t)strides[0], (int64_t)strides[1]}
+            ));
+            std::string cann_pad_mode{"CALCULATED"};
+            if (padMode == "SAME" || padMode == "VALID")
+                cann_pad_mode = padMode;
+            op->set_attr_padding_mode(cann_pad_mode.c_str());
+            op->set_attr_pads(ge::Operator::OpListInt(
+                {(int64_t)pads_begin[0], (int64_t)pads_end[0], (int64_t)pads_begin[1], (int64_t)pads_end[1]}
+            ));
+            op->set_attr_global_pooling(globalPooling);
+            op->set_attr_ceil_mode(ceilMode);
+            auto cann_exclusive = !avePoolPaddedArea;
+            op->set_attr_exclusive(cann_exclusive);
+
+            // set inputs
+            op->set_input_x_by_name(*op_x, x->name.c_str());
+            op->update_input_desc_x(*x_desc);
+            // set outputs
+            op->update_output_desc_y(*output_desc);
+
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
+    }
+#endif
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -1161,6 +1211,12 @@ public:
 
         // Halide::argmax returns tuple (r.x, r.y, max).
         Halide::Tuple res = argmax(inputBuffer(kx, ky, c, n));
+
+        if (!computeMaxIdx)
+        {
+            top(x, y, c, n) = res[2];
+            return Ptr<BackendNode>(new HalideBackendNode(top));
+        }
 
         // Compute offset from argmax in range [0, kernel_size).
         Halide::Expr max_index;

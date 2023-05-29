@@ -18,7 +18,8 @@
 #include "opencv2/gapi/render/render_types.hpp"
 #include "opencv2/gapi/s11n.hpp" // basic interfaces
 
-#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
+#if defined _MSC_VER
+#pragma warning(push)
 #pragma warning(disable: 4702)
 #endif
 
@@ -164,7 +165,7 @@ GAPI_EXPORTS void serialize( IOStream& os
 GAPI_EXPORTS GSerialized deserialize(IIStream& is);
 GAPI_EXPORTS void reconstruct(const GSerialized &s, ade::Graph &g);
 
-// FIXME: Basic Stream implementaions //////////////////////////////////////////
+// FIXME: Basic Stream implementations /////////////////////////////////////////
 
 // Basic in-memory stream implementations.
 class GAPI_EXPORTS ByteMemoryOutStream final: public IOStream {
@@ -231,5 +232,9 @@ GAPI_EXPORTS std::vector<std::string> vector_of_strings_deserialize(IIStream& is
 } // namespace s11n
 } // namespace gapi
 } // namespace cv
+
+#if defined _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // OPENCV_GAPI_COMMON_SERIALIZATION_HPP

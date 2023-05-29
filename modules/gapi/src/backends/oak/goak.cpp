@@ -7,7 +7,7 @@
 #include <opencv2/gapi/oak/oak.hpp>
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 
-#include "oak_media_adapter.hpp"
+#include "oak_memory_adapters.hpp"
 
 #include <thread>
 #include <chrono>
@@ -24,11 +24,20 @@ GFrame sobelXY(const GFrame& in, const cv::Mat& hk, const cv::Mat& vk) {
     return GSobelXY::on(in, hk, vk);
 }
 
+GFrame copy(const GFrame& in) {
+    return GCopy::on(in);
+}
+
 // This is a dummy oak::ColorCamera class that just makes our pipelining
 // machinery work. The real data comes from the physical camera which
 // is handled by DepthAI library.
 ColorCamera::ColorCamera()
     : m_dummy(cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>()) {
+}
+
+ColorCamera::ColorCamera(const ColorCameraParams& params)
+    : m_dummy(cv::MediaFrame::Create<cv::gapi::oak::OAKMediaAdapter>()),
+      m_params(params) {
 }
 
 bool ColorCamera::pull(cv::gapi::wip::Data &data) {
@@ -39,7 +48,9 @@ bool ColorCamera::pull(cv::gapi::wip::Data &data) {
 }
 
 cv::GMetaArg ColorCamera::descr_of() const {
-    return cv::GMetaArg{cv::descr_of(m_dummy)};
+    // FIXME: support other resolutions
+    GAPI_Assert(m_params.resolution == ColorCameraParams::Resolution::THE_1080_P);
+    return cv::GMetaArg{cv::GFrameDesc{cv::MediaFormat::NV12, cv::Size{1920, 1080}}};
 }
 
 } // namespace oak

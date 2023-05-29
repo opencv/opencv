@@ -35,7 +35,7 @@ cv::gapi::GBackend::Priv::compile(const ade::Graph&,
                                   const std::vector<ade::NodeHandle> &) const
 {
     // ...and this method is here for the same reason!
-    GAPI_Assert(false);
+    GAPI_Error("InternalError");
     return {};
 }
 
@@ -391,7 +391,7 @@ void unbind(Mag& mag, const RcDesc &rc)
         break;
 
     default:
-        GAPI_Assert(false);
+        GAPI_Error("InternalError");
     }
 }
 
@@ -411,6 +411,12 @@ void createMat(const cv::GMatDesc &desc, cv::Mat& mat)
     {
         GAPI_Assert(!desc.planar);
         mat.create(desc.dims, desc.depth);
+#if !defined(GAPI_STANDALONE)
+        // NB: WA for 1D mats.
+        if (desc.dims.size() == 1u) {
+            mat.dims = 1;
+        }
+#endif
     }
 }
 

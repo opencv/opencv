@@ -133,7 +133,7 @@ private:
 class CV_EXPORTS_W BundleAdjusterBase : public Estimator
 {
 public:
-    CV_WRAP const Mat refinementMask() const { return refinement_mask_.clone(); }
+    CV_WRAP Mat refinementMask() const { return refinement_mask_.clone(); }
     CV_WRAP void setRefinementMask(const Mat &mask)
     {
         CV_Assert(mask.type() == CV_8U && mask.size() == Size(3, 3));

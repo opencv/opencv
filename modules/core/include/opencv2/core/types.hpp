@@ -57,6 +57,11 @@
 #include "opencv2/core/cvstd.hpp"
 #include "opencv2/core/matx.hpp"
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4459)  // declaration of '...' hides global declaration
+#endif
+
 namespace cv
 {
 
@@ -540,8 +545,11 @@ public:
      */
     RotatedRect(const Point2f& point1, const Point2f& point2, const Point2f& point3);
 
-    /** returns 4 vertices of the rectangle
-    @param pts The points array for storing rectangle vertices. The order is bottomLeft, topLeft, topRight, bottomRight.
+    /** returns 4 vertices of the rotated rectangle
+    @param pts The points array for storing rectangle vertices. The order is _bottomLeft_, _topLeft_, topRight, bottomRight.
+    @note _Bottom_, _Top_, _Left_ and _Right_ sides refer to the original rectangle (angle is 0),
+    so after 180 degree rotation _bottomLeft_ point will be located at the top right corner of the
+    rectangle.
     */
     void points(Point2f pts[]) const;
     //! returns the minimal up-right integer rectangle containing the rotated rectangle
@@ -2017,6 +2025,15 @@ double jaccardDistance(const Rect_<_Tp>& a, const Rect_<_Tp>& b) {
     return 1.0 - Aab / (Aa + Ab - Aab);
 }
 
+/** @brief Finds out if there is any intersection between two rectangles
+ *
+ * mainly useful for language bindings
+ * @param rect1 First rectangle
+ * @param rect2 Second rectangle
+ * @return the area of the intersection
+ */
+CV_EXPORTS_W inline double rectangleIntersectionArea(const Rect2d& a, const Rect2d& b) { return (a & b).area(); }
+
 ////////////////////////////// RotatedRect //////////////////////////////
 
 inline
@@ -2435,5 +2452,9 @@ TermCriteria::TermCriteria(int _type, int _maxCount, double _epsilon)
 //! @endcond
 
 } // cv
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif //OPENCV_CORE_TYPES_HPP

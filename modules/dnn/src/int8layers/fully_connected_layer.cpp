@@ -4,6 +4,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_timvx.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -19,8 +20,14 @@ public:
     FullyConnectedLayerInt8Impl(const LayerParams& params)
     {
         setParamsFrom(params);
+
+        input_sc = params.get<float>("input_scale");
+        input_zp = params.get<int>("input_zeropoint");
         output_zp = params.get<int>("zeropoints");
+        output_sc = params.get<float>("scales");
         axis = params.get<int>("axis", 1);
+        per_channel = params.get<bool>("per_channel", true);
+
         if (blobs.size() == 3)
         {
             // blobs[0] - Weights
@@ -71,11 +78,25 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        if (backendId == DNN_BACKEND_TIMVX && haveTimVX())
+        {
+           if (biasMat.empty())
+               return true;
+           else
+               return false;
+        }
+
         return backendId == DNN_BACKEND_OPENCV;
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
     {
+        // TODO! add activation in Fully connection.
+#ifdef HAVE_TIMVX
+        if(preferableTarget == DNN_TARGET_NPU)
+            return false;
+#endif
+
         Ptr<ActivationLayerInt8> activ_int8 = layer.dynamicCast<ActivationLayerInt8>();
         if (!activ_int8.empty())
         {
@@ -87,11 +108,125 @@ public:
         return false;
     }
 
+
+    virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,
+                                       const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                       const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
+                                       bool isLast) CV_OVERRIDE
+    {
+#ifdef HAVE_TIMVX
+        // tvGraph Initialization.
+        auto timVxInfo = reinterpret_cast<TimVXInfo *>(timVXInfo_);
+        CV_Assert(timVxInfo);
+        Ptr<TimVXGraph> tvGraph = timVxInfo->getGraph();
+        CV_Assert(tvGraph);
+        Ptr<tim::vx::Graph> graph = tvGraph->graph;
+
+        int numOutput = blobs[0].size[0];
+        Mat weightMat = blobs[0];
+
+        std::vector<int> inputsIndex;
+        std::vector<int> outputsIndex;
+
+        std::vector<float> weight_scs, bias_scs;
+        std::vector<int32_t> weight_zps;
+
+        bias_scs.resize(numOutput);
+        weight_scs.resize(numOutput);
+
+        for (int i = 0; i < numOutput; i++)
+        {
+            bias_scs[i] = outputMultiplier.at<float>(i) * output_sc;
+            weight_scs[i] = bias_scs[i] / input_sc;
+        }
+
+        weight_zps.assign(numOutput, 0);
+
+        // input Tensor
+        auto inputWrapper = inputsWrapper[0].dynamicCast<TimVXBackendWrapper>();
+        int input_index = -1, weight_index = -1, output_index = -1;
+
+        if (inputWrapper->isTensor())
+        {
+            input_index = tvGraph->getTensorIndex(inputWrapper->getTensor());
+            if (input_index == -1)
+            {
+                // Copy To New inputWrapper
+                Mat tmp = inputWrapper->getMat();
+                inputWrapper = Ptr<TimVXBackendWrapper>(new TimVXBackendWrapper(tmp));
+            }
+        }
+
+        if (!inputWrapper->isTensor() || input_index == -1)
+        {
+            Ptr<tim::vx::Quantization> tvInputQuant = Ptr<tim::vx::Quantization>(
+                    new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, input_sc, input_zp));
+            inputWrapper->createTensor(graph,tim::vx::TensorAttribute::INPUT, tvInputQuant);
+            input_index = tvGraph->addWrapper(inputWrapper);
+        }
+        inputsIndex.push_back(input_index);
+
+        // weight tensor
+        Ptr<TimVXBackendWrapper> weightWrapper = Ptr<TimVXBackendWrapper>(new TimVXBackendWrapper(weightMat));
+        Ptr<tim::vx::Quantization> weightQuant;
+
+        bool tvSymmetric;
+        tvSymmetric = getQuantType(weight_scs, numOutput);
+
+        if (tvSymmetric)
+        {
+            // TODO! fix the following issue.
+            // TimVX does not support the SYMMETRIC PER CHANNEL MatMul.
+            return Ptr<BackendNode>();
+        }
+        else
+        {
+            weightQuant = Ptr<tim::vx::Quantization>(
+                    new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC,  weight_scs[0], 0));
+        }
+        weightWrapper->createTensor(graph,tim::vx::TensorAttribute::CONSTANT, weightQuant);
+
+        weight_index = tvGraph->addWrapper(weightWrapper);
+        inputsIndex.push_back(weight_index);
+
+        // Output tensor
+        CV_Assert(outputsWrapper.size() == 1);
+        Ptr<TimVXBackendWrapper> outputWrapper = outputsWrapper[0].dynamicCast<TimVXBackendWrapper>();
+        Ptr<tim::vx::Quantization> outputQuant = Ptr<tim::vx::Quantization>(
+                new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, output_sc, output_zp));
+
+        if (isLast)
+        {
+            auto shapeType = getShapeTypeFromMat(outputWrapper->getMat());
+
+            // For Graph Output tensor, we need to set tensor shape before createTensor().
+            outputWrapper->setTensorShape(shapeType);
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::OUTPUT, outputQuant);
+        }
+        else
+        {
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::TRANSIENT, outputQuant);
+        }
+
+        output_index = tvGraph->addWrapper(outputWrapper);
+        outputsIndex.push_back(output_index);
+
+        std::shared_ptr<tim::vx::Operation> tvMatmul;
+
+        tvMatmul = graph->CreateOperation<tim::vx::ops::Matmul>(false, true);
+
+        Ptr<TimVXBackendNode> tvBackendNode = new TimVXBackendNode(tvGraph, tvMatmul, inputsIndex, outputsIndex);
+
+        return tvBackendNode;
+#endif  // HAVE_TIMVX
+        return Ptr<BackendNode>();
+    }
+
     class FullyConnected : public ParallelLoopBody
     {
     public:
         FullyConnected() : srcMat(0), weights(0), biasMat(0), outputMultiplier(0), activationLUT(0), activ(0),
-                           dstMat(0), nstripes(0), outZp(0), useAVX2(false), useAVX512(false) {}
+                           dstMat(0), nstripes(0), outZp(0), useAVX2(false), useAVX512(false), useLASX(false) {}
 
         static void run(const Mat& srcMat, const Mat& weights, const Mat& biasMat, const Mat& outputMultiplier,
                         const Mat& activationLUT, Mat& dstMat, const ActivationLayerInt8* activ, int nstripes, int outZp)
@@ -115,6 +250,7 @@ public:
             p.activ = !activationLUT.empty() ? activ : 0;
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
+            p.useLASX = checkHardwareSupport(CPU_LASX);
 
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
@@ -158,6 +294,11 @@ public:
             #if CV_TRY_AVX2
                 if( useAVX2 )
                     opt_AVX2::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
+                else
+            #endif
+            #if CV_TRY_LASX
+                if( useLASX )
+                    opt_LASX::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
                 else
             #endif
                 {
@@ -214,6 +355,7 @@ public:
         int nstripes, outZp;
         bool useAVX2;
         bool useAVX512;
+        bool useLASX;
     };
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE

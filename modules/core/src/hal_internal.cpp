@@ -67,7 +67,7 @@
 #if defined(__clang__) && defined(__has_feature)
 #if __has_feature(memory_sanitizer)
 #define CV_ANNOTATE_MEMORY_IS_INITIALIZED(address, size) \
-__msan_unpoison(adresse, size)
+__msan_unpoison(address, size)
 #endif
 #endif
 #ifndef CV_ANNOTATE_MEMORY_IS_INITIALIZED
@@ -244,6 +244,11 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
     lwork = (int)round(work1); //optimal buffer size
     fptype* buffer = new fptype[lwork + 1];
 
+    // Make sure MSAN sees the memory as having been written.
+    // MSAN does not think it has been written because a different language is called.
+    // Note: we do this here because if dgesdd is C++, MSAN errors can be reported within it.
+    CV_ANNOTATE_MEMORY_IS_INITIALIZED(buffer, sizeof(fptype) * (lwork + 1));
+
     if(typeid(fptype) == typeid(float))
         OCV_LAPACK_FUNC(sgesdd)(mode, &m, &n, (float*)a, &lda, (float*)w, (float*)u, &ldu, (float*)vt, &ldv, (float*)buffer, &lwork, iworkBuf, info);
     else if(typeid(fptype) == typeid(double))
@@ -252,7 +257,6 @@ lapack_SVD(fptype* a, size_t a_step, fptype *w, fptype* u, size_t u_step, fptype
     // Make sure MSAN sees the memory as having been written.
     // MSAN does not think it has been written because a different language was called.
     CV_ANNOTATE_MEMORY_IS_INITIALIZED(a, a_step * n);
-    CV_ANNOTATE_MEMORY_IS_INITIALIZED(buffer, sizeof(fptype) * (lwork + 1));
     if (u)
       CV_ANNOTATE_MEMORY_IS_INITIALIZED(u, u_step * m);
     if (vt)

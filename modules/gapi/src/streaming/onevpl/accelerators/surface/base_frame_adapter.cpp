@@ -59,7 +59,7 @@ std::shared_ptr<Surface> BaseFrameAdapter::surface() {
     return parent_surface_ptr;
 }
 
-const BaseFrameAdapter::SessionHandle BaseFrameAdapter::get_session_handle() const {
+BaseFrameAdapter::SessionHandle BaseFrameAdapter::get_session_handle() const {
     return parent_handle;
 }
 

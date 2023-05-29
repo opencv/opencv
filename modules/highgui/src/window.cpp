@@ -366,6 +366,8 @@ CV_IMPL double cvGetWindowProperty(const char* name, int prop_id)
             return cvGetPropVisible_QT(name);
         #elif defined(HAVE_WIN32UI)
             return cvGetPropVisible_W32(name);
+        #elif defined(HAVE_COCOA)
+            return cvGetPropVisible_COCOA(name);
         #else
             return -1;
         #endif
@@ -613,6 +615,8 @@ void cv::setWindowTitle(const String& winname, const String& title)
     return setWindowTitle_QT(winname, title);
 #elif defined (HAVE_COCOA)
     return setWindowTitle_COCOA(winname, title);
+#elif defined (HAVE_WAYLAND)
+    return setWindowTitle_WAYLAND(winname, title);
 #else
     CV_Error(Error::StsNotImplemented, "The function is not implemented. "
         "Rebuild the library with Windows, GTK+ 2.x or Cocoa support. "
@@ -1226,6 +1230,7 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 #elif defined (HAVE_GTK)      // see window_gtk.cpp
 #elif defined (HAVE_COCOA)    // see window_cocoa.mm
 #elif defined (HAVE_QT)       // see window_QT.cpp
+#elif defined (HAVE_WAYLAND)  // see window_wayland.cpp
 #elif defined (WINRT) && !defined (WINRT_8_0) // see window_winrt.cpp
 
 #else

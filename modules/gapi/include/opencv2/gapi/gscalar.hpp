@@ -63,10 +63,11 @@ public:
      *
      * @note The value of GScalar may be overwritten by assigning some
      * other GScalar to the object using `operator=` -- on the
-     * assigment, the old GScalar value is discarded.
+     * assignment, the old GScalar value is discarded.
      *
      * @param s a cv::Scalar value to associate with this GScalar object.
      */
+    GAPI_WRAP
     explicit GScalar(const cv::Scalar& s);
 
     /**

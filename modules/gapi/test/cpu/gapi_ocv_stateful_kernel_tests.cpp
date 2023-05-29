@@ -14,12 +14,18 @@
 #include <opencv2/video.hpp>
 #endif
 
+#include <memory> // required by std::shared_ptr
 
 namespace opencv_test
 {
     struct BackSubStateParams
     {
         std::string method;
+    };
+
+    struct CountStateSetupsParams
+    {
+        std::shared_ptr<int> pSetupsCount;
     };
 } // namespace opencv_test
 
@@ -32,6 +38,14 @@ namespace cv
             static const char* tag()
             {
                 return "org.opencv.test.background_substractor_state_params";
+            }
+        };
+
+        template<> struct CompileArgTag<opencv_test::CountStateSetupsParams>
+        {
+            static const char* tag()
+            {
+                return "org.opencv.test.count_state_setups_params";
             }
         };
     } // namespace detail
@@ -127,7 +141,100 @@ namespace
         }
     };
 #endif
+
+    G_TYPED_KERNEL(GCountStateSetups, <cv::GOpaque<bool>(GMat)>,
+                   "org.opencv.test.count_state_setups")
+    {
+        static GOpaqueDesc outMeta(GMatDesc /* in */) { return empty_gopaque_desc(); }
+    };
+
+    GAPI_OCV_KERNEL_ST(GOCVCountStateSetups, GCountStateSetups, int)
+    {
+        static void setup(const cv::GMatDesc &, std::shared_ptr<int> &,
+                          const cv::GCompileArgs &compileArgs)
+        {
+            auto params = cv::gapi::getCompileArg<CountStateSetupsParams>(compileArgs)
+                .value_or(CountStateSetupsParams { });
+            if (params.pSetupsCount != nullptr) {
+                (*params.pSetupsCount)++;
+            }
+        }
+
+        static void run(const cv::Mat & , bool &out, int &)
+        {
+            out = true;
+        }
+    };
 };
+
+TEST(StatefulKernel, StateInitOnceInRegularMode)
+{
+    cv::GMat in;
+    cv::GOpaque<bool> out = GCountStateSetups::on(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // Input mat:
+    cv::Mat inputData(1080, 1920, CV_8UC1);
+    cv::randu(inputData, cv::Scalar::all(1), cv::Scalar::all(128));
+
+    // variable to update when state is initialized in the kernel
+    CountStateSetupsParams params;
+    params.pSetupsCount.reset(new int(0));
+
+    // Testing for 100 frames
+    bool result { };
+    for (int i = 0; i < 100; ++i) {
+        c.apply(cv::gin(inputData), cv::gout(result),
+                cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(), params));
+        EXPECT_TRUE(result);
+        EXPECT_TRUE(params.pSetupsCount != nullptr);
+        EXPECT_EQ(1, *params.pSetupsCount);
+    }
+};
+
+struct StateInitOnce : public ::testing::TestWithParam<bool>{};
+TEST_P(StateInitOnce, StreamingCompiledWithMeta)
+{
+    bool compileWithMeta = GetParam();
+    cv::GMat in;
+    cv::GOpaque<bool> out = GCountStateSetups::on(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // Input mat:
+    cv::Mat inputData(1080, 1920, CV_8UC1);
+    cv::randu(inputData, cv::Scalar::all(1), cv::Scalar::all(128));
+
+    // variable to update when state is initialized in the kernel
+    CountStateSetupsParams params;
+    params.pSetupsCount.reset(new int(0));
+
+    // Compilation & testing
+    auto ccomp = (compileWithMeta)
+        ? c.compileStreaming(cv::descr_of(inputData),
+              cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(),
+                               params))
+        : c.compileStreaming(
+              cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(),
+                               params));
+
+    ccomp.setSource(cv::gin(inputData));
+
+    ccomp.start();
+    EXPECT_TRUE(ccomp.running());
+
+    int counter { };
+    bool result;
+    // Process mat 100 times
+    while (ccomp.pull(cv::gout(result)) && (counter++ < 100)) {
+        EXPECT_TRUE(params.pSetupsCount != nullptr);
+        EXPECT_EQ(1, *params.pSetupsCount);
+    }
+
+    ccomp.stop();
+    EXPECT_FALSE(ccomp.running());
+}
+
+INSTANTIATE_TEST_CASE_P(StatefulKernel, StateInitOnce, ::testing::Bool());
 
 TEST(StatefulKernel, StateIsMutableInRuntime)
 {
@@ -163,7 +270,43 @@ TEST(StatefulKernel, StateIsMutableInRuntime)
 
 }
 
-TEST(StatefulKernel, StateIsAutoResetForNewStream)
+TEST(StateIsResetOnNewStream, RegularMode)
+{
+    cv::GMat in;
+    cv::GOpaque<bool> out = GCountStateSetups::on(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // Input mat:
+    cv::Mat inputData(1080, 1920, CV_8UC1);
+    cv::randu(inputData, cv::Scalar::all(1), cv::Scalar::all(128));
+
+    // variable to update when state is initialized in the kernel
+    CountStateSetupsParams params;
+    params.pSetupsCount.reset(new int(0));
+
+    auto setupsCounter = c.compile(cv::descr_of(inputData),
+                                   cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(),
+                                                    params));
+
+    bool result { };
+    for (int i = 0; i < 2; ++i) {
+        setupsCounter(cv::gin(inputData), cv::gout(result));
+        EXPECT_TRUE(params.pSetupsCount != nullptr);
+        EXPECT_EQ(1, *params.pSetupsCount);
+    }
+
+    EXPECT_TRUE(params.pSetupsCount != nullptr);
+    EXPECT_EQ(1, *params.pSetupsCount);
+    setupsCounter.prepareForNewStream();
+
+    for (int i = 0; i < 2; ++i) {
+        setupsCounter(cv::gin(inputData), cv::gout(result));
+        EXPECT_TRUE(params.pSetupsCount != nullptr);
+        EXPECT_EQ(2, *params.pSetupsCount);
+    }
+}
+
+TEST(StateIsResetOnNewStream, StreamingMode)
 {
     cv::GMat in;
     cv::GOpaque<bool> out = GIsStateUpToDate::on(in);
@@ -272,7 +415,7 @@ TEST(StatefulKernel, StateIsInitViaCompArgs)
     // Allowing 1% difference of all pixels between G-API and OpenCV results
     compareBackSubResults(gapiForeground, ocvForeground, 1);
 
-    // Additionally, test the case where state is resetted
+    // Additionally, test the case where state is reset
     gapiBackSub.prepareForNewStream();
     gapiBackSub(cv::gin(frame), cv::gout(gapiForeground));
     pOcvBackSub->apply(frame, ocvForeground);
@@ -386,6 +529,45 @@ TEST(StatefulKernel, StateIsChangedViaCompArgsOnReshape)
 
     run("cv/video/768x576.avi", "knn");
     run("cv/video/1920x1080.avi", "mog2");
+}
+
+TEST(StatefulKernel, StateIsResetOnceOnReshapeInStreaming)
+{
+    cv::GMat in;
+    cv::GOpaque<bool> out = GCountStateSetups::on(in);
+    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+
+    // variable to update when state is initialized in the kernel
+    CountStateSetupsParams params;
+    params.pSetupsCount.reset(new int(0));
+
+    auto ccomp = c.compileStreaming(
+        cv::compile_args(cv::gapi::kernels<GOCVCountStateSetups>(), params));
+
+    auto run = [&ccomp, &params](const std::string& videoPath, int expectedSetupsCount) {
+        auto path = findDataFile(videoPath);
+        try {
+            ccomp.setSource<cv::gapi::wip::GCaptureSource>(path);
+        } catch(...) {
+            throw SkipTestException("Video file can not be opened");
+        }
+        ccomp.start();
+
+        int frames = 0;
+        bool result = false;
+        while (ccomp.pull(cv::gout(result)) && (frames++ < 10)) {
+            EXPECT_TRUE(result);
+            EXPECT_TRUE(params.pSetupsCount != nullptr);
+            EXPECT_EQ(expectedSetupsCount, *params.pSetupsCount);
+        }
+        ccomp.stop();
+    };
+
+    run("cv/video/768x576.avi", 1);
+    // FIXME: it should be 2, not 3 for expectedSetupsCount here.
+    // With current implemention both GCPUExecutable reshape() and
+    // handleNewStream() call setupKernelStates()
+    run("cv/video/1920x1080.avi", 3);
 }
 #endif
 

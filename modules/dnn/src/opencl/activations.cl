@@ -306,3 +306,50 @@ __kernel void ThresholdedReluForward(const int n, __global T* in, __global T* ou
     if(index < n)
         out[index] = (in[index] > alpha ? in[index] : 0.f);
 }
+
+__kernel void GeluForward(const int n, __global T* in, __global T* out)
+{
+    int index = get_global_id(0);
+    if (index < n)
+    {
+        T x = in[index];
+        out[index] = (T)0.5f * x * ( (T)1.f + erf(x * M_SQRT1_2) );
+    }
+}
+
+__kernel void GeluApproximationForward(const int n, __global T* in, __global T* out)
+{
+    // see GeluApproximationConstants from modules/dnn/src/layers/elementwise_layers.cpp
+    const T sqrt_2_pi = 0.7978845834732056f;
+    const T coef_sqrt_2_pi = 0.044714998453855515f * sqrt_2_pi;
+
+    int index = get_global_id(0);
+    if(index < n)
+    {
+        T x = in[index];
+        out[index] = (T)0.5f * x * ( (T)1.f + tanh(x * (sqrt_2_pi + coef_sqrt_2_pi * x * x)) );
+    }
+}
+
+__kernel void ShrinkForward(const int n, __global T* in, __global T* out,
+                            const KERNEL_ARG_DTYPE bias,
+                            const KERNEL_ARG_DTYPE lambd)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = in[index] < -lambd ? in[index] + bias : (in[index] > lambd ? in[index] - bias : 0.f);
+}
+
+__kernel void SignForward(const int n, __global T* in, __global T* out)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = in[index] > 0.f ? 1.0f : ((in[index] < 0.f) ? -1.0f : 0.0f);
+}
+
+__kernel void ReciprocalForward(const int n, __global T* in, __global T* out)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = 1.0f/in[index];
+}

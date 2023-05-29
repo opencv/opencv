@@ -44,7 +44,8 @@ static std::string pdims(const std::vector<int64_t> &dims) {
 
 struct TensorInfo {
     TensorInfo() = default;
-    explicit TensorInfo(const Ort::TensorTypeAndShapeInfo& info)
+
+    explicit TensorInfo(const Ort::ConstTensorTypeAndShapeInfo &info)
         : dims(info.GetShape())
         , type(info.GetElementType())
         , is_dynamic(ade::util::find(dims, -1) != dims.end()) {
@@ -171,7 +172,7 @@ inline int toCV(ONNXTensorElementDataType prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return CV_32S;
-    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    default: GAPI_Error("ONNX. Unsupported data type");
     }
     return -1;
 }
@@ -207,7 +208,7 @@ inline void copyFromONNX(Ort::Value &v, cv::Mat& mat) {
                                            mat.total());
             break;
         }
-    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    default: GAPI_Error("ONNX. Unsupported data type");
     }
 }
 
@@ -233,7 +234,7 @@ inline void preprocess(const cv::Mat& src,
                             "32F tensor dimensions should match with all non-dynamic NN input dimensions");
             }
         } else {
-            GAPI_Assert(false && "32F tensor size should match with NN input");
+            GAPI_Error("32F tensor size should match with NN input");
         }
 
         dst = src;
@@ -338,7 +339,7 @@ void preprocess(const cv::MediaFrame::View& view,
             break;
         }
         default:
-            GAPI_Assert(false && "Unsupported media format for ONNX backend");
+            GAPI_Error("Unsupported media format for ONNX backend");
     }
 }
 
@@ -367,7 +368,7 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
         return createTensor<int32_t>(memory_info, tensor_params, data);
     default:
-        GAPI_Assert(false && "ONNX. Unsupported data type");
+        GAPI_Error("ONNX. Unsupported data type");
     }
     return Ort::Value{nullptr};
 }
@@ -688,11 +689,10 @@ std::vector<TensorInfo> ONNXCompiled::getTensorInfo(TensorPosition pos) {
             : this_session.GetOutputTypeInfo(i);
         tensor_info.emplace_back(info.GetTensorTypeAndShapeInfo());
 
-        char *name_p = pos == INPUT
-            ? this_session.GetInputName(i, allocator)
-            : this_session.GetOutputName(i, allocator);
-        tensor_info.back().name = name_p;
-        allocator.Free(name_p);
+        Ort::AllocatedStringPtr name_p = pos == INPUT
+            ? this_session.GetInputNameAllocated(i, allocator)
+            : this_session.GetOutputNameAllocated(i, allocator);
+        tensor_info.back().name = std::string(name_p.get());
     }
 
     return tensor_info;
@@ -735,7 +735,8 @@ void ONNXCompiled::extractMat(ONNXCallContext &ctx, const size_t in_idx, Views& 
     }
 }
 
-void ONNXCompiled::setOutput(int i, cv::Mat &m) {
+void ONNXCompiled::setOutput(int i, cv::Mat &m)
+{
     // FIXME: No need in double-indexing?
     out_data[i] = m;
 }
@@ -857,7 +858,7 @@ static void checkInputMeta(const cv::GMetaArg mm) {
                 case cv::MediaFormat::NV12: break;
                 case cv::MediaFormat::BGR:  break;
                 default:
-                    GAPI_Assert(false && "Unsupported media format for ONNX backend");
+                    GAPI_Error("Unsupported media format for ONNX backend");
             } break;
         } break;
         default:
@@ -1100,9 +1101,9 @@ struct InferList2: public cv::detail::KernelTag {
                     const auto &vec = this_vec.rref<cv::Mat>();
                     uu.oc->setInput(in_idx, vec[list_idx]);
                 } else {
-                    GAPI_Assert(false && "Only Rect and Mat types are supported for infer list 2!");
+                    GAPI_Error("Only Rect and Mat types are supported for infer list 2!");
                 }
-                // }}} (Preapre input)
+                // }}} (Prepare input)
             } // }}} (For every input of the net)
 
             std::vector<cv::Mat> out_mats(uu.oc->numOutputs());
@@ -1133,9 +1134,34 @@ namespace {
             // FIXME: Introduce a DNNBackend interface which'd specify
             // the framework for this???
             GONNXModel gm(gr);
-            const auto &np = gm.metadata(nh).get<NetworkParams>();
-            const auto &pp = cv::util::any_cast<cv::gapi::onnx::detail::ParamDesc>(np.opaque);
+            auto &np = gm.metadata(nh).get<NetworkParams>();
+            auto &pp = cv::util::any_cast<cv::gapi::onnx::detail::ParamDesc>(np.opaque);
             const auto &ki = cv::util::any_cast<KImpl>(ii.opaque);
+
+            GModel::Graph model(gr);
+            auto& op = model.metadata(nh).get<Op>();
+            if (pp.is_generic) {
+                auto& info = cv::util::any_cast<cv::detail::InOutInfo>(op.params);
+
+                for (const auto& a : info.in_names)
+                {
+                    pp.input_names.push_back(a);
+                }
+                // Adding const input is necessary because the definition of input_names
+                // includes const input.
+                for (const auto& a : pp.const_inputs)
+                {
+                    pp.input_names.push_back(a.first);
+                }
+                pp.num_in = info.in_names.size();
+
+                for (const auto& a : info.out_names)
+                {
+                    pp.output_names.push_back(a);
+                }
+                pp.num_out = info.out_names.size();
+            }
+
             gm.metadata(nh).set(ONNXUnit{pp});
             gm.metadata(nh).set(ONNXCallable{ki.run});
             gm.metadata(nh).set(CustomMetaFunction{ki.customMetaFunc});

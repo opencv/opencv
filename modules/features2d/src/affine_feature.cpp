@@ -41,7 +41,7 @@
 
 /*
  Guoshen Yu, Jean-Michel Morel, ASIFT: An Algorithm for Fully Affine
- Invariant Comparison,  Image Processing On Line, 1 (2011), pp. 11–38.
+ Invariant Comparison,  Image Processing On Line, 1 (2011), pp. 11-38.
  https://doi.org/10.5201/ipol.2011.my-asift
  */
 
@@ -243,7 +243,7 @@ private:
         else
             mask0 = mask;
         pose = Matx23f(1,0,0,
-                    0,1,0);
+                       0,1,0);
 
         if( phi == 0 )
             image.copyTo(rotImage);
@@ -276,6 +276,8 @@ private:
         }
         if( phi != 0 || tilt != 1 )
             warpAffine(mask0, warpedMask, pose, warpedImage.size(), INTER_NEAREST);
+        else
+            warpedMask = mask0;
     }
 
 

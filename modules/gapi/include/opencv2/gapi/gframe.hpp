@@ -48,7 +48,7 @@ struct GOrigin;
  * operations like BGR(), Y(), UV() -- these operations provide
  * access to frame's data in the familiar cv::GMat form, which can be
  * used with the majority of the existing G-API operations. These
- * accessor functions may perform color space converion on the fly if
+ * accessor functions may perform color space conversion on the fly if
  * the image format of the GFrame they are applied to differs from the
  * operation's semantic (e.g. the BGR() accessor is called on an NV12
  * image frame).

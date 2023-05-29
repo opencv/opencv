@@ -20,6 +20,8 @@ const char* to_cstring(AccelType type) {
             return "HOST";
         case AccelType::DX11:
             return "DX11";
+        case AccelType::VAAPI:
+            return "VAAPI";
         default:
             GAPI_DbgAssert(false && "Unexpected AccelType");
             break;
@@ -79,6 +81,54 @@ IDeviceSelector::Score::Type IDeviceSelector::Score::get() const {
 }
 
 IDeviceSelector::~IDeviceSelector() {
+}
+
+namespace detail
+{
+struct DeviceContextCreator : public IDeviceSelector {
+    DeviceScoreTable select_devices() const override { return {};}
+    DeviceContexts select_context() override { return {};}
+
+    template<typename Entity, typename ...Args>
+    static Entity create_entity(Args &&...args) {
+        return IDeviceSelector::create<Entity>(std::forward<Args>(args)...);
+    }
+};
+}
+
+Device create_host_device() {
+    return detail::DeviceContextCreator::create_entity<Device>(nullptr,
+                                                               "CPU",
+                                                               AccelType::HOST);
+}
+
+Context create_host_context() {
+    return detail::DeviceContextCreator::create_entity<Context>(nullptr,
+                                                                AccelType::HOST);
+}
+
+Device create_dx11_device(Device::Ptr device_ptr,
+                          const std::string& device_name) {
+    return detail::DeviceContextCreator::create_entity<Device>(device_ptr,
+                                                               device_name,
+                                                               AccelType::DX11);
+}
+
+Context create_dx11_context(Context::Ptr ctx_ptr) {
+    return detail::DeviceContextCreator::create_entity<Context>(ctx_ptr,
+                                                                AccelType::DX11);
+}
+
+Device create_vaapi_device(Device::Ptr device_ptr,
+                           const std::string& device_name) {
+    return detail::DeviceContextCreator::create_entity<Device>(device_ptr,
+                                                               device_name,
+                                                               AccelType::VAAPI);
+}
+
+Context create_vaapi_context(Context::Ptr ctx_ptr) {
+    return detail::DeviceContextCreator::create_entity<Context>(ctx_ptr,
+                                                                AccelType::VAAPI);
 }
 
 } // namespace onevpl

@@ -16,11 +16,7 @@
 #include "compiler/passes/passes.hpp"
 
 cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
-    : m_orig_graph(std::move(g_model))
-    , m_island_graph(GModel::Graph(*m_orig_graph).metadata()
-                     .get<IslandModel>().model)
-    , m_gm(*m_orig_graph)
-    , m_gim(*m_island_graph)
+    : GAbstractExecutor(std::move(g_model))
 {
     // NB: Right now GIslandModel is acyclic, so for a naive execution,
     // simple unrolling to a list of triggers is enough
@@ -30,10 +26,11 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
     // 1. Allocate all internal resources first (NB - CPU plugin doesn't do it)
     // 2. Put input/output GComputation arguments to the storage
     // 3. For every Island, prepare vectors of input/output parameter descs
-    // 4. Iterate over a list of operations (sorted in the topological order)
-    // 5. For every operation, form a list of input/output data objects
-    // 6. Run GIslandExecutable
-    // 7. writeBack
+    // 4. Ask every GIslandExecutable to prepare its internal states for a new stream
+    // 5. Iterate over a list of operations (sorted in the topological order)
+    // 6. For every operation, form a list of input/output data objects
+    // 7. Run GIslandExecutable
+    // 8. writeBack
 
     auto sorted = m_gim.metadata().get<ade::passes::TopologicalSortData>();
     for (auto nh : sorted.nodes())
@@ -78,10 +75,13 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
             break;
 
         default:
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
             break;
         } // switch(kind)
     } // for(gim nodes)
+
+    // (4)
+    prepareForNewStream();
 }
 
 namespace cv {
@@ -149,7 +149,7 @@ void writeBackExec(const Mag& mag, const RcDesc &rc, GRunArgP &g_arg)
     {
     case GRunArgP::index_of<cv::Mat*>() : {
         // If there is a copy intrinsic at the end of the graph
-        // we need to actualy copy the data to the user buffer
+        // we need to actually copy the data to the user buffer
         // since output runarg was optimized to simply point
         // to the input of the copy kernel
         // FIXME:
@@ -248,7 +248,7 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle & nh, const ade::N
         break;
     }
     default:
-        GAPI_Assert(false);
+        GAPI_Error("InternalError");
     }
 }
 
@@ -401,10 +401,10 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
         magazine::resetInternalData(m_res, data);
     }
 
-    // Run the script
+    // Run the script (5)
     for (auto &op : m_ops)
     {
-        // (5), (6)
+        // (6), (7)
         Input i{m_res, op.in_objects};
         Output o{m_res, op.out_objects};
         op.isl_exec->run(i, o);
@@ -412,17 +412,12 @@ void cv::gimpl::GExecutor::run(cv::gimpl::GRuntimeArgs &&args)
         o.verify();
     }
 
-    // (7)
+    // (8)
     for (auto it : ade::util::zip(ade::util::toRange(proto.outputs),
                                   ade::util::toRange(args.outObjs)))
     {
         magazine::writeBackExec(m_res, std::get<0>(it), std::get<1>(it));
     }
-}
-
-const cv::gimpl::GModel::Graph& cv::gimpl::GExecutor::model() const
-{
-    return m_gm;
 }
 
 bool cv::gimpl::GExecutor::canReshape() const

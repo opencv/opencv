@@ -350,10 +350,10 @@ static bool ocl_blendLinear( InputArray _src1, InputArray _src2, InputArray _wei
 {
     int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
-    char cvt[30];
+    char cvt[50];
     ocl::Kernel k("blendLinear", ocl::imgproc::blend_linear_oclsrc,
                   format("-D T=%s -D cn=%d -D convertToT=%s", ocl::typeToStr(depth),
-                         cn, ocl::convertTypeStr(CV_32F, depth, 1, cvt)));
+                         cn, ocl::convertTypeStr(CV_32F, depth, 1, cvt, sizeof(cvt))));
     if (k.empty())
         return false;
 

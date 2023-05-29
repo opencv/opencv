@@ -554,7 +554,7 @@ TEST_F(S11N_Basic, Test_RunArgs_MatScalar) {
             EXPECT_EQ(scalar, out_scalar);
         } break;
         default:
-            GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
+            GAPI_Error("This value type is not supported!"); // ...maybe because of STANDALONE mode.
             break;
         }
         i++;
@@ -569,7 +569,6 @@ TEST_F(S11N_Basic, Test_Bind_RunArgs_MatScalar) {
     v[0] = cv::GRunArg{ mat };
     v[1] = cv::GRunArg{ scalar };
     GRunArgsP output = cv::gapi::bind(v);
-    unsigned int i = 0;
     for (auto it : output)
     {
         using T = cv::GRunArgP;
@@ -588,10 +587,9 @@ TEST_F(S11N_Basic, Test_Bind_RunArgs_MatScalar) {
             EXPECT_EQ(out_scalar->val[2], scalar.val[2]);
         } break;
         default:
-            GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
+            GAPI_Error("This value type is not supported!"); // ...maybe because of STANDALONE mode.
             break;
         }
-        i++;
     }
 }
 

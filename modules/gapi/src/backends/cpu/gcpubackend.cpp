@@ -27,6 +27,7 @@
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
 
 #include "utils/itt.hpp"
+#include "logger.hpp"
 
 // FIXME: Is there a way to take a typed graph (our GModel),
 // and create a new typed graph _ATOP_ of that (by extending with a couple of
@@ -113,8 +114,6 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
         }
     }
     makeReshape();
-    // For each stateful kernel call 'setup' user callback to initialize state.
-    setupKernelStates();
 }
 
 // FIXME: Document what it does
@@ -190,18 +189,23 @@ void cv::gimpl::GCPUExecutable::makeReshape() {
 void cv::gimpl::GCPUExecutable::reshape(ade::Graph&, const GCompileArgs& args) {
     m_compileArgs = args;
     makeReshape();
-    // Signal to reset stateful kernels` state.
-    // There can be no handleNewStream() call to set this flag
-    // if user didn't call GCompiled`s prepareForNewStream()
-    m_newStreamStarted = true;
+    // TODO: Add an input meta sensitivity flag to stateful kernels.
+    // When reshape() happens, reset state for meta-sensitive kernels only
+    if (!m_nodesToStates.empty()) {
+        std::call_once(m_warnFlag,
+            [](){
+                GAPI_LOG_WARNING(NULL,
+                    "\nGCPUExecutable::reshape was called. Resetting states of stateful kernels.");
+            });
+        setupKernelStates();
+    }
 }
 
 void cv::gimpl::GCPUExecutable::handleNewStream()
 {
-    // Signal to reset stateful kernels` state.
-    // No need to call reshape() here since it'll
-    // be called automatically if input meta was changed
-    m_newStreamStarted = true;
+    // In case if new video-stream happens - for each stateful kernel
+    // call 'setup' user callback to re-initialize state.
+    setupKernelStates();
 }
 
 void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
@@ -229,14 +233,6 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
             // and should be excluded, but now we just don't support it
             magazine::resetInternalData(m_res, desc);
         }
-    }
-
-    // In case if new video-stream happens - for each stateful kernel
-    // call 'setup' user callback to re-initialize state.
-    if (m_newStreamStarted)
-    {
-        setupKernelStates();
-        m_newStreamStarted = false;
     }
 
     // OpenCV backend execution is not a rocket science at all.

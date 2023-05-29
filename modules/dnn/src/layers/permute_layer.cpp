@@ -47,6 +47,8 @@
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
 #include "../op_webnn.hpp"
+#include "../op_timvx.hpp"
+#include "../op_cann.hpp"
 
 #include <float.h>
 #include <algorithm>
@@ -108,6 +110,9 @@ public:
             _order.push_back(currentOrder);
         }
 
+        zeropoint = params.get<int>("zeropoints", 0);
+        scale = params.get<float>("scales", 1.0f);
+
         setParamsFrom(params);
         checkNeedForPermutation();
     }
@@ -122,10 +127,24 @@ public:
             return true;
         }
 #endif
+
+#ifdef HAVE_TIMVX
+        if (backendId == DNN_BACKEND_TIMVX && haveTimVX())
+        {
+            int len = this->type.length();
+            if (len <= 4)
+                return false;
+
+            if (this->type.substr(len - 4) == "Int8")
+                return true;
+            else
+                return false;
+        }
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_WEBNN ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan());
+               backendId == DNN_BACKEND_CANN;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -420,6 +439,35 @@ public:
         }
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        // create operator
+        auto op = std::make_shared<ge::op::Permute>(name);
+
+        // set attributes
+        op->set_attr_order(ge::Operator::OpListInt(
+            _order.begin(), _order.end()
+        ));
+
+        // set inputs
+        // set inputs : x
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+
+        // set outputs
+        auto output_y_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_y_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -462,19 +510,118 @@ public:
 #endif
 
 
-#ifdef HAVE_VULKAN
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
+#ifdef HAVE_TIMVX
+  virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,
+                                       const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                       const std::vector<Ptr<BackendWrapper> > &outputsWrapper,
+                                       bool isLast) CV_OVERRIDE
     {
-        CV_Assert(!_order.empty());
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPermute(_order));
-        return Ptr<BackendNode>(new VkComBackendNode(input, op));
+        // tvGraph Initialization.
+        auto timVxInfo = reinterpret_cast<TimVXInfo *>(timVXInfo_);
+        CV_Assert(timVxInfo);
+        Ptr<TimVXGraph> tvGraph = timVxInfo->getGraph();
+        CV_Assert(tvGraph);
+        Ptr<tim::vx::Graph> graph = tvGraph->graph;
+
+        std::vector<int> inputsIndex, outputsIndex;
+        int input_index = -1, output_index = -1;
+
+        if (outputsWrapper.size() != 1) // only work for single outputBlob
+            return Ptr<BackendNode>();
+
+        // Input
+        Ptr<TimVXBackendWrapper> inputWrapper = inputsWrapper[0].dynamicCast<TimVXBackendWrapper>();
+        if (inputWrapper->isTensor())
+        {
+            input_index = tvGraph->getTensorIndex(inputWrapper->getTensor());
+            if (input_index == -1)
+            {
+                // Copy To New inputWrapper
+                Mat tmp = inputWrapper->getMat();
+                inputWrapper = Ptr<TimVXBackendWrapper>(new TimVXBackendWrapper(tmp));
+            }
+        }
+
+        if (!inputWrapper->isTensor())
+        {
+            Ptr<tim::vx::Quantization> tvInputQuant = Ptr<tim::vx::Quantization>(
+                    new tim::vx::Quantization(tim::vx::QuantType::ASYMMETRIC, scale, zeropoint));
+            inputWrapper->createTensor(graph,tim::vx::TensorAttribute::INPUT, tvInputQuant);
+            input_index = tvGraph->addWrapper(inputWrapper);
+        }
+        inputsIndex.push_back(input_index);
+
+        //Output
+        Ptr<TimVXBackendWrapper> outputWrapper = outputsWrapper[0].dynamicCast<TimVXBackendWrapper>();
+        // output has the same quantized attrib.
+        Ptr<tim::vx::Quantization> outputQuant = inputWrapper->getTensorQuantization();
+
+        if (isLast)
+        {
+            auto shapeType = getShapeTypeFromMat(outputWrapper->getMat());
+
+            // For Graph Output tensor, we need to set tensor shape before createTensor().
+            outputWrapper->setTensorShape(shapeType);
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::OUTPUT, outputQuant);
+        }
+        else
+        {
+            outputWrapper->createTensor(graph, tim::vx::TensorAttribute::TRANSIENT, outputQuant);
+        }
+        output_index = tvGraph->addWrapper(outputWrapper);
+        outputsIndex.push_back(output_index);
+
+        std::vector<uint32_t> tvOrder;
+        if (getOrderWHCN(tvOrder))
+        {
+            std::shared_ptr<tim::vx::Operation> tvPermute = graph->CreateOperation<tim::vx::ops::Transpose>(tvOrder);
+
+            Ptr<TimVXBackendNode> tvBackendNode = new TimVXBackendNode(tvGraph, tvPermute, inputsIndex, outputsIndex);
+
+            return tvBackendNode;
+        }
+        else
+        {
+            return Ptr<BackendNode>();
+        }
     }
-#endif // HAVE_VULKAN
+#endif // HAVE_TIMVX
 
     virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
                              const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
     {
         return true;
+    }
+
+    // convert OpenCV NCHW order to WHCN order.
+    bool getOrderWHCN(std::vector<uint32_t>& orderWHCN)
+    {
+        std::map<int, int> lookup;
+        int orderLen = _order.size();
+        if (orderLen <2)
+            return false;
+        orderWHCN.assign(_order.begin(), _order.end());
+
+        if (orderLen == 2)
+        {
+            return true;
+        }
+        else if (orderLen >= 3)
+        {
+            for (int i = 0; i < orderLen; i++)
+            {
+                lookup[i] = orderLen - i - 1;
+            }
+
+            for (int i = 0; i < orderLen; i++)
+            {
+                orderWHCN[i] = lookup[_order[i]];
+            }
+            std::reverse(orderWHCN.begin(), orderWHCN.end());
+            return true;
+        }
+        else
+            return false;
     }
 
     size_t _count;
@@ -492,6 +639,8 @@ public:
 #endif
 
     size_t _numAxes;
+    int zeropoint;
+    float scale;
 };
 
 Ptr<PermuteLayer> PermuteLayer::create(const LayerParams &params)

@@ -39,8 +39,14 @@
 //
 //M*/
 
-#include <opencv2/core.hpp>
+#if !defined(BUILD_PLUGIN)
 #include "cvconfig.h"
+#else
+#include <opencv2/core/cvdef.h>
+#undef __OPENCV_BUILD  // allow public API only
+#endif
+
+#include <opencv2/core.hpp>
 
 #ifndef CV_OCL4DNN
 #define CV_OCL4DNN 0

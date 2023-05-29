@@ -259,6 +259,10 @@ class CppHeaderParser(object):
         if "CV_EXPORTS_W_SIMPLE" in l:
             l = l.replace("CV_EXPORTS_W_SIMPLE", "")
             modlist.append("/Simple")
+        if "CV_EXPORTS_W_PARAMS" in l:
+            l = l.replace("CV_EXPORTS_W_PARAMS", "")
+            modlist.append("/Map")
+            modlist.append("/Params")
         npos = l.find("CV_EXPORTS_AS")
         if npos < 0:
             npos = l.find('CV_WRAP_AS')
@@ -612,6 +616,8 @@ class CppHeaderParser(object):
                                                              ("InputOutputArray", mat),
                                                              ("OutputArray", mat),
                                                              ("noArray", arg_type)]).strip()
+                    if '/IO' in modlist and '/O' in modlist:
+                        modlist.remove('/O')
                     args.append([arg_type, arg_name, defval, modlist])
                 npos = arg_start-1
 
@@ -776,7 +782,15 @@ class CppHeaderParser(object):
                 var_list = [var_name1] + [i.strip() for i in var_list[1:]]
 
                 for v in var_list:
-                    class_decl[3].append([var_type, v, "", var_modlist])
+                    prop_definition = v.split('=')
+                    prop_name = prop_definition[0].strip()
+                    if len(prop_definition) == 1:
+                        # default value is not provided
+                        prop_default_value = ''
+                    else:
+                        prop_default_value = prop_definition[-1]
+                    class_decl[3].append([var_type, prop_name, prop_default_value,
+                                          var_modlist])
             return stmt_type, "", False, None
 
         # something unknown

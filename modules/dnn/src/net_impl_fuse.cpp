@@ -38,7 +38,9 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
 
     if(!fusion || (preferableBackend != DNN_BACKEND_OPENCV &&
                     preferableBackend != DNN_BACKEND_CUDA &&
-                    preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH))
+                    preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH &&
+                    preferableBackend != DNN_BACKEND_TIMVX &&
+                    preferableBackend != DNN_BACKEND_VKCOM))
        return;
 
 #if 0  // FIXIT mode without fusion is broken due to unsupported layers and handling of "custom" nodes
@@ -81,10 +83,11 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                     break;
                 }
 #endif
-                /* we use `tryFuse` member of convolution layer to fuse eltwise later
+                /* we use `tryFuse` member of convolution layer to fuse eltwise/naryEltwise later
                  * it's not intended to be fused here; hence, we stop when we encounter eltwise
                  */
-                if (preferableBackend == DNN_BACKEND_CUDA && ld.type == "Convolution" && nextData->type == "Eltwise")
+                if (preferableBackend == DNN_BACKEND_CUDA && ld.type == "Convolution" &&
+                        (nextData->type == "Eltwise" || nextData->type == "NaryEltwise"))
                     break;
                 Ptr<Layer> nextLayer = nextData->layerInstance;
                 if (currLayer->tryFuse(nextLayer))
@@ -109,7 +112,8 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                     break;
             }
 
-            if (preferableBackend != DNN_BACKEND_OPENCV && preferableBackend != DNN_BACKEND_CUDA)
+            if (preferableBackend != DNN_BACKEND_OPENCV && preferableBackend != DNN_BACKEND_CUDA
+                && preferableBackend != DNN_BACKEND_VKCOM)
                 continue;  // Go to the next layer.
 
             // TODO: OpenCL target support more fusion styles.
@@ -139,6 +143,28 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                 if (nextActivLayer.empty())
                     break;
 
+                // For now, Vulkan target support fusion with activation of ReLU/ReLU6
+                if (IS_DNN_VULKAN_TARGET(preferableTarget))
+                {
+                    if (nextData->type == "ReLU")
+                    {
+                        Ptr<ReLULayer> nextReLULayer = nextData->layerInstance.dynamicCast<ReLULayer>();
+                        CV_Assert(nextReLULayer);
+                        if (nextReLULayer->negativeSlope != 0.0f)
+                            break; // Skip LeakyReLU
+                    }
+                    else if (nextData->type == "ReLU6")
+                    {
+                        Ptr<ReLU6Layer> nextReLU6Layer = nextData->layerInstance.dynamicCast<ReLU6Layer>();
+                        CV_Assert(nextReLU6Layer);
+
+                        if( fabs(nextReLU6Layer->minValue) > FLT_EPSILON || fabs(nextReLU6Layer->maxValue - 6.0f) > FLT_EPSILON)
+                            break; // Skip ReLU6 if the minValue != 0 or maxValue != 6.
+                    }
+                    else
+                        break;
+                }
+
                 if (currLayer->setActivation(nextActivLayer))
                 {
                     printf_(("\tfused with %s\n", nextActivLayer->name.c_str()));
@@ -161,23 +187,204 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                     break;
             }
 
+            // CPU: fuse Convolution 2D layer followed by Add + activation.
+            while (nextData && (IS_DNN_CPU_TARGET(preferableTarget)) && ld.layerInstance->type == "Convolution")
+            {
+                // Note that we can only deal with conv + Add + activ here.
+                // To avoid the order like: conv + activ + add, if we found the conv has been fused with activ, we break.
+                Ptr<ConvolutionLayer> convLayer = ld.layerInstance.dynamicCast<ConvolutionLayer>();
+
+                // Only Convolution layer without fusion Activation supports this fusion, other-wise, we skip.
+                if (convLayer->fusedActivation)
+                    break;
+
+                // For now, there are currently two layers in OpenCV that run the Add operator.
+                Ptr<NaryEltwiseLayer> nextNaryEltwiseLayer = nextData->layerInstance.dynamicCast<NaryEltwiseLayer>();
+                Ptr<EltwiseLayer> nextEltwiseLayer = nextData->layerInstance.dynamicCast<EltwiseLayer>();
+                if (nextNaryEltwiseLayer.empty() && nextEltwiseLayer.empty())
+                    break;
+
+                if (nextData->inputBlobsId.size() != 2)
+                    break;
+
+                if (!nextData->params.has("operation") || toLowerCase(nextData->params.get<String>("operation")) != "add")
+                {
+                    CV_LOG_DEBUG(NULL, "DNN/CPU: fusion with NaryEltwise or Eltwise Layer operation is not supported: "
+                        << nextData->params.get<String>("operation"));
+                    break;
+                }
+
+                // This optimization is for cases like
+                // some_layer                      conv
+                //   |                              |
+                //   +-- eltwise or (naryEltwise) --+
+                //               |
+                //             activ
+                // This way all the element-wise computations
+                // (i.e. some_layer+conv) would be done at [conv] layer.
+                // So we need to replace [conv]'s output blob to [eltwise]'s one
+                // considering that [activ] is an in-place layer.
+                // Also we need to move all the consumers' references.
+                // To prevent memory collisions (i.e. when input of
+                // [conv] and output of [eltwise or naryEltwise] is the same blob)
+                // we allocate a new blob.
+                {
+                    LayerData *naryOrEltwiseData = nextData;
+
+                    // Eltwise or NaryEltwise layer has two inputs. We need to determine which
+                    // is a base convolution layer and which could be used as it's bias.
+                    LayerData* biasLayerData = 0;
+                    for (int i = 0; i < 2; ++i)
+                    {
+                        LayerData *downLayerData = &layers[naryOrEltwiseData->inputBlobsId[i].lid];
+                        CV_Assert(downLayerData);
+                        // If the current downLayerData is skip, it means it is fused into the parent node.
+                        while (downLayerData->skip)
+                        {
+                            if (downLayerData->inputBlobsId.size() == 1)
+                                downLayerData = &layers[downLayerData->inputBlobsId[0].lid];
+                            else
+                            {
+                                downLayerData = 0;
+                                break;
+                            }
+                        }
+
+                        if (downLayerData && ld.id == downLayerData->id)
+                        {
+                            biasLayerData = &layers[naryOrEltwiseData->inputBlobsId[1 - i].lid];
+                            break;
+                        }
+                    }
+
+                    // We check if biasLayerData is expected layer.
+                    if (!biasLayerData)
+                        break;
+
+                    // We check if the bias output shape and the ld output shape are the same.
+                    MatShape biasOutShape = shape(biasLayerData->outputBlobs[0]);
+                    MatShape ldOutShape = shape(ld.outputBlobs[0]);
+                    if (biasOutShape != ldOutShape)
+                        break;
+
+                    CV_Assert(biasLayerData);
+                    {
+                        // fuse naryEltwise layer
+                        // bias must already be computed to fuse => bias layer must appear before convolution
+                        if (biasLayerData->id < ld.id && biasLayerData->consumers.size() == 1)
+                        {
+                            // conv + naryEltwise.
+                            CV_Assert_N(biasLayerData->outputBlobs.size() == 1, ld.inputBlobs.size() == 1);
+                            CV_Assert_N(biasLayerData->outputBlobsWrappers.size() == 1, ld.inputBlobsWrappers.size() == 1);
+
+                            printf_(("\tfused with %s\n", nextNaryEltwiseLayer->name.c_str()));
+                            naryOrEltwiseData->skip = true;
+
+
+                            CV_Assert_N(ld.outputBlobs.size() == 1, ld.outputBlobsWrappers.size() == 1);
+                            // Note: Here's a trick. We set the output of conv as the output of biasLayer.
+                            ld.outputBlobs[0] = ld.outputBlobs[0].clone();
+                            ld.outputBlobsWrappers[0] = wrap(ld.outputBlobs[0]);
+
+                            // Recursively modifies the output data of biasLayerData and its parent.
+                            std::vector<LayerData*> skipDataList;
+                            skipDataList.push_back(biasLayerData);
+
+                            while (!skipDataList.empty())
+                            {
+                                LayerData* skipData = skipDataList.back();
+                                skipDataList.pop_back();
+
+                                CV_Assert(skipData->outputBlobs.size() == 1);
+                                skipData->outputBlobs[0] = ld.outputBlobs[0];
+                                skipData->outputBlobsWrappers[0] = ld.outputBlobsWrappers[0];
+                                if (skipData->skip)
+                                {
+                                    for (auto& inputLayerId : skipData->inputLayersId)
+                                    {
+                                        LayerData* inputld = &layers[inputLayerId];
+
+                                        if (inputld && inputld->outputBlobs.size() == 1)
+                                            skipDataList.push_back(inputld);
+                                    }
+                                }
+                            }
+
+                            naryOrEltwiseData->outputBlobs = ld.outputBlobs;
+                            naryOrEltwiseData->outputBlobsWrappers = ld.outputBlobsWrappers;
+
+                            // set the fusedAdd flag in [Conv];
+                            convLayer->fusedAdd = true;
+                            LayerData* finalData = naryOrEltwiseData;
+                            /* After fused Conv + naryEltwise or eltwise, we can fuse activation if:
+                             * => activation layer that follows is the only consumer of eltwise output
+                             * => activation layer does not process multiple inputs
+                             * => we do not require to keep the output of eltwise
+                             */
+                            if (naryOrEltwiseData->consumers.size() == 1)
+                            {
+                                Ptr<ActivationLayer> nextFusabeleActivLayer;
+                                LayerData* nextAct = &layers[naryOrEltwiseData->consumers[0].lid];
+
+                                if (nextData->outputBlobs.size() == 1)
+                                    nextFusabeleActivLayer = nextAct->layerInstance.dynamicCast<ActivationLayer>();
+
+                                if (!nextFusabeleActivLayer.empty())
+                                {
+                                    convLayer->setActivation(nextFusabeleActivLayer);
+                                    nextAct->skip = true;
+
+                                    nextAct->outputBlobs = ld.outputBlobs;
+                                    nextAct->outputBlobsWrappers = ld.outputBlobsWrappers;
+                                }
+                            }
+
+                            // Move references of finalData (eltwise or activation) layer consumers to the newly allocated blob.
+                            for (int i = 0; i < finalData->consumers.size(); ++i)
+                            {
+                                LayerData& consumer = layers[finalData->consumers[i].lid];
+                                for (int j = 0; j < consumer.inputBlobsId.size(); ++j)
+                                {
+                                    if (consumer.inputBlobsId[j].lid == finalData->id)
+                                    {
+                                        consumer.inputBlobs[j] = &ld.outputBlobs[0];
+                                        consumer.inputBlobsWrappers[j] = ld.outputBlobsWrappers[0];
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+
             // OpenCL: fuse convolution layer followed by eltwise + relu
-            // CUDA: fuse convolution layer followed by eltwise (and optional activation)
+            // CUDA: fuse convolution layer followed by eltwise/naryEltwise (and optional activation)
             while (nextData &&
                 (IS_DNN_OPENCL_TARGET(preferableTarget) || IS_DNN_CUDA_TARGET(preferableTarget)) &&
                 ld.layerInstance->type == "Convolution"
             )  // semantic of 'if'
             {
                 Ptr<EltwiseLayer> nextEltwiseLayer = nextData->layerInstance.dynamicCast<EltwiseLayer>();
-                if (nextEltwiseLayer.empty())
+                Ptr<NaryEltwiseLayer> nextNaryEltwiseLayer = nextData->layerInstance.dynamicCast<NaryEltwiseLayer>();
+                if (nextEltwiseLayer.empty() && nextNaryEltwiseLayer.empty())
+                    break;
+
+                // TODO: fused the Conv+NaryEltwise on OpenCL backend. At present, we can only support it at CUDA backend.
+                if (IS_DNN_OPENCL_TARGET(preferableTarget) && nextNaryEltwiseLayer)
                     break;
 
 #ifdef HAVE_CUDA
                 // CUDA backend supports fusion with eltwise sum (without variable channels)
-                if (IS_DNN_CUDA_TARGET(preferableTarget) && !nextEltwiseLayer.empty())
+                if (IS_DNN_CUDA_TARGET(preferableTarget) && (!nextEltwiseLayer.empty() || !nextNaryEltwiseLayer.empty()))
                 {
                     // we create a temporary backend node for eltwise layer to obtain the eltwise configuration
                     cuda4dnn::csl::CSLContext context; // assume that initCUDA and EltwiseOp do not use the context during init
+
+                    if (!nextData->layerInstance->supportBackend(DNN_BACKEND_CUDA))
+                        break;
+
                     const auto node = nextData->layerInstance->initCUDA(&context, nextData->inputBlobsWrappers, nextData->outputBlobsWrappers);
                     auto eltwiseNode = node.dynamicCast<cuda4dnn::EltwiseOpBase>();
 
@@ -235,7 +442,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                 {
                     LayerData *eltwiseData = nextData;
 
-                    // Eltwise layer has two inputs. We need to determine which
+                    // Eltwise/NaryEltwise layer has two inputs. We need to determine which
                     // is a base convolution layer and which could be used as it's bias.
                     LayerData* biasLayerData = 0;
                     for (int i = 0; i < 2; ++i)
@@ -310,7 +517,14 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                                  * => activation(convolution + eltwise)
                                  *    > fuse eltwise and then activation
                                  */
-                                auto layer = nextEltwiseLayer.staticCast<Layer>();
+                                Ptr<Layer> layer = nullptr;
+                                if (nextNaryEltwiseLayer)
+                                    layer = nextNaryEltwiseLayer.staticCast<Layer>();
+                                else if (nextEltwiseLayer)
+                                    layer = nextEltwiseLayer.staticCast<Layer>();
+                                else
+                                    CV_Error(Error::StsError, "Both nextNaryEltwiseLayer and nextEltwiseLayer are empty!");
+
                                 if (currLayer->tryFuse(layer))
                                 {
                                     fuse_eltwise = true; /* eltwise was successfully fused */
@@ -338,7 +552,14 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                                 CV_Assert(nextData);
                                 CV_Assert_N(biasLayerData->outputBlobsWrappers.size() == 1, ld.inputBlobsWrappers.size() == 1);
                                 ld.inputBlobsWrappers.push_back(biasLayerData->outputBlobsWrappers[0]);
-                                printf_(("\tfused with %s\n", nextEltwiseLayer->name.c_str()));
+
+                                if (nextEltwiseLayer)
+                                    printf_(("\tfused with %s\n", nextEltwiseLayer->name.c_str()));
+                                else if (nextNaryEltwiseLayer)
+                                    printf_(("\tfused with %s\n", nextEltwiseLayer->name.c_str()));
+                                else
+                                    CV_Error(Error::StsError, "Both nextNaryEltwiseLayer and nextEltwiseLayer are empty!");
+
                                 printf_(("\tfused with %s\n", nextFusabeleActivLayer->name.c_str()));
                                 eltwiseData->skip = true;
                                 nextData->skip = true;
@@ -381,12 +602,19 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                                     }
                                 }
                             }
-                            else if (fuse_eltwise) // conv + eltwise (note: conv could have fused activations before eltwise)
+                            else if (fuse_eltwise) // conv + eltwise/naryEltwise (note: conv could have fused activations before eltwise)
                             {
                                 CV_Assert(IS_DNN_CUDA_TARGET(preferableTarget));
                                 CV_Assert_N(biasLayerData->outputBlobsWrappers.size() == 1, ld.inputBlobsWrappers.size() == 1);
                                 ld.inputBlobsWrappers.push_back(biasLayerData->outputBlobsWrappers[0]);
-                                printf_(("\tfused with %s\n", nextEltwiseLayer->name.c_str()));
+
+                                if (nextEltwiseLayer)
+                                    printf_(("\tfused with %s\n", nextEltwiseLayer->name.c_str()));
+                                else if (nextNaryEltwiseLayer)
+                                    printf_(("\tfused with %s\n", nextEltwiseLayer->name.c_str()));
+                                else
+                                    CV_Error(Error::StsError, "Both nextNaryEltwiseLayer and nextEltwiseLayer are empty!");
+
                                 eltwiseData->skip = true;
                                 // This optimization is for cases like
                                 // some_layer   conv (maybe fused with activ)
@@ -397,7 +625,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                                 // (i.e. some_layer+conv or some_layer*conv)
                                 // would be done at [conv] layer. So we need to
                                 // replace [conv]'s output blob to [eltwise]'s one.
-                                // Also we need to move all the consumers' references.
+                                // Also, we need to move all the consumers' references.
                                 // To prevent memory collisions (i.e. when input of
                                 // [conv] and output of [eltwise] is the same blob)
                                 // we allocate a new blob.
@@ -461,7 +689,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                         pin = inp_i_data->inputBlobsId[0];
                         inp_i_data = &layers[pin.lid];
                     }
-                    conv_layer = conv_layer && (inp_i_data->getLayerInstance()->type == "Convolution");
+                    conv_layer = conv_layer && (getLayerInstance(*inp_i_data)->type == "Convolution");
                 }
                 if (!conv_layer)
                     continue;
@@ -509,6 +737,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                           inp_i_data->layerInstance->type != "Permute" &&
                           inp_i_data->layerInstance->type != "Reorg" &&
                           inp_i_data->layerInstance->type != "Eltwise" &&
+                          inp_i_data->layerInstance->type != "NaryEltwise" &&
                           inp_i_data->layerInstance.dynamicCast<ActivationLayer>().empty())))
                     {
                         break;

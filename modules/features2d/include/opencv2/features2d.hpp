@@ -108,6 +108,10 @@ public:
      */
     static void runByPixelsMask( std::vector<KeyPoint>& keypoints, const Mat& mask );
     /*
+     * Remove objects from some image and a vector of points by mask for pixels of this image
+     */
+    static void runByPixelsMask2VectorPoint(std::vector<KeyPoint> &keypoints, std::vector<std::vector<Point> > &removeFrom, const Mat &mask);
+    /*
      * Remove duplicated keypoints.
      */
     static void removeDuplicated( std::vector<KeyPoint>& keypoints );
@@ -212,7 +216,10 @@ public:
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 
     // see corresponding cv::Algorithm method
-    CV_WRAP inline void write(const Ptr<FileStorage>& fs, const String& name = String()) const { Algorithm::write(fs, name); }
+    CV_WRAP inline void write(FileStorage& fs, const String& name) const { Algorithm::write(fs, name); }
+#if CV_VERSION_MAJOR < 5
+    inline void write(const Ptr<FileStorage>& fs, const String& name) const { CV_Assert(fs); Algorithm::write(*fs, name); }
+#endif
 };
 
 /** Feature detectors in OpenCV have wrappers with a common interface that enables you to easily switch
@@ -279,10 +286,14 @@ public:
 
     @param sigma The sigma of the Gaussian applied to the input image at the octave \#0. If your image
     is captured with a weak camera with soft lenses, you might want to reduce the number.
+
+    @param enable_precise_upscale Whether to enable precise upscaling in the scale pyramid, which maps
+    index \f$\texttt{x}\f$ to \f$\texttt{2x}\f$. This prevents localization bias. The option
+    is disabled by default.
     */
     CV_WRAP static Ptr<SIFT> create(int nfeatures = 0, int nOctaveLayers = 3,
         double contrastThreshold = 0.04, double edgeThreshold = 10,
-        double sigma = 1.6);
+        double sigma = 1.6, bool enable_precise_upscale = false);
 
     /** @brief Create SIFT with specified descriptorType.
     @param nfeatures The number of best features to retain. The features are ranked by their scores
@@ -306,12 +317,31 @@ public:
     is captured with a weak camera with soft lenses, you might want to reduce the number.
 
     @param descriptorType The type of descriptors. Only CV_32F and CV_8U are supported.
+
+    @param enable_precise_upscale Whether to enable precise upscaling in the scale pyramid, which maps
+    index \f$\texttt{x}\f$ to \f$\texttt{2x}\f$. This prevents localization bias. The option
+    is disabled by default.
     */
     CV_WRAP static Ptr<SIFT> create(int nfeatures, int nOctaveLayers,
         double contrastThreshold, double edgeThreshold,
-        double sigma, int descriptorType);
+        double sigma, int descriptorType, bool enable_precise_upscale = false);
 
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+
+    CV_WRAP virtual void setNFeatures(int maxFeatures) = 0;
+    CV_WRAP virtual int getNFeatures() const = 0;
+
+    CV_WRAP virtual void setNOctaveLayers(int nOctaveLayers) = 0;
+    CV_WRAP virtual int getNOctaveLayers() const = 0;
+
+    CV_WRAP virtual void setContrastThreshold(double contrastThreshold) = 0;
+    CV_WRAP virtual double getContrastThreshold() const = 0;
+
+    CV_WRAP virtual void setEdgeThreshold(double edgeThreshold) = 0;
+    CV_WRAP virtual double getEdgeThreshold() const = 0;
+
+    CV_WRAP virtual void setSigma(double sigma) = 0;
+    CV_WRAP virtual double getSigma() const = 0;
 };
 
 typedef SIFT SiftFeatureDetector;
@@ -367,14 +397,20 @@ public:
     /** @brief Set detection threshold.
     @param threshold AGAST detection threshold score.
     */
-    CV_WRAP virtual void setThreshold(int threshold) { CV_UNUSED(threshold); return; }
-    CV_WRAP virtual int getThreshold() const { return -1; }
+    CV_WRAP virtual void setThreshold(int threshold) = 0;
+    CV_WRAP virtual int getThreshold() const = 0;
 
     /** @brief Set detection octaves.
     @param octaves detection octaves. Use 0 to do single scale.
     */
-    CV_WRAP virtual void setOctaves(int octaves) { CV_UNUSED(octaves); return; }
-    CV_WRAP virtual int getOctaves() const { return -1; }
+    CV_WRAP virtual void setOctaves(int octaves) = 0;
+    CV_WRAP virtual int getOctaves() const = 0;
+    /** @brief Set detection patternScale.
+    @param patternScale apply this scale to the pattern used for sampling the neighbourhood of a
+    keypoint.
+    */
+    CV_WRAP virtual void setPatternScale(float patternScale) = 0;
+    CV_WRAP virtual float getPatternScale() const = 0;
 };
 
 /** @brief Class implementing the ORB (*oriented BRIEF*) keypoint detector and descriptor extractor
@@ -507,8 +543,27 @@ public:
     CV_WRAP virtual void setMaxArea(int maxArea) = 0;
     CV_WRAP virtual int getMaxArea() const = 0;
 
+    CV_WRAP virtual void setMaxVariation(double maxVariation) = 0;
+    CV_WRAP virtual double getMaxVariation() const = 0;
+
+    CV_WRAP virtual void setMinDiversity(double minDiversity) = 0;
+    CV_WRAP virtual double getMinDiversity() const = 0;
+
+    CV_WRAP virtual void setMaxEvolution(int maxEvolution) = 0;
+    CV_WRAP virtual int getMaxEvolution() const = 0;
+
+    CV_WRAP virtual void setAreaThreshold(double areaThreshold) = 0;
+    CV_WRAP virtual double getAreaThreshold() const = 0;
+
+    CV_WRAP virtual void setMinMargin(double min_margin) = 0;
+    CV_WRAP virtual double getMinMargin() const = 0;
+
+    CV_WRAP virtual void setEdgeBlurSize(int edge_blur_size) = 0;
+    CV_WRAP virtual int getEdgeBlurSize() const = 0;
+
     CV_WRAP virtual void setPass2Only(bool f) = 0;
     CV_WRAP virtual bool getPass2Only() const = 0;
+
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
@@ -653,6 +708,9 @@ public:
     CV_WRAP virtual void setBlockSize(int blockSize) = 0;
     CV_WRAP virtual int getBlockSize() const = 0;
 
+    CV_WRAP virtual void setGradientSize(int gradientSize_) = 0;
+    CV_WRAP virtual int getGradientSize() = 0;
+
     CV_WRAP virtual void setHarrisDetector(bool val) = 0;
     CV_WRAP virtual bool getHarrisDetector() const = 0;
 
@@ -719,13 +777,20 @@ public:
       CV_PROP_RW bool filterByConvexity;
       CV_PROP_RW float minConvexity, maxConvexity;
 
+      CV_PROP_RW bool collectContours;
+
       void read( const FileNode& fn );
       void write( FileStorage& fs ) const;
   };
 
   CV_WRAP static Ptr<SimpleBlobDetector>
     create(const SimpleBlobDetector::Params &parameters = SimpleBlobDetector::Params());
+
+  CV_WRAP virtual void setParams(const SimpleBlobDetector::Params& params ) = 0;
+  CV_WRAP virtual SimpleBlobDetector::Params getParams() const = 0;
+
   CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
+  CV_WRAP virtual const std::vector<std::vector<cv::Point> >& getBlobContours() const;
 };
 
 //! @} features2d_main
@@ -1124,7 +1189,10 @@ public:
 
 
     // see corresponding cv::Algorithm method
-    CV_WRAP inline void write(const Ptr<FileStorage>& fs, const String& name = String()) const { Algorithm::write(fs, name); }
+    CV_WRAP inline void write(FileStorage& fs, const String& name) const { Algorithm::write(fs, name); }
+#if CV_VERSION_MAJOR < 5
+    inline void write(const Ptr<FileStorage>& fs, const String& name) const { CV_Assert(fs); Algorithm::write(*fs, name); }
+#endif
 
 protected:
     /**
@@ -1143,8 +1211,8 @@ protected:
         virtual void clear();
 
         const Mat& getDescriptors() const;
-        const Mat getDescriptor( int imgIdx, int localDescIdx ) const;
-        const Mat getDescriptor( int globalDescIdx ) const;
+        Mat getDescriptor( int imgIdx, int localDescIdx ) const;
+        Mat getDescriptor( int globalDescIdx ) const;
         void getLocalIdx( int globalDescIdx, int& imgIdx, int& localDescIdx ) const;
 
         int size() const;

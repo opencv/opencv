@@ -67,7 +67,7 @@ protected:
         cv::Mat tmp;
         if (!cap.read(tmp))
         {
-            GAPI_Assert(false && "Couldn't grab the very first frame");
+            GAPI_Error("Couldn't grab the very first frame");
         }
         // NOTE: Some decode/media VideoCapture backends continue
         // owning the video buffer under cv::Mat so in order to
@@ -117,6 +117,12 @@ protected:
 GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_capture_src(const std::string& path)
 {
     return make_src<GCaptureSource>(path);
+}
+
+// NB: Overload for using from python
+GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_capture_src(const int id)
+{
+    return make_src<GCaptureSource>(id);
 }
 
 } // namespace wip

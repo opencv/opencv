@@ -138,9 +138,9 @@ TEST(GStreamerPipelineFacadeTest, IsPlayingUnitTest)
                        "video/x-raw,width=1920,height=1080,framerate=3/1 ! "
                        "appsink name=sink2");
 
-    EXPECT_EQ(false, pipelineFacade.isPlaying());
+    EXPECT_FALSE(pipelineFacade.isPlaying());
     pipelineFacade.play();
-    EXPECT_EQ(true, pipelineFacade.isPlaying());
+    EXPECT_TRUE(pipelineFacade.isPlaying());
 }
 
 TEST(GStreamerPipelineFacadeTest, MTSafetyUnitTest)

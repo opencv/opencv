@@ -2131,8 +2131,6 @@ void CvWindow::createToolBar()
 {
     myToolBar = new QToolBar(this);
     myToolBar->setFloatable(false); //is not a window
-    myToolBar->setFixedHeight(28);
-    myToolBar->setMinimumWidth(1);
 
     foreach (QAction *a, vect_QActions)
         myToolBar->addAction(a);
@@ -2198,23 +2196,58 @@ void CvWindow::displayPropertiesWin()
         global_control_panel->hide();
 }
 
+static bool isTranslatableKey(Qt::Key key)
+{
+    // https://github.com/opencv/opencv/issues/21899
+    // https://doc.qt.io/qt-5/qt.html#Key-enum
+    // https://doc.qt.io/qt-6/qt.html#Key-enum
+    // https://github.com/qt/qtbase/blob/dev/src/testlib/qasciikey.cpp
+
+    bool ret = false;
+
+    switch ( key )
+    {
+        // Special keys
+        case Qt::Key_Escape:
+        case Qt::Key_Tab:
+        case Qt::Key_Backtab:
+        case Qt::Key_Backspace:
+        case Qt::Key_Enter:
+        case Qt::Key_Return:
+            ret = true;
+            break;
+
+        // latin-1 keys.
+        default:
+        ret = (
+            ( ( Qt::Key_Space        <= key ) && ( key <= Qt::Key_AsciiTilde ) ) // 0x20--0x7e
+            ||
+            ( ( Qt::Key_nobreakspace <= key ) && ( key <= Qt::Key_ssharp     ) ) // 0x0a0--0x0de
+            ||
+            ( key == Qt::Key_division )                                          // 0x0f7
+            ||
+            ( key == Qt::Key_ydiaeresis )                                        // 0x0ff
+        );
+        break;
+    }
+
+    return ret;
+}
 
 //Need more test here !
 void CvWindow::keyPressEvent(QKeyEvent *evnt)
 {
-    //see http://doc.trolltech.com/4.6/qt.html#Key-enum
     int key = evnt->key();
+    const Qt::Key qtkey = static_cast<Qt::Key>(key);
 
-        Qt::Key qtkey = static_cast<Qt::Key>(key);
-        char asciiCode = QTest::keyToAscii(qtkey);
-        if (asciiCode != 0)
-            key = static_cast<int>(asciiCode);
-        else
-            key = evnt->nativeVirtualKey(); //same codes as returned by GTK-based backend
+    if ( isTranslatableKey( qtkey ) )
+        key = static_cast<int>( QTest::keyToAscii( qtkey ) );
+    else
+        key = evnt->nativeVirtualKey(); //same codes as returned by GTK-based backend
 
     //control plus (Z, +, -, up, down, left, right) are used for zoom/panning functions
-        if (evnt->modifiers() != Qt::ControlModifier)
-        {
+    if (evnt->modifiers() != Qt::ControlModifier)
+    {
         mutexKey.lock();
         last_key = key;
         mutexKey.unlock();
@@ -3051,25 +3084,38 @@ void DefaultViewPort::drawStatusBar()
 //  if (mouseCoordinate.x()>=0 && mouseCoordinate.y()>=0)
     {
         QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
+        const QPalette colorPalette{ QApplication::palette(this) };
 
-        if (nbChannelOriginImage==CV_8UC3 )
+        const QColor normalTextColor = colorPalette.brush(QPalette::WindowText).color();
+        const QString textColorName = normalTextColor.name();
+
+
+        if (nbChannelOriginImage==CV_8UC3)
         {
-            centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
+            const int r_half = normalTextColor.red() >> 1;
+            const int g_half = normalTextColor.green() >> 1;
+            const int b_half = normalTextColor.blue() >> 1;
+            const QColor red = QColor(255, g_half, b_half);
+            const QColor green = QColor(r_half, 255, b_half);
+            const QColor blue = QColor(r_half, g_half, 255);
+            centralWidget->myStatusBar_msg->setText(tr("<font color=%1>(x=%2, y=%3) ~ </font>")
+                .arg(textColorName)
                 .arg(mouseCoordinate.x())
                 .arg(mouseCoordinate.y())+
-                tr("<font color='red'>R:%3 </font>").arg(qRed(rgbValue))+//.arg(value.val[0])+
-                tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+//.arg(value.val[1])+
-                tr("<font color='blue'>B:%5</font>").arg(qBlue(rgbValue))//.arg(value.val[2])
+                tr("<font color=%4>R:%5 </font>").arg(red.name()).arg(qRed(rgbValue))+
+                tr("<font color=%6>G:%7 </font>").arg(green.name()).arg(qGreen(rgbValue))+
+                tr("<font color=%8>B:%9</font>").arg(blue.name()).arg(qBlue(rgbValue))
                 );
         }
 
         if (nbChannelOriginImage==CV_8UC1)
         {
             //all the channel have the same value (because of cv::cvtColor(GRAY=>RGB)), so only the r channel is dsplayed
-            centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
+            centralWidget->myStatusBar_msg->setText(tr("<font color=%1>(x=%2, y=%3) ~ </font>")
+                .arg(textColorName)
                 .arg(mouseCoordinate.x())
                 .arg(mouseCoordinate.y())+
-                tr("<font color='grey'>L:%3 </font>").arg(qRed(rgbValue))
+                tr("<font color='grey'>L:%4 </font>").arg(qRed(rgbValue))
                 );
         }
     }

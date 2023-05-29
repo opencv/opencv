@@ -128,7 +128,7 @@ void traceUp(cv::gimpl::GModel::Graph &g,
         // this recursive process (e.g. via some other output or branch in the
         // subgraph)
         if (g.metadata(nh).get<DesyncPath>().index != desync_id) {
-            GAPI_Assert(false && "Desynchronization can't be nested!");
+            GAPI_Error("Desynchronization can't be nested!");
         }
         return; // This object belongs to the desync path - exit early.
     }
@@ -254,7 +254,7 @@ void apply(cv::gimpl::GModel::Graph &g) {
 }
 
 // Probably the simplest case: desync makes no sense in the regular
-// compilation process, so just drop all its occurences in the graph,
+// compilation process, so just drop all its occurrences in the graph,
 // reconnecting nodes properly.
 void drop(cv::gimpl::GModel::Graph &g) {
     // FIXME: LOG here that we're dropping the desync operations as

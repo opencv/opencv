@@ -64,7 +64,7 @@ public class Puzzle15Processor {
         }
 
         for (int i = 0; i < GRID_AREA; i++) {
-            Size s = Imgproc.getTextSize(Integer.toString(i + 1), 3/* CV_FONT_HERSHEY_COMPLEX */, 1, 2, null);
+            Size s = Imgproc.getTextSize(Integer.toString(i + 1), Imgproc.FONT_HERSHEY_COMPLEX, 1, 2, null);
             mTextHeights[i] = (int) s.height;
             mTextWidths[i] = (int) s.width;
         }
@@ -100,7 +100,7 @@ public class Puzzle15Processor {
                 cells[idx].copyTo(mCells15[i]);
                 if (mShowTileNumbers) {
                     Imgproc.putText(mCells15[i], Integer.toString(1 + idx), new Point((cols / GRID_SIZE - mTextWidths[idx]) / 2,
-                            (rows / GRID_SIZE + mTextHeights[idx]) / 2), 3/* CV_FONT_HERSHEY_COMPLEX */, 1, new Scalar(255, 0, 0, 255), 2);
+                            (rows / GRID_SIZE + mTextHeights[idx]) / 2), Imgproc.FONT_HERSHEY_COMPLEX, 1, new Scalar(255, 0, 0, 255), 2);
                 }
             }
         }

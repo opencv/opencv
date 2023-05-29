@@ -44,7 +44,7 @@ void VPLLegacyDecodeEngine::try_modify_pool_size_request_param(const char* param
                                      param_name + ", overflow");
         }
         request.NumFrameSuggested = static_cast<mfxU16>(new_frames_count);
-        GAPI_LOG_DEBUG(nullptr, "mfxFrameAllocRequest overriden by user input: " <<
+        GAPI_LOG_DEBUG(nullptr, "mfxFrameAllocRequest overridden by user input: " <<
                                 ", mfxFrameAllocRequest.NumFrameMin: " << request.NumFrameMin <<
                                 ", mfxFrameAllocRequest.NumFrameSuggested: " << request.NumFrameSuggested <<
                                 ", mfxFrameAllocRequest.Type: " << request.Type);
@@ -152,7 +152,7 @@ VPLLegacyDecodeEngine::VPLLegacyDecodeEngine(std::unique_ptr<VPLAccelerationPoli
             } while (MFX_ERR_NONE == sess.last_status && !my_sess.sync_queue.empty());
             return ExecutionStatus::Continue;
         },
-        // 4) Falls back on generic status procesing
+        // 4) Falls back on generic status processing
         [this] (EngineSession& sess) -> ExecutionStatus
         {
             return this->process_error(sess.last_status, static_cast<LegacyDecodeSession&>(sess));
@@ -175,9 +175,10 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
 
     // Prepare video param
     mfxVideoParam mfxDecParams {};
+    memset(&mfxDecParams, 0, sizeof(mfxDecParams));
     mfxDecParams.mfx.CodecId = decoder_id_name;
 
-    // set memory stream direction accroding to accelearion policy device type
+    // set memory stream direction according to acceleration policy device type
     IDeviceSelector::DeviceScoreTable devices = acceleration_policy->get_device_selector()->select_devices();
     GAPI_Assert(devices.size() == 1 && "Multiple(or zero) acceleration devices case is unsupported");
     AccelType accel_type = devices.begin()->second.get_type();
@@ -185,8 +186,11 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
         mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_VIDEO_MEMORY;
     } else if (accel_type == AccelType::HOST) {
         mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
+    } else if (accel_type == AccelType::VAAPI) {
+        // TODO make proper direction
+        mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
     } else {
-        GAPI_Assert(false && "unsupported AccelType from device selector");
+        GAPI_Error("unsupported AccelType from device selector");
     }
 
     // try fetch & decode input data
@@ -247,13 +251,15 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
 
     }
 
-    decRequest.Type |= MFX_MEMTYPE_EXTERNAL_FRAME | MFX_MEMTYPE_FROM_DECODE | MFX_MEMTYPE_FROM_VPPIN;
+    decRequest.Type |= MFX_MEMTYPE_EXTERNAL_FRAME | MFX_MEMTYPE_FROM_DECODE |
+                       MFX_MEMTYPE_FROM_VPPIN | MFX_MEMTYPE_SHARED_RESOURCE;
     VPLAccelerationPolicy::pool_key_t decode_pool_key =
                 acceleration_policy->create_surface_pool(decRequest, mfxDecParams.mfx.FrameInfo);
 
     // Input parameters finished, now initialize decode
-    // create decoder for session accoring to header recovered from source file
-
+    // create decoder for session according to header recovered from source file
+    GAPI_LOG_INFO(nullptr, "Initialize decoder for session: " << mfx_session <<
+                           ", frame info: " << mfx_frame_info_to_string(mfxDecParams.mfx.FrameInfo));
     sts = MFXVideoDECODE_Init(mfx_session, &mfxDecParams);
     if (MFX_ERR_NONE != sts) {
         throw std::runtime_error("Error initializing Decode, error: " +

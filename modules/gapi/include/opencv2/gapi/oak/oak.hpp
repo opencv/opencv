@@ -27,7 +27,7 @@ struct EncoderConfig {
      */
     enum class Profile: int { H264_BASELINE, H264_HIGH, H264_MAIN, H265_MAIN, MJPEG };
     /**
-     * Specifies prefered bitrate (kb) of compressed output bitstream
+     * Specifies preferred bitrate (kb) of compressed output bitstream
      */
     std::int32_t bitrate = 8000;
     /**
@@ -89,11 +89,21 @@ G_API_OP(GSobelXY, <GFrame(GFrame, const cv::Mat&, const cv::Mat&)>, "org.opencv
     }
 };
 
+G_API_OP(GCopy, <GFrame(GFrame)>, "org.opencv.oak.copy") {
+    static GFrameDesc outMeta(const GFrameDesc& in) {
+        return in;
+    }
+};
+
+// FIXME: add documentation on operations below
+
 GAPI_EXPORTS GArray<uint8_t> encode(const GFrame& in, const EncoderConfig&);
 
 GAPI_EXPORTS GFrame sobelXY(const GFrame& in,
                             const cv::Mat& hk,
                             const cv::Mat& vk);
+
+GAPI_EXPORTS GFrame copy(const GFrame& in);
 
 // OAK backend & kernels ////////////////////////////////////////////////////////
 GAPI_EXPORTS cv::gapi::GBackend backend();
@@ -101,16 +111,33 @@ GAPI_EXPORTS cv::gapi::GKernelPackage kernels();
 
 // Camera object ///////////////////////////////////////////////////////////////
 
-struct GAPI_EXPORTS ColorCameraParams {};
+struct GAPI_EXPORTS ColorCameraParams {
+    /**
+     * Format of the frame one gets from the camera
+     */
+    bool interleaved = false;
+
+    // FIXME: extend
+    enum class BoardSocket: int { RGB, BGR };
+
+    BoardSocket board_socket = BoardSocket::RGB;
+
+    // FIXME: extend
+    enum class Resolution: int { THE_1080_P };
+
+    Resolution resolution = Resolution::THE_1080_P;
+};
 
 class GAPI_EXPORTS ColorCamera: public cv::gapi::wip::IStreamSource {
     cv::MediaFrame m_dummy;
+    ColorCameraParams m_params;
 
     virtual bool pull(cv::gapi::wip::Data &data) override;
     virtual GMetaArg descr_of() const override;
 
 public:
     ColorCamera();
+    explicit ColorCamera(const ColorCameraParams& params);
 };
 
 } // namespace oak

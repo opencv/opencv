@@ -30,6 +30,15 @@ std::string detail::NetImplBase::getDumpFileNameBase() const
 }
 
 
+Net::Impl::~Impl()
+{
+#ifdef HAVE_VULKAN
+    if (context)
+        context->reset();
+#endif
+}
+
+
 Net::Impl::Impl()
 {
     // allocate fake net input layer
@@ -46,10 +55,10 @@ Net::Impl::Impl()
     netWasQuantized = false;
     fusion = true;
     isAsync = false;
-    preferableBackend = DNN_BACKEND_DEFAULT;
+    preferableBackend = (Backend)getParam_DNN_BACKEND_DEFAULT();
     preferableTarget = DNN_TARGET_CPU;
-    skipInfEngineInit = false;
     hasDynamicShapes = false;
+    useWinograd = true;
 }
 
 
@@ -86,42 +95,18 @@ void Net::Impl::clear()
 }
 
 
-void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
+void Net::Impl::validateBackendAndTarget()
 {
     CV_TRACE_FUNCTION();
 
-    if (dumpLevel && networkDumpCounter == 0)
-    {
-        dumpNetworkToFile();
-    }
-
-    if (preferableBackend == DNN_BACKEND_DEFAULT)
-        preferableBackend = (Backend)getParam_DNN_BACKEND_DEFAULT();
-#ifdef HAVE_INF_ENGINE
-    if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE)
-        preferableBackend = DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;  // = getInferenceEngineBackendTypeParam();
-#endif
-
     CV_Assert(preferableBackend != DNN_BACKEND_OPENCV ||
               preferableTarget == DNN_TARGET_CPU ||
+              preferableTarget == DNN_TARGET_CPU_FP16 ||
               preferableTarget == DNN_TARGET_OPENCL ||
               preferableTarget == DNN_TARGET_OPENCL_FP16);
     CV_Assert(preferableBackend != DNN_BACKEND_HALIDE ||
               preferableTarget == DNN_TARGET_CPU ||
               preferableTarget == DNN_TARGET_OPENCL);
-#ifdef HAVE_INF_ENGINE
-    if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-    {
-        CV_Assert(
-              (preferableTarget == DNN_TARGET_CPU && (!isArmComputePlugin() || preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)) ||
-              preferableTarget == DNN_TARGET_OPENCL ||
-              preferableTarget == DNN_TARGET_OPENCL_FP16 ||
-              preferableTarget == DNN_TARGET_MYRIAD ||
-              preferableTarget == DNN_TARGET_HDDL ||
-              preferableTarget == DNN_TARGET_FPGA
-        );
-    }
-#endif
 #ifdef HAVE_WEBNN
     if (preferableBackend == DNN_BACKEND_WEBNN)
     {
@@ -133,6 +118,23 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
               preferableTarget == DNN_TARGET_VULKAN);
     CV_Assert(preferableBackend != DNN_BACKEND_CUDA ||
               IS_DNN_CUDA_TARGET(preferableTarget));
+    CV_Assert(preferableBackend != DNN_BACKEND_TIMVX ||
+              preferableTarget == DNN_TARGET_NPU);
+
+    CV_Assert(preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && "Inheritance internal error");
+}
+
+void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
+{
+    CV_TRACE_FUNCTION();
+
+    if (dumpLevel && networkDumpCounter == 0)
+    {
+        dumpNetworkToFile();
+    }
+
+    validateBackendAndTarget();
+
     if (!netWasAllocated || this->blobsToKeep != blobsToKeep_)
     {
         if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))
@@ -179,6 +181,12 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
             preferableTarget = DNN_TARGET_CPU;
         }
 
+        if (preferableBackend == DNN_BACKEND_TIMVX && !haveTimVX())
+        {
+            preferableBackend = DNN_BACKEND_OPENCV;
+            preferableTarget = DNN_TARGET_CPU;
+        }
+
         clear();
 
         if (hasDynamicShapes)
@@ -219,14 +227,14 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
 Ptr<Layer> Net::Impl::getLayer(int layerId) const
 {
     LayerData& ld = getLayerData(layerId);
-    return ld.getLayerInstance();
+    return getLayerInstance(ld);
 }
 
 
 Ptr<Layer> Net::Impl::getLayer(const LayerId& layerId) const
 {
     LayerData& ld = getLayerData(layerId);
-    return ld.getLayerInstance();
+    return getLayerInstance(ld);
 }
 
 
@@ -318,7 +326,7 @@ int Net::Impl::resolvePinOutputName(LayerData& ld, const String& outName) const
 {
     if (outName.empty())
         return 0;
-    return ld.getLayerInstance()->outputNameToIndex(outName);
+    return getLayerInstance(ld)->outputNameToIndex(outName);
 }
 
 
@@ -514,12 +522,12 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
     for (int i = 0; i < ld.outputBlobs.size(); ++i)
         ld.outputBlobsWrappers[i] = wrap(ld.outputBlobs[i]);
 
-    /* CUDA backend has its own system for internal blobs; we don't need these */
-    ld.internalBlobsWrappers.resize((preferableBackend == DNN_BACKEND_CUDA) ? 0 : ld.internals.size());
+    /* CUDA & CANN backend has its own system for internal blobs; we don't need these */
+    ld.internalBlobsWrappers.resize((preferableBackend == DNN_BACKEND_CUDA || preferableBackend == DNN_BACKEND_TIMVX || preferableBackend == DNN_BACKEND_CANN) ? 0 : ld.internals.size());
     for (int i = 0; i < ld.internalBlobsWrappers.size(); ++i)
         ld.internalBlobsWrappers[i] = wrap(ld.internals[i]);
 
-    Ptr<Layer> layerPtr = ld.getLayerInstance();
+    Ptr<Layer> layerPtr = getLayerInstance(ld);
     {
         std::vector<Mat> inps(ld.inputBlobs.size());
         for (int i = 0; i < ld.inputBlobs.size(); ++i)
@@ -804,15 +812,17 @@ void Net::Impl::forwardLayer(LayerData& ld)
             {
                 forwardHalide(ld.outputBlobsWrappers, node);
             }
-#ifdef HAVE_INF_ENGINE
             else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             {
-                forwardNgraph(ld.outputBlobsWrappers, node, isAsync);
+                CV_Assert(preferableBackend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && "Inheritance internal error");
             }
-#endif
             else if (preferableBackend == DNN_BACKEND_WEBNN)
             {
                 forwardWebnn(ld.outputBlobsWrappers, node, isAsync);
+            }
+            else if (preferableBackend == DNN_BACKEND_TIMVX)
+            {
+                forwardTimVX(ld.outputBlobsWrappers, node);
             }
 #ifdef HAVE_VULKAN
             else if (preferableBackend == DNN_BACKEND_VKCOM)
@@ -831,7 +841,7 @@ void Net::Impl::forwardLayer(LayerData& ld)
 #endif
             else
             {
-                CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
+                CV_Error(Error::StsNotImplemented, cv::format("Unknown backend identifier: %d", preferableBackend));
             }
         }
 
@@ -966,7 +976,8 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
     }
     else if (outputBlobs.isMatVector())
     {
-        if (preferableTarget != DNN_TARGET_CPU)
+        // The DNN_TARGET_CPU and DNN_TARGET_CPU_FP16 both use the CPU memory, do not need the copyToHost.
+        if (preferableTarget != DNN_TARGET_CPU && preferableTarget != DNN_TARGET_CPU_FP16)
         {
             for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
             {
@@ -1143,7 +1154,7 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
     ShapesVec& os = layerShapes.out;
     ShapesVec& ints = layerShapes.internal;
     int requiredOutputs = layerData.requiredOutputs.size();
-    Ptr<Layer> l = layerData.getLayerInstance();
+    const Ptr<Layer>& l = getLayerInstance(layerData);
     CV_Assert(l);
     bool layerSupportInPlace = false;
     try
@@ -1297,7 +1308,7 @@ void Net::Impl::updateLayersShapes()
                 const MatShape& shape = layersShapes[inputLayerId].out[inputPin.oid];
                 layerShapes.in.push_back(shape);
             }
-            layerData.getLayerInstance()->updateMemoryShapes(layerShapes.in);
+            getLayerInstance(layerData)->updateMemoryShapes(layerShapes.in);
         }
         CV_LOG_DEBUG(NULL, "Layer " << layerId << ": " << toString(layerShapes.in, "input shapes"));
         CV_LOG_IF_DEBUG(NULL, !layerShapes.out.empty(), "Layer " << layerId << ": " << toString(layerShapes.out, "output shapes"));
@@ -1330,7 +1341,7 @@ Mat Net::Impl::getBlob(const LayerPin& pin) const
                                               "the #%d was requested",
                                                ld.name.c_str(), ld.outputBlobs.size(), pin.oid));
     }
-    if (preferableTarget != DNN_TARGET_CPU)
+    if (preferableTarget != DNN_TARGET_CPU && preferableTarget != DNN_TARGET_CPU_FP16)
     {
         CV_Assert(!ld.outputBlobsWrappers.empty() && !ld.outputBlobsWrappers[pin.oid].empty());
         // Transfer data to CPU if it's require.
@@ -1356,30 +1367,7 @@ Mat Net::Impl::getBlob(String outputName) const
 AsyncArray Net::Impl::getBlobAsync(const LayerPin& pin)
 {
     CV_TRACE_FUNCTION();
-#ifdef HAVE_INF_ENGINE
-    if (!pin.valid())
-        CV_Error(Error::StsObjectNotFound, "Requested blob not found");
-
-    LayerData& ld = layers[pin.lid];
-    if ((size_t)pin.oid >= ld.outputBlobs.size())
-    {
-        CV_Error(Error::StsOutOfRange, format("Layer \"%s\" produce only %d outputs, "
-                                              "the #%d was requested",
-                                               ld.name.c_str(), (int)ld.outputBlobs.size(), (int)pin.oid));
-    }
-    if (preferableTarget != DNN_TARGET_CPU)
-    {
-        CV_Assert(!ld.outputBlobsWrappers.empty() && !ld.outputBlobsWrappers[pin.oid].empty());
-        // Transfer data to CPU if it's require.
-        ld.outputBlobsWrappers[pin.oid]->copyToHost();
-    }
-    CV_Assert(preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
-
-    Ptr<NgraphBackendWrapper> wrapper = ld.outputBlobsWrappers[pin.oid].dynamicCast<NgraphBackendWrapper>();
-    return std::move(wrapper->futureMat);
-#else
     CV_Error(Error::StsNotImplemented, "DNN: OpenVINO/nGraph backend is required");
-#endif  // HAVE_INF_ENGINE
 }
 
 
@@ -1417,6 +1405,7 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
     Mat blob_ = blob.getMat();  // can't use InputArray directly due MatExpr stuff
     MatShape blobShape = shape(blob_);
 
+#if 0  // TODO: DNNTestNetwork.MobileNet_SSD_Caffe_Different_Width_Height/0
     if (pin.lid == 0)
     {
         CV_Assert(!netInputLayer.empty());
@@ -1428,7 +1417,6 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
             if (!inputShapeLimitation.empty())
             {
                 CV_CheckEQ(inputShapeLimitation.size(), blobShape.size(), "");
-#if 0  // TODO: DNNTestNetwork.MobileNet_SSD_Caffe_Different_Width_Height/0
                 const size_t dims = inputShapeLimitation.size();
                 for (size_t dim = 0; dim < dims; dim++)
                 {
@@ -1436,10 +1424,10 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
                         continue;  // don't limit batch
                     CV_CheckEQ(inputShapeLimitation[dim], blobShape[dim], "");
                 }
-#endif
             }
         }
     }
+#endif
 
     LayerData& ld = layers[pin.lid];
     const int numInputs = std::max(pin.oid + 1, (int)ld.requiredOutputs.size());
@@ -1469,7 +1457,7 @@ void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor
 Mat Net::Impl::getParam(int layer, int numParam) const
 {
     LayerData& ld = getLayerData(layer);
-    std::vector<Mat>& layerBlobs = ld.getLayerInstance()->blobs;
+    std::vector<Mat>& layerBlobs = getLayerInstance(ld)->blobs;
     CV_Assert(numParam < (int)layerBlobs.size());
     return layerBlobs[numParam];
 }
@@ -1478,7 +1466,8 @@ void Net::Impl::setParam(int layer, int numParam, const Mat& blob)
 {
     LayerData& ld = getLayerData(layer);
 
-    std::vector<Mat>& layerBlobs = ld.getLayerInstance()->blobs;
+    // FIXIT we should not modify "execution" instance
+    std::vector<Mat>& layerBlobs = getLayerInstance(ld)->blobs;
     CV_Assert(numParam < (int)layerBlobs.size());
     // we don't make strong checks, use this function carefully
     layerBlobs[numParam] = blob;
@@ -1552,10 +1541,14 @@ string Net::Impl::dump(bool forceAllocation) const
         else
         {
             if (itBackend->second == prevNode)
-                skipId.push_back(idPrev);
+            {
+                if (idPrev != -1)
+                    skipId.push_back(idPrev);
+            }
             else if (!skipId.empty())
             {
-                skipId.push_back(idPrev);
+                if (idPrev != -1)
+                    skipId.push_back(idPrev);
                 std::sort(skipId.begin(), skipId.end());
                 for (int i = 0; i < skipId.size(); i++)
                 {
@@ -1568,7 +1561,7 @@ string Net::Impl::dump(bool forceAllocation) const
             prevNode = itBackend->second;
         }
     }
-    std::vector<string> colors = { "#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151", "#b266ff" };
+    std::vector<string> colors = { "#ffffb3", "#fccde5", "#8dd3c7", "#bebada", "#80b1d3", "#fdb462", "#ff4848", "#b35151", "#b266ff", "#b266ff", "#3cb371", "#ffcab3"};
     string backend;
     switch (prefBackend)
     {
@@ -1580,9 +1573,9 @@ string Net::Impl::dump(bool forceAllocation) const
     case DNN_BACKEND_OPENCV: backend = "OCV/"; break;
     case DNN_BACKEND_VKCOM: backend = "VULKAN/"; break;
     case DNN_BACKEND_CUDA: backend = "CUDA/"; break;
-    case DNN_BACKEND_WEBNN:
-        backend = "WEBNN/";
-        break;
+    case DNN_BACKEND_WEBNN: backend = "WEBNN/"; break;
+    case DNN_BACKEND_TIMVX: backend = "TIMVX/"; break;
+    case DNN_BACKEND_CANN: backend = "CANN/"; break;
         // don't use default:
     }
     out << "digraph G {\n";
@@ -1767,6 +1760,14 @@ string Net::Impl::dump(bool forceAllocation) const
             out << "CUDA_FP16";
             colorId = 6;
             break;
+        case DNN_TARGET_NPU:
+            out << "NPU";
+            colorId = 9;
+            break;
+        case DNN_TARGET_CPU_FP16:
+            out << "CPU_FP16";
+            colorId = 10;
+            break;
             // don't use default:
         }
         CV_Assert(colorId < colors.size());
@@ -1942,7 +1943,7 @@ int64 Net::Impl::getFLOPS(const std::vector<MatShape>& netInputShapes) /*const*/
 
     for (int i = 0; i < ids.size(); i++)
     {
-        flops += layers[ids[i]].getLayerInstance()->getFLOPS(inShapes[i], outShapes[i]);
+        flops += getLayerInstance(layers[ids[i]])->getFLOPS(inShapes[i], outShapes[i]);
     }
 
     return flops;
@@ -1959,7 +1960,7 @@ int64 Net::Impl::getFLOPS(
     LayerShapes shapes;
     getLayerShapes(netInputShapes, layerId, shapes);
 
-    return const_cast<LayerData&>(layer->second).getLayerInstance()->getFLOPS(shapes.in, shapes.out);
+    return getLayerInstance(const_cast<LayerData&>(layer->second))->getFLOPS(shapes.in, shapes.out);
 }
 
 
@@ -2049,6 +2050,37 @@ void Net::Impl::getMemoryConsumption(
 
         weights.push_back(w);
         blobs.push_back(b);
+    }
+}
+
+void Net::Impl::enableWinograd(bool useWinograd_)
+{
+    if (useWinograd != useWinograd_)
+    {
+        useWinograd = useWinograd_;
+
+        for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); it++)
+        {
+            int lid = it->first;
+            LayerData &ld = layers[lid];
+            Ptr<Layer>& currLayer = ld.layerInstance;
+
+            if (ld.type == "Convolution")
+            {
+                ld.params.set("use_winograd", useWinograd_);
+                Ptr<ConvolutionLayer> convLayer = ld.layerInstance.dynamicCast<ConvolutionLayer>();
+                if (!convLayer.empty())
+                    convLayer->useWinograd = useWinograd_;
+            }
+
+            if (ld.type == "ConvolutionInt8")
+            {
+                Ptr<ConvolutionLayerInt8> convLayer = currLayer.dynamicCast<ConvolutionLayerInt8>();
+                ld.params.set("use_winograd", useWinograd_);
+                if (!convLayer.empty())
+                    convLayer->useWinograd = useWinograd_;
+            }
+        }
     }
 }
 

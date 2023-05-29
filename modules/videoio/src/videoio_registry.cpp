@@ -53,7 +53,7 @@ namespace {
 /** Ordering guidelines:
 - modern optimized, multi-platform libraries: ffmpeg, gstreamer, Media SDK
 - platform specific universal SDK: WINRT, AVFOUNDATION, MSMF/DSHOW, V4L/V4L2
-- RGB-D: OpenNI/OpenNI2, REALSENSE
+- RGB-D: OpenNI/OpenNI2, REALSENSE, OBSENSOR
 - special OpenCV (file-based): "images", "mjpeg"
 - special camera SDKs, including stereo: other special SDKs: FIREWIRE/1394, XIMEA/ARAVIS/GIGANETIX/PVAPI(GigE)/uEye
 - other: XINE, gphoto2, etc
@@ -149,7 +149,7 @@ static const struct VideoBackendInfo builtin_backends[] =
 #if defined(HAVE_ANDROID_MEDIANDK) || defined(HAVE_ANDROID_NATIVE_CAMERA)
     DECLARE_STATIC_BACKEND(CAP_ANDROID, "ANDROID_NATIVE",
 #ifdef HAVE_ANDROID_MEDIANDK
-                           MODE_CAPTURE_BY_FILENAME
+                           MODE_CAPTURE_BY_FILENAME | MODE_WRITER
 #else
                            0
 #endif
@@ -169,9 +169,30 @@ static const struct VideoBackendInfo builtin_backends[] =
 #else
                            0,
 #endif
+#ifdef HAVE_ANDROID_MEDIANDK
+                           createAndroidVideoWriter)
+#else
                            0)
 #endif
+#endif
+
+#ifdef HAVE_OBSENSOR
+    DECLARE_STATIC_BACKEND(CAP_OBSENSOR, "OBSENSOR", MODE_CAPTURE_BY_INDEX, 0, create_obsensor_capture, 0)
+#endif
+
     // dropped backends: MIL, TYZX
+};
+
+static const struct VideoDeprecatedBackendInfo deprecated_backends[] =
+{
+#ifdef _WIN32
+    {CAP_VFW, "Video for Windows"},
+#endif
+    {CAP_QT, "QuickTime"},
+    {CAP_UNICAP, "Unicap"},
+    {CAP_OPENNI, "OpenNI"},
+    {CAP_OPENNI_ASUS, "OpenNI"},
+    {CAP_GIGANETIX, "GigEVisionSDK"}
 };
 
 bool sortByPriority(const VideoBackendInfo &lhs, const VideoBackendInfo &rhs)
@@ -342,6 +363,16 @@ std::vector<VideoBackendInfo> getAvailableBackends_Writer()
     return result;
 }
 
+bool checkDeprecatedBackend(int api) {
+    const int M = sizeof(deprecated_backends) / sizeof(deprecated_backends[0]);
+    for (size_t i = 0; i < M; i++)
+    {
+        if (deprecated_backends[i].id == api)
+            return true;
+    }
+    return false;
+}
+
 cv::String getBackendName(VideoCaptureAPIs api)
 {
     if (api == CAP_ANY)
@@ -353,6 +384,14 @@ cv::String getBackendName(VideoCaptureAPIs api)
         if (backend.id == api)
             return backend.name;
     }
+
+    const int M = sizeof(deprecated_backends) / sizeof(deprecated_backends[0]);
+    for (size_t i = 0; i < M; i++)
+    {
+        if (deprecated_backends[i].id == api)
+            return deprecated_backends[i].name;
+    }
+
     return cv::format("UnknownVideoAPI(%d)", (int)api);
 }
 

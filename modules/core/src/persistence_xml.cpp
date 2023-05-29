@@ -148,7 +148,7 @@ public:
     void write( const char* key, double value )
     {
         char buf[128];
-        writeScalar( key, fs::doubleToString( buf, value, false ) );
+        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, false ) );
     }
 
     void write(const char* key, const char* str, bool quote)
@@ -208,7 +208,7 @@ public:
                     }
                     else
                     {
-                        sprintf( data, "#x%02x", (uchar)c );
+                        snprintf( data, sizeof(buf) - (data - buf), "#x%02x", (uchar)c );
                         data += 4;
                     }
                     *data++ = ';';

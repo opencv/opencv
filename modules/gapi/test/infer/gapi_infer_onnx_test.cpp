@@ -114,7 +114,7 @@ inline int toCV(ONNXTensorElementDataType prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return CV_32S;
-    default: GAPI_Assert(false && "Unsupported data type");
+    default: GAPI_Error("Unsupported data type");
     }
     return -1;
 }
@@ -142,7 +142,7 @@ void copyFromONNX(Ort::Value &v, cv::Mat& mat) {
                    [](int64_t el) { return static_cast<int>(el); });
             break;
         }
-    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    default: GAPI_Error("ONNX. Unsupported data type");
     }
 }
 
@@ -332,9 +332,8 @@ public:
         // Inputs Run params
         std::vector<Ort::Value> in_tensors;
         for(size_t i = 0; i < num_in; ++i) {
-            char* in_node_name_p = session.GetInputName(i, allocator);
-            in_node_names.emplace_back(in_node_name_p);
-            allocator.Free(in_node_name_p);
+            auto in_node_name_p = session.GetInputNameAllocated(i, allocator);
+            in_node_names.emplace_back(in_node_name_p.get());
             in_node_dims = toORT(ins[i].size);
             in_tensors.emplace_back(Ort::Value::CreateTensor<T>(memory_info,
                                                                 const_cast<T*>(ins[i].ptr<T>()),
@@ -345,9 +344,8 @@ public:
         // Outputs Run params
         if (custom_out_names.empty()) {
             for(size_t i = 0; i < num_out; ++i) {
-                char* out_node_name_p = session.GetOutputName(i, allocator);
-                out_node_names.emplace_back(out_node_name_p);
-                allocator.Free(out_node_name_p);
+                auto out_node_name_p = session.GetOutputNameAllocated(i, allocator);
+                out_node_names.emplace_back(out_node_name_p.get());
             }
         } else {
             out_node_names = std::move(custom_out_names);

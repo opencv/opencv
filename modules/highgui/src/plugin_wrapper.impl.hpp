@@ -235,12 +235,15 @@ std::vector<FileSystemPath_t> getPluginCandidates(const std::string& baseName)
     return results;
 }
 
-// NB: require loading of imgcodecs module
+#ifdef HAVE_OPENCV_IMGCODECS // NB: require loading of imgcodecs module
 static void* g_imwrite = (void*)imwrite;
+#endif
 
 void PluginUIBackendFactory::loadPlugin()
 {
+#ifdef HAVE_OPENCV_IMGCODECS
     CV_Assert(g_imwrite);
+#endif
     for (const FileSystemPath_t& plugin : getPluginCandidates(baseName_))
     {
         auto lib = std::make_shared<cv::plugin::impl::DynamicLib>(plugin);

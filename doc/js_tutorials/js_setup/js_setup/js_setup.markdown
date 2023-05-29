@@ -83,6 +83,9 @@ Building OpenCV.js from Source
     It requires `python` and `cmake` installed in your development environment.
 
 -#  The build script builds asm.js version by default. To build WebAssembly version, append `--build_wasm` switch.
+    By default everything is bundled into one JavaScript file by `base64` encoding the WebAssembly code. For production
+    builds you can add `--disable_single_file` which will reduce total size by writing the WebAssembly code
+    to a dedicated `.wasm` file which the generated JavaScript file will automatically load.
 
     For example, to build wasm version in `build_wasm` directory:
     @code{.bash}
@@ -135,14 +138,7 @@ Building OpenCV.js from Source
 
     For example:
     @code{.bash}
-    python ./platforms/js/build_js.py build_js --cmake_option="-DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules"
-    @endcode
-
--#  [optional] To enable OpenCV contrib modules append `--cmake_option="-DOPENCV_EXTRA_MODULES_PATH=/path/to/opencv_contrib/modules/"`
-
-    For example:
-    @code{.bash}
-    python ./platforms/js/build_js.py build_js --cmake_option="-DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules"
+    emcmake python ./platforms/js/build_js.py build_js --cmake_option="-DOPENCV_EXTRA_MODULES_PATH=opencv_contrib/modules"
     @endcode
 
 -#  [optional] To enable WebNN backend, append `--webnn` option.

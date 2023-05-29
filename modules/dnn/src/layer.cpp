@@ -50,7 +50,8 @@ Ptr<BackendNode> Layer::initCUDA(
     return Ptr<BackendNode>();
 }
 
-Ptr<BackendNode> Layer::initVkCom(const std::vector<Ptr<BackendWrapper>>&)
+Ptr<BackendNode> Layer::initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                  std::vector<Ptr<BackendWrapper> > &outputs)
 {
     CV_Error(Error::StsNotImplemented, "VkCom pipeline of " + type + " layers is not defined.");
     return Ptr<BackendNode>();
@@ -71,6 +72,24 @@ Ptr<BackendNode> Layer::initNgraph(const std::vector<Ptr<BackendWrapper>>& input
 Ptr<BackendNode> Layer::initWebnn(const std::vector<Ptr<BackendWrapper>>& inputs, const std::vector<Ptr<BackendNode>>& nodes)
 {
     CV_Error(Error::StsNotImplemented, "WebNN pipeline of " + type + " layers is not defined.");
+    return Ptr<BackendNode>();
+}
+
+Ptr<BackendNode> Layer::initTimVX(void* timVxInfo,
+                                  const std::vector<Ptr<BackendWrapper> > & inputsWrapper,
+                                  const std::vector<Ptr<BackendWrapper> > & outputsWrapper,
+                                  bool isLast)
+{
+    CV_Error(Error::StsNotImplemented, "TimVX pipeline of " + type +
+                                       " layers is not defined.");
+    return Ptr<BackendNode>();
+}
+
+Ptr<BackendNode> Layer::initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                 const std::vector<Ptr<BackendWrapper> > &outputs,
+                                 const std::vector<Ptr<BackendNode> >& nodes)
+{
+    CV_Error(Error::StsNotImplemented, "CANN pipeline of " + type + " layers is not defined.");
     return Ptr<BackendNode>();
 }
 

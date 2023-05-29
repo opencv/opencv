@@ -22,14 +22,14 @@ namespace onevpl {
 /**
  * @brief Public class is using for creation of onevpl::GSource instances.
  *
- * Class members availaible through methods @ref CfgParam::get_name() and @ref CfgParam::get_value() are used by
+ * Class members available through methods @ref CfgParam::get_name() and @ref CfgParam::get_value() are used by
  * onevpl::GSource inner logic to create or find oneVPL particular implementation
  * (software/hardware, specific API version and etc.).
  *
  * @note Because oneVPL may provide several implementations which are satisfying with multiple (or single one) @ref CfgParam
  * criteria therefore it is possible to configure `preferred` parameters. This kind of CfgParams are created
  * using `is_major = false` argument in @ref CfgParam::create method and are not used by creating oneVPL particular implementations.
- * Instead they fill out a "score table" to select preferrable implementation from available list. Implementation are satisfying
+ * Instead they fill out a "score table" to select preferable implementation from available list. Implementation are satisfying
  * with most of these optional params would be chosen.
  * If no one optional CfgParam params were present then first of available oneVPL implementation would be applied.
  * Please get on https://spec.oneapi.io/versions/latest/elements/oneVPL/source/API_ref/VPL_disp_api_func.html?highlight=mfxcreateconfig#mfxsetconfigfilterproperty
@@ -185,6 +185,8 @@ struct GAPI_EXPORTS CfgParam {
     const name_t& get_name() const;
     const value_t& get_value() const;
     bool is_major() const;
+    std::string to_string() const;
+
     bool operator==(const CfgParam& rhs) const;
     bool operator< (const CfgParam& rhs) const;
     bool operator!=(const CfgParam& rhs) const;

@@ -235,6 +235,15 @@ Decoding parameters are returned in jp2->j2k->cp.
 */
 void opj_jp2_setup_decoder(opj_jp2_t *jp2, opj_dparameters_t *parameters);
 
+/**
+Set the strict mode parameter.  When strict mode is enabled, the entire
+bitstream must be decoded or an error is returned.  When it is disabled,
+the decoder will decode partial bitstreams.
+@param jp2 JP2 decompressor handle
+@param strict OPJ_TRUE for strict mode
+*/
+void opj_jp2_decoder_set_strict_mode(opj_jp2_t *jp2, OPJ_BOOL strict);
+
 /** Allocates worker threads for the compressor/decompressor.
  *
  * @param jp2 JP2 decompressor handle

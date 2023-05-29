@@ -1,9 +1,9 @@
 set(the_description "High-level GUI")
 
 if(ANDROID)
-  ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python)
+  ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_imgcodecs opencv_videoio WRAP python)
 else()
-  ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python java)
+  ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_imgcodecs opencv_videoio WRAP python java)
 endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
@@ -49,7 +49,31 @@ list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${n
 
 set(OPENCV_HIGHGUI_BUILTIN_BACKEND "")
 
-if(HAVE_QT)
+if(WITH_WAYLAND AND HAVE_WAYLAND)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "Wayland")
+  add_definitions(-DHAVE_WAYLAND)
+
+  set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+  if (HAVE_WAYLAND_PROTOCOLS)
+      ocv_wayland_generate(
+            ${WAYLAND_PROTOCOLS_BASE}/stable/xdg-shell/xdg-shell.xml
+            xdg-shell-client-protocol)
+  endif()
+
+  list(APPEND highgui_srcs
+    ${CMAKE_CURRENT_LIST_DIR}/src/window_wayland.cpp
+    ${WAYLAND_PROTOCOL_SOURCES}
+  )
+  list(APPEND HIGHGUI_LIBRARIES "${WAYLAND_CLIENT_LINK_LIBRARIES};${WAYLAND_CURSOR_LINK_LIBRARIES};${XKBCOMMON_LINK_LIBRARIES}")
+
+  if(HAVE_WAYLAND_EGL)
+    if(WAYLAND_EGL_LIBRARIES)
+      list(APPEND HIGHGUI_LIBRARIES "${WAYLAND_EGL_LIBRARIES}")
+    endif()
+  endif()
+
+elseif(HAVE_QT)
   set(OPENCV_HIGHGUI_BUILTIN_BACKEND "QT${QT_VERSION_MAJOR}")
   add_definitions(-DHAVE_QT)
 
@@ -257,16 +281,7 @@ if(tgts STREQUAL "PRIVATE")
   set(tgts "")
 endif()
 
-# install used dependencies only
-if(NOT BUILD_SHARED_LIBS
-    AND NOT (CMAKE_VERSION VERSION_LESS "3.13.0")  # upgrade CMake: https://gitlab.kitware.com/cmake/cmake/-/merge_requests/2152
-)
-  foreach(tgt in ${tgts})
-    if(tgt MATCHES "^ocv\.3rdparty\.")
-      install(TARGETS ${tgt} EXPORT OpenCVModules)
-    endif()
-  endforeach()
-endif()
+ocv_install_used_external_targets(${tgts})
 
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})
 source_group("Include" FILES ${highgui_ext_hdrs})

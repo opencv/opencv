@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.11 FATAL_ERROR)
+cmake_minimum_required(VERSION ${MIN_VER_CMAKE} FATAL_ERROR)
 
 project(Carotene)
 
@@ -25,6 +25,10 @@ if(CMAKE_COMPILER_IS_GNUCC)
     else()
         set_source_files_properties(${carotene_sources} COMPILE_FLAGS "--param ipa-cp-unit-growth=100000 --param inline-unit-growth=100000 --param large-stack-frame-growth=5000")
     endif()
+endif()
+
+if(APPLE AND CV_CLANG AND WITH_NEON)
+    ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-unused-function)
 endif()
 
 add_library(carotene_objs OBJECT EXCLUDE_FROM_ALL

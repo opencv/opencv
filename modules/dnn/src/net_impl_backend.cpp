@@ -7,6 +7,9 @@
 #include "net_impl.hpp"
 #include "legacy_backend.hpp"
 
+#include "backend.hpp"
+#include "factory.hpp"
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -14,7 +17,8 @@ CV__DNN_INLINE_NS_BEGIN
 
 Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
 {
-    if (preferableBackend == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU)
+    if (preferableBackend == DNN_BACKEND_OPENCV &&
+            (preferableTarget == DNN_TARGET_CPU || preferableTarget == DNN_TARGET_CPU_FP16))
         return Ptr<BackendWrapper>();
 
     MatShape shape(host.dims);
@@ -76,6 +80,16 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
             }
 #endif
         }
+        else if (preferableBackend == DNN_BACKEND_TIMVX)
+        {
+#ifdef HAVE_TIMVX
+            return Ptr<BackendWrapper>(new TimVXBackendWrapper(baseBuffer, host));
+#endif
+        }
+        else if (preferableBackend == DNN_BACKEND_CANN)
+        {
+            CV_Assert(0 && "Internal error: DNN_BACKEND_CANN must be implemented through inheritance");
+        }
         else
             CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
     }
@@ -91,7 +105,7 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
     CV_TRACE_FUNCTION();
     if (preferableBackend == DNN_BACKEND_OPENCV)
     {
-        CV_Assert(preferableTarget == DNN_TARGET_CPU || IS_DNN_OPENCL_TARGET(preferableTarget));
+        CV_Assert(preferableTarget == DNN_TARGET_CPU || preferableTarget == DNN_TARGET_CPU_FP16 || IS_DNN_OPENCL_TARGET(preferableTarget));
     }
     else if (preferableBackend == DNN_BACKEND_HALIDE)
     {
@@ -103,11 +117,7 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
     }
     else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
-#ifdef HAVE_DNN_NGRAPH
-        initNgraphBackend(blobsToKeep_);
-#else
-        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of OpenVINO");
-#endif
+        CV_Assert(0 && "Inheritance must be used with OpenVINO backend");
     }
     else if (preferableBackend == DNN_BACKEND_WEBNN)
     {
@@ -133,6 +143,18 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of CUDA/CUDNN");
 #endif
     }
+    else if (preferableBackend == DNN_BACKEND_TIMVX)
+    {
+#ifdef HAVE_TIMVX
+        initTimVXBackend();
+#else
+        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of TimVX");
+#endif
+    }
+    else if (preferableBackend == DNN_BACKEND_CANN)
+    {
+        CV_Assert(0 && "Internal error: DNN_BACKEND_CANN must be implemented through inheritance");
+    }
     else
     {
         CV_Error(Error::StsNotImplemented, cv::format("Unknown backend identifier: %d", preferableBackend));
@@ -140,35 +162,55 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 }
 
 
-void Net::Impl::setPreferableBackend(int backendId)
+void Net::Impl::setPreferableBackend(Net& net, int backendId)
 {
     if (backendId == DNN_BACKEND_DEFAULT)
         backendId = (Backend)getParam_DNN_BACKEND_DEFAULT();
 
-    if (netWasQuantized && backendId != DNN_BACKEND_OPENCV)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
+        backendId = DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;  // = getInferenceEngineBackendTypeParam();
+
+    if (netWasQuantized && backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_TIMVX)
     {
-        CV_LOG_WARNING(NULL, "DNN: Only default backend supports quantized networks");
+        CV_LOG_WARNING(NULL, "DNN: Only default and TIMVX backends support quantized networks");
         backendId = DNN_BACKEND_OPENCV;
     }
 
-#ifdef HAVE_INF_ENGINE
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
-        backendId = DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
-#endif
-
     if (preferableBackend != backendId)
     {
-        preferableBackend = backendId;
         clear();
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        {
+#if defined(HAVE_INF_ENGINE)
+            switchToOpenVINOBackend(net);
+#elif defined(ENABLE_PLUGINS)
+            auto& networkBackend = dnn_backend::createPluginDNNNetworkBackend("openvino");
+            networkBackend.switchBackend(net);
+#else
+            CV_Error(Error::StsNotImplemented, "OpenVINO backend is not available in the current OpenCV build");
+#endif
+        }
+        else if (backendId == DNN_BACKEND_CANN)
+        {
+#ifdef HAVE_CANN
+            switchToCannBackend(net);
+#else
+            CV_Error(Error::StsNotImplemented, "CANN backend is not availlable in the current OpenCV build");
+#endif
+        }
+        else
+        {
+            preferableBackend = backendId;
+        }
     }
 }
 
 void Net::Impl::setPreferableTarget(int targetId)
 {
     if (netWasQuantized && targetId != DNN_TARGET_CPU &&
-        targetId != DNN_TARGET_OPENCL && targetId != DNN_TARGET_OPENCL_FP16)
+        targetId != DNN_TARGET_OPENCL && targetId != DNN_TARGET_OPENCL_FP16 && targetId != DNN_TARGET_NPU)
     {
-        CV_LOG_WARNING(NULL, "DNN: Only CPU and OpenCL/OpenCL FP16 target is supported by quantized networks");
+        CV_LOG_WARNING(NULL, "DNN: Only CPU, OpenCL/OpenCL FP16 and NPU targets are supported by quantized networks");
         targetId = DNN_TARGET_CPU;
     }
 
@@ -191,6 +233,15 @@ void Net::Impl::setPreferableTarget(int targetId)
                 preferableTarget = DNN_TARGET_OPENCL;
 #endif
         }
+
+#if !defined(__arm64__) || !__arm64__
+        if (targetId == DNN_TARGET_CPU_FP16)
+        {
+            CV_LOG_WARNING(NULL, "DNN: fall back to DNN_TARGET_CPU. Only ARM v8 CPU is supported by DNN_TARGET_CPU_FP16.");
+            targetId = DNN_TARGET_CPU;
+        }
+#endif
+
         clear();
     }
 }

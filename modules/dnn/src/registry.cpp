@@ -10,9 +10,13 @@
 #include "op_vkcom.hpp"
 #include "op_cuda.hpp"
 #include "op_webnn.hpp"
+#include "op_timvx.hpp"
+#include "op_cann.hpp"
 
 #include "halide_scheduler.hpp"
 
+#include "backend.hpp"
+#include "factory.hpp"
 
 namespace cv {
 namespace dnn {
@@ -42,43 +46,51 @@ private:
 #endif
 #endif  // HAVE_HALIDE
 
+        bool haveBackendOpenVINO = false;
 #ifdef HAVE_INF_ENGINE
-        if (openvino::checkTarget(DNN_TARGET_CPU))
+        haveBackendOpenVINO = true;
+#elif defined(ENABLE_PLUGINS)
         {
-#ifdef HAVE_DNN_NGRAPH
+            auto factory = dnn_backend::createPluginDNNBackendFactory("openvino");
+            if (factory)
+            {
+                auto backend = factory->createNetworkBackend();
+                if (backend)
+                    haveBackendOpenVINO = true;
+            }
+        }
+#endif
+
+        bool haveBackendCPU_FP16 = false;
+#if defined(__arm64__) && __arm64__
+        haveBackendCPU_FP16 = true;
+#endif
+
+        if (haveBackendOpenVINO && openvino::checkTarget(DNN_TARGET_CPU))
+        {
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_CPU));
-#endif
         }
-        if (openvino::checkTarget(DNN_TARGET_MYRIAD))
+        if (haveBackendOpenVINO && openvino::checkTarget(DNN_TARGET_MYRIAD))
         {
-#ifdef HAVE_DNN_NGRAPH
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_MYRIAD));
-#endif
         }
-        if (openvino::checkTarget(DNN_TARGET_HDDL))
+        if (haveBackendOpenVINO && openvino::checkTarget(DNN_TARGET_HDDL))
         {
-#ifdef HAVE_DNN_NGRAPH
             backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_HDDL));
-#endif
         }
 #ifdef HAVE_OPENCL
         if (cv::ocl::useOpenCL() && ocl::Device::getDefault().isIntel())
         {
-            if (openvino::checkTarget(DNN_TARGET_OPENCL))
+            if (haveBackendOpenVINO && openvino::checkTarget(DNN_TARGET_OPENCL))
             {
-#ifdef HAVE_DNN_NGRAPH
                 backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_OPENCL));
-#endif
             }
-            if (openvino::checkTarget(DNN_TARGET_OPENCL_FP16))
+            if (haveBackendOpenVINO && openvino::checkTarget(DNN_TARGET_OPENCL_FP16))
             {
-#ifdef HAVE_DNN_NGRAPH
                 backends.push_back(std::make_pair(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_OPENCL_FP16));
-#endif
             }
         }
-#endif
-#endif  // HAVE_INF_ENGINE
+#endif  // HAVE_OPENCL
 
 #ifdef HAVE_WEBNN
         if (haveWebnn())
@@ -97,6 +109,9 @@ private:
 
         backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
 
+        if (haveBackendCPU_FP16)
+            backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU_FP16));
+
 #ifdef HAVE_VULKAN
         if (haveVulkan())
             backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));
@@ -108,6 +123,17 @@ private:
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
         }
+#endif
+
+#ifdef HAVE_TIMVX
+        if (haveTimVX())
+        {
+            backends.push_back(std::make_pair(DNN_BACKEND_TIMVX, DNN_TARGET_NPU));
+        }
+#endif
+
+#ifdef HAVE_CANN
+        backends.push_back(std::make_pair(DNN_BACKEND_CANN, DNN_TARGET_NPU));
 #endif
     }
 
@@ -124,10 +150,9 @@ std::vector<Target> getAvailableTargets(Backend be)
 {
     if (be == DNN_BACKEND_DEFAULT)
         be = (Backend)getParam_DNN_BACKEND_DEFAULT();
-#ifdef HAVE_INF_ENGINE
+
     if (be == DNN_BACKEND_INFERENCE_ENGINE)
         be = DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
-#endif
 
     std::vector<Target> result;
     const BackendRegistry::BackendsList all_backends = getAvailableBackends();

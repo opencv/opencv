@@ -160,7 +160,7 @@ void TrackerDaSiamRPNImpl::trackerInit(Mat img)
     dnn::blobFromImage(zCrop, blob, 1.0, Size(trackState.exemplarSize, trackState.exemplarSize), Scalar(), trackState.swapRB, false, CV_32F);
     siamRPN.setInput(blob);
     Mat out1;
-    siamRPN.forward(out1, "63");
+    siamRPN.forward(out1, "onnx_node_output_0!63");
 
     siamKernelCL1.setInput(out1);
     siamKernelR1.setInput(out1);
@@ -169,8 +169,8 @@ void TrackerDaSiamRPNImpl::trackerInit(Mat img)
     Mat r1 = siamKernelR1.forward();
     std::vector<int> r1_shape = { 20, 256, 4, 4 }, cls1_shape = { 10, 256, 4, 4 };
 
-    siamRPN.setParam(siamRPN.getLayerId("65"), 0, r1.reshape(0, r1_shape));
-    siamRPN.setParam(siamRPN.getLayerId("68"), 0, cls1.reshape(0, cls1_shape));
+    siamRPN.setParam(siamRPN.getLayerId("onnx_node_output_0!65"), 0, r1.reshape(0, r1_shape));
+    siamRPN.setParam(siamRPN.getLayerId("onnx_node_output_0!68"), 0, cls1.reshape(0, cls1_shape));
 }
 
 bool TrackerDaSiamRPNImpl::update(InputArray image, Rect& boundingBox)

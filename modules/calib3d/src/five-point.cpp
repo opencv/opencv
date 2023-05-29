@@ -433,9 +433,9 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, InputArr
 {
     CV_INSTRUMENT_REGION();
 
-    if (method >= 32 && method <= 38)
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
         return usac::findEssentialMat(_points1, _points2, _cameraMatrix,
-            method, prob, threshold, _mask);
+            method, prob, threshold, _mask, maxIters);
 
     Mat points1, points2, cameraMatrix;
     _points1.getMat().convertTo(points1, CV_64F);
@@ -601,7 +601,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2,
     P3(Range::all(), Range(0, 3)) = R1 * 1.0; P3.col(3) = -t * 1.0;
     P4(Range::all(), Range(0, 3)) = R2 * 1.0; P4.col(3) = -t * 1.0;
 
-    // Do the cheirality check.
+    // Do the chirality check.
     // Notice here a threshold dist is used to filter
     // out far away points (i.e. infinite points) since
     // their depth may vary between positive and negative.

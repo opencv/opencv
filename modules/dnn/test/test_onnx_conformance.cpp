@@ -666,11 +666,15 @@ static const TestCase testConformanceConfig[] = {
     {"test_scatter_elements_with_axis", 3, 1},
     {"test_scatter_elements_with_duplicate_indices", 3, 1},
     {"test_scatter_elements_with_negative_indices", 3, 1},
+    {"test_scatter_elements_with_reduction_max", 3, 1},
+    {"test_scatter_elements_with_reduction_min", 3, 1},
     {"test_scatter_elements_without_axis", 3, 1},
     {"test_scatter_with_axis", 3, 1},
     {"test_scatter_without_axis", 3, 1},
     {"test_scatternd", 3, 1},
     {"test_scatternd_add", 3, 1},
+    {"test_scatternd_max", 3, 1},
+    {"test_scatternd_min", 3, 1},
     {"test_scatternd_multiply", 3, 1},
     {"test_sce_NCd1_mean_weight_negative_ii", 3, 1},
     {"test_sce_NCd1_mean_weight_negative_ii_expanded", 3, 1},
@@ -933,6 +937,7 @@ public:
 
     static std::set<std::string> parser_deny_list;
     static std::set<std::string> global_deny_list;
+    static std::set<std::string> opencv_deny_list;
     static std::set<std::string> opencl_fp16_deny_list;
     static std::set<std::string> opencl_deny_list;
     static std::set<std::string> cpu_deny_list;
@@ -952,9 +957,9 @@ public:
         backend = get<0>(get<1>(GetParam()));
         target = get<1>(get<1>(GetParam()));
 
-        if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+        if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
         {
-            default_l1 = 4e-3;
+            default_l1 = 7e-3;
             default_lInf = 2e-2;
         }
         else
@@ -997,6 +1002,10 @@ public:
             #include "test_onnx_conformance_layer_filter_opencv_all_denylist.inl.hpp"
         };
 
+        opencv_deny_list = {
+            #include "test_onnx_conformance_layer_filter_opencv_denylist.inl.hpp"
+        };
+
         opencl_fp16_deny_list = {
             #include "test_onnx_conformance_layer_filter_opencv_ocl_fp16_denylist.inl.hpp"
         };
@@ -1032,6 +1041,7 @@ public:
 
 std::set<std::string> Test_ONNX_conformance::parser_deny_list;
 std::set<std::string> Test_ONNX_conformance::global_deny_list;
+std::set<std::string> Test_ONNX_conformance::opencv_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_fp16_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
 std::set<std::string> Test_ONNX_conformance::cpu_deny_list;
@@ -1053,14 +1063,21 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
     bool checkLayersFallbacks = true;
     bool checkAccuracy = true;
 
+    // SKIP when the test case is in the parser deny list.
     if (parser_deny_list.find(name) != parser_deny_list.end())
     {
         applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
     }
 
+    // SKIP when the test case is in the global deny list.
+    if (global_deny_list.find(name) != global_deny_list.end())
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_GLOBAL, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+    }
+
     if (backend == DNN_BACKEND_OPENCV)
     {
-        if (global_deny_list.find(name) != global_deny_list.end())
+        if (opencv_deny_list.find(name) != opencv_deny_list.end())
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
         }

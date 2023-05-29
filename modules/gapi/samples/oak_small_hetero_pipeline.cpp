@@ -13,8 +13,6 @@ const std::string keys =
     "{ h help  |              | Print this help message }"
     "{ output  | output.png   | Path to the output file }";
 
-#ifdef HAVE_OAK
-
 int main(int argc, char *argv[]) {
     cv::CommandLineParser cmd(argc, argv, keys);
     if (cmd.has("help")) {
@@ -58,12 +56,3 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Pipeline finished: " << output_name << " file has been written." << std::endl;
 }
-
-#else // HAVE_OAK
-
-int main() {
-    GAPI_Assert(false && "Built without OAK support");
-    return -1;
-}
-
-#endif // HAVE_OAK

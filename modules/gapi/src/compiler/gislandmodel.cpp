@@ -120,7 +120,7 @@ ade::NodeHandle GIsland::producer(const ade::Graph &g,
     }
     // Consistency: A GIsland requested for producer() of slot_nh should
     // always had the appropriate GModel node handle in its m_out_ops vector.
-    GAPI_Assert(false && "Broken GIslandModel ?.");
+    GAPI_Error("Broken GIslandModel ?.");
 }
 
 std::string GIsland::name() const
@@ -164,7 +164,7 @@ void GIslandModel::generateInitial(GIslandModel::Graph &g,
         {
         case NodeType::OP:   all_operations.insert(src_nh);                break;
         case NodeType::DATA: data_to_slot[src_nh] = mkSlotNode(g, src_nh); break;
-        default: GAPI_Assert(false); break;
+        default: GAPI_Error("InternalError"); break;
         }
     } // for (src_g.nodes)
 
@@ -346,9 +346,9 @@ std::string GIslandModel::traceIslandName(const ade::NodeHandle& island_nh, cons
     auto& backend_impl = island_ptr->backend().priv();
     std::string backend_impl_type_name = typeid(backend_impl).name();
 
-    // NOTE: Major part of already existing backends implementaion classes are called using
+    // NOTE: Major part of already existing backends implementation classes are called using
     //       "*G[Name]BackendImpl*" pattern.
-    //       We are trying to match against this pattern and retrive just [Name] part.
+    //       We are trying to match against this pattern and retrieve just [Name] part.
     //       If matching isn't successful, full mangled class name will be used.
     //
     //       To match we use following algorithm:

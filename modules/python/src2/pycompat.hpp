@@ -234,7 +234,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     static PyObject* pyopencv_##CLASS_ID##_repr(PyObject* self) \
     { \
         char str[1000]; \
-        sprintf(str, "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
+        snprintf(str, sizeof(str), "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
         return PyString_FromString(str); \
     }
 
@@ -294,7 +294,7 @@ PyObject* pyopencv_from(const TYPE& src)                                        
     static PyObject* pyopencv_##CLASS_ID##_repr(PyObject* self) \
     { \
         char str[1000]; \
-        sprintf(str, "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
+        snprintf(str, sizeof(str), "< " MODULESTR SCOPE"."#EXPORT_NAME" %p>", self); \
         return PyString_FromString(str); \
     } \
     static PyType_Slot pyopencv_##CLASS_ID##_Slots[] =  \
@@ -338,8 +338,10 @@ PyObject* pyopencv_from(const TYPE& src)                                        
         if (!registerNewType(m, #EXPORT_NAME, (PyObject*)pyopencv_##CLASS_ID##_TypePtr, SCOPE)) \
         { \
             printf("Failed to register a new type: " #EXPORT_NAME  ", base (" #BASE ") in " SCOPE " \n"); \
+            Py_DECREF(pyopencv_##CLASS_ID##_TypePtr); \
             ERROR_HANDLER; \
         } \
+        Py_DECREF(pyopencv_##CLASS_ID##_TypePtr); \
     }
 
 // Debug module load:

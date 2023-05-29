@@ -48,6 +48,7 @@
 #include <limits>
 #include <cstring>
 #include <algorithm>
+#include "opencv2/core/utility.hpp"
 #include "opencv2/core/saturate.hpp"
 
 //! @cond IGNORED
@@ -879,14 +880,10 @@ OPENCV_HAL_IMPL_CMP_OP(<=)
 For all types except 64-bit integer values. */
 OPENCV_HAL_IMPL_CMP_OP(>=)
 
-/** @brief Equal comparison
-
-For all types except 64-bit integer values. */
+/** @brief Equal comparison */
 OPENCV_HAL_IMPL_CMP_OP(==)
 
-/** @brief Not equal comparison
-
-For all types except 64-bit integer values. */
+/** @brief Not equal comparison */
 OPENCV_HAL_IMPL_CMP_OP(!=)
 
 template<int n>

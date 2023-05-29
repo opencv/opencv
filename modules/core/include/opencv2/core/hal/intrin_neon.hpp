@@ -78,8 +78,6 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_NEON_AARCH64 0
 #endif
 
-// TODO
-#define CV_NEON_DOT 0
 
 //////////// Utils ////////////
 
@@ -665,11 +663,22 @@ inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const v_int64
 }
 
 // 8 >> 32
+#ifdef CV_NEON_DOT
+#define OPENCV_HAL_IMPL_NEON_DOT_PRODUCT_OP(_Tpvec1, _Tpvec2, suffix) \
+inline _Tpvec1 v_dotprod_expand(const _Tpvec2& a, const _Tpvec2& b)   \
+{ \
+    return _Tpvec1(vdotq_##suffix(vdupq_n_##suffix(0), a.val, b.val));\
+} \
+inline _Tpvec1 v_dotprod_expand(const _Tpvec2& a, const _Tpvec2& b, const _Tpvec1& c) \
+{ \
+    return _Tpvec1(vdotq_##suffix(c.val, a.val, b.val)); \
+}
+
+OPENCV_HAL_IMPL_NEON_DOT_PRODUCT_OP(v_uint32x4, v_uint8x16, u32)
+OPENCV_HAL_IMPL_NEON_DOT_PRODUCT_OP(v_int32x4,  v_int8x16,  s32)
+#else
 inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
 {
-#if CV_NEON_DOT
-    return v_uint32x4(vdotq_u32(vdupq_n_u32(0), a.val, b.val));
-#else
     const uint8x16_t zero   = vreinterpretq_u8_u32(vdupq_n_u32(0));
     const uint8x16_t mask   = vreinterpretq_u8_u32(vdupq_n_u32(0x00FF00FF));
     const uint16x8_t zero32 = vreinterpretq_u16_u32(vdupq_n_u32(0));
@@ -685,23 +694,15 @@ inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
     uint32x4_t s1 = vaddq_u32(vshrq_n_u32(vreinterpretq_u32_u16(even), 16),
                               vshrq_n_u32(vreinterpretq_u32_u16(odd),  16));
     return v_uint32x4(vaddq_u32(s0, s1));
-#endif
 }
 inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b,
                                    const v_uint32x4& c)
 {
-#if CV_NEON_DOT
-    return v_uint32x4(vdotq_u32(c.val, a.val, b.val));
-#else
     return v_dotprod_expand(a, b) + c;
-#endif
 }
 
 inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
 {
-#if CV_NEON_DOT
-    return v_int32x4(vdotq_s32(vdupq_n_s32(0), a.val, b.val));
-#else
     int16x8_t p0  = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
     int16x8_t p1  = vmull_s8(vget_high_s8(a.val), vget_high_s8(b.val));
     int16x8_t uzp1, uzp2;
@@ -710,18 +711,13 @@ inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
     int16x4_t uzpl1, uzpl2;
     _v128_unzip(vget_low_s16(sum), vget_high_s16(sum), uzpl1, uzpl2);
     return v_int32x4(vaddl_s16(uzpl1, uzpl2));
-#endif
 }
 inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b,
                                   const v_int32x4& c)
 {
-#if CV_NEON_DOT
-    return v_int32x4(vdotq_s32(c.val, a.val, b.val));
-#else
     return v_dotprod_expand(a, b) + c;
-#endif
 }
-
+#endif
 // 16 >> 64
 inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b)
 {
@@ -830,45 +826,44 @@ inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_
 }
 
 // 8 >> 32
+#ifdef CV_NEON_DOT
+#define OPENCV_HAL_IMPL_NEON_DOT_PRODUCT_FAST_OP(_Tpvec1, _Tpvec2, suffix) \
+inline _Tpvec1 v_dotprod_expand_fast(const _Tpvec2& a, const _Tpvec2& b)   \
+{ \
+    return v_dotprod_expand(a, b); \
+} \
+inline _Tpvec1 v_dotprod_expand_fast(const _Tpvec2& a, const _Tpvec2& b, const _Tpvec1& c) \
+{ \
+    return v_dotprod_expand(a, b, c); \
+}
+
+OPENCV_HAL_IMPL_NEON_DOT_PRODUCT_FAST_OP(v_uint32x4, v_uint8x16, u32)
+OPENCV_HAL_IMPL_NEON_DOT_PRODUCT_FAST_OP(v_int32x4,  v_int8x16,  s32)
+#else
 inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b)
 {
-#if CV_NEON_DOT
-    return v_uint32x4(vdotq_u32(vdupq_n_u32(0), a.val, b.val));
-#else
     uint16x8_t p0 = vmull_u8(vget_low_u8(a.val), vget_low_u8(b.val));
     uint16x8_t p1 = vmull_u8(vget_high_u8(a.val), vget_high_u8(b.val));
     uint32x4_t s0 = vaddl_u16(vget_low_u16(p0), vget_low_u16(p1));
     uint32x4_t s1 = vaddl_u16(vget_high_u16(p0), vget_high_u16(p1));
     return v_uint32x4(vaddq_u32(s0, s1));
-#endif
 }
 inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
 {
-#if CV_NEON_DOT
-    return v_uint32x4(vdotq_u32(c.val, a.val, b.val));
-#else
     return v_dotprod_expand_fast(a, b) + c;
-#endif
 }
 
 inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
 {
-#if CV_NEON_DOT
-    return v_int32x4(vdotq_s32(vdupq_n_s32(0), a.val, b.val));
-#else
     int16x8_t prod = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
     prod = vmlal_s8(prod, vget_high_s8(a.val), vget_high_s8(b.val));
     return v_int32x4(vaddl_s16(vget_low_s16(prod), vget_high_s16(prod)));
-#endif
 }
 inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
 {
-#if CV_NEON_DOT
-    return v_int32x4(vdotq_s32(c.val, a.val, b.val));
-#else
     return v_dotprod_expand_fast(a, b) + c;
-#endif
 }
+#endif
 
 // 16 >> 64
 inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b)
@@ -1041,18 +1036,6 @@ OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float64x2, v_min, vminq_f64)
 OPENCV_HAL_IMPL_NEON_BIN_FUNC(v_float64x2, v_max, vmaxq_f64)
 #endif
 
-#if CV_SIMD128_64F
-inline int64x2_t vmvnq_s64(int64x2_t a)
-{
-    int64x2_t vx = vreinterpretq_s64_u32(vdupq_n_u32(0xFFFFFFFF));
-    return veorq_s64(a, vx);
-}
-inline uint64x2_t vmvnq_u64(uint64x2_t a)
-{
-    uint64x2_t vx = vreinterpretq_u64_u32(vdupq_n_u32(0xFFFFFFFF));
-    return veorq_u64(a, vx);
-}
-#endif
 #define OPENCV_HAL_IMPL_NEON_INT_CMP_OP(_Tpvec, cast, suffix, not_suffix) \
 inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(cast(vceqq_##suffix(a.val, b.val))); } \
@@ -1074,9 +1057,47 @@ OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int16x8, vreinterpretq_s16_u16, s16, u16)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint32x4, OPENCV_HAL_NOP, u32, u32)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int32x4, vreinterpretq_s32_u32, s32, u32)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float32x4, vreinterpretq_f32_u32, f32, u32)
+#if defined(__aarch64__) || defined(_M_ARM64)
+static inline uint64x2_t vmvnq_u64(uint64x2_t a)
+{
+    uint64x2_t vx = vreinterpretq_u64_u32(vdupq_n_u32(0xFFFFFFFF));
+    return veorq_u64(a, vx);
+}
+//OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint64x2, OPENCV_HAL_NOP, u64, u64)
+//OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int64x2, vreinterpretq_s64_u64, s64, u64)
+static inline v_uint64x2 operator == (const v_uint64x2& a, const v_uint64x2& b)
+{ return v_uint64x2(vceqq_u64(a.val, b.val)); }
+static inline v_uint64x2 operator != (const v_uint64x2& a, const v_uint64x2& b)
+{ return v_uint64x2(vmvnq_u64(vceqq_u64(a.val, b.val))); }
+static inline v_int64x2 operator == (const v_int64x2& a, const v_int64x2& b)
+{ return v_int64x2(vreinterpretq_s64_u64(vceqq_s64(a.val, b.val))); }
+static inline v_int64x2 operator != (const v_int64x2& a, const v_int64x2& b)
+{ return v_int64x2(vreinterpretq_s64_u64(vmvnq_u64(vceqq_s64(a.val, b.val)))); }
+#else
+static inline v_uint64x2 operator == (const v_uint64x2& a, const v_uint64x2& b)
+{
+    uint32x4_t cmp = vceqq_u32(vreinterpretq_u32_u64(a.val), vreinterpretq_u32_u64(b.val));
+    uint32x4_t swapped = vrev64q_u32(cmp);
+    return v_uint64x2(vreinterpretq_u64_u32(vandq_u32(cmp, swapped)));
+}
+static inline v_uint64x2 operator != (const v_uint64x2& a, const v_uint64x2& b)
+{
+    uint32x4_t cmp = vceqq_u32(vreinterpretq_u32_u64(a.val), vreinterpretq_u32_u64(b.val));
+    uint32x4_t swapped = vrev64q_u32(cmp);
+    uint64x2_t v_eq = vreinterpretq_u64_u32(vandq_u32(cmp, swapped));
+    uint64x2_t vx = vreinterpretq_u64_u32(vdupq_n_u32(0xFFFFFFFF));
+    return v_uint64x2(veorq_u64(v_eq, vx));
+}
+static inline v_int64x2 operator == (const v_int64x2& a, const v_int64x2& b)
+{
+    return v_reinterpret_as_s64(v_reinterpret_as_u64(a) == v_reinterpret_as_u64(b));
+}
+static inline v_int64x2 operator != (const v_int64x2& a, const v_int64x2& b)
+{
+    return v_reinterpret_as_s64(v_reinterpret_as_u64(a) != v_reinterpret_as_u64(b));
+}
+#endif
 #if CV_SIMD128_64F
-OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint64x2, OPENCV_HAL_NOP, u64, u64)
-OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int64x2, vreinterpretq_s64_u64, s64, u64)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float64x2, vreinterpretq_f64_u64, f64, u64)
 #endif
 
