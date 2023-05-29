@@ -17,7 +17,7 @@ try:
 
     @cv.gapi.op('custom.delay', in_types=[cv.GMat], out_types=[cv.GMat])
     class GDelay:
-        """Delay for 10 ms."""
+        """Delay for 50 ms."""
 
         @staticmethod
         def outMeta(desc):
@@ -30,7 +30,7 @@ try:
 
         @staticmethod
         def run(img):
-            time.sleep(0.01)
+            time.sleep(0.05)
             return img
 
 
@@ -289,8 +289,7 @@ try:
             ccomp.start()
 
             # Assert
-            max_num_frames  = 10
-            proc_num_frames = 0
+            max_num_frames  = 50
 
             out_counter = 0
             desync_out_counter = 0
@@ -307,12 +306,11 @@ try:
                 else:
                     none_counter += 1
 
-                proc_num_frames += 1
-                if proc_num_frames == max_num_frames:
+                if out_counter == max_num_frames:
                     ccomp.stop()
                     break
 
-            self.assertLess(0, proc_num_frames)
+            self.assertLess(0, out_counter)
             self.assertLess(desync_out_counter, out_counter)
             self.assertLess(0, none_counter)
 
