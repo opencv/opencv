@@ -80,7 +80,7 @@ bool hasNonZero(InputArray _src)
     const Mat* arrays[] = {&src, nullptr};
     Mat planes[1];
     NAryMatIterator itNAry(arrays, planes, 1);
-    for(int p = 0 ; p<itNAry.nplanes ; ++p, ++itNAry)
+    for(size_t p = 0 ; p<itNAry.nplanes ; ++p, ++itNAry)
     {
         const Mat& plane = itNAry.planes[0];
         if (plane.isContinuous())
