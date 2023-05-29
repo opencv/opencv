@@ -77,11 +77,18 @@ bool hasNonZero(InputArray _src)
     HasNonZeroFunc func = getHasNonZeroTab(src.depth());
     CV_Assert( func != 0 );
 
-    if (src.isContinuous())
-        res = func(src.ptr<uchar>(0), src.total());
-    else
-      for(int row = 0, rowsCount = src.rows ; !res && (row<rowsCount) ; ++row)
-          res = func(src.ptr<uchar>(row), src.cols);
+    const Mat* arrays[] = {&src, nullptr};
+    Mat planes[1];
+    NAryMatIterator itNAry(arrays, planes, 1);
+    for(int p = 0 ; p<itNAry.nplanes ; ++p, ++itNAry)
+    {
+        const Mat& plane = itNAry.planes[0];
+        if (plane.isContinuous())
+            res = func(plane.ptr<uchar>(0), plane.total());
+        else
+          for(int row = 0, rowsCount = plane.rows ; !res && (row<rowsCount) ; ++row)
+              res = func(plane.ptr<uchar>(row), plane.cols);
+    }
 
     return res;
 }
