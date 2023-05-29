@@ -258,10 +258,6 @@ class CppHeaderParser(object):
         if "CV_EXPORTS_W_MAP" in l:
             l = l.replace("CV_EXPORTS_W_MAP", "")
             modlist.append("/Map")
-        if "CV_EXPORTS_W_PARAMS" in l:
-            l = l.replace("CV_EXPORTS_W_PARAMS", "")
-            modlist.append("/Map")
-            modlist.append("/Params")
         if "CV_EXPORTS_W_SIMPLE" in l:
             l = l.replace("CV_EXPORTS_W_SIMPLE", "")
             modlist.append("/Simple")
@@ -782,12 +778,7 @@ class CppHeaderParser(object):
                 var_list = [var_name1] + [i.strip() for i in var_list[1:]]
 
                 for v in var_list:
-                    vv = v.split("=")
-                    vname = vv[0].strip()
-                    vdefval = ""
-                    if len(vv) > 1:
-                        vdefval = vv[1].strip()
-                    class_decl[3].append([var_type, vname, vdefval, var_modlist])
+                    class_decl[3].append([var_type, v, "", var_modlist])
             return stmt_type, "", False, None
 
         # something unknown
