@@ -200,7 +200,7 @@ typedef struct opj_t1 {
     OPJ_UINT32 flagssize;
     OPJ_BOOL   encoder;
 
-    /* Thre 3 variables below are only used by the decoder */
+    /* The 3 variables below are only used by the decoder */
     /* set to TRUE in multithreaded context */
     OPJ_BOOL     mustuse_cblkdatabuffer;
     /* Temporary buffer to concatenate all chunks of a codebock */

@@ -276,6 +276,44 @@ static INLINE OPJ_INT32 opj_int_fix_mul_t1(OPJ_INT32 a, OPJ_INT32 b)
     return (OPJ_INT32)(temp >> (13 + 11 - T1_NMSEDEC_FRACBITS)) ;
 }
 
+/**
+Addition two signed integers with a wrap-around behaviour.
+Assumes complement-to-two signed integers.
+@param a
+@param b
+@return Returns a + b
+*/
+static INLINE OPJ_INT32 opj_int_add_no_overflow(OPJ_INT32 a, OPJ_INT32 b)
+{
+    void* pa = &a;
+    void* pb = &b;
+    OPJ_UINT32* upa = (OPJ_UINT32*)pa;
+    OPJ_UINT32* upb = (OPJ_UINT32*)pb;
+    OPJ_UINT32 ures = *upa + *upb;
+    void* pures = &ures;
+    OPJ_INT32* ipres = (OPJ_INT32*)pures;
+    return *ipres;
+}
+
+/**
+Subtract two signed integers with a wrap-around behaviour.
+Assumes complement-to-two signed integers.
+@param a
+@param b
+@return Returns a - b
+*/
+static INLINE OPJ_INT32 opj_int_sub_no_overflow(OPJ_INT32 a, OPJ_INT32 b)
+{
+    void* pa = &a;
+    void* pb = &b;
+    OPJ_UINT32* upa = (OPJ_UINT32*)pa;
+    OPJ_UINT32* upb = (OPJ_UINT32*)pb;
+    OPJ_UINT32 ures = *upa - *upb;
+    void* pures = &ures;
+    OPJ_INT32* ipres = (OPJ_INT32*)pures;
+    return *ipres;
+}
+
 /* ----------------------------------------------------------------------- */
 /*@}*/
 

@@ -122,6 +122,11 @@ typedef struct opj_tcd_cblk_dec {
     opj_tcd_seg_data_chunk_t* chunks; /* Array of chunks */
     /* position of the code-blocks : left upper corner (x0, y0) right low corner (x1,y1) */
     OPJ_INT32 x0, y0, x1, y1;
+    /* Mb is The maximum number of bit-planes available for the representation of
+       coefficients in any sub-band, b, as defined in Equation (E-2). See
+       Section B.10.5 of the standard */
+    OPJ_UINT32 Mb;  /* currently used only to check if HT decoding is correct */
+    /* numbps is Mb - P as defined in Section B.10.5 of the standard */
     OPJ_UINT32 numbps;
     /* number of bits for len, for the current packet. Transitory value */
     OPJ_UINT32 numlenbits;
