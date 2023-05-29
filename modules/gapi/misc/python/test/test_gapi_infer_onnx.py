@@ -18,9 +18,7 @@ try:
 
     class test_gapi_infer(NewOpenCVTests):
         def find_dnn_file(self, filename):
-            return self.find_file(filename, [os.environ.get('OPENCV_DNN_TEST_DATA_PATH', os.getcwd()),
-                                             os.environ['OPENCV_TEST_DATA_PATH'],
-                                             os.environ['OPENCV_GAPI_ONNX_MODEL_PATH'] ])
+            return self.find_file(filename, [os.environ.get('OPENCV_GAPI_ONNX_MODEL_PATH')], False)
 
         def test_onnx_classification(self):
             model_path = self.find_dnn_file(CLASSIFICATION_MODEL_PATH)
