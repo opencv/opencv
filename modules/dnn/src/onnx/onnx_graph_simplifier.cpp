@@ -808,7 +808,7 @@ public:
                         const Ptr<ImportNodeWrapper> node_to_check = net->getNode(i);
                         int numInp = node_to_check->getNumInputs();
                         for (int inp = 0; inp < numInp; ++inp) {
-                            if (i != nodeToMatch && inpNodeName == node_to_check->getInputName(0)) {
+                            if (i != nodeToMatch && inpNodeName == node_to_check->getInputName(inp)) {
                                 // Another node has the same input node, so it cannot be merged.
                                 return false;
                             }
