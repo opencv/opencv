@@ -21,8 +21,10 @@ namespace gimpl {
 namespace ov {
 
 struct OVCompiled {
-    ::ov::InferRequest infer_request;
+    ::ov::CompiledModel compiled_model;
 };
+
+class RequestPool;
 
 class GOVExecutable final: public GIslandExecutable
 {
@@ -36,6 +38,9 @@ class GOVExecutable final: public GIslandExecutable
 
     // List of all resources in graph (both internal and external)
     std::vector<ade::NodeHandle> m_dataNodes;
+
+    // To manage multiple async requests
+    std::unique_ptr<RequestPool> m_reqPool;
 
 public:
     GOVExecutable(const ade::Graph                   &graph,

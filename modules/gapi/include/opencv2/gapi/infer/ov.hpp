@@ -92,6 +92,8 @@ struct ParamDesc {
 
     using PluginConfigT = std::map<std::string, std::string>;
     PluginConfigT config;
+
+    size_t nireq = 1;
 };
 
 } // namespace detail
@@ -413,6 +415,21 @@ public:
         return *this;
     }
 
+    /** @brief Specifies number of asynchronous inference requests.
+
+    @param nireq Number of inference asynchronous requests.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgNumRequests(const size_t nireq) {
+        if (nireq == 0) {
+            cv::util::throw_error(
+                    std::logic_error("Number of inference requests"
+                                     " must be greater than zero."));
+        }
+        m_desc.nireq = nireq;
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend() const { return cv::gapi::ov::backend(); }
     std::string   tag()     const { return Net::tag(); }
@@ -640,6 +657,17 @@ public:
         GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
         auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
         model.new_shapes = std::move(new_shape_map);
+        return *this;
+    }
+
+    /** @see ov::Params::cfgNumRequests. */
+    Params& cfgNumRequests(const size_t nireq) {
+        if (nireq == 0) {
+            cv::util::throw_error(
+                    std::logic_error("Number of inference requests"
+                                     " must be greater than zero."));
+        }
+        m_desc.nireq = nireq;
         return *this;
     }
 

@@ -110,6 +110,12 @@ cv::gapi::ov::PyParams::cfgReshape(
     return *this;
 }
 
+cv::gapi::ov::PyParams&
+cv::gapi::ov::PyParams::cfgNumRequests(const size_t nireq) {
+    m_priv->cfgNumRequests(nireq);
+    return *this;
+}
+
 cv::gapi::ov::PyParams cv::gapi::ov::params(const std::string &tag,
                                             const std::string &model_path,
                                             const std::string &weights,

@@ -82,6 +82,9 @@ public:
     PyParams& cfgReshape(
             std::map<std::string, std::vector<size_t>> new_shape_map);
 
+    GAPI_WRAP
+    PyParams& cfgNumRequests(const size_t nireq);
+
     GBackend      backend() const;
     std::string   tag()     const;
     cv::util::any params()  const;

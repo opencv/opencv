@@ -18,6 +18,16 @@
 #include <opencv2/gapi/gcommon.hpp>
 #include <opencv2/gapi/infer/ov.hpp>
 
+#if defined(HAVE_TBB)
+#  include <tbb/concurrent_queue.h> // FIXME: drop it from here!
+template<typename T> using QueueClass = tbb::concurrent_bounded_queue<T>;
+#else
+#  include "executor/conc_queue.hpp"
+template<typename T> using QueueClass = cv::gapi::own::concurrent_bounded_queue<T>;
+#endif // TBB
+
+#include "utils/itt.hpp"
+
 #include <ade/util/zip_range.hpp>
 
 #include <openvino/openvino.hpp>
@@ -154,7 +164,7 @@ struct OVUnit {
                                                      params.device,
                                                      toOV(params.config));
         }
-        return {compiled_model.create_infer_request()};
+        return {compiled_model};
     }
 
     cv::gapi::ov::detail::ParamDesc params;
@@ -325,7 +335,7 @@ cv::GArg OVCallContext::packArg(const cv::GArg &arg) {
 struct OVCallable {
     static const char *name() { return "OVRequestCallable"; }
     using Run = std::function<void(std::shared_ptr<OVCallContext>,
-                                   ov::InferRequest&)>;
+                                   cv::gimpl::ov::RequestPool&)>;
     Run run;
 };
 
@@ -352,6 +362,173 @@ using GConstGOVModel = ade::ConstTypedGraph
     , OVUnit
     , OVCallable
     >;
+
+namespace {
+class IInferExecutor {
+public:
+    using Ptr             = std::shared_ptr<IInferExecutor>;
+    using NotifyCallbackF = std::function<void()>;
+    using SetInputDataF   = std::function<void(::ov::InferRequest&)>;
+    using ReadOutputDataF = std::function<void(::ov::InferRequest&, std::exception_ptr)>;
+
+    // NB: The task is represented by:
+    // SetInputDataF - function which set input data.
+    // ReadOutputDataF - function which read output data.
+    struct Task {
+        SetInputDataF   set_input_data;
+        ReadOutputDataF read_output_data;
+    };
+
+    IInferExecutor(::ov::InferRequest request, NotifyCallbackF notify)
+        : m_request(std::move(request)),
+          m_notify(std::move(notify)) {
+    };
+
+    virtual void execute(const Task& task) = 0;
+    virtual ~IInferExecutor() = default;
+
+protected:
+    ::ov::InferRequest m_request;
+    NotifyCallbackF    m_notify;
+};
+
+class SyncInferExecutor : public IInferExecutor {
+    using IInferExecutor::IInferExecutor;
+    virtual void execute(const IInferExecutor::Task &task) override;
+};
+
+void SyncInferExecutor::execute(const IInferExecutor::Task &task) {
+    try {
+        task.set_input_data(m_request);
+        m_request.infer();
+        task.read_output_data(m_request, nullptr);
+    } catch (...) {
+        m_notify();
+        throw;
+    }
+    // NB: Notify pool that executor has finished.
+    m_notify();
+}
+
+class AsyncInferExecutor : public IInferExecutor {
+public:
+    using IInferExecutor::IInferExecutor;
+    virtual void execute(const IInferExecutor::Task& task) override;
+
+private:
+    void callback(Task task,
+                  ::ov::InferRequest request,
+                  std::exception_ptr eptr) noexcept;
+};
+
+void AsyncInferExecutor::execute(const IInferExecutor::Task& task) {
+    using namespace std::placeholders;
+    using callback_t = std::function<void(std::exception_ptr)>;
+    m_request.set_callback(
+            static_cast<callback_t>(
+                std::bind(&AsyncInferExecutor::callback, this, task, m_request, _1)));
+    try {
+        task.set_input_data(m_request);
+        m_request.start_async();
+    } catch (...) {
+        m_request.set_callback([](std::exception_ptr){});
+        m_notify();
+        throw;
+    }
+}
+
+void AsyncInferExecutor::callback(IInferExecutor::Task task,
+                                  ::ov::InferRequest   request,
+                                  std::exception_ptr   eptr) noexcept {
+    task.read_output_data(request, eptr);
+    request.set_callback([](std::exception_ptr){});
+    // NB: Notify pool that executor has finished.
+    m_notify();
+}
+
+} // anonymous namespace
+
+class cv::gimpl::ov::RequestPool {
+public:
+
+    explicit RequestPool(std::vector<::ov::InferRequest>&& requests);
+
+    IInferExecutor::Ptr getIdleRequest();
+    void waitAll();
+
+private:
+    void setup();
+    void release(const size_t id);
+
+    QueueClass<size_t>               m_idle_ids;
+    std::vector<IInferExecutor::Ptr> m_requests;
+};
+
+void cv::gimpl::ov::RequestPool::release(const size_t id) {
+    m_idle_ids.push(id);
+}
+
+cv::gimpl::ov::RequestPool::RequestPool(std::vector<::ov::InferRequest>&& requests) {
+    GAPI_Assert(!requests.empty());
+    if (requests.size() == 1u) {
+        m_requests.push_back(
+                std::make_shared<SyncInferExecutor>(
+                    requests.front(), std::bind(&RequestPool::release, this, 0u)));
+    } else {
+        for (size_t i = 0; i < requests.size(); ++i) {
+            m_requests.push_back(
+                    std::make_shared<AsyncInferExecutor>(
+                        requests[i], std::bind(&RequestPool::release, this, i)));
+        }
+    }
+    setup();
+}
+
+void cv::gimpl::ov::RequestPool::setup() {
+    for (size_t i = 0; i < m_requests.size(); ++i) {
+        m_idle_ids.push(i);
+    }
+}
+
+IInferExecutor::Ptr cv::gimpl::ov::RequestPool::getIdleRequest() {
+    size_t id = 0u;
+    m_idle_ids.pop(id);
+    return m_requests[id];
+}
+
+// NB: Not thread-safe.
+void cv::gimpl::ov::RequestPool::waitAll() {
+    // NB: It will be blocked if at least one request is busy.
+    for (size_t i = 0; i < m_requests.size(); ++i) {
+        size_t id = 0u;
+        m_idle_ids.pop(id);
+    }
+    setup();
+}
+
+
+// NB: This is a callback used by async infer
+// to post outputs blobs (cv::GMat's).
+static void PostOutputs(::ov::InferRequest             &infer_request,
+                        std::exception_ptr             eptr,
+                        std::shared_ptr<OVCallContext> ctx) {
+    GAPI_ITT_STATIC_LOCAL_HANDLE(ov_cb_post_outputs_hndl, "OV_async_callback_PostOutputs");
+    GAPI_ITT_AUTO_TRACE_GUARD(ov_cb_post_outputs_hndl);
+
+    ctx->eptr = std::move(eptr);
+    for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+        // NB: Copy data back only if execution finished sucessfuly.
+        // Otherwise just post outputs to keep streaming executor contract.
+        if (!ctx->eptr) {
+            const auto& out_name = ctx->uu.params.output_names[i];
+            copyFromOV(infer_request.get_tensor(out_name),
+                       ctx->outMatR(i));
+        }
+        auto output = ctx->output(i);
+        ctx->out.meta(output, ctx->getMeta());
+        ctx->out.post(std::move(output), ctx->eptr);
+    }
+}
 
 namespace cv {
 namespace gimpl {
@@ -540,23 +717,20 @@ struct Infer: public cv::detail::KernelTag {
     }
 
     static void run(std::shared_ptr<OVCallContext> ctx,
-                    ::ov::InferRequest             &infer_request) {
-        for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
-            const auto& input_name = ctx->uu.params.input_names[i];
-            auto input_tensor = infer_request.get_tensor(input_name);
-            copyToOV(ctx->inMat(i), input_tensor);
-        }
-
-        infer_request.infer();
-
-        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-            const auto& out_name = ctx->uu.params.output_names[i];
-            copyFromOV(infer_request.get_tensor(out_name),
-                       ctx->outMatR(i));
-            auto output = ctx->output(i);
-            ctx->out.meta(output, ctx->getMeta());
-            ctx->out.post(std::move(output), ctx->eptr);
-        }
+                    cv::gimpl::ov::RequestPool     &reqPool) {
+        using namespace std::placeholders;
+        reqPool.getIdleRequest()->execute(
+                IInferExecutor::Task {
+                    [ctx](::ov::InferRequest &infer_request) {
+                        for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
+                            const auto& input_name = ctx->uu.params.input_names[i];
+                            auto input_tensor = infer_request.get_tensor(input_name);
+                            copyToOV(ctx->inMat(i), input_tensor);
+                        }
+                    },
+                    std::bind(PostOutputs, _1, _2, ctx)
+                }
+        );
     }
 };
 
@@ -617,11 +791,22 @@ namespace {
             return false;
         }
     };
-}
+
+} // anonymous namespace
 
 cv::gapi::GBackend cv::gapi::ov::backend() {
     static cv::gapi::GBackend this_backend(std::make_shared<GOVBackendImpl>());
     return this_backend;
+}
+
+static std::vector<::ov::InferRequest>
+createInferRequests(::ov::CompiledModel &compiled_model,
+                    size_t              num_infer_requests) {
+    std::vector<::ov::InferRequest> infer_requests;
+    for (size_t i = 0; i < num_infer_requests; ++i) {
+        infer_requests.push_back(compiled_model.create_infer_request());
+    }
+    return infer_requests;
 }
 
 // GOVExecutable implementation //////////////////////////////////////////////
@@ -639,6 +824,7 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
             if (this_nh == nullptr) {
                 this_nh = nh;
                 compiled = const_cast<OVUnit&>(ovm.metadata(this_nh).get<OVUnit>()).compile();
+                m_reqPool.reset(new RequestPool(createInferRequests(compiled.compiled_model, 1)));
             }
             else
                 util::throw_error(std::logic_error("Multi-node inference is not supported!"));
@@ -707,7 +893,7 @@ void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     const auto &kk = giem.metadata(this_nh).get<OVCallable>();
 
     try {
-        kk.run(ctx, compiled.infer_request);
+        kk.run(ctx, *m_reqPool);
     } catch (...) {
         auto eptr = std::current_exception();
         for (auto i : ade::util::iota(ctx->uu.params.num_out))
@@ -717,6 +903,10 @@ void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
             ctx->out.post(std::move(output), eptr);
         }
         return;
+    }
+
+    if (!m_gm.metadata().contains<Streaming>()) {
+        m_reqPool->waitAll();
     }
 }
 

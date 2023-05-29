@@ -74,7 +74,6 @@ namespace streaming
 
     GAPI_EXPORTS_W cv::GMat desync(const cv::GMat &g);
 } // namespace streaming
-
 } // namespace gapi
 
 namespace detail
