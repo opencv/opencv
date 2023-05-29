@@ -85,6 +85,20 @@ public:
     GAPI_WRAP
     PyParams& cfgNumRequests(const size_t nireq);
 
+    GAPI_WRAP
+    PyParams& cfgMean(std::vector<float> mean_values);
+
+    GAPI_WRAP
+    PyParams& cfgMean(
+            std::map<std::string, std::vector<float>> mean_map);
+
+    GAPI_WRAP
+    PyParams& cfgScale(std::vector<float> scale_values);
+
+    GAPI_WRAP
+    PyParams& cfgScale(
+            std::map<std::string, std::vector<float>> scale_map);
+
     GBackend      backend() const;
     std::string   tag()     const;
     cv::util::any params()  const;

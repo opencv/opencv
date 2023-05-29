@@ -534,15 +534,22 @@ namespace cv {
 namespace gimpl {
 namespace ov {
 
-template <typename Attr> ParamsM::AttrMap<Attr>
-broadcastLayerAttr(const ParamsM::LayerVariantAttr<Attr> &layer_attr,
-                   const std::vector<std::string>        &layer_names) {
-    ParamsM::AttrMap<Attr> map;
-    if (cv::util::holds_alternative<ParamsM::AttrMap<Attr>>(layer_attr)) {
-        map = cv::util::get<ParamsM::AttrMap<Attr>>(layer_attr);
+template <typename Attr>
+using AttrMap = cv::gapi::ov::detail::AttrMap<Attr>;
+
+template <typename Attr>
+using LayerVariantAttr = cv::gapi::ov::detail::LayerVariantAttr<Attr>;
+
+template <typename Attr> AttrMap<Attr>
+broadcastLayerAttr(const LayerVariantAttr<Attr>   &layer_attr,
+                   const std::vector<std::string> &layer_names) {
+    AttrMap<Attr> map;
+    if (cv::util::holds_alternative<AttrMap<Attr>>(layer_attr)) {
+        map = cv::util::get<AttrMap<Attr>>(layer_attr);
         // NB: Validate map:
         std::unordered_set<std::string> existing_layers =
             {layer_names.begin(), layer_names.end()};
+
         for (const auto &p : map) {
             const auto it = existing_layers.find(p.first);
             if (it == existing_layers.end()) {
@@ -634,6 +641,11 @@ struct Infer: public cv::detail::KernelTag {
                 broadcastLayerAttr(model_info.input_model_layout,
                                    uu.params.input_names);
 
+            const auto mean_values = broadcastLayerAttr(model_info.mean_values,
+                                                        uu.params.input_names);
+            const auto scale_values = broadcastLayerAttr(model_info.scale_values,
+                                                         uu.params.input_names);
+
             ::ov::preprocess::PrePostProcessor ppp(uu.model);
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                             ade::util::toRange(in_metas))) {
@@ -695,7 +707,20 @@ struct Infer: public cv::detail::KernelTag {
                                                                  spatial_size.width);
                     input_info.preprocess()
                         .resize(::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR);
-                    }
+                }
+
+                // NB: Apply mean/scale as the last step of the preprocessing.
+                // Note that this can be applied to any input data if the
+                // position of "C" dimension is known.
+                const auto mean_vec = lookUp(mean_values, input_name);
+                if (mean_vec) {
+                    input_info.preprocess().mean(*mean_vec);
+                }
+
+                const auto scale_vec = lookUp(scale_values, input_name);
+                if (scale_vec) {
+                    input_info.preprocess().scale(*scale_vec);
+                }
             }
 
             const auto output_tensor_layout =

@@ -116,6 +116,32 @@ cv::gapi::ov::PyParams::cfgNumRequests(const size_t nireq) {
     return *this;
 }
 
+cv::gapi::ov::PyParams&
+cv::gapi::ov::PyParams::cfgMean(std::vector<float> mean_values) {
+    m_priv->cfgMean(std::move(mean_values));
+    return *this;
+}
+
+cv::gapi::ov::PyParams&
+cv::gapi::ov::PyParams::cfgMean(
+        std::map<std::string, std::vector<float>> mean_map) {
+    m_priv->cfgMean(std::move(mean_map));
+    return *this;
+}
+
+cv::gapi::ov::PyParams&
+cv::gapi::ov::PyParams::cfgScale(std::vector<float> scale_values) {
+    m_priv->cfgScale(std::move(scale_values));
+    return *this;
+}
+
+cv::gapi::ov::PyParams&
+cv::gapi::ov::PyParams::cfgScale(
+        std::map<std::string, std::vector<float>> scale_map) {
+    m_priv->cfgScale(std::move(scale_map));
+    return *this;
+}
+
 cv::gapi::ov::PyParams cv::gapi::ov::params(const std::string &tag,
                                             const std::string &model_path,
                                             const std::string &weights,

@@ -29,6 +29,20 @@ GAPI_EXPORTS cv::gapi::GBackend backend();
 
 namespace detail {
 
+template <typename T>
+using AttrMap = std::map<std::string, T>;
+// NB: This type is supposed to be used to hold in/out layers
+// attributes such as precision, layout, shape etc.
+//
+// User can provide attributes either:
+// 1. cv::util::monostate - No value specified explicitly.
+// 2. Attr - value specified explicitly that should be broadcasted to all layers.
+// 3. AttrMap[str->T] - map specifies value for particular layer.
+template <typename Attr>
+using LayerVariantAttr = cv::util::variant< cv::util::monostate
+                                          , AttrMap<Attr>
+                                          , Attr>;
+
 struct ParamDesc {
     struct Model {
 
@@ -40,20 +54,6 @@ struct ParamDesc {
         std::string model_path;
         std::string bin_path;
 
-        template <typename T>
-        using AttrMap = std::map<std::string, T>;
-        // NB: This type is supposed to be used to hold in/out layers
-        // attributes such as precision, layout, shape etc.
-        //
-        // User can provide attributes either:
-        // 1. cv::util::monostate - No value specified explicitly.
-        // 2. Attr - value specified explicitly that should be broadcasted to all layers.
-        // 3. AttrMap[str->T] - map specifies value for particular layer.
-        template <typename Attr>
-        using LayerVariantAttr = cv::util::variant< cv::util::monostate
-                                                  , AttrMap<Attr>
-                                                  , Attr>;
-
         LayerVariantAttr<std::string> input_tensor_layout;
         LayerVariantAttr<std::string> input_model_layout;
         LayerVariantAttr<std::string> output_tensor_layout;
@@ -61,6 +61,9 @@ struct ParamDesc {
         LayerVariantAttr<int>         output_tensor_precision;
 
         LayerVariantAttr<std::vector<size_t>> new_shapes;
+
+        LayerVariantAttr<std::vector<float>> mean_values;
+        LayerVariantAttr<std::vector<float>> scale_values;
     };
 
     struct CompiledModel {
@@ -213,7 +216,7 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>&
-    cfgInputTensorLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+    cfgInputTensorLayout(detail::AttrMap<std::string> layout_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input tensor layout isn't"
@@ -251,7 +254,7 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>&
-    cfgInputModelLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+    cfgInputModelLayout(detail::AttrMap<std::string> layout_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input model layout isn't"
@@ -289,7 +292,7 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>&
-    cfgOutputTensorLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+    cfgOutputTensorLayout(detail::AttrMap<std::string> layout_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input tensor layout isn't"
@@ -327,7 +330,7 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>&
-    cfgOutputModelLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+    cfgOutputModelLayout(detail::AttrMap<std::string> layout_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying output model layout isn't"
@@ -366,7 +369,7 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>&
-    cfgOutputTensorPrecision(detail::ParamDesc::Model::AttrMap<int> precision_map) {
+    cfgOutputTensorPrecision(detail::AttrMap<int> precision_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying output tensor precision isn't"
@@ -404,7 +407,7 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>&
-    cfgReshape(detail::ParamDesc::Model::AttrMap<std::vector<size_t>> new_shape_map) {
+    cfgReshape(detail::AttrMap<std::vector<size_t>> new_shape_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Reshape isn't possible for compiled model."));
@@ -427,6 +430,80 @@ public:
                                      " must be greater than zero."));
         }
         m_desc.nireq = nireq;
+        return *this;
+    }
+
+    /** @brief Specifies mean values for preprocessing.
+     *
+    The function is used to set mean values for input layer preprocessing.
+
+    @param mean_vec Float vector contains mean values
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgMean(std::vector<float> mean_vec) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying mean values isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.mean_values = std::move(mean_vec);
+        return *this;
+    }
+
+    /** @overload
+
+    @param mean_map Map of pairs: name of corresponding input layer
+    and its mean values.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgMean(detail::AttrMap<std::vector<float>> mean_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying mean values isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.mean_values = std::move(mean_map);
+        return *this;
+    }
+
+    /** @brief Specifies scale values for preprocessing.
+     *
+    The function is used to set scale values for input layer preprocessing.
+
+    @param scale_values Float vector contains scale values
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgScale(std::vector<float> scale_values) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying scale values isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.scale_values = std::move(scale_values);
+        return *this;
+    }
+
+    /** @overload
+
+    @param scale_map Map of pairs: name of corresponding input layer
+    and its mean values.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgScale(detail::AttrMap<std::vector<float>> scale_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying scale values isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.scale_values = std::move(scale_map);
         return *this;
     }
 
@@ -515,7 +592,7 @@ public:
 
     /** @overload */
     Params&
-    cfgInputTensorLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+    cfgInputTensorLayout(detail::AttrMap<std::string> layout_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input tensor layout isn't"
@@ -542,7 +619,7 @@ public:
 
     /** @overload */
     Params&
-    cfgInputModelLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+    cfgInputModelLayout(detail::AttrMap<std::string> layout_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input model layout isn't"
@@ -569,7 +646,7 @@ public:
 
     /** @overload */
     Params&
-    cfgOutputTensorLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+    cfgOutputTensorLayout(detail::AttrMap<std::string> layout_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input tensor layout isn't"
@@ -596,7 +673,7 @@ public:
 
     /** @overload */
     Params&
-    cfgOutputModelLayout(detail::ParamDesc::Model::AttrMap<std::string> layout_map) {
+    cfgOutputModelLayout(detail::AttrMap<std::string> layout_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying output model layout isn't"
@@ -623,7 +700,7 @@ public:
 
     /** @overload */
     Params&
-    cfgOutputTensorPrecision(detail::ParamDesc::Model::AttrMap<int> precision_map) {
+    cfgOutputTensorPrecision(detail::AttrMap<int> precision_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying output tensor precision isn't"
@@ -649,7 +726,7 @@ public:
 
     /** @overload */
     Params&
-    cfgReshape(detail::ParamDesc::Model::AttrMap<std::vector<size_t>> new_shape_map) {
+    cfgReshape(detail::AttrMap<std::vector<size_t>> new_shape_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Reshape isn't possible for compiled model."));
@@ -668,6 +745,58 @@ public:
                                      " must be greater than zero."));
         }
         m_desc.nireq = nireq;
+        return *this;
+    }
+
+    /** @see ov::Params::cfgMean. */
+    Params& cfgMean(std::vector<float> mean_vec) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying mean values isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.mean_values = std::move(mean_vec);
+        return *this;
+    }
+
+    /** @overload */
+    Params& cfgMean(detail::AttrMap<std::vector<float>> mean_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying mean values isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.mean_values = std::move(mean_map);
+        return *this;
+    }
+
+    /** @see ov::Params::cfgScale. */
+    Params& cfgScale(std::vector<float> scale_values) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying scale values isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.scale_values = std::move(scale_values);
+        return *this;
+    }
+
+    /** @overload */
+    Params& cfgScale(detail::AttrMap<std::vector<float>> scale_map) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying scale values isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.scale_values = std::move(scale_map);
         return *this;
     }
 
