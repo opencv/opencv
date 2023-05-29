@@ -579,6 +579,26 @@ static bool isImage(const cv::GMatDesc &desc,
            (desc.depth == CV_8U);
 }
 
+static bool isBatchedImage(const cv::GMatDesc &desc) {
+    return desc.isND()            &&
+           desc.dims.size() == 4u &&
+           desc.depth == CV_8U    &&
+           (
+             // NCHW case
+             (
+               (desc.dims[1] == 1 || desc.dims[1] == 3) &&
+               (desc.dims[2] != 1)    /*H*/             &&
+               (desc.dims[3] != 1)    /*W*/
+             )
+           || // or NHWC case
+             (
+               (desc.dims[3] == 1 || desc.dims[3] == 3) &&
+               (desc.dims[1] != 1)   /*H*/              &&
+               (desc.dims[2] != 1)   /*W*/
+             )
+           );
+}
+
 struct Infer: public cv::detail::KernelTag {
     using API = cv::GInferBase;
     static cv::gapi::GBackend backend()  { return cv::gapi::ov::backend(); }
@@ -650,15 +670,32 @@ struct Infer: public cv::detail::KernelTag {
                     }
                     // Image has NHWC layout.
                     input_info.tensor().set_layout(::ov::Layout("NHWC"))
-                                       .set_shape({1,
-                                                   matdesc.size.height,
-                                                   matdesc.size.width,
-                                                   matdesc.chan});
+                                       .set_spatial_static_shape(matdesc.size.height,
+                                                                 matdesc.size.width);
                     // NB: Configure resize since image may has
                     // different size than model expects.
                     input_info.preprocess()
                         .resize(::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR);
-                }
+                } else if (isBatchedImage(matdesc)) {
+                    // NB: If user didn't provide input model layout explicitly set it to
+                    // "NCHW" in order to perform conversion to image layout (NHWC).
+                    if (!explicit_in_model_layout) {
+                        input_info.model().set_layout(::ov::Layout("NCHW"));
+                    }
+
+                    auto batch_layout = (matdesc.dims[1] == 3 || matdesc.dims[1] == 1)
+                                        ? ::ov::Layout("NCHW") : ::ov::Layout("NHWC");
+
+                    cv::Size spatial_size = (matdesc.dims[1] == 3 || matdesc.dims[1] == 1)
+                                            ? cv::Size(matdesc.dims[3], matdesc.dims[2])  // NCHW
+                                            : cv::Size(matdesc.dims[2], matdesc.dims[1]); // NHWC
+
+                    input_info.tensor().set_layout(batch_layout)
+                                       .set_spatial_static_shape(spatial_size.height,
+                                                                 spatial_size.width);
+                    input_info.preprocess()
+                        .resize(::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR);
+                    }
             }
 
             const auto output_tensor_layout =
