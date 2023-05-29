@@ -740,8 +740,9 @@ bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
     {
         return true;
     }
-    // This is a workaround for compatibility
-    if (Py_TYPE(obj)->tp_name == "cv2.RotatedRect")
+    // This is a workaround for compatibility with an initialization from tuple.
+    // Allows import RotatedRect as an object.
+    if (std::string(Py_TYPE(obj)->tp_name) == "cv2.RotatedRect")
     {
         dst = ((pyopencv_RotatedRect_t*)obj)->v;
         return true;
