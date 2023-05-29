@@ -151,8 +151,8 @@ public:
     as defined in the @ref G_API_NET. Contains names of input layers.
     @return reference to this parameter structure.
     */
-    Params<Net>& cfgInputLayers(const std::vector<std::string> &input_names) {
-        m_desc.input_names = input_names;
+    Params<Net>& cfgInputLayers(const std::vector<std::string> &layer_names) {
+        m_desc.input_names = layer_names;
         return *this;
     }
 
@@ -166,8 +166,8 @@ public:
     as defined in the @ref G_API_NET. Contains names of output layers.
     @return reference to this parameter structure.
     */
-    Params<Net>& cfgOutputLayers(const std::vector<std::string> &output_names) {
-        m_desc.output_names = output_names;
+    Params<Net>& cfgOutputLayers(const std::vector<std::string> &layer_names) {
+        m_desc.output_names = layer_names;
         return *this;
     }
 
@@ -177,7 +177,7 @@ public:
     can be different for each plugin. Please follow https://docs.openvinotoolkit.org/latest/index.html
     to check information about specific plugin.
 
-    @param cfg Map of pairs: (config parameter name, config parameter value).
+    @param config Map of pairs: (config parameter name, config parameter value).
     @return reference to this parameter structure.
     */
     Params<Net>& cfgPluginConfig(const detail::ParamDesc::PluginConfigT &config) {
@@ -231,7 +231,7 @@ public:
     will be applied to all input layers.
     @return reference to this parameter structure.
     */
-    Params<Net>& cfgInputModelLayout(std::string model_layout) {
+    Params<Net>& cfgInputModelLayout(std::string layout) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying input model layout isn't"
@@ -239,7 +239,7 @@ public:
         }
         GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
         auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.input_model_layout = std::move(model_layout);
+        model.input_model_layout = std::move(layout);
         return *this;
     }
 
@@ -307,7 +307,7 @@ public:
     will be applied to all output layers.
     @return reference to this parameter structure.
     */
-    Params<Net>& cfgOutputModelLayout(std::string model_layout) {
+    Params<Net>& cfgOutputModelLayout(std::string layout) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
                     std::logic_error("Specifying output model layout isn't"
@@ -315,7 +315,7 @@ public:
         }
         GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
         auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_model_layout = std::move(model_layout);
+        model.output_model_layout = std::move(layout);
         return *this;
     }
 
@@ -380,7 +380,7 @@ public:
 
     The function is used to set new shape for input layers.
 
-    @param shape New shape will be applied to all input layers.
+    @param new_shape New shape will be applied to all input layers.
     @return reference to this parameter structure.
     */
     Params<Net>&
