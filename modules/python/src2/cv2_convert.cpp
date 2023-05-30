@@ -727,6 +727,26 @@ PyObject* pyopencv_from(const Rect2d& r)
 
 // --- RotatedRect
 
+static inline bool convertToRotatedRect(PyObject* obj, RotatedRect& dst)
+{
+    PyObject* type = PyObject_Type(obj);
+    if (getPyObjectAttr(type, "__module__") == MODULESTR &&
+        getPyObjectNameAttr(type) == "RotatedRect")
+    {
+        struct pyopencv_RotatedRect_t
+        {
+            PyObject_HEAD
+            cv::RotatedRect v;
+        };
+        dst = reinterpret_cast<pyopencv_RotatedRect_t*>(obj)->v;
+
+        Py_DECREF(type);
+        return true;
+    }
+    Py_DECREF(type);
+    return false;
+}
+
 template<>
 bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
 {
@@ -736,14 +756,8 @@ bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
     }
     // This is a workaround for compatibility with an initialization from tuple.
     // Allows import RotatedRect as an object.
-    if (std::string(Py_TYPE(obj)->tp_name) == "cv2.RotatedRect")
+    if (convertToRotatedRect(obj, dst))
     {
-        struct pyopencv_RotatedRect_t
-        {
-            PyObject_HEAD
-            cv::RotatedRect v;
-        };
-        dst = reinterpret_cast<pyopencv_RotatedRect_t*>(obj)->v;
         return true;
     }
     if (!PySequence_Check(obj))
