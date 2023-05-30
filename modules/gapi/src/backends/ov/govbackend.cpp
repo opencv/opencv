@@ -643,7 +643,6 @@ struct Infer: public cv::detail::KernelTag {
         // NB: Pre/Post processing configuration avaiable only for read models.
         if (cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind)) {
             const auto &model_info = cv::util::get<ParamDesc::Model>(uu.params.kind);
-
             const auto new_shapes =
                 broadcastLayerAttr(model_info.new_shapes,
                                    uu.params.input_names);
@@ -662,7 +661,6 @@ struct Infer: public cv::detail::KernelTag {
                                                         uu.params.input_names);
             const auto scale_values = broadcastLayerAttr(model_info.scale_values,
                                                          uu.params.input_names);
-
             // FIXME: Pre/Post processing step shouldn't be configured in this method.
             ::ov::preprocess::PrePostProcessor ppp(uu.model);
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
@@ -685,7 +683,8 @@ struct Infer: public cv::detail::KernelTag {
                 }
                 const auto explicit_resize = lookUp(interpolation, input_name);
                 // NB: Note that model layout still can't be empty.
-                // e.g IRv11 converted without additional info about layout via Model Optimizer.
+                // e.g If model converted to IRv11 without any additional
+                // info about layout via Model Optimizer.
                 const auto model_layout = ::ov::layout::get_layout(uu.model->input(input_name));
                 // NB: Image case - all necessary preprocessng is configured automatically.
                 const auto &input_shape = uu.model->input(input_name).get_shape();
@@ -702,40 +701,42 @@ struct Infer: public cv::detail::KernelTag {
                         }
                     }
                     input_info.tensor().set_layout(::ov::Layout("NHWC"));
-                    // NB: OpenVINO should know about "H" and "W"
-                    // dimensions in order to configure resize.
-                    if (!explicit_in_tensor_layout && model_layout.empty()) {
-                        // NB: Let it be warning since user didn't ask to configure resize
-                        // it's done automatically based on assumption that image is provided.
-                        GAPI_LOG_WARNING(NULL, "Resize for input layer: " << input_name <<
-                                               " can't be configured. Failed to detect data layout");
-                    } else {
-                        input_info.tensor().set_spatial_static_shape(matdesc.size.height,
-                                                                     matdesc.size.width);
-                        // NB: Even though resize is automatically configured
-                        // user have an opportunity to specify the interpolation algorithm.
-                        auto interp = explicit_resize
-                            ? toOVInterp(*explicit_resize)
-                            : ::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR;
-
-                        input_info.preprocess().resize(interp);
-                    }
+                    input_info.tensor().set_spatial_static_shape(matdesc.size.height,
+                                                                 matdesc.size.width);
+                    // NB: Even though resize is automatically configured
+                    // user have an opportunity to specify the interpolation algorithm.
+                    auto interp = explicit_resize
+                        ? toOVInterp(*explicit_resize)
+                        : ::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR;
+                    input_info.preprocess().resize(interp);
                 } else {
+                    // NB: Othersize configure resize only if user asked.
                     if (explicit_resize) {
-                        // NB: User explicitly asked to configure resize
-                        // but there is not enough information to do that...
-                        if (!explicit_in_tensor_layout && model_layout.empty()) {
-                            std::stringstream ss;
-                            ss << "Resize for input layer: " << input_name
-                               << "can't be configured. Failed to detect data layout";
-                            util::throw_error(std::logic_error(ss.str()));
+                        if (matdesc.isND()) {
+                            // NB: ND case - need to obtain "H" and "W" positions
+                            // in order to configure resize.
+                            if (!explicit_in_tensor_layout && model_layout.empty()) {
+                                std::stringstream ss;
+                                ss << "Resize for input layer: " << input_name
+                                   << "can't be configured."
+                                   << " Failed to extract H and W positions from layout.";
+                                util::throw_error(std::logic_error(ss.str()));
+                            } else {
+                                const auto layout = explicit_in_tensor_layout
+                                    ? ::ov::Layout(*explicit_in_tensor_layout) : model_layout;
+                                const auto H_idx = ::ov::layout::height_idx(layout);
+                                const auto W_idx = ::ov::layout::width_idx(layout);
+                                // NB: It still possible if layout is "??HW".
+                                GAPI_Assert(H_idx >= 0 && H_idx < static_cast<int>(matdesc.dims.size()));
+                                GAPI_Assert(W_idx >= 0 && W_idx < static_cast<int>(matdesc.dims.size()));
+                                input_info.tensor().set_spatial_static_shape(matdesc.dims[H_idx],
+                                                                             matdesc.dims[W_idx]);
+                                input_info.preprocess().resize(toOVInterp(*explicit_resize));
+                            }
                         } else {
-                            const auto layout = explicit_in_tensor_layout
-                                ? ::ov::Layout(*explicit_in_tensor_layout) : model_layout;
-                            const auto H_idx = ::ov::layout::height_idx(layout);
-                            const auto W_idx = ::ov::layout::width_idx(layout);
-                            input_info.tensor().set_spatial_static_shape(matdesc.dims[H_idx],
-                                                                         matdesc.dims[W_idx]);
+                            // NB: 2D case - know exactly where H and W...
+                            input_info.tensor().set_spatial_static_shape(matdesc.size.height,
+                                                                         matdesc.size.width);
                             input_info.preprocess().resize(toOVInterp(*explicit_resize));
                         }
                     }
