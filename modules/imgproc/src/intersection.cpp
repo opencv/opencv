@@ -49,6 +49,9 @@ namespace cv
 
 static inline bool _isOnPositiveSide(const Point2f& line_vec, const Point2f& line_pt, const Point2f& pt)
 {
+    //we are interested by the cross product between the line vector (line_vec) and the line-to-pt vector (pt-line_pt)
+    //the sign of the only non-null component of the result determining which side of the line 'pt' is on
+    //the "positive" side meaning depends on the context usage of the current function and how line_vec and line_pt were filled
     return (line_vec.y*(line_pt.x-pt.x) >= line_vec.x*(line_pt.y-pt.y));
 }
 
