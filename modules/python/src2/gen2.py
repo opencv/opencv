@@ -241,7 +241,7 @@ class ClassProp(object):
     def __init__(self, decl):
         self.tp = decl[0].replace("*", "_ptr")
         self.name = decl[1]
-        self.defval = decl[2]
+        self.default_value = decl[2]
         self.readonly = True
         if "/RW" in decl[3]:
             self.readonly = False
@@ -269,9 +269,9 @@ class ClassInfo(object):
 
         self.cname = name.replace(".", "::")
         self.ismap = False
+        self.is_parameters = False
         self.issimple = False
         self.isalgorithm = False
-        self.isparams = False
         self.methods = {}
         self.props = []
         self.mappables = []
@@ -303,8 +303,8 @@ class ClassInfo(object):
                 elif m == "/Simple":
                     self.issimple = True
                 elif m == "/Params":
-                    self.isparams = True
-                    self.issimple = True  # TODO: rework 'params' generation/handling (see #19156 and #22934)
+                    self.is_parameters = True
+                    self.issimple = True
             self.props = [ClassProp(p) for p in decl[3]]
 
         if not self.has_export_alias and self.original_name.startswith("Cv"):
@@ -425,52 +425,56 @@ def handle_ptr(tp):
     return tp
 
 
-def get_named_params_info(all_classes, args):
-    extra_named_params = []
-    params_arg_name = ""
-    if args:
-        last_arg = args[-1]
-        if ("Params" in last_arg.tp) and (last_arg.tp in all_classes):
-            arg_classinfo = all_classes[last_arg.tp]
-            if arg_classinfo.isparams:
-                params_arg_name = last_arg.name
-                extra_named_params = arg_classinfo.props
-    return (params_arg_name, extra_named_params)
-
 class ArgInfo(object):
-    def __init__(self, arg_tuple):
-        self.tp = handle_ptr(arg_tuple[0])
-        self.name = arg_tuple[1]
-        if self.name in python_reserved_keywords:
-            self.name += "_"
-        self.defval = arg_tuple[2]
+    def __init__(self, atype, name, default_value, modifiers=(),
+                 enclosing_arg=None):
+        # type: (ArgInfo, str, str, str, tuple[str, ...], ArgInfo | None) -> None
+        self.tp = handle_ptr(atype)
+        self.name = name
+        self.defval = default_value
+        self._modifiers = tuple(modifiers)
         self.isarray = False
         self.is_smart_ptr = self.tp.startswith('Ptr<')  # FIXIT: handle through modifiers - need to modify parser
         self.arraylen = 0
         self.arraycvt = None
-        self.inputarg = True
-        self.outputarg = False
-        self.returnarg = False
-        self.isrvalueref = False
-        for m in arg_tuple[3]:
-            if m == "/O":
-                self.inputarg = False
-                self.outputarg = True
-                self.returnarg = True
-            elif m == "/IO":
-                self.inputarg = True
-                self.outputarg = True
-                self.returnarg = True
-            elif m.startswith("/A"):
+        for m in self._modifiers:
+            if m.startswith("/A"):
                 self.isarray = True
                 self.arraylen = m[2:].strip()
             elif m.startswith("/CA"):
                 self.isarray = True
                 self.arraycvt = m[2:].strip()
-            elif m == "/RRef":
-                self.isrvalueref = True
         self.py_inputarg = False
         self.py_outputarg = False
+        self.enclosing_arg = enclosing_arg
+
+    @property
+    def export_name(self):
+        if self.name in python_reserved_keywords:
+            return self.name + '_'
+        return self.name
+
+    @property
+    def inputarg(self):
+        return '/O' not in self._modifiers
+
+    @property
+    def outputarg(self):
+        return '/O' in self._modifiers or '/IO' in self._modifiers
+
+    @property
+    def returnarg(self):
+        return self.outputarg
+
+    @property
+    def isrvalueref(self):
+        return '/RRef' in self._modifiers
+
+    @property
+    def full_name(self):
+        if self.enclosing_arg is None:
+            return self.name
+        return self.enclosing_arg.name + '.' + self.name
 
     def isbig(self):
         return self.tp in ["Mat", "vector_Mat", "cuda::GpuMat", "GpuMat", "vector_GpuMat", "UMat", "vector_UMat"] # or self.tp.startswith("vector")
@@ -479,9 +483,62 @@ class ArgInfo(object):
         return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
 
 
+def find_argument_class_info(argument_type, function_namespace,
+                            function_class_name, known_classes):
+    # type: (str, str, str, dict[str, ClassInfo]) -> ClassInfo | None
+    """Tries to find corresponding class info for the provided argument type
+
+    Args:
+        argument_type (str): Function argument type
+        function_namespace (str): Namespace of the function declaration
+        function_class_name (str): Name of the class if function is a method of class
+        known_classes (dict[str, ClassInfo]): Mapping between string class
+            identifier and ClassInfo struct.
+
+    Returns:
+        Optional[ClassInfo]: class info struct if the provided argument type
+            refers to a known C++ class, None otherwise.
+    """
+
+    possible_classes = tuple(filter(lambda cls: cls.endswith(argument_type), known_classes))
+    # If argument type is not a known class - just skip it
+    if not possible_classes:
+        return None
+    if len(possible_classes) == 1:
+        return known_classes[possible_classes[0]]
+
+    # If there is more than 1 matched class, try to select the most probable one
+    # Look for a matched class name in different scope, starting from the
+    # narrowest one
+
+    # First try to find argument inside class scope of the function (if any)
+    if function_class_name:
+        type_to_match = function_class_name + '_' + argument_type
+        if type_to_match in possible_classes:
+            return known_classes[type_to_match]
+    else:
+        type_to_match = argument_type
+
+    # Trying to find argument type in the namespace of the function
+    type_to_match = '{}_{}'.format(
+        function_namespace.lstrip('cv.').replace('.', '_'), type_to_match
+    )
+    if type_to_match in possible_classes:
+        return known_classes[type_to_match]
+
+    # Try to find argument name as is
+    if argument_type in possible_classes:
+        return known_classes[argument_type]
+
+    # NOTE: parser is broken - some classes might not be visible, depending on
+    # the order of parsed headers.
+    # print("[WARNING] Can't select an appropriate class for argument: '",
+    #       argument_type, "'. Possible matches: '", possible_classes, "'")
+    return None
+
+
 class FuncVariant(object):
-    def __init__(self, all_classes, classname, name, decl, isconstructor, isphantom=False):
-        self.classname = classname
+    def __init__(self, namespace, classname, name, decl, isconstructor, known_classes, isphantom=False):
         self.name = self.wname = name
         self.isconstructor = isconstructor
         self.isphantom = isphantom
@@ -493,8 +550,14 @@ class FuncVariant(object):
             self.rettype = ""
         self.args = []
         self.array_counters = {}
-        for a in decl[3]:
-            ainfo = ArgInfo(a)
+        for arg_decl in decl[3]:
+            assert len(arg_decl) == 4, \
+                'ArgInfo contract is violated. Arg declaration should contain:' \
+                '"arg_type", "name", "default_value", "modifiers". '\
+                'Got tuple: {}'.format(arg_decl)
+
+            ainfo = ArgInfo(atype=arg_decl[0], name=arg_decl[1],
+                            default_value=arg_decl[2], modifiers=arg_decl[3])
             if ainfo.isarray and not ainfo.arraycvt:
                 c = ainfo.arraylen
                 c_arrlist = self.array_counters.get(c, [])
@@ -503,9 +566,9 @@ class FuncVariant(object):
                 else:
                     self.array_counters[c] = [ainfo.name]
             self.args.append(ainfo)
-        self.init_pyproto(all_classes)
+        self.init_pyproto(namespace, classname, known_classes)
 
-    def init_pyproto(self, all_classes):
+    def init_pyproto(self, namespace, classname, known_classes):
         # string representation of argument list, with '[', ']' symbols denoting optional arguments, e.g.
         # "src1, src2[, dst[, mask]]" for cv.add
         argstr = ""
@@ -518,7 +581,6 @@ class FuncVariant(object):
         # become the first optional input parameters of the Python function, and thus they are placed right after
         # non-optional input parameters)
         arglist = []
-        proto_arglist = []
 
         # the list of "heavy" output parameters. Heavy parameters are the parameters
         # that can be expensive to allocate each time, such as vectors and matrices (see isbig).
@@ -528,12 +590,44 @@ class FuncVariant(object):
         outlist = []
 
         firstoptarg = 1000000
-        argno = -1
-        for a in self.args:
-            argno += 1
+
+        # Check if there is params structure in arguments
+        arguments = []
+        for arg in self.args:
+            arg_class_info = find_argument_class_info(
+                arg.tp, namespace, classname, known_classes
+            )
+            # If argument refers to the 'named arguments' structure - instead of
+            # the argument put its properties
+            if arg_class_info is not None and arg_class_info.is_parameters:
+                for prop in arg_class_info.props:
+                    # Convert property to ArgIfno and mark that argument is
+                    # a part of the parameters structure:
+                    arguments.append(
+                        ArgInfo(prop.tp, prop.name, prop.default_value,
+                                enclosing_arg=arg)
+                    )
+            else:
+                arguments.append(arg)
+        # Prevent names duplication after named arguments are merged
+        # to the main arguments list
+        argument_names = tuple(arg.name for arg in arguments)
+        assert len(set(argument_names)) == len(argument_names), \
+            "Duplicate arguments with names '{}' in function '{}'. "\
+            "Please, check named arguments used in function interface".format(
+                argument_names, self.name
+            )
+
+        self.args = arguments
+
+        for argno, a in enumerate(self.args):
             if a.name in self.array_counters:
                 continue
-            assert not a.tp in forbidden_arg_types, 'Forbidden type "{}" for argument "{}" in "{}" ("{}")'.format(a.tp, a.name, self.name, self.classname)
+            assert a.tp not in forbidden_arg_types, \
+                'Forbidden type "{}" for argument "{}" in "{}" ("{}")'.format(
+                    a.tp, a.name, self.name, self.classname
+                )
+
             if a.tp in ignored_arg_types:
                 continue
             if a.returnarg:
@@ -545,48 +639,33 @@ class FuncVariant(object):
                 continue
             if not a.defval:
                 arglist.append((a.name, argno))
-                proto_arglist.append((a.name, argno))
             else:
                 firstoptarg = min(firstoptarg, len(arglist))
                 # if there are some array output parameters before the first default parameter, they
                 # are added as optional parameters before the first optional parameter
                 if outarr_list:
                     arglist += outarr_list
-                    proto_arglist += [(aname_+"=None",argno_) for (aname_, argno_) in outarr_list]
                     outarr_list = []
                 arglist.append((a.name, argno))
-                proto_arglist.append((a.name+"="+a.defval, argno))
-
-        # exclude "params" from Python func parameters ==>
-        params_arg_name, extra_named_params = get_named_params_info(all_classes, self.args)
-        if params_arg_name:
-            arglist = arglist[:-1]
-            proto_arglist = proto_arglist[:-1]
 
         if outarr_list:
             firstoptarg = min(firstoptarg, len(arglist))
-            proto_arglist += [(aname+"=None",argno) for (aname, argno) in outarr_list]
             arglist += outarr_list
-
         firstoptarg = min(firstoptarg, len(arglist))
 
-        argnamelist = [aname for aname, argno in proto_arglist]
-        noptargs = len(argnamelist) - firstoptarg
-        if params_arg_name:
-            # ==> instead, add the individual parameters one by one
-            argnamelist += ["%s=%s" % (a.name, a.defval) for a in extra_named_params]
+        noptargs = len(arglist) - firstoptarg
+        argnamelist = [self.args[argno].export_name for _, argno in arglist]
         argstr = ", ".join(argnamelist[:firstoptarg])
-        argstr += "[, " + (", ".join(argnamelist[firstoptarg:]))
-        argstr += "]"
+        argstr = "[, ".join([argstr] + argnamelist[firstoptarg:])
+        argstr += "]" * noptargs
         if self.rettype:
             outlist = [("retval", -1)] + outlist
         elif self.isconstructor:
             assert outlist == []
             outlist = [("self", -1)]
         if self.isconstructor:
-            classname = self.classname
             if classname.startswith("Cv"):
-                classname=classname[2:]
+                classname = classname[2:]
             outstr = "<%s object>" % (classname,)
         elif outlist:
             outstr = ", ".join([o[0] for o in outlist])
@@ -598,9 +677,9 @@ class FuncVariant(object):
         self.py_prototype = "%s(%s) -> %s" % (self.wname, argstr, outstr)
         self.py_noptargs = noptargs
         self.py_arglist = arglist
-        for aname, argno in arglist:
+        for _, argno in arglist:
             self.args[argno].py_inputarg = True
-        for aname, argno in outlist:
+        for _, argno in outlist:
             if argno >= 0:
                 self.args[argno].py_outputarg = True
         self.py_outlist = outlist
@@ -616,8 +695,11 @@ class FuncInfo(object):
         self.is_static = is_static
         self.variants = []
 
-    def add_variant(self, all_classes, decl, isphantom=False):
-        self.variants.append(FuncVariant(all_classes, self.classname, self.name, decl, self.isconstructor, isphantom))
+    def add_variant(self, decl, known_classes, isphantom=False):
+        self.variants.append(
+            FuncVariant(self.namespace, self.classname, self.name, decl,
+                        self.isconstructor, known_classes, isphantom)
+        )
 
     def get_wrapper_name(self):
         name = self.name
@@ -673,20 +755,20 @@ class FuncInfo(object):
         # their relevant doxygen comment
         full_docstring = ""
         for prototype, body in zip(prototype_list, docstring_list):
-            full_docstring += Template("$prototype\n$docstring").substitute(
-                prototype="\"" + prototype.replace("\\", "\\\\").replace("\"", "\\\"") + "\\n\\n\"",
-                docstring="\n".join(
-                    ["    \"" + line.replace("\\", "\\\\").replace("\"", "\\\"") + "\\n\""
+            full_docstring += Template("$prototype\n$docstring\n\n\n\n").substitute(
+                prototype=prototype,
+                docstring='\n'.join(
+                    ['.   ' + line
                      for line in body.split('\n')]
                 )
             )
 
         # Escape backslashes, newlines, and double quotes
-        #full_docstring = full_docstring.strip().replace("\\", "\\\\").replace("\"", "\\\"")
+        full_docstring = full_docstring.strip().replace("\\", "\\\\").replace('\n', '\\n').replace("\"", "\\\"")
         # Convert unicode chars to xml representation, but keep as string instead of bytes
         full_docstring = full_docstring.encode('ascii', errors='xmlcharrefreplace').decode()
 
-        return Template('    {"$py_funcname", CV_PY_FN_WITH_KW_($wrap_funcname, $flags),\n    $py_docstring},\n'
+        return Template('    {"$py_funcname", CV_PY_FN_WITH_KW_($wrap_funcname, $flags),\n    "$py_docstring"},\n'
                         ).substitute(py_funcname = self.variants[0].wname, wrap_funcname=self.get_wrapper_name(),
                                      flags = 'METH_STATIC' if self.is_static else '0', py_docstring = full_docstring)
 
@@ -726,12 +808,11 @@ class FuncInfo(object):
             if v.isphantom and ismethod and not self.is_static:
                 code_args += "_self_"
 
-            params_arg_name, extra_named_params = get_named_params_info(all_classes, v.args)
-
             # declare all the C function arguments,
             # add necessary conversions from Python objects to code_cvt_list,
             # form the function/method call,
             # for the list of type mappings
+            instantiated_args = set()
             for a in v.args:
                 if a.tp in ignored_arg_types:
                     defval = a.defval
@@ -772,16 +853,28 @@ class FuncInfo(object):
                         arg_type_info = ArgTypeInfo(tp, FormatStrings.object, defval0, True)
 
                 parse_name = a.name
-                if a.py_inputarg:
-                    if arg_type_info.strict_conversion:
-                        code_decl += "    PyObject* pyobj_%s = NULL;\n" % (a.name,)
-                        parse_name = "pyobj_" + a.name
-                        if a.tp == 'char':
-                            code_cvt_list.append("convert_to_char(pyobj_%s, &%s, %s)" % (a.name, a.name, a.crepr()))
-                        else:
-                            code_cvt_list.append("pyopencv_to_safe(pyobj_%s, %s, %s)" % (a.name, a.name, a.crepr()))
+                if a.py_inputarg and arg_type_info.strict_conversion:
+                    parse_name = "pyobj_" + a.full_name.replace('.', '_')
+                    code_decl += "    PyObject* %s = NULL;\n" % (parse_name,)
+                    if a.tp == 'char':
+                        code_cvt_list.append("convert_to_char(%s, &%s, %s)" % (parse_name, a.full_name, a.crepr()))
+                    else:
+                        code_cvt_list.append("pyopencv_to_safe(%s, %s, %s)" % (parse_name, a.full_name, a.crepr()))
 
                 all_cargs.append([arg_type_info, parse_name])
+
+                # Argument is actually a part of the named arguments structure,
+                # but it is possible to mimic further processing like it is normal arg
+                if a.enclosing_arg:
+                    a = a.enclosing_arg
+                    arg_type_info = ArgTypeInfo(a.tp, FormatStrings.object,
+                                                default_value=a.defval,
+                                                strict_conversion=True)
+                    # Skip further actions if enclosing argument is already instantiated
+                    # by its another field
+                    if a.name in instantiated_args:
+                        continue
+                    instantiated_args.add(a.name)
 
                 defval = a.defval
                 if not defval:
@@ -807,18 +900,9 @@ class FuncInfo(object):
                     code_args += ", "
 
                 if a.isrvalueref:
-                    a.name = 'std::move(' + a.name + ')'
-
-                code_args += amp + a.name
-
-            if params_arg_name:
-                for a in extra_named_params:
-                    code_decl += "    PyObject* pyobj_kw_%s = NULL;\n" % (a.name,)
-                    ainfo = "ArgInfo(\"params.%s\", %d)" % (a.name, 0)
-                    if a.tp == 'char':
-                        code_cvt_list.append("convert_to_char(pyobj_kw_%s, &params.%s, %s)" % (a.name, a.name, ainfo))
-                    else:
-                        code_cvt_list.append("pyopencv_to(pyobj_kw_%s, params.%s, %s)" % (a.name, a.name, ainfo))
+                    code_args += amp + 'std::move(' + a.name + ')'
+                else:
+                    code_args += amp + a.name
 
             code_args += ")"
 
@@ -864,27 +948,22 @@ class FuncInfo(object):
                 # form the format spec for PyArg_ParseTupleAndKeywords
                 fmtspec = "".join([
                     get_type_format_string(all_cargs[argno][0])
-                    for aname, argno in v.py_arglist
+                    for _, argno in v.py_arglist
                 ])
                 if v.py_noptargs > 0:
                     fmtspec = fmtspec[:-v.py_noptargs] + "|" + fmtspec[-v.py_noptargs:]
-                fmtspec += "O" * len(extra_named_params)
                 fmtspec += ":" + fullname
 
                 # form the argument parse code that:
                 #   - declares the list of keyword parameters
                 #   - calls PyArg_ParseTupleAndKeywords
                 #   - converts complex arguments from PyObject's to native OpenCV types
-                kw_list = ['"' + aname + '"' for aname, argno in v.py_arglist]
-                kw_list += ['"' + a.name + '"' for a in extra_named_params]
-                parse_arglist = ["&" + all_cargs[argno][1] for aname, argno in v.py_arglist]
-                parse_arglist += ["&pyobj_kw_" + a.name for a in extra_named_params]
 
                 code_parse = gen_template_parse_args.substitute(
-                    kw_list = ", ".join(kw_list),
-                    fmtspec = fmtspec,
-                    parse_arglist = ", ".join(parse_arglist),
-                    code_cvt = " &&\n        ".join(code_cvt_list))
+                    kw_list=", ".join(['"' + v.args[argno].export_name + '"' for _, argno in v.py_arglist]),
+                    fmtspec=fmtspec,
+                    parse_arglist=", ".join(["&" + all_cargs[argno][1] for _, argno in v.py_arglist]),
+                    code_cvt=" &&\n        ".join(code_cvt_list))
             else:
                 code_parse = "if(PyObject_Size(py_args) == 0 && (!kw || PyObject_Size(kw) == 0))"
 
@@ -1085,7 +1164,7 @@ class PythonWrapperGenerator(object):
             # Add it as a method to the class
             func_map = self.classes[classname].methods
             func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace_str, is_static))
-            func.add_variant(self.classes, decl, isphantom)
+            func.add_variant(decl, self.classes, isphantom)
 
             # Add it as global function
             g_name = "_".join(classes+[name])
@@ -1102,10 +1181,10 @@ class PythonWrapperGenerator(object):
             func_map = self.namespaces.setdefault(namespace_str, Namespace()).funcs
             # Exports static function with internal name (backward compatibility)
             func = func_map.setdefault(g_name, FuncInfo("", g_name, cname, isconstructor, namespace_str, False))
-            func.add_variant(self.classes, decl, isphantom)
+            func.add_variant(decl, self.classes, isphantom)
             if g_wname != g_name:  # TODO OpenCV 5.0
                 wfunc = func_map.setdefault(g_wname, FuncInfo("", g_wname, cname, isconstructor, namespace_str, False))
-                wfunc.add_variant(self.classes, decl, isphantom)
+                wfunc.add_variant(decl, self.classes, isphantom)
         else:
             if classname and not isconstructor:
                 if not isphantom:
@@ -1115,7 +1194,7 @@ class PythonWrapperGenerator(object):
                 func_map = self.namespaces.setdefault(namespace_str, Namespace()).funcs
 
             func = func_map.setdefault(name, FuncInfo(classname, name, cname, isconstructor, namespace_str, is_static))
-            func.add_variant(self.classes, decl, isphantom)
+            func.add_variant(decl, self.classes, isphantom)
 
         if classname and isconstructor:
             self.classes[classname].constructor = func
@@ -1321,7 +1400,7 @@ class PythonWrapperGenerator(object):
 
 if __name__ == "__main__":
     srcfiles = hdr_parser.opencv_hdr_list
-    dstdir = "."
+    dstdir = "/Users/vp/tmp"
     if len(sys.argv) > 1:
         dstdir = sys.argv[1]
     if len(sys.argv) > 2:
