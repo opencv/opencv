@@ -47,6 +47,14 @@
 namespace cv
 {
 
+static inline bool _isOnPositiveSide(const Point2f& line_vec, const Point2f& line_pt, const Point2f& pt)
+{
+    //we are interested by the cross product between the line vector (line_vec) and the line-to-pt vector (pt-line_pt)
+    //the sign of the only non-null component of the result determining which side of the line 'pt' is on
+    //the "positive" side meaning depends on the context usage of the current function and how line_vec and line_pt were filled
+    return (line_vec.y*(line_pt.x-pt.x) >= line_vec.x*(line_pt.y-pt.y));
+}
+
 static int _rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, std::vector<Point2f> &intersection )
 {
     CV_INSTRUMENT_REGION();
@@ -122,19 +130,10 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             float vx2 = vec2[j].x;
             float vy2 = vec2[j].y;
 
-            float normalizationScale  = std::min(vx1*vx1+vy1*vy1, vx2*vx2+vy2*vy2);//sum of squares : this is >= 0
-            //normalizationScale is a square, and we usually limit accuracy around 1e-6, so normalizationScale should be rather limited by ((1e-6)^2)=1e-12
-            normalizationScale  = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
-
-            vx1 *= normalizationScale;
-            vy1 *= normalizationScale;
-            vx2 *= normalizationScale;
-            vy2 *= normalizationScale;
-
             const float det = vx2*vy1 - vx1*vy2;
-            if (std::abs(det) < 1e-12)//like normalizationScale, we consider accuracy around 1e-6, i.e. 1e-12 when squared
+            if (std::abs(det) < 1e-12)//we consider accuracy around 1e-6, i.e. 1e-12 when squared
               continue;
-            const float detInvScaled = normalizationScale/det;
+            const float detInvScaled = 1.f/det;
 
             const float t1 = (vx2*y21 - vy2*x21)*detInvScaled;
             const float t2 = (vx1*y21 - vy1*x21)*detInvScaled;
@@ -169,22 +168,19 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         int posSign = 0;
         int negSign = 0;
 
-        const float x = pts1[i].x;
-        const float y = pts1[i].y;
+        const Point2f& pt = pts1[i];
 
         for( int j = 0; j < 4; j++ )
         {
-            float normalizationScale  = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
-            normalizationScale  = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
-            // line equation: Ax + By + C = 0
-            // see which side of the line this point is at
-            const float A = -vec2[j].y*normalizationScale ;
-            const float B = vec2[j].x*normalizationScale ;
-            const float C = -(A*pts2[j].x + B*pts2[j].y);
+            // line equation: Ax + By + C = 0 where
+            // A = -vec2[j].y ; B = vec2[j].x ; C = -(A * pts2[j].x + B * pts2[j].y)
+            // check which side of the line this point is at
+            // A*x + B*y + C <> 0
+            // + computation reordered for better numerical stability
 
-            const float s = A*x + B*y + C;
+            const bool isPositive = _isOnPositiveSide(vec2[j], pts2[j], pt);
 
-            if( s >= 0 )
+            if( isPositive )
             {
                 posSign++;
             }
@@ -209,24 +205,19 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         int posSign = 0;
         int negSign = 0;
 
-        const float x = pts2[i].x;
-        const float y = pts2[i].y;
+        const Point2f& pt = pts2[i];
 
         for( int j = 0; j < 4; j++ )
         {
-            // line equation: Ax + By + C = 0
-            // see which side of the line this point is at
-            float normalizationScale  = vec2[j].x*vec2[j].x+vec2[j].y*vec2[j].y;
-            normalizationScale  = (normalizationScale < 1e-12f) ? 1.f : 1.f/normalizationScale;
-            if (std::isinf(normalizationScale ))
-                normalizationScale  = 1.f;
-            const float A = -vec1[j].y*normalizationScale ;
-            const float B = vec1[j].x*normalizationScale ;
-            const float C = -(A*pts1[j].x + B*pts1[j].y);
+            // line equation: Ax + By + C = 0 where
+            // A = -vec1[j].y ; B = vec1[j].x ; C = -(A * pts1[j].x + B * pts1[j].y)
+            // check which side of the line this point is at
+            // A*x + B*y + C <> 0
+            // + computation reordered for better numerical stability
 
-            const float s = A*x + B*y + C;
+            const bool isPositive = _isOnPositiveSide(vec1[j], pts1[j], pt);
 
-            if( s >= 0 )
+            if( isPositive )
             {
                 posSign++;
             }
