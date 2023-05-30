@@ -70,6 +70,14 @@ struct ParamDesc {
     std::vector<std::string> names_to_remap; //!< Names of output layers that will be processed in PostProc function.
 
     bool is_generic;
+
+    // TODO: Needs to modify the rest of ParamDesc accordingly to support
+    // both generic and non-generic options without duplication
+    // (as it was done for the OV IE backend)
+    // These values are pushed into the respective vector<> fields above
+    // when the generic infer parameters are unpacked (see GONNXBackendImpl::unpackKernel)
+    std::unordered_map<std::string, std::pair<cv::Scalar, cv::Scalar> > generic_mstd;
+    std::unordered_map<std::string, bool> generic_norm;
 };
 } // namespace detail
 
@@ -298,7 +306,17 @@ public:
     @param model_path path to model file (.onnx file).
     */
     Params(const std::string& tag, const std::string& model_path)
-         : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true}, m_tag(tag) {}
+        : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true, {}, {} }, m_tag(tag) {}
+
+    void cfgMeanStdDev(const std::string &layer,
+                       const cv::Scalar &m,
+                       const cv::Scalar &s) {
+        desc.generic_mstd[layer] = std::make_pair(m, s);
+    }
+
+    void cfgNormalize(const std::string &layer, bool flag) {
+        desc.generic_norm[layer] = flag;
+    }
 
     // BEGIN(G-API's network parametrization API)
     GBackend      backend() const { return cv::gapi::onnx::backend(); }

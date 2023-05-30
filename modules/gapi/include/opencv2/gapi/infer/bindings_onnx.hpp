@@ -26,6 +26,13 @@ public:
     GAPI_WRAP
     PyParams(const std::string& tag, const std::string& model_path);
 
+    GAPI_WRAP
+    PyParams& cfgMeanStd(const std::string &layer_name,
+                         const cv::Scalar &m,
+                         const cv::Scalar &s);
+    GAPI_WRAP
+    PyParams& cfgNormalize(const std::string &layer_name, bool flag);
+
     GBackend backend() const;
     std::string tag() const;
     cv::util::any params() const;
