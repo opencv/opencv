@@ -242,7 +242,7 @@ public:
     @param cfg Map of pairs: (config parameter name, config parameter value).
     @return reference to this parameter structure.
     */
-       Params& pluginConfig(const IEConfig& cfg) {
+    Params& pluginConfig(const IEConfig& cfg) {
         desc.config = cfg;
         return *this;
     }

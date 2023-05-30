@@ -785,15 +785,14 @@ static void unpackMetasToTuple(const cv::GMetaArgs&        meta,
     }
 }
 
-static cv::GArg setup_py(cv::detail::PyObjectHolder setup,
-                         const cv::GMetaArgs&       meta,
-                         const cv::GArgs&           gargs)
+static cv::GArg run_py_setup(cv::detail::PyObjectHolder setup,
+                             const cv::GMetaArgs        &meta,
+                             const cv::GArgs            &gargs)
 {
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
 
-    cv::GArg out;
-
+    cv::GArg state;
     try
     {
         // NB: Doesn't increase reference counter (false),
@@ -801,23 +800,20 @@ static cv::GArg setup_py(cv::detail::PyObjectHolder setup,
         // In case exception decrement reference counter.
         cv::detail::PyObjectHolder args(PyTuple_New(meta.size()), false);
         unpackMetasToTuple(meta, gargs, args);
-        // NB: Take an onwership because this state is "Python" type so it will be wrapped as-is
-        // into cv::GArg and stored in GPythonBackend. Object without ownership can't
-        // be dealocated outside this function.
-        cv::detail::PyObjectHolder result(PyObject_CallObject(setup.get(), args.get()), true);
 
+        PyObject *py_kernel_state = PyObject_CallObject(setup.get(), args.get());
         if (PyErr_Occurred())
         {
             PyErr_PrintEx(0);
             PyErr_Clear();
-            throw std::logic_error("Python kernel failed with error!");
+            throw std::logic_error("Python kernel setup failed with error!");
         }
         // NB: In fact it's impossible situation, because errors were handled above.
-        GAPI_Assert(result.get() && "Python kernel returned NULL!");
+        GAPI_Assert(py_kernel_state && "Python kernel setup returned NULL!");
 
-        if (!pyopencv_to(result.get(), out, ArgInfo("arg", false)))
+        if (!pyopencv_to(py_kernel_state, state, ArgInfo("arg", false)))
         {
-            util::throw_error(std::logic_error("Unsupported output meta type"));
+            util::throw_error(std::logic_error("Failed to convert python state"));
         }
     }
     catch (...)
@@ -826,7 +822,7 @@ static cv::GArg setup_py(cv::detail::PyObjectHolder setup,
         throw;
     }
     PyGILState_Release(gstate);
-    return out;
+    return state;
 }
 
 static GMetaArg get_meta_arg(PyObject* obj)
@@ -947,7 +943,7 @@ static PyObject* pyopencv_cv_gapi_kernels(PyObject* , PyObject* py_args, PyObjec
             gapi::python::GPythonFunctor f(
                 id.c_str(), std::bind(run_py_meta, cv::detail::PyObjectHolder{out_meta}, _1, _2),
                 std::bind(run_py_kernel, cv::detail::PyObjectHolder{run}, _1),
-                std::bind(setup_py, cv::detail::PyObjectHolder{setup}, _1, _2));
+                std::bind(run_py_setup, cv::detail::PyObjectHolder{setup}, _1, _2));
             pkg.include(f);
         }
         else

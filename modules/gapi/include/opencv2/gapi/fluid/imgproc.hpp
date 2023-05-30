@@ -13,7 +13,7 @@
 
 namespace cv { namespace gapi { namespace imgproc { namespace fluid {
 
-GAPI_EXPORTS GKernelPackage kernels();
+GAPI_EXPORTS_W GKernelPackage kernels();
 
 }}}}
 
