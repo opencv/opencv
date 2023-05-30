@@ -764,8 +764,11 @@ public:
 
 };
 
-class CV_EXPORTS_W QRCodeDetectorBase {
+class CV_EXPORTS_W_SIMPLE QRCodeDetectorBase {
 public:
+    // CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+    QRCodeDetectorBase();
+
     /** @brief Detects QR code in image and returns the quadrangle containing the code.
      @param img grayscale or color (BGR) image containing (or not) QR code.
      @param points Output vector of vertices of the minimum-area quadrangle containing the code.
@@ -828,12 +831,10 @@ protected:
     Ptr<Impl> p;
 };
 
-class CV_EXPORTS_W QRCodeDetector : public QRCodeDetectorBase
+class CV_EXPORTS_W_SIMPLE QRCodeDetector : public QRCodeDetectorBase
 {
 public:
     CV_WRAP QRCodeDetector();
-    ~QRCodeDetector();
-
 
     /** @brief sets the epsilon used during the horizontal scan of QR code stop marker detection.
      @param epsX Epsilon neighborhood, which allows you to determine the horizontal pattern
@@ -871,8 +872,10 @@ public:
                                               OutputArray straight_qrcode = noArray());
 };
 
-class CV_EXPORTS_W QRCodeDetectorAruco : public QRCodeDetectorBase {
+class CV_EXPORTS_W_SIMPLE QRCodeDetectorAruco : public QRCodeDetectorBase {
 public:
+    CV_WRAP QRCodeDetectorAruco();
+
     struct CV_EXPORTS_W_SIMPLE Params {
         CV_WRAP Params();
 
@@ -906,13 +909,13 @@ public:
     };
 
     /** @brief QR code detector constructor for Aruco-based algorithm. See cv::QRCodeDetectorAruco::Params */
-    CV_WRAP explicit QRCodeDetectorAruco(const QRCodeDetectorAruco::Params& params = QRCodeDetectorAruco::Params());
+    CV_WRAP explicit QRCodeDetectorAruco(const QRCodeDetectorAruco::Params& params);
 
     /** @brief Detector parameters getter. See cv::QRCodeDetectorAruco::Params */
     CV_WRAP const QRCodeDetectorAruco::Params& getDetectorParameters() const;
 
     /** @brief Detector parameters setter. See cv::QRCodeDetectorAruco::Params */
-    CV_WRAP void setDetectorParameters(const QRCodeDetectorAruco::Params& params);
+    CV_WRAP QRCodeDetectorAruco& setDetectorParameters(const QRCodeDetectorAruco::Params& params);
 
     /** @brief Aruco detector parameters are used to search for the finder patterns. */
     CV_WRAP aruco::DetectorParameters getArucoParameters();
