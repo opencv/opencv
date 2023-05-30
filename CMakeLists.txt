@@ -1382,7 +1382,11 @@ if(WITH_WEBP OR HAVE_WEBP)
 endif()
 
 if(WITH_AVIF OR HAVE_AVIF)
-  status("    AVIF:" AVIF_FOUND THEN "${AVIF_LIBRARY} (ver ${AVIF_VERSION})" ELSE "build (ver ${AVIF_VERSION})")
+  if(AVIF_VERSION)
+    status("    AVIF:" AVIF_FOUND THEN "${AVIF_LIBRARY} (ver ${AVIF_VERSION})" ELSE "NO")
+  else()
+    status("    AVIF:" AVIF_FOUND THEN "${AVIF_LIBRARY}" ELSE "NO")
+  endif()
 endif()
 
 if(WITH_PNG OR HAVE_PNG OR WITH_SPNG)

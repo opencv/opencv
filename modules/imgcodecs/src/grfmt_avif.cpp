@@ -136,7 +136,6 @@ AvifDecoder::AvifDecoder() {
   m_buf_supported = true;
   channels_ = 0;
   decoder_ = avifDecoderCreate();
-  if (decoder_) decoder_->allowIncremental = AVIF_TRUE;
 }
 
 AvifDecoder::~AvifDecoder() {
