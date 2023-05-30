@@ -47,7 +47,6 @@
 
 #include <float.h>
 #include <string>
-#include "../nms.inl.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -598,10 +597,10 @@ public:
                 CV_Error_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
             int limit = (getNumOfTargetClasses() == 1) ? _keepTopK : std::numeric_limits<int>::max();
             if (_bboxesNormalized)
-                NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
+                cv::detail::NMSBoxesFast(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
                          indices[c], util::caffe_norm_box_overlap, limit);
             else
-                NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
+                cv::detail::NMSBoxesFast(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
                          indices[c], util::caffe_box_overlap, limit);
             numDetections += indices[c].size();
         }

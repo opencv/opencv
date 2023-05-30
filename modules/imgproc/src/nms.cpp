@@ -6,12 +6,54 @@
 // Third party copyrights are property of their respective owners.
 
 #include "precomp.hpp"
-#include "nms.inl.hpp"
 
-#include <opencv2/imgproc.hpp>
+namespace cv {
 
-namespace cv { namespace dnn {
-CV__DNN_INLINE_NS_BEGIN
+namespace
+{
+
+template <typename T>
+static inline bool SortScorePairDescend(const std::pair<float, T>& pair1,
+                          const std::pair<float, T>& pair2)
+{
+    return pair1.first > pair2.first;
+}
+
+} // namespace
+
+
+namespace detail {
+
+// Get max scores with corresponding indices.
+//    scores: a set of scores.
+//    threshold: only consider scores higher than the threshold.
+//    top_k: if -1, keep all; otherwise, keep at most top_k.
+//    score_index_vec: store the sorted (score, index) pair.
+void NMSGetMaxScoreIndex(const std::vector<float>& scores, const float threshold, const int top_k,
+                      std::vector<std::pair<float, int> >& score_index_vec)
+{
+    CV_DbgAssert(score_index_vec.empty());
+    // Generate index score pairs.
+    for (size_t i = 0; i < scores.size(); ++i)
+    {
+        if (scores[i] > threshold)
+        {
+            score_index_vec.push_back(std::make_pair(scores[i], i));
+        }
+    }
+
+    // Sort the score pair according to the scores in descending order
+    std::stable_sort(score_index_vec.begin(), score_index_vec.end(),
+                     SortScorePairDescend<int>);
+
+    // Keep top_k scores if needed.
+    if (top_k > 0 && top_k < (int)score_index_vec.size())
+    {
+        score_index_vec.resize(top_k);
+    }
+}
+
+} // detail::
 
 template <typename T>
 static inline float rectOverlap(const T& a, const T& b)
@@ -25,7 +67,7 @@ void NMSBoxes(const std::vector<Rect>& bboxes, const std::vector<float>& scores,
 {
     CV_Assert_N(bboxes.size() == scores.size(), score_threshold >= 0,
         nms_threshold >= 0, eta > 0);
-    NMSFast_(bboxes, scores, score_threshold, nms_threshold, eta, top_k, indices, rectOverlap);
+    detail::NMSBoxesFast(bboxes, scores, score_threshold, nms_threshold, eta, top_k, indices, rectOverlap);
 }
 
 void NMSBoxes(const std::vector<Rect2d>& bboxes, const std::vector<float>& scores,
@@ -34,7 +76,7 @@ void NMSBoxes(const std::vector<Rect2d>& bboxes, const std::vector<float>& score
 {
     CV_Assert_N(bboxes.size() == scores.size(), score_threshold >= 0,
         nms_threshold >= 0, eta > 0);
-    NMSFast_(bboxes, scores, score_threshold, nms_threshold, eta, top_k, indices, rectOverlap);
+    detail::NMSBoxesFast(bboxes, scores, score_threshold, nms_threshold, eta, top_k, indices, rectOverlap);
 }
 
 static inline float rotatedRectIOU(const RotatedRect& a, const RotatedRect& b)
@@ -55,7 +97,7 @@ void NMSBoxes(const std::vector<RotatedRect>& bboxes, const std::vector<float>& 
 {
     CV_Assert_N(bboxes.size() == scores.size(), score_threshold >= 0,
         nms_threshold >= 0, eta > 0);
-    NMSFast_(bboxes, scores, score_threshold, nms_threshold, eta, top_k, indices, rotatedRectIOU);
+    detail::NMSBoxesFast(bboxes, scores, score_threshold, nms_threshold, eta, top_k, indices, rotatedRectIOU);
 }
 
 template<class Rect_t>
@@ -65,7 +107,7 @@ static inline void NMSBoxesBatchedImpl(const std::vector<Rect_t>& bboxes,
                                        std::vector<int>& indices, const float eta, const int top_k)
 {
     double x1, y1, x2, y2, max_coord = 0;
-    for (int i = 0; i < bboxes.size(); i++)
+    for (size_t i = 0; i < bboxes.size(); i++)
     {
         x1 = bboxes[i].x;
         y1 = bboxes[i].y;
@@ -81,7 +123,7 @@ static inline void NMSBoxesBatchedImpl(const std::vector<Rect_t>& bboxes,
     // calculate offset and add offset to each bbox
     std::vector<Rect_t> bboxes_offset;
     double offset;
-    for (int i = 0; i < bboxes.size(); i++)
+    for (size_t i = 0; i < bboxes.size(); i++)
     {
         offset = class_ids[i] * (max_coord + 1);
         bboxes_offset.push_back(
@@ -90,7 +132,7 @@ static inline void NMSBoxesBatchedImpl(const std::vector<Rect_t>& bboxes,
         );
     }
 
-    NMSFast_(bboxes_offset, scores, score_threshold, nms_threshold, eta, top_k, indices, rectOverlap);
+    detail::NMSBoxesFast(bboxes_offset, scores, score_threshold, nms_threshold, eta, top_k, indices, rectOverlap);
 }
 
 void NMSBoxesBatched(const std::vector<Rect>& bboxes,
@@ -190,6 +232,4 @@ void softNMSBoxes(const std::vector<Rect>& bboxes,
     }
 }
 
-CV__DNN_INLINE_NS_END
-}// dnn
 }// cv

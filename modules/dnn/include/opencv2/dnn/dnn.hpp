@@ -45,6 +45,7 @@
 #include <vector>
 #include <opencv2/core.hpp>
 #include "opencv2/core/async.hpp"
+#include "opencv2/imgproc.hpp"
 
 #include "../dnn/version.hpp"
 
@@ -1291,85 +1292,10 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS_W void writeTextGraph(const String& model, const String& output);
 
-    /** @brief Performs non maximum suppression given boxes and corresponding scores.
 
-     * @param bboxes a set of bounding boxes to apply NMS.
-     * @param scores a set of corresponding confidences.
-     * @param score_threshold a threshold used to filter boxes by score.
-     * @param nms_threshold a threshold used in non maximum suppression.
-     * @param indices the kept indices of bboxes after NMS.
-     * @param eta a coefficient in adaptive threshold formula: \f$nms\_threshold_{i+1}=eta\cdot nms\_threshold_i\f$.
-     * @param top_k if `>0`, keep at most @p top_k picked indices.
-     */
-    CV_EXPORTS void NMSBoxes(const std::vector<Rect>& bboxes, const std::vector<float>& scores,
-                               const float score_threshold, const float nms_threshold,
-                               CV_OUT std::vector<int>& indices,
-                               const float eta = 1.f, const int top_k = 0);
-
-    CV_EXPORTS_W void NMSBoxes(const std::vector<Rect2d>& bboxes, const std::vector<float>& scores,
-                               const float score_threshold, const float nms_threshold,
-                               CV_OUT std::vector<int>& indices,
-                               const float eta = 1.f, const int top_k = 0);
-
-    CV_EXPORTS_AS(NMSBoxesRotated) void NMSBoxes(const std::vector<RotatedRect>& bboxes, const std::vector<float>& scores,
-                             const float score_threshold, const float nms_threshold,
-                             CV_OUT std::vector<int>& indices,
-                             const float eta = 1.f, const int top_k = 0);
-
-    /** @brief Performs batched non maximum suppression on given boxes and corresponding scores across different classes.
-
-     * @param bboxes a set of bounding boxes to apply NMS.
-     * @param scores a set of corresponding confidences.
-     * @param class_ids a set of corresponding class ids. Ids are integer and usually start from 0.
-     * @param score_threshold a threshold used to filter boxes by score.
-     * @param nms_threshold a threshold used in non maximum suppression.
-     * @param indices the kept indices of bboxes after NMS.
-     * @param eta a coefficient in adaptive threshold formula: \f$nms\_threshold_{i+1}=eta\cdot nms\_threshold_i\f$.
-     * @param top_k if `>0`, keep at most @p top_k picked indices.
-     */
-    CV_EXPORTS void NMSBoxesBatched(const std::vector<Rect>& bboxes, const std::vector<float>& scores, const std::vector<int>& class_ids,
-                                    const float score_threshold, const float nms_threshold,
-                                    CV_OUT std::vector<int>& indices,
-                                    const float eta = 1.f, const int top_k = 0);
-
-    CV_EXPORTS_W void NMSBoxesBatched(const std::vector<Rect2d>& bboxes, const std::vector<float>& scores, const std::vector<int>& class_ids,
-                                      const float score_threshold, const float nms_threshold,
-                                      CV_OUT std::vector<int>& indices,
-                                      const float eta = 1.f, const int top_k = 0);
-
-    /**
-     * @brief Enum of Soft NMS methods.
-     * @see softNMSBoxes
-     */
-    enum class SoftNMSMethod
-    {
-        SOFTNMS_LINEAR = 1,
-        SOFTNMS_GAUSSIAN = 2
-    };
-
-    /** @brief Performs soft non maximum suppression given boxes and corresponding scores.
-     * Reference: https://arxiv.org/abs/1704.04503
-     * @param bboxes a set of bounding boxes to apply Soft NMS.
-     * @param scores a set of corresponding confidences.
-     * @param updated_scores a set of corresponding updated confidences.
-     * @param score_threshold a threshold used to filter boxes by score.
-     * @param nms_threshold a threshold used in non maximum suppression.
-     * @param indices the kept indices of bboxes after NMS.
-     * @param top_k keep at most @p top_k picked indices.
-     * @param sigma parameter of Gaussian weighting.
-     * @param method Gaussian or linear.
-     * @see SoftNMSMethod
-     */
-    CV_EXPORTS_W void softNMSBoxes(const std::vector<Rect>& bboxes,
-                                   const std::vector<float>& scores,
-                                   CV_OUT std::vector<float>& updated_scores,
-                                   const float score_threshold,
-                                   const float nms_threshold,
-                                   CV_OUT std::vector<int>& indices,
-                                   size_t top_k = 0,
-                                   const float sigma = 0.5,
-                                   SoftNMSMethod method = SoftNMSMethod::SOFTNMS_GAUSSIAN);
-
+    using cv::NMSBoxes;
+    using cv::NMSBoxesBatched;
+    using cv::softNMSBoxes;
 
      /** @brief This class is presented high-level API for neural networks.
       *

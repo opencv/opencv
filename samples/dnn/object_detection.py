@@ -180,7 +180,7 @@ def postprocess(frame, outs):
             class_indices = np.where(classIds == cl)[0]
             conf = confidences[class_indices]
             box  = boxes[class_indices].tolist()
-            nms_indices = cv.dnn.NMSBoxes(box, conf, confThreshold, nmsThreshold)
+            nms_indices = cv.NMSBoxes(box, conf, confThreshold, nmsThreshold)
             nms_indices = nms_indices[:, 0] if len(nms_indices) else []
             indices.extend(class_indices[nms_indices])
     else:

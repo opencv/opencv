@@ -192,7 +192,7 @@ def main():
         [boxes, confidences] = decodeBoundingBoxes(scores, geometry, confThreshold)
 
         # Apply NMS
-        indices = cv.dnn.NMSBoxesRotated(boxes, confidences, confThreshold, nmsThreshold)
+        indices = cv.NMSBoxesRotated(boxes, confidences, confThreshold, nmsThreshold)
         for i in indices:
             # get 4 corners of the rotated rect
             vertices = cv.boxPoints(boxes[i])

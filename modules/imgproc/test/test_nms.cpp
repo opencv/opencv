@@ -12,7 +12,8 @@ namespace opencv_test { namespace {
 TEST(NMS, Accuracy)
 {
     //reference results obtained using tf.image.non_max_suppression with iou_threshold=0.5
-    std::string dataPath = findDataFile("dnn/nms_reference.yml");
+    addDataSearchSubDirectory("dnn");
+    std::string dataPath = findDataFile("nms_reference.yml");
     FileStorage fs(dataPath, FileStorage::READ);
 
     std::vector<Rect> bboxes;
@@ -26,7 +27,7 @@ TEST(NMS, Accuracy)
     const float nms_thresh = .5f;
     const float score_thresh = .01f;
     std::vector<int> indices;
-    cv::dnn::NMSBoxes(bboxes, scores, score_thresh, nms_thresh, indices);
+    NMSBoxes(bboxes, scores, score_thresh, nms_thresh, indices);
 
     ASSERT_EQ(ref_indices.size(), indices.size());
 
@@ -40,7 +41,8 @@ TEST(NMS, Accuracy)
 TEST(BatchedNMS, Accuracy)
 {
     //reference results obtained using tf.image.non_max_suppression with iou_threshold=0.5
-    std::string dataPath = findDataFile("dnn/batched_nms_reference.yml");
+    addDataSearchSubDirectory("dnn");
+    std::string dataPath = findDataFile("batched_nms_reference.yml");
     FileStorage fs(dataPath, FileStorage::READ);
 
     std::vector<Rect> bboxes;
@@ -56,7 +58,7 @@ TEST(BatchedNMS, Accuracy)
     const float nms_thresh = .5f;
     const float score_thresh = .05f;
     std::vector<int> indices;
-    cv::dnn::NMSBoxesBatched(bboxes, scores, idxs, score_thresh, nms_thresh, indices);
+    NMSBoxesBatched(bboxes, scores, idxs, score_thresh, nms_thresh, indices);
 
     ASSERT_EQ(ref_indices.size(), indices.size());
 
@@ -70,7 +72,8 @@ TEST(BatchedNMS, Accuracy)
 TEST(SoftNMS, Accuracy)
 {
     //reference results are obtained using TF v2.7 tf.image.non_max_suppression_with_scores
-    std::string dataPath = findDataFile("dnn/soft_nms_reference.yml");
+    addDataSearchSubDirectory("dnn");
+    std::string dataPath = findDataFile("soft_nms_reference.yml");
     FileStorage fs(dataPath, FileStorage::READ);
 
     std::vector<Rect> bboxes;
@@ -89,7 +92,7 @@ TEST(SoftNMS, Accuracy)
     std::vector<int> indices;
     const size_t top_k = 0;
     const float sigma = 1.; // sigma in TF is being multiplied by 2, so 0.5 should be passed there
-    cv::dnn::softNMSBoxes(bboxes, scores, updated_scores, score_thresh, nms_thresh, indices, top_k, sigma);
+    softNMSBoxes(bboxes, scores, updated_scores, score_thresh, nms_thresh, indices, top_k, sigma);
 
     ASSERT_EQ(ref_indices.size(), indices.size());
     for(size_t i = 0; i < indices.size(); i++)

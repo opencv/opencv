@@ -201,7 +201,7 @@ private:
             }
 
             std::vector<int> keepIdx;
-            dnn::NMSBoxes(faceBoxes, faceScores, scoreThreshold, nmsThreshold, keepIdx, 1.f, topK);
+            NMSBoxes(faceBoxes, faceScores, scoreThreshold, nmsThreshold, keepIdx, 1.f, topK);
 
             // Get NMS results
             Mat nms_faces;
