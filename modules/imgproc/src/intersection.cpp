@@ -47,6 +47,12 @@
 namespace cv
 {
 
+static inline bool _isOnPositiveSide(const Point2f& line_vec, const Point2f& line_pt, const Point2f& pt)
+{
+    return (line_vec.y*(line_pt.x-pt.x) >= line_vec.x*(line_pt.y-pt.y));
+}
+//end _isOnPositiveSide()
+
 static int _rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, std::vector<Point2f> &intersection )
 {
     CV_INSTRUMENT_REGION();
@@ -160,25 +166,19 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         int posSign = 0;
         int negSign = 0;
 
-        const float x = pts1[i].x;
-        const float y = pts1[i].y;
+        const Point2f& pt = pts1[i];
 
         for( int j = 0; j < 4; j++ )
         {
-            // line equation: Ax + By + C = 0
-            // see which side of the line this point is at
-            ////base algorithm
-            //const float A = -vec2[j].y;
-            //const float B = vec2[j].x;
-            //const float C = -(A*pts2[j].x + B*pts2[j].y);
-            //float s = A*x + B*y + C;//then compare to 0
-            //s = (std::fabs(s)<1e-6) ? 0 : s;//trick for numeric stability
-            ////computation reordering for better numerical stability
-            //const float s = vec2[j].y*(pts2[j].x-x)+vec2[j].x*(y-pts2[j].y);
+            // line equation: Ax + By + C = 0 where
+            // A = -vec2[j].y ; B = vec2[j].x ; C = -(A * pts2[j].x + B * pts2[j].y)
+            // check which side of the line this point is at
+            // A*x + B*y + C <> 0
+            // + computation reordered for better numerical stability
 
-            const bool isSPositive = (vec2[j].y*(pts2[j].x-x) >= vec2[j].x*(pts2[j].y-y));
+            const bool isPositive = _isOnPositiveSide(vec2[j], pts2[j], pt);
 
-            if( isSPositive )
+            if( isPositive )
             {
                 posSign++;
             }
@@ -203,25 +203,19 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         int posSign = 0;
         int negSign = 0;
 
-        const float x = pts2[i].x;
-        const float y = pts2[i].y;
+        const Point2f& pt = pts2[i];
 
         for( int j = 0; j < 4; j++ )
         {
-            // line equation: Ax + By + C = 0
-            // see which side of the line this point is at
-            ////base algorithm
-            //const float A = -vec1[j].y ;
-            //const float B = vec1[j].x ;
-            //const float C = -(A*pts1[j].x + B*pts1[j].y);
-            //float s = A*x + B*y + C;//then compare to 0
-            //s = (std::fabs(s)<1e-6) ? 0 : s;//trick for numeric stability
-            ////computation reordering for better numerical stability
-            //const float s = vec1[j].y*(pts1[j].x-x)+vec1[j].x*(y-pts1[j].y);
+            // line equation: Ax + By + C = 0 where
+            // A = -vec1[j].y ; B = vec1[j].x ; C = -(A * pts1[j].x + B * pts1[j].y)
+            // check which side of the line this point is at
+            // A*x + B*y + C <> 0
+            // + computation reordered for better numerical stability
 
-            const bool isSPositive = (vec1[j].y*(pts1[j].x-x) >= vec1[j].x*(pts1[j].y-y));
+            const bool isPositive = _isOnPositiveSide(vec1[j], pts1[j], pt);
 
-            if( isSPositive )
+            if( isPositive )
             {
                 posSign++;
             }
