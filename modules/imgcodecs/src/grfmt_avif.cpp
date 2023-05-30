@@ -120,7 +120,7 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless,
   rgba.pixels =
       const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(img.data));
 
-  avifImageRGBToYUV(result, &rgba);
+  if (avifImageRGBToYUV(result, &rgba) != AVIF_RESULT_OK) return nullptr;
   return AvifImageUniquePtr(result);
 }
 
@@ -155,14 +155,15 @@ bool AvifDecoder::checkSignature(const String &signature) const {
           status != AVIF_RESULT_BMFF_PARSE_FAILED);
 }
 
-#define OPENCV_AVIF_CHECK_STATUS(X)                                       \
-  {                                                                       \
-    const avifResult status = (X);                                        \
-    if (status != AVIF_RESULT_OK) {                                       \
-      const std::string error(decoder_->diag.error);                      \
-      CV_Error(Error::StsParseError, error + avifResultToString(status)); \
-      return false;                                                       \
-    }                                                                     \
+#define OPENCV_AVIF_CHECK_STATUS(X, ENCDEC)               \
+  {                                                       \
+    const avifResult status = (X);                        \
+    if (status != AVIF_RESULT_OK) {                       \
+      const std::string error(ENCDEC->diag.error);        \
+      CV_Error(Error::StsParseError,                      \
+               error + " " + avifResultToString(status)); \
+      return false;                                       \
+    }                                                     \
   }
 
 ImageDecoder AvifDecoder::newDecoder() const { return makePtr<AvifDecoder>(); }
@@ -178,8 +179,9 @@ bool AvifDecoder::readHeader() {
           ? avifDecoderSetIOFile(decoder_, m_filename.c_str())
           : avifDecoderSetIOMemory(
                 decoder_, reinterpret_cast<const uint8_t *>(m_buf.data),
-                m_buf.total()));
-  OPENCV_AVIF_CHECK_STATUS(avifDecoderParse(decoder_));
+                m_buf.total()),
+      decoder_);
+  OPENCV_AVIF_CHECK_STATUS(avifDecoderParse(decoder_), decoder_);
 
   m_width = decoder_->image->width;
   m_height = decoder_->image->height;
@@ -188,6 +190,7 @@ bool AvifDecoder::readHeader() {
   bit_depth_ = decoder_->image->depth;
   CV_Assert(bit_depth_ == 8 || bit_depth_ == 10 || bit_depth_ == 12);
   m_type = CV_MAKETYPE(bit_depth_ == 8 ? CV_8U : CV_16U, channels_);
+  is_first_image_ = true;
   return true;
 }
 
@@ -212,7 +215,10 @@ bool AvifDecoder::readData(Mat &img) {
     read_img.create(m_height, m_width, CV_MAKE_TYPE(img.depth(), channels_));
   }
 
-  OPENCV_AVIF_CHECK_STATUS(avifDecoderNextImage(decoder_));
+  if (is_first_image_) {
+    if (!nextPage()) return false;
+    is_first_image_ = false;
+  }
 
   if (CopyToMat(decoder_->image, channels_, &read_img) != AVIF_RESULT_OK) {
     CV_Error(Error::StsInternal, "Cannot convert from AVIF to Mat");
@@ -245,7 +251,16 @@ bool AvifDecoder::readData(Mat &img) {
   return true;
 }
 
-bool AvifDecoder::nextPage() { return true; }
+bool AvifDecoder::nextPage() {
+  const avifResult status = avifDecoderNextImage(decoder_);
+  if (status == AVIF_RESULT_NO_IMAGES_REMAINING) return false;
+  if (status != AVIF_RESULT_OK) {
+    const std::string error(decoder_->diag.error);
+    CV_Error(Error::StsParseError, error + " " + avifResultToString(status));
+    return false;
+  }
+  return true;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -325,32 +340,23 @@ bool AvifEncoder::writeToOutput(const std::vector<Mat> &img_vec,
              img.channels() == 1 || img.channels() == 3 || img.channels() == 4,
              "AVIF only supports 1, 3, 4 channels");
 
-    images.push_back(ConvertToAvif(img, do_lossless, bit_depth));
+    images.emplace_back(ConvertToAvif(img, do_lossless, bit_depth));
   }
   for (const AvifImageUniquePtr &image : images) {
-    const avifResult status = avifEncoderAddImage(
-        encoder_, image.get(), /*durationInTimescale=*/1, flag);
-    if (status != AVIF_RESULT_OK) {
-      const std::string error(encoder_->diag.error);
-      CV_Error(Error::StsParseError, error);
-      return false;
-    }
+    OPENCV_AVIF_CHECK_STATUS(
+        avifEncoderAddImage(encoder_, image.get(), /*durationInTimescale=*/1,
+                            flag),
+        encoder_);
   }
 
-  const avifResult status = avifEncoderFinish(encoder_, output.get());
-  if (status != AVIF_RESULT_OK) {
-    const std::string error(encoder_->diag.error);
-    CV_Error(Error::StsParseError, error);
-    return false;
-  }
+  OPENCV_AVIF_CHECK_STATUS(avifEncoderFinish(encoder_, output.get()), encoder_);
 
   if (m_buf) {
     m_buf->resize(output->size);
     std::memcpy(m_buf->data(), output->data, output->size);
   } else {
-    std::ofstream file(m_filename, std::ofstream::binary);
-    file.write(reinterpret_cast<char *>(output->data), output->size);
-    file.close();
+    std::ofstream(m_filename, std::ofstream::binary)
+        .write(reinterpret_cast<char *>(output->data), output->size);
   }
 
   return (output->size > 0);

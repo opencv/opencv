@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level
 // directory of this distribution and at http://opencv.org/license.html
 
+#include <cstdint>
 #include <fstream>
 
 #include "test_precomp.hpp"
@@ -11,7 +12,7 @@
 namespace opencv_test {
 namespace {
 
-class Imgcodecs_Avif_EncodeDecodeSuite
+class Imgcodecs_Avif_RoundTripSuite
     : public testing::TestWithParam<std::tuple<int, int, int, ImreadModes>> {
  protected:
   static cv::Mat modifyImage(const cv::Mat& img_original, int channels,
@@ -35,13 +36,58 @@ class Imgcodecs_Avif_EncodeDecodeSuite
 
     return img_final;
   }
+
+  void SetUp() {
+    bit_depth_ = std::get<0>(GetParam());
+    channels_ = std::get<1>(GetParam());
+    quality_ = std::get<2>(GetParam());
+    imread_mode_ = std::get<3>(GetParam());
+    encoding_params_ = {cv::IMWRITE_AVIF_QUALITY, quality_,
+                        cv::IMWRITE_AVIF_DEPTH, bit_depth_};
+  }
+
+  bool IsBitDepthValid() const {
+    return (bit_depth_ == 8 || bit_depth_ == 10 || bit_depth_ == 12);
+  }
+
+  // Makes sure images are close enough after encode/decode roundtrip.
+  void ValidateRead(const cv::Mat& img_original, const cv::Mat& img) const {
+    EXPECT_EQ(img_original.size(), img.size());
+    if (imread_mode_ == IMREAD_UNCHANGED) {
+      ASSERT_EQ(img_original.type(), img.type());
+      // Lossless.
+      if (quality_ == 100) {
+        EXPECT_EQ(0, cvtest::norm(img, img_original, NORM_INF));
+      } else {
+        const float norm = cvtest::norm(img, img_original, NORM_L2) /
+                           img.channels() / img.cols / img.rows /
+                           (1 << (bit_depth_ - 8));
+        if (quality_ == 50) {
+          EXPECT_LE(norm, 10);
+        } else if (quality_ == 0) {
+          EXPECT_LE(norm, 13);
+        } else {
+          EXPECT_FALSE(true);
+        }
+      }
+    }
+  }
+
+ public:
+  int bit_depth_;
+  int channels_;
+  int quality_;
+  int imread_mode_;
+  std::vector<int> encoding_params_;
 };
 
-class Imgcodecs_Avif_Image_EncodeDecodeSuite
-    : public Imgcodecs_Avif_EncodeDecodeSuite {
+////////////////////////////////////////////////////////////////////////////////
+
+class Imgcodecs_Avif_Image_RoundTripSuite
+    : public Imgcodecs_Avif_RoundTripSuite {
  public:
-  static const cv::Mat& get_img_original(int channels, int bit_depth) {
-    const Key key = {channels, bit_depth};
+  const cv::Mat& get_img_original() {
+    const Key key = {channels_, (bit_depth_ < 8) ? 8 : bit_depth_};
     return imgs_[key];
   }
 
@@ -61,68 +107,71 @@ class Imgcodecs_Avif_Image_EncodeDecodeSuite
     }
   }
 
-  static int kWidth;
-  static int kHeight;
+  static const int kWidth;
+  static const int kHeight;
 
  private:
   typedef std::tuple<int, int> Key;
   static std::map<Key, cv::Mat> imgs_;
 };
 std::map<std::tuple<int, int>, cv::Mat>
-    Imgcodecs_Avif_Image_EncodeDecodeSuite::imgs_;
-int Imgcodecs_Avif_Image_EncodeDecodeSuite::kWidth = 50;
-int Imgcodecs_Avif_Image_EncodeDecodeSuite::kHeight = 50;
+    Imgcodecs_Avif_Image_RoundTripSuite::imgs_;
+const int Imgcodecs_Avif_Image_RoundTripSuite::kWidth = 51;
+const int Imgcodecs_Avif_Image_RoundTripSuite::kHeight = 51;
 
-TEST_P(Imgcodecs_Avif_Image_EncodeDecodeSuite, encode_decode) {
-  // Get parameters and image to encode.
-  const int bit_depth = std::get<0>(GetParam());
-  const int channels = std::get<1>(GetParam());
-  const int quality = std::get<2>(GetParam());
-  const int imread_mode = std::get<3>(GetParam());
-  const cv::Mat& img_original =
-      get_img_original(channels, (bit_depth < 8) ? 8 : bit_depth);
+class Imgcodecs_Avif_Image_WriteReadSuite
+    : public Imgcodecs_Avif_Image_RoundTripSuite {};
+
+TEST_P(Imgcodecs_Avif_Image_WriteReadSuite, imwrite_imread) {
+  const cv::Mat& img_original = get_img_original();
   ASSERT_FALSE(img_original.empty());
 
   // Encode.
   const string output = cv::tempfile(".avif");
-  const std::vector<int> params = {cv::IMWRITE_AVIF_QUALITY, quality,
-                                   cv::IMWRITE_AVIF_DEPTH, bit_depth};
-  if (bit_depth != 8 && bit_depth != 10 && bit_depth != 12) {
-    EXPECT_NO_FATAL_FAILURE(cv::imwrite(output, img_original, params));
+  if (!IsBitDepthValid()) {
+    EXPECT_NO_FATAL_FAILURE(
+        cv::imwrite(output, img_original, encoding_params_));
     return;
-  } else {
-    EXPECT_NO_THROW(cv::imwrite(output, img_original, params));
   }
+  EXPECT_NO_THROW(cv::imwrite(output, img_original, encoding_params_));
 
   // Read from file.
-  const cv::Mat img_imread = cv::imread(output, imread_mode);
+  const cv::Mat img = cv::imread(output, imread_mode_);
 
-  // Put file into buffer and read from buffer.
-  std::ifstream file(output, std::ios::binary | std::ios::ate);
-  std::streamsize size = file.tellg();
-  file.seekg(0, std::ios::beg);
-  std::vector<unsigned char> buf(size);
-  EXPECT_TRUE(file.read(reinterpret_cast<char*>(buf.data()), size));
+  ValidateRead(img_original, img);
+}
 
-  EXPECT_EQ(0, remove(output.c_str()));
+INSTANTIATE_TEST_CASE_P(
+    Imgcodecs_AVIF, Imgcodecs_Avif_Image_WriteReadSuite,
+    ::testing::Combine(::testing::ValuesIn({6, 8, 10, 12}),
+                       ::testing::ValuesIn({1, 3, 4}),
+                       ::testing::ValuesIn({0, 50, 100}),
+                       ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
+                                            IMREAD_COLOR})));
 
-  const cv::Mat img_decode = cv::imdecode(buf, imread_mode);
+class Imgcodecs_Avif_Image_EncodeDecodeSuite
+    : public Imgcodecs_Avif_Image_RoundTripSuite {};
 
-  // Test resulting images.
-  ASSERT_EQ(img_imread.type(), img_decode.type());
-  for (const cv::Mat& img : {img_imread, img_decode}) {
-    ASSERT_FALSE(img.empty());
-    EXPECT_EQ(Imgcodecs_Avif_Image_EncodeDecodeSuite::kWidth, img.cols);
-    EXPECT_EQ(Imgcodecs_Avif_Image_EncodeDecodeSuite::kHeight, img.rows);
+TEST_P(Imgcodecs_Avif_Image_EncodeDecodeSuite, imencode_imdecode) {
+  const cv::Mat& img_original = get_img_original();
+  ASSERT_FALSE(img_original.empty());
 
-    if (imread_mode == IMREAD_UNCHANGED) {
-      ASSERT_EQ(img_original.type(), img.type());
-      // Lossless.
-      if (quality == 100) {
-        EXPECT_EQ(0, cvtest::norm(img, img_original, NORM_INF));
-      }
-    }
+  // Encode.
+  std::vector<unsigned char> buf;
+  if (!IsBitDepthValid()) {
+    EXPECT_THROW(cv::imencode(".avif", img_original, buf, encoding_params_),
+                 cv::Exception);
+    return;
   }
+  bool result;
+  EXPECT_NO_THROW(
+      result = cv::imencode(".avif", img_original, buf, encoding_params_););
+  EXPECT_TRUE(result);
+
+  // Read back.
+  const cv::Mat img = cv::imdecode(buf, imread_mode_);
+
+  ValidateRead(img_original, img);
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -135,12 +184,11 @@ INSTANTIATE_TEST_CASE_P(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-class Imgcodecs_Avif_Animation_EncodeDecodeSuite
-    : public Imgcodecs_Avif_EncodeDecodeSuite {
+class Imgcodecs_Avif_Animation_RoundTripSuite
+    : public Imgcodecs_Avif_RoundTripSuite {
  public:
-  static const std::vector<cv::Mat>& get_anim_original(int channels,
-                                                       int bit_depth) {
-    const Key key = {channels, bit_depth};
+  const std::vector<cv::Mat>& get_anim_original() {
+    const Key key = {channels_, bit_depth_};
     return anims_[key];
   }
 
@@ -156,50 +204,78 @@ class Imgcodecs_Avif_Animation_EncodeDecodeSuite
       for (int bit_depth : {8, 10, 12}) {
         const Key key{channels, bit_depth};
         const cv::Mat img = modifyImage(img_resized, channels, bit_depth);
-        anims_[key].push_back(img);
-        cv::Mat img2;
+        cv::Mat img2, img3;
         cv::flip(img, img2, 0);
-        anims_[key].push_back(img2);
+        cv::flip(img, img3, -1);
+        anims_[key] = {img, img2, img3};
       }
     }
   }
 
-  static int kWidth;
-  static int kHeight;
+  void ValidateRead(const std::vector<cv::Mat>& anim_original,
+                    const std::vector<cv::Mat>& anim) const {
+    ASSERT_EQ(anim_original.size(), anim.size());
+    for (size_t i = 0; i < anim.size(); ++i) {
+      Imgcodecs_Avif_RoundTripSuite::ValidateRead(anim_original[i], anim[i]);
+    }
+  }
+
+  static const int kWidth;
+  static const int kHeight;
 
  private:
   typedef std::tuple<int, int> Key;
   static std::map<Key, std::vector<cv::Mat>> anims_;
 };
 std::map<std::tuple<int, int>, std::vector<cv::Mat>>
-    Imgcodecs_Avif_Animation_EncodeDecodeSuite::anims_;
-int Imgcodecs_Avif_Animation_EncodeDecodeSuite::kWidth = 5;
-int Imgcodecs_Avif_Animation_EncodeDecodeSuite::kHeight = 5;
+    Imgcodecs_Avif_Animation_RoundTripSuite::anims_;
+const int Imgcodecs_Avif_Animation_RoundTripSuite::kWidth = 5;
+const int Imgcodecs_Avif_Animation_RoundTripSuite::kHeight = 5;
 
-TEST_P(Imgcodecs_Avif_Animation_EncodeDecodeSuite, encode_decode) {
-  // Get parameters and image to encode.
-  const int bit_depth = std::get<0>(GetParam());
-  const int channels = std::get<1>(GetParam());
-  const int quality = std::get<2>(GetParam());
-  const int imread_mode = std::get<3>(GetParam());
-  const std::vector<cv::Mat>& anim_original =
-      get_anim_original(channels, bit_depth);
+class Imgcodecs_Avif_Animation_WriteReadSuite
+    : public Imgcodecs_Avif_Animation_RoundTripSuite {};
+
+TEST_P(Imgcodecs_Avif_Animation_WriteReadSuite, encode_decode) {
+  const std::vector<cv::Mat>& anim_original = get_anim_original();
   ASSERT_FALSE(anim_original.empty());
 
   // Encode.
   const string output = cv::tempfile(".avif");
-  const std::vector<int> params = {cv::IMWRITE_AVIF_DEPTH, bit_depth,
-                                   cv::IMWRITE_AVIF_QUALITY, quality};
-  if (bit_depth != 8 && bit_depth != 10 && bit_depth != 12) {
-    EXPECT_NO_FATAL_FAILURE(cv::imwritemulti(output, anim_original, params));
+  if (!IsBitDepthValid()) {
+    EXPECT_THROW(cv::imwritemulti(output, anim_original, encoding_params_),
+                 cv::Exception);
     return;
-  } else {
-    EXPECT_NO_THROW(cv::imwritemulti(output, anim_original, params));
   }
+  EXPECT_NO_THROW(cv::imwritemulti(output, anim_original, encoding_params_));
 
   // Read from file.
-  std::vector<cv::Mat> anim_read;
-  ASSERT_TRUE(cv::imreadmulti(output, anim_read, imread_mode));
+  std::vector<cv::Mat> anim;
+  ASSERT_TRUE(cv::imreadmulti(output, anim, imread_mode_));
+
+  ValidateRead(anim_original, anim);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    Imgcodecs_AVIF, Imgcodecs_Avif_Animation_WriteReadSuite,
+    ::testing::Combine(::testing::ValuesIn({8, 10, 12}),
+                       ::testing::ValuesIn({1, 3}), ::testing::ValuesIn({50}),
+                       ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
+                                            IMREAD_COLOR})));
+class Imgcodecs_Avif_Animation_WriteDecodeSuite
+    : public Imgcodecs_Avif_Animation_RoundTripSuite {};
+
+TEST_P(Imgcodecs_Avif_Animation_WriteDecodeSuite, encode_decode) {
+  const std::vector<cv::Mat>& anim_original = get_anim_original();
+  ASSERT_FALSE(anim_original.empty());
+
+  // Encode.
+  const string output = cv::tempfile(".avif");
+  if (!IsBitDepthValid()) {
+    EXPECT_THROW(cv::imwritemulti(output, anim_original, encoding_params_),
+                 cv::Exception);
+    return;
+  }
+  EXPECT_NO_THROW(cv::imwritemulti(output, anim_original, encoding_params_));
 
   // Put file into buffer and read from buffer.
   std::ifstream file(output, std::ios::binary | std::ios::ate);
@@ -207,28 +283,17 @@ TEST_P(Imgcodecs_Avif_Animation_EncodeDecodeSuite, encode_decode) {
   file.seekg(0, std::ios::beg);
   std::vector<unsigned char> buf(size);
   EXPECT_TRUE(file.read(reinterpret_cast<char*>(buf.data()), size));
-
   EXPECT_EQ(0, remove(output.c_str()));
+  std::vector<cv::Mat> anim;
+  ASSERT_TRUE(cv::imdecodemulti(buf, imread_mode_, anim));
 
-  // Test resulting images.
-  ASSERT_EQ(anim_original.size(), anim_read.size());
-  for (size_t i = 0; i < anim_read.size(); ++i) {
-    const cv::Mat img = anim_read[i];
-    ASSERT_FALSE(img.empty());
-    EXPECT_EQ(Imgcodecs_Avif_Animation_EncodeDecodeSuite::kWidth, img.cols);
-    EXPECT_EQ(Imgcodecs_Avif_Animation_EncodeDecodeSuite::kHeight, img.rows);
-
-    if (imread_mode == IMREAD_UNCHANGED) {
-      ASSERT_EQ(anim_original[i].type(), img.type());
-    }
-  }
+  ValidateRead(anim_original, anim);
 }
 
 INSTANTIATE_TEST_CASE_P(
-    Imgcodecs_AVIF, Imgcodecs_Avif_Animation_EncodeDecodeSuite,
+    Imgcodecs_AVIF, Imgcodecs_Avif_Animation_WriteDecodeSuite,
     ::testing::Combine(::testing::ValuesIn({8, 10, 12}),
-                       ::testing::ValuesIn({1, 3, 4}),
-                       ::testing::ValuesIn({50}),
+                       ::testing::ValuesIn({1, 3}), ::testing::ValuesIn({50}),
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
                                             IMREAD_COLOR})));
 
