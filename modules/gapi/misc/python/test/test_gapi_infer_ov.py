@@ -171,7 +171,10 @@ try:
             gender_g = outputs.at("prob")
 
             comp = cv.GComputation(cv.GIn(g_in), cv.GOut(age_g, gender_g))
-            pp = cv.gapi.ov.params("net", model_path, bin_path, device_id).cfgReshape([2, 3, 62, 62])
+            pp = cv.gapi.ov.params("net", model_path, bin_path, device_id).cfgReshape([2, 3, 62, 62])   \
+                                                                          .cfgInputModelLayout("NCHW")  \
+                                                                          .cfgInputTensorLayout("NHWC") \
+                                                                          .cfgResize(cv.INTER_LINEAR)
 
             gapi_age, gapi_gender = comp.apply(cv.gin(batch_img), args=cv.gapi.compile_args(cv.gapi.networks(pp)))
             gapi_gender = gapi_gender.squeeze()
@@ -222,7 +225,7 @@ try:
             gender_g = outputs.at("prob")
 
             comp = cv.GComputation(cv.GIn(g_in), cv.GOut(age_g, gender_g))
-            pp = cv.gapi.ov.params("net", model_path, bin_path, device_id)
+            pp = cv.gapi.ov.params("net", model_path, bin_path, device_id).cfgResize(cv.INTER_LINEAR)
 
             gapi_age, gapi_gender = comp.apply(cv.gin(planar_img), args=cv.gapi.compile_args(cv.gapi.networks(pp)))
             gapi_gender = gapi_gender.squeeze()

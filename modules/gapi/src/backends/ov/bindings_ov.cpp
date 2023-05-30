@@ -142,6 +142,18 @@ cv::gapi::ov::PyParams::cfgScale(
     return *this;
 }
 
+cv::gapi::ov::PyParams&
+cv::gapi::ov::PyParams::cfgResize(int interpolation) {
+    m_priv->cfgResize(interpolation);
+    return *this;
+}
+
+cv::gapi::ov::PyParams&
+cv::gapi::ov::PyParams::cfgResize(std::map<std::string, int> interpolation) {
+    m_priv->cfgResize(std::move(interpolation));
+    return *this;
+}
+
 cv::gapi::ov::PyParams cv::gapi::ov::params(const std::string &tag,
                                             const std::string &model_path,
                                             const std::string &weights,

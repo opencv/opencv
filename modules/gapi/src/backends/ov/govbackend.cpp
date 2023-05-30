@@ -14,6 +14,7 @@
 
 #include "backends/ov/util.hpp"
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
+#include "logger.hpp"
 
 #include <opencv2/gapi/gcommon.hpp>
 #include <opencv2/gapi/infer/ov.hpp>
@@ -67,6 +68,18 @@ static ov::element::Type toOV(int depth) {
     return ov::element::undefined;
 }
 
+static ov::preprocess::ResizeAlgorithm toOVInterp(int interpolation) {
+    namespace pp = ov::preprocess;
+    switch (interpolation) {
+        case cv::INTER_LINEAR:  return pp::ResizeAlgorithm::RESIZE_LINEAR;
+        case cv::INTER_NEAREST: return pp::ResizeAlgorithm::RESIZE_NEAREST;
+        case cv::INTER_CUBIC:   return pp::ResizeAlgorithm::RESIZE_CUBIC;
+        default: GAPI_Error("OV Backend: Unsupported resize algorithm");
+    }
+    // Unreachable code
+    GAPI_Assert(false);
+}
+
 static std::vector<int> toCV(const ov::Shape &shape) {
     std::vector<int> result;
     result.reserve(shape.size());
@@ -90,11 +103,14 @@ static int toCV(const ov::element::Type &type) {
 
 static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
     if (tensor.get_byte_size() != mat.total() * mat.elemSize()) {
-        cv::util::throw_error(std::logic_error
-            ("OV Backend: Failed to copy data from ov::Tensor to cv::Mat! "
-             "Number of bytes mismatch. "
-             "(cv::Mat " + std::to_string(mat.total() * mat.elemSize()) + ", "
-             "ov::Tensor: " + std::to_string(tensor.get_byte_size()) + ")"));
+        std::stringstream ss;
+        ss << "OV Backend: Failed to copy data from ov::Tensor: "
+           << tensor.get_element_type() << tensor.get_shape()
+           << " to cv::Mat: " << cv::descr_of(mat)
+           << " ! Number of bytes mismatch. "
+           << "(cv::Mat " << std::to_string(mat.total() * mat.elemSize())
+           << ", ov::Tensor: " << tensor.get_byte_size() << ")";
+        cv::util::throw_error(std::logic_error(ss.str()));
     }
     std::copy_n(reinterpret_cast<uint8_t*>(tensor.data()),
                 tensor.get_byte_size(),
@@ -103,11 +119,13 @@ static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
 
 static void copyToOV(const cv::Mat &mat, ov::Tensor &tensor) {
     if (tensor.get_byte_size() != mat.total() * mat.elemSize()) {
-        cv::util::throw_error(std::logic_error
-            ("OV Backend: Failed to copy data from cv::Mat to ov::Tensor! "
-             "Number of bytes mismatch. "
-             "(cv::Mat " + std::to_string(mat.total() * mat.elemSize()) + ", "
-             "ov::Tensor: " + std::to_string(tensor.get_byte_size()) + ")"));
+        std::stringstream ss;
+        ss << "OV Backend: Failed to copy data from cv::Mat: "
+           << " to ov::Tensor: " << tensor.get_element_type()
+           << tensor.get_shape() << "! Number of bytes mismatch. "
+           << "(cv::Mat " << std::to_string(mat.total() * mat.elemSize())
+           << ", ov::Tensor: " << tensor.get_byte_size() << ")";
+        cv::util::throw_error(std::logic_error(ss.str()));
     }
     std::copy_n(mat.ptr<uint8_t>(),
                 tensor.get_byte_size(),
@@ -578,32 +596,12 @@ cv::optional<V> lookUp(const std::map<K, V> &map, const K& key) {
 }
 
 static bool isImage(const cv::GMatDesc &desc,
-                    const ::ov::Shape  &input_shape) {
-    return (input_shape.size() == 4u)                      &&
+                    const ::ov::Shape  &model_shape) {
+    return (model_shape.size() == 4u)                      &&
            (!desc.isND())  /* dims == 2 */                 &&
            (desc.chan == 1 || desc.chan == 3)              &&
            (desc.size.height != 1 && desc.size.width != 1) &&
            (desc.depth == CV_8U);
-}
-
-static bool isBatchedImage(const cv::GMatDesc &desc) {
-    return desc.isND()            &&
-           desc.dims.size() == 4u &&
-           desc.depth == CV_8U    &&
-           (
-             // NCHW case
-             (
-               (desc.dims[1] == 1 || desc.dims[1] == 3) &&
-               (desc.dims[2] != 1)    /*H*/             &&
-               (desc.dims[3] != 1)    /*W*/
-             )
-           || // or NHWC case
-             (
-               (desc.dims[3] == 1 || desc.dims[3] == 3) &&
-               (desc.dims[1] != 1)   /*H*/              &&
-               (desc.dims[2] != 1)   /*W*/
-             )
-           );
 }
 
 struct Infer: public cv::detail::KernelTag {
@@ -641,11 +639,14 @@ struct Infer: public cv::detail::KernelTag {
                 broadcastLayerAttr(model_info.input_model_layout,
                                    uu.params.input_names);
 
+            const auto interpolation = broadcastLayerAttr(model_info.interpolation,
+                                                          uu.params.input_names);
             const auto mean_values = broadcastLayerAttr(model_info.mean_values,
                                                         uu.params.input_names);
             const auto scale_values = broadcastLayerAttr(model_info.scale_values,
                                                          uu.params.input_names);
 
+            // FIXME: Pre/Post processing step shouldn't be configured in this method.
             ::ov::preprocess::PrePostProcessor ppp(uu.model);
             for (auto &&it : ade::util::zip(ade::util::toRange(uu.params.input_names),
                                             ade::util::toRange(in_metas))) {
@@ -657,58 +658,71 @@ struct Infer: public cv::detail::KernelTag {
                 auto &input_info = ppp.input(input_name);
                 input_info.tensor().set_element_type(toOV(matdesc.depth));
 
-                const auto explicit_in_model_layout = lookUp(input_model_layout , input_name);
+                const auto explicit_in_model_layout = lookUp(input_model_layout, input_name);
                 if (explicit_in_model_layout) {
                     input_info.model().set_layout(::ov::Layout(*explicit_in_model_layout));
                 }
-
                 const auto explicit_in_tensor_layout = lookUp(input_tensor_layout, input_name);
                 if (explicit_in_tensor_layout) {
-                    input_info.model().set_layout(::ov::Layout(*explicit_in_tensor_layout));
+                    input_info.tensor().set_layout(::ov::Layout(*explicit_in_tensor_layout));
                 }
-
-                // NB: Image case - all necessary preprocessng:
-                // layout conversion, resize is configured automatically.
-                // FIXME: What if user provided tensor layout that isn't equal to NHWC?
-                // Current solution just disable all automatic preprocessing...
+                const auto explicit_resize = lookUp(interpolation, input_name);
+                // NB: Note that model layout still can't be empty.
+                // e.g IRv11 converted without additional info about layout via Model Optimizer.
+                const auto model_layout = ::ov::layout::get_layout(uu.model->input(input_name));
+                // NB: Image case - all necessary preprocessng is configured automatically.
                 const auto &input_shape = uu.model->input(input_name).get_shape();
-                if (isImage(matdesc, input_shape) &&
-                    ((!explicit_in_tensor_layout) ||
-                     (explicit_in_tensor_layout && (*explicit_in_tensor_layout == "NHWC")))) {
-                    // NB: If user didn't provide input model layout explicitly set it to
-                    // "NCHW" in order to perform conversion to image layout (NHWC).
-                    if (!explicit_in_model_layout) {
-                        input_info.model().set_layout(::ov::Layout("NCHW"));
+                if (isImage(matdesc, input_shape)) {
+                    // NB: Double check that user provided correct layout.
+                    // In fact, there is only one correct for image.
+                    if (explicit_in_tensor_layout) {
+                        if (*explicit_in_tensor_layout != "NHWC") {
+                            std::stringstream ss;
+                            ss << "OV Backend: Provided tensor layout: " << *explicit_in_tensor_layout
+                               << " is not compatible with input data: " << matdesc
+                               << ". Expecting: NHWC";
+                            util::throw_error(std::logic_error(ss.str()));
+                        }
                     }
-                    // Image has NHWC layout.
-                    input_info.tensor().set_layout(::ov::Layout("NHWC"))
-                                       .set_spatial_static_shape(matdesc.size.height,
-                                                                 matdesc.size.width);
-                    // NB: Configure resize since image may has
-                    // different size than model expects.
-                    input_info.preprocess()
-                        .resize(::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR);
-                } else if (isBatchedImage(matdesc)) {
-                    // NB: If user didn't provide input model layout explicitly set it to
-                    // "NCHW" in order to perform conversion to image layout (NHWC).
-                    if (!explicit_in_model_layout) {
-                        input_info.model().set_layout(::ov::Layout("NCHW"));
+                    input_info.tensor().set_layout(::ov::Layout("NHWC"));
+                    // NB: OpenVINO should know about "H" and "W"
+                    // dimensions in order to configure resize.
+                    if (!explicit_in_tensor_layout && model_layout.empty()) {
+                        // NB: Let it be warning since user didn't ask to configure resize
+                        // it's done automatically based on assumption that image is provided.
+                        GAPI_LOG_WARNING(NULL, "Resize for input layer: " << input_name <<
+                                               " can't be configured. Failed to detect data layout");
+                    } else {
+                        input_info.tensor().set_spatial_static_shape(matdesc.size.height,
+                                                                     matdesc.size.width);
+                        // NB: Even though resize is automatically configured
+                        // user have an opportunity to specify the interpolation algorithm.
+                        auto interp = explicit_resize
+                            ? toOVInterp(*explicit_resize)
+                            : ::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR;
+
+                        input_info.preprocess().resize(interp);
                     }
-
-                    auto batch_layout = (matdesc.dims[1] == 3 || matdesc.dims[1] == 1)
-                                        ? ::ov::Layout("NCHW") : ::ov::Layout("NHWC");
-
-                    cv::Size spatial_size = (matdesc.dims[1] == 3 || matdesc.dims[1] == 1)
-                                            ? cv::Size(matdesc.dims[3], matdesc.dims[2])  // NCHW
-                                            : cv::Size(matdesc.dims[2], matdesc.dims[1]); // NHWC
-
-                    input_info.tensor().set_layout(batch_layout)
-                                       .set_spatial_static_shape(spatial_size.height,
-                                                                 spatial_size.width);
-                    input_info.preprocess()
-                        .resize(::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR);
+                } else {
+                    if (explicit_resize) {
+                        // NB: User explicitly asked to configure resize
+                        // but there is not enough information to do that...
+                        if (!explicit_in_tensor_layout && model_layout.empty()) {
+                            std::stringstream ss;
+                            ss << "Resize for input layer: " << input_name
+                               << "can't be configured. Failed to detect data layout";
+                            util::throw_error(std::logic_error(ss.str()));
+                        } else {
+                            const auto layout = explicit_in_tensor_layout
+                                ? ::ov::Layout(*explicit_in_tensor_layout) : model_layout;
+                            const auto H_idx = ::ov::layout::height_idx(layout);
+                            const auto W_idx = ::ov::layout::width_idx(layout);
+                            input_info.tensor().set_spatial_static_shape(matdesc.dims[H_idx],
+                                                                         matdesc.dims[W_idx]);
+                            input_info.preprocess().resize(toOVInterp(*explicit_resize));
+                        }
+                    }
                 }
-
                 // NB: Apply mean/scale as the last step of the preprocessing.
                 // Note that this can be applied to any input data if the
                 // position of "C" dimension is known.
@@ -755,8 +769,8 @@ struct Infer: public cv::detail::KernelTag {
                         .set_element_type(toOV(*explicit_out_tensor_prec));
                 }
             }
-            // FIXME: outMeta is the only method now
-            // where pre/post processing can be configured.
+
+            GAPI_LOG_DEBUG(NULL, "OV Backend: PrePostProcessor: " << ppp);
             const_cast<std::shared_ptr<::ov::Model>&>(uu.model) = ppp.build();
         }
 

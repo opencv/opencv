@@ -99,6 +99,12 @@ public:
     PyParams& cfgScale(
             std::map<std::string, std::vector<float>> scale_map);
 
+    GAPI_WRAP
+    PyParams& cfgResize(int interpolation);
+
+    GAPI_WRAP
+    PyParams& cfgResize(std::map<std::string, int> interpolation);
+
     GBackend      backend() const;
     std::string   tag()     const;
     cv::util::any params()  const;

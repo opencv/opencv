@@ -64,6 +64,8 @@ struct ParamDesc {
 
         LayerVariantAttr<std::vector<float>> mean_values;
         LayerVariantAttr<std::vector<float>> scale_values;
+
+        LayerVariantAttr<int> interpolation;
     };
 
     struct CompiledModel {
@@ -507,6 +509,44 @@ public:
         return *this;
     }
 
+    /** @brief Specifies resize interpolation algorithm.
+     *
+    The function is used to configure resize preprocessing for input layer.
+
+    @param interpolation Resize interpolation algorithm.
+    Supported algorithms: #INTEL_NEAREST, #INTER_LINEAR, #INTER_CUBIC.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgResize(int interpolation) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying resize preprocessing isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.interpolation = interpolation;
+        return *this;
+    }
+
+    /** @overload
+
+    @param interpolation Map of pairs: name of corresponding input layer
+    and its resize algorithm.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgResize(detail::AttrMap<int> interpolation) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying resize preprocessing isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.interpolation = std::move(interpolation);
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend() const { return cv::gapi::ov::backend(); }
     std::string   tag()     const { return Net::tag(); }
@@ -797,6 +837,32 @@ public:
         GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
         auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
         model.scale_values = std::move(scale_map);
+        return *this;
+    }
+
+    /** @see ov::Params::cfgResize. */
+    Params& cfgResize(int interpolation) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying resize preprocessing isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.interpolation = interpolation;
+        return *this;
+    }
+
+    /** @overload */
+    Params& cfgResize(detail::AttrMap<int> interpolation) {
+        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
+            cv::util::throw_error(
+                    std::logic_error("Specifying resize preprocessing isn't"
+                                     " possible for compiled model."));
+        }
+        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
+        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
+        model.interpolation = std::move(interpolation);
         return *this;
     }
 
