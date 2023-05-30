@@ -61,11 +61,10 @@ try:
 
             # OpenCV G-API
             g_in = cv.GMat()
-            # TODO: It'd be nice to pass dict instead.
-            # E.g cv.GInferInputs({'data': g_in})
             inputs = cv.GInferInputs()
             inputs.setInput('data', g_in)
-
+            # TODO: It'd be nice to pass dict instead.
+            # E.g cv.gapi.infer("net", {'data': g_in})
             outputs  = cv.gapi.infer("net", inputs)
             age_g    = outputs.at("age_conv3")
             gender_g = outputs.at("prob")
