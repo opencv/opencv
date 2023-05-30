@@ -60,7 +60,9 @@ try:
             ov_gender = results['prob'].squeeze()
 
             # OpenCV G-API
-            g_in   = cv.GMat()
+            g_in = cv.GMat()
+            # TODO: It'd be nice to pass dict instead.
+            # E.g cv.GInferInputs({'data': g_in})
             inputs = cv.GInferInputs()
             inputs.setInput('data', g_in)
 

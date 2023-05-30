@@ -514,7 +514,7 @@ public:
     The function is used to configure resize preprocessing for input layer.
 
     @param interpolation Resize interpolation algorithm.
-    Supported algorithms: #INTEL_NEAREST, #INTER_LINEAR, #INTER_CUBIC.
+    Supported algorithms: #INTER_NEAREST, #INTER_LINEAR, #INTER_CUBIC.
     @return reference to this parameter structure.
     */
     Params<Net>& cfgResize(int interpolation) {

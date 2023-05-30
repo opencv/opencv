@@ -39,13 +39,8 @@ void initDLDTDataPath()
 #endif // WINRT
 }
 
-#if INF_ENGINE_RELEASE >= 2020010000
 static const std::string SUBDIR = "intel/age-gender-recognition-retail-0013/FP32/";
-#else
-static const std::string SUBDIR = "Retail/object_attributes/age_gender/dldt/";
-#endif
 
-// FIXME: Copy paste from govbackend.cpp
 void copyFromOV(ov::Tensor &tensor, cv::Mat &mat) {
     GAPI_Assert(tensor.get_byte_size() == mat.total() * mat.elemSize());
     std::copy_n(reinterpret_cast<uint8_t*>(tensor.data()),

@@ -154,7 +154,7 @@ std::ostream& operator<<(std::ostream& os, const cv::GMatDesc &desc)
     }
 
     if (desc.isND()) {
-        os << "[";
+        os << " [";
         for (size_t i = 0; i < desc.dims.size() - 1; ++i) {
             os << desc.dims[i] << "x";
         }

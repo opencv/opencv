@@ -36,8 +36,6 @@ template<typename T> using QueueClass = cv::gapi::own::concurrent_bounded_queue<
 #include <fstream>
 
 using ParamDesc = cv::gapi::ov::detail::ParamDesc;
-using ParamsM   = ParamDesc::Model;
-using ParamsCM  = ParamDesc::CompiledModel;
 
 static ov::Core getCore() {
     static ov::Core core;
@@ -102,34 +100,52 @@ static int toCV(const ov::element::Type &type) {
 }
 
 static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
-    if (tensor.get_byte_size() != mat.total() * mat.elemSize()) {
+    const auto total = mat.total() * mat.channels();
+    if (tensor.get_element_type() != toOV(mat.depth()) ||
+        tensor.get_size()         != total ) {
         std::stringstream ss;
-        ss << "OV Backend: Failed to copy data from ov::Tensor: "
-           << tensor.get_element_type() << tensor.get_shape()
-           << " to cv::Mat: " << cv::descr_of(mat)
-           << " ! Number of bytes mismatch. "
-           << "(cv::Mat " << std::to_string(mat.total() * mat.elemSize())
-           << ", ov::Tensor: " << tensor.get_byte_size() << ")";
+        ss << "Failed to copy data from ov::Tensor to cv::Mat."
+           << " Data type or number of elements mismatch."
+           << " cv::Mat: " << cv::descr_of(mat) << " and"
+           << " ov::Tensor: " << tensor.get_element_type() << " "
+           << tensor.get_shape();
         cv::util::throw_error(std::logic_error(ss.str()));
     }
-    std::copy_n(reinterpret_cast<uint8_t*>(tensor.data()),
-                tensor.get_byte_size(),
-                mat.ptr<uint8_t>());
+
+    if (tensor.get_element_type() == ov::element::i64) {
+        GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
+        cv::gimpl::convertInt64ToInt32(tensor.data<int64_t>(),
+                                       mat.ptr<int>(),
+                                       total);
+    } else {
+        std::copy_n(reinterpret_cast<uint8_t*>(tensor.data()),
+                    tensor.get_byte_size(),
+                    mat.ptr<uint8_t>());
+    }
 }
 
 static void copyToOV(const cv::Mat &mat, ov::Tensor &tensor) {
-    if (tensor.get_byte_size() != mat.total() * mat.elemSize()) {
+    const auto total = mat.total() * mat.channels();
+    if (tensor.get_element_type() != toOV(mat.depth()) ||
+        tensor.get_size()         != total) {
         std::stringstream ss;
-        ss << "OV Backend: Failed to copy data from cv::Mat: "
-           << " to ov::Tensor: " << tensor.get_element_type()
-           << tensor.get_shape() << "! Number of bytes mismatch. "
-           << "(cv::Mat " << std::to_string(mat.total() * mat.elemSize())
-           << ", ov::Tensor: " << tensor.get_byte_size() << ")";
+        ss << "Failed to copy data from cv::Mat to ov::Tensor."
+           << " Data type or number of elements mismatch."
+           << " ov::Tensor: " << tensor.get_element_type() << " "
+           << tensor.get_shape() << " and"
+           << " cv::Mat: " << cv::descr_of(mat);
         cv::util::throw_error(std::logic_error(ss.str()));
     }
-    std::copy_n(mat.ptr<uint8_t>(),
-                tensor.get_byte_size(),
-                reinterpret_cast<uint8_t*>(tensor.data()));
+
+    if (tensor.get_element_type() == ov::element::i64) {
+        cv::gimpl::convertInt32ToInt64(mat.ptr<int>(),
+                                       tensor.data<int64_t>(),
+                                       total);
+    } else {
+        std::copy_n(mat.ptr<uint8_t>(),
+                    tensor.get_byte_size(),
+                    reinterpret_cast<uint8_t*>(tensor.data()));
+    }
 }
 
 std::vector<int> cv::gapi::ov::util::to_ocv(const ::ov::Shape &shape) {
@@ -146,6 +162,7 @@ struct OVUnit {
     explicit OVUnit(const ParamDesc &pd)
         : params(pd) {
 
+        // FIXME: Can this logic be encapsulated to prevent checking every time?
         if (cv::util::holds_alternative<ParamDesc::Model>(params.kind)) {
             const auto desc = cv::util::get<ParamDesc::Model>(params.kind);
             model = getCore().read_model(desc.model_path, desc.bin_path);
@@ -466,9 +483,9 @@ void AsyncInferExecutor::callback(IInferExecutor::Task task,
 
 } // anonymous namespace
 
+// TODO: Make it generic to reuse in IE and ONNX backends.
 class cv::gimpl::ov::RequestPool {
 public:
-
     explicit RequestPool(std::vector<::ov::InferRequest>&& requests);
 
     IInferExecutor::Ptr getIdleRequest();
@@ -624,8 +641,8 @@ struct Infer: public cv::detail::KernelTag {
                     && "Known input layers count doesn't match input meta count");
 
         // NB: Pre/Post processing configuration avaiable only for read models.
-        if (cv::util::holds_alternative<ParamsM>(uu.params.kind)) {
-            const auto &model_info = cv::util::get<ParamsM>(uu.params.kind);
+        if (cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind)) {
+            const auto &model_info = cv::util::get<ParamDesc::Model>(uu.params.kind);
 
             const auto new_shapes =
                 broadcastLayerAttr(model_info.new_shapes,
@@ -776,12 +793,12 @@ struct Infer: public cv::detail::KernelTag {
 
         for (const auto &out_name : uu.params.output_names) {
             cv::GMatDesc outm;
-            if (cv::util::holds_alternative<ParamsM>(uu.params.kind)) {
+            if (cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind)) {
                 const auto &out = uu.model->output(out_name);
                 outm = cv::GMatDesc(toCV(out.get_element_type()),
                                     toCV(out.get_shape()));
             } else {
-                GAPI_Assert(cv::util::holds_alternative<ParamsCM>(uu.params.kind));
+                GAPI_Assert(cv::util::holds_alternative<ParamDesc::CompiledModel>(uu.params.kind));
                 const auto &out = uu.compiled_model.output(out_name);
                 outm = cv::GMatDesc(toCV(out.get_element_type()),
                                     toCV(out.get_shape()));
@@ -801,6 +818,8 @@ struct Infer: public cv::detail::KernelTag {
                         for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
                             const auto& input_name = ctx->uu.params.input_names[i];
                             auto input_tensor = infer_request.get_tensor(input_name);
+                            // TODO: In some cases wrapping existing data pointer
+                            // might be faster than copy. Make it a strategy.
                             copyToOV(ctx->inMat(i), input_tensor);
                         }
                     },
@@ -816,57 +835,57 @@ struct Infer: public cv::detail::KernelTag {
 
 // IE backend implementation of GBackend::Priv ///////////////////////
 namespace {
-    class GOVBackendImpl final: public cv::gapi::GBackend::Priv {
-        virtual void unpackKernel(ade::Graph            &gr,
-                                  const ade::NodeHandle &nh,
-                                  const cv::GKernelImpl &ii) override {
-            using namespace cv::gimpl;
-            // FIXME: Introduce a DNNBackend interface which'd specify
-            // the framework for this???
-            GOVModel gm(gr);
-            auto &np = gm.metadata(nh).get<NetworkParams>();
-            auto &pp = cv::util::any_cast<ParamDesc>(np.opaque);
-            const auto &ki = cv::util::any_cast<KImpl>(ii.opaque);
+class GOVBackendImpl final: public cv::gapi::GBackend::Priv {
+    virtual void unpackKernel(ade::Graph            &gr,
+                              const ade::NodeHandle &nh,
+                              const cv::GKernelImpl &ii) override {
+        using namespace cv::gimpl;
+        // FIXME: Introduce a DNNBackend interface which'd specify
+        // the framework for this???
+        GOVModel gm(gr);
+        auto &np = gm.metadata(nh).get<NetworkParams>();
+        auto &pp = cv::util::any_cast<ParamDesc>(np.opaque);
+        const auto &ki = cv::util::any_cast<KImpl>(ii.opaque);
 
-            GModel::Graph model(gr);
-            auto& op = model.metadata(nh).get<Op>();
+        GModel::Graph model(gr);
+        auto& op = model.metadata(nh).get<Op>();
 
-            // NB: In case generic infer, info about in/out names is stored in operation (op.params)
-            if (pp.is_generic)
-            {
-                auto& info      = cv::util::any_cast<cv::detail::InOutInfo>(op.params);
-                pp.input_names  = info.in_names;
-                pp.output_names = info.out_names;
-                pp.num_in       = info.in_names.size();
-                pp.num_out      = info.out_names.size();
-            }
-
-            gm.metadata(nh).set(OVUnit{pp});
-            gm.metadata(nh).set(OVCallable{ki.run});
-            gm.metadata(nh).set(CustomMetaFunction{ki.customMetaFunc});
+        // NB: In case generic infer, info about in/out names is stored in operation (op.params)
+        if (pp.is_generic)
+        {
+            auto& info      = cv::util::any_cast<cv::detail::InOutInfo>(op.params);
+            pp.input_names  = info.in_names;
+            pp.output_names = info.out_names;
+            pp.num_in       = info.in_names.size();
+            pp.num_out      = info.out_names.size();
         }
 
-        virtual EPtr compile(const ade::Graph &graph,
-                             const cv::GCompileArgs &,
-                             const std::vector<ade::NodeHandle> &nodes) const override {
-            return EPtr{new cv::gimpl::ov::GOVExecutable(graph, nodes)};
-        }
+        gm.metadata(nh).set(OVUnit{pp});
+        gm.metadata(nh).set(OVCallable{ki.run});
+        gm.metadata(nh).set(CustomMetaFunction{ki.customMetaFunc});
+    }
 
-        virtual cv::GKernelPackage auxiliaryKernels() const override {
-            return cv::gapi::kernels< cv::gimpl::ov::Infer >();
-        }
+    virtual EPtr compile(const ade::Graph &graph,
+                         const cv::GCompileArgs &,
+                         const std::vector<ade::NodeHandle> &nodes) const override {
+        return EPtr{new cv::gimpl::ov::GOVExecutable(graph, nodes)};
+    }
 
-        virtual bool controlsMerge() const override {
-            return true;
-        }
+    virtual cv::GKernelPackage auxiliaryKernels() const override {
+        return cv::gapi::kernels< cv::gimpl::ov::Infer >();
+    }
 
-        virtual bool allowsMerge(const cv::gimpl::GIslandModel::Graph &,
-                                 const ade::NodeHandle &,
-                                 const ade::NodeHandle &,
-                                 const ade::NodeHandle &) const override {
-            return false;
-        }
-    };
+    virtual bool controlsMerge() const override {
+        return true;
+    }
+
+    virtual bool allowsMerge(const cv::gimpl::GIslandModel::Graph &,
+                             const ade::NodeHandle &,
+                             const ade::NodeHandle &,
+                             const ade::NodeHandle &) const override {
+        return false;
+    }
+};
 
 } // anonymous namespace
 
