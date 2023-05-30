@@ -51,7 +51,6 @@ static inline bool _isOnPositiveSide(const Point2f& line_vec, const Point2f& lin
 {
     return (line_vec.y*(line_pt.x-pt.x) >= line_vec.x*(line_pt.y-pt.y));
 }
-//end _isOnPositiveSide()
 
 static int _rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, std::vector<Point2f> &intersection )
 {
