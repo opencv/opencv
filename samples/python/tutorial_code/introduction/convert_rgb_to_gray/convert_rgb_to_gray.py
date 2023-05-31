@@ -1,4 +1,4 @@
-## Run "python gray.py" 
+## Run "python convert_rgb_to_gray.py" 
 import cv2
 
 ## Read original RGB image from the local folder
