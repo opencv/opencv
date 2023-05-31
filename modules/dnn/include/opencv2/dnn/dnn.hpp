@@ -1292,6 +1292,11 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS_W void writeTextGraph(const String& model, const String& output);
 
+
+    using cv::NMSBoxes;
+    using cv::NMSBoxesBatched;
+    using cv::softNMSBoxes;
+
      /** @brief This class is presented high-level API for neural networks.
       *
       * Model allows to set params for preprocessing input image.
