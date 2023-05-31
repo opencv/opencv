@@ -1951,69 +1951,20 @@ void ONNXImporter::parseBatchNormalization(LayerParams& layerParams, const openc
 // And the dim of output Y is [m, n]
 void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    CV_Assert(node_proto.input_size() >= 2);
-    layerParams.type = "InnerProduct";
-    int transA = layerParams.get<int>("transA", 0);
-    layerParams.set("transA", transA == 1);
+    CV_CheckGE(node_proto.input_size(), 2, "DNN/ONNXImporter: Gemm requires at least two inputs");
+    // layerParams.type = "InnerProduct";
 
-    if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
-    {
-        Mat inputBuf = getBlob(node_proto, 0);
-
-        LayerParams constParams;
-        constParams.name = node_proto.input(0);
-        constParams.type = "Const";
-        constParams.blobs.push_back(inputBuf);
-
-        opencv_onnx::NodeProto proto;
-        proto.add_output(constParams.name);
-        addLayer(constParams, proto);
-    }
-
-    int transB = layerParams.get<int>("transB", 0);
-    int secondInpDims;
-    if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
-    {
-        Mat weights = getBlob(node_proto, 1);
-        secondInpDims = weights.dims;
-
-        if (transA == 0) // optimized barnch, for now, we can only optimize the Gemm when transA = 0.
-        {
-            if (transB == 0)
-            {
-                transpose(weights, weights);
+    // if bias existed, it should be a constant because we need to know its shape beforehand
+    if (node_proto.input_size() == 3) {
+        bool is_C_1d = false;
+        if (constBlobsExtraInfo.find(node_proto.input(0)) != constBlobsExtraInfo.end()) {
+            if (getBlobExtraInfo(node_proto, 0).real_ndims == 1) {
+                is_C_1d = true;
             }
-            layerParams.set("transB", false);
-            layerParams.blobs.push_back(weights);
-            layerParams.set("num_output", layerParams.blobs[0].size[0]);
         }
-        else // no optimized branch, TODO! optimize when the transA==1.
-        {
-            LayerParams constParams;
-            constParams.name = node_proto.input(1);
-            constParams.type = "Const";
-            constParams.blobs.push_back(weights);
-
-            opencv_onnx::NodeProto proto;
-            proto.add_output(constParams.name);
-            addLayer(constParams, proto);
-            layerParams.set("transB", transB == 1);
-        }
-    }
-    else
-    {
-        layerParams.set("transB", transB == 1);
-        secondInpDims = outShapes[node_proto.input(1)].size();
+        layerParams.set("is_C_1d", is_C_1d);
     }
 
-    if (node_proto.input_size() == 3)
-    {
-        Mat bias = getBlob(node_proto, 2);
-        layerParams.blobs.push_back(bias);
-    }
-
-    layerParams.set("bias_term", node_proto.input_size() == 3);
-    layerParams.set("is_matmul", secondInpDims > 2);
     addLayer(layerParams, node_proto);
 }
 
