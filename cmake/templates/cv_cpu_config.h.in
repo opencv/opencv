@@ -1,0 +1,5 @@
+// OpenCV CPU baseline features
+@OPENCV_CPU_BASELINE_DEFINITIONS_CONFIGMAKE@
+
+// OpenCV supported CPU dispatched features
+@OPENCV_CPU_DISPATCH_DEFINITIONS_CONFIGMAKE@

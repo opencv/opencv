@@ -1,0 +1,75 @@
+<project name="OpenCV-Test">
+  <property environment="env"/>
+  <property file="ant-${opencv.build.type}.properties"/>
+  <property name="test.dir" value="testResults"/>
+  <property name="build.dir" value="build"/>
+
+  <property name="opencv.test.package" value="*"/>
+  <property name="opencv.test.class" value="*"/>
+  <property name="opencv.test.exclude" value=""/>
+
+  <path id="master-classpath">
+    <fileset dir="lib">
+      <include name="*.jar"/>
+    </fileset>
+    <fileset dir="bin">
+      <include name="*.jar"/>
+    </fileset>
+  </path>
+
+  <target name="clean">
+    <delete dir="build"/>
+    <delete dir="${test.dir}"/>
+  </target>
+
+  <target name="compile">
+    <mkdir dir="build/classes"/>
+
+    <javac sourcepath="" srcdir="src" destdir="build/classes" debug="on" includeantruntime="false" >
+      <include name="**/*.java"/>
+      <classpath refid="master-classpath"/>
+    </javac>
+  </target>
+
+  <target name="jar" depends="compile">
+    <mkdir dir="build/jar"/>
+    <jar destfile="build/jar/opencv-test.jar" basedir="build/classes">
+      <manifest>
+        <attribute name="Main-Class" value="org.opencv.test.OpenCVTestRunner"/>
+      </manifest>
+    </jar>
+  </target>
+
+  <target name="test" depends="jar">
+    <mkdir dir="${test.dir}"/>
+    <junit printsummary="withOutAndErr" haltonfailure="false" haltonerror="false" showoutput="true" logfailedtests="true" maxmemory="256m">
+      <sysproperty key="java.library.path" path="${opencv.lib.path}"/>
+      <env key="PATH" path="${opencv.lib.path}:${env.PATH}:${env.Path}"/>
+      <env key="DYLD_LIBRARY_PATH" path="${env.OPENCV_SAVED_DYLD_LIBRARY_PATH}"/>  <!-- https://github.com/opencv/opencv/issues/14353 -->
+      <classpath refid="master-classpath"/>
+      <classpath>
+        <pathelement location="build/classes"/>
+      </classpath>
+
+      <formatter type="xml"/>
+
+      <batchtest fork="yes" todir="${test.dir}">
+        <zipfileset src="build/jar/opencv-test.jar" includes="**/${opencv.test.package}/${opencv.test.class}.class" excludes="**/OpenCVTest*, ${opencv.test.exclude}">
+          <exclude name="**/*$*.class"/>
+        </zipfileset>
+      </batchtest>
+    </junit>
+    <junitreport todir="${test.dir}">
+      <fileset dir="${test.dir}">
+        <include name="TEST-*.xml"/>
+      </fileset>
+      <report format="noframes" todir="${test.dir}"/>
+    </junitreport>
+  </target>
+
+  <target name="build" depends="jar">
+  </target>
+
+  <target name="buildAndTest" depends="test">
+  </target>
+</project>

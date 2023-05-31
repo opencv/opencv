@@ -1,0 +1,57 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.opencv</groupId>
+    <artifactId>opencv-parent</artifactId>
+    <version>4.7.0</version>
+    <packaging>pom</packaging>
+    <name>OpenCV Parent POM</name>
+    <licenses>
+        <license>
+            <name>License Agreement For Open Source Computer Vision Library (Apache 2.0 License)</name>
+            <url>http://opencv.org/license.html</url>
+        </license>
+    </licenses>
+    <url>http://opencv.org/</url>
+    <scm>
+        <connection>scm:git:https://github.com/opencv/opencv.git</connection>
+        <url>https://github.com/opencv/opencv</url>
+    </scm>
+    <contributors>
+        <contributor>
+            <name>Kerry Billingham</name>
+            <email>contact (at) AvionicEngineers (d0t) c(0)m</email>
+            <organization>Java Technics</organization>
+            <url>www.javatechnics.com</url>
+        </contributor>
+    </contributors>
+
+    <properties>
+        <nativelibrary.name>libopencv_java${lib.version.string}.so</nativelibrary.name>
+        <pax.exam.version>4.8.0</pax.exam.version>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+        <download.cmake>false</download.cmake>
+    </properties>
+    <distributionManagement>
+        <snapshotRepository>
+            <id>${repo.name}</id>
+            <url>${repo.url}</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <modules>
+        <module>opencv</module>
+    </modules>
+    <profiles>
+        <profile>
+            <id>integration</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <modules>
+                <module>opencv-it</module>
+            </modules>
+        </profile>
+    </profiles>
+</project>

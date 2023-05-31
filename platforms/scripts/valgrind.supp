@@ -1,0 +1,289 @@
+{
+   OpenCV-IPP static init
+   Memcheck:Cond
+   fun:ippicvGetCpuFeatures
+   fun:ippicvStaticInit
+}
+
+{
+   OpenCV-getInitializationMutex
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv22getInitializationMutexEv
+}
+
+{
+   OpenCV-SingletonBuffer
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv20allocSingletonBufferEm
+}
+
+{
+   OpenCV-SingletonNewBuffer
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv23allocSingletonNewBufferEm
+}
+
+{
+   OpenCV-getStdAllocator
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv3Mat15getStdAllocatorEv
+}
+
+{
+   OpenCV-getOpenCLAllocator
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv3ocl18getOpenCLAllocatorEv
+}
+
+{
+   OpenCV-getCoreTlsData
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv14getCoreTlsDataEv
+}
+
+{
+   OpenCV-TLS-getTlsStorage
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv*L13getTlsStorageEv
+}
+
+{
+   OpenCV-TLS-getData()
+   Memcheck:Leak
+   ...
+   fun:*setData*
+   fun:_ZNK2cv16TLSDataContainer7getDataEv
+}
+
+{
+   OpenCV-parallel_for-reconfigure
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv10ThreadPool12reconfigure_Ej
+}
+
+{
+   OpenCV-parallel_for-instance
+   Memcheck:Leak
+   fun:_Znwm
+   fun:*instance*
+   ...
+   fun:_ZN2cv13parallel_for_ERKNS_5RangeERKNS_16ParallelLoopBodyEd
+}
+
+{
+   OpenCV-parallel_for-setNumThreads()
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv13setNumThreadsEi
+}
+
+{
+   OpenCV-parallel_for-getNumThreads()
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv13getNumThreadsEv
+}
+
+{
+   OpenCV-getIPPSingelton
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv3ippL15getIPPSingeltonEv
+}
+
+{
+   OpenCV-getGlobalMatOpInitializer
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN2cvL25getGlobalMatOpInitializerEv
+}
+
+{
+   OpenCV-CoreTLSData
+   Memcheck:Leak
+   ...
+   fun:_ZNK2cv7TLSDataINS_11CoreTLSDataEE3getEv
+}
+
+{
+   OpenCV-getThreadID()
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv5utils11getThreadIDEv
+}
+
+{
+   OpenCV-ThreadID
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZNK2cv7TLSDataINS_12_GLOBAL__N_18ThreadIDEE18createDataInstanceEv
+}
+
+{
+   OpenCV-ThreadID-TLS
+   Memcheck:Leak
+   fun:_Znwm
+   fun:getThreadIDTLS
+}
+
+{
+   OpenCV-CoreTLS
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZNK2cv7TLSDataINS_11CoreTLSDataEE18createDataInstanceEv
+}
+
+{
+   OpenCV-UMatDataAutoLockerTLS
+   Memcheck:Leak
+   ...
+   fun:_ZN2cvL21getUMatDataAutoLockerEv
+}
+
+{
+   OpenCV-haveOpenCL
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv3ocl10haveOpenCLEv
+}
+
+{
+   OpenCV-DNN-getLayerFactoryMutex
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv3dnn*20getLayerFactoryMutexEv
+}
+
+{
+   OpenCV-ocl::Context
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv3ocl7Context10getDefaultEb
+}
+
+{
+   OpenCV-ocl::Device
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv3ocl6Device10getDefaultEv
+}
+
+{
+   OpenCV-ocl::Queue
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv3ocl5Queue6createERKNS0_7ContextERKNS0_6DeviceE
+}
+
+{
+   OpenCV-ocl::Program
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv3ocl6Kernel6createEPKcRKNS0_7ProgramE
+}
+
+{
+   OpenCV-ocl::ProgramEntry
+   Memcheck:Leak
+   ...
+   fun:_ZNK2cv3ocl8internal12ProgramEntrycvRNS0_13ProgramSourceEEv
+}
+
+{
+   OpenCV-ocl::Context::getProg
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv3ocl7Context7getProgERKNS0_13ProgramSourceERKNS_6StringERS5_
+}
+
+{
+   OpenCV-getTraceManager()
+   Memcheck:Leak
+   ...
+   fun:getTraceManagerCallOnce
+}
+
+{
+   OpenCV-ITT
+   Memcheck:Leak
+   ...
+   fun:__itt_*create*
+}
+
+{
+   OpenCV-SingletonLogger
+   Memcheck:Leak
+   ...
+   fun:_ZN2cv5utils7logging8internalL26getGlobalLoggingInitStructEv
+}
+
+{
+   OpenCV-gtk_init
+   Memcheck:Leak
+   ...
+   fun:gtk_init
+   fun:cvInitSystem
+}
+
+{
+   OpenCV-FFmpeg-swsscale
+   Memcheck:Addr16
+   ...
+   fun:sws_scale
+   fun:_ZN20CvVideoWriter_FFMPEG10writeFrameEPKhiiiii
+   fun:cvWriteFrame_FFMPEG
+}
+
+{
+   OpenCV-GStreamer-gst_init
+   Memcheck:Leak
+   ...
+   fun:gst_init
+}
+
+{
+   OpenCV-GStreamer-gst_deinit
+   Memcheck:Leak
+   ...
+   fun:gst_deinit
+}
+
+{
+   OpenCV-GStreamer-gst_init_check
+   Memcheck:Leak
+   ...
+   fun:gst_init_check
+}
+
+{
+   OpenCV-GStreamer-gst_parse_launch_full-reachable
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:gst_parse_launch_full
+}
+
+{
+   OpenCV-OpenEXR-ThreadPool
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN16IlmThread_opencv10ThreadPoolC1Ej
+   fun:_ZN16IlmThread_opencv10ThreadPool16globalThreadPoolEv
+}
+
+{
+   OpenCV-test-gapi-thread-tls
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+}

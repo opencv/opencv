@@ -1,0 +1,68 @@
+cmake_minimum_required(VERSION 3.15)
+
+project($framework)
+
+set(MODULES "$modules")
+
+# Enable C++11
+set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
+set (OBJC_COMPILE_FLAGS "-fobjc-arc -fobjc-weak -fvisibility=hidden -fPIC -D__OPENCV_BUILD=1 $module_availability_defines")
+set (SUPPRESS_WARNINGS_FLAGS "-Wno-incomplete-umbrella")
+set (CMAKE_CXX_FLAGS  "$${CMAKE_CXX_FLAGS} $${OBJC_COMPILE_FLAGS} $${SUPPRESS_WARNINGS_FLAGS}")
+
+# grab the files
+if(SWIFT_DISABLED)
+  message(STATUS "Swift wrapper disabled")
+  file(GLOB_RECURSE objc_sources "objc/*\.h" "objc/*\.m" "objc/*\.mm" "objc/*\.modulemap")
+else()
+  enable_language(Swift)
+  file(GLOB_RECURSE objc_sources "objc/*\.h" "objc/*\.m" "objc/*\.mm" "objc/*\.swift" "objc/*\.modulemap")
+endif()
+file(GLOB_RECURSE objc_headers "*\.h")
+
+add_library($framework STATIC $${objc_sources})
+
+set_target_properties($framework PROPERTIES LINKER_LANGUAGE CXX)
+
+target_include_directories($framework PRIVATE "$${BUILD_ROOT}")
+target_include_directories($framework PRIVATE "$${BUILD_ROOT}/install/include")
+target_include_directories($framework PRIVATE "$${BUILD_ROOT}/install/include/opencv2")
+foreach(m $${MODULES})
+  target_include_directories($framework PRIVATE "$${BUILD_ROOT}/modules/objc_bindings_generator/$objc_target/gen/objc/$${m}")
+endforeach()
+
+install(TARGETS $framework LIBRARY DESTINATION lib)
+
+# Additional target properties
+if (CMAKE_XCODE_BUILD_SYSTEM GREATER_EQUAL 12)
+  set_target_properties($framework PROPERTIES
+      OUTPUT_NAME "$framework"
+      ARCHIVE_OUTPUT_DIRECTORY "$${BUILD_ROOT}/lib"
+      XCODE_ATTRIBUTE_SWIFT_VERSION 5.0
+      XCODE_ATTRIBUTE_DEFINES_MODULE YES
+      XCODE_ATTRIBUTE_BUILD_LIBRARY_FOR_DISTRIBUTION YES
+      XCODE_ATTRIBUTE_OTHER_SWIFT_FLAGS "-Xcc $${SUPPRESS_WARNINGS_FLAGS}"
+      XCODE_ATTRIBUTE_MODULEMAP_FILE objc/$framework.modulemap
+      XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER org.opencv.$framework
+      FRAMEWORK TRUE
+      MACOSX_FRAMEWORK_IDENTIFIER org.opencv.$framework
+      PUBLIC_HEADER "$${objc_headers}"
+      DEFINE_SYMBOL CVAPI_EXPORTS
+      )
+else()
+  set_target_properties($framework PROPERTIES
+      OUTPUT_NAME "$framework"
+      ARCHIVE_OUTPUT_DIRECTORY "$${BUILD_ROOT}/lib"
+      XCODE_ATTRIBUTE_SWIFT_VERSION 5.0
+      XCODE_ATTRIBUTE_DEFINES_MODULE YES
+      XCODE_ATTRIBUTE_OTHER_SWIFT_FLAGS "-Xcc $${SUPPRESS_WARNINGS_FLAGS}"
+      XCODE_ATTRIBUTE_MODULEMAP_FILE objc/$framework.modulemap
+      XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER org.opencv.$framework
+      FRAMEWORK TRUE
+      MACOSX_FRAMEWORK_IDENTIFIER org.opencv.$framework
+      PUBLIC_HEADER "$${objc_headers}"
+      DEFINE_SYMBOL CVAPI_EXPORTS
+      )
+endif()
