@@ -943,11 +943,6 @@ models = [
         sha='1b4dd21a6baa5e3523156776970895bd3db6960a',
         filename='onnx/models/DB_TD500_resnet50.onnx'),
     Model(
-        name='YuNet',
-        url='https://github.com/ShiqiYu/libfacedetection.train/raw/1688402dbd9b9fc4a3a6793810f558b7407ff384/tasks/task1/onnx/yunet_120x160.onnx',
-        sha='dfe691ae0c8e38d39d1a437e3f7e5fda7b256bdd',
-        filename='onnx/models/yunet-202202.onnx'),
-    Model(
         name='face_recognizer_fast',
         url='https://drive.google.com/uc?export=dowload&id=1ClK9WiB492c5OZFKveF3XiHCejoOxINW',
         sha='12ff8b1f5c8bff62e8dd91eabdacdfc998be255e',
@@ -1020,6 +1015,47 @@ models = [
         url='https://raw.githubusercontent.com/zihaomu/opencv_extra_data_backup/main/NanoTrackV2/models/nanotrack_head_sim_v2.onnx',
         sha='39f168489671700cf739e402dfc67d41ce648aef',
         filename='onnx/models/nanotrack_head_sim_v2.onnx'),
+    Model(
+        name='Face Mesh (TFLite)',
+        url='https://storage.googleapis.com/mediapipe-assets/face_landmark.tflite?generation=1668295060280094',
+        sha='eb01d1d88c833aaea64c880506da72e4a4f43154',
+        filename='tflite/face_landmark.tflite'),
+    Model(
+        name='Face Detection (TFLite)',
+        url='https://storage.googleapis.com/mediapipe-assets/face_detection_short_range.tflite?generation=1661875748538815',
+        sha='e8f749fafc23bb88daac85bc9f7e0698436f29a0',
+        filename='tflite/face_detection_short_range.tflite'),
+    Model(
+        name='Selfie Segmentation (TFLite)',
+        url='https://storage.googleapis.com/mediapipe-assets/selfie_segmentation.tflite?generation=1661875931201364',
+        sha='8d497f51bd678fa5fb95c3871be72eb5d722b831',
+        filename='tflite/selfie_segmentation.tflite'),
+    Model(
+        name='Hair Segmentation (TFLite)',
+        url='https://storage.googleapis.com/mediapipe-assets/hair_segmentation.tflite?generation=1661875756623461',
+        sha='bba28400dfc264b1ed7ee95df718fada1879644d',
+        filename='tflite/hair_segmentation.tflite'),
+    Model(
+        name='YuNet',
+        url='https://github.com/ShiqiYu/libfacedetection.train/raw/02246e79b1e976c83d1e135a85e0628120c93769/onnx/yunet_s_640_640.onnx',
+        sha='acbe4b5976ade60c4b866a30d0720d71589c8bbc',
+        filename='onnx/models/yunet-202303.onnx'),
+    Model(
+        name='EfficientDet (TFLite)',
+        url='https://storage.googleapis.com/mediapipe-assets/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite?generation=1661875692679200',
+        sha='200217d746d58e68028a64ad0472631060e6affb',
+        filename='tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite'),
+    Model(
+        name='PP_OCRv3_DB_text_det (ONNX)',
+        url='https://github.com/zihaomu/zihaomu/files/9740907/PP_OCRv3_DB_text_det.tar.gz',
+        sha='a2a008361d785fbe32a22ec2106621ecd1576f48',
+        filename='PP_OCRv3_DB_text_det.tar.gz'),
+    Model(
+        name='PP_OCRv3_DB_text_det (ONNX)',
+        archive='PP_OCRv3_DB_text_det.tar.gz',
+        member='PP_OCRv3_DB_text_det/PP_OCRv3_DB_text_det.onnx',
+        sha='f541f0b448561c7ad919ba9fffa72ff105062934',
+        filename='onnx/models/PP_OCRv3_DB_text_det.onnx'),
 ]
 
 # Note: models will be downloaded to current working directory

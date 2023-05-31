@@ -33,8 +33,8 @@ def quantize_and_save_model(name, input, model, act_type="uint8", wt_type="uint8
                     activation_type=type_dict[act_type], weight_type=type_dict[wt_type])
 
     os.remove(float_model_path)
-    os.remove(os.path.join("models", "dummy-opt.onnx"))
-    os.remove("augmented_model.onnx")
+    # os.remove(os.path.join("models", "dummy-opt.onnx"))
+    # os.remove("augmented_model.onnx")
     
     sess = rt.InferenceSession(quantized_model_path, None)
     input = np.random.uniform(-1, 1, sess.get_inputs()[0].shape).astype("float32")
@@ -285,3 +285,147 @@ class Gemm(nn.Module):
 input = Variable(torch.randn(1, 3))
 model = Gemm()
 quantize_and_save_model("quantized_gemm", input, model, act_type="int8", wt_type="int8", per_channel=False)
+
+shape = [1, 10, 3]
+axis = 1
+name = "qlinearsoftmax_v13"
+input = torch.rand(shape)
+model = nn.Softmax(dim=axis)
+# NOTE: this needs latest pytorch to have opset>= 13
+quantize_and_save_model(name, input, model, act_type="int8", wt_type="int8", per_channel=False)
+
+def generate_qlinearsoftmax(shape=[1, 10, 3], axis=1, opset=11, name="qlinearsoftmax", previous_name="qlinearsoftmax_v13"):
+    from onnx import helper, TensorProto
+
+    # get scales and zero points
+    previous_model = onnx.load("models/{}.onnx".format(previous_name))
+    previous_model_graph = previous_model.graph
+    previous_model_nodes = previous_model_graph.node
+    scales = []
+    zero_points = []
+    def get_val_from_initializers(initializers, name):
+        for init in initializers:
+            if init.name == name:
+                if init.int32_data:
+                    return init.int32_data[0]
+                elif init.float_data:
+                    return init.float_data[0]
+                else:
+                    raise NotImplementedError()
+    scales.append(get_val_from_initializers(previous_model_graph.initializer, previous_model_nodes[1].input[1]))
+    zero_points.append(get_val_from_initializers(previous_model_graph.initializer, previous_model_nodes[1].input[2]))
+    scales.append(get_val_from_initializers(previous_model_graph.initializer, previous_model_nodes[1].input[3]))
+    zero_points.append(get_val_from_initializers(previous_model_graph.initializer, previous_model_nodes[1].input[4]))
+
+
+    def make_initializers(input_output_names, scales, zero_points):
+        names = [
+            input_output_names[0] + "_scale",
+            input_output_names[0] + "_zero_point",
+            input_output_names[1] + "_scale",
+            input_output_names[1] + "_zero_point",
+        ]
+
+        initializers = []
+        initializers.append(helper.make_tensor(names[0], TensorProto.FLOAT, [], np.array([scales[0]], dtype=np.float32)))
+        initializers.append(helper.make_tensor(names[1], TensorProto.INT8, [], np.array([zero_points[0]], dtype=np.int8)))
+        initializers.append(helper.make_tensor(names[2], TensorProto.FLOAT, [], np.array([scales[1]], dtype=np.float32)))
+        initializers.append(helper.make_tensor(names[3], TensorProto.INT8, [], np.array([zero_points[1]], dtype=np.int8)))
+
+        return initializers
+
+    def make_quantize_dequantize(input_name, output_name, shape, dequantize=False):
+        input_names = [
+            input_name,
+            input_name.split('_')[0] + "_scale",
+            input_name.split('_')[0] + "_zero_point",
+        ]
+        output_names = [
+            output_name
+        ]
+
+        inputs = []
+        if dequantize:
+            inputs.append(helper.make_tensor_value_info(input_names[0], TensorProto.INT8, shape))
+        else:
+            inputs.append(helper.make_tensor_value_info(input_names[0], TensorProto.FLOAT, shape))
+        inputs.append(helper.make_tensor_value_info(input_names[1], TensorProto.FLOAT, []))
+        inputs.append(helper.make_tensor_value_info(input_names[2], TensorProto.INT8,  []))
+
+        outputs = []
+        if dequantize:
+            outputs.append(helper.make_tensor_value_info(output_names[0], TensorProto.FLOAT, shape))
+        else:
+            outputs.append(helper.make_empty_tensor_value_info(output_names[0]))
+
+        node_type = "DequantizeLinear" if dequantize else "QuantizeLinear"
+        node = helper.make_node(node_type, input_names, output_names)
+
+        return node, inputs[0], outputs[0]
+
+    def make_qlinearsoftmax(input_name, output_name, axis, opset):
+        input_names = [
+            input_name,
+            input_name.split('_')[0] + "_scale",
+            input_name.split('_')[0] + "_zero_point",
+            output_name.split('_')[0] + "_scale",
+            output_name.split('_')[0] + "_zero_point",
+        ]
+        output_names = [
+            output_name
+        ]
+
+        inputs = []
+        inputs.append(helper.make_empty_tensor_value_info(input_names[0]))
+        inputs.append(helper.make_tensor_value_info(input_names[1], TensorProto.FLOAT, []))
+        inputs.append(helper.make_tensor_value_info(input_names[2], TensorProto.INT8, []))
+        inputs.append(helper.make_tensor_value_info(input_names[3], TensorProto.FLOAT, []))
+        inputs.append(helper.make_tensor_value_info(input_names[4], TensorProto.INT8, []))
+
+        outputs = []
+        outputs.append(helper.make_empty_tensor_value_info(output_names[0]))
+
+        node = helper.make_node("QLinearSoftmax", input_names, output_names, domain="com.microsoft", axis=axis, opset=opset)
+
+        return node, inputs[0], outputs[0]
+
+    input_names = ["input", "input_quantized", "output_quantized"]
+    output_names = ["input_quantized", "output_quantized", "output"]
+
+    shared_initializers = make_initializers([input_names[0], output_names[-1]], scales, zero_points)
+    node_quantize, graph_input, _ = make_quantize_dequantize(input_names[0], output_names[0], shape)
+    node_qsoftmax, _, _ = make_qlinearsoftmax(input_names[1], output_names[1], axis, opset)
+    node_dequantize, _, graph_output = make_quantize_dequantize(input_names[2], output_names[2], shape, dequantize=True)
+
+    # create graph
+    name = "{}_v{}".format(name, opset)
+    graph = helper.make_graph(
+        [node_quantize, node_qsoftmax, node_dequantize],
+        name,
+        [graph_input],
+        [graph_output],
+        shared_initializers,
+    )
+
+    # create model
+    model = helper.make_model(graph, producer_name="github.com/opencv/opencv_extra")
+    model.opset_import.extend([helper.make_opsetid("com.microsoft", 1)])
+    # ignore model check to create non-standard operators
+    model_path = "models/{}.onnx".format(name)
+    onnx.save(model, model_path)
+    print("model is saved to {}".format(model_path))
+
+    sess = rt.InferenceSession(model_path)
+    # input = np.random.uniform(-1, 1, sess.get_inputs()[0].shape).astype("float32")
+    input = np.load("data/input_{}.npy".format(previous_name)).astype(np.float32)
+    output = sess.run([sess.get_outputs()[0].name], {sess.get_inputs()[0].name : input})[0]
+
+    print(name + " input has sizes",  input.shape)
+    input_files = os.path.join("data", "input_" + name)
+    np.save(input_files, input.data)
+
+    print(name + " output has sizes", output.shape)
+    output_files = os.path.join("data", "output_" + name)
+    np.save(output_files, np.ascontiguousarray(output.data))
+
+generate_qlinearsoftmax(shape, axis, name="qlinearsoftmax", previous_name=name)

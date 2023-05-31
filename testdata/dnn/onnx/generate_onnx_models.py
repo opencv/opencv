@@ -13,7 +13,8 @@ import onnx
 import onnxsim
 import google.protobuf.text_format
 import io
-from typing import Optional
+from typing import Optional, Tuple, Any
+from onnx import TensorProto
 
 def assertExpected(s):
     if not (isinstance(s, str) or (sys.version_info[0] == 2 and isinstance(s, unicode))):
@@ -421,6 +422,10 @@ input = Variable(torch.randn(1, 2, 3, 4, 5))
 conv3d = nn.Conv3d(2, 3, (2, 3, 3), stride=(1, 2, 3), padding=(0, 1, 2), groups=1, dilation=(1, 2, 3), bias=True)
 save_data_and_model("conv3d_bias", input, conv3d)
 
+input = Variable(torch.randn(1, 8, 1, 10, 10))
+conv3d = nn.Conv3d(8, 8, (1, 1, 1), stride=(1, 1, 1), padding=(1, 1, 1), groups=8, dilation=(1, 1, 1), bias=True)
+save_data_and_model("conv3d_depthwise_bias", input, conv3d, export_params=True)
+
 input = torch.randn(1, 2, 3, 4, 6)
 maxpool3d = nn.MaxPool3d((3, 2, 5), stride=(2, 1, 2), padding=(1, 0, 2))
 save_data_and_model("max_pool3d", input, maxpool3d)
@@ -519,6 +524,37 @@ def generate_slice_neg_starts():
     onnx.save(model, models_files)
 
 generate_slice_neg_starts()
+
+def postprocess_model(model_path, inputs_shapes):
+    onnx_model = onnx.load(model_path)
+
+    def update_inputs_dims(model, input_dims):
+        """
+            This function updates the sizes of dimensions of the model's inputs to the values
+            provided in input_dims. if the dim value provided is negative, a unique dim_param
+            will be set for that dimension.
+        """
+        def update_dim(tensor, dim, i, j, dim_param_prefix):
+            dim_proto = tensor.type.tensor_type.shape.dim[j]
+            if isinstance(dim, int):
+                if dim >= 0:
+                    dim_proto.dim_value = dim
+                else:
+                    dim_proto.dim_param = dim_param_prefix + str(i) + '_' + str(j)
+            elif isinstance(dim, str):
+                dim_proto.dim_param = dim
+            else:
+                raise ValueError('Only int or str is accepted as dimension value, incorrect type: {}'.format(type(dim)))
+
+        for i, input_dim_arr in enumerate(input_dims):
+            for j, dim in enumerate(input_dim_arr):
+                update_dim(model.graph.input[i], dim, i, j, 'in_')
+
+        onnx.checker.check_model(model)
+        return model
+
+    onnx_model = update_inputs_dims(onnx_model, inputs_shapes)
+    onnx.save(onnx_model, model_path)
 
 input_2 = Variable(torch.randn(6, 6))
 custom_slice_list = [
@@ -845,6 +881,13 @@ save_data_and_model("split_3", input, model)
 model = Split(dim=0, split_size_sections=[1, 1])
 save_data_and_model("split_4", input, model)
 
+input2 = Variable(torch.tensor([1., 2., 3.], dtype=torch.float32))
+model = Split(dim=0, split_size_sections=[1, 2])
+save_data_and_model("split_5", input2, model, version=13)
+
+model = Split(dim=-1, split_size_sections=[1, 2])
+save_data_and_model("split_6", input2, model, version=13)
+
 class SplitSizes(nn.Module):
     def __init__(self, *args, **kwargs):
         super(SplitSizes, self).__init__()
@@ -1103,7 +1146,33 @@ input = Variable(torch.randn(seq_len, batch, features))
 lstm = LSTM(features, hidden, batch, bidirectional=True)
 save_data_and_model("lstm_bidirectional", input, lstm)
 
+class LSTM_hidden_state_inputs(nn.Module):
 
+    def __init__(self, features, hidden, batch, num_layers=1, bidirectional=False):
+        super(LSTM_hidden_state_inputs, self).__init__()
+        self.lstm = nn.LSTM(features, hidden, num_layers, bidirectional=bidirectional)
+
+    def forward(self, x, h, c):
+        return self.lstm(x, (h, c))[0]
+
+batch = 1
+features = 16
+hidden = 8
+seq_len = 2
+num_layers = 1
+bidirectional = False
+
+lstm = LSTM_hidden_state_inputs(
+    features,
+    hidden,
+    batch,
+    num_layers=num_layers,
+    bidirectional=bidirectional
+)
+input = torch.randn(seq_len, batch, features)
+h0 = torch.randn(num_layers + int(bidirectional), batch, hidden)
+c0 = torch.randn(num_layers + int(bidirectional), batch, hidden)
+save_data_and_model_multy_inputs("lstm_init_h0_c0", lstm, input, h0, c0, export_params=True)
 
 class HiddenLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, is_bidirectional=False):
@@ -1162,7 +1231,7 @@ bidirectional=True
 
 class LSTM(nn.Module):
 
-    def __init__(self):
+    def __init__(self, features, hidden, batch, num_layers, bidirectional):
         super(LSTM, self).__init__()
         self.lstm = nn.LSTM(features, hidden, num_layers, bidirectional=bidirectional)
         self.h0 = torch.from_numpy(np.ones((num_layers + int(bidirectional), batch, hidden), dtype=np.float32))
@@ -1177,13 +1246,279 @@ class LSTM(nn.Module):
 
 
 input_ = Variable(torch.randn(seq_len, batch, features))
-lstm = LSTM()
+lstm = LSTM(features, hidden, batch, num_layers, bidirectional)
 save_data_and_model("lstm_cell_bidirectional", input_, lstm, export_params=True)
 
 bidirectional = False
 input_ = Variable(torch.randn(seq_len, batch, features))
-lstm = LSTM()
+lstm = LSTM(features, hidden, batch, num_layers, bidirectional)
 save_data_and_model("lstm_cell_forward", input_, lstm, export_params=True)
+
+
+## Test for various sequence lengths and batch sizes
+tup_bs_sl = [(1, 50), (50, 1), (5, 5)]
+features = 4
+hidden = 3
+num_layers = 1
+bidirectional = False
+
+for sl, bs in tup_bs_sl:
+    input_ = Variable(torch.randn(sl, bs, features))
+    lstm = LSTM(features, hidden, bs, num_layers, bidirectional)
+    gru  = GRU(features, hidden, num_layers, bidirectional)
+    save_data_and_model(f"lstm_cell_batchsize_{bs}_seqlen_{sl}", input_, lstm, export_params=True)
+    save_data_and_model(f"gru_cell_batchsize_{bs}_seqlen_{sl}", input_, lstm, export_params=True)
+
+class LayoutLSTM:
+    def __init__(self, **params: Any) -> None:
+        # LSTM Input Names
+        X = "X"
+        W = "W"
+        R = "R"
+        B = "B"
+        H_0 = "initial_h"
+        C_0 = "initial_c"
+        P = "P"
+        LAYOUT = "layout"
+
+        number_of_gates     = 4
+        number_of_peepholes = 3
+        weight_scale        = 1
+
+
+        hidden_size = params["hidden_size"]
+        input_size  = params["input_size"]
+        layout = params[LAYOUT] if LAYOUT in params else 0
+
+        batch_size = params[X].shape[0] if layout else params[X].shape[1]
+
+        # Initializing Inputs
+        params[W] = weight_scale * np.ones(
+            (1, number_of_gates * hidden_size, input_size)
+        ).astype(np.float32)
+        params[R] = weight_scale * np.ones(
+            (1, number_of_gates * hidden_size, hidden_size)
+        ).astype(np.float32)
+
+        params[B] = np.ones((1, 2 * number_of_gates * hidden_size)).astype(np.float32)
+
+        if H_0 not in params and C_0 not in params:
+            params[H_0] = np.ones((1, batch_size, hidden_size)).astype(np.float32)
+            params[C_0] = np.ones((1, batch_size, hidden_size)).astype(np.float32)
+
+        params[P] = weight_scale * np.ones((1, number_of_peepholes * hidden_size)).astype(
+            np.float32)
+
+        self.num_directions = params[W].shape[0]
+
+        if self.num_directions == 1:
+
+            x = params[X]
+            x = x if layout == 0 else np.swapaxes(x, 0, 1)
+
+
+            b = (
+                params[B]
+                if B in params
+                else np.ones(1, 2 * number_of_gates * hidden_size, dtype=np.float32)
+            )
+            p = (
+                params[P]
+                if P in params
+                else np.ones(1, number_of_peepholes * hidden_size, dtype=np.float32)
+            )
+            h_0 = (
+                params[H_0]
+                if H_0 in params
+                else np.ones((1, batch_size, hidden_size), dtype=np.float32)
+            )
+            c_0 = (
+                params[C_0]
+                if C_0 in params
+                else np.ones((1, batch_size, hidden_size), dtype=np.float32)
+            )
+
+            self.X = x
+            self.W = params[W]
+            self.R = params[R]
+            self.B = params[B]
+            self.P = params[P]
+            self.H_0 = params[H_0]
+            self.C_0 = params[C_0]
+            self.LAYOUT = layout
+        else:
+            raise NotImplementedError()
+
+    def f(self, x: np.ndarray) -> np.ndarray:
+        return 1 / (1 + np.exp(-x))
+
+    def g(self, x: np.ndarray) -> np.ndarray:
+        return np.tanh(x)
+
+    def h(self, x: np.ndarray) -> np.ndarray:
+        return np.tanh(x)
+
+    def step(self) -> Tuple[np.ndarray, np.ndarray]:
+
+        self.W = np.squeeze(self.W, axis=0)
+        self.R = np.squeeze(self.R, axis=0)
+        self.B = np.squeeze(self.B, axis=0)
+        self.P = np.squeeze(self.P, axis=0)
+        self.H_0 = np.squeeze(self.H_0, axis=0)
+        self.C_0 = np.squeeze(self.C_0, axis=0)
+
+        seq_length = self.X.shape[0]
+        hidden_size = self.H_0.shape[-1]
+        batch_size = self.X.shape[1]
+
+        Y = np.empty([seq_length, self.num_directions, batch_size, hidden_size])
+        h_list = []
+
+        [p_i, p_o, p_f] = np.split(self.P, 3)
+        H_t = self.H_0
+        C_t = self.C_0
+        for x in np.split(self.X, self.X.shape[0], axis=0):
+            gates = (
+                np.dot(x, np.transpose(self.W))
+                + np.dot(H_t, np.transpose(self.R))
+                + np.add(*np.split(self.B, 2))
+            )
+            i, o, f, c = np.split(gates, 4, -1)
+            i = self.f(i + p_i * C_t)
+            f = self.f(f + p_f * C_t)
+            c = self.g(c)
+            C = f * C_t + i * c
+            o = self.f(o + p_o * C)
+            H = o * self.h(C)
+            h_list.append(H)
+            H_t = H
+            C_t = C
+
+        concatenated = np.concatenate(h_list)
+        if self.num_directions == 1:
+            Y[:, 0, :, :] = concatenated
+
+        if self.LAYOUT == 0:
+            Y_h = Y[-1]
+        else:
+            Y_h = Y[-1, :, :, :]
+            Y = np.transpose(Y, [2, 0, 1, 3])
+
+        Y = np.squeeze(Y)
+        return Y, Y_h
+
+def _extract_value_info(x, name, type_proto=None):  # type: (Union[List[Any], np.ndarray, None], Text, Optional[TypeProto]) -> onnx.ValueInfoProto
+    if type_proto is None:
+        if x is None:
+            raise NotImplementedError("_extract_value_info: both input and type_proto arguments cannot be None.")
+        elif isinstance(x, list):
+            elem_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[x[0].dtype]
+            shape = None
+            tensor_type_proto = onnx.helper.make_tensor_type_proto(elem_type, shape)
+            type_proto = onnx.helper.make_sequence_type_proto(tensor_type_proto)
+        else:
+            elem_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[x.dtype]
+            shape = x.shape
+            type_proto = onnx.helper.make_tensor_type_proto(elem_type, shape)
+    return onnx.helper.make_value_info(name, type_proto)
+
+def save_model_and_data_lstm_layout(lstm, layout, x, hx, cx, basename):
+
+    W = onnx.helper.make_tensor(
+        name="W",
+        data_type = TensorProto.FLOAT,
+        dims = lstm.W.shape,
+        vals = lstm.W.flatten()
+    )
+
+    B = onnx.helper.make_tensor(
+        name="B",
+        data_type = TensorProto.FLOAT,
+        dims = lstm.B.shape,
+        vals = lstm.B.flatten()
+    )
+
+    R = onnx.helper.make_tensor(
+        name="R",
+        data_type = TensorProto.FLOAT,
+        dims = lstm.R.shape,
+        vals = lstm.R.flatten()
+    )
+
+    lstm_node = onnx.helper.make_node(
+            "LSTM",
+            inputs=["x", "W", "R", "B", "", "hx", "cx"],
+            outputs=["y", "y_h"],
+            name = "LSTM",
+            layout=layout,
+            hidden_size=hidden_size,
+        )
+
+    Y, Y_h = lstm.step()
+
+    inputs = [x, hx, cx]
+    outputs = [Y, Y_h]
+    present_inputs = ['x', 'hx', 'cx']
+    present_outputs = ['y', 'y_h']
+
+    input_type_protos = [None] * len(inputs)
+    output_type_protos = [None] * len(outputs)
+
+    inputs_vi = [_extract_value_info(arr, arr_name, input_type)
+                    for arr, arr_name, input_type in zip(inputs, present_inputs, input_type_protos)]
+    outputs_vi = [_extract_value_info(arr, arr_name, output_type)
+                    for arr, arr_name, output_type in zip(outputs, present_outputs, output_type_protos)]
+
+    # Create the graph
+    lstm_graph = onnx.helper.make_graph(
+        [lstm_node],
+        "layout_lstm",
+        inputs=inputs_vi,
+        outputs=outputs_vi,
+        initializer=[W, R, B]
+        )
+
+    m = onnx.helper.make_model(lstm_graph, producer_name="backend-test")
+    model_file = os.path.join("models", basename + ".onnx")
+    onnx.save(m, model_file)
+    onnx.checker.check_model(m)
+
+    for i, data in enumerate(inputs):
+        input_files = os.path.join("data", "input_" + basename + f"_{str(i)}.npy")
+        data = data.astype(np.float32)
+        np.save(input_files, np.ascontiguousarray(data.data))
+
+    output_file = os.path.join("data", "output_" + basename + ".npy")
+    Y_h = data.astype(np.float32)
+    np.save(output_file, np.ascontiguousarray(Y_h.data))
+
+
+
+## Generate data and model for testing LSTM Layout attribute
+input_size          = 3
+hidden_size         = 7
+batch_size          = 5
+seq_length          = 2
+
+hx = np.ones((1, batch_size, hidden_size)).astype(np.float32)
+cx = np.ones((1, batch_size, hidden_size)).astype(np.float32)
+
+for layout in [0, 1]:
+    if layout:
+        x = np.ones((batch_size, seq_length, input_size)).astype(np.float32)
+    else:
+        x = np.ones((seq_length, batch_size, input_size)).astype(np.float32)
+
+    lstm = LayoutLSTM(
+        X=x,
+        initial_h=hx,
+        initial_c=cx,
+        layout=layout,
+        hidden_size=hidden_size,
+        input_size=input_size
+    )
+
+    save_model_and_data_lstm_layout(lstm, layout, x, hx, cx, f"lstm_layout_{str(layout)}")
 
 
 class MatMul(nn.Module):
@@ -1891,36 +2226,6 @@ x = Variable(torch.zeros([1, 2, 2]))
 model = GatherMultiOutput()
 save_data_and_model("gather_multi_output", x, model)
 
-def postprocess_model(model_path, inputs_shapes):
-    onnx_model = onnx.load(model_path)
-
-    def update_inputs_dims(model, input_dims):
-        """
-            This function updates the sizes of dimensions of the model's inputs to the values
-            provided in input_dims. if the dim value provided is negative, a unique dim_param
-            will be set for that dimension.
-        """
-        def update_dim(tensor, dim, i, j, dim_param_prefix):
-            dim_proto = tensor.type.tensor_type.shape.dim[j]
-            if isinstance(dim, int):
-                if dim >= 0:
-                    dim_proto.dim_value = dim
-                else:
-                    dim_proto.dim_param = dim_param_prefix + str(i) + '_' + str(j)
-            elif isinstance(dim, str):
-                dim_proto.dim_param = dim
-            else:
-                raise ValueError('Only int or str is accepted as dimension value, incorrect type: {}'.format(type(dim)))
-
-        for i, input_dim_arr in enumerate(input_dims):
-            for j, dim in enumerate(input_dim_arr):
-                update_dim(model.graph.input[i], dim, i, j, 'in_')
-
-        onnx.checker.check_model(model)
-        return model
-    
-    onnx_model = update_inputs_dims(onnx_model, inputs_shapes)
-    onnx.save(onnx_model, model_path)
 
 class UnsqueezeAndConv(nn.Module):
     def __init__(self):
@@ -2111,6 +2416,21 @@ save_data_and_model("cumsum_2d_dim_1", x, CumSum(dim=1), version=11)
 
 x = torch.randn(2, 3, 4)
 save_data_and_model("cumsum_3d_dim_2", x, CumSum(dim=2), version=11)
+
+# where layer
+class Where(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(Where, self).__init__()
+
+    def forward(self, x):
+        a = torch.ones((6,6))
+        b = torch.zeros((2, 6, 6))
+
+        return torch.where(x > 0, a, b)
+
+input = Variable(torch.randn(1, 2, 6, 6))
+model = Where(input)
+save_data_and_model("where_layer", input, model, 13)
 
 # tf2onnx models
 def save_data_and_tf_function(tf_function, name, input):
@@ -2336,6 +2656,31 @@ gemm_model = helper.make_model(graph)
 output_np = gemm_reference_implementation(weight_np.T, input_np.T)
 save_data_and_model("gemm_first_const", input_np, output_np, gemm_model)
 
+## gemm with bias
+def generate_gemm_bias(name, inputA, inputB, inputC):
+    outputY = gemm_reference_implementation(inputA, inputB, inputC)
+
+    A = onnx.helper.make_tensor_value_info("A", onnx.TensorProto.FLOAT, inputA.shape)
+    B = onnx.helper.make_tensor_value_info("B", onnx.TensorProto.FLOAT, inputB.shape)
+    C = onnx.helper.make_tensor_value_info("C", onnx.TensorProto.FLOAT, inputC.shape)
+    B_INIT = onnx.helper.make_tensor("B", onnx.TensorProto.FLOAT, inputB.shape, inputB)
+    C_INIT = onnx.helper.make_tensor("C", onnx.TensorProto.FLOAT, inputC.shape, inputC)
+    Y = onnx.helper.make_tensor_value_info("Y", onnx.TensorProto.FLOAT, outputY.shape)
+    node = onnx.helper.make_node("Gemm", inputs=["A", "B", "C"], outputs=["Y"])
+    graph = onnx.helper.make_graph([node], name, [A, B, C], [Y], [B_INIT, C_INIT])
+    model = onnx.helper.make_model(graph, producer_name=name)
+    onnx.save(model, os.path.join("models", name + ".onnx"))
+
+    input_files = os.path.join("data", "input_" + name)
+    np.save(input_files, inputA.data)
+    output_files = os.path.join("data", "output_" + name)
+    np.save(output_files, np.ascontiguousarray(outputY.data))
+
+inputA = np.random.ranf([3, 6]).astype(np.float32)
+inputB = np.random.ranf([6, 4]).astype(np.float32)
+inputC = np.random.ranf([1, 4]).astype(np.float32)
+generate_gemm_bias("gemm_vector_bias", inputA, inputB, inputC)
+
 # ########################## ReduceSum with Dynamic Batch ##########################
 input_np = np.random.rand(2, 4, 4, 4).astype("float32")
 inputs = [onnx.helper.make_tensor_value_info("input1", onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_np.dtype], shape=('?', 4, 4, 4))]
@@ -2492,7 +2837,7 @@ def gen_layer_norm_expanded(input_shape=[1, 4, 5], axis=-1, constant_as_initiali
                 self.name_dict[op_type] += 1
             else:
                 self.name_dict[op_type] = 0
-            
+
             return "{}.{}".format(op_type, self.name_dict[op_type])
 
     node_name_manager = NodeNameManager()
@@ -2573,3 +2918,51 @@ def gen_layer_norm_expanded(input_shape=[1, 4, 5], axis=-1, constant_as_initiali
 
 gen_layer_norm_expanded()
 gen_layer_norm_expanded(constant_as_initializers=True)
+
+################# GELU #################
+
+x = torch.randn(1, 5, 20)
+gelu = nn.GELU()
+save_data_and_model("gelu", x, gelu)
+
+gelu_approximation = nn.GELU('tanh')
+save_data_and_model("gelu_approximation", x, gelu_approximation)
+
+# Test data for a part of model: https://huggingface.co/openai/clip-vit-base-patch32
+input = np.random.standard_normal((1, 1, 3)).astype(np.float32)
+embedding = np.array([4, 5, 6], dtype=np.float32)
+data = np.random.standard_normal((2, 3)).astype(np.float32)
+indices = np.array([[0, 1]], dtype=np.int64)
+
+output = np.concatenate((embedding.reshape(1, 1, 3), input), axis=1) + np.take(data, indices, axis=0)
+
+embedding = onnx.numpy_helper.from_array(embedding, name='embedding')
+X = onnx.helper.make_tensor_value_info('input', onnx.TensorProto.FLOAT, input.shape)
+Y = onnx.helper.make_tensor_value_info('output', onnx.TensorProto.FLOAT, output.shape)
+
+shape = np.array([1, 1, -1], dtype=np.int32)
+shape = onnx.numpy_helper.from_array(shape, name='shape')
+expand = onnx.helper.make_node("Expand", inputs=['embedding', 'shape'], outputs=['expand'])
+
+one = np.array([1, 1, 1], dtype=np.float32)
+one = onnx.numpy_helper.from_array(one, name='one')
+mul = onnx.helper.make_node("Mul", inputs=['input', 'one'], outputs=['input_mul'])
+
+concat = onnx.helper.make_node("Concat", inputs=['expand', 'input_mul'], outputs=['concat'], axis=1)
+
+data = onnx.numpy_helper.from_array(data, name='data')
+indices = onnx.numpy_helper.from_array(indices, name='indices')
+
+gather = onnx.helper.make_node("Gather", inputs=['data', 'indices'], outputs=['gather'])
+add = onnx.helper.make_node("Add", inputs=['concat', 'gather'], outputs=['output'])
+
+name = "clip-vit-base-head"
+graph = onnx.helper.make_graph([mul, expand, concat, gather, add], name, [X], [Y], [embedding, data, indices, shape, one])
+
+model = onnx.helper.make_model(graph, producer_name=name)
+onnx.save(model, os.path.join("models", name + ".onnx"))
+
+input_files = os.path.join("data", "input_" + name)
+np.save(input_files, input.data)
+output_files = os.path.join("data", "output_" + name)
+np.save(output_files, np.ascontiguousarray(output.data))
