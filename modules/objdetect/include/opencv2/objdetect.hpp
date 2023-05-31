@@ -766,8 +766,13 @@ public:
 
 class CV_EXPORTS_W_SIMPLE QRCodeDetectorBase {
 public:
-    // CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+    //CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
     QRCodeDetectorBase();
+
+    QRCodeDetectorBase(const QRCodeDetectorBase&) = default;
+    QRCodeDetectorBase(QRCodeDetectorBase&&) = default;
+    QRCodeDetectorBase& operator=(const QRCodeDetectorBase&) = default;
+    QRCodeDetectorBase& operator=(QRCodeDetectorBase&&) = default;
 
     /** @brief Detects QR code in image and returns the quadrangle containing the code.
      @param img grayscale or color (BGR) image containing (or not) QR code.
