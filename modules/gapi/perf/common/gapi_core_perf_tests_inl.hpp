@@ -1577,11 +1577,12 @@ PERF_TEST_P_(Merge3PerfTest, TestPerformance)
 {
     compare_f cmpF;
     cv::Size sz;
+    MatType type = -1;
     cv::GCompileArgs compile_args;
-    std::tie(cmpF, sz, compile_args) = GetParam();
+    std::tie(cmpF, sz, type, compile_args) = GetParam();
 
-    initMatsRandU(CV_8UC1, sz, CV_8UC3);
-    cv::Mat in_mat3(sz, CV_8UC1);
+    initMatsRandU(type, sz, CV_MAKETYPE(type, 3));
+    cv::Mat in_mat3(sz, type);
     cv::Scalar mean = cv::Scalar::all(127);
     cv::Scalar stddev = cv::Scalar::all(40.f);
     cv::randn(in_mat3, mean, stddev);
