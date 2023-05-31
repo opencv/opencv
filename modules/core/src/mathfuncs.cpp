@@ -1940,7 +1940,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
             break;
     }
 
-    C p(1, 0), r(1, 1);
+    C p(1, 0), r(0.4, 0.9);
 
     for( i = 0; i < n; i++ )
     {
