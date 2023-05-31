@@ -28,6 +28,58 @@ try:
             raise unittest.SkipTest("OpenVINO isn't available from python.")
 
 
+    class AgeGenderOV:
+        def __init__(self, model_path, bin_path, device):
+            self.device = device
+            self.core = Core()
+            self.model = self.core.read_model(model_path, bin_path)
+
+
+        def reshape(self, new_shape):
+            self.model.reshape(new_shape)
+
+
+        def cfgPrePostProcessing(self, pp_callback):
+            ppp = PrePostProcessor(self.model)
+            pp_callback(ppp)
+            self.model = ppp.build()
+
+
+        def apply(self, in_data):
+           compiled_model = self.core.compile_model(self.model, self.device)
+           infer_request = compiled_model.create_infer_request()
+           results = infer_request.infer(in_data)
+           ov_age = results['age_conv3'].squeeze()
+           ov_gender = results['prob'].squeeze()
+           return ov_age, ov_gender
+
+
+    class AgeGenderGAPI:
+        tag = 'age-gender-net'
+
+        def __init__(self, model_path, bin_path, device):
+            g_in   = cv.GMat()
+            inputs = cv.GInferInputs()
+            inputs.setInput('data', g_in)
+            # TODO: It'd be nice to pass dict instead.
+            # E.g cv.gapi.infer("net", {'data': g_in})
+            outputs = cv.gapi.infer(AgeGenderGAPI.tag, inputs)
+            age_g = outputs.at("age_conv3")
+            gender_g = outputs.at("prob")
+
+            self.comp = cv.GComputation(cv.GIn(g_in), cv.GOut(age_g, gender_g))
+            self.pp = cv.gapi.ov.params(AgeGenderGAPI.tag, \
+                                        model_path, bin_path, device)
+
+
+        def apply(self, in_data):
+           compile_args = cv.gapi.compile_args(cv.gapi.networks(self.pp))
+           gapi_age, gapi_gender = self.comp.apply(cv.gin(in_data), compile_args)
+           gapi_gender = gapi_gender.squeeze()
+           gapi_age = gapi_age.squeeze()
+           return gapi_age, gapi_gender
+
+
     class test_gapi_infer_ov(NewOpenCVTests):
 
         def test_age_gender_infer_image(self):
@@ -42,39 +94,21 @@ try:
             img = cv.imread(img_path)
 
             # OpenVINO
-            core = Core()
-            model = core.read_model(model_path, bin_path)
+            def preproc(ppp):
+                ppp.input().model().set_layout(Layout("NCHW"))
+                ppp.input().tensor().set_element_type(Type.u8)                            \
+                                    .set_spatial_static_shape(img.shape[0], img.shape[1]) \
+                                    .set_layout(Layout("NHWC"))
+                ppp.input().preprocess().resize(ResizeAlgorithm.RESIZE_LINEAR)
 
-            ppp = PrePostProcessor(model)
-            ppp.input().model().set_layout(Layout("NCHW"))
-            ppp.input().tensor().set_element_type(Type.u8)                            \
-                                .set_spatial_static_shape(img.shape[0], img.shape[1]) \
-                                .set_layout(Layout("NHWC"))
-            ppp.input().preprocess().resize(ResizeAlgorithm.RESIZE_LINEAR)
-            model = ppp.build()
 
-            compiled_model = core.compile_model(model, device_id)
-            infer_request = compiled_model.create_infer_request()
-            results = infer_request.infer(np.expand_dims(img, 0))
-            ov_age = results['age_conv3'].squeeze()
-            ov_gender = results['prob'].squeeze()
+            ref = AgeGenderOV(model_path, bin_path, device_id)
+            ref.cfgPrePostProcessing(preproc)
+            ov_age, ov_gender = ref.apply(np.expand_dims(img, 0))
 
-            # OpenCV G-API
-            g_in = cv.GMat()
-            inputs = cv.GInferInputs()
-            inputs.setInput('data', g_in)
-            # TODO: It'd be nice to pass dict instead.
-            # E.g cv.gapi.infer("net", {'data': g_in})
-            outputs  = cv.gapi.infer("net", inputs)
-            age_g    = outputs.at("age_conv3")
-            gender_g = outputs.at("prob")
-
-            comp = cv.GComputation(cv.GIn(g_in), cv.GOut(age_g, gender_g))
-            pp = cv.gapi.ov.params("net", model_path, bin_path, device_id)
-
-            gapi_age, gapi_gender = comp.apply(cv.gin(img), args=cv.gapi.compile_args(cv.gapi.networks(pp)))
-            gapi_gender = gapi_gender.squeeze()
-            gapi_age = gapi_age.squeeze()
+            # OpenCV G-API (No preproc required)
+            comp = AgeGenderGAPI(model_path, bin_path, device_id)
+            gapi_age, gapi_gender = comp.apply(img)
 
             # Check
             self.assertEqual(0.0, cv.norm(ov_gender, gapi_gender, cv.NORM_INF))
@@ -97,31 +131,13 @@ try:
             tensor = np.transpose(tensor, (2, 0, 1))
             tensor = np.expand_dims(tensor, 0)
 
-            # OpenVINO
-            core = Core()
-            model = core.read_model(model_path, bin_path)
+            # OpenVINO (No preproce required)
+            ref = AgeGenderOV(model_path, bin_path, device_id)
+            ov_age, ov_gender = ref.apply(tensor)
 
-            compiled_model = core.compile_model(model, device_id)
-            infer_request = compiled_model.create_infer_request()
-            results = infer_request.infer(tensor)
-            ov_age = results['age_conv3'].squeeze()
-            ov_gender = results['prob'].squeeze()
-
-            # OpenCV G-API
-            g_in   = cv.GMat()
-            inputs = cv.GInferInputs()
-            inputs.setInput('data', g_in)
-
-            outputs  = cv.gapi.infer("net", inputs)
-            age_g    = outputs.at("age_conv3")
-            gender_g = outputs.at("prob")
-
-            comp = cv.GComputation(cv.GIn(g_in), cv.GOut(age_g, gender_g))
-            pp = cv.gapi.ov.params("net", model_path, bin_path, device_id)
-
-            gapi_age, gapi_gender = comp.apply(cv.gin(tensor), args=cv.gapi.compile_args(cv.gapi.networks(pp)))
-            gapi_gender = gapi_gender.squeeze()
-            gapi_age = gapi_age.squeeze()
+            # OpenCV G-API (No preproc required)
+            comp = AgeGenderGAPI(model_path, bin_path, device_id)
+            gapi_age, gapi_gender = comp.apply(tensor)
 
             # Check
             self.assertEqual(0.0, cv.norm(ov_gender, gapi_gender, cv.NORM_INF))
@@ -144,42 +160,26 @@ try:
             batch_img = np.array([img1, img2])
 
             # OpenVINO
-            core = Core()
-            model = core.read_model(model_path, bin_path)
+            def preproc(ppp):
+                ppp.input().model().set_layout(Layout("NCHW"))
+                ppp.input().tensor().set_element_type(Type.u8)                              \
+                                    .set_spatial_static_shape(img1.shape[0], img2.shape[1]) \
+                                    .set_layout(Layout("NHWC"))
+                ppp.input().preprocess().resize(ResizeAlgorithm.RESIZE_LINEAR)
 
-            model.reshape(PartialShape([2, 3, 62, 62]))
-            ppp = PrePostProcessor(model)
-            ppp.input().model().set_layout(Layout("NCHW"))
-            ppp.input().tensor().set_element_type(Type.u8)                              \
-                                .set_spatial_static_shape(img1.shape[0], img2.shape[1]) \
-                                .set_layout(Layout("NHWC"))
-            ppp.input().preprocess().resize(ResizeAlgorithm.RESIZE_LINEAR)
-            model = ppp.build()
 
-            compiled_model = core.compile_model(model, device_id)
-            infer_request = compiled_model.create_infer_request()
-            results = infer_request.infer(batch_img)
-            ov_age = results['age_conv3'].squeeze()
-            ov_gender = results['prob'].squeeze()
+            ref = AgeGenderOV(model_path, bin_path, device_id)
+            ref.reshape(PartialShape([2, 3, 62, 62]))
+            ref.cfgPrePostProcessing(preproc)
+            ov_age, ov_gender = ref.apply(batch_img)
 
             # OpenCV G-API
-            g_in   = cv.GMat()
-            inputs = cv.GInferInputs()
-            inputs.setInput('data', g_in)
-
-            outputs  = cv.gapi.infer("net", inputs)
-            age_g    = outputs.at("age_conv3")
-            gender_g = outputs.at("prob")
-
-            comp = cv.GComputation(cv.GIn(g_in), cv.GOut(age_g, gender_g))
-            pp = cv.gapi.ov.params("net", model_path, bin_path, device_id).cfgReshape([2, 3, 62, 62])   \
-                                                                          .cfgInputModelLayout("NCHW")  \
-                                                                          .cfgInputTensorLayout("NHWC") \
-                                                                          .cfgResize(cv.INTER_LINEAR)
-
-            gapi_age, gapi_gender = comp.apply(cv.gin(batch_img), args=cv.gapi.compile_args(cv.gapi.networks(pp)))
-            gapi_gender = gapi_gender.squeeze()
-            gapi_age = gapi_age.squeeze()
+            comp = AgeGenderGAPI(model_path, bin_path, device_id)
+            comp.pp.cfgReshape([2, 3, 62, 62])   \
+                   .cfgInputModelLayout("NCHW")  \
+                   .cfgInputTensorLayout("NHWC") \
+                   .cfgResize(cv.INTER_LINEAR)
+            gapi_age, gapi_gender = comp.apply(batch_img)
 
             # Check
             self.assertEqual(0.0, cv.norm(ov_gender, gapi_gender, cv.NORM_INF))
@@ -200,37 +200,20 @@ try:
             planar_img = np.expand_dims(planar_img, 0)
 
             # OpenVINO
-            core = Core()
-            model = core.read_model(model_path, bin_path)
+            def preproc(ppp):
+                ppp.input().tensor().set_element_type(Type.u8)                            \
+                                    .set_spatial_static_shape(img.shape[0], img.shape[1])
+                ppp.input().preprocess().resize(ResizeAlgorithm.RESIZE_LINEAR)
 
-            ppp = PrePostProcessor(model)
-            ppp.input().tensor().set_element_type(Type.u8)                            \
-                                .set_spatial_static_shape(img.shape[0], img.shape[1]) \
-                                .set_layout(Layout("NCHW"))
-            ppp.input().preprocess().resize(ResizeAlgorithm.RESIZE_LINEAR)
-            model = ppp.build()
 
-            compiled_model = core.compile_model(model, device_id)
-            infer_request = compiled_model.create_infer_request()
-            results = infer_request.infer(planar_img)
-            ov_age = results['age_conv3'].squeeze()
-            ov_gender = results['prob'].squeeze()
+            ref = AgeGenderOV(model_path, bin_path, device_id)
+            ref.cfgPrePostProcessing(preproc)
+            ov_age, ov_gender = ref.apply(planar_img)
 
             # OpenCV G-API
-            g_in   = cv.GMat()
-            inputs = cv.GInferInputs()
-            inputs.setInput('data', g_in)
-
-            outputs  = cv.gapi.infer("net", inputs)
-            age_g    = outputs.at("age_conv3")
-            gender_g = outputs.at("prob")
-
-            comp = cv.GComputation(cv.GIn(g_in), cv.GOut(age_g, gender_g))
-            pp = cv.gapi.ov.params("net", model_path, bin_path, device_id).cfgResize(cv.INTER_LINEAR)
-
-            gapi_age, gapi_gender = comp.apply(cv.gin(planar_img), args=cv.gapi.compile_args(cv.gapi.networks(pp)))
-            gapi_gender = gapi_gender.squeeze()
-            gapi_age = gapi_age.squeeze()
+            comp = AgeGenderGAPI(model_path, bin_path, device_id)
+            comp.pp.cfgResize(cv.INTER_LINEAR)
+            gapi_age, gapi_gender = comp.apply(planar_img)
 
             # Check
             self.assertEqual(0.0, cv.norm(ov_gender, gapi_gender, cv.NORM_INF))

@@ -101,6 +101,19 @@ struct ParamDesc {
     size_t nireq = 1;
 };
 
+// NB: Just helper to avoid code duplication.
+static detail::ParamDesc::Model&
+getModelToSetAttrOrThrow(detail::ParamDesc::Kind  &kind,
+                         const std::string        &attr_name) {
+    if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(kind)) {
+        cv::util::throw_error(
+                std::logic_error("Specifying " + attr_name + " isn't"
+                                 " possible for compiled model."));
+    }
+    GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(kind));
+    return cv::util::get<detail::ParamDesc::Model>(kind);
+}
+
 } // namespace detail
 
 /**
@@ -201,14 +214,8 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgInputTensorLayout(std::string layout) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying input tensor layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.input_tensor_layout = std::move(layout);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "input tensor layout")
+            .input_tensor_layout = std::move(layout);
         return *this;
     }
 
@@ -219,14 +226,8 @@ public:
     */
     Params<Net>&
     cfgInputTensorLayout(detail::AttrMap<std::string> layout_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying input tensor layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.input_tensor_layout = std::move(layout_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "input tensor layout")
+            .input_tensor_layout = std::move(layout_map);
         return *this;
     }
 
@@ -239,14 +240,8 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgInputModelLayout(std::string layout) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying input model layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.input_model_layout = std::move(layout);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "input model layout")
+            .input_model_layout = std::move(layout);
         return *this;
     }
 
@@ -257,14 +252,8 @@ public:
     */
     Params<Net>&
     cfgInputModelLayout(detail::AttrMap<std::string> layout_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying input model layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.input_model_layout = std::move(layout_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "input model layout")
+            .input_model_layout = std::move(layout_map);
         return *this;
     }
 
@@ -277,14 +266,8 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgOutputTensorLayout(std::string layout) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output tensor layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_tensor_layout = std::move(layout);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "output tensor layout")
+            .output_tensor_layout = std::move(layout);
         return *this;
     }
 
@@ -295,14 +278,8 @@ public:
     */
     Params<Net>&
     cfgOutputTensorLayout(detail::AttrMap<std::string> layout_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output tensor layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_tensor_layout = std::move(layout_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "output tensor layout")
+            .output_tensor_layout = std::move(layout_map);
         return *this;
     }
 
@@ -315,14 +292,8 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgOutputModelLayout(std::string layout) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output model layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_model_layout = std::move(layout);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "output model layout")
+            .output_model_layout = std::move(layout);
         return *this;
     }
 
@@ -333,14 +304,8 @@ public:
     */
     Params<Net>&
     cfgOutputModelLayout(detail::AttrMap<std::string> layout_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output model layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_model_layout = std::move(layout_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "output model layout")
+            .output_model_layout = std::move(layout_map);
         return *this;
     }
 
@@ -353,14 +318,8 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgOutputTensorPrecision(int precision) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output tensor precision isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_tensor_precision = precision;
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "output tensor precision")
+            .output_tensor_precision = precision;
         return *this;
     }
 
@@ -372,14 +331,8 @@ public:
     */
     Params<Net>&
     cfgOutputTensorPrecision(detail::AttrMap<int> precision_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output tensor precision isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_tensor_precision = std::move(precision_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "output tensor precision")
+            .output_tensor_precision = std::move(precision_map);
         return *this;
     }
 
@@ -392,13 +345,8 @@ public:
     */
     Params<Net>&
     cfgReshape(std::vector<size_t> new_shape) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Reshape isn't possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.new_shapes = std::move(new_shape);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "reshape")
+            .new_shapes = std::move(new_shape);
         return *this;
     }
 
@@ -410,13 +358,8 @@ public:
     */
     Params<Net>&
     cfgReshape(detail::AttrMap<std::vector<size_t>> new_shape_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Reshape isn't possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.new_shapes = std::move(new_shape_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "reshape")
+            .new_shapes = std::move(new_shape_map);
         return *this;
     }
 
@@ -439,18 +382,12 @@ public:
      *
     The function is used to set mean values for input layer preprocessing.
 
-    @param mean_vec Float vector contains mean values
+    @param mean_values Float vector contains mean values
     @return reference to this parameter structure.
     */
-    Params<Net>& cfgMean(std::vector<float> mean_vec) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying mean values isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.mean_values = std::move(mean_vec);
+    Params<Net>& cfgMean(std::vector<float> mean_values) {
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "mean values")
+            .mean_values = std::move(mean_values);
         return *this;
     }
 
@@ -461,14 +398,8 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgMean(detail::AttrMap<std::vector<float>> mean_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying mean values isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.mean_values = std::move(mean_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "mean values")
+            .mean_values = std::move(mean_map);
         return *this;
     }
 
@@ -480,14 +411,8 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgScale(std::vector<float> scale_values) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying scale values isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.scale_values = std::move(scale_values);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "scale values")
+            .scale_values = std::move(scale_values);
         return *this;
     }
 
@@ -498,14 +423,8 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgScale(detail::AttrMap<std::vector<float>> scale_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying scale values isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.scale_values = std::move(scale_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "scale values")
+            .scale_values = std::move(scale_map);
         return *this;
     }
 
@@ -518,14 +437,8 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgResize(int interpolation) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying resize preprocessing isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.interpolation = interpolation;
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "resize preprocessing")
+            .interpolation = std::move(interpolation);
         return *this;
     }
 
@@ -536,14 +449,8 @@ public:
     @return reference to this parameter structure.
     */
     Params<Net>& cfgResize(detail::AttrMap<int> interpolation) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying resize preprocessing isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.interpolation = std::move(interpolation);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "resize preprocessing")
+            .interpolation = std::move(interpolation);
         return *this;
     }
 
@@ -618,162 +525,92 @@ public:
     }
 
     /** @see ov::Params::cfgInputTensorLayout. */
-    Params& cfgInputTensorLayout(std::string tensor_layout) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying input tensor layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.input_tensor_layout = std::move(tensor_layout);
+    Params& cfgInputTensorLayout(std::string layout) {
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "input tensor layout")
+            .input_tensor_layout = std::move(layout);
         return *this;
     }
 
     /** @overload */
     Params&
     cfgInputTensorLayout(detail::AttrMap<std::string> layout_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying input tensor layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.input_tensor_layout = std::move(layout_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "input tensor layout")
+            .input_tensor_layout = std::move(layout_map);
         return *this;
     }
 
     /** @see ov::Params::cfgInputModelLayout. */
-    Params& cfgInputModelLayout(std::string model_layout) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying input model layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.input_model_layout = std::move(model_layout);
+    Params& cfgInputModelLayout(std::string layout) {
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "input model layout")
+            .input_model_layout = std::move(layout);
         return *this;
     }
 
     /** @overload */
     Params&
     cfgInputModelLayout(detail::AttrMap<std::string> layout_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying input model layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.input_model_layout = std::move(layout_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "input model layout")
+            .input_model_layout = std::move(layout_map);
         return *this;
     }
 
     /** @see ov::Params::cfgOutputTensorLayout. */
     Params& cfgOutputTensorLayout(std::string layout) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output tensor layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_tensor_layout = std::move(layout);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "output tensor layout")
+            .output_tensor_layout = std::move(layout);
         return *this;
     }
 
     /** @overload */
     Params&
     cfgOutputTensorLayout(detail::AttrMap<std::string> layout_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying input tensor layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_tensor_layout = std::move(layout_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "output tensor layout")
+            .output_tensor_layout = std::move(layout_map);
         return *this;
     }
 
     /** @see ov::Params::cfgOutputModelLayout. */
-    Params& cfgOutputModelLayout(std::string model_layout) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output model layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_model_layout = std::move(model_layout);
+    Params& cfgOutputModelLayout(std::string layout) {
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "output model layout")
+            .output_model_layout = std::move(layout);
         return *this;
     }
 
     /** @overload */
     Params&
     cfgOutputModelLayout(detail::AttrMap<std::string> layout_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output model layout isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_model_layout = std::move(layout_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "output model layout")
+            .output_model_layout = std::move(layout_map);
         return *this;
     }
 
     /** @see ov::Params::cfgOutputTensorPrecision. */
     Params& cfgOutputTensorPrecision(int precision) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output tensor precision isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_tensor_precision = precision;
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "output tensor precision")
+            .output_tensor_precision = precision;
         return *this;
     }
 
     /** @overload */
     Params&
     cfgOutputTensorPrecision(detail::AttrMap<int> precision_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying output tensor precision isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.output_tensor_precision = std::move(precision_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "output tensor precision")
+            .output_tensor_precision = std::move(precision_map);
         return *this;
     }
 
     /** @see ov::Params::cfgReshape. */
-    Params& cfgReshape(std::vector<size_t> shape) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Reshape isn't possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.new_shapes = std::move(shape);
+    Params& cfgReshape(std::vector<size_t> new_shape) {
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "reshape")
+            .new_shapes = std::move(new_shape);
         return *this;
     }
 
     /** @overload */
     Params&
     cfgReshape(detail::AttrMap<std::vector<size_t>> new_shape_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Reshape isn't possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.new_shapes = std::move(new_shape_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "reshape")
+            .new_shapes = std::move(new_shape_map);
         return *this;
     }
 
@@ -789,80 +626,44 @@ public:
     }
 
     /** @see ov::Params::cfgMean. */
-    Params& cfgMean(std::vector<float> mean_vec) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying mean values isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.mean_values = std::move(mean_vec);
+    Params& cfgMean(std::vector<float> mean_values) {
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "mean values")
+            .mean_values = std::move(mean_values);
         return *this;
     }
 
     /** @overload */
     Params& cfgMean(detail::AttrMap<std::vector<float>> mean_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying mean values isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.mean_values = std::move(mean_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "mean values")
+            .mean_values = std::move(mean_map);
         return *this;
     }
 
     /** @see ov::Params::cfgScale. */
     Params& cfgScale(std::vector<float> scale_values) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying scale values isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.scale_values = std::move(scale_values);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "scale values")
+            .scale_values = std::move(scale_values);
         return *this;
     }
 
     /** @overload */
     Params& cfgScale(detail::AttrMap<std::vector<float>> scale_map) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying scale values isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.scale_values = std::move(scale_map);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "scale values")
+            .scale_values = std::move(scale_map);
         return *this;
     }
 
     /** @see ov::Params::cfgResize. */
     Params& cfgResize(int interpolation) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying resize preprocessing isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.interpolation = interpolation;
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "resize preprocessing")
+            .interpolation = std::move(interpolation);
         return *this;
     }
 
     /** @overload */
     Params& cfgResize(detail::AttrMap<int> interpolation) {
-        if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
-            cv::util::throw_error(
-                    std::logic_error("Specifying resize preprocessing isn't"
-                                     " possible for compiled model."));
-        }
-        GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));
-        auto &model = cv::util::get<detail::ParamDesc::Model>(m_desc.kind);
-        model.interpolation = std::move(interpolation);
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "resize preprocessing")
+            .interpolation = std::move(interpolation);
         return *this;
     }
 

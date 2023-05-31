@@ -482,7 +482,7 @@ TEST(TestAgeGenderOV, ThrowInvalidConfigBlob) {
                                   cv::compile_args(cv::gapi::networks(pp))));
 }
 
-TEST(TestAgeGenderOV, InvalidImageLayout) {
+TEST(TestAgeGenderOV, ThrowInvalidImageLayout) {
     initDLDTDataPath();
     const std::string xml_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
     const std::string bin_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
@@ -497,7 +497,8 @@ TEST(TestAgeGenderOV, InvalidImageLayout) {
 
     pp.cfgInputTensorLayout("NCHW");
 
-    comp.compile(cv::descr_of(in_mat), cv::compile_args(cv::gapi::networks(pp)));
+    EXPECT_ANY_THROW(comp.compile(cv::descr_of(in_mat),
+                     cv::compile_args(cv::gapi::networks(pp))));
 }
 
 TEST(TestAgeGenderOV, InferTensorWithPreproc) {

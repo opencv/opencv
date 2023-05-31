@@ -125,7 +125,7 @@ static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
 }
 
 static void copyToOV(const cv::Mat &mat, ov::Tensor &tensor) {
-    // FIXME: Ideally there should be check that mat and tensor
+    // TODO: Ideally there should be check that mat and tensor
     // dimensions are compatible.
     const auto total = mat.total() * mat.channels();
     if (tensor.get_element_type() != toOV(mat.depth()) ||
@@ -236,7 +236,6 @@ public:
     // Syntax sugar
           cv::GShape      inShape(std::size_t input) const;
     const cv::Mat&        inMat  (std::size_t input) const;
-    const cv::MediaFrame& inFrame(std::size_t input) const;
 
     cv::GRunArgP output (std::size_t idx);
     cv::Mat&     outMatR(std::size_t idx);
@@ -263,10 +262,6 @@ private:
     // To simplify access to cv::Mat inside cv::RMat
     cv::gimpl::Mag m_res;
 
-    // FIXME: avoid conversion of arguments from internal representation to OpenCV one on each call
-    //to OCV kernel. (This can be achieved by a two single time conversions in GCPUExecutable::run,
-    //once on enter for input and output arguments, and once before return for output arguments only
-    // FIXME: check if the above applies to this backend (taken from CPU)
     std::unordered_map<std::size_t, cv::GRunArgP> m_results;
 
     // Input parameters passed to an inference operation.
@@ -318,10 +313,6 @@ const cv::Mat& OVCallContext::inMat(std::size_t input) const {
     return inArg<cv::Mat>(input);
 }
 
-const cv::MediaFrame& OVCallContext::inFrame(std::size_t input) const {
-    return inArg<cv::MediaFrame>(input);
-}
-
 cv::Mat& OVCallContext::outMatR(std::size_t idx) {
     return *cv::util::get<cv::Mat*>(m_results.at(idx));
 }
@@ -352,17 +343,6 @@ cv::GArg OVCallContext::packArg(const cv::GArg &arg) {
     switch (ref.shape)
     {
     case cv::GShape::GMAT: return cv::GArg(m_res.slot<cv::Mat>()[ref.id]);
-
-    // Note: .at() is intentional for GArray as object MUST be already there
-    //   (and constructed by either bindIn/Out or resetInternal)
-    case cv::GShape::GARRAY:  return cv::GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
-
-    // Note: .at() is intentional for GOpaque as object MUST be already there
-    //   (and constructed by either bindIn/Out or resetInternal)
-    case cv::GShape::GOPAQUE:  return cv::GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
-
-    case cv::GShape::GFRAME:  return cv::GArg(m_res.slot<cv::MediaFrame>().at(ref.id));
-
     default:
         cv::util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
@@ -692,7 +672,7 @@ struct Infer: public cv::detail::KernelTag {
                 if (isImage(matdesc, input_shape)) {
                     // NB: Image case - all necessary preprocessng is configured automatically.
                     GAPI_LOG_DEBUG(NULL, "OV Backend: Input: \"" << input_name << "\" is image.");
-                    // NB: Layout is alread set above just double check that
+                    // NB: Layout is already set just double check that
                     // user provided the correct one. In fact, there is only one correct for image.
                     if (explicit_in_tensor_layout &&
                         *explicit_in_tensor_layout != "NHWC") {
