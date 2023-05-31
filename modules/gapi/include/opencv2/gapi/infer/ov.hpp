@@ -289,7 +289,7 @@ public:
     }
 
     /** @overload
-    @param layout_map Map of pairs: name of corresponding input layer
+    @param layout_map Map of pairs: name of corresponding output layer
     and its tensor layout represented in std::string ("NCHW", "NHWC", etc)
     @return reference to this parameter structure.
     */
@@ -297,7 +297,7 @@ public:
     cfgOutputTensorLayout(detail::AttrMap<std::string> layout_map) {
         if (cv::util::holds_alternative<detail::ParamDesc::CompiledModel>(m_desc.kind)) {
             cv::util::throw_error(
-                    std::logic_error("Specifying input tensor layout isn't"
+                    std::logic_error("Specifying output tensor layout isn't"
                                      " possible for compiled model."));
         }
         GAPI_Assert(cv::util::holds_alternative<detail::ParamDesc::Model>(m_desc.kind));

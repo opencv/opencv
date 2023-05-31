@@ -125,6 +125,8 @@ static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
 }
 
 static void copyToOV(const cv::Mat &mat, ov::Tensor &tensor) {
+    // FIXME: Ideally there should be check that mat and tensor
+    // dimensions are compatible.
     const auto total = mat.total() * mat.channels();
     if (tensor.get_element_type() != toOV(mat.depth()) ||
         tensor.get_size()         != total) {
@@ -686,19 +688,19 @@ struct Infer: public cv::detail::KernelTag {
                 // e.g If model converted to IRv11 without any additional
                 // info about layout via Model Optimizer.
                 const auto model_layout = ::ov::layout::get_layout(uu.model->input(input_name));
-                // NB: Image case - all necessary preprocessng is configured automatically.
                 const auto &input_shape = uu.model->input(input_name).get_shape();
                 if (isImage(matdesc, input_shape)) {
-                    // NB: Double check that user provided correct layout.
-                    // In fact, there is only one correct for image.
-                    if (explicit_in_tensor_layout) {
-                        if (*explicit_in_tensor_layout != "NHWC") {
-                            std::stringstream ss;
-                            ss << "OV Backend: Provided tensor layout: " << *explicit_in_tensor_layout
-                               << " is not compatible with input data: " << matdesc
-                               << ". Expecting: NHWC";
-                            util::throw_error(std::logic_error(ss.str()));
-                        }
+                    // NB: Image case - all necessary preprocessng is configured automatically.
+                    GAPI_LOG_DEBUG(NULL, "OV Backend: Input: \"" << input_name << "\" is image.");
+                    // NB: Layout is alread set above just double check that
+                    // user provided the correct one. In fact, there is only one correct for image.
+                    if (explicit_in_tensor_layout &&
+                        *explicit_in_tensor_layout != "NHWC") {
+                        std::stringstream ss;
+                        ss << "OV Backend: Provided tensor layout " << *explicit_in_tensor_layout
+                           << " is not compatible with input data " << matdesc << " for layer \""
+                           << input_name << "\". Expecting NHWC";
+                        util::throw_error(std::logic_error(ss.str()));
                     }
                     input_info.tensor().set_layout(::ov::Layout("NHWC"));
                     input_info.tensor().set_spatial_static_shape(matdesc.size.height,
@@ -710,7 +712,8 @@ struct Infer: public cv::detail::KernelTag {
                         : ::ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR;
                     input_info.preprocess().resize(interp);
                 } else {
-                    // NB: Othersize configure resize only if user asked.
+                    // NB: Tensor case - resize or layout conversions must be explicitly specified.
+                    GAPI_LOG_DEBUG(NULL, "OV Backend: Input: \"" << input_name << "\" is tensor.");
                     if (explicit_resize) {
                         if (matdesc.isND()) {
                             // NB: ND case - need to obtain "H" and "W" positions
@@ -724,9 +727,11 @@ struct Infer: public cv::detail::KernelTag {
                             } else {
                                 const auto layout = explicit_in_tensor_layout
                                     ? ::ov::Layout(*explicit_in_tensor_layout) : model_layout;
-                                const auto H_idx = ::ov::layout::height_idx(layout);
-                                const auto W_idx = ::ov::layout::width_idx(layout);
-                                // NB: It still possible if layout is "??HW".
+                                auto H_idx = ::ov::layout::height_idx(layout);
+                                auto W_idx = ::ov::layout::width_idx(layout);
+                                // NB: If layout is "...HW", H position is -2.
+                                if (H_idx < 0) H_idx = matdesc.dims.size() + H_idx;
+                                if (W_idx < 0) W_idx = matdesc.dims.size() + W_idx;
                                 GAPI_Assert(H_idx >= 0 && H_idx < static_cast<int>(matdesc.dims.size()));
                                 GAPI_Assert(W_idx >= 0 && W_idx < static_cast<int>(matdesc.dims.size()));
                                 input_info.tensor().set_spatial_static_shape(matdesc.dims[H_idx],
@@ -734,7 +739,7 @@ struct Infer: public cv::detail::KernelTag {
                                 input_info.preprocess().resize(toOVInterp(*explicit_resize));
                             }
                         } else {
-                            // NB: 2D case - know exactly where H and W...
+                            // NB: 2D case - We know exactly where H and W...
                             input_info.tensor().set_spatial_static_shape(matdesc.size.height,
                                                                          matdesc.size.width);
                             input_info.preprocess().resize(toOVInterp(*explicit_resize));

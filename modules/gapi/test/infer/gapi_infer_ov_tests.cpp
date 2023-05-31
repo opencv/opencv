@@ -482,6 +482,58 @@ TEST(TestAgeGenderOV, ThrowInvalidConfigBlob) {
                                   cv::compile_args(cv::gapi::networks(pp))));
 }
 
+TEST(TestAgeGenderOV, InvalidImageLayout) {
+    initDLDTDataPath();
+    const std::string xml_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    const std::string bin_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    const std::string device   = "CPU";
+
+    // NB: This mat may only have "NHWC" layout.
+    cv::Mat in_mat(300, 300, CV_8UC3);
+    cv::randu(in_mat, 0, 255);
+    cv::Mat gender, gapi_age, gapi_gender;
+    auto comp = AGNetTypedComp::create();
+    auto pp = AGNetTypedComp::params(xml_path, bin_path, device);
+
+    pp.cfgInputTensorLayout("NCHW");
+
+    comp.compile(cv::descr_of(in_mat), cv::compile_args(cv::gapi::networks(pp)));
+}
+
+TEST(TestAgeGenderOV, InferTensorWithPreproc) {
+    initDLDTDataPath();
+    const std::string xml_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    const std::string bin_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    const std::string device   = "CPU";
+
+    cv::Mat in_mat({1, 240, 320, 3}, CV_32F);
+    cv::randu(in_mat, -1, 1);
+    cv::Mat ov_age, ov_gender, gapi_age, gapi_gender;
+
+    // OpenVINO
+    AGNetOVComp ref(xml_path, bin_path, device);
+    ref.cfgPrePostProcessing([](ov::preprocess::PrePostProcessor &ppp) {
+        auto& input = ppp.input();
+        input.tensor().set_spatial_static_shape(240, 320)
+                      .set_layout("NHWC");
+        input.preprocess().resize(ov::preprocess::ResizeAlgorithm::RESIZE_LINEAR);
+    });
+    ref.apply(in_mat, ov_age, ov_gender);
+
+    // G-API
+    auto comp = AGNetTypedComp::create();
+    auto pp = AGNetTypedComp::params(xml_path, bin_path, device);
+    pp.cfgResize(cv::INTER_LINEAR)
+      .cfgInputTensorLayout("NHWC");
+
+    comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    // Assert
+    normAssert(ov_age,    gapi_age,    "Test age output"   );
+    normAssert(ov_gender, gapi_gender, "Test gender output");
+}
+
 } // namespace opencv_test
 
 #endif //  HAVE_INF_ENGINE

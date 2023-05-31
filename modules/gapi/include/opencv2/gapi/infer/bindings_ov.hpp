@@ -125,4 +125,4 @@ GAPI_EXPORTS_W PyParams params(const std::string &tag,
 } // namespace gapi
 } // namespace cv
 
-#endif // OPENCV_GAPI_INFER_BINDINGS_IE_HPP
+#endif // OPENCV_GAPI_INFER_BINDINGS_OV_HPP
