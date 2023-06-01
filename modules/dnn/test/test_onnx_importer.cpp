@@ -2598,37 +2598,37 @@ TEST_P(Test_ONNX_layers, where_node)
 }
 
 TEST_P(Test_ONNX_layers, Conformance_Gemm_all_attributes) {
-    testONNXModels("test_gemm_all_attributes", pb, 0, 0, false, true, 3);
+    testONNXModels("test_gemm_all_attributes", pb, 0, 0, false, true, 2);
 }
 TEST_P(Test_ONNX_layers, Conformance_Gemm_alpha) {
-    testONNXModels("test_gemm_alpha", pb, 0, 0, false, true, 3);
+    testONNXModels("test_gemm_alpha", pb, 0, 0, false, true, 2);
 }
 TEST_P(Test_ONNX_layers, Conformance_Gemm_beta) {
-    testONNXModels("test_gemm_beta", pb, 0, 0, false, true, 3);
+    testONNXModels("test_gemm_beta", pb, 0, 0, false, true, 2);
 }
 TEST_P(Test_ONNX_layers, Conformance_Gemm_default_matrix_bias) {
-    testONNXModels("test_gemm_default_matrix_bias", pb, 0, 0, false, true, 3);
+    testONNXModels("test_gemm_default_matrix_bias", pb, 0, 0, false, true, 2);
 }
 TEST_P(Test_ONNX_layers, Conformance_Gemm_default_no_bias) {
     testONNXModels("test_gemm_default_no_bias", pb, 0, 0, false, true, 2);
 }
 TEST_P(Test_ONNX_layers, Conformance_Gemm_default_scalar_bias) {
-    testONNXModels("test_gemm_default_scalar_bias", pb, 0, 0, false, true, 3);
+    testONNXModels("test_gemm_default_scalar_bias", pb, 0, 0, false, true, 2);
 }
 TEST_P(Test_ONNX_layers, Conformance_Gemm_default_single_elem_vector_bias) {
-    testONNXModels("test_gemm_default_single_elem_vector_bias", pb, 0, 0, false, true, 3);
+    testONNXModels("test_gemm_default_single_elem_vector_bias", pb, 0, 0, false, true, 2);
 }
 TEST_P(Test_ONNX_layers, Conformance_Gemm_default_vector_bias) {
-    testONNXModels("test_gemm_default_vector_bias", pb, 0, 0, false, true, 3);
+    testONNXModels("test_gemm_default_vector_bias", pb, 0, 0, false, true, 2);
 }
 TEST_P(Test_ONNX_layers, Conformance_Gemm_default_zero_bias) {
-    testONNXModels("test_gemm_default_zero_bias", pb, 0, 0, false, true, 3);
+    testONNXModels("test_gemm_default_zero_bias", pb, 0, 0, false, true, 2);
 }
 TEST_P(Test_ONNX_layers, Conformance_Gemm_transposeA) {
-    testONNXModels("test_gemm_transposeA", pb, 0, 0, false, true, 3);
+    testONNXModels("test_gemm_transposeA", pb, 0, 0, false, true, 2);
 }
 TEST_P(Test_ONNX_layers, Conformance_Gemm_transposeB) {
-    testONNXModels("test_gemm_transposeB", pb, 0, 0, false, true, 3);
+    testONNXModels("test_gemm_transposeB", pb, 0, 0, false, true, 2);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

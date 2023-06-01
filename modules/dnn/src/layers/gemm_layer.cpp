@@ -20,7 +20,8 @@ public:
         alpha = params.get<float>("alpha", 1.0f);
         beta = params.get<float>("beta", 1.0f);
 
-        is_C_1d = params.get<bool>("is_C_1d", false);
+        C_real_ndims = params.get<int>("C_real_ndims", -1);
+        // C is initialized and broadcast in finalize()
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
@@ -31,7 +32,7 @@ public:
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
-        size_t num_inputs = inputs.size();
+        size_t num_inputs = inputs.size(); // three inputs are guaranteed in ONNXImporter if constant C is present
         CV_CheckGE(num_inputs, static_cast<size_t>(2), "DNN/Gemm: Gemm takes at least two inputs");
         CV_CheckLE(num_inputs, static_cast<size_t>(3), "DNN/Gemm: Gemm takes at most three inputs");
 
@@ -58,14 +59,24 @@ public:
         }
         CV_CheckEQ(K_A, K_B, "DNN/Gemm: Invalid dimension of dim K");
 
-        // TODO: Check whether C can be unidirectional broadcast to (M, N). Handle carefully with 1D Mat.
+        // Check whether C can be unidirectional broadcast to (M, N). Handle carefully with 1D Mat.
         if (inputs.size() == static_cast<size_t>(3)) {
             const auto shape_C = inputs[2];
-            CV_CheckEQ(shape_C.size(), static_cast<size_t>(2), "DNN/Gemm: C must be two-dimentional");
+            // [banned] if C is an input, shape_C represents the real shape:
+            //   0d: shape_C.size() = 0 (scalar),
+            //   1d: shape_C.size() = 1
+            // if C is a constant, shape_C represents it Mat shape:
+            //   0d: shape_C.size() = 1 (it stays the same dim if put in blobs, but is turned 2d if put in inputs in forward())
+            //   1d: shape_C.size() = 2 (1 appended for the last dim)
+            //   2d: shape_C.size() = 2
+            auto ndims_C = shape_C.empty() ? 0 : shape_C.size(); // ndims_C == 0 represent a scalar C
+            CV_CheckLE(ndims_C, static_cast<size_t>(2), "DNN/Gemm: C can only be 0d (scalar) / 1d / 2d tensor");
 
-            if (is_C_1d) {
-                CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == M_ || shape_C[0] == N_, "DNN/Gemm: 1d C cannot be broadcast");
-            } else {
+            if (ndims_C == 1) { // scalar
+                CV_Check(shape_C[0], shape_C[0] == 1, "DNN/Gemm: 1d C cannot be broadcast");
+            } else if (ndims_C == 2 && C_real_ndims == 1) {
+                CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N_, "DNN/Gemm: 1d C cannot be broadcast");
+            } else if (ndims_C == 2 && C_real_ndims == 2) {
                 CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == M_, "DNN/Gemm: 2d C cannot be broadcast");
                 CV_Check(shape_C[1], shape_C[1] == 1 || shape_C[1] == N_, "DNN/Gemm: 2d C cannot be broadcast");
             }
@@ -95,8 +106,25 @@ public:
         } else {
             N = shape_B[1];
         }
-    }
 
+        // broadcast bias if existed
+        if (!blobs.empty()) {
+            C = blobs[0];
+            auto shape_C = shape(C);
+            if (C_real_ndims == 0) { // scalar
+                C = C.reshape(1, {1, 1});
+            } else if (C_real_ndims == 1 && shape_C[0] != 1) {
+                cv::transpose(C, C);
+            }
+            shape_C = shape(C);
+            if (shape_C[0] != M) {
+                C = cv::repeat(C, M, 1);
+            }
+            if (shape_C[1] != N) {
+                C = cv::repeat(C, 1, N);
+            }
+        }
+    }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
         CV_TRACE_FUNCTION();
@@ -114,37 +142,11 @@ public:
 
         const auto& A = inputs[0], B = inputs[1];
         auto& Y = outputs[0];
-        if (inputs.size() == 3) { // with bias
-            const auto& C = inputs[2];
 
-            // broadcast C to (M, N) if it is of shape (1), (N), (M, 1)
-            auto shape_C = shape(C);
-            CV_CheckEQ(shape_C.size(), (size_t)2, "DNN/Gemm: C must be two-dimentional");
-            auto C_broadcast = C;
-            if (shape_C[0] == N && is_C_1d) {
-                // (N, 1) -> (1, N)
-                cv::transpose(C_broadcast, C_broadcast);
-            }
-            if (shape_C[0] != M) {
-                C_broadcast = cv::repeat(C_broadcast, M, 1);
-            }
-            if (shape_C[1] != N) {
-                C_broadcast = cv::repeat(C_broadcast, 1, N);
-            }
-
-            // std::cout << "C_broadcast = " << C_broadcast << std::endl;
-            // for (int i = 0; i < C_broadcast.total(); ++i) {
-            //     std::cout << C_broadcast.at<float>(i) << " ";
-            // }
-            // std::cout << std::endl;
-
-            // copy broadcast bias to output
-            std::memcpy(Y.ptr<float>(), C_broadcast.ptr<float>(), M * N * sizeof(float));
-            // std::cout << "Y = " << Y << std::endl;
+        if (!C.empty()) {
+            std::memcpy(Y.ptr<float>(), C.ptr<float>(), M * N * sizeof(float));
         }
 
-        // std::cout << "M = " << M << ", N = " << N << ", K = " << K << ", alpha = " << alpha << ", beta = " << beta << std::endl;
-        // cblas_sgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K, const float alpha, const float *A, const int lda, const float *B, const int ldb, const float beta, float *C, const int ldc)
         if (transA) {
             if (transB) {
                 cblas_sgemm(CblasRowMajor, CblasTrans, CblasTrans, M, N, K, alpha, A.ptr<float>(), M, B.ptr<float>(), K, beta, Y.ptr<float>(), N);
@@ -158,7 +160,6 @@ public:
                 cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, alpha, A.ptr<float>(), K, B.ptr<float>(), N, beta, Y.ptr<float>(), N);
             }
         }
-
     }
 
 private:
@@ -166,7 +167,8 @@ private:
     int N;
     int K;
 
-    bool is_C_1d;
+    int C_real_ndims;
+    Mat C;
 };
 
 Ptr<GemmLayer> GemmLayer::create(const LayerParams& params) {

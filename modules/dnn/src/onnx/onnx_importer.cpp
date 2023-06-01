@@ -1952,17 +1952,18 @@ void ONNXImporter::parseBatchNormalization(LayerParams& layerParams, const openc
 void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_CheckGE(node_proto.input_size(), 2, "DNN/ONNXImporter: Gemm requires at least two inputs");
-    // layerParams.type = "InnerProduct";
 
     // if bias existed, it should be a constant because we need to know its shape beforehand
     if (node_proto.input_size() == 3) {
-        bool is_C_1d = false;
-        if (constBlobsExtraInfo.find(node_proto.input(0)) != constBlobsExtraInfo.end()) {
-            if (getBlobExtraInfo(node_proto, 0).real_ndims == 1) {
-                is_C_1d = true;
-            }
+        bool is_C_const = constBlobs.find(node_proto.input(2)) != constBlobs.end();
+        CV_CheckTrue(is_C_const, "DNN/ONNXImporter: Gemm supports C being a constant instead of an input for now");
+
+        Mat C = getBlob(node_proto, 2);
+        layerParams.blobs.push_back(C);
+
+        if (constBlobsExtraInfo.find(node_proto.input(2)) != constBlobsExtraInfo.end()) {
+            layerParams.set("C_real_ndims", getBlobExtraInfo(node_proto, 2).real_ndims);
         }
-        layerParams.set("is_C_1d", is_C_1d);
     }
 
     addLayer(layerParams, node_proto);
