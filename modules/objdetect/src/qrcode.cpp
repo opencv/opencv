@@ -1014,6 +1014,8 @@ public:
                      OutputArrayOfArrays straight_qrcode) const override;
     bool detectAndDecodeMulti(InputArray img, std::vector<cv::String>& decoded_info, OutputArray points,
                               OutputArrayOfArrays straight_qrcode) const override;
+
+    String decodeCurved(InputArray in, InputArray points, OutputArray straight_qrcode);
 };
 
 QRCodeDetector::QRCodeDetector() {
@@ -2879,8 +2881,12 @@ std::string ImplContour::decode(InputArray in, InputArray points, OutputArray st
     return ok ? decoded_info : std::string();
 }
 
-cv::String QRCodeDetector::decodeCurved(InputArray in, InputArray points,
-                                        OutputArray straight_qrcode)
+String QRCodeDetector::decodeCurved(InputArray in, InputArray points, OutputArray straight_qrcode) {
+    CV_Assert(p != nullptr);
+    return std::static_pointer_cast<ImplContour>(p)->decodeCurved(in, points, straight_qrcode);
+}
+
+String ImplContour::decodeCurved(InputArray in, InputArray points, OutputArray straight_qrcode)
 {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
@@ -2891,7 +2897,7 @@ cv::String QRCodeDetector::decodeCurved(InputArray in, InputArray points,
     CV_Assert(src_points.size() == 4);
     CV_CheckGT(contourArea(src_points), 0.0, "Invalid QR code source points");
 
-    QRDecode qrdec((std::static_pointer_cast<ImplContour>)(p)->useAlignmentMarkers);
+    QRDecode qrdec(useAlignmentMarkers);
     qrdec.init(inarr, src_points);
     bool ok = qrdec.curvedDecodingProcess();
 
