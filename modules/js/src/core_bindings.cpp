@@ -89,12 +89,10 @@ using namespace cv;
 
 using namespace cv::segmentation;  // FIXIT
 
+using namespace cv::aruco;
+
 #ifdef HAVE_OPENCV_DNN
 using namespace cv::dnn;
-#endif
-
-#ifdef HAVE_OPENCV_ARUCO
-using namespace aruco;
 #endif
 
 #ifdef HAVE_OPENCV_VIDEO
