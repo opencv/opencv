@@ -1020,8 +1020,15 @@ QRCodeDetector::QRCodeDetector() {
     p = makePtr<ImplContour>();
 }
 
-void QRCodeDetector::setEpsX(double epsX) { (std::static_pointer_cast<ImplContour>)(p)->epsX = epsX; }
-void QRCodeDetector::setEpsY(double epsY) { (std::static_pointer_cast<ImplContour>)(p)->epsY = epsY; }
+QRCodeDetector& QRCodeDetector::setEpsX(double epsX) {
+    (std::static_pointer_cast<ImplContour>)(p)->epsX = epsX;
+    return *this;
+}
+
+QRCodeDetector& QRCodeDetector::setEpsY(double epsY) {
+    (std::static_pointer_cast<ImplContour>)(p)->epsY = epsY;
+    return *this;
+}
 
 bool ImplContour::detect(InputArray in, OutputArray points) const
 {
@@ -4043,8 +4050,9 @@ bool ImplContour::detectAndDecodeMulti(
     return ok;
 }
 
-void QRCodeDetector::setUseAlignmentMarkers(bool useAlignmentMarkers) {
+QRCodeDetector& QRCodeDetector::setUseAlignmentMarkers(bool useAlignmentMarkers) {
     (std::static_pointer_cast<ImplContour>)(p)->useAlignmentMarkers = useAlignmentMarkers;
+    return *this;
 }
 
 QRCodeDetectorAruco::Params::Params() {

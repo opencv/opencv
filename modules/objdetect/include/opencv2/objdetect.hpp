@@ -845,18 +845,18 @@ public:
      @param epsX Epsilon neighborhood, which allows you to determine the horizontal pattern
      of the scheme 1:1:3:1:1 according to QR code standard.
     */
-    CV_WRAP void setEpsX(double epsX);
+    CV_WRAP QRCodeDetector& setEpsX(double epsX);
     /** @brief sets the epsilon used during the vertical scan of QR code stop marker detection.
      @param epsY Epsilon neighborhood, which allows you to determine the vertical pattern
      of the scheme 1:1:3:1:1 according to QR code standard.
      */
-    CV_WRAP void setEpsY(double epsY);
+    CV_WRAP QRCodeDetector& setEpsY(double epsY);
 
     /** @brief use markers to improve the position of the corners of the QR code
      *
      * alignmentMarkers using by default
      */
-    CV_WRAP void setUseAlignmentMarkers(bool useAlignmentMarkers);
+    CV_WRAP QRCodeDetector& setUseAlignmentMarkers(bool useAlignmentMarkers);
 
     /** @brief Decodes QR code on a curved surface in image once it's found by the detect() method.
 
