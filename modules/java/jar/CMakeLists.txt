@@ -37,16 +37,32 @@ endif()
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OPENCV_JAVA_DIR}/build.xml" @ONLY)
 list(APPEND depends "${OPENCV_JAVA_DIR}/build.xml")
 
-ocv_cmake_byproducts(__byproducts BYPRODUCTS "${OPENCV_JAR_FILE}")
-add_custom_command(OUTPUT "${OPENCV_DEPHELPER}/${the_module}_jar"
-    ${__byproducts}  # required for add_custom_target() by ninja
-    COMMAND ${ANT_EXECUTABLE} -noinput -k jar
-    COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/${the_module}_jar"
-    WORKING_DIRECTORY "${OPENCV_JAVA_DIR}"
-    DEPENDS ${depends}
-    COMMENT "Generating ${JAR_NAME}"
-)
-add_custom_target(${the_module}_jar DEPENDS "${OPENCV_DEPHELPER}/${the_module}_jar")
+# ocv_cmake_byproducts(__byproducts BYPRODUCTS "${OPENCV_JAR_FILE}")
+# add_custom_command(OUTPUT "${OPENCV_DEPHELPER}/${the_module}_jar"
+#     ${__byproducts}  # required for add_custom_target() by ninja
+#     COMMAND ${ANT_EXECUTABLE} -noinput -k jar
+#     COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/${the_module}_jar"
+#     WORKING_DIRECTORY "${OPENCV_JAVA_DIR}"
+#     DEPENDS ${depends}
+#     COMMENT "Generating ${JAR_NAME}"
+# )
+# add_custom_target(${the_module}_jar DEPENDS "${OPENCV_DEPHELPER}/${the_module}_jar")
+
+message("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+message(${OPENCV_DEPHELPER})
+
+find_package(Java REQUIRED)
+include(UseJava)
+
+get_filename_component(OPENCV_JAR_DIR ${OPENCV_JAR_FILE} DIRECTORY)
+get_filename_component(JAR_NAME_WE ${JAR_NAME} NAME_WE)
+
+add_jar(${the_module}_jar
+        SOURCES "@/home/dkurt/java_sources"
+        OUTPUT_NAME ${JAR_NAME_WE}
+        OUTPUT_DIR ${OPENCV_JAR_DIR})
+
+add_dependencies(${the_module}_jar ${the_module}_jar_source_copy)
 
 install(FILES ${OPENCV_JAR_FILE} OPTIONAL DESTINATION ${OPENCV_JAR_INSTALL_PATH} COMPONENT java)
 
