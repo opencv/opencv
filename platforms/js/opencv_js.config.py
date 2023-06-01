@@ -108,13 +108,23 @@ imgproc = {
     ],
 }
 
-objdetect = {'': ['groupRectangles'],
+objdetect = {'': ['groupRectangles', 'getPredefinedDictionary', 'extendDictionary',
+                  'drawDetectedMarkers', 'generateImageMarker', 'drawDetectedCornersCharuco',
+                  'drawDetectedDiamonds'],
              'HOGDescriptor': ['load', 'HOGDescriptor', 'getDefaultPeopleDetector', 'getDaimlerPeopleDetector', 'setSVMDetector', 'detectMultiScale'],
              'CascadeClassifier': ['load', 'detectMultiScale2', 'CascadeClassifier', 'detectMultiScale3', 'empty', 'detectMultiScale'],
              'QRCodeDetector': ['QRCodeDetector', 'decode', 'decodeCurved', 'detect', 'detectAndDecode', 'detectMulti', 'setEpsX', 'setEpsY'],
-             'ArucoDetector': ['getPredefinedDictionary', 'detectMarkers', 'refineDetectedMarkers', 'getDictionary', 'setDictionary', 'getDetectorParameters', 'setDetectorParameters', 'getRefineParameters', 'setRefineParameters'],
-             'GridBoard': ['create','generateImage', 'getGridSize', 'getMarkerLength', 'getMarkerSeparation'],
-             'CharucoBoard': ['create', 'generateImage', 'getChessboardCorners', 'getNearestMarkerCorners', 'checkCharucoCornersCollinear']
+             # aruco namespace
+             'aruco_PredefinedDictionaryType': [],
+             'aruco_Dictionary': ['Dictionary', 'getDistanceToId', 'generateImageMarker', 'getByteListFromBits', 'getBitsFromByteList'],
+             'aruco_Board': ['Board', 'matchImagePoints', 'generateImage'],
+             'aruco_GridBoard': ['GridBoard', 'generateImage', 'getGridSize', 'getMarkerLength', 'getMarkerSeparation', 'matchImagePoints'],
+             'aruco_CharucoParameters': ['CharucoParameters'],
+             'aruco_CharucoBoard': ['CharucoBoard', 'generateImage', 'getChessboardCorners', 'getNearestMarkerCorners', 'checkCharucoCornersCollinear', 'matchImagePoints', 'getLegacyPattern', 'setLegacyPattern'],
+             'aruco_DetectorParameters': ['DetectorParameters'],
+             'aruco_RefineParameters': ['RefineParameters'],
+             'aruco_ArucoDetector': ['ArucoDetector', 'detectMarkers', 'refineDetectedMarkers', 'setDictionary', 'setDetectorParameters', 'setRefineParameters'],
+             'aruco_CharucoDetector': ['CharucoDetector', 'setBoard', 'setCharucoParameters', 'setDetectorParameters', 'setRefineParameters', 'detectBoard', 'detectDiamonds']
 }
 
 video = {

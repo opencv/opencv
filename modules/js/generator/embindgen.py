@@ -812,6 +812,7 @@ class JSWrapperGenerator(object):
         for name, class_info in sorted(self.classes.items()):
             class_bindings = []
             if not name in white_list:
+                #print('Not in whitelist: "{}" from ns={}'.format(name, ns_name))
                 continue
 
             # Generate bindings for methods
