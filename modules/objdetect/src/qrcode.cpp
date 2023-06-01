@@ -1016,6 +1016,8 @@ public:
                               OutputArrayOfArrays straight_qrcode) const override;
 
     String decodeCurved(InputArray in, InputArray points, OutputArray straight_qrcode);
+
+    std::string detectAndDecodeCurved(InputArray in, OutputArray points, OutputArray straight_qrcode);
 };
 
 QRCodeDetector::QRCodeDetector() {
@@ -2935,9 +2937,14 @@ std::string ImplContour::detectAndDecode(InputArray in, OutputArray points_, Out
     return decoded_info;
 }
 
-std::string QRCodeDetector::detectAndDecodeCurved(InputArray in,
-                                                  OutputArray points_,
-                                                  OutputArray straight_qrcode)
+std::string QRCodeDetector::detectAndDecodeCurved(InputArray in, OutputArray points,
+                                                  OutputArray straight_qrcode) {
+    CV_Assert(p != nullptr);
+    return std::static_pointer_cast<ImplContour>(p)->detectAndDecodeCurved(in, points, straight_qrcode);
+}
+
+std::string ImplContour::detectAndDecodeCurved(InputArray in, OutputArray points_,
+                                               OutputArray straight_qrcode)
 {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
