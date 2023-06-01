@@ -93,14 +93,14 @@ if(BUILD_DOCS)
   else()
     # create_javadoc produces target ${_target}_javadoc
     create_javadoc(${the_module}
-      PACKAGES "org.opencv.core"
+      FILES "@${OPENCV_JAVA_DIR}/java_sources"
       SOURCEPATH "${OPENCV_JAVA_DIR}/java"
       INSTALLPATH "${OPENCV_JAVADOC_DESTINATION}"
       WINDOWTITLE "OpenCV ${OPENCV_VERSION_PLAIN} Java documentation"
       DOCTITLE "OpenCV Java documentation (${OPENCV_VERSION})"
       VERSION TRUE
     )
-    add_dependencies(${the_module}_javadoc ${the_module}_jar_source_copy)
+    add_dependencies(${the_module}_javadoc ${the_module}_jar_sources)
     add_custom_target(${the_module}doc DEPENDS ${the_module}_javadoc)
 
     install(DIRECTORY ${OpenCV_BINARY_DIR}/doc/doxygen/html/javadoc/${the_module}/
