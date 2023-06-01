@@ -63,6 +63,8 @@ else()
   get_filename_component(OPENCV_JAR_DIR ${OPENCV_JAR_FILE} DIRECTORY)
   get_filename_component(JAR_NAME_WE ${JAR_NAME} NAME_WE)
 
+  list(APPEND CMAKE_JAVA_COMPILE_FLAGS -encoding utf-8)
+
   add_jar(${the_module}_jar
           SOURCES "@${OPENCV_JAVA_DIR}/java_sources"
           OUTPUT_NAME ${JAR_NAME_WE}
