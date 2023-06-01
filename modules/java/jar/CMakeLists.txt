@@ -52,7 +52,9 @@ else()
   find_package(Java REQUIRED)
   include(UseJava)
 
+  ocv_cmake_byproducts(__byproducts BYPRODUCTS "${OPENCV_JAVA_DIR}/java_sources")
   add_custom_target(${the_module}_jar_sources
+                    BYPRODUCTS ${__byproducts}  # required for add_custom_target() by ninja
                     COMMAND ${CMAKE_COMMAND}
                     -D OPENCV_JAVA_DIR="${OPENCV_JAVA_DIR}"
                     -D OUTPUT="${OPENCV_JAVA_DIR}/java_sources"
