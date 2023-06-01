@@ -1363,27 +1363,27 @@ void cv::projectPoints( InputArray _opoints,
 
 void cv::getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs,
               InputArray R, InputArray newCameraMatrix, Size imgSize,
-              Rect_<float>& inner, Rect_<float>& outer )
+              Rect_<double>& inner, Rect_<double>& outer )
 {
     const int N = 9;
     int x, y, k;
-    Mat _pts(1, N*N, CV_32FC2);
-    Point2f* pts = _pts.ptr<Point2f>();
+    Mat _pts(1, N*N, CV_64FC2);
+    Point2d* pts = _pts.ptr<Point2d>();
 
     for( y = k = 0; y < N; y++ )
         for( x = 0; x < N; x++ )
-            pts[k++] = Point2f((float)x*imgSize.width/(N-1), (float)y*imgSize.height/(N-1));
+            pts[k++] = Point2d((double)x*(imgSize.width-1)/(N-1), (double)y*(imgSize.height-1)/(N-1));
 
     undistortPoints(_pts, _pts, _cameraMatrix, _distCoeffs, R, newCameraMatrix);
 
-    float iX0=-FLT_MAX, iX1=FLT_MAX, iY0=-FLT_MAX, iY1=FLT_MAX;
-    float oX0=FLT_MAX, oX1=-FLT_MAX, oY0=FLT_MAX, oY1=-FLT_MAX;
+    double iX0=-FLT_MAX, iX1=FLT_MAX, iY0=-FLT_MAX, iY1=FLT_MAX;
+    double oX0=FLT_MAX, oX1=-FLT_MAX, oY0=FLT_MAX, oY1=-FLT_MAX;
     // find the inscribed rectangle.
     // the code will likely not work with extreme rotation matrices (R) (>45%)
     for( y = k = 0; y < N; y++ )
         for( x = 0; x < N; x++ )
         {
-            Point2f p = pts[k++];
+            Point2d p = pts[k++];
             oX0 = MIN(oX0, p.x);
             oX1 = MAX(oX1, p.x);
             oY0 = MIN(oY0, p.y);
@@ -1398,15 +1398,15 @@ void cv::getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs
             if( y == N-1 )
                 iY1 = MIN(iY1, p.y);
         }
-    inner = Rect_<float>(iX0, iY0, iX1-iX0, iY1-iY0);
-    outer = Rect_<float>(oX0, oY0, oX1-oX0, oY1-oY0);
+    inner = Rect_<double>(iX0, iY0, iX1-iX0, iY1-iY0);
+    outer = Rect_<double>(oX0, oY0, oX1-oX0, oY1-oY0);
 }
 
 cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix, InputArray _distCoeffs,
                                   Size imgSize, double alpha, Size newImgSize,
                                   Rect* validPixROI, bool centerPrincipalPoint )
 {
-    Rect_<float> inner, outer;
+    Rect_<double> inner, outer;
     newImgSize = newImgSize.width*newImgSize.height != 0 ? newImgSize : imgSize;
 
     Mat cameraMatrix = _cameraMatrix.getMat(), M;
@@ -1436,10 +1436,10 @@ cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix, InputArray _dis
 
         if( validPixROI )
         {
-            inner = cv::Rect_<float>((float)((inner.x - cx0)*s + cx),
-                                     (float)((inner.y - cy0)*s + cy),
-                                     (float)(inner.width*s),
-                                     (float)(inner.height*s));
+            inner = cv::Rect_<double>((double)((inner.x - cx0)*s + cx),
+                                      (double)((inner.y - cy0)*s + cy),
+                                      (double)(inner.width*s),
+                                      (double)(inner.height*s));
             Rect r(cvCeil(inner.x), cvCeil(inner.y), cvFloor(inner.width), cvFloor(inner.height));
             r &= Rect(0, 0, newImgSize.width, newImgSize.height);
             *validPixROI = r;

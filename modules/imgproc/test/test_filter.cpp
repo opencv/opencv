@@ -49,10 +49,10 @@ public:
     CV_FilterBaseTest( bool _fp_kernel );
 
 protected:
-    int prepare_test_case( int test_case_idx );
-    int read_params( const cv::FileStorage& fs );
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
+    int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
+    int read_params( const cv::FileStorage& fs ) CV_OVERRIDE;
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types ) CV_OVERRIDE;
+    void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high ) CV_OVERRIDE;
     Size aperture_size;
     Point anchor;
     int max_aperture_size;

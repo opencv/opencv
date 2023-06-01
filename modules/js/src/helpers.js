@@ -57,7 +57,7 @@ Module['imread'] = function(imageSource) {
         canvas.height = img.height;
         ctx = canvas.getContext('2d', { willReadFrequently: true });
         ctx.drawImage(img, 0, 0, img.width, img.height);
-    } else if (img instanceof HTMLCanvasElement) {
+    } else if (img instanceof HTMLCanvasElement || img instanceof OffscreenCanvas) {
         canvas = img;
         ctx = canvas.getContext('2d');
     } else {

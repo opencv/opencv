@@ -236,7 +236,7 @@ void stereoRectify( InputArray _cameraMatrix1, InputArray _distCoeffs1,
 
     alpha = MIN(alpha, 1.);
 
-    cv::Rect_<float> inner1, inner2, outer1, outer2;
+    cv::Rect_<double> inner1, inner2, outer1, outer2;
     getUndistortRectangles(cameraMatrix1, distCoeffs1, _R1, _P1, imageSize, inner1, outer1);
     getUndistortRectangles(cameraMatrix2, distCoeffs2, _R2, _P2, imageSize, inner2, outer2);
 

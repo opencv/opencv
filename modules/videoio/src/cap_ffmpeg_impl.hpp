@@ -40,6 +40,7 @@
 //
 //M*/
 
+#include <opencv2/core/utils/configuration.private.hpp>
 #include "cap_ffmpeg_legacy_api.hpp"
 #include "opencv2/core/utils/logger.hpp"
 #include "cap_interface.hpp"
@@ -908,9 +909,11 @@ static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list v
 class InternalFFMpegRegister
 {
 public:
-    static void init()
+    static void init(const bool threadSafe)
     {
-        AutoLock lock(_mutex);
+        std::unique_lock<cv::Mutex> lock(_mutex, std::defer_lock);
+        if(!threadSafe)
+            lock.lock();
         static InternalFFMpegRegister instance;
         initLogger_();  // update logger setup unconditionally (GStreamer's libav plugin may override these settings)
     }
@@ -1000,11 +1003,22 @@ inline void fill_codec_context(AVCodecContext * enc, AVDictionary * dict)
     }
 }
 
+static bool isThreadSafe() {
+    const bool threadSafe = utils::getConfigurationParameterBool("OPENCV_FFMPEG_IS_THREAD_SAFE", false);
+    if (threadSafe) {
+        CV_LOG_WARNING(NULL, "VIDEOIO/FFMPEG: OPENCV_FFMPEG_IS_THREAD_SAFE == 1, all OpenCV locks removed, relying on FFmpeg to provide thread safety.  If FFmpeg is not thread safe isOpened() may return false when multiple threads try to call open() at the same time.");
+    }
+    return threadSafe;
+}
+
 bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters& params)
 {
-    InternalFFMpegRegister::init();
+    const bool threadSafe = isThreadSafe();
+    InternalFFMpegRegister::init(threadSafe);
 
-    AutoLock lock(_mutex);
+    std::unique_lock<cv::Mutex> lock(_mutex, std::defer_lock);
+    if(!threadSafe)
+        lock.lock();
 
     unsigned i;
     bool valid = false;
@@ -1327,6 +1341,10 @@ bool CvCapture_FFMPEG::setRaw()
     return true;
 }
 
+static inline bool h26xContainer(const char* formatLongName) {
+    return !strcmp(formatLongName, "QuickTime / MOV") || !strcmp(formatLongName, "FLV (Flash Video)") || !strcmp(formatLongName, "Matroska / WebM");
+}
+
 bool CvCapture_FFMPEG::processRawPacket()
 {
     if (packet.data == NULL)  // EOF
@@ -1350,14 +1368,8 @@ bool CvCapture_FFMPEG::processRawPacket()
 #endif
         )
         {
-            // check start code prefixed mode (as defined in the Annex B H.264 / H.265 specification)
-            if (packet.size >= 5
-                 && !(packet.data[0] == 0 && packet.data[1] == 0 && packet.data[2] == 0 && packet.data[3] == 1)
-                 && !(packet.data[0] == 0 && packet.data[1] == 0 && packet.data[2] == 1)
-            )
-            {
+            if(h26xContainer(ic->iformat->long_name))
                 filterName = eVideoCodec == CV_CODEC(CODEC_ID_H264) ? "h264_mp4toannexb" : "hevc_mp4toannexb";
-            }
         }
         if (filterName)
         {
@@ -1430,8 +1442,10 @@ bool CvCapture_FFMPEG::grabFrame()
 {
     bool valid = false;
 
-    int count_errs = 0;
-    const int max_number_of_attempts = 1 << 9;
+    static const size_t max_read_attempts = cv::utils::getConfigurationParameterSizeT("OPENCV_FFMPEG_READ_ATTEMPTS", 4096);
+    static const size_t max_decode_attempts = cv::utils::getConfigurationParameterSizeT("OPENCV_FFMPEG_DECODE_ATTEMPTS", 64);
+    size_t cur_read_attempts = 0;
+    size_t cur_decode_attempts = 0;
 
     if( !ic || !video_st || !context )  return false;
 
@@ -1486,9 +1500,15 @@ bool CvCapture_FFMPEG::grabFrame()
         if( packet.stream_index != video_stream )
         {
             _opencv_ffmpeg_av_packet_unref (&packet);
-            count_errs++;
-            if (count_errs > max_number_of_attempts)
+            if (++cur_read_attempts > max_read_attempts)
+            {
+                CV_LOG_WARNING(NULL,
+                    "packet read max attempts exceeded, if your video have "
+                    "multiple streams (video, audio) try to increase attempt "
+                    "limit by setting environment variable OPENCV_FFMPEG_READ_ATTEMPTS "
+                    "(current value is " << max_read_attempts << ")");
                 break;
+            }
             continue;
         }
 
@@ -1516,9 +1536,14 @@ bool CvCapture_FFMPEG::grabFrame()
         }
         else
         {
-            count_errs++;
-            if (count_errs > max_number_of_attempts)
+            if (++cur_decode_attempts > max_decode_attempts)
+            {
+                CV_LOG_WARNING(NULL,
+                    "frame decode max attempts exceeded, try to increase attempt "
+                    "limit by setting environment variable OPENCV_FFMPEG_DECODE_ATTEMPTS "
+                    "(current value is " << max_decode_attempts << ")");
                 break;
+            }
         }
     }
 
@@ -2646,9 +2671,12 @@ static inline void cv_ff_codec_tag_dump(const AVCodecTag *const *tags)
 bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
                                  double fps, int width, int height, const VideoWriterParameters& params)
 {
-    InternalFFMpegRegister::init();
+    const bool threadSafe = isThreadSafe();
+    InternalFFMpegRegister::init(threadSafe);
 
-    AutoLock lock(_mutex);
+    std::unique_lock<cv::Mutex> lock(_mutex, std::defer_lock);
+    if (!threadSafe)
+        lock.lock();
 
     CV_CODEC_ID codec_id = CV_CODEC(CODEC_ID_NONE);
     AVPixelFormat codec_pix_fmt;

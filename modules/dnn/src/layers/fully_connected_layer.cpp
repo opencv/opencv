@@ -48,6 +48,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
+#include "../op_vkcom.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -115,6 +116,8 @@ public:
                 biasMat = Mat::zeros(1, oriMat.size[oriMat.dims - 2], weightsMat.type());
             else
                 biasMat = Mat::zeros(1, numOutput, weightsMat.type());
+
+            transB = !transB;
         }
     }
 
@@ -155,7 +158,6 @@ public:
         }
         else
         {
-            CV_Assert(!transA && !transB);
             CV_CheckEQ(inputsTmp.size(), (size_t)1, "");
             CV_CheckEQ(blobs[0].dims, 2, "");
             if(isMatMul)
@@ -183,10 +185,11 @@ public:
             return axis == 1 && !tranAorB;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_CUDA && !tranAorB) ||
+               backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !tranAorB) ||
                (backendId == DNN_BACKEND_WEBNN && axis == 1 && !tranAorB) ||
-               backendId == DNN_BACKEND_CANN;;
+               backendId == DNN_BACKEND_CANN ||
+               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !tranAorB);
     }
 
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -527,7 +530,6 @@ public:
 
         if (!blobs.empty())
         {
-            CV_Assert(!transA && !transB);
             int inp1Dim = input[0].dims;
             if (isMatMul)
             {
@@ -611,12 +613,12 @@ public:
         const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        auto biasMat_ = bias ? biasMat : Mat();
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
 
         if (weightsMat.empty() || isMatMul)
         {
-            CV_Assert(!bias);
             int inp2Dim;
             // broadcast is not supported with CUDA
             if(weightsMat.empty())
@@ -627,16 +629,81 @@ public:
                 inp2Dim = oriMat.dims;
 
             if(input_wrapper->getRank() == inp2Dim)
-                return make_cuda_node<cuda4dnn::MatMulOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), oriMat);
+                return make_cuda_node<cuda4dnn::MatMulOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), oriMat, biasMat_, transA, transB);
             else
                 return Ptr<BackendNode>();
         }
 
         auto flatten_start_axis = normalize_axis(axis, input_wrapper->getRank());
-        auto biasMat_ = bias ? biasMat : Mat();
         return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, weightsMat, biasMat_);
     }
 #endif
+
+#ifdef HAVE_VULKAN
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                       std::vector<Ptr<BackendWrapper> > &outputs) CV_OVERRIDE
+    {
+        auto biasMat_ = bias ? biasMat : Mat();
+        auto input_wrapper = inputs[0].dynamicCast<VkComBackendWrapper>();
+
+        CV_Assert((inputs.size() == 2 || inputs.size() == 1) && outputs.size() == 1);
+        std::vector<Mat> vkBlobs;
+        Ptr<vkcom::OpBase> op;
+
+        if (!biasMat_.empty() || !activ.empty())
+        {
+            return Ptr<BackendNode>();
+        }
+
+        Ptr<VkComBackendWrapper> outputWrap = outputs[0].dynamicCast<VkComBackendWrapper>();
+        CV_Assert(outputWrap);
+        // TODO: Currently, we only support the 2D MatMul. Need support the FC layer and bias case in the future.
+
+        if (inputs.size() == 2)
+        {
+            Ptr<VkComBackendWrapper> inputWrap0 = inputs[0].dynamicCast<VkComBackendWrapper>();
+            Ptr<VkComBackendWrapper> inputWrap1 = inputs[1].dynamicCast<VkComBackendWrapper>();
+            CV_Assert(inputWrap0 && inputWrap1);
+
+            MatShape inpShape0 = shape(*inputWrap0->getMat());
+            MatShape inpShape1 = shape(*inputWrap1->getMat());
+            MatShape outShape = shape(*outputWrap->getMat());
+
+            // TODO Currently, vulkan only support 2D matmul. Try to support 3D and 4D matmul.
+            if (inpShape0.size() != 2 || inpShape1.size() != 2)
+                return Ptr<BackendNode>();
+
+            op = (new vkcom::OpMatMul(vkBlobs, inpShape0[0], inpShape0[1], outShape[1]));
+        }
+        else
+        {
+            CV_Assert(!weightsMat.empty());
+            Mat wm;
+            weightsMat.copyTo(wm); // to handle the case of isContinuous() == false
+            wm = wm.reshape(1, blobs[0].dims, blobs[0].size);
+            vkBlobs.push_back(wm.t());
+
+            Ptr<VkComBackendWrapper> inputWrap = inputs[0].dynamicCast<VkComBackendWrapper>();
+            CV_Assert(inputWrap);
+
+            MatShape inpShape = shape(*inputWrap->getMat());
+            MatShape outShape = shape(*outputWrap->getMat());
+            MatShape wShape = shape(weightsMat);
+
+            // TODO Currently, vulkan only support 2D matmul. Try to support 3D and 4D matmul.
+            if (inpShape.size() != 2 || wShape.size() != 2)
+                return Ptr<BackendNode>();
+
+            // TODO: Currently, only focus on 2D MatMul.
+            CV_Assert(inpShape.size() == 2 && outShape.size() == 2 && wShape.size() == 2);
+            CV_Assert(inpShape[1] == outShape[0]);
+            op = (new vkcom::OpMatMul(vkBlobs, inpShape[0], inpShape[1], outShape[1]));
+        }
+
+        return Ptr<BackendNode>(new VkComBackendNode(inputs, op, outputs));
+    }
+#endif
+
 
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
@@ -663,15 +730,16 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto x1 = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x1 = inputs[0].dynamicCast<CannBackendWrapper>();
         auto x1_desc = x1->getTensorDesc();
         auto op_x1 = nodes[0].dynamicCast<CannBackendNode>()->getOp();
         auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
 
-        std::string op_name = cv::format("matmul_%d", index);
-        auto op = std::make_shared<ge::op::MatMulV2>(op_name);
+        auto op = std::make_shared<ge::op::MatMulV2>(name);
 
         if (!blobs.empty()) // if B is const
         {
@@ -683,14 +751,14 @@ public:
 
             // set inputs
             // set inputs : x2 (weight)
-            auto op_const_weight = std::make_shared<CannConstOp>(weightsMat.data, weightsMat.type(), shape(weightsMat), cv::format("%s_w", op_name.c_str()));
+            auto op_const_weight = std::make_shared<CannConstOp>(weightsMat.data, weightsMat.type(), shape(weightsMat), cv::format("%s_w", name.c_str()));
             op->set_input_x2_by_name(*(op_const_weight->getOp()), "y");
             op->update_input_desc_x2(*(op_const_weight->getTensorDesc()));
         }
         else
         {
             // A and B are variable inputs; non-const bias is not considered
-            CV_Assert(inputsWrapper.size() == 2);
+            CV_Assert(inputs.size() == 2);
             CV_Assert(nodes.size() == 2);
 
             // set attributes
@@ -699,19 +767,19 @@ public:
 
             // set inputs : x2 (weight)
             auto op_x2 = nodes[1].dynamicCast<CannBackendNode>()->getOp();
-            auto x2_desc = inputsWrapper[1].dynamicCast<CannBackendWrapper>()->getTensorDesc();
+            auto x2_desc = inputs[1].dynamicCast<CannBackendWrapper>()->getTensorDesc();
             op->set_input_x2_by_name(*op_x2, "y");
             op->update_input_desc_x2(*x2_desc);
         }
 
         // set inputs
         // set inputs : x1 (input)
-        op->set_input_x1_by_name(*op_x1, "y");
+        op->set_input_x1_by_name(*op_x1, x1->name.c_str());
         op->update_input_desc_x1(*x1_desc);
         // set inputs : bias (bias)
         auto bias_mat = bias ? biasMat : Mat::zeros(1, weightsMat.size[0], weightsMat.type());
         std::vector<int> bias_shape{weightsMat.size[0]};
-        auto op_const_bias = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), bias_shape, cv::format("%s_b", op_name.c_str()));
+        auto op_const_bias = std::make_shared<CannConstOp>(bias_mat.data, bias_mat.type(), bias_shape, cv::format("%s_b", name.c_str()));
         op->set_input_bias(*(op_const_bias->getOp()));
         op->update_input_desc_bias(*(op_const_bias->getTensorDesc()));
 
@@ -844,15 +912,27 @@ public:
     {
         CV_UNUSED(inputs); // suppress unused variable warning
         long flops = 0;
+        int innerSize = 0;
 
-        int innerSize = blobs[0].size[1];
+        if (!blobs.empty())
+        {
+            innerSize = blobs[0].size[1];
+        }
+        else
+        {
+            CV_Assert(inputs.size() == 2);
+            if (transB)
+                innerSize = inputs[1][1];
+            else
+                innerSize = inputs[1][0];
+        }
+
         for(int i = 0; i < outputs.size(); i++)
         {
             flops += CV_BIG_INT(3)*innerSize*total(outputs[i]);
         }
 
         return flops;
-
     }
 
     bool bias;

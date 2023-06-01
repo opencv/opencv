@@ -634,18 +634,75 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        CV_Assert(sliceRanges.size() == 1);
-        CV_Assert(sliceSteps.size() == 1);
-        CV_Assert(sliceRanges[0].size() == sliceSteps[0].size());
+        bool isSplit = sliceRanges.size() > 1;
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        if (isSplit)
+        {
+            // create operator
+            auto op = std::make_shared<ge::op::SplitV>(name);
+
+            // set attr
+            int n_split = static_cast<int>(sliceRanges[0].size());
+            op->set_attr_num_split(n_split);
+
+            // set inputs
+            // set inputs : x
+            auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+            op->set_input_x_by_name(*op_x, x->name.c_str());
+            auto desc_x = x->getTensorDesc();
+            op->update_input_desc_x(*desc_x);
+            // set inputs : size_splits
+            std::vector<int> size_splits(n_split);
+            int cnt_split = 0;
+            for (size_t i = 0; i < sliceRanges.size() - 1; ++i)
+            {
+                auto target_range = sliceRanges[i].back();
+                size_splits[i] = target_range.end - target_range.start;
+                cnt_split += size_splits[i];
+            }
+            auto shape_x = desc_x->GetShape().GetDims();
+            CV_CheckGT(shape_x[axis], cnt_split, "DNN/CANN: invalid splits");
+            size_splits[n_split - 1] = shape_x[axis] - cnt_split;
+            std::vector<int> shape_size_splits{(int)size_splits.size()};
+            Mat size_splits_mat(shape_size_splits, CV_32S, size_splits.data());
+            auto op_const_size_splits = std::make_shared<CannConstOp>(size_splits_mat.data, size_splits_mat.type(), shape_size_splits, cv::format("%s_size_splits", name.c_str()));
+            op->set_input_size_splits(*(op_const_size_splits->getOp()));
+            op->update_input_desc_size_splits(*(op_const_size_splits->getTensorDesc()));
+            // set inputs : split_dim
+            Mat split_dim_mat(1, 1, CV_32S, Scalar(axis));
+            std::vector<int> split_dim_shape{1};
+            auto op_const_split_dim = std::make_shared<CannConstOp>(split_dim_mat.data, split_dim_mat.type(), split_dim_shape, cv::format("%s_split_dim", name.c_str()));
+            op->set_input_split_dim(*(op_const_split_dim->getOp()));
+            op->update_input_desc_split_dim(*(op_const_split_dim->getTensorDesc()));
+
+            // set outputs
+            op->create_dynamic_output_y(n_split);
+            for (uint32_t i = 0; i < n_split; ++i)
+            {
+                auto desc_output_y_i = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+                op->update_dynamic_output_desc_y(i, *desc_output_y_i);
+            }
+
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
+
+        // ONNX-Slice
+        CV_CheckEQ(sliceRanges.size(), (size_t)1, "");
+        if (hasSteps)
+        {
+            CV_CheckEQ(sliceSteps.size(), (size_t)1, "DNN/CANN/Slice: no support to multiple slices");
+            CV_CheckEQ(sliceRanges[0].size(), sliceSteps[0].size(), "DNN/CANN/Slice: number of slice ranges does not match number of slice steps");
+        }
+
         const int dims = x->host->dims;
 
         // create operator
-        std::string op_name = cv::format("slice_%d", index);
-        auto op = std::make_shared<ge::op::StridedSliceV2>(op_name);
+        auto op = std::make_shared<ge::op::StridedSliceV2>(name);
 
         // retrieve begins, ends, axes and steps
         std::vector<int> begins, ends, axes, steps;
@@ -654,34 +711,37 @@ public:
             begins.push_back(sliceRanges[0][i].start);
             ends.push_back(sliceRanges[0][i].end);
             axes.push_back(i);
-            steps.push_back(sliceSteps[0][i]);
+            if (hasSteps)
+                steps.push_back(sliceSteps[0][i]);
+            else
+                steps.push_back(1); // put 1 by default
         }
         std::vector<int> shape_{dims};
 
         // set inputs
         // set inputs : x
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        op->set_input_x_by_name(*op_x, "y");
+        op->set_input_x_by_name(*op_x, x->name.c_str());
         auto x_desc = x->getTensorDesc();
         op->update_input_desc_x(*x_desc);
         // set inputs : begin
         Mat begin_mat(shape_, CV_32S, &begins[0]);
-        auto op_const_begin = std::make_shared<CannConstOp>(begin_mat.data, begin_mat.type(), shape_, cv::format("%s_begin", op_name.c_str()));
+        auto op_const_begin = std::make_shared<CannConstOp>(begin_mat.data, begin_mat.type(), shape_, cv::format("%s_begin", name.c_str()));
         op->set_input_begin(*(op_const_begin->getOp()));
         op->update_input_desc_begin(*(op_const_begin->getTensorDesc()));
         // set inputs : end
         Mat end_mat(shape_, CV_32S, &ends[0]);
-        auto op_const_end = std::make_shared<CannConstOp>(end_mat.data, end_mat.type(), shape_, cv::format("%s_end", op_name.c_str()));
+        auto op_const_end = std::make_shared<CannConstOp>(end_mat.data, end_mat.type(), shape_, cv::format("%s_end", name.c_str()));
         op->set_input_end(*(op_const_end->getOp()));
         op->update_input_desc_end(*(op_const_end->getTensorDesc()));
         // set inputs : axes
         Mat axes_mat(shape_, CV_32S, &axes[0]);
-        auto op_const_axes = std::make_shared<CannConstOp>(axes_mat.data, axes_mat.type(), shape_, cv::format("%s_axes", op_name.c_str()));
+        auto op_const_axes = std::make_shared<CannConstOp>(axes_mat.data, axes_mat.type(), shape_, cv::format("%s_axes", name.c_str()));
         op->set_input_axes(*(op_const_axes->getOp()));
         op->update_input_desc_axes(*(op_const_axes->getTensorDesc()));
         // set inputs : strides
         Mat strides_mat(shape_, CV_32S, &steps[0]);
-        auto op_const_strides = std::make_shared<CannConstOp>(strides_mat.data, strides_mat.type(), shape_, cv::format("%s_strides", op_name.c_str()));
+        auto op_const_strides = std::make_shared<CannConstOp>(strides_mat.data, strides_mat.type(), shape_, cv::format("%s_strides", name.c_str()));
         op->set_input_strides(*(op_const_strides->getOp()));
         op->update_input_desc_strides(*(op_const_strides->getTensorDesc()));
 

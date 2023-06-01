@@ -332,9 +332,8 @@ public:
         // Inputs Run params
         std::vector<Ort::Value> in_tensors;
         for(size_t i = 0; i < num_in; ++i) {
-            char* in_node_name_p = session.GetInputName(i, allocator);
-            in_node_names.emplace_back(in_node_name_p);
-            allocator.Free(in_node_name_p);
+            auto in_node_name_p = session.GetInputNameAllocated(i, allocator);
+            in_node_names.emplace_back(in_node_name_p.get());
             in_node_dims = toORT(ins[i].size);
             in_tensors.emplace_back(Ort::Value::CreateTensor<T>(memory_info,
                                                                 const_cast<T*>(ins[i].ptr<T>()),
@@ -345,9 +344,8 @@ public:
         // Outputs Run params
         if (custom_out_names.empty()) {
             for(size_t i = 0; i < num_out; ++i) {
-                char* out_node_name_p = session.GetOutputName(i, allocator);
-                out_node_names.emplace_back(out_node_name_p);
-                allocator.Free(out_node_name_p);
+                auto out_node_name_p = session.GetOutputNameAllocated(i, allocator);
+                out_node_names.emplace_back(out_node_name_p.get());
             }
         } else {
             out_node_names = std::move(custom_out_names);
@@ -425,13 +423,17 @@ public:
         cv::Rect(cv::Point{50, 100}, cv::Size{250, 360})
     };
 
-    void preprocess(const cv::Mat& src, cv::Mat& dst) {
+    // FIXME(dm): There's too much "preprocess" routines in this file
+    // Only one must stay but better design it wisely (and later)
+    void preprocess(const cv::Mat& src, cv::Mat& dst, bool norm = true) {
         const int new_h = 224;
         const int new_w = 224;
         cv::Mat tmp, cvt, rsz;
         cv::resize(src, rsz, cv::Size(new_w, new_h));
-        rsz.convertTo(cvt, CV_32F, 1.f / 255);
-        tmp = (cvt - mean) / std;
+        rsz.convertTo(cvt, CV_32F, norm ? 1.f / 255 : 1.f);
+        tmp = norm
+            ? (cvt - mean) / std
+            : cvt;
         toCHW(tmp, dst);
         dst = dst.reshape(1, {1, 3, new_h, new_w});
     }
@@ -552,16 +554,16 @@ TEST_F(ONNXClassification, Infer)
     in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     // ONNX_API code
     cv::Mat processed_mat;
-    preprocess(in_mat, processed_mat);
+    preprocess(in_mat, processed_mat, false); // NO normalization for 1.0-9, see #23597
     infer<float>(processed_mat, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
     cv::GMat in;
     cv::GMat out = cv::gapi::infer<SqueezNet>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
-    // NOTE: We have to normalize U8 tensor
-    // so cfgMeanStd() is here
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    auto net = cv::gapi::onnx::Params<SqueezNet> {
+        model_path
+    }.cfgNormalize({false});
     comp.apply(cv::gin(in_mat),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
@@ -575,7 +577,7 @@ TEST_F(ONNXClassification, InferTensor)
     in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     // Create tensor
     cv::Mat tensor;
-    preprocess(in_mat, tensor);
+    preprocess(in_mat, tensor, false); // NO normalization for 1.0-9, see #23597
     // ONNX_API code
     infer<float>(tensor, out_onnx);
     // G_API code
@@ -583,7 +585,9 @@ TEST_F(ONNXClassification, InferTensor)
     cv::GMat in;
     cv::GMat out = cv::gapi::infer<SqueezNet>(in);
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path };
+    auto net = cv::gapi::onnx::Params<SqueezNet> {
+        model_path
+    }.cfgNormalize({false});
     comp.apply(cv::gin(tensor),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
@@ -598,7 +602,7 @@ TEST_F(ONNXClassification, InferROI)
     const auto ROI = rois.at(0);
     // ONNX_API code
     cv::Mat roi_mat;
-    preprocess(in_mat(ROI), roi_mat);
+    preprocess(in_mat(ROI), roi_mat, false);  // NO normalization for 1.0-9, see #23597
     infer<float>(roi_mat, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -606,9 +610,9 @@ TEST_F(ONNXClassification, InferROI)
     cv::GOpaque<cv::Rect> rect;
     cv::GMat out = cv::gapi::infer<SqueezNet>(rect, in);
     cv::GComputation comp(cv::GIn(in, rect), cv::GOut(out));
-    // NOTE: We have to normalize U8 tensor
-    // so cfgMeanStd() is here
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    auto net = cv::gapi::onnx::Params<SqueezNet> {
+        model_path
+    }.cfgNormalize({false});
     comp.apply(cv::gin(in_mat, ROI),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
@@ -623,7 +627,7 @@ TEST_F(ONNXClassification, InferROIList)
     // ONNX_API code
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
-        preprocess(in_mat(rois[i]), roi_mat);
+        preprocess(in_mat(rois[i]), roi_mat, false);  // NO normalization for 1.0-9, see #23597
         infer<float>(roi_mat, out_onnx);
     }
     // G_API code
@@ -634,7 +638,9 @@ TEST_F(ONNXClassification, InferROIList)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(out));
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    auto net = cv::gapi::onnx::Params<SqueezNet> {
+        model_path
+    }.cfgNormalize({false});
     comp.apply(cv::gin(in_mat, rois),
                cv::gout(out_gapi),
                cv::compile_args(cv::gapi::networks(net)));
@@ -649,7 +655,7 @@ TEST_F(ONNXClassification, Infer2ROIList)
     // ONNX_API code
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
-        preprocess(in_mat(rois[i]), roi_mat);
+        preprocess(in_mat(rois[i]), roi_mat, false);   // NO normalization for 1.0-9, see #23597
         infer<float>(roi_mat, out_onnx);
     }
     // G_API code
@@ -660,7 +666,9 @@ TEST_F(ONNXClassification, Infer2ROIList)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(out));
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    auto net = cv::gapi::onnx::Params<SqueezNet> {
+        model_path
+    }.cfgNormalize({false});
     comp.apply(cv::gin(in_mat, rois),
                cv::gout(out_gapi),
                cv::compile_args(cv::gapi::networks(net)));
@@ -749,7 +757,7 @@ TEST_F(ONNXMediaFrame, InferBGR)
     in_mat = cv::imread(findDataFile("cv/dpm/cat.png", false));
     // ONNX_API code
     cv::Mat processed_mat;
-    preprocess(in_mat, processed_mat);
+    preprocess(in_mat, processed_mat, false); // NO normalization for 1.0-9, see #23597
     infer<float>(processed_mat, out_onnx);
     // G_API code
     auto frame = MediaFrame::Create<TestMediaBGR>(in_mat);
@@ -759,7 +767,9 @@ TEST_F(ONNXMediaFrame, InferBGR)
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    auto net = cv::gapi::onnx::Params<SqueezNet> {
+        model_path
+    }.cfgNormalize({false});
     comp.apply(cv::gin(frame),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
@@ -776,7 +786,7 @@ TEST_F(ONNXMediaFrame, InferYUV)
     cv::Mat pp;
     cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
     cv::Mat processed_mat;
-    preprocess(pp, processed_mat);
+    preprocess(pp, processed_mat, false); // NO normalization for 1.0-9, see #23597
     infer<float>(processed_mat, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -785,7 +795,9 @@ TEST_F(ONNXMediaFrame, InferYUV)
     cv::GComputation comp(cv::GIn(in), cv::GOut(out));
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    auto net = cv::gapi::onnx::Params<SqueezNet> {
+        model_path
+    }.cfgNormalize({false});
     comp.apply(cv::gin(frame),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
@@ -800,7 +812,7 @@ TEST_F(ONNXMediaFrame, InferROIBGR)
     auto frame = MediaFrame::Create<TestMediaBGR>(in_mat);
     // ONNX_API code
     cv::Mat roi_mat;
-    preprocess(in_mat(rois.front()), roi_mat);
+    preprocess(in_mat(rois.front()), roi_mat, false);  // NO normalization for 1.0-9, see #23597
     infer<float>(roi_mat, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -810,7 +822,9 @@ TEST_F(ONNXMediaFrame, InferROIBGR)
     cv::GComputation comp(cv::GIn(in, rect), cv::GOut(out));
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    auto net = cv::gapi::onnx::Params<SqueezNet> {
+        model_path
+    }.cfgNormalize({false});
     comp.apply(cv::gin(frame, rois.front()),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
@@ -827,7 +841,7 @@ TEST_F(ONNXMediaFrame, InferROIYUV)
     cv::Mat pp;
     cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
     cv::Mat roi_mat;
-    preprocess(pp(rois.front()), roi_mat);
+    preprocess(pp(rois.front()), roi_mat, false);  // NO normalization for 1.0-9, see #23597
     infer<float>(roi_mat, out_onnx);
     // G_API code
     G_API_NET(SqueezNet, <cv::GMat(cv::GMat)>, "squeeznet");
@@ -837,7 +851,9 @@ TEST_F(ONNXMediaFrame, InferROIYUV)
     cv::GComputation comp(cv::GIn(in, rect), cv::GOut(out));
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    auto net = cv::gapi::onnx::Params<SqueezNet> {
+        model_path
+    }.cfgNormalize({false});
     comp.apply(cv::gin(frame, rois.front()),
                cv::gout(out_gapi.front()),
                cv::compile_args(cv::gapi::networks(net)));
@@ -853,7 +869,7 @@ TEST_F(ONNXMediaFrame, InferListBGR)
     // ONNX_API code
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
-        preprocess(in_mat(rois[i]), roi_mat);
+        preprocess(in_mat(rois[i]), roi_mat, false);  // NO normalization for 1.0-9, see #23597
         infer<float>(roi_mat, out_onnx);
     }
     // G_API code
@@ -864,7 +880,9 @@ TEST_F(ONNXMediaFrame, InferListBGR)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(out));
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    auto net = cv::gapi::onnx::Params<SqueezNet> {
+        model_path
+    }.cfgNormalize({false});
     comp.apply(cv::gin(frame, rois),
                cv::gout(out_gapi),
                cv::compile_args(cv::gapi::networks(net)));
@@ -882,7 +900,7 @@ TEST_F(ONNXMediaFrame, InferListYUV)
     cvtColorTwoPlane(m_in_y, m_in_uv, pp, cv::COLOR_YUV2BGR_NV12);
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
-        preprocess(pp(rois[i]), roi_mat);
+        preprocess(pp(rois[i]), roi_mat, false);   // NO normalization for 1.0-9, see #23597
         infer<float>(roi_mat, out_onnx);
     }
     // G_API code
@@ -893,7 +911,9 @@ TEST_F(ONNXMediaFrame, InferListYUV)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(out));
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    auto net = cv::gapi::onnx::Params<SqueezNet> {
+        model_path
+    }.cfgNormalize({false});
     comp.apply(cv::gin(frame, rois),
                cv::gout(out_gapi),
                cv::compile_args(cv::gapi::networks(net)));
@@ -935,7 +955,7 @@ TEST_F(ONNXMediaFrame, InferList2BGR)
     // ONNX_API code
     for (size_t i = 0; i < rois.size(); ++i) {
         cv::Mat roi_mat;
-        preprocess(in_mat(rois[i]), roi_mat);
+        preprocess(in_mat(rois[i]), roi_mat, false);  // NO normalization for 1.0-9, see #23597
         infer<float>(roi_mat, out_onnx);
     }
     // G_API code
@@ -946,7 +966,9 @@ TEST_F(ONNXMediaFrame, InferList2BGR)
     cv::GComputation comp(cv::GIn(in, rr), cv::GOut(out));
     // NOTE: We have to normalize U8 tensor
     // so cfgMeanStd() is here
-    auto net = cv::gapi::onnx::Params<SqueezNet> { model_path }.cfgMeanStd({ mean }, { std });
+    auto net = cv::gapi::onnx::Params<SqueezNet> {
+        model_path
+    }.cfgNormalize({false});
     comp.apply(cv::gin(frame, rois),
                cv::gout(out_gapi),
                cv::compile_args(cv::gapi::networks(net)));

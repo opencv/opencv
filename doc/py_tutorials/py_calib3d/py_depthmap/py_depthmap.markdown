@@ -44,7 +44,7 @@ from matplotlib import pyplot as plt
 imgL = cv.imread('tsukuba_l.png', cv.IMREAD_GRAYSCALE)
 imgR = cv.imread('tsukuba_r.png', cv.IMREAD_GRAYSCALE)
 
-stereo = cv.StereoBM_create(numDisparities=16, blockSize=15)
+stereo = cv.StereoBM.create(numDisparities=16, blockSize=15)
 disparity = stereo.compute(imgL,imgR)
 plt.imshow(disparity,'gray')
 plt.show()
@@ -63,6 +63,9 @@ There are some parameters when you get familiar with StereoBM, and you may need 
 - uniqueness_ratio: Another post-filtering step. If the best matching disparity is not sufficiently better than every other disparity in the search range, the pixel is filtered out. You can try tweaking this if texture_threshold and the speckle filtering are still letting through spurious matches.
 - prefilter_size and prefilter_cap: The pre-filtering phase, which normalizes image brightness and enhances texture in preparation for block matching. Normally you should not need to adjust these.
 
+These parameters are set with dedicated setters and getters after the algoritm
+initialization, such as `setTextureThreshold`, `setSpeckleRange`, `setUniquenessRatio`,
+and more. See cv::StereoBM documentation for details.
 
 Additional Resources
 --------------------

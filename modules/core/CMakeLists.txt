@@ -179,7 +179,7 @@ ocv_install_3rdparty_licenses(SoftFloat "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/So
 
 
 # generate data (samples data) config file
-set(OPENCV_DATA_CONFIG_FILE "${CMAKE_BINARY_DIR}/opencv_data_config.hpp")
+set(OPENCV_DATA_CONFIG_FILE "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv_data_config.hpp")
 set(OPENCV_DATA_CONFIG_STR "")
 
 if(CMAKE_INSTALL_PREFIX)

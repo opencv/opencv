@@ -358,7 +358,7 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         pt1.y ^= pt2.y & j;
 
         x_step = XY_ONE;
-        y_step = (dy << XY_SHIFT) / (ax | 1);
+        y_step = (int64)((uint64_t)dy << XY_SHIFT) / (ax | 1);
         pt2.x += XY_ONE;
         ecount = (int)((pt2.x >> XY_SHIFT) - (pt1.x >> XY_SHIFT));
         j = -(pt1.x & (XY_ONE - 1));
@@ -380,7 +380,7 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
         pt2.y ^= pt1.y & i;
         pt1.y ^= pt2.y & i;
 
-        x_step = (dx << XY_SHIFT) / (ay | 1);
+        x_step = (int64)((uint64_t)dx << XY_SHIFT) / (ay | 1);
         y_step = XY_ONE;
         pt2.y += XY_ONE;
         ecount = (int)((pt2.y >> XY_SHIFT) - (pt1.y >> XY_SHIFT));
