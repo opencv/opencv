@@ -317,8 +317,8 @@ def calibrateFromPoints(
 #        sys.exit(0)
 
     print('calibration time', time.time() - start_time, 'seconds')
-    print('rvecs', rvecs)
-    print('tvecs', Ts)
+    print('rvecs', [rvecs[x].transpose() for x in range(len(rvecs))])
+    print('tvecs', [Ts[x].transpose() for x in range(len(Ts))])
     print('K', Ks)
     print('distortion', distortions)
     print('mean RMS error over all visible frames %.3E' % rmse)
@@ -678,7 +678,7 @@ if __name__ == '__main__':
     parser.add_argument('--json_file', type=str, default=None, help="json file with all data. Must have keys: 'object_points', 'image_points', 'image_sizes', 'is_fisheye'")
     parser.add_argument('--filenames', type=str, default=None, help='Txt files containg image lists, e.g., cam_1.txt,cam_2.txt,...,cam_N.txt for N cameras')
     parser.add_argument('--pattern_size', type=str, default=None, help='pattern size: width,height')
-    parser.add_argument('--pattern_type', type=str, default=None, help='supported: checkeboard, circles, acircles')
+    parser.add_argument('--pattern_type', type=str, default=None, help='supported: checkerboard, circles, acircles')
     parser.add_argument('--fisheye', type=str, default=None, help='fisheye mask, e.g., 0,1,...')
     parser.add_argument('--pattern_distance', type=float, default=None, help='distance between object / pattern points')
     parser.add_argument('--find_intrinsics_in_python', required=False, action='store_true', help='calibrate intrinsics in Python sample instead of C++')
@@ -707,15 +707,17 @@ if __name__ == '__main__':
 
     if params.json_file is not None:
         output = calibrateFromJSON(params.json_file, params.find_intrinsics_in_python)
+        cam_ids = [str(x) for x in range(len(output['rvecs']))]
+        output['cam_ids'] = cam_ids
     else:
-        if (params.pattern_type is None and params.pattern_size is None and params.pattern_distance is None):
+        if (params.pattern_type is None or params.pattern_size is None or params.pattern_distance is None):
             assert False and 'Either json file or all other parameters must be set'
 
         # cam_N.txt --> cam_N --> N
         cam_ids = [os.path.splitext(f)[0].split('_')[-1] for f in params.filenames.split(',')]
 
         output = calibrateFromImages(
-            files_with_images=params.filenames.split(','),
+            files_with_images=[x.strip() for x in params.filenames.split(',')],
             grid_size=[int(v) for v in params.pattern_size.split(',')],
             pattern_type=params.pattern_type,
             is_fisheye=[bool(int(v)) for v in params.fisheye.split(',')],

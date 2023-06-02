@@ -23,5 +23,6 @@ bin/
 *.tlog
 build
 node_modules
+results
 CMakeSettings.json
 xcuserdata/
