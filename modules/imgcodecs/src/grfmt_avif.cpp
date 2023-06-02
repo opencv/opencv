@@ -120,7 +120,10 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless,
   rgba.pixels =
       const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(img.data));
 
-  if (avifImageRGBToYUV(result, &rgba) != AVIF_RESULT_OK) return nullptr;
+  if (avifImageRGBToYUV(result, &rgba) != AVIF_RESULT_OK) {
+    avifImageDestroy(result);
+    return nullptr;
+  }
   return AvifImageUniquePtr(result);
 }
 
@@ -150,8 +153,7 @@ bool AvifDecoder::checkSignature(const String &signature) const {
                          signature.size());
   decoder_->io->sizeHint = 1e9;
   const avifResult status = avifDecoderParse(decoder_);
-  return (status != AVIF_RESULT_INVALID_FTYP &&
-          status != AVIF_RESULT_BMFF_PARSE_FAILED);
+  return (status == AVIF_RESULT_OK || status == AVIF_RESULT_TRUNCATED_DATA);
 }
 
 #define OPENCV_AVIF_CHECK_STATUS(X, ENCDEC)               \

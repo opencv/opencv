@@ -12,7 +12,7 @@
 
 unset(AVIF_FOUND)
 
-find_package(libavif QUIET)
+#find_package(libavif QUIET)
 
 if(TARGET avif)
     MARK_AS_ADVANCED(AVIF_INCLUDE_DIR)
