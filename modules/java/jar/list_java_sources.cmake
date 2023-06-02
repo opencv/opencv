@@ -1,4 +1,4 @@
-file(GLOB_RECURSE java_sources "${OPENCV_JAVA_DIR}/java/*.java")
+file(GLOB_RECURSE java_sources "${OPENCV_JAVA_DIR}/*.java")
 
 set(__sources "")
 

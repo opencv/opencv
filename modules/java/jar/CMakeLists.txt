@@ -60,7 +60,7 @@ else()
                     BYPRODUCTS ${__byproducts}  # required for add_custom_target() by ninja
                     DEPENDS ${depends}
                     COMMAND ${CMAKE_COMMAND}
-                    -D OPENCV_JAVA_DIR="${OPENCV_JAVA_DIR}"
+                    -D OPENCV_JAVA_DIR="${OPENCV_JAVA_DIR}/java"
                     -D OUTPUT="${OPENCV_JAVA_DIR}/java_sources"
                     -P "${CMAKE_CURRENT_SOURCE_DIR}/list_java_sources.cmake")
 
