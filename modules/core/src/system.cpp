@@ -295,9 +295,7 @@ DECLARE_CV_CPUID_X86
   #endif
 #endif
 
-#if defined CV_CXX11
-  #include <chrono>
-#endif
+#include <chrono>
 
 namespace cv
 {
@@ -898,50 +896,15 @@ bool useOptimized(void)
 
 int64 getTickCount(void)
 {
-#if defined CV_CXX11
     std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
     return (int64)now.time_since_epoch().count();
-#elif defined _WIN32 || defined WINCE
-    LARGE_INTEGER counter;
-    QueryPerformanceCounter( &counter );
-    return (int64)counter.QuadPart;
-#elif defined __MACH__ && defined __APPLE__
-    return (int64)mach_absolute_time();
-#elif defined __unix__
-    struct timespec tp;
-    clock_gettime(CLOCK_MONOTONIC, &tp);
-    return (int64)tp.tv_sec*1000000000 + tp.tv_nsec;
-#else
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return (int64)tv.tv_sec*1000000 + tv.tv_usec;
-#endif
 }
 
 double getTickFrequency(void)
 {
-#if defined CV_CXX11
     using clock_period_t = std::chrono::steady_clock::duration::period;
     double clock_freq = clock_period_t::den / clock_period_t::num;
     return clock_freq;
-#elif defined _WIN32 || defined WINCE
-    LARGE_INTEGER freq;
-    QueryPerformanceFrequency(&freq);
-    return (double)freq.QuadPart;
-#elif defined __MACH__ && defined __APPLE__
-    static double freq = 0;
-    if( freq == 0 )
-    {
-        mach_timebase_info_data_t sTimebaseInfo;
-        mach_timebase_info(&sTimebaseInfo);
-        freq = sTimebaseInfo.denom*1e9/sTimebaseInfo.numer;
-    }
-    return freq;
-#elif defined __unix__
-    return 1e9;
-#else
-    return 1e6;
-#endif
 }
 
 #if defined __GNUC__ && (defined __i386__ || defined __x86_64__ || defined __ppc__)

@@ -102,9 +102,7 @@ int main()
 
     double t1 = (double) getTickCount();
 
-    #ifdef CV_CXX11
-
-    //! [mandelbrot-parallel-call-cxx11]
+    //! [mandelbrot-parallel-call]
     parallel_for_(Range(0, mandelbrotImg.rows*mandelbrotImg.cols), [&](const Range& range){
         for (int r = range.start; r < range.end; r++)
         {
@@ -119,16 +117,7 @@ int main()
             mandelbrotImg.ptr<uchar>(i)[j] = value;
         }
     });
-    //! [mandelbrot-parallel-call-cxx11]
-
-    #else
-
     //! [mandelbrot-parallel-call]
-    ParallelMandelbrot parallelMandelbrot(mandelbrotImg, x1, y1, scaleX, scaleY);
-    parallel_for_(Range(0, mandelbrotImg.rows*mandelbrotImg.cols), parallelMandelbrot);
-    //! [mandelbrot-parallel-call]
-
-    #endif
 
     t1 = ((double) getTickCount() - t1) / getTickFrequency();
     cout << "Parallel Mandelbrot: " << t1 << " s" << endl;

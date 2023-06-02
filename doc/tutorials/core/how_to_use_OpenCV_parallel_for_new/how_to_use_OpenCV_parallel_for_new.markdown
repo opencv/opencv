@@ -96,8 +96,8 @@ When looking at the sequential implementation, we can notice that each pixel dep
 
 @note Although values of a pixel in a particular stripe may depend on pixel values outside the stripe, these are only read only operations and hence will not cause undefined behaviour.
 
+C++11 standard allows a parallel implementation with a lambda expression:
 
-We first declare a custom class that inherits from @ref cv::ParallelLoopBody and override the `virtual void operator ()(const cv::Range& range) const`.
 @snippet how_to_use_OpenCV_parallel_for_new.cpp convolution-parallel
 
 The range in the `operator ()` represents the subset of values that will be treated by an individual thread. Based on the requirement, there may be different ways of splitting the range which in turn changes the computation.
@@ -121,10 +121,6 @@ For example, we can either
 @note In our case, both implementations perform similarly. Some cases may allow better memory access patterns or other performance benefits.
 
 To set the number of threads, you can use: @ref cv::setNumThreads. You can also specify the number of splitting using the nstripes parameter in @ref cv::parallel_for_. For instance, if your processor has 4 threads, setting `cv::setNumThreads(2)` or setting `nstripes=2` should be the same as by default it will use all the processor threads available but will split the workload only on two threads.
-
-@note C++ 11 standard allows to simplify the parallel implementation by get rid of the `parallelConvolution` class and replacing it with lambda expression:
-
-@snippet how_to_use_OpenCV_parallel_for_new.cpp convolution-parallel-cxx11
 
 Results
 -----------
