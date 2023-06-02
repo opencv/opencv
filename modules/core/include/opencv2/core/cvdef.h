@@ -751,28 +751,6 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 
 
 /****************************************************************************************\
-*                      CV_NODISCARD attribute (deprecated, GCC only)                     *
-* DONT USE: use instead the standard CV_NODISCARD_STD macro above                        *
-*           this legacy method silently fails to issue warning until some version        *
-*           after gcc 6.3.0. Yet with gcc 7+ you can use the above standard method       *
-*           which makes this method useless. Don't use it.                               *
-* @deprecated use instead CV_NODISCARD_STD                                               *
-\****************************************************************************************/
-#ifndef CV_NODISCARD
-#  if defined(__GNUC__)
-#    define CV_NODISCARD __attribute__((__warn_unused_result__))
-#  elif defined(__clang__) && defined(__has_attribute)
-#    if __has_attribute(__warn_unused_result__)
-#      define CV_NODISCARD __attribute__((__warn_unused_result__))
-#    endif
-#  endif
-#endif
-#ifndef CV_NODISCARD
-#  define CV_NODISCARD /* nothing by default */
-#endif
-
-
-/****************************************************************************************\
 *                                    C++ 11                                              *
 \****************************************************************************************/
 #ifndef CV_CXX11
