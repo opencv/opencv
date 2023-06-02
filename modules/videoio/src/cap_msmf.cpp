@@ -38,6 +38,7 @@
 #include <string>
 #include <algorithm>
 #include <deque>
+#include <iterator>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>

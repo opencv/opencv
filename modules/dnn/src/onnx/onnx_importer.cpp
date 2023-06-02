@@ -22,6 +22,7 @@
 
 #ifdef HAVE_PROTOBUF
 
+#include <array>
 #include <iostream>
 #include <fstream>
 #include <string>
