@@ -95,6 +95,8 @@ if(BUILD_DOCS)
       ${compatible_MESSAGE_NEVER}
     )
   else()
+    set(Java_JAVADOC_EXECUTABLE ${Java_JAVADOC_EXECUTABLE} -encoding utf-8)
+
     # create_javadoc produces target ${_target}_javadoc
     create_javadoc(${the_module}
       FILES "@${OPENCV_JAVA_DIR}/java_sources"
