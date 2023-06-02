@@ -190,6 +190,14 @@ _PREDEFINED_TYPES = (
                             PrimitiveTypeNode.float_(),
                             PrimitiveTypeNode.str_())
                         ), export_name="SearchParams"),
+    AliasTypeNode.dict_("map_string_and_string", PrimitiveTypeNode.str_("map_string_and_string::key"),
+                        PrimitiveTypeNode.str_("map_string_and_string::key::value")),
+    AliasTypeNode.dict_("map_string_and_int", PrimitiveTypeNode.str_("map_string_and_int::key"),
+                        PrimitiveTypeNode.int_("map_string_and_int::key::value")),
+    AliasTypeNode.dict_("map_string_and_vector_size_t", PrimitiveTypeNode.str_("map_string_and_vector_size_t::key"),
+                        SequenceTypeNode("map_string_and_vector_size_t::key::value", PrimitiveTypeNode.int_("size_t"))),
+    AliasTypeNode.dict_("map_string_and_vector_float", PrimitiveTypeNode.str_("map_string_and_vector_float::key"),
+                        SequenceTypeNode("map_string_and_vector_float::key::value", PrimitiveTypeNode.float_())),
 )
 
 PREDEFINED_TYPES = dict(zip((t.ctype_name for t in _PREDEFINED_TYPES), _PREDEFINED_TYPES))
