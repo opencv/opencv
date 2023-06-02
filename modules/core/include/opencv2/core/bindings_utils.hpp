@@ -243,6 +243,33 @@ struct CV_EXPORTS_W_SIMPLE ClassWithKeywordProperties {
     }
 };
 
+struct CV_EXPORTS_W_PARAMS FunctionParams
+{
+    CV_PROP_RW int lambda = -1;
+    CV_PROP_RW float sigma = 0.0f;
+
+    FunctionParams& setLambda(int value) CV_NOEXCEPT
+    {
+        lambda = value;
+        return *this;
+    }
+
+    FunctionParams& setSigma(float value) CV_NOEXCEPT
+    {
+        sigma = value;
+        return *this;
+    }
+};
+
+CV_WRAP static inline String
+copyMatAndDumpNamedArguments(InputArray src, OutputArray dst,
+                             const FunctionParams& params = FunctionParams())
+{
+    src.copyTo(dst);
+    return format("lambda=%d, sigma=%.1f", params.lambda,
+                  params.sigma);
+}
+
 namespace nested {
 CV_WRAP static inline bool testEchoBooleanFunction(bool flag) {
     return flag;
