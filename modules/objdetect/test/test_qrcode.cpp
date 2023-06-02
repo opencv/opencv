@@ -369,12 +369,9 @@ TEST_P(Objdetect_QRCode_Multi, regression)
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
     if (disabled_samples.find({name_current_image, method}) != disabled_samples.end())
         throw SkipTestException(name_current_image + " is disabled sample for method " + method);
-    QRCodeDetectorBase qrcode;
+    QRCodeDetectorBase qrcode = QRCodeDetector();
     if (method == "aruco_based") {
         qrcode = QRCodeDetectorAruco();
-    }
-    else {
-        qrcode = QRCodeDetector();
     }
     std::vector<Point> corners;
 #ifdef HAVE_QUIRC
@@ -430,12 +427,9 @@ TEST_P(Objdetect_QRCode_detectMulti, detect_regression_16961)
     Mat src = imread(image_path);
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 
-    QRCodeDetectorBase qrcode;
+    QRCodeDetectorBase qrcode = QRCodeDetector();
     if (method == "aruco_based") {
         qrcode = QRCodeDetectorAruco();
-    }
-    else {
-        qrcode = QRCodeDetector();
     }
     std::vector<Point> corners;
     EXPECT_TRUE(qrcode.detectMulti(src, corners));
@@ -456,12 +450,9 @@ TEST_P(Objdetect_QRCode_detectAndDecodeMulti, check_output_parameters_type_19363
     Mat src = imread(image_path);
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
 #ifdef HAVE_QUIRC
-    QRCodeDetectorBase qrcode;
+    QRCodeDetectorBase qrcode = QRCodeDetector();
     if (method == "aruco_based") {
         qrcode = QRCodeDetectorAruco();
-    }
-    else {
-        qrcode = QRCodeDetector();
     }
     std::vector<Point> corners;
     std::vector<cv::String> decoded_info;
@@ -628,12 +619,9 @@ TEST_P(Objdetect_QRCode_detectAndDecodeMulti, decode_9_qrcodes_version7)
     std::string image_path = findDataFile(root + name_current_image);
     Mat src = imread(image_path);
     const std::string method = GetParam();
-    QRCodeDetectorBase qrcode;
+    QRCodeDetectorBase qrcode = QRCodeDetector();
     if (method == "aruco_based") {
         qrcode = QRCodeDetectorAruco();
-    }
-    else {
-        qrcode = QRCodeDetector();
     }
     std::vector<Point> corners;
     std::vector<cv::String> decoded_info;

@@ -766,7 +766,7 @@ public:
 
 class CV_EXPORTS_W_SIMPLE QRCodeDetectorBase {
 public:
-    //CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
     QRCodeDetectorBase();
 
     QRCodeDetectorBase(const QRCodeDetectorBase&) = default;
@@ -787,7 +787,7 @@ public:
      @param points Quadrangle vertices found by detect() method (or some other algorithm).
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
-    CV_WRAP std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray());
+    CV_WRAP std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode = noArray()) const;
 
     /** @brief Both detects and decodes QR code
 
@@ -796,7 +796,7 @@ public:
      @param straight_qrcode The optional output image containing rectified and binarized QR code
      */
     CV_WRAP std::string detectAndDecode(InputArray img, OutputArray points=noArray(),
-                                        OutputArray straight_qrcode = noArray());
+                                        OutputArray straight_qrcode = noArray()) const;
 
 
     /** @brief Detects QR codes in image and returns the vector of the quadrangles containing the codes.

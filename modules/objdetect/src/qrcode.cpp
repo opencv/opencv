@@ -952,8 +952,8 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
 struct QRCodeDetectorBase::Impl {
     virtual ~Impl() {}
     virtual bool detect(InputArray img, OutputArray points) const = 0;
-    virtual std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode) = 0;
-    virtual std::string detectAndDecode(InputArray img, OutputArray points, OutputArray straight_qrcode) = 0;
+    virtual std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode) const = 0;
+    virtual std::string detectAndDecode(InputArray img, OutputArray points, OutputArray straight_qrcode) const = 0;
     virtual bool detectMulti(InputArray img, OutputArray points) const = 0;
     virtual bool decodeMulti(InputArray img, InputArray points, std::vector<std::string>& decoded_info,
                              OutputArrayOfArrays straight_qrcode) const = 0;
@@ -964,34 +964,34 @@ struct QRCodeDetectorBase::Impl {
 QRCodeDetectorBase::QRCodeDetectorBase() {}
 
 bool QRCodeDetectorBase::detect(InputArray img, OutputArray points) const {
-    CV_Assert(p != nullptr);
+    CV_Assert(p);
     return p->detect(img, points);
 }
 
-std::string QRCodeDetectorBase::decode(InputArray img, InputArray points, OutputArray straight_qrcode) {
-    CV_Assert(p != nullptr);
+std::string QRCodeDetectorBase::decode(InputArray img, InputArray points, OutputArray straight_qrcode) const {
+    CV_Assert(p);
     return p->decode(img, points, straight_qrcode);
 }
 
-std::string QRCodeDetectorBase::detectAndDecode(InputArray img, OutputArray points, OutputArray straight_qrcode) {
-    CV_Assert(p != nullptr);
+std::string QRCodeDetectorBase::detectAndDecode(InputArray img, OutputArray points, OutputArray straight_qrcode) const {
+    CV_Assert(p);
     return p->detectAndDecode(img, points, straight_qrcode);
 }
 
 bool QRCodeDetectorBase::detectMulti(InputArray img, OutputArray points) const {
-    CV_Assert(p != nullptr);
+    CV_Assert(p);
     return p->detectMulti(img, points);
 }
 
 bool QRCodeDetectorBase::decodeMulti(InputArray img, InputArray points, std::vector<std::string>& decoded_info,
                                      OutputArrayOfArrays straight_qrcode) const {
-    CV_Assert(p != nullptr);
+    CV_Assert(p);
     return p->decodeMulti(img, points, decoded_info, straight_qrcode);
 }
 
 bool QRCodeDetectorBase::detectAndDecodeMulti(InputArray img, std::vector<std::string>& decoded_info,
                                               OutputArray points, OutputArrayOfArrays straight_qrcode) const {
-    CV_Assert(p != nullptr);
+    CV_Assert(p);
     return p->detectAndDecodeMulti(img, decoded_info, points, straight_qrcode);
 }
 
@@ -1006,8 +1006,8 @@ public:
     bool useAlignmentMarkers = true;
 
     bool detect(InputArray in, OutputArray points) const override;
-    std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode) override;
-    std::string detectAndDecode(InputArray img, OutputArray points, OutputArray straight_qrcode) override;
+    std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode) const override;
+    std::string detectAndDecode(InputArray img, OutputArray points, OutputArray straight_qrcode) const override;
 
     bool detectMulti(InputArray img, OutputArray points) const override;
     bool decodeMulti(InputArray img, InputArray points, std::vector<cv::String>& decoded_info,
@@ -1025,12 +1025,12 @@ QRCodeDetector::QRCodeDetector() {
 }
 
 QRCodeDetector& QRCodeDetector::setEpsX(double epsX) {
-    (std::static_pointer_cast<ImplContour>)(p)->epsX = epsX;
+    std::dynamic_pointer_cast<ImplContour>(p)->epsX = epsX;
     return *this;
 }
 
 QRCodeDetector& QRCodeDetector::setEpsY(double epsY) {
-    (std::static_pointer_cast<ImplContour>)(p)->epsY = epsY;
+    std::dynamic_pointer_cast<ImplContour>(p)->epsY = epsY;
     return *this;
 }
 
@@ -2853,7 +2853,7 @@ QRDecode::QRDecode(bool _useAlignmentMarkers):
     test_perspective_size(0.f)
     {}
 
-std::string ImplContour::decode(InputArray in, InputArray points, OutputArray straight_qrcode) {
+std::string ImplContour::decode(InputArray in, InputArray points, OutputArray straight_qrcode) const {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
         return std::string();
@@ -2884,8 +2884,8 @@ std::string ImplContour::decode(InputArray in, InputArray points, OutputArray st
 }
 
 String QRCodeDetector::decodeCurved(InputArray in, InputArray points, OutputArray straight_qrcode) {
-    CV_Assert(p != nullptr);
-    return std::static_pointer_cast<ImplContour>(p)->decodeCurved(in, points, straight_qrcode);
+    CV_Assert(p);
+    return std::dynamic_pointer_cast<ImplContour>(p)->decodeCurved(in, points, straight_qrcode);
 }
 
 String ImplContour::decodeCurved(InputArray in, InputArray points, OutputArray straight_qrcode)
@@ -2917,7 +2917,7 @@ String ImplContour::decodeCurved(InputArray in, InputArray points, OutputArray s
     return ok ? decoded_info : std::string();
 }
 
-std::string ImplContour::detectAndDecode(InputArray in, OutputArray points_, OutputArray straight_qrcode) {
+std::string ImplContour::detectAndDecode(InputArray in, OutputArray points_, OutputArray straight_qrcode) const {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
     {
@@ -2939,8 +2939,8 @@ std::string ImplContour::detectAndDecode(InputArray in, OutputArray points_, Out
 
 std::string QRCodeDetector::detectAndDecodeCurved(InputArray in, OutputArray points,
                                                   OutputArray straight_qrcode) {
-    CV_Assert(p != nullptr);
-    return std::static_pointer_cast<ImplContour>(p)->detectAndDecodeCurved(in, points, straight_qrcode);
+    CV_Assert(p);
+    return std::dynamic_pointer_cast<ImplContour>(p)->detectAndDecodeCurved(in, points, straight_qrcode);
 }
 
 std::string ImplContour::detectAndDecodeCurved(InputArray in, OutputArray points_,
@@ -4064,7 +4064,7 @@ bool ImplContour::detectAndDecodeMulti(
 }
 
 QRCodeDetector& QRCodeDetector::setUseAlignmentMarkers(bool useAlignmentMarkers) {
-    (std::static_pointer_cast<ImplContour>)(p)->useAlignmentMarkers = useAlignmentMarkers;
+    (std::dynamic_pointer_cast<ImplContour>)(p)->useAlignmentMarkers = useAlignmentMarkers;
     return *this;
 }
 
@@ -4077,6 +4077,8 @@ QRCodeDetectorAruco::Params::Params() {
     maxColorsMismatch = 0.2f;
     scaleTimingPatternScore = 0.9f;
 }
+
+namespace {
 
 struct FinderPatternInfo {
     FinderPatternInfo() {}
@@ -4418,6 +4420,8 @@ struct QRCode {
     float moduleSize = 0.f;
 };
 
+} // namespace
+
 static
 vector<QRCode> analyzeFinderPatterns(const vector<vector<Point2f> > &corners, const Mat& img,
                                      const QRCodeDetectorAruco::Params& qrDetectorParameters) {
@@ -4568,24 +4572,24 @@ QRCodeDetectorAruco::QRCodeDetectorAruco() {
 
 QRCodeDetectorAruco::QRCodeDetectorAruco(const QRCodeDetectorAruco::Params& params) {
     p = makePtr<PimplQRAruco>();
-    (std::static_pointer_cast<PimplQRAruco>(p))->qrParams = params;
+    std::dynamic_pointer_cast<PimplQRAruco>(p)->qrParams = params;
 }
 
 const QRCodeDetectorAruco::Params& QRCodeDetectorAruco::getDetectorParameters() const {
-    return (std::static_pointer_cast<PimplQRAruco>(p))->qrParams;
+    return std::dynamic_pointer_cast<PimplQRAruco>(p)->qrParams;
 }
 
 QRCodeDetectorAruco& QRCodeDetectorAruco::setDetectorParameters(const QRCodeDetectorAruco::Params& params) {
-    (std::static_pointer_cast<PimplQRAruco>(p))->qrParams = params;
+    std::dynamic_pointer_cast<PimplQRAruco>(p)->qrParams = params;
     return *this;
 }
 
 aruco::DetectorParameters QRCodeDetectorAruco::getArucoParameters() {
-    return (std::static_pointer_cast<PimplQRAruco>(p))->arucoParams;
+    return std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoParams;
 }
 
 void QRCodeDetectorAruco::setArucoParameters(const aruco::DetectorParameters& params) {
-    (std::static_pointer_cast<PimplQRAruco>(p))->arucoParams = params;
+    std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoParams = params;
 }
 
 }  // namespace

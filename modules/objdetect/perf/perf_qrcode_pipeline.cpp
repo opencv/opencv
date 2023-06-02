@@ -68,12 +68,9 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, detectMulti)
     Mat src = imread(image_path);
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
     std::vector<Point> corners;
-    QRCodeDetectorBase qrcode;
+    QRCodeDetectorBase qrcode = QRCodeDetector();
     if (method == "aruco_based") {
         qrcode = QRCodeDetectorAruco();
-    }
-    else {
-        qrcode = QRCodeDetector();
     }
     TEST_CYCLE() ASSERT_TRUE(qrcode.detectMulti(src, corners));
     const int pixels_error = 7;
@@ -93,12 +90,9 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
     if (disabled_samples.find({name_current_image, method}) != disabled_samples.end()) {
         throw SkipTestException(name_current_image + " is disabled sample for method " + method);
     }
-    QRCodeDetectorBase qrcode;
+    QRCodeDetectorBase qrcode = QRCodeDetector();
     if (method == "aruco_based") {
         qrcode = QRCodeDetectorAruco();
-    }
-    else {
-        qrcode = QRCodeDetector();
     }
     std::vector<Point2f> corners;
     ASSERT_TRUE(qrcode.detectMulti(src, corners));
