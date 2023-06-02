@@ -52,9 +52,13 @@ else()
   find_package(Java REQUIRED)
   include(UseJava)
 
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/MANIFEST.MF.in" "${OPENCV_JAVA_DIR}/MANIFEST.MF" @ONLY)
+  list(APPEND depends "${OPENCV_JAVA_DIR}/MANIFEST.MF")
+
   ocv_cmake_byproducts(__byproducts BYPRODUCTS "${OPENCV_JAVA_DIR}/java_sources")
   add_custom_target(${the_module}_jar_sources
                     BYPRODUCTS ${__byproducts}  # required for add_custom_target() by ninja
+                    DEPENDS ${depends}
                     COMMAND ${CMAKE_COMMAND}
                     -D OPENCV_JAVA_DIR="${OPENCV_JAVA_DIR}"
                     -D OUTPUT="${OPENCV_JAVA_DIR}/java_sources"
@@ -67,10 +71,10 @@ else()
 
   add_jar(${the_module}_jar
           SOURCES "@${OPENCV_JAVA_DIR}/java_sources"
+          MANIFEST "${OPENCV_JAVA_DIR}/MANIFEST.MF"
           OUTPUT_NAME ${JAR_NAME_WE}
           OUTPUT_DIR ${OPENCV_JAR_DIR})
 
-  add_dependencies(${the_module}_jar_sources ${the_module}_jar_source_copy)
   add_dependencies(${the_module}_jar ${the_module}_jar_sources)
 endif()
 
