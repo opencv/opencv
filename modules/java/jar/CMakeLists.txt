@@ -34,7 +34,7 @@ if(OPENCV_JAVADOC_LINK_URL)
   set(CMAKE_CONFIG_OPENCV_JAVADOC_LINK "link=\"${OPENCV_JAVADOC_LINK_URL}\"")
 endif()
 
-if (ANT_EXECUTABLE)
+if (ANT_EXECUTABLE AND FALSE)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OPENCV_JAVA_DIR}/build.xml" @ONLY)
   list(APPEND depends "${OPENCV_JAVA_DIR}/build.xml")
 
@@ -56,13 +56,19 @@ else()
   list(APPEND depends "${OPENCV_JAVA_DIR}/MANIFEST.MF")
 
   ocv_cmake_byproducts(__byproducts BYPRODUCTS "${OPENCV_JAVA_DIR}/java_sources")
+  add_custom_command(OUTPUT "${OPENCV_DEPHELPER}/${the_module}_jar"
+      BYPRODUCTS ${__byproducts}  # required for add_custom_target() by ninja
+      DEPENDS ${depends}
+      COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/${the_module}_jar"
+      COMMAND ${CMAKE_COMMAND}
+      -D OPENCV_JAVA_DIR="${OPENCV_JAVA_DIR}/java"
+      -D OUTPUT="${OPENCV_JAVA_DIR}/java_sources"
+      -P "${CMAKE_CURRENT_SOURCE_DIR}/list_java_sources.cmake"
+  )
+
   add_custom_target(${the_module}_jar_sources
-                    BYPRODUCTS ${__byproducts}  # required for add_custom_target() by ninja
-                    DEPENDS ${depends}
-                    COMMAND ${CMAKE_COMMAND}
-                    -D OPENCV_JAVA_DIR="${OPENCV_JAVA_DIR}/java"
-                    -D OUTPUT="${OPENCV_JAVA_DIR}/java_sources"
-                    -P "${CMAKE_CURRENT_SOURCE_DIR}/list_java_sources.cmake")
+    DEPENDS "${OPENCV_DEPHELPER}/${the_module}_jar"
+  )
 
   get_filename_component(OPENCV_JAR_DIR ${OPENCV_JAR_FILE} DIRECTORY)
   get_filename_component(JAR_NAME_WE ${JAR_NAME} NAME_WE)
@@ -83,7 +89,7 @@ install(FILES ${OPENCV_JAR_FILE} OPTIONAL DESTINATION ${OPENCV_JAR_INSTALL_PATH}
 add_dependencies(${the_module} ${the_module}_jar)
 
 if(BUILD_DOCS)
-  if (ANT_EXECUTABLE)
+  if (ANT_EXECUTABLE AND FALSE)
     add_custom_command(OUTPUT "${OPENCV_DEPHELPER}/${the_module}doc"
       COMMAND ${ANT_EXECUTABLE} -noinput -k javadoc
       COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/${the_module}doc"

@@ -1,4 +1,5 @@
-if(NOT BUILD_opencv_imgcodecs
+if(NOT ANT_EXECUTABLE
+    OR NOT BUILD_opencv_imgcodecs
     OR NOT BUILD_opencv_calib3d)
   return()
 endif()
@@ -46,42 +47,18 @@ add_custom_command(OUTPUT "${OPENCV_JAVA_TEST_DIR}/bin/${JAR_NAME}"
     COMMENT "Copying the OpenCV jar"
 )
 
-if (ANT_EXECUTABLE)
-  add_custom_command(OUTPUT "${OPENCV_JAVA_TEST_DIR}/build.xml"
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/build.xml" "${OPENCV_JAVA_TEST_DIR}/build.xml"
-      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/build.xml"
-      COMMENT "Copying build.xml"
-  )
+add_custom_command(OUTPUT "${OPENCV_JAVA_TEST_DIR}/build.xml"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/build.xml" "${OPENCV_JAVA_TEST_DIR}/build.xml"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/build.xml"
+    COMMENT "Copying build.xml"
+)
 
-  add_custom_command(OUTPUT "${OPENCV_JAVA_TEST_DIR}/build/jar/opencv-test.jar"
-      COMMAND "${ANT_EXECUTABLE}" -noinput -k build
-      WORKING_DIRECTORY "${OPENCV_JAVA_TEST_DIR}"
-      DEPENDS ${depends} "${OPENCV_JAVA_TEST_DIR}/build.xml" "${CMAKE_CURRENT_SOURCE_DIR}/build.xml" "${OPENCV_JAR_FILE}" "${OPENCV_JAVA_TEST_DIR}/bin/${JAR_NAME}"
-      COMMENT "Build Java tests"
-  )
-else()
-  find_package(Java REQUIRED)
-  include(UseJava)
-
-  ocv_cmake_byproducts(__byproducts BYPRODUCTS "${OPENCV_JAVA_TEST_DIR}/java_sources")
-  add_custom_target(opencv-test_jar_sources
-                    BYPRODUCTS ${__byproducts}  # required for add_custom_target() by ninja
-                    DEPENDS ${depends}
-                    COMMAND ${CMAKE_COMMAND}
-                    -D OPENCV_JAVA_DIR="${OPENCV_JAVA_TEST_DIR}/src"
-                    -D OUTPUT="${OPENCV_JAVA_TEST_DIR}/java_sources"
-                    -P "${CMAKE_CURRENT_SOURCE_DIR}/../../jar/list_java_sources.cmake")
-
-  file(GLOB pure_test_libs "${CMAKE_CURRENT_SOURCE_DIR}/lib/*.jar")
-
-  add_jar(opencv-test_jar
-          INCLUDE_JARS ${the_module}_jar ${pure_test_libs}
-          SOURCES "@${OPENCV_JAVA_TEST_DIR}/java_sources"
-          OUTPUT_NAME "opencv-test"
-          OUTPUT_DIR "${OPENCV_JAVA_TEST_DIR}/build/jar")
-
-  add_dependencies(opencv-test_jar opencv-test_jar_sources)
-endif()
+add_custom_command(OUTPUT "${OPENCV_JAVA_TEST_DIR}/build/jar/opencv-test.jar"
+    COMMAND "${ANT_EXECUTABLE}" -noinput -k build
+    WORKING_DIRECTORY "${OPENCV_JAVA_TEST_DIR}"
+    DEPENDS ${depends} "${OPENCV_JAVA_TEST_DIR}/build.xml" "${CMAKE_CURRENT_SOURCE_DIR}/build.xml" "${OPENCV_JAR_FILE}" "${OPENCV_JAVA_TEST_DIR}/bin/${JAR_NAME}"
+    COMMENT "Build Java tests"
+)
 
 file(GENERATE OUTPUT "${OPENCV_JAVA_TEST_DIR}/ant-$<CONFIGURATION>.properties" CONTENT "opencv.lib.path=$<TARGET_FILE_DIR:${the_module}>")
 
