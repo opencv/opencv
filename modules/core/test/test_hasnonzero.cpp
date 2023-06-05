@@ -42,9 +42,6 @@
 
 #include "test_precomp.hpp"
 
-#include <functional>
-#include <numeric>
-
 namespace opencv_test { namespace {
 
 static const int MAX_WIDTH = 640;
@@ -163,7 +160,7 @@ TEST_P(HasNonZeroNd, hasNonZeroNd)
       Mat nzROI = Mat(m, nzRange.data());
       nzROI.setTo(Scalar::all(1));
 
-      const bool nzCount = countNonZero(m);
+      const int nzCount = countNonZero(m);
       EXPECT_EQ((nzCount>0), hasNonZero(m));
       fastFree(data);
     }
