@@ -42,258 +42,138 @@
 
 #include "test_precomp.hpp"
 
+#include <functional>
+#include <numeric>
+
 namespace opencv_test { namespace {
 
-#define CORE_HASNONZERO_ERROR_COUNT 1
+static const int MAX_WIDTH = 640;
+static const int MAX_HEIGHT = 480;
 
-#define MESSAGE_ERROR_COUNT "Has non zero elements returned by OpenCV function is incorrect."
+typedef testing::TestWithParam<int> HasNonZeroAllZeros;
 
-#define sign(a) a > 0 ? 1 : a == 0 ? 0 : -1
-
-#define MAX_WIDTH 100
-#define MAX_HEIGHT 100
-
-class CV_HasNonZeroTest: public cvtest::BaseTest
+TEST_P(HasNonZeroAllZeros, hasNonZeroAllZeros)
 {
-public:
-    CV_HasNonZeroTest();
-    ~CV_HasNonZeroTest();
+    const int type = GetParam();
 
-protected:
-    void run (int);
+    RNG& rng = theRNG();
 
-private:
-    float eps_32;
-    double eps_64;
-    Mat src;
-    int current_type;
-
-    void generate_src_data(cv::Size size, int type);
-    void generate_src_data(cv::Size size, int type, bool has_non_zero);
-    void generate_src_stat_data(cv::Size size, int type, int distribution);
-
-    bool get_has_non_zero();
-
-    void print_information(bool right, bool result);
-};
-
-CV_HasNonZeroTest::CV_HasNonZeroTest(): eps_32(std::numeric_limits<float>::min()), eps_64(std::numeric_limits<double>::min()), src(Mat()), current_type(-1) {}
-CV_HasNonZeroTest::~CV_HasNonZeroTest() {}
-
-void CV_HasNonZeroTest::generate_src_data(cv::Size size, int type)
-{
-    src.create(size, CV_MAKETYPE(type, 1));
-
-    for (int j = 0; j < size.width; ++j)
-        for (int i = 0; i < size.height; ++i)
-            switch (type)
-            {
-            case CV_8U: { src.at<uchar>(i, j) = cv::randu<uchar>(); break; }
-            case CV_8S: { src.at<char>(i, j) = cv::randu<uchar>() - 128; break; }
-            case CV_16U: { src.at<ushort>(i, j) = cv::randu<ushort>(); break; }
-            case CV_16S: { src.at<short>(i, j) = cv::randu<short>(); break; }
-            case CV_32S: { src.at<int>(i, j) = cv::randu<int>(); break; }
-            case CV_32F: { src.at<float>(i, j) = cv::randu<float>(); break; }
-            case CV_64F: { src.at<double>(i, j) = cv::randu<double>(); break; }
-            /*case CV_32F: { src.at<float>(i, j) = -0.f ; break;}
-            case CV_64F: { src.at<double>(i, j) = -0. ; break;}*/
-            default: break;
-            }
-}
-
-void CV_HasNonZeroTest::generate_src_data(cv::Size size, int type, bool has_non_zero)
-{
-    src = Mat::zeros(size, CV_MAKETYPE(type, 1));
-
-    int n = 0; RNG& rng = ts->get_rng();
-    int count_non_zero = (has_non_zero ? 1 : 0);
-    while (n < count_non_zero)
+    const size_t N = 100;
+    for(size_t i = 0 ; i<N ; ++i)
     {
-        int i = rng.next()%size.height, j = rng.next()%size.width;
-
-        switch (type)
-        {
-        case CV_8U: { if (!src.at<uchar>(i, j)) {src.at<uchar>(i, j) = cv::randu<uchar>(); n += (src.at<uchar>(i, j) > 0);} break; }
-        case CV_8S: { if (!src.at<char>(i, j)) {src.at<char>(i, j) = cv::randu<uchar>() - 128; n += abs(sign(src.at<char>(i, j)));} break; }
-        case CV_16U: { if (!src.at<ushort>(i, j)) {src.at<ushort>(i, j) = cv::randu<ushort>(); n += (src.at<ushort>(i, j) > 0);} break; }
-        case CV_16S: { if (!src.at<short>(i, j)) {src.at<short>(i, j) = cv::randu<short>(); n += abs(sign(src.at<short>(i, j)));} break; }
-        case CV_32S: { if (!src.at<int>(i, j)) {src.at<int>(i, j) = cv::randu<int>(); n += abs(sign(src.at<int>(i, j)));} break; }
-        case CV_32F: { if (fabs(src.at<float>(i, j)) <= eps_32) {src.at<float>(i, j) = cv::randu<float>(); n += (fabs(src.at<float>(i, j)) > eps_32);} break; }
-        case CV_64F: { if (fabs(src.at<double>(i, j)) <= eps_64) {src.at<double>(i, j) = cv::randu<double>(); n += (fabs(src.at<double>(i, j)) > eps_64);} break; }
-
-        default: break;
-        }
-    }
-
-}
-
-void CV_HasNonZeroTest::generate_src_stat_data(cv::Size size, int type, int distribution)
-{
-    src.create(size, CV_MAKETYPE(type, 1));
-
-    double mean = 0.0, sigma = 1.0;
-    double left = -1.0, right = 1.0;
-
-    RNG& rng = ts->get_rng();
-
-    if (distribution == RNG::NORMAL)
-        rng.fill(src, RNG::NORMAL, Scalar::all(mean), Scalar::all(sigma));
-    else if (distribution == RNG::UNIFORM)
-        rng.fill(src, RNG::UNIFORM, Scalar::all(left), Scalar::all(right));
-}
-
-bool CV_HasNonZeroTest::get_has_non_zero()
-{
-    bool result = false;
-
-    for (int i = 0; i < src.rows; ++i)
-        for (int j = 0; j < src.cols; ++j)
-        {
-            if (current_type == CV_8U) result |= (src.at<uchar>(i, j) > 0);
-            else if (current_type == CV_8S) result |= (abs(sign(src.at<char>(i, j)))>0);
-            else if (current_type == CV_16U) result |= (src.at<ushort>(i, j) > 0);
-            else if (current_type == CV_16S) result |= (abs(sign(src.at<short>(i, j)))>0);
-            else if (current_type == CV_32S) result |= (abs(sign(src.at<int>(i, j))) > 0);
-            else if (current_type == CV_32F) result |= (fabs(src.at<float>(i, j)) > eps_32);
-            else result |= (fabs(src.at<double>(i, j)) > eps_64);
-        }
-
-    return result;
-}
-
-void CV_HasNonZeroTest::print_information(bool right, bool result)
-{
-    cout << endl; cout << "Checking for the work of hasNonZero function..." << endl; cout << endl;
-    cout << "Type of Mat: ";
-    switch (current_type)
-    {
-    case 0: {cout << "CV_8U"; break;}
-    case 1: {cout << "CV_8S"; break;}
-    case 2: {cout << "CV_16U"; break;}
-    case 3: {cout << "CV_16S"; break;}
-    case 4: {cout << "CV_32S"; break;}
-    case 5: {cout << "CV_32F"; break;}
-    case 6: {cout << "CV_64F"; break;}
-    default: break;
-    }
-    cout << endl;
-    cout << "Number of rows: " << src.rows << "   Number of cols: " << src.cols << endl;
-    cout << "True has non zero elements: " << right << "   Result: " << result << endl;
-    cout << endl;
-}
-
-void CV_HasNonZeroTest::run(int)
-{
-    const size_t N = 1500;
-
-    for (int k = 1; k <= 3; ++k)
-        for (size_t i = 0; i < N; ++i)
-        {
-        RNG& rng = ts->get_rng();
-
-        int w = rng.next()%MAX_WIDTH + 1, h = rng.next()%MAX_HEIGHT + 1;
-
-        current_type = rng.next()%7;
-
-        switch (k)
-        {
-        case 1: {
-                generate_src_data(Size(w, h), current_type);
-                bool right = get_has_non_zero(), result = hasNonZero(src);
-                if (result != right)
-                {
-                    cout << "Number of experiment: " << i << endl;
-                    cout << "Method of data generation: RANDOM" << endl;
-                    print_information(right, result);
-                    CV_Error(CORE_HASNONZERO_ERROR_COUNT, MESSAGE_ERROR_COUNT);
-                    return;
-                }
-
-                break;
-            }
-
-        case 2: {
-                bool has_non_zero = ((rng.next()%2)>0);
-                generate_src_data(Size(w, h), current_type, has_non_zero);
-                bool result = hasNonZero(src);
-                if (result != has_non_zero)
-                {
-                    cout << "Number of experiment: " << i << endl;
-                    cout << "Method of data generation: HALF-RANDOM" << endl;
-                    print_information(has_non_zero, result);
-                    CV_Error(CORE_HASNONZERO_ERROR_COUNT, MESSAGE_ERROR_COUNT);
-                    return;
-                }
-
-                break;
-            }
-
-        case 3: {
-                int distribution = cv::randu<uchar>()%2;
-                generate_src_stat_data(Size(w, h), current_type, distribution);
-                bool right = get_has_non_zero(), result = hasNonZero(src);
-                if (right != result)
-                {
-                    cout << "Number of experiment: " << i << endl;
-                    cout << "Method of data generation: STATISTIC" << endl;
-                    print_information(right, result);
-                    CV_Error(CORE_HASNONZERO_ERROR_COUNT, MESSAGE_ERROR_COUNT);
-                    return;
-                }
-
-                break;
-            }
-
-        default: break;
-        }
+      const int width = std::max(1, static_cast<int>(rng.next())%MAX_WIDTH);
+      const int height = std::max(1, static_cast<int>(rng.next())%MAX_HEIGHT);
+      Mat m = Mat::zeros(Size(width, height), type);
+      EXPECT_EQ(false, hasNonZero(m));
     }
 }
 
-TEST (Core_HasNonZero, accuracy) { CV_HasNonZeroTest test; test.safe_run(); }
-
-
-typedef testing::TestWithParam<tuple<int, int> > HasNonZeroND;
-
-TEST_P (HasNonZeroND, ndim)
-{
-    const int dims = get<0>(GetParam());
-    const int type = get<1>(GetParam());
-    const int ONE_SIZE = 5;
-
-    vector<int> sizes(dims);
-    fill(sizes.begin(), sizes.end(), ONE_SIZE);
-
-    Mat data(sizes, CV_MAKETYPE(type, 1));
-    data = 0;
-    EXPECT_EQ(false, cv::hasNonZero(data));
-    data = Scalar::all(1);
-    bool expected = true;
-    EXPECT_EQ(expected, cv::hasNonZero(data));
-}
-
-INSTANTIATE_TEST_CASE_P(Core, HasNonZeroND,
-    testing::Combine(
-        testing::Range(2, 9),
-        testing::Values(CV_8U, CV_8S, CV_32F)
-    )
+INSTANTIATE_TEST_CASE_P(Core, HasNonZeroAllZeros,
+  testing::Values(CV_8UC1, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1)
 );
 
+typedef testing::TestWithParam<int> HasNonZeroNegZeros;
 
-typedef testing::TestWithParam<tuple<int, cv::Size> > HasNonZeroBig;
-
-TEST_P(HasNonZeroBig, /**/)
+TEST_P(HasNonZeroNegZeros, hasNonZeroNegZeros)
 {
-    const int type = get<0>(GetParam());
-    const Size sz = get<1>(GetParam());
+    const int type = GetParam();
 
-    EXPECT_EQ(false, cv::hasNonZero(cv::Mat::zeros(sz, type)));
-    EXPECT_EQ(true, cv::hasNonZero(cv::Mat::ones(sz, type)));
+    RNG& rng = theRNG();
+
+    const size_t N = 100;
+    for(size_t i = 0 ; i<N ; ++i)
+    {
+      const int width = std::max(1, static_cast<int>(rng.next())%MAX_WIDTH);
+      const int height = std::max(1, static_cast<int>(rng.next())%MAX_HEIGHT);
+      Mat m = Mat(Size(width, height), type);
+      m.setTo(Scalar::all(-0.));
+      EXPECT_EQ(false, hasNonZero(m));
+    }
 }
 
-INSTANTIATE_TEST_CASE_P(Core, HasNonZeroBig,
+INSTANTIATE_TEST_CASE_P(Core, HasNonZeroNegZeros,
+  testing::Values(CV_32FC1, CV_64FC1)
+);
+
+typedef testing::TestWithParam<int> HasNonZeroRandom;
+
+TEST_P(HasNonZeroRandom, hasNonZeroRandom)
+{
+    const int type = GetParam();
+
+    RNG& rng = theRNG();
+
+    const size_t N = 1000;
+    for(size_t i = 0 ; i<N ; ++i)
+    {
+      const int width = rng.uniform(1, MAX_WIDTH);
+      const int height = rng.uniform(1, MAX_HEIGHT);
+      const int nz_pos_x = rng.uniform(0, width);
+      const int nz_pos_y = rng.uniform(0, height);
+      Mat m = Mat::zeros(Size(width, height), type);
+      Mat nzROI = Mat(m, Rect(nz_pos_x, nz_pos_y, 1, 1));
+      nzROI.setTo(Scalar::all(1));
+      EXPECT_EQ(true, hasNonZero(m));
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Core, HasNonZeroRandom,
+  testing::Values(CV_8UC1, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1)
+);
+
+typedef testing::TestWithParam<tuple<int, int, bool> > HasNonZeroNd;
+
+TEST_P(HasNonZeroNd, hasNonZeroNd)
+{
+    const int type = get<0>(GetParam());
+    const int ndims = get<1>(GetParam());
+    const bool continuous = get<2>(GetParam());
+
+    RNG& rng = theRNG();
+
+    const size_t N = 10;
+    for(size_t i = 0 ; i<N ; ++i)
+    {
+      std::vector<size_t> steps(ndims);
+      std::vector<int> sizes(ndims);
+      size_t totalBytes = 1;
+      for(size_t dim = 0 ; dim<ndims ; ++dim)
+      {
+          const bool isFirstDim = (dim == 0);
+          const bool isLastDim = (dim+1 == ndims);
+          const int length = rng.uniform(1, 64);
+          steps[dim] = (isLastDim ? 1 : static_cast<size_t>(length))*CV_ELEM_SIZE(type);
+          sizes[dim] = (isFirstDim || continuous) ? length : rng.uniform(1, length);
+          totalBytes *= steps[dim]*static_cast<size_t>(sizes[dim]);
+      }
+
+      void* data = fastMalloc(totalBytes);
+      EXPECT_NE(nullptr, data);
+
+      memset(data, 0, totalBytes);
+      Mat m = Mat(ndims, sizes.data(), type, data, steps.data());
+
+      std::vector<Range> nzRange(ndims);
+      for(size_t dim = 0 ; dim<ndims ; ++dim)
+      {
+        const int pos = rng.uniform(0, sizes[dim]);
+        nzRange[dim] = Range(pos, pos+1);
+      }
+
+      Mat nzROI = Mat(m, nzRange.data());
+      nzROI.setTo(Scalar::all(1));
+
+      const bool nzCount = countNonZero(m);
+      EXPECT_EQ((nzCount>0), hasNonZero(m));
+      fastFree(data);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Core, HasNonZeroNd,
     testing::Combine(
-        testing::Values(CV_8UC1, CV_32FC1),
-        testing::Values(Size(1, 524190), Size(524190, 1), Size(3840, 2160))
+        testing::Values(CV_8UC1),
+        testing::Values(2, 3),
+        testing::Values(true, false)
     )
 );
 
