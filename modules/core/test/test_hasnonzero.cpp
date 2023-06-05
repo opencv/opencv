@@ -134,7 +134,7 @@ TEST_P(HasNonZeroNd, hasNonZeroNd)
       std::vector<size_t> steps(ndims);
       std::vector<int> sizes(ndims);
       size_t totalBytes = 1;
-      for(size_t dim = 0 ; dim<ndims ; ++dim)
+      for(int dim = 0 ; dim<ndims ; ++dim)
       {
           const bool isFirstDim = (dim == 0);
           const bool isLastDim = (dim+1 == ndims);
@@ -151,7 +151,7 @@ TEST_P(HasNonZeroNd, hasNonZeroNd)
       Mat m = Mat(ndims, sizes.data(), type, data, steps.data());
 
       std::vector<Range> nzRange(ndims);
-      for(size_t dim = 0 ; dim<ndims ; ++dim)
+      for(int dim = 0 ; dim<ndims ; ++dim)
       {
         const int pos = rng.uniform(0, sizes[dim]);
         nzRange[dim] = Range(pos, pos+1);
