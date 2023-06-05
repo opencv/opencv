@@ -612,7 +612,7 @@ TEST(Charuco, testBoardSubpixelCoords)
     cv::GaussianBlur(gray, gray, Size(5, 5), 1.0);
 
     aruco::DetectorParameters params;
-    params.cornerRefinementMethod = cv::aruco::CORNER_REFINE_APRILTAG;
+    params.cornerRefinementMethod = (int)cv::aruco::CORNER_REFINE_APRILTAG;
 
     aruco::CharucoParameters charucoParameters;
     charucoParameters.cameraMatrix = K;
@@ -636,7 +636,7 @@ TEST(Charuco, issue_14014)
     Mat img = imread(imgPath);
 
     aruco::DetectorParameters detectorParams;
-    detectorParams.cornerRefinementMethod = aruco::CORNER_REFINE_SUBPIX;
+    detectorParams.cornerRefinementMethod = (int)aruco::CORNER_REFINE_SUBPIX;
     detectorParams.cornerRefinementMinAccuracy = 0.01;
     aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_7X7_250), detectorParams);
     aruco::CharucoBoard board(Size(8, 5), 0.03455f, 0.02164f, detector.getDictionary());

@@ -268,12 +268,12 @@ void CV_ArucoDetectionPerspective::run(int) {
                 }
 
                 if(ArucoAlgParams::USE_APRILTAG == arucoAlgParams){
-                    detectorParameters.cornerRefinementMethod = aruco::CORNER_REFINE_APRILTAG;
+                    detectorParameters.cornerRefinementMethod = (int)aruco::CORNER_REFINE_APRILTAG;
                 }
 
                 if (ArucoAlgParams::USE_ARUCO3 == arucoAlgParams) {
                     detectorParameters.useAruco3Detection = true;
-                    detectorParameters.cornerRefinementMethod = aruco::CORNER_REFINE_SUBPIX;
+                    detectorParameters.cornerRefinementMethod = (int)aruco::CORNER_REFINE_SUBPIX;
                 }
                 detector.setDetectorParameters(detectorParameters);
 
@@ -653,7 +653,7 @@ TEST_P(ArucoThreading, number_of_threads_does_not_change_results)
     img_marker.copyTo(img(Rect(shift, shift, height_marker, height_marker)));
 
     aruco::DetectorParameters detectorParameters = detector.getDetectorParameters();
-    detectorParameters.cornerRefinementMethod = GetParam();
+    detectorParameters.cornerRefinementMethod = (int)GetParam();
     detector.setDetectorParameters(detectorParameters);
 
     vector<vector<Point2f> > original_corners;

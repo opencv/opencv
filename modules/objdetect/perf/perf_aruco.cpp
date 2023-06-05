@@ -171,7 +171,7 @@ PERF_TEST_P(EstimateAruco, ArucoFirst, ESTIMATE_PARAMS) {
     aruco::DetectorParameters detectorParams;
     detectorParams.minDistanceToBorder = 1;
     detectorParams.markerBorderBits = 1;
-    detectorParams.cornerRefinementMethod = cv::aruco::CORNER_REFINE_SUBPIX;
+    detectorParams.cornerRefinementMethod = (int)cv::aruco::CORNER_REFINE_SUBPIX;
 
     const int markerSize = 100;
     const int numMarkersInRow = 9;
@@ -203,7 +203,7 @@ PERF_TEST_P(EstimateAruco, ArucoSecond, ESTIMATE_PARAMS) {
     aruco::DetectorParameters detectorParams;
     detectorParams.minDistanceToBorder = 1;
     detectorParams.markerBorderBits = 1;
-    detectorParams.cornerRefinementMethod = cv::aruco::CORNER_REFINE_SUBPIX;
+    detectorParams.cornerRefinementMethod = (int)cv::aruco::CORNER_REFINE_SUBPIX;
 
     //USE_ARUCO3
     detectorParams.useAruco3Detection = get<0>(testParams);
@@ -255,7 +255,7 @@ PERF_TEST_P(EstimateLargeAruco, ArucoFHD, ESTIMATE_FHD_PARAMS) {
     aruco::DetectorParameters detectorParams;
     detectorParams.minDistanceToBorder = 1;
     detectorParams.markerBorderBits = 1;
-    detectorParams.cornerRefinementMethod = cv::aruco::CORNER_REFINE_SUBPIX;
+    detectorParams.cornerRefinementMethod = (int)cv::aruco::CORNER_REFINE_SUBPIX;
 
     //USE_ARUCO3
     detectorParams.useAruco3Detection = get<0>(testParams).useAruco3Detection;

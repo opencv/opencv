@@ -34,7 +34,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
         minCornerDistanceRate = 0.05;
         minDistanceToBorder = 3;
         minMarkerDistanceRate = 0.05;
-        cornerRefinementMethod = CORNER_REFINE_NONE;
+        cornerRefinementMethod = (int)CORNER_REFINE_NONE;
         cornerRefinementWinSize = 5;
         cornerRefinementMaxIterations = 30;
         cornerRefinementMinAccuracy = 0.1;
@@ -106,7 +106,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
     CV_PROP_RW double minMarkerDistanceRate;
 
     /** @brief default value CORNER_REFINE_NONE */
-    CV_PROP_RW CornerRefineMethod cornerRefinementMethod;
+    CV_PROP_RW int cornerRefinementMethod;
 
     /// window size for the corner refinement process (in pixels) (default 5).
     CV_PROP_RW int cornerRefinementWinSize;
