@@ -152,9 +152,9 @@ Size estimateContourSize(const std::vector<Point>& pts)
     Size s(0,0);
     for (size_t i = 0; i < pts.size(); i++)
     {
-        if (pts[i].x > s.width)
+        if (s.width < pts[i].x)
             s.width = pts[i].x;
-        if (pts[i].y > s.height)
+        if (s.height < pts[i].y)
             s.height = pts[i].y;
     }
     return s;
@@ -174,8 +174,8 @@ int contoursAreaPixelsMismatch(const std::vector<Point>& pts, const std::vector<
     drawContours(ptsArea, pts_wrapped, -1, Scalar(255), FILLED);
     drawContours(gtArea, gt_wrapped, -1, Scalar(255), FILLED);
 
-    Mat intersection = ptsArea & gtArea;
     Mat uni = ptsArea | gtArea;
+    Mat intersection = ptsArea & gtArea;
     bitwise_not(intersection, intersection);
     Mat delta = uni & intersection;
 
@@ -229,7 +229,7 @@ TEST(Imgproc_IntelligentScissorsMB, rect)
     tool.buildMap(source_point);
 
     std::vector<Point> pts2;
-    tool.getContour(target_point, pts2, true);
+    tool.getContour(target_point, pts2, true/*backward*/);
     checkContour(pts2, true/*backward*/);
     show(image2, pts2);
 }
