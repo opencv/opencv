@@ -1146,6 +1146,7 @@ TEST_P(Test_ONNX_layers, Split)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("split_0");
     testONNXModels("split_1");
     testONNXModels("split_2");
     testONNXModels("split_3");
