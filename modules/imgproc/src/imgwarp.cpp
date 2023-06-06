@@ -759,6 +759,14 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
             {
                 if( borderType == BORDER_TRANSPARENT && cn != 3 )
                 {
+                    int sx = XY[dx*2], sy = XY[dx*2+1];
+                    if ((unsigned)sx == width1 || (unsigned)sy == height1)
+                    {
+                        for( ; dx < X1; dx++, D += cn, sx += cn )
+                            for(int k = 0; k < cn; k++ )
+                                D[k] = S0[sy*sstep + sx];
+                        continue;
+                    }
                     D += (X1 - dx)*cn;
                     dx = X1;
                     continue;

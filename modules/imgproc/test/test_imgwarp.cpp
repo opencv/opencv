@@ -1658,5 +1658,16 @@ TEST(Imgproc_warpPolar, identity)
 #endif
 }
 
+TEST(Imgproc_Remap, issue_23562)
+{
+    Mat src = (Mat_<float>(3, 3) << 0.1, 0.2, 0.3, 0.5, 0.6, 0.7, 0.9, 1.0, 0.9);
+    Mat mapx = (Mat_<float>(3, 3) << 0, 1, 2, 0, 1, 2, 0, 1, 2);
+    Mat mapy = (Mat_<float>(3, 3) << 0, 0, 0, 1, 1, 1, 2, 2, 2);
+    Mat ref = src.clone();
+    Mat dst = Mat::zeros(3, 3, CV_32F);
+    remap(src, dst, mapx, mapy, INTER_LINEAR, BORDER_TRANSPARENT);
+    ASSERT_EQ(0.0, cvtest::norm(ref, dst, NORM_INF));
+}
+
 }} // namespace
 /* End of file. */
