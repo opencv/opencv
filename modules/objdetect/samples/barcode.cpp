@@ -47,7 +47,7 @@ struct TheApp
             const size_t idx = i / 4;
             const bool isDecodable = idx < decode_info.size()
                 && idx < decode_type.size()
-                && decode_type[idx] != barcode::NONE;
+                && decode_type[idx] != barcode::BarcodeType::Barcode_NONE;
             const Scalar lineColor = isDecodable ? greenColor : redColor;
             // draw barcode rectangle
             vector<Point> contour(corners.begin() + i, corners.begin() + i + 4);
@@ -82,13 +82,13 @@ struct TheApp
         if (detectOnly)
         {
             //! [detect]
-            bardet->detect(frame, corners);
+            bardet->detectMulti(frame, corners);
             //! [detect]
         }
         else
         {
             //! [detectAndDecode]
-            bardet->detectAndDecode(frame, decode_info, decode_type, corners);
+            bardet->detectAndDecodeExtra(frame, decode_info, decode_type, corners);
             //! [detectAndDecode]
         }
     }

@@ -3,8 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 // Copyright (c) 2020-2021 darkliang wangberlinT Certseeds
 
-#ifndef __OPENCV_BARCODE_UPCEAN_DECODER_HPP__
-#define __OPENCV_BARCODE_UPCEAN_DECODER_HPP__
+#ifndef OPENCV_BARCODE_UPCEAN_DECODER_HPP
+#define OPENCV_BARCODE_UPCEAN_DECODER_HPP
 
 #include "abs_decoder.hpp"
 
@@ -64,4 +64,4 @@ constexpr static uint MAX_INDIVIDUAL_VARIANCE = static_cast<uint>(PATTERN_MATCH_
 }
 } // namespace cv
 
-#endif //!  __OPENCV_BARCODE_UPCEAN_DECODER_HPP__
+#endif // OPENCV_BARCODE_UPCEAN_DECODER_HPP

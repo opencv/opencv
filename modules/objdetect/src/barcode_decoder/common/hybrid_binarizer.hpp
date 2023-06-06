@@ -4,8 +4,8 @@
 // Modified from ZXing. Copyright ZXing authors.
 // Licensed under the Apache License, Version 2.0 (the "License").
 
-#ifndef __OPENCV_BARCODE_HYBRID_BINARIZER_HPP__
-#define __OPENCV_BARCODE_HYBRID_BINARIZER_HPP__
+#ifndef OPENCV_BARCODE_HYBRID_BINARIZER_HPP
+#define OPENCV_BARCODE_HYBRID_BINARIZER_HPP
 
 namespace cv {
 namespace barcode {
@@ -19,4 +19,4 @@ calculateThresholdForBlock(const std::vector<uchar> &luminances, int sub_width, 
 Mat calculateBlackPoints(std::vector<uchar> luminances, int sub_width, int sub_height, int width, int height);
 }
 }
-#endif //__OPENCV_BARCODE_HYBRID_BINARIZER_HPP__
+#endif // OPENCV_BARCODE_HYBRID_BINARIZER_HPP

@@ -5,8 +5,8 @@
 // Tencent is pleased to support the open source community by making WeChat QRCode available.
 // Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
 
-#ifndef _OPENCV_BARCODE_SUPER_SCALE_HPP_
-#define _OPENCV_BARCODE_SUPER_SCALE_HPP_
+#ifndef OPENCV_BARCODE_SUPER_SCALE_HPP
+#define OPENCV_BARCODE_SUPER_SCALE_HPP
 
 #ifdef HAVE_OPENCV_DNN
 
@@ -66,4 +66,4 @@ public:
 
 #endif // !HAVE_OPENCV_DNN
 
-#endif //_OPENCV_BARCODE_SUPER_SCALE_HPP_
+#endif // OPENCV_BARCODE_SUPER_SCALE_HPP

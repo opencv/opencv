@@ -3,8 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 // Copyright (c) 2020-2021 darkliang wangberlinT Certseeds
 
-#ifndef __OPENCV_BARCODE_EAN8_DECODER_HPP__
-#define __OPENCV_BARCODE_EAN8_DECODER_HPP__
+#ifndef OPENCV_BARCODE_EAN8_DECODER_HPP
+#define OPENCV_BARCODE_EAN8_DECODER_HPP
 
 #include "upcean_decoder.hpp"
 
@@ -29,4 +29,4 @@ protected:
 }
 }
 
-#endif //__OPENCV_BARCODE_EAN8_DECODER_HPP__
+#endif // OPENCV_BARCODE_EAN8_DECODER_HPP

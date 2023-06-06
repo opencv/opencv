@@ -3,8 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 // Copyright (c) 2020-2021 darkliang wangberlinT Certseeds
 
-#ifndef __OPENCV_BARCODE_UTILS_HPP__
-#define __OPENCV_BARCODE_UTILS_HPP__
+#ifndef OPENCV_BARCODE_UTILS_HPP
+#define OPENCV_BARCODE_UTILS_HPP
 
 
 namespace cv {
@@ -22,4 +22,5 @@ void binarize(const Mat &src, Mat &dst, BinaryType mode);
 
 }
 }
-#endif //__OPENCV_BARCODE_UTILS_HPP__
+
+#endif // OPENCV_BARCODE_UTILS_HPP

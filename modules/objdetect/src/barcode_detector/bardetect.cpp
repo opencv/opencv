@@ -58,7 +58,7 @@ inline void GetMaxScoreIndex(const std::vector<float>& scores, const float thres
     {
         if (scores[i] > threshold)
         {
-            score_index_vec.push_back(std::make_pair(scores[i], i));
+            score_index_vec.push_back(std::make_pair(scores[i], (int)i));
         }
     }
 
@@ -118,7 +118,7 @@ static inline float rotatedRectIOU(const RotatedRect& a, const RotatedRect& b)
         return 0.0f;
     if (res == INTERSECT_FULL)
         return 1.0f;
-    float interArea = contourArea(inter);
+    float interArea = (float)contourArea(inter);
     return interArea / (a.size.area() + b.size.area() - interArea);
 }
 

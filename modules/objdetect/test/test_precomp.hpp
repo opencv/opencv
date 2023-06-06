@@ -6,7 +6,6 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/objdetect.hpp"
-#include "opencv2/objdetect/barcode.hpp"
 
 #if defined CV_CXX11
   #include <random>

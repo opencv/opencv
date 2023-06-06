@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
+#include "opencv2/objdetect/barcode.hpp"
 
 namespace opencv_test{namespace{
 
@@ -75,7 +76,7 @@ TEST(Barcode_BarcodeDetector_single, regression)
         std::vector<cv::Point2f> points;
         std::vector<std::string> infos;
         std::vector<cv::barcode::BarcodeType> formats;
-        bardet.detectAndDecode(img, infos, formats, points);
+        bardet.detectAndDecodeExtra(img, infos, formats, points);
         EXPECT_FALSE(points.empty()) << "Nothing detected: " << image_path;
         bool is_correct = false;
         for (const auto &ans : infos)
@@ -106,7 +107,7 @@ TEST(Barcode_BarcodeDetector_detect_multi, detect_regression)
         EXPECT_FALSE(src.empty()) << "Can't read image: " << image_path;
 
         std::vector<Point> corners;
-        bardet.detect(src, corners);
+        bardet.detectMulti(src, corners);
         EXPECT_EQ(corners.size(), expect_corners_size) << "Can't detect all barcodes: " << img;
         iterator++;
     }
@@ -117,11 +118,10 @@ TEST(Barcode_BarcodeDetector_basic, not_found_barcode)
     auto bardet = barcode::BarcodeDetector();
     std::vector<Point> corners;
     vector<cv::String> decoded_info;
-    vector<barcode::BarcodeType> decoded_type;
     Mat zero_image = Mat::zeros(256, 256, CV_8UC1);
-    EXPECT_FALSE(bardet.detect(zero_image, corners));
+    EXPECT_FALSE(bardet.detectMulti(zero_image, corners));
     corners = std::vector<Point>(4);
-    EXPECT_ANY_THROW(bardet.decode(zero_image, corners, decoded_info, decoded_type));
+    EXPECT_ANY_THROW(bardet.decodeMulti(zero_image, corners, decoded_info));
 }
 
 }} // opencv_test::<anonymous>::

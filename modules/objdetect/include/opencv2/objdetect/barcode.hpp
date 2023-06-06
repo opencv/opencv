@@ -3,11 +3,11 @@
 // of this distribution and at http://opencv.org/license.html.
 // Copyright (c) 2020-2021 darkliang wangberlinT Certseeds
 
-#ifndef __OPENCV_BARCODE_HPP__
-#define __OPENCV_BARCODE_HPP__
+#ifndef OPENCV_BARCODE_HPP
+#define OPENCV_BARCODE_HPP
 
 #include <opencv2/core.hpp>
-#include <ostream>
+#include <opencv2/objdetect/graphical_code_detector.hpp>
 
 namespace cv {
 namespace barcode {
@@ -17,26 +17,32 @@ namespace barcode {
 
 enum BarcodeType
 {
-    NONE, EAN_8, EAN_13, UPC_A, UPC_E, UPC_EAN_EXTENSION
+    Barcode_NONE,
+    Barcode_EAN_8,
+    Barcode_EAN_13,
+    Barcode_UPC_A,
+    Barcode_UPC_E,
+    Barcode_UPC_EAN_EXTENSION
 };
 
-static inline std::ostream &operator<<(std::ostream &out, const BarcodeType &barcode_type)
+template <typename S>
+static inline S &operator<<(S &out, const BarcodeType &barcode_type)
 {
     switch (barcode_type)
     {
-        case BarcodeType::EAN_8:
+        case BarcodeType::Barcode_EAN_8:
             out << "EAN_8";
             break;
-        case BarcodeType::EAN_13:
+        case BarcodeType::Barcode_EAN_13:
             out << "EAN_13";
             break;
-        case BarcodeType::UPC_E:
+        case BarcodeType::Barcode_UPC_E:
             out << "UPC_E";
             break;
-        case BarcodeType::UPC_A:
+        case BarcodeType::Barcode_UPC_A:
             out << "UPC_A";
             break;
-        case BarcodeType::UPC_EAN_EXTENSION:
+        case BarcodeType::Barcode_UPC_EAN_EXTENSION:
             out << "UPC_EAN_EXTENSION";
             break;
         default:
@@ -45,26 +51,17 @@ static inline std::ostream &operator<<(std::ostream &out, const BarcodeType &bar
     return out;
 }
 
-class CV_EXPORTS_W BarcodeDetector
+class CV_EXPORTS_W_SIMPLE BarcodeDetector : public cv::GraphicalCodeDetector
 {
 public:
     /**
      * @brief Initialize the BarcodeDetector.
+     * Parameters allow to load _optional_ Super Resolution DNN model for better quality.
      * @param prototxt_path prototxt file path for the super resolution model
      * @param model_path model file path for the super resolution model
      */
     CV_WRAP BarcodeDetector(const std::string &prototxt_path = "", const std::string &model_path = "");
-
     ~BarcodeDetector();
-
-    /** @brief Detects Barcode in image and returns the rectangle(s) containing the code.
-     *
-     * @param img grayscale or color (BGR) image containing (or not) Barcode.
-     * @param points Output vector of vector of vertices of the minimum-area rotated rectangle containing the codes.
-     * For N detected barcodes, the dimensions of this array should be [N][4].
-     * Order of four points in vector< Point2f> is bottomLeft, topLeft, topRight, bottomRight.
-     */
-    CV_WRAP bool detect(InputArray img, OutputArray points) const;
 
     /** @brief Decodes barcode in image once it's found by the detect() method.
      *
@@ -75,8 +72,10 @@ public:
      * @param decoded_info UTF8-encoded output vector of string or empty vector of string if the codes cannot be decoded.
      * @param decoded_type vector of BarcodeType, specifies the type of these barcodes
      */
-    CV_WRAP bool decode(InputArray img, InputArray points, CV_OUT std::vector<std::string> &decoded_info, CV_OUT
-                        std::vector<BarcodeType> &decoded_type) const;
+    CV_WRAP bool decodeExtra(InputArray img,
+                             InputArray points,
+                             CV_OUT std::vector<std::string> &decoded_info,
+                             CV_OUT std::vector<BarcodeType> &decoded_type) const;
 
     /** @brief Both detects and decodes barcode
 
@@ -85,14 +84,13 @@ public:
      * @param decoded_type vector of BarcodeType, specifies the type of these barcodes
      * @param points optional output vector of vertices of the found  barcode rectangle. Will be empty if not found.
      */
-    CV_WRAP bool detectAndDecode(InputArray img, CV_OUT std::vector<std::string> &decoded_info, CV_OUT
-                                 std::vector<BarcodeType> &decoded_type, OutputArray points = noArray()) const;
-
-protected:
-    struct Impl;
-    Ptr<Impl> p;
+    CV_WRAP bool detectAndDecodeExtra(InputArray img,
+                                      CV_OUT std::vector<std::string> &decoded_info,
+                                      CV_OUT std::vector<BarcodeType> &decoded_type,
+                                      OutputArray points = noArray()) const;
 };
 //! @}
 
 }} // cv::barcode::
-#endif //__OPENCV_BARCODE_HPP__
+
+#endif // OPENCV_BARCODE_HPP

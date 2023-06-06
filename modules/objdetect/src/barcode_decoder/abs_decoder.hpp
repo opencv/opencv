@@ -3,8 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 // Copyright (c) 2020-2021 darkliang wangberlinT Certseeds
 
-#ifndef __OPENCV_BARCODE_ABS_DECODER_HPP__
-#define __OPENCV_BARCODE_ABS_DECODER_HPP__
+#ifndef OPENCV_BARCODE_ABS_DECODER_HPP
+#define OPENCV_BARCODE_ABS_DECODER_HPP
 
 #include "opencv2/objdetect/barcode.hpp"
 
@@ -20,7 +20,7 @@ constexpr static uchar WHITE = std::numeric_limits<uchar>::max();
 struct Result
 {
     std::string result;
-    BarcodeType format = BarcodeType::NONE;
+    BarcodeType format = BarcodeType::Barcode_NONE;
 
     Result() = default;
 
@@ -70,4 +70,4 @@ uint patternMatch(const Counter &counters, const std::vector<int> &pattern, uint
 }
 } // namespace cv
 
-#endif //! __OPENCV_BARCODE_ABS_DECODER_HPP__
+#endif // OPENCV_BARCODE_ABS_DECODER_HPP

@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "perf_precomp.hpp"
+#include "opencv2/objdetect/barcode.hpp"
 
 namespace opencv_test{namespace{
 
@@ -25,7 +26,7 @@ PERF_TEST_P_(Perf_Barcode_multi, detect)
     bool res = false;
     TEST_CYCLE()
     {
-        res = bardet.detect(src, corners);
+        res = bardet.detectMulti(src, corners);
     }
     SANITY_CHECK_NOTHING();
     ASSERT_TRUE(res);
@@ -49,7 +50,7 @@ PERF_TEST_P_(Perf_Barcode_multi, detect_decode)
     bool res = false;
     TEST_CYCLE()
     {
-        res = bardet.detectAndDecode(src, decoded_info, decoded_type, corners);
+        res = bardet.detectAndDecodeExtra(src, decoded_info, decoded_type, corners);
     }
     SANITY_CHECK_NOTHING();
     ASSERT_TRUE(res);
@@ -71,7 +72,7 @@ PERF_TEST_P_(Perf_Barcode_single, detect)
     bool res = false;
     TEST_CYCLE()
     {
-        res = bardet.detect(src, corners);
+        res = bardet.detectMulti(src, corners);
     }
     SANITY_CHECK_NOTHING();
     ASSERT_TRUE(res);
@@ -95,7 +96,7 @@ PERF_TEST_P_(Perf_Barcode_single, detect_decode)
     bool res = false;
     TEST_CYCLE()
     {
-        res = bardet.detectAndDecode(src, decoded_info, decoded_type, corners);
+        res = bardet.detectAndDecodeExtra(src, decoded_info, decoded_type, corners);
     }
     SANITY_CHECK_NOTHING();
     ASSERT_TRUE(res);

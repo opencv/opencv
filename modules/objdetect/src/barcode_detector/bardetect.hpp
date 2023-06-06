@@ -3,8 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 // Copyright (c) 2020-2021 darkliang wangberlinT Certseeds
 
-#ifndef __OPENCV_BARCODE_BARDETECT_HPP__
-#define __OPENCV_BARCODE_BARDETECT_HPP__
+#ifndef OPENCV_BARCODE_BARDETECT_HPP
+#define OPENCV_BARCODE_BARDETECT_HPP
 
 
 #include <opencv2/core.hpp>
@@ -59,4 +59,4 @@ protected:
 }
 }
 
-#endif //__OPENCV_BARCODE_BARDETECT_HPP__
+#endif // OPENCV_BARCODE_BARDETECT_HPP
