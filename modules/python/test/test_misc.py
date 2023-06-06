@@ -144,13 +144,18 @@ class Bindings(NewOpenCVTests):
 
     def test_maketype(self):
         data = {
-            cv.CV_8UC3: [cv.CV_8U, 3],
-            cv.CV_16SC1: [cv.CV_16S, 1],
-            cv.CV_32FC4: [cv.CV_32F, 4],
-            cv.CV_64FC2: [cv.CV_64F, 2],
+            cv.CV_8UC3: [cv.CV_8U, 3, cv.CV_8UC],
+            cv.CV_16SC1: [cv.CV_16S, 1, cv.CV_16SC],
+            cv.CV_32FC4: [cv.CV_32F, 4, cv.CV_32FC],
+            cv.CV_64FC2: [cv.CV_64F, 2, cv.CV_64FC],
+            cv.CV_8SC4: [cv.CV_8S, 4, cv.CV_8SC],
+            cv.CV_16UC2: [cv.CV_16U, 2, cv.CV_16UC],
+            cv.CV_32SC1: [cv.CV_32S, 1, cv.CV_32SC],
+            cv.CV_16FC3: [cv.CV_16F, 3, cv.CV_16FC],
         }
-        for ref, (depth, channels) in data.items():
+        for ref, (depth, channels, func) in data.items():
             self.assertEqual(ref, cv.CV_MAKETYPE(depth, channels))
+            self.assertEqual(ref, func(channels))
 
 
 class Arguments(NewOpenCVTests):

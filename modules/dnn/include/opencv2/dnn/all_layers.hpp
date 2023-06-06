@@ -258,7 +258,6 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
         bool fusedActivation = false;
         bool fusedAdd = false;
-        bool isConv2D = false; // Should be deleted after fastconv branch support Conv1D and Conv3D.
         bool useWinograd = false; // Flag whether to use Winograd to speed up 3x3 convolution.
     };
 
