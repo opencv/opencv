@@ -173,10 +173,11 @@ def main():
             obj_pts.append(board.getChessboardCorners()[index])
             img_pts.append(charuco_corners[i])
 
-    base_obj_pts = np.array(base_obj_pts)
-    base_img_pts = np.array(base_img_pts)
+        obj_pts = np.array(obj_pts)
+        img_pts = np.array(img_pts)
 
-    return base_obj_pts, base_img_pts
+        return obj_pts, img_pts
+    
     chessboards = [x for x in chessboards if x is not None]
 
     # not using pattern_points
