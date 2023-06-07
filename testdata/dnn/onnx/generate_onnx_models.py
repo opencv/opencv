@@ -868,6 +868,15 @@ class Split(nn.Module):
         tup = torch.split(x, self.split_size_sections, self.dim)
         return torch.cat(tup)
 
+class SimpleSplit(nn.Module):
+    def forward(self, image):
+        return torch.cat([img for img in image])
+
+
+model = SimpleSplit()
+input = torch.ones((1, 3, 2, 2))
+save_data_and_model("split_0", input, model, version=11)
+
 model = Split()
 input = Variable(torch.tensor([1., 2.], dtype=torch.float32))
 save_data_and_model("split_1", input, model)
@@ -887,6 +896,8 @@ save_data_and_model("split_5", input2, model, version=13)
 
 model = Split(dim=-1, split_size_sections=[1, 2])
 save_data_and_model("split_6", input2, model, version=13)
+
+
 
 class SplitSizes(nn.Module):
     def __init__(self, *args, **kwargs):
