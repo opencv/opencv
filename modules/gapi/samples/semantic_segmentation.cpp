@@ -163,12 +163,17 @@ int main(int argc, char *argv[]) {
     cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(bgr, out))
         .compileStreaming(cv::compile_args(kernels, networks));
 
-    cv::GRunArgs inputs;
+    std::shared_ptr<cv::gapi::wip::GCaptureSource> source;
     if (isNumber(input)) {
-        inputs = cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(std::stoi(input)));
+        source = std::make_shared<cv::gapi::wip::GCaptureSource>(std::stoi(input));
+        source->set(cv::CAP_PROP_FRAME_WIDTH, 1280);
+        source->set(cv::CAP_PROP_FRAME_HEIGHT, 720);
     } else {
-        inputs = cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input));
+        source = std::make_shared<cv::gapi::wip::GCaptureSource>(input);
     }
+
+    cv::gapi::wip::IStreamSource::Ptr src = source;
+    auto inputs = cv::gin(src);
 
     // The execution part
     pipeline.setSource(std::move(inputs));
