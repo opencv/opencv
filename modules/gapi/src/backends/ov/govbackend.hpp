@@ -10,7 +10,7 @@
 // Include anyway - cv::gapi::ov::backend() still needs to be defined
 #include "opencv2/gapi/infer/ov.hpp"
 
-#ifdef HAVE_INF_ENGINE
+#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2022010000
 
 #include <openvino/openvino.hpp>
 
@@ -62,5 +62,5 @@ public:
 
 }}}
 
-#endif // HAVE_INF_ENGINE
+#endif // HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2022010000
 #endif // OPENCV_GAPI_GOVBACKEND_HPP
