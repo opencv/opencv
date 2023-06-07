@@ -67,7 +67,9 @@ def main():
     marker_size = float(args.get('--marker_size'))
     aruco_dict_name = str(args.get('--aruco_dict'))
 
-    pattern_size = (height, width)
+    # pattern_size = (height, width)
+    pattern_size = (width, height)
+
     if pattern_type == 'chessboard':
         pattern_points = np.zeros((np.prod(pattern_size), 3), np.float32)
         pattern_points[:, :2] = np.indices(pattern_size).T.reshape(-1, 2)
@@ -140,7 +142,9 @@ def main():
 
         if debug_dir:
             vis = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
-            cv.drawChessboardCorners(vis, pattern_size, corners, found)
+            # cv.drawChessboardCorners(vis, pattern_size, corners, found)
+            cv.aruco.drawDetectedCornersCharuco(vis, corners, charucoIds=_charucoIds)
+
             _path, name, _ext = splitfn(fn)
             outfile = os.path.join(debug_dir, name + '_chess.png')
             cv.imwrite(outfile, vis)
@@ -150,7 +154,7 @@ def main():
             return None
 
         print('           %s... OK' % fn)
-        return (corners.reshape(-1, 2), pattern_points)
+        return (corners.reshape(-1, 2), pattern_points, _charucoIds)
 
     threads_num = int(args.get('--threads'))
     if threads_num <= 1:
@@ -160,14 +164,41 @@ def main():
         from multiprocessing.dummy import Pool as ThreadPool
         pool = ThreadPool(threads_num)
         chessboards = pool.map(processImage, img_names)
+        
+    def matchImagePointsforcharuco(board, charuco_corners, charuco_ids):
+        obj_pts = []
+        img_pts = []
+        for i in range(0, len(charuco_ids)):
+            index = charuco_ids[i]
+            obj_pts.append(board.getChessboardCorners()[index])
+            img_pts.append(charuco_corners[i])
 
+    base_obj_pts = np.array(base_obj_pts)
+    base_img_pts = np.array(base_img_pts)
+
+    return base_obj_pts, base_img_pts
     chessboards = [x for x in chessboards if x is not None]
+
+    # not using pattern_points
     for (corners, pattern_points) in chessboards:
-        img_points.append(corners)
-        obj_points.append(pattern_points)
+        obj_points_tmp, img_points_tmp = matchImagePointsforcharuco(board, corners, _charucoIds)
+        img_points.append(img_points_tmp)
+        obj_points.append(obj_points_tmp)
+
 
     # calculate camera distortion
-    rms, camera_matrix, dist_coefs, _rvecs, _tvecs = cv.calibrateCamera(obj_points, img_points, (w, h), None, None)
+    fov = 60
+    focal_length = width / (2 * np.tan(fov * np.pi / 360))
+    mtx = np.array([[focal_length, 0, w / 2],
+                    [0, focal_length, h / 2],
+                    [0, 0, 1]])
+    dist = np.array([[0, 0, 0, 0, 0]], dtype=np.float32)
+    flags = cv2.CALIB_USE_INTRINSIC_GUESS + cv2.CALIB_FIX_K3 + cv2.CALIB_FIX_K4 + cv2.CALIB_FIX_K5 + cv2.CALIB_FIX_K6
+    flags += cv2.CALIB_FIX_K2
+    flags += cv2.CALIB_ZERO_TANGENT_DIST
+    flags += cv2.CALIB_FIX_PRINCIPAL_POINT
+    flags += cv2.CALIB_FIX_ASPECT_RATIO
+    rms, camera_matrix, dist_coefs, _rvecs, _tvecs = cv.calibrateCamera(obj_points, img_points, (w, h), mtx, dist, flags=flags)
 
     print("\nRMS:", rms)
     print("camera matrix:\n", camera_matrix)
