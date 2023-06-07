@@ -286,7 +286,6 @@ bool AvifEncoder::write(const Mat &img, const std::vector<int> &params) {
 
 bool AvifEncoder::writemulti(const std::vector<Mat> &img_vec,
                              const std::vector<int> &params) {
-  encoder_->timescale = 10;
   return writeToOutput(img_vec, params);
 }
 

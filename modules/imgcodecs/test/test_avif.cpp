@@ -9,8 +9,6 @@
 
 #ifdef HAVE_AVIF
 
-#include <avif/avif.h>
-
 namespace opencv_test {
 namespace {
 
@@ -133,6 +131,7 @@ TEST_P(Imgcodecs_Avif_Image_WriteReadSuite, imwrite_imread) {
   if (!IsBitDepthValid()) {
     EXPECT_NO_FATAL_FAILURE(
         cv::imwrite(output, img_original, encoding_params_));
+    EXPECT_NE(0, remove(output.c_str()));
     return;
   }
   EXPECT_NO_THROW(cv::imwrite(output, img_original, encoding_params_));
@@ -141,6 +140,8 @@ TEST_P(Imgcodecs_Avif_Image_WriteReadSuite, imwrite_imread) {
   const cv::Mat img = cv::imread(output, imread_mode_);
 
   ValidateRead(img_original, img);
+
+  EXPECT_EQ(0, remove(output.c_str()));
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -186,51 +187,48 @@ INSTANTIATE_TEST_CASE_P(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#if AVIF_VERSION > ((0 * 1000000) + (11 * 10000) + (1 * 100) + 1)
-TEST(Imgcodecs_Avif_Image_Exif, exif_orientation) {
-#else
-TEST(DISABLED_Imgcodecs_Avif_Image_Exif, exif_orientation) {
-#endif
-  cv::Mat1b img_in(2, 4);
-  img_in.row(0).setTo(cv::Scalar(1));
-  img_in.row(1).setTo(cv::Scalar(2));
-  // Create a simple gray AVIF image.
-  avifImage* image = avifImageCreateEmpty();
-  ASSERT_NE(image, nullptr);
-  image->width = 4;
-  image->height = 2;
-  image->depth = 8;
-  image->yuvFormat = AVIF_PIXEL_FORMAT_YUV400;
-  image->colorPrimaries = AVIF_COLOR_PRIMARIES_UNSPECIFIED;
-  image->transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_UNSPECIFIED;
-  image->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_IDENTITY;
-  image->yuvRange = AVIF_RANGE_FULL;
-  image->yuvPlanes[0] = img_in.data;
-  image->yuvRowBytes[0] = img_in.step[0];
-  image->imageOwnsYUVPlanes = AVIF_FALSE;
+typedef testing::TestWithParam<string> Imgcodecs_AVIF_Exif;
 
-  constexpr uint8_t kExif[] = {73, 73, 42, 0, 8, 0, 0, 0, 1, 0, 18, 1, 3,
-                               0,  1,  0,  0, 0, 5, 0, 0, 0, 0, 0,  0, 0};
-  avifImageSetMetadataExif(image, kExif, 26);
-  ASSERT_GT(image->exif.size, 0u);
-  ASSERT_EQ(1, image->irot.angle);
-  avifEncoder* encoder = avifEncoderCreate();
-  encoder->speed = 9;
-  ASSERT_NE(encoder, nullptr);
-  avifRWData output = AVIF_DATA_EMPTY;
-  avifEncoderWrite(encoder, image, &output);
-  std::vector<uchar> buf(output.size);
-  std::memcpy(buf.data(), output.data, output.size);
+TEST_P(Imgcodecs_AVIF_Exif, exif_orientation) {
+  const string root = cvtest::TS::ptr()->get_data_path();
+  const string filename = root + GetParam();
+  const int colorThresholdHigh = 250;
+  const int colorThresholdLow = 5;
 
-  cv::Mat img_out = cv::imdecode(buf, cv::IMREAD_UNCHANGED);
-  ASSERT_EQ(cv::Size(4, 2), img_out.size());
-  img_out = cv::imdecode(buf, cv::IMREAD_GRAYSCALE);
-  ASSERT_EQ(cv::Size(2, 4), img_out.size());
+  Mat m_img = imread(filename);
+  ASSERT_FALSE(m_img.empty());
+  Vec3b vec;
 
-  avifEncoderDestroy(encoder);
-  avifRWDataFree(&output);
-  avifImageDestroy(image);
+  // Checking the first quadrant (with supposed red)
+  vec = m_img.at<Vec3b>(2, 2);  // some point inside the square
+  EXPECT_LE(vec.val[0], colorThresholdLow);
+  EXPECT_LE(vec.val[1], colorThresholdLow);
+  EXPECT_GE(vec.val[2], colorThresholdHigh);
+
+  // Checking the second quadrant (with supposed green)
+  vec = m_img.at<Vec3b>(2, 7);  // some point inside the square
+  EXPECT_LE(vec.val[0], colorThresholdLow);
+  EXPECT_GE(vec.val[1], colorThresholdHigh);
+  EXPECT_LE(vec.val[2], colorThresholdLow);
+
+  // Checking the third quadrant (with supposed blue)
+  vec = m_img.at<Vec3b>(7, 2);  // some point inside the square
+  EXPECT_GE(vec.val[0], colorThresholdHigh);
+  EXPECT_LE(vec.val[1], colorThresholdLow);
+  EXPECT_LE(vec.val[2], colorThresholdLow);
 }
+
+const string exif_files[] = {"readwrite/testExifOrientation_1.avif",
+                             "readwrite/testExifOrientation_2.avif",
+                             "readwrite/testExifOrientation_3.avif",
+                             "readwrite/testExifOrientation_4.avif",
+                             "readwrite/testExifOrientation_5.avif",
+                             "readwrite/testExifOrientation_6.avif",
+                             "readwrite/testExifOrientation_7.avif",
+                             "readwrite/testExifOrientation_8.avif"};
+
+INSTANTIATE_TEST_CASE_P(ExifFiles, Imgcodecs_AVIF_Exif,
+                        testing::ValuesIn(exif_files));
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -294,6 +292,7 @@ TEST_P(Imgcodecs_Avif_Animation_WriteReadSuite, encode_decode) {
   if (!IsBitDepthValid()) {
     EXPECT_THROW(cv::imwritemulti(output, anim_original, encoding_params_),
                  cv::Exception);
+    EXPECT_NE(0, remove(output.c_str()));
     return;
   }
   EXPECT_NO_THROW(cv::imwritemulti(output, anim_original, encoding_params_));
@@ -303,6 +302,8 @@ TEST_P(Imgcodecs_Avif_Animation_WriteReadSuite, encode_decode) {
   ASSERT_TRUE(cv::imreadmulti(output, anim, imread_mode_));
 
   ValidateRead(anim_original, anim);
+
+  EXPECT_EQ(0, remove(output.c_str()));
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -323,6 +324,7 @@ TEST_P(Imgcodecs_Avif_Animation_WriteDecodeSuite, encode_decode) {
   if (!IsBitDepthValid()) {
     EXPECT_THROW(cv::imwritemulti(output, anim_original, encoding_params_),
                  cv::Exception);
+    EXPECT_NE(0, remove(output.c_str()));
     return;
   }
   EXPECT_NO_THROW(cv::imwritemulti(output, anim_original, encoding_params_));
