@@ -18,28 +18,10 @@ const std::string keys =
     "{ ssm    | semantic-segmentation-adas-0001.xml | Path to OpenVINO IE semantic segmentation model (.xml) }";
 
 // 20 colors for 20 classes of semantic-segmentation-adas-0001
-const std::vector<cv::Vec3b> colors = {
-    { 128, 64,  128 },
-    { 232, 35,  244 },
-    { 70,  70,  70 },
-    { 156, 102, 102 },
-    { 153, 153, 190 },
-    { 153, 153, 153 },
-    { 30,  170, 250 },
-    { 0,   220, 220 },
-    { 35,  142, 107 },
-    { 152, 251, 152 },
-    { 180, 130, 70 },
-    { 60,  20,  220 },
-    { 0,   0,   255 },
-    { 142, 0,   0 },
-    { 70,  0,   0 },
-    { 100, 60,  0 },
-    { 90,  0,   0 },
-    { 230, 0,   0 },
-    { 32,  11,  119 },
-    { 0,   74,  111 },
-};
+static std::vector<cv::Vec3b> colors = {
+    {0, 0, 0},       {0, 0, 128},     {0, 128, 0}, {0, 128, 128}, {128, 0, 0},   {128, 0, 128}, {128, 128, 0},
+    {128, 128, 128}, {0, 0, 64},      {0, 0, 192}, {0, 128, 64},  {0, 128, 192}, {128, 0, 64},  {128, 0, 192},
+    {128, 128, 64},  {128, 128, 192}, {0, 64, 0},  {0, 64, 128},  {0, 192, 0},   {0, 192, 128}, {128, 64, 0}};
 
 namespace {
 std::string get_weights_path(const std::string &model_path) {
@@ -216,6 +198,7 @@ int main(int argc, char *argv[]) {
         const double fps = (frames / static_cast<double>(elapsed)) * 1e6;
 
         if (!lastMat.empty()) {
+            std::cout << "lasMat: " << lastMat.size << std::endl;
             std::stringstream ss;
             ss << "FPS: " << std::fixed << std::setprecision(1) << fps;
             putText(lastMat, ss.str());
