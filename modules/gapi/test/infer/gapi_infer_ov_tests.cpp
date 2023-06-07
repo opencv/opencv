@@ -4,7 +4,7 @@
 //
 // Copyright (C) 2023 Intel Corporation
 
-#ifdef HAVE_INF_ENGINE
+#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2022010000
 
 #include "../test_precomp.hpp"
 
@@ -537,4 +537,4 @@ TEST(TestAgeGenderOV, InferTensorWithPreproc) {
 
 } // namespace opencv_test
 
-#endif //  HAVE_INF_ENGINE
+#endif // HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2022010000
