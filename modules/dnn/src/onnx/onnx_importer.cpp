@@ -1363,14 +1363,22 @@ void ONNXImporter::parseSplit(LayerParams& layerParams, const opencv_onnx::NodeP
     {
         DictValue splits = layerParams.get("split");
         const int numSplits = splits.size();
-        CV_Assert(numSplits > 1);
 
-        std::vector<int> slicePoints(numSplits - 1, splits.get<int>(0));
-        for (int i = 1; i < splits.size() - 1; ++i)
+        if (numSplits == 1)
         {
-            slicePoints[i] = slicePoints[i - 1] + splits.get<int>(i);
+            layerParams.set("num_split", 1);
         }
-        layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
+        else
+        {
+            CV_Assert(numSplits >= 1);
+
+            std::vector<int> slicePoints(numSplits - 1, splits.get<int>(0));
+            for (int i = 1; i < splits.size() - 1; ++i)
+            {
+                slicePoints[i] = slicePoints[i - 1] + splits.get<int>(i);
+            }
+            layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
+        }
     }
     else if (node_proto.input_size() == 2) // opset >= 13, the split will be stored at the second input, instead of the attribute.
     {
