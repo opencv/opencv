@@ -757,21 +757,6 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
             }
             else
             {
-                if (borderType == BORDER_TRANSPARENT)
-                {
-                    int sx = XY[dx*2], sy = XY[dx*2+1];
-                    if ((unsigned)sx == width1 || (unsigned)sy == height1)
-                    {
-                        for( ; dx < X1; dx++, D += cn, sx++ )
-                            for(int k = 0; k < cn; k++ )
-                                D[k] = S0[sy*sstep + sx*cn + k];
-                        continue;
-                    }
-                    D += (X1 - dx)*cn;
-                    dx = X1;
-                    continue;
-                }
-
                 if( cn == 1 )
                     for( ; dx < X1; dx++, D++ )
                     {
@@ -781,6 +766,12 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                              sy >= ssize.height || sy+1 < 0) )
                         {
                             D[0] = cval[0];
+                        }
+                        else if (borderType == BORDER_TRANSPARENT)
+                        {
+                            if (sx < ssize.width && sx >= 0 &&
+                                sy < ssize.height && sy >= 0)
+                                D[0] = S0[sy*sstep + sx];
                         }
                         else
                         {
@@ -822,6 +813,13 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                         {
                             for(int k = 0; k < cn; k++ )
                                 D[k] = cval[k];
+                        }
+                        else if (borderType == BORDER_TRANSPARENT)
+                        {
+                            if (sx < ssize.width && sx >= 0 &&
+                                sy < ssize.height && sy >= 0)
+                                for(int k = 0; k < cn; k++ )
+                                    D[k] = S0[sy*sstep + sx*cn + k];
                         }
                         else
                         {
