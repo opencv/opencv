@@ -5,8 +5,14 @@
 #include <opencv2/gapi/operators.hpp>
 #include <opencv2/highgui.hpp>
 
+#include <opencv2/gapi/streaming/desync.hpp>
+#include <opencv2/gapi/streaming/format.hpp>
+
+#include <iomanip>
+
 const std::string keys =
     "{ h help |                                     | Print this help message }"
+    "{ desync | false                               | Desynchronize inference }"
     "{ input  |                                     | Path to the input video file }"
     "{ output |                                     | Path to the output video file }"
     "{ ssm    | semantic-segmentation-adas-0001.xml | Path to OpenVINO IE semantic segmentation model (.xml) }";
@@ -123,6 +129,24 @@ GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
 };
 } // namespace custom
 
+static bool isNumber(const std::string &str) {
+    return !str.empty() && std::all_of(str.begin(), str.end(),
+            [](unsigned char ch) { return std::isdigit(ch); });
+}
+
+static void putText(cv::Mat& mat, const std::string &message) {
+    auto fontFace = cv::FONT_HERSHEY_COMPLEX;
+    int thickness = 2;
+    cv::Scalar color = {200, 10, 10};
+    int offset = 1;
+    double fontScale = 0.65;
+    cv::Point position = {10, 22 + offset};
+
+    cv::putText(mat, message, position, fontFace,
+                fontScale, cv::Scalar(255, 255, 255), thickness + 1);
+    cv::putText(mat, message, position, fontFace, fontScale, color, thickness);
+}
+
 int main(int argc, char *argv[]) {
     cv::CommandLineParser cmd(argc, argv, keys);
     if (cmd.has("help")) {
@@ -134,6 +158,7 @@ int main(int argc, char *argv[]) {
     const std::string input  = cmd.get<std::string>("input");
     const std::string output = cmd.get<std::string>("output");
     const auto model_path    = cmd.get<std::string>("ssm");
+    const bool desync        = cmd.get<bool>("desync");
     const auto weights_path  = get_weights_path(model_path);
     const auto device        = "CPU";
     G_API_NET(SemSegmNet, <cv::GMat(cv::GMat)>, "semantic-segmentation");
@@ -145,40 +170,71 @@ int main(int argc, char *argv[]) {
 
     // Now build the graph
     cv::GMat in;
-    cv::GMat out_blob = cv::gapi::infer<SemSegmNet>(in);
-    cv::GMat post_proc_out = custom::PostProcessing::on(in, out_blob);
-    cv::GMat blending_in = in * 0.3f;
+    cv::GMat bgr = cv::gapi::copy(in);
+    cv::GMat frame = desync ? cv::gapi::streaming::desync(bgr) : bgr;
+    cv::GMat out_blob = cv::gapi::infer<SemSegmNet>(frame);
+    cv::GMat post_proc_out = custom::PostProcessing::on(frame, out_blob);
+    cv::GMat blending_in = frame * 0.3f;
     cv::GMat blending_out = post_proc_out * 0.7f;
     cv::GMat out = blending_in + blending_out;
 
-    cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
+    cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(bgr, out))
         .compileStreaming(cv::compile_args(kernels, networks));
-    auto inputs = cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input));
+
+    cv::GRunArgs inputs;
+    if (isNumber(input)) {
+        inputs = cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(std::stoi(input)));
+    } else {
+        inputs = cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input));
+    }
 
     // The execution part
     pipeline.setSource(std::move(inputs));
 
     cv::VideoWriter writer;
-    cv::TickMeter tm;
-    cv::Mat outMat;
+
+    cv::Mat lastMat;
+    cv::util::optional<cv::Mat> outMat;
+    cv::util::optional<cv::Mat> outFrame;
 
     std::size_t frames = 0u;
-    tm.start();
+
+    using namespace std::chrono;
+    auto now = high_resolution_clock::now();
+    auto startTs = duration_cast<microseconds>(now.time_since_epoch()).count();
+
     pipeline.start();
-    while (pipeline.pull(cv::gout(outMat))) {
+    while (pipeline.pull(cv::gout(outFrame, outMat))) {
+        if (outMat) {
+            lastMat = *outMat;
+        }
+
         ++frames;
-        cv::imshow("Out", outMat);
-        cv::waitKey(1);
-        if (!output.empty()) {
-            if (!writer.isOpened()) {
-                const auto sz = cv::Size{outMat.cols, outMat.rows};
-                writer.open(output, cv::VideoWriter::fourcc('M','J','P','G'), 25.0, sz);
-                CV_Assert(writer.isOpened());
+        now = high_resolution_clock::now();
+        const auto currentTs = duration_cast<microseconds>(now.time_since_epoch()).count();
+        const auto elapsed = currentTs - startTs;
+        const double fps = (frames / static_cast<double>(elapsed)) * 1e6;
+
+        if (!lastMat.empty()) {
+            std::stringstream ss;
+            ss << "FPS: " << std::fixed << std::setprecision(1) << fps;
+            putText(lastMat, ss.str());
+
+            cv::imshow("Out", lastMat);
+            cv::waitKey(1);
+            if (!output.empty()) {
+                if (!writer.isOpened()) {
+                    const auto sz = cv::Size{lastMat.cols, lastMat.rows};
+                    writer.open(output, cv::VideoWriter::fourcc('M','J','P','G'), 25.0, sz);
+                    CV_Assert(writer.isOpened());
+                }
+                writer << lastMat;
             }
-            writer << outMat;
         }
     }
-    tm.stop();
-    std::cout << "Processed " << frames << " frames" << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
+    const auto currentTs = duration_cast<microseconds>(now.time_since_epoch()).count();
+    const auto elapsed = currentTs - startTs;
+    const double fps = (frames / static_cast<double>(elapsed)) * 1e6;
+    std::cout << "Processed " << frames << " frames" << " (" << fps << " FPS)" << std::endl;
     return 0;
 }
