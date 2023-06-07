@@ -168,6 +168,9 @@ int main(int argc, char *argv[]) {
         source = std::make_shared<cv::gapi::wip::GCaptureSource>(std::stoi(input));
         source->set(cv::CAP_PROP_FRAME_WIDTH, 1280);
         source->set(cv::CAP_PROP_FRAME_HEIGHT, 720);
+        source->set(cv::CAP_PROP_BUFFERSIZE, 1);
+        source->set(cv::CAP_PROP_AUTOFOCUS, true);
+        source->set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
     } else {
         source = std::make_shared<cv::gapi::wip::GCaptureSource>(input);
     }
