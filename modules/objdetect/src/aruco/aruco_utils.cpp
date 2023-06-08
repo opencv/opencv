@@ -12,17 +12,23 @@ using namespace std;
 void _copyVector2Output(vector<vector<Point2f> > &vec, OutputArrayOfArrays out, const float scale) {
     out.create((int)vec.size(), 1, CV_32FC2);
     if(out.isMatVector()) {
-        for (unsigned int i = 0; i < vec.size(); i++) {
-            out.create(4, 1, CV_32FC2, i);
-            Mat &m = out.getMatRef(i);
-            Mat(Mat(vec[i]).t()*scale).copyTo(m);
+        vector<Mat>& out_ = out.getMatVecRef();
+        size_t i, nvecs = vec.size();
+        out_.resize(nvecs);
+        for (i = 0; i < nvecs; i++) {
+            const vector<Point2f>& vec_i = vec[i];
+            Mat& out_i = out_[i];
+            Mat(vec_i).reshape(2, 1).convertTo(out_i, CV_32F, scale);
         }
     }
     else if(out.isUMatVector()) {
-        for (unsigned int i = 0; i < vec.size(); i++) {
-            out.create(4, 1, CV_32FC2, i);
-            UMat &m = out.getUMatRef(i);
-            Mat(Mat(vec[i]).t()*scale).copyTo(m);
+        vector<UMat>& out_ = out.getUMatVecRef();
+        size_t i, nvecs = vec.size();
+        out_.resize(nvecs);
+        for (i = 0; i < nvecs; i++) {
+            const vector<Point2f>& vec_i = vec[i];
+            UMat& out_i = out_[i];
+            Mat(vec_i).reshape(2, 1).convertTo(out_i, CV_32F, scale);
         }
     }
     else if(out.kind() == _OutputArray::STD_VECTOR_VECTOR &&

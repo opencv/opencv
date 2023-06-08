@@ -767,7 +767,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
-    CV_Assert( m.dims >= 2 || (m.dims == 1 && (_rowRange == Range::all() || _rowRange == Range(0, 1))));
+    CV_Assert( m.dims >= 2 || (m.dims == 1 && (_rowRange == Range::all() || _rowRange == Range(0, m.rows))));
     if( m.dims > 2 )
     {
         AutoBuffer<Range> rs(m.dims);

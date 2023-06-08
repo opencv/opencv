@@ -119,7 +119,8 @@ protected:
         Mat l = nn.getLayerSizes();
         nbVariables = 0;
         adrVariables.clear();
-        for (int i = 1; i < l.rows-1; i++)
+        int nlayers = (int)l.total();
+        for (int i = 1; i < nlayers-1; i++)
         {
             Mat w = nn.getWeights(i);
             for (int j = 0; j < w.rows; j++)

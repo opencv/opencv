@@ -322,6 +322,20 @@ _OutputArray _OutputArray::rawOut(std::array<_Tp, _Nm>& arr)
     return v;
 }
 
+inline
+std::vector<Mat>& _OutputArray::getMatVecRef() const
+{
+    CV_Assert(kind() == _InputArray::STD_VECTOR_MAT);
+    return *(std::vector<Mat>*)obj;
+}
+
+inline
+std::vector<UMat>& _OutputArray::getUMatVecRef() const
+{
+    CV_Assert(kind() == _InputArray::STD_VECTOR_UMAT);
+    return *(std::vector<UMat>*)obj;
+}
+
 template<typename _Tp> inline
 std::vector<std::vector<_Tp> >& _OutputArray::getVecVecRef() const
 {

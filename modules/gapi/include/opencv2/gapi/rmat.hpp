@@ -90,7 +90,9 @@ public:
         template<typename T = uchar> const T* ptr(int y, int x) const {
             return reinterpret_cast<const T*>(m_data + step()*y + step(1)*x);
         }
-        size_t step(size_t i = 0) const { GAPI_DbgAssert(i<m_steps.size()); return m_steps[i]; }
+        size_t step(size_t i = 0) const {
+            GAPI_DbgAssert(i<m_steps.size());
+            return i == 0 && m_desc.size.height == 1 ? 0 : m_steps[i]; }
         const stepsT& steps() const { return m_steps; }
 
     private:

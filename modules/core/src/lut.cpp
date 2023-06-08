@@ -370,8 +370,8 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2,
                ocl_LUT(_src, _lut, _dst))
 
-    _dst.createSameSize(_src, CV_MAKETYPE(_lut.depth(), cn));
     Mat src = _src.getMat(), lut = _lut.getMat();
+    _dst.createSameSize(_src, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_TABLE_LOOKUP>(src.cols, src.rows),

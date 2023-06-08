@@ -1126,7 +1126,8 @@ void CirclesGridFinder::findBasis(const std::vector<Point2f> &samples, std::vect
   TermCriteria termCriteria;
   Mat centers;
   const int clustersCount = 4;
-  kmeans(Mat(samples).reshape(1, 0), clustersCount, bestLabels, termCriteria, parameters.kmeansAttempts,
+  int nsamples = (int)samples.size();
+  kmeans(Mat(samples).reshape(1, nsamples), clustersCount, bestLabels, termCriteria, parameters.kmeansAttempts,
          KMEANS_RANDOM_CENTERS, centers);
   CV_Assert( centers.type() == CV_32FC1 );
 
