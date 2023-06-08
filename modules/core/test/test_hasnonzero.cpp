@@ -69,45 +69,66 @@ INSTANTIATE_TEST_CASE_P(Core, HasNonZeroAllZeros,
   testing::Values(CV_8UC1, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1)
 );
 
-typedef testing::TestWithParam<int> HasNonZeroNegZeros;
+typedef testing::TestWithParam<std::tuple<int, Size> > HasNonZeroNegZeros;
 
 TEST_P(HasNonZeroNegZeros, hasNonZeroNegZeros)
 {
-    const int type = GetParam();
+    const int type = std::get<0>(GetParam());
+    const Size size = std::get<1>(GetParam());
 
-    RNG& rng = theRNG();
-
-    const size_t N = 100;
-    for(size_t i = 0 ; i<N ; ++i)
-    {
-      const int width = std::max(1, static_cast<int>(rng.next())%MAX_WIDTH);
-      const int height = std::max(1, static_cast<int>(rng.next())%MAX_HEIGHT);
-      Mat m = Mat(Size(width, height), type);
-      m.setTo(Scalar::all(-0.));
-      EXPECT_EQ(false, hasNonZero(m));
-    }
+    Mat m = Mat(size, type);
+    m.setTo(Scalar::all(-0.));
+    EXPECT_EQ(false, hasNonZero(m));
 }
 
 INSTANTIATE_TEST_CASE_P(Core, HasNonZeroNegZeros,
-  testing::Values(CV_32FC1, CV_64FC1)
+    testing::Combine(
+      testing::Values(CV_32FC1, CV_64FC1),
+        testing::Values(Size(1, 1), Size(320, 240), Size(127, 113), Size(1, 113))
+    )
 );
 
-typedef testing::TestWithParam<int> HasNonZeroRandom;
+typedef testing::TestWithParam<std::tuple<int, Size> > HasNonZeroLimitValues;
+
+TEST_P(HasNonZeroLimitValues, hasNonZeroLimitValues)
+{
+    const int type = std::get<0>(GetParam());
+    const Size size = std::get<1>(GetParam());
+
+    Mat m = Mat(size, type);
+
+    m.setTo(Scalar::all(std::numeric_limits<double>::infinity()));
+    EXPECT_EQ(true, hasNonZero(m));
+
+    m.setTo(Scalar::all(-std::numeric_limits<double>::infinity()));
+    EXPECT_EQ(true, hasNonZero(m));
+
+    m.setTo(Scalar::all(std::numeric_limits<double>::quiet_NaN()));
+    EXPECT_EQ(true, hasNonZero(m));
+}
+
+INSTANTIATE_TEST_CASE_P(Core, HasNonZeroLimitValues,
+    testing::Combine(
+        testing::Values(CV_32FC1, CV_64FC1),
+        testing::Values(Size(1, 1), Size(320, 240), Size(127, 113), Size(1, 113))
+    )
+);
+
+typedef testing::TestWithParam<std::tuple<int, Size> > HasNonZeroRandom;
 
 TEST_P(HasNonZeroRandom, hasNonZeroRandom)
 {
-    const int type = GetParam();
+    const int type = std::get<0>(GetParam());
+    const Size size = std::get<1>(GetParam());
 
     RNG& rng = theRNG();
 
-    const size_t N = 1000;
+    const size_t N = std::min(100, size.area());
     for(size_t i = 0 ; i<N ; ++i)
     {
-      const int width = rng.uniform(1, MAX_WIDTH);
-      const int height = rng.uniform(1, MAX_HEIGHT);
-      const int nz_pos_x = rng.uniform(0, width);
-      const int nz_pos_y = rng.uniform(0, height);
-      Mat m = Mat::zeros(Size(width, height), type);
+      const int nz_pos_x = rng.uniform(0, size.width);
+      const int nz_pos_y = rng.uniform(0, size.height);
+      Mat m = Mat::zeros(size, type);
       Mat nzROI = Mat(m, Rect(nz_pos_x, nz_pos_y, 1, 1));
       nzROI.setTo(Scalar::all(1));
       EXPECT_EQ(true, hasNonZero(m));
@@ -115,7 +136,10 @@ TEST_P(HasNonZeroRandom, hasNonZeroRandom)
 }
 
 INSTANTIATE_TEST_CASE_P(Core, HasNonZeroRandom,
-  testing::Values(CV_8UC1, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1)
+    testing::Combine(
+        testing::Values(CV_8UC1, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1),
+        testing::Values(Size(1, 1), Size(320, 240), Size(127, 113), Size(1, 113))
+    )
 );
 
 typedef testing::TestWithParam<tuple<int, int, bool> > HasNonZeroNd;
@@ -144,10 +168,9 @@ TEST_P(HasNonZeroNd, hasNonZeroNd)
           totalBytes *= steps[dim]*static_cast<size_t>(sizes[dim]);
       }
 
-      void* data = fastMalloc(totalBytes);
-      EXPECT_NE(nullptr, data);
+      std::vector<unsigned char> buffer(totalBytes);
+      void* data = buffer.data();
 
-      memset(data, 0, totalBytes);
       Mat m = Mat(ndims, sizes.data(), type, data, steps.data());
 
       std::vector<Range> nzRange(ndims);
@@ -162,7 +185,6 @@ TEST_P(HasNonZeroNd, hasNonZeroNd)
 
       const int nzCount = countNonZero(m);
       EXPECT_EQ((nzCount>0), hasNonZero(m));
-      fastFree(data);
     }
 }
 
