@@ -181,26 +181,19 @@ Ptr<FastConv> initFastConv(
                 {0.0f, 0.0f, 1.0f}
         };
 
-        static const int CONV_WINO_KBLOCK = 4;
-#if (CV_NEON && CV_NEON_AARCH64)
-        static const int CONV_WINO_IBLOCK = 6;
-#elif  CV_TRY_AVX || CV_TRY_AVX2
-        static const int CONV_WINO_IBLOCK = (conv->useAVX || conv->useAVX2) ? 6 : 3;
-#else
-        static const int CONV_WINO_IBLOCK = 3;
-#endif
+        const int CONV_WINO_KBLOCK = 4;
 
 #if CV_TRY_AVX || CV_TRY_AVX2
-        static const int CONV_WINO_ATOM_F32 = (conv->useAVX || conv->useAVX2) ? 8 : 4;
+        const int CONV_WINO_ATOM_F32 = (conv->useAVX || conv->useAVX2) ? 8 : 4;
 #else
-        static const int CONV_WINO_ATOM_F32 = 4;
+        const int CONV_WINO_ATOM_F32 = 4;
 #endif
-        static const int CONV_WINO_NATOMS_F32 = CONV_WINO_AREA / CONV_WINO_ATOM_F32; // for AVX2, it is 8, otherwise, it's 16.
+        const int CONV_WINO_NATOMS_F32 = CONV_WINO_AREA / CONV_WINO_ATOM_F32; // for AVX2, it is 8, otherwise, it's 16.
 
 #ifdef CONV_ARM_FP16
         // FP 16
-        static const int CONV_WINO_ATOM_F16 = CONV_WINO_ATOM_F32 * 2;
-        static const int CONV_WINO_NATOMS_F16 = CONV_WINO_AREA / CONV_WINO_ATOM_F16;
+        const int CONV_WINO_ATOM_F16 = CONV_WINO_ATOM_F32 * 2;
+        const int CONV_WINO_NATOMS_F16 = CONV_WINO_AREA / CONV_WINO_ATOM_F16;
 #endif
 
         // the weights are packed as 6-dim tensor:
