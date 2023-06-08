@@ -117,7 +117,7 @@ class Imgcodecs_Avif_Image_RoundTripSuite
 std::map<std::tuple<int, int>, cv::Mat>
     Imgcodecs_Avif_Image_RoundTripSuite::imgs_;
 const int Imgcodecs_Avif_Image_RoundTripSuite::kWidth = 51;
-const int Imgcodecs_Avif_Image_RoundTripSuite::kHeight = 51;
+const int Imgcodecs_Avif_Image_RoundTripSuite::kHeight = 31;
 
 class Imgcodecs_Avif_Image_WriteReadSuite
     : public Imgcodecs_Avif_Image_RoundTripSuite {};
