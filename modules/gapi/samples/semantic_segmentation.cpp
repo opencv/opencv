@@ -39,13 +39,11 @@ std::string get_weights_path(const std::string &model_path) {
 
 namespace vis {
 
-void putText(cv::Mat& mat, const std::string &message) {
+void putText(cv::Mat& mat, const cv::Point &position, const std::string &message) {
     auto fontFace = cv::FONT_HERSHEY_COMPLEX;
     int thickness = 2;
     cv::Scalar color = {200, 10, 10};
-    int offset = 1;
     double fontScale = 0.65;
-    cv::Point position = {10, 22 + offset};
 
     cv::putText(mat, message, position, fontFace,
                 fontScale, cv::Scalar(255, 255, 255), thickness + 1);
@@ -115,14 +113,22 @@ G_API_OP(PostProcessing, <cv::GMat(cv::GMat, cv::GMat)>, "sample.custom.post_pro
 
 GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
     static void run(const cv::Mat &in, const cv::Mat &out_blob, cv::Mat &out) {
+        int C = -1, H = -1, W = -1;
+        if (out_blob.size.dims() == 4u) {
+            C = 1; H = 2; W = 3;
+        } else if (out_blob.size.dims() == 3u) {
+            C = 0; H = 1; W = 2;
+        } else {
+            throw std::logic_error("Number of dimmensions for model output must be 3 or 4!");
+        }
         cv::Mat classes;
         // NB: If output has more than single plane, it contains probabilities
         // otherwise class id.
-        if (out_blob.size[1] > 1) {
+        if (out_blob.size[C] > 1) {
             probsToClasses(out_blob, classes);
         } else {
             out_blob.convertTo(classes, CV_8UC1);
-            classes = classes.reshape(1, out_blob.size[2]);
+            classes = classes.reshape(1, out_blob.size[H]);
         }
 
         cv::Mat mask_img;
@@ -135,6 +141,12 @@ GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
 static bool isNumber(const std::string &str) {
     return !str.empty() && std::all_of(str.begin(), str.end(),
             [](unsigned char ch) { return std::isdigit(ch); });
+}
+
+static std::string toStr(double value) {
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(1) << value;
+    return ss.str();
 }
 
 int main(int argc, char *argv[]) {
@@ -166,22 +178,26 @@ int main(int argc, char *argv[]) {
     cv::GMat out = custom::PostProcessing::on(frame, out_blob);
 
     cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(bgr, out))
-        .compileStreaming(cv::compile_args(kernels, networks));
+        .compileStreaming(cv::compile_args(kernels, networks,
+                          cv::gapi::streaming::queue_capacity{1}));
 
     std::shared_ptr<cv::gapi::wip::GCaptureSource> source;
     if (isNumber(input)) {
-        source = std::make_shared<cv::gapi::wip::GCaptureSource>(std::stoi(input));
-        source->set(cv::CAP_PROP_FRAME_WIDTH, 1280);
-        source->set(cv::CAP_PROP_FRAME_HEIGHT, 720);
-        source->set(cv::CAP_PROP_BUFFERSIZE, 1);
-        source->set(cv::CAP_PROP_AUTOFOCUS, true);
-        source->set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+        using P = cv::gapi::wip::GCaptureSource::Properties;
+        source = std::make_shared<cv::gapi::wip::GCaptureSource>(
+            std::stoi(input),
+            cv::gapi::wip::GCaptureSource::Properties {
+              {cv::CAP_PROP_FRAME_WIDTH, 1280},
+              {cv::CAP_PROP_FRAME_HEIGHT, 720},
+              {cv::CAP_PROP_BUFFERSIZE, 1},
+              {cv::CAP_PROP_AUTOFOCUS, true},
+              {cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G')}
+            }
+        );
     } else {
         source = std::make_shared<cv::gapi::wip::GCaptureSource>(input);
     }
-
-    cv::gapi::wip::IStreamSource::Ptr src = source;
-    auto inputs = cv::gin(src);
+    auto inputs = cv::gin(static_cast<cv::gapi::wip::IStreamSource::Ptr>(source));
 
     // The execution part
     pipeline.setSource(std::move(inputs));
@@ -196,36 +212,41 @@ int main(int argc, char *argv[]) {
 
     pipeline.start();
     tm.start();
-    std::size_t frames = 0u;
-    while (pipeline.pull(cv::gout(image, color_mask))) {
-        ++frames;
 
+    std::size_t frames = 0u;
+    std::size_t masks  = 0u;
+    while (pipeline.pull(cv::gout(image, color_mask))) {
         if (image.has_value()) {
+            ++frames;
             last_image = std::move(*image);
         }
 
         if (color_mask.has_value()) {
+            ++masks;
             last_color_mask = std::move(*color_mask);
         }
 
         if (!last_image.empty() && !last_color_mask.empty()) {
             tm.stop();
 
-            std::stringstream ss;
-            ss << "FPS: " << std::fixed << std::setprecision(1) << frames / tm.getTimeSec();
+            std::string stream_fps = "Stream FPS: " + toStr(frames / tm.getTimeSec());
+            std::string inference_fps = "Inference FPS: " + toStr(masks  / tm.getTimeSec());
 
-            vis::drawResults(last_image, last_color_mask);
-            vis::putText(last_image, ss.str());
+            cv::Mat tmp = last_image.clone();
 
-            cv::imshow("Out", last_image);
+            vis::drawResults(tmp, last_color_mask);
+            vis::putText(tmp, {10, 22}, stream_fps);
+            vis::putText(tmp, {10, 22 + 30}, inference_fps);
+
+            cv::imshow("Out", tmp);
             cv::waitKey(1);
             if (!output.empty()) {
                 if (!writer.isOpened()) {
-                    const auto sz = cv::Size{last_image.cols, last_image.rows};
+                    const auto sz = cv::Size{tmp.cols, tmp.rows};
                     writer.open(output, cv::VideoWriter::fourcc('M','J','P','G'), 25.0, sz);
                     CV_Assert(writer.isOpened());
                 }
-                writer << last_image;
+                writer << tmp;
             }
 
             tm.start();

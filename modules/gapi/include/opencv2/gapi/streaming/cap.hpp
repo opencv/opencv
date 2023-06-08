@@ -47,8 +47,13 @@ namespace wip {
 class GCaptureSource: public IStreamSource
 {
 public:
-    explicit GCaptureSource(int id) : cap(id) { prep(); }
-    explicit GCaptureSource(const std::string &path) : cap(path) { prep(); }
+    using Properties = std::unordered_map<int, double>;
+    explicit GCaptureSource(int id, const Properties &properties = {})
+        : cap(id) { prep(properties); }
+
+    explicit GCaptureSource(const std::string &path,
+                            const Properties  &properties = {})
+        : cap(path) { prep(properties); }
 
     void set(int propid, double value) {
         cap.set(propid, value);
@@ -63,8 +68,12 @@ protected:
     bool first_pulled = false;
     int64_t counter = 0;
 
-    void prep()
+    void prep(const Properties &properties)
     {
+        for (const auto &it : properties) {
+            cap.set(it.first, it.second);
+        }
+
         // Prepare first frame to report its meta to engine
         // when needed
         GAPI_Assert(first.empty());
