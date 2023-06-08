@@ -51,13 +51,21 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 
     int ngroups = conv->ngroups, Cg = C/ngroups, Kg = K/ngroups;
 
-    const int CONV_WINO_STEP = conv->CONV_WINO_STEP;
-    const int CONV_WINO_SIZE = conv->CONV_WINO_SIZE;
-    const int CONV_WINO_AREA = conv->CONV_WINO_AREA;
-    const int CONV_WINO_KBLOCK = conv->CONV_WINO_KBLOCK;
-    const int CONV_WINO_IBLOCK = conv->CONV_WINO_IBLOCK;
-    const int CONV_WINO_ATOM_F32 = conv->CONV_WINO_ATOM_F32;
-    const int CONV_WINO_NATOMS_F32 = conv->CONV_WINO_NATOMS_F32;
+    static const int CONV_WINO_KBLOCK = 4;
+#if (CV_NEON && CV_NEON_AARCH64)
+    static const int CONV_WINO_IBLOCK = 6;
+#elif  CV_TRY_AVX || CV_TRY_AVX2
+    static const int CONV_WINO_IBLOCK = (conv->useAVX || conv->useAVX2) ? 6 : 3;
+#else
+    static const int CONV_WINO_IBLOCK = 3;
+#endif
+
+#if CV_TRY_AVX || CV_TRY_AVX2
+    static const int CONV_WINO_ATOM_F32 = (conv->useAVX || conv->useAVX2) ? 8 : 4;
+#else
+    static const int CONV_WINO_ATOM_F32 = 4;
+#endif
+    static const int CONV_WINO_NATOMS_F32 = CONV_WINO_AREA / CONV_WINO_ATOM_F32; // for AVX2, it is 8, otherwise, it's 16.
 
     int Kg_nblocks = (Kg + CONV_WINO_KBLOCK - 1)/CONV_WINO_KBLOCK;
     const size_t inp_planesize = (size_t)Hi*Wi;
