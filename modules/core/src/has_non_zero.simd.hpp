@@ -227,7 +227,8 @@ static bool hasNonZero32f( const float* src, size_t len )
 
         v0 |= v2;
         v4 |= v6;
-        res = v_check_any(((v0 | v4) != v_zero));
+        //res = v_check_any(((v0 | v4) != v_zero));//beware : (NaN != 0) returns "false" since != is mapped to _CMP_NEQ_OQ and not _CMP_NEQ_UQ
+        res = !v_check_all(((v0 | v4) == v_zero));
     }
 
     v_cleanup();
@@ -298,7 +299,8 @@ static bool hasNonZero64f( const double* src, size_t len )
 
         v0  |= v4;
         v8  |= v12;
-        res = v_check_any(((v0 | v8) != v_zero));
+        //res = v_check_any(((v0 | v8) != v_zero));//beware : (NaN != 0) returns "false" since != is mapped to _CMP_NEQ_OQ and not _CMP_NEQ_UQ
+        res = !v_check_all(((v0 | v8) == v_zero));
     }
 
     v_cleanup();
