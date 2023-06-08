@@ -37,6 +37,27 @@ std::string get_weights_path(const std::string &model_path) {
     return model_path.substr(0u, sz - EXT_LEN) + ".bin";
 }
 
+namespace vis {
+
+void putText(cv::Mat& mat, const std::string &message) {
+    auto fontFace = cv::FONT_HERSHEY_COMPLEX;
+    int thickness = 2;
+    cv::Scalar color = {200, 10, 10};
+    int offset = 1;
+    double fontScale = 0.65;
+    cv::Point position = {10, 22 + offset};
+
+    cv::putText(mat, message, position, fontFace,
+                fontScale, cv::Scalar(255, 255, 255), thickness + 1);
+    cv::putText(mat, message, position, fontFace, fontScale, color, thickness);
+}
+
+void drawResults(cv::Mat &img, const cv::Mat &color_mask) {
+    img = img / 2 + color_mask / 2;
+}
+
+} // namespace vis
+
 void classesToColors(const cv::Mat &out_blob,
                            cv::Mat &mask_img) {
     const int H = out_blob.size[0];
@@ -106,7 +127,7 @@ GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
 
         cv::Mat mask_img;
         classesToColors(classes, mask_img);
-        cv::resize(mask_img, out, in.size());
+        cv::resize(mask_img, out, in.size(), 0, 0, cv::INTER_NEAREST);
     }
 };
 } // namespace custom
@@ -114,19 +135,6 @@ GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
 static bool isNumber(const std::string &str) {
     return !str.empty() && std::all_of(str.begin(), str.end(),
             [](unsigned char ch) { return std::isdigit(ch); });
-}
-
-static void putText(cv::Mat& mat, const std::string &message) {
-    auto fontFace = cv::FONT_HERSHEY_COMPLEX;
-    int thickness = 2;
-    cv::Scalar color = {200, 10, 10};
-    int offset = 1;
-    double fontScale = 0.65;
-    cv::Point position = {10, 22 + offset};
-
-    cv::putText(mat, message, position, fontFace,
-                fontScale, cv::Scalar(255, 255, 255), thickness + 1);
-    cv::putText(mat, message, position, fontFace, fontScale, color, thickness);
 }
 
 int main(int argc, char *argv[]) {
@@ -155,10 +163,7 @@ int main(int argc, char *argv[]) {
     cv::GMat bgr = cv::gapi::copy(in);
     cv::GMat frame = desync ? cv::gapi::streaming::desync(bgr) : bgr;
     cv::GMat out_blob = cv::gapi::infer<SemSegmNet>(frame);
-    cv::GMat post_proc_out = custom::PostProcessing::on(frame, out_blob);
-    cv::GMat blending_in = frame * 0.3f;
-    cv::GMat blending_out = post_proc_out * 0.7f;
-    cv::GMat out = blending_in + blending_out;
+    cv::GMat out = custom::PostProcessing::on(frame, out_blob);
 
     cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(bgr, out))
         .compileStreaming(cv::compile_args(kernels, networks));
@@ -181,51 +186,53 @@ int main(int argc, char *argv[]) {
     // The execution part
     pipeline.setSource(std::move(inputs));
 
+    cv::TickMeter tm;
     cv::VideoWriter writer;
 
-    cv::Mat lastMat;
-    cv::util::optional<cv::Mat> outMat;
-    cv::util::optional<cv::Mat> outFrame;
-
-    std::size_t frames = 0u;
-
-    using namespace std::chrono;
-    auto now = high_resolution_clock::now();
-    auto startTs = duration_cast<microseconds>(now.time_since_epoch()).count();
+    cv::util::optional<cv::Mat> color_mask;
+    cv::util::optional<cv::Mat> image;
+    cv::Mat last_image;
+    cv::Mat last_color_mask;
 
     pipeline.start();
-    while (pipeline.pull(cv::gout(outFrame, outMat))) {
-        if (outMat) {
-            lastMat = *outMat;
+    tm.start();
+    std::size_t frames = 0u;
+    while (pipeline.pull(cv::gout(image, color_mask))) {
+        ++frames;
+
+        if (image.has_value()) {
+            last_image = std::move(*image);
         }
 
-        ++frames;
-        now = high_resolution_clock::now();
-        const auto currentTs = duration_cast<microseconds>(now.time_since_epoch()).count();
-        const auto elapsed = currentTs - startTs;
-        const double fps = (frames / static_cast<double>(elapsed)) * 1e6;
+        if (color_mask.has_value()) {
+            last_color_mask = std::move(*color_mask);
+        }
 
-        if (!lastMat.empty()) {
-            std::cout << "lasMat: " << lastMat.size << std::endl;
+        if (!last_image.empty() && !last_color_mask.empty()) {
+            tm.stop();
+
             std::stringstream ss;
-            ss << "FPS: " << std::fixed << std::setprecision(1) << fps;
-            putText(lastMat, ss.str());
+            ss << "FPS: " << std::fixed << std::setprecision(1) << frames / tm.getTimeSec();
 
-            cv::imshow("Out", lastMat);
+            vis::drawResults(last_image, last_color_mask);
+            vis::putText(last_image, ss.str());
+
+            cv::imshow("Out", last_image);
             cv::waitKey(1);
             if (!output.empty()) {
                 if (!writer.isOpened()) {
-                    const auto sz = cv::Size{lastMat.cols, lastMat.rows};
+                    const auto sz = cv::Size{last_image.cols, last_image.rows};
                     writer.open(output, cv::VideoWriter::fourcc('M','J','P','G'), 25.0, sz);
                     CV_Assert(writer.isOpened());
                 }
-                writer << lastMat;
+                writer << last_image;
             }
+
+            tm.start();
         }
     }
-    const auto currentTs = duration_cast<microseconds>(now.time_since_epoch()).count();
-    const auto elapsed = currentTs - startTs;
-    const double fps = (frames / static_cast<double>(elapsed)) * 1e6;
-    std::cout << "Processed " << frames << " frames" << " (" << fps << " FPS)" << std::endl;
+    tm.stop();
+    std::cout << "Processed " << frames << " frames" << " ("
+              << frames / tm.getTimeSec()<< " FPS)" << std::endl;
     return 0;
 }
