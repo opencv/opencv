@@ -37,7 +37,7 @@ static bool ocl_convertScaleAbs( InputArray _src, OutputArray _dst, double alpha
     if (!doubleSupport && depth == CV_64F)
         return false;
 
-    _dst.create(_src.size(), CV_8UC(cn));
+    _dst.createSameSize(_src, CV_8UC(cn));
     int kercn = 1;
     if (d.isIntel())
     {

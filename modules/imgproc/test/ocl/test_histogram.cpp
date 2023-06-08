@@ -240,7 +240,7 @@ PARAM_TEST_CASE(CalcHist, bool)
         randomSubMat(src, src_roi, roiSize, srcBorder, CV_8UC1, 0, 256);
 
         Border histBorder = randomBorder(0, useRoi ? MAX_VALUE : 0);
-        randomSubMat(hist, hist_roi, Size(1, 256), histBorder, CV_32SC1, 0, MAX_VALUE);
+        randomSubMat(hist, hist_roi, Size(256, 1), histBorder, CV_32SC1, 0, MAX_VALUE);
 
         UMAT_UPLOAD_INPUT_PARAMETER(src);
         UMAT_UPLOAD_OUTPUT_PARAMETER(hist);

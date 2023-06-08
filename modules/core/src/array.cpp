@@ -264,10 +264,10 @@ cvInitMatNDHeader( CvMatND* mat, int dims, const int* sizes,
     mat->dims = dims;
     if (dims < 2) {
         mat->dims = 2;
-        for (int i = dims; i < 2; i++) {
-            mat->dim[i].size = 1;
-            mat->dim[i].step = (int)esz;
-        }
+        mat->dim[1].size = dims == 0 ? 1 : mat->dim[0].size;
+        mat->dim[1].step = (int)esz;
+        mat->dim[0].size = 1;
+        mat->dim[0].step = mat->dim[1].size*esz;
     }
     mat->data.ptr = (uchar*)data;
     mat->refcount = 0;

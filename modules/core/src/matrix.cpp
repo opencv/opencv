@@ -220,12 +220,12 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
     CV_Assert( 0 <= _dims && _dims <= CV_MAX_DIM );
     if( m.dims != _dims )
     {
-        if( m.step.p != m.step.buf )
+        if( m.step.p != m.step.buf && m.step.p != m.step.buf+1)
         {
             fastFree(m.step.p);
-            m.step.p = m.step.buf;
-            m.size.p = &m.rows;
         }
+        m.step.p = m.step.buf;
+        m.size.p = &m.rows;
         if( _dims > 2 )
         {
             m.step.p = (size_t*)fastMalloc(_dims*sizeof(m.step.p[0]) + (_dims+1)*sizeof(m.size.p[0]));
@@ -274,8 +274,12 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
 
     if( _dims < 2 )
     {
-        m.cols = 1;
-        m.step[0] = m.step[1] = esz;
+        m.cols = _dims >= 1 ? m.rows : 1;
+        m.rows = 1;
+        m.size.p = &m.cols;
+        m.step.buf[0] = m.cols*esz;
+        m.step.buf[1] = esz;
+        m.step.p = &m.step.buf[1];
     }
 }
 
@@ -406,7 +410,11 @@ Mat::Mat(const Mat& m)
         CV_XADD(&u->refcount, 1);
     if( m.dims <= 2 )
     {
-        step[0] = m.step[0]; step[1] = m.step[1];
+        int _1d = m.dims <= 1;
+        size.p = &rows + _1d;
+        step.p = &step.buf[_1d];
+        step.buf[0] = m.step.buf[0];
+        step.buf[1] = m.step.buf[1];
     }
     else
     {
@@ -436,8 +444,8 @@ Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
             CV_Error(Error::BadStep, "Step must be a multiple of esz1");
         }
     }
-    step[0] = _step;
-    step[1] = esz;
+    step.buf[0] = _step;
+    step.buf[1] = esz;
     datalimit = datastart + _step * rows;
     dataend = datalimit - _step + minstep;
     updateContinuityFlag();
@@ -475,8 +483,9 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
 
 Mat::~Mat()
 {
+    CV_Assert(dummy == 153 && step.buf[2] == 153);
     release();
-    if( step.p != step.buf )
+    if( step.p != step.buf && step.p != step.buf+1 )
         fastFree(step.p);
 }
 
@@ -488,13 +497,17 @@ Mat& Mat::operator=(const Mat& m)
             CV_XADD(&m.u->refcount, 1);
         release();
         flags = m.flags;
+
         if( dims <= 2 && m.dims <= 2 )
         {
+            int _1d = m.dims < 2;
             dims = m.dims;
             rows = m.rows;
             cols = m.cols;
-            step[0] = m.step[0];
-            step[1] = m.step[1];
+            step.p = &step.buf[_1d];
+            step.buf[0] = m.step.buf[0];
+            step.buf[1] = m.step.buf[1];
+            size.p = &rows + _1d;
         }
         else
             copySize(m);
@@ -537,6 +550,11 @@ void Mat::create(Size _sz, int _type)
     create(_sz.height, _sz.width, _type);
 }
 
+void Mat::createSameSize(InputArray m, int type)
+{
+    _OutputArray(*this).createSameSize(m, type);
+}
+
 void Mat::addref()
 {
     if( u )
@@ -553,13 +571,13 @@ void Mat::release()
         size.p[i] = 0;
 #ifdef _DEBUG
     flags = MAGIC_VAL;
-    dims = rows = cols = 0;
-    if(step.p != step.buf)
+    if(step.p != step.buf && step.p != step.buf+1)
     {
         fastFree(step.p);
         step.p = step.buf;
         size.p = &rows;
     }
+    dims = rows = cols = 0;
 #endif
 }
 
@@ -570,7 +588,7 @@ size_t Mat::step1(int i) const
 
 bool Mat::empty() const
 {
-    return data == 0 || total() == 0 || dims == 0;
+    return data == 0 || total() == 0;
 }
 
 size_t Mat::total() const
@@ -601,12 +619,15 @@ Mat::Mat(Mat&& m)
 {
     if (m.dims <= 2)  // move new step/size info
     {
-        step[0] = m.step[0];
-        step[1] = m.step[1];
+        int _1d = dims <= 1;
+        step.p = &step.buf[_1d];
+        size.p = &rows + _1d;
+        step.buf[0] = m.step.buf[0];
+        step.buf[1] = m.step.buf[1];
     }
     else
     {
-        CV_Assert(m.step.p != m.step.buf);
+        CV_Assert(m.step.p != m.step.buf && m.step.p != m.step.buf+1);
         step.p = m.step.p;
         size.p = m.size.p;
         m.step.p = m.step.buf;
@@ -628,25 +649,28 @@ Mat& Mat::operator=(Mat&& m)
     flags = m.flags; dims = m.dims; rows = m.rows; cols = m.cols; data = m.data;
     datastart = m.datastart; dataend = m.dataend; datalimit = m.datalimit; allocator = m.allocator;
     u = m.u;
-    if (step.p != step.buf) // release self step/size
+    if (step.p != step.buf && step.p != step.buf+1) // release self step/size
     {
         fastFree(step.p);
-        step.p = step.buf;
-        size.p = &rows;
     }
+    step.p = step.buf;
+    size.p = &rows;
     if (m.dims <= 2) // move new step/size info
     {
-        step[0] = m.step[0];
-        step[1] = m.step[1];
+        int _1d = dims <= 1;
+        step.buf[0] = m.step.buf[0];
+        step.buf[1] = m.step.buf[1];
+        step.p = &step.buf[_1d];
+        size.p = &rows + _1d;
     }
     else
     {
-        CV_Assert(m.step.p != m.step.buf);
+        CV_Assert(m.step.p != m.step.buf && m.step.p != m.step.buf+1);
         step.p = m.step.p;
         size.p = m.size.p;
-        m.step.p = m.step.buf;
-        m.size.p = &m.rows;
     }
+    m.step.p = m.step.buf;
+    m.size.p = &m.rows;
     m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
     m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
     m.allocator = NULL;
@@ -720,6 +744,8 @@ void Mat::create(const std::vector<int>& _sizes, int _type)
 void Mat::copySize(const Mat& m)
 {
     setSize(*this, m.dims, 0, 0);
+    step.buf[0] = m.step.buf[0];
+    step.buf[1] = m.step.buf[1];
     for( int i = 0; i < dims; i++ )
     {
         size[i] = m.size[i];
@@ -741,7 +767,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows)
 {
-    CV_Assert( m.dims >= 2 || (m.dims == 1 && _colRange == Range::all()));
+    CV_Assert( m.dims >= 2 || (m.dims == 1 && (_rowRange == Range::all() || _rowRange == Range(0, 1))));
     if( m.dims > 2 )
     {
         AutoBuffer<Range> rs(m.dims);
@@ -894,7 +920,7 @@ Mat::Mat(const Mat& m, const std::vector<Range>& ranges)
 
 Mat Mat::diag(int d) const
 {
-    CV_Assert( dims <= 2 );
+    CV_Assert( dims == 2 );
     Mat m = *this;
     size_t esz = elemSize();
     int len;
@@ -1123,10 +1149,16 @@ Mat& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
     if(col1 > col2)
         std::swap(col1, col2);
 
-    data += (row1 - ofs.y)*step + (col1 - ofs.x)*esz;
-    rows = row2 - row1; cols = col2 - col1;
-    size.p[0] = rows; size.p[1] = cols;
-    updateContinuityFlag();
+    if (dims == 1) {
+        data += (col1 - ofs.x)*esz;
+        cols = col2 - col1;
+        size.p[0] = cols;
+    } else {
+        data += (row1 - ofs.y)*step + (col1 - ofs.x)*esz;
+        rows = row2 - row1; cols = col2 - col1;
+        size.p[0] = rows; size.p[1] = cols;
+        updateContinuityFlag();
+    }
     return *this;
 }
 
@@ -1178,7 +1210,7 @@ Mat Mat::reshape(int new_cn, int new_rows) const
                                     "is not divisible by the new number of rows" );
 
         hdr.rows = new_rows;
-        hdr.step[0] = total_width * elemSize1();
+        hdr.step.buf[0] = total_width * elemSize1();
     }
 
     int new_width = total_width / new_cn;
@@ -1190,7 +1222,9 @@ Mat Mat::reshape(int new_cn, int new_rows) const
     hdr.dims = 2;
     hdr.cols = new_width;
     hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
-    hdr.step[1] = CV_ELEM_SIZE(hdr.flags);
+    hdr.step.buf[1] = CV_ELEM_SIZE(hdr.flags);
+    hdr.step.p = &hdr.step.buf[0];
+    hdr.size.p = &hdr.rows;
     return hdr;
 }
 

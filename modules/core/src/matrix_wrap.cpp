@@ -165,6 +165,7 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
         const Mat& m = *(const Mat*)obj;
         int n = (int)m.size[0];
         mv.resize(n);
+        CV_Assert(m.dims >= 2);
 
         for( int i = 0; i < n; i++ )
             mv[i] = m.dims == 2 ? Mat(1, m.cols, m.type(), (void*)m.ptr(i)) :

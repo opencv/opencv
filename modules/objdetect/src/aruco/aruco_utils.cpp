@@ -25,11 +25,19 @@ void _copyVector2Output(vector<vector<Point2f> > &vec, OutputArrayOfArrays out, 
             Mat(Mat(vec[i]).t()*scale).copyTo(m);
         }
     }
-    else if(out.kind() == _OutputArray::STD_VECTOR_VECTOR){
-        for (unsigned int i = 0; i < vec.size(); i++) {
-            out.create(4, 1, CV_32FC2, i);
-            Mat m = out.getMat(i);
-            Mat(Mat(vec[i]).t()*scale).copyTo(m);
+    else if(out.kind() == _OutputArray::STD_VECTOR_VECTOR &&
+            out.type() == CV_32FC2){
+        vector<vector<Point2f>>& out_ = out.getVecVecRef<Point2f>();
+        size_t i, j, nvecs = vec.size();
+        out_.resize(nvecs);
+        for (i = 0; i < nvecs; i++) {
+            const vector<Point2f>& vec_i = vec[i];
+            size_t npoints_i = vec_i.size();
+            vector<Point2f>& out_i = out_[i];
+            out_i.resize(npoints_i);
+            for (j = 0; j < npoints_i; j++) {
+                out_i[j] = vec_i[j]*scale;
+            }
         }
     }
     else {

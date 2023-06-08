@@ -2358,7 +2358,7 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
     if (fftType == C2C || fftType == R2C)
     {
         // complex output
-        _dst.create(src.size(), CV_MAKETYPE(depth, 2));
+        _dst.createSameSize(src, CV_MAKETYPE(depth, 2));
         output = _dst.getUMat();
     }
     else
@@ -2366,13 +2366,13 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
         // real output
         if (is1d)
         {
-            _dst.create(src.size(), CV_MAKETYPE(depth, 1));
+            _dst.createSameSize(src, CV_MAKETYPE(depth, 1));
             output = _dst.getUMat();
         }
         else
         {
-            _dst.create(src.size(), CV_MAKETYPE(depth, 1));
-            output.create(src.size(), CV_MAKETYPE(depth, 2));
+            _dst.createSameSize(src, CV_MAKETYPE(depth, 1));
+            output.create(src.dims, src.size, CV_MAKETYPE(depth, 2));
         }
     }
 
@@ -3511,11 +3511,11 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
     CV_Assert( !((flags & DFT_COMPLEX_INPUT) && src.channels() != 2) );
 
     if( !inv && src.channels() == 1 && (flags & DFT_COMPLEX_OUTPUT) )
-        _dst.create( src.size(), CV_MAKETYPE(depth, 2) );
+        _dst.createSameSize( src, CV_MAKETYPE(depth, 2) );
     else if( inv && src.channels() == 2 && (flags & DFT_REAL_OUTPUT) )
-        _dst.create( src.size(), depth );
+        _dst.createSameSize( src, depth );
     else
-        _dst.create( src.size(), type );
+        _dst.createSameSize( src, type );
 
     Mat dst = _dst.getMat();
 
@@ -3560,7 +3560,7 @@ static bool ocl_mulSpectrums( InputArray _srcA, InputArray _srcB,
     UMat A = _srcA.getUMat(), B = _srcB.getUMat();
     CV_Assert(A.size() == B.size());
 
-    _dst.create(A.size(), atype);
+    _dst.createSameSize(A, atype);
     UMat dst = _dst.getUMat();
 
     ocl::Kernel k("mulAndScaleSpectrums",

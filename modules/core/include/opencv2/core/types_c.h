@@ -571,7 +571,7 @@ CV_INLINE CvMat cvMat(const cv::Mat& m)
 {
     CvMat self;
     CV_DbgAssert(m.dims <= 2);
-    self = cvMat(m.rows, m.dims == 1 ? 1 : m.cols, m.type(), m.data);
+    self = cvMat(m.dims == 1 ? 1 : m.rows, m.cols, m.type(), m.data);
     self.step = (int)m.step[0];
     self.type = (self.type & ~cv::Mat::CONTINUOUS_FLAG) | (m.flags & cv::Mat::CONTINUOUS_FLAG);
     return self;

@@ -309,7 +309,10 @@ UMat::UMat(const UMat& m)
     addref();
     if( m.dims <= 2 )
     {
-        step[0] = m.step[0]; step[1] = m.step[1];
+        int _1d = dims <= 1;
+        step.buf[0] = m.step.buf[0]; step.buf[1] = m.step.buf[1];
+        step.p = &step.buf[_1d];
+        size.p = &rows + _1d;
     }
     else
     {
@@ -330,8 +333,11 @@ UMat& UMat::operator=(const UMat& m)
             dims = m.dims;
             rows = m.rows;
             cols = m.cols;
-            step[0] = m.step[0];
-            step[1] = m.step[1];
+            int _1d = dims <= 1;
+            step.buf[0] = m.step.buf[0];
+            step.buf[1] = m.step.buf[1];
+            step.p = &step.buf[_1d];
+            size.p = &rows + _1d;
         }
         else
             copySize(m);
@@ -369,6 +375,13 @@ void UMat::create(Size _sz, int _type, UMatUsageFlags _usageFlags)
     create(_sz.height, _sz.width, _type, _usageFlags);
 }
 
+void UMat::createSameSize(InputArray arr, int _type, UMatUsageFlags _usageFlags)
+{
+    int arr_size[CV_MAX_DIM];
+    int ndims = arr.sizend(arr_size);
+    create(ndims, arr_size, _type, _usageFlags);
+}
+
 void UMat::addref()
 {
     if( u )
@@ -386,7 +399,7 @@ void UMat::release()
 
 bool UMat::empty() const
 {
-    return u == 0 || total() == 0 || dims == 0;
+    return u == 0 || total() == 0;
 }
 
 size_t UMat::total() const
@@ -406,12 +419,15 @@ UMat::UMat(UMat&& m)
 {
     if (m.dims <= 2)  // move new step/size info
     {
-        step[0] = m.step[0];
-        step[1] = m.step[1];
+        int _1d = m.dims <= 1;
+        step.buf[0] = m.step.buf[0];
+        step.buf[1] = m.step.buf[1];
+        step.p = &step.buf[_1d];
+        size.p = &rows + _1d;
     }
     else
     {
-        CV_DbgAssert(m.step.p != m.step.buf);
+        CV_DbgAssert(m.step.p != m.step.buf && m.step.p != m.step.buf+1);
         step.p = m.step.p;
         size.p = m.size.p;
         m.step.p = m.step.buf;
@@ -432,25 +448,28 @@ UMat& UMat::operator=(UMat&& m)
     allocator = m.allocator; usageFlags = m.usageFlags;
     u = m.u;
     offset = m.offset;
-    if (step.p != step.buf) // release self step/size
+    if (step.p != step.buf && step.p != step.buf+1) // release self step/size
     {
         fastFree(step.p);
-        step.p = step.buf;
-        size.p = &rows;
     }
+    step.p = step.buf;
+    size.p = &rows;
     if (m.dims <= 2) // move new step/size info
     {
-        step[0] = m.step[0];
-        step[1] = m.step[1];
+        int _1d = dims <= 1;
+        step.buf[0] = m.step.buf[0];
+        step.buf[1] = m.step.buf[1];
+        step.p = &step.buf[_1d];
+        size.p = &rows + _1d;
     }
     else
     {
-        CV_DbgAssert(m.step.p != m.step.buf);
+        CV_DbgAssert(m.step.p != m.step.buf && m.step.p != m.step.buf+1);
         step.p = m.step.p;
         size.p = m.size.p;
-        m.step.p = m.step.buf;
-        m.size.p = &m.rows;
     }
+    m.step.p = m.step.buf;
+    m.size.p = &m.rows;
     m.flags = MAGIC_VAL;
     m.usageFlags = USAGE_DEFAULT;
     m.dims = m.rows = m.cols = 0;
@@ -485,32 +504,34 @@ void swap( UMat& a, UMat& b )
     std::swap(a.step.buf[0], b.step.buf[0]);
     std::swap(a.step.buf[1], b.step.buf[1]);
 
-    if( a.step.p == b.step.buf )
+    if(a.dims <= 2)
     {
-        a.step.p = a.step.buf;
-        a.size.p = &a.rows;
+        int a_1d = a.dims <= 1;
+        a.step.p = &a.step.buf[a_1d];
+        a.size.p = &a.rows + a_1d;
     }
 
-    if( b.step.p == a.step.buf )
+    if( b.dims <= 2)
     {
-        b.step.p = b.step.buf;
-        b.size.p = &b.rows;
+        int b_1d = b.dims <= 1;
+        b.step.p = &b.step.buf[b_1d];
+        b.size.p = &b.rows + b_1d;
     }
 }
 
 
 void setSize( UMat& m, int _dims, const int* _sz,
-                            const size_t* _steps, bool autoSteps )
+              const size_t* _steps, bool autoSteps )
 {
     CV_Assert( 0 <= _dims && _dims <= CV_MAX_DIM );
     if( m.dims != _dims )
     {
-        if( m.step.p != m.step.buf )
+        if( m.step.p != m.step.buf && m.step.p != m.step.buf+1 )
         {
             fastFree(m.step.p);
-            m.step.p = m.step.buf;
-            m.size.p = &m.rows;
         }
+        m.step.p = m.step.buf;
+        m.size.p = &m.rows;
         if( _dims > 2 )
         {
             m.step.p = (size_t*)fastMalloc(_dims*sizeof(m.step.p[0]) + (_dims+1)*sizeof(m.size.p[0]));
@@ -546,9 +567,12 @@ void setSize( UMat& m, int _dims, const int* _sz,
 
     if( _dims == 1 )
     {
-        m.dims = 2;
-        m.cols = 1;
-        m.step[1] = esz;
+        m.cols = m.rows;
+        m.rows = 1;
+        m.size.p = &m.cols;
+        m.step.p = &m.step[1];
+        m.step.buf[1] = esz;
+        m.step.buf[0] = m.cols*esz;
     }
 }
 
@@ -735,7 +759,7 @@ void UMat::copySize(const UMat& m)
 UMat::~UMat()
 {
     release();
-    if( step.p != step.buf )
+    if( step.p != step.buf && step.p != step.buf+1 )
         fastFree(step.p);
 }
 
@@ -919,7 +943,7 @@ void UMat::locateROI( Size& wholeSize, Point& ofs ) const
 
 UMat& UMat::adjustROI( int dtop, int dbottom, int dleft, int dright )
 {
-    CV_Assert( dims <= 2 && step[0] > 0 );
+    CV_Assert( dims == 2 && step[0] > 0 );
     Size wholeSize; Point ofs;
     size_t esz = elemSize();
     locateROI( wholeSize, ofs );
@@ -978,7 +1002,7 @@ UMat UMat::reshape(int new_cn, int new_rows) const
                                     "is not divisible by the new number of rows" );
 
         hdr.rows = new_rows;
-        hdr.step[0] = total_width * elemSize1();
+        hdr.step.buf[0] = total_width * elemSize1();
     }
 
     int new_width = total_width / new_cn;
@@ -987,9 +1011,12 @@ UMat UMat::reshape(int new_cn, int new_rows) const
         CV_Error( CV_BadNumChannels,
         "The total width is not divisible by the new number of channels" );
 
+    hdr.dims = 2;
     hdr.cols = new_width;
     hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
-    hdr.step[1] = CV_ELEM_SIZE(hdr.flags);
+    hdr.step.buf[1] = CV_ELEM_SIZE(hdr.flags);
+    hdr.step.p = &hdr.step.buf[0];
+    hdr.size.p = &hdr.rows;
     return hdr;
 }
 

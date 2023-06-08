@@ -1112,9 +1112,10 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
 
         for (size_t i = 0; i < vec_rvecs.size(); i++)
         {
-            std::vector<Point2d> projectedPoints;
+            Mat projectedPoints;
             projectPoints(objectPoints, vec_rvecs[i], vec_tvecs[i], cameraMatrix, distCoeffs, projectedPoints);
-            double rmse = norm(Mat(projectedPoints, false), imagePoints, NORM_L2) / sqrt(2*projectedPoints.size());
+            int nprojectedPoints = (int)projectedPoints.total();
+            double rmse = norm(projectedPoints, imagePoints, NORM_L2) / sqrt(2*nprojectedPoints);
 
             Mat err = reprojectionError.getMat();
             if (type == CV_32F)

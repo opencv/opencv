@@ -126,10 +126,10 @@ __kernel void merge_histogram(__global const int * ghist, __global uchar * histp
 {
     int lid = get_local_id(0);
 
-    __global HT * hist = (__global HT *)(histptr + hist_offset);
 #if WGS >= BINS
     HT res = (HT)(0);
 #else
+    __global HT * hist = (__global HT *)(histptr + hist_offset);
     #pragma unroll
     for (int i = lid; i < BINS; i += WGS)
         hist[i] = (HT)(0);

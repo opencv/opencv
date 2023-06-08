@@ -1360,12 +1360,12 @@ TEST(Core_Mat, copyNx1ToVector)
     src.copyTo(ref_dst8);
     src.copyTo(dst8);
 
-    ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst8, cv::Mat_<uchar>(dst8));
+    ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst8, cv::Mat_<uchar>(dst8).reshape(1, 5));
 
     src.convertTo(ref_dst16, CV_16U);
     src.convertTo(dst16, CV_16U);
 
-    ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst16, cv::Mat_<ushort>(dst16));
+    ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst16, cv::Mat_<ushort>(dst16).reshape(1, 5));
 }
 
 TEST(Core_Matx, fromMat_)
@@ -2386,20 +2386,20 @@ TEST(Mat1D, basic)
     EXPECT_FALSE(m1.empty());
     ASSERT_EQ(1, m1.dims);
     ASSERT_EQ(1, m1.size.dims());  // hack map on .rows
-    EXPECT_EQ(Size(1, 100), m1.size());
+    EXPECT_EQ(Size(100, 1), m1.size());
 
     {
         SCOPED_TRACE("clone");
         Mat m = m1.clone();
         EXPECT_EQ(1, m.dims);
-        EXPECT_EQ(Size(1, 100), m.size());
+        EXPECT_EQ(Size(100, 1), m.size());
     }
 
     {
         SCOPED_TRACE("colRange()");
-        Mat m = m1.rowRange(Range(10, 30));
+        Mat m = m1.colRange(Range(10, 30));
         EXPECT_EQ(1, m.dims);
-        EXPECT_EQ(Size(1, 20), m.size());
+        EXPECT_EQ(Size(20, 1), m.size());
     }
 
     {
@@ -2417,10 +2417,12 @@ TEST(Mat1D, basic)
     }
 
     {
-        SCOPED_TRACE("reshape(1, {1, 100})");
-        Mat m = m1.reshape(1, {1, 100});
-        EXPECT_EQ(2, m.dims);
-        EXPECT_EQ(Size(100, 1), m.size());
+        SCOPED_TRACE("reshape(1, {10, 10}).reshape(1, {100})");
+        std::vector<int> newsize={100};
+        Mat m2 = m1.reshape(1, {10, 10});
+        Mat m3 = m2.reshape(1, newsize);
+        EXPECT_EQ(1, m3.dims);
+        EXPECT_EQ(Size(100, 1), m3.size());
     }
 
     {
@@ -2448,24 +2450,24 @@ TEST(Mat1D, basic)
     {
         SCOPED_TRACE("CvMat");
         CvMat c_mat = cvMat(m1);
-        EXPECT_EQ(1, c_mat.cols);
-        EXPECT_EQ(100, c_mat.rows);
+        EXPECT_EQ(100, c_mat.cols);
+        EXPECT_EQ(1, c_mat.rows);
     }
 
     {
         SCOPED_TRACE("CvMatND");
         CvMatND c_mat = cvMatND(m1);
         EXPECT_EQ(2, c_mat.dims);
-        EXPECT_EQ(100, c_mat.dim[0].size);
-        EXPECT_EQ(1, c_mat.dim[1].size);
+        EXPECT_EQ(1, c_mat.dim[0].size);
+        EXPECT_EQ(100, c_mat.dim[1].size);
     }
 
     {
         SCOPED_TRACE("minMaxLoc");
         Point pt;
         minMaxLoc(m1, 0, 0, 0, &pt);
-        EXPECT_EQ(50, pt.y);
-        EXPECT_EQ(0, pt.x);
+        EXPECT_EQ(0, pt.y);
+        EXPECT_EQ(50, pt.x);
         minMaxLoc(m1_copy, 0, 0, 0, &pt);
         EXPECT_EQ(0, pt.y);
         EXPECT_EQ(50, pt.x);

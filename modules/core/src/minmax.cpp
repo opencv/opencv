@@ -1580,16 +1580,14 @@ void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
         if (dims == 2)
             std::swap(minLoc->x, minLoc->y);
         else {
-            minLoc->y = minLoc->x;
-            minLoc->x = 0;
+            minLoc->y = 0;
         }
     }
     if( maxLoc) {
         if (dims == 2)
             std::swap(maxLoc->x, maxLoc->y);
         else {
-            maxLoc->y = maxLoc->x;
-            maxLoc->x = 0;
+            maxLoc->y = 0;
         }
     }
 }

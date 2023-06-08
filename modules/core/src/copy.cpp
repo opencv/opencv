@@ -355,9 +355,10 @@ void Mat::copyTo( OutputArray _dst ) const
         CV_Assert(dims > 0 && dims < CV_MAX_DIM);
         for( i = 0; i < (size_t)dims; i++ )
             sz[i] = size.p[i];
-        sz[dims-1] *= esz;
+        int lastdim = dims >= 1 ? dims-1 : 0;
+        sz[lastdim] *= esz;
         dst.ndoffset(dstofs);
-        dstofs[dims-1] *= esz;
+        dstofs[lastdim] *= esz;
         dst.u->currAllocator->upload(dst.u, data, dims, sz, dstofs, dst.step.p, step.p);
         return;
     }

@@ -858,7 +858,7 @@ namespace reference {
 static void flip(const Mat& src, Mat& dst, int flipcode)
 {
     CV_Assert(src.dims <= 2);
-    dst.create(src.dims, src.size.p, src.type());
+    dst.createSameSize(src, src.type());
     int i, j, k, esz = (int)src.elemSize(), width = src.cols*esz;
 
     for( i = 0; i < dst.rows; i++ )
@@ -1686,8 +1686,10 @@ TEST(Core_Add, AddToColumnWhen3Rows)
     m1.col(1) += 10;
 
     cv::Mat m2 = (cv::Mat_<double>(3, 2) << 1, 12, 3, 14, 5, 16);
+    cv::MatExpr diff = m1 - m2;
+    int nz = countNonZero(diff);
 
-    ASSERT_EQ(0, countNonZero(m1 - m2));
+    ASSERT_EQ(0, nz);
 }
 
 TEST(Core_Add, AddToColumnWhen4Rows)
