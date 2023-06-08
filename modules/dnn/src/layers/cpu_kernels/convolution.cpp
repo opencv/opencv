@@ -181,6 +181,15 @@ Ptr<FastConv> initFastConv(
                 {0.0f, 0.0f, 1.0f}
         };
 
+        const int CONV_WINO_KSIZE = conv->CONV_WINO_KSIZE;
+        const int CONV_WINO_AREA = conv->CONV_WINO_AREA;
+        const int CONV_WINO_KBLOCK = conv->CONV_WINO_KBLOCK;
+        const int CONV_WINO_ATOM_F32 = conv->CONV_WINO_ATOM_F32;
+        const int CONV_WINO_NATOMS_F32 = conv->CONV_WINO_NATOMS_F32;
+#ifdef CONV_ARM_FP16
+        const int CONV_WINO_ATOM_F16 = conv->CONV_WINO_ATOM_F16;
+        const int CONV_WINO_NATOMS_F16 = conv->CONV_WINO_NATOMS_F16;
+#endif
         // the weights are packed as 6-dim tensor:
         // ngroups * ceil((K/ngroups)/KBLOCK) * (W*W/ATOM_SIZE) * (C/ngroups) * KBLOCK * ATOM_SIZE,
         // where W is the size of Winograd-transformed kernel (8x8),
