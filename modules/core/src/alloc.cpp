@@ -58,8 +58,6 @@
 
 #ifdef HAVE_POSIX_MEMALIGN
 #include <stdlib.h>
-#elif defined HAVE_MALLOC_H
-#include <malloc.h>
 #endif
 
 #ifdef OPENCV_ALLOC_ENABLE_STATISTICS
@@ -82,7 +80,7 @@ cv::utils::AllocatorStatisticsInterface& getAllocatorStatistics()
     return allocator_stats;
 }
 
-#if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN || defined HAVE_WIN32_ALIGNED_MALLOC
+#if defined HAVE_POSIX_MEMALIGN || defined HAVE_WIN32_ALIGNED_MALLOC
 static bool readMemoryAlignmentParameter()
 {
     bool value = true;
@@ -140,14 +138,6 @@ void* fastMalloc(size_t size)
             return OutOfMemoryError(size);
         return ptr;
     }
-#elif defined HAVE_MEMALIGN
-    if (isAlignedAllocationEnabled())
-    {
-        void* ptr = memalign(CV_MALLOC_ALIGN, size);
-        if(!ptr)
-            return OutOfMemoryError(size);
-        return ptr;
-    }
 #elif defined HAVE_WIN32_ALIGNED_MALLOC
     if (isAlignedAllocationEnabled())
     {
@@ -172,7 +162,7 @@ void fastFree_(void* ptr)
 void fastFree(void* ptr)
 #endif
 {
-#if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN
+#if defined HAVE_POSIX_MEMALIGN
     if (isAlignedAllocationEnabled())
     {
         free(ptr);

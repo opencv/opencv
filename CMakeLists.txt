@@ -702,10 +702,6 @@ if(UNIX OR MINGW)
 
   if(OPENCV_ENABLE_MEMALIGN)
     CHECK_SYMBOL_EXISTS(posix_memalign stdlib.h HAVE_POSIX_MEMALIGN)
-    CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
-    if(HAVE_MALLOC_H)
-      CHECK_SYMBOL_EXISTS(memalign malloc.h HAVE_MEMALIGN)
-    endif()
     # TODO:
     # - std::aligned_alloc() C++17 / C11
   endif()
