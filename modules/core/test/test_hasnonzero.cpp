@@ -61,7 +61,7 @@ TEST_P(HasNonZeroAllZeros, hasNonZeroAllZeros)
       const int width = std::max(1, static_cast<int>(rng.next())%MAX_WIDTH);
       const int height = std::max(1, static_cast<int>(rng.next())%MAX_HEIGHT);
       Mat m = Mat::zeros(Size(width, height), type);
-      EXPECT_EQ(false, hasNonZero(m));
+      EXPECT_FALSE(hasNonZero(m));
     }
 }
 
@@ -78,7 +78,7 @@ TEST_P(HasNonZeroNegZeros, hasNonZeroNegZeros)
 
     Mat m = Mat(size, type);
     m.setTo(Scalar::all(-0.));
-    EXPECT_EQ(false, hasNonZero(m));
+    EXPECT_FALSE(hasNonZero(m));
 }
 
 INSTANTIATE_TEST_CASE_P(Core, HasNonZeroNegZeros,
@@ -98,13 +98,13 @@ TEST_P(HasNonZeroLimitValues, hasNonZeroLimitValues)
     Mat m = Mat(size, type);
 
     m.setTo(Scalar::all(std::numeric_limits<double>::infinity()));
-    EXPECT_EQ(true, hasNonZero(m));
+    EXPECT_TRUE(hasNonZero(m));
 
     m.setTo(Scalar::all(-std::numeric_limits<double>::infinity()));
-    EXPECT_EQ(true, hasNonZero(m));
+    EXPECT_TRUE(hasNonZero(m));
 
     m.setTo(Scalar::all(std::numeric_limits<double>::quiet_NaN()));
-    EXPECT_EQ(true, hasNonZero(m));
+    EXPECT_TRUE(hasNonZero(m));
 }
 
 INSTANTIATE_TEST_CASE_P(Core, HasNonZeroLimitValues,
@@ -131,7 +131,7 @@ TEST_P(HasNonZeroRandom, hasNonZeroRandom)
       Mat m = Mat::zeros(size, type);
       Mat nzROI = Mat(m, Rect(nz_pos_x, nz_pos_y, 1, 1));
       nzROI.setTo(Scalar::all(1));
-      EXPECT_EQ(true, hasNonZero(m));
+      EXPECT_TRUE(hasNonZero(m));
     }
 }
 
