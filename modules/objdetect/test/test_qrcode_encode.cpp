@@ -188,7 +188,7 @@ TEST_P(Objdetect_QRCode_Encode_ECI, regression) {
         size_t images_count = static_cast<size_t>(images_list.size());
         ASSERT_GT(images_count, 0u) << "Can't find validation data entries in 'test_images': " << dataset_config;
         QRCodeEncoder::Params params;
-        params.mode = QRCodeEncoder::MODE_ECI;
+        params.mode = (int)QRCodeEncoder::MODE_ECI;
 
         for (size_t index = 0; index < images_count; index++)
         {
@@ -281,8 +281,8 @@ TEST(Objdetect_QRCode_Encode_Decode, regression)
 
                 QRCodeEncoder::Params params;
                 params.version = version;
-                params.correction_level = static_cast<QRCodeEncoder::CorrectionLevel>(level);
-                params.mode = mode;
+                params.correction_level = level;
+                params.mode = (int)mode;
                 Ptr<QRCodeEncoder> encoder = QRCodeEncoder::create(params);
                 Mat qrcode;
                 encoder->encode(input_info, qrcode);
@@ -310,7 +310,7 @@ TEST(Objdetect_QRCode_Encode_Decode, regression)
                 std::string output_info = QRCodeDetector().decode(resized_src, corners, straight_barcode);
                 EXPECT_FALSE(output_info.empty())
                     << "The generated QRcode cannot be decoded." << " Mode: " << (int)mode
-                    << " version: " << version << " error correction level: " << (int)level;
+                    << " version: " << version << " error correction level: " << level;
                 EXPECT_EQ(input_info, output_info) << "The generated QRcode is not same as test data." << " Mode: " << (int)mode <<
                                                         " version: " << version << " error correction level: " << (int)level;
 #endif
@@ -323,7 +323,7 @@ TEST(Objdetect_QRCode_Encode_Decode, regression)
 TEST(Objdetect_QRCode_Encode_Kanji, regression)
 {
     QRCodeEncoder::Params params;
-    params.mode = QRCodeEncoder::MODE_KANJI;
+    params.mode = (int)QRCodeEncoder::MODE_KANJI;
 
     Mat qrcode;
 
@@ -463,7 +463,7 @@ TEST_P(Objdetect_QRCode_Encode_Decode_Structured_Append_Parameterized, regressio
 
     cv::QRCodeEncoder::Params params;
     int encode_mode = GetParam();
-    params.mode = static_cast<cv::QRCodeEncoder::EncodeMode>(encode_mode);
+    params.mode = encode_mode;
 
     for(size_t struct_num = 2; struct_num < 5; ++struct_num)
     {

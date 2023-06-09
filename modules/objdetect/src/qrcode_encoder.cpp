@@ -154,8 +154,8 @@ QRCodeEncoder::~QRCodeEncoder()
 QRCodeEncoder::Params::Params()
 {
     version = 0;
-    correction_level = CORRECT_LEVEL_L;
-    mode = MODE_AUTO;
+    correction_level = (int)CORRECT_LEVEL_L;
+    mode = (int)MODE_AUTO;
     structure_number = 1;
 }
 
@@ -165,8 +165,8 @@ public:
     QRCodeEncoderImpl(const QRCodeEncoder::Params& parameters) : params(parameters)
     {
         version_level = parameters.version;
-        ecc_level = parameters.correction_level;
-        mode_type = parameters.mode;
+        ecc_level = (QRCodeEncoder::CorrectionLevel)parameters.correction_level;
+        mode_type = (QRCodeEncoder::EncodeMode)parameters.mode;
         struct_num = parameters.structure_number;
         version_size = 21;
         mask_type = 0;

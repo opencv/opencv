@@ -739,8 +739,8 @@ public:
     {
         CV_WRAP Params();
         CV_PROP_RW int version;
-        CV_PROP_RW CorrectionLevel correction_level;
-        CV_PROP_RW EncodeMode mode;
+        CV_PROP_RW int correction_level;
+        CV_PROP_RW int mode;
         CV_PROP_RW int structure_number;
     };
 
