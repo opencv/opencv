@@ -272,7 +272,7 @@ void polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order)
             A.at<double>(y,x) = srcX.at<double>(y)*A.at<double>(y,x-1);
     }
     cv::Mat w;
-    solve(A,srcY,w,DECOMP_SVD);
+    solve(A,srcY.reshape(1, npoints),w,DECOMP_SVD);
     w.convertTo(dst, ((src_x.depth() == CV_64F || src_y.depth() == CV_64F) ? CV_64F : CV_32F));
 }
 
