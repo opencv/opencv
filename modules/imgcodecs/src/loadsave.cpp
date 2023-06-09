@@ -132,6 +132,10 @@ struct ImageCodecInitializer
     */
     ImageCodecInitializer()
     {
+#ifdef HAVE_AVIF
+        decoders.push_back(makePtr<AvifDecoder>());
+        encoders.push_back(makePtr<AvifEncoder>());
+#endif
         /// BMP Support
         decoders.push_back( makePtr<BmpDecoder>() );
         encoders.push_back( makePtr<BmpEncoder>() );
