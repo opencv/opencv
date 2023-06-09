@@ -9,6 +9,7 @@
 #include "opencv2/objdetect.hpp"
 #include "opencv2/calib3d.hpp"
 #include <opencv2/core/utils/logger.hpp>
+#include "graphical_code_detector_impl.hpp"
 
 #ifdef HAVE_QUIRC
 #include "quirc.h"
@@ -950,53 +951,7 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
     return result_angle_list;
 }
 
-struct QRCodeDetectorBase::Impl {
-    virtual ~Impl() {}
-    virtual bool detect(InputArray img, OutputArray points) const = 0;
-    virtual std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode) const = 0;
-    virtual std::string detectAndDecode(InputArray img, OutputArray points, OutputArray straight_qrcode) const = 0;
-    virtual bool detectMulti(InputArray img, OutputArray points) const = 0;
-    virtual bool decodeMulti(InputArray img, InputArray points, std::vector<std::string>& decoded_info,
-                             OutputArrayOfArrays straight_qrcode) const = 0;
-    virtual bool detectAndDecodeMulti(InputArray img, std::vector<std::string>& decoded_info, OutputArray points,
-                                      OutputArrayOfArrays straight_qrcode) const = 0;
-};
-
-QRCodeDetectorBase::QRCodeDetectorBase() {}
-
-bool QRCodeDetectorBase::detect(InputArray img, OutputArray points) const {
-    CV_Assert(p);
-    return p->detect(img, points);
-}
-
-std::string QRCodeDetectorBase::decode(InputArray img, InputArray points, OutputArray straight_qrcode) const {
-    CV_Assert(p);
-    return p->decode(img, points, straight_qrcode);
-}
-
-std::string QRCodeDetectorBase::detectAndDecode(InputArray img, OutputArray points, OutputArray straight_qrcode) const {
-    CV_Assert(p);
-    return p->detectAndDecode(img, points, straight_qrcode);
-}
-
-bool QRCodeDetectorBase::detectMulti(InputArray img, OutputArray points) const {
-    CV_Assert(p);
-    return p->detectMulti(img, points);
-}
-
-bool QRCodeDetectorBase::decodeMulti(InputArray img, InputArray points, std::vector<std::string>& decoded_info,
-                                     OutputArrayOfArrays straight_qrcode) const {
-    CV_Assert(p);
-    return p->decodeMulti(img, points, decoded_info, straight_qrcode);
-}
-
-bool QRCodeDetectorBase::detectAndDecodeMulti(InputArray img, std::vector<std::string>& decoded_info,
-                                              OutputArray points, OutputArrayOfArrays straight_qrcode) const {
-    CV_Assert(p);
-    return p->detectAndDecodeMulti(img, decoded_info, points, straight_qrcode);
-}
-
-struct ImplContour : public QRCodeDetectorBase::Impl
+struct ImplContour : public GraphicalCodeDetector::Impl
 {
 public:
     ImplContour(): epsX(0.2), epsY(0.1)  {}
