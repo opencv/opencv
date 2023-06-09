@@ -31,7 +31,6 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
 void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep, float* bpptr, int bpstep, float* outptr, int outstep,
                           float bias, float minval, float maxval, bool ifMinMaxAct);
 
-
 int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv>& conv,
                   int ntasks, float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct)
 {
@@ -51,6 +50,23 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
     int pad_left = conv->pad_left;
 
     int ngroups = conv->ngroups, Cg = C/ngroups, Kg = K/ngroups;
+
+    const int CONV_WINO_KBLOCK = 4;
+#if (CV_NEON && CV_NEON_AARCH64)
+    const int CONV_WINO_IBLOCK = 6;
+#elif  CV_TRY_AVX || CV_TRY_AVX2
+    const int CONV_WINO_IBLOCK = (conv->useAVX || conv->useAVX2) ? 6 : 3;
+#else
+    const int CONV_WINO_IBLOCK = 3;
+#endif
+
+#if CV_TRY_AVX || CV_TRY_AVX2
+    const int CONV_WINO_ATOM_F32 = (conv->useAVX || conv->useAVX2) ? 8 : 4;
+#else
+    const int CONV_WINO_ATOM_F32 = 4;
+#endif
+    const int CONV_WINO_NATOMS_F32 = CONV_WINO_AREA / CONV_WINO_ATOM_F32; // for AVX2, it is 8, otherwise, it's 16.
+
     int Kg_nblocks = (Kg + CONV_WINO_KBLOCK - 1)/CONV_WINO_KBLOCK;
     const size_t inp_planesize = (size_t)Hi*Wi;
     const size_t out_planesize = (size_t)H0*W0;
@@ -398,7 +414,7 @@ void winofunc_accum_f32(const float* inwptr, const float* wptr, float* outbuf, i
 void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
                           float* outptr, int Cg, const int winoIblock, const int winoAtomF32)
 {
-    CV_Assert(CONV_WINO_IBLOCK == 3 && CONV_WINO_KBLOCK == 4 && CONV_WINO_ATOM_F32 == 4);
+    CV_Assert(winoIblock == 3 && winoAtomF32 == 4);
     v_float32x4 x00 = v_load(inptr), x01 = v_load(inptr + 4);
     v_float32x4 x10 = v_load(inptr + inpstep), x11 = v_load(inptr + inpstep + 4);
     v_float32x4 x20 = v_load(inptr + inpstep*2), x21 = v_load(inptr + inpstep*2 + 4);
@@ -573,7 +589,6 @@ void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep,
                           float* bpptr, int bpstep, float* outptr, int outstep,
                           float bias, float minval, float maxval, bool ifMinMaxAct)
 {
-    CV_Assert(CONV_WINO_IBLOCK == 3 && CONV_WINO_KBLOCK == 4 && CONV_WINO_ATOM_F32 == 4);
     v_float32x4 x00 = v_load(inptr), x01 = v_load(inptr + 4);
     v_float32x4 x10 = v_load(inptr + inpstep), x11 = v_load(inptr + inpstep + 4);
     v_float32x4 x20 = v_load(inptr + inpstep*2), x21 = v_load(inptr + inpstep*2 + 4);
