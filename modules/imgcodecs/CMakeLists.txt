@@ -13,6 +13,11 @@ if(HAVE_WINRT_CX AND NOT WINRT)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()
 
+if (HAVE_AVIF)
+  ocv_include_directories(${AVIF_INCLUDE_DIR})
+  list(APPEND GRFMT_LIBS ${AVIF_LIBRARY})
+endif()
+
 if(HAVE_JPEG)
   ocv_include_directories(${JPEG_INCLUDE_DIR} ${${JPEG_LIBRARY}_BINARY_DIR})
   list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
