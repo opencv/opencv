@@ -681,7 +681,12 @@ Mat& Mat::operator=(Mat&& m)
 
 void Mat::create(int d, const int* _sizes, int _type)
 {
+    int sz1 = 1;
     int i;
+    if (d == 0) {
+        d = 1;
+        _sizes = (const int*)&sz1;
+    }
     CV_Assert(0 <= d && d <= CV_MAX_DIM && _sizes);
     _type = CV_MAT_TYPE(_type);
 

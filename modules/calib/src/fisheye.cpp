@@ -340,7 +340,9 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
             Mat rvec = Mat(rvecs1[image_idx]);
             Mat tvec  = Mat(tvecs1[image_idx]);
             cv::internal::projectPoints(object, projected, rvec, tvec, intrinsicLeft, jacobians);
-            Mat(Mat((imageLeft - projected).t()).reshape(1, 1).t()).copyTo(ekk.rowRange(0, 2 * n_points));
+            Mat pt_diff = imageLeft.reshape(1, n_points*2) -
+                          projected.reshape(1, n_points*2);
+            pt_diff.copyTo(ekk.rowRange(0, 2 * n_points));
             jacobians.colRange(8, 11).copyTo(Jkk.colRange(24 + image_idx * 6, 27 + image_idx * 6).rowRange(0, 2 * n_points));
             jacobians.colRange(11, 14).copyTo(Jkk.colRange(27 + image_idx * 6, 30 + image_idx * 6).rowRange(0, 2 * n_points));
             jacobians.colRange(0, 2).copyTo(Jkk.colRange(0, 2).rowRange(0, 2 * n_points));
@@ -354,7 +356,10 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
             tvec  = Mat(tvecs2[image_idx]);
 
             cv::internal::projectPoints(object, projected, omr, Tr, intrinsicRight, jacobians);
-            Mat(Mat((imageRight - projected).t()).reshape(1, 1).t()).copyTo(ekk.rowRange(2 * n_points, 4 * n_points));
+
+            pt_diff = imageRight.reshape(1, n_points*2) -
+                      projected.reshape(1, n_points*2);
+            pt_diff.copyTo(ekk.rowRange(2 * n_points, 4 * n_points));
             Mat dxrdom = jacobians.colRange(8, 11) * domrdom + jacobians.colRange(11, 14) * dTrdom;
             Mat dxrdT = jacobians.colRange(8, 11) * domrdT + jacobians.colRange(11, 14)* dTrdT;
             Mat dxrdomckk = jacobians.colRange(8, 11) * domrdomckk + jacobians.colRange(11, 14) * dTrdomckk;
@@ -580,7 +585,7 @@ void cv::internal::ComputeExtrinsicRefine(const Mat& imagePoints, const Mat& obj
         Mat jacobians;
         projectPoints(objectPoints, x, rvec, tvec, param, jacobians);
 
-        Mat ex = imagePoints - Mat(x).t();
+        Mat ex = imagePoints - Mat(x);
         ex = ex.reshape(1, 2);
 
         J = jacobians.colRange(8, 14).clone();
@@ -826,7 +831,7 @@ void cv::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayO
         objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
         imagePoints.getMat (image_idx).convertTo(image, CV_64FC2);
 
-        bool imT = image.rows < image.cols;
+        bool imT = image.channels() == 1 && image.rows > image.cols;
         Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
 
         std::vector<Point2d> x;
@@ -850,8 +855,9 @@ void cv::internal::ComputeJacobians(InputArrayOfArrays objectPoints, InputArrayO
         JJ2(Rect(9 + 6 * image_idx, 0, 6, 9)) = A * B.t();
         JJ2(Rect(0, 9 + 6 * image_idx, 9, 6)) = JJ2(Rect(9 + 6 * image_idx, 0, 6, 9)).t();
 
-        ex3.rowRange(0, 9) += A * exkk.reshape(1, 2 * exkk.rows);
-        ex3.rowRange(9 + 6 * image_idx, 9 + 6 * (image_idx + 1)) = B * exkk.reshape(1, 2 * exkk.rows);
+        Mat exkk_col = exkk.reshape(1, 2 * (int)exkk.total());
+        ex3.rowRange(0, 9) += A * exkk_col;
+        ex3.rowRange(9 + 6 * image_idx, 9 + 6 * (image_idx + 1)) = B *  exkk_col;
 
         if (check_cond)
         {
@@ -891,13 +897,14 @@ void cv::internal::EstimateUncertainties(InputArrayOfArrays objectPoints, InputA
         objectPoints.getMat(image_idx).convertTo(object, CV_64FC3);
         imagePoints.getMat (image_idx).convertTo(image, CV_64FC2);
 
-        bool imT = image.rows < image.cols;
+        bool imT = image.channels() == 1 && image.rows > image.cols;
 
         Mat om(omc.getMat().col(image_idx)), T(Tc.getMat().col(image_idx));
 
         std::vector<Point2d> x;
         projectPoints(object, x, om, T, params, noArray());
         Mat ex_ = (imT ? image.t() : image) - Mat(x);
+        ex_ = ex_.reshape(2, (int)ex_.total());
         ex_.copyTo(ex.rowRange(insert_idx, insert_idx + ex_.rows));
         insert_idx += ex_.rows;
     }

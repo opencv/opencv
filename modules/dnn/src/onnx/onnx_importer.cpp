@@ -2584,7 +2584,7 @@ void ONNXImporter::parseShape(LayerParams& layerParams, const opencv_onnx::NodeP
     int dims = static_cast<int>(inpShape.size());
     if (isInput1D)
         dims = 1;
-    Mat shapeMat(dims, 1, CV_32S);
+    Mat shapeMat(1, dims, CV_32S);
     bool isDynamicShape = false;
     for (int j = 0; j < dims; ++j)
     {

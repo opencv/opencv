@@ -615,7 +615,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                 errors_per_view = std::vector<double>(obj_points_.size());
                 for (int f = 0; f < (int) obj_points_.size(); f++) {
                     double err2 = multiview::computeReprojectionMSE(obj_points_[f],
-                        img_points_[f], Ks[camera], distortions[camera], rvecs.row(f), tvecs.row(f), noArray(), noArray(), true);
+                        img_points_[f], Ks[camera], distortions[camera], rvecs.col(f), tvecs.col(f), noArray(), noArray(), true);
                     errors_per_view[f] = sqrt(err2);
                 }
             } else {
@@ -626,8 +626,8 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
             int cnt_visible_frame = 0;
             for (int f = 0; f < NUM_FRAMES; f++) {
                 if (detection_mask_mat[camera][f]) {
-                    rvecs_all[camera][f] = Vec3d(Mat(3, 1, CV_64F, rvecs.row(cnt_visible_frame).data));
-                    tvecs_all[camera][f] = Vec3d(Mat(3, 1, CV_64F, tvecs.row(cnt_visible_frame).data));
+                    rvecs_all[camera][f] = Vec3d(Mat(3, 1, CV_64F, rvecs.col(cnt_visible_frame).data));
+                    tvecs_all[camera][f] = Vec3d(Mat(3, 1, CV_64F, tvecs.col(cnt_visible_frame).data));
                     double err = errors_per_view[cnt_visible_frame];
                     double err2 = err * err;
                     if (camera_rt_errors[f] > err2) {
