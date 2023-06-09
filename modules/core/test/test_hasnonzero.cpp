@@ -44,29 +44,22 @@
 
 namespace opencv_test { namespace {
 
-static const int MAX_WIDTH = 640;
-static const int MAX_HEIGHT = 480;
-
-typedef testing::TestWithParam<int> HasNonZeroAllZeros;
+typedef testing::TestWithParam<std::tuple<int, Size> > HasNonZeroAllZeros;
 
 TEST_P(HasNonZeroAllZeros, hasNonZeroAllZeros)
 {
-    const int type = GetParam();
+    const int type = std::get<0>(GetParam());
+    const Size size = std::get<1>(GetParam());
 
-    RNG& rng = theRNG();
-
-    const size_t N = 100;
-    for(size_t i = 0 ; i<N ; ++i)
-    {
-      const int width = std::max(1, static_cast<int>(rng.next())%MAX_WIDTH);
-      const int height = std::max(1, static_cast<int>(rng.next())%MAX_HEIGHT);
-      Mat m = Mat::zeros(Size(width, height), type);
-      EXPECT_FALSE(hasNonZero(m));
-    }
+    Mat m = Mat::zeros(size, type);
+    EXPECT_FALSE(hasNonZero(m));
 }
 
 INSTANTIATE_TEST_CASE_P(Core, HasNonZeroAllZeros,
-  testing::Values(CV_8UC1, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1)
+    testing::Combine(
+        testing::Values(CV_8UC1, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1),
+        testing::Values(Size(1, 1), Size(320, 240), Size(127, 113), Size(1, 113))
+    )
 );
 
 typedef testing::TestWithParam<std::tuple<int, Size> > HasNonZeroNegZeros;
@@ -83,7 +76,7 @@ TEST_P(HasNonZeroNegZeros, hasNonZeroNegZeros)
 
 INSTANTIATE_TEST_CASE_P(Core, HasNonZeroNegZeros,
     testing::Combine(
-      testing::Values(CV_32FC1, CV_64FC1),
+        testing::Values(CV_32FC1, CV_64FC1),
         testing::Values(Size(1, 1), Size(320, 240), Size(127, 113), Size(1, 113))
     )
 );
