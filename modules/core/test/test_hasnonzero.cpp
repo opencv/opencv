@@ -105,6 +105,15 @@ TEST_P(HasNonZeroLimitValues, hasNonZeroLimitValues)
 
     m.setTo(Scalar::all(std::numeric_limits<double>::quiet_NaN()));
     EXPECT_TRUE(hasNonZero(m));
+
+    m.setTo((CV_MAT_DEPTH(type) == CV_64F) ? Scalar::all(std::numeric_limits<double>::epsilon()) : Scalar::all(std::numeric_limits<float>::epsilon()));
+    EXPECT_TRUE(hasNonZero(m));
+
+    m.setTo((CV_MAT_DEPTH(type) == CV_64F) ? Scalar::all(std::numeric_limits<double>::min()) : Scalar::all(std::numeric_limits<float>::min()));
+    EXPECT_TRUE(hasNonZero(m));
+
+    m.setTo((CV_MAT_DEPTH(type) == CV_64F) ? Scalar::all(std::numeric_limits<double>::denorm_min()) : Scalar::all(std::numeric_limits<float>::denorm_min()));
+    EXPECT_TRUE(hasNonZero(m));
 }
 
 INSTANTIATE_TEST_CASE_P(Core, HasNonZeroLimitValues,
