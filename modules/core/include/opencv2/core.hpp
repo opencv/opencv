@@ -572,6 +572,14 @@ independently for each channel.
 */
 CV_EXPORTS_AS(sumElems) Scalar sum(InputArray src);
 
+/** @brief Checks for the presence of at least one non-zero array element.
+
+The function returns whether there are non-zero elements in src
+@param src single-channel array.
+@sa  mean, meanStdDev, norm, minMaxLoc, calcCovarMatrix
+*/
+CV_EXPORTS_W bool hasNonZero( InputArray src );
+
 /** @brief Counts non-zero array elements.
 
 The function returns the number of non-zero elements in src :
