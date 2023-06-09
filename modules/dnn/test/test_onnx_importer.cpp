@@ -82,6 +82,7 @@ public:
 
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
+        net.enableWinograd(useWinograd);
 
         std::vector<String> inputNames;
         for (int i = 0; i < numInps; ++i)
@@ -1932,7 +1933,9 @@ TEST_P(Test_ONNX_layers, ConvResizePool1d)
 #endif
     }
 #endif
-    testONNXModels("conv_resize_pool_1d");
+
+    const double lInf = (target == DNN_TARGET_CPU_FP16) ? 0.024 : default_lInf;
+    testONNXModels("conv_resize_pool_1d", npy, default_l1, lInf);
 }
 
 TEST_P(Test_ONNX_layers, DepthWiseAdd)
@@ -2133,6 +2136,7 @@ TEST_P(Test_ONNX_nets, Alexnet)
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
+    net.enableWinograd(false);
 
     Mat inp = imread(_tf("../grace_hopper_227.png"));
     Mat ref = blobFromNPY(_tf("../caffe_alexnet_prob.npy"));
@@ -2204,6 +2208,9 @@ TEST_P(Test_ONNX_nets, Googlenet)
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
+
+    if (target == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
 
     std::vector<Mat> images;
     images.push_back( imread(_tf("../googlenet_0.png")) );
@@ -2349,7 +2356,7 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
     }
 #endif
 
-    testONNXModels("tiny_yolo2", pb, l1, lInf);
+    testONNXModels("tiny_yolo2", pb, l1, lInf, false, true, 1, false);
 }
 
 TEST_P(Test_ONNX_nets, CNN_MNIST)
@@ -2394,6 +2401,7 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
 
     double l1 = default_l1, lInf = default_lInf;
     // output range: [-3; 3]
+    bool useWinograd = true;
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
     {
         l1 = 0.009;
@@ -2409,7 +2417,14 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
         l1 = 0.009;
         lInf = 0.04;
     }
-    testONNXModels("LResNet100E_IR", pb, l1, lInf);
+    else if (target == DNN_TARGET_CPU_FP16)
+    {
+        useWinograd = false;
+        l1 = 0.009;
+        lInf = 0.035;
+    }
+
+    testONNXModels("LResNet100E_IR", pb, l1, lInf, false, true, 1, useWinograd);
 }
 
 TEST_P(Test_ONNX_nets, Emotion_ferplus)
@@ -2424,7 +2439,7 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
 
     double l1 = default_l1;
     double lInf = default_lInf;
-
+    bool useWinograd = true;
     // Output values are in range [-2.011, 2.111]
     if ((backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16) || (target == DNN_TARGET_CUDA_FP16))
         l1 = 0.007;
@@ -2437,6 +2452,11 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
         l1 = 2.4e-4;
         lInf = 6e-4;
     }
+    else if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+    {
+        useWinograd = false;
+        l1 = 0.007;
+    }
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2020040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
     {
@@ -2444,7 +2464,7 @@ TEST_P(Test_ONNX_nets, Emotion_ferplus)
     }
 #endif
 
-    testONNXModels("emotion_ferplus", pb, l1, lInf);
+    testONNXModels("emotion_ferplus", pb, l1, lInf, false, true, 1, useWinograd);
 }
 
 TEST_P(Test_ONNX_nets, Inception_v2)

@@ -40,6 +40,8 @@ public:
         model.setPreferableTarget(target);
 
         model.setNmsAcrossClasses(nmsAcrossClasses);
+        if (target == DNN_TARGET_CPU_FP16)
+            model.enableWinograd(false);
 
         std::vector<int> classIds;
         std::vector<float> confidences;

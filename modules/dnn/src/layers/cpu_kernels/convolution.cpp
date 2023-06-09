@@ -14,14 +14,55 @@
 
 #include "conv_block.simd.hpp"
 #include "layers/cpu_kernels/conv_block.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
+#include <opencv2/core/utils/logger.hpp>
 
 namespace cv { namespace dnn {
-enum { VEC_ALIGN = 32, DFT_TYPE = CV_32F }; // Memory alignment.
+enum { VEC_ALIGN = 32}; // Memory alignment.
 
-void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int outLen,
+void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int outLen,
                const int convMR, const int convNR);
-void convBlockMR1(int np, const float* a, const float* b, float *c, const float bias, bool init_c,
+void convBlockMR1_F32(int np, const float* a, const float* b, float *c, const float bias, bool init_c,
                   const float minval, const float maxval, bool ifMinMaxAct, const int outLen, const int convNR);
+
+#ifdef CONV_ARM_FP16
+// Fast convert float 32 to float16
+static inline void _cvt32f16f( const float* src, float16_t* dst, int len)
+{
+    int j = 0;
+    const int VECSZ = 4;
+    __fp16* dst_FP16 = (__fp16 *)dst;
+    if (len > VECSZ * 4)
+    {
+        const int VECSZ4 = 4 * VECSZ;
+        for( ; j + VECSZ4 < len; j += VECSZ4)
+        {
+
+            float32x4_t v0 = vld1q_f32(src + j);
+            float32x4_t v1 = vld1q_f32(src + j + 4);
+            float32x4_t v2 = vld1q_f32(src + j + 8);
+            float32x4_t v3 = vld1q_f32(src + j + 12);
+
+            vst1q_f16(dst_FP16 + j, vcombine_f16(vcvt_f16_f32(v0), vcvt_f16_f32(v1)));
+            vst1q_f16(dst_FP16 + j + 8, vcombine_f16(vcvt_f16_f32(v2), vcvt_f16_f32(v3)));
+        }
+    }
+
+    for( ; j < len; j += VECSZ )
+    {
+        if( j > len - VECSZ )
+        {
+            if( j == 0 )
+                break;
+            j = len - VECSZ;
+        }
+
+        float16x4_t hv = vcvt_f16_f32(vld1q_f32(src + j));
+        vst1_f16(dst_FP16 + j, hv);
+    }
+    for( ; j < len; j++ )
+        dst[j] = float16_t(src[j]);
+}
+#endif
 
 Ptr<FastConv> initFastConv(
         InputArray _weightsMat,
@@ -119,9 +160,16 @@ Ptr<FastConv> initFastConv(
 
     conv->useFP16 = false;
 #ifdef CONV_ARM_FP16
-    // TODO: add FP16 support for Winograd.
-    if (_useFP16 && (conv->conv_type == CONV_TYPE_GENERIC || conv->conv_type == CONV_TYPE_DEPTHWISE_REMAIN))
+    if (_useFP16 && (conv->conv_type == CONV_TYPE_GENERIC || conv->conv_type == CONV_TYPE_DEPTHWISE_REMAIN
+    || conv->conv_type == CONV_TYPE_WINOGRAD3X3))
         conv->useFP16 = true;
+
+    // Runtime FP16 check.
+    if (conv->useFP16 && !haveFP16_ARM())
+    {
+        conv->useFP16 = false;
+        CV_LOG_ONCE_WARNING(NULL, "DNN: the CPU does not support the instruction set required by FP16, fallback to FP32.");
+    }
 #endif
 
     float *srcWeights = (float *)weightsMat.data;
@@ -552,46 +600,6 @@ static inline void packData2(char *& inpbuf, float*& inptrIn, int& in_w, int& x0
     inptrIn += stride_w;
     in_w += stride_w;
 }
-
-#ifdef CONV_ARM_FP16
-// Fast convert float 32 to float16
-static inline void _cvt32f16f( const float* src, float16_t* dst, int len)
-{
-    int j = 0;
-    const int VECSZ = 4;
-    __fp16* dst_FP16 = (__fp16 *)dst;
-    if (len > VECSZ * 4)
-    {
-        const int VECSZ4 = 4 * VECSZ;
-        for( ; j + VECSZ4 < len; j += VECSZ4)
-        {
-
-            float32x4_t v0 = vld1q_f32(src + j);
-            float32x4_t v1 = vld1q_f32(src + j + 4);
-            float32x4_t v2 = vld1q_f32(src + j + 8);
-            float32x4_t v3 = vld1q_f32(src + j + 12);
-
-            vst1q_f16(dst_FP16 + j, vcombine_f16(vcvt_f16_f32(v0), vcvt_f16_f32(v1)));
-            vst1q_f16(dst_FP16 + j + 8, vcombine_f16(vcvt_f16_f32(v2), vcvt_f16_f32(v3)));
-        }
-    }
-
-    for( ; j < len; j += VECSZ )
-    {
-        if( j > len - VECSZ )
-        {
-            if( j == 0 )
-                break;
-            j = len - VECSZ;
-        }
-
-        float16x4_t hv = vcvt_f16_f32(vld1q_f32(src + j));
-        vst1_f16(dst_FP16 + j, hv);
-    }
-    for( ; j < len; j++ )
-        dst[j] = float16_t(src[j]);
-}
-#endif
 
 static inline void packInputData(char* inpbuf_task, float* inp, const int* ofstab, const int* dhwTab, int zyx0, int zyx_limit,
                                  int ksize, int stride_d, int stride_h, int stride_w, int pad_front, int pad_top, int pad_left,
@@ -1174,10 +1182,9 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
     else
         activ = nullptr;
 
-    // TODO: support FP16 for winograd.
     if (conv->conv_type == CONV_TYPE_WINOGRAD3X3) // winograd
     {
-        CV_Assert(conv->weightsWinoBufPtr && input.dims == 4 && conv_dim == CONV_2D && !useFP16);
+        CV_Assert((conv->weightsWinoBufPtr || conv->weightsWinoBufPtr_FP16) && input.dims == 4 && conv_dim == CONV_2D);
         if (runWinograd63(input, fusedAddMat, output, conv, ntasks, minval, maxval, activ, ifMinMaxAct))
             return;
     }
@@ -1477,7 +1484,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
 #ifdef CONV_ARM_FP16
                             if (useFP16)
                             {
-                                opt_NEON::convBlockMR1_FP16(DkHkWkCg, weights, inptr, cptr, biasVal, fusedAdd, minval, maxval, ifMinMaxAct, outLen, CONV_NR);
+                                opt_FP16::convBlockMR1_F16(DkHkWkCg, weights, inptr, cptr, biasVal, fusedAdd, minval, maxval, ifMinMaxAct, outLen, CONV_NR);
                             }
                             else
 #endif
@@ -1485,7 +1492,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
                         }
                         else
 #endif
-                        convBlockMR1(DkHkWkCg, (const float *)weights, (const float *)inptr, cptr, biasVal, fusedAdd, minval, maxval, ifMinMaxAct, outLen, CONV_NR);
+                        convBlockMR1_F32(DkHkWkCg, (const float *)weights, (const float *)inptr, cptr, biasVal, fusedAdd, minval, maxval, ifMinMaxAct, outLen, CONV_NR);
 
                         if (ifBuffer)
                         {
@@ -1526,12 +1533,12 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
                             {
 #if CV_TRY_AVX2
                                 if (conv->useAVX2)
-                                    opt_AVX2::convBlock(c1 - c0, (const float *)wptr, (const float *)inptr, cptr, ldc, c0 == 0, outLen, CONV_MR, CONV_NR);
+                                    opt_AVX2::convBlock_F32(c1 - c0, (const float *)wptr, (const float *)inptr, cptr, ldc, c0 == 0, outLen, CONV_MR, CONV_NR);
                                 else
 #endif
 #if CV_TRY_AVX
                                 if (conv->useAVX)
-                                    opt_AVX::convBlock(c1 - c0, (const float *)wptr, (const float *)inptr, cptr, ldc, c0 == 0, outLen, CONV_MR, CONV_NR);
+                                    opt_AVX::convBlock_F32(c1 - c0, (const float *)wptr, (const float *)inptr, cptr, ldc, c0 == 0, outLen, CONV_MR, CONV_NR);
                                 else
 #endif
 #if CV_NEON
@@ -1540,16 +1547,16 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
 #ifdef CONV_ARM_FP16
                                     if (useFP16)
                                     {
-                                        opt_NEON::convBlock_FP16(c1 - c0, wptr, inptr, (char *)cptr_f16, ldc, c0 == 0, outLen, CONV_MR, CONV_NR);
+                                        opt_FP16::convBlock_F16(c1 - c0, wptr, inptr, (char *)cptr_f16, ldc, c0 == 0, outLen, CONV_MR, CONV_NR);
                                     }
                                     else
 #endif
-                                    opt_NEON::convBlock(c1 - c0, (const float *)wptr, (const float *)inptr, cptr, ldc, c0 == 0, outLen, CONV_MR, CONV_NR);
+                                    opt_NEON::convBlock_F32(c1 - c0, (const float *)wptr, (const float *)inptr, cptr, ldc, c0 == 0, outLen, CONV_MR, CONV_NR);
                                 }
                                 else
 #endif
                                 // The possible outLen range is 24 or 8~1.
-                                convBlock(c1 - c0, (const float *)wptr, (const float *)inptr, cptr, ldc, c0 == 0, outLen, CONV_MR, CONV_NR);
+                                convBlock_F32(c1 - c0, (const float *)wptr, (const float *)inptr, cptr, ldc, c0 == 0, outLen, CONV_MR, CONV_NR);
                             }
                         }
                     }
@@ -1838,7 +1845,7 @@ static inline void convBlockMR1x12(int np, const float* a, const float* b, float
 }
 #endif
 
-void convBlockMR1(int np, const float* a, const float* b, float *c, const float bias, bool init_c,
+void convBlockMR1_F32(int np, const float* a, const float* b, float *c, const float bias, bool init_c,
                   const float minval, const float maxval, bool ifMinMaxAct, const int outLen, const int convNR)
 {
 #if CV_SIMD128
@@ -2088,7 +2095,7 @@ static inline void convBlockNoSIMD(int np, const float* a, const float* b, float
     }
 }
 
-void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int outLen,
+void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int outLen,
                const int convMR, const int convNR)
 {
     // The possible outLen range is [24, 8~1].

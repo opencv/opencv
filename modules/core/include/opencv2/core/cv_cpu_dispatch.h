@@ -74,10 +74,13 @@
 #ifdef CV_CPU_COMPILE_FP16
 #  if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM) || defined(_M_ARM64)
 #    include <arm_neon.h>
+#ifdef __ARM_FEATURE_FP16_VECTOR_ARITHMETIC
+#    define CV_FP16 1
+#endif
 #  else
 #    include <immintrin.h>
+#    define CV_FP16 1
 #  endif
-#  define CV_FP16 1
 #endif
 #ifdef CV_CPU_COMPILE_NEON_DOTPROD
 #  include <arm_neon.h>

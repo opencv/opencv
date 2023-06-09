@@ -8,7 +8,15 @@ namespace cv {
 namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool init_c, int width, const int convMR, const int convNR);
+void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bool init_c, int width, const int convMR, const int convNR);
+
+
+// FP 16 branch.
+void convBlock_F16(int np, const char * _a, const char * _b, char * _c, int ldc, bool init_c, int width,
+                    const int convMR_fp16, const int convNR_fp16);
+
+void convBlockMR1_F16(int np, const char* _a, const char* _b, float *c, const float _bias, bool init_c,
+                       const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR_FP16);
 
 #if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_AVX
 
@@ -17,7 +25,7 @@ void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool i
 #define _mm256_fmadd_ps(a, b, c) _mm256_add_ps(c, _mm256_mul_ps(a, b))
 #endif
 
-void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool init_c, int width, const int convMR, const int convNR)
+void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bool init_c, int width, const int convMR, const int convNR)
 {
     CV_Assert(convMR == 4 && convNR == 24);
     __m256 c00 = _mm256_set1_ps(0.f), c01 = c00, c02 = c00;
@@ -485,19 +493,18 @@ void convBlockMR1_F32(int np, const float * a, const float * b, float *c, const 
 
 #if CV_NEON_AARCH64 && defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)
 // Fix conflict between float16_t in arm_neon.h and float16_t in cvdef.h.
+#ifndef _FIX_ARM_FP16
+#define _FIX_ARM_FP16
 typedef __fp16 float16_t;
-
-#ifndef __ARM_FEATURE_FMA // Work around without FMA support.
-#define vfmaq_f16(a, b, c) (a + b * c)
 #endif
-void convBlock_FP16(int np, const char * _a, const char * _b, char * _c, int ldc, bool init_c, int width,
+
+void convBlock_F16(int np, const char * _a, const char * _b, char * _c, int ldc, bool init_c, int width,
                     const int convMR_fp16, const int convNR_fp16)
 {
-#if 1
     const float16_t* a = (const float16_t*)_a;
     const float16_t* b = (const float16_t*)_b;
     float16_t* c = (float16_t*)_c;
-
+#if 1
     CV_Assert(convMR_fp16 == 8 && convNR_fp16 == 24);
 
     float16x8_t c00 = vdupq_n_f16(0), c01 = c00, c02 = c00;
@@ -603,8 +610,8 @@ void convBlock_FP16(int np, const char * _a, const char * _b, char * _c, int ldc
 
     if (!init_c)
     {
-#undef _FX_UPDATE_CBUF_ROW
-#define _FX_UPDATE_CBUF_ROW(row) \
+        #undef _FX_UPDATE_CBUF_ROW
+        #define _FX_UPDATE_CBUF_ROW(row) \
         c##row##0 = c##row##0 + vld1q_f16(c + row*ldc); \
         c##row##1 = c##row##1 + vld1q_f16(c + row*ldc + 8); \
         c##row##2 = c##row##2 + vld1q_f16(c + row*ldc + 16)
@@ -619,8 +626,8 @@ void convBlock_FP16(int np, const char * _a, const char * _b, char * _c, int ldc
         _FX_UPDATE_CBUF_ROW(7);
     }
 
-#undef _FX_STORE_CBUF_ROW
-#define _FX_STORE_CBUF_ROW(row) \
+    #undef _FX_STORE_CBUF_ROW
+    #define _FX_STORE_CBUF_ROW(row) \
     vst1q_f16(c + row*ldc, c##row##0); \
     vst1q_f16(c + row*ldc + 8, c##row##1); \
     vst1q_f16(c + row*ldc + 16, c##row##2)
@@ -635,9 +642,6 @@ void convBlock_FP16(int np, const char * _a, const char * _b, char * _c, int ldc
     _FX_STORE_CBUF_ROW(7);
 #else
     // reference only.
-    const float16_t* a = (const float16_t*)_a;
-    const float16_t* b = (const float16_t*)_b;
-    float16_t* c = (float16_t*)_c;
     float cbuf[convMR_fp16*convNR_fp16];
     memset(cbuf, 0, sizeof(cbuf));
 
@@ -646,14 +650,14 @@ void convBlock_FP16(int np, const char * _a, const char * _b, char * _c, int ldc
         for( int i = 0; i < convMR_fp16; i++ )
         {
             float ai = float(a[convMR_fp16*p + i]);
-                for( int j = 0; j < convNR_fp16; j++ )
-                    cbuf[i*convNR_fp16+j] += float(b[convNR_fp16*p + j]) * ai;
+            for( int j = 0; j < convNR_fp16; j++ )
+                cbuf[i*convNR_fp16+j] += float(b[convNR_fp16*p + j]) * ai;
         }
     }
 
     if (!init_c)
     {
-    for(int i = 0; i < convMR_fp16; i++)
+        for(int i = 0; i < convMR_fp16; i++)
         {
             for(int j = 0; j < convNR_fp16; j++)
                 c[i*ldc + j] = float16_t(float(c[i*ldc + j]) + cbuf[i*convNR_fp16 + j]);
@@ -670,8 +674,8 @@ void convBlock_FP16(int np, const char * _a, const char * _b, char * _c, int ldc
 #endif
 }
 
-void convBlockMR1_FP16(int np, const char* _a, const char* _b, float *c, const float _bias, bool init_c,
-                            const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR_FP16)
+void convBlockMR1_F16(int np, const char* _a, const char* _b, float *c, const float _bias, bool init_c,
+                       const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR_FP16)
 {
     CV_Assert(convNR_FP16 == 24); // CONV_NR_FP16 = 24
     const float16_t* a = (const float16_t*)_a;
@@ -752,8 +756,8 @@ void convBlockMR1_FP16(int np, const char* _a, const char* _b, float *c, const f
     vst1q_f32(c + 16, c20);
     vst1q_f32(c + 20, c21);
 }
-#endif
 
-#endif
-}
+#endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
+CV_CPU_OPTIMIZATION_NAMESPACE_END
 }} // namespace cv::dnn
