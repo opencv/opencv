@@ -263,8 +263,8 @@ The distortion parameters are the radial coefficients \f$k_1\f$, \f$k_2\f$, \f$k
 are the thin prism distortion coefficients. Higher-order coefficients are not considered in OpenCV.
 
 The next figures show two common types of radial distortion: barrel distortion
-(\f$ 1 + k_1 r^2 + k_2 r^4 + k_3 r^6 \f$ monotonically decreasing)
-and pincushion distortion (\f$ 1 + k_1 r^2 + k_2 r^4 + k_3 r^6 \f$ monotonically increasing).
+(\f$ 1 + k_1 r^2 + k_2 r^4 + k_3 r^6 \f$ monotonically increasing)
+and pincushion distortion (\f$ 1 + k_1 r^2 + k_2 r^4 + k_3 r^6 \f$ monotonically decreasing).
 Radial distortion is always monotonic for real lenses,
 and if the estimator produces a non-monotonic result,
 this should be considered a calibration failure.
