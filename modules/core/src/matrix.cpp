@@ -274,7 +274,7 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
 
     if( _dims < 2 )
     {
-        m.cols = _dims >= 1 ? m.rows : 1;
+        m.cols = _dims >= 1 ? _sz[0] : 1;
         m.rows = 1;
         m.size.p = &m.cols;
         m.step.buf[0] = m.cols*esz;

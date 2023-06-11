@@ -234,12 +234,20 @@ public:
             char* data, const size_t* step,
             const Functor& op)
     {
-        assert(ndims >= 2);
+        CV_Assert(ndims >= 1);
         size_t dp1 = step1[ndims-1]/sizeof(T);
         size_t dp2 = step2[ndims-1]/sizeof(T);
         size_t dp = step[ndims-1]/sizeof(T);
-        int k, n1 = shape[ndims-1], n2 = shape[ndims-2];
+        int k, n1 = shape[ndims-1], n2 = ndims >= 2 ? shape[ndims-2] : 1;
+        size_t inplane_step1 = 0, inplane_step2 = 0, inplane_step = 0;
         size_t plane_idx, nplanes = 1;
+
+        if (ndims >= 2) {
+            inplane_step1 = step1[ndims-2];
+            inplane_step2 = step2[ndims-2];
+            inplane_step = step[ndims-2];
+        }
+
         for (k = 0; k < ndims-2; k++) nplanes *= shape[k];
 
         for (plane_idx = 0; plane_idx < nplanes; plane_idx++) {
@@ -255,9 +263,9 @@ public:
                 ptr_ += i_k*step[k];
                 idx = next_idx;
             }
-            for (int i2 = 0; i2 < n2; i2++, ptr1_ += step1[ndims-2],
-                                            ptr2_ += step2[ndims-2],
-                                            ptr_ += step[ndims-2])
+            for (int i2 = 0; i2 < n2; i2++, ptr1_ += inplane_step1,
+                                            ptr2_ += inplane_step2,
+                                            ptr_ += inplane_step)
             {
                 const T* ptr1 = (const T*)ptr1_;
                 const T* ptr2 = (const T*)ptr2_;

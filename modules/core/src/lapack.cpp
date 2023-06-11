@@ -1252,8 +1252,7 @@ bool solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int method )
             method = DECOMP_EIG;
     }
 
-    CV_Assert((is_normal && (n == src2.rows)) ||
-              (!is_normal && (m == src2.rows)));
+    CV_Assert(m == src2.rows);
     size_t asize = astep*(method == DECOMP_SVD || is_normal ? n : m);
     bufsize += asize + 32;
 

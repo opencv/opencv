@@ -102,6 +102,12 @@ public:
             netSoftmax.setInput(ref);
             ref = netSoftmax.forward();
         }
+        if (ref.dims != out.dims) {
+            if (ref.dims == 1)
+                ref = ref.reshape(1, out.rows);
+            if (out.dims == 1)
+                out = out.reshape(1, ref.rows);
+        }
         if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
         {
             l1 = std::max(l1, 1.4e-3);
