@@ -254,8 +254,54 @@ inline IE::TensorDesc toIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
     return IE::TensorDesc(toIE(mat.depth()), toIE(sz), toIELayout(sz.dims()));
 }
 
-inline IE::Blob::Ptr wrapIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
-    const auto tDesc = toIE(mat, hint);
+// NB: Inference dimmensions always follow NCDHW order
+// even though the real layout is different.
+// E.g if user provided Mat({1, 240, 320, 3}, CV_8U) + NHWC layout
+// need to create Blob(U8, {1, 3, 240, 320}, NHWC).
+inline IE::SizeVector alignDimsWithLayout(const IE::SizeVector &dims,
+                                          const IE::Layout     layout) {
+    switch (layout) {
+        case IE::Layout::NDHWC: // NCDHW
+            return {dims[0], dims[4], dims[1], dims[2], dims[3]};
+        case IE::Layout::NHWC: // NCHW
+            return {dims[0], dims[3], dims[1], dims[2]};
+        case IE::Layout::HWC: // CHW
+            return {dims[2], dims[0], dims[1]};
+         default: return dims;
+    }
+    GAPI_Assert(false);
+}
+
+inline IE::TensorDesc toIE(const cv::Mat               &mat,
+                           const cv::gapi::ie::TraitAs hint,
+                           const IE::Layout            layout) {
+    const auto &sz = mat.size;
+    if (sz.dims() == 2 && hint == cv::gapi::ie::TraitAs::IMAGE)
+    {
+        // NB: This logic is mainly taken from IE samples
+        const size_t channels = mat.channels();
+        const size_t height   = mat.size().height;
+        const size_t width    = mat.size().width;
+
+        const size_t strideH  = mat.step1();
+        IE::BlockingDesc bdesc({1, height, width, channels} /* blocking dims */,
+                               {0, 2, 3, 1} /* order for NHWC   */,
+                               0            /* offset           */,
+                               {0, 0, 0, 0} /* offsets for dims */,
+                               {strideH * height, strideH, channels, 1} /* strides for dims */);
+
+        return IE::TensorDesc(toIE(mat.depth()),
+                              IE::SizeVector{1, channels, height, width}, bdesc);
+    }
+    return IE::TensorDesc(toIE(mat.depth()),
+                          alignDimsWithLayout(toIE(sz), layout),
+                          layout);
+}
+
+inline IE::Blob::Ptr wrapIE(const cv::Mat         &mat,
+                            cv::gapi::ie::TraitAs hint,
+                            const IE::Layout      layout = IE::Layout::ANY) {
+    const auto tDesc = toIE(mat, hint, layout);
     switch (mat.depth()) {
         // NB: Seems there's no way to create an untyped (T-less) Blob::Ptr
         // in IE given only precision via TensorDesc. So we have to do this:
@@ -847,7 +893,8 @@ cv::MediaFrame preprocess_frame_impl(cv::MediaFrame &&in_frame, const std::strin
 
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
                                  std::size_t i,
-                                 cv::gapi::ie::TraitAs hint,
+                                 const cv::gapi::ie::TraitAs hint,
+                                 const IE::Layout &layout,
                                  const std::string& layer_name,
                                  const cv::util::optional<cv::Rect> &opt_roi,
                                  cv::MediaFrame* out_keep_alive_frame = nullptr,
@@ -895,14 +942,13 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
             return wrapIE(*(ctx.views.back()), frame.desc());
         }
         case cv::GShape::GMAT: {
-            return wrapIE(ctx.inMat(i), hint);
+            return wrapIE(ctx.inMat(i), hint, layout);
         }
         default:
             GAPI_Assert("Unsupported input shape for IE backend");
     }
     GAPI_Error("InternalError");
 }
-
 
 static void setBlob(InferenceEngine::InferRequest& req,
                     const std::string&             layer_name,
@@ -1336,11 +1382,14 @@ static void cfgInputPreprocessing(const cv::gapi::ie::TraitAs trait,
     } else {
         // NB: Tensor case - preprocessing is configured only if user asked.
         GAPI_LOG_DEBUG(NULL, "IE Backend: Input: \"" <<
-                       layer_name << " " << mm <<  "\" is tensor.");
+                       layer_name << "\" " << mm << " is tensor.");
         if (explicit_input_layout) {
+            GAPI_LOG_DEBUG(NULL, "IE Backend: Set input layout \"" <<
+                *explicit_input_layout << "\" for layer \"" << layer_name << "\"");
             ii->setLayout(toIE(*explicit_input_layout));
         }
         if (explicit_resize) {
+            GAPI_LOG_DEBUG(NULL, "IE Backend: Set resize for layer \"" << layer_name << "\"");
             ii->getPreProcess().setResizeAlgorithm(toIEInterp(*explicit_resize));
         }
     }
@@ -1631,9 +1680,11 @@ struct Infer: public cv::detail::KernelTag {
                         for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
                             const auto& layer_name = ctx->uu.params.input_names[i];
                             const auto hint = ctx->getInputType(layer_name);
+                            const auto layout = req.GetBlob(layer_name)->getTensorDesc().getLayout();
                             IE::Blob::Ptr this_blob = extractBlob(*ctx, i, hint,
-                                                                  layer_name,
+                                                                  layout, layer_name,
                                                                   cv::util::optional<cv::Rect>{});
+                            std::cout << std::endl;
                             setBlob(req, layer_name, this_blob, *ctx);
                         }
                     },
@@ -1780,6 +1831,7 @@ struct InferROI: public cv::detail::KernelTag {
                         bool preprocessed = false;
                         IE::Blob::Ptr this_blob =
                             extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE,
+                                        IE::Layout::ANY,
                                         *(ctx->uu.params.input_names.begin()),
                                         cv::util::make_optional(this_roi),
                                         slot_ptr, &preprocessed);
@@ -1919,6 +1971,7 @@ struct InferList: public cv::detail::KernelTag {
         // NB: This blob will be used to make roi from its, so
         // it should be treated as image
         IE::Blob::Ptr this_blob = extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE,
+                                              IE::Layout::ANY,
                                               ctx->uu.params.input_names[0u],
                                               cv::util::optional<cv::Rect>{});
 
@@ -2083,6 +2136,7 @@ struct InferList2: public cv::detail::KernelTag {
         // NB: This blob will be used to make roi from its, so
         // it should be treated as image
         IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0, cv::gapi::ie::TraitAs::IMAGE,
+                                           IE::Layout::ANY,
                                            ctx->uu.params.input_names[0u],
                                            cv::util::optional<cv::Rect>{});
         const auto list_size = ctx->inArg<cv::detail::VectorRef>(1u).size();
@@ -2125,8 +2179,10 @@ struct InferList2: public cv::detail::KernelTag {
                             } else if (this_vec.getKind() == cv::detail::OpaqueKind::CV_MAT) {
                                 const auto &vec = this_vec.rref<cv::Mat>();
                                 const auto &mat = vec[list_idx];
-                                setBlob(req, ctx->uu.params.input_names[in_idx],
-                                        wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR),
+                                const auto layer_name = ctx->uu.params.input_names[in_idx];
+                                const auto layout = req.GetBlob(layer_name)->getTensorDesc().getLayout();
+                                setBlob(req, layer_name,
+                                        wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR, layout),
                                         *ctx);
                             } else {
                                 GAPI_Assert(false &&
