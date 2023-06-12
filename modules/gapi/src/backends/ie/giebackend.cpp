@@ -195,6 +195,7 @@ broadcastLayerAttr(const LayerVariantAttr<Attr>   &layer_attr,
     return map;
 }
 
+// TODO: Move it to some common place
 template <typename K, typename V>
 cv::optional<V> lookUp(const std::map<K, V> &map, const K& key) {
     const auto it = map.find(key);
