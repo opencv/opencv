@@ -3057,6 +3057,17 @@ TEST_F(AgeGenderInferTest, ChangeSpecificOutputPrecison) {
     validate();
 }
 
+TEST_F(AgeGenderInferTest, ThrowIfSetLayoutForImage) {
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        m_params.model_path, m_params.weights_path, m_params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgOutputPrecision({{"prob", CV_8U}})
+     .cfgInputLayout("NHWC");
+
+    EXPECT_ANY_THROW(buildGraph().apply(cv::gin(m_in_mat), cv::gout(m_gapi_age, m_gapi_gender),
+                                        cv::compile_args(cv::gapi::networks(pp))));
+}
+
 } // namespace opencv_test
 
 #endif //  HAVE_INF_ENGINE
