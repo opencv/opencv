@@ -1684,7 +1684,6 @@ struct Infer: public cv::detail::KernelTag {
                             IE::Blob::Ptr this_blob = extractBlob(*ctx, i, hint,
                                                                   layout, layer_name,
                                                                   cv::util::optional<cv::Rect>{});
-                            std::cout << std::endl;
                             setBlob(req, layer_name, this_blob, *ctx);
                         }
                     },
@@ -1741,11 +1740,7 @@ struct InferROI: public cv::detail::KernelTag {
                                                      uu.params.input_names);
         const auto interpolation = broadcastLayerAttr(uu.params.interpolation,
                                                       uu.params.input_names);
-        // FIXME: This is the only place where information about input type
-        // can be stored for the futher execution.
         const auto trait = cv::gapi::ie::TraitAs::IMAGE;
-        const_cast<IEUnit&>(uu)
-            .inputs_type.emplace(input_name, trait);
         if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             // 0th is ROI, 1st is input image
             auto inputs = uu.net.getInputsInfo();
@@ -1900,10 +1895,6 @@ struct InferList: public cv::detail::KernelTag {
                     uu.params.layer_names_to_reshape.end()) {
                     configureInputReshapeByImage(ii, mm, input_reshape_table);
                 }
-                // FIXME: This is the only place where information about input type
-                // can be stored for the futher execution.
-                const_cast<IEUnit&>(uu)
-                    .inputs_type.emplace(input_name, input_trait);
                 cfgInputPreprocessing(input_trait, ii, mm,
                                       input_name, input_layout, interpolation);
             }
@@ -2082,10 +2073,6 @@ struct InferList2: public cv::detail::KernelTag {
                         uu.params.layer_names_to_reshape.end()) {
                         configureInputReshapeByImage(ii, mm_0, input_reshape_table);
                     }
-                    // FIXME: This is the only place where information about input type
-                    // can be stored for the futher execution.
-                    const_cast<IEUnit&>(uu)
-                        .inputs_type.emplace(input_name, input_trait);
                     cfgInputPreprocessing(input_trait, ii, mm_0,
                                           input_name, input_layout, interpolation);
 
@@ -2117,6 +2104,14 @@ struct InferList2: public cv::detail::KernelTag {
                 // Just validate that it is really the type
                 // (other types are prohibited here)
                 GAPI_Assert(op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_MAT);
+                // NB: Well, it's even impossible to specify the precision since
+                // there is not such info in GArray<cv::GMat>
+                const auto explicit_resize = lookUp(interpolation, input_name);
+                const auto explicit_layout = lookUp(input_layout , input_name);
+                if (explicit_resize || explicit_layout) {
+                    util::throw_error(std::logic_error(
+                        "InferList2 doesn't support preprocessing for \"tensor\"'s arguments!"));
+                }
             }
             idx++; // NB: Never forget to increment the counter
         }
