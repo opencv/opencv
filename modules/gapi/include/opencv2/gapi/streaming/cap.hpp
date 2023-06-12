@@ -22,6 +22,7 @@
  * because of this file.
  */
 #include <chrono>
+#include <map>
 
 #include <opencv2/videoio.hpp>
 #include <opencv2/gapi/garg.hpp>
