@@ -110,7 +110,10 @@ enum PredefinedDictionaryType {
     DICT_APRILTAG_16h5,     ///< 4x4 bits, minimum hamming distance between any two codes = 5, 30 codes
     DICT_APRILTAG_25h9,     ///< 5x5 bits, minimum hamming distance between any two codes = 9, 35 codes
     DICT_APRILTAG_36h10,    ///< 6x6 bits, minimum hamming distance between any two codes = 10, 2320 codes
-    DICT_APRILTAG_36h11     ///< 6x6 bits, minimum hamming distance between any two codes = 11, 587 codes
+    DICT_APRILTAG_36h11,     ///< 6x6 bits, minimum hamming distance between any two codes = 11, 587 codes
+    DICT_ARUCO_MIP_16h3,     ///< 4x4 bits, minimum hamming distance between any two codes = 3, 250 codes
+    DICT_ARUCO_MIP_25h7,     ///< 5x5 bits, minimum hamming distance between any two codes = 7, 100 codes
+    DICT_ARUCO_MIP_36h12     ///< 6x6 bits, minimum hamming distance between any two codes = 12, 250 codes
 };
 
 

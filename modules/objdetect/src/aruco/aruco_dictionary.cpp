@@ -257,6 +257,10 @@ Dictionary getPredefinedDictionary(PredefinedDictionaryType name) {
     static const Dictionary DICT_APRILTAG_25h9_DATA = Dictionary(Mat(35, (5 * 5 + 7) / 8, CV_8UC4, (uchar*)DICT_APRILTAG_25h9_BYTES), 5, 0);
     static const Dictionary DICT_APRILTAG_36h10_DATA = Dictionary(Mat(2320, (6 * 6 + 7) / 8, CV_8UC4, (uchar*)DICT_APRILTAG_36h10_BYTES), 6, 0);
     static const Dictionary DICT_APRILTAG_36h11_DATA = Dictionary(Mat(587, (6 * 6 + 7) / 8, CV_8UC4, (uchar*)DICT_APRILTAG_36h11_BYTES), 6, 0);
+    
+    static const Dictionary DICT_ARUCO_MIP_16h3_DATA = Dictionary(Mat(250, (4 * 4 + 7) / 8, CV_8UC4, (uchar*)DICT_ARUCO_MIP_16h3_BYTES), 4, 3);
+    static const Dictionary DICT_ARUCO_MIP_25h7_DATA = Dictionary(Mat(100, (5 * 5 + 7) / 8, CV_8UC4, (uchar*)DICT_ARUCO_MIP_25h7_BYTES), 5, 7);
+    static const Dictionary DICT_ARUCO_MIP_36h12_DATA = Dictionary(Mat(250, (6 * 6 + 7) / 8, CV_8UC4, (uchar*)DICT_ARUCO_MIP_36h12_BYTES), 6, 12);
 
     switch(name) {
 
@@ -308,6 +312,12 @@ Dictionary getPredefinedDictionary(PredefinedDictionaryType name) {
     case DICT_APRILTAG_36h11:
         return Dictionary(DICT_APRILTAG_36h11_DATA);
 
+    case DICT_ARUCO_MIP_16h3:
+        return Dictionary(DICT_ARUCO_MIP_16h3_DATA);
+    case DICT_ARUCO_MIP_25h7:
+        return Dictionary(DICT_ARUCO_MIP_25h7_DATA);
+    case DICT_ARUCO_MIP_36h12:
+        return Dictionary(DICT_ARUCO_MIP_36h12_DATA);
     }
     return Dictionary(DICT_4X4_50_DATA);
 }
