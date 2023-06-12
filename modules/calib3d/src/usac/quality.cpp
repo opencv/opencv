@@ -410,9 +410,9 @@ public:
      * 1.  Check whether j-th data point is consistent with the
      * model
      * 2.  Compute the likelihood ratio λj eq. (1)
-     * 3.  If λj >  A, decide the model is ’bad’ (model ”re-jected”),
+     * 3.  If λj >  A, decide the model is ’bad’ (model "re-jected"),
      * else increment j or continue testing
-     * 4.  If j = N the number of correspondences decide model ”accepted”
+     * 4.  If j = N the number of correspondences decide model "accepted"
      *
      * Verifies model and returns model score.
 
