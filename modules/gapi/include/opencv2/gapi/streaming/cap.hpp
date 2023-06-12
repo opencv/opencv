@@ -47,12 +47,11 @@ namespace wip {
 class GCaptureSource: public IStreamSource
 {
 public:
-    using Properties = std::unordered_map<int, double>;
-    explicit GCaptureSource(int id, const Properties &properties = {})
+    explicit GCaptureSource(int id, const std::map<int, double> &properties = {})
         : cap(id) { prep(properties); }
 
     explicit GCaptureSource(const std::string &path,
-                            const Properties  &properties = {})
+                            const std::map<int, double> &properties = {})
         : cap(path) { prep(properties); }
 
     void set(int propid, double value) {
@@ -68,7 +67,7 @@ protected:
     bool first_pulled = false;
     int64_t counter = 0;
 
-    void prep(const Properties &properties)
+    void prep(const std::map<int, double> &properties)
     {
         for (const auto &it : properties) {
             cap.set(it.first, it.second);
@@ -127,15 +126,19 @@ protected:
 };
 
 // NB: Overload for using from python
-GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_capture_src(const std::string& path)
+GAPI_EXPORTS_W cv::Ptr<IStreamSource>
+inline make_capture_src(const std::string& path,
+                        const std::map<int, double>& properties = {})
 {
-    return make_src<GCaptureSource>(path);
+    return make_src<GCaptureSource>(path, properties);
 }
 
 // NB: Overload for using from python
-GAPI_EXPORTS_W cv::Ptr<IStreamSource> inline make_capture_src(const int id)
+GAPI_EXPORTS_W cv::Ptr<IStreamSource>
+inline make_capture_src(const int id,
+                        const std::map<int, double>& properties = {})
 {
-    return make_src<GCaptureSource>(id);
+    return make_src<GCaptureSource>(id, properties);
 }
 
 } // namespace wip

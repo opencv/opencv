@@ -211,7 +211,7 @@ int main(int argc, char *argv[]) {
     if (isNumber(input)) {
         source = std::make_shared<cv::gapi::wip::GCaptureSource>(
             std::stoi(input),
-            cv::gapi::wip::GCaptureSource::Properties {
+            std::map<int, double> {
               {cv::CAP_PROP_FRAME_WIDTH, 1280},
               {cv::CAP_PROP_FRAME_HEIGHT, 720},
               {cv::CAP_PROP_BUFFERSIZE, 1},
