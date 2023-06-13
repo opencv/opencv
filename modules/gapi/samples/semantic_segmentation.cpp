@@ -19,9 +19,28 @@ const std::string keys =
 
 // 20 colors for 20 classes of semantic-segmentation-adas-0001
 static std::vector<cv::Vec3b> colors = {
-    {0, 0, 0},       {0, 0, 128},     {0, 128, 0}, {0, 128, 128}, {128, 0, 0},   {128, 0, 128}, {128, 128, 0},
-    {128, 128, 128}, {0, 0, 64},      {0, 0, 192}, {0, 128, 64},  {0, 128, 192}, {128, 0, 64},  {128, 0, 192},
-    {128, 128, 64},  {128, 128, 192}, {0, 64, 0},  {0, 64, 128},  {0, 192, 0},   {0, 192, 128}, {128, 64, 0}};
+    { 0, 0, 0 },
+    { 0, 0, 128 },
+    { 0, 128, 0 },
+    { 0, 128, 128 },
+    { 128, 0, 0 },
+    { 128, 0, 128 },
+    { 128, 128, 0 },
+    { 128, 128, 128 },
+    { 0, 0, 64 },
+    { 0, 0, 192 },
+    { 0, 128, 64 },
+    { 0, 128, 192 },
+    { 128, 0, 64 },
+    { 128, 0, 192 },
+    { 128, 128, 64 },
+    { 128, 128, 192 },
+    { 0, 64, 0 },
+    { 0, 64, 128 },
+    { 0, 192, 0 },
+    { 0, 192, 128 },
+    { 128, 64, 0 }
+};
 
 namespace {
 std::string get_weights_path(const std::string &model_path) {
@@ -31,30 +50,22 @@ std::string get_weights_path(const std::string &model_path) {
 
     auto ext = model_path.substr(sz - EXT_LEN);
     std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){
-            return static_cast<unsigned char>(std::tolower(c));
-        });
+        return static_cast<unsigned char>(std::tolower(c));
+    });
     CV_Assert(ext == ".xml");
     return model_path.substr(0u, sz - EXT_LEN) + ".bin";
 }
 
-namespace vis {
-
-void putText(cv::Mat& mat, const cv::Point &position, const std::string &message) {
-    auto fontFace = cv::FONT_HERSHEY_COMPLEX;
-    int thickness = 2;
-    cv::Scalar color = {200, 10, 10};
-    double fontScale = 0.65;
-
-    cv::putText(mat, message, position, fontFace,
-                fontScale, cv::Scalar(255, 255, 255), thickness + 1);
-    cv::putText(mat, message, position, fontFace, fontScale, color, thickness);
+bool isNumber(const std::string &str) {
+    return !str.empty() && std::all_of(str.begin(), str.end(),
+            [](unsigned char ch) { return std::isdigit(ch); });
 }
 
-void drawResults(cv::Mat &img, const cv::Mat &color_mask) {
-    img = img / 2 + color_mask / 2;
+std::string toStr(double value) {
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(1) << value;
+    return ss.str();
 }
-
-} // namespace vis
 
 void classesToColors(const cv::Mat &out_blob,
                            cv::Mat &mask_img) {
@@ -104,6 +115,25 @@ void probsToClasses(const cv::Mat& probs, cv::Mat& classes) {
 
 } // anonymous namespace
 
+namespace vis {
+
+static void putText(cv::Mat& mat, const cv::Point &position, const std::string &message) {
+    auto fontFace = cv::FONT_HERSHEY_COMPLEX;
+    int thickness = 2;
+    cv::Scalar color = {200, 10, 10};
+    double fontScale = 0.65;
+
+    cv::putText(mat, message, position, fontFace,
+                fontScale, cv::Scalar(255, 255, 255), thickness + 1);
+    cv::putText(mat, message, position, fontFace, fontScale, color, thickness);
+}
+
+static void drawResults(cv::Mat &img, const cv::Mat &color_mask) {
+    img = img / 2 + color_mask / 2;
+}
+
+} // namespace vis
+
 namespace custom {
 G_API_OP(PostProcessing, <cv::GMat(cv::GMat, cv::GMat)>, "sample.custom.post_processing") {
     static cv::GMatDesc outMeta(const cv::GMatDesc &in, const cv::GMatDesc &) {
@@ -115,11 +145,12 @@ GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
     static void run(const cv::Mat &in, const cv::Mat &out_blob, cv::Mat &out) {
         int C = -1, H = -1, W = -1;
         if (out_blob.size.dims() == 4u) {
-            C = 1; H = 2; W = 3;
+            C = 1; H = 2, W = 3;
         } else if (out_blob.size.dims() == 3u) {
-            C = 0; H = 1; W = 2;
+            C = 0; H = 1, W = 2;
         } else {
-            throw std::logic_error("Number of dimmensions for model output must be 3 or 4!");
+            throw std::logic_error(
+                    "Number of dimmensions for model output must be 3 or 4!");
         }
         cv::Mat classes;
         // NB: If output has more than single plane, it contains probabilities
@@ -127,27 +158,22 @@ GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
         if (out_blob.size[C] > 1) {
             probsToClasses(out_blob, classes);
         } else {
-            out_blob.convertTo(classes, CV_8UC1);
-            classes = classes.reshape(1, out_blob.size[H]);
+            if (out_blob.depth() != CV_32S) {
+                throw std::logic_error(
+                        "Single channel output must have integer precision!");
+            }
+            cv::Mat view(out_blob.size[H], // cols
+                         out_blob.size[W], // rows
+                         CV_32SC1,
+                         out_blob.data);
+            view.convertTo(classes, CV_8UC1);
         }
-
         cv::Mat mask_img;
         classesToColors(classes, mask_img);
         cv::resize(mask_img, out, in.size(), 0, 0, cv::INTER_NEAREST);
     }
 };
 } // namespace custom
-
-static bool isNumber(const std::string &str) {
-    return !str.empty() && std::all_of(str.begin(), str.end(),
-            [](unsigned char ch) { return std::isdigit(ch); });
-}
-
-static std::string toStr(double value) {
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(1) << value;
-    return ss.str();
-}
 
 int main(int argc, char *argv[]) {
     cv::CommandLineParser cmd(argc, argv, keys);
@@ -183,10 +209,9 @@ int main(int argc, char *argv[]) {
 
     std::shared_ptr<cv::gapi::wip::GCaptureSource> source;
     if (isNumber(input)) {
-        using P = cv::gapi::wip::GCaptureSource::Properties;
         source = std::make_shared<cv::gapi::wip::GCaptureSource>(
             std::stoi(input),
-            cv::gapi::wip::GCaptureSource::Properties {
+            std::map<int, double> {
               {cv::CAP_PROP_FRAME_WIDTH, 1280},
               {cv::CAP_PROP_FRAME_HEIGHT, 720},
               {cv::CAP_PROP_BUFFERSIZE, 1},
@@ -197,7 +222,8 @@ int main(int argc, char *argv[]) {
     } else {
         source = std::make_shared<cv::gapi::wip::GCaptureSource>(input);
     }
-    auto inputs = cv::gin(static_cast<cv::gapi::wip::IStreamSource::Ptr>(source));
+    auto inputs = cv::gin(
+            static_cast<cv::gapi::wip::IStreamSource::Ptr>(source));
 
     // The execution part
     pipeline.setSource(std::move(inputs));
