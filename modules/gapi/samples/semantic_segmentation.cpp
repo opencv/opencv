@@ -215,8 +215,7 @@ int main(int argc, char *argv[]) {
               {cv::CAP_PROP_FRAME_WIDTH, 1280},
               {cv::CAP_PROP_FRAME_HEIGHT, 720},
               {cv::CAP_PROP_BUFFERSIZE, 1},
-              {cv::CAP_PROP_AUTOFOCUS, true},
-              {cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G')}
+              {cv::CAP_PROP_AUTOFOCUS, true}
             }
         );
     } else {
