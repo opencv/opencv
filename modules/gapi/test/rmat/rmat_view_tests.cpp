@@ -94,12 +94,16 @@ TEST_P(RMatViewNDTest, DefaultStep) {
 TEST_P(RMatViewNDTest, StepFromMat) {
     int depth = 0, ndims = 0;
     std::tie(depth, ndims) = GetParam();
-    std::vector<int> dims(ndims, 12);
-    cv::Mat mat(dims, depth);
-    auto view = asView(mat);
-    EXPECT_EQ(mat.ptr(), view.ptr());
-    for (int i = 0; i < ndims; i++) {
-        EXPECT_EQ(mat.step[i], view.step(i));
+    if (ndims <= 1) {
+        throw SkipTestException("1D mat's in G-API need to be synchronized with cv::Mat");
+    } else {
+        std::vector<int> dims(ndims, 12);
+        cv::Mat mat(dims, depth);
+        auto view = asView(mat);
+        EXPECT_EQ(mat.ptr(), view.ptr());
+        for (int i = 0; i < ndims; i++) {
+            EXPECT_EQ(mat.step[i], view.step(i));
+        }
     }
 }
 
@@ -270,11 +274,11 @@ TEST_F(RMatViewCallbackTest, MagazineInteraction) {
 }
 
 TEST(RMatView, Access1DMat) {
-    cv::Mat m({1}, CV_32FC1);
-    m.dims = 1;
+    int sz=1;
+    cv::Mat m(1, &sz, CV_32FC1);
     auto rmat = cv::make_rmat<cv::gimpl::RMatOnMat>(m);
     auto view = rmat.access(cv::RMat::Access::R);
     auto out = cv::gimpl::asMat(view);
-    EXPECT_EQ(1, out.dims);
+    EXPECT_EQ(2, out.dims);
 }
 } // namespace opencv_test
