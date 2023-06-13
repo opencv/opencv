@@ -177,21 +177,25 @@ struct CharucoDetector::CharucoDetectorImpl {
         // approximated pose estimation using marker corners
         Mat approximatedRvec, approximatedTvec;
         Mat objPoints, imgPoints; // object and image points for the solvePnP function
-        Board simpleBoard(board.getObjPoints(), board.getDictionary(), board.getIds());
-        simpleBoard.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);
+        //printf("before board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);\n");
+        board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);
+        //printf("after board.matchImagePoints(markerCorners, markerIds, objPoints, imgPoints);\n");
         if (objPoints.total() < 4ull)  // need, at least, 4 corners
             return;
 
         solvePnP(objPoints, imgPoints, charucoParameters.cameraMatrix, charucoParameters.distCoeffs, approximatedRvec, approximatedTvec);
+        //printf("after solvePnP\n");
 
         // project chessboard corners
         vector<Point2f> allChessboardImgPoints;
         projectPoints(board.getChessboardCorners(), approximatedRvec, approximatedTvec, charucoParameters.cameraMatrix,
                       charucoParameters.distCoeffs, allChessboardImgPoints);
+        //printf("after projectPoints\n");
         // calculate maximum window sizes for subpixel refinement. The size is limited by the distance
         // to the closes marker corner to avoid erroneous displacements to marker corners
         vector<Size> subPixWinSizes = getMaximumSubPixWindowSizes(markerCorners, markerIds, allChessboardImgPoints);
         // filter corners outside the image and subpixel-refine charuco corners
+        //printf("before selectAndRefineChessboardCorners\n");
         selectAndRefineChessboardCorners(allChessboardImgPoints, image, charucoCorners, charucoIds, subPixWinSizes);
     }
 
@@ -380,6 +384,7 @@ void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diam
     if (_markerCorners.empty() && _markerIds.empty()) {
         charucoDetectorImpl->arucoDetector.detectMarkers(image, _markerCorners, _markerIds);
     }
+    const vector<vector<Point2f>>& markerCorners = _markerCorners.getVecVecRef<Point2f>();
 
     const float minRepDistanceRate = 1.302455f;
     vector<vector<Point2f>> diamondCorners;
@@ -403,9 +408,8 @@ void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diam
 
         // calculate marker perimeter
         float perimeterSq = 0;
-        Mat corners = _markerCorners.getMat(i);
         for(int c = 0; c < 4; c++) {
-          Point2f edge = corners.at<Point2f>(c) - corners.at<Point2f>((c + 1) % 4);
+          Point2f edge = markerCorners[i][c] - markerCorners[i][(c + 1) % 4];
           perimeterSq += edge.x*edge.x + edge.y*edge.y;
         }
         // maximum reprojection error relative to perimeter
@@ -415,18 +419,18 @@ void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diam
 
         // prepare data to call refineDetectedMarkers()
         // detected markers (only the current one)
-        vector<Mat> currentMarker;
+        vector<vector<Point2f> > currentMarker;
         vector<int> currentMarkerId;
-        currentMarker.push_back(_markerCorners.getMat(i));
+        currentMarker.push_back(markerCorners[i]);
         currentMarkerId.push_back(currentId);
 
         // marker candidates (the rest of markers if they have not been assigned)
-        vector<Mat> candidates;
+        vector<vector<Point2f> > candidates;
         vector<int> candidatesIdxs;
         for(unsigned int k = 0; k < assigned.size(); k++) {
             if(k == i) continue;
             if(!assigned[k]) {
-                candidates.push_back(_markerCorners.getMat(k));
+                candidates.push_back(markerCorners[k]);
                 candidatesIdxs.push_back(k);
             }
         }

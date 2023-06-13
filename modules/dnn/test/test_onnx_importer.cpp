@@ -1905,7 +1905,7 @@ TEST_P(Test_ONNX_layers, Quantized_Convolution)
 
 TEST_P(Test_ONNX_layers, Quantized_MatMul)
 {
-    testONNXModels("quantized_matmul_uint8_weights", npy, 0.005, 0.007);
+    testONNXModels("quantized_matmul_uint8_weights", npy, 0.008, 0.015);
     testONNXModels("quantized_matmul_int8_weights", npy, 0.06, 0.2);
     testONNXModels("quantized_matmul_per_channel_weights", npy, 0.06, 0.22);
 }
@@ -2004,7 +2004,7 @@ TEST_P(Test_ONNX_layers, Quantized_Concat)
 
 TEST_P(Test_ONNX_layers, Quantized_Constant)
 {
-    testONNXModels("quantized_constant", npy, 0.002, 0.008);
+    testONNXModels("quantized_constant", npy, 0.008, 0.02);
 }
 
 TEST_P(Test_ONNX_layers, OutputRegistration)

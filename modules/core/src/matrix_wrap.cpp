@@ -43,9 +43,9 @@ Mat _InputArray::getMat_(int i) const
         CV_Assert( i < 0 );
         int t = CV_MAT_TYPE(flags);
         const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
-        int sz = size().width;
+        int v_size = size().width;
 
-        return !v.empty() ? Mat(1, &sz, t, (void*)&v[0]) : Mat();
+        return !v.empty() ? Mat(1, &v_size, t, (void*)&v[0]) : Mat();
     }
 
     if( k == STD_BOOL_VECTOR )
@@ -72,8 +72,9 @@ Mat _InputArray::getMat_(int i) const
         const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
         CV_Assert( 0 <= i && i < (int)vv.size() );
         const std::vector<uchar>& v = vv[i];
+        int v_size = size(i).width;
 
-        return !v.empty() ? Mat(size(i), t, (void*)&v[0]) : Mat();
+        return !v.empty() ? Mat(1, &v_size, t, (void*)&v[0]) : Mat();
     }
 
     if( k == STD_VECTOR_MAT )

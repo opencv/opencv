@@ -1244,12 +1244,15 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
 
         // recalculate _rejectedCorners based on alreadyIdentified
         vector<vector<Point2f> > finalRejected;
-        for(unsigned int i = 0; i < alreadyIdentified.size(); i++) {
+        vector<vector<Point2f> >& rejectedCorners = _rejectedCorners.getVecVecRef<Point2f>();
+        for(size_t i = 0; i < alreadyIdentified.size(); i++) {
             if(!alreadyIdentified[i]) {
-                finalRejected.push_back(_rejectedCorners.getMat(i).clone());
+                finalRejected.push_back(rejectedCorners[i]);
             }
         }
-        _copyVector2Output(finalRejected, _rejectedCorners);
+        rejectedCorners.clear();
+        for (size_t i = 0; i < finalRejected.size(); i++)
+            rejectedCorners.push_back(finalRejected[i]);
 
         if(_recoveredIdxs.needed()) {
             Mat(recoveredIdxs).copyTo(_recoveredIdxs);

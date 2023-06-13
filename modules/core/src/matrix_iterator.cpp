@@ -82,7 +82,7 @@ void NAryMatIterator::init(const Mat** _arrays, Mat* _planes, uchar** _ptrs, int
 
     if( i0 >= 0 )
     {
-        size = arrays[i0]->size[d-1];
+        size = arrays[i0]->size[d > 0 ? d-1 : 0];
         for( j = d-1; j > iterdepth; j-- )
         {
             int64 total1 = (int64)size*arrays[i0]->size[j-1];

@@ -1510,6 +1510,7 @@ TEST(Core_Mat_vector, copyTo_roi_row)
     {
         _dst.create(src.rows, src.cols, src.type());
         Mat dst = _dst.getMat();
+        dst = dst.reshape(dst.channels(), dst.rows);
         EXPECT_EQ(src.dims, dst.dims);
         EXPECT_EQ(src.cols, dst.cols);
         EXPECT_EQ(src.rows, dst.rows);

@@ -10,10 +10,9 @@ namespace aruco {
 using namespace std;
 
 void _copyVector2Output(vector<vector<Point2f> > &vec, OutputArrayOfArrays out, const float scale) {
-    out.create((int)vec.size(), 1, CV_32FC2);
+    size_t i, j, nvecs = vec.size();
     if(out.isMatVector()) {
         vector<Mat>& out_ = out.getMatVecRef();
-        size_t i, nvecs = vec.size();
         out_.resize(nvecs);
         for (i = 0; i < nvecs; i++) {
             const vector<Point2f>& vec_i = vec[i];
@@ -23,7 +22,6 @@ void _copyVector2Output(vector<vector<Point2f> > &vec, OutputArrayOfArrays out, 
     }
     else if(out.isUMatVector()) {
         vector<UMat>& out_ = out.getUMatVecRef();
-        size_t i, nvecs = vec.size();
         out_.resize(nvecs);
         for (i = 0; i < nvecs; i++) {
             const vector<Point2f>& vec_i = vec[i];
@@ -34,7 +32,6 @@ void _copyVector2Output(vector<vector<Point2f> > &vec, OutputArrayOfArrays out, 
     else if(out.kind() == _OutputArray::STD_VECTOR_VECTOR &&
             out.type() == CV_32FC2){
         vector<vector<Point2f>>& out_ = out.getVecVecRef<Point2f>();
-        size_t i, j, nvecs = vec.size();
         out_.resize(nvecs);
         for (i = 0; i < nvecs; i++) {
             const vector<Point2f>& vec_i = vec[i];

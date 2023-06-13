@@ -255,7 +255,7 @@ int normalize_axis(int axis, const MatShape& shape)
 static inline
 Range normalize_axis_range(const Range& r, int axisSize)
 {
-    if (r == Range::all())
+    if (r == Range::all() || r == Range(0, INT_MAX))
         return Range(0, axisSize);
     CV_CheckGE(r.start, 0, "");
     Range clamped(r.start,
