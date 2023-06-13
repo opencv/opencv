@@ -191,13 +191,15 @@ _PREDEFINED_TYPES = (
                             PrimitiveTypeNode.str_())
                         ), export_name="SearchParams"),
     AliasTypeNode.dict_("map_string_and_string", PrimitiveTypeNode.str_("map_string_and_string::key"),
-                        PrimitiveTypeNode.str_("map_string_and_string::key::value")),
+                        PrimitiveTypeNode.str_("map_string_and_string::value")),
     AliasTypeNode.dict_("map_string_and_int", PrimitiveTypeNode.str_("map_string_and_int::key"),
-                        PrimitiveTypeNode.int_("map_string_and_int::key::value")),
+                        PrimitiveTypeNode.int_("map_string_and_int::value")),
     AliasTypeNode.dict_("map_string_and_vector_size_t", PrimitiveTypeNode.str_("map_string_and_vector_size_t::key"),
-                        SequenceTypeNode("map_string_and_vector_size_t::key::value", PrimitiveTypeNode.int_("size_t"))),
+                        SequenceTypeNode("map_string_and_vector_size_t::value", PrimitiveTypeNode.int_("size_t"))),
     AliasTypeNode.dict_("map_string_and_vector_float", PrimitiveTypeNode.str_("map_string_and_vector_float::key"),
-                        SequenceTypeNode("map_string_and_vector_float::key::value", PrimitiveTypeNode.float_())),
+                        SequenceTypeNode("map_string_and_vector_float::value", PrimitiveTypeNode.float_())),
+    AliasTypeNode.dict_("map_int_and_double", PrimitiveTypeNode.int_("map_int_and_double::key"),
+                        PrimitiveTypeNode.float_("map_int_and_double::value")),
 )
 
 PREDEFINED_TYPES = dict(zip((t.ctype_name for t in _PREDEFINED_TYPES), _PREDEFINED_TYPES))

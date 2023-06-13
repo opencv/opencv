@@ -268,6 +268,11 @@ PyObject* pyopencv_from(const std::vector<Tp>& value)
 template<typename K, typename V>
 bool pyopencv_to(PyObject *obj, std::map<K,V> &map, const ArgInfo& info)
 {
+    if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+
     PyObject* py_key = nullptr;
     PyObject* py_value = nullptr;
     Py_ssize_t pos = 0;
