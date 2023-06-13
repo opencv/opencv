@@ -43,8 +43,9 @@ Mat _InputArray::getMat_(int i) const
         CV_Assert( i < 0 );
         int t = CV_MAT_TYPE(flags);
         const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
+        int sz = size().width;
 
-        return !v.empty() ? Mat(size(), t, (void*)&v[0]) : Mat();
+        return !v.empty() ? Mat(1, &sz, t, (void*)&v[0]) : Mat();
     }
 
     if( k == STD_BOOL_VECTOR )
@@ -55,7 +56,7 @@ Mat _InputArray::getMat_(int i) const
         int j, n = (int)v.size();
         if( n == 0 )
             return Mat();
-        Mat m(1, n, t);
+        Mat m(1, &n, t);
         uchar* dst = m.data;
         for( j = 0; j < n; j++ )
             dst[j] = (uchar)v[j];
@@ -168,7 +169,7 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
         CV_Assert(m.dims >= 2);
 
         for( int i = 0; i < n; i++ )
-            mv[i] = m.dims == 2 ? Mat(1, m.cols, m.type(), (void*)m.ptr(i)) :
+            mv[i] = m.dims <= 2 ? Mat(1, m.cols, m.type(), (void*)m.ptr(i)) :
                 Mat(m.dims-1, &m.size[1], m.type(), (void*)m.ptr(i), &m.step[1]);
         return;
     }
@@ -562,6 +563,15 @@ int _InputArray::sizend(int* arrsz, int i) const
         if(arrsz)
             for(j = 0; j < d; j++)
                 arrsz[j] = m.size.p[j];
+    }
+    else if (k == STD_VECTOR && i < 0 )
+    {
+        Size sz2d = size();
+        d = 1;
+        if(arrsz)
+        {
+            arrsz[0] = sz2d.width;
+        }
     }
     else
     {

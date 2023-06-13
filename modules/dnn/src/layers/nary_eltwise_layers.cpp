@@ -177,7 +177,7 @@ public:
         // since we'd need proper values of steps to check continuity.
         // this loop is probably the most tricky part
         // in the whole implementation of broadcasting.
-        j = max_ndims-1;
+        j = max_ndims > 0 ? max_ndims-1 : 0;
         for (i = j - 1; i >= 0; i--) {
             bool all_contiguous = true, all_scalars = true, all_consistent = true;
             for(k = 0; k < narrays; k++) {
@@ -207,6 +207,8 @@ public:
             for (k = 0; k < narrays; k++)
                 step[k][i] = shape[k][i] == 1 ? 0 : step[k][i];
         }
+        if (max_ndims == 0)
+            i = 0;
         for (; i >= 0; i--) {
             for (k = 0; k < narrays; k++) {
                 step[k][i] = 0;
@@ -234,21 +236,26 @@ public:
             char* data, const size_t* step,
             const Functor& op)
     {
-        CV_Assert(ndims >= 1);
-        size_t dp1 = step1[ndims-1]/sizeof(T);
-        size_t dp2 = step2[ndims-1]/sizeof(T);
-        size_t dp = step[ndims-1]/sizeof(T);
-        int k, n1 = shape[ndims-1], n2 = ndims >= 2 ? shape[ndims-2] : 1;
+        size_t dp1 = 0, dp2 = 0, dp = 0;
+        int k, n1 = 1, n2 = 1;
         size_t inplane_step1 = 0, inplane_step2 = 0, inplane_step = 0;
         size_t plane_idx, nplanes = 1;
 
-        if (ndims >= 2) {
-            inplane_step1 = step1[ndims-2];
-            inplane_step2 = step2[ndims-2];
-            inplane_step = step[ndims-2];
-        }
+        if (ndims >= 1) {
+            dp1 = step1[ndims-1]/sizeof(T);
+            dp2 = step2[ndims-1]/sizeof(T);
+            dp = step[ndims-1]/sizeof(T);
+            n1 = shape[ndims-1];
 
-        for (k = 0; k < ndims-2; k++) nplanes *= shape[k];
+            if (ndims >= 2) {
+                inplane_step1 = step1[ndims-2];
+                inplane_step2 = step2[ndims-2];
+                inplane_step = step[ndims-2];
+                n2 = shape[ndims-2];
+
+                for (k = 0; k < ndims-2; k++) nplanes *= shape[k];
+            }
+        }
 
         for (plane_idx = 0; plane_idx < nplanes; plane_idx++) {
             const char* ptr1_ = data1;
@@ -306,31 +313,20 @@ public:
 
         int max_ndims = std::max(a.dims, std::max(b.dims, out.dims));
 
-        // buf holds the folllowing for a, b & output:
-        //  * orig_shapes, shapes (result_shape), orig_steps, steps (result_step), 3*4 elements in total
-        //  * shape_buf & step_buf, 3*2*max_ndims elements in total
-        //  * all_ndims, 3*1 elements in total
-        //  * all_type_sizes, 3*1 elements in total
-        AutoBuffer<size_t> buf(3 * (2 * max_ndims + 6));
-
-        int** orig_shapes = (int**)(buf.data());
-        int** shapes = orig_shapes + 3;
-        size_t** orig_steps = (size_t**)(shapes + 3);
-        size_t** steps = orig_steps + 3;
-
-        int* shape_buf = (int*)(steps + 3);
-        size_t* step_buf = (size_t*)(shape_buf + 3 * max_ndims);
-
-        int* all_ndims = (int*)(step_buf + 3 * max_ndims);
-        size_t* all_type_sizes = (size_t*)(all_ndims + 3);
+        const int* orig_shapes[3];
+        int shapes_[3][CV_MAX_DIM];
+        int* shapes[] = {shapes_[0], shapes_[1], shapes_[2]};
+        const size_t* orig_steps[3];
+        size_t steps_[3][CV_MAX_DIM];
+        size_t* steps[] = {steps_[0], steps_[1], steps_[2]};
+        int all_ndims[3];
+        size_t all_type_sizes[3];
 
         // assign orig_shapes, shapes, orig_steps, steps, all_ndims, all_type_sizes
         for (int i = 0; i < 3; i++)
         {
-            orig_shapes[i] = (int*)(i == 0 ? out_shape : in_shape[i-1]);
+            orig_shapes[i] = (const int*)(i == 0 ? out_shape : in_shape[i-1]);
             orig_steps[i] = (size_t*)(i == 0 ? out_step : in_step[i-1]);
-            shapes[i] = shape_buf + i * max_ndims;
-            steps[i] = step_buf + i * max_ndims;
             all_ndims[i] = i == 0 ? out_ndims : in_ndims[i-1];
             all_type_sizes[i] = sizeof(T);
         }

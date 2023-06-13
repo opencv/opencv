@@ -1011,7 +1011,7 @@ _Tp& Mat::at(int i0)
     CV_DbgAssert(data);
     CV_DbgAssert(elemSize() == sizeof(_Tp));
     if (dims <= 1) {
-        CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
+        CV_DbgAssert((unsigned)i0 < (unsigned)cols);
         return ((_Tp*)data)[i0];
     }
     CV_DbgAssert(dims == 2);
@@ -1030,17 +1030,17 @@ const _Tp& Mat::at(int i0) const
     CV_DbgAssert(data);
     CV_DbgAssert(elemSize() == sizeof(_Tp));
     if (dims <= 1) {
-        CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
+        CV_DbgAssert((unsigned)i0 < (unsigned)cols);
         return ((const _Tp*)data)[i0];
     }
     CV_DbgAssert(dims == 2);
-    CV_DbgAssert((unsigned)i0 < (unsigned)(size.p[0] * size.p[1]));
-    if( isContinuous() || size.p[0] == 1 )
+    CV_DbgAssert((unsigned)i0 < (unsigned)(rows*cols));
+    if( isContinuous() || rows == 1 )
         return ((const _Tp*)data)[i0];
-    if( size.p[1] == 1 )
-        return *(const _Tp*)(data + step.p[0] * i0);
+    if( cols == 1 )
+        return *(const _Tp*)(data + step.buf[0] * i0);
     int i = i0 / cols, j = i0 - i * cols;
-    return ((const _Tp*)(data + step.p[0] * i))[j];
+    return ((const _Tp*)(data + step.buf[0] * i))[j];
 }
 
 template<typename _Tp> inline

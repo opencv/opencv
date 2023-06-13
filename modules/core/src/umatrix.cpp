@@ -542,37 +542,37 @@ void setSize( UMat& m, int _dims, const int* _sz,
     }
 
     m.dims = _dims;
-    if( !_sz )
-        return;
 
     size_t esz = CV_ELEM_SIZE(m.flags), total = esz;
-    int i;
-    for( i = _dims-1; i >= 0; i-- )
-    {
-        int s = _sz[i];
-        CV_Assert( s >= 0 );
-        m.size.p[i] = s;
-
-        if( _steps )
-            m.step.p[i] = i < _dims-1 ? _steps[i] : esz;
-        else if( autoSteps )
+    if (_sz != 0) {
+        int i;
+        for( i = _dims-1; i >= 0; i-- )
         {
-            m.step.p[i] = total;
-            int64 total1 = (int64)total*s;
-            if( (uint64)total1 != (size_t)total1 )
-                CV_Error( CV_StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
-            total = (size_t)total1;
+            int s = _sz[i];
+            CV_Assert( s >= 0 );
+            m.size.p[i] = s;
+
+            if( _steps )
+                m.step.p[i] = i < _dims-1 ? _steps[i] : esz;
+            else if( autoSteps )
+            {
+                m.step.p[i] = total;
+                int64 total1 = (int64)total*s;
+                if( (uint64)total1 != (size_t)total1 )
+                    CV_Error( CV_StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
+                total = (size_t)total1;
+            }
         }
     }
 
-    if( _dims == 1 )
+    if( _dims < 2 )
     {
-        m.cols = m.rows;
+        m.cols = _dims >= 1 && _sz ? _sz[0] : 1;
         m.rows = 1;
         m.size.p = &m.cols;
-        m.step.p = &m.step[1];
-        m.step.buf[1] = esz;
         m.step.buf[0] = m.cols*esz;
+        m.step.buf[1] = esz;
+        m.step.p = &m.step.buf[1];
     }
 }
 
@@ -674,9 +674,14 @@ UMat Mat::getUMat(AccessFlag accessFlags, UMatUsageFlags usageFlags) const
 
 }
 
-void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlags)
+void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFlags)
 {
+    int sz1 = 1, d = d0;
     int i;
+    if (d == 0) {
+        d = 1;
+        _sizes = (const int*)&sz1;
+    }
     CV_Assert(0 <= d && d <= CV_MAX_DIM && _sizes);
     _type = CV_MAT_TYPE(_type);
 
@@ -738,6 +743,7 @@ void UMat::create(int d, const int* _sizes, int _type, UMatUsageFlags _usageFlag
 
     finalizeHdr(*this);
     addref();
+    dims = d0;
 }
 
 void UMat::create(const std::vector<int>& _sizes, int _type, UMatUsageFlags _usageFlags)

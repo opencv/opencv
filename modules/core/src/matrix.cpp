@@ -236,45 +236,44 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
     }
 
     m.dims = _dims;
-    if( !_sz )
-        return;
-
     size_t esz = CV_ELEM_SIZE(m.flags), esz1 = CV_ELEM_SIZE1(m.flags), total = esz;
-    for( int i = _dims-1; i >= 0; i-- )
-    {
-        int s = _sz[i];
-        CV_Assert( s >= 0 );
-        m.size.p[i] = s;
-
-        if( _steps )
+    if (_sz != 0) {
+        for( int i = _dims-1; i >= 0; i-- )
         {
-            if (i < _dims-1)
+            int s = _sz[i];
+            CV_Assert( s >= 0 );
+            m.size.p[i] = s;
+
+            if( _steps )
             {
-                if (_steps[i] % esz1 != 0)
+                if (i < _dims-1)
                 {
-                    CV_Error_(Error::BadStep, ("Step %zu for dimension %d must be a multiple of esz1 %zu", _steps[i], i, esz1));
-                }
+                    if (_steps[i] % esz1 != 0)
+                    {
+                        CV_Error_(Error::BadStep, ("Step %zu for dimension %d must be a multiple of esz1 %zu", _steps[i], i, esz1));
+                    }
 
-                m.step.p[i] = _steps[i];
+                    m.step.p[i] = _steps[i];
+                }
+                else
+                {
+                    m.step.p[i] = esz;
+                }
             }
-            else
+            else if( autoSteps )
             {
-                m.step.p[i] = esz;
+                m.step.p[i] = total;
+                uint64 total1 = (uint64)total*s;
+                if( (uint64)total1 != (size_t)total1 )
+                    CV_Error( CV_StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
+                total = (size_t)total1;
             }
-        }
-        else if( autoSteps )
-        {
-            m.step.p[i] = total;
-            uint64 total1 = (uint64)total*s;
-            if( (uint64)total1 != (size_t)total1 )
-                CV_Error( CV_StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
-            total = (size_t)total1;
         }
     }
 
     if( _dims < 2 )
     {
-        m.cols = _dims >= 1 ? _sz[0] : 1;
+        m.cols = _dims >= 1 && _sz ? _sz[0] : 1;
         m.rows = 1;
         m.size.p = &m.cols;
         m.step.buf[0] = m.cols*esz;
@@ -286,6 +285,8 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
 int updateContinuityFlag(int flags, int dims, const int* size, const size_t* step)
 {
     int i, j;
+    if (dims <= 1)
+        return flags | Mat::CONTINUOUS_FLAG;
     for( i = 0; i < dims; i++ )
     {
         if( size[i] > 1 )
@@ -679,9 +680,9 @@ Mat& Mat::operator=(Mat&& m)
 }
 
 
-void Mat::create(int d, const int* _sizes, int _type)
+void Mat::create(int d0, const int* _sizes, int _type)
 {
-    int sz1 = 1;
+    int sz1 = 1, d = d0;
     int i;
     if (d == 0) {
         d = 1;
@@ -739,6 +740,7 @@ void Mat::create(int d, const int* _sizes, int _type)
 
     addref();
     finalizeHdr(*this);
+    dims = d0;
 }
 
 void Mat::create(const std::vector<int>& _sizes, int _type)
@@ -1245,7 +1247,7 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
 
     if (isContinuous())
     {
-        CV_Assert(_cn >= 0 && _newndims > 0 && _newndims <= CV_MAX_DIM && _newsz);
+        CV_Assert(_cn >= 0 && _newndims >= 0 && _newndims <= CV_MAX_DIM && (_newndims == 0 || _newsz != 0));
 
         if (_cn == 0)
             _cn = this->channels();
@@ -1287,13 +1289,13 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
 
 Mat Mat::reshape(int _cn, const std::vector<int>& _newshape) const
 {
-    if(_newshape.empty())
+    int newdims = (int)_newshape.size();
+    if(newdims == 0 && empty())
     {
-        CV_Assert(empty());
         return *this;
     }
 
-    return reshape(_cn, (int)_newshape.size(), &_newshape[0]);
+    return reshape(_cn, newdims, newdims > 0 ? &_newshape[0] : 0);
 }
 
 Mat Mat::diag(const Mat& d)
