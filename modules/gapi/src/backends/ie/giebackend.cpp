@@ -76,6 +76,7 @@ IE::Layout toIE(const std::string &layout) {
         {"NCDHW", IE::Layout::NCDHW},
         {"NDHWC", IE::Layout::NDHWC},
         {"NHWC" , IE::Layout::NHWC },
+        {"NCHW" , IE::Layout::NCHW },
         {"CHW"  , IE::Layout::CHW  },
         {"HWC"  , IE::Layout::HWC  },
         {"HW"   , IE::Layout::HW   },
@@ -259,8 +260,8 @@ inline IE::TensorDesc toIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
 // even though the real layout is different.
 // E.g if user provided Mat({1, 240, 320, 3}, CV_8U) + NHWC layout
 // need to create Blob(U8, {1, 3, 240, 320}, NHWC).
-inline IE::SizeVector alignDimsWithLayout(const IE::SizeVector &dims,
-                                          const IE::Layout     layout) {
+inline IE::SizeVector toIEDims(const IE::SizeVector &dims,
+                               const IE::Layout     layout) {
     switch (layout) {
         case IE::Layout::NDHWC: // NCDHW
             return {dims[0], dims[4], dims[1], dims[2], dims[3]};
@@ -268,6 +269,24 @@ inline IE::SizeVector alignDimsWithLayout(const IE::SizeVector &dims,
             return {dims[0], dims[3], dims[1], dims[2]};
         case IE::Layout::HWC: // CHW
             return {dims[2], dims[0], dims[1]};
+         default: return dims;
+    }
+    GAPI_Assert(false);
+}
+
+// NB: Inference dimmensions always follow NCDHW order
+// even though the real layout is different.
+// E.g if U8 blob has {1, 3, 240, 320} dims and NHWC layout
+// need to create cv::Mat({1, 240, 320, 3}, CV_8U);
+inline std::vector<int> toCVDims(const std::vector<int> &dims,
+                                 const IE::Layout       layout) {
+    switch (layout) {
+        case IE::Layout::NDHWC: // NCDHW
+            return {dims[0], dims[2], dims[3], dims[4], dims[1]};
+        case IE::Layout::NHWC: // NCHW
+            return {dims[0], dims[2], dims[3], dims[1]};
+        case IE::Layout::HWC: // CHW
+            return {dims[1], dims[2], dims[0]};
          default: return dims;
     }
     GAPI_Assert(false);
@@ -295,7 +314,7 @@ inline IE::TensorDesc toIE(const cv::Mat               &mat,
                               IE::SizeVector{1, channels, height, width}, bdesc);
     }
     return IE::TensorDesc(toIE(mat.depth()),
-                          alignDimsWithLayout(toIE(sz), layout),
+                          toIEDims(toIE(sz), layout),
                           layout);
 }
 
@@ -1664,7 +1683,7 @@ struct Infer: public cv::detail::KernelTag {
                     : uu.this_network.GetOutputsInfo().at(out_name)->getTensorDesc();
 
             cv::GMatDesc outm(toCV(desc.getPrecision()),
-                              toCV(desc.getDims()));
+                              toCVDims(toCV(desc.getDims()), desc.getLayout()));
             result.emplace_back(outm);
         }
         return result;
@@ -1804,7 +1823,7 @@ struct InferROI: public cv::detail::KernelTag {
                     : uu.this_network.GetOutputsInfo().at(out_name)->getTensorDesc();
 
             cv::GMatDesc outm(toCV(desc.getPrecision()),
-                              toCV(desc.getDims()));
+                              toCVDims(toCV(desc.getDims()), desc.getLayout()));
             result.emplace_back(outm);
         }
         return result;
@@ -1974,7 +1993,7 @@ struct InferList: public cv::detail::KernelTag {
                 ctx->uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load
                     ? ctx->uu.net.getOutputsInfo().at(out_name)->getTensorDesc()
                     : ctx->uu.this_network.GetOutputsInfo().at(out_name)->getTensorDesc();
-            cached_dims[i] = toCV(desc.getDims());
+            cached_dims[i] = toCVDims(toCV(desc.getDims()), desc.getLayout());
             // FIXME: Isn't this should be done automatically
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
             auto& out_vec = ctx->outVecR<cv::Mat>(i);
@@ -2152,7 +2171,7 @@ struct InferList2: public cv::detail::KernelTag {
                 ctx->uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load
                     ? ctx->uu.net.getOutputsInfo().at(out_name)->getTensorDesc()
                     : ctx->uu.this_network.GetOutputsInfo().at(out_name)->getTensorDesc();
-            cached_dims[i] = toCV(desc.getDims());
+            cached_dims[i] = toCVDims(toCV(desc.getDims()), desc.getLayout());
             // FIXME: Isn't this should be done automatically
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
             auto& out_vec = ctx->outVecR<cv::Mat>(i);
