@@ -101,8 +101,8 @@ static int toCV(const ov::element::Type &type) {
 
 static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
     const auto total = mat.total() * mat.channels();
-    if (tensor.get_element_type() != toOV(mat.depth()) ||
-        tensor.get_size()         != total ) {
+    if (toCV(tensor.get_element_type()) != mat.depth() ||
+        tensor.get_size()               != total ) {
         std::stringstream ss;
         ss << "Failed to copy data from ov::Tensor to cv::Mat."
            << " Data type or number of elements mismatch."
@@ -128,8 +128,8 @@ static void copyToOV(const cv::Mat &mat, ov::Tensor &tensor) {
     // TODO: Ideally there should be check that mat and tensor
     // dimensions are compatible.
     const auto total = mat.total() * mat.channels();
-    if (tensor.get_element_type() != toOV(mat.depth()) ||
-        tensor.get_size()         != total) {
+    if (toCV(tensor.get_element_type()) != mat.depth() ||
+        tensor.get_size()               != total) {
         std::stringstream ss;
         ss << "Failed to copy data from cv::Mat to ov::Tensor."
            << " Data type or number of elements mismatch."
