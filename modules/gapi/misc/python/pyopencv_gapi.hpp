@@ -28,6 +28,7 @@ using map_string_and_string         = std::map<std::string, std::string>;
 using map_string_and_string         = std::map<std::string, std::string>;
 using map_string_and_vector_size_t  = std::map<std::string, std::vector<size_t>>;
 using map_string_and_vector_float   = std::map<std::string, std::vector<float>>;
+using map_int_and_double            = std::map<int, double>;
 
 // NB: Python wrapper generate T_U for T<U>
 // This behavior is only observed for inputs

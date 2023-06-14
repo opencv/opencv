@@ -655,6 +655,44 @@ public:
         return *this;
     }
 
+    /** @see ie::Params::cfgInputLayout */
+    Params& cfgInputLayout(std::string layout) {
+        desc.input_layout = std::move(layout);
+        return *this;
+    }
+
+    /** @overload */
+    Params&
+    cfgInputLayout(detail::AttrMap<std::string> layout_map) {
+        desc.input_layout = std::move(layout_map);
+        return *this;
+    }
+
+    /** @see ie::Params::cfgOutputLayout */
+    Params& cfgOutputLayout(std::string layout) {
+        desc.output_layout = std::move(layout);
+        return *this;
+    }
+
+    /** @overload */
+    Params&
+    cfgOutputLayout(detail::AttrMap<std::string> layout_map) {
+        desc.output_layout = std::move(layout_map);
+        return *this;
+    }
+
+    /** @see ie::Params::cfgResize */
+    Params& cfgResize(int interpolation) {
+        desc.interpolation = interpolation;
+        return *this;
+    }
+
+    /** @overload */
+    Params& cfgResize(detail::AttrMap<int> interpolation) {
+        desc.interpolation = std::move(interpolation);
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend()    const { return cv::gapi::ie::backend();  }
     std::string   tag()        const { return m_tag; }

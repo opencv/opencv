@@ -76,6 +76,7 @@ IE::Layout toIE(const std::string &layout) {
         {"NCDHW", IE::Layout::NCDHW},
         {"NDHWC", IE::Layout::NDHWC},
         {"NHWC" , IE::Layout::NHWC },
+        {"NCHW" , IE::Layout::NCHW },
         {"CHW"  , IE::Layout::CHW  },
         {"HWC"  , IE::Layout::HWC  },
         {"HW"   , IE::Layout::HW   },
@@ -195,6 +196,7 @@ broadcastLayerAttr(const LayerVariantAttr<Attr>   &layer_attr,
     return map;
 }
 
+// TODO: Move it to some common place
 template <typename K, typename V>
 cv::optional<V> lookUp(const std::map<K, V> &map, const K& key) {
     const auto it = map.find(key);
@@ -254,8 +256,72 @@ inline IE::TensorDesc toIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
     return IE::TensorDesc(toIE(mat.depth()), toIE(sz), toIELayout(sz.dims()));
 }
 
-inline IE::Blob::Ptr wrapIE(const cv::Mat &mat, cv::gapi::ie::TraitAs hint) {
-    const auto tDesc = toIE(mat, hint);
+// NB: Inference dimmensions always follow NCDHW order
+// even though the real layout is different.
+// E.g if user provided Mat({1, 240, 320, 3}, CV_8U) + NHWC layout
+// need to create Blob(U8, {1, 3, 240, 320}, NHWC).
+inline IE::SizeVector toIEDims(const IE::SizeVector &dims,
+                               const IE::Layout     layout) {
+    switch (layout) {
+        case IE::Layout::NDHWC: // NCDHW
+            return {dims[0], dims[4], dims[1], dims[2], dims[3]};
+        case IE::Layout::NHWC: // NCHW
+            return {dims[0], dims[3], dims[1], dims[2]};
+        case IE::Layout::HWC: // CHW
+            return {dims[2], dims[0], dims[1]};
+         default: return dims;
+    }
+    GAPI_Assert(false);
+}
+
+// NB: Inference dimmensions always follow NCDHW order
+// even though the real layout is different.
+// E.g if U8 blob has {1, 3, 240, 320} dims and NHWC layout
+// need to create cv::Mat({1, 240, 320, 3}, CV_8U);
+inline std::vector<int> toCVDims(const std::vector<int> &dims,
+                                 const IE::Layout       layout) {
+    switch (layout) {
+        case IE::Layout::NDHWC: // NCDHW
+            return {dims[0], dims[2], dims[3], dims[4], dims[1]};
+        case IE::Layout::NHWC: // NCHW
+            return {dims[0], dims[2], dims[3], dims[1]};
+        case IE::Layout::HWC: // CHW
+            return {dims[1], dims[2], dims[0]};
+         default: return dims;
+    }
+    GAPI_Assert(false);
+}
+
+inline IE::TensorDesc toIE(const cv::Mat               &mat,
+                           const cv::gapi::ie::TraitAs hint,
+                           const IE::Layout            layout) {
+    const auto &sz = mat.size;
+    if (sz.dims() == 2 && hint == cv::gapi::ie::TraitAs::IMAGE)
+    {
+        // NB: This logic is mainly taken from IE samples
+        const size_t channels = mat.channels();
+        const size_t height   = mat.size().height;
+        const size_t width    = mat.size().width;
+
+        const size_t strideH  = mat.step1();
+        IE::BlockingDesc bdesc({1, height, width, channels} /* blocking dims */,
+                               {0, 2, 3, 1} /* order for NHWC   */,
+                               0            /* offset           */,
+                               {0, 0, 0, 0} /* offsets for dims */,
+                               {strideH * height, strideH, channels, 1} /* strides for dims */);
+
+        return IE::TensorDesc(toIE(mat.depth()),
+                              IE::SizeVector{1, channels, height, width}, bdesc);
+    }
+    return IE::TensorDesc(toIE(mat.depth()),
+                          toIEDims(toIE(sz), layout),
+                          layout);
+}
+
+inline IE::Blob::Ptr wrapIE(const cv::Mat         &mat,
+                            cv::gapi::ie::TraitAs hint,
+                            const IE::Layout      layout = IE::Layout::ANY) {
+    const auto tDesc = toIE(mat, hint, layout);
     switch (mat.depth()) {
         // NB: Seems there's no way to create an untyped (T-less) Blob::Ptr
         // in IE given only precision via TensorDesc. So we have to do this:
@@ -847,7 +913,8 @@ cv::MediaFrame preprocess_frame_impl(cv::MediaFrame &&in_frame, const std::strin
 
 inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
                                  std::size_t i,
-                                 cv::gapi::ie::TraitAs hint,
+                                 const cv::gapi::ie::TraitAs hint,
+                                 const IE::Layout &layout,
                                  const std::string& layer_name,
                                  const cv::util::optional<cv::Rect> &opt_roi,
                                  cv::MediaFrame* out_keep_alive_frame = nullptr,
@@ -899,14 +966,13 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
             return wrapIE(*(ctx.views.back()), frame.desc());
         }
         case cv::GShape::GMAT: {
-            return wrapIE(ctx.inMat(i), hint);
+            return wrapIE(ctx.inMat(i), hint, layout);
         }
         default:
             GAPI_Assert("Unsupported input shape for IE backend");
     }
     GAPI_Error("InternalError");
 }
-
 
 static void setBlob(InferenceEngine::InferRequest& req,
                     const std::string&             layer_name,
@@ -1639,7 +1705,7 @@ struct Infer: public cv::detail::KernelTag {
                     : uu.this_network.GetOutputsInfo().at(out_name)->getTensorDesc();
 
             cv::GMatDesc outm(toCV(desc.getPrecision()),
-                              toCV(desc.getDims()));
+                              toCVDims(toCV(desc.getDims()), desc.getLayout()));
             result.emplace_back(outm);
         }
         return result;
@@ -1656,8 +1722,9 @@ struct Infer: public cv::detail::KernelTag {
                         for (auto i : ade::util::iota(ctx->uu.params.num_in)) {
                             const auto& layer_name = ctx->uu.params.input_names[i];
                             const auto hint = ctx->getInputType(layer_name);
+                            const auto layout = req.GetBlob(layer_name)->getTensorDesc().getLayout();
                             IE::Blob::Ptr this_blob = extractBlob(*ctx, i, hint,
-                                                                  layer_name,
+                                                                  layout, layer_name,
                                                                   cv::util::optional<cv::Rect>{});
                             setBlob(req, layer_name, this_blob, *ctx);
                         }
@@ -1715,11 +1782,7 @@ struct InferROI: public cv::detail::KernelTag {
                                                      uu.params.input_names);
         const auto interpolation = broadcastLayerAttr(uu.params.interpolation,
                                                       uu.params.input_names);
-        // FIXME: This is the only place where information about input type
-        // can be stored for the futher execution.
         const auto trait = cv::gapi::ie::TraitAs::IMAGE;
-        const_cast<IEUnit&>(uu)
-            .inputs_type.emplace(input_name, trait);
         if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {
             // 0th is ROI, 1st is input image
             auto inputs = uu.net.getInputsInfo();
@@ -1782,7 +1845,7 @@ struct InferROI: public cv::detail::KernelTag {
                     : uu.this_network.GetOutputsInfo().at(out_name)->getTensorDesc();
 
             cv::GMatDesc outm(toCV(desc.getPrecision()),
-                              toCV(desc.getDims()));
+                              toCVDims(toCV(desc.getDims()), desc.getLayout()));
             result.emplace_back(outm);
         }
         return result;
@@ -1805,6 +1868,7 @@ struct InferROI: public cv::detail::KernelTag {
                         bool preprocessed = false;
                         IE::Blob::Ptr this_blob =
                             extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE,
+                                        IE::Layout::ANY,
                                         *(ctx->uu.params.input_names.begin()),
                                         cv::util::make_optional(this_roi),
                                         slot_ptr, &preprocessed);
@@ -1873,10 +1937,6 @@ struct InferList: public cv::detail::KernelTag {
                     uu.params.layer_names_to_reshape.end()) {
                     configureInputReshapeByImage(ii, mm, input_reshape_table);
                 }
-                // FIXME: This is the only place where information about input type
-                // can be stored for the futher execution.
-                const_cast<IEUnit&>(uu)
-                    .inputs_type.emplace(input_name, input_trait);
                 cfgInputPreprocessing(input_trait, ii, mm,
                                       input_name, input_layout, interpolation);
             }
@@ -1944,6 +2004,7 @@ struct InferList: public cv::detail::KernelTag {
         // NB: This blob will be used to make roi from its, so
         // it should be treated as image
         IE::Blob::Ptr this_blob = extractBlob(*ctx, 1, cv::gapi::ie::TraitAs::IMAGE,
+                                              IE::Layout::ANY,
                                               ctx->uu.params.input_names[0u],
                                               cv::util::optional<cv::Rect>{});
 
@@ -1954,7 +2015,7 @@ struct InferList: public cv::detail::KernelTag {
                 ctx->uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load
                     ? ctx->uu.net.getOutputsInfo().at(out_name)->getTensorDesc()
                     : ctx->uu.this_network.GetOutputsInfo().at(out_name)->getTensorDesc();
-            cached_dims[i] = toCV(desc.getDims());
+            cached_dims[i] = toCVDims(toCV(desc.getDims()), desc.getLayout());
             // FIXME: Isn't this should be done automatically
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
             auto& out_vec = ctx->outVecR<cv::Mat>(i);
@@ -2054,10 +2115,6 @@ struct InferList2: public cv::detail::KernelTag {
                         uu.params.layer_names_to_reshape.end()) {
                         configureInputReshapeByImage(ii, mm_0, input_reshape_table);
                     }
-                    // FIXME: This is the only place where information about input type
-                    // can be stored for the futher execution.
-                    const_cast<IEUnit&>(uu)
-                        .inputs_type.emplace(input_name, input_trait);
                     cfgInputPreprocessing(input_trait, ii, mm_0,
                                           input_name, input_layout, interpolation);
 
@@ -2089,6 +2146,14 @@ struct InferList2: public cv::detail::KernelTag {
                 // Just validate that it is really the type
                 // (other types are prohibited here)
                 GAPI_Assert(op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_MAT);
+                // NB: Well, it's even impossible to specify the precision since
+                // there is not such info in GArray<cv::GMat>
+                const auto explicit_resize = lookUp(interpolation, input_name);
+                const auto explicit_layout = lookUp(input_layout , input_name);
+                if (explicit_resize || explicit_layout) {
+                    util::throw_error(std::logic_error(
+                        "InferList2 doesn't support preprocessing for \"tensor\"'s arguments!"));
+                }
             }
             idx++; // NB: Never forget to increment the counter
         }
@@ -2108,6 +2173,7 @@ struct InferList2: public cv::detail::KernelTag {
         // NB: This blob will be used to make roi from its, so
         // it should be treated as image
         IE::Blob::Ptr blob_0 = extractBlob(*ctx, 0, cv::gapi::ie::TraitAs::IMAGE,
+                                           IE::Layout::ANY,
                                            ctx->uu.params.input_names[0u],
                                            cv::util::optional<cv::Rect>{});
         const auto list_size = ctx->inArg<cv::detail::VectorRef>(1u).size();
@@ -2127,7 +2193,7 @@ struct InferList2: public cv::detail::KernelTag {
                 ctx->uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load
                     ? ctx->uu.net.getOutputsInfo().at(out_name)->getTensorDesc()
                     : ctx->uu.this_network.GetOutputsInfo().at(out_name)->getTensorDesc();
-            cached_dims[i] = toCV(desc.getDims());
+            cached_dims[i] = toCVDims(toCV(desc.getDims()), desc.getLayout());
             // FIXME: Isn't this should be done automatically
             // by some resetInternalData(), etc? (Probably at the GExecutor level)
             auto& out_vec = ctx->outVecR<cv::Mat>(i);
@@ -2150,8 +2216,10 @@ struct InferList2: public cv::detail::KernelTag {
                             } else if (this_vec.getKind() == cv::detail::OpaqueKind::CV_MAT) {
                                 const auto &vec = this_vec.rref<cv::Mat>();
                                 const auto &mat = vec[list_idx];
-                                setBlob(req, ctx->uu.params.input_names[in_idx],
-                                        wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR),
+                                const auto layer_name = ctx->uu.params.input_names[in_idx];
+                                const auto layout = req.GetBlob(layer_name)->getTensorDesc().getLayout();
+                                setBlob(req, layer_name,
+                                        wrapIE(mat, cv::gapi::ie::TraitAs::TENSOR, layout),
                                         *ctx);
                             } else {
                                 GAPI_Assert(false &&

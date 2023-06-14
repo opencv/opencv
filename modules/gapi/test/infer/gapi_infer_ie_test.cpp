@@ -3187,6 +3187,62 @@ TEST_F(AgeGenderInferTest, ThrowIfSetLayoutForImage) {
                                         cv::compile_args(cv::gapi::networks(pp))));
 }
 
+TEST(TestAgeGenderIE, InferTensorWithPreproc) {
+    initDLDTDataPath();
+
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.device_id = "CPU";
+
+    // Load IE network, initialize input data using that.
+    cv::Mat in_mat({1, 240, 320, 3}, CV_8U);
+    cv::randu(in_mat, 0, 255);
+    cv::Mat gapi_age, gapi_gender;
+
+    IE::Blob::Ptr ie_age, ie_gender;
+    {
+        auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
+        auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+        auto ii = net.getInputsInfo().at("data");
+
+        ii->setPrecision(IE::Precision::U8);
+        ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+        ii->setLayout(IE::Layout::NHWC);
+
+        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        auto infer_request = this_network.CreateInferRequest();
+        IE::TensorDesc desc{IE::Precision::U8, {1, 3, 240, 320}, IE::Layout::NHWC};
+        auto blob =  IE::make_shared_blob<uint8_t>(desc, const_cast<uint8_t*>(in_mat.ptr<uint8_t>()));
+        infer_request.SetBlob("data", blob);
+        infer_request.Infer();
+        ie_age    = infer_request.GetBlob("age_conv3");
+        ie_gender = infer_request.GetBlob("prob");
+    }
+
+    // Configure & run G-API
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GMat in;
+    cv::GMat age, gender;
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.weights_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgResize(cv::INTER_LINEAR)
+     .cfgInputLayout("NHWC");
+
+    comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    // Validate with IE itself (avoid DNN module dependency here)
+    normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
+    normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
+}
+
 } // namespace opencv_test
 
 #endif //  HAVE_INF_ENGINE
