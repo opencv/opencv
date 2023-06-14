@@ -343,6 +343,11 @@ cv::GArg OVCallContext::packArg(const cv::GArg &arg) {
     switch (ref.shape)
     {
     case cv::GShape::GMAT: return cv::GArg(m_res.slot<cv::Mat>()[ref.id]);
+
+    // Note: .at() is intentional for GArray as object MUST be already there
+    //   (and constructed by either bindIn/Out or resetInternal)
+    case cv::GShape::GARRAY:  return cv::GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
+
     default:
         cv::util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
@@ -547,6 +552,62 @@ static void PostOutputs(::ov::InferRequest             &infer_request,
     }
 }
 
+class PostOutputsList {
+public:
+    PostOutputsList(size_t size,
+                    std::shared_ptr<OVCallContext> ctx);
+
+    void operator()(::ov::InferRequest &infer_request,
+                    std::exception_ptr eptr,
+                    size_t             pos) const;
+
+private:
+    struct Priv {
+        std::atomic<size_t> finished{0u};
+        size_t size;
+        std::shared_ptr<OVCallContext> ctx;
+    };
+    std::shared_ptr<Priv> m_priv;
+};
+
+PostOutputsList::PostOutputsList(size_t size,
+                                 std::shared_ptr<OVCallContext> ctx)
+    : m_priv(new Priv{}) {
+    m_priv->size = size;
+    m_priv->ctx = ctx;
+}
+
+void PostOutputsList::operator()(::ov::InferRequest &infer_request,
+                                 std::exception_ptr eptr,
+                                 size_t             pos) const {
+    auto&& ctx         = m_priv->ctx;
+    auto&& finished    = m_priv->finished;
+    auto&& size        = m_priv->size;
+
+    ctx->eptr = eptr;
+    if (!ctx->eptr) {
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            std::vector<cv::Mat> &out_vec = ctx->outVecR<cv::Mat>(i);
+
+            const auto &out_name = ctx->uu.params.output_names[i];
+            const auto &out_tensor = infer_request.get_tensor(out_name);
+
+            out_vec[pos].create(toCV(out_tensor.get_shape()),
+                                toCV(out_tensor.get_element_type()));
+            copyFromOV(out_tensor, out_vec[pos]);
+        }
+    }
+    ++finished;
+
+    if (finished == size) {
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            auto output = ctx->output(i);
+            ctx->out.meta(output, ctx->getMeta());
+            ctx->out.post(std::move(output), ctx->eptr);
+        }
+    }
+}
+
 namespace cv {
 namespace gimpl {
 namespace ov {
@@ -592,6 +653,34 @@ cv::optional<V> lookUp(const std::map<K, V> &map, const K& key) {
         return {};
     }
     return cv::util::make_optional(std::move(it->second));
+}
+
+// NB: This function is used to preprocess input image
+// for InferROI, InferList, InferList2 kernels.
+static cv::Mat preprocess(const cv::Mat     &in_mat,
+                          const cv::Rect    &roi,
+                          const ::ov::Shape &model_shape) {
+    cv::Mat out;
+    // FIXME: Since there is no information about H and W positions
+    // among tensor dimmensions assume that model layout is "NHWC".
+    // (In fact "NHWC" is the only right layout for preprocessing because
+    // it works only with images.
+    GAPI_Assert(model_shape.size() == 4u);
+    const auto H = model_shape[1];
+    const auto W = model_shape[2];
+    const auto C = model_shape[3];
+    // NB: Soft check that at least number of channels matches.
+    if (static_cast<int>(C) != in_mat.channels()) {
+        std::stringstream ss;
+        ss << "OV Backend: Failed to preprocess input data "
+              " (Number of channels mismatch)."
+              " Provided data: " << cv::descr_of(in_mat) <<
+              " and Model shape: " << model_shape;
+        util::throw_error(std::logic_error(ss.str()));
+    }
+    // NB: Crop roi and resize to model size.
+    cv::resize(in_mat(roi), out, cv::Size(W, H));
+    return out;
 }
 
 static bool isImage(const cv::GMatDesc &desc,
@@ -815,6 +904,189 @@ struct Infer: public cv::detail::KernelTag {
     }
 };
 
+struct InferList: public cv::detail::KernelTag {
+    using API = cv::GInferListBase;
+    static cv::gapi::GBackend backend()  { return cv::gapi::ov::backend(); }
+    static KImpl kernel()                { return KImpl{outMeta, run}; }
+
+    static cv::GMetaArgs outMeta(const ade::Graph      &gr,
+                                 const ade::NodeHandle &nh,
+                                 const cv::GMetaArgs   &in_metas,
+                                 const cv::GArgs       &/*in_args*/) {
+        cv::GMetaArgs result;
+
+        GConstGOVModel gm(gr);
+        const auto &uu = gm.metadata(nh).get<OVUnit>();
+        // Initialize input information
+        // Note our input layers list order matches the API order and so
+        // meta order.
+        GAPI_Assert(uu.params.input_names.size() == (in_metas.size() - 1u)
+                    && "Known input layers count doesn't match input meta count");
+
+        // NB: Pre/Post processing configuration avaiable only for read models.
+        if (cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind)) {
+            const auto &model_info = cv::util::get<ParamDesc::Model>(uu.params.kind);
+            const auto new_shapes =
+                broadcastLayerAttr(model_info.new_shapes,
+                                   uu.params.input_names);
+            const_cast<std::shared_ptr<::ov::Model>&>(uu.model)->reshape(toOV(new_shapes));
+
+            const auto input_tensor_layout =
+                broadcastLayerAttr(model_info.input_tensor_layout,
+                                   uu.params.input_names);
+            const auto input_model_layout =
+                broadcastLayerAttr(model_info.input_model_layout,
+                                   uu.params.input_names);
+
+            const auto interpolation = broadcastLayerAttr(model_info.interpolation,
+                                                          uu.params.input_names);
+            const auto mean_values = broadcastLayerAttr(model_info.mean_values,
+                                                        uu.params.input_names);
+            const auto scale_values = broadcastLayerAttr(model_info.scale_values,
+                                                         uu.params.input_names);
+
+            // FIXME: Pre/Post processing step shouldn't be configured in this method.
+            ::ov::preprocess::PrePostProcessor ppp(uu.model);
+            size_t idx = 1u;
+            for (auto &&input_name : uu.params.input_names) {
+                const auto &mm = in_metas[idx++];
+                GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(mm));
+                const auto &matdesc = cv::util::get<cv::GMatDesc>(mm);
+
+                auto &input_info = ppp.input(input_name);
+                input_info.tensor().set_element_type(toOV(matdesc.depth));
+
+                const auto explicit_in_model_layout = lookUp(input_model_layout, input_name);
+                if (explicit_in_model_layout) {
+                    input_info.model().set_layout(::ov::Layout(*explicit_in_model_layout));
+                }
+                const auto explicit_in_tensor_layout = lookUp(input_tensor_layout, input_name);
+                if (explicit_in_tensor_layout) {
+                    input_info.tensor().set_layout(::ov::Layout(*explicit_in_tensor_layout));
+                }
+                const auto explicit_resize = lookUp(interpolation, input_name);
+
+                const auto model_layout = ::ov::layout::get_layout(uu.model->input(input_name));
+                const auto &input_shape = uu.model->input(input_name).get_shape();
+
+                if (!isImage(matdesc, input_shape)) {
+                    util::throw_error(std::runtime_error(
+                                "OV Backend: Only image is supported"
+                                " as the " + std::to_string(idx) + "th argument for InferList"));
+                }
+
+                // NB: Image case - all necessary preprocessng is configured automatically.
+                GAPI_LOG_DEBUG(NULL, "OV Backend: Input: \"" << input_name << "\" is image.");
+                // NB: Layout is already set just double check that
+                // user provided the correct one. In fact, there is only one correct for image.
+                if (explicit_in_tensor_layout &&
+                    *explicit_in_tensor_layout != "NHWC") {
+                    std::stringstream ss;
+                    ss << "OV Backend: Provided tensor layout " << *explicit_in_tensor_layout
+                       << " is not compatible with input data " << matdesc << " for layer \""
+                       << input_name << "\". Expecting NHWC";
+                    util::throw_error(std::logic_error(ss.str()));
+                }
+                input_info.tensor().set_layout(::ov::Layout("NHWC"));
+                // NB: Apply mean/scale as the last step of the preprocessing.
+                // Note that this can be applied to any input data if the
+                // position of "C" dimension is known.
+                const auto mean_vec = lookUp(mean_values, input_name);
+                if (mean_vec) {
+                    input_info.preprocess().mean(*mean_vec);
+                }
+
+                const auto scale_vec = lookUp(scale_values, input_name);
+                if (scale_vec) {
+                    input_info.preprocess().scale(*scale_vec);
+                }
+            }
+
+            const auto output_tensor_layout =
+                broadcastLayerAttr(model_info.output_tensor_layout,
+                                   uu.params.output_names);
+            const auto output_model_layout =
+                broadcastLayerAttr(model_info.output_model_layout,
+                                   uu.params.output_names);
+            const auto output_tensor_precision =
+                broadcastLayerAttr(model_info.output_tensor_precision,
+                                   uu.params.output_names);
+
+            for (const auto &output_name : uu.params.output_names) {
+                const auto explicit_out_tensor_layout =
+                    lookUp(output_tensor_layout, output_name);
+                if (explicit_out_tensor_layout) {
+                    ppp.output(output_name).tensor()
+                        .set_layout(::ov::Layout(*explicit_out_tensor_layout));
+                }
+
+                const auto explicit_out_model_layout =
+                    lookUp(output_model_layout, output_name);
+                if (explicit_out_model_layout) {
+                    ppp.output(output_name).model()
+                        .set_layout(::ov::Layout(*explicit_out_model_layout));
+                }
+
+                const auto explicit_out_tensor_prec =
+                    lookUp(output_tensor_precision, output_name);
+                if (explicit_out_tensor_prec) {
+                    ppp.output(output_name).tensor()
+                        .set_element_type(toOV(*explicit_out_tensor_prec));
+                }
+            }
+            GAPI_LOG_DEBUG(NULL, "OV Backend: PrePostProcessor: " << ppp);
+            const_cast<std::shared_ptr<::ov::Model>&>(uu.model) = ppp.build();
+        }
+
+        // roi-list version is much easier at the moment.
+        // All our outputs are vectors which don't have
+        // metadata at the moment - so just create a vector of
+        // "empty" array metadatas of the required size.
+        return cv::GMetaArgs(uu.params.output_names.size(),
+                             cv::GMetaArg{cv::empty_array_desc()});
+    }
+
+    static void run(std::shared_ptr<OVCallContext> ctx,
+                    cv::gimpl::ov::RequestPool     &reqPool) {
+        const auto& in_roi_vec = ctx->inArg<cv::detail::VectorRef>(0u).rref<cv::Rect>();
+        // NB: In case there is no input data need to post output anyway
+        if (in_roi_vec.empty()) {
+            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                auto output = ctx->output(i);
+                ctx->out.meta(output, ctx->getMeta());
+                ctx->out.post(std::move(output));
+            }
+            return;
+        }
+
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            // FIXME: Isn't this should be done automatically
+            // by some resetInternalData(), etc? (Probably at the GExecutor level)
+            auto& out_vec = ctx->outVecR<cv::Mat>(i);
+            out_vec.clear();
+            out_vec.resize(in_roi_vec.size());
+        }
+
+        PostOutputsList callback(in_roi_vec.size(), ctx);
+        for (auto&& it : ade::util::indexed(in_roi_vec)) {
+            const auto pos = ade::util::index(it);
+            const auto &rc = ade::util::value(it);
+            reqPool.getIdleRequest()->execute(
+                IInferExecutor::Task {
+                    [ctx, rc](::ov::InferRequest &infer_request) {
+                        const auto &input_name = ctx->uu.params.input_names[0];
+                        auto input_tensor = infer_request.get_tensor(input_name);
+                        const auto &shape = input_tensor.get_shape();
+                        const auto roi_mat = preprocess(ctx->inMat(1), rc, shape);
+                        copyToOV(roi_mat, input_tensor);
+                    },
+                    std::bind(callback, std::placeholders::_1, std::placeholders::_2, pos)
+                }
+            );
+        }
+    }
+};
+
 } // namespace ov
 } // namespace gimpl
 } // namespace cv
@@ -858,7 +1130,8 @@ class GOVBackendImpl final: public cv::gapi::GBackend::Priv {
     }
 
     virtual cv::GKernelPackage auxiliaryKernels() const override {
-        return cv::gapi::kernels< cv::gimpl::ov::Infer >();
+        return cv::gapi::kernels< cv::gimpl::ov::Infer
+                                , cv::gimpl::ov::InferList >();
     }
 
     virtual bool controlsMerge() const override {
