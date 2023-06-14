@@ -58,7 +58,7 @@ namespace detail {
 
 template <typename T>
 using AttrMap = std::map<std::string, T>;
-// NB: This type is supposed to be used to hold in/out layers
+// NB: This type is used to hold in/out layers
 // attributes such as precision, layout, shape etc.
 //
 // User can provide attributes either:

@@ -1420,11 +1420,14 @@ static void cfgInputPreprocessing(const cv::gapi::ie::TraitAs trait,
     } else {
         // NB: Tensor case - preprocessing is configured only if user asked.
         GAPI_LOG_DEBUG(NULL, "IE Backend: Input: \"" <<
-                       layer_name << " " << mm <<  "\" is tensor.");
+                       layer_name << "\" " << mm << " is tensor.");
         if (explicit_input_layout) {
+            GAPI_LOG_DEBUG(NULL, "IE Backend: Set input layout \"" <<
+                *explicit_input_layout << "\" for layer \"" << layer_name << "\"");
             ii->setLayout(toIE(*explicit_input_layout));
         }
         if (explicit_resize) {
+            GAPI_LOG_DEBUG(NULL, "IE Backend: Set resize for layer \"" << layer_name << "\"");
             ii->getPreProcess().setResizeAlgorithm(toIEInterp(*explicit_resize));
         }
     }
