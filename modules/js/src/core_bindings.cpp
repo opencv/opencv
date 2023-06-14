@@ -101,6 +101,9 @@ using namespace cv::dnn;
 typedef TrackerMIL::Params TrackerMIL_Params;
 #endif
 
+// HACK: JS generator ommits namespace for parameter types for some reason. Added typedef to handle std::string correctly
+typedef std::string string;
+
 namespace binding_utils
 {
     template<typename classT, typename enumT>
