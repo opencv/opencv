@@ -36,11 +36,11 @@ While coding, we firstly need to create a cv::barcode::BarcodeDetector object. I
 
 Optionally user can construct barcode detector with super resolution model which should be downloaded from https://github.com/WeChatCV/opencv_3rdparty/tree/wechat_qrcode (`sr.caffemodel`, `sr.prototxt`).
 
-@snippet ./samples/barcode.cpp initialize
+@snippet cpp/barcode.cpp initialize
 
 We need to create variables to store the outputs.
 
-@snippet ./samples/barcode.cpp output
+@snippet cpp/barcode.cpp output
 
 #### Detecting
 
@@ -48,7 +48,7 @@ cv::barcode::BarcodeDetector::detect method uses an algorithm based on direction
 
 Detect codes in the input image, and output the corners of detected rectangles:
 
-@snippet ./samples/barcode.cpp detect
+@snippet cpp/barcode.cpp detect
 
 #### Decoding
 
@@ -58,11 +58,11 @@ cv::barcode::BarcodeDetector::decode method first super-scales the image (_optio
 
 cv::barcode::BarcodeDetector::detectAndDecode combines `detect` and `decode` in a single call. A simple example below shows how to use this function:
 
-@snippet ./samples/barcode.cpp detectAndDecode
+@snippet cpp/barcode.cpp detectAndDecode
 
 Visualize the results:
 
-@snippet ./samples/barcode.cpp visualize
+@snippet cpp/barcode.cpp visualize
 
 Results
 -------
