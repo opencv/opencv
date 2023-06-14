@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2022 Intel Corporation
+// Copyright (C) 2018-2023 Intel Corporation
 
 #include "precomp.hpp"
 
@@ -882,7 +882,11 @@ inline IE::Blob::Ptr extractBlob(IECallContext& ctx,
                 auto y_blob = ctx.uu.rctx->CreateBlob(blob_params->first.first, blob_params->first.second);
                 auto uv_blob = ctx.uu.rctx->CreateBlob(blob_params->second.first, blob_params->second.second);
 
-#if INF_ENGINE_RELEASE >= 2021010000
+#if INF_ENGINE_RELEASE > 2023000000
+                cv::util::throw_error(std::logic_error(
+                            "IE Backend: NV12 feature has been deprecated in OpenVINO 1.0 API."
+                            " The last version which supports this is 2023.0"));
+#elif INF_ENGINE_RELEASE >= 2021010000
                 return IE::make_shared_blob<IE::NV12Blob>(y_blob, uv_blob);
 #else
                 return IE::make_shared_blob<InferenceEngine::NV12Blob>(y_blob, uv_blob);
@@ -916,7 +920,14 @@ static void setBlob(InferenceEngine::InferRequest& req,
         req.SetBlob(layer_name, blob);
     } else {
         GAPI_Assert(ctx.uu.params.kind == ParamDesc::Kind::Import);
+#if INF_ENGINE_RELEASE > 2023000000
+        // NB: SetBlob overload which accepts IE::PreProcessInfo
+        // has been deprecated - preprocessing can't be configured
+        // for "Import" networks anymore.
+        req.SetBlob(layer_name, blob);
+#else
         req.SetBlob(layer_name, blob, ctx.uu.preproc_map.at(layer_name));
+#endif
     }
 }
 
@@ -1304,7 +1315,14 @@ static void cfgImagePreprocessing(const IE::InputInfo::Ptr  &ii,
     if (cv::util::holds_alternative<cv::GFrameDesc>(mm)) {
         const auto &meta = util::get<cv::GFrameDesc>(mm);
         if (meta.fmt == cv::MediaFormat::NV12) {
+#if INF_ENGINE_RELEASE > 2023000000
+            cv::util::throw_error(std::logic_error(
+                        "IE Backend: cv::MediaFrame with NV12 format is no longer supported"
+                        " because NV12 feature has been deprecated in OpenVINO 1.0 API."
+                        " The last version which supports this is 2023.0"));
+#else
             ii->getPreProcess().setColorFormat(IE::ColorFormat::NV12);
+#endif
         }
     }
 }
@@ -1357,7 +1375,14 @@ static IE::PreProcessInfo createImagePreProcInfo(const cv::GMetaArg         &mm,
     if (cv::util::holds_alternative<cv::GFrameDesc>(mm)) {
         const auto &meta = util::get<cv::GFrameDesc>(mm);
         if (meta.fmt == cv::MediaFormat::NV12) {
+#if INF_ENGINE_RELEASE > 2023000000
+            cv::util::throw_error(std::logic_error(
+                        "IE Backend: cv::MediaFrame with NV12 format is no longer supported"
+                        " because NV12 feature has been deprecated in OpenVINO 1.0 API."
+                        " The last version which supports this is 2023.0"));
+#else
             info.setColorFormat(IE::ColorFormat::NV12);
+#endif
         }
     }
     return info;
@@ -2228,7 +2253,11 @@ IE::Blob::Ptr cv::gapi::ie::util::to_ie(const cv::Mat &blob) {
 IE::Blob::Ptr cv::gapi::ie::util::to_ie(const cv::Mat &y_plane, const cv::Mat &uv_plane) {
     auto y_blob   = wrapIE(y_plane,  cv::gapi::ie::TraitAs::IMAGE);
     auto uv_blob  = wrapIE(uv_plane, cv::gapi::ie::TraitAs::IMAGE);
-#if INF_ENGINE_RELEASE >= 2021010000
+#if INF_ENGINE_RELEASE > 2023000000
+    cv::util::throw_error(std::logic_error(
+                "IE Backend: NV12 feature has been deprecated in OpenVINO 1.0 API."
+                " The last version which supports this is 2023.0"));
+#elif INF_ENGINE_RELEASE >= 2021010000
     return IE::make_shared_blob<IE::NV12Blob>(y_blob, uv_blob);
 #else
     return IE::make_shared_blob<InferenceEngine::NV12Blob>(y_blob, uv_blob);
