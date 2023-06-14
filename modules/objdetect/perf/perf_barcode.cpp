@@ -43,14 +43,14 @@ PERF_TEST_P_(Perf_Barcode_multi, detect_decode)
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
     cv::resize(src, src, sz);
 
-    vector<cv::String> decoded_info;
-    vector<barcode::BarcodeType> decoded_type;
+    vector<std::string> decoded_info;
+    vector<std::string> decoded_type;
     vector< Point > corners;
     auto bardet = barcode::BarcodeDetector();
     bool res = false;
     TEST_CYCLE()
     {
-        res = bardet.detectAndDecodeExtra(src, decoded_info, decoded_type, corners);
+        res = bardet.detectAndDecodeWithType(src, decoded_info, decoded_type, corners);
     }
     SANITY_CHECK_NOTHING();
     ASSERT_TRUE(res);
@@ -89,14 +89,14 @@ PERF_TEST_P_(Perf_Barcode_single, detect_decode)
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
     cv::resize(src, src, sz);
 
-    vector<cv::String> decoded_info;
-    vector<barcode::BarcodeType> decoded_type;
+    vector<std::string> decoded_info;
+    vector<std::string> decoded_type;
     vector< Point > corners;
     auto bardet = barcode::BarcodeDetector();
     bool res = false;
     TEST_CYCLE()
     {
-        res = bardet.detectAndDecodeExtra(src, decoded_info, decoded_type, corners);
+        res = bardet.detectAndDecodeWithType(src, decoded_info, decoded_type, corners);
     }
     SANITY_CHECK_NOTHING();
     ASSERT_TRUE(res);

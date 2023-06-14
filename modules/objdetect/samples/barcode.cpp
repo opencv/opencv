@@ -1,5 +1,5 @@
 #include <iostream>
-#include "opencv2/objdetect/barcode.hpp"
+#include "opencv2/objdetect.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 
@@ -11,7 +11,7 @@ static const Scalar redColor(0, 0, 255);
 static const Scalar yellowColor(0, 255, 255);
 static Scalar randColor()
 {
-    RNG rng = theRNG();
+    RNG &rng = theRNG();
     return Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 }
 
@@ -23,7 +23,7 @@ struct TheApp
     //! [output]
     vector<Point> corners;
     vector<string> decode_info;
-    vector<barcode::BarcodeType> decode_type;
+    vector<string> decode_type;
     //! [output]
     bool detectOnly;
 
@@ -47,7 +47,7 @@ struct TheApp
             const size_t idx = i / 4;
             const bool isDecodable = idx < decode_info.size()
                 && idx < decode_type.size()
-                && decode_type[idx] != barcode::BarcodeType::Barcode_NONE;
+                && !decode_type[idx].empty();
             const Scalar lineColor = isDecodable ? greenColor : redColor;
             // draw barcode rectangle
             vector<Point> contour(corners.begin() + i, corners.begin() + i + 4);
@@ -88,7 +88,7 @@ struct TheApp
         else
         {
             //! [detectAndDecode]
-            bardet->detectAndDecodeExtra(frame, decode_info, decode_type, corners);
+            bardet->detectAndDecodeWithType(frame, decode_info, decode_type, corners);
             //! [detectAndDecode]
         }
     }

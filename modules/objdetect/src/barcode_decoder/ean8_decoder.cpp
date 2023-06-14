@@ -17,12 +17,12 @@ Result Ean8Decoder::decode(const vector<uchar> &data) const
     char decode_result[EAN8DIGIT_NUM + 1]{'\0'};
     if (data.size() < EAN8BITS_NUM)
     {
-        return Result("Wrong Size", BarcodeType::Barcode_NONE);
+        return Result("Wrong Size", Result::BARCODE_NONE);
     }
     pair<uint, uint> pattern;
     if (!findStartGuardPatterns(data, pattern))
     {
-        return Result("Begin Pattern Not Found", BarcodeType::Barcode_NONE);
+        return Result("Begin Pattern Not Found", Result::BARCODE_NONE);
     }
     uint start = pattern.second;
     Counter counter(vector<int>{0, 0, 0, 0});
@@ -32,7 +32,7 @@ Result Ean8Decoder::decode(const vector<uchar> &data) const
         int bestMatch = decodeDigit(data, counter, start, get_A_or_C_Patterns());
         if (bestMatch == -1)
         {
-            return Result("Decode Error", BarcodeType::Barcode_NONE);
+            return Result("Decode Error", Result::BARCODE_NONE);
         }
         decode_result[i] = static_cast<char>('0' + bestMatch % 10);
         start = counter.sum + start;
@@ -42,7 +42,7 @@ Result Ean8Decoder::decode(const vector<uchar> &data) const
 
     if (!findGuardPatterns(data, start, true, MIDDLE_PATTERN(), middle_counter, pattern))
     {
-        return Result("Middle Pattern Not Found", BarcodeType::Barcode_NONE);
+        return Result("Middle Pattern Not Found", Result::BARCODE_NONE);
     }
 
     start = pattern.second;
@@ -51,7 +51,7 @@ Result Ean8Decoder::decode(const vector<uchar> &data) const
         int bestMatch = decodeDigit(data, counter, start, get_A_or_C_Patterns());
         if (bestMatch == -1)
         {
-            return Result("Decode Error", BarcodeType::Barcode_NONE);
+            return Result("Decode Error", Result::BARCODE_NONE);
         }
         decode_result[i + 4] = static_cast<char>('0' + bestMatch);
         start = counter.sum + start;
@@ -59,14 +59,14 @@ Result Ean8Decoder::decode(const vector<uchar> &data) const
     Counter end_counter(vector<int>(BEGIN_PATTERN().size()));
     if (!findGuardPatterns(data, start, false, BEGIN_PATTERN(), end_counter, pattern))
     {
-        return Result("End Pattern Not Found", BarcodeType::Barcode_NONE);
+        return Result("End Pattern Not Found", Result::BARCODE_NONE);
     }
     result = string(decode_result);
     if (!isValid(result))
     {
-        return Result("Wrong: " + result.append(string(EAN8DIGIT_NUM - result.size(), ' ')), BarcodeType::Barcode_NONE);
+        return Result("Wrong: " + result.append(string(EAN8DIGIT_NUM - result.size(), ' ')), Result::BARCODE_NONE);
     }
-    return Result(result, BarcodeType::Barcode_EAN_8);
+    return Result(result, Result::BARCODE_EAN_8);
 }
 
 Ean8Decoder::Ean8Decoder()

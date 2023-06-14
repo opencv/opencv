@@ -6,7 +6,6 @@ import org.opencv.objdetect.BarcodeDetector;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.test.OpenCVTestCase;
 import java.util.ArrayList;
-import static org.opencv.objdetect.Objdetect.Barcode_EAN_13;
 
 public class BarcodeDetectorTest extends OpenCVTestCase {
 
@@ -28,15 +27,15 @@ public class BarcodeDetectorTest extends OpenCVTestCase {
         BarcodeDetector detector = new BarcodeDetector();
         assertNotNull(detector);
         List < String > infos = new ArrayList< String >();
-        List < Integer > types = new ArrayList< Integer >();
+        List < String > types = new ArrayList< String >();
 
-        boolean result = detector.detectAndDecodeExtra(img, infos, types);
+        boolean result = detector.detectAndDecodeWithType(img, infos, types);
         assertTrue(result);
         assertEquals(infos.size(), 4);
         assertEquals(types.size(), 4);
         final String[]  correctResults = {"9787122276124", "9787118081473", "9787564350840", "9783319200064"};
         for (int i = 0; i < 4; i++) {
-            assertEquals(types.get(i).intValue(), Barcode_EAN_13);
+            assertEquals(types.get(i), "EAN_13");
             result = false;
             for (int j = 0; j < 4; j++) {
                 if (correctResults[j].equals(infos.get(i))) {

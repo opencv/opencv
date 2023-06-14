@@ -30,11 +30,11 @@ void UPCEANDecoder::drawDebugLine(Mat &debug_img, const Point2i &begin, const Po
         circle(debug_img, Point2i(begin.x + start_range.second, begin.y), 2, Scalar(0), 2);
     }
     result = this->decode(middle);
-    if (result.format == BarcodeType::Barcode_NONE)
+    if (result.format == Result::BARCODE_NONE)
     {
         result = this->decode(std::vector<uchar>(middle.crbegin(), middle.crend()));
     }
-    if (result.format == BarcodeType::Barcode_NONE)
+    if (result.format == Result::BARCODE_NONE)
     {
         cv::line(debug_img, begin, end, Scalar(0), 2);
         cv::putText(debug_img, result.result, begin, cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(0, 0, 255), 1);
@@ -135,15 +135,15 @@ std::pair<Result, float> UPCEANDecoder::decodeROI(const Mat &bar_img) const
 {
     if ((size_t) bar_img.cols < this->bits_num)
     {
-        return std::make_pair(Result{string(), BarcodeType::Barcode_NONE}, 0.0F);
+        return std::make_pair(Result{string(), Result::BARCODE_NONE}, 0.0F);
     }
 
     std::map<std::string, int> result_vote;
-    std::map<BarcodeType, int> format_vote;
+    std::map<Result::BarcodeType, int> format_vote;
     int vote_cnt = 0;
     int total_vote = 0;
     std::string max_result;
-    BarcodeType max_type = BarcodeType::Barcode_NONE;
+    Result::BarcodeType max_type = Result::BARCODE_NONE;
 
     const int step = bar_img.rows / (DIVIDE_PART + BIAS_PART);
     Result result;
@@ -158,7 +158,7 @@ std::pair<Result, float> UPCEANDecoder::decodeROI(const Mat &bar_img) const
         const auto *ptr = bar_img.ptr<uchar>(row_num);
         vector<uchar> line(ptr, ptr + bar_img.cols);
         result = decodeLine(line);
-        if (result.format != BarcodeType::Barcode_NONE)
+        if (result.format != Result::BARCODE_NONE)
         {
             total_vote++;
             result_vote[result.result] += 1;
@@ -172,15 +172,15 @@ std::pair<Result, float> UPCEANDecoder::decodeROI(const Mat &bar_img) const
     }
     if (total_vote == 0 || (vote_cnt << 2) < total_vote)
     {
-        return std::make_pair(Result(string(), BarcodeType::Barcode_NONE), 0.0f);
+        return std::make_pair(Result(string(), Result::BARCODE_NONE), 0.0f);
     }
 
     float confidence = (float) vote_cnt / (float) DIVIDE_PART;
     //Check if it is UPC-A format
-    if (max_type == BarcodeType::Barcode_EAN_13 && max_result[0] == '0')
+    if (max_type == Result::BARCODE_EAN_13 && max_result[0] == '0')
     {
         max_result = max_result.substr(1, 12); //UPC-A length 12
-        max_type = Barcode_UPC_A;
+        max_type = Result::BARCODE_UPC_A;
     }
     return std::make_pair(Result(max_result, max_type), confidence);
 }
@@ -189,7 +189,7 @@ std::pair<Result, float> UPCEANDecoder::decodeROI(const Mat &bar_img) const
 Result UPCEANDecoder::decodeLine(const vector<uchar> &line) const
 {
     Result result = this->decode(line);
-    if (result.format == BarcodeType::Barcode_NONE)
+    if (result.format == Result::BARCODE_NONE)
     {
         result = this->decode(std::vector<uchar>(line.crbegin(), line.crend()));
     }

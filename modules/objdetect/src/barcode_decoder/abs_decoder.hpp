@@ -19,8 +19,18 @@ constexpr static uchar WHITE = std::numeric_limits<uchar>::max();
 
 struct Result
 {
+    enum BarcodeType
+    {
+        BARCODE_NONE,
+        BARCODE_EAN_8,
+        BARCODE_EAN_13,
+        BARCODE_UPC_A,
+        BARCODE_UPC_E,
+        BARCODE_UPC_EAN_EXTENSION
+    };
+
     std::string result;
-    BarcodeType format = BarcodeType::Barcode_NONE;
+    BarcodeType format = Result::BARCODE_NONE;
 
     Result() = default;
 
@@ -28,6 +38,22 @@ struct Result
     {
         result = _result;
         format = _format;
+    }
+    string typeString() const
+    {
+        switch (format)
+        {
+            case Result::BARCODE_EAN_8: return "EAN_8";
+            case Result::BARCODE_EAN_13: return "EAN_13";
+            case Result::BARCODE_UPC_E: return "UPC_E";
+            case Result::BARCODE_UPC_A: return "UPC_A";
+            case Result::BARCODE_UPC_EAN_EXTENSION: return "UPC_EAN_EXTENSION";
+            default: return string();
+        }
+    }
+    bool isValid() const
+    {
+        return format != BARCODE_NONE;
     }
 };
 

@@ -60,7 +60,7 @@ inline datasetType initValidation(std::string path)
 
 //==============================================================================
 
-TEST(Barcode_BarcodeDetector_single, regression)
+TEST(BARCODE_BarcodeDetector_single, regression)
 {
     const std::string root = "barcode/single/";
     datasetType validation = initValidation(root + "result.csv");
@@ -75,8 +75,8 @@ TEST(Barcode_BarcodeDetector_single, regression)
         EXPECT_FALSE(img.empty()) << "Can't read image: " << image_path;
         std::vector<cv::Point2f> points;
         std::vector<std::string> infos;
-        std::vector<cv::barcode::BarcodeType> formats;
-        bardet.detectAndDecodeExtra(img, infos, formats, points);
+        std::vector<std::string> formats;
+        bardet.detectAndDecodeWithType(img, infos, formats, points);
         EXPECT_FALSE(points.empty()) << "Nothing detected: " << image_path;
         bool is_correct = false;
         for (const auto &ans : infos)
@@ -92,7 +92,7 @@ TEST(Barcode_BarcodeDetector_single, regression)
     }
 }
 
-TEST(Barcode_BarcodeDetector_detect_multi, detect_regression)
+TEST(BARCODE_BarcodeDetector_detect_multi, detect_regression)
 {
     const std::string root = "barcode/multiple/";
     datasetType validation = initValidation(root + "result.csv");
@@ -113,7 +113,7 @@ TEST(Barcode_BarcodeDetector_detect_multi, detect_regression)
     }
 }
 
-TEST(Barcode_BarcodeDetector_basic, not_found_barcode)
+TEST(BARCODE_BarcodeDetector_basic, not_found_barcode)
 {
     auto bardet = barcode::BarcodeDetector();
     std::vector<Point> corners;

@@ -148,13 +148,13 @@ public:
     // own methods
     BarcodeImpl() = default;
     vector<Mat> initDecode(const Mat &src, const vector<vector<Point2f>> &points) const;
-    bool decodeExtra(InputArray img,
+    bool decodeWithType(InputArray img,
                      InputArray points,
                      vector<string> &decoded_info,
-                     vector<BarcodeType> &decoded_type) const;
-    bool detectAndDecodeExtra(InputArray img,
+                     vector<string> &decoded_type) const;
+    bool detectAndDecodeWithType(InputArray img,
                               vector<string> &decoded_info,
-                              vector<BarcodeType> &decoded_type,
+                              vector<string> &decoded_type,
                               OutputArray points_) const;
 
     //=================
@@ -188,10 +188,10 @@ vector<Mat> BarcodeImpl::initDecode(const Mat &src, const vector<vector<Point2f>
     return bar_imgs;
 }
 
-bool BarcodeImpl::decodeExtra(InputArray img,
+bool BarcodeImpl::decodeWithType(InputArray img,
                               InputArray points,
                               vector<string> &decoded_info,
-                              vector<BarcodeType> &decoded_type) const
+                              vector<string> &decoded_type) const
 {
     Mat inarr;
     if (!checkBarInputImage(img, inarr))
@@ -222,20 +222,20 @@ bool BarcodeImpl::decodeExtra(InputArray img,
     bool ok = false;
     for (const auto &res : info)
     {
-        if (res.format != BarcodeType::Barcode_NONE)
+        if (res.isValid())
         {
             ok = true;
         }
 
         decoded_info.emplace_back(res.result);
-        decoded_type.emplace_back(res.format);
+        decoded_type.emplace_back(res.typeString());
     }
     return ok;
 }
 
-bool BarcodeImpl::detectAndDecodeExtra(InputArray img,
+bool BarcodeImpl::detectAndDecodeWithType(InputArray img,
                                        vector<string> &decoded_info,
-                                       vector<BarcodeType> &decoded_type,
+                                       vector<string> &decoded_type,
                                        OutputArray points_) const
 {
     Mat inarr;
@@ -254,7 +254,7 @@ bool BarcodeImpl::detectAndDecodeExtra(InputArray img,
     updatePointsResult(points_, points);
     decoded_info.clear();
     decoded_type.clear();
-    ok = decodeExtra(inarr, points, decoded_info, decoded_type);
+    ok = decodeWithType(inarr, points, decoded_info, decoded_type);
     return ok;
 }
 
@@ -289,8 +289,8 @@ string BarcodeImpl::decode(InputArray img, InputArray points, OutputArray straig
 {
     CV_UNUSED(straight_code);
     vector<string> decoded_info;
-    vector<BarcodeType> decoded_type;
-    if (!decodeExtra(img, points, decoded_info, decoded_type))
+    vector<string> decoded_type;
+    if (!decodeWithType(img, points, decoded_info, decoded_type))
         return string();
     if (decoded_info.size() < 1)
         return string();
@@ -301,9 +301,9 @@ string BarcodeImpl::detectAndDecode(InputArray img, OutputArray points, OutputAr
 {
     CV_UNUSED(straight_code);
     vector<string> decoded_info;
-    vector<BarcodeType> decoded_type;
+    vector<string> decoded_type;
     vector<Point> points_;
-    if (!detectAndDecodeExtra(img, decoded_info, decoded_type, points_))
+    if (!detectAndDecodeWithType(img, decoded_info, decoded_type, points_))
         return string();
     if (points_.size() < 4 || decoded_info.size() < 1)
         return string();
@@ -320,19 +320,24 @@ bool BarcodeImpl::detectMulti(InputArray img, OutputArray points) const
 bool BarcodeImpl::decodeMulti(InputArray img, InputArray points, vector<string> &decoded_info, OutputArrayOfArrays straight_code) const
 {
     CV_UNUSED(straight_code);
-    vector<BarcodeType> decoded_type;
-    return decodeExtra(img, points, decoded_info, decoded_type);
+    vector<string> decoded_type;
+    return decodeWithType(img, points, decoded_info, decoded_type);
 }
 
 bool BarcodeImpl::detectAndDecodeMulti(InputArray img, vector<string> &decoded_info, OutputArray points, OutputArrayOfArrays straight_code) const
 {
     CV_UNUSED(straight_code);
-    vector<BarcodeType> decoded_type;
-    return detectAndDecodeExtra(img, decoded_info, decoded_type, points);
+    vector<string> decoded_type;
+    return detectAndDecodeWithType(img, decoded_info, decoded_type, points);
 }
 
 //==================================================================================================
 // Public class implementation
+
+BarcodeDetector::BarcodeDetector()
+    : BarcodeDetector(string(), string())
+{
+}
 
 BarcodeDetector::BarcodeDetector(const string &prototxt_path, const string &model_path)
 {
@@ -351,18 +356,18 @@ BarcodeDetector::BarcodeDetector(const string &prototxt_path, const string &mode
 
 BarcodeDetector::~BarcodeDetector() = default;
 
-bool BarcodeDetector::decodeExtra(InputArray img, InputArray points, vector<string> &decoded_info, vector<BarcodeType> &decoded_type) const
+bool BarcodeDetector::decodeWithType(InputArray img, InputArray points, vector<string> &decoded_info, vector<string> &decoded_type) const
 {
     Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
     CV_Assert(p_);
-    return p_->decodeExtra(img, points, decoded_info, decoded_type);
+    return p_->decodeWithType(img, points, decoded_info, decoded_type);
 }
 
-bool BarcodeDetector::detectAndDecodeExtra(InputArray img, vector<string> &decoded_info, vector<BarcodeType> &decoded_type, OutputArray points_) const
+bool BarcodeDetector::detectAndDecodeWithType(InputArray img, vector<string> &decoded_info, vector<string> &decoded_type, OutputArray points_) const
 {
     Ptr<BarcodeImpl> p_ = dynamic_pointer_cast<BarcodeImpl>(p);
     CV_Assert(p_);
-    return p_->detectAndDecodeExtra(img, decoded_info, decoded_type, points_);
+    return p_->detectAndDecodeWithType(img, decoded_info, decoded_type, points_);
 }
 
 }// namespace barcode
