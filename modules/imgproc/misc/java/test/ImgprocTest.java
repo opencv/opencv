@@ -429,7 +429,7 @@ public class ImgprocTest extends OpenCVTestCase {
         MatOfInt expHull = new MatOfInt(
                 0, 1, 2, 3
         );
-        assertMatEqual(expHull, hull, EPS);
+        assertMatEqual(expHull, hull.reshape(1, hull.total()), EPS);
     }
 
     public void testConvexHullMatMatBooleanBoolean() {
@@ -1105,7 +1105,7 @@ public class ImgprocTest extends OpenCVTestCase {
 
         Imgproc.HoughLinesP(img, lines, 1, 3.1415926/180, 100);
 
-        assertEquals(2, lines.rows());
+        assertEquals(2, lines.total());
 
         /*
         Log.d("HoughLinesP", "lines=" + lines);

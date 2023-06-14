@@ -10,6 +10,7 @@
 #endif
 
 #include "opencv2/core/cuda.hpp"
+#include "opencv2/core/bindings_utils.hpp"
 
 namespace opencv_test { namespace {
 
@@ -2591,6 +2592,15 @@ TEST(Mat, Recreate1DMatWithSameMeta)
     m.dims = 1;
 
     EXPECT_NO_THROW(m.create(dims, depth));
+}
+
+TEST(InputArray, dumpEmpty)
+{
+    std::string s;
+    s = cv::utils::dumpInputArray(noArray());
+    EXPECT_EQ(s, "InputArray: noArray()");
+    s = cv::utils::dumpInputArray(Mat());
+    EXPECT_EQ(s, "InputArray: empty()=true kind=0x00010000 flags=0x01010000 total(-1)=0 dims(-1)=0 size(-1)=0x0 type(-1)=CV_8UC1");
 }
 
 }} // namespace

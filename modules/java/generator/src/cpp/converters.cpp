@@ -9,11 +9,25 @@ using namespace cv;
 
 // vector_int
 
+template<typename _Tp>
+void Mat_to_vector(Mat& mat, std::vector<_Tp>& v, int type)
+{
+    CHECK_MAT(mat.type() == type && (mat.cols == 1 || mat.rows == 1));
+    int i, nelems = (int)mat.total();
+    v.resize(nelems);
+    for (i = 0; i < nelems; i++)
+        v[i] = mat.at<_Tp>(i);
+}
+
+template<typename _Tp>
+void Mat_to_vector(Mat& mat, std::vector<_Tp>& v)
+{
+    Mat_to_vector(mat, v, traits::Type<_Tp>::value);
+}
+
 void Mat_to_vector_int(Mat& mat, std::vector<int>& v_int)
 {
-    v_int.clear();
-    CHECK_MAT(mat.type()==CV_32SC1 && mat.cols==1);
-    v_int = (std::vector<int>) mat;
+    Mat_to_vector(mat, v_int);
 }
 
 void vector_int_to_Mat(std::vector<int>& v_int, Mat& mat)
@@ -26,9 +40,7 @@ void vector_int_to_Mat(std::vector<int>& v_int, Mat& mat)
 
 void Mat_to_vector_double(Mat& mat, std::vector<double>& v_double)
 {
-    v_double.clear();
-    CHECK_MAT(mat.type()==CV_64FC1 && mat.cols==1);
-    v_double = (std::vector<double>) mat;
+    Mat_to_vector(mat, v_double);
 }
 
 void vector_double_to_Mat(std::vector<double>& v_double, Mat& mat)
@@ -41,9 +53,7 @@ void vector_double_to_Mat(std::vector<double>& v_double, Mat& mat)
 
 void Mat_to_vector_float(Mat& mat, std::vector<float>& v_float)
 {
-    v_float.clear();
-    CHECK_MAT(mat.type()==CV_32FC1 && mat.cols==1);
-    v_float = (std::vector<float>) mat;
+    Mat_to_vector(mat, v_float);
 }
 
 void vector_float_to_Mat(std::vector<float>& v_float, Mat& mat)
@@ -56,9 +66,7 @@ void vector_float_to_Mat(std::vector<float>& v_float, Mat& mat)
 
 void Mat_to_vector_uchar(Mat& mat, std::vector<uchar>& v_uchar)
 {
-    v_uchar.clear();
-    CHECK_MAT(mat.type()==CV_8UC1 && mat.cols==1);
-    v_uchar = (std::vector<uchar>) mat;
+    Mat_to_vector(mat, v_uchar);
 }
 
 void vector_uchar_to_Mat(std::vector<uchar>& v_uchar, Mat& mat)
@@ -68,9 +76,7 @@ void vector_uchar_to_Mat(std::vector<uchar>& v_uchar, Mat& mat)
 
 void Mat_to_vector_char(Mat& mat, std::vector<char>& v_char)
 {
-    v_char.clear();
-    CHECK_MAT(mat.type()==CV_8SC1 && mat.cols==1);
-    v_char = (std::vector<char>) mat;
+    Mat_to_vector(mat, v_char);
 }
 
 void vector_char_to_Mat(std::vector<char>& v_char, Mat& mat)
@@ -83,9 +89,7 @@ void vector_char_to_Mat(std::vector<char>& v_char, Mat& mat)
 
 void Mat_to_vector_Rect(Mat& mat, std::vector<Rect>& v_rect)
 {
-    v_rect.clear();
-    CHECK_MAT(mat.type()==CV_32SC4 && mat.cols==1);
-    v_rect = (std::vector<Rect>) mat;
+    Mat_to_vector(mat, v_rect);
 }
 
 void vector_Rect_to_Mat(std::vector<Rect>& v_rect, Mat& mat)
@@ -97,9 +101,7 @@ void vector_Rect_to_Mat(std::vector<Rect>& v_rect, Mat& mat)
 
 void Mat_to_vector_Rect2d(Mat& mat, std::vector<Rect2d>& v_rect)
 {
-    v_rect.clear();
-    CHECK_MAT(mat.type()==CV_64FC4 && mat.cols==1);
-    v_rect = (std::vector<Rect2d>) mat;
+    Mat_to_vector(mat, v_rect, CV_64FC4);
 }
 
 void vector_Rect2d_to_Mat(std::vector<Rect2d>& v_rect, Mat& mat)
@@ -111,9 +113,7 @@ void vector_Rect2d_to_Mat(std::vector<Rect2d>& v_rect, Mat& mat)
 
 void Mat_to_vector_RotatedRect(Mat& mat, std::vector<RotatedRect>& v_rect)
 {
-    v_rect.clear();
-    CHECK_MAT(mat.type()==CV_32FC(5) && mat.cols==1);
-    v_rect = (std::vector<RotatedRect>) mat;
+    Mat_to_vector(mat, v_rect, CV_32FC(5));
 }
 
 void vector_RotatedRect_to_Mat(std::vector<RotatedRect>& v_rect, Mat& mat)
@@ -124,52 +124,38 @@ void vector_RotatedRect_to_Mat(std::vector<RotatedRect>& v_rect, Mat& mat)
 //vector_Point
 void Mat_to_vector_Point(Mat& mat, std::vector<Point>& v_point)
 {
-    v_point.clear();
-    CHECK_MAT(mat.type()==CV_32SC2 && mat.cols==1);
-    v_point = (std::vector<Point>) mat;
+    Mat_to_vector(mat, v_point);
 }
 
 //vector_Point2f
 void Mat_to_vector_Point2f(Mat& mat, std::vector<Point2f>& v_point)
 {
-    v_point.clear();
-    CHECK_MAT(mat.type()==CV_32FC2 && mat.cols==1);
-    v_point = (std::vector<Point2f>) mat;
+    Mat_to_vector(mat, v_point);
 }
 
 //vector_Point2d
 void Mat_to_vector_Point2d(Mat& mat, std::vector<Point2d>& v_point)
 {
-    v_point.clear();
-    CHECK_MAT(mat.type()==CV_64FC2 && mat.cols==1);
-    v_point = (std::vector<Point2d>) mat;
+    Mat_to_vector(mat, v_point);
 }
-
 
 //vector_Point3i
 void Mat_to_vector_Point3i(Mat& mat, std::vector<Point3i>& v_point)
 {
-    v_point.clear();
-    CHECK_MAT(mat.type()==CV_32SC3 && mat.cols==1);
-    v_point = (std::vector<Point3i>) mat;
+    Mat_to_vector(mat, v_point);
 }
 
 //vector_Point3f
 void Mat_to_vector_Point3f(Mat& mat, std::vector<Point3f>& v_point)
 {
-    v_point.clear();
-    CHECK_MAT(mat.type()==CV_32FC3 && mat.cols==1);
-    v_point = (std::vector<Point3f>) mat;
+    Mat_to_vector(mat, v_point);
 }
 
 //vector_Point3d
 void Mat_to_vector_Point3d(Mat& mat, std::vector<Point3d>& v_point)
 {
-    v_point.clear();
-    CHECK_MAT(mat.type()==CV_64FC3 && mat.cols==1);
-    v_point = (std::vector<Point3d>) mat;
+    Mat_to_vector(mat, v_point);
 }
-
 
 void vector_Point_to_Mat(std::vector<Point>& v_point, Mat& mat)
 {
@@ -205,18 +191,19 @@ void vector_Point3d_to_Mat(std::vector<Point3d>& v_point, Mat& mat)
 void Mat_to_vector_Mat(cv::Mat& mat, std::vector<cv::Mat>& v_mat)
 {
     v_mat.clear();
-    if(mat.type() == CV_32SC2 && mat.cols == 1)
+    if(mat.type() == CV_32SC2 && (mat.cols == 1 || mat.rows == 1))
     {
-        v_mat.reserve(mat.rows);
-        for(int i=0; i<mat.rows; i++)
+        int nelems = (int)mat.total();
+        v_mat.reserve(nelems);
+        for(int i = 0; i < nelems; i++)
         {
-            Vec<int, 2> a = mat.at< Vec<int, 2> >(i, 0);
+            Vec<int, 2> a = mat.at< Vec<int, 2> >(i);
             long long addr = (((long long)a[0])<<32) | (a[1]&0xffffffff);
             Mat& m = *( (Mat*) addr );
             v_mat.push_back(m);
         }
     } else {
-        LOGD("Mat_to_vector_Mat() FAILED: mat.type() == CV_32SC2 && mat.cols == 1");
+        LOGD("Mat_to_vector_Mat() FAILED: mat.type() == CV_32SC2 && (mat.cols == 1 || mat.rows == 1)");
     }
 }
 

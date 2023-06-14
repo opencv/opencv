@@ -16,6 +16,11 @@ namespace aruco {
 void _copyVector2Output(std::vector<std::vector<Point2f> > &vec, OutputArrayOfArrays out, const float scale = 1.f);
 
 /**
+ * @brief Copy the contents of InputArray to a corners vector.
+ */
+void _copyInput2Vector(InputArrayOfArrays inp, std::vector<std::vector<Point2f> > &vec);
+
+/**
   * @brief Convert input image to gray if it is a 3-channels image
   */
 void _convertToGrey(InputArray _in, OutputArray _out);

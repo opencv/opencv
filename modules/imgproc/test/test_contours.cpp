@@ -182,5 +182,16 @@ TEST(Imgproc_PointPolygonTest, regression_10222)
     EXPECT_GT(result, 0) << "Desired result: point is inside polygon - actual result: point is not inside polygon";
 }
 
+TEST(Imgproc_DrawContours, MatListOfMatIntScalarInt)
+{
+    Mat gray0 = Mat::zeros(10, 10, CV_8U);
+    rectangle(gray0, Point(1, 2), Point(7, 8), Scalar(100));
+    vector<Mat> contours;
+    findContours(gray0, contours, noArray(), RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    drawContours(gray0, contours, -1, Scalar(0), FILLED);
+    int nz = countNonZero(gray0);
+    EXPECT_EQ(nz, 0);
+}
+
 }} // namespace
 /* End of file. */

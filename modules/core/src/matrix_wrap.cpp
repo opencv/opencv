@@ -397,13 +397,17 @@ Size _InputArray::size(int i) const
     if( k == MAT )
     {
         CV_Assert( i < 0 );
-        return ((const Mat*)obj)->size();
+        const Mat* m = (const Mat*)obj;
+        CV_Assert(m->dims <= 2);
+        return Size(m->cols, m->rows);
     }
 
     if( k == UMAT )
     {
         CV_Assert( i < 0 );
-        return ((const UMat*)obj)->size();
+        const UMat* m = (const UMat*)obj;
+        CV_Assert(m->dims <= 2);
+        return Size(m->cols, m->rows);
     }
 
     if (k == MATX)
