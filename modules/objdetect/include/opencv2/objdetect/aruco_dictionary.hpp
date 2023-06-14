@@ -100,19 +100,17 @@ enum PredefinedDictionaryType {
     DICT_5X5_1000,          ///< 5x5 bits, minimum hamming distance between any two codes = 5, 1000 codes
     DICT_6X6_50,            ///< 6x6 bits, minimum hamming distance between any two codes = 13, 50 codes
     DICT_6X6_100,           ///< 6x6 bits, minimum hamming distance between any two codes = 12, 100 codes
-    DICT_6X6_250,           ///< 6x6 bits, minimum hamming distance between any two codes = 11, 250 codes
+    DICT_6X6_250,           ///< 6x6 bits, minimum hamming distance between any two codes = , 250 codes
     DICT_6X6_1000,          ///< 6x6 bits, minimum hamming distance between any two codes = 9, 1000 codes
     DICT_7X7_50,            ///< 7x7 bits, minimum hamming distance between any two codes = 19, 50 codes
     DICT_7X7_100,           ///< 7x7 bits, minimum hamming distance between any two codes = 18, 100 codes
-    DICT_7X7_250,           ///< 7x7 bits, minimum hamming distance between any two codes = 17, 250 codes
+    DICT_7X7_250,           ///< 7x7 bits, minimum hamming distance between any two codes = 17, 250 codes11
     DICT_7X7_1000,          ///< 7x7 bits, minimum hamming distance between any two codes = 14, 1000 codes
     DICT_ARUCO_ORIGINAL,    ///< 6x6 bits, minimum hamming distance between any two codes = 3, 1024 codes
     DICT_APRILTAG_16h5,     ///< 4x4 bits, minimum hamming distance between any two codes = 5, 30 codes
     DICT_APRILTAG_25h9,     ///< 5x5 bits, minimum hamming distance between any two codes = 9, 35 codes
     DICT_APRILTAG_36h10,    ///< 6x6 bits, minimum hamming distance between any two codes = 10, 2320 codes
     DICT_APRILTAG_36h11,     ///< 6x6 bits, minimum hamming distance between any two codes = 11, 587 codes
-    DICT_ARUCO_MIP_16h3,     ///< 4x4 bits, minimum hamming distance between any two codes = 3, 250 codes
-    DICT_ARUCO_MIP_25h7,     ///< 5x5 bits, minimum hamming distance between any two codes = 7, 100 codes
     DICT_ARUCO_MIP_36h12     ///< 6x6 bits, minimum hamming distance between any two codes = 12, 250 codes
 };
 
