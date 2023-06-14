@@ -258,6 +258,8 @@ Dictionary getPredefinedDictionary(PredefinedDictionaryType name) {
     static const Dictionary DICT_APRILTAG_36h10_DATA = Dictionary(Mat(2320, (6 * 6 + 7) / 8, CV_8UC4, (uchar*)DICT_APRILTAG_36h10_BYTES), 6, 0);
     static const Dictionary DICT_APRILTAG_36h11_DATA = Dictionary(Mat(587, (6 * 6 + 7) / 8, CV_8UC4, (uchar*)DICT_APRILTAG_36h11_BYTES), 6, 0);
 
+    static const Dictionary DICT_ARUCO_MIP_36h12_DATA = Dictionary(Mat(250, (6 * 6 + 7) / 8, CV_8UC4, (uchar*)DICT_ARUCO_MIP_36h12_BYTES), 6, 12);
+
     switch(name) {
 
     case DICT_ARUCO_ORIGINAL:
@@ -308,6 +310,8 @@ Dictionary getPredefinedDictionary(PredefinedDictionaryType name) {
     case DICT_APRILTAG_36h11:
         return Dictionary(DICT_APRILTAG_36h11_DATA);
 
+    case DICT_ARUCO_MIP_36h12:
+        return Dictionary(DICT_ARUCO_MIP_36h12_DATA);
     }
     return Dictionary(DICT_4X4_50_DATA);
 }
