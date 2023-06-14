@@ -90,6 +90,8 @@ using namespace cv;
 using namespace cv::segmentation;  // FIXIT
 
 using namespace cv::aruco;
+typedef aruco::DetectorParameters aruco_DetectorParameters;
+typedef QRCodeDetectorAruco::Params QRCodeDetectorAruco_Params;
 
 #ifdef HAVE_OPENCV_DNN
 using namespace cv::dnn;

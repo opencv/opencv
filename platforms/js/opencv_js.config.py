@@ -124,7 +124,9 @@ objdetect = {'': ['groupRectangles', 'getPredefinedDictionary', 'extendDictionar
              'aruco_DetectorParameters': ['DetectorParameters'],
              'aruco_RefineParameters': ['RefineParameters'],
              'aruco_ArucoDetector': ['ArucoDetector', 'detectMarkers', 'refineDetectedMarkers', 'setDictionary', 'setDetectorParameters', 'setRefineParameters'],
-             'aruco_CharucoDetector': ['CharucoDetector', 'setBoard', 'setCharucoParameters', 'setDetectorParameters', 'setRefineParameters', 'detectBoard', 'detectDiamonds']
+             'aruco_CharucoDetector': ['CharucoDetector', 'setBoard', 'setCharucoParameters', 'setDetectorParameters', 'setRefineParameters', 'detectBoard', 'detectDiamonds'],
+             'QRCodeDetectorAruco_Params': ['Params'],
+             'QRCodeDetectorAruco': ['QRCodeDetectorAruco', 'decode', 'detect', 'detectAndDecode', 'detectMulti', 'decodeMulti', 'detectAndDecodeMulti', 'setDetectorParameters', 'setArucoParameters']
 }
 
 video = {
