@@ -97,11 +97,11 @@ class CaffeImporter
 
 public:
 
-    CaffeImporter(const char *pototxt, const char *caffeModel)
+    CaffeImporter(const char *prototxt, const char *caffeModel)
     {
         CV_TRACE_FUNCTION();
 
-        ReadNetParamsFromTextFileOrDie(pototxt, &net);
+        ReadNetParamsFromTextFileOrDie(prototxt, &net);
 
         if (caffeModel && caffeModel[0])
             ReadNetParamsFromBinaryFileOrDie(caffeModel, &netBinary);
@@ -193,7 +193,6 @@ public:
             break;
         default:
             CV_Error(Error::StsError, "Unknown type \"" + String(field->type_name()) + "\" in prototxt");
-            break;
         }
     }
 
@@ -556,7 +555,6 @@ public:
         if (idx < 0)
         {
             CV_Error(Error::StsObjectNotFound, "Can't find output blob \"" + name + "\"");
-            return;
         }
 
         dstNet.connect(addedBlobs[idx].layerId, addedBlobs[idx].outNum, layerId, inNum);
