@@ -103,6 +103,7 @@ using a Boosted Cascade of Simple Features. IEEE CVPR, 2001. The paper is availa
 <https://github.com/SvHey/thesis/blob/master/Literature/ObjectDetection/violaJones_CVPR2001.pdf>
 
     @defgroup objdetect_hog HOG (Histogram of Oriented Gradients) descriptor and object detector
+    @defgroup objdetect_barcode Barcode detection and decoding
     @defgroup objdetect_qrcode QRCode detection and encoding
     @defgroup objdetect_dnn_face DNN-based face detection and recognition
 Check @ref tutorial_dnn_face "the corresponding tutorial" for more details.
@@ -863,5 +864,6 @@ public:
 #include "opencv2/objdetect/detection_based_tracker.hpp"
 #include "opencv2/objdetect/face.hpp"
 #include "opencv2/objdetect/charuco_detector.hpp"
+#include "opencv2/objdetect/barcode.hpp"
 
 #endif
