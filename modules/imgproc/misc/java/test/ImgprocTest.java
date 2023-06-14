@@ -429,7 +429,7 @@ public class ImgprocTest extends OpenCVTestCase {
         MatOfInt expHull = new MatOfInt(
                 0, 1, 2, 3
         );
-        assertMatEqual(expHull, hull.reshape(1, hull.total()), EPS);
+        assertMatEqual(expHull, hull.reshape(1, (int)hull.total()), EPS);
     }
 
     public void testConvexHullMatMatBooleanBoolean() {
