@@ -67,8 +67,8 @@ public class CalibTest extends OpenCVTestCase {
 
         assertTrue(Calib.findCirclesGrid(img, new Size(5, 5), centers));
 
-        assertEquals(25, centers.rows());
-        assertEquals(1, centers.cols());
+        assertEquals(1, centers.rows());
+        assertEquals(25, centers.cols());
         assertEquals(CvType.CV_32FC2, centers.type());
     }
 
@@ -93,8 +93,8 @@ public class CalibTest extends OpenCVTestCase {
         assertTrue(Calib.findCirclesGrid(img, new Size(3, 5), centers, Calib.CALIB_CB_CLUSTERING
                 | Calib.CALIB_CB_ASYMMETRIC_GRID));
 
-        assertEquals(15, centers.rows());
-        assertEquals(1, centers.cols());
+        assertEquals(1, centers.rows());
+        assertEquals(15, centers.cols());
         assertEquals(CvType.CV_32FC2, centers.type());
     }
 
