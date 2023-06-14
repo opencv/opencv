@@ -12,8 +12,8 @@
 namespace cv { namespace usac {
 class FundamentalMinimalSolver7ptsImpl: public FundamentalMinimalSolver7pts {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    const Mat * points_mat; // pointer to OpenCV Mat
+    const float * const points; // pointer to points_mat->data for faster data access
     const bool use_ge;
 public:
     explicit FundamentalMinimalSolver7ptsImpl (const Mat &points_, bool use_ge_) :

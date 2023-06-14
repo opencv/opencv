@@ -28,7 +28,8 @@ public:
      * (1 - w^n) is probability that at least one point of N is outlier.
      * 1 - p = (1-w^n)^k is probability that in K steps of getting at least one outlier is 1% (5%).
      */
-    int update (const Mat &/*model*/, int inlier_number) const override {
+    int update (const Mat &model, int inlier_number) const override {
+        CV_UNUSED(model);
         const double predicted_iters = log_confidence / log(1 - std::pow
             (static_cast<double>(inlier_number) / points_size, sample_size));
 
@@ -82,7 +83,8 @@ public:
      * this equation does not have to be evaluated before nR < n0
      * nR = (1 - P_g)^k
      */
-    int update (const Mat &/*model*/, int inlier_size) const override {
+    int update (const Mat &model, int inlier_size) const override {
+        CV_UNUSED(model);
         const auto &sprt_histories = sprt->getSPRTvector();
         if (sprt_histories.size() <= 1)
             return getStandardUpperBound(inlier_size);

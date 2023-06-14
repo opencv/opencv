@@ -10,7 +10,7 @@ enum EstimationMethod { HOMOGRAPHY=0, FUNDAMENTAL=1, FUNDAMENTAL8=2, ESSENTIAL=3
 enum VerificationMethod { NULL_VERIFIER=0, SPRT_VERIFIER=1, ASPRT=2 };
 enum ErrorMetric {DIST_TO_LINE=0, SAMPSON_ERR=1, SGD_ERR=2, SYMM_REPR_ERR=3, FORW_REPR_ERR=4, RERPOJ=5};
 enum MethodSolver { GEM_SOLVER=0, SVD_SOLVER=1 };
-enum MODEL_CONFIDENCE {RANDOM=0, NON_RANDOM=1, UNKNOWN=2};
+enum ModelConfidence {RANDOM=0, NON_RANDOM=1, UNKNOWN=2};
 
 // Abstract Error class
 class Error : public Algorithm {
@@ -155,7 +155,7 @@ public:
     virtual int getMaxNumberOfSolutions () const = 0;
     virtual int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
             const std::vector<double> &/*weights*/) = 0;
-    virtual void enforceRankConstraint (bool /*enforce*/) = 0;
+    virtual void enforceRankConstraint (bool enforce) = 0;
 };
 
 //-------------------------- HOMOGRAPHY MATRIX -----------------------
@@ -335,8 +335,13 @@ public:
      * Fix degenerate model.
      * Return true if model is degenerate, false - otherwise
      */
-    virtual bool recoverIfDegenerate (const std::vector<int> &/*sample*/,const Mat &/*best_model*/, const Score &/*score*/,
-                  Mat &/*non_degenerate_model*/, Score &/*non_degenerate_model_score*/) {
+    virtual bool recoverIfDegenerate (const std::vector<int> &sample,const Mat &best_model, const Score &score,
+                  Mat &non_degenerate_model, Score &non_degenerate_model_score) {
+        CV_UNUSED(sample);
+        CV_UNUSED(best_model);
+        CV_UNUSED(score);
+        CV_UNUSED(non_degenerate_model);
+        CV_UNUSED(non_degenerate_model_score);
         return false;
     }
 };
@@ -447,7 +452,7 @@ public:
     // Return true if model is good, false - otherwise.
     virtual bool isModelGood(const Mat &model, Score &score) = 0;
     // update verifier by given inlier number
-    virtual void update (const Score &/*score*/, int /*iteration*/) = 0;
+    virtual void update (const Score &score, int iteration) = 0;
     virtual void reset() = 0;
     virtual void updateSPRT (double time_model_est, double time_corr_ver, double new_avg_models, double new_delta, double new_epsilon, const Score &best_score) = 0;
     static Ptr<ModelVerifier> create(const Ptr<Quality> &qualtiy);
@@ -848,7 +853,7 @@ public:
     virtual ~RansacOutput() override = default;
     static Ptr<RansacOutput> create(const Mat &model_,
         const std::vector<bool> &inliers_mask_, int number_inliers_,
-        int number_iterations_, MODEL_CONFIDENCE conf, const std::vector<float> &errors_);
+        int number_iterations_, ModelConfidence conf, const std::vector<float> &errors_);
 
     // Return inliers' indices. size of vector = number of inliers
     virtual const std::vector<int > &getInliers() = 0;
@@ -857,7 +862,7 @@ public:
     virtual int getNumberOfInliers() const = 0;
     virtual const Mat &getModel() const = 0;
     virtual int getNumberOfIters() const = 0;
-    virtual MODEL_CONFIDENCE getConfidence() const = 0;
+    virtual ModelConfidence getConfidence() const = 0;
     virtual const std::vector<float> &getResiduals() const = 0;
 };
 

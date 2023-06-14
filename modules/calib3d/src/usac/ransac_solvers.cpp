@@ -38,10 +38,10 @@ private:
     // vector of points size, value of i-th index corresponds to error of i-th point if i is inlier.
     std::vector<float> residuals;
     int number_inliers, number_iterations;
-    MODEL_CONFIDENCE conf;
+    ModelConfidence conf;
 public:
     RansacOutputImpl (const cv::Mat &model_, const std::vector<bool> &inliers_mask_, int number_inliers_,
-            int number_iterations_, MODEL_CONFIDENCE conf_, const std::vector<float> &errors_) {
+            int number_iterations_, ModelConfidence conf_, const std::vector<float> &errors_) {
         model_.copyTo(model);
         inliers_mask = inliers_mask_;
         number_inliers = number_inliers_;
@@ -75,7 +75,7 @@ public:
     int getNumberOfIters() const override {
         return number_iterations;
     }
-    MODEL_CONFIDENCE getConfidence() const override {
+    ModelConfidence getConfidence() const override {
         return conf;
     }
     const std::vector<float> &getResiduals() const override {
@@ -84,7 +84,7 @@ public:
 };
 
 Ptr<RansacOutput> RansacOutput::create(const cv::Mat &model_, const std::vector<bool> &inliers_mask_, int number_inliers_,
-            int number_iterations_, MODEL_CONFIDENCE conf, const std::vector<float> &errors_) {
+            int number_iterations_, ModelConfidence conf, const std::vector<float> &errors_) {
     return makePtr<RansacOutputImpl>(model_, inliers_mask_, number_inliers_,
             number_iterations_, conf, errors_);
 }
@@ -961,7 +961,7 @@ public:
                 lambda_non_random_all_inliers = avg_lambda / num_lambdas;
         }
         if (best_model.empty()) {
-            ransac_output = RansacOutput::create(best_model, std::vector<bool>(), best_score.inlier_number, final_iters, MODEL_CONFIDENCE::RANDOM, std::vector<float>());
+            ransac_output = RansacOutput::create(best_model, std::vector<bool>(), best_score.inlier_number, final_iters, ModelConfidence::RANDOM, std::vector<float>());
             return false;
         }
         if (last_model_from_LO && IS_FUNDAMENTAL && K1.empty() && K2.empty()) {
@@ -1006,7 +1006,7 @@ public:
             _quality->getInliers(residuals, inliers_mask, threshold);
         }
 
-        MODEL_CONFIDENCE model_conf = MODEL_CONFIDENCE::UNKNOWN;
+        ModelConfidence model_conf = ModelConfidence::UNKNOWN;
         if (IS_NON_RAND_TEST) {
             std::vector<int> temp_inliers(points_size);
             const int non_random_inls_best_model = getIndependentInliers(best_model, best_sample, temp_inliers,
@@ -1021,8 +1021,8 @@ public:
                 int min_non_rand_inliers;
                 const double lambda = getLambda(inliers_list, 1.644, points_size, sample_size, true, min_non_rand_inliers);
                 const double cdf_lambda = Utils::getPoissonCDF(lambda, non_random_inls_best_model), cdf_N = pow(cdf_lambda, num_total_tested_models);
-                model_conf = cdf_N < 0.9999 ? MODEL_CONFIDENCE ::RANDOM : MODEL_CONFIDENCE ::NON_RANDOM;
-            } else model_conf = MODEL_CONFIDENCE ::NON_RANDOM;
+                model_conf = cdf_N < 0.9999 ? ModelConfidence ::RANDOM : ModelConfidence ::NON_RANDOM;
+            } else model_conf = ModelConfidence ::NON_RANDOM;
         }
         ransac_output = RansacOutput::create(best_model, inliers_mask, best_score.inlier_number, final_iters, model_conf, residuals);
         return true;

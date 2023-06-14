@@ -340,7 +340,10 @@ private:
     const Ptr<Termination> termination;
     const Ptr<RandomGenerator> random_generator;
     const Ptr<WeightFunction> weight_fnc;
-    Ptr<RandomGenerator> random_generator2;
+    // unlike to @random_generator which has fixed subset size
+    // @random_generator_smaller_subset is used to draw smaller
+    // amount of points which depends on current number of inliers  
+    Ptr<RandomGenerator> random_generator_smaller_subset;
     int points_size, max_lo_iters, non_min_sample_size, current_ransac_iter;
     std::vector<double> weights;
     std::vector<int> inliers;
@@ -362,7 +365,7 @@ public:
         points_size = quality_->getPointsSize();
         inlier_threshold_sqr = inlier_threshold_sqr_;
         if (weight_fnc != nullptr) weights = std::vector<double>(points_size);
-        random_generator2 = nullptr;
+        random_generator_smaller_subset = nullptr;
         updated_lo = update_lo_;
     }
     void setCurrentRANSACiter (int ransac_iter) override { current_ransac_iter = ransac_iter; }
@@ -381,9 +384,9 @@ public:
                 const int new_sample_size = (int)(0.6*num_inls);
                 if (new_sample_size <= estimator->getMaxNumberOfSolutions())
                     return false;
-                if (random_generator2 == nullptr)
-                    random_generator2 = UniformRandomGenerator::create(num_inls/*state*/, quality->getPointsSize(), new_sample_size);
-                else random_generator2->setSubsetSize(new_sample_size);
+                if (random_generator_smaller_subset == nullptr)
+                    random_generator_smaller_subset = UniformRandomGenerator::create(num_inls/*state*/, quality->getPointsSize(), new_sample_size);
+                else random_generator_smaller_subset->setSubsetSize(new_sample_size);
             }
             return true;
         };
@@ -394,8 +397,8 @@ public:
         for (int iter = 0; iter < max_lo_iters_; iter++) {
             int num_models;
             if (num_inliers <= non_min_sample_size)
-                 num_models = estimator->estimate(new_model, random_generator2->generateUniqueRandomSubset(inliers, num_inliers),
-                        random_generator2->getSubsetSize(), models, weights);
+                 num_models = estimator->estimate(new_model, random_generator_smaller_subset->generateUniqueRandomSubset(inliers, num_inliers),
+                        random_generator_smaller_subset->getSubsetSize(), models, weights);
             else num_models = estimator->estimate(new_model, random_generator->generateUniqueRandomSubset(inliers, num_inliers), non_min_sample_size, models, weights);
             for (int m = 0; m < num_models; m++) {
                 const auto score = quality->getScore(models[m]);
