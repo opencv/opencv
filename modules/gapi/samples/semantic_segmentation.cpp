@@ -1,6 +1,5 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/gapi/infer/ie.hpp>
-#include <opencv2/gapi/infer/ov.hpp>
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/gapi/operators.hpp>
