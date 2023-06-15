@@ -74,7 +74,7 @@ ov::Core getCore() {
 // TODO: AGNetGenComp, AGNetTypedComp, AGNetOVComp, AGNetOVCompiled
 // can be generalized to work with any model and used as parameters for tests.
 
-struct AGNetGenComp {
+struct AGNetGenParams {
     static constexpr const char* tag = "age-gender-generic";
     using Params = cv::gapi::ov::Params<cv::gapi::Generic>;
 
@@ -88,7 +88,9 @@ struct AGNetGenComp {
                          const std::string &device) {
         return {tag, blob_path, device};
     }
+};
 
+struct AGNetGenComp : public AGNetGenParams {
     static cv::GComputation create() {
         cv::GMat in;
         GInferInputs inputs;
@@ -117,6 +119,33 @@ struct AGNetTypedComp {
         cv::GMat in;
         cv::GMat age, gender;
         std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+        return cv::GComputation{cv::GIn(in), cv::GOut(age, gender)};
+    }
+};
+
+struct AGNetROIGenComp {
+    static constexpr const char* tag = "age-gender-generic-roi";
+    using Params = cv::gapi::ov::Params<cv::gapi::Generic>;
+
+    static Params params(const std::string &xml,
+                         const std::string &bin,
+                         const std::string &device) {
+        return {tag, xml, bin, device};
+    }
+
+    static Params params(const std::string &blob_path,
+                         const std::string &device) {
+        return {tag, blob_path, device};
+    }
+
+    static cv::GComputation create() {
+        cv::GMat in;
+        cv::GOpaque<cv::Rect> roi;
+        GInferInputs inputs;
+        inputs["data"] = in;
+        auto outputs = cv::gapi::infer<cv::gapi::Generic>(tag, roi, inputs);
+        auto age = outputs.at("age_conv3");
+        auto gender = outputs.at("prob");
         return cv::GComputation{cv::GIn(in), cv::GOut(age, gender)};
     }
 };
