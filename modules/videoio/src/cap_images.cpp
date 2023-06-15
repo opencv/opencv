@@ -113,7 +113,16 @@ void CvCapture_Images::close()
 
 bool CvCapture_Images::grabFrame()
 {
-    cv::String filename = cv::format(filename_pattern.c_str(), (int)(firstframe + currentframe));
+    cv::String filename;
+    if (length == 1)
+        if (currentframe < length)
+            filename = filename_pattern;
+        else
+        {
+            return false;
+        }
+    else
+        filename = cv::format(filename_pattern.c_str(), (int)(firstframe + currentframe));
     CV_Assert(!filename.empty());
 
     if (grabbedInOpen)
@@ -250,6 +259,7 @@ std::string icvExtractPattern(const std::string& filename, unsigned *offset)
 
         if (pos == len)
         {
+            return "";
             CV_Error_(Error::StsBadArg, ("CAP_IMAGES: can't find starting number (in the name of file): %s", filename.c_str()));
         }
 
@@ -292,7 +302,25 @@ bool CvCapture_Images::open(const std::string& _filename)
 
     CV_Assert(!_filename.empty());
     filename_pattern = icvExtractPattern(_filename, &offset);
-    CV_Assert(!filename_pattern.empty());
+    if (filename_pattern.empty())
+    {
+        filename_pattern = _filename;
+        cv::String filename = _filename.c_str();
+        if (!utils::fs::exists(filename))
+        {
+            return false;
+        }
+        if (!haveImageReader(filename))
+        {
+            CV_LOG_INFO(NULL, "CAP_IMAGES: Stop scanning. Can't read image file: " << filename);
+        }
+        length = 1;
+        // grab frame to enable properties retrieval
+        bool grabRes = grabFrame();
+        grabbedInOpen = true;
+        currentframe = 0;
+        return grabRes;
+    }
 
     // determine the length of the sequence
     for (length = 0; ;)
