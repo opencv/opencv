@@ -8,6 +8,10 @@ from .ast_utils import find_function_node, SymbolName
 
 
 def apply_manual_api_refinement(root: NamespaceNode) -> None:
+    # Export OpenCV exception class
+    builtin_exception = root.add_class("Exception")
+    builtin_exception.is_exported = False
+    root.add_class("error", (builtin_exception, ))
     for symbol_name, refine_symbol in NODES_TO_REFINE.items():
         refine_symbol(root, symbol_name)
 
