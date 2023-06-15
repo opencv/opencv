@@ -1983,6 +1983,9 @@ static inline bool setHorizontalOrder(vector<int>& x_arr, vector<int>& y_arr) {
         if (y_arr[i] == y_arr[i-1])
             countY++;
     }
+    // Only the points of the function can be interpolated using splines.
+    // Contour points may not be a function, there may be several points with the same x coordinate and different y.
+    // We are adding a small offset in x coord to fix this problem. This should not significantly affect the final answer.
     if (countX != 0 || countY != 0) {
         vector<int>& newX = countX < countY ? x_arr : y_arr;
         const int delta = newX.back() > newX.front() ? 1 : -1;
