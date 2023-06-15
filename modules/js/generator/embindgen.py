@@ -236,11 +236,6 @@ class ArgInfo(object):
                 self.tp = "std::vector<cv::Mat>&"
             elif self.inputarg:
                 self.tp = "const std::vector<cv::Mat>&"
-        if self.tp == "vector_string":
-            if self.outputarg:
-                self.tp = "std::vector<std::string>&"
-            elif self.inputarg:
-                self.tp = "const std::vector<std::string>&"
         self.tp = handle_vector(self.tp).strip()
         if self.const:
             self.tp = "const " + self.tp
