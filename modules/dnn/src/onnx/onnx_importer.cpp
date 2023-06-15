@@ -2779,7 +2779,7 @@ void ONNXImporter::parseResize(LayerParams& layerParams, const opencv_onnx::Node
     if (layerParams.has("coordinate_transformation_mode"))
     {
         String interp_mode = layerParams.get<String>("coordinate_transformation_mode");
-        CV_Assert_N(interp_mode != "tf_crop_and_resize");
+        CV_Assert(interp_mode != "tf_crop_and_resize");
 
         bool halfPixel = interp_mode == "tf_half_pixel_for_nn" || interp_mode == "half_pixel" || interp_mode == "pytorch_half_pixel";
 
@@ -2840,7 +2840,7 @@ void ONNXImporter::parseUpsample(LayerParams& layerParams, const opencv_onnx::No
     if (layerParams.has("coordinate_transformation_mode"))
     {
         String interp_mode = layerParams.get<String>("coordinate_transformation_mode");
-        CV_Assert_N(interp_mode != "tf_crop_and_resize");
+        CV_Assert(interp_mode != "tf_crop_and_resize");
 
         bool halfPixel = interp_mode == "tf_half_pixel_for_nn" || interp_mode == "half_pixel" || interp_mode == "pytorch_half_pixel";
 
