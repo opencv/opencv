@@ -382,7 +382,7 @@ public:
             if (num_inls <= non_min_sample_size) {
                 // add new random generator if number of inliers is fewer than non-minimal sample size
                 const int new_sample_size = (int)(0.6*num_inls);
-                if (new_sample_size <= estimator->getMaxNumberOfSolutions())
+                if (new_sample_size <= estimator->getMinimumRequiredSampleSize())
                     return false;
                 if (random_generator_smaller_subset == nullptr)
                     random_generator_smaller_subset = UniformRandomGenerator::create(num_inls/*state*/, quality->getPointsSize(), new_sample_size);
