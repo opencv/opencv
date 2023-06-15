@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
     const auto weights_path  = get_weights_path(model_path);
     const auto device        = "CPU";
     G_API_NET(SemSegmNet, <cv::GMat(cv::GMat)>, "semantic-segmentation");
-    const auto net = cv::gapi::ov::Params<SemSegmNet> {
+    const auto net = cv::gapi::ie::Params<SemSegmNet> {
         model_path, weights_path, device
     };
     const auto kernels = cv::gapi::kernels<custom::OCVPostProcessing>();
