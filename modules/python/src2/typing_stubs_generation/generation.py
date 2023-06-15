@@ -611,9 +611,7 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
     """
     def register_alias_links_from_aggregated_type(type_node: TypeNode) -> None:
         assert isinstance(type_node, AggregatedTypeNode), \
-            "Provided type node '{}' is not an aggregated type".format(
-                type_node.ctype_name
-            )
+            f"Provided type node '{type_node.ctype_name}' is not an aggregated type"
 
         for item in filter(lambda i: isinstance(i, AliasRefTypeNode), type_node):
             register_alias(PREDEFINED_TYPES[item.ctype_name])  # type: ignore
@@ -631,8 +629,8 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         aliases[typename] = alias_node.value.full_typename.replace(
             root.export_name + ".typing.", ""
         )
-        if alias_node.comment is not None:
-            aliases[typename] += "  # " + alias_node.comment
+        if alias_node.doc is not None:
+            aliases[typename] += f'\n"""{alias_node.doc}"""'
         for required_import in alias_node.required_definition_imports:
             required_imports.add(required_import)
 
@@ -643,12 +641,18 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
     aliases: Dict[str, str] = {}
 
     # Resolve each node and register aliases
+    TypeNode.compatible_to_runtime_usage = True
     for node in PREDEFINED_TYPES.values():
         node.resolve(root)
         if isinstance(node, AliasTypeNode):
             register_alias(node)
 
     output_stream = StringIO()
+    output_stream.write("__all__ = [\n")
+    for alias_name in aliases:
+        output_stream.write(f'    "{alias_name}",\n')
+    output_stream.write("]\n\n")
+
     _write_required_imports(required_imports, output_stream)
 
     for alias_name, alias_type in aliases.items():
@@ -657,7 +661,8 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         output_stream.write(alias_type)
         output_stream.write("\n")
 
-    (output_path / "__init__.pyi").write_text(output_stream.getvalue())
+    TypeNode.compatible_to_runtime_usage = False
+    (output_path / "__init__.py").write_text(output_stream.getvalue())
 
 
 StubGenerator = Callable[[ASTNode, StringIO, int], None]
