@@ -2,6 +2,7 @@ __all__ = ("generate_typing_stubs", )
 
 from io import StringIO
 from pathlib import Path
+import re
 from typing import (Generator, Type, Callable, NamedTuple, Union, Set, Dict,
                     Collection)
 import warnings
@@ -269,7 +270,8 @@ def _generate_class_stub(class_node: ClassNode, output_stream: StringIO,
 
 def _generate_constant_stub(constant_node: ConstantNode,
                             output_stream: StringIO, indent: int = 0,
-                            extra_export_prefix: str = "") -> None:
+                            extra_export_prefix: str = "",
+                            generate_uppercase_version: bool = True) -> None:
     """Generates stub for the provided constant node.
 
     Args:
@@ -277,18 +279,27 @@ def _generate_constant_stub(constant_node: ConstantNode,
         output_stream (StringIO): Output stream for constant stub.
         indent (int, optional): Indent used for each line written to
             `output_stream`. Defaults to 0.
-        extra_export_prefix (str, optional) Extra prefix added to the export
+        extra_export_prefix (str, optional): Extra prefix added to the export
             constant name. Defaults to empty string.
+        generate_uppercase_version (bool, optional): Generate uppercase version
+            alongside the normal one. Defaults to True.
     """
 
-    output_stream.write(
-        "{indent}{prefix}{name}: {value_type}\n".format(
-            prefix=extra_export_prefix,
-            name=constant_node.export_name,
-            value_type=constant_node.value_type,
-            indent=" " * indent
+    def write_constant_to_stream(export_name: str) -> None:
+        output_stream.write(
+            "{indent}{name}: {value_type}\n".format(
+                name=export_name,
+                value_type=constant_node.value_type,
+                indent=" " * indent
+            )
         )
-    )
+
+    export_name = extra_export_prefix + constant_node.export_name
+    write_constant_to_stream(export_name)
+    if generate_uppercase_version and not export_name.isupper():
+        uppercase_name = re.sub(r"([a-z])([A-Z])", r"\1_\2", export_name).upper()
+        if export_name != uppercase_name:
+            write_constant_to_stream(uppercase_name)
 
 
 def _generate_enumeration_stub(enumeration_node: EnumerationNode,
