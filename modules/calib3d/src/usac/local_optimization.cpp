@@ -342,7 +342,7 @@ private:
     const Ptr<WeightFunction> weight_fnc;
     // unlike to @random_generator which has fixed subset size
     // @random_generator_smaller_subset is used to draw smaller
-    // amount of points which depends on current number of inliers  
+    // amount of points which depends on current number of inliers
     Ptr<RandomGenerator> random_generator_smaller_subset;
     int points_size, max_lo_iters, non_min_sample_size, current_ransac_iter;
     std::vector<double> weights;
