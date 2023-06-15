@@ -70,10 +70,11 @@ def generate_typing_stubs(root: NamespaceNode, output_path: Path):
     # checked and at least 1 node is still unresolved.
     root.resolve_type_nodes()
     _generate_typing_module(root, output_path)
+    _populate_reexported_symbols(root)
     _generate_typing_stubs(root, output_path)
 
 
-def _generate_typing_stubs(root: NamespaceNode, output_path: Path):
+def _generate_typing_stubs(root: NamespaceNode, output_path: Path) -> None:
     output_path = Path(output_path) / root.export_name
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -84,6 +85,8 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path):
 
     # Write required imports at the top of file
     _write_required_imports(required_imports, output_stream)
+
+    _write_reexported_symbols_section(root, output_stream)
 
     # Write constants section, because constants don't impose any dependencies
     _generate_section_stub(StubSection("# Constants", ConstantNode), root,
@@ -580,6 +583,53 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
         required_imports.remove(root_import)
 
     return required_imports
+
+
+def _populate_reexported_symbols(root: NamespaceNode) -> None:
+    # Re-export all submodules to allow referencing symbols in submodules
+    # without submodule import. Example:
+    # `cv2.aruco.ArucoDetector` should be accessible without `import cv2.aruco`
+    for submodule in root.namespaces.values():
+        root.reexported_submodules.append(submodule.export_name)
+
+    # Special cases, symbols defined in possible pure Python submodules should be
+    root.reexported_submodules_symbols["mat_wrapper"].append("Mat")
+
+def _write_reexported_symbols_section(module: NamespaceNode, output_stream: StringIO) -> None:
+    """Write re-export section for the given module.
+
+    Re-export statements have from `from module_name import smth as smth`.
+    Example:
+    ```python
+    from cv2 import aruco as aruco
+    from cv2 import cuda as cuda
+    from cv2 import ml as ml
+    from cv2.mat_wrapper import Mat as Mat
+    ```
+
+    Args:
+        module (NamespaceNode): Module with re-exported symbols.
+        output_stream (StringIO): Output stream for re-export statements.
+    """
+
+    parent_name = module.full_export_name
+    for submodule in sorted(module.reexported_submodules):
+        output_stream.write(
+            "from {0} import {1} as {1}\n".format(parent_name, submodule)
+        )
+
+    for submodule, symbols in sorted(module.reexported_submodules_symbols.items(),
+                                     key=lambda kv: kv[0]):
+        for symbol in symbols:
+            output_stream.write(
+                "from {0}.{1} import {2} as {2}\n".format(
+                    parent_name, submodule, symbol
+                )
+            )
+
+    if len(module.reexported_submodules) or \
+            len(module.reexported_submodules_symbols):
+        output_stream.write("\n\n")
 
 
 def _write_required_imports(required_imports: Collection[str],
