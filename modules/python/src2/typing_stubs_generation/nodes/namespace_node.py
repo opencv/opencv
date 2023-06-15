@@ -1,14 +1,13 @@
-from typing import Type, Iterable, Sequence, Tuple, Optional, Dict
 import itertools
 import weakref
-
-from .node import ASTNode, ASTNodeType
+from collections import defaultdict
+from typing import Dict, List, Optional, Sequence, Tuple, Type
 
 from .class_node import ClassNode, ClassProperty
-from .function_node import FunctionNode
-from .enumeration_node import EnumerationNode
 from .constant_node import ConstantNode
-
+from .enumeration_node import EnumerationNode
+from .function_node import FunctionNode
+from .node import ASTNode, ASTNodeType
 from .type_node import TypeResolutionError
 
 
@@ -18,6 +17,17 @@ class NamespaceNode(ASTNode):
     NamespaceNode can have other namespaces, classes, functions, enumerations
     and global constants as its children nodes.
     """
+    def __init__(self, name: str, parent: Optional[ASTNode] = None,
+                 export_name: Optional[str] = None) -> None:
+        super().__init__(name, parent, export_name)
+        self.reexported_submodules: List[str] = []
+        """List of reexported submodules"""
+
+        self.reexported_submodules_symbols: Dict[str, List[str]] = defaultdict(list)
+        """Mapping between submodules export names and their symbols re-exported
+        in this module"""
+
+
     @property
     def node_type(self) -> ASTNodeType:
         return ASTNodeType.Namespace
