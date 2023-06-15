@@ -413,24 +413,24 @@ public:
     }
 
     /*
-    *                      p(x(r)|Hb)                  p(x(j)|Hb)
-    * lambda(j) = Product (----------) = lambda(j-1) * ----------
-    *                      p(x(r)|Hg)                  p(x(j)|Hg)
-    * Set j = 1
-    * 1.  Check whether j-th data point is consistent with the
-    * model
-    * 2.  Compute the likelihood ratio λj eq. (1)
-    * 3.  If λj >  A, decide the model is ’bad’ (model ”re-jected”),
-    * else increment j or continue testing
-    * 4.  If j = N the number of correspondences decide model ”accepted”
-    *
-    * Verifies model and returns model score.
-    -
-    * Returns true if model is good, false - otherwise.
-    * @model: model to verify
-    * @current_hypothesis: current RANSAC iteration
-    * Return: true if model is good, false - otherwise.
-    */
+     *                      p(x(r)|Hb)                  p(x(j)|Hb)
+     * lambda(j) = Product (----------) = lambda(j-1) * ----------
+     *                      p(x(r)|Hg)                  p(x(j)|Hg)
+     * Set j = 1
+     * 1.  Check whether j-th data point is consistent with the
+     * model
+     * 2.  Compute the likelihood ratio λj eq. (1)
+     * 3.  If λj >  A, decide the model is ’bad’ (model "re-jected"),
+     * else increment j or continue testing
+     * 4.  If j = N the number of correspondences decide model "accepted"
+     *
+     * Verifies model and returns model score.
+
+     * Returns true if model is good, false - otherwise.
+     * @model: model to verify
+     * @current_hypothesis: current RANSAC iteration
+     * Return: true if model is good, false - otherwise.
+     */
     inline bool isModelGood (const Mat &model, Score &out_score) override {
         // update error object with current model
         bool last_model_is_good = true;
