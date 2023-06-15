@@ -348,6 +348,10 @@ cv::GArg OVCallContext::packArg(const cv::GArg &arg) {
     //   (and constructed by either bindIn/Out or resetInternal)
     case cv::GShape::GARRAY:  return cv::GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
 
+    // Note: .at() is intentional for GOpaque as object MUST be already there
+    //   (and constructed by either bindIn/Out or resetInternal)
+    case cv::GShape::GOPAQUE:  return cv::GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
+
     default:
         cv::util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
@@ -692,6 +696,40 @@ static bool isImage(const cv::GMatDesc &desc,
            (desc.depth == CV_8U);
 }
 
+static void cfgOutputPostprocessing(::ov::preprocess::PrePostProcessor &ppp,
+                                    const ParamDesc::Model             &model_info,
+                                    const std::vector<std::string>     &output_names) {
+    const auto output_tensor_layout =
+        broadcastLayerAttr(model_info.output_tensor_layout, output_names);
+    const auto output_model_layout =
+        broadcastLayerAttr(model_info.output_model_layout, output_names);
+    const auto output_tensor_precision =
+        broadcastLayerAttr(model_info.output_tensor_precision, output_names);
+
+    for (const auto &output_name : output_names) {
+        const auto explicit_out_tensor_layout =
+            lookUp(output_tensor_layout, output_name);
+        if (explicit_out_tensor_layout) {
+            ppp.output(output_name).tensor()
+                .set_layout(::ov::Layout(*explicit_out_tensor_layout));
+        }
+
+        const auto explicit_out_model_layout =
+            lookUp(output_model_layout, output_name);
+        if (explicit_out_model_layout) {
+            ppp.output(output_name).model()
+                .set_layout(::ov::Layout(*explicit_out_model_layout));
+        }
+
+        const auto explicit_out_tensor_prec =
+            lookUp(output_tensor_precision, output_name);
+        if (explicit_out_tensor_prec) {
+            ppp.output(output_name).tensor()
+                .set_element_type(toOV(*explicit_out_tensor_prec));
+        }
+    }
+}
+
 struct Infer: public cv::detail::KernelTag {
     using API = cv::GInferBase;
     static cv::gapi::GBackend backend()  { return cv::gapi::ov::backend(); }
@@ -770,8 +808,10 @@ struct Infer: public cv::detail::KernelTag {
                            << " is not compatible with input data " << matdesc << " for layer \""
                            << input_name << "\". Expecting NHWC";
                         util::throw_error(std::logic_error(ss.str()));
+                    } else {
+                        input_info.tensor().set_layout(::ov::Layout("NHWC"));
                     }
-                    input_info.tensor().set_layout(::ov::Layout("NHWC"));
+
                     input_info.tensor().set_spatial_static_shape(matdesc.size.height,
                                                                  matdesc.size.width);
                     // NB: Even though resize is automatically configured
@@ -829,39 +869,7 @@ struct Infer: public cv::detail::KernelTag {
                 }
             }
 
-            const auto output_tensor_layout =
-                broadcastLayerAttr(model_info.output_tensor_layout,
-                                   uu.params.output_names);
-            const auto output_model_layout =
-                broadcastLayerAttr(model_info.output_model_layout,
-                                   uu.params.output_names);
-            const auto output_tensor_precision =
-                broadcastLayerAttr(model_info.output_tensor_precision,
-                                   uu.params.output_names);
-
-            for (const auto &output_name : uu.params.output_names) {
-                const auto explicit_out_tensor_layout =
-                    lookUp(output_tensor_layout, output_name);
-                if (explicit_out_tensor_layout) {
-                    ppp.output(output_name).tensor()
-                        .set_layout(::ov::Layout(*explicit_out_tensor_layout));
-                }
-
-                const auto explicit_out_model_layout =
-                    lookUp(output_model_layout, output_name);
-                if (explicit_out_model_layout) {
-                    ppp.output(output_name).model()
-                        .set_layout(::ov::Layout(*explicit_out_model_layout));
-                }
-
-                const auto explicit_out_tensor_prec =
-                    lookUp(output_tensor_precision, output_name);
-                if (explicit_out_tensor_prec) {
-                    ppp.output(output_name).tensor()
-                        .set_element_type(toOV(*explicit_out_tensor_prec));
-                }
-            }
-
+            cfgOutputPostprocessing(ppp, model_info, uu.params.output_names);
             GAPI_LOG_DEBUG(NULL, "OV Backend: PrePostProcessor: " << ppp);
             const_cast<std::shared_ptr<::ov::Model>&>(uu.model) = ppp.build();
         }
@@ -904,8 +912,8 @@ struct Infer: public cv::detail::KernelTag {
     }
 };
 
-struct InferList: public cv::detail::KernelTag {
-    using API = cv::GInferListBase;
+struct InferROI: public cv::detail::KernelTag {
+    using API = cv::GInferROIBase;
     static cv::gapi::GBackend backend()  { return cv::gapi::ov::backend(); }
     static KImpl kernel()                { return KImpl{outMeta, run}; }
 
@@ -915,6 +923,147 @@ struct InferList: public cv::detail::KernelTag {
                                  const cv::GArgs       &/*in_args*/) {
         cv::GMetaArgs result;
 
+        GConstGOVModel gm(gr);
+        const auto &uu = gm.metadata(nh).get<OVUnit>();
+        // Initialize input information
+        // FIXME: So far it is pretty limited
+        GAPI_Assert(1u == uu.params.input_names.size());
+        GAPI_Assert(2u == in_metas.size());
+
+        const auto &input_name = uu.params.input_names.at(0);
+        const auto &mm = in_metas.at(1u);
+        GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(mm));
+        const auto &matdesc = cv::util::get<cv::GMatDesc>(mm);
+
+        const bool is_model = cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind);
+        const auto &input_shape = is_model ? uu.model->input(input_name).get_shape()
+                                           : uu.compiled_model.input(input_name).get_shape();
+        if (!isImage(matdesc, input_shape)) {
+            util::throw_error(std::runtime_error(
+                "OV Backend: InferROI supports only image as the 1th argument"));
+        }
+
+        if (is_model) {
+            const auto &model_info = cv::util::get<ParamDesc::Model>(uu.params.kind);
+            const auto new_shapes =
+                broadcastLayerAttr(model_info.new_shapes,
+                                   uu.params.input_names);
+            const_cast<std::shared_ptr<::ov::Model>&>(uu.model)->reshape(toOV(new_shapes));
+
+            const auto input_tensor_layout =
+                broadcastLayerAttr(model_info.input_tensor_layout,
+                                   uu.params.input_names);
+            const auto input_model_layout =
+                broadcastLayerAttr(model_info.input_model_layout,
+                                   uu.params.input_names);
+
+            const auto interpolation = broadcastLayerAttr(model_info.interpolation,
+                                                          uu.params.input_names);
+            const auto mean_values = broadcastLayerAttr(model_info.mean_values,
+                                                        uu.params.input_names);
+            const auto scale_values = broadcastLayerAttr(model_info.scale_values,
+                                                         uu.params.input_names);
+
+            ::ov::preprocess::PrePostProcessor ppp(uu.model);
+            auto &input_info = ppp.input(input_name);
+            input_info.tensor().set_element_type(toOV(matdesc.depth));
+
+            const auto explicit_in_model_layout = lookUp(input_model_layout, input_name);
+            if (explicit_in_model_layout) {
+                input_info.model().set_layout(::ov::Layout(*explicit_in_model_layout));
+            }
+            const auto explicit_in_tensor_layout = lookUp(input_tensor_layout, input_name);
+            if (explicit_in_tensor_layout) {
+                input_info.tensor().set_layout(::ov::Layout(*explicit_in_tensor_layout));
+            }
+
+            if (explicit_in_tensor_layout &&
+                *explicit_in_tensor_layout != "NHWC") {
+                std::stringstream ss;
+                ss << "OV Backend: Provided tensor layout " << *explicit_in_tensor_layout
+                   << " is not compatible with input data " << matdesc << " for layer \""
+                   << input_name << "\". Expecting NHWC";
+                util::throw_error(std::logic_error(ss.str()));
+            } else {
+                input_info.tensor().set_layout(::ov::Layout("NHWC"));
+            }
+
+            // NB: Need to know input data shape at this point to
+            // configure resize otherwise use dynamic shapes that
+            // might be not supported by some plugins...
+            const auto explicit_resize = lookUp(interpolation, input_name);
+            if (explicit_resize) {
+                util::throw_error(std::logic_error(
+                    "OV Backend: InferList2 doesn't support configuring resize."
+                    " ROI arguments will be automatically resized to model shape"
+                    " and Tensor arguments will be passed without resize."));
+            }
+
+            // NB: Apply mean/scale as the last step of the preprocessing.
+            // Note that this can be applied to any input data if the
+            // position of "C" dimension is known.
+            const auto mean_vec = lookUp(mean_values, input_name);
+            if (mean_vec) {
+                input_info.preprocess().mean(*mean_vec);
+            }
+
+            const auto scale_vec = lookUp(scale_values, input_name);
+            if (scale_vec) {
+                input_info.preprocess().scale(*scale_vec);
+            }
+
+            cfgOutputPostprocessing(ppp, model_info, uu.params.output_names);
+            GAPI_LOG_DEBUG(NULL, "OV Backend: PrePostProcessor: " << ppp);
+            const_cast<std::shared_ptr<::ov::Model>&>(uu.model) = ppp.build();
+        }
+
+        for (const auto &out_name : uu.params.output_names) {
+            cv::GMatDesc outm;
+            if (cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind)) {
+                const auto &out = uu.model->output(out_name);
+                outm = cv::GMatDesc(toCV(out.get_element_type()),
+                                    toCV(out.get_shape()));
+            } else {
+                GAPI_Assert(cv::util::holds_alternative<ParamDesc::CompiledModel>(uu.params.kind));
+                const auto &out = uu.compiled_model.output(out_name);
+                outm = cv::GMatDesc(toCV(out.get_element_type()),
+                                    toCV(out.get_shape()));
+            }
+            result.emplace_back(std::move(outm));
+        }
+
+        return result;
+    }
+
+    static void run(std::shared_ptr<OVCallContext> ctx,
+                    cv::gimpl::ov::RequestPool     &reqPool) {
+        using namespace std::placeholders;
+        reqPool.getIdleRequest()->execute(
+            IInferExecutor::Task {
+                [ctx](::ov::InferRequest &infer_request) {
+                    GAPI_Assert(ctx->uu.params.num_in == 1);
+                    const auto &input_name = ctx->uu.params.input_names[0];
+                    auto input_tensor = infer_request.get_tensor(input_name);
+                    const auto &shape = input_tensor.get_shape();
+                    const auto &roi = ctx->inArg<cv::detail::OpaqueRef>(0).rref<cv::Rect>();
+                    const auto roi_mat = preprocess(ctx->inMat(1), roi, shape);
+                    copyToOV(roi_mat, input_tensor);
+                },
+                std::bind(PostOutputs, _1, _2, ctx)
+            }
+        );
+    }
+};
+
+struct InferList: public cv::detail::KernelTag {
+    using API = cv::GInferListBase;
+    static cv::gapi::GBackend backend()  { return cv::gapi::ov::backend(); }
+    static KImpl kernel()                { return KImpl{outMeta, run};     }
+
+    static cv::GMetaArgs outMeta(const ade::Graph      &gr,
+                                 const ade::NodeHandle &nh,
+                                 const cv::GMetaArgs   &in_metas,
+                                 const cv::GArgs       &/*in_args*/) {
         GConstGOVModel gm(gr);
         const auto &uu = gm.metadata(nh).get<OVUnit>();
         // Initialize input information
@@ -964,21 +1113,14 @@ struct InferList: public cv::detail::KernelTag {
                 if (explicit_in_tensor_layout) {
                     input_info.tensor().set_layout(::ov::Layout(*explicit_in_tensor_layout));
                 }
-                const auto explicit_resize = lookUp(interpolation, input_name);
 
-                const auto model_layout = ::ov::layout::get_layout(uu.model->input(input_name));
                 const auto &input_shape = uu.model->input(input_name).get_shape();
-
                 if (!isImage(matdesc, input_shape)) {
                     util::throw_error(std::runtime_error(
-                                "OV Backend: Only image is supported"
-                                " as the " + std::to_string(idx) + "th argument for InferList"));
+                        "OV Backend: Only image is supported"
+                        " as the " + std::to_string(idx) + "th argument for InferList"));
                 }
 
-                // NB: Image case - all necessary preprocessng is configured automatically.
-                GAPI_LOG_DEBUG(NULL, "OV Backend: Input: \"" << input_name << "\" is image.");
-                // NB: Layout is already set just double check that
-                // user provided the correct one. In fact, there is only one correct for image.
                 if (explicit_in_tensor_layout &&
                     *explicit_in_tensor_layout != "NHWC") {
                     std::stringstream ss;
@@ -986,8 +1128,21 @@ struct InferList: public cv::detail::KernelTag {
                        << " is not compatible with input data " << matdesc << " for layer \""
                        << input_name << "\". Expecting NHWC";
                     util::throw_error(std::logic_error(ss.str()));
+                } else {
+                    input_info.tensor().set_layout(::ov::Layout("NHWC"));
                 }
-                input_info.tensor().set_layout(::ov::Layout("NHWC"));
+
+                // NB: Need to know input data shape at this point to
+                // configure resize otherwise use dynamic shapes that
+                // might be not supported by some plugins...
+                const auto explicit_resize = lookUp(interpolation, input_name);
+                if (explicit_resize) {
+                    util::throw_error(std::logic_error(
+                        "OV Backend: InferList2 doesn't support configuring resize."
+                        " ROI arguments will be automatically resized to model shape"
+                        " and Tensor arguments will be passed without resize."));
+                }
+
                 // NB: Apply mean/scale as the last step of the preprocessing.
                 // Note that this can be applied to any input data if the
                 // position of "C" dimension is known.
@@ -1002,38 +1157,7 @@ struct InferList: public cv::detail::KernelTag {
                 }
             }
 
-            const auto output_tensor_layout =
-                broadcastLayerAttr(model_info.output_tensor_layout,
-                                   uu.params.output_names);
-            const auto output_model_layout =
-                broadcastLayerAttr(model_info.output_model_layout,
-                                   uu.params.output_names);
-            const auto output_tensor_precision =
-                broadcastLayerAttr(model_info.output_tensor_precision,
-                                   uu.params.output_names);
-
-            for (const auto &output_name : uu.params.output_names) {
-                const auto explicit_out_tensor_layout =
-                    lookUp(output_tensor_layout, output_name);
-                if (explicit_out_tensor_layout) {
-                    ppp.output(output_name).tensor()
-                        .set_layout(::ov::Layout(*explicit_out_tensor_layout));
-                }
-
-                const auto explicit_out_model_layout =
-                    lookUp(output_model_layout, output_name);
-                if (explicit_out_model_layout) {
-                    ppp.output(output_name).model()
-                        .set_layout(::ov::Layout(*explicit_out_model_layout));
-                }
-
-                const auto explicit_out_tensor_prec =
-                    lookUp(output_tensor_precision, output_name);
-                if (explicit_out_tensor_prec) {
-                    ppp.output(output_name).tensor()
-                        .set_element_type(toOV(*explicit_out_tensor_prec));
-                }
-            }
+            cfgOutputPostprocessing(ppp, model_info, uu.params.output_names);
             GAPI_LOG_DEBUG(NULL, "OV Backend: PrePostProcessor: " << ppp);
             const_cast<std::shared_ptr<::ov::Model>&>(uu.model) = ppp.build();
         }
@@ -1087,6 +1211,188 @@ struct InferList: public cv::detail::KernelTag {
     }
 };
 
+struct InferList2: public cv::detail::KernelTag {
+    using API = cv::GInferList2Base;
+    static cv::gapi::GBackend backend()  { return cv::gapi::ov::backend(); }
+    static KImpl kernel()                { return KImpl{outMeta, run}; }
+
+    static cv::GMetaArgs outMeta(const ade::Graph      &gr,
+                                 const ade::NodeHandle &nh,
+                                 const cv::GMetaArgs   &in_metas,
+                                 const cv::GArgs       &/*in_args*/) {
+        GConstGOVModel gm(gr);
+        const auto &uu = gm.metadata(nh).get<OVUnit>();
+        // Initialize input information
+        // Note our input layers list order matches the API order and so
+        // meta order.
+        GAPI_Assert(uu.params.input_names.size() == (in_metas.size() - 1u)
+                    && "Known input layers count doesn't match input meta count");
+
+        const auto &op = gm.metadata(nh).get<Op>();
+
+        // In contrast to InferList, the InferList2 has only one
+        // "full-frame" image argument, and all the rest are arrays of
+        // ether ROI or blobs. So here we set the 0th arg image format
+        // to all inputs which are ROI-based (skipping the
+        // "blob"-based ones)
+        // FIXME: this is filtering not done, actually! GArrayDesc has
+        // no hint for its underlying type!
+
+        const auto &mm_0 = in_metas[0u];
+        const auto &matdesc = cv::util::get<cv::GMatDesc>(mm_0);
+
+        if (cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind)) {
+            const auto &model_info = cv::util::get<ParamDesc::Model>(uu.params.kind);
+            const auto new_shapes =
+                broadcastLayerAttr(model_info.new_shapes,
+                                   uu.params.input_names);
+            const_cast<std::shared_ptr<::ov::Model>&>(uu.model)->reshape(toOV(new_shapes));
+
+            const auto input_tensor_layout =
+                broadcastLayerAttr(model_info.input_tensor_layout,
+                                   uu.params.input_names);
+            const auto input_model_layout =
+                broadcastLayerAttr(model_info.input_model_layout,
+                                   uu.params.input_names);
+
+            const auto interpolation = broadcastLayerAttr(model_info.interpolation,
+                                                          uu.params.input_names);
+            const auto mean_values = broadcastLayerAttr(model_info.mean_values,
+                                                        uu.params.input_names);
+            const auto scale_values = broadcastLayerAttr(model_info.scale_values,
+                                                         uu.params.input_names);
+            ::ov::preprocess::PrePostProcessor ppp(uu.model);
+            size_t idx = 1u;
+            for (auto &&input_name : uu.params.input_names) {
+                GAPI_Assert(util::holds_alternative<cv::GArrayDesc>(in_metas[idx])
+                            && "Non-array inputs are not supported");
+
+                auto &input_info = ppp.input(input_name);
+
+                const auto explicit_in_model_layout = lookUp(input_model_layout, input_name);
+                if (explicit_in_model_layout) {
+                    input_info.model().set_layout(::ov::Layout(*explicit_in_model_layout));
+                }
+                const auto explicit_in_tensor_layout = lookUp(input_tensor_layout, input_name);
+                if (explicit_in_tensor_layout) {
+                    input_info.tensor().set_layout(::ov::Layout(*explicit_in_tensor_layout));
+                }
+
+                // NB: Need to know input data shape at this point to
+                // configure resize otherwise use dynamic shapes that
+                // might be not supported by some plugins...
+                const auto explicit_resize = lookUp(interpolation, input_name);
+                if (explicit_resize) {
+                    util::throw_error(std::logic_error(
+                        "OV Backend: InferList2 doesn't support configuring resize."
+                        " ROI arguments will be automatically resized to model shape"
+                        " and Tensor arguments will be passed without resize."));
+                }
+
+                if (op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_RECT) {
+                    // NB: We only know precision for the 0th argument
+                    input_info.tensor().set_element_type(toOV(matdesc.depth));
+                    // NB: Validate if provided explicitly otherwise set "NHWC" for image.
+                    if (explicit_in_tensor_layout &&
+                        *explicit_in_tensor_layout != "NHWC") {
+                        std::stringstream ss;
+                        ss << "OV Backend: Provided tensor layout " << *explicit_in_tensor_layout
+                           << " is not compatible with input data " << matdesc << " for layer \""
+                           << input_name << "\". Expecting NHWC";
+                        util::throw_error(std::logic_error(ss.str()));
+                    } else {
+                        input_info.tensor().set_layout(::ov::Layout("NHWC"));
+                    }
+                } else {
+                    // This is a cv::GMat (equals to: cv::Mat)
+                    // Just validate that it is really the type
+                    // (other types are prohibited here)
+                    GAPI_Assert(op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_MAT);
+                }
+                // NB: Apply mean/scale as the last step of the preprocessing.
+                // Note that this can be applied to any input data if the
+                // position of "C" dimension is known.
+                const auto mean_vec = lookUp(mean_values, input_name);
+                if (mean_vec) {
+                    input_info.preprocess().mean(*mean_vec);
+                }
+
+                const auto scale_vec = lookUp(scale_values, input_name);
+                if (scale_vec) {
+                    input_info.preprocess().scale(*scale_vec);
+                }
+
+                idx++; // NB: Never forget to increment the counter
+            }
+
+            cfgOutputPostprocessing(ppp, model_info, uu.params.output_names);
+            GAPI_LOG_DEBUG(NULL, "OV Backend: PrePostProcessor: " << ppp);
+            const_cast<std::shared_ptr<::ov::Model>&>(uu.model) = ppp.build();
+        }
+        // roi-list version is much easier at the moment.
+        // All our outputs are vectors which don't have
+        // metadata at the moment - so just create a vector of
+        // "empty" array metadatas of the required size.
+        return cv::GMetaArgs(uu.params.output_names.size(),
+                             cv::GMetaArg{cv::empty_array_desc()});
+    }
+
+    static void run(std::shared_ptr<OVCallContext> ctx,
+                    cv::gimpl::ov::RequestPool     &reqPool) {
+        GAPI_Assert(ctx->inArgs().size() > 1u
+                && "This operation must have at least two arguments");
+        // NB: This blob will be used to make roi from its, so
+        // it should be treated as image
+        const auto list_size = ctx->inArg<cv::detail::VectorRef>(1u).size();
+        if (list_size == 0u) {
+            for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+                auto output = ctx->output(i);
+                ctx->out.meta(output, ctx->getMeta());
+                ctx->out.post(std::move(output));
+            }
+            return;
+        }
+
+        for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
+            // FIXME: Isn't this should be done automatically
+            // by some resetInternalData(), etc? (Probably at the GExecutor level)
+            auto& out_vec = ctx->outVecR<cv::Mat>(i);
+            out_vec.clear();
+            out_vec.resize(list_size);
+        }
+
+        PostOutputsList callback(list_size, ctx);
+        for (const auto &list_idx : ade::util::iota(list_size)) {
+            reqPool.getIdleRequest()->execute(
+                IInferExecutor::Task {
+                    [ctx, list_idx, list_size](::ov::InferRequest &infer_request) {
+                        for (auto in_idx : ade::util::iota(ctx->uu.params.num_in)) {
+                            const auto &this_vec = ctx->inArg<cv::detail::VectorRef>(in_idx+1u);
+                            GAPI_Assert(this_vec.size() == list_size);
+                            const auto &input_name = ctx->uu.params.input_names[in_idx];
+                            auto input_tensor = infer_request.get_tensor(input_name);
+                            const auto &shape = input_tensor.get_shape();
+                            if (this_vec.getKind() == cv::detail::OpaqueKind::CV_RECT) {
+                                const auto &vec = this_vec.rref<cv::Rect>();
+                                const auto roi_mat = preprocess(ctx->inMat(0), vec[list_idx], shape);
+                                copyToOV(roi_mat, input_tensor);
+                            } else if (this_vec.getKind() == cv::detail::OpaqueKind::CV_MAT) {
+                                const auto &vec = this_vec.rref<cv::Mat>();
+                                const auto &mat = vec[list_idx];
+                                copyToOV(mat, input_tensor);
+                            } else {
+                                GAPI_Assert(false &&
+                                        "OV: Only Rect and Mat types are supported for InferList2 !");
+                            }
+                        }
+                    },
+                    std::bind(callback, std::placeholders::_1, std::placeholders::_2, list_idx)
+                } // task
+            );
+        } // for
+    }
+};
+
 } // namespace ov
 } // namespace gimpl
 } // namespace cv
@@ -1131,7 +1437,9 @@ class GOVBackendImpl final: public cv::gapi::GBackend::Priv {
 
     virtual cv::GKernelPackage auxiliaryKernels() const override {
         return cv::gapi::kernels< cv::gimpl::ov::Infer
-                                , cv::gimpl::ov::InferList >();
+                                , cv::gimpl::ov::InferROI
+                                , cv::gimpl::ov::InferList
+                                , cv::gimpl::ov::InferList2 >();
     }
 
     virtual bool controlsMerge() const override {

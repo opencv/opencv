@@ -6,6 +6,7 @@
 #include <opencv2/gapi/core.hpp>
 #include <opencv2/gapi/infer.hpp>
 #include <opencv2/gapi/infer/ie.hpp>
+#include <opencv2/gapi/infer/ov.hpp>
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/highgui.hpp> // CommandLineParser
@@ -284,22 +285,22 @@ int main(int argc, char *argv[])
     const auto lmrk_model_path = cmd.get<std::string>("landm");
     const auto gaze_model_path = cmd.get<std::string>("gazem");
 
-    auto face_net = cv::gapi::ie::Params<custom::Faces> {
+    auto face_net = cv::gapi::ov::Params<custom::Faces> {
         face_model_path,                // path to topology IR
         weights_path(face_model_path),  // path to weights
         cmd.get<std::string>("faced"),  /// device specifier
     };
-    auto head_net = cv::gapi::ie::Params<custom::HeadPose> {
+    auto head_net = cv::gapi::ov::Params<custom::HeadPose> {
         head_model_path,                // path to topology IR
         weights_path(head_model_path),  // path to weights
         cmd.get<std::string>("headd"),  // device specifier
     }.cfgOutputLayers({"angle_y_fc", "angle_p_fc", "angle_r_fc"});
-    auto landmarks_net = cv::gapi::ie::Params<custom::Landmarks> {
+    auto landmarks_net = cv::gapi::ov::Params<custom::Landmarks> {
         lmrk_model_path,                // path to topology IR
         weights_path(lmrk_model_path),  // path to weights
         cmd.get<std::string>("landd"),  // device specifier
     };
-    auto gaze_net = cv::gapi::ie::Params<custom::Gaze> {
+    auto gaze_net = cv::gapi::ov::Params<custom::Gaze> {
         gaze_model_path,                // path to topology IR
         weights_path(gaze_model_path),  // path to weights
         cmd.get<std::string>("gazed"),  // device specifier

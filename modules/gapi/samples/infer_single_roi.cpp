@@ -10,6 +10,7 @@
 #include <opencv2/gapi/infer.hpp>
 #include <opencv2/gapi/render.hpp>
 #include <opencv2/gapi/infer/ie.hpp>
+#include <opencv2/gapi/infer/ov.hpp>
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/highgui.hpp>
@@ -139,7 +140,7 @@ int main(int argc, char *argv[])
     const auto opt_roi = parse_roi(cmd.get<std::string>("roi"));
 
     const auto face_model_path = cmd.get<std::string>("facem");
-    auto face_net = cv::gapi::ie::Params<custom::FaceDetector> {
+    auto face_net = cv::gapi::ov::Params<custom::FaceDetector> {
         face_model_path,                 // path to topology IR
         weights_path(face_model_path),   // path to weights
         cmd.get<std::string>("faced"),   // device specifier

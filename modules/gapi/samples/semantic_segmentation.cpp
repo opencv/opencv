@@ -1,5 +1,6 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/gapi/infer/ie.hpp>
+#include <opencv2/gapi/infer/ov.hpp>
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/gapi/operators.hpp>
@@ -137,7 +138,7 @@ int main(int argc, char *argv[]) {
     const auto weights_path  = get_weights_path(model_path);
     const auto device        = "CPU";
     G_API_NET(SemSegmNet, <cv::GMat(cv::GMat)>, "semantic-segmentation");
-    const auto net = cv::gapi::ie::Params<SemSegmNet> {
+    const auto net = cv::gapi::ov::Params<SemSegmNet> {
         model_path, weights_path, device
     };
     const auto kernels = cv::gapi::kernels<custom::OCVPostProcessing>();
