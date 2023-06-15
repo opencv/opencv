@@ -6,15 +6,15 @@ from typing import (Generator, Type, Callable, NamedTuple, Union, Set, Dict,
                     Collection)
 import warnings
 
-from .ast_utils import get_enclosing_namespace
+from .ast_utils import get_enclosing_namespace, get_enum_module_and_export_name
 
 from .predefined_types import PREDEFINED_TYPES
 
-from .nodes import (ASTNode, NamespaceNode, ClassNode, FunctionNode,
+from .nodes import (ASTNode, ASTNodeType, NamespaceNode, ClassNode, FunctionNode,
                     EnumerationNode, ConstantNode)
 
 from .nodes.type_node import (TypeNode, AliasTypeNode, AliasRefTypeNode,
-                              AggregatedTypeNode)
+                              AggregatedTypeNode, ASTNodeTypeNode)
 
 
 def generate_typing_stubs(root: NamespaceNode, output_path: Path):
@@ -616,14 +616,53 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         for item in filter(lambda i: isinstance(i, AliasRefTypeNode), type_node):
             register_alias(PREDEFINED_TYPES[item.ctype_name])  # type: ignore
 
+    def create_alias_for_enum_node(enum_node: ASTNode) -> AliasTypeNode:
+        """Create int alias corresponding to the given enum node.
+
+        Args:
+            enum_node (ASTNodeTypeNode): Enumeration node to create int alias for.
+
+        Returns:
+            AliasTypeNode: int alias node with same export name as enum.
+        """
+        assert enum_node.node_type == ASTNodeType.Enumeration, \
+            f"{enum_node} has wrong node type. Expected type: Enumeration."
+
+        enum_export_name, enum_module_name = get_enum_module_and_export_name(
+            enum_node
+        )
+        enum_full_export_name = f"{enum_module_name}.{enum_export_name}"
+        alias_node = AliasTypeNode.int_(enum_full_export_name,
+                                        enum_export_name)
+        type_checking_time_definitions.add(alias_node)
+        return alias_node
+
     def register_alias(alias_node: AliasTypeNode) -> None:
         typename = alias_node.typename
         # Check if alias is already registered
         if typename in aliases:
             return
+
+        # Collect required imports for alias definition
+        for required_import in alias_node.required_definition_imports:
+            required_imports.add(required_import)
+
         if isinstance(alias_node.value, AggregatedTypeNode):
             # Check if collection contains a link to another alias
             register_alias_links_from_aggregated_type(alias_node.value)
+
+            # Remove references to alias nodes
+            for i, item in enumerate(alias_node.value.items):
+                # Process enumerations only
+                if not isinstance(item, ASTNodeTypeNode) or item.ast_node is None:
+                    continue
+                if item.ast_node.node_type != ASTNodeType.Enumeration:
+                    continue
+                alias_node.value.items[i] = create_alias_for_enum_node(item.ast_node)
+
+        if isinstance(alias_node.value, ASTNodeTypeNode) \
+                and alias_node.value.ast_node == ASTNodeType.Enumeration:
+            alias_node.value = create_alias_for_enum_node(alias_node.ast_node)
 
         # Strip module prefix from aliased types
         aliases[typename] = alias_node.value.full_typename.replace(
@@ -631,14 +670,13 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         )
         if alias_node.doc is not None:
             aliases[typename] += f'\n"""{alias_node.doc}"""'
-        for required_import in alias_node.required_definition_imports:
-            required_imports.add(required_import)
 
     output_path = Path(output_path) / root.export_name / "typing"
     output_path.mkdir(parents=True, exist_ok=True)
 
     required_imports: Set[str] = set()
     aliases: Dict[str, str] = {}
+    type_checking_time_definitions: Set[AliasTypeNode] = set()
 
     # Resolve each node and register aliases
     TypeNode.compatible_to_runtime_usage = True
@@ -655,11 +693,16 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
 
     _write_required_imports(required_imports, output_stream)
 
+    # Add type checking time definitions as generated __init__.py content
+    for alias in type_checking_time_definitions:
+        output_stream.write("if typing.TYPE_CHECKING:\n    ")
+        output_stream.write(f"{alias.typename} = {alias.ctype_name}\nelse:\n")
+        output_stream.write(f"    {alias.typename} = {alias.value.ctype_name}\n")
+    if type_checking_time_definitions:
+        output_stream.write("\n\n")
+
     for alias_name, alias_type in aliases.items():
-        output_stream.write(alias_name)
-        output_stream.write(" = ")
-        output_stream.write(alias_type)
-        output_stream.write("\n")
+        output_stream.write(f"{alias_name} = {alias_type}\n")
 
     TypeNode.compatible_to_runtime_usage = False
     (output_path / "__init__.py").write_text(output_stream.getvalue())

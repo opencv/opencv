@@ -418,6 +418,10 @@ class ASTNodeTypeNode(TypeNode):
         self._ast_node: Optional[weakref.ProxyType[ASTNode]] = None
 
     @property
+    def ast_node(self):
+        return self._ast_node
+
+    @property
     def typename(self) -> str:
         if self._ast_node is None:
             return self._typename
