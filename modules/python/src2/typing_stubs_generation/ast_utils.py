@@ -1,4 +1,5 @@
-from typing import NamedTuple, Sequence, Tuple, Union, List, Dict
+from typing import (NamedTuple, Sequence, Tuple, Union, List,
+                    Dict, Callable, Optional)
 import keyword
 
 from .nodes import (ASTNode, NamespaceNode, ClassNode, FunctionNode,
@@ -323,12 +324,18 @@ def resolve_enum_scopes(root: NamespaceNode,
         enum_node.parent = scope
 
 
-def get_enclosing_namespace(node: ASTNode) -> NamespaceNode:
+def get_enclosing_namespace(
+    node: ASTNode,
+    class_node_callback: Optional[Callable[[ClassNode], None]] = None
+) -> NamespaceNode:
     """Traverses up nodes hierarchy to find closest enclosing namespace of the
     passed node
 
     Args:
         node (ASTNode): Node to find a namespace for.
+        class_node_callback (Optional[Callable[[ClassNode], None]]): Optional
+            callable object invoked for each traversed class node in bottom-up
+            order. Defaults: None.
 
     Returns:
         NamespaceNode: Closest enclosing namespace of the provided node.
@@ -360,8 +367,30 @@ def get_enclosing_namespace(node: ASTNode) -> NamespaceNode:
             "Can't find enclosing namespace for '{}' known as: '{}'".format(
                 node.full_export_name, node.native_name
             )
+        if class_node_callback:
+            class_node_callback(parent_node)
         parent_node = parent_node.parent
     return parent_node
+
+
+def get_enum_module_and_export_name(enum_node: EnumerationNode) -> Tuple[str, str]:
+    """Get export name of the enum node with its module name.
+
+    Note: Enumeration export names are prefixed with enclosing class names.
+
+    Args:
+        enum_node (EnumerationNode): Enumeration node to construct name for.
+
+    Returns:
+        Tuple[str, str]: a pair of enum export name and its full module name.
+    """
+    def update_full_export_name(class_node: ClassNode) -> None:
+        nonlocal enum_export_name
+        enum_export_name = class_node.export_name + "_" + enum_export_name
+
+    enum_export_name = enum_node.export_name
+    namespace_node = get_enclosing_namespace(enum_node, update_full_export_name)
+    return enum_export_name, namespace_node.full_export_name
 
 
 if __name__ == '__main__':

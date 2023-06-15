@@ -12,6 +12,7 @@ if sys.version_info >= (3, 6):
     from contextlib import contextmanager
 
     from typing import Dict, Set, Any, Sequence, Generator, Union
+    import traceback
 
     from pathlib import Path
 
@@ -46,10 +47,12 @@ if sys.version_info >= (3, 6):
 
                     try:
                         ret_type = func(*args, **kwargs)
-                    except Exception as e:
+                    except Exception:
                         self.has_failure = True
                         warnings.warn(
-                            'Typing stubs generation has failed. Reason: {}'.format(e)
+                            "Typing stubs generation has failed.\n{}".format(
+                                traceback.format_exc()
+                            )
                         )
                         if ret_type_on_failure is None:
                             return None
