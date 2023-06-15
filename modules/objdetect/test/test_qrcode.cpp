@@ -635,6 +635,18 @@ TEST_P(Objdetect_QRCode_detectAndDecodeMulti, decode_9_qrcodes_version7)
     }
 }
 
+TEST(Objdetect_QRCode_Curved_Test, detect_regression_22892)
+{
+    const std::string name_current_image = "issue_22892.png";
+    const std::string root = "qrcode/curved/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat src = imread(image_path);
+    auto qcd = QRCodeDetector();
+    vector<Point2f> points;
+    ASSERT_NO_THROW(qcd.detectAndDecodeCurved(src, points));
+}
+
 #endif // UPDATE_QRCODE_TEST_DATA
 
 }} // namespace

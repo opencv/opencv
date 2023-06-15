@@ -1973,6 +1973,29 @@ vector<vector<float> > QRDecode::computeSpline(const vector<int> &x_arr, const v
     return S;
 }
 
+// get horizontal_order and update x_arr, y_arr if necessary
+static inline bool setHorizontalOrder(vector<int>& x_arr, vector<int>& y_arr) {
+    bool horizontal_order = abs(x_arr.front() - x_arr.back()) > abs(y_arr.front() - y_arr.back());
+    int countX = 0, countY = 0;
+    for (size_t i = 1ull; i < x_arr.size(); i++) {
+        if (x_arr[i] == x_arr[i-1])
+            countX++;
+        if (y_arr[i] == y_arr[i-1])
+            countY++;
+    }
+    if (countX != 0 || countY != 0) {
+        vector<int>& newX = countX < countY ? x_arr : y_arr;
+        const int delta = newX.back() > newX.front() ? 1 : -1;
+        horizontal_order = countX < countY ? true : false;
+        if (min(countX, countY) > 0)
+            for (size_t i = 1ull; i < x_arr.size(); i++) {
+                if (newX[i] == newX[i-1])
+                    newX[i] += delta;
+            }
+    }
+    return horizontal_order;
+}
+
 bool QRDecode::createSpline(vector<vector<Point2f> > &spline_lines)
 {
     int start, end;
@@ -1987,11 +2010,11 @@ bool QRDecode::createSpline(vector<vector<Point2f> > &spline_lines)
 
         for (size_t j = 0; j < spline_points.size(); j++)
         {
-            x_arr.push_back(cvRound(spline_points[j].x));
-            y_arr.push_back(cvRound(spline_points[j].y));
+            x_arr.push_back(spline_points[j].x);
+            y_arr.push_back(spline_points[j].y);
         }
 
-        bool horizontal_order = abs(x_arr.front() - x_arr.back()) > abs(y_arr.front() - y_arr.back());
+        bool horizontal_order = setHorizontalOrder(x_arr, y_arr);
         vector<int>& second_arr = horizontal_order ? x_arr : y_arr;
         vector<int>& first_arr  = horizontal_order ? y_arr : x_arr;
 
