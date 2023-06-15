@@ -11,16 +11,17 @@
 
 namespace cv {
 
-void PlyDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<std::vector<int32_t>> &indices)
+void PlyDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb, std::vector<std::vector<int32_t>> &indices)
 {
     points.clear();
     normals.clear();
+    rgb.clear();
     CV_UNUSED(indices);
 
     std::ifstream file(m_filename, std::ios::binary);
     if (parseHeader(file))
     {
-        parseBody(file, points, normals);
+        parseBody(file, points, normals, rgb);
     }
 }
 
@@ -83,7 +84,7 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
                 auto splitArrElem = split(s, ' ');
                 if (splitArrElem[2] == "x" || splitArrElem[2] == "red" || splitArrElem[2] == "nx")
                 {
-                    if (splitArrElem[1] != "float") {
+                    if (splitArrElem[1] != "float" && splitArrElem[1] != "uchar") {
                         CV_LOG_ERROR(NULL, "Provided PLY file format '" << splitArrElem[1] << "' is not supported");
                         return false;
                     }
@@ -130,7 +131,7 @@ T readNext(std::ifstream &file, DataFormat format)
     return val;
 }
 
-void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, std::vector<Point3f> &normals)
+void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb)
 {
     points.reserve(m_vertexCount);
     if (m_hasNormal)
@@ -146,9 +147,11 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
         points.push_back(vertex);
         if (m_hasColour)
         {
-            readNext<float>(file, m_inputDataFormat);
-            readNext<float>(file, m_inputDataFormat);
-            readNext<float>(file, m_inputDataFormat);
+            Point3_<uchar> colour;
+            colour.x = readNext<int>(file, m_inputDataFormat) & 0xff;
+            colour.y = readNext<int>(file, m_inputDataFormat) & 0xff;
+            colour.z = readNext<int>(file, m_inputDataFormat) & 0xff;
+            rgb.push_back(colour);
         }
         if (m_hasNormal)
         {
@@ -161,7 +164,7 @@ void PlyDecoder::parseBody(std::ifstream &file, std::vector<Point3f> &points, st
     }
 }
 
-void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<std::vector<int32_t>> &indices)
+void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<Point3_<uchar>> &rgb, const std::vector<std::vector<int32_t>> &indices)
 {
     CV_UNUSED(indices);
     std::ofstream file(m_filename, std::ios::binary);
@@ -169,6 +172,7 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
         CV_LOG_ERROR(NULL, "Impossible to open the file: " << m_filename);
         return;
     }
+    bool hasNormals = !normals.empty(), hasColor = !rgb.empty();
 
     file << "ply" << std::endl;
     file << "format ascii 1.0" << std::endl;
@@ -179,23 +183,30 @@ void PlyEncoder::writeData(const std::vector<Point3f> &points, const std::vector
     file << "property float y" << std::endl;
     file << "property float z" << std::endl;
 
-    file << "end_header" << std::endl;
+    if(hasColor) {
+        file << "property uchar red" << std::endl;
+        file << "property uchar green" << std::endl;
+        file << "property uchar blue" << std::endl;
+    }
 
-    if (normals.size() != 0)
+    if (hasNormals)
     {
         file << "property float nx" << std::endl;
         file << "property float ny" << std::endl;
         file << "property float nz" << std::endl;
     }
 
-    bool isNormals = (normals.size() != 0);
+    file << "end_header" << std::endl;
+
 
     for (size_t i = 0; i < points.size(); i++)
     {
         file << points[i].x << " " << points[i].y << " " << points[i].z;
-        if (isNormals)
-        {
-            file << normals[i].x << " " << normals[i].y << " " << normals[i].z;
+        if (hasColor) {
+            file << " " << static_cast<int>(rgb[i].x) << " " << static_cast<int>(rgb[i].y) << " " << static_cast<int>(rgb[i].z);
+        }
+        if (hasNormals) {
+            file << " " << normals[i].x << " " << normals[i].y << " " << normals[i].z;
         }
         file << std::endl;
     }

@@ -87,6 +87,7 @@ TEST(PointCloud, LoadSavePly)
 {
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
+    std::vector<cv::Point3_<uchar>> rgb;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
     std::string new_path = tempfile("new.ply");
@@ -96,11 +97,13 @@ TEST(PointCloud, LoadSavePly)
 
     std::vector<cv::Point3f> points_gold;
     std::vector<cv::Point3f> normals_gold;
+    std::vector<cv::Point3_<uchar>> rgb_gold;
 
-    cv::loadPointCloud(new_path, points_gold, normals_gold);
+    cv::loadPointCloud(new_path, points_gold, normals_gold, rgb_gold);
 
     EXPECT_EQ(normals_gold, normals);
     EXPECT_EQ(points_gold, points);
+    EXPECT_EQ(rgb_gold, rgb);
     std::remove(new_path.c_str());
 }
 

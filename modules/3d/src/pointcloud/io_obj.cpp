@@ -12,10 +12,11 @@ namespace cv {
 
 std::unordered_set<std::string> ObjDecoder::m_unsupportedKeys;
 
-void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<std::vector<int32_t>> &indices)
+void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb, std::vector<std::vector<int32_t>> &indices)
 {
     points.clear();
     normals.clear();
+    CV_UNUSED(rgb);
     indices.clear();
 
     std::ifstream file(m_filename, std::ios::binary);
@@ -75,9 +76,10 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
     file.close();
 }
 
-void ObjEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<std::vector<int32_t>> &indices)
+void ObjEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<Point3_<uchar>> &rgb, const std::vector<std::vector<int32_t>> &indices)
 {
     std::ofstream file(m_filename, std::ios::binary);
+    CV_UNUSED(rgb);
     if (!file) {
         CV_LOG_ERROR(NULL, "Impossible to open the file: " << m_filename);
         return;
