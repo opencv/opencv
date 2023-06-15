@@ -49,13 +49,15 @@ namespace cv { namespace usac {
 class DLSPnPImpl : public DLSPnP {
 #if defined(HAVE_LAPACK) || defined(HAVE_EIGEN)
 private:
-    const Mat * points_mat, * calib_norm_points_mat;
+    Mat points_mat, calib_norm_points_mat;
     const Matx33d K;
-    const float * const calib_norm_points, * const points;
 public:
     explicit DLSPnPImpl (const Mat &points_, const Mat &calib_norm_points_, const Mat &K_)
-        : points_mat(&points_), calib_norm_points_mat(&calib_norm_points_), K(K_),
-        calib_norm_points((float*)calib_norm_points_mat->data), points((float*)points_mat->data) {}
+        : points_mat(points_), calib_norm_points_mat(calib_norm_points_), K(K_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+        CV_DbgAssert(!calib_norm_points_mat.empty() && calib_norm_points_mat.isContinuous());
+    }
 #else
 public:
     explicit DLSPnPImpl (const Mat &, const Mat &, const Mat &) {}
@@ -88,7 +90,8 @@ public:
         // Compute V*W*b with the rotation parameters factored out. This is the
         // translation parameterized by the 9 entries of the rotation matrix.
         Matx<double, 3, 9> translation_factor = Matx<double, 3, 9>::zeros();
-
+        const float * points = points_mat.ptr<float>();
+        const float * calib_norm_points = calib_norm_points_mat.ptr<float>();
         for (int i = 0; i < sample_number; i++) {
             const int idx_world = 5 * sample[i], idx_calib = 3 * sample[i];
             Vec3d normalized_feature_pos(calib_norm_points[idx_calib],
