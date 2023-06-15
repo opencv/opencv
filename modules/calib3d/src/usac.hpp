@@ -142,8 +142,9 @@ public:
 //////////////////////////////////////// NON MINIMAL SOLVER ///////////////////////////////////////
 class NonMinimalSolver : public Algorithm {
 public:
-    virtual int estimate (const Mat &/*model*/, const std::vector<int> &sample, int sample_size, std::vector<Mat>
+    virtual int estimate (const Mat &model, const std::vector<int> &sample, int sample_size, std::vector<Mat>
             &models, const std::vector<double> &weights) const {
+        CV_UNUSED(model);
         return estimate(sample, sample_size, models, weights);
     }
     // Estimate models from non minimal sample. models.size() == number of found solutions
@@ -153,8 +154,8 @@ public:
     virtual int getMinimumRequiredSampleSize() const = 0;
     // return maximum number of possible solutions.
     virtual int getMaxNumberOfSolutions () const = 0;
-    virtual int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
-            const std::vector<double> &/*weights*/) = 0;
+    virtual int estimate (const std::vector<bool>& mask, std::vector<Mat>& models,
+            const std::vector<double>& weights) = 0;
     virtual void enforceRankConstraint (bool enforce) = 0;
 };
 
@@ -246,7 +247,7 @@ public:
      * @model: Mat current model, e.g., H matrix.
      */
     virtual Score getScore (const Mat &model) const = 0;
-    virtual Score getScore (const std::vector<float> &/*errors*/) const = 0;
+    virtual Score getScore (const std::vector<float>& errors) const = 0;
     // get @inliers of the @model. Assume threshold is given
     // @inliers must be preallocated to maximum points size.
     virtual int getInliers (const Mat &model, std::vector<int> &inliers) const = 0;
@@ -321,14 +322,17 @@ public:
      * Check if sample causes degenerate configurations.
      * For example, test if points are collinear.
      */
-    virtual bool isSampleGood (const std::vector<int> &/*sample*/) const {
+    virtual bool isSampleGood (const std::vector<int>& sample) const {
+        CV_UNUSED(sample);
         return true;
     }
     /*
      * Check if model satisfies constraints.
      * For example, test if epipolar geometry satisfies oriented constraint.
      */
-    virtual bool isModelValid (const Mat &/*model*/, const std::vector<int> &/*sample*/) const {
+    virtual bool isModelValid (const Mat& model, const std::vector<int>& sample) const {
+        CV_UNUSED(model);
+        CV_UNUSED(sample);
         return true;
     }
     /*
@@ -382,8 +386,9 @@ public:
 //////////////////////////////////////// ESTIMATOR //////////////////////////////////
 class Estimator : public Algorithm{
 public:
-    virtual int estimateModelNonMinimalSample (const Mat &/*model*/, const std::vector<int> &sample, int sample_size, std::vector<Mat>
+    virtual int estimateModelNonMinimalSample (const Mat& model, const std::vector<int> &sample, int sample_size, std::vector<Mat>
         &models, const std::vector<double> &weights) const {
+        CV_UNUSED(model);
         return estimateModelNonMinimalSample(sample, sample_size, models, weights);
     }
     /*
@@ -411,7 +416,7 @@ public:
     virtual int getMaxNumSolutions () const = 0;
     // return maximum number of possible solutions of non-minimal estimation.
     virtual int getMaxNumSolutionsNonMinimal () const = 0;
-    virtual void enforceRankConstraint (bool /*enforce*/) = 0;
+    virtual void enforceRankConstraint (bool enforce) = 0;
 };
 
 class HomographyEstimator : public Estimator {
