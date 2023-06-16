@@ -258,10 +258,7 @@ std::string icvExtractPattern(const std::string& filename, unsigned *offset)
         while (pos < len && !isdigit(filename[pos])) pos++;
 
         if (pos == len)
-        {
             return "";
-            CV_Error_(Error::StsBadArg, ("CAP_IMAGES: can't find starting number (in the name of file): %s", filename.c_str()));
-        }
 
         std::string::size_type pos0 = pos;
 
