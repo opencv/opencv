@@ -446,9 +446,6 @@ static long THDiskFile_readString(THFile *self, const char *format, char **str_)
       }
     }
   }
-
-  *str_ = NULL;
-  return 0;
 }
 
 THFile *THDiskFile_new(const std::string &name, const char *mode, int isQuiet)
