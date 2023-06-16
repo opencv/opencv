@@ -1189,12 +1189,14 @@ void UMat::copyTo(OutputArray _dst) const
         return;
     }
 
-    size_t i, sz[CV_MAX_DIM] = {0}, srcofs[CV_MAX_DIM], dstofs[CV_MAX_DIM], esz = elemSize();
-    for( i = 0; i < (size_t)dims; i++ )
+    size_t sz[CV_MAX_DIM] = {1}, srcofs[CV_MAX_DIM]={0}, dstofs[CV_MAX_DIM]={0};
+    size_t esz = elemSize();
+    int i, d = std::max(dims, 1);
+    for( i = 0; i < d; i++ )
         sz[i] = size.p[i];
-    sz[dims-1] *= esz;
+    sz[d-1] *= esz;
     ndoffset(srcofs);
-    srcofs[dims-1] *= esz;
+    srcofs[d-1] *= esz;
 
     _dst.create( dims, size.p, type() );
     if( _dst.isUMat() )
@@ -1208,13 +1210,13 @@ void UMat::copyTo(OutputArray _dst) const
         {
             dst.ndoffset(dstofs);
             dstofs[dims-1] *= esz;
-            u->currAllocator->copy(u, dst.u, dims, sz, srcofs, step.p, dstofs, dst.step.p, false);
+            u->currAllocator->copy(u, dst.u, d, sz, srcofs, step.p, dstofs, dst.step.p, false);
             return;
         }
     }
 
     Mat dst = _dst.getMat();
-    u->currAllocator->download(u, dst.ptr(), dims, sz, srcofs, step.p, dst.step.p);
+    u->currAllocator->download(u, dst.ptr(), d, sz, srcofs, step.p, dst.step.p);
 }
 
 void UMat::copyTo(OutputArray _dst, InputArray _mask) const
