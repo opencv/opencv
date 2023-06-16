@@ -51,7 +51,7 @@ public:
     {
         return 0;
     }
-    void processImageScale(const Mat &src, Mat &dst, float scale, const bool & isEnabled, int)
+    void processImageScale(const Mat &src, Mat &dst, float scale, const bool & isEnabled, int = -1)
     {
         if (isEnabled)
         {
