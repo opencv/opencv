@@ -894,7 +894,6 @@ CV__DNN_INLINE_NS_BEGIN
     *  @param cfgFile      path to the .cfg file with text description of the network architecture.
     *  @param darknetModel path to the .weights file with learned network.
     *  @returns Network object that ready to do forward, throw an exception in failure cases.
-    *  @returns Net object.
     */
     CV_EXPORTS_W Net readNetFromDarknet(const String &cfgFile, const String &darknetModel = String());
 
