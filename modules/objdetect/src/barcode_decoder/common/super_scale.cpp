@@ -8,11 +8,14 @@
 
 #include "../../precomp.hpp"
 #include "super_scale.hpp"
-
-#ifdef HAVE_OPENCV_DNN
+#include "opencv2/core.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 namespace cv {
 namespace barcode {
+
+#ifdef HAVE_OPENCV_DNN
+
 constexpr static float MAX_SCALE = 4.0f;
 
 int SuperScale::init(const std::string &proto_path, const std::string &model_path)
@@ -71,7 +74,26 @@ int SuperScale::superResolutionScale(const Mat &src, Mat &dst)
     }
     return 0;
 }
+
+#else // HAVE_OPENCV_DNN
+
+int SuperScale::init(const std::string &proto_path, const std::string &model_path)
+{
+    CV_UNUSED(proto_path);
+    CV_UNUSED(model_path);
+    return 0;
+}
+
+void SuperScale::processImageScale(const Mat &src, Mat &dst, float scale, const bool & isEnabled, int sr_max_size)
+{
+    CV_UNUSED(sr_max_size);
+    if (isEnabled)
+    {
+        CV_LOG_WARNING(NULL, "objdetect/barcode: SuperScaling disabled - OpenCV has been built without DNN support");
+    }
+    resize(src, dst, Size(), scale, scale, INTER_CUBIC);
+}
+#endif // HAVE_OPENCV_DNN
+
 }  // namespace barcode
 }  // namespace cv
-
-#endif // HAVE_OPENCV_DNN
