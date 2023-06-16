@@ -522,9 +522,9 @@ cv::Mat cv::findEssentialMat( InputArray points1, InputArray points2,
                       InputArray cameraMatrix1, InputArray cameraMatrix2,
                       InputArray dist_coeff1, InputArray dist_coeff2, OutputArray mask, const UsacParams &params) {
     Ptr<usac::Model> model;
-    usac::setParameters(model, usac::EstimationMethod::Essential, params, mask.needed());
+    usac::setParameters(model, usac::EstimationMethod::ESSENTIAL, params, mask.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model, points1, points2, model->getRandomGeneratorState(),
+    if (usac::run(model, points1, points2,
             ransac_output, cameraMatrix1, cameraMatrix2, dist_coeff1, dist_coeff2)) {
         usac::saveMask(mask, ransac_output->getInliersMask());
         return ransac_output->getModel();
