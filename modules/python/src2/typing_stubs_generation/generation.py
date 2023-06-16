@@ -2,8 +2,9 @@ __all__ = ("generate_typing_stubs", )
 
 from io import StringIO
 from pathlib import Path
+import re
 from typing import (Generator, Type, Callable, NamedTuple, Union, Set, Dict,
-                    Collection)
+                    Collection, Tuple, List)
 import warnings
 
 from .ast_utils import get_enclosing_namespace, get_enum_module_and_export_name
@@ -272,7 +273,8 @@ def _generate_class_stub(class_node: ClassNode, output_stream: StringIO,
 
 def _generate_constant_stub(constant_node: ConstantNode,
                             output_stream: StringIO, indent: int = 0,
-                            extra_export_prefix: str = "") -> None:
+                            extra_export_prefix: str = "",
+                            generate_uppercase_version: bool = True) -> Tuple[str, ...]:
     """Generates stub for the provided constant node.
 
     Args:
@@ -280,18 +282,32 @@ def _generate_constant_stub(constant_node: ConstantNode,
         output_stream (StringIO): Output stream for constant stub.
         indent (int, optional): Indent used for each line written to
             `output_stream`. Defaults to 0.
-        extra_export_prefix (str, optional) Extra prefix added to the export
+        extra_export_prefix (str, optional): Extra prefix added to the export
             constant name. Defaults to empty string.
+        generate_uppercase_version (bool, optional): Generate uppercase version
+            alongside the normal one. Defaults to True.
+
+    Returns:
+        Tuple[str, ...]: exported constants names.
     """
 
-    output_stream.write(
-        "{indent}{prefix}{name}: {value_type}\n".format(
-            prefix=extra_export_prefix,
-            name=constant_node.export_name,
-            value_type=constant_node.value_type,
-            indent=" " * indent
+    def write_constant_to_stream(export_name: str) -> None:
+        output_stream.write(
+            "{indent}{name}: {value_type}\n".format(
+                name=export_name,
+                value_type=constant_node.value_type,
+                indent=" " * indent
+            )
         )
-    )
+
+    export_name = extra_export_prefix + constant_node.export_name
+    write_constant_to_stream(export_name)
+    if generate_uppercase_version:
+        uppercase_name = re.sub(r"([a-z])([A-Z])", r"\1_\2", export_name).upper()
+        if export_name != uppercase_name:
+            write_constant_to_stream(uppercase_name)
+            return export_name, uppercase_name
+    return export_name,
 
 
 def _generate_enumeration_stub(enumeration_node: EnumerationNode,
@@ -356,18 +372,20 @@ def _generate_enumeration_stub(enumeration_node: EnumerationNode,
     entries_extra_prefix = extra_export_prefix
     if enumeration_node.is_scoped:
         entries_extra_prefix += enumeration_node.export_name + "_"
+    generated_constants_entries: List[str] = []
     for entry in enumeration_node.constants.values():
-        _generate_constant_stub(entry, output_stream, indent, entries_extra_prefix)
+        generated_constants_entries.extend(
+            _generate_constant_stub(entry, output_stream, indent, entries_extra_prefix)
+        )
     # Unnamed enumerations are skipped as definition
     if enumeration_node.export_name.endswith("<unnamed>"):
         output_stream.write("\n")
         return
     output_stream.write(
-        "{indent}{export_prefix}{name} = int  # One of [{entries}]\n\n".format(
+        '{indent}{export_prefix}{name} = int\n{indent}"""One of [{entries}]"""\n\n'.format(
             export_prefix=extra_export_prefix,
             name=enumeration_node.export_name,
-            entries=", ".join(entry.export_name
-                              for entry in enumeration_node.constants.values()),
+            entries=", ".join(generated_constants_entries),
             indent=" " * indent
         )
     )
