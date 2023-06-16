@@ -4,116 +4,129 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/objdetect/barcode.hpp"
+#include <set>
+
+using namespace std;
 
 namespace opencv_test{namespace{
 
-typedef std::vector<std::string> stringvec;
-typedef std::map<std::string, std::string> datasetType;
+typedef std::set<string> StringSet;
 
-inline stringvec explode(const std::string &s, const char &c)
+// Convert ';'-separated strings to a set
+inline static StringSet toSet(const string &line)
 {
-    std::string buff;
-    stringvec v;
-
-    for (auto n:s)
+    StringSet res;
+    string::size_type it = 0, ti;
+    while (true)
     {
-        if (n != c) { buff += n; }
-        else if (n == c && !buff.empty())
+        ti = line.find(';', it);
+        if (ti == string::npos)
         {
-            v.push_back(buff);
-            buff = "";
+            res.insert(string(line, it, line.size() - it));
+            break;
         }
+        res.insert(string(line, it, ti - it));
+        it = ti + 1;
     }
-    if (!buff.empty()) { v.push_back(buff); }
-
-    return v;
+    return res;
 }
 
-inline datasetType buildDataSet(std::string result_file_path)
+// Convert vector of strings to a set
+inline static StringSet toSet(const vector<string> &lines)
 {
-    std::ifstream result_file;
-    datasetType dataset;
-    result_file.open(result_file_path);
-    std::string line;
-    if (result_file.is_open())
+    StringSet res;
+    for (const string & line : lines)
+        res.insert(line);
+    return res;
+}
+
+// Get all keys of a map in a vector
+template<typename T, typename V>
+inline static vector<T> getKeys(const map<T, V> &m)
+{
+    vector<T> res;
+    for (const auto & it : m)
+        res.push_back(it.first);
+    return res;
+}
+
+struct BarcodeResult
+{
+    string type;
+    string data;
+};
+
+map<string, BarcodeResult> testResults {
+    { "single/book.jpg", {"EAN_13", "9787115279460"} },
+    { "single/bottle_1.jpg", {"EAN_13", "6922255451427"} },
+    { "single/bottle_2.jpg", {"EAN_13", "6921168509256"} },
+    { "multiple/4_barcodes.jpg", {"EAN_13;EAN_13;EAN_13;EAN_13", "9787564350840;9783319200064;9787118081473;9787122276124"} }
+};
+
+typedef testing::TestWithParam< string > BarcodeDetector_main;
+
+TEST_P(BarcodeDetector_main, interface)
+{
+    const string fname = GetParam();
+    const string image_path = findDataFile(string("barcode/") + fname);
+    const StringSet expected_lines = toSet(testResults[fname].data);
+    const StringSet expected_types = toSet(testResults[fname].type);
+    const size_t expected_count = expected_lines.size(); // assume codes are unique
+    // TODO: verify points location
+
+    Mat img = imread(image_path);
+    ASSERT_FALSE(img.empty()) << "Can't read image: " << image_path;
+
+    barcode::BarcodeDetector det;
+    vector<Point2f> points;
+    vector<string> types;
+    vector<string> lines;
+
+    // common interface (single)
     {
-        while (std::getline(result_file, line))
-        {
-            stringvec result = explode(line, ',');
-            std::string filename = result[0];
-            if (dataset.find(filename) == dataset.end())
-            {
-                dataset[filename] = result[1];
-            }
-        }
+        bool res = det.detect(img, points);
+        ASSERT_TRUE(res);
+        EXPECT_EQ(expected_count * 4, points.size());
     }
 
-    result_file.close();
-    return dataset;
-}
-
-inline datasetType initValidation(std::string path)
-{
-    const std::string valid_path = findDataFile(path);
-    return buildDataSet(valid_path);
-}
-
-//==============================================================================
-
-TEST(BARCODE_BarcodeDetector_single, regression)
-{
-    const std::string root = "barcode/single/";
-    datasetType validation = initValidation(root + "result.csv");
-    auto bardet = barcode::BarcodeDetector();
-    datasetType::iterator iterator = validation.begin();
-    while (iterator != validation.end())
     {
-        std::string img_name = iterator->first;
-        std::string result = iterator->second;
-        std::string image_path = findDataFile(root + img_name);
-        Mat img = imread(image_path);
-        EXPECT_FALSE(img.empty()) << "Can't read image: " << image_path;
-        std::vector<cv::Point2f> points;
-        std::vector<std::string> infos;
-        std::vector<std::string> formats;
-        bardet.detectAndDecodeWithType(img, infos, formats, points);
-        EXPECT_FALSE(points.empty()) << "Nothing detected: " << image_path;
-        bool is_correct = false;
-        for (const auto &ans : infos)
-        {
-            if (ans == result)
-            {
-                is_correct = true;
-                break;
-            }
-        }
-        EXPECT_TRUE(is_correct) << "No results for " << img_name;
-        iterator++;
+        string res = det.decode(img, points);
+        ASSERT_FALSE(res.empty());
+        EXPECT_EQ(1u, expected_lines.count(res));
     }
-}
 
-TEST(BARCODE_BarcodeDetector_detect_multi, detect_regression)
-{
-    const std::string root = "barcode/multiple/";
-    datasetType validation = initValidation(root + "result.csv");
-    auto bardet = barcode::BarcodeDetector();
-    datasetType::iterator iterator = validation.begin();
-    while (iterator != validation.end())
+    // common interface (multi)
     {
-        std::string img = iterator->first;
-        size_t expect_corners_size = std::stoi(iterator->second);
-        std::string image_path = findDataFile(root + img);
-        Mat src = imread(image_path);
-        EXPECT_FALSE(src.empty()) << "Can't read image: " << image_path;
+        bool res = det.detectMulti(img, points);
+        ASSERT_TRUE(res);
+        EXPECT_EQ(expected_count * 4, points.size());
+    }
 
-        std::vector<Point> corners;
-        bardet.detectMulti(src, corners);
-        EXPECT_EQ(corners.size(), expect_corners_size) << "Can't detect all barcodes: " << img;
-        iterator++;
+    {
+        bool res = det.decodeMulti(img, points, lines);
+        ASSERT_TRUE(res);
+        EXPECT_EQ(expected_lines, toSet(lines));
+    }
+
+    // specific interface
+    {
+        bool res = det.decodeWithType(img, points, lines, types);
+        ASSERT_TRUE(res);
+        EXPECT_EQ(expected_types, toSet(types));
+        EXPECT_EQ(expected_lines, toSet(lines));
+    }
+
+    {
+        bool res = det.detectAndDecodeWithType(img, lines, types, points);
+        ASSERT_TRUE(res);
+        EXPECT_EQ(expected_types, toSet(types));
+        EXPECT_EQ(expected_lines, toSet(lines));
     }
 }
 
-TEST(BARCODE_BarcodeDetector_basic, not_found_barcode)
+INSTANTIATE_TEST_CASE_P(/**/, BarcodeDetector_main, testing::ValuesIn(getKeys(testResults)));
+
+TEST(BarcodeDetector_base, invalid)
 {
     auto bardet = barcode::BarcodeDetector();
     std::vector<Point> corners;
