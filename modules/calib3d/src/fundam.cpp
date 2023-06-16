@@ -451,9 +451,9 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
 cv::Mat cv::findHomography(InputArray srcPoints, InputArray dstPoints, OutputArray mask,
                    const UsacParams &params) {
     Ptr<usac::Model> model;
-    usac::setParameters(model, usac::EstimationMethod::Homography, params, mask.needed());
+    usac::setParameters(model, usac::EstimationMethod::HOMOGRAPHY, params, mask.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model, srcPoints, dstPoints, model->getRandomGeneratorState(),
+    if (usac::run(model, srcPoints, dstPoints,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         usac::saveMask(mask, ransac_output->getInliersMask());
         return ransac_output->getModel() / ransac_output->getModel().at<double>(2,2);
@@ -913,10 +913,10 @@ cv::Mat cv::findFundamentalMat( cv::InputArray points1, cv::InputArray points2, 
 cv::Mat cv::findFundamentalMat( InputArray points1, InputArray points2,
                         OutputArray mask, const UsacParams &params) {
     Ptr<usac::Model> model;
-    setParameters(model, usac::EstimationMethod::Fundamental, params, mask.needed());
+    setParameters(model, usac::EstimationMethod::FUNDAMENTAL, params, mask.needed());
     CV_Assert(model);
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model, points1, points2, model->getRandomGeneratorState(),
+    if (usac::run(model, points1, points2,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         usac::saveMask(mask, ransac_output->getInliersMask());
         return ransac_output->getModel();
