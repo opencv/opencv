@@ -5,12 +5,13 @@ set(OPENCV_JAVA_DIR "${CMAKE_CURRENT_BINARY_DIR}/opencv" CACHE INTERNAL "")
 file(REMOVE_RECURSE "${OPENCV_JAVA_DIR}")
 file(REMOVE "${OPENCV_DEPHELPER}/${the_module}_jar_source_copy")
 
-file(MAKE_DIRECTORY "${OPENCV_JAVA_DIR}/build/classes")
 set(java_src_dir "${OPENCV_JAVA_DIR}/java")
 file(MAKE_DIRECTORY "${java_src_dir}")
 
-set(JAR_NAME opencv-${OPENCV_JAVA_LIB_NAME_SUFFIX}.jar)
-set(OPENCV_JAR_FILE "${OpenCV_BINARY_DIR}/bin/${JAR_NAME}" CACHE INTERNAL "")
+set(JAR_NAME_WE opencv-${OPENCV_JAVA_LIB_NAME_SUFFIX})
+set(JAR_NAME ${JAR_NAME_WE}.jar)
+set(OPENCV_JAR_DIR "${OpenCV_BINARY_DIR}/bin/" CACHE INTERNAL "")
+set(OPENCV_JAR_FILE "${OPENCV_JAR_DIR}${JAR_NAME}" CACHE INTERNAL "")
 
 ocv_copyfiles_append_dir(JAVA_SRC_COPY "${OPENCV_JAVA_BINDINGS_DIR}/gen/java" "${java_src_dir}")
 
@@ -34,7 +35,9 @@ if(OPENCV_JAVADOC_LINK_URL)
   set(CMAKE_CONFIG_OPENCV_JAVADOC_LINK "link=\"${OPENCV_JAVADOC_LINK_URL}\"")
 endif()
 
-if (ANT_EXECUTABLE)
+if(OPENCV_JAVA_SDK_BUILD_TYPE STREQUAL "ANT")
+  file(MAKE_DIRECTORY "${OPENCV_JAVA_DIR}/build/classes")
+
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.xml.in" "${OPENCV_JAVA_DIR}/build.xml" @ONLY)
   list(APPEND depends "${OPENCV_JAVA_DIR}/build.xml")
 
@@ -48,7 +51,7 @@ if (ANT_EXECUTABLE)
       COMMENT "Generating ${JAR_NAME}"
   )
   add_custom_target(${the_module}_jar DEPENDS "${OPENCV_DEPHELPER}/${the_module}_jar")
-else()
+elseif(OPENCV_JAVA_SDK_BUILD_TYPE STREQUAL "JAVA")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/MANIFEST.MF.in" "${OPENCV_JAVA_DIR}/MANIFEST.MF" @ONLY)
   list(APPEND depends "${OPENCV_JAVA_DIR}/MANIFEST.MF")
 
@@ -67,18 +70,17 @@ else()
     DEPENDS "${OPENCV_DEPHELPER}/${the_module}_jar"
   )
 
-  get_filename_component(OPENCV_JAR_DIR ${OPENCV_JAR_FILE} DIRECTORY)
-  get_filename_component(JAR_NAME_WE ${JAR_NAME} NAME_WE)
-
-  list(APPEND CMAKE_JAVA_COMPILE_FLAGS -encoding utf-8)
+  list(APPEND CMAKE_JAVA_COMPILE_FLAGS -encoding utf-8 ${OPENCV_EXTRA_JAVA_COMPILE_FLAGS})
 
   add_jar(${the_module}_jar
           SOURCES "@${OPENCV_JAVA_DIR}/java_sources"
           MANIFEST "${OPENCV_JAVA_DIR}/MANIFEST.MF"
-          OUTPUT_NAME ${JAR_NAME_WE}
-          OUTPUT_DIR ${OPENCV_JAR_DIR})
+          OUTPUT_NAME "${JAR_NAME_WE}"
+          OUTPUT_DIR "${OPENCV_JAR_DIR}")
 
   add_dependencies(${the_module}_jar ${the_module}_jar_sources)
+else()
+  ocv_assert(0)
 endif()
 
 install(FILES ${OPENCV_JAR_FILE} OPTIONAL DESTINATION ${OPENCV_JAR_INSTALL_PATH} COMPONENT java)
@@ -86,7 +88,7 @@ install(FILES ${OPENCV_JAR_FILE} OPTIONAL DESTINATION ${OPENCV_JAR_INSTALL_PATH}
 add_dependencies(${the_module} ${the_module}_jar)
 
 if(BUILD_DOCS)
-  if (ANT_EXECUTABLE)
+  if(OPENCV_JAVA_SDK_BUILD_TYPE STREQUAL "ANT")
     add_custom_command(OUTPUT "${OPENCV_DEPHELPER}/${the_module}doc"
       COMMAND ${ANT_EXECUTABLE} -noinput -k javadoc
       COMMAND ${CMAKE_COMMAND} -E touch "${OPENCV_DEPHELPER}/${the_module}doc"
@@ -101,7 +103,7 @@ if(BUILD_DOCS)
       COMPONENT "docs" OPTIONAL
       ${compatible_MESSAGE_NEVER}
     )
-  else()
+  elseif(OPENCV_JAVA_SDK_BUILD_TYPE STREQUAL "JAVA")
     set(Java_JAVADOC_EXECUTABLE ${Java_JAVADOC_EXECUTABLE} -encoding utf-8)
 
     # create_javadoc produces target ${_target}_javadoc
@@ -121,6 +123,8 @@ if(BUILD_DOCS)
       COMPONENT "docs" OPTIONAL
       ${compatible_MESSAGE_NEVER}
     )
+  else()
+    ocv_assert(0)
   endif()
 
   set(CMAKE_DOXYGEN_JAVADOC_NODE
