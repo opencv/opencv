@@ -2779,13 +2779,15 @@ void ONNXImporter::parseResize(LayerParams& layerParams, const opencv_onnx::Node
     if (layerParams.has("coordinate_transformation_mode"))
     {
         String interp_mode = layerParams.get<String>("coordinate_transformation_mode");
-        CV_Assert_N(interp_mode != "tf_crop_and_resize", interp_mode != "tf_half_pixel_for_nn");
+        CV_Assert(interp_mode != "tf_crop_and_resize");
+
+        bool halfPixel = interp_mode == "tf_half_pixel_for_nn" || interp_mode == "half_pixel" || interp_mode == "pytorch_half_pixel";
 
         layerParams.set("align_corners", interp_mode == "align_corners");
+        layerParams.set("half_pixel_centers", halfPixel);
         if (layerParams.get<String>("mode") == "linear")
         {
-            layerParams.set("mode", interp_mode == "pytorch_half_pixel" || interp_mode == "half_pixel" ?
-                                    "opencv_linear" : "bilinear");
+            layerParams.set("mode", halfPixel ? "opencv_linear" : "bilinear");
         }
     }
     if (layerParams.get<String>("mode") == "linear" && framework_name == "pytorch")
@@ -2838,13 +2840,15 @@ void ONNXImporter::parseUpsample(LayerParams& layerParams, const opencv_onnx::No
     if (layerParams.has("coordinate_transformation_mode"))
     {
         String interp_mode = layerParams.get<String>("coordinate_transformation_mode");
-        CV_Assert_N(interp_mode != "tf_crop_and_resize", interp_mode != "tf_half_pixel_for_nn");
+        CV_Assert(interp_mode != "tf_crop_and_resize");
+
+        bool halfPixel = interp_mode == "tf_half_pixel_for_nn" || interp_mode == "half_pixel" || interp_mode == "pytorch_half_pixel";
 
         layerParams.set("align_corners", interp_mode == "align_corners");
+        layerParams.set("half_pixel_centers", halfPixel);
         if (layerParams.get<String>("mode") == "linear")
         {
-            layerParams.set("mode", interp_mode == "pytorch_half_pixel" ?
-                                    "opencv_linear" : "bilinear");
+            layerParams.set("mode", halfPixel ? "opencv_linear" : "bilinear");
         }
     }
     if (layerParams.get<String>("mode") == "linear" && framework_name == "pytorch")
