@@ -7,7 +7,7 @@
 #ifndef OPENCV_GAPI_INFER_OV_UTIL_HPP
 #define OPENCV_GAPI_INFER_OV_UTIL_HPP
 
-#ifdef HAVE_INF_ENGINE
+#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2022010000
 
 // NOTE: This file is not included by default in infer/ov.hpp
 // and won't be. infer/ov.hpp doesn't depend on OV headers itself.
@@ -30,6 +30,6 @@ GAPI_EXPORTS int to_ocv(const ::ov::element::Type &type);
 
 }}}}
 
-#endif // HAVE_INF_ENGINE
+#endif // HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2022010000
 
 #endif // OPENCV_GAPI_INFER_OV_UTIL_HPP

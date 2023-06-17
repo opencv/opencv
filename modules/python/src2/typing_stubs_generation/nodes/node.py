@@ -1,7 +1,7 @@
 import abc
 import enum
 import itertools
-from typing import (Iterator, Type, TypeVar, Iterable, Dict,
+from typing import (Iterator, Type, TypeVar, Dict,
                     Optional, Tuple, DefaultDict)
 from collections import defaultdict
 

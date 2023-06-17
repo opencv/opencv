@@ -33,36 +33,17 @@ typedef __fp16 float16_t; // Fix conflict between float16_t in arm_neon.h and fl
 #define CONV_NR_FP32 24
 #endif
 
-// Winograd Params
 enum {
     CONV_WINO_STEP=6,
     CONV_WINO_KSIZE=3,
-    CONV_WINO_SIZE=CONV_WINO_STEP+CONV_WINO_KSIZE-1, // 8
+    CONV_WINO_SIZE=CONV_WINO_STEP+CONV_WINO_KSIZE - 1, // 8
     CONV_WINO_AREA=CONV_WINO_SIZE*CONV_WINO_SIZE,
-
-    CONV_WINO_KBLOCK = 4,
-#if (CV_NEON && CV_NEON_AARCH64) || CV_TRY_AVX || CV_TRY_AVX2
-    CONV_WINO_IBLOCK = 6,
-#else
-    CONV_WINO_IBLOCK = 3,
-#endif
-
-#if CV_TRY_AVX || CV_TRY_AVX2
-    CONV_WINO_ATOM_F32 = 8,
-#else
-    CONV_WINO_ATOM_F32 = 4,
-#endif
-
-    CONV_WINO_NATOMS_F32 = CONV_WINO_AREA / CONV_WINO_ATOM_F32, // for AVX2, it is 8, otherwise, it's 16.
-
-    // FP 16
-    CONV_WINO_ATOM_F16 = CONV_WINO_ATOM_F32 * 2,
-    CONV_WINO_NATOMS_F16 = CONV_WINO_AREA / CONV_WINO_ATOM_F16,
 };
 
 // NOTE that: CONV_TYPE_DEPTHWISE is for 3x3 depthwise conv, and others depthwise will be set as CONV_TYPE_DEPTHWISE_REMAIN.
 enum { CONV_TYPE_GENERIC=0, CONV_TYPE_DEPTHWISE=1, CONV_TYPE_WINOGRAD3X3=2, CONV_TYPE_DEPTHWISE_REMAIN=3 };
 enum { CONV_1D = 0, CONV_2D = 1, CONV_3D = 2 };
+
 #endif
 
 namespace cv {
