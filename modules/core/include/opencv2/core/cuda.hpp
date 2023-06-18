@@ -567,6 +567,29 @@ The function does not reallocate memory if the matrix has proper attributes alre
  */
 CV_EXPORTS_W void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr);
 
+/** @brief Bindings overload to create a GpuMat from existing GPU memory.
+@param rows Row count.
+@param cols Column count.
+@param type Type of the matrix.
+@param cudaMemoryAddress Address of the allocated GPU memory on the device. This does not allocate matrix data. Instead, it just initializes the matrix header that points to the specified \a cudaMemoryAddress, which means that no data is copied. This operation is very efficient and can be used to process external data using OpenCV functions. The external data is not automatically deallocated, so you should take care of it.
+@param step Number of bytes each matrix row occupies. The value should include the padding bytes at the end of each row, if any. If the parameter is missing (set to Mat::AUTO_STEP ), no padding is assumed and the actual step is calculated as cols*elemSize(). See GpuMat::elemSize.
+@note Overload for generation of bindings only, not exported or intended for use internally from C++.
+ */
+CV_EXPORTS_W GpuMat inline createGpuMatFromCudaMemory(int rows, int cols, int type, size_t cudaMemoryAddress, size_t step = Mat::AUTO_STEP) {
+    return GpuMat(rows, cols, type, reinterpret_cast<void*>(cudaMemoryAddress), step);
+};
+
+ /** @overload
+@param size 2D array size: Size(cols, rows). In the Size() constructor, the number of rows and the number of columns go in the reverse order.
+@param type Type of the matrix.
+@param cudaMemoryAddress Address of the allocated GPU memory on the device. This does not allocate matrix data. Instead, it just initializes the matrix header that points to the specified \a cudaMemoryAddress, which means that no data is copied. This operation is very efficient and can be used to process external data using OpenCV functions. The external data is not automatically deallocated, so you should take care of it.
+@param step Number of bytes each matrix row occupies. The value should include the padding bytes at the end of each row, if any. If the parameter is missing (set to Mat::AUTO_STEP ), no padding is assumed and the actual step is calculated as cols*elemSize(). See GpuMat::elemSize.
+@note Overload for generation of bindings only, not exported or intended for use internally from C++.
+ */
+CV_EXPORTS_W inline GpuMat createGpuMatFromCudaMemory(Size size, int type, size_t cudaMemoryAddress, size_t step = Mat::AUTO_STEP) {
+    return GpuMat(size, type, reinterpret_cast<void*>(cudaMemoryAddress), step);
+};
+
 /** @brief BufferPool for use with CUDA streams
 
 BufferPool utilizes Stream's allocator to create new buffers for GpuMat's. It is
@@ -609,8 +632,8 @@ Below is an example that utilizes BufferPool with StackAllocator:
         GpuMat d_src2 = pool2.getBuffer(1024, 1024, CV_8UC1);   // 1MB
         GpuMat d_dst2 = pool2.getBuffer(1024, 1024, CV_8UC3);   // 3MB
 
-        cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
-        cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
+        cvtColor(d_src1, d_dst1, cv::COLOR_GRAY2BGR, 0, stream1);
+        cvtColor(d_src2, d_dst2, cv::COLOR_GRAY2BGR, 0, stream2);
     }
 @endcode
 
@@ -675,8 +698,8 @@ and the corresponding memory is automatically returned to the pool for later usa
             d_src1.setTo(Scalar(i), stream1);
             d_src2.setTo(Scalar(i), stream2);
 
-            cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
-            cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
+            cvtColor(d_src1, d_dst1, cv::COLOR_GRAY2BGR, 0, stream1);
+            cvtColor(d_src2, d_dst2, cv::COLOR_GRAY2BGR, 0, stream2);
                                                                     // The order of destruction of the local variables is:
                                                                     //   d_dst2 => d_src2 => d_dst1 => d_src1
                                                                     // LIFO rule is satisfied, this code runs without error
@@ -920,6 +943,13 @@ private:
     friend class BufferPool;
     friend class DefaultDeviceInitializer;
 };
+
+
+/** @brief Bindings overload to create a Stream object from the address stored in an existing CUDA Runtime API stream pointer (cudaStream_t).
+@param cudaStreamMemoryAddress Memory address stored in a CUDA Runtime API stream pointer (cudaStream_t). The created Stream object does not perform any allocation or deallocation and simply wraps existing raw CUDA Runtime API stream pointer.
+@note Overload for generation of bindings only, not exported or intended for use internally from C++.
+ */
+CV_EXPORTS_W Stream wrapStream(size_t cudaStreamMemoryAddress);
 
 class CV_EXPORTS_W Event
 {

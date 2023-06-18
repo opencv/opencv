@@ -1,4 +1,38 @@
 #!/usr/bin/env python
+""" Print performance test run statistics.
+
+Performance data is stored in the GTest log file created by performance tests. Default name is
+`test_details.xml`. It can be changed with the `--gtest_output=xml:<location>/<filename>.xml` test
+option. See https://github.com/opencv/opencv/wiki/HowToUsePerfTests for more details.
+
+This script produces configurable performance report tables in text and HTML formats. It allows to
+filter test cases by name and parameter string and select specific performance metrics columns. One
+or multiple test results can be used for input.
+
+### Example
+
+./report.py  -c min,mean,median -f '(LUT|Match).*640' opencv_perf_core.xml  opencv_perf_features2d.xml
+
+opencv_perf_features2d.xml, opencv_perf_core.xml
+
+                       Name of Test                            Min        Mean      Median
+KnnMatch::OCL_BruteForceMatcherFixture::(640x480, 32FC1)    1365.04 ms 1368.18 ms 1368.52 ms
+LUT::OCL_LUTFixture::(640x480, 32FC1)                        2.57 ms    2.62 ms    2.64 ms
+LUT::OCL_LUTFixture::(640x480, 32FC4)                        21.15 ms   21.25 ms   21.24 ms
+LUT::OCL_LUTFixture::(640x480, 8UC1)                         2.22 ms    2.28 ms    2.29 ms
+LUT::OCL_LUTFixture::(640x480, 8UC4)                         19.12 ms   19.24 ms   19.19 ms
+LUT::SizePrm::640x480                                        2.22 ms    2.27 ms    2.29 ms
+Match::OCL_BruteForceMatcherFixture::(640x480, 32FC1)       1364.15 ms 1367.73 ms 1365.45 ms
+RadiusMatch::OCL_BruteForceMatcherFixture::(640x480, 32FC1) 1372.68 ms 1375.52 ms 1375.42 ms
+
+### Options
+
+-o FMT, --output=FMT        - output results in text format (can be 'txt', 'html' or 'auto' - default)
+-u UNITS, --units=UNITS     - units for output values (s, ms (default), us, ns or ticks)
+-c COLS, --columns=COLS     - comma-separated list of columns to show
+-f REGEX, --filter=REGEX    - regex to filter tests
+--show-all                  - also include empty and "notrun" lines
+"""
 
 from __future__ import print_function
 import testlog_parser, sys, os, xml, re, glob

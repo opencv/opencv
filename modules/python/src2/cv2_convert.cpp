@@ -88,6 +88,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
                typenum == NPY_SHORT ? CV_16S :
                typenum == NPY_INT ? CV_32S :
                typenum == NPY_INT32 ? CV_32S :
+               typenum == NPY_HALF ? CV_16F :
                typenum == NPY_FLOAT ? CV_32F :
                typenum == NPY_DOUBLE ? CV_64F : -1;
 
@@ -326,7 +327,7 @@ bool pyopencv_to(PyObject *o, Scalar& s, const ArgInfo& info)
         }
     } else {
         if (PyFloat_Check(o) || PyInt_Check(o)) {
-            s[0] = PyFloat_AsDouble(o);
+            s = PyFloat_AsDouble(o);
         } else {
             failmsg("Scalar value for argument '%s' is not numeric", info.name);
             return false;
@@ -443,6 +444,30 @@ PyObject* pyopencv_from(const int& value)
 }
 
 // --- int64
+
+template<>
+bool pyopencv_to(PyObject* obj, int64& value, const ArgInfo& info)
+{
+    if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be integer, not bool", info.name);
+        return false;
+    }
+    if (PyArray_IsIntegerScalar(obj))
+    {
+        value = PyLong_AsLongLong(obj);
+    }
+    else
+    {
+        failmsg("Argument '%s' is required to be an integer", info.name);
+        return false;
+    }
+    return !CV_HAS_CONVERSION_ERROR(value);
+}
 
 template<>
 PyObject* pyopencv_from(const int64& value)

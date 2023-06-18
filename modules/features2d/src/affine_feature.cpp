@@ -243,7 +243,7 @@ private:
         else
             mask0 = mask;
         pose = Matx23f(1,0,0,
-                    0,1,0);
+                       0,1,0);
 
         if( phi == 0 )
             image.copyTo(rotImage);
@@ -276,6 +276,8 @@ private:
         }
         if( phi != 0 || tilt != 1 )
             warpAffine(mask0, warpedMask, pose, warpedImage.size(), INTER_NEAREST);
+        else
+            warpedMask = mask0;
     }
 
 

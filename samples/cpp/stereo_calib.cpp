@@ -24,6 +24,7 @@
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
+#include "opencv2/objdetect/charuco_detector.hpp"
 
 #include <vector>
 #include <string>
@@ -40,21 +41,31 @@ using namespace std;
 static int print_help(char** argv)
 {
     cout <<
-            " Given a list of chessboard images, the number of corners (nx, ny)\n"
-            " on the chessboards, and a flag: useCalibrated for \n"
+            " Given a list of chessboard or ChArUco images, the number of corners (nx, ny)\n"
+            " on the chessboards and the number of squares (nx, ny) on ChArUco,\n"
+            " and a flag: useCalibrated for \n"
             "   calibrated (0) or\n"
             "   uncalibrated \n"
             "     (1: use stereoCalibrate(), 2: compute fundamental\n"
             "         matrix separately) stereo. \n"
             " Calibrate the cameras and display the\n"
             " rectified results along with the computed disparity images.   \n" << endl;
-    cout << "Usage:\n " << argv[0] << " -w=<board_width default=9> -h=<board_height default=6> -s=<square_size default=1.0> <image list XML/YML file default=stereo_calib.xml>\n" << endl;
+    cout << "Usage:\n " << argv[0] << " -w=<board_width default=9> -h=<board_height default=6>"
+        <<" -t=<pattern type: chessboard or charucoboard default=chessboard> -s=<square_size default=1.0> -ms=<marker size default=0.5>"
+        <<" -ad=<predefined aruco dictionary name default=DICT_4X4_50> -adf=<aruco dictionary file default=None>"
+        <<" <image list XML/YML file default=stereo_calib.xml>\n" << endl;
+    cout << "Available Aruco dictionaries: DICT_4X4_50, DICT_4X4_100, DICT_4X4_250, "
+        << "DICT_4X4_1000, DICT_5X5_50, DICT_5X5_100, DICT_5X5_250, DICT_5X5_1000, "
+        << "DICT_6X6_50, DICT_6X6_100, DICT_6X6_250, DICT_6X6_1000, DICT_7X7_50, "
+        << "DICT_7X7_100, DICT_7X7_250, DICT_7X7_1000, DICT_ARUCO_ORIGINAL, "
+        << "DICT_APRILTAG_16h5, DICT_APRILTAG_25h9, DICT_APRILTAG_36h10, DICT_APRILTAG_36h11\n";
+
     return 0;
 }
 
 
 static void
-StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, bool displayCorners = false, bool useCalibrated=true, bool showRectified=true)
+StereoCalib(const vector<string>& imagelist, Size inputBoardSize, string type, float squareSize, float markerSize, cv::aruco::PredefinedDictionaryType arucoDict, string arucoDictFile, bool displayCorners = false, bool useCalibrated=true, bool showRectified=true)
 {
     if( imagelist.size() % 2 != 0 )
     {
@@ -75,12 +86,43 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
     imagePoints[1].resize(nimages);
     vector<string> goodImageList;
 
+    Size boardSizeInnerCorners, boardSizeUnits;
+    if (type == "chessboard") {
+        //chess board pattern boardSize is given in inner corners
+        boardSizeInnerCorners = inputBoardSize;
+        boardSizeUnits.height = inputBoardSize.height+1;
+        boardSizeUnits.width = inputBoardSize.width+1;
+    }
+    else if (type == "charucoboard") {
+        //ChArUco board pattern boardSize is given in squares units
+        boardSizeUnits = inputBoardSize;
+        boardSizeInnerCorners.width = inputBoardSize.width - 1;
+        boardSizeInnerCorners.height = inputBoardSize.height - 1;
+    }
+    else {
+        std::cout << "unknown pattern type " << type << "\n";
+        return;
+    }
+
+    cv::aruco::Dictionary dictionary;
+    if (arucoDictFile == "None") {
+        dictionary = cv::aruco::getPredefinedDictionary(arucoDict);
+    }
+    else {
+        cv::FileStorage dict_file(arucoDictFile, cv::FileStorage::Mode::READ);
+        cv::FileNode fn(dict_file.root());
+        dictionary.readDictionary(fn);
+    }
+    cv::aruco::CharucoBoard ch_board(boardSizeUnits, squareSize, markerSize, dictionary);
+    cv::aruco::CharucoDetector ch_detector(ch_board);
+    std::vector<int> markerIds;
+
     for( i = j = 0; i < nimages; i++ )
     {
         for( k = 0; k < 2; k++ )
         {
             const string& filename = imagelist[i*2+k];
-            Mat img = imread(filename, 0);
+            Mat img = imread(filename, IMREAD_GRAYSCALE);
             if(img.empty())
                 break;
             if( imageSize == Size() )
@@ -99,8 +141,19 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
                     timg = img;
                 else
                     resize(img, timg, Size(), scale, scale, INTER_LINEAR_EXACT);
-                found = findChessboardCorners(timg, boardSize, corners,
-                    CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE);
+
+                if (type == "chessboard") {
+                    found = findChessboardCorners(timg, boardSizeInnerCorners, corners,
+                        CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE);
+                }
+                else if (type == "charucoboard") {
+                    ch_detector.detectBoard(timg, corners, markerIds);
+                    found = corners.size() == (size_t) (boardSizeInnerCorners.height*boardSizeInnerCorners.width);
+                }
+                else {
+                    cout << "Error: unknown pattern " << type << "\n";
+                    return;
+                }
                 if( found )
                 {
                     if( scale > 1 )
@@ -116,7 +169,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
                 cout << filename << endl;
                 Mat cimg, cimg1;
                 cvtColor(img, cimg, COLOR_GRAY2BGR);
-                drawChessboardCorners(cimg, boardSize, corners, found);
+                drawChessboardCorners(cimg, boardSizeInnerCorners, corners, found);
                 double sf = 640./MAX(img.rows, img.cols);
                 resize(cimg, cimg1, Size(), sf, sf, INTER_LINEAR_EXACT);
                 imshow("corners", cimg1);
@@ -128,9 +181,11 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
                 putchar('.');
             if( !found )
                 break;
-            cornerSubPix(img, corners, Size(11,11), Size(-1,-1),
-                         TermCriteria(TermCriteria::COUNT+TermCriteria::EPS,
-                                      30, 0.01));
+            if (type == "chessboard") {
+                cornerSubPix(img, corners, Size(11, 11), Size(-1, -1),
+                    TermCriteria(TermCriteria::COUNT + TermCriteria::EPS,
+                        30, 0.01));
+            }
         }
         if( k == 2 )
         {
@@ -153,8 +208,8 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
 
     for( i = 0; i < nimages; i++ )
     {
-        for( j = 0; j < boardSize.height; j++ )
-            for( k = 0; k < boardSize.width; k++ )
+        for( j = 0; j < boardSizeInnerCorners.height; j++ )
+            for( k = 0; k < boardSizeInnerCorners.width; k++ )
                 objectPoints[i].push_back(Point3f(k*squareSize, j*squareSize, 0));
     }
 
@@ -298,7 +353,7 @@ StereoCalib(const vector<string>& imagelist, Size boardSize, float squareSize, b
     {
         for( k = 0; k < 2; k++ )
         {
-            Mat img = imread(goodImageList[i*2+k], 0), rimg, cimg;
+            Mat img = imread(goodImageList[i*2+k], IMREAD_GRAYSCALE), rimg, cimg;
             remap(img, rimg, rmap[k][0], rmap[k][1], INTER_LINEAR);
             cvtColor(rimg, cimg, COLOR_GRAY2BGR);
             Mat canvasPart = !isVerticalStereo ? canvas(Rect(w*k, 0, w, h)) : canvas(Rect(0, h*k, w, h));
@@ -342,17 +397,49 @@ static bool readStringList( const string& filename, vector<string>& l )
 
 int main(int argc, char** argv)
 {
-    Size boardSize;
+    Size inputBoardSize;
     string imagelistfn;
     bool showRectified;
-    cv::CommandLineParser parser(argc, argv, "{w|9|}{h|6|}{s|1.0|}{nr||}{help||}{@input|stereo_calib.xml|}");
+    cv::CommandLineParser parser(argc, argv, "{w|9|}{h|6|}{t|chessboard|}{s|1.0|}{ms|0.5|}{ad|DICT_4X4_50|}{adf|None|}{nr||}{help||}{@input|stereo_calib.xml|}");
     if (parser.has("help"))
         return print_help(argv);
     showRectified = !parser.has("nr");
     imagelistfn = samples::findFile(parser.get<string>("@input"));
-    boardSize.width = parser.get<int>("w");
-    boardSize.height = parser.get<int>("h");
+    inputBoardSize.width = parser.get<int>("w");
+    inputBoardSize.height = parser.get<int>("h");
+    string type = parser.get<string>("t");
     float squareSize = parser.get<float>("s");
+    float markerSize = parser.get<float>("ms");
+    string arucoDictName = parser.get<string>("ad");
+    string arucoDictFile = parser.get<string>("adf");
+
+    cv::aruco::PredefinedDictionaryType arucoDict;
+    if (arucoDictName == "DICT_4X4_50") { arucoDict = cv::aruco::DICT_4X4_50; }
+    else if (arucoDictName == "DICT_4X4_100") { arucoDict = cv::aruco::DICT_4X4_100; }
+    else if (arucoDictName == "DICT_4X4_250") { arucoDict = cv::aruco::DICT_4X4_250; }
+    else if (arucoDictName == "DICT_4X4_1000") { arucoDict = cv::aruco::DICT_4X4_1000; }
+    else if (arucoDictName == "DICT_5X5_50") { arucoDict = cv::aruco::DICT_5X5_50; }
+    else if (arucoDictName == "DICT_5X5_100") { arucoDict = cv::aruco::DICT_5X5_100; }
+    else if (arucoDictName == "DICT_5X5_250") { arucoDict = cv::aruco::DICT_5X5_250; }
+    else if (arucoDictName == "DICT_5X5_1000") { arucoDict = cv::aruco::DICT_5X5_1000; }
+    else if (arucoDictName == "DICT_6X6_50") { arucoDict = cv::aruco::DICT_6X6_50; }
+    else if (arucoDictName == "DICT_6X6_100") { arucoDict = cv::aruco::DICT_6X6_100; }
+    else if (arucoDictName == "DICT_6X6_250") { arucoDict = cv::aruco::DICT_6X6_250; }
+    else if (arucoDictName == "DICT_6X6_1000") { arucoDict = cv::aruco::DICT_6X6_1000; }
+    else if (arucoDictName == "DICT_7X7_50") { arucoDict = cv::aruco::DICT_7X7_50; }
+    else if (arucoDictName == "DICT_7X7_100") { arucoDict = cv::aruco::DICT_7X7_100; }
+    else if (arucoDictName == "DICT_7X7_250") { arucoDict = cv::aruco::DICT_7X7_250; }
+    else if (arucoDictName == "DICT_7X7_1000") { arucoDict = cv::aruco::DICT_7X7_1000; }
+    else if (arucoDictName == "DICT_ARUCO_ORIGINAL") { arucoDict = cv::aruco::DICT_ARUCO_ORIGINAL; }
+    else if (arucoDictName == "DICT_APRILTAG_16h5") { arucoDict = cv::aruco::DICT_APRILTAG_16h5; }
+    else if (arucoDictName == "DICT_APRILTAG_25h9") { arucoDict = cv::aruco::DICT_APRILTAG_25h9; }
+    else if (arucoDictName == "DICT_APRILTAG_36h10") { arucoDict = cv::aruco::DICT_APRILTAG_36h10; }
+    else if (arucoDictName == "DICT_APRILTAG_36h11") { arucoDict = cv::aruco::DICT_APRILTAG_36h11; }
+    else {
+        cout << "incorrect name of aruco dictionary \n";
+        return 1;
+    }
+
     if (!parser.check())
     {
         parser.printErrors();
@@ -366,6 +453,6 @@ int main(int argc, char** argv)
         return print_help(argv);
     }
 
-    StereoCalib(imagelist, boardSize, squareSize, false, true, showRectified);
+    StereoCalib(imagelist, inputBoardSize, type, squareSize, markerSize, arucoDict, arucoDictFile, false, true, showRectified);
     return 0;
 }

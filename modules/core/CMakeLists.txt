@@ -6,6 +6,7 @@ ocv_add_dispatched_file(arithm SSE2 SSE4_1 AVX2 VSX3)
 ocv_add_dispatched_file(convert SSE2 AVX2 VSX3)
 ocv_add_dispatched_file(convert_scale SSE2 AVX2)
 ocv_add_dispatched_file(count_non_zero SSE2 AVX2)
+ocv_add_dispatched_file(has_non_zero SSE2 AVX2)
 ocv_add_dispatched_file(matmul SSE2 SSE4_1 AVX2 AVX512_SKX NEON_DOTPROD)
 ocv_add_dispatched_file(mean SSE2 AVX2)
 ocv_add_dispatched_file(merge SSE2 AVX2)
@@ -168,6 +169,10 @@ if(HAVE_HPX)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE "${HPX_LIBRARIES}")
 endif()
 
+if(HAVE_OPENMP AND DEFINED OpenMP_CXX_LIBRARIES AND OpenMP_CXX_LIBRARIES)
+  ocv_target_link_libraries(${the_module} LINK_PRIVATE "${OpenMP_CXX_LIBRARIES}")
+endif()
+
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
 
@@ -175,7 +180,7 @@ ocv_install_3rdparty_licenses(SoftFloat "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/So
 
 
 # generate data (samples data) config file
-set(OPENCV_DATA_CONFIG_FILE "${CMAKE_BINARY_DIR}/opencv_data_config.hpp")
+set(OPENCV_DATA_CONFIG_FILE "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv_data_config.hpp")
 set(OPENCV_DATA_CONFIG_STR "")
 
 if(CMAKE_INSTALL_PREFIX)

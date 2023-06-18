@@ -35,6 +35,22 @@ static AppMode strToAppMode(const std::string& mode_str) {
     }
 }
 
+enum class WaitMode {
+    BUSY,
+    SLEEP
+};
+
+static WaitMode strToWaitMode(const std::string& mode_str) {
+    if (mode_str == "sleep") {
+        return WaitMode::SLEEP;
+    } else if (mode_str == "busy") {
+        return WaitMode::BUSY;
+    } else {
+        throw std::logic_error("Unsupported wait mode: " + mode_str +
+                "\nPlease chose between: busy (default) and sleep");
+    }
+}
+
 template <typename T>
 T read(const cv::FileNode& node) {
     return static_cast<T>(node);
@@ -401,7 +417,12 @@ int main(int argc, char* argv[]) {
                 if (app_mode == AppMode::BENCHMARK) {
                     latency = 0.0;
                 }
-                auto src = std::make_shared<DummySource>(latency, output, drop_frames);
+
+                const auto wait_mode =
+                    strToWaitMode(readOpt<std::string>(src_fn["wait_mode"]).value_or("busy"));
+                auto wait_strategy = (wait_mode == WaitMode::SLEEP) ? utils::sleep : utils::busyWait;
+                auto src = std::make_shared<DummySource>(
+                        utils::double_ms_t{latency}, output, drop_frames, std::move(wait_strategy));
                 builder.setSource(src_name, src);
             }
 
@@ -446,7 +467,7 @@ int main(int argc, char* argv[]) {
             // NB: Pipeline mode from config takes priority over cmd.
             auto pl_mode = cfg_pl_mode.has_value()
                 ? strToPLMode(cfg_pl_mode.value()) : cmd_pl_mode;
-            // NB: Using drop_frames with streaming pipelines will follow to
+            // NB: Using drop_frames with streaming pipelines will lead to
             // incorrect performance results.
             if (drop_frames && pl_mode == PLMode::STREAMING) {
                 throw std::logic_error(

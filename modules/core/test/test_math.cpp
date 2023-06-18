@@ -3018,7 +3018,7 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
     cv::randu(src,cv::Scalar(-128), cv::Scalar(128));
     cv::Mat goldMean;
 
-    cv::reduce(src,goldMean,0 ,REDUCE_AVG, CV_32F);
+    cv::reduce(src, goldMean, 0, REDUCE_AVG, CV_32F);
 
     cv::calcCovarMatrix(src,gold,goldMean,singleMatFlags,CV_32F);
 
@@ -3992,6 +3992,13 @@ TEST(Core_FastMath, InlineNaN)
     EXPECT_EQ( cvIsNaN((double) NAN), 1);
     EXPECT_EQ( cvIsNaN((double) -NAN), 1);
     EXPECT_EQ( cvIsNaN(0.0), 0);
+
+    // Regression: check the +/-Inf cases
+    Cv64suf suf;
+    suf.u = 0x7FF0000000000000UL;
+    EXPECT_EQ( cvIsNaN(suf.f), 0);
+    suf.u = 0xFFF0000000000000UL;
+    EXPECT_EQ( cvIsNaN(suf.f), 0);
 }
 
 TEST(Core_FastMath, InlineIsInf)
@@ -4003,6 +4010,13 @@ TEST(Core_FastMath, InlineIsInf)
     EXPECT_EQ( cvIsInf((double) HUGE_VAL), 1);
     EXPECT_EQ( cvIsInf((double) -HUGE_VAL), 1);
     EXPECT_EQ( cvIsInf(0.0), 0);
+
+    // Regression: check the cases of 0x7FF00000xxxxxxxx
+    Cv64suf suf;
+    suf.u = 0x7FF0000000000001UL;
+    EXPECT_EQ( cvIsInf(suf.f), 0);
+    suf.u = 0x7FF0000012345678UL;
+    EXPECT_EQ( cvIsInf(suf.f), 0);
 }
 
 }} // namespace

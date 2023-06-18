@@ -74,7 +74,11 @@ void focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, boo
     d2 = (h[7] - h[6]) * (h[7] + h[6]);
     v1 = -(h[0] * h[1] + h[3] * h[4]) / d1;
     v2 = (h[0] * h[0] + h[3] * h[3] - h[1] * h[1] - h[4] * h[4]) / d2;
-    if (v1 < v2) std::swap(v1, v2);
+    if (v1 < v2)
+    {
+        std::swap(v1, v2);
+        std::swap(d1, d2);
+    }
     if (v1 > 0 && v2 > 0) f1 = std::sqrt(std::abs(d1) > std::abs(d2) ? v1 : v2);
     else if (v1 > 0) f1 = std::sqrt(v1);
     else f1_ok = false;
@@ -84,7 +88,11 @@ void focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, boo
     d2 = h[0] * h[0] + h[1] * h[1] - h[3] * h[3] - h[4] * h[4];
     v1 = -h[2] * h[5] / d1;
     v2 = (h[5] * h[5] - h[2] * h[2]) / d2;
-    if (v1 < v2) std::swap(v1, v2);
+    if (v1 < v2)
+    {
+        std::swap(v1, v2);
+        std::swap(d1, d2);
+    }
     if (v1 > 0 && v2 > 0) f0 = std::sqrt(std::abs(d1) > std::abs(d2) ? v1 : v2);
     else if (v1 > 0) f0 = std::sqrt(v1);
     else f0_ok = false;

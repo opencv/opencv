@@ -49,7 +49,7 @@ std::ostream& operator<< (std::ostream &os, const KernelPackage &e)
         _C(OCL);
         _C(OCL_FLUID);
 #undef _C
-    default: GAPI_Assert(false);
+    default: GAPI_Error("InternalError");
     }
     return os;
 }
@@ -190,7 +190,7 @@ public:
         : cv::gapi::wip::GCaptureSource(pipeline) {
     }
 
-    bool pull(cv::gapi::wip::Data& data) {
+    bool pull(cv::gapi::wip::Data& data) override {
         if (cv::gapi::wip::GCaptureSource::pull(data)) {
             data = cv::MediaFrame::Create<TestMediaBGR>(cv::util::get<cv::Mat>(data));
             return true;
@@ -232,7 +232,7 @@ public:
         : cv::gapi::wip::GCaptureSource(pipeline) {
     }
 
-    bool pull(cv::gapi::wip::Data& data) {
+    bool pull(cv::gapi::wip::Data& data) override {
         if (cv::gapi::wip::GCaptureSource::pull(data)) {
             cv::Mat bgr = cv::util::get<cv::Mat>(data);
             cv::Mat y, uv;
@@ -256,7 +256,7 @@ public:
         : cv::gapi::wip::GCaptureSource(pipeline) {
     }
 
-    bool pull(cv::gapi::wip::Data& data) {
+    bool pull(cv::gapi::wip::Data& data) override {
         if (cv::gapi::wip::GCaptureSource::pull(data)) {
             cv::Mat bgr = cv::util::get<cv::Mat>(data);
             cv::Mat gray;
@@ -298,7 +298,7 @@ void checkPullOverload(const cv::Mat& ref,
             out_mat = *opt_mat;
             break;
         }
-        default: GAPI_Assert(false && "Incorrect type of Args");
+        default: GAPI_Error("Incorrect type of Args");
     }
 
     EXPECT_EQ(0., cv::norm(ref, out_mat, cv::NORM_INF));
@@ -319,7 +319,7 @@ public:
         return "InvalidSource sucessfuly failed!";
     }
 
-    bool pull(cv::gapi::wip::Data& d) {
+    bool pull(cv::gapi::wip::Data& d) override {
         ++m_curr_frame_id;
         if (m_curr_frame_id > m_num_frames) {
             return false;
@@ -2420,7 +2420,7 @@ TEST(GAPI_Streaming, TestPythonAPI)
     switch (args.index()) {
         case RunArgs::index_of<cv::GRunArgs>():
             out_args = util::get<cv::GRunArgs>(args); break;
-        default: GAPI_Assert(false && "Incorrect type of return value");
+        default: GAPI_Error("Incorrect type of return value");
     }
 
     ASSERT_EQ(1u, out_args.size());

@@ -44,7 +44,8 @@ static std::string pdims(const std::vector<int64_t> &dims) {
 
 struct TensorInfo {
     TensorInfo() = default;
-    explicit TensorInfo(const Ort::TensorTypeAndShapeInfo& info)
+
+    explicit TensorInfo(const Ort::ConstTensorTypeAndShapeInfo &info)
         : dims(info.GetShape())
         , type(info.GetElementType())
         , is_dynamic(ade::util::find(dims, -1) != dims.end()) {
@@ -171,7 +172,7 @@ inline int toCV(ONNXTensorElementDataType prec) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: return CV_32F;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32: return CV_32S;
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64: return CV_32S;
-    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    default: GAPI_Error("ONNX. Unsupported data type");
     }
     return -1;
 }
@@ -207,7 +208,7 @@ inline void copyFromONNX(Ort::Value &v, cv::Mat& mat) {
                                            mat.total());
             break;
         }
-    default: GAPI_Assert(false && "ONNX. Unsupported data type");
+    default: GAPI_Error("ONNX. Unsupported data type");
     }
 }
 
@@ -233,7 +234,7 @@ inline void preprocess(const cv::Mat& src,
                             "32F tensor dimensions should match with all non-dynamic NN input dimensions");
             }
         } else {
-            GAPI_Assert(false && "32F tensor size should match with NN input");
+            GAPI_Error("32F tensor size should match with NN input");
         }
 
         dst = src;
@@ -283,6 +284,7 @@ inline void preprocess(const cv::Mat& src,
         cv::resize(csc, rsz, cv::Size(new_w, new_h));
         if (src.depth() == CV_8U && type == CV_32F) {
             rsz.convertTo(pp, type, ti.normalize ? 1.f / 255 : 1.f);
+
             if (ti.mstd.has_value()) {
                 pp -= ti.mstd->mean;
                 pp /= ti.mstd->stdev;
@@ -338,7 +340,7 @@ void preprocess(const cv::MediaFrame::View& view,
             break;
         }
         default:
-            GAPI_Assert(false && "Unsupported media format for ONNX backend");
+            GAPI_Error("Unsupported media format for ONNX backend");
     }
 }
 
@@ -367,7 +369,7 @@ inline Ort::Value createTensor(const Ort::MemoryInfo& memory_info,
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
         return createTensor<int32_t>(memory_info, tensor_params, data);
     default:
-        GAPI_Assert(false && "ONNX. Unsupported data type");
+        GAPI_Error("ONNX. Unsupported data type");
     }
     return Ort::Value{nullptr};
 }
@@ -688,11 +690,10 @@ std::vector<TensorInfo> ONNXCompiled::getTensorInfo(TensorPosition pos) {
             : this_session.GetOutputTypeInfo(i);
         tensor_info.emplace_back(info.GetTensorTypeAndShapeInfo());
 
-        char *name_p = pos == INPUT
-            ? this_session.GetInputName(i, allocator)
-            : this_session.GetOutputName(i, allocator);
-        tensor_info.back().name = name_p;
-        allocator.Free(name_p);
+        Ort::AllocatedStringPtr name_p = pos == INPUT
+            ? this_session.GetInputNameAllocated(i, allocator)
+            : this_session.GetOutputNameAllocated(i, allocator);
+        tensor_info.back().name = std::string(name_p.get());
     }
 
     return tensor_info;
@@ -858,7 +859,7 @@ static void checkInputMeta(const cv::GMetaArg mm) {
                 case cv::MediaFormat::NV12: break;
                 case cv::MediaFormat::BGR:  break;
                 default:
-                    GAPI_Assert(false && "Unsupported media format for ONNX backend");
+                    GAPI_Error("Unsupported media format for ONNX backend");
             } break;
         } break;
         default:
@@ -1101,7 +1102,7 @@ struct InferList2: public cv::detail::KernelTag {
                     const auto &vec = this_vec.rref<cv::Mat>();
                     uu.oc->setInput(in_idx, vec[list_idx]);
                 } else {
-                    GAPI_Assert(false && "Only Rect and Mat types are supported for infer list 2!");
+                    GAPI_Error("Only Rect and Mat types are supported for infer list 2!");
                 }
                 // }}} (Prepare input)
             } // }}} (For every input of the net)
@@ -1143,24 +1144,31 @@ namespace {
             if (pp.is_generic) {
                 auto& info = cv::util::any_cast<cv::detail::InOutInfo>(op.params);
 
-                for (const auto& a : info.in_names)
+                for (const auto& layer_name : info.in_names)
                 {
-                    pp.input_names.push_back(a);
-                }
-                // Adding const input is necessary because the definition of input_names
-                // includes const input.
-                for (const auto& a : pp.const_inputs)
-                {
-                    pp.input_names.push_back(a.first);
+                    pp.input_names.push_back(layer_name);
+                    if (!pp.generic_mstd.empty()) {
+                        const auto &ms = pp.generic_mstd.at(layer_name);
+                        pp.mean.push_back(ms.first);
+                        pp.stdev.push_back(ms.second);
+                    }
+                    if (!pp.generic_norm.empty()) {
+                        pp.normalize.push_back(pp.generic_norm.at(layer_name));
+                    }
                 }
                 pp.num_in = info.in_names.size();
+
+                // Incorporate extra parameters associated with input layer names
+                // FIXME(DM): The current form assumes ALL input layers require
+                // this information, this is obviously not correct
 
                 for (const auto& a : info.out_names)
                 {
                     pp.output_names.push_back(a);
                 }
                 pp.num_out = info.out_names.size();
-            }
+            } // if(is_generic) -- note, the structure is already filled at the user
+              // end when a non-generic Params are used
 
             gm.metadata(nh).set(ONNXUnit{pp});
             gm.metadata(nh).set(ONNXCallable{ki.run});

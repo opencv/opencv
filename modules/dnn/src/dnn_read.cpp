@@ -29,6 +29,10 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
             std::swap(model, config);
         return readNetFromTensorflow(model, config);
     }
+    if (framework == "tflite" || modelExt == "tflite")
+    {
+        return readNetFromTFLite(model);
+    }
     if (framework == "torch" || modelExt == "t7" || modelExt == "net" || configExt == "t7" || configExt == "net")
     {
         return readNetFromTorch(model.empty() ? config : model);
@@ -66,6 +70,8 @@ Net readNet(const String& _framework, const std::vector<uchar>& bufferModel,
         CV_Error(Error::StsNotImplemented, "Reading Torch models from buffers");
     else if (framework == "dldt")
         return readNetFromModelOptimizer(bufferConfig, bufferModel);
+    else if (framework == "tflite")
+        return readNetFromTFLite(bufferModel);
     CV_Error(Error::StsError, "Cannot determine an origin framework with a name " + framework);
 }
 

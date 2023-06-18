@@ -241,6 +241,8 @@ OCV_OPTION(WITH_1394 "Include IEEE1394 support" ON
 OCV_OPTION(WITH_AVFOUNDATION "Use AVFoundation for Video I/O (iOS/Mac)" ON
   VISIBLE_IF APPLE
   VERIFY HAVE_AVFOUNDATION)
+OCV_OPTION(WITH_AVIF "Enable AVIF support" OFF
+  VERIFY HAVE_AVIF)
 OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
   VISIBLE_IF IOS
   VERIFY HAVE_CAP_IOS)
@@ -264,10 +266,10 @@ OCV_OPTION(WITH_CUBLAS "Include NVidia Cuda Basic Linear Algebra Subprograms (BL
 OCV_OPTION(WITH_CUDNN "Include NVIDIA CUDA Deep Neural Network (cuDNN) library support" WITH_CUDA
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_CUDNN)
-OCV_OPTION(WITH_NVCUVID "Include NVidia Video Decoding library support" OFF  # disabled, details: https://github.com/opencv/opencv/issues/14850
+OCV_OPTION(WITH_NVCUVID "Include NVidia Video Decoding library support" ON
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_NVCUVID)
-OCV_OPTION(WITH_NVCUVENC "Include NVidia Video Encoding library support" OFF
+OCV_OPTION(WITH_NVCUVENC "Include NVidia Video Encoding library support" ON
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_NVCUVENC)
 OCV_OPTION(WITH_EIGEN "Include Eigen2/Eigen3 support" (NOT CV_DISABLE_OPTIMIZATION AND NOT CMAKE_CROSSCOMPILING)
@@ -469,6 +471,12 @@ OCV_OPTION(WITH_TIMVX "Include Tim-VX support" OFF
 OCV_OPTION(WITH_OBSENSOR "Include obsensor support (Orbbec RGB-D modules: Astra+/Femto)" ON
   VISIBLE_IF (WIN32 AND NOT ARM AND NOT WINRT) OR ( UNIX AND NOT APPLE AND NOT ANDROID)
   VERIFY HAVE_OBSENSOR)
+OCV_OPTION(WITH_CANN "Include CANN support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_CANN)
+OCV_OPTION(WITH_FLATBUFFERS "Include Flatbuffers support (required by DNN/TFLite importer)" ON
+  VISIBLE_IF TRUE
+  VERIFY HAVE_FLATBUFFERS)
 
 # OpenCV build components
 # ===================================================
@@ -506,6 +514,7 @@ OCV_OPTION(INSTALL_TESTS            "Install accuracy and performance test binar
 # ===================================================
 OCV_OPTION(ENABLE_CCACHE              "Use ccache"                                               (UNIX AND (CMAKE_GENERATOR MATCHES "Makefile" OR CMAKE_GENERATOR MATCHES "Ninja" OR CMAKE_GENERATOR MATCHES "Xcode")) )
 OCV_OPTION(ENABLE_PRECOMPILED_HEADERS "Use precompiled headers"                                  MSVC IF (MSVC OR (NOT IOS AND NOT CMAKE_CROSSCOMPILING) ) )
+OCV_OPTION(ENABLE_DELAYLOAD           "Enable delayed loading of OpenCV DLLs"                    OFF VISIBLE_IF MSVC AND BUILD_SHARED_LIBS)
 OCV_OPTION(ENABLE_SOLUTION_FOLDERS    "Solution folder in Visual Studio or in other IDEs"        (MSVC_IDE OR CMAKE_GENERATOR MATCHES Xcode) )
 OCV_OPTION(ENABLE_PROFILING           "Enable profiling in the GCC compiler (Add flags: -g -pg)" OFF  IF CV_GCC )
 OCV_OPTION(ENABLE_COVERAGE            "Enable coverage collection with  GCov"                    OFF  IF CV_GCC )
@@ -750,11 +759,15 @@ include(cmake/OpenCVFindLibsVideo.cmake)
 include(cmake/OpenCVFindLibsPerf.cmake)
 include(cmake/OpenCVFindLAPACK.cmake)
 include(cmake/OpenCVFindProtobuf.cmake)
+include(cmake/OpenCVDetectFlatbuffers.cmake)
 if(WITH_TENGINE)
   include(cmake/OpenCVFindTengine.cmake)
 endif()
 if(WITH_TIMVX)
   include(cmake/OpenCVFindTIMVX.cmake)
+endif()
+if(WITH_CANN)
+  include(cmake/OpenCVFindCANN.cmake)
 endif()
 
 # ----------------------------------------------------------------------------
@@ -767,6 +780,15 @@ if(BUILD_JAVA)
     include(cmake/android/OpenCVDetectAndroidSDK.cmake)
   else()
     include(cmake/OpenCVDetectApacheAnt.cmake)
+    if(ANT_EXECUTABLE AND NOT OPENCV_JAVA_IGNORE_ANT)
+      ocv_update(OPENCV_JAVA_SDK_BUILD_TYPE "ANT")
+    elseif(NOT ANDROID)
+      find_package(Java)
+      if(Java_FOUND)
+        include(UseJava)
+        ocv_update(OPENCV_JAVA_SDK_BUILD_TYPE "JAVA")
+      endif()
+    endif()
     find_package(JNI)
   endif()
 endif()
@@ -909,7 +931,7 @@ foreach(hal ${OpenCV_HAL})
     endif()
   endif()
 endforeach()
-configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${CMAKE_BINARY_DIR}/custom_hal.hpp" @ONLY)
+configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/custom_hal.hpp.in" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/custom_hal.hpp" @ONLY)
 unset(_hal_includes)
 
 
@@ -1372,6 +1394,14 @@ if(WITH_WEBP OR HAVE_WEBP)
   status("    WEBP:" WEBP_FOUND THEN "${WEBP_LIBRARY} (ver ${WEBP_VERSION})" ELSE "build (ver ${WEBP_VERSION})")
 endif()
 
+if(WITH_AVIF OR HAVE_AVIF)
+  if(AVIF_VERSION)
+    status("    AVIF:" AVIF_FOUND THEN "${AVIF_LIBRARY} (ver ${AVIF_VERSION})" ELSE "NO")
+  else()
+    status("    AVIF:" AVIF_FOUND THEN "${AVIF_LIBRARY}" ELSE "NO")
+  endif()
+endif()
+
 if(WITH_PNG OR HAVE_PNG OR WITH_SPNG)
   if(WITH_SPNG)
     status("    PNG:" "build-${SPNG_LIBRARY} (ver ${SPNG_VERSION})")
@@ -1740,6 +1770,15 @@ if(WITH_ONNX OR HAVE_ONNX)
   endif()
 endif()
 
+if(WITH_CANN)
+  status("")
+  status("  CANN:"    HAVE_CANN THEN "YES" ELSE "NO")
+  if(HAVE_CANN)
+    status("    Include path"     CANN_INCLUDE_DIRS THEN "${CANN_INCLUDE_DIRS}" ELSE "NO")
+    status("    Link libraries:"  CANN_LIBRARIES    THEN "${CANN_LIBRARIES}"    ELSE "NO")
+  endif()
+endif()
+
 # ========================== python ==========================
 if(BUILD_opencv_python2)
   status("")
@@ -1776,9 +1815,10 @@ if(BUILD_JAVA)
   status("  Java:"            BUILD_FAT_JAVA_LIB  THEN "export all functions"                                      ELSE "")
   status("    ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})"                    ELSE NO)
   if(NOT ANDROID)
+    status("    Java:"        Java_FOUND     THEN "YES (ver ${Java_VERSION})"                                      ELSE NO)
     status("    JNI:"         JNI_INCLUDE_DIRS    THEN "${JNI_INCLUDE_DIRS}"                                       ELSE NO)
   endif()
-  status("    Java wrappers:" HAVE_opencv_java                                                            THEN YES ELSE NO)
+  status("    Java wrappers:" HAVE_opencv_java                                                            THEN "YES (${OPENCV_JAVA_SDK_BUILD_TYPE})" ELSE NO)
   status("    Java tests:"    BUILD_TESTS AND opencv_test_java_BINARY_DIR                                 THEN YES ELSE NO)
 endif()
 

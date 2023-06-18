@@ -101,8 +101,6 @@ namespace cv {
 
 #define MAX_CONTOUR_APPROX  7
 
-#define USE_CV_FINDCONTOURS  // switch between cv::findContours() and legacy C API
-#ifdef USE_CV_FINDCONTOURS
 struct QuadCountour {
     Point pt[4];
     int parent_contour;
@@ -113,18 +111,6 @@ struct QuadCountour {
         pt[0] = pt_[0]; pt[1] = pt_[1]; pt[2] = pt_[2]; pt[3] = pt_[3];
     }
 };
-#else
-
-} // namespace
-#include "opencv2/imgproc/imgproc_c.h"
-namespace cv {
-
-struct CvContourEx
-{
-    CV_CONTOUR_FIELDS()
-    int counter;
-};
-#endif
 
 
 /** This structure stores information about the chessboard corner.*/
@@ -552,13 +538,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
         rectangle( thresh_img_new, Point(0,0), Point(thresh_img_new.cols-1, thresh_img_new.rows-1), Scalar(255,255,255), 3, LINE_8);
 
         detector.reset();
-
-#ifdef USE_CV_FINDCONTOURS
-        Mat binarized_img = thresh_img_new;
-#else
-        Mat binarized_img = thresh_img_new.clone(); // make clone because cvFindContours modifies the source image
-#endif
-        detector.generateQuads(binarized_img, flags);
+        detector.generateQuads(thresh_img_new, flags);
         DPRINTF("Quad count: %d/%d", detector.all_quads_count, (pattern_size.width/2+1)*(pattern_size.height/2+1));
         SHOW_QUADS("New quads", thresh_img_new, &detector.all_quads[0], detector.all_quads_count);
         if (detector.processQuads(out_corners, prev_sqr_size))
@@ -623,13 +603,7 @@ bool findChessboardCorners(InputArray image_, Size pattern_size,
                 rectangle( thresh_img, Point(0,0), Point(thresh_img.cols-1, thresh_img.rows-1), Scalar(255,255,255), 3, LINE_8);
 
                 detector.reset();
-
-#ifdef USE_CV_FINDCONTOURS
-                Mat binarized_img = thresh_img;
-#else
-                Mat binarized_img = (useAdaptive) ? thresh_img : thresh_img.clone(); // make clone because cvFindContours modifies the source image
-#endif
-                detector.generateQuads(binarized_img, flags);
+                detector.generateQuads(thresh_img, flags);
                 DPRINTF("Quad count: %d/%d", detector.all_quads_count, (pattern_size.width/2+1)*(pattern_size.height/2+1));
                 SHOW_QUADS("Old quads", thresh_img, &detector.all_quads[0], detector.all_quads_count);
                 if (detector.processQuads(out_corners, prev_sqr_size))
@@ -1376,7 +1350,6 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
 
         for (int j = 0; j < 4; ++j)
         {
-            //cvLine( debug_img, cvPointFrom32f(q->corners[j]->pt), cvPointFrom32f(q->corners[(j+1)&3]->pt), color, 1, CV_AA, 0 );
             if (q->neighbors[j])
             {
                 int next_j = (j + 1) & 3;
@@ -1465,7 +1438,6 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
         goto finalize;
 
     cur->row = 0;
-    //cvCircle( debug_img, cvPointFrom32f(cur->pt), 3, cvScalar(0,255,0), -1, 8, 0 );
 
     first = below; // remember the first corner in the next row
 
@@ -1474,7 +1446,6 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
     {
         right->row = 0;
         out_corners.push_back(right);
-        //cvCircle( debug_img, cvPointFrom32f(right->pt), 3, cvScalar(0,255-j*10,0), -1, 8, 0 );
         if( right->count == 2 )
             break;
         if( right->count != 3 || (int)out_corners.size() >= std::max(pattern_size.width,pattern_size.height) )
@@ -1519,7 +1490,6 @@ int ChessBoardDetector::checkQuadGroup(std::vector<ChessBoardQuad*>& quad_group,
         {
             cur->row = i;
             out_corners.push_back(cur);
-            //cvCircle( debug_img, cvPointFrom32f(cur->pt), 3, cvScalar(0,0,255-j*10), -1, 8, 0 );
             if (cur->count == 2 + (i < height-1) && j > 0)
                 break;
 
@@ -1764,7 +1734,6 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
     int min_size = 25; //cvRound( image->cols * image->rows * .03 * 0.01 * 0.92 );
 
     bool filterQuads = (flags & CALIB_CB_FILTER_QUADS) != 0;
-#ifdef USE_CV_FINDCONTOURS // use cv::findContours
 
     std::vector<std::vector<Point> > contours;
     std::vector<Vec4i> hierarchy;
@@ -1878,122 +1847,6 @@ void ChessBoardDetector::generateQuads(const cv::Mat& image_, int flags)
             q.edge_len = std::min(q.edge_len, d);
         }
     }
-
-#else // use legacy API: cvStartFindContours / cvFindNextContour / cvEndFindContours
-
-    CvMat image_old = cvMat(image_), *image = &image_old;
-
-    CvContourEx* board = 0;
-
-    // create temporary storage for contours and the sequence of pointers to found quadrangles
-    cv::Ptr<CvMemStorage> temp_storage(cvCreateMemStorage(0));
-    CvSeq *root = cvCreateSeq(0, sizeof(CvSeq), sizeof(CvSeq*), temp_storage);
-
-    // initialize contour retrieving routine
-    CvContourScanner scanner = cvStartFindContours(image, temp_storage, sizeof(CvContourEx),
-                                   CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
-
-    // get all the contours one by one
-    CvSeq* src_contour = NULL;
-    while ((src_contour = cvFindNextContour(scanner)) != NULL)
-    {
-        CvSeq *dst_contour = 0;
-        CvRect rect = ((CvContour*)src_contour)->rect;
-
-        // reject contours with too small perimeter
-        if( CV_IS_SEQ_HOLE(src_contour) && rect.width*rect.height >= min_size )
-        {
-            const int min_approx_level = 1, max_approx_level = MAX_CONTOUR_APPROX;
-            for (int approx_level = min_approx_level; approx_level <= max_approx_level; approx_level++ )
-            {
-                dst_contour = cvApproxPoly( src_contour, sizeof(CvContour), temp_storage,
-                                            CV_POLY_APPROX_DP, (float)approx_level );
-                if( dst_contour->total == 4 )
-                    break;
-
-                // we call this again on its own output, because sometimes
-                // cvApproxPoly() does not simplify as much as it should.
-                dst_contour = cvApproxPoly( dst_contour, sizeof(CvContour), temp_storage,
-                                            CV_POLY_APPROX_DP, (float)approx_level );
-
-                if( dst_contour->total == 4 )
-                    break;
-            }
-
-            // reject non-quadrangles
-            if( dst_contour->total == 4 && cvCheckContourConvexity(dst_contour) )
-            {
-                cv::Point2i pt[4];
-                double p = cvContourPerimeter(dst_contour);
-                double area = fabs(cvContourArea(dst_contour, CV_WHOLE_SEQ));
-
-                for (int i = 0; i < 4; ++i)
-                    pt[i] = *(CvPoint*)cvGetSeqElem(dst_contour, i);
-                CV_LOG_VERBOSE(NULL, 9, "... contours(" << root->total << " added):" << pt[0] << " " << pt[1] << " " << pt[2] << " " << pt[3]);
-
-                double d1 = sqrt(normL2Sqr<double>(pt[0] - pt[2]));
-                double d2 = sqrt(normL2Sqr<double>(pt[1] - pt[3]));
-
-                // philipg.  Only accept those quadrangles which are more square
-                // than rectangular and which are big enough
-                double d3 = sqrt(normL2Sqr<double>(pt[0] - pt[1]));
-                double d4 = sqrt(normL2Sqr<double>(pt[1] - pt[2]));
-                if (!filterQuads ||
-                    (d3*4 > d4 && d4*4 > d3 && d3*d4 < area*1.5 && area > min_size &&
-                    d1 >= 0.15 * p && d2 >= 0.15 * p))
-                {
-                    CvContourEx* parent = (CvContourEx*)(src_contour->v_prev);
-                    parent->counter++;
-                    if( !board || board->counter < parent->counter )
-                        board = parent;
-                    dst_contour->v_prev = (CvSeq*)parent;
-                    //for( i = 0; i < 4; i++ ) cvLine( debug_img, pt[i], pt[(i+1)&3], cvScalar(200,255,255), 1, CV_AA, 0 );
-                    cvSeqPush( root, &dst_contour );
-                }
-            }
-        }
-    }
-
-    // finish contour retrieving
-    cvEndFindContours( &scanner );
-
-    // allocate quad & corner buffers
-    int total = root->total;
-    size_t max_quad_buf_size = std::max((size_t)2, (size_t)total * 3);
-    all_quads.allocate(max_quad_buf_size);
-    all_corners.allocate(max_quad_buf_size * 4);
-
-    // Create array of quads structures
-    for (int idx = 0; idx < total; ++idx)
-    {
-        /* CvSeq* */src_contour = *(CvSeq**)cvGetSeqElem(root, idx);
-        if (filterQuads && src_contour->v_prev != (CvSeq*)board)
-            continue;
-
-        int quad_idx = quad_count++;
-        ChessBoardQuad& q = all_quads[quad_idx];
-
-        // reset group ID
-        q = ChessBoardQuad();
-        CV_Assert(src_contour->total == 4);
-        for (int i = 0; i < 4; i++)
-        {
-            Point* onePoint = (Point*)cvGetSeqElem(src_contour, i);
-            CV_Assert(onePoint != NULL);
-            Point2f pt(*onePoint);
-            ChessBoardCorner& corner = all_corners[quad_idx*4 + i];
-
-            corner = ChessBoardCorner(pt);
-            q.corners[i] = &corner;
-        }
-        q.edge_len = FLT_MAX;
-        for (int i = 0; i < 4; ++i)
-        {
-            float d = normL2Sqr<float>(q.corners[i]->pt - q.corners[(i+1)&3]->pt);
-            q.edge_len = std::min(q.edge_len, d);
-        }
-    }
-#endif
 
     all_quads_count = quad_count;
 

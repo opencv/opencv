@@ -162,6 +162,7 @@ private:
 
     bool setupReadingAt(CMTime position);
     IplImage* retrieveFramePixelBuffer();
+    int getPreferredOrientationDegrees() const;
 
     CMTime mFrameTimestamp;
     size_t mFrameNum;
@@ -750,7 +751,7 @@ fromConnection:(AVCaptureConnection *)connection{
         bgr_image->imageData = bgr_imagedata;
         bgr_image->imageSize = (int)currSize;
 
-        cvCvtColor(image, bgr_image, CV_BGRA2BGR);
+        cv::cvtColor(cv::cvarrToMat(image), cv::cvarrToMat(bgr_image), cv::COLOR_BGRA2BGR);
 
         // image taken from the buffer is incorrected rotated. I'm using cvTranspose + cvFlip.
         // There should be an option in iOS API to rotate the buffer output orientation.
@@ -1000,11 +1001,11 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         deviceChannels = 4;
 
         if (mMode == CV_CAP_MODE_BGR) {
-            cvtCode = CV_BGRA2BGR;
+            cvtCode = cv::COLOR_BGRA2BGR;
         } else if (mMode == CV_CAP_MODE_RGB) {
-            cvtCode = CV_BGRA2RGB;
+            cvtCode = cv::COLOR_BGRA2RGB;
         } else if (mMode == CV_CAP_MODE_GRAY) {
-            cvtCode = CV_BGRA2GRAY;
+            cvtCode = cv::COLOR_BGRA2GRAY;
         } else {
             CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
             CVBufferRelease(mGrabbedPixels);
@@ -1016,11 +1017,11 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         deviceChannels = 3;
 
         if (mMode == CV_CAP_MODE_BGR) {
-            cvtCode = CV_RGB2BGR;
+            cvtCode = cv::COLOR_RGB2BGR;
         } else if (mMode == CV_CAP_MODE_RGB) {
             cvtCode = 0;
         } else if (mMode == CV_CAP_MODE_GRAY) {
-            cvtCode = CV_RGB2GRAY;
+            cvtCode = cv::COLOR_RGB2GRAY;
         } else {
             CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
             CVBufferRelease(mGrabbedPixels);
@@ -1032,11 +1033,11 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         deviceChannels = 2;
 
         if (mMode == CV_CAP_MODE_BGR) {
-            cvtCode = CV_YUV2BGR_UYVY;
+            cvtCode = cv::COLOR_YUV2BGR_UYVY;
         } else if (mMode == CV_CAP_MODE_RGB) {
-            cvtCode = CV_YUV2RGB_UYVY;
+            cvtCode = cv::COLOR_YUV2RGB_UYVY;
         } else if (mMode == CV_CAP_MODE_GRAY) {
-            cvtCode = CV_YUV2GRAY_UYVY;
+            cvtCode = cv::COLOR_YUV2GRAY_UYVY;
         } else if (mMode == CV_CAP_MODE_YUYV) {
             cvtCode = -1;    // Copy
         } else {
@@ -1052,11 +1053,11 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         deviceChannels = 1;
 
         if (mMode == CV_CAP_MODE_BGR) {
-            cvtCode = CV_YUV2BGR_YV12;
+            cvtCode = cv::COLOR_YUV2BGR_YV12;
         } else if (mMode == CV_CAP_MODE_RGB) {
-            cvtCode = CV_YUV2RGB_YV12;
+            cvtCode = cv::COLOR_YUV2RGB_YV12;
         } else if (mMode == CV_CAP_MODE_GRAY) {
-            cvtCode = CV_YUV2GRAY_420;
+            cvtCode = cv::COLOR_YUV2GRAY_420;
         } else {
             CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
             CVBufferRelease(mGrabbedPixels);
@@ -1088,7 +1089,7 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
     if (cvtCode == -1) {
         cv::cvarrToMat(mDeviceImage).copyTo(cv::cvarrToMat(mOutImage));
     } else {
-        cvCvtColor(mDeviceImage, mOutImage, cvtCode);
+        cv::cvtColor(cv::cvarrToMat(mDeviceImage), cv::cvarrToMat(mOutImage), cvtCode);
     }
 
     CVPixelBufferUnlockBaseAddress(mGrabbedPixels, 0);
@@ -1098,6 +1099,13 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
     return mOutImage;
 }
 
+int CvCaptureFile::getPreferredOrientationDegrees() const {
+    if (mAssetTrack == nil) return 0;
+
+    CGAffineTransform transform = mAssetTrack.preferredTransform;
+    double radians = atan2(transform.b, transform.a);
+    return static_cast<int>(round(radians * 180 / M_PI));
+}
 
 IplImage* CvCaptureFile::retrieveFrame(int) {
     return retrieveFramePixelBuffer();
@@ -1129,6 +1137,8 @@ double CvCaptureFile::getProperty(int property_id) const{
             return mFormat;
         case CV_CAP_PROP_FOURCC:
             return mMode;
+        case cv::CAP_PROP_ORIENTATION_META:
+            return getPreferredOrientationDegrees();
         default:
             break;
     }
@@ -1373,10 +1383,10 @@ bool CvVideoWriter_AVFoundation::writeFrame(const IplImage* iplimage) {
 
     if (movieColor) {
         //assert(iplimage->nChannels == 3);
-        cvCvtColor(iplimage, argbimage, CV_BGR2BGRA);
+        cv::cvtColor(cv::cvarrToMat(iplimage), cv::cvarrToMat(argbimage), cv::COLOR_BGR2BGRA);
     }else{
         //assert(iplimage->nChannels == 1);
-        cvCvtColor(iplimage, argbimage, CV_GRAY2BGRA);
+        cv::cvtColor(cv::cvarrToMat(iplimage), cv::cvarrToMat(argbimage), cv::COLOR_GRAY2BGRA);
     }
     //IplImage -> CGImage conversion
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();

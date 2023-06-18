@@ -321,9 +321,9 @@ cvWritebackLabels( const CvMat* labels, CvMat* dst_labels,
 #define cvWritebackResponses cvWritebackLabels
 
 #define XML_FIELD_NAME "_name"
-CvFileNode* icvFileNodeGetChild(CvFileNode* father, const char* name);
-CvFileNode* icvFileNodeGetChildArrayElem(CvFileNode* father, const char* name,int index);
-CvFileNode* icvFileNodeGetNext(CvFileNode* n, const char* name);
+cv::FileNode icvFileNodeGetChild( cv::FileNode& father, const char* name );
+cv::FileNode icvFileNodeGetChildArrayElem( cv::FileNode& father, const char* name,int index );
+cv::FileNode icvFileNodeGetNext( cv::FileNode& n, const char* name );
 
 
 void cvCheckTrainData( const CvMat* train_data, int tflag,

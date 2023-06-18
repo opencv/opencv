@@ -757,13 +757,6 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
             }
             else
             {
-                if( borderType == BORDER_TRANSPARENT && cn != 3 )
-                {
-                    D += (X1 - dx)*cn;
-                    dx = X1;
-                    continue;
-                }
-
                 if( cn == 1 )
                     for( ; dx < X1; dx++, D++ )
                     {
@@ -773,6 +766,12 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                              sy >= ssize.height || sy+1 < 0) )
                         {
                             D[0] = cval[0];
+                        }
+                        else if (borderType == BORDER_TRANSPARENT)
+                        {
+                            if (sx < ssize.width && sx >= 0 &&
+                                sy < ssize.height && sy >= 0)
+                                D[0] = S0[sy*sstep + sx];
                         }
                         else
                         {
@@ -814,6 +813,13 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                         {
                             for(int k = 0; k < cn; k++ )
                                 D[k] = cval[k];
+                        }
+                        else if (borderType == BORDER_TRANSPARENT)
+                        {
+                            if (sx < ssize.width && sx >= 0 &&
+                                sy < ssize.height && sy >= 0)
+                                for(int k = 0; k < cn; k++ )
+                                    D[k] = S0[sy*sstep + sx*cn + k];
                         }
                         else
                         {
@@ -1340,15 +1346,15 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
 
     if (interpolation != INTER_NEAREST)
     {
-        char cvt[3][40];
+        char cvt[3][50];
         int wdepth = std::max(CV_32F, depth);
         buildOptions = buildOptions
                       + format(" -D WT=%s -D convertToT=%s -D convertToWT=%s"
                                " -D convertToWT2=%s -D WT2=%s",
                                ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
-                               ocl::convertTypeStr(wdepth, depth, cn, cvt[0]),
-                               ocl::convertTypeStr(depth, wdepth, cn, cvt[1]),
-                               ocl::convertTypeStr(CV_32S, wdepth, 2, cvt[2]),
+                               ocl::convertTypeStr(wdepth, depth, cn, cvt[0], sizeof(cvt[0])),
+                               ocl::convertTypeStr(depth, wdepth, cn, cvt[1], sizeof(cvt[1])),
+                               ocl::convertTypeStr(CV_32S, wdepth, 2, cvt[2], sizeof(cvt[2])),
                                ocl::typeToStr(CV_MAKE_TYPE(wdepth, 2)));
     }
     int scalarcn = cn == 3 ? 4 : cn;
@@ -2490,8 +2496,8 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
                       ocl::typeToStr(CV_MAT_DEPTH(type)),
                       ocl::typeToStr(sctype),
                       ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), depth,
-                      ocl::convertTypeStr(depth, wdepth, cn, cvt[0]),
-                      ocl::convertTypeStr(wdepth, depth, cn, cvt[1]),
+                      ocl::convertTypeStr(depth, wdepth, cn, cvt[0], sizeof(cvt[0])),
+                      ocl::convertTypeStr(wdepth, depth, cn, cvt[1], sizeof(cvt[1])),
                       doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                       useDouble ? "double" : "float",
                       cn, rowsPerWI);

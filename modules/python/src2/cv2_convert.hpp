@@ -6,6 +6,8 @@
 #include "cv2_numpy.hpp"
 #include <vector>
 #include <string>
+#include <unordered_map>
+#include <map>
 #include <type_traits>  // std::enable_if
 
 extern PyTypeObject* pyopencv_Mat_TypePtr;
@@ -62,6 +64,10 @@ PyObject* pyopencv_from(const T& src) { return PyOpenCV_Converter<T>::from(src);
 template<typename _Tp, int m, int n>
 bool pyopencv_to(PyObject* o, cv::Matx<_Tp, m, n>& mx, const ArgInfo& info)
 {
+    if (!o || o == Py_None) {
+        return true;
+    }
+
     cv::Mat tmp;
     if (!pyopencv_to(o, tmp, info)) {
         return false;
@@ -121,6 +127,7 @@ template<> bool pyopencv_to(PyObject* obj, int& value, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const int& value);
 
 // --- int64
+template<> bool pyopencv_to(PyObject* obj, int64& value, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const int64& value);
 
 // There is conflict between "size_t" and "unsigned int".
@@ -256,6 +263,43 @@ template <typename Tp>
 PyObject* pyopencv_from(const std::vector<Tp>& value)
 {
     return pyopencvVecConverter<Tp>::from(value);
+}
+
+template<typename K, typename V>
+bool pyopencv_to(PyObject *obj, std::map<K,V> &map, const ArgInfo& info)
+{
+    if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+
+    PyObject* py_key = nullptr;
+    PyObject* py_value = nullptr;
+    Py_ssize_t pos = 0;
+
+    if (!PyDict_Check(obj)) {
+        failmsg("Can't parse '%s'. Input argument isn't dict or"
+                " an instance of subtype of the dict type", info.name);
+        return false;
+    }
+
+    while(PyDict_Next(obj, &pos, &py_key, &py_value))
+    {
+        K cpp_key;
+        if (!pyopencv_to(py_key, cpp_key, ArgInfo("key", false))) {
+            failmsg("Can't parse dict key. Key on position %lu has a wrong type", pos);
+            return false;
+        }
+
+        V cpp_value;
+        if (!pyopencv_to(py_value, cpp_value, ArgInfo("value", false))) {
+            failmsg("Can't parse dict value. Value on position %lu has a wrong type", pos);
+            return false;
+        }
+
+        map.emplace(cpp_key, cpp_value);
+    }
+    return true;
 }
 
 template <typename Tp>
