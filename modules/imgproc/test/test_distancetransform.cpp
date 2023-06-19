@@ -313,11 +313,35 @@ TEST(Imgproc_DistanceTransform, wide_image_22732)
 
 TEST(Imgproc_DistanceTransform, large_square_22732)
 {
-    Mat src = Mat::zeros(8000, 8000, CV_8U);
-    Mat dist(src.rows, src.cols, CV_32F);
+    Mat src = Mat::zeros(8000, 8005, CV_8U), dist;
     distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE, CV_32F);
     int nz = countNonZero(dist);
+    EXPECT_EQ(dist.size(), src.size());
+    EXPECT_EQ(dist.type(), CV_32F);
     EXPECT_EQ(nz, 0);
+
+    Point p0(src.cols-1, src.rows-1);
+    src.setTo(1);
+    src.at<uchar>(p0) = 0;
+    distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE, CV_32F);
+    EXPECT_EQ(dist.size(), src.size());
+    EXPECT_EQ(dist.type(), CV_32F);
+    bool first = true;
+    int nerrs = 0;
+    for (int y = 0; y < dist.rows; y++)
+        for (int x = 0; x < dist.cols; x++) {
+            float d = dist.at<float>(y, x);
+            float dx = (x - p0.x), dy = (y - p0.y);
+            float d0 = sqrt(dx*dx + dy*dy);
+            if (std::abs(d0 - d) > 1) {
+                if (first) {
+                    printf("y=%d, x=%d. dist_ref=%.2f, dist=%.2f\n", y, x, d0, d);
+                    first = false;
+                }
+                nerrs++;
+            }
+        }
+    EXPECT_EQ(0, nerrs) << "reference distance map is different from computed one at " << nerrs << " pixels\n";
 }
 
 }} // namespace
