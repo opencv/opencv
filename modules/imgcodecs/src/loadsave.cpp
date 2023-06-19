@@ -630,6 +630,8 @@ imreadraw_(const String& filename, Mat& mat)
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
 #ifndef HAVE_RAW
+    std::cerr << "imreadraw_('" << filename << "'): libraw not found" << std::endl << std::flush;
+    mat = Mat();
     return false;
 #else
     decoder = makePtr<LibRawDecoder>();
