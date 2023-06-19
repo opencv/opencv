@@ -197,9 +197,9 @@ struct ImageCodecInitializer
         /// Attach the GDAL Decoder
         decoders.push_back( makePtr<GdalDecoder>() );
     #endif/*HAVE_GDAL*/
-    #ifdef HAVE_RAW
-            decoders.push_back(makePtr<LibRawDecoder>());
-    #endif
+//    #ifdef HAVE_RAW
+//            decoders.push_back(makePtr<LibRawDecoder>());
+//    #endif
     }
 
     std::vector<ImageDecoder> decoders;
@@ -395,62 +395,45 @@ imread_( const String& filename, int flags, Mat& mat )
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
-#ifdef HAVE_RAW
-    bool rawDecoder = false;
-#endif
+
 #ifdef HAVE_GDAL
-    if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
+    if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
         decoder = GdalDecoder().newDecoder();
-    }else{
+}
+    else {
 #endif
-        decoder = findDecoder( filename );
+        decoder = findDecoder(filename);
 #ifdef HAVE_GDAL
     }
 #endif
 
-    if( !decoder ){
-#ifdef HAVE_RAW
-        decoder = makePtr<LibRawDecoder>();
-        rawDecoder = true;
-#else
     /// if no decoder was found, return nothing.
+    if (!decoder) {
         return 0;
-#endif
     }
+
     int scale_denom = 1;
-    if( flags > IMREAD_LOAD_GDAL )
+    if (flags > IMREAD_LOAD_GDAL)
     {
-        if( flags & IMREAD_REDUCED_GRAYSCALE_2 )
+        if (flags & IMREAD_REDUCED_GRAYSCALE_2)
             scale_denom = 2;
-        else if( flags & IMREAD_REDUCED_GRAYSCALE_4 )
+        else if (flags & IMREAD_REDUCED_GRAYSCALE_4)
             scale_denom = 4;
-        else if( flags & IMREAD_REDUCED_GRAYSCALE_8 )
+        else if (flags & IMREAD_REDUCED_GRAYSCALE_8)
             scale_denom = 8;
     }
 
     /// set the scale_denom in the driver
-    decoder->setScale( scale_denom );
+    decoder->setScale(scale_denom);
 
     /// set the filename in the driver
-    decoder->setSource( filename );
+    decoder->setSource(filename);
 
     try
     {
         // read the header to make sure it succeeds
         if (!decoder->readHeader())
-        {
-#ifdef HAVE_RAW
-            if (rawDecoder)
-                return 0;
-            decoder = makePtr<LibRawDecoder>();
-            decoder->setScale(scale_denom);
-            decoder->setSource(filename);
-            if (!decoder->readHeader())
-                return 0;
-#else
             return 0;
-#endif
-        }
     }
     catch (const cv::Exception& e)
     {
@@ -469,19 +452,19 @@ imread_( const String& filename, int flags, Mat& mat )
 
     // grab the decoded type
     int type = decoder->type();
-    if( (flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED )
+    if ((flags & IMREAD_LOAD_GDAL) != IMREAD_LOAD_GDAL && flags != IMREAD_UNCHANGED)
     {
-        if( (flags & IMREAD_ANYDEPTH) == 0 )
+        if ((flags & IMREAD_ANYDEPTH) == 0)
             type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
 
-        if( (flags & IMREAD_COLOR) != 0 ||
-           ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
+        if ((flags & IMREAD_COLOR) != 0 ||
+            ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1))
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
         else
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 1);
     }
 
-    mat.create( size.height, size.width, type );
+    mat.create(size.height, size.width, type);
 
     // read the image data
     bool success = false;
@@ -492,27 +475,7 @@ imread_( const String& filename, int flags, Mat& mat )
     }
     catch (const cv::Exception& e)
     {
-#ifndef HAVE_RAW
         std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
-#else
-        if (!rawDecoder)
-            std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
-        else
-        {
-            try
-            {
-                decoder = makePtr<LibRawDecoder>();
-                decoder->setScale(scale_denom);
-                decoder->setSource(filename);
-                if (!decoder->readHeader())
-                    return 0;
-            }
-            catch (const cv::Exception& eraw)
-            {
-                std::cerr << "imread_('" << filename << "'): can't read data: " << eraw.what() << std::endl << std::flush;
-            }
-        }
-#endif
     }
     catch (...)
     {
@@ -520,54 +483,23 @@ imread_( const String& filename, int flags, Mat& mat )
     }
     if (!success)
     {
-#ifndef HAVE_RAW
         mat.release();
         return false;
-#else
-        if (rawDecoder)
-        {
-            mat.release();
-            return false;
-        }
-        else
-        {
-            mat.release();
-            try
-            {
-                decoder = makePtr<LibRawDecoder>();
-                decoder->setScale(scale_denom);
-                decoder->setSource(filename);
-                if (!decoder->readHeader())
-                    return 0;
-                success = false;
-                size = validateInputImageSize(Size(decoder->width(), decoder->height()));
-                mat.create(size.height, size.width, type);
-                if (decoder->readData(mat))
-                    success = true;
-            }
-            catch (const cv::Exception& e)
-            {
-                std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
-                mat.release();
-                return false;
-            }
-        }
-#endif
     }
 
-    if( decoder->setScale( scale_denom ) > 1 ) // if decoder is JpegDecoder then decoder->setScale always returns 1
+    if (decoder->setScale(scale_denom) > 1) // if decoder is JpegDecoder then decoder->setScale always returns 1
     {
-        resize( mat, mat, Size( size.width / scale_denom, size.height / scale_denom ), 0, 0, INTER_LINEAR_EXACT);
+        resize(mat, mat, Size(size.width / scale_denom, size.height / scale_denom), 0, 0, INTER_LINEAR_EXACT);
     }
 
     /// optionally rotate the data if EXIF orientation flag says so
-    if (!mat.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
+    if (!mat.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
     {
         ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
     }
 
     return true;
-}
+    }
 
 
 static bool
@@ -686,6 +618,86 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
 }
 
 /**
+ * Read an image using libraw into memory and return the information
+ *
+ * @param[in] filename File to load
+ * @param[in] mat Reference to C++ Mat object
+ *
+*/
+static bool
+imreadraw_(const String& filename, Mat& mat)
+{
+    /// Search for the relevant decoder to handle the imagery
+    ImageDecoder decoder;
+#ifndef HAVE_RAW
+    return false;
+#else
+    decoder = makePtr<LibRawDecoder>();
+    int scale_denom = 1;
+
+    /// set the scale_denom in the driver
+    decoder->setScale(scale_denom);
+
+    /// set the filename in the driver
+    decoder->setSource(filename);
+
+    try
+    {
+        // read the header to make sure it succeeds
+        if (!decoder->readHeader())
+            return 0;
+    }
+    catch (const cv::Exception& e)
+    {
+        std::cerr << "imread_('" << filename << "'): can't read header: " << e.what() << std::endl << std::flush;
+        return 0;
+    }
+    catch (...)
+    {
+        std::cerr << "imread_('" << filename << "'): can't read header: unknown exception" << std::endl << std::flush;
+        return 0;
+    }
+
+
+    // established the required input image size
+    Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
+
+    // grab the decoded type
+    int type = decoder->type();
+    mat.create(size.height, size.width, type);
+
+    // read the image data
+    bool success = false;
+    try
+    {
+        if (decoder->readData(mat))
+            success = true;
+    }
+    catch (const cv::Exception& e)
+    {
+        std::cerr << "imread_('" << filename << "'): can't read data: " << e.what() << std::endl << std::flush;
+    }
+    catch (...)
+    {
+        std::cerr << "imread_('" << filename << "'): can't read data: unknown exception" << std::endl << std::flush;
+    }
+    if (!success)
+    {
+        mat.release();
+        return false;
+    }
+
+    if (decoder->setScale(scale_denom) > 1) // if decoder is JpegDecoder then decoder->setScale always returns 1
+    {
+        resize(mat, mat, Size(size.width / scale_denom, size.height / scale_denom), 0, 0, INTER_LINEAR_EXACT);
+    }
+
+    return true;
+#endif
+}
+
+
+/**
  * Read an image
  *
  *  This function merely calls the actual implementation above and returns itself.
@@ -743,6 +755,27 @@ size_t imcount_(const String& filename, int flags)
         std::cerr << "imcount_('" << filename << "'): can't read header or can't find decoder: " << e.what() << std::endl << std::flush;
     }
     return 0;
+}
+
+/**
+ * Read an image using libraw
+ *
+ *  This function merely calls the actual implementation above and returns itself.
+ *
+ * @param[in] filename File to load
+*/
+Mat imreadraw(const String& filename)
+{
+    CV_TRACE_FUNCTION();
+
+    /// create the basic container
+    Mat img;
+
+    /// load the data
+    imreadraw_(filename, img);
+
+    /// return a reference to the data
+    return img;
 }
 
 size_t imcount(const String& filename, int flags)

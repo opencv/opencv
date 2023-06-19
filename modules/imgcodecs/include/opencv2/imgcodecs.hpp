@@ -245,6 +245,13 @@ The function imreadmulti loads a specified range from a multi-page image from th
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int start, int count, int flags = IMREAD_ANYCOLOR);
 
+
+/** @brief read an image using libraw
+@param filename Name of file to be loaded.
+@param flags Flag that can take values of cv::ImreadModes
+*/
+CV_EXPORTS_W Mat imreadraw(const String & filename);
+
 /** @brief Returns the number of images inside the give file
 
 The function imcount will return the number of pages in a multi-page image, or 1 for single-page images
