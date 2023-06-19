@@ -1847,7 +1847,7 @@ int64_t CvCapture_FFMPEG::get_bitrate() const
 
 double CvCapture_FFMPEG::get_fps() const
 {
-#if 0 && LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 1, 100) && LIBAVFORMAT_VERSION_MICRO >= 100
+#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 1, 100) && LIBAVFORMAT_VERSION_MICRO >= 100
     double fps = r2d(av_guess_frame_rate(ic, ic->streams[video_stream], NULL));
 #else
     double fps = r2d(ic->streams[video_stream]->avg_frame_rate);
