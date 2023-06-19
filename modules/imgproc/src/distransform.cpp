@@ -481,7 +481,7 @@ struct DTColumnInvoker : ParallelLoopBody
             {
                 dist = dist + 1 - sat_tab[dist - d[j]];
                 d[j] = dist;
-                dptr[0] = sqr_tab[dist];
+                dptr[0] = (float)sqr_tab[dist];
             }
         }
     }
@@ -586,7 +586,8 @@ trueDistTrans( const Mat& src, Mat& dst )
     // stage 2: compute modified distance transform for each row
     float* inv_tab = (float*)sqr_tab + n;
 
-    inv_tab[0] = sqr_tab[0] = 0.f;
+    inv_tab[0] = 0.f;
+    sqr_tab[0] = 0;
     for( i = 1; i < n; i++ )
     {
         inv_tab[i] = (float)(0.5/i);
