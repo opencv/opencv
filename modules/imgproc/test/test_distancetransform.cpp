@@ -331,8 +331,8 @@ TEST(Imgproc_DistanceTransform, large_square_22732)
     for (int y = 0; y < dist.rows; y++)
         for (int x = 0; x < dist.cols; x++) {
             float d = dist.at<float>(y, x);
-            float dx = (x - p0.x), dy = (y - p0.y);
-            float d0 = sqrt(dx*dx + dy*dy);
+            double dx = (double)(x - p0.x), dy = (double)(y - p0.y);
+            float d0 = (float)sqrt(dx*dx + dy*dy);
             if (std::abs(d0 - d) > 1) {
                 if (first) {
                     printf("y=%d, x=%d. dist_ref=%.2f, dist=%.2f\n", y, x, d0, d);
