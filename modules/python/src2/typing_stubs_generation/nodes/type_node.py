@@ -307,14 +307,31 @@ class AliasTypeNode(TypeNode):
         return cls(ctype_name, PrimitiveTypeNode.float_(), export_name, doc)
 
     @classmethod
-    def array_(cls, ctype_name: str, shape: Optional[Tuple[int, ...]],
-               dtype: Optional[str] = None, export_name: Optional[str] = None,
-               doc: Optional[str] = None):
+    def array_ref_(cls, ctype_name: str, array_ref_name: str,
+                   shape: Optional[Tuple[int, ...]],
+                   dtype: Optional[str] = None,
+                   export_name: Optional[str] = None,
+                   doc: Optional[str] = None):
+        """Create alias to array reference alias `array_ref_name`.
+
+        This is required to preserve backward compatibility with Python < 3.9
+        and NumPy 1.20, when NumPy module introduces generics support.
+
+        Args:
+            ctype_name (str): Name of the alias.
+            array_ref_name (str): Name of the conditional array alias.
+            shape (Optional[Tuple[int, ...]]): Array shape.
+            dtype (Optional[str], optional): Array type.  Defaults to None.
+            export_name (Optional[str], optional): Alias export name.
+                Defaults to None.
+            doc (Optional[str], optional): Documentation string for alias.
+                Defaults to None.
+        """
         if doc is None:
-            doc = "Shape: " + str(shape)
+            doc = f"NDArray(shape={shape}, dtype={dtype})"
         else:
-            doc += ". Shape: " + str(shape)
-        return cls(ctype_name, NDArrayTypeNode(ctype_name, shape, dtype),
+            doc += f". NDArray(shape={shape}, dtype={dtype})"
+        return cls(ctype_name, AliasRefTypeNode(array_ref_name),
                    export_name, doc)
 
     @classmethod
@@ -376,23 +393,111 @@ class AliasTypeNode(TypeNode):
                    export_name, doc)
 
 
-class NDArrayTypeNode(TypeNode):
-    """Type node representing NumPy ndarray.
+class ConditionalAliasTypeNode(TypeNode):
+    """Type node representing an alias protected by condition checked in runtime.
+    Example:
+    ```python
+    if numpy.lib.NumpyVersion(numpy.__version__) > "1.20.0" and sys.version_info >= (3, 9)
+        NumPyArray = numpy.ndarray[typing.Any, numpy.dtype[numpy.generic]]
+    else:
+        NumPyArray = numpy.ndarray
+    ```
+    is defined as follows:
+    ```python
+
+    ConditionalAliasTypeNode(
+        "NumPyArray",
+        'numpy.lib.NumpyVersion(numpy.__version__) > "1.20.0" and sys.version_info >= (3, 9)',
+        NDArrayTypeNode("NumPyArray"),
+        NDArrayTypeNode("NumPyArray", use_numpy_generics=False),
+        condition_required_imports=("import numpy", "import sys")
+    )
+    ```
     """
-    def __init__(self, ctype_name: str, shape: Optional[Tuple[int, ...]] = None,
-                 dtype: Optional[str] = None) -> None:
+    def __init__(self, ctype_name: str, condition: str,
+                 positive_branch_type: TypeNode,
+                 negative_branch_type: TypeNode,
+                 export_name: Optional[str] = None,
+                 condition_required_imports: Sequence[str] = ()) -> None:
         super().__init__(ctype_name)
-        self.shape = shape
-        self.dtype = dtype
+        self.condition = condition
+        self.positive_branch_type = positive_branch_type
+        self.positive_branch_type.ctype_name = self.ctype_name
+        self.negative_branch_type = negative_branch_type
+        self.negative_branch_type.ctype_name = self.ctype_name
+        self._export_name = export_name
+        self._condition_required_imports = condition_required_imports
 
     @property
     def typename(self) -> str:
-        return "numpy.ndarray[{shape}, numpy.dtype[{dtype}]]".format(
-            # NOTE: Shape is not fully supported yet
-            # shape=self.shape if self.shape is not None else "typing.Any",
-            shape="typing.Any",
-            dtype=self.dtype if self.dtype is not None else "numpy.generic"
+        if self._export_name is not None:
+            return self._export_name
+        return self.ctype_name
+
+    @property
+    def full_typename(self) -> str:
+        return "cv2.typing." + self.typename
+
+    @property
+    def required_definition_imports(self) -> Generator[str, None, None]:
+        yield from self.positive_branch_type.required_usage_imports
+        yield from self.negative_branch_type.required_usage_imports
+        yield from self._condition_required_imports
+
+    @property
+    def required_usage_imports(self) -> Generator[str, None, None]:
+        yield "import cv2.typing"
+
+    @property
+    def is_resolved(self) -> bool:
+        return self.positive_branch_type.is_resolved \
+                and self.negative_branch_type.is_resolved
+
+    def resolve(self, root: ASTNode):
+        try:
+            self.positive_branch_type.resolve(root)
+            self.negative_branch_type.resolve(root)
+        except TypeResolutionError as e:
+            raise TypeResolutionError(
+                'Failed to resolve alias "{}" exposed as "{}"'.format(
+                    self.ctype_name, self.typename
+                )
+            ) from e
+
+    @classmethod
+    def numpy_array_(cls, ctype_name: str, export_name: Optional[str] = None,
+                     shape: Optional[Tuple[int, ...]] = None,
+                     dtype: Optional[str] = None):
+        return cls(
+            ctype_name,
+            ('numpy.lib.NumpyVersion(numpy.__version__) > "1.20.0" '
+             'and sys.version_info >= (3, 9)'),
+            NDArrayTypeNode(ctype_name, shape, dtype),
+            NDArrayTypeNode(ctype_name, shape, dtype,
+                            use_numpy_generics=False),
+            condition_required_imports=("import numpy", "import sys")
         )
+
+
+class NDArrayTypeNode(TypeNode):
+    """Type node representing NumPy ndarray.
+    """
+    def __init__(self, ctype_name: str,
+                 shape: Optional[Tuple[int, ...]] = None,
+                 dtype: Optional[str] = None,
+                 use_numpy_generics: bool = True) -> None:
+        super().__init__(ctype_name)
+        self.shape = shape
+        self.dtype = dtype
+        self._use_numpy_generics = use_numpy_generics
+
+    @property
+    def typename(self) -> str:
+        if self._use_numpy_generics:
+            # NOTE: Shape is not fully supported yet
+            dtype = self.dtype if self.dtype is not None else "numpy.generic"
+            return f"numpy.ndarray[typing.Any, numpy.dtype[{dtype}]]"
+        return "numpy.ndarray"
 
     @property
     def required_usage_imports(self) -> Generator[str, None, None]:
