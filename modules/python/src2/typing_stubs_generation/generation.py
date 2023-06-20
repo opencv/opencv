@@ -759,8 +759,6 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         output_stream.write(f'    "{alias_name}",\n')
     output_stream.write("]\n\n")
 
-    # HACK: force add cv2.mat_wrapper import to handle MatLike alias
-    required_imports.add("import cv2.mat_wrapper")
     _write_required_imports(required_imports, output_stream)
 
     # Add type checking time definitions as generated __init__.py content
