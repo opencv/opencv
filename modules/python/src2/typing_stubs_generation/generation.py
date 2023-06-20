@@ -15,7 +15,8 @@ from .nodes import (ASTNode, ASTNodeType, NamespaceNode, ClassNode, FunctionNode
                     EnumerationNode, ConstantNode)
 
 from .nodes.type_node import (TypeNode, AliasTypeNode, AliasRefTypeNode,
-                              AggregatedTypeNode, ASTNodeTypeNode)
+                              AggregatedTypeNode, ASTNodeTypeNode,
+                              ConditionalAliasTypeNode, PrimitiveTypeNode)
 
 
 def generate_typing_stubs(root: NamespaceNode, output_path: Path):
@@ -682,28 +683,37 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
             f"Provided type node '{type_node.ctype_name}' is not an aggregated type"
 
         for item in filter(lambda i: isinstance(i, AliasRefTypeNode), type_node):
-            register_alias(PREDEFINED_TYPES[item.ctype_name])  # type: ignore
+            type_node = PREDEFINED_TYPES[item.ctype_name]
+            if isinstance(type_node, AliasTypeNode):
+                register_alias(type_node)
+            elif isinstance(type_node, ConditionalAliasTypeNode):
+                conditional_type_nodes[type_node.ctype_name] = type_node
 
-    def create_alias_for_enum_node(enum_node: ASTNode) -> AliasTypeNode:
-        """Create int alias corresponding to the given enum node.
+    def create_alias_for_enum_node(enum_node_alias: AliasTypeNode) -> ConditionalAliasTypeNode:
+        """Create conditional int alias corresponding to the given enum node.
 
         Args:
-            enum_node (ASTNodeTypeNode): Enumeration node to create int alias for.
+            enum_node (AliasTypeNode): Enumeration node to create conditional
+                int alias for.
 
         Returns:
-            AliasTypeNode: int alias node with same export name as enum.
+            ConditionalAliasTypeNode: conditional int alias node with same
+                export name as enum.
         """
+        enum_node = enum_node_alias.ast_node
         assert enum_node.node_type == ASTNodeType.Enumeration, \
             f"{enum_node} has wrong node type. Expected type: Enumeration."
 
         enum_export_name, enum_module_name = get_enum_module_and_export_name(
             enum_node
         )
-        enum_full_export_name = f"{enum_module_name}.{enum_export_name}"
-        alias_node = AliasTypeNode.int_(enum_full_export_name,
-                                        enum_export_name)
-        type_checking_time_definitions.add(alias_node)
-        return alias_node
+        return ConditionalAliasTypeNode(
+            enum_export_name,
+            "typing.TYPE_CHECKING",
+            positive_branch_type=enum_node_alias,
+            negative_branch_type=PrimitiveTypeNode.int_(enum_export_name),
+            condition_required_imports=("import typing", )
+        )
 
     def register_alias(alias_node: AliasTypeNode) -> None:
         typename = alias_node.typename
@@ -726,11 +736,15 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
                     continue
                 if item.ast_node.node_type != ASTNodeType.Enumeration:
                     continue
-                alias_node.value.items[i] = create_alias_for_enum_node(item.ast_node)
+                enum_node = create_alias_for_enum_node(item)
+                alias_node.value.items[i] = enum_node
+                conditional_type_nodes[enum_node.ctype_name] = enum_node
 
         if isinstance(alias_node.value, ASTNodeTypeNode) \
                 and alias_node.value.ast_node == ASTNodeType.Enumeration:
-            alias_node.value = create_alias_for_enum_node(alias_node.ast_node)
+            enum_node = create_alias_for_enum_node(alias_node.ast_node)
+            conditional_type_nodes[enum_node.ctype_name] = enum_node
+            return
 
         # Strip module prefix from aliased types
         aliases[typename] = alias_node.value.full_typename.replace(
@@ -744,7 +758,7 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
 
     required_imports: Set[str] = set()
     aliases: Dict[str, str] = {}
-    type_checking_time_definitions: Set[AliasTypeNode] = set()
+    conditional_type_nodes: Dict[str, ConditionalAliasTypeNode] = {}
 
     # Resolve each node and register aliases
     TypeNode.compatible_to_runtime_usage = True
@@ -752,6 +766,12 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         node.resolve(root)
         if isinstance(node, AliasTypeNode):
             register_alias(node)
+        elif isinstance(node, ConditionalAliasTypeNode):
+            conditional_type_nodes[node.ctype_name] = node
+
+    for node in conditional_type_nodes.values():
+        for required_import in node.required_definition_imports:
+            required_imports.add(required_import)
 
     output_stream = StringIO()
     output_stream.write("__all__ = [\n")
@@ -762,12 +782,10 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
     _write_required_imports(required_imports, output_stream)
 
     # Add type checking time definitions as generated __init__.py content
-    for alias in type_checking_time_definitions:
-        output_stream.write("if typing.TYPE_CHECKING:\n    ")
-        output_stream.write(f"{alias.typename} = {alias.ctype_name}\nelse:\n")
-        output_stream.write(f"    {alias.typename} = {alias.value.ctype_name}\n")
-    if type_checking_time_definitions:
-        output_stream.write("\n\n")
+    for _, type_node in conditional_type_nodes.items():
+        output_stream.write(f"if {type_node.condition}:\n    ")
+        output_stream.write(f"{type_node.typename} = {type_node.positive_branch_type.full_typename}\nelse:\n")
+        output_stream.write(f"    {type_node.typename} = {type_node.negative_branch_type.full_typename}\n\n\n")
 
     for alias_name, alias_type in aliases.items():
         output_stream.write(f"{alias_name} = {alias_type}\n")
