@@ -561,13 +561,14 @@ class ContainerTypeNode(AggregatedTypeNode):
     @property
     def required_definition_imports(self) -> Generator[str, None, None]:
         yield "import typing"
-        return super().required_definition_imports
+        yield from super().required_definition_imports
 
     @property
     def required_usage_imports(self) -> Generator[str, None, None]:
         if TypeNode.compatible_to_runtime_usage:
             yield "import typing"
-        return super().required_usage_imports
+        yield from super().required_usage_imports
+
     @abc.abstractproperty
     def type_format(self) -> str:
         pass
