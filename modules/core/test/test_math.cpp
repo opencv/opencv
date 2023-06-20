@@ -6,6 +6,7 @@
 /////////////////// tests for matrix operations and math functions ///////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
 
+#include "opencv2/core.hpp"
 #include "test_precomp.hpp"
 #include <float.h>
 #include <math.h>
@@ -2416,6 +2417,113 @@ void Core_SolvePolyTest::run( int )
             for (size_t j=0;j<ar.size();++j)
                 ts->printf( cvtest::TS::LOG, "ar[%d]=(%g, %g)\n", j, ar[j].real(), ar[j].imag());
             break;
+        }
+    }
+}
+
+// Iterate over combinations (n, k)
+class Comb
+{
+private:
+    const size_t total;
+    vector<size_t> comb;
+public:
+    Comb(size_t n, size_t k) : total(n), comb(k, 0)
+    {
+        CV_Assert(n >= k && n >= 1 && k >= 1);
+        for (auto it = comb.begin(); it != comb.end(); ++it)
+            *it = it - comb.begin();
+    }
+    bool next()
+    {
+        bool is_last = false;
+        for (auto it = comb.rbegin(); it != comb.rend(); ++it)
+        {
+            const bool is_max = (*it == (total - 1)); // can't increase - goto next element
+            const bool not_end = (it != comb.rbegin()); // have previous element
+            const bool is_max2 = not_end && ((*it + 1) == *(it - 1)); // have previous can't go over it
+            if (is_max || is_max2)
+            {
+                if (it == comb.rend() - 1) // came to the first element
+                    is_last = true;
+                continue;
+            }
+            *it += 1;
+            if (not_end) // fill rest of array (x+1, x+2, ...)
+            {
+                for (auto jt = it.base(); jt != comb.end(); ++jt)
+                    *jt = (*it) + (jt - it.base()) + 1;
+            }
+            break;
+        }
+        return !is_last;
+    }
+    const vector<size_t> & get() const
+    {
+        return comb;
+    }
+};
+
+template <typename T>
+inline static T rootMultiply(const Mat_<T> &roots, size_t num)
+{
+    T res = static_cast<T>(0);
+    Comb comb_iter(roots.rows, num);
+    for (;;)
+    {
+        T p = static_cast<T>(1);
+        const vector<size_t> & comb = comb_iter.get();
+        for (auto it = comb.cbegin(); it != comb.cend(); ++it)
+            p *= roots(*it);
+        res += p;
+        if (!comb_iter.next())
+            break;
+    }
+    return res;
+}
+
+template <typename T>
+inline static void generatePoly(Mat & roots, Mat & coeffs)
+{
+    cv::RNG &rng = cv::theRNG();
+    const size_t degree = rng.uniform(1, 7);
+    const T center = static_cast<T>(rng.uniform(-1e1, 1e1));
+    const T range = static_cast<T>(rng.uniform(0.1, 1e1));
+    Mat_<T> roots_(degree, 1, static_cast<T>(0));
+    for (size_t i = 0; i < degree; ++i)
+        roots_(i) = rng.uniform(center - range, center + range);
+    cv::sort(roots_, roots_, SORT_EVERY_COLUMN);
+
+    Mat_<T> coeffs_(degree + 1, 1, static_cast<T>(1));
+    for (size_t i = 0; i < degree; ++i) // coeffs[degree] is 1
+        coeffs_(i) = ((degree - i) % 2 == 0 ? 1 : -1) * rootMultiply(roots_, degree - i);
+    roots = roots_;
+    coeffs = coeffs_;
+}
+
+TEST(DISABLED_Core_SolvePoly, random_real)
+{
+    for (unsigned rep = 0; rep < 100; ++rep)
+    {
+        Mat roots, coeffs;
+        generatePoly<double>(roots, coeffs);
+        Mat result, re, im;
+        const double epsilon = solvePoly(coeffs, result);
+        extractChannel(result, re, 0);
+        extractChannel(result, im, 1);
+        cv::sort(re, re, SORT_EVERY_COLUMN);
+        const double im_norm = cvtest::norm(im, NORM_INF);
+        EXPECT_LT(im_norm, epsilon);
+        const double actual_diff = cvtest::norm(re, roots, NORM_INF);
+        EXPECT_LT(actual_diff, epsilon);
+        if (im_norm >= epsilon || (actual_diff >= epsilon))
+        {
+            cout << "Coeffs: " << coeffs.t() << endl;
+            cout << "Roots : " << roots.t() << endl;
+            cout << "RE    : " << re.t() << endl;
+            cout << "IM    : " << im.t() << endl;
+            cout << "Eps   : " << epsilon << endl;
+            cout << "=========" << endl;
         }
     }
 }
