@@ -71,16 +71,27 @@ public:
      */
     CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) = 0;
 
-	CV_WRAP virtual void applyWithMask(InputArray image, InputArray _imageMask, OutputArray fgmask, double learningRate = -1) = 0;
+	/** @brief Computes a foreground mask with mask (to be removed in the future)
+
+	@param image Next video frame.
+	@param fgmask The output foreground mask as an 8-bit binary image.
+	@param learningRate The value between 0 and 1 that indicates how fast the background model is
+	learnt. Negative parameter value makes the algorithm to use some automatically chosen learning
+	rate. 0 means that the background model is not updated at all, 1 means that the background model
+	is completely reinitialized from the last frame.
+	 */
+	CV_WRAP virtual void applyWithMask(InputArray image, InputArray imageMask, OutputArray fgmask, double learningRate=-1)
+	{
+	};
 
 
-    /** @brief Computes a background image.
+	/** @brief Computes a background image.
 
-    @param backgroundImage The output background image.
+	@param backgroundImage The output background image.
 
-    @note Sometimes the background image can be very blurry, as it contain the average background
-    statistics.
-     */
+	@note Sometimes the background image can be very blurry, as it contain the average background
+	statistics.
+	 */
     CV_WRAP virtual void getBackgroundImage(OutputArray backgroundImage) const = 0;
 };
 
@@ -208,30 +219,31 @@ public:
     rate. 0 means that the background model is not updated at all, 1 means that the background model
     is completely reinitialized from the last frame.
      */
-    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) = 0;
+    CV_WRAP virtual void apply(InputArray image, OutputArray fgmask, double learningRate=-1) CV_OVERRIDE = 0;
 
+	// ToDo: to be removed in future
+	CV_WRAP virtual void applyWithMask(InputArray image, InputArray _imageMask, OutputArray fgmask, double learningRate = -1) CV_OVERRIDE
+	{};
 
-	CV_WRAP virtual void applyWithMask(InputArray image, InputArray _imageMask, OutputArray fgmask, double learningRate = -1) = 0;
+	CV_WRAP virtual void getModel(OutputArray& model) const{};
 
-	CV_WRAP virtual void getModel(OutputArray& model) const = 0;
+	CV_WRAP virtual void setModel(OutputArray& model) {};
 
-	CV_WRAP virtual void setModel(OutputArray& model) = 0;
+	CV_WRAP virtual void getModelUsedModes(OutputArray& model) const {};
 
-	CV_WRAP virtual void getModelUsedModes(OutputArray& model) const = 0;
+	CV_WRAP virtual void setModelUsedModes(OutputArray& model) {};
 
-	CV_WRAP virtual void setModelUsedModes(OutputArray& model) = 0;
+	CV_WRAP virtual void getWeight(OutputArray& model) const {};
 
-	CV_WRAP virtual void getWeight(OutputArray& model) const = 0;
+	CV_WRAP virtual void setWeight(OutputArray& model){};
 
-	CV_WRAP virtual void setWeight(OutputArray& model) = 0;
+	CV_WRAP virtual void getVariance(OutputArray& model) const{};
 
-	CV_WRAP virtual void getVariance(OutputArray& model) const = 0;
+	CV_WRAP virtual void setVariance(OutputArray& model){};
 
-	CV_WRAP virtual void setVariance(OutputArray& model) = 0;
+	CV_WRAP virtual void getMean(OutputArray& model) const{};
 
-	CV_WRAP virtual void getMean(OutputArray& model) const = 0;
-
-	CV_WRAP virtual void setMean(OutputArray& model) = 0;	
+	CV_WRAP virtual void setMean(OutputArray& model) {};
 };
 
 /** @brief Creates MOG2 Background Subtractor
