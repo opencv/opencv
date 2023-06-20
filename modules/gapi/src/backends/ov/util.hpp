@@ -27,6 +27,8 @@ namespace util {
 // test suite only.
 GAPI_EXPORTS std::vector<int> to_ocv(const ::ov::Shape &shape);
 GAPI_EXPORTS int to_ocv(const ::ov::element::Type &type);
+GAPI_EXPORTS void to_ov(const cv::Mat &mat, ::ov::Tensor &tensor);
+GAPI_EXPORTS void to_ocv(const ::ov::Tensor &tensor, cv::Mat &mat);
 
 }}}}
 
