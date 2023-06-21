@@ -16,8 +16,8 @@ default values:
     -w: 4
     -h: 6
     -t: chessboard
-    --square_size: 50
-    --marker_size: 25
+    --square_size: 10
+    --marker_size: 2
     --aruco_dict: DICT_4X4_50
     --threads: 4
     <image mask> defaults to ../data/left*.jpg
@@ -34,6 +34,7 @@ from common import splitfn
 
 # built-in modules
 import os
+
 
 def main():
     import sys
@@ -85,27 +86,27 @@ def main():
     h, w = cv.imread(img_names[0], cv.IMREAD_GRAYSCALE).shape[:2]  # TODO: use imquery call to retrieve results
 
     aruco_dicts = {
-        'DICT_4X4_50':cv.aruco.DICT_4X4_50,
-        'DICT_4X4_100':cv.aruco.DICT_4X4_100,
-        'DICT_4X4_250':cv.aruco.DICT_4X4_250,
-        'DICT_4X4_1000':cv.aruco.DICT_4X4_1000,
-        'DICT_5X5_50':cv.aruco.DICT_5X5_50,
-        'DICT_5X5_100':cv.aruco.DICT_5X5_100,
-        'DICT_5X5_250':cv.aruco.DICT_5X5_250,
-        'DICT_5X5_1000':cv.aruco.DICT_5X5_1000,
-        'DICT_6X6_50':cv.aruco.DICT_6X6_50,
-        'DICT_6X6_100':cv.aruco.DICT_6X6_100,
-        'DICT_6X6_250':cv.aruco.DICT_6X6_250,
-        'DICT_6X6_1000':cv.aruco.DICT_6X6_1000,
-        'DICT_7X7_50':cv.aruco.DICT_7X7_50,
-        'DICT_7X7_100':cv.aruco.DICT_7X7_100,
-        'DICT_7X7_250':cv.aruco.DICT_7X7_250,
-        'DICT_7X7_1000':cv.aruco.DICT_7X7_1000,
-        'DICT_ARUCO_ORIGINAL':cv.aruco.DICT_ARUCO_ORIGINAL,
-        'DICT_APRILTAG_16h5':cv.aruco.DICT_APRILTAG_16h5,
-        'DICT_APRILTAG_25h9':cv.aruco.DICT_APRILTAG_25h9,
-        'DICT_APRILTAG_36h10':cv.aruco.DICT_APRILTAG_36h10,
-        'DICT_APRILTAG_36h11':cv.aruco.DICT_APRILTAG_36h11
+        'DICT_4X4_50': cv.aruco.DICT_4X4_50,
+        'DICT_4X4_100': cv.aruco.DICT_4X4_100,
+        'DICT_4X4_250': cv.aruco.DICT_4X4_250,
+        'DICT_4X4_1000': cv.aruco.DICT_4X4_1000,
+        'DICT_5X5_50': cv.aruco.DICT_5X5_50,
+        'DICT_5X5_100': cv.aruco.DICT_5X5_100,
+        'DICT_5X5_250': cv.aruco.DICT_5X5_250,
+        'DICT_5X5_1000': cv.aruco.DICT_5X5_1000,
+        'DICT_6X6_50': cv.aruco.DICT_6X6_50,
+        'DICT_6X6_100': cv.aruco.DICT_6X6_100,
+        'DICT_6X6_250': cv.aruco.DICT_6X6_250,
+        'DICT_6X6_1000': cv.aruco.DICT_6X6_1000,
+        'DICT_7X7_50': cv.aruco.DICT_7X7_50,
+        'DICT_7X7_100': cv.aruco.DICT_7X7_100,
+        'DICT_7X7_250': cv.aruco.DICT_7X7_250,
+        'DICT_7X7_1000': cv.aruco.DICT_7X7_1000,
+        'DICT_ARUCO_ORIGINAL': cv.aruco.DICT_ARUCO_ORIGINAL,
+        'DICT_APRILTAG_16h5': cv.aruco.DICT_APRILTAG_16h5,
+        'DICT_APRILTAG_25h9': cv.aruco.DICT_APRILTAG_25h9,
+        'DICT_APRILTAG_36h10': cv.aruco.DICT_APRILTAG_36h10,
+        'DICT_APRILTAG_36h11': cv.aruco.DICT_APRILTAG_36h11
     }
 
     if (aruco_dict_name not in set(aruco_dicts.keys())):
@@ -115,7 +116,7 @@ def main():
     board = cv.aruco.CharucoBoard(pattern_size, square_size, marker_size, aruco_dict)
     charuco_detector = cv.aruco.CharucoDetector(board)
 
-    def processImage(fn):
+    def process_image(fn):
         print('processing %s... ' % fn)
         img = cv.imread(fn, cv.IMREAD_GRAYSCALE)
         if img is None:
@@ -131,7 +132,7 @@ def main():
                 term = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_COUNT, 30, 0.1)
                 cv.cornerSubPix(img, corners, (5, 5), (-1, -1), term)
         elif pattern_type == 'charucoboard':
-            corners, _charucoIds, _markerCorners_svg, _markerIds_svg = charuco_detector.detectBoard(img)
+            corners, _charuco_ids, _marker_corners_svg, _marker_ids_svg = charuco_detector.detectBoard(img)
             if (len(corners) == (height-1)*(width-1)):
                 found = True
         else:
@@ -154,12 +155,12 @@ def main():
 
     threads_num = int(args.get('--threads'))
     if threads_num <= 1:
-        chessboards = [processImage(fn) for fn in img_names]
+        chessboards = [process_image(fn) for fn in img_names]
     else:
         print("Run with %d threads..." % threads_num)
         from multiprocessing.dummy import Pool as ThreadPool
         pool = ThreadPool(threads_num)
-        chessboards = pool.map(processImage, img_names)
+        chessboards = pool.map(process_image, img_names)
 
     chessboards = [x for x in chessboards if x is not None]
     for (corners, pattern_points) in chessboards:
