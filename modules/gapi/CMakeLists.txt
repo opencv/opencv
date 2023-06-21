@@ -254,6 +254,7 @@ ocv_target_link_libraries(${the_module} PRIVATE ade)
 
 if(TARGET ocv.3rdparty.openvino AND OPENCV_GAPI_WITH_OPENVINO)
   ocv_target_link_libraries(${the_module} PRIVATE ocv.3rdparty.openvino)
+  ocv_install_used_external_targets(ocv.3rdparty.openvino)
 endif()
 
 if(HAVE_TBB)
