@@ -10,6 +10,7 @@ import warnings
 from .ast_utils import get_enclosing_namespace, get_enum_module_and_export_name
 
 from .predefined_types import PREDEFINED_TYPES
+from .api_refinement import apply_manual_api_refinement
 
 from .nodes import (ASTNode, ASTNodeType, NamespaceNode, ClassNode, FunctionNode,
                     EnumerationNode, ConstantNode)
@@ -47,6 +48,18 @@ def generate_typing_stubs(root: NamespaceNode, output_path: Path):
         root (NamespaceNode): Root namespace node of the library AST.
         output_path (Path): Path to output directory.
     """
+    # Perform special handling for function arguments that has some conventions
+    # not expressed in their API e.g. optionality of mutually exclusive arguments
+    # without default values:
+    # ```cxx
+    # cv::resize(cv::InputArray src, cv::OutputArray dst, cv::Size dsize,
+    #       double fx = 0.0, double fy = 0.0, int interpolation);
+    # ```
+    # should accept `None` as `dsize`:
+    # ```python
+    # cv2.resize(image, dsize=None, fx=0.5, fy=0.5)
+    # ```
+    apply_manual_api_refinement(root)
     # Most of the time type nodes miss their full name (especially function
     # arguments and return types), so resolution should start from the narrowest
     # scope and gradually expanded.
