@@ -22,7 +22,7 @@ In order to use the Astra camera's depth sensor with OpenCV you should do the fo
     Unzip the archive, choose the build according to your operating system and follow installation
     steps provided in the Readme file.
 
--#  For SDK <= 2.3.0.63, if you use 64bit GNU/Linux run to install:
+-#  For instance, if you use 64bit GNU/Linux run:
     @code{.bash}
     $ cd Linux/OpenNI-Linux-x64-2.3.0.63/
     $ sudo ./install.sh
@@ -43,7 +43,8 @@ In order to use the Astra camera's depth sensor with OpenCV you should do the fo
     @endcode
     If the above two variables are empty, then you need to source `OpenNIDevEnvironment` again.
 
--#  For SDK >= 2.3.0.86, it does not provide `install.sh` any more. You need to copy the following content:
+    @note Orbbec OpenNI SDK version 2.3.0.86 and newer does not provide `install.sh` any more.
+    You can use the following script to initialize environment:
     @code{.text}
     # Check if user is root/running with sudo
     if [ `whoami` != root ]; then
@@ -68,16 +69,6 @@ In order to use the Astra camera's depth sensor with OpenCV you should do the fo
     chmod a+r $OUT_FILE
     echo "exit"
     @endcode
-    and make your own `install.sh` for installation:
-    @code{.bash}
-    $ cd OpenNI_2.3.0.86_202210111154_4c8f5aa4_beta6_linux
-    $ vim install.sh # copy the above content into this file
-    $ sudo ./install.sh
-    $ source OpenNIDevEnvironment
-    $ echo $OPENNI2_INCLUDE # verify if it has the correct ooutput
-    $ echo $OPENNI2_REDIST  # verify if it has the correct ooutput
-    @endcode
-
 
 -#  Now you can configure OpenCV with OpenNI support enabled by setting the `WITH_OPENNI2` flag in CMake.
     You may also like to enable the `BUILD_EXAMPLES` flag to get a code sample working with your Astra camera.
