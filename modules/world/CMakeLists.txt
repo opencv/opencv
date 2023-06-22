@@ -12,7 +12,7 @@ endif()
 function(include_one_module m)
   include("${OPENCV_MODULE_${m}_LOCATION}/CMakeLists.txt")
   foreach(var
-      CMAKE_CXX_FLAGS CMAKE_C_FLAGS # Propagate warnings settings
+      CMAKE_CXX_FLAGS CMAKE_C_FLAGS # Propagate warning settings
   )
     set(${var} "${${var}}" PARENT_SCOPE)
   endforeach()
