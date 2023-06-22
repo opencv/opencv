@@ -98,10 +98,10 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
 }
 
 static inline
-std::string getPyObjectNameAttr(PyObject* obj)
+std::string getPyObjectAttr(PyObject* obj, const char* attrName)
 {
     std::string obj_name;
-    PyObject* cls_name_obj = PyObject_GetAttrString(obj, "__name__");
+    PyObject* cls_name_obj = PyObject_GetAttrString(obj, attrName);
     if (cls_name_obj && !getUnicodeString(cls_name_obj, obj_name)) {
         obj_name.clear();
     }
@@ -115,6 +115,12 @@ std::string getPyObjectNameAttr(PyObject* obj)
         obj_name = "<UNAVAILABLE>";
     }
     return obj_name;
+}
+
+static inline
+std::string getPyObjectNameAttr(PyObject* obj)
+{
+    return getPyObjectAttr(obj, "__name__");
 }
 
 //==================================================================================================
