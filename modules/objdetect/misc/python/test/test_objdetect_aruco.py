@@ -238,6 +238,27 @@ class aruco_objdetect_test(NewOpenCVTests):
             self.assertEqual(charucoIds[i], i)
         np.testing.assert_allclose(gold_corners, charucoCorners.reshape(-1, 2), 0.01, 0.1)
 
+    def test_detect_diamonds(self):
+        aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_250)
+        board_size = (3, 3)
+        board = cv.aruco.CharucoBoard(board_size, 1.0, .8, aruco_dict)
+        charuco_detector = cv.aruco.CharucoDetector(board)
+        cell_size = 120
+
+        image = board.generateImage((cell_size*board_size[0], cell_size*board_size[1]))
+
+        list_gold_corners = [(cell_size, cell_size), (2*cell_size, cell_size), (2*cell_size, 2*cell_size),
+                             (cell_size, 2*cell_size)]
+        gold_corners = np.array(list_gold_corners, dtype=np.float32)
+
+        diamond_corners, diamond_ids, marker_corners, marker_ids = charuco_detector.detectDiamonds(image)
+
+        self.assertEqual(diamond_ids.size, 4)
+        self.assertEqual(marker_ids.size, 4)
+        for i in range(0, 4):
+            self.assertEqual(diamond_ids[0][0][i], i)
+        np.testing.assert_allclose(gold_corners, np.array(diamond_corners, dtype=np.float32).reshape(-1, 2), 0.01, 0.1)
+
     # check no segfault when cameraMatrix or distCoeffs are not initialized
     def test_charuco_no_segfault_params(self):
         dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_1000)
