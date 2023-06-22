@@ -482,6 +482,27 @@ class Arguments(NewOpenCVTests):
             self.assertEqual(expected, actual,
                              msg=get_conversion_error_msg(convertible, expected, actual))
 
+
+    def test_wrap_rotated_rect(self):
+        center = (34.5, 52.)
+        size = (565.0, 140.0)
+        angle = -177.5
+        rect1 = cv.RotatedRect(center, size, angle)
+        self.assertEqual(rect1.center, center)
+        self.assertEqual(rect1.size, size)
+        self.assertEqual(rect1.angle, angle)
+
+        pts = [[ 319.7845, -5.6109037],
+               [ 313.6778, 134.25586],
+               [-250.78448, 109.6109],
+               [-244.6778, -30.25586]]
+        self.assertLess(np.max(np.abs(rect1.points() - pts)), 1e-4)
+
+        rect2 = cv.RotatedRect(pts[0], pts[1], pts[2])
+        _, inter_pts = cv.rotatedRectangleIntersection(rect1, rect2)
+        self.assertLess(np.max(np.abs(inter_pts.reshape(-1, 2) - pts)), 1e-4)
+
+
     def test_parse_to_rotated_rect_not_convertible(self):
         for not_convertible in ([], (), np.array([]), (123, (45, 34), 1), {1: 2, 3: 4}, 123,
                                 np.array([[123, 123, 14], [1, 3], 56], dtype=object), '123'):
