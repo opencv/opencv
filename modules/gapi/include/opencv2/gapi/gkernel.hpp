@@ -51,6 +51,7 @@ struct GAPI_EXPORTS GKernel
     GShapes     outShapes;  // types (shapes) kernel's outputs
     GKinds      inKinds;    // kinds of kernel's inputs (fixme: below)
     GCtors      outCtors;   // captured constructors for template output types
+    GKinds      outKinds;   // kinds of kernel's outputs (fixme: below)
 };
 // TODO: It's questionable if inKinds should really be here. Instead,
 // this information could come from meta.
@@ -227,7 +228,8 @@ public:
                               , &K::getOutMeta
                               , {detail::GTypeTraits<R>::shape...}
                               , {detail::GTypeTraits<Args>::op_kind...}
-                              , {detail::GObtainCtor<R>::get()...}});
+                              , {detail::GObtainCtor<R>::get()...}
+                              , {detail::GTypeTraits<R>::op_kind...}});
         call.pass(args...); // TODO: std::forward() here?
         return yield(call, typename detail::MkSeq<sizeof...(R)>::type());
     }
@@ -251,7 +253,8 @@ public:
                               , &K::getOutMeta
                               , {detail::GTypeTraits<R>::shape}
                               , {detail::GTypeTraits<Args>::op_kind...}
-                              , {detail::GObtainCtor<R>::get()}});
+                              , {detail::GObtainCtor<R>::get()}
+                              , {detail::GTypeTraits<R>::op_kind}});
         call.pass(args...);
         return detail::Yield<R>::yield(call, 0);
     }
