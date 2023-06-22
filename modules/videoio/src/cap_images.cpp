@@ -51,8 +51,8 @@
 
 #include "precomp.hpp"
 #include "opencv2/imgcodecs.hpp"
-
 #include "opencv2/core/utils/filesystem.hpp"
+#include "opencv2/videoio/utils.private.hpp"
 
 #if 0
 #define CV_WARN(message)
@@ -200,7 +200,7 @@ bool CvCapture_Images::setProperty(int id, double value)
     return false;
 }
 
-static
+// static
 std::string icvExtractPattern(const std::string& filename, unsigned *offset)
 {
     size_t len = filename.size();
