@@ -315,7 +315,7 @@ void CharucoDetector::detectBoard(InputArray image, OutputArray charucoCorners, 
 }
 
 void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diamondCorners, OutputArray _diamondIds,
-                                     InputOutputArrayOfArrays inMarkerCorners, InputOutputArrayOfArrays inMarkerIds) const {
+                                     InputOutputArrayOfArrays inMarkerCorners, InputOutputArray inMarkerIds) const {
     CV_Assert(getBoard().getChessboardSize() == Size(3, 3));
     CV_Assert((inMarkerCorners.empty() && inMarkerIds.empty() && !image.empty()) || (inMarkerCorners.total() == inMarkerIds.total()));
 
