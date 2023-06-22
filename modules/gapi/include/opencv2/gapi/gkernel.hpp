@@ -51,7 +51,7 @@ struct GAPI_EXPORTS GKernel
     GShapes     outShapes;  // types (shapes) kernel's outputs
     GKinds      inKinds;    // kinds of kernel's inputs (fixme: below)
     GCtors      outCtors;   // captured constructors for template output types
-    GKinds      outKinds;   // kinds of kerne's outputs
+    GKinds      outKinds;   // kinds of kernel's outputs (fixme: below)
 };
 // TODO: It's questionable if inKinds should really be here. Instead,
 // this information could come from meta.
