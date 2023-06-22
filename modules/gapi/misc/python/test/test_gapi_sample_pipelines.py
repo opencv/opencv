@@ -207,7 +207,48 @@ try:
         return Op
 
 
+    # NB: Just mock operation to test different kinds for output G-types.
+    @cv.gapi.op('custom.square_mean', in_types=[cv.GArray.Int], out_types=[cv.GOpaque.Float, cv.GArray.Int])
+    class GSquareMean:
+        @staticmethod
+        def outMeta(desc):
+            return cv.empty_gopaque_desc(), cv.empty_array_desc()
+
+
+    @cv.gapi.kernel(GSquareMean)
+    class GSquareMeanImpl:
+        @staticmethod
+        def run(arr):
+            squares = [val**2 for val in arr]
+            return sum(arr) / len(arr), squares
+
+    @cv.gapi.op('custom.squares', in_types=[cv.GArray.Int], out_types=[cv.GArray.Int])
+    class GSquare:
+        @staticmethod
+        def outMeta(desc):
+            return cv.empty_array_desc()
+
+
+    @cv.gapi.kernel(GSquare)
+    class GSquareImpl:
+        @staticmethod
+        def run(arr):
+            squares = [val**2 for val in arr]
+            return squares
+
+
     class gapi_sample_pipelines(NewOpenCVTests):
+        def test_different_output_opaque_kinds(self):
+            g_in = cv.GArray.Int()
+            g_mean, g_squares = GSquareMean.on(g_in)
+            comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_mean, g_squares))
+
+            pkg = cv.gapi.kernels(GSquareMeanImpl)
+            mean, squares = comp.apply(cv.gin([1,2,3]), args=cv.gapi.compile_args(pkg))
+
+            self.assertEqual([1,4,9], list(squares))
+            self.assertEqual(2.0, mean)
+
 
         def test_custom_op_add(self):
             sz = (3, 3)

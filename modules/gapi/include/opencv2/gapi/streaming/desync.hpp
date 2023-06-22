@@ -46,6 +46,7 @@ G desync(const G &g) {
         , {cv::detail::GTypeTraits<G>::shape}               // output Shape
         , {cv::detail::GTypeTraits<G>::op_kind}             // input data kinds
         , {cv::detail::GObtainCtor<G>::get()}               // output template ctors
+        , {cv::detail::GTypeTraits<G>::op_kind}             // output data kinds
     };
     cv::GCall call(std::move(k));
     call.pass(g);

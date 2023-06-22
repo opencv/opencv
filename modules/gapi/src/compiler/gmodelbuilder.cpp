@@ -59,7 +59,6 @@ private:
 
 } // namespace
 
-
 cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
                                           const GProtoArgs &outs)
 {
@@ -135,18 +134,19 @@ cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
                 // Put the outputs object description of the node
                 // so that they are not lost if they are not consumed by other operations
                 GAPI_Assert(call_p.m_k.outCtors.size() == call_p.m_k.outShapes.size());
-                for (const auto it : ade::util::indexed(call_p.m_k.outShapes))
+                for (const auto it : ade::util::indexed(ade::util::zip(call_p.m_k.outShapes,
+                                                                       call_p.m_k.outCtors,
+                                                                       call_p.m_k.outKinds)))
                 {
-                    std::size_t port  = ade::util::index(it);
-                    GShape shape      = ade::util::value(it);
-
-                    // FIXME: then use ZIP
-                    HostCtor ctor     = call_p.m_k.outCtors[port];
-
+                    auto port  = ade::util::index(it);
+                    auto &val  = ade::util::value(it);
+                    auto shape = std::get<0>(val);
+                    auto ctor  = std::get<1>(val);
+                    auto kind  = std::get<2>(val);
                     // NB: Probably this fixes all other "missing host ctor"
                     // problems.
                     // TODO: Clean-up the old workarounds if it really is.
-                    GOrigin org {shape, node, port, std::move(ctor), origin.kind};
+                    GOrigin org {shape, node, port, std::move(ctor), kind};
                     origins.insert(org);
                 }
 

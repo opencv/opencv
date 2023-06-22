@@ -738,6 +738,15 @@ public:
         const auto explicit_in_model_layout = lookUp(m_input_model_layout, input_name);
         if (explicit_in_model_layout) {
             input_info.model().set_layout(::ov::Layout(*explicit_in_model_layout));
+        } else if (m_model->input(input_name).get_shape().size() == 4u) {
+            // NB: Back compatibility with IR's without any layout information.
+            // Note that default is only applicable for 4D inputs in order to
+            // support auto resize for image use cases.
+            GAPI_LOG_WARNING(NULL, "Failed to find layout for input layer \""
+                    << input_name << "\" - NCHW is set by default");
+            const std::string default_layout = "NCHW";
+            input_info.model().set_layout(::ov::Layout(default_layout));
+            m_input_model_layout.emplace(input_name, default_layout);
         }
         const auto explicit_in_tensor_layout = lookUp(m_input_tensor_layout, input_name);
         if (explicit_in_tensor_layout) {
@@ -765,6 +774,7 @@ public:
         const auto &matdesc = cv::util::get<cv::GMatDesc>(input_meta);
 
         const auto explicit_in_tensor_layout = lookUp(m_input_tensor_layout, input_name);
+        const auto explicit_in_model_layout  = lookUp(m_input_model_layout, input_name);
         const auto explicit_resize = lookUp(m_interpolation, input_name);
 
         if (disable_img_resize && explicit_resize.has_value()) {
@@ -810,7 +820,9 @@ public:
                 if (matdesc.isND()) {
                     // NB: ND case - need to obtain "H" and "W" positions
                     // in order to configure resize.
-                    const auto model_layout = ::ov::layout::get_layout(m_model->input(input_name));
+                    const auto model_layout = explicit_in_model_layout
+                        ? ::ov::Layout(*explicit_in_model_layout)
+                        : ::ov::layout::get_layout(m_model->input(input_name));
                     if (!explicit_in_tensor_layout && model_layout.empty()) {
                         std::stringstream ss;
                         ss << "Resize for input layer: " << input_name

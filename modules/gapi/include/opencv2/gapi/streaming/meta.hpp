@@ -50,6 +50,7 @@ cv::GOpaque<T> meta(G g, const std::string &tag) {
         , {cv::detail::GTypeTraits<O>::shape}    // output Shape
         , {cv::detail::GTypeTraits<G>::op_kind}  // input data kinds
         , {cv::detail::GObtainCtor<O>::get()}    // output template ctors
+        , {cv::detail::GTypeTraits<O>::op_kind}  // output data kind
     };
     cv::GCall call(std::move(k));
     call.pass(g);
