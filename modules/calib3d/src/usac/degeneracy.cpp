@@ -8,12 +8,14 @@
 namespace cv { namespace usac {
 class EpipolarGeometryDegeneracyImpl : public EpipolarGeometryDegeneracy {
 private:
-    const Mat * points_mat;
-    const float * const points; // i-th row xi1 yi1 xi2 yi2
+    Mat points_mat;
     const int min_sample_size;
 public:
     explicit EpipolarGeometryDegeneracyImpl (const Mat &points_, int sample_size_) :
-        points_mat(&points_), points ((float*) points_mat->data), min_sample_size (sample_size_) {}
+        points_mat(points_), min_sample_size (sample_size_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+    }
     /*
      * Do oriented constraint to verify if epipolar geometry is in front or behind the camera.
      * Return: true if all points are in front of the camers w.r.t. tested epipolar geometry - satisfies constraint.
@@ -26,6 +28,7 @@ public:
         const Vec3d ep = Utils::getRightEpipole(F_);
         const auto * const e = ep.val; // of size 3x1
         const auto * const F = (double *) F_.data;
+        const float * points = points_mat.ptr<float>();
 
         // without loss of generality, let the first point in sample be in front of the camera.
         int pt = 4*sample[0];
@@ -67,16 +70,19 @@ Ptr<EpipolarGeometryDegeneracy> EpipolarGeometryDegeneracy::create (const Mat &p
 
 class HomographyDegeneracyImpl : public HomographyDegeneracy {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
     const float TOLERANCE = 2 * FLT_EPSILON; // 2 from area of triangle
 public:
     explicit HomographyDegeneracyImpl (const Mat &points_) :
-            points_mat(&points_), points ((float *)points_mat->data) {}
+            points_mat(points_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+    }
 
     inline bool isSampleGood (const std::vector<int> &sample) const override {
         const int smpl1 = 4*sample[0], smpl2 = 4*sample[1], smpl3 = 4*sample[2], smpl4 = 4*sample[3];
         // planar correspondences must lie on the same side of any line from two points in sample
+        const float * points = points_mat.ptr<float>();
         const float x1 = points[smpl1], y1 = points[smpl1+1], X1 = points[smpl1+2], Y1 = points[smpl1+3];
         const float x2 = points[smpl2], y2 = points[smpl2+1], X2 = points[smpl2+2], Y2 = points[smpl2+3];
         const float x3 = points[smpl3], y3 = points[smpl3+1], X3 = points[smpl3+2], Y3 = points[smpl3+3];
@@ -188,8 +194,7 @@ private:
     const Ptr<Quality> quality;
     const Ptr<Error> f_error;
     Ptr<Quality> h_repr_quality;
-    const float * const points;
-    const Mat * points_mat;
+    Mat points_mat;
     const Ptr<ReprojectionErrorForward> h_reproj_error;
     Ptr<EpipolarNonMinimalSolver> f_non_min_solver;
     Ptr<HomographyNonMinimalSolver> h_non_min_solver;
@@ -215,7 +220,7 @@ public:
     FundamentalDegeneracyImpl (int state, const Ptr<Quality> &quality_, const Mat &points_,
                 int sample_size_, int plane_and_parallax_iters, double homography_threshold_,
                 double f_inlier_thr_sqr, const Mat true_K1_, const Mat true_K2_) :
-            rng (state), quality(quality_), f_error(quality_->getErrorFnc()), points((float *) points_.data), points_mat(&points_),
+            rng (state), quality(quality_), f_error(quality_->getErrorFnc()), points_mat(points_),
             h_reproj_error(ReprojectionErrorForward::create(points_)),
             ep_deg (points_, sample_size_), homography_threshold (homography_threshold_),
             points_size (quality_->getPointsSize()),
@@ -330,7 +335,7 @@ public:
     bool recoverIfDegenerate (const std::vector<int> &sample, const Mat &F_best, const Score &F_best_score,
                               Mat &non_degenerate_model, Score &non_degenerate_model_score) override {
         const auto swapF = [&] (const Mat &_F, const Score &_score) {
-            const auto non_min_solver = EpipolarNonMinimalSolver::create(*points_mat, true);
+            const auto non_min_solver = EpipolarNonMinimalSolver::create(points_mat, true);
             if (! optimizeF(_F, _score, non_degenerate_model, non_degenerate_model_score)) {
                 _F.copyTo(non_degenerate_model);
                 non_degenerate_model_score = _score;
@@ -401,6 +406,7 @@ public:
             return false;
         num_models_used_so_far = 0; // reset estimation of lambda for plane-and-parallax
         int max_iters = max_iters_pl_par, non_planar_support = 0, iters = 0;
+        const float * points = points_mat.ptr<float>();
         std::vector<Matx33d> F_good;
         const double CLOSE_THR = 1.0;
         for (; iters < max_iters; iters++) {
@@ -454,6 +460,7 @@ public:
         return true;
     }
     bool calibDegensac (const Matx33d &H, Mat &F_new, Score &F_new_score, int non_planar_support_degen_F, const Score &F_degen_score) {
+        const float * points = points_mat.ptr<float>();
         if (! is_principal_pt_set) {
             // estimate principal points from coordinates
             float px1 = 0, py1 = 0, px2 = 0, py2 = 0;
@@ -606,6 +613,7 @@ public:
     }
 private:
     bool getH (const Matx33d &A, const Vec3d &e_prime, int smpl1, int smpl2, int smpl3, Matx33d &H) {
+        const float * points = points_mat.ptr<float>();
         Vec3d p1(points[smpl1  ], points[smpl1+1], 1), p2(points[smpl2  ], points[smpl2+1], 1), p3(points[smpl3  ], points[smpl3+1], 1);
         Vec3d P1(points[smpl1+2], points[smpl1+3], 1), P2(points[smpl2+2], points[smpl2+3], 1), P3(points[smpl3+2], points[smpl3+3], 1);
         const Matx33d M (p1[0], p1[1], 1, p2[0], p2[1], 1, p3[0], p3[1], 1);

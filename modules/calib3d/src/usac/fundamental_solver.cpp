@@ -12,17 +12,20 @@
 namespace cv { namespace usac {
 class FundamentalMinimalSolver7ptsImpl: public FundamentalMinimalSolver7pts {
 private:
-    const Mat * points_mat; // pointer to OpenCV Mat
-    const float * const points; // pointer to points_mat->data for faster data access
+    Mat points_mat;
     const bool use_ge;
 public:
     explicit FundamentalMinimalSolver7ptsImpl (const Mat &points_, bool use_ge_) :
-            points_mat (&points_), points ((float *) points_mat->data), use_ge(use_ge_) {}
+            points_mat (points_), use_ge(use_ge_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+    }
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         const int m = 7, n = 9; // rows, cols
         std::vector<double> a(63); // m*n
         auto * a_ = &a[0];
+        const float * points = points_mat.ptr<float>();
 
         for (int i = 0; i < m; i++ ) {
             const int smpl = 4*sample[i];
@@ -158,17 +161,19 @@ Ptr<FundamentalMinimalSolver7pts> FundamentalMinimalSolver7pts::create(const Mat
 
 class FundamentalMinimalSolver8ptsImpl : public FundamentalMinimalSolver8pts {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
 public:
     explicit FundamentalMinimalSolver8ptsImpl (const Mat &points_) :
-            points_mat (&points_), points ((float*) points_mat->data)
-    { CV_DbgAssert(points); }
+            points_mat (points_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+    }
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         const int m = 8, n = 9; // rows, cols
         std::vector<double> a(72); // m*n
         auto * a_ = &a[0];
+        const float * points = points_mat.ptr<float>();
 
         for (int i = 0; i < m; i++ ) {
             const int smpl = 4*sample[i];
@@ -233,18 +238,19 @@ Ptr<FundamentalMinimalSolver8pts> FundamentalMinimalSolver8pts::create(const Mat
 
 class EpipolarNonMinimalSolverImpl : public EpipolarNonMinimalSolver {
 private:
-    const Mat * points_mat;
+    Mat points_mat;
     const bool do_norm;
     Matx33d _T1, _T2;
     Ptr<NormTransform> normTr = nullptr;
     bool enforce_rank = true, is_fundamental, use_ge;
 public:
     explicit EpipolarNonMinimalSolverImpl (const Mat &points_, const Matx33d &T1, const Matx33d &T2, bool use_ge_)
-        : points_mat(&points_), do_norm(false), _T1(T1), _T2(T2), use_ge(use_ge_) {
-        is_fundamental = true;
+        : points_mat(points_), do_norm(false), _T1(T1), _T2(T2), is_fundamental(true), use_ge(use_ge_) {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
     }
     explicit EpipolarNonMinimalSolverImpl (const Mat &points_, bool is_fundamental_) :
-        points_mat(&points_), do_norm(is_fundamental_), use_ge(false) {
+        points_mat(points_), do_norm(is_fundamental_), use_ge(false) {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
         is_fundamental = is_fundamental_;
         if (is_fundamental)
             normTr = NormTransform::create(points_);
@@ -259,7 +265,7 @@ public:
         Mat norm_points;
         if (do_norm)
             normTr->getNormTransformation(norm_points, sample, sample_size, T1, T2);
-        const auto * const norm_pts = do_norm ? (float *) norm_points.data : (float *) points_mat->data;
+        const float * const norm_pts = do_norm ? norm_points.ptr<const float>() : points_mat.ptr<float>();
 
         if (use_ge) {
             double a[8];

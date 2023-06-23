@@ -11,14 +11,17 @@
 namespace cv { namespace usac {
 class HomographyMinimalSolver4ptsImpl : public HomographyMinimalSolver4pts {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
     const bool use_ge;
 public:
     explicit HomographyMinimalSolver4ptsImpl (const Mat &points_, bool use_ge_) :
-        points_mat(&points_), points ((float*) points_mat->data), use_ge(use_ge_) {}
+        points_mat(points_), use_ge(use_ge_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+    }
 
     int estimate (const std::vector<int>& sample, std::vector<Mat> &models) const override {
+        const float * points = points_mat.ptr<float>();
         int m = 8, n = 9;
         std::vector<double> A(72, 0);
         int cnt = 0;
@@ -80,15 +83,21 @@ Ptr<HomographyMinimalSolver4pts> HomographyMinimalSolver4pts::create(const Mat &
 
 class HomographyNonMinimalSolverImpl : public HomographyNonMinimalSolver {
 private:
-    const Mat * points_mat;
+    Mat points_mat;
     const bool do_norm, use_ge;
     Ptr<NormTransform> normTr;
     Matx33d _T1, _T2;
 public:
     explicit HomographyNonMinimalSolverImpl (const Mat &norm_points_, const Matx33d &T1, const Matx33d &T2, bool use_ge_) :
-            points_mat(&norm_points_), do_norm(false), use_ge(use_ge_), _T1(T1), _T2(T2) {}
+            points_mat(norm_points_), do_norm(false), use_ge(use_ge_), _T1(T1), _T2(T2)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+    }
     explicit HomographyNonMinimalSolverImpl (const Mat &points_, bool use_ge_) :
-        points_mat(&points_), do_norm(true), use_ge(use_ge_), normTr (NormTransform::create(points_)) {}
+        points_mat(points_), do_norm(true), use_ge(use_ge_), normTr (NormTransform::create(points_))
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+    }
 
     int estimate (const std::vector<int> &sample, int sample_size, std::vector<Mat> &models,
             const std::vector<double> &weights) const override {
@@ -99,7 +108,7 @@ public:
         Mat norm_points_;
         if (do_norm)
             normTr->getNormTransformation(norm_points_, sample, sample_size, T1, T2);
-        const auto * const npts = do_norm ? (float *) norm_points_.data : (float *) points_mat->data;
+        const float * const npts = do_norm ? norm_points_.ptr<float>() : points_mat.ptr<float>();
 
         Mat H;
         if (use_ge) {
@@ -388,11 +397,13 @@ Ptr<CovarianceHomographySolver> CovarianceHomographySolver::create (const Mat &p
 
 class AffineMinimalSolverImpl : public AffineMinimalSolver {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
 public:
     explicit AffineMinimalSolverImpl (const Mat &points_) :
-            points_mat(&points_), points((float *) points_mat->data) {}
+            points_mat(points_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+    }
     /*
         Affine transformation
         x1 y1 1 0  0  0   a   u1
@@ -404,6 +415,7 @@ public:
     */
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         const int smpl1 = 4*sample[0], smpl2 = 4*sample[1], smpl3 = 4*sample[2];
+        const float * points = points_mat.ptr<float>();
         const auto
                 x1 = points[smpl1], y1 = points[smpl1+1], u1 = points[smpl1+2], v1 = points[smpl1+3],
                 x2 = points[smpl2], y2 = points[smpl2+1], u2 = points[smpl2+2], v2 = points[smpl2+3],
@@ -435,13 +447,14 @@ Ptr<AffineMinimalSolver> AffineMinimalSolver::create(const Mat &points_) {
 
 class AffineNonMinimalSolverImpl : public AffineNonMinimalSolver {
 private:
-    const Mat * points_mat;
+    Mat points_mat;
     Ptr<NormTransform> normTr;
     Matx33d _T1, _T2;
     bool do_norm;
 public:
     explicit AffineNonMinimalSolverImpl (const Mat &points_, InputArray T1, InputArray T2) :
-            points_mat(&points_) {
+            points_mat(points_) {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
         if (!T1.empty() && !T2.empty()) {
             do_norm = false;
             _T1 = T1.getMat();
@@ -460,7 +473,7 @@ public:
         Mat norm_points_;
         if (do_norm)
             normTr->getNormTransformation(norm_points_, sample, sample_size, T1, T2);
-        const auto * const pts = normTr ? (float *) norm_points_.data : (float *) points_mat->data;
+        const float * const pts = normTr ? norm_points_.ptr<float>() : points_mat.ptr<float>();
 
         // do Least Squares
         // Ax = b   ->  A^T Ax = A^T b
