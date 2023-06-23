@@ -18,6 +18,7 @@
 
 #include <opencv2/gapi/gcommon.hpp>
 #include <opencv2/gapi/infer/ov.hpp>
+#include <opencv2/core/utils/configuration.private.hpp> // getConfigurationParameterBool
 
 #if defined(HAVE_TBB)
 #  include <tbb/concurrent_queue.h> // FIXME: drop it from here!
@@ -37,9 +38,35 @@ template<typename T> using QueueClass = cv::gapi::own::concurrent_bounded_queue<
 
 using ParamDesc = cv::gapi::ov::detail::ParamDesc;
 
-static ov::Core getCore() {
+// NB: Some of OV plugins fail during ov::Core destroying in specific cases.
+// Solution is allocate ov::Core in heap and doesn't destroy it, which cause
+// leak, but fixes tests on CI. This behaviour is configurable by using
+// OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND=0
+static ov::Core create_OV_Core_pointer() {
+    // NB: 'delete' is never called
+    static ov::Core* core = new ov::Core();
+    return *core;
+}
+
+static ov::Core create_OV_Core_instance() {
     static ov::Core core;
     return core;
+}
+
+ov::Core cv::gapi::ov::wrap::getCore() {
+    // NB: to make happy memory leak tools use:
+    // - OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND=0
+    static bool param_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND =
+        utils::getConfigurationParameterBool(
+                "OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND",
+#if defined(_WIN32) || defined(__APPLE__)
+                true
+#else
+                false
+#endif
+                );
+    return param_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND
+        ? create_OV_Core_pointer() : create_OV_Core_instance();
 }
 
 static ov::AnyMap toOV(const ParamDesc::PluginConfigT &config) {
@@ -175,7 +202,8 @@ struct OVUnit {
         // FIXME: Can this logic be encapsulated to prevent checking every time?
         if (cv::util::holds_alternative<ParamDesc::Model>(params.kind)) {
             const auto desc = cv::util::get<ParamDesc::Model>(params.kind);
-            model = getCore().read_model(desc.model_path, desc.bin_path);
+            model = cv::gapi::ov::wrap::getCore()
+                .read_model(desc.model_path, desc.bin_path);
             GAPI_Assert(model);
 
             if (params.num_in == 1u && params.input_names.empty()) {
@@ -190,9 +218,8 @@ struct OVUnit {
             std::ifstream file(cv::util::get<ParamDesc::CompiledModel>(params.kind).blob_path,
                                std::ios_base::in | std::ios_base::binary);
             GAPI_Assert(file.is_open());
-            compiled_model = getCore().import_model(file,
-                                                    params.device,
-                                                    toOV(params.config));
+            compiled_model = cv::gapi::ov::wrap::getCore()
+                .import_model(file, params.device, toOV(params.config));
 
             if (params.num_in == 1u && params.input_names.empty()) {
                 params.input_names = { compiled_model.inputs().begin()->get_any_name() };
@@ -205,9 +232,8 @@ struct OVUnit {
 
     cv::gimpl::ov::OVCompiled compile() {
         if (cv::util::holds_alternative<ParamDesc::Model>(params.kind)) {
-            compiled_model = getCore().compile_model(model,
-                                                     params.device,
-                                                     toOV(params.config));
+            compiled_model = cv::gapi::ov::wrap::getCore()
+                .compile_model(model, params.device, toOV(params.config));
         }
         return {compiled_model};
     }
