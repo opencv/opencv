@@ -23,14 +23,17 @@ namespace cv { namespace usac {
 class EssentialMinimalSolver5ptsImpl : public EssentialMinimalSolver5pts {
 private:
     // Points must be calibrated K^-1 x
-    const Mat * points_mat;
-    const float * const pts;
+    const Mat points_mat;
     const bool use_svd, is_nister;
 public:
     explicit EssentialMinimalSolver5ptsImpl (const Mat &points_, bool use_svd_=false, bool is_nister_=false) :
-        points_mat(&points_), pts((float*)points_mat->data), use_svd(use_svd_), is_nister(is_nister_) {}
+        points_mat(points_), use_svd(use_svd_), is_nister(is_nister_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+    }
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
+        const float * pts = points_mat.ptr<float>();
         // (1) Extract 4 null vectors from linear equations of epipolar constraint
         std::vector<double> coefficients(45); // 5 pts=rows, 9 columns
         auto *coefficients_ = &coefficients[0];
