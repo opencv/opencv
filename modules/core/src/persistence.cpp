@@ -56,6 +56,28 @@ char* itoa( int _val, char* buffer, int /*radix*/ )
     return ptr;
 }
 
+char* itoa( int64_t _val, char* buffer, int /*radix*/, bool _signed)
+{
+    const int radix = 10;
+    char* ptr=buffer + 23 /* enough even for 64-bit integers */;
+    int sign = _signed && _val < 0 ? -1 : 1;
+    uint64_t val = _signed ? *(uint64_t*)&_val : abs(_val);
+
+    *ptr = '\0';
+    do
+    {
+        uint64_t r = val / radix;
+        *--ptr = (char)(val - (r*radix) + '0');
+        val = r;
+    }
+    while( val != 0 );
+
+    if( sign < 0 )
+        *--ptr = '-';
+
+    return ptr;
+}
+
 char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero )
 {
     Cv64suf val;
@@ -264,13 +286,18 @@ int calcStructSize( const char* dt, int initial_size )
         switch (v)
         {
         case 'u': { elem_max_size = std::max( elem_max_size, sizeof(uchar ) ); break; }
+        case 'b': { elem_max_size = std::max( elem_max_size, sizeof(bool  ) ); break; }
         case 'c': { elem_max_size = std::max( elem_max_size, sizeof(schar ) ); break; }
         case 'w': { elem_max_size = std::max( elem_max_size, sizeof(ushort) ); break; }
         case 's': { elem_max_size = std::max( elem_max_size, sizeof(short ) ); break; }
         case 'i': { elem_max_size = std::max( elem_max_size, sizeof(int   ) ); break; }
+        case 'n': { elem_max_size = std::max( elem_max_size, sizeof(unsigned) ); break; }
         case 'f': { elem_max_size = std::max( elem_max_size, sizeof(float ) ); break; }
         case 'd': { elem_max_size = std::max( elem_max_size, sizeof(double) ); break; }
-        case 'h': { elem_max_size = std::max(elem_max_size, sizeof(float16_t)); break; }
+        case 'h': { elem_max_size = std::max( elem_max_size, sizeof(float16_t)); break; }
+        case 'H': { elem_max_size = std::max( elem_max_size, sizeof(bfloat16_t)); break; }
+        case 'I': { elem_max_size = std::max( elem_max_size, sizeof(int64_t)); break; }
+        case 'U': { elem_max_size = std::max( elem_max_size, sizeof(uint64_t)); break; }
         default:
             CV_Error_(Error::StsNotImplemented, ("Unknown type identifier: '%c' in '%s'", (char)(*type), dt));
         }
@@ -1097,6 +1124,10 @@ void FileStorage::Impl::writeRawData(const std::string &dt, const void *_data, s
                         ptr = fs::itoa(*(uchar *) data, buf, 10);
                         data++;
                         break;
+                    case CV_Bool:
+                        ptr = fs::itoa(*(uchar *) data != 0, buf, 10);
+                        data++;
+                        break;
                     case CV_8S:
                         ptr = fs::itoa(*(char *) data, buf, 10);
                         data++;
@@ -1109,8 +1140,20 @@ void FileStorage::Impl::writeRawData(const std::string &dt, const void *_data, s
                         ptr = fs::itoa(*(short *) data, buf, 10);
                         data += sizeof(short);
                         break;
+                    case CV_32U:
+                        ptr = fs::itoa((int64_t)*(unsigned*) data, buf, 10, false);
+                        data += sizeof(int);
+                        break;
                     case CV_32S:
                         ptr = fs::itoa(*(int *) data, buf, 10);
+                        data += sizeof(int);
+                        break;
+                    case CV_64U:
+                        ptr = fs::itoa(*(uint64_t*) data, buf, 10, false);
+                        data += sizeof(int);
+                        break;
+                    case CV_64S:
+                        ptr = fs::itoa(*(int64_t*) data, buf, 10, true);
                         data += sizeof(int);
                         break;
                     case CV_32F:
@@ -1121,9 +1164,13 @@ void FileStorage::Impl::writeRawData(const std::string &dt, const void *_data, s
                         ptr = fs::doubleToString(buf, sizeof(buf), *(double *) data, explicitZero);
                         data += sizeof(double);
                         break;
-                    case CV_16F: /* reference */
+                    case CV_16F:
                         ptr = fs::floatToString(buf, sizeof(buf), (float) *(float16_t *) data, true, explicitZero);
                         data += sizeof(float16_t);
+                        break;
+                    case CV_16BF:
+                        ptr = fs::floatToString(buf, sizeof(buf), (float) *(bfloat16_t *) data, true, explicitZero);
+                        data += sizeof(bfloat16_t);
                         break;
                     default:
                         CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported type");

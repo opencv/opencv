@@ -3250,6 +3250,8 @@ template<int n> inline v_reg<double, n/2> v_dotprod_expand_fast(const v_reg<int,
 
 ////// FP16 support ///////
 
+#define OPENCV_HAL_HAVE_PACK_STORE_BFLOAT16 1
+
 inline v_reg<float, simd128_width / sizeof(float)>
 v_load_expand(const float16_t* ptr)
 {

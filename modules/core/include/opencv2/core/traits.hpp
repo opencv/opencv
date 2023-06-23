@@ -134,9 +134,9 @@ public:
     typedef value_type  channel_type;
     typedef value_type  vec_type;
     enum { generic_type = 0,
-           depth        = CV_8U,
+           depth        = CV_Bool,
            channels     = 1,
-           fmt          = (int)'u',
+           fmt          = (int)'b',
            type         = CV_MAKETYPE(depth, channels)
          };
 };
@@ -231,6 +231,51 @@ public:
          };
 };
 
+template<> class DataType<unsigned>
+{
+public:
+    typedef unsigned    value_type;
+    typedef value_type  work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_32U,
+           channels     = 1,
+           fmt          = (int)'n',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<int64_t>
+{
+public:
+    typedef unsigned    value_type;
+    typedef value_type  work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_64S,
+           channels     = 1,
+           fmt          = (int)'L',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<uint64_t>
+{
+public:
+    typedef unsigned    value_type;
+    typedef value_type  work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_64U,
+           channels     = 1,
+           fmt          = (int)'U',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
 template<> class DataType<float>
 {
 public:
@@ -272,6 +317,21 @@ public:
            depth        = CV_16F,
            channels     = 1,
            fmt          = (int)'h',
+           type         = CV_MAKETYPE(depth, channels)
+         };
+};
+
+template<> class DataType<bfloat16_t>
+{
+public:
+    typedef bfloat16_t  value_type;
+    typedef float       work_type;
+    typedef value_type  channel_type;
+    typedef value_type  vec_type;
+    enum { generic_type = 0,
+           depth        = CV_16BF,
+           channels     = 1,
+           fmt          = (int)'H',
            type         = CV_MAKETYPE(depth, channels)
          };
 };
@@ -332,6 +392,12 @@ template<> class TypeDepth<CV_32S>
     typedef int value_type;
 };
 
+template<> class TypeDepth<CV_32U>
+{
+    enum { depth = CV_32U };
+    typedef unsigned value_type;
+};
+
 template<> class TypeDepth<CV_32F>
 {
     enum { depth = CV_32F };
@@ -344,10 +410,34 @@ template<> class TypeDepth<CV_64F>
     typedef double value_type;
 };
 
+template<> class TypeDepth<CV_64U>
+{
+    enum { depth = CV_64U };
+    typedef uint64_t value_type;
+};
+
+template<> class TypeDepth<CV_64S>
+{
+    enum { depth = CV_64S };
+    typedef int64_t value_type;
+};
+
 template<> class TypeDepth<CV_16F>
 {
     enum { depth = CV_16F };
     typedef float16_t value_type;
+};
+
+template<> class TypeDepth<CV_16BF>
+{
+    enum { depth = CV_16BF };
+    typedef bfloat16_t value_type;
+};
+
+template<> class TypeDepth<CV_Bool>
+{
+    enum { depth = CV_Bool };
+    typedef bool value_type;
 };
 
 #endif

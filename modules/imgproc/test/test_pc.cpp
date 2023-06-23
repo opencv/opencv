@@ -186,10 +186,10 @@ void CV_DivSpectrumsTest::get_test_array_types_and_sizes( int test_case_idx, vec
     // Inputs are CCS-packed arrays.  Prepare outputs and temporary inputs as complex matrices.
     if( type == CV_32FC1 || type == CV_64FC1 )
     {
-        types[OUTPUT][0] += 8;
-        types[REF_OUTPUT][0] += 8;
-        types[TEMP][0] += 8;
-        types[TEMP][1] += 8;
+        types[OUTPUT][0] += CV_DEPTH_MAX;
+        types[REF_OUTPUT][0] += CV_DEPTH_MAX;
+        types[TEMP][0] += CV_DEPTH_MAX;
+        types[TEMP][1] += CV_DEPTH_MAX;
     }
 }
 

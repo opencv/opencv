@@ -217,6 +217,33 @@ static void cvtScale##suffix( const uchar* src_, size_t sstep, const uchar*, siz
     cvt(src, sstep, dst, dstep, size, (wtype)scale[0], (wtype)scale[1]); \
 }
 
+#define DEF_CVT_SCALE2BOOL_FUNC(suffix, stype, wtype) \
+static void cvtScale##suffix( const uchar* src_, size_t sstep, const uchar*, size_t, \
+                              uchar* dst, size_t dstep, Size size, void* scale_) \
+{ \
+    const stype* src = (const stype*)src_; \
+    const double* scale = (const double*)scale_; \
+    wtype a = (wtype)scale[0], b = (wtype)scale[1]; \
+    sstep /= sizeof(src[0]); \
+    for( int i = 0; i < size.height; i++, src += sstep, dst += dstep ) \
+        for (int j = 0; j < size.width; j++) \
+            dst[j] = (bool)((wtype)src[j]*a + b != 0); \
+}
+
+#define DEF_CVT_SCALEBOOL2_FUNC(suffix, dtype, wtype) \
+static void cvtScale##suffix( const uchar* src, size_t sstep, const uchar*, size_t, \
+                              uchar* dst_, size_t dstep, Size size, void* scale_) \
+{ \
+    dtype* dst = (dtype*)dst_; \
+    const double* scale = (const double*)scale_; \
+    wtype a = (wtype)scale[0], b = (wtype)scale[1]; \
+    dtype v0 = saturate_cast<dtype>(b), v1 = saturate_cast<dtype>(a + b); \
+    dstep /= sizeof(dst[0]); \
+    for( int i = 0; i < size.height; i++, src += sstep, dst += dstep ) \
+        for (int j = 0; j < size.width; j++) \
+            dst[j] = src[j] != 0 ? v1 : v0; \
+}
+
 DEF_CVT_SCALE_ABS_FUNC(8u,    cvtabs_32f, uchar,  uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(8s8u,  cvtabs_32f, schar,  uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(16u8u, cvtabs_32f, ushort, uchar, float)
@@ -229,73 +256,184 @@ DEF_CVT_SCALE_FUNC(8u,     cvt_32f, uchar,  uchar, float)
 DEF_CVT_SCALE_FUNC(8s8u,   cvt_32f, schar,  uchar, float)
 DEF_CVT_SCALE_FUNC(16u8u,  cvt_32f, ushort, uchar, float)
 DEF_CVT_SCALE_FUNC(16s8u,  cvt_32f, short,  uchar, float)
+DEF_CVT_SCALE_FUNC(32u8u,  cvt_32f, unsigned, uchar, float)
 DEF_CVT_SCALE_FUNC(32s8u,  cvt_32f, int,    uchar, float)
 DEF_CVT_SCALE_FUNC(32f8u,  cvt_32f, float,  uchar, float)
 DEF_CVT_SCALE_FUNC(64f8u,  cvt_32f, double, uchar, float)
+DEF_CVT_SCALE_FUNC(64u8u,  cvt_32f, uint64_t, uchar, float)
+DEF_CVT_SCALE_FUNC(64s8u,  cvt_32f, int64_t, uchar, float)
 DEF_CVT_SCALE_FUNC(16f8u,  cvt_32f, float16_t, uchar, float)
+DEF_CVT_SCALE_FUNC(16bf8u, cvt_32f, bfloat16_t, uchar, float)
 
 DEF_CVT_SCALE_FUNC(8u8s,   cvt_32f, uchar,  schar, float)
 DEF_CVT_SCALE_FUNC(8s,     cvt_32f, schar,  schar, float)
 DEF_CVT_SCALE_FUNC(16u8s,  cvt_32f, ushort, schar, float)
 DEF_CVT_SCALE_FUNC(16s8s,  cvt_32f, short,  schar, float)
+DEF_CVT_SCALE_FUNC(32u8s,  cvt_32f, unsigned, schar, float)
 DEF_CVT_SCALE_FUNC(32s8s,  cvt_32f, int,    schar, float)
 DEF_CVT_SCALE_FUNC(32f8s,  cvt_32f, float,  schar, float)
 DEF_CVT_SCALE_FUNC(64f8s,  cvt_32f, double, schar, float)
+DEF_CVT_SCALE_FUNC(64u8s,  cvt_32f, uint64_t, schar, float)
+DEF_CVT_SCALE_FUNC(64s8s,  cvt_32f, int64_t, schar, float)
 DEF_CVT_SCALE_FUNC(16f8s,  cvt_32f, float16_t, schar, float)
+DEF_CVT_SCALE_FUNC(16bf8s, cvt_32f, bfloat16_t, schar, float)
+
+DEF_CVT_SCALE2BOOL_FUNC(8u8b, uchar, float)
+DEF_CVT_SCALE2BOOL_FUNC(8s8b, schar, float)
+DEF_CVT_SCALE2BOOL_FUNC(16u8b, ushort, float)
+DEF_CVT_SCALE2BOOL_FUNC(16s8b, short, float)
+DEF_CVT_SCALE2BOOL_FUNC(32u8b, unsigned, float)
+DEF_CVT_SCALE2BOOL_FUNC(32s8b, int, float)
+DEF_CVT_SCALE2BOOL_FUNC(32f8b, float, float)
+DEF_CVT_SCALE2BOOL_FUNC(64f8b, double, float)
+DEF_CVT_SCALE2BOOL_FUNC(64u8b, uint64_t, float)
+DEF_CVT_SCALE2BOOL_FUNC(64s8b, int64_t, float)
+DEF_CVT_SCALE2BOOL_FUNC(16f8b, float16_t, float)
+DEF_CVT_SCALE2BOOL_FUNC(16bf8b, bfloat16_t, float)
 
 DEF_CVT_SCALE_FUNC(8u16u,  cvt_32f, uchar,  ushort, float)
 DEF_CVT_SCALE_FUNC(8s16u,  cvt_32f, schar,  ushort, float)
 DEF_CVT_SCALE_FUNC(16u,    cvt_32f, ushort, ushort, float)
 DEF_CVT_SCALE_FUNC(16s16u, cvt_32f, short,  ushort, float)
+DEF_CVT_SCALE_FUNC(32u16u, cvt_32f, unsigned, ushort, float)
 DEF_CVT_SCALE_FUNC(32s16u, cvt_32f, int,    ushort, float)
 DEF_CVT_SCALE_FUNC(32f16u, cvt_32f, float,  ushort, float)
 DEF_CVT_SCALE_FUNC(64f16u, cvt_32f, double, ushort, float)
+DEF_CVT_SCALE_FUNC(64u16u, cvt_32f, uint64_t, ushort, float)
+DEF_CVT_SCALE_FUNC(64s16u, cvt_32f, int64_t, ushort, float)
 DEF_CVT_SCALE_FUNC(16f16u, cvt1_32f, float16_t, ushort, float)
+DEF_CVT_SCALE_FUNC(16bf16u, cvt1_32f, bfloat16_t, ushort, float)
 
 DEF_CVT_SCALE_FUNC(8u16s,  cvt_32f, uchar,  short, float)
 DEF_CVT_SCALE_FUNC(8s16s,  cvt_32f, schar,  short, float)
 DEF_CVT_SCALE_FUNC(16u16s, cvt_32f, ushort, short, float)
 DEF_CVT_SCALE_FUNC(16s,    cvt_32f, short,  short, float)
+DEF_CVT_SCALE_FUNC(32u16s, cvt_32f, unsigned, short, float)
 DEF_CVT_SCALE_FUNC(32s16s, cvt_32f, int,    short, float)
 DEF_CVT_SCALE_FUNC(32f16s, cvt_32f, float,  short, float)
 DEF_CVT_SCALE_FUNC(64f16s, cvt_32f, double, short, float)
+DEF_CVT_SCALE_FUNC(64u16s, cvt_32f, uint64_t, short, float)
+DEF_CVT_SCALE_FUNC(64s16s, cvt_32f, int64_t, short, float)
 DEF_CVT_SCALE_FUNC(16f16s, cvt1_32f, float16_t, short, float)
+DEF_CVT_SCALE_FUNC(16bf16s, cvt1_32f, bfloat16_t, short, float)
+
+DEF_CVT_SCALE_FUNC(8u32u,  cvt_32f, uchar,  unsigned, float)
+DEF_CVT_SCALE_FUNC(8s32u,  cvt_32f, schar,  unsigned, float)
+DEF_CVT_SCALE_FUNC(16u32u, cvt_32f, ushort, unsigned, float)
+DEF_CVT_SCALE_FUNC(16s32u, cvt_32f, short,  unsigned, float)
+DEF_CVT_SCALE_FUNC(32u, cvt_32f, unsigned, unsigned, float)
+DEF_CVT_SCALE_FUNC(32s32u, cvt_64f, int,    unsigned, double)
+DEF_CVT_SCALE_FUNC(32f32u, cvt_32f, float,  unsigned, float)
+DEF_CVT_SCALE_FUNC(64f32u, cvt_32f, double, unsigned, double)
+DEF_CVT_SCALE_FUNC(64u32u, cvt_32f, uint64_t, unsigned, float)
+DEF_CVT_SCALE_FUNC(64s32u, cvt_32f, int64_t, unsigned, float)
+DEF_CVT_SCALE_FUNC(16f32u, cvt1_32f, float16_t, unsigned, float)
+DEF_CVT_SCALE_FUNC(16bf32u, cvt1_32f, bfloat16_t, unsigned, float)
 
 DEF_CVT_SCALE_FUNC(8u32s,  cvt_32f, uchar,  int, float)
 DEF_CVT_SCALE_FUNC(8s32s,  cvt_32f, schar,  int, float)
 DEF_CVT_SCALE_FUNC(16u32s, cvt_32f, ushort, int, float)
 DEF_CVT_SCALE_FUNC(16s32s, cvt_32f, short,  int, float)
+DEF_CVT_SCALE_FUNC(32u32s, cvt_32f, unsigned, int, float)
 DEF_CVT_SCALE_FUNC(32s,    cvt_64f, int,    int, double)
 DEF_CVT_SCALE_FUNC(32f32s, cvt_32f, float,  int, float)
 DEF_CVT_SCALE_FUNC(64f32s, cvt_64f, double, int, double)
+DEF_CVT_SCALE_FUNC(64u32s, cvt_32f, uint64_t, int, float)
+DEF_CVT_SCALE_FUNC(64s32s, cvt_32f, int64_t, int, float)
 DEF_CVT_SCALE_FUNC(16f32s, cvt1_32f, float16_t, int, float)
+DEF_CVT_SCALE_FUNC(16bf32s, cvt1_32f, bfloat16_t, int, float)
 
 DEF_CVT_SCALE_FUNC(8u32f,  cvt_32f, uchar,  float, float)
 DEF_CVT_SCALE_FUNC(8s32f,  cvt_32f, schar,  float, float)
 DEF_CVT_SCALE_FUNC(16u32f, cvt_32f, ushort, float, float)
 DEF_CVT_SCALE_FUNC(16s32f, cvt_32f, short,  float, float)
+DEF_CVT_SCALE_FUNC(32u32f, cvt_32f, unsigned, float, float)
 DEF_CVT_SCALE_FUNC(32s32f, cvt_32f, int,    float, float)
 DEF_CVT_SCALE_FUNC(32f,    cvt_32f, float,  float, float)
 DEF_CVT_SCALE_FUNC(64f32f, cvt_64f, double, float, double)
+DEF_CVT_SCALE_FUNC(64u32f, cvt_32f, uint64_t, float, float)
+DEF_CVT_SCALE_FUNC(64s32f, cvt_32f, int64_t, float, float)
 DEF_CVT_SCALE_FUNC(16f32f, cvt1_32f, float16_t, float, float)
+DEF_CVT_SCALE_FUNC(16bf32f, cvt1_32f, bfloat16_t, float, float)
 
 DEF_CVT_SCALE_FUNC(8u64f,  cvt_64f, uchar,  double, double)
 DEF_CVT_SCALE_FUNC(8s64f,  cvt_64f, schar,  double, double)
 DEF_CVT_SCALE_FUNC(16u64f, cvt_64f, ushort, double, double)
 DEF_CVT_SCALE_FUNC(16s64f, cvt_64f, short,  double, double)
+DEF_CVT_SCALE_FUNC(32u64f, cvt_64f, unsigned, double, double)
 DEF_CVT_SCALE_FUNC(32s64f, cvt_64f, int,    double, double)
 DEF_CVT_SCALE_FUNC(32f64f, cvt_64f, float,  double, double)
 DEF_CVT_SCALE_FUNC(64f,    cvt_64f, double, double, double)
+DEF_CVT_SCALE_FUNC(64u64f, cvt_64f, uint64_t, double, double)
+DEF_CVT_SCALE_FUNC(64s64f, cvt_64f, int64_t, double, double)
 DEF_CVT_SCALE_FUNC(16f64f, cvt_64f, float16_t, double, double)
+DEF_CVT_SCALE_FUNC(16bf64f, cvt_64f, bfloat16_t, double, double)
+
+DEF_CVT_SCALE_FUNC(8u64u,  cvt_64f, uchar,  uint64_t, double)
+DEF_CVT_SCALE_FUNC(8s64u,  cvt_64f, schar,  uint64_t, double)
+DEF_CVT_SCALE_FUNC(16u64u, cvt_64f, ushort, uint64_t, double)
+DEF_CVT_SCALE_FUNC(16s64u, cvt_64f, short,  uint64_t, double)
+DEF_CVT_SCALE_FUNC(32u64u, cvt_64f, unsigned, uint64_t, double)
+DEF_CVT_SCALE_FUNC(32s64u, cvt_64f, int,    uint64_t, double)
+DEF_CVT_SCALE_FUNC(32f64u, cvt_64f, float,  uint64_t, double)
+DEF_CVT_SCALE_FUNC(64f64u, cvt_64f, double, uint64_t, double)
+DEF_CVT_SCALE_FUNC(64u, cvt_64f, uint64_t, uint64_t, double)
+DEF_CVT_SCALE_FUNC(64s64u, cvt_64f, int64_t, uint64_t, double)
+DEF_CVT_SCALE_FUNC(16f64u, cvt_64f, float16_t, uint64_t, double)
+DEF_CVT_SCALE_FUNC(16bf64u, cvt_64f, bfloat16_t, uint64_t, double)
+
+DEF_CVT_SCALE_FUNC(8u64s,  cvt_64f, uchar,  int64_t, double)
+DEF_CVT_SCALE_FUNC(8s64s,  cvt_64f, schar,  int64_t, double)
+DEF_CVT_SCALE_FUNC(16u64s, cvt_64f, ushort, int64_t, double)
+DEF_CVT_SCALE_FUNC(16s64s, cvt_64f, short,  int64_t, double)
+DEF_CVT_SCALE_FUNC(32u64s, cvt_64f, unsigned, int64_t, double)
+DEF_CVT_SCALE_FUNC(32s64s, cvt_64f, int,    int64_t, double)
+DEF_CVT_SCALE_FUNC(32f64s, cvt_64f, float,  int64_t, double)
+DEF_CVT_SCALE_FUNC(64f64s, cvt_64f, double, int64_t, double)
+DEF_CVT_SCALE_FUNC(64u64s, cvt_64f, uint64_t, int64_t, double)
+DEF_CVT_SCALE_FUNC(64s, cvt_64f, int64_t, int64_t, double)
+DEF_CVT_SCALE_FUNC(16f64s, cvt_64f, float16_t, int64_t, double)
+DEF_CVT_SCALE_FUNC(16bf64s, cvt_64f, bfloat16_t, int64_t, double)
 
 DEF_CVT_SCALE_FUNC(8u16f,  cvt1_32f, uchar,  float16_t, float)
 DEF_CVT_SCALE_FUNC(8s16f,  cvt1_32f, schar,  float16_t, float)
 DEF_CVT_SCALE_FUNC(16u16f, cvt1_32f, ushort, float16_t, float)
 DEF_CVT_SCALE_FUNC(16s16f, cvt1_32f, short,  float16_t, float)
+DEF_CVT_SCALE_FUNC(32u16f, cvt1_32f, unsigned, float16_t, float)
 DEF_CVT_SCALE_FUNC(32s16f, cvt1_32f, int,    float16_t, float)
 DEF_CVT_SCALE_FUNC(32f16f, cvt1_32f, float,  float16_t, float)
-DEF_CVT_SCALE_FUNC(64f16f, cvt_64f,  double, float16_t, double)
+DEF_CVT_SCALE_FUNC(64f16f, cvt1_32f, double, float16_t, float)
+DEF_CVT_SCALE_FUNC(64u16f, cvt1_32f, uint64_t, float16_t, float)
+DEF_CVT_SCALE_FUNC(64s16f, cvt1_32f, int64_t, float16_t, float)
 DEF_CVT_SCALE_FUNC(16f,    cvt1_32f, float16_t, float16_t, float)
+DEF_CVT_SCALE_FUNC(16bf16f, cvt1_32f, bfloat16_t, float16_t, float)
+
+DEF_CVT_SCALE_FUNC(8u16bf,  cvt1_32f, uchar,  bfloat16_t, float)
+DEF_CVT_SCALE_FUNC(8s16bf,  cvt1_32f, schar,  bfloat16_t, float)
+DEF_CVT_SCALE_FUNC(16u16bf, cvt1_32f, ushort, bfloat16_t, float)
+DEF_CVT_SCALE_FUNC(16s16bf, cvt1_32f, short,  bfloat16_t, float)
+DEF_CVT_SCALE_FUNC(32u16bf, cvt1_32f, unsigned, bfloat16_t, float)
+DEF_CVT_SCALE_FUNC(32s16bf, cvt1_32f, int,    bfloat16_t, float)
+DEF_CVT_SCALE_FUNC(32f16bf, cvt1_32f, float,  bfloat16_t, float)
+DEF_CVT_SCALE_FUNC(64f16bf, cvt1_32f, double, bfloat16_t, float)
+DEF_CVT_SCALE_FUNC(64u16bf, cvt1_32f, uint64_t, bfloat16_t, float)
+DEF_CVT_SCALE_FUNC(64s16bf, cvt1_32f, int64_t, bfloat16_t, float)
+DEF_CVT_SCALE_FUNC(16f16bf, cvt1_32f, float16_t, bfloat16_t, float)
+DEF_CVT_SCALE_FUNC(16bf, cvt1_32f, bfloat16_t, bfloat16_t, float)
+
+DEF_CVT_SCALEBOOL2_FUNC(8b8u, uchar, float)
+DEF_CVT_SCALEBOOL2_FUNC(8b8s, schar, float)
+DEF_CVT_SCALEBOOL2_FUNC(8b, bool, float)
+DEF_CVT_SCALEBOOL2_FUNC(8b16u, ushort, float)
+DEF_CVT_SCALEBOOL2_FUNC(8b16s, short, float)
+DEF_CVT_SCALEBOOL2_FUNC(8b32u, unsigned, float)
+DEF_CVT_SCALEBOOL2_FUNC(8b32s, int, float)
+DEF_CVT_SCALEBOOL2_FUNC(8b32f, float, float)
+DEF_CVT_SCALEBOOL2_FUNC(8b64u, uint64_t, double)
+DEF_CVT_SCALEBOOL2_FUNC(8b64s, int64_t, double)
+DEF_CVT_SCALEBOOL2_FUNC(8b64f, double, double)
+DEF_CVT_SCALEBOOL2_FUNC(8b16f, float16_t, float)
+DEF_CVT_SCALEBOOL2_FUNC(8b16bf, bfloat16_t, float)
 
 BinaryFunc getCvtScaleAbsFunc(int depth)
 {
@@ -309,53 +447,210 @@ BinaryFunc getCvtScaleAbsFunc(int depth)
     return cvtScaleAbsTab[depth];
 }
 
-BinaryFunc getConvertScaleFunc(int sdepth, int ddepth)
+BinaryFunc getConvertScaleFunc(int sdepth_, int ddepth_)
 {
-    static BinaryFunc cvtScaleTab[][8] =
-    {
-        {
-            (BinaryFunc)GET_OPTIMIZED(cvtScale8u), (BinaryFunc)GET_OPTIMIZED(cvtScale8s8u), (BinaryFunc)GET_OPTIMIZED(cvtScale16u8u),
-            (BinaryFunc)GET_OPTIMIZED(cvtScale16s8u), (BinaryFunc)GET_OPTIMIZED(cvtScale32s8u), (BinaryFunc)GET_OPTIMIZED(cvtScale32f8u),
-            (BinaryFunc)cvtScale64f8u, (BinaryFunc)cvtScale16f8u
-        },
-        {
-            (BinaryFunc)GET_OPTIMIZED(cvtScale8u8s), (BinaryFunc)GET_OPTIMIZED(cvtScale8s), (BinaryFunc)GET_OPTIMIZED(cvtScale16u8s),
-            (BinaryFunc)GET_OPTIMIZED(cvtScale16s8s), (BinaryFunc)GET_OPTIMIZED(cvtScale32s8s), (BinaryFunc)GET_OPTIMIZED(cvtScale32f8s),
-            (BinaryFunc)cvtScale64f8s, (BinaryFunc)cvtScale16f8s
-        },
-        {
-            (BinaryFunc)GET_OPTIMIZED(cvtScale8u16u), (BinaryFunc)GET_OPTIMIZED(cvtScale8s16u), (BinaryFunc)GET_OPTIMIZED(cvtScale16u),
-            (BinaryFunc)GET_OPTIMIZED(cvtScale16s16u), (BinaryFunc)GET_OPTIMIZED(cvtScale32s16u), (BinaryFunc)GET_OPTIMIZED(cvtScale32f16u),
-            (BinaryFunc)cvtScale64f16u, (BinaryFunc)cvtScale16f16u
-        },
-        {
-            (BinaryFunc)GET_OPTIMIZED(cvtScale8u16s), (BinaryFunc)GET_OPTIMIZED(cvtScale8s16s), (BinaryFunc)GET_OPTIMIZED(cvtScale16u16s),
-            (BinaryFunc)GET_OPTIMIZED(cvtScale16s), (BinaryFunc)GET_OPTIMIZED(cvtScale32s16s), (BinaryFunc)GET_OPTIMIZED(cvtScale32f16s),
-            (BinaryFunc)cvtScale64f16s, (BinaryFunc)cvtScale16f16s
-        },
-        {
-            (BinaryFunc)GET_OPTIMIZED(cvtScale8u32s), (BinaryFunc)GET_OPTIMIZED(cvtScale8s32s), (BinaryFunc)GET_OPTIMIZED(cvtScale16u32s),
-            (BinaryFunc)GET_OPTIMIZED(cvtScale16s32s), (BinaryFunc)GET_OPTIMIZED(cvtScale32s), (BinaryFunc)GET_OPTIMIZED(cvtScale32f32s),
-            (BinaryFunc)cvtScale64f32s, (BinaryFunc)cvtScale16f32s
-        },
-        {
-            (BinaryFunc)GET_OPTIMIZED(cvtScale8u32f), (BinaryFunc)GET_OPTIMIZED(cvtScale8s32f), (BinaryFunc)GET_OPTIMIZED(cvtScale16u32f),
-            (BinaryFunc)GET_OPTIMIZED(cvtScale16s32f), (BinaryFunc)GET_OPTIMIZED(cvtScale32s32f), (BinaryFunc)GET_OPTIMIZED(cvtScale32f),
-            (BinaryFunc)cvtScale64f32f, (BinaryFunc)cvtScale16f32f
-        },
-        {
-            (BinaryFunc)cvtScale8u64f, (BinaryFunc)cvtScale8s64f, (BinaryFunc)cvtScale16u64f,
-            (BinaryFunc)cvtScale16s64f, (BinaryFunc)cvtScale32s64f, (BinaryFunc)cvtScale32f64f,
-            (BinaryFunc)cvtScale64f, (BinaryFunc)cvtScale16f64f
-        },
-        {
-            (BinaryFunc)cvtScale8u16f, (BinaryFunc)cvtScale8s16f, (BinaryFunc)cvtScale16u16f,
-            (BinaryFunc)cvtScale16s16f, (BinaryFunc)cvtScale32s16f, (BinaryFunc)cvtScale32f16f,
-            (BinaryFunc)cvtScale64f16f, (BinaryFunc)cvtScale16f
-        },
-    };
+    int sdepth = CV_MAT_DEPTH(sdepth_);
+    int ddepth = CV_MAT_DEPTH(ddepth_);
+    BinaryFunc func =
+        ddepth == CV_8U ? (
+            sdepth == CV_8U ? cvtScale8u :
+            sdepth == CV_8S ? cvtScale8s8u :
+            sdepth == CV_Bool ? cvtScale8b8u :
+            sdepth == CV_16U ? cvtScale16u8u :
+            sdepth == CV_16S ? cvtScale16s8u :
+            sdepth == CV_32U ? cvtScale32u8u :
+            sdepth == CV_32S ? cvtScale32s8u :
+            sdepth == CV_32F ? cvtScale32f8u :
+            sdepth == CV_64F ? cvtScale64f8u :
+            sdepth == CV_16F ? cvtScale16f8u :
+            sdepth == CV_16BF ? cvtScale16bf8u :
+            sdepth == CV_64U ? cvtScale64u8u :
+            sdepth == CV_64S ? cvtScale64s8u :
+            0) :
+        ddepth == CV_8S ? (
+            sdepth == CV_8U ? cvtScale8u8s :
+            sdepth == CV_8S ? cvtScale8s :
+            sdepth == CV_Bool ? cvtScale8b8s :
+            sdepth == CV_16U ? cvtScale16u8s :
+            sdepth == CV_16S ? cvtScale16s8s :
+            sdepth == CV_32U ? cvtScale32u8s :
+            sdepth == CV_32S ? cvtScale32s8s :
+            sdepth == CV_32F ? cvtScale32f8s :
+            sdepth == CV_64F ? cvtScale64f8s :
+            sdepth == CV_16F ? cvtScale16f8s :
+            sdepth == CV_16BF ? cvtScale16bf8s :
+            sdepth == CV_64U ? cvtScale64u8s :
+            sdepth == CV_64S ? cvtScale64s8s :
+            0) :
+        ddepth == CV_16U ? (
+            sdepth == CV_8U ? cvtScale8u16u :
+            sdepth == CV_8S ? cvtScale8s16u :
+            sdepth == CV_Bool ? cvtScale8b16u :
+            sdepth == CV_16U ? cvtScale16u :
+            sdepth == CV_16S ? cvtScale16s16u :
+            sdepth == CV_32U ? cvtScale32u16u :
+            sdepth == CV_32S ? cvtScale32s16u :
+            sdepth == CV_32F ? cvtScale32f16u :
+            sdepth == CV_64F ? cvtScale64f16u :
+            sdepth == CV_16F ? cvtScale16f16u :
+            sdepth == CV_16BF ? cvtScale16bf16u :
+            sdepth == CV_64U ? cvtScale64u16u :
+            sdepth == CV_64S ? cvtScale64s16u :
+            0) :
+        ddepth == CV_16S ? (
+            sdepth == CV_8U ? cvtScale8u16s :
+            sdepth == CV_8S ? cvtScale8s16s :
+            sdepth == CV_Bool ? cvtScale8b16s :
+            sdepth == CV_16U ? cvtScale16u16s :
+            sdepth == CV_16S ? cvtScale16s :
+            sdepth == CV_32U ? cvtScale32u16s :
+            sdepth == CV_32S ? cvtScale32s16s :
+            sdepth == CV_32F ? cvtScale32f16s :
+            sdepth == CV_64F ? cvtScale64f16s :
+            sdepth == CV_16F ? cvtScale16f16s :
+            sdepth == CV_16BF ? cvtScale16bf16s :
+            sdepth == CV_64U ? cvtScale64u16s :
+            sdepth == CV_64S ? cvtScale64s16s :
+            0) :
+        ddepth == CV_32U ? (
+            sdepth == CV_8U ? cvtScale8u32u :
+            sdepth == CV_8S ? cvtScale8s32u :
+            sdepth == CV_Bool ? cvtScale8b32u :
+            sdepth == CV_16U ? cvtScale16u32u :
+            sdepth == CV_16S ? cvtScale16s32u :
+            sdepth == CV_32U ? cvtScale32u :
+            sdepth == CV_32S ? cvtScale32s32u :
+            sdepth == CV_32F ? cvtScale32f32u :
+            sdepth == CV_64F ? cvtScale64f32u :
+            sdepth == CV_16F ? cvtScale16f32u :
+            sdepth == CV_16BF ? cvtScale16bf32u :
+            sdepth == CV_64U ? cvtScale64u32u :
+            sdepth == CV_64S ? cvtScale64s32u :
 
-    return cvtScaleTab[CV_MAT_DEPTH(ddepth)][CV_MAT_DEPTH(sdepth)];
+            0) :
+        ddepth == CV_32S ? (
+            sdepth == CV_8U ? cvtScale8u32s :
+            sdepth == CV_8S ? cvtScale8s32s :
+            sdepth == CV_Bool ? cvtScale8b32s :
+            sdepth == CV_16U ? cvtScale16u32s :
+            sdepth == CV_16S ? cvtScale16s32s :
+            sdepth == CV_32U ? cvtScale32u32s :
+            sdepth == CV_32S ? cvtScale32s :
+            sdepth == CV_32F ? cvtScale32f32s :
+            sdepth == CV_64F ? cvtScale64f32s :
+            sdepth == CV_16F ? cvtScale16f32s :
+            sdepth == CV_16BF ? cvtScale16bf32s :
+            sdepth == CV_64U ? cvtScale64u32s :
+            sdepth == CV_64S ? cvtScale64s32s :
+            0) :
+        ddepth == CV_32F ? (
+            sdepth == CV_8U ? cvtScale8u32f :
+            sdepth == CV_8S ? cvtScale8s32f :
+            sdepth == CV_Bool ? cvtScale8b32f :
+            sdepth == CV_16U ? cvtScale16u32f :
+            sdepth == CV_16S ? cvtScale16s32f :
+            sdepth == CV_32U ? cvtScale32u32f :
+            sdepth == CV_32S ? cvtScale32s32f :
+            sdepth == CV_32F ? cvtScale32f :
+            sdepth == CV_64F ? cvtScale64f32f :
+            sdepth == CV_16F ? cvtScale16f32f :
+            sdepth == CV_16BF ? cvtScale16bf32f :
+            sdepth == CV_64U ? cvtScale64u32f :
+            sdepth == CV_64S ? cvtScale64s32f :
+            0) :
+        ddepth == CV_64F ? (
+            sdepth == CV_8U ? cvtScale8u64f :
+            sdepth == CV_8S ? cvtScale8s64f :
+            sdepth == CV_Bool ? cvtScale8b64f :
+            sdepth == CV_16U ? cvtScale16u64f :
+            sdepth == CV_16S ? cvtScale16s64f :
+            sdepth == CV_32U ? cvtScale32u64f :
+            sdepth == CV_32S ? cvtScale32s64f :
+            sdepth == CV_32F ? cvtScale32f64f :
+            sdepth == CV_64F ? cvtScale64f :
+            sdepth == CV_16F ? cvtScale16f64f :
+            sdepth == CV_16BF ? cvtScale16bf64f :
+            sdepth == CV_64U ? cvtScale64u64f :
+            sdepth == CV_64S ? cvtScale64s64f :
+            0) :
+        ddepth == CV_16F ? (
+            sdepth == CV_8U ? cvtScale8u16f :
+            sdepth == CV_8S ? cvtScale8s16f :
+            sdepth == CV_Bool ? cvtScale8b16f :
+            sdepth == CV_16U ? cvtScale16u16f :
+            sdepth == CV_16S ? cvtScale16s16f :
+            sdepth == CV_32U ? cvtScale32u16f :
+            sdepth == CV_32S ? cvtScale32s16f :
+            sdepth == CV_32F ? cvtScale32f16f :
+            sdepth == CV_64F ? cvtScale64f16f :
+            sdepth == CV_16F ? cvtScale16f :
+            sdepth == CV_16BF ? cvtScale16bf16f :
+            sdepth == CV_64U ? cvtScale64u16f :
+            sdepth == CV_64S ? cvtScale64s16f :
+            0) :
+        ddepth == CV_16BF ? (
+            sdepth == CV_8U ? cvtScale8u16bf :
+            sdepth == CV_8S ? cvtScale8s16bf :
+            sdepth == CV_Bool ? cvtScale8b16bf :
+            sdepth == CV_16U ? cvtScale16u16bf :
+            sdepth == CV_16S ? cvtScale16s16bf :
+            sdepth == CV_32U ? cvtScale32u16bf :
+            sdepth == CV_32S ? cvtScale32s16bf :
+            sdepth == CV_32F ? cvtScale32f16bf :
+            sdepth == CV_64F ? cvtScale64f16bf :
+            sdepth == CV_16F ? cvtScale16f16bf :
+            sdepth == CV_16BF ? cvtScale16bf :
+            sdepth == CV_64U ? cvtScale64u16bf :
+            sdepth == CV_64S ? cvtScale64s16bf :
+            0) :
+        ddepth == CV_Bool ? (
+            sdepth == CV_8U ? cvtScale8u8b :
+            sdepth == CV_8S ? cvtScale8s8b :
+            sdepth == CV_Bool ? cvtScale8b :
+            sdepth == CV_16U ? cvtScale16u8b :
+            sdepth == CV_16S ? cvtScale16s8b :
+            sdepth == CV_32U ? cvtScale32u8b :
+            sdepth == CV_32S ? cvtScale32s8b :
+            sdepth == CV_32F ? cvtScale32f8b :
+            sdepth == CV_64F ? cvtScale64f8b :
+            sdepth == CV_16F ? cvtScale16f8b :
+            sdepth == CV_16BF ? cvtScale16bf8b :
+            sdepth == CV_64U ? cvtScale64u8b :
+            sdepth == CV_64S ? cvtScale64s8b :
+            0) :
+        ddepth == CV_64U ? (
+            sdepth == CV_8U ? cvtScale8u64u :
+            sdepth == CV_8S ? cvtScale8s64u :
+            sdepth == CV_Bool ? cvtScale8b64u :
+            sdepth == CV_16U ? cvtScale16u64u :
+            sdepth == CV_16S ? cvtScale16s64u :
+            sdepth == CV_32U ? cvtScale32u64u :
+            sdepth == CV_32S ? cvtScale32s64u :
+            sdepth == CV_32F ? cvtScale32f64u :
+            sdepth == CV_64F ? cvtScale64f64u :
+            sdepth == CV_16F ? cvtScale16f64u :
+            sdepth == CV_16BF ? cvtScale16bf64u :
+            sdepth == CV_64U ? cvtScale64u :
+            sdepth == CV_64S ? cvtScale64s64u :
+            0) :
+        ddepth == CV_64S ? (
+            sdepth == CV_8U ? cvtScale8u64s :
+            sdepth == CV_8S ? cvtScale8s64s :
+            sdepth == CV_Bool ? cvtScale8b64s :
+            sdepth == CV_16U ? cvtScale16u64s :
+            sdepth == CV_16S ? cvtScale16s64s :
+            sdepth == CV_32U ? cvtScale32u64s :
+            sdepth == CV_32S ? cvtScale32s64s :
+            sdepth == CV_32F ? cvtScale32f64s :
+            sdepth == CV_64F ? cvtScale64f64s :
+            sdepth == CV_16F ? cvtScale16f64s :
+            sdepth == CV_16BF ? cvtScale16bf64s :
+            sdepth == CV_64U ? cvtScale64u64s :
+            sdepth == CV_64S ? cvtScale64s :
+            0) :
+        0;
+    CV_Assert(func != 0);
+    return func;
 }
 
 #endif

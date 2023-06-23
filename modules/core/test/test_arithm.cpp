@@ -40,7 +40,10 @@ struct BaseElemWiseOp
                                   ninputs > 1 ? ARITHM_MAX_CHANNELS : 4);
     }
 
-    virtual double getMaxErr(int depth) { return depth < CV_32F ? 1 : depth == CV_32F ? 1e-5 : 1e-12; }
+    virtual double getMaxErr(int depth)
+    {
+        return depth < CV_32F || depth == CV_32U || depth == CV_64U || depth == CV_64S ? 1 : depth == CV_16F || depth == CV_16BF ? 1e-2 : depth == CV_32F ? 1e-5 : 1e-12;
+    }
     virtual void generateScalars(int depth, RNG& rng)
     {
         const double m = 3.;
@@ -478,7 +481,7 @@ struct CopyOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -500,7 +503,7 @@ struct SetOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -725,7 +728,7 @@ struct ConvertScaleOp : public BaseElemWiseOp
     }
     double getMaxErr(int)
     {
-        return ddepth <= CV_32S ? 2 : ddepth < CV_64F ? 1e-3 : 1e-12;
+        return ddepth <= CV_32S || ddepth == CV_32U || ddepth == CV_64U || ddepth == CV_64S ? 2 : ddepth == CV_64F ? 1e-12 : ddepth == CV_Bool ? 0 : ddepth == CV_16BF ? 1e-2 : 1e-3;
     }
     void generateScalars(int depth, RNG& rng)
     {
