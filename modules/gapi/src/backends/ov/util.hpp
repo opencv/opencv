@@ -22,15 +22,19 @@ namespace cv {
 namespace gapi {
 namespace ov {
 namespace util {
-
 // NB: These functions are EXPORTed to make them accessible by the
 // test suite only.
 GAPI_EXPORTS std::vector<int> to_ocv(const ::ov::Shape &shape);
 GAPI_EXPORTS int to_ocv(const ::ov::element::Type &type);
 GAPI_EXPORTS void to_ov(const cv::Mat &mat, ::ov::Tensor &tensor);
 GAPI_EXPORTS void to_ocv(const ::ov::Tensor &tensor, cv::Mat &mat);
-
-}}}}
+} // namespace util
+namespace wrap {
+GAPI_EXPORTS ::ov::Core getCore();
+} // namespace wrap
+} // namespace ov
+} // namespace gapi
+} // namespace cv
 
 #endif // HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2022010000
 
