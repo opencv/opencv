@@ -1125,7 +1125,7 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
     else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT16)
     {
         // FIXME, for now, we only load FP16 Tensor as FP32 Mat, full support for FP16 is required in the future.
-        CV_LOG_ONCE_WARNING(NULL, "DNN: load FP16 model as FP32 model, and it takes twice the FP16 RAM requirement.");
+        CV_LOG_ONCE_INFO(NULL, "DNN: load FP16 model as FP32 model, and it takes twice the FP16 RAM requirement.");
 
         // ONNX saves float 16 data in two format: int32 and raw_data.
         // Link: https://github.com/onnx/onnx/issues/4460#issuecomment-1224373746
