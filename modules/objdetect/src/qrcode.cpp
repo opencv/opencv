@@ -2014,7 +2014,7 @@ static inline SplinePointsStatus checkSplinePoints(vector<int>& x_arr, vector<in
 bool QRDecode::getSplineInterpolation(vector<vector<Point2f> > &spline_lines)
 {
     int start, end;
-    vector<vector<float> > S;
+    vector<vector<float> > S, S2;
 
     for (int idx = 0; idx < NUM_SIDES; idx++)
     {
@@ -2029,15 +2029,24 @@ bool QRDecode::getSplineInterpolation(vector<vector<Point2f> > &spline_lines)
             y_arr.push_back(spline_points[j].y);
         }
 
-        SplinePointsStatus horizontal_order = checkSplinePoints(x_arr, y_arr);
-        vector<int>& second_arr = horizontal_order ? x_arr : y_arr;
-        vector<int>& first_arr  = horizontal_order ? y_arr : x_arr;
+        SplinePointsStatus pointsStatus = checkSplinePoints(x_arr, y_arr);
+        if (pointsStatus == SplinePointsStatus::NEED_SWAP_AXES) {
+            swap(x_arr, y_arr);
+        }
+        if (pointsStatus != SplinePointsStatus::NEED_ADD_PARAMETRIZATION) {
+            S = computeSpline(x_arr, y_arr);
+        }
+        else {
+            vector<int> t(x_arr.size());
+            std::iota(t.begin(), t.end(), 0);
+            S = computeSpline(y_arr, t);
 
-        S = computeSpline(first_arr, second_arr);
+            S2 = computeSpline(x_arr, t);
+        }
 
-        int closest_point_first  = horizontal_order ? closest_points[idx_curved_side].second.x
+        int closest_point_first = pointsStatus == NEED_SWAP_AXES ? closest_points[idx_curved_side].second.x
                                                     : closest_points[idx_curved_side].second.y;
-        int closest_point_second = horizontal_order ? closest_points[(idx_curved_side + 1) % 4].second.x
+        int closest_point_second = pointsStatus == NEED_SWAP_AXES ? closest_points[(idx_curved_side + 1) % 4].second.x
                                                     : closest_points[(idx_curved_side + 1) % 4].second.y;
 
         start = idx_curved_side;
@@ -2048,23 +2057,23 @@ bool QRDecode::getSplineInterpolation(vector<vector<Point2f> > &spline_lines)
             end = idx_curved_side;
         }
 
-        int closest_point_start = horizontal_order ? closest_points[start].second.x : closest_points[start].second.y;
-        int closest_point_end   = horizontal_order ? closest_points[end].second.x   : closest_points[end].second.y;
+        int closest_point_start = pointsStatus == NEED_SWAP_AXES ? closest_points[start].second.x : closest_points[start].second.y;
+        int closest_point_end   = pointsStatus == NEED_SWAP_AXES ? closest_points[end].second.x   : closest_points[end].second.y;
 
         // переменная index, это на самом деле x
         for (int index = closest_point_start; index <= closest_point_end; index++)
         {
-            if (index == second_arr.front())
+            if (index == y_arr.front())
             {
                 spline_lines[idx].push_back(closest_points[start].second);
             }
-            for (size_t i = 0; i < second_arr.size() - 1; i++)
+            for (size_t i = 0; i < y_arr.size() - 1; i++)
             {
-                if ((index > second_arr[i]) && (index <= second_arr[i + 1]))
+                if ((index > y_arr[i]) && (index <= y_arr[i + 1]))
                 {
-                    float val = S[i][0] + S[i][1] * (index - second_arr[i]) + S[i][2] * (index - second_arr[i]) * (index - second_arr[i])
-                                                                            + S[i][3] * (index - second_arr[i]) * (index - second_arr[i]) * (index - second_arr[i]);
-                    spline_lines[idx].push_back(horizontal_order ? Point2f(static_cast<float>(index), val) : Point2f(val, static_cast<float>(index)));
+                    int x = index - y_arr[i];
+                    float val = S[i][0] + S[i][1]*x + S[i][2]*x*x + S[i][3]*x*x*x;
+                    spline_lines[idx].push_back(pointsStatus == NEED_SWAP_AXES ? Point2f(static_cast<float>(index), val) : Point2f(val, static_cast<float>(index)));
                 }
             }
         }
