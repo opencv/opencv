@@ -52,11 +52,6 @@ void normAssert(cv::InputArray ref, cv::InputArray test,
     EXPECT_LE(normInf, lInf) << comment;
 }
 
-ov::Core getCore() {
-    static ov::Core core;
-    return core;
-}
-
 // TODO: AGNetGenComp, AGNetTypedComp, AGNetOVComp, AGNetOVCompiled
 // can be generalized to work with any model and used as parameters for tests.
 
@@ -228,7 +223,8 @@ public:
                 const std::string &bin_path,
                 const std::string &device)
         : m_device(device) {
-        m_model = getCore().read_model(xml_path, bin_path);
+        m_model = cv::gapi::ov::wrap::getCore()
+            .read_model(xml_path, bin_path);
     }
 
     using PrePostProcessF = std::function<void(ov::preprocess::PrePostProcessor&)>;
@@ -240,7 +236,8 @@ public:
     }
 
     AGNetOVCompiled compile() {
-        auto compiled_model = getCore().compile_model(m_model, m_device);
+        auto compiled_model = cv::gapi::ov::wrap::getCore()
+            .compile_model(m_model, m_device);
         return {std::move(compiled_model)};
     }
 
