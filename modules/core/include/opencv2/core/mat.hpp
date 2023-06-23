@@ -1289,15 +1289,36 @@ public:
                              t(); // finally, transpose the Nx3 matrix.
                                   // This involves copying all the elements
     @endcode
+    3-channel 2x2 matrix reshaped to 1-channel 4x3 matrix, each column has values from one of original channels:
+    @code
+    Mat m(Size(2, 2), CV_8UC3, Scalar(1, 2, 3));
+    vector<int> new_shape {4, 3};
+    m = m.reshape(1, new_shape);
+    @endcode
+    or:
+    @code
+    Mat m(Size(2, 2), CV_8UC3, Scalar(1, 2, 3));
+    const int new_shape[] = {4, 3};
+    m = m.reshape(1, 2, new_shape);
+    @endcode
     @param cn New number of channels. If the parameter is 0, the number of channels remains the same.
     @param rows New number of rows. If the parameter is 0, the number of rows remains the same.
      */
     Mat reshape(int cn, int rows=0) const;
 
-    /** @overload */
+    /** @overload
+     * @param cn New number of channels. If the parameter is 0, the number of channels remains the same.
+     * @param newndims New number of dimentions.
+     * @param newsz Array with new matrix size by all dimentions. If some sizes are zero,
+     * the original sizes in those dimensions are presumed.
+     */
     Mat reshape(int cn, int newndims, const int* newsz) const;
 
-    /** @overload */
+    /** @overload
+     * @param cn New number of channels. If the parameter is 0, the number of channels remains the same.
+     * @param newshape Vector with new matrix size by all dimentions. If some sizes are zero,
+     * the original sizes in those dimensions are presumed.
+     */
     Mat reshape(int cn, const std::vector<int>& newshape) const;
 
     /** @brief Transposes a matrix.
