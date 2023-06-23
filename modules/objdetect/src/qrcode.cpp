@@ -1053,7 +1053,7 @@ protected:
     bool addPointsToSides();
     void completeAndSortSides();
     vector<vector<float> > computeSpline(const vector<int> &x_arr, const vector<int> &y_arr);
-    bool createSpline(vector<vector<Point2f> > &spline_lines);
+    bool getSplineInterpolation(vector<vector<Point2f> > &spline_lines);
     bool divideIntoEvenSegments(vector<vector<Point2f> > &segments_points);
     bool straightenQRCodeInParts();
     bool preparingCurvedQRCodes();
@@ -1973,33 +1973,45 @@ vector<vector<float> > QRDecode::computeSpline(const vector<int> &x_arr, const v
     return S;
 }
 
+enum SplinePointsStatus {
+    OK = 0,
+    NEED_SWAP_AXES,
+    NEED_ADD_PARAMETRIZATION
+};
+
 // get horizontal_order and update x_arr, y_arr if necessary
-static inline bool setHorizontalOrder(vector<int>& x_arr, vector<int>& y_arr) {
-    bool horizontal_order = abs(x_arr.front() - x_arr.back()) > abs(y_arr.front() - y_arr.back());
-    int countX = 0, countY = 0;
+static inline SplinePointsStatus checkSplinePoints(vector<int>& x_arr, vector<int>& y_arr) {
+    SplinePointsStatus status = abs(x_arr.front() - x_arr.back()) > abs(y_arr.front() - y_arr.back()) ? NEED_SWAP_AXES : OK;
+    bool duplicateX = false, duplicateY = false;
     for (size_t i = 1ull; i < x_arr.size(); i++) {
-        if (x_arr[i] == x_arr[i-1])
-            countX++;
-        if (y_arr[i] == y_arr[i-1])
-            countY++;
+        if (x_arr[i] == x_arr[i-1]) {
+            duplicateX = true;
+            break;
+        }
     }
+     for (size_t i = 1ull; i < y_arr.size(); i++) {
+        if (y_arr[i] == y_arr[i-1]) {
+            duplicateY = true;
+            break;
+        }
+     }
+
     // Only the points of the function can be interpolated using splines.
     // Contour points may not be a function, there may be several points with the same x coordinate and different y.
-    // We are adding a small offset in x coord to fix this problem. This should not significantly affect the final answer.
-    if (countX != 0 || countY != 0) {
-        vector<int>& newX = countX < countY ? x_arr : y_arr;
-        const int delta = newX.back() > newX.front() ? 1 : -1;
-        horizontal_order = countX < countY ? true : false;
-        if (min(countX, countY) > 0)
-            for (size_t i = 1ull; i < x_arr.size(); i++) {
-                if (newX[i] == newX[i-1])
-                    newX[i] += delta;
-            }
+
+    if (duplicateX || duplicateY) {
+        if (duplicateX == false && duplicateY)
+            return NEED_SWAP_AXES;
+        else if (duplicateY == false && duplicateX)
+            return OK;
+        else // if duplicateX && duplicateY, then need to use parametrazation
+            return NEED_ADD_PARAMETRIZATION;
     }
-    return horizontal_order;
+    return status;
 }
 
-bool QRDecode::createSpline(vector<vector<Point2f> > &spline_lines)
+// Данная функция интерполирует точки с помощью сплайнов
+bool QRDecode::getSplineInterpolation(vector<vector<Point2f> > &spline_lines)
 {
     int start, end;
     vector<vector<float> > S;
@@ -2017,7 +2029,7 @@ bool QRDecode::createSpline(vector<vector<Point2f> > &spline_lines)
             y_arr.push_back(spline_points[j].y);
         }
 
-        bool horizontal_order = setHorizontalOrder(x_arr, y_arr);
+        SplinePointsStatus horizontal_order = checkSplinePoints(x_arr, y_arr);
         vector<int>& second_arr = horizontal_order ? x_arr : y_arr;
         vector<int>& first_arr  = horizontal_order ? y_arr : x_arr;
 
@@ -2039,6 +2051,7 @@ bool QRDecode::createSpline(vector<vector<Point2f> > &spline_lines)
         int closest_point_start = horizontal_order ? closest_points[start].second.x : closest_points[start].second.y;
         int closest_point_end   = horizontal_order ? closest_points[end].second.x   : closest_points[end].second.y;
 
+        // переменная index, это на самом деле x
         for (int index = closest_point_start; index <= closest_point_end; index++)
         {
             if (index == second_arr.front())
@@ -2069,7 +2082,7 @@ bool QRDecode::createSpline(vector<vector<Point2f> > &spline_lines)
 bool QRDecode::divideIntoEvenSegments(vector<vector<Point2f> > &segments_points)
 {
     vector<vector<Point2f> > spline_lines(NUM_SIDES);
-    if (!createSpline(spline_lines))
+    if (!getSplineInterpolation(spline_lines))
     {
         return false;
     }
