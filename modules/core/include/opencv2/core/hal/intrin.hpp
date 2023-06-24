@@ -730,7 +730,7 @@ namespace CV__SIMD_NAMESPACE {
 
     inline void v_pack_store(const bfloat16_t* ptr, v_float32 v)
     {
-        v_int32 iv = v_rshr<16>(v_reinterpret_as_s32(v));
+        v_int32 iv = v_shr<16>(v_reinterpret_as_s32(v));
         v_pack_store((short*)ptr, iv);
     }
 

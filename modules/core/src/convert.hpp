@@ -658,7 +658,7 @@ static inline void v_store_pair_as(float16_t* ptr, const v_float64& a, const v_f
 
 static inline void v_store_pair_as(uint64_t* ptr, const v_float64& a, const v_float64& b)
 {
-    v_float64 z = v_setzero_f64();
+    v_float64 z = vx_setzero_f64();
     v_int64 ia, ib;
     v_expand(v_round(v_max(a, z), v_max(b, z)), ia, ib);
     v_store(ptr, v_reinterpret_as_u64(ia));
