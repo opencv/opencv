@@ -155,6 +155,11 @@ template<> inline uint64 saturate_cast<uint64>(int v)        { return (uint64)st
 template<> inline uint64 saturate_cast<uint64>(int64 v)      { return (uint64)std::max(v, (int64)0); }
 
 template<> inline int64 saturate_cast<int64>(uint64 v)       { return (int64)std::min(v, (uint64)LLONG_MAX); }
+template<> inline int64 saturate_cast<int64>(float v)        { return (int64)round((double)v); }
+template<> inline int64 saturate_cast<int64>(double v)       { return (int64)round(v); }
+template<> inline uint64 saturate_cast<uint64>(float v)      { return (int64)round((double)std::max(v, 0.f)); }
+template<> inline uint64 saturate_cast<uint64>(double v)     { return (int64)round(std::max(v, 0.)); }
+
 
 /** @overload */
 template<typename _Tp> static inline _Tp saturate_cast(float16_t v) { return saturate_cast<_Tp>((float)v); }

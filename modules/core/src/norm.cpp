@@ -367,7 +367,7 @@ typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, uchar*, in
 
 static NormFunc getNormFunc(int normType, int depth)
 {
-    static NormFunc normTab[3][8] =
+    static NormFunc normTab[3][CV_DEPTH_MAX] =
     {
         {
             (NormFunc)GET_OPTIMIZED(normInf_8u), (NormFunc)GET_OPTIMIZED(normInf_8s), (NormFunc)GET_OPTIMIZED(normInf_16u), (NormFunc)GET_OPTIMIZED(normInf_16s),
@@ -388,7 +388,7 @@ static NormFunc getNormFunc(int normType, int depth)
 
 static NormDiffFunc getNormDiffFunc(int normType, int depth)
 {
-    static NormDiffFunc normDiffTab[3][8] =
+    static NormDiffFunc normDiffTab[3][CV_DEPTH_MAX] =
     {
         {
             (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8u), (NormDiffFunc)normDiffInf_8s,

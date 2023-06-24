@@ -164,12 +164,12 @@ char* floatToString( char* buf, size_t bufSize, float value, bool halfprecision,
     return buf;
 }
 
-static const char symbols[9] = "ucwsifdh";
+static const char symbols[] = "ucwsifdhHbLUn";
 
 static char typeSymbol(int depth)
 {
     CV_StaticAssert(CV_64F == 6, "");
-    CV_CheckDepth(depth, depth >=0 && depth <= CV_16F, "");
+    CV_CheckDepth(depth, depth >= 0 && depth <= CV_32U, "");
     return symbols[depth];
 }
 
@@ -1142,7 +1142,7 @@ void FileStorage::Impl::writeRawData(const std::string &dt, const void *_data, s
                         break;
                     case CV_32U:
                         ptr = fs::itoa((int64_t)*(unsigned*) data, buf, 10, false);
-                        data += sizeof(int);
+                        data += sizeof(unsigned);
                         break;
                     case CV_32S:
                         ptr = fs::itoa(*(int *) data, buf, 10);
@@ -1150,11 +1150,11 @@ void FileStorage::Impl::writeRawData(const std::string &dt, const void *_data, s
                         break;
                     case CV_64U:
                         ptr = fs::itoa(*(uint64_t*) data, buf, 10, false);
-                        data += sizeof(int);
+                        data += sizeof(uint64_t);
                         break;
                     case CV_64S:
                         ptr = fs::itoa(*(int64_t*) data, buf, 10, true);
-                        data += sizeof(int);
+                        data += sizeof(int64_t);
                         break;
                     case CV_32F:
                         ptr = fs::floatToString(buf, sizeof(buf), *(float *) data, false, explicitZero);
@@ -2619,6 +2619,10 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                             *(char*)data = saturate_cast<schar>(ival);
                             data++;
                             break;
+                        case CV_Bool:
+                            *(bool*)data = ival != 0;
+                            data++;
+                            break;
                         case CV_16U:
                             *(ushort*)data = saturate_cast<ushort>(ival);
                             data += sizeof(ushort);
@@ -2626,6 +2630,10 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                         case CV_16S:
                             *(short*)data = saturate_cast<short>(ival);
                             data += sizeof(short);
+                            break;
+                        case CV_32U:
+                            *(unsigned*)data = (unsigned)std::max(ival, 0);
+                            data += sizeof(unsigned);
                             break;
                         case CV_32S:
                             *(int*)data = ival;
@@ -2635,6 +2643,14 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                             *(float*)data = (float)ival;
                             data += sizeof(float);
                             break;
+                        case CV_64U:
+                            *(uint64_t*)data = (uint64_t)ival;
+                            data += sizeof(uint64_t);
+                            break;
+                        case CV_64S:
+                            *(int64_t*)data = (int64_t)ival;
+                            data += sizeof(int64_t);
+                            break;
                         case CV_64F:
                             *(double*)data = (double)ival;
                             data += sizeof(double);
@@ -2642,6 +2658,10 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                         case CV_16F:
                             *(float16_t*)data = float16_t((float)ival);
                             data += sizeof(float16_t);
+                            break;
+                        case CV_16BF:
+                            *(bfloat16_t*)data = bfloat16_t((float)ival);
+                            data += sizeof(bfloat16_t);
                             break;
                         default:
                             CV_Error( Error::StsUnsupportedFormat, "Unsupported type" );
@@ -2669,6 +2689,10 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                             *(short*)data = saturate_cast<short>(fval);
                             data += sizeof(short);
                             break;
+                        case CV_32U:
+                            *(int*)data = saturate_cast<unsigned>(fval);
+                            data += sizeof(int);
+                            break;
                         case CV_32S:
                             *(int*)data = saturate_cast<int>(fval);
                             data += sizeof(int);
@@ -2677,6 +2701,14 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                             *(float*)data = (float)fval;
                             data += sizeof(float);
                             break;
+                        case CV_64U:
+                            *(uint64_t*)data = (uint64_t)round(std::max(fval, 0.));
+                            data += sizeof(uint64_t);
+                            break;
+                        case CV_64S:
+                            *(int64_t*)data = (int64_t)round(std::max(fval, 0.));
+                            data += sizeof(int64_t);
+                            break;
                         case CV_64F:
                             *(double*)data = fval;
                             data += sizeof(double);
@@ -2684,6 +2716,10 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                         case CV_16F:
                             *(float16_t*)data = float16_t((float)fval);
                             data += sizeof(float16_t);
+                            break;
+                        case CV_16BF:
+                            *(bfloat16_t*)data = bfloat16_t((float)fval);
+                            data += sizeof(bfloat16_t);
                             break;
                         default:
                             CV_Error( Error::StsUnsupportedFormat, "Unsupported type" );

@@ -244,7 +244,7 @@ static void randf_16_or_32f( void* dst, int len_, int cn, uint64* state, const V
         k = CN_NEXT(k);
     }
     *state = temp;
-    hal::addRNGBias32f(arr, &p[0][0], len_, cn);
+    hal::addRNGBias32f(arr, &p[0][0], len_, cn+1);
     if (depth == CV_16F)
         hal::cvt32f16f(fbuf, (float16_t*)dst, len);
     else if (depth == CV_16BF)
@@ -268,7 +268,7 @@ randf_64f( double* arr, int len_, int cn, uint64* state, const Vec2d* p, void*, 
         k = CN_NEXT(k);
     }
     *state = temp;
-    hal::addRNGBias64f(arr, &p[0][0], len_, cn);
+    hal::addRNGBias64f(arr, &p[0][0], len_, cn+1);
 }
 
 typedef void (*RandFunc)(uchar* arr, int len, int cn, uint64* state,
@@ -601,10 +601,16 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                     small_flag = idiff <= 255;
                 else
                 {
-                    if( diff > INT64_MAX )
-                        ip[j][0] = INT64_MAX;
-                    if( a < INT64_MIN/2 )
-                        ip[j][1] = INT64_MIN/2;
+                    int64_t minval = INT32_MIN/2, maxval = INT32_MAX;
+                    if (depth == CV_64S || depth == CV_64U)
+                    {
+                        minval = INT64_MIN/2;
+                        maxval = INT64_MAX;
+                    }
+                    if( diff > (double)maxval )
+                        ip[j][0] = maxval;
+                    if( a < (double)minval )
+                        ip[j][1] = minval;
                 }
             }
 

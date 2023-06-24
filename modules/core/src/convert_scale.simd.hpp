@@ -53,38 +53,18 @@ cvtabs_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
     }
 }
 
-// variant for conversions 16f <-> ... w/o unrolling
-template<typename _Ts, typename _Td> inline void
-cvtabs1_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
-             Size size, float a, float b )
+static void
+cvtabs_32f( const bool* src_, size_t sstep,
+            uchar* dst, size_t dstep,
+            Size size, float a, float b )
 {
-#if CV_SIMD
-    v_float32 va = vx_setall_f32(a), vb = vx_setall_f32(b);
-    const int VECSZ = v_float32::nlanes*2;
-#endif
-    sstep /= sizeof(src[0]);
-    dstep /= sizeof(dst[0]);
-
+    const uchar* src = (const uchar*)src_;
+    uchar v0 = saturate_cast<uchar>(std::abs(b));
+    uchar v1 = saturate_cast<uchar>(std::abs(a + b));
     for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
-        int j = 0;
-#if CV_SIMD
-        for( ; j < size.width; j += VECSZ )
-        {
-            if( j > size.width - VECSZ )
-            {
-                if( j == 0 || src == (_Ts*)dst )
-                    break;
-                j = size.width - VECSZ;
-            }
-            v_float32 v0;
-            vx_load_as(src + j, v0);
-            v0 = v_fma(v0, va, vb);
-            v_store_as(dst + j, v_abs(v0));
-        }
-#endif
-        for( ; j < size.width; j++ )
-            dst[j] = saturate_cast<_Td>(src[j]*a + b);
+        for (int j = 0; j < size.width; j++)
+            dst[j] = src[j] != 0 ? v1 : v0;
     }
 }
 
@@ -246,11 +226,17 @@ static void cvtScale##suffix( const uchar* src, size_t sstep, const uchar*, size
 
 DEF_CVT_SCALE_ABS_FUNC(8u,    cvtabs_32f, uchar,  uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(8s8u,  cvtabs_32f, schar,  uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(8b8u,  cvtabs_32f, bool,  uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(16u8u, cvtabs_32f, ushort, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(16s8u, cvtabs_32f, short,  uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(32u8u, cvtabs_32f, unsigned, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(32s8u, cvtabs_32f, int,    uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(32f8u, cvtabs_32f, float,  uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(64u8u, cvtabs_32f, uint64_t, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(64s8u, cvtabs_32f, int64_t, uchar, float)
 DEF_CVT_SCALE_ABS_FUNC(64f8u, cvtabs_32f, double, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(16f8u, cvtabs_32f, float16_t, uchar, float)
+DEF_CVT_SCALE_ABS_FUNC(16bf8u, cvtabs_32f, bfloat16_t, uchar, float)
 
 DEF_CVT_SCALE_FUNC(8u,     cvt_32f, uchar,  uchar, float)
 DEF_CVT_SCALE_FUNC(8s8u,   cvt_32f, schar,  uchar, float)
@@ -437,14 +423,22 @@ DEF_CVT_SCALEBOOL2_FUNC(8b16bf, bfloat16_t, float)
 
 BinaryFunc getCvtScaleAbsFunc(int depth)
 {
-    static BinaryFunc cvtScaleAbsTab[] =
-    {
-        (BinaryFunc)cvtScaleAbs8u, (BinaryFunc)cvtScaleAbs8s8u, (BinaryFunc)cvtScaleAbs16u8u,
-        (BinaryFunc)cvtScaleAbs16s8u, (BinaryFunc)cvtScaleAbs32s8u, (BinaryFunc)cvtScaleAbs32f8u,
-        (BinaryFunc)cvtScaleAbs64f8u, 0
-    };
-
-    return cvtScaleAbsTab[depth];
+    BinaryFunc func =
+        depth == CV_8U ? (BinaryFunc)cvtScaleAbs8u :
+        depth == CV_8S ? (BinaryFunc)cvtScaleAbs8s8u :
+        depth == CV_Bool ? (BinaryFunc)cvtScaleAbs8b8u :
+        depth == CV_16U ? (BinaryFunc)cvtScaleAbs16u8u :
+        depth == CV_16S ? (BinaryFunc)cvtScaleAbs16s8u :
+        depth == CV_16F ? (BinaryFunc)cvtScaleAbs16f8u :
+        depth == CV_16BF ? (BinaryFunc)cvtScaleAbs16bf8u :
+        depth == CV_32U ? (BinaryFunc)cvtScaleAbs32u8u :
+        depth == CV_32S ? (BinaryFunc)cvtScaleAbs32s8u :
+        depth == CV_32F ? (BinaryFunc)cvtScaleAbs32f8u :
+        depth == CV_64U ? (BinaryFunc)cvtScaleAbs64u8u :
+        depth == CV_64S ? (BinaryFunc)cvtScaleAbs64s8u :
+        depth == CV_64F ? (BinaryFunc)cvtScaleAbs64f8u : 0;
+    CV_Assert(func != 0);
+    return func;
 }
 
 BinaryFunc getConvertScaleFunc(int sdepth_, int ddepth_)
