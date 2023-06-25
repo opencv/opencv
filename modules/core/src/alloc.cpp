@@ -141,6 +141,7 @@ void* fastMalloc(size_t size)
         return ptr;
     }
 #elif defined HAVE_MEMALIGN
+    bbbbb;
     if (isAlignedAllocationEnabled())
     {
         void* ptr = memalign(CV_MALLOC_ALIGN, size);
