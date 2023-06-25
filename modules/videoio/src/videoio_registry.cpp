@@ -66,6 +66,13 @@ static const struct VideoBackendInfo builtin_backends[] =
     DECLARE_DYNAMIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER)
 #endif
 
+// Linux, some Unix
+#if defined HAVE_CAMV4L2
+    DECLARE_STATIC_BACKEND(CAP_V4L2, "V4L2", MODE_CAPTURE_ALL, create_V4L_capture_file, create_V4L_capture_cam, 0)
+#elif defined HAVE_VIDEOIO
+    DECLARE_STATIC_BACKEND(CAP_V4L, "V4L_BSD", MODE_CAPTURE_ALL, create_V4L_capture_file, create_V4L_capture_cam, 0)
+#endif
+
 #ifdef HAVE_GSTREAMER
     DECLARE_STATIC_BACKEND(CAP_GSTREAMER, "GSTREAMER", MODE_CAPTURE_ALL | MODE_WRITER, createGStreamerCapture_file, createGStreamerCapture_cam, create_GStreamer_writer)
 #elif defined(ENABLE_PLUGINS)
@@ -97,14 +104,6 @@ static const struct VideoBackendInfo builtin_backends[] =
 #ifdef HAVE_DSHOW
     DECLARE_STATIC_BACKEND(CAP_DSHOW, "DSHOW", MODE_CAPTURE_BY_INDEX, 0, create_DShow_capture, 0)
 #endif
-
-    // Linux, some Unix
-#if defined HAVE_CAMV4L2
-    DECLARE_STATIC_BACKEND(CAP_V4L2, "V4L2", MODE_CAPTURE_ALL, create_V4L_capture_file, create_V4L_capture_cam, 0)
-#elif defined HAVE_VIDEOIO
-    DECLARE_STATIC_BACKEND(CAP_V4L, "V4L_BSD", MODE_CAPTURE_ALL, create_V4L_capture_file, create_V4L_capture_cam, 0)
-#endif
-
 
     // RGB-D universal
 #ifdef HAVE_OPENNI2
