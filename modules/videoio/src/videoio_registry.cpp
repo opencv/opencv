@@ -241,7 +241,7 @@ protected:
         enabledBackends.resize(enabled);
         CV_LOG_DEBUG(NULL, "VIDEOIO: Available backends(" << enabled << "): " << dumpBackends());
         std::sort(enabledBackends.begin(), enabledBackends.end(), sortByPriority);
-        CV_LOG_INFO(NULL, "VIDEOIO: Enabled backends(" << enabled << ", sorted by priority): " << dumpBackends());
+        CV_LOG_DEBUG(NULL, "VIDEOIO: Enabled backends(" << enabled << ", sorted by priority): " << dumpBackends());
     }
 
     static std::vector<std::string> tokenize_string(const std::string& input, char token)
