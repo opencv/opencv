@@ -5,6 +5,8 @@
 #ifndef OPENCV_NDSRVP_IMGPROC_HPP
 #define OPENCV_NDSRVP_IMGPROC_HPP
 
+struct cvhalFilter2D;
+
 namespace cv {
 
 namespace ndsrvp {
@@ -70,6 +72,34 @@ int threshold(const uchar* src_data, size_t src_step,
 
 #undef cv_hal_threshold
 #define cv_hal_threshold (cv::ndsrvp::threshold)
+
+// ################ filter ################
+
+int filterInit(cvhalFilter2D **context,
+    uchar *kernel_data, size_t kernel_step,
+    int kernel_type, int kernel_width,
+    int kernel_height, int max_width, int max_height,
+    int src_type, int dst_type, int borderType,
+    double delta, int anchor_x, int anchor_y,
+    bool allowSubmatrix, bool allowInplace);
+
+#undef cv_hal_filterInit
+#define cv_hal_filterInit (cv::ndsrvp::filterInit)
+
+int filter(cvhalFilter2D *context,
+    const uchar *src_data, size_t src_step,
+    uchar *dst_data, size_t dst_step,
+    int width, int height,
+    int full_width, int full_height,
+    int offset_x, int offset_y);
+
+#undef cv_hal_filter
+#define cv_hal_filter (cv::ndsrvp::filter)
+
+int filterFree(cvhalFilter2D *context);
+
+#undef cv_hal_filterFree
+#define cv_hal_filterFree (cv::ndsrvp::filterFree)
 
 } // namespace ndsrvp
 
