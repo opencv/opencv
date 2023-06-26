@@ -36,7 +36,7 @@ TEST(Core_SaturateCast, NegativesAreClipped)
     double d = -1.0;
     unsigned int val = cv::saturate_cast<unsigned int>(d);
 
-    ASSERT_EQ(0, val);
+    ASSERT_EQ(0u, val);
 }
 
 template<typename T, typename U>

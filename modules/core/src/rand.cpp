@@ -261,8 +261,9 @@ randf_64f( double* arr, int len_, int cn, uint64* state, const Vec2d* p, void*, 
     {
         temp = RNG_NEXT(temp);
         unsigned t0 = (unsigned)temp;
-        temp = RNG_NEXT(temp);
-        unsigned t1 = (unsigned)temp;
+        unsigned t1 = 0;
+        //temp = RNG_NEXT(temp);
+        //unsigned t1 = (unsigned)temp;
         int64_t v = (int64_t)(((uint64_t)t0 << 32)|t1);
         arr[i] = v*p[k][0];
         k = CN_NEXT(k);

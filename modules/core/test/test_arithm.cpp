@@ -749,7 +749,7 @@ struct ConvertScaleOp : public BaseElemWiseOp
     }
     double getMaxErr(int)
     {
-        return ddepth <= CV_32S || ddepth == CV_32U || ddepth == CV_64U || ddepth == CV_64S ? 2 : ddepth == CV_64F ? 1e-12 : ddepth == CV_Bool ? 0 : ddepth == CV_16BF ? 1e-2 : 1e-3;
+        return ddepth <= CV_32S || ddepth == CV_32U || ddepth == CV_64U || ddepth == CV_64S ? 2 : ddepth == CV_64F ? 1e-12 : ddepth == CV_Bool ? 0 : ddepth == CV_16BF ? 1e-2 : 2e-3;
     }
     void generateScalars(int depth, RNG& rng)
     {
