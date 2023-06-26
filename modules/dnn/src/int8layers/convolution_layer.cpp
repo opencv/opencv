@@ -970,6 +970,13 @@ public:
                                     biasptr, multptr, inptr_, height, width, outptr_, out_d, outH, outW, inpZp, outZp);
                             else
                         #endif
+                        #if CV_RVP052
+                            if(isConv2D)
+                                opt_RVP052::fastDepthwiseConv(wptr, kernel_h, kernel_w,
+                                    stride_h, stride_w, dilation_h, dilation_w, pad_t, pad_l,
+                                    biasptr, multptr, inptr_, height, width, outptr_, out_d, outH, outW, inpZp, outZp);
+                            else
+                        #endif
                             {
                                 const int8_t w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
                                              w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
@@ -1346,6 +1353,12 @@ public:
                     #if CV_TRY_LASX
                         if(useLASX)
                             opt_LASX::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
+                                          outShape, bsz, vsz, vsz_a, outZp, multptr, cn0 == 0, cn1 == inpCn);
+                        else
+                    #endif
+                    #if CV_RVP052
+                        if(isConv2D)
+                            opt_RVP052::fastConv(wptr, wstep, biasptr, rowbuf0, data_out0 + ofs0,
                                           outShape, bsz, vsz, vsz_a, outZp, multptr, cn0 == 0, cn1 == inpCn);
                         else
                     #endif
