@@ -535,6 +535,12 @@ public:
         cv::_OutputArray* dst = static_cast<cv::_OutputArray*>(userdata);
         if (!dst)
             return CV_ERROR_FAIL;
+        int depth = CV_MAT_DEPTH(type);
+        if (depth > 7) {
+            // [TODO] temporary hack; remove after rebuilding plugins or add a new
+            // version of plugins. Convert type from the old one to the new one (5 bits)
+            type = CV_MAKETYPE((type & 7), (type >> 3) + 1); 
+        }
         cv::Mat(cv::Size(width, height), type, (void*)data, step).copyTo(*dst);
         return CV_ERROR_OK;
     }
