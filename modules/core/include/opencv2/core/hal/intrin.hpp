@@ -1111,6 +1111,10 @@ namespace CV__SIMD_NAMESPACE {
 #define CV_SIMD 0
 #endif
 
+#if (!defined CV_SIMD_64F) || (!CV_SIMD_64F)
+typedef struct v_float64 { int dummy; } v_float64;
+#endif
+
 #include "simd_utils.impl.hpp"
 
 #ifndef CV_DOXYGEN

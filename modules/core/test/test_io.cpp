@@ -680,8 +680,9 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
                 reference.read(&reference_data[0], ref_sz);
                 reference.close();
 
-                if (useMemory)
+                if (useMemory) {
                     EXPECT_EQ(reference_data, test_data);
+                }
             }
             std::cout << "Storage size: " << sz << std::endl;
             EXPECT_LE(sz, (size_t)6000);
@@ -760,8 +761,9 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         ASSERT_EQ(_rd_in.dims   , _rd_out.dims);
         ASSERT_EQ(_rd_in.depth(), _rd_out.depth());
 
-        if (useMemory)
+        if (useMemory) {
             EXPECT_EQ(0, cv::norm(_rd_in, _rd_out, NORM_INF));
+        }
     }
 }
 

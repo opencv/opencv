@@ -173,6 +173,35 @@ cvt_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
     }
 }
 
+template<typename _Ts, typename _Td, typename dummy> static inline void
+cvt_64f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
+{
+    sstep /= sizeof(src[0]);
+    dstep /= sizeof(dst[0]);
+
+    for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
+    {
+        int j = 0;
+#if CV_SIMD_64F
+        const int VECSZ = v_float64::nlanes*2;
+        for( ; j < size.width; j += VECSZ )
+        {
+            if( j > size.width - VECSZ )
+            {
+                if( j == 0 || src == (_Ts*)dst )
+                    break;
+                j = size.width - VECSZ;
+            }
+            v_float64 v0, v1;
+            vx_load_pair_as(src + j, v0, v1);
+            v_store_pair_as(dst + j, v0, v1);
+        }
+#endif
+        for( ; j < size.width; j++ )
+            dst[j] = saturate_cast<_Td>(src[j]);
+    }
+}
+
 // in order to reduce the code size, for (16f <-> ...) conversions
 // we add a conversion function without loop unrolling
 template<typename _Ts, typename _Td, typename _Twvec> static inline void
@@ -398,11 +427,11 @@ DEF_CVT_FUNC(64f8u,  cvt_, double, uchar,  v_int32)
 DEF_CVT_FUNC(64f8s,  cvt_, double, schar,  v_int32)
 DEF_CVT_FUNC(64f16u, cvt_, double, ushort, v_int32)
 DEF_CVT_FUNC(64f16s, cvt_, double, short,  v_int32)
-DEF_CVT_FUNC(64f32u, cvt_, double, unsigned, v_float64)
+DEF_CVT_FUNC(64f32u, cvt_64f, double, unsigned, v_float32)
 DEF_CVT_FUNC(64f32s, cvt_, double, int,    v_int32)
 DEF_CVT_FUNC(64f32f, cvt_, double, float,  v_float32)
 DEF_CVT_FUNC(64f64u, cvt_, double, uint64_t, v_float64)
-DEF_CVT_FUNC(64f64s, cvt_, double, int64_t, v_float64)
+DEF_CVT_FUNC(64f64s, cvt_64f, double, int64_t, v_float32)
 DEF_CVT_FUNC(64f16f, cvt1_,double, float16_t, v_float32)
 DEF_CVT_FUNC(64f16bf, cvt1_,double, bfloat16_t, v_float32)
 DEF_CVT2BOOL_FUNC(64f8b, int64_t, 1)
@@ -444,9 +473,9 @@ DEF_CVT_FUNC(64s16u, cvt_, int64_t, ushort, v_int32)
 DEF_CVT_FUNC(64s16s, cvt_, int64_t, short,  v_int32)
 DEF_CVT_FUNC(64s32u, cvt_, int64_t, unsigned, v_uint32)
 DEF_CVT_FUNC(64s32s, cvt_, int64_t, int,    v_int32)
-DEF_CVT_FUNC(64s32f, cvt_, int64_t, float,  v_float64)
-DEF_CVT_FUNC(64s64f, cvt_, int64_t, double,  v_float64)
-DEF_CVT_FUNC(64s64u, cvt_, int64_t, uint64_t, v_uint64)
+DEF_CVT_FUNC(64s32f, cvt_64f, int64_t, float,  v_float32)
+DEF_CVT_FUNC(64s64f, cvt_64f, int64_t, double,  v_float32)
+DEF_CVT_FUNC(64s64u, cvt_64f, int64_t, uint64_t, v_uint32)
 DEF_CVT_FUNC(64s16f, cvt1_,int64_t, float16_t, v_float32)
 DEF_CVT_FUNC(64s16bf, cvt1_, int64_t, bfloat16_t, v_float32)
 DEF_CVT2BOOL_FUNC(64s8b, int64_t, 0)
@@ -459,8 +488,8 @@ DEF_CVT_FUNC(64u16u, cvt_, uint64_t, ushort, v_int32)
 DEF_CVT_FUNC(64u16s, cvt_, uint64_t, short,  v_int32)
 DEF_CVT_FUNC(64u32u, cvt_, uint64_t, unsigned, v_uint32)
 DEF_CVT_FUNC(64u32s, cvt_, uint64_t, int,   v_int32)
-DEF_CVT_FUNC(64u32f, cvt_, uint64_t, float,  v_float64)
-DEF_CVT_FUNC(64u64f, cvt_, uint64_t, double,  v_float64)
+DEF_CVT_FUNC(64u32f, cvt_64f, uint64_t, float,  v_float32)
+DEF_CVT_FUNC(64u64f, cvt_64f, uint64_t, double,  v_float32)
 DEF_CVT_FUNC(64u16f, cvt1_,uint64_t, float16_t, v_float32)
 DEF_CVT_FUNC(64u16bf, cvt1_, uint64_t, bfloat16_t, v_float32)
 

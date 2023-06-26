@@ -1074,9 +1074,9 @@ TEST_F(fisheyeTest, multiview_calibration)
         right_pts.copyTo(image_points_all[1][i]);
     }
     std::vector<cv::Size> image_sizes(2, imageSize);
-    cv::Mat visibility_mat = cv::Mat_<bool>::ones(2, (int)leftPoints.size()), errors_mat, output_pairs;
+    cv::Mat visibility_mat = cv::Mat_<uchar>::ones(2, (int)leftPoints.size()), errors_mat, output_pairs;
     std::vector<cv::Mat> Rs, Ts, Ks, distortions, rvecs0, tvecs0;
-    std::vector<bool> is_fisheye(2, true);
+    std::vector<uchar> is_fisheye(2, true);
     int flag = 0;
     flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
     flag |= cv::fisheye::CALIB_CHECK_COND;

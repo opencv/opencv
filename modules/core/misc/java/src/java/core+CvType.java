@@ -30,7 +30,7 @@ public final class CvType {
             CV_64FC1 = CV_64FC(1), CV_64FC2 = CV_64FC(2), CV_64FC3 = CV_64FC(3), CV_64FC4 = CV_64FC(4),
             CV_16FC1 = CV_16FC(1), CV_16FC2 = CV_16FC(2), CV_16FC3 = CV_16FC(3), CV_16FC4 = CV_16FC(4);
 
-    private static final int CV_CN_MAX = 512, CV_CN_SHIFT = 3, CV_DEPTH_MAX = (1 << CV_CN_SHIFT);
+    private static final int CV_CN_MAX = 128, CV_CN_SHIFT = 5, CV_DEPTH_MAX = (1 << CV_CN_SHIFT);
 
     public static final int makeType(int depth, int channels) {
         if (channels <= 0 || channels >= CV_CN_MAX) {

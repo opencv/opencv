@@ -280,13 +280,13 @@ static RandFunc randTab[][16] =
         (RandFunc)randi_8u, (RandFunc)randi_8s, (RandFunc)randi_16u,
         (RandFunc)randi_16s, (RandFunc)randi_32s, (RandFunc)randf_16_or_32f,
         (RandFunc)randf_64f, (RandFunc)randf_16_or_32f, (RandFunc)randf_16_or_32f,
-        (RandFunc)randi_8u, (RandFunc)randi_64u, (RandFunc)randi_64s,
+        (RandFunc)randi_8b, (RandFunc)randi_64u, (RandFunc)randi_64s,
         (RandFunc)randi_32u, 0, 0, 0
     },
     {
         (RandFunc)randBits_8u, (RandFunc)randBits_8s, (RandFunc)randBits_16u,
         (RandFunc)randBits_16s, (RandFunc)randBits_32s, 0, 0, 0, 0,
-        (RandFunc)randBits_8u, (RandFunc)randBits_64u, (RandFunc)randBits_64s,
+        (RandFunc)randBits_8b, (RandFunc)randBits_64u, (RandFunc)randBits_64s,
         (RandFunc)randBits_32u, 0, 0, 0
     }
 };
@@ -723,9 +723,9 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     int flags = mat.type();
 
     if( disttype == UNIFORM )
-        flags |= (small_flag ? RNG_FLAG_SMALL : 0);
+        flags |= (small_flag ? (int)RNG_FLAG_SMALL : 0);
     else
-        flags |= (stdmtx ? RNG_FLAG_STDMTX : 0);
+        flags |= (stdmtx ? (int)RNG_FLAG_STDMTX : 0);
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
