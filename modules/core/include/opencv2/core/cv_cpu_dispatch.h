@@ -188,6 +188,11 @@
 #  include <riscv_vector.h>
 #endif
 
+#if defined CV_CPU_COMPILE_RVP052
+#  define CV_RVP052 1
+#  include <nds_intrinsic.h>
+#endif
+
 #endif // CV_ENABLE_INTRINSICS && !CV_DISABLE_OPTIMIZATION && !__CUDACC__
 
 #if defined CV_CPU_COMPILE_AVX && !defined CV_CPU_BASELINE_COMPILE_AVX
@@ -383,4 +388,8 @@ struct VZeroUpperGuard {
 
 #ifndef CV_LASX
 #  define CV_LASX 0
+#endif
+
+#ifndef CV_RVP052
+#  define CV_RVP052 0
 #endif

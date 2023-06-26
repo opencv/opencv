@@ -702,13 +702,14 @@ public:
         bool useAVX2;
         bool useAVX512;
         bool useLASX;
+        bool useRVP052;
         int blk_size_cn;
         int inpZp, outZp;
         const std::vector<float>* multiplier;
 
         ParallelConv()
             : input_(0), weights_(0), output_(0), ngroups_(0), nstripes_(0),
-              biasvec_(0), activLUT_(0), activ_(0), is1x1_(false), useAVX2(false), useAVX512(false), useLASX(false)
+              biasvec_(0), activLUT_(0), activ_(0), is1x1_(false), useAVX2(false), useAVX512(false), useLASX(false), useRVP052(false)
             , blk_size_cn(0), inpZp(0), outZp(0), multiplier(0)
         {}
 
@@ -765,6 +766,7 @@ public:
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX  && isConv2D;
 
             p.useLASX   = checkHardwareSupport(CPU_LASX) && isConv2D;
+            p.useRVP052   = checkHardwareSupport(CPU_RVP052) && isConv2D;
 
             int kernel_d = isConv3D? kernel_size[0] : 1;
             int kernel_h = isConv1D? 1 : kernel_size[kernel_size.size() - 2];

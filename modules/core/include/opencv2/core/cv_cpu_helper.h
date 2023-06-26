@@ -567,6 +567,27 @@
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_RVV(fn, args, mode, ...)  CV_CPU_CALL_RVV(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_RVP052
+#  define CV_TRY_RVP052 1
+#  define CV_CPU_FORCE_RVP052 1
+#  define CV_CPU_HAS_SUPPORT_RVP052 1
+#  define CV_CPU_CALL_RVP052(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_RVP052_(fn, args) return (opt_RVP052::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_RVP052
+#  define CV_TRY_RVP052 1
+#  define CV_CPU_FORCE_RVP052 0
+#  define CV_CPU_HAS_SUPPORT_RVP052 (cv::checkHardwareSupport(CV_CPU_RVP052))
+#  define CV_CPU_CALL_RVP052(fn, args) if (CV_CPU_HAS_SUPPORT_RVP052) return (opt_RVP052::fn args)
+#  define CV_CPU_CALL_RVP052_(fn, args) if (CV_CPU_HAS_SUPPORT_RVP052) return (opt_RVP052::fn args)
+#else
+#  define CV_TRY_RVP052 0
+#  define CV_CPU_FORCE_RVP052 0
+#  define CV_CPU_HAS_SUPPORT_RVP052 0
+#  define CV_CPU_CALL_RVP052(fn, args)
+#  define CV_CPU_CALL_RVP052_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_RVP052(fn, args, mode, ...)  CV_CPU_CALL_RVP052(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
 #if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_LSX
 #  define CV_TRY_LSX 1
 #  define CV_CPU_FORCE_LSX 1
