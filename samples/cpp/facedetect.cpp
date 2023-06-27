@@ -199,7 +199,7 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
         Size(30, 30) );
     if( tryflip )
     {
-        flip(smallImg, smallImg, 1);
+        flip(img, img, 1);
         cascade.detectMultiScale( smallImg, faces2,
                                  1.1, 2, 0
                                  //|CASCADE_FIND_BIGGEST_OBJECT
