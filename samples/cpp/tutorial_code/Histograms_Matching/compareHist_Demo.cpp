@@ -25,9 +25,9 @@ int main( int argc, char** argv )
 {
     //! [Load three images with different environment settings]
     CommandLineParser parser( argc, argv, keys );
-    Mat src_base = imread( parser.get<String>("input1") );
-    Mat src_test1 = imread( parser.get<String>("input2") );
-    Mat src_test2 = imread( parser.get<String>("input3") );
+    Mat src_base = imread( parser.get<String>("@input1") );
+    Mat src_test1 = imread( parser.get<String>("@input2") );
+    Mat src_test2 = imread( parser.get<String>("@input3") );
     if( src_base.empty() || src_test1.empty() || src_test2.empty() )
     {
         cout << "Could not open or find the images!\n" << endl;
