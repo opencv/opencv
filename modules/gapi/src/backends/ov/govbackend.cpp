@@ -1403,8 +1403,10 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
         case NodeType::OP:
             if (this_nh == nullptr) {
                 this_nh = nh;
-                compiled = const_cast<OVUnit&>(ovm.metadata(this_nh).get<OVUnit>()).compile();
-                m_reqPool.reset(new RequestPool(createInferRequests(compiled.compiled_model, 1)));
+                const auto &unit = ovm.metadata(this_nh).get<OVUnit>();
+                compiled = const_cast<OVUnit&>(unit).compile();
+                m_reqPool.reset(new RequestPool(createInferRequests(
+                                compiled.compiled_model, unit.params.nireq)));
             }
             else
                 util::throw_error(std::logic_error("Multi-node inference is not supported!"));
@@ -1436,6 +1438,7 @@ void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
 
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
+        m_reqPool->waitAll();
         out.post(cv::gimpl::EndOfStream{});
         return;
     }
