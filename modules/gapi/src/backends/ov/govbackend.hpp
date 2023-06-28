@@ -22,6 +22,7 @@ namespace ov {
 
 struct OVCompiled {
     ::ov::CompiledModel compiled_model;
+    size_t nireq;
 };
 
 class RequestPool;

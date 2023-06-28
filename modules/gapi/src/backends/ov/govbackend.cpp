@@ -235,7 +235,7 @@ struct OVUnit {
             compiled_model = cv::gapi::ov::wrap::getCore()
                 .compile_model(model, params.device, toOV(params.config));
         }
-        return {compiled_model};
+        return {compiled_model, params.nireq};
     }
 
     cv::gapi::ov::detail::ParamDesc params;
@@ -1404,7 +1404,8 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
             if (this_nh == nullptr) {
                 this_nh = nh;
                 compiled = const_cast<OVUnit&>(ovm.metadata(this_nh).get<OVUnit>()).compile();
-                m_reqPool.reset(new RequestPool(createInferRequests(compiled.compiled_model, 1)));
+                m_reqPool.reset(new RequestPool(createInferRequests(
+                                compiled.compiled_model, compiled.nireq)));
             }
             else
                 util::throw_error(std::logic_error("Multi-node inference is not supported!"));
@@ -1436,6 +1437,7 @@ void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
 
     if (cv::util::holds_alternative<cv::gimpl::EndOfStream>(in_msg))
     {
+        m_reqPool->waitAll();
         out.post(cv::gimpl::EndOfStream{});
         return;
     }
