@@ -88,6 +88,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
                typenum == NPY_SHORT ? CV_16S :
                typenum == NPY_INT ? CV_32S :
                typenum == NPY_INT32 ? CV_32S :
+               typenum == NPY_HALF ? CV_16F :
                typenum == NPY_FLOAT ? CV_32F :
                typenum == NPY_DOUBLE ? CV_64F : -1;
 
@@ -326,7 +327,7 @@ bool pyopencv_to(PyObject *o, Scalar& s, const ArgInfo& info)
         }
     } else {
         if (PyFloat_Check(o) || PyInt_Check(o)) {
-            s[0] = PyFloat_AsDouble(o);
+            s = PyFloat_AsDouble(o);
         } else {
             failmsg("Scalar value for argument '%s' is not numeric", info.name);
             return false;
@@ -727,10 +728,36 @@ PyObject* pyopencv_from(const Rect2d& r)
 
 // --- RotatedRect
 
+static inline bool convertToRotatedRect(PyObject* obj, RotatedRect& dst)
+{
+    PyObject* type = PyObject_Type(obj);
+    if (getPyObjectAttr(type, "__module__") == MODULESTR &&
+        getPyObjectNameAttr(type) == "RotatedRect")
+    {
+        struct pyopencv_RotatedRect_t
+        {
+            PyObject_HEAD
+            cv::RotatedRect v;
+        };
+        dst = reinterpret_cast<pyopencv_RotatedRect_t*>(obj)->v;
+
+        Py_DECREF(type);
+        return true;
+    }
+    Py_DECREF(type);
+    return false;
+}
+
 template<>
 bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
 {
     if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+    // This is a workaround for compatibility with an initialization from tuple.
+    // Allows import RotatedRect as an object.
+    if (convertToRotatedRect(obj, dst))
     {
         return true;
     }

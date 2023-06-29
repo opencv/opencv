@@ -1658,5 +1658,21 @@ TEST(Imgproc_warpPolar, identity)
 #endif
 }
 
+TEST(Imgproc_Remap, issue_23562)
+{
+    cv::RNG rng(17);
+    Mat_<float> mapx({3, 3}, {0, 1, 2, 0, 1, 2, 0, 1, 2});
+    Mat_<float> mapy({3, 3}, {0, 0, 0, 1, 1, 1, 2, 2, 2});
+    for (int cn = 1; cn <= 4; ++cn) {
+        Mat src(3, 3, CV_32FC(cn));
+        rng.fill(src, cv::RNG::UNIFORM, -1, 1);
+        Mat dst = Mat::zeros(3, 3, CV_32FC(cn));
+        Mat ref = src.clone();
+
+        remap(src, dst, mapx, mapy, INTER_LINEAR, BORDER_TRANSPARENT);
+        ASSERT_EQ(0.0, cvtest::norm(ref, dst, NORM_INF)) << "channels=" << cn;
+    }
+}
+
 }} // namespace
 /* End of file. */

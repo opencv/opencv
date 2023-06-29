@@ -133,6 +133,11 @@ def header_import(hdr):
     #hdr = hdr[pos+8 if pos >= 0 else 0:]
     return hdr
 
+def make_objcname(m):
+    return "Cv"+m if (m[0] in "0123456789") else m
+
+def make_objcmodule(m):
+    return "cv"+m if (m[0] in "0123456789") else m
 
 T_OBJC_CLASS_HEADER = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_class_header.template'))
 T_OBJC_CLASS_BODY = read_contents(os.path.join(SCRIPT_DIR, 'templates/objc_class_body.template'))
@@ -290,7 +295,7 @@ class ClassInfo(GeneralInfo):
         self.member_classes = [] # Only relevant for modules
         self.member_enums = [] # Only relevant for modules
         if decl[1]:
-            self.base = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip().replace(self.objc_name, "")
+            self.base = re.sub(r"^.*:", "", decl[1].split(",")[0]).strip()
             if self.base:
                 self.is_base_class = False
                 self.native_ptr_name = "nativePtr" + self.objc_name
@@ -299,7 +304,7 @@ class ClassInfo(GeneralInfo):
         return Template("CLASS $namespace::$classpath.$name : $base").substitute(**self.__dict__)
 
     def getImports(self, module):
-        return ["#import \"%s.h\"" % c for c in sorted([m for m in [type_dict[m]["import_module"] if m in type_dict and "import_module" in type_dict[m] else m for m in self.imports] if m != self.name])]
+        return ["#import \"%s.h\"" % make_objcname(c) for c in sorted([m for m in [type_dict[m]["import_module"] if m in type_dict and "import_module" in type_dict[m] else m for m in self.imports] if m != self.name])]
 
     def isEnum(self, c):
         return c in type_dict and type_dict[c].get("is_enum", False)
@@ -308,7 +313,7 @@ class ClassInfo(GeneralInfo):
         enum_decl = [x for x in self.imports if self.isEnum(x) and type_dict[x]["import_module"] != module]
         enum_imports = sorted(list(set([type_dict[m]["import_module"] for m in enum_decl])))
         class_decl = [x for x in self.imports if not self.isEnum(x)]
-        return ["#import \"%s.h\"" % c for c in enum_imports] + [""] + ["@class %s;" % c for c in sorted(class_decl)]
+        return ["#import \"%s.h\"" % make_objcname(c) for c in enum_imports] + [""] + ["@class %s;" % c for c in sorted(class_decl)]
 
     def addImports(self, ctype, is_out_type):
         if ctype == self.cname:
@@ -381,7 +386,7 @@ class ClassInfo(GeneralInfo):
         return Template(self.objc_header_template + "\n\n").substitute(
                             module = M,
                             additionalImports = self.additionalImports.getvalue(),
-                            importBaseClass = '#import "' + self.base + '.h"' if not self.is_base_class else "",
+                            importBaseClass = '#import "' + make_objcname(self.base) + '.h"' if not self.is_base_class else "",
                             forwardDeclarations = "\n".join([_f for _f in self.getForwardDeclarations(objcM) if _f]),
                             enumDeclarations = self.enum_declarations.getvalue(),
                             nativePointerHandling = Template(
@@ -402,7 +407,7 @@ class ClassInfo(GeneralInfo):
                             manualMethodDeclations = "",
                             methodDeclarations = self.method_declarations.getvalue(),
                             name = self.name,
-                            objcName = self.objc_name,
+                            objcName = make_objcname(self.objc_name),
                             cName = self.cname,
                             imports = "\n".join(self.getImports(M)),
                             docs = gen_class_doc(self.docstring, M, self.member_classes, self.member_enums),
@@ -641,7 +646,7 @@ def build_swift_signature(args):
     return swift_signature
 
 def build_unrefined_call(name, args, constructor, static, classname, has_ret):
-    swift_refine_call = ("let ret = " if has_ret and not constructor else "") + ((classname + ".") if static else "") + (name if not constructor else "self.init")
+    swift_refine_call = ("let ret = " if has_ret and not constructor else "") + ((make_objcname(classname) + ".") if static else "") + (name if not constructor else "self.init")
     call_args = []
     for a in args:
         if a.ctype not in type_dict:
@@ -891,6 +896,7 @@ class ObjectiveCWrapperGenerator(object):
     def gen(self, srcfiles, module, output_path, output_objc_path, common_headers, manual_classes):
         self.clear()
         self.module = module
+        self.objcmodule = make_objcmodule(module)
         self.Module = module.capitalize()
         extension_implementations = StringIO() # Swift extensions implementations stream
         extension_signatures = []
@@ -935,9 +941,9 @@ class ObjectiveCWrapperGenerator(object):
         self.classes[self.Module].member_classes += manual_classes
 
         logging.info("\n\n===== Generating... =====")
-        package_path = os.path.join(output_objc_path, module)
+        package_path = os.path.join(output_objc_path, self.objcmodule)
         mkdir_p(package_path)
-        extension_file = "%s/%s/%sExt.swift" % (output_objc_path, module, self.Module)
+        extension_file = "%s/%sExt.swift" % (package_path, make_objcname(self.Module))
 
         for ci in sorted(self.classes.values(), key=lambda x: x.symbol_id):
             if ci.name == "Mat":
@@ -945,15 +951,16 @@ class ObjectiveCWrapperGenerator(object):
             ci.initCodeStreams(self.Module)
             self.gen_class(ci, self.module, extension_implementations, extension_signatures)
             classObjcHeaderCode = ci.generateObjcHeaderCode(self.module, self.Module, ci.objc_name)
-            header_file = "%s/%s/%s.h" % (output_objc_path, module, ci.objc_name)
+            objc_mangled_name = make_objcname(ci.objc_name)
+            header_file = "%s/%s.h" % (package_path, objc_mangled_name)
             self.save(header_file, classObjcHeaderCode)
             self.header_files.append(header_file)
             classObjcBodyCode = ci.generateObjcBodyCode(self.module, self.Module)
-            self.save("%s/%s/%s.mm" % (output_objc_path, module, ci.objc_name), classObjcBodyCode)
+            self.save("%s/%s.mm" % (package_path, objc_mangled_name), classObjcBodyCode)
             ci.cleanupCodeStreams()
         self.save(extension_file, extension_implementations.getvalue())
         extension_implementations.close()
-        self.save(os.path.join(output_path, module+".txt"), self.makeReport())
+        self.save(os.path.join(output_path, self.objcmodule+".txt"), self.makeReport())
 
     def makeReport(self):
         '''
@@ -1241,7 +1248,7 @@ $unrefined_call$epilogue$ret
 
 """
                         ).substitute(
-                            classname = ci.name,
+                            classname = make_objcname(ci.name),
                             deprecation_decl = "@available(*, deprecated)\n    " if fi.deprecated else "",
                             prototype = prototype,
                             prologue = "        " + "\n        ".join(pro),
@@ -1282,7 +1289,7 @@ $unrefined_call$epilogue$ret
             additional_imports.insert(0, h)
 
         if additional_imports:
-            ci.additionalImports.write('\n'.join(['#import %s' % h for h in additional_imports]))
+            ci.additionalImports.write('\n'.join(['#import %s' % make_objcname(h) for h in additional_imports]))
 
         # constants
         wrote_consts_pragma = False
@@ -1438,6 +1445,8 @@ typedef NS_ENUM(int, {1}) {{
         opencv_header = "#import <Foundation/Foundation.h>\n\n"
         opencv_header += "// ! Project version number\nFOUNDATION_EXPORT double " + framework_name + "VersionNumber;\n\n"
         opencv_header += "// ! Project version string\nFOUNDATION_EXPORT const unsigned char " + framework_name + "VersionString[];\n\n"
+        opencv_header += "\n".join(["#define AVAILABLE_" + m['name'].upper() for m in config['modules']])
+        opencv_header += "\n\n"
         opencv_header += "\n".join(["#import <" + framework_name + "/%s>" % os.path.basename(f) for f in self.header_files])
         self.save(opencv_header_file, opencv_header)
         opencv_modulemap_file = os.path.join(output_objc_path, framework_name + ".modulemap")
@@ -1446,8 +1455,9 @@ typedef NS_ENUM(int, {1}) {{
         opencv_modulemap += "\n".join(["  header \"%s\"" % os.path.basename(f) for f in self.header_files])
         opencv_modulemap += "\n  export *\n  module * {export *}\n}\n"
         self.save(opencv_modulemap_file, opencv_modulemap)
+        available_modules = " ".join(["-DAVAILABLE_" + m['name'].upper() for m in config['modules']])
         cmakelist_template = read_contents(os.path.join(SCRIPT_DIR, 'templates/cmakelists.template'))
-        cmakelist = Template(cmakelist_template).substitute(modules = ";".join(modules), framework = framework_name, objc_target=objc_target)
+        cmakelist = Template(cmakelist_template).substitute(modules = ";".join(modules), framework = framework_name, objc_target=objc_target, module_availability_defines=available_modules)
         self.save(os.path.join(dstdir, "CMakeLists.txt"), cmakelist)
         mkdir_p(os.path.join(output_objc_build_path, "framework_build"))
         mkdir_p(os.path.join(output_objc_build_path, "test_build"))

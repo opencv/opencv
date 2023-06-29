@@ -41,7 +41,7 @@
 <script src="utils.js" type="text/javascript"></script>
 <script id="codeSnippet" type="text/code-snippet">
 let src = cv.imread('canvasInput');
-let dst = cv.Mat.zeros(src.cols, src.rows, cv.CV_8UC3);
+let dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
 cv.cvtColor(src, src, cv.COLOR_RGBA2GRAY, 0);
 cv.threshold(src, src, 120, 200, cv.THRESH_BINARY);
 let contours = new cv.MatVector();

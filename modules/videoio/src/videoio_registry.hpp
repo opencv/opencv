@@ -29,11 +29,17 @@ struct VideoBackendInfo {
     Ptr<IBackendFactory> backendFactory;
 };
 
+struct VideoDeprecatedBackendInfo {
+    VideoCaptureAPIs id;
+    const char* name;
+};
+
 namespace videoio_registry {
 
 std::vector<VideoBackendInfo> getAvailableBackends_CaptureByIndex();
 std::vector<VideoBackendInfo> getAvailableBackends_CaptureByFilename();
 std::vector<VideoBackendInfo> getAvailableBackends_Writer();
+bool checkDeprecatedBackend(int api);
 
 } // namespace
 

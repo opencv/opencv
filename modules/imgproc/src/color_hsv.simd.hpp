@@ -420,6 +420,14 @@ inline void HSV2RGB_simd(const v_float32& h, const v_float32& s, const v_float32
 }
 #endif
 
+// Compute the sector and the new H for HSV and HLS 2 RGB conversions.
+inline void ComputeSectorAndClampedH(float& h, int &sector) {
+    sector = cvFloor(h);
+    h -= sector;
+    sector %= 6;
+    sector += sector < 0 ? 6 : 0;
+}
+
 
 inline void HSV2RGB_native(float h, float s, float v,
                            float& b, float& g, float& r,
@@ -434,14 +442,7 @@ inline void HSV2RGB_native(float h, float s, float v,
         float tab[4];
         int sector;
         h *= hscale;
-        h = fmod(h, 6.f);
-        sector = cvFloor(h);
-        h -= sector;
-        if( (unsigned)sector >= 6u )
-        {
-            sector = 0;
-            h = 0.f;
-        }
+        ComputeSectorAndClampedH(h, sector);
 
         tab[0] = v;
         tab[1] = v*(1.f - s);
@@ -812,11 +813,10 @@ struct RGB2HLS_b
         //TODO: fix that when v_interleave is available
         float CV_DECL_ALIGNED(CV_SIMD_WIDTH) interTmpM[VTraits<v_float32>::max_nlanes*3];
         v_store_interleave(interTmpM, vx_setall_f32(1.f), vx_setall_f32(255.f), vx_setall_f32(255.f));
-        v_float32 mhls0, mhls1, mhls2, mhls3;
+        v_float32 mhls0, mhls1, mhls2;
         mhls0 = vx_load_aligned(interTmpM);
         mhls1 = vx_load_aligned(interTmpM + fsize);
         mhls2 = vx_load_aligned(interTmpM + 2*fsize);
-        mhls3 = vx_load_aligned(interTmpM + 3*fsize);
 #endif
 
         for(int i = 0; i < n; i += BLOCK_SIZE, dst += BLOCK_SIZE*3 )
@@ -1058,13 +1058,7 @@ struct HLS2RGB_f
                 float p1 = 2*l - p2;
 
                 h *= hscale;
-                // We need both loops to clamp (e.g. for h == -1e-40).
-                while( h < 0 ) h += 6;
-                while( h >= 6 ) h -= 6;
-
-                CV_DbgAssert( 0 <= h && h < 6 );
-                sector = cvFloor(h);
-                h -= sector;
+                ComputeSectorAndClampedH(h, sector);
 
                 tab[0] = p2;
                 tab[1] = p1;

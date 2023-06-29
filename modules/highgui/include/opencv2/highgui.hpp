@@ -504,7 +504,7 @@ left scrolling, respectively.
 
 @note
 
-Mouse-wheel events are currently supported only on Windows.
+Mouse-wheel events are currently supported only on Windows and Cocoa
 
 @param flags The mouse callback flags parameter.
  */

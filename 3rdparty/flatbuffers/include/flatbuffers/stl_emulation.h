@@ -41,15 +41,18 @@
   #include <optional>
 #endif
 
-// The __cpp_lib_span is the predefined feature macro.
-#if defined(FLATBUFFERS_USE_STD_SPAN)
-    #include <span>
-#elif defined(__cpp_lib_span) && defined(__has_include)
-  #if __has_include(<span>)
-    #include <array>
-    #include <span>
-    #define FLATBUFFERS_USE_STD_SPAN
+#ifndef FLATBUFFERS_USE_STD_SPAN
+  // Testing __cpp_lib_span requires including either <version> or <span>,
+  // both of which were added in C++20.
+  // See: https://en.cppreference.com/w/cpp/utility/feature_test
+  #if defined(__cplusplus) && __cplusplus >= 202002L
+    #define FLATBUFFERS_USE_STD_SPAN 1
   #endif
+#endif // FLATBUFFERS_USE_STD_SPAN
+
+#if defined(FLATBUFFERS_USE_STD_SPAN)
+  #include <array>
+  #include <span>
 #else
   // Disable non-trivial ctors if FLATBUFFERS_SPAN_MINIMAL defined.
   #if !defined(FLATBUFFERS_TEMPLATES_ALIASES)

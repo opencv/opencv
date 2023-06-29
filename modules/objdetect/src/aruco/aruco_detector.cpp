@@ -881,7 +881,7 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
     }
     else {
         // always turn on corner refinement in case of Aruco3, due to upsampling
-        detectorParams.cornerRefinementMethod = CORNER_REFINE_SUBPIX;
+        detectorParams.cornerRefinementMethod = (int)CORNER_REFINE_SUBPIX;
         // only CORNER_REFINE_SUBPIX implement correctly for useAruco3Detection
         // Todo: update other CORNER_REFINE methods
     }
@@ -923,7 +923,7 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
     vector<vector<vector<Point> > > contoursSet;
 
     /// STEP 2.a Detect marker candidates :: using AprilTag
-    if(detectorParams.cornerRefinementMethod == CORNER_REFINE_APRILTAG){
+    if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_APRILTAG){
         _apriltag(grey, detectorParams, candidates, contours);
 
         candidatesSet.push_back(candidates);
@@ -938,7 +938,7 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
                         candidates, contours, ids, detectorParams, _rejectedImgPoints);
 
     /// STEP 3: Corner refinement :: use corner subpix
-    if (detectorParams.cornerRefinementMethod == CORNER_REFINE_SUBPIX) {
+    if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
         CV_Assert(detectorParams.cornerRefinementWinSize > 0 && detectorParams.cornerRefinementMaxIterations > 0 &&
                   detectorParams.cornerRefinementMinAccuracy > 0);
         // Do subpixel estimation. In Aruco3 start on the lowest pyramid level and upscale the corners
@@ -963,9 +963,9 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
     }
 
     /// STEP 3, Optional : Corner refinement :: use contour container
-    if (detectorParams.cornerRefinementMethod == CORNER_REFINE_CONTOUR){
+    if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_CONTOUR){
 
-        if (!_ids.empty()) {
+        if (!ids.empty()) {
 
             // do corner refinement using the contours for each detected markers
             parallel_for_(Range(0, (int)candidates.size()), [&](const Range& range) {
@@ -976,7 +976,7 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
         }
     }
 
-    if (detectorParams.cornerRefinementMethod != CORNER_REFINE_SUBPIX && fxfy != 1.f) {
+    if (detectorParams.cornerRefinementMethod != (int)CORNER_REFINE_SUBPIX && fxfy != 1.f) {
         // only CORNER_REFINE_SUBPIX implement correctly for useAruco3Detection
         // Todo: update other CORNER_REFINE methods
 
@@ -1213,7 +1213,7 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
         if(closestCandidateIdx >= 0) {
 
             // subpixel refinement
-            if(detectorParams.cornerRefinementMethod == CORNER_REFINE_SUBPIX) {
+            if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
                 CV_Assert(detectorParams.cornerRefinementWinSize > 0 &&
                           detectorParams.cornerRefinementMaxIterations > 0 &&
                           detectorParams.cornerRefinementMinAccuracy > 0);

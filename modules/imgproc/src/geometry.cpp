@@ -146,7 +146,6 @@ double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
     else
     {
         Point2f v0, v;
-        Point iv;
 
         if( is_float )
         {

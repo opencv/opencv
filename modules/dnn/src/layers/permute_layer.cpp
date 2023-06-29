@@ -144,7 +144,6 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_WEBNN ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan()) ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -441,10 +440,11 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         // create operator
         auto op = std::make_shared<ge::op::Permute>(name);
@@ -509,15 +509,6 @@ public:
     }
 #endif
 
-
-#ifdef HAVE_VULKAN
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
-    {
-        CV_Assert(!_order.empty());
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPermute(_order));
-        return Ptr<BackendNode>(new VkComBackendNode(input, op));
-    }
-#endif // HAVE_VULKAN
 
 #ifdef HAVE_TIMVX
   virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,

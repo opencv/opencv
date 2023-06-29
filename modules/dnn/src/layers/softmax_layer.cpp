@@ -46,7 +46,6 @@
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
-#include "../op_vkcom.hpp"
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
 
@@ -117,7 +116,6 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1) ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan()) ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -327,18 +325,6 @@ public:
     }
 #endif
 
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_VULKAN
-        vkcom::Tensor in = VkComTensor(inputs[0]);
-        int cAxis = normalize_axis(axisRaw, in.dimNum());
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpSoftmax(cAxis, logSoftMax));
-        return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
-#endif  // HAVE_VULKAN
-        return Ptr<BackendNode>();
-    }
-
-
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
@@ -365,10 +351,11 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         // create operator
         auto op = std::make_shared<ge::op::SoftmaxV2>(name);

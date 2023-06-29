@@ -58,14 +58,22 @@ public:
     CV_WRAP const Point3f& getRightBottomCorner() const;
 
     /** @brief Given a board configuration and a set of detected markers, returns the corresponding
-     * image points and object points to call solvePnP()
+     * image points and object points, can be used in solvePnP()
      *
      * @param detectedCorners List of detected marker corners of the board.
-     * For CharucoBoard class you can set list of charuco corners.
-     * @param detectedIds List of identifiers for each marker or list of charuco identifiers for each corner.
-     * For CharucoBoard class you can set list of charuco identifiers for each corner.
-     * @param objPoints Vector of vectors of board marker points in the board coordinate space.
-     * @param imgPoints Vector of vectors of the projections of board marker corner points.
+     * For cv::Board and cv::GridBoard the method expects std::vector<std::vector<Point2f>> or std::vector<Mat> with Aruco marker corners.
+     * For cv::CharucoBoard the method expects std::vector<Point2f> or Mat with ChAruco corners (chess board corners matched with Aruco markers).
+     *
+     * @param detectedIds List of identifiers for each marker or charuco corner.
+     * For any Board class the method expects std::vector<int> or Mat.
+     *
+     * @param objPoints Vector of marker points in the board coordinate space.
+     * For any Board class the method expects std::vector<cv::Point3f> objectPoints or cv::Mat
+     *
+     * @param imgPoints Vector of marker points in the image coordinate space.
+     * For any Board class the method expects std::vector<cv::Point2f> objectPoints or cv::Mat
+     *
+     * @sa solvePnP
      */
     CV_WRAP void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
                                   OutputArray objPoints, OutputArray imgPoints) const;
@@ -82,7 +90,7 @@ public:
      */
     CV_WRAP void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const;
 
-    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to “protected” (need to fix bindings first)
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
     Board();
 
     struct Impl;
@@ -114,7 +122,7 @@ public:
     CV_WRAP float getMarkerLength() const;
     CV_WRAP float getMarkerSeparation() const;
 
-    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to “protected” (need to fix bindings first)
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
     GridBoard();
 };
 
@@ -137,6 +145,18 @@ public:
      */
     CV_WRAP CharucoBoard(const Size& size, float squareLength, float markerLength,
                          const Dictionary &dictionary, InputArray ids = noArray());
+
+    /** @brief set legacy chessboard pattern.
+     *
+     * Legacy setting creates chessboard patterns starting with a white box in the upper left corner
+     * if there is an even row count of chessboard boxes, otherwise it starts with a black box.
+     * This setting ensures compatibility to patterns created with OpenCV versions prior OpenCV 4.6.0.
+     * See https://github.com/opencv/opencv/issues/23152.
+     *
+     * Default value: false.
+     */
+    CV_WRAP void setLegacyPattern(bool legacyPattern);
+    CV_WRAP bool getLegacyPattern() const;
 
     CV_WRAP Size getChessboardSize() const;
     CV_WRAP float getSquareLength() const;
@@ -167,7 +187,7 @@ public:
      */
     CV_WRAP bool checkCharucoCornersCollinear(InputArray charucoIds) const;
 
-    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to “protected” (need to fix bindings first)
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
     CharucoBoard();
 };
 

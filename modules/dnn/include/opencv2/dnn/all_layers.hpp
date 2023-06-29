@@ -258,7 +258,6 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
         bool fusedActivation = false;
         bool fusedAdd = false;
-        bool isConv2D = false; // Should be deleted after fastconv branch support Conv1D and Conv3D.
         bool useWinograd = false; // Flag whether to use Winograd to speed up 3x3 convolution.
     };
 
@@ -346,16 +345,7 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS ReduceLayer : public Layer
     {
     public:
-        int reduceType;
-        // reduceDims contains the dimensions that need to be reduced, targetDims is the target output dimension.
-        std::vector<size_t> reduceDims, targetDims;
         static Ptr<ReduceLayer> create(const LayerParams& params);
-    };
-
-    class CV_EXPORTS ReduceLayerInt8 : public ReduceLayer
-    {
-    public:
-        static Ptr<ReduceLayerInt8> create(const LayerParams& params);
     };
 
     class CV_EXPORTS SoftmaxLayer : public Layer

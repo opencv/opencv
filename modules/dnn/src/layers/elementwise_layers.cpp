@@ -188,10 +188,11 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        return func.initCannOp(Layer::name, inputsWrapper, nodes);
+        return func.initCannOp(Layer::name, inputs, nodes);
     }
 #endif // HAVE_CANN
 
@@ -215,13 +216,6 @@ public:
     }
 #endif
 
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_VULKAN
-        return Ptr<BackendNode>(new VkComBackendNode(inputs, func.initVkCom()));
-#endif  // HAVE_VULKAN
-        return Ptr<BackendNode>();
-    }
 
     virtual bool tryFuse(Ptr<dnn::Layer>& top) CV_OVERRIDE
     {
@@ -358,7 +352,6 @@ struct ReLUFunctor : public BaseFunctor
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_VKCOM ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -461,10 +454,10 @@ struct ReLUFunctor : public BaseFunctor
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
         auto x_desc = x->getTensorDesc();
 
@@ -512,14 +505,6 @@ struct ReLUFunctor : public BaseFunctor
         return builder.Relu(input);
     }
 #endif
-
-#ifdef HAVE_VULKAN
-    std::shared_ptr<vkcom::OpBase> initVkCom()
-    {
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpReLU(slope));
-        return op;
-    }
-#endif  // HAVE_VULKAN
 
     bool tryQuantize(const std::vector<std::vector<float> > &scales,
                      const std::vector<std::vector<int> > &zeropoints, LayerParams& params)
@@ -655,10 +640,10 @@ struct ReLU6Functor : public BaseFunctor
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::ClipByValue>(name);
 
@@ -704,14 +689,6 @@ struct ReLU6Functor : public BaseFunctor
         return builder.Clamp(input, &clampOptions);
     }
 #endif
-
-#ifdef HAVE_VULKAN
-    std::shared_ptr<vkcom::OpBase> initVkCom()
-    {
-        // TODO: add vkcom implementation
-        return std::shared_ptr<vkcom::OpBase>();
-    }
-#endif  // HAVE_VULKAN
 
     bool tryQuantize(const std::vector<std::vector<float> > &scales,
                      const std::vector<std::vector<int> > &zeropoints, LayerParams& params)
@@ -808,7 +785,7 @@ struct BaseDefaultFunctor : public BaseFunctor
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
         CV_Error(Error::StsNotImplemented, "");
@@ -828,14 +805,6 @@ struct BaseDefaultFunctor : public BaseFunctor
         CV_Error(Error::StsNotImplemented, "");
     }
 #endif
-
-#ifdef HAVE_VULKAN
-    std::shared_ptr<vkcom::OpBase> initVkCom()
-    {
-        // TODO: add vkcom implementation
-        return std::shared_ptr<vkcom::OpBase>();
-    }
-#endif  // HAVE_VULKAN
 
 private:
     static const char* const ocl_kernel_name;
@@ -930,10 +899,10 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Tanh>(name);
 
@@ -997,10 +966,10 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Swish>(name);
 
@@ -1075,10 +1044,10 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Mish>(name);
 
@@ -1131,7 +1100,14 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 
     inline float calculate(float x) const
     {
-        return 1.f / (1.f + exp(-x));
+        float y;
+        if (x >= 0)
+            y = 1.f / (1.f + exp(-x));
+        else {
+            y = exp(x);
+            y = y / (1 + y);
+        }
+        return y;
     }
 
 #ifdef HAVE_CUDA
@@ -1151,10 +1127,10 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Sigmoid>(name);
 
@@ -1229,10 +1205,10 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Elu>(name);
 
@@ -1301,10 +1277,10 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Abs>(name);
 
@@ -1363,10 +1339,10 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::BNLL>(name);
 
@@ -1420,10 +1396,10 @@ struct CeilFunctor : public BaseDefaultFunctor<CeilFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::BNLL>(name);
 
@@ -1479,10 +1455,10 @@ struct FloorFunctor : public BaseDefaultFunctor<FloorFunctor>
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         auto op = std::make_shared<ge::op::Floor>(name);
 
@@ -2334,7 +2310,7 @@ struct PowerFunctor : public BaseFunctor
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
         CV_Error(Error::StsNotImplemented, "");
@@ -2369,14 +2345,6 @@ struct PowerFunctor : public BaseFunctor
         return operand;
     }
 #endif
-
-#ifdef HAVE_VULKAN
-    std::shared_ptr<vkcom::OpBase> initVkCom()
-    {
-        // TODO: add vkcom implementation
-        return std::shared_ptr<vkcom::OpBase>();
-    }
-#endif  // HAVE_VULKAN
 
     bool tryFuse(Ptr<dnn::Layer>& top)
     {
@@ -2498,7 +2466,8 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE;
+               backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
@@ -2590,10 +2559,10 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
-                                const std::vector<Ptr<BackendWrapper> > &inputsWrapper,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
         auto x_desc = x->getTensorDesc();
 
@@ -2632,14 +2601,6 @@ struct ChannelsPReLUFunctor : public BaseFunctor
         return operand;
     }
 #endif
-
-#ifdef HAVE_VULKAN
-    std::shared_ptr<vkcom::OpBase> initVkCom()
-    {
-        // TODO: add vkcom implementation
-        return std::shared_ptr<vkcom::OpBase>();
-    }
-#endif  // HAVE_VULKAN
 
     int64 getFLOPSPerElement() const { return 1; }
 };

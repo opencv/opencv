@@ -626,7 +626,7 @@ CV_IMPL int cvWaitKey (int maxWait)
          inMode:NSDefaultRunLoopMode
          dequeue:YES];
 
-        if([event type] == NSKeyDown) {
+        if([event type] == NSKeyDown && [[event characters] length]) {
             returnCode = [[event characters] characterAtIndex:0];
             break;
         }
@@ -899,8 +899,22 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     mp.y *= (imageSize.height / std::max(viewSize.height, 1.));
     mp.x *= (imageSize.width / std::max(viewSize.width, 1.));
 
-    if( mp.x >= 0 && mp.y >= 0 && mp.x < imageSize.width && mp.y < imageSize.height )
-        mouseCallback(type, mp.x, mp.y, flags, mouseParam);
+    if( [event type] == NSEventTypeScrollWheel ) {
+      if( event.hasPreciseScrollingDeltas ) {
+        mp.x = int(event.scrollingDeltaX);
+        mp.y = int(event.scrollingDeltaY);
+      } else {
+        mp.x = int(event.scrollingDeltaX / 0.100006);
+        mp.y = int(event.scrollingDeltaY / 0.100006);
+      }
+      if( mp.x && !mp.y && CV_EVENT_MOUSEWHEEL == type ) {
+        type = CV_EVENT_MOUSEHWHEEL;
+      }
+      mouseCallback(type, mp.x, mp.y, flags, mouseParam);
+    } else if( mp.x >= 0 && mp.y >= 0 && mp.x < imageSize.width && mp.y < imageSize.height ) {
+      mouseCallback(type, mp.x, mp.y, flags, mouseParam);
+    }
+
 }
 
 - (void)cvMouseEvent:(NSEvent *)event {
@@ -923,6 +937,11 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     if([event type] == NSLeftMouseDragged) {[self cvSendMouseEvent:event type:CV_EVENT_MOUSEMOVE   flags:flags | CV_EVENT_FLAG_LBUTTON];}
     if([event type] == NSRightMouseDragged)	{[self cvSendMouseEvent:event type:CV_EVENT_MOUSEMOVE   flags:flags | CV_EVENT_FLAG_RBUTTON];}
     if([event type] == NSOtherMouseDragged)	{[self cvSendMouseEvent:event type:CV_EVENT_MOUSEMOVE   flags:flags | CV_EVENT_FLAG_MBUTTON];}
+    if([event type] == NSEventTypeScrollWheel) {[self cvSendMouseEvent:event type:CV_EVENT_MOUSEWHEEL   flags:flags ];}
+}
+
+-(void)scrollWheel:(NSEvent *)theEvent {
+    [self cvMouseEvent:theEvent];
 }
 - (void)keyDown:(NSEvent *)theEvent {
     //cout << "keyDown" << endl;

@@ -76,8 +76,9 @@ inline const uint8_t *GetBufferStartFromRootPointer(const void *root) {
 }
 
 /// @brief This return the prefixed size of a FlatBuffer.
-inline uoffset_t GetPrefixedSize(const uint8_t *buf) {
-  return ReadScalar<uoffset_t>(buf);
+template<typename SizeT = uoffset_t>
+inline SizeT GetPrefixedSize(const uint8_t *buf) {
+  return ReadScalar<SizeT>(buf);
 }
 
 // Base class for native objects (FlatBuffer data de-serialized into native
