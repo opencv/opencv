@@ -15,15 +15,17 @@
 namespace cv { namespace usac {
 class PnPMinimalSolver6PtsImpl : public PnPMinimalSolver6Pts {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
 public:
     // linear 6 points required (11 equations)
     int getSampleSize() const override { return 6; }
     int getMaxNumberOfSolutions () const override { return 1; }
 
     explicit PnPMinimalSolver6PtsImpl (const Mat &points_) :
-        points_mat(&points_), points ((float*)points_mat->data) {}
+        points_mat(points_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+    }
     /*
         DLT:
         d x = P X, x = (u, v, 1), X = (X, Y, Z, 1), P = K[R t]
@@ -72,7 +74,7 @@ public:
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         std::vector<double> A1 (60, 0), A2(56, 0); // 5x12, 7x8
-
+        const float * points = points_mat.ptr<float>();
         // std::vector<double> A_all(11*12, 0);
         // int cnt3 = 0;
 
@@ -154,14 +156,17 @@ Ptr<PnPMinimalSolver6Pts> PnPMinimalSolver6Pts::create(const Mat &points_) {
 
 class PnPNonMinimalSolverImpl : public PnPNonMinimalSolver {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
 public:
     explicit PnPNonMinimalSolverImpl (const Mat &points_) :
-        points_mat(&points_), points ((float*)points_mat->data){}
+        points_mat(points_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+    }
 
     int estimate (const std::vector<int> &sample, int sample_size,
-          std::vector<Mat> &models, const std::vector<double> &weights) const override {
+                  std::vector<Mat> &models, const std::vector<double> &weights) const override {
+        const float * points = points_mat.ptr<float>();
         if (sample_size < 6)
             return 0;
 
@@ -284,9 +289,8 @@ private:
      * calibrated normalized points
      * K^-1 [u v 1]^T / ||K^-1 [u v 1]^T||
      */
-    const Mat * points_mat, * calib_norm_points_mat;
+    const Mat points_mat, calib_norm_points_mat;
     const Matx33d K;
-    const float * const calib_norm_points, * const points;
     const double VAL_THR = 1e-4;
 public:
     /*
@@ -294,8 +298,11 @@ public:
      * u v x y z. (u,v) is image point, (x y z) is world point
      */
     P3PSolverImpl (const Mat &points_, const Mat &calib_norm_points_, const Mat &K_) :
-        points_mat(&points_), calib_norm_points_mat(&calib_norm_points_), K(K_),
-        calib_norm_points((float*)calib_norm_points_mat->data), points((float*)points_mat->data) {}
+        points_mat(points_), calib_norm_points_mat(calib_norm_points_), K(K_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+        CV_DbgAssert(!calib_norm_points_mat.empty() && calib_norm_points_mat.isContinuous());
+    }
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         /*
@@ -303,6 +310,9 @@ public:
          * http://cmp.felk.cvut.cz/~pajdla/gvg/GVG-2016-Lecture.pdf
          * pages: 51-59
          */
+        const float * points = points_mat.ptr<float>();
+        const float * calib_norm_points = calib_norm_points_mat.ptr<float>();
+
         const int   idx1 = 5*sample[0],   idx2 = 5*sample[1],   idx3 = 5*sample[2];
         const Vec3d X1 (points[idx1+2], points[idx1+3], points[idx1+4]);
         const Vec3d X2 (points[idx2+2], points[idx2+3], points[idx2+4]);

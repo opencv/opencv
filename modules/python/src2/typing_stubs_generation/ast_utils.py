@@ -143,13 +143,24 @@ because 'GOpaque' class is not registered yet
     return scope
 
 
-def find_class_node(root: NamespaceNode, full_class_name: str,
-                    namespaces: Sequence[str]) -> ClassNode:
-    symbol_name = SymbolName.parse(full_class_name, namespaces)
-    scope = find_scope(root, symbol_name)
-    if symbol_name.name not in scope.classes:
-        raise SymbolNotFoundError("Can't find {} in its scope".format(symbol_name))
-    return scope.classes[symbol_name.name]
+def find_class_node(root: NamespaceNode, class_symbol: SymbolName,
+                    create_missing_namespaces: bool = False) -> ClassNode:
+    scope = find_scope(root, class_symbol, create_missing_namespaces)
+    if class_symbol.name not in scope.classes:
+        raise SymbolNotFoundError(
+            "Can't find {} in its scope".format(class_symbol)
+        )
+    return scope.classes[class_symbol.name]
+
+
+def find_function_node(root: NamespaceNode, function_symbol: SymbolName,
+                       create_missing_namespaces: bool = False) -> FunctionNode:
+    scope = find_scope(root, function_symbol, create_missing_namespaces)
+    if function_symbol.name not in scope.functions:
+        raise SymbolNotFoundError(
+            "Can't find {} in its scope".format(function_symbol)
+        )
+    return scope.functions[function_symbol.name]
 
 
 def create_function_node_in_scope(scope: Union[NamespaceNode, ClassNode],

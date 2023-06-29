@@ -9,7 +9,7 @@ Using Orbbec Astra 3D cameras {#tutorial_orbbec_astra}
 
 ### Introduction
 
-This tutorial is devoted to the Astra Series of Orbbec 3D cameras (https://orbbec3d.com/product-astra-pro/).
+This tutorial is devoted to the Astra Series of Orbbec 3D cameras (https://orbbec3d.com/index/Product/info.html?cate=38&id=36).
 That cameras have a depth sensor in addition to a common color sensor. The depth sensors can be read using
 the open source OpenNI API with @ref cv::VideoCapture class. The video stream is provided through the regular
 camera interface.
@@ -18,9 +18,11 @@ camera interface.
 
 In order to use the Astra camera's depth sensor with OpenCV you should do the following steps:
 
--#  Download the latest version of Orbbec OpenNI SDK (from here <https://orbbec3d.com/develop/>).
+-#  Download the latest version of Orbbec OpenNI SDK (from here <https://orbbec3d.com/index/download.html>).
     Unzip the archive, choose the build according to your operating system and follow installation
-    steps provided in the Readme file. For instance, if you use 64bit GNU/Linux run:
+    steps provided in the Readme file.
+
+-#  For instance, if you use 64bit GNU/Linux run:
     @code{.bash}
     $ cd Linux/OpenNI-Linux-x64-2.3.0.63/
     $ sudo ./install.sh
@@ -31,17 +33,44 @@ In order to use the Astra camera's depth sensor with OpenCV you should do the fo
     @code{.bash}
     $ source OpenNIDevEnvironment
     @endcode
-
--#  Run the following commands to verify that OpenNI library and header files can be found. You should see
-    something similar in your terminal:
+    To verify that the source command works and OpenNI library and header files can be found, run the following
+    command and you should see something similar in your terminal:
     @code{.bash}
     $ echo $OPENNI2_INCLUDE
     /home/user/OpenNI_2.3.0.63/Linux/OpenNI-Linux-x64-2.3.0.63/Include
     $ echo $OPENNI2_REDIST
     /home/user/OpenNI_2.3.0.63/Linux/OpenNI-Linux-x64-2.3.0.63/Redist
     @endcode
-    If the above two variables are empty, then you need to source `OpenNIDevEnvironment` again. Now you can
-    configure OpenCV with OpenNI support enabled by setting the `WITH_OPENNI2` flag in CMake.
+    If the above two variables are empty, then you need to source `OpenNIDevEnvironment` again.
+
+    @note Orbbec OpenNI SDK version 2.3.0.86 and newer does not provide `install.sh` any more.
+    You can use the following script to initialize environment:
+    @code{.text}
+    # Check if user is root/running with sudo
+    if [ `whoami` != root ]; then
+        echo Please run this script with sudo
+        exit
+    fi
+
+    ORIG_PATH=`pwd`
+    cd `dirname $0`
+    SCRIPT_PATH=`pwd`
+    cd $ORIG_PATH
+
+    if [ "`uname -s`" != "Darwin" ]; then
+        # Install UDEV rules for USB device
+        cp ${SCRIPT_PATH}/orbbec-usb.rules /etc/udev/rules.d/558-orbbec-usb.rules
+        echo "usb rules file install at /etc/udev/rules.d/558-orbbec-usb.rules"
+    fi
+
+    OUT_FILE="$SCRIPT_PATH/OpenNIDevEnvironment"
+    echo "export OPENNI2_INCLUDE=$SCRIPT_PATH/../sdk/Include" > $OUT_FILE
+    echo "export OPENNI2_REDIST=$SCRIPT_PATH/../sdk/libs" >> $OUT_FILE
+    chmod a+r $OUT_FILE
+    echo "exit"
+    @endcode
+
+-#  Now you can configure OpenCV with OpenNI support enabled by setting the `WITH_OPENNI2` flag in CMake.
     You may also like to enable the `BUILD_EXAMPLES` flag to get a code sample working with your Astra camera.
     Run the following commands in the directory containing OpenCV source code to enable OpenNI support:
     @code{.bash}
