@@ -1100,7 +1100,14 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 
     inline float calculate(float x) const
     {
-        return 1.f / (1.f + exp(-x));
+        float y;
+        if (x >= 0)
+            y = 1.f / (1.f + exp(-x));
+        else {
+            y = exp(x);
+            y = y / (1 + y);
+        }
+        return y;
     }
 
 #ifdef HAVE_CUDA

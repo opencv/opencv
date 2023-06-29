@@ -62,6 +62,11 @@ public:
         return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
     }
     cv::util::any blobParams() const override {
+#if INF_ENGINE_RELEASE > 2023000000
+        // NB: blobParams() shouldn't be used in tests
+        // if OpenVINO versions is higher than 2023.0
+        GAPI_Assert(false && "NV12 feature has been deprecated in OpenVINO 1.0 API.");
+#else
         return std::make_pair<InferenceEngine::TensorDesc,
                               InferenceEngine::ParamMap>({IE::Precision::U8,
                                                           {1, 3, 300, 300},
@@ -69,6 +74,7 @@ public:
                                                          {{"HELLO", 42},
                                                           {"COLOR_FORMAT",
                                                            InferenceEngine::ColorFormat::NV12}});
+#endif // INF_ENGINE_RELEASE > 2023000000
     }
 };
 
@@ -138,7 +144,13 @@ void setNetParameters(IE::CNNNetwork& net, bool is_nv12 = false) {
     ii->setPrecision(IE::Precision::U8);
     ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
     if (is_nv12) {
+#if INF_ENGINE_RELEASE > 2023000000
+        // NB: NV12 feature shouldn't be used in tests
+        // if OpenVINO versions is higher than 2023.0
+        GAPI_Assert(false && "NV12 feature has been deprecated in OpenVINO 1.0 API.");
+#else
         ii->getPreProcess().setColorFormat(IE::ColorFormat::NV12);
+#endif // INF_ENGINE_RELEASE > 2023000000
     }
 }
 
@@ -392,10 +404,14 @@ struct InferWithReshapeNV12: public InferWithReshape {
         cv::randu(m_in_y, 0, 255);
         m_in_uv = cv::Mat{sz / 2, CV_8UC2};
         cv::randu(m_in_uv, 0, 255);
+// NB: NV12 feature shouldn't be used in tests
+// if OpenVINO versions is higher than 2023.0
+#if INF_ENGINE_RELEASE <= 2023000000
         setNetParameters(net, true);
         net.reshape({{"data", reshape_dims}});
         auto frame_blob = cv::gapi::ie::util::to_ie(m_in_y, m_in_uv);
         inferROIs(frame_blob);
+#endif // INF_ENGINE_RELEASE <= 2023000000
     }
 };
 
@@ -505,8 +521,11 @@ struct ROIListNV12: public ::testing::Test {
             cv::Rect(cv::Point{50, 32}, cv::Size{128, 160}),
         };
 
-        // Load & run IE network
+// NB: NV12 feature shouldn't be used in tests
+// if OpenVINO versions is higher than 2023.0
+#if INF_ENGINE_RELEASE <= 2023000000
         {
+            // Load & run IE network
             auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
             auto net           = cv::gimpl::ie::wrap::readNetwork(params);
             setNetParameters(net, true);
@@ -530,9 +549,11 @@ struct ROIListNV12: public ::testing::Test {
                 m_out_ie_genders.push_back(to_ocv(infer_request.GetBlob("prob")).clone());
             }
         } // namespace IE = ..
+#endif // INF_ENGINE_RELEASE <= 2023000000
     } // ROIList()
 
     void validate() {
+#if INF_ENGINE_RELEASE <= 2023000000
         // Validate with IE itself (avoid DNN module dependency here)
         ASSERT_EQ(2u, m_out_ie_ages.size());
         ASSERT_EQ(2u, m_out_ie_genders.size());
@@ -543,6 +564,10 @@ struct ROIListNV12: public ::testing::Test {
         normAssert(m_out_ie_genders[0], m_out_gapi_genders[0], "0: Test gender output");
         normAssert(m_out_ie_ages   [1], m_out_gapi_ages   [1], "1: Test age output");
         normAssert(m_out_ie_genders[1], m_out_gapi_genders[1], "1: Test gender output");
+#else
+        GAPI_Assert(false && "Reference hasn't been calculated because"
+                             " NV12 feature has been deprecated.");
+#endif // INF_ENGINE_RELEASE <= 2023000000
     }
 };
 
@@ -631,6 +656,9 @@ struct SingleROINV12: public ::testing::Test {
 
         m_roi = cv::Rect(cv::Point{64, 60}, cv::Size{96, 96});
 
+// NB: NV12 feature shouldn't be used in tests
+// if OpenVINO versions is higher than 2023.0
+#if INF_ENGINE_RELEASE <= 2023000000
         // Load & run IE network
         IE::Blob::Ptr ie_age, ie_gender;
         {
@@ -657,12 +685,18 @@ struct SingleROINV12: public ::testing::Test {
             m_out_ie_age    = to_ocv(infer_request.GetBlob("age_conv3")).clone();
             m_out_ie_gender = to_ocv(infer_request.GetBlob("prob")).clone();
         }
+#endif // INF_ENGINE_RELEASE <= 2023000000
     }
 
     void validate() {
+#if INF_ENGINE_RELEASE <= 2023000000
         // Validate with IE itself (avoid DNN module dependency here)
         normAssert(m_out_ie_age   , m_out_gapi_age   , "Test age output");
         normAssert(m_out_ie_gender, m_out_gapi_gender, "Test gender output");
+#else
+        GAPI_Assert(false && "Reference hasn't been calculated because"
+                             " NV12 feature has been deprecated.");
+#endif
     }
 };
 
@@ -962,11 +996,20 @@ TEST_F(ROIListNV12, MediaInputNV12)
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
 
     validate();
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi_list),
+                     cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST(TestAgeGenderIE, MediaInputNV12)
@@ -986,6 +1029,9 @@ TEST(TestAgeGenderIE, MediaInputNV12)
 
     cv::Mat gapi_age, gapi_gender;
 
+// NB: NV12 feature shouldn't be used in tests
+// if OpenVINO versions is higher than 2023.0
+#if INF_ENGINE_RELEASE <= 2023000000
     // Load & run IE network
     IE::Blob::Ptr ie_age, ie_gender;
     {
@@ -999,6 +1045,7 @@ TEST(TestAgeGenderIE, MediaInputNV12)
         ie_age    = infer_request.GetBlob("age_conv3");
         ie_gender = infer_request.GetBlob("prob");
     }
+#endif
 
     // Configure & run G-API
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
@@ -1014,13 +1061,20 @@ TEST(TestAgeGenderIE, MediaInputNV12)
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
-
 
     // Validate with IE itself (avoid DNN module dependency here)
     normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame), cv::gout(gapi_age, gapi_gender),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST(TestAgeGenderIE, MediaInputBGR)
@@ -1155,6 +1209,9 @@ TEST(InferROI, MediaInputNV12)
     cv::Mat gapi_age, gapi_gender;
     cv::Rect rect(cv::Point{64, 60}, cv::Size{96, 96});
 
+// NB: NV12 feature shouldn't be used in tests
+// if OpenVINO versions is higher than 2023.0
+#if INF_ENGINE_RELEASE <= 2023000000
     // Load & run IE network
     IE::Blob::Ptr ie_age, ie_gender;
     {
@@ -1176,6 +1233,7 @@ TEST(InferROI, MediaInputNV12)
         ie_age    = infer_request.GetBlob("age_conv3");
         ie_gender = infer_request.GetBlob("prob");
     }
+#endif
 
     // Configure & run G-API
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
@@ -1192,13 +1250,20 @@ TEST(InferROI, MediaInputNV12)
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, rect), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
-
 
     // Validate with IE itself (avoid DNN module dependency here)
     normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, rect), cv::gout(gapi_age, gapi_gender),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST_F(ROIList, Infer2MediaInputBGR)
@@ -1233,10 +1298,20 @@ TEST_F(ROIListNV12, Infer2MediaInputNV12)
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
+
     validate();
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi_list),
+                     cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST_F(SingleROI, GenericInfer)
@@ -1310,10 +1385,19 @@ TEST_F(SingleROINV12, GenericInferMediaNV12)
     pp.cfgNumRequests(2u);
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, m_roi), cv::gout(m_out_gapi_age, m_out_gapi_gender),
             cv::compile_args(cv::gapi::networks(pp)));
 
     validate();
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi),
+                     cv::gout(m_out_gapi_age, m_out_gapi_gender),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST_F(ROIList, GenericInfer)
@@ -1386,11 +1470,20 @@ TEST_F(ROIListNV12, GenericInferMediaNV12)
     pp.cfgNumRequests(2u);
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+
+    // NB: NV12 feature has been deprecated in OpenVINO versions higher
+    // than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, m_roi_list),
-            cv::gout(m_out_gapi_ages, m_out_gapi_genders),
-            cv::compile_args(cv::gapi::networks(pp)));
+               cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+               cv::compile_args(cv::gapi::networks(pp)));
 
     validate();
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi_list),
+                     cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST_F(ROIList, GenericInfer2)
@@ -1461,10 +1554,20 @@ TEST_F(ROIListNV12, GenericInfer2MediaInputNV12)
     pp.cfgNumRequests(2u);
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, m_roi_list),
-            cv::gout(m_out_gapi_ages, m_out_gapi_genders),
-            cv::compile_args(cv::gapi::networks(pp)));
+               cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+               cv::compile_args(cv::gapi::networks(pp)));
+
     validate();
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi_list),
+                     cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST(Infer, SetInvalidNumberOfRequests)
@@ -2050,11 +2153,20 @@ TEST_F(InferWithReshapeNV12, TestInferListYUV)
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" }).cfgInputReshape({{"data", reshape_dims}});
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
     // Validate
     validate();
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi_list),
+                     cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST_F(ROIList, CallInferMultipleTimes)
@@ -2079,6 +2191,7 @@ TEST_F(ROIList, CallInferMultipleTimes)
     validate();
 }
 
+#if INF_ENGINE_RELEASE <= 2023000000
 TEST(IEFrameAdapter, blobParams)
 {
     cv::Mat bgr = cv::Mat::eye(240, 320, CV_8UC3);
@@ -2093,6 +2206,7 @@ TEST(IEFrameAdapter, blobParams)
 
     EXPECT_EQ(expected, actual);
 }
+#endif
 
 namespace
 {
@@ -2281,6 +2395,10 @@ TEST(TestAgeGenderIE, InferWithBatch)
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
 }
 
+// NB: All tests below use preprocessing for "Import" networks
+// passed as the last argument to SetBLob. This overload has
+// been deprecated in OpenVINO 1.0 API.
+#if INF_ENGINE_RELEASE <= 2023000000
 TEST(ImportNetwork, Infer)
 {
     const std::string device = "MYRIAD";
@@ -2820,6 +2938,7 @@ TEST(ImportNetwork, InferList2NV12)
         normAssert(out_ie_genders[i], out_gapi_genders[i], "Test gender output");
     }
 }
+#endif
 
 TEST(TestAgeGender, ThrowBlobAndInputPrecisionMismatch)
 {

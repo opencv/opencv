@@ -267,13 +267,14 @@ cv::gapi::wip::GOutputs::Priv::Priv(const std::string& id, cv::GKernel::M outMet
     std::transform(args.begin(), args.end(), std::back_inserter(kinds),
             [](const cv::GArg& arg) { return arg.opaque_kind; });
 
-    m_call.reset(new cv::GCall{cv::GKernel{id, {}, outMeta, {}, std::move(kinds), {}}});
+    m_call.reset(new cv::GCall{cv::GKernel{id, {}, outMeta, {}, std::move(kinds), {}, {}}});
     m_call->setArgs(std::move(args));
 }
 
 cv::GMat cv::gapi::wip::GOutputs::Priv::getGMat()
 {
     m_call->kernel().outShapes.push_back(cv::GShape::GMAT);
+    m_call->kernel().outKinds.push_back(cv::detail::OpaqueKind::CV_UNKNOWN);
     // ...so _empty_ constructor is passed here.
     m_call->kernel().outCtors.emplace_back(cv::util::monostate{});
     return m_call->yield(output++);
@@ -282,6 +283,7 @@ cv::GMat cv::gapi::wip::GOutputs::Priv::getGMat()
 cv::GScalar cv::gapi::wip::GOutputs::Priv::getGScalar()
 {
     m_call->kernel().outShapes.push_back(cv::GShape::GSCALAR);
+    m_call->kernel().outKinds.push_back(cv::detail::OpaqueKind::CV_UNKNOWN);
     // ...so _empty_ constructor is passed here.
     m_call->kernel().outCtors.emplace_back(cv::util::monostate{});
     return m_call->yieldScalar(output++);
@@ -290,10 +292,14 @@ cv::GScalar cv::gapi::wip::GOutputs::Priv::getGScalar()
 cv::GArrayT cv::gapi::wip::GOutputs::Priv::getGArray(cv::gapi::ArgType type)
 {
     m_call->kernel().outShapes.push_back(cv::GShape::GARRAY);
-#define HC(T, K)                                                                                \
-    case K:                                                                                     \
-        m_call->kernel().outCtors.emplace_back(cv::detail::GObtainCtor<cv::GArray<T>>::get());  \
-        return cv::GArrayT(m_call->yieldArray<T>(output++));                                    \
+
+#define HC(T, K)                                                                                 \
+    case K: {                                                                                    \
+        const auto kind = cv::detail::GTypeTraits<cv::GArray<T>>::op_kind;                       \
+        m_call->kernel().outKinds.emplace_back(kind);                                            \
+        m_call->kernel().outCtors.emplace_back(cv::detail::GObtainCtor<cv::GArray<T>>::get());   \
+        return cv::GArrayT(m_call->yieldArray<T>(output++));                                     \
+    }
 
     SWITCH(type, GARRAY_TYPE_LIST_G, HC)
 #undef HC
@@ -302,10 +308,13 @@ cv::GArrayT cv::gapi::wip::GOutputs::Priv::getGArray(cv::gapi::ArgType type)
 cv::GOpaqueT cv::gapi::wip::GOutputs::Priv::getGOpaque(cv::gapi::ArgType type)
 {
     m_call->kernel().outShapes.push_back(cv::GShape::GOPAQUE);
-#define HC(T, K)                                                                                \
-    case K:                                                                                     \
-        m_call->kernel().outCtors.emplace_back(cv::detail::GObtainCtor<cv::GOpaque<T>>::get()); \
-        return cv::GOpaqueT(m_call->yieldOpaque<T>(output++));                                  \
+#define HC(T, K)                                                                                  \
+    case K: {                                                                                     \
+        const auto kind = cv::detail::GTypeTraits<cv::GOpaque<T>>::op_kind;                       \
+        m_call->kernel().outKinds.emplace_back(kind);                                             \
+        m_call->kernel().outCtors.emplace_back(cv::detail::GObtainCtor<cv::GOpaque<T>>::get());   \
+        return cv::GOpaqueT(m_call->yieldOpaque<T>(output++));                                    \
+    }
 
     SWITCH(type, GOPAQUE_TYPE_LIST_G, HC)
 #undef HC
