@@ -186,6 +186,11 @@ void RotatedRect::points(Point2f pt[]) const
     pt[3].y = 2*center.y - pt[1].y;
 }
 
+void RotatedRect::points(std::vector<Point2f>& pts) const {
+    pts.resize(4);
+    points(pts.data());
+}
+
 Rect RotatedRect::boundingRect() const
 {
     Point2f pt[4];

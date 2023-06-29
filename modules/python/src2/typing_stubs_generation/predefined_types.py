@@ -1,7 +1,7 @@
 from .nodes.type_node import (
     AliasTypeNode, AliasRefTypeNode, PrimitiveTypeNode,
     ASTNodeTypeNode, NDArrayTypeNode, NoneTypeNode, SequenceTypeNode,
-    TupleTypeNode, UnionTypeNode, AnyTypeNode
+    TupleTypeNode, UnionTypeNode, AnyTypeNode, ConditionalAliasTypeNode
 )
 
 # Set of predefined types used to cover cases when library doesn't
@@ -30,12 +30,15 @@ _PREDEFINED_TYPES = (
     PrimitiveTypeNode.str_("char"),
     PrimitiveTypeNode.str_("String"),
     PrimitiveTypeNode.str_("c_string"),
+    ConditionalAliasTypeNode.numpy_array_("NumPyArrayGeneric"),
+    ConditionalAliasTypeNode.numpy_array_("NumPyArrayFloat32", dtype="numpy.float32"),
+    ConditionalAliasTypeNode.numpy_array_("NumPyArrayFloat64", dtype="numpy.float64"),
     NoneTypeNode("void"),
     AliasTypeNode.int_("void*", "IntPointer", "Represents an arbitrary pointer"),
     AliasTypeNode.union_(
         "Mat",
         items=(ASTNodeTypeNode("Mat", module_name="cv2.mat_wrapper"),
-               NDArrayTypeNode("Mat")),
+               AliasRefTypeNode("NumPyArrayGeneric")),
         export_name="MatLike"
     ),
     AliasTypeNode.sequence_("MatShape", PrimitiveTypeNode.int_()),
@@ -137,10 +140,22 @@ _PREDEFINED_TYPES = (
                                 ASTNodeTypeNode("gapi.wip.draw.Mosaic"),
                                 ASTNodeTypeNode("gapi.wip.draw.Poly"))),
     SequenceTypeNode("Prims", AliasRefTypeNode("Prim")),
-    AliasTypeNode.array_("Matx33f", (3, 3), "numpy.float32"),
-    AliasTypeNode.array_("Matx33d", (3, 3), "numpy.float64"),
-    AliasTypeNode.array_("Matx44f", (4, 4), "numpy.float32"),
-    AliasTypeNode.array_("Matx44d", (4, 4), "numpy.float64"),
+    AliasTypeNode.array_ref_("Matx33f",
+                             array_ref_name="NumPyArrayFloat32",
+                             shape=(3, 3),
+                             dtype="numpy.float32"),
+    AliasTypeNode.array_ref_("Matx33d",
+                             array_ref_name="NumPyArrayFloat64",
+                             shape=(3, 3),
+                             dtype="numpy.float64"),
+    AliasTypeNode.array_ref_("Matx44f",
+                             array_ref_name="NumPyArrayFloat32",
+                             shape=(4, 4),
+                             dtype="numpy.float32"),
+    AliasTypeNode.array_ref_("Matx44d",
+                             array_ref_name="NumPyArrayFloat64",
+                             shape=(4, 4),
+                             dtype="numpy.float64"),
     NDArrayTypeNode("vector<uchar>", dtype="numpy.uint8"),
     NDArrayTypeNode("vector_uchar", dtype="numpy.uint8"),
     TupleTypeNode("GMat2", items=(ASTNodeTypeNode("GMat"),

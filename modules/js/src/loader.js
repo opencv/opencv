@@ -73,6 +73,11 @@ async function loadOpenCV(paths, onloadCallback) {
         console.log("The OpenCV.js for wasm is loaded now");
     } else if (wasmSupported) {
         console.log("The browser supports wasm, but the path of OpenCV.js for wasm is empty");
+
+        if (asmPath != "") {
+            OPENCV_URL = asmPath;
+            console.log("The OpenCV.js for Asm.js is loaded as fallback.");
+        }
     }
 
     if (OPENCV_URL === "") {

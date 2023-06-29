@@ -32,6 +32,7 @@
 #include <va/va_backend.h>
 #ifdef HAVE_VA_INTEL
 #include "opencv2/core/va_intel.hpp"
+#include "opencv2/core/detail/va_intel_interop.hpp"
 #ifndef CL_TARGET_OPENCL_VERSION
 #define CL_TARGET_OPENCL_VERSION 120
 #endif
@@ -265,12 +266,12 @@ bool hw_check_device(AVBufferRef* ctx, AVHWDeviceType hw_type, const std::string
         ret = (hw_type != AV_HWDEVICE_TYPE_QSV); // disable MFX if we can't check VAAPI for VideoProc entrypoint
 #endif
     }
-    if (ret && !device_subname.empty() && device_name.find(device_subname) == std::string::npos)
-    {
-        CV_LOG_INFO(NULL, "FFMPEG: Skipping '" << hw_name <<
-            "' video acceleration on the following device name as not matching substring '" << device_subname << "': " << device_name);
-        ret = false;  // reject configuration
-    }
+//    if (ret && !device_subname.empty() && device_name.find(device_subname) == std::string::npos)
+//    {
+//        CV_LOG_INFO(NULL, "FFMPEG: Skipping '" << hw_name <<
+//            "' video acceleration on the following device name as not matching substring '" << device_subname << "': " << device_name);
+//        ret = false;  // reject configuration
+//    }
     if (ret)
     {
         if (!device_name.empty()) {
@@ -453,8 +454,15 @@ AVHWDeviceType hw_check_opencl_context(AVHWDeviceContext* ctx) {
 #ifdef HAVE_VA_INTEL
     VADisplay vadisplay_ocl = ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
     VADisplay vadisplay_ctx = hw_get_va_display(ctx);
+
+    if(!vadisplay_ocl && vadisplay_ctx) {
+        va_intel::ocl::initializeContextFromVA(vadisplay_ctx);
+    }
+
     if (vadisplay_ocl && vadisplay_ocl == vadisplay_ctx)
         return AV_HWDEVICE_TYPE_VAAPI;
+    else
+       CV_Error_(cv::Error::StsBadArg, ("Can't interop with current OpenCL context - VA display mismatch: %p (hwcontext) vs %p (ocl_context).\ndid you call initializeContextFromVA before using VideoCapture/VideoWriter?", vadisplay_ctx, vadisplay_ocl));
 #endif
 #ifdef HAVE_D3D11
     ID3D11Device* d3d11device_ocl = (ID3D11Device*)ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_D3D11_DEVICE_KHR);
@@ -472,10 +480,17 @@ void hw_init_opencl(AVBufferRef* ctx) {
     AVHWDeviceContext* hw_device_ctx = (AVHWDeviceContext*)ctx->data;
     if (!hw_device_ctx)
         return;
+    ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
 #ifdef HAVE_VA_INTEL
-    VADisplay va_display = hw_get_va_display(hw_device_ctx);
-    if (va_display) {
-        va_intel::ocl::initializeContextFromVA(va_display);
+    cv::va_intel::VAAPIInterop* interop = ocl_context.getContext().getUserContext<cv::va_intel::VAAPIInterop>().get();
+    //only initialize the context automatically if it isn't already
+    if(!interop) {
+        VADisplay va_display = hw_get_va_display(hw_device_ctx);
+        if (va_display) {
+            va_intel::ocl::initializeContextFromVA(va_display);
+        }
+    } else {
+        CV_LOG_DEBUG(NULL, "OpenCL/VA_INTEL: CL/VA interop already initialized. ")
     }
 #endif
 #ifdef HAVE_D3D11
@@ -486,8 +501,7 @@ void hw_init_opencl(AVBufferRef* ctx) {
 #endif
     if (hw_check_opencl_context(hw_device_ctx) != AV_HWDEVICE_TYPE_NONE) {
         // Attach AVHWDeviceContext to OpenCL context
-        ocl::Context &ocl_context = ocl::OpenCLExecutionContext::getCurrent().getContext();
-        ocl_context.setUserContext(std::make_shared<OpenCL_FFMPEG_Context>(ctx));
+        ocl_context.getContext().setUserContext(std::make_shared<OpenCL_FFMPEG_Context>(ctx));
     }
 }
 
@@ -576,6 +590,8 @@ AVBufferRef* hw_create_device(AVHWDeviceType hw_type, int hw_device, const std::
                             CV_LOG_INFO(NULL, "FFMPEG: Created OpenCL context with " << hw_child_name <<
                                 " video acceleration on OpenCL device: " << ocl_context.getDevice().name());
                         }
+                    } catch (std::exception& ex) {
+                        std::cerr << ex.what() << std::endl;
                     } catch (...) {
                         CV_LOG_INFO(NULL, "FFMPEG: Exception creating OpenCL context with " << hw_child_name << " video acceleration");
                     }

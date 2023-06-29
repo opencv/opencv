@@ -216,19 +216,18 @@ Ptr<PnPEstimator> PnPEstimator::create (const Ptr<MinimalSolver> &min_solver_,
 // Symmetric Reprojection Error
 class ReprojectionErrorSymmetricImpl : public ReprojectionErrorSymmetric {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
     float m11, m12, m13, m21, m22, m23, m31, m32, m33;
     float minv11, minv12, minv13, minv21, minv22, minv23, minv31, minv32, minv33;
     std::vector<float> errors;
 public:
     explicit ReprojectionErrorSymmetricImpl (const Mat &points_)
-        : points_mat(&points_), points ((float *) points_.data)
+        : points_mat(points_)
         , m11(0), m12(0), m13(0), m21(0), m22(0), m23(0), m31(0), m32(0), m33(0)
         , minv11(0), minv12(0), minv13(0), minv21(0), minv22(0), minv23(0), minv31(0), minv32(0), minv33(0)
         , errors(points_.rows)
     {
-        CV_DbgAssert(points);
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
     }
 
     inline void setModelParameters(const Mat& model) override
@@ -250,6 +249,7 @@ public:
     }
     inline float getError (int idx) const override {
         idx *= 4;
+        const float * points = points_mat.ptr<float>();
         const float x1=points[idx], y1=points[idx+1], x2=points[idx+2], y2=points[idx+3];
         const float est_z2 = 1 / (m31 * x1 + m32 * y1 + m33),
                     dx2 =  x2 -  (m11 * x1 + m12 * y1 + m13) * est_z2,
@@ -261,7 +261,8 @@ public:
     }
     const std::vector<float> &getErrors (const Mat &model) override {
         setModelParameters(model);
-        for (int point_idx = 0; point_idx < points_mat->rows; point_idx++) {
+        const float * points = points_mat.ptr<float>();
+        for (int point_idx = 0; point_idx < points_mat.rows; point_idx++) {
             const int smpl = 4*point_idx;
             const float x1=points[smpl], y1=points[smpl+1], x2=points[smpl+2], y2=points[smpl+3];
             const float est_z2 = 1 / (m31 * x1 + m32 * y1 + m33),
@@ -283,17 +284,16 @@ ReprojectionErrorSymmetric::create(const Mat &points) {
 // Forward Reprojection Error
 class ReprojectionErrorForwardImpl : public ReprojectionErrorForward {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
     float m11, m12, m13, m21, m22, m23, m31, m32, m33;
     std::vector<float> errors;
 public:
     explicit ReprojectionErrorForwardImpl (const Mat &points_)
-        : points_mat(&points_), points ((float *)points_.data)
+        : points_mat(points_)
         , m11(0), m12(0), m13(0), m21(0), m22(0), m23(0), m31(0), m32(0), m33(0)
         , errors(points_.rows)
     {
-        CV_DbgAssert(points);
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
     }
 
     inline void setModelParameters(const Mat& model) override
@@ -308,6 +308,7 @@ public:
     }
     inline float getError (int idx) const override {
         idx *= 4;
+        const float * points = points_mat.ptr<float>();
         const float x1 = points[idx], y1 = points[idx+1], x2 = points[idx+2], y2 = points[idx+3];
         const float est_z2 = 1 / (m31 * x1 + m32 * y1 + m33),
                     dx2 =  x2 -  (m11 * x1 + m12 * y1 + m13) * est_z2,
@@ -316,7 +317,8 @@ public:
     }
     const std::vector<float> &getErrors (const Mat &model) override {
         setModelParameters(model);
-        for (int point_idx = 0; point_idx < points_mat->rows; point_idx++) {
+        const float * points = points_mat.ptr<float>();
+        for (int point_idx = 0; point_idx < points_mat.rows; point_idx++) {
             const int smpl = 4*point_idx;
             const float x1=points[smpl], y1=points[smpl+1], x2=points[smpl+2], y2=points[smpl+3];
             const float est_z2 = 1 / (m31 * x1 + m32 * y1 + m33),
@@ -334,17 +336,16 @@ ReprojectionErrorForward::create(const Mat &points) {
 
 class SampsonErrorImpl : public SampsonError {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
     float m11, m12, m13, m21, m22, m23, m31, m32, m33;
     std::vector<float> errors;
 public:
     explicit SampsonErrorImpl (const Mat &points_)
-        : points_mat(&points_), points ((float *) points_.data)
+        : points_mat(points_)
         , m11(0), m12(0), m13(0), m21(0), m22(0), m23(0), m31(0), m32(0), m33(0)
         , errors(points_.rows)
     {
-        CV_DbgAssert(points);
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
     }
 
     inline void setModelParameters(const Mat& model) override
@@ -370,6 +371,7 @@ public:
      */
     inline float getError (int idx) const override {
         idx *= 4;
+        const float * points = points_mat.ptr<float>();
         const float x1=points[idx], y1=points[idx+1], x2=points[idx+2], y2=points[idx+3];
         const float F_pt1_x = m11 * x1 + m12 * y1 + m13,
                     F_pt1_y = m21 * x1 + m22 * y1 + m23;
@@ -381,7 +383,8 @@ public:
     }
     const std::vector<float> &getErrors (const Mat &model) override {
         setModelParameters(model);
-        for (int point_idx = 0; point_idx < points_mat->rows; point_idx++) {
+        const float * points = points_mat.ptr<float>();
+        for (int point_idx = 0; point_idx < points_mat.rows; point_idx++) {
             const int smpl = 4*point_idx;
             const float x1=points[smpl], y1=points[smpl+1], x2=points[smpl+2], y2=points[smpl+3];
             const float F_pt1_x = m11 * x1 + m12 * y1 + m13,
@@ -402,17 +405,16 @@ SampsonError::create(const Mat &points) {
 
 class SymmetricGeometricDistanceImpl : public SymmetricGeometricDistance {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
     float m11, m12, m13, m21, m22, m23, m31, m32, m33;
     std::vector<float> errors;
 public:
     explicit SymmetricGeometricDistanceImpl (const Mat &points_)
-        : points_mat(&points_), points ((float *) points_.data)
+        : points_mat(points_)
         , m11(0), m12(0), m13(0), m21(0), m22(0), m23(0), m31(0), m32(0), m33(0)
         , errors(points_.rows)
     {
-        CV_DbgAssert(points);
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
     }
 
     inline void setModelParameters(const Mat& model) override
@@ -428,6 +430,7 @@ public:
 
     inline float getError (int idx) const override {
         idx *= 4;
+        const float * points = points_mat.ptr<float>();
         const float x1=points[idx], y1=points[idx+1], x2=points[idx+2], y2=points[idx+3];
         // pt2^T * E, line 1 = [l1 l2]
         const float l1 = x2 * m11 + y2 * m21 + m31,
@@ -443,7 +446,8 @@ public:
     }
     const std::vector<float> &getErrors (const Mat &model) override {
         setModelParameters(model);
-        for (int point_idx = 0; point_idx < points_mat->rows; point_idx++) {
+        const float * points = points_mat.ptr<float>();
+        for (int point_idx = 0; point_idx < points_mat.rows; point_idx++) {
             const int smpl = 4*point_idx;
             const float x1=points[smpl], y1=points[smpl+1], x2=points[smpl+2], y2=points[smpl+3];
             const float l1 = x2 * m11 + y2 * m21 + m31, t1 = m11 * x1 + m12 * y1 + m13,
@@ -462,17 +466,16 @@ SymmetricGeometricDistance::create(const Mat &points) {
 
 class ReprojectionErrorPmatrixImpl : public ReprojectionErrorPmatrix {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
     float p11, p12, p13, p14, p21, p22, p23, p24, p31, p32, p33, p34;
     std::vector<float> errors;
 public:
     explicit ReprojectionErrorPmatrixImpl (const Mat &points_)
-        : points_mat(&points_), points ((float *) points_.data)
+        : points_mat(points_)
         , p11(0), p12(0), p13(0), p14(0), p21(0), p22(0), p23(0), p24(0), p31(0), p32(0), p33(0), p34(0)
         , errors(points_.rows)
     {
-        CV_DbgAssert(points);
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
     }
 
 
@@ -489,6 +492,7 @@ public:
 
     inline float getError (int idx) const override {
         idx *= 5;
+        const float * points = points_mat.ptr<float>();
         const float u = points[idx  ], v = points[idx+1],
                     x = points[idx+2], y = points[idx+3], z = points[idx+4];
         const float depth = 1 / (p31 * x + p32 * y + p33 * z + p34);
@@ -498,7 +502,8 @@ public:
     }
     const std::vector<float> &getErrors (const Mat &model) override {
         setModelParameters(model);
-        for (int point_idx = 0; point_idx < points_mat->rows; point_idx++) {
+        const float * points = points_mat.ptr<float>();
+        for (int point_idx = 0; point_idx < points_mat.rows; point_idx++) {
             const int smpl = 5*point_idx;
             const float u = points[smpl  ], v = points[smpl+1],
                         x = points[smpl+2], y = points[smpl+3], z = points[smpl+4];
@@ -523,17 +528,16 @@ private:
      * m21 m22 m23
      * 0   0   1
      */
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
     float m11, m12, m13, m21, m22, m23;
     std::vector<float> errors;
 public:
     explicit ReprojectionDistanceAffineImpl (const Mat &points_)
-        : points_mat(&points_), points ((float *) points_.data)
+        : points_mat(points_)
         , m11(0), m12(0), m13(0), m21(0), m22(0), m23(0)
         , errors(points_.rows)
     {
-        CV_DbgAssert(points);
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
     }
 
     inline void setModelParameters(const Mat& model) override
@@ -547,13 +551,15 @@ public:
     }
     inline float getError (int idx) const override {
         idx *= 4;
+        const float * points = points_mat.ptr<float>();
         const float x1=points[idx], y1=points[idx+1], x2=points[idx+2], y2=points[idx+3];
         const float dx2 = x2 - (m11 * x1 + m12 * y1 + m13), dy2 = y2 - (m21 * x1 + m22 * y1 + m23);
         return dx2 * dx2 + dy2 * dy2;
     }
     const std::vector<float> &getErrors (const Mat &model) override {
         setModelParameters(model);
-        for (int point_idx = 0; point_idx < points_mat->rows; point_idx++) {
+        const float * points = points_mat.ptr<float>();
+        for (int point_idx = 0; point_idx < points_mat.rows; point_idx++) {
             const int smpl = 4*point_idx;
             const float x1=points[smpl], y1=points[smpl+1], x2=points[smpl+2], y2=points[smpl+3];
             const float dx2 = x2 - (m11 * x1 + m12 * y1 + m13), dy2 = y2 - (m21 * x1 + m22 * y1 + m23);
@@ -570,13 +576,14 @@ ReprojectionErrorAffine::create(const Mat &points) {
 ////////////////////////////////////// NORMALIZING TRANSFORMATION /////////////////////////
 class NormTransformImpl : public NormTransform {
 private:
-    const float * const points;
+    Mat points_mat;
 public:
-    explicit NormTransformImpl (const Mat &points_) : points((float*)points_.data) {}
+    explicit NormTransformImpl (const Mat &points_) : points_mat(points_) {}
 
     // Compute normalized points and transformation matrices.
     void getNormTransformation (Mat& norm_points, const std::vector<int> &sample,
                                 int sample_size, Matx33d &T1, Matx33d &T2) const override {
+        const float * points = points_mat.ptr<float>();
         double mean_pts1_x = 0, mean_pts1_y = 0, mean_pts2_x = 0, mean_pts2_y = 0;
 
         // find average of each coordinate of points.
