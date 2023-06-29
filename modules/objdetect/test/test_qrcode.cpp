@@ -374,8 +374,8 @@ TEST_P(Objdetect_QRCode_Multi, regression)
         qrcode = QRCodeDetectorAruco();
     }
     std::vector<Point> corners;
-#ifdef HAVE_QUIRC
     std::vector<cv::String> decoded_info;
+#ifdef HAVE_QUIRC
     std::vector<Mat> straight_barcode;
     EXPECT_TRUE(qrcode.detectAndDecodeMulti(src, decoded_info, corners, straight_barcode));
     ASSERT_FALSE(corners.empty());
@@ -538,7 +538,6 @@ TEST(Objdetect_QRCode_detect_flipped, regression_23249)
 
     for(const auto &flipped_image : flipped_images){
         const std::string &image_name = flipped_image.first;
-        const std::string &expect_msg = flipped_image.second;
 
         std::string image_path = findDataFile(root + image_name);
         Mat src = imread(image_path);
@@ -551,6 +550,7 @@ TEST(Objdetect_QRCode_detect_flipped, regression_23249)
         EXPECT_TRUE(!corners.empty());
         std::string decoded_msg;
         #ifdef HAVE_QUIRC
+            const std::string &expect_msg = flipped_image.second;
             EXPECT_NO_THROW(decoded_msg = qrcode.decode(src, corners, straight_barcode));
             ASSERT_FALSE(straight_barcode.empty()) << "Can't decode qrimage.";
             EXPECT_EQ(expect_msg, decoded_msg);
