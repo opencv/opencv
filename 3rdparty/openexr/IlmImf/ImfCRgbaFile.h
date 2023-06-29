@@ -93,7 +93,7 @@ typedef struct ImfRgba ImfRgba;
 #define IMF_VERSION_NUMBER      2
 
 /*
-** Line order; values must the the same as in Imf::LineOrder.
+** Line order; values must be the same as in Imf::LineOrder.
 */
 
 #define IMF_INCREASING_Y	0

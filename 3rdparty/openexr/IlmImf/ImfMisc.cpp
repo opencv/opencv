@@ -348,7 +348,7 @@ copyIntoFrameBuffer (const char *& readPtr,
     else if (format == Compressor::XDR)
     {
         //
-        // The the line or tile buffer is in XDR format.
+        // The line or tile buffer is in XDR format.
         //
         // Convert the pixels from the file's machine-
         // independent representation, and store the
@@ -485,7 +485,7 @@ copyIntoFrameBuffer (const char *& readPtr,
     else
     {
         //
-        // The the line or tile buffer is in NATIVE format.
+        // The line or tile buffer is in NATIVE format.
         // Copy the results into the frame buffer.
         //
 
@@ -769,7 +769,7 @@ copyIntoDeepFrameBuffer (const char *& readPtr,
     else if (format == Compressor::XDR)
     {
         //
-        // The the line or tile buffer is in XDR format.
+        // The line or tile buffer is in XDR format.
         //
         // Convert the pixels from the file's machine-
         // independent representation, and store the
@@ -1050,7 +1050,7 @@ copyIntoDeepFrameBuffer (const char *& readPtr,
     else
     {
         //
-        // The the line or tile buffer is in NATIVE format.
+        // The line or tile buffer is in NATIVE format.
         // Copy the results into the frame buffer.
         //
 
@@ -1439,7 +1439,7 @@ copyFromFrameBuffer (char *& writePtr,
     if (format == Compressor::XDR)
     {
         //
-        // The the line or tile buffer is in XDR format.
+        // The line or tile buffer is in XDR format.
         //
 
         switch (type)
@@ -1480,7 +1480,7 @@ copyFromFrameBuffer (char *& writePtr,
     else
     {
         //
-        // The the line or tile buffer is in NATIVE format.
+        // The line or tile buffer is in NATIVE format.
         //
 
         switch (type)
@@ -1549,7 +1549,7 @@ copyFromDeepFrameBuffer (char *& writePtr,
     if (format == Compressor::XDR)
     {
         //
-        // The the line or tile buffer is in XDR format.
+        // The line or tile buffer is in XDR format.
         //
 
         switch (type)
@@ -1624,7 +1624,7 @@ copyFromDeepFrameBuffer (char *& writePtr,
     else
     {
         //
-        // The the line or tile buffer is in NATIVE format.
+        // The line or tile buffer is in NATIVE format.
         //
 
         switch (type)

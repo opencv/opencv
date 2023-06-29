@@ -147,7 +147,7 @@ static OPJ_BOOL opj_jp2_write_ftyp(opj_jp2_t *jp2,
                                    opj_event_mgr_t * p_manager);
 
 /**
- * Reads a a FTYP box - File type box
+ * Reads a FTYP box - File type box
  *
  * @param   p_header_data   the data contained in the FTYP box.
  * @param   jp2             the jpeg2000 file codec.
@@ -2578,7 +2578,7 @@ static OPJ_BOOL opj_jp2_read_jp(opj_jp2_t *jp2,
 }
 
 /**
- * Reads a a FTYP box - File type box
+ * Reads a FTYP box - File type box
  *
  * @param   p_header_data   the data contained in the FTYP box.
  * @param   jp2             the jpeg2000 file codec.

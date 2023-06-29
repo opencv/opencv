@@ -734,7 +734,7 @@ android_cpuInit(void)
 #ifdef __arm__
     {
         /* Extract architecture from the "CPU Architecture" field.
-         * The list is well-known, unlike the the output of
+         * The list is well-known, unlike the output of
          * the 'Processor' field which can vary greatly.
          *
          * See the definition of the 'proc_arch' array in

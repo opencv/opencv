@@ -136,7 +136,7 @@ tf.io.write_graph(graph_or_graph_def=frozen_tf_func.graph,
 
 After the successful execution of the above code, we will get a frozen graph in ``models/mobilenet.pb``.
 
-* read TF frozen graph with with cv.dnn.readNetFromTensorflow passing the obtained in the previous step ``mobilenet.pb`` into it:
+* read TF frozen graph with cv.dnn.readNetFromTensorflow passing the obtained in the previous step ``mobilenet.pb`` into it:
 
 ```python
 # get TF frozen graph path
