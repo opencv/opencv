@@ -96,8 +96,8 @@ void blobFromImagesWithParams(InputArrayOfArrays images_, OutputArray blob_, con
     CV_CheckType(param.ddepth, param.ddepth == CV_32F || param.ddepth == CV_8U,
                  "Blob depth should be CV_32F or CV_8U");
     Size size = param.size;
-    std::vector<Mat> images;
-    images_.getMatVector(images);
+    std::vector<UMat> images;
+    images_.getUMatVector(images);
     CV_Assert(!images.empty());
 
     int nch = images[0].channels();
@@ -157,12 +157,12 @@ void blobFromImagesWithParams(InputArrayOfArrays images_, OutputArray blob_, con
         if (images[i].depth() == CV_8U && param.ddepth == CV_32F)
             images[i].convertTo(images[i], CV_32F);
 
-        images[i] -= mean;
+        subtract(images[i], mean, images[i]);
         multiply(images[i], scalefactor, images[i]);
     }
 
     size_t nimages = images.size();
-    Mat image0 = images[0];
+    UMat image0 = images[0];
     CV_Assert(image0.dims == 2);
 
     if (param.datalayout == DNN_LAYOUT_NCHW)
@@ -172,18 +172,18 @@ void blobFromImagesWithParams(InputArrayOfArrays images_, OutputArray blob_, con
             int sz[] = { (int)nimages, nch, image0.rows, image0.cols };
             blob_.create(4, sz, param.ddepth);
             Mat blob = blob_.getMat();
-            Mat ch[4];
+            std::vector<UMat> ch(4);
 
             for (size_t i = 0; i < nimages; i++)
             {
-                const Mat& image = images[i];
+                const UMat& image = images[i];
                 CV_Assert(image.depth() == blob_.depth());
                 nch = image.channels();
                 CV_Assert(image.dims == 2 && (nch == 3 || nch == 4));
                 CV_Assert(image.size() == image0.size());
 
                 for (int j = 0; j < nch; j++)
-                    ch[j] = Mat(image.rows, image.cols, param.ddepth, blob.ptr((int)i, j));
+                    ch[j] = Mat(image.rows, image.cols, param.ddepth, blob.ptr((int)i, j)).getUMat(ACCESS_RW);
                 if (param.swapRB)
                     std::swap(ch[0], ch[2]);
                 split(image, ch);
@@ -198,7 +198,7 @@ void blobFromImagesWithParams(InputArrayOfArrays images_, OutputArray blob_, con
 
             for (size_t i = 0; i < nimages; i++)
             {
-                const Mat& image = images[i];
+                const UMat& image = images[i];
                 CV_Assert(image.depth() == blob_.depth());
                 nch = image.channels();
                 CV_Assert(image.dims == 2 && (nch == 1));
@@ -216,7 +216,7 @@ void blobFromImagesWithParams(InputArrayOfArrays images_, OutputArray blob_, con
         int subMatType = CV_MAKETYPE(param.ddepth, nch);
         for (size_t i = 0; i < nimages; i++)
         {
-            const Mat& image = images[i];
+            const UMat& image = images[i];
             CV_Assert(image.depth() == blob_.depth());
             CV_Assert(image.channels() == image0.channels());
             CV_Assert(image.size() == image0.size());
