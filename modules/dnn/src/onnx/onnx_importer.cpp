@@ -1962,7 +1962,7 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
         layerParams.blobs.push_back(C);
 
         if (constBlobsExtraInfo.find(node_proto.input(2)) != constBlobsExtraInfo.end()) {
-            layerParams.set("C_real_ndims", getBlobExtraInfo(node_proto, 2).real_ndims);
+            layerParams.set("real_ndims_C", getBlobExtraInfo(node_proto, 2).real_ndims);
         }
     }
 

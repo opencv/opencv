@@ -4,9 +4,9 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "Accelerate/Accelerate.h"
 
 #include <opencv2/dnn/shape_utils.hpp>
+#include "cpu_kernels/gemm.impl.hpp"
 
 namespace cv { namespace dnn {
 
@@ -15,13 +15,13 @@ public:
     GemmLayerImpl(const LayerParams& params) {
         setParamsFrom(params);
 
-        transA = params.get<bool>("transA", false);
-        transB = params.get<bool>("transB", false);
+        trans_a = params.get<bool>("transA", false);
+        trans_b = params.get<bool>("transB", false);
         alpha = params.get<float>("alpha", 1.0f);
         beta = params.get<float>("beta", 1.0f);
 
-        C_real_ndims = params.get<int>("C_real_ndims", -1);
         // C is initialized and broadcast in finalize()
+        real_ndims_C = params.get<int>("real_ndims_C", -1);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
@@ -43,14 +43,14 @@ public:
 
         // Check legal matrix multiplication
         int M_, N_, K_A, K_B;
-        if (transA) {
+        if (trans_a) {
             K_A = shape_A[0];
             M_ = shape_A[1];
         } else {
             M_ = shape_A[0];
             K_A = shape_A[1];
         }
-        if (transB) {
+        if (trans_b) {
             N_ = shape_B[0];
             K_B = shape_B[1];
         } else {
@@ -74,9 +74,9 @@ public:
 
             if (ndims_C == 1) { // scalar
                 CV_Check(shape_C[0], shape_C[0] == 1, "DNN/Gemm: 1d C cannot be broadcast");
-            } else if (ndims_C == 2 && C_real_ndims == 1) {
+            } else if (ndims_C == 2 && real_ndims_C == 1) {
                 CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N_, "DNN/Gemm: 1d C cannot be broadcast");
-            } else if (ndims_C == 2 && C_real_ndims == 2) {
+            } else if (ndims_C == 2 && real_ndims_C == 2) {
                 CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == M_, "DNN/Gemm: 2d C cannot be broadcast");
                 CV_Check(shape_C[1], shape_C[1] == 1 || shape_C[1] == N_, "DNN/Gemm: 2d C cannot be broadcast");
             }
@@ -92,28 +92,18 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        const auto& A = inputs[0], B = inputs[1];
+        const auto &A = inputs[0], &B = inputs[1];
         const auto shape_A = shape(A), shape_B = shape(B);
-        if (transA) {
-            K = shape_A[0];
-            M = shape_A[1];
-        } else {
-            M = shape_A[0];
-            K = shape_A[1];
-        }
-        if (transB) {
-            N = shape_B[0];
-        } else {
-            N = shape_B[1];
-        }
+        int M = trans_a ? shape_A[1] : shape_A[0];
+        int N = trans_b ? shape_B[0] : shape_B[1];
 
         // broadcast bias if existed
         if (!blobs.empty()) {
             C = blobs[0];
             auto shape_C = shape(C);
-            if (C_real_ndims == 0) { // scalar
+            if (real_ndims_C == 0) { // scalar
                 C = C.reshape(1, {1, 1});
-            } else if (C_real_ndims == 1 && shape_C[0] != 1) {
+            } else if (real_ndims_C == 1 && shape_C[0] != 1) {
                 cv::transpose(C, C);
             }
             shape_C = shape(C);
@@ -143,31 +133,19 @@ public:
         const auto& A = inputs[0], B = inputs[1];
         auto& Y = outputs[0];
 
+        const auto shape_A = shape(A), shape_B = shape(B);
+        int M = trans_a ? shape_A[1] : shape_A[0];
+        int N = trans_b ? shape_B[0] : shape_B[1];
+
         if (!C.empty()) {
             std::memcpy(Y.ptr<float>(), C.ptr<float>(), M * N * sizeof(float));
         }
 
-        if (transA) {
-            if (transB) {
-                cblas_sgemm(CblasRowMajor, CblasTrans, CblasTrans, M, N, K, alpha, A.ptr<float>(), M, B.ptr<float>(), K, beta, Y.ptr<float>(), N);
-            } else {
-                cblas_sgemm(CblasRowMajor, CblasTrans, CblasNoTrans, M, N, K, alpha, A.ptr<float>(), M, B.ptr<float>(), N, beta, Y.ptr<float>(), N);
-            }
-        } else {
-            if (transB) {
-                cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, M, N, K, alpha, A.ptr<float>(), K, B.ptr<float>(), K, beta, Y.ptr<float>(), N);
-            } else {
-                cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, alpha, A.ptr<float>(), K, B.ptr<float>(), N, beta, Y.ptr<float>(), N);
-            }
-        }
+        ocv_gemm(trans_a, trans_b, alpha, A, B, beta, Y);
     }
 
 private:
-    int M;
-    int N;
-    int K;
-
-    int C_real_ndims;
+    int real_ndims_C;
     Mat C;
 };
 

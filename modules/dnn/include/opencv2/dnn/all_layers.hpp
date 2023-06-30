@@ -1103,8 +1103,8 @@ CV__DNN_INLINE_NS_BEGIN
 
     class CV_EXPORTS GemmLayer : public Layer {
     public:
-        bool transA;
-        bool transB;
+        bool trans_a;
+        bool trans_b;
         float alpha;
         float beta;
 
