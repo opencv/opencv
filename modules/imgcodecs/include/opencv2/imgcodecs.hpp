@@ -248,7 +248,6 @@ CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& m
 
 /** @brief read an image using libraw
 @param filename Name of file to be loaded.
-@param flags Flag that can take values of cv::ImreadModes
 */
 CV_EXPORTS_W Mat imreadraw(const String & filename);
 
