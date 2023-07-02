@@ -1949,21 +1949,35 @@ void ONNXImporter::parseBatchNormalization(LayerParams& layerParams, const openc
 
 // A * B + C = Y, we require that the dimension of A is [m, k], and the dimension of B is [n, k].
 // And the dim of output Y is [m, n]
-void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
+    auto node_proto = node_proto_;
     CV_CheckGE(node_proto.input_size(), 2, "DNN/ONNXImporter: Gemm requires at least two inputs");
+    CV_CheckLE(node_proto.input_size(), 3, "DNN/ONNXImporter: Gemm have at most three inputs.");
 
-    // if bias existed, it should be a constant because we need to know its shape beforehand
-    if (node_proto.input_size() == 3) {
-        bool is_C_const = constBlobs.find(node_proto.input(2)) != constBlobs.end();
-        CV_CheckTrue(is_C_const, "DNN/ONNXImporter: Gemm supports C being a constant instead of an input for now");
+    // set const for constants if found
+    for (int i = 0; i < node_proto.input_size(); ++i) {
+        if (constBlobs.find(node_proto.input(i)) == constBlobs.end()) {
+            continue;
+        }
 
-        Mat C = getBlob(node_proto, 2);
-        layerParams.blobs.push_back(C);
-
-        if (constBlobsExtraInfo.find(node_proto.input(2)) != constBlobsExtraInfo.end()) {
+        if (i == 2 && constBlobsExtraInfo.find(node_proto.input(2)) != constBlobsExtraInfo.end()) {
             layerParams.set("real_ndims_C", getBlobExtraInfo(node_proto, 2).real_ndims);
         }
+
+        Mat blob = getBlob(node_proto, i);
+
+        LayerParams const_params;
+        std::string const_params_name = i == 0 ? "A" : i == 1 ? "B" : "C";
+        const_params.name = layerParams.name + cv::format("/const_%s", const_params_name.c_str());
+        const_params.type = "Const";
+        const_params.blobs.push_back(blob);
+
+        opencv_onnx::NodeProto const_node_proto;
+        const_node_proto.add_output(const_params.name);
+        addLayer(const_params, const_node_proto);
+
+        node_proto.set_input(i, const_params.name);
     }
 
     addLayer(layerParams, node_proto);

@@ -32,88 +32,46 @@ public:
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
-        size_t num_inputs = inputs.size(); // three inputs are guaranteed in ONNXImporter if constant C is present
+        size_t num_inputs = inputs.size();
         CV_CheckGE(num_inputs, static_cast<size_t>(2), "DNN/Gemm: Gemm takes at least two inputs");
         CV_CheckLE(num_inputs, static_cast<size_t>(3), "DNN/Gemm: Gemm takes at most three inputs");
 
         // Check whether A and B are two dimensional
         const auto shape_A = inputs[0], shape_B = inputs[1];
-        CV_CheckEQ(shape_A.size(), static_cast<size_t>(2), "DNN/Gemm: Input A of Gemm should be two dimensional");
-        CV_CheckEQ(shape_B.size(), static_cast<size_t>(2), "DNN/Gemm: Input B of Gemm should be two dimensional");
+        CV_CheckEQ(shape_A.size(), static_cast<size_t>(2), "DNN/Gemm: Input A should be two dimensional");
+        CV_CheckEQ(shape_B.size(), static_cast<size_t>(2), "DNN/Gemm: Input B should be two dimensional");
 
         // Check legal matrix multiplication
-        int M_, N_, K_A, K_B;
-        if (trans_a) {
-            K_A = shape_A[0];
-            M_ = shape_A[1];
-        } else {
-            M_ = shape_A[0];
-            K_A = shape_A[1];
-        }
-        if (trans_b) {
-            N_ = shape_B[0];
-            K_B = shape_B[1];
-        } else {
-            K_B = shape_B[0];
-            N_ = shape_B[1];
-        }
-        CV_CheckEQ(K_A, K_B, "DNN/Gemm: Invalid dimension of dim K");
+        int ma = shape_A[0], na = shape_A[1];
+        int mb = shape_B[0], nb = shape_B[1];
+        int M = trans_a ? na : ma;
+        int N = trans_b ? mb : nb;
+        int K_a = trans_a ? ma : na;
+        int K_b = trans_b ? nb : mb;
+        CV_CheckEQ(K_a, K_b, "DNN/Gemm: Invalid dimension of dim K");
 
         // Check whether C can be unidirectional broadcast to (M, N). Handle carefully with 1D Mat.
         if (inputs.size() == static_cast<size_t>(3)) {
             const auto shape_C = inputs[2];
-            // [banned] if C is an input, shape_C represents the real shape:
-            //   0d: shape_C.size() = 0 (scalar),
-            //   1d: shape_C.size() = 1
-            // if C is a constant, shape_C represents it Mat shape:
-            //   0d: shape_C.size() = 1 (it stays the same dim if put in blobs, but is turned 2d if put in inputs in forward())
-            //   1d: shape_C.size() = 2 (1 appended for the last dim)
-            //   2d: shape_C.size() = 2
-            auto ndims_C = shape_C.empty() ? 0 : shape_C.size(); // ndims_C == 0 represent a scalar C
+
+            auto ndims_C = shape_C.size();
             CV_CheckLE(ndims_C, static_cast<size_t>(2), "DNN/Gemm: C can only be 0d (scalar) / 1d / 2d tensor");
 
             if (ndims_C == 1) { // scalar
-                CV_Check(shape_C[0], shape_C[0] == 1, "DNN/Gemm: 1d C cannot be broadcast");
-            } else if (ndims_C == 2 && real_ndims_C == 1) {
-                CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N_, "DNN/Gemm: 1d C cannot be broadcast");
+                CV_Check(shape_C[0], shape_C[0] == 1, "DNN/Gemm: scalar C cannot be broadcast");
+            } else if (ndims_C == 2 && real_ndims_C == 1) { // 1d tensor
+                CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N, "DNN/Gemm: 1d C cannot be broadcast");
             } else if (ndims_C == 2 && real_ndims_C == 2) {
-                CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == M_, "DNN/Gemm: 2d C cannot be broadcast");
-                CV_Check(shape_C[1], shape_C[1] == 1 || shape_C[1] == N_, "DNN/Gemm: 2d C cannot be broadcast");
+                CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == M, "DNN/Gemm: 2d C cannot be broadcast");
+                CV_Check(shape_C[1], shape_C[1] == 1 || shape_C[1] == N, "DNN/Gemm: 2d C cannot be broadcast");
+            } else {
+                CV_Error(Error::StsBadArg, "DNN/Gemm: Input C can not be unidirectional broadcastable to (M, N)");
             }
         }
 
-        MatShape shape_y{M_, N_};
+        MatShape shape_y{M, N};
         outputs.assign(1, shape_y);
         return false;
-    }
-
-    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
-        std::vector<Mat> inputs, outputs;
-        inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
-
-        const auto &A = inputs[0], &B = inputs[1];
-        const auto shape_A = shape(A), shape_B = shape(B);
-        int M = trans_a ? shape_A[1] : shape_A[0];
-        int N = trans_b ? shape_B[0] : shape_B[1];
-
-        // broadcast bias if existed
-        if (!blobs.empty()) {
-            C = blobs[0];
-            auto shape_C = shape(C);
-            if (real_ndims_C == 0) { // scalar
-                C = C.reshape(1, {1, 1});
-            } else if (real_ndims_C == 1 && shape_C[0] != 1) {
-                cv::transpose(C, C);
-            }
-            shape_C = shape(C);
-            if (shape_C[0] != M) {
-                C = cv::repeat(C, M, 1);
-            }
-            if (shape_C[1] != N) {
-                C = cv::repeat(C, 1, N);
-            }
-        }
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
@@ -130,15 +88,52 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        const auto& A = inputs[0], B = inputs[1];
-        auto& Y = outputs[0];
+        const auto &A = inputs[0], &B = inputs[1];
+        auto &Y = outputs[0];
 
-        const auto shape_A = shape(A), shape_B = shape(B);
-        int M = trans_a ? shape_A[1] : shape_A[0];
-        int N = trans_b ? shape_B[0] : shape_B[1];
+        // broadcast C and copy C to output
+        if (inputs.size() == 3) {
+            auto C = inputs[2].clone();
 
-        if (!C.empty()) {
-            std::memcpy(Y.ptr<float>(), C.ptr<float>(), M * N * sizeof(float));
+            const auto shape_A = shape(A),
+                       shape_B = shape(B),
+                       shape_C = shape(C);
+
+            int ma = shape_A[0], na = shape_A[1];
+            int mb = shape_B[0], nb = shape_B[1];
+            int M = trans_a ? na : ma;
+            int N = trans_b ? mb : nb;
+
+            // broadcast
+            float *ptr_y = Y.ptr<float>();
+            const float *ptr_c = C.ptr<const float>();
+            if (real_ndims_C == 0 || (real_ndims_C == 1 && shape_C[0] == 1) ||
+                (real_ndims_C == 2 && shape_C[0] == 1 && shape_C[1] == 1)) {
+                // (), (1,), (1, 1)
+                float c = C.at<float>(0);
+                int total = M * N;
+                for (int i = 0; i < total; ++i) {
+                    ptr_y[i] = c;
+                }
+            } else if ((real_ndims_C == 1 && shape_C[0] != 1) ||
+                       (real_ndims_C == 2 && shape_C[0] == 1)) {
+                // (N,), (1, N)
+                for (int i = 0; i < M; ++i) {
+                    std::memcpy(ptr_y + i * N, ptr_c, N * sizeof(float));
+                }
+            } else if (real_ndims_C == 2 && shape_C[1] == 1) {
+                // (M, 1)
+                float *ptr_c = C.ptr<float>();
+                for (int i = 0; i < M; ++i) {
+                    int step = i * M;
+                    for (int j = 0; j < N; ++j) {
+                        ptr_y[step + j] = ptr_c[i];
+                    }
+                }
+            } else {
+                // (M, N)
+                std::memcpy(ptr_y, ptr_c, M * N * sizeof(float));
+            }
         }
 
         ocv_gemm(trans_a, trans_b, alpha, A, B, beta, Y);
@@ -146,7 +141,6 @@ public:
 
 private:
     int real_ndims_C;
-    Mat C;
 };
 
 Ptr<GemmLayer> GemmLayer::create(const LayerParams& params) {
