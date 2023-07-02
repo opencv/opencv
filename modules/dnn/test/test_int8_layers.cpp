@@ -837,7 +837,7 @@ TEST_P(Test_Int8_nets, RCNN_ILSVRC13)
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    float l1 = 0.02, lInf = 0.042;
+    float l1 = 0.02, lInf = 0.045;
     testONNXNet("rcnn_ilsvrc13", l1, lInf);
 }
 

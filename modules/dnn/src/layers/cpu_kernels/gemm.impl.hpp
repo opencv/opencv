@@ -303,7 +303,7 @@ static void fx_gemm_thin(float alpha, float beta, int M, int N, int K,
     parallel_for_(Range(0, total), fn, nstripes);
 }
 
-void ocv_gemm(bool trans_a, bool trans_b, 
+void ocv_gemm(bool trans_a, bool trans_b,
               float alpha, const Mat &A, const Mat &B,
               float beta, Mat &C) {
     CV_CheckTypeEQ(A.type(), B.type(), "DNN/gemm: A and B should have the same type");
