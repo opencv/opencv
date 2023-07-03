@@ -15,12 +15,12 @@ body:
       Please provide the following system information to help us diagnose the bug. For example:
 
       // example for c++ user
-      OpenCV version: 4.6.0
+      OpenCV version: 4.8.0
       Operating System / Platform: Ubuntu 20.04
       Compiler & compiler version: GCC 9.3.0
 
       // example for python user
-      OpenCV python version: 4.6.0.66
+      OpenCV python version: 4.8.0.74
       Operating System / Platform: Ubuntu 20.04
       Python version: 3.9.6
   validations:
