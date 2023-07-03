@@ -438,7 +438,7 @@ public:
     explicit CovarianceEpipolarSolverImpl (const Mat &points_, bool is_fundamental_) {
         points_size = points_.rows;
         is_fundamental = is_fundamental_;
-        if (is_fundamental) { // normalize image points only for fundmantal matrix
+        if (is_fundamental) { // normalize image points only for fundamental matrix
             std::vector<int> sample(points_size);
             for (int i = 0; i < points_size; i++) sample[i] = i;
             const Ptr<NormTransform> normTr = NormTransform::create(points_);
@@ -558,7 +558,7 @@ public:
         const auto * const pts_ = (float *) calib_points.data;
         // a few point are enough to test
         // actually due to Sampson error minimization, the input R,t do not really matter
-        // for a correct pair there is a sligthly faster convergence
+        // for a correct pair there is a slightly faster convergence
         for (int i = 0; i < 3; i++) { // could be 1 point
             const int rand_inl = 4 * sample[rng.uniform(0, sample_size)];
             Vec3d p1 (pts_[rand_inl], pts_[rand_inl+1], 1), p2(pts_[rand_inl+2], pts_[rand_inl+3], 1);

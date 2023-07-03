@@ -112,7 +112,7 @@ public:
             return false;
 
         // Checks if points are not collinear
-        // If area of triangle constructed with 3 points is less then threshold then points are collinear:
+        // If area of triangle constructed with 3 points is less than threshold then points are collinear:
         //           |x1 y1 1|             |x1      y1      1|
         // (1/2) det |x2 y2 1| = (1/2) det |x2-x1   y2-y1   0| = det |x2-x1   y2-y1| < 2 * threshold
         //           |x3 y3 1|             |x3-x1   y3-y1   0|       |x3-x1   y3-y1|

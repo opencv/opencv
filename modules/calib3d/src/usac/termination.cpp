@@ -19,7 +19,7 @@ public:
 
     /*
      * Get upper bound iterations for any sample number
-     * n is points size, w is inlier ratio, p is desired probability, k is expceted number of iterations.
+     * n is points size, w is inlier ratio, p is desired probability, k is expected number of iterations.
      * 1 - p = (1 - w^n)^k,
      * k = log_(1-w^n) (1-p)
      * k = ln (1-p) / ln (1-w^n)
