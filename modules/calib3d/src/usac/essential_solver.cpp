@@ -142,7 +142,7 @@ public:
             }
 
             std::vector<double> c(11), rs;
-            // filling coefficients of 10-degree polynomial satysfying zero-determinant constraint of essential matrix, ie., det(E) = 0
+            // filling coefficients of 10-degree polynomial satisfying zero-determinant constraint of essential matrix, ie., det(E) = 0
             // based on "An Efficient Solution to the Five-Point Relative Pose Problem" (David Nister)
             // same as in five-point.cpp
             c[10] = (b[0]*b[17]*b[34]+b[26]*b[4]*b[21]-b[26]*b[17]*b[8]-b[13]*b[4]*b[34]-b[0]*b[21]*b[30]+b[13]*b[30]*b[8]);

@@ -294,7 +294,7 @@ public:
                     params->getUpperIncompleteOfSigmaQuantile()); break;
             case ScoreMethod::SCORE_METHOD_LMEDS :
                 quality = LMedsQuality::create(points_size, threshold, error); break;
-            default: CV_Error(cv::Error::StsNotImplemented, "Score is not imeplemeted!");
+            default: CV_Error(cv::Error::StsNotImplemented, "Score is not implemented!");
         }
 
         const auto is_ge_solver = params->getRansacSolver() == GEM_SOLVER;

@@ -62,8 +62,8 @@ Ptr<UniformSampler> UniformSampler::create(int state, int sample_size_, int poin
 /////////////////////////////////// PROSAC (SIMPLE) SAMPLER ///////////////////////////////////////
 /*
 * PROSAC (simple) sampler does not use array of precalculated T_n (n is subset size) samples, but computes T_n for
-* specific n directy in generateSample() function.
-* Also, the stopping length (or maximum subset size n*) by default is set to points_size (N) and does not updating
+* specific n directly in generateSample() function.
+* Also, the stopping length (or maximum subset size n*) by default is set to points_size (N) and does not update
 * during computation.
 */
 class ProsacSimpleSamplerImpl : public ProsacSimpleSampler {
@@ -176,7 +176,7 @@ protected:
     // In our experiments, the parameter was set to T_N = 200000
     int growth_max_samples;
 
-    // how many time PROSAC generateSample() was called
+    // how many times PROSAC generateSample() was called
     int kth_sample_number;
     Ptr<UniformRandomGenerator> random_gen;
 public:
@@ -488,7 +488,7 @@ public:
 
         points_large_neighborhood_size = 0;
 
-        // find indicies of points that have sufficient neighborhood (at least sample_size-1)
+        // find indices of points that have sufficient neighborhood (at least sample_size-1)
         for (int pt_idx = 0; pt_idx < points_size; pt_idx++)
             if ((int)neighborhood_graph->getNeighbors(pt_idx).size() >= sample_size-1)
                 points_large_neighborhood[points_large_neighborhood_size++] = pt_idx;
