@@ -648,6 +648,8 @@ bool _InputArray::sameSize(const _InputArray& arr) const
     {
         return ((const cuda::GpuMatND*)obj)->size == ((const cuda::GpuMatND*)arr.obj)->size;
     }
+    else
+        sz1 = size();
 
     if( arr.dims() > 2 )
         return false;
