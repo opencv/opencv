@@ -14,7 +14,6 @@ class GammaValuesImpl : public GammaValues {
 public:
     GammaValuesImpl (int DoF_, int max_size_table_) {
         max_size_table = max_size_table_;
-        max_size_table = max_size_table_;
         DoF = DoF_;
         /*
          * Gamma values for degrees of freedom n = 2 and sigma quantile 99% of chi distribution
