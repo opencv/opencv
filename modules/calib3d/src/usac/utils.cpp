@@ -344,10 +344,10 @@ void Utils::decomposeProjection (const Mat &P, Matx33d &K, Matx33d &R, Vec3d &t,
 }
 
 double Utils::getPoissonCDF (double lambda, int inliers) {
-    double exp_lamda = exp(-lambda), cdf = exp_lamda, lambda_i_div_fact_i = 1;
+    double exp_lambda = exp(-lambda), cdf = exp_lambda, lambda_i_div_fact_i = 1;
     for (int i = 1; i <= inliers; i++) {
         lambda_i_div_fact_i *= (lambda / i);
-        cdf += exp_lamda * lambda_i_div_fact_i;
+        cdf += exp_lambda * lambda_i_div_fact_i;
         if (fabs(cdf - 1) < DBL_EPSILON) // cdf is almost 1
             break;
     }
