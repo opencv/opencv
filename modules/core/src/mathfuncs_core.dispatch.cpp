@@ -74,7 +74,7 @@ void magnitudeSqr32f(const float* x, const float* y, float* mag, int len)
         (CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32f, x, y, mag, len) >= 0) &&
         (CV_INSTRUMENT_FUN_IPP(ippiMul_32f_C1R, mag, len*sizeof(float), mag, len*sizeof(float), mag, len*sizeof(float), ippiSize(len, 1)) >= 0)
     );
-    
+
     CV_CPU_DISPATCH(magnitudeSqr32f, (x, y, mag, len),
         CV_CPU_DISPATCH_MODES_ALL);
 }
