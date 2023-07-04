@@ -1,12 +1,18 @@
 __all__ = []
 
-import sys
 import numpy as np
 import cv2 as cv
+from typing import TYPE_CHECKING, Any
+
+# Type subscription is not possible in python 3.8
+if TYPE_CHECKING:
+    _NDArray = np.ndarray[Any, np.dtype[np.generic]]
+else:
+    _NDArray = np.ndarray
 
 # NumPy documentation: https://numpy.org/doc/stable/user/basics.subclassing.html
 
-class Mat(np.ndarray):
+class Mat(_NDArray):
     '''
     cv.Mat wrapper for numpy array.
 
