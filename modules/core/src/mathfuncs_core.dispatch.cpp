@@ -68,24 +68,29 @@ void magnitudeSqr32f(const float* x, const float* y, float* mag, int len)
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(magnitudeSqr32f, cv_hal_magnitudeSqr32f, x, y, mag, len);
-    #if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV)//TODO ippicv must implement ippsPowerSpectr_32f
     // SSE42 performance issues
-    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsPowerSpectr_32f, x, y, mag, len) >= 0);
-    #endif
-
+    //CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsPowerSpectr_32f, x, y, mag, len) >= 0);
+    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42,
+        (CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32f, x, y, mag, len) >= 0) &&
+        (CV_INSTRUMENT_FUN_IPP(ippiMul_32f_C1R, mag, len*sizeof(float), mag, len*sizeof(float), mag, len*sizeof(float), ippiSize(len, 1)) >= 0)
+    );
+    
     CV_CPU_DISPATCH(magnitudeSqr32f, (x, y, mag, len),
         CV_CPU_DISPATCH_MODES_ALL);
 }
+
+#define CV_FUN_TRUE(A) (A, true)
 
 void magnitudeSqr64f(const double* x, const double* y, double* mag, int len)
 {
     CV_INSTRUMENT_REGION();
 
     CALL_HAL(magnitudeSqr64f, cv_hal_magnitudeSqr64f, x, y, mag, len);
-    #if defined(HAVE_IPP) && !defined(HAVE_IPP_ICV)//TODO ippicv must implement ippsPowerSpectr_64f
     // SSE42 performance issues
-    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsPowerSpectr_64f, x, y, mag, len) >= 0);
-    #endif
+    //CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsPowerSpectr_64f, x, y, mag, len) >= 0);
+    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42,
+        (CV_INSTRUMENT_FUN_IPP(ippsMagnitude_64f, x, y, mag, len) >= 0) && CV_FUN_TRUE(sqr64f(mag, mag, len))
+    );
 
     CV_CPU_DISPATCH(magnitudeSqr64f, (x, y, mag, len),
         CV_CPU_DISPATCH_MODES_ALL);
@@ -115,7 +120,6 @@ void invSqrt64f(const double* src, double* dst, int len)
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-
 void sqrt32f(const float* src, float* dst, int len)
 {
     CV_INSTRUMENT_REGION();
@@ -126,7 +130,6 @@ void sqrt32f(const float* src, float* dst, int len)
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-
 void sqrt64f(const double* src, double* dst, int len)
 {
     CV_INSTRUMENT_REGION();
@@ -134,6 +137,16 @@ void sqrt64f(const double* src, double* dst, int len)
     CALL_HAL(sqrt64f, cv_hal_sqrt64f, src, dst, len);
 
     CV_CPU_DISPATCH(sqrt64f, (src, dst, len),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+void sqr64f(const double* src, double* dst, int len)
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(sqr64f, cv_hal_sqr64f, src, dst, len);
+
+    CV_CPU_DISPATCH(sqr64f, (src, dst, len),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 

@@ -445,11 +445,13 @@ inline int hal_ni_invSqrt64f(const double* src, double* dst, int len) { return C
 //! @{
 inline int hal_ni_sqrt32f(const float* src, float* dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_sqrt64f(const double* src, double* dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_sqr64f(const double* src, double* dst, int len) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 //! @}
 
 //! @cond IGNORED
 #define cv_hal_sqrt32f hal_ni_sqrt32f
 #define cv_hal_sqrt64f hal_ni_sqrt64f
+#define cv_hal_sqr64f  hal_ni_sqr64f
 //! @endcond
 
 

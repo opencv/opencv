@@ -102,6 +102,8 @@ CV_EXPORTS void sqrt64f(const double* src, double* dst, int len);
 CV_EXPORTS void invSqrt32f(const float* src, float* dst, int len);
 CV_EXPORTS void invSqrt64f(const double* src, double* dst, int len);
 
+CV_EXPORTS void sqr64f(const double* src, double* dst, int len);
+
 CV_EXPORTS void split8u(const uchar* src, uchar** dst, int len, int cn );
 CV_EXPORTS void split16u(const ushort* src, ushort** dst, int len, int cn );
 CV_EXPORTS void split32s(const int* src, int** dst, int len, int cn );

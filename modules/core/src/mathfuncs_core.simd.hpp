@@ -20,6 +20,7 @@ void invSqrt32f(const float* src, float* dst, int len);
 void invSqrt64f(const double* src, double* dst, int len);
 void sqrt32f(const float* src, float* dst, int len);
 void sqrt64f(const double* src, double* dst, int len);
+void sqr64f(const double* src, double* dst, int len);
 void exp32f(const float *src, float *dst, int n);
 void exp64f(const double *src, double *dst, int n);
 void log32f(const float *src, float *dst, int n);
@@ -436,6 +437,36 @@ void sqrt64f(const double* src, double* dst, int len)
 
     for( ; i < len; i++ )
         dst[i] = std::sqrt(src[i]);
+}
+
+void sqr64f(const double* src, double* dst, int len)
+{
+    CV_INSTRUMENT_REGION();
+
+    int i = 0;
+
+#if CV_SIMD_64F
+    const int VECSZ = v_float64::nlanes;
+    for( ; i < len; i += VECSZ*2 )
+    {
+        if( i + VECSZ*2 > len )
+        {
+            if( i == 0 || src == dst )
+                break;
+            i = len - VECSZ*2;
+        }
+        v_float64 x0 = vx_load(src + i), x1 = vx_load(src + i + VECSZ);
+        v_store(dst + i, x0*x0);
+        v_store(dst + i + VECSZ, x1*x1);
+    }
+    vx_cleanup();
+#endif
+
+    for( ; i < len; i++ )
+    {
+        const double x0 = src[i];
+        dst[i] = x0*x0;
+    }
 }
 
 // Workaround for ICE in MSVS 2015 update 3 (issue #7795)
