@@ -444,9 +444,8 @@ void  WBaseStream::close()
 
 void  WBaseStream::release()
 {
-    if( m_start )
-        delete[] m_start;
-    m_start = m_end = m_current = 0;
+    delete[] m_start;
+    m_start = m_end = m_current = nullptr;
 }
 
 
