@@ -11,10 +11,10 @@ USAGE:
 README FIRST:
     Two windows will show up, one for input and one for output.
 
-    At first, in input window, draw a rectangle around the object using
-mouse right button. Then press 'n' to segment the object (once or a few times)
+    At first, in input window, draw a rectangle around the object using the
+right mouse button. Then press 'n' to segment the object (once or a few times)
 For any finer touch-ups, you can press any of the keys below and draw lines on
-the areas you want. Then again press 'n' for updating the output.
+the areas you want. Then again press 'n' to update the output.
 
 Key '0' - To select areas of sure background
 Key '1' - To select areas of sure foreground
@@ -44,8 +44,8 @@ class App():
 
     DRAW_BG = {'color' : BLACK, 'val' : 0}
     DRAW_FG = {'color' : WHITE, 'val' : 1}
-    DRAW_PR_FG = {'color' : GREEN, 'val' : 3}
     DRAW_PR_BG = {'color' : RED, 'val' : 2}
+    DRAW_PR_FG = {'color' : GREEN, 'val' : 3}
 
     # setting up flags
     rect = (0,0,1,1)
@@ -160,14 +160,12 @@ class App():
                 print(""" For finer touchups, mark foreground and background after pressing keys 0-3
                 and again press 'n' \n""")
                 try:
+                    bgdmodel = np.zeros((1, 65), np.float64)
+                    fgdmodel = np.zeros((1, 65), np.float64)
                     if (self.rect_or_mask == 0):         # grabcut with rect
-                        bgdmodel = np.zeros((1, 65), np.float64)
-                        fgdmodel = np.zeros((1, 65), np.float64)
                         cv.grabCut(self.img2, self.mask, self.rect, bgdmodel, fgdmodel, 1, cv.GC_INIT_WITH_RECT)
                         self.rect_or_mask = 1
-                    elif self.rect_or_mask == 1:         # grabcut with mask
-                        bgdmodel = np.zeros((1, 65), np.float64)
-                        fgdmodel = np.zeros((1, 65), np.float64)
+                    elif (self.rect_or_mask == 1):       # grabcut with mask
                         cv.grabCut(self.img2, self.mask, self.rect, bgdmodel, fgdmodel, 1, cv.GC_INIT_WITH_MASK)
                 except:
                     import traceback

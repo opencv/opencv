@@ -10,6 +10,7 @@ import random
 import argparse
 
 import numpy as np
+#sys.OpenCV_LOADER_DEBUG = True
 import cv2 as cv
 
 # Python 3 moved urlopen to urllib.requests
@@ -24,7 +25,7 @@ class NewOpenCVTests(unittest.TestCase):
     repoPath = None
     extraTestDataPath = None
     # github repository url
-    repoUrl = 'https://raw.github.com/opencv/opencv/master'
+    repoUrl = 'https://raw.github.com/opencv/opencv/4.x'
 
     def find_file(self, filename, searchPaths=[], required=True):
         searchPaths = searchPaths if searchPaths else [self.repoPath, self.extraTestDataPath]

@@ -1,6 +1,17 @@
 Use OpenCL in Android camera preview based CV application {#tutorial_android_ocl_intro}
 =====================================
 
+@prev_tutorial{tutorial_dev_with_OCV_on_Android}
+@next_tutorial{tutorial_macos_install}
+
+|    |    |
+| -: | :- |
+| Original author | Andrey Pavlenko |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial is deprecated.
+
 This guide was designed to help you in use of [OpenCL &trade;](https://www.khronos.org/opencl/) in Android camera preview based CV application.
 It was written for [Eclipse-based ADT tools](http://developer.android.com/tools/help/adt.html)
 (deprecated by Google now), but it easily can be reproduced with [Android Studio](http://developer.android.com/tools/studio/index.html).
@@ -17,7 +28,7 @@ If you need help with anything of the above, you may refer to our @ref tutorial_
 This tutorial also assumes you have an Android operated device with OpenCL enabled.
 
 The related source code is located within OpenCV samples at
-[opencv/samples/android/tutorial-4-opencl](https://github.com/opencv/opencv/tree/master/samples/android/tutorial-4-opencl/) directory.
+[opencv/samples/android/tutorial-4-opencl](https://github.com/opencv/opencv/tree/4.x/samples/android/tutorial-4-opencl/) directory.
 
 Preface
 -------
@@ -244,7 +255,7 @@ As you can see, inheritors for `Camera` and `Camera2` APIs should implement the 
 @endcode
 
 Let's leave the details of their implementation beyond of this tutorial, please refer the
-[source code](https://github.com/opencv/opencv/tree/master/samples/android/tutorial-4-opencl/) to see them.
+[source code](https://github.com/opencv/opencv/tree/4.x/samples/android/tutorial-4-opencl/) to see them.
 
 Preview Frames modification
 ---------------------------

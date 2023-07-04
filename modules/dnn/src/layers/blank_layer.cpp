@@ -40,7 +40,15 @@
 //
 //M*/
 #include "../precomp.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
+#include "../op_cann.hpp"
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/reshape.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -56,8 +64,13 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_INF_ENGINE
+        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            return true;
+#endif
         return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE && haveInfEngine());
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -107,30 +120,59 @@ public:
                 inputs[i].copyTo(outputs[i]);
     }
 
-#ifdef HAVE_INF_ENGINE
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        InferenceEngine::DataPtr input = infEngineDataNode(inputs[0]);
-        std::vector<size_t> dims = input->getDims();
-        CV_Assert(!dims.empty());
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto x_desc = x->getTensorDesc();
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
 
-        InferenceEngine::Builder::Layer ieLayer(name);
-        ieLayer.setName(name);
-        if (preferableTarget == DNN_TARGET_MYRIAD)
-        {
-            ieLayer.setType("Copy");
-        }
-        else
-        {
-            ieLayer.setType("Split");
-            ieLayer.getParameters()["axis"] = dims.size() - 1;
-            ieLayer.getParameters()["out_sizes"] = dims[0];
-        }
-        ieLayer.setInputPorts({InferenceEngine::Port(dims)});
-        ieLayer.setOutputPorts(std::vector<InferenceEngine::Port>(1));
-        return Ptr<BackendNode>(new InfEngineBackendNode(ieLayer));
+        // create operator
+        auto op = std::make_shared<ge::op::Identity>(name);
+
+        // set inputs
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        op->update_input_desc_x(*x_desc);
+
+        // set output
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
     }
-#endif  // HAVE_INF_ENGINE
+#endif
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        ngraph::OutputVector inp{ieInpNode};
+        auto blank = std::make_shared<ngraph::op::Concat>(inp, 0);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(blank));
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return make_cuda_node<cuda4dnn::ReshapeOp>(preferableTarget, std::move(context->stream));
+    }
+#endif
+
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        return true;
+    }
 };
 
 Ptr<Layer> BlankLayer::create(const LayerParams& params)

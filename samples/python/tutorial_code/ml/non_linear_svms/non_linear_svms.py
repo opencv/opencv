@@ -94,13 +94,13 @@ thick = -1
 for i in range(NTRAINING_SAMPLES):
     px = trainData[i,0]
     py = trainData[i,1]
-    cv.circle(I, (px, py), 3, (0, 255, 0), thick)
+    cv.circle(I, (int(px), int(py)), 3, (0, 255, 0), thick)
 
 # Class 2
 for i in range(NTRAINING_SAMPLES, 2*NTRAINING_SAMPLES):
     px = trainData[i,0]
     py = trainData[i,1]
-    cv.circle(I, (px, py), 3, (255, 0, 0), thick)
+    cv.circle(I, (int(px), int(py)), 3, (255, 0, 0), thick)
 ## [show_data]
 
 #------------------------- 6. Show support vectors --------------------------------------------
@@ -109,7 +109,7 @@ thick = 2
 sv = svm.getUncompressedSupportVectors()
 
 for i in range(sv.shape[0]):
-    cv.circle(I, (sv[i,0], sv[i,1]), 6, (128, 128, 128), thick)
+    cv.circle(I, (int(sv[i,0]), int(sv[i,1])), 6, (128, 128, 128), thick)
 ## [show_vectors]
 
 cv.imwrite('result.png', I)                      # save the Image

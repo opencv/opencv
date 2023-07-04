@@ -5,11 +5,11 @@
 
 using namespace cv;
 
-static void help()
+static void help(char** argv)
 {
     printf("\nThis program demonstrates OpenCV drawing and text output functions.\n"
     "Usage:\n"
-    "   ./drawing\n");
+    "   %s\n", argv[0]);
 }
 static Scalar randomColor(RNG& rng)
 {
@@ -17,9 +17,9 @@ static Scalar randomColor(RNG& rng)
     return Scalar(icolor&255, (icolor>>8)&255, (icolor>>16)&255);
 }
 
-int main()
+int main(int /* argc */, char** argv)
 {
-    help();
+    help(argv);
     char wndname[] = "Drawing Demo";
     const int NUMBER = 100;
     const int DELAY = 5;

@@ -287,7 +287,7 @@
 #                            Only available for CUDA version 5.5+.
 #   CUDA_npps_LIBRARY     -- NVIDIA Performance Primitives lib (signal processing).
 #                            Only available for CUDA version 5.5+.
-#   CUDA_nvcuvenc_LIBRARY -- CUDA Video Encoder library.
+#   CUDA_nvencodeapi_LIBRARY -- CUDA Video Encoder library.
 #                            Only available for CUDA version 3.2+.
 #                            Windows only.
 #   CUDA_nvcuvid_LIBRARY  -- CUDA Video Decoder library.
@@ -530,7 +530,7 @@ macro(cuda_unset_include_and_libraries)
   unset(CUDA_nppc_LIBRARY CACHE)
   unset(CUDA_nppi_LIBRARY CACHE)
   unset(CUDA_npps_LIBRARY CACHE)
-  unset(CUDA_nvcuvenc_LIBRARY CACHE)
+  unset(CUDA_nvencodeapi_LIBRARY CACHE)
   unset(CUDA_nvcuvid_LIBRARY CACHE)
 endmacro()
 
@@ -790,7 +790,7 @@ if(NOT CUDA_VERSION VERSION_LESS "3.2")
   find_cuda_helper_libs(cusparse)
   find_cuda_helper_libs(curand)
   if (WIN32)
-    find_cuda_helper_libs(nvcuvenc)
+    find_cuda_helper_libs(nvencodeapi)
     find_cuda_helper_libs(nvcuvid)
   endif()
 endif()

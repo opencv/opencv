@@ -165,7 +165,7 @@ public:
 
     /** @brief Sets the initial step that will be used in downhill simplex algorithm.
 
-    Step, together with initial point (givin in DownhillSolver::minimize) are two `n`-dimensional
+    Step, together with initial point (given in DownhillSolver::minimize) are two `n`-dimensional
     vectors that are used to determine the shape of initial simplex. Roughly said, initial point
     determines the position of a simplex (it will become simplex's centroid), while step determines the
     spread (size in each dimension) of a simplex. To be more precise, if \f$s,x_0\in\mathbb{R}^n\f$ are
@@ -256,6 +256,7 @@ public:
 //! return codes for cv::solveLP() function
 enum SolveLPResult
 {
+    SOLVELP_LOST   = -3, //!< problem is feasible, but solver lost solution due to floating-point arithmetic errors
     SOLVELP_UNBOUNDED    = -2, //!< problem is unbounded (target function can achieve arbitrary high values)
     SOLVELP_UNFEASIBLE    = -1, //!< problem is unfeasible (there are no points that satisfy all the constraints imposed)
     SOLVELP_SINGLE    = 0, //!< there is only one maximum for target function
@@ -291,8 +292,12 @@ in the latter case it is understood to correspond to \f$c^T\f$.
 and the remaining to \f$A\f$. It should contain 32- or 64-bit floating point numbers.
 @param z The solution will be returned here as a column-vector - it corresponds to \f$c\f$ in the
 formulation above. It will contain 64-bit floating point numbers.
+@param constr_eps allowed numeric disparity for constraints
 @return One of cv::SolveLPResult
  */
+CV_EXPORTS_W int solveLP(InputArray Func, InputArray Constr, OutputArray z, double constr_eps);
+
+/** @overload */
 CV_EXPORTS_W int solveLP(InputArray Func, InputArray Constr, OutputArray z);
 
 //! @}

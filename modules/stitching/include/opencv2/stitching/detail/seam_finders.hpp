@@ -248,7 +248,7 @@ public:
     ~GraphCutSeamFinder();
 
     CV_WRAP void find(const std::vector<UMat> &src, const std::vector<Point> &corners,
-              std::vector<UMat> &masks) CV_OVERRIDE;
+                      CV_IN_OUT std::vector<UMat> &masks) CV_OVERRIDE;
 
 private:
     // To avoid GCGraph dependency

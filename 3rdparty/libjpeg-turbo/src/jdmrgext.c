@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1994-1996, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2011, 2015, D. R. Commander.
+ * Copyright (C) 2011, 2015, 2020, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -25,7 +25,7 @@ h2v1_merged_upsample_internal(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
                               JDIMENSION in_row_group_ctr,
                               JSAMPARRAY output_buf)
 {
-  my_upsample_ptr upsample = (my_upsample_ptr)cinfo->upsample;
+  my_merged_upsample_ptr upsample = (my_merged_upsample_ptr)cinfo->upsample;
   register int y, cred, cgreen, cblue;
   int cb, cr;
   register JSAMPROW outptr;
@@ -46,13 +46,13 @@ h2v1_merged_upsample_internal(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
   /* Loop for each pair of output pixels */
   for (col = cinfo->output_width >> 1; col > 0; col--) {
     /* Do the chroma part of the calculation */
-    cb = GETJSAMPLE(*inptr1++);
-    cr = GETJSAMPLE(*inptr2++);
+    cb = *inptr1++;
+    cr = *inptr2++;
     cred = Crrtab[cr];
     cgreen = (int)RIGHT_SHIFT(Cbgtab[cb] + Crgtab[cr], SCALEBITS);
     cblue = Cbbtab[cb];
     /* Fetch 2 Y values and emit 2 pixels */
-    y  = GETJSAMPLE(*inptr0++);
+    y  = *inptr0++;
     outptr[RGB_RED] =   range_limit[y + cred];
     outptr[RGB_GREEN] = range_limit[y + cgreen];
     outptr[RGB_BLUE] =  range_limit[y + cblue];
@@ -60,7 +60,7 @@ h2v1_merged_upsample_internal(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
     outptr[RGB_ALPHA] = 0xFF;
 #endif
     outptr += RGB_PIXELSIZE;
-    y  = GETJSAMPLE(*inptr0++);
+    y  = *inptr0++;
     outptr[RGB_RED] =   range_limit[y + cred];
     outptr[RGB_GREEN] = range_limit[y + cgreen];
     outptr[RGB_BLUE] =  range_limit[y + cblue];
@@ -71,12 +71,12 @@ h2v1_merged_upsample_internal(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
   }
   /* If image width is odd, do the last output column separately */
   if (cinfo->output_width & 1) {
-    cb = GETJSAMPLE(*inptr1);
-    cr = GETJSAMPLE(*inptr2);
+    cb = *inptr1;
+    cr = *inptr2;
     cred = Crrtab[cr];
     cgreen = (int)RIGHT_SHIFT(Cbgtab[cb] + Crgtab[cr], SCALEBITS);
     cblue = Cbbtab[cb];
-    y  = GETJSAMPLE(*inptr0);
+    y  = *inptr0;
     outptr[RGB_RED] =   range_limit[y + cred];
     outptr[RGB_GREEN] = range_limit[y + cgreen];
     outptr[RGB_BLUE] =  range_limit[y + cblue];
@@ -97,7 +97,7 @@ h2v2_merged_upsample_internal(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
                               JDIMENSION in_row_group_ctr,
                               JSAMPARRAY output_buf)
 {
-  my_upsample_ptr upsample = (my_upsample_ptr)cinfo->upsample;
+  my_merged_upsample_ptr upsample = (my_merged_upsample_ptr)cinfo->upsample;
   register int y, cred, cgreen, cblue;
   int cb, cr;
   register JSAMPROW outptr0, outptr1;
@@ -120,13 +120,13 @@ h2v2_merged_upsample_internal(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
   /* Loop for each group of output pixels */
   for (col = cinfo->output_width >> 1; col > 0; col--) {
     /* Do the chroma part of the calculation */
-    cb = GETJSAMPLE(*inptr1++);
-    cr = GETJSAMPLE(*inptr2++);
+    cb = *inptr1++;
+    cr = *inptr2++;
     cred = Crrtab[cr];
     cgreen = (int)RIGHT_SHIFT(Cbgtab[cb] + Crgtab[cr], SCALEBITS);
     cblue = Cbbtab[cb];
     /* Fetch 4 Y values and emit 4 pixels */
-    y  = GETJSAMPLE(*inptr00++);
+    y  = *inptr00++;
     outptr0[RGB_RED] =   range_limit[y + cred];
     outptr0[RGB_GREEN] = range_limit[y + cgreen];
     outptr0[RGB_BLUE] =  range_limit[y + cblue];
@@ -134,7 +134,7 @@ h2v2_merged_upsample_internal(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
     outptr0[RGB_ALPHA] = 0xFF;
 #endif
     outptr0 += RGB_PIXELSIZE;
-    y  = GETJSAMPLE(*inptr00++);
+    y  = *inptr00++;
     outptr0[RGB_RED] =   range_limit[y + cred];
     outptr0[RGB_GREEN] = range_limit[y + cgreen];
     outptr0[RGB_BLUE] =  range_limit[y + cblue];
@@ -142,7 +142,7 @@ h2v2_merged_upsample_internal(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
     outptr0[RGB_ALPHA] = 0xFF;
 #endif
     outptr0 += RGB_PIXELSIZE;
-    y  = GETJSAMPLE(*inptr01++);
+    y  = *inptr01++;
     outptr1[RGB_RED] =   range_limit[y + cred];
     outptr1[RGB_GREEN] = range_limit[y + cgreen];
     outptr1[RGB_BLUE] =  range_limit[y + cblue];
@@ -150,7 +150,7 @@ h2v2_merged_upsample_internal(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
     outptr1[RGB_ALPHA] = 0xFF;
 #endif
     outptr1 += RGB_PIXELSIZE;
-    y  = GETJSAMPLE(*inptr01++);
+    y  = *inptr01++;
     outptr1[RGB_RED] =   range_limit[y + cred];
     outptr1[RGB_GREEN] = range_limit[y + cgreen];
     outptr1[RGB_BLUE] =  range_limit[y + cblue];
@@ -161,19 +161,19 @@ h2v2_merged_upsample_internal(j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
   }
   /* If image width is odd, do the last output column separately */
   if (cinfo->output_width & 1) {
-    cb = GETJSAMPLE(*inptr1);
-    cr = GETJSAMPLE(*inptr2);
+    cb = *inptr1;
+    cr = *inptr2;
     cred = Crrtab[cr];
     cgreen = (int)RIGHT_SHIFT(Cbgtab[cb] + Crgtab[cr], SCALEBITS);
     cblue = Cbbtab[cb];
-    y  = GETJSAMPLE(*inptr00);
+    y  = *inptr00;
     outptr0[RGB_RED] =   range_limit[y + cred];
     outptr0[RGB_GREEN] = range_limit[y + cgreen];
     outptr0[RGB_BLUE] =  range_limit[y + cblue];
 #ifdef RGB_ALPHA
     outptr0[RGB_ALPHA] = 0xFF;
 #endif
-    y  = GETJSAMPLE(*inptr01);
+    y  = *inptr01;
     outptr1[RGB_RED] =   range_limit[y + cred];
     outptr1[RGB_GREEN] = range_limit[y + cgreen];
     outptr1[RGB_BLUE] =  range_limit[y + cblue];

@@ -104,12 +104,23 @@ inline int dstChannels(int code)
             return 4;
 
         case COLOR_BGRA2BGR: case COLOR_RGBA2BGR: case COLOR_RGB2BGR:
+        case COLOR_HSV2RGB: case COLOR_HSV2BGR: case COLOR_RGB2HSV: case COLOR_BGR2HSV:
+        case COLOR_HLS2RGB: case COLOR_HLS2BGR: case COLOR_RGB2HLS: case COLOR_BGR2HLS:
+        case COLOR_HSV2RGB_FULL: case COLOR_HSV2BGR_FULL: case COLOR_RGB2HSV_FULL: case COLOR_BGR2HSV_FULL:
+        case COLOR_HLS2RGB_FULL: case COLOR_HLS2BGR_FULL: case COLOR_RGB2HLS_FULL: case COLOR_BGR2HLS_FULL:
+        case COLOR_YUV2RGB: case COLOR_YUV2BGR: case COLOR_RGB2YUV: case COLOR_BGR2YUV:
         case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652RGB: case COLOR_BGR5552RGB:
         case COLOR_GRAY2BGR:
         case COLOR_YUV2BGR_NV21: case COLOR_YUV2RGB_NV21: case COLOR_YUV2BGR_NV12: case COLOR_YUV2RGB_NV12:
         case COLOR_YUV2BGR_YV12: case COLOR_YUV2RGB_YV12: case COLOR_YUV2BGR_IYUV: case COLOR_YUV2RGB_IYUV:
         case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU:
         case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2:
+        case COLOR_Lab2BGR: case COLOR_Lab2RGB: case COLOR_BGR2Lab: case COLOR_RGB2Lab:
+        case COLOR_Lab2LBGR: case COLOR_Lab2LRGB:
+        case COLOR_Luv2BGR: case COLOR_Luv2RGB: case COLOR_BGR2Luv: case COLOR_RGB2Luv:
+        case COLOR_Luv2LBGR: case COLOR_Luv2LRGB:
+        case COLOR_YCrCb2BGR: case COLOR_YCrCb2RGB: case COLOR_BGR2YCrCb: case COLOR_RGB2YCrCb:
+        case COLOR_XYZ2BGR: case COLOR_XYZ2RGB: case COLOR_BGR2XYZ: case COLOR_RGB2XYZ:
 
             return 3;
 
@@ -224,7 +235,10 @@ struct OclHelper
         int scn = src.channels();
         int depth = src.depth();
 
-        CV_Assert( VScn::contains(scn) && VDcn::contains(dcn) && VDepth::contains(depth) );
+        CV_Check(scn, VScn::contains(scn), "Invalid number of channels in input image");
+        CV_Check(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
+        CV_CheckDepth(depth, VDepth::contains(depth), "Unsupported depth of input image");
+
         switch (sizePolicy)
         {
         case TO_YUV:

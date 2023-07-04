@@ -954,6 +954,10 @@ __kernel void TEMPLATE(gemm_buffer_copy_image_transpose, Dtype)(
 {
     const int gidx = get_global_id(0);
     const int gidy = get_global_id(1);
+
+    if (gidx >= width || gidy >= height)
+        return;
+
     int2 coord_dst = (int2)(gidx, gidy);
     __global Dtype* A_off = A + offA;
     Dtype srcA = A_off[gidy * ldA + gidx];
@@ -968,12 +972,18 @@ __kernel void TEMPLATE(gemm_buffer_copy_image_no_transpose, Dtype)(
     __global Dtype* A,
     __write_only image2d_t ImA,
     int offA,
+    int padded_width,
+    int padded_height,
     int width,
     int height,
     int ldA)
 {
     const int gidx = get_global_id(0);
     const int gidy = get_global_id(1);
+
+    if (gidx >= padded_width || gidy >= padded_height)
+        return;
+
     int2 coord_dst = (int2)(gidx, gidy);
 #if TYPE == TYPE_HALF
     if (gidx >= width || gidy >= height) {

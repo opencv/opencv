@@ -234,7 +234,12 @@ OCL_TEST_P(CornerMinEigenVal, Mat)
         OCL_OFF(cv::cornerMinEigenVal(src_roi, dst_roi, blockSize, apertureSize, borderType));
         OCL_ON(cv::cornerMinEigenVal(usrc_roi, udst_roi, blockSize, apertureSize, borderType));
 
-        Near(1e-5, true);
+        // The corner kernel uses native_sqrt() which has implementation defined accuracy.
+        // If we're using a CL implementation that isn't intel, test with relaxed accuracy.
+        if (!ocl::useOpenCL() || ocl::Device::getDefault().isIntel())
+            Near(1e-5, true);
+        else
+            Near(0.1, true);
     }
 }
 

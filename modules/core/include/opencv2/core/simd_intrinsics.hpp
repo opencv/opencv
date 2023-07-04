@@ -7,7 +7,7 @@
 
 /**
 Helper header to support SIMD intrinsics (universal intrinsics) in user code.
-Intrinsics documentation: https://docs.opencv.org/master/df/d91/group__core__hal__intrin.html
+Intrinsics documentation: https://docs.opencv.org/4.x/df/d91/group__core__hal__intrin.html
 
 
 Checks of target CPU instruction set based on compiler definitions don't work well enough.
@@ -40,7 +40,6 @@ Notes:
 #endif
 
 #include "opencv2/core/cvdef.h"
-#include "opencv2/core/version.hpp"
 
 #ifdef OPENCV_SIMD_CONFIG_HEADER
 #include CVAUX_STR(OPENCV_SIMD_CONFIG_HEADER)

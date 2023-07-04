@@ -59,7 +59,7 @@ struct CV_EXPORTS_W_SIMPLE ImageFeatures
 {
     CV_PROP_RW int img_idx;
     CV_PROP_RW Size img_size;
-    std::vector<KeyPoint> keypoints;
+    CV_PROP_RW std::vector<KeyPoint> keypoints;
     CV_PROP_RW UMat descriptors;
     CV_WRAP std::vector<KeyPoint> getKeypoints() { return keypoints; };
 };
@@ -104,8 +104,8 @@ struct CV_EXPORTS_W_SIMPLE MatchesInfo
 
     CV_PROP_RW int src_img_idx;
     CV_PROP_RW int dst_img_idx;       //!< Images indices (optional)
-    std::vector<DMatch> matches;
-    std::vector<uchar> inliers_mask;    //!< Geometrically consistent matches mask
+    CV_PROP_RW std::vector<DMatch> matches;
+    CV_PROP_RW std::vector<uchar> inliers_mask;    //!< Geometrically consistent matches mask
     CV_PROP_RW int num_inliers;                    //!< Number of geometrically consistent matches
     CV_PROP_RW Mat H;                              //!< Estimated transformation
     CV_PROP_RW double confidence;                  //!< Confidence two images are from the same panorama
@@ -138,7 +138,7 @@ public:
     @sa detail::MatchesInfo
     */
     CV_WRAP_AS(apply2) void operator ()(const std::vector<ImageFeatures> &features, CV_OUT std::vector<MatchesInfo> &pairwise_matches,
-                     const cv::UMat &mask = cv::UMat());
+                                        const cv::UMat &mask = cv::UMat()) { match(features, pairwise_matches, mask); };
 
     /** @return True, if it's possible to use the same matcher instance in parallel, false otherwise
     */
@@ -161,6 +161,16 @@ protected:
     virtual void match(const ImageFeatures &features1, const ImageFeatures &features2,
                        MatchesInfo& matches_info) = 0;
 
+    /** @brief This method implements logic to match features between arbitrary number of features.
+    By default this checks every pair of inputs in the input, but the behaviour can be changed by subclasses.
+
+    @param features vector of image features
+    @param pairwise_matches found matches
+    @param mask (optional) mask indicating which image pairs should be matched
+     */
+    virtual void match(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
+                       const cv::UMat &mask = cv::UMat());
+
     bool is_thread_safe_;
 };
 
@@ -180,19 +190,22 @@ public:
     estimation used in the inliers classification step
     @param num_matches_thresh2 Minimum number of matches required for the 2D projective transform
     re-estimation on inliers
+    @param matches_confindece_thresh Matching confidence threshold to take the match into account.
+    The threshold was determined experimentally and set to 3 by default.
      */
     CV_WRAP BestOf2NearestMatcher(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,
-                          int num_matches_thresh2 = 6);
+                          int num_matches_thresh2 = 6, double matches_confindece_thresh = 3.);
 
     CV_WRAP void collectGarbage() CV_OVERRIDE;
     CV_WRAP static Ptr<BestOf2NearestMatcher> create(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,
-        int num_matches_thresh2 = 6);
+        int num_matches_thresh2 = 6, double matches_confindece_thresh = 3.);
 
 protected:
 
     void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info) CV_OVERRIDE;
     int num_matches_thresh1_;
     int num_matches_thresh2_;
+    double matches_confindece_thresh_;
     Ptr<FeaturesMatcher> impl_;
 };
 
@@ -202,11 +215,12 @@ public:
     CV_WRAP BestOf2NearestRangeMatcher(int range_width = 5, bool try_use_gpu = false, float match_conf = 0.3f,
                             int num_matches_thresh1 = 6, int num_matches_thresh2 = 6);
 
-    void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
-                     const cv::UMat &mask = cv::UMat());
-
-
 protected:
+    // indicate that we do not want to hide the base class match method with a different signature
+    using BestOf2NearestMatcher::match;
+    void match(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
+               const cv::UMat &mask = cv::UMat()) CV_OVERRIDE;
+
     int range_width_;
 };
 
@@ -215,14 +229,14 @@ finds two best matches for each feature and leaves the best one only if the
 ratio between descriptor distances is greater than the threshold match_conf.
 
 Unlike cv::detail::BestOf2NearestMatcher this matcher uses affine
-transformation (affine trasformation estimate will be placed in matches_info).
+transformation (affine transformation estimate will be placed in matches_info).
 
 @sa cv::detail::FeaturesMatcher cv::detail::BestOf2NearestMatcher
  */
 class CV_EXPORTS_W AffineBestOf2NearestMatcher : public BestOf2NearestMatcher
 {
 public:
-    /** @brief Constructs a "best of 2 nearest" matcher that expects affine trasformation
+    /** @brief Constructs a "best of 2 nearest" matcher that expects affine transformation
     between images
 
     @param full_affine whether to use full affine transformation with 6 degress of freedom or reduced

@@ -82,6 +82,8 @@ template<typename T1, typename T2> int PyrDownVecV(T1**, T2*, int) { return 0; }
 
 template<typename T1, typename T2> int PyrUpVecV(T1**, T2**, int) { return 0; }
 
+template<typename T1, typename T2> int PyrUpVecVOneRow(T1**, T2*, int) { return 0; }
+
 #if CV_SIMD
 
 template<> int PyrDownVecH<uchar, int, 1>(const uchar* src, int* row, int width)
@@ -717,31 +719,161 @@ template <> int PyrUpVecV<float, float>(float** src, float** dst, int width)
     return x;
 }
 
+template <> int PyrUpVecVOneRow<int, uchar>(int** src, uchar* dst, int width)
+{
+    int x = 0;
+    const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
+
+    for( ; x <= width - v_uint8::nlanes; x += v_uint8::nlanes)
+    {
+        v_int16 v_r00 = v_pack(vx_load(row0 + x), vx_load(row0 + x + v_int32::nlanes)),
+                v_r01 = v_pack(vx_load(row0 + x + 2 * v_int32::nlanes), vx_load(row0 + x + 3 * v_int32::nlanes)),
+                v_r10 = v_pack(vx_load(row1 + x), vx_load(row1 + x + v_int32::nlanes)),
+                v_r11 = v_pack(vx_load(row1 + x + 2 * v_int32::nlanes), vx_load(row1 + x + 3 * v_int32::nlanes)),
+                v_r20 = v_pack(vx_load(row2 + x), vx_load(row2 + x + v_int32::nlanes)),
+                v_r21 = v_pack(vx_load(row2 + x + 2 * v_int32::nlanes), vx_load(row2 + x + 3 * v_int32::nlanes));
+        v_int16 v_2r10 = v_r10 + v_r10, v_2r11 = (v_r11 + v_r11);
+        v_store(dst + x, v_rshr_pack_u<6>(v_r00 + v_r20 + (v_2r10 + v_2r10 + v_2r10), v_r01 + v_r21 + (v_2r11 + v_2r11 + v_2r11)));
+    }
+    if(x <= width - v_uint16::nlanes)
+    {
+        v_int16 v_r00 = v_pack(vx_load(row0 + x), vx_load(row0 + x + v_int32::nlanes)),
+                v_r10 = v_pack(vx_load(row1 + x), vx_load(row1 + x + v_int32::nlanes)),
+                v_r20 = v_pack(vx_load(row2 + x), vx_load(row2 + x + v_int32::nlanes));
+        v_int16 v_2r10 = v_r10 + v_r10;
+        v_rshr_pack_u_store<6>(dst + x, v_r00 + v_r20 + (v_2r10 + v_2r10 + v_2r10));
+        x += v_uint16::nlanes;
+    }
+    typedef int CV_DECL_ALIGNED(1) unaligned_int;
+    for (; x <= width - v_int32x4::nlanes; x += v_int32x4::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r10 = vx_load(row1 + x),
+                v_r20 = vx_load(row2 + x);
+        v_int32 v_2r10 = v_r10 + v_r10;
+        v_int16 d = v_pack(v_r00 + v_r20 + (v_2r10 + v_2r10 + v_2r10), (v_r10 + v_r20) << 2);
+        *(unaligned_int*)(dst + x) = v_reinterpret_as_s32(v_rshr_pack_u<6>(d, vx_setzero_s16())).get0();
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template <> int PyrUpVecVOneRow<int, short>(int** src, short* dst, int width)
+{
+    int x = 0;
+    const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
+
+    for( ; x <= width - v_int16::nlanes; x += v_int16::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r01 = vx_load(row0 + x + v_int32::nlanes),
+                v_r10 = vx_load(row1 + x),
+                v_r11 = vx_load(row1 + x + v_int32::nlanes),
+                v_r20 = vx_load(row2 + x),
+                v_r21 = vx_load(row2 + x + v_int32::nlanes);
+        v_store(dst + x, v_rshr_pack<6>(v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)), v_r01 + v_r21 + ((v_r11 << 1) + (v_r11 << 2))));
+    }
+    if(x <= width - v_int32::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r10 = vx_load(row1 + x),
+                v_r20 = vx_load(row2 + x);
+        v_rshr_pack_store<6>(dst + x, v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)));
+        x += v_int32::nlanes;
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template <> int PyrUpVecVOneRow<int, ushort>(int** src, ushort* dst, int width)
+{
+    int x = 0;
+    const int *row0 = src[0], *row1 = src[1], *row2 = src[2];
+
+    for( ; x <= width - v_uint16::nlanes; x += v_uint16::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r01 = vx_load(row0 + x + v_int32::nlanes),
+                v_r10 = vx_load(row1 + x),
+                v_r11 = vx_load(row1 + x + v_int32::nlanes),
+                v_r20 = vx_load(row2 + x),
+                v_r21 = vx_load(row2 + x + v_int32::nlanes);
+        v_store(dst + x, v_rshr_pack_u<6>(v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)), v_r01 + v_r21 + ((v_r11 << 1) + (v_r11 << 2))));
+    }
+    if(x <= width - v_int32::nlanes)
+    {
+        v_int32 v_r00 = vx_load(row0 + x),
+                v_r10 = vx_load(row1 + x),
+                v_r20 = vx_load(row2 + x);
+        v_rshr_pack_u_store<6>(dst + x, v_r00 + v_r20 + ((v_r10 << 1) + (v_r10 << 2)));
+        x += v_int32::nlanes;
+    }
+    vx_cleanup();
+
+    return x;
+}
+
+template <> int PyrUpVecVOneRow<float, float>(float** src, float* dst, int width)
+{
+    int x = 0;
+    const float *row0 = src[0], *row1 = src[1], *row2 = src[2];
+
+    v_float32 v_6 = vx_setall_f32(6.0f), v_scale = vx_setall_f32(1.f/64.f);
+    for( ; x <= width - v_float32::nlanes; x += v_float32::nlanes)
+    {
+        v_float32 v_r0 = vx_load(row0 + x),
+                  v_r1 = vx_load(row1 + x),
+                  v_r2 = vx_load(row2 + x);
+        v_store(dst + x, v_scale * (v_muladd(v_6, v_r1, v_r0) + v_r2));
+    }
+    vx_cleanup();
+
+    return x;
+}
+
 #endif
+
+template<class CastOp>
+struct PyrDownInvoker : ParallelLoopBody
+{
+    PyrDownInvoker(const Mat& src, const Mat& dst, int borderType, int **tabR, int **tabM, int **tabL)
+    {
+        _src = &src;
+        _dst = &dst;
+        _borderType = borderType;
+        _tabR = tabR;
+        _tabM = tabM;
+        _tabL = tabL;
+    }
+
+    void operator()(const Range& range) const CV_OVERRIDE;
+
+    int **_tabR;
+    int **_tabM;
+    int **_tabL;
+    const Mat *_src;
+    const Mat *_dst;
+    int _borderType;
+};
 
 template<class CastOp> void
 pyrDown_( const Mat& _src, Mat& _dst, int borderType )
 {
     const int PD_SZ = 5;
-    typedef typename CastOp::type1 WT;
-    typedef typename CastOp::rtype T;
-
     CV_Assert( !_src.empty() );
     Size ssize = _src.size(), dsize = _dst.size();
     int cn = _src.channels();
-    int bufstep = (int)alignSize(dsize.width*cn, 16);
-    AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
-    WT* buf = alignPtr((WT*)_buf.data(), 16);
-    int tabL[CV_CN_MAX*(PD_SZ+2)], tabR[CV_CN_MAX*(PD_SZ+2)];
-    AutoBuffer<int> _tabM(dsize.width*cn);
-    int* tabM = _tabM.data();
-    WT* rows[PD_SZ];
-    CastOp castOp;
+
+    AutoBuffer<int> _tabM(dsize.width * cn), _tabL(cn * (PD_SZ + 2)),
+        _tabR(cn * (PD_SZ + 2));
+    int *tabM = _tabM.data(), *tabL = _tabL.data(), *tabR = _tabR.data();
 
     CV_Assert( ssize.width > 0 && ssize.height > 0 &&
                std::abs(dsize.width*2 - ssize.width) <= 2 &&
                std::abs(dsize.height*2 - ssize.height) <= 2 );
-    int sy0 = -PD_SZ/2, sy = sy0, width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
+    int width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
 
     for (int x = 0; x <= PD_SZ+1; x++)
     {
@@ -754,27 +886,51 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
         }
     }
 
+    for (int x = 0; x < dsize.width*cn; x++)
+        tabM[x] = (x/cn)*2*cn + x % cn;
+
+    int *tabLPtr = tabL;
+    int *tabRPtr = tabR;
+
+    cv::parallel_for_(Range(0,dsize.height), cv::PyrDownInvoker<CastOp>(_src, _dst, borderType, &tabRPtr, &tabM, &tabLPtr), cv::getNumThreads());
+}
+
+template<class CastOp>
+void PyrDownInvoker<CastOp>::operator()(const Range& range) const
+{
+    const int PD_SZ = 5;
+    typedef typename CastOp::type1 WT;
+    typedef typename CastOp::rtype T;
+    Size ssize = _src->size(), dsize = _dst->size();
+    int cn = _src->channels();
+    int bufstep = (int)alignSize(dsize.width*cn, 16);
+    AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
+    WT* buf = alignPtr((WT*)_buf.data(), 16);
+    WT* rows[PD_SZ];
+    CastOp castOp;
+
+    int sy0 = -PD_SZ/2, sy = range.start * 2 + sy0, width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);
+
     ssize.width *= cn;
     dsize.width *= cn;
     width0 *= cn;
 
-    for (int x = 0; x < dsize.width; x++)
-        tabM[x] = (x/cn)*2*cn + x % cn;
-
-    for (int y = 0; y < dsize.height; y++)
+    for (int y = range.start; y < range.end; y++)
     {
-        T* dst = _dst.ptr<T>(y);
+        T* dst = (T*)_dst->ptr<T>(y);
         WT *row0, *row1, *row2, *row3, *row4;
 
         // fill the ring buffer (horizontal convolution and decimation)
-        for( ; sy <= y*2 + 2; sy++ )
+        int sy_limit = y*2 + 2;
+        for( ; sy <= sy_limit; sy++ )
         {
             WT* row = buf + ((sy - sy0) % PD_SZ)*bufstep;
-            int _sy = borderInterpolate(sy, ssize.height, borderType);
-            const T* src = _src.ptr<T>(_sy);
+            int _sy = borderInterpolate(sy, ssize.height, _borderType);
+            const T* src = _src->ptr<T>(_sy);
 
             do {
                 int x = 0;
+                const int* tabL = *_tabL;
                 for( ; x < cn; x++ )
                 {
                     row[x] = src[tabL[x+cn*2]]*6 + (src[tabL[x+cn]] + src[tabL[x+cn*3]])*4 +
@@ -832,13 +988,14 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
                 {
                     for( ; x < width0; x++ )
                     {
-                        int sx = tabM[x];
+                        int sx = (*_tabM)[x];
                         row[x] = src[sx]*6 + (src[sx - cn] + src[sx + cn])*4 +
                             src[sx - cn*2] + src[sx + cn*2];
                     }
                 }
 
                 // tabR
+                const int* tabR = *_tabR;
                 for (int x_ = 0; x < dsize.width; x++, x_++)
                 {
                     row[x] = src[tabR[x_+cn*2]]*6 + (src[tabR[x_+cn]] + src[tabR[x_+cn*3]])*4 +
@@ -922,7 +1079,7 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
 
                 if (dsize.width > ssize.width*2)
                 {
-                    row[(_dst.cols-1) + x] = row[dx + cn];
+                    row[(_dst.cols-1) * cn + x] = row[dx + cn];
                 }
             }
 
@@ -942,13 +1099,26 @@ pyrUp_( const Mat& _src, Mat& _dst, int)
         row0 = rows[0]; row1 = rows[1]; row2 = rows[2];
         dsts[0] = dst0; dsts[1] = dst1;
 
-        x = PyrUpVecV<WT, T>(rows, dsts, dsize.width);
-        for( ; x < dsize.width; x++ )
+        if (dst0 != dst1)
         {
-            T t1 = castOp((row1[x] + row2[x])*4);
-            T t0 = castOp(row0[x] + row1[x]*6 + row2[x]);
-            dst1[x] = t1; dst0[x] = t0;
+            x = PyrUpVecV<WT, T>(rows, dsts, dsize.width);
+            for( ; x < dsize.width; x++ )
+            {
+                T t1 = castOp((row1[x] + row2[x])*4);
+                T t0 = castOp(row0[x] + row1[x]*6 + row2[x]);
+                dst1[x] = t1; dst0[x] = t0;
+            }
         }
+        else
+        {
+            x = PyrUpVecVOneRow<WT, T>(rows, dst0, dsize.width);
+            for( ; x < dsize.width; x++ )
+            {
+                T t0 = castOp(row0[x] + row1[x]*6 + row2[x]);
+                dst0[x] = t0;
+            }
+        }
+
     }
 
     if (dsize.height > ssize.height*2)
@@ -1000,8 +1170,8 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
             "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
             "-D T1=%s -D cn=%d -D kercn=%d -D fdepth=%d -D %s -D LOCAL_SIZE=%d",
             ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, cn)),
-            ocl::convertTypeStr(float_depth, depth, cn, cvt[0]),
-            ocl::convertTypeStr(depth, float_depth, cn, cvt[1]),
+            ocl::convertTypeStr(float_depth, depth, cn, cvt[0], sizeof(cvt[0])),
+            ocl::convertTypeStr(depth, float_depth, cn, cvt[1], sizeof(cvt[1])),
             doubleSupport ? " -D DOUBLE_SUPPORT" : "", ocl::typeToStr(depth),
             cn, kercn, float_depth, borderMap[borderType], local_size
     );
@@ -1037,36 +1207,31 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
     UMat dst = _dst.getUMat();
 
     int float_depth = depth == CV_64F ? CV_64F : CV_32F;
-    const int local_size = 16;
+    const int local_size = channels == 1 ? 16 : 8;
     char cvt[2][50];
     String buildOptions = format(
             "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
             "-D T1=%s -D cn=%d -D LOCAL_SIZE=%d",
             ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, channels)),
-            ocl::convertTypeStr(float_depth, depth, channels, cvt[0]),
-            ocl::convertTypeStr(depth, float_depth, channels, cvt[1]),
+            ocl::convertTypeStr(float_depth, depth, channels, cvt[0], sizeof(cvt[0])),
+            ocl::convertTypeStr(depth, float_depth, channels, cvt[1], sizeof(cvt[1])),
             doubleSupport ? " -D DOUBLE_SUPPORT" : "",
             ocl::typeToStr(depth), channels, local_size
     );
     size_t globalThreads[2] = { (size_t)dst.cols, (size_t)dst.rows };
     size_t localThreads[2] = { (size_t)local_size, (size_t)local_size };
     ocl::Kernel k;
-    if (ocl::Device::getDefault().isIntel() && channels == 1)
+    if (type == CV_8UC1 && src.cols % 2 == 0)
     {
-        if (type == CV_8UC1 && src.cols % 2 == 0)
-        {
-            buildOptions.clear();
-            k.create("pyrUp_cols2", ocl::imgproc::pyramid_up_oclsrc, buildOptions);
-            globalThreads[0] = dst.cols/4; globalThreads[1] = dst.rows/2;
-        }
-        else
-        {
-            k.create("pyrUp_unrolled", ocl::imgproc::pyr_up_oclsrc, buildOptions);
-            globalThreads[0] = dst.cols/2; globalThreads[1] = dst.rows/2;
-        }
+        buildOptions.clear();
+        k.create("pyrUp_cols2", ocl::imgproc::pyramid_up_oclsrc, buildOptions);
+        globalThreads[0] = dst.cols/4; globalThreads[1] = dst.rows/2;
     }
     else
-        k.create("pyrUp", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+    {
+        k.create("pyrUp_unrolled", ocl::imgproc::pyr_up_oclsrc, buildOptions);
+        globalThreads[0] = dst.cols/2; globalThreads[1] = dst.rows/2;
+    }
 
     if (k.empty())
         return false;

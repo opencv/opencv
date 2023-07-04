@@ -58,6 +58,7 @@ BmpDecoder::BmpDecoder()
     m_origin = ORIGIN_TL;
     m_bpp = 0;
     m_rle_code = BMP_RGB;
+    initMask();
 }
 
 
@@ -97,15 +98,42 @@ bool  BmpDecoder::readHeader()
         int  size = m_strm.getDWord();
         CV_Assert(size > 0); // overflow, 2Gb limit
 
+        initMask();
         if( size >= 36 )
         {
             m_width  = m_strm.getDWord();
             m_height = m_strm.getDWord();
             m_bpp    = m_strm.getDWord() >> 16;
-            m_rle_code = (BmpCompression)m_strm.getDWord();
+            int m_rle_code_ = m_strm.getDWord();
+            CV_Assert(m_rle_code_ >= 0 && m_rle_code_ <= BMP_BITFIELDS);
+            m_rle_code = (BmpCompression)m_rle_code_;
             m_strm.skip(12);
             int clrused = m_strm.getDWord();
-            m_strm.skip( size - 36 );
+
+            if( m_bpp == 32 && m_rle_code == BMP_BITFIELDS && size >= 56 )
+            {
+                m_strm.skip(4); //important colors
+                //0 is Red channel bit mask, 1 is Green channel bit mask, 2 is Blue channel bit mask, 3 is Alpha channel bit mask
+                for( int index_rgba = 0; index_rgba < 4; ++index_rgba )
+                {
+                    uint mask = m_strm.getDWord();
+                    m_rgba_mask[index_rgba] = mask;
+                    if(mask != 0)
+                    {
+                        int bit_count = 0;
+                        while(!(mask & 1))
+                        {
+                            mask >>= 1;
+                            ++bit_count;
+                        }
+                        m_rgba_bit_offset[index_rgba] = bit_count;
+                        m_rgba_scale_factor[index_rgba] = 255.0f / mask;
+                    }
+                }
+                m_strm.skip( size - 56 );
+            }
+            else
+                m_strm.skip( size - 36 );
 
             if( m_width > 0 && m_height != 0 &&
              (((m_bpp == 1 || m_bpp == 4 || m_bpp == 8 ||
@@ -178,7 +206,7 @@ bool  BmpDecoder::readHeader()
         throw;
     }
     // in 32 bit case alpha channel is used - so require CV_8UC4 type
-    m_type = iscolor ? (m_bpp == 32 ? CV_8UC4 : CV_8UC3 ) : CV_8UC1;
+    m_type = iscolor ? ((m_bpp == 32 && m_rle_code != BMP_RGB) ? CV_8UC4 : CV_8UC3 ) : CV_8UC1;
     m_origin = m_height > 0 ? ORIGIN_BL : ORIGIN_TL;
     m_height = std::abs(m_height);
 
@@ -476,16 +504,34 @@ decode_rle8_bad: ;
             break;
         /************************* 32 BPP ************************/
         case 32:
-            for( y = 0; y < m_height; y++, data += step )
             {
-                m_strm.getBytes( src, src_pitch );
+                bool has_bit_mask = (m_rgba_bit_offset[0] >= 0) && (m_rgba_bit_offset[1] >= 0) && (m_rgba_bit_offset[2] >= 0);
+                for( y = 0; y < m_height; y++, data += step )
+                {
+                    m_strm.getBytes( src, src_pitch );
 
-                if( !color )
-                    icvCvt_BGRA2Gray_8u_C4C1R( src, 0, data, 0, Size(m_width,1) );
-                else if( img.channels() == 3 )
-                    icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, Size(m_width, 1));
-                else if( img.channels() == 4 )
-                    memcpy(data, src, m_width * 4);
+                    if( !color )
+                    {
+                        if ( has_bit_mask )
+                            maskBGRAtoGray(data, src, m_width);
+                        else
+                            icvCvt_BGRA2Gray_8u_C4C1R( src, 0, data, 0, Size(m_width,1) );
+                    }
+                    else if( img.channels() == 3 )
+                    {
+                        if ( has_bit_mask )
+                            maskBGRA(data, src, m_width, false);
+                        else
+                            icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, Size(m_width, 1));
+                    }
+                    else if ( img.channels() == 4 )
+                    {
+                        if ( has_bit_mask )
+                            maskBGRA(data, src, m_width, true);
+                        else
+                            memcpy(data, src, m_width * 4);
+                    }
+                }
             }
             result = true;
             break;
@@ -501,7 +547,46 @@ decode_rle8_bad: ;
     return result;
 }
 
+void  BmpDecoder::initMask()
+{
+    memset(m_rgba_mask, 0, sizeof(m_rgba_mask));
+    memset(m_rgba_bit_offset, -1, sizeof(m_rgba_bit_offset));
+    for (size_t i = 0; i < 4; i++) {
+        m_rgba_scale_factor[i] = 1.0f;
+    }
+}
 
+void  BmpDecoder::maskBGRA(uchar* des, const uchar* src, int num, bool alpha_required)
+{
+    int dest_stride = alpha_required ? 4 : 3;
+    for( int i = 0; i < num; i++, des += dest_stride, src += 4 )
+    {
+        uint data = *((uint*)src);
+        des[0] = (uchar)(((m_rgba_mask[2] & data) >> m_rgba_bit_offset[2]) * m_rgba_scale_factor[2]);
+        des[1] = (uchar)(((m_rgba_mask[1] & data) >> m_rgba_bit_offset[1]) * m_rgba_scale_factor[1]);
+        des[2] = (uchar)(((m_rgba_mask[0] & data) >> m_rgba_bit_offset[0]) * m_rgba_scale_factor[0]);
+        if (alpha_required)
+        {
+            if (m_rgba_bit_offset[3] >= 0)
+                des[3] = (uchar)(((m_rgba_mask[3] & data) >> m_rgba_bit_offset[3]) * m_rgba_scale_factor[3]);
+            else
+                des[3] = 255;
+        }
+    }
+}
+
+void  BmpDecoder::maskBGRAtoGray(uchar* des, const uchar* src, int num)
+{
+    for( int i = 0; i < num; i++, des++, src += 4 )
+    {
+        uint data = *((uint*)src);
+        int red = (uchar)(((m_rgba_mask[0] & data) >> m_rgba_bit_offset[0]) * m_rgba_scale_factor[0]);
+        int green = (uchar)(((m_rgba_mask[1] & data) >> m_rgba_bit_offset[1]) * m_rgba_scale_factor[1]);
+        int blue = (uchar)(((m_rgba_mask[2] & data) >> m_rgba_bit_offset[2]) * m_rgba_scale_factor[2]);
+
+        *des = (uchar)(0.299f * red + 0.587f * green + 0.114f * blue);
+    }
+}
 //////////////////////////////////////////////////////////////////////////////////////////
 
 BmpEncoder::BmpEncoder()

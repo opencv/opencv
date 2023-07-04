@@ -125,11 +125,11 @@ MACRO(_PCH_GET_COMPILE_COMMAND out_command _input _output)
             STRING(REGEX REPLACE "^ +" "" pchsupport_compiler_cxx_arg1 ${CMAKE_CXX_COMPILER_ARG1})
 
             SET(${out_command}
-              ${CMAKE_CXX_COMPILER} ${pchsupport_compiler_cxx_arg1} ${_compile_FLAGS} -x c++-header -o ${_output} ${_input}
+              ${CMAKE_CXX_COMPILER} ${pchsupport_compiler_cxx_arg1} ${_compile_FLAGS} -x c++-header -o ${_output} -c ${_input}
               )
         ELSE(CMAKE_CXX_COMPILER_ARG1)
             SET(${out_command}
-              ${CMAKE_CXX_COMPILER}  ${_compile_FLAGS} -x c++-header -o ${_output} ${_input}
+              ${CMAKE_CXX_COMPILER}  ${_compile_FLAGS} -x c++-header -o ${_output} -c ${_input}
               )
         ENDIF(CMAKE_CXX_COMPILER_ARG1)
     ELSE()
@@ -331,7 +331,8 @@ ENDMACRO(ADD_PRECOMPILED_HEADER)
 MACRO(GET_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
   if(ENABLE_PRECOMPILED_HEADERS)
-    if(CMAKE_GENERATOR MATCHES "^Visual.*$")
+    if(CMAKE_GENERATOR MATCHES "^Visual.*$"
+       AND (CMAKE_VERSION VERSION_LESS "3.16" OR OPENCV_SKIP_CMAKE_BUILTIN_PCH)) # with 3.16+ we use target_precompile_headers
         set(${_targetName}_pch ${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch.cpp)
     endif()
   endif()
@@ -406,7 +407,9 @@ ENDMACRO(ADD_NATIVE_PRECOMPILED_HEADER)
 
 macro(ocv_add_precompiled_header_to_target the_target pch_header)
   if(PCHSupport_FOUND AND ENABLE_PRECOMPILED_HEADERS AND EXISTS "${pch_header}")
-    if(CMAKE_GENERATOR MATCHES "^Visual" OR CMAKE_GENERATOR MATCHES Xcode)
+    if(NOT CMAKE_VERSION VERSION_LESS "3.16" AND NOT OPENCV_SKIP_CMAKE_BUILTIN_PCH)
+      target_precompile_headers(${the_target} PRIVATE ${pch_header})
+    elseif(CMAKE_GENERATOR MATCHES "^Visual" OR CMAKE_GENERATOR MATCHES Xcode)
       add_native_precompiled_header(${the_target} ${pch_header})
     elseif(CV_GCC AND CMAKE_GENERATOR MATCHES "Makefiles|Ninja")
       add_precompiled_header(${the_target} ${pch_header})

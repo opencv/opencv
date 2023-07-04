@@ -18,6 +18,7 @@
 #include "opencv2/stitching/warpers.hpp"
 
 #ifdef HAVE_OPENCV_XFEATURES2D
+#include "opencv2/xfeatures2d.hpp"
 #include "opencv2/xfeatures2d/nonfree.hpp"
 #endif
 
@@ -29,11 +30,11 @@ using namespace std;
 using namespace cv;
 using namespace cv::detail;
 
-static void printUsage()
+static void printUsage(char** argv)
 {
     cout <<
         "Rotation model images stitcher.\n\n"
-        "stitching_detailed img1 img2 [...imgN] [flags]\n\n"
+         << argv[0] << " img1 img2 [...imgN] [flags]\n\n"
         "Flags:\n"
         "  --preview\n"
         "      Run stitching in the preview mode. Works faster than usual mode,\n"
@@ -116,8 +117,10 @@ double compose_megapix = -1;
 float conf_thresh = 1.f;
 #ifdef HAVE_OPENCV_XFEATURES2D
 string features_type = "surf";
+float match_conf = 0.65f;
 #else
 string features_type = "orb";
+float match_conf = 0.3f;
 #endif
 string matcher_type = "homography";
 string estimator_type = "homography";
@@ -132,7 +135,6 @@ int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
 int expos_comp_nr_feeds = 1;
 int expos_comp_nr_filtering = 2;
 int expos_comp_block_size = 32;
-float match_conf = 0.3f;
 string seam_find_type = "gc_color";
 int blend_type = Blender::MULTI_BAND;
 int timelapse_type = Timelapser::AS_IS;
@@ -146,14 +148,14 @@ static int parseCmdArgs(int argc, char** argv)
 {
     if (argc == 1)
     {
-        printUsage();
+        printUsage(argv);
         return -1;
     }
     for (int i = 1; i < argc; ++i)
     {
         if (string(argv[i]) == "--help" || string(argv[i]) == "/?")
         {
-            printUsage();
+            printUsage(argv);
             return -1;
         }
         else if (string(argv[i]) == "--preview")
@@ -196,7 +198,7 @@ static int parseCmdArgs(int argc, char** argv)
         else if (string(argv[i]) == "--features")
         {
             features_type = argv[i + 1];
-            if (features_type == "orb")
+            if (string(features_type) == "orb")
                 match_conf = 0.3f;
             i++;
         }
@@ -429,10 +431,11 @@ int main(int argc, char* argv[])
     {
         finder = xfeatures2d::SURF::create();
     }
-    else if (features_type == "sift") {
-        finder = xfeatures2d::SIFT::create();
-    }
 #endif
+    else if (features_type == "sift")
+    {
+        finder = SIFT::create();
+    }
     else
     {
         cout << "Unknown 2D features type: '" << features_type << "'.\n";

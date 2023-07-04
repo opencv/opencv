@@ -538,6 +538,16 @@ _AccTp normInf(const _Tp* a, const _Tp* b, int n)
  */
 CV_EXPORTS_W float cubeRoot(float val);
 
+/** @overload
+
+cubeRoot with argument of `double` type calls `std::cbrt(double)`
+*/
+static inline
+double cubeRoot(double val)
+{
+    return std::cbrt(val);
+}
+
 /** @brief Calculates the angle of a 2D vector in degrees.
 
  The function fastAtan2 calculates the full-range angle of an input 2D vector. The angle is measured

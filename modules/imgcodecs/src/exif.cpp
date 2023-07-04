@@ -62,7 +62,7 @@ ExifEntry_t::ExifEntry_t() :
 /**
  * @brief ExifReader constructor
  */
-ExifReader::ExifReader(std::istream& stream) : m_stream(stream), m_format(NONE)
+ExifReader::ExifReader() : m_format(NONE)
 {
 }
 
@@ -71,25 +71,6 @@ ExifReader::ExifReader(std::istream& stream) : m_stream(stream), m_format(NONE)
  */
 ExifReader::~ExifReader()
 {
-}
-
-/**
- * @brief Parsing the file and prepare (internally) exif directory structure
- * @return  true if parsing was successful and exif information exists in JpegReader object
- *          false in case of unsuccessful parsing
- */
-bool ExifReader::parse()
-{
-    try {
-        m_exif = getExif();
-        if( !m_exif.empty() )
-        {
-            return true;
-        }
-        return false;
-    } catch (ExifParsingError&) {
-        return false;
-    }
 }
 
 
@@ -101,10 +82,10 @@ bool ExifReader::parse()
  *  @return ExifEntru_t structure. Caller has to know what tag it calls in order to extract proper field from the structure ExifEntry_t
  *
  */
-ExifEntry_t ExifReader::getTag(const ExifTagName tag)
+ExifEntry_t ExifReader::getTag(const ExifTagName tag) const
 {
     ExifEntry_t entry;
-    std::map<int, ExifEntry_t>::iterator it = m_exif.find(tag);
+    std::map<int, ExifEntry_t>::const_iterator it = m_exif.find(tag);
 
     if( it != m_exif.end() )
     {
@@ -115,100 +96,37 @@ ExifEntry_t ExifReader::getTag(const ExifTagName tag)
 
 
 /**
- * @brief Get exif directory structure contained in file (if any)
- *          This is internal function and is not exposed to client
+ * @brief Parsing the exif data buffer and prepare (internal) exif directory
  *
- *  @return Map where key is tag number and value is ExifEntry_t structure
- */
-std::map<int, ExifEntry_t > ExifReader::getExif()
-{
-    const std::streamsize markerSize = 2;
-    const std::streamsize offsetToTiffHeader = 6; //bytes from Exif size field to the first TIFF header
-    unsigned char appMarker[markerSize];
-    m_exif.erase( m_exif.begin(), m_exif.end() );
-
-    std::streamsize count;
-
-    bool exifFound = false, stopSearch = false;
-    while( ( !m_stream.eof() ) && !exifFound && !stopSearch )
-    {
-        m_stream.read( reinterpret_cast<char*>(appMarker), markerSize );
-        count = m_stream.gcount();
-        if( count < markerSize )
-        {
-            break;
-        }
-        unsigned char marker = appMarker[1];
-        size_t bytesToSkip;
-        size_t exifSize;
-        switch( marker )
-        {
-            //For all the markers just skip bytes in file pointed by followed two bytes (field size)
-            case SOF0: case SOF2: case DHT: case DQT: case DRI: case SOS:
-            case RST0: case RST1: case RST2: case RST3: case RST4: case RST5: case RST6: case RST7:
-            case APP0: case APP2: case APP3: case APP4: case APP5: case APP6: case APP7: case APP8:
-            case APP9: case APP10: case APP11: case APP12: case APP13: case APP14: case APP15:
-            case COM:
-                bytesToSkip = getFieldSize();
-                if (bytesToSkip < markerSize) {
-                    throw ExifParsingError();
-                }
-                m_stream.seekg( static_cast<long>( bytesToSkip - markerSize ), m_stream.cur );
-                if ( m_stream.fail() ) {
-                    throw ExifParsingError();
-                }
-                break;
-
-            //SOI and EOI don't have the size field after the marker
-            case SOI: case EOI:
-                break;
-
-            case APP1: //actual Exif Marker
-                exifSize = getFieldSize();
-                if (exifSize <= offsetToTiffHeader) {
-                    throw ExifParsingError();
-                }
-                m_data.resize( exifSize - offsetToTiffHeader );
-                m_stream.seekg( static_cast<long>( offsetToTiffHeader ), m_stream.cur );
-                if ( m_stream.fail() ) {
-                    throw ExifParsingError();
-                }
-                m_stream.read( reinterpret_cast<char*>(&m_data[0]), exifSize - offsetToTiffHeader );
-                exifFound = true;
-                break;
-
-            default: //No other markers are expected according to standard. May be a signal of error
-                stopSearch = true;
-                break;
-        }
-    }
-
-    if( !exifFound )
-    {
-        return m_exif;
-    }
-
-    parseExif();
-
-    return m_exif;
-}
-
-/**
- * @brief Get the size of exif field (required to properly ready whole exif from the file)
- *          This is internal function and is not exposed to client
+ * @param [in] data The data buffer to read EXIF data starting with endianness
+ * @param [in] size The size of the data buffer
  *
- *  @return size of exif field in the file
+ * @return  true if parsing was successful
+ *          false in case of unsuccessful parsing
  */
-size_t ExifReader::getFieldSize ()
+bool ExifReader::parseExif(unsigned char* data, const size_t size)
 {
-    unsigned char fieldSize[2];
-    m_stream.read( reinterpret_cast<char*>(fieldSize), 2 );
-    std::streamsize count = m_stream.gcount();
-    if (count < 2)
+    // Populate m_data, then call parseExif() (private)
+    if( data && size > 0 )
     {
-        return 0;
+        m_data.assign(data, data + size);
     }
-    return ( fieldSize[0] << 8 ) + fieldSize[1];
+    else
+    {
+        return false;
+    }
+
+    try {
+        parseExif();
+        if( !m_exif.empty() )
+        {
+            return true;
+        }
+        return false;
+    }
+    catch( ExifParsingError& ) {
+        return false;
+    }
 }
 
 /**

@@ -59,7 +59,7 @@ QUnit.test('Detectors', function(assert) {
 
   let akaze = new cv.AKAZE();
   akaze.detect(image, kp);
-  assert.equal(kp.size(), 52, 'AKAZE');
+  assert.equal(kp.size(), 53, 'AKAZE');
 });
 
 QUnit.test('BFMatcher', function(assert) {

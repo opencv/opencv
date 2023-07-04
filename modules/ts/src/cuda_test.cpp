@@ -91,7 +91,13 @@ namespace cvtest
 
     GpuMat createMat(Size size, int type, bool useRoi)
     {
-        Size size0 = size;
+        Size size0; Point ofs;
+        return createMat(size, type, size0, ofs, useRoi);
+    }
+
+    GpuMat createMat(Size size, int type, Size& size0, Point& ofs, bool useRoi)
+    {
+        size0 = size;
 
         if (useRoi)
         {
@@ -100,9 +106,10 @@ namespace cvtest
         }
 
         GpuMat d_m(size0, type);
-
-        if (size0 != size)
-            d_m = d_m(Rect((size0.width - size.width) / 2, (size0.height - size.height) / 2, size.width, size.height));
+        if (size0 != size) {
+            ofs = Point((size0.width - size.width) / 2, (size0.height - size.height) / 2);
+            d_m = d_m(Rect(ofs, size));
+        }
 
         return d_m;
     }
@@ -515,13 +522,35 @@ namespace cvtest
 
         int validCount = 0;
 
-        for (size_t i = 0; i < gold.size(); ++i)
+        if (actual.size() == gold.size())
         {
-            const cv::KeyPoint& p1 = gold[i];
-            const cv::KeyPoint& p2 = actual[i];
+            for (size_t i = 0; i < gold.size(); ++i)
+            {
+                const cv::KeyPoint& p1 = gold[i];
+                const cv::KeyPoint& p2 = actual[i];
 
-            if (keyPointsEquals(p1, p2))
-                ++validCount;
+                if (keyPointsEquals(p1, p2))
+                    ++validCount;
+            }
+        }
+        else
+        {
+            std::vector<cv::KeyPoint>& shorter = gold;
+            std::vector<cv::KeyPoint>& longer = actual;
+            if (actual.size() < gold.size())
+            {
+                shorter = actual;
+                longer = gold;
+            }
+            for (size_t i = 0; i < shorter.size(); ++i)
+            {
+                const cv::KeyPoint& p1 = shorter[i];
+                const cv::KeyPoint& p2 = longer[i];
+                const cv::KeyPoint& p3 = longer[i+1];
+
+                if (keyPointsEquals(p1, p2) || keyPointsEquals(p1, p3))
+                    ++validCount;
+            }
         }
 
         return validCount;

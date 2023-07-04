@@ -82,9 +82,6 @@
 #    error "Insufficient Cuda Runtime library version, please update it."
 #  endif
 
-#  if defined(CUDA_ARCH_BIN_OR_PTX_10)
-#    error "OpenCV CUDA module doesn't support NVIDIA compute capability 1.0"
-#  endif
 #endif
 
 //! @cond IGNORED

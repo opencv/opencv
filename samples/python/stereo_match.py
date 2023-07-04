@@ -69,8 +69,8 @@ def main():
     out_points = points[mask]
     out_colors = colors[mask]
     out_fn = 'out.ply'
-    write_ply('out.ply', out_points, out_colors)
-    print('%s saved' % 'out.ply')
+    write_ply(out_fn, out_points, out_colors)
+    print('%s saved' % out_fn)
 
     cv.imshow('left', imgL)
     cv.imshow('disparity', (disp-min_disp)/num_disp)

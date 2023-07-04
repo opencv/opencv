@@ -384,7 +384,7 @@ static bool ocl_sepFilter3x3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
     char build_opts[1024];
-    sprintf(build_opts, "-D %s %s%s", borderMap[borderType],
+    snprintf(build_opts, sizeof(build_opts), "-D %s %s%s", borderMap[borderType],
             ocl::kernelToStr(kernelX, CV_32F, "KERNEL_MATRIX_X").c_str(),
             ocl::kernelToStr(kernelY, CV_32F, "KERNEL_MATRIX_Y").c_str());
 
@@ -415,6 +415,8 @@ void cv::Sobel( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                 int ksize, double scale, double delta, int borderType )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(!_src.empty());
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
@@ -467,6 +469,8 @@ void cv::Scharr( InputArray _src, OutputArray _dst, int ddepth, int dx, int dy,
                  double scale, double delta, int borderType )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(!_src.empty());
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)
@@ -574,7 +578,7 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
         size_t lt2[2] = { tileSizeX, tileSizeY};
         size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1] };
 
-        char cvt[2][40];
+        char cvt[2][50];
         const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
                                            "BORDER_REFLECT_101" };
 
@@ -586,8 +590,8 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
                                  (int)lt2[0], (int)lt2[1], kernelX.cols / 2,
                                  ocl::kernelToStr(kernelX, wdepth, "KERNEL_MATRIX_X").c_str(),
                                  ocl::kernelToStr(kernelY, wdepth, "KERNEL_MATRIX_Y").c_str(),
-                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
-                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
+                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])),
+                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])),
                                  borderMap[borderType],
                                  ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), ocl::typeToStr(wdepth),
                                  ocl::typeToStr(CV_MAKETYPE(sdepth, cn)),
@@ -620,7 +624,7 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
     if (!doubleSupport && wdepth == CV_64F)
         return false;
 
-    char cvt[2][40];
+    char cvt[2][50];
     ocl::Kernel k("sumConvert", ocl::imgproc::laplacian5_oclsrc,
                   format("-D ONLY_SUM_CONVERT "
                          "-D srcT=%s -D WT=%s -D dstT=%s -D coeffT=%s -D wdepth=%d "
@@ -629,8 +633,8 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
                          ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)),
                          ocl::typeToStr(CV_MAKE_TYPE(ddepth, kercn)),
                          ocl::typeToStr(wdepth), wdepth,
-                         ocl::convertTypeStr(depth, wdepth, kercn, cvt[0]),
-                         ocl::convertTypeStr(wdepth, ddepth, kercn, cvt[1]),
+                         ocl::convertTypeStr(depth, wdepth, kercn, cvt[0], sizeof(cvt[0])),
+                         ocl::convertTypeStr(wdepth, ddepth, kercn, cvt[1], sizeof(cvt[1])),
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -680,7 +684,7 @@ static bool ocl_Laplacian3_8UC1(InputArray _src, OutputArray _dst, int ddepth,
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
     char build_opts[1024];
-    sprintf(build_opts, "-D %s %s", borderMap[borderType],
+    snprintf(build_opts, sizeof(build_opts), "-D %s %s", borderMap[borderType],
             ocl::kernelToStr(kernel, CV_32F, "KERNEL_MATRIX").c_str());
 
     ocl::Kernel k("laplacian3_8UC1_cols16_rows2", cv::ocl::imgproc::laplacian3_oclsrc, build_opts);
@@ -784,6 +788,8 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
                     double scale, double delta, int borderType )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(!_src.empty());
 
     int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype);
     if (ddepth < 0)

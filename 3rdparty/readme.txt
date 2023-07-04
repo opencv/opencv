@@ -20,6 +20,7 @@ libjpeg-turbo         libjpeg-turbo is covered by three compatible BSD-style ope
                       WITH_JPEG CMake option must be ON to add libjpeg or libjpeg-turbo support to imgcodecs.
                       BUILD_JPEG=ON selects libjpeg-turbo by default (since OpenCV 3.4.2).
                       Enable BUILD_JPEG_TURBO_DISABLE=ON to force using of libjpeg (this option is removed in OpenCV 4.0).
+                      SIMD instructions are enabled by default. Use ENABLE_LIBJPEG_TURBO_SIMD to control SIMD instructions.
 ------------------------------------------------------------------------------------
 libpng                Portable Network Graphics library.
                       The license and copyright notes can be found in libpng/LICENSE.
@@ -27,17 +28,24 @@ libpng                Portable Network Graphics library.
                       for details and links to the source code
 
                       WITH_PNG CMake option must be ON to add libpng support to imgcodecs.
+                      
+libspng               Portable Network Graphics library.
+                      The license and copyright notes can be found in libspng/LICENSE.
+                      See libspng home page https://www.libspng.org
+                      for details and links to the source code
+                      
+                      WITH_SPNG CMake option must be ON to add libspng support to imgcodecs
 ------------------------------------------------------------------------------------
 libtiff               Tag Image File Format (TIFF) Software
                       Copyright (c) 1988-1997 Sam Leffler
                       Copyright (c) 1991-1997 Silicon Graphics, Inc.
-                      See libtiff home page http://www.remotesensing.org/libtiff/
+                      See libtiff home page http://www.libtiff.org/
                       for details and links to the source code
 
                       WITH_TIFF CMake option must be ON to add libtiff & zlib support to imgcodecs.
 ------------------------------------------------------------------------------------
 zlib                  General purpose LZ77 compression library
-                      Copyright (C) 1995-2012 Jean-loup Gailly and Mark Adler.
+                      Copyright (C) 1995-2022 Jean-loup Gailly and Mark Adler.
                       See zlib home page http://www.zlib.net
                       for details and links to the source code
 ------------------------------------------------------------------------------------
@@ -51,7 +59,9 @@ jasper                JasPer is a collection of software
                       Copyright (c) 1999-2000 The University of British Columbia
                       Copyright (c) 2001-2003 Michael David Adams
 
-                      The JasPer license can be found in libjasper.
+                      See JasPer official GitHub repository
+                      https://github.com/jasper-software/jasper.git
+                      for details and links to source code
 ------------------------------------------------------------------------------------
 openexr               OpenEXR is a high dynamic-range (HDR) image file format developed
                       by Industrial Light & Magic for use in computer imaging applications.

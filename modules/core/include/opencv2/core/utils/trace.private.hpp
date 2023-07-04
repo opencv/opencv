@@ -9,6 +9,8 @@
 
 #include <opencv2/core/utils/logger.hpp>
 
+#include <opencv2/core/utils/tls.hpp>
+
 #include "trace.hpp"
 
 //! @cond IGNORED
@@ -61,7 +63,7 @@ class TraceMessage;
 class TraceStorage {
 public:
     TraceStorage() {}
-    virtual ~TraceStorage() {};
+    virtual ~TraceStorage() {}
 
     virtual bool put(const TraceMessage& msg) const = 0;
 };
@@ -332,7 +334,7 @@ public:
     Mutex mutexCreate;
     Mutex mutexCount;
 
-    TLSData<TraceManagerThreadLocal> tls;
+    TLSDataAccumulator<TraceManagerThreadLocal> tls;
 
     cv::Ptr<TraceStorage> trace_storage;
 private:

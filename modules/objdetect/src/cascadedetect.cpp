@@ -969,10 +969,10 @@ int CascadeClassifierImpl::runAt( Ptr<FeatureEvaluator>& evaluator, Point pt, in
 {
     CV_INSTRUMENT_REGION();
 
-    assert( !oldCascade &&
-           (data.featureType == FeatureEvaluator::HAAR ||
-            data.featureType == FeatureEvaluator::LBP ||
-            data.featureType == FeatureEvaluator::HOG) );
+    CV_Assert( !oldCascade &&
+               (data.featureType == FeatureEvaluator::HAAR ||
+                data.featureType == FeatureEvaluator::LBP  ||
+                data.featureType == FeatureEvaluator::HOG) );
 
     if( !evaluator->setWindow(pt, scaleIdx) )
         return -1;

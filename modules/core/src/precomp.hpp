@@ -43,6 +43,10 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
+#ifdef BUILD_PLUGIN
+#include "opencv2/core/utility.hpp"
+#else  // BUILD_PLUGIN
+
 #include "opencv2/opencv_modules.hpp"
 #include "cvconfig.h"
 
@@ -58,7 +62,6 @@
 #include "opencv2/core/ocl.hpp"
 #endif
 
-#include <assert.h>
 #include <ctype.h>
 #include <float.h>
 #include <limits.h>
@@ -105,12 +108,36 @@ extern const uchar g_Saturate8u[];
 #define CV_MIN_8U(a,b)       ((a) - CV_FAST_CAST_8U((a) - (b)))
 #define CV_MAX_8U(a,b)       ((a) + CV_FAST_CAST_8U((b) - (a)))
 
+template<typename T1, typename T2=T1, typename T3=T1> struct OpNop
+{
+    typedef T1 type1;
+    typedef T2 type2;
+    typedef T3 rtype;
+    T3 operator ()(const T1 a) const { return saturate_cast<T3>(a); }
+};
+
+template<typename T1, typename T2=T1, typename T3=T1> struct OpSqr
+{
+    typedef T1 type1;
+    typedef T2 type2;
+    typedef T3 rtype;
+    T3 operator ()(const T1 a) const { return saturate_cast<T3>(a)*saturate_cast<T3>(a); }
+};
+
 template<typename T1, typename T2=T1, typename T3=T1> struct OpAdd
 {
     typedef T1 type1;
     typedef T2 type2;
     typedef T3 rtype;
     T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a + b); }
+};
+
+template<typename T1, typename T2=T1, typename T3=T1> struct OpAddSqr
+{
+    typedef T1 type1;
+    typedef T2 type2;
+    typedef T3 rtype;
+    T3 operator ()(const T1 a, const T2 b) const { return saturate_cast<T3>(a + saturate_cast<T3>(b)*saturate_cast<T3>(b)); }
 };
 
 template<typename T1, typename T2=T1, typename T3=T1> struct OpSub
@@ -322,7 +349,7 @@ struct CoreTLSData
 {
     CoreTLSData() :
 //#ifdef HAVE_OPENCL
-        device(0), useOpenCL(-1),
+        oclExecutionContextInitialized(false), useOpenCL(-1),
 //#endif
         useIPP(-1),
         useIPP_NE(-1)
@@ -333,8 +360,8 @@ struct CoreTLSData
 
     RNG rng;
 //#ifdef HAVE_OPENCL
-    int device; // device index of an array of devices in a context, see also Device::getDefault
-    ocl::Queue oclQueue; // the queue used for running a kernel, see also getQueue, Kernel::run
+    ocl::OpenCLExecutionContext oclExecutionContext;
+    bool oclExecutionContextInitialized;
     int useOpenCL; // 1 - use, 0 - do not use, -1 - auto/not initialized
 //#endif
     int useIPP;    // 1 - use, 0 - do not use, -1 - auto/not initialized
@@ -344,7 +371,7 @@ struct CoreTLSData
 #endif
 };
 
-TLSData<CoreTLSData>& getCoreTlsData();
+CoreTLSData& getCoreTlsData();
 
 #if defined(BUILD_SHARED_LIBS)
 #if defined _WIN32 || defined WINCE
@@ -362,24 +389,25 @@ extern CV_EXPORTS
 bool __termination;  // skip some cleanups, because process is terminating
                      // (for example, if ExitProcess() was already called)
 
+CV_EXPORTS
 cv::Mutex& getInitializationMutex();
 
-// TODO Memory barriers?
+/// @brief Returns timestamp in nanoseconds since program launch
+int64 getTimestampNS();
+
+
 #define CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, RET_VALUE) \
-    static TYPE* volatile instance = NULL; \
-    if (instance == NULL) \
-    { \
-        cv::AutoLock lock(cv::getInitializationMutex()); \
-        if (instance == NULL) \
-            instance = INITIALIZER; \
-    } \
+    static TYPE* const instance = INITIALIZER; \
     return RET_VALUE;
 
 #define CV_SINGLETON_LAZY_INIT(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, instance)
 #define CV_SINGLETON_LAZY_INIT_REF(TYPE, INITIALIZER) CV_SINGLETON_LAZY_INIT_(TYPE, INITIALIZER, *instance)
 
+CV_EXPORTS void releaseTlsStorageThread();
+
 int cv_snprintf(char* buf, int len, const char* fmt, ...);
 int cv_vsnprintf(char* buf, int len, const char* fmt, va_list args);
 }
 
-#endif /*_CXCORE_INTERNAL_H_*/
+#endif  // BUILD_PLUGIN
+#endif  // __OPENCV_PRECOMP_H__

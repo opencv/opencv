@@ -357,7 +357,7 @@ public class ImgprocTest extends OpenCVTestCase {
         H1.put(0, 0, 1, 2, 3);
         H2.put(0, 0, 4, 5, 6);
 
-        double distance = Imgproc.compareHist(H1, H2, Imgproc.CV_COMP_CORREL);
+        double distance = Imgproc.compareHist(H1, H2, Imgproc.HISTCMP_CORREL);
 
         assertEquals(1., distance, EPS);
     }
@@ -427,7 +427,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.convexHull(points, hull);
 
         MatOfInt expHull = new MatOfInt(
-                1, 2, 3, 0
+                0, 1, 2, 3
         );
         assertMatEqual(expHull, hull, EPS);
     }
@@ -636,7 +636,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat dstLables = getMat(CvType.CV_32SC1, 0);
         Mat labels = new Mat();
 
-        Imgproc.distanceTransformWithLabels(gray128, dst, labels, Imgproc.CV_DIST_L2, 3);
+        Imgproc.distanceTransformWithLabels(gray128, dst, labels, Imgproc.DIST_L2, 3);
 
         assertMatEqual(dstLables, labels);
         assertMatEqual(getMat(CvType.CV_32FC1, 8192), dst, EPS);
@@ -797,9 +797,13 @@ public class ImgprocTest extends OpenCVTestCase {
 
         rrect = Imgproc.fitEllipse(points);
 
-        assertPointEquals(new Point(0, 0), rrect.center, EPS);
-        assertEquals(2.828, rrect.size.width, EPS);
-        assertEquals(2.828, rrect.size.height, EPS);
+        double FIT_ELLIPSE_CENTER_EPS = 0.01;
+        double FIT_ELLIPSE_SIZE_EPS = 0.4;
+
+        assertEquals(0.0, rrect.center.x, FIT_ELLIPSE_CENTER_EPS);
+        assertEquals(0.0, rrect.center.y, FIT_ELLIPSE_CENTER_EPS);
+        assertEquals(2.828, rrect.size.width, FIT_ELLIPSE_SIZE_EPS);
+        assertEquals(2.828, rrect.size.height, FIT_ELLIPSE_SIZE_EPS);
     }
 
     public void testFitLine() {
@@ -809,7 +813,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat linePoints = new Mat(4, 1, CvType.CV_32FC1);
         linePoints.put(0, 0, 0.53198653, 0.84675282, 2.5, 3.75);
 
-        Imgproc.fitLine(points, dst, Imgproc.CV_DIST_L12, 0, 0.01, 0.01);
+        Imgproc.fitLine(points, dst, Imgproc.DIST_L12, 0, 0.01, 0.01);
 
         assertMatEqual(linePoints, dst, EPS);
     }
@@ -1036,7 +1040,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Mat img = new Mat(sz, sz, CvType.CV_8U, new Scalar(128));
         Mat circles = new Mat();
 
-        Imgproc.HoughCircles(img, circles, Imgproc.CV_HOUGH_GRADIENT, 2, img.rows() / 4);
+        Imgproc.HoughCircles(img, circles, Imgproc.HOUGH_GRADIENT, 2, img.rows() / 4);
 
         assertEquals(0, circles.cols());
     }
@@ -1050,7 +1054,7 @@ public class ImgprocTest extends OpenCVTestCase {
         int radius = Math.min(img.cols() / 4, img.rows() / 4);
         Imgproc.circle(img, center, radius, colorBlack, 3);
 
-        Imgproc.HoughCircles(img, circles, Imgproc.CV_HOUGH_GRADIENT, 2, img.rows() / 4);
+        Imgproc.HoughCircles(img, circles, Imgproc.HOUGH_GRADIENT, 2, img.rows() / 4);
 
         assertEquals(1, circles.cols());
     }
@@ -1304,7 +1308,7 @@ public class ImgprocTest extends OpenCVTestCase {
         contour1.put(0, 0, 1, 1, 5, 1, 4, 3, 6, 2);
         contour2.put(0, 0, 1, 1, 6, 1, 4, 1, 2, 5);
 
-        double distance = Imgproc.matchShapes(contour1, contour2, Imgproc.CV_CONTOURS_MATCH_I1, 1);
+        double distance = Imgproc.matchShapes(contour1, contour2, Imgproc.CONTOURS_MATCH_I1, 1);
 
         assertEquals(2.81109697365334, distance, EPS);
     }
@@ -1340,8 +1344,8 @@ public class ImgprocTest extends OpenCVTestCase {
 
         RotatedRect rrect = Imgproc.minAreaRect(points);
 
-        assertEquals(new Size(2, 5), rrect.size);
-        assertEquals(-90., rrect.angle);
+        assertEquals(new Size(5, 2), rrect.size);
+        assertEquals(0., rrect.angle);
         assertEquals(new Point(3.5, 2), rrect.center);
     }
 

@@ -98,7 +98,7 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv.imread('simple.jpg',0)
+img = cv.imread('blox.jpg', cv.IMREAD_GRAYSCALE) # `<opencv_root>/samples/data/blox.jpg`
 
 # Initiate FAST object with default values
 fast = cv.FastFeatureDetector_create()
@@ -113,17 +113,17 @@ print( "nonmaxSuppression:{}".format(fast.getNonmaxSuppression()) )
 print( "neighborhood: {}".format(fast.getType()) )
 print( "Total Keypoints with nonmaxSuppression: {}".format(len(kp)) )
 
-cv.imwrite('fast_true.png',img2)
+cv.imwrite('fast_true.png', img2)
 
 # Disable nonmaxSuppression
 fast.setNonmaxSuppression(0)
-kp = fast.detect(img,None)
+kp = fast.detect(img, None)
 
 print( "Total Keypoints without nonmaxSuppression: {}".format(len(kp)) )
 
 img3 = cv.drawKeypoints(img, kp, None, color=(255,0,0))
 
-cv.imwrite('fast_false.png',img3)
+cv.imwrite('fast_false.png', img3)
 @endcode
 See the results. First image shows FAST with nonmaxSuppression and second one without
 nonmaxSuppression:
@@ -133,7 +133,7 @@ nonmaxSuppression:
 Additional Resources
 --------------------
 
--#  Edward Rosten and Tom Drummond, “Machine learning for high speed corner detection” in 9th
+-#  Edward Rosten and Tom Drummond, "Machine learning for high speed corner detection" in 9th
     European Conference on Computer Vision, vol. 1, 2006, pp. 430–443.
 2.  Edward Rosten, Reid Porter, and Tom Drummond, "Faster and better: a machine learning approach to
     corner detection" in IEEE Trans. Pattern Analysis and Machine Intelligence, 2010, vol 32, pp.

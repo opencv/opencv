@@ -11,7 +11,8 @@
 
 namespace
 {
-#define CORE_CPU [] () { return cv::compile_args(cv::gapi::core::cpu::kernels()); }
+#define CORE_CPU [] () { return cv::compile_args(cv::gapi::use_only{cv::gapi::core::cpu::kernels()}); }
+    const std::vector <cv::Size> in_sizes{ cv::Size(1280, 720), cv::Size(128, 128) };
 }  // anonymous namespace
 
 namespace opencv_test
@@ -19,53 +20,45 @@ namespace opencv_test
 
 // FIXME: CPU test runs are disabled since Fluid is an exclusive plugin now!
 INSTANTIATE_TEST_CASE_P(MathOperatorTestCPU, MathOperatorMatMatTest,
-                    Combine(Values(CV_8UC1, CV_16SC1, CV_32FC1),
-                            Values(cv::Size(1280, 720),
-                                   cv::Size(640, 480),
-                                   cv::Size(128, 128)),
-                            Values(-1, CV_8U, CV_32F),
-                            Values(CORE_CPU),
-                            Values(AbsExact().to_compare_obj()),
-                            Values( opPlusM, opMinusM, opDivM,
-                                    opGreater, opLess, opGreaterEq, opLessEq, opEq, opNotEq)));
+                        Combine(Values(CV_8UC1, CV_16SC1, CV_32FC1),
+                                ValuesIn(in_sizes),
+                                Values(-1),
+                                Values(CORE_CPU),
+                                Values(AbsExact().to_compare_obj()),
+                                Values( ADD, SUB, DIV,
+                                    GT, LT, GE, LE, EQ, NE)));
 
 INSTANTIATE_TEST_CASE_P(MathOperatorTestCPU, MathOperatorMatScalarTest,
                         Combine(Values(CV_8UC1, CV_16SC1, CV_32FC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(640, 480),
-                                       cv::Size(128, 128)),
-                                Values(-1, CV_8U, CV_32F),
+                                ValuesIn(in_sizes),
+                                Values(-1),
                                 Values(CORE_CPU),
                                 Values(AbsExact().to_compare_obj()),
-                                Values( opPlus, opPlusR, opMinus, opMinusR, opMul, opMulR,  // FIXIT avoid division by values near zero: opDiv, opDivR,
-                                        opGT, opLT, opGE, opLE, opEQ, opNE,
-                                        opGTR, opLTR, opGER, opLER, opEQR, opNER)));
+                                Values( ADD,  SUB,  MUL,  DIV,
+                                        ADDR, SUBR, MULR, DIVR,
+                                        GT,  LT,  GE,  LE,  EQ,  NE,
+                                        GTR, LTR, GER, LER, EQR, NER)));
 
 INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestCPU, MathOperatorMatMatTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(640, 480),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_CPU),
                                 Values(AbsExact().to_compare_obj()),
-                                Values( opAnd, opOr, opXor )));
+                                Values( AND, OR, XOR )));
 
 INSTANTIATE_TEST_CASE_P(BitwiseOperatorTestCPU, MathOperatorMatScalarTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(640, 480),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_CPU),
                                 Values(AbsExact().to_compare_obj()),
-                                Values( opAND, opOR, opXOR, opANDR, opORR, opXORR )));
+                                Values( AND,  OR,  XOR,
+                                        ANDR, ORR, XORR )));
 
 INSTANTIATE_TEST_CASE_P(BitwiseNotOperatorTestCPU, NotOperatorTest,
                         Combine(Values(CV_8UC1, CV_16UC1, CV_16SC1),
-                                Values(cv::Size(1280, 720),
-                                       cv::Size(640, 480),
-                                       cv::Size(128, 128)),
+                                ValuesIn(in_sizes),
                                 Values(-1),
                                 Values(CORE_CPU)));
 }

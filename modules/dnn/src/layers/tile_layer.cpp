@@ -1,0 +1,97 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
+#include "../precomp.hpp"
+#include "layers_common.hpp"
+
+#include <opencv2/dnn/shape_utils.hpp>
+
+namespace cv { namespace dnn {
+
+class TileLayerImpl CV_FINAL : public TileLayer
+{
+public:
+    TileLayerImpl(const LayerParams& params)
+    {
+        setParamsFrom(params);
+        if (params.has("repeats"))
+        {
+            DictValue param_repeats = params.get("repeats");
+            int n_repeats = param_repeats.size();
+
+            CV_Assert(n_repeats > 0);
+            repeats.resize(n_repeats);
+            for (int i = 0; i < n_repeats; i++)
+                repeats[i] = param_repeats.get<int>(i);
+        }
+        else
+            CV_Error(Error::StsNotImplemented, "Tile: repeats needs to be treated as parameter but it is missing.");
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV;
+    }
+
+    virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
+                                 const int requiredOutputs,
+                                 std::vector<MatShape> &outputs,
+                                 std::vector<MatShape> &internals) const CV_OVERRIDE
+    {
+        CV_CheckEQ(inputs.size(), 1ull, "Tile: one input is expected");
+
+        // repeats must have the same length as input's dimension number
+        // FIXIT: it breaks when the input is 1d tensor (represented as 2d mat with size=2 in opencv dnn)
+        CV_CheckEQ(inputs[0].size(), repeats.size(), "Tile: repeats must be a 1D tensor of the same length as input's dimension number");
+
+        outputs.assign(1, inputs[0]);
+        for (int i = 0; i < repeats.size(); i++)
+        {
+            outputs[0][i] *= repeats[i];
+        }
+        return false;
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+
+        const Mat& data = inputs[0];
+        Mat& out = outputs[0];
+
+        Mat tmp = data.clone();
+        MatShape tmp_shape = shape(tmp);
+        MatShape out_shape = shape(out);
+        int rep_i, ndims = data.dims;
+        int dims = 1;
+        for (int i = 0; i < ndims; i++)
+        {
+            rep_i = repeats[i];
+            if (rep_i != 1)
+            {
+                tmp = tmp.reshape(0, dims);
+                tmp = cv::repeat(tmp, 1, rep_i);
+                dims *= out_shape[i];
+            }
+        }
+        tmp = tmp.reshape(0, out_shape);
+
+        tmp.copyTo(out);
+    }
+
+private:
+    std::vector<int> repeats;
+};
+
+Ptr<TileLayer> TileLayer::create(const LayerParams& params)
+{
+    return makePtr<TileLayerImpl>(params);
+}
+
+}} // namespace cv::dnn

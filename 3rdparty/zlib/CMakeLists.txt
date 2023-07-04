@@ -76,13 +76,14 @@ set(ZLIB_SRCS
     zutil.c
 )
 
-add_library(${ZLIB_LIBRARY} STATIC ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
+add_library(${ZLIB_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
 set_target_properties(${ZLIB_LIBRARY} PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wshorten-64-to-32 -Wattributes -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wshift-negative-value
     -Wundef  # _LFS64_LARGEFILE is not defined
     /wd4267  # MSVS 2015 (x64) + zlib 1.2.11
     -Wimplicit-fallthrough
+    /wd4244  # MSVS + zlib 1.2.12: warning C4244: '=': conversion from 'ush' to 'uchf', possible loss of data
 )
 
 set_target_properties(${ZLIB_LIBRARY} PROPERTIES
@@ -101,4 +102,4 @@ if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(${ZLIB_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
 
-ocv_install_3rdparty_licenses(zlib README)
+ocv_install_3rdparty_licenses(zlib LICENSE)

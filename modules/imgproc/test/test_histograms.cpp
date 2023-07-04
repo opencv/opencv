@@ -1957,5 +1957,74 @@ TEST(Imgproc_Hist_Calc, calcHist_regression_11544)
     }
 }
 
+TEST(Imgproc_Hist_Calc, badarg)
+{
+    const int channels[] = {0};
+    float range1[] = {0, 10};
+    float range2[] = {10, 20};
+    const float * ranges[] = {range1, range2};
+    Mat img = cv::Mat::zeros(10, 10, CV_8UC1);
+    Mat imgInt = cv::Mat::zeros(10, 10, CV_32SC1);
+    Mat hist;
+    const int hist_size[] = { 100, 100 };
+    // base run
+    EXPECT_NO_THROW(cv::calcHist(&img, 1, channels, noArray(), hist, 1, hist_size, ranges, true));
+    // bad parameters
+    EXPECT_THROW(cv::calcHist(NULL, 1, channels, noArray(), hist, 1, hist_size, ranges, true), cv::Exception);
+    EXPECT_THROW(cv::calcHist(&img, 0, channels, noArray(), hist, 1, hist_size, ranges, true), cv::Exception);
+    EXPECT_THROW(cv::calcHist(&img, 1, NULL, noArray(), hist, 2, hist_size, ranges, true), cv::Exception);
+    EXPECT_THROW(cv::calcHist(&img, 1, channels, noArray(), noArray(), 1, hist_size, ranges, true), cv::Exception);
+    EXPECT_THROW(cv::calcHist(&img, 1, channels, noArray(), hist, -1, hist_size, ranges, true), cv::Exception);
+    EXPECT_THROW(cv::calcHist(&img, 1, channels, noArray(), hist, 1, NULL, ranges, true), cv::Exception);
+    EXPECT_THROW(cv::calcHist(&imgInt, 1, channels, noArray(), hist, 1, hist_size, NULL, true), cv::Exception);
+    // special case
+    EXPECT_NO_THROW(cv::calcHist(&img, 1, channels, noArray(), hist, 1, hist_size, NULL, true));
+
+    Mat backProj;
+    // base run
+    EXPECT_NO_THROW(cv::calcBackProject(&img, 1, channels, hist, backProj, ranges, 1, true));
+    // bad parameters
+    EXPECT_THROW(cv::calcBackProject(NULL, 1, channels, hist, backProj, ranges, 1, true), cv::Exception);
+    EXPECT_THROW(cv::calcBackProject(&img, 0, channels, hist, backProj, ranges, 1, true), cv::Exception);
+    EXPECT_THROW(cv::calcBackProject(&img, 1, channels, noArray(), backProj, ranges, 1, true), cv::Exception);
+    EXPECT_THROW(cv::calcBackProject(&img, 1, channels, hist, noArray(), ranges, 1, true), cv::Exception);
+    EXPECT_THROW(cv::calcBackProject(&imgInt, 1, channels, hist, backProj, NULL, 1, true), cv::Exception);
+    // special case
+    EXPECT_NO_THROW(cv::calcBackProject(&img, 1, channels, hist, backProj, NULL, 1, true));
+}
+
+TEST(Imgproc_Hist_Calc, IPP_ranges_with_equal_exponent_21595)
+{
+    const int channels[] = { 0 };
+    float range1[] = { -0.5f, 1.5f };
+    const float* ranges[] = { range1 };
+    const int hist_size[] = { 2 };
+
+    uint8_t m[1][6] = { { 0, 1, 0, 1 , 1, 1 } };
+    cv::Mat images_u = Mat(1, 6, CV_8UC1, m);
+    cv::Mat histogram_u;
+    cv::calcHist(&images_u, 1, channels, noArray(), histogram_u, 1, hist_size, ranges);
+
+    ASSERT_EQ(histogram_u.at<float>(0), 2.f) << "0 not counts correctly, res: " << histogram_u.at<float>(0);
+    ASSERT_EQ(histogram_u.at<float>(1), 4.f) << "1 not counts correctly, res: " << histogram_u.at<float>(0);
+}
+
+TEST(Imgproc_Hist_Calc, IPP_ranges_with_nonequal_exponent_21595)
+{
+    const int channels[] = { 0 };
+    float range1[] = { -1.3f, 1.5f };
+    const float* ranges[] = { range1 };
+    const int hist_size[] = { 3 };
+
+    uint8_t m[1][6] = { { 0, 1, 0, 1 , 1, 1 } };
+    cv::Mat images_u = Mat(1, 6, CV_8UC1, m);
+    cv::Mat histogram_u;
+    cv::calcHist(&images_u, 1, channels, noArray(), histogram_u, 1, hist_size, ranges);
+
+    ASSERT_EQ(histogram_u.at<float>(0), 0.f) << "not equal to zero, res: " << histogram_u.at<float>(0);
+    ASSERT_EQ(histogram_u.at<float>(1), 2.f) << "0 not counts correctly, res: " << histogram_u.at<float>(1);
+    ASSERT_EQ(histogram_u.at<float>(2), 4.f) << "1 not counts correctly, res: " << histogram_u.at<float>(2);
+}
+
 }} // namespace
 /* End Of File */

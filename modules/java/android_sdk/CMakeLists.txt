@@ -44,7 +44,7 @@ foreach(file ${seed_project_files_rel})
 endforeach()
 
 list(APPEND depends gen_opencv_java_source "${OPENCV_DEPHELPER}/gen_opencv_java_source")
-ocv_copyfiles_add_target(${the_module}_android_source_copy JAVA_SRC_COPY "Copy Java(Andoid SDK) source files" ${depends})
+ocv_copyfiles_add_target(${the_module}_android_source_copy JAVA_SRC_COPY "Copy Java(Android SDK) source files" ${depends})
 file(REMOVE "${OPENCV_DEPHELPER}/${the_module}_android_source_copy")  # force rebuild after CMake run
 
 set(depends ${the_module}_android_source_copy "${OPENCV_DEPHELPER}/${the_module}_android_source_copy")
@@ -96,7 +96,11 @@ FILE(MAKE_DIRECTORY \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${JAVA_INSTALL_ROOT
 
 ocv_update(ANDROID_COMPILE_SDK_VERSION "27")
 ocv_update(ANDROID_MIN_SDK_VERSION "14")
-ocv_update(ANDROID_TARGET_SDK_VERSION "21")
+if(ANDROID_NATIVE_API_LEVEL GREATER 21)
+  ocv_update(ANDROID_TARGET_SDK_VERSION "${ANDROID_NATIVE_API_LEVEL}")
+else()
+  ocv_update(ANDROID_TARGET_SDK_VERSION "21")
+endif()
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/build.gradle.in" "${CMAKE_CURRENT_BINARY_DIR}/build.gradle" @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/build.gradle" DESTINATION ${JAVA_INSTALL_ROOT}/.. COMPONENT java)
 
@@ -134,7 +138,7 @@ foreach(file ${__files_rel})
 endforeach()
 
 list(APPEND depends gen_opencv_java_source "${OPENCV_DEPHELPER}/gen_opencv_java_source")
-ocv_copyfiles_add_target(${the_module}_android_source_copy JAVA_SRC_COPY "Copy Java(Andoid SDK) source files" ${depends})
+ocv_copyfiles_add_target(${the_module}_android_source_copy JAVA_SRC_COPY "Copy Java(Android SDK) source files" ${depends})
 file(REMOVE "${OPENCV_DEPHELPER}/${the_module}_android_source_copy")  # force rebuild after CMake run
 
 set(depends ${the_module}_android_source_copy "${OPENCV_DEPHELPER}/${the_module}_android_source_copy")

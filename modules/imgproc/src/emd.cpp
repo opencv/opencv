@@ -336,7 +336,7 @@ static int icvInitEMD( const float* signature1, int size1,
     char *buffer, *buffer_end;
 
     memset( state, 0, sizeof( *state ));
-    assert( cost_step % sizeof(float) == 0 );
+    CV_Assert( cost_step % sizeof(float) == 0 );
     cost_step /= sizeof(float);
 
     /* calculate buffer size */
@@ -510,7 +510,7 @@ static int icvInitEMD( const float* signature1, int size1,
                     }
                     else
                     {
-                        assert( cost );
+                        CV_Assert( cost );
                         val = cost[cost_step*ci + cj];
                     }
                     state->cost[i][j] = val;
@@ -552,7 +552,7 @@ static int icvInitEMD( const float* signature1, int size1,
         buffer += dsize;
     }
 
-    assert( buffer <= buffer_end );
+    CV_Assert( buffer <= buffer_end );
 
     icvRussel( state );
 

@@ -1,6 +1,17 @@
 Camera calibration With OpenCV {#tutorial_camera_calibration}
 ==============================
 
+@tableofcontents
+
+@prev_tutorial{tutorial_camera_calibration_square_chess}
+@next_tutorial{tutorial_real_time_pose}
+
+|    |    |
+| -: | :- |
+| Original author | Bernát Gábor |
+| Compatibility | OpenCV >= 4.0 |
+
+
 Cameras have been around for a long-long time. However, with the introduction of the cheap *pinhole*
 cameras in the late 20th century, they became a common occurrence in our everyday life.
 Unfortunately, this cheapness comes with its price: significant distortion. Luckily, these are
@@ -49,6 +60,7 @@ done through basic geometrical equations. The equations used depend on the chose
 objects. Currently OpenCV supports three types of objects for calibration:
 
 -   Classical black-white chessboard
+-   ChArUco board pattern
 -   Symmetrical circle pattern
 -   Asymmetrical circle pattern
 
@@ -77,13 +89,14 @@ Source code
 
 You may also find the source code in the `samples/cpp/tutorial_code/calib3d/camera_calibration/`
 folder of the OpenCV source library or [download it from here
-](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp). For the usage of the program, run it with `-h` argument. The program has an
+](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp).
+For the usage of the program, run it with `-h` argument. The program has an
 essential argument: the name of its configuration file. If none is given then it will try to open the
 one named "default.xml". [Here's a sample configuration file
-](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/in_VID5.xml) in XML format. In the
+](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/calib3d/camera_calibration/in_VID5.xml) in XML format. In the
 configuration file you may choose to use camera as an input, a video file or an image list. If you
 opt for the last one, you will need to create a configuration file where you enumerate the images to
-use. Here's [an example of this ](https://github.com/opencv/opencv/tree/master/samples/cpp/tutorial_code/calib3d/camera_calibration/VID5.xml).
+use. Here's [an example of this ](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/calib3d/camera_calibration/VID5.xml).
 The important part to remember is that the images need to be specified using the absolute path or
 the relative one from your application's working directory. You may find all this in the samples
 directory mentioned above.
@@ -117,14 +130,23 @@ Explanation
 
     The formation of the equations I mentioned above aims
     to finding major patterns in the input: in case of the chessboard this are corners of the
-    squares and for the circles, well, the circles themselves. The position of these will form the
+    squares and for the circles, well, the circles themselves. ChArUco board is equivalent to
+    chessboard, but corners are mached by ArUco markers. The position of these will form the
     result which will be written into the *pointBuf* vector.
     @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp find_pattern
     Depending on the type of the input pattern you use either the @ref cv::findChessboardCorners or
-    the @ref cv::findCirclesGrid function. For both of them you pass the current image and the size
-    of the board and you'll get the positions of the patterns. Furthermore, they return a boolean
-    variable which states if the pattern was found in the input (we only need to take into account
-    those images where this is true!).
+    the @ref cv::findCirclesGrid function or @ref cv::aruco::CharucoDetector::detectBoard method.
+    For all of them you pass the current image and the size of the board and you'll get the positions
+    of the patterns. cv::findChessboardCorners and cv::findCirclesGrid return a boolean variable
+    which states if the pattern was found in the input (we only need to take into account
+    those images where this is true!). `CharucoDetector::detectBoard` may detect partially visible
+    pattern and returns coordunates and ids of visible inner corners.
+
+    @note Board size and amount of matched points is different for chessboard, circles grid and ChArUco.
+    All chessboard related algorithm expects amount of inner corners as board width and height.
+    Board size of circles grid is just amount of circles by both grid dimentions. ChArUco board size
+    is defined in squares, but detection result is list of inner corners and that's why is smaller
+    by 1 in both dimentions.
 
     Then again in case of cameras we only take camera images when an input delay time is passed.
     This is done in order to allow user moving the chessboard around and getting different images.
@@ -132,7 +154,7 @@ Explanation
     form an ill-posed problem, so the calibration will fail. For square images the positions of the
     corners are only approximate. We may improve this by calling the @ref cv::cornerSubPix function.
     (`winSize` is used to control the side length of the search window. Its default value is 11.
-    `winSzie` may be changed by command line parameter `--winSize=<number>`.)
+    `winSize` may be changed by command line parameter `--winSize=<number>`.)
     It will produce better calibration result. After this we add a valid inputs result to the
     *imagePoints* vector to collect all of the equations into a single container. Finally, for
     visualization feedback purposes we will draw the found points on the input image using @ref

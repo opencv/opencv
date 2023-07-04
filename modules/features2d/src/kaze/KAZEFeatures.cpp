@@ -311,8 +311,8 @@ private:
 void KAZEFeatures::Determinant_Hessian(std::vector<KeyPoint>& kpts)
 {
     int level = 0;
-    float dist = 0.0, smax = 3.0;
-    int npoints = 0, id_repeated = 0;
+    float smax = 3.0;
+    int id_repeated = 0;
     int left_x = 0, right_x = 0, up_y = 0, down_y = 0;
     bool is_extremum = false, is_repeated = false, is_out = false;
 
@@ -338,17 +338,24 @@ void KAZEFeatures::Determinant_Hessian(std::vector<KeyPoint>& kpts)
         for (int j = 0; j < (int)kpts_par_[i].size(); j++)
         {
             level = i + 1;
+            const TEvolution& evolution_level = evolution_[level];
+
             is_extremum = true;
             is_repeated = false;
             is_out = false;
 
-            // Check in case we have the same point as maxima in previous evolution levels
-            for (int ik = 0; ik < (int)kpts.size(); ik++) {
-                if (kpts[ik].class_id == level || kpts[ik].class_id == level + 1 || kpts[ik].class_id == level - 1) {
-                    dist = pow(kpts_par_[i][j].pt.x - kpts[ik].pt.x, 2) + pow(kpts_par_[i][j].pt.y - kpts[ik].pt.y, 2);
+            const KeyPoint& kpts_par_ij = kpts_par_[i][j];
 
-                    if (dist < evolution_[level].sigma_size*evolution_[level].sigma_size) {
-                        if (kpts_par_[i][j].response > kpts[ik].response) {
+            // Check in case we have the same point as maxima in previous evolution levels
+            for (int ik = 0; ik < (int)kpts.size(); ik++)
+            {
+                const KeyPoint& kpts_ik = kpts[ik];
+                if (kpts_ik.class_id == level || kpts_ik.class_id == level + 1 || kpts_ik.class_id == level - 1) {
+                    Point2f diff = kpts_par_ij.pt - kpts_ik.pt;
+                    float dist = diff.dot(diff);
+
+                    if (dist < evolution_level.sigma_size*evolution_level.sigma_size) {
+                        if (kpts_par_ij.response > kpts_ik.response) {
                             id_repeated = ik;
                             is_repeated = true;
                         }
@@ -363,23 +370,22 @@ void KAZEFeatures::Determinant_Hessian(std::vector<KeyPoint>& kpts)
 
             if (is_extremum == true) {
                 // Check that the point is under the image limits for the descriptor computation
-                left_x = cvRound(kpts_par_[i][j].pt.x - smax*kpts_par_[i][j].size);
-                right_x = cvRound(kpts_par_[i][j].pt.x + smax*kpts_par_[i][j].size);
-                up_y = cvRound(kpts_par_[i][j].pt.y - smax*kpts_par_[i][j].size);
-                down_y = cvRound(kpts_par_[i][j].pt.y + smax*kpts_par_[i][j].size);
+                left_x = cvRound(kpts_par_ij.pt.x - smax*kpts_par_ij.size);
+                right_x = cvRound(kpts_par_ij.pt.x + smax*kpts_par_ij.size);
+                up_y = cvRound(kpts_par_ij.pt.y - smax*kpts_par_ij.size);
+                down_y = cvRound(kpts_par_ij.pt.y + smax*kpts_par_ij.size);
 
-                if (left_x < 0 || right_x >= evolution_[level].Ldet.cols ||
-                    up_y < 0 || down_y >= evolution_[level].Ldet.rows) {
+                if (left_x < 0 || right_x >= evolution_level.Ldet.cols ||
+                    up_y < 0 || down_y >= evolution_level.Ldet.rows) {
                     is_out = true;
                 }
 
                 if (is_out == false) {
                     if (is_repeated == false) {
-                        kpts.push_back(kpts_par_[i][j]);
-                        npoints++;
+                        kpts.push_back(kpts_par_ij);
                     }
                     else {
-                        kpts[id_repeated] = kpts_par_[i][j];
+                        kpts[id_repeated] = kpts_par_ij;
                     }
                 }
             }
@@ -513,16 +519,16 @@ public:
             if (options_.upright)
             {
                 kpts[i].angle = 0.0;
-                                if (options_.extended)
+                if (options_.extended)
                     Get_KAZE_Upright_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
                 else
                     Get_KAZE_Upright_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
             }
             else
             {
-                                KAZEFeatures::Compute_Main_Orientation(kpts[i], evolution, options_);
+                KAZEFeatures::Compute_Main_Orientation(kpts[i], evolution, options_);
 
-                                if (options_.extended)
+                if (options_.extended)
                     Get_KAZE_Descriptor_128(kpts[i], desc.ptr<float>((int)i));
                 else
                     Get_KAZE_Descriptor_64(kpts[i], desc.ptr<float>((int)i));
@@ -712,26 +718,26 @@ void KAZE_Descriptor_Invoker::Get_KAZE_Upright_Descriptor_64(const KeyPoint &kpt
                     y1 = (int)(sample_y - 0.5f);
                     x1 = (int)(sample_x - 0.5f);
 
-                                        checkDescriptorLimits(x1, y1, options_.img_width, options_.img_height);
+                    checkDescriptorLimits(x1, y1, options_.img_width, options_.img_height);
 
                     y2 = (int)(sample_y + 0.5f);
                     x2 = (int)(sample_x + 0.5f);
 
-                                        checkDescriptorLimits(x2, y2, options_.img_width, options_.img_height);
+                    checkDescriptorLimits(x2, y2, options_.img_width, options_.img_height);
 
                     fx = sample_x - x1;
                     fy = sample_y - y1;
 
-                                        res1 = *(evolution[level].Lx.ptr<float>(y1)+x1);
-                                        res2 = *(evolution[level].Lx.ptr<float>(y1)+x2);
-                                        res3 = *(evolution[level].Lx.ptr<float>(y2)+x1);
-                                        res4 = *(evolution[level].Lx.ptr<float>(y2)+x2);
+                    res1 = *(evolution[level].Lx.ptr<float>(y1)+x1);
+                    res2 = *(evolution[level].Lx.ptr<float>(y1)+x2);
+                    res3 = *(evolution[level].Lx.ptr<float>(y2)+x1);
+                    res4 = *(evolution[level].Lx.ptr<float>(y2)+x2);
                     rx = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
-                                        res1 = *(evolution[level].Ly.ptr<float>(y1)+x1);
-                                        res2 = *(evolution[level].Ly.ptr<float>(y1)+x2);
-                                        res3 = *(evolution[level].Ly.ptr<float>(y2)+x1);
-                                        res4 = *(evolution[level].Ly.ptr<float>(y2)+x2);
+                    res1 = *(evolution[level].Ly.ptr<float>(y1)+x1);
+                    res2 = *(evolution[level].Ly.ptr<float>(y1)+x2);
+                    res3 = *(evolution[level].Ly.ptr<float>(y2)+x1);
+                    res4 = *(evolution[level].Ly.ptr<float>(y2)+x2);
                     ry = (1.0f - fx)*(1.0f - fy)*res1 + fx*(1.0f - fy)*res2 + (1.0f - fx)*fy*res3 + fx*fy*res4;
 
                     rx = gauss_s1*rx;

@@ -47,12 +47,12 @@ void initGModel(ade::Graph& gr,
     gm.metadata().set(p);
 }
 
-bool isConsumedBy(cv::gimpl::GModel::Graph gm, ade::NodeHandle data_nh, ade::NodeHandle op_nh) {
+bool isConsumedBy(const cv::gimpl::GModel::ConstGraph &gm, ade::NodeHandle data_nh, ade::NodeHandle op_nh) {
     auto oi = cv::gimpl::GModel::orderedInputs(gm, op_nh);
     return std::find(oi.begin(), oi.end(), data_nh) != oi.end();
 }
 
-std::string opName(cv::gimpl::GModel::Graph gm, ade::NodeHandle op_nh) {
+std::string opName(const cv::gimpl::GModel::ConstGraph &gm, ade::NodeHandle op_nh) {
     return gm.metadata(op_nh).get<cv::gimpl::Op>().k.name;
 }
 
@@ -318,7 +318,7 @@ TEST(PatternMatching, TestPrepResizeSplit3)
                                           r_nh, op1_nh, op2_nh}),
               nodes);
 
-    EXPECT_EQ(cv::gapi::core::GResize::id(), matching_test::opName(tgm, op1_nh));
+    EXPECT_EQ(cv::gapi::imgproc::GResize::id(), matching_test::opName(tgm, op1_nh));
     EXPECT_EQ(cv::gapi::core::GSplit3::id(), matching_test::opName(tgm, op2_nh));
 
     EXPECT_EQ(1u, tmp_nh->outEdges().size());
@@ -385,7 +385,7 @@ TEST(PatternMatching, TestPrepResizeToNCHW)
     EXPECT_EQ(matching_test::S({bgr_nh, tmp_nh, plr_nh, op1_nh, op2_nh}),
               nodes);
 
-    EXPECT_EQ(cv::gapi::core::GResize::id(), matching_test::opName(tgm, op1_nh));
+    EXPECT_EQ(cv::gapi::imgproc::GResize::id(), matching_test::opName(tgm, op1_nh));
     EXPECT_EQ(GToNCHW::id(), matching_test::opName(tgm, op2_nh));
 
     EXPECT_EQ(1u, tmp_nh->outEdges().size());

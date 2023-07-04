@@ -4,13 +4,13 @@ Image Thresholding {#tutorial_py_thresholding}
 Goal
 ----
 
--   In this tutorial, you will learn Simple thresholding, Adaptive thresholding and Otsu's thresholding.
+-   In this tutorial, you will learn simple thresholding, adaptive thresholding and Otsu's thresholding.
 -   You will learn the functions **cv.threshold** and **cv.adaptiveThreshold**.
 
 Simple Thresholding
 -------------------
 
-Here, the matter is straight forward. For every pixel, the same threshold value is applied.
+Here, the matter is straight-forward. For every pixel, the same threshold value is applied.
 If the pixel value is smaller than the threshold, it is set to 0, otherwise it is set to a maximum value.
 The function **cv.threshold** is used to apply the thresholding.
 The first argument is the source image, which **should be a grayscale image**.
@@ -37,7 +37,8 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv.imread('gradient.png',0)
+img = cv.imread('gradient.png', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 ret,thresh1 = cv.threshold(img,127,255,cv.THRESH_BINARY)
 ret,thresh2 = cv.threshold(img,127,255,cv.THRESH_BINARY_INV)
 ret,thresh3 = cv.threshold(img,127,255,cv.THRESH_TRUNC)
@@ -47,8 +48,8 @@ ret,thresh5 = cv.threshold(img,127,255,cv.THRESH_TOZERO_INV)
 titles = ['Original Image','BINARY','BINARY_INV','TRUNC','TOZERO','TOZERO_INV']
 images = [img, thresh1, thresh2, thresh3, thresh4, thresh5]
 
-for i in xrange(6):
-    plt.subplot(2,3,i+1),plt.imshow(images[i],'gray')
+for i in range(6):
+    plt.subplot(2,3,i+1),plt.imshow(images[i],'gray',vmin=0,vmax=255)
     plt.title(titles[i])
     plt.xticks([]),plt.yticks([])
 
@@ -65,11 +66,11 @@ Adaptive Thresholding
 
 In the previous section, we used one global value as a threshold.
 But this might not be good in all cases, e.g. if an image has different lighting conditions in different areas.
-In that case, adaptive thresholding thresholding can help.
+In that case, adaptive thresholding can help.
 Here, the algorithm determines the threshold for a pixel based on a small region around it.
 So we get different thresholds for different regions of the same image which gives better results for images with varying illumination.
 
-Additionally to the parameters described above, the method cv.adaptiveThreshold three input parameters:
+In addition to the parameters described above, the method cv.adaptiveThreshold takes three input parameters:
 
 The **adaptiveMethod** decides how the threshold value is calculated:
     -   cv.ADAPTIVE_THRESH_MEAN_C: The threshold value is the mean of the neighbourhood area minus the constant **C**.
@@ -85,7 +86,8 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv.imread('sudoku.png',0)
+img = cv.imread('sudoku.png', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 img = cv.medianBlur(img,5)
 
 ret,th1 = cv.threshold(img,127,255,cv.THRESH_BINARY)
@@ -98,7 +100,7 @@ titles = ['Original Image', 'Global Thresholding (v = 127)',
             'Adaptive Mean Thresholding', 'Adaptive Gaussian Thresholding']
 images = [img, th1, th2, th3]
 
-for i in xrange(4):
+for i in range(4):
     plt.subplot(2,2,i+1),plt.imshow(images[i],'gray')
     plt.title(titles[i])
     plt.xticks([]),plt.yticks([])
@@ -133,7 +135,8 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv.imread('noisy2.png',0)
+img = cv.imread('noisy2.png', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 
 # global thresholding
 ret1,th1 = cv.threshold(img,127,255,cv.THRESH_BINARY)
@@ -153,7 +156,7 @@ titles = ['Original Noisy Image','Histogram','Global Thresholding (v=127)',
           'Original Noisy Image','Histogram',"Otsu's Thresholding",
           'Gaussian filtered Image','Histogram',"Otsu's Thresholding"]
 
-for i in xrange(3):
+for i in range(3):
     plt.subplot(3,3,i*3+1),plt.imshow(images[i*3],'gray')
     plt.title(titles[i*3]), plt.xticks([]), plt.yticks([])
     plt.subplot(3,3,i*3+2),plt.hist(images[i*3].ravel(),256)
@@ -168,8 +171,8 @@ Result:
 
 ### How does Otsu's Binarization work?
 
-This section demonstrates a Python implementation of Otsu's binarization to show how it works
-actually. If you are not interested, you can skip this.
+This section demonstrates a Python implementation of Otsu's binarization to show how it actually
+works. If you are not interested, you can skip this.
 
 Since we are working with bimodal images, Otsu's algorithm tries to find a threshold value (t) which
 minimizes the **weighted within-class variance** given by the relation:
@@ -183,12 +186,13 @@ where
 It actually finds a value of t which lies in between two peaks such that variances to both classes
 are minimal. It can be simply implemented in Python as follows:
 @code{.py}
-img = cv.imread('noisy2.png',0)
+img = cv.imread('noisy2.png', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 blur = cv.GaussianBlur(img,(5,5),0)
 
 # find normalized_histogram, and its cumulative distribution function
 hist = cv.calcHist([blur],[0],None,[256],[0,256])
-hist_norm = hist.ravel()/hist.max()
+hist_norm = hist.ravel()/hist.sum()
 Q = hist_norm.cumsum()
 
 bins = np.arange(256)
@@ -196,9 +200,11 @@ bins = np.arange(256)
 fn_min = np.inf
 thresh = -1
 
-for i in xrange(1,256):
+for i in range(1,256):
     p1,p2 = np.hsplit(hist_norm,[i]) # probabilities
     q1,q2 = Q[i],Q[255]-Q[i] # cum sum of classes
+    if q1 < 1.e-6 or q2 < 1.e-6:
+        continue
     b1,b2 = np.hsplit(bins,[i]) # weights
 
     # finding means and variances

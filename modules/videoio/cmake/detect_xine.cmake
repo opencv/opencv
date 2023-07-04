@@ -5,5 +5,3 @@ endif()
 if(HAVE_XINE)
   ocv_add_external_target(xine "${XINE_INCLUDE_DIRS}" "${XINE_LIBRARIES}" "HAVE_XINE")
 endif()
-
-set(HAVE_XINE ${HAVE_XINE} PARENT_SCOPE)

@@ -189,7 +189,7 @@
 #
 # ------------------------------------------------------------------------------
 
-cmake_minimum_required( VERSION 2.6.3 )
+cmake_minimum_required( VERSION 2.8.12.2 )
 
 if( DEFINED CMAKE_CROSSCOMPILING )
  # subsequent toolchain loading is not really needed
@@ -399,7 +399,7 @@ if( NOT ANDROID_NDK )
  __INIT_VARIABLE( ANDROID_STANDALONE_TOOLCHAIN PATH ENV_ANDROID_STANDALONE_TOOLCHAIN )
 
  if( NOT ANDROID_STANDALONE_TOOLCHAIN )
-  #try to find Android NDK in one of the the default locations
+  #try to find Android NDK in one of the default locations
   set( __ndkSearchPaths )
   foreach( __ndkSearchPath ${ANDROID_NDK_SEARCH_PATHS} )
    foreach( suffix ${ANDROID_SUPPORTED_NDK_VERSIONS} )
@@ -413,7 +413,7 @@ if( NOT ANDROID_NDK )
    message( STATUS "Using default path for Android NDK: ${ANDROID_NDK}" )
    message( STATUS "  If you prefer to use a different location, please define a cmake or environment variable: ANDROID_NDK" )
   else()
-   #try to find Android standalone toolchain in one of the the default locations
+   #try to find Android standalone toolchain in one of the default locations
    __INIT_VARIABLE( ANDROID_STANDALONE_TOOLCHAIN PATH ANDROID_STANDALONE_TOOLCHAIN_SEARCH_PATH )
 
    if( ANDROID_STANDALONE_TOOLCHAIN )

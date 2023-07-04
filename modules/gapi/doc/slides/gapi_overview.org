@@ -1,0 +1,961 @@
+#+TITLE:     OpenCV 4.4 Graph API
+#+AUTHOR:    Dmitry Matveev\newline Intel Corporation
+#+OPTIONS: H:2 toc:t num:t
+#+LATEX_CLASS: beamer
+#+LATEX_CLASS_OPTIONS: [presentation]
+#+LATEX_HEADER: \usepackage{transparent} \usepackage{listings} \usepackage{pgfplots} \usepackage{mtheme.sty/beamerthememetropolis}
+#+LATEX_HEADER: \setbeamertemplate{frame footer}{OpenCV 4.4 G-API: Overview and programming by example}
+#+BEAMER_HEADER: \subtitle{Overview and programming by example}
+#+BEAMER_HEADER: \titlegraphic{ \vspace*{3cm}\hspace*{5cm} {\transparent{0.2}\includegraphics[height=\textheight]{ocv_logo.eps}}}
+#+COLUMNS: %45ITEM %10BEAMER_ENV(Env) %10BEAMER_ACT(Act) %4BEAMER_COL(Col) %8BEAMER_OPT(Opt)
+
+* G-API: What is, why, what's for?
+
+** OpenCV evolution in one slide
+
+*** Version 1.x -- Library inception
+
+- Just a set of CV functions + helpers around (visualization, IO);
+
+*** Version 2.x -- Library rewrite
+
+- OpenCV meets C++, ~cv::Mat~ replaces ~IplImage*~;
+
+*** Version 3.0 -- Welcome Transparent API (T-API)
+
+- ~cv::UMat~ is introduced as a /transparent/ addition to
+  ~cv::Mat~;
+- With ~cv::UMat~, an OpenCL kernel can be enqeueud instead of
+  immediately running C code;
+- ~cv::UMat~ data is kept on a /device/ until explicitly queried.
+
+** OpenCV evolution in one slide (cont'd)
+# FIXME: Learn proper page-breaking!
+
+*** Version 4.0 -- Welcome Graph API (G-API)
+
+- A new separate module (not a full library rewrite);
+- A framework (or even a /meta/-framework);
+- Usage model:
+  - /Express/ an image/vision processing graph and then /execute/ it;
+  - Fine-tune execution without changes in the graph;
+- Similar to Halide -- separates logic from
+  platform details.
+- More than Halide:
+  - Kernels can be written in unconstrained platform-native code;
+  - Halide can serve as a backend (one of many).
+
+** OpenCV evolution in one slide (cont'd)
+# FIXME: Learn proper page-breaking!
+
+*** Version 4.2 -- New horizons
+
+- Introduced in-graph inference via OpenVINO™ Toolkit;
+- Introduced video-oriented Streaming execution mode;
+- Extended focus from individual image processing to the full
+  application pipeline optimization.
+
+*** Version 4.4 -- More on video
+
+- Introduced a notion of stateful kernels;
+  - The road to object tracking, background subtraction, etc. in the
+    graph;
+- Added more video-oriented operations (feature detection, Optical
+  flow).
+
+** Why G-API?
+
+*** Why introduce a new execution model?
+
+- Ultimately it is all about optimizations;
+  - or at least about a /possibility/ to optimize;
+- A CV algorithm is usually not a single function call, but a
+  composition of functions;
+- Different models operate at different levels of knowledge on the
+  algorithm (problem) we run.
+
+** Why G-API? (cont'd)
+# FIXME: Learn proper page-breaking!
+
+*** Why introduce a new execution model?
+
+- *Traditional* -- every function can be optimized (e.g. vectorized)
+  and parallelized, the rest is up to programmer to care about.
+- *Queue-based* -- kernels are enqueued dynamically with no guarantee
+  where the end is or what is called next;
+- *Graph-based* -- nearly all information is there, some compiler
+  magic can be done!
+
+** What is G-API for?
+
+*** Bring the value of graph model with OpenCV where it makes sense:
+
+- *Memory consumption* can be reduced dramatically;
+- *Memory access* can be optimized to maximize cache reuse;
+- *Parallelism* can be applied automatically where it is hard to do
+  it manually;
+  - It also becomes more efficient when working with graphs;
+- *Heterogeneity* gets extra benefits like:
+  - Avoiding unnecessary data transfers;
+  - Shadowing transfer costs with parallel host co-execution;
+  - Improving system throughput with frame-level pipelining.
+
+* Programming with G-API
+
+** G-API Basics
+
+*** G-API Concepts
+
+- *Graphs* are built by applying /operations/ to /data objects/;
+  - API itself has no "graphs", it is expression-based instead;
+- *Data objects* do not hold actual data, only capture /dependencies/;
+- *Operations* consume and produce data objects.
+- A graph is defined by specifying its /boundaries/ with data objects:
+  - What data objects are /inputs/ to the graph?
+  - What are its /outputs/?
+
+** The code is worth a thousand words
+   :PROPERTIES:
+   :BEAMER_opt: shrink=42
+   :END:
+
+#+BEGIN_SRC C++
+#include <opencv2/gapi.hpp>                            // G-API framework header
+#include <opencv2/gapi/imgproc.hpp>                    // cv::gapi::blur()
+#include <opencv2/highgui.hpp>                         // cv::imread/imwrite
+
+int main(int argc, char *argv[]) {
+    if (argc < 3) return 1;
+
+    cv::GMat in;                                       // Express the graph:
+    cv::GMat out = cv::gapi::blur(in, cv::Size(3,3));  // `out` is a result of `blur` of `in`
+
+    cv::Mat in_mat = cv::imread(argv[1]);              // Get the real data
+    cv::Mat out_mat;                                   // Output buffer (may be empty)
+
+    cv::GComputation(cv::GIn(in), cv::GOut(out))       // Declare a graph from `in` to `out`
+        .apply(cv::gin(in_mat), cv::gout(out_mat));    // ...and run it immediately
+
+    cv::imwrite(argv[2], out_mat);                     // Save the result
+    return 0;
+}
+#+END_SRC
+
+** The code is worth a thousand words
+   :PROPERTIES:
+   :BEAMER_opt: shrink=42
+   :END:
+
+*** Traditional OpenCV                                        :B_block:BMCOL:
+    :PROPERTIES:
+    :BEAMER_env: block
+    :BEAMER_col: 0.45
+    :END:
+#+BEGIN_SRC C++
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+
+#include <opencv2/highgui.hpp>
+
+int main(int argc, char *argv[]) {
+    using namespace cv;
+    if (argc != 3) return 1;
+
+    Mat in_mat = imread(argv[1]);
+    Mat gx, gy;
+
+    Sobel(in_mat, gx, CV_32F, 1, 0);
+    Sobel(in_mat, gy, CV_32F, 0, 1);
+
+    Mat mag, out_mat;
+    sqrt(gx.mul(gx) + gy.mul(gy), mag);
+    mag.convertTo(out_mat, CV_8U);
+
+    imwrite(argv[2], out_mat);
+    return 0;
+}
+#+END_SRC
+
+*** OpenCV G-API                                              :B_block:BMCOL:
+    :PROPERTIES:
+    :BEAMER_env: block
+    :BEAMER_col: 0.5
+    :END:
+#+BEGIN_SRC C++
+#include <opencv2/gapi.hpp>
+#include <opencv2/gapi/core.hpp>
+#include <opencv2/gapi/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+
+int main(int argc, char *argv[]) {
+    using namespace cv;
+    if (argc != 3) return 1;
+
+    GMat in;
+    GMat gx  = gapi::Sobel(in, CV_32F, 1, 0);
+    GMat gy  = gapi::Sobel(in, CV_32F, 0, 1);
+    GMat mag = gapi::sqrt(  gapi::mul(gx, gx)
+                          + gapi::mul(gy, gy));
+    GMat out = gapi::convertTo(mag, CV_8U);
+    GComputation sobel(GIn(in), GOut(out));
+
+    Mat in_mat = imread(argv[1]), out_mat;
+    sobel.apply(in_mat, out_mat);
+    imwrite(argv[2], out_mat);
+    return 0;
+}
+#+END_SRC
+
+** The code is worth a thousand words (cont'd)
+# FIXME: sections!!!
+
+*** What we have just learned?
+
+- G-API functions mimic their traditional OpenCV ancestors;
+- No real data is required to construct a graph;
+- Graph construction and graph execution are separate steps.
+
+*** What else?
+
+- Graph is first /expressed/ and then /captured/ in an object;
+- Graph constructor defines /protocol/; user can pass vectors of
+  inputs/outputs like
+  #+BEGIN_SRC C++
+cv::GComputation(cv::GIn(...), cv::GOut(...))
+  #+END_SRC
+- Calls to ~.apply()~ must conform to graph's protocol
+
+** On data objects
+
+Graph *protocol* defines what arguments a computation was defined on
+(both inputs and outputs), and what are the *shapes* (or types) of
+those arguments:
+
+  | *Shape*      | *Argument*       | Size                        |
+  |--------------+------------------+-----------------------------|
+  | ~GMat~       | ~Mat~            | Static; defined during      |
+  |              |                  | graph compilation           |
+  |--------------+------------------+-----------------------------|
+  | ~GScalar~    | ~Scalar~         | 4 x ~double~                |
+  |--------------+------------------+-----------------------------|
+  | ~GArray<T>~  | ~std::vector<T>~ | Dynamic; defined in runtime |
+  |--------------+------------------+-----------------------------|
+  | ~GOpaque<T>~ | ~T~              | Static, ~sizeof(T)~         |
+
+~GScalar~ may be value-initialized at construction time to allow
+  expressions like ~GMat a = 2*(b + 1)~.
+
+** On operations and kernels
+    :PROPERTIES:
+    :BEAMER_opt: shrink=22
+    :END:
+
+***                                                           :B_block:BMCOL:
+    :PROPERTIES:
+    :BEAMER_env: block
+    :BEAMER_col: 0.45
+    :END:
+
+- Graphs are built with *Operations* over virtual *Data*;
+- *Operations* define interfaces (literally);
+- *Kernels* are implementations to *Operations* (like in OOP);
+- An *Operation* is platform-agnostic, a *kernel* is not;
+- *Kernels* are implemented for *Backends*, the latter provide
+  APIs to write kernels;
+- Users can /add/ their *own* operations and kernels,
+  and also /redefine/ "standard" kernels their *own* way.
+
+***                                                          :B_block:BMCOL:
+    :PROPERTIES:
+    :BEAMER_env: block
+    :BEAMER_col: 0.45
+    :END:
+
+#+BEGIN_SRC dot :file "000-ops-kernels.eps" :cmdline "-Kdot -Teps"
+digraph G {
+node [shape=box];
+rankdir=BT;
+
+Gr [label="Graph"];
+Op [label="Operation\nA"];
+{rank=same
+Impl1 [label="Kernel\nA:2"];
+Impl2 [label="Kernel\nA:1"];
+}
+
+Op -> Gr [dir=back, label="'consists of'"];
+Impl1 -> Op [];
+Impl2 -> Op [label="'is implemented by'"];
+
+node [shape=note,style=dashed];
+{rank=same
+Op;
+CommentOp [label="Abstract:\ndeclared via\nG_API_OP()"];
+}
+{rank=same
+Comment1 [label="Platform:\ndefined with\nOpenCL backend"];
+Comment2 [label="Platform:\ndefined with\nOpenCV backend"];
+}
+
+CommentOp -> Op      [constraint=false, style=dashed, arrowhead=none];
+Comment1  -> Impl1   [style=dashed, arrowhead=none];
+Comment2  -> Impl2   [style=dashed, arrowhead=none];
+}
+#+END_SRC
+
+** On operations and kernels (cont'd)
+
+*** Defining an operation
+
+- A type name (every operation is a C++ type);
+- Operation signature (similar to ~std::function<>~);
+- Operation identifier (a string);
+- Metadata callback -- describe what is the output value format(s),
+  given the input and arguments.
+- Use ~OpType::on(...)~ to use a new kernel ~OpType~ to construct graphs.
+
+#+LaTeX: {\footnotesize
+#+BEGIN_SRC C++
+G_API_OP(GSqrt,<GMat(GMat)>,"org.opencv.core.math.sqrt") {
+    static GMatDesc outMeta(GMatDesc in) { return in; }
+};
+#+END_SRC
+#+LaTeX: }
+
+** On operations and kernels (cont'd)
+
+*** ~GSqrt~ vs. ~cv::gapi::sqrt()~
+
+- How a *type* relates to a *functions* from the example?
+- These functions are just wrappers over ~::on~:
+  #+LaTeX: {\scriptsize
+  #+BEGIN_SRC C++
+  G_API_OP(GSqrt,<GMat(GMat)>,"org.opencv.core.math.sqrt") {
+      static GMatDesc outMeta(GMatDesc in) { return in; }
+  };
+  GMat gapi::sqrt(const GMat& src) { return GSqrt::on(src); }
+  #+END_SRC
+  #+LaTeX: }
+- Why -- Doxygen, default parameters, 1:n mapping:
+  #+LaTeX: {\scriptsize
+  #+BEGIN_SRC C++
+  cv::GMat custom::unsharpMask(const cv::GMat &src,
+                               const int       sigma,
+                               const float     strength) {
+      cv::GMat blurred   = cv::gapi::medianBlur(src, sigma);
+      cv::GMat laplacian = cv::gapi::Laplacian(blurred, CV_8U);
+      return (src - (laplacian * strength));
+  }
+  #+END_SRC
+  #+LaTeX: }
+
+** On operations and kernels (cont'd)
+
+*** Implementing an operation
+
+- Depends on the backend and its API;
+- Common part for all backends: refer to operation being implemented
+  using its /type/.
+
+*** OpenCV backend
+- OpenCV backend is the default one: OpenCV kernel is a wrapped OpenCV
+  function:
+  #+LaTeX: {\footnotesize
+  #+BEGIN_SRC C++
+  GAPI_OCV_KERNEL(GCPUSqrt, cv::gapi::core::GSqrt) {
+      static void run(const cv::Mat& in, cv::Mat &out) {
+          cv::sqrt(in, out);
+      }
+  };
+  #+END_SRC
+  #+LaTeX: }
+
+** Operations and Kernels (cont'd)
+# FIXME!!!
+
+*** Fluid backend
+
+- Fluid backend operates with row-by-row kernels and schedules its
+  execution to optimize data locality:
+  #+LaTeX: {\footnotesize
+  #+BEGIN_SRC C++
+  GAPI_FLUID_KERNEL(GFluidSqrt, cv::gapi::core::GSqrt, false) {
+      static const int Window = 1;
+      static void run(const View &in, Buffer &out) {
+          hal::sqrt32f(in .InLine <float>(0)
+                       out.OutLine<float>(0),
+                       out.length());
+      }
+  };
+  #+END_SRC
+  #+LaTeX: }
+- Note ~run~ changes signature but still is derived from the operation
+  signature.
+
+** Operations and Kernels (cont'd)
+
+*** Specifying which kernels to use
+
+- Graph execution model is defined by kernels which are available/used;
+- Kernels can be specified via the graph compilation arguments:
+  #+LaTeX: {\footnotesize
+  #+BEGIN_SRC C++
+  #include <opencv2/gapi/fluid/core.hpp>
+  #include <opencv2/gapi/fluid/imgproc.hpp>
+  ...
+  auto pkg = cv::gapi::combine(cv::gapi::core::fluid::kernels(),
+                               cv::gapi::imgproc::fluid::kernels());
+  sobel.apply(in_mat, out_mat, cv::compile_args(pkg));
+  #+END_SRC
+  #+LaTeX: }
+- Users can combine kernels of different backends and G-API will partition
+  the execution among those automatically.
+
+** Heterogeneity in G-API
+    :PROPERTIES:
+    :BEAMER_opt: shrink=35
+    :END:
+*** Automatic subgraph partitioning in G-API
+***                                                           :B_block:BMCOL:
+    :PROPERTIES:
+    :BEAMER_env: block
+    :BEAMER_col: 0.18
+    :END:
+
+#+BEGIN_SRC dot :file "010-hetero-init.eps" :cmdline "-Kdot -Teps"
+digraph G {
+rankdir=TB;
+ranksep=0.3;
+
+node [shape=box margin=0 height=0.25];
+A; B; C;
+
+node [shape=ellipse];
+GMat0;
+GMat1;
+GMat2;
+GMat3;
+
+GMat0 -> A -> GMat1 -> B -> GMat2;
+GMat2 -> C;
+GMat0 -> C -> GMat3
+
+subgraph cluster {style=invis; A; GMat1; B; GMat2; C};
+}
+#+END_SRC
+
+The initial graph: operations are not resolved yet.
+
+***                                                           :B_block:BMCOL:
+    :PROPERTIES:
+    :BEAMER_env: block
+    :BEAMER_col: 0.18
+    :END:
+
+#+BEGIN_SRC dot :file "011-hetero-homo.eps" :cmdline "-Kdot -Teps"
+digraph G {
+rankdir=TB;
+ranksep=0.3;
+
+node [shape=box margin=0 height=0.25];
+A; B; C;
+
+node [shape=ellipse];
+GMat0;
+GMat1;
+GMat2;
+GMat3;
+
+GMat0 -> A -> GMat1 -> B -> GMat2;
+GMat2 -> C;
+GMat0 -> C -> GMat3
+
+subgraph cluster {style=filled;color=azure2; A; GMat1; B; GMat2; C};
+}
+#+END_SRC
+
+All operations are handled by the same backend.
+
+***                                                           :B_block:BMCOL:
+    :PROPERTIES:
+    :BEAMER_env: block
+    :BEAMER_col: 0.18
+    :END:
+
+#+BEGIN_SRC dot :file "012-hetero-a.eps" :cmdline "-Kdot -Teps"
+digraph G {
+rankdir=TB;
+ranksep=0.3;
+
+node [shape=box margin=0 height=0.25];
+A; B; C;
+
+node [shape=ellipse];
+GMat0;
+GMat1;
+GMat2;
+GMat3;
+
+GMat0 -> A -> GMat1 -> B -> GMat2;
+GMat2 -> C;
+GMat0 -> C -> GMat3
+
+subgraph cluster_1 {style=filled;color=azure2; A; GMat1; B; }
+subgraph cluster_2 {style=filled;color=ivory2; C};
+}
+#+END_SRC
+
+~A~ & ~B~ are of backend ~1~, ~C~ is of backend ~2~.
+
+***                                                           :B_block:BMCOL:
+    :PROPERTIES:
+    :BEAMER_env: block
+    :BEAMER_col: 0.18
+    :END:
+
+#+BEGIN_SRC dot :file "013-hetero-b.eps" :cmdline "-Kdot -Teps"
+digraph G {
+rankdir=TB;
+ranksep=0.3;
+
+node [shape=box margin=0 height=0.25];
+A; B; C;
+
+node [shape=ellipse];
+GMat0;
+GMat1;
+GMat2;
+GMat3;
+
+GMat0 -> A -> GMat1 -> B -> GMat2;
+GMat2 -> C;
+GMat0 -> C -> GMat3
+
+subgraph cluster_1 {style=filled;color=azure2; A};
+subgraph cluster_2 {style=filled;color=ivory2; B};
+subgraph cluster_3 {style=filled;color=azure2; C};
+}
+#+END_SRC
+
+~A~ & ~C~ are of backend ~1~, ~B~ is of backend ~2~.
+
+** Heterogeneity in G-API
+
+*** Heterogeneity summary
+
+- G-API automatically partitions its graph in subgraphs (called "islands")
+  based on the available kernels;
+- Adjacent kernels taken from the same backend are "fused" into the same
+  "island";
+- G-API implements a two-level execution model:
+  - Islands are executed at the top level by a G-API's *Executor*;
+  - Island internals are run at the bottom level by its *Backend*;
+- G-API fully delegates the low-level execution and memory management to backends.
+
+* Inference and Streaming
+
+** Inference with G-API
+
+*** In-graph inference example
+
+- Starting with OpencV 4.2 (2019), G-API allows to integrate ~infer~
+  operations into the graph:
+  #+LaTeX: {\scriptsize
+  #+BEGIN_SRC C++
+  G_API_NET(ObjDetect, <cv::GMat(cv::GMat)>, "pdf.example.od");
+
+  cv::GMat in;
+  cv::GMat blob = cv::gapi::infer<ObjDetect>(bgr);
+  cv::GOpaque<cv::Size> size = cv::gapi::streaming::size(bgr);
+  cv::GArray<cv::Rect>  objs = cv::gapi::streaming::parseSSD(blob, size);
+  cv::GComputation pipelne(cv::GIn(in), cv::GOut(objs));
+  #+END_SRC
+  #+LaTeX: }
+- Starting with OpenCV 4.5 (2020), G-API will provide more streaming-
+  and NN-oriented operations out of the box.
+
+** Inference with G-API
+
+*** What is the difference?
+
+- ~ObjDetect~ is not an operation, ~cv::gapi::infer<T>~ is;
+- ~cv::gapi::infer<T>~ is a *generic* operation, where ~T=ObjDetect~ describes
+  the calling convention:
+  - How many inputs the network consumes,
+  - How many outputs the network produces.
+- Inference data types are ~GMat~ only:
+  - Representing an image, then preprocessed automatically;
+  - Representing a blob (n-dimensional ~Mat~), then passed as-is.
+- Inference *backends* only need to implement a single generic operation ~infer~.
+
+** Inference with G-API
+
+*** But how does it run?
+
+- Since ~infer~ is an *Operation*, backends may provide *Kernels* implementing it;
+- The only publicly available inference backend now is *OpenVINO™*:
+  - Brings its ~infer~ kernel atop of the Inference Engine;
+- NN model data is passed through G-API compile arguments (like kernels);
+- Every NN backend provides its own structure to configure the network (like
+  a kernel API).
+
+** Inference with G-API
+
+*** Passing OpenVINO™ parameters to G-API
+
+- ~ObjDetect~ example:
+  #+LaTeX: {\footnotesize
+  #+BEGIN_SRC C++
+  auto face_net = cv::gapi::ie::Params<ObjDetect> {
+      face_xml_path,        // path to the topology IR
+      face_bin_path,        // path to the topology weights
+      face_device_string,   // OpenVINO plugin (device) string
+  };
+  auto networks = cv::gapi::networks(face_net);
+  pipeline.compile(.., cv::compile_args(..., networks));
+  #+END_SRC
+  #+LaTeX: }
+- ~AgeGender~ requires binding Op's outputs to NN layers:
+  #+LaTeX: {\footnotesize
+  #+BEGIN_SRC C++
+  auto age_net = cv::gapi::ie::Params<AgeGender> {
+      ...
+  }.cfgOutputLayers({"age_conv3", "prob"}); // array<string,2> !
+  #+END_SRC
+  #+LaTeX: }
+
+** Streaming with G-API
+
+#+BEGIN_SRC dot :file 020-fd-demo.eps :cmdline "-Kdot -Teps"
+digraph {
+  rankdir=LR;
+  node [shape=box];
+
+  cap [label=Capture];
+  dec [label=Decode];
+  res [label=Resize];
+  cnn [label=Infer];
+  vis [label=Visualize];
+
+  cap -> dec;
+  dec -> res;
+  res -> cnn;
+  cnn -> vis;
+}
+#+END_SRC
+Anatomy of a regular video analytics application
+
+** Streaming with G-API
+
+#+BEGIN_SRC dot :file 021-fd-serial.eps :cmdline "-Kdot -Teps"
+digraph {
+  node [shape=box margin=0 width=0.3 height=0.4]
+  nodesep=0.2;
+  rankdir=LR;
+
+  subgraph cluster0 {
+  colorscheme=blues9
+  pp [label="..." shape=plaintext];
+  v0 [label=V];
+  label="Frame N-1";
+  color=7;
+  }
+
+  subgraph cluster1 {
+  colorscheme=blues9
+  c1 [label=C];
+  d1 [label=D];
+  r1 [label=R];
+  i1 [label=I];
+  v1 [label=V];
+  label="Frame N";
+  color=6;
+  }
+
+  subgraph cluster2 {
+  colorscheme=blues9
+  c2 [label=C];
+  nn [label="..." shape=plaintext];
+  label="Frame N+1";
+  color=5;
+  }
+
+  c1 -> d1 -> r1 -> i1 -> v1;
+
+  pp-> v0;
+  v0 -> c1 [style=invis];
+  v1 -> c2 [style=invis];
+  c2 -> nn;
+}
+#+END_SRC
+Serial execution of the sample video analytics application
+
+** Streaming with G-API
+    :PROPERTIES:
+    :BEAMER_opt: shrink
+    :END:
+
+#+BEGIN_SRC dot :file 022-fd-pipelined.eps :cmdline "-Kdot -Teps"
+digraph {
+  nodesep=0.2;
+  ranksep=0.2;
+  node [margin=0 width=0.4 height=0.2];
+  node [shape=plaintext]
+  Camera [label="Camera:"];
+  GPU [label="GPU:"];
+  FPGA [label="FPGA:"];
+  CPU [label="CPU:"];
+  Time [label="Time:"];
+  t6  [label="T6"];
+  t7  [label="T7"];
+  t8  [label="T8"];
+  t9  [label="T9"];
+  t10 [label="T10"];
+  tnn [label="..."];
+
+  node [shape=box margin=0 width=0.4 height=0.4 colorscheme=blues9]
+  node [color=9] V3;
+  node [color=8] F4; V4;
+  node [color=7] DR5; F5; V5;
+  node [color=6] C6; DR6; F6; V6;
+  node [color=5] C7; DR7; F7; V7;
+  node [color=4] C8; DR8; F8;
+  node [color=3] C9; DR9;
+  node [color=2] C10;
+
+  {rank=same; rankdir=LR; Camera C6 C7 C8 C9 C10}
+  Camera -> C6 -> C7 -> C8 -> C9 -> C10 [style=invis];
+
+  {rank=same; rankdir=LR; GPU DR5 DR6 DR7 DR8 DR9}
+  GPU -> DR5 -> DR6 -> DR7 -> DR8 -> DR9 [style=invis];
+
+  C6 -> DR5 [style=invis];
+  C6 -> DR6 [constraint=false];
+  C7 -> DR7 [constraint=false];
+  C8 -> DR8 [constraint=false];
+  C9 -> DR9 [constraint=false];
+
+  {rank=same; rankdir=LR; FPGA F4 F5 F6 F7 F8}
+  FPGA -> F4 -> F5 -> F6 -> F7 -> F8 [style=invis];
+
+  DR5 -> F4 [style=invis];
+  DR5 -> F5 [constraint=false];
+  DR6 -> F6 [constraint=false];
+  DR7 -> F7 [constraint=false];
+  DR8 -> F8 [constraint=false];
+
+  {rank=same; rankdir=LR; CPU V3 V4 V5 V6 V7}
+  CPU -> V3 -> V4 -> V5 -> V6 -> V7 [style=invis];
+
+  F4 -> V3 [style=invis];
+  F4 -> V4 [constraint=false];
+  F5 -> V5 [constraint=false];
+  F6 -> V6 [constraint=false];
+  F7 -> V7 [constraint=false];
+
+  {rank=same; rankdir=LR; Time t6 t7 t8 t9 t10 tnn}
+  Time -> t6 -> t7 -> t8 -> t9 -> t10 -> tnn [style=invis];
+
+  CPU -> Time [style=invis];
+  V3 -> t6  [style=invis];
+  V4 -> t7  [style=invis];
+  V5 -> t8  [style=invis];
+  V6 -> t9  [style=invis];
+  V7 -> t10 [style=invis];
+}
+#+END_SRC
+Pipelined execution for the video analytics application
+
+** Streaming with G-API: Example
+
+**** Serial mode (4.0)                                        :B_block:BMCOL:
+    :PROPERTIES:
+    :BEAMER_env: block
+    :BEAMER_col: 0.45
+    :END:
+#+LaTeX: {\tiny
+#+BEGIN_SRC C++
+pipeline = cv::GComputation(...);
+
+cv::VideoCapture cap(input);
+cv::Mat in_frame;
+std::vector<cv::Rect> out_faces;
+
+while (cap.read(in_frame)) {
+    pipeline.apply(cv::gin(in_frame),
+                   cv::gout(out_faces),
+                   cv::compile_args(kernels,
+                                    networks));
+    // Process results
+    ...
+}
+#+END_SRC
+#+LaTeX: }
+
+**** Streaming mode (since 4.2)                               :B_block:BMCOL:
+    :PROPERTIES:
+    :BEAMER_env: block
+    :BEAMER_col: 0.45
+    :END:
+#+LaTeX: {\tiny
+#+BEGIN_SRC C++
+pipeline = cv::GComputation(...);
+
+auto in_src = cv::gapi::wip::make_src
+    <cv::gapi::wip::GCaptureSource>(input)
+auto cc = pipeline.compileStreaming
+    (cv::compile_args(kernels, networks))
+cc.setSource(cv::gin(in_src));
+cc.start();
+
+std::vector<cv::Rect> out_faces;
+while (cc.pull(cv::gout(out_faces))) {
+    // Process results
+    ...
+}
+#+END_SRC
+#+LaTeX: }
+
+**** More information
+
+#+LaTeX: {\footnotesize
+https://opencv.org/hybrid-cv-dl-pipelines-with-opencv-4-4-g-api/
+#+LaTeX: }
+
+* Latest features
+** Latest features
+*** Python API
+
+- Initial Python3 binding is available now in ~master~ (future 4.5);
+- Only basic CV functionality is supported (~core~ & ~imgproc~ namespaces,
+  selecting backends);
+- Adding more programmability, inference, and streaming is next.
+
+** Latest features
+*** Python API
+
+#+LaTeX: {\footnotesize
+#+BEGIN_SRC Python
+import numpy as np
+import cv2 as cv
+
+sz  = (1280, 720)
+in1 = np.random.randint(0, 100, sz).astype(np.uint8)
+in2 = np.random.randint(0, 100, sz).astype(np.uint8)
+
+g_in1 = cv.GMat()
+g_in2 = cv.GMat()
+g_out = cv.gapi.add(g_in1, g_in2)
+gr    = cv.GComputation(g_in1, g_in2, g_out)
+
+pkg   = cv.gapi.core.fluid.kernels()
+out   = gr.apply(in1, in2, args=cv.compile_args(pkg))
+#+END_SRC
+#+LaTeX: }
+
+* Understanding the "G-Effect"
+
+** Understanding the "G-Effect"
+
+*** What is "G-Effect"?
+
+- G-API is not only an API, but also an /implementation/;
+  - i.e. it does some work already!
+- We call "G-Effect" any measurable improvement which G-API demonstrates
+  against traditional methods;
+- So far the list is:
+  - Memory consumption;
+  - Performance;
+  - Programmer efforts.
+
+Note: in the following slides, all measurements are taken on
+Intel\textregistered{} Core\texttrademark-i5 6600 CPU.
+
+** Understanding the "G-Effect"
+# FIXME
+
+*** Memory consumption: Sobel Edge Detector
+
+- G-API/Fluid backend is designed to minimize footprint:
+#+LaTeX: {\footnotesize
+| Input       | OpenCV | G-API/Fluid | Factor |
+|             |    MiB |         MiB | Times  |
+|-------------+--------+-------------+--------|
+| 512 x 512   |  17.33 |        0.59 |  28.9x |
+| 640 x 480   |  20.29 |        0.62 |  32.8x |
+| 1280 x 720  |  60.73 |        0.72 |  83.9x |
+| 1920 x 1080 | 136.53 |        0.83 | 164.7x |
+| 3840 x 2160 | 545.88 |        1.22 | 447.4x |
+#+LaTeX: }
+- The detector itself can be written manually in two ~for~
+  loops, but G-API covers cases more complex than that;
+- OpenCV code requires changes to shrink footprint.
+
+** Understanding the "G-Effect"
+
+*** Performance: Sobel Edge Detector
+
+- G-API/Fluid backend also optimizes cache reuse:
+
+#+LaTeX: {\footnotesize
+| Input       | OpenCV | G-API/Fluid | Factor |
+|             |     ms |          ms |  Times |
+|-------------+--------+-------------+--------|
+| 320 x 240   |   1.16 |        0.53 |  2.17x |
+| 640 x 480   |   5.66 |        1.89 |  2.99x |
+| 1280 x 720  |  17.24 |        5.26 |  3.28x |
+| 1920 x 1080 |  39.04 |       12.29 |  3.18x |
+| 3840 x 2160 | 219.57 |       51.22 |  4.29x |
+#+LaTeX: }
+
+- The more data is processed, the bigger "G-Effect" is.
+
+** Understanding the "G-Effect"
+
+*** Relative speed-up based on cache efficiency
+
+#+BEGIN_LATEX
+\begin{figure}
+  \begin{tikzpicture}
+    \begin{axis}[
+      xlabel={Image size},
+      ylabel={Relative speed-up},
+      nodes near coords,
+      width=0.8\textwidth,
+      xtick=data,
+      xticklabels={QVGA, VGA, HD, FHD, UHD},
+      height=4.5cm,
+    ]
+
+    \addplot plot coordinates {(1, 1.0) (2, 1.38) (3, 1.51) (4, 1.46) (5, 1.97)};
+
+    \end{axis}
+  \end{tikzpicture}
+\end{figure}
+#+END_LATEX
+
+The higher resolution is, the higher relative speed-up is (with
+speed-up on QVGA taken as 1.0).
+
+* Resources on G-API
+
+** Resources on G-API
+   :PROPERTIES:
+   :BEAMER_opt: shrink
+   :END:
+*** Repository
+
+- https://github.com/opencv/opencv (see ~modules/gapi~)
+
+*** Article
+
+- https://opencv.org/hybrid-cv-dl-pipelines-with-opencv-4-4-g-api/
+
+*** Documentation
+
+- https://docs.opencv.org/4.4.0/d0/d1e/gapi.html
+
+*** Tutorials
+- https://docs.opencv.org/4.4.0/df/d7e/tutorial_table_of_content_gapi.html
+
+* Thank you!

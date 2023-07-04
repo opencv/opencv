@@ -4,9 +4,9 @@ typedef std::vector<dnn::MatShape> vector_MatShape;
 typedef std::vector<std::vector<dnn::MatShape> > vector_vector_MatShape;
 
 template<>
-bool pyopencv_to(PyObject *o, dnn::DictValue &dv, const char *name)
+bool pyopencv_to(PyObject *o, dnn::DictValue &dv, const ArgInfo& info)
 {
-    CV_UNUSED(name);
+    CV_UNUSED(info);
     if (!o || o == Py_None)
         return true; //Current state will be used
     else if (PyLong_Check(o))
@@ -34,12 +34,6 @@ bool pyopencv_to(PyObject *o, dnn::DictValue &dv, const char *name)
         }
     }
     return false;
-}
-
-template<>
-bool pyopencv_to(PyObject *o, std::vector<Mat> &blobs, const char *name) //required for Layer::blobs RW
-{
-  return pyopencvVecConverter<Mat>::to(o, blobs, ArgInfo(name, false));
 }
 
 template<typename T>
@@ -75,6 +69,12 @@ PyObject* pyopencv_from(const dnn::LayerParams& lp)
         CV_Assert(!PyDict_SetItemString(dict, it->first.c_str(), pyopencv_from(it->second)));
     }
     return dict;
+}
+
+template<>
+PyObject* pyopencv_from(const std::vector<dnn::Target> &t)
+{
+    return pyopencv_from(std::vector<int>(t.begin(), t.end()));
 }
 
 class pycvLayer CV_FINAL : public dnn::Layer
@@ -160,12 +160,13 @@ public:
         PyObject* args = pyopencv_from(inputs);
         PyObject* res = PyObject_CallMethodObjArgs(o, PyString_FromString("forward"), args, NULL);
         Py_DECREF(args);
-        PyGILState_Release(gstate);
         if (!res)
             CV_Error(Error::StsNotImplemented, "Failed to call \"forward\" method");
 
         std::vector<Mat> pyOutputs;
         CV_Assert(pyopencv_to(res, pyOutputs, ArgInfo("", 0)));
+        Py_DECREF(res);
+        PyGILState_Release(gstate);
 
         CV_Assert(pyOutputs.size() == outputs.size());
         for (size_t i = 0; i < outputs.size(); ++i)

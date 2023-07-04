@@ -46,6 +46,7 @@
 #define OPENCV_CORE_SATURATE_HPP
 
 #include "opencv2/core/cvdef.h"
+#include <climits>
 #include "opencv2/core/fast_math.hpp"
 
 namespace cv
@@ -73,8 +74,6 @@ namespace cv
  When the parameter is a floating-point value and the target type is an integer (8-, 16- or 32-bit),
  the floating-point value is first rounded to the nearest integer and then clipped if needed (when
  the target type is 8- or 16-bit).
-
- This operation is used in the simplest or most complex image processing functions in OpenCV.
 
  @param v Function parameter.
  @sa add, subtract, multiply, divide, Mat::convertTo

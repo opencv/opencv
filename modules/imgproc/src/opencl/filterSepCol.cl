@@ -61,7 +61,11 @@
 #endif
 
 #define DIG(a) a,
+#if defined(INTEGER_ARITHMETIC)
+__constant int mat_kernel[] = { COEFF };
+#else
 __constant srcT1 mat_kernel[] = { COEFF };
+#endif
 
 __kernel void col_filter(__global const uchar * src, int src_step, int src_offset, int src_whole_rows, int src_whole_cols,
                          __global uchar * dst, int dst_step, int dst_offset, int dst_rows, int dst_cols, float delta)
@@ -92,30 +96,28 @@ __kernel void col_filter(__global const uchar * src, int src_step, int src_offse
     barrier(CLK_LOCAL_MEM_FENCE);
 
     // read pixels from lds and calculate the result
-    sum = LDS_DAT[l_y + RADIUSY][l_x] * mat_kernel[RADIUSY];
+    sum = LDS_DAT[l_y + RADIUSY][l_x] * mat_kernel[RADIUSY] + (srcT)delta;
     for (int i = 1; i <= RADIUSY; ++i)
     {
         temp[0] = LDS_DAT[l_y + RADIUSY - i][l_x];
         temp[1] = LDS_DAT[l_y + RADIUSY + i][l_x];
-#if (defined(INTEGER_ARITHMETIC) && !INTEL_DEVICE)
+#if defined(INTEGER_ARITHMETIC)
         sum += mad24(temp[0],mat_kernel[RADIUSY - i], temp[1] * mat_kernel[RADIUSY + i]);
 #else
         sum += mad(temp[0], mat_kernel[RADIUSY - i], temp[1] * mat_kernel[RADIUSY + i]);
 #endif
     }
 
-#ifdef INTEGER_ARITHMETIC
-#ifdef INTEL_DEVICE
-    sum = (sum + (1 << (SHIFT_BITS-1))) / (1 << SHIFT_BITS);
-#else
-    sum = (sum + (1 << (SHIFT_BITS-1))) >> SHIFT_BITS;
-#endif
-#endif
-
     // write the result to dst
     if (x < dst_cols && y < dst_rows)
     {
+#if defined(SHIFT_BITS) && SHIFT_BITS > 0
+        dstT result = convertToDstT(convertToFloatT(sum) * (floatT)(1.0f / (1 << SHIFT_BITS)));
+#else
+        dstT result = convertToDstT(sum);
+#endif
+
         start_addr = mad24(y, dst_step, mad24(DSTSIZE, x, dst_offset));
-        storepix(convertToDstT(sum + (srcT)(delta)), dst + start_addr);
+        storepix(result, dst + start_addr);
     }
 }

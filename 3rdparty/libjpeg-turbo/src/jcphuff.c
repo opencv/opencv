@@ -4,8 +4,10 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1995-1997, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2011, 2015, 2018, D. R. Commander.
+ * Copyright (C) 2011, 2015, 2018, 2021-2022, D. R. Commander.
  * Copyright (C) 2016, 2018, Matthieu Darbois.
+ * Copyright (C) 2020, Arm Limited.
+ * Copyright (C) 2021, Alex Richardson.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -43,23 +45,28 @@
  * memory footprint by 64k, which is important for some mobile applications
  * that create many isolated instances of libjpeg-turbo (web browsers, for
  * instance.)  This may improve performance on some mobile platforms as well.
- * This feature is enabled by default only on ARM processors, because some x86
+ * This feature is enabled by default only on Arm processors, because some x86
  * chips have a slow implementation of bsr, and the use of clz/bsr cannot be
  * shown to have a significant performance impact even on the x86 chips that
- * have a fast implementation of it.  When building for ARMv6, you can
+ * have a fast implementation of it.  When building for Armv6, you can
  * explicitly disable the use of clz/bsr by adding -mthumb to the compiler
  * flags (this defines __thumb__).
  */
 
 /* NOTE: Both GCC and Clang define __GNUC__ */
-#if defined __GNUC__ && (defined __arm__ || defined __aarch64__)
-#if !defined __thumb__ || defined __thumb2__
+#if (defined(__GNUC__) && (defined(__arm__) || defined(__aarch64__))) || \
+    defined(_M_ARM) || defined(_M_ARM64)
+#if !defined(__thumb__) || defined(__thumb2__)
 #define USE_CLZ_INTRINSIC
 #endif
 #endif
 
 #ifdef USE_CLZ_INTRINSIC
+#if defined(_MSC_VER) && !defined(__clang__)
+#define JPEG_NBITS_NONZERO(x)  (32 - _CountLeadingZeros(x))
+#else
 #define JPEG_NBITS_NONZERO(x)  (32 - __builtin_clz(x))
+#endif
 #define JPEG_NBITS(x)          (x ? JPEG_NBITS_NONZERO(x) : 0)
 #else
 #include "jpeg_nbits_table.h"
@@ -169,24 +176,26 @@ INLINE
 METHODDEF(int)
 count_zeroes(size_t *x)
 {
-  int result;
 #if defined(HAVE_BUILTIN_CTZL)
+  int result;
   result = __builtin_ctzl(*x);
   *x >>= result;
 #elif defined(HAVE_BITSCANFORWARD64)
+  unsigned long result;
   _BitScanForward64(&result, *x);
   *x >>= result;
 #elif defined(HAVE_BITSCANFORWARD)
+  unsigned long result;
   _BitScanForward(&result, *x);
   *x >>= result;
 #else
-  result = 0;
+  int result = 0;
   while ((*x & 1) == 0) {
     ++result;
     *x >>= 1;
   }
 #endif
-  return result;
+  return (int)result;
 }
 
 
@@ -266,7 +275,7 @@ start_pass_phuff(j_compress_ptr cinfo, boolean gather_statistics)
         entropy->count_ptrs[tbl] = (long *)
           (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_IMAGE,
                                       257 * sizeof(long));
-      MEMZERO(entropy->count_ptrs[tbl], 257 * sizeof(long));
+      memset(entropy->count_ptrs[tbl], 0, 257 * sizeof(long));
     } else {
       /* Compute derived values for Huffman table */
       /* We may do this more than once for a table, but it's not expensive */
@@ -575,8 +584,8 @@ encode_mcu_DC_first(j_compress_ptr cinfo, JBLOCKROW *MCU_data)
       continue; \
     /* For a negative coef, want temp2 = bitwise complement of abs(coef) */ \
     temp2 ^= temp; \
-    values[k] = temp; \
-    values[k + DCTSIZE2] = temp2; \
+    values[k] = (JCOEF)temp; \
+    values[k + DCTSIZE2] = (JCOEF)temp2; \
     zerobits |= ((size_t)1U) << k; \
   } \
 }
@@ -672,7 +681,7 @@ encode_mcu_AC_first(j_compress_ptr cinfo, JBLOCKROW *MCU_data)
       emit_restart(entropy, entropy->next_restart_num);
 
 #ifdef WITH_SIMD
-  cvalue = values = (JCOEF *)PAD((size_t)values_unaligned, 16);
+  cvalue = values = (JCOEF *)PAD((JUINTPTR)values_unaligned, 16);
 #else
   /* Not using SIMD, so alignment is not needed */
   cvalue = values = values_unaligned;
@@ -860,7 +869,7 @@ encode_mcu_AC_refine_prepare(const JCOEF *block,
 
 #define ENCODE_COEFS_AC_REFINE(label) { \
   while (zerobits) { \
-    int idx = count_zeroes(&zerobits); \
+    idx = count_zeroes(&zerobits); \
     r += idx; \
     cabsvalue += idx; \
     signbits >>= idx; \
@@ -917,7 +926,7 @@ METHODDEF(boolean)
 encode_mcu_AC_refine(j_compress_ptr cinfo, JBLOCKROW *MCU_data)
 {
   phuff_entropy_ptr entropy = (phuff_entropy_ptr)cinfo->entropy;
-  register int temp, r;
+  register int temp, r, idx;
   char *BR_buffer;
   unsigned int BR;
   int Sl = cinfo->Se - cinfo->Ss + 1;
@@ -937,7 +946,7 @@ encode_mcu_AC_refine(j_compress_ptr cinfo, JBLOCKROW *MCU_data)
       emit_restart(entropy, entropy->next_restart_num);
 
 #ifdef WITH_SIMD
-  cabsvalue = absvalues = (JCOEF *)PAD((size_t)absvalues_unaligned, 16);
+  cabsvalue = absvalues = (JCOEF *)PAD((JUINTPTR)absvalues_unaligned, 16);
 #else
   /* Not using SIMD, so alignment is not needed */
   cabsvalue = absvalues = absvalues_unaligned;
@@ -968,7 +977,7 @@ encode_mcu_AC_refine(j_compress_ptr cinfo, JBLOCKROW *MCU_data)
 
   if (zerobits) {
     int diff = ((absvalues + DCTSIZE2 / 2) - cabsvalue);
-    int idx = count_zeroes(&zerobits);
+    idx = count_zeroes(&zerobits);
     signbits >>= idx;
     idx += diff;
     r += idx;
@@ -1053,7 +1062,7 @@ finish_pass_gather_phuff(j_compress_ptr cinfo)
   /* It's important not to apply jpeg_gen_optimal_table more than once
    * per table, because it clobbers the input frequency counts!
    */
-  MEMZERO(did, sizeof(did));
+  memset(did, 0, sizeof(did));
 
   for (ci = 0; ci < cinfo->comps_in_scan; ci++) {
     compptr = cinfo->cur_comp_info[ci];

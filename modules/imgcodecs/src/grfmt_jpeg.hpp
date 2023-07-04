@@ -52,6 +52,25 @@
 
 namespace cv
 {
+/**
+* @brief Jpeg markers that can be encountered in a Jpeg file
+*/
+enum AppMarkerTypes
+{
+    SOI = 0xD8, SOF0 = 0xC0, SOF2 = 0xC2, DHT = 0xC4,
+    DQT = 0xDB, DRI = 0xDD, SOS = 0xDA,
+
+    RST0 = 0xD0, RST1 = 0xD1, RST2 = 0xD2, RST3 = 0xD3,
+    RST4 = 0xD4, RST5 = 0xD5, RST6 = 0xD6, RST7 = 0xD7,
+
+    APP0 = 0xE0, APP1 = 0xE1, APP2 = 0xE2, APP3 = 0xE3,
+    APP4 = 0xE4, APP5 = 0xE5, APP6 = 0xE6, APP7 = 0xE7,
+    APP8 = 0xE8, APP9 = 0xE9, APP10 = 0xEA, APP11 = 0xEB,
+    APP12 = 0xEC, APP13 = 0xED, APP14 = 0xEE, APP15 = 0xEF,
+
+    COM = 0xFE, EOI = 0xD9
+};
+
 
 class JpegDecoder CV_FINAL : public BaseImageDecoder
 {

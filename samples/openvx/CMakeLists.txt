@@ -1,6 +1,6 @@
 ocv_install_example_src(cpp *.cpp *.hpp CMakeLists.txt)
 
-cmake_minimum_required(VERSION 2.8.9)
+cmake_minimum_required(VERSION 2.8.12.2)
 
 set(OPENCV_OPENVX_SAMPLE_REQUIRED_DEPS
   opencv_core
@@ -21,5 +21,5 @@ add_definitions(-DIVX_HIDE_INFO_WARNINGS)
 file(GLOB_RECURSE cpp_samples RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp)
 foreach(sample_filename ${cpp_samples})
   ocv_define_sample(tgt ${sample_filename} openvx)
-  ocv_target_link_libraries(${tgt} LINK_PRIVATE ${OPENCV_LINKER_LIBS} ${OPENCV_OPENVX_SAMPLE_REQUIRED_DEPS})
+  ocv_target_link_libraries(${tgt} PRIVATE ${OPENCV_LINKER_LIBS} ${OPENCV_OPENVX_SAMPLE_REQUIRED_DEPS})
 endforeach()

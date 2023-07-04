@@ -13,7 +13,7 @@ namespace cv {
 CV_EXPORTS const char* depthToString(int depth);
 
 /** Returns string of cv::Mat depth value: CV_8UC3 -> "CV_8UC3" or "<invalid type>" */
-CV_EXPORTS const String typeToString(int type);
+CV_EXPORTS String typeToString(int type);
 
 
 //! @cond IGNORED
@@ -23,7 +23,7 @@ namespace detail {
 CV_EXPORTS const char* depthToString_(int depth);
 
 /** Returns string of cv::Mat depth value: CV_8UC3 -> "CV_8UC3" or cv::String() */
-CV_EXPORTS const cv::String typeToString_(int type);
+CV_EXPORTS cv::String typeToString_(int type);
 
 enum TestOp {
   TEST_CUSTOM = 0,
@@ -63,8 +63,9 @@ struct CheckContext {
 #define CV__CHECK_LOCATION_VARNAME(id) CVAUX_CONCAT(CVAUX_CONCAT(__cv_check_, id), __LINE__)
 #define CV__DEFINE_CHECK_CONTEXT(id, message, testOp, p1_str, p2_str) \
     static const cv::detail::CheckContext CV__CHECK_LOCATION_VARNAME(id) = \
-            { CV__CHECK_FUNCTION, CV__CHECK_FILENAME, __LINE__, testOp, message, p1_str, p2_str }
+            { CV__CHECK_FUNCTION, CV__CHECK_FILENAME, __LINE__, testOp, "" message, "" p1_str, "" p2_str }
 
+CV_EXPORTS void CV_NORETURN check_failed_auto(const bool v1, const bool v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const int v1, const int v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const size_t v1, const size_t v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const float v1, const float v2, const CheckContext& ctx);
@@ -74,11 +75,15 @@ CV_EXPORTS void CV_NORETURN check_failed_MatDepth(const int v1, const int v2, co
 CV_EXPORTS void CV_NORETURN check_failed_MatType(const int v1, const int v2, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v1, const int v2, const CheckContext& ctx);
 
+CV_EXPORTS void CV_NORETURN check_failed_true(const bool v, const CheckContext& ctx);
+CV_EXPORTS void CV_NORETURN check_failed_false(const bool v, const CheckContext& ctx);
+
 CV_EXPORTS void CV_NORETURN check_failed_auto(const int v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const size_t v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const float v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const double v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_auto(const Size_<int> v, const CheckContext& ctx);
+CV_EXPORTS void CV_NORETURN check_failed_auto(const std::string& v1, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatDepth(const int v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatType(const int v, const CheckContext& ctx);
 CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v, const CheckContext& ctx);
@@ -132,6 +137,12 @@ CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v, const CheckCon
 
 /// Example: v == A || v == B
 #define CV_Check(v, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, auto, v, (test_expr), #v, #test_expr, msg)
+
+/// Example: v == true
+#define CV_CheckTrue(v, msg)  CV__CHECK_CUSTOM_TEST(_, true, v, v, #v, "", msg)
+
+/// Example: v == false
+#define CV_CheckFalse(v, msg)  CV__CHECK_CUSTOM_TEST(_, false, v, (!(v)), #v, "", msg)
 
 /// Some complex conditions: CV_Check(src2, src2.empty() || (src2.type() == src1.type() && src2.size() == src1.size()), "src2 should have same size/type as src1")
 // TODO define pretty-printers

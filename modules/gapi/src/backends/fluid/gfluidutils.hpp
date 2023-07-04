@@ -25,7 +25,7 @@ using cv::gapi::own::rintd;
 
 //--------------------------------
 //
-// Macros for mappig of data types
+// Macros for mapping of data types
 //
 //--------------------------------
 
@@ -83,6 +83,23 @@ using cv::gapi::own::rintd;
         GAPI_DbgAssert(              1 == src3.meta().chan); \
                                                            \
         OP<DST, SRC1, SRC2, SRC3>(__VA_ARGS__);            \
+        return;                                            \
+    }
+
+#define MERGE3_(T, OP, ...)                                \
+    if (cv::DataType<T>::depth == dst.meta().depth &&      \
+        cv::DataType<T>::depth == src1.meta().depth)       \
+    {                                                      \
+        GAPI_DbgAssert(dst.length() == src1.length());     \
+        GAPI_DbgAssert(dst.length() == src2.length());     \
+        GAPI_DbgAssert(dst.length() == src3.length());     \
+                                                           \
+        GAPI_DbgAssert(1 == src1.meta().chan);             \
+        GAPI_DbgAssert(1 == src2.meta().chan);             \
+        GAPI_DbgAssert(1 == src3.meta().chan);             \
+        GAPI_DbgAssert(3 == dst.meta().chan);              \
+                                                           \
+        OP<T>(__VA_ARGS__);                                \
         return;                                            \
     }
 

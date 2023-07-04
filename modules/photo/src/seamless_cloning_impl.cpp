@@ -57,12 +57,8 @@ void Cloning::computeGradientX( const Mat &img, Mat &gx)
     }
     else if (img.channels() == 1)
     {
-        Mat tmp[3];
-        for(int chan = 0 ; chan < 3 ; ++chan)
-        {
-            filter2D(img, tmp[chan], CV_32F, kernel);
-        }
-        merge(tmp, 3, gx);
+        filter2D(img, gx, CV_32F, kernel);
+        cvtColor(gx, gx, COLOR_GRAY2BGR);
     }
 }
 
@@ -78,12 +74,8 @@ void Cloning::computeGradientY( const Mat &img, Mat &gy)
     }
     else if (img.channels() == 1)
     {
-        Mat tmp[3];
-        for(int chan = 0 ; chan < 3 ; ++chan)
-        {
-            filter2D(img, tmp[chan], CV_32F, kernel);
-        }
-        merge(tmp, 3, gy);
+        filter2D(img, gy, CV_32F, kernel);
+        cvtColor(gy, gy, COLOR_GRAY2BGR);
     }
 }
 
@@ -254,7 +246,7 @@ void Cloning::initVariables(const Mat &destination, const Mat &binaryMask)
         filter_Y[j] = 2.0f * (float)std::cos(scale * (j + 1));
 }
 
-void Cloning::computeDerivatives(const Mat& destination, const Mat &patch, const Mat &binaryMask)
+void Cloning::computeDerivatives(const Mat& destination, const Mat &patch, Mat &binaryMask)
 {
     initVariables(destination, binaryMask);
 
@@ -314,7 +306,7 @@ void Cloning::poisson(const Mat &destination)
     }
 }
 
-void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
+void Cloning::evaluate(const Mat &I, Mat &wmask, const Mat &cloned)
 {
     bitwise_not(wmask,wmask);
 
@@ -328,7 +320,7 @@ void Cloning::evaluate(const Mat &I, const Mat &wmask, const Mat &cloned)
     merge(output,cloned);
 }
 
-void Cloning::normalClone(const Mat &destination, const Mat &patch, const Mat &binaryMask, Mat &cloned, int flag)
+void Cloning::normalClone(const Mat &destination, const Mat &patch, Mat &binaryMask, Mat &cloned, int flag)
 {
     const int w = destination.cols;
     const int h = destination.rows;

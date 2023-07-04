@@ -53,6 +53,10 @@
 
 #include <opencv2/core/utils/trace.hpp>
 
+#ifdef ENABLE_INSTRUMENTATION
+#include "opencv2/core/utils/instrumentation.hpp"
+#endif
+
 #ifdef HAVE_EIGEN
 #  if defined __GNUC__ && defined __APPLE__
 #    pragma GCC diagnostic ignored "-Wshadow"
@@ -206,8 +210,6 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #define IPP_DISABLE_HOUGH               1 // improper integration/results
 #define IPP_DISABLE_FILTER2D_BIG_MASK   1 // different results on masks > 7x7
 
-#define IPP_DISABLE_GAUSSIANBLUR_PARALLEL 1 // not supported (2017u2 / 2017u3)
-
 // Temporary disabled named IPP region. Performance
 #define IPP_DISABLE_PERF_COPYMAKE       1 // performance variations
 #define IPP_DISABLE_PERF_LUT            1 // there are no performance benefits (PR #2653)
@@ -233,6 +235,10 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #include "ipp.h"
 #endif
 #ifdef HAVE_IPP_IW
+#  if defined(__OPENCV_BUILD) && defined(__clang__)
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wstrict-prototypes"
+#  endif
 #  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wsuggest-override"
@@ -243,6 +249,9 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #  endif
 #  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 #  pragma GCC diagnostic pop
+#  endif
+#  if defined(__OPENCV_BUILD) && defined(__clang__)
+#  pragma clang diagnostic pop
 #  endif
 #endif
 

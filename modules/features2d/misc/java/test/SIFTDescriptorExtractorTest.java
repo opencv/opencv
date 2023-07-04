@@ -6,14 +6,15 @@ import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.KeyPoint;
+import org.opencv.features2d.SIFT;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 import org.opencv.imgproc.Imgproc;
-import org.opencv.features2d.Feature2D;
+import org.opencv.features2d.SIFT;
 
 public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
-    Feature2D extractor;
+    SIFT extractor;
     KeyPoint keypoint;
     int matSize;
     Mat truth;
@@ -29,7 +30,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        extractor = createClassInstance(XFEATURES2D+"SIFT", DEFAULT_FACTORY, null, null);
+        extractor = SIFT.create();
         keypoint = new KeyPoint(55.775577545166016f, 44.224422454833984f, 16, 9.754629f, 8617.863f, 1, -1);
         matSize = 100;
         truth = new Mat(1, 128, CvType.CV_32FC1) {
@@ -42,7 +43,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
                           117, 112, 117, 76, 117, 54, 117, 25, 29, 22, 117, 117, 16, 11, 14,
                           1, 0, 0, 22, 26, 0, 0, 0, 0, 1, 4, 15, 2, 47, 8, 0, 0, 82, 56, 31,
                           17, 81, 12, 0, 0, 26, 23, 18, 23, 0, 0, 0, 0, 0, 0, 0, 0
-                   );
+                    );
             }
         };
     }
@@ -75,23 +76,23 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
     public void testEmpty() {
 //        assertFalse(extractor.empty());
-        fail("Not yet implemented"); //SIFT does not override empty() method
+        fail("Not yet implemented"); // SIFT does not override empty() method
     }
 
-    public void testRead() {
-        fail("Not yet implemented");
-    }
+    public void testReadYml() {
+        String filename = OpenCVTestRunner.getTempFileName("yml");
+        writeFile(filename, "%YAML:1.0\n---\nname: \"Feature2D.SIFT\"\nnfeatures: 100\nnOctaveLayers: 4\ncontrastThreshold: 5.0000000000000001e-02\nedgeThreshold: 11\nsigma: 1.7\ndescriptorType: 5\n");
 
-    public void testWrite() {
-        String filename = OpenCVTestRunner.getTempFileName("xml");
+        extractor.read(filename);
 
-        extractor.write(filename);
+        assertEquals(128, extractor.descriptorSize());
 
-//        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<name>Feature2D.SIFT</name>\n<contrastThreshold>4.0000000000000001e-02</contrastThreshold>\n<edgeThreshold>10.</edgeThreshold>\n<nFeatures>0</nFeatures>\n<nOctaveLayers>3</nOctaveLayers>\n<sigma>1.6000000000000001e+00</sigma>\n</opencv_storage>\n";
-        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n</opencv_storage>\n";
-        String actual = readFile(filename);
-        actual = actual.replaceAll("e([+-])0(\\d\\d)", "e$1$2"); // NOTE: workaround for different platforms double representation
-        assertEquals(truth, actual);
+        assertEquals(100, extractor.getNFeatures());
+        assertEquals(4, extractor.getNOctaveLayers());
+        assertEquals(0.05, extractor.getContrastThreshold());
+        assertEquals(11., extractor.getEdgeThreshold());
+        assertEquals(1.7, extractor.getSigma());
+        assertEquals(5, extractor.descriptorType());
     }
 
     public void testWriteYml() {
@@ -99,8 +100,7 @@ public class SIFTDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-//        String truth = "%YAML:1.0\n---\nname: \"Feature2D.SIFT\"\ncontrastThreshold: 4.0000000000000001e-02\nedgeThreshold: 10.\nnFeatures: 0\nnOctaveLayers: 3\nsigma: 1.6000000000000001e+00\n";
-        String truth = "%YAML:1.0\n---\n";
+        String truth = "%YAML:1.0\n---\nname: \"Feature2D.SIFT\"\nnfeatures: 0\nnOctaveLayers: 3\ncontrastThreshold: 4.0000000000000001e-02\nedgeThreshold: 10.\nsigma: 1.6000000000000001e+00\ndescriptorType: 5\n";
         String actual = readFile(filename);
         actual = actual.replaceAll("e([+-])0(\\d\\d)", "e$1$2"); // NOTE: workaround for different platforms double representation
         assertEquals(truth, actual);

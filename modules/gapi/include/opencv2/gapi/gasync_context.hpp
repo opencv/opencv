@@ -17,13 +17,38 @@
 
 namespace cv {
 namespace gapi{
+
+/**
+ * @brief This namespace contains experimental G-API functionality,
+ * functions or structures in this namespace are subjects to change or
+ * removal in the future releases. This namespace also contains
+ * functions which API is not stabilized yet.
+ */
 namespace wip {
+
+/**
+ * @brief A class to group async requests to cancel them in a single shot.
+ *
+ * GAsyncContext is passed as an argument to async() and async_apply() functions
+ */
 
 class GAPI_EXPORTS GAsyncContext{
     std::atomic<bool> cancelation_requested = {false};
 public:
-    //returns true if it was a first request to cancel the context
+    /**
+     * @brief Start cancellation process for an associated request.
+     *
+     * User still has to wait for each individual request (either via callback or according std::future object) to make sure it actually canceled.
+     *
+     * @return true if it was a first request to cancel the context
+     */
     bool cancel();
+
+    /**
+    * @brief Returns true if cancellation was requested for this context.
+    *
+    * @return true if cancellation was requested for this context
+    */
     bool isCanceled() const;
 };
 

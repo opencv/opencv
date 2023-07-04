@@ -110,7 +110,7 @@ img1 = cv.imread('box.png',cv.IMREAD_GRAYSCALE)          # queryImage
 img2 = cv.imread('box_in_scene.png',cv.IMREAD_GRAYSCALE) # trainImage
 
 # Initiate SIFT detector
-sift = cv.xfeatures2d.SIFT_create()
+sift = cv.SIFT_create()
 
 # find the keypoints and descriptors with SIFT
 kp1, des1 = sift.detectAndCompute(img1,None)
@@ -174,7 +174,7 @@ img1 = cv.imread('box.png',cv.IMREAD_GRAYSCALE)          # queryImage
 img2 = cv.imread('box_in_scene.png',cv.IMREAD_GRAYSCALE) # trainImage
 
 # Initiate SIFT detector
-sift = cv.xfeatures2d.SIFT_create()
+sift = cv.SIFT_create()
 
 # find the keypoints and descriptors with SIFT
 kp1, des1 = sift.detectAndCompute(img1,None)

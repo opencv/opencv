@@ -45,8 +45,6 @@
 #ifndef OPENCV_CORE_HAL_INTERNAL_HPP
 #define OPENCV_CORE_HAL_INTERNAL_HPP
 
-#include "precomp.hpp"
-
 #ifdef HAVE_LAPACK
 
 int lapack_LU32f(float* a, size_t a_step, int m, float* b, size_t b_step, int n, int* info);

@@ -32,4 +32,4 @@ To run performance tests, please launch a local web server in <build_dir>/bin fo
 
 Navigate the web browser to the kernel page you want to test, like http://localhost:8080/perf/imgproc/cvtcolor.html.
 
-You can input the paramater, and then click the `Run` button to run the specific case, or it will run all the cases.
+You can input the parameter, and then click the `Run` button to run the specific case, or it will run all the cases.

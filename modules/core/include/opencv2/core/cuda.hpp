@@ -155,7 +155,7 @@ public:
     CV_WRAP void create(Size size, int type);
 
     //! decreases reference counter, deallocate the data when reference counter reaches 0
-    void release();
+    CV_WRAP void release();
 
     //! swaps with other smart pointer
     CV_WRAP void swap(GpuMat& mat);
@@ -305,6 +305,9 @@ public:
     //! returns true if GpuMat data is NULL
     CV_WRAP bool empty() const;
 
+    // returns pointer to cuda memory
+    CV_WRAP void* cudaPtr() const;
+
     //! internal use method: updates the continuity flag
     CV_WRAP void updateContinuityFlag();
 
@@ -337,6 +340,209 @@ public:
     Allocator* allocator;
 };
 
+struct CV_EXPORTS_W GpuData
+{
+    explicit GpuData(size_t _size);
+     ~GpuData();
+
+    GpuData(const GpuData&) = delete;
+    GpuData& operator=(const GpuData&) = delete;
+
+    GpuData(GpuData&&) = delete;
+    GpuData& operator=(GpuData&&) = delete;
+
+    uchar* data;
+    size_t size;
+};
+
+class CV_EXPORTS_W GpuMatND
+{
+public:
+    using SizeArray = std::vector<int>;
+    using StepArray = std::vector<size_t>;
+    using IndexArray = std::vector<int>;
+
+    //! destructor
+    ~GpuMatND();
+
+    //! default constructor
+    GpuMatND();
+
+    /** @overload
+    @param size Array of integers specifying an n-dimensional array shape.
+    @param type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
+    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
+    */
+    GpuMatND(SizeArray size, int type);
+
+    /** @overload
+    @param size Array of integers specifying an n-dimensional array shape.
+    @param type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
+    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
+    @param data Pointer to the user data. Matrix constructors that take data and step parameters do not
+    allocate matrix data. Instead, they just initialize the matrix header that points to the specified
+    data, which means that no data is copied. This operation is very efficient and can be used to
+    process external data using OpenCV functions. The external data is not automatically deallocated, so
+    you should take care of it.
+    @param step Array of _size.size()-1 steps in case of a multi-dimensional array (the last step is always
+    set to the element size). If not specified, the matrix is assumed to be continuous.
+    */
+    GpuMatND(SizeArray size, int type, void* data, StepArray step = StepArray());
+
+    /** @brief Allocates GPU memory.
+    Suppose there is some GPU memory already allocated. In that case, this method may choose to reuse that
+    GPU memory under the specific condition: it must be of the same size and type, not externally allocated,
+    the GPU memory is continuous(i.e., isContinuous() is true), and is not a sub-matrix of another GpuMatND
+    (i.e., isSubmatrix() is false). In other words, this method guarantees that the GPU memory allocated by
+    this method is always continuous and is not a sub-region of another GpuMatND.
+    */
+    void create(SizeArray size, int type);
+
+    void release();
+
+    void swap(GpuMatND& m) noexcept;
+
+    /** @brief Creates a full copy of the array and the underlying data.
+    The method creates a full copy of the array. It mimics the behavior of Mat::clone(), i.e.
+    the original step is not taken into account. So, the array copy is a continuous array
+    occupying total()\*elemSize() bytes.
+    */
+    GpuMatND clone() const;
+
+    /** @overload
+    This overload is non-blocking, so it may return even if the copy operation is not finished.
+    */
+    GpuMatND clone(Stream& stream) const;
+
+    /** @brief Extracts a sub-matrix.
+    The operator makes a new header for the specified sub-array of \*this.
+    The operator is an O(1) operation, that is, no matrix data is copied.
+    @param ranges Array of selected ranges along each dimension.
+    */
+    GpuMatND operator()(const std::vector<Range>& ranges) const;
+
+    /** @brief Creates a GpuMat header for a 2D plane part of an n-dim matrix.
+    @note The returned GpuMat is constructed with the constructor for user-allocated data.
+    That is, It does not perform reference counting.
+    @note This function does not increment this GpuMatND's reference counter.
+    */
+    GpuMat createGpuMatHeader(IndexArray idx, Range rowRange, Range colRange) const;
+
+    /** @overload
+    Creates a GpuMat header if this GpuMatND is effectively 2D.
+    @note The returned GpuMat is constructed with the constructor for user-allocated data.
+    That is, It does not perform reference counting.
+    @note This function does not increment this GpuMatND's reference counter.
+    */
+    GpuMat createGpuMatHeader() const;
+
+    /** @brief Extracts a 2D plane part of an n-dim matrix.
+    It differs from createGpuMatHeader(IndexArray, Range, Range) in that it clones a part of this
+    GpuMatND to the returned GpuMat.
+    @note This operator does not increment this GpuMatND's reference counter;
+    */
+    GpuMat operator()(IndexArray idx, Range rowRange, Range colRange) const;
+
+    /** @brief Extracts a 2D plane part of an n-dim matrix if this GpuMatND is effectively 2D.
+    It differs from createGpuMatHeader() in that it clones a part of this GpuMatND.
+    @note This operator does not increment this GpuMatND's reference counter;
+    */
+    operator GpuMat() const;
+
+    GpuMatND(const GpuMatND&) = default;
+    GpuMatND& operator=(const GpuMatND&) = default;
+
+#if defined(__GNUC__) && __GNUC__ < 5
+    // error: function '...' defaulted on its first declaration with an exception-specification
+    // that differs from the implicit declaration '...'
+
+    GpuMatND(GpuMatND&&) = default;
+    GpuMatND& operator=(GpuMatND&&) = default;
+#else
+    GpuMatND(GpuMatND&&) noexcept = default;
+    GpuMatND& operator=(GpuMatND&&) noexcept = default;
+#endif
+
+    void upload(InputArray src);
+    void upload(InputArray src, Stream& stream);
+    void download(OutputArray dst) const;
+    void download(OutputArray dst, Stream& stream) const;
+
+    //! returns true iff the GpuMatND data is continuous
+    //! (i.e. when there are no gaps between successive rows)
+    bool isContinuous() const;
+
+    //! returns true if the matrix is a sub-matrix of another matrix
+    bool isSubmatrix() const;
+
+    //! returns element size in bytes
+    size_t elemSize() const;
+
+    //! returns the size of element channel in bytes
+    size_t elemSize1() const;
+
+    //! returns true if data is null
+    bool empty() const;
+
+    //! returns true if not empty and points to external(user-allocated) gpu memory
+    bool external() const;
+
+    //! returns pointer to the first byte of the GPU memory
+    uchar* getDevicePtr() const;
+
+    //! returns the total number of array elements
+    size_t total() const;
+
+    //! returns the size of underlying memory in bytes
+    size_t totalMemSize() const;
+
+    //! returns element type
+    int type() const;
+
+private:
+    //! internal use
+    void setFields(SizeArray size, int type, StepArray step = StepArray());
+
+public:
+    /*! includes several bit-fields:
+    - the magic signature
+    - continuity flag
+    - depth
+    - number of channels
+    */
+    int flags;
+
+    //! matrix dimensionality
+    int dims;
+
+    //! shape of this array
+    SizeArray size;
+
+    /*! step values
+    Their semantics is identical to the semantics of step for Mat.
+    */
+    StepArray step;
+
+private:
+    /*! internal use
+    If this GpuMatND holds external memory, this is empty.
+    */
+    std::shared_ptr<GpuData> data_;
+
+    /*! internal use
+    If this GpuMatND manages memory with reference counting, this value is
+    always equal to data_->data. If this GpuMatND holds external memory,
+    data_ is empty and data points to the external memory.
+    */
+    uchar* data;
+
+    /*! internal use
+    If this GpuMatND is a sub-matrix of a larger matrix, this value is the
+    difference of the first byte between the sub-matrix and the whole matrix.
+    */
+    size_t offset;
+};
+
 /** @brief Creates a continuous matrix.
 
 @param rows Row count.
@@ -360,6 +566,29 @@ CV_EXPORTS_W void createContinuous(int rows, int cols, int type, OutputArray arr
 The function does not reallocate memory if the matrix has proper attributes already.
  */
 CV_EXPORTS_W void ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr);
+
+/** @brief Bindings overload to create a GpuMat from existing GPU memory.
+@param rows Row count.
+@param cols Column count.
+@param type Type of the matrix.
+@param cudaMemoryAddress Address of the allocated GPU memory on the device. This does not allocate matrix data. Instead, it just initializes the matrix header that points to the specified \a cudaMemoryAddress, which means that no data is copied. This operation is very efficient and can be used to process external data using OpenCV functions. The external data is not automatically deallocated, so you should take care of it.
+@param step Number of bytes each matrix row occupies. The value should include the padding bytes at the end of each row, if any. If the parameter is missing (set to Mat::AUTO_STEP ), no padding is assumed and the actual step is calculated as cols*elemSize(). See GpuMat::elemSize.
+@note Overload for generation of bindings only, not exported or intended for use internally from C++.
+ */
+CV_EXPORTS_W GpuMat inline createGpuMatFromCudaMemory(int rows, int cols, int type, size_t cudaMemoryAddress, size_t step = Mat::AUTO_STEP) {
+    return GpuMat(rows, cols, type, reinterpret_cast<void*>(cudaMemoryAddress), step);
+};
+
+ /** @overload
+@param size 2D array size: Size(cols, rows). In the Size() constructor, the number of rows and the number of columns go in the reverse order.
+@param type Type of the matrix.
+@param cudaMemoryAddress Address of the allocated GPU memory on the device. This does not allocate matrix data. Instead, it just initializes the matrix header that points to the specified \a cudaMemoryAddress, which means that no data is copied. This operation is very efficient and can be used to process external data using OpenCV functions. The external data is not automatically deallocated, so you should take care of it.
+@param step Number of bytes each matrix row occupies. The value should include the padding bytes at the end of each row, if any. If the parameter is missing (set to Mat::AUTO_STEP ), no padding is assumed and the actual step is calculated as cols*elemSize(). See GpuMat::elemSize.
+@note Overload for generation of bindings only, not exported or intended for use internally from C++.
+ */
+CV_EXPORTS_W inline GpuMat createGpuMatFromCudaMemory(Size size, int type, size_t cudaMemoryAddress, size_t step = Mat::AUTO_STEP) {
+    return GpuMat(size, type, reinterpret_cast<void*>(cudaMemoryAddress), step);
+};
 
 /** @brief BufferPool for use with CUDA streams
 
@@ -403,8 +632,8 @@ Below is an example that utilizes BufferPool with StackAllocator:
         GpuMat d_src2 = pool2.getBuffer(1024, 1024, CV_8UC1);   // 1MB
         GpuMat d_dst2 = pool2.getBuffer(1024, 1024, CV_8UC3);   // 3MB
 
-        cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
-        cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
+        cvtColor(d_src1, d_dst1, cv::COLOR_GRAY2BGR, 0, stream1);
+        cvtColor(d_src2, d_dst2, cv::COLOR_GRAY2BGR, 0, stream2);
     }
 @endcode
 
@@ -469,8 +698,8 @@ and the corresponding memory is automatically returned to the pool for later usa
             d_src1.setTo(Scalar(i), stream1);
             d_src2.setTo(Scalar(i), stream2);
 
-            cvtColor(d_src1, d_dst1, CV_GRAY2BGR, 0, stream1);
-            cvtColor(d_src2, d_dst2, CV_GRAY2BGR, 0, stream2);
+            cvtColor(d_src1, d_dst1, cv::COLOR_GRAY2BGR, 0, stream1);
+            cvtColor(d_src2, d_dst2, cv::COLOR_GRAY2BGR, 0, stream2);
                                                                     // The order of destruction of the local variables is:
                                                                     //   d_dst2 => d_src2 => d_dst1 => d_src1
                                                                     // LIFO rule is satisfied, this code runs without error
@@ -483,13 +712,21 @@ class CV_EXPORTS_W BufferPool
 public:
 
     //! Gets the BufferPool for the given stream.
-    explicit BufferPool(Stream& stream);
+    CV_WRAP explicit BufferPool(Stream& stream);
 
     //! Allocates a new GpuMat of given size and type.
     CV_WRAP GpuMat getBuffer(int rows, int cols, int type);
 
+// WARNING: unreachable code using Ninja
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(push)
+#pragma warning(disable: 4702)
+#endif
     //! Allocates a new GpuMat of given size and type.
     CV_WRAP GpuMat getBuffer(Size size, int type) { return getBuffer(size.height, size.width, type); }
+#if defined _MSC_VER && _MSC_VER >= 1920
+#pragma warning(pop)
+#endif
 
     //! Returns the allocator associated with the stream.
     CV_WRAP Ptr<GpuMat::Allocator> getAllocator() const { return allocator_; }
@@ -653,6 +890,18 @@ public:
     //! creates a new asynchronous stream with custom allocator
     CV_WRAP Stream(const Ptr<GpuMat::Allocator>& allocator);
 
+    /** @brief creates a new Stream using the cudaFlags argument to determine the behaviors of the stream
+
+    @note The cudaFlags parameter is passed to the underlying api cudaStreamCreateWithFlags() and
+    supports the same parameter values.
+    @code
+        // creates an OpenCV cuda::Stream that manages an asynchronous, non-blocking,
+        // non-default CUDA stream
+        cv::cuda::Stream cvStream(cudaStreamNonBlocking);
+    @endcode
+     */
+    CV_WRAP Stream(const size_t cudaFlags);
+
     /** @brief Returns true if the current stream queue is finished. Otherwise, it returns false.
     */
     CV_WRAP bool queryIfComplete() const;
@@ -681,6 +930,9 @@ public:
     //! returns true if stream object is not default (!= 0)
     operator bool_type() const;
 
+    //! return Pointer to CUDA stream
+    CV_WRAP void* cudaPtr() const;
+
     class Impl;
 
 private:
@@ -691,6 +943,13 @@ private:
     friend class BufferPool;
     friend class DefaultDeviceInitializer;
 };
+
+
+/** @brief Bindings overload to create a Stream object from the address stored in an existing CUDA Runtime API stream pointer (cudaStream_t).
+@param cudaStreamMemoryAddress Memory address stored in a CUDA Runtime API stream pointer (cudaStream_t). The created Stream object does not perform any allocation or deallocation and simply wraps existing raw CUDA Runtime API stream pointer.
+@note Overload for generation of bindings only, not exported or intended for use internally from C++.
+ */
+CV_EXPORTS_W Stream wrapStream(size_t cudaStreamMemoryAddress);
 
 class CV_EXPORTS_W Event
 {
@@ -703,7 +962,7 @@ public:
         INTERPROCESS   = 0x04   /**< Event is suitable for interprocess use. DisableTiming must be set */
     };
 
-    CV_WRAP explicit Event(Event::CreateFlags flags = Event::CreateFlags::DEFAULT);
+    CV_WRAP explicit Event(const Event::CreateFlags flags = Event::CreateFlags::DEFAULT);
 
     //! records an event
     CV_WRAP void record(Stream& stream = Stream::Null());
@@ -725,6 +984,7 @@ private:
 
     friend struct EventAccessor;
 };
+CV_ENUM_FLAGS(Event::CreateFlags)
 
 //! @} cudacore_struct
 

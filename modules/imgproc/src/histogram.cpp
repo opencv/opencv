@@ -45,6 +45,8 @@
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
 
+#include "opencv2/core/utils/tls.hpp"
+
 namespace cv
 {
 
@@ -73,8 +75,8 @@ calcHistLookupTables_8u( const Mat& hist, const SparseMat& shist,
             int sz = !issparse ? hist.size[i] : shist.size(i);
             size_t step = !issparse ? hist.step[i] : 1;
 
-            double v_lo = ranges[i][0];
-            double v_hi = ranges[i][1];
+            double v_lo = ranges ? ranges[i][0] : 0;
+            double v_hi = ranges ? ranges[i][1] : 256;
 
             for( j = low; j < high; j++ )
             {
@@ -181,7 +183,7 @@ static void histPrepareImages( const Mat* images, int nimages, const int* channe
         imsize.height = 1;
     }
 
-    if( !ranges )
+    if( !ranges ) // implicit uniform ranges for 8U
     {
         CV_Assert( depth == CV_8U );
 
@@ -907,7 +909,8 @@ static bool ipp_calchist(const Mat &image, Mat &hist, int histSize, const float*
 #endif
 
     // IPP_DISABLE_HISTOGRAM - https://github.com/opencv/opencv/issues/11544
-    if (uniform && (ranges[0][1] - ranges[0][0]) != histSize)
+    // and https://github.com/opencv/opencv/issues/21595
+    if ((uniform && (ranges[0][1] - ranges[0][0]) != histSize) || abs(ranges[0][0]) != cvFloor(ranges[0][0]))
         return false;
 
     Mat ihist = hist;
@@ -948,6 +951,8 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
                    const float** ranges, bool uniform, bool accumulate )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(images && nimages > 0);
 
     CV_OVX_RUN(
         images && histSize &&
@@ -1227,10 +1232,10 @@ static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32
         return false;
 
     wgs = std::min<size_t>(ocl::Device::getDefault().maxWorkGroupSize(), BINS);
-    char cvt[40];
+    char cvt[50];
     ocl::Kernel k2("merge_histogram", ocl::imgproc::histogram_oclsrc,
                    format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D convertToHT=%s -D HT=%s",
-                          BINS, compunits, (int)wgs, ocl::convertTypeStr(CV_32S, ddepth, 1, cvt),
+                          BINS, compunits, (int)wgs, ocl::convertTypeStr(CV_32S, ddepth, 1, cvt, sizeof(cvt)),
                           ocl::typeToStr(ddepth)));
     if (k2.empty())
         return false;
@@ -1258,6 +1263,8 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
                const float** ranges, bool uniform, bool accumulate )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(images && nimages > 0);
 
     Mat mask = _mask.getMat();
     calcHist( images, nimages, channels, mask, hist, dims, histSize,
@@ -1606,6 +1613,8 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(images && nimages > 0);
+
     Mat hist = _hist.getMat();
     std::vector<uchar*> ptrs;
     std::vector<int> deltas;
@@ -1774,6 +1783,8 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
                           const float** ranges, double scale, bool uniform )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(images && nimages > 0);
 
     std::vector<uchar*> ptrs;
     std::vector<int> deltas;

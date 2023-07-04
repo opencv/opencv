@@ -3,7 +3,9 @@ if(OPENCV_INITIAL_PASS)
   add_subdirectory(generator)
 endif()
 
-if(APPLE_FRAMEWORK OR WINRT OR NOT PYTHON_DEFAULT_AVAILABLE OR NOT (ANT_EXECUTABLE OR ANDROID_PROJECTS_BUILD_TYPE STREQUAL "GRADLE")
+if(APPLE_FRAMEWORK OR WINRT
+    OR NOT PYTHON_DEFAULT_AVAILABLE
+    OR NOT (ANT_EXECUTABLE OR Java_FOUND OR ANDROID_PROJECTS_BUILD_TYPE STREQUAL "GRADLE")
     OR NOT (JNI_FOUND OR (ANDROID AND (NOT DEFINED ANDROID_NATIVE_API_LEVEL OR ANDROID_NATIVE_API_LEVEL GREATER 7)))
     OR BUILD_opencv_world
     )
@@ -19,7 +21,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/common.cmake)
 macro(glob_more_specific_sources _type _root _output)
   unset(_masks)
   if(${_type} STREQUAL "H")
-    set(_masks "${_root}/cpp/*.h" "${root}/cpp/*.hpp")
+    set(_masks "${_root}/cpp/*.h" "${_root}/cpp/*.hpp")
   elseif(${_type} STREQUAL "CPP")
     set(_masks "${_root}/cpp/*.cpp")
   elseif(${_type} STREQUAL "JAVA")

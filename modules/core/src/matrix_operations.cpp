@@ -2,11 +2,10 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-
+#include "precomp.hpp"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/types_c.h"
 #include "opencl_kernels_core.hpp"
-#include "precomp.hpp"
 
 #undef HAVE_IPP
 #undef CV_IPP_RUN_FAST
@@ -227,6 +226,23 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
     }
 }
 
+
+namespace cv {
+
+UMat UMat::eye(int rows, int cols, int type, UMatUsageFlags usageFlags)
+{
+    return UMat::eye(Size(cols, rows), type, usageFlags);
+}
+
+UMat UMat::eye(Size size, int type, UMatUsageFlags usageFlags)
+{
+    UMat m(size, type, usageFlags);
+    setIdentity(m);
+    return m;
+}
+
+}  // namespace
+
 //////////////////////////////////////////// trace ///////////////////////////////////////////
 
 cv::Scalar cv::trace( InputArray _m )
@@ -259,285 +275,6 @@ cv::Scalar cv::trace( InputArray _m )
     }
 
     return cv::sum(m.diag());
-}
-
-////////////////////////////////////// transpose /////////////////////////////////////////
-
-namespace cv
-{
-
-template<typename T> static void
-transpose_( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz )
-{
-    int i=0, j, m = sz.width, n = sz.height;
-
-    #if CV_ENABLE_UNROLLED
-    for(; i <= m - 4; i += 4 )
-    {
-        T* d0 = (T*)(dst + dstep*i);
-        T* d1 = (T*)(dst + dstep*(i+1));
-        T* d2 = (T*)(dst + dstep*(i+2));
-        T* d3 = (T*)(dst + dstep*(i+3));
-
-        for( j = 0; j <= n - 4; j += 4 )
-        {
-            const T* s0 = (const T*)(src + i*sizeof(T) + sstep*j);
-            const T* s1 = (const T*)(src + i*sizeof(T) + sstep*(j+1));
-            const T* s2 = (const T*)(src + i*sizeof(T) + sstep*(j+2));
-            const T* s3 = (const T*)(src + i*sizeof(T) + sstep*(j+3));
-
-            d0[j] = s0[0]; d0[j+1] = s1[0]; d0[j+2] = s2[0]; d0[j+3] = s3[0];
-            d1[j] = s0[1]; d1[j+1] = s1[1]; d1[j+2] = s2[1]; d1[j+3] = s3[1];
-            d2[j] = s0[2]; d2[j+1] = s1[2]; d2[j+2] = s2[2]; d2[j+3] = s3[2];
-            d3[j] = s0[3]; d3[j+1] = s1[3]; d3[j+2] = s2[3]; d3[j+3] = s3[3];
-        }
-
-        for( ; j < n; j++ )
-        {
-            const T* s0 = (const T*)(src + i*sizeof(T) + j*sstep);
-            d0[j] = s0[0]; d1[j] = s0[1]; d2[j] = s0[2]; d3[j] = s0[3];
-        }
-    }
-    #endif
-    for( ; i < m; i++ )
-    {
-        T* d0 = (T*)(dst + dstep*i);
-        j = 0;
-        #if CV_ENABLE_UNROLLED
-        for(; j <= n - 4; j += 4 )
-        {
-            const T* s0 = (const T*)(src + i*sizeof(T) + sstep*j);
-            const T* s1 = (const T*)(src + i*sizeof(T) + sstep*(j+1));
-            const T* s2 = (const T*)(src + i*sizeof(T) + sstep*(j+2));
-            const T* s3 = (const T*)(src + i*sizeof(T) + sstep*(j+3));
-
-            d0[j] = s0[0]; d0[j+1] = s1[0]; d0[j+2] = s2[0]; d0[j+3] = s3[0];
-        }
-        #endif
-        for( ; j < n; j++ )
-        {
-            const T* s0 = (const T*)(src + i*sizeof(T) + j*sstep);
-            d0[j] = s0[0];
-        }
-    }
-}
-
-template<typename T> static void
-transposeI_( uchar* data, size_t step, int n )
-{
-    for( int i = 0; i < n; i++ )
-    {
-        T* row = (T*)(data + step*i);
-        uchar* data1 = data + i*sizeof(T);
-        for( int j = i+1; j < n; j++ )
-            std::swap( row[j], *(T*)(data1 + step*j) );
-    }
-}
-
-typedef void (*TransposeFunc)( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz );
-typedef void (*TransposeInplaceFunc)( uchar* data, size_t step, int n );
-
-#define DEF_TRANSPOSE_FUNC(suffix, type) \
-static void transpose_##suffix( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size sz ) \
-{ transpose_<type>(src, sstep, dst, dstep, sz); } \
-\
-static void transposeI_##suffix( uchar* data, size_t step, int n ) \
-{ transposeI_<type>(data, step, n); }
-
-DEF_TRANSPOSE_FUNC(8u, uchar)
-DEF_TRANSPOSE_FUNC(16u, ushort)
-DEF_TRANSPOSE_FUNC(8uC3, Vec3b)
-DEF_TRANSPOSE_FUNC(32s, int)
-DEF_TRANSPOSE_FUNC(16uC3, Vec3s)
-DEF_TRANSPOSE_FUNC(32sC2, Vec2i)
-DEF_TRANSPOSE_FUNC(32sC3, Vec3i)
-DEF_TRANSPOSE_FUNC(32sC4, Vec4i)
-DEF_TRANSPOSE_FUNC(32sC6, Vec6i)
-DEF_TRANSPOSE_FUNC(32sC8, Vec8i)
-
-static TransposeFunc transposeTab[] =
-{
-    0, transpose_8u, transpose_16u, transpose_8uC3, transpose_32s, 0, transpose_16uC3, 0,
-    transpose_32sC2, 0, 0, 0, transpose_32sC3, 0, 0, 0, transpose_32sC4,
-    0, 0, 0, 0, 0, 0, 0, transpose_32sC6, 0, 0, 0, 0, 0, 0, 0, transpose_32sC8
-};
-
-static TransposeInplaceFunc transposeInplaceTab[] =
-{
-    0, transposeI_8u, transposeI_16u, transposeI_8uC3, transposeI_32s, 0, transposeI_16uC3, 0,
-    transposeI_32sC2, 0, 0, 0, transposeI_32sC3, 0, 0, 0, transposeI_32sC4,
-    0, 0, 0, 0, 0, 0, 0, transposeI_32sC6, 0, 0, 0, 0, 0, 0, 0, transposeI_32sC8
-};
-
-#ifdef HAVE_OPENCL
-
-static bool ocl_transpose( InputArray _src, OutputArray _dst )
-{
-    const ocl::Device & dev = ocl::Device::getDefault();
-    const int TILE_DIM = 32, BLOCK_ROWS = 8;
-    int type = _src.type(), cn = CV_MAT_CN(type), depth = CV_MAT_DEPTH(type),
-        rowsPerWI = dev.isIntel() ? 4 : 1;
-
-    UMat src = _src.getUMat();
-    _dst.create(src.cols, src.rows, type);
-    UMat dst = _dst.getUMat();
-
-    String kernelName("transpose");
-    bool inplace = dst.u == src.u;
-
-    if (inplace)
-    {
-        CV_Assert(dst.cols == dst.rows);
-        kernelName += "_inplace";
-    }
-    else
-    {
-        // check required local memory size
-        size_t required_local_memory = (size_t) TILE_DIM*(TILE_DIM+1)*CV_ELEM_SIZE(type);
-        if (required_local_memory > ocl::Device::getDefault().localMemSize())
-            return false;
-    }
-
-    ocl::Kernel k(kernelName.c_str(), ocl::core::transpose_oclsrc,
-                  format("-D T=%s -D T1=%s -D cn=%d -D TILE_DIM=%d -D BLOCK_ROWS=%d -D rowsPerWI=%d%s",
-                         ocl::memopTypeToStr(type), ocl::memopTypeToStr(depth),
-                         cn, TILE_DIM, BLOCK_ROWS, rowsPerWI, inplace ? " -D INPLACE" : ""));
-    if (k.empty())
-        return false;
-
-    if (inplace)
-        k.args(ocl::KernelArg::ReadWriteNoSize(dst), dst.rows);
-    else
-        k.args(ocl::KernelArg::ReadOnly(src),
-               ocl::KernelArg::WriteOnlyNoSize(dst));
-
-    size_t localsize[2]  = { TILE_DIM, BLOCK_ROWS };
-    size_t globalsize[2] = { (size_t)src.cols, inplace ? ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI : (divUp((size_t)src.rows, TILE_DIM) * BLOCK_ROWS) };
-
-    if (inplace && dev.isIntel())
-    {
-        localsize[0] = 16;
-        localsize[1] = dev.maxWorkGroupSize() / localsize[0];
-    }
-
-    return k.run(2, globalsize, localsize, false);
-}
-
-#endif
-
-#ifdef HAVE_IPP
-static bool ipp_transpose( Mat &src, Mat &dst )
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    int type = src.type();
-    typedef IppStatus (CV_STDCALL * IppiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
-    typedef IppStatus (CV_STDCALL * IppiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
-    IppiTranspose ippiTranspose = 0;
-    IppiTransposeI ippiTranspose_I = 0;
-
-    if (dst.data == src.data && dst.cols == dst.rows)
-    {
-        CV_SUPPRESS_DEPRECATED_START
-        ippiTranspose_I =
-            type == CV_8UC1 ? (IppiTransposeI)ippiTranspose_8u_C1IR :
-            type == CV_8UC3 ? (IppiTransposeI)ippiTranspose_8u_C3IR :
-            type == CV_8UC4 ? (IppiTransposeI)ippiTranspose_8u_C4IR :
-            type == CV_16UC1 ? (IppiTransposeI)ippiTranspose_16u_C1IR :
-            type == CV_16UC3 ? (IppiTransposeI)ippiTranspose_16u_C3IR :
-            type == CV_16UC4 ? (IppiTransposeI)ippiTranspose_16u_C4IR :
-            type == CV_16SC1 ? (IppiTransposeI)ippiTranspose_16s_C1IR :
-            type == CV_16SC3 ? (IppiTransposeI)ippiTranspose_16s_C3IR :
-            type == CV_16SC4 ? (IppiTransposeI)ippiTranspose_16s_C4IR :
-            type == CV_32SC1 ? (IppiTransposeI)ippiTranspose_32s_C1IR :
-            type == CV_32SC3 ? (IppiTransposeI)ippiTranspose_32s_C3IR :
-            type == CV_32SC4 ? (IppiTransposeI)ippiTranspose_32s_C4IR :
-            type == CV_32FC1 ? (IppiTransposeI)ippiTranspose_32f_C1IR :
-            type == CV_32FC3 ? (IppiTransposeI)ippiTranspose_32f_C3IR :
-            type == CV_32FC4 ? (IppiTransposeI)ippiTranspose_32f_C4IR : 0;
-        CV_SUPPRESS_DEPRECATED_END
-    }
-    else
-    {
-        ippiTranspose =
-            type == CV_8UC1 ? (IppiTranspose)ippiTranspose_8u_C1R :
-            type == CV_8UC3 ? (IppiTranspose)ippiTranspose_8u_C3R :
-            type == CV_8UC4 ? (IppiTranspose)ippiTranspose_8u_C4R :
-            type == CV_16UC1 ? (IppiTranspose)ippiTranspose_16u_C1R :
-            type == CV_16UC3 ? (IppiTranspose)ippiTranspose_16u_C3R :
-            type == CV_16UC4 ? (IppiTranspose)ippiTranspose_16u_C4R :
-            type == CV_16SC1 ? (IppiTranspose)ippiTranspose_16s_C1R :
-            type == CV_16SC3 ? (IppiTranspose)ippiTranspose_16s_C3R :
-            type == CV_16SC4 ? (IppiTranspose)ippiTranspose_16s_C4R :
-            type == CV_32SC1 ? (IppiTranspose)ippiTranspose_32s_C1R :
-            type == CV_32SC3 ? (IppiTranspose)ippiTranspose_32s_C3R :
-            type == CV_32SC4 ? (IppiTranspose)ippiTranspose_32s_C4R :
-            type == CV_32FC1 ? (IppiTranspose)ippiTranspose_32f_C1R :
-            type == CV_32FC3 ? (IppiTranspose)ippiTranspose_32f_C3R :
-            type == CV_32FC4 ? (IppiTranspose)ippiTranspose_32f_C4R : 0;
-    }
-
-    IppiSize roiSize = { src.cols, src.rows };
-    if (ippiTranspose != 0)
-    {
-        if (CV_INSTRUMENT_FUN_IPP(ippiTranspose, src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, roiSize) >= 0)
-            return true;
-    }
-    else if (ippiTranspose_I != 0)
-    {
-        if (CV_INSTRUMENT_FUN_IPP(ippiTranspose_I, dst.ptr(), (int)dst.step, roiSize) >= 0)
-            return true;
-    }
-    return false;
-}
-#endif
-
-}
-
-
-void cv::transpose( InputArray _src, OutputArray _dst )
-{
-    CV_INSTRUMENT_REGION();
-
-    int type = _src.type(), esz = CV_ELEM_SIZE(type);
-    CV_Assert( _src.dims() <= 2 && esz <= 32 );
-
-    CV_OCL_RUN(_dst.isUMat(),
-               ocl_transpose(_src, _dst))
-
-    Mat src = _src.getMat();
-    if( src.empty() )
-    {
-        _dst.release();
-        return;
-    }
-
-    _dst.create(src.cols, src.rows, src.type());
-    Mat dst = _dst.getMat();
-
-    // handle the case of single-column/single-row matrices, stored in STL vectors.
-    if( src.rows != dst.cols || src.cols != dst.rows )
-    {
-        CV_Assert( src.size() == dst.size() && (src.cols == 1 || src.rows == 1) );
-        src.copyTo(dst);
-        return;
-    }
-
-    CV_IPP_RUN_FAST(ipp_transpose(src, dst))
-
-    if( dst.data == src.data )
-    {
-        TransposeInplaceFunc func = transposeInplaceTab[esz];
-        CV_Assert( func != 0 );
-        CV_Assert( dst.cols == dst.rows );
-        func( dst.ptr(), dst.step, dst.rows );
-    }
-    else
-    {
-        TransposeFunc func = transposeTab[esz];
-        CV_Assert( func != 0 );
-        func( src.ptr(), src.step, dst.ptr(), dst.step, src.size() );
-    }
 }
 
 
@@ -604,29 +341,32 @@ cv::Mat cv::Mat::cross(InputArray _m) const
 namespace cv
 {
 
-template<typename T, typename ST, class Op> static void
-reduceR_( const Mat& srcmat, Mat& dstmat )
+template<typename T, typename ST, typename WT, class Op, class OpInit>
+class ReduceR_Invoker : public ParallelLoopBody
 {
-    typedef typename Op::rtype WT;
-    Size size = srcmat.size();
-    size.width *= srcmat.channels();
-    AutoBuffer<WT> buffer(size.width);
+public:
+  ReduceR_Invoker(const Mat& aSrcmat, Mat& aDstmat, Op& aOp, OpInit& aOpInit)
+                 :srcmat(aSrcmat),dstmat(aDstmat),op(aOp),opInit(aOpInit),buffer(srcmat.size().width*srcmat.channels())
+  {
+  }
+  void operator()(const Range& range) const CV_OVERRIDE
+  {
+    const T* src = srcmat.ptr<T>();
+    const size_t srcstep = srcmat.step/sizeof(src[0]);
     WT* buf = buffer.data();
     ST* dst = dstmat.ptr<ST>();
-    const T* src = srcmat.ptr<T>();
-    size_t srcstep = srcmat.step/sizeof(src[0]);
-    int i;
-    Op op;
+    int i = 0;
 
-    for( i = 0; i < size.width; i++ )
-        buf[i] = src[i];
+    for( i = range.start ; i < range.end; i++ )
+        buf[i] = opInit(src[i]);
 
-    for( ; --size.height; )
+    int height = srcmat.size().height;
+    for( ; --height; )
     {
         src += srcstep;
-        i = 0;
+        i = range.start;
         #if CV_ENABLE_UNROLLED
-        for(; i <= size.width - 4; i += 4 )
+        for(; i <= range.end - 4; i += 4 )
         {
             WT s0, s1;
             s0 = op(buf[i], (WT)src[i]);
@@ -638,63 +378,94 @@ reduceR_( const Mat& srcmat, Mat& dstmat )
             buf[i+2] = s0; buf[i+3] = s1;
         }
         #endif
-        for( ; i < size.width; i++ )
+        for( ; i < range.end; i++ )
             buf[i] = op(buf[i], (WT)src[i]);
     }
 
-    for( i = 0; i < size.width; i++ )
+    for( i = range.start ; i < range.end; i++ )
         dst[i] = (ST)buf[i];
-}
+  }
+private:
+  const Mat& srcmat;
+  Mat& dstmat;
+  Op& op;
+  OpInit& opInit;
+  mutable AutoBuffer<WT> buffer;
+};
 
-
-template<typename T, typename ST, class Op> static void
-reduceC_( const Mat& srcmat, Mat& dstmat )
+template<typename T, typename ST, class Op, class OpInit = OpNop<ST> > static void
+reduceR_( const Mat& srcmat, Mat& dstmat)
 {
     typedef typename Op::rtype WT;
-    Size size = srcmat.size();
-    int cn = srcmat.channels();
-    size.width *= cn;
     Op op;
+    OpInit opInit;
 
-    for( int y = 0; y < size.height; y++ )
+    ReduceR_Invoker<T, ST, WT, Op, OpInit> body(srcmat, dstmat, op, opInit);
+    //group columns by 64 bytes for data locality
+    parallel_for_(Range(0, srcmat.size().width*srcmat.channels()), body, srcmat.size().width*CV_ELEM_SIZE(srcmat.depth())/64);
+}
+
+template<typename T, typename ST, typename WT, class Op, class OpInit>
+class ReduceC_Invoker : public ParallelLoopBody
+{
+public:
+  ReduceC_Invoker(const Mat& aSrcmat, Mat& aDstmat, Op& aOp, OpInit& aOpInit)
+                 :srcmat(aSrcmat),dstmat(aDstmat),op(aOp),opInit(aOpInit)
+  {
+  }
+  void operator()(const Range& range) const CV_OVERRIDE
+  {
+    const int cn = srcmat.channels();
+    const int width = srcmat.size().width*cn;
+    AutoBuffer<WT> cumul(cn);
+    for( int y = range.start; y < range.end; y++ )
     {
         const T* src = srcmat.ptr<T>(y);
         ST* dst = dstmat.ptr<ST>(y);
-        if( size.width == cn )
-            for( int k = 0; k < cn; k++ )
-                dst[k] = src[k];
+        if( width == cn )
+        {
+          for( int k = 0; k < cn; k++ )
+              dst[k] = (ST)opInit(src[k]);
+        }
         else
         {
-            for( int k = 0; k < cn; k++ )
+            for(int k = 0; k < cn ; ++k )
+              cumul[k] = opInit(src[k]);
+            for(int k = cn ; k < width ; k += cn )
             {
-                WT a0 = src[k], a1 = src[k+cn];
-                int i;
-                for( i = 2*cn; i <= size.width - 4*cn; i += 4*cn )
-                {
-                    a0 = op(a0, (WT)src[i+k]);
-                    a1 = op(a1, (WT)src[i+k+cn]);
-                    a0 = op(a0, (WT)src[i+k+cn*2]);
-                    a1 = op(a1, (WT)src[i+k+cn*3]);
-                }
-
-                for( ; i < size.width; i += cn )
-                {
-                    a0 = op(a0, (WT)src[i+k]);
-                }
-                a0 = op(a0, a1);
-                dst[k] = (ST)a0;
+                for (int c = 0 ; c < cn ; ++c)
+                  cumul[c] = op(cumul[c], src[k+c]);
             }
+            for(int k = 0 ; k < cn ; ++k )
+              dst[k] = (ST)cumul[k];
         }
     }
+  }
+private:
+  const Mat& srcmat;
+  Mat& dstmat;
+  Op& op;
+  OpInit& opInit;
+};
+
+template<typename T, typename ST, class Op, class OpInit = OpNop<ST> > static void
+reduceC_( const Mat& srcmat, Mat& dstmat)
+{
+    typedef typename Op::rtype WT;
+    Op op;
+    OpInit opInit;
+
+    ReduceC_Invoker<T, ST, WT, Op, OpInit> body(srcmat, dstmat, op, opInit);
+    parallel_for_(Range(0, srcmat.size().height), body);
 }
 
 typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 
 }
 
-#define reduceSumR8u32s  reduceR_<uchar, int,   OpAdd<int> >
-#define reduceSumR8u32f  reduceR_<uchar, float, OpAdd<int> >
-#define reduceSumR8u64f  reduceR_<uchar, double,OpAdd<int> >
+#define reduceSumR8u32s  reduceR_<uchar, int,   OpAdd<int>, OpNop<int> >
+#define reduceSumR8u32f  reduceR_<uchar, float, OpAdd<int>, OpNop<int> >
+#define reduceSumR8u64f  reduceR_<uchar, double,OpAdd<int>, OpNop<int> >
 #define reduceSumR16u32f reduceR_<ushort,float, OpAdd<float> >
 #define reduceSumR16u64f reduceR_<ushort,double,OpAdd<double> >
 #define reduceSumR16s32f reduceR_<short, float, OpAdd<float> >
@@ -702,6 +473,17 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 #define reduceSumR32f32f reduceR_<float, float, OpAdd<float> >
 #define reduceSumR32f64f reduceR_<float, double,OpAdd<double> >
 #define reduceSumR64f64f reduceR_<double,double,OpAdd<double> >
+
+#define reduceSum2R8u32s  reduceR_<uchar, int,   OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2R8u32f  reduceR_<uchar, float, OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2R8u64f  reduceR_<uchar, double,OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2R16u32f reduceR_<ushort,float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2R16u64f reduceR_<ushort,double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2R16s32f reduceR_<short, float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2R16s64f reduceR_<short, double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2R32f32f reduceR_<float, float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2R32f64f reduceR_<float, double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2R64f64f reduceR_<double,double,OpAddSqr<double>,OpSqr<double> >
 
 #define reduceMaxR8u  reduceR_<uchar, uchar, OpMax<uchar> >
 #define reduceMaxR16u reduceR_<ushort,ushort,OpMax<ushort> >
@@ -790,12 +572,19 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 
 #endif
 
-#define reduceSumC8u32s  reduceC_<uchar, int,   OpAdd<int> >
-#define reduceSumC8u32f  reduceC_<uchar, float, OpAdd<int> >
+#define reduceSumC8u32s  reduceC_<uchar, int,   OpAdd<int>, OpNop<int> >
+#define reduceSumC8u32f  reduceC_<uchar, float, OpAdd<int>, OpNop<int> >
 #define reduceSumC16u32f reduceC_<ushort,float, OpAdd<float> >
 #define reduceSumC16s32f reduceC_<short, float, OpAdd<float> >
 #define reduceSumC32f32f reduceC_<float, float, OpAdd<float> >
 #define reduceSumC64f64f reduceC_<double,double,OpAdd<double> >
+
+#define reduceSum2C8u32s  reduceC_<uchar, int,   OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2C8u32f  reduceC_<uchar, float, OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2C16u32f reduceC_<ushort,float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2C16s32f reduceC_<short, float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2C32f32f reduceC_<float, float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2C64f64f reduceC_<double,double,OpAddSqr<double>,OpSqr<double> >
 
 #ifdef HAVE_IPP
 #define reduceSumC8u64f  reduceSumC_8u16u16s32f_64f
@@ -803,10 +592,15 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSumC16s64f reduceSumC_8u16u16s32f_64f
 #define reduceSumC32f64f reduceSumC_8u16u16s32f_64f
 #else
-#define reduceSumC8u64f  reduceC_<uchar, double,OpAdd<int> >
+#define reduceSumC8u64f  reduceC_<uchar, double,OpAdd<int>, OpNop<int> >
 #define reduceSumC16u64f reduceC_<ushort,double,OpAdd<double> >
 #define reduceSumC16s64f reduceC_<short, double,OpAdd<double> >
 #define reduceSumC32f64f reduceC_<float, double,OpAdd<double> >
+
+#define reduceSum2C8u64f  reduceC_<uchar, double,OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2C16u64f reduceC_<ushort,double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2C16s64f reduceC_<short, double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2C32f64f reduceC_<float, double,OpAddSqr<double>,OpSqr<double> >
 #endif
 
 #ifdef HAVE_IPP
@@ -879,14 +673,15 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
     if (!doubleSupport && (sdepth == CV_64F || ddepth == CV_64F))
         return false;
 
-    if (op == CV_REDUCE_AVG)
+    if (op == REDUCE_AVG)
     {
         if (sdepth < CV_32S && ddepth < CV_32S)
             ddepth = CV_32S;
     }
 
-    const char * const ops[4] = { "OCL_CV_REDUCE_SUM", "OCL_CV_REDUCE_AVG",
-                                  "OCL_CV_REDUCE_MAX", "OCL_CV_REDUCE_MIN" };
+    const char * const ops[5] = { "OCL_CV_REDUCE_SUM", "OCL_CV_REDUCE_AVG",
+                                  "OCL_CV_REDUCE_MAX", "OCL_CV_REDUCE_MIN",
+                                  "OCL_CV_REDUCE_SUM2"};
     int wdepth = std::max(ddepth, CV_32F);
     if (useOptimized)
     {
@@ -896,7 +691,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
             static const size_t maxItemInGroupCount = 16;
             tileHeight = min(tileHeight, defDev.localMemSize() / buf_cols / CV_ELEM_SIZE(CV_MAKETYPE(wdepth, cn)) / maxItemInGroupCount);
         }
-        char cvt[3][40];
+        char cvt[3][50];
         cv::String build_opt = format("-D OP_REDUCE_PRE -D BUF_COLS=%d -D TILE_HEIGHT=%zu -D %s -D dim=1"
                                             " -D cn=%d -D ddepth=%d"
                                             " -D srcT=%s -D bufT=%s -D dstT=%s"
@@ -905,9 +700,9 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
                                             ocl::typeToStr(sdepth),
                                             ocl::typeToStr(ddepth),
                                             ocl::typeToStr(ddepth0),
-                                            ocl::convertTypeStr(ddepth, wdepth, 1, cvt[0]),
-                                            ocl::convertTypeStr(sdepth, ddepth, 1, cvt[1]),
-                                            ocl::convertTypeStr(wdepth, ddepth0, 1, cvt[2]),
+                                            ocl::convertTypeStr(ddepth, wdepth, 1, cvt[0], sizeof(cvt[0])),
+                                            ocl::convertTypeStr(sdepth, ddepth, 1, cvt[1], sizeof(cvt[1])),
+                                            ocl::convertTypeStr(wdepth, ddepth0, 1, cvt[2], sizeof(cvt[2])),
                                             doubleSupport ? " -D DOUBLE_SUPPORT" : "");
         ocl::Kernel k("reduce_horz_opt", ocl::core::reduce2_oclsrc, build_opt);
         if (k.empty())
@@ -917,7 +712,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
         _dst.create(dsize, dtype);
         UMat dst = _dst.getUMat();
 
-        if (op0 == CV_REDUCE_AVG)
+        if (op0 == REDUCE_AVG)
             k.args(ocl::KernelArg::ReadOnly(src),
                       ocl::KernelArg::WriteOnlyNoSize(dst), 1.0f / src.cols);
         else
@@ -930,15 +725,15 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
     }
     else
     {
-        char cvt[2][40];
+        char cvt[2][50];
         cv::String build_opt = format("-D %s -D dim=%d -D cn=%d -D ddepth=%d"
                                       " -D srcT=%s -D dstT=%s -D dstT0=%s -D convertToWT=%s"
                                       " -D convertToDT=%s -D convertToDT0=%s%s",
                                       ops[op], dim, cn, ddepth, ocl::typeToStr(useOptimized ? ddepth : sdepth),
                                       ocl::typeToStr(ddepth), ocl::typeToStr(ddepth0),
-                                      ocl::convertTypeStr(ddepth, wdepth, 1, cvt[0]),
-                                      ocl::convertTypeStr(sdepth, ddepth, 1, cvt[0]),
-                                      ocl::convertTypeStr(wdepth, ddepth0, 1, cvt[1]),
+                                      ocl::convertTypeStr(ddepth, wdepth, 1, cvt[0], sizeof(cvt[0])),
+                                      ocl::convertTypeStr(sdepth, ddepth, 1, cvt[0], sizeof(cvt[0])),
+                                      ocl::convertTypeStr(wdepth, ddepth0, 1, cvt[1], sizeof(cvt[1])),
                                       doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
         ocl::Kernel k("reduce", ocl::core::reduce2_oclsrc, build_opt);
@@ -953,7 +748,7 @@ static bool ocl_reduce(InputArray _src, OutputArray _dst,
         ocl::KernelArg srcarg = ocl::KernelArg::ReadOnly(src),
                 temparg = ocl::KernelArg::WriteOnlyNoSize(dst);
 
-        if (op0 == CV_REDUCE_AVG)
+        if (op0 == REDUCE_AVG)
             k.args(srcarg, temparg, 1.0f / (dim == 0 ? src.rows : src.cols));
         else
             k.args(srcarg, temparg);
@@ -980,8 +775,9 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     int ddepth = CV_MAT_DEPTH(dtype);
 
     CV_Assert( cn == CV_MAT_CN(dtype) );
-    CV_Assert( op == CV_REDUCE_SUM || op == CV_REDUCE_MAX ||
-               op == CV_REDUCE_MIN || op == CV_REDUCE_AVG );
+    CV_Assert( op == REDUCE_SUM || op == REDUCE_MAX ||
+               op == REDUCE_MIN || op == REDUCE_AVG ||
+               op == REDUCE_SUM2);
 
     CV_OCL_RUN(_dst.isUMat(),
                ocl_reduce(_src, _dst, dim, op, op0, stype, dtype))
@@ -995,9 +791,9 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     _dst.create(dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, dtype);
     Mat dst = _dst.getMat(), temp = dst;
 
-    if( op == CV_REDUCE_AVG )
+    if( op == REDUCE_AVG )
     {
-        op = CV_REDUCE_SUM;
+        op = REDUCE_SUM;
         if( sdepth < CV_32S && ddepth < CV_32S )
         {
             temp.create(dst.rows, dst.cols, CV_32SC(cn));
@@ -1008,10 +804,10 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     ReduceFunc func = 0;
     if( dim == 0 )
     {
-        if( op == CV_REDUCE_SUM )
+        if( op == REDUCE_SUM )
         {
             if(sdepth == CV_8U && ddepth == CV_32S)
-                func = GET_OPTIMIZED(reduceSumR8u32s);
+                func = reduceSumR8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSumR8u32f;
             else if(sdepth == CV_8U && ddepth == CV_64F)
@@ -1025,45 +821,68 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
             else if(sdepth == CV_16S && ddepth == CV_64F)
                 func = reduceSumR16s64f;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceSumR32f32f);
+                func = reduceSumR32f32f;
             else if(sdepth == CV_32F && ddepth == CV_64F)
                 func = reduceSumR32f64f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceSumR64f64f;
         }
-        else if(op == CV_REDUCE_MAX)
+        else if(op == REDUCE_MAX)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
-                func = GET_OPTIMIZED(reduceMaxR8u);
+                func = reduceMaxR8u;
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceMaxR16u;
             else if(sdepth == CV_16S && ddepth == CV_16S)
                 func = reduceMaxR16s;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceMaxR32f);
+                func = reduceMaxR32f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMaxR64f;
         }
-        else if(op == CV_REDUCE_MIN)
+        else if(op == REDUCE_MIN)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
-                func = GET_OPTIMIZED(reduceMinR8u);
+                func = reduceMinR8u;
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceMinR16u;
             else if(sdepth == CV_16S && ddepth == CV_16S)
                 func = reduceMinR16s;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceMinR32f);
+                func = reduceMinR32f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMinR64f;
+        }
+        else if( op == REDUCE_SUM2 )
+        {
+            if(sdepth == CV_8U && ddepth == CV_32S)
+                func = reduceSum2R8u32s;
+            else if(sdepth == CV_8U && ddepth == CV_32F)
+                func = reduceSum2R8u32f;
+            else if(sdepth == CV_8U && ddepth == CV_64F)
+                func = reduceSum2R8u64f;
+            else if(sdepth == CV_16U && ddepth == CV_32F)
+                func = reduceSum2R16u32f;
+            else if(sdepth == CV_16U && ddepth == CV_64F)
+                func = reduceSum2R16u64f;
+            else if(sdepth == CV_16S && ddepth == CV_32F)
+                func = reduceSum2R16s32f;
+            else if(sdepth == CV_16S && ddepth == CV_64F)
+                func = reduceSum2R16s64f;
+            else if(sdepth == CV_32F && ddepth == CV_32F)
+                func = reduceSum2R32f32f;
+            else if(sdepth == CV_32F && ddepth == CV_64F)
+                func = reduceSum2R32f64f;
+            else if(sdepth == CV_64F && ddepth == CV_64F)
+                func = reduceSum2R64f64f;
         }
     }
     else
     {
-        if(op == CV_REDUCE_SUM)
+        if(op == REDUCE_SUM)
         {
             if(sdepth == CV_8U && ddepth == CV_32S)
-                func = GET_OPTIMIZED(reduceSumC8u32s);
+                func = reduceSumC8u32s;
             else if(sdepth == CV_8U && ddepth == CV_32F)
                 func = reduceSumC8u32f;
             else if(sdepth == CV_8U && ddepth == CV_64F)
@@ -1077,37 +896,60 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
             else if(sdepth == CV_16S && ddepth == CV_64F)
                 func = reduceSumC16s64f;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceSumC32f32f);
+                func = reduceSumC32f32f;
             else if(sdepth == CV_32F && ddepth == CV_64F)
                 func = reduceSumC32f64f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceSumC64f64f;
         }
-        else if(op == CV_REDUCE_MAX)
+        else if(op == REDUCE_MAX)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
-                func = GET_OPTIMIZED(reduceMaxC8u);
+                func = reduceMaxC8u;
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceMaxC16u;
             else if(sdepth == CV_16S && ddepth == CV_16S)
                 func = reduceMaxC16s;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceMaxC32f);
+                func = reduceMaxC32f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMaxC64f;
         }
-        else if(op == CV_REDUCE_MIN)
+        else if(op == REDUCE_MIN)
         {
             if(sdepth == CV_8U && ddepth == CV_8U)
-                func = GET_OPTIMIZED(reduceMinC8u);
+                func = reduceMinC8u;
             else if(sdepth == CV_16U && ddepth == CV_16U)
                 func = reduceMinC16u;
             else if(sdepth == CV_16S && ddepth == CV_16S)
                 func = reduceMinC16s;
             else if(sdepth == CV_32F && ddepth == CV_32F)
-                func = GET_OPTIMIZED(reduceMinC32f);
+                func = reduceMinC32f;
             else if(sdepth == CV_64F && ddepth == CV_64F)
                 func = reduceMinC64f;
+        }
+        else if(op == REDUCE_SUM2)
+        {
+            if(sdepth == CV_8U && ddepth == CV_32S)
+                func = reduceSum2C8u32s;
+            else if(sdepth == CV_8U && ddepth == CV_32F)
+                func = reduceSum2C8u32f;
+            else if(sdepth == CV_8U && ddepth == CV_64F)
+                func = reduceSum2C8u64f;
+            else if(sdepth == CV_16U && ddepth == CV_32F)
+                func = reduceSum2C16u32f;
+            else if(sdepth == CV_16U && ddepth == CV_64F)
+                func = reduceSum2C16u64f;
+            else if(sdepth == CV_16S && ddepth == CV_32F)
+                func = reduceSum2C16s32f;
+            else if(sdepth == CV_16S && ddepth == CV_64F)
+                func = reduceSum2C16s64f;
+            else if(sdepth == CV_32F && ddepth == CV_32F)
+                func = reduceSum2C32f32f;
+            else if(sdepth == CV_32F && ddepth == CV_64F)
+                func = reduceSum2C32f64f;
+            else if(sdepth == CV_64F && ddepth == CV_64F)
+                func = reduceSum2C64f64f;
         }
     }
 
@@ -1117,7 +959,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
 
     func( src, temp );
 
-    if( op0 == CV_REDUCE_AVG )
+    if( op0 == REDUCE_AVG )
         temp.convertTo(dst, dst.type(), 1./(dim == 0 ? src.rows : src.cols));
 }
 
@@ -1131,9 +973,9 @@ template<typename T> static void sort_( const Mat& src, Mat& dst, int flags )
 {
     AutoBuffer<T> buf;
     int n, len;
-    bool sortRows = (flags & 1) == CV_SORT_EVERY_ROW;
+    bool sortRows = (flags & 1) == SORT_EVERY_ROW;
     bool inplace = src.data == dst.data;
-    bool sortDescending = (flags & CV_SORT_DESCENDING) != 0;
+    bool sortDescending = (flags & SORT_DESCENDING) != 0;
 
     if( sortRows )
         n = src.rows, len = src.cols;
@@ -1203,8 +1045,8 @@ static bool ipp_sort(const Mat& src, Mat& dst, int flags)
 {
     CV_INSTRUMENT_REGION_IPP();
 
-    bool        sortRows        = (flags & 1) == CV_SORT_EVERY_ROW;
-    bool        sortDescending  = (flags & CV_SORT_DESCENDING) != 0;
+    bool        sortRows        = (flags & 1) == SORT_EVERY_ROW;
+    bool        sortDescending  = (flags & SORT_DESCENDING) != 0;
     bool        inplace         = (src.data == dst.data);
     int         depth           = src.depth();
     IppDataType type            = ippiGetDataType(depth);
@@ -1276,8 +1118,8 @@ template<typename T> static void sortIdx_( const Mat& src, Mat& dst, int flags )
 {
     AutoBuffer<T> buf;
     AutoBuffer<int> ibuf;
-    bool sortRows = (flags & 1) == CV_SORT_EVERY_ROW;
-    bool sortDescending = (flags & CV_SORT_DESCENDING) != 0;
+    bool sortRows = (flags & 1) == SORT_EVERY_ROW;
+    bool sortDescending = (flags & SORT_DESCENDING) != 0;
 
     CV_Assert( src.data != dst.data );
 

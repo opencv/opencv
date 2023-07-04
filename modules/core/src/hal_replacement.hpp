@@ -47,12 +47,15 @@
 
 #include "opencv2/core/hal/interface.h"
 
-#if defined __GNUC__
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wunused-parameter"
-#elif defined _MSC_VER
-#  pragma warning( push )
-#  pragma warning( disable: 4100 )
+#if defined(__clang__)  // clang or MSVC clang
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4100)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 
 //! @addtogroup core_hal_interface
@@ -532,7 +535,7 @@ inline int hal_ni_dftFree1D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEME
 /**
 @param context double pointer to context storing all necessary data
 @param width,height image dimensions
-@param depth image type (CV_32F or CV64F)
+@param depth image type (CV_32F or CV_64F)
 @param src_channels number of channels in input image
 @param dst_channels number of channels in output image
 @param flags algorithm options (combination of CV_HAL_DFT_INVERSE, ...)
@@ -559,7 +562,7 @@ inline int hal_ni_dftFree2D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEME
 /**
 @param context double pointer to context storing all necessary data
 @param width,height image dimensions
-@param depth image type (CV_32F or CV64F)
+@param depth image type (CV_32F or CV_64F)
 @param flags algorithm options (combination of CV_HAL_DFT_INVERSE, ...)
  */
 inline int hal_ni_dctInit2D(cvhalDFT **context, int width, int height, int depth, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
@@ -735,10 +738,12 @@ inline int hal_ni_minMaxIdx(const uchar* src_data, size_t src_step, int width, i
 //! @}
 
 
-#if defined __GNUC__
-#  pragma GCC diagnostic pop
-#elif defined _MSC_VER
-#  pragma warning( pop )
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
 #endif
 
 #include "hal_internal.hpp"
