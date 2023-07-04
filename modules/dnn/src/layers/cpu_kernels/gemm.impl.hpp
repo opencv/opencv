@@ -303,38 +303,24 @@ static void fx_gemm_thin(float alpha, float beta, int M, int N, int K,
     parallel_for_(Range(0, total), fn, nstripes);
 }
 
-void ocv_gemm(bool trans_a, bool trans_b,
-              float alpha, const Mat &A, const Mat &B,
-              float beta, Mat &C) {
-    CV_CheckTypeEQ(A.type(), B.type(), "DNN/gemm: A and B should have the same type");
-    CV_CheckTypeEQ(B.type(), C.type(), "DNN/gemm: B and C should have the same type");
-    CV_CheckTypeEQ(A.type(), CV_32F, "DNN/gemm: only support float32 for now");
+void ocv_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
+              float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
+              float beta, float *C, int ldc) {
 
-    const auto shape_a = shape(A);
-    const auto shape_b = shape(B);
-    const auto shape_c = shape(C);
-
-    int ma = shape_a[0], na = shape_a[1];
-    int mb = shape_b[0], nb = shape_b[1];
+    const char *a = (const char *)A;
+    const char *b = (const char *)B;
+    char *c = (char *)C;
 
     int M = trans_a ? na : ma;
     int N = trans_b ? mb : nb;
     int K = trans_a ? ma : na;
-    int lda0 = na, lda1 = 1, ldb0 = nb, ldb1 = 1, ldc = shape_c[1];
+
     if (trans_a) {
         std::swap(lda0, lda1);
     }
     if (trans_b) {
         std::swap(ldb0, ldb1);
     }
-
-    /*
-    std::cout << cv::format("trans_a=%d, trans_b=%d, m=%d, n=%d, k=%d, alpha=%f, beta=%f, lda0=%d, lda1=%d, ldb0=%d, ldb1=%d\n", static_cast<int>(trans_a), static_cast<int>(trans_b), m, n, k, alphaf, betaf, lda0, lda1, ldb0, ldb1);
-    */
-
-    const char *a = A.ptr<const char>();
-    const char *b = B.ptr<const char>();
-    char *c = C.ptr<char>();
 
     const void* palpha = (const void*)&alpha;
 
@@ -411,6 +397,41 @@ void ocv_gemm(bool trans_a, bool trans_b,
     };
 
     parallel_for_(Range(0, total), fn, nstripes);
+}
+
+void ocv_gemm(bool trans_a, bool trans_b,
+              float alpha, const Mat &A, const Mat &B,
+              float beta, Mat &C) {
+    CV_CheckTypeEQ(A.type(), B.type(), "DNN/gemm: A and B should have the same type");
+    CV_CheckTypeEQ(B.type(), C.type(), "DNN/gemm: B and C should have the same type");
+    CV_CheckTypeEQ(A.type(), CV_32F, "DNN/gemm: only support float32 for now");
+
+    const auto shape_a = shape(A);
+    const auto shape_b = shape(B);
+    const auto shape_c = shape(C);
+
+    int ma = shape_a[0], na = shape_a[1];
+    int mb = shape_b[0], nb = shape_b[1];
+
+    int lda0 = na, lda1 = 1, ldb0 = nb, ldb1 = 1, ldc = shape_c[1];
+
+    /*
+    std::cout << cv::format("trans_a=%d, trans_b=%d, m=%d, n=%d, k=%d, alpha=%f, beta=%f, lda0=%d, lda1=%d, ldb0=%d, ldb1=%d\n", static_cast<int>(trans_a), static_cast<int>(trans_b), m, n, k, alphaf, betaf, lda0, lda1, ldb0, ldb1);
+    */
+
+    const float *a = A.ptr<const float>();
+    const float *b = B.ptr<const float>();
+    float *c = C.ptr<float>();
+
+
+    /*
+    bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
+              float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
+              float beta, float *C, int ldc) {
+    */
+    ocv_gemm(trans_a, trans_b, ma, na, mb, nb,
+             alpha, a, lda0, lda1, b, ldb0, ldb1,
+             beta, c, ldc);
 }
 
 }} // cv::dnn
