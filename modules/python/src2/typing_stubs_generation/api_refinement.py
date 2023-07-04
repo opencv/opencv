@@ -3,7 +3,8 @@ __all__ = [
 ]
 
 from typing import Sequence, Callable
-from .nodes import NamespaceNode, FunctionNode, OptionalTypeNode
+
+from .nodes import NamespaceNode, FunctionNode, OptionalTypeNode, ClassProperty, PrimitiveTypeNode
 from .ast_utils import find_function_node, SymbolName
 
 
@@ -11,7 +12,7 @@ def apply_manual_api_refinement(root: NamespaceNode) -> None:
     # Export OpenCV exception class
     builtin_exception = root.add_class("Exception")
     builtin_exception.is_exported = False
-    root.add_class("error", (builtin_exception, ))
+    root.add_class("error", (builtin_exception, ), ERROR_CLASS_PROPERTIES)
     for symbol_name, refine_symbol in NODES_TO_REFINE.items():
         refine_symbol(root, symbol_name)
 
@@ -46,3 +47,11 @@ NODES_TO_REFINE = {
     SymbolName(("cv", ), (), "resize"): make_optional_arg("dsize"),
     SymbolName(("cv", ), (), "calcHist"): make_optional_arg("mask"),
 }
+ERROR_CLASS_PROPERTIES = (
+    ClassProperty("code", PrimitiveTypeNode.int_(), False),
+    ClassProperty("err", PrimitiveTypeNode.str_(), False),
+    ClassProperty("file", PrimitiveTypeNode.str_(), False),
+    ClassProperty("func", PrimitiveTypeNode.str_(), False),
+    ClassProperty("line", PrimitiveTypeNode.int_(), False),
+    ClassProperty("msg", PrimitiveTypeNode.str_(), False),
+)
