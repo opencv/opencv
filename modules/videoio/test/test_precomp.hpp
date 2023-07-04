@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include "opencv2/ts.hpp"
+#include "opencv2/ts/ocl_test.hpp"
 #include "opencv2/videoio.hpp"
 #include "opencv2/videoio/registry.hpp"
 #include "opencv2/core/private.hpp"
