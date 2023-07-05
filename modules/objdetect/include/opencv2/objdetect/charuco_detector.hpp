@@ -13,7 +13,7 @@ namespace aruco {
 //! @{
 
 struct CV_EXPORTS_W_SIMPLE CharucoParameters {
-    CharucoParameters() {
+    CV_WRAP CharucoParameters() {
         minMarkers = 2;
         tryRefineMarkers = false;
     }
@@ -104,7 +104,7 @@ public:
      */
     CV_WRAP void detectDiamonds(InputArray image, OutputArrayOfArrays diamondCorners, OutputArray diamondIds,
                                 InputOutputArrayOfArrays markerCorners = noArray(),
-                                InputOutputArrayOfArrays markerIds = noArray()) const;
+                                InputOutputArray markerIds = noArray()) const;
 protected:
     struct CharucoDetectorImpl;
     Ptr<CharucoDetectorImpl> charucoDetectorImpl;

@@ -105,7 +105,10 @@ enum ImwriteFlags {
        IMWRITE_TIFF_XDPI           = 257,//!< For TIFF, use to specify the X direction DPI
        IMWRITE_TIFF_YDPI           = 258,//!< For TIFF, use to specify the Y direction DPI
        IMWRITE_TIFF_COMPRESSION    = 259,//!< For TIFF, use to specify the image compression scheme. See libtiff for integer constants corresponding to compression formats. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
-       IMWRITE_JPEG2000_COMPRESSION_X1000 = 272 //!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
+       IMWRITE_JPEG2000_COMPRESSION_X1000 = 272,//!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
+       IMWRITE_AVIF_QUALITY        = 512,//!< For AVIF, it can be a quality between 0 and 100 (the higher the better). Default is 95.
+       IMWRITE_AVIF_DEPTH          = 513,//!< For AVIF, it can be 8, 10 or 12. If >8, it is stored/read as CV_32F. Default is 8.
+       IMWRITE_AVIF_SPEED          = 514 //!< For AVIF, it is between 0 (slowest) and (fastest). Default is 9.
      };
 
 enum ImwriteJPEGSamplingFactorParams {
@@ -185,6 +188,7 @@ Currently, the following file formats are supported:
 -   JPEG 2000 files - \*.jp2 (see the *Note* section)
 -   Portable Network Graphics - \*.png (see the *Note* section)
 -   WebP - \*.webp (see the *Note* section)
+-   AVIF - \*.avif (see the *Note* section)
 -   Portable image format - \*.pbm, \*.pgm, \*.ppm \*.pxm, \*.pnm (always supported)
 -   PFM files - \*.pfm (see the *Note* section)
 -   Sun rasters - \*.sr, \*.ras (always supported)
@@ -256,18 +260,26 @@ CV_EXPORTS_W size_t imcount(const String& filename, int flags = IMREAD_ANYCOLOR)
 /** @brief Saves an image to a specified file.
 
 The function imwrite saves the image to the specified file. The image format is chosen based on the
-filename extension (see cv::imread for the list of extensions). In general, only 8-bit
+filename extension (see cv::imread for the list of extensions). In general, only 8-bit unsigned (CV_8U)
 single-channel or 3-channel (with 'BGR' channel order) images
 can be saved using this function, with these exceptions:
 
-- 16-bit unsigned (CV_16U) images can be saved in the case of PNG, JPEG 2000, and TIFF formats
-- 32-bit float (CV_32F) images can be saved in PFM, TIFF, OpenEXR, and Radiance HDR formats;
-  3-channel (CV_32FC3) TIFF images will be saved using the LogLuv high dynamic range encoding
-  (4 bytes per pixel)
-- PNG images with an alpha channel can be saved using this function. To do this, create
-8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels
-should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535 (see the code sample below).
-- Multiple images (vector of Mat) can be saved in TIFF format (see the code sample below).
+- With OpenEXR encoder, only 32-bit float (CV_32F) images can be saved.
+  - 8-bit unsigned (CV_8U) images are not supported.
+- With Radiance HDR encoder, non 64-bit float (CV_64F) images can be saved.
+  - All images will be converted to 32-bit float (CV_32F).
+- With JPEG 2000 encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
+- With PAM encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
+- With PNG encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
+  - PNG images with an alpha channel can be saved using this function. To do this, create
+    8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels
+    should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535 (see the code sample below).
+- With PGM/PPM encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
+- With TIFF encoder, 8-bit unsigned (CV_8U), 16-bit unsigned (CV_16U),
+                     32-bit float (CV_32F) and 64-bit float (CV_64F) images can be saved.
+  - Multiple images (vector of Mat) can be saved in TIFF format (see the code sample below).
+  - 32-bit float 3-channel (CV_32FC3) TIFF images will be saved
+    using the LogLuv high dynamic range encoding (4 bytes per pixel)
 
 If the image format is not supported, the image will be converted to 8-bit unsigned (CV_8U) and saved that way.
 

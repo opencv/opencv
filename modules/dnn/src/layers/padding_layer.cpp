@@ -222,13 +222,14 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         // create operator
-        std::string op_name = cv::format("pad_%d", index);
-        auto op = std::make_shared<ge::op::PadV3>(op_name);
+        auto op = std::make_shared<ge::op::PadV3>(name);
 
         // set attributes
         op->set_attr_mode(paddingType.c_str());
@@ -236,7 +237,7 @@ public:
         // set inputs
         // set inputs : x
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        op->set_input_x_by_name(*op_x, "y");
+        op->set_input_x_by_name(*op_x, x->name.c_str());
         auto x_desc = x->getTensorDesc();
         op->update_input_desc_x(*x_desc);
         // set inputs : paddings
@@ -248,13 +249,13 @@ public:
         }
         std::vector<int> pads_shape{(int)pads.size()};
         Mat paddings_mat(pads_shape, CV_32S, &pads[0]);
-        auto op_const_paddings = std::make_shared<CannConstOp>(paddings_mat.data, paddings_mat.type(), pads_shape, cv::format("%s_paddings", op_name.c_str()));
+        auto op_const_paddings = std::make_shared<CannConstOp>(paddings_mat.data, paddings_mat.type(), pads_shape, cv::format("%s_paddings", name.c_str()));
         op->set_input_paddings(*(op_const_paddings->getOp()));
         op->update_input_desc_paddings(*(op_const_paddings->getTensorDesc()));
         // set inputs : constant_values
         std::vector<int> constant_values_shape{1};
         Mat constant_values_mat(1, 1, CV_32F, Scalar(paddingValue));
-        auto op_const_constant_values = std::make_shared<CannConstOp>(constant_values_mat.data, constant_values_mat.type(), constant_values_shape, cv::format("%s_constant_values", op_name.c_str()));
+        auto op_const_constant_values = std::make_shared<CannConstOp>(constant_values_mat.data, constant_values_mat.type(), constant_values_shape, cv::format("%s_constant_values", name.c_str()));
         op->set_input_constant_values(*(op_const_constant_values->getOp()));
         op->update_input_desc_constant_values(*(op_const_constant_values->getTensorDesc()));
 

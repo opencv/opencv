@@ -157,7 +157,7 @@ static void onMouse(int event, int x, int y, int, void*)
     {
         for (int i = 0; i < 4; ++i)
         {
-            if ((event == EVENT_LBUTTONDOWN) & ((abs(roi_corners[i].x - x) < 10)) & (abs(roi_corners[i].y - y) < 10))
+            if ((event == EVENT_LBUTTONDOWN) && ((abs(roi_corners[i].x - x) < 10)) && (abs(roi_corners[i].y - y) < 10))
             {
                 selected_corner_index = i;
                 dragging = true;

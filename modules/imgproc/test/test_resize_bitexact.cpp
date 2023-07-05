@@ -194,7 +194,7 @@ TEST(Resize_Bitexact, Nearest8U)
 
     // 2x decimation
     src[0] = (Mat_<uint8_t>(1, 6) << 0, 1, 2, 3, 4, 5);
-    dst[0] = (Mat_<uint8_t>(1, 3) << 0, 2, 4);
+    dst[0] = (Mat_<uint8_t>(1, 3) << 1, 3, 5);
 
     // decimation odd to 1
     src[1] = (Mat_<uint8_t>(1, 5) << 0, 1, 2, 3, 4);
@@ -234,6 +234,9 @@ TEST(Resize_Bitexact, Nearest8U)
         Mat calc;
         resize(src[i], calc, dst[i].size(), 0, 0, INTER_NEAREST_EXACT);
         EXPECT_EQ(cvtest::norm(calc, dst[i], cv::NORM_L1), 0);
+
+        resize(src[i].t(), calc, dst[i].t().size(), 0, 0, INTER_NEAREST_EXACT);
+        EXPECT_EQ(cvtest::norm(calc, dst[i].t(), cv::NORM_L1), 0);
     }
 }
 

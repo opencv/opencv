@@ -27,7 +27,7 @@ class GMockExecutable final: public cv::gimpl::GIslandExecutable
         m_priv->m_reshape_counter++;
     }
     virtual void handleNewStream() override {  }
-    virtual void run(std::vector<InObj>&&, std::vector<OutObj>&&) { }
+    virtual void run(std::vector<InObj>&&, std::vector<OutObj>&&) override { }
     virtual bool allocatesOutputs() const override
     {
         return true;

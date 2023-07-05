@@ -67,7 +67,7 @@ public:
 class DepthFrameProcessor: public IFrameProcessor {
 public:
     DepthFrameProcessor(const OBExtensionParam& parma);
-    virtual ~DepthFrameProcessor() noexcept;
+    virtual ~DepthFrameProcessor();
     virtual void process(Frame* frame) override;
 
 private:
@@ -78,7 +78,7 @@ private:
 class DepthFrameUnpacker: public IFrameProcessor {
 public:
     DepthFrameUnpacker();
-    virtual ~DepthFrameUnpacker() noexcept;
+    virtual ~DepthFrameUnpacker();
     virtual void process(Frame* frame) override;
 private:
     const uint32_t OUT_DATA_SIZE = 1280*800*2;

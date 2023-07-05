@@ -286,10 +286,14 @@ public:
 
     @param sigma The sigma of the Gaussian applied to the input image at the octave \#0. If your image
     is captured with a weak camera with soft lenses, you might want to reduce the number.
+
+    @param enable_precise_upscale Whether to enable precise upscaling in the scale pyramid, which maps
+    index \f$\texttt{x}\f$ to \f$\texttt{2x}\f$. This prevents localization bias. The option
+    is disabled by default.
     */
     CV_WRAP static Ptr<SIFT> create(int nfeatures = 0, int nOctaveLayers = 3,
         double contrastThreshold = 0.04, double edgeThreshold = 10,
-        double sigma = 1.6);
+        double sigma = 1.6, bool enable_precise_upscale = false);
 
     /** @brief Create SIFT with specified descriptorType.
     @param nfeatures The number of best features to retain. The features are ranked by their scores
@@ -313,10 +317,14 @@ public:
     is captured with a weak camera with soft lenses, you might want to reduce the number.
 
     @param descriptorType The type of descriptors. Only CV_32F and CV_8U are supported.
+
+    @param enable_precise_upscale Whether to enable precise upscaling in the scale pyramid, which maps
+    index \f$\texttt{x}\f$ to \f$\texttt{2x}\f$. This prevents localization bias. The option
+    is disabled by default.
     */
     CV_WRAP static Ptr<SIFT> create(int nfeatures, int nOctaveLayers,
         double contrastThreshold, double edgeThreshold,
-        double sigma, int descriptorType);
+        double sigma, int descriptorType, bool enable_precise_upscale = false);
 
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 

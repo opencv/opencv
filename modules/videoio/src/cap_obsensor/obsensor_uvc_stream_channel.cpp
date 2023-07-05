@@ -198,7 +198,7 @@ DepthFrameUnpacker::DepthFrameUnpacker(){
     outputDataBuf_ = new uint8_t[OUT_DATA_SIZE];
 }
 
-DepthFrameUnpacker::~DepthFrameUnpacker(){
+DepthFrameUnpacker::~DepthFrameUnpacker() {
     delete[] outputDataBuf_;
 }
 
@@ -335,6 +335,24 @@ bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* rec
             param.p6[1] = 480;
             param.p7[0] = 640;
             param.p7[1] = 480;
+            *recvDataSize = sizeof(CameraParam);
+            memcpy(recvData, &param, *recvDataSize);
+        }
+        else if(OBSENSOR_FEMTO_MEGA_PID == devInfo_.pid){
+            // return default param
+            CameraParam param;
+            param.p0[0] = 748.370f;
+            param.p0[1] = 748.296f;
+            param.p0[2] = 634.670f;
+            param.p0[3] = 341.196f;
+            param.p1[0] = 374.185f;
+            param.p1[1] = 374.148f;
+            param.p1[2] = 317.335f;
+            param.p1[3] = 170.598f;
+            param.p6[0] = 1280;
+            param.p6[1] = 720;
+            param.p7[0] = 640;
+            param.p7[1] = 360;
             *recvDataSize = sizeof(CameraParam);
             memcpy(recvData, &param, *recvDataSize);
         }

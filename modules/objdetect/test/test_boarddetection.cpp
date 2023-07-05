@@ -26,7 +26,7 @@ class CV_ArucoBoardPose : public cvtest::BaseTest {
         params.minDistanceToBorder = 3;
         if (arucoAlgParams == ArucoAlgParams::USE_ARUCO3) {
             params.useAruco3Detection = true;
-            params.cornerRefinementMethod = aruco::CORNER_REFINE_SUBPIX;
+            params.cornerRefinementMethod = (int)aruco::CORNER_REFINE_SUBPIX;
             params.minSideLengthCanonicalImg = 16;
             params.errorCorrectionRate = 0.8;
         }
@@ -51,7 +51,7 @@ void CV_ArucoBoardPose::run(int) {
     aruco::DetectorParameters detectorParameters = detector.getDetectorParameters();
 
     // for different perspectives
-    for(double distance = 0.2; distance <= 0.4; distance += 0.15) {
+    for(double distance : {0.2, 0.35}) {
         for(int yaw = -55; yaw <= 50; yaw += 25) {
             for(int pitch = -55; pitch <= 50; pitch += 25) {
                 vector<int> tmpIds;
@@ -137,7 +137,7 @@ class CV_ArucoRefine : public cvtest::BaseTest {
         aruco::Dictionary dictionary = aruco::getPredefinedDictionary(aruco::DICT_6X6_250);
         aruco::DetectorParameters params;
         params.minDistanceToBorder = 3;
-        params.cornerRefinementMethod = aruco::CORNER_REFINE_SUBPIX;
+        params.cornerRefinementMethod = (int)aruco::CORNER_REFINE_SUBPIX;
         if (arucoAlgParams == ArucoAlgParams::USE_ARUCO3)
             params.useAruco3Detection = true;
         aruco::RefineParameters refineParams(10.f, 3.f, true);
@@ -162,7 +162,7 @@ void CV_ArucoRefine::run(int) {
     aruco::DetectorParameters detectorParameters = detector.getDetectorParameters();
 
     // for different perspectives
-    for(double distance = 0.2; distance <= 0.4; distance += 0.2) {
+    for(double distance : {0.2, 0.4}) {
         for(int yaw = -60; yaw < 60; yaw += 30) {
             for(int pitch = -60; pitch <= 60; pitch += 30) {
                 aruco::GridBoard gridboard(Size(3, 3), 0.02f, 0.005f, detector.getDictionary());

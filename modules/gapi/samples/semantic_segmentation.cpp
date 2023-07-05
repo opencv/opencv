@@ -5,34 +5,41 @@
 #include <opencv2/gapi/operators.hpp>
 #include <opencv2/highgui.hpp>
 
+#include <opencv2/gapi/streaming/desync.hpp>
+#include <opencv2/gapi/streaming/format.hpp>
+
+#include <iomanip>
+
 const std::string keys =
     "{ h help |                                     | Print this help message }"
+    "{ desync | false                               | Desynchronize inference }"
     "{ input  |                                     | Path to the input video file }"
     "{ output |                                     | Path to the output video file }"
     "{ ssm    | semantic-segmentation-adas-0001.xml | Path to OpenVINO IE semantic segmentation model (.xml) }";
 
 // 20 colors for 20 classes of semantic-segmentation-adas-0001
-const std::vector<cv::Vec3b> colors = {
-    { 128, 64,  128 },
-    { 232, 35,  244 },
-    { 70,  70,  70 },
-    { 156, 102, 102 },
-    { 153, 153, 190 },
-    { 153, 153, 153 },
-    { 30,  170, 250 },
-    { 0,   220, 220 },
-    { 35,  142, 107 },
-    { 152, 251, 152 },
-    { 180, 130, 70 },
-    { 60,  20,  220 },
-    { 0,   0,   255 },
-    { 142, 0,   0 },
-    { 70,  0,   0 },
-    { 100, 60,  0 },
-    { 90,  0,   0 },
-    { 230, 0,   0 },
-    { 32,  11,  119 },
-    { 0,   74,  111 },
+static std::vector<cv::Vec3b> colors = {
+    { 0, 0, 0 },
+    { 0, 0, 128 },
+    { 0, 128, 0 },
+    { 0, 128, 128 },
+    { 128, 0, 0 },
+    { 128, 0, 128 },
+    { 128, 128, 0 },
+    { 128, 128, 128 },
+    { 0, 0, 64 },
+    { 0, 0, 192 },
+    { 0, 128, 64 },
+    { 0, 128, 192 },
+    { 128, 0, 64 },
+    { 128, 0, 192 },
+    { 128, 128, 64 },
+    { 128, 128, 192 },
+    { 0, 64, 0 },
+    { 0, 64, 128 },
+    { 0, 192, 0 },
+    { 0, 192, 128 },
+    { 128, 64, 0 }
 };
 
 namespace {
@@ -43,10 +50,21 @@ std::string get_weights_path(const std::string &model_path) {
 
     auto ext = model_path.substr(sz - EXT_LEN);
     std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){
-            return static_cast<unsigned char>(std::tolower(c));
-        });
+        return static_cast<unsigned char>(std::tolower(c));
+    });
     CV_Assert(ext == ".xml");
     return model_path.substr(0u, sz - EXT_LEN) + ".bin";
+}
+
+bool isNumber(const std::string &str) {
+    return !str.empty() && std::all_of(str.begin(), str.end(),
+            [](unsigned char ch) { return std::isdigit(ch); });
+}
+
+std::string toStr(double value) {
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(1) << value;
+    return ss.str();
 }
 
 void classesToColors(const cv::Mat &out_blob,
@@ -97,6 +115,25 @@ void probsToClasses(const cv::Mat& probs, cv::Mat& classes) {
 
 } // anonymous namespace
 
+namespace vis {
+
+static void putText(cv::Mat& mat, const cv::Point &position, const std::string &message) {
+    auto fontFace = cv::FONT_HERSHEY_COMPLEX;
+    int thickness = 2;
+    cv::Scalar color = {200, 10, 10};
+    double fontScale = 0.65;
+
+    cv::putText(mat, message, position, fontFace,
+                fontScale, cv::Scalar(255, 255, 255), thickness + 1);
+    cv::putText(mat, message, position, fontFace, fontScale, color, thickness);
+}
+
+static void drawResults(cv::Mat &img, const cv::Mat &color_mask) {
+    img = img / 2 + color_mask / 2;
+}
+
+} // namespace vis
+
 namespace custom {
 G_API_OP(PostProcessing, <cv::GMat(cv::GMat, cv::GMat)>, "sample.custom.post_processing") {
     static cv::GMatDesc outMeta(const cv::GMatDesc &in, const cv::GMatDesc &) {
@@ -106,19 +143,34 @@ G_API_OP(PostProcessing, <cv::GMat(cv::GMat, cv::GMat)>, "sample.custom.post_pro
 
 GAPI_OCV_KERNEL(OCVPostProcessing, PostProcessing) {
     static void run(const cv::Mat &in, const cv::Mat &out_blob, cv::Mat &out) {
+        int C = -1, H = -1, W = -1;
+        if (out_blob.size.dims() == 4u) {
+            C = 1; H = 2, W = 3;
+        } else if (out_blob.size.dims() == 3u) {
+            C = 0; H = 1, W = 2;
+        } else {
+            throw std::logic_error(
+                    "Number of dimmensions for model output must be 3 or 4!");
+        }
         cv::Mat classes;
         // NB: If output has more than single plane, it contains probabilities
         // otherwise class id.
-        if (out_blob.size[1] > 1) {
+        if (out_blob.size[C] > 1) {
             probsToClasses(out_blob, classes);
         } else {
-            out_blob.convertTo(classes, CV_8UC1);
-            classes = classes.reshape(1, out_blob.size[2]);
+            if (out_blob.depth() != CV_32S) {
+                throw std::logic_error(
+                        "Single channel output must have integer precision!");
+            }
+            cv::Mat view(out_blob.size[H], // cols
+                         out_blob.size[W], // rows
+                         CV_32SC1,
+                         out_blob.data);
+            view.convertTo(classes, CV_8UC1);
         }
-
         cv::Mat mask_img;
         classesToColors(classes, mask_img);
-        cv::resize(mask_img, out, in.size());
+        cv::resize(mask_img, out, in.size(), 0, 0, cv::INTER_NEAREST);
     }
 };
 } // namespace custom
@@ -134,6 +186,7 @@ int main(int argc, char *argv[]) {
     const std::string input  = cmd.get<std::string>("input");
     const std::string output = cmd.get<std::string>("output");
     const auto model_path    = cmd.get<std::string>("ssm");
+    const bool desync        = cmd.get<bool>("desync");
     const auto weights_path  = get_weights_path(model_path);
     const auto device        = "CPU";
     G_API_NET(SemSegmNet, <cv::GMat(cv::GMat)>, "semantic-segmentation");
@@ -145,40 +198,87 @@ int main(int argc, char *argv[]) {
 
     // Now build the graph
     cv::GMat in;
-    cv::GMat out_blob = cv::gapi::infer<SemSegmNet>(in);
-    cv::GMat post_proc_out = custom::PostProcessing::on(in, out_blob);
-    cv::GMat blending_in = in * 0.3f;
-    cv::GMat blending_out = post_proc_out * 0.7f;
-    cv::GMat out = blending_in + blending_out;
+    cv::GMat bgr = cv::gapi::copy(in);
+    cv::GMat frame = desync ? cv::gapi::streaming::desync(bgr) : bgr;
+    cv::GMat out_blob = cv::gapi::infer<SemSegmNet>(frame);
+    cv::GMat out = custom::PostProcessing::on(frame, out_blob);
 
-    cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(out))
-        .compileStreaming(cv::compile_args(kernels, networks));
-    auto inputs = cv::gin(cv::gapi::wip::make_src<cv::gapi::wip::GCaptureSource>(input));
+    cv::GStreamingCompiled pipeline = cv::GComputation(cv::GIn(in), cv::GOut(bgr, out))
+        .compileStreaming(cv::compile_args(kernels, networks,
+                          cv::gapi::streaming::queue_capacity{1}));
+
+    std::shared_ptr<cv::gapi::wip::GCaptureSource> source;
+    if (isNumber(input)) {
+        source = std::make_shared<cv::gapi::wip::GCaptureSource>(
+            std::stoi(input),
+            std::map<int, double> {
+              {cv::CAP_PROP_FRAME_WIDTH, 1280},
+              {cv::CAP_PROP_FRAME_HEIGHT, 720},
+              {cv::CAP_PROP_BUFFERSIZE, 1},
+              {cv::CAP_PROP_AUTOFOCUS, true}
+            }
+        );
+    } else {
+        source = std::make_shared<cv::gapi::wip::GCaptureSource>(input);
+    }
+    auto inputs = cv::gin(
+            static_cast<cv::gapi::wip::IStreamSource::Ptr>(source));
 
     // The execution part
     pipeline.setSource(std::move(inputs));
 
-    cv::VideoWriter writer;
     cv::TickMeter tm;
-    cv::Mat outMat;
+    cv::VideoWriter writer;
+
+    cv::util::optional<cv::Mat> color_mask;
+    cv::util::optional<cv::Mat> image;
+    cv::Mat last_image;
+    cv::Mat last_color_mask;
+
+    pipeline.start();
+    tm.start();
 
     std::size_t frames = 0u;
-    tm.start();
-    pipeline.start();
-    while (pipeline.pull(cv::gout(outMat))) {
-        ++frames;
-        cv::imshow("Out", outMat);
-        cv::waitKey(1);
-        if (!output.empty()) {
-            if (!writer.isOpened()) {
-                const auto sz = cv::Size{outMat.cols, outMat.rows};
-                writer.open(output, cv::VideoWriter::fourcc('M','J','P','G'), 25.0, sz);
-                CV_Assert(writer.isOpened());
+    std::size_t masks  = 0u;
+    while (pipeline.pull(cv::gout(image, color_mask))) {
+        if (image.has_value()) {
+            ++frames;
+            last_image = std::move(*image);
+        }
+
+        if (color_mask.has_value()) {
+            ++masks;
+            last_color_mask = std::move(*color_mask);
+        }
+
+        if (!last_image.empty() && !last_color_mask.empty()) {
+            tm.stop();
+
+            std::string stream_fps = "Stream FPS: " + toStr(frames / tm.getTimeSec());
+            std::string inference_fps = "Inference FPS: " + toStr(masks  / tm.getTimeSec());
+
+            cv::Mat tmp = last_image.clone();
+
+            vis::drawResults(tmp, last_color_mask);
+            vis::putText(tmp, {10, 22}, stream_fps);
+            vis::putText(tmp, {10, 22 + 30}, inference_fps);
+
+            cv::imshow("Out", tmp);
+            cv::waitKey(1);
+            if (!output.empty()) {
+                if (!writer.isOpened()) {
+                    const auto sz = cv::Size{tmp.cols, tmp.rows};
+                    writer.open(output, cv::VideoWriter::fourcc('M','J','P','G'), 25.0, sz);
+                    CV_Assert(writer.isOpened());
+                }
+                writer << tmp;
             }
-            writer << outMat;
+
+            tm.start();
         }
     }
     tm.stop();
-    std::cout << "Processed " << frames << " frames" << " (" << frames / tm.getTimeSec() << " FPS)" << std::endl;
+    std::cout << "Processed " << frames << " frames" << " ("
+              << frames / tm.getTimeSec()<< " FPS)" << std::endl;
     return 0;
 }

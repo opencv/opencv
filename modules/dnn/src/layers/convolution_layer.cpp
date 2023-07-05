@@ -72,7 +72,7 @@ using namespace cv::dnn::ocl4dnn;
 using namespace cv::dnn::cuda4dnn;
 #endif
 
-#include "fast_convolution/fast_convolution.hpp"
+#include "cpu_kernels/convolution.hpp"
 
 namespace cv
 {
@@ -116,9 +116,6 @@ public:
 
         fusedWeights = false;
         fusedBias = false;
-
-        if (kernel_size.size() == 2)
-            isConv2D = true;
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -134,11 +131,11 @@ public:
         CV_Assert(inputs[0].dims == outputs[0].dims);
         if (weightShape.dims() == 3)
         {
-            kernel_size.assign(1, kernel_size[0]);
-            strides.assign(1, strides[0]);
-            dilations.assign(1, dilations[0]);
-            pads_begin.assign(1, pads_begin[0]);
-            pads_end.assign(1, pads_end[0]);
+            kernel_size.resize(1, kernel_size[0]);
+            strides.resize(1, strides[0]);
+            dilations.resize(1, dilations[0]);
+            pads_begin.resize(1, pads_begin[0]);
+            pads_end.resize(1, pads_end[0]);
         }
         CV_Assert(weightShape.dims() == kernel_size.size() + 2);
         for (int i = 0; i < kernel_size.size(); i++) {
@@ -428,7 +425,6 @@ public:
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
         BaseConvolutionLayerImpl::finalize(inputs_arr, outputs_arr);
-
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
         // prepare weightsMat where each row is aligned and has enough zero padding on the right to
@@ -606,7 +602,8 @@ public:
         if(IS_DNN_CUDA_TARGET(preferableTarget))
         {
             Ptr<EltwiseLayer> eltwise = top.dynamicCast<EltwiseLayer>();
-            if (!eltwise.empty()) // && eltwise->op == EltwiseLayer::SUM && eltwise->coeffs.empty())
+            Ptr<NaryEltwiseLayer> naryEltwise = top.dynamicCast<NaryEltwiseLayer>();
+            if (!eltwise.empty() || !naryEltwise.empty())
             {
                 /* we also need to check that the eltwise input does not require shortcut mechanism
                  * it's difficult to verify it here but we hope that `fuseLayers` has done the check already
@@ -665,68 +662,50 @@ public:
         biasvec[outCn] = biasvec[outCn+1] = biasvec[outCn-1];
     }
 
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
+    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs, std::vector<Ptr<BackendWrapper> > &outputs) CV_OVERRIDE
     {
 #ifdef HAVE_VULKAN
-        CV_Assert(!blobs.empty());
-        int out_channel = blobs[0].size[0];
-        bool has_bias = hasBias() || fusedBias;
-        int filter_size[2] = {kernel.height, kernel.width};
-        int pad_size[2] = {pad.height, pad.width};
-        int stride_size[2] = {stride.height, stride.width};
-        int dilation_size[2] = {dilation.height, dilation.width};
-        int activation = 0;
-        vkcom::Tensor input_tensor = VkComTensor(inputs[0]);
-        int in_channel = input_tensor.dimSize(1);
-        int group = in_channel / blobs[0].size[1];
+        int activationType = transFusedActivType(activ);
 
-        // TODO: support group > 1
-        if (group != 1)
+        CV_Assert(inputs.size() == 1 && outputs.size() == 1);
+        Ptr<VkComBackendWrapper> inputWrap = inputs[0].dynamicCast<VkComBackendWrapper>();
+        Ptr<VkComBackendWrapper> outputWrap = outputs[0].dynamicCast<VkComBackendWrapper>();
+        CV_Assert(inputWrap && outputWrap);
+
+        MatShape inpShape = shape(*inputWrap->getMat());
+        MatShape outShape = shape(*outputWrap->getMat());
+
+        CV_Assert(inpShape.size() == 4 && inpShape.size() == outShape.size());
+
+        if (activationType == -1)
+        {
+            CV_LOG_WARNING(NULL, "Unsupported fused Active type in Conv layer!!!");
+            return Ptr<BackendNode>();
+        }
+
+        const int inpGroupCn = blobs[0].size[1];
+        int ngroups = inpShape[1] / inpGroupCn;
+        CV_Assert(outShape[1] % ngroups == 0);
+        if (ngroups != 1)
             return Ptr<BackendNode>();
 
-        int padding_mode;
-        if (padMode.empty())
-        {
-            padding_mode = vkcom::kPaddingModeCaffe;
-        }
-        else if (padMode == "VALID")
-        {
-            padding_mode = vkcom::kPaddingModeValid;
-        }
-        else if (padMode == "SAME")
-        {
-            padding_mode = vkcom::kPaddingModeSame;
-        }
-        else
-            CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
-
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpConv(out_channel, has_bias,
-                    filter_size, pad_size,
-                    stride_size, dilation_size,
-                    activation, group,
-                    padding_mode));
-
-        std::vector<Ptr<BackendWrapper> > blobsWrapper;
-
+        Mat weightVK;
         if (fusedWeights)
         {
-            Mat wm;
-            weightsMat.copyTo(wm); // to handle the case of isContinuous() == false
-            wm = wm.reshape(1, blobs[0].dims, blobs[0].size);
-            blobsWrapper.push_back(Ptr<BackendWrapper>(new VkComBackendWrapper(wm)));
+            weightsMat.copyTo(weightVK); // to handle the case of isContinuous() == false
+            weightVK = weightVK.reshape(1, blobs[0].dims, blobs[0].size);
         }
         else
-        {
-            blobsWrapper.push_back(Ptr<BackendWrapper>(new VkComBackendWrapper(blobs[0])));
-        }
+            weightVK = blobs[0];
 
-        if (has_bias)
-        {
-            Mat biasesMat({out_channel}, CV_32F, &biasvec[0]);
-            blobsWrapper.push_back(Ptr<BackendWrapper>(new VkComBackendWrapper(biasesMat)));
-        }
+        CV_Assert(weightVK.isContinuous());
+        CV_Assert(pads_begin.size() == 2);
+        CV_Assert(fusedAdd == false && "Vulkan Backend can not support the Conv_Add optimization.");
+        Ptr<vkcom::OpBase> op(new vkcom::OpConv(weightVK, biasvec, activationType, ngroups, outShape[1], inpShape[1],
+                                                            kernel.height, kernel.width, stride.height, stride.width,
+                                                            dilation.height, dilation.width, pads_begin[1], pads_begin[0]));
 
-        return Ptr<BackendNode>(new VkComBackendNode(inputs, op, blobsWrapper));
+        return Ptr<BackendNode>(new VkComBackendNode(inputs, op, outputs));
 #endif  // HAVE_VULKAN
         return Ptr<BackendNode>();
     }
@@ -781,27 +760,46 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(!blobs.empty());
-        CV_Assert(inputsWrapper.size() == 1);
+        CV_Assert(inputs.size() == 1);
         CV_Assert(nodes.size() == 1);
 
         bool has_bias = hasBias() || fusedBias;
 
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
-        const int x_in_channel = x->host->size[1];
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+        const auto shape_x = x->host->size; // [b, c, h, w]
         const int filter_out_channel = blobs[0].size[1];
-        const int groups = x_in_channel / filter_out_channel;
+        const int groups = shape_x[1] / filter_out_channel;
 
         // create operator
-        std::string op_name = cv::format("conv2d_%d", index);
-        auto op = std::make_shared<ge::op::Conv2D>(op_name);
+        auto op = std::make_shared<ge::op::Conv2D>(name);
 
         // set attributes
         op->set_attr_strides(ge::Operator::OpListInt(
             {1, 1, (int64_t)strides[0], (int64_t)strides[1]}
         ));
+        // recalculate pads in case of "SAME" padMode with odd pads
+        // since in 'getConvPoolPaddings' pads are divided equally
+        // leading to the loss of one pad
+        if (padMode == "SAME")
+        {
+            for (int i = 0; i < pads_begin.size(); i++) {
+                if (strides[i] <= kernel_size[i])
+                {
+                    int pads_at_i = kernel_size[i] - 1 - (shape_x[i+2] - 1 + strides[i]) % strides[i];
+                    pads_begin[i] = pads_at_i / 2;
+                    // if odd, add extra padding to the end for SAME_UPPER
+                    // or to the beginning for SAME_LOWER. Since here we cannot
+                    // identity SAME_UPPER and SAME_LOWER, extra padding is always
+                    // added to the end.
+                    pads_end[i] = pads_at_i - pads_begin[i];
+                }
+            }
+        }
         op->set_attr_pads(ge::Operator::OpListInt(
             {(int64_t)pads_begin[1], (int64_t)pads_end[1], (int64_t)pads_begin[0], (int64_t)pads_end[0]}
         ));
@@ -814,12 +812,12 @@ public:
         // set inputs
         // set inputs : x
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        op->set_input_x_by_name(*op_x, "y");
+        op->set_input_x_by_name(*op_x, x->name.c_str());
         auto x_desc = x->getTensorDesc();
         op->update_input_desc_x(*x_desc);
         // set inputs : weight
         const Mat& w_mat = blobs[0];
-        auto op_const_weight = std::make_shared<CannConstOp>(w_mat.data, w_mat.type(), shape(w_mat), cv::format("%s_w", op_name.c_str()));
+        auto op_const_weight = std::make_shared<CannConstOp>(w_mat.data, w_mat.type(), shape(w_mat), cv::format("%s_w", name.c_str()));
         op->set_input_filter(*(op_const_weight->getOp()));
         op->update_input_desc_filter(*(op_const_weight->getTensorDesc()));
         // set inputs : bias
@@ -829,7 +827,7 @@ public:
             Mat b_mat({out_channel}, CV_32F, &biasvec[0]);
 
             std::vector<int> bias_shape{out_channel};
-            auto op_const_bias = std::make_shared<CannConstOp>(b_mat.data, b_mat.type(), bias_shape, cv::format("%s_b", op_name.c_str()));
+            auto op_const_bias = std::make_shared<CannConstOp>(b_mat.data, b_mat.type(), bias_shape, cv::format("%s_b", name.c_str()));
             op->set_input_bias(*(op_const_bias->getOp()));
             op->update_input_desc_bias(*(op_const_bias->getTensorDesc()));
         }
@@ -1385,7 +1383,8 @@ public:
 
                 CV_Assert(outputs[0].size[1] % ngroups == 0);
                 fastConvImpl = initFastConv(weightsMat, &biasvec[0], ngroups, K, C, kernel_size, strides,
-                                            dilations, pads_begin, pads_end, conv_dim, canUseWinograd);
+                                            dilations, pads_begin, pads_end, conv_dim,
+                                            preferableTarget == DNN_TARGET_CPU_FP16, canUseWinograd);
             }
 
             runFastConv(inputs[0], outputs[0], fastConvImpl, nstripes, activ, reluslope, fusedAdd);
@@ -1592,7 +1591,8 @@ public:
 #endif  // HAVE_INF_ENGINE
         {
             return backendId == DNN_BACKEND_CUDA ||
-            (kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE));
+            (kernel_size.size() == 2 && (backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_HALIDE)) ||
+            (kernel_size.size() == 2 && backendId == DNN_BACKEND_CANN);
         }
     }
 
@@ -2253,6 +2253,79 @@ public:
         return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(!blobs.empty());
+        CV_Assert(inputs.size() == 1);
+        CV_Assert(nodes.size() == 1);
+
+        bool has_bias = hasBias() || fusedBias;
+
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto y = outputs[0].dynamicCast<CannBackendWrapper>();
+        const auto shape_x = x->host->size; // [N, C, H, W]
+        const auto shape_y = y->host->size; // [N, C, H, W]
+        const int filter_out_channel = blobs[0].size[0];
+        const int groups = shape_x[1] / filter_out_channel;
+
+        // create operator
+        auto op = std::make_shared<ge::op::Conv2DTransposeD>(name);
+
+        // set attributes
+        op->set_attr_input_size(
+            ge::Operator::OpListInt({(int64_t)shape_y[0],
+                                     (int64_t)shape_y[1],
+                                     (int64_t)shape_y[2],
+                                     (int64_t)shape_y[3],})
+        );
+        op->set_attr_strides(
+            ge::Operator::OpListInt({1, 1, (int64_t)strides[0], (int64_t)strides[1]})
+        );
+        op->set_attr_pads(ge::Operator::OpListInt(
+            {(int64_t)pads_begin[1], (int64_t)pads_end[1], (int64_t)pads_begin[0], (int64_t)pads_end[0]}
+        ));
+        op->set_attr_dilations(ge::Operator::OpListInt(
+            {1, 1, (int64_t)dilations[0], (int64_t)dilations[1]}
+        ));
+        op->set_attr_groups(groups);
+        op->set_attr_data_format("NCHW");
+        op->set_attr_output_padding(
+            ge::Operator::OpListInt({0, 0, (int64_t)adjust_pads[0], (int64_t)adjust_pads[1]}) // adjust_pads: [height, width]
+        );
+
+        // set inputs
+        // set inputs : x
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto desc_x = x->getTensorDesc();
+        op->update_input_desc_x(*desc_x);
+        // set inputs : weight
+        const Mat& mat_w = blobs[0];
+        auto op_const_w = std::make_shared<CannConstOp>(mat_w.data, mat_w.type(), shape(mat_w), cv::format("%s_w", name.c_str()));
+        op->set_input_filter(*(op_const_w->getOp()));
+        op->update_input_desc_filter(*(op_const_w->getTensorDesc()));
+        // set inputs : bias
+        if (has_bias)
+        {
+            int out_channel = blobs[0].size[0];
+            const Mat& mat_b = blobs[1];
+
+            std::vector<int> shape_b{out_channel};
+            auto op_const_b = std::make_shared<CannConstOp>(mat_b.data, mat_b.type(), shape_b, cv::format("%s_b", name.c_str()));
+            op->set_input_bias(*(op_const_b->getOp()));
+            op->update_input_desc_bias(*(op_const_b->getTensorDesc()));
+        }
+
+        // set outputs
+        auto desc_output = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*desc_output);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,

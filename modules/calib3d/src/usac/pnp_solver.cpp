@@ -15,15 +15,17 @@
 namespace cv { namespace usac {
 class PnPMinimalSolver6PtsImpl : public PnPMinimalSolver6Pts {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
 public:
     // linear 6 points required (11 equations)
     int getSampleSize() const override { return 6; }
     int getMaxNumberOfSolutions () const override { return 1; }
 
     explicit PnPMinimalSolver6PtsImpl (const Mat &points_) :
-        points_mat(&points_), points ((float*)points_.data) {}
+        points_mat(points_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+    }
     /*
         DLT:
         d x = P X, x = (u, v, 1), X = (X, Y, Z, 1), P = K[R t]
@@ -72,6 +74,9 @@ public:
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         std::vector<double> A1 (60, 0), A2(56, 0); // 5x12, 7x8
+        const float * points = points_mat.ptr<float>();
+        // std::vector<double> A_all(11*12, 0);
+        // int cnt3 = 0;
 
         int cnt1 = 0, cnt2 = 0;
         for (int i = 0; i < 6; i++) {
@@ -100,13 +105,15 @@ public:
             A2[cnt2++] = -v * Z;
             A2[cnt2++] = -v;
         }
-        // matrix is sparse -> do not test for singularity
+
         Math::eliminateUpperTriangular(A1, 5, 12);
+
 
         int offset = 4*12;
         // add last eliminated row of A1
         for (int i = 0; i < 8; i++)
             A2[cnt2++] = A1[offset + i + 4/* skip 4 first cols*/];
+
 
         // must be full-rank
         if (!Math::eliminateUpperTriangular(A2, 7, 8))
@@ -139,12 +146,8 @@ public:
             if (std::isnan(p[i]))
                 return 0;
         }
-
         models = std::vector<Mat>{P};
         return 1;
-    }
-    Ptr<MinimalSolver> clone () const override {
-        return makePtr<PnPMinimalSolver6PtsImpl>(*points_mat);
     }
 };
 Ptr<PnPMinimalSolver6Pts> PnPMinimalSolver6Pts::create(const Mat &points_) {
@@ -153,14 +156,17 @@ Ptr<PnPMinimalSolver6Pts> PnPMinimalSolver6Pts::create(const Mat &points_) {
 
 class PnPNonMinimalSolverImpl : public PnPNonMinimalSolver {
 private:
-    const Mat * points_mat;
-    const float * const points;
+    Mat points_mat;
 public:
     explicit PnPNonMinimalSolverImpl (const Mat &points_) :
-        points_mat(&points_), points ((float*)points_.data){}
+        points_mat(points_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+    }
 
     int estimate (const std::vector<int> &sample, int sample_size,
-          std::vector<Mat> &models, const std::vector<double> &weights) const override {
+                  std::vector<Mat> &models, const std::vector<double> &weights) const override {
+        const float * points = points_mat.ptr<float>();
         if (sample_size < 6)
             return 0;
 
@@ -190,7 +196,7 @@ public:
                 a2[10] = v * Z;
                 a2[11] = v;
 
-                // fill covarinace matrix
+                // fill covariance matrix
                 for (int j = 0; j < 12; j++)
                     for (int z = j; z < 12; z++)
                         AtA[j * 12 + z] += a1[j] * a1[z] + a2[j] * a2[z];
@@ -221,7 +227,7 @@ public:
                 a2[10] = v * weight_Z;
                 a2[11] = v * weight;
 
-                // fill covarinace matrix
+                // fill covariance matrix
                 for (int j = 0; j < 12; j++)
                     for (int z = j; z < 12; z++)
                         AtA[j * 12 + z] += a1[j] * a1[z] + a2[j] * a2[z];
@@ -236,7 +242,7 @@ public:
         models = std::vector<Mat>{ Mat_<double>(3,4) };
         Eigen::HouseholderQR<Eigen::Matrix<double, 12, 12>> qr((Eigen::Matrix<double, 12, 12>(AtA)));
         const Eigen::Matrix<double, 12, 12> &Q = qr.householderQ();
-        // extract the last nullspace
+        // extract the last null-vector
         Eigen::Map<Eigen::Matrix<double, 12, 1>>((double *)models[0].data) = Q.col(11);
 #else
         Matx<double, 12, 12> Vt;
@@ -246,15 +252,35 @@ public:
 #endif
         return 1;
     }
-
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+            const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
+    void enforceRankConstraint (bool /*enforce*/) override {}
     int getMinimumRequiredSampleSize() const override { return 6; }
     int getMaxNumberOfSolutions () const override { return 1; }
-    Ptr<NonMinimalSolver> clone () const override {
-        return makePtr<PnPNonMinimalSolverImpl>(*points_mat);
-    }
 };
 Ptr<PnPNonMinimalSolver> PnPNonMinimalSolver::create(const Mat &points) {
     return makePtr<PnPNonMinimalSolverImpl>(points);
+}
+
+class PnPSVDSolverImpl : public PnPSVDSolver {
+private:
+    std::vector<double> w;
+    Ptr<PnPNonMinimalSolver> pnp_solver;
+public:
+    int getSampleSize() const override { return 6; }
+    int getMaxNumberOfSolutions () const override { return 1; }
+
+    explicit PnPSVDSolverImpl (const Mat &points_) {
+        pnp_solver = PnPNonMinimalSolver::create(points_);
+    }
+    int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
+        return pnp_solver->estimate(sample, 6, models, w);
+    }
+};
+Ptr<PnPSVDSolver> PnPSVDSolver::create(const Mat &points_) {
+    return makePtr<PnPSVDSolverImpl>(points_);
 }
 
 class P3PSolverImpl : public P3PSolver {
@@ -263,18 +289,20 @@ private:
      * calibrated normalized points
      * K^-1 [u v 1]^T / ||K^-1 [u v 1]^T||
      */
-    const Mat * points_mat, * calib_norm_points_mat;
-    const Matx33d * K_mat, &K;
-    const float * const calib_norm_points, * const points;
+    const Mat points_mat, calib_norm_points_mat;
+    const Matx33d K;
     const double VAL_THR = 1e-4;
 public:
     /*
      * @points_ is matrix N x 5
      * u v x y z. (u,v) is image point, (x y z) is world point
      */
-    P3PSolverImpl (const Mat &points_, const Mat &calib_norm_points_, const Matx33d &K_) :
-        points_mat(&points_), calib_norm_points_mat(&calib_norm_points_), K_mat (&K_),
-        K(K_), calib_norm_points((float*)calib_norm_points_.data), points((float*)points_.data) {}
+    P3PSolverImpl (const Mat &points_, const Mat &calib_norm_points_, const Mat &K_) :
+        points_mat(points_), calib_norm_points_mat(calib_norm_points_), K(K_)
+    {
+        CV_DbgAssert(!points_mat.empty() && points_mat.isContinuous());
+        CV_DbgAssert(!calib_norm_points_mat.empty() && calib_norm_points_mat.isContinuous());
+    }
 
     int estimate (const std::vector<int> &sample, std::vector<Mat> &models) const override {
         /*
@@ -282,6 +310,9 @@ public:
          * http://cmp.felk.cvut.cz/~pajdla/gvg/GVG-2016-Lecture.pdf
          * pages: 51-59
          */
+        const float * points = points_mat.ptr<float>();
+        const float * calib_norm_points = calib_norm_points_mat.ptr<float>();
+
         const int   idx1 = 5*sample[0],   idx2 = 5*sample[1],   idx3 = 5*sample[2];
         const Vec3d X1 (points[idx1+2], points[idx1+3], points[idx1+4]);
         const Vec3d X2 (points[idx2+2], points[idx2+3], points[idx2+4]);
@@ -362,8 +393,8 @@ public:
             zw[2] = Z3crZ1w(0); zw[5] = Z3crZ1w(1); zw[8] = Z3crZ1w(2);
 
             const Matx33d R = Math::rotVec2RotMat(Math::rotMat2RotVec(Z * Zw.inv()));
-
-            Mat P, KR = Mat(K * R);
+            Matx33d KR = K * R;
+            Matx34d P;
             hconcat(KR, -KR * (X1 - R.t() * nX1), P);
             models.emplace_back(P);
         }
@@ -371,11 +402,8 @@ public:
     }
     int getSampleSize() const override { return 3; }
     int getMaxNumberOfSolutions () const override { return 4; }
-    Ptr<MinimalSolver> clone () const override {
-        return makePtr<P3PSolverImpl>(*points_mat, *calib_norm_points_mat, *K_mat);
-    }
 };
-Ptr<P3PSolver> P3PSolver::create(const Mat &points_, const Mat &calib_norm_pts, const Matx33d &K) {
+Ptr<P3PSolver> P3PSolver::create(const Mat &points_, const Mat &calib_norm_pts, const Mat &K) {
     return makePtr<P3PSolverImpl>(points_, calib_norm_pts, K);
 }
 }}

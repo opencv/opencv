@@ -849,16 +849,18 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        CV_Assert(inputsWrapper.size() == 2);
+        CV_Assert(inputs.size() == 2);
         CV_Assert(nodes.size() == 2);
 
         auto op_x1 = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        auto x1 = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x1 = inputs[0].dynamicCast<CannBackendWrapper>();
         auto x1_desc = x1->getTensorDesc();
         auto op_x2 = nodes[1].dynamicCast<CannBackendNode>()->getOp();
-        auto x2 = inputsWrapper[1].dynamicCast<CannBackendWrapper>();
+        auto x2 = inputs[1].dynamicCast<CannBackendWrapper>();
         auto x2_desc = x2->getTensorDesc();
         auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
 
@@ -866,22 +868,22 @@ public:
         // add, mul, div, max, min
         switch (op)
         {
-#define BUILD_CANN_ELTWISE_OP(op_type, class_name, op_name)      \
-            case op_type: {                                      \
-                auto eltwise_op =                                \
-                  std::make_shared<ge::op::class_name>(op_name); \
-                eltwise_op->set_input_x1_by_name(*op_x1, "y");   \
-                eltwise_op->set_input_x2_by_name(*op_x2, "y");   \
-                eltwise_op->update_input_desc_x1(*x1_desc);      \
-                eltwise_op->update_input_desc_x2(*x2_desc);      \
-                eltwise_op->update_output_desc_y(*output_desc);  \
-                eltwise_operator = eltwise_op;                   \
+#define BUILD_CANN_ELTWISE_OP(op_type, class_name, op_name)                 \
+            case op_type: {                                                 \
+                auto eltwise_op =                                           \
+                  std::make_shared<ge::op::class_name>(op_name);            \
+                eltwise_op->set_input_x1_by_name(*op_x1, x1->name.c_str()); \
+                eltwise_op->set_input_x2_by_name(*op_x2, x2->name.c_str()); \
+                eltwise_op->update_input_desc_x1(*x1_desc);                 \
+                eltwise_op->update_input_desc_x2(*x2_desc);                 \
+                eltwise_op->update_output_desc_y(*output_desc);             \
+                eltwise_operator = eltwise_op;                              \
             } break;
-            BUILD_CANN_ELTWISE_OP(SUM, Add, cv::format("add_%d", index));
-            BUILD_CANN_ELTWISE_OP(PROD, Mul, cv::format("mul_%d", index));
-            BUILD_CANN_ELTWISE_OP(DIV, Xdivy, cv::format("div_%d", index));
-            BUILD_CANN_ELTWISE_OP(MAX, Maximum, cv::format("max_%d", index));
-            BUILD_CANN_ELTWISE_OP(MIN, Minimum, cv::format("min_%d", index));
+            BUILD_CANN_ELTWISE_OP(SUM, Add, name);
+            BUILD_CANN_ELTWISE_OP(PROD, Mul, name);
+            BUILD_CANN_ELTWISE_OP(DIV, Xdivy, name);
+            BUILD_CANN_ELTWISE_OP(MAX, Maximum, name);
+            BUILD_CANN_ELTWISE_OP(MIN, Minimum, name);
 #undef BUILD_CANN_ELTWISE_OP
             default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
         }

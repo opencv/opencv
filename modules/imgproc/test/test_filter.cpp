@@ -49,10 +49,10 @@ public:
     CV_FilterBaseTest( bool _fp_kernel );
 
 protected:
-    int prepare_test_case( int test_case_idx );
-    int read_params( const cv::FileStorage& fs );
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
+    int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
+    int read_params( const cv::FileStorage& fs ) CV_OVERRIDE;
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types ) CV_OVERRIDE;
+    void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high ) CV_OVERRIDE;
     Size aperture_size;
     Point anchor;
     int max_aperture_size;
@@ -689,8 +689,8 @@ public:
     CV_SmoothBaseTest();
 
 protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    double get_success_error_level( int test_case_idx, int i, int j );
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
     const char* smooth_type;
 
     void dump_test_case(int test_case_idx, std::ostream* out) CV_OVERRIDE
@@ -802,10 +802,10 @@ public:
     CV_GaussianBlurTest();
 
 protected:
-    void prepare_to_validation( int test_case_idx );
-    void run_func();
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    double get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ );
+    void prepare_to_validation( int test_case_idx ) CV_OVERRIDE;
+    void run_func() CV_OVERRIDE;
+    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types ) CV_OVERRIDE;
+    double get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ ) CV_OVERRIDE;
     double sigma;
     int param1, param2;
 

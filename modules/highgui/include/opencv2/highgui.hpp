@@ -504,7 +504,7 @@ left scrolling, respectively.
 
 @note
 
-Mouse-wheel events are currently supported only on Windows.
+Mouse-wheel events are currently supported only on Windows and Cocoa
 
 @param flags The mouse callback flags parameter.
  */
@@ -520,16 +520,17 @@ Controls: use `space` or `enter` to finish selection, use key `c` to cancel sele
 @param showCrosshair if true crosshair of selection rectangle will be shown.
 @param fromCenter if true center of selection will match initial mouse position. In opposite case a corner of
 selection rectangle will correspont to the initial mouse position.
+@param printNotice if true a notice to select ROI or cancel selection will be printed in console.
 @return selected ROI or empty rect if selection canceled.
 
 @note The function sets it's own mouse callback for specified window using cv::setMouseCallback(windowName, ...).
 After finish of work an empty callback will be set for the used window.
  */
-CV_EXPORTS_W Rect selectROI(const String& windowName, InputArray img, bool showCrosshair = true, bool fromCenter = false);
+CV_EXPORTS_W Rect selectROI(const String& windowName, InputArray img, bool showCrosshair = true, bool fromCenter = false, bool printNotice = true);
 
 /** @overload
  */
-CV_EXPORTS_W Rect selectROI(InputArray img, bool showCrosshair = true, bool fromCenter = false);
+CV_EXPORTS_W Rect selectROI(InputArray img, bool showCrosshair = true, bool fromCenter = false, bool printNotice = true);
 
 /** @brief Allows users to select multiple ROIs on the given image.
 
@@ -543,12 +544,13 @@ use `esc` to terminate multiple ROI selection process.
 @param showCrosshair if true crosshair of selection rectangle will be shown.
 @param fromCenter if true center of selection will match initial mouse position. In opposite case a corner of
 selection rectangle will correspont to the initial mouse position.
+@param printNotice if true a notice to select ROI or cancel selection will be printed in console.
 
 @note The function sets it's own mouse callback for specified window using cv::setMouseCallback(windowName, ...).
 After finish of work an empty callback will be set for the used window.
  */
 CV_EXPORTS_W void selectROIs(const String& windowName, InputArray img,
-                             CV_OUT std::vector<Rect>& boundingBoxes, bool showCrosshair = true, bool fromCenter = false);
+                             CV_OUT std::vector<Rect>& boundingBoxes, bool showCrosshair = true, bool fromCenter = false, bool printNotice = true);
 
 /** @brief Creates a trackbar and attaches it to the specified window.
 

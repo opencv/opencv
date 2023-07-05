@@ -190,7 +190,7 @@ public:
         : cv::gapi::wip::GCaptureSource(pipeline) {
     }
 
-    bool pull(cv::gapi::wip::Data& data) {
+    bool pull(cv::gapi::wip::Data& data) override {
         if (cv::gapi::wip::GCaptureSource::pull(data)) {
             data = cv::MediaFrame::Create<TestMediaBGR>(cv::util::get<cv::Mat>(data));
             return true;
@@ -232,7 +232,7 @@ public:
         : cv::gapi::wip::GCaptureSource(pipeline) {
     }
 
-    bool pull(cv::gapi::wip::Data& data) {
+    bool pull(cv::gapi::wip::Data& data) override {
         if (cv::gapi::wip::GCaptureSource::pull(data)) {
             cv::Mat bgr = cv::util::get<cv::Mat>(data);
             cv::Mat y, uv;
@@ -256,7 +256,7 @@ public:
         : cv::gapi::wip::GCaptureSource(pipeline) {
     }
 
-    bool pull(cv::gapi::wip::Data& data) {
+    bool pull(cv::gapi::wip::Data& data) override {
         if (cv::gapi::wip::GCaptureSource::pull(data)) {
             cv::Mat bgr = cv::util::get<cv::Mat>(data);
             cv::Mat gray;
@@ -319,7 +319,7 @@ public:
         return "InvalidSource sucessfuly failed!";
     }
 
-    bool pull(cv::gapi::wip::Data& d) {
+    bool pull(cv::gapi::wip::Data& d) override {
         ++m_curr_frame_id;
         if (m_curr_frame_id > m_num_frames) {
             return false;

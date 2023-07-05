@@ -2104,8 +2104,6 @@ struct KeypointComparator
     {
         return cmp(pts_[idx1], pts_[idx2]);
     }
-private:
-    KeypointComparator& operator=(const KeypointComparator&) = delete;
 };
 }//namespace
 
@@ -2119,7 +2117,8 @@ void perf::sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors
     for (int i = 0; i < desc.rows; ++i)
         idxs[i] = i;
 
-    std::sort(idxs.data(), idxs.data() + desc.rows, KeypointComparator(pts));
+    comparators::KeypointGreater cmp;
+    std::sort(idxs.data(), idxs.data() + desc.rows, [&](int lhs, int rhs){ return cmp(pts[lhs], pts[rhs]); });
 
     std::vector<cv::KeyPoint> spts(pts.size());
     cv::Mat sdesc(desc.size(), desc.type());

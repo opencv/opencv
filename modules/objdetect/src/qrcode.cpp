@@ -9,6 +9,7 @@
 #include "opencv2/objdetect.hpp"
 #include "opencv2/calib3d.hpp"
 #include <opencv2/core/utils/logger.hpp>
+#include "graphical_code_detector_impl.hpp"
 
 #ifdef HAVE_QUIRC
 #include "quirc.h"
@@ -571,10 +572,11 @@ bool QRDetect::computeTransformationPoints()
     {
         Mat mask = Mat::zeros(bin_barcode.rows + 2, bin_barcode.cols + 2, CV_8UC1);
         uint8_t next_pixel, future_pixel = 255;
-        int count_test_lines = 0, index = cvRound(localization_points[i].x);
-        for (; index < bin_barcode.cols - 1; index++)
+        int count_test_lines = 0, index_c = max(0, min(cvRound(localization_points[i].x), bin_barcode.cols - 1));
+        const int index_r = max(0, min(cvRound(localization_points[i].y), bin_barcode.rows - 1));
+        for (; index_c < bin_barcode.cols - 1; index_c++)
         {
-            next_pixel = bin_barcode.ptr<uint8_t>(cvRound(localization_points[i].y))[index + 1];
+            next_pixel = bin_barcode.ptr<uint8_t>(index_r)[index_c + 1];
             if (next_pixel == future_pixel)
             {
                 future_pixel = static_cast<uint8_t>(~future_pixel);
@@ -582,7 +584,7 @@ bool QRDetect::computeTransformationPoints()
                 if (count_test_lines == 2)
                 {
                     floodFill(bin_barcode, mask,
-                              Point(index + 1, cvRound(localization_points[i].y)), 255,
+                              Point(index_c + 1, index_r), 255,
                               0, Scalar(), Scalar(), FLOODFILL_MASK_ONLY);
                     break;
                 }
@@ -949,34 +951,53 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
     return result_angle_list;
 }
 
-
-struct QRCodeDetector::Impl
+struct ImplContour : public GraphicalCodeDetector::Impl
 {
 public:
-    Impl() { epsX = 0.2; epsY = 0.1; }
-    ~Impl() {}
+    ImplContour(): epsX(0.2), epsY(0.1)  {}
 
     double epsX, epsY;
-    vector<vector<Point2f>> alignmentMarkers;
-    vector<Point2f> updateQrCorners;
+    mutable vector<vector<Point2f>> alignmentMarkers;
+    mutable vector<Point2f> updateQrCorners;
     bool useAlignmentMarkers = true;
+
+    bool detect(InputArray in, OutputArray points) const override;
+    std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode) const override;
+    std::string detectAndDecode(InputArray img, OutputArray points, OutputArray straight_qrcode) const override;
+
+    bool detectMulti(InputArray img, OutputArray points) const override;
+    bool decodeMulti(InputArray img, InputArray points, std::vector<cv::String>& decoded_info,
+                     OutputArrayOfArrays straight_qrcode) const override;
+    bool detectAndDecodeMulti(InputArray img, std::vector<cv::String>& decoded_info, OutputArray points,
+                              OutputArrayOfArrays straight_qrcode) const override;
+
+    String decodeCurved(InputArray in, InputArray points, OutputArray straight_qrcode);
+
+    std::string detectAndDecodeCurved(InputArray in, OutputArray points, OutputArray straight_qrcode);
 };
 
-QRCodeDetector::QRCodeDetector() : p(new Impl) {}
+QRCodeDetector::QRCodeDetector() {
+    p = makePtr<ImplContour>();
+}
 
-QRCodeDetector::~QRCodeDetector() {}
+QRCodeDetector& QRCodeDetector::setEpsX(double epsX) {
+    std::dynamic_pointer_cast<ImplContour>(p)->epsX = epsX;
+    return *this;
+}
 
-void QRCodeDetector::setEpsX(double epsX) { p->epsX = epsX; }
-void QRCodeDetector::setEpsY(double epsY) { p->epsY = epsY; }
+QRCodeDetector& QRCodeDetector::setEpsY(double epsY) {
+    std::dynamic_pointer_cast<ImplContour>(p)->epsY = epsY;
+    return *this;
+}
 
-bool QRCodeDetector::detect(InputArray in, OutputArray points) const
+bool ImplContour::detect(InputArray in, OutputArray points) const
 {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
         return false;
 
     QRDetect qrdet;
-    qrdet.init(inarr, p->epsX, p->epsY);
+    qrdet.init(inarr, epsX, epsY);
     if (!qrdet.localization()) { return false; }
     if (!qrdet.computeTransformationPoints()) { return false; }
     vector<Point2f> pnts2f = qrdet.getTransformationPoints();
@@ -2732,6 +2753,12 @@ bool QRDecode::decodingProcess()
 
     quirc_data qr_code_data;
     quirc_decode_error_t errorCode = quirc_decode(&qr_code, &qr_code_data);
+
+    if(errorCode ==  QUIRC_ERROR_DATA_ECC){
+        quirc_flip(&qr_code);
+        errorCode = quirc_decode(&qr_code, &qr_code_data);
+    }
+
     if (errorCode != 0) { return false; }
 
     for (int i = 0; i < qr_code_data.payload_len; i++)
@@ -2782,9 +2809,7 @@ QRDecode::QRDecode(bool _useAlignmentMarkers):
     test_perspective_size(0.f)
     {}
 
-std::string QRCodeDetector::decode(InputArray in, InputArray points,
-                                   OutputArray straight_qrcode)
-{
+std::string ImplContour::decode(InputArray in, InputArray points, OutputArray straight_qrcode) const {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
         return std::string();
@@ -2794,7 +2819,7 @@ std::string QRCodeDetector::decode(InputArray in, InputArray points,
     CV_Assert(src_points.size() == 4);
     CV_CheckGT(contourArea(src_points), 0.0, "Invalid QR code source points");
 
-    QRDecode qrdec(p->useAlignmentMarkers);
+    QRDecode qrdec(useAlignmentMarkers);
     qrdec.init(inarr, src_points);
     bool ok = qrdec.straightDecodingProcess();
 
@@ -2808,14 +2833,18 @@ std::string QRCodeDetector::decode(InputArray in, InputArray points,
         qrdec.getStraightBarcode().convertTo(straight_qrcode, CV_8UC1);
     }
     if (ok && !decoded_info.empty()) {
-        p->alignmentMarkers = {qrdec.alignment_coords};
-        p->updateQrCorners = qrdec.getOriginalPoints();
+        alignmentMarkers = {qrdec.alignment_coords};
+        updateQrCorners = qrdec.getOriginalPoints();
     }
     return ok ? decoded_info : std::string();
 }
 
-cv::String QRCodeDetector::decodeCurved(InputArray in, InputArray points,
-                                        OutputArray straight_qrcode)
+String QRCodeDetector::decodeCurved(InputArray in, InputArray points, OutputArray straight_qrcode) {
+    CV_Assert(p);
+    return std::dynamic_pointer_cast<ImplContour>(p)->decodeCurved(in, points, straight_qrcode);
+}
+
+String ImplContour::decodeCurved(InputArray in, InputArray points, OutputArray straight_qrcode)
 {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
@@ -2826,7 +2855,7 @@ cv::String QRCodeDetector::decodeCurved(InputArray in, InputArray points,
     CV_Assert(src_points.size() == 4);
     CV_CheckGT(contourArea(src_points), 0.0, "Invalid QR code source points");
 
-    QRDecode qrdec(p->useAlignmentMarkers);
+    QRDecode qrdec(useAlignmentMarkers);
     qrdec.init(inarr, src_points);
     bool ok = qrdec.curvedDecodingProcess();
 
@@ -2844,10 +2873,7 @@ cv::String QRCodeDetector::decodeCurved(InputArray in, InputArray points,
     return ok ? decoded_info : std::string();
 }
 
-std::string QRCodeDetector::detectAndDecode(InputArray in,
-                                            OutputArray points_,
-                                            OutputArray straight_qrcode)
-{
+std::string ImplContour::detectAndDecode(InputArray in, OutputArray points_, OutputArray straight_qrcode) const {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
     {
@@ -2867,9 +2893,14 @@ std::string QRCodeDetector::detectAndDecode(InputArray in,
     return decoded_info;
 }
 
-std::string QRCodeDetector::detectAndDecodeCurved(InputArray in,
-                                                  OutputArray points_,
-                                                  OutputArray straight_qrcode)
+std::string QRCodeDetector::detectAndDecodeCurved(InputArray in, OutputArray points,
+                                                  OutputArray straight_qrcode) {
+    CV_Assert(p);
+    return std::dynamic_pointer_cast<ImplContour>(p)->detectAndDecodeCurved(in, points, straight_qrcode);
+}
+
+std::string ImplContour::detectAndDecodeCurved(InputArray in, OutputArray points_,
+                                               OutputArray straight_qrcode)
 {
     Mat inarr;
     if (!checkQRInputImage(in, inarr))
@@ -3810,31 +3841,28 @@ bool QRDetectMulti::computeTransformationPoints(const size_t cur_ind)
     return true;
 }
 
-bool QRCodeDetector::detectMulti(InputArray in, OutputArray points) const
-{
-    Mat inarr;
-    if (!checkQRInputImage(in, inarr))
-    {
+bool ImplContour::detectMulti(InputArray in, OutputArray points) const {
+    Mat gray;
+    if (!checkQRInputImage(in, gray)) {
         points.release();
         return false;
     }
-
+    vector<Point2f> result;
     QRDetectMulti qrdet;
-    qrdet.init(inarr, p->epsX, p->epsY);
-    if (!qrdet.localization())
-    {
+    qrdet.init(gray, epsX, epsY);
+    if (!qrdet.localization()) {
         points.release();
         return false;
     }
-    vector< vector< Point2f > > pnts2f = qrdet.getTransformationPoints();
-    vector<Point2f> trans_points;
+    vector<vector<Point2f> > pnts2f = qrdet.getTransformationPoints();
     for(size_t i = 0; i < pnts2f.size(); i++)
         for(size_t j = 0; j < pnts2f[i].size(); j++)
-            trans_points.push_back(pnts2f[i][j]);
-
-    updatePointsResult(points, trans_points);
-
-    return true;
+            result.push_back(pnts2f[i][j]);
+    if (result.size() >= 4) {
+        updatePointsResult(points, result);
+        return true;
+    }
+    return false;
 }
 
 class ParallelDecodeProcess : public ParallelLoopBody
@@ -3895,7 +3923,7 @@ private:
 
 };
 
-bool QRCodeDetector::decodeMulti(
+bool ImplContour::decodeMulti(
         InputArray img,
         InputArray points,
         CV_OUT std::vector<cv::String>& decoded_info,
@@ -3919,7 +3947,7 @@ bool QRCodeDetector::decodeMulti(
         }
     }
     CV_Assert(src_points.size() > 0);
-    vector<QRDecode> qrdec(src_points.size(), p->useAlignmentMarkers);
+    vector<QRDecode> qrdec(src_points.size(), useAlignmentMarkers);
     vector<Mat> straight_barcode(src_points.size());
     vector<std::string> info(src_points.size());
     ParallelDecodeProcess parallelDecodeProcess(inarr, qrdec, info, straight_barcode, src_points);
@@ -3950,12 +3978,12 @@ bool QRCodeDetector::decodeMulti(
     {
        decoded_info.push_back(info[i]);
     }
-    p->alignmentMarkers.resize(src_points.size());
-    p->updateQrCorners.resize(src_points.size()*4ull);
+    alignmentMarkers.resize(src_points.size());
+    updateQrCorners.resize(src_points.size()*4ull);
     for (size_t i = 0ull; i < src_points.size(); i++) {
-        p->alignmentMarkers[i] = qrdec[i].alignment_coords;
+        alignmentMarkers[i] = qrdec[i].alignment_coords;
         for (size_t j = 0ull; j < 4ull; j++)
-            p->updateQrCorners[i*4ull+j] = qrdec[i].getOriginalPoints()[j] * qrdec[i].coeff_expansion;
+            updateQrCorners[i*4ull+j] = qrdec[i].getOriginalPoints()[j] * qrdec[i].coeff_expansion;
     }
     if (!decoded_info.empty())
         return true;
@@ -3963,7 +3991,7 @@ bool QRCodeDetector::decodeMulti(
         return false;
 }
 
-bool QRCodeDetector::detectAndDecodeMulti(
+bool ImplContour::detectAndDecodeMulti(
         InputArray img,
         CV_OUT std::vector<cv::String>& decoded_info,
         OutputArray points_,
@@ -3987,13 +4015,537 @@ bool QRCodeDetector::detectAndDecodeMulti(
     updatePointsResult(points_, points);
     decoded_info.clear();
     ok = decodeMulti(inarr, points, decoded_info, straight_qrcode);
-    updatePointsResult(points_, p->updateQrCorners);
+    updatePointsResult(points_, updateQrCorners);
     return ok;
 }
 
-void QRCodeDetector::setUseAlignmentMarkers(bool useAlignmentMarkers) {
-    p->useAlignmentMarkers = useAlignmentMarkers;
+QRCodeDetector& QRCodeDetector::setUseAlignmentMarkers(bool useAlignmentMarkers) {
+    (std::dynamic_pointer_cast<ImplContour>)(p)->useAlignmentMarkers = useAlignmentMarkers;
+    return *this;
 }
 
+QRCodeDetectorAruco::Params::Params() {
+    minModuleSizeInPyramid = 4.f;
+    maxRotation = (float)CV_PI/12.f;
+    maxModuleSizeMismatch = 1.75f;
+    maxTimingPatternMismatch = 2.f;
+    maxPenalties = 0.4f;
+    maxColorsMismatch = 0.2f;
+    scaleTimingPatternScore = 0.9f;
+}
+
+namespace {
+
+struct FinderPatternInfo {
+    FinderPatternInfo() {}
+
+    FinderPatternInfo(const vector<Point2f>& patternPoints): points(patternPoints) {
+        float minSin = 1.f;
+        for (int i = 0; i < 4; i++) {
+            center += points[i];
+            const Point2f side = points[i]-points[(i+1) % 4];
+            const float lenSide = sqrt(normL2Sqr<float>(side));
+            minSin = min(minSin, abs(side.y) / lenSide);
+            moduleSize += lenSide;
+        }
+        moduleSize /= (4.f * 7.f); // 4 sides, 7 modules in one side
+        center /= 4.f;
+        minQrAngle = asin(minSin);
+    }
+
+    enum TypePattern {
+        CENTER,
+        RIGHT,
+        BOTTOM,
+        NONE
+    };
+
+    void setType(const TypePattern& _typePattern, const Point2f& centerQR) {
+        typePattern = _typePattern;
+        float bestLen = normL2Sqr<float>(centerQR - points[0]);
+        int id = 0;
+        for (int i = 1; i < 4; i++) {
+            float len = normL2Sqr<float>(centerQR - points[i]);
+            if (len < bestLen) {
+                bestLen = len;
+                id = i;
+            }
+        }
+        innerCornerId = id;
+    }
+
+    Point2f getDirectionTo(const TypePattern& other) const {
+        Point2f res = points[innerCornerId];
+        if (typePattern == TypePattern::CENTER) {
+            if (other == TypePattern::RIGHT) {
+                res -= points[(innerCornerId + 1) % 4];
+                res = 0.5f*(res + points[(innerCornerId + 3) % 4] - points[(innerCornerId + 2) % 4]);
+            }
+            else if (other == TypePattern::BOTTOM) {
+                res -= points[(innerCornerId + 3) % 4];
+                res = 0.5f*(res + points[(innerCornerId + 1) % 4] - points[(innerCornerId + 2) % 4]);
+            }
+        }
+        else if (typePattern == TypePattern::RIGHT && other == TypePattern::CENTER) {
+            res = res - points[(innerCornerId + 3) % 4];
+            res = 0.5f*(res + points[(innerCornerId + 1) % 4] - points[(innerCornerId + 2) % 4]);
+        }
+        else if (typePattern == TypePattern::BOTTOM && other == TypePattern::CENTER) {
+            res = res - points[(innerCornerId + 1) % 4];
+            res = 0.5f*(res + points[(innerCornerId + 3) % 4] - points[(innerCornerId + 2) % 4]);
+        }
+        return res;
+    }
+
+    bool checkTriangleAngle(const FinderPatternInfo& patternRight, const FinderPatternInfo& patternBottom, const float length2Vec) {
+        // check the triangle angle btw right & center & bootom sides of QR code
+        // the triangle angle shoud be between 30 and 150 degrees
+        // abs(pi/2 - triangle_angle) should be less 60 degrees
+        const float angle = abs((float)CV_PI/2.f - acos((center - patternRight.center).dot((center - patternBottom.center)) / length2Vec));
+
+        const float maxTriangleDeltaAngle = (float)CV_PI / 3.f;
+        if (angle > maxTriangleDeltaAngle) {
+            return false;
+        }
+        return true;
+    }
+
+    bool checkAngle(const FinderPatternInfo& other, const float maxRotation) {
+        Point2f toOther = getDirectionTo(other.typePattern);
+        Point2f toThis = other.getDirectionTo(typePattern);
+        const float cosAngle = getCosAngle(toOther, toThis);
+        if (cosAngle < 0.f && (CV_PI - acos(cosAngle)) / 2.f < maxRotation) {
+            const float angleCenter = max(acos(getCosAngle(toOther, other.center - center)), acos(getCosAngle(toThis, center - other.center)));
+            if (angleCenter < maxRotation)
+                return true;
+            }
+        return false;
+    }
+
+    static float getCosAngle(const Point2f& vec1, const Point2f& vec2) {
+        float cosAngle = vec1.dot(vec2) / (sqrt(normL2Sqr<float>(vec1)) * sqrt(normL2Sqr<float>(vec2)));
+        cosAngle = std::max(-1.f, cosAngle);
+        cosAngle = std::min(1.f, cosAngle);
+        return cosAngle;
+    }
+
+    pair<int, Point2f> getQRCorner() const {
+        if (typePattern == TypePattern::CENTER) {
+            int id = (innerCornerId + 2) % 4;
+            return std::make_pair(id, points[id]);
+        }
+        else if (typePattern != TypePattern::NONE) {
+            int id = (innerCornerId + 2) % 4;
+            return std::make_pair(id, points[id]);
+        }
+        return std::make_pair(-1, Point2f());
+    }
+
+    pair<int, Point2f> getCornerForIntersection() const {
+        if (typePattern == TypePattern::RIGHT) {
+            int id = (innerCornerId + 3) % 4;
+            return std::make_pair(id, points[id]);
+        }
+        else if (typePattern == TypePattern::BOTTOM) {
+            int id = (innerCornerId + 1) % 4;
+            return std::make_pair(id, points[id]);
+        }
+        return std::make_pair(-1, Point2f());
+    }
+
+    Point2f getTimingStart(TypePattern direction) const {
+        const float timingStartPosition = .5f;
+        const float patternLength = 7.f;
+        Point2f start = points[innerCornerId]*((patternLength - timingStartPosition)/patternLength);
+        if (typePattern == TypePattern::CENTER && direction == TypePattern::RIGHT) {
+            start += points[(innerCornerId + 3) % 4]*(timingStartPosition/patternLength);
+        }
+        else if (typePattern == TypePattern::CENTER && direction == TypePattern::BOTTOM) {
+            start += points[(innerCornerId + 1) % 4]*(timingStartPosition/patternLength);
+        }
+        else if (typePattern == TypePattern::RIGHT && direction == TypePattern::CENTER) {
+            start += points[(innerCornerId + 1) % 4]*(timingStartPosition/patternLength);
+        }
+        else if (typePattern == TypePattern::BOTTOM && direction == TypePattern::CENTER) {
+            start += points[(innerCornerId + 3) % 4]*(timingStartPosition/patternLength);
+        }
+        return start + getDirectionTo(direction)/(patternLength*2.f);
+    }
+
+    // return total white+black modules in timing pattern, total white modules, penaltyPoints
+    Point3i getTimingPatternScore(const Point2f& start, const Point2f& end, Mat &img, const float maxTimingPatternMismatch) const {
+        Rect imageRect(Point(), img.size());
+        int penaltyPoints = 0;
+        int colorCounters[2] = {0, 0};
+        if (imageRect.contains(Point(cvRound(end.x), cvRound(end.y)))) {
+            LineIterator lineIterator(start, end);
+            uint8_t prevValue = img.at<uint8_t>(lineIterator.pos());
+
+            vector<Point> vec = {lineIterator.pos()};
+
+            // the starting position in the timing pattern is the white module white module next to the finder pattern.
+            bool whiteColor = true;
+            lineIterator++;
+            colorCounters[whiteColor]++;
+
+            for(int i = 1; i < lineIterator.count; i++, ++lineIterator) {
+                const uint8_t value = img.at<uint8_t>(lineIterator.pos());
+                if (prevValue != value) {
+                    const float dist = sqrt(normL2Sqr<float>((Point2f)(vec.back()-lineIterator.pos())));
+                    // check long and short lines in timing pattern
+                    const float relativeDiff = max(moduleSize, dist)/min(moduleSize, dist);
+                    if (relativeDiff > maxTimingPatternMismatch) {
+                        if (dist < moduleSize || relativeDiff < maxTimingPatternMismatch*8.f)
+                            penaltyPoints++;
+                        else
+                            penaltyPoints += cvRound(relativeDiff);
+                    }
+                    vec.push_back(lineIterator.pos());
+                    prevValue = value;
+                    whiteColor ^= true;
+                    colorCounters[whiteColor]++;
+                }
+            }
+        }
+        return Point3i(colorCounters[0] + colorCounters[1], colorCounters[1], penaltyPoints);
+    }
+
+    FinderPatternInfo& operator*=(const float scale) {
+        moduleSize *= scale;
+        center *= scale;
+        for (auto& point: points)
+            point *= scale;
+        return *this;
+    }
+
+    float moduleSize = 0.f;
+
+    // Index of inner QR corner.
+    // The inner corner is the corner closest to the center of the QR code.
+    int innerCornerId = 0;
+
+    float minQrAngle = 0.f;
+    TypePattern typePattern = NONE;
+
+    Point2f center;
+    vector<Point2f> points;
+};
+
+struct QRCode {
+    QRCode() {}
+
+    QRCode(const FinderPatternInfo& _centerPattern, const FinderPatternInfo& _rightPattern, const FinderPatternInfo& _bottomPattern,
+           Point2f _center, float dist): centerPattern(_centerPattern), rightPattern(_rightPattern), bottomPattern(_bottomPattern),
+           center(_center), distance(dist) {
+               moduleSize = (centerPattern.moduleSize + rightPattern.moduleSize + bottomPattern.moduleSize) / 3.f;
+           }
+
+    vector<Point2f> getQRCorners() const {
+        Point2f a1 = rightPattern.getQRCorner().second;
+        Point2f a2 = rightPattern.getCornerForIntersection().second;
+
+        Point2f b1 = bottomPattern.getQRCorner().second;
+        Point2f b2 = bottomPattern.getCornerForIntersection().second;
+
+        Point2f rightBottom = intersectionLines(a1, a2, b1, b2);
+
+        return {centerPattern.getQRCorner().second, rightPattern.getQRCorner().second, rightBottom, bottomPattern.getQRCorner().second};
+    }
+
+    static QRCode checkCompatibilityPattern(const FinderPatternInfo &_pattern1, const FinderPatternInfo& _pattern2, const FinderPatternInfo& _pattern3,
+                                            Point3i& index, const QRCodeDetectorAruco::Params& qrDetectorParameters) {
+        FinderPatternInfo pattern1 = _pattern1, pattern2 = _pattern2, pattern3 = _pattern3;
+        Point2f centerQR;
+        float distance = std::numeric_limits<float>::max();
+
+        if (abs(pattern1.minQrAngle - pattern2.minQrAngle) >  qrDetectorParameters.maxRotation ||
+            abs(pattern1.minQrAngle - pattern3.minQrAngle) > qrDetectorParameters.maxRotation) // check maxRotation
+            return QRCode(pattern1, pattern2, pattern3, centerQR, distance);
+        if (max(pattern1.moduleSize, pattern2.moduleSize) / min(pattern1.moduleSize, pattern2.moduleSize) > qrDetectorParameters.maxModuleSizeMismatch ||
+            max(pattern1.moduleSize, pattern3.moduleSize) / min(pattern1.moduleSize, pattern3.moduleSize) > qrDetectorParameters.maxModuleSizeMismatch)
+            return QRCode(pattern1, pattern2, pattern3, centerQR, distance);
+        // QR code:
+        // center       right
+        //    1 ________ 2
+        //     |_|    |_|
+        //     |     /  |
+        //     |    /   |
+        //     |   /    |
+        //     |_ /     |
+        //     |_|______|
+        //    4
+        //  bottom
+
+        // sides length check
+        const float side1 = sqrt(normL2Sqr<float>(pattern1.center - pattern2.center));
+        const float side2 = sqrt(normL2Sqr<float>(pattern1.center - pattern3.center));
+        const float side3 = sqrt(normL2Sqr<float>(pattern2.center - pattern3.center));
+        std::array<float, 3> sides = {side1, side2, side3};
+        std::sort(sides.begin(), sides.end());
+        // check sides diff
+        if (sides[1] / sides[0] < qrDetectorParameters.maxModuleSizeMismatch) {
+            // find center pattern
+            if (side1 > side2 && side1 > side3) { // centerPattern is pattern3
+                std::swap(pattern3, pattern1); // now pattern1 is centerPattern
+                std::swap(index.x, index.z);
+            }
+            else if (side2 > side1 && side2 > side3) { // centerPattern is pattern2
+                std::swap(pattern2, pattern1); // now pattern1 is centerPattern
+                std::swap(index.x, index.y);
+            }
+            // now pattern1 is centerPattern
+            centerQR = (pattern2.center + pattern3.center) / 2.f;
+            pattern1.setType(FinderPatternInfo::TypePattern::CENTER, centerQR);
+            // check triangle angle
+            if (pattern1.checkTriangleAngle(pattern2, pattern3, sides[0]*sides[1]) == false)
+                return QRCode(pattern1, pattern2, pattern3, centerQR, distance);
+            // check that pattern2 is right
+            pattern2.setType(FinderPatternInfo::TypePattern::RIGHT, centerQR);
+            bool ok = pattern1.checkAngle(pattern2, qrDetectorParameters.maxRotation);
+            if (!ok) {
+                // check that pattern3 is right
+                pattern3.setType(FinderPatternInfo::TypePattern::RIGHT, centerQR);
+                ok = pattern1.checkAngle(pattern3, qrDetectorParameters.maxRotation);
+                if (ok) {
+                    std::swap(pattern3, pattern2); // now pattern2 is rightPattern
+                    std::swap(index.y, index.z);
+                }
+            }
+            if (ok) {
+                // check that pattern3 is bottom
+                pattern3.setType(FinderPatternInfo::TypePattern::BOTTOM, centerQR);
+                ok = pattern1.checkAngle(pattern3, qrDetectorParameters.maxRotation);
+                if (ok) {
+                    // intersection check
+                    Point2f c1 = intersectionLines(pattern1.getQRCorner().second, pattern1.points[pattern1.innerCornerId],
+                                                   pattern2.getQRCorner().second, pattern2.points[pattern2.innerCornerId]);
+                    Point2f c2 = intersectionLines(pattern1.getQRCorner().second, pattern1.points[pattern1.innerCornerId],
+                                                   pattern3.getQRCorner().second, pattern3.points[pattern3.innerCornerId]);
+                    const float centerDistance = sqrt(normL2Sqr<float>(c1 - c2));
+                    distance = (sides[0] + sides[1] + centerDistance)*(sides[1] / sides[0]);
+                }
+            }
+        }
+        QRCode qrcode(pattern1, pattern2, pattern3, centerQR, distance);
+        return qrcode;
+    }
+
+     int calculateScoreByTimingPattern(Mat &img, const QRCodeDetectorAruco::Params& params) {
+        const int minModulesInTimingPattern = 4;
+
+        const Point3i v1 = centerPattern.getTimingPatternScore(rightPattern.getTimingStart(FinderPatternInfo::CENTER),
+                                                                centerPattern.getTimingStart(FinderPatternInfo::RIGHT), img,
+                                                                params.maxTimingPatternMismatch);
+
+        if ((float)v1.z > params.maxPenalties*v1.x || v1.x <= minModulesInTimingPattern || abs(v1.y / (float)v1.x - 0.5f) > params.maxColorsMismatch)
+            return std::numeric_limits<int>::max();
+
+        const Point3i v2 = centerPattern.getTimingPatternScore(bottomPattern.getTimingStart(FinderPatternInfo::CENTER),
+                                                                centerPattern.getTimingStart(FinderPatternInfo::BOTTOM), img,
+                                                                params.maxTimingPatternMismatch);
+
+
+        if ((float)v2.z > params.maxPenalties*v2.x || v2.x <= minModulesInTimingPattern || abs(v2.y / (float)v2.x - 0.5f) > params.maxColorsMismatch)
+            return std::numeric_limits<int>::max();
+
+        // TODO: add v1, v2 check, add "y" checks
+        float numModules = (sqrt(normL2Sqr<float>((centerPattern.getQRCorner().second - rightPattern.getQRCorner().second)))*0.5f +
+                            sqrt(normL2Sqr<float>((centerPattern.getQRCorner().second - bottomPattern.getQRCorner().second))*0.5f)) / moduleSize;
+
+        const int sizeDelta = abs(cvRound(numModules) - (14 + v1.z < v2.z ? v1.x : v2.x));
+        const int colorDelta = abs(v1.x - v1.y - v1.y) + abs(v2.x - v2.y - v2.y);
+        const int score = v1.z + v2.z + sizeDelta + colorDelta;
+        return score;
+     }
+
+    QRCode& operator*=(const float scale) {
+        centerPattern *= scale;
+        rightPattern *= scale;
+        bottomPattern *= scale;
+        center *= scale;
+        moduleSize *= scale;
+        return *this;
+    }
+
+    FinderPatternInfo centerPattern;
+    FinderPatternInfo rightPattern;
+    FinderPatternInfo bottomPattern;
+    Point2f center;
+    float distance = std::numeric_limits<float>::max();
+    int timingPatternScore = std::numeric_limits<int>::max();
+    float moduleSize = 0.f;
+};
+
+} // namespace
+
+static
+vector<QRCode> analyzeFinderPatterns(const vector<vector<Point2f> > &corners, const Mat& img,
+                                     const QRCodeDetectorAruco::Params& qrDetectorParameters) {
+    vector<QRCode> qrCodes;
+    vector<FinderPatternInfo> patterns;
+    if (img.empty())
+        return qrCodes;
+    float maxModuleSize = 0.f;
+    for (size_t i = 0ull; i < corners.size(); i++) {
+        FinderPatternInfo pattern = FinderPatternInfo(corners[i]);
+        // TODO: improve thinning Aruco markers
+        bool isUniq = true;
+        for (const FinderPatternInfo& tmp : patterns) {
+            Point2f dist = pattern.center - tmp.center;
+            if (max(abs(dist.x), abs(dist.y)) < 3.f * tmp.moduleSize) {
+                isUniq = false;
+                break;
+            }
+        }
+        if (isUniq) {
+            patterns.push_back(pattern);
+            maxModuleSize = max(maxModuleSize, patterns.back().moduleSize);
+        }
+    }
+    const int threshold = cvRound(qrDetectorParameters.minModuleSizeInPyramid * 12.5f) +
+                          (cvRound(qrDetectorParameters.minModuleSizeInPyramid * 12.5f) % 2 ? 0 : 1);
+    int maxLevelPyramid = 0;
+    while (maxModuleSize / 2.f > qrDetectorParameters.minModuleSizeInPyramid) {
+        maxLevelPyramid++;
+        maxModuleSize /= 2.f;
+    }
+    vector<Mat> pyramid;
+    buildPyramid(img, pyramid, maxLevelPyramid);
+    // TODO: ADAPTIVE_THRESH_GAUSSIAN_C vs ADAPTIVE_THRESH_MEAN_C
+    for (Mat& pyr: pyramid) {
+        adaptiveThreshold(pyr, pyr, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, threshold, -1);
+    }
+
+    for (size_t i = 0ull; i < patterns.size(); i++) {
+        QRCode qrCode;
+        int indexes[3] = {0};
+        for (size_t j = i + 1ull; j < patterns.size(); j++) {
+            for (size_t k = j + 1ull; k < patterns.size(); k++) {
+                Point3i index((int)i, (int)j, (int)k);
+                QRCode tmp = QRCode::checkCompatibilityPattern(patterns[i], patterns[j], patterns[k], index, qrDetectorParameters);
+                if (tmp.distance != std::numeric_limits<float>::max()) {
+                    int levelPyramid = 0;
+                    QRCode qrCopy = tmp;
+                    while (tmp.moduleSize / 2.f > qrDetectorParameters.minModuleSizeInPyramid) {
+                        tmp *= 0.5f;
+                        levelPyramid++;
+                    }
+                    qrCopy.timingPatternScore = tmp.calculateScoreByTimingPattern(pyramid[levelPyramid], qrDetectorParameters);
+                    if (qrCopy.timingPatternScore != std::numeric_limits<int>::max() &&
+                        qrCopy.timingPatternScore * qrDetectorParameters.scaleTimingPatternScore < (float)qrCode.timingPatternScore
+                        && qrCopy.distance < qrCode.distance)
+                    {
+                        qrCode = qrCopy;
+                        indexes[0] = (int)i;
+                        indexes[1] = (int)j;
+                        indexes[2] = (int)k;
+                    }
+                }
+            }
+        }
+        if (qrCode.distance != std::numeric_limits<float>::max()) {
+            qrCodes.push_back(qrCode);
+            std::swap(patterns[indexes[2]], patterns.back());
+            patterns.pop_back();
+            std::swap(patterns[indexes[1]], patterns.back());
+            patterns.pop_back();
+            std::swap(patterns[indexes[0]], patterns.back());
+            patterns.pop_back();
+            i--;
+        }
+    }
+    return qrCodes;
+}
+
+struct PimplQRAruco : public ImplContour {
+    QRCodeDetectorAruco::Params qrParams;
+    aruco::ArucoDetector arucoDetector;
+    aruco::DetectorParameters arucoParams;
+
+    PimplQRAruco() {
+        Mat bits = Mat::ones(Size(5, 5), CV_8UC1);
+        Mat(bits, Rect(1, 1, 3, 3)).setTo(Scalar(0));
+        Mat byteList = aruco::Dictionary::getByteListFromBits(bits);
+        aruco::Dictionary dictionary = aruco::Dictionary(byteList, 5, 4);
+        arucoParams.minMarkerPerimeterRate = 0.02;
+        arucoDetector = aruco::ArucoDetector(dictionary, arucoParams);
+    }
+
+    bool detectMulti(InputArray in, OutputArray points) const override {
+        Mat gray;
+        if (!checkQRInputImage(in, gray)) {
+            points.release();
+            return false;
+        }
+        vector<Point2f> result;
+        vector<vector<Point2f> > corners;
+        vector<int> ids;
+        arucoDetector.detectMarkers(gray, corners, ids);
+        if (corners.size() >= 3ull) {
+            vector<QRCode> qrCodes = analyzeFinderPatterns(corners, gray.clone(), qrParams);
+            if (qrCodes.size() == 0ull)
+                return false;
+            for (auto& qr : qrCodes) {
+                for (Point2f& corner : qr.getQRCorners()) {
+                    result.push_back(corner);
+                }
+            }
+        }
+        if (result.size() >= 4) {
+            updatePointsResult(points, result);
+            return true;
+        }
+        return false;
+    }
+
+    bool detect(InputArray img, OutputArray points) const override {
+        vector<Point2f> corners, result;
+        bool flag = detectMulti(img, corners);
+        CV_Assert((int)corners.size() % 4 == 0);
+
+        Point2f imageCenter(((float)img.cols())/2.f, ((float)img.rows())/2.f);
+        size_t minQrId = 0ull;
+        float minDist = std::numeric_limits<float>::max();
+        for (size_t i = 0ull; i < corners.size(); i += 4ull) {
+            Point2f qrCenter((corners[i] + corners[i+1ull] + corners[i+2ull] + corners[i+3ull]) / 4.f);
+            float dist = sqrt(normL2Sqr<float>(qrCenter - imageCenter));
+            if (dist < minDist) {
+                minQrId = i;
+                minDist = dist;
+            }
+        }
+        if (flag) {
+            result = {corners[minQrId], corners[minQrId+1ull], corners[minQrId+2ull], corners[minQrId+3ull]};
+            updatePointsResult(points, result);
+        }
+        return flag;
+    }
+};
+
+QRCodeDetectorAruco::QRCodeDetectorAruco() {
+    p = makePtr<PimplQRAruco>();
+}
+
+QRCodeDetectorAruco::QRCodeDetectorAruco(const QRCodeDetectorAruco::Params& params) {
+    p = makePtr<PimplQRAruco>();
+    std::dynamic_pointer_cast<PimplQRAruco>(p)->qrParams = params;
+}
+
+const QRCodeDetectorAruco::Params& QRCodeDetectorAruco::getDetectorParameters() const {
+    return std::dynamic_pointer_cast<PimplQRAruco>(p)->qrParams;
+}
+
+QRCodeDetectorAruco& QRCodeDetectorAruco::setDetectorParameters(const QRCodeDetectorAruco::Params& params) {
+    std::dynamic_pointer_cast<PimplQRAruco>(p)->qrParams = params;
+    return *this;
+}
+
+aruco::DetectorParameters QRCodeDetectorAruco::getArucoParameters() {
+    return std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoParams;
+}
+
+void QRCodeDetectorAruco::setArucoParameters(const aruco::DetectorParameters& params) {
+    std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoParams = params;
+}
 
 }  // namespace

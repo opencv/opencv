@@ -49,13 +49,13 @@ bool checkBigDataTests();
 
 
 #undef TEST
-#define TEST_(test_case_name, test_name, parent_class, bodyMethodName, BODY_IMPL) \
+#define TEST_(test_case_name, test_name, parent_class, bodyMethodName, BODY_ATTR, BODY_IMPL) \
     class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) : public parent_class {\
      public:\
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {}\
      private:\
       virtual void TestBody() CV_OVERRIDE;\
-      virtual void bodyMethodName();\
+      virtual void bodyMethodName() BODY_ATTR;\
       static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;\
       GTEST_DISALLOW_COPY_AND_ASSIGN_(\
           GTEST_TEST_CLASS_NAME_(test_case_name, test_name));\
@@ -74,7 +74,7 @@ bool checkBigDataTests();
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() BODY_IMPL( #test_case_name "_" #test_name ) \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::bodyMethodName()
 
-#define TEST(test_case_name, test_name) TEST_(test_case_name, test_name, ::testing::Test, Body, CV__TEST_BODY_IMPL)
+#define TEST(test_case_name, test_name) TEST_(test_case_name, test_name, ::testing::Test, Body,, CV__TEST_BODY_IMPL)
 
 #define CV__TEST_BIGDATA_BODY_IMPL(name) \
     { \
@@ -96,9 +96,9 @@ bool checkBigDataTests();
 
 // Special type of tests which require / use or validate processing of huge amount of data (>= 2Gb)
 #if defined(_M_X64) || defined(_M_ARM64) || defined(__x86_64__) || defined(__aarch64__)
-#define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, test_name, ::testing::Test, Body, CV__TEST_BIGDATA_BODY_IMPL)
+#define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, test_name, ::testing::Test, Body,, CV__TEST_BIGDATA_BODY_IMPL)
 #else
-#define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, DISABLED_ ## test_name, ::testing::Test, Body, CV__TEST_BIGDATA_BODY_IMPL)
+#define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, DISABLED_ ## test_name, ::testing::Test, Body,, CV__TEST_BIGDATA_BODY_IMPL)
 #endif
 
 #undef TEST_F
@@ -128,13 +128,13 @@ bool checkBigDataTests();
     void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::Body()
 
 // Don't use directly
-#define CV__TEST_P(test_case_name, test_name, bodyMethodName, BODY_IMPL/*(name_str)*/) \
+#define CV__TEST_P(test_case_name, test_name, bodyMethodName, BODY_ATTR, BODY_IMPL/*(name_str)*/) \
   class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) \
       : public test_case_name { \
    public: \
     GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {} \
    private: \
-    virtual void bodyMethodName(); \
+    virtual void bodyMethodName() BODY_ATTR; \
     virtual void TestBody() CV_OVERRIDE; \
     static int AddToRegistry() { \
       ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
@@ -160,7 +160,7 @@ bool checkBigDataTests();
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::bodyMethodName()
 
 #undef TEST_P
-#define TEST_P(test_case_name, test_name) CV__TEST_P(test_case_name, test_name, Body, CV__TEST_BODY_IMPL)
+#define TEST_P(test_case_name, test_name) CV__TEST_P(test_case_name, test_name, Body,, CV__TEST_BODY_IMPL)
 
 
 #define CV_TEST_EXPECT_EXCEPTION_MESSAGE(statement, msg) \
