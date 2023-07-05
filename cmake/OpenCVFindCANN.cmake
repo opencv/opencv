@@ -85,7 +85,7 @@ if(CANN_INSTALL_DIR)
     list(APPEND libs_cann ${lib_opsproto})
     list(APPEND libs_cann ${lib_graph})
     list(APPEND libs_cann ${lib_ge_compiler})
-    list(APPEND libs_cann ${libgraph_base})
+    list(APPEND libs_cann ${lib_graph_base})
     
     try_compile(VALID_ASCENDCL
         "${OpenCV_BINARY_DIR}"
