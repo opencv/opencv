@@ -190,22 +190,22 @@ public:
     estimation used in the inliers classification step
     @param num_matches_thresh2 Minimum number of matches required for the 2D projective transform
     re-estimation on inliers
-    @param matches_confindece_thresh Matching confidence threshold to take the match into account.
+    @param matches_confidence_thresh Matching confidence threshold to take the match into account.
     The threshold was determined experimentally and set to 3 by default.
      */
     CV_WRAP BestOf2NearestMatcher(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,
-                          int num_matches_thresh2 = 6, double matches_confindece_thresh = 3.);
+                          int num_matches_thresh2 = 6, double matches_confidence_thresh = 3.);
 
     CV_WRAP void collectGarbage() CV_OVERRIDE;
     CV_WRAP static Ptr<BestOf2NearestMatcher> create(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,
-        int num_matches_thresh2 = 6, double matches_confindece_thresh = 3.);
+        int num_matches_thresh2 = 6, double matches_confidence_thresh = 3.);
 
 protected:
 
     void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info) CV_OVERRIDE;
     int num_matches_thresh1_;
     int num_matches_thresh2_;
-    double matches_confindece_thresh_;
+    double matches_confidence_thresh_;
     Ptr<FeaturesMatcher> impl_;
 };
 
