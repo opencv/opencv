@@ -269,9 +269,20 @@ public:
             case ErrorMetric::SYMM_REPR_ERR:
                 error = ReprojectionErrorSymmetric::create(points); break;
             case ErrorMetric::FORW_REPR_ERR:
-                if (params->getEstimator() == EstimationMethod::AFFINE)
-                    error = ReprojectionErrorAffine::create(points);
-                else error = ReprojectionErrorForward::create(points);
+                switch(params->getEstimator()){
+                    case EstimationMethod::AFFINE:
+                    case EstimationMethod::SE2:
+                    case EstimationMethod::SIM2:
+                        error = ReprojectionErrorAffine::create(points);
+                        break;
+                    case EstimationMethod::SO3:
+                    case EstimationMethod::SE3:
+                    case EstimationMethod::SIM3:
+                        error = ReprojectionErrorAffine3D::create(points);
+                        break;
+                    default:
+                        error = ReprojectionErrorForward::create(points);
+                }
                 break;
             case ErrorMetric::SAMPSON_ERR:
                 error = SampsonError::create(points); break;
@@ -364,6 +375,36 @@ public:
                     _fo_solver = CovarianceAffineSolver::create(points);
                 else _fo_solver = non_min_solver;
             }
+        } else if (params->getEstimator() == EstimationMethod::SE2) {
+            degeneracy = makePtr<Degeneracy>();
+            min_solver = SE2MinimalSolver::create(points);
+            non_min_solver = SE2NonMinimalSolver::create(points);
+            estimator = AffineEstimator::create(min_solver, non_min_solver);
+            if (!parallel_call && params->getFinalPolisher() != NONE_POLISHER) _fo_solver = non_min_solver;
+        } else if (params->getEstimator() == EstimationMethod::SIM2) {
+            degeneracy = makePtr<Degeneracy>();
+            min_solver = SIM2MinimalSolver::create(points);
+            non_min_solver = SIM2NonMinimalSolver::create(points);
+            estimator = AffineEstimator::create(min_solver, non_min_solver);
+            if (!parallel_call && params->getFinalPolisher() != NONE_POLISHER) _fo_solver = non_min_solver;
+        } else if (params->getEstimator() == EstimationMethod::SO3) {
+            degeneracy = makePtr<Degeneracy>();
+            min_solver = SO3MinimalSolver::create(points);
+            non_min_solver = SO3NonMinimalSolver::create(points);
+            estimator = AffineEstimator::create(min_solver, non_min_solver);
+            if (!parallel_call && params->getFinalPolisher() != NONE_POLISHER) _fo_solver = non_min_solver;
+        } else if (params->getEstimator() == EstimationMethod::SE3) {
+            degeneracy = makePtr<Degeneracy>();
+            min_solver = SE3MinimalSolver::create(points);
+            non_min_solver = SE3NonMinimalSolver::create(points);
+            estimator = AffineEstimator::create(min_solver, non_min_solver);
+            if (!parallel_call && params->getFinalPolisher() != NONE_POLISHER) _fo_solver = non_min_solver;
+        } else if (params->getEstimator() == EstimationMethod::SIM3) {
+            degeneracy = makePtr<Degeneracy>();
+            min_solver = SIM3MinimalSolver::create(points);
+            non_min_solver = SIM3NonMinimalSolver::create(points);
+            estimator = AffineEstimator::create(min_solver, non_min_solver);
+            if (!parallel_call && params->getFinalPolisher() != NONE_POLISHER) _fo_solver = non_min_solver;
         } else CV_Error(cv::Error::StsNotImplemented, "Estimator not implemented!");
 
         switch (params->getSampler()) {
