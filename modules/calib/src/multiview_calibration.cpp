@@ -325,91 +325,61 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
         }
         
         std::vector<Mat> image_points_undist;
-        if (!are_both_fisheye_cams && are_fisheye_cams) {
+        if (useUndistort && !are_both_fisheye_cams && are_fisheye_cams) {
             image_points_undist.reserve(image_points1.size());
             for (size_t i = 0; i < image_points1.size(); i++) {
                 Mat undist;
-                if (useUndistort) { // undistort fisheye cameras
-                    if (is_fisheye_vec[c1]) {
-                        fisheye::undistortPoints(image_points1[i], undist, Ks[c1], distortions[c1], noArray(), Ks[c1]);
-                        // image_points1[i] = undist;
-                    } else {
-                        fisheye::undistortPoints(image_points2[i], undist, Ks[c2], distortions[c2], noArray(), Ks[c2]);
-                        // image_points2[i] = undist;
-                    }
-                } else { // undistort pinhole cameras
-                    Mat temp;
-                    if (!is_fisheye_vec[c1]) {
-                        undistortPoints(image_points1[i], temp, Ks[c1], distortions[c1]);
-                        fisheye::distortPoints(temp, undist, Ks[c1], dist_pinhole_map);
-                        // undistortPoints(image_points1[i], undist, Ks[c1], distortions[c1], noArray(), Ks[c1]);
-                        // image_points1[i] = undist;
-
-                    } else {
-                        undistortPoints(image_points2[i], temp, Ks[c2], distortions[c2]);
-                        fisheye::distortPoints(temp, undist, Ks[c2], dist_pinhole_map);
-                        // undistortPoints(image_points2[i], undist, Ks[c2], distortions[c2], noArray(), Ks[c2]);
-                        // image_points2[i] = undist;
-                    }
-
+                // undistort fisheye cameras
+                if (is_fisheye_vec[c1]) {
+                    fisheye::undistortPoints(image_points1[i], undist, Ks[c1], distortions[c1], noArray(), Ks[c1]);
+                } else {
+                    fisheye::undistortPoints(image_points2[i], undist, Ks[c2], distortions[c2], noArray(), Ks[c2]);
                 }
                 image_points_undist.emplace_back(undist);
             }
-            std::cout << "point undistortion done" << std::endl;
         }
+
         Matx33d R;
         Vec3d T;
         // If use the mode of useUndistort, distort image points into normalized points; else, set the pinhole camera to be undistorted  
         // image size does not matter since intrinsics are used
-        if (are_both_fisheye_cams) {
-            fisheye::stereoCalibrate(grid_points, image_points1, image_points2,
-                            Ks[c1], distortions[c1],
-                            Ks[c2], distortions[c2],
-                            Size(), R, T, CALIB_FIX_INTRINSIC);
-        } else if (!are_fisheye_cams) {
-            int flags_extrinsics = CALIB_FIX_INTRINSIC;
-            if ((flags.at<int>(c1) & CALIB_RATIONAL_MODEL) || (flags.at<int>(c2) & CALIB_RATIONAL_MODEL))
-                flags_extrinsics += CALIB_RATIONAL_MODEL;
-            if ((flags.at<int>(c1) & CALIB_THIN_PRISM_MODEL) || (flags.at<int>(c2) & CALIB_THIN_PRISM_MODEL))
-                flags_extrinsics += CALIB_THIN_PRISM_MODEL;
+        if (useUndistort) {
+            if (are_both_fisheye_cams) {
+                fisheye::stereoCalibrate(grid_points, image_points1, image_points2,
+                                Ks[c1], distortions[c1],
+                                Ks[c2], distortions[c2],
+                                Size(), R, T, CALIB_FIX_INTRINSIC);
+            } else if (!are_fisheye_cams) {
+                int flags_extrinsics = CALIB_FIX_INTRINSIC;
+                if ((flags.at<int>(c1) & CALIB_RATIONAL_MODEL) || (flags.at<int>(c2) & CALIB_RATIONAL_MODEL))
+                    flags_extrinsics += CALIB_RATIONAL_MODEL;
+                if ((flags.at<int>(c1) & CALIB_THIN_PRISM_MODEL) || (flags.at<int>(c2) & CALIB_THIN_PRISM_MODEL))
+                    flags_extrinsics += CALIB_THIN_PRISM_MODEL;
 
-            stereoCalibrate(grid_points, image_points1, image_points2,
-                            Ks[c1], distortions[c1],
-                            Ks[c2], distortions[c2],
-                            Size(), R, T, noArray(), noArray(), noArray(), flags_extrinsics);
-        } else if (useUndistort) { // if in the mode of undistorting fisheye cameras
-            int flags_extrinsics = CALIB_FIX_INTRINSIC;
-            if ((flags.at<int>(c1) & CALIB_RATIONAL_MODEL) || (flags.at<int>(c2) & CALIB_RATIONAL_MODEL))
-                flags_extrinsics += CALIB_RATIONAL_MODEL;
-            if ((flags.at<int>(c1) & CALIB_THIN_PRISM_MODEL) || (flags.at<int>(c2) & CALIB_THIN_PRISM_MODEL))
-                flags_extrinsics += CALIB_THIN_PRISM_MODEL;
-
-            if (is_fisheye_vec[c1]) {
-                stereoCalibrate(grid_points, image_points_undist, image_points2,
-                                Ks[c1], dist_null_map,
+                stereoCalibrate(grid_points, image_points1, image_points2,
+                                Ks[c1], distortions[c1],
                                 Ks[c2], distortions[c2],
                                 Size(), R, T, noArray(), noArray(), noArray(), flags_extrinsics);
             } else {
-                stereoCalibrate(grid_points, image_points1, image_points_undist,
-                                Ks[c1], distortions[c1],
-                                Ks[c2], dist_null_map,
-                                Size(), R, T, noArray(), noArray(), noArray(), flags_extrinsics);
+                int flags_extrinsics = CALIB_FIX_INTRINSIC;
+                if ((flags.at<int>(c1) & CALIB_RATIONAL_MODEL) || (flags.at<int>(c2) & CALIB_RATIONAL_MODEL))
+                    flags_extrinsics += CALIB_RATIONAL_MODEL;
+                if ((flags.at<int>(c1) & CALIB_THIN_PRISM_MODEL) || (flags.at<int>(c2) & CALIB_THIN_PRISM_MODEL))
+                    flags_extrinsics += CALIB_THIN_PRISM_MODEL;
+
+                if (is_fisheye_vec[c1]) {
+                    stereoCalibrate(grid_points, image_points_undist, image_points2,
+                                    Ks[c1], dist_null_map,
+                                    Ks[c2], distortions[c2],
+                                    Size(), R, T, noArray(), noArray(), noArray(), flags_extrinsics);
+                } else {
+                    stereoCalibrate(grid_points, image_points1, image_points_undist,
+                                    Ks[c1], distortions[c1],
+                                    Ks[c2], dist_null_map,
+                                    Size(), R, T, noArray(), noArray(), noArray(), flags_extrinsics);
+                }
             }
         } else {
-            if (is_fisheye_vec[c1]) {
-                fisheye::stereoCalibrate(grid_points, image_points1, image_points_undist,
-                                Ks[c1], distortions[c1],
-                                Ks[c2], dist_pinhole_map,
-                                Size(), R, T, CALIB_FIX_INTRINSIC);
-            } else {
-                fisheye::stereoCalibrate(grid_points, image_points_undist, image_points2,
-                                Ks[c1], dist_pinhole_map,
-                                Ks[c2], distortions[c2],
-                                Size(), R, T, CALIB_FIX_INTRINSIC);
-            }
-        }
-
-        if (false) {
             int flags_extrinsics1 = CALIB_FIX_INTRINSIC;
             int flags_extrinsics2 = CALIB_FIX_INTRINSIC;
             flags_extrinsics1 = flags_extrinsics1 + flags.at<int>(c1);
