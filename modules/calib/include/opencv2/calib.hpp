@@ -1122,6 +1122,20 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      OutputArray perViewErrors, int flags = CALIB_FIX_INTRINSIC,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
 
+/// @overload
+// TODO: MAKE MORE INTERFACE AVAILABLE
+CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+                                     InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
+                                     bool isFisheye1,
+                                     InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
+                                     bool isFisheye2,
+                                     Size imageSize, InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
+                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
+                                     OutputArray perViewErrors, int flags1 = CALIB_FIX_INTRINSIC,
+                                     int flags2 = CALIB_FIX_INTRINSIC,
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
+
 /** @brief Estimates intrinsics and extrinsics (camera pose) for multi-camera system a.k.a multiview calibraton.
 
 @param[in] objPoints Calibration pattern object points. Expected shape: NUM_FRAMES x NUM_POINTS x 3. Supported data type: CV_32F.
@@ -1155,12 +1169,13 @@ points in all the available views from all cameras.
 @sa findChessboardCorners, findCirclesGrid, calibrateCamera, fisheye::calibrate
 */
 
+// TODO: clean the "useUndistort" flag 
 CV_EXPORTS_W double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
         const std::vector<Size> &imageSize, InputArray detectionMask,
         OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, CV_IN_OUT std::vector<Mat> &Ks, CV_IN_OUT std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray isFisheye,
         OutputArray perFrameErrors, OutputArray initializationPairs,
-        bool useIntrinsicsGuess=false, InputArray flagsForIntrinsics=noArray());
+        bool useIntrinsicsGuess=false, InputArray flagsForIntrinsics=noArray(), bool useUndistort=false);
 
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$
