@@ -20,10 +20,10 @@ namespace cv {
 
         Vec3f v = w.cross(u);
         Vec4f w_prime(w[0], w[1], w[2], 0.0f), u_prime(u[0], u[1], u[2], 0.0f), v_prime(v[0], v[1], v[2], 0.0f), identity(0.0f, 0.0f, 0.0f, 1.0f);
-        Matx44f res;
-        res.col(0) = u_prime, res.col(1) = v_prime;
-        res.col(2) = w_prime, res.col(3) = identity;
-        res = res.t();
+        Matx44f res(u_prime[0], u_prime[1], u_prime[2], u_prime[3],
+                    v_prime[0], v_prime[1], v_prime[2], v_prime[3],
+                    w_prime[0], w_prime[1], w_prime[2], w_prime[3],
+                    identity[0], identity[1], identity[2], identity[3]);
 
         Matx44f translate(1.0f, 0.0f, 0.0f, -(float)position[0],
             0.0f, 1.0f, 0.0f, -(float)position[1],
@@ -85,7 +85,6 @@ namespace cv {
             if (beta + gamma <= 1)
                 return Vec3f( 1.0 - beta - gamma, beta, gamma );
         }
-        return Vec3f(1.0, 1.0, 1.0);
     }
 
     void triangle_rendering(const Triangle& tri, int width, int height, bool isConstant,
@@ -109,13 +108,14 @@ namespace cv {
                 {
                     Vec3f barycentricCoord = barycentricCal(x + 0.5, y + 0.5, tri.vertices);
                     float alpha = barycentricCoord[0], beta = barycentricCoord[1], gamma = barycentricCoord[2];
-                    float z_interpolated = 1.0 / (alpha / tri.vertices[0][2] + beta / tri.vertices[1][2], gamma / tri.vertices[2][2]);
+                    float z_interpolated = 1.0 / (alpha / tri.vertices[0][2] + beta / tri.vertices[1][2] + gamma / tri.vertices[2][2]);
 
                     int index = (height - 1 - y) * width + x;
                     if (z_interpolated < depth_buf[index])
                     {
                         if (isConstant)
                             color_buf[index] = tri.getTriangleColor();
+                            //color_buf[index] = Vec3f(255, 0, 0);
                         else
                             color_buf[index] = (alpha * tri.color[0] / tri.vertices[0][2] + beta * tri.color[1] / tri.vertices[1][2]
                                                 + gamma * tri.color[2] / tri.vertices[2][2]) * z_interpolated;

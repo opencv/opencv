@@ -10,8 +10,8 @@ protected:
     {
         width = 700, height = 700;
 
-        position = Vec3f(0.0, 0.0, 6.0);
-        lookat = Vec3f(0.0, 0.0, 1.0);
+        position = Vec3f(0.0, 0.0, 5.0);
+        lookat = Vec3f(0.0, 0.0, 0.0);
         upVector = Vec3f(0.0, 1.0, 0.0);
 
         fovy = 45.0;
@@ -35,12 +35,12 @@ TEST_F(RenderingTest, depthRenderingTest)
     std::vector<Vec3f> color_buf;
 
     std::vector <Vec3f> vertices = {
-        Vec3f(2.0, 0, -1.0),
-        Vec3f(0, 2, -1),
-        Vec3f(-2, 0, -1),
-        Vec3f(3.5, -1, -4),
-        Vec3f(2.5, 1.5, -4),
-        Vec3f(-1, 0.5, -4)
+        Vec3f(2.0, 0, -2.0),
+        Vec3f(0, -2, -2),
+        Vec3f(-2, 0, -2),
+        Vec3f(3.5, -1, -5),
+        Vec3f(2.5, -1.5, -5),
+        Vec3f(-1, 0.5, -5)
     };
 
     std::vector<Vec3i> indices = {
@@ -73,27 +73,19 @@ TEST_F(RenderingTest, colorRenderingTest)
     isConstant = false;
 
     std::vector <Vec3f> vertices = {
-        Vec3f(-0.5f, -0.5f, 1.5f), Vec3f(-0.5f, 0.5f, 1.5f), Vec3f(0.5f, 0.5f, 1.5f), Vec3f(0.5f, -0.5f, 1.5f),
-        Vec3f(-0.5f, -0.5f, 0.5f), Vec3f(-0.5f, 0.5f, 0.5f), Vec3f(0.5f, 0.5f, 0.5f), Vec3f(0.5f, -0.5f, 0.5f),
-        Vec3f(-0.5f, -0.5f, 1.5f), Vec3f(-0.5f, 0.5f, 1.5f), Vec3f(-0.5f, 0.5f, 0.5f), Vec3f(-0.5f, -0.5f, 0.5f),
-        Vec3f(0.5f, -0.5f, 1.5f), Vec3f(0.5f, 0.5f, 1.5f), Vec3f(0.5f, 0.5f, 0.5f), Vec3f(0.5f, -0.5f, 0.5f),
-        Vec3f(0.5f, 0.5f, 1.5f), Vec3f(-0.5f, 0.5f, 1.5f), Vec3f(-0.5f, 0.5f, 0.5f), Vec3f(0.5f, 0.5f, 0.5f),
-        Vec3f(0.5f, -0.5f, 1.5f), Vec3f(-0.5f, -0.5f, 1.5f), Vec3f(-0.5f, -0.5f, 0.5f), Vec3f(0.5f, -0.5f, 0.5f)
+        Vec3f(2.0, 0, -2.0),
+        Vec3f(0, 2, -3),
+        Vec3f(-2, 0, -2),
+        Vec3f(0, -2, -1)
     };
 
     std::vector<Vec3i> indices = {
-        Vec3i(0, 1, 2), Vec3i(0, 2, 3), Vec3i(4, 5, 6), Vec3i(4, 6, 7),
-        Vec3i(8, 9, 10), Vec3i(8, 10, 11), Vec3i(12, 13, 14), Vec3i(12, 14, 15),
-        Vec3i(16, 17, 18), Vec3i(16, 18, 19), Vec3i(20, 21, 22), Vec3i(20, 22, 23)
+        Vec3i(0, 1, 2),
+        Vec3i(0, 2, 3)
     };
 
     std::vector<Vec3f> colors = {
-        Vec3f(0.0f, 0.0f, 255.0f),  Vec3f(0.0f, 0.0f, 255.0f),  Vec3f(0.0f, 0.0f, 255.0f),  Vec3f(0.0f, 0.0f, 255.0f),
-        Vec3f(0.0f, 0.0f, -255.0f), Vec3f(0.0f, 0.0f, -255.0f), Vec3f(0.0f, 0.0f, -255.0f), Vec3f(0.0f, 0.0f, -255.0f),
-        Vec3f(-255.0f, 0.0f, 0.0f), Vec3f(-255.0f, 0.0f, 0.0f), Vec3f(-255.0f, 0.0f, 0.0f), Vec3f(-255.0f, 0.0f, 0.0f),
-        Vec3f(255.0f, 0.0f, 0.0f), Vec3f(255.0f, 0.0f, 0.0f), Vec3f(255.0f, 0.0f, 0.0f), Vec3f(255.0f, 0.0f, 0.0f),
-        Vec3f(0.0f, 255.0f, 0.0f), Vec3f(0.0f, 255.0f, 0.0f), Vec3f(0.0f, 255.0f, 0.0f), Vec3f(0.0f, 255.0f, 0.0f),
-        Vec3f(0.0f, -255.0f, 0.0f), Vec3f(0.0f, -255.0f, 0.0f), Vec3f(0.0f, -255.0f, 0.0f), Vec3f(0.0f, -255.0f, 0.0f)
+        Vec3f(0.0f, 0.0f, 255.0f),  Vec3f(0.0f, 255.0f, 0.0f),  Vec3f(255.0f, 0.0f, 0.0f), Vec3f(0.0f, 255.0f, 0.0f)
     };
 
     triangleRasterize(vertices, indices, colors, position, lookat, upVector, fovy, zNear, zFar, width, height,

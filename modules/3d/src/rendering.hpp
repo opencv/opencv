@@ -11,6 +11,6 @@ struct Triangle
     void setVertexPosition(int index, Vec3f vertex);
     void setVertexColor(int index, Vec3f color);
 
-    Vec3f getTriangleColor() const { return color[0] * 255; }
+    Vec3f getTriangleColor() const { return color[0]; }
 };
 }
