@@ -1,17 +1,17 @@
 #include <iostream>
 
 #ifdef _WIN32
-    #define WIN32_LEAN_AND_MEAN 1
-    #define NOMINMAX 1
-    #include <windows.h>
+#define WIN32_LEAN_AND_MEAN 1
+#define NOMINMAX 1
+#include <windows.h>
 #endif
 
 #if defined(__APPLE__)
-    #include <OpenGL/gl.h>
-    #include <OpenGL/glu.h>
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
 #else
-    #include <GL/gl.h>
-    #include <GL/glu.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
 #endif
 
 #include "opencv2/core.hpp"

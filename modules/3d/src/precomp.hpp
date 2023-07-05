@@ -65,6 +65,7 @@
 
 #include "opencv2/3d/detail/optimizer.hpp"
 #include "opencv2/3d/detail/kinfu_frame.hpp"
+#include "rendering.hpp"
 
 #include <atomic>
 #include <functional>
