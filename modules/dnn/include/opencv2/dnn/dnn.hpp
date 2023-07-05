@@ -106,6 +106,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_CUDA_FP16,
         DNN_TARGET_HDDL,
         DNN_TARGET_NPU,
+        DNN_TARGET_CPU_FP16, // Only the ARM platform is supported. Low precision computing, accelerate model inference.
     };
 
     /**
@@ -329,7 +330,7 @@ CV__DNN_INLINE_NS_BEGIN
 
         virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs, const std::vector<Ptr<BackendNode> >& nodes);
 
-        virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs);
+        virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs, std::vector<Ptr<BackendWrapper> > &outputs);
 
         virtual Ptr<BackendNode> initWebnn(const std::vector<Ptr<BackendWrapper> > &inputs, const std::vector<Ptr<BackendNode> >& nodes);
 
@@ -893,7 +894,6 @@ CV__DNN_INLINE_NS_BEGIN
     *  @param cfgFile      path to the .cfg file with text description of the network architecture.
     *  @param darknetModel path to the .weights file with learned network.
     *  @returns Network object that ready to do forward, throw an exception in failure cases.
-    *  @returns Net object.
     */
     CV_EXPORTS_W Net readNetFromDarknet(const String &cfgFile, const String &darknetModel = String());
 
@@ -1422,7 +1422,7 @@ CV__DNN_INLINE_NS_BEGIN
          /** @brief Set scalefactor value for frame.
           *  @param[in] scale Multiplier for frame values.
          */
-         CV_WRAP Model& setInputScale(double scale);
+         CV_WRAP Model& setInputScale(const Scalar& scale);
 
          /** @brief Set flag crop for frame.
           *  @param[in] crop Flag which indicates whether image will be cropped after resize or not.

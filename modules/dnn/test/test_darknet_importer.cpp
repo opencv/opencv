@@ -181,12 +181,21 @@ public:
                           const std::vector<std::vector<float> >& refConfidences,
                           const std::vector<std::vector<Rect2d> >& refBoxes,
                           double scoreDiff, double iouDiff, float confThreshold = 0.24,
-                          float nmsThreshold = 0.4, bool useWinograd = true)
+                          float nmsThreshold = 0.4, bool useWinograd = true,
+                          int zeroPadW = 0)
     {
         checkBackend();
 
         Mat img1 = imread(_tf("dog416.png"));
         Mat img2 = imread(_tf("street.png"));
+        cv::resize(img2, img2, Size(416, 416));
+
+        // Pad images by black pixel at the right to test not equal width and height sizes
+        if (zeroPadW) {
+            cv::copyMakeBorder(img1, img1, 0, 0, 0, zeroPadW, BORDER_CONSTANT);
+            cv::copyMakeBorder(img2, img2, 0, 0, 0, zeroPadW, BORDER_CONSTANT);
+        }
+
         std::vector<Mat> samples(2);
         samples[0] = img1; samples[1] = img2;
 
@@ -195,7 +204,7 @@ public:
         CV_Assert(batch_size == 1 || batch_size == 2);
         samples.resize(batch_size);
 
-        Mat inp = blobFromImages(samples, 1.0/255, Size(416, 416), Scalar(), true, false);
+        Mat inp = blobFromImages(samples, 1.0/255, Size(), Scalar(), true, false);
 
         Net net = readNet(findDataFile("dnn/" + cfg),
                           findDataFile("dnn/" + weights, false));
@@ -275,6 +284,14 @@ public:
                 continue;
             }
 
+            // Return predictions from padded image to the origin
+            if (zeroPadW) {
+                float scale = static_cast<float>(inp.size[3]) / (inp.size[3] - zeroPadW);
+                for (auto& box : nms_boxes) {
+                    box.x *= scale;
+                    box.width *= scale;
+                }
+            }
             normAssertDetections(refClassIds[b], refConfidences[b], refBoxes[b], nms_classIds,
                              nms_confidences, nms_boxes, format("batch size %d, sample %d\n", batch_size, b).c_str(), confThreshold, scoreDiff, iouDiff);
         }
@@ -285,18 +302,20 @@ public:
                           const std::vector<float>& refConfidences,
                           const std::vector<Rect2d>& refBoxes,
                           double scoreDiff, double iouDiff, float confThreshold = 0.24,
-                          float nmsThreshold = 0.4, bool useWinograd = true)
+                          float nmsThreshold = 0.4, bool useWinograd = true,
+                          int zeroPadW = 0)
     {
         testDarknetModel(cfg, weights,
                          std::vector<std::vector<int> >(1, refClassIds),
                          std::vector<std::vector<float> >(1, refConfidences),
                          std::vector<std::vector<Rect2d> >(1, refBoxes),
-                         scoreDiff, iouDiff, confThreshold, nmsThreshold, useWinograd);
+                         scoreDiff, iouDiff, confThreshold, nmsThreshold, useWinograd, zeroPadW);
     }
 
     void testDarknetModel(const std::string& cfg, const std::string& weights,
                           const cv::Mat& ref, double scoreDiff, double iouDiff,
-                          float confThreshold = 0.24, float nmsThreshold = 0.4, bool useWinograd = true)
+                          float confThreshold = 0.24, float nmsThreshold = 0.4, bool useWinograd = true,
+                          int zeroPadW = 0)
     {
         CV_Assert(ref.cols == 7);
         std::vector<std::vector<int> > refClassIds;
@@ -323,7 +342,7 @@ public:
             refBoxes[batchId].push_back(box);
         }
         testDarknetModel(cfg, weights, refClassIds, refScores, refBoxes,
-                         scoreDiff, iouDiff, confThreshold, nmsThreshold, useWinograd);
+                         scoreDiff, iouDiff, confThreshold, nmsThreshold, useWinograd, zeroPadW);
     }
 };
 
@@ -360,9 +379,9 @@ TEST_P(Test_Darknet_nets, YoloVoc)
                                     1, 6,  0.667770f, 0.446555f, 0.453578f, 0.499986f, 0.519167f,  // a car
                                     1, 6,  0.844947f, 0.637058f, 0.460398f, 0.828508f, 0.66427f);  // a car
 
-    double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.397 : 0.4;
+    double nmsThreshold = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.397 : 0.4;
     double scoreDiff = 8e-5, iouDiff = 3e-4;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 1e-2;
         iouDiff = 0.018;
@@ -451,7 +470,7 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
                                     1, 6,  0.928758f, 0.651024f, 0.463539f, 0.823784f, 0.654998f); // a car
 
     double scoreDiff = 8e-5, iouDiff = 3e-4;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 8e-3;
         iouDiff = 0.018;
@@ -636,7 +655,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
     double scoreDiff = 8e-5, iouDiff = 3e-4;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2022010000)
         if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -725,8 +744,8 @@ TEST_P(Test_Darknet_nets, YOLOv4)
     };
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.006 : 8e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.042 : 3e-4;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.006 : 8e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.042 : 3e-4;
     if (target == DNN_TARGET_CUDA_FP16)
     {
         scoreDiff = 0.008;
@@ -767,6 +786,8 @@ TEST_P(Test_Darknet_nets, YOLOv4)
     {
         SCOPED_TRACE("batch size 1");
         testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff, 0.24, 0.4, false);
+        // Test not equal width and height applying zero padding
+        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), 0.006, 0.008, 0.24, 0.4, false, /*zeroPadW*/ 32);
     }
 
     {
@@ -847,7 +868,7 @@ TEST_P(Test_Darknet_nets, YOLOv4_tiny)
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
     double scoreDiff = 0.012f;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.15 : 0.01f;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.15 : 0.01f;
     if (target == DNN_TARGET_CUDA_FP16)
         iouDiff = 0.02;
 
@@ -930,7 +951,7 @@ TEST_P(Test_Darknet_nets, YOLOv4x_mish)
     double scoreDiff = 8e-5;
     double iouDiff = 3e-4;
 
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.006;
         iouDiff = 0.042;
@@ -1093,6 +1114,8 @@ TEST_P(Test_Darknet_layers, connected)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
     testDarknetLayer("connected", true);
 }
 

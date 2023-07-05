@@ -651,8 +651,8 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                 privDataWidth / pxLoadNumPixels, pxPerWorkItemY + ksize.height - 1,
                 ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
                 ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
-                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
-                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), kerStr.c_str());
+                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])),
+                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])), kerStr.c_str());
 
         if (!k.create("filter2DSmall", cv::ocl::imgproc::filter2DSmall_oclsrc, build_options))
             return false;
@@ -696,8 +696,8 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                                  doubleSupport ? " -D DOUBLE_SUPPORT" : "", kerStr.c_str(),
                                  ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
                                  ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
-                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
-                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]));
+                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])),
+                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])));
 
             localsize[0] = BLOCK_SIZE;
             globalsize[0] = DIVUP(sz.width, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE;
@@ -771,7 +771,7 @@ static bool ocl_sepRowFilter2D(const UMat & src, UMat & buf, const Mat & kernelX
                                           extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
                                           isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
                                           ocl::typeToStr(type), ocl::typeToStr(buf_type),
-                                          ocl::convertTypeStr(sdepth, bdepth, cn, cvt),
+                                          ocl::convertTypeStr(sdepth, bdepth, cn, cvt, sizeof(cvt)),
                                           ocl::typeToStr(sdepth), ocl::typeToStr(bdepth),
                                           doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                                           int_arithm ? " -D INTEGER_ARITHMETIC" : "");
@@ -832,9 +832,9 @@ static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY
                                           " -D srcT1=%s -D dstT1=%s -D SHIFT_BITS=%d%s%s",
                                           anchor, (int)localsize[0], (int)localsize[1], cn,
                                           ocl::typeToStr(buf_type), ocl::typeToStr(dtype),
-                                          ocl::convertTypeStr(bdepth, floatT, cn, cvt[0]),
+                                          ocl::convertTypeStr(bdepth, floatT, cn, cvt[0], sizeof(cvt[0])),
                                           ocl::typeToStr(CV_MAKETYPE(floatT, cn)),
-                                          ocl::convertTypeStr(shift_bits ? floatT : bdepth, ddepth, cn, cvt[1]),
+                                          ocl::convertTypeStr(shift_bits ? floatT : bdepth, ddepth, cn, cvt[1], sizeof(cvt[1])),
                                           ocl::typeToStr(bdepth), ocl::typeToStr(ddepth),
                                           2*shift_bits, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                                           int_arithm ? " -D INTEGER_ARITHMETIC" : "");
@@ -901,9 +901,9 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
                              (int)lt2[0], (int)lt2[1], kernelX.cols / 2, kernelY.cols / 2,
                              ocl::kernelToStr(kernelX, wdepth, "KERNEL_MATRIX_X").c_str(),
                              ocl::kernelToStr(kernelY, wdepth, "KERNEL_MATRIX_Y").c_str(),
-                             ocl::typeToStr(stype), ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                             ocl::typeToStr(stype), ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])),
                              ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), ocl::typeToStr(dtype),
-                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), borderMap[borderType],
+                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])), borderMap[borderType],
                              ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), ocl::typeToStr(wdepth),
                              cn, 2*shift_bits, int_arithm ? " -D INTEGER_ARITHMETIC" : "");
 

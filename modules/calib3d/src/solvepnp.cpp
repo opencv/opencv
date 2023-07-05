@@ -199,21 +199,6 @@ public:
     Mat tvec;
 };
 
-UsacParams::UsacParams()
-{
-    confidence = 0.99;
-    isParallel = false;
-    loIterations = 5;
-    loMethod = LocalOptimMethod::LOCAL_OPTIM_INNER_LO;
-    loSampleSize = 14;
-    maxIterations = 5000;
-    neighborsSearch = NeighborSearchMethod::NEIGH_GRID;
-    randomGeneratorState = 0;
-    sampler = SamplingMethod::SAMPLING_UNIFORM;
-    score = ScoreMethod::SCORE_METHOD_MSAC;
-    threshold = 1.5;
-}
-
 bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                     InputArray _cameraMatrix, InputArray _distCoeffs,
                     OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
@@ -407,7 +392,7 @@ bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
     usac::setParameters(model_params, cameraMatrix.empty() ? usac::EstimationMethod::P6P :
         usac::EstimationMethod::P3P, params, inliers.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model_params, imagePoints, objectPoints, model_params->getRandomGeneratorState(),
+    if (usac::run(model_params, imagePoints, objectPoints,
             ransac_output, cameraMatrix, noArray(), distCoeffs, noArray())) {
         if (inliers.needed()) {
             const auto &inliers_mask = ransac_output->getInliersMask();

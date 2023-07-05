@@ -4086,7 +4086,7 @@ The function finds the four vertices of a rotated rectangle. This function is us
 rectangle. In C++, instead of using this function, you can directly use RotatedRect::points method. Please
 visit the @ref tutorial_bounding_rotated_ellipses "tutorial on Creating Bounding rotated boxes and ellipses for contours" for more information.
 
-@param box The input rotated rectangle. It may be the output of
+@param box The input rotated rectangle. It may be the output of @ref minAreaRect.
 @param points The output array of four vertices of rectangles.
  */
 CV_EXPORTS_W void boxPoints(RotatedRect box, OutputArray points);

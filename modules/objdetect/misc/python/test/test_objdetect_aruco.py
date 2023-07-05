@@ -238,6 +238,27 @@ class aruco_objdetect_test(NewOpenCVTests):
             self.assertEqual(charucoIds[i], i)
         np.testing.assert_allclose(gold_corners, charucoCorners.reshape(-1, 2), 0.01, 0.1)
 
+    def test_detect_diamonds(self):
+        aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_250)
+        board_size = (3, 3)
+        board = cv.aruco.CharucoBoard(board_size, 1.0, .8, aruco_dict)
+        charuco_detector = cv.aruco.CharucoDetector(board)
+        cell_size = 120
+
+        image = board.generateImage((cell_size*board_size[0], cell_size*board_size[1]))
+
+        list_gold_corners = [(cell_size, cell_size), (2*cell_size, cell_size), (2*cell_size, 2*cell_size),
+                             (cell_size, 2*cell_size)]
+        gold_corners = np.array(list_gold_corners, dtype=np.float32)
+
+        diamond_corners, diamond_ids, marker_corners, marker_ids = charuco_detector.detectDiamonds(image)
+
+        self.assertEqual(diamond_ids.size, 4)
+        self.assertEqual(marker_ids.size, 4)
+        for i in range(0, 4):
+            self.assertEqual(diamond_ids[0][0][i], i)
+        np.testing.assert_allclose(gold_corners, np.array(diamond_corners, dtype=np.float32).reshape(-1, 2), 0.01, 0.1)
+
     # check no segfault when cameraMatrix or distCoeffs are not initialized
     def test_charuco_no_segfault_params(self):
         dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_1000)
@@ -312,6 +333,33 @@ class aruco_objdetect_test(NewOpenCVTests):
 
                         reprErr = cv.norm(charucoCorners[i] - projectedCharucoCorners[currentId])
                         self.assertLessEqual(reprErr, 5)
+
+    def test_aruco_match_image_points(self):
+        aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_50)
+        board_size = (3, 4)
+        board = cv.aruco.GridBoard(board_size, 5.0, 1.0, aruco_dict)
+        aruco_corners = np.array(board.getObjPoints())[:, :, :2]
+        aruco_ids = board.getIds()
+        obj_points, img_points = board.matchImagePoints(aruco_corners, aruco_ids)
+        aruco_corners = aruco_corners.reshape(-1, 2)
+
+        self.assertEqual(aruco_corners.shape[0], obj_points.shape[0])
+        self.assertEqual(img_points.shape[0], obj_points.shape[0])
+        self.assertEqual(2, img_points.shape[2])
+        np.testing.assert_array_equal(aruco_corners, obj_points[:, :, :2].reshape(-1, 2))
+
+    def test_charuco_match_image_points(self):
+        aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_50)
+        board_size = (3, 4)
+        board = cv.aruco.CharucoBoard(board_size, 5.0, 1.0, aruco_dict)
+        chessboard_corners = np.array(board.getChessboardCorners())[:, :2]
+        chessboard_ids = board.getIds()
+        obj_points, img_points = board.matchImagePoints(chessboard_corners, chessboard_ids)
+
+        self.assertEqual(chessboard_corners.shape[0], obj_points.shape[0])
+        self.assertEqual(img_points.shape[0], obj_points.shape[0])
+        self.assertEqual(2, img_points.shape[2])
+        np.testing.assert_array_equal(chessboard_corners, obj_points[:, :, :2].reshape(-1, 2))
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

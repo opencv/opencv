@@ -76,6 +76,12 @@ Most compilers implement their own version of this keyword ...
 #define OPJ_DEPRECATED(func) func
 #endif
 
+#if defined(__GNUC__) && __GNUC__ >= 6
+#define OPJ_DEPRECATED_STRUCT_MEMBER(memb, msg) __attribute__ ((deprecated(msg))) memb
+#else
+#define OPJ_DEPRECATED_STRUCT_MEMBER(memb, msg) memb
+#endif
+
 #if defined(OPJ_STATIC) || !defined(_WIN32)
 /* http://gcc.gnu.org/wiki/Visibility */
 #   if !defined(_WIN32) && __GNUC__ >= 4
@@ -449,9 +455,9 @@ typedef struct opj_cparameters {
     char infile[OPJ_PATH_LEN];
     /** output file name */
     char outfile[OPJ_PATH_LEN];
-    /** DEPRECATED. Index generation is now handeld with the opj_encode_with_info() function. Set to NULL */
+    /** DEPRECATED. Index generation is now handled with the opj_encode_with_info() function. Set to NULL */
     int index_on;
-    /** DEPRECATED. Index generation is now handeld with the opj_encode_with_info() function. Set to NULL */
+    /** DEPRECATED. Index generation is now handled with the opj_encode_with_info() function. Set to NULL */
     char index[OPJ_PATH_LEN];
     /** subimage encoding: origin image offset in x direction */
     int image_offset_x0;
@@ -681,10 +687,10 @@ typedef struct opj_image_comp {
     OPJ_UINT32 x0;
     /** y component offset compared to the whole image */
     OPJ_UINT32 y0;
-    /** precision */
+    /** precision: number of bits per component per pixel */
     OPJ_UINT32 prec;
-    /** image depth in bits */
-    OPJ_UINT32 bpp;
+    /** obsolete: use prec instead */
+    OPJ_DEPRECATED_STRUCT_MEMBER(OPJ_UINT32 bpp, "Use prec instead");
     /** signed (1) / unsigned (0) */
     OPJ_UINT32 sgnd;
     /** number of decoded resolution */
@@ -738,10 +744,10 @@ typedef struct opj_image_comptparm {
     OPJ_UINT32 x0;
     /** y component offset compared to the whole image */
     OPJ_UINT32 y0;
-    /** precision */
+    /** precision: number of bits per component per pixel */
     OPJ_UINT32 prec;
-    /** image depth in bits */
-    OPJ_UINT32 bpp;
+    /** obsolete: use prec instead */
+    OPJ_DEPRECATED_STRUCT_MEMBER(OPJ_UINT32 bpp, "Use prec instead");
     /** signed (1) / unsigned (0) */
     OPJ_UINT32 sgnd;
 } opj_image_cmptparm_t;
@@ -1340,6 +1346,20 @@ OPJ_API OPJ_BOOL OPJ_CALLCONV opj_setup_decoder(opj_codec_t *p_codec,
         opj_dparameters_t *parameters);
 
 /**
+ * Set strict decoding parameter for this decoder.  If strict decoding is enabled, partial bit
+ * streams will fail to decode.  If strict decoding is disabled, the decoder will decode partial
+ * bitstreams as much as possible without erroring
+ *
+ * @param p_codec       decompressor handler
+ * @param strict        OPJ_TRUE to enable strict decoding, OPJ_FALSE to disable
+ *
+ * @return true         if the decoder is correctly set
+ */
+
+OPJ_API OPJ_BOOL OPJ_CALLCONV opj_decoder_set_strict_mode(opj_codec_t *p_codec,
+        OPJ_BOOL strict);
+
+/**
  * Allocates worker threads for the compressor/decompressor.
  *
  * By default, only the main thread is used. If this function is not used,
@@ -1447,7 +1467,7 @@ OPJ_API OPJ_BOOL OPJ_CALLCONV opj_decode(opj_codec_t *p_decompressor,
  * Get the decoded tile from the codec
  *
  * @param   p_codec         the jpeg2000 codec.
- * @param   p_stream        input streamm
+ * @param   p_stream        input stream
  * @param   p_image         output image
  * @param   tile_index      index of the tile which will be decode
  *
@@ -1592,7 +1612,13 @@ OPJ_API OPJ_BOOL OPJ_CALLCONV opj_setup_encoder(opj_codec_t *p_codec,
  * <ul>
  * <li>PLT=YES/NO. Defaults to NO. If set to YES, PLT marker segments,
  *     indicating the length of each packet in the tile-part header, will be
- *     written. Since 2.3.2</li>
+ *     written. Since 2.4.0</li>
+ * <li>TLM=YES/NO. Defaults to NO (except for Cinema and IMF profiles).
+ *     If set to YES, TLM marker segments, indicating the length of each
+ *     tile-part part will be written. Since 2.4.0</li>
+ * <li>GUARD_BITS=value. Number of guard bits in [0,7] range. Default value is 2.
+ *     1 may be used sometimes (like in SMPTE DCP Bv2.1 Application Profile for 2K images).
+ *     Since 2.5.0</li>
  * </ul>
  *
  * @param p_codec       Compressor handle
@@ -1600,7 +1626,7 @@ OPJ_API OPJ_BOOL OPJ_CALLCONV opj_setup_encoder(opj_codec_t *p_codec,
  *                      array of strings. Each string is of the form KEY=VALUE.
  *
  * @return OPJ_TRUE in case of success.
- * @since 2.3.2
+ * @since 2.4.0
  */
 OPJ_API OPJ_BOOL OPJ_CALLCONV opj_encoder_set_extra_options(
     opj_codec_t *p_codec,

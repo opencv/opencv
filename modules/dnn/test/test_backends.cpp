@@ -175,6 +175,8 @@ TEST_P(DNNTestNetwork, ENet)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
     processNet("dnn/Enet-model-best.net", "", Size(512, 512), "l367_Deconvolution",
                target == DNN_TARGET_OPENCL ? "dnn/halide_scheduler_opencl_enet.yml" :
                                              "dnn/halide_scheduler_enet.yml",
@@ -189,7 +191,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
-    float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 1.5e-2 : 0.0;
+    float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 1.5e-2 : 0.0;
     float iouDiff = (target == DNN_TARGET_MYRIAD) ? 0.063  : 0.0;
     float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.262  : FLT_MIN;
          processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
@@ -225,7 +227,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f / 127.5, Size(300, 560), Scalar(127.5, 127.5, 127.5), false);
     float scoreDiff = 0.0, iouDiff = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.029;
         iouDiff = 0.09;
@@ -242,7 +244,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
 
 TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
 {
-    applyTestTag(target == DNN_TARGET_CPU ? "" : CV_TEST_TAG_MEMORY_512MB);
+    applyTestTag((target == DNN_TARGET_CPU || target == DNN_TARGET_CPU_FP16) ? "" : CV_TEST_TAG_MEMORY_512MB);
     if (backend == DNN_BACKEND_HALIDE)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
 
@@ -250,7 +252,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow)
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.216 : 0.2;
     float scoreDiff = 0.0, iouDiff = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.095;
         iouDiff = 0.09;
@@ -282,7 +284,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v1_TensorFlow_Different_Width_Height)
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 560), Scalar(), false);
     float scoreDiff = 0.0, iouDiff = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.013;
         iouDiff = 0.06;
@@ -306,7 +308,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     float scoreDiff = 2e-5, iouDiff = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.013;
         iouDiff = 0.062;
@@ -332,7 +334,7 @@ TEST_P(DNNTestNetwork, SSD_VGG16)
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
 
     float scoreDiff = 0.0, iouDiff = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.04;
     }
@@ -387,7 +389,7 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi)
 
     // output range: [-0.001, 0.97]
     const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.02 : 0.0;
-    const float lInf = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16) ? 0.2 : 0.0;
+    const float lInf = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16) ? 0.2 : 0.0;
     processNet("dnn/openpose_pose_mpi.caffemodel", "dnn/openpose_pose_mpi.prototxt",
                Size(46, 46), "", "", l1, lInf);
     expectNoFallbacksFromIE(net);
@@ -461,7 +463,7 @@ TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
     Mat sample = imread(findDataFile("dnn/street.png"));
     Mat inp = blobFromImage(sample, 1.0f, Size(300, 300), Scalar(), false);
     float scoreDiff = 0.0, iouDiff = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.02;
         iouDiff = 0.1;
@@ -483,7 +485,7 @@ TEST_P(DNNTestNetwork, DenseNet_121)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);
     // Reference output values are in range [-3.807, 4.605]
     float l1 = 0.0, lInf = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         l1 = 2e-2;
         lInf = 9e-2;
@@ -537,6 +539,16 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     {
         l1 = 0.3;
         lInf = 7.6;
+    }
+    else if (target == DNN_TARGET_CPU_FP16)
+    {
+        l1 = 0.4;
+        lInf = 19.;
+    }
+    else if (target == DNN_TARGET_VULKAN)
+    {
+        l1 = 0.4;
+        lInf = 7.46;
     }
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)

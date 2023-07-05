@@ -90,7 +90,7 @@ static void swap_columns(Mat_<double>& A,int col1,int col2);
 #define SWAP(type,a,b) {type tmp=(a);(a)=(b);(b)=tmp;}
 
 //return codes:-2 (no_sol - unbdd),-1(no_sol - unfsbl), 0(single_sol), 1(multiple_sol=>least_l2_norm)
-int solveLP(InputArray Func_, InputArray Constr_, OutputArray z_)
+int solveLP(InputArray Func_, InputArray Constr_, OutputArray z_, double constr_eps)
 {
     dprintf(("call to solveLP\n"));
 
@@ -143,7 +143,23 @@ int solveLP(InputArray Func_, InputArray Constr_, OutputArray z_)
     }
 
     z.copyTo(z_);
+
+    //check constraints feasibility
+    Mat prod = Constr(Rect(0, 0, Constr.cols - 1, Constr.rows)) * z;
+    Mat constr_check = Constr.col(Constr.cols - 1) - prod;
+    double min_value = 0.0;
+    minMaxIdx(constr_check, &min_value);
+    if (min_value < -constr_eps)
+    {
+        return SOLVELP_LOST;
+    }
+
     return res;
+}
+
+int solveLP(InputArray Func, InputArray Constr, OutputArray z)
+{
+    return solveLP(Func, Constr, z, 1e-12);
 }
 
 static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,vector<unsigned int>& indexToRow){
@@ -255,7 +271,7 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
 static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,vector<unsigned int>& indexToRow){
 
     for(;;){
-        static MatIterator_<double> pos_ptr;
+        MatIterator_<double> pos_ptr;
         int e=-1,pos_ctr=0,min_var=INT_MAX;
         bool all_nonzero=true;
         for(pos_ptr=c.begin();pos_ptr!=c.end();pos_ptr++,pos_ctr++){

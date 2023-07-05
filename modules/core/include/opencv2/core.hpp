@@ -230,7 +230,8 @@ enum KmeansFlags {
 enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/columns of the matrix.
                    REDUCE_AVG = 1, //!< the output is the mean vector of all rows/columns of the matrix.
                    REDUCE_MAX = 2, //!< the output is the maximum (column/row-wise) of all rows/columns of the matrix.
-                   REDUCE_MIN = 3  //!< the output is the minimum (column/row-wise) of all rows/columns of the matrix.
+                   REDUCE_MIN = 3,  //!< the output is the minimum (column/row-wise) of all rows/columns of the matrix.
+                   REDUCE_SUM2 = 4  //!< the output is the sum of all squared rows/columns of the matrix.
                  };
 
 //! @} core_array
@@ -571,6 +572,14 @@ independently for each channel.
 */
 CV_EXPORTS_AS(sumElems) Scalar sum(InputArray src);
 
+/** @brief Checks for the presence of at least one non-zero array element.
+
+The function returns whether there are non-zero elements in src
+@param src single-channel array.
+@sa  mean, meanStdDev, norm, minMaxLoc, calcCovarMatrix
+*/
+CV_EXPORTS_W bool hasNonZero( InputArray src );
+
 /** @brief Counts non-zero array elements.
 
 The function returns the number of non-zero elements in src :
@@ -903,7 +912,7 @@ The function #reduce reduces the matrix to a vector by treating the matrix rows/
 1D vectors and performing the specified operation on the vectors until a single row/column is
 obtained. For example, the function can be used to compute horizontal and vertical projections of a
 raster image. In case of #REDUCE_MAX and #REDUCE_MIN , the output image should have the same type as the source one.
-In case of #REDUCE_SUM and #REDUCE_AVG , the output may have a larger element bit-depth to preserve accuracy.
+In case of #REDUCE_SUM, #REDUCE_SUM2 and #REDUCE_AVG , the output may have a larger element bit-depth to preserve accuracy.
 And multi-channel arrays are also supported in these two reduction modes.
 
 The following code demonstrates its usage for a single channel matrix.

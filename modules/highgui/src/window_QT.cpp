@@ -3084,25 +3084,38 @@ void DefaultViewPort::drawStatusBar()
 //  if (mouseCoordinate.x()>=0 && mouseCoordinate.y()>=0)
     {
         QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
+        const QPalette colorPalette{ QApplication::palette(this) };
 
-        if (nbChannelOriginImage==CV_8UC3 )
+        const QColor normalTextColor = colorPalette.brush(QPalette::WindowText).color();
+        const QString textColorName = normalTextColor.name();
+
+
+        if (nbChannelOriginImage==CV_8UC3)
         {
-            centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
+            const int r_half = normalTextColor.red() >> 1;
+            const int g_half = normalTextColor.green() >> 1;
+            const int b_half = normalTextColor.blue() >> 1;
+            const QColor red = QColor(255, g_half, b_half);
+            const QColor green = QColor(r_half, 255, b_half);
+            const QColor blue = QColor(r_half, g_half, 255);
+            centralWidget->myStatusBar_msg->setText(tr("<font color=%1>(x=%2, y=%3) ~ </font>")
+                .arg(textColorName)
                 .arg(mouseCoordinate.x())
                 .arg(mouseCoordinate.y())+
-                tr("<font color='red'>R:%3 </font>").arg(qRed(rgbValue))+//.arg(value.val[0])+
-                tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+//.arg(value.val[1])+
-                tr("<font color='blue'>B:%5</font>").arg(qBlue(rgbValue))//.arg(value.val[2])
+                tr("<font color=%4>R:%5 </font>").arg(red.name()).arg(qRed(rgbValue))+
+                tr("<font color=%6>G:%7 </font>").arg(green.name()).arg(qGreen(rgbValue))+
+                tr("<font color=%8>B:%9</font>").arg(blue.name()).arg(qBlue(rgbValue))
                 );
         }
 
         if (nbChannelOriginImage==CV_8UC1)
         {
             //all the channel have the same value (because of cv::cvtColor(GRAY=>RGB)), so only the r channel is dsplayed
-            centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
+            centralWidget->myStatusBar_msg->setText(tr("<font color=%1>(x=%2, y=%3) ~ </font>")
+                .arg(textColorName)
                 .arg(mouseCoordinate.x())
                 .arg(mouseCoordinate.y())+
-                tr("<font color='grey'>L:%3 </font>").arg(qRed(rgbValue))
+                tr("<font color='grey'>L:%4 </font>").arg(qRed(rgbValue))
                 );
         }
     }

@@ -40,9 +40,6 @@ public:
                       points_random_pool[--random_pool_size]);
         }
     }
-    Ptr<Sampler> clone (int state) const override {
-        return makePtr<UniformSamplerImpl>(state, sample_size, points_size);
-    }
 private:
     void setPointsSize (int points_size_) {
         CV_Assert (sample_size <= points_size_);
@@ -65,8 +62,8 @@ Ptr<UniformSampler> UniformSampler::create(int state, int sample_size_, int poin
 /////////////////////////////////// PROSAC (SIMPLE) SAMPLER ///////////////////////////////////////
 /*
 * PROSAC (simple) sampler does not use array of precalculated T_n (n is subset size) samples, but computes T_n for
-* specific n directy in generateSample() function.
-* Also, the stopping length (or maximum subset size n*) by default is set to points_size (N) and does not updating
+* specific n directly in generateSample() function.
+* Also, the stopping length (or maximum subset size n*) by default is set to points_size (N) and does not update
 * during computation.
 */
 class ProsacSimpleSamplerImpl : public ProsacSimpleSampler {
@@ -143,10 +140,6 @@ public:
         points_size = points_size_;
         initialize ();
     }
-    Ptr<Sampler> clone (int state) const override {
-        return makePtr<ProsacSimpleSamplerImpl>(state, points_size, sample_size,
-                    max_prosac_samples_count);
-    }
 private:
     void initialize () {
         largest_sample_size = points_size; // termination length, n*
@@ -183,7 +176,7 @@ protected:
     // In our experiments, the parameter was set to T_N = 200000
     int growth_max_samples;
 
-    // how many time PROSAC generateSample() was called
+    // how many times PROSAC generateSample() was called
     int kth_sample_number;
     Ptr<UniformRandomGenerator> random_gen;
 public:
@@ -266,15 +259,19 @@ public:
 
         // Choice of the hypothesis generation set
         // if (t = T'_n) & (n < n*) then n = n + 1 (eqn. 4)
-        if (kth_sample_number == growth_function[subset_size-1] && subset_size < termination_length)
+        if (kth_sample_number >= growth_function[subset_size-1] && subset_size < termination_length)
             subset_size++;
 
         // Semi-random sample M_t of size m
         // if T'n < t   then
         if (growth_function[subset_size-1] < kth_sample_number) {
-            // The sample contains m-1 points selected from U_(n-1) at random and u_n
-            random_gen->generateUniqueRandomSet(sample, sample_size-1, subset_size-1);
-            sample[sample_size-1] = subset_size-1;
+            if (subset_size >= termination_length) {
+                random_gen->generateUniqueRandomSet(sample, sample_size, subset_size);
+            } else {
+                // The sample contains m-1 points selected from U_(n-1) at random and u_n
+                random_gen->generateUniqueRandomSet(sample, sample_size-1, subset_size-1);
+                sample[sample_size-1] = subset_size-1;
+            }
         } else {
             // Select m points from U_n at random.
             random_gen->generateUniqueRandomSet(sample, sample_size, subset_size);
@@ -305,10 +302,6 @@ public:
     void setNewPointsSize (int /*points_size_*/) override {
         CV_Error(cv::Error::StsError, "Changing points size in PROSAC requires to change also "
                     "termination criteria! Use PROSAC simpler version");
-    }
-    Ptr<Sampler> clone (int state) const override {
-        return makePtr<ProsacSamplerImpl>(state, points_size, sample_size,
-                growth_max_samples);
     }
 };
 
@@ -465,10 +458,6 @@ public:
         CV_Error(cv::Error::StsError, "Changing points size requires changing neighborhood graph! "
                     "You must reinitialize P-NAPSAC!");
     }
-    Ptr<Sampler> clone (int state) const override {
-        return makePtr<ProgressiveNapsacImpl>(state, points_size, sample_size, *layers,
-                sampler_length);
-    }
 };
 Ptr<ProgressiveNapsac> ProgressiveNapsac::create(int state, int points_size_, int sample_size_,
         const std::vector<Ptr<NeighborhoodGraph>> &layers, int sampler_length_) {
@@ -499,7 +488,7 @@ public:
 
         points_large_neighborhood_size = 0;
 
-        // find indicies of points that have sufficient neighborhood (at least sample_size-1)
+        // find indices of points that have sufficient neighborhood (at least sample_size-1)
         for (int pt_idx = 0; pt_idx < points_size; pt_idx++)
             if ((int)neighborhood_graph->getNeighbors(pt_idx).size() >= sample_size-1)
                 points_large_neighborhood[points_large_neighborhood_size++] = pt_idx;
@@ -536,9 +525,6 @@ public:
     void setNewPointsSize (int /*points_size_*/) override {
         CV_Error(cv::Error::StsError, "Changing points size requires changing neighborhood graph!"
                     " You must reinitialize NAPSAC!");
-    }
-    Ptr<Sampler> clone (int state) const override {
-        return makePtr<NapsacSamplerImpl>(state, points_size, sample_size, neighborhood_graph);
     }
 };
 Ptr<NapsacSampler> NapsacSampler::create(int state, int points_size_, int sample_size_,

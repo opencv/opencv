@@ -2320,12 +2320,15 @@ GAPI_FLUID_KERNEL(GFluidSplit3, cv::gapi::core::GSplit3, false)
 
     static void run(const View &src, Buffer &dst1, Buffer &dst2, Buffer &dst3)
     {
+        GAPI_Assert((src.meta().depth == CV_8U) && (dst1.meta().depth == CV_8U) &&
+                    (dst2.meta().depth == CV_8U) && (dst3.meta().depth == CV_8U) &&
+                    (3 == src.meta().chan));
+
         const auto *in   = src.InLine<uchar>(0);
               auto *out1 = dst1.OutLine<uchar>();
               auto *out2 = dst2.OutLine<uchar>();
               auto *out3 = dst3.OutLine<uchar>();
 
-        GAPI_Assert(3 == src.meta().chan);
         int width = src.length();
         int w = 0;
 
@@ -2348,13 +2351,16 @@ GAPI_FLUID_KERNEL(GFluidSplit4, cv::gapi::core::GSplit4, false)
 
     static void run(const View &src, Buffer &dst1, Buffer &dst2, Buffer &dst3, Buffer &dst4)
     {
+        GAPI_Assert((src.meta().depth == CV_8U) && (dst1.meta().depth == CV_8U) &&
+                    (dst2.meta().depth == CV_8U) && (dst3.meta().depth == CV_8U) &&
+                    (dst4.meta().depth == CV_8U) && (4 == src.meta().chan));
+
         const auto *in   = src.InLine<uchar>(0);
               auto *out1 = dst1.OutLine<uchar>();
               auto *out2 = dst2.OutLine<uchar>();
               auto *out3 = dst3.OutLine<uchar>();
               auto *out4 = dst4.OutLine<uchar>();
 
-        GAPI_Assert(4 == src.meta().chan);
         int width = src.length();
         int w = 0;
 
@@ -2372,31 +2378,46 @@ GAPI_FLUID_KERNEL(GFluidSplit4, cv::gapi::core::GSplit4, false)
     }
 };
 
+template<typename T>
+CV_ALWAYS_INLINE void run_merge3(Buffer& dst, const View& src1, const View& src2, const View& src3)
+{
+    const auto* in1 = src1.InLine<T>(0);
+    const auto* in2 = src2.InLine<T>(0);
+    const auto* in3 = src3.InLine<T>(0);
+    auto* out = dst.OutLine<T>();
+
+    int width = dst.length();
+    int w = 0;
+
+#if CV_SIMD
+        w = merge3_simd(in1, in2, in3, out, width);
+#endif
+
+    for (; w < width; w++)
+    {
+        out[3 * w] = in1[w];
+        out[3 * w + 1] = in2[w];
+        out[3 * w + 2] = in3[w];
+    }
+}
+
 GAPI_FLUID_KERNEL(GFluidMerge3, cv::gapi::core::GMerge3, false)
 {
     static const int Window = 1;
 
-    static void run(const View &src1, const View &src2, const View &src3, Buffer &dst)
+    static void run(const View& src1, const View& src2, const View& src3, Buffer& dst)
     {
-        const auto *in1 = src1.InLine<uchar>(0);
-        const auto *in2 = src2.InLine<uchar>(0);
-        const auto *in3 = src3.InLine<uchar>(0);
-              auto *out = dst.OutLine<uchar>();
+        GAPI_Assert((src1.meta().depth == dst.meta().depth) &&
+                    (src1.meta().depth == src2.meta().depth) &&
+                    (src1.meta().depth == src3.meta().depth));
 
-        GAPI_Assert(3 == dst.meta().chan);
-        int width = dst.length();
-        int w = 0;
+        // SRC/DST TYPE      OP          __VA_ARGS__
+        MERGE3_(uchar,  run_merge3, dst, src1, src2, src3);
+        MERGE3_(ushort, run_merge3, dst, src1, src2, src3);
+        MERGE3_(short,  run_merge3, dst, src1, src2, src3);
+        MERGE3_(float,  run_merge3, dst, src1, src2, src3);
 
-    #if CV_SIMD
-        w = merge3_simd(in1, in2, in3, out, width);
-    #endif
-
-        for (; w < width; w++)
-        {
-            out[3*w    ] = in1[w];
-            out[3*w + 1] = in2[w];
-            out[3*w + 2] = in3[w];
-        }
+        CV_Error(cv::Error::StsBadArg, "unsupported combination of types");
     }
 };
 
@@ -2407,13 +2428,16 @@ GAPI_FLUID_KERNEL(GFluidMerge4, cv::gapi::core::GMerge4, false)
     static void run(const View &src1, const View &src2, const View &src3, const View &src4,
                     Buffer &dst)
     {
+        GAPI_Assert((dst.meta().depth == CV_8U) && (src1.meta().depth == CV_8U) &&
+                    (src2.meta().depth == CV_8U) && (src3.meta().depth == CV_8U) &&
+                    (4 == dst.meta().chan));
+
         const auto *in1 = src1.InLine<uchar>(0);
         const auto *in2 = src2.InLine<uchar>(0);
         const auto *in3 = src3.InLine<uchar>(0);
         const auto *in4 = src4.InLine<uchar>(0);
               auto *out = dst.OutLine<uchar>();
 
-        GAPI_Assert(4 == dst.meta().chan);
         int width = dst.length();
 
         int w = 0; // cycle counter

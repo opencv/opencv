@@ -1017,6 +1017,7 @@ TEST_P(Test_ONNX_layers, Padding)
 TEST_P(Test_ONNX_layers, Resize)
 {
     testONNXModels("resize_nearest");
+    testONNXModels("tf_half_pixel_for_nn");
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("resize_bilinear");
@@ -1146,6 +1147,7 @@ TEST_P(Test_ONNX_layers, Split)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("split_0");
     testONNXModels("split_1");
     testONNXModels("split_2");
     testONNXModels("split_3");
@@ -1385,6 +1387,27 @@ TEST_P(Test_ONNX_layers, LSTM_cell_batchsize_5_seqlen_5)
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("lstm_cell_batchsize_5_seqlen_5", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, LSTM_init_h0_c0)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("lstm_init_h0_c0", npy, 0, 0, false, false, 3);
+}
+// epsilon is larger because onnx does not match with torch/opencv exactly
+TEST_P(Test_ONNX_layers, LSTM_layout_seq)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("lstm_layout_0", npy, 0.005, 0.005, false, false, 3);
+}
+// epsilon is larger because onnx does not match with torch/opencv exactly
+TEST_P(Test_ONNX_layers, LSTM_layout_batch)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("lstm_layout_1", npy, 0.005, 0.005, false, false, 3);
 }
 
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
@@ -1978,6 +2001,12 @@ TEST_P(Test_ONNX_layers, OutputRegistration)
     testONNXModels("output_registration", npy, 0, 0, false, true, 2);
 }
 
+TEST_P(Test_ONNX_layers, QLinearSoftmax)
+{
+    testONNXModels("qlinearsoftmax_v11", npy, 0.002, 0.002); // 2D coerced
+    testONNXModels("qlinearsoftmax_v13", npy, 0.002, 0.002);
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
 
 class Test_ONNX_nets : public Test_ONNX_layers
@@ -2172,7 +2201,7 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
 
     // output range: [-11; 8]
     double l1 =  default_l1, lInf = default_lInf;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.02;
         lInf = 0.2;
@@ -2556,6 +2585,11 @@ TEST_P(Test_ONNX_layers, Gelu)
 TEST_P(Test_ONNX_layers, OpenAI_CLIP_head)
 {
     testONNXModels("clip-vit-base-head");
+}
+
+TEST_P(Test_ONNX_layers, where_node)
+{
+    testONNXModels("where_layer");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
