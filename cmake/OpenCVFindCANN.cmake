@@ -58,7 +58,7 @@ if(CANN_INSTALL_DIR)
         return()
     endif()
     #  * libopsproto.so
-    set(lib_opsproto "${CANN_INSTALL_DIR}/opp/op_proto/built-in")
+    set(lib_opsproto "${CANN_INSTALL_DIR}/opp/built-in/op_proto/lib/linux/${CMAKE_HOST_SYSTEM_PROCESSOR}")
     find_library(found_lib_opsproto NAMES opsproto PATHS ${lib_opsproto} NO_DEFAULT_PATH)
     if(found_lib_opsproto)
         set(lib_opsproto ${found_lib_opsproto})
@@ -68,14 +68,25 @@ if(CANN_INSTALL_DIR)
         set(HAVE_CANN OFF)
         return()
     endif()
-
+	  #  * libgraph_base.so 添加
+	  set(lib_graph_base "${CANN_INSTALL_DIR}/compiler/lib64")
+	  find_library(found_libgraph_base NAMES graph_base PATHS ${lib_graph_base} NO_DEFAULT_PATH)
+	  if(found_libgraph_base)
+		  set(lib_graph_base ${found_libgraph_base})
+		  message(STATUS "CANN: lib_graph_base.so is found at ${lib_graph_base}")
+	  else()
+		  message(STATUS "CANN: Missing lib_graph_base.so. Turning off HAVE_CANN")
+		  set(HAVE_CANN OFF)
+		  return()
+	  endif()
 
     set(libs_cann "")
     list(APPEND libs_cann ${lib_ascendcl})
     list(APPEND libs_cann ${lib_opsproto})
     list(APPEND libs_cann ${lib_graph})
     list(APPEND libs_cann ${lib_ge_compiler})
-
+    list(APPEND libs_cann ${libgraph_base})
+    
     try_compile(VALID_ASCENDCL
         "${OpenCV_BINARY_DIR}"
         "${OpenCV_SOURCE_DIR}/cmake/checks/cann.cpp"
