@@ -306,7 +306,7 @@ std::shared_ptr<ge::ModelBufferData> compileCannGraph(std::shared_ptr<ge::Graph>
         {
             // initialize engine
             std::map<ge::AscendString, ge::AscendString> options = {
-                {ge::AscendString(ge::ir_option::SOC_VERSION), ge::AscendString("Ascend310")},
+                {ge::AscendString(ge::ir_option::SOC_VERSION), ge::AscendString(aclrtGetSocName())},
             };
             ACL_CHECK_GRAPH_RET(ge::aclgrphBuildInitialize(options));
 
