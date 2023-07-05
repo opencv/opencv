@@ -99,10 +99,18 @@ TEST_F(RenderingTest, colorRenderingTest)
     triangleRasterize(vertices, indices, colors, position, lookat, upVector, fovy, zNear, zFar, width, height,
         isConstant, depth_buf, color_buf);
 
+    Scalar blue_color(255, 0, 0);
+    /*bool flag = false;
+    for (auto color : color_buf)
+    {
+        if (color[0] != 0.0 || color[1] != 0.0 || color[2] != 0.0)
+            flag = true;
+    }*/
     Mat image(width, height, CV_32FC3, color_buf.data());
+    //Mat image(width, height, CV_32FC3, blue_color);
     image.convertTo(image, CV_8UC3, 1.0f);
     cvtColor(image, image, cv::COLOR_RGB2BGR);
-    imwrite("temp_image.png", image);
+    imwrite("temp_image_color.png", image);
 }
 
 
