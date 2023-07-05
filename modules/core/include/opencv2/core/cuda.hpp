@@ -577,7 +577,7 @@ CV_EXPORTS_W void ensureSizeIsEnough(int rows, int cols, int type, OutputArray a
  */
 CV_EXPORTS_W GpuMat inline createGpuMatFromCudaMemory(int rows, int cols, int type, size_t cudaMemoryAddress, size_t step = Mat::AUTO_STEP) {
     return GpuMat(rows, cols, type, reinterpret_cast<void*>(cudaMemoryAddress), step);
-};
+}
 
  /** @overload
 @param size 2D array size: Size(cols, rows). In the Size() constructor, the number of rows and the number of columns go in the reverse order.
@@ -588,7 +588,7 @@ CV_EXPORTS_W GpuMat inline createGpuMatFromCudaMemory(int rows, int cols, int ty
  */
 CV_EXPORTS_W inline GpuMat createGpuMatFromCudaMemory(Size size, int type, size_t cudaMemoryAddress, size_t step = Mat::AUTO_STEP) {
     return GpuMat(size, type, reinterpret_cast<void*>(cudaMemoryAddress), step);
-};
+}
 
 /** @brief BufferPool for use with CUDA streams
 
