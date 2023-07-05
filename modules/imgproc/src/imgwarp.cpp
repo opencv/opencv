@@ -780,7 +780,7 @@ static void remapBilinear( const Mat& _src, Mat& _dst, const Mat& _xy,
                                 if (sy >= 0 && sx < ssize.width - 1) t0 += S[k + cn] * w[1];
                                 if (sx >= 0 && sy < ssize.height - 1) t0 += S[sstep + k] * w[2];
                                 if (sx < ssize.width - 1 && sy < ssize.height - 1) t0 += S[sstep + k + cn] * w[3];
-                                t0 = t0 * (float)w_tot_ini / w_tot;
+                                t0 = (WT)(t0 * (float)w_tot_ini / w_tot);
                                 D[k] = castOp(t0);
                             }
                         }
