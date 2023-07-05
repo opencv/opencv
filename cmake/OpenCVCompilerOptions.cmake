@@ -108,6 +108,7 @@ elseif(CV_ICC)
 elseif(CV_GCC OR CV_CLANG)
   if(ENABLE_FAST_MATH)
     add_extra_compiler_option(-ffast-math)
+    add_extra_compiler_option(-fno-finite-math-only)
   endif()
 endif()
 
