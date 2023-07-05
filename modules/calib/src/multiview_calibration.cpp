@@ -5,12 +5,14 @@
 #include "precomp.hpp"
 #include "opencv2/core/utils/logger.hpp"
 #include "opencv2/core/softfloat.hpp"
+#include "fisheye.hpp"
 
 namespace cv {
 namespace multiview {
 class RobustFunction : public Algorithm {
 public:
     virtual float getError(float err) const = 0;
+    virtual float getJacobian(float err) const = 0;
 };
 
 #define USE_FAST_EXP 0
@@ -41,9 +43,15 @@ public:
     {
         return exp(minvScale * err);
     }
+    float getJacobian(float err) const override
+    {
+        float scaledErr = minvScale * err;
+        return exp(scaledErr);
+    }
 };
 #endif
 
+// TODO: the function here is still incorrect: W should not directly be considered as a diagonal
 static double robustWrapper (const Mat& ptsErrors, Mat& weights, const RobustFunction &fnc) {
     Mat errs;
     ptsErrors.convertTo(errs, CV_32F);
@@ -82,6 +90,31 @@ static double computeReprojectionMSE(const Mat &obj_points_, const Mat &img_poin
         img_points = img_points.t();
     subtract (tmpImagePoints, img_points, tmpImagePoints);
     return norm(tmpImagePoints, NORM_L2SQR) / tmpImagePoints.rows;
+}
+
+// TODO: this function is not debugged yet. the obj_points_ are properly set for the fisheye camera model
+static void computeExtrinsics(const Mat &obj_points_, const Mat &img_points_, const Matx33d &K, const Mat &distortion,
+               Vec3d &rvec, Vec3d &tvec, bool is_fisheye) {
+    if (is_fisheye) {
+        // TODO: Debugg this part, the pnp solver
+        cv::internal::IntrinsicParams param;
+        param.Init(Vec2d(K(0, 0), K(1, 1)),
+                    Vec2d(K(0, 2), K(1, 2)),
+                    Vec4d (0, 0, 0, 0),
+                    K(0, 1) / K(0, 0));
+        Mat obj_reshape = obj_points_.reshape(3);
+        Mat img_reshape = img_points_.reshape(2);
+
+        Mat rmat, tmat;
+        rmat.create(1, 1, CV_64FC3);
+        tmat.create(1, 1, CV_64FC3);
+        cv::internal::CalibrateExtrinsics(obj_reshape, img_reshape, param, 1, 50., rmat, tmat);
+        rvec = rmat.reshape(1);
+        tvec = tmat.reshape(1);
+    } else {
+        solvePnP(obj_points_, img_points_, K, distortion, rvec, tvec, false, SOLVEPNP_ITERATIVE);
+    }
+
 }
 
 static bool maximumSpanningTree (int NUM_CAMERAS, int NUM_FRAMES, const std::vector<std::vector<bool>> &detection_mask,
@@ -261,35 +294,79 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
         const std::vector<std::vector<Mat>> &imagePoints, const std::vector<std::vector<int>> &overlaps,
         const std::vector<std::vector<bool>> &detection_mask_mat, const std::vector<Mat> &Ks,
         const std::vector<Mat> &distortions, std::vector<Matx33d> &Rs_vec, std::vector<Vec3d> &Ts_vec,
-        Mat &flags) {
+        Mat &flags, bool useUndistort) {
     const int NUM_FRAMES = (int) objPoints_norm.size();
+    
+    std::vector<double> dist_null{0., 0., 0., 0., 0.};
+    std::vector<double> dist_pinhole{1./3., 2./15., 17./315., 62./2835.};
+    cv::Mat dist_null_map(1, dist_null.size(), CV_64FC1, dist_null.data());
+    cv::Mat dist_pinhole_map(1, dist_pinhole.size(), CV_64FC1, dist_pinhole.data());
+
     for (const auto &pair : pairs) {
         const int c1 = pair.first, c2 = pair.second, overlap = overlaps[c1][c2];
+        std::cout << "(c1, c2): " << "(" << c1 << ", " << c2 << ")" << std::endl;
         // prepare image points of two cameras and grid points
         std::vector<Mat> image_points1, image_points2, grid_points;
         grid_points.reserve(overlap);
         image_points1.reserve(overlap);
         image_points2.reserve(overlap);
-        const bool are_fisheye_cams = is_fisheye_vec[c1] && is_fisheye_vec[c2];
+        const bool are_both_fisheye_cams = is_fisheye_vec[c1] && is_fisheye_vec[c2];
+        const bool are_fisheye_cams = is_fisheye_vec[c1] || is_fisheye_vec[c2];
+        const bool convert_shape = are_fisheye_cams;
         for (int f = 0; f < NUM_FRAMES; f++) {
             if (detection_mask_mat[c1][f] && detection_mask_mat[c2][f]) {
-                grid_points.emplace_back((are_fisheye_cams && objPoints_norm[f].channels() != 3) ?
+                grid_points.emplace_back((convert_shape && objPoints_norm[f].channels() != 3) ?
                                          objPoints_norm[f].reshape(3): objPoints_norm[f]);
-                image_points1.emplace_back((are_fisheye_cams && imagePoints[c1][f].channels() != 2) ?
+                image_points1.emplace_back((convert_shape && imagePoints[c1][f].channels() != 2) ?
                                            imagePoints[c1][f].reshape(2) : imagePoints[c1][f]);
-                image_points2.emplace_back((are_fisheye_cams && imagePoints[c2][f].channels() != 2) ?
+                image_points2.emplace_back((convert_shape && imagePoints[c2][f].channels() != 2) ?
                                          imagePoints[c2][f].reshape(2) : imagePoints[c2][f]);
             }
         }
+        
+        std::vector<Mat> image_points_undist;
+        if (!are_both_fisheye_cams && are_fisheye_cams) {
+            image_points_undist.reserve(image_points1.size());
+            for (size_t i = 0; i < image_points1.size(); i++) {
+                Mat undist;
+                if (useUndistort) { // undistort fisheye cameras
+                    if (is_fisheye_vec[c1]) {
+                        fisheye::undistortPoints(image_points1[i], undist, Ks[c1], distortions[c1], noArray(), Ks[c1]);
+                        // image_points1[i] = undist;
+                    } else {
+                        fisheye::undistortPoints(image_points2[i], undist, Ks[c2], distortions[c2], noArray(), Ks[c2]);
+                        // image_points2[i] = undist;
+                    }
+                } else { // undistort pinhole cameras
+                    Mat temp;
+                    if (!is_fisheye_vec[c1]) {
+                        undistortPoints(image_points1[i], temp, Ks[c1], distortions[c1]);
+                        fisheye::distortPoints(temp, undist, Ks[c1], dist_pinhole_map);
+                        // undistortPoints(image_points1[i], undist, Ks[c1], distortions[c1], noArray(), Ks[c1]);
+                        // image_points1[i] = undist;
+
+                    } else {
+                        undistortPoints(image_points2[i], temp, Ks[c2], distortions[c2]);
+                        fisheye::distortPoints(temp, undist, Ks[c2], dist_pinhole_map);
+                        // undistortPoints(image_points2[i], undist, Ks[c2], distortions[c2], noArray(), Ks[c2]);
+                        // image_points2[i] = undist;
+                    }
+
+                }
+                image_points_undist.emplace_back(undist);
+            }
+            std::cout << "point undistortion done" << std::endl;
+        }
         Matx33d R;
         Vec3d T;
+        // If use the mode of useUndistort, distort image points into normalized points; else, set the pinhole camera to be undistorted  
         // image size does not matter since intrinsics are used
-        if (are_fisheye_cams) {
+        if (are_both_fisheye_cams) {
             fisheye::stereoCalibrate(grid_points, image_points1, image_points2,
                             Ks[c1], distortions[c1],
                             Ks[c2], distortions[c2],
                             Size(), R, T, CALIB_FIX_INTRINSIC);
-        } else {
+        } else if (!are_fisheye_cams) {
             int flags_extrinsics = CALIB_FIX_INTRINSIC;
             if ((flags.at<int>(c1) & CALIB_RATIONAL_MODEL) || (flags.at<int>(c2) & CALIB_RATIONAL_MODEL))
                 flags_extrinsics += CALIB_RATIONAL_MODEL;
@@ -300,6 +377,48 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
                             Ks[c1], distortions[c1],
                             Ks[c2], distortions[c2],
                             Size(), R, T, noArray(), noArray(), noArray(), flags_extrinsics);
+        } else if (useUndistort) { // if in the mode of undistorting fisheye cameras
+            int flags_extrinsics = CALIB_FIX_INTRINSIC;
+            if ((flags.at<int>(c1) & CALIB_RATIONAL_MODEL) || (flags.at<int>(c2) & CALIB_RATIONAL_MODEL))
+                flags_extrinsics += CALIB_RATIONAL_MODEL;
+            if ((flags.at<int>(c1) & CALIB_THIN_PRISM_MODEL) || (flags.at<int>(c2) & CALIB_THIN_PRISM_MODEL))
+                flags_extrinsics += CALIB_THIN_PRISM_MODEL;
+
+            if (is_fisheye_vec[c1]) {
+                stereoCalibrate(grid_points, image_points_undist, image_points2,
+                                Ks[c1], dist_null_map,
+                                Ks[c2], distortions[c2],
+                                Size(), R, T, noArray(), noArray(), noArray(), flags_extrinsics);
+            } else {
+                stereoCalibrate(grid_points, image_points1, image_points_undist,
+                                Ks[c1], distortions[c1],
+                                Ks[c2], dist_null_map,
+                                Size(), R, T, noArray(), noArray(), noArray(), flags_extrinsics);
+            }
+        } else {
+            if (is_fisheye_vec[c1]) {
+                fisheye::stereoCalibrate(grid_points, image_points1, image_points_undist,
+                                Ks[c1], distortions[c1],
+                                Ks[c2], dist_pinhole_map,
+                                Size(), R, T, CALIB_FIX_INTRINSIC);
+            } else {
+                fisheye::stereoCalibrate(grid_points, image_points_undist, image_points2,
+                                Ks[c1], dist_pinhole_map,
+                                Ks[c2], distortions[c2],
+                                Size(), R, T, CALIB_FIX_INTRINSIC);
+            }
+        }
+
+        if (false) {
+            int flags_extrinsics1 = CALIB_FIX_INTRINSIC;
+            int flags_extrinsics2 = CALIB_FIX_INTRINSIC;
+            flags_extrinsics1 = flags_extrinsics1 + flags.at<int>(c1);
+            flags_extrinsics2 = flags_extrinsics2 + flags.at<int>(c2);
+            
+            stereoCalibrate(grid_points, image_points1, image_points2,
+                            Ks[c1], distortions[c1], is_fisheye_vec[c1],
+                            Ks[c2], distortions[c2], is_fisheye_vec[c2],
+                            Size(), R, T, noArray(), noArray(), noArray(), noArray(), noArray(), flags_extrinsics1, flags_extrinsics2);
         }
 
         // R_0 = I
@@ -315,6 +434,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
     }
 }
 
+// TODO: the behavior of the method here is strange: converge after a single iterations? 
 static void optimizeLM (std::vector<double> &param, const RobustFunction &robust_fnc, const TermCriteria &termCrit,
          const std::vector<bool> &valid_frames, const std::vector<std::vector<bool>> &detection_mask_mat,
          const std::vector<Mat> &objPoints_norm, const std::vector<std::vector<Mat>> &imagePoints,
@@ -328,12 +448,12 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
         cnt_valid_frame = 0;
         for (int i = 0; i < NUM_FRAMES; i++ ) {
             if (!valid_frames[i]) continue;
-            for (int k = 1; k < NUM_CAMERAS; k++ ) { // skip first camera as there is nothing to optimize
+            for (int k = 0; k < NUM_CAMERAS; k++ ) { // for the first camera, take caution that only the frame camera is to be optimized
                 if (!detection_mask_mat[k][i]) continue;
                 const int cam_idx = (k-1)*6; // camera extrinsics
-                const auto * const pose_k = param_p + cam_idx;
-                Vec3d om_0ToK(pose_k[0], pose_k[1], pose_k[2]), om[2];
-                Vec3d T_0ToK(pose_k[3], pose_k[4], pose_k[5]), T[2];
+                const auto * const pose_k = (k > 0)? (param_p + cam_idx) : nullptr;
+                Vec3d om_0ToK = (k > 0)? Vec3d(pose_k[0], pose_k[1], pose_k[2]) : Vec3d(0., 0., 0.), om[2];
+                Vec3d T_0ToK = (k > 0)? Vec3d(pose_k[3], pose_k[4], pose_k[5]) : Vec3d(0., 0., 0.), T[2];
                 Matx33d dr3dr1, dr3dr2, dt3dr2, dt3dt1, dt3dt2;
 
                 auto * pi = param_p + (cnt_valid_frame+NUM_CAMERAS-1)*6; // get rvecs / tvecs for frame pose
@@ -383,48 +503,51 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
                     assert( JtJ_.needed() && JtErr_.needed() );
                     // JtJ : NUM_PARAMS x NUM_PARAMS, JtErr : NUM_PARAMS x 1
 
-                    // k is always greater than zero
                     // d(err_{x|y}R) ~ de3
                     // convert de3/{dr3,dt3} => de3{dr1,dt1} & de3{dr2,dt2}
-                    for (int p = 0; p < NUM_PATTERN_PTS * 2; p++)
-                    {
-                        Matx13d de3dr3, de3dt3, de3dr2, de3dt2, de3dr1, de3dt1;
-                        for (int j = 0; j < 3; j++)
-                            de3dr3(j) = Je.at<double>(p, j);
+                    if (k > 0) { // if not the first frame 
+                        for (int p = 0; p < NUM_PATTERN_PTS * 2; p++) {
+                            Matx13d de3dr3, de3dt3, de3dr2, de3dt2, de3dr1, de3dt1;
+                            for (int j = 0; j < 3; j++)
+                                de3dr3(j) = Je.at<double>(p, j);
 
-                        for (int j = 0; j < 3; j++)
-                            de3dt3(j) = Je.at<double>(p, 3 + j);
+                            for (int j = 0; j < 3; j++)
+                                de3dt3(j) = Je.at<double>(p, 3 + j);
 
-                        for (int j = 0; j < 3; j++)
-                            de3dr2(j) = J_0ToK.at<double>(p, j);
+                            for (int j = 0; j < 3; j++)
+                                de3dr2(j) = J_0ToK.at<double>(p, j);
 
-                        for (int j = 0; j < 3; j++)
-                            de3dt2(j) = J_0ToK.at<double>(p, 3 + j);
+                            for (int j = 0; j < 3; j++)
+                                de3dt2(j) = J_0ToK.at<double>(p, 3 + j);
 
-                        de3dr1 = de3dr3 * dr3dr1;
-                        de3dt1 = de3dt3 * dt3dt1;
-                        de3dr2 = de3dr3 * dr3dr2 + de3dt3 * dt3dr2;
-                        de3dt2 = de3dt3 * dt3dt2;
+                            de3dr1 = de3dr3 * dr3dr1;
+                            de3dt1 = de3dt3 * dt3dt1;
+                            de3dr2 = de3dr3 * dr3dr2 + de3dt3 * dt3dr2;
+                            de3dt2 = de3dt3 * dt3dt2;
 
-                        for (int j = 0; j < 3; j++)
-                            Je.at<double>(p, j) = de3dr1(j);
+                            for (int j = 0; j < 3; j++)
+                                Je.at<double>(p, j) = de3dr1(j);
 
-                        for (int j = 0; j < 3; j++)
-                            Je.at<double>(p, 3 + j) = de3dt1(j);
+                            for (int j = 0; j < 3; j++)
+                                Je.at<double>(p, 3 + j) = de3dt1(j);
 
-                        for (int j = 0; j < 3; j++)
-                            J_0ToK.at<double>(p, j) = de3dr2(j);
+                            for (int j = 0; j < 3; j++)
+                                J_0ToK.at<double>(p, j) = de3dr2(j);
 
-                        for (int j = 0; j < 3; j++)
-                            J_0ToK.at<double>(p, 3 + j) = de3dt2(j);
+                            for (int j = 0; j < 3; j++)
+                                J_0ToK.at<double>(p, 3 + j) = de3dt2(j);
+                        }
                     }
 
                     Mat wd;
                     Mat::diag(weights).convertTo(wd, CV_64F);
                     // 6 x (ni*2) * (ni*2 x ni*2) * (ni*2) x 6
-                    JtJ(Rect((k - 1) * 6, (k - 1) * 6, 6, 6)) += (J_0ToK.t() * wd * J_0ToK);
-                    JtJ(Rect(eofs, (k - 1) * 6, 6, 6)) = (J_0ToK.t() * wd * Je);
-                    JtErr.rowRange((k - 1) * 6, (k - 1) * 6 + 6) += (J_0ToK.t() * wd * err);
+                    if (k > 0) {
+                        JtJ(Rect((k - 1) * 6, (k - 1) * 6, 6, 6)) += (J_0ToK.t() * wd * J_0ToK);
+                        // TODO: kind of strange here, any reason not updating both symmetric parts?
+                        JtJ(Rect(eofs, (k - 1) * 6, 6, 6)) = (J_0ToK.t() * wd * Je); 
+                        JtErr.rowRange((k - 1) * 6, (k - 1) * 6 + 6) += (J_0ToK.t() * wd * err);
+                    }
 
                     JtJ(Rect(eofs, eofs, 6, 6)) += Je.t() * wd * Je;
                     JtErr.rowRange(eofs, eofs + 6) += Je.t() * wd * err;
@@ -432,6 +555,12 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
             }
             cnt_valid_frame++;
         }
+        // TODO: Clean the output
+        if (JtJ_.needed()) {
+            std::cout << "norm(JtJ_): " << norm(JtJ_) << std::endl;
+            std::cout << "norm(JtErr_): " << norm(JtErr_) << std::endl;
+        }
+        std::cout << "errnorm: " << errnorm << std::endl;
         iters_lm += 1;
         return true;
     };
@@ -441,7 +570,13 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
                .setStepNormTolerance(termCrit.epsilon)
                .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon),
            noArray()/*mask, all variables to optimize*/);
-    solver.optimize();
+    LevMarq::Report report = solver.optimize();
+
+    // TODO: Clean the output
+    std::cout << "Convergence: " << report.found << std::endl;
+    std::cout << "Iterations: " << report.iters << std::endl;
+    std::cout << "Energy: " << report.energy << std::endl;
+    std::cout << "iters_lm: " << iters_lm << std::endl;
 }
 
 static void checkConnected (const std::vector<std::vector<bool>> &detection_mask_mat) {
@@ -487,7 +622,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         const std::vector<Size> &imageSize, InputArray detectionMask,
         OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, std::vector<Mat> &Ks, std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray isFisheye,
-        OutputArray perFrameErrors, OutputArray initializationPairs, bool useIntrinsicsGuess, InputArray flagsForIntrinsics) {
+        OutputArray perFrameErrors, OutputArray initializationPairs, bool useIntrinsicsGuess, InputArray flagsForIntrinsics, bool useUndistort) {
 
     CV_CheckEQ((int)objPoints.empty(), 0, "Objects points must not be empty!");
     CV_CheckEQ((int)imagePoints.empty(), 0, "Image points must not be empty!");
@@ -499,17 +634,6 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     CV_CheckEQ(detection_mask_.type(), CV_8U, "detectionMask must be of type CV_8U");
     CV_CheckEQ(is_fisheye_mat.type(), CV_8U, "isFisheye must be of type CV_8U");
 
-    bool is_fisheye = false;
-    bool is_pinhole = false;
-
-    for  (int i = 0; i < (int)is_fisheye_mat.total(); i++) {
-        if (is_fisheye_mat.at<uchar>(i)) {
-            is_fisheye = true;
-        } else {
-            is_pinhole = true;
-        }
-    }
-    CV_CheckEQ(is_fisheye && is_pinhole, false, "Mix of pinhole and fisheye cameras is not supported for now");
 
     // equal number of cameras
     CV_Assert(imageSize.size() == imagePoints.size());
@@ -622,6 +746,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                 repr_err = calibrateCamera(obj_points_, img_points_, imageSize[camera], Ks[camera], distortions[camera],
                    rvecs, tvecs, noArray(), noArray(), errors_per_view, flagsForIntrinsics_mat.at<int>(camera));
             }
+            std::cout << "Camera: " << camera << ", repr_err: " << repr_err << std::endl;
             CV_LOG_IF_WARNING(NULL, repr_err > WARNING_RMSE, "Warning! Mean RMSE of intrinsics calibration is higher than "+std::to_string(WARNING_RMSE)+" pixels!");
             int cnt_visible_frame = 0;
             for (int f = 0; f < NUM_FRAMES; f++) {
@@ -645,6 +770,8 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                 if (!detection_mask_mat[k][i]) continue;
                 Vec3d rvec, tvec;
                 solvePnP(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], rvec, tvec, false, SOLVEPNP_ITERATIVE);
+                // TODO: change to the correct version of PnP supporting mixed camera models
+                // multiview::computeExtrinsics(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], rvec, tvec, is_fisheye_vec[k]);
                 rvecs_all[k][i] = rvec;
                 tvecs_all[k][i] = tvec;
                 const double err2 = multiview::computeReprojectionMSE(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], Mat(rvec), Mat(tvec), noArray(), noArray(), is_fisheye_vec[k]);
@@ -688,7 +815,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         pairs_mat.copyTo(initializationPairs);
     }
     multiview::pairwiseStereoCalibration(pairs, is_fisheye_vec, objPoints_norm, imagePoints,
-         overlaps, detection_mask_mat, Ks, distortions, Rs_vec, Ts_vec, flagsForIntrinsics_mat);
+         overlaps, detection_mask_mat, Ks, distortions, Rs_vec, Ts_vec, flagsForIntrinsics_mat, useUndistort);
 
     const int NUM_VALID_FRAMES = countNonZero(valid_frames);
     const int nparams = (NUM_VALID_FRAMES + NUM_CAMERAS - 1) * 6; // rvecs + tvecs (6)
