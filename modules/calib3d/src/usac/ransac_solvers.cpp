@@ -24,7 +24,7 @@ UsacParams::UsacParams() {
 }
 
 namespace usac {
-int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, bool ispnp);
+int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, EstimationMethod estimator);
 void setParameters (int flag, Ptr<Model> &params, EstimationMethod estimator, double thr,
                     int max_iters, double conf, bool mask_needed);
 
@@ -147,13 +147,13 @@ public:
                 if (! dist_coeff1.empty()) {
                     // undistortPoints also calibrate points using K
                     undistortPoints(points1.isContinuous() ? points1 : points1.getMat().clone(), undist_points1, K1_, dist_coeff1);
-                    points_size = mergePoints(undist_points1, points2, points, true);
+                    points_size = mergePoints(undist_points1, points2, points, params->getEstimator());
                     Utils::normalizeAndDecalibPointsPnP (K1, points, calib_points);
                 } else {
-                    points_size = mergePoints(points1, points2, points, true);
+                    points_size = mergePoints(points1, points2, points, params->getEstimator());
                     Utils::calibrateAndNormalizePointsPnP(K1, points, calib_points);
                 }
-            } else points_size = mergePoints(points1, points2, points, true);
+            } else points_size = mergePoints(points1, points2, points, params->getEstimator());
         } else {
             if (params->isEssential()) {
                 CV_CheckEQ((int)(!K1_.empty() && !K2_.empty()), 1, "Intrinsic matrix must not be empty!");
@@ -165,15 +165,15 @@ public:
                     else undist_points1 = points1.getMat();
                     if (! dist_coeff2.empty()) undistortPoints(points2.isContinuous() ? points2 : points2.getMat().clone(), undist_points2, K2_, dist_coeff2);
                     else undist_points2 = points2.getMat();
-                    points_size = mergePoints(undist_points1, undist_points2, calib_points, false);
+                    points_size = mergePoints(undist_points1, undist_points2, calib_points, params->getEstimator());
                 } else {
-                    points_size = mergePoints(points1, points2, points, false);
+                    points_size = mergePoints(points1, points2, points, params->getEstimator());
                     Utils::calibratePoints(K1, K2, points, calib_points);
                 }
                 threshold = Utils::getCalibratedThreshold(threshold, K1, K2);
                 max_thr = Utils::getCalibratedThreshold(max_thr, K1, K2);
             } else {
-                points_size = mergePoints(points1, points2, points, false);
+                points_size = mergePoints(points1, points2, points, params->getEstimator());
                 if (params->isFundamental() && ! K1_.empty() && ! K2_.empty()) {
                     K1 = K1_.getMat(); K1.convertTo(K1, CV_64F);
                     K2 = K2_.getMat(); K2.convertTo(K2, CV_64F);
@@ -1091,11 +1091,11 @@ int mergePoints (InputArray pts1_, InputArray pts2_, Mat &pts, EstimationMethod 
     };
 
     switch (estimator) {
-        case EstimationMethod::Homography:
-        case EstimationMethod::Fundamental:
-        case EstimationMethod::Fundamental8:
-        case EstimationMethod::Essential:
-        case EstimationMethod::Affine:
+        case EstimationMethod::HOMOGRAPHY:
+        case EstimationMethod::FUNDAMENTAL:
+        case EstimationMethod::FUNDAMENTAL8:
+        case EstimationMethod::ESSENTIAL:
+        case EstimationMethod::AFFINE:
         case EstimationMethod::SE2:
         case EstimationMethod::SIM2:
             convertPoints(pts1, 2); // pts1 are always image points
@@ -1302,7 +1302,7 @@ Mat estimateSE2(InputArray from, InputArray to, OutputArray mask, int method,
     Ptr<Model> params;
     setParameters(method, params, EstimationMethod ::SE2, thr, max_iters, conf, mask.needed());
     Ptr<RansacOutput> ransac_output;
-    if (run(params, from, to, params->getRandomGeneratorState(),
+    if (run(params, from, to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         saveMask(mask, ransac_output->getInliersMask());
         return ransac_output->getModel().rowRange(0,2);
@@ -1319,7 +1319,7 @@ Mat estimateSIM2(InputArray from, InputArray to, OutputArray mask, int method,
     Ptr<Model> params;
     setParameters(method, params, EstimationMethod ::SIM2, thr, max_iters, conf, mask.needed());
     Ptr<RansacOutput> ransac_output;
-    if (run(params, from, to, params->getRandomGeneratorState(),
+    if (run(params, from, to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         saveMask(mask, ransac_output->getInliersMask());
         return ransac_output->getModel().rowRange(0,2);
@@ -1336,7 +1336,7 @@ Mat estimateSO3(InputArray from, InputArray to, OutputArray mask, int method,
     Ptr<Model> params;
     setParameters(method, params, EstimationMethod ::SO3, thr, max_iters, conf, mask.needed());
     Ptr<RansacOutput> ransac_output;
-    if (run(params, from, to, params->getRandomGeneratorState(),
+    if (run(params, from, to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         saveMask(mask, ransac_output->getInliersMask());
         return ransac_output->getModel().rowRange(0,3);
@@ -1353,7 +1353,7 @@ Mat estimateSE3(InputArray from, InputArray to, OutputArray mask, int method,
     Ptr<Model> params;
     setParameters(method, params, EstimationMethod ::SE3, thr, max_iters, conf, mask.needed());
     Ptr<RansacOutput> ransac_output;
-    if (run(params, from, to, params->getRandomGeneratorState(),
+    if (run(params, from, to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         saveMask(mask, ransac_output->getInliersMask());
         return ransac_output->getModel().rowRange(0,3);
@@ -1370,7 +1370,7 @@ Mat estimateSIM3(InputArray from, InputArray to, OutputArray mask, int method,
     Ptr<Model> params;
     setParameters(method, params, EstimationMethod ::SIM3, thr, max_iters, conf, mask.needed());
     Ptr<RansacOutput> ransac_output;
-    if (run(params, from, to, params->getRandomGeneratorState(),
+    if (run(params, from, to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         saveMask(mask, ransac_output->getInliersMask());
         return ransac_output->getModel().rowRange(0,3);
@@ -1465,12 +1465,12 @@ public:
                 sample_size = 3; est_error = ErrorMetric ::FORW_REPR_ERR; break;
             case (EstimationMethod::SE2):
             case (EstimationMethod::SIM2):
-                avg_num_models = 1; time_for_model_est = 100;
+                avg_num_models = 1; model_est_to_ver_time = 100;
                 sample_size = 2; est_error = ErrorMetric ::FORW_REPR_ERR; break;
             case (EstimationMethod::SO3):
             case (EstimationMethod::SE3):
             case (EstimationMethod::SIM3):
-                avg_num_models = 1; time_for_model_est = 100;
+                avg_num_models = 1; model_est_to_ver_time = 100;
                 sample_size = 3; est_error = ErrorMetric ::FORW_REPR_ERR; break;
             case (EstimationMethod::HOMOGRAPHY):
                 avg_num_models = 0.8; model_est_to_ver_time = 200;

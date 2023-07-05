@@ -675,9 +675,6 @@ public:
     }
     int getSampleSize() const override { return 2; }
     int getMaxNumberOfSolutions () const override { return 1; }
-    Ptr<MinimalSolver> clone () const override {
-        return makePtr<SE2MinimalSolverImpl>(*points_mat);
-    }
 };
 Ptr<SE2MinimalSolver> SE2MinimalSolver::create(const Mat &points_) {
     return makePtr<SE2MinimalSolverImpl>(points_);
@@ -701,9 +698,6 @@ public:
     }
     int getSampleSize() const override { return 2; }
     int getMaxNumberOfSolutions () const override { return 1; }
-    Ptr<MinimalSolver> clone () const override {
-        return makePtr<SIM2MinimalSolverImpl>(*points_mat);
-    }
 };
 Ptr<SIM2MinimalSolver> SIM2MinimalSolver::create(const Mat &points_) {
     return makePtr<SIM2MinimalSolverImpl>(points_);
@@ -727,9 +721,6 @@ public:
     }
     int getSampleSize() const override { return 3; }
     int getMaxNumberOfSolutions () const override { return 1; }
-    Ptr<MinimalSolver> clone () const override {
-        return makePtr<SO3MinimalSolverImpl>(*points_mat);
-    }
 };
 Ptr<SO3MinimalSolver> SO3MinimalSolver::create(const Mat &points_) {
     return makePtr<SO3MinimalSolverImpl>(points_);
@@ -753,9 +744,6 @@ public:
     }
     int getSampleSize() const override { return 3; }
     int getMaxNumberOfSolutions () const override { return 1; }
-    Ptr<MinimalSolver> clone () const override {
-        return makePtr<SE3MinimalSolverImpl>(*points_mat);
-    }
 };
 Ptr<SE3MinimalSolver> SE3MinimalSolver::create(const Mat &points_) {
     return makePtr<SE3MinimalSolverImpl>(points_);
@@ -779,9 +767,6 @@ public:
     }
     int getSampleSize() const override { return 3; }
     int getMaxNumberOfSolutions () const override { return 1; }
-    Ptr<MinimalSolver> clone () const override {
-        return makePtr<SIM3MinimalSolverImpl>(*points_mat);
-    }
 };
 Ptr<SIM3MinimalSolver> SIM3MinimalSolver::create(const Mat &points_) {
     return makePtr<SIM3MinimalSolverImpl>(points_);
@@ -811,12 +796,13 @@ public:
         models[0] = solve_weighted_umeyama<2>(p_mat, false, false, weights);
         return 1;
     }
-
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+            const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
+    void enforceRankConstraint (bool /*enforce*/) override {}
     int getMinimumRequiredSampleSize() const override { return 2; }
     int getMaxNumberOfSolutions () const override { return 1; }
-    Ptr<NonMinimalSolver> clone () const override {
-        return makePtr<SE2NonMinimalSolverImpl>(*points_mat);
-    }
 };
 Ptr<SE2NonMinimalSolver> SE2NonMinimalSolver::create(const Mat &points_) {
     return makePtr<SE2NonMinimalSolverImpl>(points_);
@@ -846,12 +832,13 @@ public:
         models[0] = solve_weighted_umeyama<2>(p_mat, true, false, weights);
         return 1;
     }
-
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+            const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
+    void enforceRankConstraint (bool /*enforce*/) override {}
     int getMinimumRequiredSampleSize() const override { return 2; }
     int getMaxNumberOfSolutions () const override { return 1; }
-    Ptr<NonMinimalSolver> clone () const override {
-        return makePtr<SIM2NonMinimalSolverImpl>(*points_mat);
-    }
 };
 Ptr<SIM2NonMinimalSolver> SIM2NonMinimalSolver::create(const Mat &points_) {
     return makePtr<SIM2NonMinimalSolverImpl>(points_);
@@ -881,12 +868,13 @@ public:
         models[0] = solve_weighted_umeyama<3>(p_mat, false, true, weights);
         return 1;
     }
-
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+            const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
+    void enforceRankConstraint (bool /*enforce*/) override {}
     int getMinimumRequiredSampleSize() const override { return 3; }
     int getMaxNumberOfSolutions () const override { return 1; }
-    Ptr<NonMinimalSolver> clone () const override {
-        return makePtr<SO3NonMinimalSolverImpl>(*points_mat);
-    }
 };
 Ptr<SO3NonMinimalSolver> SO3NonMinimalSolver::create(const Mat &points_) {
     return makePtr<SO3NonMinimalSolverImpl>(points_);
@@ -916,12 +904,13 @@ public:
         models[0] = solve_weighted_umeyama<3>(p_mat, false, false, weights);
         return 1;
     }
-
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+            const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
+    void enforceRankConstraint (bool /*enforce*/) override {}
     int getMinimumRequiredSampleSize() const override { return 3; }
     int getMaxNumberOfSolutions () const override { return 1; }
-    Ptr<NonMinimalSolver> clone () const override {
-        return makePtr<SE3NonMinimalSolverImpl>(*points_mat);
-    }
 };
 Ptr<SE3NonMinimalSolver> SE3NonMinimalSolver::create(const Mat &points_) {
     return makePtr<SE3NonMinimalSolverImpl>(points_);
@@ -951,12 +940,13 @@ public:
         models[0] = solve_weighted_umeyama<3>(p_mat, true, false, weights);
         return 1;
     }
-
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+            const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
+    void enforceRankConstraint (bool /*enforce*/) override {}
     int getMinimumRequiredSampleSize() const override { return 3; }
     int getMaxNumberOfSolutions () const override { return 1; }
-    Ptr<NonMinimalSolver> clone () const override {
-        return makePtr<SIM3NonMinimalSolverImpl>(*points_mat);
-    }
 };
 Ptr<SIM3NonMinimalSolver> SIM3NonMinimalSolver::create(const Mat &points_) {
     return makePtr<SIM3NonMinimalSolverImpl>(points_);

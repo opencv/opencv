@@ -1201,7 +1201,7 @@ Mat estimateSE2(InputArray _from, InputArray _to, OutputArray inliers,
     Ptr<usac::Model> model;
     usac::setParameters(model, usac::EstimationMethod::SE2, params, inliers.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model, _from, _to, model->getRandomGeneratorState(),
+    if (usac::run(model, _from, _to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         usac::saveMask(inliers, ransac_output->getInliersMask());
         return ransac_output->getModel().rowRange(0,2);
@@ -1226,7 +1226,7 @@ Mat estimateSIM2(InputArray _from, InputArray _to, OutputArray inliers,
     Ptr<usac::Model> model;
     usac::setParameters(model, usac::EstimationMethod::SIM2, params, inliers.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model, _from, _to, model->getRandomGeneratorState(),
+    if (usac::run(model, _from, _to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         usac::saveMask(inliers, ransac_output->getInliersMask());
         return ransac_output->getModel().rowRange(0,2);
@@ -1250,7 +1250,7 @@ Mat estimateSO3(InputArray _from, InputArray _to, OutputArray inliers,
     Ptr<usac::Model> model;
     usac::setParameters(model, usac::EstimationMethod::SO3, params, inliers.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model, _from, _to, model->getRandomGeneratorState(),
+    if (usac::run(model, _from, _to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         usac::saveMask(inliers, ransac_output->getInliersMask());
         return ransac_output->getModel().rowRange(0,3);
@@ -1274,7 +1274,7 @@ Mat estimateSE3(InputArray _from, InputArray _to, OutputArray inliers,
     Ptr<usac::Model> model;
     usac::setParameters(model, usac::EstimationMethod::SE3, params, inliers.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model, _from, _to, model->getRandomGeneratorState(),
+    if (usac::run(model, _from, _to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         usac::saveMask(inliers, ransac_output->getInliersMask());
         return ransac_output->getModel().rowRange(0,3);
@@ -1299,7 +1299,7 @@ Mat estimateSIM3(InputArray _from, InputArray _to, OutputArray inliers,
     Ptr<usac::Model> model;
     usac::setParameters(model, usac::EstimationMethod::SIM3, params, inliers.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model, _from, _to, model->getRandomGeneratorState(),
+    if (usac::run(model, _from, _to,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         usac::saveMask(inliers, ransac_output->getInliersMask());
         return ransac_output->getModel().rowRange(0,3);

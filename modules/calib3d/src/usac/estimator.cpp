@@ -624,9 +624,6 @@ public:
         }
         return errors;
     }
-    Ptr<Error> clone () const override {
-        return makePtr<ReprojectionDistanceAffineImpl>(*points_mat);
-    }
 };
 Ptr<ReprojectionErrorAffine3D>
 ReprojectionErrorAffine3D::create(const Mat &points) {

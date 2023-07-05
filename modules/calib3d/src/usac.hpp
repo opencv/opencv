@@ -62,6 +62,7 @@ public:
 class ReprojectionErrorAffine3D : public Error {
 public:
     static Ptr<ReprojectionErrorAffine3D> create(const Mat &points);
+};
 
 class TrifocalTensorReprError : public Error {
 public:
