@@ -68,7 +68,7 @@ if(CANN_INSTALL_DIR)
         set(HAVE_CANN OFF)
         return()
     endif()
-	  #  * libgraph_base.so 添加
+	  #  * lib_graph_base.so 
 	  set(lib_graph_base "${CANN_INSTALL_DIR}/compiler/lib64")
 	  find_library(found_libgraph_base NAMES graph_base PATHS ${lib_graph_base} NO_DEFAULT_PATH)
 	  if(found_libgraph_base)
