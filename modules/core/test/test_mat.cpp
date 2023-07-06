@@ -18,7 +18,7 @@ class Core_ReduceTest : public cvtest::BaseTest
 public:
     Core_ReduceTest() {}
 protected:
-    void run( int);
+    void run( int) CV_OVERRIDE;
     int checkOp( const Mat& src, int dstType, int opType, const Mat& opRes, int dim );
     int checkCase( int srcType, int dstType, int dim, Size sz );
     int checkDim( int dim, Size sz );
@@ -495,7 +495,7 @@ public:
     Core_ArrayOpTest();
     ~Core_ArrayOpTest();
 protected:
-    void run(int);
+    void run(int) CV_OVERRIDE;
 };
 
 
@@ -599,6 +599,11 @@ static void setValue(SparseMat& M, const int* idx, double value, RNG& rng)
         CV_Error(CV_StsUnsupportedFormat, "");
 }
 
+#if defined(__GNUC__) && (__GNUC__ == 11 || __GNUC__ == 12)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
 template<typename Pixel>
 struct InitializerFunctor{
     /// Initializer for cv::Mat::forEach test
@@ -620,6 +625,11 @@ struct InitializerFunctor5D{
         pixel[4] = idx[4];
     }
 };
+
+#if defined(__GNUC__) && (__GNUC__ == 11 || __GNUC__ == 12)
+#pragma GCC diagnostic pop
+#endif
+
 
 template<typename Pixel>
 struct EmptyFunctor
@@ -1023,7 +1033,7 @@ class Core_MergeSplitBaseTest : public cvtest::BaseTest
 protected:
     virtual int run_case(int depth, size_t channels, const Size& size, RNG& rng) = 0;
 
-    virtual void run(int)
+    virtual void run(int) CV_OVERRIDE
     {
         // m is Mat
         // mv is vector<Mat>
@@ -1068,7 +1078,7 @@ public:
     ~Core_MergeTest() {}
 
 protected:
-    virtual int run_case(int depth, size_t matCount, const Size& size, RNG& rng)
+    virtual int run_case(int depth, size_t matCount, const Size& size, RNG& rng) CV_OVERRIDE
     {
         const int maxMatChannels = 10;
 
@@ -1126,7 +1136,7 @@ public:
     ~Core_SplitTest() {}
 
 protected:
-    virtual int run_case(int depth, size_t channels, const Size& size, RNG& rng)
+    virtual int run_case(int depth, size_t channels, const Size& size, RNG& rng) CV_OVERRIDE
     {
         Mat src(size, CV_MAKETYPE(depth, (int)channels));
         rng.fill(src, RNG::UNIFORM, 0, 100, true);
@@ -1990,7 +2000,6 @@ TEST(Core_InputArray, fetch_MatExpr)
 }
 
 
-#ifdef CV_CXX11
 class TestInputArrayRangeChecking {
     static const char *kind2str(cv::_InputArray ia)
     {
@@ -2137,8 +2146,6 @@ TEST(Core_InputArray, range_checking)
 {
     TestInputArrayRangeChecking::run();
 }
-#endif
-
 
 TEST(Core_Vectors, issue_13078)
 {
