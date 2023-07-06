@@ -231,8 +231,7 @@ public:
         // threshold squared as well
         threshold *= threshold;
 
-        if ((params->isHomography() || (params->isFundamental() && (K1.empty() || K2.empty() || !params->isLarssonOptimization())) ||
-             params->getEstimator() == EstimationMethod::AFFINE) && (params->getLO() != LOCAL_OPTIM_NULL || params->getFinalPolisher() == COV_POLISHER)) {
+        if ((params->isHomography() || (params->isFundamental() && (K1.empty() || K2.empty() || !params->isLarssonOptimization())) || params->isPtsetReg()) && (params->getLO() != LOCAL_OPTIM_NULL || params->getFinalPolisher() == COV_POLISHER)) {
             const auto normTr = NormTransform::create(points);
             std::vector<int> sample (points_size);
             for (int i = 0; i < points_size; i++) sample[i] = i;
@@ -489,8 +488,11 @@ public:
             // convert E to F
             model = Mat(Matx33d(K2).inv().t() * Matx33d(model) * Matx33d(K1).inv());
             sample_size = 5;
-        } else if (params->isPnP() || params->getEstimator() == EstimationMethod::AFFINE) sample_size = 3;
-        else
+        } else if (params->isPnP() || params->isPtsetReg()) {
+            if (params->getEstimator() == EstimationMethod::SE2 || params->getEstimator() == EstimationMethod::SIM2)
+                sample_size = 2;
+            else sample_size = 3;
+        } else
             CV_Error(cv::Error::StsNotImplemented, "Method for independent inliers is not implemented for this problem");
         if (num_inliers_ <= sample_size) return 0; // minimal sample size generates model
         model.convertTo(model, CV_32F);
@@ -1582,6 +1584,12 @@ public:
     bool isEssential () const override { return estimator == EstimationMethod::ESSENTIAL; }
     bool isPnP() const override {
         return estimator == EstimationMethod ::P3P || estimator == EstimationMethod ::P6P;
+    }
+    bool isPtsetReg() const override {
+        return estimator == EstimationMethod ::AFFINE ||
+               estimator == EstimationMethod ::SE2 || estimator == EstimationMethod ::SIM2 ||
+               estimator == EstimationMethod ::SO3 ||
+               estimator == EstimationMethod ::SE3 || estimator == EstimationMethod ::SIM3;
     }
 };
 

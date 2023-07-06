@@ -933,6 +933,7 @@ public:
     virtual bool isHomography () const = 0;
     virtual bool isEssential () const = 0;
     virtual bool isPnP () const = 0;
+    virtual bool isPtsetReg () const = 0;
 
     // getters
     virtual int getSampleSize () const = 0;

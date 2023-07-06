@@ -670,7 +670,7 @@ public:
         Mat p_mat;
         std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]),};
         cv::vconcat(arr, p_mat);
-        models[0] = solve_weighted_umeyama<2>(p_mat, false, false);
+        models = std::vector<Mat>{ solve_weighted_umeyama<2>(p_mat, false, false) };
         return 1;
     }
     int getSampleSize() const override { return 2; }
@@ -693,7 +693,7 @@ public:
         Mat p_mat;
         std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]),};
         cv::vconcat(arr, p_mat);
-        models[0] = solve_weighted_umeyama<2>(p_mat, true, false);
+        models = std::vector<Mat>{ solve_weighted_umeyama<2>(p_mat, true, false) };
         return 1;
     }
     int getSampleSize() const override { return 2; }
@@ -716,7 +716,7 @@ public:
         Mat p_mat;
         std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]), points_mat->row(sample[2]),};
         cv::vconcat(arr, p_mat);
-        models[0] = solve_weighted_umeyama<3>(p_mat, false, true);
+        models = std::vector<Mat>{ solve_weighted_umeyama<3>(p_mat, false, true) };
         return 1;
     }
     int getSampleSize() const override { return 3; }
@@ -739,7 +739,7 @@ public:
         Mat p_mat;
         std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]), points_mat->row(sample[2]),};
         cv::vconcat(arr, p_mat);
-        models[0] = solve_weighted_umeyama<3>(p_mat, false, false);
+        models = std::vector<Mat>{ solve_weighted_umeyama<3>(p_mat, false, false) };
         return 1;
     }
     int getSampleSize() const override { return 3; }
@@ -762,7 +762,7 @@ public:
         Mat p_mat;
         std::vector<cv::Mat> arr{points_mat->row(sample[0]), points_mat->row(sample[1]), points_mat->row(sample[2]),};
         cv::vconcat(arr, p_mat);
-        models[0] = solve_weighted_umeyama<3>(p_mat, true, false);
+        models = std::vector<Mat>{ solve_weighted_umeyama<3>(p_mat, true, false) };
         return 1;
     }
     int getSampleSize() const override { return 3; }
@@ -793,7 +793,7 @@ public:
             arr[p] = points_mat->row(sample[p]);
         }
         cv::vconcat(arr, p_mat);
-        models[0] = solve_weighted_umeyama<2>(p_mat, false, false, weights);
+        models = std::vector<Mat>{ solve_weighted_umeyama<2>(p_mat, false, false, weights) };
         return 1;
     }
     int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
@@ -829,7 +829,7 @@ public:
             arr[p] = points_mat->row(sample[p]);
         }
         cv::vconcat(arr, p_mat);
-        models[0] = solve_weighted_umeyama<2>(p_mat, true, false, weights);
+        models = std::vector<Mat>{ solve_weighted_umeyama<2>(p_mat, true, false, weights) };
         return 1;
     }
     int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
@@ -865,7 +865,7 @@ public:
             arr[p] = points_mat->row(sample[p]);
         }
         cv::vconcat(arr, p_mat);
-        models[0] = solve_weighted_umeyama<3>(p_mat, false, true, weights);
+        models = std::vector<Mat>{ solve_weighted_umeyama<3>(p_mat, false, true, weights) };
         return 1;
     }
     int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
@@ -901,7 +901,7 @@ public:
             arr[p] = points_mat->row(sample[p]);
         }
         cv::vconcat(arr, p_mat);
-        models[0] = solve_weighted_umeyama<3>(p_mat, false, false, weights);
+        models = std::vector<Mat>{ solve_weighted_umeyama<3>(p_mat, false, false, weights) };
         return 1;
     }
     int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
@@ -937,7 +937,7 @@ public:
             arr[p] = points_mat->row(sample[p]);
         }
         cv::vconcat(arr, p_mat);
-        models[0] = solve_weighted_umeyama<3>(p_mat, true, false, weights);
+        models = std::vector<Mat>{ solve_weighted_umeyama<3>(p_mat, true, false, weights) };
         return 1;
     }
     int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
@@ -1053,7 +1053,6 @@ Mat solve_weighted_umeyama(const Mat &points_, const bool is_scale, const bool i
     auto hTsl = buildTrans<dim>( center2);
     auto hRot = buildRot<dim>(rot);
     auto hScl = buildScale<dim>(is_scale ? scale : 1.0);
-
     return Mat(hTsl * hScl * hRot * hInv)(Rect(0,0,dim+1,dim));
 }
 
