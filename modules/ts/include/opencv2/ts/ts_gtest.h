@@ -17501,6 +17501,7 @@ CartesianProductHolder2(const Generator1& g1, const Generator2& g2)
         static_cast<ParamGenerator<T2> >(g2_)));
   }
 
+  CartesianProductHolder2(const CartesianProductHolder2 & other) = default;
  private:
   // No implementation - assignment is unsupported.
   void operator=(const CartesianProductHolder2& other) = delete;
@@ -17523,7 +17524,7 @@ CartesianProductHolder3(const Generator1& g1, const Generator2& g2,
         static_cast<ParamGenerator<T2> >(g2_),
         static_cast<ParamGenerator<T3> >(g3_)));
   }
-
+  CartesianProductHolder3(const CartesianProductHolder3 &) = default;
  private:
   // No implementation - assignment is unsupported.
   void operator=(const CartesianProductHolder3& other) = delete;
@@ -17549,7 +17550,7 @@ CartesianProductHolder4(const Generator1& g1, const Generator2& g2,
         static_cast<ParamGenerator<T3> >(g3_),
         static_cast<ParamGenerator<T4> >(g4_)));
   }
-
+  CartesianProductHolder4(const CartesianProductHolder4 &) = default;
  private:
   // No implementation - assignment is unsupported.
   void operator=(const CartesianProductHolder4& other) = delete;
@@ -17577,7 +17578,7 @@ CartesianProductHolder5(const Generator1& g1, const Generator2& g2,
         static_cast<ParamGenerator<T4> >(g4_),
         static_cast<ParamGenerator<T5> >(g5_)));
   }
-
+  CartesianProductHolder5(const CartesianProductHolder5 &) = default;
  private:
   // No implementation - assignment is unsupported.
   void operator=(const CartesianProductHolder5& other) = delete;
@@ -17609,7 +17610,7 @@ CartesianProductHolder6(const Generator1& g1, const Generator2& g2,
         static_cast<ParamGenerator<T5> >(g5_),
         static_cast<ParamGenerator<T6> >(g6_)));
   }
-
+  CartesianProductHolder6(const CartesianProductHolder6 &) = default;
  private:
   // No implementation - assignment is unsupported.
   void operator=(const CartesianProductHolder6& other) = delete;
@@ -17644,7 +17645,7 @@ CartesianProductHolder7(const Generator1& g1, const Generator2& g2,
         static_cast<ParamGenerator<T6> >(g6_),
         static_cast<ParamGenerator<T7> >(g7_)));
   }
-
+  CartesianProductHolder7(const CartesianProductHolder7 &) = default;
  private:
   // No implementation - assignment is unsupported.
   void operator=(const CartesianProductHolder7& other) = delete;
@@ -17683,7 +17684,7 @@ CartesianProductHolder8(const Generator1& g1, const Generator2& g2,
         static_cast<ParamGenerator<T7> >(g7_),
         static_cast<ParamGenerator<T8> >(g8_)));
   }
-
+  CartesianProductHolder8(const CartesianProductHolder8 &) = default;
  private:
   // No implementation - assignment is unsupported.
   void operator=(const CartesianProductHolder8& other) = delete;
@@ -17726,7 +17727,7 @@ CartesianProductHolder9(const Generator1& g1, const Generator2& g2,
         static_cast<ParamGenerator<T8> >(g8_),
         static_cast<ParamGenerator<T9> >(g9_)));
   }
-
+  CartesianProductHolder9(const CartesianProductHolder9 &) = default;
  private:
   // No implementation - assignment is unsupported.
   void operator=(const CartesianProductHolder9& other) = delete;
