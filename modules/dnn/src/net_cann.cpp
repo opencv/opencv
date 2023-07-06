@@ -308,6 +308,7 @@ std::shared_ptr<ge::ModelBufferData> compileCannGraph(std::shared_ptr<ge::Graph>
             std::map<ge::AscendString, ge::AscendString> options = {
                 {ge::AscendString(ge::ir_option::SOC_VERSION), ge::AscendString(aclrtGetSocName())},
             };
+            // `ACL_CHECK_GRAPH_RET()` support Ascend310/Ascend310P3/Ascend910B
             ACL_CHECK_GRAPH_RET(ge::aclgrphBuildInitialize(options));
 
             // build
