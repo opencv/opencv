@@ -435,7 +435,7 @@ public:
         double e = -(v1*x2 - v2*x1 - v1*x3 + v3*x1 + v2*x3 - v3*x2) * denominator;
         double f = v1 - d * x1 - e * y1; // dx1 + ey1 + f = v1
 
-        models[0] = Mat(Matx33d(a, b, c, d, e, f, 0, 0, 1));
+        models = std::vector<Mat>{ Mat(Matx33d(a, b, c, d, e, f, 0, 0, 1)) };
         return 1;
     }
     int getSampleSize() const override { return 3; }
