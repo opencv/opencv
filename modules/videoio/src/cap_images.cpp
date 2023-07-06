@@ -302,59 +302,58 @@ bool CvCapture_Images::open(const std::string& _filename)
     if (filename_pattern.empty())
     {
         filename_pattern = _filename;
-        cv::String filename = _filename.c_str();
-        if (!utils::fs::exists(filename))
+        if (!utils::fs::exists(filename_pattern))
         {
+            CV_LOG_INFO(NULL, "CAP_IMAGES: File does not exist: " << filename_pattern);
+            close();
             return false;
         }
-        if (!haveImageReader(filename))
+        if (!haveImageReader(filename_pattern))
         {
-            CV_LOG_INFO(NULL, "CAP_IMAGES: Stop scanning. Can't read image file: " << filename);
+            CV_LOG_INFO(NULL, "CAP_IMAGES: File is not an image: " << filename_pattern);
+            close();
+            return false;
         }
         length = 1;
-        // grab frame to enable properties retrieval
-        bool grabRes = grabFrame();
-        grabbedInOpen = true;
-        currentframe = 0;
-        return grabRes;
     }
-
-    // determine the length of the sequence
-    for (length = 0; ;)
+    else
     {
-        cv::String filename = cv::format(filename_pattern.c_str(), (int)(offset + length));
-        if (!utils::fs::exists(filename))
+        // determine the length of the sequence
+        for (length = 0; ;)
         {
-            if (length == 0 && offset == 0) // allow starting with 0 or 1
+            cv::String filename = cv::format(filename_pattern.c_str(), (int)(offset + length));
+            if (!utils::fs::exists(filename))
             {
-                offset++;
-                continue;
+                if (length == 0 && offset == 0) // allow starting with 0 or 1
+                {
+                    offset++;
+                    continue;
+                }
+                CV_LOG_INFO(NULL, "CAP_IMAGES: File does not exist: " << filename);
+                break;
             }
-            break;
+
+            if(!haveImageReader(filename))
+            {
+                CV_LOG_INFO(NULL, "CAP_IMAGES: File is not an image: " << filename);
+                break;
+            }
+
+            length++;
         }
 
-        if(!haveImageReader(filename))
+        if (length == 0)
         {
-            CV_LOG_INFO(NULL, "CAP_IMAGES: Stop scanning. Can't read image file: " << filename);
-            break;
+            close();
+            return false;
         }
 
-        length++;
+        firstframe = offset;
     }
-
-    if (length == 0)
-    {
-        close();
-        return false;
-    }
-
-    firstframe = offset;
-
     // grab frame to enable properties retrieval
-    bool grabRes = grabFrame();
+    bool grabRes = CvCapture_Images::grabFrame();
     grabbedInOpen = true;
     currentframe = 0;
-
     return grabRes;
 }
 
