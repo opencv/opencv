@@ -6,10 +6,10 @@ if("cann${CANN_INSTALL_DIR}" STREQUAL "cann" AND DEFINED ENV{ASCEND_TOOLKIT_HOME
 endif()
 
 if(EXISTS "${CANN_INSTALL_DIR}/opp/op_proto/built-in/inc")
-    set(LOW_CANN_VERSION "YES" )
+    set(CANN_VERSION_BELOW_6_3_ALPHA002 "YES" )
 endif()
-if(LOW_CANN_VERSION)
-    add_definitions(-DLOW_CANN_VERSION="YES")
+if(CANN_VERSION_BELOW_6_3_ALPHA002)
+    add_definitions(-DCANN_VERSION_BELOW_6_3_ALPHA002="YES")
 endif()
 
 if(CANN_INSTALL_DIR)
@@ -65,7 +65,7 @@ if(CANN_INSTALL_DIR)
         return()
     endif()
     #  * libopsproto.so
-    if (LOW_CANN_VERSION)
+    if (CANN_VERSION_BELOW_6_3_ALPHA002)
         set(lib_opsproto "${CANN_INSTALL_DIR}/opp/op_proto/built-in/")
     else()
         if(EXISTS "${CANN_INSTALL_DIR}/opp/built-in/op_proto/lib/linux")
@@ -90,8 +90,8 @@ if(CANN_INSTALL_DIR)
     list(APPEND libs_cann ${lib_graph})
     list(APPEND libs_cann ${lib_ge_compiler})
 
-    #  * libgraph_base.so 
-    if(NOT LOW_CANN_VERSION)
+    #  * lib_graph_base.so 
+    if(NOT CANN_VERSION_BELOW_6_3_ALPHA002)
         set(lib_graph_base "${CANN_INSTALL_DIR}/compiler/lib64")
         find_library(found_libgraph_base NAMES graph_base PATHS ${lib_graph_base} NO_DEFAULT_PATH)
         if(found_libgraph_base)
