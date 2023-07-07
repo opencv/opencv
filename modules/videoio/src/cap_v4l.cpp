@@ -1854,8 +1854,12 @@ static inline cv::String capPropertyName(int prop)
         return "auto wb";
     case CAP_PROP_WB_TEMPERATURE:
         return "wb temperature";
+    case CAP_PROP_ORIENTATION_META:
+        return "orientation meta";
+    case CAP_PROP_ORIENTATION_AUTO:
+        return "orientation auto";
     default:
-        return "unknown";
+        return cv::format("unknown (%d)", prop);
     }
 }
 
@@ -1970,7 +1974,7 @@ bool CvCaptureCAM_V4L::controlInfo(int property_id, __u32 &_v4l2id, cv::Range &r
     v4l2_queryctrl queryctrl = v4l2_queryctrl();
     queryctrl.id = __u32(v4l2id);
     if (v4l2id == -1 || !tryIoctl(VIDIOC_QUERYCTRL, &queryctrl)) {
-        CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): property " << capPropertyName(property_id) << " is not supported");
+        CV_LOG_INFO(NULL, "VIDEOIO(V4L2:" << deviceName << "): property '" << capPropertyName(property_id) << "' is not supported");
         return false;
     }
     _v4l2id = __u32(v4l2id);
