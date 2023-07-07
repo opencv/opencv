@@ -654,29 +654,46 @@ struct Layer_Gemm : public TestBaseWithParam<tuple<Backend, Target>>
         lp.set("alpha", alpha);
         lp.set("beta", beta);
         lp.set("real_ndims_C", static_cast<int>(c_shape.size()));
+        if (op == "InnerProduct") {
+            cv::transpose(B, B);
+            lp.blobs.push_back(B);
+            lp.set("num_output", B.size[0]);
+            if (!c_shape.empty()) {
+                Mat C(c_shape, CV_32FC1);
+                randu(C, 0.f, 1.f);
+
+                lp.blobs.push_back(C);
+                lp.set("bias_term", true);
+            }
+        }
         int id = net.addLayerToPrev(lp.name, lp.type, lp);
         net.connect(0, 0, id, 0);
-        net.connect(0, 1, id, 1);
-
-        if (!c_shape.empty()) {
-            net.connect(0, 2, id, 2);
+        if (op != "InnerProduct") {
+            net.connect(0, 1, id, 1);
+            if (!c_shape.empty()) {
+                net.connect(0, 2, id, 2);
+            }
         }
 
         // warmup
         {
-            std::vector<String> input_names(2);
+            std::vector<String> input_names(1);
             input_names[0] = "A";
-            input_names[1] = "B";
-            if (!c_shape.empty()) {
-                input_names.push_back("C");
+            if (op != "InnerProduct") {
+                input_names[1] = "B";
+                if (!c_shape.empty()) {
+                    input_names.push_back("C");
+                }
             }
             net.setInputsNames(input_names);
             net.setInput(A, input_names[0]);
-            net.setInput(B, input_names[1]);
-            if (!c_shape.empty()) {
-                Mat C(c_shape, CV_32FC1);
-                randu(C, 0.f, 1.f);
-                net.setInput(C, input_names[2]);
+            if (op != "InnerProduct") {
+                net.setInput(B, input_names[1]);
+                if (!c_shape.empty()) {
+                    Mat C(c_shape, CV_32FC1);
+                    randu(C, 0.f, 1.f);
+                    net.setInput(C, input_names[2]);
+                }
             }
 
             net.setPreferableBackend(backendId);
@@ -699,14 +716,14 @@ struct Layer_Gemm : public TestBaseWithParam<tuple<Backend, Target>>
 
 PERF_TEST_P_(Layer_Gemm, gemm)
 {
-    // test_layer({M, K}, {K, N}, {M, N});
-    test_layer({M, K}, {K, N});
+    test_layer({M, K}, {K, N}, {N});
+    // test_layer({M, K}, {K, N});
 }
 
 PERF_TEST_P_(Layer_Gemm, innerproduct)
 {
-    // test_layer({M, K}, {K, N}, {M, N}, false, false, 1.f, 1.f, "InnerProduct");
-    test_layer({M, K}, {K, N}, {}, false, false, 1.f, 1.f, "InnerProduct");
+    test_layer({M, K}, {K, N}, {N}, false, false, 1.f, 1.f, "InnerProduct");
+    // test_layer({M, K}, {K, N}, {}, false, false, 1.f, 1.f, "InnerProduct");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(false, false));

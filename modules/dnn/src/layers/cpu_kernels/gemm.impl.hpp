@@ -12,8 +12,6 @@
 #ifndef OPENCV_DNN_GEMM_IMPL_HPP
 #define OPENCV_DNN_GEMM_IMPL_HPP
 
-// #include <arm_neon.h>
-
 #include <iostream>
 #include <functional>
 
@@ -116,15 +114,8 @@ static void fx_gemm8x12_f32(int k, const char *a_, const char *b_,
     v_float32x4 s70 = s00, s71 = s00, s72 = s00;
 
     for(int p = 0; p < k; p++, a += _FX_SGEMM_MR, b += _FX_SGEMM_NR) {
-        // v_float32x4 a0 = v_load(a);
         v_float32x4 b0 = v_load(b), b1 = v_load(b + 4), b2 = v_load(b + 8);
 
-        // s00 = vfmaq_laneq_f32(s00, b0, a0, 0);
-        // s01 = vfmaq_laneq_f32(s01, b1, a0, 0);
-        // s02 = vfmaq_laneq_f32(s02, b2, a0, 0);
-        // s10 = vfmaq_laneq_f32(s10, b0, a0, 1);
-        // s11 = vfmaq_laneq_f32(s11, b1, a0, 1);
-        // s12 = vfmaq_laneq_f32(s12, b2, a0, 1);
         v_float32x4 a0 = v_setall_f32(*a);
         s00 = v_fma(b0, a0, s00);
         s01 = v_fma(b1, a0, s01);
@@ -134,12 +125,6 @@ static void fx_gemm8x12_f32(int k, const char *a_, const char *b_,
         s11 = v_fma(b1, a1, s11);
         s12 = v_fma(b2, a1, s12);
 
-        // s20 = vfmaq_laneq_f32(s20, b0, a0, 2);
-        // s21 = vfmaq_laneq_f32(s21, b1, a0, 2);
-        // s22 = vfmaq_laneq_f32(s22, b2, a0, 2);
-        // s30 = vfmaq_laneq_f32(s30, b0, a0, 3);
-        // s31 = vfmaq_laneq_f32(s31, b1, a0, 3);
-        // s32 = vfmaq_laneq_f32(s32, b2, a0, 3);
         v_float32x4 a2 = v_setall_f32(*(a + 2));
         s20 = v_fma(b0, a2, s20);
         s21 = v_fma(b1, a2, s21);
@@ -149,14 +134,6 @@ static void fx_gemm8x12_f32(int k, const char *a_, const char *b_,
         s31 = v_fma(b1, a3, s31);
         s32 = v_fma(b2, a3, s32);
 
-        // a0 = vld1q_f32(a + 4);
-
-        // s40 = vfmaq_laneq_f32(s40, b0, a0, 0);
-        // s41 = vfmaq_laneq_f32(s41, b1, a0, 0);
-        // s42 = vfmaq_laneq_f32(s42, b2, a0, 0);
-        // s50 = vfmaq_laneq_f32(s50, b0, a0, 1);
-        // s51 = vfmaq_laneq_f32(s51, b1, a0, 1);
-        // s52 = vfmaq_laneq_f32(s52, b2, a0, 1);
         a0 = v_setall_f32(*(a + 4));
         s40 = v_fma(b0, a0, s40);
         s41 = v_fma(b1, a0, s41);
@@ -166,12 +143,6 @@ static void fx_gemm8x12_f32(int k, const char *a_, const char *b_,
         s51 = v_fma(b1, a1, s51);
         s52 = v_fma(b2, a1, s52);
 
-        // s60 = vfmaq_laneq_f32(s60, b0, a0, 2);
-        // s61 = vfmaq_laneq_f32(s61, b1, a0, 2);
-        // s62 = vfmaq_laneq_f32(s62, b2, a0, 2);
-        // s70 = vfmaq_laneq_f32(s70, b0, a0, 3);
-        // s71 = vfmaq_laneq_f32(s71, b1, a0, 3);
-        // s72 = vfmaq_laneq_f32(s72, b2, a0, 3);
         a2 = v_setall_f32(*(a + 6));
         s60 = v_fma(b0, a2, s60);
         s61 = v_fma(b1, a2, s61);
@@ -352,10 +323,6 @@ void ocv_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
     a_packer = _fx_gemm_pack8_f32;
     b_packer = _fx_gemm_pack12_f32;
 
-    int total = total_tiles;
-    int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
-    double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
-
     auto fn = [&](const Range &r) {
         char* pack_a = (char*)(use_stackbuff ? alloca(buff_size) : malloc(buff_size));
         char* pack_b = pack_a + KC * MC * esz;
@@ -396,6 +363,9 @@ void ocv_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
         }
     };
 
+    int total = total_tiles;
+    int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
+    double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
     parallel_for_(Range(0, total), fn, nstripes);
 }
 
