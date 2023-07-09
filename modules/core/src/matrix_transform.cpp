@@ -7,6 +7,7 @@
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
 
 #include <algorithm> // std::swap_ranges
+#include <numeric> // std::accumulate
 
 namespace cv {
 
@@ -855,6 +856,85 @@ void flipND(InputArray _src, OutputArray _dst, int _axis)
     // call impl
     Mat dst = _dst.getMat();
     flipNDImpl(dst.ptr(), dst.size.p, dst.step.p, axis);
+}
+
+void broadcast_to(InputArray _src, const std::vector<int>& shape, OutputArray _dst) {
+    CV_INSTRUMENT_REGION();
+
+    Mat src = _src.getMat();
+    CV_CheckTrue(src.isContinuous(), "broadcast_to: input array must be continuous");
+    CV_CheckChannelsEQ(src.channels(), 1, "broadcast_to: input array must be single channel");
+
+    // check valid shape, 1D/0D Mat would fail in the following checks
+    const auto dims_src = src.dims;
+    CV_CheckLE(dims_src, static_cast<int>(shape.size()),
+               "broadcast_to: dimension of input array must be less than or equal to dimension of target shape");
+    std::vector<int> shape_src{src.size.p, src.size.p + dims_src};
+    if (shape_src.size() < shape.size()) {
+        shape_src.insert(shape_src.begin(), shape.size() - shape_src.size(), 1);
+    }
+    for (int i = 0; i < static_cast<int>(shape_src.size()); ++i) {
+        if (shape_src[i] != shape[i] && shape_src[i] != 1) {
+            CV_Error(Error::StsBadArg, "broadcast_to: invalid shape");
+        }
+    }
+
+    // impl
+    _dst.create(static_cast<int>(shape.size()), shape.data(), src.type());
+    Mat dst = _dst.getMat();
+    std::vector<int> is_same_shape(shape.size(), 0);
+    for (int i = 0; i < static_cast<int>(shape_src.size()); ++i) {
+        if (shape_src[i] == shape[i]) {
+            is_same_shape[i] = 1;
+        }
+    }
+    // copy if same shape
+    if (std::accumulate(is_same_shape.begin(), is_same_shape.end(), 1, std::multiplies<int>()) != 0) {
+        const auto *p_src = src.ptr<const void>();
+        auto *p_dst = dst.ptr<void>();
+        std::memcpy(p_dst, p_src, dst.total() * dst.elemSize());
+        return;
+    }
+    // initial copy (src to dst)
+    std::vector<int> step_src{src.step.p, src.step.p + dims_src};
+    if (step_src.size() < shape.size()) {
+        step_src.insert(step_src.begin(), shape.size() - step_src.size(), step_src[0]);
+    }
+    for (size_t i = 0; i < src.total(); ++i) {
+        size_t t = i;
+        size_t src_offset = 0, dst_offset = 0;
+        for (int j = static_cast<int>(shape_src.size() - 1); j >= 0; --j) {
+            size_t idx = t / shape_src[j];
+            size_t offset = static_cast<size_t>(t - idx * shape_src[j]);
+            src_offset += offset * step_src[j];
+            dst_offset += offset * dst.step[j];
+            t = idx;
+        }
+        const auto *p_src = src.ptr<const char>();
+        auto *p_dst = dst.ptr<char>();
+        std::memcpy(p_dst + dst_offset, p_src + src_offset, dst.elemSize());
+    }
+    // broadcast copy (dst inplace)
+    std::vector<int> cumulative_shape(shape.size(), 1);
+    int total = dst.total();
+    for (int i = static_cast<int>(shape.size() - 1); i >= 0; --i) {
+        cumulative_shape[i] = static_cast<int>(total / shape[i]);
+        total = cumulative_shape[i];
+    }
+    for (int i = static_cast<int>(shape.size()) - 1; i >= 0; --i) {
+        if (is_same_shape[i] == 1) {
+            continue;
+        }
+        auto step = dst.step[i];
+        auto *p_dst = dst.ptr<char>();
+        for (int j = 0; j < cumulative_shape[i]; j++) {
+            for (int k = 0; k < shape[i] - 1; k++) {
+                std::memcpy(p_dst + step, p_dst, step);
+                p_dst += step;
+            }
+            p_dst += step;
+        }
+    }
 }
 
 void rotate(InputArray _src, OutputArray _dst, int rotateMode)
