@@ -14,8 +14,7 @@ protected:
     void SetUp() override
     {
         pointCloudSize = 1000;
-        maxDepth = 18;
-
+        resolution=0.0001;
         int scale;
         Point3i pmin, pmax;
         scale = 1<<20;
@@ -30,11 +29,11 @@ protected:
             float _x = 10 * (float)rng_Point.uniform(pmin.x, pmax.x)/scale;
             float _y = 10 * (float)rng_Point.uniform(pmin.y, pmax.y)/scale;
             float _z = 10 * (float)rng_Point.uniform(pmin.z, pmax.z)/scale;
-            pointcloud.push_back(Point3f(_x, _y, _z));
+            pointCloud.push_back(Point3f(_x, _y, _z));
         }
 
         // Generate Octree From PointCloud.
-        treeTest.create(pointcloud, maxDepth);
+        treeTest.create(pointCloud, resolution);
 
         // Randomly generate another 3D point.
         float _x = 10 * (float)rng_Point.uniform(pmin.x, pmax.x)/scale;
@@ -45,33 +44,38 @@ protected:
     }
 
 public:
-    std::vector<Point3f> pointcloud;
+    //Origin point cloud data
+    std::vector<Point3f> pointCloud;
+
+    //Point cloud data from octree
+    std::vector<Point3f> restorePointCloudData;
+
+    //Color attribute of pointCloud from octree
+    std::vector<Point3f> restorePointCloudColor;
+
     int pointCloudSize;
     Point3f restPoint;
     Octree treeTest;
-
-private:
-    int maxDepth;
+    double resolution;
 };
 
 TEST_F(OctreeTest, BasicFunctionTest)
 {
     // Check if the point in Bound.
     EXPECT_TRUE(treeTest.isPointInBound(restPoint));
-    EXPECT_FALSE(treeTest.isPointInBound(restPoint + Point3f(20, 20, 20)));
+    EXPECT_FALSE(treeTest.isPointInBound(restPoint + Point3f(60, 60, 60)));
 
     // insert, delete Test.
     EXPECT_FALSE(treeTest.deletePoint(restPoint));
 
-    EXPECT_THROW(treeTest.insertPoint(restPoint + Point3f(20, 20, 20)), cv::Exception);
-    EXPECT_NO_THROW(treeTest.insertPoint(restPoint));
+    EXPECT_FALSE(treeTest.insertPoint(restPoint + Point3f(60, 60, 60)));
+    EXPECT_TRUE(treeTest.insertPoint(restPoint));
 
     EXPECT_TRUE(treeTest.deletePoint(restPoint));
 
     EXPECT_FALSE(treeTest.empty());
     EXPECT_NO_THROW(treeTest.clear());
     EXPECT_TRUE(treeTest.empty());
-
 }
 
 TEST_F(OctreeTest, RadiusSearchTest)
@@ -80,7 +84,9 @@ TEST_F(OctreeTest, RadiusSearchTest)
     std::vector<Point3f> outputPoints;
     std::vector<float> outputSquareDist;
     EXPECT_NO_THROW(treeTest.radiusNNSearch(restPoint, radius, outputPoints, outputSquareDist));
+    EXPECT_EQ(outputPoints.size(),5);
 
+    //The outputPoints should be unordered, so in some resolution, this test will fail because it specified the order of output.
     EXPECT_FLOAT_EQ(outputPoints[0].x, -8.88461112976f);
     EXPECT_FLOAT_EQ(outputPoints[0].y, -1.881799697875f);
     EXPECT_FLOAT_EQ(outputPoints[1].x, -8.405818939208f);
@@ -108,6 +114,23 @@ TEST_F(OctreeTest, KNNSearchTest)
     EXPECT_FLOAT_EQ(outputPoints[3].y, -0.708484649658f);
 }
 
+TEST_F(OctreeTest, restoreTest) {
+    //restore the pointCloud data from octree.
+    EXPECT_NO_THROW(treeTest.getPointCloudByOctree(restorePointCloudData,restorePointCloudColor));
+
+    //The points in same leaf node will be seen as the same point. So if the resolution is small,
+    //it will work as a downSampling function.
+    EXPECT_LE(restorePointCloudData.size(),pointCloudSize);
+
+    //The distance between the restore point cloud data and origin data should less than resolution.
+    std::vector<Point3f> outputPoints;
+    std::vector<float> outputSquareDist;
+    EXPECT_NO_THROW(treeTest.getPointCloudByOctree(restorePointCloudData,restorePointCloudColor));
+    EXPECT_NO_THROW(treeTest.KNNSearch(restorePointCloudData[0], 1, outputPoints, outputSquareDist));
+    EXPECT_LE(abs(outputPoints[0].x-restorePointCloudData[0].x),resolution);
+    EXPECT_LE(abs(outputPoints[0].y-restorePointCloudData[0].y),resolution);
+    EXPECT_LE(abs(outputPoints[0].z-restorePointCloudData[0].z),resolution);
+}
 
 } // namespace
 } // opencv_test
