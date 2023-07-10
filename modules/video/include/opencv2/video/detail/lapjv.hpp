@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #ifndef LAPJV_H
 #define LAPJV_H
 

@@ -55,5 +55,6 @@
 
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/video/background_segm.hpp"
+#include "opencv2/video/tracking.hpp"
 
 #endif //OPENCV_VIDEO_HPP

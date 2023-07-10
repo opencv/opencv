@@ -3,9 +3,16 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
-#include "detail/bytetracker.hpp"
-#include "detail/bytetracker_strack.hpp"
-#include "detail/lapjv.hpp"
+
+//#include "opencv2/video/detail/bytetracker.hpp"
+// /#include "opencv2/video/detail/bytetracker_strack.hpp"
+#include "opencv2/video/detail/lapjv.hpp"
+#include "opencv2/video/detail/tracking.detail.hpp"
+#include <unordered_map>
+
+// #include "detail/bytetracker.hpp"
+// #include "detail/bytetracker_strack.hpp"
+// #include "detail/lapjv.hpp"
 
 #ifdef HAVE_OPENCV_DNN
 #include "opencv2/dnn.hpp"
@@ -15,11 +22,13 @@ using namespace std;
 using namespace cv;
 
 namespace cv {
-inline namespace tracking {
-namespace impl {
 
 
-using cv::detail::tracking::Strack;
+//using cv::detail::tracking::Strack;
+//using cv::detail::tracking::Detection;
+//using cv::detail::tracking::TrackState;
+
+
 
 ByteTracker::ByteTracker()
 {
@@ -54,7 +63,8 @@ public:
         maxTimeLost_ = static_cast<int>(params_.frameRate / 30.0f * params_.frameBuffer);
     }
 
-    void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
+    void init(InputArray image, const Rect& boundingBox);
+    //std::vector<std::vector<float>> update(std::vector<std::vector<float>>)
     vector<Strack> update(vector<Detection>& objects);
     //Scalar get_color(int idx);
     int getFrame();
@@ -518,6 +528,4 @@ int ByteTrackerImpl::getFrame()
     return frame_;
 }
 
-}
-}
 }

@@ -1,4 +1,7 @@
-#include "detail/lapjv.h"
+
+#include "opencv2/video/detail/lapjv.hpp"
+#include <cstring>
+
 
 /** Column-reduction and reduction transfer for a dense cost matrix.
  */

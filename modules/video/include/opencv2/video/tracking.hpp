@@ -735,6 +735,7 @@ public:
     */
     CV_WRAP virtual
     bool update(InputArray image, CV_OUT Rect& boundingBox) = 0;
+
 };
 
 
@@ -887,24 +888,66 @@ public:
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
-class CV_EXPORTS_W ByteTracker : public Tracker {
+enum TrackState { New = 0, Tracked, Lost};
+
+class CV_EXPORTS Detection
+{
+public:
+    int classId;
+    float confidence;
+    cv::Rect box;
+};
+
+class CV_EXPORTS Strack {
+public:
+    Strack();
+    Strack(Rect tlwh, float score);
+    int getId() const;
+    cv::Rect getTlwh() const;
+    void setTlwh(cv::Mat tlwh);
+    TrackState getState() const;
+    void setState(TrackState);
+    cv::Mat predict();
+    void update(const Strack& track);
+    void activate(int frame, int id);
+    void reactivate(const Strack& track, int frame);
+    int getTrackletLen();
+    void incrementTrackletLen();
+    float getScore() const;
+    ~Strack();
+
+private:
+    cv::Rect tlwh_;
+    int trackId_;
+    TrackState state_;
+    int trackletLen_;
+    float score_;
+    int startFrame_;
+    cv::KalmanFilter kalmanFilter_;
+
+};
+
+class CV_EXPORTS ByteTracker {
 protected:
     ByteTracker();
 public:
-    virtual ~ByteTracker() CV_OVERRIDE;
+    virtual ~ByteTracker();
 
     struct CV_EXPORTS_W_SIMPLE Params
     {
         CV_WRAP Params();
-        CV_PROP_RW int framerate;
+        CV_PROP_RW int frameRate;
         CV_PROP_RW int frameBuffer;
     };
     
-    static CV_WRAP
+    //static CV_WRAP
     Ptr<ByteTracker> create(const ByteTracker::Params& parameters = ByteTracker::Params());
-
+    //static CV_WRAP
+    std::vector<Strack> update(std::vector<Detection>& objects);
 
 };
+
+
 
 
 //! @} video_track

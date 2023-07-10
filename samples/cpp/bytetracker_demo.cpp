@@ -1,18 +1,23 @@
-#include <opencv2/opencv.hpp>
+//#include <opencv2/opencv.hpp>
+#include <opencv2/dnn.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/video.hpp>
-#include "opencv2/video/detail/tracking.detail.hpp"
 #include <opencv2/highgui.hpp>
+#include <iostream>
 #include <fstream>
-//#include "bytetracker.hpp"
+//#include "opencv2/video/detail/bytetracker.hpp"
 #include "opencv2/video/tracking.hpp"
+//#include "opencv2/video/detail/bytetracker_strack.hpp"
 
 
 // Namespaces.
 using namespace cv;
 using namespace std;
 using namespace dnn;
-//using namespace cv::detail::tracking;
+//using cv::detail::tracking::Detection;
+//using cv::detail::tracking::Strack;
+
+// using namespace cv::detail::tracking;
 
 // Constants.
 const float INPUT_WIDTH = 640.0;
@@ -46,8 +51,9 @@ Mat postProcessImage(Mat&, vector<Mat>&, const vector<string>&, vector<Detection
 void drawLabel(Mat&, string, int, int);
 void writeDetectionsToFile(const vector<Detection>, const std::string&, const int);
 void writeTracksToFile(const vector<Strack>, const std::string&, const int);
+Scalar getColor(int);
 
-int example()
+int main()
 {
     // Load class list.
 
@@ -78,8 +84,10 @@ int example()
     Mat frame;
     int frameNumber = 0;
     //int fps = capture.get(CAP_PROP_FPS);
-    int fps = 25;
-    ByteTrackerImpl tracker(fps, 30);
+    cv::ByteTracker::Params params;
+    params.frameRate = 25;
+    params.frameBuffer = 30;
+    auto tracker = ByteTracker::create(params);
     while (capture.read(frame))
     {
         if (frame.empty())
@@ -99,10 +107,10 @@ int example()
         Mat frameClone = frame.clone();
         Mat img = postProcessImage(frameClone, detections, classList,
                                objects);
-        vector<Strack> trackedObjects = tracker.update(objects);
+        vector<Strack> trackedObjects = tracker->update(objects);
         for (const Strack track : trackedObjects)
         {
-            Scalar color = tracker.getColor(track.getId());
+            Scalar color = getColor(track.getId());
             Rect tlwh_ = track.getTlwh();
             int id_ = track.getId();
             if (track.getState() == TrackState::Tracked)
