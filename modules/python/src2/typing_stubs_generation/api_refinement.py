@@ -4,17 +4,46 @@ __all__ = [
 
 from typing import Sequence, Callable
 
-from .nodes import NamespaceNode, FunctionNode, OptionalTypeNode, ClassProperty, PrimitiveTypeNode
+from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode,
+                    ClassProperty, PrimitiveTypeNode)
 from .ast_utils import find_function_node, SymbolName
 
 
 def apply_manual_api_refinement(root: NamespaceNode) -> None:
+    export_matrix_type_constants(root)
     # Export OpenCV exception class
     builtin_exception = root.add_class("Exception")
     builtin_exception.is_exported = False
     root.add_class("error", (builtin_exception, ), ERROR_CLASS_PROPERTIES)
     for symbol_name, refine_symbol in NODES_TO_REFINE.items():
         refine_symbol(root, symbol_name)
+
+
+def export_matrix_type_constants(root: NamespaceNode) -> None:
+    MAX_PREDEFINED_CHANNELS = 4
+
+    depth_names = ("CV_8U", "CV_8S", "CV_16U", "CV_16S", "CV_32S",
+                   "CV_32F", "CV_64F", "CV_16F")
+    for depth_value, depth_name in enumerate(depth_names):
+        # Export depth constants
+        root.add_constant(depth_name, str(depth_value))
+        # Export predefined types
+        for c in range(MAX_PREDEFINED_CHANNELS):
+            root.add_constant(f"{depth_name}C{c + 1}",
+                              f"{depth_value + 8 * c}")
+        # Export type creation function
+        root.add_function(
+            f"{depth_name}C",
+            (FunctionNode.Arg("channels", PrimitiveTypeNode.int_()), ),
+            FunctionNode.RetType(PrimitiveTypeNode.int_())
+        )
+    # Export CV_MAKETYPE
+    root.add_function(
+        "CV_MAKETYPE",
+        (FunctionNode.Arg("depth", PrimitiveTypeNode.int_()),
+         FunctionNode.Arg("channels", PrimitiveTypeNode.int_())),
+        FunctionNode.RetType(PrimitiveTypeNode.int_())
+    )
 
 
 def make_optional_arg(arg_name: str) -> Callable[[NamespaceNode, SymbolName], None]:
