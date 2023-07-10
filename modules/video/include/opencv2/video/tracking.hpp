@@ -887,6 +887,26 @@ public:
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
+class CV_EXPORTS_W ByteTracker : public Tracker {
+protected:
+    ByteTracker();
+public:
+    virtual ~ByteTracker() CV_OVERRIDE;
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW int framerate;
+        CV_PROP_RW int frameBuffer;
+    };
+    
+    static CV_WRAP
+    Ptr<ByteTracker> create(const ByteTracker::Params& parameters = ByteTracker::Params());
+
+
+};
+
+
 //! @} video_track
 
 } // cv
