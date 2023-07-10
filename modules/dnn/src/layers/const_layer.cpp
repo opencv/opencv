@@ -84,7 +84,9 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto mat_shape = shape(blobs[0]);
         std::vector<int64_t> mat_shape_{mat_shape.begin(), mat_shape.end()};
@@ -110,8 +112,7 @@ public:
         ge_tensor->SetTensorDesc(*desc);
         ge_tensor->SetData(blobs[0].data, ge_shape.GetShapeSize() * size_of_type);
 
-        std::string op_name = cv::format("const_%d", index);
-        auto op = std::make_shared<ge::op::Const>(op_name);
+        auto op = std::make_shared<ge::op::Const>(name);
         op->set_attr_value(*ge_tensor);
 
         return Ptr<BackendNode>(new CannBackendNode(op));

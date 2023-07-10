@@ -8,12 +8,12 @@
 namespace opencv_test {
 
 vector<Point2f> getAxis(InputArray _cameraMatrix, InputArray _distCoeffs, InputArray _rvec,
-                        InputArray _tvec, float length, const float offset) {
+                        InputArray _tvec, float length, const Point2f offset) {
     vector<Point3f> axis;
-    axis.push_back(Point3f(offset, offset, 0.f));
-    axis.push_back(Point3f(length+offset, offset, 0.f));
-    axis.push_back(Point3f(offset, length+offset, 0.f));
-    axis.push_back(Point3f(offset, offset, length));
+    axis.push_back(Point3f(offset.x, offset.y, 0.f));
+    axis.push_back(Point3f(length+offset.x, offset.y, 0.f));
+    axis.push_back(Point3f(offset.x, length+offset.y, 0.f));
+    axis.push_back(Point3f(offset.x, offset.y, length));
     vector<Point2f> axis_to_img;
     projectPoints(axis, _rvec, _tvec, _cameraMatrix, _distCoeffs, axis_to_img);
     return axis_to_img;

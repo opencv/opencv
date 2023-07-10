@@ -420,6 +420,14 @@ inline void HSV2RGB_simd(const v_float32& h, const v_float32& s, const v_float32
 }
 #endif
 
+// Compute the sector and the new H for HSV and HLS 2 RGB conversions.
+inline void ComputeSectorAndClampedH(float& h, int &sector) {
+    sector = cvFloor(h);
+    h -= sector;
+    sector %= 6;
+    sector += sector < 0 ? 6 : 0;
+}
+
 
 inline void HSV2RGB_native(float h, float s, float v,
                            float& b, float& g, float& r,
@@ -434,14 +442,7 @@ inline void HSV2RGB_native(float h, float s, float v,
         float tab[4];
         int sector;
         h *= hscale;
-        h = fmod(h, 6.f);
-        sector = cvFloor(h);
-        h -= sector;
-        if( (unsigned)sector >= 6u )
-        {
-            sector = 0;
-            h = 0.f;
-        }
+        ComputeSectorAndClampedH(h, sector);
 
         tab[0] = v;
         tab[1] = v*(1.f - s);
@@ -1058,13 +1059,7 @@ struct HLS2RGB_f
                 float p1 = 2*l - p2;
 
                 h *= hscale;
-                // We need both loops to clamp (e.g. for h == -1e-40).
-                while( h < 0 ) h += 6;
-                while( h >= 6 ) h -= 6;
-
-                CV_DbgAssert( 0 <= h && h < 6 );
-                sector = cvFloor(h);
-                h -= sector;
+                ComputeSectorAndClampedH(h, sector);
 
                 tab[0] = p2;
                 tab[1] = p1;

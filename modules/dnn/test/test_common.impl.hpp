@@ -49,6 +49,7 @@ void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     case DNN_TARGET_CUDA: *os << "CUDA"; return;
     case DNN_TARGET_CUDA_FP16: *os << "CUDA_FP16"; return;
     case DNN_TARGET_NPU: *os << "NPU"; return;
+    case DNN_TARGET_CPU_FP16: *os << "CPU_FP16"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_TARGET_UNKNOWN(" << (int)v << ")";
 }
@@ -439,7 +440,7 @@ void initDNNTests()
 
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND,
-        CV_TEST_TAG_DNN_SKIP_CPU,
+        CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_CPU_FP16,
         CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16
     );
 #if defined(HAVE_HALIDE)

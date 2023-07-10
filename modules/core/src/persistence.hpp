@@ -91,7 +91,8 @@ char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero
 
 int calcStructSize( const char* dt, int initial_size );
 int calcElemSize( const char* dt, int initial_size );
-char* encodeFormat( int elem_type, char* dt );
+CV_DEPRECATED char* encodeFormat( int elem_type, char* dt );
+char* encodeFormat( int elem_type, char* dt, size_t dt_len );
 int decodeFormat( const char* dt, int* fmt_pairs, int max_len );
 int decodeSimpleFormat( const char* dt );
 }

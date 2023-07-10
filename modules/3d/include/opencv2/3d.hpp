@@ -2384,7 +2384,7 @@ to compute the optimal new camera matrix.
  */
 CV_EXPORTS void getUndistortRectangles(InputArray cameraMatrix, InputArray distCoeffs,
                                        InputArray R, InputArray newCameraMatrix, Size imgSize,
-                                       Rect_<float>& inner, Rect_<float>& outer );
+                                       Rect_<double>& inner, Rect_<double>& outer );
 
 /** @brief Returns the new camera intrinsic matrix based on the free scaling parameter.
 

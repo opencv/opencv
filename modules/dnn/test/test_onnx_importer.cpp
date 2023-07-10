@@ -30,6 +30,27 @@ public:
         pb
     };
 
+    void testInputShapes(const Net& net, const std::vector<Mat>& inps)
+    {
+        std::vector<MatShape> inLayerShapes;
+        std::vector<MatShape> outLayerShapes;
+        net.getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+        ASSERT_EQ(inLayerShapes.size(), inps.size());
+
+        for (int i = 0; i < inps.size(); ++i) {
+            bool hasDynamicShapes = inLayerShapes[i].empty();
+            if (hasDynamicShapes)
+                continue;
+            if (inLayerShapes[i].size() == 1) {  // 1D input
+                ASSERT_EQ(shape(inLayerShapes[i][0], 1), shape(inps[i]));
+            } else {
+                // Compare all axes except batch dimension which is variable.
+                inLayerShapes[i][0] = inps[i].size[0];
+                ASSERT_EQ(inLayerShapes[i], shape(inps[i]));
+            }
+        }
+    }
+
     void testONNXModels(const String& basename, const Extension ext = npy,
                         const double l1 = 0, const float lInf = 0, const bool useSoftmax = false,
                         bool checkNoFallbacks = true, int numInps = 1)
@@ -53,6 +74,8 @@ public:
         checkBackend(&inps[0], &ref);
         Net net = readNetFromONNX(onnxmodel);
         ASSERT_FALSE(net.empty());
+
+        testInputShapes(net, inps);
 
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
@@ -233,6 +256,7 @@ TEST_P(Test_ONNX_layers, Convolution3D_bias)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
     }
     testONNXModels("conv3d_bias");
+    testONNXModels("conv3d_depthwise_bias"); // kernel 1x1
 }
 
 TEST_P(Test_ONNX_layers, Two_convolution)
@@ -1126,6 +1150,8 @@ TEST_P(Test_ONNX_layers, Split)
     testONNXModels("split_2");
     testONNXModels("split_3");
     testONNXModels("split_4");
+    testONNXModels("split_5");
+    testONNXModels("split_6");
     testONNXModels("split_neg_axis");
 }
 
@@ -1262,6 +1288,48 @@ TEST_P(Test_ONNX_layers, GRU)
     testONNXModels("gru", npy, 0, 0, false, false);
 }
 
+TEST_P(Test_ONNX_layers, gru_cell_batchsize_50_seqlen_1)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    // IE exception: Node GRU_22 was not assigned on any pointed device
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("gru_cell_batchsize_50_seqlen_1", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, gru_cell_batchsize_5_seqlen_5)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    // IE exception: Node GRU_22 was not assigned on any pointed device
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("gru_cell_batchsize_5_seqlen_5", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, gru_cell_batchsize_1_seqlen_50)
+{
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+    // IE exception: Node GRU_22 was not assigned on any pointed device
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
+            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
+        );
+#endif
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("gru_cell_batchsize_1_seqlen_50", npy, 0, 0, false, false);
+}
+
 TEST_P(Test_ONNX_layers, GRU_bidirectional)
 {
     testONNXModels("gru_bi", npy, 0, 0, false, false);
@@ -1296,6 +1364,48 @@ TEST_P(Test_ONNX_layers, LSTM_cell_bidirectional)
 TEST_P(Test_ONNX_layers, LSTM_cell_with_peepholes)
 {
     testONNXModels("lstm_cell_with_peepholes", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, LSTM_cell_batchsize_50_seqlen_1)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("lstm_cell_batchsize_50_seqlen_1", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, LSTM_cell_batchsize_1_seqlen_50)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("lstm_cell_batchsize_1_seqlen_50", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, LSTM_cell_batchsize_5_seqlen_5)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("lstm_cell_batchsize_5_seqlen_5", npy, 0, 0, false, false);
+}
+
+TEST_P(Test_ONNX_layers, LSTM_init_h0_c0)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("lstm_init_h0_c0", npy, 0, 0, false, false, 3);
+}
+// epsilon is larger because onnx does not match with torch/opencv exactly
+TEST_P(Test_ONNX_layers, LSTM_layout_seq)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("lstm_layout_0", npy, 0.005, 0.005, false, false, 3);
+}
+// epsilon is larger because onnx does not match with torch/opencv exactly
+TEST_P(Test_ONNX_layers, LSTM_layout_batch)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("lstm_layout_1", npy, 0.005, 0.005, false, false, 3);
 }
 
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
@@ -1755,6 +1865,11 @@ TEST_P(Test_ONNX_layers, Gemm)
     testONNXModels("gemm_first_const");
 }
 
+TEST_P(Test_ONNX_layers, Gemm_bias)
+{
+    testONNXModels("gemm_vector_bias");
+}
+
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {
     // The difference of QOperator and QDQ format:
@@ -1882,6 +1997,12 @@ TEST_P(Test_ONNX_layers, Quantized_Constant)
 TEST_P(Test_ONNX_layers, OutputRegistration)
 {
     testONNXModels("output_registration", npy, 0, 0, false, true, 2);
+}
+
+TEST_P(Test_ONNX_layers, QLinearSoftmax)
+{
+    testONNXModels("qlinearsoftmax_v11", npy, 0.002, 0.002); // 2D coerced
+    testONNXModels("qlinearsoftmax_v13", npy, 0.002, 0.002);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_ONNX_layers, dnnBackendsAndTargets());
@@ -2078,7 +2199,7 @@ TEST_P(Test_ONNX_nets, TinyYolov2)
 
     // output range: [-11; 8]
     double l1 =  default_l1, lInf = default_lInf;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.02;
         lInf = 0.2;
@@ -2310,6 +2431,8 @@ TEST_P(Test_ONNX_nets, Resnet34_kinetics)
         lInf = 0.06;
     }
 
+    testInputShapes(net, {input0});
+
     checkBackend(&input0, &ref0);
     net.setInput(input0);
     Mat out = net.forward().clone();
@@ -2449,6 +2572,22 @@ TEST_P(Test_ONNX_layers, LayerNormExpanded)
 {
     testONNXModels("layer_norm_expanded");
     testONNXModels("layer_norm_expanded_with_initializers");
+}
+
+TEST_P(Test_ONNX_layers, Gelu)
+{
+    testONNXModels("gelu");
+    testONNXModels("gelu_approximation");
+}
+
+TEST_P(Test_ONNX_layers, OpenAI_CLIP_head)
+{
+    testONNXModels("clip-vit-base-head");
+}
+
+TEST_P(Test_ONNX_layers, where_node)
+{
+    testONNXModels("where_layer");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

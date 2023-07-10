@@ -217,6 +217,27 @@ static OPJ_BOOL opj_t1_decode_cblk(opj_t1_t *t1,
                                    opj_mutex_t* p_manager_mutex,
                                    OPJ_BOOL check_pterm);
 
+/**
+Decode 1 HT code-block
+@param t1 T1 handle
+@param cblk Code-block coding parameters
+@param orient
+@param roishift Region of interest shifting value
+@param cblksty Code-block style
+@param p_manager the event manager
+@param p_manager_mutex mutex for the event manager
+@param check_pterm whether PTERM correct termination should be checked
+*/
+OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
+                               opj_tcd_cblk_dec_t* cblk,
+                               OPJ_UINT32 orient,
+                               OPJ_UINT32 roishift,
+                               OPJ_UINT32 cblksty,
+                               opj_event_mgr_t *p_manager,
+                               opj_mutex_t* p_manager_mutex,
+                               OPJ_BOOL check_pterm);
+
+
 static OPJ_BOOL opj_t1_allocate_buffers(opj_t1_t *t1,
                                         OPJ_UINT32 w,
                                         OPJ_UINT32 h);
@@ -1665,18 +1686,34 @@ static void opj_t1_clbl_decode_processor(void* user_data, opj_tls_t* tls)
     }
     t1->mustuse_cblkdatabuffer = job->mustuse_cblkdatabuffer;
 
-    if (OPJ_FALSE == opj_t1_decode_cblk(
-                t1,
-                cblk,
-                band->bandno,
-                (OPJ_UINT32)tccp->roishift,
-                tccp->cblksty,
-                job->p_manager,
-                job->p_manager_mutex,
-                job->check_pterm)) {
-        *(job->pret) = OPJ_FALSE;
-        opj_free(job);
-        return;
+    if ((tccp->cblksty & J2K_CCP_CBLKSTY_HT) != 0) {
+        if (OPJ_FALSE == opj_t1_ht_decode_cblk(
+                    t1,
+                    cblk,
+                    band->bandno,
+                    (OPJ_UINT32)tccp->roishift,
+                    tccp->cblksty,
+                    job->p_manager,
+                    job->p_manager_mutex,
+                    job->check_pterm)) {
+            *(job->pret) = OPJ_FALSE;
+            opj_free(job);
+            return;
+        }
+    } else {
+        if (OPJ_FALSE == opj_t1_decode_cblk(
+                    t1,
+                    cblk,
+                    band->bandno,
+                    (OPJ_UINT32)tccp->roishift,
+                    tccp->cblksty,
+                    job->p_manager,
+                    job->p_manager_mutex,
+                    job->check_pterm)) {
+            *(job->pret) = OPJ_FALSE;
+            opj_free(job);
+            return;
+        }
     }
 
     x = cblk->x0 - band->x0;

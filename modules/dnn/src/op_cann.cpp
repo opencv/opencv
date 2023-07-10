@@ -177,7 +177,7 @@ void CannNet::bindInputWrappers(const std::vector<Ptr<BackendWrapper>>& inputWra
 
 void CannNet::bindOutputWrappers(const std::vector<Ptr<BackendWrapper>>& outputWrappers)
 {
-    CV_Assert(outputWrappers.size() == getOutputNum());
+    CV_CheckEQ(outputWrappers.size(), getOutputNum(), "DNN/CANN: Built graph does not have the same number of outputs of model description");
     for (int i = 0; i < outputWrappers.size(); ++i)
     {
         auto wrapper = outputWrappers[i].dynamicCast<CannBackendWrapper>();
