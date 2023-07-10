@@ -153,7 +153,7 @@ bool AvifDecoder::checkSignature(const String &signature) const {
   avifDecoderSetIOMemory(decoder,
                          reinterpret_cast<const uint8_t *>(signature.c_str()),
                          signature.size());
-  decoder->io->sizeHint = 1e9;
+  decoder->io->sizeHint = 0;
   const avifResult status = avifDecoderParse(decoder);
   avifDecoderDestroy(decoder);
   return (status == AVIF_RESULT_OK || status == AVIF_RESULT_TRUNCATED_DATA);
