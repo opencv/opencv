@@ -195,3 +195,4 @@ if(TARGET opencv_test_imgcodecs AND ((HAVE_PNG AND NOT (PNG_VERSION VERSION_LESS
   ocv_target_compile_definitions(opencv_test_imgcodecs PRIVATE OPENCV_IMGCODECS_PNG_WITH_EXIF=1)
 endif()
 ocv_add_perf_tests()
+ocv_add_fuzz_tests()

@@ -47,3 +47,16 @@ if(OPENCV_DISABLE_THREAD_SUPPORT)
   # described in `ts_gtest.h`.
   ocv_target_compile_definitions(${the_module} PUBLIC GTEST_HAS_PTHREAD=0)
 endif()
+
+include(FetchContent)
+FetchContent_Declare(fuzztest
+  GIT_REPOSITORY https://github.com/google/fuzztest.git
+  GIT_TAG main
+#  BUILD_COMMAND ${CMAKE_COMMAND} -E echo "Starting $<CONFIG> build"
+#  COMMAND       ${CMAKE_COMMAND} --build <BINARY_DIR> --config $<CONFIG>
+#  COMMAND       ${CMAKE_COMMAND} -E echo "$<CONFIG> build complete"
+)
+FetchContent_MakeAvailable(fuzztest)
+
+link_fuzztest(opencv_ts)
+ocv_target_link_libraries(opencv_ts PUBLIC fuzztest_gtest_main)
