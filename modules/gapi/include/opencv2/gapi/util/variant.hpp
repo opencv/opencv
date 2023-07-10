@@ -509,6 +509,11 @@ namespace util
         return v.index() == util::variant<Types...>::template index_of<T>();
     }
 
+#if defined(__GNUC__) && (__GNUC__ == 11 || __GNUC__ == 12)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
     template<typename... Us> bool operator==(const variant<Us...> &lhs,
                                              const variant<Us...> &rhs)
     {
@@ -523,6 +528,10 @@ namespace util
             return false;
         return (eqs[lhs.index()])(lhs.memory, rhs.memory);
     }
+
+#if defined(__GNUC__) && (__GNUC__ == 11 || __GNUC__ == 12)
+#pragma GCC diagnostic pop
+#endif
 
     template<typename... Us> bool operator!=(const variant<Us...> &lhs,
                                              const variant<Us...> &rhs)
