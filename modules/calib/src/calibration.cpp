@@ -1674,7 +1674,6 @@ static double stereoCalibrateImpl(
             ptPos += ni;
         }
         errnorm = reprojErr;
-        std::cout << "stereoCalibrate LM energy: " << errnorm << std::endl;
         return true;
     };
 

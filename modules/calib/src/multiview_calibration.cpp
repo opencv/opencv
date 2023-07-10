@@ -6,6 +6,7 @@
 #include "opencv2/core/utils/logger.hpp"
 #include "opencv2/core/softfloat.hpp"
 #include "fisheye.hpp"
+#include <iomanip>
 
 namespace cv {
 namespace multiview {
@@ -46,6 +47,8 @@ public:
     float getJacobian(float err) const override
     {
         float scaledErr = minvScale * err;
+        // return exp(scaledErr) + pow(scaledErr, 2) / exp(scaledErr) - 2 * scaledErr;
+        // return (exp(scaledErr) * std::pow(1 - scaledErr, 2)) / (4 * err);
         return exp(scaledErr);
     }
 };
@@ -66,6 +69,17 @@ static double robustWrapper (const Mat& ptsErrors, Mat& weights, const RobustFun
         weights_ptr[pt*2 + 0] = w;
         weights_ptr[pt*2 + 1] = w;
         robust_sum_sqr_errs += w * sqr_err;
+
+        // // float dedx = fnc.getJacobian(sqr_err);
+        // float dedx = 1.;
+        // // weights_ptr[pt*2 + 0] = dedx * pow(p.x, 2) / sqr_err;
+        // // weights_ptr[pt*2 + 1] = dedx * pow(p.y, 2) / sqr_err;
+        // weights_ptr[pt*2 + 0] = dedx;
+        // weights_ptr[pt*2 + 1] = dedx;
+        // // weights_ptr[pt*2 + 0] = dedx / sqr_err;
+        // // weights_ptr[pt*2 + 1] = dedx / sqr_err;
+        // // robust_sum_sqr_errs += w * sqr_err;
+        // robust_sum_sqr_errs += sqr_err;
     }
     return robust_sum_sqr_errs;
 }
@@ -304,7 +318,6 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
 
     for (const auto &pair : pairs) {
         const int c1 = pair.first, c2 = pair.second, overlap = overlaps[c1][c2];
-        std::cout << "(c1, c2): " << "(" << c1 << ", " << c2 << ")" << std::endl;
         // prepare image points of two cameras and grid points
         std::vector<Mat> image_points1, image_points2, grid_points;
         grid_points.reserve(overlap);
