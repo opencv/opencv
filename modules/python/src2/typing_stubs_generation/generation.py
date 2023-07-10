@@ -535,7 +535,7 @@ def check_overload_presence(node: Union[NamespaceNode, ClassNode]) -> bool:
             otherwise.
     """
     for func_node in node.functions.values():
-        if len(func_node.overloads):
+        if len(func_node.overloads) > 1:
             return True
     return False
 
