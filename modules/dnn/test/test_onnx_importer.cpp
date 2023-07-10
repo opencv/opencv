@@ -238,6 +238,11 @@ TEST_P(Test_ONNX_layers, GatherMulti)
     testONNXModels("gather_multi", npy, 0, 0, false, false);
 }
 
+TEST_P(Test_ONNX_layers, GatherElements)
+{
+    testONNXModels("gather_elements", pb);
+}
+
 TEST_P(Test_ONNX_layers, Convolution3D)
 {
     if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
