@@ -315,7 +315,6 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         static Ptr<GatherElementsLayer> create(const LayerParams& params);
     };
- 
 
     class CV_EXPORTS PoolingLayer : public Layer
     {
