@@ -1681,7 +1681,7 @@ TEST(Imgproc_Remap, issue_23562)
         for(int y = 0; y < 3; ++y) {
             for(int x = 0; x < 3; ++x) {
                 for(int k = 0; k < cn; ++k) {
-                    src.ptr<float>(y,x)[k] = 10 * y + x;
+                    src.ptr<float>(y,x)[k] = 10.f * y + x;
                 }
             }
         }
