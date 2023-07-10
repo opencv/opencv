@@ -181,6 +181,7 @@ private:
     void parseCast                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstantFill         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGather               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseGatherElements       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUpsample             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2701,6 +2702,55 @@ void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter::parseGatherElements(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    CV_CheckEQ(node_proto.input_size(), 2, "");
+    int axis = layerParams.get<int>("axis", 0);
+    int input0_const = layer_id.find(node_proto.input(0)) == layer_id.end();
+    int input1_const = layer_id.find(node_proto.input(1)) == layer_id.end();
+
+    int input0_dims = 1;
+    if (input0_const)
+        input0_dims = getBlob(node_proto, 0).dims;
+    else
+        input0_dims = outShapes[node_proto.input(0)].size();
+
+    int input1_dims = 1;
+    if (input1_const)
+        input1_dims = getBlob(node_proto, 1).dims;
+    else
+        input1_dims = outShapes[node_proto.input(1)].size();
+    
+    CV_Assert(input0_dims >= 1);
+    CV_CheckEQ(input0_dims, input1_dims, "ONNX/GatherElements: input and indices have to be of same rank.");
+    CV_Assert(axis >= -1 * input0_dims && axis <= input0_dims - 1);
+
+    if(input0_const && input1_const)
+    {
+        std::vector<Mat> inputs, output;
+
+        Mat input0_blob = getBlob(node_proto, 0);
+        int type = input0_blob.type();
+        input0_blob.convertTo(input0_blob, CV_32FC1);
+        inputs.push_back(input0_blob);
+
+        Mat input1_blob = getBlob(node_proto, 1);
+        input1_blob.convertTo(input1_blob, CV_32FC1);
+        inputs.push_back(input1_blob);
+
+        runLayer(layerParams, inputs, output);
+        CV_Assert(output.size() == 1);
+        output.back().convertTo(output.back(), type);
+        addConstant(node_proto.output(0), output[0]);
+        return;
+    }
+
+    else
+    {
+        addLayer(layerParams, node_proto);
+    }
+}
+
 void ONNXImporter::parseConcat(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     bool hasVariableInps = false;
@@ -4015,6 +4065,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Cast"] = &ONNXImporter::parseCast;
     dispatch["ConstantFill"] = dispatch["ConstantOfShape"] = &ONNXImporter::parseConstantFill;
     dispatch["Gather"] = &ONNXImporter::parseGather;
+    dispatch["GatherElements"] = &ONNXImporter::parseGatherElements;
     dispatch["Concat"] = &ONNXImporter::parseConcat;
     dispatch["Resize"] = &ONNXImporter::parseResize;
     dispatch["Upsample"] = &ONNXImporter::parseUpsample;
