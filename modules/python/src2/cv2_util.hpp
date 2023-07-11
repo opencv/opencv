@@ -71,7 +71,7 @@ public:
     }
 
     operator bool() {
-        return static_cast<bool>(obj_);
+        return obj_ != nullptr;
     }
 
     PyObject* release()
