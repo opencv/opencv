@@ -605,13 +605,26 @@ public:
             pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
 
 
-        ieInpNode = std::make_shared<ngraph::op::Convert>(ieInpNode, ngraph::element::i32);
-        ieWeights = std::make_shared<ngraph::op::Convert>(ieWeights, ngraph::element::i32);
+        ieInpNode = std::make_shared<ngraph::op::Convert>(ieInpNode, ngraph::element::f32);
+        float low = -128, high = 127;
+        ieInpNode = std::make_shared<ngraph::op::FakeQuantize>(ieInpNode,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
+            256 // levels
+        );
 
-        // ieInpNode = std::make_shared<ngraph::op::v1::Add>(
-        //     ieInpNode,
-        //     std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &input_zp)
-        // );
+        ieWeights = std::make_shared<ngraph::op::Convert>(ieWeights, ngraph::element::f32);
+        ieWeights = std::make_shared<ngraph::op::FakeQuantize>(ieWeights,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
+            256 // levels
+        );
+
+        // ieWeights = std::make_shared<ngraph::op::Convert>(ieWeights, ngraph::element::i32);
 
         std::shared_ptr<ngraph::Node> conv_node;
         if (group != 1) {
@@ -631,15 +644,7 @@ public:
                                 ngraph::Strides(dilations),
                                 pad_type);
         }
-        // std::cout << "~~~~~~~" << std::endl;
-        // std::cout << input_zp << std::endl;
-        // std::cout << output_zp << std::endl;
-        // std::cout << "~~~~~~~" << std::endl;
-        // std::cout << biasvec.size() << std::endl;
-        // std::cout << biasvec[0] << std::endl;
-        // std::cout << outputMultiplier[0] << std::endl;
-        // std::cout << "~~~~~~~" << std::endl;
-
+        // conv_node->set_output_type(0, ngraph::element::i32, conv_node->get_output_partial_shape(0));
         // conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::i32);
 
         std::vector<size_t> shape(conv_node->get_shape().size(), 1);
@@ -657,9 +662,10 @@ public:
             {
                 bias = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape(shape), biasvec.data());
             }
+            bias = std::make_shared<ngraph::op::Convert>(bias, ngraph::element::f32);
             conv_node = std::make_shared<ngraph::op::v1::Add>(conv_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
         }
-        conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::f32);
+        // conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::f32);
         conv_node = std::make_shared<ngraph::op::v1::Multiply>(
             conv_node,
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), &outputMultiplier[0])
@@ -670,7 +676,7 @@ public:
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &output_zp_f)
         );
         conv_node = std::make_shared<ngraph::op::Clamp>(conv_node, -128, 127);
-        conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::i8);
+        // conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::i8);
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(conv_node));
     }
