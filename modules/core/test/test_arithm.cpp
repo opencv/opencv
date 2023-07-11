@@ -2316,7 +2316,7 @@ TEST(BroadcastTo, basic) {
         };
         Mat ref(static_cast<int>(shape.size()), shape.data(), src.type(), data_ref.data());
         Mat dst;
-        broadcast_to(src, shape, dst);
+        broadcastTo(src, shape, dst);
         fn_verify(ref, dst);
     }
 
@@ -2336,7 +2336,7 @@ TEST(BroadcastTo, basic) {
         };
         Mat ref(static_cast<int>(shape.size()), shape.data(), _src.type(), data_ref.data());
         Mat dst;
-        broadcast_to(_src, shape, dst);
+        broadcastTo(_src, shape, dst);
         fn_verify(ref, dst);
     }
 
@@ -2350,7 +2350,7 @@ TEST(BroadcastTo, basic) {
         };
         Mat ref(static_cast<int>(shape.size()), shape.data(), _src.type(), data_ref.data());
         Mat dst;
-        broadcast_to(_src, shape, dst);
+        broadcastTo(_src, shape, dst);
         fn_verify(ref, dst);
     }
 
@@ -2387,7 +2387,7 @@ TEST(BroadcastTo, basic) {
         };
         Mat ref(static_cast<int>(shape.size()), shape.data(), _src.type(), data_ref.data());
         Mat dst;
-        broadcast_to(_src, shape, dst);
+        broadcastTo(_src, shape, dst);
         fn_verify(ref, dst);
     }
 }

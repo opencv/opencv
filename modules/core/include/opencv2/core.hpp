@@ -1123,7 +1123,7 @@ CV_EXPORTS_W void flipND(InputArray src, OutputArray dst, int axis);
  * @param dst output array that has the given shape
  * @param shape target shape
  */
-CV_EXPORTS_W void broadcast_to(InputArray src, const std::vector<int>& shape, OutputArray dst);
+CV_EXPORTS_W void broadcastTo(InputArray src, const std::vector<int>& shape, OutputArray dst);
 
 enum RotateFlags {
     ROTATE_90_CLOCKWISE = 0, //!<Rotate 90 degrees clockwise

@@ -858,24 +858,24 @@ void flipND(InputArray _src, OutputArray _dst, int _axis)
     flipNDImpl(dst.ptr(), dst.size.p, dst.step.p, axis);
 }
 
-void broadcast_to(InputArray _src, const std::vector<int>& shape, OutputArray _dst) {
+void broadcastTo(InputArray _src, const std::vector<int>& shape, OutputArray _dst) {
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
-    CV_CheckTrue(src.isContinuous(), "broadcast_to: input array must be continuous");
-    CV_CheckChannelsEQ(src.channels(), 1, "broadcast_to: input array must be single channel");
+    CV_CheckTrue(src.isContinuous(), "broadcastTo: input array must be continuous");
+    CV_CheckChannelsEQ(src.channels(), 1, "broadcastTo: input array must be single channel");
 
     // check valid shape, 1D/0D Mat would fail in the following checks
     const auto dims_src = src.dims;
     CV_CheckLE(dims_src, static_cast<int>(shape.size()),
-               "broadcast_to: dimension of input array must be less than or equal to dimension of target shape");
+               "broadcastTo: dimension of input array must be less than or equal to dimension of target shape");
     std::vector<int> shape_src{src.size.p, src.size.p + dims_src};
     if (shape_src.size() < shape.size()) {
         shape_src.insert(shape_src.begin(), shape.size() - shape_src.size(), 1);
     }
     for (int i = 0; i < static_cast<int>(shape_src.size()); ++i) {
         if (shape_src[i] != shape[i] && shape_src[i] != 1) {
-            CV_Error(Error::StsBadArg, "broadcast_to: invalid shape");
+            CV_Error(Error::StsBadArg, "broadcastTo: invalid shape");
         }
     }
 
@@ -916,7 +916,7 @@ void broadcast_to(InputArray _src, const std::vector<int>& shape, OutputArray _d
     }
     // broadcast copy (dst inplace)
     std::vector<int> cumulative_shape(shape.size(), 1);
-    int total = dst.total();
+    int total = static_cast<int>(dst.total());
     for (int i = static_cast<int>(shape.size() - 1); i >= 0; --i) {
         cumulative_shape[i] = static_cast<int>(total / shape[i]);
         total = cumulative_shape[i];
