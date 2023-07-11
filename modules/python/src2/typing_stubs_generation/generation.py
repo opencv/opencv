@@ -618,11 +618,16 @@ def _populate_reexported_symbols(root: NamespaceNode) -> None:
     # Re-export all submodules to allow referencing symbols in submodules
     # without submodule import. Example:
     # `cv2.aruco.ArucoDetector` should be accessible without `import cv2.aruco`
-    for submodule in root.namespaces.values():
-        root.reexported_submodules.append(submodule.export_name)
+    def _reexport_submodule(ns: NamespaceNode) -> None:
+        for submodule in ns.namespaces.values():
+            ns.reexported_submodules.append(submodule.export_name)
+            _reexport_submodule(submodule)
+
+    _reexport_submodule(root)
 
     # Special cases, symbols defined in possible pure Python submodules should be
     root.reexported_submodules_symbols["mat_wrapper"].append("Mat")
+
 
 def _write_reexported_symbols_section(module: NamespaceNode, output_stream: StringIO) -> None:
     """Write re-export section for the given module.
