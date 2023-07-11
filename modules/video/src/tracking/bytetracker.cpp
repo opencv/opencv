@@ -16,21 +16,14 @@
 // #include "detail/bytetracker_strack.hpp"
 // #include "detail/lapjv.hpp"
 
-#ifdef HAVE_OPENCV_DNN
-#include "opencv2/dnn.hpp"
-#endif
-
 using namespace std;
 using namespace cv;
 
 namespace cv {
 
-
 //using cv::detail::tracking::Strack;
 //using cv::detail::tracking::Detection;
 //using cv::detail::tracking::TrackState;
-
-
 
 ByteTracker::ByteTracker()
 {
@@ -47,10 +40,6 @@ ByteTracker::Params::Params()
     frameRate = 30;
     frameBuffer = 30;
 }
-        
-    
-
-
 
 class ByteTrackerImpl : public ByteTracker
 { 
