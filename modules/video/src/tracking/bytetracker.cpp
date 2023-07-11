@@ -8,7 +8,7 @@
 
 //#include "opencv2/video/detail/bytetracker.hpp"
 // /#include "opencv2/video/detail/bytetracker_strack.hpp"
-#include "opencv2/video/detail/lapjv.hpp"
+#include "../lapjv/lapjv.hpp"
 #include "opencv2/video/detail/tracking.detail.hpp"
 #include <unordered_map>
 
@@ -70,7 +70,6 @@ protected:
     int lastId_;
     int frame_;
     int maxTimeLost_;
-    KalmanFilter kalmanFilter_;
 
     void getDetections(vector<Detection>& Objects, vector<Strack>& detections, 
         vector<Strack>& detectionsLow);
@@ -389,13 +388,13 @@ Mat ByteTrackerImpl::getCostMatrix(unordered_map<int, Strack> &atracks, vector<S
 
 Mat ByteTrackerImpl::calculateIous(vector<Rect> &atlwhs, vector<Rect> &btlwhs)
 {
-    Mat calculateIous;
+    Mat iousMatrix;
     if (atlwhs.empty() || btlwhs.empty())
     {
-        return calculateIous;
+        return iousMatrix;
     }
 
-    calculateIous.create(static_cast<int>(atlwhs.size()), static_cast<int>(btlwhs.size()), CV_32F);
+    iousMatrix.create(static_cast<int>(atlwhs.size()), static_cast<int>(btlwhs.size()), CV_32F);
     
     // bbox_ious
     for (int i = 0; i < static_cast<int>(atlwhs.size()); ++i)
@@ -406,12 +405,13 @@ Mat ByteTrackerImpl::calculateIous(vector<Rect> &atlwhs, vector<Rect> &btlwhs)
             cv::Rect unionRect = atlwhs[i] | btlwhs[j];
             float intersectionArea = intersection.area();
             float unionArea = unionRect.area();
-            calculateIous.at<float>(i, j) = intersectionArea / unionArea;
+            iousMatrix.at<float>(i, j) = intersectionArea / unionArea;
         }
     }
 
-    return calculateIous;
+    return iousMatrix;
 }
+
 
 unordered_map<int, Strack> ByteTrackerImpl::joinStracks(
     const vector<Strack>& trackA, vector<Strack>& trackB)
