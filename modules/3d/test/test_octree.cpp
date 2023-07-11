@@ -53,7 +53,7 @@ public:
     //Color attribute of pointCloud from octree
     std::vector<Point3f> restorePointCloudColor;
 
-    int pointCloudSize;
+    unsigned int pointCloudSize;
     Point3f restPoint;
     Octree treeTest;
     double resolution;
@@ -84,7 +84,7 @@ TEST_F(OctreeTest, RadiusSearchTest)
     std::vector<Point3f> outputPoints;
     std::vector<float> outputSquareDist;
     EXPECT_NO_THROW(treeTest.radiusNNSearch(restPoint, radius, outputPoints, outputSquareDist));
-    EXPECT_EQ(outputPoints.size(),5);
+    EXPECT_EQ(outputPoints.size(),(unsigned int)5);
 
     //The outputPoints should be unordered, so in some resolution, this test will fail because it specified the order of output.
     EXPECT_FLOAT_EQ(outputPoints[0].x, -8.88461112976f);
