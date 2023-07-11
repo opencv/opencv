@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_timvx.hpp"
+#include "../ie_ngraph.hpp"
 
 namespace cv
 {
@@ -98,7 +99,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -171,6 +173,46 @@ public:
         else
             inputs[0].convertTo(outputs[0], CV_8S, 1.f/scales[0], zeropoints[0]);
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        // OpenVINO quantization technique is described in FakeQuantize layer documentation.
+        // It accepts input and output low/high values and performs computations as follows:
+        // out = round((x - inp_low) / (inp_high - inp_low) * (levels-1)) / (levels-1) * (out_high - out_low) + out_low
+        // where levels are 256
+        // const float outLow = -128;
+        // const float outHigh = 127;
+        // const float inpLow = (outLow - zeropoints[0]) * scales[0];
+        // const float inpHigh = (outHigh - zeropoints[0]) * scales[0];
+
+        float scale = 1.f/scales[0];
+        float zeropoint = static_cast<float>(zeropoints[0]);
+
+        const auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto scaled = std::make_shared<ngraph::op::v1::Multiply>(
+            input,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &scale)
+        );
+        auto shifted = std::make_shared<ngraph::op::v1::Add>(
+            scaled,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &zeropoint)
+        );
+        auto quantized = std::make_shared<ngraph::op::Convert>(shifted, ngraph::element::i8);
+
+        // auto quantized = std::make_shared<ngraph::op::FakeQuantize>(input,
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+        //     256 // levels
+        // );
+        // return Ptr<BackendNode>(new InfEngineNgraphNode(quantized));
+
+        return Ptr<BackendNode>(new InfEngineNgraphNode(quantized));
+    }
+#endif  // HAVE_DNN_NGRAPH
 };
 
 // Dequantize INT8 Inputs to FP32/FP16

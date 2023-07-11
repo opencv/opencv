@@ -519,8 +519,10 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
     std::vector<LayerPin> pinsForInternalBlobs;
     blobManager.allocateBlobsForLayer(ld, layerShapesIt->second, pinsForInternalBlobs);
     ld.outputBlobsWrappers.resize(ld.outputBlobs.size());
-    for (int i = 0; i < ld.outputBlobs.size(); ++i)
+    for (int i = 0; i < ld.outputBlobs.size(); ++i) {
+        std::cout << "warp " << ld.outputBlobs[i].type() << std::endl;
         ld.outputBlobsWrappers[i] = wrap(ld.outputBlobs[i]);
+    }
 
     /* CUDA & CANN backend has its own system for internal blobs; we don't need these */
     ld.internalBlobsWrappers.resize((preferableBackend == DNN_BACKEND_CUDA || preferableBackend == DNN_BACKEND_TIMVX || preferableBackend == DNN_BACKEND_CANN) ? 0 : ld.internals.size());
