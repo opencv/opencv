@@ -603,10 +603,10 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
         {
             for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
             {
-                v_int32 t0 = vx_load((int*)(src0 + i));
-                v_int32 t1 = vx_load((int*)(src1 + i));
-                v_store((int*)(dst0 + i), t1);
-                v_store((int*)(dst1 + i), t0);
+                v_int32 t0 = v_reinterpret_as_s32(vx_load(src0 + i));
+                v_int32 t1 = v_reinterpret_as_s32(vx_load(src1 + i));
+                v_store(dst0 + i, v_reinterpret_as_u8(t1));
+                v_store(dst1 + i, v_reinterpret_as_u8(t0));
             }
         }
 #if CV_STRONG_ALIGNMENT
