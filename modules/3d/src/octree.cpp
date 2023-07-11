@@ -30,16 +30,16 @@ static void radiusNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& qu
 static void KNNSearchRecurse(const Ptr<OctreeNode>& node, const Point3f& query, const int K,
                              float& smallestDist, std::vector<PQueueElem<Point3f> >& candidatePoint);
 
-OctreeNode::OctreeNode():children(OCTREE_CHILD_NUM, nullptr),neigh(OCTREE_NEIGH_SIZE, nullptr), depth(0), size(0), origin(0,0,0), parentIndex(-1),pointNum(0)
+OctreeNode::OctreeNode():children(OCTREE_CHILD_NUM, nullptr), depth(0), size(0), origin(0,0,0),
+                                    pointNum(0),neigh(OCTREE_NEIGH_SIZE, nullptr),parentIndex(-1)
 {
 }
 
 OctreeNode::OctreeNode(int _depth, double _size, const Point3f &_origin, const Point3f &_color,
-                       int _parentIndex, int _pointNum) : children(OCTREE_CHILD_NUM),
-                                                          neigh(OCTREE_NEIGH_SIZE), depth(_depth),
-                                                          size(_size), origin(_origin),
-                                                          color(_color), parentIndex(_parentIndex),
-                                                          pointNum(_pointNum) {
+                       int _parentIndex, int _pointNum) : children(OCTREE_CHILD_NUM), depth(_depth),
+                                                          size(_size), origin(_origin),color(_color),pointNum(_pointNum),
+                                                          neigh(OCTREE_NEIGH_SIZE),parentIndex(_parentIndex)
+                                                          {
 }
 
 bool OctreeNode::empty() const

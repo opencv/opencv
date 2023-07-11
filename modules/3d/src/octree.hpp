@@ -88,7 +88,7 @@ public:
     //! color attribute of octree node.
     Point3f color;
     //! RAHTCoefficient of octree node, used for color attribute compression.
-    Point3f RAHTCoefficient;
+    Point3f RAHTCoefficient=Point3f(0,0,0);
     //! Number of point cloud in this node.
     int pointNum;
 
