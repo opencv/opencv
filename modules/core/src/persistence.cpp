@@ -61,7 +61,7 @@ char* itoa( int64_t _val, char* buffer, int /*radix*/, bool _signed)
     const int radix = 10;
     char* ptr=buffer + 23 /* enough even for 64-bit integers */;
     int sign = _signed && _val < 0 ? -1 : 1;
-    uint64_t val = _signed ? *(uint64_t*)&_val : abs(_val);
+    uint64_t val = !_signed ? (uint64_t)_val : abs(_val);
 
     *ptr = '\0';
     do
