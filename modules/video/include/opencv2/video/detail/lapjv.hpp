@@ -1,3 +1,20 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
+/** @brief Linear Assignment Problem solver
+ *
+ *  lap is a linear assignment problem solver using Jonker-Volgenant algorithm for dense (LAPJV) or 
+ *  sparse (LAPMOD) matrices.
+ *  Both algorithms are implemented from scratch based solely on the papers [1,2] and the public 
+ *  domain Pascal implementation provided by A. Volgenant [3].
+ *  In my tests the LAPMOD implementation seems to be faster than the LAPJV implementation for     
+ *  matrices with a side of more than ~5000 and with less than 50% finite coefficients.
+ *
+ *  Tomas Kazmar, 2012-2017, BSD 2-clause license, see LICENSE.
+ */
+
+
 #include <stdlib.h>
 #ifndef LAPJV_H
 #define LAPJV_H
