@@ -1123,7 +1123,6 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
 
 /// @overload
-// TODO: MAKE MORE INTERFACE AVAILABLE
 CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
@@ -1132,7 +1131,33 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      bool isFisheye2,
                                      Size imageSize, InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
-                                     OutputArray perViewErrors, int flags1 = CALIB_FIX_INTRINSIC,
+                                     OutputArray perViewErrors,
+                                     int flags1 = CALIB_FIX_INTRINSIC,
+                                     int flags2 = CALIB_FIX_INTRINSIC,
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
+
+/// @overload
+CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+                                     InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
+                                     bool isFisheye1,
+                                     InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
+                                     bool isFisheye2,
+                                     Size imageSize, OutputArray R,OutputArray T, OutputArray E, OutputArray F,
+                                     int flags1 = CALIB_FIX_INTRINSIC,
+                                     int flags2 = CALIB_FIX_INTRINSIC,
+                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
+           
+/// @overload                          
+CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
+                                     InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
+                                     bool isFisheye1,
+                                     InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
+                                     bool isFisheye2,
+                                     Size imageSize, InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
+                                     OutputArray perViewErrors,
+                                     int flags1 = CALIB_FIX_INTRINSIC,
                                      int flags2 = CALIB_FIX_INTRINSIC,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
 

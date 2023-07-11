@@ -2300,7 +2300,42 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
     return err;
 }
 
-// TODO: allow more interface
+double stereoCalibrate( InputArrayOfArrays _objectPoints,
+                        InputArrayOfArrays _imagePoints1,
+                        InputArrayOfArrays _imagePoints2,
+                        InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1, bool isFisheye1,
+                        InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2, bool isFisheye2,
+                        Size imageSize, OutputArray _Rmat, OutputArray _Tmat,
+                        OutputArray _Emat, OutputArray _Fmat, int flags1, int flags2,
+                        TermCriteria criteria)
+{
+    if ((flags1 & CALIB_USE_EXTRINSIC_GUESS) && (flags2 & CALIB_USE_EXTRINSIC_GUESS))
+        CV_Error(Error::StsBadFlag, "stereoCalibrate does not support CALIB_USE_EXTRINSIC_GUESS.");
+
+    Mat Rmat, Tmat;
+    double ret = stereoCalibrate(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, isFisheye1,
+                                 _cameraMatrix2, _distCoeffs2, isFisheye2, imageSize, Rmat, Tmat, _Emat, _Fmat,
+                                 noArray(), flags1, flags2, criteria);
+    Rmat.copyTo(_Rmat);
+    Tmat.copyTo(_Tmat);
+    return ret;
+}
+
+double stereoCalibrate( InputArrayOfArrays _objectPoints,
+                        InputArrayOfArrays _imagePoints1,
+                        InputArrayOfArrays _imagePoints2,
+                        InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1, bool isFisheye1,
+                        InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2, bool isFisheye2,
+                        Size imageSize, InputOutputArray _Rmat, InputOutputArray _Tmat,
+                        OutputArray _Emat, OutputArray _Fmat,
+                        OutputArray _perViewErrors, int flags1, int flags2,
+                        TermCriteria criteria)
+{
+    return stereoCalibrate(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, isFisheye1,
+                           _cameraMatrix2, _distCoeffs2, isFisheye2, imageSize, _Rmat, _Tmat, _Emat, _Fmat,
+                           noArray(), noArray(), _perViewErrors, flags1, flags2, criteria);
+}
+
 double stereoCalibrate( InputArrayOfArrays _objectPoints,
                         InputArrayOfArrays _imagePoints1,
                         InputArrayOfArrays _imagePoints2,
