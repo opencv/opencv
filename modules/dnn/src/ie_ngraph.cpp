@@ -593,9 +593,7 @@ void InfEngineNgraphNet::init(Target targetId)
         ppp.output(i++).tensor().set_element_type(ov::element::i8);  // Should be always FP32
     }
 
-    std::cout << "start build" << std::endl;
     ppp.build();
-    std::cout << "finish build" << std::endl;
 
 #else
 

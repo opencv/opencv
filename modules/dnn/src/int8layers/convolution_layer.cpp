@@ -604,6 +604,15 @@ public:
         if (!padMode.empty())
             pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
 
+
+        ieInpNode = std::make_shared<ngraph::op::Convert>(ieInpNode, ngraph::element::i32);
+        ieWeights = std::make_shared<ngraph::op::Convert>(ieWeights, ngraph::element::i32);
+
+        // ieInpNode = std::make_shared<ngraph::op::v1::Add>(
+        //     ieInpNode,
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &input_zp)
+        // );
+
         std::shared_ptr<ngraph::Node> conv_node;
         if (group != 1) {
             conv_node = std::make_shared<ngraph::op::v1::GroupConvolution>(
@@ -622,25 +631,47 @@ public:
                                 ngraph::Strides(dilations),
                                 pad_type);
         }
+        // std::cout << "~~~~~~~" << std::endl;
+        // std::cout << input_zp << std::endl;
+        // std::cout << output_zp << std::endl;
+        // std::cout << "~~~~~~~" << std::endl;
+        // std::cout << biasvec.size() << std::endl;
+        // std::cout << biasvec[0] << std::endl;
+        // std::cout << outputMultiplier[0] << std::endl;
+        // std::cout << "~~~~~~~" << std::endl;
 
-        // if (hasBias() || fusedBias || nodes.size() == 3)
-        // {
-        //     std::vector<size_t> shape(conv_node->get_shape().size(), 1);
-        //     shape[1] = conv_node->get_shape()[1];
-        //     std::shared_ptr<ngraph::Node> bias;
-        //     if (nodes.size() == 3)
-        //     {
-        //         auto bias_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-        //                             ngraph::Shape{shape.size()}, std::vector<int64_t>(shape.begin(), shape.end()));
-        //         bias = std::make_shared<ngraph::op::v1::Reshape>(nodes[2].dynamicCast<InfEngineNgraphNode>()->node, bias_shape, true);
-        //     }
-        //     else
-        //     {
-        //         bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), biasvec.data());
-        //     }
-        //     auto conv_bias = std::make_shared<ngraph::op::v1::Add>(conv_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
-        //     return Ptr<BackendNode>(new InfEngineNgraphNode(conv_bias));
-        // }
+        // conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::i32);
+
+        std::vector<size_t> shape(conv_node->get_shape().size(), 1);
+        shape[1] = conv_node->get_shape()[1];
+        if (biasvec.size() || nodes.size() == 3)
+        {
+            std::shared_ptr<ngraph::Node> bias;
+            if (nodes.size() == 3)
+            {
+                auto bias_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
+                                    ngraph::Shape{shape.size()}, std::vector<int64_t>(shape.begin(), shape.end()));
+                bias = std::make_shared<ngraph::op::v1::Reshape>(nodes[2].dynamicCast<InfEngineNgraphNode>()->node, bias_shape, true);
+            }
+            else
+            {
+                bias = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape(shape), biasvec.data());
+            }
+            conv_node = std::make_shared<ngraph::op::v1::Add>(conv_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
+        }
+        // conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::f32);
+        // conv_node = std::make_shared<ngraph::op::v1::Multiply>(
+        //     conv_node,
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), &outputMultiplier[0])
+        // );
+        // conv_node = std::make_shared<ngraph::op::v1::Add>(
+        //     conv_node,
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &output_zp)
+        // );
+        std::cout << "biasvec[0] " << biasvec[0] << std::endl;
+        // conv_node = std::make_shared<ngraph::op::Clamp>(conv_node, -128, 127);
+        // conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::i8);
+
         return Ptr<BackendNode>(new InfEngineNgraphNode(conv_node));
     }
 #endif  // HAVE_DNN_NGRAPH
@@ -1468,10 +1499,18 @@ public:
         int nstripes = std::max(getNumThreads(), 1);
         Mat outputInt32 = Mat(shape(outputs[0]), CV_32S);
 
+        for (int i = 0; i < outputMultiplier.size(); ++i)
+            outputMultiplier[i] = 1;
+        // for (int i = 0; i < biasvec.size(); ++i)
+        //     biasvec[i] = 0;
+        input_zp = 0;
+        output_zp = 0;
+
         ParallelConv::run(inputs[0], outputInt32, weightsMat, outputMultiplier, biasvec, activationLUT, kernel_size, strides,
                           pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes, input_zp, output_zp);
-
+        std::cout << "conv " << outputInt32.ptr<int32_t>()[8] << std::endl;
         outputInt32.convertTo(outputs[0], CV_8S);
+        std::cout << "conv " << (int)outputs[0].ptr<int8_t>()[8] << std::endl;
 
 #if CV_SSE3
         _MM_SET_FLUSH_ZERO_MODE(ftzMode);
