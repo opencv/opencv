@@ -16,7 +16,7 @@ namespace cv {
 Strack::Strack()
 {
     trackId_ = 0;
-    state_ = TrackState::New;
+    state_ = TrackState::NEW;
     trackletLen_ = 0;
     startFrame_ = 0;
     kalmanFilter_ = cv::KalmanFilter(8,4);
@@ -30,7 +30,7 @@ Strack::~Strack()
 Strack::Strack(cv::Rect tlwh, float score) : tlwh_(tlwh), score_(score)
 {
     trackId_ = 0;
-    state_ = TrackState::New;
+    state_ = TrackState::NEW;
     trackletLen_ = 0;
     startFrame_ = 0;
     kalmanFilter_ = cv::KalmanFilter(8,4);
@@ -46,10 +46,9 @@ cv::Rect Strack::getTlwh() const
   return tlwh_;  
 }
 
-void Strack::setTlwh(cv::Mat tlwh)
+void Strack::setTlwh(cv::Rect tlwh)
 {  
-    tlwh_ = cv::Rect(tlwh.at<float>(0,0), tlwh.at<float>(1,0), 
-        tlwh.at<float>(2,0), tlwh.at<float>(3,0));
+    tlwh_ = tlwh;
 }
 
 TrackState Strack::getState() const
@@ -65,7 +64,7 @@ void Strack::activate(int frame, int id)
 {
     startFrame_ = frame;
     trackletLen_ = 0;
-    state_ = TrackState::Tracked;
+    state_ = TrackState::TRACKED;
     trackId_ = id;
     
     kalmanFilter_.measurementMatrix = cv::Mat::eye(4, 8, CV_32F); //H mat
@@ -122,7 +121,7 @@ void Strack::reactivate(const Strack& track, int frame)
     update(track);
     startFrame_ = frame;
     trackletLen_ = 0;
-    state_ = TrackState::Tracked;
+    state_ = TrackState::TRACKED;
 }
 
 void Strack::incrementTrackletLen()
@@ -135,9 +134,15 @@ int Strack::getTrackletLen()
     return trackletLen_;
 }
 
-cv::Mat Strack::predict()
+cv::Rect Strack::predict()
 {
-    cv::Mat prediction = kalmanFilter_.predict();
+    cv::Mat predictionMat = kalmanFilter_.predict();
+    cv::Rect prediction(
+        predictionMat.at<float>(0),
+        predictionMat.at<float>(1),
+        predictionMat.at<float>(2),
+        predictionMat.at<float>(3)
+    );
     return prediction;
 }
 

@@ -194,7 +194,7 @@ vector<Strack> ByteTrackerImpl::update(vector<Detection> &objects)
         Strack &detection = detections[pair.second];
 
         // if it's tracked, update it, else reactivate it
-        if (track.getState() == TrackState::Tracked)
+        if (track.getState() == TrackState::TRACKED)
         {
             track.update(detection);
             activatedStracks.push_back(track);
@@ -254,7 +254,7 @@ vector<Strack> ByteTrackerImpl::update(vector<Detection> &objects)
         Strack &detection = detectionsLow[pair.second];
 
         // if it's tracked, update it, else re_activate it
-        if (track.getState() == TrackState::Tracked)
+        if (track.getState() == TrackState::TRACKED)
         {
             track.update(detection);
             activatedStracks.push_back(track);
@@ -285,7 +285,7 @@ vector<Strack> ByteTrackerImpl::update(vector<Detection> &objects)
         if ((track.second.getTrackletLen()) >maxTimeLost_)
             keysToRemove.push_back(track.first);
         else
-            track.second.setState(TrackState::Lost);
+            track.second.setState(TrackState::LOST);
     }
 
     for (int key : keysToRemove)
@@ -328,7 +328,7 @@ void ByteTrackerImpl::addNewDetectedTracks(unordered_map<int, Strack> trackedMap
     for (auto pair : trackedMap)
     {
         Strack track = pair.second;
-        if (track.getState() == TrackState::Tracked)
+        if (track.getState() == TrackState::TRACKED)
             trackedStracks.push_back(track);
         else
             inactiveStracks.push_back(track);
