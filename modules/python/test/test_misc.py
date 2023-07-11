@@ -223,9 +223,14 @@ class Arguments(NewOpenCVTests):
         for dtype in (object, str, np.complex128):
             test_array = np.zeros((4, 4, 3), dtype=dtype)
             msg = ".*type = {} is not supported".format(test_array.dtype)
-            self.assertRaisesRegex(
-                Exception, msg, cv.utils.dumpInputArray, test_array
-            )
+            if sys.version_info[0] < 3:
+                self.assertRaisesRegexp(
+                    Exception, msg, cv.utils.dumpInputArray, test_array
+                )
+            else:
+                self.assertRaisesRegex(
+                    Exception, msg, cv.utils.dumpInputArray, test_array
+                )
 
     def test_20968(self):
         pixel = np.uint8([[[40, 50, 200]]])
