@@ -2,7 +2,7 @@ OpenCV configuration options reference {#tutorial_config_reference}
 ======================================
 
 @prev_tutorial{tutorial_general_install}
-@next_tutorial{tutorial_linux_install}
+@next_tutorial{tutorial_env_reference}
 
 @tableofcontents
 
