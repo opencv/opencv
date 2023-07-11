@@ -659,18 +659,18 @@ public:
             }
             conv_node = std::make_shared<ngraph::op::v1::Add>(conv_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
         }
-        // conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::f32);
-        // conv_node = std::make_shared<ngraph::op::v1::Multiply>(
-        //     conv_node,
-        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), &outputMultiplier[0])
-        // );
+        conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::f32);
+        conv_node = std::make_shared<ngraph::op::v1::Multiply>(
+            conv_node,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), &outputMultiplier[0])
+        );
+        float output_zp_f = output_zp;
         conv_node = std::make_shared<ngraph::op::v1::Add>(
             conv_node,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &output_zp)
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &output_zp_f)
         );
-        std::cout << "biasvec[0] " << biasvec[0] << std::endl;
-        // conv_node = std::make_shared<ngraph::op::Clamp>(conv_node, -128, 127);
-        // conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::i8);
+        conv_node = std::make_shared<ngraph::op::Clamp>(conv_node, -128, 127);
+        conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::i8);
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(conv_node));
     }
@@ -1499,8 +1499,8 @@ public:
         int nstripes = std::max(getNumThreads(), 1);
         Mat outputInt32 = Mat(shape(outputs[0]), CV_32S);
 
-        for (int i = 0; i < outputMultiplier.size(); ++i)
-            outputMultiplier[i] = 1;
+        // for (int i = 0; i < outputMultiplier.size(); ++i)
+        //     outputMultiplier[i] = 1;
         // for (int i = 0; i < biasvec.size(); ++i)
         //     biasvec[i] = 0;
         input_zp = 0;
