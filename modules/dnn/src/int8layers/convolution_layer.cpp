@@ -664,10 +664,10 @@ public:
         //     conv_node,
         //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), &outputMultiplier[0])
         // );
-        // conv_node = std::make_shared<ngraph::op::v1::Add>(
-        //     conv_node,
-        //     std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &output_zp)
-        // );
+        conv_node = std::make_shared<ngraph::op::v1::Add>(
+            conv_node,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &output_zp)
+        );
         std::cout << "biasvec[0] " << biasvec[0] << std::endl;
         // conv_node = std::make_shared<ngraph::op::Clamp>(conv_node, -128, 127);
         // conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::i8);
@@ -1504,7 +1504,7 @@ public:
         // for (int i = 0; i < biasvec.size(); ++i)
         //     biasvec[i] = 0;
         input_zp = 0;
-        output_zp = 0;
+        // output_zp = 0;
 
         ParallelConv::run(inputs[0], outputInt32, weightsMat, outputMultiplier, biasvec, activationLUT, kernel_size, strides,
                           pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes, input_zp, output_zp);
