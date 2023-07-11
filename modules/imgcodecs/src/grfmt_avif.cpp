@@ -148,11 +148,14 @@ AvifDecoder::~AvifDecoder() {
 size_t AvifDecoder::signatureLength() const { return kAvifSignatureSize; }
 
 bool AvifDecoder::checkSignature(const String &signature) const {
-  avifDecoderSetIOMemory(decoder_,
+  avifDecoder *decoder = avifDecoderCreate();
+  if (!decoder) return false;
+  avifDecoderSetIOMemory(decoder,
                          reinterpret_cast<const uint8_t *>(signature.c_str()),
                          signature.size());
-  decoder_->io->sizeHint = 1e9;
-  const avifResult status = avifDecoderParse(decoder_);
+  decoder->io->sizeHint = 1e9;
+  const avifResult status = avifDecoderParse(decoder);
+  avifDecoderDestroy(decoder);
   return (status == AVIF_RESULT_OK || status == AVIF_RESULT_TRUNCATED_DATA);
 }
 
