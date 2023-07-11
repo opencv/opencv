@@ -308,7 +308,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
         const std::vector<std::vector<Mat>> &imagePoints, const std::vector<std::vector<int>> &overlaps,
         const std::vector<std::vector<bool>> &detection_mask_mat, const std::vector<Mat> &Ks,
         const std::vector<Mat> &distortions, std::vector<Matx33d> &Rs_vec, std::vector<Vec3d> &Ts_vec,
-        Mat &flags, bool useUndistort) {
+        Mat &flags, bool useUndistort, bool useExtrinsicsGuess) {
     const int NUM_FRAMES = (int) objPoints_norm.size();
     
     std::vector<double> dist_null{0., 0., 0., 0., 0.};
@@ -316,6 +316,17 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
     cv::Mat dist_null_map(1, dist_null.size(), CV_64FC1, dist_null.data());
     cv::Mat dist_pinhole_map(1, dist_pinhole.size(), CV_64FC1, dist_pinhole.data());
 
+    std::vector<Matx33d> Rs_prior;
+    std::vector<Vec3d> Ts_prior;
+    if (useExtrinsicsGuess) {
+        int NUM_CAMERAS = int(Rs_vec.size());
+        Rs_prior.resize(NUM_CAMERAS);
+        Ts_prior.resize(NUM_CAMERAS);
+        for (int i = 0; i < NUM_CAMERAS; i++) {
+            Rs_vec[i].copyTo(Rs_prior[i]);
+            Ts_vec[i].copyTo(Ts_prior[i]);
+        }
+    }
     for (const auto &pair : pairs) {
         const int c1 = pair.first, c2 = pair.second, overlap = overlaps[c1][c2];
         // prepare image points of two cameras and grid points
@@ -354,32 +365,33 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
 
         Matx33d R;
         Vec3d T;
+        if (useExtrinsicsGuess) {
+            R = Rs_prior[c2] * Rs_prior[c1].t();
+            T = -R * Ts_prior[c1] + Ts_prior[c2];
+        }
         // If use the mode of useUndistort, distort image points into normalized points; else, set the pinhole camera to be undistorted  
         // image size does not matter since intrinsics are used
         if (useUndistort) {
+            int flags_extrinsics = CALIB_FIX_INTRINSIC;
+            if ((flags.at<int>(c1) & CALIB_RATIONAL_MODEL) || (flags.at<int>(c2) & CALIB_RATIONAL_MODEL))
+                flags_extrinsics += CALIB_RATIONAL_MODEL;
+            if ((flags.at<int>(c1) & CALIB_THIN_PRISM_MODEL) || (flags.at<int>(c2) & CALIB_THIN_PRISM_MODEL))
+                flags_extrinsics += CALIB_THIN_PRISM_MODEL;
+            if (useExtrinsicsGuess) {
+                flags_extrinsics += CALIB_USE_EXTRINSIC_GUESS;
+            }
             if (are_both_fisheye_cams) {
                 fisheye::stereoCalibrate(grid_points, image_points1, image_points2,
                                 Ks[c1], distortions[c1],
                                 Ks[c2], distortions[c2],
                                 Size(), R, T, CALIB_FIX_INTRINSIC);
             } else if (!are_fisheye_cams) {
-                int flags_extrinsics = CALIB_FIX_INTRINSIC;
-                if ((flags.at<int>(c1) & CALIB_RATIONAL_MODEL) || (flags.at<int>(c2) & CALIB_RATIONAL_MODEL))
-                    flags_extrinsics += CALIB_RATIONAL_MODEL;
-                if ((flags.at<int>(c1) & CALIB_THIN_PRISM_MODEL) || (flags.at<int>(c2) & CALIB_THIN_PRISM_MODEL))
-                    flags_extrinsics += CALIB_THIN_PRISM_MODEL;
 
                 stereoCalibrate(grid_points, image_points1, image_points2,
                                 Ks[c1], distortions[c1],
                                 Ks[c2], distortions[c2],
                                 Size(), R, T, noArray(), noArray(), noArray(), flags_extrinsics);
             } else {
-                int flags_extrinsics = CALIB_FIX_INTRINSIC;
-                if ((flags.at<int>(c1) & CALIB_RATIONAL_MODEL) || (flags.at<int>(c2) & CALIB_RATIONAL_MODEL))
-                    flags_extrinsics += CALIB_RATIONAL_MODEL;
-                if ((flags.at<int>(c1) & CALIB_THIN_PRISM_MODEL) || (flags.at<int>(c2) & CALIB_THIN_PRISM_MODEL))
-                    flags_extrinsics += CALIB_THIN_PRISM_MODEL;
-
                 if (is_fisheye_vec[c1]) {
                     stereoCalibrate(grid_points, image_points_undist, image_points2,
                                     Ks[c1], dist_null_map,
@@ -398,6 +410,11 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
             flags_extrinsics1 = flags_extrinsics1 + flags.at<int>(c1);
             flags_extrinsics2 = flags_extrinsics2 + flags.at<int>(c2);
             
+            if (useExtrinsicsGuess) {
+                flags_extrinsics1 += CALIB_USE_EXTRINSIC_GUESS;
+                flags_extrinsics2 += CALIB_USE_EXTRINSIC_GUESS;
+            }
+
             stereoCalibrate(grid_points, image_points1, image_points2,
                             Ks[c1], distortions[c1], is_fisheye_vec[c1],
                             Ks[c2], distortions[c2], is_fisheye_vec[c2],
@@ -462,7 +479,7 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
 
                 if (is_fisheye_vec[k]) {
                     if( JtJ_.needed() || JtErr_.needed() ) {
-                        Mat jacobian; // of size num_points*2  x  15 (2 + 2 + 1 + 4 + 3 + 3; // f, c, alpha, k, om, T)
+                        Mat jacobian; // of size num_points*2  x  15 (2 + 2 + 4 + 3 + 3 + 1; // f, c, k, om, T, alpha)
                         fisheye::projectPoints(objpt_i, tmpImagePoints, om[1], T[1], Ks[k], distortions[k], 0, jacobian);
                         jacobian.colRange(8,11).copyTo(dpdrot);
                         jacobian.colRange(11,14).copyTo(dpdt);
@@ -488,7 +505,9 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
 
                     // d(err_{x|y}R) ~ de3
                     // convert de3/{dr3,dt3} => de3{dr1,dt1} & de3{dr2,dt2}
-                    if (k > 0) { // if not the first frame 
+                    Mat wd;
+                    Mat::diag(weights).convertTo(wd, CV_64F);
+                    if (k > 0) { // if not the first camera 
                         for (int p = 0; p < NUM_PATTERN_PTS * 2; p++) {
                             Matx13d de3dr3, de3dt3, de3dr2, de3dt2, de3dr1, de3dt1;
                             for (int j = 0; j < 3; j++)
@@ -520,15 +539,12 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
                             for (int j = 0; j < 3; j++)
                                 J_0ToK.at<double>(p, 3 + j) = de3dt2(j);
                         }
-                    }
 
-                    Mat wd;
-                    Mat::diag(weights).convertTo(wd, CV_64F);
-                    // 6 x (ni*2) * (ni*2 x ni*2) * (ni*2) x 6
-                    if (k > 0) {
+                        // 6 x (ni*2) * (ni*2 x ni*2) * (ni*2) x 6
                         JtJ(Rect((k - 1) * 6, (k - 1) * 6, 6, 6)) += (J_0ToK.t() * wd * J_0ToK);
                         // TODO: kind of strange here, any reason not updating both symmetric parts?
-                        JtJ(Rect(eofs, (k - 1) * 6, 6, 6)) = (J_0ToK.t() * wd * Je); 
+                        JtJ(Rect(eofs, (k - 1) * 6, 6, 6)) += (J_0ToK.t() * wd * Je); 
+                        JtJ(Rect((k - 1) * 6, eofs, 6, 6)) += (Je.t() * wd * J_0ToK); 
                         JtErr.rowRange((k - 1) * 6, (k - 1) * 6 + 6) += (J_0ToK.t() * wd * err);
                     }
 
@@ -543,7 +559,7 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
             std::cout << "norm(JtJ_): " << norm(JtJ_) << std::endl;
             std::cout << "norm(JtErr_): " << norm(JtErr_) << std::endl;
         }
-        std::cout << "errnorm: " << errnorm << std::endl;
+        std::cout << "multi errnorm: " << errnorm << std::endl;
         iters_lm += 1;
         return true;
     };
@@ -603,9 +619,9 @@ static void checkConnected (const std::vector<std::vector<bool>> &detection_mask
 //TODO: use Input/OutputArrays for imagePoints, imageSize(?), Ks, distortions
 double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
         const std::vector<Size> &imageSize, InputArray detectionMask,
-        OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, std::vector<Mat> &Ks, std::vector<Mat> &distortions,
+        InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts, std::vector<Mat> &Ks, std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray isFisheye,
-        OutputArray perFrameErrors, OutputArray initializationPairs, bool useIntrinsicsGuess, InputArray flagsForIntrinsics, bool useUndistort) {
+        OutputArray perFrameErrors, OutputArray initializationPairs, bool useIntrinsicsGuess, InputArray flagsForIntrinsics, bool useUndistort, bool useExtrinsicsGuess) {
 
     CV_CheckEQ((int)objPoints.empty(), 0, "Objects points must not be empty!");
     CV_CheckEQ((int)imagePoints.empty(), 0, "Image points must not be empty!");
@@ -627,6 +643,12 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     if (useIntrinsicsGuess) {
         CV_Assert(Ks.size() == distortions.size() && Ks.size() == imageSize.size());
     }
+
+    if (useExtrinsicsGuess) {
+        CV_Assert(Rs.isMatVector() && Ts.isMatVector());
+        CV_Assert(Rs.total() == Ts.total() && Rs.total() == imageSize.size());
+    }
+
     // normalize object points
     const Mat obj_pts_0 = objPoints.getMat(0);
     CV_Assert((obj_pts_0.type() == CV_32F && (obj_pts_0.rows == 3 || obj_pts_0.cols == 3)) ||
@@ -774,6 +796,14 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     Rs_vec[0] = Matx33d ::eye();
     Ts_vec[0] = Vec3d::zeros();
 
+    if (useExtrinsicsGuess) {
+        for (int k = 1; k < NUM_CAMERAS; k++) {
+            Rs.getMat(k).copyTo(Rs_vec[k]);
+            Ts.getMat(k).copyTo(Ts_vec[k]);
+            Ts_vec[k] /= scale_3d_pts;
+        }
+    }
+
     std::vector<int> parent;
     std::vector<std::vector<int>> overlaps;
     if (! multiview::maximumSpanningTree(NUM_CAMERAS, NUM_FRAMES, detection_mask_mat, parent, overlaps, opt_axes,
@@ -797,8 +827,10 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         }
         pairs_mat.copyTo(initializationPairs);
     }
-    multiview::pairwiseStereoCalibration(pairs, is_fisheye_vec, objPoints_norm, imagePoints,
-         overlaps, detection_mask_mat, Ks, distortions, Rs_vec, Ts_vec, flagsForIntrinsics_mat, useUndistort);
+    if (!useExtrinsicsGuess) {
+        multiview::pairwiseStereoCalibration(pairs, is_fisheye_vec, objPoints_norm, imagePoints,
+            overlaps, detection_mask_mat, Ks, distortions, Rs_vec, Ts_vec, flagsForIntrinsics_mat, useUndistort, useExtrinsicsGuess);
+    }
 
     const int NUM_VALID_FRAMES = countNonZero(valid_frames);
     const int nparams = (NUM_VALID_FRAMES + NUM_CAMERAS - 1) * 6; // rvecs + tvecs (6)
@@ -846,33 +878,26 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         cnt_valid_frame++;
     }
 
-    TermCriteria termCrit (TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6);
+    TermCriteria termCrit (TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-12);
     const float RBS_FNC_SCALE = 30;
     multiview::RobustExpFunction robust_fnc(RBS_FNC_SCALE);
     multiview::optimizeLM(param, robust_fnc, termCrit, valid_frames, detection_mask_mat, objPoints_norm, imagePoints, Ks, distortions, is_fisheye_vec, NUM_PATTERN_PTS);
     const auto * const params = &param[0];
 
     // extract extrinsics (R_i, t_i) for i = 1 ... NUM_CAMERAS:
-    const bool rt_mat_vec = Rs.isMatVector();
-    Mat rs, ts;
-    if (rt_mat_vec) {
+    if (!useExtrinsicsGuess) {
         Rs.create(NUM_CAMERAS, 1, CV_64F);
         Ts.create(NUM_CAMERAS, 1, CV_64F);
-    } else {
-        rs = Mat_<double>(NUM_CAMERAS, 3);
-        ts = Mat_<double>(NUM_CAMERAS, 3);
     }
     for (int c = 0; c < NUM_CAMERAS; c++) {
         Mat r_store, t_store;
-        if (rt_mat_vec) {
-            Rs.create(3, 1, CV_64F, c, true);
+        if (!useExtrinsicsGuess) {
+            Rs.create(3, 3, CV_64F, c, true);
             Ts.create(3, 1, CV_64F, c, true);
-            r_store = Rs.getMat(c);
-            t_store = Ts.getMat(c);
-        } else {
-            r_store = rs.row(c);
-            t_store = ts.row(c);
         }
+        r_store.create(3, 1, CV_64F);
+        t_store = Ts.getMat(c);
+        // t_store.create(3, 1, CV_64F);
         if (c == 0) {
             memcpy(r_store.ptr(), Vec3d(0,0,0).val, 3*sizeof(double));
             memcpy(t_store.ptr(), Vec3d(0,0,0).val, 3*sizeof(double));
@@ -881,12 +906,8 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
             memcpy(t_store.ptr(), params + (c-1)*6+3, 3*sizeof(double)); // and de-normalize translation
             t_store *= scale_3d_pts;
         }
-        Mat R;
+        Mat R = Rs.getMat(c);
         Rodrigues(r_store, R);
-    }
-    if (! rt_mat_vec) {
-        rs.copyTo(Rs);
-        ts.copyTo(Ts);
     }
     Mat rvecs0_, tvecs0_;
     if (rvecs0.needed() || perFrameErrors.needed()) {
@@ -936,8 +957,10 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         Mat errs = Mat_<double>(NUM_CAMERAS, NUM_FRAMES);
         auto * errs_ptr = (double *) errs.data;
         for (int c = 0; c < NUM_CAMERAS; c++) {
-            const Mat rvec = r_mat_vec ? Rs.getMat(c) : Rs.getMat().row(c).t();
-            const Mat tvec = t_mat_vec ? Ts.getMat(c) : Ts.getMat().row(c).t();
+            Mat rvec;
+            Rodrigues(Rs.getMat(c), rvec);
+            const Mat tvec = Ts.getMat(c);
+
             for (int f = 0; f < NUM_FRAMES; f++) {
                 if (detection_mask_mat[c][f]) {
                     const Mat rvec0 = rvecs_mat_vec ? rvecs0.getMat(f) : rvecs0_.row(f).t();

@@ -1172,10 +1172,10 @@ points in all the available views from all cameras.
 // TODO: clean the "useUndistort" flag 
 CV_EXPORTS_W double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
         const std::vector<Size> &imageSize, InputArray detectionMask,
-        OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, CV_IN_OUT std::vector<Mat> &Ks, CV_IN_OUT std::vector<Mat> &distortions,
+        InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts, CV_IN_OUT std::vector<Mat> &Ks, CV_IN_OUT std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray isFisheye,
         OutputArray perFrameErrors, OutputArray initializationPairs,
-        bool useIntrinsicsGuess=false, InputArray flagsForIntrinsics=noArray(), bool useUndistort=false);
+        bool useIntrinsicsGuess=false, InputArray flagsForIntrinsics=noArray(), bool useUndistort=false, bool useExtrinsicsGuess=false);
 
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$

@@ -1597,7 +1597,7 @@ static double stereoCalibrateImpl(
                         jacobian.colRange(8, 11).copyTo(dpdrot);
                         jacobian.colRange(11,14).copyTo(dpdt);
                     } else
-                        fisheye::projectPoints(objpt_i, tmpImagePoints, om[1], T[1], intrin[k], distCoeffs[k]);
+                        fisheye::projectPoints(objpt_i, tmpImagePoints, om[k], T[k], intrin[k], distCoeffs[k]);
                 }
                 subtract( tmpImagePoints, imgpt_ik, tmpImagePoints );
 
