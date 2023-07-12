@@ -251,7 +251,7 @@ void TFLiteImporter::populateNet()
             throw;
         }
         // std::cout << op_outputs->Get(0) << std::endl;
-        if (op_outputs->Get(0) == 333)
+        if (op_outputs->Get(0) == 341)
             break;
     }
 }
@@ -414,7 +414,7 @@ void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opc
         }
     }
     addLayer(layerParams, op);
-    // parseFusedActivation(op, options->fused_activation_function());
+    parseFusedActivation(op, options->fused_activation_function());
 }
 
 void TFLiteImporter::parseDWConvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {

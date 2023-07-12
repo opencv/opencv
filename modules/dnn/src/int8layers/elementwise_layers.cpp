@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_timvx.hpp"
+#include "../ie_ngraph.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <iostream>
@@ -56,7 +57,7 @@ public:
             return tvActType != tvActNotSupported;
         }
 #endif
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -243,6 +244,16 @@ public:
 #endif  // HAVE_TIMVX
         return Ptr<BackendNode>();
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto& input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        // TODO: implement RELU6
+        return new InfEngineNgraphNode(std::make_shared<ngraph::op::Clamp>(input, -128, 127));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {

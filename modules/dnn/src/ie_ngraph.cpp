@@ -835,7 +835,6 @@ void NgraphBackendLayer::forward(InputArrayOfArrays inputs, OutputArrayOfArrays 
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
 
 ov::Tensor wrapToNgraphBlob(const Mat& m) {
-    std::cout << "wrapToNgraphBlob " << m.type() << std::endl;
     std::vector<size_t> shape = getShape<size_t>(m);
     if (m.type() == CV_32F)
         return ov::Tensor(ov::element::f32, shape, m.data);
@@ -897,7 +896,6 @@ InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m, const std::vector<size
 InferenceEngine::Blob::Ptr wrapToNgraphBlob(const Mat& m, InferenceEngine::Layout layout)
 {
     std::vector<size_t> shape = getShape<size_t>(m);
-    std::cout << "wrapToNgraphBlob 1" << std::endl;
     return wrapToNgraphBlob(m, shape, layout);
 }
 
@@ -909,8 +907,6 @@ NgraphBackendWrapper::NgraphBackendWrapper(int targetId, const cv::Mat& m)
     : BackendWrapper(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, targetId)
     , host((Mat*)&m)
 {
-    std::cout << "wrapToNgraphBlob 2" << std::endl;
-
     blob = wrapToNgraphBlob(m);
 }
 
