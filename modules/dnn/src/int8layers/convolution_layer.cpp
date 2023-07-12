@@ -570,7 +570,7 @@ public:
         CV_Assert(!blobs.empty());
         CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         CV_CheckTypeEQ(weightsMat.type(), CV_8S, "");
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<size_t> dims = ieInpNode->get_shape();
         CV_Check(dims.size(), dims.size() >= 3 && dims.size() <= 5, "");
         std::shared_ptr<ngraph::Node> ieWeights = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;
@@ -684,7 +684,7 @@ public:
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &output_zp_f)
         );
         conv_node = std::make_shared<ngraph::op::Clamp>(conv_node, -128, 127);
-        // conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::i8);
+        conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::i8);
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(conv_node));
     }
@@ -1513,18 +1513,9 @@ public:
         int nstripes = std::max(getNumThreads(), 1);
         Mat outputInt32 = Mat(shape(outputs[0]), CV_32S);
 
-        // for (int i = 0; i < outputMultiplier.size(); ++i)
-        //     outputMultiplier[i] = 1;
-        // for (int i = 0; i < biasvec.size(); ++i)
-        //     biasvec[i] = 0;
-        // input_zp = 0;
-        // output_zp = 0;
-
         ParallelConv::run(inputs[0], outputInt32, weightsMat, outputMultiplier, biasvec, activationLUT, kernel_size, strides,
                           pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes, input_zp, output_zp);
-        std::cout << "conv " << outputInt32.ptr<int32_t>()[8] << std::endl;
         outputInt32.convertTo(outputs[0], CV_8S);
-        std::cout << "conv " << (int)outputs[0].ptr<int8_t>()[8] << std::endl;
 
 #if CV_SSE3
         _MM_SET_FLUSH_ZERO_MODE(ftzMode);

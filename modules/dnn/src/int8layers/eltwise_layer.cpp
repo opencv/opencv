@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_timvx.hpp"
+#include "../ie_ngraph.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv
@@ -138,7 +139,7 @@ public:
         // For TimVX Backend, only ELTWISE_CHANNNELS_SAME was supported.
         if (backendId == DNN_BACKEND_TIMVX && haveTimVX())
             return channelsModeInput == ELTWISE_CHANNNELS_SAME;
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -368,6 +369,52 @@ public:
 #endif  // HAVE_TIMVX
         return Ptr<BackendNode>();
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto input0 = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto input1 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+
+        // float low = -128, high = 127;
+        input0 = std::make_shared<ngraph::op::Convert>(input0, ngraph::element::f32);
+        input0 = std::make_shared<ngraph::op::v1::Multiply>(
+            input0,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[0])
+        );
+        // input0 = std::make_shared<ngraph::op::FakeQuantize>(input0,
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
+        //     256 // levels
+        // );
+
+        input1 = std::make_shared<ngraph::op::Convert>(input1, ngraph::element::f32);
+        input1 = std::make_shared<ngraph::op::v1::Multiply>(
+            input1,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[1])
+        );
+        // // input1 = std::make_shared<ngraph::op::FakeQuantize>(input1,
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
+        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
+        //     256 // levels
+        // );
+
+        std::shared_ptr<ngraph::Node> res = std::make_shared<ngraph::op::v1::Add>(input0, input1);
+        res = std::make_shared<ngraph::op::v1::Add>(
+            res,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &offset)
+        );
+        res = std::make_shared<ngraph::op::Clamp>(res, -128, 127);
+        res = std::make_shared<ngraph::op::Convert>(res, ngraph::element::i8);
+
+        return new InfEngineNgraphNode(res);
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     class EltwiseInvoker : public ParallelLoopBody
     {

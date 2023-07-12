@@ -251,7 +251,7 @@ public:
     {
         auto& input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         // TODO: implement RELU6
-        return new InfEngineNgraphNode(std::make_shared<ngraph::op::Clamp>(input, -128, 127));
+        return new InfEngineNgraphNode(input);
     }
 #endif  // HAVE_DNN_NGRAPH
 
