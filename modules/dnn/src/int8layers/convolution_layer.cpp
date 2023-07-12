@@ -606,15 +606,23 @@ public:
 
 
         ieInpNode = std::make_shared<ngraph::op::Convert>(ieInpNode, ngraph::element::f32);
-        float low = -128, high = 127;
+
+        float input_zp_f = input_zp;
+        ieInpNode = std::make_shared<ngraph::op::v1::Subtract>(
+            ieInpNode,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &input_zp_f)
+        );
+
+        float inpLow = -128 - input_zp_f, inpHigh = 127 - input_zp_f;
         ieInpNode = std::make_shared<ngraph::op::FakeQuantize>(ieInpNode,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
             256 // levels
         );
 
+        float low = -128, high = 127;
         ieWeights = std::make_shared<ngraph::op::Convert>(ieWeights, ngraph::element::f32);
         ieWeights = std::make_shared<ngraph::op::FakeQuantize>(ieWeights,
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
@@ -623,8 +631,6 @@ public:
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
             256 // levels
         );
-
-        // ieWeights = std::make_shared<ngraph::op::Convert>(ieWeights, ngraph::element::i32);
 
         std::shared_ptr<ngraph::Node> conv_node;
         if (group != 1) {
@@ -644,8 +650,6 @@ public:
                                 ngraph::Strides(dilations),
                                 pad_type);
         }
-        // conv_node->set_output_type(0, ngraph::element::i32, conv_node->get_output_partial_shape(0));
-        // conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::i32);
 
         std::vector<size_t> shape(conv_node->get_shape().size(), 1);
         shape[1] = conv_node->get_shape()[1];
@@ -660,15 +664,19 @@ public:
             }
             else
             {
-                bias = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape(shape), biasvec.data());
+                std::vector<int32_t> ovBias(numOutput);
+                for (int i = 0; i < numOutput; ++i) {
+                    ovBias[i] = biasvec[i] + input_zp * cv::sum(blobs[0].row(i))[0];
+                }
+                bias = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape(shape), ovBias.data());
             }
             bias = std::make_shared<ngraph::op::Convert>(bias, ngraph::element::f32);
             conv_node = std::make_shared<ngraph::op::v1::Add>(conv_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
         }
-        // conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::f32);
+
         conv_node = std::make_shared<ngraph::op::v1::Multiply>(
             conv_node,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), &outputMultiplier[0])
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), outputMultiplier.data())
         );
         float output_zp_f = output_zp;
         conv_node = std::make_shared<ngraph::op::v1::Add>(
@@ -1509,7 +1517,7 @@ public:
         //     outputMultiplier[i] = 1;
         // for (int i = 0; i < biasvec.size(); ++i)
         //     biasvec[i] = 0;
-        input_zp = 0;
+        // input_zp = 0;
         // output_zp = 0;
 
         ParallelConv::run(inputs[0], outputInt32, weightsMat, outputMultiplier, biasvec, activationLUT, kernel_size, strides,
