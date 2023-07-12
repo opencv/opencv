@@ -256,7 +256,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -327,6 +327,27 @@ public:
         else
             inputs[0].convertTo(outputs[0], CV_32F, scales[0], -(scales[0]*zeropoints[0]));
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        float zeropoint = static_cast<float>(zeropoints[0]);
+
+        auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        input = std::make_shared<ngraph::op::Convert>(input, ngraph::element::f32);
+
+        auto shifted = std::make_shared<ngraph::op::v1::Subtract>(
+            input,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &zeropoint)
+        );
+        auto scaled = std::make_shared<ngraph::op::v1::Multiply>(
+            shifted,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &scales[0])
+        );
+        return new InfEngineNgraphNode(scaled);
+    }
+#endif  // HAVE_DNN_NGRAPH
 };
 
 // Rescale/Requantize INT8 Inputs from (scale1, zeropoint1) to (scale2, zeropoint2)
