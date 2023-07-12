@@ -868,6 +868,15 @@ class Split(nn.Module):
         tup = torch.split(x, self.split_size_sections, self.dim)
         return torch.cat(tup)
 
+class SimpleSplit(nn.Module):
+    def forward(self, image):
+        return torch.cat([img for img in image])
+
+
+model = SimpleSplit()
+input = torch.ones((1, 3, 2, 2))
+save_data_and_model("split_0", input, model, version=11)
+
 model = Split()
 input = Variable(torch.tensor([1., 2.], dtype=torch.float32))
 save_data_and_model("split_1", input, model)
@@ -887,6 +896,8 @@ save_data_and_model("split_5", input2, model, version=13)
 
 model = Split(dim=-1, split_size_sections=[1, 2])
 save_data_and_model("split_6", input2, model, version=13)
+
+
 
 class SplitSizes(nn.Module):
     def __init__(self, *args, **kwargs):
@@ -2440,7 +2451,7 @@ def save_data_and_tf_function(tf_function, name, input):
     np.save(os.path.join("data", "output_" + name + ".npy"), output)
     cumsum_model = tf2onnx.convert.from_function(
         function=tf_function,
-        input_signature=[tf.TensorSpec([], tf.float32)],
+        input_signature=[tf.TensorSpec(input.shape, tf.float32)],
         opset=14)[0]
     onnx.save(cumsum_model, os.path.join("models", name + ".onnx"))
 
@@ -2966,3 +2977,9 @@ input_files = os.path.join("data", "input_" + name)
 np.save(input_files, input.data)
 output_files = os.path.join("data", "output_" + name)
 np.save(output_files, np.ascontiguousarray(output.data))
+
+## tf_half_pixel_for_nn
+@tf.function
+def tf_resize_nearest(x):
+    return tf.compat.v1.image.resize_nearest_neighbor(x, size=(5, 6), align_corners=False, half_pixel_centers=True)
+save_data_and_tf_function(tf_resize_nearest, "tf_half_pixel_for_nn", np.random.rand(1, 2, 3, 2))
