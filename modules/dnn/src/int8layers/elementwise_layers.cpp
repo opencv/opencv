@@ -252,6 +252,11 @@ public:
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::shared_ptr<ngraph::Node> res = nullptr;
         if (type == "ReLU6Int8") {
+            std::vector<int8_t> data(256);
+            for (int i = 0; i < 256; ++i) {
+                data[i] = i - 128;
+            }
+            CV_Assert(cv::norm(Mat(1, 256, CV_8S, data.data()), activationLUT, NORM_INF) == 0);
             res = input;  // TODO: implement it
         } else if (type == "SigmoidInt8") {
             std::cout << "sigmoid" << std::endl;

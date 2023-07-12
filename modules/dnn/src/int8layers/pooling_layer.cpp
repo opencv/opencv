@@ -280,6 +280,7 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+        CV_Assert(type == MAX);
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
         ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;

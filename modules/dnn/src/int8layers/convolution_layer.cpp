@@ -1515,6 +1515,7 @@ public:
 
         ParallelConv::run(inputs[0], outputInt32, weightsMat, outputMultiplier, biasvec, activationLUT, kernel_size, strides,
                           pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes, input_zp, output_zp);
+
         outputInt32.convertTo(outputs[0], CV_8S);
 
 #if CV_SSE3
