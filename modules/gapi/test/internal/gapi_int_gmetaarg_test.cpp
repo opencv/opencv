@@ -102,7 +102,7 @@ TEST(GMetaArg, Can_Get_Metas_From_Input_Run_Args)
     GMatDesc m_desc;
     GMetaArgs meta_args = descr_of(cv::gin(m, s, v));
 
-    EXPECT_EQ(meta_args.size(), 3u);
+    EXPECT_EQ(3u, meta_args.size());
     EXPECT_NO_THROW(m_desc = util::get<cv::GMatDesc>(meta_args[0]));
     EXPECT_NO_THROW(util::get<cv::GScalarDesc>(meta_args[1]));
     EXPECT_NO_THROW(util::get<cv::GArrayDesc>(meta_args[2]));
@@ -138,22 +138,18 @@ TEST(GMetaArg, Can_Describe_RunArg)
     cv::Mat m(3, 3, CV_8UC3);
     cv::UMat um(3, 3, CV_8UC3);
     cv::Scalar s;
-    constexpr int w = 3, h = 3, c = 3;
-    uchar data[w*h*c];
-    cv::gapi::own::Mat om(h, w, CV_8UC3, data);
     cv::Scalar os;
     std::vector<int> v;
 
     GMetaArgs metas = {GMetaArg(descr_of(m)),
                        GMetaArg(descr_of(um)),
                        GMetaArg(descr_of(s)),
-                       GMetaArg(descr_of(om)),
                        GMetaArg(descr_of(os)),
                        GMetaArg(descr_of(v))};
 
-    auto in_run_args = cv::gin(m, um, s, om, os, v);
+    auto in_run_args = cv::gin(m, um, s, os, v);
 
-    for (int i = 0; i < 3; i++) {
+    for (size_t i = 0; i < metas.size(); i++) {
         EXPECT_TRUE(can_describe(metas[i], in_run_args[i]));
     }
 }
@@ -178,22 +174,18 @@ TEST(GMetaArg, Can_Describe_RunArgP)
     cv::Mat m(3, 3, CV_8UC3);
     cv::UMat um(3, 3, CV_8UC3);
     cv::Scalar s;
-    constexpr int w = 3, h = 3, c = 3;
-    uchar data[w*h*c];
-    cv::gapi::own::Mat om(h, w, CV_8UC3, data);
     cv::Scalar os;
     std::vector<int> v;
 
     GMetaArgs metas = {GMetaArg(descr_of(m)),
                        GMetaArg(descr_of(um)),
                        GMetaArg(descr_of(s)),
-                       GMetaArg(descr_of(om)),
                        GMetaArg(descr_of(os)),
                        GMetaArg(descr_of(v))};
 
-    auto out_run_args = cv::gout(m, um, s, om, os, v);
+    auto out_run_args = cv::gout(m, um, s, os, v);
 
-    for (int i = 0; i < 3; i++) {
+    for (size_t i = 0; i < metas.size(); i++) {
         EXPECT_TRUE(can_describe(metas[i], out_run_args[i]));
     }
 }

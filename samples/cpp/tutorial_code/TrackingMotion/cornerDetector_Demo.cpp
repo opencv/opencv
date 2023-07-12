@@ -62,7 +62,7 @@ int main( int argc, char** argv )
         {
             float lambda_1 = myHarris_dst.at<Vec6f>(i, j)[0];
             float lambda_2 = myHarris_dst.at<Vec6f>(i, j)[1];
-            Mc.at<float>(i, j) = lambda_1*lambda_2 - 0.04f*pow( ( lambda_1 + lambda_2 ), 2 );
+            Mc.at<float>(i, j) = lambda_1*lambda_2 - 0.04f*((lambda_1 + lambda_2) * (lambda_1 + lambda_2));
         }
     }
 

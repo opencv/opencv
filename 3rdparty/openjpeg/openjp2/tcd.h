@@ -122,6 +122,11 @@ typedef struct opj_tcd_cblk_dec {
     opj_tcd_seg_data_chunk_t* chunks; /* Array of chunks */
     /* position of the code-blocks : left upper corner (x0, y0) right low corner (x1,y1) */
     OPJ_INT32 x0, y0, x1, y1;
+    /* Mb is The maximum number of bit-planes available for the representation of
+       coefficients in any sub-band, b, as defined in Equation (E-2). See
+       Section B.10.5 of the standard */
+    OPJ_UINT32 Mb;  /* currently used only to check if HT decoding is correct */
+    /* numbps is Mb - P as defined in Section B.10.5 of the standard */
     OPJ_UINT32 numbps;
     /* number of bits for len, for the current packet. Transitory value */
     OPJ_UINT32 numlenbits;
@@ -284,6 +289,22 @@ typedef struct opj_tcd {
     OPJ_BOOL* used_component;
 } opj_tcd_t;
 
+/**
+ * Structure to hold information needed to generate some markers.
+ * Used by encoder.
+ */
+typedef struct opj_tcd_marker_info {
+    /** In: Whether information to generate PLT markers in needed */
+    OPJ_BOOL    need_PLT;
+
+    /** OUT: Number of elements in p_packet_size[] array */
+    OPJ_UINT32  packet_count;
+
+    /** OUT: Array of size packet_count, such that p_packet_size[i] is
+     *       the size in bytes of the ith packet */
+    OPJ_UINT32* p_packet_size;
+} opj_tcd_marker_info_t;
+
 /** @name Exported functions */
 /*@{*/
 /* ----------------------------------------------------------------------- */
@@ -305,6 +326,21 @@ Destroy a previously created TCD handle
 @param tcd TCD handle to destroy
 */
 void opj_tcd_destroy(opj_tcd_t *tcd);
+
+
+/**
+ * Create a new opj_tcd_marker_info_t* structure
+ * @param need_PLT Whether information is needed to generate PLT markers.
+ */
+opj_tcd_marker_info_t* opj_tcd_marker_info_create(OPJ_BOOL need_PLT);
+
+
+/**
+Destroy a previously created opj_tcd_marker_info_t* structure
+@param p_tcd_marker_info Structure to destroy
+*/
+void opj_tcd_marker_info_destroy(opj_tcd_marker_info_t *p_tcd_marker_info);
+
 
 /**
  * Initialize the tile coder and may reuse some memory.
@@ -364,6 +400,7 @@ OPJ_UINT32 opj_tcd_get_decoded_tile_size(opj_tcd_t *p_tcd,
  * @param   p_data_written  pointer to an int that is incremented by the number of bytes really written on p_dest
  * @param   p_len           Maximum length of the destination buffer
  * @param   p_cstr_info     Codestream information structure
+ * @param   p_marker_info   Marker information structure
  * @param   p_manager       the user event manager
  * @return  true if the coding is successful.
 */
@@ -373,6 +410,7 @@ OPJ_BOOL opj_tcd_encode_tile(opj_tcd_t *p_tcd,
                              OPJ_UINT32 * p_data_written,
                              OPJ_UINT32 p_len,
                              struct opj_codestream_info *p_cstr_info,
+                             opj_tcd_marker_info_t* p_marker_info,
                              opj_event_mgr_t *p_manager);
 
 
@@ -415,9 +453,11 @@ OPJ_BOOL opj_tcd_update_tile_data(opj_tcd_t *p_tcd,
                                   OPJ_UINT32 p_dest_length);
 
 /**
- *
+ * Get the size in bytes of the input buffer provided before encoded.
+ * This must be the size provided to the p_src_length argument of
+ * opj_tcd_copy_tile_data()
  */
-OPJ_SIZE_T opj_tcd_get_encoded_tile_size(opj_tcd_t *p_tcd);
+OPJ_SIZE_T opj_tcd_get_encoder_input_buffer_size(opj_tcd_t *p_tcd);
 
 /**
  * Initialize the tile coder and may reuse some meory.
@@ -433,6 +473,8 @@ OPJ_BOOL opj_tcd_init_encode_tile(opj_tcd_t *p_tcd,
 
 /**
  * Copies tile data from the given memory block onto the system.
+ *
+ * p_src_length must be equal to opj_tcd_get_encoder_input_buffer_size()
  */
 OPJ_BOOL opj_tcd_copy_tile_data(opj_tcd_t *p_tcd,
                                 OPJ_BYTE * p_src,

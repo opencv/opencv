@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+@KOTLIN_PLUGIN_DECLARATION@
 
 def openCVersionName = "@OPENCV_VERSION@"
 def openCVersionCode = ((@OPENCV_VERSION_MAJOR@ * 100 + @OPENCV_VERSION_MINOR@) * 100 + @OPENCV_VERSION_PATCH@) * 10 + 0
@@ -34,10 +35,6 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
-    }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_6
-        targetCompatibility JavaVersion.VERSION_1_6
     }
 
     sourceSets {

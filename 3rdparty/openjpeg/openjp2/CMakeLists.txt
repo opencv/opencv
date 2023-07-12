@@ -5,6 +5,7 @@ set(OPENJPEG_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/cio.c
   ${CMAKE_CURRENT_SOURCE_DIR}/dwt.c
   ${CMAKE_CURRENT_SOURCE_DIR}/event.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/ht_dec.c
   ${CMAKE_CURRENT_SOURCE_DIR}/image.c
   ${CMAKE_CURRENT_SOURCE_DIR}/invert.c
   ${CMAKE_CURRENT_SOURCE_DIR}/j2k.c
@@ -33,7 +34,13 @@ endif()
 #   set(WIN32 YES)
 # endif()
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wundef -Wstrict-prototypes -Wcast-function-type)
+ocv_warnings_disable(CMAKE_C_FLAGS
+    -Wundef -Wstrict-prototypes -Wcast-function-type
+    -Wshadow   # v2.4.0: GCC
+    -Wunused-function   # v2.4.0: Clang
+)
+
+ocv_warnings_disable(CMAKE_C_FLAGS /wd4819) # vs2019 Win64
 
 add_library(${OPENJPEG_LIBRARY_NAME} STATIC ${OPENJPEG_SRCS})
 

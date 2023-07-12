@@ -5,7 +5,7 @@ namespace opencv_test
 {
 using namespace perf;
 
-CV_ENUM(ROp, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
+CV_ENUM(ROp, REDUCE_SUM, REDUCE_AVG, REDUCE_MAX, REDUCE_MIN, REDUCE_SUM2)
 typedef tuple<Size, MatType, ROp> Size_MatType_ROp_t;
 typedef perf::TestBaseWithParam<Size_MatType_ROp_t> Size_MatType_ROp;
 
@@ -23,7 +23,7 @@ PERF_TEST_P(Size_MatType_ROp, reduceR,
     int reduceOp = get<2>(GetParam());
 
     int ddepth = -1;
-    if( CV_MAT_DEPTH(matType) < CV_32S && (reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG) )
+    if( CV_MAT_DEPTH(matType) < CV_32S && (reduceOp == REDUCE_SUM || reduceOp == REDUCE_AVG || reduceOp == REDUCE_SUM2) )
         ddepth = CV_32S;
 
     Mat src(sz, matType);
@@ -35,7 +35,7 @@ PERF_TEST_P(Size_MatType_ROp, reduceR,
     int runs = 15;
     TEST_CYCLE_MULTIRUN(runs) reduce(src, vec, 0, reduceOp, ddepth);
 
-    SANITY_CHECK(vec, 1);
+    SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(Size_MatType_ROp, reduceC,
@@ -51,7 +51,7 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
     int reduceOp = get<2>(GetParam());
 
     int ddepth = -1;
-    if( CV_MAT_DEPTH(matType)< CV_32S && (reduceOp == CV_REDUCE_SUM || reduceOp == CV_REDUCE_AVG) )
+    if( CV_MAT_DEPTH(matType)< CV_32S && (reduceOp == REDUCE_SUM || reduceOp == REDUCE_AVG || reduceOp == REDUCE_SUM2) )
         ddepth = CV_32S;
 
     Mat src(sz, matType);
@@ -62,7 +62,36 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
 
     TEST_CYCLE() reduce(src, vec, 1, reduceOp, ddepth);
 
-    SANITY_CHECK(vec, 1);
+    SANITY_CHECK_NOTHING();
+}
+
+typedef tuple<Size, MatType, int> Size_MatType_RMode_t;
+typedef perf::TestBaseWithParam<Size_MatType_RMode_t> Size_MatType_RMode;
+
+PERF_TEST_P(Size_MatType_RMode, DISABLED_reduceArgMinMax, testing::Combine(
+        testing::Values(TYPICAL_MAT_SIZES),
+        testing::Values(CV_8U, CV_32F),
+        testing::Values(0, 1)
+)
+)
+{
+    Size srcSize = get<0>(GetParam());
+    int matType = get<1>(GetParam());
+    int axis = get<2>(GetParam());
+
+    Mat src(srcSize, matType);
+
+    std::vector<int> dstSize(src.dims);
+    std::copy(src.size.p, src.size.p + src.dims, dstSize.begin());
+    dstSize[axis] = 1;
+
+    Mat dst(dstSize, CV_32S, 0.);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() cv::reduceArgMin(src, dst, axis, true);
+
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace

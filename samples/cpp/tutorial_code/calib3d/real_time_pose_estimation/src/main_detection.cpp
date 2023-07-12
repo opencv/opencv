@@ -361,7 +361,7 @@ int main(int argc, char *argv[])
                 frame_vis.copyTo(frameSave);
             }
 
-            string saveFilename = format(string(saveDirectory + "/image_%04d.png").c_str(), frameCount);
+            string saveFilename = cv::format(string(saveDirectory + "/image_%04d.png").c_str(), frameCount);
             imwrite(saveFilename, frameSave);
             frameCount++;
         }

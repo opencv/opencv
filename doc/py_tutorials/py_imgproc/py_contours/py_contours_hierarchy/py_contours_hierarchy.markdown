@@ -1,6 +1,8 @@
 Contours Hierarchy {#tutorial_py_contours_hierarchy}
 ==================
 
+@prev_tutorial{tutorial_py_contours_more_functions}
+
 Goal
 ----
 

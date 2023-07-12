@@ -195,7 +195,7 @@ def main():
         indices = cv.dnn.NMSBoxesRotated(boxes, confidences, confThreshold, nmsThreshold)
         for i in indices:
             # get 4 corners of the rotated rect
-            vertices = cv.boxPoints(boxes[i[0]])
+            vertices = cv.boxPoints(boxes[i])
             # scale the bounding box coordinates based on the respective ratios
             for j in range(4):
                 vertices[j][0] *= rW
@@ -222,8 +222,8 @@ def main():
                            0.5, (255, 0, 0))
 
             for j in range(4):
-                p1 = (vertices[j][0], vertices[j][1])
-                p2 = (vertices[(j + 1) % 4][0], vertices[(j + 1) % 4][1])
+                p1 = (int(vertices[j][0]), int(vertices[j][1]))
+                p2 = (int(vertices[(j + 1) % 4][0]), int(vertices[(j + 1) % 4][1]))
                 cv.line(frame, p1, p2, (0, 255, 0), 1)
 
         # Put efficiency information

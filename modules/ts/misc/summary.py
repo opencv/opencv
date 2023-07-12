@@ -1,5 +1,38 @@
 #!/usr/bin/env python
+""" Format performance test results and compare metrics between test runs
 
+Performance data is stored in the GTest log file created by performance tests. Default name is
+`test_details.xml`. It can be changed with the `--gtest_output=xml:<location>/<filename>.xml` test
+option. See https://github.com/opencv/opencv/wiki/HowToUsePerfTests for more details.
+
+This script allows to compare performance data collected during separate test runs and present it in
+a text, Markdown or HTML table.
+
+### Major options
+
+-o FMT, --output=FMT        - output format ('txt', 'html', 'markdown', 'tabs' or 'auto')
+-f REGEX, --filter=REGEX    - regex to filter tests
+-m NAME, --metric=NAME      - output metric
+-u UNITS, --units=UNITS     - units for output values (s, ms (default), us, ns or ticks)
+
+### Example
+
+./summary.py -f LUT.*640 core1.xml core2.xml
+
+Geometric mean (ms)
+
+            Name of Test              core1  core2   core2
+                                                       vs
+                                                     core1
+                                                   (x-factor)
+LUT::OCL_LUTFixture::(640x480, 8UC1)  2.278  0.737    3.09
+LUT::OCL_LUTFixture::(640x480, 32FC1) 2.622  0.805    3.26
+LUT::OCL_LUTFixture::(640x480, 8UC4)  19.243 3.624    5.31
+LUT::OCL_LUTFixture::(640x480, 32FC4) 21.254 4.296    4.95
+LUT::SizePrm::640x480                 2.268  0.687    3.30
+"""
+
+from __future__ import print_function
 import testlog_parser, sys, os, xml, glob, re
 from table_formatter import *
 from optparse import OptionParser
@@ -26,11 +59,11 @@ def getSetName(tset, idx, columns, short = True):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print >> sys.stderr, "Usage:\n", os.path.basename(sys.argv[0]), "<log_name1>.xml [<log_name2>.xml ...]"
+        print("Usage:\n", os.path.basename(sys.argv[0]), "<log_name1>.xml [<log_name2>.xml ...]", file=sys.stderr)
         exit(0)
 
     parser = OptionParser()
-    parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html', 'markdown' or 'auto' - default)", metavar="FMT", default="auto")
+    parser.add_option("-o", "--output", dest="format", help="output results in text format (can be 'txt', 'html', 'markdown', 'tabs' or 'auto' - default)", metavar="FMT", default="auto")
     parser.add_option("-m", "--metric", dest="metric", help="output metric", metavar="NAME", default="gmean")
     parser.add_option("-u", "--units", dest="units", help="units for output values (s, ms (default), us, ns or ticks)", metavar="UNITS", default="ms")
     parser.add_option("-f", "--filter", dest="filter", help="regex to filter tests", metavar="REGEX", default=None)

@@ -247,6 +247,7 @@ inline DictValue & DictValue::operator=(const DictValue &r)
 }
 
 inline DictValue::DictValue(const DictValue &r)
+    : pv(NULL)
 {
     type = r.type;
 

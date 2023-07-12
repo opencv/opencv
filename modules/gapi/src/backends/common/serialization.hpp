@@ -5,7 +5,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2020 Intel Corporation
+// Copyright (C) 2020-2021 Intel Corporation
 
 #include <iostream>
 #include <fstream>
@@ -18,7 +18,8 @@
 #include "opencv2/gapi/render/render_types.hpp"
 #include "opencv2/gapi/s11n.hpp" // basic interfaces
 
-#if (defined _WIN32 || defined _WIN64) && defined _MSC_VER
+#if defined _MSC_VER
+#pragma warning(push)
 #pragma warning(disable: 4702)
 #endif
 
@@ -31,6 +32,9 @@ struct GSerialized {
     std::vector<cv::gimpl::Data> m_datas;
     cv::gimpl::DataObjectCounter m_counter;
     cv::gimpl::Protocol m_proto;
+
+    using data_tag_t = uint64_t;
+    std::map<data_tag_t, cv::gimpl::ConstValue> m_const_datas;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -39,6 +43,8 @@ struct GSerialized {
 // Note: operators for basic types are defined in IIStream/IOStream
 
 // G-API types /////////////////////////////////////////////////////////////////
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GCompileArg& arg);
 
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, cv::util::monostate  );
 GAPI_EXPORTS IIStream& operator>> (IIStream& is, cv::util::monostate &);
@@ -83,19 +89,8 @@ GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GOpaqueDesc &);
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GArrayDesc &);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GArrayDesc &);
 
-#if !defined(GAPI_STANDALONE)
-GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::UMat &);
-GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::UMat &);
-#endif // !defined(GAPI_STANDALONE)
-
-GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gapi::wip::IStreamSource::Ptr &);
-GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gapi::wip::IStreamSource::Ptr &);
-
-GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::detail::VectorRef &);
-GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::VectorRef &);
-
-GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::detail::OpaqueRef &);
-GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::detail::OpaqueRef &);
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::GFrameDesc &);
+GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::GFrameDesc &);
 
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gimpl::RcDesc &rc);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gimpl::RcDesc &rc);
@@ -105,6 +100,9 @@ GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gimpl::Op &op);
 
 GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gimpl::Data &op);
 GAPI_EXPORTS IIStream& operator>> (IIStream& is,       cv::gimpl::Data &op);
+
+GAPI_EXPORTS IOStream& operator<< (IOStream& os, const cv::gimpl::ConstValue &cd);
+GAPI_EXPORTS IIStream& operator>> (IIStream& os, cv::gimpl::ConstValue &cd);
 
 // Render types ////////////////////////////////////////////////////////////////
 
@@ -167,47 +165,7 @@ GAPI_EXPORTS void serialize( IOStream& os
 GAPI_EXPORTS GSerialized deserialize(IIStream& is);
 GAPI_EXPORTS void reconstruct(const GSerialized &s, ade::Graph &g);
 
-// Generic: variant serialization //////////////////////////////////////////////
-namespace detail { // FIXME: breaks old code
-template<typename V>
-IOStream& put_v(IOStream&, const V&, std::size_t) {
-    GAPI_Assert(false && "variant>>: requested index is invalid");
-};
-template<typename V, typename X, typename... Xs>
-IOStream& put_v(IOStream& os, const V& v, std::size_t x) {
-    return (x == 0u)
-        ? os << cv::util::get<X>(v)
-        : put_v<V, Xs...>(os, v, x-1);
-}
-template<typename V>
-IIStream& get_v(IIStream&, V&, std::size_t, std::size_t) {
-    GAPI_Assert(false && "variant<<: requested index is invalid");
-}
-template<typename V, typename X, typename... Xs>
-IIStream& get_v(IIStream& is, V& v, std::size_t i, std::size_t gi) {
-    if (i == gi) {
-        X x{};
-        is >> x;
-        v = std::move(x);
-        return is;
-    } else return get_v<V, Xs...>(is, v, i+1, gi);
-}
-} // namespace detail FIXME: breaks old code
-
-template<typename... Ts>
-IOStream& operator<< (IOStream& os, const cv::util::variant<Ts...> &v) {
-    os << (uint32_t)v.index();
-    return detail::put_v<cv::util::variant<Ts...>, Ts...>(os, v, v.index());
-}
-template<typename... Ts>
-IIStream& operator>> (IIStream& is, cv::util::variant<Ts...> &v) {
-    int idx = -1;
-    is >> idx;
-    GAPI_Assert(idx >= 0 && idx < (int)sizeof...(Ts));
-    return detail::get_v<cv::util::variant<Ts...>, Ts...>(is, v, 0u, idx);
-}
-
-// FIXME: Basic Stream implementaions //////////////////////////////////////////
+// FIXME: Basic Stream implementations /////////////////////////////////////////
 
 // Basic in-memory stream implementations.
 class GAPI_EXPORTS ByteMemoryOutStream final: public IOStream {
@@ -259,13 +217,24 @@ public:
     virtual IIStream& operator>> (std::string &) override;
 };
 
+namespace detail {
+GAPI_EXPORTS std::unique_ptr<IIStream> getInStream(const std::vector<char> &p);
+} // namespace detail
+
+GAPI_EXPORTS void serialize(IOStream& os, const cv::GCompileArgs &ca);
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GMetaArgs &ma);
 GAPI_EXPORTS void serialize(IOStream& os, const cv::GRunArgs &ra);
+GAPI_EXPORTS void serialize(IOStream& os, const std::vector<std::string> &vs);
 GAPI_EXPORTS GMetaArgs meta_args_deserialize(IIStream& is);
 GAPI_EXPORTS GRunArgs run_args_deserialize(IIStream& is);
+GAPI_EXPORTS std::vector<std::string> vector_of_strings_deserialize(IIStream& is);
 
 } // namespace s11n
 } // namespace gapi
 } // namespace cv
+
+#if defined _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // OPENCV_GAPI_COMMON_SERIALIZATION_HPP

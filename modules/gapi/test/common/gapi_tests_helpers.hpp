@@ -50,6 +50,18 @@ namespace opencv_test
     __TUPLE_PARAM_TYPE(index) param_name = getSpecificParam<index>(); \
     __WRAP_VAARGS(__DEFINE_PARAMS_IMPL7(index+1, __VA_ARGS__))
 
+#define __DEFINE_PARAMS_IMPL9(index, param_name, ...) \
+    __TUPLE_PARAM_TYPE(index) param_name = getSpecificParam<index>(); \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL8(index+1, __VA_ARGS__))
+
+#define __DEFINE_PARAMS_IMPL10(index, param_name, ...) \
+    __TUPLE_PARAM_TYPE(index) param_name = getSpecificParam<index>(); \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL9(index+1, __VA_ARGS__))
+
+#define __DEFINE_PARAMS_IMPL11(index, param_name, ...) \
+    __TUPLE_PARAM_TYPE(index) param_name = getSpecificParam<index>(); \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL10(index+1, __VA_ARGS__))
+
 // user interface to define member variables of specified names
 #define DEFINE_SPECIFIC_PARAMS_0()
 
@@ -76,6 +88,15 @@ namespace opencv_test
 
 #define DEFINE_SPECIFIC_PARAMS_8(...) \
     __WRAP_VAARGS(__DEFINE_PARAMS_IMPL8(0, __VA_ARGS__))
+
+#define DEFINE_SPECIFIC_PARAMS_9(...) \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL9(0, __VA_ARGS__))
+
+#define DEFINE_SPECIFIC_PARAMS_10(...) \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL10(0, __VA_ARGS__))
+
+#define DEFINE_SPECIFIC_PARAMS_11(...) \
+    __WRAP_VAARGS(__DEFINE_PARAMS_IMPL11(0, __VA_ARGS__))
 } // namespace opencv_test
 
 #endif //OPENCV_GAPI_TESTS_HELPERS_HPP

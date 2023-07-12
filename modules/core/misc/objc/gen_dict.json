@@ -78,6 +78,26 @@
             "(void)divide:(double)scale src2:(Mat*)src2 dst:(Mat*)dst dtype:(int)dtype" : { "src2" : {"name" : "src"} }
         }
     },
+    "header_fix" : {
+        "Core": {
+            "pow" : {
+                "prolog" : "#pragma push_macro(\"pow\")\n#undef pow",
+                "epilog" : "#pragma pop_macro(\"pow\")"
+            },
+            "sqrt" : {
+                "prolog" : "#pragma push_macro(\"sqrt\")\n#undef sqrt",
+                "epilog" : "#pragma pop_macro(\"sqrt\")"
+            },
+            "exp" : {
+                "prolog" : "#pragma push_macro(\"exp\")\n#undef exp",
+                "epilog" : "#pragma pop_macro(\"exp\")"
+            },
+            "log" : {
+                "prolog" : "#pragma push_macro(\"log\")\n#undef log",
+                "epilog" : "#pragma pop_macro(\"log\")"
+            }
+        }
+    },
     "type_dict" : {
         "Algorithm": {
             "objc_type": "Algorithm*"
@@ -113,13 +133,13 @@
             "objc_type": "Point2i*",
             "to_cpp": "%(n)s.nativeRef",
             "from_cpp": "[Point2i fromNative:%(n)s]",
-            "swift_type": "Point"
+            "swift_type": "Point2i"
         },
         "Point2i": {
             "objc_type": "Point2i*",
             "to_cpp": "%(n)s.nativeRef",
             "from_cpp": "[Point2i fromNative:%(n)s]",
-            "swift_type": "Point"
+            "swift_type": "Point2i"
         },
         "Point2f": {
             "objc_type": "Point2f*",
@@ -153,13 +173,13 @@
             "objc_type": "Rect2i*",
             "to_cpp": "%(n)s.nativeRef",
             "from_cpp": "[Rect2i fromNative:%(n)s]",
-            "swift_type": "Rect"
+            "swift_type": "Rect2i"
         },
         "Rect2i": {
             "objc_type": "Rect2i*",
             "to_cpp": "%(n)s.nativeRef",
             "from_cpp": "[Rect2i fromNative:%(n)s]",
-            "swift_type": "Rect"
+            "swift_type": "Rect2i"
         },
         "Rect2f": {
             "objc_type": "Rect2f*",
@@ -185,13 +205,13 @@
             "objc_type": "Size2i*",
             "to_cpp": "%(n)s.nativeRef",
             "from_cpp": "[Size2i fromNative:%(n)s]",
-            "swift_type": "Size"
+            "swift_type": "Size2i"
         },
         "Size2i": {
             "objc_type": "Size2i*",
             "to_cpp": "%(n)s.nativeRef",
             "from_cpp": "[Size2i fromNative:%(n)s]",
-            "swift_type": "Size"
+            "swift_type": "Size2i"
         },
         "Size2f": {
             "objc_type": "Size2f*",
@@ -210,6 +230,13 @@
             "swift_type": "String"
         },
         "std::string": {
+            "objc_type": "NSString*",
+            "to_cpp": "std::string(%(n)s.UTF8String)",
+            "from_cpp": "[NSString stringWithUTF8String:%(n)s.c_str()]",
+            "swift_type": "String"
+        },
+        "string": {
+            "cast_to": "std::string",
             "objc_type": "NSString*",
             "to_cpp": "std::string(%(n)s.UTF8String)",
             "from_cpp": "[NSString stringWithUTF8String:%(n)s.c_str()]",
@@ -266,7 +293,7 @@
         "vector_Point": {
             "objc_type": "Point2i*",
             "v_type": "Point2i",
-            "swift_type": "[Point]"
+            "swift_type": "[Point2i]"
         },
         "vector_Point2f": {
             "objc_type": "Point2f*",
@@ -291,7 +318,7 @@
         "vector_Rect": {
             "objc_type": "Rect2i*",
             "v_type": "Rect2i",
-            "swift_type": "[Rect]"
+            "swift_type": "[Rect2i]"
         },
         "vector_Rect2d": {
             "objc_type": "Rect2d*",
@@ -379,7 +406,7 @@
         "vector_vector_Point": {
             "objc_type": "Point2i*",
             "v_v_type": "Point2i",
-            "swift_type": "[[Point]]"
+            "swift_type": "[[Point2i]]"
         },
         "vector_vector_Point2f": {
             "objc_type": "Point2f*",

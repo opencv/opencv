@@ -63,6 +63,39 @@
     #endif
 #endif
 
+using namespace cv;
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+#define Qt_MiddleButton Qt::MiddleButton
+inline Qt::Orientation wheelEventOrientation(QWheelEvent *we) {
+    if (std::abs(we->angleDelta().x()) < std::abs(we->angleDelta().y()))
+        return Qt::Vertical;
+    else
+        return Qt::Horizontal;
+}
+inline int wheelEventDelta(QWheelEvent *we) {
+    if(wheelEventOrientation(we) == Qt::Vertical)
+        return we->angleDelta().y();
+    else
+        return we->angleDelta().x();
+}
+inline QPoint wheelEventPos(QWheelEvent *we) {
+    return we->position().toPoint();
+}
+#else
+#define Qt_MiddleButton Qt::MidButton
+inline Qt::Orientation wheelEventOrientation(QWheelEvent *we) {
+    return we->orientation();
+}
+inline int wheelEventDelta(QWheelEvent *we) {
+    return we->delta();
+}
+inline QPoint wheelEventPos(QWheelEvent *we) {
+    return we->pos();
+}
+
+#endif
+
 
 //Static and global first
 static GuiReceiver *guiMainThread = NULL;
@@ -197,7 +230,7 @@ void cvSetPropWindow_QT(const char* name,double prop_value)
         Q_ARG(double, prop_value));
 }
 
-void cv::setWindowTitle(const String& winname, const String& title)
+void setWindowTitle_QT(const String& winname, const String& title)
 {
     if (!guiMainThread)
         CV_Error(Error::StsNullPtr, "NULL guiReceiver (please create a window)");
@@ -496,6 +529,9 @@ static int icvInitSystem(int* c, char** v)
     //"For any GUI application using Qt, there is precisely one QApplication object"
     if (!QApplication::instance())
     {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+#endif
         new QApplication(*c, v);
         setlocale(LC_NUMERIC,"C");
 
@@ -1219,9 +1255,6 @@ void GuiReceiver::addSlider2(QString bar_name, QString window_name, void* value,
     if (t) //trackbar exists
         return;
 
-    if (!value)
-        CV_Error(CV_StsNullPtr, "NULL value pointer" );
-
     if (count <= 0) //count is the max value of the slider, so must be bigger than 0
         CV_Error(CV_StsNullPtr, "Max value of the slider must be bigger than 0" );
 
@@ -1342,7 +1375,8 @@ void CvTrackbar::create(CvWindow* arg, QString name, int* value, int _count)
     slider->setMinimum(0);
     slider->setMaximum(_count);
     slider->setPageStep(5);
-    slider->setValue(*value);
+    if (dataSlider)
+        slider->setValue(*dataSlider);
     slider->setTickPosition(QSlider::TicksBelow);
 
 
@@ -1409,7 +1443,8 @@ void CvTrackbar::update(int myvalue)
 {
     setLabel(myvalue);
 
-    *dataSlider = myvalue;
+    if (dataSlider)
+        *dataSlider = myvalue;
     if (callback)
     {
         callback(myvalue);
@@ -1580,7 +1615,9 @@ CvWinProperties::CvWinProperties(QString name_paraWindow, QObject* /*parent*/)
     myLayout->setObjectName(QString::fromUtf8("boxLayout"));
     myLayout->setContentsMargins(0, 0, 0, 0);
     myLayout->setSpacing(0);
+#if QT_VERSION < QT_VERSION_CHECK(5, 13, 0)
     myLayout->setMargin(0);
+#endif
     myLayout->setSizeConstraint(QLayout::SetFixedSize);
     setLayout(myLayout);
 
@@ -1958,7 +1995,9 @@ void CvWindow::createBarLayout()
     myBarLayout->setObjectName(QString::fromUtf8("barLayout"));
     myBarLayout->setContentsMargins(0, 0, 0, 0);
     myBarLayout->setSpacing(0);
+#if QT_VERSION < QT_VERSION_CHECK(5, 13, 0)
     myBarLayout->setMargin(0);
+#endif
 }
 
 
@@ -1968,7 +2007,9 @@ void CvWindow::createGlobalLayout()
     myGlobalLayout->setObjectName(QString::fromUtf8("boxLayout"));
     myGlobalLayout->setContentsMargins(0, 0, 0, 0);
     myGlobalLayout->setSpacing(0);
+#if QT_VERSION < QT_VERSION_CHECK(5, 13, 0)
     myGlobalLayout->setMargin(0);
+#endif
     setMinimumSize(1, 1);
 
     if (param_flags == CV_WINDOW_AUTOSIZE)
@@ -2090,8 +2131,6 @@ void CvWindow::createToolBar()
 {
     myToolBar = new QToolBar(this);
     myToolBar->setFloatable(false); //is not a window
-    myToolBar->setFixedHeight(28);
-    myToolBar->setMinimumWidth(1);
 
     foreach (QAction *a, vect_QActions)
         myToolBar->addAction(a);
@@ -2157,23 +2196,58 @@ void CvWindow::displayPropertiesWin()
         global_control_panel->hide();
 }
 
+static bool isTranslatableKey(Qt::Key key)
+{
+    // https://github.com/opencv/opencv/issues/21899
+    // https://doc.qt.io/qt-5/qt.html#Key-enum
+    // https://doc.qt.io/qt-6/qt.html#Key-enum
+    // https://github.com/qt/qtbase/blob/dev/src/testlib/qasciikey.cpp
+
+    bool ret = false;
+
+    switch ( key )
+    {
+        // Special keys
+        case Qt::Key_Escape:
+        case Qt::Key_Tab:
+        case Qt::Key_Backtab:
+        case Qt::Key_Backspace:
+        case Qt::Key_Enter:
+        case Qt::Key_Return:
+            ret = true;
+            break;
+
+        // latin-1 keys.
+        default:
+        ret = (
+            ( ( Qt::Key_Space        <= key ) && ( key <= Qt::Key_AsciiTilde ) ) // 0x20--0x7e
+            ||
+            ( ( Qt::Key_nobreakspace <= key ) && ( key <= Qt::Key_ssharp     ) ) // 0x0a0--0x0de
+            ||
+            ( key == Qt::Key_division )                                          // 0x0f7
+            ||
+            ( key == Qt::Key_ydiaeresis )                                        // 0x0ff
+        );
+        break;
+    }
+
+    return ret;
+}
 
 //Need more test here !
 void CvWindow::keyPressEvent(QKeyEvent *evnt)
 {
-    //see http://doc.trolltech.com/4.6/qt.html#Key-enum
     int key = evnt->key();
+    const Qt::Key qtkey = static_cast<Qt::Key>(key);
 
-        Qt::Key qtkey = static_cast<Qt::Key>(key);
-        char asciiCode = QTest::keyToAscii(qtkey);
-        if (asciiCode != 0)
-            key = static_cast<int>(asciiCode);
-        else
-            key = evnt->nativeVirtualKey(); //same codes as returned by GTK-based backend
+    if ( isTranslatableKey( qtkey ) )
+        key = static_cast<int>( QTest::keyToAscii( qtkey ) );
+    else
+        key = evnt->nativeVirtualKey(); //same codes as returned by GTK-based backend
 
     //control plus (Z, +, -, up, down, left, right) are used for zoom/panning functions
-        if (evnt->modifiers() != Qt::ControlModifier)
-        {
+    if (evnt->modifiers() != Qt::ControlModifier)
+    {
         mutexKey.lock();
         last_key = key;
         mutexKey.unlock();
@@ -2206,7 +2280,7 @@ void CvWindow::icvLoadControlPanel()
             }
             if (t->type == type_CvButtonbar)
             {
-                int subsize = settings.beginReadArray(QString("buttonbar")+i);
+                int subsize = settings.beginReadArray(QString("buttonbar%1").arg(i));
 
                 if ( subsize == ((CvButtonbar*)t)->layout()->count() )
                     icvLoadButtonbar((CvButtonbar*)t,&settings);
@@ -2237,7 +2311,7 @@ void CvWindow::icvSaveControlPanel()
         }
         if (t->type == type_CvButtonbar)
         {
-            settings.beginWriteArray(QString("buttonbar")+i);
+            settings.beginWriteArray(QString("buttonbar%1").arg(i));
             icvSaveButtonbar((CvButtonbar*)t,&settings);
             settings.endArray();
         }
@@ -2397,14 +2471,14 @@ void OCVViewPort::icvmouseHandler(QMouseEvent* evnt, type_mouse_event category, 
         flags |= CV_EVENT_FLAG_LBUTTON;
     if(buttons & Qt::RightButton)
         flags |= CV_EVENT_FLAG_RBUTTON;
-    if(buttons & Qt::MidButton)
+    if(buttons & Qt_MiddleButton)
         flags |= CV_EVENT_FLAG_MBUTTON;
 
     if (cv_event == -1) {
         if (category == mouse_wheel) {
             QWheelEvent *we = (QWheelEvent *) evnt;
-            cv_event = ((we->orientation() == Qt::Vertical) ? CV_EVENT_MOUSEWHEEL : CV_EVENT_MOUSEHWHEEL);
-            flags |= (we->delta() & 0xffff)<<16;
+            cv_event = ((wheelEventOrientation(we) == Qt::Vertical) ? CV_EVENT_MOUSEWHEEL : CV_EVENT_MOUSEHWHEEL);
+            flags |= (wheelEventDelta(we) & 0xffff)<<16;
             return;
         }
         switch(evnt->button())
@@ -2417,7 +2491,7 @@ void OCVViewPort::icvmouseHandler(QMouseEvent* evnt, type_mouse_event category, 
             cv_event = tableMouseButtons[category][1];
             flags |= CV_EVENT_FLAG_RBUTTON;
             break;
-        case Qt::MidButton:
+        case Qt_MiddleButton:
             cv_event = tableMouseButtons[category][2];
             flags |= CV_EVENT_FLAG_MBUTTON;
             break;
@@ -2772,7 +2846,7 @@ void DefaultViewPort::wheelEvent(QWheelEvent* evnt)
 {
     icvmouseEvent((QMouseEvent *)evnt, mouse_wheel);
 
-    scaleView(evnt->delta() / 240.0, evnt->pos());
+    scaleView(wheelEventDelta(evnt) / 240.0, wheelEventPos(evnt));
     viewport()->update();
 
     QWidget::wheelEvent(evnt);
@@ -2883,18 +2957,19 @@ inline bool DefaultViewPort::isSameSize(IplImage* img1, IplImage* img2)
 void DefaultViewPort::controlImagePosition()
 {
     qreal left, top, right, bottom;
+    qreal factor = 1.0 / param_matrixWorld.m11();
 
     //after check top-left, bottom right corner to avoid getting "out" during zoom/panning
     param_matrixWorld.map(0,0,&left,&top);
 
     if (left > 0)
     {
-        param_matrixWorld.translate(-left,0);
+        param_matrixWorld.translate(-left * factor, 0);
         left = 0;
     }
     if (top > 0)
     {
-        param_matrixWorld.translate(0,-top);
+        param_matrixWorld.translate(0, -top * factor);
         top = 0;
     }
     //-------
@@ -2903,12 +2978,12 @@ void DefaultViewPort::controlImagePosition()
     param_matrixWorld.map(sizeImage.width(),sizeImage.height(),&right,&bottom);
     if (right < sizeImage.width())
     {
-        param_matrixWorld.translate(sizeImage.width()-right,0);
+        param_matrixWorld.translate((sizeImage.width() - right) * factor, 0);
         right = sizeImage.width();
     }
     if (bottom < sizeImage.height())
     {
-        param_matrixWorld.translate(0,sizeImage.height()-bottom);
+        param_matrixWorld.translate(0, (sizeImage.height() - bottom) * factor);
         bottom = sizeImage.height();
     }
 
@@ -3009,25 +3084,38 @@ void DefaultViewPort::drawStatusBar()
 //  if (mouseCoordinate.x()>=0 && mouseCoordinate.y()>=0)
     {
         QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
+        const QPalette colorPalette{ QApplication::palette(this) };
 
-        if (nbChannelOriginImage==CV_8UC3 )
+        const QColor normalTextColor = colorPalette.brush(QPalette::WindowText).color();
+        const QString textColorName = normalTextColor.name();
+
+
+        if (nbChannelOriginImage==CV_8UC3)
         {
-            centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
+            const int r_half = normalTextColor.red() >> 1;
+            const int g_half = normalTextColor.green() >> 1;
+            const int b_half = normalTextColor.blue() >> 1;
+            const QColor red = QColor(255, g_half, b_half);
+            const QColor green = QColor(r_half, 255, b_half);
+            const QColor blue = QColor(r_half, g_half, 255);
+            centralWidget->myStatusBar_msg->setText(tr("<font color=%1>(x=%2, y=%3) ~ </font>")
+                .arg(textColorName)
                 .arg(mouseCoordinate.x())
                 .arg(mouseCoordinate.y())+
-                tr("<font color='red'>R:%3 </font>").arg(qRed(rgbValue))+//.arg(value.val[0])+
-                tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+//.arg(value.val[1])+
-                tr("<font color='blue'>B:%5</font>").arg(qBlue(rgbValue))//.arg(value.val[2])
+                tr("<font color=%4>R:%5 </font>").arg(red.name()).arg(qRed(rgbValue))+
+                tr("<font color=%6>G:%7 </font>").arg(green.name()).arg(qGreen(rgbValue))+
+                tr("<font color=%8>B:%9</font>").arg(blue.name()).arg(qBlue(rgbValue))
                 );
         }
 
         if (nbChannelOriginImage==CV_8UC1)
         {
             //all the channel have the same value (because of cv::cvtColor(GRAY=>RGB)), so only the r channel is dsplayed
-            centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
+            centralWidget->myStatusBar_msg->setText(tr("<font color=%1>(x=%2, y=%3) ~ </font>")
+                .arg(textColorName)
                 .arg(mouseCoordinate.x())
                 .arg(mouseCoordinate.y())+
-                tr("<font color='grey'>L:%3 </font>").arg(qRed(rgbValue))
+                tr("<font color='grey'>L:%4 </font>").arg(qRed(rgbValue))
                 );
         }
     }
@@ -3188,7 +3276,9 @@ void DefaultViewPort::setSize(QSize /*size_*/)
 
 #ifdef HAVE_QT_OPENGL
 
-OpenGlViewPort::OpenGlViewPort(QWidget* _parent) : QGLWidget(_parent), OCVViewPort(), size(-1, -1)
+
+// QOpenGLWidget vs QGLWidget info: https://www.qt.io/blog/2014/09/10/qt-weekly-19-qopenglwidget
+OpenGlViewPort::OpenGlViewPort(QWidget* _parent) : OpenCVQtWidgetBase(_parent), OCVViewPort(), size(-1, -1)
 {
     glDrawCallback = 0;
     glDrawData = 0;
@@ -3242,7 +3332,11 @@ void OpenGlViewPort::makeCurrentOpenGlContext()
 
 void OpenGlViewPort::updateGl()
 {
+    #ifdef HAVE_QT6
+    QOpenGLWidget::update();
+    #else
     QGLWidget::updateGL();
+    #endif
 }
 
 void OpenGlViewPort::initializeGL()
@@ -3269,31 +3363,31 @@ void OpenGlViewPort::paintGL()
 void OpenGlViewPort::wheelEvent(QWheelEvent* evnt)
 {
     icvmouseEvent((QMouseEvent *)evnt, mouse_wheel);
-    QGLWidget::wheelEvent(evnt);
+    OpenCVQtWidgetBase::wheelEvent(evnt);
 }
 
 void OpenGlViewPort::mousePressEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_down);
-    QGLWidget::mousePressEvent(evnt);
+    OpenCVQtWidgetBase::mousePressEvent(evnt);
 }
 
 void OpenGlViewPort::mouseReleaseEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_up);
-    QGLWidget::mouseReleaseEvent(evnt);
+    OpenCVQtWidgetBase::mouseReleaseEvent(evnt);
 }
 
 void OpenGlViewPort::mouseDoubleClickEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_dbclick);
-    QGLWidget::mouseDoubleClickEvent(evnt);
+    OpenCVQtWidgetBase::mouseDoubleClickEvent(evnt);
 }
 
 void OpenGlViewPort::mouseMoveEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_move);
-    QGLWidget::mouseMoveEvent(evnt);
+    OpenCVQtWidgetBase::mouseMoveEvent(evnt);
 }
 
 
@@ -3301,8 +3395,7 @@ QSize OpenGlViewPort::sizeHint() const
 {
     if (size.width() > 0 && size.height() > 0)
         return size;
-
-    return QGLWidget::sizeHint();
+    return OpenCVQtWidgetBase::sizeHint();
 }
 
 void OpenGlViewPort::setSize(QSize size_)
@@ -3311,6 +3404,6 @@ void OpenGlViewPort::setSize(QSize size_)
     updateGeometry();
 }
 
-#endif
+#endif //HAVE_QT_OPENGL
 
 #endif // HAVE_QT

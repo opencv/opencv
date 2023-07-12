@@ -60,7 +60,7 @@ int main( void )
 
    //![create_trackbar]
    char TrackbarName[50];
-   sprintf( TrackbarName, "Alpha x %d", alpha_slider_max );
+   snprintf( TrackbarName, sizeof(TrackbarName), "Alpha x %d", alpha_slider_max );
    createTrackbar( TrackbarName, "Linear Blend", &alpha_slider, alpha_slider_max, on_trackbar );
    //![create_trackbar]
 

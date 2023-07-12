@@ -18,6 +18,7 @@
 #include "cudnn/softmax.hpp"
 #include "cudnn/transform.hpp"
 #include "cudnn/transpose_convolution.hpp"
+#include "cudnn/recurrent.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -44,6 +45,30 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                 memcpy(dest.get(), src.get(), dest.size(), stream);
         }
 
+        namespace detail {
+            template <class T>
+            void assertGEMMCompatiblity(const TensorSpan<T>& result, bool transa, const TensorView<T>& A, bool transb, const TensorView<T>& B) {
+                /* check dimension requirements for matrix multiplication */
+                if (!transa && !transb) {
+                    CV_Assert(A.get_axis_size(-2) == result.get_axis_size(-2));
+                    CV_Assert(A.get_axis_size(-1) == B.get_axis_size(-2));
+                    CV_Assert(B.get_axis_size(-1) == result.get_axis_size(-1));
+                } else if (!transa && transb) {
+                    CV_Assert(A.get_axis_size(-2) == result.get_axis_size(-2));
+                    CV_Assert(A.get_axis_size(-1) == B.get_axis_size(-1));
+                    CV_Assert(B.get_axis_size(-2) == result.get_axis_size(-1));
+                } else if (transa && !transb) {
+                    CV_Assert(A.get_axis_size(-1) == result.get_axis_size(-2));
+                    CV_Assert(A.get_axis_size(-2) == B.get_axis_size(-2));
+                    CV_Assert(B.get_axis_size(-1) == result.get_axis_size(-1));
+                } else {
+                    CV_Assert(A.get_axis_size(-1) == result.get_axis_size(-2));
+                    CV_Assert(A.get_axis_size(-2) == B.get_axis_size(-1));
+                    CV_Assert(B.get_axis_size(-2) == result.get_axis_size(-1));
+                }
+            }
+        }
+
         /** @brief performs generalized matrix-multiplication
          *
          * Pre-conditions:
@@ -54,35 +79,18 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
          */
         template <class T> inline
         void gemm(const cublas::Handle& handle, T beta, TensorSpan<T> result, T alpha, bool transa, TensorView<T> A, bool transb, TensorView<T> B) {
-            /* matrix operations can be performed only on rank two or less tensors */
-            CV_Assert(get_effective_rank(A) <= 2 &&
-                get_effective_rank(B) <= 2 &&
-                get_effective_rank(result) <= 2);
-
-            /* check dimension requirements for matrix multiplication */
-            if (!transa && !transb) {
-                CV_Assert(A.get_axis_size(-2) == result.get_axis_size(-2));
-                CV_Assert(A.get_axis_size(-1) == B.get_axis_size(-2));
-                CV_Assert(B.get_axis_size(-1) == result.get_axis_size(-1));
-            } else if (!transa && transb) {
-                CV_Assert(A.get_axis_size(-2) == result.get_axis_size(-2));
-                CV_Assert(A.get_axis_size(-1) == B.get_axis_size(-1));
-                CV_Assert(B.get_axis_size(-2) == result.get_axis_size(-1));
-            } else if (transa && !transb) {
-                CV_Assert(A.get_axis_size(-1) == result.get_axis_size(-2));
-                CV_Assert(A.get_axis_size(-2) == B.get_axis_size(-2));
-                CV_Assert(B.get_axis_size(-1) == result.get_axis_size(-1));
-            } else {
-                CV_Assert(A.get_axis_size(-1) == result.get_axis_size(-2));
-                CV_Assert(A.get_axis_size(-2) == B.get_axis_size(-1));
-                CV_Assert(B.get_axis_size(-2) == result.get_axis_size(-1));
-            }
+            /* matrix operations can be performed only on tensors with rank two or below */
+            CV_Assert(get_effective_rank(A) <= 2);
+            CV_Assert(get_effective_rank(B) <= 2);
+            CV_Assert(get_effective_rank(result) <= 2);
 
             const auto result_nr = result.get_axis_size(-2);
             const auto result_nc = result.get_axis_size(-1);
             const auto common_dim = A.get_axis_size(transa ? -2 : -1);
             const auto A_nc = A.get_axis_size(-1);
             const auto B_nc = B.get_axis_size(-1);
+
+            detail::assertGEMMCompatiblity(result, transa, A, transb, B);
 
             /* tensors are stored in row-major but cublas::gemm operates on column-major matrices
              * a row-major matrix when read as column-major matrix gives the transpose of the intended matrix
@@ -101,6 +109,47 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
                 alpha, B.get(), B_nc,
                 A.get(), A_nc,
                 beta, result.get(), result_nc);
+        }
+
+        /** @brief performs generalized matrix-multiplication for a strided batch of matrices
+         *
+         * Pre-conditions:
+         * - A, B and C must be rank three tensors with dimensions (batch, rows, cols)
+         * - the last two axes of \p A and \p B must meet the mathematical requirements for matrix multiplication
+         * - \p result must be large enough to hold the result and the matrices must not overlap in memory
+         * - batch dimension should be same in \p A, \p B and \p result
+         *
+         * Exception Guarantee: Basic
+         */
+        template <class T> inline
+        void gemmStridedBatched(const cublas::Handle& handle, T beta, TensorSpan<T> result, T alpha, bool transa, TensorView<T> A, bool transb, TensorView<T> B) {
+            CV_Assert(A.rank() == 3);
+            CV_Assert(B.rank() == 3);
+            CV_Assert(result.rank() == 3);
+
+            const auto batch_size = result.get_axis_size(0);
+            CV_Assert(batch_size == A.get_axis_size(0));
+            CV_Assert(batch_size == B.get_axis_size(0));
+
+            detail::assertGEMMCompatiblity(result, transa, A, transb, B);
+
+            const auto result_nr = result.get_axis_size(-2);
+            const auto result_nc = result.get_axis_size(-1);
+            const auto common_dim = A.get_axis_size(transa ? -2 : -1);
+            const auto A_nc = A.get_axis_size(-1);
+            const auto B_nc = B.get_axis_size(-1);
+
+            std::size_t strideA = (A.size() / batch_size),
+                        strideB = (B.size() / batch_size),
+                        strideC = (result.size() / batch_size);
+
+            cublas::gemmStridedBatched<T>(handle,
+                transb, transa,
+                result_nc, result_nr, common_dim,
+                alpha, B.get(), B_nc, strideB,
+                A.get(), A_nc, strideA,
+                beta, result.get(), result_nc, strideC,
+                batch_size);
         }
 
         /** @brief performs element-wise addition with broadcasting
@@ -422,6 +471,90 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
     private:
         cudnn::Handle cudnnHandle;
         TensorTransformDescriptor transDesc;
+    };
+
+    template<class T>
+    class LSTM
+    {
+        using TensorDescriptor = cudnn::TensorDescriptor<T>;
+        using DropoutDescriptor = cudnn::DropoutDescriptor;
+        using RNNDescriptor = cudnn::RNNDescriptor<T>;
+        using FilterDescriptor = cudnn::FilterDescriptor<T>;
+        using TensorDescriptorsArray = cudnn::TensorDescriptorsArray<T>;
+
+    public:
+        using RNNMode = typename RNNDescriptor::RNNMode;
+
+        struct params_type
+        {
+            std::vector<std::size_t> weights_shape;
+
+            int seqLength;
+            int numLayers;
+            int hiddenSize;
+            int inputSize;
+            int miniBatch;
+            bool bidirectional;
+
+            float dropout;
+            RNNMode type;
+        };
+
+        LSTM() = default;
+        LSTM(const LSTM&) = delete;
+        LSTM(LSTM&&) = default;
+        LSTM(cudnn::Handle handle, const params_type& params)
+            : cudnnHandle(std::move(handle)), seqLength{params.seqLength},
+              inputDesc(seqLength, {params.miniBatch, params.inputSize, 1}),
+              outputDesc(seqLength,
+                         {params.miniBatch,
+                          params.bidirectional ? params.hiddenSize * 2 : params.hiddenSize,
+                          1})
+        {
+            dropoutDesc = DropoutDescriptor(cudnnHandle, params.dropout);
+            filterDesc = FilterDescriptor(params.weights_shape);
+            rnnDesc = RNNDescriptor(cudnnHandle, params.type, params.hiddenSize,
+                                    params.numLayers, params.bidirectional, dropoutDesc);
+
+            int num_direction = params.bidirectional ? 2 : 1;
+            h0TensorDesc = TensorDescriptor(
+                    {num_direction, params.miniBatch, params.hiddenSize});
+            c0TensorDesc = TensorDescriptor(
+                    {num_direction, params.miniBatch, params.hiddenSize});
+
+            // Get amount of work space required to execute the RNN described by rnnDesc
+            // with input dimensions defined by inputDesc
+            csl::WorkspaceBuilder builder;
+            builder.require(cudnn::getRNNWorkspaceSize<T>(cudnnHandle, rnnDesc, seqLength, inputDesc));
+            scratch_mem_in_bytes = builder.required_workspace_size();
+        }
+
+        LSTM& operator=(const LSTM&) = delete;
+        LSTM& operator=(LSTM&&) = default;
+
+        void inference(TensorView<T> input, TensorSpan<T> y_output, TensorSpan<T> yc_output, TensorView<T> filters,
+                       TensorView<T> h0, TensorView<T> c0, WorkspaceInstance workspace)
+        {
+            cudnn::LSTMForward<T>(cudnnHandle, rnnDesc, filterDesc, filters.get(), inputDesc,
+                                  input.get(), h0TensorDesc, h0.get(), c0TensorDesc, c0.get(),
+                                  seqLength, outputDesc, y_output.get(), yc_output.get(), workspace);
+        }
+
+        std::size_t get_workspace_memory_in_bytes() const noexcept { return scratch_mem_in_bytes; }
+
+    private:
+        cudnn::Handle cudnnHandle;
+        std::size_t scratch_mem_in_bytes{0};
+        int seqLength;
+
+        RNNDescriptor rnnDesc;
+        DropoutDescriptor dropoutDesc;
+
+        FilterDescriptor filterDesc;
+        TensorDescriptor h0TensorDesc, c0TensorDesc;
+
+        TensorDescriptorsArray inputDesc;
+        TensorDescriptorsArray outputDesc;
     };
 
 }}}} /* namespace cv::dnn::cuda4dnn::csl */

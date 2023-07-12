@@ -7,6 +7,9 @@
 #include <string>
 #include "cap_mfx_reader.hpp"
 #include "cap_mfx_writer.hpp"
+
+#define ABI_VERSION 0
+#define API_VERSION 0
 #include "plugin_api.hpp"
 
 using namespace std;
@@ -34,8 +37,13 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int, CV_OUT CvPluginC
             }
         }
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
     }
     if (cap)
         delete cap;
@@ -66,8 +74,14 @@ CvResult CV_API_CALL cv_capture_get_prop(CvPluginCapture handle, int prop, CV_OU
         *val = instance->getProperty(prop);
         return CV_ERROR_OK;
     }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
     catch (...)
     {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -82,8 +96,14 @@ CvResult CV_API_CALL cv_capture_set_prop(CvPluginCapture handle, int prop, doubl
         VideoCapture_IntelMFX* instance = (VideoCapture_IntelMFX*)handle;
         return instance->setProperty(prop, val) ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -98,8 +118,14 @@ CvResult CV_API_CALL cv_capture_grab(CvPluginCapture handle)
         VideoCapture_IntelMFX* instance = (VideoCapture_IntelMFX*)handle;
         return instance->grabFrame() ? CV_ERROR_OK : CV_ERROR_FAIL;
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -117,8 +143,14 @@ CvResult CV_API_CALL cv_capture_retrieve(CvPluginCapture handle, int stream_idx,
             return callback(stream_idx, img.data, (int)img.step, img.cols, img.rows, img.channels(), userdata);
         return CV_ERROR_FAIL;
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
@@ -137,8 +169,13 @@ CvResult CV_API_CALL cv_writer_open(const char* filename, int fourcc, double fps
             return CV_ERROR_OK;
         }
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
     }
     if (wrt)
         delete wrt;
@@ -179,42 +216,48 @@ CvResult CV_API_CALL cv_writer_write(CvPluginWriter handle, const unsigned char 
         instance->write(img);
         return CV_ERROR_OK;
     }
-    catch(...)
+    catch (const std::exception& e)
     {
+        CV_LOG_WARNING(NULL, "MFX: Exception is raised: " << e.what());
+        return CV_ERROR_FAIL;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "MFX: Unknown C++ exception is raised");
         return CV_ERROR_FAIL;
     }
 }
 
-static const OpenCV_VideoIO_Plugin_API_preview plugin_api_v0 =
+static const OpenCV_VideoIO_Plugin_API_preview plugin_api =
 {
     {
         sizeof(OpenCV_VideoIO_Plugin_API_preview), ABI_VERSION, API_VERSION,
         CV_VERSION_MAJOR, CV_VERSION_MINOR, CV_VERSION_REVISION, CV_VERSION_STATUS,
         "MediaSDK OpenCV Video I/O plugin"
     },
-    /*  1*/CAP_INTEL_MFX,
-    /*  2*/cv_capture_open,
-    /*  3*/cv_capture_release,
-    /*  4*/cv_capture_get_prop,
-    /*  5*/cv_capture_set_prop,
-    /*  6*/cv_capture_grab,
-    /*  7*/cv_capture_retrieve,
-    /*  8*/cv_writer_open,
-    /*  9*/cv_writer_release,
-    /* 10*/cv_writer_get_prop,
-    /* 11*/cv_writer_set_prop,
-    /* 12*/cv_writer_write
+    {
+        /*  1*/CAP_INTEL_MFX,
+        /*  2*/cv_capture_open,
+        /*  3*/cv_capture_release,
+        /*  4*/cv_capture_get_prop,
+        /*  5*/cv_capture_set_prop,
+        /*  6*/cv_capture_grab,
+        /*  7*/cv_capture_retrieve,
+        /*  8*/cv_writer_open,
+        /*  9*/cv_writer_release,
+        /* 10*/cv_writer_get_prop,
+        /* 11*/cv_writer_set_prop,
+        /* 12*/cv_writer_write
+    }
 };
 
 } // namespace
 
 const OpenCV_VideoIO_Plugin_API_preview* opencv_videoio_plugin_init_v0(int requested_abi_version, int requested_api_version, void* /*reserved=NULL*/) CV_NOEXCEPT
 {
-    if (requested_abi_version != 0)
-        return NULL;
-    if (requested_api_version != 0)
-        return NULL;
-    return &cv::plugin_api_v0;
+    if (requested_abi_version == ABI_VERSION && requested_api_version <= API_VERSION)
+        return &cv::plugin_api;
+    return NULL;
 }
 
 #endif // BUILD_PLUGIN

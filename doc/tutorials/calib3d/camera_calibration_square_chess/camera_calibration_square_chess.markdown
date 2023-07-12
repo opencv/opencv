@@ -1,8 +1,15 @@
 Camera calibration with square chessboard {#tutorial_camera_calibration_square_chess}
 =========================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_camera_calibration_pattern}
 @next_tutorial{tutorial_camera_calibration}
+
+|    |    |
+| -: | :- |
+| Original author | Victor Eruhimov |
+| Compatibility | OpenCV >= 4.0 |
 
 
 The goal of this tutorial is to learn how to calibrate a camera given a set of chessboard images.

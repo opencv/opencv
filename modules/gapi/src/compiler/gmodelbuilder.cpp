@@ -59,7 +59,6 @@ private:
 
 } // namespace
 
-
 cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
                                           const GProtoArgs &outs)
 {
@@ -134,12 +133,20 @@ cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
 
                 // Put the outputs object description of the node
                 // so that they are not lost if they are not consumed by other operations
-                for (const auto &it : ade::util::indexed(call_p.m_k.outShapes))
+                GAPI_Assert(call_p.m_k.outCtors.size() == call_p.m_k.outShapes.size());
+                for (const auto it : ade::util::indexed(ade::util::zip(call_p.m_k.outShapes,
+                                                                       call_p.m_k.outCtors,
+                                                                       call_p.m_k.outKinds)))
                 {
-                    std::size_t port  = ade::util::index(it);
-                    GShape shape      = ade::util::value(it);
-
-                    GOrigin org { shape, node, port, {}, origin.kind };
+                    auto port  = ade::util::index(it);
+                    auto &val  = ade::util::value(it);
+                    auto shape = std::get<0>(val);
+                    auto ctor  = std::get<1>(val);
+                    auto kind  = std::get<2>(val);
+                    // NB: Probably this fixes all other "missing host ctor"
+                    // problems.
+                    // TODO: Clean-up the old workarounds if it really is.
+                    GOrigin org {shape, node, port, std::move(ctor), kind};
                     origins.insert(org);
                 }
 
@@ -155,7 +162,7 @@ cv::gimpl::Unrolled cv::gimpl::unrollExpr(const GProtoArgs &ins,
 
         default:
             // Unsupported node shape
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
             break;
         }
     }
@@ -205,7 +212,7 @@ cv::gimpl::GModelBuilder::put(const GProtoArgs &ins, const GProtoArgs &outs)
         const GCall::Priv&  call_p  = call.priv();
         ade::NodeHandle     call_h  = put_OpNode(op_expr_node);
 
-        for (const auto &it : ade::util::indexed(call_p.m_args))
+        for (const auto it : ade::util::indexed(call_p.m_args))
         {
             const auto  in_port = ade::util::index(it);
             const auto& in_arg  = ade::util::value(it);
@@ -286,7 +293,7 @@ ade::NodeHandle cv::gimpl::GModelBuilder::put_OpNode(const cv::GNode &node)
     {
         GAPI_Assert(node.shape() == GNode::NodeShape::CALL);
         const auto &call_p = node.call().priv();
-        auto nh = cv::gimpl::GModel::mkOpNode(m_gm, call_p.m_k, call_p.m_args, node_p.m_island);
+        auto nh = cv::gimpl::GModel::mkOpNode(m_gm, call_p.m_k, call_p.m_args, call_p.m_params, node_p.m_island);
         m_graph_ops[&node_p] = nh;
         return nh;
     }

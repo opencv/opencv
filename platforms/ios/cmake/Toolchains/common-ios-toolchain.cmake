@@ -79,8 +79,11 @@ endif()
 if(NOT DEFINED CMAKE_OSX_SYSROOT)
   if(IPHONEOS)
     set(CMAKE_OSX_SYSROOT "iphoneos")
-  else()
+  elseif(IPHONESIMULATOR)
     set(CMAKE_OSX_SYSROOT "iphonesimulator")
+  elseif(MAC_CATALYST)
+    # Use MacOS SDK for Catalyst builds
+    set(CMAKE_OSX_SYSROOT "macosx")
   endif()
 endif()
 set(CMAKE_MACOSX_BUNDLE YES)
@@ -90,7 +93,7 @@ if(APPLE_FRAMEWORK AND NOT BUILD_SHARED_LIBS)
   set(CMAKE_OSX_ARCHITECTURES "${IOS_ARCH}" CACHE INTERNAL "Build architecture for iOS" FORCE)
 endif()
 
-if(NOT DEFINED IPHONEOS_DEPLOYMENT_TARGET)
+if(NOT DEFINED IPHONEOS_DEPLOYMENT_TARGET AND NOT MAC_CATALYST)
   if(NOT DEFINED ENV{IPHONEOS_DEPLOYMENT_TARGET})
     message(FATAL_ERROR "IPHONEOS_DEPLOYMENT_TARGET is not specified")
   endif()
@@ -98,8 +101,17 @@ if(NOT DEFINED IPHONEOS_DEPLOYMENT_TARGET)
 endif()
 
 if(NOT __IN_TRY_COMPILE)
-  set(_xcodebuild_wrapper "${CMAKE_BINARY_DIR}/xcodebuild_wrapper")
-  if(NOT EXISTS "${_xcodebuild_wrapper}")
+  set(_xcodebuild_wrapper "")
+  if(NOT (CMAKE_VERSION VERSION_LESS "3.25.1"))  # >= 3.25.1
+    # no workaround is required (#23156)
+  elseif(NOT (CMAKE_VERSION VERSION_LESS "3.25.0"))  # >= 3.25.0 < 3.25.1
+    if(NOT OPENCV_SKIP_MESSAGE_ISSUE_23156)
+      message(FATAL_ERROR "OpenCV: Please upgrade CMake to 3.25.1+. Current CMake version is ${CMAKE_VERSION}. Details: https://github.com/opencv/opencv/issues/23156")
+    endif()
+  else()  # < 3.25.0, apply workaround from #13912
+    set(_xcodebuild_wrapper "${CMAKE_BINARY_DIR}/xcodebuild_wrapper")
+  endif()
+  if(_xcodebuild_wrapper AND NOT EXISTS "${_xcodebuild_wrapper}")
     set(_xcodebuild_wrapper_tmp "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/xcodebuild_wrapper")
     if(NOT DEFINED CMAKE_MAKE_PROGRAM)  # empty since CMake 3.10
       find_program(XCODEBUILD_PATH "xcodebuild")
@@ -119,7 +131,9 @@ if(NOT __IN_TRY_COMPILE)
     configure_file("${CMAKE_CURRENT_LIST_DIR}/xcodebuild_wrapper.in" "${_xcodebuild_wrapper_tmp}" @ONLY)
     file(COPY "${_xcodebuild_wrapper_tmp}" DESTINATION ${CMAKE_BINARY_DIR} FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
   endif()
-  set(CMAKE_MAKE_PROGRAM "${_xcodebuild_wrapper}" CACHE INTERNAL "" FORCE)
+  if(_xcodebuild_wrapper)
+    set(CMAKE_MAKE_PROGRAM "${_xcodebuild_wrapper}" CACHE INTERNAL "" FORCE)
+  endif()
 endif()
 
 # Standard settings
@@ -160,10 +174,20 @@ set(CMAKE_CXX_COMPILER_ABI ELF)
 set(CMAKE_CXX_COMPILER_WORKS TRUE)
 set(CMAKE_C_COMPILER_WORKS TRUE)
 
-# Search for programs in the build host directories
-set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
-#   for libraries and headers in the target directories
-set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+if(NOT CMAKE_FIND_ROOT_PATH_MODE_LIBRARY)
+  set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+endif()
+
+if(NOT CMAKE_FIND_ROOT_PATH_MODE_INCLUDE)
+  set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+endif()
+
+if(NOT CMAKE_FIND_ROOT_PATH_MODE_PACKAGE)
+  set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+endif()
+
+if(NOT CMAKE_FIND_ROOT_PATH_MODE_PROGRAM)
+  set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+endif()
 
 toolchain_save_config(IOS_ARCH IPHONEOS_DEPLOYMENT_TARGET)

@@ -31,7 +31,7 @@ MULTILINE_CPP_IS_BRIEF = NO
 INHERIT_DOCS           = YES
 SEPARATE_MEMBER_PAGES  = NO
 TAB_SIZE               = 4
-ALIASES               += add_toggle{1}="@htmlonly[block] <div class='newInnerHTML'>\1</div><div> <script type="text/javascript"> addToggle(); </script>@endhtmlonly"
+ALIASES               += add_toggle{1}="@htmlonly[block] <div class='newInnerHTML'>\1</div><div> <script type='text/javascript'> addToggle(); </script>@endhtmlonly"
 ALIASES               += add_toggle_cpp="@htmlonly[block] <div class='newInnerHTML' title='cpp' style='display: none;'>C++</div><div class='toggleable_div label_cpp' style='display: none;'>@endhtmlonly"
 ALIASES               += add_toggle_java="@htmlonly[block] <div class='newInnerHTML' title='java' style='display: none;'>Java</div><div class='toggleable_div label_java' style='display: none;'>@endhtmlonly"
 ALIASES               += add_toggle_python="@htmlonly[block] <div class='newInnerHTML' title='python' style='display: none;'>Python</div><div class='toggleable_div label_python' style='display: none;'>@endhtmlonly"
@@ -39,7 +39,6 @@ ALIASES               += end_toggle="@htmlonly[block] </div> @endhtmlonly"
 ALIASES               += prev_tutorial{1}="**Prev  Tutorial:** \ref \1 \n"
 ALIASES               += next_tutorial{1}="**Next  Tutorial:** \ref \1 \n"
 ALIASES               += youtube{1}="@htmlonly[block]<div align='center'><iframe title='Video' width='560' height='349' src='https://www.youtube.com/embed/\1?rel=0' frameborder='0' align='middle' allowfullscreen></iframe></div>@endhtmlonly"
-TCL_SUBST              =
 OPTIMIZE_OUTPUT_FOR_C  = NO
 OPTIMIZE_OUTPUT_JAVA   = NO
 OPTIMIZE_FOR_FORTRAN   = NO
@@ -107,7 +106,7 @@ RECURSIVE              = YES
 EXCLUDE                = @CMAKE_DOXYGEN_EXCLUDE_LIST@
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = *.inl.hpp *.impl.hpp *_detail.hpp */cudev/**/detail/*.hpp *.m */opencl/runtime/* */legacy/* *_c.h @DOXYGEN_EXCLUDE_PATTERNS@
-EXCLUDE_SYMBOLS        = cv::DataType<*> cv::traits::* int void CV__* T __CV*
+EXCLUDE_SYMBOLS        = cv::DataType<*> cv::traits::* int void CV__* T __CV* cv::gapi::detail*
 EXAMPLE_PATH           = @CMAKE_DOXYGEN_EXAMPLE_PATH@
 EXAMPLE_PATTERNS       = *
 EXAMPLE_RECURSIVE      = YES
@@ -228,6 +227,7 @@ INCLUDE_PATH           =
 INCLUDE_FILE_PATTERNS  =
 PREDEFINED             = __cplusplus=1 \
                          CVAPI(x)=x \
+                         CV_API_CALL= \
                          CV_DOXYGEN= \
                          CV_EXPORTS= \
                          CV_EXPORTS_W= \
@@ -255,6 +255,12 @@ PREDEFINED             = __cplusplus=1 \
                          CV_DEFAULT(x)=" = x" \
                          CV_NEON=1 \
                          CV_SSE2=1 \
+                         CV_SIMD128=1 \
+                         CV_SIMD256=1 \
+                         CV_SIMD512=1 \
+                         CV_SIMD128_64F=1 \
+                         CV_SIMD256_64F=1 \
+                         CV_SIMD512_64F=1 \
                          CV__DEBUG_NS_BEGIN= \
                          CV__DEBUG_NS_END= \
                          CV_DEPRECATED_EXTERNAL= \

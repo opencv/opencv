@@ -122,7 +122,6 @@ def createSSDGraph(modelPath, configPath, outputPath):
     print('Input image size: %dx%d' % (image_width, image_height))
 
     # Read the graph.
-    _inpNames = ['image_tensor']
     outNames = ['num_detections', 'detection_scores', 'detection_boxes', 'detection_classes']
 
     writeTextGraph(modelPath, outputPath, outNames)
@@ -247,6 +246,15 @@ def createSSDGraph(modelPath, configPath, outputPath):
     graph_def.node[1].input.append(graph_def.node[0].name)
     graph_def.node[1].input.append(weights)
 
+    # check and correct the case when preprocessing block is after input
+    preproc_id = "Preprocessor/"
+    if graph_def.node[2].name.startswith(preproc_id) and \
+        graph_def.node[2].input[0].startswith(preproc_id):
+
+        if not any(preproc_id in inp for inp in graph_def.node[3].input):
+            graph_def.node[3].input.insert(0, graph_def.node[2].name)
+
+
     # Create SSD postprocessing head ###############################################
 
     # Concatenate predictions of classes, predictions of bounding boxes and proposals.
@@ -262,12 +270,12 @@ def createSSDGraph(modelPath, configPath, outputPath):
     addConstNode('concat/axis_flatten', [-1], graph_def)
     addConstNode('PriorBox/concat/axis', [-2], graph_def)
 
-    for label in ['ClassPredictor', 'BoxEncodingPredictor' if box_predictor is 'convolutional' else 'BoxPredictor']:
+    for label in ['ClassPredictor', 'BoxEncodingPredictor' if box_predictor == 'convolutional' else 'BoxPredictor']:
         concatInputs = []
         for i in range(num_layers):
             # Flatten predictions
             flatten = NodeDef()
-            if box_predictor is 'convolutional':
+            if box_predictor == 'convolutional':
                 inpName = 'BoxPredictor_%d/%s/BiasAdd' % (i, label)
             else:
                 if i == 0:
@@ -300,7 +308,7 @@ def createSSDGraph(modelPath, configPath, outputPath):
         priorBox = NodeDef()
         priorBox.name = 'PriorBox_%d' % i
         priorBox.op = 'PriorBox'
-        if box_predictor is 'convolutional':
+        if box_predictor == 'convolutional':
             priorBox.input.append('BoxPredictor_%d/BoxEncodingPredictor/BiasAdd' % i)
         else:
             if i == 0:

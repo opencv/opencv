@@ -61,7 +61,7 @@ static void printCommandLineParams()
     cout << "-fmd=      Fixed max disparity? (0 or 1; 0 by default) Ignored if disparity map is not colorized (-cd 0)." << endl;
     cout << "-mode=     image mode: resolution and fps, supported three values:  0 - CAP_OPENNI_VGA_30HZ, 1 - CAP_OPENNI_SXGA_15HZ," << endl;
     cout << "          2 - CAP_OPENNI_SXGA_30HZ (0 by default). Ignored if rgb image or gray image are not selected to show." << endl;
-    cout << "-m=        Mask to set which output images are need. It is a string of size 5. Each element of this is '0' or '1' and" << endl;
+    cout << "-m=        Mask to set which output images are need. It is a string of size 6. Each element of this is '0' or '1' and" << endl;
     cout << "          determine: is depth map, disparity map, valid pixels mask, rgb image, gray image need or not (correspondently), ir image" << endl ;
     cout << "          By default -m=010100 i.e. disparity map and rgb image will be shown." << endl ;
     cout << "-r=        Filename of .oni video file. The data will grabbed from it." << endl ;

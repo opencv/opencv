@@ -254,6 +254,18 @@ namespace cv { namespace gapi { namespace own {
             *this = std::move(tmp);
         }
 
+        /** @brief Creates a full copy of the matrix and the underlying data.
+
+        The method creates a full copy of the matrix. The original step[] is not taken into account.
+        So, the copy has a continuous buffer occupying total() * elemSize() bytes.
+         */
+        Mat clone() const
+        {
+            Mat m;
+            copyTo(m);
+            return m;
+        }
+
         /** @brief Copies the matrix to another one.
 
         The method copies the matrix data to another matrix. Before copying the data, the method invokes :

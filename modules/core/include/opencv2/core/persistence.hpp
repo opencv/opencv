@@ -309,8 +309,8 @@ public:
         READ        = 0, //!< value, open the file for reading
         WRITE       = 1, //!< value, open the file for writing
         APPEND      = 2, //!< value, open the file for appending
-        MEMORY      = 4, //!< flag, read data from source or write data to the internal buffer (which is
-        //!< returned by FileStorage::release)
+        MEMORY      = 4, /**< flag, read data from source or write data to the internal buffer (which is
+                              returned by FileStorage::release) */
         FORMAT_MASK = (7<<3), //!< mask for format flags
         FORMAT_AUTO = 0,      //!< flag, auto format
         FORMAT_XML  = (1<<3), //!< flag, XML format
@@ -403,8 +403,8 @@ public:
 
     /**
      * @brief Simplified writing API to use with bindings.
-     * @param name Name of the written object
-     * @param val Value of the written object
+     * @param name Name of the written object. When writing to sequences (a.k.a. "arrays"), pass an empty string.
+     * @param val Value of the written object.
      */
     CV_WRAP void write(const String& name, int val);
     /// @overload
@@ -437,9 +437,10 @@ public:
     CV_WRAP void writeComment(const String& comment, bool append = false);
 
     /** @brief Starts to write a nested structure (sequence or a mapping).
-    @param name name of the structure (if it's a member of parent mapping, otherwise it should be empty
+    @param name name of the structure. When writing to sequences (a.k.a. "arrays"), pass an empty string.
     @param flags type of the structure (FileNode::MAP or FileNode::SEQ (both with optional FileNode::FLOW)).
-    @param typeName usually an empty string
+    @param typeName optional name of the type you store. The effect of setting this depends on the storage format.
+    I.e. if the format has a specification for storing type information, this parameter is used.
     */
     CV_WRAP void startWriteStruct(const String& name, int flags, const String& typeName=String());
 

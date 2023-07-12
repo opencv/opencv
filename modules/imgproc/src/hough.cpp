@@ -68,6 +68,18 @@ struct hough_cmp_gt
     const int* aux;
 };
 
+static inline int
+computeNumangle( double min_theta, double max_theta, double theta_step )
+{
+    int numangle = cvFloor((max_theta - min_theta) / theta_step) + 1;
+    // If the distance between the first angle and the last angle is
+    // approximately equal to pi, then the last angle will be removed
+    // in order to prevent a line to be detected twice.
+    if ( numangle > 1 && fabs(CV_PI - (numangle-1)*theta_step) < theta_step/2 )
+        --numangle;
+    return numangle;
+}
+
 static void
 createTrigTable( int numangle, double min_theta, double theta_step,
                  float irho, float *tabSin, float *tabCos )
@@ -130,7 +142,7 @@ HoughLinesStandard( InputArray src, OutputArray lines, int type,
 
     CV_CheckGE(max_theta, min_theta, "max_theta must be greater than min_theta");
 
-    int numangle = cvRound((max_theta - min_theta) / theta);
+    int numangle = computeNumangle(min_theta, max_theta, theta);
     int numrho = cvRound(((max_rho - min_rho) + 1) / rho);
 
 #if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_HOUGH
@@ -340,8 +352,8 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
                     rv = r0 * std::cos( phi );
                     i = (int)rv * tn;
                     i += cvFloor( phi1 );
-                    assert( i >= 0 );
-                    assert( i < rn * tn );
+                    CV_Assert( i >= 0 );
+                    CV_Assert( i < rn * tn );
                     caccum[i] = (uchar) (caccum[i] + ((i ^ iprev) != 0));
                     iprev = i;
                     if( cmax < caccum[i] )
@@ -405,8 +417,8 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
                         i = CV_IMAX( i, -1 );
                         i = CV_IMIN( i, sfn );
                         mcaccum[i]++;
-                        assert( i >= -1 );
-                        assert( i <= sfn );
+                        CV_Assert( i >= -1 );
+                        CV_Assert( i <= sfn );
                     }
                 }
 
@@ -435,12 +447,14 @@ HoughLinesSDiv( InputArray image, OutputArray lines, int type,
         }
     }
 
+    int pos = (int)(lst.size() - 1);
+    if( pos >= 0 && lst[pos].rho < 0 )
+        lst.pop_back();
+
     lines.create((int)lst.size(), 1, type);
     Mat _lines = lines.getMat();
     for( size_t idx = 0; idx < lst.size(); idx++ )
     {
-        if( lst[idx].rho < 0 )
-            continue;
         if (type == CV_32FC2)
         {
             _lines.at<Vec2f>((int)idx) = Vec2f(lst[idx].rho, lst[idx].theta);
@@ -473,7 +487,7 @@ HoughLinesProbabilistic( Mat& image,
     int width = image.cols;
     int height = image.rows;
 
-    int numangle = cvRound(CV_PI / theta);
+    int numangle = computeNumangle(0.0, CV_PI, theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
 #if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_HOUGH
@@ -790,7 +804,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     }
 
     UMat src = _src.getUMat();
-    int numangle = cvRound((max_theta - min_theta) / theta);
+    int numangle = computeNumangle(min_theta, max_theta, theta);
     int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
 
     UMat pointsList;
@@ -844,7 +858,7 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
     }
 
     UMat src = _src.getUMat();
-    int numangle = cvRound(CV_PI / theta);
+    int numangle = computeNumangle(0.0, CV_PI, theta);
     int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
 
     UMat pointsList;
@@ -954,7 +968,7 @@ void HoughLinesPointSet( InputArray _point, OutputArray _lines, int lines_max, i
     int i;
     float irho = 1 / (float)rho_step;
     float irho_min = ((float)min_rho * irho);
-    int numangle = cvRound((max_theta - min_theta) / theta_step);
+    int numangle = computeNumangle(min_theta, max_theta, theta_step);
     int numrho = cvRound((max_rho - min_rho + 1) / rho_step);
 
     Mat _accum = Mat::zeros( (numangle+2), (numrho+2), CV_32SC1 );
@@ -973,7 +987,9 @@ void HoughLinesPointSet( InputArray _point, OutputArray _lines, int lines_max, i
         for(int n = 0; n < numangle; n++ )
         {
             int r = cvRound( point.at(i).x  * tabCos[n] + point.at(i).y * tabSin[n] - irho_min);
-            accum[(n+1) * (numrho+2) + r+1]++;
+            if ( r >= 0 && r <= numrho) {
+                accum[(n+1) * (numrho+2) + r+1]++;
+            }
         }
 
     // stage 2. find local maximums
@@ -2251,7 +2267,6 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
     }
 
     CV_Assert(!_image.empty() && _image.type() == CV_8UC1 && (_image.isMat() || _image.isUMat()));
-    CV_Assert(_circles.isMat() || _circles.isVector());
 
     if( dp <= 0 || minDist <= 0 || param1 <= 0)
         CV_Error( Error::StsOutOfRange, "dp, min_dist and canny_threshold must be all positive numbers" );
@@ -2290,6 +2305,9 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
         break;
     case HOUGH_GRADIENT_ALT:
         {
+            if( param2 >= 1 )
+                CV_Error( Error::StsOutOfRange, "when using HOUGH_GRADIENT_ALT method, param2 parameter must be smaller than 1.0" );
+
             std::vector<EstimatedCircle> circles;
             Mat image = _image.getMat();
             HoughCirclesAlt(image, circles, dp, minDist, minRadius, maxRadius, param1, param2);
@@ -2301,21 +2319,23 @@ static void HoughCircles( InputArray _image, OutputArray _circles,
                 std::vector<Vec4f> cw(ncircles);
                 for( i = 0; i < ncircles; i++ )
                     cw[i] = GetCircle4f(circles[i]);
-                Mat(cw).copyTo(_circles);
+                if (ncircles > 0)
+                    Mat(1, (int)ncircles, cv::traits::Type<Vec4f>::value, &cw[0]).copyTo(_circles);
             }
             else if( type == CV_32FC3 )
             {
                 std::vector<Vec3f> cwow(ncircles);
                 for( i = 0; i < ncircles; i++ )
                     cwow[i] = GetCircle(circles[i]);
-                Mat(cwow).copyTo(_circles);
+                if (ncircles > 0)
+                    Mat(1, (int)ncircles, cv::traits::Type<Vec3f>::value, &cwow[0]).copyTo(_circles);
             }
             else
                 CV_Error(Error::StsError, "Internal error");
         }
         break;
     default:
-        CV_Error( Error::StsBadArg, "Unrecognized method id. Actually only CV_HOUGH_GRADIENT is supported." );
+        CV_Error( Error::StsBadArg, "Unrecognized method id. Actually supported methods are HOUGH_GRADIENT and HOUGH_GRADIENT_ALT" );
     }
 }
 

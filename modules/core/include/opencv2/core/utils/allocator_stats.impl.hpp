@@ -7,13 +7,11 @@
 
 #include "./allocator_stats.hpp"
 
-#ifdef CV_CXX11
-#include <atomic>
-#endif
-
 //#define OPENCV_DISABLE_ALLOCATOR_STATS
 
-namespace cv { namespace utils {
+#ifdef CV_CXX11
+
+#include <atomic>
 
 #ifndef OPENCV_ALLOCATOR_STATS_COUNTER_TYPE
 #if defined(__GNUC__) && (\
@@ -27,6 +25,16 @@ namespace cv { namespace utils {
 #ifndef OPENCV_ALLOCATOR_STATS_COUNTER_TYPE
 #define OPENCV_ALLOCATOR_STATS_COUNTER_TYPE long long
 #endif
+
+#else  // CV_CXX11
+
+#ifndef OPENCV_ALLOCATOR_STATS_COUNTER_TYPE
+#define OPENCV_ALLOCATOR_STATS_COUNTER_TYPE int  // CV_XADD supports int only
+#endif
+
+#endif  // CV_CXX11
+
+namespace cv { namespace utils {
 
 #ifdef CV__ALLOCATOR_STATS_LOG
 namespace {

@@ -14,46 +14,37 @@
 namespace opencv_test {
 
 G_API_OP(GBlurFrame, <GMat(GFrame)>, "test.blur_frame") {
-    static GMatDesc outMeta(GMatDesc in) {
-        return in;
+    static GMatDesc outMeta(GFrameDesc in) {
+        return cv::GMatDesc(CV_8U,3,in.size);
     }
 };
 
 GAPI_OCV_KERNEL(OCVBlurFrame, GBlurFrame) {
-    static void run(const cv::Mat& in, cv::Mat& out) {
-        cv::blur(in, out, cv::Size{3,3});
+    static void run(const cv::MediaFrame &in, cv::Mat& out) {
+        GAPI_Assert(in.desc().fmt == cv::MediaFormat::BGR);
+        cv::MediaFrame::View view = in.access(cv::MediaFrame::Access::R);
+        cv::blur(cv::Mat(in.desc().size, CV_8UC3, view.ptr[0], view.stride[0]),
+                 out,
+                 cv::Size{3,3});
     }
 };
 
-struct GFrameTest : public ::testing::Test {
-    cv::Size sz{32,32};
-    cv::Mat in_mat;
-    cv::Mat out_mat;
-    cv::Mat out_mat_ocv;
-
-    GFrameTest()
-        : in_mat(cv::Mat(sz, CV_8UC1))
-        , out_mat(cv::Mat::zeros(sz, CV_8UC1))
-        , out_mat_ocv(cv::Mat::zeros(sz, CV_8UC1)) {
-        cv::randn(in_mat, cv::Scalar::all(127.0f), cv::Scalar::all(40.f));
-        cv::blur(in_mat, out_mat_ocv, cv::Size{3,3});
-    }
-
-    void check() {
-        EXPECT_EQ(0, cvtest::norm(out_mat, out_mat_ocv, NORM_INF));
+G_API_OP(GBlurFrameGray, <GMat(GFrame)>, "test.blur_frame_gray") {
+    static GMatDesc outMeta(GFrameDesc in) {
+        return cv::GMatDesc(CV_8U, 1, in.size);
     }
 };
 
-TEST_F(GFrameTest, Input) {
-    cv::GFrame in;
-    auto out = GBlurFrame::on(in);
-    cv::GComputation c(cv::GIn(in), cv::GOut(out));
+GAPI_OCV_KERNEL(OCVBlurFrameGray, GBlurFrameGray) {
+    static void run(const cv::MediaFrame & in, cv::Mat & out) {
+        GAPI_Assert(in.desc().fmt == cv::MediaFormat::GRAY);
+        cv::MediaFrame::View view = in.access(cv::MediaFrame::Access::R);
+        cv::blur(cv::Mat(in.desc().size, CV_8UC1, view.ptr[0], view.stride[0]),
+        out,
+        cv::Size{ 3,3 });
+    }
+};
 
-    auto pkg = cv::gapi::kernels<OCVBlurFrame>();
-    c.apply(cv::gin(in_mat), cv::gout(out_mat), cv::compile_args(pkg));
-
-    check();
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 // cv::MediaFrame tests
@@ -96,6 +87,26 @@ public:
         return cv::MediaFrame::View(std::move(pp), std::move(ss));
     }
 };
+
+class TestMediaGray final : public cv::MediaFrame::IAdapter {
+    cv::Mat m_mat;
+    using Cb = cv::MediaFrame::View::Callback;
+    Cb m_cb;
+
+public:
+    explicit TestMediaGray(cv::Mat m, Cb cb = []() {})
+        : m_mat(m), m_cb(cb) {
+    }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{ cv::MediaFormat::GRAY, cv::Size(m_mat.cols, m_mat.rows) };
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+        cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{ m_cb });
+    }
+};
+
 } // anonymous namespace
 
 struct MediaFrame_Test: public ::testing::Test {
@@ -108,6 +119,7 @@ struct MediaFrame_BGR: public MediaFrame_Test {
     M bgr;
     MediaFrame_BGR()
         : bgr(M::eye(240, 320, CV_8UC3)) {
+        cv::randn(bgr, cv::Scalar::all(127.0f), cv::Scalar::all(40.f));
         frame = MF::Create<TestMediaBGR>(bgr);
     }
 };
@@ -127,6 +139,66 @@ TEST_F(MediaFrame_BGR, Access) {
     EXPECT_EQ(bgr.ptr(), view2.ptr[0]);
     EXPECT_EQ(bgr.step,  view2.stride[0]);
 }
+
+TEST_F(MediaFrame_BGR, Input) {
+    // Run the OpenCV code
+    cv::Mat out_mat_ocv, out_mat_gapi;
+    cv::blur(bgr, out_mat_ocv, cv::Size{3,3});
+
+    // Run the G-API code
+    cv::GFrame in;
+    cv::GMat out = GBlurFrame::on(in);
+    cv::GComputation(cv::GIn(in), cv::GOut(out))
+        .apply(cv::gin(frame),
+               cv::gout(out_mat_gapi),
+               cv::compile_args(cv::gapi::kernels<OCVBlurFrame>()));
+
+    // Compare
+    EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
+}
+
+struct MediaFrame_Gray : public MediaFrame_Test {
+    M gray;
+    MediaFrame_Gray()
+        : gray(M::eye(240, 320, CV_8UC1)) {
+        cv::randn(gray, cv::Scalar::all(127.0f), cv::Scalar::all(40.f));
+        frame = MF::Create<TestMediaGray>(gray);
+    }
+};
+
+TEST_F(MediaFrame_Gray, Meta) {
+    auto meta = frame.desc();
+    EXPECT_EQ(cv::MediaFormat::GRAY, meta.fmt);
+    EXPECT_EQ(cv::Size(320, 240), meta.size);
+}
+
+TEST_F(MediaFrame_Gray, Access) {
+    cv::MediaFrame::View view1 = frame.access(cv::MediaFrame::Access::R);
+    EXPECT_EQ(gray.ptr(), view1.ptr[0]);
+    EXPECT_EQ(gray.step, view1.stride[0]);
+
+    cv::MediaFrame::View view2 = frame.access(cv::MediaFrame::Access::R);
+    EXPECT_EQ(gray.ptr(), view2.ptr[0]);
+    EXPECT_EQ(gray.step, view2.stride[0]);
+}
+
+TEST_F(MediaFrame_Gray, Input) {
+    // Run the OpenCV code
+    cv::Mat out_mat_ocv, out_mat_gapi;
+    cv::blur(gray, out_mat_ocv, cv::Size{ 3,3 });
+
+    // Run the G-API code
+    cv::GFrame in;
+    cv::GMat out = GBlurFrameGray::on(in);
+    cv::GComputation(cv::GIn(in), cv::GOut(out))
+        .apply(cv::gin(frame),
+            cv::gout(out_mat_gapi),
+            cv::compile_args(cv::gapi::kernels<OCVBlurFrameGray>()));
+
+    // Compare
+    EXPECT_EQ(0, cvtest::norm(out_mat_ocv, out_mat_gapi, NORM_INF));
+}
+
 
 struct MediaFrame_NV12: public MediaFrame_Test {
     cv::Size sz;
@@ -180,6 +252,13 @@ TEST(MediaFrame, Callback) {
         EXPECT_EQ(1, counter);
     }
     EXPECT_EQ(3, counter);
+}
+
+TEST(MediaFrame, blobParams) {
+    cv::Mat bgr = cv::Mat::eye(240, 320, CV_8UC3);
+    cv::MediaFrame frame = cv::MediaFrame::Create<TestMediaBGR>(bgr);
+
+    EXPECT_NO_THROW(frame.blobParams());
 }
 
 } // namespace opencv_test

@@ -297,10 +297,7 @@ public:
             return _explicitSizes || _stepX == _stepY;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && haveInfEngine() &&
-                   ( _explicitSizes || (_minSize.size() == 1 && _maxSize.size() <= 1)))
-               || (backendId == DNN_BACKEND_VKCOM && haveVulkan());
+               backendId == DNN_BACKEND_CUDA;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -510,69 +507,6 @@ public:
     }
 
 
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        if (_explicitSizes)
-        {
-            InferenceEngine::Builder::PriorBoxClusteredLayer ieLayer(name);
-            ieLayer.setSteps({_stepY, _stepX});
-
-            CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
-            ieLayer.setOffset(_offsetsX[0]);
-
-            ieLayer.setClip(_clip);
-            ieLayer.setFlip(false);  // We already flipped aspect ratios.
-
-            InferenceEngine::Builder::Layer l = ieLayer;
-
-            CV_Assert_N(!_boxWidths.empty(), !_boxHeights.empty(), !_variance.empty());
-            CV_Assert(_boxWidths.size() == _boxHeights.size());
-            l.getParameters()["width"] = _boxWidths;
-            l.getParameters()["height"] = _boxHeights;
-            l.getParameters()["variance"] = _variance;
-            return Ptr<BackendNode>(new InfEngineBackendNode(l));
-        }
-        else
-        {
-            InferenceEngine::Builder::PriorBoxLayer ieLayer(name);
-
-            CV_Assert(!_explicitSizes);
-            ieLayer.setMinSize(_minSize[0]);
-            if (!_maxSize.empty())
-                ieLayer.setMaxSize(_maxSize[0]);
-
-            CV_CheckEQ(_offsetsX.size(), (size_t)1, ""); CV_CheckEQ(_offsetsY.size(), (size_t)1, ""); CV_CheckEQ(_offsetsX[0], _offsetsY[0], "");
-            ieLayer.setOffset(_offsetsX[0]);
-
-            ieLayer.setClip(_clip);
-            ieLayer.setFlip(false);  // We already flipped aspect ratios.
-
-            InferenceEngine::Builder::Layer l = ieLayer;
-            if (_stepX == _stepY)
-            {
-                l.getParameters()["step"] = _stepX;
-                l.getParameters()["step_h"] = 0.0f;
-                l.getParameters()["step_w"] = 0.0f;
-            }
-            else
-            {
-                l.getParameters()["step"] = 0.0f;
-                l.getParameters()["step_h"] = _stepY;
-                l.getParameters()["step_w"] = _stepX;
-            }
-            if (!_aspectRatios.empty())
-            {
-                l.getParameters()["aspect_ratio"] = _aspectRatios;
-            }
-            CV_Assert(!_variance.empty());
-            l.getParameters()["variance"] = _variance;
-            return Ptr<BackendNode>(new InfEngineBackendNode(l));
-        }
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
-
-
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
@@ -607,7 +541,7 @@ public:
 
             auto priorBox = std::make_shared<ngraph::op::PriorBoxClustered>(slice_layer, slice_image, attrs);
             auto axis = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{0});
-            auto unsqueeze = std::make_shared<ngraph::op::Unsqueeze>(priorBox, axis);
+            auto unsqueeze = std::make_shared<ngraph::op::v0::Unsqueeze>(priorBox, axis);
             return Ptr<BackendNode>(new InfEngineNgraphNode(unsqueeze));
         }
         else
@@ -628,7 +562,7 @@ public:
 
             auto priorBox = std::make_shared<ngraph::op::PriorBox>(slice_layer, slice_image, attrs);
             auto axis = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{0});
-            auto unsqueeze = std::make_shared<ngraph::op::Unsqueeze>(priorBox, axis);
+            auto unsqueeze = std::make_shared<ngraph::op::v0::Unsqueeze>(priorBox, axis);
             return Ptr<BackendNode>(new InfEngineNgraphNode(unsqueeze));
         }
     }
@@ -672,20 +606,6 @@ public:
         return make_cuda_node<cuda4dnn::PriorBoxOp>(preferableTarget, std::move(context->stream), config);
     }
 #endif
-
-
-#ifdef HAVE_VULKAN
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
-    {
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPriorBox(_stepX, _stepY,
-                                                                _clip, _numPriors,
-                                                                _variance, _offsetsX,
-                                                                _offsetsY, _boxWidths,
-                                                                _boxHeights));
-        return Ptr<BackendNode>(new VkComBackendNode(input, op));
-    }
-#endif // HAVE_VULKAN
-
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

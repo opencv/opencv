@@ -4,6 +4,14 @@ Introduction into Android Development {#tutorial_android_dev_intro}
 @prev_tutorial{tutorial_clojure_dev_intro}
 @next_tutorial{tutorial_O4A_SDK}
 
+|    |    |
+| -: | :- |
+| Original author | Vsevolod Glumov |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial is deprecated.
+
 
 This guide was designed to help you in learning Android development basics and setting up your
 working environment quickly. It was written with Windows 7 in mind, though it would work with Linux
@@ -11,7 +19,7 @@ working environment quickly. It was written with Windows 7 in mind, though it wo
 
 If you encounter any error after thoroughly following these steps, feel free to contact us via
 [OpenCV4Android](https://groups.google.com/group/android-opencv/) discussion group or OpenCV [Q&A
-forum](http://answers.opencv.org). We'll do our best to help you out.
+forum](https://forum.opencv.org). We'll do our best to help you out.
 
 Preface
 -------

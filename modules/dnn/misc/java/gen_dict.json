@@ -54,7 +54,7 @@
                 ]
 
             ],
-            "jni_name": "(*(cv::dnn::DictValue*)%(n)s_nativeObj)",
+            "jni_name": "(*(*(Ptr<cv::dnn::DictValue>*)%(n)s_nativeObj))",
             "jni_type": "jlong",
             "suffix": "J",
             "j_import": "org.opencv.dnn.DictValue"

@@ -33,6 +33,7 @@ class QrSample:
         self.multi = args.multi
         self.saveDetections = args.save_detections
         self.saveAll = args.save_all
+        self.arucoBased = args.aruco_based
 
     def getQRModeString(self):
         msg1 = "multi " if self.multi else ""
@@ -104,7 +105,12 @@ class QrSample:
             return
         print('Run {:s} on image [{:d}x{:d}]'.format(
             self.getQRModeString(), inputimg.shape[1], inputimg.shape[0]))
-        qrCode = cv.QRCodeDetector()
+
+        if self.arucoBased:
+            qrCode = cv.QRCodeDetectorAruco()
+        else:
+            qrCode = cv.QRCodeDetector()
+
         count = 10
         timer = cv.TickMeter()
         for _ in range(count):
@@ -152,7 +158,10 @@ class QrSample:
         print("Press ' ' (space) to save result into images")
         print("Press 'ESC' to exit")
 
-        qrcode = cv.QRCodeDetector()
+        if self.arucoBased:
+            qrcode = cv.QRCodeDetectorAruco()
+        else:
+            qrcode = cv.QRCodeDetector()
 
         while True:
             ret, frame = cap.read()
@@ -205,6 +214,10 @@ def main():
         default="",
         metavar="")
     parser.add_argument(
+        '--aruco_based',
+        help="use aruco-based detector",
+        action='store_true')
+    parser.add_argument(
         '-d',
         '--detect',
         help="detect QR code only (skip decoding) (default: False)",
@@ -245,4 +258,6 @@ def main():
 
 
 if __name__ == '__main__':
+    print(__doc__)
     main()
+    cv.destroyAllWindows()

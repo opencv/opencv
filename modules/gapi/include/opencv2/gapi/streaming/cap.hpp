@@ -21,9 +21,12 @@
  * Note for developers: please don't put videoio dependency in G-API
  * because of this file.
  */
+#include <chrono>
+#include <map>
 
 #include <opencv2/videoio.hpp>
 #include <opencv2/gapi/garg.hpp>
+#include <opencv2/gapi/streaming/meta.hpp>
 
 namespace cv {
 namespace gapi {
@@ -45,8 +48,16 @@ namespace wip {
 class GCaptureSource: public IStreamSource
 {
 public:
-    explicit GCaptureSource(int id) : cap(id) { prep(); }
-    explicit GCaptureSource(const std::string &path) : cap(path) { prep(); }
+    explicit GCaptureSource(int id, const std::map<int, double> &properties = {})
+        : cap(id) { prep(properties); }
+
+    explicit GCaptureSource(const std::string &path,
+                            const std::map<int, double> &properties = {})
+        : cap(path) { prep(properties); }
+
+    void set(int propid, double value) {
+        cap.set(propid, value);
+    }
 
     // TODO: Add more constructor overloads to make it
     // fully compatible with VideoCapture's interface.
@@ -55,16 +66,21 @@ protected:
     cv::VideoCapture cap;
     cv::Mat first;
     bool first_pulled = false;
+    int64_t counter = 0;
 
-    void prep()
+    void prep(const std::map<int, double> &properties)
     {
+        for (const auto &it : properties) {
+            cap.set(it.first, it.second);
+        }
+
         // Prepare first frame to report its meta to engine
         // when needed
         GAPI_Assert(first.empty());
         cv::Mat tmp;
         if (!cap.read(tmp))
         {
-            GAPI_Assert(false && "Couldn't grab the very first frame");
+            GAPI_Error("Couldn't grab the very first frame");
         }
         // NOTE: Some decode/media VideoCapture backends continue
         // owning the video buffer under cv::Mat so in order to
@@ -80,19 +96,26 @@ protected:
             GAPI_Assert(!first.empty());
             first_pulled = true;
             data = first; // no need to clone here since it was cloned already
-            return true;
         }
-
-        if (!cap.isOpened()) return false;
-
-        cv::Mat frame;
-        if (!cap.read(frame))
+        else
         {
-            // end-of-stream happened
-            return false;
+            if (!cap.isOpened()) return false;
+
+            cv::Mat frame;
+            if (!cap.read(frame))
+            {
+                // end-of-stream happened
+                return false;
+            }
+            // Same reason to clone as in prep()
+            data = frame.clone();
         }
-        // Same reason to clone as in prep()
-        data = frame.clone();
+        // Tag data with seq_id/ts
+        const auto now = std::chrono::system_clock::now();
+        const auto dur = std::chrono::duration_cast<std::chrono::microseconds>
+            (now.time_since_epoch());
+        data.meta[cv::gapi::streaming::meta_tag::timestamp] = int64_t{dur.count()};
+        data.meta[cv::gapi::streaming::meta_tag::seq_id]    = int64_t{counter++};
         return true;
     }
 
@@ -102,6 +125,22 @@ protected:
         return cv::GMetaArg{cv::descr_of(first)};
     }
 };
+
+// NB: Overload for using from python
+GAPI_EXPORTS_W cv::Ptr<IStreamSource>
+inline make_capture_src(const std::string& path,
+                        const std::map<int, double>& properties = {})
+{
+    return make_src<GCaptureSource>(path, properties);
+}
+
+// NB: Overload for using from python
+GAPI_EXPORTS_W cv::Ptr<IStreamSource>
+inline make_capture_src(const int id,
+                        const std::map<int, double>& properties = {})
+{
+    return make_src<GCaptureSource>(id, properties);
+}
 
 } // namespace wip
 } // namespace gapi

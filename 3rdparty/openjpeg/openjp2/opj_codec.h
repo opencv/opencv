@@ -90,6 +90,9 @@ typedef struct opj_codec_private {
             /** Setup decoder function handler */
             void (*opj_setup_decoder)(void * p_codec, opj_dparameters_t * p_param);
 
+            /** Strict mode function handler */
+            void (*opj_decoder_set_strict_mode)(void * p_codec, OPJ_BOOL strict);
+
             /** Set decode area function handler */
             OPJ_BOOL(*opj_set_decode_area)(void * p_codec,
                                            opj_image_t * p_image,
@@ -148,6 +151,11 @@ typedef struct opj_codec_private {
                                           opj_cparameters_t * p_param,
                                           struct opj_image * p_image,
                                           struct opj_event_mgr * p_manager);
+
+            OPJ_BOOL(* opj_encoder_set_extra_options)(void * p_codec,
+                    const char* const* p_options,
+                    struct opj_event_mgr * p_manager);
+
         } m_compression;
     } m_codec_data;
     /** FIXME DOC*/

@@ -270,7 +270,11 @@ def removeIdentity(graph_def):
     identities = {}
     for node in graph_def.node:
         if node.op == 'Identity' or node.op == 'IdentityN':
-            identities[node.name] = node.input[0]
+            inp = node.input[0]
+            if inp in identities:
+                identities[node.name] = identities[inp]
+            else:
+                identities[node.name] = inp
             graph_def.node.remove(node)
 
     for node in graph_def.node:

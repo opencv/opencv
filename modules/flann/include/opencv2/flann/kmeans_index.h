@@ -370,7 +370,7 @@ public:
             chooseCenters = &KMeansIndex::chooseCentersKMeanspp;
         }
         else {
-            throw FLANNException("Unknown algorithm for choosing initial centers.");
+            FLANN_THROW(cv::Error::StsBadArg, "Unknown algorithm for choosing initial centers.");
         }
         cb_index_ = 0.4f;
 
@@ -442,7 +442,7 @@ public:
     void buildIndex() CV_OVERRIDE
     {
         if (branching_<2) {
-            throw FLANNException("Branching factor must be at least 2");
+            FLANN_THROW(cv::Error::StsError, "Branching factor must be at least 2");
         }
 
         free_indices();
@@ -528,7 +528,7 @@ public:
         }
         else {
             // Priority queue storing intermediate branches in the best-bin-first search
-            Heap<BranchSt>* heap = new Heap<BranchSt>((int)size_);
+            const cv::Ptr<Heap<BranchSt>>& heap = Heap<BranchSt>::getPooledInstance(cv::utils::getThreadID(), (int)size_);
 
             int checks = 0;
             for (int i=0; i<trees_; ++i) {
@@ -542,8 +542,6 @@ public:
                 KMeansNodePtr node = branch.node;
                 findNN(node, result, vec, checks, maxChecks, heap);
             }
-            delete heap;
-
             CV_Assert(result.full());
         }
     }
@@ -559,7 +557,7 @@ public:
     {
         int numClusters = centers.rows;
         if (numClusters<1) {
-            throw FLANNException("Number of clusters must be at least 1");
+            FLANN_THROW(cv::Error::StsBadArg, "Number of clusters must be at least 1");
         }
 
         DistanceType variance;
@@ -1529,7 +1527,7 @@ private:
 
 
     void findNN(KMeansNodePtr node, ResultSet<DistanceType>& result, const ElementType* vec, int& checks, int maxChecks,
-                Heap<BranchSt>* heap)
+                const cv::Ptr<Heap<BranchSt>>& heap)
     {
         // Ignore those clusters that are too far away
         {
@@ -1577,7 +1575,7 @@ private:
      *     distances = array with the distances to each child node.
      * Returns:
      */
-    int exploreNodeBranches(KMeansNodePtr node, const ElementType* q, DistanceType* domain_distances, Heap<BranchSt>* heap)
+    int exploreNodeBranches(KMeansNodePtr node, const ElementType* q, DistanceType* domain_distances, const cv::Ptr<Heap<BranchSt>>& heap)
     {
 
         int best_index = 0;

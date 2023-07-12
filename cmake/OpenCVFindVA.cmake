@@ -2,21 +2,20 @@
 #   HAVE_VA - libva is available
 #   HAVE_VA_INTEL - OpenCL/libva Intel interoperability extension is available
 
-if(UNIX AND NOT ANDROID)
-    find_path(
+find_path(
     VA_INCLUDE_DIR
     NAMES va/va.h
-    PATHS "/usr/include"
+    PATHS ${VA_ROOT_DIR}
     PATH_SUFFIXES include
-    DOC "Path to libva headers")
-endif()
+    DOC "Path to libva headers"
+)
 
 if(VA_INCLUDE_DIR)
     set(HAVE_VA TRUE)
-    if(NOT DEFINED VA_LIBRARIES)
+    if(NOT DEFINED VA_LIBRARIES AND NOT OPENCV_LIBVA_LINK)
       set(VA_LIBRARIES "va" "va-drm")
     endif()
 else()
     set(HAVE_VA FALSE)
-    message(WARNING "libva installation is not found.")
+    message(STATUS "libva: missing va.h header (VA_INCLUDE_DIR)")
 endif()

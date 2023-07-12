@@ -35,6 +35,8 @@
 #include "executor/gexecutor.hpp"
 #include "executor/gstreamingexecutor.hpp"
 #include "backends/common/gbackend.hpp"
+#include "backends/common/gmetabackend.hpp"
+#include "backends/streaming/gstreamingbackend.hpp" // cv::gimpl::streaming::kernels()
 
 // <FIXME:>
 #if !defined(GAPI_STANDALONE)
@@ -51,14 +53,18 @@
 
 namespace
 {
-    cv::gapi::GKernelPackage getKernelPackage(cv::GCompileArgs &args)
+    cv::GKernelPackage getKernelPackage(cv::GCompileArgs &args)
     {
-        auto withAuxKernels = [](const cv::gapi::GKernelPackage& pkg) {
-            cv::gapi::GKernelPackage aux_pkg;
+        auto withAuxKernels = [](const cv::GKernelPackage& pkg) {
+            cv::GKernelPackage aux_pkg;
             for (const auto &b : pkg.backends()) {
-                aux_pkg = combine(aux_pkg, b.priv().auxiliaryKernels());
+                aux_pkg = cv::gapi::combine(aux_pkg, b.priv().auxiliaryKernels());
             }
-            return combine(pkg, aux_pkg);
+            // Always include built-in meta<> and copy implementation
+            return cv::gapi::combine(pkg,
+                                     aux_pkg,
+                                     cv::gimpl::meta::kernels(),
+                                     cv::gimpl::streaming::kernels());
         };
 
         auto has_use_only = cv::gapi::getCompileArg<cv::gapi::use_only>(args);
@@ -67,17 +73,18 @@ namespace
 
         static auto ocv_pkg =
 #if !defined(GAPI_STANDALONE)
-            combine(cv::gapi::core::cpu::kernels(),
-                    cv::gapi::imgproc::cpu::kernels(),
-                    cv::gapi::video::cpu::kernels(),
-                    cv::gapi::render::ocv::kernels());
+            cv::gapi::combine(cv::gapi::core::cpu::kernels(),
+                              cv::gapi::imgproc::cpu::kernels(),
+                              cv::gapi::video::cpu::kernels(),
+                              cv::gapi::render::ocv::kernels(),
+                              cv::gapi::streaming::kernels());
 #else
-            cv::gapi::GKernelPackage();
+            cv::GKernelPackage();
 #endif // !defined(GAPI_STANDALONE)
 
-        auto user_pkg = cv::gapi::getCompileArg<cv::gapi::GKernelPackage>(args);
-        auto user_pkg_with_aux = withAuxKernels(user_pkg.value_or(cv::gapi::GKernelPackage{}));
-        return combine(ocv_pkg, user_pkg_with_aux);
+        auto user_pkg = cv::gapi::getCompileArg<cv::GKernelPackage>(args);
+        auto user_pkg_with_aux = withAuxKernels(user_pkg.value_or(cv::GKernelPackage{}));
+        return cv::gapi::combine(ocv_pkg, user_pkg_with_aux);
     }
 
     cv::gapi::GNetPackage getNetworkPackage(cv::GCompileArgs &args)
@@ -103,8 +110,8 @@ namespace
     }
 
     template<typename C>
-    cv::gapi::GKernelPackage auxKernelsFrom(const C& c) {
-        cv::gapi::GKernelPackage result;
+    cv::GKernelPackage auxKernelsFrom(const C& c) {
+        cv::GKernelPackage result;
         for (const auto &b : c) {
             result = cv::gapi::combine(result, b.priv().auxiliaryKernels());
         }
@@ -114,7 +121,7 @@ namespace
     using adeGraphs = std::vector<std::unique_ptr<ade::Graph>>;
 
     // Creates ADE graphs (patterns and substitutes) from pkg's transformations
-    void makeTransformationGraphs(const cv::gapi::GKernelPackage& pkg,
+    void makeTransformationGraphs(const cv::GKernelPackage& pkg,
                                   adeGraphs& patterns,
                                   adeGraphs& substitutes) {
         const auto& transforms = pkg.get_transformations();
@@ -135,7 +142,7 @@ namespace
         }
     }
 
-    void checkTransformations(const cv::gapi::GKernelPackage& pkg,
+    void checkTransformations(const cv::GKernelPackage& pkg,
                               const adeGraphs& patterns,
                               const adeGraphs& substitutes) {
         const auto& transforms = pkg.get_transformations();
@@ -238,6 +245,11 @@ cv::gimpl::GCompiler::GCompiler(const cv::GComputation &c,
                                                       // (no compound backend present here)
     m_e.addPass("kernels", "check_islands_content", passes::checkIslandsContent);
 
+    // Special stage for intrinsics handling
+    m_e.addPassStage("intrin");
+    m_e.addPass("intrin", "desync",         passes::intrinDesync);
+    m_e.addPass("intrin", "finalizeIntrin", passes::intrinFinalize);
+
     //Input metas may be empty when a graph is compiled for streaming
     m_e.addPassStage("meta");
     if (!m_metas.empty())
@@ -311,8 +323,10 @@ void cv::gimpl::GCompiler::validateInputMeta()
         // FIXME: Auto-generate methods like this from traits:
         case GProtoArg::index_of<cv::GMat>():
         case GProtoArg::index_of<cv::GMatP>():
-        case GProtoArg::index_of<cv::GFrame>():
             return util::holds_alternative<cv::GMatDesc>(meta);
+
+        case GProtoArg::index_of<cv::GFrame>():
+            return util::holds_alternative<cv::GFrameDesc>(meta);
 
         case GProtoArg::index_of<cv::GScalar>():
             return util::holds_alternative<cv::GScalarDesc>(meta);
@@ -324,24 +338,31 @@ void cv::gimpl::GCompiler::validateInputMeta()
             return util::holds_alternative<cv::GOpaqueDesc>(meta);
 
         default:
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
         }
         return false; // should never happen
     };
 
-    for (const auto &meta_arg_idx : ade::util::indexed(ade::util::zip(m_metas, c_expr.m_ins)))
+    GAPI_LOG_DEBUG(nullptr, "Total count: " << m_metas.size());
+    for (const auto meta_arg_idx : ade::util::indexed(ade::util::zip(m_metas, c_expr.m_ins)))
     {
         const auto &meta  = std::get<0>(ade::util::value(meta_arg_idx));
         const auto &proto = std::get<1>(ade::util::value(meta_arg_idx));
 
+        const auto index = ade::util::index(meta_arg_idx);
+        GAPI_LOG_DEBUG(nullptr, "Process index: " << index);
+
+        // check types validity
         if (!meta_matches(meta, proto))
         {
-            const auto index  = ade::util::index(meta_arg_idx);
             util::throw_error(std::logic_error
                         ("GComputation object type / metadata descriptor mismatch "
                          "(argument " + std::to_string(index) + ")"));
             // FIXME: report what we've got and what we've expected
         }
+
+        // check value consistency
+        gimpl::proto::validate_input_meta_arg(meta); //may throw
     }
     // All checks are ok
 }
@@ -356,7 +377,7 @@ void cv::gimpl::GCompiler::validateOutProtoArgs()
         return;
     }
     const auto &c_expr = util::get<cv::GComputation::Priv::Expr>(m_c.priv().m_shape);
-    for (const auto &out_pos : ade::util::indexed(c_expr.m_outs))
+    for (const auto out_pos : ade::util::indexed(c_expr.m_outs))
     {
         const auto &node = proto::origin_of(ade::util::value(out_pos)).node;
         if (node.shape() != cv::GNode::NodeShape::CALL)
@@ -382,6 +403,9 @@ cv::gimpl::GCompiler::GPtr cv::gimpl::GCompiler::generateGraph()
     {
         GModel::Graph(*g).metadata().set(OriginalInputMeta{m_metas});
     }
+    // FIXME: remove m_args, remove GCompileArgs from backends' method signatures,
+    // rework backends to access GCompileArgs from graph metadata
+    GModel::Graph(*g).metadata().set(CompileArgs{m_args});
     return g;
 }
 
@@ -423,14 +447,16 @@ cv::GCompiled cv::gimpl::GCompiler::produceCompiled(GPtr &&pg)
     //     an execution plan for it (backend-specific execution)
     // ...before call to produceCompiled();
 
+    GModel::ConstGraph cgr(*pg);
     const auto &outMetas = GModel::ConstGraph(*pg).metadata()
         .get<OutputMeta>().outMeta;
-    std::unique_ptr<GExecutor> pE(new GExecutor(std::move(pg)));
     // FIXME: select which executor will be actually used,
     // make GExecutor abstract.
+    std::unique_ptr<GExecutor> pE(new GExecutor(std::move(pg)));
 
     GCompiled compiled;
     compiled.priv().setup(m_metas, outMetas, std::move(pE));
+
     return compiled;
 }
 
@@ -446,6 +472,8 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
         outMetas = GModel::ConstGraph(*pg).metadata().get<OutputMeta>().outMeta;
     }
 
+    GModel::ConstGraph cgr(*pg);
+
     std::unique_ptr<GStreamingExecutor> pE(new GStreamingExecutor(std::move(pg),
                                                                   m_args));
     if (!m_metas.empty() && !outMetas.empty())
@@ -457,7 +485,7 @@ cv::GStreamingCompiled cv::gimpl::GCompiler::produceStreamingCompiled(GPtr &&pg)
         // Otherwise, set it up with executor object only
         compiled.priv().setup(std::move(pE));
     }
-    else GAPI_Assert(false && "Impossible happened -- please report a bug");
+    else GAPI_Error("Impossible happened -- please report a bug");
     return compiled;
 }
 

@@ -35,8 +35,6 @@
 
 #include <stdio.h>
 
-#include "general.h"
-
 namespace cvflann
 {
 

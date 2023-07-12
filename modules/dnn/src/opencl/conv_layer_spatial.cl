@@ -74,18 +74,22 @@
     (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(_x_, _channel_); \
 } while(0)
 #define ELTWISE_DATA_ARG __global Dtype* eltwise_data,
+#define ELTWISE_DATA_ARG_WITH_OFFSET __global Dtype* eltwise_ptr, int eltwise_offset,
 #else
 #define ACTIVATION_FUNCTION(_dst_, _offset_, _data_, _channel_) do { \
     const Dtype _x_ = (_data_); \
     (_dst_)[(_offset_)] = ACTIVATION_RELU_FUNCTION(_x_, _channel_); \
 } while(0)
 #define ELTWISE_DATA_ARG
+#define ELTWISE_DATA_ARG_WITH_OFFSET
 #endif
 
 #if APPLY_BIAS
 #define BIAS_KERNEL_ARG __global Dtype * biases_base,
+#define BIAS_KERNEL_ARG_WITH_OFFSET __global Dtype * biases_base_ptr, int biases_base_offset,
 #else
 #define BIAS_KERNEL_ARG
+#define BIAS_KERNEL_ARG_WITH_OFFSET
 #endif
 
 #define __CAT(x, y) x##y
@@ -154,22 +158,18 @@ __kernel void ConvolveBasic(
 )
 {
     __global Dtype* convolved_image = convolved_image_base + convolved_image_base_offset;
-    const int outputX = get_global_id(0);
-    const int outputY = get_global_id(1);
-    const int kernelNum = get_global_id(2) * ZPAR;
-    if (outputX < output_width && outputY < output_height)
+    const int out_idx = get_global_id(0);  // 1D task layout: [output_width * output_height * OUTPUT_Z]
+    const int plane_size = output_width * output_height;
+    const int out_plane_idx = out_idx % plane_size;
+    const int outputZ = out_idx / plane_size;  // kernelNum
+    const int outputY = out_plane_idx / output_width;
+    const int outputX = out_plane_idx % output_width;
+    if (outputZ < OUTPUT_Z)
     {
-        Dtype sum[ZPAR];
-        for (int kern = 0; kern < ZPAR; kern++)
-        {
-            sum[kern] = 0.0f;
-        }
+        Dtype sum = 0.0f;
         const int org_y = outputY * STRIDE_Y - pad_h;
         const int org_x = outputX * STRIDE_X - pad_w;
-        const int currentKernelOffset = kernel_offset + kernelNum*KERNEL_HEIGHT*KERNEL_WIDTH*CHANNELS;
-#if APPLY_BIAS
-        const int biasIndex = bias_offset + kernelNum;
-#endif
+        const int currentKernelOffset = kernel_offset + outputZ*KERNEL_HEIGHT*KERNEL_WIDTH*CHANNELS;
         const int local_image_offset = org_y * input_width + org_x;
         const int imageSize = input_width * input_height;
         __global Dtype* image_dataPtr = (image_data + (image_offset + local_image_offset));
@@ -178,17 +178,13 @@ __kernel void ConvolveBasic(
         {
             for (int y = 0; y < KERNEL_HEIGHT; y++)
             {
+                int y_ = org_y + y * DILATION_Y;
                 for (int x = 0; x < KERNEL_WIDTH; x++)
                 {
-                    int y_ = org_y + y * DILATION_Y;
                     int x_ = org_x + x * DILATION_X;
-                    if (!(y_ >= 0 && y_ < input_height && x_ >= 0 && x_ < input_width))
+                    if (y_ >= 0 && y_ < input_height && x_ >= 0 && x_ < input_width)
                     {
-                        continue;
-                    }
-                    for (int kern = 0; kern < ZPAR; kern++)
-                    {
-                        sum[kern] += image_dataPtr[x * DILATION_X] * kernel_dataPtr[kern*KERNEL_HEIGHT*KERNEL_WIDTH*CHANNELS + x];
+                        sum = mad(image_dataPtr[x * DILATION_X], kernel_dataPtr[x], sum);
                     }
                 }
                 image_dataPtr += input_width * DILATION_Y;
@@ -197,18 +193,13 @@ __kernel void ConvolveBasic(
             image_dataPtr += imageSize - input_width*KERNEL_HEIGHT*DILATION_Y;
         }
 
-        for (int kern = 0; kern < ZPAR; kern++)
-        {
-            if (kernelNum + kern < OUTPUT_Z)
-            {
-                int offset = convolved_image_offset + (kernelNum+kern)*output_height*output_width + outputY*output_width + outputX;
+        int offset = convolved_image_offset + out_idx;
 #if APPLY_BIAS
-                ACTIVATION_FUNCTION(convolved_image, offset, sum[kern] + bias[biasIndex + kern], biasIndex + kern);
+        int biasIndex = bias_offset + outputZ;
+        ACTIVATION_FUNCTION(convolved_image, offset, sum + bias[biasIndex], biasIndex);
 #else
-                ACTIVATION_FUNCTION(convolved_image, offset, sum[kern], kernelNum + kern);
+        ACTIVATION_FUNCTION(convolved_image, offset, sum, outputZ);
 #endif
-            }
-        }
     }
 }
 
@@ -223,19 +214,28 @@ __attribute__((reqd_work_group_size(1, 1, SIMD_SIZE)))
 __attribute__((intel_reqd_sub_group_size(SIMD_SIZE)))
 __kernel void
 convolve_simd(
-    ELTWISE_DATA_ARG
+    ELTWISE_DATA_ARG_WITH_OFFSET
     FUSED_ARG
-    __global Dtype* inputs,
-    __global Dtype* weights,
-    BIAS_KERNEL_ARG
-    __global Dtype* outputs_base,
-    const int outputs_offset,
+    __global Dtype* inputs_ptr, const int inputs_offset,
+    __global Dtype* weights_ptr, const int weights_offset,
+    BIAS_KERNEL_ARG_WITH_OFFSET
+    __global Dtype* outputs_base, const int outputs_offset,
     const ushort input_width,
     const ushort input_height,
     const ushort output_width,
     const ushort output_height)
 {
+  __global Dtype* inputs = inputs_ptr + inputs_offset;
+  __global Dtype* weights = weights_ptr + weights_offset;
+#if APPLY_BIAS
+  __global Dtype* biases_base = biases_base_ptr + biases_base_offset;
+#endif
+
   __global Dtype* outputs = outputs_base + outputs_offset;
+#ifdef FUSED_CONV_ELTWISE
+  __global Dtype* eltwise_data = eltwise_ptr + eltwise_offset;
+#endif
+
   unsigned int oc = get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column
   unsigned int or = get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
   unsigned int fm = get_global_id(2);                    // fm = Feature Map = od = Output Depth
@@ -388,13 +388,12 @@ typedef struct half0 { half s0; } half0; //never used but makes compiler happy.
 #define ROW_PITCH input_width
 
 #define GEMM_LIKE_KERNEL_ARGS     \
-    ELTWISE_DATA_ARG              \
+    ELTWISE_DATA_ARG_WITH_OFFSET  \
     FUSED_ARG                     \
-    const __global Dtype *src0,   \
-    const __global Dtype *src1,   \
-    BIAS_KERNEL_ARG               \
-    __global Dtype *dst_base,     \
-    const int dst_offset,         \
+    const __global Dtype *src0_ptr, const unsigned int src0_offset, const unsigned int src0_limit, \
+    const __global Dtype *src1_ptr, const unsigned int src1_offset, const unsigned int src1_limit, \
+    BIAS_KERNEL_ARG_WITH_OFFSET   \
+    __global Dtype *dst_base, const unsigned int dst_offset, const unsigned int dst_limit, \
     const ushort input_width,     \
     const ushort input_height,    \
     const ushort output_width,    \
@@ -424,7 +423,17 @@ typedef struct half0 { half s0; } half0; //never used but makes compiler happy.
 __attribute__((intel_reqd_sub_group_size(8)))
 __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 {
+    const __global Dtype *src0 = src0_ptr + src0_offset;
+    const __global Dtype *src1 = src1_ptr + src1_offset;
+#if APPLY_BIAS
+  __global Dtype* biases_base = biases_base_ptr + biases_base_offset;
+#endif
+
     __global Dtype *dst = dst_base + dst_offset;
+#ifdef FUSED_CONV_ELTWISE
+  __global Dtype* eltwise_data = eltwise_ptr + eltwise_offset;
+#endif
+
     const int group_x = get_group_id(0);
     const int group_y = get_group_id(1);
     const int global_x = get_global_id(0);
@@ -447,6 +456,14 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
     }
     typedef CAT( Dtype, KERNEL_WIDTH ) Dtype_t;
 
+// U_GEMM_LIKE_CONV_k11x11_cn3_g1_s4x4_d1x1_b1_in240x240_p0x0_num1_M96_activ1_eltwise0_FP32_5_1_8_32_SIMD8 doesn't run properly (src0_read out of bounds)
+// Test: DNNTestNetwork.AlexNet/0 (to run all kernels use OPENCV_OCL4DNN_FORCE_AUTO_TUNING=1)
+#if 0 // INPUT_PAD_W == 0 && INPUT_PAD_H == 0 && DILATION_X == 1 && DILATION_Y == 1 && INPUT_PAD_BOTTOM == 0 && INPUT_PAD_RIGHT == 0
+  #define OPTIMIZE_READ 1
+#else
+  #define OPTIMIZE_READ 0
+#endif
+
     // True for all threads if filter_width is multiple of TILE_N
     // else, true for all but right-most column of threads.
     if( TILE_N_LAST == 0 || global_x < WIDTH1 / TILE_N )
@@ -463,7 +480,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         // atile is M rows x K columns.
         int curr_x = ( global_y % output_width ) * STRIDE_X;
         int curr_y = ( global_y / output_width ) * STRIDE_Y;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
+#if !OPTIMIZE_READ
         int saved_y = curr_y;
 #endif
         const __global Dtype *src0_read = src0
@@ -483,7 +500,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         do
         {
             int patch_row = 0;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
+#if !OPTIMIZE_READ
             curr_y = saved_y;
 #endif
 
@@ -501,11 +518,17 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
                 // ...
                 const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
 
-#if INPUT_PAD_W == 0 && INPUT_PAD_H == 0 && DILATION_X == 1 && DILATION_Y == 1 && INPUT_PAD_BOTTOM == 0 && INPUT_PAD_RIGHT == 0
+#if OPTIMIZE_READ
   #if KERNEL_WIDTH == 3
                 Dtype_t blockA00 = vload3(0, src0_read);
                 Dtype*  pblockA00 = (Dtype*)(&blockA00);
   #else
+    #if 0 // debug
+                if ((int)(src0_read - src0) >= src0_limit - KERNEL_WIDTH)
+                {
+                    printf("CATCH: src0_read-src0: %d   limit=%d   curr_y,curr_x=%d,%d\n", (int)(src0_read - src0), src0_limit, curr_y, curr_x);
+                }
+    #endif
                 Dtype_t blockA00 = ( (const __global Dtype_t*)src0_read )[  0  ];
                 Dtype*  pblockA00 = (Dtype*)(&blockA00);
   #endif
@@ -626,7 +649,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         // atile is M rows x K columns.
         int curr_x = ( global_y % output_width ) * STRIDE_X;
         int curr_y = ( global_y / output_width ) * STRIDE_Y;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
+#if !OPTIMIZE_READ
         int saved_y = curr_y;
 #endif
         const __global Dtype *src0_read = src0
@@ -646,14 +669,14 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
         do
         {
             int patch_row = 0;
-#if INPUT_PAD_H != 0 || INPUT_PAD_W != 0 || DILATION_X != 1 || DILATION_Y != 1 || INPUT_PAD_BOTTOM != 0 || INPUT_PAD_RIGHT != 0
+#if !OPTIMIZE_READ
             curr_y = saved_y;
 #endif
             do
             {
                 // Load atile and interleaved btile.
                 const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
-#if INPUT_PAD_W == 0 && INPUT_PAD_H == 0 && DILATION_X == 1 && DILATION_Y == 1 && INPUT_PAD_BOTTOM == 0 && INPUT_PAD_RIGHT == 0
+#if OPTIMIZE_READ
                 Dtype_t blockA00 = ( (const __global Dtype_t*)src0_read )[  0  ];
                 Dtype*  pblockA00 = (Dtype*)(&blockA00);
 #else
@@ -790,7 +813,7 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
             }
         }
     }
-#endif
+#endif  // TILE_N_LAST > 0
 }
 #endif
 #ifdef GEMM_LIKE_CONV_32_2
@@ -813,7 +836,17 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 __attribute__((intel_reqd_sub_group_size(8)))
 __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 {
+    const __global Dtype *src0 = src0_ptr + src0_offset;
+    const __global Dtype *src1 = src1_ptr + src1_offset;
+#if APPLY_BIAS
+  __global Dtype* biases_base = biases_base_ptr + biases_base_offset;
+#endif
+
     __global Dtype *dst = dst_base + dst_offset;
+#ifdef FUSED_CONV_ELTWISE
+  __global Dtype* eltwise_data = eltwise_ptr + eltwise_offset;
+#endif
+
     const int group_x = get_group_id(0);
     const int group_y = get_group_id(1);
     const int global_x = get_global_id(0);
@@ -1375,7 +1408,17 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 __attribute__((intel_reqd_sub_group_size(16)))
 __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 {
+    const __global Dtype *src0 = src0_ptr + src0_offset;
+    const __global Dtype *src1 = src1_ptr + src1_offset;
+#if APPLY_BIAS
+  __global Dtype* biases_base = biases_base_ptr + biases_base_offset;
+#endif
+
     __global Dtype *dst = dst_base + dst_offset;
+#ifdef FUSED_CONV_ELTWISE
+  __global Dtype* eltwise_data = eltwise_ptr + eltwise_offset;
+#endif
+
     const int group_x = get_group_id(0);
     const int group_y = get_group_id(1);
     const int global_x = get_global_id(0);
@@ -1561,7 +1604,17 @@ __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 __attribute__((intel_reqd_sub_group_size(16)))
 __kernel void Conv_Interleaved(GEMM_LIKE_KERNEL_ARGS)
 {
+    const __global Dtype *src0 = src0_ptr + src0_offset;
+    const __global Dtype *src1 = src1_ptr + src1_offset;
+#if APPLY_BIAS
+  __global Dtype* biases_base = biases_base_ptr + biases_base_offset;
+#endif
+
     __global Dtype *dst = dst_base + dst_offset;
+#ifdef FUSED_CONV_ELTWISE
+  __global Dtype* eltwise_data = eltwise_ptr + eltwise_offset;
+#endif
+
     const int group_x = get_group_id(0);
     const int group_y = get_group_id(1);
     const int global_x = get_global_id(0);
@@ -1780,10 +1833,13 @@ __kernel void DWCONV(
     const ushort output_width,
     const ushort output_height) {
   __global Dtype* convolved_image = convolved_image_base + convolved_image_offset;
-  const int outputX = get_global_id(0);
-  const int outputY = get_global_id(1);
-  const int outputZ = get_global_id(2);
-  if(outputX < output_width && outputY < output_height)
+  const int out_idx = get_global_id(0);  // 1D task layout: [output_width * output_height * OUTPUT_Z]
+  const int plane_size = output_width * output_height;
+  const int out_plane_idx = out_idx % plane_size;
+  const int outputZ = out_idx / plane_size;
+  const int outputY = out_plane_idx / output_width;
+  const int outputX = out_plane_idx % output_width;
+  if (outputZ < OUTPUT_Z)
   {
     Dtype sum = 0.;
 

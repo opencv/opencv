@@ -177,7 +177,7 @@ if(NOT ${found})
 
     if(NOT ANDROID AND NOT IOS)
       if(CMAKE_HOST_UNIX)
-        execute_process(COMMAND ${_executable} -c "from distutils.sysconfig import *; print(get_python_lib())"
+        execute_process(COMMAND ${_executable} -c "from sysconfig import *; print(get_path('purelib'))"
                         RESULT_VARIABLE _cvpy_process
                         OUTPUT_VARIABLE _std_packages_path
                         OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -296,4 +296,11 @@ elseif(PYTHON3_EXECUTABLE AND PYTHON3INTERP_FOUND)
     # Use Python 3 as fallback Python interpreter (if there is no Python 2)
     set(PYTHON_DEFAULT_AVAILABLE "TRUE")
     set(PYTHON_DEFAULT_EXECUTABLE "${PYTHON3_EXECUTABLE}")
+endif()
+
+if(PYTHON_DEFAULT_AVAILABLE)
+  execute_process(COMMAND ${PYTHON_DEFAULT_EXECUTABLE} --version
+                  OUTPUT_VARIABLE PYTHON_DEFAULT_VERSION
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" PYTHON_DEFAULT_VERSION "${PYTHON_DEFAULT_VERSION}")
 endif()

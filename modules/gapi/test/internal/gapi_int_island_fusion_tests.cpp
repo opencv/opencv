@@ -513,7 +513,67 @@ TEST(IslandFusion, Regression_ShouldFuseAll)
     EXPECT_EQ(1u, isl_nhs.size());  // 1 island
 }
 
-// FIXME: add more tests on mixed (hetero) graphs
+TEST(IslandFusion, Test_Desync_NoFuse)
+{
+    cv::GMat in;
+    cv::GMat tmp1 = in*0.5f;
+    cv::GMat tmp2 = tmp1 + in;
+
+    cv::GMat tmp3 = cv::gapi::streaming::desync(tmp1);
+    cv::GMat tmp4 = tmp3*0.1f;
+
+    const auto in_meta = cv::GMetaArg(cv::GMatDesc{CV_8U,1,cv::Size(32,32)});
+    cv::GComputation comp(cv::GIn(in), cv::GOut(tmp2, tmp4));
+
+    //////////////////////////////////////////////////////////////////
+    // Compile the graph in "regular" mode, it should produce a single island
+    // Note: with copy moved to a separate backend there is always 3 islands in this test
+    {
+        using namespace cv::gimpl;
+
+        GCompiler compiler(comp, {in_meta}, cv::compile_args());
+        GCompiler::GPtr graph = compiler.generateGraph();
+        compiler.runPasses(*graph);
+
+        auto isl_model = GModel::ConstGraph(*graph).metadata()
+            .get<IslandModel>().model;
+        GIslandModel::ConstGraph gim(*isl_model);
+
+        const auto is_island = [&](ade::NodeHandle nh) {
+            return (NodeKind::ISLAND == gim.metadata(nh).get<NodeKind>().k);
+        };
+        const auto num_isl = std::count_if(gim.nodes().begin(),
+                                           gim.nodes().end(),
+                                           is_island);
+        EXPECT_EQ(3, num_isl);
+    }
+    //////////////////////////////////////////////////////////////////
+    // Now compile the graph in the streaming mode.
+    // It has to produce two islands
+    // Note: with copy moved to a separate backend there is always 3 islands in this test
+    {
+        using namespace cv::gimpl;
+
+        GCompiler compiler(comp, {in_meta}, cv::compile_args());
+        GCompiler::GPtr graph = compiler.generateGraph();
+        GModel::Graph(*graph).metadata().set(Streaming{});
+        compiler.runPasses(*graph);
+
+        auto isl_model = GModel::ConstGraph(*graph).metadata()
+             .get<IslandModel>().model;
+        GIslandModel::ConstGraph gim(*isl_model);
+
+        const auto is_island = [&](ade::NodeHandle nh) {
+            return (NodeKind::ISLAND == gim.metadata(nh).get<NodeKind>().k);
+        };
+        const auto num_isl = std::count_if(gim.nodes().begin(),
+                                           gim.nodes().end(),
+                                           is_island);
+        EXPECT_EQ(3, num_isl);
+    }
+}
+
+// Fixme: add more tests on mixed (hetero) graphs
 // ADE-222, ADE-223
 
 // FIXME: add test on combination of user-specified island

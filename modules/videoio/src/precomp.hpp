@@ -44,6 +44,7 @@
 
 #if defined(__OPENCV_BUILD) && defined(BUILD_PLUGIN)
 #undef __OPENCV_BUILD  // allow public API only
+#define OPENCV_HAVE_CVCONFIG_H 1  // but we still have access to cvconfig.h (TODO remove this)
 #include <opencv2/core.hpp>
 #include <opencv2/core/utils/trace.hpp>
 #endif
@@ -81,7 +82,6 @@
 #include <string.h>
 #include <limits.h>
 #include <ctype.h>
-#include <assert.h>  // FIXIT remove this
 
 #if defined _WIN32 || defined WINCE
     #if !defined _WIN32_WINNT

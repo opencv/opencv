@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2019 Intel Corporation
+// Copyright (C) 2018-2021 Intel Corporation
 
 
 #ifndef OPENCV_GAPI_GISLANDMODEL_HPP
@@ -21,7 +21,6 @@
 #include "compiler/gobjref.hpp"
 
 namespace cv { namespace gimpl {
-
 
 // FIXME: GAPI_EXPORTS only because of tests!
 class GAPI_EXPORTS GIsland
@@ -122,6 +121,8 @@ public:
 
     virtual bool canReshape() const = 0;
     virtual void reshape(ade::Graph& g, const GCompileArgs& args) = 0;
+    virtual bool allocatesOutputs() const { return false; }
+    virtual cv::RMat allocate(const cv::GMatDesc&) const { GAPI_Error("should never be called"); }
 
     // This method is called when the GStreamingCompiled gets a new
     // input source to process. Normally this method is called once
@@ -139,7 +140,15 @@ public:
     // FIXME: This thing will likely break stuff once we introduce
     // "multi-source streaming", a better design needs to be proposed
     // at that stage.
-    virtual void handleNewStream() {}; // do nothing here by default
+    virtual void handleNewStream() {} // do nothing here by default
+
+    // This method is called for every IslandExecutable when
+    // the stream-based execution is stopped.
+    // All processing is guaranteed to be stopped by this moment,
+    // with no pending or running 'run()' processes ran in background.
+    // FIXME: This method is tightly bound to the GStreamingExecutor
+    // now.
+    virtual void handleStopStream() {} // do nothing here by default
 
     virtual ~GIslandExecutable() = default;
 };
@@ -152,7 +161,12 @@ public:
     const std::vector<cv::gimpl::RcDesc> &desc() const   { return d; }
 };
 struct EndOfStream {};
-using StreamMsg = cv::util::variant<EndOfStream, cv::GRunArgs>;
+
+struct Exception {
+    std::exception_ptr eptr;
+};
+
+using StreamMsg = cv::util::variant<EndOfStream, cv::GRunArgs, Exception>;
 struct GIslandExecutable::IInput: public GIslandExecutable::IODesc {
     virtual ~IInput() = default;
     virtual StreamMsg get() = 0;     // Get a new input vector (blocking)
@@ -160,9 +174,15 @@ struct GIslandExecutable::IInput: public GIslandExecutable::IODesc {
 };
 struct GIslandExecutable::IOutput: public GIslandExecutable::IODesc {
     virtual ~IOutput() = default;
-    virtual GRunArgP get(int idx) = 0;  // Allocate (wrap) a new data object for output idx
-    virtual void post(GRunArgP&&) = 0;  // Release the object back to the framework (mark available)
-    virtual void post(EndOfStream&&) = 0; // Post end-of-stream marker back to the framework
+    virtual GRunArgP get(int idx) = 0;                                 // Allocate (wrap) a new data object for output idx
+    virtual void post(GRunArgP&&, const std::exception_ptr& = {}) = 0; // Release the object back to the framework (mark available)
+    virtual void post(EndOfStream&&) = 0;                              // Post end-of-stream marker back to the framework
+    virtual void post(Exception&&) = 0;
+
+
+    // Assign accumulated metadata to the given output object.
+    // This method can only be called after get() and before post().
+    virtual void meta(const GRunArgP&, const GRunArg::Meta &) = 0;
 };
 
 // GIslandEmitter - a backend-specific thing which feeds data into
@@ -221,8 +241,19 @@ struct IslandsCompiled
     static const char *name() { return "IslandsCompiled"; }
 };
 
+// This flag marks an edge in an GIslandModel as "desynchronized"
+// i.e. it starts a new desynchronized subgraph
+struct DesyncIslEdge
+{
+    static const char *name() { return "DesynchronizedIslandEdge"; }
+
+    // Projection from GModel/DesyncEdge.index
+    int index;
+};
+
 namespace GIslandModel
 {
+
     using Graph = ade::TypedGraph
         < NodeKind
         , FusedIsland
@@ -231,6 +262,7 @@ namespace GIslandModel
         , Emitter
         , Sink
         , IslandsCompiled
+        , DesyncIslEdge
         , ade::passes::TopologicalSortData
         >;
 
@@ -243,6 +275,7 @@ namespace GIslandModel
         , Emitter
         , Sink
         , IslandsCompiled
+        , DesyncIslEdge
         , ade::passes::TopologicalSortData
         >;
 
@@ -264,7 +297,11 @@ namespace GIslandModel
     //     from the original model (! don't mix with DataSlot)
     // FIXME: GAPI_EXPORTS because of tests only!
     ade::NodeHandle GAPI_EXPORTS producerOf(const ConstGraph &g, ade::NodeHandle &data_nh);
-
+    // traceIslandName - returns pretty island name for passed island node.
+    //     Function uses RTTI to assembly name.
+    //     In case if name of backend implementation class doesn't fit *G[Name]BackendImpl* pattern,
+    //     raw mangled name of class will be used.
+    std::string traceIslandName(const ade::NodeHandle& op_nh, const Graph& g);
 } // namespace GIslandModel
 
 }} // namespace cv::gimpl

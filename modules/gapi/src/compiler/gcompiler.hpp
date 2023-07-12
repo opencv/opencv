@@ -26,10 +26,10 @@ class GAPI_EXPORTS GCompiler
     GCompileArgs             m_args;
     ade::ExecutionEngine     m_e;
 
-    cv::gapi::GKernelPackage m_all_kernels;
+    cv::GKernelPackage       m_all_kernels;
     cv::gapi::GNetPackage    m_all_networks;
 
-    // Patters built from transformations
+    // Patterns built from transformations
     std::vector<std::unique_ptr<ade::Graph>> m_all_patterns;
 
 

@@ -49,16 +49,18 @@
 #include <google/protobuf/message.h>
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/reflection.h>
 #include "caffe_io.hpp"
 #endif
+
+#include <opencv2/core/utils/fp_control_utils.hpp>
 
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 #ifdef HAVE_PROTOBUF
-using ::google::protobuf::RepeatedField;
-using ::google::protobuf::RepeatedPtrField;
+using ::google::protobuf::RepeatedFieldRef;
 using ::google::protobuf::Message;
 using ::google::protobuf::Descriptor;
 using ::google::protobuf::FieldDescriptor;
@@ -88,16 +90,18 @@ MatShape parseBlobShape(const caffe::BlobShape& _input_shape)
 
 class CaffeImporter
 {
+    FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
     caffe::NetParameter net;
     caffe::NetParameter netBinary;
 
 public:
 
-    CaffeImporter(const char *pototxt, const char *caffeModel)
+    CaffeImporter(const char *prototxt, const char *caffeModel)
     {
         CV_TRACE_FUNCTION();
 
-        ReadNetParamsFromTextFileOrDie(pototxt, &net);
+        ReadNetParamsFromTextFileOrDie(prototxt, &net);
 
         if (caffeModel && caffeModel[0])
             ReadNetParamsFromBinaryFileOrDie(caffeModel, &netBinary);
@@ -136,7 +140,7 @@ public:
 
         #define SET_UP_FILED(getter, arrayConstr, gtype)                                    \
             if (isRepeated) {                                                               \
-                const RepeatedField<gtype> &v = refl->GetRepeatedField<gtype>(msg, field);  \
+                const RepeatedFieldRef<gtype> v = refl->GetRepeatedFieldRef<gtype>(msg, field);  \
                 params.set(name, DictValue::arrayConstr(v.begin(), (int)v.size()));                  \
             }                                                                               \
             else {                                                                          \
@@ -168,7 +172,7 @@ public:
             break;
         case FieldDescriptor::CPPTYPE_STRING:
             if (isRepeated) {
-                const RepeatedPtrField<std::string> &v = refl->GetRepeatedPtrField<std::string>(msg, field);
+                const RepeatedFieldRef<std::string> v = refl->GetRepeatedFieldRef<std::string>(msg, field);
                 params.set(name, DictValue::arrayString(v.begin(), (int)v.size()));
             }
             else {
@@ -189,7 +193,6 @@ public:
             break;
         default:
             CV_Error(Error::StsError, "Unknown type \"" + String(field->type_name()) + "\" in prototxt");
-            break;
         }
     }
 
@@ -306,16 +309,13 @@ public:
 
         caffe::LayerParameter* binLayer = netBinary.mutable_layer(li);
         const int numBlobs = binLayer->blobs_size();
+        std::vector<caffe::BlobProto*> blobs(numBlobs);
+        binLayer->mutable_blobs()->ExtractSubrange(0, numBlobs, blobs.data());
         layerParams.blobs.resize(numBlobs);
         for (int bi = 0; bi < numBlobs; bi++)
         {
-            blobFromProto(binLayer->blobs(bi), layerParams.blobs[bi]);
-        }
-        binLayer->clear_blobs();
-        CV_Assert(numBlobs == binLayer->blobs().ClearedCount());
-        for (int bi = 0; bi < numBlobs; bi++)
-        {
-            delete binLayer->mutable_blobs()->ReleaseCleared();
+            blobFromProto(*blobs[bi], layerParams.blobs[bi]);
+            delete blobs[bi];
         }
     }
 
@@ -555,7 +555,6 @@ public:
         if (idx < 0)
         {
             CV_Error(Error::StsObjectNotFound, "Can't find output blob \"" + name + "\"");
-            return;
         }
 
         dstNet.connect(addedBlobs[idx].layerId, addedBlobs[idx].outNum, layerId, inNum);
@@ -590,7 +589,23 @@ Net readNetFromCaffe(const std::vector<uchar>& bufferProto, const std::vector<uc
                             bufferModelPtr, bufferModel.size());
 }
 
-#endif //HAVE_PROTOBUF
+#else  // HAVE_PROTOBUF
+
+#define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/Caffe: Build OpenCV with Protobuf to import Caffe models")
+
+Net readNetFromCaffe(const String &, const String &) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Net readNetFromCaffe(const char *, size_t, const char *, size_t) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Net readNetFromCaffe(const std::vector<uchar>&, const std::vector<uchar>&) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+#endif  // HAVE_PROTOBUF
 
 CV__DNN_INLINE_NS_END
 }} // namespace

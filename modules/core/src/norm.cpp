@@ -152,10 +152,10 @@ float normL2Sqr_(const float* a, const float* b, int n)
     {
         v_float32 t0 = vx_load(a + j) - vx_load(b + j);
         v_float32 t1 = vx_load(a + j + v_float32::nlanes) - vx_load(b + j + v_float32::nlanes);
-        v_float32 t2 = vx_load(a + j + 2 * v_float32::nlanes) - vx_load(b + j + 2 * v_float32::nlanes);
-        v_float32 t3 = vx_load(a + j + 3 * v_float32::nlanes) - vx_load(b + j + 3 * v_float32::nlanes);
         v_d0 = v_muladd(t0, t0, v_d0);
+        v_float32 t2 = vx_load(a + j + 2 * v_float32::nlanes) - vx_load(b + j + 2 * v_float32::nlanes);
         v_d1 = v_muladd(t1, t1, v_d1);
+        v_float32 t3 = vx_load(a + j + 3 * v_float32::nlanes) - vx_load(b + j + 3 * v_float32::nlanes);
         v_d2 = v_muladd(t2, t2, v_d2);
         v_d3 = v_muladd(t3, t3, v_d3);
     }
@@ -205,12 +205,9 @@ int normL1_(const uchar* a, const uchar* b, int n)
     return d;
 }
 
-}} //cv::hal
+} //cv::hal
 
 //==================================================================================================
-
-namespace cv
-{
 
 template<typename T, typename ST> int
 normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
@@ -594,12 +591,10 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
     CV_UNUSED(src); CV_UNUSED(normType); CV_UNUSED(mask); CV_UNUSED(result);
 #endif
     return false;
-}
-#endif
+}  // ipp_norm()
+#endif  // HAVE_IPP
 
-} // cv::
-
-double cv::norm( InputArray _src, int normType, InputArray _mask )
+double norm( InputArray _src, int normType, InputArray _mask )
 {
     CV_INSTRUMENT_REGION();
 
@@ -758,7 +753,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
             {
                 int bsz = std::min(total - j, blockSize);
                 hal::cvt16f32f((const float16_t*)ptrs[0], data0, bsz * cn);
-                func((uchar*)data0, ptrs[1], (uchar*)&result.d, bsz, cn);
+                func((uchar*)data0, ptrs[1], (uchar*)&result.f, bsz, cn);
                 ptrs[0] += bsz*esz;
                 if (ptrs[1])
                     ptrs[1] += bsz;
@@ -776,9 +771,9 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 
     if( normType == NORM_INF )
     {
-        if(depth == CV_64F || depth == CV_16F)
+        if(depth == CV_64F)
             return result.d;
-        else if (depth == CV_32F)
+        else if (depth == CV_32F || depth == CV_16F)
             return result.f;
         else
             return result.i;
@@ -792,9 +787,6 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
 //==================================================================================================
 
 #ifdef HAVE_OPENCL
-
-namespace cv {
-
 static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask, double & result )
 {
 #ifdef __ANDROID__
@@ -849,15 +841,10 @@ static bool ocl_norm( InputArray _src1, InputArray _src2, int normType, InputArr
         result /= (s2 + DBL_EPSILON);
 
     return true;
-}
-
-}
-
-#endif
+}  // ocl_norm()
+#endif  // HAVE_OPENCL
 
 #ifdef HAVE_IPP
-namespace cv
-{
 static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask, double &result)
 {
     CV_INSTRUMENT_REGION_IPP();
@@ -1008,16 +995,6 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 type == CV_16UC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_16u_C3CMR :
                 type == CV_32FC3 ? (ippiMaskNormDiffFuncC3)ippiNormDiff_L2_32f_C3CMR :
                 0) : 0;
-            if (cv::ipp::getIppTopFeatures() & (
-#if IPP_VERSION_X100 >= 201700
-                    ippCPUID_AVX512F |
-#endif
-                    ippCPUID_AVX2)
-            ) // IPP_DISABLE_NORM_16UC3_mask_small (#11399)
-            {
-                if (normType == NORM_L1 && type == CV_16UC3 && sz.width < 16)
-                    return false;
-            }
             if( ippiNormDiff_C3CMR )
             {
                 Ipp64f norm1, norm2, norm3;
@@ -1083,12 +1060,11 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
     CV_UNUSED(_src1); CV_UNUSED(_src2); CV_UNUSED(normType); CV_UNUSED(_mask); CV_UNUSED(result);
 #endif
     return false;
-}
-}
-#endif
+}  // ipp_norm
+#endif  // HAVE_IPP
 
 
-double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask )
+double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask )
 {
     CV_INSTRUMENT_REGION();
 
@@ -1208,7 +1184,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
         // special case to handle "integer" overflow in accumulator
         const size_t esz = src1.elemSize();
         const int total = (int)it.size;
-        const int intSumBlockSize = normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15);
+        const int intSumBlockSize = (normType == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
         const int blockSize = std::min(total, intSumBlockSize);
         int isum = 0;
         int count = 0;
@@ -1248,7 +1224,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 int bsz = std::min(total - j, blockSize);
                 hal::cvt16f32f((const float16_t*)ptrs[0], data0, bsz * cn);
                 hal::cvt16f32f((const float16_t*)ptrs[1], data1, bsz * cn);
-                func((uchar*)data0, (uchar*)data1, ptrs[2], (uchar*)&result.d, bsz, cn);
+                func((uchar*)data0, (uchar*)data1, ptrs[2], (uchar*)&result.f, bsz, cn);
                 ptrs[0] += bsz*esz;
                 ptrs[1] += bsz*esz;
                 if (ptrs[2])
@@ -1267,9 +1243,9 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
 
     if( normType == NORM_INF )
     {
-        if (depth == CV_64F || depth == CV_16F)
+        if (depth == CV_64F)
             return result.d;
-        else if (depth == CV_32F)
+        else if (depth == CV_32F || depth == CV_16F)
             return result.f;
         else
             return result.u;
@@ -1280,12 +1256,12 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     return result.d;
 }
 
-cv::Hamming::ResultType cv::Hamming::operator()( const unsigned char* a, const unsigned char* b, int size ) const
+cv::Hamming::ResultType Hamming::operator()( const unsigned char* a, const unsigned char* b, int size ) const
 {
     return cv::hal::normHamming(a, b, size);
 }
 
-double cv::PSNR(InputArray _src1, InputArray _src2, double R)
+double PSNR(InputArray _src1, InputArray _src2, double R)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1295,3 +1271,141 @@ double cv::PSNR(InputArray _src1, InputArray _src2, double R)
     double diff = std::sqrt(norm(_src1, _src2, NORM_L2SQR)/(_src1.total()*_src1.channels()));
     return 20*log10(R/(diff+DBL_EPSILON));
 }
+
+
+#ifdef HAVE_OPENCL
+static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _mask, int dtype,
+                           double scale, double delta )
+{
+    UMat src = _src.getUMat();
+
+    if( _mask.empty() )
+        src.convertTo( _dst, dtype, scale, delta );
+    else if (src.channels() <= 4)
+    {
+        const ocl::Device & dev = ocl::Device::getDefault();
+
+        int stype = _src.type(), sdepth = CV_MAT_DEPTH(stype), cn = CV_MAT_CN(stype),
+                ddepth = CV_MAT_DEPTH(dtype), wdepth = std::max(CV_32F, std::max(sdepth, ddepth)),
+                rowsPerWI = dev.isIntel() ? 4 : 1;
+
+        float fscale = static_cast<float>(scale), fdelta = static_cast<float>(delta);
+        bool haveScale = std::fabs(scale - 1) > DBL_EPSILON,
+                haveZeroScale = !(std::fabs(scale) > DBL_EPSILON),
+                haveDelta = std::fabs(delta) > DBL_EPSILON,
+                doubleSupport = dev.doubleFPConfig() > 0;
+
+        if (!haveScale && !haveDelta && stype == dtype)
+        {
+            _src.copyTo(_dst, _mask);
+            return true;
+        }
+        if (haveZeroScale)
+        {
+            _dst.setTo(Scalar(delta), _mask);
+            return true;
+        }
+
+        if ((sdepth == CV_64F || ddepth == CV_64F) && !doubleSupport)
+            return false;
+
+        char cvt[2][50];
+        String opts = format("-D srcT=%s -D dstT=%s -D convertToWT=%s -D cn=%d -D rowsPerWI=%d"
+                             " -D convertToDT=%s -D workT=%s%s%s%s -D srcT1=%s -D dstT1=%s",
+                             ocl::typeToStr(stype), ocl::typeToStr(dtype),
+                             ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])), cn,
+                             rowsPerWI, ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])),
+                             ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
+                             doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                             haveScale ? " -D HAVE_SCALE" : "",
+                             haveDelta ? " -D HAVE_DELTA" : "",
+                             ocl::typeToStr(sdepth), ocl::typeToStr(ddepth));
+
+        ocl::Kernel k("normalizek", ocl::core::normalize_oclsrc, opts);
+        if (k.empty())
+            return false;
+
+        UMat mask = _mask.getUMat(), dst = _dst.getUMat();
+
+        ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
+                maskarg = ocl::KernelArg::ReadOnlyNoSize(mask),
+                dstarg = ocl::KernelArg::ReadWrite(dst);
+
+        if (haveScale)
+        {
+            if (haveDelta)
+                k.args(srcarg, maskarg, dstarg, fscale, fdelta);
+            else
+                k.args(srcarg, maskarg, dstarg, fscale);
+        }
+        else
+        {
+            if (haveDelta)
+                k.args(srcarg, maskarg, dstarg, fdelta);
+            else
+                k.args(srcarg, maskarg, dstarg);
+        }
+
+        size_t globalsize[2] = { (size_t)src.cols, ((size_t)src.rows + rowsPerWI - 1) / rowsPerWI };
+        return k.run(2, globalsize, NULL, false);
+    }
+    else
+    {
+        UMat temp;
+        src.convertTo( temp, dtype, scale, delta );
+        temp.copyTo( _dst, _mask );
+    }
+
+    return true;
+}  // ocl_normalize
+#endif  // HAVE_OPENCL
+
+void normalize(InputArray _src, InputOutputArray _dst, double a, double b,
+               int norm_type, int rtype, InputArray _mask)
+{
+    CV_INSTRUMENT_REGION();
+
+    double scale = 1, shift = 0;
+    int type = _src.type(), depth = CV_MAT_DEPTH(type);
+
+    if( rtype < 0 )
+        rtype = _dst.fixedType() ? _dst.depth() : depth;
+
+    if( norm_type == CV_MINMAX )
+    {
+        double smin = 0, smax = 0;
+        double dmin = MIN( a, b ), dmax = MAX( a, b );
+        minMaxIdx( _src, &smin, &smax, 0, 0, _mask );
+        scale = (dmax - dmin)*(smax - smin > DBL_EPSILON ? 1./(smax - smin) : 0);
+        if( rtype == CV_32F )
+        {
+            scale = (float)scale;
+            shift = (float)dmin - (float)(smin*scale);
+        }
+        else
+            shift = dmin - smin*scale;
+    }
+    else if( norm_type == CV_L2 || norm_type == CV_L1 || norm_type == CV_C )
+    {
+        scale = norm( _src, norm_type, _mask );
+        scale = scale > DBL_EPSILON ? a/scale : 0.;
+        shift = 0;
+    }
+    else
+        CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
+
+    CV_OCL_RUN(_dst.isUMat(),
+               ocl_normalize(_src, _dst, _mask, rtype, scale, shift))
+
+    Mat src = _src.getMat();
+    if( _mask.empty() )
+        src.convertTo( _dst, rtype, scale, shift );
+    else
+    {
+        Mat temp;
+        src.convertTo( temp, rtype, scale, shift );
+        temp.copyTo( _dst, _mask );
+    }
+}
+
+}  // namespace

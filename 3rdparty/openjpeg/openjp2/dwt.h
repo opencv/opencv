@@ -56,9 +56,11 @@ DWT.C are used by some function in TCD.C.
 /**
 Forward 5-3 wavelet transform in 2-D.
 Apply a reversible DWT transform to a component of an image.
+@param p_tcd TCD handle
 @param tilec Tile component information (current tile)
 */
-OPJ_BOOL opj_dwt_encode(opj_tcd_tilecomp_t * tilec);
+OPJ_BOOL opj_dwt_encode(opj_tcd_t *p_tcd,
+                        opj_tcd_tilecomp_t * tilec);
 
 /**
 Inverse 5-3 wavelet transform in 2-D.
@@ -72,12 +74,6 @@ OPJ_BOOL opj_dwt_decode(opj_tcd_t *p_tcd,
                         OPJ_UINT32 numres);
 
 /**
-Get the gain of a subband for the reversible 5-3 DWT.
-@param orient Number that identifies the subband (0->LL, 1->HL, 2->LH, 3->HH)
-@return Returns 0 if orient = 0, returns 1 if orient = 1 or 2, returns 2 otherwise
-*/
-OPJ_UINT32 opj_dwt_getgain(OPJ_UINT32 orient) ;
-/**
 Get the norm of a wavelet function of a subband at a specified level for the reversible 5-3 DWT.
 @param level Level of the wavelet function
 @param orient Band of the wavelet function
@@ -87,9 +83,11 @@ OPJ_FLOAT64 opj_dwt_getnorm(OPJ_UINT32 level, OPJ_UINT32 orient);
 /**
 Forward 9-7 wavelet transform in 2-D.
 Apply an irreversible DWT transform to a component of an image.
+@param p_tcd TCD handle
 @param tilec Tile component information (current tile)
 */
-OPJ_BOOL opj_dwt_encode_real(opj_tcd_tilecomp_t * tilec);
+OPJ_BOOL opj_dwt_encode_real(opj_tcd_t *p_tcd,
+                             opj_tcd_tilecomp_t * tilec);
 /**
 Inverse 9-7 wavelet transform in 2-D.
 Apply an irreversible inverse DWT transform to a component of an image.
@@ -101,12 +99,6 @@ OPJ_BOOL opj_dwt_decode_real(opj_tcd_t *p_tcd,
                              opj_tcd_tilecomp_t* OPJ_RESTRICT tilec,
                              OPJ_UINT32 numres);
 
-/**
-Get the gain of a subband for the irreversible 9-7 DWT.
-@param orient Number that identifies the subband (0->LL, 1->HL, 2->LH, 3->HH)
-@return Returns the gain of the 9-7 wavelet transform
-*/
-OPJ_UINT32 opj_dwt_getgain_real(OPJ_UINT32 orient);
 /**
 Get the norm of a wavelet function of a subband at a specified level for the irreversible 9-7 DWT
 @param level Level of the wavelet function

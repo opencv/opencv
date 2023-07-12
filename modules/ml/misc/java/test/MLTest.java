@@ -36,7 +36,7 @@ public class MLTest extends OpenCVTestCase {
         String filename = OpenCVTestRunner.getTempFileName("yml");
         saved.save(filename);
         SVM loaded = SVM.load(filename);
-        assertTrue(saved.isTrained());
+        assertTrue(loaded.isTrained());
     }
 
 }

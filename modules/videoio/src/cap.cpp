@@ -75,10 +75,24 @@ VideoCapture::VideoCapture(const String& filename, int apiPreference) : throwOnF
     open(filename, apiPreference);
 }
 
+VideoCapture::VideoCapture(const String& filename, int apiPreference, const std::vector<int>& params)
+    : throwOnFail(false)
+{
+    CV_TRACE_FUNCTION();
+    open(filename, apiPreference, params);
+}
+
 VideoCapture::VideoCapture(int index, int apiPreference) : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
     open(index, apiPreference);
+}
+
+VideoCapture::VideoCapture(int index, int apiPreference, const std::vector<int>& params)
+    : throwOnFail(false)
+{
+    CV_TRACE_FUNCTION();
+    open(index, apiPreference, params);
 }
 
 VideoCapture::~VideoCapture()
@@ -89,20 +103,30 @@ VideoCapture::~VideoCapture()
 
 bool VideoCapture::open(const String& filename, int apiPreference)
 {
-    CV_TRACE_FUNCTION();
+    return open(filename, apiPreference, std::vector<int>());
+}
+
+bool VideoCapture::open(const String& filename, int apiPreference, const std::vector<int>& params)
+{
+    CV_INSTRUMENT_REGION();
 
     if (isOpened())
     {
         release();
     }
 
+    const VideoCaptureParameters parameters(params);
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByFilename();
     for (size_t i = 0; i < backends.size(); i++)
     {
         const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
-
+            if (!info.backendFactory)
+            {
+                CV_LOG_DEBUG(NULL, "VIDEOIO(" << info.name << "): factory is not available (plugins require filesystem support)");
+                continue;
+            }
             CV_CAPTURE_LOG_DEBUG(NULL,
                                  cv::format("VIDEOIO(%s): trying capture filename='%s' ...",
                                             info.name, filename.c_str()));
@@ -112,7 +136,7 @@ bool VideoCapture::open(const String& filename, int apiPreference)
             {
                 try
                 {
-                    icap = backend->createCapture(filename);
+                    icap = backend->createCapture(filename, parameters);
                     if (!icap.empty())
                     {
                         CV_CAPTURE_LOG_DEBUG(NULL,
@@ -164,11 +188,22 @@ bool VideoCapture::open(const String& filename, int apiPreference)
             else
             {
                 CV_CAPTURE_LOG_DEBUG(NULL,
-                                     cv::format("VIDEOIO(%s): backend is not available "
+                                    cv::format("VIDEOIO(%s): backend is not available "
                                                 "(plugin is missing, or can't be loaded due "
                                                 "dependencies or it is not compatible)",
-                                                 info.name));
+                                                info.name));
             }
+        }
+    }
+
+    if(apiPreference != CAP_ANY)
+    {
+        bool found = cv::videoio_registry::isBackendBuiltIn(static_cast<VideoCaptureAPIs>(apiPreference));
+        if (found)
+        {
+            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is generally available "
+                                            "but can't be used to capture by name",
+                                            cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(apiPreference)).c_str()));
         }
     }
 
@@ -177,10 +212,28 @@ bool VideoCapture::open(const String& filename, int apiPreference)
         CV_Error_(Error::StsError, ("could not open '%s'", filename.c_str()));
     }
 
+    if (cv::videoio_registry::checkDeprecatedBackend(apiPreference))
+    {
+        CV_LOG_DEBUG(NULL,
+            cv::format("VIDEOIO(%s): backend is removed from OpenCV",
+                cv::videoio_registry::getBackendName((VideoCaptureAPIs) apiPreference).c_str()));
+    }
+    else
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong. "
+            "Please make sure that your computer support chosen backend and OpenCV built "
+            "with right flags.");
+    }
+
     return false;
 }
 
 bool VideoCapture::open(int cameraNum, int apiPreference)
+{
+    return open(cameraNum, apiPreference, std::vector<int>());
+}
+
+bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>& params)
 {
     CV_TRACE_FUNCTION();
 
@@ -200,23 +253,28 @@ bool VideoCapture::open(int cameraNum, int apiPreference)
         }
     }
 
+    const VideoCaptureParameters parameters(params);
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByIndex();
     for (size_t i = 0; i < backends.size(); i++)
     {
         const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
+            if (!info.backendFactory)
+            {
+                CV_LOG_DEBUG(NULL, "VIDEOIO(" << info.name << "): factory is not available (plugins require filesystem support)");
+                continue;
+            }
             CV_CAPTURE_LOG_DEBUG(NULL,
                                  cv::format("VIDEOIO(%s): trying capture cameraNum=%d ...",
                                             info.name, cameraNum));
-
             CV_Assert(!info.backendFactory.empty());
             const Ptr<IBackend> backend = info.backendFactory->getBackend();
             if (!backend.empty())
             {
                 try
                 {
-                    icap = backend->createCapture(cameraNum);
+                    icap = backend->createCapture(cameraNum, parameters);
                     if (!icap.empty())
                     {
                         CV_CAPTURE_LOG_DEBUG(NULL,
@@ -268,17 +326,41 @@ bool VideoCapture::open(int cameraNum, int apiPreference)
             else
             {
                 CV_CAPTURE_LOG_DEBUG(NULL,
-                                     cv::format("VIDEOIO(%s): backend is not available "
+                                    cv::format("VIDEOIO(%s): backend is not available "
                                                 "(plugin is missing, or can't be loaded due "
                                                 "dependencies or it is not compatible)",
-                                                 info.name));
+                                                info.name));
             }
+        }
+    }
+
+    if(apiPreference != CAP_ANY)
+    {
+        bool found = cv::videoio_registry::isBackendBuiltIn(static_cast<VideoCaptureAPIs>(apiPreference));
+        if (found)
+        {
+            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is generally available "
+                                            "but can't be used to capture by index",
+                                            cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(apiPreference)).c_str()));
         }
     }
 
     if (throwOnFail)
     {
         CV_Error_(Error::StsError, ("could not open camera %d", cameraNum));
+    }
+
+    if (cv::videoio_registry::checkDeprecatedBackend(apiPreference))
+    {
+        CV_LOG_DEBUG(NULL,
+            cv::format("VIDEOIO(%s): backend is removed from OpenCV",
+                cv::videoio_registry::getBackendName((VideoCaptureAPIs) apiPreference).c_str()));
+    }
+    else
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong."
+            "Please make sure that your computer support chosen backend and OpenCV built "
+            "with right flags.");
     }
 
     return false;
@@ -584,6 +666,20 @@ bool VideoWriter::open(const String& filename, int apiPreference, int fourcc, do
             }
         }
     }
+
+    if (cv::videoio_registry::checkDeprecatedBackend(apiPreference))
+    {
+        CV_LOG_DEBUG(NULL,
+            cv::format("VIDEOIO(%s): backend is removed from OpenCV",
+                cv::videoio_registry::getBackendName((VideoCaptureAPIs) apiPreference).c_str()));
+    }
+    else
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong."
+            "Please make sure that your computer support chosen backend and OpenCV built "
+            "with right flags.");
+    }
+
     return false;
 }
 

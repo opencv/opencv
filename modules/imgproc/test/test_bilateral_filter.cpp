@@ -203,7 +203,7 @@ namespace opencv_test { namespace {
             }
             else
             {
-                assert( cn == 3 );
+                CV_Assert( cn == 3 );
                 for( j = 0; j < size.width*3; j += 3 )
                 {
                     float sum_b = 0, sum_g = 0, sum_r = 0, wsum = 0;

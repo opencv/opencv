@@ -23,15 +23,19 @@ namespace ade {
     }
 }
 
-namespace cv {
-
 // Forward declarations - internal
-namespace gapi {
+namespace cv {
     class GKernelPackage;
+
+namespace gapi {
     struct GNetPackage;
 }  // namespace gapi
 
-namespace gimpl { namespace passes {
+namespace gimpl {
+
+bool is_intrinsic(const std::string &op_name);
+
+namespace passes {
 
 void dumpDot(const ade::Graph &g, std::ostream& os);
 void dumpDot(ade::passes::PassContext &ctx, std::ostream& os);
@@ -48,23 +52,26 @@ void inferMeta(ade::passes::PassContext &ctx, bool meta_is_initialized);
 void storeResultingMeta(ade::passes::PassContext &ctx);
 
 void expandKernels(ade::passes::PassContext &ctx,
-                   const gapi::GKernelPackage& kernels);
+                   const GKernelPackage& kernels);
 
 void bindNetParams(ade::passes::PassContext   &ctx,
                    const gapi::GNetPackage    &networks);
 
 void resolveKernels(ade::passes::PassContext   &ctx,
-                    const gapi::GKernelPackage &kernels);
+                    const GKernelPackage &kernels);
 
 void fuseIslands(ade::passes::PassContext &ctx);
 void syncIslandTags(ade::passes::PassContext &ctx);
 void topoSortIslands(ade::passes::PassContext &ctx);
 
 void applyTransformations(ade::passes::PassContext &ctx,
-                          const gapi::GKernelPackage &pkg,
+                          const GKernelPackage &pkg,
                           const std::vector<std::unique_ptr<ade::Graph>> &preGeneratedPatterns);
 
 void addStreaming(ade::passes::PassContext &ctx);
+
+void intrinDesync(ade::passes::PassContext &ctx);
+void intrinFinalize(ade::passes::PassContext &ctx);
 
 }} // namespace gimpl::passes
 

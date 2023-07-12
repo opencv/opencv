@@ -1551,4 +1551,14 @@ TEST(Core_MatExpr, empty_check_15760)
     EXPECT_THROW(Mat c = Mat().cross(Mat()), cv::Exception);
 }
 
+TEST(Core_Arithm, scalar_handling_19599)  // https://github.com/opencv/opencv/issues/19599 (OpenCV 4.x+ only)
+{
+    Mat a(1, 1, CV_32F, Scalar::all(1));
+    Mat b(4, 1, CV_64F, Scalar::all(1));  // MatExpr may convert Scalar to Mat
+    Mat c;
+    EXPECT_NO_THROW(cv::multiply(a, b, c));
+    EXPECT_EQ(1, c.cols);
+    EXPECT_EQ(1, c.rows);
+}
+
 }} // namespace

@@ -1005,7 +1005,7 @@ void CvCascadeBoostTree::read( const FileNode &node, CvBoost* _ensemble,
     int step = 3 + ( maxCatCount>0 ? subsetN : 1 );
 
     queue<CvDTreeNode*> internalNodesQueue;
-    FileNodeIterator internalNodesIt, leafValsuesIt;
+    int internalNodesIdx, leafValsuesIdx;
     CvDTreeNode* prntNode, *cldNode;
 
     clear();
@@ -1015,9 +1015,9 @@ void CvCascadeBoostTree::read( const FileNode &node, CvBoost* _ensemble,
 
     // read tree nodes
     FileNode rnode = node[CC_INTERNAL_NODES];
-    internalNodesIt = rnode.end();
-    leafValsuesIt = node[CC_LEAF_VALUES].end();
-    internalNodesIt--; leafValsuesIt--;
+    internalNodesIdx = (int) rnode.size() - 1;
+    FileNode lnode = node[CC_LEAF_VALUES];
+    leafValsuesIdx = (int) lnode.size() - 1;
     for( size_t i = 0; i < rnode.size()/step; i++ )
     {
         prntNode = data->new_node( 0, 0, 0, 0 );
@@ -1026,23 +1026,23 @@ void CvCascadeBoostTree::read( const FileNode &node, CvBoost* _ensemble,
             prntNode->split = data->new_split_cat( 0, 0 );
             for( int j = subsetN-1; j>=0; j--)
             {
-                *internalNodesIt >> prntNode->split->subset[j]; internalNodesIt--;
+                rnode[internalNodesIdx] >> prntNode->split->subset[j]; --internalNodesIdx;
             }
         }
         else
         {
             float split_value;
-            *internalNodesIt >> split_value; internalNodesIt--;
+            rnode[internalNodesIdx] >> split_value; --internalNodesIdx;
             prntNode->split = data->new_split_ord( 0, split_value, 0, 0, 0);
         }
-        *internalNodesIt >> prntNode->split->var_idx; internalNodesIt--;
+        rnode[internalNodesIdx] >> prntNode->split->var_idx; --internalNodesIdx;
         int ridx, lidx;
-        *internalNodesIt >> ridx; internalNodesIt--;
-        *internalNodesIt >> lidx;internalNodesIt--;
+        rnode[internalNodesIdx] >> ridx; --internalNodesIdx;
+        rnode[internalNodesIdx] >> lidx; --internalNodesIdx;
         if ( ridx <= 0)
         {
             prntNode->right = cldNode = data->new_node( 0, 0, 0, 0 );
-            *leafValsuesIt >> cldNode->value; leafValsuesIt--;
+            lnode[leafValsuesIdx] >> cldNode->value; --leafValsuesIdx;
             cldNode->parent = prntNode;
         }
         else
@@ -1055,7 +1055,7 @@ void CvCascadeBoostTree::read( const FileNode &node, CvBoost* _ensemble,
         if ( lidx <= 0)
         {
             prntNode->left = cldNode = data->new_node( 0, 0, 0, 0 );
-            *leafValsuesIt >> cldNode->value; leafValsuesIt--;
+            lnode[leafValsuesIdx] >> cldNode->value; --leafValsuesIdx;
             cldNode->parent = prntNode;
         }
         else
@@ -1677,7 +1677,7 @@ void CvCascadeBoost::write( FileStorage &fs, const Mat& featureMap ) const
     fs << CC_WEAK_CLASSIFIERS << "[";
     for( int wi = 0; wi < weak->total; wi++)
     {
-        /*sprintf( cmnt, "tree %i", wi );
+        /*snprintf( cmnt, sizeof(cmnt), "tree %i", wi );
         cvWriteComment( fs, cmnt, 0 );*/
         weakTree = *((CvCascadeBoostTree**) cvGetSeqElem( weak, wi ));
         weakTree->write( fs, featureMap );

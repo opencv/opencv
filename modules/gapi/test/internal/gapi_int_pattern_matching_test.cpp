@@ -318,7 +318,7 @@ TEST(PatternMatching, TestPrepResizeSplit3)
                                           r_nh, op1_nh, op2_nh}),
               nodes);
 
-    EXPECT_EQ(cv::gapi::core::GResize::id(), matching_test::opName(tgm, op1_nh));
+    EXPECT_EQ(cv::gapi::imgproc::GResize::id(), matching_test::opName(tgm, op1_nh));
     EXPECT_EQ(cv::gapi::core::GSplit3::id(), matching_test::opName(tgm, op2_nh));
 
     EXPECT_EQ(1u, tmp_nh->outEdges().size());
@@ -385,7 +385,7 @@ TEST(PatternMatching, TestPrepResizeToNCHW)
     EXPECT_EQ(matching_test::S({bgr_nh, tmp_nh, plr_nh, op1_nh, op2_nh}),
               nodes);
 
-    EXPECT_EQ(cv::gapi::core::GResize::id(), matching_test::opName(tgm, op1_nh));
+    EXPECT_EQ(cv::gapi::imgproc::GResize::id(), matching_test::opName(tgm, op1_nh));
     EXPECT_EQ(GToNCHW::id(), matching_test::opName(tgm, op2_nh));
 
     EXPECT_EQ(1u, tmp_nh->outEdges().size());

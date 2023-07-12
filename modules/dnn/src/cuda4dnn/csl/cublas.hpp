@@ -247,6 +247,122 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
         );
     }
 
+    /** @brief Strided batched GEMM for colummn-major matrices
+     *
+     * \f$ C_i = \alpha A_i B_i + \beta C_i \f$ for a stack of matrices A, B and C indexed by i
+     *
+     * @tparam          T           matrix element type (must be `half` or `float`)
+     *
+     * @param           handle      valid cuBLAS Handle
+     * @param           transa      use transposed matrix of A_i for computation
+     * @param           transb      use transposed matrix of B_i for computation
+     * @param           rows_c      number of rows in C_i
+     * @param           cols_c      number of columns in C_i
+     * @param           common_dim  common dimension of A_i (or trans A_i) and B_i (or trans B_i)
+     * @param           alpha       scale factor for A_i B_i
+     * @param[in]       A           pointer to stack of column-major matrices A in device memory
+     * @param           lda         leading dimension of matrix A_i
+     * @param           strideA     stride between matrices in A
+     * @param[in]       B           pointer to stack of column-major matrices B in device memory
+     * @param           ldb         leading dimension of matrix B_i
+     * @param           strideB     stride between matrices in B
+     * @param           beta        scale factor for C_i
+     * @param[in,out]   C           pointer to stack of column-major matrices C in device memory
+     * @param           ldc         leading dimension of matrix C_i
+     * @param           strideC     stride between matrices in C
+     * @param           batchCount  number of matrices in the batch
+     *
+     * Exception Guarantee: Basic
+     */
+    template <class T>
+    void gemmStridedBatched(const Handle& handle,
+        bool transa, bool transb,
+        std::size_t rows_c, std::size_t cols_c, std::size_t common_dim,
+        T alpha, const DevicePtr<const T> A, std::size_t lda, std::size_t strideA,
+        const DevicePtr<const T> B, std::size_t ldb, std::size_t strideB,
+        T beta, const DevicePtr<T> C, std::size_t ldc, std::size_t strideC,
+        std::size_t batchCount);
+
+    template <> inline
+    void gemmStridedBatched<half>(const Handle& handle,
+        bool transa, bool transb,
+        std::size_t rows_c, std::size_t cols_c, std::size_t common_dim,
+        half alpha, const DevicePtr<const half> A, std::size_t lda, std::size_t strideA,
+        const DevicePtr<const half> B, std::size_t ldb, std::size_t strideB,
+        half beta, const DevicePtr<half> C, std::size_t ldc, std::size_t strideC,
+        std::size_t batchCount)
+    {
+        CV_Assert(handle);
+
+        const auto opa = transa ? CUBLAS_OP_T : CUBLAS_OP_N,
+                   opb = transb ? CUBLAS_OP_T : CUBLAS_OP_N;
+        const auto irows_c = static_cast<int>(rows_c),
+                   icols_c = static_cast<int>(cols_c),
+                   icommon_dim = static_cast<int>(common_dim),
+                   ilda = static_cast<int>(lda),
+                   ildb = static_cast<int>(ldb),
+                   ildc = static_cast<int>(ldc);
+
+        const auto batch_count = static_cast<int>(batchCount);
+        const auto stride_a = static_cast<long long int>(strideA),
+                   stride_b = static_cast<long long int>(strideB),
+                   stride_c = static_cast<long long int>(strideC);
+
+        CV_Assert(stride_c >= irows_c * icols_c); // output matrices must not overlap
+
+        CUDA4DNN_CHECK_CUBLAS(
+            cublasHgemmStridedBatched(
+                handle.get(),
+                opa, opb,
+                irows_c, icols_c, icommon_dim,
+                &alpha, A.get(), ilda, stride_a,
+                B.get(), ildb, stride_b,
+                &beta, C.get(), ildc, stride_c,
+                batch_count
+            )
+        );
+    }
+
+    template <> inline
+    void gemmStridedBatched<float>(const Handle& handle,
+        bool transa, bool transb,
+        std::size_t rows_c, std::size_t cols_c, std::size_t common_dim,
+        float alpha, const DevicePtr<const float> A, std::size_t lda, std::size_t strideA,
+        const DevicePtr<const float> B, std::size_t ldb, std::size_t strideB,
+        float beta, const DevicePtr<float> C, std::size_t ldc, std::size_t strideC,
+        std::size_t batchCount)
+    {
+        CV_Assert(handle);
+
+        const auto opa = transa ? CUBLAS_OP_T : CUBLAS_OP_N,
+                   opb = transb ? CUBLAS_OP_T : CUBLAS_OP_N;
+        const auto irows_c = static_cast<int>(rows_c),
+                   icols_c = static_cast<int>(cols_c),
+                   icommon_dim = static_cast<int>(common_dim),
+                   ilda = static_cast<int>(lda),
+                   ildb = static_cast<int>(ldb),
+                   ildc = static_cast<int>(ldc);
+
+        const auto batch_count = static_cast<int>(batchCount);
+        const auto stride_a = static_cast<long long int>(strideA),
+                   stride_b = static_cast<long long int>(strideB),
+                   stride_c = static_cast<long long int>(strideC);
+
+        CV_Assert(stride_c >= irows_c * icols_c); // output matrices must not overlap
+
+        CUDA4DNN_CHECK_CUBLAS(
+            cublasSgemmStridedBatched(
+                handle.get(),
+                opa, opb,
+                irows_c, icols_c, icommon_dim,
+                &alpha, A.get(), ilda, stride_a,
+                B.get(), ildb, stride_b,
+                &beta, C.get(), ildc, stride_c,
+                batch_count
+            )
+        );
+    }
+
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cublas */
 
 #endif /* OPENCV_DNN_SRC_CUDA4DNN_CSL_CUBLAS_HPP */

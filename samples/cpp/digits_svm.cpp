@@ -137,7 +137,7 @@ static void evaluate_model(const vector<float>& predictions, const vector<Mat>& 
 
     err /= predictions.size();
 
-    cout << format("error: %.2f %%", err * 100) << endl;
+    cout << cv::format("error: %.2f %%", err * 100) << endl;
 
     int confusion[10][10] = {};
 
@@ -151,7 +151,7 @@ static void evaluate_model(const vector<float>& predictions, const vector<Mat>& 
     {
         for (int j = 0; j < 10; j++)
         {
-            cout << format("%2d ", confusion[i][j]);
+            cout << cv::format("%2d ", confusion[i][j]);
         }
         cout << endl;
     }

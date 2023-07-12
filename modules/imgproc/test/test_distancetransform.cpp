@@ -161,7 +161,7 @@ cvTsDistTransform( const CvMat* _src, CvMat* _dst, int dist_type,
     float delta[16];
     int tstep, count;
 
-    assert( mask_size == 3 || mask_size == 5 );
+    CV_Assert( mask_size == 3 || mask_size == 5 );
 
     if( dist_type == CV_DIST_USER )
         memcpy( mask, _mask, sizeof(mask) );
@@ -300,6 +300,48 @@ BIGDATA_TEST(Imgproc_DistanceTransform, large_image_12218)
     Size size = labels.size();
     nz = cv::countNonZero(labels);
     EXPECT_EQ(nz, (size.height*size.width / 2));
+}
+
+TEST(Imgproc_DistanceTransform, wide_image_22732)
+{
+    Mat src = Mat::zeros(1, 4099, CV_8U); // 4099 or larger used to be bad
+    Mat dist(src.rows, src.cols, CV_32F);
+    distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE, CV_32F);
+    int nz = countNonZero(dist);
+    EXPECT_EQ(nz, 0);
+}
+
+TEST(Imgproc_DistanceTransform, large_square_22732)
+{
+    Mat src = Mat::zeros(8000, 8005, CV_8U), dist;
+    distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE, CV_32F);
+    int nz = countNonZero(dist);
+    EXPECT_EQ(dist.size(), src.size());
+    EXPECT_EQ(dist.type(), CV_32F);
+    EXPECT_EQ(nz, 0);
+
+    Point p0(src.cols-1, src.rows-1);
+    src.setTo(1);
+    src.at<uchar>(p0) = 0;
+    distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE, CV_32F);
+    EXPECT_EQ(dist.size(), src.size());
+    EXPECT_EQ(dist.type(), CV_32F);
+    bool first = true;
+    int nerrs = 0;
+    for (int y = 0; y < dist.rows; y++)
+        for (int x = 0; x < dist.cols; x++) {
+            float d = dist.at<float>(y, x);
+            double dx = (double)(x - p0.x), dy = (double)(y - p0.y);
+            float d0 = (float)sqrt(dx*dx + dy*dy);
+            if (std::abs(d0 - d) > 1) {
+                if (first) {
+                    printf("y=%d, x=%d. dist_ref=%.2f, dist=%.2f\n", y, x, d0, d);
+                    first = false;
+                }
+                nerrs++;
+            }
+        }
+    EXPECT_EQ(0, nerrs) << "reference distance map is different from computed one at " << nerrs << " pixels\n";
 }
 
 }} // namespace

@@ -358,7 +358,11 @@ _IplImage
                                needed for correct deallocation */
 
 #if defined(CV__ENABLE_C_API_CTORS) && defined(__cplusplus)
-    _IplImage() {}
+    _IplImage()
+    {
+        memset(this, 0, sizeof(*this));  // valid for POD structure
+        nSize = sizeof(IplImage);
+    }
     _IplImage(const cv::Mat& m) { *this = cvIplImage(m); }
 #endif
 }

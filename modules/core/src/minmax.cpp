@@ -7,6 +7,9 @@
 #include "opencl_kernels_core.hpp"
 #include "opencv2/core/openvx/ovx_defs.hpp"
 #include "stat.hpp"
+#include "opencv2/core/detail/dispatch_helper.impl.hpp"
+
+#include <algorithm>
 
 #undef HAVE_IPP
 #undef CV_IPP_RUN_FAST
@@ -973,6 +976,12 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
         return false;
 #endif
 
+    if (dev.deviceVersionMajor() == 1 && dev.deviceVersionMinor() < 2)
+    {
+        // 'static' storage class specifier used by "minmaxloc" is available from OpenCL 1.2+ only
+        return false;
+    }
+
     bool doubleSupport = dev.doubleFPConfig() > 0, haveMask = !_mask.empty(),
         haveSrc2 = _src2.kind() != _InputArray::NONE;
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
@@ -1020,7 +1029,7 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
             needMaxLoc = true;
     }
 
-    char cvt[2][40];
+    char cvt[2][50];
     String opts = format("-D DEPTH_%d -D srcT1=%s%s -D WGS=%d -D srcT=%s"
                          " -D WGS2_ALIGNED=%d%s%s%s -D kercn=%d%s%s%s%s"
                          " -D dstT1=%s -D dstT=%s -D convertToDT=%s%s%s%s%s -D wdepth=%d -D convertFromU=%s"
@@ -1033,11 +1042,11 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
                          needMinVal ? " -D NEED_MINVAL" : "", needMaxVal ? " -D NEED_MAXVAL" : "",
                          needMinLoc ? " -D NEED_MINLOC" : "", needMaxLoc ? " -D NEED_MAXLOC" : "",
                          ocl::typeToStr(ddepth), ocl::typeToStr(CV_MAKE_TYPE(ddepth, kercn)),
-                         ocl::convertTypeStr(depth, ddepth, kercn, cvt[0]),
+                         ocl::convertTypeStr(depth, ddepth, kercn, cvt[0], sizeof(cvt[0])),
                          absValues ? " -D OP_ABS" : "",
                          haveSrc2 ? " -D HAVE_SRC2" : "", maxVal2 ? " -D OP_CALC2" : "",
                          haveSrc2 && _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "", ddepth,
-                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, kercn, cvt[1]) : "noconvert",
+                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, kercn, cvt[1], sizeof(cvt[1])) : "noconvert",
                          MINMAX_STRUCT_ALIGNMENT);
 
     ocl::Kernel k("minmaxloc", ocl::core::minmaxloc_oclsrc, opts);
@@ -1562,11 +1571,137 @@ void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(_img.dims() <= 2);
+    int dims = _img.dims();
+    CV_CheckLE(dims, 2, "");
 
     minMaxIdx(_img, minVal, maxVal, (int*)minLoc, (int*)maxLoc, mask);
     if( minLoc )
-        std::swap(minLoc->x, minLoc->y);
+    {
+        if (dims == 2)
+            std::swap(minLoc->x, minLoc->y);
+        else
+            minLoc->y = 0;
+    }
     if( maxLoc )
-        std::swap(maxLoc->x, maxLoc->y);
+    {
+        if (dims == 2)
+            std::swap(maxLoc->x, maxLoc->y);
+        else
+            maxLoc->y = 0;
+    }
+}
+
+enum class ReduceMode
+{
+    FIRST_MIN = 0, //!< get index of first min occurrence
+    LAST_MIN  = 1, //!< get index of last min occurrence
+    FIRST_MAX = 2, //!< get index of first max occurrence
+    LAST_MAX  = 3, //!< get index of last max occurrence
+};
+
+template <typename T>
+struct reduceMinMaxImpl
+{
+    void operator()(const cv::Mat& src, cv::Mat& dst, ReduceMode mode, const int axis) const
+    {
+        switch(mode)
+        {
+        case ReduceMode::FIRST_MIN:
+            reduceMinMaxApply<std::less>(src, dst, axis);
+            break;
+        case ReduceMode::LAST_MIN:
+            reduceMinMaxApply<std::less_equal>(src, dst, axis);
+            break;
+        case ReduceMode::FIRST_MAX:
+            reduceMinMaxApply<std::greater>(src, dst, axis);
+            break;
+        case ReduceMode::LAST_MAX:
+            reduceMinMaxApply<std::greater_equal>(src, dst, axis);
+            break;
+        }
+    }
+
+    template <template<class> class Cmp>
+    static void reduceMinMaxApply(const cv::Mat& src, cv::Mat& dst, const int axis)
+    {
+        Cmp<T> cmp;
+
+        const auto *src_ptr = src.ptr<T>();
+        auto *dst_ptr = dst.ptr<int32_t>();
+
+        const size_t outer_size = src.total(0, axis);
+        const auto mid_size = static_cast<size_t>(src.size[axis]);
+
+        const size_t outer_step = src.total(axis);
+        const size_t dst_step = dst.total(axis);
+
+        const size_t mid_step = src.total(axis + 1);
+
+        for (size_t outer = 0; outer < outer_size; ++outer)
+        {
+            const size_t outer_offset = outer * outer_step;
+            const size_t dst_offset = outer * dst_step;
+            for (size_t mid = 0; mid != mid_size; ++mid)
+            {
+                const size_t src_offset = outer_offset + mid * mid_step;
+                for (size_t inner = 0; inner < mid_step; inner++)
+                {
+                    int32_t& index = dst_ptr[dst_offset + inner];
+
+                    const size_t prev = outer_offset + index * mid_step + inner;
+                    const size_t curr = src_offset + inner;
+
+                    if (cmp(src_ptr[curr], src_ptr[prev]))
+                    {
+                        index = static_cast<int32_t>(mid);
+                    }
+                }
+            }
+        }
+    }
+};
+
+static void reduceMinMax(cv::InputArray src, cv::OutputArray dst, ReduceMode mode, int axis)
+{
+    CV_INSTRUMENT_REGION();
+
+    cv::Mat srcMat = src.getMat();
+    axis = (axis + srcMat.dims) % srcMat.dims;
+    CV_Assert(srcMat.channels() == 1 && axis >= 0 && axis < srcMat.dims);
+
+    std::vector<int> sizes(srcMat.dims);
+    std::copy(srcMat.size.p, srcMat.size.p + srcMat.dims, sizes.begin());
+    sizes[axis] = 1;
+
+    dst.create(srcMat.dims, sizes.data(), CV_32SC1); // indices
+    cv::Mat dstMat = dst.getMat();
+    dstMat.setTo(cv::Scalar::all(0));
+
+    if (!srcMat.isContinuous())
+    {
+        srcMat = srcMat.clone();
+    }
+
+    bool needs_copy = !dstMat.isContinuous();
+    if (needs_copy)
+    {
+        dstMat = dstMat.clone();
+    }
+
+    cv::detail::depthDispatch<reduceMinMaxImpl>(srcMat.depth(), srcMat, dstMat, mode, axis);
+
+    if (needs_copy)
+    {
+        dstMat.copyTo(dst);
+    }
+}
+
+void cv::reduceArgMin(InputArray src, OutputArray dst, int axis, bool lastIndex)
+{
+    reduceMinMax(src, dst, lastIndex ? ReduceMode::LAST_MIN : ReduceMode::FIRST_MIN, axis);
+}
+
+void cv::reduceArgMax(InputArray src, OutputArray dst, int axis, bool lastIndex)
+{
+    reduceMinMax(src, dst, lastIndex ? ReduceMode::LAST_MAX : ReduceMode::FIRST_MAX, axis);
 }

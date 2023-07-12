@@ -52,14 +52,19 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             auto output_wrapper = outputs[0].dynamicCast<wrapper_type>();
             auto output = output_wrapper->getSpan();
 
-            auto effective_rank = get_effective_rank(input);
-            CV_Assert(get_effective_rank(input) == get_effective_rank(output));
-
             /* suppose we require padding for the first spatial axis (H in NCHW or D in NCDHW)
              *
              * there could be a case where the batch axis, channel axis, and the first spatial axis are all one
              * this would result in effective rank being less than the number of axes requiring padding
              */
+            /* the effective rank of the input may be smaller than the effective rank of the output but the converse is never true
+             * input: [1, 1, 1, 3]; effective rank = 1
+             * output: [1, 1, 3, 3]; effective rank = 2
+             *
+             * hence, we use the effective rank of the output tensor for the padding operation
+             */
+            auto effective_rank = get_effective_rank(output);
+            CV_Assert(get_effective_rank(input) <= effective_rank);
             effective_rank = std::max(effective_rank, dstRanges.size());
 
             for (int i = effective_rank - dstRanges.size(); i < effective_rank; i++)

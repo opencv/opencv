@@ -1,5 +1,7 @@
 # Face analytics pipeline with G-API {#tutorial_gapi_interactive_face_detection}
 
+@next_tutorial{tutorial_gapi_anisotropic_segmentation}
+
 [TOC]
 
 # Overview {#gapi_ifd_intro}
@@ -239,7 +241,7 @@ pipeline is compiled for streaming:
 cv::GComputation::compileStreaming() triggers a special video-oriented
 form of graph compilation where G-API is trying to optimize
 throughput. Result of this compilation is an object of special type
-cv::GStreamingCompiled -- in constract to a traditional callable
+cv::GStreamingCompiled -- in contrast to a traditional callable
 cv::GCompiled, these objects are closer to media players in their
 semantics.
 

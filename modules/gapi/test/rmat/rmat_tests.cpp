@@ -6,55 +6,10 @@
 
 #include "../test_precomp.hpp"
 #include <opencv2/gapi/rmat.hpp>
+#include "rmat_test_common.hpp"
 
 namespace opencv_test {
 namespace {
-class RMatAdapterRef : public RMat::Adapter {
-    cv::Mat& m_mat;
-    bool& m_callbackCalled;
-public:
-    RMatAdapterRef(cv::Mat& m, bool& callbackCalled)
-        : m_mat(m), m_callbackCalled(callbackCalled)
-    {}
-    virtual RMat::View access(RMat::Access access) const override {
-        if (access == RMat::Access::W) {
-            return RMat::View(cv::descr_of(m_mat), m_mat.data, m_mat.step,
-                              [this](){
-                                  EXPECT_FALSE(m_callbackCalled);
-                                  m_callbackCalled = true;
-                              });
-        } else {
-            return RMat::View(cv::descr_of(m_mat), m_mat.data, m_mat.step);
-        }
-    }
-    virtual cv::GMatDesc desc() const override { return cv::descr_of(m_mat); }
-};
-
-class RMatAdapterCopy : public RMat::Adapter {
-    cv::Mat& m_deviceMat;
-    cv::Mat  m_hostMat;
-    bool& m_callbackCalled;
-
-public:
-    RMatAdapterCopy(cv::Mat& m, bool& callbackCalled)
-        : m_deviceMat(m), m_hostMat(m.clone()), m_callbackCalled(callbackCalled)
-    {}
-    virtual RMat::View access(RMat::Access access) const override {
-        if (access == RMat::Access::W) {
-            return RMat::View(cv::descr_of(m_hostMat), m_hostMat.data, m_hostMat.step,
-                              [this](){
-                                  EXPECT_FALSE(m_callbackCalled);
-                                  m_callbackCalled = true;
-                                  m_hostMat.copyTo(m_deviceMat);
-                              });
-        } else {
-            m_deviceMat.copyTo(m_hostMat);
-            return RMat::View(cv::descr_of(m_hostMat), m_hostMat.data, m_hostMat.step);
-        }
-    }
-    virtual cv::GMatDesc desc() const override { return cv::descr_of(m_hostMat); }
-};
-
 void randomizeMat(cv::Mat& m) {
     auto ref = m.clone();
     while (cv::norm(m, ref, cv::NORM_INF) == 0) {
@@ -66,7 +21,7 @@ template <typename RMatAdapterT>
 struct RMatTest {
     using AdapterT = RMatAdapterT;
     RMatTest()
-        : m_deviceMat(8,8,CV_8UC1)
+        : m_deviceMat(cv::Mat::zeros(8,8,CV_8UC1))
         , m_rmat(make_rmat<RMatAdapterT>(m_deviceMat, m_callbackCalled)) {
         randomizeMat(m_deviceMat);
         expectNoCallbackCalled();
@@ -139,8 +94,8 @@ TYPED_TEST(RMatTypedTest, CorrectAdapterCast) {
     EXPECT_NE(nullptr, this->rmat().template get<T>());
 }
 
-class DummyAdapter : public RMat::Adapter {
-    virtual RMat::View access(RMat::Access) const override { return {}; }
+class DummyAdapter : public RMat::IAdapter {
+    virtual RMat::View access(RMat::Access) override { return {}; }
     virtual cv::GMatDesc desc() const override { return {}; }
 };
 
@@ -148,11 +103,11 @@ TYPED_TEST(RMatTypedTest, IncorrectAdapterCast) {
     EXPECT_EQ(nullptr, this->rmat().template get<DummyAdapter>());
 }
 
-class RMatAdapterForBackend : public RMat::Adapter {
+class RMatAdapterForBackend : public RMat::IAdapter {
     int m_i;
 public:
     RMatAdapterForBackend(int i) : m_i(i) {}
-    virtual RMat::View access(RMat::Access) const override { return {}; }
+    virtual RMat::View access(RMat::Access) override { return {}; }
     virtual GMatDesc desc() const override { return {}; }
     int deviceSpecificData() const { return m_i; }
 };
@@ -161,11 +116,11 @@ public:
 // we have some specific data hidden under RMat,
 // test that we can obtain it via RMat.as<T>() method
 TEST(RMat, UsageInBackend) {
-    int i = std::rand();
+    int i = 123456;
     auto rmat = cv::make_rmat<RMatAdapterForBackend>(i);
 
     auto adapter = rmat.get<RMatAdapterForBackend>();
-    EXPECT_NE(nullptr, adapter);
+    ASSERT_NE(nullptr, adapter);
     EXPECT_EQ(i, adapter->deviceSpecificData());
 }
 } // namespace opencv_test

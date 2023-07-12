@@ -40,12 +40,12 @@ using **cv.Sobel()**).
 Then comes the main part. After this, they created a score, basically an equation, which
 determines if a window can contain a corner or not.
 
-\f[R = det(M) - k(trace(M))^2\f]
+\f[R = \det(M) - k(\operatorname{trace}(M))^2\f]
 
 where
-    -   \f$det(M) = \lambda_1 \lambda_2\f$
-    -   \f$trace(M) = \lambda_1 + \lambda_2\f$
-    -   \f$\lambda_1\f$ and \f$\lambda_2\f$ are the eigenvalues of M
+    -   \f$\det(M) = \lambda_1 \lambda_2\f$
+    -   \f$\operatorname{trace}(M) = \lambda_1 + \lambda_2\f$
+    -   \f$\lambda_1\f$ and \f$\lambda_2\f$ are the eigenvalues of \f$M\f$
 
 So the magnitudes of these eigenvalues decide whether a region is a corner, an edge, or flat.
 

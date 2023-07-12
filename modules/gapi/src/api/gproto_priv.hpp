@@ -31,6 +31,9 @@ GProtoArg      rewrap    (const GArg      &arg);
 // FIXME:: GAPI_EXPORTS because of tests only!!
 GAPI_EXPORTS const void*    ptr       (const GRunArgP  &arg);
 
+void validate_input_meta_arg(const GMetaArg& meta);
+void validate_input_meta(const GMatDesc& meta);
+
 } // proto
 } // gimpl
 } // cv

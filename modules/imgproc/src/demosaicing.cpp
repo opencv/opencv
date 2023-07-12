@@ -184,9 +184,9 @@ public:
 
         for( ; bayer <= bayer_end - 18; bayer += 14, dst += 14 )
         {
-            v_uint16x8 r0 = v_load((ushort*)bayer);
-            v_uint16x8 r1 = v_load((ushort*)(bayer+bayer_step));
-            v_uint16x8 r2 = v_load((ushort*)(bayer+bayer_step*2));
+            v_uint16x8 r0 = v_reinterpret_as_u16(v_load(bayer));
+            v_uint16x8 r1 = v_reinterpret_as_u16(v_load(bayer+bayer_step));
+            v_uint16x8 r2 = v_reinterpret_as_u16(v_load(bayer+bayer_step*2));
 
             v_uint16x8 b1 = ((r0 << 8) >> 7) + ((r2 << 8) >> 7);
             v_uint16x8 b0 = v_rotate_right<1>(b1) + b1;
@@ -265,9 +265,9 @@ public:
 
         for( ; bayer <= bayer_end - 18; bayer += 14, dst += 42 )
         {
-            v_uint16x8 r0 = v_load((ushort*)bayer);
-            v_uint16x8 r1 = v_load((ushort*)(bayer+bayer_step));
-            v_uint16x8 r2 = v_load((ushort*)(bayer+bayer_step*2));
+            v_uint16x8 r0 = v_reinterpret_as_u16(v_load(bayer));
+            v_uint16x8 r1 = v_reinterpret_as_u16(v_load(bayer+bayer_step));
+            v_uint16x8 r2 = v_reinterpret_as_u16(v_load(bayer+bayer_step*2));
 
             v_uint16x8 b1 = (r0 & masklo) + (r2 & masklo);
             v_uint16x8 nextb1 = v_rotate_right<1>(b1);
@@ -398,9 +398,9 @@ public:
 
         for( ; bayer <= bayer_end - 18; bayer += 14, dst += 56 )
         {
-            v_uint16x8 r0 = v_load((ushort*)bayer);
-            v_uint16x8 r1 = v_load((ushort*)(bayer+bayer_step));
-            v_uint16x8 r2 = v_load((ushort*)(bayer+bayer_step*2));
+            v_uint16x8 r0 = v_reinterpret_as_u16(v_load(bayer));
+            v_uint16x8 r1 = v_reinterpret_as_u16(v_load(bayer+bayer_step));
+            v_uint16x8 r2 = v_reinterpret_as_u16(v_load(bayer+bayer_step*2));
 
             v_uint16x8 b1 = (r0 & masklo) + (r2 & masklo);
             v_uint16x8 nextb1 = v_rotate_right<1>(b1);
@@ -494,9 +494,9 @@ public:
              B G B G | B G B G | B G B G | B G B G
              */
 
-            v_uint16x8 r0 = v_load((ushort*)bayer);
-            v_uint16x8 r1 = v_load((ushort*)(bayer+bayer_step));
-            v_uint16x8 r2 = v_load((ushort*)(bayer+bayer_step*2));
+            v_uint16x8 r0 = v_reinterpret_as_u16(v_load(bayer));
+            v_uint16x8 r1 = v_reinterpret_as_u16(v_load(bayer+bayer_step));
+            v_uint16x8 r2 = v_reinterpret_as_u16(v_load(bayer+bayer_step*2));
 
             v_uint16x8 b1 = (r0 & masklow) + (r2 & masklow);
             v_uint16x8 nextb1 = v_rotate_right<1>(b1);
@@ -603,7 +603,7 @@ public:
     virtual void operator ()(const Range& range) const CV_OVERRIDE
     {
         SIMDInterpolator vecOp;
-        const int G2Y = 9617;
+        const unsigned G2Y = 9617;
         const int SHIFT = 14;
 
         const T* bayer0 = srcmat.ptr<T>();
@@ -1566,9 +1566,9 @@ public:
             int x = 1;
             if (start_with_green)
             {
-                D[blue<<1] = (S[-sstep] + S[sstep]) >> 1;
+                D[blue<<1] = (S[-sstep] + S[sstep] + 1) >> 1;
                 D[1] = S[0];
-                D[2-(blue<<1)] = (S[-1] + S[1]) >> 1;
+                D[2-(blue<<1)] = (S[-1] + S[1] + 1) >> 1;
                 D += dcn;
                 ++S;
                 ++x;
@@ -1584,7 +1584,7 @@ public:
                 {
                     D[0] = S[0];
                     D[1] = (std::abs(S[-1] - S[1]) > std::abs(S[sstep] - S[-sstep]) ? (S[sstep] + S[-sstep] + 1) : (S[-1] + S[1] + 1)) >> 1;
-                    D[2] = (S[-sstep-1] + S[-sstep+1] + S[sstep-1] + S[sstep+1]) >> 2;
+                    D[2] = (S[-sstep-1] + S[-sstep+1] + S[sstep-1] + S[sstep+1] + 2) >> 2;
 
                     D[3] = (S[0] + S[2] + 1) >> 1;
                     D[4] = S[1];

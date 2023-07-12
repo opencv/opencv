@@ -220,6 +220,15 @@ TEST(GaussianBlur_Bitexact, regression_15015)
     ASSERT_EQ(0.0, cvtest::norm(dst, src, NORM_INF));
 }
 
+TEST(GaussianBlur_Bitexact, overflow_20121)
+{
+    Mat src(100, 100, CV_16UC1, Scalar(65535));
+    Mat dst;
+    GaussianBlur(src, dst, cv::Size(9, 9), 0.0);
+    double min_val;
+    minMaxLoc(dst, &min_val);
+    ASSERT_EQ(cvRound(min_val), 65535);
+}
 
 static void checkGaussianBlur_8Uvs32F(const Mat& src8u, const Mat& src32f, int N, double sigma)
 {
@@ -238,6 +247,17 @@ TEST(GaussianBlur_Bitexact, regression_9863)
      Mat src32f; src8u.convertTo(src32f, CV_32F);
 
     checkGaussianBlur_8Uvs32F(src8u, src32f, 151, 30);
+}
+
+TEST(GaussianBlur_Bitexact, overflow_20792)
+{
+    Mat src(128, 128, CV_16UC1, Scalar(255));
+    Mat dst;
+    double sigma = theRNG().uniform(0.0, 0.2);        // a peaky kernel
+    GaussianBlur(src, dst, Size(7, 7), sigma, 0.9);
+    int count = (int)countNonZero(dst);
+    int nintyPercent = (int)(src.rows*src.cols * 0.9);
+    EXPECT_GT(count, nintyPercent);
 }
 
 }} // namespace

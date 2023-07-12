@@ -2,7 +2,6 @@
 if(NOT HAVE_DC1394_2 AND PKG_CONFIG_FOUND)
   ocv_check_modules(DC1394_2 libdc1394-2)
   if(DC1394_2_FOUND)
-    set(DC1394_2_VERSION "${DC1394_2_VERSION}" PARENT_SCOPE) # informational
     set(HAVE_DC1394_2 TRUE)
   endif()
 endif()
@@ -20,12 +19,10 @@ if(NOT HAVE_DC1394_2)
     set(HAVE_DC1394_2 TRUE)
     set(DC1394_2_INCLUDE_DIRS "${DC1394_INCLUDE}")
     set(DC1394_2_LIBRARIES "${DC1394_LIBRARY}")
-    set(DC1394_2_VERSION "unknown" PARENT_SCOPE) # informational
+    set(DC1394_2_VERSION "unknown") # informational
   endif()
 endif()
 
 if(HAVE_DC1394_2)
   ocv_add_external_target(dc1394_2 "${DC1394_2_INCLUDE_DIRS}" "${DC1394_2_LIBRARIES}" "HAVE_DC1394_2")
 endif()
-
-set(HAVE_DC1394_2 ${HAVE_DC1394_2} PARENT_SCOPE)

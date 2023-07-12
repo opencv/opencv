@@ -31,7 +31,7 @@ extern "C" {
 
 // version numbers
 #define ENC_MAJ_VERSION 1
-#define ENC_MIN_VERSION 1
+#define ENC_MIN_VERSION 2
 #define ENC_REV_VERSION 0
 
 enum { MAX_LF_LEVELS = 64,       // Maximum loop filter level
@@ -505,9 +505,9 @@ int WebPPictureAllocARGB(WebPPicture* const picture, int width, int height);
 // Returns false in case of error (invalid param, out-of-memory).
 int WebPPictureAllocYUVA(WebPPicture* const picture, int width, int height);
 
-// Clean-up the RGB samples under fully transparent area, to help lossless
-// compressibility (no guarantee, though). Assumes that pic->use_argb is true.
-void WebPCleanupTransparentAreaLossless(WebPPicture* const pic);
+// Replace samples that are fully transparent by 'color' to help compressibility
+// (no guarantee, though). Assumes pic->use_argb is true.
+void WebPReplaceTransparentPixels(WebPPicture* const pic, uint32_t color);
 
 //------------------------------------------------------------------------------
 

@@ -339,7 +339,7 @@ CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray input
                                       InputArray inputMask, int gaussFiltSize);
 
 /** @overload */
-CV_EXPORTS
+CV_EXPORTS_W
 double findTransformECC(InputArray templateImage, InputArray inputImage,
     InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
@@ -703,6 +703,188 @@ public:
             TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),
             int flags = 0,
             double minEigThreshold = 1e-4);
+};
+
+
+
+
+/** @brief Base abstract class for the long-term tracker
+ */
+class CV_EXPORTS_W Tracker
+{
+protected:
+    Tracker();
+public:
+    virtual ~Tracker();
+
+    /** @brief Initialize the tracker with a known bounding box that surrounded the target
+    @param image The initial frame
+    @param boundingBox The initial bounding box
+    */
+    CV_WRAP virtual
+    void init(InputArray image, const Rect& boundingBox) = 0;
+
+    /** @brief Update the tracker, find the new most likely bounding box for the target
+    @param image The current frame
+    @param boundingBox The bounding box that represent the new target location, if true was returned, not
+    modified otherwise
+
+    @return True means that target was located and false means that tracker cannot locate target in
+    current frame. Note, that latter *does not* imply that tracker has failed, maybe target is indeed
+    missing from the frame (say, out of sight)
+    */
+    CV_WRAP virtual
+    bool update(InputArray image, CV_OUT Rect& boundingBox) = 0;
+};
+
+
+
+/** @brief The MIL algorithm trains a classifier in an online manner to separate the object from the
+background.
+
+Multiple Instance Learning avoids the drift problem for a robust tracking. The implementation is
+based on @cite MIL .
+
+Original code can be found here <http://vision.ucsd.edu/~bbabenko/project_miltrack.shtml>
+ */
+class CV_EXPORTS_W TrackerMIL : public Tracker
+{
+protected:
+    TrackerMIL();  // use ::create()
+public:
+    virtual ~TrackerMIL() CV_OVERRIDE;
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        //parameters for sampler
+        CV_PROP_RW float samplerInitInRadius;  //!< radius for gathering positive instances during init
+        CV_PROP_RW int samplerInitMaxNegNum;  //!< # negative samples to use during init
+        CV_PROP_RW float samplerSearchWinSize;  //!< size of search window
+        CV_PROP_RW float samplerTrackInRadius;  //!< radius for gathering positive instances during tracking
+        CV_PROP_RW int samplerTrackMaxPosNum;  //!< # positive samples to use during tracking
+        CV_PROP_RW int samplerTrackMaxNegNum;  //!< # negative samples to use during tracking
+        CV_PROP_RW int featureSetNumFeatures;  //!< # features
+    };
+
+    /** @brief Create MIL tracker instance
+     *  @param parameters MIL parameters TrackerMIL::Params
+     */
+    static CV_WRAP
+    Ptr<TrackerMIL> create(const TrackerMIL::Params &parameters = TrackerMIL::Params());
+
+    //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
+    //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
+};
+
+
+
+/** @brief the GOTURN (Generic Object Tracking Using Regression Networks) tracker
+ *
+ *  GOTURN (@cite GOTURN) is kind of trackers based on Convolutional Neural Networks (CNN). While taking all advantages of CNN trackers,
+ *  GOTURN is much faster due to offline training without online fine-tuning nature.
+ *  GOTURN tracker addresses the problem of single target tracking: given a bounding box label of an object in the first frame of the video,
+ *  we track that object through the rest of the video. NOTE: Current method of GOTURN does not handle occlusions; however, it is fairly
+ *  robust to viewpoint changes, lighting changes, and deformations.
+ *  Inputs of GOTURN are two RGB patches representing Target and Search patches resized to 227x227.
+ *  Outputs of GOTURN are predicted bounding box coordinates, relative to Search patch coordinate system, in format X1,Y1,X2,Y2.
+ *  Original paper is here: <http://davheld.github.io/GOTURN/GOTURN.pdf>
+ *  As long as original authors implementation: <https://github.com/davheld/GOTURN#train-the-tracker>
+ *  Implementation of training algorithm is placed in separately here due to 3d-party dependencies:
+ *  <https://github.com/Auron-X/GOTURN_Training_Toolkit>
+ *  GOTURN architecture goturn.prototxt and trained model goturn.caffemodel are accessible on opencv_extra GitHub repository.
+ */
+class CV_EXPORTS_W TrackerGOTURN : public Tracker
+{
+protected:
+    TrackerGOTURN();  // use ::create()
+public:
+    virtual ~TrackerGOTURN() CV_OVERRIDE;
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW std::string modelTxt;
+        CV_PROP_RW std::string modelBin;
+    };
+
+    /** @brief Constructor
+    @param parameters GOTURN parameters TrackerGOTURN::Params
+    */
+    static CV_WRAP
+    Ptr<TrackerGOTURN> create(const TrackerGOTURN::Params& parameters = TrackerGOTURN::Params());
+
+    //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
+    //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
+};
+
+class CV_EXPORTS_W TrackerDaSiamRPN : public Tracker
+{
+protected:
+    TrackerDaSiamRPN();  // use ::create()
+public:
+    virtual ~TrackerDaSiamRPN() CV_OVERRIDE;
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW std::string model;
+        CV_PROP_RW std::string kernel_cls1;
+        CV_PROP_RW std::string kernel_r1;
+        CV_PROP_RW int backend;
+        CV_PROP_RW int target;
+    };
+
+    /** @brief Constructor
+    @param parameters DaSiamRPN parameters TrackerDaSiamRPN::Params
+    */
+    static CV_WRAP
+    Ptr<TrackerDaSiamRPN> create(const TrackerDaSiamRPN::Params& parameters = TrackerDaSiamRPN::Params());
+
+    /** @brief Return tracking score
+    */
+    CV_WRAP virtual float getTrackingScore() = 0;
+
+    //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
+    //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
+};
+
+/** @brief the Nano tracker is a super lightweight dnn-based general object tracking.
+ *
+ *  Nano tracker is much faster and extremely lightweight due to special model structure, the whole model size is about 1.9 MB.
+ *  Nano tracker needs two models: one for feature extraction (backbone) and the another for localization (neckhead).
+ *  Model download link: https://github.com/HonglinChu/SiamTrackers/tree/master/NanoTrack/models/nanotrackv2
+ *  Original repo is here: https://github.com/HonglinChu/NanoTrack
+ *  Author: HongLinChu, 1628464345@qq.com
+ */
+class CV_EXPORTS_W TrackerNano : public Tracker
+{
+protected:
+    TrackerNano();  // use ::create()
+public:
+    virtual ~TrackerNano() CV_OVERRIDE;
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW std::string backbone;
+        CV_PROP_RW std::string neckhead;
+        CV_PROP_RW int backend;
+        CV_PROP_RW int target;
+    };
+
+    /** @brief Constructor
+    @param parameters NanoTrack parameters TrackerNano::Params
+    */
+    static CV_WRAP
+    Ptr<TrackerNano> create(const TrackerNano::Params& parameters = TrackerNano::Params());
+
+    /** @brief Return tracking score
+    */
+    CV_WRAP virtual float getTrackingScore() = 0;
+
+    //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
+    //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
 //! @} video_track

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import cv2 as cv
+import numpy as np
 
 from tests_common import NewOpenCVTests
 
@@ -27,6 +28,9 @@ class stitching_detail_test(NewOpenCVTests):
         finder= cv.ORB.create()
         imgFea = cv.detail.computeImageFeatures2(finder,img)
         self.assertIsNotNone(imgFea)
+
+        # Added Test for PR #21180
+        self.assertIsNotNone(imgFea.keypoints)
 
         matcher = cv.detail_BestOf2NearestMatcher(False, 0.3)
         self.assertIsNotNone(matcher)
@@ -113,6 +117,64 @@ class stitching_compose_panorama_args(NewOpenCVTests):
         result, _ = stitcher.composePanorama((img1, img2))
 
         assert result == 0
+
+
+class stitching_matches_info_test(NewOpenCVTests):
+
+    def test_simple(self):
+        finder = cv.ORB.create()
+        img1 = self.get_sample('stitching/a1.png')
+        img2 = self.get_sample('stitching/a2.png')
+
+        img_feat1 = cv.detail.computeImageFeatures2(finder, img1)
+        img_feat2 = cv.detail.computeImageFeatures2(finder, img2)
+
+        matcher = cv.detail.BestOf2NearestMatcher_create()
+        matches_info = matcher.apply(img_feat1, img_feat2)
+
+        self.assertIsNotNone(matches_info.matches)
+        self.assertIsNotNone(matches_info.inliers_mask)
+
+class stitching_range_matcher_test(NewOpenCVTests):
+
+    def test_simple(self):
+        images = [
+            self.get_sample('stitching/a1.png'),
+            self.get_sample('stitching/a2.png'),
+            self.get_sample('stitching/a3.png')
+        ]
+
+        orb = cv.ORB_create()
+
+        features = [cv.detail.computeImageFeatures2(orb, img) for img in images]
+
+        matcher = cv.detail_BestOf2NearestRangeMatcher(range_width=1)
+        matches = matcher.apply2(features)
+
+        # matches[1] is image 0 and image 1, should have non-zero confidence
+        self.assertNotEqual(matches[1].confidence, 0)
+
+        # matches[2] is image 0 and image 2, should have zero confidence due to range_width=1
+        self.assertEqual(matches[2].confidence, 0)
+
+
+class stitching_seam_finder_graph_cuts(NewOpenCVTests):
+
+    def test_simple(self):
+        images = [
+            self.get_sample('stitching/a1.png'),
+            self.get_sample('stitching/a2.png'),
+            self.get_sample('stitching/a3.png')
+        ]
+
+        images = [cv.resize(img, [100, 100]) for img in images]
+
+        finder = cv.detail_GraphCutSeamFinder('COST_COLOR_GRAD')
+        masks = [cv.UMat(255 * np.ones((img.shape[0], img.shape[1]), np.uint8)) for img in images]
+        images_f = [img.astype(np.float32) for img in images]
+        masks_warped = finder.find(images_f, [(0, 0), (75, 0), (150, 0)], masks)
+
+        self.assertIsNotNone(masks_warped)
 
 
 if __name__ == '__main__':

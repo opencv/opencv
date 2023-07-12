@@ -32,7 +32,7 @@ namespace cv { namespace gimpl { namespace passes {
  * connected to a new "Sink" node which becomes its _consumer_.
  *
  * These extra nodes are required to streamline the queues
- * initialization by the GStreamingExecutable and its derivatives.
+ * initialization by the GStreamingIntrinExecutable and its derivatives.
  */
 void addStreaming(ade::passes::PassContext &ctx)
 {

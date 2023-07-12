@@ -89,14 +89,16 @@ OPJ_BOOL OPJ_CALLCONV opj_set_error_handler(opj_codec_t * p_codec,
 /* ---------------------------------------------------------------------- */
 
 static OPJ_SIZE_T opj_read_from_file(void * p_buffer, OPJ_SIZE_T p_nb_bytes,
-                                     FILE * p_file)
+                                     void * p_user_data)
 {
-    OPJ_SIZE_T l_nb_read = fread(p_buffer, 1, p_nb_bytes, p_file);
+    FILE* p_file = (FILE*)p_user_data;
+    OPJ_SIZE_T l_nb_read = fread(p_buffer, 1, p_nb_bytes, (FILE*)p_file);
     return l_nb_read ? l_nb_read : (OPJ_SIZE_T) - 1;
 }
 
-static OPJ_UINT64 opj_get_data_length_from_file(FILE * p_file)
+static OPJ_UINT64 opj_get_data_length_from_file(void * p_user_data)
 {
+    FILE* p_file = (FILE*)p_user_data;
     OPJ_OFF_T file_length = 0;
 
     OPJ_FSEEK(p_file, 0, SEEK_END);
@@ -107,27 +109,36 @@ static OPJ_UINT64 opj_get_data_length_from_file(FILE * p_file)
 }
 
 static OPJ_SIZE_T opj_write_from_file(void * p_buffer, OPJ_SIZE_T p_nb_bytes,
-                                      FILE * p_file)
+                                      void * p_user_data)
 {
+    FILE* p_file = (FILE*)p_user_data;
     return fwrite(p_buffer, 1, p_nb_bytes, p_file);
 }
 
-static OPJ_OFF_T opj_skip_from_file(OPJ_OFF_T p_nb_bytes, FILE * p_user_data)
+static OPJ_OFF_T opj_skip_from_file(OPJ_OFF_T p_nb_bytes, void * p_user_data)
 {
-    if (OPJ_FSEEK(p_user_data, p_nb_bytes, SEEK_CUR)) {
+    FILE* p_file = (FILE*)p_user_data;
+    if (OPJ_FSEEK(p_file, p_nb_bytes, SEEK_CUR)) {
         return -1;
     }
 
     return p_nb_bytes;
 }
 
-static OPJ_BOOL opj_seek_from_file(OPJ_OFF_T p_nb_bytes, FILE * p_user_data)
+static OPJ_BOOL opj_seek_from_file(OPJ_OFF_T p_nb_bytes, void * p_user_data)
 {
-    if (OPJ_FSEEK(p_user_data, p_nb_bytes, SEEK_SET)) {
+    FILE* p_file = (FILE*)p_user_data;
+    if (OPJ_FSEEK(p_file, p_nb_bytes, SEEK_SET)) {
         return OPJ_FALSE;
     }
 
     return OPJ_TRUE;
+}
+
+static void opj_close_from_file(void* p_user_data)
+{
+    FILE* p_file = (FILE*)p_user_data;
+    fclose(p_file);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -207,6 +218,10 @@ opj_codec_t* OPJ_CALLCONV opj_create_decompress(OPJ_CODEC_FORMAT p_format)
 
         l_codec->m_codec_data.m_decompression.opj_setup_decoder =
             (void (*)(void *, opj_dparameters_t *)) opj_j2k_setup_decoder;
+
+        l_codec->m_codec_data.m_decompression.opj_decoder_set_strict_mode =
+            (void (*)(void *, OPJ_BOOL)) opj_j2k_decoder_set_strict_mode;
+
 
         l_codec->m_codec_data.m_decompression.opj_read_tile_header =
             (OPJ_BOOL(*)(void *,
@@ -315,6 +330,9 @@ opj_codec_t* OPJ_CALLCONV opj_create_decompress(OPJ_CODEC_FORMAT p_format)
         l_codec->m_codec_data.m_decompression.opj_setup_decoder =
             (void (*)(void *, opj_dparameters_t *)) opj_jp2_setup_decoder;
 
+        l_codec->m_codec_data.m_decompression.opj_decoder_set_strict_mode =
+            (void (*)(void *, OPJ_BOOL)) opj_jp2_decoder_set_strict_mode;
+
         l_codec->m_codec_data.m_decompression.opj_set_decode_area =
             (OPJ_BOOL(*)(void *,
                          opj_image_t*,
@@ -410,6 +428,26 @@ OPJ_BOOL OPJ_CALLCONV opj_setup_decoder(opj_codec_t *p_codec,
 
         l_codec->m_codec_data.m_decompression.opj_setup_decoder(l_codec->m_codec,
                 parameters);
+        return OPJ_TRUE;
+    }
+    return OPJ_FALSE;
+}
+
+OPJ_API OPJ_BOOL OPJ_CALLCONV opj_decoder_set_strict_mode(opj_codec_t *p_codec,
+        OPJ_BOOL strict)
+{
+    if (p_codec) {
+        opj_codec_private_t * l_codec = (opj_codec_private_t *) p_codec;
+
+        if (! l_codec->is_decompressor) {
+            opj_event_msg(&(l_codec->m_event_mgr), EVT_ERROR,
+                          "Codec provided to the opj_decoder_set_strict_mode function is not a decompressor handler.\n");
+            return OPJ_FALSE;
+        }
+
+        l_codec->m_codec_data.m_decompression.opj_decoder_set_strict_mode(
+            l_codec->m_codec,
+            strict);
         return OPJ_TRUE;
     }
     return OPJ_FALSE;
@@ -652,6 +690,14 @@ opj_codec_t* OPJ_CALLCONV opj_create_compress(OPJ_CODEC_FORMAT p_format)
                 struct opj_image *,
                 struct opj_event_mgr *)) opj_j2k_setup_encoder;
 
+        l_codec->m_codec_data.m_compression.opj_encoder_set_extra_options = (OPJ_BOOL(
+                    *)(void *,
+                       const char* const*,
+                       struct opj_event_mgr *)) opj_j2k_encoder_set_extra_options;
+
+        l_codec->opj_set_threads =
+            (OPJ_BOOL(*)(void * p_codec, OPJ_UINT32 num_threads)) opj_j2k_set_threads;
+
         l_codec->m_codec = opj_j2k_create_compress();
         if (! l_codec->m_codec) {
             opj_free(l_codec);
@@ -690,6 +736,14 @@ opj_codec_t* OPJ_CALLCONV opj_create_compress(OPJ_CODEC_FORMAT p_format)
                 struct opj_image *,
                 struct opj_event_mgr *)) opj_jp2_setup_encoder;
 
+        l_codec->m_codec_data.m_compression.opj_encoder_set_extra_options = (OPJ_BOOL(
+                    *)(void *,
+                       const char* const*,
+                       struct opj_event_mgr *)) opj_jp2_encoder_set_extra_options;
+
+        l_codec->opj_set_threads =
+            (OPJ_BOOL(*)(void * p_codec, OPJ_UINT32 num_threads)) opj_jp2_set_threads;
+
         l_codec->m_codec = opj_jp2_create(OPJ_FALSE);
         if (! l_codec->m_codec) {
             opj_free(l_codec);
@@ -718,11 +772,11 @@ void OPJ_CALLCONV opj_set_default_encoder_parameters(opj_cparameters_t
         parameters->cp_cinema = OPJ_OFF; /* DEPRECATED */
         parameters->rsiz = OPJ_PROFILE_NONE;
         parameters->max_comp_size = 0;
-        parameters->numresolution = 6;
+        parameters->numresolution = OPJ_COMP_PARAM_DEFAULT_NUMRESOLUTION;
         parameters->cp_rsiz = OPJ_STD_RSIZ; /* DEPRECATED */
-        parameters->cblockw_init = 64;
-        parameters->cblockh_init = 64;
-        parameters->prog_order = OPJ_LRCP;
+        parameters->cblockw_init = OPJ_COMP_PARAM_DEFAULT_CBLOCKW;
+        parameters->cblockh_init = OPJ_COMP_PARAM_DEFAULT_CBLOCKH;
+        parameters->prog_order = OPJ_COMP_PARAM_DEFAULT_PROG_ORDER;
         parameters->roi_compno = -1;        /* no ROI */
         parameters->subsampling_dx = 1;
         parameters->subsampling_dy = 1;
@@ -787,6 +841,27 @@ OPJ_BOOL OPJ_CALLCONV opj_setup_encoder(opj_codec_t *p_codec,
 
     return OPJ_FALSE;
 }
+
+/* ----------------------------------------------------------------------- */
+
+OPJ_BOOL OPJ_CALLCONV opj_encoder_set_extra_options(opj_codec_t *p_codec,
+        const char* const* options)
+{
+    if (p_codec) {
+        opj_codec_private_t * l_codec = (opj_codec_private_t *) p_codec;
+
+        if (! l_codec->is_decompressor) {
+            return l_codec->m_codec_data.m_compression.opj_encoder_set_extra_options(
+                       l_codec->m_codec,
+                       options,
+                       &(l_codec->m_event_mgr));
+        }
+    }
+
+    return OPJ_FALSE;
+}
+
+/* ----------------------------------------------------------------------- */
 
 OPJ_BOOL OPJ_CALLCONV opj_start_compress(opj_codec_t *p_codec,
         opj_image_t * p_image,
@@ -1037,15 +1112,14 @@ opj_stream_t* OPJ_CALLCONV opj_stream_create_file_stream(
         return NULL;
     }
 
-    opj_stream_set_user_data(l_stream, p_file,
-                             (opj_stream_free_user_data_fn) fclose);
+    opj_stream_set_user_data(l_stream, p_file, opj_close_from_file);
     opj_stream_set_user_data_length(l_stream,
                                     opj_get_data_length_from_file(p_file));
-    opj_stream_set_read_function(l_stream, (opj_stream_read_fn) opj_read_from_file);
+    opj_stream_set_read_function(l_stream, opj_read_from_file);
     opj_stream_set_write_function(l_stream,
                                   (opj_stream_write_fn) opj_write_from_file);
-    opj_stream_set_skip_function(l_stream, (opj_stream_skip_fn) opj_skip_from_file);
-    opj_stream_set_seek_function(l_stream, (opj_stream_seek_fn) opj_seek_from_file);
+    opj_stream_set_skip_function(l_stream, opj_skip_from_file);
+    opj_stream_set_seek_function(l_stream, opj_seek_from_file);
 
     return l_stream;
 }

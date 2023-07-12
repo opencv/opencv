@@ -72,7 +72,9 @@
 #if defined _WIN32 || defined WINCE
 # include <windows.h>
 #else
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 # include <dirent.h>
+#endif
 # include <sys/stat.h>
 #endif
 
@@ -310,7 +312,7 @@ void BaseTest::safe_run( int start_from )
             char buf[1 << 16];
 
             const char* delim = exc.err.find('\n') == cv::String::npos ? "" : "\n";
-            sprintf( buf, "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d",
+            snprintf( buf, sizeof(buf), "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d",
                     errorStr, delim, exc.err.c_str(), exc.func.size() > 0 ?
                     exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line );
             ts->printf(TS::LOG, "%s\n", buf);
@@ -377,7 +379,7 @@ void BaseTest::run( int start_from )
 
 void BaseTest::run_func(void)
 {
-    assert(0);
+    CV_Assert(0);
 }
 
 
@@ -601,7 +603,7 @@ void TS::set_gtest_status()
         return SUCCEED();
 
     char seedstr[32];
-    sprintf(seedstr, "%08x%08x", (unsigned)(current_test_info.rng_seed>>32),
+    snprintf(seedstr, sizeof(seedstr), "%08x%08x", (unsigned)(current_test_info.rng_seed>>32),
                                 (unsigned)(current_test_info.rng_seed));
 
     string logs = "";
@@ -621,20 +623,27 @@ void TS::set_gtest_status()
 
 void TS::update_context( BaseTest* test, int test_case_idx, bool update_ts_context )
 {
+    CV_UNUSED(update_ts_context);
+
     if( current_test_info.test != test )
     {
         for( int i = 0; i <= CONSOLE_IDX; i++ )
             output_buf[i] = string();
-        rng = RNG(params.rng_seed);
-        current_test_info.rng_seed0 = current_test_info.rng_seed = rng.state;
+    }
+
+    if (test_case_idx >= 0)
+    {
+        current_test_info.rng_seed = param_seed + test_case_idx;
+        current_test_info.rng_seed0 = current_test_info.rng_seed;
+
+        rng = RNG(current_test_info.rng_seed);
+        cv::theRNG() = rng;
     }
 
     current_test_info.test = test;
     current_test_info.test_case_idx = test_case_idx;
     current_test_info.code = 0;
     cvSetErrStatus( CV_StsOk );
-    if( update_ts_context )
-        current_test_info.rng_seed = rng.state;
 }
 
 
@@ -774,6 +783,7 @@ static bool checkTestData = cv::utils::getConfigurationParameterBool("OPENCV_TES
 bool skipUnstableTests = false;
 bool runBigDataTests = false;
 int testThreads = 0;
+int debugLevel = (int)cv::utils::getConfigurationParameterSizeT("OPENCV_TEST_DEBUG", 0);
 
 
 static size_t memory_usage_base = 0;
@@ -883,6 +893,7 @@ void parseCustomOptions(int argc, char **argv)
         "{ test_threads       |-1       |the number of worker threads, if parallel execution is enabled}"
         "{ skip_unstable      |false    |skip unstable tests }"
         "{ test_bigdata       |false    |run BigData tests (>=2Gb) }"
+        "{ test_debug         |         |0 - no debug (default), 1 - basic test debug information, >1 - extra debug information }"
         "{ test_require_data  |") + (checkTestData ? "true" : "false") + string("|fail on missing non-required test data instead of skip (env:OPENCV_TEST_REQUIRE_DATA)}"
         CV_TEST_TAGS_PARAMS
         "{ h   help           |false    |print help info                          }"
@@ -909,6 +920,14 @@ void parseCustomOptions(int argc, char **argv)
 
     skipUnstableTests = parser.get<bool>("skip_unstable");
     runBigDataTests = parser.get<bool>("test_bigdata");
+    if (parser.has("test_debug"))
+    {
+        cv::String s = parser.get<cv::String>("test_debug");
+        if (s.empty() || s == "true")
+            debugLevel = 1;
+        else
+            debugLevel = parser.get<int>("test_debug");
+    }
     if (parser.has("test_require_data"))
         checkTestData = parser.get<bool>("test_require_data");
 
@@ -1122,7 +1141,9 @@ void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
     }
     recordPropertyVerbose("cv_cpu_features", "CPU features", cv::getCPUFeaturesLine());
 #ifdef HAVE_IPP
-    recordPropertyVerbose("cv_ipp_version", "Intel(R) IPP version", cv::ipp::useIPP() ? cv::ipp::getIppVersion() :  "disabled");
+    recordPropertyVerbose("cv_ipp_version", "Intel(R) IPP version", cv::ipp::useIPP() ? cv::ipp::getIppVersion() : "disabled");
+    if (cv::ipp::useIPP())
+        recordPropertyVerbose("cv_ipp_features", "Intel(R) IPP features code", cv::format("0x%llx", cv::ipp::getIppTopFeatures()));
 #endif
 #ifdef HAVE_OPENCL
     cv::dumpOpenCLInformation();

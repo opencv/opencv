@@ -22,8 +22,21 @@ cv::GFrameDesc cv::MediaFrame::desc() const {
     return m->adapter->meta();
 }
 
-cv::MediaFrame::View cv::MediaFrame::access(Access code) {
+cv::MediaFrame::View cv::MediaFrame::access(Access code) const {
     return m->adapter->access(code);
+}
+
+cv::util::any cv::MediaFrame::blobParams() const
+{
+    return m->adapter->blobParams();
+}
+
+cv::MediaFrame::IAdapter* cv::MediaFrame::getAdapter() const {
+    return m->adapter.get();
+}
+
+void cv::MediaFrame::serialize(cv::gapi::s11n::IOStream& os) const {
+    m->adapter->serialize(os);
 }
 
 cv::MediaFrame::View::View(Ptrs&& ptrs, Strides&& strs, Callback &&cb)
@@ -36,6 +49,12 @@ cv::MediaFrame::View::~View() {
     if (m_cb) {
         m_cb();
     }
+}
+
+cv::util::any cv::MediaFrame::IAdapter::blobParams() const
+{
+    // Does nothing by default
+    return {};
 }
 
 cv::MediaFrame::IAdapter::~IAdapter() {

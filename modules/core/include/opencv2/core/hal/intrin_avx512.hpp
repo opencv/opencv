@@ -1385,11 +1385,21 @@ inline v_uint64x8  v_popcount(const v_uint64x8&  a) { return v_popcount(v_reinte
 ////////// Other math /////////
 
 /** Some frequent operations **/
+#if CV_FMA3
 #define OPENCV_HAL_IMPL_AVX512_MULADD(_Tpvec, suffix)                         \
     inline _Tpvec v_fma(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)    \
     { return _Tpvec(_mm512_fmadd_##suffix(a.val, b.val, c.val)); }            \
     inline _Tpvec v_muladd(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c) \
-    { return _Tpvec(_mm512_fmadd_##suffix(a.val, b.val, c.val)); }            \
+    { return _Tpvec(_mm512_fmadd_##suffix(a.val, b.val, c.val)); }
+#else
+#define OPENCV_HAL_IMPL_AVX512_MULADD(_Tpvec, suffix)                                 \
+    inline _Tpvec v_fma(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)            \
+    { return _Tpvec(_mm512_add_##suffix(_mm512_mul_##suffix(a.val, b.val), c.val)); } \
+    inline _Tpvec v_muladd(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c)         \
+    { return _Tpvec(_mm512_add_##suffix(_mm512_mul_##suffix(a.val, b.val), c.val)); }
+#endif
+
+#define OPENCV_HAL_IMPL_AVX512_MISC(_Tpvec, suffix)                           \
     inline _Tpvec v_sqrt(const _Tpvec& x)                                     \
     { return _Tpvec(_mm512_sqrt_##suffix(x.val)); }                           \
     inline _Tpvec v_sqr_magnitude(const _Tpvec& a, const _Tpvec& b)           \
@@ -1399,6 +1409,8 @@ inline v_uint64x8  v_popcount(const v_uint64x8&  a) { return v_popcount(v_reinte
 
 OPENCV_HAL_IMPL_AVX512_MULADD(v_float32x16, ps)
 OPENCV_HAL_IMPL_AVX512_MULADD(v_float64x8,  pd)
+OPENCV_HAL_IMPL_AVX512_MISC(v_float32x16, ps)
+OPENCV_HAL_IMPL_AVX512_MISC(v_float64x8,  pd)
 
 inline v_int32x16 v_fma(const v_int32x16& a, const v_int32x16& b, const v_int32x16& c)
 { return a * b + c; }

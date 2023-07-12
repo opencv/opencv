@@ -43,7 +43,7 @@
 
 namespace opencv_test { namespace {
 
-#ifdef HAVE_OPENCV_XFEATURES2D
+#if defined(HAVE_OPENCV_XFEATURES2D) && defined(OPENCV_ENABLE_NONFREE)
 
 TEST(SurfFeaturesFinder, CanFindInROIs)
 {
@@ -80,7 +80,7 @@ TEST(SurfFeaturesFinder, CanFindInROIs)
     EXPECT_EQ(bad_count, 0);
 }
 
-#endif // HAVE_OPENCV_XFEATURES2D
+#endif // HAVE_OPENCV_XFEATURES2D && OPENCV_ENABLE_NONFREE
 
 TEST(ParallelFeaturesFinder, IsSameWithSerial)
 {
@@ -112,6 +112,32 @@ TEST(ParallelFeaturesFinder, IsSameWithSerial)
         EXPECT_EQ(serial_features.img_size, para_features[i].img_size);
         EXPECT_EQ(serial_features.keypoints.size(), para_features[i].keypoints.size());
     }
+}
+
+TEST(RangeMatcher, MatchesRangeOnly)
+{
+    Ptr<Feature2D> finder = ORB::create();
+
+    Mat img0 = imread(string(cvtest::TS::ptr()->get_data_path()) + "stitching/a1.png", IMREAD_GRAYSCALE);
+    Mat img1 = imread(string(cvtest::TS::ptr()->get_data_path()) + "stitching/a2.png", IMREAD_GRAYSCALE);
+    Mat img2 = imread(string(cvtest::TS::ptr()->get_data_path()) + "stitching/a3.png", IMREAD_GRAYSCALE);
+
+    vector<detail::ImageFeatures> features(3);
+
+    computeImageFeatures(finder, img0, features[0]);
+    computeImageFeatures(finder, img1, features[1]);
+    computeImageFeatures(finder, img2, features[2]);
+
+    vector<detail::MatchesInfo> pairwise_matches;
+    Ptr<detail::FeaturesMatcher> matcher = makePtr<detail::BestOf2NearestRangeMatcher>(1);
+
+    (*matcher)(features, pairwise_matches);
+
+    // matches[1] will be image 0 and image 1, should have non-zero confidence
+    EXPECT_NE(pairwise_matches[1].confidence, .0);
+
+    // matches[2] will be image 0 and image 2, should have zero confidence due to range_width=1
+    EXPECT_DOUBLE_EQ(pairwise_matches[2].confidence, .0);
 }
 
 }} // namespace

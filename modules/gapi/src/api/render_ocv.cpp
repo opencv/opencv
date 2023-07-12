@@ -2,7 +2,7 @@
 #include <opencv2/gapi/render/render.hpp> // Kernel API's
 
 #include "api/render_ocv.hpp"
-#include "api/ft_render.hpp"
+#include "backends/render/ft_render.hpp"
 
 namespace cv
 {
@@ -146,12 +146,8 @@ struct EmptyConverter
 template <typename ColorConverter>
 void drawPrimitivesOCV(cv::Mat& in,
                        const cv::gapi::wip::draw::Prims& prims,
-                       cv::gapi::wip::draw::FTTextRender* ftpr)
+                       std::shared_ptr<cv::gapi::wip::draw::FTTextRender>& ftpr)
 {
-#ifndef HAVE_FREETYPE
-    cv::util::suppress_unused_warning(ftpr);
-#endif
-
     using namespace cv::gapi::wip::draw;
 
     ColorConverter converter;
@@ -163,7 +159,7 @@ void drawPrimitivesOCV(cv::Mat& in,
             {
                 const auto& rp = cv::util::get<Rect>(p);
                 const auto color = converter.cvtColor(rp.color);
-                cv::rectangle(in, rp.rect, color , rp.thick);
+                cv::rectangle(in, rp.rect, color, rp.thick, rp.lt, rp.shift);
                 break;
             }
 
@@ -177,7 +173,6 @@ void drawPrimitivesOCV(cv::Mat& in,
 
             case Prim::index_of<FText>():
             {
-#ifdef HAVE_FREETYPE
                 const auto& ftp  = cv::util::get<FText>(p);
                 const auto color = converter.cvtColor(ftp.color);
 
@@ -196,9 +191,6 @@ void drawPrimitivesOCV(cv::Mat& in,
                 cv::Point tl(ftp.org.x, ftp.org.y - mask.size().height + baseline);
 
                 blendTextMask(in, mask, tl, color);
-#else
-                cv::util::throw_error(std::runtime_error("FreeType not found !"));
-#endif
                 break;
             }
 
@@ -206,7 +198,7 @@ void drawPrimitivesOCV(cv::Mat& in,
             {
                 const auto& cp = cv::util::get<Circle>(p);
                 const auto color = converter.cvtColor(cp.color);
-                cv::circle(in, cp.center, cp.radius, color, cp.thick);
+                cv::circle(in, cp.center, cp.radius, color, cp.thick, cp.lt, cp.shift);
                 break;
             }
 
@@ -214,7 +206,7 @@ void drawPrimitivesOCV(cv::Mat& in,
             {
                 const auto& lp = cv::util::get<Line>(p);
                 const auto color = converter.cvtColor(lp.color);
-                cv::line(in, lp.pt1, lp.pt2, color, lp.thick);
+                cv::line(in, lp.pt1, lp.pt2, color, lp.thick, lp.lt, lp.shift);
                 break;
             }
 
@@ -251,16 +243,16 @@ void drawPrimitivesOCV(cv::Mat& in,
     }
 }
 
-void drawPrimitivesOCVBGR(cv::Mat &in,
-                          const cv::gapi::wip::draw::Prims &prims,
-                          cv::gapi::wip::draw::FTTextRender* ftpr)
+void drawPrimitivesOCVBGR(cv::Mat                                                  &in,
+                          const cv::gapi::wip::draw::Prims                         &prims,
+                          std::shared_ptr<cv::gapi::wip::draw::FTTextRender> &ftpr)
 {
     drawPrimitivesOCV<EmptyConverter>(in, prims, ftpr);
 }
 
-void drawPrimitivesOCVYUV(cv::Mat &in,
-                          const cv::gapi::wip::draw::Prims &prims,
-                          cv::gapi::wip::draw::FTTextRender* ftpr)
+void drawPrimitivesOCVYUV(cv::Mat                                                  &in,
+                          const cv::gapi::wip::draw::Prims                         &prims,
+                          std::shared_ptr<cv::gapi::wip::draw::FTTextRender> &ftpr)
 {
     drawPrimitivesOCV<BGR2YUVConverter>(in, prims, ftpr);
 }

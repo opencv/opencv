@@ -17,6 +17,12 @@ class MatTests: OpenCVTestCase {
         super.tearDown()
     }
 
+    func testInitWithSize() {
+        let size = Size(width: 7, height: 9)
+        let mat = Mat(size: size, type: CvType.CV_8U)
+        assertSizeEquals(size, mat.size())
+    }
+
     func testAdjustROI() throws {
         let roi = gray0.submat(rowStart: 3, rowEnd: 5, colStart: 7, colEnd: 10)
         let originalroi = roi.clone()
@@ -308,15 +314,15 @@ class MatTests: OpenCVTestCase {
         XCTAssert([340] == sm.get(row: 1, col: 1))
     }
 
-    func testGetIntIntByteArray() throws {
-        let m = try getTestMat(size: 5, type: CvType.CV_8UC3)
+    func testGetIntIntInt8Array() throws {
+        let m = try getTestMat(size: 5, type: CvType.CV_8SC3)
         var goodData = [Int8](repeating: 0, count: 9)
 
         // whole Mat
         var bytesNum = try m.get(row: 1, col: 1, data: &goodData)
 
         XCTAssertEqual(9, bytesNum)
-        XCTAssert([110, 111, 112, 120, 121, 122, -126, -125, -124] == goodData)
+        XCTAssert([110, 111, 112, 120, 121, 122, 127, 127, 127] == goodData)
 
         var badData = [Int8](repeating: 0, count: 7)
         XCTAssertThrowsError(bytesNum = try m.get(row: 0, col: 0, data: &badData))
@@ -326,11 +332,36 @@ class MatTests: OpenCVTestCase {
         var buff00 = [Int8](repeating: 0, count: 3)
         bytesNum = try sm.get(row: 0, col: 0, data: &buff00)
         XCTAssertEqual(3, bytesNum)
-        XCTAssert(buff00 == [-26, -25, -24])
+        XCTAssert(buff00 == [127, 127, 127])
         var buff11 = [Int8](repeating: 0, count: 3)
         bytesNum = try sm.get(row: 1, col: 1, data: &buff11)
         XCTAssertEqual(3, bytesNum)
-        XCTAssert(buff11 == [-1, -1, -1])
+        XCTAssert(buff11 == [127, 127, 127])
+    }
+
+    func testGetIntIntUInt8Array() throws {
+        let m = try getTestMat(size: 5, type: CvType.CV_8UC3)
+        var goodData = [UInt8](repeating: 0, count: 9)
+
+        // whole Mat
+        var bytesNum = try m.get(row: 1, col: 1, data: &goodData)
+
+        XCTAssertEqual(9, bytesNum)
+        XCTAssert([110, 111, 112, 120, 121, 122, 130, 131, 132] == goodData)
+
+        var badData = [UInt8](repeating: 0, count: 7)
+        XCTAssertThrowsError(bytesNum = try m.get(row: 0, col: 0, data: &badData))
+
+        // sub-Mat
+        let sm = m.submat(rowStart: 2, rowEnd: 4, colStart: 3, colEnd: 5)
+        var buff00 = [UInt8](repeating: 0, count: 3)
+        bytesNum = try sm.get(row: 0, col: 0, data: &buff00)
+        XCTAssertEqual(3, bytesNum)
+        XCTAssert(buff00 == [230, 231, 232])
+        var buff11 = [UInt8](repeating: 0, count: 3)
+        bytesNum = try sm.get(row: 1, col: 1, data: &buff11)
+        XCTAssertEqual(3, bytesNum)
+        XCTAssert(buff11 == [255, 255, 255])
     }
 
     func testGetIntIntDoubleArray() throws {
@@ -399,14 +430,14 @@ class MatTests: OpenCVTestCase {
         XCTAssert(buff11 == [340, 341, 0, 0])
     }
 
-    func testGetIntIntShortArray() throws {
+    func testGetIntIntInt16Array() throws {
         let m = try getTestMat(size: 5, type: CvType.CV_16SC2)
         var buff = [Int16](repeating: 0, count: 6)
 
         // whole Mat
         var bytesNum = try m.get(row: 1, col: 1, data: &buff)
 
-        XCTAssertEqual(12, bytesNum);
+        XCTAssertEqual(12, bytesNum)
         XCTAssert(buff == [110, 111, 120, 121, 130, 131])
 
         // sub-Mat
@@ -416,6 +447,46 @@ class MatTests: OpenCVTestCase {
         XCTAssertEqual(8, bytesNum)
         XCTAssert(buff00 == [230, 231, 240, 241])
         var buff11 = [Int16](repeating: 0, count: 4)
+        bytesNum = try sm.get(row: 1, col: 1, data: &buff11)
+        XCTAssertEqual(4, bytesNum)
+        XCTAssert(buff11 == [340, 341, 0, 0])
+
+        let m2 = Mat(sizes: [5, 6, 8], type: CvType.CV_16S)
+        let data:[Int16] = (0..<m2.total()).map { Int16($0) }
+        try m2.put(indices: [0, 0, 0], data: data)
+        let matNonContinuous = m2.submat(ranges:[Range(start:1, end:4), Range(start:2, end:5), Range(start:3, end:6)])
+        let matContinuous = matNonContinuous.clone()
+        var outNonContinuous = [Int16](repeating:0, count: matNonContinuous.total())
+        try matNonContinuous.get(indices: [0, 0, 0], data: &outNonContinuous)
+        var outContinuous = [Int16](repeating: 0, count:matNonContinuous.total())
+        try matContinuous.get(indices: [0, 0, 0], data: &outContinuous)
+        XCTAssertEqual(outNonContinuous, outContinuous)
+        let subMat2 = m2.submat(ranges:[Range(start:1, end:4), Range(start:1, end:5), Range(start:0, end:8)])
+        let subMatClone2 = subMat2.clone()
+        var outNonContinuous2 = [Int16](repeating:0, count: subMat2.total())
+        try subMat2.get(indices: [0, 1, 1], data: &outNonContinuous2)
+        var outContinuous2 = [Int16](repeating:0, count:subMat2.total())
+        try subMatClone2.get(indices: [0, 1, 1], data: &outContinuous2)
+        XCTAssertEqual(outNonContinuous2, outContinuous2)
+    }
+
+    func testGetIntIntUInt16Array() throws {
+        let m = try getTestMat(size: 5, type: CvType.CV_16UC2)
+        var buff = [UInt16](repeating: 0, count: 6)
+
+        // whole Mat
+        var bytesNum = try m.get(row: 1, col: 1, data: &buff)
+
+        XCTAssertEqual(12, bytesNum);
+        XCTAssert(buff == [110, 111, 120, 121, 130, 131])
+
+        // sub-Mat
+        let sm = m.submat(rowStart: 2, rowEnd: 4, colStart: 3, colEnd: 5)
+        var buff00 = [UInt16](repeating: 0, count: 4)
+        bytesNum = try sm.get(row: 0, col: 0, data: &buff00)
+        XCTAssertEqual(8, bytesNum)
+        XCTAssert(buff00 == [230, 231, 240, 241])
+        var buff11 = [UInt16](repeating: 0, count: 4)
         bytesNum = try sm.get(row: 1, col: 1, data: &buff11)
         XCTAssertEqual(4, bytesNum);
         XCTAssert(buff11 == [340, 341, 0, 0])
@@ -618,6 +689,16 @@ class MatTests: OpenCVTestCase {
         try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
     }
 
+    func testMatMulMat() throws {
+        let m1 = Mat(rows: 2, cols: 2, type: CvType.CV_32F, scalar: Scalar(2))
+        let m2 = Mat(rows: 2, cols: 2, type: CvType.CV_32F, scalar: Scalar(3))
+
+        dst = m1.matMul(m2)
+
+        truth = Mat(rows: 2, cols: 2, type: CvType.CV_32F, scalar: Scalar(12))
+        try assertMatEqual(truth!, dst, OpenCVTestCase.EPS)
+    }
+
     func testOnesIntIntInt() throws {
         dst = Mat.ones(rows: OpenCVTestCase.matSize, cols: OpenCVTestCase.matSize, type: CvType.CV_32F)
 
@@ -653,7 +734,7 @@ class MatTests: OpenCVTestCase {
         try assertMatEqual(truth!, m1, OpenCVTestCase.EPS)
     }
 
-    func testPutIntIntByteArray() throws {
+    func testPutIntIntInt8Array() throws {
         let m = Mat(rows: 5, cols: 5, type: CvType.CV_8SC3, scalar: Scalar(1, 2, 3))
         let sm = m.submat(rowStart: 2, rowEnd: 4, colStart: 3, colEnd: 5)
         var buff = [Int8](repeating: 0, count: 6)
@@ -683,7 +764,37 @@ class MatTests: OpenCVTestCase {
         XCTAssert(buff == buff0)
     }
 
-    func testPutIntArrayByteArray() throws {
+    func testPutIntIntUInt8Array() throws {
+        let m = Mat(rows: 5, cols: 5, type: CvType.CV_8UC3, scalar: Scalar(1, 2, 3))
+        let sm = m.submat(rowStart: 2, rowEnd: 4, colStart: 3, colEnd: 5)
+        var buff = [UInt8](repeating: 0, count: 6)
+        let buff0:[UInt8] = [10, 20, 30, 40, 50, 60]
+        let buff1:[UInt8] = [255, 254, 253, 252, 251, 250]
+
+        var bytesNum = try m.put(row:1, col:2, data:buff0)
+
+        XCTAssertEqual(6, bytesNum)
+        bytesNum = try m.get(row: 1, col: 2, data: &buff)
+        XCTAssertEqual(6, bytesNum)
+        XCTAssert(buff == buff0)
+
+        bytesNum = try sm.put(row:0, col:0, data:buff1)
+
+        XCTAssertEqual(6, bytesNum)
+        bytesNum = try sm.get(row: 0, col: 0, data: &buff)
+        XCTAssertEqual(6, bytesNum)
+        XCTAssert(buff == buff1)
+        bytesNum = try m.get(row: 2, col: 3, data: &buff)
+        XCTAssertEqual(6, bytesNum);
+        XCTAssert(buff == buff1)
+
+        let m1 = m.row(1)
+        bytesNum = try m1.get(row: 0, col: 2, data: &buff)
+        XCTAssertEqual(6, bytesNum)
+        XCTAssert(buff == buff0)
+    }
+
+    func testPutIntArrayInt8Array() throws {
         let m = Mat(sizes: [5, 5, 5], type: CvType.CV_8SC3, scalar: Scalar(1, 2, 3))
         let sm = m.submat(ranges: [Range(start: 0, end: 2), Range(start: 1, end: 3), Range(start: 2, end: 4)])
         var buff = [Int8](repeating: 0, count: 6)
@@ -714,10 +825,41 @@ class MatTests: OpenCVTestCase {
         XCTAssert(buff == buff0)
     }
 
+    func testPutIntArrayUInt8Array() throws {
+        let m = Mat(sizes: [5, 5, 5], type: CvType.CV_8UC3, scalar: Scalar(1, 2, 3))
+        let sm = m.submat(ranges: [Range(start: 0, end: 2), Range(start: 1, end: 3), Range(start: 2, end: 4)])
+        var buff = [UInt8](repeating: 0, count: 6)
+        let buff0:[UInt8] = [10, 20, 30, 40, 50, 60]
+        let buff1:[UInt8] = [255, 254, 253, 252, 251, 250]
+
+        var bytesNum = try m.put(indices:[1, 2, 0], data:buff0)
+
+        XCTAssertEqual(6, bytesNum)
+        bytesNum = try m.get(indices: [1, 2, 0], data: &buff)
+        XCTAssertEqual(6, bytesNum)
+        XCTAssert(buff == buff0)
+
+        bytesNum = try sm.put(indices: [0, 0, 0], data: buff1)
+
+        XCTAssertEqual(6, bytesNum)
+        bytesNum = try sm.get(indices: [0, 0, 0], data: &buff)
+        XCTAssertEqual(6, bytesNum)
+        XCTAssert(buff == buff1)
+
+        bytesNum = try m.get(indices: [0, 1, 2], data: &buff)
+        XCTAssertEqual(6, bytesNum)
+        XCTAssert(buff == buff1)
+
+        let m1 = m.submat(ranges: [Range(start: 1,end: 2), Range.all(), Range.all()])
+        bytesNum = try m1.get(indices: [0, 2, 0], data: &buff)
+        XCTAssertEqual(6, bytesNum)
+        XCTAssert(buff == buff0)
+    }
+
     func testPutIntIntDoubleArray() throws {
-        let m = Mat(rows: 5, cols: 5, type: CvType.CV_8SC3, scalar: Scalar(1, 2, 3))
+        let m = Mat(rows: 5, cols: 5, type: CvType.CV_8UC3, scalar: Scalar(1, 2, 3))
         let sm = m.submat(rowStart: 2, rowEnd: 4, colStart: 3, colEnd: 5)
-        var buff = [Int8](repeating: 0, count: 6)
+        var buff = [UInt8](repeating: 0, count: 6)
 
         var bytesNum = try m.put(row: 1, col: 2, data: [10, 20, 30, 40, 50, 60] as [Double])
 
@@ -731,16 +873,16 @@ class MatTests: OpenCVTestCase {
         XCTAssertEqual(6, bytesNum)
         bytesNum = try sm.get(row: 0, col: 0, data: &buff)
         XCTAssertEqual(6, bytesNum);
-        XCTAssert(buff == [-1, -2, -3, -4, -5, -6])
+        XCTAssert(buff == [255, 254, 253, 252, 251, 250])
         bytesNum = try m.get(row: 2, col: 3, data: &buff)
         XCTAssertEqual(6, bytesNum);
-        XCTAssert(buff == [-1, -2, -3, -4, -5, -6])
+        XCTAssert(buff == [255, 254, 253, 252, 251, 250])
     }
 
     func testPutIntArrayDoubleArray() throws {
-        let m = Mat(sizes: [5, 5, 5], type: CvType.CV_8SC3, scalar: Scalar(1, 2, 3))
+        let m = Mat(sizes: [5, 5, 5], type: CvType.CV_8UC3, scalar: Scalar(1, 2, 3))
         let sm = m.submat(ranges: [Range(start: 0, end: 2), Range(start: 1, end: 3), Range(start: 2, end: 4)])
-        var buff = [Int8](repeating: 0, count: 6)
+        var buff = [UInt8](repeating: 0, count: 6)
 
         var bytesNum = try m.put(indices: [1, 2, 0], data: [10, 20, 30, 40, 50, 60] as [Double])
 
@@ -754,10 +896,10 @@ class MatTests: OpenCVTestCase {
         XCTAssertEqual(6, bytesNum);
         bytesNum = try sm.get(indices: [0, 0, 0], data: &buff)
         XCTAssertEqual(6, bytesNum);
-        XCTAssert(buff == [-1, -2, -3, -4, -5, -6])
+        XCTAssert(buff == [255, 254, 253, 252, 251, 250])
         bytesNum = try m.get(indices: [0, 1, 2], data: &buff)
         XCTAssertEqual(6, bytesNum)
-        XCTAssert(buff == [-1, -2, -3, -4, -5, -6])
+        XCTAssert(buff == [255, 254, 253, 252, 251, 250])
     }
 
     func testPutIntIntFloatArray() throws {
@@ -820,7 +962,7 @@ class MatTests: OpenCVTestCase {
         XCTAssert([40, 50, 60] == m.get(indices: [0, 1, 0]))
     }
 
-    func testPutIntIntShortArray() throws {
+    func testPutIntIntInt16Array() throws {
         let m = Mat(rows: 5, cols: 5, type: CvType.CV_16SC3, scalar: Scalar(-1, -2, -3))
         let elements: [Int16] = [ 10, 20, 30, 40, 50, 60]
 
@@ -834,7 +976,21 @@ class MatTests: OpenCVTestCase {
         XCTAssert([40, 50, 60] == m.get(row: 2, col: 4))
     }
 
-    func testPutIntArrayShortArray() throws {
+    func testPutIntIntUInt16Array() throws {
+        let m = Mat(rows: 5, cols: 5, type: CvType.CV_16UC3, scalar: Scalar(-1, -2, -3))
+        let elements: [UInt16] = [ 10, 20, 30, 40, 50, 60]
+
+        var bytesNum = try m.put(row: 2, col: 3, data: elements)
+
+        XCTAssertEqual(Int32(elements.count * 2), bytesNum)
+        let m1 = m.col(3)
+        var buff = [UInt16](repeating: 0, count: 3)
+        bytesNum = try m1.get(row: 2, col: 0, data: &buff)
+        XCTAssert(buff == [10, 20, 30])
+        XCTAssert([40, 50, 60] == m.get(row: 2, col: 4))
+    }
+
+    func testPutIntArrayInt16Array() throws {
         let m = Mat(sizes: [5, 5, 5], type: CvType.CV_16SC3, scalar: Scalar(-1, -2, -3))
         let elements: [Int16] = [ 10, 20, 30, 40, 50, 60]
 
@@ -843,6 +999,20 @@ class MatTests: OpenCVTestCase {
         XCTAssertEqual(Int32(elements.count * 2), bytesNum)
         let m1 = m.submat(ranges: [Range.all(), Range.all(), Range(start: 3, end: 4)])
         var buff = [Int16](repeating: 0, count: 3)
+        bytesNum = try m1.get(indices: [0, 2, 0], data: &buff)
+        XCTAssert(buff == [10, 20, 30])
+        XCTAssert([40, 50, 60] == m.get(indices: [0, 2, 4]))
+    }
+
+    func testPutIntArrayUInt16Array() throws {
+        let m = Mat(sizes: [5, 5, 5], type: CvType.CV_16UC3, scalar: Scalar(-1, -2, -3))
+        let elements: [UInt16] = [ 10, 20, 30, 40, 50, 60]
+
+        var bytesNum = try m.put(indices: [0, 2, 3], data: elements)
+
+        XCTAssertEqual(Int32(elements.count * 2), bytesNum)
+        let m1 = m.submat(ranges: [Range.all(), Range.all(), Range(start: 3, end: 4)])
+        var buff = [UInt16](repeating: 0, count: 3)
         bytesNum = try m1.get(indices: [0, 2, 0], data: &buff)
         XCTAssert(buff == [10, 20, 30])
         XCTAssert([40, 50, 60] == m.get(indices: [0, 2, 4]))
@@ -1141,6 +1311,30 @@ class MatTests: OpenCVTestCase {
         XCTAssertEqual(0, bufferOut[79])
         XCTAssertEqual(8, bufferOut[80])
         XCTAssertEqual(5, bufferOut[63*80 + 63])
+    }
+
+    func testMatAt() {
+        let uc1 = Mat(rows: 2, cols: 3, type: CvType.CV_8U)
+        try! uc1.put(row: 0, col: 0, data: [1, 2, 3, 4, 5, 6] as [Int8])
+        XCTAssertEqual(UInt8(1), uc1.at(row: 0, col: 0).v)
+        XCTAssertEqual(UInt8(2), uc1.at(row: 0, col: 1).v)
+        XCTAssertEqual(UInt8(3), uc1.at(row: 0, col: 2).v)
+        XCTAssertEqual(UInt8(4), uc1.at(row: 1, col: 0).v)
+        XCTAssertEqual(UInt8(5), uc1.at(row: 1, col: 1).v)
+        XCTAssertEqual(UInt8(6), uc1.at(row: 1, col: 2).v)
+        uc1.at(row: 0, col: 0).v = UInt8(7)
+        uc1.at(row: 0, col: 1).v = UInt8(8)
+        uc1.at(row: 0, col: 2).v = UInt8(9)
+        uc1.at(row: 1, col: 0).v = UInt8(10)
+        uc1.at(row: 1, col: 1).v = UInt8(11)
+        uc1.at(row: 1, col: 2).v = UInt8(12)
+        var data = [Int8](repeating: 0, count: 6)
+        try! uc1.get(row: 0, col: 0, data: &data)
+        XCTAssertEqual(data, [7, 8, 9, 10, 11, 12] as [Int8])
+        let (b, g, r): T3<UInt8>  = rgbLena.at(row: 0, col: 0).v3c
+        XCTAssertEqual(b, UInt8(128))
+        XCTAssertEqual(g, UInt8(138))
+        XCTAssertEqual(r, UInt8(225))
     }
 
 }

@@ -301,16 +301,6 @@ GMat merge4(const GMat& src1, const GMat& src2, const GMat& src3, const GMat& sr
     return core::GMerge4::on(src1, src2, src3, src4);
 }
 
-GMat resize(const GMat& src, const Size& dsize, double fx, double fy, int interpolation)
-{
-    return core::GResize::on(src, dsize, fx, fy, interpolation);
-}
-
-GMatP resizeP(const GMatP& src, const Size& dsize, int interpolation)
-{
-    return core::GResizeP::on(src, dsize, interpolation);
-}
-
 GMat remap(const GMat& src, const Mat& map1, const Mat& map2,
            int interpolation, int borderMode,
            const Scalar& borderValue)
@@ -326,11 +316,6 @@ GMat flip(const GMat& src, int flipCode)
 GMat crop(const GMat& src, const Rect& rect)
 {
     return core::GCrop::on(src, rect);
-}
-
-GMat copy(const GMat& src)
-{
-    return core::GCopy::on(src);
 }
 
 GMat concatHor(const GMat& src1, const GMat& src2)
@@ -388,14 +373,59 @@ GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags,
     return core::GWarpAffine::on(src, M, dsize, flags, borderMode, borderValue);
 }
 
-GOpaque<Size> size(const GMat& src)
+std::tuple<GOpaque<double>,GMat,GMat> kmeans(const GMat& data, const int K, const GMat& bestLabels,
+                                             const TermCriteria& criteria, const int attempts,
+                                             const KmeansFlags flags)
 {
-    return core::GSize::on(src);
+    return core::GKMeansND::on(data, K, bestLabels, criteria, attempts, flags);
 }
 
-GOpaque<Size> size(const GOpaque<Rect>& r)
+std::tuple<GOpaque<double>,GMat,GMat> kmeans(const GMat& data, const int K,
+                                             const TermCriteria& criteria, const int attempts,
+                                             const KmeansFlags flags)
 {
-    return core::GSizeR::on(r);
+    return core::GKMeansNDNoInit::on(data, K, criteria, attempts, flags);
+}
+
+std::tuple<GOpaque<double>,GArray<int>,GArray<Point2f>> kmeans(const GArray<Point2f>& data,
+                                                               const int              K,
+                                                               const GArray<int>&     bestLabels,
+                                                               const TermCriteria&    criteria,
+                                                               const int              attempts,
+                                                               const KmeansFlags      flags)
+{
+    return core::GKMeans2D::on(data, K, bestLabels, criteria, attempts, flags);
+}
+
+std::tuple<GOpaque<double>,GArray<int>,GArray<Point3f>> kmeans(const GArray<Point3f>& data,
+                                                               const int              K,
+                                                               const GArray<int>&     bestLabels,
+                                                               const TermCriteria&    criteria,
+                                                               const int              attempts,
+                                                               const KmeansFlags      flags)
+{
+    return core::GKMeans3D::on(data, K, bestLabels, criteria, attempts, flags);
+}
+
+
+GMat transpose(const GMat& src)
+{
+    return core::GTranspose::on(src);
+}
+
+GOpaque<Size> streaming::size(const GMat& src)
+{
+    return streaming::GSize::on(src);
+}
+
+GOpaque<Size> streaming::size(const GOpaque<Rect>& r)
+{
+    return streaming::GSizeR::on(r);
+}
+
+GOpaque<Size> streaming::size(const GFrame& src)
+{
+    return streaming::GSizeMF::on(src);
 }
 
 } //namespace gapi

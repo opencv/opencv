@@ -170,12 +170,14 @@ private:
 } // namespace nn
 } // namespace gapi
 
-void parseSSDBL(const cv::Mat&  in_ssd_result,
-                const cv::Size& in_size,
-                const float     confidence_threshold,
-                const int       filter_label,
-                std::vector<cv::Rect>& out_boxes,
-                std::vector<int>&      out_labels)
+void ParseSSD(const cv::Mat&  in_ssd_result,
+              const cv::Size& in_size,
+              const float     confidence_threshold,
+              const int       filter_label,
+              const bool      alignment_to_square,
+              const bool      filter_out_of_bounds,
+              std::vector<cv::Rect>& out_boxes,
+              std::vector<int>&      out_labels)
 {
     cv::gapi::nn::SSDParser parser(in_ssd_result.size, in_size, in_ssd_result.ptr<float>());
     out_boxes.clear();
@@ -192,48 +194,18 @@ void parseSSDBL(const cv::Mat&  in_ssd_result,
         {
             break;    // marks end-of-detections
         }
-
-        if (confidence < confidence_threshold ||
-            (filter_label != -1 && label != filter_label))
-        {
-            continue; // filter out object classes if filter is specified
-        }             // and skip objects with low confidence
-        out_boxes.emplace_back(rc & parser.getSurface());
-        out_labels.emplace_back(label);
-    }
-}
-
-void parseSSD(const cv::Mat&  in_ssd_result,
-              const cv::Size& in_size,
-              const float     confidence_threshold,
-              const bool      alignment_to_square,
-              const bool      filter_out_of_bounds,
-              std::vector<cv::Rect>& out_boxes)
-{
-    cv::gapi::nn::SSDParser parser(in_ssd_result.size, in_size, in_ssd_result.ptr<float>());
-    out_boxes.clear();
-    cv::Rect rc;
-    float image_id, confidence;
-    int label;
-    const size_t range = parser.getMaxProposals();
-    for (size_t i = 0; i < range; ++i)
-    {
-        std::tie(rc, image_id, confidence, label) = parser.extract(i);
-
-        if (image_id < 0.f)
-        {
-            break;    // marks end-of-detections
-        }
         if (confidence < confidence_threshold)
         {
             continue; // skip objects with low confidence
         }
-
+        if((filter_label != -1) && (label != filter_label))
+        {
+            continue; // filter out object classes if filter is specified
+        }
         if (alignment_to_square)
         {
             parser.adjustBoundingBox(rc);
         }
-
         const auto clipped_rc = rc & parser.getSurface();
         if (filter_out_of_bounds)
         {
@@ -243,6 +215,29 @@ void parseSSD(const cv::Mat&  in_ssd_result,
             }
         }
         out_boxes.emplace_back(clipped_rc);
+        out_labels.emplace_back(label);
+    }
+}
+
+static void checkYoloDims(const MatSize& dims) {
+    const auto d = dims.dims();
+    // Accept 1x13x13xN and 13x13xN
+    GAPI_Assert(d >= 2);
+    if (d >= 3) {
+        if (dims[d-2] == 13) {
+            GAPI_Assert(dims[d-1]%5 == 0);
+            GAPI_Assert(dims[d-2] == 13);
+            GAPI_Assert(dims[d-3] == 13);
+            for (int i = 0; i < d-3; i++) {
+                GAPI_Assert(dims[i] == 1);
+            }
+            return;
+        }
+    }
+    // Accept 1x1x1xN, 1x1xN, 1xN
+    GAPI_Assert(dims[d-1]%(5*13*13) == 0);
+    for (int i = 0; i < d-1; i++) {
+        GAPI_Assert(dims[i] == 1);
     }
 }
 
@@ -255,12 +250,12 @@ void parseYolo(const cv::Mat&  in_yolo_result,
                std::vector<int>&      out_labels)
 {
     const auto& dims = in_yolo_result.size;
-    GAPI_Assert(dims.dims() == 4);
-    GAPI_Assert(dims[0] == 1);
-    GAPI_Assert(dims[1] == 13);
-    GAPI_Assert(dims[2] == 13);
-    GAPI_Assert(dims[3] % 5 == 0); // 5 boxes
-    const auto num_classes = dims[3] / 5 - 5;
+    checkYoloDims(dims);
+    int acc = 1;
+    for (int i = 0; i < dims.dims(); i++) {
+        acc *= dims[i];
+    }
+    const auto num_classes = acc/(5*13*13)-5;
     GAPI_Assert(num_classes > 0);
     GAPI_Assert(0 < nms_threshold && nms_threshold <= 1);
     out_boxes.clear();

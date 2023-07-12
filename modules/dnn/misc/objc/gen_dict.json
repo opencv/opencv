@@ -8,7 +8,9 @@
             "(Net*)readNetFromONNX:(NSString*)onnxFile" : { "readNetFromONNX" : {"name" : "readNetFromONNXFile"} },
             "(Net*)readNetFromONNX:(ByteVector*)buffer" : { "readNetFromONNX" : {"name" : "readNetFromONNXBuffer"} },
             "(Net*)readNetFromTensorflow:(NSString*)model config:(NSString*)config" : { "readNetFromTensorflow" : {"name" : "readNetFromTensorflowFile"} },
-            "(Net*)readNetFromTensorflow:(ByteVector*)bufferModel bufferConfig:(ByteVector*)bufferConfig" : { "readNetFromTensorflow" : {"name" : "readNetFromTensorflowBuffer"} }
+            "(Net*)readNetFromTensorflow:(ByteVector*)bufferModel bufferConfig:(ByteVector*)bufferConfig" : { "readNetFromTensorflow" : {"name" : "readNetFromTensorflowBuffer"} },
+            "(Net*)readNetFromTFLite:(NSString*)model" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteFile"} },
+            "(Net*)readNetFromTFLite:(ByteVector*)buffer" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteBuffer"} }
         },
         "Net": {
             "(void)forward:(NSMutableArray<Mat*>*)outputBlobs outputName:(NSString*)outputName" : { "forward" : {"name" : "forwardOutputBlobs"} },
@@ -18,8 +20,12 @@
             "(long)getFLOPS:(NSArray<IntVector*>*)netInputShapes" : { "getFLOPS" : {"name" : "getFLOPSWithNetInputShapes"} },
             "(long)getFLOPS:(int)layerId netInputShape:(IntVector*)netInputShape" : { "getFLOPS" : {"name" : "getFLOPSWithLayerId"} },
             "(long)getFLOPS:(int)layerId netInputShapes:(NSArray<IntVector*>*)netInputShapes" : { "getFLOPS" : {"name" : "getFLOPSWithLayerId"} },
+            "(Layer*)getLayer:(NSString*)layerName" : { "getLayer" : {"name" : "getLayerByName"} },
+            "(Layer*)getLayer:(DictValue*)layerId" : { "getLayer" : {"name" : "getLayerByDictValue"} },
             "(void)getLayersShapes:(IntVector*)netInputShape layersIds:(IntVector*)layersIds inLayersShapes:(NSMutableArray<NSMutableArray<IntVector*>*>*)inLayersShapes outLayersShapes:(NSMutableArray<NSMutableArray<IntVector*>*>*)outLayersShapes" : { "getLayersShapes" : {"name" : "getLayersShapesWithNetInputShape"} },
-            "(void)getLayersShapes:(NSArray<IntVector*>*)netInputShapes layersIds:(IntVector*)layersIds inLayersShapes:(NSMutableArray<NSMutableArray<IntVector*>*>*)inLayersShapes outLayersShapes:(NSMutableArray<NSMutableArray<IntVector*>*>*)outLayersShapes" : { "getLayersShapes" : {"name" : "getLayersShapesWithNetInputShapes"} }
+            "(void)getLayersShapes:(NSArray<IntVector*>*)netInputShapes layersIds:(IntVector*)layersIds inLayersShapes:(NSMutableArray<NSMutableArray<IntVector*>*>*)inLayersShapes outLayersShapes:(NSMutableArray<NSMutableArray<IntVector*>*>*)outLayersShapes" : { "getLayersShapes" : {"name" : "getLayersShapesWithNetInputShapes"} },
+            "(Mat*)getParam:(NSString*)layerName numParam:(int)numParam" : { "getParam" : {"name" : "getParamByName"} },
+            "(void)setParam:(NSString*)layerName numParam:(int)numParam blob:(Mat*)blob" : { "setParam" : {"name" : "setParamByName"} }
         }
     },
     "type_dict": {

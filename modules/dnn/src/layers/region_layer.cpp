@@ -70,6 +70,7 @@ class RegionLayerImpl CV_FINAL : public RegionLayer
 public:
     int coords, classes, anchors, classfix;
     float thresh, scale_x_y;
+    int new_coords;
     bool useSoftmax, useLogistic;
 #ifdef HAVE_OPENCL
     UMat blob_umat;
@@ -89,6 +90,7 @@ public:
         useLogistic = params.get<bool>("logistic", false);
         nmsThreshold = params.get<float>("nms_threshold", 0.4);
         scale_x_y = params.get<float>("scale_x_y", 1.0); // Yolov4
+        new_coords = params.get<int>("new_coords", 0); // Yolov4x-mish
 
         CV_Assert(nmsThreshold >= 0.);
         CV_Assert(coords == 4);
@@ -119,7 +121,7 @@ public:
     {
 #ifdef HAVE_DNN_NGRAPH
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2) && preferableTarget != DNN_TARGET_MYRIAD;
+        return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2) && preferableTarget != DNN_TARGET_MYRIAD && new_coords == 0;
 #endif
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA)
@@ -269,26 +271,28 @@ public:
             const float *srcData = inpBlob.ptr<float>();
             float *dstData = outBlob.ptr<float>();
 
-            // logistic activation for t0, for each grid cell (X x Y x Anchor-index)
-            for (int i = 0; i < batch_size*rows*cols*anchors; ++i) {
-                int index = cell_size*i;
-                float x = srcData[index + 4];
-                dstData[index + 4] = logistic_activate(x);	// logistic activation
-            }
-
-            if (useSoftmax) {  // Yolo v2
+            if (new_coords == 0) {
+                // logistic activation for t0, for each grid cell (X x Y x Anchor-index)
                 for (int i = 0; i < batch_size*rows*cols*anchors; ++i) {
                     int index = cell_size*i;
-                    softmax_activate(srcData + index + 5, classes, 1, dstData + index + 5);
+                    float x = srcData[index + 4];
+                    dstData[index + 4] = logistic_activate(x);	// logistic activation
                 }
-            }
-            else if (useLogistic) {  // Yolo v3
-                for (int i = 0; i < batch_size*rows*cols*anchors; ++i){
-                    int index = cell_size*i;
-                    const float* input = srcData + index + 5;
-                    float* output = dstData + index + 5;
-                    for (int c = 0; c < classes; ++c)
-                        output[c] = logistic_activate(input[c]);
+
+                if (useSoftmax) {  // Yolo v2
+                    for (int i = 0; i < batch_size*rows*cols*anchors; ++i) {
+                        int index = cell_size*i;
+                        softmax_activate(srcData + index + 5, classes, 1, dstData + index + 5);
+                    }
+                }
+                else if (useLogistic) {  // Yolo v3
+                    for (int i = 0; i < batch_size*rows*cols*anchors; ++i){
+                        int index = cell_size*i;
+                        const float* input = srcData + index + 5;
+                        float* output = dstData + index + 5;
+                        for (int c = 0; c < classes; ++c)
+                            output[c] = logistic_activate(input[c]);
+                    }
                 }
             }
             for (int b = 0; b < batch_size; ++b)
@@ -300,20 +304,47 @@ public:
                             int index = (y*cols + x)*anchors + a;  // index for each grid-cell & anchor
                             int p_index = index_sample_offset + index * cell_size + 4;
                             float scale = dstData[p_index];
-                            if (classfix == -1 && scale < .5) scale = 0;  // if(t0 < 0.5) t0 = 0;
+                            if (classfix == -1 && scale < .5)
+                            {
+                                scale = 0;  // if(t0 < 0.5) t0 = 0;
+                            }
                             int box_index = index_sample_offset + index * cell_size;
 
-                            float x_tmp = (logistic_activate(srcData[box_index + 0]) - 0.5f) * scale_x_y + 0.5f;
-                            float y_tmp = (logistic_activate(srcData[box_index + 1]) - 0.5f) * scale_x_y + 0.5f;
-                            dstData[box_index + 0] = (x + x_tmp) / cols;
-                            dstData[box_index + 1] = (y + y_tmp) / rows;
-                            dstData[box_index + 2] = exp(srcData[box_index + 2]) * biasData[2 * a] / wNorm;
-                            dstData[box_index + 3] = exp(srcData[box_index + 3]) * biasData[2 * a + 1] / hNorm;
+                            if (new_coords == 1) {
+                                float x_tmp = (srcData[box_index + 0] - 0.5f) * scale_x_y + 0.5f;
+                                float y_tmp = (srcData[box_index + 1] - 0.5f) * scale_x_y + 0.5f;
+                                dstData[box_index + 0] = (x + x_tmp) / cols;
+                                dstData[box_index + 1] = (y + y_tmp) / rows;
+                                dstData[box_index + 2] = (srcData[box_index + 2]) * (srcData[box_index + 2]) * 4 * biasData[2 * a] / wNorm;
+                                dstData[box_index + 3] = (srcData[box_index + 3]) * (srcData[box_index + 3]) * 4 * biasData[2 * a + 1] / hNorm;
+                                dstData[box_index + 4] = srcData[p_index];
 
-                            int class_index = index_sample_offset + index * cell_size + 5;
-                            for (int j = 0; j < classes; ++j) {
-                                float prob = scale*dstData[class_index + j];  // prob = IoU(box, object) = t0 * class-probability
-                                dstData[class_index + j] = (prob > thresh) ? prob : 0;  // if (IoU < threshold) IoU = 0;
+                                scale = srcData[p_index];
+                                if (classfix == -1 && scale < thresh)
+                                {
+                                    scale = 0;  // if(t0 < 0.5) t0 = 0;
+                                }
+
+                                int class_index = index_sample_offset + index * cell_size + 5;
+                                for (int j = 0; j < classes; ++j) {
+                                    float prob = scale*srcData[class_index + j];  // prob = IoU(box, object) = t0 * class-probability
+                                    dstData[class_index + j] = (prob > thresh) ? prob : 0;  // if (IoU < threshold) IoU = 0;
+                                }
+                            }
+                            else
+                            {
+                                float x_tmp = (logistic_activate(srcData[box_index + 0]) - 0.5f) * scale_x_y + 0.5f;
+                                float y_tmp = (logistic_activate(srcData[box_index + 1]) - 0.5f) * scale_x_y + 0.5f;
+                                dstData[box_index + 0] = (x + x_tmp) / cols;
+                                dstData[box_index + 1] = (y + y_tmp) / rows;
+                                dstData[box_index + 2] = exp(srcData[box_index + 2]) * biasData[2 * a] / wNorm;
+                                dstData[box_index + 3] = exp(srcData[box_index + 3]) * biasData[2 * a + 1] / hNorm;
+
+                                int class_index = index_sample_offset + index * cell_size + 5;
+                                for (int j = 0; j < classes; ++j) {
+                                    float prob = scale*dstData[class_index + j];  // prob = IoU(box, object) = t0 * class-probability
+                                    dstData[class_index + j] = (prob > thresh) ? prob : 0;  // if (IoU < threshold) IoU = 0;
+                                }
                             }
                         }
             if (nmsThreshold > 0) {
@@ -407,11 +438,12 @@ public:
 
         config.scale_x_y = scale_x_y;
 
-        config.object_prob_cutoff = (classfix == -1) ? 0.5 : 0.0;
+        config.object_prob_cutoff = (classfix == -1) ? thresh : 0.f;
         config.class_prob_cutoff = thresh;
 
         config.nms_iou_threshold = nmsThreshold;
 
+        config.new_coords = (new_coords == 1);
         return make_cuda_node<cuda4dnn::RegionOp>(preferableTarget, std::move(context->stream), blobs[0], config);
     }
 #endif
@@ -460,8 +492,10 @@ public:
             std::vector<int64_t> mask(anchors, 1);
             region = std::make_shared<ngraph::op::RegionYolo>(tr_input, coords, classes, anchors, useSoftmax, mask, 1, 3, anchors_vec);
 
+            auto tr_shape = tr_input->get_shape();
             auto shape_as_inp = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                                                       ngraph::Shape{tr_input->get_shape().size()}, tr_input->get_shape().data());
+                                                                       ngraph::Shape{tr_shape.size()},
+                                                                       std::vector<int64_t>(tr_shape.begin(), tr_shape.end()));
 
             region = std::make_shared<ngraph::op::v1::Reshape>(region, shape_as_inp, true);
             new_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{4}, std::vector<int64_t>{0, 2, 3, 1});
@@ -492,14 +526,14 @@ public:
 
             std::vector<float> x_indices(w * h * anchors);
             auto begin = x_indices.begin();
-            for (int i = 0; i < h; i++)
+            for (int i = 0; i < w; i++)
             {
                 std::fill(begin + i * anchors, begin + (i + 1) * anchors, i);
             }
 
-            for (int j = 1; j < w; j++)
+            for (int j = 1; j < h; j++)
             {
-                std::copy(begin, begin + h * anchors, begin + j * h * anchors);
+                std::copy(begin, begin + w * anchors, begin + j * w * anchors);
             }
             auto horiz = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, box_broad_shape, x_indices.data());
             box_x = std::make_shared<ngraph::op::v1::Add>(box_x, horiz, ngraph::op::AutoBroadcastType::NUMPY);
@@ -607,7 +641,7 @@ public:
         result = std::make_shared<ngraph::op::Transpose>(result, tr_axes);
         if (b > 1)
         {
-            std::vector<size_t> sizes = {(size_t)b, result->get_shape()[0] / b, result->get_shape()[1]};
+            std::vector<int64_t> sizes{b, static_cast<int64_t>(result->get_shape()[0]) / b, static_cast<int64_t>(result->get_shape()[1])};
             auto shape_node = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{sizes.size()}, sizes.data());
             result = std::make_shared<ngraph::op::v1::Reshape>(result, shape_node, true);
         }

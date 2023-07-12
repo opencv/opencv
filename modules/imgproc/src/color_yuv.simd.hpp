@@ -17,11 +17,7 @@ void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
                  int depth, int dcn, bool swapBlue, bool isCbCr);
-void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
-                         uchar * dst_data, size_t dst_step,
-                         int dst_width, int dst_height,
-                         int dcn, bool swapBlue, int uIdx);
-void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src_step,
+void cvtTwoPlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * uv_data, size_t uv_step,
                          uchar * dst_data, size_t dst_step,
                          int dst_width, int dst_height,
                          int dcn, bool swapBlue, int uIdx);
@@ -1042,6 +1038,7 @@ static inline void uvToRGBuv(const uchar u, const uchar v, int& ruv, int& guv, i
     buv = (1 << (ITUR_BT_601_SHIFT - 1)) + ITUR_BT_601_CUB * uu;
 }
 
+#if CV_SIMD
 static inline void uvToRGBuv(const v_uint8& u, const v_uint8& v,
                              v_int32 (&ruv)[4],
                              v_int32 (&guv)[4],
@@ -1071,6 +1068,7 @@ static inline void uvToRGBuv(const v_uint8& u, const v_uint8& v,
         buv[k] = vshift + ub * uu[k];
     }
 }
+#endif
 
 static inline void yRGBuvToRGBA(const uchar vy, const int ruv, const int guv, const int buv,
                                 uchar& r, uchar& g, uchar& b, uchar& a)
@@ -1083,6 +1081,7 @@ static inline void yRGBuvToRGBA(const uchar vy, const int ruv, const int guv, co
     a = uchar(0xff);
 }
 
+#if CV_SIMD
 static inline void yRGBuvToRGBA(const v_uint8& vy,
                                 const v_int32 (&ruv)[4],
                                 const v_int32 (&guv)[4],
@@ -1121,6 +1120,7 @@ static inline void yRGBuvToRGBA(const v_uint8& vy,
     gg = v_pack_u(g0, g1);
     bb = v_pack_u(b0, b1);
 }
+#endif
 
 template<int bIdx, int dcn, bool is420>
 static inline void cvtYuv42xxp2RGB8(const uchar u, const uchar v,
@@ -1177,24 +1177,28 @@ struct YUV420sp2RGB8Invoker : ParallelLoopBody
     uchar * dst_data;
     size_t dst_step;
     int width;
-    const uchar* my1, *muv;
-    size_t stride;
+    const uchar* my1;
+    size_t my1_step;
+    const uchar* muv;
+    size_t muv_step;
 
-    YUV420sp2RGB8Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _uv)
-        : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), muv(_uv), stride(_stride) {}
+    YUV420sp2RGB8Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width,
+                         const uchar* _y1, size_t _y1_step, const uchar* _uv, size_t _uv_step) :
+            dst_data(_dst_data), dst_step(_dst_step), width(_dst_width),
+            my1(_y1), my1_step(_y1_step), muv(_uv), muv_step(_uv_step) {}
 
     void operator()(const Range& range) const CV_OVERRIDE
     {
         const int rangeBegin = range.start * 2;
         const int rangeEnd   = range.end   * 2;
 
-        const uchar* y1 = my1 + rangeBegin * stride, *uv = muv + rangeBegin * stride / 2;
+        const uchar* y1 = my1 + rangeBegin * my1_step, *uv = muv + rangeBegin * muv_step / 2;
 
-        for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, uv += stride)
+        for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += my1_step * 2, uv += muv_step)
         {
             uchar* row1 = dst_data + dst_step * j;
             uchar* row2 = dst_data + dst_step * (j + 1);
-            const uchar* y2 = y1 + stride;
+            const uchar* y2 = y1 + my1_step;
 
             int i = 0;
 #if CV_SIMD
@@ -1395,9 +1399,10 @@ struct YUV420p2RGB8Invoker : ParallelLoopBody
 #define MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION (320*240)
 
 template<int bIdx, int uIdx, int dcn>
-inline void cvtYUV420sp2RGB(uchar * dst_data, size_t dst_step, int dst_width, int dst_height, size_t _stride, const uchar* _y1, const uchar* _uv)
+inline void cvtYUV420sp2RGB(uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                            const uchar* _y1, size_t _y1_step, const uchar* _uv, size_t _uv_step)
 {
-    YUV420sp2RGB8Invoker<bIdx, uIdx, dcn> converter(dst_data, dst_step, dst_width, _stride, _y1,  _uv);
+    YUV420sp2RGB8Invoker<bIdx, uIdx, dcn> converter(dst_data, dst_step, dst_width, _y1, _y1_step, _uv, _uv_step);
     if (dst_width * dst_height >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
         parallel_for_(Range(0, dst_height/2), converter);
     else
@@ -1425,6 +1430,7 @@ static inline uchar rgbToY42x(uchar r, uchar g, uchar b)
     return saturate_cast<uchar>(yy >> ITUR_BT_601_SHIFT);
 }
 
+#if CV_SIMD
 static inline v_uint8 rgbToY42x(const v_uint8& r, const v_uint8& g, const v_uint8& b)
 {
     const int shifted16 = (16 << ITUR_BT_601_SHIFT);
@@ -1454,6 +1460,7 @@ static inline v_uint8 rgbToY42x(const v_uint8& r, const v_uint8& g, const v_uint
 
     return v_pack(y0, y1);
 }
+#endif
 
 static inline void rgbToUV42x(uchar r, uchar g, uchar b, uchar& u, uchar& v)
 {
@@ -1466,6 +1473,7 @@ static inline void rgbToUV42x(uchar r, uchar g, uchar b, uchar& u, uchar& v)
     v = saturate_cast<uchar>(vv >> ITUR_BT_601_SHIFT);
 }
 
+#if CV_SIMD
 static inline void rgbToUV42x(const v_uint8& r0, const v_uint8& r1, const v_uint8& g0, const v_uint8& g1,
                               const v_uint8& b0, const v_uint8& b1, v_uint8& u, v_uint8& v)
 {
@@ -1513,6 +1521,7 @@ static inline void rgbToUV42x(const v_uint8& r0, const v_uint8& r1, const v_uint
     u = v_pack_u(u0, u1);
     v = v_pack_u(v0, v1);
 }
+#endif
 
 
 struct RGB8toYUV420pInvoker: public ParallelLoopBody
@@ -1817,26 +1826,16 @@ void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
         CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_f<float>(dcn, blueIdx, isCbCr));
 }
 
-void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
-                         uchar * dst_data, size_t dst_step,
-                         int dst_width, int dst_height,
-                         int dcn, bool swapBlue, int uIdx)
-{
-    CV_INSTRUMENT_REGION();
-
-    const uchar* uv = src_data + src_step * static_cast<size_t>(dst_height);
-    cvtTwoPlaneYUVtoBGR(src_data, uv, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
-}
-
 typedef void (*cvt_2plane_yuv_ptr_t)(uchar * /* dst_data*/,
                        size_t /* dst_step */,
                        int /* dst_width */,
                        int /* dst_height */,
-                       size_t /* _stride */,
                        const uchar* /* _y1 */,
-                       const uchar* /* _uv */);
+                       size_t /* _y1_step */,
+                       const uchar* /* _uv */,
+                       size_t /* _uv_step */);
 
-void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src_step,
+void cvtTwoPlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * uv_data, size_t uv_step,
                          uchar * dst_data, size_t dst_step,
                          int dst_width, int dst_height,
                          int dcn, bool swapBlue, int uIdx)
@@ -1859,7 +1858,7 @@ void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src
     default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
     };
 
-    cvtPtr(dst_data, dst_step, dst_width, dst_height, src_step, y_data, uv_data);
+    cvtPtr(dst_data, dst_step, dst_width, dst_height, y_data, y_step, uv_data, uv_step);
 }
 
 typedef void (*cvt_3plane_yuv_ptr_t)(uchar * /* dst_data */,

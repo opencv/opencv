@@ -45,6 +45,9 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
 
+#include "opencv2/core/parallel/parallel_backend.hpp"
+#include "parallel/parallel.hpp"
+
 #if defined _WIN32 || defined WINCE
     #include <windows.h>
     #undef small
@@ -53,8 +56,9 @@
     #undef abs
 #endif
 
-#if defined __linux__ || defined __APPLE__ || defined __GLIBC__ \
-    || defined __HAIKU__ || defined __EMSCRIPTEN__ || defined __FreeBSD__
+#if defined __unix__ || defined __APPLE__ || defined __GLIBC__ \
+    || defined __HAIKU__ || defined __EMSCRIPTEN__ \
+    || defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__
     #include <unistd.h>
     #include <stdio.h>
     #include <sys/types.h>
@@ -68,7 +72,7 @@
     #endif
 #endif
 
-#if defined CV_CXX11
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
     #include <thread>
 #endif
 
@@ -100,7 +104,6 @@
     #endif
     #include "tbb/tbb.h"
     #include "tbb/task.h"
-    #include "tbb/tbb_stddef.h"
     #if TBB_INTERFACE_VERSION >= 8000
         #include "tbb/task_arena.h"
     #endif
@@ -125,6 +128,8 @@
     #include <ppltasks.h>
 #elif defined HAVE_CONCURRENCY
     #include <ppl.h>
+#elif defined HAVE_PTHREADS_PF
+    #include <pthread.h>
 #endif
 
 
@@ -144,13 +149,14 @@
 #  define CV_PARALLEL_FRAMEWORK "pthreads"
 #endif
 
-#ifdef CV_PARALLEL_FRAMEWORK
 #include <atomic>
-#endif
 
 #include "parallel_impl.hpp"
 
 #include "opencv2/core/detail/exception_ptr.hpp"  // CV__EXCEPTION_PTR = 1 if std::exception_ptr is available
+
+#include <opencv2/core/utils/fp_control_utils.hpp>
+#include <opencv2/core/utils/fp_control.private.hpp>
 
 using namespace cv;
 
@@ -158,9 +164,10 @@ namespace cv {
 
 ParallelLoopBody::~ParallelLoopBody() {}
 
+using namespace cv::parallel;
+
 namespace {
 
-#ifdef CV_PARALLEL_FRAMEWORK
 #ifdef ENABLE_INSTRUMENTATION
     static void SyncNodes(cv::instr::InstrNode *pNode)
     {
@@ -201,6 +208,9 @@ namespace {
 
             // propagate main thread state
             rng = cv::theRNG();
+#if OPENCV_SUPPORTS_FP_DENORMALS_HINT && OPENCV_IMPL_FP_HINTS
+            details::saveFPDenormalsState(fp_denormals_base_state);
+#endif
 
 #ifdef OPENCV_TRACE
             traceRootRegion = CV_TRACE_NS::details::getCurrentRegion();
@@ -267,7 +277,9 @@ namespace {
         void recordException(const cv::String& msg)
 #endif
         {
+#ifndef CV_THREAD_SANITIZER
             if (!hasException)
+#endif
             {
                 cv::AutoLock lock(cv::getInitializationMutex());
                 if (!hasException)
@@ -281,6 +293,11 @@ namespace {
                 }
             }
         }
+
+#if OPENCV_SUPPORTS_FP_DENORMALS_HINT && OPENCV_IMPL_FP_HINTS
+        details::FPDenormalsModeState fp_denormals_base_state;
+#endif
+
     private:
         ParallelLoopBodyWrapperContext(const ParallelLoopBodyWrapperContext&); // disabled
         ParallelLoopBodyWrapperContext& operator=(const ParallelLoopBodyWrapperContext&); // disabled
@@ -317,6 +334,9 @@ namespace {
 
             // propagate main thread state
             cv::theRNG() = ctx.rng;
+#if OPENCV_SUPPORTS_FP_DENORMALS_HINT && OPENCV_IMPL_FP_HINTS
+            FPDenormalsIgnoreHintScope fp_denormals_scope(ctx.fp_denormals_base_state);
+#endif
 
             cv::Range r;
             cv::Range wholeRange = ctx.wholeRange;
@@ -429,8 +449,6 @@ namespace {
     typedef ParallelLoopBodyWrapper ProxyLoopBody;
 #endif
 
-static int numThreads = -1;
-
 #if defined HAVE_TBB
     #if TBB_INTERFACE_VERSION >= 8000
         static tbb::task_arena tbbArena(tbb::task_arena::automatic);
@@ -445,7 +463,7 @@ static inline int _initMaxThreads()
     int maxThreads = omp_get_max_threads();
     if (!utils::getConfigurationParameterBool("OPENCV_FOR_OPENMP_DYNAMIC_DISABLE", false))
     {
-        omp_set_dynamic(maxThreads);
+        omp_set_dynamic(1);
     }
     return maxThreads;
 }
@@ -476,15 +494,11 @@ static SchedPtr pplScheduler;
 
 #endif
 
-#endif // CV_PARALLEL_FRAMEWORK
-
 } // namespace anon
 
 /* ================================   parallel_for_  ================================ */
 
-#ifdef CV_PARALLEL_FRAMEWORK
 static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes); // forward declaration
-#endif
 
 void parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
@@ -499,7 +513,6 @@ void parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, dou
     if (range.empty())
         return;
 
-#ifdef CV_PARALLEL_FRAMEWORK
     static std::atomic<bool> flagNestedParallelFor(false);
     bool isNotNestedRegion = !flagNestedParallelFor.load();
     if (isNotNestedRegion)
@@ -518,16 +531,23 @@ void parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, dou
         }
     }
     else // nested parallel_for_() calls are not parallelized
-#endif // CV_PARALLEL_FRAMEWORK
     {
         CV_UNUSED(nstripes);
         body(range);
     }
 }
 
-#ifdef CV_PARALLEL_FRAMEWORK
+static
+void parallel_for_cb(int start, int end, void* data)
+{
+    CV_DbgAssert(data);
+    const cv::ParallelLoopBody& body = *(const cv::ParallelLoopBody*)data;
+    body(Range(start, end));
+}
+
 static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
+    using namespace cv::parallel;
     if ((numThreads < 0 || numThreads > 1) && range.end - range.start > 1)
     {
         ParallelLoopBodyWrapperContext ctx(body, range, nstripes);
@@ -539,6 +559,16 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
             return;
         }
 
+        std::shared_ptr<ParallelForAPI>& api = getCurrentParallelForAPI();
+        if (api)
+        {
+            CV_CheckEQ(stripeRange.start, 0, "");
+            api->parallel_for(stripeRange.end, parallel_for_cb, (void*)&pbody);
+            ctx.finalize();  // propagate exceptions if exists
+            return;
+        }
+
+#ifdef CV_PARALLEL_FRAMEWORK
 #if defined HAVE_TBB
 
 #if TBB_INTERFACE_VERSION >= 8000
@@ -589,23 +619,24 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
 #endif
 
         ctx.finalize();  // propagate exceptions if exists
-    }
-    else
-    {
-        body(range);
-    }
-}
+        return;
 #endif // CV_PARALLEL_FRAMEWORK
+    }
+
+    body(range);
+}
 
 
 int getNumThreads(void)
 {
-#ifdef CV_PARALLEL_FRAMEWORK
+    std::shared_ptr<ParallelForAPI>& api = getCurrentParallelForAPI();
+    if (api)
+    {
+        return api->getNumThreads();
+    }
 
-    if(numThreads == 0)
+    if (numThreads == 0)
         return 1;
-
-#endif
 
 #if defined HAVE_TBB
 
@@ -681,10 +712,15 @@ unsigned defaultNumberOfThreads()
 void setNumThreads( int threads_ )
 {
     CV_UNUSED(threads_);
-#ifdef CV_PARALLEL_FRAMEWORK
+
     int threads = (threads_ < 0) ? defaultNumberOfThreads() : (unsigned)threads_;
     numThreads = threads;
-#endif
+
+    std::shared_ptr<ParallelForAPI>& api = getCurrentParallelForAPI();
+    if (api)
+    {
+        api->setNumThreads(numThreads);
+    }
 
 #ifdef HAVE_TBB
 
@@ -740,6 +776,12 @@ void setNumThreads( int threads_ )
 
 int getThreadNum()
 {
+    std::shared_ptr<ParallelForAPI>& api = getCurrentParallelForAPI();
+    if (api)
+    {
+        return api->getThreadNum();
+    }
+
 #if defined HAVE_TBB
     #if TBB_INTERFACE_VERSION >= 9100
         return tbb::this_task_arena::current_thread_index();
@@ -860,9 +902,11 @@ T minNonZero(const T& val_1, const T& val_2)
     return (val_1 != 0) ? val_1 : val_2;
 }
 
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 static
 int getNumberOfCPUs_()
 {
+#ifndef OPENCV_SEMIHOSTING
     /*
      * Logic here is to try different methods of getting CPU counts and return
      * the minimum most value as it has high probablity of being right and safe.
@@ -946,7 +990,7 @@ int getNumberOfCPUs_()
 
 #endif
 
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if !defined(_WIN32) && !defined(__APPLE__) && defined(_SC_NPROCESSORS_ONLN)
 
     static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
     ncpus = minNonZero(ncpus, cpu_count_sysconf);
@@ -954,6 +998,9 @@ int getNumberOfCPUs_()
 #endif
 
     return ncpus != 0 ? ncpus : 1;
+#else //  OPENCV_SEMIHOSTING
+    return 1;
+#endif //OPENCV_SEMIHOSTING
 }
 
 int getNumberOfCPUs()
@@ -962,7 +1009,20 @@ int getNumberOfCPUs()
     return nCPUs;  // cached value
 }
 
-const char* currentParallelFramework() {
+#else  // OPENCV_DISABLE_THREAD_SUPPORT
+int getNumberOfCPUs()
+{
+    return 1;
+}
+#endif  // OPENCV_DISABLE_THREAD_SUPPORT
+
+const char* currentParallelFramework()
+{
+    std::shared_ptr<ParallelForAPI>& api = getCurrentParallelForAPI();
+    if (api)
+    {
+        return api->getName();
+    }
 #ifdef CV_PARALLEL_FRAMEWORK
     return CV_PARALLEL_FRAMEWORK;
 #else

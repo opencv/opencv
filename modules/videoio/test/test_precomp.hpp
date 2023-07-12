@@ -5,19 +5,43 @@
 #define __OPENCV_TEST_PRECOMP_HPP__
 
 #include <sstream>
+#include <algorithm>
 
 #include "opencv2/ts.hpp"
+#include "opencv2/ts/ocl_test.hpp"
 #include "opencv2/videoio.hpp"
 #include "opencv2/videoio/registry.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
-
 #include "opencv2/core/private.hpp"
 
 namespace cv {
 
-inline std::ostream &operator<<(std::ostream &out, const VideoCaptureAPIs& api)
+static inline
+std::ostream& operator<<(std::ostream& out, const VideoCaptureAPIs& api)
 {
     out << cv::videoio_registry::getBackendName(api); return out;
+}
+
+static inline
+std::ostream& operator<<(std::ostream& out, const VideoAccelerationType& va_type)
+{
+    struct {
+        VideoAccelerationType va_type;
+        const char* str;
+    } va_types[] = {
+            {VIDEO_ACCELERATION_ANY,   "ANY"},
+            {VIDEO_ACCELERATION_NONE,  "NONE"},
+            {VIDEO_ACCELERATION_D3D11, "D3D11"},
+            {VIDEO_ACCELERATION_VAAPI, "VAAPI"},
+            {VIDEO_ACCELERATION_MFX,   "MFX"},
+    };
+    for (const auto& va : va_types) {
+        if (va_type == va.va_type) {
+            out << va.str;
+            return out;
+        }
+    }
+    out << cv::format("UNKNOWN(0x%ux)", static_cast<unsigned int>(va_type));
+    return out;
 }
 
 static inline void PrintTo(const cv::VideoCaptureAPIs& api, std::ostream* os)
@@ -31,6 +55,13 @@ static inline void PrintTo(const cv::VideoCaptureAPIs& api, std::ostream* os)
 inline std::string fourccToString(int fourcc)
 {
     return cv::format("%c%c%c%c", fourcc & 255, (fourcc >> 8) & 255, (fourcc >> 16) & 255, (fourcc >> 24) & 255);
+}
+
+inline std::string fourccToStringSafe(int fourcc)
+{
+    std::string res = fourccToString(fourcc);
+    std::replace_if(res.begin(), res.end(), [](uint8_t c){ return c < '0' || c > 'z'; }, '_');
+    return res;
 }
 
 inline int fourccFromString(const std::string &fourcc)

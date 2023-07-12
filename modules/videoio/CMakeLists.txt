@@ -1,13 +1,24 @@
+set(VIDEOIO_ENABLE_PLUGINS_DEFAULT ON)
+if(EMSCRIPTEN OR IOS OR WINRT)
+  set(VIDEOIO_ENABLE_PLUGINS_DEFAULT OFF)
+endif()
+
 set(VIDEOIO_PLUGIN_LIST "" CACHE STRING "List of videoio backends to be compiled as plugins (ffmpeg, gstreamer, mfx, msmf or special value 'all')")
-set(VIDEOIO_ENABLE_PLUGINS "ON" CACHE BOOL "Allow building videoio plugin support")
-set(VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK "ON" CACHE BOOL "Make sure OpenCV version is the same in plugin and host code")
-mark_as_advanced(VIDEOIO_PLUGIN_LIST VIDEOIO_ENABLE_PLUGINS VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK)
+set(VIDEOIO_ENABLE_PLUGINS "${VIDEOIO_ENABLE_PLUGINS_DEFAULT}" CACHE BOOL "Allow building and using of videoio plugins")
+mark_as_advanced(VIDEOIO_PLUGIN_LIST VIDEOIO_ENABLE_PLUGINS)
 
 string(REPLACE "," ";" VIDEOIO_PLUGIN_LIST "${VIDEOIO_PLUGIN_LIST}")  # support comma-separated list (,) too
-
-# Make virtual opencv_videoio_plugins target
-if(NOT TARGET opencv_videoio_plugins)
-  add_custom_target(opencv_videoio_plugins ALL)
+string(TOLOWER "${VIDEOIO_PLUGIN_LIST}" VIDEOIO_PLUGIN_LIST)
+if(NOT VIDEOIO_ENABLE_PLUGINS)
+  if(VIDEOIO_PLUGIN_LIST)
+    message(WARNING "VideoIO: plugins are disabled through VIDEOIO_ENABLE_PLUGINS, so VIDEOIO_PLUGIN_LIST='${VIDEOIO_PLUGIN_LIST}' is ignored")
+    set(VIDEOIO_PLUGIN_LIST "")
+  endif()
+else()
+  # Make virtual opencv_videoio_plugins target
+  if(NOT TARGET opencv_videoio_plugins)
+    add_custom_target(opencv_videoio_plugins ALL)
+  endif()
 endif()
 
 ocv_add_module(videoio opencv_imgproc opencv_imgcodecs WRAP java objc python)
@@ -70,7 +81,7 @@ endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
 
-set(tgts)
+set(tgts "PRIVATE")
 
 if(TARGET ocv.3rdparty.mediasdk)
   if("mfx" IN_LIST VIDEOIO_PLUGIN_LIST OR VIDEOIO_PLUGIN_LIST STREQUAL "all")
@@ -138,15 +149,40 @@ if(TARGET ocv.3rdparty.ximea)
   list(APPEND tgts ocv.3rdparty.ximea)
 endif()
 
+if(TARGET ocv.3rdparty.ueye)
+  if("ueye" IN_LIST VIDEOIO_PLUGIN_LIST OR VIDEOIO_PLUGIN_LIST STREQUAL "all")
+    ocv_create_builtin_videoio_plugin("opencv_videoio_ueye" ocv.3rdparty.ueye "cap_ueye.cpp")
+  else()
+    list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ueye.cpp)
+    list(APPEND tgts ocv.3rdparty.ueye)
+  endif()
+endif()
+
 if(TARGET ocv.3rdparty.ffmpeg)
   if(HAVE_FFMPEG_WRAPPER)
     list(APPEND tgts ocv.3rdparty.ffmpeg)
   elseif("ffmpeg" IN_LIST VIDEOIO_PLUGIN_LIST OR VIDEOIO_PLUGIN_LIST STREQUAL "all")
     ocv_create_builtin_videoio_plugin("opencv_videoio_ffmpeg" ocv.3rdparty.ffmpeg "cap_ffmpeg.cpp")
+    if(TARGET ocv.3rdparty.ffmpeg.plugin_deps)
+      ocv_target_link_libraries(opencv_videoio_ffmpeg ocv.3rdparty.ffmpeg.plugin_deps)
+    endif()
+    if(TARGET ocv.3rdparty.mediasdk
+        AND NOT OPENCV_FFMPEG_DISABLE_MEDIASDK
+    )
+      ocv_target_link_libraries(opencv_videoio_ffmpeg ocv.3rdparty.mediasdk)
+    endif()
   else()
     list(APPEND videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg_impl.hpp)
     list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_ffmpeg.cpp)
     list(APPEND tgts ocv.3rdparty.ffmpeg)
+    if(TARGET ocv.3rdparty.ffmpeg.builtin_deps)
+      list(APPEND tgts ocv.3rdparty.ffmpeg.builtin_deps)
+    endif()
+    if(TARGET ocv.3rdparty.mediasdk
+        AND NOT OPENCV_FFMPEG_DISABLE_MEDIASDK
+    )
+      list(APPEND tgts ocv.3rdparty.mediasdk)
+    endif()
   endif()
 endif()
 
@@ -193,6 +229,42 @@ if(TARGET ocv.3rdparty.android_mediandk)
   list(APPEND tgts ocv.3rdparty.android_mediandk)
 endif()
 
+if(TARGET ocv.3rdparty.android_native_camera)
+  list(APPEND videoio_srcs
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_android_camera.cpp)
+  list(APPEND tgts ocv.3rdparty.android_native_camera)
+endif()
+
+if(TARGET ocv.3rdparty.obsensor)
+  list(APPEND videoio_srcs
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor_capture.cpp)
+  list(APPEND videoio_hdrs
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor_capture.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_stream_channel_interface.hpp)
+  if(HAVE_OBSENSOR_MSMF)
+    list(APPEND videoio_srcs
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_uvc_stream_channel.cpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_stream_channel_msmf.cpp)
+    list(APPEND videoio_hdrs
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_uvc_stream_channel.hpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_stream_channel_msmf.hpp)
+  elseif(HAVE_OBSENSOR_V4L2)
+    list(APPEND videoio_srcs
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_uvc_stream_channel.cpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_stream_channel_v4l2.cpp)
+    list(APPEND videoio_hdrs
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_uvc_stream_channel.hpp
+      ${CMAKE_CURRENT_LIST_DIR}/src/cap_obsensor/obsensor_stream_channel_v4l2.hpp)
+  endif()
+  list(APPEND tgts ocv.3rdparty.obsensor)
+endif()
+
+if(tgts STREQUAL "PRIVATE")
+  set(tgts "")
+endif()
+
+ocv_install_used_external_targets(${tgts})
+
 ocv_set_module_sources(HEADERS ${videoio_ext_hdrs} ${videoio_hdrs} SOURCES ${videoio_srcs})
 ocv_module_include_directories()
 ocv_create_module()
@@ -201,10 +273,6 @@ ocv_add_perf_tests(${tgts})
 
 if(VIDEOIO_ENABLE_PLUGINS)
   ocv_target_compile_definitions(${the_module} PRIVATE ENABLE_PLUGINS)
-endif()
-
-if(VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK)
-  ocv_target_compile_definitions(${the_module} PRIVATE STRICT_PLUGIN_CHECK)
 endif()
 
 ocv_target_link_libraries(${the_module} LINK_PRIVATE ${tgts})

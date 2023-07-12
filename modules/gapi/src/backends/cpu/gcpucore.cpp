@@ -462,30 +462,6 @@ GAPI_OCV_KERNEL(GCPUMerge4, cv::gapi::core::GMerge4)
     }
 };
 
-GAPI_OCV_KERNEL(GCPUResize, cv::gapi::core::GResize)
-{
-    static void run(const cv::Mat& in, cv::Size sz, double fx, double fy, int interp, cv::Mat &out)
-    {
-        cv::resize(in, out, sz, fx, fy, interp);
-    }
-};
-
-GAPI_OCV_KERNEL(GCPUResizeP, cv::gapi::core::GResizeP)
-{
-    static void run(const cv::Mat& in, cv::Size out_sz, int interp, cv::Mat& out)
-    {
-        int inH = in.rows / 3;
-        int inW = in.cols;
-        int outH = out.rows / 3;
-        int outW = out.cols;
-        for (int i = 0; i < 3; i++) {
-            auto in_plane = in(cv::Rect(0, i*inH, inW, inH));
-            auto out_plane = out(cv::Rect(0, i*outH, outW, outH));
-            cv::resize(in_plane, out_plane, out_sz, 0, 0, interp);
-        }
-    }
-};
-
 GAPI_OCV_KERNEL(GCPURemap, cv::gapi::core::GRemap)
 {
     static void run(const cv::Mat& in, const cv::Mat& x, const cv::Mat& y, int a, int b, cv::Scalar s, cv::Mat& out)
@@ -507,14 +483,6 @@ GAPI_OCV_KERNEL(GCPUCrop, cv::gapi::core::GCrop)
     static void run(const cv::Mat& in, cv::Rect rect, cv::Mat& out)
     {
         cv::Mat(in, rect).copyTo(out);
-    }
-};
-
-GAPI_OCV_KERNEL(GCPUCopy, cv::gapi::core::GCopy)
-{
-    static void run(const cv::Mat& in, cv::Mat& out)
-    {
-        in.copyTo(out);
     }
 };
 
@@ -585,6 +553,72 @@ GAPI_OCV_KERNEL(GCPUWarpAffine, cv::gapi::core::GWarpAffine)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUKMeansND, cv::gapi::core::GKMeansND)
+{
+    static void run(const cv::Mat& data, const int K, const cv::Mat& inBestLabels,
+                    const cv::TermCriteria& criteria, const int attempts,
+                    const cv::KmeansFlags flags,
+                    double& compactness, cv::Mat& outBestLabels, cv::Mat& centers)
+    {
+        if (flags & cv::KMEANS_USE_INITIAL_LABELS)
+        {
+            inBestLabels.copyTo(outBestLabels);
+        }
+        compactness = cv::kmeans(data, K, outBestLabels, criteria, attempts, flags, centers);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUKMeansNDNoInit, cv::gapi::core::GKMeansNDNoInit)
+{
+    static void run(const cv::Mat& data, const int K, const cv::TermCriteria& criteria,
+                    const int attempts, const cv::KmeansFlags flags,
+                    double& compactness, cv::Mat& outBestLabels, cv::Mat& centers)
+    {
+        compactness = cv::kmeans(data, K, outBestLabels, criteria, attempts, flags, centers);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUKMeans2D, cv::gapi::core::GKMeans2D)
+{
+    static void run(const std::vector<cv::Point2f>& data, const int K,
+                    const std::vector<int>& inBestLabels, const cv::TermCriteria& criteria,
+                    const int attempts, const cv::KmeansFlags flags,
+                    double& compactness, std::vector<int>& outBestLabels,
+                    std::vector<cv::Point2f>& centers)
+    {
+        if (flags & cv::KMEANS_USE_INITIAL_LABELS)
+        {
+            outBestLabels = inBestLabels;
+        }
+        compactness = cv::kmeans(data, K, outBestLabels, criteria, attempts, flags, centers);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUKMeans3D, cv::gapi::core::GKMeans3D)
+{
+    static void run(const std::vector<cv::Point3f>& data, const int K,
+                    const std::vector<int>& inBestLabels, const cv::TermCriteria& criteria,
+                    const int attempts, const cv::KmeansFlags flags,
+                    double& compactness, std::vector<int>& outBestLabels,
+                    std::vector<cv::Point3f>& centers)
+    {
+        if (flags & cv::KMEANS_USE_INITIAL_LABELS)
+        {
+            outBestLabels = inBestLabels;
+        }
+        compactness = cv::kmeans(data, K, outBestLabels, criteria, attempts, flags, centers);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUTranspose, cv::gapi::core::GTranspose)
+{
+    static void run(const cv::Mat& in, cv::Mat& out)
+    {
+        cv::transpose(in, out);
+    }
+};
+
+
 GAPI_OCV_KERNEL(GCPUParseSSDBL, cv::gapi::nn::parsers::GParseSSDBL)
 {
     static void run(const cv::Mat&  in_ssd_result,
@@ -594,7 +628,12 @@ GAPI_OCV_KERNEL(GCPUParseSSDBL, cv::gapi::nn::parsers::GParseSSDBL)
                     std::vector<cv::Rect>& out_boxes,
                     std::vector<int>&      out_labels)
     {
-        cv::parseSSDBL(in_ssd_result, in_size, confidence_threshold, filter_label, out_boxes, out_labels);
+        cv::ParseSSD(in_ssd_result, in_size,
+                     confidence_threshold,
+                     filter_label,
+                     false,
+                     false,
+                     out_boxes, out_labels);
     }
 };
 
@@ -607,7 +646,13 @@ GAPI_OCV_KERNEL(GOCVParseSSD, cv::gapi::nn::parsers::GParseSSD)
                     const bool      filter_out_of_bounds,
                     std::vector<cv::Rect>& out_boxes)
     {
-        cv::parseSSD(in_ssd_result, in_size, confidence_threshold, alignment_to_square, filter_out_of_bounds, out_boxes);
+        std::vector<int> unused_labels;
+        cv::ParseSSD(in_ssd_result, in_size,
+                     confidence_threshold,
+                     -1,
+                     alignment_to_square,
+                     filter_out_of_bounds,
+                     out_boxes, unused_labels);
     }
 };
 
@@ -625,7 +670,7 @@ GAPI_OCV_KERNEL(GCPUParseYolo, cv::gapi::nn::parsers::GParseYolo)
     }
 };
 
-GAPI_OCV_KERNEL(GCPUSize, cv::gapi::core::GSize)
+GAPI_OCV_KERNEL(GCPUSize, cv::gapi::streaming::GSize)
 {
     static void run(const cv::Mat& in, cv::Size& out)
     {
@@ -634,7 +679,7 @@ GAPI_OCV_KERNEL(GCPUSize, cv::gapi::core::GSize)
     }
 };
 
-GAPI_OCV_KERNEL(GCPUSizeR, cv::gapi::core::GSizeR)
+GAPI_OCV_KERNEL(GCPUSizeR, cv::gapi::streaming::GSizeR)
 {
     static void run(const cv::Rect& in, cv::Size& out)
     {
@@ -643,7 +688,15 @@ GAPI_OCV_KERNEL(GCPUSizeR, cv::gapi::core::GSizeR)
     }
 };
 
-cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
+GAPI_OCV_KERNEL(GCPUSizeMF, cv::gapi::streaming::GSizeMF)
+{
+    static void run(const cv::MediaFrame& in, cv::Size& out)
+    {
+        out = in.desc().size;
+    }
+};
+
+cv::GKernelPackage cv::gapi::core::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
         <  GCPUAdd
@@ -698,14 +751,11 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUInRange
          , GCPUSplit3
          , GCPUSplit4
-         , GCPUResize
-         , GCPUResizeP
          , GCPUMerge3
          , GCPUMerge4
          , GCPURemap
          , GCPUFlip
          , GCPUCrop
-         , GCPUCopy
          , GCPUConcatHor
          , GCPUConcatVert
          , GCPULUT
@@ -714,11 +764,17 @@ cv::gapi::GKernelPackage cv::gapi::core::cpu::kernels()
          , GCPUNormalize
          , GCPUWarpPerspective
          , GCPUWarpAffine
+         , GCPUKMeansND
+         , GCPUKMeansNDNoInit
+         , GCPUKMeans2D
+         , GCPUKMeans3D
+         , GCPUTranspose
          , GCPUParseSSDBL
          , GOCVParseSSD
          , GCPUParseYolo
          , GCPUSize
          , GCPUSizeR
-         >();
+         , GCPUSizeMF
+        >();
     return pkg;
 }

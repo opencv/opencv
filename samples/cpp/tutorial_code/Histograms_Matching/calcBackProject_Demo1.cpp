@@ -26,8 +26,9 @@ void Hist_and_Backproj(int, void* );
 int main( int argc, char* argv[] )
 {
     //! [Read the image]
-    CommandLineParser parser( argc, argv, "{@input |  | input image}" );
-    Mat src = imread( parser.get<String>( "@input" ) );
+    CommandLineParser parser( argc, argv, "{@input |Back_Projection_Theory0.jpg| input image}" );
+    samples::addSamplesDataSearchSubDirectory("doc/tutorials/imgproc/histograms/back_projection/images");
+    Mat src = imread(samples::findFile(parser.get<String>( "@input" )) );
     if( src.empty() )
     {
         cout << "Could not open or find the image!\n" << endl;
@@ -72,18 +73,18 @@ void Hist_and_Backproj(int, void* )
     //! [initialize]
     int histSize = MAX( bins, 2 );
     float hue_range[] = { 0, 180 };
-    const float* ranges = { hue_range };
+    const float* ranges[] = { hue_range };
     //! [initialize]
 
     //! [Get the Histogram and normalize it]
     Mat hist;
-    calcHist( &hue, 1, 0, Mat(), hist, 1, &histSize, &ranges, true, false );
+    calcHist( &hue, 1, 0, Mat(), hist, 1, &histSize, ranges, true, false );
     normalize( hist, hist, 0, 255, NORM_MINMAX, -1, Mat() );
     //! [Get the Histogram and normalize it]
 
     //! [Get Backprojection]
     Mat backproj;
-    calcBackProject( &hue, 1, 0, hist, backproj, &ranges, 1, true );
+    calcBackProject( &hue, 1, 0, hist, backproj, ranges, 1, true );
     //! [Get Backprojection]
 
     //! [Draw the backproj]

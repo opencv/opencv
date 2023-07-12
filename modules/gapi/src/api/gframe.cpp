@@ -8,21 +8,17 @@
 #include "precomp.hpp"
 
 #include <opencv2/gapi/gframe.hpp>
+#include <opencv2/gapi/media.hpp>
 
 #include "api/gorigin.hpp"
 
 // cv::GFrame public implementation //////////////////////////////////////////////
 cv::GFrame::GFrame()
-    : m_priv(new GOrigin(GShape::GMAT, GNode::Param())) {
-    // N.B.: The shape here is still GMAT as currently cv::Mat is used
-    // as an underlying host type. Will be changed to GFRAME once
-    // GExecutor & GStreamingExecutor & selected backends will be extended
-    // to support cv::MediaFrame.
+    : m_priv(new GOrigin(GShape::GFRAME, GNode::Param())) {
 }
 
 cv::GFrame::GFrame(const GNode &n, std::size_t out)
-    : m_priv(new GOrigin(GShape::GMAT, n, out)) {
-    // N.B.: GMAT is here for the same reason as above ^
+    : m_priv(new GOrigin(GShape::GFRAME, n, out)) {
 }
 
 cv::GOrigin& cv::GFrame::priv() {
@@ -34,7 +30,24 @@ const cv::GOrigin& cv::GFrame::priv() const {
 }
 
 namespace cv {
-std::ostream& operator<<(std::ostream& os, const cv::GFrameDesc &) {
+
+bool GFrameDesc::operator== (const GFrameDesc &rhs) const {
+    return fmt == rhs.fmt && size == rhs.size;
+}
+
+GFrameDesc descr_of(const cv::MediaFrame &frame) {
+    return frame.desc();
+}
+
+std::ostream& operator<<(std::ostream& os, const cv::GFrameDesc &d) {
+    os << '[';
+    switch (d.fmt) {
+    case MediaFormat::BGR:  os << "BGR"; break;
+    case MediaFormat::NV12: os << "NV12"; break;
+    case MediaFormat::GRAY: os << "GRAY"; break;
+    default: GAPI_Error("Invalid media format");
+    }
+    os << ' ' << d.size << ']';
     return os;
 }
 

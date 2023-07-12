@@ -102,7 +102,6 @@ void CV_ImgWarpBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     int cn = cvtest::randInt(rng) % 3 + 1;
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     depth = depth == 0 ? CV_8U : depth == 1 ? CV_16U : CV_32F;
-    cn += cn == 2;
 
     types[INPUT][0] = types[INPUT_OUTPUT][0] = types[REF_INPUT_OUTPUT][0] = CV_MAKETYPE(depth, cn);
     if( test_array[INPUT].size() > 1 )
@@ -169,7 +168,7 @@ int CV_ImgWarpBaseTest::prepare_test_case( int test_case_idx )
             }
             break;
         default:
-            assert(0);
+            CV_Assert(0);
         }
 
         /*switch( depth )
@@ -187,7 +186,7 @@ int CV_ImgWarpBaseTest::prepare_test_case( int test_case_idx )
                 ((float*)ptr)[j] = (float)buffer[j];
             break;
         default:
-            assert(0);
+            CV_Assert(0);
         }*/
         cv::Mat src(1, cols*cn, CV_32F, &buffer[0]);
         cv::Mat dst(1, cols*cn, depth, ptr);
@@ -482,7 +481,7 @@ static void test_remap( const Mat& src, Mat& dst, const Mat& mapx, const Mat& ma
                 }
                 break;
             default:
-                assert(0);
+                CV_Assert(0);
             }
         }
     }
@@ -1473,6 +1472,26 @@ TEST(Imgproc_Warp, multichannel)
     }
 }
 
+
+TEST(Imgproc_Warp, regression_19566)  // valgrind should detect problem if any
+{
+    const Size imgSize(8192, 8);
+
+    Mat inMat = Mat::zeros(imgSize, CV_8UC4);
+    Mat outMat = Mat::zeros(imgSize, CV_8UC4);
+
+    warpAffine(
+        inMat,
+        outMat,
+        getRotationMatrix2D(Point2f(imgSize.width / 2.0f, imgSize.height / 2.0f), 45.0, 1.0),
+        imgSize,
+        INTER_LINEAR,
+        cv::BORDER_CONSTANT,
+        cv::Scalar(0.0, 0.0, 0.0, 255.0)
+    );
+}
+
+
 TEST(Imgproc_GetAffineTransform, singularity)
 {
     Point2f A_sample[3];
@@ -1637,6 +1656,44 @@ TEST(Imgproc_warpPolar, identity)
     imshow("input", in); imshow("result", dst); imshow("restore", src); imshow("all", all);
     cv::waitKey();
 #endif
+}
+
+TEST(Imgproc_Remap, issue_23562)
+{
+    cv::RNG rng(17);
+    Mat_<float> mapx({3, 3}, {0, 1, 2, 0, 1, 2, 0, 1, 2});
+    Mat_<float> mapy({3, 3}, {0, 0, 0, 1, 1, 1, 2, 2, 2});
+    for (int cn = 1; cn <= 4; ++cn) {
+        Mat src(3, 3, CV_32FC(cn));
+        rng.fill(src, cv::RNG::UNIFORM, -1, 1);
+        Mat dst = Mat::zeros(3, 3, CV_32FC(cn));
+        Mat ref = src.clone();
+
+        remap(src, dst, mapx, mapy, INTER_LINEAR, BORDER_TRANSPARENT);
+        ASSERT_EQ(0.0, cvtest::norm(ref, dst, NORM_INF)) << "channels=" << cn;
+    }
+
+    mapx = Mat1f({3, 3}, {0, 1, 2, 0, 1, 2, 0, 1, 2});
+    mapy = Mat1f({3, 3}, {0, 0, 0, 1, 1, 1, 2, 2, 1.5});
+    for (int cn = 1; cn <= 4; ++cn) {
+        Mat src = cv::Mat(3, 3, CV_32FC(cn));
+        Mat dst = 10 * Mat::ones(3, 3, CV_32FC(cn));
+        for(int y = 0; y < 3; ++y) {
+            for(int x = 0; x < 3; ++x) {
+                for(int k = 0; k < cn; ++k) {
+                    src.ptr<float>(y,x)[k] = 10.f * y + x;
+                }
+            }
+        }
+
+        Mat ref = src.clone();
+        for(int k = 0; k < cn; ++k) {
+            ref.ptr<float>(2,2)[k] = (src.ptr<float>(1, 2)[k] + src.ptr<float>(2, 2)[k]) / 2.f;
+        }
+
+        remap(src, dst, mapx, mapy, INTER_LINEAR, BORDER_TRANSPARENT);
+        ASSERT_EQ(0.0, cvtest::norm(ref, dst, NORM_INF)) << "channels=" << cn;
+    }
 }
 
 }} // namespace

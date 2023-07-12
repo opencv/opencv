@@ -5,7 +5,7 @@
  * Copyright (C) 1994-1996, Thomas G. Lane.
  * Modified 2009-2011 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2013, 2016, D. R. Commander.
+ * Copyright (C) 2013, 2016, 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -104,7 +104,7 @@ fill_input_buffer(j_decompress_ptr cinfo)
   my_src_ptr src = (my_src_ptr)cinfo->src;
   size_t nbytes;
 
-  nbytes = JFREAD(src->infile, src->buffer, INPUT_BUF_SIZE);
+  nbytes = fread(src->buffer, 1, INPUT_BUF_SIZE, src->infile);
 
   if (nbytes <= 0) {
     if (src->start_of_file)     /* Treat empty input file as fatal error */

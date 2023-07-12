@@ -207,60 +207,57 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
                                           DC1394_ISO_SPEED_3200);
     }
 
-    // should a specific mode be used
-    if (userMode >= 0)
+    dc1394video_modes_t videoModes;
+    dc1394_video_get_supported_modes(dcCam, &videoModes);
 
+    // should a specific mode be used
+    while (userMode >= 0)  // 'if' semantic, no real loop here
     {
         dc1394video_mode_t wantedMode;
-        dc1394video_modes_t videoModes;
-        dc1394_video_get_supported_modes(dcCam, &videoModes);
-
-        //set mode from number, for example the second supported mode, i.e userMode = 1
 
         if (userMode < (int)videoModes.num)
         {
+            // set mode from number, for example the second supported mode, i.e userMode = 1
             wantedMode = videoModes.modes[userMode];
         }
-
-        //set modes directly from DC134 constants (from dc1394video_mode_t)
-        else if ((userMode >= DC1394_VIDEO_MODE_MIN) && (userMode <= DC1394_VIDEO_MODE_MAX ))
+        else if ((userMode >= DC1394_VIDEO_MODE_MIN) && (userMode <= DC1394_VIDEO_MODE_MAX))
         {
+            // set modes directly from DC134 constants (from dc1394video_mode_t)
+
             //search for wanted mode, to check if camera supports it
             int j = 0;
-            while ((j< (int)videoModes.num) && videoModes.modes[j]!=userMode)
+            while ((j < (int)videoModes.num) && videoModes.modes[j] != userMode)
             {
                 j++;
             }
-
-            if ((int)videoModes.modes[j]==userMode)
-            {
-                wantedMode = videoModes.modes[j];
-            }
-            else
+            if (!(j < (int)videoModes.num))
             {
                 userMode = -1;  // wanted mode not supported, search for best mode
+                break;
             }
+
+            wantedMode = videoModes.modes[j];
         }
         else
         {
-            userMode = -1;      // wanted mode not supported, search for best mode
+            userMode = -1;  // wanted mode not supported, search for best mode
+            break;
         }
+
         //if userMode is available: set it and update size
-        if (userMode != -1)
         {
             code = dc1394_video_set_mode(dcCam, wantedMode);
-            uint32_t width, height;
+            uint32_t width = 0, height = 0;
             dc1394_get_image_size_from_video_mode(dcCam, wantedMode, &width, &height);
             frameWidth  = (int)width;
             frameHeight = (int)height;
         }
+        break;
     }
 
     if (userMode == -1 && (frameWidth > 0 || frameHeight > 0))
     {
-        dc1394video_mode_t bestMode = (dc1394video_mode_t) - 1;
-        dc1394video_modes_t videoModes;
-        dc1394_video_get_supported_modes(dcCam, &videoModes);
+        dc1394video_mode_t bestMode = (dc1394video_mode_t)(-1);
         for (i = 0; i < (int)videoModes.num; i++)
         {
             dc1394video_mode_t mode = videoModes.modes[i];

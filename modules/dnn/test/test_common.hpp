@@ -18,8 +18,10 @@
 #define INF_ENGINE_VER_MAJOR_LE(ver) (((INF_ENGINE_RELEASE) / 10000) <= ((ver) / 10000))
 #define INF_ENGINE_VER_MAJOR_EQ(ver) (((INF_ENGINE_RELEASE) / 10000) == ((ver) / 10000))
 
-
+#define CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND      "dnn_skip_opencv_backend"
 #define CV_TEST_TAG_DNN_SKIP_HALIDE              "dnn_skip_halide"
+#define CV_TEST_TAG_DNN_SKIP_CPU                 "dnn_skip_cpu"
+#define CV_TEST_TAG_DNN_SKIP_CPU_FP16            "dnn_skip_cpu_fp16"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL              "dnn_skip_ocl"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL_FP16         "dnn_skip_ocl_fp16"
 #define CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER       "dnn_skip_ie_nn_builder"
@@ -30,11 +32,13 @@
 #define CV_TEST_TAG_DNN_SKIP_IE_2019R1_1         "dnn_skip_ie_2019r1_1"
 #define CV_TEST_TAG_DNN_SKIP_IE_2019R2           "dnn_skip_ie_2019r2"
 #define CV_TEST_TAG_DNN_SKIP_IE_2019R3           "dnn_skip_ie_2019r3"
+#define CV_TEST_TAG_DNN_SKIP_IE_CPU              "dnn_skip_ie_cpu"
 #define CV_TEST_TAG_DNN_SKIP_IE_OPENCL           "dnn_skip_ie_ocl"
 #define CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16      "dnn_skip_ie_ocl_fp16"
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2         "dnn_skip_ie_myriad2"
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X         "dnn_skip_ie_myriadx"
 #define CV_TEST_TAG_DNN_SKIP_IE_MYRIAD           CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_2, CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X
+#define CV_TEST_TAG_DNN_SKIP_IE_ARM_CPU          "dnn_skip_ie_arm_cpu"
 
 #define CV_TEST_TAG_DNN_SKIP_VULKAN              "dnn_skip_vulkan"
 
@@ -42,6 +46,12 @@
 #define CV_TEST_TAG_DNN_SKIP_CUDA_FP16           "dnn_skip_cuda_fp16"
 #define CV_TEST_TAG_DNN_SKIP_CUDA_FP32           "dnn_skip_cuda_fp32"
 
+#define CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE    "dnn_skip_onnx_conformance"
+#define CV_TEST_TAG_DNN_SKIP_PARSER              "dnn_skip_parser"
+#define CV_TEST_TAG_DNN_SKIP_GLOBAL              "dnn_skip_global"
+
+#define CV_TEST_TAG_DNN_SKIP_TIMVX               "dnn_skip_timvx"
+#define CV_TEST_TAG_DNN_SKIP_CANN                "dnn_skip_cann"
 
 #ifdef HAVE_INF_ENGINE
 #if INF_ENGINE_VER_MAJOR_EQ(2018050000)
@@ -113,11 +123,17 @@ void normAssertDetections(
         double confThreshold = 0.0, double scores_diff = 1e-5,
         double boxes_iou_diff = 1e-4);
 
+// For text detection networks
+// Curved text polygon is not supported in the current version.
+// (concave polygon is invalid input to intersectConvexConvex)
+void normAssertTextDetections(
+        const std::vector<std::vector<Point>>& gtPolys,
+        const std::vector<std::vector<Point>>& testPolys,
+        const char *comment = "", double boxes_iou_diff = 1e-4);
+
 void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content);
 
-#ifdef HAVE_INF_ENGINE
 bool validateVPUType();
-#endif
 
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargets(
         bool withInferenceEngine = true,
@@ -125,7 +141,9 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withCpuOCV = true,
         bool withVkCom = true,
         bool withCUDA = true,
-        bool withNgraph = true
+        bool withNgraph = true,
+        bool withWebnn = true,
+        bool withCann = true
 );
 
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargetsIE();
@@ -147,7 +165,7 @@ public:
 
     static void getDefaultThresholds(int backend, int target, double* l1, double* lInf)
     {
-        if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+        if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
         {
             *l1 = 4e-3;
             *lInf = 2e-2;
@@ -161,16 +179,19 @@ public:
 
     static void checkBackend(int backend, int target, Mat* inp = 0, Mat* ref = 0)
     {
+        CV_UNUSED(backend); CV_UNUSED(target); CV_UNUSED(inp); CV_UNUSED(ref);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021000000)
         if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             && target == DNN_TARGET_MYRIAD)
         {
             if (inp && ref && inp->dims == 4 && ref->dims == 4 &&
                 inp->size[0] != 1 && inp->size[0] != ref->size[0])
             {
+                std::cout << "Inconsistent batch size of input and output blobs for Myriad plugin" << std::endl;
                 applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
-                throw SkipTestException("Inconsistent batch size of input and output blobs for Myriad plugin");
             }
         }
+#endif
     }
 
     void expectNoFallbacks(Net& net, bool raiseError = true)

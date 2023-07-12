@@ -28,6 +28,30 @@ namespace {
     }
 }
 
+GAPI_OCV_KERNEL(GCPUResize, cv::gapi::imgproc::GResize)
+{
+    static void run(const cv::Mat& in, cv::Size sz, double fx, double fy, int interp, cv::Mat &out)
+    {
+        cv::resize(in, out, sz, fx, fy, interp);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUResizeP, cv::gapi::imgproc::GResizeP)
+{
+    static void run(const cv::Mat& in, cv::Size out_sz, int interp, cv::Mat& out)
+    {
+        int inH = in.rows / 3;
+        int inW = in.cols;
+        int outH = out.rows / 3;
+        int outW = out.cols;
+        for (int i = 0; i < 3; i++) {
+            auto in_plane = in(cv::Rect(0, i*inH, inW, inH));
+            auto out_plane = out(cv::Rect(0, i*outH, outW, outH));
+            cv::resize(in_plane, out_plane, out_sz, 0, 0, interp);
+        }
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUSepFilter, cv::gapi::imgproc::GSepFilter)
 {
     static void run(const cv::Mat& in, int ddepth, const cv::Mat& kernX, const cv::Mat& kernY, const cv::Point& anchor, const cv::Scalar& delta,
@@ -145,6 +169,16 @@ GAPI_OCV_KERNEL(GCPUDilate, cv::gapi::imgproc::GDilate)
     }
 };
 
+GAPI_OCV_KERNEL(GCPUMorphologyEx, cv::gapi::imgproc::GMorphologyEx)
+{
+    static void run(const cv::Mat &in, const cv::MorphTypes op, const cv::Mat &kernel,
+                    const cv::Point &anchor, const int iterations,
+                    const cv::BorderTypes borderType, const cv::Scalar &borderValue, cv::Mat &out)
+    {
+        cv::morphologyEx(in, out, op, kernel, anchor, iterations, borderType, borderValue);
+    }
+};
+
 GAPI_OCV_KERNEL(GCPUSobel, cv::gapi::imgproc::GSobel)
 {
     static void run(const cv::Mat& in, int ddepth, int dx, int dy, int ksize, double scale, double delta, int borderType,
@@ -208,6 +242,182 @@ GAPI_OCV_KERNEL(GCPUGoodFeatures, cv::gapi::imgproc::GGoodFeatures)
     {
         cv::goodFeaturesToTrack(image, out, maxCorners, qualityLevel, minDistance,
                                 mask, blockSize, useHarrisDetector, k);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFindContours, cv::gapi::imgproc::GFindContours)
+{
+    static void run(const cv::Mat& image, const cv::RetrievalModes mode,
+                    const cv::ContourApproximationModes method, const cv::Point& offset,
+                    std::vector<std::vector<cv::Point>> &outConts)
+    {
+        cv::findContours(image, outConts, mode, method, offset);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFindContoursNoOffset, cv::gapi::imgproc::GFindContoursNoOffset)
+{
+    static void run(const cv::Mat& image, const cv::RetrievalModes mode,
+                    const cv::ContourApproximationModes method,
+                    std::vector<std::vector<cv::Point>> &outConts)
+    {
+        cv::findContours(image, outConts, mode, method);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFindContoursH, cv::gapi::imgproc::GFindContoursH)
+{
+    static void run(const cv::Mat& image, const cv::RetrievalModes mode,
+                    const cv::ContourApproximationModes method, const cv::Point& offset,
+                    std::vector<std::vector<cv::Point>> &outConts, std::vector<cv::Vec4i> &outHier)
+    {
+        cv::findContours(image, outConts, outHier, mode, method, offset);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFindContoursHNoOffset, cv::gapi::imgproc::GFindContoursHNoOffset)
+{
+    static void run(const cv::Mat& image, const cv::RetrievalModes mode,
+                    const cv::ContourApproximationModes method,
+                    std::vector<std::vector<cv::Point>> &outConts, std::vector<cv::Vec4i> &outHier)
+    {
+        cv::findContours(image, outConts, outHier, mode, method);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUBoundingRectMat, cv::gapi::imgproc::GBoundingRectMat)
+{
+    static void run(const cv::Mat& in, cv::Rect& out)
+    {
+        out = cv::boundingRect(in);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUBoundingRectVector32S, cv::gapi::imgproc::GBoundingRectVector32S)
+{
+    static void run(const std::vector<cv::Point2i>& in, cv::Rect& out)
+    {
+        out = cv::boundingRect(in);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUBoundingRectVector32F, cv::gapi::imgproc::GBoundingRectVector32F)
+{
+    static void run(const std::vector<cv::Point2f>& in, cv::Rect& out)
+    {
+        out = cv::boundingRect(in);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine2DMat, cv::gapi::imgproc::GFitLine2DMat)
+{
+    static void run(const cv::Mat& in, const cv::DistanceTypes distType, const double param,
+                    const double reps, const double aeps, cv::Vec4f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine2DVector32S, cv::gapi::imgproc::GFitLine2DVector32S)
+{
+    static void run(const std::vector<cv::Point2i>& in, const cv::DistanceTypes distType,
+                    const double param, const double reps, const double aeps, cv::Vec4f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine2DVector32F, cv::gapi::imgproc::GFitLine2DVector32F)
+{
+    static void run(const std::vector<cv::Point2f>& in, const cv::DistanceTypes distType,
+                    const double param, const double reps, const double aeps, cv::Vec4f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine2DVector64F, cv::gapi::imgproc::GFitLine2DVector64F)
+{
+    static void run(const std::vector<cv::Point2d>& in, const cv::DistanceTypes distType,
+                    const double param, const double reps, const double aeps, cv::Vec4f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine3DMat, cv::gapi::imgproc::GFitLine3DMat)
+{
+    static void run(const cv::Mat& in, const cv::DistanceTypes distType, const double param,
+                    const double reps, const double aeps, cv::Vec6f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine3DVector32S, cv::gapi::imgproc::GFitLine3DVector32S)
+{
+    static void run(const std::vector<cv::Point3i>& in, const cv::DistanceTypes distType,
+                    const double param, const double reps, const double aeps, cv::Vec6f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine3DVector32F, cv::gapi::imgproc::GFitLine3DVector32F)
+{
+    static void run(const std::vector<cv::Point3f>& in, const cv::DistanceTypes distType,
+                    const double param, const double reps, const double aeps, cv::Vec6f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUFitLine3DVector64F, cv::gapi::imgproc::GFitLine3DVector64F)
+{
+    static void run(const std::vector<cv::Point3d>& in, const cv::DistanceTypes distType,
+                    const double param, const double reps, const double aeps, cv::Vec6f& out)
+    {
+        cv::fitLine(in, out, distType, param, reps, aeps);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUBGR2RGB, cv::gapi::imgproc::GBGR2RGB)
+{
+    static void run(const cv::Mat& in, cv::Mat &out)
+    {
+        cv::cvtColor(in, out, cv::COLOR_BGR2RGB);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUBGR2I420, cv::gapi::imgproc::GBGR2I420)
+{
+    static void run(const cv::Mat& in, cv::Mat &out)
+    {
+        cv::cvtColor(in, out, cv::COLOR_BGR2YUV_I420);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPURGB2I420, cv::gapi::imgproc::GRGB2I420)
+{
+    static void run(const cv::Mat& in, cv::Mat &out)
+    {
+        cv::cvtColor(in, out, cv::COLOR_RGB2YUV_I420);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUI4202BGR, cv::gapi::imgproc::GI4202BGR)
+{
+    static void run(const cv::Mat& in, cv::Mat &out)
+    {
+        cv::cvtColor(in, out, cv::COLOR_YUV2BGR_I420);
+    }
+};
+
+GAPI_OCV_KERNEL(GCPUI4202RGB, cv::gapi::imgproc::GI4202RGB)
+{
+    static void run(const cv::Mat& in, cv::Mat &out)
+    {
+        cv::cvtColor(in, out, cv::COLOR_YUV2RGB_I420);
     }
 };
 
@@ -427,10 +637,12 @@ GAPI_OCV_KERNEL(GCPUNV12toBGRp, cv::gapi::imgproc::GNV12toBGRp)
     }
 };
 
-cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
+cv::GKernelPackage cv::gapi::imgproc::cpu::kernels()
 {
     static auto pkg = cv::gapi::kernels
         < GCPUFilter2D
+        , GCPUResize
+        , GCPUResizeP
         , GCPUSepFilter
         , GCPUBoxFilter
         , GCPUBlur
@@ -438,6 +650,7 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUMedianBlur
         , GCPUErode
         , GCPUDilate
+        , GCPUMorphologyEx
         , GCPUSobel
         , GCPUSobelXY
         , GCPULaplacian
@@ -445,8 +658,28 @@ cv::gapi::GKernelPackage cv::gapi::imgproc::cpu::kernels()
         , GCPUCanny
         , GCPUGoodFeatures
         , GCPUEqualizeHist
+        , GCPUFindContours
+        , GCPUFindContoursNoOffset
+        , GCPUFindContoursH
+        , GCPUFindContoursHNoOffset
+        , GCPUBGR2RGB
         , GCPURGB2YUV
+        , GCPUBoundingRectMat
+        , GCPUBoundingRectVector32S
+        , GCPUBoundingRectVector32F
+        , GCPUFitLine2DMat
+        , GCPUFitLine2DVector32S
+        , GCPUFitLine2DVector32F
+        , GCPUFitLine2DVector64F
+        , GCPUFitLine3DMat
+        , GCPUFitLine3DVector32S
+        , GCPUFitLine3DVector32F
+        , GCPUFitLine3DVector64F
         , GCPUYUV2RGB
+        , GCPUBGR2I420
+        , GCPURGB2I420
+        , GCPUI4202BGR
+        , GCPUI4202RGB
         , GCPUNV12toRGB
         , GCPUNV12toBGR
         , GCPURGB2Lab

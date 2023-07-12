@@ -9,14 +9,15 @@
 #define OPENCV_GAPI_CORE_HPP
 
 #include <math.h>
-
 #include <utility> // std::tuple
 
 #include <opencv2/imgproc.hpp>
+#include <opencv2/gapi/imgproc.hpp>
 
 #include <opencv2/gapi/gmat.hpp>
 #include <opencv2/gapi/gscalar.hpp>
 #include <opencv2/gapi/gkernel.hpp>
+#include <opencv2/gapi/streaming/format.hpp>
 
 /** \defgroup gapi_core G-API Core functionality
 @{
@@ -26,8 +27,16 @@
     @defgroup gapi_transform Graph API: Image and channel composition functions
 @}
  */
+
 namespace cv { namespace gapi {
+/**
+ * @brief This namespace contains G-API Operation Types for OpenCV
+ * Core module functionality.
+ */
 namespace core {
+    using GResize = cv::gapi::imgproc::GResize;
+    using GResizeP = cv::gapi::imgproc::GResizeP;
+
     using GMat2 = std::tuple<GMat,GMat>;
     using GMat3 = std::tuple<GMat,GMat,GMat>; // FIXME: how to avoid this?
     using GMat4 = std::tuple<GMat,GMat,GMat,GMat>;
@@ -51,6 +60,7 @@ namespace core {
 
     G_TYPED_KERNEL(GAddC, <GMat(GMat, GScalar, int)>, "org.opencv.core.math.addC") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc, int ddepth) {
+            GAPI_Assert(a.chan <= 4);
             return a.withDepth(ddepth);
         }
     };
@@ -93,7 +103,7 @@ namespace core {
         }
     };
 
-    G_TYPED_KERNEL(GMulC, <GMat(GMat, GScalar, int)>, "org.opencv.core.math.mulC"){
+    G_TYPED_KERNEL(GMulC, <GMat(GMat, GScalar, int)>, "org.opencv.core.math.mulC") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc, int ddepth) {
             return a.withDepth(ddepth);
         }
@@ -194,37 +204,37 @@ namespace core {
         }
     };
 
-    G_TYPED_KERNEL(GCmpGTScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpGTScalar"){
+    G_TYPED_KERNEL(GCmpGTScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpGTScalar") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
             return a.withDepth(CV_8U);
         }
     };
 
-    G_TYPED_KERNEL(GCmpGEScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpGEScalar"){
+    G_TYPED_KERNEL(GCmpGEScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpGEScalar") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
             return a.withDepth(CV_8U);
         }
     };
 
-    G_TYPED_KERNEL(GCmpLEScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpLEScalar"){
+    G_TYPED_KERNEL(GCmpLEScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpLEScalar") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
             return a.withDepth(CV_8U);
         }
     };
 
-    G_TYPED_KERNEL(GCmpLTScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpLTScalar"){
+    G_TYPED_KERNEL(GCmpLTScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpLTScalar") {
     static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
             return a.withDepth(CV_8U);
         }
     };
 
-    G_TYPED_KERNEL(GCmpEQScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpEQScalar"){
+    G_TYPED_KERNEL(GCmpEQScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpEQScalar") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
             return a.withDepth(CV_8U);
         }
     };
 
-    G_TYPED_KERNEL(GCmpNEScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpNEScalar"){
+    G_TYPED_KERNEL(GCmpNEScalar, <GMat(GMat, GScalar)>, "org.opencv.core.pixelwise.compare.cmpNEScalar") {
         static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
             return a.withDepth(CV_8U);
         }
@@ -296,8 +306,8 @@ namespace core {
         }
     };
 
-    G_TYPED_KERNEL(GAbsDiffC, <GMat(GMat, GScalar)>, "org.opencv.core.matrixop.absdiffC") {
-        static GMatDesc outMeta(GMatDesc a, GScalarDesc) {
+    G_TYPED_KERNEL(GAbsDiffC, <GMat(GMat,GScalar)>, "org.opencv.core.matrixop.absdiffC") {
+        static GMatDesc outMeta(const GMatDesc& a, const GScalarDesc&) {
             return a;
         }
     };
@@ -391,32 +401,6 @@ namespace core {
         }
     };
 
-    G_TYPED_KERNEL(GResize, <GMat(GMat,Size,double,double,int)>, "org.opencv.core.transform.resize") {
-        static GMatDesc outMeta(GMatDesc in, Size sz, double fx, double fy, int) {
-            if (sz.width != 0 && sz.height != 0)
-            {
-                return in.withSize(sz);
-            }
-            else
-            {
-                int outSz_w = static_cast<int>(round(in.size.width  * fx));
-                int outSz_h = static_cast<int>(round(in.size.height * fy));
-                GAPI_Assert(outSz_w > 0 && outSz_h > 0);
-                return in.withSize(Size(outSz_w, outSz_h));
-            }
-        }
-    };
-
-    G_TYPED_KERNEL(GResizeP, <GMatP(GMatP,Size,int)>, "org.opencv.core.transform.resizeP") {
-        static GMatDesc outMeta(GMatDesc in, Size sz, int interp) {
-            GAPI_Assert(in.depth == CV_8U);
-            GAPI_Assert(in.chan == 3);
-            GAPI_Assert(in.planar);
-            GAPI_Assert(interp == cv::INTER_LINEAR);
-            return in.withSize(sz);
-        }
-    };
-
     G_TYPED_KERNEL(GMerge3, <GMat(GMat,GMat,GMat)>, "org.opencv.core.transform.merge3") {
         static GMatDesc outMeta(GMatDesc in, GMatDesc, GMatDesc) {
             // Preserve depth and add channel component
@@ -447,12 +431,6 @@ namespace core {
     G_TYPED_KERNEL(GCrop, <GMat(GMat, Rect)>, "org.opencv.core.transform.crop") {
         static GMatDesc outMeta(GMatDesc in, Rect rc) {
             return in.withSize(Size(rc.width, rc.height));
-        }
-    };
-
-    G_TYPED_KERNEL(GCopy, <GMat(GMat)>, "org.opencv.core.transform.copy") {
-        static GMatDesc outMeta(GMatDesc in) {
-            return in;
         }
     };
 
@@ -509,18 +487,105 @@ namespace core {
         }
     };
 
-    G_TYPED_KERNEL(GSize, <GOpaque<Size>(GMat)>, "org.opencv.core.size") {
-        static GOpaqueDesc outMeta(const GMatDesc&) {
-            return empty_gopaque_desc();
+    G_TYPED_KERNEL(
+        GKMeansND,
+        <std::tuple<GOpaque<double>,GMat,GMat>(GMat,int,GMat,TermCriteria,int,KmeansFlags)>,
+        "org.opencv.core.kmeansND") {
+
+        static std::tuple<GOpaqueDesc,GMatDesc,GMatDesc>
+        outMeta(const GMatDesc& in, int K, const GMatDesc& bestLabels, const TermCriteria&, int,
+                KmeansFlags flags) {
+            GAPI_Assert(in.depth == CV_32F);
+            std::vector<int> amount_n_dim = detail::checkVector(in);
+            int amount = amount_n_dim[0], dim = amount_n_dim[1];
+            if (amount == -1)   // Mat with height != 1, width != 1, channels != 1 given
+            {                   // which means that kmeans will consider the following:
+                amount = in.size.height;
+                dim    = in.size.width * in.chan;
+            }
+            // kmeans sets these labels' sizes when no bestLabels given:
+            GMatDesc out_labels(CV_32S, 1, Size{1, amount});
+            // kmeans always sets these centers' sizes:
+            GMatDesc centers   (CV_32F, 1, Size{dim, K});
+            if (flags & KMEANS_USE_INITIAL_LABELS)
+            {
+                GAPI_Assert(bestLabels.depth == CV_32S);
+                int labels_amount = detail::checkVector(bestLabels, 1u);
+                GAPI_Assert(labels_amount == amount);
+                out_labels = bestLabels;  // kmeans preserves bestLabels' sizes if given
+            }
+            return std::make_tuple(empty_gopaque_desc(), out_labels, centers);
         }
     };
 
-    G_TYPED_KERNEL(GSizeR, <GOpaque<Size>(GOpaque<Rect>)>, "org.opencv.core.sizeR") {
-        static GOpaqueDesc outMeta(const GOpaqueDesc&) {
-            return empty_gopaque_desc();
+    G_TYPED_KERNEL(
+        GKMeansNDNoInit,
+        <std::tuple<GOpaque<double>,GMat,GMat>(GMat,int,TermCriteria,int,KmeansFlags)>,
+        "org.opencv.core.kmeansNDNoInit") {
+
+        static std::tuple<GOpaqueDesc,GMatDesc,GMatDesc>
+        outMeta(const GMatDesc& in, int K, const TermCriteria&, int, KmeansFlags flags) {
+            GAPI_Assert( !(flags & KMEANS_USE_INITIAL_LABELS) );
+            GAPI_Assert(in.depth == CV_32F);
+            std::vector<int> amount_n_dim = detail::checkVector(in);
+            int amount = amount_n_dim[0], dim = amount_n_dim[1];
+            if (amount == -1) // Mat with height != 1, width != 1, channels != 1 given
+            {                   // which means that kmeans will consider the following:
+                amount = in.size.height;
+                dim    = in.size.width * in.chan;
+            }
+            GMatDesc out_labels(CV_32S, 1, Size{1, amount});
+            GMatDesc centers   (CV_32F, 1, Size{dim, K});
+            return std::make_tuple(empty_gopaque_desc(), out_labels, centers);
         }
     };
-}
+
+    G_TYPED_KERNEL(GKMeans2D, <std::tuple<GOpaque<double>,GArray<int>,GArray<Point2f>>
+                               (GArray<Point2f>,int,GArray<int>,TermCriteria,int,KmeansFlags)>,
+                   "org.opencv.core.kmeans2D") {
+        static std::tuple<GOpaqueDesc,GArrayDesc,GArrayDesc>
+        outMeta(const GArrayDesc&,int,const GArrayDesc&,const TermCriteria&,int,KmeansFlags) {
+            return std::make_tuple(empty_gopaque_desc(), empty_array_desc(), empty_array_desc());
+        }
+    };
+
+    G_TYPED_KERNEL(GKMeans3D, <std::tuple<GOpaque<double>,GArray<int>,GArray<Point3f>>
+                               (GArray<Point3f>,int,GArray<int>,TermCriteria,int,KmeansFlags)>,
+                   "org.opencv.core.kmeans3D") {
+        static std::tuple<GOpaqueDesc,GArrayDesc,GArrayDesc>
+        outMeta(const GArrayDesc&,int,const GArrayDesc&,const TermCriteria&,int,KmeansFlags) {
+            return std::make_tuple(empty_gopaque_desc(), empty_array_desc(), empty_array_desc());
+        }
+    };
+
+    G_TYPED_KERNEL(GTranspose, <GMat(GMat)>, "org.opencv.core.transpose") {
+        static GMatDesc outMeta(GMatDesc in) {
+            return in.withSize({in.size.height, in.size.width});
+        }
+    };
+} // namespace core
+
+namespace streaming {
+
+// Operations for Streaming (declared in this header for convenience)
+G_TYPED_KERNEL(GSize, <GOpaque<Size>(GMat)>, "org.opencv.streaming.size") {
+    static GOpaqueDesc outMeta(const GMatDesc&) {
+        return empty_gopaque_desc();
+    }
+};
+
+G_TYPED_KERNEL(GSizeR, <GOpaque<Size>(GOpaque<Rect>)>, "org.opencv.streaming.sizeR") {
+    static GOpaqueDesc outMeta(const GOpaqueDesc&) {
+        return empty_gopaque_desc();
+    }
+};
+
+G_TYPED_KERNEL(GSizeMF, <GOpaque<Size>(GFrame)>, "org.opencv.streaming.sizeMF") {
+    static GOpaqueDesc outMeta(const GFrameDesc&) {
+        return empty_gopaque_desc();
+    }
+};
+} // namespace streaming
 
 //! @addtogroup gapi_math
 //! @{
@@ -568,9 +633,9 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param ddepth optional depth of the output matrix.
 @sa sub, addWeighted
 */
-GAPI_EXPORTS GMat addC(const GMat& src1, const GScalar& c, int ddepth = -1);
+GAPI_EXPORTS_W GMat addC(const GMat& src1, const GScalar& c, int ddepth = -1);
 //! @overload
-GAPI_EXPORTS GMat addC(const GScalar& c, const GMat& src1, int ddepth = -1);
+GAPI_EXPORTS_W GMat addC(const GScalar& c, const GMat& src1, int ddepth = -1);
 
 /** @brief Calculates the per-element difference between two matrices.
 
@@ -595,7 +660,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param ddepth optional depth of the output matrix.
 @sa  add, addC
   */
-GAPI_EXPORTS GMat sub(const GMat& src1, const GMat& src2, int ddepth = -1);
+GAPI_EXPORTS_W GMat sub(const GMat& src1, const GMat& src2, int ddepth = -1);
 
 /** @brief Calculates the per-element difference between matrix and given scalar.
 
@@ -614,12 +679,12 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param ddepth optional depth of the output matrix.
 @sa  add, addC, subRC
   */
-GAPI_EXPORTS GMat subC(const GMat& src, const GScalar& c, int ddepth = -1);
+GAPI_EXPORTS_W GMat subC(const GMat& src, const GScalar& c, int ddepth = -1);
 
 /** @brief Calculates the per-element difference between given scalar and the matrix.
 
 The function can be replaced with matrix expressions:
-    \f[\texttt{dst} =  \texttt{val} - \texttt{src}\f]
+    \f[\texttt{dst} =  \texttt{c} - \texttt{src}\f]
 
 Depth of the output matrix is determined by the ddepth parameter.
 If ddepth is set to default -1, the depth of output matrix will be the same as the depth of input matrix.
@@ -633,7 +698,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param ddepth optional depth of the output matrix.
 @sa  add, addC, subC
   */
-GAPI_EXPORTS GMat subRC(const GScalar& c, const GMat& src, int ddepth = -1);
+GAPI_EXPORTS_W GMat subRC(const GScalar& c, const GMat& src, int ddepth = -1);
 
 /** @brief Calculates the per-element scaled product of two matrices.
 
@@ -654,7 +719,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param ddepth optional depth of the output matrix.
 @sa add, sub, div, addWeighted
 */
-GAPI_EXPORTS GMat mul(const GMat& src1, const GMat& src2, double scale = 1.0, int ddepth = -1);
+GAPI_EXPORTS_W GMat mul(const GMat& src1, const GMat& src2, double scale = 1.0, int ddepth = -1);
 
 /** @brief Multiplies matrix by scalar.
 
@@ -672,18 +737,21 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param ddepth optional depth of the output matrix. If -1, the depth of output matrix will be the same as input matrix depth.
 @sa add, sub, div, addWeighted
 */
-GAPI_EXPORTS GMat mulC(const GMat& src, double multiplier, int ddepth = -1);
+GAPI_EXPORTS_W GMat mulC(const GMat& src, double multiplier, int ddepth = -1);
 //! @overload
-GAPI_EXPORTS GMat mulC(const GMat& src, const GScalar& multiplier, int ddepth = -1);   // FIXME: merge with mulc
+GAPI_EXPORTS_W GMat mulC(const GMat& src, const GScalar& multiplier, int ddepth = -1);   // FIXME: merge with mulc
 //! @overload
-GAPI_EXPORTS GMat mulC(const GScalar& multiplier, const GMat& src, int ddepth = -1);   // FIXME: merge with mulc
+GAPI_EXPORTS_W GMat mulC(const GScalar& multiplier, const GMat& src, int ddepth = -1);   // FIXME: merge with mulc
 
 /** @brief Performs per-element division of two matrices.
 
 The function divides one matrix by another:
 \f[\texttt{dst(I) = saturate(src1(I)*scale/src2(I))}\f]
 
-When src2(I) is zero, dst(I) will also be zero. Different channels of
+For integer types when src2(I) is zero, dst(I) will also be zero.
+Floating point case returns Inf/NaN (according to IEEE).
+
+Different channels of
 multi-channel matrices are processed independently.
 The matrices can be single or multi channel. Output matrix must have the same size and depth as src.
 
@@ -696,7 +764,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param ddepth optional depth of the output matrix; you can only pass -1 when src1.depth() == src2.depth().
 @sa  mul, add, sub
 */
-GAPI_EXPORTS GMat div(const GMat& src1, const GMat& src2, double scale, int ddepth = -1);
+GAPI_EXPORTS_W GMat div(const GMat& src1, const GMat& src2, double scale, int ddepth = -1);
 
 /** @brief Divides matrix by scalar.
 
@@ -717,7 +785,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param scale scale factor.
 @sa add, sub, div, addWeighted
 */
-GAPI_EXPORTS GMat divC(const GMat& src, const GScalar& divisor, double scale, int ddepth = -1);
+GAPI_EXPORTS_W GMat divC(const GMat& src, const GScalar& divisor, double scale, int ddepth = -1);
 
 /** @brief Divides scalar by matrix.
 
@@ -738,7 +806,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param scale scale factor
 @sa add, sub, div, addWeighted
 */
-GAPI_EXPORTS GMat divRC(const GScalar& divident, const GMat& src, double scale, int ddepth = -1);
+GAPI_EXPORTS_W GMat divRC(const GScalar& divident, const GMat& src, double scale, int ddepth = -1);
 
 /** @brief Applies a mask to a matrix.
 
@@ -751,7 +819,7 @@ Supported src matrix data types are @ref CV_8UC1, @ref CV_16SC1, @ref CV_16UC1. 
 @param src input matrix.
 @param mask input mask matrix.
 */
-GAPI_EXPORTS GMat mask(const GMat& src, const GMat& mask);
+GAPI_EXPORTS_W GMat mask(const GMat& src, const GMat& mask);
 
 /** @brief Calculates an average (mean) of matrix elements.
 
@@ -786,8 +854,8 @@ Both output must have the same size and depth as input matrices.
 degrees, otherwise, they are measured in radians.
 @sa cartToPolar, exp, log, pow, sqrt
 */
-GAPI_EXPORTS std::tuple<GMat, GMat> polarToCart(const GMat& magnitude, const GMat& angle,
-                                              bool angleInDegrees = false);
+GAPI_EXPORTS_W std::tuple<GMat, GMat> polarToCart(const GMat& magnitude, const GMat& angle,
+                                                  bool angleInDegrees = false);
 
 /** @brief Calculates the magnitude and angle of 2D vectors.
 
@@ -810,8 +878,8 @@ x; the angles are measured in radians (from 0 to 2\*Pi) or in degrees (0 to 360 
 in radians (which is by default), or in degrees.
 @sa polarToCart
 */
-GAPI_EXPORTS std::tuple<GMat, GMat> cartToPolar(const GMat& x, const GMat& y,
-                                              bool angleInDegrees = false);
+GAPI_EXPORTS_W std::tuple<GMat, GMat> cartToPolar(const GMat& x, const GMat& y,
+                                                  bool angleInDegrees = false);
 
 /** @brief Calculates the rotation angle of 2D vectors.
 
@@ -828,7 +896,7 @@ same size and the same type as x.
 degrees, otherwise, they are measured in radians.
 @return array of vector angles; it has the same size and same type as x.
 */
-GAPI_EXPORTS GMat phase(const GMat& x, const GMat &y, bool angleInDegrees = false);
+GAPI_EXPORTS_W GMat phase(const GMat& x, const GMat &y, bool angleInDegrees = false);
 
 /** @brief Calculates a square root of array elements.
 
@@ -839,7 +907,7 @@ std::sqrt .
 @param src input floating-point array.
 @return output array of the same size and type as src.
 */
-GAPI_EXPORTS GMat sqrt(const GMat &src);
+GAPI_EXPORTS_W GMat sqrt(const GMat &src);
 
 //! @} gapi_math
 //!
@@ -866,11 +934,11 @@ Supported input matrix data types are @ref CV_8UC1, @ref CV_16UC1, @ref CV_16SC1
 @param src2 second input matrix/scalar of the same depth as first input matrix.
 @sa min, max, threshold, cmpLE, cmpGE, cmpLT
 */
-GAPI_EXPORTS GMat cmpGT(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat cmpGT(const GMat& src1, const GMat& src2);
 /** @overload
 @note Function textual ID is "org.opencv.core.pixelwise.compare.cmpGTScalar"
 */
-GAPI_EXPORTS GMat cmpGT(const GMat& src1, const GScalar& src2);
+GAPI_EXPORTS_W GMat cmpGT(const GMat& src1, const GScalar& src2);
 
 /** @brief Performs the per-element comparison of two matrices checking if elements from first matrix are less than elements in second.
 
@@ -892,11 +960,11 @@ Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1,
 @param src2 second input matrix/scalar of the same depth as first input matrix.
 @sa min, max, threshold, cmpLE, cmpGE, cmpGT
 */
-GAPI_EXPORTS GMat cmpLT(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat cmpLT(const GMat& src1, const GMat& src2);
 /** @overload
 @note Function textual ID is "org.opencv.core.pixelwise.compare.cmpLTScalar"
 */
-GAPI_EXPORTS GMat cmpLT(const GMat& src1, const GScalar& src2);
+GAPI_EXPORTS_W GMat cmpLT(const GMat& src1, const GScalar& src2);
 
 /** @brief Performs the per-element comparison of two matrices checking if elements from first matrix are greater or equal compare to elements in second.
 
@@ -918,11 +986,11 @@ Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1,
 @param src2 second input matrix/scalar of the same depth as first input matrix.
 @sa min, max, threshold, cmpLE, cmpGT, cmpLT
 */
-GAPI_EXPORTS GMat cmpGE(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat cmpGE(const GMat& src1, const GMat& src2);
 /** @overload
 @note Function textual ID is "org.opencv.core.pixelwise.compare.cmpLGEcalar"
 */
-GAPI_EXPORTS GMat cmpGE(const GMat& src1, const GScalar& src2);
+GAPI_EXPORTS_W GMat cmpGE(const GMat& src1, const GScalar& src2);
 
 /** @brief Performs the per-element comparison of two matrices checking if elements from first matrix are less or equal compare to elements in second.
 
@@ -944,11 +1012,11 @@ Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1,
 @param src2 second input matrix/scalar of the same depth as first input matrix.
 @sa min, max, threshold, cmpGT, cmpGE, cmpLT
 */
-GAPI_EXPORTS GMat cmpLE(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat cmpLE(const GMat& src1, const GMat& src2);
 /** @overload
 @note Function textual ID is "org.opencv.core.pixelwise.compare.cmpLEScalar"
 */
-GAPI_EXPORTS GMat cmpLE(const GMat& src1, const GScalar& src2);
+GAPI_EXPORTS_W GMat cmpLE(const GMat& src1, const GScalar& src2);
 
 /** @brief Performs the per-element comparison of two matrices checking if elements from first matrix are equal to elements in second.
 
@@ -970,11 +1038,11 @@ Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1,
 @param src2 second input matrix/scalar of the same depth as first input matrix.
 @sa min, max, threshold, cmpNE
 */
-GAPI_EXPORTS GMat cmpEQ(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat cmpEQ(const GMat& src1, const GMat& src2);
 /** @overload
 @note Function textual ID is "org.opencv.core.pixelwise.compare.cmpEQScalar"
 */
-GAPI_EXPORTS GMat cmpEQ(const GMat& src1, const GScalar& src2);
+GAPI_EXPORTS_W GMat cmpEQ(const GMat& src1, const GScalar& src2);
 
 /** @brief Performs the per-element comparison of two matrices checking if elements from first matrix are not equal to elements in second.
 
@@ -996,11 +1064,11 @@ Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1,
 @param src2 second input matrix/scalar of the same depth as first input matrix.
 @sa min, max, threshold, cmpEQ
 */
-GAPI_EXPORTS GMat cmpNE(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat cmpNE(const GMat& src1, const GMat& src2);
 /** @overload
 @note Function textual ID is "org.opencv.core.pixelwise.compare.cmpNEScalar"
 */
-GAPI_EXPORTS GMat cmpNE(const GMat& src1, const GScalar& src2);
+GAPI_EXPORTS_W GMat cmpNE(const GMat& src1, const GScalar& src2);
 
 /** @brief computes bitwise conjunction of the two matrixes (src1 & src2)
 Calculates the per-element bit-wise logical conjunction of two matrices of the same size.
@@ -1018,13 +1086,13 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param src1 first input matrix.
 @param src2 second input matrix.
 */
-GAPI_EXPORTS GMat bitwise_and(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat bitwise_and(const GMat& src1, const GMat& src2);
 /** @overload
 @note Function textual ID is "org.opencv.core.pixelwise.bitwise_andS"
 @param src1 first input matrix.
 @param src2 scalar, which will be per-lemenetly conjuncted with elements of src1.
 */
-GAPI_EXPORTS GMat bitwise_and(const GMat& src1, const GScalar& src2);
+GAPI_EXPORTS_W GMat bitwise_and(const GMat& src1, const GScalar& src2);
 
 /** @brief computes bitwise disjunction of the two matrixes (src1 | src2)
 Calculates the per-element bit-wise logical disjunction of two matrices of the same size.
@@ -1042,13 +1110,13 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param src1 first input matrix.
 @param src2 second input matrix.
 */
-GAPI_EXPORTS GMat bitwise_or(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat bitwise_or(const GMat& src1, const GMat& src2);
 /** @overload
 @note Function textual ID is "org.opencv.core.pixelwise.bitwise_orS"
 @param src1 first input matrix.
 @param src2 scalar, which will be per-lemenetly disjuncted with elements of src1.
 */
-GAPI_EXPORTS GMat bitwise_or(const GMat& src1, const GScalar& src2);
+GAPI_EXPORTS_W GMat bitwise_or(const GMat& src1, const GScalar& src2);
 
 
 /** @brief computes bitwise logical "exclusive or" of the two matrixes (src1 ^ src2)
@@ -1067,16 +1135,17 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param src1 first input matrix.
 @param src2 second input matrix.
 */
-GAPI_EXPORTS GMat bitwise_xor(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat bitwise_xor(const GMat& src1, const GMat& src2);
 /** @overload
 @note Function textual ID is "org.opencv.core.pixelwise.bitwise_xorS"
 @param src1 first input matrix.
 @param src2 scalar, for which per-lemenet "logical or" operation on elements of src1 will be performed.
 */
-GAPI_EXPORTS GMat bitwise_xor(const GMat& src1, const GScalar& src2);
+GAPI_EXPORTS_W GMat bitwise_xor(const GMat& src1, const GScalar& src2);
 
 
 /** @brief Inverts every bit of an array.
+
 The function bitwise_not calculates per-element bit-wise inversion of the input
 matrix:
 \f[\texttt{dst} (I) =  \neg \texttt{src} (I)\f]
@@ -1093,7 +1162,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 
 @param src input matrix.
 */
-GAPI_EXPORTS GMat bitwise_not(const GMat& src);
+GAPI_EXPORTS_W GMat bitwise_not(const GMat& src);
 
 /** @brief Select values from either first or second of input matrices by given mask.
 The function set to the output matrix either the value from the first input matrix if corresponding value of mask matrix is 255,
@@ -1109,7 +1178,7 @@ Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1,
 @param src2 second input matrix.
 @param mask mask input matrix.
 */
-GAPI_EXPORTS GMat select(const GMat& src1, const GMat& src2, const GMat& mask);
+GAPI_EXPORTS_W GMat select(const GMat& src1, const GMat& src2, const GMat& mask);
 
 //! @} gapi_pixelwise
 
@@ -1131,7 +1200,7 @@ Supported input matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1,
 @param src2 second input matrix of the same size and depth as src1.
 @sa max, cmpEQ, cmpLT, cmpLE
 */
-GAPI_EXPORTS GMat min(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat min(const GMat& src1, const GMat& src2);
 
 /** @brief Calculates per-element maximum of two matrices.
 
@@ -1148,7 +1217,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param src2 second input matrix of the same size and depth as src1.
 @sa min, compare, cmpEQ, cmpGT, cmpGE
 */
-GAPI_EXPORTS GMat max(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat max(const GMat& src1, const GMat& src2);
 
 /** @brief Calculates the per-element absolute difference between two matrices.
 
@@ -1165,7 +1234,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param src2 second input matrix.
 @sa abs
 */
-GAPI_EXPORTS GMat absDiff(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat absDiff(const GMat& src1, const GMat& src2);
 
 /** @brief Calculates absolute value of matrix elements.
 
@@ -1182,7 +1251,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param c scalar to be subtracted.
 @sa min, max
 */
-GAPI_EXPORTS GMat absDiffC(const GMat& src, const GScalar& c);
+GAPI_EXPORTS_W GMat absDiffC(const GMat& src, const GScalar& c);
 
 /** @brief Calculates sum of all matrix elements.
 
@@ -1194,7 +1263,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param src input matrix.
 @sa countNonZero, mean, min, max
 */
-GAPI_EXPORTS GScalar sum(const GMat& src);
+GAPI_EXPORTS_W GScalar sum(const GMat& src);
 
 /** @brief Counts non-zero array elements.
 
@@ -1207,7 +1276,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_16UC1, @ref CV_16SC1, @ref
 @param src input single-channel matrix.
 @sa  mean, min, max
 */
-GAPI_EXPORTS GOpaque<int> countNonZero(const GMat& src);
+GAPI_EXPORTS_W GOpaque<int> countNonZero(const GMat& src);
 
 /** @brief Calculates the weighted sum of two matrices.
 
@@ -1230,7 +1299,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param ddepth optional depth of the output matrix.
 @sa  add, sub
 */
-GAPI_EXPORTS GMat addWeighted(const GMat& src1, double alpha, const GMat& src2, double beta, double gamma, int ddepth = -1);
+GAPI_EXPORTS_W GMat addWeighted(const GMat& src1, double alpha, const GMat& src2, double beta, double gamma, int ddepth = -1);
 
 /** @brief Calculates the  absolute L1 norm of a matrix.
 
@@ -1253,7 +1322,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param src input matrix.
 @sa normL2, normInf
 */
-GAPI_EXPORTS GScalar normL1(const GMat& src);
+GAPI_EXPORTS_W GScalar normL1(const GMat& src);
 
 /** @brief Calculates the absolute L2 norm of a matrix.
 
@@ -1275,7 +1344,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param src input matrix.
 @sa normL1, normInf
 */
-GAPI_EXPORTS GScalar normL2(const GMat& src);
+GAPI_EXPORTS_W GScalar normL2(const GMat& src);
 
 /** @brief Calculates the absolute infinite norm of a matrix.
 
@@ -1298,7 +1367,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param src input matrix.
 @sa normL1, normL2
 */
-GAPI_EXPORTS GScalar normInf(const GMat& src);
+GAPI_EXPORTS_W GScalar normInf(const GMat& src);
 
 /** @brief Calculates the integral of an image.
 
@@ -1318,7 +1387,7 @@ The function return integral image as \f$(W+1)\times (H+1)\f$ , 32-bit integer o
 CV_64F.
 @param sqdepth desired depth of the integral image of squared pixel values, CV_32F or CV_64F.
  */
-GAPI_EXPORTS std::tuple<GMat, GMat> integral(const GMat& src, int sdepth = -1, int sqdepth = -1);
+GAPI_EXPORTS_W std::tuple<GMat, GMat> integral(const GMat& src, int sdepth = -1, int sqdepth = -1);
 
 /** @brief Applies a fixed-level threshold to each matrix element.
 
@@ -1347,9 +1416,9 @@ types.
 
 @sa min, max, cmpGT, cmpLE, cmpGE, cmpLT
  */
-GAPI_EXPORTS GMat threshold(const GMat& src, const GScalar& thresh, const GScalar& maxval, int type);
+GAPI_EXPORTS_W GMat threshold(const GMat& src, const GScalar& thresh, const GScalar& maxval, int type);
 /** @overload
-This function applicable for all threshold types except CV_THRESH_OTSU and CV_THRESH_TRIANGLE
+This function applicable for all threshold types except cv::THRESH_OTSU and cv::THRESH_TRIANGLE
 @note Function textual ID is "org.opencv.core.matrixop.thresholdOT"
 */
 GAPI_EXPORTS_W std::tuple<GMat, GScalar> threshold(const GMat& src, const GScalar& maxval, int type);
@@ -1369,104 +1438,83 @@ Input and output matrices must be CV_8UC1.
 
 @sa threshold
  */
-GAPI_EXPORTS GMat inRange(const GMat& src, const GScalar& threshLow, const GScalar& threshUp);
+GAPI_EXPORTS_W GMat inRange(const GMat& src, const GScalar& threshLow, const GScalar& threshUp);
 
 //! @} gapi_matrixop
 
 //! @addtogroup gapi_transform
 //! @{
-/** @brief Resizes an image.
-
-The function resizes the image src down to or up to the specified size.
-
-Output image size will have the size dsize (when dsize is non-zero) or the size computed from
-src.size(), fx, and fy; the depth of output is the same as of src.
-
-If you want to resize src so that it fits the pre-created dst,
-you may call the function as follows:
-@code
-    // explicitly specify dsize=dst.size(); fx and fy will be computed from that.
-    resize(src, dst, dst.size(), 0, 0, interpolation);
-@endcode
-If you want to decimate the image by factor of 2 in each direction, you can call the function this
-way:
-@code
-    // specify fx and fy and let the function compute the destination image size.
-    resize(src, dst, Size(), 0.5, 0.5, interpolation);
-@endcode
-To shrink an image, it will generally look best with cv::INTER_AREA interpolation, whereas to
-enlarge an image, it will generally look best with cv::INTER_CUBIC (slow) or cv::INTER_LINEAR
-(faster but still looks OK).
-
-@note Function textual ID is "org.opencv.core.transform.resize"
-
-@param src input image.
-@param dsize output image size; if it equals zero, it is computed as:
- \f[\texttt{dsize = Size(round(fx*src.cols), round(fy*src.rows))}\f]
- Either dsize or both fx and fy must be non-zero.
-@param fx scale factor along the horizontal axis; when it equals 0, it is computed as
-\f[\texttt{(double)dsize.width/src.cols}\f]
-@param fy scale factor along the vertical axis; when it equals 0, it is computed as
-\f[\texttt{(double)dsize.height/src.rows}\f]
-@param interpolation interpolation method, see cv::InterpolationFlags
-
-@sa  warpAffine, warpPerspective, remap, resizeP
- */
-GAPI_EXPORTS GMat resize(const GMat& src, const Size& dsize, double fx = 0, double fy = 0, int interpolation = INTER_LINEAR);
-
-/** @brief Resizes a planar image.
-
-The function resizes the image src down to or up to the specified size.
-Planar image memory layout is three planes laying in the memory contiguously,
-so the image height should be plane_height*plane_number, image type is @ref CV_8UC1.
-
-Output image size will have the size dsize, the depth of output is the same as of src.
-
-@note Function textual ID is "org.opencv.core.transform.resizeP"
-
-@param src input image, must be of @ref CV_8UC1 type;
-@param dsize output image size;
-@param interpolation interpolation method, only cv::INTER_LINEAR is supported at the moment
-
-@sa  warpAffine, warpPerspective, remap, resize
- */
-GAPI_EXPORTS GMatP resizeP(const GMatP& src, const Size& dsize, int interpolation = cv::INTER_LINEAR);
-
-/** @brief Creates one 3-channel (4-channel) matrix out of 3(4) single-channel ones.
+/** @brief Creates one 4-channel matrix out of 4 single-channel ones.
 
 The function merges several matrices to make a single multi-channel matrix. That is, each
 element of the output matrix will be a concatenation of the elements of the input matrices, where
 elements of i-th input matrix are treated as mv[i].channels()-element vectors.
-Input matrix must be of @ref CV_8UC3 (@ref CV_8UC4) type.
+Output matrix must be of @ref CV_8UC4 type.
 
-The function split3/split4 does the reverse operation.
+The function split4 does the reverse operation.
 
-@note Function textual ID for merge3 is "org.opencv.core.transform.merge3"
-@note Function textual ID for merge4 is "org.opencv.core.transform.merge4"
+@note
+ - Function textual ID is "org.opencv.core.transform.merge4"
 
-@param src1 first input matrix to be merged
-@param src2 second input matrix to be merged
-@param src3 third input matrix to be merged
-@param src4 fourth input matrix to be merged
-@sa  split4, split3
+@param src1 first input @ref CV_8UC1 matrix to be merged.
+@param src2 second input @ref CV_8UC1 matrix to be merged.
+@param src3 third input @ref CV_8UC1 matrix to be merged.
+@param src4 fourth input @ref CV_8UC1 matrix to be merged.
+@sa merge3, split4, split3
 */
-GAPI_EXPORTS GMat merge4(const GMat& src1, const GMat& src2, const GMat& src3, const GMat& src4);
-GAPI_EXPORTS GMat merge3(const GMat& src1, const GMat& src2, const GMat& src3);
+GAPI_EXPORTS_W GMat merge4(const GMat& src1, const GMat& src2, const GMat& src3, const GMat& src4);
 
-/** @brief Divides a 3-channel (4-channel) matrix into 3(4) single-channel matrices.
+/** @brief Creates one 3-channel matrix out of 3 single-channel ones.
 
-The function splits a 3-channel (4-channel) matrix into 3(4) single-channel matrices:
+The function merges several matrices to make a single multi-channel matrix. That is, each
+element of the output matrix will be a concatenation of the elements of the input matrices, where
+elements of i-th input matrix are treated as mv[i].channels()-element vectors.
+Output matrix must be of @ref CV_8UC3 type.
+
+The function split3 does the reverse operation.
+
+@note
+ - Function textual ID is "org.opencv.core.transform.merge3"
+
+@param src1 first input @ref CV_8UC1 matrix to be merged.
+@param src2 second input @ref CV_8UC1 matrix to be merged.
+@param src3 third input @ref CV_8UC1 matrix to be merged.
+@sa merge4, split4, split3
+*/
+GAPI_EXPORTS_W GMat merge3(const GMat& src1, const GMat& src2, const GMat& src3);
+
+/** @brief Divides a 4-channel matrix into 4 single-channel matrices.
+
+The function splits a 4-channel matrix into 4 single-channel matrices:
 \f[\texttt{mv} [c](I) =  \texttt{src} (I)_c\f]
 
-All output matrices must be in @ref CV_8UC1.
+All output matrices must be of @ref CV_8UC1 type.
 
-@note Function textual for split3 ID is "org.opencv.core.transform.split3"
-@note Function textual for split4 ID is "org.opencv.core.transform.split4"
+The function merge4 does the reverse operation.
 
-@param src input @ref CV_8UC4 (@ref CV_8UC3) matrix.
-@sa merge3, merge4
+@note
+ - Function textual ID is "org.opencv.core.transform.split4"
+
+@param src input @ref CV_8UC4 matrix.
+@sa split3, merge3, merge4
 */
-GAPI_EXPORTS std::tuple<GMat, GMat, GMat,GMat> split4(const GMat& src);
+GAPI_EXPORTS_W std::tuple<GMat, GMat, GMat,GMat> split4(const GMat& src);
+
+/** @brief Divides a 3-channel matrix into 3 single-channel matrices.
+
+The function splits a 3-channel matrix into 3 single-channel matrices:
+\f[\texttt{mv} [c](I) =  \texttt{src} (I)_c\f]
+
+All output matrices must be of @ref CV_8UC1 type.
+
+The function merge3 does the reverse operation.
+
+@note
+ - Function textual ID is "org.opencv.core.transform.split3"
+
+@param src input @ref CV_8UC3 matrix.
+@sa split4, merge3, merge4
+*/
 GAPI_EXPORTS_W std::tuple<GMat, GMat, GMat> split3(const GMat& src);
 
 /** @brief Applies a generic geometrical transformation to an image.
@@ -1484,25 +1532,25 @@ convert from floating to fixed-point representations of a map is that they can y
 cvFloor(y)) and \f$map_2\f$ contains indices in a table of interpolation coefficients.
 Output image must be of the same size and depth as input one.
 
-@note Function textual ID is "org.opencv.core.transform.remap"
+@note
+ - Function textual ID is "org.opencv.core.transform.remap"
+ - Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
 
 @param src Source image.
 @param map1 The first map of either (x,y) points or just x values having the type CV_16SC2,
 CV_32FC1, or CV_32FC2.
 @param map2 The second map of y values having the type CV_16UC1, CV_32FC1, or none (empty map
 if map1 is (x,y) points), respectively.
-@param interpolation Interpolation method (see cv::InterpolationFlags). The method INTER_AREA is
-not supported by this function.
+@param interpolation Interpolation method (see cv::InterpolationFlags). The methods #INTER_AREA
+and #INTER_LINEAR_EXACT are not supported by this function.
 @param borderMode Pixel extrapolation method (see cv::BorderTypes). When
 borderMode=BORDER_TRANSPARENT, it means that the pixels in the destination image that
 corresponds to the "outliers" in the source image are not modified by the function.
 @param borderValue Value used in case of a constant border. By default, it is 0.
-@note
-Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
  */
-GAPI_EXPORTS GMat remap(const GMat& src, const Mat& map1, const Mat& map2,
-                      int interpolation, int borderMode = BORDER_CONSTANT,
-                      const Scalar& borderValue = Scalar());
+GAPI_EXPORTS_W GMat remap(const GMat& src, const Mat& map1, const Mat& map2,
+                          int interpolation, int borderMode = BORDER_CONSTANT,
+                          const Scalar& borderValue = Scalar());
 
 /** @brief Flips a 2D matrix around vertical, horizontal, or both axes.
 
@@ -1539,7 +1587,7 @@ flipping around y-axis. Negative value (for example, -1) means flipping
 around both axes.
 @sa remap
 */
-GAPI_EXPORTS GMat flip(const GMat& src, int flipCode);
+GAPI_EXPORTS_W GMat flip(const GMat& src, int flipCode);
 
 /** @brief Crops a 2D matrix.
 
@@ -1553,20 +1601,7 @@ Output matrix must be of the same depth as input one, size is specified by given
 @param rect a rect to crop a matrix to
 @sa resize
 */
-GAPI_EXPORTS GMat crop(const GMat& src, const Rect& rect);
-
-/** @brief Copies a matrix.
-
-Copies an input array. Works as a regular Mat::clone but happens in-graph.
-Mainly is used to workaround some existing limitations (e.g. to forward an input frame to outputs
-in the streaming mode). Will be deprecated and removed in the future.
-
-@note Function textual ID is "org.opencv.core.transform.copy"
-
-@param src input matrix.
-@sa crop
-*/
-GAPI_EXPORTS GMat copy(const GMat& src);
+GAPI_EXPORTS_W GMat crop(const GMat& src, const Rect& rect);
 
 /** @brief Applies horizontal concatenation to given matrices.
 
@@ -1594,7 +1629,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param src2 second input matrix to be considered for horizontal concatenation.
 @sa concatVert
 */
-GAPI_EXPORTS GMat concatHor(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat concatHor(const GMat& src1, const GMat& src2);
 
 /** @overload
 The function horizontally concatenates given number of GMat matrices (with the same number of columns).
@@ -1602,7 +1637,7 @@ Output matrix must the same number of columns and depth as the input matrices, a
 
 @param v vector of input matrices to be concatenated horizontally.
 */
-GAPI_EXPORTS GMat concatHor(const std::vector<GMat> &v);
+GAPI_EXPORTS_W GMat concatHor(const std::vector<GMat> &v);
 
 /** @brief Applies vertical concatenation to given matrices.
 
@@ -1634,7 +1669,7 @@ Supported matrix data types are @ref CV_8UC1, @ref CV_8UC3, @ref CV_16UC1, @ref 
 @param src2 second input matrix to be considered for vertical concatenation.
 @sa concatHor
 */
-GAPI_EXPORTS GMat concatVert(const GMat& src1, const GMat& src2);
+GAPI_EXPORTS_W GMat concatVert(const GMat& src1, const GMat& src2);
 
 /** @overload
 The function vertically concatenates given number of GMat matrices (with the same number of columns).
@@ -1642,7 +1677,7 @@ Output matrix must the same number of columns and depth as the input matrices, a
 
 @param v vector of input matrices to be concatenated vertically.
 */
-GAPI_EXPORTS GMat concatVert(const std::vector<GMat> &v);
+GAPI_EXPORTS_W GMat concatVert(const std::vector<GMat> &v);
 
 
 /** @brief Performs a look-up table transform of a matrix.
@@ -1661,7 +1696,7 @@ Output is a matrix of the same size and number of channels as src, and the same 
 either have a single channel (in this case the same table is used for all channels) or the same
 number of channels as in the input matrix.
 */
-GAPI_EXPORTS GMat LUT(const GMat& src, const Mat& lut);
+GAPI_EXPORTS_W GMat LUT(const GMat& src, const Mat& lut);
 
 /** @brief Converts a matrix to another data depth with optional scaling.
 
@@ -1678,7 +1713,7 @@ same as the input has; if rdepth is negative, the output matrix will have the sa
 @param alpha optional scale factor.
 @param beta optional delta added to the scaled values.
  */
-GAPI_EXPORTS GMat convertTo(const GMat& src, int rdepth, double alpha=1, double beta=0);
+GAPI_EXPORTS_W GMat convertTo(const GMat& src, int rdepth, double alpha=1, double beta=0);
 
 /** @brief Normalizes the norm or value range of an array.
 
@@ -1700,8 +1735,8 @@ normalization.
 number of channels as src and the depth =ddepth.
 @sa norm, Mat::convertTo
 */
-GAPI_EXPORTS GMat normalize(const GMat& src, double alpha, double beta,
-                            int norm_type, int ddepth = -1);
+GAPI_EXPORTS_W GMat normalize(const GMat& src, double alpha, double beta,
+                              int norm_type, int ddepth = -1);
 
 /** @brief Applies a perspective transformation to an image.
 
@@ -1724,8 +1759,8 @@ optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
 
 @sa  warpAffine, resize, remap, getRectSubPix, perspectiveTransform
  */
-GAPI_EXPORTS GMat warpPerspective(const GMat& src, const Mat& M, const Size& dsize, int flags = cv::INTER_LINEAR,
-                                  int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
+GAPI_EXPORTS_W GMat warpPerspective(const GMat& src, const Mat& M, const Size& dsize, int flags = cv::INTER_LINEAR,
+                                    int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
 
 /** @brief Applies an affine transformation to an image.
 
@@ -1749,28 +1784,127 @@ borderMode=#BORDER_TRANSPARENT isn't supported
 
 @sa  warpPerspective, resize, remap, getRectSubPix, transform
  */
-GAPI_EXPORTS GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags = cv::INTER_LINEAR,
-                             int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
+GAPI_EXPORTS_W GMat warpAffine(const GMat& src, const Mat& M, const Size& dsize, int flags = cv::INTER_LINEAR,
+                               int borderMode = cv::BORDER_CONSTANT, const Scalar& borderValue = Scalar());
 //! @} gapi_transform
 
+/** @brief Finds centers of clusters and groups input samples around the clusters.
+
+The function kmeans implements a k-means algorithm that finds the centers of K clusters
+and groups the input samples around the clusters. As an output, \f$\texttt{bestLabels}_i\f$
+contains a 0-based cluster index for the \f$i^{th}\f$ sample.
+
+@note
+ - Function textual ID is "org.opencv.core.kmeansND"
+ - In case of an N-dimentional points' set given, input GMat can have the following traits:
+2 dimensions, a single row or column if there are N channels,
+or N columns if there is a single channel. Mat should have @ref CV_32F depth.
+ - Although, if GMat with height != 1, width != 1, channels != 1 given as data, n-dimensional
+samples are considered given in amount of A, where A = height, n = width * channels.
+ - In case of GMat given as data:
+     - the output labels are returned as 1-channel GMat with sizes
+width = 1, height = A, where A is samples amount, or width = bestLabels.width,
+height = bestLabels.height if bestLabels given;
+     - the cluster centers are returned as 1-channel GMat with sizes
+width = n, height = K, where n is samples' dimentionality and K is clusters' amount.
+ - As one of possible usages, if you want to control the initial labels for each attempt
+by yourself, you can utilize just the core of the function. To do that, set the number
+of attempts to 1, initialize labels each time using a custom algorithm, pass them with the
+( flags = #KMEANS_USE_INITIAL_LABELS ) flag, and then choose the best (most-compact) clustering.
+
+@param data Data for clustering. An array of N-Dimensional points with float coordinates is needed.
+Function can take GArray<Point2f>, GArray<Point3f> for 2D and 3D cases or GMat for any
+dimentionality and channels.
+@param K Number of clusters to split the set by.
+@param bestLabels Optional input integer array that can store the supposed initial cluster indices
+for every sample. Used when ( flags = #KMEANS_USE_INITIAL_LABELS ) flag is set.
+@param criteria The algorithm termination criteria, that is, the maximum number of iterations
+and/or the desired accuracy. The accuracy is specified as criteria.epsilon. As soon as each of
+the cluster centers moves by less than criteria.epsilon on some iteration, the algorithm stops.
+@param attempts Flag to specify the number of times the algorithm is executed using different
+initial labellings. The algorithm returns the labels that yield the best compactness (see the first
+function return value).
+@param flags Flag that can take values of cv::KmeansFlags .
+
+@return
+ - Compactness measure that is computed as
+\f[\sum _i  \| \texttt{samples} _i -  \texttt{centers} _{ \texttt{labels} _i} \| ^2\f]
+after every attempt. The best (minimum) value is chosen and the corresponding labels and the
+compactness value are returned by the function.
+ - Integer array that stores the cluster indices for every sample.
+ - Array of the cluster centers.
+*/
+GAPI_EXPORTS_W std::tuple<GOpaque<double>,GMat,GMat>
+kmeans(const GMat& data, const int K, const GMat& bestLabels,
+       const TermCriteria& criteria, const int attempts, const KmeansFlags flags);
+
+/** @overload
+@note
+ - Function textual ID is "org.opencv.core.kmeansNDNoInit"
+ - #KMEANS_USE_INITIAL_LABELS flag must not be set while using this overload.
+ */
+GAPI_EXPORTS_W std::tuple<GOpaque<double>,GMat,GMat>
+kmeans(const GMat& data, const int K, const TermCriteria& criteria, const int attempts,
+       const KmeansFlags flags);
+
+/** @overload
+@note Function textual ID is "org.opencv.core.kmeans2D"
+ */
+GAPI_EXPORTS_W std::tuple<GOpaque<double>,GArray<int>,GArray<Point2f>>
+kmeans(const GArray<Point2f>& data, const int K, const GArray<int>& bestLabels,
+       const TermCriteria& criteria, const int attempts, const KmeansFlags flags);
+
+/** @overload
+@note Function textual ID is "org.opencv.core.kmeans3D"
+ */
+GAPI_EXPORTS_W std::tuple<GOpaque<double>,GArray<int>,GArray<Point3f>>
+kmeans(const GArray<Point3f>& data, const int K, const GArray<int>& bestLabels,
+       const TermCriteria& criteria, const int attempts, const KmeansFlags flags);
+
+
+/** @brief Transposes a matrix.
+
+The function transposes the matrix:
+\f[\texttt{dst} (i,j) =  \texttt{src} (j,i)\f]
+
+@note
+ - Function textual ID is "org.opencv.core.transpose"
+ - No complex conjugation is done in case of a complex matrix. It should be done separately if needed.
+
+@param src input array.
+*/
+GAPI_EXPORTS_W GMat transpose(const GMat& src);
+
+
+namespace streaming {
 /** @brief Gets dimensions from Mat.
 
-@note Function textual ID is "org.opencv.core.size"
+@note Function textual ID is "org.opencv.streaming.size"
 
 @param src Input tensor
 @return Size (tensor dimensions).
 */
-GAPI_EXPORTS GOpaque<Size> size(const GMat& src);
+GAPI_EXPORTS_W GOpaque<Size> size(const GMat& src);
 
 /** @overload
 Gets dimensions from rectangle.
 
-@note Function textual ID is "org.opencv.core.sizeR"
+@note Function textual ID is "org.opencv.streaming.sizeR"
 
 @param r Input rectangle.
 @return Size (rectangle dimensions).
 */
-GAPI_EXPORTS GOpaque<Size> size(const GOpaque<Rect>& r);
+GAPI_EXPORTS_W GOpaque<Size> size(const GOpaque<Rect>& r);
+
+/** @brief Gets dimensions from MediaFrame.
+
+@note Function textual ID is "org.opencv.streaming.sizeMF"
+
+@param src Input frame
+@return Size (frame dimensions).
+*/
+GAPI_EXPORTS_W GOpaque<Size> size(const GFrame& src);
+} //namespace streaming
 } //namespace gapi
 } //namespace cv
 

@@ -9,6 +9,7 @@
 #include <opencv2/gapi/streaming/cap.hpp>
 #include <opencv2/gapi/cpu/gcpukernel.hpp>
 #include <opencv2/highgui.hpp> // CommandLineParser
+#include <opencv2/gapi/infer/parsers.hpp>
 
 const std::string about =
     "This is an OpenCV-based version of Gaze Estimation example";
@@ -16,13 +17,13 @@ const std::string keys =
     "{ h help |                                    | Print this help message }"
     "{ input  |                                    | Path to the input video file }"
     "{ facem  | face-detection-retail-0005.xml     | Path to OpenVINO face detection model (.xml) }"
-    "{ faced  | CPU                                | Target device for the face detection (e.g. CPU, GPU, VPU, ...) }"
+    "{ faced  | CPU                                | Target device for the face detection (e.g. CPU, GPU, ...) }"
     "{ landm  | facial-landmarks-35-adas-0002.xml  | Path to OpenVINO landmarks detector model (.xml) }"
-    "{ landd  | CPU                                | Target device for the landmarks detector (e.g. CPU, GPU, VPU, ...) }"
+    "{ landd  | CPU                                | Target device for the landmarks detector (e.g. CPU, GPU, ...) }"
     "{ headm  | head-pose-estimation-adas-0001.xml | Path to OpenVINO head pose estimation model (.xml) }"
-    "{ headd  | CPU                                | Target device for the head pose estimation inference (e.g. CPU, GPU, VPU, ...) }"
+    "{ headd  | CPU                                | Target device for the head pose estimation inference (e.g. CPU, GPU, ...) }"
     "{ gazem  | gaze-estimation-adas-0002.xml      | Path to OpenVINO gaze vector estimaiton model (.xml) }"
-    "{ gazed  | CPU                                | Target device for the gaze vector estimation inference (e.g. CPU, GPU, VPU, ...) }"
+    "{ gazed  | CPU                                | Target device for the gaze vector estimation inference (e.g. CPU, GPU, ...) }"
     ;
 
 namespace {
@@ -58,16 +59,6 @@ G_API_OP(Size, <GSize(cv::GMat)>, "custom.gapi.size") {
     }
 };
 
-G_API_OP(ParseSSD,
-         <GRects(cv::GMat, GSize, bool)>,
-         "custom.gaze_estimation.parseSSD") {
-    static cv::GArrayDesc outMeta( const cv::GMatDesc &
-                                 , const cv::GOpaqueDesc &
-                                 , bool) {
-        return cv::empty_array_desc();
-    }
-};
-
 // Left/Right eye per every face
 G_API_OP(ParseEyes,
          <std::tuple<GRects, GRects>(GMats, GRects, GSize)>,
@@ -91,27 +82,6 @@ G_API_OP(ProcessPoses,
     }
 };
 
-void adjustBoundingBox(cv::Rect& boundingBox) {
-    auto w = boundingBox.width;
-    auto h = boundingBox.height;
-
-    boundingBox.x -= static_cast<int>(0.067 * w);
-    boundingBox.y -= static_cast<int>(0.028 * h);
-
-    boundingBox.width += static_cast<int>(0.15 * w);
-    boundingBox.height += static_cast<int>(0.13 * h);
-
-    if (boundingBox.width < boundingBox.height) {
-        auto dx = (boundingBox.height - boundingBox.width);
-        boundingBox.x -= dx / 2;
-        boundingBox.width += dx;
-    } else {
-        auto dy = (boundingBox.width - boundingBox.height);
-        boundingBox.y -= dy / 2;
-        boundingBox.height += dy;
-    }
-}
-
 void gazeVectorToGazeAngles(const cv::Point3f& gazeVector,
                                   cv::Point2f& gazeAngles) {
     auto r = cv::norm(gazeVector);
@@ -127,55 +97,6 @@ void gazeVectorToGazeAngles(const cv::Point3f& gazeVector,
 GAPI_OCV_KERNEL(OCVSize, Size) {
     static void run(const cv::Mat &in, cv::Size &out) {
         out = in.size();
-    }
-};
-
-GAPI_OCV_KERNEL(OCVParseSSD, ParseSSD) {
-    static void run(const cv::Mat &in_ssd_result,
-                    const cv::Size &upscale,
-                    const bool filter_out_of_bounds,
-                    std::vector<cv::Rect> &out_objects) {
-        const auto &in_ssd_dims = in_ssd_result.size;
-        CV_Assert(in_ssd_dims.dims() == 4u);
-
-        const int MAX_PROPOSALS = in_ssd_dims[2];
-        const int OBJECT_SIZE   = in_ssd_dims[3];
-        CV_Assert(OBJECT_SIZE  == 7); // fixed SSD object size
-
-        const cv::Rect surface({0,0}, upscale);
-        out_objects.clear();
-
-        const float *data = in_ssd_result.ptr<float>();
-        for (int i = 0; i < MAX_PROPOSALS; i++) {
-            const float image_id   = data[i * OBJECT_SIZE + 0];
-            const float label      = data[i * OBJECT_SIZE + 1];
-            const float confidence = data[i * OBJECT_SIZE + 2];
-            const float rc_left    = data[i * OBJECT_SIZE + 3];
-            const float rc_top     = data[i * OBJECT_SIZE + 4];
-            const float rc_right   = data[i * OBJECT_SIZE + 5];
-            const float rc_bottom  = data[i * OBJECT_SIZE + 6];
-            (void) label;
-            if (image_id < 0.f) {
-                break;    // marks end-of-detections
-            }
-            if (confidence < 0.5f) {
-                continue; // skip objects with low confidence
-            }
-            cv::Rect rc;  // map relative coordinates to the original image scale
-            rc.x      = static_cast<int>(rc_left   * upscale.width);
-            rc.y      = static_cast<int>(rc_top    * upscale.height);
-            rc.width  = static_cast<int>(rc_right  * upscale.width)  - rc.x;
-            rc.height = static_cast<int>(rc_bottom * upscale.height) - rc.y;
-            adjustBoundingBox(rc);                // TODO: new option?
-
-            const auto clipped_rc = rc & surface; // TODO: new option?
-            if (filter_out_of_bounds) {
-                if (clipped_rc.area() != rc.area()) {
-                    continue;
-                }
-            }
-            out_objects.emplace_back(clipped_rc);
-        }
     }
 };
 
@@ -335,11 +256,10 @@ int main(int argc, char *argv[])
         cmd.printMessage();
         return 0;
     }
-
     cv::GMat in;
     cv::GMat faces = cv::gapi::infer<custom::Faces>(in);
-    cv::GOpaque<cv::Size> sz = custom::Size::on(in); // FIXME
-    cv::GArray<cv::Rect> faces_rc = custom::ParseSSD::on(faces, sz, true);
+    cv::GOpaque<cv::Size> sz = cv::gapi::streaming::size(in);
+    cv::GArray<cv::Rect> faces_rc = cv::gapi::parseSSD(faces, sz, 0.5f, true, true);
     cv::GArray<cv::GMat> angles_y, angles_p, angles_r;
     std::tie(angles_y, angles_p, angles_r) = cv::gapi::infer<custom::HeadPose>(faces_rc, in);
     cv::GArray<cv::GMat> heads_pos = custom::ProcessPoses::on(angles_y, angles_p, angles_r);
@@ -386,7 +306,6 @@ int main(int argc, char *argv[])
     }.cfgInputLayers({"left_eye_image", "right_eye_image", "head_pose_angles"});
 
     auto kernels = cv::gapi::kernels< custom::OCVSize
-                                    , custom::OCVParseSSD
                                     , custom::OCVParseEyes
                                     , custom::OCVProcessPoses>();
     auto networks = cv::gapi::networks(face_net, head_net, landmarks_net, gaze_net);

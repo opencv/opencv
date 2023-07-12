@@ -35,14 +35,14 @@ template<typename T> class GArray;
  * \addtogroup gapi_meta_args
  * @{
  */
-struct GArrayDesc
+struct GAPI_EXPORTS_W_SIMPLE GArrayDesc
 {
     // FIXME: Body
     // FIXME: Also implement proper operator== then
     bool operator== (const GArrayDesc&) const { return true; }
 };
 template<typename U> GArrayDesc descr_of(const std::vector<U> &) { return {};}
-static inline GArrayDesc empty_array_desc() {return {}; }
+GAPI_EXPORTS_W inline GArrayDesc empty_array_desc() {return {}; }
 /** @} */
 
 std::ostream& operator<<(std::ostream& os, const cv::GArrayDesc &desc);
@@ -177,7 +177,7 @@ namespace detail
             {
                 util::get<rw_own_t>(m_ref).clear();
             }
-            else GAPI_Assert(false); // shouldn't be called in *EXT modes
+            else GAPI_Error("InternalError"); // shouldn't be called in *EXT modes
         }
 
         // Obtain a WRITE reference to underlying object
@@ -236,7 +236,7 @@ namespace detail
     class VectorRef
     {
         std::shared_ptr<BasicVectorRef> m_ref;
-        cv::detail::OpaqueKind m_kind;
+        cv::detail::OpaqueKind m_kind = cv::detail::OpaqueKind::CV_UNKNOWN;
 
         template<typename T> inline void check() const
         {
@@ -246,12 +246,18 @@ namespace detail
 
     public:
         VectorRef() = default;
-        template<typename T> explicit VectorRef(const std::vector<T>& vec) :
-                                            m_ref(new VectorRefT<T>(vec)), m_kind(GOpaqueTraits<T>::kind) {}
-        template<typename T> explicit VectorRef(std::vector<T>& vec)       :
-                                            m_ref(new VectorRefT<T>(vec)), m_kind(GOpaqueTraits<T>::kind) {}
-        template<typename T> explicit VectorRef(std::vector<T>&& vec)      :
-                                            m_ref(new VectorRefT<T>(std::move(vec))), m_kind(GOpaqueTraits<T>::kind) {}
+        template<typename T> explicit VectorRef(const std::vector<T>& vec)
+            : m_ref(new VectorRefT<T>(vec))
+            , m_kind(GOpaqueTraits<T>::kind)
+        {}
+        template<typename T> explicit VectorRef(std::vector<T>& vec)
+            : m_ref(new VectorRefT<T>(vec))
+            , m_kind(GOpaqueTraits<T>::kind)
+        {}
+        template<typename T> explicit VectorRef(std::vector<T>&& vec)
+            : m_ref(new VectorRefT<T>(std::move(vec)))
+            , m_kind(GOpaqueTraits<T>::kind)
+        {}
 
         cv::detail::OpaqueKind getKind() const
         {
@@ -284,6 +290,14 @@ namespace detail
             return static_cast<VectorRefT<T>&>(*m_ref).rref();
         }
 
+        // Check if was created for/from std::vector<T>
+        template <typename T> bool holds() const
+        {
+            if (!m_ref) return false;
+            using U = typename std::decay<T>::type;
+            return dynamic_cast<VectorRefT<U>*>(m_ref.get()) != nullptr;
+        }
+
         void mov(VectorRef &v)
         {
             m_ref->mov(*v.m_ref);
@@ -313,9 +327,10 @@ namespace detail
 #  define FLATTEN_NS cv
 #endif
     template<class T> struct flatten_g;
-    template<> struct flatten_g<cv::GMat>    { using type = FLATTEN_NS::Mat; };
-    template<> struct flatten_g<cv::GScalar> { using type = FLATTEN_NS::Scalar; };
-    template<class T> struct flatten_g       { using type = T; };
+    template<> struct flatten_g<cv::GMat>         { using type = FLATTEN_NS::Mat; };
+    template<> struct flatten_g<cv::GScalar>      { using type = FLATTEN_NS::Scalar; };
+    template<class T> struct flatten_g<GArray<T>> { using type = std::vector<T>; };
+    template<class T> struct flatten_g            { using type = T; };
 #undef FLATTEN_NS
     // FIXME: the above mainly duplicates "ProtoToParam" thing from gtyped.hpp
     // but I decided not to include gtyped here - probably worth moving that stuff
@@ -325,31 +340,92 @@ namespace detail
 /** \addtogroup gapi_data_objects
  * @{
  */
-
+/**
+ * @brief `cv::GArray<T>` template class represents a list of objects
+ * of class `T` in the graph.
+ *
+ * `cv::GArray<T>` describes a functional relationship between
+ * operations consuming and producing arrays of objects of class
+ * `T`. The primary purpose of `cv::GArray<T>` is to represent a
+ * dynamic list of objects -- where the size of the list is not known
+ * at the graph construction or compile time. Examples include: corner
+ * and feature detectors (`cv::GArray<cv::Point>`), object detection
+ * and tracking  results (`cv::GArray<cv::Rect>`). Programmers can use
+ * their own types with `cv::GArray<T>` in the custom operations.
+ *
+ * Similar to `cv::GScalar`, `cv::GArray<T>` may be value-initialized
+ * -- in this case a graph-constant value is associated with the object.
+ *
+ * `GArray<T>` is a virtual counterpart of `std::vector<T>`, which is
+ * usually used to represent the `GArray<T>` data in G-API during the
+ * execution.
+ *
+ * @sa `cv::GOpaque<T>`
+ */
 template<typename T> class GArray
 {
 public:
     // Host type (or Flat type) - the type this GArray is actually
     // specified to.
+    /// @private
     using HT = typename detail::flatten_g<typename std::decay<T>::type>::type;
 
+    /**
+     * @brief Constructs a value-initialized `cv::GArray<T>`
+     *
+     * `cv::GArray<T>` objects  may have their values
+     * be associated at graph construction time. It is useful when
+     * some operation has a `cv::GArray<T>` input which doesn't change during
+     * the program execution, and is set only once. In this case,
+     * there is no need to declare such `cv::GArray<T>` as a graph input.
+     *
+     * @note The value of `cv::GArray<T>` may be overwritten by assigning some
+     * other `cv::GArray<T>` to the object using `operator=` -- on the
+     * assignment, the old association or value is discarded.
+     *
+     * @param v a std::vector<T> to associate with this
+     * `cv::GArray<T>` object. Vector data is copied into the
+     * `cv::GArray<T>` (no reference to the passed data is held).
+     */
     explicit GArray(const std::vector<HT>& v) // Constant value constructor
         : m_ref(detail::GArrayU(detail::VectorRef(v))) { putDetails(); }
+
+    /**
+     * @overload
+     * @brief Constructs a value-initialized `cv::GArray<T>`
+     *
+     * @param v a std::vector<T> to associate with this
+     * `cv::GArray<T>` object. Vector data is moved into the `cv::GArray<T>`.
+     */
     explicit GArray(std::vector<HT>&& v)      // Move-constructor
         : m_ref(detail::GArrayU(detail::VectorRef(std::move(v)))) { putDetails(); }
-    GArray() { putDetails(); }             // Empty constructor
-    explicit GArray(detail::GArrayU &&ref) // GArrayU-based constructor
-        : m_ref(ref) { putDetails(); }     //   (used by GCall, not for users)
 
-    detail::GArrayU strip() const { return m_ref; }
+    /**
+     * @brief Constructs an empty `cv::GArray<T>`
+     *
+     * Normally, empty G-API data objects denote a starting point of
+     * the graph. When an empty `cv::GArray<T>` is assigned to a result
+     * of some operation, it obtains a functional link to this
+     * operation (and is not empty anymore).
+     */
+    GArray() { putDetails(); }                // Empty constructor
+
+    /// @private
+    explicit GArray(detail::GArrayU &&ref)    // GArrayU-based constructor
+        : m_ref(ref) { putDetails(); }        //   (used by GCall, not for users)
+
+    /// @private
+    detail::GArrayU strip() const {
+        return m_ref;
+    }
+    /// @private
+    static void VCtor(detail::VectorRef& vref) {
+        vref.reset<HT>();
+    }
 
 private:
-    static void VCTor(detail::VectorRef& vref) {
-        vref.reset<HT>();
-        vref.storeKind<HT>();
-    }
     void putDetails() {
-        m_ref.setConstructFcn(&VCTor);
+        m_ref.setConstructFcn(&VCtor);
         m_ref.specifyType<HT>();  // FIXME: to unify those 2 to avoid excessive dynamic_cast
         m_ref.storeKind<HT>();    //
     }

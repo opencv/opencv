@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2020 Intel Corporation
+// Copyright (C) 2018-2022 Intel Corporation
 
 
 #include "precomp.hpp"
@@ -25,6 +25,9 @@
 #include "backends/cpu/gcpubackend.hpp"
 
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
+
+#include "utils/itt.hpp"
+#include "logger.hpp"
 
 // FIXME: Is there a way to take a typed graph (our GModel),
 // and create a new typed graph _ATOP_ of that (by extending with a couple of
@@ -86,7 +89,7 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
         {
         case NodeType::OP:
         {
-            m_script.push_back({nh, GModel::collectOutputMeta(m_gm, nh)});
+            m_opNodes.push_back(nh);
 
             // If kernel is stateful then prepare storage for its state.
             GCPUKernel k = gcm.metadata(nh).get<CPUUnit>().k;
@@ -105,21 +108,12 @@ cv::gimpl::GCPUExecutable::GCPUExecutable(const ade::Graph &g,
                 auto rc = RcDesc{desc.rc, desc.shape, desc.ctor};
                 magazine::bindInArg(m_res, rc, m_gm.metadata(nh).get<ConstValue>().arg);
             }
-            //preallocate internal Mats in advance
-            if (desc.storage == Data::Storage::INTERNAL && desc.shape == GShape::GMAT)
-            {
-                const auto mat_desc = util::get<cv::GMatDesc>(desc.meta);
-                auto& mat = m_res.slot<cv::Mat>()[desc.rc];
-                createMat(mat_desc, mat);
-            }
             break;
         }
         default: util::throw_error(std::logic_error("Unsupported NodeType type"));
         }
     }
-
-    // For each stateful kernel call 'setup' user callback to initialize state.
-    setupKernelStates();
+    makeReshape();
 }
 
 // FIXME: Document what it does
@@ -128,9 +122,10 @@ cv::GArg cv::gimpl::GCPUExecutable::packArg(const GArg &arg)
     // No API placeholders allowed at this point
     // FIXME: this check has to be done somewhere in compilation stage.
     GAPI_Assert(   arg.kind != cv::detail::ArgKind::GMAT
-              && arg.kind != cv::detail::ArgKind::GSCALAR
-              && arg.kind != cv::detail::ArgKind::GARRAY
-              && arg.kind != cv::detail::ArgKind::GOPAQUE);
+                && arg.kind != cv::detail::ArgKind::GSCALAR
+                && arg.kind != cv::detail::ArgKind::GARRAY
+                && arg.kind != cv::detail::ArgKind::GOPAQUE
+                && arg.kind != cv::detail::ArgKind::GFRAME);
 
     if (arg.kind != cv::detail::ArgKind::GOBJREF)
     {
@@ -150,6 +145,7 @@ cv::GArg cv::gimpl::GCPUExecutable::packArg(const GArg &arg)
     //   (and constructed by either bindIn/Out or resetInternal)
     case GShape::GARRAY:  return GArg(m_res.slot<cv::detail::VectorRef>().at(ref.id));
     case GShape::GOPAQUE: return GArg(m_res.slot<cv::detail::OpaqueRef>().at(ref.id));
+    case GShape::GFRAME:  return GArg(m_res.slot<cv::MediaFrame>().at(ref.id));
     default:
         util::throw_error(std::logic_error("Unsupported GShape type"));
         break;
@@ -172,9 +168,44 @@ void cv::gimpl::GCPUExecutable::setupKernelStates()
     }
 }
 
+void cv::gimpl::GCPUExecutable::makeReshape() {
+    // Prepare the execution script
+    m_script.clear();
+    for (auto &nh : m_opNodes) {
+        m_script.push_back({nh, GModel::collectOutputMeta(m_gm, nh)});
+    }
+
+    // Preallocate internal mats
+    for (auto& nh : m_dataNodes) {
+        const auto& desc = m_gm.metadata(nh).get<Data>();
+        if (desc.storage == Data::Storage::INTERNAL && desc.shape == GShape::GMAT) {
+            const auto mat_desc = util::get<cv::GMatDesc>(desc.meta);
+            auto& mat = m_res.slot<cv::Mat>()[desc.rc];
+            createMat(mat_desc, mat);
+        }
+    }
+}
+
+void cv::gimpl::GCPUExecutable::reshape(ade::Graph&, const GCompileArgs& args) {
+    m_compileArgs = args;
+    makeReshape();
+    // TODO: Add an input meta sensitivity flag to stateful kernels.
+    // When reshape() happens, reset state for meta-sensitive kernels only
+    if (!m_nodesToStates.empty()) {
+        std::call_once(m_warnFlag,
+            [](){
+                GAPI_LOG_WARNING(NULL,
+                    "\nGCPUExecutable::reshape was called. Resetting states of stateful kernels.");
+            });
+        setupKernelStates();
+    }
+}
+
 void cv::gimpl::GCPUExecutable::handleNewStream()
 {
-    m_newStreamStarted = true;
+    // In case if new video-stream happens - for each stateful kernel
+    // call 'setup' user callback to re-initialize state.
+    setupKernelStates();
 }
 
 void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
@@ -204,14 +235,6 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
         }
     }
 
-    // In case if new video-stream happens - for each stateful kernel
-    // call 'setup' user callback to re-initialize state.
-    if (m_newStreamStarted)
-    {
-        setupKernelStates();
-        m_newStreamStarted = false;
-    }
-
     // OpenCV backend execution is not a rocket science at all.
     // Simply invoke our kernels in the proper order.
     GConstGCPUModel gcm(m_g);
@@ -235,11 +258,11 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
 
         // - Output parameters.
         // FIXME: pre-allocate internal Mats, etc, according to the known meta
-        for (const auto &out_it : ade::util::indexed(op.outs))
+        for (const auto out_it : ade::util::indexed(op.outs))
         {
             // FIXME: Can the same GArg type resolution mechanism be reused here?
-            const auto out_port  = ade::util::index(out_it);
-            const auto out_desc  = ade::util::value(out_it);
+            const auto  out_port  = ade::util::index(out_it);
+            const auto& out_desc  = ade::util::value(out_it);
             context.m_results[out_port] = magazine::getObjPtr(m_res, out_desc);
         }
 
@@ -249,18 +272,23 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
             context.m_state = m_nodesToStates.at(op_info.nh);
         }
 
-        // Now trigger the executable unit
-        k.m_runF(context);
+        {
+            GAPI_ITT_DYNAMIC_LOCAL_HANDLE(op_hndl, op.k.name.c_str());
+            GAPI_ITT_AUTO_TRACE_GUARD(op_hndl);
+
+            // Now trigger the executable unit
+            k.m_runF(context);
+        }
 
         //As Kernels are forbidden to allocate memory for (Mat) outputs,
         //this code seems redundant, at least for Mats
         //FIXME: unify with cv::detail::ensure_out_mats_not_reallocated
         //FIXME: when it's done, remove can_describe(const GMetaArg&, const GRunArgP&)
         //and descr_of(const cv::GRunArgP &argp)
-        for (const auto &out_it : ade::util::indexed(op_info.expected_out_metas))
+        for (const auto out_it : ade::util::indexed(op_info.expected_out_metas))
         {
-            const auto out_index      = ade::util::index(out_it);
-            const auto expected_meta  = ade::util::value(out_it);
+            const auto  out_index      = ade::util::index(out_it);
+            const auto& expected_meta  = ade::util::value(out_it);
 
             if (!can_describe(expected_meta, context.m_results[out_index]))
             {
@@ -276,4 +304,8 @@ void cv::gimpl::GCPUExecutable::run(std::vector<InObj>  &&input_objs,
     } // for(m_script)
 
     for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second);
+
+    // In/Out args clean-up is mandatory now with RMat
+    for (auto &it : input_objs) magazine::unbind(m_res, it.first);
+    for (auto &it : output_objs) magazine::unbind(m_res, it.first);
 }

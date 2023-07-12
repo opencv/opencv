@@ -138,6 +138,12 @@ public:
 
     typedef std::map<int, std::vector<util::NormalizedBBox> > LabelBBox;
 
+    inline int getNumOfTargetClasses() {
+        unsigned numBackground =
+            (_backgroundLabelId >= 0 && _backgroundLabelId < _numClasses) ? 1 : 0;
+        return (_numClasses - numBackground);
+    }
+
     bool getParameterDict(const LayerParams &params,
                           const std::string &parameterName,
                           DictValue& result)
@@ -215,7 +221,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_CUDA && !_groupByClasses) ||
-               ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && !_locPredTransposed && _bboxesNormalized);
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && !_locPredTransposed && _bboxesNormalized);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -456,7 +462,7 @@ public:
             // Retrieve all prior bboxes
             std::vector<util::NormalizedBBox> priorBBoxes;
             std::vector<std::vector<float> > priorVariances;
-            GetPriorBBoxes(priorData, numPriors, _bboxesNormalized, priorBBoxes, priorVariances);
+            GetPriorBBoxes(priorData, numPriors, _bboxesNormalized, _varianceEncodedInTarget, priorBBoxes, priorVariances);
 
             // Decode all loc predictions to bboxes
             util::NormalizedBBox clipBounds;
@@ -590,12 +596,13 @@ public:
             LabelBBox::const_iterator label_bboxes = decodeBBoxes.find(label);
             if (label_bboxes == decodeBBoxes.end())
                 CV_Error_(cv::Error::StsError, ("Could not find location predictions for label %d", label));
+            int limit = (getNumOfTargetClasses() == 1) ? _keepTopK : std::numeric_limits<int>::max();
             if (_bboxesNormalized)
                 NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
-                         indices[c], util::caffe_norm_box_overlap);
+                         indices[c], util::caffe_norm_box_overlap, limit);
             else
                 NMSFast_(label_bboxes->second, scores, _confidenceThreshold, _nmsThreshold, 1.0, _topK,
-                         indices[c], util::caffe_box_overlap);
+                         indices[c], util::caffe_box_overlap, limit);
             numDetections += indices[c].size();
         }
         if (_keepTopK > -1 && numDetections > (size_t)_keepTopK)
@@ -617,8 +624,13 @@ public:
                 }
             }
             // Keep outputs k results per image.
-            std::sort(scoreIndexPairs.begin(), scoreIndexPairs.end(),
-                      util::SortScorePairDescend<std::pair<int, int> >);
+            if ((_keepTopK * 8) > scoreIndexPairs.size()) {
+                std::sort(scoreIndexPairs.begin(), scoreIndexPairs.end(),
+                          util::SortScorePairDescend<std::pair<int, int> >);
+            } else {
+                std::partial_sort(scoreIndexPairs.begin(), scoreIndexPairs.begin() + _keepTopK, scoreIndexPairs.end(),
+                          util::SortScorePairDescend<std::pair<int, int> >);
+            }
             scoreIndexPairs.resize(_keepTopK);
 
             std::map<int, std::vector<int> > newIndices;
@@ -744,7 +756,7 @@ public:
         CV_Assert(prior_bboxes.size() == prior_variances.size());
         CV_Assert(prior_bboxes.size() == bboxes.size());
         size_t num_bboxes = prior_bboxes.size();
-        CV_Assert(num_bboxes == 0 || prior_variances[0].size() == 4);
+        CV_Assert(num_bboxes == 0 || prior_variances[0].size() == 4 || variance_encoded_in_target);
         decode_bboxes.clear(); decode_bboxes.resize(num_bboxes);
         if(variance_encoded_in_target)
         {
@@ -796,12 +808,13 @@ public:
     }
 
     // Get prior bounding boxes from prior_data
-    //    prior_data: 1 x 2 x num_priors * 4 x 1 blob.
+    //    prior_data: 1 x 1 x num_priors * 4 x 1 blob or 1 x 2 x num_priors * 4 x 1 blob.
     //    num_priors: number of priors.
     //    prior_bboxes: stores all the prior bboxes in the format of util::NormalizedBBox.
     //    prior_variances: stores all the variances needed by prior bboxes.
     static void GetPriorBBoxes(const float* priorData, const int& numPriors,
-                        bool normalized_bbox, std::vector<util::NormalizedBBox>& priorBBoxes,
+                        bool normalized_bbox, bool variance_encoded_in_target,
+                        std::vector<util::NormalizedBBox>& priorBBoxes,
                         std::vector<std::vector<float> >& priorVariances)
     {
         priorBBoxes.clear(); priorBBoxes.resize(numPriors);
@@ -817,13 +830,16 @@ public:
             bbox.set_size(BBoxSize(bbox, normalized_bbox));
         }
 
-        for (int i = 0; i < numPriors; ++i)
+        if (!variance_encoded_in_target)
         {
-            int startIdx = (numPriors + i) * 4;
-            // not needed here: priorVariances[i].clear();
-            for (int j = 0; j < 4; ++j)
+            for (int i = 0; i < numPriors; ++i)
             {
-                priorVariances[i].push_back(priorData[startIdx + j]);
+                int startIdx = (numPriors + i) * 4;
+                // not needed here: priorVariances[i].clear();
+                for (int j = 0; j < 4; ++j)
+                {
+                    priorVariances[i].push_back(priorData[startIdx + j]);
+                }
             }
         }
     }
@@ -853,16 +869,16 @@ public:
         for (int i = 0; i < num; ++i, locData += numPredsPerClass * numLocClasses * 4)
         {
             LabelBBox& labelBBox = locPreds[i];
+            int start = shareLocation ? -1 : 0;
+            for (int c = 0; c < numLocClasses; ++c) {
+                labelBBox[start++].resize(numPredsPerClass);
+            }
             for (int p = 0; p < numPredsPerClass; ++p)
             {
                 int startIdx = p * numLocClasses * 4;
                 for (int c = 0; c < numLocClasses; ++c)
                 {
                     int label = shareLocation ? -1 : c;
-                    if (labelBBox.find(label) == labelBBox.end())
-                    {
-                        labelBBox[label].resize(numPredsPerClass);
-                    }
                     util::NormalizedBBox& bbox = labelBBox[label][p];
                     if (locPredTransposed)
                     {
@@ -984,30 +1000,6 @@ public:
         return make_cuda_node<cuda4dnn::DetectionOutputOp>(preferableTarget, std::move(context->stream), config);
     }
 #endif
-
-#ifdef HAVE_DNN_IE_NN_BUILDER_2019
-    virtual Ptr<BackendNode> initInfEngine(const std::vector<Ptr<BackendWrapper> >&) CV_OVERRIDE
-    {
-        InferenceEngine::Builder::DetectionOutputLayer ieLayer(name);
-
-        ieLayer.setNumClasses(_numClasses);
-        ieLayer.setShareLocation(_shareLocation);
-        ieLayer.setBackgroudLabelId(_backgroundLabelId);
-        ieLayer.setNMSThreshold(_nmsThreshold);
-        ieLayer.setTopK(_topK > 0 ? _topK : _keepTopK);
-        ieLayer.setKeepTopK(_keepTopK);
-        ieLayer.setConfidenceThreshold(_confidenceThreshold);
-        ieLayer.setVariantEncodedInTarget(_varianceEncodedInTarget);
-        ieLayer.setCodeType("caffe.PriorBoxParameter." + _codeType);
-        ieLayer.setInputPorts(std::vector<InferenceEngine::Port>(3));
-
-        InferenceEngine::Builder::Layer l = ieLayer;
-        l.getParameters()["eta"] = std::string("1.0");
-        l.getParameters()["clip"] = _clip;
-
-        return Ptr<BackendNode>(new InfEngineBackendNode(l));
-    }
-#endif  // HAVE_DNN_IE_NN_BUILDER_2019
 
 
 #ifdef HAVE_DNN_NGRAPH

@@ -31,7 +31,11 @@ namespace internal
 #if defined(__GXX_RTTI) || defined(_CPPRTTI)
        return dynamic_cast<T>(operand);
 #else
-    #warning used static cast instead of dynamic because RTTI is disabled
+#ifdef __GNUC__
+#warning used static cast instead of dynamic because RTTI is disabled
+#else
+#pragma message("WARNING: used static cast instead of dynamic because RTTI is disabled")
+#endif
        return static_cast<T>(operand);
 #endif
     }

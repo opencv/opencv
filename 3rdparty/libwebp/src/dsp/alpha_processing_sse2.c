@@ -265,6 +265,27 @@ static int HasAlpha32b_SSE2(const uint8_t* src, int length) {
   return 0;
 }
 
+static void AlphaReplace_SSE2(uint32_t* src, int length, uint32_t color) {
+  const __m128i m_color = _mm_set1_epi32(color);
+  const __m128i zero = _mm_setzero_si128();
+  int i = 0;
+  for (; i + 8 <= length; i += 8) {
+    const __m128i a0 = _mm_loadu_si128((const __m128i*)(src + i + 0));
+    const __m128i a1 = _mm_loadu_si128((const __m128i*)(src + i + 4));
+    const __m128i b0 = _mm_srai_epi32(a0, 24);
+    const __m128i b1 = _mm_srai_epi32(a1, 24);
+    const __m128i c0 = _mm_cmpeq_epi32(b0, zero);
+    const __m128i c1 = _mm_cmpeq_epi32(b1, zero);
+    const __m128i d0 = _mm_and_si128(c0, m_color);
+    const __m128i d1 = _mm_and_si128(c1, m_color);
+    const __m128i e0 = _mm_andnot_si128(c0, a0);
+    const __m128i e1 = _mm_andnot_si128(c1, a1);
+    _mm_storeu_si128((__m128i*)(src + i + 0), _mm_or_si128(d0, e0));
+    _mm_storeu_si128((__m128i*)(src + i + 4), _mm_or_si128(d1, e1));
+  }
+  for (; i < length; ++i) if ((src[i] >> 24) == 0) src[i] = color;
+}
+
 // -----------------------------------------------------------------------------
 // Apply alpha value to rows
 
@@ -334,6 +355,7 @@ WEBP_TSAN_IGNORE_FUNCTION void WebPInitAlphaProcessingSSE2(void) {
 
   WebPHasAlpha8b = HasAlpha8b_SSE2;
   WebPHasAlpha32b = HasAlpha32b_SSE2;
+  WebPAlphaReplace = AlphaReplace_SSE2;
 }
 
 #else  // !WEBP_USE_SSE2

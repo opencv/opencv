@@ -179,11 +179,11 @@ CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback, void* userdat
 CV_EXPORTS String tempfile( const char* suffix = 0);
 CV_EXPORTS void glob(String pattern, std::vector<String>& result, bool recursive = false);
 
-/** @brief OpenCV will try to set the number of threads for the next parallel region.
+/** @brief OpenCV will try to set the number of threads for subsequent parallel regions.
 
-If threads == 0, OpenCV will disable threading optimizations and run all it's functions
-sequentially. Passing threads \< 0 will reset threads number to system default. This function must
-be called outside of parallel region.
+If threads == 1, OpenCV will disable threading optimizations and run all it's functions
+sequentially. Passing threads \< 0 will reset threads number to system default.
+The function is not thread-safe. It must not be called in parallel region or concurrent threads.
 
 OpenCV will try to run its functions with specified threads number, but some behaviour differs from
 framework:
@@ -570,6 +570,8 @@ static inline size_t getElemSize(int type) { return (size_t)CV_ELEM_SIZE(type); 
 /////////////////////////////// Parallel Primitives //////////////////////////////////
 
 /** @brief Base class for parallel data processors
+
+@ingroup core_parallel
 */
 class CV_EXPORTS ParallelLoopBody
 {
@@ -579,17 +581,23 @@ public:
 };
 
 /** @brief Parallel data processor
+
+@ingroup core_parallel
 */
 CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
 
+//! @ingroup core_parallel
 class ParallelLoopBodyLambdaWrapper : public ParallelLoopBody
 {
 private:
     std::function<void(const Range&)> m_functor;
 public:
-    ParallelLoopBodyLambdaWrapper(std::function<void(const Range&)> functor) :
-        m_functor(functor)
-    { }
+    inline
+    ParallelLoopBodyLambdaWrapper(std::function<void(const Range&)> functor)
+        : m_functor(functor)
+    {
+        // nothing
+    }
 
     virtual void operator() (const cv::Range& range) const CV_OVERRIDE
     {
@@ -597,10 +605,13 @@ public:
     }
 };
 
-inline void parallel_for_(const Range& range, std::function<void(const Range&)> functor, double nstripes=-1.)
+//! @ingroup core_parallel
+static inline
+void parallel_for_(const Range& range, std::function<void(const Range&)> functor, double nstripes=-1.)
 {
     parallel_for_(range, ParallelLoopBodyLambdaWrapper(functor), nstripes);
 }
+
 
 /////////////////////////////// forEach method of cv::Mat ////////////////////////////
 template<typename _Tp, typename Functor> inline
@@ -703,9 +714,27 @@ void Mat::forEach_impl(const Functor& operation) {
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 
 #if !defined(_M_CEE)
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
 typedef std::recursive_mutex Mutex;
 typedef std::lock_guard<cv::Mutex> AutoLock;
-#endif
+#else // OPENCV_DISABLE_THREAD_SUPPORT
+// Custom (failing) implementation of `std::recursive_mutex`.
+struct Mutex {
+    void lock(){
+        CV_Error(cv::Error::StsNotImplemented,
+                 "cv::Mutex is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+    }
+    void unlock(){
+        CV_Error(cv::Error::StsNotImplemented,
+                 "cv::Mutex is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+    }
+};
+// Stub for cv::AutoLock when threads are disabled.
+struct AutoLock {
+    AutoLock(Mutex &) { }
+};
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
+#endif // !defined(_M_CEE)
 
 
 /** @brief Designed for command line parsing

@@ -45,6 +45,21 @@
 
 namespace cvflann
 {
+class FILEScopeGuard {
+
+public:
+    explicit FILEScopeGuard(FILE* file) {
+        file_ = file;
+    };
+
+    ~FILEScopeGuard() {
+        fclose(file_);
+    };
+
+private:
+    FILE* file_;
+};
+
 
 /**
  * Sets the log level used for all flann functions
@@ -69,7 +84,6 @@ struct SavedIndexParams : public IndexParams
     }
 };
 
-
 template<typename Distance>
 NNIndex<Distance>* load_saved_index(const Matrix<typename Distance::ElementType>& dataset, const cv::String& filename, Distance distance)
 {
@@ -79,21 +93,20 @@ NNIndex<Distance>* load_saved_index(const Matrix<typename Distance::ElementType>
     if (fin == NULL) {
         return NULL;
     }
+    FILEScopeGuard fscgd(fin);
+
     IndexHeader header = load_header(fin);
     if (header.data_type != Datatype<ElementType>::type()) {
-        fclose(fin);
-        throw FLANNException("Datatype of saved index is different than of the one to be created.");
+        FLANN_THROW(cv::Error::StsError, "Datatype of saved index is different than of the one to be created.");
     }
     if ((size_t(header.rows) != dataset.rows)||(size_t(header.cols) != dataset.cols)) {
-        fclose(fin);
-        throw FLANNException("The index saved belongs to a different dataset");
+        FLANN_THROW(cv::Error::StsError, "The index saved belongs to a different dataset");
     }
 
     IndexParams params;
     params["algorithm"] = header.index_type;
     NNIndex<Distance>* nnIndex = create_index_by_type<Distance>(dataset, params, distance);
     nnIndex->loadIndex(fin);
-    fclose(fin);
 
     return nnIndex;
 }
@@ -107,7 +120,7 @@ public:
     typedef typename Distance::ResultType DistanceType;
 
     Index(const Matrix<ElementType>& features, const IndexParams& params, Distance distance = Distance() )
-        : index_params_(params)
+        :index_params_(params)
     {
         flann_algorithm_t index_type = get_param<flann_algorithm_t>(params,"algorithm");
         loaded_ = false;
@@ -140,7 +153,7 @@ public:
     {
         FILE* fout = fopen(filename.c_str(), "wb");
         if (fout == NULL) {
-            throw FLANNException("Cannot open file");
+            FLANN_THROW(cv::Error::StsError, "Cannot open file");
         }
         save_header(fout, *nnIndex_);
         saveIndex(fout);

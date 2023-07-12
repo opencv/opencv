@@ -7,12 +7,20 @@
 #pragma once
 
 #ifdef __cplusplus
-#import "opencv.hpp"
+#import "opencv2/core.hpp"
 #else
 #define CV_EXPORTS
 #endif
 
 #import <Foundation/Foundation.h>
+
+#ifdef AVAILABLE_IMGCODECS
+#if TARGET_OS_IPHONE
+#import <UIKit/UIKit.h>
+#elif TARGET_OS_MAC
+#import <AppKit/AppKit.h>
+#endif
+#endif
 
 @class Size2i;
 @class Scalar;
@@ -97,6 +105,7 @@ CV_EXPORTS @interface Mat : NSObject
 - (void)createEx:(NSArray<NSNumber*>*)sizes type:(int)type  NS_SWIFT_NAME(create(sizes:type:));
 - (void)copySize:(Mat*)mat;
 - (Mat*)cross:(Mat*)mat;
+- (unsigned char*)dataPtr NS_SWIFT_NAME(dataPointer());
 - (int)depth;
 - (Mat*)diag:(int)diagonal;
 - (Mat*)diag;
@@ -113,7 +122,17 @@ CV_EXPORTS @interface Mat : NSObject
 - (BOOL)isSubmatrix;
 - (void)locateROI:(Size2i*)wholeSize ofs:(Point2i*)offset NS_SWIFT_NAME(locateROI(wholeSize:offset:));
 - (Mat*)mul:(Mat*)mat scale:(double)scale;
+/**
+ Performs element-wise multiplication
+ @param mat operand with with which to perform element-wise multiplication
+*/
 - (Mat*)mul:(Mat*)mat;
+/**
+ Performs matrix multiplication
+ @param mat operand with with which to perform matrix multiplication
+ @see `Core.gemm(...)`
+*/
+- (Mat*)matMul:(Mat*)mat;
 + (Mat*)ones:(int)rows cols:(int)cols type:(int)type NS_SWIFT_NAME(ones(rows:cols:type:));
 + (Mat*)ones:(Size2i*)size type:(int)type NS_SWIFT_NAME(ones(size:type:));
 + (Mat*)onesEx:(NSArray<NSNumber*>*)sizes type:(int)type NS_SWIFT_NAME(ones(sizes:type:));
@@ -170,6 +189,37 @@ CV_EXPORTS @interface Mat : NSObject
 - (int)put:(NSArray<NSNumber*>*)indices count:(int)count intBuffer:(const int*)buffer NS_REFINED_FOR_SWIFT;
 - (int)put:(NSArray<NSNumber*>*)indices count:(int)count shortBuffer:(const short*)buffer NS_REFINED_FOR_SWIFT;
 
+#pragma mark - Converters
+
+#ifdef AVAILABLE_IMGCODECS
+
+- (CGImageRef)toCGImage CF_RETURNS_RETAINED;
+- (instancetype)initWithCGImage:(CGImageRef)image;
+- (instancetype)initWithCGImage:(CGImageRef)image alphaExist:(BOOL)alphaExist;
+
+#if TARGET_OS_IPHONE
+
+- (UIImage*)toUIImage;
+- (instancetype)initWithUIImage:(UIImage*)image;
+- (instancetype)initWithUIImage:(UIImage*)image alphaExist:(BOOL)alphaExist;
+
+#elif TARGET_OS_MAC
+
+- (NSImage*)toNSImage;
+- (instancetype)initWithNSImage:(NSImage*)image;
+- (instancetype)initWithNSImage:(NSImage*)image alphaExist:(BOOL)alphaExist;
+
+#endif
+
+#endif
+
+#pragma mark - QuickLook
+
+#ifdef AVAILABLE_IMGCODECS
+
+- (id)debugQuickLookObject;
+
+#endif
 
 @end
 

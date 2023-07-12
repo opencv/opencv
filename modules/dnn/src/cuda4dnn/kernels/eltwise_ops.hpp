@@ -6,26 +6,29 @@
 #define OPENCV_DNN_SRC_CUDA4DNN_KERNELS_ELTWISE_OPS_HPP
 
 #include "../csl/stream.hpp"
-#include "../csl/span.hpp"
+#include "../csl/tensor.hpp"
 
 #include <cstddef>
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template <class T>
-    void eltwise_max_2(const csl::Stream& stream, csl::Span<T> output, csl::View<T> x, csl::View<T> y);
+    void eltwise_max_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y);
 
     template <class T>
-    void eltwise_sum_2(const csl::Stream& stream, csl::Span<T> output, csl::View<T> x, csl::View<T> y);
+    void eltwise_min_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y);
 
     template <class T>
-    void eltwise_sum_coeff_2(const csl::Stream& stream, csl::Span<T> output, T coeff_x, csl::View<T> x, T coeff_y, csl::View<T> y);
+    void eltwise_sum_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y);
 
     template <class T>
-    void eltwise_prod_2(const csl::Stream& stream, csl::Span<T> output, csl::View<T> x, csl::View<T> y);
+    void eltwise_sum_coeff_2(const csl::Stream& stream, csl::TensorSpan<T> output, T coeff_x, csl::TensorView<T> x, T coeff_y, csl::TensorView<T> y);
 
     template <class T>
-    void eltwise_div_2(const csl::Stream& stream, csl::Span<T> output, csl::View<T> x, csl::View<T> y);
+    void eltwise_prod_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y);
+
+    template <class T>
+    void eltwise_div_2(const csl::Stream& stream, csl::TensorSpan<T> output, csl::TensorView<T> x, csl::TensorView<T> y);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 

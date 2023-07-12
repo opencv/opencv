@@ -22,11 +22,6 @@
 #include "jpeglib.h"
 #include "jmemsys.h"            /* import the system-dependent declarations */
 
-#ifndef HAVE_STDLIB_H           /* <stdlib.h> should declare malloc(),free() */
-extern void *malloc(size_t size);
-extern void free(void *ptr);
-#endif
-
 
 /*
  * Memory allocation and freeing are controlled by the regular library

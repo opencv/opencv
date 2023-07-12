@@ -5,6 +5,7 @@
 
 #include "precomp.hpp"
 
+#ifndef OPENCV_EXCLUDE_C_API
 
 CV_IMPL void
 cvSplit( const void* srcarr, void* dstarr0, void* dstarr1, void* dstarr2, void* dstarr3 )
@@ -132,3 +133,5 @@ CV_IMPL void cvNormalize( const CvArr* srcarr, CvArr* dstarr,
     CV_Assert( dst.size() == src.size() && src.channels() == dst.channels() );
     cv::normalize( src, dst, a, b, norm_type, dst.type(), mask );
 }
+
+#endif  // OPENCV_EXCLUDE_C_API

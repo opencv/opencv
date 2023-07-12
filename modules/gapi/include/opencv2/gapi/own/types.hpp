@@ -15,6 +15,11 @@ namespace cv
 {
 namespace gapi
 {
+
+/**
+ * @brief This namespace contains G-API own data structures used in
+ * its standalone mode build.
+ */
 namespace own
 {
 
@@ -22,19 +27,40 @@ class Point
 {
 public:
     Point() = default;
-    Point(int _x, int _y) : x(_x),  y(_y)  {};
+    Point(int _x, int _y) : x(_x),  y(_y) {}
 
     int x = 0;
     int y = 0;
+};
+
+class Point2f
+{
+public:
+    Point2f() = default;
+    Point2f(float _x, float _y) : x(_x),  y(_y) {}
+
+    float x = 0.f;
+    float y = 0.f;
+};
+
+class Point3f
+{
+public:
+    Point3f() = default;
+    Point3f(float _x, float _y, float _z) : x(_x),  y(_y), z(_z) {}
+
+    float x = 0.f;
+    float y = 0.f;
+    float z = 0.f;
 };
 
 class Rect
 {
 public:
     Rect() = default;
-    Rect(int _x, int _y, int _width, int _height) : x(_x), y(_y),   width(_width),  height(_height)  {};
+    Rect(int _x, int _y, int _width, int _height) : x(_x), y(_y),   width(_width),  height(_height) {}
 #if !defined(GAPI_STANDALONE)
-    Rect(const cv::Rect& other) : x(other.x), y(other.y), width(other.width), height(other.height) {};
+    Rect(const cv::Rect& other) : x(other.x), y(other.y), width(other.width), height(other.height) {}
     inline Rect& operator=(const cv::Rect& other)
     {
         x = other.x;
@@ -74,7 +100,7 @@ inline Rect& operator&=(Rect& lhs, const Rect& rhs)
     return lhs;
 }
 
-inline const Rect operator&(const Rect& lhs, const Rect& rhs)
+inline Rect operator&(const Rect& lhs, const Rect& rhs)
 {
     Rect result = lhs;
     return result &= rhs;
@@ -89,9 +115,9 @@ class Size
 {
 public:
     Size() = default;
-    Size(int _width, int _height) : width(_width),  height(_height)  {};
+    Size(int _width, int _height) : width(_width),  height(_height) {}
 #if !defined(GAPI_STANDALONE)
-    Size(const cv::Size& other) : width(other.width), height(other.height) {};
+    Size(const cv::Size& other) : width(other.width), height(other.height) {}
     inline Size& operator=(const cv::Size& rhs)
     {
         width  = rhs.width;
@@ -128,6 +154,7 @@ inline std::ostream& operator<<(std::ostream& o, const Size& s)
     return o;
 }
 
+struct VoidType {};
 } // namespace own
 } // namespace gapi
 } // namespace cv

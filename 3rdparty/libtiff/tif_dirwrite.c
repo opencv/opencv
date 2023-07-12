@@ -28,6 +28,8 @@
  * Directory Write Support Routines.
  */
 #include "tiffiop.h"
+#include <float.h>		/*--: for Rational2Double */
+#include <math.h>		/*--: for Rational2Double */
 
 #ifdef HAVE_IEEEFP
 #define TIFFCvtNativeToIEEEFloat(tif, n, fp)
@@ -154,6 +156,19 @@ static int TIFFWriteDirectoryTagCheckedSlong8Array(TIFF* tif, uint32* ndir, TIFF
 static int TIFFWriteDirectoryTagCheckedRational(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, double value);
 static int TIFFWriteDirectoryTagCheckedRationalArray(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, uint32 count, float* value);
 static int TIFFWriteDirectoryTagCheckedSrationalArray(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, uint32 count, float* value);
+
+/*--: Rational2Double: New functions to support true double-precision for custom rational tag types. */
+static int TIFFWriteDirectoryTagRationalDoubleArray(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, uint32 count, double* value);
+static int TIFFWriteDirectoryTagSrationalDoubleArray(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, uint32 count, double* value);
+static int TIFFWriteDirectoryTagCheckedRationalDoubleArray(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, uint32 count, double* value);
+static int TIFFWriteDirectoryTagCheckedSrationalDoubleArray(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, uint32 count, double* value);
+static void DoubleToRational(double value, uint32 *num, uint32 *denom);
+static void DoubleToSrational(double value, int32 *num, int32 *denom);
+#if 0
+static void DoubleToRational_direct(double value, unsigned long *num, unsigned long *denom);
+static void DoubleToSrational_direct(double value, long *num, long *denom);
+#endif
+
 #ifdef notdef
 static int TIFFWriteDirectoryTagCheckedFloat(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, float value);
 #endif
@@ -182,6 +197,51 @@ TIFFWriteDirectory(TIFF* tif)
 }
 
 /*
+ * This is an advanced writing function that must be used in a particular
+ * sequence, and generally together with TIFFForceStrileArrayWriting(),
+ * to make its intended effect. Its aim is to modify the location
+ * where the [Strip/Tile][Offsets/ByteCounts] arrays are located in the file.
+ * More precisely, when TIFFWriteCheck() will be called, the tag entries for
+ * those arrays will be written with type = count = offset = 0 as a temporary
+ * value.
+ *
+ * Its effect is only valid for the current directory, and before
+ * TIFFWriteDirectory() is first called, and  will be reset when
+ * changing directory.
+ *
+ * The typical sequence of calls is:
+ * TIFFOpen()
+ * [ TIFFCreateDirectory(tif) ]
+ * Set fields with calls to TIFFSetField(tif, ...)
+ * TIFFDeferStrileArrayWriting(tif)
+ * TIFFWriteCheck(tif, ...)
+ * TIFFWriteDirectory(tif)
+ * ... potentially create other directories and come back to the above directory
+ * TIFFForceStrileArrayWriting(tif): emit the arrays at the end of file
+ *
+ * Returns 1 in case of success, 0 otherwise.
+ */
+int TIFFDeferStrileArrayWriting(TIFF* tif)
+{
+    static const char module[] = "TIFFDeferStrileArrayWriting";
+    if (tif->tif_mode == O_RDONLY)
+    {
+        TIFFErrorExt(tif->tif_clientdata, tif->tif_name,
+                     "File opened in read-only mode");
+        return 0;
+    }
+    if( tif->tif_diroff != 0 )
+    {
+        TIFFErrorExt(tif->tif_clientdata, module,
+                     "Directory has already been written");
+        return 0;
+    }
+
+    tif->tif_dir.td_deferstrilearraywriting = TRUE;
+    return 1;
+}
+
+/*
  * Similar to TIFFWriteDirectory(), writes the directory out
  * but leaves all data structures in memory so that it can be
  * written again.  This will make a partially written TIFF file
@@ -192,7 +252,7 @@ TIFFCheckpointDirectory(TIFF* tif)
 {
 	int rc;
 	/* Setup the strips arrays, if they haven't already been. */
-	if (tif->tif_dir.td_stripoffset == NULL)
+	if (tif->tif_dir.td_stripoffset_p == NULL)
 	    (void) TIFFSetupStrips(tif);
 	rc = TIFFWriteDirectorySec(tif,TRUE,FALSE,NULL);
 	(void) TIFFSetWriteOffset(tif, TIFFSeekFile(tif, 0, SEEK_END));
@@ -527,12 +587,12 @@ TIFFWriteDirectorySec(TIFF* tif, int isimage, int imagedone, uint64* pdiroff)
 			{
 				if (!isTiled(tif))
 				{
-					if (!TIFFWriteDirectoryTagLongLong8Array(tif,&ndir,dir,TIFFTAG_STRIPBYTECOUNTS,tif->tif_dir.td_nstrips,tif->tif_dir.td_stripbytecount))
+					if (!TIFFWriteDirectoryTagLongLong8Array(tif,&ndir,dir,TIFFTAG_STRIPBYTECOUNTS,tif->tif_dir.td_nstrips,tif->tif_dir.td_stripbytecount_p))
 						goto bad;
 				}
 				else
 				{
-					if (!TIFFWriteDirectoryTagLongLong8Array(tif,&ndir,dir,TIFFTAG_TILEBYTECOUNTS,tif->tif_dir.td_nstrips,tif->tif_dir.td_stripbytecount))
+					if (!TIFFWriteDirectoryTagLongLong8Array(tif,&ndir,dir,TIFFTAG_TILEBYTECOUNTS,tif->tif_dir.td_nstrips,tif->tif_dir.td_stripbytecount_p))
 						goto bad;
 				}
 			}
@@ -540,7 +600,7 @@ TIFFWriteDirectorySec(TIFF* tif, int isimage, int imagedone, uint64* pdiroff)
 			{
 				if (!isTiled(tif))
 				{
-                    /* td_stripoffset might be NULL in an odd OJPEG case. See
+                    /* td_stripoffset_p might be NULL in an odd OJPEG case. See
                      *  tif_dirread.c around line 3634.
                      * XXX: OJPEG hack.
                      * If a) compression is OJPEG, b) it's not a tiled TIFF,
@@ -551,13 +611,13 @@ TIFFWriteDirectorySec(TIFF* tif, int isimage, int imagedone, uint64* pdiroff)
                      * We can get here when using tiffset on such a file.
                      * See http://bugzilla.maptools.org/show_bug.cgi?id=2500
                     */
-                    if (tif->tif_dir.td_stripoffset != NULL &&
-                        !TIFFWriteDirectoryTagLongLong8Array(tif,&ndir,dir,TIFFTAG_STRIPOFFSETS,tif->tif_dir.td_nstrips,tif->tif_dir.td_stripoffset))
+                    if (tif->tif_dir.td_stripoffset_p != NULL &&
+                        !TIFFWriteDirectoryTagLongLong8Array(tif,&ndir,dir,TIFFTAG_STRIPOFFSETS,tif->tif_dir.td_nstrips,tif->tif_dir.td_stripoffset_p))
                         goto bad;
 				}
 				else
 				{
-					if (!TIFFWriteDirectoryTagLongLong8Array(tif,&ndir,dir,TIFFTAG_TILEOFFSETS,tif->tif_dir.td_nstrips,tif->tif_dir.td_stripoffset))
+					if (!TIFFWriteDirectoryTagLongLong8Array(tif,&ndir,dir,TIFFTAG_TILEOFFSETS,tif->tif_dir.td_nstrips,tif->tif_dir.td_stripoffset_p))
 						goto bad;
 				}
 			}
@@ -751,12 +811,42 @@ TIFFWriteDirectorySec(TIFF* tif, int isimage, int imagedone, uint64* pdiroff)
 						goto bad;
 					break;
 				case TIFF_RATIONAL:
-					if (!TIFFWriteDirectoryTagRationalArray(tif,&ndir,dir,tag,count,tif->tif_dir.td_customValues[m].value))
-						goto bad;
+					{
+						/*-- Rational2Double: For Rationals evaluate "set_field_type" to determine internal storage size. */
+						int tv_size;
+						tv_size = _TIFFSetGetFieldSize(tif->tif_dir.td_customValues[m].info->set_field_type);
+						if (tv_size == 8) {
+							if (!TIFFWriteDirectoryTagRationalDoubleArray(tif,&ndir,dir,tag,count,tif->tif_dir.td_customValues[m].value))
+								goto bad;
+						} else {
+							/*-- default should be tv_size == 4 */
+							if (!TIFFWriteDirectoryTagRationalArray(tif,&ndir,dir,tag,count,tif->tif_dir.td_customValues[m].value))
+								goto bad;
+							/*-- ToDo: After Testing, this should be removed and tv_size==4 should be set as default. */
+							if (tv_size != 4) {
+								TIFFErrorExt(0,"TIFFLib: _TIFFWriteDirectorySec()", "Rational2Double: .set_field_type in not 4 but %d", tv_size); 
+							}
+						}
+					}
 					break;
 				case TIFF_SRATIONAL:
-					if (!TIFFWriteDirectoryTagSrationalArray(tif,&ndir,dir,tag,count,tif->tif_dir.td_customValues[m].value))
-						goto bad;
+					{
+						/*-- Rational2Double: For Rationals evaluate "set_field_type" to determine internal storage size. */
+						int tv_size;
+						tv_size = _TIFFSetGetFieldSize(tif->tif_dir.td_customValues[m].info->set_field_type);
+						if (tv_size == 8) {
+							if (!TIFFWriteDirectoryTagSrationalDoubleArray(tif,&ndir,dir,tag,count,tif->tif_dir.td_customValues[m].value))
+								goto bad;
+						} else {
+							/*-- default should be tv_size == 4 */
+							if (!TIFFWriteDirectoryTagSrationalArray(tif,&ndir,dir,tag,count,tif->tif_dir.td_customValues[m].value))
+								goto bad;
+							/*-- ToDo: After Testing, this should be removed and tv_size==4 should be set as default. */
+							if (tv_size != 4) {
+								TIFFErrorExt(0,"TIFFLib: _TIFFWriteDirectorySec()", "Rational2Double: .set_field_type in not 4 but %d", tv_size); 
+							}
+						}
+					}
 					break;
 				case TIFF_FLOAT:
 					if (!TIFFWriteDirectoryTagFloatArray(tif,&ndir,dir,tag,count,tif->tif_dir.td_customValues[m].value))
@@ -1515,6 +1605,29 @@ TIFFWriteDirectoryTagSrationalArray(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, 
 	return(TIFFWriteDirectoryTagCheckedSrationalArray(tif,ndir,dir,tag,count,value));
 }
 
+/*-- Rational2Double: additional write functions */
+static int
+TIFFWriteDirectoryTagRationalDoubleArray(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, uint32 count, double* value)
+{
+	if (dir==NULL)
+	{
+		(*ndir)++;
+		return(1);
+	}
+	return(TIFFWriteDirectoryTagCheckedRationalDoubleArray(tif,ndir,dir,tag,count,value));
+}
+
+static int
+TIFFWriteDirectoryTagSrationalDoubleArray(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, uint32 count, double* value)
+{
+	if (dir==NULL)
+	{
+		(*ndir)++;
+		return(1);
+	}
+	return(TIFFWriteDirectoryTagCheckedSrationalDoubleArray(tif,ndir,dir,tag,count,value));
+}
+
 #ifdef notdef
 static int TIFFWriteDirectoryTagFloat(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, float value)
 {
@@ -1651,22 +1764,52 @@ TIFFWriteDirectoryTagShortLong(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint1
 		return(TIFFWriteDirectoryTagCheckedLong(tif,ndir,dir,tag,value));
 }
 
+static int _WriteAsType(TIFF* tif, uint64 strile_size, uint64 uncompressed_threshold)
+{
+    const uint16 compression = tif->tif_dir.td_compression;
+    if ( compression == COMPRESSION_NONE )
+    {
+        return strile_size > uncompressed_threshold;
+    }
+    else if ( compression == COMPRESSION_JPEG ||
+              compression == COMPRESSION_LZW ||
+              compression == COMPRESSION_ADOBE_DEFLATE ||
+              compression == COMPRESSION_LZMA ||
+              compression == COMPRESSION_LERC ||
+              compression == COMPRESSION_ZSTD ||
+              compression == COMPRESSION_WEBP )
+    {
+        /* For a few select compression types, we assume that in the worst */
+        /* case the compressed size will be 10 times the uncompressed size */
+        /* This is overly pessismistic ! */
+        return strile_size >= uncompressed_threshold / 10;
+    }
+    return 1;
+}
+
+static int WriteAsLong8(TIFF* tif, uint64 strile_size)
+{
+    return _WriteAsType(tif, strile_size, 0xFFFFFFFFU);
+}
+
+static int WriteAsLong4(TIFF* tif, uint64 strile_size)
+{
+    return _WriteAsType(tif, strile_size, 0xFFFFU);
+}
+
 /************************************************************************/
 /*                TIFFWriteDirectoryTagLongLong8Array()                 */
 /*                                                                      */
-/*      Write out LONG8 array as LONG8 for BigTIFF or LONG for          */
-/*      Classic TIFF with some checking.                                */
+/*      Write out LONG8 array and write a SHORT/LONG/LONG8 depending    */
+/*      on strile size and Classic/BigTIFF mode.                        */
 /************************************************************************/
 
 static int
 TIFFWriteDirectoryTagLongLong8Array(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, uint32 count, uint64* value)
 {
     static const char module[] = "TIFFWriteDirectoryTagLongLong8Array";
-    uint64* ma;
-    uint32 mb;
-    uint32* p;
-    uint32* q;
     int o;
+    int write_aslong4;
 
     /* is this just a counting pass? */
     if (dir==NULL)
@@ -1675,37 +1818,105 @@ TIFFWriteDirectoryTagLongLong8Array(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, 
         return(1);
     }
 
-    /* We always write LONG8 for BigTIFF, no checking needed. */
-    if( tif->tif_flags&TIFF_BIGTIFF )
-        return TIFFWriteDirectoryTagCheckedLong8Array(tif,ndir,dir,
-                                                      tag,count,value);
-
-    /*
-    ** For classic tiff we want to verify everything is in range for LONG
-    ** and convert to long format.
-    */
-
-    p = _TIFFmalloc(count*sizeof(uint32));
-    if (p==NULL)
+    if( tif->tif_dir.td_deferstrilearraywriting )
     {
-        TIFFErrorExt(tif->tif_clientdata,module,"Out of memory");
-        return(0);
+        return TIFFWriteDirectoryTagData(tif, ndir, dir, tag, TIFF_NOTYPE, 0, 0, NULL);
     }
 
-    for (q=p, ma=value, mb=0; mb<count; ma++, mb++, q++)
+    if( tif->tif_flags&TIFF_BIGTIFF )
     {
-        if (*ma>0xFFFFFFFF)
+        int write_aslong8 = 1;
+        /* In the case of ByteCounts array, we may be able to write them on */
+        /* LONG if the strip/tilesize is not too big. */
+        /* Also do that for count > 1 in the case someone would want to create */
+        /* a single-strip file with a growing height, in which case using */
+        /* LONG8 will be safer. */
+        if( count > 1 && tag == TIFFTAG_STRIPBYTECOUNTS )
         {
-            TIFFErrorExt(tif->tif_clientdata,module,
-                         "Attempt to write value larger than 0xFFFFFFFF in Classic TIFF file.");
-            _TIFFfree(p);
+            write_aslong8 = WriteAsLong8(tif, TIFFStripSize64(tif));
+        }
+        else if( count > 1 && tag == TIFFTAG_TILEBYTECOUNTS )
+        {
+            write_aslong8 = WriteAsLong8(tif, TIFFTileSize64(tif));
+        }
+        if( write_aslong8 )
+        {
+            return TIFFWriteDirectoryTagCheckedLong8Array(tif,ndir,dir,
+                                                        tag,count,value);
+        }
+    }
+
+    write_aslong4 = 1;
+    if( count > 1 && tag == TIFFTAG_STRIPBYTECOUNTS )
+    {
+        write_aslong4 = WriteAsLong4(tif, TIFFStripSize64(tif));
+    }
+    else if( count > 1 && tag == TIFFTAG_TILEBYTECOUNTS )
+    {
+        write_aslong4 = WriteAsLong4(tif, TIFFTileSize64(tif));
+    }
+    if( write_aslong4 )
+    {
+        /*
+        ** For classic tiff we want to verify everything is in range for LONG
+        ** and convert to long format.
+        */
+
+        uint32* p = _TIFFmalloc(count*sizeof(uint32));
+        uint32* q;
+        uint64* ma;
+        uint32 mb;
+
+        if (p==NULL)
+        {
+            TIFFErrorExt(tif->tif_clientdata,module,"Out of memory");
             return(0);
         }
-        *q= (uint32)(*ma);
-    }
 
-    o=TIFFWriteDirectoryTagCheckedLongArray(tif,ndir,dir,tag,count,p);
-    _TIFFfree(p);
+        for (q=p, ma=value, mb=0; mb<count; ma++, mb++, q++)
+        {
+            if (*ma>0xFFFFFFFF)
+            {
+                TIFFErrorExt(tif->tif_clientdata,module,
+                            "Attempt to write value larger than 0xFFFFFFFF in LONG array.");
+                _TIFFfree(p);
+                return(0);
+            }
+            *q= (uint32)(*ma);
+        }
+
+        o=TIFFWriteDirectoryTagCheckedLongArray(tif,ndir,dir,tag,count,p);
+        _TIFFfree(p);
+    }
+    else
+    {
+        uint16* p = _TIFFmalloc(count*sizeof(uint16));
+        uint16* q;
+        uint64* ma;
+        uint32 mb;
+
+        if (p==NULL)
+        {
+            TIFFErrorExt(tif->tif_clientdata,module,"Out of memory");
+            return(0);
+        }
+
+        for (q=p, ma=value, mb=0; mb<count; ma++, mb++, q++)
+        {
+            if (*ma>0xFFFF)
+            {
+                /* Should not happen normally given the check we did before */
+                TIFFErrorExt(tif->tif_clientdata,module,
+                            "Attempt to write value larger than 0xFFFF in SHORT array.");
+                _TIFFfree(p);
+                return(0);
+            }
+            *q= (uint16)(*ma);
+        }
+
+        o=TIFFWriteDirectoryTagCheckedShortArray(tif,ndir,dir,tag,count,p);
+        _TIFFfree(p);
+    }
 
     return(o);
 }
@@ -2175,19 +2386,20 @@ TIFFWriteDirectoryTagCheckedSlong8Array(TIFF* tif, uint32* ndir, TIFFDirEntry* d
 static int
 TIFFWriteDirectoryTagCheckedRational(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, double value)
 {
-        static const char module[] = "TIFFWriteDirectoryTagCheckedRational";
+	static const char module[] = "TIFFWriteDirectoryTagCheckedRational";
 	uint32 m[2];
 	assert(sizeof(uint32)==4);
-        if( value < 0 )
-        {
-            TIFFErrorExt(tif->tif_clientdata,module,"Negative value is illegal");
-            return 0;
-        }
-        else if( value != value )
-        {
-            TIFFErrorExt(tif->tif_clientdata,module,"Not-a-number value is illegal");
-            return 0;
-        }
+	if (value < 0) 
+	{
+		TIFFErrorExt(tif->tif_clientdata, module, "Negative value is illegal");
+		return 0;
+	} 
+	else if (value != value) 
+	{
+		TIFFErrorExt(tif->tif_clientdata, module, "Not-a-number value is illegal");
+		return 0;
+	}
+#ifdef not_def
 	else if (value==0.0)
 	{
 		m[0]=0;
@@ -2208,6 +2420,15 @@ TIFFWriteDirectoryTagCheckedRational(TIFF* tif, uint32* ndir, TIFFDirEntry* dir,
 		m[0]=0xFFFFFFFF;
 		m[1]=(uint32)(0xFFFFFFFF/value);
 	}
+#else
+	/*--Rational2Double: New function also used for non-custom rational tags. 
+	 *  However, could be omitted here, because TIFFWriteDirectoryTagCheckedRational() is not used by code for custom tags,
+	 *  only by code for named-tiff-tags like FIELD_RESOLUTION and FIELD_POSITION */
+	else {
+	DoubleToRational(value, &m[0], &m[1]);
+	}
+#endif
+
 	if (tif->tif_flags&TIFF_SWAB)
 	{
 		TIFFSwabLong(&m[0]);
@@ -2234,6 +2455,7 @@ TIFFWriteDirectoryTagCheckedRationalArray(TIFF* tif, uint32* ndir, TIFFDirEntry*
 	}
 	for (na=value, nb=m, nc=0; nc<count; na++, nb+=2, nc++)
 	{
+#ifdef not_def
 		if (*na<=0.0 || *na != *na)
 		{
 			nb[0]=0;
@@ -2255,6 +2477,10 @@ TIFFWriteDirectoryTagCheckedRationalArray(TIFF* tif, uint32* ndir, TIFFDirEntry*
 			nb[0]=0xFFFFFFFF;
 			nb[1]=(uint32)((double)0xFFFFFFFF/(*na));
 		}
+#else
+		/*-- Rational2Double: Also for float precision accuracy is sometimes enhanced --*/
+		DoubleToRational(*na, &nb[0], &nb[1]);
+#endif
 	}
 	if (tif->tif_flags&TIFF_SWAB)
 		TIFFSwabArrayOfLong(m,count*2);
@@ -2281,6 +2507,7 @@ TIFFWriteDirectoryTagCheckedSrationalArray(TIFF* tif, uint32* ndir, TIFFDirEntry
 	}
 	for (na=value, nb=m, nc=0; nc<count; na++, nb+=2, nc++)
 	{
+#ifdef not_def
 		if (*na<0.0)
 		{
 			if (*na==(int32)(*na))
@@ -2317,6 +2544,10 @@ TIFFWriteDirectoryTagCheckedSrationalArray(TIFF* tif, uint32* ndir, TIFFDirEntry
 				nb[1]=(int32)((double)0x7FFFFFFF/(*na));
 			}
 		}
+#else
+		/*-- Rational2Double: Also for float precision accuracy is sometimes enhanced --*/
+		DoubleToSrational(*na, &nb[0], &nb[1]);
+#endif
 	}
 	if (tif->tif_flags&TIFF_SWAB)
 		TIFFSwabArrayOfLong((uint32*)m,count*2);
@@ -2324,6 +2555,400 @@ TIFFWriteDirectoryTagCheckedSrationalArray(TIFF* tif, uint32* ndir, TIFFDirEntry
 	_TIFFfree(m);
 	return(o);
 }
+
+/*-- Rational2Double: additional write functions for double arrays */
+static int
+TIFFWriteDirectoryTagCheckedRationalDoubleArray(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, uint32 count, double* value)
+{
+	static const char module[] = "TIFFWriteDirectoryTagCheckedRationalDoubleArray";
+	uint32* m;
+	double* na;
+	uint32* nb;
+	uint32 nc;
+	int o;
+	assert(sizeof(uint32)==4);
+	m=_TIFFmalloc(count*2*sizeof(uint32));
+	if (m==NULL)
+	{
+		TIFFErrorExt(tif->tif_clientdata,module,"Out of memory");
+		return(0);
+	}
+	for (na=value, nb=m, nc=0; nc<count; na++, nb+=2, nc++)
+	{
+		DoubleToRational(*na, &nb[0], &nb[1]);
+	}
+	if (tif->tif_flags&TIFF_SWAB)
+		TIFFSwabArrayOfLong(m,count*2);
+	o=TIFFWriteDirectoryTagData(tif,ndir,dir,tag,TIFF_RATIONAL,count,count*8,&m[0]);
+	_TIFFfree(m);
+	return(o);
+} /*-- TIFFWriteDirectoryTagCheckedRationalDoubleArray() ------- */
+
+static int
+TIFFWriteDirectoryTagCheckedSrationalDoubleArray(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag, uint32 count, double* value)
+{
+	static const char module[] = "TIFFWriteDirectoryTagCheckedSrationalDoubleArray";
+	int32* m;
+	double* na;
+	int32* nb;
+	uint32 nc;
+	int o;
+	assert(sizeof(int32)==4);
+	m=_TIFFmalloc(count*2*sizeof(int32));
+	if (m==NULL)
+	{
+		TIFFErrorExt(tif->tif_clientdata,module,"Out of memory");
+		return(0);
+	}
+	for (na=value, nb=m, nc=0; nc<count; na++, nb+=2, nc++)
+	{
+		DoubleToSrational(*na, &nb[0], &nb[1]);
+	}
+	if (tif->tif_flags&TIFF_SWAB)
+		TIFFSwabArrayOfLong((uint32*)m,count*2);
+	o=TIFFWriteDirectoryTagData(tif,ndir,dir,tag,TIFF_SRATIONAL,count,count*8,&m[0]);
+	_TIFFfree(m);
+	return(o);
+} /*--- TIFFWriteDirectoryTagCheckedSrationalDoubleArray() -------- */
+
+#if 0
+static
+void DoubleToRational_direct(double value, unsigned long *num, unsigned long *denom)
+{
+	/*--- OLD Code for debugging and comparison  ---- */
+	/* code merged from TIFFWriteDirectoryTagCheckedRationalArray() and TIFFWriteDirectoryTagCheckedRational() */
+
+	/* First check for zero and also check for negative numbers (which are illegal for RATIONAL) 
+	 * and also check for "not-a-number". In each case just set this to zero to support also rational-arrays.
+	  */
+	if (value<=0.0 || value != value)
+	{
+		*num=0;
+		*denom=1;
+	}
+	else if (value <= 0xFFFFFFFFU &&  (value==(double)(uint32)(value)))	/* check for integer values */
+	{
+		*num=(uint32)(value);
+		*denom=1;
+	}
+	else if (value<1.0)
+	{
+		*num = (uint32)((value) * (double)0xFFFFFFFFU);
+		*denom=0xFFFFFFFFU;
+	}
+	else
+	{
+		*num=0xFFFFFFFFU;
+		*denom=(uint32)((double)0xFFFFFFFFU/(value));
+	}
+}  /*-- DoubleToRational_direct() -------------- */
+#endif
+
+#if 0
+static
+void DoubleToSrational_direct(double value,  long *num,  long *denom)
+{
+	/*--- OLD Code for debugging and comparison -- SIGNED-version ----*/
+	/*  code was amended from original TIFFWriteDirectoryTagCheckedSrationalArray() */
+
+	/* First check for zero and also check for negative numbers (which are illegal for RATIONAL)
+	 * and also check for "not-a-number". In each case just set this to zero to support also rational-arrays.
+	  */
+	if (value<0.0)
+		{
+			if (value==(int32)(value))
+			{
+				*num=(int32)(value);
+				*denom=1;
+			}
+			else if (value>-1.0)
+			{
+				*num=-(int32)((-value) * (double)0x7FFFFFFF);
+				*denom=0x7FFFFFFF;
+			}
+			else
+			{
+				*num=-0x7FFFFFFF;
+				*denom=(int32)((double)0x7FFFFFFF / (-value));
+			}
+		}
+		else
+		{
+			if (value==(int32)(value))
+			{
+				*num=(int32)(value);
+				*denom=1;
+			}
+			else if (value<1.0)
+			{
+				*num=(int32)((value)  *(double)0x7FFFFFFF);
+				*denom=0x7FFFFFFF;
+			}
+			else
+			{
+				*num=0x7FFFFFFF;
+				*denom=(int32)((double)0x7FFFFFFF / (value));
+			}
+		}
+}  /*-- DoubleToSrational_direct() --------------*/
+#endif
+
+//#define DOUBLE2RAT_DEBUGOUTPUT
+/** -----  Rational2Double: Double To Rational Conversion ----------------------------------------------------------
+* There is a mathematical theorem to convert real numbers into a rational (integer fraction) number.
+* This is called "continuous fraction" which uses the Euclidean algorithm to find the greatest common divisor (GCD).
+*  (ref. e.g. https://de.wikipedia.org/wiki/Kettenbruch or https://en.wikipedia.org/wiki/Continued_fraction
+*             https://en.wikipedia.org/wiki/Euclidean_algorithm)
+* The following functions implement the
+* - ToRationalEuclideanGCD()		auxiliary function which mainly implements euclidean GCD
+* - DoubleToRational()			conversion function for un-signed rationals
+* - DoubleToSrational()			conversion function for signed rationals
+------------------------------------------------------------------------------------------------------------------*/
+
+/**---- ToRationalEuclideanGCD() -----------------------------------------
+* Calculates the rational fractional of a double input value
+* using the Euclidean algorithm to find the greatest common divisor (GCD)
+------------------------------------------------------------------------*/
+static
+void ToRationalEuclideanGCD(double value, int blnUseSignedRange, int blnUseSmallRange, unsigned long long *ullNum, unsigned long long *ullDenom)
+{
+	/* Internally, the integer variables can be bigger than the external ones,
+	* as long as the result will fit into the external variable size.
+	*/
+	unsigned long long val, numSum[3] = { 0, 1, 0 }, denomSum[3] = { 1, 0, 0 };
+	unsigned long long aux, bigNum, bigDenom;
+	unsigned long long returnLimit;
+	int i;
+	unsigned long long nMax;
+	double fMax;
+	unsigned long maxDenom;
+	/*-- nMax and fMax defines the initial accuracy of the starting fractional,
+	*   or better, the highest used integer numbers used within the starting fractional (bigNum/bigDenom).
+	*   There are two approaches, which can accidentally lead to different accuracies just depending on the value.
+	*   Therefore, blnUseSmallRange steers this behavior.
+	*   For long long nMax = ((9223372036854775807-1)/2); for long nMax = ((2147483647-1)/2);
+	*/
+	if (blnUseSmallRange) {
+		nMax = (unsigned long long)((2147483647 - 1) / 2); /* for ULONG range */
+	}
+	else {
+		nMax = ((9223372036854775807 - 1) / 2);				/* for ULLONG range */
+	}
+	fMax = (double)nMax;
+
+	/*-- For the Euclidean GCD define the denominator range, so that it stays within size of unsigned long variables.
+	*   maxDenom should be LONG_MAX for negative values and ULONG_MAX for positive ones.
+	*   Also the final returned value of ullNum and ullDenom is limited according to signed- or unsigned-range.
+	*/
+	if (blnUseSignedRange) {
+		maxDenom = 2147483647UL;  /*LONG_MAX = 0x7FFFFFFFUL*/
+		returnLimit = maxDenom;
+	}
+	else {
+		maxDenom = 0xFFFFFFFFUL;  /*ULONG_MAX = 0xFFFFFFFFUL*/
+		returnLimit = maxDenom;
+	}
+
+	/*-- First generate a rational fraction (bigNum/bigDenom) which represents the value
+	*   as a rational number with the highest accuracy. Therefore, unsigned long long (uint64) is needed.
+	*   This rational fraction is then reduced using the Euclidean algorithm to find the greatest common divisor (GCD).
+	*   bigNum   = big numinator of value without fraction (or cut residual fraction)
+	*   bigDenom = big denominator of value
+	*-- Break-criteria so that uint64 cast to "bigNum" introduces no error and bigDenom has no overflow,
+	*   and stop with enlargement of fraction when the double-value of it reaches an integer number without fractional part.
+	*/
+	bigDenom = 1;
+	while ((value != floor(value)) && (value < fMax) && (bigDenom < nMax)) {
+		bigDenom <<= 1;
+		value *= 2;
+	}
+	bigNum = (unsigned long long)value;
+
+	/*-- Start Euclidean algorithm to find the greatest common divisor (GCD) -- */
+#define MAX_ITERATIONS 64
+	for (i = 0; i < MAX_ITERATIONS; i++) {
+		/* if bigDenom is not zero, calculate integer part of fraction. */
+		if (bigDenom == 0) {
+			val = 0;
+			break;
+		}
+		else {
+			val = bigNum / bigDenom;
+		}
+
+		/* Set bigDenom to reminder of bigNum/bigDenom and bigNum to previous denominator bigDenom. */
+		aux = bigNum;
+		bigNum = bigDenom;
+		bigDenom = aux % bigDenom;
+
+		/* calculate next denominator and check for its given maximum */
+		aux = val;
+		if (denomSum[1] * val + denomSum[0] >= maxDenom) {
+			aux = (maxDenom - denomSum[0]) / denomSum[1];
+			if (aux * 2 >= val || denomSum[1] >= maxDenom)
+				i = (MAX_ITERATIONS + 1);			/* exit but execute rest of for-loop */
+			else
+				break;
+		}
+		/* calculate next numerator to numSum2 and save previous one to numSum0; numSum1 just copy of numSum2. */
+		numSum[2] = aux * numSum[1] + numSum[0];
+		numSum[0] = numSum[1];
+		numSum[1] = numSum[2];
+		/* calculate next denominator to denomSum2 and save previous one to denomSum0; denomSum1 just copy of denomSum2. */
+		denomSum[2] = aux * denomSum[1] + denomSum[0];
+		denomSum[0] = denomSum[1];
+		denomSum[1] = denomSum[2];
+	}
+
+	/*-- Check and adapt for final variable size and return values; reduces internal accuracy; denominator is kept in ULONG-range with maxDenom -- */
+	while (numSum[1] > returnLimit || denomSum[1] > returnLimit) {
+		numSum[1] = numSum[1] / 2;
+		denomSum[1] = denomSum[1] / 2;
+	}
+
+	/* return values */
+	*ullNum = numSum[1];
+	*ullDenom = denomSum[1];
+
+}  /*-- ToRationalEuclideanGCD() -------------- */
+
+
+/**---- DoubleToRational() -----------------------------------------------
+* Calculates the rational fractional of a double input value
+* for UN-SIGNED rationals,
+* using the Euclidean algorithm to find the greatest common divisor (GCD)
+------------------------------------------------------------------------*/
+static
+void DoubleToRational(double value, uint32 *num, uint32 *denom)
+{
+	/*---- UN-SIGNED RATIONAL ---- */
+	double dblDiff, dblDiff2;
+	unsigned long long ullNum, ullDenom, ullNum2, ullDenom2;
+
+	/*-- Check for negative values. If so it is an error. */
+        /* Test written that way to catch NaN */
+	if (!(value >= 0)) {
+		*num = *denom = 0;
+		TIFFErrorExt(0, "TIFFLib: DoubleToRational()", " Negative Value for Unsigned Rational given.");
+		return;
+	}
+
+	/*-- Check for too big numbers (> ULONG_MAX) -- */
+	if (value > 0xFFFFFFFFUL) {
+		*num = 0xFFFFFFFFU;
+		*denom = 0;
+		return;
+	}
+	/*-- Check for easy integer numbers -- */
+	if (value == (uint32)(value)) {
+		*num = (uint32)value;
+		*denom = 1;
+		return;
+	}
+	/*-- Check for too small numbers for "unsigned long" type rationals -- */
+	if (value < 1.0 / (double)0xFFFFFFFFUL) {
+		*num = 0;
+		*denom = 0xFFFFFFFFU;
+		return;
+	}
+
+	/*-- There are two approaches using the Euclidean algorithm,
+	*   which can accidentally lead to different accuracies just depending on the value.
+	*   Try both and define which one was better.
+	*/
+	ToRationalEuclideanGCD(value, FALSE, FALSE, &ullNum, &ullDenom);
+	ToRationalEuclideanGCD(value, FALSE, TRUE, &ullNum2, &ullDenom2);
+	/*-- Double-Check, that returned values fit into ULONG :*/
+	if (ullNum > 0xFFFFFFFFUL || ullDenom > 0xFFFFFFFFUL || ullNum2 > 0xFFFFFFFFUL || ullDenom2 > 0xFFFFFFFFUL) {
+#if defined(__WIN32__) && (defined(_MSC_VER) || defined(__MINGW32__))
+		TIFFErrorExt(0, "TIFFLib: DoubleToRational()", " Num or Denom exceeds ULONG: val=%14.6f, num=%I64u, denom=%I64u | num2=%I64u, denom2=%I64u", value, ullNum, ullDenom, ullNum2, ullDenom2);
+#else
+		TIFFErrorExt(0, "TIFFLib: DoubleToRational()", " Num or Denom exceeds ULONG: val=%14.6f, num=%12llu, denom=%12llu | num2=%12llu, denom2=%12llu", value, ullNum, ullDenom, ullNum2, ullDenom2);
+#endif
+		assert(0);
+	}
+
+	/* Check, which one has higher accuracy and take that. */
+	dblDiff = fabs(value - ((double)ullNum / (double)ullDenom));
+	dblDiff2 = fabs(value - ((double)ullNum2 / (double)ullDenom2));
+	if (dblDiff < dblDiff2) {
+		*num = (uint32)ullNum;
+		*denom = (uint32)ullDenom;
+	}
+	else {
+		*num = (uint32)ullNum2;
+		*denom = (uint32)ullDenom2;
+	}
+}  /*-- DoubleToRational() -------------- */
+
+/**---- DoubleToSrational() -----------------------------------------------
+* Calculates the rational fractional of a double input value
+* for SIGNED rationals,
+* using the Euclidean algorithm to find the greatest common divisor (GCD)
+------------------------------------------------------------------------*/
+static
+void DoubleToSrational(double value, int32 *num, int32 *denom)
+{
+	/*---- SIGNED RATIONAL ----*/
+	int neg = 1;
+	double dblDiff, dblDiff2;
+	unsigned long long ullNum, ullDenom, ullNum2, ullDenom2;
+
+	/*-- Check for negative values and use then the positive one for internal calculations, but take the sign into account before returning. */
+	if (value < 0) { neg = -1; value = -value; }
+
+	/*-- Check for too big numbers (> LONG_MAX) -- */
+	if (value > 0x7FFFFFFFL) {
+		*num = 0x7FFFFFFFL;
+		*denom = 0;
+		return;
+	}
+	/*-- Check for easy numbers -- */
+	if (value == (int32)(value)) {
+		*num = (int32)(neg * value);
+		*denom = 1;
+		return;
+	}
+	/*-- Check for too small numbers for "long" type rationals -- */
+	if (value < 1.0 / (double)0x7FFFFFFFL) {
+		*num = 0;
+		*denom = 0x7FFFFFFFL;
+		return;
+	}
+
+	/*-- There are two approaches using the Euclidean algorithm,
+	*   which can accidentally lead to different accuracies just depending on the value.
+	*   Try both and define which one was better.
+	*   Furthermore, set behavior of ToRationalEuclideanGCD() to the range of signed-long.
+	*/
+	ToRationalEuclideanGCD(value, TRUE, FALSE, &ullNum, &ullDenom);
+	ToRationalEuclideanGCD(value, TRUE, TRUE, &ullNum2, &ullDenom2);
+	/*-- Double-Check, that returned values fit into LONG :*/
+	if (ullNum > 0x7FFFFFFFL || ullDenom > 0x7FFFFFFFL || ullNum2 > 0x7FFFFFFFL || ullDenom2 > 0x7FFFFFFFL) {
+#if defined(__WIN32__) && (defined(_MSC_VER) || defined(__MINGW32__))
+		TIFFErrorExt(0, "TIFFLib: DoubleToSrational()", " Num or Denom exceeds LONG: val=%14.6f, num=%I64u, denom=%I64u | num2=%I64u, denom2=%I64u", neg*value, ullNum, ullDenom, ullNum2, ullDenom2);
+#else
+		TIFFErrorExt(0, "TIFFLib: DoubleToSrational()", " Num or Denom exceeds LONG: val=%14.6f, num=%12llu, denom=%12llu | num2=%12llu, denom2=%12llu", neg*value, ullNum, ullDenom, ullNum2, ullDenom2);
+#endif
+		assert(0);
+	}
+
+	/* Check, which one has higher accuracy and take that. */
+	dblDiff = fabs(value - ((double)ullNum / (double)ullDenom));
+	dblDiff2 = fabs(value - ((double)ullNum2 / (double)ullDenom2));
+	if (dblDiff < dblDiff2) {
+		*num = (int32)(neg * (long)ullNum);
+		*denom = (int32)ullDenom;
+	}
+	else {
+		*num = (int32)(neg * (long)ullNum2);
+		*denom = (int32)ullDenom2;
+	}
+}  /*-- DoubleToSrational() --------------*/
+
+
+
+
 
 #ifdef notdef
 static int
@@ -2420,7 +3045,12 @@ TIFFWriteDirectoryTagData(TIFF* tif, uint32* ndir, TIFFDirEntry* dir, uint16 tag
 	dir[m].tdir_count=count;
 	dir[m].tdir_offset.toff_long8 = 0;
 	if (datalength<=((tif->tif_flags&TIFF_BIGTIFF)?0x8U:0x4U))
-		_TIFFmemcpy(&dir[m].tdir_offset,data,datalength);
+        {
+            if( data && datalength )
+            {
+                _TIFFmemcpy(&dir[m].tdir_offset,data,datalength);
+            }
+        }
 	else
 	{
 		uint64 na,nb;
@@ -2813,12 +3443,59 @@ _TIFFRewriteField(TIFF* tif, uint16 tag, TIFFDataType in_datatype,
     }
 
 /* -------------------------------------------------------------------- */
+/*      When a dummy tag was written due to TIFFDeferStrileArrayWriting() */
+/* -------------------------------------------------------------------- */
+    if( entry_offset == 0 && entry_count == 0 && entry_type == 0 )
+    {
+        if( tag == TIFFTAG_TILEOFFSETS || tag == TIFFTAG_STRIPOFFSETS )
+        {
+            entry_type = (tif->tif_flags&TIFF_BIGTIFF) ? TIFF_LONG8 : TIFF_LONG; 
+        }
+        else
+        {
+            int write_aslong8 = 1;
+            if( count > 1 && tag == TIFFTAG_STRIPBYTECOUNTS )
+            {
+                write_aslong8 = WriteAsLong8(tif, TIFFStripSize64(tif));
+            }
+            else if( count > 1 && tag == TIFFTAG_TILEBYTECOUNTS )
+            {
+                write_aslong8 = WriteAsLong8(tif, TIFFTileSize64(tif));
+            }
+            if( write_aslong8 )
+            {
+                entry_type = TIFF_LONG8;
+            }
+            else
+            {
+                int write_aslong4 = 1;
+                if( count > 1 && tag == TIFFTAG_STRIPBYTECOUNTS )
+                {
+                    write_aslong4 = WriteAsLong4(tif, TIFFStripSize64(tif));
+                }
+                else if( count > 1 && tag == TIFFTAG_TILEBYTECOUNTS )
+                {
+                    write_aslong4 = WriteAsLong4(tif, TIFFTileSize64(tif));
+                }
+                if( write_aslong4 )
+                {
+                    entry_type = TIFF_LONG;
+                }
+                else
+                {
+                    entry_type = TIFF_SHORT;
+                }
+            }
+        }
+    }
+
+/* -------------------------------------------------------------------- */
 /*      What data type do we want to write this as?                     */
 /* -------------------------------------------------------------------- */
     if( TIFFDataWidth(in_datatype) == 8 && !(tif->tif_flags&TIFF_BIGTIFF) )
     {
         if( in_datatype == TIFF_LONG8 )
-            datatype = TIFF_LONG;
+            datatype = entry_type == TIFF_SHORT ? TIFF_SHORT : TIFF_LONG;
         else if( in_datatype == TIFF_SLONG8 )
             datatype = TIFF_SLONG;
         else if( in_datatype == TIFF_IFD8 )
@@ -2826,8 +3503,21 @@ _TIFFRewriteField(TIFF* tif, uint16 tag, TIFFDataType in_datatype,
         else
             datatype = in_datatype;
     }
-    else 
-        datatype = in_datatype;
+    else
+    {
+        if( in_datatype == TIFF_LONG8 &&
+            (entry_type == TIFF_SHORT || entry_type == TIFF_LONG ||
+             entry_type == TIFF_LONG8 ) )
+            datatype = entry_type;
+        else if( in_datatype == TIFF_SLONG8 &&
+            (entry_type == TIFF_SLONG || entry_type == TIFF_SLONG8 ) )
+            datatype = entry_type;
+        else if( in_datatype == TIFF_IFD8 &&
+            (entry_type == TIFF_IFD || entry_type == TIFF_IFD8 ) )
+            datatype = entry_type;
+        else
+            datatype = in_datatype;
+    }
 
 /* -------------------------------------------------------------------- */
 /*      Prepare buffer of actual data to write.  This includes          */
@@ -2876,6 +3566,29 @@ _TIFFRewriteField(TIFF* tif, uint16 tag, TIFFDataType in_datatype,
             }
         }
     }
+    else if( datatype == TIFF_SHORT && in_datatype == TIFF_LONG8 )
+    {
+	tmsize_t i;
+
+        for( i = 0; i < count; i++ )
+        {
+            ((uint16 *) buf_to_write)[i] =
+                (uint16) ((uint64 *) data)[i];
+            if( (uint64) ((uint16 *) buf_to_write)[i] != ((uint64 *) data)[i] )
+            {
+                _TIFFfree( buf_to_write );
+                TIFFErrorExt( tif->tif_clientdata, module,
+                              "Value exceeds 16bit range of output type." );
+                return 0;
+            }
+        }
+    }
+    else
+    {
+        TIFFErrorExt( tif->tif_clientdata, module,
+                      "Unhandled type conversion." );
+        return 0;
+    }
 
     if( TIFFDataWidth(datatype) > 1 && (tif->tif_flags&TIFF_SWAB) )
     {
@@ -2905,6 +3618,23 @@ _TIFFRewriteField(TIFF* tif, uint16 tag, TIFFDataType in_datatype,
             entry_offset = read_offset + 12;
             value_in_entry = 1;
         }
+    }
+
+    if( (tag == TIFFTAG_TILEOFFSETS || tag == TIFFTAG_STRIPOFFSETS) &&
+        tif->tif_dir.td_stripoffset_entry.tdir_count == 0 &&
+        tif->tif_dir.td_stripoffset_entry.tdir_type == 0 &&
+        tif->tif_dir.td_stripoffset_entry.tdir_offset.toff_long8 == 0 )
+    {
+        tif->tif_dir.td_stripoffset_entry.tdir_type = datatype;
+        tif->tif_dir.td_stripoffset_entry.tdir_count = count;
+    }
+    else if( (tag == TIFFTAG_TILEBYTECOUNTS || tag == TIFFTAG_STRIPBYTECOUNTS) &&
+        tif->tif_dir.td_stripbytecount_entry.tdir_count == 0 &&
+        tif->tif_dir.td_stripbytecount_entry.tdir_type == 0 &&
+        tif->tif_dir.td_stripbytecount_entry.tdir_offset.toff_long8 == 0 )
+    {
+        tif->tif_dir.td_stripbytecount_entry.tdir_type = datatype;
+        tif->tif_dir.td_stripbytecount_entry.tdir_count = count;
     }
 
 /* -------------------------------------------------------------------- */
@@ -2958,6 +3688,7 @@ _TIFFRewriteField(TIFF* tif, uint16 tag, TIFFDataType in_datatype,
 /*      Adjust the directory entry.                                     */
 /* -------------------------------------------------------------------- */
     entry_type = datatype;
+    entry_count = (uint64)count;
     memcpy( direntry_raw + 2, &entry_type, sizeof(uint16) );
     if (tif->tif_flags&TIFF_SWAB)
         TIFFSwabShort( (uint16 *) (direntry_raw + 2) );

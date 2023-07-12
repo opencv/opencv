@@ -77,7 +77,7 @@ E.g. external ref-counting is implemented for 1.0 version and native OpenVX one 
 
 Also there are some **C++ 11** features are used (e.g. rvalue ref-s) when their availability is detected at ***compile time***.
 
-C++ exceptions are used for errors indication instead of return codes. There are two types of exceptions are defined:  `RuntimeError` is thrown when OpenVX C call returned unsuccessful result and `WrapperError` is thrown when a problem is occured in the wrappers code. Both exception calsses are derived from `std::exception` (actually from its inheritants).
+C++ exceptions are used for errors indication instead of return codes. There are two types of exceptions are defined:  `RuntimeError` is thrown when OpenVX C call returned unsuccessful result and `WrapperError` is thrown when a problem is occurred in the wrappers code. Both exception calsses are derived from `std::exception` (actually from its inheritants).
 
 The so called **OpenVX objects** (e.g. `vx_image`) are represented as C++ classes in wrappers.
 All these classes use automatic ref-counting that allows development of exception-safe code.

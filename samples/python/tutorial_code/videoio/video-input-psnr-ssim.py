@@ -86,8 +86,8 @@ def main():
 
     framenum = -1 # Frame counter
 
-    captRefrnc = cv.VideoCapture(sourceReference)
-    captUndTst = cv.VideoCapture(sourceCompareWith)
+    captRefrnc = cv.VideoCapture(cv.samples.findFileOrKeep(sourceReference))
+    captUndTst = cv.VideoCapture(cv.samples.findFileOrKeep(sourceCompareWith))
 
     if not captRefrnc.isOpened():
         print("Could not open the reference " + sourceReference)

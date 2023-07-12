@@ -4,6 +4,13 @@ Using OpenCV Java with Eclipse {#tutorial_java_eclipse}
 @prev_tutorial{tutorial_java_dev_intro}
 @next_tutorial{tutorial_clojure_dev_intro}
 
+|    |    |
+| -: | :- |
+| Original author | Barış Evrim Demiröz |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial can contain obsolete information.
 
 Since version 2.4.4 [OpenCV supports Java](http://opencv.org/opencv-java-api.html). In this tutorial
 I will explain how to setup development environment for using OpenCV Java with Eclipse in

@@ -667,7 +667,7 @@ double DigitalCameraCapture::getProperty(int propertyId) const
     catch (const GPhoto2Exception & e)
     {
         char buf[128] = "";
-        sprintf(buf, "cannot get property: %d", propertyId);
+        snprintf(buf, sizeof(buf), "cannot get property: %d", propertyId);
         message(WARNING, (const char *) buf, e);
         return 0;
     }
@@ -810,7 +810,7 @@ bool DigitalCameraCapture::setProperty(int propertyId, double value)
     catch (const GPhoto2Exception & e)
     {
         char buf[128] = "";
-        sprintf(buf, "cannot set property: %d to %f", propertyId, value);
+        snprintf(buf, sizeof(buf), "cannot set property: %d to %f", propertyId, value);
         message(WARNING, (const char *) buf, e);
         return false;
     }

@@ -24,7 +24,7 @@
 #include "src/webp/format_constants.h"
 
 #define DMUX_MAJ_VERSION 1
-#define DMUX_MIN_VERSION 1
+#define DMUX_MIN_VERSION 2
 #define DMUX_REV_VERSION 0
 
 typedef struct {
@@ -312,6 +312,7 @@ static ParseStatus ParseAnimationFrame(
   int bits;
   MemBuffer* const mem = &dmux->mem_;
   Frame* frame;
+  size_t start_offset;
   ParseStatus status =
       NewFrame(mem, ANMF_CHUNK_SIZE, frame_chunk_size, &frame);
   if (status != PARSE_OK) return status;
@@ -332,7 +333,11 @@ static ParseStatus ParseAnimationFrame(
 
   // Store a frame only if the animation flag is set there is some data for
   // this frame is available.
+  start_offset = mem->start_;
   status = StoreFrame(dmux->num_frames_ + 1, anmf_payload_size, mem, frame);
+  if (status != PARSE_ERROR && mem->start_ - start_offset > anmf_payload_size) {
+    status = PARSE_ERROR;
+  }
   if (status != PARSE_ERROR && is_animation && frame->frame_num_ > 0) {
     added_frame = AddFrame(dmux, frame);
     if (added_frame) {

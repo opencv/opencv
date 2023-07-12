@@ -390,14 +390,18 @@ void Index::build(InputArray _data, const IndexParams& params, flann_distance_t 
     CV_INSTRUMENT_REGION();
 
     release();
+
+    // Index may reuse 'data' during search, need to keep it alive
+    features_clone = _data.getMat().clone();
+    Mat data = features_clone;
+
     algo = getParam<flann_algorithm_t>(params, "algorithm", FLANN_INDEX_LINEAR);
     if( algo == FLANN_INDEX_SAVED )
     {
-        load(_data, getParam<String>(params, "filename", String()));
+        load_(getParam<String>(params, "filename", String()));
         return;
     }
 
-    Mat data = _data.getMat();
     index = 0;
     featureType = data.type();
     distType = _distType;
@@ -461,6 +465,8 @@ Index::~Index()
 void Index::release()
 {
     CV_INSTRUMENT_REGION();
+
+    features_clone.release();
 
     if( !index )
         return;
@@ -785,14 +791,28 @@ bool loadIndex(Index* index0, void*& index, const Mat& data, FILE* fin, const Di
 
 bool Index::load(InputArray _data, const String& filename)
 {
-    Mat data = _data.getMat();
-    bool ok = true;
     release();
+
+    // Index may reuse 'data' during search, need to keep it alive
+    features_clone = _data.getMat().clone();
+    Mat data = features_clone;
+
+    return load_(filename);
+}
+
+bool Index::load_(const String& filename)
+{
+    Mat data = features_clone;
+    bool ok = true;
+
     FILE* fin = fopen(filename.c_str(), "rb");
-    if (fin == NULL)
+    if (fin == NULL) {
         return false;
+    }
+    FILEScopeGuard fscgd(fin);
 
     ::cvflann::IndexHeader header = ::cvflann::load_header(fin);
+
     algo = header.index_type;
     featureType = header.data_type == FLANN_UINT8 ? CV_8U :
                   header.data_type == FLANN_INT8 ? CV_8S :
@@ -807,7 +827,6 @@ bool Index::load(InputArray _data, const String& filename)
     {
         fprintf(stderr, "Reading FLANN index error: the saved data size (%d, %d) or type (%d) is different from the passed one (%d, %d), %d\n",
                 (int)header.rows, (int)header.cols, featureType, data.rows, data.cols, data.type());
-        fclose(fin);
         return false;
     }
 
@@ -820,7 +839,6 @@ bool Index::load(InputArray _data, const String& filename)
           (distType != FLANN_DIST_HAMMING && featureType == CV_32F)) )
     {
         fprintf(stderr, "Reading FLANN index error: unsupported feature type %d for the index type %d\n", featureType, algo);
-        fclose(fin);
         return false;
     }
 
@@ -860,8 +878,6 @@ bool Index::load(InputArray _data, const String& filename)
         ok = false;
     }
 
-    if( fin )
-        fclose(fin);
     return ok;
 }
 

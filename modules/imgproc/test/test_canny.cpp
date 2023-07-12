@@ -160,7 +160,7 @@ void CV_CannyTest::run_func()
     {
         cv::Mat _out = cv::cvarrToMat(test_array[OUTPUT][0]);
         cv::Canny(cv::cvarrToMat(test_array[INPUT][0]), _out, threshold1, threshold2,
-                aperture_size + (use_true_gradient ? CV_CANNY_L2_GRADIENT : 0));
+                aperture_size, use_true_gradient);
     }
 }
 
@@ -249,7 +249,7 @@ test_Canny( const Mat& src, Mat& dst,
             }
             else
             {
-                assert( fabs(tg) > tan_3pi_8 );
+                CV_Assert( fabs(tg) > tan_3pi_8 );
                 x1 = x2 = x; y1 = y + 1; y2 = y - 1;
             }
 

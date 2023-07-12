@@ -4,11 +4,11 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1996, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2015, D. R. Commander.
+ * Copyright (C) 2015, 2020, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
- * This file contains a slow-but-accurate integer implementation of the
+ * This file contains a slower but more accurate integer implementation of the
  * forward DCT (Discrete Cosine Transform).
  *
  * A 2-D DCT can be done by 1-D DCT on each row followed by 1-D DCT

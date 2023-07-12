@@ -13,25 +13,33 @@
 #import "CvType.h"
 #import "CVObjcUtil.h"
 
-// return true if we have reached the final index
-static bool incIdx(cv::Mat* mat, std::vector<int>& indices) {
-    for (int dim = mat->dims-1; dim>=0; dim--) {
-        indices[dim] = (indices[dim] + 1) % mat->size[dim];
-        if (indices[dim] != 0) {
-            return false;
-        }
+#ifdef AVAILABLE_IMGCODECS
+#import "MatConverters.h"
+#import "MatQuickLook.h"
+#endif
+
+static int idx2Offset(cv::Mat* mat, std::vector<int>& indices) {
+    int offset = indices[0];
+    for (int dim=1; dim < mat->dims; dim++) {
+        offset = offset*mat->size[dim] + indices[dim];
     }
-    return true;
+    return offset;
+}
+
+static void offset2Idx(cv::Mat* mat, size_t offset, std::vector<int>& indices) {
+    for (int dim=mat->dims-1; dim>=0; dim--) {
+        indices[dim] = offset % mat->size[dim];
+        offset = (offset - indices[dim]) / mat->size[dim];
+    }
 }
 
 // returns true if final index was reached
-static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
-    for (int index = 0; index < inc; index++) {
-        if (incIdx(mat, indices)) {
-            return true;
-        }
-    }
-    return false;
+static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, size_t inc) {
+    size_t currentOffset = idx2Offset(mat, indices);
+    size_t newOffset = currentOffset + inc;
+    bool reachedEnd = newOffset>=(size_t)mat->total();
+    offset2Idx(mat, reachedEnd?0:newOffset, indices);
+    return reachedEnd;
 }
 
 @implementation Mat {
@@ -95,7 +103,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 - (instancetype)initWithSize:(Size2i*)size type:(int)type {
     self = [super init];
     if (self) {
-        _nativePtr = new cv::Mat(size.width, size.height, type);
+        _nativePtr = new cv::Mat(size.height, size.width, type);
     }
     return self;
 }
@@ -125,7 +133,7 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     self = [super init];
     if (self) {
         cv::Scalar scalerTemp(scalar.val[0].doubleValue, scalar.val[1].doubleValue, scalar.val[2].doubleValue, scalar.val[3].doubleValue);
-        _nativePtr = new cv::Mat(size.width, size.height, type, scalerTemp);
+        _nativePtr = new cv::Mat(size.height, size.width, type, scalerTemp);
     }
     return self;
 }
@@ -286,6 +294,10 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
     return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->cross(*(cv::Mat*)mat.nativePtr))];
 }
 
+- (unsigned char*)dataPtr {
+    return _nativePtr->data;
+}
+
 - (int)depth {
     return _nativePtr->depth();
 }
@@ -363,6 +375,11 @@ static bool updateIdx(cv::Mat* mat, std::vector<int>& indices, int inc) {
 
 - (Mat*)mul:(Mat*)mat {
     return [[Mat alloc] initWithNativeMat:new cv::Mat(_nativePtr->mul(*(cv::Mat*)mat.nativePtr))];
+}
+
+- (Mat*)matMul:(Mat*)mat {
+    cv::Mat temp = self.nativeRef * mat.nativeRef;
+    return [Mat fromNative:temp];
 }
 
 + (Mat*)ones:(int)rows cols:(int)cols type:(int)type {
@@ -544,7 +561,7 @@ template<typename T> void putData(uchar* dataDest, int count, T (^readData)(int)
     if (depth == CV_8U) {
         putData(dest, count, ^uchar (int index) { return cv::saturate_cast<uchar>(data[offset + index].doubleValue);} );
     } else if (depth == CV_8S) {
-        putData(dest, count, ^char (int index) { return cv::saturate_cast<char>(data[offset + index].doubleValue);} );
+        putData(dest, count, ^schar (int index) { return cv::saturate_cast<schar>(data[offset + index].doubleValue);} );
     } else if (depth == CV_16U) {
         putData(dest, count, ^ushort (int index) { return cv::saturate_cast<ushort>(data[offset + index].doubleValue);} );
     } else if (depth == CV_16S) {
@@ -720,22 +737,31 @@ template<typename T> int getData(NSArray<NSNumber*>* indices, cv::Mat* mat, int 
     }
 
     int arrayAvailable = count;
+    size_t countBytes = count * sizeof(T);
+    size_t remainingBytes = (size_t)(mat->total() - idx2Offset(mat, tempIndices))*mat->elemSize();
+    countBytes = (countBytes>remainingBytes)?remainingBytes:countBytes;
+    int result = (int)countBytes;
     int matAvailable = getMatAvailable(mat, tempIndices);
     int available = MIN(arrayAvailable, matAvailable);
-    int result = (int)(available * mat->elemSize() / mat->channels());
     if (mat->isContinuous()) {
         memcpy(tBuffer, mat->ptr(tempIndices.data()), available * sizeof(T));
     } else {
-        int copyOffset = 0;
-        int copyCount = MIN((mat->size[mat->dims - 1] - tempIndices[mat->dims - 1]) * mat->channels(), available);
-        while (available > 0) {
-            memcpy(tBuffer + copyOffset, mat->ptr(tempIndices.data()), copyCount * sizeof(T));
-            if (updateIdx(mat, tempIndices, copyCount / mat->channels())) {
-                break;
-            }
-            available -= copyCount;
-            copyOffset += copyCount * sizeof(T);
-            copyCount = MIN(mat->size[mat->dims-1] * mat->channels(), available);
+        char* buff = (char*)tBuffer;
+        size_t blockSize = mat->size[mat->dims-1] * mat->elemSize();
+        size_t firstPartialBlockSize = (mat->size[mat->dims-1] - tempIndices[mat->dims-1]) * mat->step[mat->dims-1];
+        for (int dim=mat->dims-2; dim>=0 && blockSize == mat->step[dim]; dim--) {
+            blockSize *= mat->size[dim];
+            firstPartialBlockSize += (mat->size[dim] - (tempIndices[dim]+1)) * mat->step[dim];
+        }
+        size_t copyCount = (countBytes<firstPartialBlockSize)?countBytes:firstPartialBlockSize;
+        uchar* data = mat->ptr(tempIndices.data());
+        while(countBytes>0) {
+            memcpy(buff, data, copyCount);
+            updateIdx(mat, tempIndices, copyCount / mat->elemSize());
+            countBytes -= copyCount;
+            buff += copyCount;
+            copyCount = countBytes<blockSize?countBytes:blockSize;
+            data = mat->ptr(tempIndices.data());
         }
     }
     return result;
@@ -813,22 +839,31 @@ template<typename T> int putData(NSArray<NSNumber*>* indices, cv::Mat* mat, int 
     }
 
     int arrayAvailable = count;
+    size_t countBytes = count * sizeof(T);
+    size_t remainingBytes = (size_t)(mat->total() - idx2Offset(mat, tempIndices))*mat->elemSize();
+    countBytes = (countBytes>remainingBytes)?remainingBytes:countBytes;
+    int result = (int)countBytes;
     int matAvailable = getMatAvailable(mat, tempIndices);
     int available = MIN(arrayAvailable, matAvailable);
-    int result = (int)(available * mat->elemSize() / mat->channels());
     if (mat->isContinuous()) {
         memcpy(mat->ptr(tempIndices.data()), tBuffer, available * sizeof(T));
     } else {
-        int copyOffset = 0;
-        int copyCount = MIN((mat->size[mat->dims - 1] - tempIndices[mat->dims - 1]) * mat->channels(), available);
-        while (available > 0) {
-            memcpy(mat->ptr(tempIndices.data()), tBuffer + copyOffset, copyCount * sizeof(T));
-            if (updateIdx(mat, tempIndices, copyCount / mat->channels())) {
-                break;
-            }
-            available -= copyCount;
-            copyOffset += copyCount * sizeof(T);
-            copyCount = MIN(mat->size[mat->dims-1] * (int)mat->channels(), available);
+        char* buff = (char*)tBuffer;
+        size_t blockSize = mat->size[mat->dims-1] * mat->elemSize();
+        size_t firstPartialBlockSize = (mat->size[mat->dims-1] - tempIndices[mat->dims-1]) * mat->step[mat->dims-1];
+        for (int dim=mat->dims-2; dim>=0 && blockSize == mat->step[dim]; dim--) {
+            blockSize *= mat->size[dim];
+            firstPartialBlockSize += (mat->size[dim] - (tempIndices[dim]+1)) * mat->step[dim];
+        }
+        size_t copyCount = (countBytes<firstPartialBlockSize)?countBytes:firstPartialBlockSize;
+        uchar* data = mat->ptr(tempIndices.data());
+        while(countBytes>0){
+            memcpy(data, buff, copyCount);
+            updateIdx(mat, tempIndices, copyCount / mat->elemSize());
+            countBytes -= copyCount;
+            buff += copyCount;
+            copyCount = countBytes<blockSize?countBytes:blockSize;
+            data = mat->ptr(tempIndices.data());
         }
     }
     return result;
@@ -901,5 +936,55 @@ template<typename T> int putData(NSArray<NSNumber*>* indices, cv::Mat* mat, int 
 - (int)width {
     return [self cols];
 }
+
+#ifdef AVAILABLE_IMGCODECS
+
+-(CGImageRef)toCGImage {
+    return [MatConverters convertMatToCGImageRef:self];
+}
+
+-(instancetype)initWithCGImage:(CGImageRef)image {
+    return [MatConverters convertCGImageRefToMat:image];
+}
+
+-(instancetype)initWithCGImage:(CGImageRef)image alphaExist:(BOOL)alphaExist {
+    return [MatConverters convertCGImageRefToMat:image alphaExist:alphaExist];
+}
+
+#if TARGET_OS_IPHONE
+
+-(UIImage*)toUIImage {
+    return [MatConverters converMatToUIImage:self];
+}
+
+-(instancetype)initWithUIImage:(UIImage*)image {
+    return [MatConverters convertUIImageToMat:image];
+}
+
+-(instancetype)initWithUIImage:(UIImage*)image alphaExist:(BOOL)alphaExist {
+    return [MatConverters convertUIImageToMat:image alphaExist:alphaExist];
+}
+
+#elif TARGET_OS_MAC
+
+-(NSImage*)toNSImage {
+    return [MatConverters converMatToNSImage:self];
+}
+
+-(instancetype)initWithNSImage:(NSImage*)image {
+    return [MatConverters convertNSImageToMat:image];
+}
+
+-(instancetype)initWithNSImage:(NSImage*)image alphaExist:(BOOL)alphaExist {
+    return [MatConverters convertNSImageToMat:image alphaExist:alphaExist];
+}
+
+#endif
+
+- (id)debugQuickLookObject {
+    return [MatQuickLook matDebugQuickLookObject:self];
+}
+
+#endif
 
 @end

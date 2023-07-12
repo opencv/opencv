@@ -182,7 +182,7 @@ int CV_ApproxPolyTest::check_slice( CvPoint StartPt, CvPoint EndPt,
     ////////////////////////////////
     if( SrcReader == NULL )
     {
-        assert( false );
+        CV_Assert( false );
         return 0;
     }
 
@@ -220,6 +220,7 @@ int CV_ApproxPolyTest::check_slice( CvPoint StartPt, CvPoint EndPt,
 
     *_j = j;
 
+    (void) TotalErrors; // To avoid -Wunused-but-set-variable warning
     //return TotalErrors;
     return 0;
 }
@@ -237,7 +238,7 @@ int CV_ApproxPolyTest::check( CvSeq* SrcSeq, CvSeq* DstSeq, float Eps )
     int Count;
     int i,j;
 
-    assert( SrcSeq && DstSeq );
+    CV_Assert( SrcSeq && DstSeq );
 
     ////////// init ////////////////////
     Count = SrcSeq->total;

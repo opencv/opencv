@@ -59,7 +59,7 @@ public:
     using F = std::function<void(GPlaidMLContext &)>;
 
     GPlaidMLKernel() = default;
-    explicit GPlaidMLKernel(const F& f) : m_f(f) {};
+    explicit GPlaidMLKernel(const F& f) : m_f(f) {}
 
     void apply(GPlaidMLContext &ctx) const
     {

@@ -38,10 +38,10 @@ def Hist_and_Backproj(val):
 
 ## [Read the image]
 parser = argparse.ArgumentParser(description='Code for Back Projection tutorial.')
-parser.add_argument('--input', help='Path to input image.')
+parser.add_argument('--input', help='Path to input image.', default='home.jpg')
 args = parser.parse_args()
 
-src = cv.imread(args.input)
+src = cv.imread(cv.samples.findFile(args.input))
 if src is None:
     print('Could not open or find the image:', args.input)
     exit(0)

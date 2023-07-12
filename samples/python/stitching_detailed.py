@@ -29,13 +29,14 @@ BA_COST_CHOICES['no'] = cv.detail_NoBundleAdjuster
 
 FEATURES_FIND_CHOICES = OrderedDict()
 try:
+    cv.xfeatures2d_SURF.create() # check if the function can be called
     FEATURES_FIND_CHOICES['surf'] = cv.xfeatures2d_SURF.create
-except AttributeError:
+except (AttributeError, cv.error) as e:
     print("SURF not available")
 # if SURF not available, ORB is default
 FEATURES_FIND_CHOICES['orb'] = cv.ORB.create
 try:
-    FEATURES_FIND_CHOICES['sift'] = cv.xfeatures2d_SIFT.create
+    FEATURES_FIND_CHOICES['sift'] = cv.SIFT_create
 except AttributeError:
     print("SIFT not available")
 try:
@@ -78,7 +79,10 @@ WARP_CHOICES = (
     'transverseMercator',
 )
 
-WAVE_CORRECT_CHOICES = ('horiz', 'no', 'vert',)
+WAVE_CORRECT_CHOICES = OrderedDict()
+WAVE_CORRECT_CHOICES['horiz'] = cv.detail.WAVE_CORRECT_HORIZ
+WAVE_CORRECT_CHOICES['no'] = None
+WAVE_CORRECT_CHOICES['vert'] = cv.detail.WAVE_CORRECT_VERT
 
 BLEND_CHOICES = ('multiband', 'feather', 'no',)
 
@@ -146,9 +150,9 @@ parser.add_argument(
     type=str, dest='ba_refine_mask'
 )
 parser.add_argument(
-    '--wave_correct', action='store', default=WAVE_CORRECT_CHOICES[0],
-    help="Perform wave effect correction. The default is '%s'" % WAVE_CORRECT_CHOICES[0],
-    choices=WAVE_CORRECT_CHOICES,
+    '--wave_correct', action='store', default=list(WAVE_CORRECT_CHOICES.keys())[0],
+    help="Perform wave effect correction. The default is '%s'" % list(WAVE_CORRECT_CHOICES.keys())[0],
+    choices=WAVE_CORRECT_CHOICES.keys(),
     type=str, dest='wave_correct'
 )
 parser.add_argument(
@@ -244,9 +248,9 @@ def get_matcher(args):
     if matcher_type == "affine":
         matcher = cv.detail_AffineBestOf2NearestMatcher(False, try_cuda, match_conf)
     elif range_width == -1:
-        matcher = cv.detail.BestOf2NearestMatcher_create(try_cuda, match_conf)
+        matcher = cv.detail_BestOf2NearestMatcher(try_cuda, match_conf)
     else:
-        matcher = cv.detail.BestOf2NearestRangeMatcher_create(range_width, try_cuda, match_conf)
+        matcher = cv.detail_BestOf2NearestRangeMatcher(range_width, try_cuda, match_conf)
     return matcher
 
 
@@ -278,11 +282,7 @@ def main():
     compose_megapix = args.compose_megapix
     conf_thresh = args.conf_thresh
     ba_refine_mask = args.ba_refine_mask
-    wave_correct = args.wave_correct
-    if wave_correct == 'no':
-        do_wave_correct = False
-    else:
-        do_wave_correct = True
+    wave_correct = WAVE_CORRECT_CHOICES[args.wave_correct]
     if args.save_graph is None:
         save_graph = False
     else:
@@ -326,7 +326,10 @@ def main():
                 is_work_scale_set = True
             img = cv.resize(src=full_img, dsize=None, fx=work_scale, fy=work_scale, interpolation=cv.INTER_LINEAR_EXACT)
         if is_seam_scale_set is False:
-            seam_scale = min(1.0, np.sqrt(seam_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
+            if seam_megapix > 0:
+                seam_scale = min(1.0, np.sqrt(seam_megapix * 1e6 / (full_img.shape[0] * full_img.shape[1])))
+            else:
+                seam_scale = 1.0
             seam_work_aspect = seam_scale / work_scale
             is_seam_scale_set = True
         img_feat = cv.detail.computeImageFeatures2(finder, img)
@@ -342,14 +345,14 @@ def main():
         with open(args.save_graph, 'w') as fh:
             fh.write(cv.detail.matchesGraphAsString(img_names, p, conf_thresh))
 
-    indices = cv.detail.leaveBiggestComponent(features, p, 0.3)
+    indices = cv.detail.leaveBiggestComponent(features, p, conf_thresh)
     img_subset = []
     img_names_subset = []
     full_img_sizes_subset = []
     for i in range(len(indices)):
-        img_names_subset.append(img_names[indices[i, 0]])
-        img_subset.append(images[indices[i, 0]])
-        full_img_sizes_subset.append(full_img_sizes[indices[i, 0]])
+        img_names_subset.append(img_names[indices[i]])
+        img_subset.append(images[indices[i]])
+        full_img_sizes_subset.append(full_img_sizes[indices[i]])
     images = img_subset
     img_names = img_names_subset
     full_img_sizes = full_img_sizes_subset
@@ -367,7 +370,7 @@ def main():
         cam.R = cam.R.astype(np.float32)
 
     adjuster = BA_COST_CHOICES[args.ba]()
-    adjuster.setConfThresh(1)
+    adjuster.setConfThresh(conf_thresh)
     refine_mask = np.zeros((3, 3), np.uint8)
     if ba_refine_mask[0] == 'x':
         refine_mask[0, 0] = 1
@@ -387,16 +390,16 @@ def main():
     focals = []
     for cam in cameras:
         focals.append(cam.focal)
-    sorted(focals)
+    focals.sort()
     if len(focals) % 2 == 1:
         warped_image_scale = focals[len(focals) // 2]
     else:
         warped_image_scale = (focals[len(focals) // 2] + focals[len(focals) // 2 - 1]) / 2
-    if do_wave_correct:
+    if wave_correct is not None:
         rmats = []
         for cam in cameras:
             rmats.append(np.copy(cam.R))
-        rmats = cv.detail.waveCorrect(rmats, cv.detail.WAVE_CORRECT_HORIZ)
+        rmats = cv.detail.waveCorrect(rmats, wave_correct)
         for idx, cam in enumerate(cameras):
             cam.R = rmats[idx]
     corners = []
@@ -432,13 +435,13 @@ def main():
     compensator.feed(corners=corners, images=images_warped, masks=masks_warped)
 
     seam_finder = SEAM_FIND_CHOICES[args.seam]
-    seam_finder.find(images_warped_f, corners, masks_warped)
+    masks_warped = seam_finder.find(images_warped_f, corners, masks_warped)
     compose_scale = 1
     corners = []
     sizes = []
     blender = None
     timelapser = None
-    # https://github.com/opencv/opencv/blob/master/samples/cpp/stitching_detailed.cpp#L725 ?
+    # https://github.com/opencv/opencv/blob/4.x/samples/cpp/stitching_detailed.cpp#L725 ?
     for idx, name in enumerate(img_names):
         full_img = cv.imread(name)
         if not is_compose_scale_set:
@@ -452,7 +455,8 @@ def main():
                 cameras[i].focal *= compose_work_aspect
                 cameras[i].ppx *= compose_work_aspect
                 cameras[i].ppy *= compose_work_aspect
-                sz = (full_img_sizes[i][0] * compose_scale, full_img_sizes[i][1] * compose_scale)
+                sz = (int(round(full_img_sizes[i][0] * compose_scale)),
+                      int(round(full_img_sizes[i][1] * compose_scale)))
                 K = cameras[i].K().astype(np.float32)
                 roi = warper.warpRoi(sz, K, cameras[i].R)
                 corners.append(roi[0:2])
@@ -480,7 +484,7 @@ def main():
                 blender = cv.detail.Blender_createDefault(cv.detail.Blender_NO)
             elif blend_type == "multiband":
                 blender = cv.detail_MultiBandBlender()
-                blender.setNumBands((np.log(blend_width) / np.log(2.) - 1.).astype(np.int))
+                blender.setNumBands((np.log(blend_width) / np.log(2.) - 1.).astype(np.int32))
             elif blend_type == "feather":
                 blender = cv.detail_FeatherBlender()
                 blender.setSharpness(1. / blend_width)
@@ -514,6 +518,5 @@ def main():
 
 
 if __name__ == '__main__':
-    print(__doc__)
     main()
     cv.destroyAllWindows()

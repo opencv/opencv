@@ -239,6 +239,9 @@ if(HOST_BIG_ENDIAN)
 else()
   set(HOST_BIG_ENDIAN 0)
 endif()
+if(HOST_BIG_ENDIAN)
+  add_definitions(-DWORDS_BIGENDIAN)
+endif()
 
 # IEEE floating point
 set(HAVE_IEEEFP 1 CACHE STRING "IEEE floating point is available")
@@ -449,8 +452,10 @@ ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-protot
                                    -Wcast-align -Wshadow -Wno-maybe-uninitialized -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast
                                    -Wmisleading-indentation
                                    -Wimplicit-fallthrough
+                                   -Wunused-parameter  # clang
+                                   -Warray-parameter
+                                   -Wstrict-prototypes  # clang15
 )
-ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter) # clang
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations -Wunused-parameter -Wmissing-prototypes
     -Wundef  # tiffiop.h: #if __clang_major__ >= 4
 )
@@ -462,7 +467,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4456 /wd4457 /wd4312) # vs2015
 
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4267 /wd4244 /wd4018 /wd4311 /wd4312)
 
-add_library(${TIFF_LIBRARY} STATIC ${lib_srcs})
+add_library(${TIFF_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs})
 target_link_libraries(${TIFF_LIBRARY} ${ZLIB_LIBRARIES})
 
 set_target_properties(${TIFF_LIBRARY}
@@ -479,7 +484,7 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 if(NOT BUILD_SHARED_LIBS)
-  ocv_install_target(${TIFF_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+  ocv_install_target(${TIFF_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev OPTIONAL)
 endif()
 
 ocv_install_3rdparty_licenses(libtiff COPYRIGHT)

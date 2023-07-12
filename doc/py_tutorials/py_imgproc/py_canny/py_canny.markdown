@@ -74,7 +74,7 @@ Canny Edge Detection in OpenCV
 
 OpenCV puts all the above in single function, **cv.Canny()**. We will see how to use it. First
 argument is our input image. Second and third arguments are our minVal and maxVal respectively.
-Third argument is aperture_size. It is the size of Sobel kernel used for find image gradients. By
+Fourth argument is aperture_size. It is the size of Sobel kernel used for find image gradients. By
 default it is 3. Last argument is L2gradient which specifies the equation for finding gradient
 magnitude. If it is True, it uses the equation mentioned above which is more accurate, otherwise it
 uses this function: \f$Edge\_Gradient \; (G) = |G_x| + |G_y|\f$. By default, it is False.
@@ -83,7 +83,8 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv.imread('messi5.jpg',0)
+img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 edges = cv.Canny(img,100,200)
 
 plt.subplot(121),plt.imshow(img,cmap = 'gray')

@@ -33,6 +33,8 @@ Installing OpenCV from prebuilt binaries
 
 -#  Copy **cv2.pyd** to **C:/Python27/lib/site-packages**.
 
+-#  Copy the **opencv_world.dll** file to **C:/Python27/lib/site-packages**
+
 -#  Open Python IDLE and type following codes in Python terminal.
     @code
         >>> import cv2 as cv

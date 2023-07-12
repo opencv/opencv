@@ -54,24 +54,6 @@
 
 namespace cv
 {
-/**
- * @brief Jpeg markers that can encounter in Jpeg file
- */
-enum AppMarkerTypes
-{
-    SOI   = 0xD8, SOF0  = 0xC0, SOF2  = 0xC2, DHT   = 0xC4,
-    DQT   = 0xDB, DRI   = 0xDD, SOS   = 0xDA,
-
-    RST0  = 0xD0, RST1  = 0xD1, RST2  = 0xD2, RST3  = 0xD3,
-    RST4  = 0xD4, RST5  = 0xD5, RST6  = 0xD6, RST7  = 0xD7,
-
-    APP0  = 0xE0, APP1  = 0xE1, APP2  = 0xE2, APP3  = 0xE3,
-    APP4  = 0xE4, APP5  = 0xE5, APP6  = 0xE6, APP7  = 0xE7,
-    APP8  = 0xE8, APP9  = 0xE9, APP10 = 0xEA, APP11 = 0xEB,
-    APP12 = 0xEC, APP13 = 0xED, APP14 = 0xEE, APP15 = 0xEF,
-
-    COM   = 0xFE, EOI   = 0xD9
-};
 
 /**
  * @brief Base Exif tags used by IFD0 (main image)
@@ -168,19 +150,22 @@ class ExifReader
 public:
     /**
      * @brief ExifReader constructor. Constructs an object of exif reader
-     *
-     * @param [in]stream An istream to look for EXIF bytes from
      */
-    explicit ExifReader( std::istream& stream );
+    ExifReader();
     ~ExifReader();
 
 
     /**
      * @brief Parse the file with exif info
      *
-     * @return true if parsing was successful and exif information exists in JpegReader object
+     * @param [in] data The data buffer to read EXIF data starting with endianness
+     * @param [in] size The size of the data buffer
+     *
+     * @return true if successful parsing
+     *         false if parsing error
      */
-    bool parse();
+
+    bool parseExif(unsigned char* data, const size_t size);
 
     /**
      * @brief Get tag info by tag number
@@ -188,10 +173,10 @@ public:
      * @param [in] tag The tag number
      * @return ExifEntru_t structure. Caller has to know what tag it calls in order to extract proper field from the structure ExifEntry_t
      */
-    ExifEntry_t getTag( const ExifTagName tag );
+    ExifEntry_t getTag( const ExifTagName tag ) const;
+
 
 private:
-    std::istream& m_stream;
     std::vector<unsigned char> m_data;
     std::map<int, ExifEntry_t > m_exif;
     Endianess_t m_format;
@@ -199,7 +184,6 @@ private:
     void parseExif();
     bool checkTagMark() const;
 
-    size_t getFieldSize ();
     size_t getNumDirEntry( const size_t offsetNumDir ) const;
     uint32_t getStartOffset() const;
     uint16_t getExifTag( const size_t offset ) const;
@@ -215,7 +199,6 @@ private:
 
     u_rational_t getURational( const size_t offset ) const;
 
-    std::map<int, ExifEntry_t > getExif();
     std::string getString( const size_t offset ) const;
     std::vector<u_rational_t> getResolution( const size_t offset ) const;
     std::vector<u_rational_t> getWhitePoint( const size_t offset ) const;

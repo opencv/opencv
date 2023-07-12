@@ -8,6 +8,7 @@
 #include "precomp.hpp"
 
 #include <ade/graph.hpp>
+#include <ade/util/zip_range.hpp>   // util::indexed
 
 #include <opencv2/gapi/gproto.hpp> // can_describe
 #include <opencv2/gapi/gcompiled.hpp>
@@ -18,14 +19,14 @@
 // GStreamingCompiled private implementation ///////////////////////////////////
 void cv::GStreamingCompiled::Priv::setup(const GMetaArgs &_metaArgs,
                                          const GMetaArgs &_outMetas,
-                                         std::unique_ptr<cv::gimpl::GStreamingExecutor> &&_pE)
+                                         std::unique_ptr<cv::gimpl::GAbstractStreamingExecutor> &&_pE)
 {
     m_metas    = _metaArgs;
     m_outMetas = _outMetas;
     m_exec     = std::move(_pE);
 }
 
-void cv::GStreamingCompiled::Priv::setup(std::unique_ptr<cv::gimpl::GStreamingExecutor> &&_pE)
+void cv::GStreamingCompiled::Priv::setup(std::unique_ptr<cv::gimpl::GAbstractStreamingExecutor> &&_pE)
 {
     m_exec = std::move(_pE);
 }
@@ -69,6 +70,16 @@ bool cv::GStreamingCompiled::Priv::pull(cv::GRunArgsP &&outs)
     return m_exec->pull(std::move(outs));
 }
 
+bool cv::GStreamingCompiled::Priv::pull(cv::GOptRunArgsP &&outs)
+{
+    return m_exec->pull(std::move(outs));
+}
+
+std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> cv::GStreamingCompiled::Priv::pull()
+{
+    return m_exec->pull();
+}
+
 bool cv::GStreamingCompiled::Priv::try_pull(cv::GRunArgsP &&outs)
 {
     return m_exec->try_pull(std::move(outs));
@@ -90,6 +101,12 @@ cv::GStreamingCompiled::GStreamingCompiled()
 {
 }
 
+// NB: This overload is called from python code
+void cv::GStreamingCompiled::setSource(const cv::detail::ExtractArgsCallback& callback)
+{
+    setSource(callback(m_priv->inInfo()));
+}
+
 void cv::GStreamingCompiled::setSource(GRunArgs &&ins)
 {
     // FIXME: verify these input parameters according to the graph input meta
@@ -107,6 +124,16 @@ void cv::GStreamingCompiled::start()
 }
 
 bool cv::GStreamingCompiled::pull(cv::GRunArgsP &&outs)
+{
+    return m_priv->pull(std::move(outs));
+}
+
+std::tuple<bool, cv::util::variant<cv::GRunArgs, cv::GOptRunArgs>> cv::GStreamingCompiled::pull()
+{
+    return m_priv->pull();
+}
+
+bool cv::GStreamingCompiled::pull(cv::GOptRunArgsP &&outs)
 {
     return m_priv->pull(std::move(outs));
 }

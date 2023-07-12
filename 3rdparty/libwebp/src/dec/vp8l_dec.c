@@ -947,7 +947,6 @@ static WEBP_INLINE void CopyBlock8b(uint8_t* const dst, int dist, int length) {
         break;
       default:
         goto Copy;
-        break;
     }
     CopySmallPattern8b(src, dst, length, pattern);
     return;

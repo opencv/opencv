@@ -127,7 +127,7 @@ for fname in images:
         objpoints.append(objp)
 
         corners2 = cv.cornerSubPix(gray,corners, (11,11), (-1,-1), criteria)
-        imgpoints.append(corners)
+        imgpoints.append(corners2)
 
         # Draw and display the corners
         cv.drawChessboardCorners(img, (7,6), corners2, ret)
@@ -209,7 +209,7 @@ find the average error, we calculate the arithmetical mean of the errors calcula
 calibration images.
 @code{.py}
 mean_error = 0
-for i in xrange(len(objpoints)):
+for i in range(len(objpoints)):
     imgpoints2, _ = cv.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
     error = cv.norm(imgpoints[i], imgpoints2, cv.NORM_L2)/len(imgpoints2)
     mean_error += error
