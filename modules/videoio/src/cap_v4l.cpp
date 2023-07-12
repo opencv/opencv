@@ -1607,27 +1607,23 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
         return;
     case V4L2_PIX_FMT_Y16:
     {
+        // https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-y16.html
+        // This is a grey-scale image with a depth of 16 bits per pixel. The least significant byte is stored at lower memory addresses (little-endian).
+        // Note: 10-bits precision is not supported
         cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].start);
-        cv::Mat(imageSize, CV_16UC1, currentBuffer.start).convertTo(temp, CV_8U, 1.0 / 256);
+        cv::extractChannel(cv::Mat(imageSize, CV_16UC1, currentBuffer.start), temp, 1);  // 1 - second channel
         cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
         return;
     }
     case V4L2_PIX_FMT_Y16_BE:
     {
-        cv::Mat temp(imageSize, CV_8UC2, currentBuffer.start);
-        cv::Mat temp2(imageSize, CV_16UC1, buffers[MAX_V4L_BUFFERS].start);
-        cv::Mat temp3(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].start);
-
-        cv::Mat channels[2];
-
-        cv::split(temp,channels);
-        cv::addWeighted(channels[0],256,channels[1],1,0,temp2,CV_16UC1);
-
-        temp2.convertTo(temp3, CV_8U, 1.0 / 256);
-
-        cv::cvtColor(temp3, destination, COLOR_GRAY2BGR);
+        // https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/pixfmt-y16-be.html
+        // This is a grey-scale image with a depth of 16 bits per pixel. The most significant byte is stored at lower memory addresses (big-endian).
+        // Note: 10-bits precision is not supported
+        cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].start);
+        cv::extractChannel(cv::Mat(imageSize, CV_16UC1, currentBuffer.start), temp, 0);  // 0 - first channel
+        cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
         return;
-
     }
     case V4L2_PIX_FMT_Y12:
     {
