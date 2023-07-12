@@ -460,6 +460,30 @@ OCL_PERF_TEST_P(CountNonZeroFixture, CountNonZero,
     SANITY_CHECK(result);
 }
 
+///////////// countNonZero ////////////////////////
+
+typedef Size_MatType HasNonZeroFixture;
+
+OCL_PERF_TEST_P(HasNonZeroFixture, HasNonZero,
+    ::testing::Combine(OCL_TEST_SIZES,
+        OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type);
+    /*bool result = false;*/
+    randu(src, 0, 10);
+    declare.in(src);
+
+    OCL_TEST_CYCLE() /*result =*/ cv::hasNonZero(src);
+
+    SANITY_CHECK_NOTHING();
+}
+
 ///////////// Phase ////////////////////////
 
 typedef Size_MatType PhaseFixture;

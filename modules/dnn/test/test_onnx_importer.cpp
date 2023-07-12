@@ -1017,6 +1017,7 @@ TEST_P(Test_ONNX_layers, Padding)
 TEST_P(Test_ONNX_layers, Resize)
 {
     testONNXModels("resize_nearest");
+    testONNXModels("tf_half_pixel_for_nn");
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     testONNXModels("resize_bilinear");
@@ -1146,6 +1147,7 @@ TEST_P(Test_ONNX_layers, Split)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    testONNXModels("split_0");
     testONNXModels("split_1");
     testONNXModels("split_2");
     testONNXModels("split_3");

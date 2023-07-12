@@ -4,7 +4,7 @@ Cascade Classifier Training {#tutorial_traincascade}
 @tableofcontents
 
 @prev_tutorial{tutorial_cascade_classifier}
-@next_tutorial{tutorial_introduction_to_svm}
+@next_tutorial{tutorial_barcode_detect_and_decode}
 
 Introduction
 ------------

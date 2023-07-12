@@ -19,6 +19,17 @@ class TypeNode(abc.ABC):
           e.g. `cv::Rect`.
         - There is no information about types visibility (see `ASTNodeTypeNode`).
     """
+    compatible_to_runtime_usage = False
+    """Class-wide property that switches exported type names for several nodes.
+    Example:
+    >>> node = OptionalTypeNode(ASTNodeTypeNode("Size"))
+    >>> node.typename  # TypeNode.compatible_to_runtime_usage == False
+    "Size | None"
+    >>> TypeNode.compatible_to_runtime_usage = True
+    >>> node.typename
+    "typing.Optional[Size]"
+    """
+
     def __init__(self, ctype_name: str) -> None:
         self.ctype_name = ctype_name
 
@@ -247,11 +258,11 @@ class AliasTypeNode(TypeNode):
     """
     def __init__(self, ctype_name: str, value: TypeNode,
                  export_name: Optional[str] = None,
-                 comment: Optional[str] = None) -> None:
+                 doc: Optional[str] = None) -> None:
         super().__init__(ctype_name)
         self.value = value
         self._export_name = export_name
-        self.comment = comment
+        self.doc = doc
 
     @property
     def typename(self) -> str:
@@ -287,82 +298,82 @@ class AliasTypeNode(TypeNode):
 
     @classmethod
     def int_(cls, ctype_name: str, export_name: Optional[str] = None,
-             comment: Optional[str] = None):
-        return cls(ctype_name, PrimitiveTypeNode.int_(), export_name, comment)
+             doc: Optional[str] = None):
+        return cls(ctype_name, PrimitiveTypeNode.int_(), export_name, doc)
 
     @classmethod
     def float_(cls, ctype_name: str, export_name: Optional[str] = None,
-               comment: Optional[str] = None):
-        return cls(ctype_name, PrimitiveTypeNode.float_(), export_name, comment)
+               doc: Optional[str] = None):
+        return cls(ctype_name, PrimitiveTypeNode.float_(), export_name, doc)
 
     @classmethod
     def array_(cls, ctype_name: str, shape: Optional[Tuple[int, ...]],
                dtype: Optional[str] = None, export_name: Optional[str] = None,
-               comment: Optional[str] = None):
-        if comment is None:
-            comment = "Shape: " + str(shape)
+               doc: Optional[str] = None):
+        if doc is None:
+            doc = "Shape: " + str(shape)
         else:
-            comment += ". Shape: " + str(shape)
+            doc += ". Shape: " + str(shape)
         return cls(ctype_name, NDArrayTypeNode(ctype_name, shape, dtype),
-                   export_name, comment)
+                   export_name, doc)
 
     @classmethod
     def union_(cls, ctype_name: str, items: Tuple[TypeNode, ...],
                export_name: Optional[str] = None,
-               comment: Optional[str] = None):
+               doc: Optional[str] = None):
         return cls(ctype_name, UnionTypeNode(ctype_name, items),
-                   export_name, comment)
+                   export_name, doc)
 
     @classmethod
     def optional_(cls, ctype_name: str, item: TypeNode,
                   export_name: Optional[str] = None,
-                  comment: Optional[str] = None):
-        return cls(ctype_name, OptionalTypeNode(item), export_name, comment)
+                  doc: Optional[str] = None):
+        return cls(ctype_name, OptionalTypeNode(item), export_name, doc)
 
     @classmethod
     def sequence_(cls, ctype_name: str, item: TypeNode,
                   export_name: Optional[str] = None,
-                  comment: Optional[str] = None):
+                  doc: Optional[str] = None):
         return cls(ctype_name, SequenceTypeNode(ctype_name, item),
-                   export_name, comment)
+                   export_name, doc)
 
     @classmethod
     def tuple_(cls, ctype_name: str, items: Tuple[TypeNode, ...],
                export_name: Optional[str] = None,
-               comment: Optional[str] = None):
+               doc: Optional[str] = None):
         return cls(ctype_name, TupleTypeNode(ctype_name, items),
-                   export_name, comment)
+                   export_name, doc)
 
     @classmethod
     def class_(cls, ctype_name: str, class_name: str,
                export_name: Optional[str] = None,
-               comment: Optional[str] = None):
+               doc: Optional[str] = None):
         return cls(ctype_name, ASTNodeTypeNode(class_name),
-                   export_name, comment)
+                   export_name, doc)
 
     @classmethod
     def callable_(cls, ctype_name: str,
                   arg_types: Union[TypeNode, Sequence[TypeNode]],
                   ret_type: TypeNode = NoneTypeNode("void"),
                   export_name: Optional[str] = None,
-                  comment: Optional[str] = None):
+                  doc: Optional[str] = None):
         return cls(ctype_name,
                    CallableTypeNode(ctype_name, arg_types, ret_type),
-                   export_name, comment)
+                   export_name, doc)
 
     @classmethod
     def ref_(cls, ctype_name: str, alias_ctype_name: str,
              alias_export_name: Optional[str] = None,
-             export_name: Optional[str] = None, comment: Optional[str] = None):
+             export_name: Optional[str] = None, doc: Optional[str] = None):
         return cls(ctype_name,
                    AliasRefTypeNode(alias_ctype_name, alias_export_name),
-                   export_name, comment)
+                   export_name, doc)
 
     @classmethod
     def dict_(cls, ctype_name: str, key_type: TypeNode, value_type: TypeNode,
-              export_name: Optional[str] = None, comment: Optional[str] = None):
+              export_name: Optional[str] = None, doc: Optional[str] = None):
         return cls(ctype_name, DictTypeNode(ctype_name, key_type, value_type),
-                   export_name, comment)
+                   export_name, doc)
 
 
 class NDArrayTypeNode(TypeNode):
@@ -543,6 +554,16 @@ class ContainerTypeNode(AggregatedTypeNode):
             item.relative_typename(module) for item in self
         ))
 
+    @property
+    def required_definition_imports(self) -> Generator[str, None, None]:
+        yield "import typing"
+        return super().required_definition_imports
+
+    @property
+    def required_usage_imports(self) -> Generator[str, None, None]:
+        if TypeNode.compatible_to_runtime_usage:
+            yield "import typing"
+        return super().required_usage_imports
     @abc.abstractproperty
     def type_format(self) -> str:
         pass
@@ -560,30 +581,22 @@ class SequenceTypeNode(ContainerTypeNode):
         super().__init__(ctype_name, (item, ))
 
     @property
-    def type_format(self):
+    def type_format(self) -> str:
         return "typing.Sequence[{}]"
 
     @property
-    def types_separator(self):
+    def types_separator(self) -> str:
         return ", "
-
-    @property
-    def required_definition_imports(self) -> Generator[str, None, None]:
-        yield "import typing"
-        yield from super().required_definition_imports
-
-    @property
-    def required_usage_imports(self) -> Generator[str, None, None]:
-        yield "import typing"
-        yield from super().required_usage_imports
 
 
 class TupleTypeNode(ContainerTypeNode):
-    """Type node representing possibly heterogenous collection of types with
+    """Type node representing possibly heterogeneous collection of types with
     possibly unspecified length.
     """
     @property
-    def type_format(self):
+    def type_format(self) -> str:
+        if TypeNode.compatible_to_runtime_usage:
+            return "typing.Tuple[{}]"
         return "tuple[{}]"
 
     @property
@@ -595,20 +608,34 @@ class UnionTypeNode(ContainerTypeNode):
     """Type node representing type that can be one of the predefined set of types.
     """
     @property
-    def type_format(self):
+    def type_format(self) -> str:
+        if TypeNode.compatible_to_runtime_usage:
+            return "typing.Union[{}]"
         return "{}"
 
     @property
-    def types_separator(self):
+    def types_separator(self) -> str:
+        if TypeNode.compatible_to_runtime_usage:
+            return ", "
         return " | "
 
 
-class OptionalTypeNode(UnionTypeNode):
+class OptionalTypeNode(ContainerTypeNode):
     """Type node representing optional type which is effectively is a union
     of value type node and None.
     """
     def __init__(self, value: TypeNode) -> None:
-        super().__init__(value.ctype_name, (value, NoneTypeNode(value.ctype_name)))
+        super().__init__(value.ctype_name, (value,))
+
+    @property
+    def type_format(self) -> str:
+        if TypeNode.compatible_to_runtime_usage:
+            return "typing.Optional[{}]"
+        return "{} | None"
+
+    @property
+    def types_separator(self) -> str:
+        return ", "
 
 
 class DictTypeNode(ContainerTypeNode):
@@ -627,11 +654,13 @@ class DictTypeNode(ContainerTypeNode):
         return self.items[1]
 
     @property
-    def type_format(self):
+    def type_format(self) -> str:
+        if TypeNode.compatible_to_runtime_usage:
+            return "typing.Dict[{}]"
         return "dict[{}]"
 
     @property
-    def types_separator(self):
+    def types_separator(self) -> str:
         return ", "
 
 

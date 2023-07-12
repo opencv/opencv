@@ -446,5 +446,11 @@ class dnn_test(NewOpenCVTests):
 
             normAssert(self, real_output, gold_output, "", getDefaultThreshold(target))
 
+    def test_scalefactor_assign(self):
+        params = cv.dnn.Image2BlobParams()
+        self.assertEqual(params.scalefactor, (1.0, 1.0, 1.0, 1.0))
+        params.scalefactor = 2.0
+        self.assertEqual(params.scalefactor, (2.0, 0.0, 0.0, 0.0))
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
