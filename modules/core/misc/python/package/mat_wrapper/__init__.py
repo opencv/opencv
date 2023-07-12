@@ -4,15 +4,15 @@ import numpy as np
 import cv2 as cv
 from typing import TYPE_CHECKING, Any
 
-# Type subscription is not possible in python 3.8
+# Same as cv2.typing.NumPyArrayGeneric, but avoids circular dependencies
 if TYPE_CHECKING:
-    _NDArray = np.ndarray[Any, np.dtype[np.generic]]
+    _NumPyArrayGeneric = np.ndarray[Any, np.dtype[np.generic]]
 else:
-    _NDArray = np.ndarray
+    _NumPyArrayGeneric = np.ndarray
 
 # NumPy documentation: https://numpy.org/doc/stable/user/basics.subclassing.html
 
-class Mat(_NDArray):
+class Mat(_NumPyArrayGeneric):
     '''
     cv.Mat wrapper for numpy array.
 

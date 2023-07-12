@@ -395,9 +395,12 @@ class AliasTypeNode(TypeNode):
 
 class ConditionalAliasTypeNode(TypeNode):
     """Type node representing an alias protected by condition checked in runtime.
+    For typing-related conditions, prefer using typing.TYPE_CHECKING. For a full explanation, see:
+    https://github.com/opencv/opencv/pull/23927#discussion_r1256326835
+
     Example:
     ```python
-    if numpy.lib.NumpyVersion(numpy.__version__) > "1.20.0" and sys.version_info >= (3, 9)
+    if typing.TYPE_CHECKING
         NumPyArray = numpy.ndarray[typing.Any, numpy.dtype[numpy.generic]]
     else:
         NumPyArray = numpy.ndarray
@@ -407,10 +410,10 @@ class ConditionalAliasTypeNode(TypeNode):
 
     ConditionalAliasTypeNode(
         "NumPyArray",
-        'numpy.lib.NumpyVersion(numpy.__version__) > "1.20.0" and sys.version_info >= (3, 9)',
+        'typing.TYPE_CHECKING',
         NDArrayTypeNode("NumPyArray"),
         NDArrayTypeNode("NumPyArray", use_numpy_generics=False),
-        condition_required_imports=("import numpy", "import sys")
+        condition_required_imports=("import typing",)
     )
     ```
     """
@@ -468,14 +471,14 @@ class ConditionalAliasTypeNode(TypeNode):
     def numpy_array_(cls, ctype_name: str, export_name: Optional[str] = None,
                      shape: Optional[Tuple[int, ...]] = None,
                      dtype: Optional[str] = None):
+        """Type subscription is not possible in python 3.8 and older numpy versions."""
         return cls(
             ctype_name,
-            ('numpy.lib.NumpyVersion(numpy.__version__) > "1.20.0" '
-             'and sys.version_info >= (3, 9)'),
+            "typing.TYPE_CHECKING",
             NDArrayTypeNode(ctype_name, shape, dtype),
             NDArrayTypeNode(ctype_name, shape, dtype,
                             use_numpy_generics=False),
-            condition_required_imports=("import numpy", "import sys")
+            condition_required_imports=("import typing",)
         )
 
 
