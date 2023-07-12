@@ -249,7 +249,7 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto& input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         // TODO: implement RELU6
         return new InfEngineNgraphNode(input);
     }

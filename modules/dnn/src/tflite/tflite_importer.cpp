@@ -251,7 +251,7 @@ void TFLiteImporter::populateNet()
             throw;
         }
         // std::cout << op_outputs->Get(0) << std::endl;
-        if (op_outputs->Get(0) == 342)
+        if (op_outputs->Get(0) == 397)
             break;
     }
 }
