@@ -24,7 +24,7 @@ protected:
         RNG& rng_Point = theRNG(); // set random seed for fixing output 3D point.
 
         // Generate 3D PointCloud
-        for(unsigned int i = 0; i < pointCloudSize; i++)
+        for(size_t i = 0; i < pointCloudSize; i++)
         {
             float _x = 10 * (float)rng_Point.uniform(pmin.x, pmax.x)/scale;
             float _y = 10 * (float)rng_Point.uniform(pmin.y, pmax.y)/scale;
@@ -52,7 +52,7 @@ public:
     //Color attribute of pointCloud from octree
     std::vector<Point3f> restorePointCloudColor;
 
-    unsigned int pointCloudSize;
+    size_t pointCloudSize;
     Point3f restPoint;
     Octree treeTest;
     double resolution;

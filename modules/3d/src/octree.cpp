@@ -12,8 +12,8 @@
 
 namespace cv{
 
-void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3f> &restoreColor, unsigned long x_key, unsigned long y_key,
-                     unsigned long z_key, Ptr<OctreeNode> &_node, double resolution, Point3f ori, bool hasColor);
+void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3f> &restoreColor, size_t x_key, size_t y_key,
+                     size_t z_key, Ptr<OctreeNode> &_node, double resolution, Point3f ori, bool hasColor);
 
 // Locate the OctreeNode corresponding to the input point from the given OctreeNode.
 static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& node,OctreeKey& key,size_t depthMask);
@@ -94,7 +94,7 @@ bool _isPointInBound(const Point3f& _point, const Point3f& _origin, double _size
 struct Octree::Impl
 {
 public:
-    Impl():maxDepth(-1), size(0), origin(0,0,0), resolution(0)
+    Impl():maxDepth(0), size(0), origin(0,0,0), resolution(0)
     {}
 
     ~Impl()
@@ -103,7 +103,7 @@ public:
     // The pointer to Octree root node.
     Ptr <OctreeNode> rootNode = nullptr;
     //! Max depth of the Octree. And depth must be greater than zero
-    int maxDepth;
+    size_t maxDepth;
     //! The size of the cube of the .
     double size;
     //! The origin coordinate of root node.
@@ -116,7 +116,7 @@ public:
 
 Octree::Octree() : p(new Impl)
 {
-    p->maxDepth = -1;
+    p->maxDepth = 0;
     p->size = 0;
     p->origin = Point3f(0,0,0);
 }
@@ -160,9 +160,9 @@ bool Octree::insertPoint(const Point3f& point,const Point3f &color)
     {
         return false;
     }
-    OctreeKey key(floor((point.x - this->p->origin.x) / resolution),
-                  floor((point.y - this->p->origin.y) / resolution),
-                  floor((point.z - this->p->origin.z) / resolution));
+    OctreeKey key((size_t)floor((point.x - this->p->origin.x) / resolution),
+                  (size_t)floor((point.y - this->p->origin.y) / resolution),
+                  (size_t)floor((point.z - this->p->origin.z) / resolution));
 
     bool result = insertPointRecurse(p->rootNode, point, color, p->maxDepth, key, depthMask);
     return result;
@@ -199,7 +199,7 @@ bool Octree::create(const std::vector<Point3f> &pointCloud, const std::vector<Po
     double maxSize = max(max(maxBound.x - minBound.x, maxBound.y - minBound.y), maxBound.z - minBound.z);
     //To use bit operation, the length of the root cube should be power of 2.
     maxSize=double(1<<int(ceil(log2(maxSize))));
-    p->maxDepth = ceil(log2(maxSize / resolution));
+    p->maxDepth = (size_t)ceil(log2(maxSize / resolution));
     this->p->size = (1<<p->maxDepth)*resolution;
     this->p->origin = Point3f(float(floor(minBound.x / resolution) * resolution),
                               float(floor(minBound.y / resolution) * resolution),
@@ -247,7 +247,7 @@ void Octree::clear()
     }
 
     p->size = 0;
-    p->maxDepth = -1;
+    p->maxDepth = 0;
     p->origin = Point3f (0,0,0); // origin coordinate
 }
 
@@ -296,9 +296,9 @@ bool Octree::isPointInBound(const Point3f& _point) const
 
 bool Octree::deletePoint(const Point3f& point)
 {
-    OctreeKey key=OctreeKey(floor((point.x - this->p->origin.x) / p->resolution),
-                            floor((point.y - this->p->origin.y) / p->resolution),
-                            floor((point.z - this->p->origin.z) / p->resolution));
+    OctreeKey key=OctreeKey((size_t)floor((point.x - this->p->origin.x) / p->resolution),
+                            (size_t)floor((point.y - this->p->origin.y) / p->resolution),
+                            (size_t)floor((point.z - this->p->origin.z) / p->resolution));
     size_t depthMask=1 << (p->maxDepth - 1);
     Ptr<OctreeNode> node = index(point, p->rootNode,key,depthMask);
 
@@ -415,8 +415,8 @@ void Octree::getPointCloudByOctree(std::vector<Point3f> &restorePointCloud, std:
     getPointRecurse(restorePointCloud, restoreColor, 0, 0, 0, root, resolution, p->origin, p->hasColor);
 }
 
-void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3f> &restoreColor, unsigned long x_key,
-                     unsigned long y_key,unsigned long z_key, Ptr<OctreeNode> &_node, double resolution, Point3f ori,
+void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3f> &restoreColor, size_t x_key,
+                     size_t y_key,size_t z_key, Ptr<OctreeNode> &_node, double resolution, Point3f ori,
                      bool hasColor) {
     OctreeNode node = *_node;
     if (node.isLeaf) {
@@ -433,9 +433,9 @@ void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3
     unsigned char y_mask = 2;
     unsigned char z_mask = 4;
     for (unsigned char i = 0; i < 8; i++) {
-        unsigned long x_copy = x_key;
-        unsigned long y_copy = y_key;
-        unsigned long z_copy = z_key;
+        size_t x_copy = x_key;
+        size_t y_copy = y_key;
+        size_t z_copy = z_key;
         if (!node.children[i].empty()) {
             size_t x_offSet = !!(x_mask & i);
             size_t y_offSet = !!(y_mask & i);
