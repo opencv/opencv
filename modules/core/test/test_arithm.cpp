@@ -2273,7 +2273,18 @@ TEST(BroadcastTo, basic) {
     std::vector<int> data_src{1, 2};
     Mat src(static_cast<int>(shape_src.size()), shape_src.data(), CV_32SC1, data_src.data());
 
-    auto fn_verify = [](const Mat& ref, const Mat& res) {
+    auto get_index = [](const std::vector<int>& shape, int cnt) {
+        std::vector<int> index(shape.size());
+        size_t t = cnt;
+        for (int i = static_cast<int>(shape.size() - 1); i >= 0; --i) {
+            size_t idx = t / shape[i];
+            index[i] = static_cast<int>(t - idx * shape[i]);
+            t = idx;
+        }
+        return index;
+    };
+
+    auto fn_verify = [get_index](const Mat& ref, const Mat& res) {
         // check type
         EXPECT_EQ(ref.type(), res.type());
         // check shape
@@ -2282,23 +2293,21 @@ TEST(BroadcastTo, basic) {
             EXPECT_EQ(ref.size[i], res.size[i]);
         }
         // check value
-        switch (ref.type()) {
-            case CV_32SC1: {
-                for (size_t i = 0; i < ref.total(); ++i) {
-                    ASSERT_EQ(ref.at<int>(i), res.at<int>(i));
-                }
-            } break;
-            case CV_8UC1: {
-                for (size_t i = 0; i < ref.total(); ++i) {
-                    ASSERT_EQ(ref.at<uint8_t>(i), res.at<uint8_t>(i));
-                }
-            } break;
-            case CV_32FC1: {
-                for (size_t i = 0; i < ref.total(); ++i) {
-                    ASSERT_EQ(ref.at<float>(i), res.at<float>(i));
-                }
-            } break;
-            default: FAIL() << "Unsupported type: " << ref.type();
+        std::vector<int> shape{ref.size.p, ref.size.p + ref.dims};
+        for (size_t i = 0; i < ref.total(); ++i) {
+            auto index = get_index(shape, i);
+            switch (ref.type()) {
+                case CV_32SC1: {
+                    ASSERT_EQ(ref.at<int>(index.data()), res.at<int>(index.data()));
+                } break;
+                case CV_8UC1: {
+                    ASSERT_EQ(ref.at<uint8_t>(index.data()), res.at<uint8_t>(index.data()));
+                } break;
+                case CV_32FC1: {
+                    ASSERT_EQ(ref.at<float>(index.data()), res.at<float>(index.data()));
+                } break;
+                default: FAIL() << "Unsupported type: " << ref.type();
+            }
         }
     };
 
