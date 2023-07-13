@@ -1454,7 +1454,7 @@ transform_( const T* src, T* dst, const WT* m, int len, int scn, int dcn )
 static void
 transform_8u( const uchar* src, uchar* dst, const float* m, int len, int scn, int dcn )
 {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     const int BITS = 10, SCALE = 1 << BITS;
     const float MAX_M = (float)(1 << (15 - BITS));
 
@@ -1485,7 +1485,7 @@ transform_8u( const uchar* src, uchar* dst, const float* m, int len, int scn, in
         v_int32 m10 = vx_setall_s32(m32[4]);
         v_int32 m11 = vx_setall_s32(m32[5]);
         int x = 0;
-        for (; x <= (len - v_uint8::nlanes) * nChannels; x += v_uint8::nlanes * nChannels)
+        for (; x <= (len - VTraits<v_uint8>::vlanes()) * nChannels; x += VTraits<v_uint8>::vlanes() * nChannels)
         {
             v_uint8 b, g, r;
             v_load_deinterleave(src + x, b, g, r);
@@ -1499,20 +1499,20 @@ transform_8u( const uchar* src, uchar* dst, const float* m, int len, int scn, in
             v_int32 p1, p3;
             v_expand(bgl, p0, p2);
             v_expand(v_reinterpret_as_s16(rl), p1, p3);
-            dbl = v_rshr_pack<BITS>(v_dotprod(v_reinterpret_as_s16(p0), m01) + p1 *  m2 + m3,
-                                    v_dotprod(v_reinterpret_as_s16(p2), m01) + p3 *  m2 + m3);
-            dgl = v_rshr_pack<BITS>(v_dotprod(v_reinterpret_as_s16(p0), m45) + p1 *  m6 + m7,
-                                    v_dotprod(v_reinterpret_as_s16(p2), m45) + p3 *  m6 + m7);
-            drl = v_rshr_pack<BITS>(v_dotprod(v_reinterpret_as_s16(p0), m89) + p1 * m10 + m11,
-                                    v_dotprod(v_reinterpret_as_s16(p2), m89) + p3 * m10 + m11);
+            dbl = v_rshr_pack<BITS>(v_add(v_add(v_dotprod(v_reinterpret_as_s16(p0), m01), v_mul(p1, m2)), m3),
+                                    v_add(v_add(v_dotprod(v_reinterpret_as_s16(p2), m01), v_mul(p3, m2)), m3));
+            dgl = v_rshr_pack<BITS>(v_add(v_add(v_dotprod(v_reinterpret_as_s16(p0), m45), v_mul(p1, m6)), m7),
+                                    v_add(v_add(v_dotprod(v_reinterpret_as_s16(p2), m45), v_mul(p3, m6)), m7));
+            drl = v_rshr_pack<BITS>(v_add(v_add(v_dotprod(v_reinterpret_as_s16(p0), m89), v_mul(p1, m10)), m11),
+                                    v_add(v_add(v_dotprod(v_reinterpret_as_s16(p2), m89), v_mul(p3, m10)), m11));
             v_expand(bgh, p0, p2);
             v_expand(v_reinterpret_as_s16(rh), p1, p3);
-            dbh = v_rshr_pack<BITS>(v_dotprod(v_reinterpret_as_s16(p0), m01) + p1 *  m2 + m3,
-                                    v_dotprod(v_reinterpret_as_s16(p2), m01) + p3 *  m2 + m3);
-            dgh = v_rshr_pack<BITS>(v_dotprod(v_reinterpret_as_s16(p0), m45) + p1 *  m6 + m7,
-                                    v_dotprod(v_reinterpret_as_s16(p2), m45) + p3 *  m6 + m7);
-            drh = v_rshr_pack<BITS>(v_dotprod(v_reinterpret_as_s16(p0), m89) + p1 * m10 + m11,
-                                    v_dotprod(v_reinterpret_as_s16(p2), m89) + p3 * m10 + m11);
+            dbh = v_rshr_pack<BITS>(v_add(v_add(v_dotprod(v_reinterpret_as_s16(p0), m01), v_mul(p1, m2)), m3),
+                                    v_add(v_add(v_dotprod(v_reinterpret_as_s16(p2), m01), v_mul(p3, m2)), m3));
+            dgh = v_rshr_pack<BITS>(v_add(v_add(v_dotprod(v_reinterpret_as_s16(p0), m45), v_mul(p1, m6)), m7),
+                                    v_add(v_add(v_dotprod(v_reinterpret_as_s16(p2), m45), v_mul(p3, m6)), m7));
+            drh = v_rshr_pack<BITS>(v_add(v_add(v_dotprod(v_reinterpret_as_s16(p0), m89), v_mul(p1, m10)), m11),
+                                    v_add(v_add(v_dotprod(v_reinterpret_as_s16(p2), m89), v_mul(p3, m10)), m11));
             v_store_interleave(dst + x, v_pack_u(dbl, dbh), v_pack_u(dgl, dgh), v_pack_u(drl, drh));
         }
         m32[1] = saturate_cast<int>((m[3] + 0.5f)*SCALE);
@@ -1936,9 +1936,9 @@ static void scaleAdd_32f(const float* src1, const float* src2, float* dst,
 {
     float alpha = *_alpha;
     int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     v_float32 v_alpha = vx_setall_f32(alpha);
-    const int cWidth = v_float32::nlanes;
+    const int cWidth = VTraits<v_float32>::vlanes();
     for (; i <= len - cWidth; i += cWidth)
         v_store(dst + i, v_muladd(vx_load(src1 + i), v_alpha, vx_load(src2 + i)));
     vx_cleanup();
@@ -1953,9 +1953,9 @@ static void scaleAdd_64f(const double* src1, const double* src2, double* dst,
 {
     double alpha = *_alpha;
     int i = 0;
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     v_float64 a2 = vx_setall_f64(alpha);
-    const int cWidth = v_float64::nlanes;
+    const int cWidth = VTraits<v_float64>::vlanes();
     for (; i <= len - cWidth; i += cWidth)
         v_store(dst + i, v_muladd(vx_load(src1 + i), a2, vx_load(src2 + i)));
     vx_cleanup();
@@ -2078,7 +2078,7 @@ MulTransposedR(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
         deltastep = deltastep ? 4 : 0;
     }
 
-#if CV_SIMD_64F
+#if CV_SIMD128_64F
     v_float64x2 v_scale = v_setall_f64(scale);
 #endif
 
@@ -2090,7 +2090,7 @@ MulTransposedR(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
 
             for( j = i; j <= size.width - 4; j += 4 )
             {
-#if CV_SIMD_64F
+#if CV_SIMD128_64F
                 if (DataType<sT>::depth == CV_64F && DataType<dT>::depth == CV_64F)
                 {
                     v_float64x2 s0 = v_setzero_f64(), s1 = v_setzero_f64();
@@ -2150,7 +2150,7 @@ MulTransposedR(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
 
             for( j = i; j <= size.width - 4; j += 4 )
             {
-#if CV_SIMD_64F
+#if CV_SIMD128_64F
                 if (DataType<sT>::depth == CV_64F && DataType<dT>::depth == CV_64F)
                 {
                     v_float64x2 s0 = v_setzero_f64(), s1 = v_setzero_f64();
@@ -2227,7 +2227,7 @@ MulTransposedL(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
                 double s = 0;
                 const sT *tsrc1 = src + i*srcstep;
                 const sT *tsrc2 = src + j*srcstep;
-#if CV_SIMD_64F
+#if CV_SIMD128_64F
                 if (DataType<sT>::depth == CV_64F && DataType<dT>::depth == CV_64F)
                 {
                     const double *v_tsrc1 = (double *)(tsrc1);
@@ -2280,7 +2280,7 @@ MulTransposedL(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
                         delta_buf[2] = delta_buf[3] = tdelta2[0];
                     tdelta2 = delta_buf;
                 }
-#if CV_SIMD_64F
+#if CV_SIMD128_64F
                 if (DataType<sT>::depth == CV_64F && DataType<dT>::depth == CV_64F)
                 {
                     const double *v_tsrc2 = (double *)(tsrc2);
@@ -2393,14 +2393,14 @@ double dotProd_8u(const uchar* src1, const uchar* src2, int len)
     double r = 0;
     int i = 0;
 
-#if CV_SIMD
-    int len0 = len & -v_uint16::nlanes, blockSize0 = (1 << 15), blockSize;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    int len0 = len & -VTraits<v_uint16>::vlanes(), blockSize0 = (1 << 15), blockSize;
 
     while (i < len0)
     {
         blockSize = std::min(len0 - i, blockSize0);
         v_uint32 v_sum = vx_setzero_u32();
-        const int cWidth = v_uint16::nlanes;
+        const int cWidth = VTraits<v_uint16>::vlanes();
 
         int j = 0;
         for (; j <= blockSize - cWidth * 2; j += cWidth * 2)
@@ -2414,7 +2414,7 @@ double dotProd_8u(const uchar* src1, const uchar* src2, int len)
         {
             v_int16 v_src10 = v_reinterpret_as_s16(vx_load_expand(src1 + j));
             v_int16 v_src20 = v_reinterpret_as_s16(vx_load_expand(src2 + j));
-            v_sum += v_reinterpret_as_u32(v_dotprod_fast(v_src10, v_src20));
+            v_sum = v_add(v_sum, v_reinterpret_as_u32(v_dotprod_fast(v_src10, v_src20)));
         }
         r += (double)v_reduce_sum(v_sum);
 
@@ -2433,14 +2433,14 @@ double dotProd_8s(const schar* src1, const schar* src2, int len)
     double r = 0.0;
     int i = 0;
 
-#if CV_SIMD
-    int len0 = len & -v_int16::nlanes, blockSize0 = (1 << 14), blockSize;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    int len0 = len & -VTraits<v_int16>::vlanes(), blockSize0 = (1 << 14), blockSize;
 
     while (i < len0)
     {
         blockSize = std::min(len0 - i, blockSize0);
         v_int32 v_sum = vx_setzero_s32();
-        const int cWidth = v_int16::nlanes;
+        const int cWidth = VTraits<v_int16>::vlanes();
 
         int j = 0;
         for (; j <= blockSize - cWidth * 2; j += cWidth * 2)
@@ -2473,14 +2473,14 @@ double dotProd_16u(const ushort* src1, const ushort* src2, int len)
     double r = 0.0;
     int i = 0;
 
-#if CV_SIMD
-    int len0 = len & -v_uint16::nlanes, blockSize0 = (1 << 24), blockSize;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    int len0 = len & -VTraits<v_uint16>::vlanes(), blockSize0 = (1 << 24), blockSize;
 
     while (i < len0)
     {
         blockSize = std::min(len0 - i, blockSize0);
         v_uint64 v_sum = vx_setzero_u64();
-        const int cWidth = v_uint16::nlanes;
+        const int cWidth = VTraits<v_uint16>::vlanes();
 
         int j = 0;
         for (; j <= blockSize - cWidth; j += cWidth)
@@ -2505,14 +2505,14 @@ double dotProd_16s(const short* src1, const short* src2, int len)
     double r = 0.0;
     int i = 0;
 
-#if CV_SIMD
-    int len0 = len & -v_int16::nlanes, blockSize0 = (1 << 24), blockSize;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    int len0 = len & -VTraits<v_int16>::vlanes(), blockSize0 = (1 << 24), blockSize;
 
     while (i < len0)
     {
         blockSize = std::min(len0 - i, blockSize0);
         v_int64 v_sum = vx_setzero_s64();
-        const int cWidth = v_int16::nlanes;
+        const int cWidth = VTraits<v_int16>::vlanes();
 
         int j = 0;
         for (; j <= blockSize - cWidth; j += cWidth)
@@ -2572,8 +2572,8 @@ double dotProd_32f(const float* src1, const float* src2, int len)
     double r = 0.0;
     int i = 0;
 
-#if CV_SIMD
-    int len0 = len & -v_float32::nlanes, blockSize0 = (1 << 13), blockSize;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    int len0 = len & -VTraits<v_float32>::vlanes(), blockSize0 = (1 << 13), blockSize;
 
     while (i < len0)
     {
@@ -2581,7 +2581,7 @@ double dotProd_32f(const float* src1, const float* src2, int len)
         v_float32 v_sum = vx_setzero_f32();
 
         int j = 0;
-        int cWidth = v_float32::nlanes;
+        int cWidth = VTraits<v_float32>::vlanes();
 
 #if CV_ENABLE_UNROLLED
         v_float32 v_sum1 = vx_setzero_f32();
@@ -2600,7 +2600,7 @@ double dotProd_32f(const float* src1, const float* src2, int len)
                               vx_load(src2 + j + (cWidth * 3)), v_sum3);
         }
 
-        v_sum += v_sum1 + v_sum2 + v_sum3;
+        v_sum = v_add(v_sum, v_add(v_add(v_sum1, v_sum2), v_sum3));
 #endif
 
         for (; j <= blockSize - cWidth; j += cWidth)
