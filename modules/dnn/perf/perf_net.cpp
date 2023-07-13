@@ -302,6 +302,14 @@ PERF_TEST_P_(DNNTestNetwork, EfficientDet)
     processNet("dnn/efficientdet-d0.pb", "dnn/efficientdet-d0.pbtxt", "", inp);
 }
 
+
+PERF_TEST_P_(DNNTestNetwork, EfficientDet_int8)
+{
+    Mat inp = imread(findDataFile("dnn/dog416.png"));
+    resize(inp, inp, Size(320, 320));
+    processNet("", "dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", "", inp);
+}
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets());
 
 } // namespace

@@ -410,7 +410,6 @@ public:
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &offset)
         );
         res = std::make_shared<ngraph::op::Clamp>(res, -128, 127);
-        res = std::make_shared<ngraph::op::Convert>(res, ngraph::element::i8);
 
         return new InfEngineNgraphNode(res);
     }

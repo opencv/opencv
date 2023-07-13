@@ -573,6 +573,7 @@ public:
         auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<size_t> dims = ieInpNode->get_shape();
         CV_Check(dims.size(), dims.size() >= 3 && dims.size() <= 5, "");
+        CV_Assert(ieInpNode->get_element_type() == ngraph::element::f32);
         std::shared_ptr<ngraph::Node> ieWeights = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;
         if (nodes.size() > 1)
             CV_Assert(ieWeights);  // dynamic_cast should not fail
@@ -604,25 +605,16 @@ public:
         if (!padMode.empty())
             pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
 
-
-        ieInpNode = std::make_shared<ngraph::op::Convert>(ieInpNode, ngraph::element::f32);
-
-        float input_zp_f = input_zp;
-        ieInpNode = std::make_shared<ngraph::op::v1::Subtract>(
-            ieInpNode,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &input_zp_f)
-        );
-
-        float inpLow = -128 - input_zp_f, inpHigh = 127 - input_zp_f;
+        const float low = -128, high = 127;
+        float outLow = low - input_zp, outHigh = high - input_zp;
         ieInpNode = std::make_shared<ngraph::op::FakeQuantize>(ieInpNode,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
             256 // levels
         );
 
-        float low = -128, high = 127;
         ieWeights = std::make_shared<ngraph::op::Convert>(ieWeights, ngraph::element::f32);
         ieWeights = std::make_shared<ngraph::op::FakeQuantize>(ieWeights,
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
@@ -687,7 +679,6 @@ public:
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &output_zp_f)
         );
         conv_node = std::make_shared<ngraph::op::Clamp>(conv_node, -128, 127);
-        conv_node = std::make_shared<ngraph::op::Convert>(conv_node, ngraph::element::i8);
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(conv_node));
     }
