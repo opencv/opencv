@@ -671,7 +671,13 @@ public:
             conv_node,
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), outputMultiplier.data())
         );
-        conv_node = std::make_shared<ngraph::op::v5::Round>(conv_node, ngraph::op::v5::Round::RoundMode::HALF_TO_EVEN);
+
+        // TODO: this is strange! Is OpenCV uses different round for depthwise and common convolutions?
+        if (group != 1) {
+            conv_node = std::make_shared<ngraph::op::v5::Round>(conv_node, ngraph::op::v5::Round::RoundMode::HALF_AWAY_FROM_ZERO);
+        } else {
+            conv_node = std::make_shared<ngraph::op::v5::Round>(conv_node, ngraph::op::v5::Round::RoundMode::HALF_TO_EVEN);
+        }
 
         float output_zp_f = output_zp;
         conv_node = std::make_shared<ngraph::op::v1::Add>(

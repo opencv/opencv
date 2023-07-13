@@ -251,12 +251,12 @@ void TFLiteImporter::populateNet()
             throw;
         }
         // std::cout << op_outputs->Get(0) << std::endl;
-        if (op_outputs->Get(0) == 597)
-            break;
-        // layer 592: max error 26 -> 14
-        // layer 596: max error 57 -> 27
-        // layer 594: max error 0.148438 -> 0.0625
-        // layer 597: max error 1.04144 -> 0.493313
+        // if (op_outputs->Get(0) == 594)
+        //     break;
+        // layer 592: max error 10 -> 9
+        // layer 596: max error 25 -> 23
+        // layer 594: max error 0.0820312 -> 0.0429688
+        // layer 597: max error 0.456771 -> 0.420229
     }
 }
 
