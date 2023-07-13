@@ -12,14 +12,6 @@ References:
 Alexander Mordvintsev 6/10/12
 '''
 
-# Python 2/3 compatibility
-from __future__ import print_function
-import sys
-PY3 = sys.version_info[0] == 3
-
-if PY3:
-    xrange = range
-
 import numpy as np
 import cv2 as cv
 
@@ -29,7 +21,7 @@ from common import nothing, getsize
 def build_lappyr(img, leveln=6, dtype=np.int16):
     img = dtype(img)
     levels = []
-    for _i in xrange(leveln-1):
+    for _i in range(leveln-1):
         next_img = cv.pyrDown(img)
         img1 = cv.pyrUp(next_img, dstsize=getsize(img))
         levels.append(img-img1)
@@ -56,14 +48,14 @@ def main():
 
     leveln = 6
     cv.namedWindow('level control')
-    for i in xrange(leveln):
+    for i in range(leveln):
         cv.createTrackbar('%d'%i, 'level control', 5, 50, nothing)
 
     while True:
         _ret, frame = cap.read()
 
         pyr = build_lappyr(frame, leveln)
-        for i in xrange(leveln):
+        for i in range(leveln):
             v = int(cv.getTrackbarPos('%d'%i, 'level control') / 5)
             pyr[i] *= v
         res = merge_lappyr(pyr)

@@ -9,21 +9,13 @@ inspired by
   http://www.mia.uni-saarland.de/Publications/weickert-dagm03.pdf
 '''
 
-# Python 2/3 compatibility
-from __future__ import print_function
-import sys
-PY3 = sys.version_info[0] == 3
-
-if PY3:
-    xrange = range
-
 import numpy as np
 import cv2 as cv
 
 def coherence_filter(img, sigma = 11, str_sigma = 11, blend = 0.5, iter_n = 4):
     h, w = img.shape[:2]
 
-    for i in xrange(iter_n):
+    for i in range(iter_n):
         print(i)
 
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)

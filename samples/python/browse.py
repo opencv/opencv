@@ -12,14 +12,6 @@ browse.py [image filename]
 
 '''
 
-# Python 2/3 compatibility
-from __future__ import print_function
-import sys
-PY3 = sys.version_info[0] == 3
-
-if PY3:
-    xrange = range
-
 import numpy as np
 import cv2 as cv
 
@@ -45,7 +37,7 @@ def main():
 
 
     small = img
-    for _i in xrange(3):
+    for _i in range(3):
         small = cv.pyrDown(small)
 
     def onmouse(event, x, y, flags, param):

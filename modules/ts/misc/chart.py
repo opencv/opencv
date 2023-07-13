@@ -42,7 +42,6 @@ sum::Size_MatType::(Y, X)
 32FC1 0.05 ms 1.77 ms 5.23 ms  11.72 ms
 """
 
-from __future__ import print_function
 import testlog_parser, sys, os, xml, re
 from table_formatter import *
 from optparse import OptionParser

@@ -26,18 +26,11 @@ See https://github.com/opencv/opencv/wiki/Profiling-OpenCV-Applications for more
                                                                         0.173  ...
 """
 
-from __future__ import print_function
-
 import os
 import sys
 import csv
 from pprint import pprint
 from collections import deque
-
-try:
-    long        # Python 2
-except NameError:
-    long = int  # Python 3
 
 # trace.hpp
 REGION_FLAG_IMPL_MASK = 15 << 16
@@ -65,11 +58,6 @@ def tryNum(s):
         return int(s)
     except ValueError:
         pass
-    if sys.version_info[0] < 3:
-        try:
-            return long(s)
-        except ValueError:
-            pass
     return s
 
 def formatTimestamp(t):

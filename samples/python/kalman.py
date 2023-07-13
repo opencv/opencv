@@ -15,12 +15,6 @@
    Pressing any key (except ESC) will reset the tracking.
    Pressing ESC will stop the program.
 """
-# Python 2/3 compatibility
-import sys
-PY3 = sys.version_info[0] == 3
-
-if PY3:
-    long = int
 
 import numpy as np
 import cv2 as cv
@@ -32,7 +26,7 @@ def main():
     img_width = 500
     kalman = cv.KalmanFilter(2, 1, 0)
 
-    code = long(-1)
+    code = -1
     num_circle_steps = 12
     while True:
         img = np.zeros((img_height, img_width, 3), np.uint8)

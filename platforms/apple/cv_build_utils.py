@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Common utilities. These should be compatible with Python 2 and 3.
+Common utilities. These should be compatible with Python3.
 """
 
 from __future__ import print_function

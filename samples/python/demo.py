@@ -4,8 +4,6 @@
 Sample-launcher application.
 '''
 
-# Python 2/3 compatibility
-from __future__ import print_function
 import sys
 
 # local modules
@@ -16,13 +14,8 @@ import webbrowser
 from glob import glob
 from subprocess import Popen
 
-try:
-    import tkinter as tk  # Python 3
-    from tkinter.scrolledtext import ScrolledText
-except ImportError:
-    import Tkinter as tk  # Python 2
-    from ScrolledText import ScrolledText
-
+import tkinter as tk
+from tkinter.scrolledtext import ScrolledText
 
 #from IPython.Shell import IPShellEmbed
 #ipshell = IPShellEmbed()
@@ -117,19 +110,12 @@ class App:
 
         descr = ""
         try:
-            if sys.version_info[0] > 2:
-                # Python 3.x
-                module_globals = {}
-                module_locals = {}
-                with open(fn, 'r') as f:
-                    module_code = f.read()
-                exec(compile(module_code, fn, 'exec'), module_globals, module_locals)
-                descr = module_locals.get('__doc__', 'no-description')
-            else:
-                # Python 2
-                module_globals = {}
-                execfile(fn, module_globals)  # noqa: F821
-                descr = module_globals.get('__doc__', 'no-description')
+            module_globals = {}
+            module_locals = {}
+            with open(fn, 'r') as f:
+                module_code = f.read()
+            exec(compile(module_code, fn, 'exec'), module_globals, module_locals)
+            descr = module_locals.get('__doc__', 'no-description')
         except Exception as e:
             descr = str(e)
 

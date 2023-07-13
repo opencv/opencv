@@ -1,6 +1,9 @@
 Install OpenCV-Python in Fedora {#tutorial_py_setup_in_fedora}
 ===============================
 
+@warning
+The instruction is deprecated. Please use OpenCV-Python package instead. See https://github.com/opencv/opencv-python for more details
+
 Goals
 -----
 

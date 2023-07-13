@@ -7,14 +7,6 @@ Multiscale Turing Patterns generator
 Inspired by http://www.jonathanmccabe.com/Cyclic_Symmetric_Multi-Scale_Turing_Patterns.pdf
 '''
 
-# Python 2/3 compatibility
-from __future__ import print_function
-import sys
-PY3 = sys.version_info[0] == 3
-
-if PY3:
-    xrange = range
-
 import numpy as np
 import cv2 as cv
 from common import draw_str
@@ -45,7 +37,7 @@ def main():
 
     def process_scale(a_lods, lod):
         d = a_lods[lod] - cv.pyrUp(a_lods[lod+1])
-        for _i in xrange(lod):
+        for _i in range(lod):
             d = cv.pyrUp(d)
         v = cv.GaussianBlur(d*d, (3, 3), 0)
         return np.sign(d), v
@@ -53,10 +45,10 @@ def main():
     scale_num = 6
     for frame_i in count():
         a_lods = [a]
-        for i in xrange(scale_num):
+        for i in range(scale_num):
             a_lods.append(cv.pyrDown(a_lods[-1]))
         ms, vs = [], []
-        for i in xrange(1, scale_num):
+        for i in range(1, scale_num):
             m, v = process_scale(a_lods, i)
             ms.append(m)
             vs.append(v)

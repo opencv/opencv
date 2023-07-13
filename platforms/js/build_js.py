@@ -137,7 +137,6 @@ class Builder:
                "-DBUILD_opencv_stitching=OFF",
                "-DBUILD_opencv_java=OFF",
                "-DBUILD_opencv_js=ON",
-               "-DBUILD_opencv_python2=OFF",
                "-DBUILD_opencv_python3=OFF",
                "-DBUILD_EXAMPLES=ON",
                "-DBUILD_PACKAGE=OFF",

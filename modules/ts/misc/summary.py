@@ -32,7 +32,6 @@ LUT::OCL_LUTFixture::(640x480, 32FC4) 21.254 4.296    4.95
 LUT::SizePrm::640x480                 2.268  0.687    3.30
 """
 
-from __future__ import print_function
 import testlog_parser, sys, os, xml, glob, re
 from table_formatter import *
 from optparse import OptionParser

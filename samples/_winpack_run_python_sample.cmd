@@ -67,12 +67,12 @@ ECHO Found Python %PY_VERSION% from Windows Registry: %PYTHON%
 ENDLOCAL & SET PYTHON=%PYTHON%
 EXIT /B 0
 
-IF exist C:\Python27-x64\python.exe (
-  SET PYTHON=C:\Python27-x64\python.exe
+IF exist C:\Python36-x64\python.exe (
+  SET PYTHON=C:\Python36-x64\python.exe
   GOTO :PYTHON_FOUND
 )
-IF exist C:\Python27\python.exe (
-  SET PYTHON=C:\Python27\python.exe
+IF exist C:\Python36\python.exe (
+  SET PYTHON=C:\Python36\python.exe
   GOTO :PYTHON_FOUND
 )
 

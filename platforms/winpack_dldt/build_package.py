@@ -379,7 +379,6 @@ class Builder:
 
             OPENCV_INSTALL_DATA_DIR_RELATIVE='../../src/opencv',
 
-            BUILD_opencv_python2='OFF',
             BUILD_opencv_python3='ON',
             PYTHON3_LIMITED_API='ON',
             OPENCV_PYTHON_INSTALL_PATH='python',

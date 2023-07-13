@@ -4,12 +4,8 @@
 This module serves as utility for other scripts.
 """
 
-from __future__ import print_function
 import sys, re, os.path, stat, math
-try:
-    from html import escape
-except ImportError:
-    from cgi import escape  # Python 2.7
+from html import escape
 from optparse import OptionParser
 from color import getColorizer, dummyColorizer
 
@@ -215,12 +211,8 @@ class table(object):
         cell.width = len(max(cell.text, key = lambda line: len(line)))
 
     def reformatTextValue(self, value):
-        if sys.version_info >= (2,7):
-            unicode = str
         if isinstance(value, str):
             vstr = value
-        elif isinstance(value, unicode):
-            vstr = str(value)
         else:
             try:
                 vstr = '\n'.join([str(v) for v in value])
