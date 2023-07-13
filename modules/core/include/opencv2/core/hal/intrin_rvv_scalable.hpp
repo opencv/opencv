@@ -1651,6 +1651,10 @@ inline v_uint32 v_popcount(const v_uint32& a)
 {
     return v_hadd(v_hadd(v_popcount(vreinterpret_u8m1(a))));
 }
+inline v_uint64 v_popcount(const v_uint64& a)
+{
+    return v_hadd(v_hadd(v_hadd(v_popcount(vreinterpret_u8m1(a)))));
+}
 
 inline v_uint8 v_popcount(const v_int8& a)
 {
@@ -1663,6 +1667,11 @@ inline v_uint16 v_popcount(const v_int16& a)
 inline v_uint32 v_popcount(const v_int32& a)
 {
     return v_popcount(v_abs(a));\
+}
+inline v_uint64 v_popcount(const v_int64& a)
+{
+    // max(0 - a) is used, since v_abs does not support 64-bit integers.
+    return v_popcount(v_reinterpret_as_u64(vmax(a, v_sub(v_setzero_s64(), a), VTraits<v_int64>::vlanes())));
 }
 
 
