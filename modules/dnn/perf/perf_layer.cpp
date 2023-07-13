@@ -680,7 +680,7 @@ struct Layer_Gemm : public TestBaseWithParam<tuple<Backend, Target>>
             std::vector<String> input_names(1);
             input_names[0] = "A";
             if (op != "InnerProduct") {
-                input_names[1] = "B";
+                input_names.push_back("B");
                 if (!c_shape.empty()) {
                     input_names.push_back("C");
                 }
