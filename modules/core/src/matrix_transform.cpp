@@ -896,7 +896,7 @@ void broadcastTo(InputArray _src, const std::vector<int>& shape, OutputArray _ds
         return;
     }
     // initial copy (src to dst)
-    std::vector<int> step_src{src.step.p, src.step.p + dims_src};
+    std::vector<size_t> step_src{src.step.p, src.step.p + dims_src};
     if (step_src.size() < shape.size()) {
         step_src.insert(step_src.begin(), shape.size() - step_src.size(), step_src[0]);
     }

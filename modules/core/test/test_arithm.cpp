@@ -2273,7 +2273,7 @@ TEST(BroadcastTo, basic) {
     std::vector<int> data_src{1, 2};
     Mat src(static_cast<int>(shape_src.size()), shape_src.data(), CV_32SC1, data_src.data());
 
-    auto get_index = [](const std::vector<int>& shape, int cnt) {
+    auto get_index = [](const std::vector<int>& shape, size_t cnt) {
         std::vector<int> index(shape.size());
         size_t t = cnt;
         for (int i = static_cast<int>(shape.size() - 1); i >= 0; --i) {
