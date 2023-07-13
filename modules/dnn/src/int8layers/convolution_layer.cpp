@@ -674,10 +674,13 @@ public:
             conv_node = std::make_shared<ngraph::op::v1::Add>(conv_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
         }
 
+        // Apply multipliers with rounding.
         conv_node = std::make_shared<ngraph::op::v1::Multiply>(
             conv_node,
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), outputMultiplier.data())
         );
+        conv_node = std::make_shared<ngraph::op::v5::Round>(conv_node, ngraph::op::v5::Round::RoundMode::HALF_TO_EVEN);
+
         float output_zp_f = output_zp;
         conv_node = std::make_shared<ngraph::op::v1::Add>(
             conv_node,
@@ -1512,6 +1515,13 @@ public:
 
         int nstripes = std::max(getNumThreads(), 1);
         Mat outputInt32 = Mat(shape(outputs[0]), CV_32S);
+
+        // for (int i = 0; i < outputMultiplier.size(); ++i)
+        //     outputMultiplier[i] = 1;
+        // for (int i = 0; i < biasvec.size(); ++i)
+        //     biasvec[i] = 0;
+        // input_zp = 0;
+        // output_zp = 0;
 
         ParallelConv::run(inputs[0], outputInt32, weightsMat, outputMultiplier, biasvec, activationLUT, kernel_size, strides,
                           pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes, input_zp, output_zp);
