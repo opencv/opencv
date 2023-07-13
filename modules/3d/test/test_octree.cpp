@@ -40,7 +40,6 @@ protected:
         float _y = 10 * (float)rng_Point.uniform(pmin.y, pmax.y)/scale;
         float _z = 10 * (float)rng_Point.uniform(pmin.z, pmax.z)/scale;
         restPoint = Point3f(_x, _y, _z);
-
     }
 
 public:
