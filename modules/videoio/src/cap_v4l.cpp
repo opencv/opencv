@@ -1746,7 +1746,7 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
         // This is a grey-scale image with a depth of 16 bits per pixel. The least significant byte is stored at lower memory addresses (little-endian).
         // Note: 10-bits precision is not supported
         cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
-        cv::extractChannel(cv::Mat(imageSize, CV_16UC1, start), temp, 1);  // 1 - second channel
+        cv::extractChannel(cv::Mat(imageSize, CV_8UC2, start), temp, 1);  // 1 - second channel
         cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
         return;
     }
@@ -1756,7 +1756,7 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
         // This is a grey-scale image with a depth of 16 bits per pixel. The most significant byte is stored at lower memory addresses (big-endian).
         // Note: 10-bits precision is not supported
         cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
-        cv::extractChannel(cv::Mat(imageSize, CV_16UC1, start), temp, 0);  // 0 - first channel
+        cv::extractChannel(cv::Mat(imageSize, CV_8UC2, start), temp, 0);  // 0 - first channel
         cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
         return;
     }
