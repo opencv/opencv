@@ -354,7 +354,7 @@ CV_INLINE int cvFloor( float value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_floorf(value);
-#elif defined __loongarch
+#elif defined __loongarch__
     int i;
     float tmp;
     __asm__ ("ftintrm.w.s     %[tmp],    %[in]       \n\t"
@@ -381,7 +381,7 @@ CV_INLINE int cvCeil( float value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_ceilf(value);
-#elif defined __loongarch
+#elif defined __loongarch__
     int i;
     float tmp;
     __asm__ ("ftintrp.w.s     %[tmp],    %[in]       \n\t"
