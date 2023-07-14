@@ -83,14 +83,14 @@ if(CANN_INSTALL_DIR)
         set(HAVE_CANN OFF)
         return()
     endif()
-    
+
     set(libs_cann "")
     list(APPEND libs_cann ${lib_ascendcl})
     list(APPEND libs_cann ${lib_opsproto})
     list(APPEND libs_cann ${lib_graph})
     list(APPEND libs_cann ${lib_ge_compiler})
 
-    #  * lib_graph_base.so 
+    #  * lib_graph_base.so
     if(NOT CANN_VERSION_BELOW_6_3_ALPHA002)
         set(lib_graph_base "${CANN_INSTALL_DIR}/compiler/lib64")
         find_library(found_libgraph_base NAMES graph_base PATHS ${lib_graph_base} NO_DEFAULT_PATH)
@@ -101,8 +101,8 @@ if(CANN_INSTALL_DIR)
         else()
             message(STATUS "CANN: Missing lib_graph_base.so. It is only required after cann version 6.3.RC1.alpha002")
         endif()
-    endif()   
-    
+    endif()
+
     try_compile(VALID_ASCENDCL
         "${OpenCV_BINARY_DIR}"
         "${OpenCV_SOURCE_DIR}/cmake/checks/cann.cpp"
