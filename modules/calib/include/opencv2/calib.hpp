@@ -419,32 +419,37 @@ enum { CALIB_CB_SYMMETRIC_GRID  = 1,
        CALIB_CB_CLUSTERING      = 4
      };
 
-enum { CALIB_NINTRINSIC          = 18,
-       CALIB_USE_INTRINSIC_GUESS = 0x00001,
-       CALIB_FIX_ASPECT_RATIO    = 0x00002,
-       CALIB_FIX_PRINCIPAL_POINT = 0x00004,
-       CALIB_ZERO_TANGENT_DIST   = 0x00008,
-       CALIB_FIX_FOCAL_LENGTH    = 0x00010,
-       CALIB_FIX_K1              = 0x00020,
-       CALIB_FIX_K2              = 0x00040,
-       CALIB_FIX_K3              = 0x00080,
-       CALIB_FIX_K4              = 0x00800,
-       CALIB_FIX_K5              = 0x01000,
-       CALIB_FIX_K6              = 0x02000,
-       CALIB_RATIONAL_MODEL      = 0x04000,
-       CALIB_THIN_PRISM_MODEL    = 0x08000,
-       CALIB_FIX_S1_S2_S3_S4     = 0x10000,
-       CALIB_TILTED_MODEL        = 0x40000,
-       CALIB_FIX_TAUX_TAUY       = 0x80000,
-       CALIB_USE_QR              = 0x100000, //!< use QR instead of SVD decomposition for solving. Faster but potentially less precise
-       CALIB_FIX_TANGENT_DIST    = 0x200000,
+#define CALIB_NINTRINSIC 18 //!< Maximal size of camera internal parameters (initrinsics) vector
+
+enum { CALIB_USE_INTRINSIC_GUESS = 0x00001, //!< Use user provided intrinsics as initial point for optimization.
+       CALIB_FIX_ASPECT_RATIO    = 0x00002, //!< Use with CALIB_USE_INTRINSIC_GUESS. The ratio fx/fy stays the same as in the input cameraMatrix.
+       CALIB_FIX_PRINCIPAL_POINT = 0x00004, //!< The principal point (cx, cy) stays the same as in the input camera matrix. Image center is used as principal point, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_ZERO_TANGENT_DIST   = 0x00008, //!< For pinhole model only. Tangential distortion coefficients \f$(p_1, p_2)\f$ are set to zeros and stay zero.
+       CALIB_FIX_FOCAL_LENGTH    = 0x00010, //!< Use with CALIB_USE_INTRINSIC_GUESS. The focal length (fx, fy) stays the same as in the input cameraMatrix.
+       CALIB_FIX_K1              = 0x00020, //!< The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_FIX_K2              = 0x00040, //!< The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_FIX_K3              = 0x00080, //!< The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_FIX_K4              = 0x00800, //!< The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_FIX_K5              = 0x01000, //!< For pinhole model only. The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_FIX_K6              = 0x02000, //!< For pinhole model only. The corresponding distortion coefficient is not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_RATIONAL_MODEL      = 0x04000, //!< For pinhole model only. Use rational distortion model with coefficients k4..k6.
+       CALIB_THIN_PRISM_MODEL    = 0x08000, //!< For pinhole model only. Use thin prism distortion model with coefficients s1..s4.
+       CALIB_FIX_S1_S2_S3_S4     = 0x10000, //!< For pinhole model only. The thin prism distortion coefficients are not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_TILTED_MODEL        = 0x40000, //!< For pinhole model only. Coefficients tauX and tauY are enabled in camera matrix.
+       CALIB_FIX_TAUX_TAUY       = 0x80000, //!< For pinhole model only. The tauX and tauY coefficients are not changed during the optimization. 0 value is used, if CALIB_USE_INTRINSIC_GUESS is not set.
+       CALIB_USE_QR              = 0x100000, //!< Use QR instead of SVD decomposition for solving. Faster but potentially less precise
+       CALIB_FIX_TANGENT_DIST    = 0x200000, //!< For pinhole model only. Tangential distortion coefficients (p1,p2) are set to zeros and stay zero.
        // only for stereo
-       CALIB_FIX_INTRINSIC       = 0x00100,
-       CALIB_SAME_FOCAL_LENGTH   = 0x00200,
+       CALIB_FIX_INTRINSIC       = 0x00100, //!< For stereo and milti-camera calibration only. Do not optimize cameras intrinsics
+       CALIB_SAME_FOCAL_LENGTH   = 0x00200, //!< For stereo calibration only. Use the same focal length for cameras in pair.
        // for stereo rectification
-       CALIB_ZERO_DISPARITY      = 0x00400,
+       CALIB_ZERO_DISPARITY      = 0x00400, //!< For @ref stereoRectify only. See the function description for more details.
        CALIB_USE_LU              = (1 << 17), //!< use LU instead of SVD decomposition for solving. much faster but potentially less precise
-       CALIB_USE_EXTRINSIC_GUESS = (1 << 22)  //!< for stereoCalibrate
+       CALIB_USE_EXTRINSIC_GUESS = (1 << 22), //!< For stereo calibration only. Use user provided extrinsics (R, T) as initial point for optimization
+       // fisheye only flags
+       CALIB_RECOMPUTE_EXTRINSIC = (1 << 23), //!< For fisheye model only. Recompute board position on each calibration iteration
+       CALIB_CHECK_COND          = (1 << 24), //!< For fisheye model only. Check SVD decomposition quality for each frame during extrinsics estimation
+       CALIB_FIX_SKEW            = (1 << 25)  //!< For fisheye model only. Skew coefficient (alpha) is set to zero and stay zero.
      };
 
 enum HandEyeCalibrationMethod
@@ -759,7 +764,7 @@ a change of basis from object coordinate space to camera coordinate space. Due t
 tuple is equivalent to the position of the calibration pattern with respect to the camera coordinate
 space.
 @param tvecs Output vector of translation vectors estimated for each pattern view, see parameter
-describtion above.
+description above.
 @param stdDeviationsIntrinsics Output vector of standard deviations estimated for intrinsic
 parameters. Order of deviations values:
 \f$(f_x, f_y, c_x, c_y, k_1, k_2, p_1, p_2, k_3, k_4, k_5, k_6 , s_1, s_2, s_3,
@@ -1466,20 +1471,20 @@ namespace fisheye
 //! @addtogroup calib3d_fisheye
 //! @{
 
-enum{
-    CALIB_USE_INTRINSIC_GUESS   = 1 << 0,
-    CALIB_RECOMPUTE_EXTRINSIC   = 1 << 1,
-    CALIB_CHECK_COND            = 1 << 2,
-    CALIB_FIX_SKEW              = 1 << 3,
-    CALIB_FIX_K1                = 1 << 4,
-    CALIB_FIX_K2                = 1 << 5,
-    CALIB_FIX_K3                = 1 << 6,
-    CALIB_FIX_K4                = 1 << 7,
-    CALIB_FIX_INTRINSIC         = 1 << 8,
-    CALIB_FIX_PRINCIPAL_POINT   = 1 << 9,
-    CALIB_ZERO_DISPARITY        = 1 << 10,
-    CALIB_FIX_FOCAL_LENGTH      = 1 << 11
-};
+// For backward compatibility only!
+// Use unified Pinhole and Fisheye model calibration flags
+using cv::CALIB_USE_INTRINSIC_GUESS;
+using cv::CALIB_RECOMPUTE_EXTRINSIC;
+using cv::CALIB_CHECK_COND;
+using cv::CALIB_FIX_SKEW;
+using cv::CALIB_FIX_K1;
+using cv::CALIB_FIX_K2;
+using cv::CALIB_FIX_K3;
+using cv::CALIB_FIX_K4;
+using cv::CALIB_FIX_INTRINSIC;
+using cv::CALIB_FIX_PRINCIPAL_POINT;
+using cv::CALIB_ZERO_DISPARITY;
+using cv::CALIB_FIX_FOCAL_LENGTH;
 
 /** @brief Projects points using fisheye model
 
@@ -1613,7 +1618,7 @@ objectPoints[i].size() for each i.
 @param image_size Size of the image used only to initialize the camera intrinsic matrix.
 @param K Output 3x3 floating-point camera intrinsic matrix
 \f$\cameramatrix{A}\f$ . If
-@ref fisheye::CALIB_USE_INTRINSIC_GUESS is specified, some or all of fx, fy, cx, cy must be
+@ref CALIB_USE_INTRINSIC_GUESS is specified, some or all of fx, fy, cx, cy must be
 initialized before calling the function.
 @param D Output vector of distortion coefficients \f$\distcoeffsfisheye\f$.
 @param rvecs Output vector of rotation vectors (see Rodrigues ) estimated for each pattern view.
@@ -1623,19 +1628,19 @@ space (in which object points are specified) to the world coordinate space, that
 position of the calibration pattern in the k-th pattern view (k=0.. *M* -1).
 @param tvecs Output vector of translation vectors estimated for each pattern view.
 @param flags Different flags that may be zero or a combination of the following values:
--   @ref fisheye::CALIB_USE_INTRINSIC_GUESS  cameraMatrix contains valid initial values of
+-   @ref CALIB_USE_INTRINSIC_GUESS  cameraMatrix contains valid initial values of
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
 center ( imageSize is used), and focal distances are computed in a least-squares fashion.
--   @ref fisheye::CALIB_RECOMPUTE_EXTRINSIC  Extrinsic will be recomputed after each iteration
+-   @ref CALIB_RECOMPUTE_EXTRINSIC  Extrinsic will be recomputed after each iteration
 of intrinsic optimization.
--   @ref fisheye::CALIB_CHECK_COND  The functions will check validity of condition number.
--   @ref fisheye::CALIB_FIX_SKEW  Skew coefficient (alpha) is set to zero and stay zero.
--   @ref fisheye::CALIB_FIX_K1,..., @ref fisheye::CALIB_FIX_K4 Selected distortion coefficients
+-   @ref CALIB_CHECK_COND  The functions will check validity of condition number.
+-   @ref CALIB_FIX_SKEW  Skew coefficient (alpha) is set to zero and stay zero.
+-   @ref CALIB_FIX_K1,..., @ref CALIB_FIX_K4 Selected distortion coefficients
 are set to zeros and stay zero.
--   @ref fisheye::CALIB_FIX_PRINCIPAL_POINT  The principal point is not changed during the global
-optimization. It stays at the center or at a different location specified when @ref fisheye::CALIB_USE_INTRINSIC_GUESS is set too.
--   @ref fisheye::CALIB_FIX_FOCAL_LENGTH The focal length is not changed during the global
-optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \f$f_y\f$ when @ref fisheye::CALIB_USE_INTRINSIC_GUESS is set too.
+-   @ref CALIB_FIX_PRINCIPAL_POINT  The principal point is not changed during the global
+optimization. It stays at the center or at a different location specified when @ref CALIB_USE_INTRINSIC_GUESS is set too.
+-   @ref CALIB_FIX_FOCAL_LENGTH The focal length is not changed during the global
+optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \f$f_y\f$ when @ref CALIB_USE_INTRINSIC_GUESS is set too.
 @param criteria Termination criteria for the iterative optimization algorithm.
  */
 CV_EXPORTS_W double calibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints, const Size& image_size,
@@ -1659,7 +1664,7 @@ camera.
 @param P2 Output 3x4 projection matrix in the new (rectified) coordinate systems for the second
 camera.
 @param Q Output \f$4 \times 4\f$ disparity-to-depth mapping matrix (see reprojectImageTo3D ).
-@param flags Operation flags that may be zero or @ref fisheye::CALIB_ZERO_DISPARITY . If the flag is set,
+@param flags Operation flags that may be zero or @ref CALIB_ZERO_DISPARITY . If the flag is set,
 the function makes the principal points of each camera have the same pixel coordinates in the
 rectified views. And if the flag is not set, the function may still shift the images in the
 horizontal or vertical direction (depending on the orientation of epipolar lines) to maximize the
@@ -1685,7 +1690,7 @@ observed by the first camera.
 observed by the second camera.
 @param K1 Input/output first camera intrinsic matrix:
 \f$\vecthreethree{f_x^{(j)}}{0}{c_x^{(j)}}{0}{f_y^{(j)}}{c_y^{(j)}}{0}{0}{1}\f$ , \f$j = 0,\, 1\f$ . If
-any of @ref fisheye::CALIB_USE_INTRINSIC_GUESS , @ref fisheye::CALIB_FIX_INTRINSIC are specified,
+any of @ref CALIB_USE_INTRINSIC_GUESS , @ref CALIB_FIX_INTRINSIC are specified,
 some or all of the matrix components must be initialized.
 @param D1 Input/output vector of distortion coefficients \f$\distcoeffsfisheye\f$ of 4 elements.
 @param K2 Input/output second camera intrinsic matrix. The parameter is similar to K1 .
@@ -1704,28 +1709,28 @@ to camera coordinate space of the first camera of the stereo pair.
 @param tvecs Output vector of translation vectors estimated for each pattern view, see parameter description
 of previous output parameter ( rvecs ).
 @param flags Different flags that may be zero or a combination of the following values:
--   @ref fisheye::CALIB_FIX_INTRINSIC  Fix K1, K2? and D1, D2? so that only R, T matrices
+-   @ref CALIB_FIX_INTRINSIC  Fix K1, K2? and D1, D2? so that only R, T matrices
 are estimated.
--   @ref fisheye::CALIB_USE_INTRINSIC_GUESS  K1, K2 contains valid initial values of
+-   @ref CALIB_USE_INTRINSIC_GUESS  K1, K2 contains valid initial values of
 fx, fy, cx, cy that are optimized further. Otherwise, (cx, cy) is initially set to the image
 center (imageSize is used), and focal distances are computed in a least-squares fashion.
--   @ref fisheye::CALIB_RECOMPUTE_EXTRINSIC  Extrinsic will be recomputed after each iteration
+-   @ref CALIB_RECOMPUTE_EXTRINSIC  Extrinsic will be recomputed after each iteration
 of intrinsic optimization.
--   @ref fisheye::CALIB_CHECK_COND  The functions will check validity of condition number.
--   @ref fisheye::CALIB_FIX_SKEW  Skew coefficient (alpha) is set to zero and stay zero.
--   @ref fisheye::CALIB_FIX_K1,..., @ref fisheye::CALIB_FIX_K4 Selected distortion coefficients are set to zeros and stay
+-   @ref CALIB_CHECK_COND  The functions will check validity of condition number.
+-   @ref CALIB_FIX_SKEW  Skew coefficient (alpha) is set to zero and stay zero.
+-   @ref CALIB_FIX_K1,..., @ref CALIB_FIX_K4 Selected distortion coefficients are set to zeros and stay
 zero.
 @param criteria Termination criteria for the iterative optimization algorithm.
  */
 CV_EXPORTS_W double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                     InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
-                                    OutputArray R, OutputArray T, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags = fisheye::CALIB_FIX_INTRINSIC,
+                                    OutputArray R, OutputArray T, OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, int flags = CALIB_FIX_INTRINSIC,
                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
 
 /// @overload
 CV_EXPORTS_W double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                     InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
-                                    OutputArray R, OutputArray T, int flags = fisheye::CALIB_FIX_INTRINSIC,
+                                    OutputArray R, OutputArray T, int flags = CALIB_FIX_INTRINSIC,
                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
 
 //! @} calib3d_fisheye

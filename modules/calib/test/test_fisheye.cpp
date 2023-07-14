@@ -427,9 +427,9 @@ TEST_F(fisheyeTest, Calibration)
     fs_object.release();
 
     int flag = 0;
-    flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-    flag |= cv::fisheye::CALIB_CHECK_COND;
-    flag |= cv::fisheye::CALIB_FIX_SKEW;
+    flag |= cv::CALIB_RECOMPUTE_EXTRINSIC;
+    flag |= cv::CALIB_CHECK_COND;
+    flag |= cv::CALIB_FIX_SKEW;
 
     cv::Matx33d theK;
     cv::Vec4d theD;
@@ -462,11 +462,11 @@ TEST_F(fisheyeTest, CalibrationWithFixedFocalLength)
     fs_object.release();
 
     int flag = 0;
-    flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-    flag |= cv::fisheye::CALIB_CHECK_COND;
-    flag |= cv::fisheye::CALIB_FIX_SKEW;
-    flag |= cv::fisheye::CALIB_FIX_FOCAL_LENGTH;
-    flag |= cv::fisheye::CALIB_USE_INTRINSIC_GUESS;
+    flag |= cv::CALIB_RECOMPUTE_EXTRINSIC;
+    flag |= cv::CALIB_CHECK_COND;
+    flag |= cv::CALIB_FIX_SKEW;
+    flag |= cv::CALIB_FIX_FOCAL_LENGTH;
+    flag |= cv::CALIB_USE_INTRINSIC_GUESS;
 
     cv::Matx33d theK = this->K;
     const cv::Matx33d newK(
@@ -570,9 +570,9 @@ TEST_F(fisheyeTest, EstimateUncertainties)
     fs_object.release();
 
     int flag = 0;
-    flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-    flag |= cv::fisheye::CALIB_CHECK_COND;
-    flag |= cv::fisheye::CALIB_FIX_SKEW;
+    flag |= cv::CALIB_RECOMPUTE_EXTRINSIC;
+    flag |= cv::CALIB_CHECK_COND;
+    flag |= cv::CALIB_FIX_SKEW;
 
     cv::Matx33d theK;
     cv::Vec4d theD;
@@ -609,8 +609,8 @@ TEST_F(fisheyeTest, stereoRectify)
 {
     // For consistency purposes
     CV_StaticAssert(
-        static_cast<int>(cv::CALIB_ZERO_DISPARITY) == static_cast<int>(cv::fisheye::CALIB_ZERO_DISPARITY),
-        "For the purpose of continuity the following should be true: cv::CALIB_ZERO_DISPARITY == cv::fisheye::CALIB_ZERO_DISPARITY"
+        static_cast<int>(cv::CALIB_ZERO_DISPARITY) == static_cast<int>(cv::CALIB_ZERO_DISPARITY),
+        "For the purpose of continuity the following should be true: cv::CALIB_ZERO_DISPARITY == cv::CALIB_ZERO_DISPARITY"
     );
 
     const std::string folder = combine(datasets_repository_path, "calib-3_stereo_from_JY");
@@ -625,7 +625,7 @@ TEST_F(fisheyeTest, stereoRectify)
     double balance = 0.0, fov_scale = 1.1;
     cv::Mat R1, R2, P1, P2, Q;
     cv::fisheye::stereoRectify(K1, D1, K2, D2, calibration_size, theR, theT, R1, R2, P1, P2, Q,
-                      cv::fisheye::CALIB_ZERO_DISPARITY, requested_size, balance, fov_scale);
+                      cv::CALIB_ZERO_DISPARITY, requested_size, balance, fov_scale);
 
     // Collected with these CMake flags: -DWITH_IPP=OFF -DCV_ENABLE_INTRINSICS=OFF -DCV_DISABLE_OPTIMIZATION=ON -DCMAKE_BUILD_TYPE=Debug
     cv::Matx33d R1_ref(
@@ -745,9 +745,9 @@ TEST_F(fisheyeTest, stereoCalibrate)
     cv::Vec4d D1, D2;
 
     int flag = 0;
-    flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-    flag |= cv::fisheye::CALIB_CHECK_COND;
-    flag |= cv::fisheye::CALIB_FIX_SKEW;
+    flag |= cv::CALIB_RECOMPUTE_EXTRINSIC;
+    flag |= cv::CALIB_CHECK_COND;
+    flag |= cv::CALIB_FIX_SKEW;
 
     cv::fisheye::stereoCalibrate(objectPoints, leftPoints, rightPoints,
                     K1, D1, K2, D2, imageSize, theR, theT, flag,
@@ -811,10 +811,10 @@ TEST_F(fisheyeTest, stereoCalibrateFixIntrinsic)
     cv::Vec3d theT;
 
     int flag = 0;
-    flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-    flag |= cv::fisheye::CALIB_CHECK_COND;
-    flag |= cv::fisheye::CALIB_FIX_SKEW;
-    flag |= cv::fisheye::CALIB_FIX_INTRINSIC;
+    flag |= cv::CALIB_RECOMPUTE_EXTRINSIC;
+    flag |= cv::CALIB_CHECK_COND;
+    flag |= cv::CALIB_FIX_SKEW;
+    flag |= cv::CALIB_FIX_INTRINSIC;
 
     cv::Matx33d K1 (561.195925927249,                0, 621.282400272412,
                                    0, 562.849402029712, 380.555455380889,
@@ -875,9 +875,9 @@ TEST_F(fisheyeTest, CalibrationWithDifferentPointsNumber)
     cv::Vec4d theD;
 
     int flag = 0;
-    flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-    flag |= cv::fisheye::CALIB_USE_INTRINSIC_GUESS;
-    flag |= cv::fisheye::CALIB_FIX_SKEW;
+    flag |= cv::CALIB_RECOMPUTE_EXTRINSIC;
+    flag |= cv::CALIB_USE_INTRINSIC_GUESS;
+    flag |= cv::CALIB_FIX_SKEW;
 
     cv::fisheye::calibrate(objectPoints, imagePoints, cv::Size(100, 100), theK, theD,
         cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
@@ -919,9 +919,9 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
     std::vector<cv::Mat> rvecs, tvecs;
 
     int flag = 0;
-    flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-    flag |= cv::fisheye::CALIB_CHECK_COND;
-    flag |= cv::fisheye::CALIB_FIX_SKEW;
+    flag |= cv::CALIB_RECOMPUTE_EXTRINSIC;
+    flag |= cv::CALIB_CHECK_COND;
+    flag |= cv::CALIB_FIX_SKEW;
 
     double rmsErrorStereoCalib = cv::fisheye::stereoCalibrate(objectPoints, leftPoints, rightPoints,
                                                               K1, D1, K2, D2, imageSize, theR, theT, rvecs, tvecs, flag,
@@ -1078,9 +1078,9 @@ TEST_F(fisheyeTest, multiview_calibration)
     std::vector<cv::Mat> Rs, Ts, Ks, distortions, rvecs0, tvecs0;
     std::vector<bool> is_fisheye(2, true);
     int flag = 0;
-    flag |= cv::fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-    flag |= cv::fisheye::CALIB_CHECK_COND;
-    flag |= cv::fisheye::CALIB_FIX_SKEW;
+    flag |= cv::CALIB_RECOMPUTE_EXTRINSIC;
+    flag |= cv::CALIB_CHECK_COND;
+    flag |= cv::CALIB_FIX_SKEW;
 
     std::vector<int> all_flags(2, flag);
 
