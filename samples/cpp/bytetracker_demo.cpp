@@ -14,10 +14,7 @@
 using namespace cv;
 using namespace std;
 using namespace dnn;
-//dirusing cv::detail::tracking::Detection;
-//using cv::detail::tracking::Strack;
 
-// using namespace cv::detail::tracking;
 
 // Constants.
 const float INPUT_WIDTH = 640.0;
@@ -37,20 +34,23 @@ Scalar BLUE = Scalar(255, 178, 50);
 Scalar YELLOW = Scalar(0, 255, 255);
 Scalar RED = Scalar(0, 0, 255);
 
-string DETECTIONS_OUTPUT_PATH = "/home/jose/commonFiles/det.txt";
-string TRACKINGS_OUTPUT_PATH = "/home/jose/commonFiles/tracked.txt";
-string VIDEO_OUTPUT_PATH = "/home/jose/commonFiles/output.mp4";
+string home = getenv("HOME");
+string DETECTIONS_OUTPUT_PATH = home + "/files/det.txt";
+string TRACKINGS_OUTPUT_PATH = home + "/files/tracked.txt";
+string VIDEO_OUTPUT_PATH = home + "/files/output.mp4";
+string COCO_NAMES = home + "/files/coco.names";
+string NET_PATH = home + "/files/YOLOv5s.onnx";
 
 int outputCodec = VideoWriter::fourcc('M', 'J', 'P', 'G');
-double outputFps = 25;
-Size outputSize(1920, 1080);
+double outputFps = 10;
+Size outputSize(768, 576);
 
 vector<Mat> preProcessImage(Mat&, Net&);
 Mat formatYolov5(const Mat&);
 Mat postProcessImage(Mat&, vector<Mat>&, const vector<string>&, vector<Detection>&);
 void drawLabel(Mat&, string, int, int);
-void writeDetectionsToFile(const vector<Detection>, const std::string&, const int);
-void writeTracksToFile(const Mat&, const std::string&, const int);
+void writeDetectionsToFile(const vector<Detection>, const string&, const int);
+void writeTracksToFile(const Mat&, const string&, const int);
 Scalar getColor(int);
 Mat detectionToMat(vector<Detection>);
 
@@ -59,7 +59,7 @@ int main()
     // Load class list.
     cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_WARNING);
     vector<string> classList;
-    ifstream ifs("/home/jose/commonFiles/coco.names");
+    ifstream ifs(COCO_NAMES);
     string line;
     while (getline(ifs, line))
     {
@@ -67,7 +67,7 @@ int main()
     }
 
     //string folderPath = "./imgs/%06d.jpg";
-    string folderPath="/home/jose/byte_venv/ByteTrack/datasets/MOT20/train/MOT20-01/img1/%06d.jpg";
+    string folderPath="../data/vtest.avi";
 
     VideoCapture capture;
     VideoWriter writer(VIDEO_OUTPUT_PATH, outputCodec, outputFps, outputSize);
@@ -77,29 +77,29 @@ int main()
 
     if (!capture.isOpened())
     {
-        std::cout << "failed to open the image sequence: " << folderPath << std::endl;
+        cout << "failed to open the image sequence: " << folderPath << endl;
         return -1;
     }
 
     // Load image sequence.
     Mat frame;
     int frameNumber = 0;
-    //int fps = capture.get(CAP_PROP_FPS);
+    int fps = capture.get(CAP_PROP_FPS);
     cv::ByteTracker::Params params;
-    params.frameRate = 25;
+    params.frameRate = fps;
     params.frameBuffer = 30;
     Ptr<ByteTracker> tracker = ByteTracker::create(params);
     while (capture.read(frame))
     {
         if (frame.empty())
         {
-            std::cout << "Failed to read the frame." << std::endl;
+            cout << "Failed to read the frame." << endl;
             break;
         }
 
         // Load model.
         Net net;
-        net = readNet("/home/jose/commonFiles/YOLOv5s.onnx");
+        net = readNet(NET_PATH);
         // net.setPreferableBackend(dnn::DNN_TARGET_CPU);
         // net.setPreferableTarget(dnn::DNN_TARGET_CUDA_FP16);
         vector<Mat> detections; // Process the image.
@@ -110,10 +110,9 @@ int main()
                                objects);
         Mat objectsMat = detectionToMat(objects);
         Mat trackedObjects;
-        //vector<Strack> trackedObjects = tracker->update(objectsMat);
         bool ok = false;
         ok = tracker->update(objectsMat, trackedObjects);
-        cout<<trackedObjects<<"\n";
+        //cout<<trackedObjects<<"\n";
         if (ok)
         {
             for (int i = 0; i < trackedObjects.rows; i++)
@@ -121,7 +120,7 @@ int main()
                 Scalar color = getColor(trackedObjects.at<float>(i,6));
                 Rect tlwh_(trackedObjects.at<float>(i, 0), trackedObjects.at<float>(i, 1),
                     trackedObjects.at<float>(i, 2), trackedObjects.at<float>(i, 3));
-                int id_ = static_cast<int>(trackedObjects.at<float>(i, 5));
+                int id_ = static_cast<int>(trackedObjects.at<float>(i, 6));
                 
                 rectangle(img, tlwh_, color, 2);
                 putText(img, to_string(id_), Point(tlwh_.x, tlwh_.y - 5), FONT_FACE, FONT_SCALE, RED); // THICKNESS
@@ -148,7 +147,7 @@ int main()
     }
     writer.release();
     capture.release();
-    
+    cout<<"Output video generated";
 
     return 0;
 }
@@ -184,6 +183,7 @@ Mat formatYolov5(const Mat &source)
 Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> &className,       
     vector<Detection> &object)
 {
+    //This post process works for Yolov3, for Yolox I should use another format
     // Initialize vectors to hold respective outputs while unwrapping     detections.
     vector<int> classIds;
     vector<float> confidences;
@@ -234,7 +234,7 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
         // Jump to the next row.
         data += 85;
     }
-    std::vector<int> nmsResult;
+    vector<int> nmsResult;
     dnn::NMSBoxes(boxes, confidences, SCORE_THRESHOLD, NMS_THRESHOLD, nmsResult);
     for (int i = 0; i < nmsResult.size(); i++)
     {
@@ -277,14 +277,14 @@ void drawLabel(Mat &inputImage, string label, int left, int top)
     putText(inputImage, label, Point(left, top + labelSize.height), FONT_FACE, FONT_SCALE, YELLOW, THICKNESS);
 }
 
-void writeDetectionsToFile(const vector<Detection> objects, const std::string &outputPath, 
+void writeDetectionsToFile(const vector<Detection> objects, const string &outputPath, 
     const int frameNumber)
 {
     // Open the output file for writing
-    std::ofstream outputFile(outputPath, std::ios_base::app);
+    ofstream outputFile(outputPath, ios_base::app);
     if (!outputFile.is_open())
     {
-        std::cout << "Failed to open the output file: " << outputPath << std::endl;
+        cout << "Failed to open the output file: " << outputPath << endl;
         return;
     }
     // Check if the output file is empty
@@ -293,7 +293,7 @@ void writeDetectionsToFile(const vector<Detection> objects, const std::string &o
     // Write the header row of the file is empty
     if (isEmpty)
     {
-        outputFile << "frame, trackId, x, y, width, height, score, classId" << std::endl;
+        outputFile << "frame, trackId, x, y, width, height, score, classId" << endl;
     }
 
     // Iterate over the detections and write the data to the output file
@@ -307,23 +307,23 @@ void writeDetectionsToFile(const vector<Detection> objects, const std::string &o
         float score = object.confidence;
 
         // Write the data to the output file
-        outputFile << frameNumber << ", " << -1 << ", " << x << ", " << y << ", " << width << ", " << height << ", " << score << ", -1, -1, -1" << std::endl;
+        outputFile << frameNumber << ", " << -1 << ", " << x << ", " << y << ", " << width << ", " << height << ", " << score << ", -1, -1, -1" << endl;
     }
 
     // Close the output file
     outputFile.close();
 
-    //std::cout << "\n Detection data saved to: " << outputPath << std::endl;
+    //cout << "\n Detection data saved to: " << outputPath << endl;
 }
 
-void writeTracksToFile(const Mat& objects, const std::string &outputPath, 
+void writeTracksToFile(const Mat& objects, const string &outputPath, 
     const int frameNumber)
 {
     // Open the output file for writing
-    std::ofstream outputFile(outputPath, std::ios_base::app);
+    ofstream outputFile(outputPath, ios_base::app);
     if (!outputFile.is_open())
     {
-        std::cout << "Failed to open the output file: " << outputPath << std::endl;
+        cout << "Failed to open the output file: " << outputPath << endl;
         return;
     }
     // Check if the output file is empty
@@ -332,7 +332,7 @@ void writeTracksToFile(const Mat& objects, const std::string &outputPath,
     // Write the header row of the file is empty
     if (isEmpty)
     {
-        outputFile << "frame, trackId, x, y, width, height, score, classId" << std::endl;
+        outputFile << "frame, trackId, x, y, width, height, score, classId" << endl;
     }
 
 
@@ -349,13 +349,13 @@ void writeTracksToFile(const Mat& objects, const std::string &outputPath,
         int trackId = static_cast<int>(objects.at<float>(i, 6));
 
         // Write the data to the output file
-        outputFile << frameNumber << ", " << trackId << ", " << x << ", " << y << ", " << width << ", " << height << ", " << score << ", " << classId << ", " << ", -1" << std::endl;
+        outputFile << frameNumber << ", " << trackId << ", " << x << ", " << y << ", " << width << ", " << height << ", " << score << ", " << classId << ", " << ", -1" << endl;
     }
 
     // Close the output file
     outputFile.close();
 
-    //std::cout << "\n Detection data saved to: " << outputPath << std::endl;
+    //cout << "\n Detection data saved to: " << outputPath << endl;
 }
 
 Scalar getColor(const int idx)

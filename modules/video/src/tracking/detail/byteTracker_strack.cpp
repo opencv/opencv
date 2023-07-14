@@ -141,6 +141,10 @@ int Strack::getTrackletLen() const
 {
     return trackletLen_;
 }
+void Strack::setTrackletLen(int val)
+{
+    trackletLen_= val;
+}
 
 cv::Rect Strack::predict()
 {

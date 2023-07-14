@@ -934,6 +934,7 @@ public:
     void activate(int frame, int id);
     void reactivate(Strack& track, int frame);
     int getTrackletLen() const;
+    void setTrackletLen(int val);
     void incrementTrackletLen();
     float getScore() const;
     ~Strack();

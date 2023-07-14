@@ -2,8 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-
-
 #include "../precomp.hpp"
 
 //#include "opencv2/video/detail/bytetracker.hpp"
@@ -92,6 +90,8 @@ protected:
     unordered_map<int, Strack> joinStracks(const vector<Strack>& trackA, vector<Strack>& trackB);
     unordered_map<int, Strack> joinStracks(const vector<Strack>& trackVector,
         unordered_map<int, Strack>& trackMap, bool inplace);
+    
+    unordered_map<int, Strack> vectorToMap(const vector<Strack>& stracks);
 
 };
 
@@ -114,7 +114,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     vector<Strack> inactiveStracks;
     vector<Strack> trackedStracks;
 
-    addNewDetectedTracks(trackedStracks_, inactiveStracks, trackedStracks); // trackedStracks_ -> inactive and active
+    addNewDetectedTracks(trackedStracks_, inactiveStracks, trackedStracks); // trackedStracks_ -> inactive and active I think that I don't need this function and I just need to change joinStracks to receive two hash maps
 
     unordered_map<int, Strack> strackPool;
     strackPool = joinStracks(trackedStracks, lostStracks_, false);
@@ -259,19 +259,26 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
         activatedStracks.push_back(newTrack);
     }
 
-    joinStracks(activatedStracks, trackedStracks_, true); //"true" means replacing in place
-    joinStracks(reRemainTracks, lostStracks_, true);
+    //joinStracks(activatedStracks, trackedStracks_, true); //"true" means replacing in place
+    //joinStracks(reRemainTracks, lostStracks_, true);
+    trackedStracks_ = vectorToMap(activatedStracks);
+    lostStracks_ = vectorToMap(reRemainTracks);
     
     // deal with lost tracks and save them in an attribute
     vector<int> keysToRemove;
     for (auto& pair : lostStracks_)
     {
         Strack& track = pair.second;
-        track.incrementTrackletLen();
-        if ((track.getTrackletLen()) >maxTimeLost_)
-            keysToRemove.push_back(pair.first);
-        else
+        if (track.getState() != TrackState::LOST)
+        {
+            track.setTrackletLen(1);
             track.setState(TrackState::LOST);
+        }
+        else
+            track.incrementTrackletLen();
+
+        if ((track.getTrackletLen()) > maxTimeLost_)
+            keysToRemove.push_back(pair.first);
     }
 
     for (int key : keysToRemove)
@@ -279,7 +286,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
         lostStracks_.erase(key);
     }
 
-
+    
     cv::Mat trackData(trackedStracks_.size(), 7, CV_32F);
     int row = 0;
     for (auto &track : trackedStracks_)
@@ -595,6 +602,17 @@ int ByteTrackerImpl::getFrame()
 void ByteTrackerImpl::incrementFrame()
 {
     frame_++;
+}
+
+unordered_map<int, Strack> ByteTrackerImpl::vectorToMap(const vector<Strack>& stracks)
+{
+    unordered_map<int, Strack> strackMap;
+    for (const Strack& strack : stracks)
+    {
+        int id = strack.getId();
+        strackMap.emplace(id, strack);
+    }
+    return strackMap;
 }
 
 }
