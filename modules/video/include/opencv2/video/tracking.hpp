@@ -923,7 +923,6 @@ class CV_EXPORTS_W Strack {
 public:
     Strack();
     Strack(Rect tlwh, int classId, float score);
-    bool operator<(const Strack& other) const;
     int getId() const;
     cv::Rect getTlwh() const;
     void setTlwh(cv::Rect tlwh);

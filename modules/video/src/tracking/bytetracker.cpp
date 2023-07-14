@@ -12,6 +12,7 @@
 //#include "opencv2/video/detail/tracking.detail.hpp"
 #include <map>
 #include <unordered_map>
+#include <iostream>
 
 // #include "detail/bytetracker.hpp"
 // #include "detail/bytetracker_strack.hpp"
@@ -102,7 +103,6 @@ Ptr<ByteTracker> ByteTracker::create(const ByteTracker::Params& parameters)
 
 bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outputTracks)
 {
-    cout<<"This is update loop";
     // Detetions, Dk = Detections(fk)
     vector<Strack> detections; // consider changing to cv::Mat_<Strack>
     vector<Strack> detectionsLow;
@@ -115,21 +115,20 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     vector<Strack> trackedStracks;
 
     addNewDetectedTracks(trackedStracks_, inactiveStracks, trackedStracks); // trackedStracks_ -> inactive and active
-    //trackedStracks_.copyTo(outputTracks);
 
     unordered_map<int, Strack> strackPool;
     strackPool = joinStracks(trackedStracks, lostStracks_, false);
     // remember that in the first association we consider the lost tracks too
     // we need to predict the tracks to do association
     // it updates strackPool with prediction, maybe pass strackPool by reference
-    for (auto& track : strackPool)
+    for (auto& pair : strackPool)
     {
-        cv::Rect prediction = track.second.predict(); // cx cy w h
+        Strack& track = pair.second;
+        cv::Rect prediction = track.predict(); // cx cy w h
         prediction.x -= prediction.width;
         prediction.y -= prediction.height;
-        track.second.setTlwh(prediction);
+        track.setTlwh(prediction);
     }
-    strackPool.copyTo(outputTracks)
 
     // getting map keys from the indexes
     unordered_map<int, int> indexToKey;
@@ -140,7 +139,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
         indexToKey[index] = key;
         ++index;
     }
-    
+
     // First association with IoU
     Mat dists; // IoU distances, maybe change it to mat type?
     dists = getCostMatrix(strackPool, detections);
@@ -151,7 +150,6 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     map<int, int> matches;
 
     matches = lapjv(dists); // returns a map (track_i,matched_det_index)
-    // cout << "\n Num of matches: " << matches.size();
 
     // Find unmatched track indexes
     for (int trackIndex = 0; trackIndex < static_cast<int>(strackPool.size()); ++trackIndex)
@@ -219,8 +217,6 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     detectionsIndex.clear();
     matches = lapjv(dists);
 
-    // cout << "\n Num of low matches: " << matches.size();
-
     // Find unmatched track indexes
     for (int trackIndex = 0; trackIndex < static_cast<int>(remainTracks.size()); ++trackIndex)
     {
@@ -262,18 +258,20 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
         newTrack.activate(getFrame(), lastId_++);
         activatedStracks.push_back(newTrack);
     }
+
     joinStracks(activatedStracks, trackedStracks_, true); //"true" means replacing in place
     joinStracks(reRemainTracks, lostStracks_, true);
-
+    
     // deal with lost tracks and save them in an attribute
     vector<int> keysToRemove;
-    for (auto& track : lostStracks_)
+    for (auto& pair : lostStracks_)
     {
-        track.second.incrementTrackletLen();
-        if ((track.second.getTrackletLen()) >maxTimeLost_)
-            keysToRemove.push_back(track.first);
+        Strack& track = pair.second;
+        track.incrementTrackletLen();
+        if ((track.getTrackletLen()) >maxTimeLost_)
+            keysToRemove.push_back(pair.first);
         else
-            track.second.setState(TrackState::LOST);
+            track.setState(TrackState::LOST);
     }
 
     for (int key : keysToRemove)
@@ -300,9 +298,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
         ++row;
     }
 
-    //trackData.copyTo(outputTracks);
-
-    //cout<<outputTracks;
+    trackData.copyTo(outputTracks);
 
     return true;
 }
@@ -457,7 +453,7 @@ unordered_map<int, Strack> ByteTrackerImpl::joinStracks(const vector<Strack>& tr
     {
         for (const auto& track : trackVector)
         {
-            trackMap.emplace(track.getId(), track);
+            trackMap[track.getId()] = track;
         }
         return trackMap;
     }
@@ -496,9 +492,9 @@ map<int, int> ByteTrackerImpl::lapjv(InputArray &cost)
     {
         for (int j = 0; j < n; j++)
         {
-            if (i < maxI && j < maxJ && _cost.at<double>(i, j) < matchThreshold_) // verify
+            if (i < maxI && j < maxJ && _cost.at<float>(i, j) < matchThreshold_) // verify
             {
-                cost_ptr[i][j] = (double)_cost.at<double>(i, j);
+                cost_ptr[i][j] = static_cast<double>(_cost.at<float>(i, j));
             }
             else
             {
