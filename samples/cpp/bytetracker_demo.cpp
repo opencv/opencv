@@ -37,9 +37,9 @@ Scalar BLUE = Scalar(255, 178, 50);
 Scalar YELLOW = Scalar(0, 255, 255);
 Scalar RED = Scalar(0, 0, 255);
 
-string DETECTIONS_OUTPUT_PATH = "det.txt";
-string TRACKINGS_OUTPUT_PATH = "tracked.txt";
-string VIDEO_OUTPUT_PATH = "output.mp4";
+string DETECTIONS_OUTPUT_PATH = "/home/jose/commonFiles/det.txt";
+string TRACKINGS_OUTPUT_PATH = "/home/jose/commonFiles/tracked.txt";
+string VIDEO_OUTPUT_PATH = "/home/jose/commonFiles/output.mp4";
 
 int outputCodec = VideoWriter::fourcc('M', 'J', 'P', 'G');
 double outputFps = 25;
@@ -59,15 +59,15 @@ int main()
     // Load class list.
     cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_WARNING);
     vector<string> classList;
-    ifstream ifs("coco.names");
+    ifstream ifs("/home/jose/commonFiles/coco.names");
     string line;
     while (getline(ifs, line))
     {
         classList.push_back(line);
     }
 
-    string folderPath = "./imgs/%06d.jpg";
-    // string outputPath = "output.txt";
+    //string folderPath = "./imgs/%06d.jpg";
+    string folderPath="/home/jose/byte_venv/ByteTrack/datasets/MOT20/train/MOT20-01/img1/%06d.jpg";
 
     VideoCapture capture;
     VideoWriter writer(VIDEO_OUTPUT_PATH, outputCodec, outputFps, outputSize);
@@ -99,7 +99,7 @@ int main()
 
         // Load model.
         Net net;
-        net = readNet("../YOLOv5s.onnx");
+        net = readNet("/home/jose/commonFiles/YOLOv5s.onnx");
         // net.setPreferableBackend(dnn::DNN_TARGET_CPU);
         // net.setPreferableTarget(dnn::DNN_TARGET_CUDA_FP16);
         vector<Mat> detections; // Process the image.
