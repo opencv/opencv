@@ -1290,7 +1290,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
     else
         Kg_nblocks = 1;
 
-    bool separateIm2col = fast_1x1 || stripes_per_plane == 1;
+    bool separateIm2col = (fast_1x1 || stripes_per_plane == 1) && conv->conv_type != CONV_TYPE_DEPTHWISE_REMAIN;
 
     int Kstripes = Kg_nblocks * stripes_per_plane;
     int nsubtasks = N * ngroups * Kstripes;
