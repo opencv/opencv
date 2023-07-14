@@ -34,6 +34,13 @@
 #ifndef V4L2_PIX_FMT_XBGR32
 #define V4L2_PIX_FMT_XBGR32  v4l2_fourcc('X', 'R', '2', '4')
 #endif
+#ifndef V4L2_PIX_FMT_Y16
+#define V4L2_PIX_FMT_Y16 v4l2_fourcc('Y', '1', '6', ' ')
+#endif
+#ifndef V4L2_PIX_FMT_Y16_BE
+#define V4L2_PIX_FMT_Y16_BE v4l2_fourcc_be('Y', '1', '6', ' ')
+#endif
+
 
 using namespace cv;
 
@@ -111,6 +118,7 @@ vector<Format_Channels_Depth> all_params = {
 //    { V4L2_PIX_FMT_SGBRG8, 1, CV_8U, 1.f, 1.f },
     { V4L2_PIX_FMT_RGB24, 3, CV_8U, 1.f, 1.f },
     { V4L2_PIX_FMT_Y16, 1, CV_16U, 1.f, 1.f },
+    { V4L2_PIX_FMT_Y16_BE, 1, CV_16U, 1.f, 1.f },
     { V4L2_PIX_FMT_Y10, 1, CV_16U, 1.f, 1.f },
     { V4L2_PIX_FMT_GREY, 1, CV_8U, 1.f, 1.f },
     { V4L2_PIX_FMT_BGR24, 3, CV_8U, 1.f, 1.f },
