@@ -60,7 +60,8 @@ inline std::string fourccToString(int fourcc)
 inline std::string fourccToStringSafe(int fourcc)
 {
     std::string res = fourccToString(fourcc);
-    std::replace_if(res.begin(), res.end(), [](uint8_t c){ return c < '0' || c > 'z'; }, '_');
+    // TODO: return hex values for invalid characters
+    std::transform(res.begin(), res.end(), res.begin(), [](uint8_t c) { return (c >= '0' && c <= 'z') ? c : (c == ' ' ? '_' : 'x'); });
     return res;
 }
 
