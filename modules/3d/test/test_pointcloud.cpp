@@ -45,7 +45,7 @@ TEST(PointCloud, LoadObj)
     std::vector<cv::Point3_<uchar>> rgb;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
-    cv::loadPointCloud(folder + "pointcloudio/orig_no_norms.obj", points, normals, rgb);
+    cv::loadPointCloud(folder + "pointcloudio/orig.obj", points, normals, rgb);
 
     EXPECT_EQ(points_gold, points);
     EXPECT_EQ(rgb_gold, rgb);
