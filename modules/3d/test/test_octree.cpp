@@ -66,10 +66,8 @@ TEST_F(OctreeTest, BasicFunctionTest)
 
     // insert, delete Test.
     EXPECT_FALSE(treeTest.deletePoint(restPoint));
-
     EXPECT_FALSE(treeTest.insertPoint(restPoint + Point3f(60, 60, 60)));
     EXPECT_TRUE(treeTest.insertPoint(restPoint));
-
     EXPECT_TRUE(treeTest.deletePoint(restPoint));
 
     EXPECT_FALSE(treeTest.empty());
