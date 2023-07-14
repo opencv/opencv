@@ -37,10 +37,6 @@ Strack::Strack(cv::Rect tlwh,  int classId, float score) : tlwh_(tlwh), classId_
     kalmanFilter_ = cv::KalmanFilter(8,4);
 }
 
-bool Strack::operator<(const Strack& other) const
-{
-    return trackId_ < other.trackId_;
-}
 
 int Strack::getId() const
 {

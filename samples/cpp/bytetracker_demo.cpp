@@ -1,20 +1,20 @@
-//#include <opencv2/opencv.hpp>
 #include <opencv2/dnn.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/video.hpp>
 #include <opencv2/highgui.hpp>
 #include <iostream>
 #include <fstream>
-//#include "opencv2/video/detail/bytetracker.hpp"
 #include "opencv2/video/tracking.hpp"
-//#include "opencv2/video/detail/bytetracker_strack.hpp"
+#include <opencv2/core.hpp>
+#include <opencv2/core/utils/logger.hpp>
+
 
 
 // Namespaces.
 using namespace cv;
 using namespace std;
 using namespace dnn;
-//using cv::detail::tracking::Detection;
+//dirusing cv::detail::tracking::Detection;
 //using cv::detail::tracking::Strack;
 
 // using namespace cv::detail::tracking;
@@ -37,9 +37,9 @@ Scalar BLUE = Scalar(255, 178, 50);
 Scalar YELLOW = Scalar(0, 255, 255);
 Scalar RED = Scalar(0, 0, 255);
 
-string DETECTIONS_OUTPUT_PATH = "det.txt";
-string TRACKINGS_OUTPUT_PATH = "tracked.txt";
-string VIDEO_OUTPUT_PATH = "output.mp4";
+string DETECTIONS_OUTPUT_PATH = "~/det.txt";
+string TRACKINGS_OUTPUT_PATH = "~/tracked.txt";
+string VIDEO_OUTPUT_PATH = "~/output.mp4";
 
 int outputCodec = VideoWriter::fourcc('M', 'J', 'P', 'G');
 double outputFps = 25;
@@ -50,23 +50,24 @@ Mat formatYolov5(const Mat&);
 Mat postProcessImage(Mat&, vector<Mat>&, const vector<string>&, vector<Detection>&);
 void drawLabel(Mat&, string, int, int);
 void writeDetectionsToFile(const vector<Detection>, const std::string&, const int);
-void writeTracksToFile(const vector<Strack>, const std::string&, const int);
+void writeTracksToFile(const Mat&, const std::string&, const int);
 Scalar getColor(int);
+Mat detectionToMat(vector<Detection>);
 
 int main()
 {
     // Load class list.
-
+    cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_WARNING);
     vector<string> classList;
-    ifstream ifs("coco.names");
+    ifstream ifs("~/coco.names");
     string line;
     while (getline(ifs, line))
     {
         classList.push_back(line);
     }
 
-    string folderPath = "./imgs/%06d.jpg";
-    // string outputPath = "output.txt";
+    //string folderPath = "./imgs/%06d.jpg";
+    string folderPath="~/ByteTrack/datasets/MOT20/train/MOT20-01/img1/%06d.jpg";
 
     VideoCapture capture;
     VideoWriter writer(VIDEO_OUTPUT_PATH, outputCodec, outputFps, outputSize);
@@ -87,7 +88,7 @@ int main()
     cv::ByteTracker::Params params;
     params.frameRate = 25;
     params.frameBuffer = 30;
-    auto tracker = ByteTracker::create(params);
+    Ptr<ByteTracker> tracker = ByteTracker::create(params);
     while (capture.read(frame))
     {
         if (frame.empty())
@@ -98,45 +99,52 @@ int main()
 
         // Load model.
         Net net;
-        net = readNet("../YOLOv5s.onnx");
+        net = readNet("~/YOLOv5s.onnx");
         // net.setPreferableBackend(dnn::DNN_TARGET_CPU);
         // net.setPreferableTarget(dnn::DNN_TARGET_CUDA_FP16);
         vector<Mat> detections; // Process the image.
         vector<Detection> objects;
         detections = preProcessImage(frame, net);
         Mat frameClone = frame.clone();
-        Mat img = postProcessImage(frameClone, detections, classList,
+        Mat img = postProcessImage(frame, detections, classList,
                                objects);
-        vector<Strack> trackedObjects = tracker->update(objects);
-        for (const Strack track : trackedObjects)
+        Mat objectsMat = detectionToMat(objects);
+        Mat trackedObjects;
+        //vector<Strack> trackedObjects = tracker->update(objectsMat);
+        bool ok = false;
+        ok = tracker->update(objectsMat, trackedObjects);
+        cout<<trackedObjects<<"\n";
+        if (ok)
         {
-            Scalar color = getColor(track.getId());
-            Rect tlwh_ = track.getTlwh();
-            int id_ = track.getId();
-            if (track.getState() == TrackState::Tracked)
+            for (int i = 0; i < trackedObjects.rows; i++)
             {
+                Scalar color = getColor(trackedObjects.at<float>(i,6));
+                Rect tlwh_(trackedObjects.at<float>(i, 0), trackedObjects.at<float>(i, 1),
+                    trackedObjects.at<float>(i, 2), trackedObjects.at<float>(i, 3));
+                int id_ = static_cast<int>(trackedObjects.at<float>(i, 5));
+                
                 rectangle(img, tlwh_, color, 2);
                 putText(img, to_string(id_), Point(tlwh_.x, tlwh_.y - 5), FONT_FACE, FONT_SCALE, RED); // THICKNESS
             }
+            writeTracksToFile(trackedObjects, TRACKINGS_OUTPUT_PATH, frameNumber);
+            writeDetectionsToFile(objects, DETECTIONS_OUTPUT_PATH, frameNumber);
+
+            // Put efficiency information.
+            // The function getPerfProfile returns the overall time for     inference(t) and the timings for each of the layers(in layersTimes).
+            vector<double> layersTimes;
+            double freq = getTickFrequency() / 1000;
+            double t = net.getPerfProfile(layersTimes) / freq;
+            string label = format("Inference time : %.2f ms", t);
+            putText(img, label, Point(20, 40), FONT_FACE, FONT_SCALE, RED);
+            imshow("Output", img);
+            writer.write(img);
+            //waitKey(0);
+
+            if (waitKey(1) == 27)
+                break;
+
+            frameNumber++;
         }
-        writeTracksToFile(trackedObjects, TRACKINGS_OUTPUT_PATH, frameNumber);
-        writeDetectionsToFile(objects, DETECTIONS_OUTPUT_PATH, frameNumber);
-
-        // Put efficiency information.
-        // The function getPerfProfile returns the overall time for     inference(t) and the timings for each of the layers(in layersTimes).
-        vector<double> layersTimes;
-        double freq = getTickFrequency() / 1000;
-        double t = net.getPerfProfile(layersTimes) / freq;
-        string label = format("Inference time : %.2f ms", t);
-        putText(img, label, Point(20, 40), FONT_FACE, FONT_SCALE, RED);
-        imshow("Output", img);
-        writer.write(img);
-        //waitKey(0);
-
-        if (waitKey(1) == 27)
-            break;
-
-        frameNumber++;
     }
     writer.release();
     capture.release();
@@ -279,11 +287,19 @@ void writeDetectionsToFile(const vector<Detection> objects, const std::string &o
         std::cout << "Failed to open the output file: " << outputPath << std::endl;
         return;
     }
+    // Check if the output file is empty
+    bool isEmpty = outputFile.tellp() == 0;
+
+    // Write the header row of the file is empty
+    if (isEmpty)
+    {
+        outputFile << "frame, trackId, x, y, width, height, score, classId" << std::endl;
+    }
 
     // Iterate over the detections and write the data to the output file
     for (const auto object : objects)
     {
-        // Extract the detection data (frame, id, x1, y1, width, height, score)
+        // Extract the detection data (frame, trackId, x, y, width, height, score, classId)
         int y = object.box.y;
         int x = object.box.x;
         int width = object.box.width;
@@ -300,7 +316,7 @@ void writeDetectionsToFile(const vector<Detection> objects, const std::string &o
     //std::cout << "\n Detection data saved to: " << outputPath << std::endl;
 }
 
-void writeTracksToFile(const vector<Strack> objects, const std::string &outputPath, 
+void writeTracksToFile(const Mat& objects, const std::string &outputPath, 
     const int frameNumber)
 {
     // Open the output file for writing
@@ -310,21 +326,30 @@ void writeTracksToFile(const vector<Strack> objects, const std::string &outputPa
         std::cout << "Failed to open the output file: " << outputPath << std::endl;
         return;
     }
+    // Check if the output file is empty
+    bool isEmpty = outputFile.tellp() == 0;
+
+    // Write the header row of the file is empty
+    if (isEmpty)
+    {
+        outputFile << "frame, trackId, x, y, width, height, score, classId" << std::endl;
+    }
+
 
     // Iterate over the detections and write the data to the output file
-    for (const auto object : objects)
+    for (int i = 0; i < objects.rows; ++i)
     {
-        // Extract the detection data (frame, id, x1, y1, width, height, score)
-        int id = object.getId();
-        Rect tlwh_ = object.getTlwh();
-        int y = tlwh_.y;
-        int x = tlwh_.x;
-        int width = tlwh_.width;
-        int height = tlwh_.height;
-        float score = object.getScore();
+        // Extract the detection data (frame, trackId, x1, y1, width, height, score, classId)
+        int x = objects.at<float>(i, 0);
+        int y = objects.at<float>(i, 1);
+        int width = objects.at<float>(i, 2);
+        int height = objects.at<float>(i, 3);
+        int classId = static_cast<int>(objects.at<float>(i, 4));
+        float score = objects.at<float>(i, 5);
+        int trackId = static_cast<int>(objects.at<float>(i, 6));
 
         // Write the data to the output file
-        outputFile << frameNumber << ", " << id << ", " << x << ", " << y << ", " << width << ", " << height << ", " << score << ", -1, -1, -1" << std::endl;
+        outputFile << frameNumber << ", " << trackId << ", " << x << ", " << y << ", " << width << ", " << height << ", " << score << ", " << classId << ", " << ", -1" << std::endl;
     }
 
     // Close the output file
@@ -337,4 +362,23 @@ Scalar getColor(const int idx)
 {
     int value = idx + 3;
     return Scalar(37 * value % 255, 17 * value % 255, 29 * value % 255);
+}
+
+Mat detectionToMat(vector<Detection> objs)
+{
+    Mat output(objs.size(), 6, CV_32F);
+    for (size_t i = 0; i < objs.size(); ++i) 
+    {
+        const Detection& detection = objs[i];
+        cv::Mat row = output.row(i);
+
+        row.at<float>(0) = static_cast<float>(detection.box.x);
+        row.at<float>(1) = static_cast<float>(detection.box.y);
+        row.at<float>(2) = static_cast<float>(detection.box.width);
+        row.at<float>(3) = static_cast<float>(detection.box.height);
+        row.at<float>(4) = static_cast<float>(detection.classId);
+        row.at<float>(5) = detection.confidence;
+    }
+
+    return output;
 }
