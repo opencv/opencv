@@ -16,7 +16,7 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
 {
     points.clear();
     normals.clear();
-    CV_UNUSED(rgb);
+    rgb.clear();
     indices.clear();
 
     std::ifstream file(m_filename, std::ios::binary);
@@ -40,9 +40,17 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
             continue;
         else if (key == "v")
         {
-            Point3f vertex;
+            Point3f vertex, color;
             ss >> vertex.x >> vertex.y >> vertex.z;
             points.push_back(vertex);
+            if (ss.rdbuf()->in_avail() != 0) {
+                Point3_<uchar> uc_color;
+                ss >> color.x >> color.y >> color.z;
+                uc_color.x = static_cast<uchar>(std::round(255.f * color.x));
+                uc_color.y = static_cast<uchar>(std::round(255.f * color.y));
+                uc_color.z = static_cast<uchar>(std::round(255.f * color.z));
+                rgb.push_back(uc_color);
+            }
         }
         else if (key == "vn")
         {
@@ -79,18 +87,27 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
 void ObjEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<Point3_<uchar>> &rgb, const std::vector<std::vector<int32_t>> &indices)
 {
     std::ofstream file(m_filename, std::ios::binary);
-    CV_UNUSED(rgb);
     if (!file) {
         CV_LOG_ERROR(NULL, "Impossible to open the file: " << m_filename);
+        return;
+    }
+
+    if (!rgb.empty() && rgb.size() != points.size()) {
+        CV_LOG_ERROR(NULL, "Vertices and Colors have different size.");
         return;
     }
 
     file << "# OBJ file writer" << std::endl;
     file << "o Point_Cloud" << std::endl;
 
-    for (const auto& point : points)
+    for (size_t i = 0; i < points.size(); ++i)
     {
-        file << "v " << point.x << " " << point.y << " " << point.z << std::endl;
+        file << "v " << points[i].x << " " << points[i].y << " " << points[i].z;
+        if (!rgb.empty()) {
+            file << " " << static_cast<float>(rgb[i].x) / 255.f << " " <<
+                static_cast<float>(rgb[i].y) / 255.f  << " " << static_cast<float>(rgb[i].z) / 255.f;
+        }
+        file << std::endl;
     }
 
     for (const auto& normal : normals)

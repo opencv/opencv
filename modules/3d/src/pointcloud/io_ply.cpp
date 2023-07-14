@@ -82,19 +82,30 @@ bool PlyDecoder::parseHeader(std::ifstream &file)
             if (onVertexRead)
             {
                 auto splitArrElem = split(s, ' ');
-                if (splitArrElem[2] == "x" || splitArrElem[2] == "red" || splitArrElem[2] == "nx")
+                if (splitArrElem[2] == "x" || splitArrElem[2] == "y" || splitArrElem[2] == "z")
                 {
-                    if (splitArrElem[1] != "float" && splitArrElem[1] != "uchar") {
-                        CV_LOG_ERROR(NULL, "Provided PLY file format '" << splitArrElem[1] << "' is not supported");
+                    if (splitArrElem[1] != "float") {
+                        CV_LOG_ERROR(NULL, "Provided property '" << splitArrElem[2] << "' with format '" << splitArrElem[1]
+                        << "' is not supported");
                         return false;
                     }
                 }
-                if (splitArrElem[2] == "red")
+                if (splitArrElem[2] == "red" || splitArrElem[2] == "green" || splitArrElem[2] == "blue")
                 {
+                    if (splitArrElem[1] != "uchar") {
+                        CV_LOG_ERROR(NULL, "Provided property '" << splitArrElem[2] << "' with format '" << splitArrElem[1]
+                        << "' is not supported");
+                        return false;
+                    }
                     m_hasColour = true;
                 }
                 if (splitArrElem[2] == "nx")
                 {
+                    if (splitArrElem[1] != "float") {
+                        CV_LOG_ERROR(NULL, "Provided property '" << splitArrElem[2] << "' with format '" << splitArrElem[1]
+                        << "' is not supported");
+                        return false;
+                    }
                     m_hasNormal = true;
                 }
             }

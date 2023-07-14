@@ -30,13 +30,25 @@ TEST(PointCloud, LoadObj)
         {0.0000f, -1.0000f, 0.0000f},
         {0.0000f, 1.0000f, 0.0000f}};
 
+    std::vector<cv::Point3_<uchar>> rgb_gold = {
+            {19, 144, 149},
+            {219, 28, 216},
+            {218, 157, 101},
+            {11, 161, 78},
+            {248, 183, 214},
+            {63, 196, 6},
+            {165, 190, 153},
+            {89, 203, 11}};
+
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
+    std::vector<cv::Point3_<uchar>> rgb;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
-    cv::loadPointCloud(folder + "pointcloudio/orig.obj", points, normals);
+    cv::loadPointCloud(folder + "pointcloudio/orig_no_norms.obj", points, normals, rgb);
 
     EXPECT_EQ(points_gold, points);
+    EXPECT_EQ(rgb_gold, rgb);
     EXPECT_EQ(normals_gold, normals);
 }
 
@@ -66,20 +78,23 @@ TEST(PointCloud, SaveObj)
 {
     std::vector<cv::Point3f> points_gold;
     std::vector<cv::Point3f> normals_gold;
+    std::vector<cv::Point3_<uchar>> rgb_gold;
 
     auto folder = cvtest::TS::ptr()->get_data_path();
     auto new_path = tempfile("new.obj");
 
-    cv::loadPointCloud(folder + "pointcloudio/orig.obj", points_gold, normals_gold);
-    cv::savePointCloud(new_path, points_gold, normals_gold);
+    cv::loadPointCloud(folder + "pointcloudio/orig.obj", points_gold, normals_gold, rgb_gold);
+    cv::savePointCloud(new_path, points_gold, normals_gold, rgb_gold);
 
     std::vector<cv::Point3f> points;
     std::vector<cv::Point3f> normals;
+    std::vector<cv::Point3_<uchar>> rgb;
 
-    cv::loadPointCloud(new_path, points, normals);
+    cv::loadPointCloud(new_path, points, normals, rgb);
 
     EXPECT_EQ(normals, normals_gold);
     EXPECT_EQ(points, points_gold);
+    EXPECT_EQ(rgb, rgb_gold);
     std::remove(new_path.c_str());
 }
 
@@ -92,8 +107,8 @@ TEST(PointCloud, LoadSavePly)
     auto folder = cvtest::TS::ptr()->get_data_path();
     std::string new_path = tempfile("new.ply");
 
-    cv::loadPointCloud(folder + "pointcloudio/orig.ply", points, normals);
-    cv::savePointCloud(new_path, points, normals);
+    cv::loadPointCloud(folder + "pointcloudio/orig.ply", points, normals, rgb);
+    cv::savePointCloud(new_path, points, normals, rgb);
 
     std::vector<cv::Point3f> points_gold;
     std::vector<cv::Point3f> normals_gold;
