@@ -888,45 +888,6 @@ public:
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
-enum TrackState { NEW = 0, TRACKED, LOST};
-
-class CV_EXPORTS Detection
-{
-public:
-    int classId;
-    float confidence;
-    cv::Rect box;
-};
-
-class CV_EXPORTS_W Strack {
-public:
-    Strack();
-    Strack(Rect tlwh, float score);
-    int getId() const;
-    cv::Rect getTlwh() const;
-    void setTlwh(cv::Rect tlwh);
-    TrackState getState() const;
-    void setState(TrackState);
-    cv::Rect predict();
-    void update(const Strack& track);
-    void activate(int frame, int id);
-    void reactivate(const Strack& track, int frame);
-    int getTrackletLen();
-    void incrementTrackletLen();
-    float getScore() const;
-    ~Strack();
-
-private:
-    cv::Rect tlwh_;
-    int trackId_;
-    TrackState state_;
-    int trackletLen_;
-    float score_;
-    int startFrame_;
-    cv::KalmanFilter kalmanFilter_;
-
-};
-
 
 
 /** @brief ByteTrack is a simple, fast and strong multi-object tracker.
@@ -947,6 +908,50 @@ private:
  * Author: Yifu Zhang, https://github.com/ifzhang
  */
 
+enum TrackState { NEW = 0, TRACKED, LOST};
+
+class CV_EXPORTS_W Detection
+{
+public:
+    int classId;
+    float confidence;
+    cv::Rect box;
+};
+
+
+class CV_EXPORTS_W Strack {
+public:
+    Strack();
+    Strack(Rect tlwh, int classId, float score);
+    bool operator<(const Strack& other) const;
+    int getId() const;
+    cv::Rect getTlwh() const;
+    void setTlwh(cv::Rect tlwh);
+    TrackState getState() const;
+    void setState(TrackState);
+    int getClass();
+    cv::Rect predict();
+    void update(Strack& track);
+    void activate(int frame, int id);
+    void reactivate(Strack& track, int frame);
+    int getTrackletLen() const;
+    void incrementTrackletLen();
+    float getScore() const;
+    ~Strack();
+
+private:
+    cv::Rect tlwh_;
+    int trackId_;
+    int classId_;
+    TrackState state_;
+    int trackletLen_;
+    float score_;
+    int startFrame_;
+    cv::KalmanFilter kalmanFilter_;
+
+};
+
+
 class CV_EXPORTS_W ByteTracker {
 protected:
     ByteTracker();
@@ -962,8 +967,9 @@ public:
     
     static CV_WRAP
     Ptr<ByteTracker> create(const ByteTracker::Params& parameters = ByteTracker::Params());
-    static CV_WRAP
-    std::vector<Strack> update(std::vector<Detection>& objects);
+    //CV_WRAP bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks);
+    CV_WRAP 
+    virtual bool update(InputArray inputDetections, CV_OUT OutputArray& outputTracks) = 0;
 
 };
 

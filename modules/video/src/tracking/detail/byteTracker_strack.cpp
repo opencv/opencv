@@ -16,6 +16,7 @@ namespace cv {
 Strack::Strack()
 {
     trackId_ = 0;
+    classId_ = 0;
     state_ = TrackState::NEW;
     trackletLen_ = 0;
     startFrame_ = 0;
@@ -27,13 +28,18 @@ Strack::~Strack()
     //nothing
 }
 
-Strack::Strack(cv::Rect tlwh, float score) : tlwh_(tlwh), score_(score)
+Strack::Strack(cv::Rect tlwh,  int classId, float score) : tlwh_(tlwh), classId_(classId), score_(score)
 {
     trackId_ = 0;
     state_ = TrackState::NEW;
     trackletLen_ = 0;
     startFrame_ = 0;
     kalmanFilter_ = cv::KalmanFilter(8,4);
+}
+
+bool Strack::operator<(const Strack& other) const
+{
+    return trackId_ < other.trackId_;
 }
 
 int Strack::getId() const
@@ -56,8 +62,14 @@ TrackState Strack::getState() const
     return state_;
 }
 
-void Strack::setState(TrackState state){
+void Strack::setState(TrackState state)
+{
     state_ = state;
+}
+
+int Strack::getClass()
+{
+    return classId_;
 }
 
 void Strack::activate(int frame, int id)
@@ -101,7 +113,7 @@ void Strack::activate(int frame, int id)
     
 }
 
-void Strack::update(const Strack& track)
+void Strack::update(Strack& track)
 {
     trackletLen_++;
 
@@ -116,7 +128,7 @@ void Strack::update(const Strack& track)
 
 }
 
-void Strack::reactivate(const Strack& track, int frame)
+void Strack::reactivate(Strack& track, int frame)
 {
     update(track);
     startFrame_ = frame;
@@ -129,7 +141,7 @@ void Strack::incrementTrackletLen()
     trackletLen_++;
 }
 
-int Strack::getTrackletLen()
+int Strack::getTrackletLen() const
 {
     return trackletLen_;
 }
