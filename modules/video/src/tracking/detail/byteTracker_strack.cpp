@@ -10,7 +10,7 @@
 namespace cv {
 //namespace detail {
 //namespace tracking {
-    
+
 //using namespace cv::detail::tracking;
 
 Strack::Strack()
@@ -40,16 +40,16 @@ Strack::Strack(cv::Rect tlwh,  int classId, float score) : tlwh_(tlwh), classId_
 
 int Strack::getId() const
 {
-  return trackId_;  
+  return trackId_;
 }
 
 cv::Rect Strack::getTlwh() const
 {
-  return tlwh_;  
+  return tlwh_;
 }
 
 void Strack::setTlwh(cv::Rect tlwh)
-{  
+{
     tlwh_ = tlwh;
 }
 
@@ -74,13 +74,13 @@ void Strack::activate(int frame, int id)
     trackletLen_ = 0;
     state_ = TrackState::TRACKED;
     trackId_ = id;
-    
+
     kalmanFilter_.measurementMatrix = cv::Mat::eye(4, 8, CV_32F); //H mat
-    
+
     cv::Mat_<float> transitionMatrix(8,8); //make it a createTransitionMatrix() or maybe a big wrapper for everything.
-    for (int row = 0; row < 8; ++row) 
+    for (int row = 0; row < 8; ++row)
     {
-        for (int col = 0; col < 8; ++col) 
+        for (int col = 0; col < 8; ++col)
         {
             if (row == col || col == (row + 4))
                 transitionMatrix(row,col) = 1.0;
@@ -104,9 +104,9 @@ void Strack::activate(int frame, int id)
     float cy = tlwh_.y + tlwh_.height;
     float w = tlwh_.width;
     float h = tlwh_.height;
-    kalmanFilter_.statePre = (cv::Mat_<float>(8,1,CV_32F) << cx, cy, w, h, 0, 0, 0, 0); 
+    kalmanFilter_.statePre = (cv::Mat_<float>(8,1,CV_32F) << cx, cy, w, h, 0, 0, 0, 0);
     kalmanFilter_.statePost = (cv::Mat_<float>(8,1,CV_32F) << cx, cy, w, h, 0, 0, 0, 0);
-    
+
 }
 
 void Strack::update(Strack& track)
@@ -164,7 +164,3 @@ float Strack::getScore() const
 }
 
 }
-//}
-//}
-
-

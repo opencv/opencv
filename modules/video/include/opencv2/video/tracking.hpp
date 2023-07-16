@@ -888,22 +888,12 @@ public:
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
-
-
 /** @brief ByteTrack is a simple, fast and strong multi-object tracker.
  *
- * [ECCV 2022] ByteTrack: Multi-Object Tracking by Associating Every Detection Box 
- * ByteTracker needs one model for object detection.
- * "Most methods obtain identities by associating detection boxes whose scores are higher than a
- * threshold. The objects with low detection scores, e.g. occluded objects, are simply thrown 
- * away, which brings non-negligible true object missing and fragmented trajectories. To solve this 
- * problem, we present a simple, effective and generic association method, tracking by associating 
- * almost every detection box instead of only the high score ones. For the low score detection 
- * boxes, we utilize their similarities with tracklets to recover true objects and filter out the 
- * background detections."
- * 
- * The implementation is based on @cite DBLP:journals/corr/abs-2110-06864 .
- * 
+ * [ECCV 2022] ByteTrack: Multi-Object Tracking by Associating Every Detection Box. ByteTracker needs one model for object detection.
+ * "Most methods obtain identities by associating detection boxes whose scores are higher than a threshold. The objects with low detection scores, e.g. occluded objects, are simply thrown away, which brings non-negligible true object missing and fragmented trajectories. To solve this problem, we present a simple, effective and generic association method, tracking by associating almost every detection box instead of only the high score ones. For the low score detection boxes, we utilize their similarities with tracklets to recover true objects and filter out the background detections."
+ * The implementation is based on @cite DBLP:journals/corr/abs-2110-06864
+ *
  * Original repo is here: https://github.com/ifzhang/ByteTrack
  * Author: Yifu Zhang, https://github.com/ifzhang
  */
@@ -964,11 +954,11 @@ public:
         CV_PROP_RW int frameRate;
         CV_PROP_RW int frameBuffer;
     };
-    
+
     static CV_WRAP
     Ptr<ByteTracker> create(const ByteTracker::Params& parameters = ByteTracker::Params());
     //CV_WRAP bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks);
-    CV_WRAP 
+    CV_WRAP
     virtual bool update(InputArray inputDetections, CV_OUT OutputArray& outputTracks) = 0;
 
 };

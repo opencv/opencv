@@ -42,7 +42,7 @@ ByteTracker::Params::Params()
 }
 
 class ByteTrackerImpl : public ByteTracker
-{ 
+{
 public:
     //ByteTracker(int, int);
     ByteTrackerImpl(const ByteTracker::Params& parameters) : params_(parameters)
@@ -72,7 +72,7 @@ protected:
     int frame_;
     int maxTimeLost_;
 
-    void getDetections(InputArray& inputObjects, vector<Strack>& detections, 
+    void getDetections(InputArray& inputObjects, vector<Strack>& detections,
         vector<Strack>& detectionsLow);
 
 
@@ -83,14 +83,14 @@ protected:
     Mat getCostMatrix(vector<Strack>& tracks, vector<Strack>& btracks);
     Mat getCostMatrix(unordered_map<int, Strack>& atracks, vector<Strack> &btracks);
 
-        
+
     Mat calculateIous(vector<Rect>& atlwhs, vector<Rect> &btlwhs);
 
 
     unordered_map<int, Strack> joinStracks(const vector<Strack>& trackA, vector<Strack>& trackB);
     unordered_map<int, Strack> joinStracks(const vector<Strack>& trackVector,
         unordered_map<int, Strack>& trackMap, bool inplace);
-    
+
     unordered_map<int, Strack> vectorToMap(const vector<Strack>& stracks);
 
 };
@@ -263,7 +263,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     //joinStracks(reRemainTracks, lostStracks_, true);
     trackedStracks_ = vectorToMap(activatedStracks);
     lostStracks_ = vectorToMap(reRemainTracks);
-    
+
     // deal with lost tracks and save them in an attribute
     vector<int> keysToRemove;
     for (auto& pair : lostStracks_)
@@ -286,7 +286,6 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
         lostStracks_.erase(key);
     }
 
-    
     cv::Mat trackData(trackedStracks_.size(), 7, CV_32F);
     int row = 0;
     for (auto &track : trackedStracks_)
@@ -310,7 +309,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     return true;
 }
 
-void ByteTrackerImpl::getDetections(InputArray& inputObjects, vector<Strack>& detections, 
+void ByteTrackerImpl::getDetections(InputArray& inputObjects, vector<Strack>& detections,
     vector<Strack>& detectionsLow)
 {
     Mat objects = inputObjects.getMat();
@@ -328,7 +327,7 @@ void ByteTrackerImpl::getDetections(InputArray& inputObjects, vector<Strack>& de
         box.height = objects.at<float>(i, 3);
         classId = static_cast<int>(objects.at<float>(i, 4));
         score = objects.at<float>(i, 5);
-    
+
         Strack strack(box, classId, score);
         if (score >= trackThreshold_) // Dhigh or Dlow
         {
@@ -341,7 +340,7 @@ void ByteTrackerImpl::getDetections(InputArray& inputObjects, vector<Strack>& de
     }
 }
 
-void ByteTrackerImpl::addNewDetectedTracks(unordered_map<int, Strack> trackedMap, 
+void ByteTrackerImpl::addNewDetectedTracks(unordered_map<int, Strack> trackedMap,
     vector<Strack> &inactiveStracks, vector<Strack> &trackedStracks)
 {
     // checks if the trackedStracks are activated to keep them in the vector(same name)
@@ -416,7 +415,7 @@ Mat ByteTrackerImpl::calculateIous(vector<Rect> &atlwhs, vector<Rect> &btlwhs)
     }
 
     iousMatrix.create(static_cast<int>(atlwhs.size()), static_cast<int>(btlwhs.size()), CV_32F);
-    
+
     // bbox_ious
     for (int i = 0; i < static_cast<int>(atlwhs.size()); ++i)
     {
@@ -484,15 +483,15 @@ map<int, int> ByteTrackerImpl::lapjv(InputArray &cost)
     int maxI = _cost.rows;
     int maxJ = _cost.cols;
     int n = max(maxJ, maxI);
-    double **cost_ptr;
-    double *u = new double[sizeof(double) * n];
-    double *v = new double[sizeof(double) * n];
-    int *x_c = new int[n];
-    int *y_c = new int[n];
-    cost_ptr = new double *[sizeof(double *) * n];
-    for (int i = 0; i < n; i++)
+
+    vector<vector<double>> cost_ptr(n, vector<double>(n));
+    vector<int> x_c(n);
+    vector<int> y_c(n);
+
+    vector<double*> cost_ptr_ptr(n);
+    for (int i=0; i < n; i++)
     {
-        cost_ptr[i] = new double[sizeof(double) * n];
+        cost_ptr_ptr[i] = cost_ptr[i].data();
     }
 
     for (int i = 0; i < n; i++)
@@ -511,7 +510,7 @@ map<int, int> ByteTrackerImpl::lapjv(InputArray &cost)
         x_c[i] = -1.0;
         y_c[i] = -1.0;
     }
-    lapjv_internal(n, cost_ptr, x_c, y_c);
+    lapjv_internal(n, cost_ptr_ptr.data(), x_c.data(), y_c.data());
     for (int i = 0; i < n; i++)
     {
         if (i < maxI && x_c[i] < maxJ) // verify
@@ -520,79 +519,8 @@ map<int, int> ByteTrackerImpl::lapjv(InputArray &cost)
         }
     }
 
-    for (int i = 0; i < n; i++)
-    {
-        delete[] cost_ptr[i];
-    }
-    delete[] cost_ptr;
-    delete[] x_c;
-    delete[] y_c;
-    delete[] u;
-    delete[] v;
-
     return ret;
 }
-
-
-
-/*
-map<int, int> ByteTrackerImpl::lapjv(vector<vector<float>> &cost)
-{
-    map<int, int> ret;
-    if (cost.size() == 0 || cost[0].size() == 0)
-        return ret;
-    int maxI = cost.size();
-    int maxJ = cost[0].size();
-    int n = max(maxJ, maxI);
-    double **cost_ptr;
-    double *u = new double[sizeof(double) * n];
-    double *v = new double[sizeof(double) * n];
-    int *x_c = new int[n];
-    int *y_c = new int[n];
-    cost_ptr = new double *[sizeof(double *) * n];
-    for (int i = 0; i < n; i++)
-    {
-        cost_ptr[i] = new double[sizeof(double) * n];
-    }
-
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            if (i < maxI && j < maxJ && cost[i][j] < matchThreshold_) // verify
-            {
-                cost_ptr[i][j] = (double)cost[i][j];
-            }
-            else
-            {
-                cost_ptr[i][j] = LARGE;
-            }
-        }
-        x_c[i] = -1.0;
-        y_c[i] = -1.0;
-    }
-    lapjv_internal(n, cost_ptr, x_c, y_c);
-    for (int i = 0; i < n; i++)
-    {
-        if (i < maxI && x_c[i] < maxJ) // verify
-        {
-            ret[i] = x_c[i];
-        }
-    }
-
-    for (int i = 0; i < n; i++)
-    {
-        delete[] cost_ptr[i];
-    }
-    delete[] cost_ptr;
-    delete[] x_c;
-    delete[] y_c;
-    delete[] u;
-    delete[] v;
-
-    return ret;
-}
-*/
 
 int ByteTrackerImpl::getFrame()
 {
