@@ -249,8 +249,8 @@ void TFLiteImporter::populateNet()
             }
             throw;
         }
-        if (op_outputs->Get(0) == 260)
-            break;
+        // if (op_outputs->Get(0) == 336)
+        //     break;
     }
 }
 
@@ -649,7 +649,6 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
 void TFLiteImporter::parsePack(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     auto options = reinterpret_cast<const PackOptions*>(op.builtin_options());
     int axis = options->axis();
-    std::cout << axis << std::endl;
 
     DataLayout inpLayout = layouts[op.inputs()->Get(0)];
     if (inpLayout == DNN_LAYOUT_NHWC) {
@@ -658,12 +657,12 @@ void TFLiteImporter::parsePack(const Operator& op, const std::string& opcode, La
         static const int remap[] = {0, 1, 3, 4, 2};
         axis = remap[axis];
     }
-    std::cout << axis << std::endl;
 
     // Replace Pack layer to Reshape + Concat
 
     // Use a set because there are models which replicate single layer data by Pack.
     std::set<int> op_inputs(op.inputs()->begin(), op.inputs()->end());
+    std::map<int, std::pair<int, int> > originLayerIds;
     for (int inp : op_inputs) {
         auto inpId = layerIds[inp];
 
@@ -683,12 +682,18 @@ void TFLiteImporter::parsePack(const Operator& op, const std::string& opcode, La
         int reshapeId = dstNet.addLayer(name, "Reshape", isInt8(op) ? CV_8S : CV_32F, lp);
         dstNet.connect(inpId.first, inpId.second, reshapeId, 0);
 
+        originLayerIds[inp] = layerIds[inp];
         layerIds[inp] = std::make_pair(reshapeId, 0);
         // layouts[inp] = DNN_LAYOUT_UNKNOWN;
     }
     layerParams.type = "Concat";
     layerParams.set("axis", axis);
     addLayer(layerParams, op);
+
+    // Restore origin layer inputs
+    for (const auto& ids : originLayerIds) {
+        layerIds[ids.first] = ids.second;
+    }
 }
 
 void TFLiteImporter::parseResize(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
