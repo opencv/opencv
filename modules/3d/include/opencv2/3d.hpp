@@ -2523,7 +2523,7 @@ public:
     *
     * @param maxDepth The max depth of the Octree. The maxDepth > -1.
     */
-    explicit Octree(int maxDepth);
+    explicit Octree(size_t maxDepth);
 
     /** @overload
     * @brief Create an Octree from the PointCloud data with the specific resolution.
@@ -2540,7 +2540,7 @@ public:
     * @param size Initial Cube size.
     * @param origin Initial center coordinate.
     */
-    Octree(int maxDepth, double size, const Point3f& origin);
+    Octree(size_t maxDepth, double size, const Point3f& origin);
 
     //! Default destructor
     ~Octree();
@@ -2591,7 +2591,7 @@ public:
     bool isPointInBound(const Point3f& point) const;
 
     //! Set MaxDepth for Octree.
-    void setMaxDepth(int maxDepth);
+    void setMaxDepth(size_t maxDepth);
 
     //! Set Box Size for Octree.
     void setSize(double size);
