@@ -202,6 +202,11 @@ namespace cvtest
         { \
           UnsafeTestBody(); \
         } \
+        catch (const cvtest::details::SkipTestExceptionBase& e) \
+        { \
+            printf("[     SKIP ] %s\n", e.what()); \
+            cv::cuda::resetDevice(); \
+        } \
         catch (...) \
         { \
           cv::cuda::resetDevice(); \
