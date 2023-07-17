@@ -131,44 +131,19 @@ TEST(Test_TFLite, max_unpooling)
 }
 
 TEST(Test_TFLite, EfficientDet_int8) {
-    // Net net = readNet(findDataFile("dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", false));
-    Net net = readNet("/home/dkurt/detect.tflite");
+    Net net = readNet(findDataFile("dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", false));
 
-    Mat img = imread("/home/dkurt/car.jpg");
-    Mat blob = blobFromImage(img, 1.0/255, Size(320, 320));
+    Mat img = imread(findDataFile("dnn/dog416.png"));
+    Mat blob = blobFromImage(img, 1.0, Size(320, 320));
 
     net.setInput(blob);
     Mat out = net.forward();
-    std::cout << out.size << std::endl;
-
-    float* data = out.ptr<float>();
-    for (int i = 0; i < 10; ++i) {
-        float score = data[i * 7 + 2];
-        if (score > 0.5) {
-            std::cout << score << std::endl;
-            int xmin = data[i * 7 + 3] * img.cols;
-            int ymin = data[i * 7 + 4] * img.rows;
-            int xmax = data[i * 7 + 5] * img.cols;
-            int ymax = data[i * 7 + 6] * img.rows;
-            rectangle(img, Point(xmin, ymin), Point(xmax, ymax), Scalar(0, 255, 0), 5);
-        }
-    }
-    imwrite("res.png", img);
-    // for (int i = 0; i < 12804; ++i) {
-    //     if (data[i * 3 + 0] > 0.5 ||
-    //         data[i * 3 + 1] > 0.5 ||
-    //         data[i * 3 + 2] > 0.5) {
-    //         std::cout << data[i * 3 + 0] << " ";
-    //         std::cout << data[i * 3 + 1] << " ";
-    //         std::cout << data[i * 3 + 2] << std::endl;
-    //     }
-    // }
-    // Mat_<float> ref({3, 7}, {
-    //     0, 7, 0.62890625, 0.6014542579650879, 0.13300055265426636, 0.8977657556533813, 0.292389452457428,
-    //     0, 17, 0.56640625, 0.15983937680721283, 0.35905322432518005, 0.5155506730079651, 0.9409466981887817,
-    //     0, 1, 0.5, 0.14357104897499084, 0.2240825891494751, 0.7183101177215576, 0.9140362739562988
-    // });
-    // normAssertDetections(ref, out, "", 0.5, 0.05, 0.1);
+    Mat_<float> ref({3, 7}, {
+        0, 7, 0.62890625, 0.6014542579650879, 0.13300055265426636, 0.8977657556533813, 0.292389452457428,
+        0, 17, 0.56640625, 0.15983937680721283, 0.35905322432518005, 0.5155506730079651, 0.9409466981887817,
+        0, 1, 0.5, 0.14357104897499084, 0.2240825891494751, 0.7183101177215576, 0.9140362739562988
+    });
+    normAssertDetections(ref, out, "", 0.5, 0.05, 0.1);
 }
 
 TEST(Test_TFLite, replicate_by_pack) {

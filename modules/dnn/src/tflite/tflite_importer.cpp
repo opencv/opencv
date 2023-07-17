@@ -664,13 +664,15 @@ void TFLiteImporter::parsePack(const Operator& op, const std::string& opcode, La
     std::map<int, std::pair<int, int> > originLayerIds;
     for (int inp : op_inputs) {
         auto inpId = layerIds[inp];
+        int dims = modelTensors->Get(inp)->shape()->size();
 
         std::vector<int> shape{1, -1};
-        if (axis == 4) {
+        if (axis == dims) {
             std::swap(shape[0], shape[1]);
         }
         const auto name = modelTensors->Get(inp)->name()->str() + "/reshape";
-        int reshapeId = addReshapeLayer(shape, axis == 4 ? 3 : axis, 1, name, inpId, isInt8(op) ? CV_8S : CV_32F);
+        int reshapeId = addReshapeLayer(shape, axis == dims ? dims - 1 : axis, 1,
+                                        name, inpId, isInt8(op) ? CV_8S : CV_32F);
 
         originLayerIds[inp] = layerIds[inp];
         layerIds[inp] = std::make_pair(reshapeId, 0);
@@ -832,7 +834,7 @@ void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::st
         parameters[keys[i]] = *reinterpret_cast<const uint32_t*>(data + offset + i * 4);
     }
 
-    parameters["num_classes"] = 3;
+    parameters["num_classes"] = modelTensors->Get(op.inputs()->Get(1))->shape()->Get(2);
 
     layerParams.type = "DetectionOutput";
     layerParams.set("num_classes", parameters["num_classes"]);
