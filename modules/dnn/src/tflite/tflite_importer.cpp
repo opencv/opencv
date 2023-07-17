@@ -611,20 +611,21 @@ void TFLiteImporter::parseReshape(const Operator& op, const std::string& opcode,
         shape.assign(options->new_shape()->begin(), options->new_shape()->end());
     }
 
-    if (inpLayout == DNN_LAYOUT_NHWC && shape.size() != 4) {
-        // Permute to NCHW
-        std::vector<int> order = {0, 2, 3, 1};
-        const std::string name = layerParams.name + "/permute";
-        auto inpId = layerIds[op.inputs()->Get(0)];
-        int permId = addPermuteLayer(order, name, inpId, isInt8(op) ? CV_8S : CV_32F);  // NCHW -> NHWC
-        layerIds[op.inputs()->Get(0)] = std::make_pair(permId, 0);
-        layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NCHW;
+    if (inpLayout == DNN_LAYOUT_NHWC) {
+        if (shape.size() == 4) {
+            // Keep data but change a shape to OpenCV's NCHW order
+            std::swap(shape[2], shape[3]);
+            std::swap(shape[1], shape[2]);
+        } else {
+            // Permute to NCHW entire data and reshape to given a shape
+            std::vector<int> order = {0, 2, 3, 1};
+            const std::string name = layerParams.name + "/permute";
+            auto inpId = layerIds[op.inputs()->Get(0)];
+            int permId = addPermuteLayer(order, name, inpId, isInt8(op) ? CV_8S : CV_32F);  // NCHW -> NHWC
+            layerIds[op.inputs()->Get(0)] = std::make_pair(permId, 0);
+            layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NCHW;
+        }
     }
-    if (inpLayout == DNN_LAYOUT_NHWC && shape.size() == 4) {
-        std::swap(shape[2], shape[3]);
-        std::swap(shape[1], shape[2]);
-    }
-
     layerParams.set("dim", DictValue::arrayInt<int*>(shape.data(), shape.size()));
     addLayer(layerParams, op);
 }
@@ -659,7 +660,6 @@ void TFLiteImporter::parsePack(const Operator& op, const std::string& opcode, La
     }
 
     // Replace Pack layer to Reshape + Concat
-
     // Use a set because there are models which replicate single layer data by Pack.
     std::set<int> op_inputs(op.inputs()->begin(), op.inputs()->end());
     std::map<int, std::pair<int, int> > originLayerIds;
@@ -684,7 +684,6 @@ void TFLiteImporter::parsePack(const Operator& op, const std::string& opcode, La
 
         originLayerIds[inp] = layerIds[inp];
         layerIds[inp] = std::make_pair(reshapeId, 0);
-        // layouts[inp] = DNN_LAYOUT_UNKNOWN;
     }
     layerParams.type = "Concat";
     layerParams.set("axis", axis);
