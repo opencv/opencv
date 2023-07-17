@@ -851,7 +851,6 @@ void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::st
     layerParams.set("top_k", parameters["max_detections"]);
     layerParams.set("keep_top_k", parameters["max_detections"]);
     layerParams.set("code_type", "CENTER_SIZE");
-    layerParams.set("variance_encoded_in_target", true);
     layerParams.set("loc_pred_transposed", true);
 
     // Replace third input from tensor to Const layer with the priors
@@ -867,10 +866,27 @@ void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::st
     priors.col(2) = priors.col(0) + priors.col(3);
     priors.col(3) = priors.col(1) + tmp;
 
+    float x_scale = *(float*)&parameters["x_scale"];
+    float y_scale = *(float*)&parameters["y_scale"];
+    float w_scale = *(float*)&parameters["w_scale"];
+    float h_scale = *(float*)&parameters["h_scale"];
+    if (x_scale != 1.0f || y_scale != 1.0f || w_scale != 1.0f || h_scale != 1.0f) {
+        int numPriors = priors.rows;
+        priors.resize(numPriors * 2);
+        Mat_<float> scales({1, 4}, {1.f / x_scale, 1.f / y_scale,
+                                    1.f / w_scale, 1.f / h_scale});
+        repeat(scales, numPriors, 1, priors.rowRange(numPriors, priors.rows));
+        priors = priors.reshape(1, {1, 2, (int)priors.total() / 2});
+        layerParams.set("variance_encoded_in_target", false);
+    } else {
+        priors = priors.reshape(1, {1, 1, (int)priors.total()});
+        layerParams.set("variance_encoded_in_target", true);
+    }
+
     LayerParams priorsLP;
     priorsLP.name = layerParams.name + "/priors";
     priorsLP.type = "Const";
-    priorsLP.blobs.resize(1, priors.reshape(1, {1, 1, (int)priors.total()}));
+    priorsLP.blobs.resize(1, priors);
 
     int priorsId = dstNet.addLayer(priorsLP.name, priorsLP.type, priorsLP);
     layerIds[op.inputs()->Get(2)] = std::make_pair(priorsId, 0);
