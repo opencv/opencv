@@ -60,7 +60,7 @@ public:
     * the range is (-1~7). Among them, only the root node's _parentIndex is -1.
     * @param _pointNum The number of point in this cube.
     */
-    OctreeNode(int _depth, double _size, const Point3f& _origin, const Point3f& _color, int _parentIndex, int _pointNum);
+    OctreeNode(size_t _depth, double _size, const Point3f& _origin, const Point3f& _color, int _parentIndex, int _pointNum);
 
     //! returns true if the rootNode is NULL.
     bool empty() const;
@@ -76,7 +76,7 @@ public:
     Ptr<OctreeNode> parent = nullptr;
 
     //! The depth of the current node. The depth of the root node is 0, and the leaf node is equal to the depth of Octree.
-    int depth;
+    size_t depth;
 
     //! The length of the OctreeNode. In space, every OctreeNode represents a cube.
     double size;

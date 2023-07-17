@@ -19,7 +19,7 @@ void getPointRecurse(std::vector<Point3f> &restorePointCloud, std::vector<Point3
 static Ptr<OctreeNode> index(const Point3f& point, Ptr<OctreeNode>& node,OctreeKey& key,size_t depthMask);
 
 static bool _isPointInBound(const Point3f& _point, const Point3f& _origin, double _size);
-static bool insertPointRecurse( Ptr<OctreeNode>& node, const Point3f& point, const Point3f &color, int maxDepth
+static bool insertPointRecurse( Ptr<OctreeNode>& node, const Point3f& point, const Point3f &color, size_t maxDepth
         ,const OctreeKey &key, size_t depthMask);
 bool deletePointRecurse( Ptr<OctreeNode>& node);
 
@@ -35,7 +35,7 @@ OctreeNode::OctreeNode():children(OCTREE_CHILD_NUM, nullptr), depth(0), size(0),
 {
 }
 
-OctreeNode::OctreeNode(int _depth, double _size, const Point3f &_origin, const Point3f &_color,
+OctreeNode::OctreeNode(size_t _depth, double _size, const Point3f &_origin, const Point3f &_color,
                        int _parentIndex, int _pointNum) : children(OCTREE_CHILD_NUM), depth(_depth),
                                                           size(_size), origin(_origin),color(_color),pointNum(_pointNum),
                                                           neigh(OCTREE_NEIGH_SIZE),parentIndex(_parentIndex)
@@ -121,7 +121,7 @@ Octree::Octree() : p(new Impl)
     p->origin = Point3f(0,0,0);
 }
 
-Octree::Octree(int _maxDepth, double _size, const Point3f& _origin ) : p(new Impl)
+Octree::Octree(size_t _maxDepth, double _size, const Point3f& _origin ) : p(new Impl)
 {
     p->maxDepth = _maxDepth;
     p->size = _size;
@@ -134,7 +134,7 @@ Octree::Octree(const std::vector<Point3f>& _pointCloud, double resolution) : p(n
     this->create(_pointCloud,v, resolution);
 }
 
-Octree::Octree(int _maxDepth) : p(new Impl)
+Octree::Octree(size_t _maxDepth) : p(new Impl)
 {
     p->maxDepth = _maxDepth;
     p->size = 0;
@@ -150,7 +150,7 @@ bool Octree::insertPoint(const Point3f& point){
 bool Octree::insertPoint(const Point3f& point,const Point3f &color)
 {
     double resolution=p->resolution;
-    size_t depthMask=1 << (p->maxDepth - 1);
+    size_t depthMask=(size_t)1 << (p->maxDepth - 1);
     if(p->rootNode.empty())
     {
         p->rootNode = new OctreeNode( 0, p->size, p->origin,  color, -1, 0);
@@ -223,7 +223,7 @@ bool Octree::create(const std::vector<Point3f> &pointCloud, double resolution) {
     return this->create(pointCloud, v, resolution);
 }
 
-void Octree::setMaxDepth(int _maxDepth)
+void Octree::setMaxDepth(size_t _maxDepth)
 {
     if(_maxDepth )
         this->p->maxDepth = _maxDepth;
@@ -299,7 +299,7 @@ bool Octree::deletePoint(const Point3f& point)
     OctreeKey key=OctreeKey((size_t)floor((point.x - this->p->origin.x) / p->resolution),
                             (size_t)floor((point.y - this->p->origin.y) / p->resolution),
                             (size_t)floor((point.z - this->p->origin.z) / p->resolution));
-    size_t depthMask=1 << (p->maxDepth - 1);
+    size_t depthMask=(size_t)1 << (p->maxDepth - 1);
     Ptr<OctreeNode> node = index(point, p->rootNode,key,depthMask);
 
     if(!node.empty())
@@ -376,7 +376,7 @@ bool deletePointRecurse(Ptr<OctreeNode>& _node)
     }
 }
 
-bool insertPointRecurse( Ptr<OctreeNode>& _node,  const Point3f& point,const Point3f &color, int maxDepth,const OctreeKey &key,
+bool insertPointRecurse( Ptr<OctreeNode>& _node,  const Point3f& point,const Point3f &color, size_t maxDepth,const OctreeKey &key,
                          size_t depthMask)
 {
     OctreeNode &node = *_node;
