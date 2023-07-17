@@ -720,10 +720,10 @@ public:
 
             float decode_bbox_center_x, decode_bbox_center_y;
             float decode_bbox_width, decode_bbox_height;
-            decode_bbox_center_x = bbox_xmin * prior_width + prior_center_x;
-            decode_bbox_center_y = bbox_ymin * prior_height + prior_center_y;
-            decode_bbox_width = exp(bbox_xmax) * prior_width;
-            decode_bbox_height = exp(bbox_ymax) * prior_height;
+            decode_bbox_center_x = bbox_xmin * prior_width / 10.0f + prior_center_x;
+            decode_bbox_center_y = bbox_ymin * prior_height / 10.0f + prior_center_y;
+            decode_bbox_width = exp(bbox_xmax / 5.0f) * prior_width;
+            decode_bbox_height = exp(bbox_ymax / 5.0f) * prior_height;
             decode_bbox.xmin = decode_bbox_center_x - decode_bbox_width * .5;
             decode_bbox.ymin = decode_bbox_center_y - decode_bbox_height * .5;
             decode_bbox.xmax = decode_bbox_center_x + decode_bbox_width * .5;
