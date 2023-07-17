@@ -1055,7 +1055,7 @@ void cv_wl_keyboard::handle_kb_keymap(void *data, struct wl_keyboard *kb, uint32
     } catch (std::exception &e) {
         if (keyboard->xkb_.keymap)
             xkb_keymap_unref(keyboard->xkb_.keymap);
-        std::cerr << "OpenCV Error: " << e.what() << std::endl;
+        CV_LOG_ERROR(NULL, "OpenCV Error: " << e.what());
     }
 
     close(fd);
