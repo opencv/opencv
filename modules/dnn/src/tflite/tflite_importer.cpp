@@ -71,7 +71,8 @@ private:
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams, bool isFused);
     void addLayer(LayerParams& layerParams, const Operator& op);
     int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId, int dtype);
-    // int addReshapeLayer(const std::vector<int>& shape, const std::string& name, const std::pair<int, int>& inpId, int dtype);
+    int addReshapeLayer(const std::vector<int>& shape, int axis, int num_axes,
+                        const std::string& name, const std::pair<int, int>& inpId, int dtype);
     inline bool isInt8(const Operator& op);
     inline void getQuantParams(const Operator& op, float& inpScale, int& inpZero, float& outScale, int& outZero);
 };
@@ -249,8 +250,6 @@ void TFLiteImporter::populateNet()
             }
             throw;
         }
-        // if (op_outputs->Get(0) == 336)
-        //     break;
     }
 }
 
@@ -666,21 +665,12 @@ void TFLiteImporter::parsePack(const Operator& op, const std::string& opcode, La
     for (int inp : op_inputs) {
         auto inpId = layerIds[inp];
 
-        LayerParams lp;
-
-        int outShape[] = {1, -1};
+        std::vector<int> shape{1, -1};
         if (axis == 4) {
-            lp.set("axis", 3);
-            std::swap(outShape[0], outShape[1]);
-        } else {
-            lp.set("axis", axis);
+            std::swap(shape[0], shape[1]);
         }
-        lp.set("dim", DictValue::arrayInt(&outShape[0], 2));
-        lp.set("num_axes", 1);
-
         const auto name = modelTensors->Get(inp)->name()->str() + "/reshape";
-        int reshapeId = dstNet.addLayer(name, "Reshape", isInt8(op) ? CV_8S : CV_32F, lp);
-        dstNet.connect(inpId.first, inpId.second, reshapeId, 0);
+        int reshapeId = addReshapeLayer(shape, axis == 4 ? 3 : axis, 1, name, inpId, isInt8(op) ? CV_8S : CV_32F);
 
         originLayerIds[inp] = layerIds[inp];
         layerIds[inp] = std::make_pair(reshapeId, 0);
@@ -725,15 +715,17 @@ int TFLiteImporter::addPermuteLayer(const std::vector<int>& order, const std::st
     return permId;
 }
 
-// int TFLiteImporter::addReshapeLayer(const std::vector<int>& shape, int axis, const std::string& name,
-//                                     const std::pair<int, int>& inpId, int dtype)
-// {
-//     LayerParams lp;
-//     lp.set("shape", DictValue::arrayInt<const int*>(order.data(), order.size()));
-//     int id = dstNet.addLayer(permName, "Reshape", dtype, lp);
-//     dstNet.connect(inpId.first, inpId.second, id, 0);
-//     return id;
-// }
+int TFLiteImporter::addReshapeLayer(const std::vector<int>& shape, int axis, int num_axes,
+                                    const std::string& name, const std::pair<int, int>& inpId, int dtype)
+{
+    LayerParams lp;
+    lp.set("axis", axis);
+    lp.set("dim", DictValue::arrayInt<const int*>(shape.data(), shape.size()));
+    lp.set("num_axes", num_axes);
+    int id = dstNet.addLayer(name, "Reshape", dtype, lp);
+    dstNet.connect(inpId.first, inpId.second, id, 0);
+    return id;
+}
 
 void TFLiteImporter::parseDeconvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Deconvolution";
