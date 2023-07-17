@@ -7,8 +7,6 @@ endif()
 
 if(EXISTS "${CANN_INSTALL_DIR}/opp/op_proto/built-in/inc")
     set(CANN_VERSION_BELOW_6_3_ALPHA002 "YES" )
-endif()
-if(CANN_VERSION_BELOW_6_3_ALPHA002)
     add_definitions(-DCANN_VERSION_BELOW_6_3_ALPHA002="YES")
 endif()
 
