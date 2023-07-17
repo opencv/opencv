@@ -841,6 +841,8 @@ void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::st
         parameters[keys[i]] = *reinterpret_cast<const uint32_t*>(data + offset + i * 4);
     }
 
+    parameters["num_classes"] = 3;
+
     layerParams.type = "DetectionOutput";
     layerParams.set("num_classes", parameters["num_classes"]);
     layerParams.set("share_location", true);
