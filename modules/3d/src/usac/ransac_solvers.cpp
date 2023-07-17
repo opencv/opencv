@@ -400,7 +400,7 @@ void UniversalRANSAC::initialize (int state, Ptr<MinimalSolver> &min_solver, Ptr
         ModelConstraintFunction &constraint_func = custom_model_constraints;
         if (params->getEstimator() == EstimationMethod::PLANE) {
             min_solver = PlaneModelMinimalSolver::create(points);
-            non_min_solver = PlaneModelNonMinimalSolver::create(points);        
+            non_min_solver = PlaneModelNonMinimalSolver::create(points);
             _fo_solver = PlaneModelNonMinimalSolver::create(points);
         } else {
             min_solver = SphereModelMinimalSolver::create(points);

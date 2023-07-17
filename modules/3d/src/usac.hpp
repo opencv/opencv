@@ -878,7 +878,6 @@ public:
     int estimate (const std::vector<int> &, int , std::vector<Mat> &,
           const std::vector<double> &) const override {
         CV_Error(cv::Error::StsNotImplemented, "estimate with vector is not implemented for CovarianceSolver");
-        return 0;
     }
     virtual int estimate (const std::vector<bool> &new_mask, std::vector<Mat> &models,
                   const std::vector<double> &weights) override = 0;
