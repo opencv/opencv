@@ -1537,7 +1537,7 @@ transform_8u( const uchar* src, uchar* dst, const float* m, int len, int scn, in
 static void
 transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn, int dcn )
 {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     if( scn == 3 && dcn == 3 )
     {
         int x = 0;
@@ -1555,7 +1555,7 @@ transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn,
         v_float32 m10 = vx_setall_f32(m[10]);
         v_float32 m11 = vx_setall_f32(m[11] - 32768.f);
         v_int16 delta = vx_setall_s16(-32768);
-        for (; x <= (len - v_uint16::nlanes)*3; x += v_uint16::nlanes*3)
+        for (; x <= (len - VTraits<v_uint16>::vlanes())*3; x +=  VTraits<v_uint16>::vlanes()*3)
         {
             v_uint16 b, g, r;
             v_load_deinterleave(src + x, b, g, r);
@@ -1574,6 +1574,7 @@ transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn,
             v_store_interleave(dst + x, v_reinterpret_as_u16(db), v_reinterpret_as_u16(dg), v_reinterpret_as_u16(dr));
         }
 #endif
+#if CV_SIMD128
         v_float32x4 _m0l(m[0], m[4], m[ 8], 0.f);
         v_float32x4 _m1l(m[1], m[5], m[ 9], 0.f);
         v_float32x4 _m2l(m[2], m[6], m[10], 0.f);
@@ -1587,6 +1588,7 @@ transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn,
             v_store(dst + x, v_rotate_right<1>(v_reinterpret_as_u16(v_add_wrap(v_pack(
                              v_round(v_matmuladd(v_cvt_f32(v_reinterpret_as_s32(v_load_expand(src + x    ))), _m0h, _m1h, _m2h, _m3h)),
                              v_round(v_matmuladd(v_cvt_f32(v_reinterpret_as_s32(v_load_expand(src + x + 3))), _m0l, _m1l, _m2l, _m3l))), _delta))));
+#endif //CV_SIMD128
         for( ; x < len * 3; x += 3 )
         {
             float v0 = src[x], v1 = src[x + 1], v2 = src[x + 2];
@@ -1606,25 +1608,25 @@ transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn,
 static void
 transform_32f( const float* src, float* dst, const float* m, int len, int scn, int dcn )
 {
-#if CV_SIMD && !defined(__aarch64__) && !defined(_M_ARM64)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__aarch64__) && !defined(_M_ARM64)
     int x = 0;
     if( scn == 3 && dcn == 3 )
     {
-        int idx[v_float32::nlanes/2];
-        for( int i = 0; i < v_float32::nlanes/4; i++ )
+        int idx[VTraits<v_float32>::max_nlanes/2];
+        for( int i = 0; i < VTraits<v_float32>::vlanes()/4; i++ )
         {
             idx[i] = 3*i;
-            idx[i + v_float32::nlanes/4] = 0;
+            idx[i + VTraits<v_float32>::vlanes()/4] = 0;
         }
         float _m[] = { m[0], m[4], m[ 8], 0.f,
                        m[1], m[5], m[ 9], 0.f,
                        m[2], m[6], m[10], 0.f,
                        m[3], m[7], m[11], 0.f };
-        v_float32 m0 = vx_lut_quads(_m     , idx + v_float32::nlanes/4);
-        v_float32 m1 = vx_lut_quads(_m +  4, idx + v_float32::nlanes/4);
-        v_float32 m2 = vx_lut_quads(_m +  8, idx + v_float32::nlanes/4);
-        v_float32 m3 = vx_lut_quads(_m + 12, idx + v_float32::nlanes/4);
-        for( ; x <= len*3 - v_float32::nlanes; x += 3*v_float32::nlanes/4 )
+        v_float32 m0 = vx_lut_quads(_m     , idx + VTraits<v_float32>::vlanes()/4);
+        v_float32 m1 = vx_lut_quads(_m +  4, idx + VTraits<v_float32>::vlanes()/4);
+        v_float32 m2 = vx_lut_quads(_m +  8, idx + VTraits<v_float32>::vlanes()/4);
+        v_float32 m3 = vx_lut_quads(_m + 12, idx + VTraits<v_float32>::vlanes()/4);
+        for( ; x <= len*3 - VTraits<v_float32>::vlanes(); x += 3*VTraits<v_float32>::vlanes()/4 )
             v_store(dst + x, v_pack_triplets(v_matmuladd(vx_lut_quads(src + x, idx), m0, m1, m2, m3)));
         for( ; x < len*3; x += 3 )
         {
@@ -1641,8 +1643,8 @@ transform_32f( const float* src, float* dst, const float* m, int len, int scn, i
     if( scn == 4 && dcn == 4 )
     {
 #if CV_SIMD_WIDTH > 16
-        int idx[v_float32::nlanes/4];
-        for( int i = 0; i < v_float32::nlanes/4; i++ )
+        int idx[VTraits<v_float32>::max_nlanes/4];
+        for( int i = 0; i < VTraits<v_float32>::vlanes()/4; i++ )
             idx[i] = 0;
         float _m[] = { m[4], m[9], m[14], m[19] };
         v_float32 m0 = vx_lut_quads(m   , idx);
@@ -1650,12 +1652,13 @@ transform_32f( const float* src, float* dst, const float* m, int len, int scn, i
         v_float32 m2 = vx_lut_quads(m+10, idx);
         v_float32 m3 = vx_lut_quads(m+15, idx);
         v_float32 m4 = vx_lut_quads(_m, idx);
-        for( ; x <= len*4 - v_float32::nlanes; x += v_float32::nlanes )
+        for( ; x <= len*4 - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes() )
         {
             v_float32 v_src = vx_load(src + x);
-            v_store(dst + x, v_reduce_sum4(v_src * m0, v_src * m1, v_src * m2, v_src * m3) + m4);
+            v_store(dst + x, v_add(v_reduce_sum4(v_mul(v_src, m0), v_mul(v_src, m1), v_mul(v_src, m2), v_mul(v_src, m3)), m4));
         }
 #endif
+#if CV_SIMD128
         v_float32x4 _m0 = v_load(m     );
         v_float32x4 _m1 = v_load(m +  5);
         v_float32x4 _m2 = v_load(m + 10);
@@ -1666,6 +1669,17 @@ transform_32f( const float* src, float* dst, const float* m, int len, int scn, i
             v_float32x4 v_src = v_load(src + x);
             v_store(dst + x, v_reduce_sum4(v_src * _m0, v_src * _m1, v_src * _m2, v_src * _m3) + _m4);
         }
+#else // CV_SIMD_WIDTH >= 16 && !CV_SIMD128
+        for( ; x < len*4; x += 4 )
+        {
+            float v0 = src[x], v1 = src[x+1], v2 = src[x+2], v3 = src[x+3];
+            float t0 = saturate_cast<float>(m[0]*v0 + m[1]*v1 + m[ 2]*v2 + m[ 3]*v3 + m[ 4]);
+            float t1 = saturate_cast<float>(m[5]*v0 + m[6]*v1 + m[ 7]*v2 + m[ 8]*v3 + m[ 9]);
+            float t2 = saturate_cast<float>(m[10]*v0 + m[11]*v1 + m[12]*v2 + m[13]*v3 + m[14]);
+            float t3 = saturate_cast<float>(m[15]*v0 + m[16]*v1 + m[17]*v2 + m[18]*v3 + m[19]);
+            dst[x] = t0; dst[x+1] = t1; dst[x+2] = t2; dst[x+3] = t3;
+        }
+#endif
         vx_cleanup();
         return;
     }
@@ -2534,10 +2548,10 @@ double dotProd_16s(const short* src1, const short* src2, int len)
 
 double dotProd_32s(const int* src1, const int* src2, int len)
 {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     double r = .0;
     int i = 0;
-    const int step  = v_int32::nlanes;
+    const int step  = VTraits<v_int32>::vlanes();
     v_float64 v_sum0 = vx_setzero_f64();
 #if CV_SIMD_WIDTH == 16
     const int wstep = step * 2;
