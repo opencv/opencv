@@ -17,14 +17,14 @@ using namespace dnn;
 
 
 // Constants.
-const float INPUT_WIDTH = 640.0;
-const float INPUT_HEIGHT = 640.0;
-const float SCORE_THRESHOLD = 0.5;
-const float NMS_THRESHOLD = 0.45;
-const float CONFIDENCE_THRESHOLD = 0.45;
+const int INPUT_WIDTH = 640;
+const int INPUT_HEIGHT = 640;
+const float SCORE_THRESHOLD = 0.5f;
+const float NMS_THRESHOLD = 0.45f;
+const float CONFIDENCE_THRESHOLD = 0.45f;
 
 // Text parameters.
-const float FONT_SCALE = 0.7;
+const float FONT_SCALE = 0.7f;
 const int FONT_FACE = FONT_HERSHEY_SIMPLEX;
 const int THICKNESS = 1;
 
@@ -84,7 +84,7 @@ int main()
     // Load image sequence.
     Mat frame;
     int frameNumber = 0;
-    int fps = capture.get(CAP_PROP_FPS);
+    int fps = static_cast<int>(capture.get(CAP_PROP_FPS));
     cv::ByteTracker::Params params;
     params.frameRate = fps;
     params.frameBuffer = 30;
@@ -117,11 +117,15 @@ int main()
         {
             for (int i = 0; i < trackedObjects.rows; i++)
             {
-                Scalar color = getColor(trackedObjects.at<float>(i,6));
-                Rect tlwh_(trackedObjects.at<float>(i, 0), trackedObjects.at<float>(i, 1),
-                    trackedObjects.at<float>(i, 2), trackedObjects.at<float>(i, 3));
+                Scalar color = getColor(static_cast<int>(trackedObjects.at<float>(i,6)));
+                cv::Rect tlwh_(
+                    static_cast<int>(trackedObjects.at<float>(i, 0)),
+                    static_cast<int>(trackedObjects.at<float>(i, 1)),
+                    static_cast<int>(trackedObjects.at<float>(i, 2)),
+                    static_cast<int>(trackedObjects.at<float>(i, 3)));
+
                 int id_ = static_cast<int>(trackedObjects.at<float>(i, 6));
-                
+
                 rectangle(img, tlwh_, color, 2);
                 putText(img, to_string(id_), Point(tlwh_.x, tlwh_.y - 5), FONT_FACE, FONT_SCALE, RED); // THICKNESS
             }
@@ -174,13 +178,13 @@ Mat formatYolov5(const Mat &source)
     int col = source.cols;
     int row = source.rows;
     int _max = MAX(col, row);
-    int _min = MIN(col, row);
+    //int _min = MIN(col, row);
     Mat result = Mat::zeros(_max, _max, CV_8UC3);
     source.copyTo(result(Rect(0, 0, col, row)));
     return result;
 }
 
-Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> &className,       
+Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> &className,
     vector<Detection> &object)
 {
     //This post process works for Yolov3, for Yolox I should use another format
@@ -189,10 +193,10 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
     vector<float> confidences;
     vector<Rect> boxes;
     // Resizing factor.
-    float xFactor = inputImage.cols / INPUT_WIDTH;
-    float yFactor = inputImage.rows / INPUT_HEIGHT;
+    float xFactor = 1.0 * inputImage.cols / INPUT_WIDTH;
+    float yFactor = 1.0 * inputImage.rows / INPUT_HEIGHT;
     float *data = (float *)output[0].data;
-    const int dimensions = 85;
+    //const int dimensions = 85;
 
     //  25200 for default size 640.
     const int rows = 25200;
@@ -205,7 +209,7 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
         {
             float *classes_scores = data + 5;
             // Create a 1x85 Mat and store class scores of 80 classes.
-            Mat scores(1, className.size(), CV_32FC1, classes_scores);
+            Mat scores(1, static_cast<int>(className.size()), CV_32FC1, classes_scores);
             // Perform minMaxLoc and acquire the index of best class  score.
             Point classId;
             double maxClassScore;
@@ -236,7 +240,7 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
     }
     vector<int> nmsResult;
     dnn::NMSBoxes(boxes, confidences, SCORE_THRESHOLD, NMS_THRESHOLD, nmsResult);
-    for (int i = 0; i < nmsResult.size(); i++)
+    for (int i = 0; i < static_cast<int>(nmsResult.size()); i++)
     {
         int idx = nmsResult[i];
         Rect box = boxes[idx];
@@ -277,7 +281,7 @@ void drawLabel(Mat &inputImage, string label, int left, int top)
     putText(inputImage, label, Point(left, top + labelSize.height), FONT_FACE, FONT_SCALE, YELLOW, THICKNESS);
 }
 
-void writeDetectionsToFile(const vector<Detection> objects, const string &outputPath, 
+void writeDetectionsToFile(const vector<Detection> objects, const string &outputPath,
     const int frameNumber)
 {
     // Open the output file for writing
@@ -288,8 +292,9 @@ void writeDetectionsToFile(const vector<Detection> objects, const string &output
         return;
     }
     // Check if the output file is empty
-    bool isEmpty = outputFile.tellp() == 0;
-
+    //bool isEmpty = outputFile.tellp() == 0; //doesnt work on windows for some reason
+    ifstream file(outputPath);
+    bool isEmpty = file.peek() == ifstream::traits_type::eof();
     // Write the header row of the file is empty
     if (isEmpty)
     {
@@ -305,9 +310,10 @@ void writeDetectionsToFile(const vector<Detection> objects, const string &output
         int width = object.box.width;
         int height = object.box.height;
         float score = object.confidence;
+        int classId = object.classId;
 
         // Write the data to the output file
-        outputFile << frameNumber << ", " << -1 << ", " << x << ", " << y << ", " << width << ", " << height << ", " << score << ", -1, -1, -1" << endl;
+        outputFile << frameNumber << ", " << -1 << ", " << x << ", " << y << ", " << width << ", " << height << ", " << score << ", "<<classId << endl;
     }
 
     // Close the output file
@@ -316,7 +322,7 @@ void writeDetectionsToFile(const vector<Detection> objects, const string &output
     //cout << "\n Detection data saved to: " << outputPath << endl;
 }
 
-void writeTracksToFile(const Mat& objects, const string &outputPath, 
+void writeTracksToFile(const Mat& objects, const string &outputPath,
     const int frameNumber)
 {
     // Open the output file for writing
@@ -340,16 +346,16 @@ void writeTracksToFile(const Mat& objects, const string &outputPath,
     for (int i = 0; i < objects.rows; ++i)
     {
         // Extract the detection data (frame, trackId, x1, y1, width, height, score, classId)
-        int x = objects.at<float>(i, 0);
-        int y = objects.at<float>(i, 1);
-        int width = objects.at<float>(i, 2);
-        int height = objects.at<float>(i, 3);
+        int x = static_cast<int>(objects.at<float>(i, 0));
+        int y = static_cast<int>(objects.at<float>(i, 1));
+        int width = static_cast<int>(objects.at<float>(i, 2));
+        int height = static_cast<int>(objects.at<float>(i, 3));
         int classId = static_cast<int>(objects.at<float>(i, 4));
         float score = objects.at<float>(i, 5);
         int trackId = static_cast<int>(objects.at<float>(i, 6));
 
         // Write the data to the output file
-        outputFile << frameNumber << ", " << trackId << ", " << x << ", " << y << ", " << width << ", " << height << ", " << score << ", " << classId << ", " << ", -1" << endl;
+        outputFile << frameNumber << ", " << trackId << ", " << x << ", " << y << ", " << width << ", " << height << ", " << score << ", " << classId << endl;
     }
 
     // Close the output file
@@ -366,8 +372,8 @@ Scalar getColor(const int idx)
 
 Mat detectionToMat(vector<Detection> objs)
 {
-    Mat output(objs.size(), 6, CV_32F);
-    for (size_t i = 0; i < objs.size(); ++i) 
+    Mat output(static_cast<int>(objs.size()), 6, CV_32F);
+    for (size_t i = 0; i < static_cast<int>(objs.size()); ++i)
     {
         const Detection& detection = objs[i];
         cv::Mat row = output.row(i);

@@ -4,11 +4,11 @@
 
 /** @brief Linear Assignment Problem solver
  *
- *  lap is a linear assignment problem solver using Jonker-Volgenant algorithm for dense (LAPJV) or 
+ *  lap is a linear assignment problem solver using Jonker-Volgenant algorithm for dense (LAPJV) or
  *  sparse (LAPMOD) matrices.
- *  Both algorithms are implemented from scratch based solely on the papers [1,2] and the public 
+ *  Both algorithms are implemented from scratch based solely on the papers [1,2] and the public
  *  domain Pascal implementation provided by A. Volgenant [3].
- *  In my tests the LAPMOD implementation seems to be faster than the LAPJV implementation for     
+ *  In my tests the LAPMOD implementation seems to be faster than the LAPJV implementation for
  *  matrices with a side of more than ~5000 and with less than 50% finite coefficients.
  *
  *  Tomas Kazmar, 2012-2017, BSD 2-clause license, see LICENSE.
@@ -81,5 +81,12 @@ extern int_t lapjv_internal(
 extern int_t lapmod_internal(
     const uint_t n, cost_t *cc, uint_t *ii, uint_t *kk,
     int_t *x, int_t *y, fp_t fp_version);
+
+extern int_t _ccrrt_dense(uint_t, cost_t**, int_t*, int_t*, int_t*, cost_t*);
+extern int_t _carr_dense(uint_t, cost_t**, uint_t, int_t*, int_t*, int_t*, cost_t*);
+extern uint_t _find_dense(uint_t, uint_t, cost_t*, int_t*);
+extern int_t _scan_dense(uint_t, cost_t**, uint_t*, uint_t*, cost_t*, int_t*, int_t*, int_t*, cost_t*);
+extern int_t find_path_dense(uint_t, cost_t**, int_t, int_t*, cost_t*, int_t*);
+extern int_t _ca_dense(uint_t, cost_t**, uint_t, int_t*, int_t*, int_t*, cost_t*);
 
 #endif // LAPJV_H

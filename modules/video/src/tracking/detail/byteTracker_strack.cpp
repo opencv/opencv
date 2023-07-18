@@ -95,15 +95,15 @@ void Strack::activate(int frame, int id)
     for (int i=0; i < 4; i++){
         kalmanFilter_.processNoiseCov.at<float>(i,i) *= 10000;
     }
-    kalmanFilter_.processNoiseCov.at<float>(7,7) = 1e-4;
+    kalmanFilter_.processNoiseCov.at<float>(7,7) = static_cast<float>(1e-4);
     //vx  vy = 1
-    kalmanFilter_.processNoiseCov.at<float>(4,4) = 1e-4;
-    kalmanFilter_.processNoiseCov.at<float>(5,5) = 1e-4;
+    kalmanFilter_.processNoiseCov.at<float>(4,4) = static_cast<float>(1e-4);
+    kalmanFilter_.processNoiseCov.at<float>(5,5) = static_cast<float>(1e-4);
 
-    float cx = tlwh_.x + tlwh_.width;
-    float cy = tlwh_.y + tlwh_.height;
-    float w = tlwh_.width;
-    float h = tlwh_.height;
+    float cx = static_cast<float>(tlwh_.x + tlwh_.width);
+    float cy = static_cast<float>(tlwh_.y + tlwh_.height);
+    float w = static_cast<float>(tlwh_.width);
+    float h = static_cast<float>(tlwh_.height);
     kalmanFilter_.statePre = (cv::Mat_<float>(8,1,CV_32F) << cx, cy, w, h, 0, 0, 0, 0);
     kalmanFilter_.statePost = (cv::Mat_<float>(8,1,CV_32F) << cx, cy, w, h, 0, 0, 0, 0);
 
@@ -113,10 +113,10 @@ void Strack::update(Strack& track)
 {
     trackletLen_++;
 
-    float cx = track.tlwh_.x + track.tlwh_.width;
-    float cy = track.tlwh_.y + track.tlwh_.height;
-    float w = track.tlwh_.width;
-    float h = track.tlwh_.height;
+    float cx = static_cast<float>(track.tlwh_.x + track.tlwh_.width);
+    float cy = static_cast<float>(track.tlwh_.y + track.tlwh_.height);
+    float w = static_cast<float>(track.tlwh_.width);
+    float h = static_cast<float>(track.tlwh_.height);
 
     cv::Mat measurement = (cv::Mat_<float>(4,1) << cx, cy, w, h);
     kalmanFilter_.correct(measurement);
@@ -150,10 +150,10 @@ cv::Rect Strack::predict()
 {
     cv::Mat predictionMat = kalmanFilter_.predict();
     cv::Rect prediction(
-        predictionMat.at<float>(0),
-        predictionMat.at<float>(1),
-        predictionMat.at<float>(2),
-        predictionMat.at<float>(3)
+        static_cast<int>(predictionMat.at<float>(0)),
+        static_cast<int>(predictionMat.at<float>(1)),
+        static_cast<int>(predictionMat.at<float>(2)),
+        static_cast<int>(predictionMat.at<float>(3))
     );
     return prediction;
 }

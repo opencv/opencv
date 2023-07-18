@@ -146,7 +146,7 @@ int_t _carr_dense(
 
 /** Find columns with minimum d[j] and put them on the SCAN list.
  */
-uint_t _find_dense(const uint_t n, uint_t lo, cost_t *d, int_t *cols, int_t *y)
+uint_t _find_dense(const uint_t n, uint_t lo, cost_t *d, int_t *cols)
 {
     uint_t hi = lo + 1;
     cost_t mind = d[cols[lo]];
@@ -237,7 +237,7 @@ int_t find_path_dense(
         if (lo == hi) {
             PRINTF("%d..%d -> find\n", lo, hi);
             n_ready = lo;
-            hi = _find_dense(n, lo, d, cols, y);
+            hi = _find_dense(n, lo, d, cols);
             PRINTF("check %d..%d\n", lo, hi);
             PRINT_INDEX_ARRAY(cols, n);
             for (uint_t k = lo; k < hi; k++) {

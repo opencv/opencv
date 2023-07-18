@@ -286,17 +286,17 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
         lostStracks_.erase(key);
     }
 
-    cv::Mat trackData(trackedStracks_.size(), 7, CV_32F);
+    cv::Mat trackData(static_cast<int>(trackedStracks_.size()), 7, CV_32F);
     int row = 0;
     for (auto &track : trackedStracks_)
     {
 
         float* data = trackData.ptr<float>(row);
         Rect tlwh = track.second.getTlwh();
-        data[0] = tlwh.x;
-        data[1] = tlwh.y;
-        data[2] = tlwh.width;
-        data[3] = tlwh.height;
+        data[0] = static_cast<float>(tlwh.x);
+        data[1] = static_cast<float>(tlwh.y);
+        data[2] = static_cast<float>(tlwh.width);
+        data[3] = static_cast<float>(tlwh.height);
         data[4] = static_cast<float>(track.second.getClass());
         data[5] = track.second.getScore();
         data[6] = static_cast<float>(track.second.getId());
@@ -321,10 +321,10 @@ void ByteTrackerImpl::getDetections(InputArray& inputObjects, vector<Strack>& de
         float score;
         int classId;
 
-        box.x = objects.at<float>(i, 0);
-        box.y = objects.at<float>(i, 1);
-        box.width = objects.at<float>(i, 2);
-        box.height = objects.at<float>(i, 3);
+        box.x = static_cast<int>(objects.at<float>(i, 0));
+        box.y = static_cast<int>(objects.at<float>(i, 1));
+        box.width = static_cast<int>(objects.at<float>(i, 2));
+        box.height = static_cast<int>(objects.at<float>(i, 3));
         classId = static_cast<int>(objects.at<float>(i, 4));
         score = objects.at<float>(i, 5);
 
@@ -423,8 +423,8 @@ Mat ByteTrackerImpl::calculateIous(vector<Rect> &atlwhs, vector<Rect> &btlwhs)
         {
             cv::Rect intersection = atlwhs[i] & btlwhs[j];
             cv::Rect unionRect = atlwhs[i] | btlwhs[j];
-            float intersectionArea = intersection.area();
-            float unionArea = unionRect.area();
+            float intersectionArea = static_cast<float>(intersection.area());
+            float unionArea = static_cast<float>(unionRect.area());
             iousMatrix.at<float>(i, j) = intersectionArea / unionArea;
         }
     }
@@ -507,8 +507,8 @@ map<int, int> ByteTrackerImpl::lapjv(InputArray &cost)
                 cost_ptr[i][j] = LARGE;
             }
         }
-        x_c[i] = -1.0;
-        y_c[i] = -1.0;
+        x_c[i] = -1;
+        y_c[i] = -1;
     }
     lapjv_internal(n, cost_ptr_ptr.data(), x_c.data(), y_c.data());
     for (int i = 0; i < n; i++)
