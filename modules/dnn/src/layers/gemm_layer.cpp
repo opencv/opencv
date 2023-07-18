@@ -176,6 +176,7 @@ public:
             float *ptr_y = Y.ptr<float>();
             for (int i = ndims_common - 3; i >= 0; --i) {
                 for (int dim_i = 0; dim_i < shape_Y[i]; ++dim_i) {
+                    std::memset(ptr_y, 0, M * N * sizeof(float));
                     ocv_gemm(trans_a, trans_b, ma, na, mb, nb,
                              1.f, ptr_A, na, 1, ptr_B, nb, 1,
                              1.f, ptr_y, N);
@@ -185,16 +186,15 @@ public:
                 }
             }
         } else { // Gemm
+            int ma = shape_A[0], na = shape_A[1];
+            int mb = shape_B[0], nb = shape_B[1];
+            int M = trans_a ? na : ma;
+            int N = trans_b ? mb : nb;
+
             // broadcast C and copy C to output
             if (inputs.size() == 3) {
                 auto C = inputs[2].clone();
-
                 const auto shape_C = shape(C);
-
-                int ma = shape_A[0], na = shape_A[1];
-                int mb = shape_B[0], nb = shape_B[1];
-                int M = trans_a ? na : ma;
-                int N = trans_b ? mb : nb;
 
                 // broadcast
                 float *ptr_y = Y.ptr<float>();
@@ -226,6 +226,9 @@ public:
                     // (M, N)
                     std::memcpy(ptr_y, ptr_c, M * N * sizeof(float));
                 }
+            } else { // initialization
+                float *ptr_y = Y.ptr<float>();
+                std::memset(ptr_y, 0, M * N * sizeof(float));
             }
 
             ocv_gemm(trans_a, trans_b, alpha, A, B, beta, Y);
