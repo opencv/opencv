@@ -11,6 +11,13 @@ if(EXISTS "${CANN_INSTALL_DIR}/opp/op_proto/built-in/inc")
 endif()
 
 if(CANN_INSTALL_DIR)
+    # Supported system: UNIX
+    if(UNIX)
+    else()
+        set(HAVE_CANN OFF)
+        message(STATUS "CANN: CANN toolkit supports unix but not ${CMAKE_SYSTEM_NAME}. Turning off HAVE_CANN")
+        return()
+    endif()
     # Supported platforms: x86-64, arm64
     if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
     elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64")
