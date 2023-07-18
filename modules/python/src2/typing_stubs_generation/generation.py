@@ -103,9 +103,6 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path) -> None:
 
     _write_reexported_symbols_section(root, output_stream)
 
-    # Write constants section, because constants don't impose any dependencies
-    _generate_section_stub(StubSection("# Constants", ConstantNode), root,
-                           output_stream, 0)
     # NOTE: Enumerations require special handling, because all enumeration
     # constants are exposed as module attributes
     has_enums = _generate_section_stub(StubSection("# Enumerations", EnumerationNode),
@@ -535,7 +532,7 @@ def check_overload_presence(node: Union[NamespaceNode, ClassNode]) -> bool:
             otherwise.
     """
     for func_node in node.functions.values():
-        if len(func_node.overloads):
+        if len(func_node.overloads) > 1:
             return True
     return False
 
@@ -621,11 +618,16 @@ def _populate_reexported_symbols(root: NamespaceNode) -> None:
     # Re-export all submodules to allow referencing symbols in submodules
     # without submodule import. Example:
     # `cv2.aruco.ArucoDetector` should be accessible without `import cv2.aruco`
-    for submodule in root.namespaces.values():
-        root.reexported_submodules.append(submodule.export_name)
+    def _reexport_submodule(ns: NamespaceNode) -> None:
+        for submodule in ns.namespaces.values():
+            ns.reexported_submodules.append(submodule.export_name)
+            _reexport_submodule(submodule)
+
+    _reexport_submodule(root)
 
     # Special cases, symbols defined in possible pure Python submodules should be
     root.reexported_submodules_symbols["mat_wrapper"].append("Mat")
+
 
 def _write_reexported_symbols_section(module: NamespaceNode, output_stream: StringIO) -> None:
     """Write re-export section for the given module.
