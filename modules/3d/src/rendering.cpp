@@ -95,10 +95,10 @@ namespace cv {
 
         for (int i = 0; i < 3; i++)
         {
-            min_x = std::min(tri.vertices[i][0], min_x);
-            max_x = std::max(tri.vertices[i][0], max_x);
-            min_y = std::min(tri.vertices[i][1], min_y);
-            max_y = std::max(tri.vertices[i][1], max_y);
+            min_x = std::max(std::min(tri.vertices[i][0], min_x), 0.0f);
+            max_x = std::min(std::max(tri.vertices[i][0], max_x), (float)width);
+            min_y = std::max(std::min(tri.vertices[i][1], min_y), 0.0f);
+            max_y = std::min(std::max(tri.vertices[i][1], max_y), (float)height);
         }
 
         for(int y = min_y; y < max_y; y++)
@@ -111,7 +111,7 @@ namespace cv {
                     float z_interpolated = 1.0 / (alpha / tri.vertices[0][2] + beta / tri.vertices[1][2] + gamma / tri.vertices[2][2]);
 
                     int index = (height - 1 - y) * width + x;
-                    if (z_interpolated < depth_buf[index])
+                    if (z_interpolated < depth_buf[index] && z_interpolated >= 0.0 && z_interpolated <= 1.0)
                     {
                         if (isConstant)
                             color_buf[index] = tri.getTriangleColor();
