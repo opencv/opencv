@@ -3,16 +3,13 @@
 
 This module serves as utility for other scripts.
 """
-from __future__ import print_function
 import collections
 import re
 import os.path
 import sys
 from xml.dom.minidom import parse
 
-if sys.version_info > (3,):
-    long = int
-    def cmp(a, b): return (a>b)-(a<b)
+def cmp(a, b): return (a>b)-(a<b)
 
 class TestInfo(object):
 
@@ -59,9 +56,9 @@ class TestInfo(object):
 
     def parseLongMetric(self, xmlnode, name, default = 0):
         if name in self.properties:
-            self.metrix[name] = long(self.properties[name])
+            self.metrix[name] = int(self.properties[name])
         elif xmlnode.hasAttribute(name):
-            self.metrix[name] = long(xmlnode.getAttribute(name))
+            self.metrix[name] = int(xmlnode.getAttribute(name))
         else:
             self.metrix[name] = default
 
@@ -117,8 +114,8 @@ class TestInfo(object):
             if units == "ns":
                 scale = 1000000000.0
             if units == "ticks":
-                frequency = long(1)
-                scale = long(1)
+                frequency = int(1)
+                scale = int(1)
             return val * scale / frequency
         return val
 

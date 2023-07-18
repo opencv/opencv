@@ -64,12 +64,6 @@ We need **CMake** to configure the installation, **GCC** for compilation, **Pyth
 sudo apt-get install cmake
 sudo apt-get install gcc g++
 ```
-to support python2:
-
-```
-sudo apt-get install python-dev python-numpy
-```
-
 to support python3:
 
 ```
@@ -154,12 +148,6 @@ For additional information about CMake options refer to OpenCV @ref tutorial_lin
 You should see these lines in your CMake output (they mean that Python is properly found):
 
 ```
---   Python 2:
---     Interpreter:                 /usr/bin/python2.7 (ver 2.7.6)
---     Libraries:                   /usr/lib/x86_64-linux-gnu/libpython2.7.so (ver 2.7.6)
---     numpy:                       /usr/lib/python2.7/dist-packages/numpy/core/include (ver 1.8.2)
---     packages path:               lib/python2.7/dist-packages
---
 --   Python 3:
 --     Interpreter:                 /usr/bin/python3.4 (ver 3.4.3)
 --     Libraries:                   /usr/lib/x86_64-linux-gnu/libpython3.4m.so (ver 3.4.3)

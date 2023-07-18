@@ -2,7 +2,6 @@
 """ Utility package for run.py
 """
 
-from __future__ import print_function
 import xml.etree.ElementTree as ET
 from glob import glob
 from pprint import PrettyPrinter as PP

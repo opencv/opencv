@@ -573,7 +573,6 @@ Following options can be used to change installation layout for common scenarios
 | `ENABLE_FLAKE8` | _ON_ (when docs or examples are enabled) | Enable python scripts check with [Flake8](https://flake8.pycqa.org/) (_check_flake8_ target). Flake8 must be installed. |
 | `BUILD_JAVA` | _ON_ | Enable Java wrappers build. Java SDK and Ant must be installed. |
 | `BUILD_FAT_JAVA_LIB` | _ON_ (for static Android builds) | Build single _opencv_java_ dynamic library containing all library functionality bundled with Java bindings. |
-| `BUILD_opencv_python2` | _ON_ | Build python2 bindings (deprecated). Python with development files and numpy must be installed. |
 | `BUILD_opencv_python3` | _ON_ | Build python3 bindings. Python with development files and numpy must be installed. |
 
 TODO: need separate tutorials covering bindings builds

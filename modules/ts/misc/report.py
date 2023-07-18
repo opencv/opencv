@@ -34,7 +34,6 @@ RadiusMatch::OCL_BruteForceMatcherFixture::(640x480, 32FC1) 1372.68 ms 1375.52 m
 --show-all                  - also include empty and "notrun" lines
 """
 
-from __future__ import print_function
 import testlog_parser, sys, os, xml, re, glob
 from table_formatter import *
 from optparse import OptionParser

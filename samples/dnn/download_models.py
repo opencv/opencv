@@ -15,10 +15,7 @@ import requests
 import shutil
 from pathlib import Path
 from datetime import datetime
-if sys.version_info[0] < 3:
-    from urllib2 import urlopen
-else:
-    from urllib.request import urlopen
+from urllib.request import urlopen
 import xml.etree.ElementTree as ET
 
 __all__ = ["downloadFile"]

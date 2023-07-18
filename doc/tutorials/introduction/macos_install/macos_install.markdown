@@ -109,8 +109,6 @@ Building OpenCV from Source Using CMake
     -   `PYTHON3_INCLUDE_DIR = /usr/include/python<version>`
     -   `PYTHON3_NUMPY_INCLUDE_DIRS =
         /usr/lib/python<version>/dist-packages/numpy/core/include/`
-    @note
-    To specify Python2 versions, you can replace `PYTHON3_` with `PYTHON2_` in the above parameters.
 
 -#  Build. From build directory execute *make*, it is recommended to do this in several threads
 

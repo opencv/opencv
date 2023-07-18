@@ -157,7 +157,7 @@ should be due to the sky)
 
 Well, here you adjust the values of histograms along with its bin values to look like x,y
 coordinates so that you can draw it using cv.line() or cv.polyline() function to generate same
-image as above. This is already available with OpenCV-Python2 official samples. Check the
+image as above. This is already available with OpenCV-Python official samples. Check the
 code at samples/python/hist.py.
 
 Application of Mask

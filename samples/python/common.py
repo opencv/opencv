@@ -4,14 +4,7 @@
 This module contains some common routines used by other samples.
 '''
 
-# Python 2/3 compatibility
-from __future__ import print_function
-import sys
-PY3 = sys.version_info[0] == 3
-
-if PY3:
-    from functools import reduce
-
+from functools import reduce
 import numpy as np
 import cv2 as cv
 
@@ -202,10 +195,7 @@ class RectSelector:
 def grouper(n, iterable, fillvalue=None):
     '''grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx'''
     args = [iter(iterable)] * n
-    if PY3:
-        output = it.zip_longest(fillvalue=fillvalue, *args)
-    else:
-        output = it.izip_longest(fillvalue=fillvalue, *args)
+    output = it.zip_longest(fillvalue=fillvalue, *args)
     return output
 
 def mosaic(w, imgs):
@@ -215,10 +205,7 @@ def mosaic(w, imgs):
     imgs -- images (must have same size and format)
     '''
     imgs = iter(imgs)
-    if PY3:
-        img0 = next(imgs)
-    else:
-        img0 = imgs.next()
+    img0 = next(imgs)
     pad = np.zeros_like(img0)
     imgs = it.chain([img0], imgs)
     rows = grouper(w, imgs, pad)

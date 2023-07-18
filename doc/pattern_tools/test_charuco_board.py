@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import os, tempfile, numpy as np
 
 import sys

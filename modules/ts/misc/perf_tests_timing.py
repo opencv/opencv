@@ -22,7 +22,6 @@ opencv Normalize::OCL_NormalizeFixture                         5.412         96
 ...    ...                                                      ...         ...
 """
 
-from __future__ import print_function
 import testlog_parser, sys, os, xml, glob, re
 from table_formatter import *
 from optparse import OptionParser
