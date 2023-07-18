@@ -70,10 +70,10 @@ void magnitudeSqr32f(const float* x, const float* y, float* mag, int len)
     CALL_HAL(magnitudeSqr32f, cv_hal_magnitudeSqr32f, x, y, mag, len);
     // SSE42 performance issues
     //CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsPowerSpectr_32f, x, y, mag, len) >= 0);
-    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42,
+    /*CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42,
         (CV_INSTRUMENT_FUN_IPP(ippsMagnitude_32f, x, y, mag, len) >= 0) &&
         (CV_INSTRUMENT_FUN_IPP(ippiMul_32f_C1R, mag, len*sizeof(float), mag, len*sizeof(float), mag, len*sizeof(float), ippiSize(len, 1)) >= 0)
-    );
+    );*/
     
     CV_CPU_DISPATCH(magnitudeSqr32f, (x, y, mag, len),
         CV_CPU_DISPATCH_MODES_ALL);
@@ -88,9 +88,9 @@ void magnitudeSqr64f(const double* x, const double* y, double* mag, int len)
     CALL_HAL(magnitudeSqr64f, cv_hal_magnitudeSqr64f, x, y, mag, len);
     // SSE42 performance issues
     //CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42, CV_INSTRUMENT_FUN_IPP(ippsPowerSpectr_64f, x, y, mag, len) >= 0);
-    CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42,
+    /*CV_IPP_RUN(IPP_VERSION_X100 > 201800 || cv::ipp::getIppTopFeatures() != ippCPUID_SSE42,
         (CV_INSTRUMENT_FUN_IPP(ippsMagnitude_64f, x, y, mag, len) >= 0) && CV_FUN_TRUE(sqr64f(mag, mag, len))
-    );
+    );*/
 
     CV_CPU_DISPATCH(magnitudeSqr64f, (x, y, mag, len),
         CV_CPU_DISPATCH_MODES_ALL);
