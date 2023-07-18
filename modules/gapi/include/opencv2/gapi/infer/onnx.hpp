@@ -27,6 +27,57 @@ namespace gapi {
  */
 namespace onnx {
 
+namespace ep {
+
+struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
+    GAPI_WRAP
+    OpenVINO() = default;
+
+    GAPI_WRAP
+    OpenVINO(const std::string &id)
+        : device_id(id) {
+    }
+
+    GAPI_WRAP
+    OpenVINO& cfgDeviceType(const std::string &type) {
+        device_type = cv::util::make_optional(type);
+        return *this;
+    }
+
+    GAPI_WRAP
+    OpenVINO& cfgCacheDir(const std::string &dir) {
+        cache_dir = cv::util::make_optional(dir);
+        return *this;
+    }
+
+    GAPI_WRAP
+    OpenVINO& cfgNumThreads(size_t nthreads) {
+        num_of_threads = cv::util::make_optional(nthreads);
+        return *this;
+    }
+
+    GAPI_WRAP
+    OpenVINO& cfgEnableVPUFastCompile() {
+        enable_vpu_fast_compile = true;
+        return *this;
+    }
+
+    std::string device_id;
+
+    cv::optional<std::string> cache_dir;
+    cv::optional<std::string> device_type;
+    cv::optional<size_t> num_of_threads;
+
+    bool enable_vpu_fast_compile = false;
+    bool enable_opencl_throttling = false;
+    bool enable_dynamic_shapes = false;
+    void *context = nullptr;
+};
+
+using EP = cv::util::variant<cv::util::monostate, OpenVINO>;
+
+} // namespace ep
+
 GAPI_EXPORTS cv::gapi::GBackend backend();
 
 enum class TraitAs: int {
@@ -78,6 +129,9 @@ struct ParamDesc {
     // when the generic infer parameters are unpacked (see GONNXBackendImpl::unpackKernel)
     std::unordered_map<std::string, std::pair<cv::Scalar, cv::Scalar> > generic_mstd;
     std::unordered_map<std::string, bool> generic_norm;
+
+    cv::gapi::onnx::ep::EP execution_provider;
+    bool disable_mem_pattern;
 };
 } // namespace detail
 
@@ -115,6 +169,7 @@ public:
         desc.num_in  = std::tuple_size<typename Net::InArgs>::value;
         desc.num_out = std::tuple_size<typename Net::OutArgs>::value;
         desc.is_generic = false;
+        desc.disable_mem_pattern = false;
     };
 
     /** @brief Specifies sequence of network input layers names for inference.
@@ -279,6 +334,16 @@ public:
         return *this;
     }
 
+    Params<Net>& cfgExecutionProvider(ep::OpenVINO&& ov_ep) {
+        desc.execution_provider = std::move(ov_ep);
+        return *this;
+    }
+
+    Params<Net>& cfgDisableMemPattern() {
+        desc.disable_mem_pattern = true;
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend() const { return cv::gapi::onnx::backend(); }
     std::string   tag()     const { return Net::tag(); }
@@ -306,7 +371,7 @@ public:
     @param model_path path to model file (.onnx file).
     */
     Params(const std::string& tag, const std::string& model_path)
-        : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true, {}, {} }, m_tag(tag) {}
+        : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true, {}, {}, {}, false }, m_tag(tag) {}
 
     void cfgMeanStdDev(const std::string &layer,
                        const cv::Scalar &m,
@@ -316,6 +381,14 @@ public:
 
     void cfgNormalize(const std::string &layer, bool flag) {
         desc.generic_norm[layer] = flag;
+    }
+
+    void cfgExecutionProvider(ep::OpenVINO&& ov_ep) {
+        desc.execution_provider = std::move(ov_ep);
+    }
+
+    void cfgDisableMemPattern() {
+        desc.disable_mem_pattern = true;
     }
 
     // BEGIN(G-API's network parametrization API)
