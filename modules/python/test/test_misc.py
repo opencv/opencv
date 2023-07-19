@@ -232,6 +232,12 @@ class Arguments(NewOpenCVTests):
                     Exception, msg, cv.utils.dumpInputArray, test_array
                 )
 
+    def test_numpy_writeable_flag_is_preserved(self):
+        array = np.zeros((10, 10, 1), dtype=np.uint8)
+        array.setflags(write=False)
+        with self.assertRaises(Exception):
+            cv.rectangle(array, (0, 0), (5, 5), (255), 2)
+
     def test_20968(self):
         pixel = np.uint8([[[40, 50, 200]]])
         _ = cv.cvtColor(pixel, cv.COLOR_RGB2BGR)  # should not raise exception
