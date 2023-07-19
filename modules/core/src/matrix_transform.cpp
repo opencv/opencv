@@ -858,33 +858,39 @@ void flipND(InputArray _src, OutputArray _dst, int _axis)
     flipNDImpl(dst.ptr(), dst.size.p, dst.step.p, axis);
 }
 
-void broadcastTo(InputArray _src, const std::vector<int>& shape, OutputArray _dst) {
+void broadcastTo(InputArray _src, InputArray _shape, OutputArray _dst) {
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
     CV_CheckTrue(src.isContinuous(), "broadcastTo: input array must be continuous");
     CV_CheckChannelsEQ(src.channels(), 1, "broadcastTo: input array must be single channel");
 
+    Mat shape = _shape.getMat();
+    CV_CheckTypeEQ(shape.type(), CV_32S, "broadcastTo: target shape must be of type int32");
+    const auto dims_shape = static_cast<int>(shape.total());
+    const auto *ptr_shape = shape.ptr<int>();
+
     // check valid shape, 1D/0D Mat would fail in the following checks
     const auto dims_src = src.dims;
-    CV_CheckLE(dims_src, static_cast<int>(shape.size()),
+    CV_CheckLE(dims_src, dims_shape,
                "broadcastTo: dimension of input array must be less than or equal to dimension of target shape");
     std::vector<int> shape_src{src.size.p, src.size.p + dims_src};
-    if (shape_src.size() < shape.size()) {
-        shape_src.insert(shape_src.begin(), shape.size() - shape_src.size(), 1);
+    if (shape_src.size() < static_cast<size_t>(dims_shape)) {
+        shape_src.insert(shape_src.begin(), dims_shape - shape_src.size(), 1);
     }
     for (int i = 0; i < static_cast<int>(shape_src.size()); ++i) {
-        if (shape_src[i] != shape[i] && shape_src[i] != 1) {
-            CV_Error(Error::StsBadArg, "broadcastTo: invalid shape");
+        const auto *shape_target = ptr_shape;
+        if (shape_src[i] != 1) {
+            CV_CheckEQ(shape_src[i], shape_target[i], "target shape must be equal to input shape or 1");
         }
     }
 
     // impl
-    _dst.create(static_cast<int>(shape.size()), shape.data(), src.type());
+    _dst.create(dims_shape, shape.ptr<int>(), src.type());
     Mat dst = _dst.getMat();
-    std::vector<int> is_same_shape(shape.size(), 0);
+    std::vector<int> is_same_shape(dims_shape, 0);
     for (int i = 0; i < static_cast<int>(shape_src.size()); ++i) {
-        if (shape_src[i] == shape[i]) {
+        if (shape_src[i] == ptr_shape[i]) {
             is_same_shape[i] = 1;
         }
     }
@@ -897,8 +903,8 @@ void broadcastTo(InputArray _src, const std::vector<int>& shape, OutputArray _ds
     }
     // initial copy (src to dst)
     std::vector<size_t> step_src{src.step.p, src.step.p + dims_src};
-    if (step_src.size() < shape.size()) {
-        step_src.insert(step_src.begin(), shape.size() - step_src.size(), step_src[0]);
+    if (step_src.size() < static_cast<size_t>(dims_shape)) {
+        step_src.insert(step_src.begin(), dims_shape - step_src.size(), step_src[0]);
     }
     for (size_t i = 0; i < src.total(); ++i) {
         size_t t = i;
@@ -915,20 +921,20 @@ void broadcastTo(InputArray _src, const std::vector<int>& shape, OutputArray _ds
         std::memcpy(p_dst + dst_offset, p_src + src_offset, dst.elemSize());
     }
     // broadcast copy (dst inplace)
-    std::vector<int> cumulative_shape(shape.size(), 1);
+    std::vector<int> cumulative_shape(dims_shape, 1);
     int total = static_cast<int>(dst.total());
-    for (int i = static_cast<int>(shape.size() - 1); i >= 0; --i) {
-        cumulative_shape[i] = static_cast<int>(total / shape[i]);
+    for (int i = dims_shape - 1; i >= 0; --i) {
+        cumulative_shape[i] = static_cast<int>(total / ptr_shape[i]);
         total = cumulative_shape[i];
     }
-    for (int i = static_cast<int>(shape.size()) - 1; i >= 0; --i) {
+    for (int i = dims_shape - 1; i >= 0; --i) {
         if (is_same_shape[i] == 1) {
             continue;
         }
         auto step = dst.step[i];
         auto *p_dst = dst.ptr<char>();
         for (int j = 0; j < cumulative_shape[i]; j++) {
-            for (int k = 0; k < shape[i] - 1; k++) {
+            for (int k = 0; k < ptr_shape[i] - 1; k++) {
                 std::memcpy(p_dst + step, p_dst, step);
                 p_dst += step;
             }
