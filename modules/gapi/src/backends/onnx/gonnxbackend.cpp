@@ -143,8 +143,8 @@ public:
     void run();
 };
 
-void appendExecutionProvider(Ort::SessionOptions          *session_options,
-                             const cv::gapi::onnx::ep::EP &execution_provider) {
+static void appendExecutionProvider(Ort::SessionOptions          *session_options,
+                                    const cv::gapi::onnx::ep::EP &execution_provider) {
     namespace ep = cv::gapi::onnx::ep;
     switch (execution_provider.index()) {
         case ep::EP::index_of<ep::OpenVINO>(): {
@@ -168,7 +168,16 @@ void appendExecutionProvider(Ort::SessionOptions          *session_options,
                 options.num_of_threads = *ovep.num_of_threads;
              }
 
-             session_options->AppendExecutionProvider_OpenVINO(options);
+             try {
+                session_options->AppendExecutionProvider_OpenVINO(options);
+             } catch (const std::exception &e) {
+                 std::stringstream ss;
+                 ss << "ONNX Backend: Failed to enable OpenVINO Execution Provider: "
+                    << e.what() << "\nMake sure that onnxruntime has"
+                                   " been compiled with OpenVINO support.";
+                 cv::util::throw_error(std::runtime_error(ss.str()));
+             }
+
              break;
         }
         default:
