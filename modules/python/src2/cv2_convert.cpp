@@ -101,6 +101,13 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     PyArrayObject* oarr = (PyArrayObject*) o;
 
+    if (info.outputarg && !PyArray_ISWRITEABLE(oarr))
+    {
+        failmsg("%s marked as output argument, but provided NumPy array "
+                "marked as readonly", info.name);
+        return false;
+    }
+
     bool needcopy = false, needcast = false;
     int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
     int type = typenum == NPY_UBYTE ? CV_8U :
