@@ -2,14 +2,16 @@ __all__ = [
     "apply_manual_api_refinement"
 ]
 
-from typing import Sequence, Callable
+from typing import cast, Sequence, Callable, Iterable
 
-from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode,
-                    ClassProperty, PrimitiveTypeNode)
-from .ast_utils import find_function_node, SymbolName
+from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode, TypeNode,
+                    ClassProperty, PrimitiveTypeNode, ASTNodeTypeNode)
+from .ast_utils import (find_function_node, SymbolName,
+                        for_each_function_overload)
 
 
 def apply_manual_api_refinement(root: NamespaceNode) -> None:
+    refine_cuda_module(root)
     export_matrix_type_constants(root)
     # Export OpenCV exception class
     builtin_exception = root.add_class("Exception")
@@ -57,13 +59,43 @@ def make_optional_arg(arg_name: str) -> Callable[[NamespaceNode, SymbolName], No
                 continue
 
             overload.arguments[arg_idx].type_node = OptionalTypeNode(
-                overload.arguments[arg_idx].type_node
+                cast(TypeNode, overload.arguments[arg_idx].type_node)
             )
 
     return _make_optional_arg
 
 
-def _find_argument_index(arguments: Sequence[FunctionNode.Arg], name: str) -> int:
+def refine_cuda_module(root: NamespaceNode) -> None:
+    def fix_cudaflow_enums_names():
+        for class_name in ("NvidiaOpticalFlow_1_0", "NvidiaOpticalFlow_2_0"):
+            opt_flow_class = cuda_root.classes[class_name]
+            _trim_class_name_from_argument_types(
+                for_each_function_overload(opt_flow_class), class_name
+            )
+
+    if "cuda" not in root.namespaces:
+        return
+    cuda_root = root.namespaces["cuda"]
+    fix_cudaflow_enums_names()
+
+
+def _trim_class_name_from_argument_types(
+    overloads: Iterable[FunctionNode.Overload],
+    class_name: str
+) -> None:
+    separator = f"{class_name}_"
+    for overload in overloads:
+        for arg in [arg for arg in overload.arguments
+                    if arg.type_node is not None]:
+            ast_node = cast(ASTNodeTypeNode, arg.type_node)
+            if class_name in ast_node.ctype_name:
+                fixed_name = ast_node._typename.split(separator)[-1]
+                ast_node._typename = fixed_name
+
+
+
+def _find_argument_index(arguments: Sequence[FunctionNode.Arg],
+                         name: str) -> int:
     for i, arg in enumerate(arguments):
         if arg.name == name:
             return i
@@ -76,6 +108,7 @@ NODES_TO_REFINE = {
     SymbolName(("cv", ), (), "resize"): make_optional_arg("dsize"),
     SymbolName(("cv", ), (), "calcHist"): make_optional_arg("mask"),
 }
+
 ERROR_CLASS_PROPERTIES = (
     ClassProperty("code", PrimitiveTypeNode.int_(), False),
     ClassProperty("err", PrimitiveTypeNode.str_(), False),
