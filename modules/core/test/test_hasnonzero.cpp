@@ -81,6 +81,26 @@ INSTANTIATE_TEST_CASE_P(Core, HasNonZeroNegZeros,
     )
 );
 
+typedef testing::TestWithParam<std::tuple<int, Size> > HasNonZeroNaNValues;
+
+TEST_P(HasNonZeroNaNValues, hasNonZeroNaNValues)
+{
+    const int type = std::get<0>(GetParam());
+    const Size size = std::get<1>(GetParam());
+
+    Mat m = Mat(size, type);
+
+    m.setTo(Scalar::all(std::numeric_limits<double>::quiet_NaN()));
+    EXPECT_TRUE(hasNonZero(m));
+}
+
+INSTANTIATE_TEST_CASE_P(Core, HasNonZeroNaNValues,
+    testing::Combine(
+        testing::Values(CV_32FC1, CV_64FC1),
+        testing::Values(Size(1, 1), Size(320, 240), Size(127, 113), Size(1, 113))
+    )
+);
+
 typedef testing::TestWithParam<std::tuple<int, Size> > HasNonZeroLimitValues;
 
 TEST_P(HasNonZeroLimitValues, hasNonZeroLimitValues)
@@ -94,9 +114,6 @@ TEST_P(HasNonZeroLimitValues, hasNonZeroLimitValues)
     EXPECT_TRUE(hasNonZero(m));
 
     m.setTo(Scalar::all(-std::numeric_limits<double>::infinity()));
-    EXPECT_TRUE(hasNonZero(m));
-
-    m.setTo(Scalar::all(std::numeric_limits<double>::quiet_NaN()));
     EXPECT_TRUE(hasNonZero(m));
 
     m.setTo((CV_MAT_DEPTH(type) == CV_64F) ? Scalar::all(std::numeric_limits<double>::epsilon()) : Scalar::all(std::numeric_limits<float>::epsilon()));

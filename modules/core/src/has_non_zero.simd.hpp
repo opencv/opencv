@@ -53,7 +53,7 @@ inline bool hasNonZero_(const float* src, size_t len )
             #endif
         }
         for( ; !res && (i < len); i++ )
-            res |= (src[i] != 0);
+            res |= (src[i] != 0) || std::isnan(src[i]);//isnan() is needed under fast-math
     }
     return res;
 }
@@ -78,7 +78,7 @@ inline bool hasNonZero_(const double* src, size_t len )
             #endif
         }
         for( ; !res && (i < len); i++ )
-            res |= (src[i] != 0);
+            res |= (src[i] != 0) || std::isnan(src[i]);//isnan() is needed under fast-math
     }
     return res;
 }
