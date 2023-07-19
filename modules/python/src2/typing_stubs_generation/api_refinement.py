@@ -2,14 +2,17 @@ __all__ = [
     "apply_manual_api_refinement"
 ]
 
-from typing import Sequence, Callable
+from typing import cast, Sequence, Callable, Iterable
 
-from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode,
-                    ClassProperty, PrimitiveTypeNode)
-from .ast_utils import find_function_node, SymbolName
+from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode, TypeNode,
+                    ClassProperty, PrimitiveTypeNode, ASTNodeTypeNode,
+                    AggregatedTypeNode)
+from .ast_utils import (find_function_node, SymbolName,
+                        for_each_function_overload)
 
 
 def apply_manual_api_refinement(root: NamespaceNode) -> None:
+    refine_cuda_module(root)
     export_matrix_type_constants(root)
     # Export OpenCV exception class
     builtin_exception = root.add_class("Exception")
@@ -57,13 +60,65 @@ def make_optional_arg(arg_name: str) -> Callable[[NamespaceNode, SymbolName], No
                 continue
 
             overload.arguments[arg_idx].type_node = OptionalTypeNode(
-                overload.arguments[arg_idx].type_node
+                cast(TypeNode, overload.arguments[arg_idx].type_node)
             )
 
     return _make_optional_arg
 
 
-def _find_argument_index(arguments: Sequence[FunctionNode.Arg], name: str) -> int:
+def refine_cuda_module(root: NamespaceNode) -> None:
+    def fix_cudaoptflow_enums_names() -> None:
+        for class_name in ("NvidiaOpticalFlow_1_0", "NvidiaOpticalFlow_2_0"):
+            if class_name not in cuda_root.classes:
+                continue
+            opt_flow_class = cuda_root.classes[class_name]
+            _trim_class_name_from_argument_types(
+                for_each_function_overload(opt_flow_class), class_name
+            )
+
+    def fix_namespace_usage_scope(cuda_ns: NamespaceNode) -> None:
+        USED_TYPES = ("GpuMat", "Stream")
+
+        def fix_type_usage(type_node: TypeNode) -> None:
+            if isinstance(type_node, AggregatedTypeNode):
+                for item in type_node.items:
+                    fix_type_usage(item)
+            if isinstance(type_node, ASTNodeTypeNode):
+                if type_node._typename in USED_TYPES:
+                    type_node._typename = f"cuda_{type_node._typename}"
+
+        for overload in for_each_function_overload(cuda_ns):
+            if overload.return_type is not None:
+                fix_type_usage(overload.return_type.type_node)
+            for type_node in [arg.type_node for arg in overload.arguments
+                              if arg.type_node is not None]:
+                fix_type_usage(type_node)
+
+    if "cuda" not in root.namespaces:
+        return
+    cuda_root = root.namespaces["cuda"]
+    fix_cudaoptflow_enums_names()
+    for ns in [ns for ns_name, ns in root.namespaces.items()
+               if ns_name.startswith("cuda")]:
+        fix_namespace_usage_scope(ns)
+
+
+def _trim_class_name_from_argument_types(
+    overloads: Iterable[FunctionNode.Overload],
+    class_name: str
+) -> None:
+    separator = f"{class_name}_"
+    for overload in overloads:
+        for arg in [arg for arg in overload.arguments
+                    if arg.type_node is not None]:
+            ast_node = cast(ASTNodeTypeNode, arg.type_node)
+            if class_name in ast_node.ctype_name:
+                fixed_name = ast_node._typename.split(separator)[-1]
+                ast_node._typename = fixed_name
+
+
+def _find_argument_index(arguments: Sequence[FunctionNode.Arg],
+                         name: str) -> int:
     for i, arg in enumerate(arguments):
         if arg.name == name:
             return i
@@ -76,6 +131,7 @@ NODES_TO_REFINE = {
     SymbolName(("cv", ), (), "resize"): make_optional_arg("dsize"),
     SymbolName(("cv", ), (), "calcHist"): make_optional_arg("mask"),
 }
+
 ERROR_CLASS_PROPERTIES = (
     ClassProperty("code", PrimitiveTypeNode.int_(), False),
     ClassProperty("err", PrimitiveTypeNode.str_(), False),

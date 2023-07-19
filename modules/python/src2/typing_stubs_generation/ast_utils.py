@@ -1,5 +1,5 @@
 from typing import (NamedTuple, Sequence, Tuple, Union, List,
-                    Dict, Callable, Optional)
+                    Dict, Callable, Optional, Generator)
 import keyword
 
 from .nodes import (ASTNode, NamespaceNode, ClassNode, FunctionNode,
@@ -402,6 +402,33 @@ def get_enum_module_and_export_name(enum_node: EnumerationNode) -> Tuple[str, st
     enum_export_name = enum_node.export_name
     namespace_node = get_enclosing_namespace(enum_node, update_full_export_name)
     return enum_export_name, namespace_node.full_export_name
+
+
+def for_each_class(
+    node: Union[NamespaceNode, ClassNode]
+) -> Generator[ClassNode, None, None]:
+    for cls in node.classes.values():
+        yield cls
+        if len(cls.classes):
+            yield from for_each_class(cls)
+
+
+def for_each_function(
+    node: Union[NamespaceNode, ClassNode],
+    traverse_class_nodes: bool = True
+) -> Generator[FunctionNode, None, None]:
+    yield from node.functions.values()
+    if traverse_class_nodes:
+        for cls in for_each_class(node):
+            yield from for_each_function(cls)
+
+
+def for_each_function_overload(
+    node: Union[NamespaceNode, ClassNode],
+    traverse_class_nodes: bool = True
+) -> Generator[FunctionNode.Overload, None, None]:
+    for func in for_each_function(node, traverse_class_nodes):
+        yield from func.overloads
 
 
 if __name__ == '__main__':
