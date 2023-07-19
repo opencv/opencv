@@ -317,6 +317,10 @@ def _generate_constant_stub(constant_node: ConstantNode,
     export_name = extra_export_prefix + constant_node.export_name
     write_constant_to_stream(export_name)
     if generate_uppercase_version:
+        # Handle Python "magic" constants like __version__
+        if re.match(r"^__.*__$", export_name) is not None:
+            return export_name,
+
         uppercase_name = re.sub(r"([a-z])([A-Z])", r"\1_\2", export_name).upper()
         if export_name != uppercase_name:
             write_constant_to_stream(uppercase_name)
