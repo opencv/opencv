@@ -98,6 +98,9 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path) -> None:
 
     output_stream = StringIO()
 
+    # Add empty __all__ dunder on top of the module
+    output_stream.write("__all__: list[str] = []\n\n")
+
     # Write required imports at the top of file
     _write_required_imports(required_imports, output_stream)
 
