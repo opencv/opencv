@@ -19,6 +19,9 @@
 #include <ostream>
 #include <typeinfo>
 
+#include "opencv2/core/cvdef.h"
+#include "opencv2/core/utility.hpp"
+
 namespace cvflann
 {
 
