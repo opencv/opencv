@@ -5,7 +5,8 @@ __all__ = [
 from typing import cast, Sequence, Callable, Iterable
 
 from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode, TypeNode,
-                    ClassProperty, PrimitiveTypeNode, ASTNodeTypeNode)
+                    ClassProperty, PrimitiveTypeNode, ASTNodeTypeNode,
+                    AggregatedTypeNode)
 from .ast_utils import (find_function_node, SymbolName,
                         for_each_function_overload)
 
@@ -66,17 +67,38 @@ def make_optional_arg(arg_name: str) -> Callable[[NamespaceNode, SymbolName], No
 
 
 def refine_cuda_module(root: NamespaceNode) -> None:
-    def fix_cudaflow_enums_names():
+    def fix_cudaflow_enums_names() -> None:
         for class_name in ("NvidiaOpticalFlow_1_0", "NvidiaOpticalFlow_2_0"):
             opt_flow_class = cuda_root.classes[class_name]
             _trim_class_name_from_argument_types(
                 for_each_function_overload(opt_flow_class), class_name
             )
 
+    def fix_namespace_usage_scope(cuda_ns: NamespaceNode) -> None:
+        USED_TYPES = ("GpuMat", "Stream")
+
+        def fix_type_usage(type_node: TypeNode) -> None:
+            if isinstance(type_node, AggregatedTypeNode):
+                for item in type_node.items:
+                    fix_type_usage(item)
+            if isinstance(type_node, ASTNodeTypeNode):
+                if type_node._typename in USED_TYPES:
+                    type_node._typename = f"cuda_{type_node._typename}"
+
+        for overload in for_each_function_overload(cuda_ns):
+            if overload.return_type is not None:
+                fix_type_usage(overload.return_type.type_node)
+            for type_node in [arg.type_node for arg in overload.arguments
+                              if arg.type_node is not None]:
+                fix_type_usage(type_node)
+
     if "cuda" not in root.namespaces:
         return
     cuda_root = root.namespaces["cuda"]
     fix_cudaflow_enums_names()
+    for ns in [ns for ns_name, ns in root.namespaces.items()
+               if ns_name.startswith("cuda")]:
+        fix_namespace_usage_scope(ns)
 
 
 def _trim_class_name_from_argument_types(
@@ -91,7 +113,6 @@ def _trim_class_name_from_argument_types(
             if class_name in ast_node.ctype_name:
                 fixed_name = ast_node._typename.split(separator)[-1]
                 ast_node._typename = fixed_name
-
 
 
 def _find_argument_index(arguments: Sequence[FunctionNode.Arg],
