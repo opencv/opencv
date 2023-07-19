@@ -67,8 +67,10 @@ def make_optional_arg(arg_name: str) -> Callable[[NamespaceNode, SymbolName], No
 
 
 def refine_cuda_module(root: NamespaceNode) -> None:
-    def fix_cudaflow_enums_names() -> None:
+    def fix_cudaoptflow_enums_names() -> None:
         for class_name in ("NvidiaOpticalFlow_1_0", "NvidiaOpticalFlow_2_0"):
+            if class_name not in cuda_root.classes:
+                continue
             opt_flow_class = cuda_root.classes[class_name]
             _trim_class_name_from_argument_types(
                 for_each_function_overload(opt_flow_class), class_name
@@ -95,7 +97,7 @@ def refine_cuda_module(root: NamespaceNode) -> None:
     if "cuda" not in root.namespaces:
         return
     cuda_root = root.namespaces["cuda"]
-    fix_cudaflow_enums_names()
+    fix_cudaoptflow_enums_names()
     for ns in [ns for ns_name, ns in root.namespaces.items()
                if ns_name.startswith("cuda")]:
         fix_namespace_usage_scope(ns)
