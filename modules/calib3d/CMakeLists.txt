@@ -9,4 +9,4 @@ endif()
 ocv_define_module(calib3d opencv_imgproc opencv_features2d opencv_flann ${debug_modules}
     WRAP java objc python js
 )
-ocv_target_link_libraries(${the_module} ${LAPACK_LIBRARIES})
+ocv_target_link_libraries(${the_module} ${LAPACK_LIBRARIES} ${CMAKE_SHARED_LINKER_FLAGS})
