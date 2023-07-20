@@ -54,11 +54,11 @@ public:
 class EntropyCoder {
 public:
     //! encode char vector to bit stream
-    void encodeCharVectorToStream(const std::vector<unsigned char> &inputCharVector,
+    void encodeCharVectorToStream(std::vector<unsigned char> &inputCharVector,
                                   std::ostream &outputStream);
 
     //! decode char vector from bit stream
-    void decodeStreamToCharVector(const std::istream &inputStream,
+    void decodeStreamToCharVector(std::istream &inputStream,
                                   std::vector<unsigned char> &outputCharVector);
 };
 
