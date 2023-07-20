@@ -148,6 +148,7 @@ static void appendExecutionProvider(Ort::SessionOptions          *session_option
     namespace ep = cv::gapi::onnx::ep;
     switch (execution_provider.index()) {
         case ep::EP::index_of<ep::OpenVINO>(): {
+             GAPI_LOG_INFO(NULL, "OpenVINO Execution Provider is selected.");
              const auto &ovep = cv::util::get<ep::OpenVINO>(execution_provider);
              OrtOpenVINOProviderOptions options;
              options.device_id = ovep.device_id.c_str();
