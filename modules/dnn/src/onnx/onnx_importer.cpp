@@ -194,6 +194,7 @@ private:
     void parseTile                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimpleLayers         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseEinsum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
@@ -3338,6 +3339,31 @@ void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx
     addLayer(layerParams, node_proto);
 }
 
+
+void ONNXImporter::parseEinsum(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    //implementation
+    std::cout << "\n\n\t\t***NO IMPLEMENTATION FOR EINSUM PARSER YET***\n\n" << std::endl;
+    std::cout << "Number of inputs: " << node_proto.input_size() << std::endl;
+    std::cout << "Number of outpus: " << node_proto.output_size() << std::endl;
+
+    //TODO: delete
+    // Print input names
+    for(size_t i = 0; i < node_proto.input_size(); i++)
+    {
+        std::cout << "input[i] : " << node_proto.input(i) << std::endl;
+    }
+
+    // Check if of eqution is valid
+    std::string equation = layerParams.get<std::string>("equation");
+    CV_Assert(!equation.empty());
+
+    // Save number of inputs. We need it in layer initialization
+    layerParams.set("inputSize", node_proto.input_size());
+
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseCustomLayer(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     const std::string& name = layerParams.name;
@@ -4044,6 +4070,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = &ONNXImporter::parseElementWise;
     dispatch["Where"] = &ONNXImporter::parseElementWise;
     dispatch["Range"] = &ONNXImporter::parseRange;
+    dispatch["Einsum"] = &ONNXImporter::parseEinsum;
 
     std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
                                           "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",

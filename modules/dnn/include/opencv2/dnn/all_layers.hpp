@@ -241,6 +241,46 @@ CV__DNN_INLINE_NS_BEGIN
 
     };
 
+    class CV_EXPORTS EinsumLayer : public Layer
+    {
+    public:
+        static Ptr<EinsumLayer> create(const LayerParams& params);
+    /** @brief This function performs array summation based
+    * on the Einstein summation convention. The function
+    * allows for concise expressions of various mathematical
+    * operations using subscripts. For example:
+    * `trace(a)`         -> `einsum("ii", a)`
+    * `transpose(a)`     -> `einsum("ji", a)`
+    * `multiply(a, b)`   -> `einsum(",", a, b)`
+    * `inner(a, b)`      -> `einsum("i,i", a, b)`
+    * `outer(a, b)`      -> `einsum("i,j", a, b)`
+    * `matvec(a, b)`     -> `einsum("ij,j", a, b)`
+    * `matmat(a, b)`     -> `einsum("ij,jk", a, b)`
+    *
+    * By default, the labels are placed in alphabetical
+    * order at the end of the output.
+    * For example:
+    * if `c = einsum("i,j", a, b)`, then `c[i,j] == a[i]*b[j]`.
+    * However, if `c = einsum("j,i", a, b)`, then `c[i,j] = a[j]*b[i]`.
+    * Alternatively, you can control the output order or prevent
+    * an axis from being summed/force an axis to be summed
+    * by providing indices for the output.
+    * For example:
+    * `diag(a)`         -> `einsum("ii->i", a)`
+    * `sum(a, axis=0)`  -> `einsum("i...->", a)`
+    * Subscripts at the beginning and end may be specified
+    * by putting an ellipsis "..." in the middle.
+    * For instance, the function `einsum("i...i", a)` takes
+    * the diagonal of the first and last dimensions of
+    * the operand, and `einsum("ij...,jk...->ik...")` performs
+    * the matrix product using the first two indices
+    * of each operand instead of the last two.
+    * When there is only one operand, no axes being summed,
+    *  and no output parameter, this function returns
+    * a view into the operand instead of creating a copy.
+     */
+    };
+
     class CV_EXPORTS BaseConvolutionLayer : public Layer
     {
     public:
