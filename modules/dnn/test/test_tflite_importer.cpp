@@ -20,6 +20,14 @@ namespace opencv_test { namespace {
 using namespace cv;
 using namespace cv::dnn;
 
+class Test_TFLite : public DNNTestLayer {
+public:
+    void testModel(Net& net, const std::string& modelName, const Mat& input, double l1 = 1e-5, double lInf = 1e-4);
+    void testModel(const std::string& modelName, const Mat& input, double l1 = 1e-5, double lInf = 1e-4);
+    void testModel(const std::string& modelName, const Size& inpSize, double l1 = 1e-5, double lInf = 1e-4);
+    void testLayer(const std::string& modelName, double l1 = 1e-5, double lInf = 1e-4);
+};
+
 void testInputShapes(const Net& net, const std::vector<Mat>& inps) {
     std::vector<MatShape> inLayerShapes;
     std::vector<MatShape> outLayerShapes;
@@ -31,8 +39,11 @@ void testInputShapes(const Net& net, const std::vector<Mat>& inps) {
     }
 }
 
-void testModel(Net& net, const std::string& modelName, const Mat& input, double l1 = 1e-5, double lInf = 1e-4)
+void Test_TFLite::testModel(Net& net, const std::string& modelName, const Mat& input, double l1, double lInf)
 {
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
     testInputShapes(net, {input});
     net.setInput(input);
 
@@ -48,20 +59,20 @@ void testModel(Net& net, const std::string& modelName, const Mat& input, double 
     }
 }
 
-void testModel(const std::string& modelName, const Mat& input, double l1 = 1e-5, double lInf = 1e-4)
+void Test_TFLite::testModel(const std::string& modelName, const Mat& input, double l1, double lInf)
 {
     Net net = readNet(findDataFile("dnn/tflite/" + modelName + ".tflite", false));
     testModel(net, modelName, input, l1, lInf);
 }
 
-void testModel(const std::string& modelName, const Size& inpSize, double l1 = 1e-5, double lInf = 1e-4)
+void Test_TFLite::testModel(const std::string& modelName, const Size& inpSize, double l1, double lInf)
 {
     Mat input = imread(findDataFile("cv/shared/lena.png"));
     input = blobFromImage(input, 1.0 / 255, inpSize, 0, true);
     testModel(modelName, input, l1, lInf);
 }
 
-void testLayer(const std::string& modelName, double l1 = 1e-5, double lInf = 1e-4)
+void Test_TFLite::testLayer(const std::string& modelName, double l1, double lInf)
 {
     Mat inp = blobFromNPY(findDataFile("dnn/tflite/" + modelName + "_inp.npy"));
     Net net = readNet(findDataFile("dnn/tflite/" + modelName + ".tflite"));
@@ -69,29 +80,31 @@ void testLayer(const std::string& modelName, double l1 = 1e-5, double lInf = 1e-
 }
 
 // https://google.github.io/mediapipe/solutions/face_mesh
-TEST(Test_TFLite, face_landmark)
+TEST_P(Test_TFLite, face_landmark)
 {
     testModel("face_landmark", Size(192, 192), 2e-5, 2e-4);
 }
 
 // https://google.github.io/mediapipe/solutions/face_detection
-TEST(Test_TFLite, face_detection_short_range)
+TEST_P(Test_TFLite, face_detection_short_range)
 {
     testModel("face_detection_short_range", Size(128, 128));
 }
 
 // https://google.github.io/mediapipe/solutions/selfie_segmentation
-TEST(Test_TFLite, selfie_segmentation)
+TEST_P(Test_TFLite, selfie_segmentation)
 {
     testModel("selfie_segmentation", Size(256, 256));
 }
 
-TEST(Test_TFLite, max_unpooling)
+TEST_P(Test_TFLite, max_unpooling)
 {
     // Due Max Unpoling is a numerically unstable operation and small difference between frameworks
     // might lead to positional difference of maximal elements in the tensor, this test checks
     // behavior of Max Unpooling layer only.
     Net net = readNet(findDataFile("dnn/tflite/hair_segmentation.tflite", false));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     Mat input = imread(findDataFile("cv/shared/lena.png"));
     cvtColor(input, input, COLOR_BGR2RGBA);
@@ -142,8 +155,10 @@ TEST(Test_TFLite, max_unpooling)
     }
 }
 
-TEST(Test_TFLite, EfficientDet_int8) {
+TEST_P(Test_TFLite, EfficientDet_int8) {
     Net net = readNet(findDataFile("dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", false));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     Mat img = imread(findDataFile("dnn/dog416.png"));
     Mat blob = blobFromImage(img, 1.0, Size(320, 320));
@@ -158,9 +173,11 @@ TEST(Test_TFLite, EfficientDet_int8) {
     normAssertDetections(ref, out, "", 0.5, 0.05, 0.1);
 }
 
-TEST(Test_TFLite, replicate_by_pack) {
+TEST_P(Test_TFLite, replicate_by_pack) {
     testLayer("replicate_by_pack");
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
 
 }}  // namespace
 
