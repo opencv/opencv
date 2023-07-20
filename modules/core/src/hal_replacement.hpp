@@ -731,6 +731,24 @@ inline int hal_ni_minMaxIdx(const uchar* src_data, size_t src_step, int width, i
 #define cv_hal_minMaxIdx hal_ni_minMaxIdx
 //! @endcond
 
+/**
+   @brief hal_flip
+   @param src_type source and destination image type
+   @param src_data source image data
+   @param src_step source image step
+   @param src_width source and destination image width
+   @param src_height source and destination image height
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param flip_mode 0 flips around x-axis, positive around y-axis, negative both
+ */
+inline int hal_ni_flip(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height,
+                       uchar* dst_data, size_t dst_step, int flip_mode) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_flip hal_ni_flip
+//! @endcond
+
 //! @}
 
 

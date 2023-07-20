@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include "hal_replacement.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
 
 #include <algorithm> // std::swap_ranges
@@ -801,6 +802,9 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     int type = src.type();
     _dst.create( size, type );
     Mat dst = _dst.getMat();
+
+    CALL_HAL(flip, cv_hal_flip, type, src.ptr(), src.step, src.cols, src.rows,
+             dst.ptr(), dst.step, flip_mode);
 
     CV_IPP_RUN_FAST(ipp_flip(src, dst, flip_mode));
 
