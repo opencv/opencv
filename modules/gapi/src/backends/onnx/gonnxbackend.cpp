@@ -150,24 +150,17 @@ static void appendExecutionProvider(Ort::SessionOptions          *session_option
         case ep::EP::index_of<ep::OpenVINO>(): {
              const auto &ovep = cv::util::get<ep::OpenVINO>(execution_provider);
              OrtOpenVINOProviderOptions options;
-
              options.device_id = ovep.device_id.c_str();
-
-             options.enable_vpu_fast_compile = ovep.enable_vpu_fast_compile;
-             options.context = ovep.context;
+             options.cache_dir = ovep.cache_dir.c_str();
              options.enable_opencl_throttling = ovep.enable_opencl_throttling;
              options.enable_dynamic_shapes = ovep.enable_dynamic_shapes;
-
+             // NB: If are not specified, will be taken from onnxruntime build.
              if (ovep.device_type) {
                 options.device_type = ovep.device_type->c_str();
-             }
-             if (ovep.cache_dir) {
-                options.cache_dir = ovep.cache_dir->c_str();
              }
              if (ovep.num_of_threads) {
                 options.num_of_threads = *ovep.num_of_threads;
              }
-
              try {
                 session_options->AppendExecutionProvider_OpenVINO(options);
              } catch (const std::exception &e) {
@@ -177,7 +170,6 @@ static void appendExecutionProvider(Ort::SessionOptions          *session_option
                                    " been compiled with OpenVINO support.";
                  cv::util::throw_error(std::runtime_error(ss.str()));
              }
-
              break;
         }
         default:
