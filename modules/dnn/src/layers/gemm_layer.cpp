@@ -6,7 +6,7 @@
 #include "layers_common.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
-#include "cpu_kernels/gemm.impl.hpp"
+#include "cpu_kernels/fast_gemm.hpp"
 
 namespace cv { namespace dnn {
 
@@ -20,7 +20,9 @@ public:
         alpha = params.get<float>("alpha", 1.0f);
         beta = params.get<float>("beta", 1.0f);
 
-        // C is initialized and broadcast in finalize()
+        // const_A = params.get<bool>("constA", false);
+        // const_B = params.get<bool>("constB", false);
+
         real_ndims_C = params.get<int>("real_ndims_C", -1);
     }
 
@@ -28,7 +30,14 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
-    // static bool unidirectional_broadcast_to
+    // virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
+    //     // pack A or B if one of them is const
+    //     if (blobs.size() == 1) {
+    //         ;
+    //     } else if (blobs.size() == 2) {
+    //         ;
+    //     }
+    // }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
@@ -177,9 +186,9 @@ public:
             for (int i = ndims_common - 3; i >= 0; --i) {
                 for (int dim_i = 0; dim_i < shape_Y[i]; ++dim_i) {
                     std::memset(ptr_y, 0, M * N * sizeof(float));
-                    ocv_gemm(trans_a, trans_b, ma, na, mb, nb,
-                             1.f, ptr_A, na, 1, ptr_B, nb, 1,
-                             1.f, ptr_y, N);
+                    fast_gemm(trans_a, trans_b, ma, na, mb, nb,
+                              1.f, ptr_A, na, 1, ptr_B, nb, 1,
+                              1.f, ptr_y, N);
                     ptr_A += dim_i < bshape_A[i] ? step_A : 0;
                     ptr_B += dim_i < bshape_B[i] ? step_B : 0;
                     ptr_y += step_Y;
@@ -231,11 +240,13 @@ public:
                 std::memset(ptr_y, 0, M * N * sizeof(float));
             }
 
-            ocv_gemm(trans_a, trans_b, alpha, A, B, beta, Y);
+            fast_gemm(trans_a, trans_b, alpha, A, B, beta, Y);
         }
     }
 
 private:
+    // bool const_A;
+    // bool const_B;
     int real_ndims_C;
 };
 
