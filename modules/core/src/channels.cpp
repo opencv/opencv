@@ -53,25 +53,25 @@ static void mixChannels8u( const uchar** src, const int* sdelta,
     mixChannels_(src, sdelta, dst, ddelta, len, npairs);
 }
 
-static void mixChannels16u( const ushort** src, const int* sdelta,
-                            ushort** dst, const int* ddelta,
+static void mixChannels16u( const uchar** src, const int* sdelta,
+                            uchar** dst, const int* ddelta,
                             int len, int npairs )
 {
-    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+    mixChannels_((const ushort**)src, sdelta, (ushort**)dst, ddelta, len, npairs);
 }
 
-static void mixChannels32s( const int** src, const int* sdelta,
-                            int** dst, const int* ddelta,
+static void mixChannels32s( const uchar** src, const int* sdelta,
+                            uchar** dst, const int* ddelta,
                             int len, int npairs )
 {
-    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+    mixChannels_((const int**)src, sdelta, (int**)dst, ddelta, len, npairs);
 }
 
-static void mixChannels64s( const int64** src, const int* sdelta,
-                            int64** dst, const int* ddelta,
+static void mixChannels64s( const uchar** src, const int* sdelta,
+                            uchar** dst, const int* ddelta,
                             int len, int npairs )
 {
-    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+    mixChannels_((const int64**)src, sdelta, (int64**)dst, ddelta, len, npairs);
 }
 
 typedef void (*MixChannelsFunc)( const uchar** src, const int* sdelta,
@@ -81,9 +81,9 @@ static MixChannelsFunc getMixchFunc(int depth)
 {
     static MixChannelsFunc mixchTab[] =
     {
-        (MixChannelsFunc)mixChannels8u, (MixChannelsFunc)mixChannels8u, (MixChannelsFunc)mixChannels16u,
-        (MixChannelsFunc)mixChannels16u, (MixChannelsFunc)mixChannels32s, (MixChannelsFunc)mixChannels32s,
-        (MixChannelsFunc)mixChannels64s, 0
+        mixChannels8u, mixChannels8u, mixChannels16u,
+        mixChannels16u, mixChannels32s, mixChannels32s,
+        mixChannels64s, 0
     };
 
     return mixchTab[depth];
