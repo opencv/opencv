@@ -11,6 +11,7 @@ class ConstantNode(ASTNode):
                  export_name: Optional[str] = None) -> None:
         super().__init__(name, parent, export_name)
         self.value = value
+        self._value_type = "int"
 
     @property
     def children_types(self) -> Tuple[Type[ASTNode], ...]:
@@ -22,7 +23,7 @@ class ConstantNode(ASTNode):
 
     @property
     def value_type(self) -> str:
-        return 'int'
+        return self._value_type
 
     def __str__(self) -> str:
         return "Constant('{}' exported as '{}': {})".format(

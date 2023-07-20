@@ -20,6 +20,8 @@ def apply_manual_api_refinement(root: NamespaceNode) -> None:
     root.add_class("error", (builtin_exception, ), ERROR_CLASS_PROPERTIES)
     for symbol_name, refine_symbol in NODES_TO_REFINE.items():
         refine_symbol(root, symbol_name)
+    version_constant = root.add_constant("__version__", "<unused>")
+    version_constant._value_type = "str"
 
 
 def export_matrix_type_constants(root: NamespaceNode) -> None:
