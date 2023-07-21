@@ -31,9 +31,8 @@ void testInputShapes(const Net& net, const std::vector<Mat>& inps) {
     }
 }
 
-void testModel(const std::string& modelName, const Mat& input, double l1 = 1e-5, double lInf = 1e-4)
+void testModel(Net& net, const std::string& modelName, const Mat& input, double l1 = 1e-5, double lInf = 1e-4)
 {
-    Net net = readNet(findDataFile("dnn/tflite/" + modelName + ".tflite", false));
     testInputShapes(net, {input});
     net.setInput(input);
 
@@ -49,11 +48,24 @@ void testModel(const std::string& modelName, const Mat& input, double l1 = 1e-5,
     }
 }
 
+void testModel(const std::string& modelName, const Mat& input, double l1 = 1e-5, double lInf = 1e-4)
+{
+    Net net = readNet(findDataFile("dnn/tflite/" + modelName + ".tflite", false));
+    testModel(net, modelName, input, l1, lInf);
+}
+
 void testModel(const std::string& modelName, const Size& inpSize, double l1 = 1e-5, double lInf = 1e-4)
 {
     Mat input = imread(findDataFile("cv/shared/lena.png"));
     input = blobFromImage(input, 1.0 / 255, inpSize, 0, true);
     testModel(modelName, input, l1, lInf);
+}
+
+void testLayer(const std::string& modelName, double l1 = 1e-5, double lInf = 1e-4)
+{
+    Mat inp = blobFromNPY(findDataFile("dnn/tflite/" + modelName + "_inp.npy"));
+    Net net = readNet(findDataFile("dnn/tflite/" + modelName + ".tflite"));
+    testModel(net, modelName, inp, l1, lInf);
 }
 
 // https://google.github.io/mediapipe/solutions/face_mesh
@@ -144,6 +156,10 @@ TEST(Test_TFLite, EfficientDet_int8) {
         0, 1, 0.5, 0.14357104897499084, 0.2240825891494751, 0.7183101177215576, 0.9140362739562988
     });
     normAssertDetections(ref, out, "", 0.5, 0.05, 0.1);
+}
+
+TEST(Test_TFLite, replicate_by_pack) {
+    testLayer("replicate_by_pack");
 }
 
 }}  // namespace
