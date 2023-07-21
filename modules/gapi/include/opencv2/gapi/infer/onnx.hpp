@@ -27,6 +27,118 @@ namespace gapi {
  */
 namespace onnx {
 
+/**
+ * @brief This namespace contains Execution Providers structures for G-API ONNX Runtime backend.
+ */
+namespace ep {
+
+/**
+ * @brief This structure provides functions
+ * that fill inference options for ONNX OpenVINO Execution Provider.
+ * Please follow https://onnxruntime.ai/docs/execution-providers/OpenVINO-ExecutionProvider.html#summary-of-options
+ */
+struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
+    // NB: Used from python.
+    /// @private -- Exclude this constructor from OpenCV documentation
+    GAPI_WRAP
+    OpenVINO() = default;
+
+    /** @brief Class constructor.
+
+    Constructs OpenVINO parameters based on device information.
+
+    @param device Target device to use.
+    */
+    GAPI_WRAP
+    OpenVINO(const std::string &device)
+        : device_id(device) {
+    }
+
+    /** @brief Specifies OpenVINO Execution Provider device type.
+
+    This function is used to override the accelerator hardware type
+    and precision at runtime. If this option is not explicitly configured, default
+    hardware and precision specified during onnxruntime build time is used.
+
+    @param type Device type ("CPU_FP32", "GPU_FP16", etc)
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    OpenVINO& cfgDeviceType(const std::string &type) {
+        device_type = cv::util::make_optional(type);
+        return *this;
+    }
+
+    /** @brief Specifies OpenVINO Execution Provider cache dir.
+
+    This function is used to explicitly specify the path to save and load
+    the blobs enabling model caching feature.
+
+    @param dir Path to the directory what will be used as cache.
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    OpenVINO& cfgCacheDir(const std::string &dir) {
+        cache_dir = dir;
+        return *this;
+    }
+
+    /** @brief Specifies OpenVINO Execution Provider number of threads.
+
+    This function is used to override the accelerator default value
+    of number of threads with this value at runtime. If this option
+    is not explicitly set, default value of 8 is used during build time.
+
+    @param nthreads Number of threads.
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    OpenVINO& cfgNumThreads(size_t nthreads) {
+        num_of_threads = cv::util::make_optional(nthreads);
+        return *this;
+    }
+
+    /** @brief Enables OpenVINO Execution Provider opencl throttling.
+
+    This function is used to enable OpenCL queue throttling for GPU devices
+    (reduces CPU utilization when using GPU).
+
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    OpenVINO& cfgEnableOpenCLThrottling() {
+        enable_opencl_throttling = true;
+        return *this;
+    }
+
+    /** @brief Enables OpenVINO Execution Provider dynamic shapes.
+
+    This function is used to enable OpenCL queue throttling for GPU devices
+    (reduces CPU utilization when using GPU).
+    This function is used to enable work with dynamic shaped models
+    whose shape will be set dynamically based on the infer input
+    image/data shape at run time in CPU.
+
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    OpenVINO& cfgEnableDynamicShapes() {
+        enable_dynamic_shapes = true;
+        return *this;
+    }
+
+    std::string device_id;
+    std::string cache_dir;
+    cv::optional<std::string> device_type;
+    cv::optional<size_t> num_of_threads;
+    bool enable_opencl_throttling = false;
+    bool enable_dynamic_shapes = false;
+};
+
+using EP = cv::util::variant<cv::util::monostate, OpenVINO>;
+
+} // namespace ep
+
 GAPI_EXPORTS cv::gapi::GBackend backend();
 
 enum class TraitAs: int {
@@ -78,6 +190,9 @@ struct ParamDesc {
     // when the generic infer parameters are unpacked (see GONNXBackendImpl::unpackKernel)
     std::unordered_map<std::string, std::pair<cv::Scalar, cv::Scalar> > generic_mstd;
     std::unordered_map<std::string, bool> generic_norm;
+
+    cv::gapi::onnx::ep::EP execution_provider;
+    bool disable_mem_pattern;
 };
 } // namespace detail
 
@@ -115,6 +230,7 @@ public:
         desc.num_in  = std::tuple_size<typename Net::InArgs>::value;
         desc.num_out = std::tuple_size<typename Net::OutArgs>::value;
         desc.is_generic = false;
+        desc.disable_mem_pattern = false;
     };
 
     /** @brief Specifies sequence of network input layers names for inference.
@@ -279,6 +395,29 @@ public:
         return *this;
     }
 
+    /** @brief Specifies execution provider for runtime.
+
+    The function is used to set ONNX Runtime OpenVINO Execution Provider options.
+
+    @param ovep OpenVINO Execution Provider options.
+    @see cv::gapi::onnx::ep::OpenVINO.
+
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgExecutionProvider(ep::OpenVINO&& ovep) {
+        desc.execution_provider = std::move(ovep);
+        return *this;
+    }
+
+    /** @brief Disables the memory pattern optimization.
+
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgDisableMemPattern() {
+        desc.disable_mem_pattern = true;
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend() const { return cv::gapi::onnx::backend(); }
     std::string   tag()     const { return Net::tag(); }
@@ -306,7 +445,7 @@ public:
     @param model_path path to model file (.onnx file).
     */
     Params(const std::string& tag, const std::string& model_path)
-        : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true, {}, {} }, m_tag(tag) {}
+        : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true, {}, {}, {}, false }, m_tag(tag) {}
 
     void cfgMeanStdDev(const std::string &layer,
                        const cv::Scalar &m,
@@ -316,6 +455,14 @@ public:
 
     void cfgNormalize(const std::string &layer, bool flag) {
         desc.generic_norm[layer] = flag;
+    }
+
+    void cfgExecutionProvider(ep::OpenVINO&& ov_ep) {
+        desc.execution_provider = std::move(ov_ep);
+    }
+
+    void cfgDisableMemPattern() {
+        desc.disable_mem_pattern = true;
     }
 
     // BEGIN(G-API's network parametrization API)
