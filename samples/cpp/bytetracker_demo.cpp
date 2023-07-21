@@ -39,7 +39,10 @@ string DETECTIONS_OUTPUT_PATH = home + "/files/det.txt";
 string TRACKINGS_OUTPUT_PATH = home + "/files/tracked.txt";
 string VIDEO_OUTPUT_PATH = home + "/files/output.mp4";
 string COCO_NAMES = home + "/files/coco.names";
-string NET_PATH = home + "/files/YOLOv5s.onnx";
+//string NET_PATH = home + "/files/YOLOv5s.onnx";
+string NET_PATH = home + "/files/yolov8s.onnx";
+//string NET_PATH = home + "/files/yolov8x.onnx";
+//string NET_PATH = home + "/files/bytetrack_x_mot20.onnx";
 
 int outputCodec = VideoWriter::fourcc('M', 'J', 'P', 'G');
 double outputFps = 10;
@@ -195,48 +198,92 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
     // Resizing factor.
     float xFactor = 1.0 * inputImage.cols / INPUT_WIDTH;
     float yFactor = 1.0 * inputImage.rows / INPUT_HEIGHT;
-    float *data = (float *)output[0].data;
+    bool yolov8 = false;
     //const int dimensions = 85;
 
     //  25200 for default size 640.
-    const int rows = 25200;
+    // 8400 for yolox and yolov8
+    int rows = output[0].size[1];
+    int dimensions = output[0].size[2];
+
+    if (dimensions > rows) // Check if the shape[2] is more than shape[1] (yolov8)
+    {
+        yolov8 = true;
+        rows = output[0].size[2];
+        dimensions = output[0].size[1];
+
+        output[0] = output[0].reshape(1, dimensions);
+        cv::transpose(output[0], output[0]);
+    }
     // Iterate through 25200 detections.
+    float *data = (float *)output[0].data;
+    Point classId;
+    double maxClassScore;
     for (int i = 0; i < rows; ++i)
     {
-        float confidence = data[4];
-        // Discard bad detections and continue.
-        if (confidence >= CONFIDENCE_THRESHOLD)
+        if (yolov8)
         {
-            float *classes_scores = data + 5;
-            // Create a 1x85 Mat and store class scores of 80 classes.
-            Mat scores(1, static_cast<int>(className.size()), CV_32FC1, classes_scores);
-            // Perform minMaxLoc and acquire the index of best class  score.
-            Point classId;
-            double maxClassScore;
+            float *classes_scores = data + 4;
+            cv::Mat scores(1, 80, CV_32FC1, classes_scores); //80 classes
+
             minMaxLoc(scores, 0, &maxClassScore, 0, &classId);
-            // Continue if the class score is above the threshold.
+
             if (maxClassScore > SCORE_THRESHOLD)
             {
-                // Store class ID and confidence in the pre-defined respective vectors.
-                confidences.push_back(confidence);
+                confidences.push_back(maxClassScore);
                 classIds.push_back(classId.x);
-                // Center.
-                float cx = data[0];
-                float cy = data[1];
-                // Box dimension.
+                //class_ids.push_back(class_id.x);
+
+                float x = data[0];
+                float y = data[1];
                 float w = data[2];
                 float h = data[3];
-                // Bounding box coordinates.
-                int left = int((cx - 0.5 * w) * xFactor);
-                int top = int((cy - 0.5 * h) * yFactor);
+
+                int left = int((x - 0.5 * w) * xFactor);
+                int top = int((y - 0.5 * h) * yFactor);
+
                 int width = int(w * xFactor);
                 int height = int(h * yFactor);
-                // Store good detections in the boxes vector.
-                boxes.push_back(Rect(left, top, width, height));
+
+                boxes.push_back(cv::Rect(left, top, width, height));
+            }
+        }
+        else
+        {
+            float confidence = data[4];
+            // Discard bad detections and continue.
+            if (confidence >= CONFIDENCE_THRESHOLD)
+            {
+                float *classes_scores = data + 5;
+                // Create a 1x85 Mat and store class scores of 80 classes.
+                //This is also true for yolox
+                Mat scores(1, static_cast<int>(className.size()), CV_32FC1, classes_scores);
+                // Perform minMaxLoc and acquire the index of best class  score.
+                minMaxLoc(scores, 0, &maxClassScore, 0, &classId);
+                // Continue if the class score is above the threshold.
+                if (maxClassScore > SCORE_THRESHOLD)
+                {
+                    // Store class ID and confidence in the pre-defined respective vectors.
+                    confidences.push_back(confidence);
+                    classIds.push_back(classId.x);
+                    // Center.
+                    float cx = data[0];
+                    float cy = data[1];
+                    // Box dimension.
+                    float w = data[2];
+                    float h = data[3];
+                    // Bounding box coordinates.
+                    int left = int((cx - 0.5 * w) * xFactor);
+                    int top = int((cy - 0.5 * h) * yFactor);
+                    int width = int(w * xFactor);
+                    int height = int(h * yFactor);
+                    // Store good detections in the boxes vector.
+                    boxes.push_back(Rect(left, top, width, height));
+                }
             }
         }
         // Jump to the next row.
-        data += 85;
+        data += dimensions;
     }
     vector<int> nmsResult;
     dnn::NMSBoxes(boxes, confidences, SCORE_THRESHOLD, NMS_THRESHOLD, nmsResult);
@@ -333,8 +380,9 @@ void writeTracksToFile(const Mat& objects, const string &outputPath,
         return;
     }
     // Check if the output file is empty
-    bool isEmpty = outputFile.tellp() == 0;
-
+    //bool isEmpty = outputFile.tellp() == 0;
+    ifstream file(outputPath);
+    bool isEmpty = file.peek() == ifstream::traits_type::eof();
     // Write the header row of the file is empty
     if (isEmpty)
     {
