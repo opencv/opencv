@@ -3350,6 +3350,9 @@ void ONNXImporter::parseEinsum(LayerParams& layerParams, const opencv_onnx::Node
     // Save number of inputs. We need it in layer initialization
     layerParams.set("inputSize", node_proto.input_size());
 
+    // Save number of outputs. We need it in layer initialization
+    layerParams.set("outputSize", node_proto.output_size());
+
     addLayer(layerParams, node_proto);
 }
 

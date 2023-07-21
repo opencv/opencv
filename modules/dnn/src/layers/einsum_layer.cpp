@@ -37,6 +37,8 @@ int64_t letterToIndex(const char ch) {
 class LayerEinsumImpl CV_FINAL : public EinsumLayer
 {
 public:
+    // Number of inputs and outputs of the layer
+    int inputSize, outputSize;
 
     // These hold equation subring, left hand side and right it of
     mutable String equation, lhs_eq, rhs_eq;
@@ -59,6 +61,10 @@ public:
     // Holds the dimension value of the index corresponding to the subscript label
     // `-1` indicates that the corresponding label was not encountered at all
     mutable std::vector<int64_t> subscriptIndicesToDimValue;
+
+    // Index corresponding to each output dim corresponding to each subscript index
+    // A value of -1 means the corresponding subscript index is not found in the output
+    mutable std::vector<int64_t> subscriptIndicesToOutputIndices;
 
     // Hold max number of alphabetic numbers
     static const size_t numOfLetters = 52;
@@ -84,12 +90,15 @@ public:
     bool processEquation(const String& equation, const std::vector<MatShape>& inputs) const;
     bool processBroadcastedDims() const;
     bool createOutputSubsctipt() const;
+    bool calculateOutputShape(std::vector<MatShape>& output_dims) const;
 
     // constructor
     LayerEinsumImpl(const LayerParams& params)
     {
         setParamsFrom(params);
         equation = params.get<String>("equation");
+        outputSize = params.get<int>("outputSize");
+        inputSize  = params.get<int>("inputSize");
 
         // fill in vectors to avoid getting random numbers
         letter2count.fill(0);
@@ -111,8 +120,15 @@ public:
             CV_Assert(processEquation(equation, inputs));
             CV_Assert(processBroadcastedDims());
             CV_Assert(createOutputSubsctipt());
+            CV_Assert(calculateOutputShape(outputs));
             is_parsed = true;
         }
+        std::cout << "Shape: [";
+        for(int i = 0; i < outputs[0].size(); i++){
+            std::cout << outputs[0][i] << " ";
+        }
+        std::cout << "]";
+
         return result;
     }
 
@@ -155,11 +171,89 @@ public:
     }
 };
 
+bool LayerEinsumImpl::calculateOutputShape(std::vector<MatShape>& output_dims) const
+{
+    bool result = true;
+    MatShape dims; // vector to store output dimentions
+
+    if (outputSize!= 1)
+    {
+        CV_Error(Error::StsError,
+        cv::format("Einsum layer should only have one output, currenly [%d]", outputSize));
+    }
+
+    // Traverse through each of the subscript labels within the output subscript.
+    bool middleOfEllipsis = false;
+    int64_t ellipsisCharCount = 0;
+
+    subscriptIndicesToOutputIndices.resize(numLetterIndices, -1);
+
+    std::array<int64_t, numOfLetters> outputLetterToCount;
+    outputLetterToCount.fill(0);
+
+    int64_t outputDimCounter = 0;
+    for (auto letter : rhs_eq)
+    {
+        if(letter == '.')
+        {
+            CV_Error(Error::StsNotImplemented, "Ellipsis are not supported yet");
+        } else {
+            if (middleOfEllipsis)
+            {
+                CV_Error(Error::StsError, "Encountered '.' character that is"
+                " not part of output subscript");
+            }
+
+            auto letterIndex = letterToIndex(letter);
+
+            if (letterIndex == -1)
+            {
+                 CV_Error(Error::StsError,
+                    "The only permissible subscript labels are"
+                    " lowercase letters (a-z) and uppercase letters (A-Z).");
+            }
+
+            if (outputLetterToCount[letterIndex] != 0)
+            {
+                CV_Error(Error::StsError,
+                 "Output subscript constains repeated letters");
+            }
+
+            ++outputLetterToCount[letterIndex];
+
+            auto mappedIndex = letter2index[letterIndex];
+
+            if(mappedIndex == -1)
+            {
+                CV_Error(Error::StsError,
+                "Output subscript has letters that were not encountered in the inputs");
+            }
+
+            std::cout << "Segmentation fault happens here!" << std::endl;
+            // Push output dimention
+            // Einsum layer only has one output vector
+            dims.push_back(subscriptIndicesToDimValue[mappedIndex]);
+            std::cout << "Conferm" << std::endl;
+
+            // Reset the last input index for this subscript label
+            // given that it is seen in the output and hence can't be reduced
+            subscriptIndicesToLastInput[mappedIndex] = -1;
+            subscriptIndicesToOutputIndices[mappedIndex] = outputDimCounter++;
+        }
+    }
+    output_dims.clear();
+    output_dims.push_back(dims);
+    return result;
+}
+
 bool LayerEinsumImpl::createOutputSubsctipt() const
 {
+    // The explicit form requires no operation, as the output
+    // would have already been parsed during the input parsing process.
     bool result = true;
     if(explicitEquation)
     {
+        // Ensure that the provided explicit equation includes an ellipsis if the input contains ellipses.
         if(numOfEllipsisDims > 0)
         {
             if(rhs_eq.find("...") == std::string::npos)
@@ -251,7 +345,7 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
                 int letterIdx = letterToIndex(letter);
                 if (letterIdx == -1)
                 {
-                    CV_Error(Error::StsAssert,
+                    CV_Error(Error::StsError,
                     "The only permissible subscript labels are lowercase letters (a-z) and uppercase letters (A-Z).");
                 }
 
