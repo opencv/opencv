@@ -17,6 +17,14 @@ if(ONNXRT_ROOT_DIR)
 endif()
 
 if(ORT_LIB AND ORT_INCLUDE)
+  find_path(ORT_DML_INCLUDE dml_provider_factory.h
+    ${ONNXRT_ROOT_DIR}/include/onnxruntime/core/providers/dml
+    CMAKE_FIND_ROOT_PATH_BOTH)
+
+  if(ORT_DML_INCLUDE)
+    set(HAVE_ONNX_DML TRUE)
+  endif()
+
   set(HAVE_ONNX TRUE)
   # For CMake output only
   set(ONNX_LIBRARIES "${ORT_LIB}" CACHE STRING "ONNX Runtime libraries")

@@ -9,6 +9,8 @@
 
 #ifdef HAVE_ONNX
 
+#include "backends/onnx/dml_ep.hpp"
+
 #include <ade/util/algorithm.hpp> // any_of
 #include <ade/util/zip_range.hpp>
 #include <opencv2/gapi/infer.hpp>
@@ -143,37 +145,45 @@ public:
     void run();
 };
 
+static void appendOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
+                                            const cv::gapi::onnx::ep::OpenVINO &ov_ep) {
+     OrtOpenVINOProviderOptions options;
+     options.device_type = ov_ep.device_type.c_str();
+     options.cache_dir = ov_ep.cache_dir.c_str();
+     options.num_of_threads = ov_ep.num_of_threads;
+     options.enable_opencl_throttling = ov_ep.enable_opencl_throttling;
+     options.enable_dynamic_shapes = ov_ep.enable_dynamic_shapes;
+     options.context = nullptr;
+
+     try {
+        session_options->AppendExecutionProvider_OpenVINO(options);
+     } catch (const std::exception &e) {
+         std::stringstream ss;
+         ss << "ONNX Backend: Failed to enable OpenVINO Execution Provider: "
+            << e.what() << "\nMake sure that onnxruntime has"
+                           " been compiled with OpenVINO support.";
+         cv::util::throw_error(std::runtime_error(ss.str()));
+     }
+}
+
 static void appendExecutionProvider(Ort::SessionOptions          *session_options,
                                     const cv::gapi::onnx::ep::EP &execution_provider) {
     namespace ep = cv::gapi::onnx::ep;
     switch (execution_provider.index()) {
         case ep::EP::index_of<ep::OpenVINO>(): {
              GAPI_LOG_INFO(NULL, "OpenVINO Execution Provider is selected.");
-             const auto &ovep = cv::util::get<ep::OpenVINO>(execution_provider);
-             OrtOpenVINOProviderOptions options;
-             options.device_id = ovep.device_id.c_str();
-             options.cache_dir = ovep.cache_dir.c_str();
-             options.enable_opencl_throttling = ovep.enable_opencl_throttling;
-             options.enable_dynamic_shapes = ovep.enable_dynamic_shapes;
-             // NB: If are not specified, will be taken from onnxruntime build.
-             if (ovep.device_type) {
-                options.device_type = ovep.device_type->c_str();
-             }
-             if (ovep.num_of_threads) {
-                options.num_of_threads = *ovep.num_of_threads;
-             }
-             try {
-                session_options->AppendExecutionProvider_OpenVINO(options);
-             } catch (const std::exception &e) {
-                 std::stringstream ss;
-                 ss << "ONNX Backend: Failed to enable OpenVINO Execution Provider: "
-                    << e.what() << "\nMake sure that onnxruntime has"
-                                   " been compiled with OpenVINO support.";
-                 cv::util::throw_error(std::runtime_error(ss.str()));
-             }
+             const auto &ov_ep = cv::util::get<ep::OpenVINO>(execution_provider);
+             appendOpenVINOExecutionProvider(session_options, ov_ep);
              break;
         }
+        case ep::EP::index_of<ep::DirectML>(): {
+            GAPI_LOG_INFO(NULL, "DirectML Execution Provider is selected.");
+            const auto &dml_ep = cv::util::get<ep::DirectML>(execution_provider);
+            appendDMLExecutionProvider(session_options, dml_ep);
+            break;
+        }
         default:
+            GAPI_LOG_INFO(NULL, "CPU Execution Provider is selected.");
             break;
     }
 }
@@ -629,7 +639,10 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     }
     // Create and initialize the ONNX session
     Ort::SessionOptions session_options;
-    cv::gimpl::onnx::appendExecutionProvider(&session_options, pp.execution_provider);
+    for (const auto &ep : pp.execution_providers) {
+        GAPI_LOG_INFO(NULL, "Adding Execution Providers for \"" << pp.model_path << "\"");
+        cv::gimpl::onnx::appendExecutionProvider(&session_options, ep);
+    }
 
     if (pp.disable_mem_pattern) {
         session_options.DisableMemPattern();
