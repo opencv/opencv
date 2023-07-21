@@ -13,6 +13,7 @@ Implementation of Batch Normalization layer.
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
 #include "../op_halide.hpp"
+#include "../ie_ngraph.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
@@ -41,6 +42,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && !poolPad.width && !poolPad.height);
     }
 
@@ -180,6 +182,44 @@ public:
         return Ptr<BackendNode>(new HalideBackendNode(top));
 #endif  // HAVE_HALIDE
         return Ptr<BackendNode>();
+    }
+
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+#ifdef HAVE_DNN_NGRAPH
+        auto features = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto indices = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+
+        auto inpShape = features->get_shape();
+        std::vector<int32_t> outShape(inpShape.begin(), inpShape.end());
+        outShape[2] = (outShape[2] - 1) * poolStride.height + poolKernel.height - 2 * poolPad.height;
+        outShape[3] = (outShape[3] - 1) * poolStride.width + poolKernel.width - 2 * poolPad.width;
+
+        Mat zeros = Mat::zeros(1, total(outShape), CV_32F);
+        auto zeroInp = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{zeros.total()}, zeros.data);
+
+        int newShape = -1;
+        features = std::make_shared<ngraph::op::v1::Reshape>(
+            features,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &newShape),
+            true
+        );
+        indices = std::make_shared<ngraph::op::v1::Reshape>(
+            indices,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &newShape),
+            true
+        );
+
+        int axis = 0;
+        std::shared_ptr<ngraph::Node> unpool = std::make_shared<ngraph::op::ScatterElementsUpdate>(zeroInp, indices, features,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &axis));
+
+        auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{outShape.size()}, outShape.data());
+        unpool = std::make_shared<ngraph::op::v1::Reshape>(unpool, shape, true);
+
+        return Ptr<BackendNode>(new InfEngineNgraphNode(unpool));
+#endif  // HAVE_DNN_NGRAPH
     }
 };
 
