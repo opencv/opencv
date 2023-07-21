@@ -19,15 +19,38 @@
 #include <ostream>
 #include <typeinfo>
 
+#include "opencv2/core/cvdef.h"
+#include "opencv2/core/utility.hpp"
+
 namespace cvflann
 {
 
 namespace anyimpl
 {
 
-struct bad_any_cast
+struct bad_any_cast : public std::exception
 {
+    bad_any_cast() = default;
+
+    bad_any_cast(const char* src, const char* dst)
+        : message_(cv::format("cvflann::bad_any_cast(from %s to %s)", src, dst)) {}
+
+
+    const char* what() const noexcept override
+    {
+        return message_.c_str();
+    }
+
+private:
+    std::string message_{"cvflann::bad_any_cast"};
 };
+
+#ifndef CV_THROW_IF_TYPE_MISMATCH
+#define CV_THROW_IF_TYPE_MISMATCH(src_type_info, dst_type_info) \
+    if ((src_type_info) != (dst_type_info)) \
+        throw cvflann::anyimpl::bad_any_cast((src_type_info).name(), \
+                                             (dst_type_info).name())
+#endif
 
 struct empty_any
 {
@@ -271,7 +294,7 @@ public:
     template<typename T>
     T& cast()
     {
-        if (policy->type() != typeid(T)) throw anyimpl::bad_any_cast();
+        CV_THROW_IF_TYPE_MISMATCH(policy->type(), typeid(T));
         T* r = reinterpret_cast<T*>(policy->get_value(&object));
         return *r;
     }
@@ -280,7 +303,7 @@ public:
     template<typename T>
     const T& cast() const
     {
-        if (policy->type() != typeid(T)) throw anyimpl::bad_any_cast();
+        CV_THROW_IF_TYPE_MISMATCH(policy->type(), typeid(T));
         const T* r = reinterpret_cast<const T*>(policy->get_value(&object));
         return *r;
     }
