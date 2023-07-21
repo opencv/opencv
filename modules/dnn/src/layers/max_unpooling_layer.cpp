@@ -184,10 +184,10 @@ public:
         return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-#ifdef HAVE_DNN_NGRAPH
         auto features = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         auto indices = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
 
@@ -219,8 +219,8 @@ public:
         unpool = std::make_shared<ngraph::op::v1::Reshape>(unpool, shape, true);
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(unpool));
-#endif  // HAVE_DNN_NGRAPH
     }
+#endif  // HAVE_DNN_NGRAPH
 };
 
 Ptr<MaxUnpoolLayer> MaxUnpoolLayer::create(const LayerParams& params)

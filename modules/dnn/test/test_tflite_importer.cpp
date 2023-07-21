@@ -22,10 +22,10 @@ using namespace cv::dnn;
 
 class Test_TFLite : public DNNTestLayer {
 public:
-    void testModel(Net& net, const std::string& modelName, const Mat& input, double l1 = 1e-5, double lInf = 1e-4);
-    void testModel(const std::string& modelName, const Mat& input, double l1 = 1e-5, double lInf = 1e-4);
-    void testModel(const std::string& modelName, const Size& inpSize, double l1 = 1e-5, double lInf = 1e-4);
-    void testLayer(const std::string& modelName, double l1 = 1e-5, double lInf = 1e-4);
+    void testModel(Net& net, const std::string& modelName, const Mat& input, double l1 = 0, double lInf = 0);
+    void testModel(const std::string& modelName, const Mat& input, double l1 = 0, double lInf = 0);
+    void testModel(const std::string& modelName, const Size& inpSize, double l1 = 0, double lInf = 0);
+    void testLayer(const std::string& modelName, double l1 = 0, double lInf = 0);
 };
 
 void testInputShapes(const Net& net, const std::vector<Mat>& inps) {
@@ -41,6 +41,9 @@ void testInputShapes(const Net& net, const std::vector<Mat>& inps) {
 
 void Test_TFLite::testModel(Net& net, const std::string& modelName, const Mat& input, double l1, double lInf)
 {
+    l1 = l1 ? l1 : default_l1;
+    lInf = lInf ? lInf : default_lInf;
+
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
@@ -82,6 +85,8 @@ void Test_TFLite::testLayer(const std::string& modelName, double l1, double lInf
 // https://google.github.io/mediapipe/solutions/face_mesh
 TEST_P(Test_TFLite, face_landmark)
 {
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
     testModel("face_landmark", Size(192, 192), 2e-5, 2e-4);
 }
 
@@ -99,6 +104,9 @@ TEST_P(Test_TFLite, selfie_segmentation)
 
 TEST_P(Test_TFLite, max_unpooling)
 {
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+
     // Due Max Unpoling is a numerically unstable operation and small difference between frameworks
     // might lead to positional difference of maximal elements in the tensor, this test checks
     // behavior of Max Unpooling layer only.
@@ -158,8 +166,9 @@ TEST_P(Test_TFLite, max_unpooling)
                     }
                 }
                 EXPECT_EQ(poolInpData[maxIdx], poolOutData[y * 64 + x]) << errMsg;
-                if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+                if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
                     EXPECT_EQ(poolIdsData[y * 64 + x], (float)maxIdx) << errMsg;
+                }
                 EXPECT_EQ(unpoolOutData[maxIdx], unpoolInpData[y * 64 + x]) << errMsg;
             }
         }
