@@ -40,16 +40,33 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
             continue;
         else if (key == "v")
         {
-            Point3f vertex, color;
+            // (x, y, z, [w], [r, g, b])
+            auto splitArr = split(s, ' ');
+            if (splitArr.size() <= 3)
+            {
+                CV_LOG_ERROR(NULL, "Vertex should have at least 3 coordinate values.");
+                return;
+            }
+            Point3f vertex;
             ss >> vertex.x >> vertex.y >> vertex.z;
             points.push_back(vertex);
-            if (ss.rdbuf()->in_avail() != 0) {
-                Point3_<uchar> uc_color;
-                ss >> color.x >> color.y >> color.z;
-                uc_color.x = static_cast<uchar>(std::round(255.f * color.x));
-                uc_color.y = static_cast<uchar>(std::round(255.f * color.y));
-                uc_color.z = static_cast<uchar>(std::round(255.f * color.z));
-                rgb.push_back(uc_color);
+            if (splitArr.size() == 5 || splitArr.size() == 8)
+            {
+                float w;
+                ss >> w;
+                CV_UNUSED(w);
+            }
+            if (splitArr.size() >= 7)
+            {
+                Point3f color;
+                if (ss.rdbuf()->in_avail() != 0) {
+                    Point3_<uchar> uc_color;
+                    ss >> color.x >> color.y >> color.z;
+                    uc_color.x = static_cast<uchar>(std::round(255.f * color.x));
+                    uc_color.y = static_cast<uchar>(std::round(255.f * color.y));
+                    uc_color.z = static_cast<uchar>(std::round(255.f * color.z));
+                    rgb.push_back(uc_color);
+                }
             }
         }
         else if (key == "vn")
