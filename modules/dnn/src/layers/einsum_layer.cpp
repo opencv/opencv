@@ -149,16 +149,15 @@ public:
             CV_Assert(processEquation(equation, inputs));
             CV_Assert(processBroadcastedDims());
             CV_Assert(createOutputSubsctipt());
+            is_parsed = true;
         }
-
         return result;
     }
 
     // forward
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
-        //TODO: delete
-        std::cout << "\n\n\t\t*** Einsum Forward not implemented yet***" << std::endl;
+        CV_Error(Error::StsError, "Forward is not implemented");
     }
 
     void parseEquation(const String& equation) const
@@ -239,8 +238,14 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
     // For install "ij, jk -> ik" needs to have 2 inputs tensors
     int num_input_tensors = inputs.size();
     if (lhs_eq_tokens.size() != num_input_tensors)
-        CV_Error(Error::StsAssert, "Number of input tensors does not match the number of subsribts in the input equation");
-
+    {
+        CV_Error(
+            Error::StsAssert,
+            cv::format("Number of input tensors [%d] does not "
+            "match the number of subscribts [%ld] "
+            "in the input equation", num_input_tensors, lhs_eq_tokens.size())
+            );
+    }
     int64_t inputIdx = 0;
 
     // Maintains a mapping between input indices and their corresponding subscript labels for each input
@@ -257,14 +262,6 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
         const MatShape shape = inputs[inputIdx];
         size_t rank = shape.size();
         size_t dim_count = 0;
-
-        //TODO: delete
-        std::cout << "Dimention: [";
-        for (int i = 0; i < rank; i++)
-        {
-            std::cout << " " << shape[i];
-        }
-        std::cout << "]" << std::endl << std::endl;
 
         std::vector<int64_t> currTokenIndices;
         currTokenIndices.reserve(rank);
@@ -284,7 +281,9 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
                 if (middleOfellipsis)
                 {
                     CV_Error(Error::StsAssert,
-                    "Encountered '.' character that is not part of an ellipsis in the input: ");
+                    cv::format(
+                        "Encountered '.' character that is not part of an ellipsis in the input: [%ld]",
+                        inputIdx));
                 }
 
                 int letterIdx = letterToIndex(letter);
@@ -295,8 +294,6 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
                 }
 
                 int dimValue = shape[dim_count];
-                //TODO: delete
-                std::cout << "dim_conter: " << dim_count << " dim_value: " << dimValue << std::endl;
 
                 // The subscript label was not found in the global subscript label array
                 // Therefore, it is added to both the local and global subscript arrays
@@ -312,9 +309,6 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
                     auto mappedIndx = letter2index[letterIdx];
                     subscriptIndicesToLastInput[mappedIndx] = inputIdx;
 
-                    //TODO: delete
-                    std::cout << "mappedIndx: " << mappedIndx << std::endl;
-                    std::cout << "subscriptIndicesToDimValue: " << subscriptIndicesToDimValue[mappedIndx] << std::endl;
                     if (subscriptIndicesToDimValue[mappedIndx] != dimValue)
                     {
                         if(subscriptIndicesToDimValue[mappedIndx] == 1){
@@ -323,15 +317,12 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
                         {
                             if (dimValue != 1)
                             {
-
-                                // CV_Error(Error::StsError, cv::format("Node [%s@%s]:(%s) parse error: %s", layer_type.c_str(), layer_type_domain.c_str(), name.c_str(), e.what()));
                                 CV_Error(Error::StsError, cv::format("Einsum operands can not be broadcasted."
                                                                      "Check input shapes/equation passed."
-                                                                     "Input shape of operand %s"
-                                                                     " is incompatible in the dimention %s."
-                                                                    , std::to_string(inputIdx)
-                                                                    , std::to_string(dim_count))
-                                                                    );
+                                                                     "Input shape of operand [%ld]"
+                                                                     " is incompatible in the dimention [%ld]."
+                                                                    ,inputIdx
+                                                                    ,dim_count));
                             }
                         }
                     }
