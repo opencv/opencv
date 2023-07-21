@@ -40,6 +40,9 @@
 #include <set>
 #include <vector>
 
+#include "opencv2/core/base.hpp"
+#include "opencv2/core/cvdef.h"
+
 namespace cvflann
 {
 
