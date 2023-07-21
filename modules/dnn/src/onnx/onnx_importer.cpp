@@ -3342,17 +3342,6 @@ void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx
 
 void ONNXImporter::parseEinsum(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    //implementation
-    std::cout << "\n\n\t\t***NO IMPLEMENTATION FOR EINSUM PARSER YET***\n\n" << std::endl;
-    std::cout << "Number of inputs: " << node_proto.input_size() << std::endl;
-    std::cout << "Number of outpus: " << node_proto.output_size() << std::endl;
-
-    //TODO: delete
-    // Print input names
-    for(size_t i = 0; i < node_proto.input_size(); i++)
-    {
-        std::cout << "input[i] : " << node_proto.input(i) << std::endl;
-    }
 
     // Check if of eqution is valid
     std::string equation = layerParams.get<std::string>("equation");
