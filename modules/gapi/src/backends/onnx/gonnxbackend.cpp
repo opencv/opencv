@@ -143,6 +143,41 @@ public:
     void run();
 };
 
+static void appendExecutionProvider(Ort::SessionOptions          *session_options,
+                                    const cv::gapi::onnx::ep::EP &execution_provider) {
+    namespace ep = cv::gapi::onnx::ep;
+    switch (execution_provider.index()) {
+        case ep::EP::index_of<ep::OpenVINO>(): {
+             GAPI_LOG_INFO(NULL, "OpenVINO Execution Provider is selected.");
+             const auto &ovep = cv::util::get<ep::OpenVINO>(execution_provider);
+             OrtOpenVINOProviderOptions options;
+             options.device_id = ovep.device_id.c_str();
+             options.cache_dir = ovep.cache_dir.c_str();
+             options.enable_opencl_throttling = ovep.enable_opencl_throttling;
+             options.enable_dynamic_shapes = ovep.enable_dynamic_shapes;
+             // NB: If are not specified, will be taken from onnxruntime build.
+             if (ovep.device_type) {
+                options.device_type = ovep.device_type->c_str();
+             }
+             if (ovep.num_of_threads) {
+                options.num_of_threads = *ovep.num_of_threads;
+             }
+             try {
+                session_options->AppendExecutionProvider_OpenVINO(options);
+             } catch (const std::exception &e) {
+                 std::stringstream ss;
+                 ss << "ONNX Backend: Failed to enable OpenVINO Execution Provider: "
+                    << e.what() << "\nMake sure that onnxruntime has"
+                                   " been compiled with OpenVINO support.";
+                 cv::util::throw_error(std::runtime_error(ss.str()));
+             }
+             break;
+        }
+        default:
+            break;
+    }
+}
+
 } // namespace onnx
 } // namespace gimpl
 } // namespace cv
@@ -592,9 +627,13 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
         cv::util::throw_error(std::logic_error("Please specify output layer names for "
                                                + params.model_path));
     }
-
     // Create and initialize the ONNX session
     Ort::SessionOptions session_options;
+    cv::gimpl::onnx::appendExecutionProvider(&session_options, pp.execution_provider);
+
+    if (pp.disable_mem_pattern) {
+        session_options.DisableMemPattern();
+    }
     this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
 #ifndef _WIN32
     this_session = Ort::Session(this_env, params.model_path.data(), session_options);
