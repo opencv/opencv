@@ -21,6 +21,18 @@ cv::gapi::onnx::PyParams& cv::gapi::onnx::PyParams::cfgNormalize(const std::stri
     return *this;
 }
 
+cv::gapi::onnx::PyParams&
+cv::gapi::onnx::PyParams::cfgExecutionProvider(cv::gapi::onnx::ep::OpenVINO ov_ep) {
+    m_priv->cfgExecutionProvider(std::move(ov_ep));
+    return *this;
+}
+
+cv::gapi::onnx::PyParams&
+cv::gapi::onnx::PyParams::cfgDisableMemPattern() {
+    m_priv->cfgDisableMemPattern();
+    return *this;
+}
+
 cv::gapi::GBackend cv::gapi::onnx::PyParams::backend() const {
     return m_priv->backend();
 }
