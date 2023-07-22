@@ -8,41 +8,9 @@
 namespace cv { namespace usac {
 enum EstimationMethod { HOMOGRAPHY=0, FUNDAMENTAL=1, FUNDAMENTAL8=2, ESSENTIAL=3, AFFINE=4, P3P=5, P6P=6, PLANE=7, SPHERE=8};
 enum VerificationMethod { NULL_VERIFIER=0, SPRT_VERIFIER=1, ASPRT=2 };
-enum ErrorMetric {DIST_TO_LINE, SAMPSON_ERR, SGD_ERR, SYMM_REPR_ERR, FORW_REPR_ERR, RERPOJ, POINT_TO_PLANE, POINT_TO_SPHERE};
+enum ErrorMetric {DIST_TO_LINE=0, SAMPSON_ERR=1, SGD_ERR=2, SYMM_REPR_ERR=3, FORW_REPR_ERR=4, RERPOJ=5, POINT_TO_PLANE=6, POINT_TO_SPHERE=7};
 enum MethodSolver { GEM_SOLVER=0, SVD_SOLVER=1 };
 enum ModelConfidence {RANDOM=0, NON_RANDOM=1, UNKNOWN=2};
-
-
-class UsacConfig : public Algorithm {
-public:
-    virtual int getMaxIterations () const = 0;
-    virtual int getRandomGeneratorState () const = 0;
-    virtual bool isParallel() const = 0;
-
-    virtual NeighborSearchMethod getNeighborsSearchMethod () const = 0;
-    virtual SamplingMethod getSamplingMethod () const = 0;
-    virtual ScoreMethod getScoreMethod () const = 0;
-    virtual LocalOptimMethod getLOMethod () const = 0;
-    virtual EstimationMethod getEstimationMethod () const = 0;
-    virtual bool isMaskRequired () const = 0;
-
-};
-
-class SimpleUsacConfig : public UsacConfig {
-public:
-    virtual void setMaxIterations(int max_iterations_) = 0;
-    virtual void setRandomGeneratorState(int random_generator_state_) = 0;
-    virtual void setParallel(bool is_parallel) = 0;
-    virtual void setNeighborsSearchMethod(NeighborSearchMethod neighbors_search_method_) = 0;
-    virtual void setSamplingMethod(SamplingMethod sampling_method_) = 0;
-    virtual void setScoreMethod(ScoreMethod score_method_) = 0;
-    virtual void setLoMethod(LocalOptimMethod lo_method_) = 0;
-    virtual void maskRequired(bool need_mask_) = 0;
-
-    static Ptr<SimpleUsacConfig> create(EstimationMethod est_method);
-
-};
-
 
 // Abstract Error class
 class Error : public Algorithm {
@@ -93,18 +61,6 @@ public:
 class TrifocalTensorReprError : public Error {
 public:
     static Ptr<TrifocalTensorReprError> create(const Mat &points);
-};
-
-// Error for plane model
-class PlaneModelError : public Error {
-public:
-    static Ptr<PlaneModelError> create(const Mat &points);
-};
-
-// Error for sphere model
-class SphereModelError : public Error {
-public:
-    static Ptr<SphereModelError> create(const Mat &points);
 };
 
 // Normalizing transformation of data points
@@ -177,23 +133,10 @@ public:
     static Ptr<AffineMinimalSolver> create(const Mat &points_);
 };
 
-//---------------------- Trifocal tensor -------------------
 class TrifocalTensorMinimalSolver : public MinimalSolver {
 public:
     static Ptr<TrifocalTensorMinimalSolver> create(const Mat &points_);
     virtual void getFundamentalMatricesFromTensor (const cv::Mat &tensor, cv::Mat &F21, cv::Mat &F31) = 0;
-};
-
-//-------------------------- 3D PLANE -----------------------
-class PlaneModelMinimalSolver : public MinimalSolver {
-public:
-    static Ptr<PlaneModelMinimalSolver> create(const Mat &points_);
-};
-
-//-------------------------- 3D SPHERE -----------------------
-class SphereModelMinimalSolver : public MinimalSolver {
-public:
-    static Ptr<SphereModelMinimalSolver> create(const Mat &points_);
 };
 
 //////////////////////////////////////// NON MINIMAL SOLVER ///////////////////////////////////////
@@ -258,25 +201,11 @@ public:
     static Ptr<AffineNonMinimalSolver> create(const Mat &points, InputArray T1, InputArray T2);
 };
 
-// Relative pose:
 class LarssonOptimizer : public NonMinimalSolver {
 public:
     static Ptr<LarssonOptimizer> create(const Mat &calib_points_, const Matx33d &K1_, const Matx33d &K2_, int max_iters_, bool is_fundamental_);
 };
 
-//-------------------------- 3D PLANE -----------------------
-class PlaneModelNonMinimalSolver : public NonMinimalSolver {
-public:
-    static Ptr<PlaneModelNonMinimalSolver> create(const Mat &points_);
-};
-
-//-------------------------- 3D SPHERE -----------------------
-class SphereModelNonMinimalSolver : public NonMinimalSolver {
-public:
-    static Ptr<SphereModelNonMinimalSolver> create(const Mat &points_);
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////// SCORE ///////////////////////////////////////////
 class Score {
 public:
@@ -518,23 +447,6 @@ class PnPEstimator : public Estimator {
 public:
     static Ptr<PnPEstimator> create (const Ptr<MinimalSolver> &min_solver_,
             const Ptr<NonMinimalSolver> &non_min_solver_);
-};
-
-class PointCloudModelEstimator : public Estimator {
-public:
-    //! Custom function that take the model coefficients and return whether the model is acceptable or not.
-    //! Same as cv::SACSegmentation::ModelConstraintFunction in ptcloud.hpp.
-    using ModelConstraintFunction = std::function<bool(const std::vector<double> &/*model_coefficients*/)>;
-    /** @brief Methods for creating PointCloudModelEstimator.
-     *
-     * @param min_solver_ Minimum solver for estimating the model with minimum samples.
-     * @param non_min_solver_ Non-minimum solver for estimating the model with non-minimum samples.
-     * @param custom_model_constraints_ Custom model constraints for filtering the estimated obtained model.
-     * @return Ptr\<PointCloudModelEstimator\>
-     */
-    static Ptr<PointCloudModelEstimator> create (const Ptr<MinimalSolver> &min_solver_,
-            const Ptr<NonMinimalSolver> &non_min_solver_,
-            const ModelConstraintFunction &custom_model_constraints_ = nullptr);
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -1026,6 +938,122 @@ public:
          double confidence_=0.95, int max_iterations_=5000, ScoreMethod score_ =ScoreMethod::SCORE_METHOD_MSAC);
 };
 
+double getLambda (std::vector<int> &supports, double cdf_thr, int points_size,
+      int sample_size, bool is_indendent_inliers, int &min_non_random_inliers);
+
+Mat findHomography(InputArray srcPoints, InputArray dstPoints, int method,
+                   double ransacReprojThreshold, OutputArray mask,
+                   const int maxIters, const double confidence);
+
+Mat findFundamentalMat( InputArray points1, InputArray points2,
+    int method, double ransacReprojThreshold, double confidence,
+    int maxIters, OutputArray mask=noArray());
+
+bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
+         InputArray cameraMatrix, InputArray distCoeffs,
+         OutputArray rvec, OutputArray tvec,
+         bool useExtrinsicGuess, int iterationsCount,
+         float reprojectionError, double confidence,
+         OutputArray inliers, int flags);
+
+Mat findEssentialMat( InputArray points1, InputArray points2,
+                      InputArray cameraMatrix1,
+                      int method, double prob,
+                      double threshold, OutputArray mask,
+                      int maxIters);
+
+Mat estimateAffine2D(InputArray from, InputArray to, OutputArray inliers,
+     int method, double ransacReprojThreshold, int maxIters,
+     double confidence, int refineIters);
+
+void saveMask (OutputArray mask, const std::vector<bool> &inliers_mask);
+void setParameters (Ptr<Model> &params, EstimationMethod estimator, const UsacParams &usac_params,
+        bool mask_need);
+bool run (Ptr<Model> &params, InputArray points1, InputArray points2,
+      Ptr<RansacOutput> &ransac_output, InputArray K1_, InputArray K2_,
+      InputArray dist_coeff1, InputArray dist_coeff2);
+
+class UsacConfig : public Algorithm {
+public:
+    virtual int getMaxIterations () const = 0;
+    virtual int getRandomGeneratorState () const = 0;
+    virtual bool isParallel() const = 0;
+
+    virtual NeighborSearchMethod getNeighborsSearchMethod () const = 0;
+    virtual SamplingMethod getSamplingMethod () const = 0;
+    virtual ScoreMethod getScoreMethod () const = 0;
+    virtual LocalOptimMethod getLOMethod () const = 0;
+    virtual EstimationMethod getEstimationMethod () const = 0;
+    virtual bool isMaskRequired () const = 0;
+
+};
+
+class SimpleUsacConfig : public UsacConfig {
+public:
+    virtual void setMaxIterations(int max_iterations_) = 0;
+    virtual void setRandomGeneratorState(int random_generator_state_) = 0;
+    virtual void setParallel(bool is_parallel) = 0;
+    virtual void setNeighborsSearchMethod(NeighborSearchMethod neighbors_search_method_) = 0;
+    virtual void setSamplingMethod(SamplingMethod sampling_method_) = 0;
+    virtual void setScoreMethod(ScoreMethod score_method_) = 0;
+    virtual void setLoMethod(LocalOptimMethod lo_method_) = 0;
+    virtual void maskRequired(bool need_mask_) = 0;
+
+    static Ptr<SimpleUsacConfig> create(EstimationMethod est_method);
+};
+
+// Error for plane model
+class PlaneModelError : public Error {
+public:
+    static Ptr<PlaneModelError> create(const Mat &points);
+};
+
+// Error for sphere model
+class SphereModelError : public Error {
+public:
+    static Ptr<SphereModelError> create(const Mat &points);
+};
+
+//-------------------------- 3D PLANE -----------------------
+class PlaneModelMinimalSolver : public MinimalSolver {
+public:
+    static Ptr<PlaneModelMinimalSolver> create(const Mat &points_);
+};
+
+//-------------------------- 3D SPHERE -----------------------
+class SphereModelMinimalSolver : public MinimalSolver {
+public:
+    static Ptr<SphereModelMinimalSolver> create(const Mat &points_);
+};
+
+//-------------------------- 3D PLANE -----------------------
+class PlaneModelNonMinimalSolver : public NonMinimalSolver {
+public:
+    static Ptr<PlaneModelNonMinimalSolver> create(const Mat &points_);
+};
+
+//-------------------------- 3D SPHERE -----------------------
+class SphereModelNonMinimalSolver : public NonMinimalSolver {
+public:
+    static Ptr<SphereModelNonMinimalSolver> create(const Mat &points_);
+};
+class PointCloudModelEstimator : public Estimator {
+public:
+    //! Custom function that take the model coefficients and return whether the model is acceptable or not.
+    //! Same as cv::SACSegmentation::ModelConstraintFunction in ptcloud.hpp.
+    using ModelConstraintFunction = std::function<bool(const std::vector<double> &/*model_coefficients*/)>;
+    /** @brief Methods for creating PointCloudModelEstimator.
+     *
+     * @param min_solver_ Minimum solver for estimating the model with minimum samples.
+     * @param non_min_solver_ Non-minimum solver for estimating the model with non-minimum samples.
+     * @param custom_model_constraints_ Custom model constraints for filtering the estimated obtained model.
+     * @return Ptr\<PointCloudModelEstimator\>
+     */
+    static Ptr<PointCloudModelEstimator> create (const Ptr<MinimalSolver> &min_solver_,
+                                                 const Ptr<NonMinimalSolver> &non_min_solver_,
+                                                 const ModelConstraintFunction &custom_model_constraints_ = nullptr);
+};
+
 /////////////////////////////////////////  UniversalRANSAC  ////////////////////////////////////////
 
 /** Implementation of the Universal RANSAC algorithm.
@@ -1105,12 +1133,12 @@ protected:
 public:
 
     UniversalRANSAC (const Ptr<const UsacConfig> &config_, int points_size_, Ptr<Estimator> &estimator_, const Ptr<Quality> &quality_,
-            const Ptr<Sampler> &sampler_, const Ptr<Termination> &termination_criteria_,
-            const Ptr<ModelVerifier> &model_verifier_, const Ptr<Degeneracy> &degeneracy_,
-            const Ptr<LocalOptimization> &local_optimization_, Ptr<FinalModelPolisher> &model_polisher_);
+                     const Ptr<Sampler> &sampler_, const Ptr<Termination> &termination_criteria_,
+                     const Ptr<ModelVerifier> &model_verifier_, const Ptr<Degeneracy> &degeneracy_,
+                     const Ptr<LocalOptimization> &local_optimization_, Ptr<FinalModelPolisher> &model_polisher_);
 
     UniversalRANSAC (Ptr<Model> &params_, cv::InputArray points1, cv::InputArray points2,
-            cv::InputArray K1_, cv::InputArray K2_, cv::InputArray dist_coeff1, cv::InputArray dist_coeff2);
+                     cv::InputArray K1_, cv::InputArray K2_, cv::InputArray dist_coeff1, cv::InputArray dist_coeff2);
 
     void initialize (int state, Ptr<MinimalSolver> &min_solver, Ptr<NonMinimalSolver> &non_min_solver,
                      Ptr<Error> &error, Ptr<Estimator> &estimator, Ptr<Degeneracy> &degeneracy, Ptr<Quality> &quality,
@@ -1124,41 +1152,6 @@ public:
     int getPointsSize() const;
     const Mat &getK1() const;
 };
-
-double getLambda (std::vector<int> &supports, double cdf_thr, int points_size,
-      int sample_size, bool is_indendent_inliers, int &min_non_random_inliers);
-
-Mat findHomography(InputArray srcPoints, InputArray dstPoints, int method,
-                   double ransacReprojThreshold, OutputArray mask,
-                   const int maxIters, const double confidence);
-
-Mat findFundamentalMat( InputArray points1, InputArray points2,
-    int method, double ransacReprojThreshold, double confidence,
-    int maxIters, OutputArray mask=noArray());
-
-bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
-         InputArray cameraMatrix, InputArray distCoeffs,
-         OutputArray rvec, OutputArray tvec,
-         bool useExtrinsicGuess, int iterationsCount,
-         float reprojectionError, double confidence,
-         OutputArray inliers, int flags);
-
-Mat findEssentialMat( InputArray points1, InputArray points2,
-                      InputArray cameraMatrix1,
-                      int method, double prob,
-                      double threshold, OutputArray mask,
-                      int maxIters);
-
-Mat estimateAffine2D(InputArray from, InputArray to, OutputArray inliers,
-     int method, double ransacReprojThreshold, int maxIters,
-     double confidence, int refineIters);
-
-void saveMask (OutputArray mask, const std::vector<bool> &inliers_mask);
-void setParameters (Ptr<Model> &params, EstimationMethod estimator, const UsacParams &usac_params,
-        bool mask_need);
-bool run (Ptr<Model> &params, InputArray points1, InputArray points2,
-      Ptr<RansacOutput> &ransac_output, InputArray K1_, InputArray K2_,
-      InputArray dist_coeff1, InputArray dist_coeff2);
 }}
 
 #endif //OPENCV_USAC_USAC_HPP
