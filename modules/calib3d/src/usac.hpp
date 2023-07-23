@@ -176,7 +176,7 @@ public:
 //-------------------------- ESSENTIAL MATRIX -----------------------
 class EssentialNonMinimalSolverViaF : public NonMinimalSolver {
 public:
-static Ptr<EssentialNonMinimalSolverViaF> create(const Mat &points_, const cv::Mat &K1, const Mat &K2);
+    static Ptr<EssentialNonMinimalSolverViaF> create(const Mat &points_, const cv::Mat &K1, const Mat &K2);
 };
 
 class EssentialNonMinimalSolverViaT : public NonMinimalSolver {
@@ -432,7 +432,7 @@ public:
 };
 
 class EssentialEstimator : public Estimator {
-public :
+public:
     static Ptr<EssentialEstimator> create (const Ptr<MinimalSolver> &min_solver_,
             const Ptr<NonMinimalSolver> &non_min_solver_, const Ptr<Degeneracy> &degeneracy_);
 };
@@ -542,21 +542,11 @@ public:
             int cell_size_x_img1_, int cell_size_y_img1_,
             int cell_size_x_img2_, int cell_size_y_img2_, int max_neighbors);
 };
-class GridNeighborhoodGraph2Images : public NeighborhoodGraph {
-public:
-    static Ptr<GridNeighborhoodGraph2Images> create(const Mat &points, int points_size,
-        float cell_size_x_img1_, float cell_size_y_img1_, float cell_size_x_img2_, float cell_size_y_img2_);
-};
 
 ////////////////////////////////////// UNIFORM SAMPLER ////////////////////////////////////////////
 class UniformSampler : public Sampler {
 public:
     static Ptr<UniformSampler> create(int state, int sample_size_, int points_size_);
-};
-
-class QuasiUniformSampler : public Sampler {
-public:
-    static Ptr<QuasiUniformSampler> create(int state, int sample_size_, int points_size_);
 };
 
 /////////////////////////////////// PROSAC (SIMPLE) SAMPLER ///////////////////////////////////////
