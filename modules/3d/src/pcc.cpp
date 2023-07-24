@@ -205,6 +205,20 @@ void EntropyCoder::decodeStreamToCharVector(
     }
 }
 
+void traverse(OctreeNode &root, std::vector<unsigned char> &serializedVectorOut) {
+
+}
+
+OctreeSerializeCoder::OctreeSerializeCoder(float resolution) : resolution(resolution) {}
+
+void OctreeSerializeCoder::encode(const std::vector<Point3f> &pointCloud,
+            std::vector<unsigned char> &serializedVector) {
+    // create octree by pointcloud
+    this->octree->create(pointCloud, this->resolution);
+
+    // Encode octree by traverse its occupancy code in BFS order
+}
+
 }
 
 
