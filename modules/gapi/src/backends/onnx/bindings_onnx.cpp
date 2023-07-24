@@ -22,14 +22,14 @@ cv::gapi::onnx::PyParams& cv::gapi::onnx::PyParams::cfgNormalize(const std::stri
 }
 
 cv::gapi::onnx::PyParams&
-cv::gapi::onnx::PyParams::cfgAppendExecutionProvider(cv::gapi::onnx::ep::OpenVINO ep) {
-    m_priv->cfgAppendExecutionProvider(std::move(ep));
+cv::gapi::onnx::PyParams::cfgAddExecutionProvider(cv::gapi::onnx::ep::OpenVINO ep) {
+    m_priv->cfgAddExecutionProvider(std::move(ep));
     return *this;
 }
 
 cv::gapi::onnx::PyParams&
-cv::gapi::onnx::PyParams::cfgAppendExecutionProvider(cv::gapi::onnx::ep::DirectML ep) {
-    m_priv->cfgAppendExecutionProvider(std::move(ep));
+cv::gapi::onnx::PyParams::cfgAddExecutionProvider(cv::gapi::onnx::ep::DirectML ep) {
+    m_priv->cfgAddExecutionProvider(std::move(ep));
     return *this;
 }
 

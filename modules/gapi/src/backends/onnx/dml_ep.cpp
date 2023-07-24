@@ -18,7 +18,13 @@ void cv::gimpl::onnx::appendDMLExecutionProvider(Ort::SessionOptions *session_op
     namespace ep = cv::gapi::onnx::ep;
     GAPI_Assert(cv::util::holds_alternative<int>(dml_ep.ddesc));
     const int device_id = cv::util::get<int>(dml_ep.ddesc);
-    OrtSessionOptionsAppendExecutionProvider_DML(*session_options, device_id);
+    try {
+        OrtSessionOptionsAppendExecutionProvider_DML(*session_options, device_id);
+    } catch (const std::exception &e) {
+         cv::util::throw_error(std::runtime_error(
+                     "ONNX Backend: Failed to enable DirectML"
+                     " Execution Provider: " + e.what()));
+    }
 }
 
 
@@ -27,7 +33,7 @@ void cv::gimpl::onnx::appendDMLExecutionProvider(Ort::SessionOptions *session_op
 void cv::gimpl::onnx::appendDMLExecutionProvider(Ort::SessionOptions*,
                                                  const cv::gapi::onnx::ep::DirectML&) {
     cv::util::throw_error(
-        std::runtime_error("DirectML Execution Provider isn't"
+        std::runtime_error("ONNX Backend: DirectML Execution Provider isn't"
                            " available for the current ONNX Runtime build."));
 }
 

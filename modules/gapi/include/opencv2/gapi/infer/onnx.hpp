@@ -403,7 +403,7 @@ public:
         return *this;
     }
 
-    /** @brief Appends execution provider for runtime.
+    /** @brief Adds execution provider for runtime.
 
     The function is used to append ONNX Runtime OpenVINO Execution Provider options.
 
@@ -412,12 +412,12 @@ public:
 
     @return the reference on modified object.
     */
-    Params<Net>& cfgAppendExecutionProvider(ep::OpenVINO&& ep) {
+    Params<Net>& cfgAddExecutionProvider(ep::OpenVINO&& ep) {
         desc.execution_providers.emplace_back(std::move(ep));
         return *this;
     }
 
-    /** @brief Appends execution provider for runtime.
+    /** @brief Adds execution provider for runtime.
 
     The function is used to append ONNX Runtime DirectML Execution Provider options.
 
@@ -426,7 +426,7 @@ public:
 
     @return the reference on modified object.
     */
-    Params<Net>& cfgAppendExecutionProvider(ep::DirectML&& ep) {
+    Params<Net>& cfgAddExecutionProvider(ep::DirectML&& ep) {
         desc.execution_providers.emplace_back(std::move(ep));
         return *this;
     }
@@ -481,13 +481,13 @@ public:
         desc.generic_norm[layer] = flag;
     }
 
-    /** @see onnx::Params::cfgAppendExecutionProvider. */
-    void cfgAppendExecutionProvider(ep::OpenVINO&& ep) {
+    /** @see onnx::Params::cfgAddExecutionProvider. */
+    void cfgAddExecutionProvider(ep::OpenVINO&& ep) {
         desc.execution_providers.emplace_back(std::move(ep));
     }
 
-    /** @see onnx::Params::cfgAppendExecutionProvider. */
-    void cfgAppendExecutionProvider(ep::DirectML&& ep) {
+    /** @see onnx::Params::cfgAddExecutionProvider. */
+    void cfgAddExecutionProvider(ep::DirectML&& ep) {
         desc.execution_providers.emplace_back(std::move(ep));
     }
 
