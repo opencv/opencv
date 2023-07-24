@@ -368,9 +368,6 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
         grid_points.reserve(overlap);
         image_points1.reserve(overlap);
         image_points2.reserve(overlap);
-        const bool are_both_fisheye_cams = is_fisheye_vec[c1] && is_fisheye_vec[c2];
-        const bool are_fisheye_cams = is_fisheye_vec[c1] || is_fisheye_vec[c2];
-        const bool convert_shape = are_fisheye_cams;
         for (int f = 0; f < NUM_FRAMES; f++) {
             if (detection_mask_mat[c1][f] && detection_mask_mat[c2][f]) {
                 Mat grid_points_frame, image_points1_frame, image_points2_frame;
@@ -813,7 +810,6 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                 if (!detection_mask_mat[k][i]) continue;
                 Vec3d rvec, tvec;
 
-                // solvePnP(obj_points_valid[k][cnt_valid_frame], img_points_valid[k][cnt_valid_frame], Ks[k], distortions[k], rvec, tvec, false, SOLVEPNP_ITERATIVE);
                 // TODO: change to the correct version of PnP supporting mixed camera models
                 multiview::computeExtrinsics(obj_points_valid[k][cnt_valid_frame], img_points_valid[k][cnt_valid_frame], Ks[k], distortions[k], rvec, tvec, is_fisheye_vec[k]);
                 std::cout << "computeExtrinsics done" << std::endl;
@@ -846,30 +842,30 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         }
     }
 
-    std::vector<int> parent;
-    std::vector<std::vector<int>> overlaps;
-    if (! multiview::maximumSpanningTree(NUM_CAMERAS, NUM_FRAMES, detection_mask_mat, parent, overlaps, opt_axes,
-            is_valid_angle2pattern, points_ratio_area, .5, 1.0)) {
-        // failed to find suitable pairs with constraints!
-        CV_Error(Error::StsInternal, "Failed to build tree for stereo calibration.");
-    }
-
-    std::vector<std::pair<int,int>> pairs;
-    multiview::selectPairsBFS (pairs, NUM_CAMERAS, parent);
-
-    if ((int)pairs.size() != NUM_CAMERAS-1) {
-        CV_Error(Error::StsInternal, "Failed to build tree for stereo calibration. Incorrect number of pairs.");
-    }
-    if (initializationPairs.needed()) {
-        Mat pairs_mat = Mat_<int>(NUM_CAMERAS-1, 2);
-        auto * pairs_ptr = (int *) pairs_mat.data;
-        for (const auto &p : pairs) {
-            (*pairs_ptr++) = p.first;
-            (*pairs_ptr++) = p.second;
-        }
-        pairs_mat.copyTo(initializationPairs);
-    }
     if (!useExtrinsicsGuess) {
+        std::vector<int> parent;
+        std::vector<std::vector<int>> overlaps;
+        if (! multiview::maximumSpanningTree(NUM_CAMERAS, NUM_FRAMES, detection_mask_mat, parent, overlaps, opt_axes,
+                is_valid_angle2pattern, points_ratio_area, .5, 1.0)) {
+            // failed to find suitable pairs with constraints!
+            CV_Error(Error::StsInternal, "Failed to build tree for stereo calibration.");
+        }
+
+        std::vector<std::pair<int,int>> pairs;
+        multiview::selectPairsBFS (pairs, NUM_CAMERAS, parent);
+
+        if ((int)pairs.size() != NUM_CAMERAS-1) {
+            CV_Error(Error::StsInternal, "Failed to build tree for stereo calibration. Incorrect number of pairs.");
+        }
+        if (initializationPairs.needed()) {
+            Mat pairs_mat = Mat_<int>(NUM_CAMERAS-1, 2);
+            auto * pairs_ptr = (int *) pairs_mat.data;
+            for (const auto &p : pairs) {
+                (*pairs_ptr++) = p.first;
+                (*pairs_ptr++) = p.second;
+            }
+            pairs_mat.copyTo(initializationPairs);
+        }
         multiview::pairwiseStereoCalibration(pairs, is_fisheye_vec, objPoints_norm, imagePoints,
             overlaps, detection_mask_mat, is_valid_imgpt, Ks, distortions, Rs_vec, Ts_vec, flagsForIntrinsics_mat, useExtrinsicsGuess);
     }
