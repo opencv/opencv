@@ -341,7 +341,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
         const std::vector<std::vector<std::vector<bool>>> &is_valid_imgpt,
         const std::vector<Mat> &Ks,
         const std::vector<Mat> &distortions, std::vector<Matx33d> &Rs_vec, std::vector<Vec3d> &Ts_vec,
-        Mat &flags, bool useUndistort, bool useExtrinsicsGuess) {
+        Mat &flags, bool useExtrinsicsGuess) {
     const int NUM_FRAMES = (int) objPoints_norm.size();
     const int NUM_PATTERN_PTS = (int) objPoints_norm[0].rows;
     
@@ -383,10 +383,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
                     }
                 }
                 // TODO: set the minimal concurrent count as 3
-                if (image_points1_frame.rows <= 3) {
-                    std::cout << "1 frame is less than 3 joint visible points" << std::endl;;
-                    continue;
-                }
+                CV_Assert(image_points1_frame.rows > 3);
                 
                 grid_points.emplace_back(grid_points_frame);
                 image_points1.emplace_back(image_points1_frame);
@@ -395,20 +392,6 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
             }
         }
         
-        std::vector<Mat> image_points_undist;
-        if (useUndistort && !are_both_fisheye_cams && are_fisheye_cams) {
-            image_points_undist.reserve(image_points1.size());
-            for (size_t i = 0; i < image_points1.size(); i++) {
-                Mat undist;
-                // undistort fisheye cameras
-                if (is_fisheye_vec[c1]) {
-                    fisheye::undistortPoints(image_points1[i], undist, Ks[c1], distortions[c1], noArray(), Ks[c1]);
-                } else {
-                    fisheye::undistortPoints(image_points2[i], undist, Ks[c2], distortions[c2], noArray(), Ks[c2]);
-                }
-                image_points_undist.emplace_back(undist);
-            }
-        }
 
         Matx33d R;
         Vec3d T;
@@ -416,52 +399,17 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
             R = Rs_prior[c2] * Rs_prior[c1].t();
             T = -R * Ts_prior[c1] + Ts_prior[c2];
         }
-        // If use the mode of useUndistort, distort image points into normalized points; else, set the pinhole camera to be undistorted  
         // image size does not matter since intrinsics are used
-        if (useUndistort) {
-            int flags_extrinsics = CALIB_FIX_INTRINSIC;
-            if ((flags.at<int>(c1) & CALIB_RATIONAL_MODEL) || (flags.at<int>(c2) & CALIB_RATIONAL_MODEL))
-                flags_extrinsics += CALIB_RATIONAL_MODEL;
-            if ((flags.at<int>(c1) & CALIB_THIN_PRISM_MODEL) || (flags.at<int>(c2) & CALIB_THIN_PRISM_MODEL))
-                flags_extrinsics += CALIB_THIN_PRISM_MODEL;
-            if (useExtrinsicsGuess) {
-                flags_extrinsics += CALIB_USE_EXTRINSIC_GUESS;
-            }
-            if (are_both_fisheye_cams) {
-                fisheye::stereoCalibrate(grid_points, image_points1, image_points2,
-                                Ks[c1], distortions[c1],
-                                Ks[c2], distortions[c2],
-                                Size(), R, T, CALIB_FIX_INTRINSIC);
-            } else if (!are_fisheye_cams) {
-                stereoCalibrate(grid_points, image_points1, image_points2,
-                                Ks[c1], distortions[c1],
-                                Ks[c2], distortions[c2],
-                                Size(), R, T, noArray(), noArray(), noArray(), flags_extrinsics);
-            } else {
-                if (is_fisheye_vec[c1]) {
-                    stereoCalibrate(grid_points, image_points_undist, image_points2,
-                                    Ks[c1], dist_null_map,
-                                    Ks[c2], distortions[c2],
-                                    Size(), R, T, noArray(), noArray(), noArray(), flags_extrinsics);
-                } else {
-                    stereoCalibrate(grid_points, image_points1, image_points_undist,
-                                    Ks[c1], distortions[c1],
-                                    Ks[c2], dist_null_map,
-                                    Size(), R, T, noArray(), noArray(), noArray(), flags_extrinsics);
-                }
-            }
-        } else {
-            int flags_extrinsics = CALIB_FIX_INTRINSIC;
-            
-            if (useExtrinsicsGuess) {
-                flags_extrinsics += CALIB_USE_EXTRINSIC_GUESS;
-            }
-
-            stereoExtrinsicCalibrate(grid_points, image_points1, image_points2,
-                            Ks[c1], distortions[c1], is_fisheye_vec[c1],
-                            Ks[c2], distortions[c2], is_fisheye_vec[c2],
-                            Size(), R, T, noArray(), noArray(), noArray(), noArray(), noArray(), flags_extrinsics);
+        int flags_extrinsics = CALIB_FIX_INTRINSIC;
+        
+        if (useExtrinsicsGuess) {
+            flags_extrinsics += CALIB_USE_EXTRINSIC_GUESS;
         }
+
+        stereoExtrinsicCalibrate(grid_points, image_points1, image_points2,
+                        Ks[c1], distortions[c1], is_fisheye_vec[c1],
+                        Ks[c2], distortions[c2], is_fisheye_vec[c2],
+                        Size(), R, T, noArray(), noArray(), noArray(), noArray(), noArray(), flags_extrinsics);
 
         // R_0 = I
         // R_ij = R_i R_j^T     =>  R_i = R_ij R_j
@@ -681,7 +629,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         const std::vector<Size> &imageSize, InputArray detectionMask,
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts, std::vector<Mat> &Ks, std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray isFisheye,
-        OutputArray perFrameErrors, OutputArray initializationPairs, bool useIntrinsicsGuess, InputArray flagsForIntrinsics, bool useUndistort, bool useExtrinsicsGuess) {
+        OutputArray perFrameErrors, OutputArray initializationPairs, bool useIntrinsicsGuess, InputArray flagsForIntrinsics, bool useExtrinsicsGuess) {
 
     CV_CheckEQ((int)objPoints.empty(), 0, "Objects points must not be empty!");
     CV_CheckEQ((int)imagePoints.empty(), 0, "Image points must not be empty!");
@@ -923,7 +871,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     }
     if (!useExtrinsicsGuess) {
         multiview::pairwiseStereoCalibration(pairs, is_fisheye_vec, objPoints_norm, imagePoints,
-            overlaps, detection_mask_mat, is_valid_imgpt, Ks, distortions, Rs_vec, Ts_vec, flagsForIntrinsics_mat, useUndistort, useExtrinsicsGuess);
+            overlaps, detection_mask_mat, is_valid_imgpt, Ks, distortions, Rs_vec, Ts_vec, flagsForIntrinsics_mat, useExtrinsicsGuess);
     }
 
     const int NUM_VALID_FRAMES = countNonZero(valid_frames);
