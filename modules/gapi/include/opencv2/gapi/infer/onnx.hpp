@@ -405,7 +405,7 @@ public:
 
     /** @brief Adds execution provider for runtime.
 
-    The function is used to append ONNX Runtime OpenVINO Execution Provider options.
+    The function is used to add ONNX Runtime OpenVINO Execution Provider options.
 
     @param ep OpenVINO Execution Provider options.
     @see cv::gapi::onnx::ep::OpenVINO.
@@ -419,7 +419,7 @@ public:
 
     /** @brief Adds execution provider for runtime.
 
-    The function is used to append ONNX Runtime DirectML Execution Provider options.
+    The function is used to add ONNX Runtime DirectML Execution Provider options.
 
     @param ep DirectML Execution Provider options.
     @see cv::gapi::onnx::ep::DirectML.
