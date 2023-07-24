@@ -13,8 +13,8 @@
 #ifdef HAVE_ONNX_DML
 #include "../providers/dml/dml_provider_factory.h"
 
-void cv::gimpl::onnx::appendDMLExecutionProvider(Ort::SessionOptions *session_options,
-                                                 const cv::gapi::onnx::ep::DirectML &dml_ep) {
+void cv::gimpl::onnx::addDMLExecutionProvider(Ort::SessionOptions *session_options,
+                                              const cv::gapi::onnx::ep::DirectML &dml_ep) {
     namespace ep = cv::gapi::onnx::ep;
     GAPI_Assert(cv::util::holds_alternative<int>(dml_ep.ddesc));
     const int device_id = cv::util::get<int>(dml_ep.ddesc);
@@ -30,8 +30,8 @@ void cv::gimpl::onnx::appendDMLExecutionProvider(Ort::SessionOptions *session_op
 
 #else  // HAVE_ONNX_DML
 
-void cv::gimpl::onnx::appendDMLExecutionProvider(Ort::SessionOptions*,
-                                                 const cv::gapi::onnx::ep::DirectML&) {
+void cv::gimpl::onnx::addDMLExecutionProvider(Ort::SessionOptions*,
+                                              const cv::gapi::onnx::ep::DirectML&) {
     cv::util::throw_error(
         std::runtime_error("ONNX Backend: DirectML Execution Provider isn't"
                            " available for the current ONNX Runtime build."));

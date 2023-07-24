@@ -145,8 +145,8 @@ public:
     void run();
 };
 
-static void appendOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
-                                            const cv::gapi::onnx::ep::OpenVINO &ov_ep) {
+static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
+                                         const cv::gapi::onnx::ep::OpenVINO &ov_ep) {
      OrtOpenVINOProviderOptions options;
      options.device_type = ov_ep.device_type.c_str();
      options.cache_dir = ov_ep.cache_dir.c_str();
@@ -166,20 +166,20 @@ static void appendOpenVINOExecutionProvider(Ort::SessionOptions *session_options
      }
 }
 
-static void appendExecutionProvider(Ort::SessionOptions          *session_options,
-                                    const cv::gapi::onnx::ep::EP &execution_provider) {
+static void addExecutionProvider(Ort::SessionOptions          *session_options,
+                                 const cv::gapi::onnx::ep::EP &execution_provider) {
     namespace ep = cv::gapi::onnx::ep;
     switch (execution_provider.index()) {
         case ep::EP::index_of<ep::OpenVINO>(): {
              GAPI_LOG_INFO(NULL, "OpenVINO Execution Provider is selected.");
              const auto &ov_ep = cv::util::get<ep::OpenVINO>(execution_provider);
-             appendOpenVINOExecutionProvider(session_options, ov_ep);
+             addOpenVINOExecutionProvider(session_options, ov_ep);
              break;
         }
         case ep::EP::index_of<ep::DirectML>(): {
             GAPI_LOG_INFO(NULL, "DirectML Execution Provider is selected.");
             const auto &dml_ep = cv::util::get<ep::DirectML>(execution_provider);
-            appendDMLExecutionProvider(session_options, dml_ep);
+            addDMLExecutionProvider(session_options, dml_ep);
             break;
         }
         default:
@@ -641,7 +641,7 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     Ort::SessionOptions session_options;
     for (const auto &ep : pp.execution_providers) {
         GAPI_LOG_INFO(NULL, "Adding Execution Providers for \"" << pp.model_path << "\"");
-        cv::gimpl::onnx::appendExecutionProvider(&session_options, ep);
+        cv::gimpl::onnx::addExecutionProvider(&session_options, ep);
     }
 
     if (pp.disable_mem_pattern) {

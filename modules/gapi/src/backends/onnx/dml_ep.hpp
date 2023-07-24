@@ -15,8 +15,8 @@
 namespace cv {
 namespace gimpl {
 namespace onnx {
-void appendDMLExecutionProvider(Ort::SessionOptions *session_options,
-                                const cv::gapi::onnx::ep::DirectML &dml_ep);
+void addDMLExecutionProvider(Ort::SessionOptions *session_options,
+                             const cv::gapi::onnx::ep::DirectML &dml_ep);
 }}}
 
 #endif  // HAVE_ONNX
