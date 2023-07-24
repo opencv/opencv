@@ -2131,27 +2131,6 @@ double stereoExtrinsicCalibrate( InputArrayOfArrays _objectPoints,
                         InputArrayOfArrays _imagePoints2,
                         InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1, bool isFisheye1,
                         InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2, bool isFisheye2,
-                        Size imageSize, OutputArray _Rmat, OutputArray _Tmat,
-                        OutputArray _Emat, OutputArray _Fmat, int flags,
-                        TermCriteria criteria)
-{
-    if (flags & CALIB_USE_EXTRINSIC_GUESS)
-        CV_Error(Error::StsBadFlag, "stereoExtrinsicCalibrate does not support CALIB_USE_EXTRINSIC_GUESS.");
-
-    Mat Rmat, Tmat;
-    double ret = stereoExtrinsicCalibrate(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, isFisheye1,
-                                 _cameraMatrix2, _distCoeffs2, isFisheye2, imageSize, Rmat, Tmat, _Emat, _Fmat,
-                                 noArray(), flags, criteria);
-    Rmat.copyTo(_Rmat);
-    Tmat.copyTo(_Tmat);
-    return ret;
-}
-
-double stereoExtrinsicCalibrate( InputArrayOfArrays _objectPoints,
-                        InputArrayOfArrays _imagePoints1,
-                        InputArrayOfArrays _imagePoints2,
-                        InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1, bool isFisheye1,
-                        InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2, bool isFisheye2,
                         OutputArray _Rmat, OutputArray _Tmat,
                         OutputArray _Emat, OutputArray _Fmat, int flags,
                         TermCriteria criteria)
