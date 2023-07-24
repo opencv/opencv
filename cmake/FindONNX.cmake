@@ -16,14 +16,19 @@ if(ONNXRT_ROOT_DIR)
     CMAKE_FIND_ROOT_PATH_BOTH)
 endif()
 
-if(ORT_LIB AND ORT_INCLUDE)
-  find_path(ORT_DML_INCLUDE dml_provider_factory.h
-    ${ONNXRT_ROOT_DIR}/include/onnxruntime/core/providers/dml
-    CMAKE_FIND_ROOT_PATH_BOTH)
+macro(detect_onxxrt_ep filename dir variable)
+    find_path(ORT_EP_INCLUDE ${filename} ${dir} CMAKE_FIND_ROOT_PATH_BOTH)
+    if(ORT_EP_INCLUDE)
+       set(${variable} TRUE)
+    endif()
+endmacro()
 
-  if(ORT_DML_INCLUDE)
-    set(HAVE_ONNX_DML TRUE)
-  endif()
+if(ORT_LIB AND ORT_INCLUDE)
+  detect_onxxrt_ep(
+      dml_provider_factory.h
+      ${ONNXRT_ROOT_DIR}/include/onnxruntime/core/providers/dml
+      HAVE_ONNX_DML
+  )
 
   set(HAVE_ONNX TRUE)
   # For CMake output only
