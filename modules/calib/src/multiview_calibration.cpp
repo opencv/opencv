@@ -13,7 +13,6 @@ namespace multiview {
 class RobustFunction : public Algorithm {
 public:
     virtual float getError(float err) const = 0;
-    virtual float getJacobian(float err) const = 0;
 };
 
 #define USE_FAST_EXP 0
@@ -47,13 +46,6 @@ public:
     {
         return exp(minvScale * err);
     }
-    float getJacobian(float err) const override
-    {
-        float scaledErr = minvScale * err;
-        // return exp(scaledErr) + pow(scaledErr, 2) / exp(scaledErr) - 2 * scaledErr;
-        // return (exp(scaledErr) * std::pow(1 - scaledErr, 2)) / (4 * err);
-        return exp(scaledErr);
-    }
 };
 #endif
 
@@ -72,17 +64,6 @@ static double robustWrapper (const Mat& ptsErrors, Mat& weights, const RobustFun
         weights_ptr[pt*2 + 0] = w;
         weights_ptr[pt*2 + 1] = w;
         robust_sum_sqr_errs += w * sqr_err;
-
-        // // float dedx = fnc.getJacobian(sqr_err);
-        // float dedx = 1.;
-        // // weights_ptr[pt*2 + 0] = dedx * pow(p.x, 2) / sqr_err;
-        // // weights_ptr[pt*2 + 1] = dedx * pow(p.y, 2) / sqr_err;
-        // weights_ptr[pt*2 + 0] = dedx;
-        // weights_ptr[pt*2 + 1] = dedx;
-        // // weights_ptr[pt*2 + 0] = dedx / sqr_err;
-        // // weights_ptr[pt*2 + 1] = dedx / sqr_err;
-        // // robust_sum_sqr_errs += w * sqr_err;
-        // robust_sum_sqr_errs += sqr_err;
     }
     return robust_sum_sqr_errs;
 }
@@ -375,7 +356,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
                     }
                 }
                 // TODO: set the minimal concurrent count as 3
-                CV_Assert(image_points1_frame.rows > 3);
+                CV_Assert(image_points1_frame.rows >= MINIMUM_OBSERVATION);
                 
                 grid_points.emplace_back(grid_points_frame);
                 image_points1.emplace_back(image_points1_frame);
@@ -383,8 +364,6 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
 
             }
         }
-        
-
         Matx33d R;
         Vec3d T;
         if (useExtrinsicsGuess) {
