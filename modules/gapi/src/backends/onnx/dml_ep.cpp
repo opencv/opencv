@@ -28,7 +28,6 @@ void cv::gimpl::onnx::addDMLExecutionProvider(Ort::SessionOptions *session_optio
     }
 }
 
-
 #else  // HAVE_ONNX_DML
 
 void cv::gimpl::onnx::addDMLExecutionProvider(Ort::SessionOptions*,
