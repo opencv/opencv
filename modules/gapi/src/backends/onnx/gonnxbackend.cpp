@@ -171,19 +171,19 @@ static void addExecutionProvider(Ort::SessionOptions          *session_options,
     namespace ep = cv::gapi::onnx::ep;
     switch (execution_provider.index()) {
         case ep::EP::index_of<ep::OpenVINO>(): {
-             GAPI_LOG_INFO(NULL, "OpenVINO Execution Provider is selected.");
+             GAPI_LOG_INFO(NULL, "OpenVINO Execution Provider is added.");
              const auto &ov_ep = cv::util::get<ep::OpenVINO>(execution_provider);
              addOpenVINOExecutionProvider(session_options, ov_ep);
              break;
         }
         case ep::EP::index_of<ep::DirectML>(): {
-            GAPI_LOG_INFO(NULL, "DirectML Execution Provider is selected.");
+            GAPI_LOG_INFO(NULL, "DirectML Execution Provider is added.");
             const auto &dml_ep = cv::util::get<ep::DirectML>(execution_provider);
             addDMLExecutionProvider(session_options, dml_ep);
             break;
         }
         default:
-            GAPI_LOG_INFO(NULL, "CPU Execution Provider is selected.");
+            GAPI_LOG_INFO(NULL, "CPU Execution Provider is added.");
             break;
     }
 }
@@ -639,8 +639,8 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     }
     // Create and initialize the ONNX session
     Ort::SessionOptions session_options;
+    GAPI_LOG_INFO(NULL, "Adding Execution Providers for \"" << pp.model_path << "\"");
     for (const auto &ep : pp.execution_providers) {
-        GAPI_LOG_INFO(NULL, "Adding Execution Providers for \"" << pp.model_path << "\"");
         cv::gimpl::onnx::addExecutionProvider(&session_options, ep);
     }
 

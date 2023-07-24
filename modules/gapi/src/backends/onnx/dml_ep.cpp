@@ -21,9 +21,10 @@ void cv::gimpl::onnx::addDMLExecutionProvider(Ort::SessionOptions *session_optio
     try {
         OrtSessionOptionsAppendExecutionProvider_DML(*session_options, device_id);
     } catch (const std::exception &e) {
-         cv::util::throw_error(std::runtime_error(
-                     "ONNX Backend: Failed to enable DirectML"
-                     " Execution Provider: " + e.what()));
+        std::stringstream ss;
+        ss << "ONNX Backend: Failed to enable DirectML"
+           << " Execution Provider: " << e.what();
+        cv::util::throw_error(std::runtime_error(ss.str()));
     }
 }
 

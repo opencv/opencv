@@ -16,17 +16,19 @@ if(ONNXRT_ROOT_DIR)
     CMAKE_FIND_ROOT_PATH_BOTH)
 endif()
 
-macro(detect_onxxrt_ep filename dir variable)
+macro(detect_onxxrt_ep filename dir have_ep_var)
     find_path(ORT_EP_INCLUDE ${filename} ${dir} CMAKE_FIND_ROOT_PATH_BOTH)
     if(ORT_EP_INCLUDE)
-       set(${variable} TRUE)
+       set(${have_ep_var} TRUE)
     endif()
 endmacro()
 
 if(ORT_LIB AND ORT_INCLUDE)
+  # Check DirectML Execution Provider availability
+  get_filename_component(dml_dir ${ONNXRT_ROOT_DIR}/include/onnxruntime/core/providers/dml ABSOLUTE)
   detect_onxxrt_ep(
       dml_provider_factory.h
-      ${ONNXRT_ROOT_DIR}/include/onnxruntime/core/providers/dml
+      ${dml_dir}
       HAVE_ONNX_DML
   )
 
