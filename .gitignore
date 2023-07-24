@@ -23,10 +23,5 @@ bin/
 *.tlog
 build
 node_modules
-results
 CMakeSettings.json
 xcuserdata/
-
-test_local
-*-*-2023*.yaml
-undistorted_*.png
