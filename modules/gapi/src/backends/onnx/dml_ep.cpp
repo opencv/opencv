@@ -38,5 +38,4 @@ void cv::gimpl::onnx::appendDMLExecutionProvider(Ort::SessionOptions*,
 }
 
 #endif  // HAVE_ONNX_DML
-
 #endif  // HAVE_ONNX
