@@ -182,7 +182,7 @@ public:
         bool tranAorB = transA || transB;
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-            return axis == 1 && !tranAorB;
+            return axis == 1;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
@@ -802,7 +802,7 @@ public:
         if (nodes.size() == 2)
         {
             auto& inp2 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, inp2, false, false);
+            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, inp2, transA, transB);
         }
         else
         {
@@ -812,7 +812,7 @@ public:
 
             std::vector<size_t> weight_shape{(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
             auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, weight_shape, blobs[0].data);
-            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, false, true);
+            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, transA, transB);
         }
 
         if (bias) {
