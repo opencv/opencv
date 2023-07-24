@@ -241,10 +241,6 @@ CV__DNN_INLINE_NS_BEGIN
 
     };
 
-    class CV_EXPORTS EinsumLayer : public Layer
-    {
-    public:
-        static Ptr<EinsumLayer> create(const LayerParams& params);
     /** @brief This function performs array summation based
     * on the Einstein summation convention. The function
     * allows for concise expressions of various mathematical
@@ -279,6 +275,10 @@ CV__DNN_INLINE_NS_BEGIN
     *  and no output parameter, this function returns
     * a view into the operand instead of creating a copy.
      */
+    class CV_EXPORTS EinsumLayer : public Layer
+    {
+    public:
+        static Ptr<EinsumLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS BaseConvolutionLayer : public Layer
