@@ -87,19 +87,37 @@ TEST_P(Test_TFLite, face_landmark)
 {
     if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    double l1 = 2e-5, lInf = 2e-4;
+    if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.15;
+        lInf = 0.82;
+    }
     testModel("face_landmark", Size(192, 192), 2e-5, 2e-4);
+    testModel("face_landmark", Size(192, 192), l1, lInf);
 }
 
 // https://google.github.io/mediapipe/solutions/face_detection
 TEST_P(Test_TFLite, face_detection_short_range)
 {
-    testModel("face_detection_short_range", Size(128, 128));
+    double l1 = 0, lInf = 2e-4;
+    if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        l1 = 0.03;
+        lInf = 0.7;
+    }
+    testModel("face_detection_short_range", Size(128, 128), l1, lInf);
 }
 
 // https://google.github.io/mediapipe/solutions/selfie_segmentation
 TEST_P(Test_TFLite, selfie_segmentation)
 {
-    testModel("selfie_segmentation", Size(256, 256));
+    double l1 = 0, lInf = 0;
+    if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    {
+        lInf = 0.2;
+    }
+    testModel("selfie_segmentation", Size(256, 256), l1, lInf);
 }
 
 TEST_P(Test_TFLite, max_unpooling)
