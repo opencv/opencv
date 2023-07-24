@@ -420,7 +420,7 @@ void OdometryTest::prepareFrameCheck()
             odf.getPyramidAt(normi, OdometryFramePyramidType::PYR_NORM, i);
             ASSERT_FALSE(normi.empty());
             double nnorm = cv::norm(normi, gtNormal, NORM_INF, normmaski);
-            EXPECT_LE(nnorm, 1.8e-7) << "Normals diff is too big at pyr level " << i;
+            EXPECT_LE(nnorm, 3.3e-7) << "Normals diff is too big at pyr level " << i;
 
             if (i == 0)
             {

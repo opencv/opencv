@@ -74,8 +74,6 @@
     Finally, run the script. Use the --help option for usage information.
 """
 
-from __future__ import division
-
 import ast
 import errno
 import fnmatch

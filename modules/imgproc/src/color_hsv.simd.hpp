@@ -813,11 +813,10 @@ struct RGB2HLS_b
         //TODO: fix that when v_interleave is available
         float CV_DECL_ALIGNED(CV_SIMD_WIDTH) interTmpM[VTraits<v_float32>::max_nlanes*3];
         v_store_interleave(interTmpM, vx_setall_f32(1.f), vx_setall_f32(255.f), vx_setall_f32(255.f));
-        v_float32 mhls0, mhls1, mhls2, mhls3;
+        v_float32 mhls0, mhls1, mhls2;
         mhls0 = vx_load_aligned(interTmpM);
         mhls1 = vx_load_aligned(interTmpM + fsize);
         mhls2 = vx_load_aligned(interTmpM + 2*fsize);
-        mhls3 = vx_load_aligned(interTmpM + 3*fsize);
 #endif
 
         for(int i = 0; i < n; i += BLOCK_SIZE, dst += BLOCK_SIZE*3 )

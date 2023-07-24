@@ -21,7 +21,6 @@ jobs:
                 crossbuild-essential-arm64 \
                 git \
                 cmake \
-                libpython-dev:arm64 \
                 libpython3-dev:arm64 \
                 python-numpy \
                 python3-numpy
@@ -34,10 +33,7 @@ jobs:
       run: |
         mkdir build
         cd build
-        cmake -DPYTHON2_INCLUDE_PATH=/usr/include/python2.7/ \
-              -DPYTHON2_LIBRARIES=/usr/lib/aarch64-linux-gnu/libpython2.7.so \
-              -DPYTHON2_NUMPY_INCLUDE_DIRS=/usr/lib/python2.7/dist-packages/numpy/core/include \
-              -DPYTHON3_INCLUDE_PATH=/usr/include/python3.6m/ \
+        cmake -DPYTHON3_INCLUDE_PATH=/usr/include/python3.6m/ \
               -DPYTHON3_LIBRARIES=/usr/lib/aarch64-linux-gnu/libpython3.6m.so \
               -DPYTHON3_NUMPY_INCLUDE_DIRS=/usr/lib/python3/dist-packages/numpy/core/include \
               -DCMAKE_TOOLCHAIN_FILE=../platforms/linux/aarch64-gnu.toolchain.cmake \

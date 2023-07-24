@@ -145,12 +145,12 @@ public:
 
         if (useFisheye) {
             // the fisheye model has its own enum, so overwrite the flags
-            flag = fisheye::CALIB_FIX_SKEW | fisheye::CALIB_RECOMPUTE_EXTRINSIC;
-            if(fixK1)                   flag |= fisheye::CALIB_FIX_K1;
-            if(fixK2)                   flag |= fisheye::CALIB_FIX_K2;
-            if(fixK3)                   flag |= fisheye::CALIB_FIX_K3;
-            if(fixK4)                   flag |= fisheye::CALIB_FIX_K4;
-            if (calibFixPrincipalPoint) flag |= fisheye::CALIB_FIX_PRINCIPAL_POINT;
+            flag = CALIB_FIX_SKEW | CALIB_RECOMPUTE_EXTRINSIC;
+            if(fixK1)                   flag |= CALIB_FIX_K1;
+            if(fixK2)                   flag |= CALIB_FIX_K2;
+            if(fixK3)                   flag |= CALIB_FIX_K3;
+            if(fixK4)                   flag |= CALIB_FIX_K4;
+            if (calibFixPrincipalPoint) flag |= CALIB_FIX_PRINCIPAL_POINT;
         }
 
         calibrationPattern = NOT_EXISTING;
@@ -728,12 +728,12 @@ static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, M
         if (s.useFisheye)
         {
             flagsStringStream << "flags:"
-                << (s.flag & fisheye::CALIB_FIX_SKEW ? " +fix_skew" : "")
-                << (s.flag & fisheye::CALIB_FIX_K1 ? " +fix_k1" : "")
-                << (s.flag & fisheye::CALIB_FIX_K2 ? " +fix_k2" : "")
-                << (s.flag & fisheye::CALIB_FIX_K3 ? " +fix_k3" : "")
-                << (s.flag & fisheye::CALIB_FIX_K4 ? " +fix_k4" : "")
-                << (s.flag & fisheye::CALIB_RECOMPUTE_EXTRINSIC ? " +recompute_extrinsic" : "");
+                << (s.flag & CALIB_FIX_SKEW ? " +fix_skew" : "")
+                << (s.flag & CALIB_FIX_K1 ? " +fix_k1" : "")
+                << (s.flag & CALIB_FIX_K2 ? " +fix_k2" : "")
+                << (s.flag & CALIB_FIX_K3 ? " +fix_k3" : "")
+                << (s.flag & CALIB_FIX_K4 ? " +fix_k4" : "")
+                << (s.flag & CALIB_RECOMPUTE_EXTRINSIC ? " +recompute_extrinsic" : "");
         }
         else
         {

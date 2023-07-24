@@ -92,7 +92,6 @@ parse_patterns = (
     {'name': "java_test_dir",            'default': None,       'pattern': re.compile(r"^OPENCV_JAVA_TEST_DIR:\w+=(.*)$")},
     {'name': "is_x64",                   'default': "OFF",      'pattern': re.compile(r"^CUDA_64_BIT_DEVICE_CODE:\w+=(ON)$")},
     {'name': "cmake_generator",          'default': None,       'pattern': re.compile(r"^CMAKE_GENERATOR:\w+=(.+)$")},
-    {'name': "python2",                  'default': None,       'pattern': re.compile(r"^BUILD_opencv_python2:\w+=(.*)$")},
     {'name': "python3",                  'default': None,       'pattern': re.compile(r"^BUILD_opencv_python3:\w+=(.*)$")},
 )
 
@@ -153,21 +152,16 @@ class CMakeCache:
             files = glob.glob(os.path.join(d, mask))
             if not self.getOS() == "android" and self.withJava():
                 files.append("java")
-            if self.withPython2():
-                files.append("python2")
             if self.withPython3():
                 files.append("python3")
             return [f for f in files if isGood(f)]
         return []
 
     def isMainModule(self, name):
-        return name in self.main_modules + ['python2', 'python3']
+        return name in self.main_modules + ['python3']
 
     def withJava(self):
         return self.ant_executable and self.java_test_dir and os.path.exists(self.java_test_dir)
-
-    def withPython2(self):
-        return self.python2 == 'ON'
 
     def withPython3(self):
         return self.python3 == 'ON'

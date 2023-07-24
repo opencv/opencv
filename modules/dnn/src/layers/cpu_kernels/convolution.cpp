@@ -181,6 +181,21 @@ Ptr<FastConv> initFastConv(
                 {0.0f, 0.0f, 1.0f}
         };
 
+        const int CONV_WINO_KBLOCK = 4;
+
+#if CV_TRY_AVX || CV_TRY_AVX2
+        const int CONV_WINO_ATOM_F32 = (conv->useAVX || conv->useAVX2) ? 8 : 4;
+#else
+        const int CONV_WINO_ATOM_F32 = 4;
+#endif
+        const int CONV_WINO_NATOMS_F32 = CONV_WINO_AREA / CONV_WINO_ATOM_F32; // for AVX2, it is 8, otherwise, it's 16.
+
+#ifdef CONV_ARM_FP16
+        // FP 16
+        const int CONV_WINO_ATOM_F16 = CONV_WINO_ATOM_F32 * 2;
+        const int CONV_WINO_NATOMS_F16 = CONV_WINO_AREA / CONV_WINO_ATOM_F16;
+#endif
+
         // the weights are packed as 6-dim tensor:
         // ngroups * ceil((K/ngroups)/KBLOCK) * (W*W/ATOM_SIZE) * (C/ngroups) * KBLOCK * ATOM_SIZE,
         // where W is the size of Winograd-transformed kernel (8x8),
@@ -1275,7 +1290,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
     else
         Kg_nblocks = 1;
 
-    bool seperateIm2col = fast_1x1 || stripes_per_plane == 1;
+    bool separateIm2col = fast_1x1 || stripes_per_plane == 1;
 
     int Kstripes = Kg_nblocks * stripes_per_plane;
     int nsubtasks = N * ngroups * Kstripes;
@@ -1285,12 +1300,12 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
 
     size_t taskbufsize = cbufsize * sizeof(float );
 
-    if (!seperateIm2col)
+    if (!separateIm2col)
         taskbufsize += MAX_STRIPES * stripesize * esz;
 
     size_t totalbufsize_base = taskbufsize * ntasks;
     size_t totalbufsize = totalbufsize_base;
-    if (seperateIm2col)
+    if (separateIm2col)
         totalbufsize += N * ngroups * stripes_per_plane0 * stripesize * esz;
 
     AutoBuffer<char> inpbuf_all_;
@@ -1308,7 +1323,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
     // In general, im2row results in Hk*Wk-x unrolling factor
     // (e.g. 3*3=9x unrolling for 3x3 convolution), thus for 1x1 convolution
     // the reordered tensor will take as much space as the original tensor.
-    if (seperateIm2col)
+    if (separateIm2col)
     {
         // the optional phase 1. im2row
         parallel_for_(Range(0, ntasks), [&](const Range& r0) {
@@ -1409,7 +1424,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
 
                 CV_Assert(nstripes <= MAX_STRIPES);
 
-                if (!seperateIm2col)
+                if (!separateIm2col)
                 {
                     packInputData(inpbuf_task, inp, ofstab, dhwTab, zyx0, zyx_block_limit, ksize, stride_d, stride_h,
                                   stride_w, pad_front, pad_top, pad_left, Dk, Hk, Wk, dilation_d, dilation_h, dilation_w,
@@ -1442,8 +1457,8 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
                     int out_width = zyx_block_limit - zyx0;
                     float *outptr = out + outofs;
                     const float biasVal = *(conv->biasBuf.data() + g);
-                    const char *inptr_ = seperateIm2col ? inpbuf_all_0 + (ng*stripes_per_plane0 + zyx0/CONV_NR) * stripesize * esz:
-                                        inpbuf_task;
+                    const char *inptr_ = separateIm2col ? inpbuf_all_0 + (ng * stripes_per_plane0 + zyx0 / CONV_NR) * stripesize * esz :
+                                         inpbuf_task;
 
                     for (int stripe = 0; stripe < nstripes; stripe++)
                     {
@@ -1496,8 +1511,8 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
                     for (int c0 = 0; c0 < DkHkWkCg; c0 += C_BLOCK_SIZE)
                     {
                         int c1 = c0 + C_BLOCK_SIZE < DkHkWkCg ? c0 + C_BLOCK_SIZE : DkHkWkCg;
-                        const char *inptr = seperateIm2col ? inpbuf_all_0 + (ng*stripes_per_plane0 + zyx0/CONV_NR)*stripesize*esz:
-                                             inpbuf_task;
+                        const char *inptr = separateIm2col ? inpbuf_all_0 + (ng * stripes_per_plane0 + zyx0 / CONV_NR) * stripesize * esz :
+                                            inpbuf_task;
                         inptr += (c0 * CONV_NR) * esz;
                         for (int stripe = 0; stripe < nstripes; stripe++, inptr += stripesize * esz)
                         {

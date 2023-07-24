@@ -51,6 +51,11 @@ void blobFromImages(InputArrayOfArrays images_, OutputArray blob_, double scalef
         Size size, const Scalar& mean_, bool swapRB, bool crop, int ddepth)
 {
     CV_TRACE_FUNCTION();
+    if (images_.kind() != _InputArray::STD_VECTOR_MAT && images_.kind() != _InputArray::STD_ARRAY_MAT &&
+        images_.kind() != _InputArray::STD_VECTOR_VECTOR) {
+        String error_message = "The data is expected as vectors of vectors or vectors of matrices.";
+        CV_Error(Error::StsBadArg, error_message);
+    }
     Image2BlobParams param(Scalar::all(scalefactor), size, mean_, swapRB, ddepth);
     if (crop)
         param.paddingmode = DNN_PMODE_CROP_CENTER;
@@ -83,9 +88,13 @@ Mat blobFromImagesWithParams(InputArrayOfArrays images, const Image2BlobParams& 
 void blobFromImagesWithParams(InputArrayOfArrays images_, OutputArray blob_, const Image2BlobParams& param)
 {
     CV_TRACE_FUNCTION();
+    if (images_.kind() != _InputArray::STD_VECTOR_MAT && images_.kind() != _InputArray::STD_ARRAY_MAT &&
+        images_.kind() != _InputArray::STD_VECTOR_VECTOR) {
+        String error_message = "The data is expected as vectors of vectors or vectors of matrices.";
+        CV_Error(Error::StsBadArg, error_message);
+    }
     CV_CheckType(param.ddepth, param.ddepth == CV_32F || param.ddepth == CV_8U,
                  "Blob depth should be CV_32F or CV_8U");
-
     Size size = param.size;
     std::vector<Mat> images;
     images_.getMatVector(images);

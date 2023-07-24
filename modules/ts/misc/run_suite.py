@@ -73,7 +73,7 @@ class TestSuite(object):
         return set(res)
 
     def isTest(self, fullpath):
-        if fullpath in ['java', 'python2', 'python3']:
+        if fullpath in ['java', 'python3']:
             return self.options.mode == 'test'
         if not os.path.isfile(fullpath):
             return False
@@ -123,7 +123,7 @@ class TestSuite(object):
             cmd += ["buildAndTest"]
             ret = execute(cmd, cwd=self.cache.java_test_dir)
             return None, ret
-        elif module in ['python2', 'python3']:
+        elif module == 'python3':
             executable = os.getenv('OPENCV_PYTHON_BINARY', None)
             if executable is None or module == 'python{}'.format(sys.version_info[0]):
                 executable = sys.executable
@@ -181,7 +181,7 @@ class TestSuite(object):
             more_args = []
             exe = self.getTest(test)
 
-            if exe in ["java", "python2", "python3"]:
+            if exe in ["java", "python3"]:
                 logname = None
             else:
                 userlog = [a for a in args if a.startswith("--gtest_output=")]

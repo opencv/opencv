@@ -12,6 +12,7 @@ using namespace cv;
 static int liveQRCodeDetect();
 static int imageQRCodeDetect(const string& in_file);
 
+static bool g_useArucoBased = false;
 static bool g_modeMultiQR = false;
 static bool g_detectOnly = false;
 
@@ -35,6 +36,7 @@ int main(int argc, char *argv[])
     const string keys =
         "{h help ? |        | print help messages }"
         "{i in     |        | input image path (also switches to image detection mode) }"
+        "{aruco_based | false | use Aruco-based QR code detector instead of contour-based }"
         "{detect   | false  | detect QR code only (skip decoding) }"
         "{m multi  |        | use detect for multiple qr-codes }"
         "{o out    | qr_code.png | path to result file }"
@@ -75,6 +77,7 @@ int main(int argc, char *argv[])
 
     g_modeMultiQR = cmd_parser.has("multi") && cmd_parser.get<bool>("multi");
     g_detectOnly = cmd_parser.has("detect") && cmd_parser.get<bool>("detect");
+    g_useArucoBased = cmd_parser.has("aruco_based") && cmd_parser.get<bool>("aruco_based");
 
     g_saveDetections = cmd_parser.has("save_detections") && cmd_parser.get<bool>("save_detections");
     g_saveAll = cmd_parser.has("save_all") && cmd_parser.get<bool>("save_all");
@@ -157,7 +160,7 @@ void drawQRCodeResults(Mat& frame, const vector<Point>& corners, const vector<cv
 
 static
 void runQR(
-    QRCodeDetector& qrcode, const Mat& input,
+    const GraphicalCodeDetector& qrcode, const Mat& input,
     vector<Point>& corners, vector<cv::String>& decode_info
     // +global: bool g_modeMultiQR, bool g_detectOnly
 )
@@ -191,7 +194,7 @@ void runQR(
 }
 
 static
-double processQRCodeDetection(QRCodeDetector& qrcode, const Mat& input, Mat& result, vector<Point>& corners)
+double processQRCodeDetection(const GraphicalCodeDetector& qrcode, const Mat& input, Mat& result, vector<Point>& corners)
 {
     if (input.channels() == 1)
         cvtColor(input, result, COLOR_GRAY2BGR);
@@ -229,7 +232,9 @@ int liveQRCodeDetect()
     cout << "Press 'd' to switch between decoder and detector" << endl;
     cout << "Press ' ' (space) to save result into images" << endl;
     cout << "Press 'ESC' to exit" << endl;
-    QRCodeDetector qrcode;
+    GraphicalCodeDetector qrcode = QRCodeDetector();
+    if (g_useArucoBased)
+        qrcode = QRCodeDetectorAruco();
 
     for (;;)
     {
@@ -310,7 +315,10 @@ int imageQRCodeDetect(const string& in_file)
         << " on image: " << input.size() << " (" << typeToString(input.type()) << ")"
         << endl;
 
-    QRCodeDetector qrcode;
+    GraphicalCodeDetector qrcode = QRCodeDetector();
+    if (g_useArucoBased)
+        qrcode = QRCodeDetectorAruco();
+
     vector<Point> corners;
     vector<cv::String> decode_info;
 

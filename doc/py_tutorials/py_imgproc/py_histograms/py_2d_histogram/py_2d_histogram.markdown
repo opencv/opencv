@@ -108,7 +108,7 @@ You can verify it with any image editing tools like GIMP.
 
 ### Method 3 : OpenCV sample style !!
 
-There is a sample code for color-histogram in OpenCV-Python2 samples
+There is a sample code for color-histogram in OpenCV-Python samples
 (samples/python/color_histogram.py).
 If you run the code, you can see the histogram shows the corresponding color also.
 Or simply it outputs a color coded histogram.

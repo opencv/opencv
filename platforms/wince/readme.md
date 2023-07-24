@@ -38,7 +38,6 @@ For headless WEC2013, this configuration may not be limited to but is known to w
 -DBUILD_opencv_videostab=OFF `
 -DBUILD_opencv_dnn=OFF `
 -DBUILD_opencv_java=OFF `
--DBUILD_opencv_python2=OFF `
 -DBUILD_opencv_python3=OFF `
 -DBUILD_opencv_java_bindings_generator=OFF `
 -DBUILD_opencv_python_bindings_generator=OFF `
