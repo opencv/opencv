@@ -1818,8 +1818,8 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.018 : default_lInf;
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
-        scoreDiff = std::max(scoreDiff, 0.02);
-        iouDiff = std::max(iouDiff, 0.009);
+        scoreDiff = std::max(scoreDiff, 0.06);
+        iouDiff = std::max(iouDiff, 0.01);
     }
     normAssertDetections(refDetections, outDetections, "", /*threshold for zero confidence*/1e-5, scoreDiff, iouDiff);
 

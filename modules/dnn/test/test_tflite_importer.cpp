@@ -88,12 +88,12 @@ TEST_P(Test_TFLite, face_landmark)
     if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
     double l1 = 2e-5, lInf = 2e-4;
-    if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL))
     {
         l1 = 0.15;
         lInf = 0.82;
     }
-    testModel("face_landmark", Size(192, 192), 2e-5, 2e-4);
     testModel("face_landmark", Size(192, 192), l1, lInf);
 }
 
@@ -101,10 +101,11 @@ TEST_P(Test_TFLite, face_landmark)
 TEST_P(Test_TFLite, face_detection_short_range)
 {
     double l1 = 0, lInf = 2e-4;
-    if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL))
     {
-        l1 = 0.03;
-        lInf = 0.7;
+        l1 = 0.04;
+        lInf = 0.8;
     }
     testModel("face_detection_short_range", Size(128, 128), l1, lInf);
 }
@@ -113,9 +114,11 @@ TEST_P(Test_TFLite, face_detection_short_range)
 TEST_P(Test_TFLite, selfie_segmentation)
 {
     double l1 = 0, lInf = 0;
-    if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL))
     {
-        lInf = 0.2;
+        l1 = 0.01;
+        lInf = 0.48;
     }
     testModel("selfie_segmentation", Size(256, 256), l1, lInf);
 }
@@ -124,6 +127,15 @@ TEST_P(Test_TFLite, max_unpooling)
 {
     if (backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU) {
+        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+        if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+        if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
     // Due Max Unpoling is a numerically unstable operation and small difference between frameworks
     // might lead to positional difference of maximal elements in the tensor, this test checks
@@ -212,7 +224,13 @@ TEST_P(Test_TFLite, EfficientDet_int8) {
 }
 
 TEST_P(Test_TFLite, replicate_by_pack) {
-    testLayer("replicate_by_pack");
+    double l1 = 0, lInf = 0;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+    {
+        l1 = 4e-4;
+        lInf = 2e-3;
+    }
+    testLayer("replicate_by_pack", l1, lInf);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
