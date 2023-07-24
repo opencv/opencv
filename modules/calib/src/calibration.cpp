@@ -1182,7 +1182,7 @@ static double stereoCalibrateImpl(
     return std::sqrt(reprojErr/(pointsTotal*2));
 }
 
-static double stereoCalibrateImpl(
+static double stereoExtrinsicCalibrateImpl(
         const Mat& _objectPoints, const Mat& _imagePoints1,
         const Mat& _imagePoints2, const Mat& _npoints,
         Mat& _cameraMatrix1, Mat& _distCoeffs1, bool isFisheye1,
@@ -1190,7 +1190,7 @@ static double stereoCalibrateImpl(
         Size imageSize, Mat matR, Mat matT,
         Mat matE, Mat matF,
         Mat rvecs, Mat tvecs,
-        Mat perViewErr, int flags1, int flags2,
+        Mat perViewErr, int flags,
         TermCriteria termCrit )
 {
     int NINTRINSIC = CALIB_NINTRINSIC;
@@ -1199,7 +1199,6 @@ static double stereoCalibrateImpl(
     Vec<double, 14> distInitial[2];
     Matx33d A[2];
     int pointsTotal = 0, maxPoints = 0, nparams;
-    bool recomputeIntrinsics = false;
     double aspectRatio[2] = {0, 0};
 
     CV_Assert( _imagePoints1.type() == _imagePoints2.type() &&
@@ -1243,14 +1242,12 @@ static double stereoCalibrateImpl(
     }
 
     bool isFisheyes[2] = {isFisheye1, isFisheye2};
-    int flagsVec[2] = {flags1, flags2};
     std::vector<int> nIntrinVec(2);
     for(int k = 0; k < 2; k++ )
     {
         const Mat& points = k == 0 ? _imagePoints1 : _imagePoints2;
         const Mat& cameraMatrix = k == 0 ? _cameraMatrix1 : _cameraMatrix2;
         const Mat& distCoeffs = k == 0 ? _distCoeffs1 : _distCoeffs2;
-        int flags = flagsVec[k];
         bool isFisheye = isFisheyes[k];
 
         if (isFisheye) {
@@ -1270,35 +1267,10 @@ static double stereoCalibrateImpl(
         points.convertTo(imagePoints[k], CV_64F);
         imagePoints[k] = imagePoints[k].reshape(2, 1);
         
-        if((isFisheye 
-                && (flags & ( CALIB_FIX_INTRINSIC | fisheye::CALIB_FIX_SKEW  )))
-        || (!isFisheye
-                && (flags & ( CALIB_FIX_INTRINSIC | CALIB_USE_INTRINSIC_GUESS |
-                    CALIB_FIX_ASPECT_RATIO | CALIB_FIX_FOCAL_LENGTH ))))
-            cameraMatrix.convertTo(A[k], CV_64F);
+        cameraMatrix.convertTo(A[k], CV_64F);
+        Mat tdist( distCoeffs.size(), CV_MAKETYPE(CV_64F, distCoeffs.channels()), distInitial[k].val);
+        distCoeffs.convertTo(tdist, CV_64F);
 
-        // TODO: Flags here are entangled
-        if( (!isFisheye && 
-                    (flags & ( CALIB_FIX_INTRINSIC | CALIB_USE_INTRINSIC_GUESS |
-                      CALIB_FIX_K1 | CALIB_FIX_K2 | CALIB_FIX_K3 | CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6 |
-                      CALIB_FIX_TANGENT_DIST)))
-            || (isFisheye && 
-                    (flags & (CALIB_FIX_K1 | CALIB_FIX_K2 | CALIB_FIX_K3 | CALIB_FIX_K4))))
-        {
-            Mat tdist( distCoeffs.size(), CV_MAKETYPE(CV_64F, distCoeffs.channels()), distInitial[k].val);
-            distCoeffs.convertTo(tdist, CV_64F);
-        }
-
-        // TODO: The calibration here not impelmented
-        if( !(flags & (CALIB_FIX_INTRINSIC | CALIB_USE_INTRINSIC_GUESS)))
-        {
-            // Mat mIntr(A[k], /* copyData = */ false);
-            // Mat mDist(distInitial[k], /* copyData = */ false);
-            // calibrateCameraInternal(objectPoints, imagePoints[k],
-            //                         _npoints, imageSize, 0, mIntr, mDist,
-            //                         Mat(), Mat(), Mat(), Mat(), Mat(), flags, termCrit);
-            std::cout << "NOT IMPLEMENTED!!!" << std::endl;
-        }
     }
 
     // TODO: Not suppporting same focal length and fixed aspect ratio
@@ -1316,66 +1288,14 @@ static double stereoCalibrateImpl(
     //         aspectRatio[k] = A[k](0, 0) / A[k](1, 1);
     // }
 
-    // TODO: how to set wether fixe intrinsics or not?
-    recomputeIntrinsics = (flags1 & CALIB_FIX_INTRINSIC) == 0;
-
-    // we optimize for the inter-camera R(3),t(3), then, optionally,
-    // for intrinisic parameters of each camera ((fx,fy,cx,cy,k1,k2,p1,p2) ~ 8 parameters).
+    // we optimize for the inter-camera R(3),t(3)
     // Param mapping is:
     // - from 0 next 6: stereo pair Rt, from 6+i*6 next 6: Rt for each ith camera of nimages,
-    // - from 6*(nimages+1) next NINTRINSICS: intrinsics for 1st camera: fx, fy, cx, cy, 14 x dist
-    // - next NINTRINSICS: the same for for 2nd camera
-    nparams = 6*(nimages+1) + (recomputeIntrinsics ? nIntrinVec[0] + nIntrinVec[1] : 0);
+    nparams = 6*(nimages+1);
 
     std::vector<uchar> mask(nparams, (uchar)1);
 
     std::vector<double> param(nparams, 0.);
-
-    if( recomputeIntrinsics )
-    {
-        // size_t idx = nparams - nIntrinVec[0] + nIntrinVec[1];
-        // if( !(flags & CALIB_RATIONAL_MODEL) )
-        //     flags |= CALIB_FIX_K4 | CALIB_FIX_K5 | CALIB_FIX_K6;
-        // if( !(flags & CALIB_THIN_PRISM_MODEL) )
-        //     flags |= CALIB_FIX_S1_S2_S3_S4;
-        // if( !(flags & CALIB_TILTED_MODEL) )
-        //     flags |= CALIB_FIX_TAUX_TAUY;
-        // if( flags & CALIB_FIX_ASPECT_RATIO )
-        //     mask[idx + 0] = mask[idx + NINTRINSIC] = 0;
-        // if ( flags & CALIB_SAME_FOCAL_LENGTH)
-        //     mask[idx + NINTRINSIC] = mask[idx + NINTRINSIC + 1] = 0;
-        // if( flags & CALIB_FIX_FOCAL_LENGTH )
-        //     mask[idx + 0] = mask[idx + 1] = mask[idx + NINTRINSIC] = mask[idx + NINTRINSIC+1] = 0;
-        // if( flags & CALIB_FIX_PRINCIPAL_POINT )
-        //     mask[idx + 2] = mask[idx + 3] = mask[idx + NINTRINSIC+2] = mask[idx + NINTRINSIC+3] = 0;
-        // if( flags & (CALIB_ZERO_TANGENT_DIST|CALIB_FIX_TANGENT_DIST) )
-        //     mask[idx + 6] = mask[idx + 7] = mask[idx + NINTRINSIC+6] = mask[idx + NINTRINSIC+7] = 0;
-        // if( flags & CALIB_FIX_K1 )
-        //     mask[idx + 4] = mask[idx + NINTRINSIC+4] = 0;
-        // if( flags & CALIB_FIX_K2 )
-        //     mask[idx + 5] = mask[idx + NINTRINSIC+5] = 0;
-        // if( flags & CALIB_FIX_K3 )
-        //     mask[idx + 8] = mask[idx + NINTRINSIC+8] = 0;
-        // if( flags & CALIB_FIX_K4 )
-        //     mask[idx + 9] = mask[idx + NINTRINSIC+9] = 0;
-        // if( flags & CALIB_FIX_K5 )
-        //     mask[idx + 10] = mask[idx + NINTRINSIC+10] = 0;
-        // if( flags & CALIB_FIX_K6 )
-        //     mask[idx + 11] = mask[idx + NINTRINSIC+11] = 0;
-        // if( flags & CALIB_FIX_S1_S2_S3_S4 )
-        // {
-        //     mask[idx + 12] = mask[idx + NINTRINSIC+12] = 0;
-        //     mask[idx + 13] = mask[idx + NINTRINSIC+13] = 0;
-        //     mask[idx + 14] = mask[idx + NINTRINSIC+14] = 0;
-        //     mask[idx + 15] = mask[idx + NINTRINSIC+15] = 0;
-        // }
-        // if( flags & CALIB_FIX_TAUX_TAUY )
-        // {
-        //     mask[idx + 16] = mask[idx + NINTRINSIC+16] = 0;
-        //     mask[idx + 17] = mask[idx + NINTRINSIC+17] = 0;
-        // }
-        std::cout << "NOT IMPLEMENTED!!!" << std::endl;
-    }
 
     // storage for initial [om(R){i}|t{i}] (in order to compute the median for each component)
     std::vector<double> rtsort(nimages*6);
@@ -1438,8 +1358,7 @@ static double stereoCalibrateImpl(
         pos += ni;
     }
 
-    // TODO: how to set CALIB_USE_EXTRINSIC_GUESS
-    if(flags1 & CALIB_USE_EXTRINSIC_GUESS)
+    if(flags & CALIB_USE_EXTRINSIC_GUESS)
     {
         Vec3d R, T;
         matT.convertTo(T, CV_64F);
@@ -1468,34 +1387,15 @@ static double stereoCalibrateImpl(
             double h = rtsort[idx + nimages/2];
             param[i] = (nimages % 2 == 0) ? (h + rtsort[idx + nimages/2 - 1]) * 0.5 : h;
         }
-    }
-
-    // Parameter initialization done
-    // TODO: tackle the problem of intrinsics in the mixed optimization
-    if( recomputeIntrinsics )
-    {
-        std::cout << "NOT SUPPORTED!!!" << std::endl;
-        // for(int k = 0; k < 2; k++ )
-        // {
-        //     size_t idx = (nimages+1)*6 + k*NINTRINSIC;
-        //     if( flags & CALIB_ZERO_TANGENT_DIST )
-        //         distInitial[k][2] = distInitial[k][3] = 0;
-        //     param[idx +  0] = A[k](0, 0); param[idx + 1] = A[k](1, 1); param[idx + 2] = A[k](0, 2); param[idx + 3] = A[k](1, 2);
-        //     for (int i = 0; i < 14; i++)
-        //     {
-        //         param[idx + 4 + i] = distInitial[k][i];
-        //     }
-        // }
-    }
-    
+    }    
 
     // Preallocated place for callback calculations
     Mat errBuf( maxPoints*2, 1, CV_64F );
     Mat JeBuf( maxPoints*2, 6, CV_64F );
     Mat J_LRBuf( maxPoints*2, 6, CV_64F );
-    Mat JiBuf( maxPoints*2, NINTRINSIC, CV_64F, Scalar(0) );
+    // Mat JiBuf( maxPoints*2, NINTRINSIC, CV_64F, Scalar(0) );
 
-    auto lmcallback = [&, recomputeIntrinsics, nimages, flagsVec, isFisheyes, nIntrinVec, _npoints]
+    auto lmcallback = [&, nimages, isFisheyes, nIntrinVec, _npoints]
                       (InputOutputArray _param, OutputArray JtErr_, OutputArray JtJ_, double& errnorm)
     {   
         Mat_<double> param_m = _param.getMat();
@@ -1510,40 +1410,11 @@ static double stereoCalibrateImpl(
         }
         double reprojErr = 0;
 
-        if( recomputeIntrinsics )
+        for (int k = 0; k < 2; k++)
         {
-            int idx = (nimages+1)*6;
-
-            // TODO: NOT SUPPORTED!!!
-            // if( flags & CALIB_SAME_FOCAL_LENGTH )
-            // {
-            //     param_m(idx + NINTRINSIC  ) = param_m(idx + 0);
-            //     param_m(idx + NINTRINSIC+1) = param_m(idx + 1);
-            // }
-            // if( flags & CALIB_FIX_ASPECT_RATIO )
-            // {
-            //     param_m(idx + 0)          = aspectRatio[0]*param_m(idx + 1             );
-            //     param_m(idx + nIntrinVec[k]) = aspectRatio[1]*param_m(idx + 1 + nIntrinVec[k]);
-            // }
-            for(int k = 0; k < 2; k++ )
-            {
-                double fx = param_m(idx + k*nIntrinVec[k]+0), fy = param_m(idx + k*nIntrinVec[k]+1);
-                double cx = param_m(idx + k*nIntrinVec[k]+2), cy = param_m(idx + k*nIntrinVec[k]+3);
-                intrin[k] = Matx33d(fx,  0, cx,
-                                     0, fy, cy,
-                                     0,  0,  1);
-                for(int j = 0; j < nIntrinVec[k] - 4; j++)
-                    distCoeffs[k][j] = param_m(idx + k*nIntrinVec[k]+4+j);
-            }
-        }
-        else
-        {
-            for (int k = 0; k < 2; k++)
-            {
-                intrin[k] = A[k];
-                for(int j = 0; j < nIntrinVec[k] - 4; j++)
-                    distCoeffs[k][j] = distInitial[k][j];
-            }
+            intrin[k] = A[k];
+            for(int j = 0; j < nIntrinVec[k] - 4; j++)
+                distCoeffs[k][j] = distInitial[k][j];
         }
 
         int ptPos = 0;
@@ -1565,35 +1436,25 @@ static double stereoCalibrateImpl(
             Mat err  = errBuf (Range(0, ni*2), Range::all());
             Mat Je   = JeBuf  (Range(0, ni*2), Range::all());
             Mat J_LR = J_LRBuf(Range(0, ni*2), Range::all());
-            Mat Ji   = JiBuf  (Range(0, ni*2), Range::all());
 
             Mat tmpImagePoints = err.reshape(2, 1);
-            Mat dpdf = Ji.colRange(0, 2);
-            Mat dpdc = Ji.colRange(2, 4);
             Mat dpdrot = Je.colRange(0, 3);
             Mat dpdt = Je.colRange(3, 6);
 
             for(int k = 0; k < 2; k++ )
             {
-                Mat dpdk = Ji.colRange(4, nIntrinVec[k]);
                 Mat imgpt_ik = imagePoints[k](Range::all(), Range(ptPos, ptPos + ni));
 
                 if (!isFisheyes[k]) {
                     if( JtJ_.needed() || JtErr_.needed() )
                         projectPoints(objpt_i, om[k], T[k], intrin[k], distCoeffs[k],
-                                    tmpImagePoints, dpdrot, dpdt, dpdf, dpdc, dpdk, noArray(),
-                                    (flagsVec[k] & CALIB_FIX_ASPECT_RATIO) ? aspectRatio[k] : 0.);
+                                    tmpImagePoints, dpdrot, dpdt, noArray(), noArray(), noArray(), noArray(), 0.);
                     else
                         projectPoints(objpt_i, om[k], T[k], intrin[k], distCoeffs[k], tmpImagePoints);
                 } else {
                     if( JtJ_.needed() || JtErr_.needed() ) {
                         Mat jacobian; // of size num_points*2  x  15 (2 + 2+ 4 + 3 + 3 + 1 ; // f, c, k, om, T, alpha)
-                        // TODO: verify this
-                        // TODO: does not support the update for the skew yet
                         fisheye::projectPoints(objpt_i, tmpImagePoints, om[k], T[k], intrin[k], distCoeffs[k], 0, jacobian);
-                        jacobian.colRange(0, 2).copyTo(dpdf);
-                        jacobian.colRange(2, 4).copyTo(dpdc);
-                        jacobian.colRange(4, 8).copyTo(dpdk);
                         jacobian.colRange(8, 11).copyTo(dpdrot);
                         jacobian.colRange(11,14).copyTo(dpdt);
                     } else
@@ -1605,7 +1466,7 @@ static double stereoCalibrateImpl(
                 {
                     Mat JtErr = JtErr_.getMat();
                     Mat JtJ = JtJ_.getMat();
-                    int iofs = (nimages+1)*6 + k*nIntrinVec[0], eofs = (i+1)*6;
+                    int eofs = (i+1)*6;
                     assert( JtJ_.needed() && JtErr_.needed() );
 
                     if( k == 1 )
@@ -1652,17 +1513,6 @@ static double stereoCalibrateImpl(
 
                     JtJ(Rect(eofs, eofs, 6, 6)) += Je.t()*Je;
                     JtErr.rowRange(eofs, eofs + 6) += Je.t()*err;
-
-                    if( recomputeIntrinsics )
-                    {
-                        JtJ(Rect(iofs, iofs, nIntrinVec[k], nIntrinVec[k])) += Ji.t()*Ji;
-                        JtJ(Rect(iofs, eofs, nIntrinVec[k], 6)) += Je.t()*Ji;
-                        if( k == 1 )
-                        {
-                            JtJ(Rect(iofs, 0, nIntrinVec[k], 6)) += J_LR.t()*Ji;
-                        }
-                        JtErr.rowRange(iofs, iofs + nIntrinVec[k]) += Ji.t()*err;
-                    }
                 }
 
                 double viewErr = norm(err, NORM_L2SQR);
@@ -1674,29 +1524,26 @@ static double stereoCalibrateImpl(
             ptPos += ni;
         }
         errnorm = reprojErr;
+        std::cout << "stereo errnorm: " << errnorm << std::endl;
         return true;
     };
 
     double reprojErr = 0;
-    if (countNonZero(mask))
+    LevMarq solver(param, lmcallback,
+                    LevMarq::Settings()
+                    .setMaxIterations((unsigned int)termCrit.maxCount)
+                    .setStepNormTolerance(termCrit.epsilon)
+                    .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon));
+    // geodesic not supported for normal callbacks
+    LevMarq::Report r = solver.optimize();
+
+    // If solver failed, then the last calculated perViewErr can be wrong & should be recalculated
+    if (!r.found && !perViewErr.empty())
     {
-        LevMarq solver(param, lmcallback,
-                       LevMarq::Settings()
-                       .setMaxIterations((unsigned int)termCrit.maxCount)
-                       .setStepNormTolerance(termCrit.epsilon)
-                       .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon),
-                       mask);
-        // geodesic not supported for normal callbacks
-        LevMarq::Report r = solver.optimize();
-
-        // If solver failed, then the last calculated perViewErr can be wrong & should be recalculated
-        if (!r.found && !perViewErr.empty())
-        {
-            lmcallback(param, noArray(), noArray(), reprojErr);
-        }
-
-        reprojErr = r.energy;
+        lmcallback(param, noArray(), noArray(), reprojErr);
     }
+
+    reprojErr = r.energy;
 
     // Extract optimized params from the param vector
 
@@ -1710,26 +1557,6 @@ static double stereoCalibrateImpl(
         R_LR.convertTo(matR, matR.depth());
     T_LR.convertTo(matT, matT.depth());
 
-
-    if( recomputeIntrinsics )
-    {
-        for(int k = 0; k < 2; k++ )
-        {
-            size_t idx = (nimages+1)*6 + k*nIntrinVec[0];
-            A[k] = Matx33d(param[idx + 0], 0, param[idx + 2], 0, param[idx + 1], param[idx + 3], 0, 0, 1);
-
-            Mat& cameraMatrix = k == 0 ? _cameraMatrix1 : _cameraMatrix2;
-            Mat& distCoeffs = k == 0 ? _distCoeffs1 : _distCoeffs2;
-            A[k].convertTo(cameraMatrix, cameraMatrix.depth());
-
-            std::vector<double> vdist(nIntrinVec[k]);
-            for(int j = 0; j < nIntrinVec[k]; j++)
-                vdist[j] = param[idx + 4 + j];
-
-            Mat tdist( distCoeffs.size(), CV_MAKETYPE(CV_64F, distCoeffs.channels()), vdist.data());
-            tdist.convertTo(distCoeffs, distCoeffs.depth());
-        }
-    }
 
     if( !matE.empty() || !matF.empty() )
     {
@@ -2300,43 +2127,43 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
     return err;
 }
 
-double stereoCalibrate( InputArrayOfArrays _objectPoints,
+double stereoExtrinsicCalibrate( InputArrayOfArrays _objectPoints,
                         InputArrayOfArrays _imagePoints1,
                         InputArrayOfArrays _imagePoints2,
                         InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1, bool isFisheye1,
                         InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2, bool isFisheye2,
                         Size imageSize, OutputArray _Rmat, OutputArray _Tmat,
-                        OutputArray _Emat, OutputArray _Fmat, int flags1, int flags2,
+                        OutputArray _Emat, OutputArray _Fmat, int flags,
                         TermCriteria criteria)
 {
-    if ((flags1 & CALIB_USE_EXTRINSIC_GUESS) && (flags2 & CALIB_USE_EXTRINSIC_GUESS))
-        CV_Error(Error::StsBadFlag, "stereoCalibrate does not support CALIB_USE_EXTRINSIC_GUESS.");
+    if (flags & CALIB_USE_EXTRINSIC_GUESS)
+        CV_Error(Error::StsBadFlag, "stereoExtrinsicCalibrate does not support CALIB_USE_EXTRINSIC_GUESS.");
 
     Mat Rmat, Tmat;
-    double ret = stereoCalibrate(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, isFisheye1,
+    double ret = stereoExtrinsicCalibrate(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, isFisheye1,
                                  _cameraMatrix2, _distCoeffs2, isFisheye2, imageSize, Rmat, Tmat, _Emat, _Fmat,
-                                 noArray(), flags1, flags2, criteria);
+                                 noArray(), flags, criteria);
     Rmat.copyTo(_Rmat);
     Tmat.copyTo(_Tmat);
     return ret;
 }
 
-double stereoCalibrate( InputArrayOfArrays _objectPoints,
+double stereoExtrinsicCalibrate( InputArrayOfArrays _objectPoints,
                         InputArrayOfArrays _imagePoints1,
                         InputArrayOfArrays _imagePoints2,
                         InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1, bool isFisheye1,
                         InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2, bool isFisheye2,
                         Size imageSize, InputOutputArray _Rmat, InputOutputArray _Tmat,
                         OutputArray _Emat, OutputArray _Fmat,
-                        OutputArray _perViewErrors, int flags1, int flags2,
+                        OutputArray _perViewErrors, int flags,
                         TermCriteria criteria)
 {
-    return stereoCalibrate(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, isFisheye1,
+    return stereoExtrinsicCalibrate(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, isFisheye1,
                            _cameraMatrix2, _distCoeffs2, isFisheye2, imageSize, _Rmat, _Tmat, _Emat, _Fmat,
-                           noArray(), noArray(), _perViewErrors, flags1, flags2, criteria);
+                           noArray(), noArray(), _perViewErrors, flags, criteria);
 }
 
-double stereoCalibrate( InputArrayOfArrays _objectPoints,
+double stereoExtrinsicCalibrate( InputArrayOfArrays _objectPoints,
                         InputArrayOfArrays _imagePoints1,
                         InputArrayOfArrays _imagePoints2,
                         InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1, bool isFisheye1,
@@ -2344,7 +2171,7 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
                         Size imageSize, InputOutputArray _Rmat, InputOutputArray _Tmat,
                         OutputArray _Emat, OutputArray _Fmat,
                         OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs,
-                        OutputArray _perViewErrors, int flags1, int flags2,
+                        OutputArray _perViewErrors, int flags,
                         TermCriteria criteria)
 {
     int rtype = CV_64F;
@@ -2352,26 +2179,27 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
     Mat cameraMatrix2 = _cameraMatrix2.getMat();
     Mat distCoeffs1 = _distCoeffs1.getMat();
     Mat distCoeffs2 = _distCoeffs2.getMat();
-    cameraMatrix1 = prepareCameraMatrix(cameraMatrix1, rtype, flags1);
-    cameraMatrix2 = prepareCameraMatrix(cameraMatrix2, rtype, flags2);
+    cameraMatrix1 = prepareCameraMatrix(cameraMatrix1, rtype, flags);
+    cameraMatrix2 = prepareCameraMatrix(cameraMatrix2, rtype, flags);
     distCoeffs1 = (isFisheye1)? prepareDistCoeffs(distCoeffs1, rtype, 4) : prepareDistCoeffs(distCoeffs1, rtype, 14);
     distCoeffs2 = (isFisheye2)? prepareDistCoeffs(distCoeffs2, rtype, 4) : prepareDistCoeffs(distCoeffs2, rtype, 14);
 
-    for (int i = 0; i < 2; i++) {
-        int flags = (i == 0) ? flags1 : flags2;
-        bool isFisheye = (i == 0) ? isFisheye1 : isFisheye2;
-        Mat& distCoeffs = (i == 0) ? distCoeffs1 : distCoeffs2;
-        if (!isFisheye) {
-            if( !(flags & CALIB_RATIONAL_MODEL) &&
-            (!(flags & CALIB_THIN_PRISM_MODEL)) &&
-            (!(flags & CALIB_TILTED_MODEL)))
-            {
-                distCoeffs = distCoeffs.rows == 1 ? distCoeffs.colRange(0, 5) : distCoeffs.rowRange(0, 5);
-            }
-        }
-    }
+    // for (int i = 0; i < 2; i++) {
+    //     // int flags = (i == 0) ? flags1 : flags2;
+    //     bool isFisheye = (i == 0) ? isFisheye1 : isFisheye2;
+    //     Mat& distCoeffs = (i == 0) ? distCoeffs1 : distCoeffs2;
+    //     if (!isFisheye) {
+    //         if( !(flags & CALIB_RATIONAL_MODEL) &&
+    //         (!(flags & CALIB_THIN_PRISM_MODEL)) &&
+    //         (!(flags & CALIB_TILTED_MODEL)))
+    //         {
+    //             distCoeffs = distCoeffs.rows == 1 ? distCoeffs.colRange(0, 5) : distCoeffs.rowRange(0, 5);
+    //         }
+    //     }
+    // }
+    // TODO: how to resize the distcoeffs here?
 
-    if(((flags1 & CALIB_USE_EXTRINSIC_GUESS) && (flags2 & CALIB_USE_EXTRINSIC_GUESS)) == 0)
+    if(!(flags & CALIB_USE_EXTRINSIC_GUESS))
     {
         _Rmat.create(3, 3, rtype);
         _Tmat.create(3, 1, rtype);
@@ -2432,10 +2260,10 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
         matErr = _perViewErrors.getMat();
     }
 
-    double err = stereoCalibrateImpl(objPt, imgPt, imgPt2, npoints, cameraMatrix1,
+    double err = stereoExtrinsicCalibrateImpl(objPt, imgPt, imgPt2, npoints, cameraMatrix1,
                                      distCoeffs1, isFisheye1, cameraMatrix2, distCoeffs2, isFisheye2, imageSize,
                                      matR, matT, matE, matF, rvecLM, tvecLM,
-                                     matErr, flags1, flags2, criteria);
+                                     matErr, flags, criteria);
     cameraMatrix1.copyTo(_cameraMatrix1);
     cameraMatrix2.copyTo(_cameraMatrix2);
     distCoeffs1.copyTo(_distCoeffs1);

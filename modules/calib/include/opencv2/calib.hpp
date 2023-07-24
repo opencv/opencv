@@ -1122,8 +1122,8 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      OutputArray perViewErrors, int flags = CALIB_FIX_INTRINSIC,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
 
-/// @overload
-CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
+// TODO: add documentation for this
+CV_EXPORTS_AS(stereoCalibrateExtrinsicExtended)  double stereoExtrinsicCalibrate( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
                                      bool isFisheye1,
@@ -1132,24 +1132,22 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      Size imageSize, InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                      OutputArray perViewErrors,
-                                     int flags1 = CALIB_FIX_INTRINSIC,
-                                     int flags2 = CALIB_FIX_INTRINSIC,
+                                     int flags = 0,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
 
 /// @overload
-CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
+CV_EXPORTS_W double stereoExtrinsicCalibrate( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
                                      bool isFisheye1,
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
                                      bool isFisheye2,
                                      Size imageSize, OutputArray R,OutputArray T, OutputArray E, OutputArray F,
-                                     int flags1 = CALIB_FIX_INTRINSIC,
-                                     int flags2 = CALIB_FIX_INTRINSIC,
+                                     int flags = 0,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
            
 /// @overload                          
-CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
+CV_EXPORTS_W double stereoExtrinsicCalibrate( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
                                      bool isFisheye1,
@@ -1157,8 +1155,7 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      bool isFisheye2,
                                      Size imageSize, InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
                                      OutputArray perViewErrors,
-                                     int flags1 = CALIB_FIX_INTRINSIC,
-                                     int flags2 = CALIB_FIX_INTRINSIC,
+                                     int flags = 0,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
 
 /** @brief Estimates intrinsics and extrinsics (camera pose) for multi-camera system a.k.a multiview calibraton.
