@@ -345,11 +345,6 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
     const int NUM_FRAMES = (int) objPoints_norm.size();
     const int NUM_PATTERN_PTS = (int) objPoints_norm[0].rows;
     
-    std::vector<double> dist_null{0., 0., 0., 0., 0.};
-    std::vector<double> dist_pinhole{1./3., 2./15., 17./315., 62./2835.};
-    cv::Mat dist_null_map(1, dist_null.size(), CV_64FC1, dist_null.data());
-    cv::Mat dist_pinhole_map(1, dist_pinhole.size(), CV_64FC1, dist_pinhole.data());
-
     std::vector<Matx33d> Rs_prior;
     std::vector<Vec3d> Ts_prior;
     if (useExtrinsicsGuess) {
@@ -396,6 +391,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
             R = Rs_prior[c2] * Rs_prior[c1].t();
             T = -R * Ts_prior[c1] + Ts_prior[c2];
         }
+        // TODO: what flags do we need to perform the stereo calibration?
         // image size does not matter since intrinsics are used
         int flags_extrinsics = CALIB_FIX_INTRINSIC;
         
@@ -406,7 +402,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
         stereoExtrinsicCalibrate(grid_points, image_points1, image_points2,
                         Ks[c1], distortions[c1], is_fisheye_vec[c1],
                         Ks[c2], distortions[c2], is_fisheye_vec[c2],
-                        Size(), R, T, noArray(), noArray(), noArray(), noArray(), noArray(), flags_extrinsics);
+                        R, T, noArray(), noArray(), noArray(), noArray(), noArray(), flags_extrinsics);
 
         // R_0 = I
         // R_ij = R_i R_j^T     =>  R_i = R_ij R_j
@@ -549,12 +545,6 @@ static void optimizeLM (std::vector<double> &param,
             }
             cnt_valid_frame++;
         }
-        // TODO: Clean the output
-        if (JtJ_.needed()) {
-            std::cout << "norm(JtJ_): " << norm(JtJ_) << std::endl;
-            std::cout << "norm(JtErr_): " << norm(JtErr_) << std::endl;
-        }
-        std::cout << "multi errnorm: " << errnorm << std::endl;
         iters_lm += 1;
         return true;
     };
@@ -564,13 +554,7 @@ static void optimizeLM (std::vector<double> &param,
                .setStepNormTolerance(termCrit.epsilon)
                .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon),
            noArray()/*mask, all variables to optimize*/);
-    LevMarq::Report report = solver.optimize();
-
-    // TODO: Clean the output
-    std::cout << "Convergence: " << report.found << std::endl;
-    std::cout << "Iterations: " << report.iters << std::endl;
-    std::cout << "Energy: " << report.energy << std::endl;
-    std::cout << "iters_lm: " << iters_lm << std::endl;
+    solver.optimize();
 }
 
 static void checkConnected (const std::vector<std::vector<bool>> &detection_mask_mat, const std::vector<std::vector<std::vector<bool>>> &is_valid_imgpt) {
@@ -784,7 +768,6 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                 repr_err = calibrateCamera(obj_points_, img_points_, imageSize[camera], Ks[camera], distortions[camera],
                    rvecs, tvecs, noArray(), noArray(), errors_per_view, flagsForIntrinsics_mat.at<int>(camera));
             }
-            std::cout << "Camera: " << camera << ", repr_err: " << repr_err << std::endl;
             CV_LOG_IF_WARNING(NULL, repr_err > WARNING_RMSE, "Warning! Mean RMSE of intrinsics calibration is higher than "+std::to_string(WARNING_RMSE)+" pixels!");
             int cnt_visible_frame = 0;
             for (int f = 0; f < NUM_FRAMES; f++) {
@@ -805,14 +788,12 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         // use PnP to compute rvecs and tvecs
         for (int k = 0; k < NUM_CAMERAS; k++) {
             int cnt_valid_frame = 0;
-            std::cout << "k: " << k << std::endl;
             for (int i = 0; i < NUM_FRAMES; i++) {
                 if (!detection_mask_mat[k][i]) continue;
                 Vec3d rvec, tvec;
 
                 // TODO: change to the correct version of PnP supporting mixed camera models
                 multiview::computeExtrinsics(obj_points_valid[k][cnt_valid_frame], img_points_valid[k][cnt_valid_frame], Ks[k], distortions[k], rvec, tvec, is_fisheye_vec[k]);
-                std::cout << "computeExtrinsics done" << std::endl;
                 rvecs_all[k][i] = rvec;
                 tvecs_all[k][i] = tvec;
                 const double err2 = multiview::computeReprojectionMSE(obj_points_valid[k][cnt_valid_frame], img_points_valid[k][cnt_valid_frame], Ks[k], distortions[k], Mat(rvec), Mat(tvec), noArray(), noArray(), is_fisheye_vec[k]);
@@ -823,7 +804,6 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                 cnt_valid_frame++;
             }
         }
-        std::cout << "calculate error done" << std::endl;
     }
 
     std::vector<std::vector<bool>> is_valid_angle2pattern;
@@ -991,7 +971,6 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     double sum_errors = 0, cnt_errors = 0;
     if (perFrameErrors.needed()) {
         const bool rvecs_mat_vec = rvecs0.needed() && rvecs0.isMatVector(), tvecs_mat_vec = tvecs0.needed() && tvecs0.isMatVector();
-        const bool r_mat_vec = Rs.isMatVector(), t_mat_vec = Ts.isMatVector();
         Mat errs = Mat_<double>(NUM_CAMERAS, NUM_FRAMES);
         auto * errs_ptr = (double *) errs.data;
         for (int c = 0; c < NUM_CAMERAS; c++) {

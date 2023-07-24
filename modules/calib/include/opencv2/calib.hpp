@@ -1134,7 +1134,7 @@ CV_EXPORTS_AS(stereoCalibrateExtrinsicExtended)  double stereoExtrinsicCalibrate
                                      bool isFisheye1,
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
                                      bool isFisheye2,
-                                     Size imageSize, InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
+                                     InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                      OutputArray perViewErrors,
                                      int flags = 0,
@@ -1147,7 +1147,7 @@ CV_EXPORTS_W double stereoExtrinsicCalibrate( InputArrayOfArrays objectPoints,
                                      bool isFisheye1,
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
                                      bool isFisheye2,
-                                     Size imageSize, OutputArray R,OutputArray T, OutputArray E, OutputArray F,
+                                     OutputArray R,OutputArray T, OutputArray E, OutputArray F,
                                      int flags = 0,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
            
@@ -1158,11 +1158,10 @@ CV_EXPORTS_W double stereoExtrinsicCalibrate( InputArrayOfArrays objectPoints,
                                      bool isFisheye1,
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
                                      bool isFisheye2,
-                                     Size imageSize, InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
+                                     InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
                                      OutputArray perViewErrors,
                                      int flags = 0,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
-
 /** @brief Estimates intrinsics and extrinsics (camera pose) for multi-camera system a.k.a multiview calibraton.
 
 @param[in] objPoints Calibration pattern object points. Expected shape: NUM_FRAMES x NUM_POINTS x 3. Supported data type: CV_32F.
