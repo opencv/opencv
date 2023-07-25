@@ -452,13 +452,13 @@ void convBlockMR1_F32(int np, const float * a, const float * b, float *c, const 
 
     if (init_c)
     {
-        c0 += vld1q_f32(c);
-        c1 += vld1q_f32(c + 4);
-        c2 += vld1q_f32(c + 8);
-        c3 += vld1q_f32(c + 12);
-        c4 += vld1q_f32(c + 16);
-        c5 += vld1q_f32(c + 20);
-        c6 += vld1q_f32(c + 24);
+        c0 = vaddq_f32(c0, vld1q_f32(c));
+        c1 = vaddq_f32(c1, vld1q_f32(c + 4));
+        c2 = vaddq_f32(c2, vld1q_f32(c + 8));
+        c3 = vaddq_f32(c3, vld1q_f32(c + 12));
+        c4 = vaddq_f32(c4, vld1q_f32(c + 16));
+        c5 = vaddq_f32(c5, vld1q_f32(c + 20));
+        c6 = vaddq_f32(c6, vld1q_f32(c + 24));
     }
 
     if (ifMinMaxAct)
