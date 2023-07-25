@@ -176,6 +176,70 @@ PERF_TEST_P_(Gemm, gemm)
     SANITY_CHECK_NOTHING();
 }
 
+PERF_TEST_P_(Gemm, innerproduct)
+{
+    int test_id = (int)get<0>(GetParam());
+    ASSERT_GE(test_id, 0); ASSERT_LT(test_id, GemmParamId::GEMM_LAST);
+    const GemmParam_t& params = test_gemm_configs[test_id];
+    auto a_shape = params.a_shape;
+    auto b_shape = params.b_shape;
+    auto c_shape = params.c_shape;
+    auto trans_a = params.trans_a;
+    auto trans_b = params.trans_b;
+
+    Backend backend_id = get<0>(get<1>(GetParam()));
+    Target target_id = get<1>(get<1>(GetParam()));
+
+    bool have_bias = c_shape.empty() ? false : true;
+
+    Mat A(static_cast<int>(a_shape.size()), a_shape.data(), CV_32F);
+    randu(A, -1.0f, 1.0f);
+    Mat B(static_cast<int>(b_shape.size()), b_shape.data(), CV_32F);
+    randu(A, -1.0f, 1.0f);
+
+    LayerParams lp;
+    lp.type = "InnerProduct";
+    lp.name = "testLayer";
+    if (trans_a) {
+        cv::transpose(A, A);
+    }
+    if (!trans_b) {
+        cv::transpose(B, B);
+    }
+    lp.blobs.push_back(B);
+    lp.set("num_output", B.size[0]);
+    if (have_bias) {
+        Mat C(static_cast<int>(c_shape.size()), c_shape.data(), CV_32F);
+        randu(C, -1.0f, 1.0f);
+        lp.blobs.push_back(C);
+        lp.set("bias_term", true);
+    } else {
+        lp.set("bias_term", false);
+    }
+
+    Net net;
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    net.connect(0, 0, id, 0);
+    net.setPreferableBackend(backend_id);
+    net.setPreferableTarget(target_id);
+
+    // warmup
+    {
+        std::vector<std::string> input_names(2);
+        input_names[0] = "A";
+        net.setInputsNames(input_names);
+        net.setInput(A, input_names[0]);
+        Mat out = net.forward();
+    }
+
+    TEST_CYCLE()
+    {
+        Mat res = net.forward();
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Gemm, Combine(
     GemmParamId::all(),
     dnnBackendsAndTargets(false, false)  // defined in ../test/test_common.hpp
