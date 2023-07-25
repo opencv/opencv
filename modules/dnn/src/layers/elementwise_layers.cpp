@@ -2588,7 +2588,12 @@ struct ChannelsPReLUFunctor : public BaseFunctor
     std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
     {
         std::vector<size_t> shape = getShape<size_t>(scale);
-        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, scale.ptr<float>());
+        std::shared_ptr<ngraph::Node> slope;
+        if (std::count_if(shape.begin(), shape.end(), [](int d){ return d != 1;}) > 1) {
+            slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, scale.ptr<float>());
+        } else {
+            slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{scale.total()}, scale.ptr<float>());
+        }
         return std::make_shared<ngraph::op::PRelu>(node, slope);
     }
 #endif  // HAVE_DNN_NGRAPH
@@ -3098,7 +3103,9 @@ Ptr<Layer> ChannelsPReLULayer::create(const LayerParams& params)
     }
 
     Ptr<Layer> l;
-    if (scale.dims > 1 && scale.size[1] != scale.total())
+    // Check first two dimensions of scale (batch, channels)
+    MatShape scaleShape = shape(scale);
+    if (std::count_if(scaleShape.begin(), scaleShape.end(), [](int d){ return d != 1;}) > 1)
     {
         l = new ElementWiseLayer<PReLUFunctor>(PReLUFunctor(scale));
     }
