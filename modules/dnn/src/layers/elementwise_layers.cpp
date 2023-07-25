@@ -138,7 +138,7 @@ public:
             {
                 const float* srcptr = src_->ptr<float>(i) + stripeStart;
                 float* dstptr = dst_->ptr<float>(i) + stripeStart;
-                func_->apply(srcptr, dstptr, (int)(stripeEnd - stripeStart), planeSize, 0, outCn);
+                func_->apply(srcptr, dstptr, stripeStart, (int)(stripeEnd - stripeStart), planeSize, 0, outCn);
             }
         }
     };
@@ -268,7 +268,7 @@ public:
 
     void forwardSlice(const float* src, float* dst, int len, size_t planeSize, int cn0, int cn1) const CV_OVERRIDE
     {
-        func.apply(src, dst, len, planeSize, cn0, cn1);
+        func.apply(src, dst, -1, len, planeSize, cn0, cn1);
     }
 
 #ifdef HAVE_CUDA
@@ -355,7 +355,7 @@ struct ReLUFunctor : public BaseFunctor
                backendId == DNN_BACKEND_CANN;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int, int len, size_t planeSize, int cn0, int cn1) const
     {
         float s = slope;
         for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
@@ -559,7 +559,7 @@ struct ReLU6Functor : public BaseFunctor
                backendId == DNN_BACKEND_CANN;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int, int len, size_t planeSize, int cn0, int cn1) const
     {
         for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
         {
@@ -704,7 +704,7 @@ struct ReLU6Functor : public BaseFunctor
 template <class T>
 struct BaseDefaultFunctor : public BaseFunctor
 {
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int, int len, size_t planeSize, int cn0, int cn1) const
     {
         for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
         {
@@ -2226,7 +2226,7 @@ struct PowerFunctor : public BaseFunctor
         shift = originShift;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int, int len, size_t planeSize, int cn0, int cn1) const
     {
         float a = scale, b = shift, p = power;
         if( p == 1.f )
@@ -2470,7 +2470,7 @@ struct ChannelsPReLUFunctor : public BaseFunctor
                backendId == DNN_BACKEND_CANN;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int, int len, size_t planeSize, int cn0, int cn1) const
     {
         CV_Assert(scale.isContinuous() && scale.type() == CV_32F);
 
@@ -2587,8 +2587,8 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 #ifdef HAVE_DNN_NGRAPH
     std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
     {
-        const size_t numChannels = scale.total();
-        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numChannels}, scale.data);
+        std::vector<size_t> shape = getShape<size_t>(scale);
+        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, scale.ptr<float>());
         return std::make_shared<ngraph::op::PRelu>(node, slope);
     }
 #endif  // HAVE_DNN_NGRAPH
@@ -2603,6 +2603,55 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 #endif
 
     int64 getFLOPSPerElement() const { return 1; }
+};
+
+struct PReLUFunctor : public ChannelsPReLUFunctor
+{
+    explicit PReLUFunctor(const Mat& scale_=Mat()) : ChannelsPReLUFunctor(scale_)
+    {
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_Assert(scale.isContinuous() && scale.type() == CV_32F);
+
+        if (stripeStart < 0)
+            CV_Error(Error::StsNotImplemented, "PReLUFunctor requires stripe offset parameter");
+
+        const float* scaleptr = scale.ptr<float>() + cn0 * planeSize + stripeStart;
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize, scaleptr += planeSize )
+        {
+            int i = 0;
+        #if CV_SIMD128
+            v_float32x4 z = v_setzero_f32();
+            for( ; i <= len - 16; i += 16 )
+            {
+                v_float32x4 x0 = v_load(srcptr + i);
+                v_float32x4 x1 = v_load(srcptr + i + 4);
+                v_float32x4 x2 = v_load(srcptr + i + 8);
+                v_float32x4 x3 = v_load(srcptr + i + 12);
+                v_float32x4 s0 = v_load(scaleptr + i);
+                v_float32x4 s1 = v_load(scaleptr + i + 4);
+                v_float32x4 s2 = v_load(scaleptr + i + 8);
+                v_float32x4 s3 = v_load(scaleptr + i + 12);
+                x0 = v_select(x0 >= z, x0, x0*s0);
+                x1 = v_select(x1 >= z, x1, x1*s1);
+                x2 = v_select(x2 >= z, x2, x2*s2);
+                x3 = v_select(x3 >= z, x3, x3*s3);
+                v_store(dstptr + i, x0);
+                v_store(dstptr + i + 4, x1);
+                v_store(dstptr + i + 8, x2);
+                v_store(dstptr + i + 12, x3);
+            }
+        #endif
+            for( ; i < len; i++ )
+            {
+                float x = srcptr[i];
+                float s = scaleptr[i];
+                dstptr[i] = x >= 0.f ? x : s*x;
+            }
+        }
+    }
 };
 
 struct SignFunctor : public BaseDefaultFunctor<SignFunctor>
@@ -3040,13 +3089,23 @@ Ptr<ExpLayer> ExpLayer::create(const LayerParams& params)
 Ptr<Layer> ChannelsPReLULayer::create(const LayerParams& params)
 {
     CV_Assert(params.blobs.size() == 1);
-    if (params.blobs[0].total() == 1)
+    Mat scale = params.blobs[0];
+    if (scale.total() == 1)
     {
         LayerParams reluParams = params;
-        reluParams.set("negative_slope", *params.blobs[0].ptr<float>());
+        reluParams.set("negative_slope", *scale.ptr<float>());
         return ReLULayer::create(reluParams);
     }
-    Ptr<ChannelsPReLULayer> l(new ElementWiseLayer<ChannelsPReLUFunctor>(ChannelsPReLUFunctor(params.blobs[0])));
+
+    Ptr<Layer> l;
+    if (scale.dims > 1 && scale.size[1] != scale.total())
+    {
+        l = new ElementWiseLayer<PReLUFunctor>(PReLUFunctor(scale));
+    }
+    else
+    {
+        l = new ElementWiseLayer<ChannelsPReLUFunctor>(ChannelsPReLUFunctor(scale));
+    }
     l->setParamsFrom(params);
 
     return l;
