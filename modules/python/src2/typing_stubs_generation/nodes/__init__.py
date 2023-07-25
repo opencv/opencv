@@ -7,5 +7,5 @@ from .constant_node import ConstantNode
 from .type_node import (
     TypeNode, OptionalTypeNode, UnionTypeNode, NoneTypeNode, TupleTypeNode,
     ASTNodeTypeNode, AliasTypeNode, SequenceTypeNode, AnyTypeNode,
-    AggregatedTypeNode, NDArrayTypeNode, AliasRefTypeNode,
+    AggregatedTypeNode, NDArrayTypeNode, AliasRefTypeNode, PrimitiveTypeNode
 )

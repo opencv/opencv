@@ -43,7 +43,7 @@
 #include "precomp.hpp"
 #include "utils.hpp"
 #include "grfmt_pxm.hpp"
-#include <iostream>
+#include <opencv2/core/utils/logger.hpp>
 
 #ifdef HAVE_IMGCODEC_PXM
 
@@ -191,7 +191,7 @@ bool PxMDecoder::readHeader()
     }
     catch (...)
     {
-        std::cerr << "PXM::readHeader(): unknown C++ exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "PXM::readHeader(): unknown C++ exception");
         throw;
     }
 
@@ -364,7 +364,7 @@ bool PxMDecoder::readData( Mat& img )
     }
     catch (...)
     {
-        std::cerr << "PXM::readData(): unknown exception" << std::endl << std::flush;
+        CV_LOG_ERROR(NULL, "PXM::readData(): unknown exception");
         throw;
     }
 

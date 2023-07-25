@@ -3,17 +3,20 @@ __all__ = ("generate_typing_stubs", )
 from io import StringIO
 from pathlib import Path
 import re
-from typing import (Generator, Type, Callable, NamedTuple, Union, Set, Dict,
+from typing import (Type, Callable, NamedTuple, Union, Set, Dict,
                     Collection, Tuple, List)
 import warnings
 
-from .ast_utils import get_enclosing_namespace, get_enum_module_and_export_name
+from .ast_utils import (get_enclosing_namespace,
+                        get_enum_module_and_export_name,
+                        for_each_function_overload,
+                        for_each_class)
 
 from .predefined_types import PREDEFINED_TYPES
 from .api_refinement import apply_manual_api_refinement
 
-from .nodes import (ASTNode, ASTNodeType, NamespaceNode, ClassNode, FunctionNode,
-                    EnumerationNode, ConstantNode)
+from .nodes import (ASTNode, ASTNodeType, NamespaceNode, ClassNode,
+                    FunctionNode, EnumerationNode, ConstantNode)
 
 from .nodes.type_node import (TypeNode, AliasTypeNode, AliasRefTypeNode,
                               AggregatedTypeNode, ASTNodeTypeNode,
@@ -98,18 +101,19 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path) -> None:
 
     output_stream = StringIO()
 
+    # Add empty __all__ dunder on top of the module
+    output_stream.write("__all__: list[str] = []\n\n")
+
     # Write required imports at the top of file
     _write_required_imports(required_imports, output_stream)
 
     _write_reexported_symbols_section(root, output_stream)
 
-    # Write constants section, because constants don't impose any dependencies
-    _generate_section_stub(StubSection("# Constants", ConstantNode), root,
-                           output_stream, 0)
     # NOTE: Enumerations require special handling, because all enumeration
     # constants are exposed as module attributes
-    has_enums = _generate_section_stub(StubSection("# Enumerations", EnumerationNode),
-                                       root, output_stream, 0)
+    has_enums = _generate_section_stub(
+        StubSection("# Enumerations", EnumerationNode), root, output_stream, 0
+    )
     # Collect all enums from class level and export them to module level
     for class_node in root.classes.values():
         if _generate_enums_from_classes_tree(class_node, output_stream, indent=0):
@@ -317,6 +321,10 @@ def _generate_constant_stub(constant_node: ConstantNode,
     export_name = extra_export_prefix + constant_node.export_name
     write_constant_to_stream(export_name)
     if generate_uppercase_version:
+        # Handle Python "magic" constants like __version__
+        if re.match(r"^__.*__$", export_name) is not None:
+            return export_name,
+
         uppercase_name = re.sub(r"([a-z])([A-Z])", r"\1_\2", export_name).upper()
         if export_name != uppercase_name:
             write_constant_to_stream(uppercase_name)
@@ -535,33 +543,9 @@ def check_overload_presence(node: Union[NamespaceNode, ClassNode]) -> bool:
             otherwise.
     """
     for func_node in node.functions.values():
-        if len(func_node.overloads):
+        if len(func_node.overloads) > 1:
             return True
     return False
-
-
-def _for_each_class(node: Union[NamespaceNode, ClassNode]) \
-        -> Generator[ClassNode, None, None]:
-    for cls in node.classes.values():
-        yield cls
-        if len(cls.classes):
-            yield from _for_each_class(cls)
-
-
-def _for_each_function(node: Union[NamespaceNode, ClassNode]) \
-        -> Generator[FunctionNode, None, None]:
-    for func in node.functions.values():
-        yield func
-    for cls in node.classes.values():
-        yield from _for_each_function(cls)
-
-
-def _for_each_function_overload(node: Union[NamespaceNode, ClassNode]) \
-        -> Generator[FunctionNode.Overload, None, None]:
-    for func in _for_each_function(node):
-        for overload in func.overloads:
-            yield overload
-
 
 def _collect_required_imports(root: NamespaceNode) -> Set[str]:
     """Collects all imports required for classes and functions typing stubs
@@ -585,7 +569,7 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
     has_overload = check_overload_presence(root)
     # if there is no module-level functions with overload, check its presence
     # during class traversing, including their inner-classes
-    for cls in _for_each_class(root):
+    for cls in for_each_class(root):
         if not has_overload and check_overload_presence(cls):
             has_overload = True
             required_imports.add("import typing")
@@ -603,8 +587,9 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
     if has_overload:
         required_imports.add("import typing")
     # Importing modules required to resolve functions arguments
-    for overload in _for_each_function_overload(root):
-        for arg in filter(lambda a: a.type_node is not None, overload.arguments):
+    for overload in for_each_function_overload(root):
+        for arg in filter(lambda a: a.type_node is not None,
+                          overload.arguments):
             _add_required_usage_imports(arg.type_node, required_imports)  # type: ignore
         if overload.return_type is not None:
             _add_required_usage_imports(overload.return_type.type_node,
@@ -621,13 +606,20 @@ def _populate_reexported_symbols(root: NamespaceNode) -> None:
     # Re-export all submodules to allow referencing symbols in submodules
     # without submodule import. Example:
     # `cv2.aruco.ArucoDetector` should be accessible without `import cv2.aruco`
-    for submodule in root.namespaces.values():
-        root.reexported_submodules.append(submodule.export_name)
+    def _reexport_submodule(ns: NamespaceNode) -> None:
+        for submodule in ns.namespaces.values():
+            ns.reexported_submodules.append(submodule.export_name)
+            _reexport_submodule(submodule)
 
-    # Special cases, symbols defined in possible pure Python submodules should be
+    _reexport_submodule(root)
+
+    # Special cases, symbols defined in possible pure Python submodules
+    # should be
     root.reexported_submodules_symbols["mat_wrapper"].append("Mat")
 
-def _write_reexported_symbols_section(module: NamespaceNode, output_stream: StringIO) -> None:
+
+def _write_reexported_symbols_section(module: NamespaceNode,
+                                      output_stream: StringIO) -> None:
     """Write re-export section for the given module.
 
     Re-export statements have from `from module_name import smth as smth`.
