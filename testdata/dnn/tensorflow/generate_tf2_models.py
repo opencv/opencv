@@ -76,9 +76,9 @@ model = tf.keras.models.Sequential([
 save(model, 'tf2_dense', flatten_input=tf.TensorSpec(shape=[None, 1, 2, 3], dtype=tf.float32))
 ################################################################################
 model = tf.keras.models.Sequential([
-  tf.keras.layers.PReLU(input_shape=(1, 2, 3)),
+  tf.keras.layers.PReLU(input_shape=(1, 4, 6), alpha_initializer='random_normal'),
 ])
-save(model, 'tf2_prelu', p_re_lu_input=tf.TensorSpec(shape=[None, 1, 2, 3], dtype=tf.float32))
+save(model, 'tf2_prelu', p_re_lu_input=tf.TensorSpec(shape=[None, 1, 4, 6], dtype=tf.float32))
 ################################################################################
 model = tf.keras.models.Sequential([
   tf.keras.layers.AveragePooling2D(input_shape=(4, 6, 3), pool_size=(2, 2)),
