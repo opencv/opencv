@@ -633,99 +633,6 @@ PERF_TEST_P_(Layer_LayerNormExpanded, DISABLED_LayerNormExpanded)
     test_layer({N, H ,W});
 }
 
-struct Layer_Gemm : public TestBaseWithParam<tuple<Backend, Target>>
-{
-    void test_layer(const std::vector<int>& a_shape, const std::vector<int>& b_shape, const std::vector<int>& c_shape = {}, bool trans_a = false, bool trans_b = false, float alpha = 1.f, float beta = 1.f, const std::string &op = "Gemm") {
-        int backendId = get<0>(GetParam());
-        int targetId = get<1>(GetParam());
-
-        Mat A(a_shape, CV_32FC1);
-        Mat B(b_shape, CV_32FC1);
-
-        randu(A, 0.f, 1.f);
-        randu(B, 0.f, 1.f);
-
-        Net net;
-        LayerParams lp;
-        lp.type = op;
-        lp.name = "testLayer";
-        lp.set("transA", trans_a);
-        lp.set("transB", trans_b);
-        lp.set("alpha", alpha);
-        lp.set("beta", beta);
-        lp.set("real_ndims_C", static_cast<int>(c_shape.size()));
-        if (op == "InnerProduct") {
-            cv::transpose(B, B);
-            lp.blobs.push_back(B);
-            lp.set("num_output", B.size[0]);
-            if (!c_shape.empty()) {
-                Mat C(c_shape, CV_32FC1);
-                randu(C, 0.f, 1.f);
-
-                lp.blobs.push_back(C);
-                lp.set("bias_term", true);
-            }
-        }
-        int id = net.addLayerToPrev(lp.name, lp.type, lp);
-        net.connect(0, 0, id, 0);
-        if (op != "InnerProduct") {
-            net.connect(0, 1, id, 1);
-            if (!c_shape.empty()) {
-                net.connect(0, 2, id, 2);
-            }
-        }
-
-        // warmup
-        {
-            std::vector<String> input_names(1);
-            input_names[0] = "A";
-            if (op != "InnerProduct") {
-                input_names.push_back("B");
-                if (!c_shape.empty()) {
-                    input_names.push_back("C");
-                }
-            }
-            net.setInputsNames(input_names);
-            net.setInput(A, input_names[0]);
-            if (op != "InnerProduct") {
-                net.setInput(B, input_names[1]);
-                if (!c_shape.empty()) {
-                    Mat C(c_shape, CV_32FC1);
-                    randu(C, 0.f, 1.f);
-                    net.setInput(C, input_names[2]);
-                }
-            }
-
-            net.setPreferableBackend(backendId);
-            net.setPreferableTarget(targetId);
-            Mat out = net.forward();
-        }
-
-        TEST_CYCLE()
-        {
-            Mat res = net.forward();
-        }
-
-        SANITY_CHECK_NOTHING();
-    }
-
-    int M = 768;
-    int N = 768;
-    int K = 768 * 3;
-};
-
-PERF_TEST_P_(Layer_Gemm, gemm)
-{
-    test_layer({M, K}, {K, N}, {N});
-    // test_layer({M, K}, {K, N});
-}
-
-PERF_TEST_P_(Layer_Gemm, innerproduct)
-{
-    test_layer({M, K}, {K, N}, {N}, false, false, 1.f, 1.f, "InnerProduct");
-    // test_layer({M, K}, {K, N}, {}, false, false, 1.f, 1.f, "InnerProduct");
-}
-
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(false, false));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 #ifdef HAVE_CUDA
@@ -735,7 +642,6 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Scatter, testing::Values(std::make_tuple(DNN
 INSTANTIATE_TEST_CASE_P(/**/, Layer_ScatterND, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNormExpanded, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
-INSTANTIATE_TEST_CASE_P(/**/, Layer_Gemm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 
 
 typedef TestBaseWithParam<tuple<Vec4i, int, bool, tuple<Backend, Target> > > Layer_FullyConnected;
