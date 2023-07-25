@@ -49,7 +49,7 @@ static PointCloudEncoder findEncoder(const String &filename)
 
 #endif
 
-void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals)
+void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals, OutputArray rgb)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     auto decoder = findDecoder(filename);
@@ -63,14 +63,19 @@ void loadPointCloud(const String &filename, OutputArray vertices, OutputArray no
 
     std::vector<Point3f> vec_vertices;
     std::vector<Point3f> vec_normals;
+    std::vector<Point3_<uchar>> vec_rgb;
 
-    decoder->readData(vec_vertices, vec_normals);
+    decoder->readData(vec_vertices, vec_normals, vec_rgb);
 
     if (!vec_vertices.empty())
         Mat(static_cast<int>(vec_vertices.size()), 1, CV_32FC3, &vec_vertices[0]).copyTo(vertices);
 
     if (!vec_normals.empty() && normals.needed())
         Mat(static_cast<int>(vec_normals.size()), 1, CV_32FC3, &vec_normals[0]).copyTo(normals);
+
+    if (!vec_rgb.empty() && rgb.needed())
+        Mat(static_cast<int>(vec_rgb.size()), 1, CV_8UC3, &vec_rgb[0]).copyTo(rgb);
+
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_UNUSED(filename);
     CV_UNUSED(vertices);
@@ -79,7 +84,7 @@ void loadPointCloud(const String &filename, OutputArray vertices, OutputArray no
 #endif
 }
 
-void savePointCloud(const String &filename, InputArray vertices, InputArray normals)
+void savePointCloud(const String &filename, InputArray vertices, InputArray normals, InputArray rgb)
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     if (vertices.empty()) {
@@ -98,11 +103,16 @@ void savePointCloud(const String &filename, InputArray vertices, InputArray norm
 
     std::vector<Point3f> vec_vertices(vertices.getMat());
     std::vector<Point3f> vec_normals;
+    std::vector<Point3_<uchar>> vec_rgb;
+
     if (!normals.empty()){
         vec_normals = normals.getMat();
     }
 
-    encoder->writeData(vec_vertices, vec_normals);
+    if (!rgb.empty()){
+        vec_rgb = rgb.getMat();
+    }
+    encoder->writeData(vec_vertices, vec_normals, vec_rgb);
 
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_UNUSED(filename);
@@ -126,9 +136,10 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArray normals,
 
     std::vector<Point3f> vec_vertices;
     std::vector<Point3f> vec_normals;
+    std::vector<Point3_<uchar>> vec_rgb;
     std::vector<std::vector<int32_t>> vec_indices;
 
-    decoder->readData(vec_vertices, vec_normals, vec_indices);
+    decoder->readData(vec_vertices, vec_normals, vec_rgb, vec_indices);
 
     if (!vec_vertices.empty()) {
         Mat(1, static_cast<int>(vec_vertices.size()), CV_32FC3, vec_vertices.data()).copyTo(vertices);
@@ -173,6 +184,7 @@ void saveMesh(const String &filename, InputArray vertices, InputArray normals, I
 
     std::vector<Point3f> vec_vertices(vertices.getMat());
     std::vector<Point3f> vec_normals;
+    std::vector<Point3_<uchar>> vec_rgb;
     if (!normals.empty()){
         vec_normals = normals.getMat();
     }
@@ -185,7 +197,7 @@ void saveMesh(const String &filename, InputArray vertices, InputArray normals, I
         mat_indices[i].copyTo(vec_indices[i]);
     }
 
-    encoder->writeData(vec_vertices, vec_normals, vec_indices);
+    encoder->writeData(vec_vertices, vec_normals, vec_rgb, vec_indices);
 
 #else // OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_UNUSED(filename);
