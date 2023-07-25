@@ -50,7 +50,7 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     @param dev_type Target device type to use. ("CPU_FP32", "GPU_FP16", etc)
     */
     GAPI_WRAP
-    OpenVINO(const std::string &dev_type)
+    explicit OpenVINO(const std::string &dev_type)
         : device_type(dev_type) {
     }
 
@@ -137,7 +137,7 @@ public:
     @param device_id Target device id to use. ("0", "1", etc)
     */
     GAPI_WRAP
-    DirectML(const int device_id) : ddesc(device_id) { };
+    explicit DirectML(const int device_id) : ddesc(device_id) { };
 
     using DeviceDesc = cv::util::variant<int>;
     DeviceDesc ddesc;

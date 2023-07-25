@@ -159,9 +159,8 @@ static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
         session_options->AppendExecutionProvider_OpenVINO(options);
      } catch (const std::exception &e) {
          std::stringstream ss;
-         ss << "ONNX Backend: Failed to enable OpenVINO Execution Provider: "
-            << e.what() << "\nMake sure that onnxruntime has"
-                           " been compiled with OpenVINO support.";
+         ss << "ONNX Backend: Failed to enable OpenVINO"
+            << " Execution Provider: " << e.what();
          cv::util::throw_error(std::runtime_error(ss.str()));
      }
 }

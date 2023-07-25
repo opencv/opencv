@@ -32,9 +32,8 @@ void cv::gimpl::onnx::addDMLExecutionProvider(Ort::SessionOptions *session_optio
 
 void cv::gimpl::onnx::addDMLExecutionProvider(Ort::SessionOptions*,
                                               const cv::gapi::onnx::ep::DirectML&) {
-    cv::util::throw_error(
-        std::runtime_error("ONNX Backend: DirectML Execution Provider isn't"
-                           " available for the current ONNX Runtime build."));
+     util::throw_error(std::runtime_error("G-API has been compiled with ONNXRT"
+                                          " without DirectML support"));
 }
 
 #endif  // HAVE_ONNX_DML
