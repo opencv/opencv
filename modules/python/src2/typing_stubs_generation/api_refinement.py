@@ -25,6 +25,29 @@ def apply_manual_api_refinement(root: NamespaceNode) -> None:
     version_constant = root.add_constant("__version__", "<unused>")
     version_constant._value_type = "str"
 
+    """
+    def redirectError(
+        onError: Callable[[int, str, str, str, int], None] | None
+    ) -> None: ...
+    """
+    root.add_function("redirectError", [
+        FunctionNode.Arg(
+            "onError",
+            OptionalTypeNode(
+                CallableTypeNode(
+                    "ErrorCallback",
+                    [
+                        PrimitiveTypeNode.int_(),
+                        PrimitiveTypeNode.str_(),
+                        PrimitiveTypeNode.str_(),
+                        PrimitiveTypeNode.str_(),
+                        PrimitiveTypeNode.int_()
+                    ]
+                )
+            )
+        )
+    ])
+
 
 def export_matrix_type_constants(root: NamespaceNode) -> None:
     MAX_PREDEFINED_CHANNELS = 4
