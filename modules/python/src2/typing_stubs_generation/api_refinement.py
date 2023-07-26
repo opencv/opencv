@@ -6,12 +6,14 @@ from typing import cast, Sequence, Callable, Iterable
 
 from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode, TypeNode,
                     ClassProperty, PrimitiveTypeNode, ASTNodeTypeNode,
-                    AggregatedTypeNode)
+                    AggregatedTypeNode, CallableTypeNode, AnyTypeNode,
+                    TupleTypeNode, UnionTypeNode)
 from .ast_utils import (find_function_node, SymbolName,
                         for_each_function_overload)
 
 
 def apply_manual_api_refinement(root: NamespaceNode) -> None:
+    refine_highgui_module(root)
     refine_cuda_module(root)
     export_matrix_type_constants(root)
     # Export OpenCV exception class
@@ -103,6 +105,91 @@ def refine_cuda_module(root: NamespaceNode) -> None:
     for ns in [ns for ns_name, ns in root.namespaces.items()
                if ns_name.startswith("cuda")]:
         fix_namespace_usage_scope(ns)
+
+
+def refine_highgui_module(root: NamespaceNode) -> None:
+    # Check if library is built with enabled highgui module
+    if "destroyAllWindows" not in root.functions:
+        return
+    """
+    def createTrackbar(trackbarName: str,
+                       windowName: str,
+                       value: int,
+                       count: int,
+                       onChange: Callable[[int], None]) -> None: ...
+    """
+    root.add_function(
+        "createTrackbar",
+        [
+            FunctionNode.Arg("trackbarName", PrimitiveTypeNode.str_()),
+            FunctionNode.Arg("windowName", PrimitiveTypeNode.str_()),
+            FunctionNode.Arg("value", PrimitiveTypeNode.int_()),
+            FunctionNode.Arg("count", PrimitiveTypeNode.int_()),
+            FunctionNode.Arg("onChange",
+                             CallableTypeNode("TrackbarCallback",
+                                              PrimitiveTypeNode.int_("int"))),
+        ]
+    )
+    """
+    def createButton(buttonName: str,
+                     onChange: Callable[[tuple[int] | tuple[int, Any]], None],
+                     userData: Any | None = ...,
+                     buttonType: int = ...,
+                     initialButtonState: int = ...) -> None: ...
+    """
+    root.add_function(
+        "createButton",
+        [
+            FunctionNode.Arg("buttonName", PrimitiveTypeNode.str_()),
+            FunctionNode.Arg(
+                "onChange",
+                CallableTypeNode(
+                    "ButtonCallback",
+                    UnionTypeNode(
+                        "onButtonChangeCallbackData",
+                        [
+                            TupleTypeNode("onButtonChangeCallbackData",
+                                          [PrimitiveTypeNode.int_(), ]),
+                            TupleTypeNode("onButtonChangeCallbackData",
+                                          [PrimitiveTypeNode.int_(),
+                                           AnyTypeNode("void*")])
+                        ]
+                    )
+                )),
+            FunctionNode.Arg("userData",
+                             OptionalTypeNode(AnyTypeNode("void*")),
+                             default_value="None"),
+            FunctionNode.Arg("buttonType", PrimitiveTypeNode.int_(),
+                             default_value="0"),
+            FunctionNode.Arg("initialButtonState", PrimitiveTypeNode.int_(),
+                             default_value="0")
+        ]
+    )
+    """
+    def setMouseCallback(
+        windowName: str,
+        onMouse: Callback[[int, int, int, int, Any | None], None],
+        param: Any | None = ...
+    ) -> None: ...
+    """
+    root.add_function(
+        "setMouseCallback",
+        [
+            FunctionNode.Arg("windowName", PrimitiveTypeNode.str_()),
+            FunctionNode.Arg(
+                "onMouse",
+                CallableTypeNode("MouseCallback", [
+                    PrimitiveTypeNode.int_(),
+                    PrimitiveTypeNode.int_(),
+                    PrimitiveTypeNode.int_(),
+                    PrimitiveTypeNode.int_(),
+                    OptionalTypeNode(AnyTypeNode("void*"))
+                ])
+            ),
+            FunctionNode.Arg("param", OptionalTypeNode(AnyTypeNode("void*")),
+                             default_value="None")
+        ]
+    )
 
 
 def _trim_class_name_from_argument_types(
