@@ -2667,8 +2667,9 @@ protected:
 * @param filename Name of the file.
 * @param vertices (vector of Point3f) Point coordinates of a point cloud
 * @param normals (vector of Point3f) Point normals of a point cloud
+* @param rgb (vector of Point3_<uchar>) Point RGB color of a point cloud
 */
-CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals = noArray());
+CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals = noArray(), OutputArray rgb = noArray());
 
 /** @brief Saves a point cloud to a specified file.
 *
@@ -2678,8 +2679,9 @@ CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, O
 * @param filename Name of the file.
 * @param vertices (vector of Point3f) Point coordinates of a point cloud
 * @param normals (vector of Point3f) Point normals of a point cloud
+* @param rgb (vector of Point3_<uchar>) Point RGB color of a point cloud
 */
-CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, InputArray normals = noArray());
+CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, InputArray normals = noArray(), InputArray rgb = noArray());
 
 /** @brief Loads a mesh from a file.
 *
