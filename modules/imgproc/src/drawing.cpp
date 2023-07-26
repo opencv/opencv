@@ -932,7 +932,7 @@ void ellipse2Poly( Point center, Size axes, int angle,
         Point pt;
         pt.x = cvRound(_pts[i].x);
         pt.y = cvRound(_pts[i].y);
-        if (i == 0 || pt != prevPt) {
+        if (pt != prevPt) {
             pts.push_back(pt);
             prevPt = pt;
         }
@@ -1030,7 +1030,7 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
         pt.y = (int64)cvRound(_v[i].y / XY_ONE) << XY_SHIFT;
         pt.x += cvRound(_v[i].x - pt.x);
         pt.y += cvRound(_v[i].y - pt.y);
-        if (i == 0 || pt != prevPt) {
+        if (pt != prevPt) {
             v.push_back(pt);
             prevPt = pt;
         }
