@@ -475,6 +475,23 @@ OPENCV_HAL_IMPL_RVV_LUT(v_float32, float, m1)
 OPENCV_HAL_IMPL_RVV_LUT(v_float64, double, mf2)
 #endif
 
+inline v_uint32 v_lut(const unsigned* tab, const v_int32& vidx) \
+{ \
+    return vloxei32(tab, vreinterpret_u32m1(vidx), VTraits<v_uint32>::vlanes()); \
+} \
+inline v_int32 v_lut(const int* tab, const v_int32& vidx) \
+{ \
+    return vloxei32(tab, vreinterpret_u32m1(vidx), VTraits<v_int32>::vlanes()); \
+} \
+inline v_float32 v_lut(const float* tab, const v_int32& vidx) \
+{ \
+    return vloxei32(tab, vreinterpret_u32m1(vidx), VTraits<v_float32>::vlanes()); \
+} \
+inline v_float64 v_lut(const double* tab, const v_int32& vidx) \
+{ \
+    return vloxei32(tab, vlmul_trunc_u32mf2(vreinterpret_u32m1(vidx)), VTraits<v_float64>::vlanes()); \
+} \
+
 inline v_uint8 v_lut(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut((schar*)tab, idx)); }
 inline v_uint8 v_lut_pairs(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_pairs((schar*)tab, idx)); }
 inline v_uint8 v_lut_quads(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_quads((schar*)tab, idx)); }
@@ -924,6 +941,8 @@ inline scalartype v_reduce_sum(const _Tpvec& a)  \
     return (scalartype)v_get0(res); \
 }
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float32, v_float32, vfloat32m1_t, float, f32, VTraits<v_float32>::vlanes())
+// Used in file modules/imgproc/src/histogram.cpp
+OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float64, v_float64, vfloat64m1_t, double, f64, VTraits<v_float64>::vlanes())
 
 #define OPENCV_HAL_IMPL_RVV_REDUCE(_Tpvec, func, scalartype, suffix, vl, red) \
 inline scalartype v_reduce_##func(const _Tpvec& a)  \
