@@ -939,6 +939,7 @@ void ellipse2Poly( Point center, Size axes, int angle,
     }
 
     // If there are no points, it's a zero-size polygon
+    CV_Assert( !pts.empty() );
     if (pts.size() == 1) {
         pts.assign(2, center);
     }
@@ -1001,6 +1002,7 @@ void ellipse2Poly( Point2d center, Size2d axes, int angle,
     }
 
     // If there are no points, it's a zero-size polygon
+    CV_Assert( !pts.empty() );
     if( pts.size() == 1) {
         pts.assign(2,center);
     }
@@ -1021,7 +1023,6 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
 
     std::vector<Point2l> v;
     Point2l prevPt(0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF);
-    v.resize(0);
     for (unsigned int i = 0; i < _v.size(); ++i)
     {
         Point2l pt;
@@ -1036,7 +1037,7 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
     }
 
     // If there are no points, it's a zero-size polygon
-    if (v.size() == 1) {
+    if (v.size() <= 1) {
         v.assign(2, center);
     }
 
