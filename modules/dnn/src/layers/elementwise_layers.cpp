@@ -2588,13 +2588,8 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 #ifdef HAVE_DNN_NGRAPH
     std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
     {
-        std::vector<size_t> shape = getShape<size_t>(scale);
-        std::shared_ptr<ngraph::Node> slope;
-        if (std::count_if(shape.begin(), shape.end(), [](int d){ return d != 1;}) > 1) {
-            slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, scale.ptr<float>());
-        } else {
-            slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{scale.total()}, scale.ptr<float>());
-        }
+        const size_t numChannels = scale.total();
+        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numChannels}, scale.data);
         return std::make_shared<ngraph::op::PRelu>(node, slope);
     }
 #endif  // HAVE_DNN_NGRAPH
@@ -2615,7 +2610,9 @@ struct PReLUFunctor : public ChannelsPReLUFunctor
 {
     explicit PReLUFunctor(const Mat& scale_=Mat()) : ChannelsPReLUFunctor(scale_)
     {
+#ifdef HAVE_OPENCL
         oclKernelName = "PReLUForward";
+#endif
     }
 
     bool supportBackend(int backendId, int)
@@ -2666,6 +2663,15 @@ struct PReLUFunctor : public ChannelsPReLUFunctor
             }
         }
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    {
+        auto shape = getShape<size_t>(scale);
+        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, scale.ptr<float>());
+        return std::make_shared<ngraph::op::PRelu>(node, slope);
+    }
+#endif  // HAVE_DNN_NGRAPH
 };
 
 struct SignFunctor : public BaseDefaultFunctor<SignFunctor>
