@@ -17,6 +17,10 @@
 // E.g HAVE_DXCORE && HAVE_DIRECTX12 && HAVE_DIRECTML
 #ifdef HAVE_DXCORE
 
+// FIXME: Fix warning
+#define WINVER 0x0A00
+#define _WIN32_WINNT 0x0A00
+
 #include <initguid.h>
 
 #include <d3d11.h>
