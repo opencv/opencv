@@ -71,37 +71,62 @@ void cv::gimpl::onnx::addDMLExecutionProvider(Ort::SessionOptions *session_optio
 
 #ifdef HAVE_DXCORE
 
-#define THROW_IF_FAILED(hr)                                   \
-{                                                             \
-    if ((hr) != S_OK)                                         \
-        throw std::logic_error("Failed with status != S_OK"); \
+#define THROW_IF_FAILED(hr, error_msg)    \
+{                                         \
+    if ((hr) != S_OK)                     \
+        throw std::runtime_error(error_msg); \
+}
+
+template <typename T>
+void release(T *ptr) {
+    if (ptr) {
+        ptr->Release();
+    }
+}
+
+template <typename T>
+using ComPtrGuard = std::unique_ptr<T, decltype(&release<T>)>;
+
+template <typename T>
+ComPtrGuard<T> make_com_ptr(T *ptr) {
+    return ComPtrGuard<T>{ptr, &release<T>};
 }
 
 struct AdapterDesc {
-    IDXCoreAdapter* ptr;
-    char description[256];
+    ComPtrGuard<IDXCoreAdapter> ptr;
+    std::string description;
 };
 
 static std::vector<AdapterDesc> getAvailableAdapters() {
         std::vector<AdapterDesc> all_adapters;
 
-        IDXCoreAdapterFactory* factory;
+        IDXCoreAdapterFactory* factory_ptr;
         GAPI_LOG_DEBUG(nullptr, "Create IDXCoreAdapterFactory");
-        THROW_IF_FAILED(DXCoreCreateAdapterFactory(__uuidof(IDXCoreAdapterFactory), (void**)&factory));
-        GAPI_LOG_DEBUG(nullptr, "Create IDXCoreAdapterFactory - successful");
+        THROW_IF_FAILED(
+            DXCoreCreateAdapterFactory(
+                __uuidof(IDXCoreAdapterFactory), (void**)&factory_ptr),
+            "Failed to create IDXCoreAdapterFactory");
+        auto factory = make_com_ptr<IDXCoreAdapterFactory>(factory_ptr);
 
-        IDXCoreAdapterList* adapter_list;
+        IDXCoreAdapterList* adapter_list_ptr;
         const GUID dxGUIDs[] = { DXCORE_ADAPTER_ATTRIBUTE_D3D12_CORE_COMPUTE };
         GAPI_LOG_DEBUG(nullptr, "CreateAdapterList");
-        THROW_IF_FAILED(factory->CreateAdapterList(ARRAYSIZE(dxGUIDs), dxGUIDs, __uuidof(IDXCoreAdapterList), (void**)&adapter_list));
-        GAPI_LOG_DEBUG(nullptr, "CreateAdapterList - successful");
+        THROW_IF_FAILED(
+            factory->CreateAdapterList(
+                ARRAYSIZE(dxGUIDs), dxGUIDs, __uuidof(IDXCoreAdapterList), (void**)&adapter_list_ptr),
+            "Failed to create IDXCoreAdapterList");
+        auto adapter_list = make_com_ptr<IDXCoreAdapterList>(adapter_list_ptr);
 
         for (UINT i = 0; i < adapter_list->GetAdapterCount(); i++)
         {
-            IDXCoreAdapter* curr_adapter;
+            IDXCoreAdapter* curr_adapter_ptr;
             GAPI_LOG_DEBUG(nullptr, "GetAdapter");
-            THROW_IF_FAILED(adapter_list->GetAdapter(i, __uuidof(IDXCoreAdapter), (void**)&curr_adapter));
-            GAPI_LOG_DEBUG(nullptr, "GetAdapter - successful");
+            THROW_IF_FAILED(
+                adapter_list->GetAdapter(
+                    i, __uuidof(IDXCoreAdapter), (void**)&curr_adapter_ptr),
+                "Failed to obtain IDXCoreAdapter"
+            );
+            auto curr_adapter = make_com_ptr<IDXCoreAdapter>(curr_adapter_ptr);
 
             bool is_hardware = false;
             curr_adapter->GetProperty(DXCoreAdapterProperty::IsHardware, &is_hardware);
@@ -110,24 +135,22 @@ static std::vector<AdapterDesc> getAvailableAdapters() {
                 continue;
             }
 
-            AdapterDesc adapter_desc;
-            adapter_desc.ptr = curr_adapter;
-
-            size_t desc_size;
+            size_t desc_size = 0u;
+            char description[256];
             curr_adapter->GetPropertySize(DXCoreAdapterProperty::DriverDescription, &desc_size);
-            curr_adapter->GetProperty(DXCoreAdapterProperty::DriverDescription, desc_size, &adapter_desc.description);
-            all_adapters.push_back(std::move(adapter_desc));
+            curr_adapter->GetProperty(DXCoreAdapterProperty::DriverDescription, desc_size, &description);
+            all_adapters.push_back(AdapterDesc{std::move(curr_adapter), description});
         }
         return all_adapters;
 };
 
 struct DMLDeviceInfo {
-    IDMLDevice* device;
-    ID3D12CommandQueue* cmd_queue;
+    ComPtrGuard<IDMLDevice> device;
+    ComPtrGuard<ID3D12CommandQueue> cmd_queue;
 };
 
 static DMLDeviceInfo createDMLInfo(IDXCoreAdapter* adapter) {
-    IUnknown* pAdapter = adapter;
+    auto pAdapter = make_com_ptr<IUnknown>(adapter);
     D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_1_0_CORE;
     if (adapter->IsAttributeSupported(DXCORE_ADAPTER_ATTRIBUTE_D3D12_GRAPHICS))
     {
@@ -136,57 +159,73 @@ static DMLDeviceInfo createDMLInfo(IDXCoreAdapter* adapter) {
 
         IDXGIFactory4* dxgiFactory4;
         GAPI_LOG_DEBUG(nullptr, "CreateDXGIFactory2");
-        THROW_IF_FAILED(CreateDXGIFactory2(0, __uuidof(IDXGIFactory4), (void**)&dxgiFactory4));
-        GAPI_LOG_DEBUG(nullptr, "CreateDXGIFactory2 - successful");
+        THROW_IF_FAILED(
+            CreateDXGIFactory2(0, __uuidof(IDXGIFactory4), (void**)&dxgiFactory4),
+            "Failed to create IDXGIFactory4"
+        );
         // If DXGI factory creation was successful then get the IDXGIAdapter from the LUID
         // acquired from the selectedAdapter
         LUID adapterLuid;
         IDXGIAdapter* spDxgiAdapter;
 
         GAPI_LOG_DEBUG(nullptr, "Get DXCoreAdapterProperty::InstanceLuid property");
-        THROW_IF_FAILED(adapter->GetProperty(DXCoreAdapterProperty::InstanceLuid, &adapterLuid));
-        GAPI_LOG_DEBUG(nullptr, "Get DXCoreAdapterProperty::InstanceLuid property - successful");
+        THROW_IF_FAILED(
+            adapter->GetProperty(DXCoreAdapterProperty::InstanceLuid, &adapterLuid),
+            "Failed to get DXCoreAdapterProperty::InstanceLuid property");
 
         GAPI_LOG_DEBUG(nullptr, "Get IDXGIAdapter by luid");
-        THROW_IF_FAILED(dxgiFactory4->EnumAdapterByLuid(adapterLuid, __uuidof(IDXGIAdapter), (void**)&spDxgiAdapter));
-        GAPI_LOG_DEBUG(nullptr, "Get IDXGIAdapter by luid - successful");
-
-        pAdapter = spDxgiAdapter;
+        THROW_IF_FAILED(
+            dxgiFactory4->EnumAdapterByLuid(
+                adapterLuid, __uuidof(IDXGIAdapter), (void**)&spDxgiAdapter),
+            "Failed to get IDXGIAdapter");
+        pAdapter = make_com_ptr<IUnknown>(spDxgiAdapter);
     } else {
         GAPI_LOG_INFO(nullptr, "DXCORE_ADAPTER_ATTRIBUTE_D3D12_GRAPHICS isn't supported");
     }
 
-    ID3D12Device* d3d12Device;
+    ID3D12Device* d3d12_device_ptr;
     GAPI_LOG_DEBUG(nullptr, "Create D3D12Device");
-    THROW_IF_FAILED(D3D12CreateDevice(pAdapter, d3dFeatureLevel, __uuidof(ID3D12Device), (void**)&d3d12Device));
-    GAPI_LOG_DEBUG(nullptr, "Create D3D12Device - successful");
+    THROW_IF_FAILED(
+        D3D12CreateDevice(
+            pAdapter.get(), d3dFeatureLevel, __uuidof(ID3D12Device), (void**)&d3d12_device_ptr),
+        "Failed to create ID3D12Device");
+    auto d3d12_device = make_com_ptr<ID3D12Device>(d3d12_device_ptr);
 
     D3D12_COMMAND_LIST_TYPE commandQueueType = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-    ID3D12CommandQueue* d3d12CommandQueue;
+    ID3D12CommandQueue* cmd_queue_ptr;
     D3D12_COMMAND_QUEUE_DESC commandQueueDesc = {};
     commandQueueDesc.Type = commandQueueType;
     GAPI_LOG_DEBUG(nullptr, "Create D3D12CommandQueue");
-    THROW_IF_FAILED(d3d12Device->CreateCommandQueue(&commandQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&d3d12CommandQueue));
+    THROW_IF_FAILED(
+        d3d12_device->CreateCommandQueue(
+            &commandQueueDesc, __uuidof(ID3D12CommandQueue), (void**)&cmd_queue_ptr),
+        "Failed to create D3D12CommandQueue"
+    );
     GAPI_LOG_DEBUG(nullptr, "Create D3D12CommandQueue - successful");
+    auto cmd_queue = make_com_ptr<ID3D12CommandQueue>(cmd_queue_ptr);
 
-    IDMLDevice* dmlDevice;
+    IDMLDevice* dml_device_ptr;
     GAPI_LOG_DEBUG(nullptr, "Create DirectML device");
-    THROW_IF_FAILED(DMLCreateDevice(d3d12Device, DML_CREATE_DEVICE_FLAG_NONE, IID_PPV_ARGS(&dmlDevice)));
+    THROW_IF_FAILED(
+        DMLCreateDevice(
+            d3d12_device.get(), DML_CREATE_DEVICE_FLAG_NONE, IID_PPV_ARGS(&dml_device_ptr)),
+        "Failed to create IDMLDevice");
     GAPI_LOG_DEBUG(nullptr, "Create DirectML device - successful");
+    auto dml_device = make_com_ptr<IDMLDevice>(dml_device_ptr);
 
-    return {dmlDevice, d3d12CommandQueue};
+    return {std::move(dml_device), std::move(cmd_queue)};
 };
 
 static void addDMLExecutionProviderWithAdapterName(Ort::SessionOptions *session_options,
                                                    const std::string &adapter_name) {
-    const auto all_adapters = getAvailableAdapters();
+    auto all_adapters = getAvailableAdapters();
 
     std::vector<AdapterDesc> selected_adapters;
     std::stringstream log_msg;
-    for (const auto& adapter : all_adapters) {
+    for (auto&& adapter : all_adapters) {
         log_msg << adapter.description << std::endl;
-        if (std::strstr(adapter.description, adapter_name.c_str())) {
-            selected_adapters.emplace_back(adapter);
+        if (std::strstr(adapter.description.c_str(), adapter_name.c_str())) {
+            selected_adapters.emplace_back(std::move(adapter));
         }
     }
     GAPI_LOG_INFO(NULL, "\nAvailable DirectML adapters:\n" << log_msg.str());
@@ -205,9 +244,10 @@ static void addDMLExecutionProviderWithAdapterName(Ort::SessionOptions *session_
     }
 
     GAPI_LOG_INFO(NULL, "Selected device: " << selected_adapters.front().description);
-    auto dml = createDMLInfo(selected_adapters.front().ptr);
+    auto dml = createDMLInfo(selected_adapters.front().ptr.get());
     try {
-        OrtSessionOptionsAppendExecutionProviderEx_DML(*session_options, dml.device, dml.cmd_queue);
+        OrtSessionOptionsAppendExecutionProviderEx_DML(
+            *session_options, dml.device.release(), dml.cmd_queue.release());
     } catch (const std::exception &e) {
         std::stringstream ss;
         ss << "ONNX Backend: Failed to enable DirectML"
