@@ -485,7 +485,7 @@ template<> int PyrDownVecV<int, uchar>(int** src, uchar* dst, int width)
         int r4 = *(row4 + x);
         int t0 = r0 + r4 + (r2 + r2) + ((r1 + r3 + r2) << 2);
         // Similar to v_rshr_pack<8>(v_pack_u(t0, t0), v_setzero_u16()).get0()
-        *(dst + x) = (int)((((unsigned int)t0) + ((1 << (8 - 1)))) >> 8); 
+        *(dst + x) = (int)((((unsigned int)t0) + ((1 << (8 - 1)))) >> 8);
     }
     #endif //CV_SIMD128
     vx_cleanup();
@@ -637,7 +637,7 @@ template <> int PyrUpVecV<int, uchar>(int** src, uchar** dst, int width)
         // Similar to v_rshr_pack_u<6>(d, vx_setzero_s16()).get0()
         *(dst0 + x) = (int)((((unsigned int)d) + ((1 << (6 - 1)))) >> 6);
         // Similar to v_rshr_pack_u<6>(v_combine_high(d, d), vx_setzero_s16()).get0()
-        *(dst1 + x) = (int)((((unsigned int)d_shifted) + ((1 << (6 - 1)))) >> 6); 
+        *(dst1 + x) = (int)((((unsigned int)d_shifted) + ((1 << (6 - 1)))) >> 6);
     }
     #endif //CV_SIMD128
     vx_cleanup();
@@ -773,7 +773,7 @@ template <> int PyrUpVecVOneRow<int, uchar>(int** src, uchar* dst, int width)
         int d = r00 + r20 + (_2r10 + _2r10 + _2r10);
         int d_shifted = (r10 + r20) << 2;
         // Similar to v_rshr_pack_u<6>(d, vx_setzero_s16()).get0()
-        *(dst + x) = (int)((((unsigned int)d) + ((1 << (6 - 1)))) >> 6); 
+        *(dst + x) = (int)((((unsigned int)d) + ((1 << (6 - 1)))) >> 6);
     }
     #endif //CV_SIMD128
     vx_cleanup();
