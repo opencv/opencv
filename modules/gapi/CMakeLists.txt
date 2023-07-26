@@ -369,6 +369,8 @@ if(HAVE_ONNX)
   ocv_target_compile_definitions(${the_module} PRIVATE HAVE_ONNX=1)
   if(HAVE_ONNX_DML)
     ocv_target_compile_definitions(${the_module} PRIVATE HAVE_ONNX_DML=1)
+    # FIXME: It shouldn't be here...
+    ocv_target_compile_definitions(${the_module} PRIVATE HAVE_DXCORE=1)
   endif()
   if(TARGET opencv_test_gapi)
     ocv_target_compile_definitions(opencv_test_gapi PRIVATE HAVE_ONNX=1)
