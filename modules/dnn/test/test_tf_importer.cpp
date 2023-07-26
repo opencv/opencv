@@ -1675,17 +1675,14 @@ TEST_P(Test_TensorFlow_layers, clip_by_value)
 
 TEST_P(Test_TensorFlow_layers, tf2_prelu)
 {
+    double l1 = 0, lInf = 0;
     if (backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported; only across channels is supported
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Eltwise executor got invalid input/output dims configuration
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // Input prelu:StatefulPartitionedCall/StatefulPartitionedCall/sequential/p_re_lu/add hasn't been found in primitiveIDs map
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
-        );
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2023000000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) {
+        l1 = 1e-4;
+        lInf = 1e-3;
+    }
 #elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
@@ -1705,7 +1702,7 @@ TEST_P(Test_TensorFlow_layers, tf2_prelu)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
 
-    runTensorFlowNet("tf2_prelu");
+    runTensorFlowNet("tf2_prelu", false, l1, lInf);
 }
 
 TEST_P(Test_TensorFlow_layers, tf2_permute_nhwc_ncwh)

@@ -2452,6 +2452,7 @@ struct ChannelsPReLUFunctor : public BaseFunctor
     Mat scale;
 #ifdef HAVE_OPENCL
     UMat scale_umat;
+    std::string oclKernelName = "ChannelsPReLUForward";
 #endif
 
     explicit ChannelsPReLUFunctor(const Mat& scale_=Mat()) : scale(scale_)
@@ -2525,7 +2526,7 @@ struct ChannelsPReLUFunctor : public BaseFunctor
             UMat& src = inputs[i];
             UMat& dst = outputs[i];
 
-            ocl::Kernel kernel("PReLUForward", ocl::dnn::activations_oclsrc, buildopt);
+            ocl::Kernel kernel(oclKernelName.c_str(), ocl::dnn::activations_oclsrc, buildopt);
             kernel.set(0, (int)src.total());
             kernel.set(1, (int)src.size[1]);
             kernel.set(2, (int)total(shape(src), 2));
@@ -2614,6 +2615,14 @@ struct PReLUFunctor : public ChannelsPReLUFunctor
 {
     explicit PReLUFunctor(const Mat& scale_=Mat()) : ChannelsPReLUFunctor(scale_)
     {
+        oclKernelName = "PReLUForward";
+    }
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
@@ -3095,10 +3104,11 @@ Ptr<Layer> ChannelsPReLULayer::create(const LayerParams& params)
 {
     CV_Assert(params.blobs.size() == 1);
     Mat scale = params.blobs[0];
-    if (scale.total() == 1)
+    float slope = *scale.ptr<float>();
+    if (scale.total() == 1 || countNonZero(scale != slope) == 0)
     {
         LayerParams reluParams = params;
-        reluParams.set("negative_slope", *scale.ptr<float>());
+        reluParams.set("negative_slope", slope);
         return ReLULayer::create(reluParams);
     }
 
