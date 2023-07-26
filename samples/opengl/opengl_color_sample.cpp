@@ -23,8 +23,8 @@ using namespace std;
 using namespace cv;
 using namespace cv::cuda;
 
-const int win_width = 700;
-const int win_height = 700;
+const int win_width = 640;
+const int win_height = 480;
 
 struct DrawData
 {
@@ -48,13 +48,13 @@ int main()
 
 	Mat_<Vec3f> vertex(1, 4);
 	vertex << Vec3f(2.0, 0, -2.0), Vec3f(0, 2, -3),
-              Vec3f(-2, 0, -2), Vec3f(0, -2, -1);
+              Vec3f(-2, 0, -2), Vec3f(0, -2, 1.0);
 
 	Mat_<int> indices(1, 6);
 	indices << 0, 1, 2, 0, 2, 3;
 
 	Mat_<Vec3f> colors(1, 4);
-	colors << Vec3f(0.0f, 0.0f, 255.0f), Vec3f(0.0f, 255.0f, 0.0f), Vec3f(255.0f, 0.0f, 0.0f), Vec3f(0.0f, 255.0f, 0.0f);
+	colors << Vec3f(1.0f, 0.0f, 0.0f), Vec3f(0.0f, 1.0f, 0.0f), Vec3f(0.0f, 0.0f, 1.0f), Vec3f(0.0f, 1.0f, 0.0f);
 
 	DrawData data;
 
@@ -64,18 +64,25 @@ int main()
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(45.0, (double)win_width / win_height, 0.1, 50);
+	gluPerspective(60.0, (double)win_width / win_height, 0.1, 50);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
 
 	glDisable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
 
 	setOpenGlDrawCallback("OpenGL", draw, &data);
 
 	for (;;)
 	{
+        std::vector<uint8_t> pixels(win_width * win_height * 3);
+        glReadPixels(0, 0, win_width, win_height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+        cv::Mat image(win_height, win_width, CV_8UC3, pixels.data());
+        cv::flip(image, image, 0);
+
+        cv::imwrite("example_image_color.png", image);
 		updateWindow("OpenGL");
 		char key = (char)waitKey(40);
 		if (key == 27)

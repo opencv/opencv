@@ -54,10 +54,10 @@ int main()
 	Mat_<int> indices(1, 6);
 	indices << 0, 1, 2, 3, 4, 5;
 
-	Mat_<Vec3f> colors(1, 6);
-	colors << Vec3f(255.0f, 0.0f, 0.0f), Vec3f(255.0f, 0.0f, 0.0f),
-		Vec3f(255.0f, 0.0f, 0.0f), Vec3f(217.0f, 173.0f, 0.0f),
-		Vec3f(217.0f, 173.0f, 0.0f), Vec3f(217.0f, 173.0f, 0.0f);
+	Mat_<Vec4f> colors(1, 6);
+	colors << Vec4f(0.725f, 0.933f, 0.851f, 1.0f), Vec4f(0.725f, 0.933f, 0.851f, 1.0f),
+		Vec4f(0.725f, 0.933f, 0.851f, 1.0f), Vec4f(0.933f, 0.851f, 0.725f, 1.0f),
+		Vec4f(0.933f, 0.851f, 0.725f, 1.0f), Vec4f(0.933f, 0.851f, 0.725f, 1.0f);
 
 	DrawData data;
 
@@ -74,11 +74,18 @@ int main()
 	gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
 
 	glDisable(GL_CULL_FACE);
+    glEnable(GL_DEPTH_TEST);
 
 	setOpenGlDrawCallback("OpenGL", draw, &data);
 
 	for (;;)
 	{
+        std::vector<uint8_t> pixels(win_width * win_height * 3);
+        glReadPixels(0, 0, win_width, win_height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+        cv::Mat image(win_height, win_width, CV_8UC3, pixels.data());
+        cv::flip(image, image, 0);
+
+        cv::imwrite("example_image_depth.png", image);
 		updateWindow("OpenGL");
 		char key = (char)waitKey(40);
 		if (key == 27)

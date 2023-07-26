@@ -12,13 +12,29 @@ namespace cv {
         color[index] = colorPerVertex;
     }
 
+    Vec3f cross_product(const Vec3f& a, const Vec3f& b)
+    {
+        return Vec3f(a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]);
+    }
+
+    Vec3f normalize_vector(Vec3f a)
+    {
+        float length = std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+        return Vec3f(a[0] / length, a[1] / length, a[2] / length);
+    }
+
+    float length(Vec3f a)
+    {
+        return std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+    }
+
     Matx44f lookAtMatrixCal(const Vec3f& position, const Vec3f& lookat, const Vec3f& upVector)
     {
         Vec3f w, u;
-        normalize(position - lookat, w, 1.0, 0.0, NORM_L1);
-        normalize(upVector.cross(w), u, 1.0, 0.0, NORM_L1);
+        w = normalize_vector(position - lookat);
+        u = normalize_vector(cross_product(upVector, w));
 
-        Vec3f v = w.cross(u);
+        Vec3f v = cross_product(w, u);
         Vec4f w_prime(w[0], w[1], w[2], 0.0f), u_prime(u[0], u[1], u[2], 0.0f), v_prime(v[0], v[1], v[2], 0.0f), identity(0.0f, 0.0f, 0.0f, 1.0f);
         Matx44f res(u_prime[0], u_prime[1], u_prime[2], u_prime[3],
                     v_prime[0], v_prime[1], v_prime[2], v_prime[3],
@@ -47,7 +63,9 @@ namespace cv {
 
     bool insideTriangle(float x, float y, const Vec3f* vertices)
     {
-        Vec3f A(vertices[0][0], vertices[0][1], 1.0), B(vertices[1][0], vertices[1][1], 1.0), C(vertices[2][0], vertices[2][1], 1.0);
+        Vec3f A(vertices[0][0], vertices[0][1], 1.0);
+        Vec3f B(vertices[1][0], vertices[1][1], 1.0);
+        Vec3f C(vertices[2][0], vertices[2][1], 1.0);
         Vec3f P(x, y, 1.0);
 
         Vec3f ACcrossAB = (C - A).cross(B - A);
@@ -58,8 +76,8 @@ namespace cv {
 
         if (ACcrossAB.dot(ACcrossAP) >= 0 && ABcrossAC.dot(ABcrossAP) >= 0)
         {
-            float beta = norm(ACcrossAP) / norm(ACcrossAB);
-            float gamma = norm(ABcrossAP) / norm(ABcrossAC);
+            float beta = length(ACcrossAP) / length(ACcrossAB);
+            float gamma = length(ABcrossAP) / length(ABcrossAC);
             if (beta + gamma <= 1)
                 return true;
         }
@@ -67,10 +85,12 @@ namespace cv {
         return false;
     }
 
-    Vec3f barycentricCal(float x, float y, const Vec3f* vertices)
+    Vec3f barycentricCal(float x, float y, const Vec3f* vertices, int width, int height)
     {
-       Vec3f A(vertices[0][0], vertices[0][1], 1.0), B(vertices[1][0], vertices[1][1], 1.0), C(vertices[2][0], vertices[2][1], 1.0);
-        Vec3f P(x, y, 1.0);
+        Vec3f A(vertices[0][0] / width, vertices[0][1] / height, 1.0);
+        Vec3f B(vertices[1][0] / width, vertices[1][1] / height, 1.0);
+        Vec3f C(vertices[2][0] / width, vertices[2][1] / height, 1.0);
+        Vec3f P(x / width, y / height, 1.0);
 
         Vec3f ACcrossAB = (C - A).cross(B - A);
         Vec3f ACcrossAP = (C - A).cross(P - A);
@@ -80,8 +100,8 @@ namespace cv {
 
         if (ACcrossAB.dot(ACcrossAP) >= 0 && ABcrossAC.dot(ABcrossAP) >= 0)
         {
-            float beta = norm(ACcrossAP) / norm(ACcrossAB);
-            float gamma = norm(ABcrossAP) / norm(ABcrossAC);
+            float beta = length(ACcrossAP) / length(ACcrossAB);
+            float gamma = length(ABcrossAP) / length(ABcrossAC);
             if (beta + gamma <= 1)
                 return Vec3f( 1.0 - beta - gamma, beta, gamma );
         }
@@ -106,9 +126,9 @@ namespace cv {
             {
                 if (insideTriangle(x + 0.5, y + 0.5, tri.vertices))
                 {
-                    Vec3f barycentricCoord = barycentricCal(x + 0.5, y + 0.5, tri.vertices);
+                    Vec3f barycentricCoord = barycentricCal(x + 0.5, y + 0.5, tri.vertices, width, height);
                     float alpha = barycentricCoord[0], beta = barycentricCoord[1], gamma = barycentricCoord[2];
-                    float z_interpolated = 1.0 / (alpha / tri.vertices[0][2] + beta / tri.vertices[1][2] + gamma / tri.vertices[2][2]);
+                    float z_interpolated = 1.0f / (alpha / tri.vertices[0][2] + beta / tri.vertices[1][2] + gamma / tri.vertices[2][2]);
 
                     int index = (height - 1 - y) * width + x;
                     if (z_interpolated < depth_buf[index] && z_interpolated >= 0.0 && z_interpolated <= 1.0)
@@ -116,9 +136,16 @@ namespace cv {
                         if (isConstant)
                             color_buf[index] = tri.getTriangleColor();
                             //color_buf[index] = Vec3f(255, 0, 0);
-                        else
-                            color_buf[index] = (alpha * tri.color[0] / tri.vertices[0][2] + beta * tri.color[1] / tri.vertices[1][2]
-                                                + gamma * tri.color[2] / tri.vertices[2][2]) * z_interpolated;
+                        else {
+                            float r1 = alpha * z_interpolated / tri.vertices[0][2] * tri.color[0][0] + beta * z_interpolated / tri.vertices[1][2] * tri.color[1][0]
+                                + gamma * z_interpolated / tri.vertices[2][2] * tri.color[2][0];
+                            float g1 = alpha * z_interpolated / tri.vertices[0][2] * tri.color[0][1] + beta * z_interpolated / tri.vertices[1][2] * tri.color[1][1]
+                                + gamma * z_interpolated / tri.vertices[2][2] * tri.color[2][1];
+                            float b1 = alpha * z_interpolated / tri.vertices[0][2] * tri.color[0][2] + beta * z_interpolated / tri.vertices[1][2] * tri.color[1][2]
+                                + gamma * z_interpolated / tri.vertices[2][2] * tri.color[2][2];
+
+                            color_buf[index] = Vec3f(r1, g1, b1);
+                        }
                         depth_buf[index] = z_interpolated;
                     }
                 }
@@ -151,7 +178,7 @@ namespace cv {
 
             for (auto& vertex: ver)
             {
-                divide(vertex, vertex[3], vertex);
+                vertex = Vec4f(vertex[0] / vertex[3], vertex[1] / vertex[3], vertex[2] / vertex[3], 1.0);
             }
 
             for (int j = 0; j < 3; j++)
