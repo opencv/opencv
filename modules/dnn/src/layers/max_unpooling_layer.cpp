@@ -42,7 +42,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && !poolPad.width && !poolPad.height);
     }
 
@@ -191,12 +191,15 @@ public:
         auto features = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         auto indices = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
 
-        auto inpShape = features->get_shape();
-        std::vector<int32_t> outShape(inpShape.begin(), inpShape.end());
-        outShape[2] = (outShape[2] - 1) * poolStride.height + poolKernel.height - 2 * poolPad.height;
-        outShape[3] = (outShape[3] - 1) * poolStride.width + poolKernel.width - 2 * poolPad.width;
+        std::vector<MatShape> inpShapes(nodes.size());
+        std::vector<MatShape> outShapes, internals;
+        for (int i = 0; i < nodes.size(); ++i) {
+            std::vector<size_t> shape = nodes[i].dynamicCast<InfEngineNgraphNode>()->node->get_shape();
+            inpShapes[i] = std::vector<int>(shape.begin(), shape.end());
+        }
+        getMemoryShapes(inpShapes, 1, outShapes, internals);
 
-        Mat zeros = Mat::zeros(1, total(outShape), CV_32F);
+        Mat zeros = Mat::zeros(1, total(outShapes[0]), CV_32F);
         auto zeroInp = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{zeros.total()}, zeros.data);
 
         int newShape = -1;
@@ -215,7 +218,7 @@ public:
         std::shared_ptr<ngraph::Node> unpool = std::make_shared<ngraph::op::ScatterElementsUpdate>(zeroInp, indices, features,
             std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &axis));
 
-        auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{outShape.size()}, outShape.data());
+        auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{outShapes[0].size()}, outShapes[0].data());
         unpool = std::make_shared<ngraph::op::v1::Reshape>(unpool, shape, true);
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(unpool));
