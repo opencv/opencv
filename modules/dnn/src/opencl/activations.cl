@@ -80,7 +80,7 @@ __kernel void ChannelsPReLUForward(const int count, const int channels, const in
   int index = get_global_id(0);
   int c = (index / plane_size) % channels;
   if(index < count)
-  out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[c];
+    out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[c];
 }
 
 __kernel void PReLUForward(const int count, const int channels, const int plane_size,
@@ -89,7 +89,7 @@ __kernel void PReLUForward(const int count, const int channels, const int plane_
 {
   int index = get_global_id(0);
   if(index < count)
-  out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[index];
+    out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[index];
 }
 
 __kernel void TanHForward(const int count, __global T* in, __global T* out) {

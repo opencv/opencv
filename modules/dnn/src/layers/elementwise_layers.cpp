@@ -355,8 +355,9 @@ struct ReLUFunctor : public BaseFunctor
                backendId == DNN_BACKEND_CANN;
     }
 
-    void apply(const float* srcptr, float* dstptr, int, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
     {
+        CV_UNUSED(stripeStart);
         float s = slope;
         for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
         {
@@ -559,8 +560,9 @@ struct ReLU6Functor : public BaseFunctor
                backendId == DNN_BACKEND_CANN;
     }
 
-    void apply(const float* srcptr, float* dstptr, int, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
     {
+        CV_UNUSED(stripeStart);
         for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
         {
             int i = 0;
@@ -704,8 +706,9 @@ struct ReLU6Functor : public BaseFunctor
 template <class T>
 struct BaseDefaultFunctor : public BaseFunctor
 {
-    void apply(const float* srcptr, float* dstptr, int, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
     {
+        CV_UNUSED(stripeStart);
         for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
         {
             for( int i = 0; i < len; i++ )
@@ -2226,8 +2229,9 @@ struct PowerFunctor : public BaseFunctor
         shift = originShift;
     }
 
-    void apply(const float* srcptr, float* dstptr, int, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
     {
+        CV_UNUSED(stripeStart);
         float a = scale, b = shift, p = power;
         if( p == 1.f )
         {
@@ -2471,8 +2475,9 @@ struct ChannelsPReLUFunctor : public BaseFunctor
                backendId == DNN_BACKEND_CANN;
     }
 
-    void apply(const float* srcptr, float* dstptr, int, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
     {
+        CV_UNUSED(stripeStart);
         CV_Assert(scale.isContinuous() && scale.type() == CV_32F);
 
         const float* scaleptr = scale.ptr<float>();
@@ -2624,6 +2629,7 @@ struct PReLUFunctor : public ChannelsPReLUFunctor
 
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
     {
+        CV_UNUSED(stripeStart);
         CV_Assert(scale.isContinuous() && scale.type() == CV_32F);
 
         if (stripeStart < 0)
