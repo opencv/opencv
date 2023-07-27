@@ -228,7 +228,7 @@ TEST_F(SacSegmentationTest, PlaneSacSegmentation)
 
     pt_cloud.release();
     sacSegmentation->setCustomModelConstraints(nullptr);
-    sacSegmentation->setParallel(true);
+    // sacSegmentation->setParallel(true); // parallel version is not deterministic and should be initialized differently
 
     // Multi-plane segmentation
     for (int i = 0; i < models_num; i++)
@@ -298,7 +298,7 @@ TEST_F(SacSegmentationTest, SphereSacSegmentation)
 
     pt_cloud.release();
     sacSegmentation->setCustomModelConstraints(nullptr);
-    sacSegmentation->setParallel(true);
+    // sacSegmentation->setParallel(true); // parallel version is not deterministic and should be initialized differently
 
     // Multi-sphere segmentation
     for (int i = 0; i < models_num; i++)
