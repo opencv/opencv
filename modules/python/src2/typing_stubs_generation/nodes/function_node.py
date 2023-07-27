@@ -1,4 +1,4 @@
-from typing import NamedTuple, Sequence, Type, Optional, Tuple, List
+from typing import NamedTuple, Sequence, Optional, Tuple, List
 
 from .node import ASTNode, ASTNodeType
 from .type_node import TypeNode, NoneTypeNode, TypeResolutionError
@@ -98,7 +98,7 @@ class FunctionNode(ASTNode):
         return ASTNodeType.Function
 
     @property
-    def children_types(self) -> Tuple[Type[ASTNode], ...]:
+    def children_types(self) -> Tuple[ASTNodeType, ...]:
         return ()
 
     def add_overload(self, arguments: Sequence["FunctionNode.Arg"] = (),

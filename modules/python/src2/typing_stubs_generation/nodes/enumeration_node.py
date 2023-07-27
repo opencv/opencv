@@ -18,8 +18,8 @@ class EnumerationNode(ASTNode):
         self.is_scoped = is_scoped
 
     @property
-    def children_types(self) -> Tuple[Type[ASTNode], ...]:
-        return (ConstantNode, )
+    def children_types(self) -> Tuple[ASTNodeType, ...]:
+        return (ASTNodeType.Constant, )
 
     @property
     def node_type(self) -> ASTNodeType:
@@ -27,7 +27,7 @@ class EnumerationNode(ASTNode):
 
     @property
     def constants(self) -> Dict[str, ConstantNode]:
-        return self._children[ConstantNode]
+        return self._children[ASTNodeType.Constant]
 
     def add_constant(self, name: str, value: str) -> ConstantNode:
         return self._add_child(ConstantNode, name, value=value)

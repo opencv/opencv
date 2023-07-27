@@ -70,22 +70,22 @@ class ASTNode:
         self._parent: Optional["ASTNode"] = None
         self.parent = parent
         self.is_exported = True
-        self._children: DefaultDict[NodeType, NameToNode] = defaultdict(dict)
+        self._children: DefaultDict[ASTNodeType, NameToNode] = defaultdict(dict)
 
     def __str__(self) -> str:
         return "{}('{}' exported as '{}')".format(
-            type(self).__name__.replace("Node", ""), self.name, self.export_name
+            self.node_type.name, self.name, self.export_name
         )
 
     def __repr__(self) -> str:
         return str(self)
 
     @abc.abstractproperty
-    def children_types(self) -> Tuple[Type["ASTNode"], ...]:
+    def children_types(self) -> Tuple[ASTNodeType, ...]:
         """Set of ASTNode types that are allowed to be children of this node
 
         Returns:
-            Tuple[Type[ASTNode], ...]: Types of children nodes
+            Tuple[ASTNodeType, ...]: Types of children nodes
         """
         pass
 
@@ -98,6 +98,9 @@ class ASTNode:
             ASTNodeType: Current node type
         """
         pass
+
+    def node_type_name(self) -> str:
+        return f"{self.node_type.name}::{self.name}"
 
     @property
     def name(self) -> str:
@@ -126,11 +129,11 @@ class ASTNode:
             "but got: {}".format(type(value))
 
         if value is not None:
-            value.__check_child_before_add(type(self), self.name)
+            value.__check_child_before_add(self, self.name)
 
         # Detach from previous parent
         if self._parent is not None:
-            self._parent._children[type(self)].pop(self.name)
+            self._parent._children[self.node_type].pop(self.name)
 
         if value is None:
             self._parent = None
@@ -138,28 +141,26 @@ class ASTNode:
 
         # Set a weak reference to a new parent and add self to its children
         self._parent = weakref.proxy(value)
-        value._children[type(self)][self.name] = self
+        value._children[self.node_type][self.name] = self
 
-    def __check_child_before_add(self, child_type: Type[ASTNodeSubtype],
+    def __check_child_before_add(self, child: ASTNodeSubtype,
                                  name: str) -> None:
-        assert len(self.children_types) > 0, \
-            "Trying to add child node '{}::{}' to node '{}::{}' " \
-            "that can't have children nodes".format(child_type.__name__, name,
-                                                    type(self).__name__,
-                                                    self.name)
+        assert len(self.children_types) > 0, (
+            f"Trying to add child node '{child.node_type_name}' to node "
+            f"'{self.node_type_name}' that can't have children nodes"
+        )
 
-        assert child_type in self.children_types, \
-            "Trying to add child node '{}::{}' to node '{}::{}' " \
+        assert child.node_type in self.children_types, \
+            "Trying to add child node '{}' to node '{}' " \
             "that supports only ({}) as its children types".format(
-                child_type.__name__, name, type(self).__name__, self.name,
-                ",".join(t.__name__ for t in self.children_types)
+                child.node_type_name, self.node_type_name,
+                ",".join(t.name for t in self.children_types)
             )
 
-        if self._find_child(child_type, name) is not None:
+        if self._find_child(child.node_type, name) is not None:
             raise ValueError(
-                "Node '{}::{}' already has a child '{}::{}'".format(
-                    type(self).__name__, self.name, child_type.__name__, name
-                )
+                f"Node '{self.node_type_name}' already has a "
+                f"child '{child.node_type_name}'"
             )
 
     def _add_child(self, child_type: Type[ASTNodeSubtype], name: str,
@@ -180,15 +181,14 @@ class ASTNode:
         Returns:
             ASTNodeSubtype: Created ASTNode
         """
-        self.__check_child_before_add(child_type, name)
         return child_type(name, parent=self, **kwargs)
 
-    def _find_child(self, child_type: Type[ASTNodeSubtype],
+    def _find_child(self, child_type: ASTNodeType,
                     name: str) -> Optional[ASTNodeSubtype]:
         """Looks for child node with the given type and name.
 
         Args:
-            child_type (Type[ASTNodeSubtype]): Type of the child node.
+            child_type (ASTNodeType): Type of the child node.
             name (str): Name of the child node.
 
         Returns:

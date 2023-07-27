@@ -3,7 +3,7 @@ __all__ = ("generate_typing_stubs", )
 from io import StringIO
 from pathlib import Path
 import re
-from typing import (Type, Callable, NamedTuple, Union, Set, Dict,
+from typing import (Callable, NamedTuple, Union, Set, Dict,
                     Collection, Tuple, List)
 import warnings
 
@@ -16,7 +16,8 @@ from .predefined_types import PREDEFINED_TYPES
 from .api_refinement import apply_manual_api_refinement
 
 from .nodes import (ASTNode, ASTNodeType, NamespaceNode, ClassNode,
-                    FunctionNode, EnumerationNode, ConstantNode)
+                    FunctionNode, EnumerationNode, ConstantNode,
+                    ProtocolClassNode)
 
 from .nodes.type_node import (TypeNode, AliasTypeNode, AliasRefTypeNode,
                               AggregatedTypeNode, ASTNodeTypeNode,
@@ -112,11 +113,13 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path) -> None:
     # NOTE: Enumerations require special handling, because all enumeration
     # constants are exposed as module attributes
     has_enums = _generate_section_stub(
-        StubSection("# Enumerations", EnumerationNode), root, output_stream, 0
+        StubSection("# Enumerations", ASTNodeType.Enumeration), root,
+        output_stream, 0
     )
     # Collect all enums from class level and export them to module level
     for class_node in root.classes.values():
-        if _generate_enums_from_classes_tree(class_node, output_stream, indent=0):
+        if _generate_enums_from_classes_tree(class_node, output_stream,
+                                             indent=0):
             has_enums = True
     # 2 empty lines between enum and classes definitions
     if has_enums:
@@ -134,14 +137,15 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path) -> None:
 
 class StubSection(NamedTuple):
     name: str
-    node_type: Type[ASTNode]
+    node_type: ASTNodeType
 
 
 STUB_SECTIONS = (
-    StubSection("# Constants", ConstantNode),
-    # StubSection("# Enumerations", EnumerationNode), # Skipped for now (special rules)
-    StubSection("# Classes", ClassNode),
-    StubSection("# Functions", FunctionNode)
+    StubSection("# Constants", ASTNodeType.Constant),
+    # Enumerations are skipped due to special handling rules
+    # StubSection("# Enumerations", ASTNodeType.Enumeration),
+    StubSection("# Classes", ASTNodeType.Class),
+    StubSection("# Functions", ASTNodeType.Function)
 )
 
 
@@ -250,9 +254,9 @@ def _generate_class_stub(class_node: ClassNode, output_stream: StringIO,
             else:
                 bases.append(base.export_name)
 
-        inheritance_str = "({})".format(
-            ', '.join(bases)
-        )
+        inheritance_str = f"({', '.join(bases)})"
+    elif isinstance(class_node, ProtocolClassNode):
+        inheritance_str = "(Protocol)"
     else:
         inheritance_str = ""
 
@@ -547,7 +551,8 @@ def check_overload_presence(node: Union[NamespaceNode, ClassNode]) -> bool:
             return True
     return False
 
-def _collect_required_imports(root: NamespaceNode) -> Set[str]:
+
+def _collect_required_imports(root: NamespaceNode) -> Collection[str]:
     """Collects all imports required for classes and functions typing stubs
     declarations.
 
@@ -555,8 +560,8 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
         root (NamespaceNode): Namespace node to collect imports for
 
     Returns:
-        Set[str]: Collection of unique `import smth` statements required for
-        classes and function declarations of `root` node.
+        Collection[str]: Collection of unique `import smth` statements required
+        for classes and function declarations of `root` node.
     """
 
     def _add_required_usage_imports(type_node: TypeNode, imports: Set[str]):
@@ -569,6 +574,7 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
     has_overload = check_overload_presence(root)
     # if there is no module-level functions with overload, check its presence
     # during class traversing, including their inner-classes
+    has_protocol = False
     for cls in for_each_class(root):
         if not has_overload and check_overload_presence(cls):
             has_overload = True
@@ -583,6 +589,8 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
                 required_imports.add(
                     "import " + base_namespace.full_export_name
                 )
+        if isinstance(cls, ProtocolClassNode):
+            has_protocol = True
 
     if has_overload:
         required_imports.add("import typing")
@@ -599,7 +607,20 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
     if root_import in required_imports:
         required_imports.remove(root_import)
 
-    return required_imports
+    if has_protocol:
+        required_imports.add("import sys")
+    ordered_required_imports = sorted(required_imports)
+
+    # Protocol import always goes as last import statement
+    if has_protocol:
+        ordered_required_imports.append(
+            """if sys.version_info >= (3, 8):
+    from typing import Protocol
+else:
+    from typing_extensions import Protocol"""
+        )
+
+    return ordered_required_imports
 
 
 def _populate_reexported_symbols(root: NamespaceNode) -> None:
@@ -666,7 +687,7 @@ def _write_required_imports(required_imports: Collection[str],
         output_stream (StringIO): Output stream for import statements.
     """
 
-    for required_import in sorted(required_imports):
+    for required_import in required_imports:
         output_stream.write(required_import)
         output_stream.write("\n")
     if len(required_imports):
@@ -803,8 +824,8 @@ StubGenerator = Callable[[ASTNode, StringIO, int], None]
 
 
 NODE_TYPE_TO_STUB_GENERATOR = {
-    ClassNode: _generate_class_stub,
-    ConstantNode: _generate_constant_stub,
-    EnumerationNode: _generate_enumeration_stub,
-    FunctionNode: _generate_function_stub
+    ASTNodeType.Class: _generate_class_stub,
+    ASTNodeType.Constant: _generate_constant_stub,
+    ASTNodeType.Enumeration: _generate_enumeration_stub,
+    ASTNodeType.Function: _generate_function_stub
 }
