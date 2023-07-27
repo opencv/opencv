@@ -219,9 +219,10 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+        CV_Assert(!_locPredTransposed);  // To catch tests which depend on it
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_CUDA && !_groupByClasses) ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && !_locPredTransposed && _bboxesNormalized);
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && !_locPredTransposed);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -1006,9 +1007,26 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(nodes.size() == 3);
-        auto& box_logits  = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto& class_preds = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-        auto& proposals   = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+        auto box_logits  = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto class_preds = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto proposals   = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+
+        auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{2}, std::vector<int32_t>{0, -1});
+        box_logits = std::make_shared<ngraph::op::v1::Reshape>(box_logits, shape, true);
+        class_preds = std::make_shared<ngraph::op::v1::Reshape>(class_preds, shape, true);
+        proposals = std::make_shared<ngraph::op::v1::Reshape>(proposals,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{3}, std::vector<int32_t>{0, _varianceEncodedInTarget ? 1 : 2, -1}),
+            true
+        );
+        // std::cout << box_logits->get_shape() << std::endl;
+        // std::cout << class_preds->get_shape() << std::endl;
+        // std::cout << proposals->get_shape() << std::endl;
+        // std::cout << "_shareLocation " << _shareLocation << std::endl;
+        // std::cout << "_numClasses " << _numClasses << std::endl;
+        // std::cout << "_varianceEncodedInTarget " << _varianceEncodedInTarget << std::endl;
+        // // 300 * 21 * 4 = 25200
+        // // 300 * 21
+        // // 300 * 4
 
         ngraph::op::DetectionOutputAttrs attrs;
         attrs.num_classes                = _numClasses;
