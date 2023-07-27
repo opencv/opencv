@@ -21,4 +21,3 @@ void addCoreMLExecutionProvider(Ort::SessionOptions *session_options,
 
 #endif  // HAVE_ONNX
 #endif  // OPENCV_GAPI_COREML_EP_HPP
-

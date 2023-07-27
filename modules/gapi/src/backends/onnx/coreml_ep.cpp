@@ -48,4 +48,3 @@ void cv::gimpl::onnx::addCoreMLExecutionProvider(Ort::SessionOptions*,
 
 #endif  // HAVE_ONNX_COREML
 #endif  // HAVE_ONNX
-
