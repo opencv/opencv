@@ -34,7 +34,7 @@ namespace ep {
 
 /**
  * @brief This structure provides functions
- * that fill inference options for CUDA OpenVINO Execution Provider.
+ * that fill inference options for CUDA Execution Provider.
  * Please follow https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html#cuda-execution-provider
  */
 struct GAPI_EXPORTS_W_SIMPLE CUDA {
@@ -59,7 +59,7 @@ struct GAPI_EXPORTS_W_SIMPLE CUDA {
 
 /**
  * @brief This structure provides functions
- * that fill inference options for TensorRT OpenVINO Execution Provider.
+ * that fill inference options for TensorRT Execution Provider.
  * Please follow https://onnxruntime.ai/docs/execution-providers/TensorRT-ExecutionProvider.html#tensorrt-execution-provider
  */
 struct GAPI_EXPORTS_W_SIMPLE TensorRT {
@@ -504,7 +504,7 @@ public:
     The function is used to add ONNX Runtime TensorRT Execution Provider options.
 
     @param ep TensorRT Execution Provider options.
-    @see cv::gapi::onnx::ep::CUDA.
+    @see cv::gapi::onnx::ep::TensorRT.
 
     @return the reference on modified object.
     */
