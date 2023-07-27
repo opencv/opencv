@@ -7,15 +7,18 @@ from typing import cast, Sequence, Callable, Iterable
 from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode, TypeNode,
                     ClassProperty, PrimitiveTypeNode, ASTNodeTypeNode,
                     AggregatedTypeNode, CallableTypeNode, AnyTypeNode,
-                    TupleTypeNode, UnionTypeNode)
+                    TupleTypeNode, UnionTypeNode, ProtocolClassNode,
+                    DictTypeNode, ClassTypeNode)
 from .ast_utils import (find_function_node, SymbolName,
                         for_each_function_overload)
+from .types_conversion import create_type_node
 
 
 def apply_manual_api_refinement(root: NamespaceNode) -> None:
     refine_highgui_module(root)
     refine_cuda_module(root)
     export_matrix_type_constants(root)
+    refine_dnn_module(root)
     # Export OpenCV exception class
     builtin_exception = root.add_class("Exception")
     builtin_exception.is_exported = False
@@ -211,6 +214,86 @@ def refine_highgui_module(root: NamespaceNode) -> None:
             ),
             FunctionNode.Arg("param", OptionalTypeNode(AnyTypeNode("void*")),
                              default_value="None")
+        ]
+    )
+
+
+def refine_dnn_module(root: NamespaceNode) -> None:
+    if "dnn" not in root.namespaces:
+        return
+    dnn_module = root.namespaces["dnn"]
+
+    """
+    class LayerProtocol(Protocol):
+        def __init__(
+            self, params: dict[str, DictValue],
+            blobs: typing.Sequence[cv2.typing.MatLike]
+        ) -> None: ...
+
+        def getMemoryShapes(
+            self, inputs: typing.Sequence[typing.Sequence[int]]
+        ) -> typing.Sequence[typing.Sequence[int]]: ...
+
+        def forward(
+            self, inputs: typing.Sequence[cv2.typing.MatLike]
+        ) -> typing.Sequence[cv2.typing.MatLike]: ...
+    """
+    layer_proto = ProtocolClassNode("LayerProtocol", dnn_module)
+    layer_proto.add_function(
+        "__init__",
+        arguments=[
+            FunctionNode.Arg(
+                "params",
+                DictTypeNode(
+                    "LayerParams", PrimitiveTypeNode.str_(),
+                    create_type_node("cv::dnn::DictValue")
+                )
+            ),
+            FunctionNode.Arg("blobs", create_type_node("vector<cv::Mat>"))
+        ]
+    )
+    layer_proto.add_function(
+        "getMemoryShapes",
+        arguments=[
+            FunctionNode.Arg("inputs",
+                             create_type_node("vector<vector<int>>"))
+        ],
+        return_type=FunctionNode.RetType(
+            create_type_node("vector<vector<int>>")
+        )
+    )
+    layer_proto.add_function(
+        "forward",
+        arguments=[
+            FunctionNode.Arg("inputs", create_type_node("vector<cv::Mat>"))
+        ],
+        return_type=FunctionNode.RetType(create_type_node("vector<cv::Mat>"))
+    )
+
+    """
+    def dnn_registerLayer(layerTypeName: str,
+                          layerClass: typing.Type[LayerProtocol]) -> None: ...
+    """
+    root.add_function(
+        "dnn_registerLayer",
+        arguments=[
+            FunctionNode.Arg("layerTypeName", PrimitiveTypeNode.str_()),
+            FunctionNode.Arg(
+                "layerClass",
+                ClassTypeNode(ASTNodeTypeNode(
+                    layer_proto.export_name, f"dnn.{layer_proto.export_name}"
+                ))
+            )
+        ]
+    )
+
+    """
+    def dnn_unregisterLayer(layerTypeName: str) -> None: ...
+    """
+    root.add_function(
+        "dnn_unregisterLayer",
+        arguments=[
+            FunctionNode.Arg("layerTypeName", PrimitiveTypeNode.str_())
         ]
     )
 
