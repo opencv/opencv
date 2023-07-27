@@ -162,6 +162,7 @@ set(gapi_srcs
 
     # ONNX backend
     src/backends/onnx/gonnxbackend.cpp
+    src/backends/onnx/dml_ep.cpp
 
     # Render backend
     src/backends/render/grenderocv.cpp
@@ -254,6 +255,7 @@ ocv_target_link_libraries(${the_module} PRIVATE ade)
 
 if(TARGET ocv.3rdparty.openvino AND OPENCV_GAPI_WITH_OPENVINO)
   ocv_target_link_libraries(${the_module} PRIVATE ocv.3rdparty.openvino)
+  ocv_install_used_external_targets(ocv.3rdparty.openvino)
 endif()
 
 if(HAVE_TBB)
@@ -365,6 +367,9 @@ endif()
 if(HAVE_ONNX)
   ocv_target_link_libraries(${the_module} PRIVATE ${ONNX_LIBRARY})
   ocv_target_compile_definitions(${the_module} PRIVATE HAVE_ONNX=1)
+  if(HAVE_ONNX_DML)
+    ocv_target_compile_definitions(${the_module} PRIVATE HAVE_ONNX_DML=1)
+  endif()
   if(TARGET opencv_test_gapi)
     ocv_target_compile_definitions(opencv_test_gapi PRIVATE HAVE_ONNX=1)
     ocv_target_link_libraries(opencv_test_gapi PRIVATE ${ONNX_LIBRARY})

@@ -1531,8 +1531,8 @@ TEST(Calib3d_SolvePnP, generic)
                 }
                 else
                 {
-                    p3f = p3f_;
-                    p2f = p2f_;
+                    p3f = vector<Point3f>(p3f_.begin(), p3f_.end());
+                    p2f = vector<Point2f>(p2f_.begin(), p2f_.end());
                 }
 
                 vector<double> reprojectionErrors;

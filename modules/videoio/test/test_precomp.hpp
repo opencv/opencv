@@ -5,8 +5,10 @@
 #define __OPENCV_TEST_PRECOMP_HPP__
 
 #include <sstream>
+#include <algorithm>
 
 #include "opencv2/ts.hpp"
+#include "opencv2/ts/ocl_test.hpp"
 #include "opencv2/videoio.hpp"
 #include "opencv2/videoio/registry.hpp"
 #include "opencv2/core/private.hpp"
@@ -53,6 +55,14 @@ static inline void PrintTo(const cv::VideoCaptureAPIs& api, std::ostream* os)
 inline std::string fourccToString(int fourcc)
 {
     return cv::format("%c%c%c%c", fourcc & 255, (fourcc >> 8) & 255, (fourcc >> 16) & 255, (fourcc >> 24) & 255);
+}
+
+inline std::string fourccToStringSafe(int fourcc)
+{
+    std::string res = fourccToString(fourcc);
+    // TODO: return hex values for invalid characters
+    std::transform(res.begin(), res.end(), res.begin(), [](uint8_t c) { return (c >= '0' && c <= 'z') ? c : (c == ' ' ? '_' : 'x'); });
+    return res;
 }
 
 inline int fourccFromString(const std::string &fourcc)

@@ -9,6 +9,8 @@
 
 #ifdef HAVE_ONNX
 
+#include "backends/onnx/dml_ep.hpp"
+
 #include <ade/util/algorithm.hpp> // any_of
 #include <ade/util/zip_range.hpp>
 #include <opencv2/gapi/infer.hpp>
@@ -142,6 +144,48 @@ public:
     // Run with the assigned inputs/outputs
     void run();
 };
+
+static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
+                                         const cv::gapi::onnx::ep::OpenVINO &ov_ep) {
+     OrtOpenVINOProviderOptions options;
+     options.device_type = ov_ep.device_type.c_str();
+     options.cache_dir = ov_ep.cache_dir.c_str();
+     options.num_of_threads = ov_ep.num_of_threads;
+     options.enable_opencl_throttling = ov_ep.enable_opencl_throttling;
+     options.enable_dynamic_shapes = ov_ep.enable_dynamic_shapes;
+     options.context = nullptr;
+
+     try {
+        session_options->AppendExecutionProvider_OpenVINO(options);
+     } catch (const std::exception &e) {
+         std::stringstream ss;
+         ss << "ONNX Backend: Failed to enable OpenVINO"
+            << " Execution Provider: " << e.what();
+         cv::util::throw_error(std::runtime_error(ss.str()));
+     }
+}
+
+static void addExecutionProvider(Ort::SessionOptions          *session_options,
+                                 const cv::gapi::onnx::ep::EP &execution_provider) {
+    namespace ep = cv::gapi::onnx::ep;
+    switch (execution_provider.index()) {
+        case ep::EP::index_of<ep::OpenVINO>(): {
+             GAPI_LOG_INFO(NULL, "OpenVINO Execution Provider is added.");
+             const auto &ov_ep = cv::util::get<ep::OpenVINO>(execution_provider);
+             addOpenVINOExecutionProvider(session_options, ov_ep);
+             break;
+        }
+        case ep::EP::index_of<ep::DirectML>(): {
+            GAPI_LOG_INFO(NULL, "DirectML Execution Provider is added.");
+            const auto &dml_ep = cv::util::get<ep::DirectML>(execution_provider);
+            addDMLExecutionProvider(session_options, dml_ep);
+            break;
+        }
+        default:
+            GAPI_LOG_INFO(NULL, "CPU Execution Provider is added.");
+            break;
+    }
+}
 
 } // namespace onnx
 } // namespace gimpl
@@ -592,9 +636,16 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
         cv::util::throw_error(std::logic_error("Please specify output layer names for "
                                                + params.model_path));
     }
-
     // Create and initialize the ONNX session
     Ort::SessionOptions session_options;
+    GAPI_LOG_INFO(NULL, "Adding Execution Providers for \"" << pp.model_path << "\"");
+    for (const auto &ep : pp.execution_providers) {
+        cv::gimpl::onnx::addExecutionProvider(&session_options, ep);
+    }
+
+    if (pp.disable_mem_pattern) {
+        session_options.DisableMemPattern();
+    }
     this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
 #ifndef _WIN32
     this_session = Ort::Session(this_env, params.model_path.data(), session_options);

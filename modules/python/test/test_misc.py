@@ -219,6 +219,25 @@ class Arguments(NewOpenCVTests):
         #res6 = cv.utils.dumpInputArray([a, b])
         #self.assertEqual(res6, "InputArrayOfArrays: empty()=false kind=0x00050000 flags=0x01050000 total(-1)=2 dims(-1)=1 size(-1)=2x1 type(0)=CV_32FC1 dims(0)=4 size(0)=[2 3 4 5]")
 
+    def test_unsupported_numpy_data_types_string_description(self):
+        for dtype in (object, str, np.complex128):
+            test_array = np.zeros((4, 4, 3), dtype=dtype)
+            msg = ".*type = {} is not supported".format(test_array.dtype)
+            if sys.version_info[0] < 3:
+                self.assertRaisesRegexp(
+                    Exception, msg, cv.utils.dumpInputArray, test_array
+                )
+            else:
+                self.assertRaisesRegex(
+                    Exception, msg, cv.utils.dumpInputArray, test_array
+                )
+
+    def test_numpy_writeable_flag_is_preserved(self):
+        array = np.zeros((10, 10, 1), dtype=np.uint8)
+        array.setflags(write=False)
+        with self.assertRaises(Exception):
+            cv.rectangle(array, (0, 0), (5, 5), (255), 2)
+
     def test_20968(self):
         pixel = np.uint8([[[40, 50, 200]]])
         _ = cv.cvtColor(pixel, cv.COLOR_RGB2BGR)  # should not raise exception
@@ -481,6 +500,27 @@ class Arguments(NewOpenCVTests):
             actual = try_to_convert(convertible)
             self.assertEqual(expected, actual,
                              msg=get_conversion_error_msg(convertible, expected, actual))
+
+
+    def test_wrap_rotated_rect(self):
+        center = (34.5, 52.)
+        size = (565.0, 140.0)
+        angle = -177.5
+        rect1 = cv.RotatedRect(center, size, angle)
+        self.assertEqual(rect1.center, center)
+        self.assertEqual(rect1.size, size)
+        self.assertEqual(rect1.angle, angle)
+
+        pts = [[ 319.7845, -5.6109037],
+               [ 313.6778, 134.25586],
+               [-250.78448, 109.6109],
+               [-244.6778, -30.25586]]
+        self.assertLess(np.max(np.abs(rect1.points() - pts)), 1e-4)
+
+        rect2 = cv.RotatedRect(pts[0], pts[1], pts[2])
+        _, inter_pts = cv.rotatedRectangleIntersection(rect1, rect2)
+        self.assertLess(np.max(np.abs(inter_pts.reshape(-1, 2) - pts)), 1e-4)
+
 
     def test_parse_to_rotated_rect_not_convertible(self):
         for not_convertible in ([], (), np.array([]), (123, (45, 34), 1), {1: 2, 3: 4}, 123,

@@ -14,6 +14,7 @@ Implementation of Batch Normalization layer.
 #include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <opencv2/core/utils/logger.hpp>
 
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/max_unpooling.hpp"
@@ -110,17 +111,12 @@ public:
                     int index = idxptr[i_wh];
                     if (!(0 <= index && index < outPlaneTotal))
                     {
-                        std::cerr
-                            << "i_n=" << i_n << std::endl
-                            << "i_c=" << i_c << std::endl
-                            << "i_wh=" << i_wh << std::endl
-                            << "index=" << index << std::endl
-                            << "maxval=" << inptr[i_wh] << std::endl
-                            << "outPlaneTotal=" << outPlaneTotal << std::endl
-                            << "input.size=" << input.size << std::endl
-                            << "indices.size=" << indices.size << std::endl
-                            << "outBlob=" << outBlob.size << std::endl
-                            ;
+                        CV_LOG_ERROR(NULL, cv::format(
+                            "i_n=%d\ni_c=%d\ni_wh=%d\nindex=%d\nmaxval=%lf\noutPlaneTotal=%d\n",
+                            i_n, i_c, i_wh, index, inptr[i_wh], outPlaneTotal));
+                        CV_LOG_ERROR(NULL, "input.size=" << input.size);
+                        CV_LOG_ERROR(NULL, "indices.size=" << indices.size);
+                        CV_LOG_ERROR(NULL, "outBlob=" << outBlob.size);
                         CV_Assert(0 <= index && index < outPlaneTotal);
                     }
                     outptr[index] = inptr[i_wh];

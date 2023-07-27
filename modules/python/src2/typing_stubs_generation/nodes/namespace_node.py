@@ -1,14 +1,13 @@
-from typing import Type, Iterable, Sequence, Tuple, Optional, Dict
 import itertools
 import weakref
-
-from .node import ASTNode, ASTNodeType
+from collections import defaultdict
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from .class_node import ClassNode, ClassProperty
-from .function_node import FunctionNode
-from .enumeration_node import EnumerationNode
 from .constant_node import ConstantNode
-
+from .enumeration_node import EnumerationNode
+from .function_node import FunctionNode
+from .node import ASTNode, ASTNodeType
 from .type_node import TypeResolutionError
 
 
@@ -18,34 +17,45 @@ class NamespaceNode(ASTNode):
     NamespaceNode can have other namespaces, classes, functions, enumerations
     and global constants as its children nodes.
     """
+    def __init__(self, name: str, parent: Optional[ASTNode] = None,
+                 export_name: Optional[str] = None) -> None:
+        super().__init__(name, parent, export_name)
+        self.reexported_submodules: List[str] = []
+        """List of reexported submodules"""
+
+        self.reexported_submodules_symbols: Dict[str, List[str]] = defaultdict(list)
+        """Mapping between submodules export names and their symbols re-exported
+        in this module"""
+
+
     @property
     def node_type(self) -> ASTNodeType:
         return ASTNodeType.Namespace
 
     @property
-    def children_types(self) -> Tuple[Type[ASTNode], ...]:
-        return (NamespaceNode, ClassNode, FunctionNode,
-                EnumerationNode, ConstantNode)
+    def children_types(self) -> Tuple[ASTNodeType, ...]:
+        return (ASTNodeType.Namespace, ASTNodeType.Class, ASTNodeType.Function,
+                ASTNodeType.Enumeration, ASTNodeType.Constant)
 
     @property
     def namespaces(self) -> Dict[str, "NamespaceNode"]:
-        return self._children[NamespaceNode]
+        return self._children[ASTNodeType.Namespace]
 
     @property
     def classes(self) -> Dict[str, ClassNode]:
-        return self._children[ClassNode]
+        return self._children[ASTNodeType.Class]
 
     @property
     def functions(self) -> Dict[str, FunctionNode]:
-        return self._children[FunctionNode]
+        return self._children[ASTNodeType.Function]
 
     @property
     def enumerations(self) -> Dict[str, EnumerationNode]:
-        return self._children[EnumerationNode]
+        return self._children[ASTNodeType.Enumeration]
 
     @property
     def constants(self) -> Dict[str, ConstantNode]:
-        return self._children[ConstantNode]
+        return self._children[ASTNodeType.Constant]
 
     def add_namespace(self, name: str) -> "NamespaceNode":
         return self._add_child(NamespaceNode, name)
