@@ -32,6 +32,14 @@ if(ORT_LIB AND ORT_INCLUDE)
       HAVE_ONNX_DML
   )
 
+  # Check CoreML Execution Provider availability
+  get_filename_component(coreml_dir ${ONNXRT_ROOT_DIR}/include/onnxruntime/core/providers/coreml ABSOLUTE)
+  detect_onxxrt_ep(
+      coreml_provider_factory.h
+      ${coreml_dir}
+      HAVE_ONNX_COREML
+  )
+
   set(HAVE_ONNX TRUE)
   # For CMake output only
   set(ONNX_LIBRARIES "${ORT_LIB}" CACHE STRING "ONNX Runtime libraries")
