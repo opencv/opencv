@@ -34,7 +34,7 @@ namespace ep {
 
 /**
  * @brief This structure provides functions
- * that fill inference options for ONNX OpenVINO Execution Provider.
+ * that fill inference options for ONNX CoreML Execution Provider.
  * Please follow https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html#coreml-execution-provider
  */
 struct GAPI_EXPORTS_W_SIMPLE CoreML {
@@ -498,7 +498,7 @@ public:
 
     The function is used to add ONNX Runtime CoreML Execution Provider options.
 
-    @param ep OpenVINO Execution Provider options.
+    @param ep CoreML Execution Provider options.
     @see cv::gapi::onnx::ep::CoreML.
 
     @return the reference on modified object.
