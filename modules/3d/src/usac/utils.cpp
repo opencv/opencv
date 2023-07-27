@@ -233,9 +233,9 @@ Ptr<SolverPoly> SolverPoly::create() {
     return makePtr<SolvePoly>();
 }
 
-double Utils::getCalibratedThreshold (double threshold, const Matx33d &K1, const Matx33d &K2) {
-    return threshold / ((K1(0, 0) + K1(1, 1) +
-                         K2(0, 0) + K2(1, 1)) / 4.0);
+double Utils::getCalibratedThreshold (double threshold, const Mat &K1, const Mat &K2) {
+    const auto * const k1 = (double *) K1.data, * const k2 = (double *) K2.data;
+    return threshold / ((k1[0] + k1[4] + k2[0] + k2[4]) / 4.0);
 }
 
 /*
@@ -245,20 +245,22 @@ double Utils::getCalibratedThreshold (double threshold, const Matx33d &K1, const
  *              0  k22 k23
  *              0   0   1]
  */
-void Utils::calibratePoints (const Matx33d &K1, const Matx33d &K2, const Mat &points, Mat &calib_points) {
-    const auto inv1_k11 = float(1 / K1(0, 0)); // 1 / k11
-    const auto inv1_k12 = float(-K1(0, 1) / (K1(0, 0)*K1(1, 1))); // -k12 / (k11*k22)
-    // (-k13*k22 + k12*k23) / (k11*k22)
-    const auto inv1_k13 = float((-K1(0, 2)*K1(1, 1) + K1(0, 1)*K1(1, 2)) / (K1(0, 0)*K1(1, 1)));
-    const auto inv1_k22 = float(1 / K1(1, 1)); // 1 / k22
-    const auto inv1_k23 = float(-K1(1, 2) / K1(1, 1)); // -k23 / k22
-
-    const auto inv2_k11 = float(1 / K2(0, 0));
-    const auto inv2_k12 = float(-K2(0, 1) / (K2(0, 0)*K2(1, 1)));
-    const auto inv2_k13 = float((-K2(0, 2)*K2(1, 1) + K2(0, 1)*K2(1, 2)) / (K2(0, 0)*K2(1, 1)));
-    const auto inv2_k22 = float(1 / K2(1, 1));
-    const auto inv2_k23 = float(-K2(1, 2) / K2(1, 1));
+void Utils::calibratePoints (const Mat &K1, const Mat &K2, const Mat &points, Mat &calib_points) {
     const auto * const points_ = (float *) points.data;
+    const auto * const k1 = (double *) K1.data;
+    const auto inv1_k11 = float(1 / k1[0]); // 1 / k11
+    const auto inv1_k12 = float(-k1[1] / (k1[0]*k1[4])); // -k12 / (k11*k22)
+    // (-k13*k22 + k12*k23) / (k11*k22)
+    const auto inv1_k13 = float((-k1[2]*k1[4] + k1[1]*k1[5]) / (k1[0]*k1[4]));
+    const auto inv1_k22 = float(1 / k1[4]); // 1 / k22
+    const auto inv1_k23 = float(-k1[5] / k1[4]); // -k23 / k22
+
+    const auto * const k2 = (double *) K2.data;
+    const auto inv2_k11 = float(1 / k2[0]);
+    const auto inv2_k12 = float(-k2[1] / (k2[0]*k2[4]));
+    const auto inv2_k13 = float((-k2[2]*k2[4] + k2[1]*k2[5]) / (k2[0]*k2[4]));
+    const auto inv2_k22 = float(1 / k2[4]);
+    const auto inv2_k23 = float(-k2[5] / k2[4]);
 
     calib_points = Mat ( points.rows, 4, points.type());
     auto * calib_points_ = (float *) calib_points.data;
@@ -277,13 +279,15 @@ void Utils::calibratePoints (const Matx33d &K1, const Matx33d &K2, const Mat &po
  * points is matrix of size |N| x 5, first two columns are image points [u_i, v_i]
  * calib_norm_pts are  K^-1 [u v 1]^T / ||K^-1 [u v 1]^T||
  */
-void Utils::calibrateAndNormalizePointsPnP (const Matx33d &K, const Mat &pts, Mat &calib_norm_pts) {
+void Utils::calibrateAndNormalizePointsPnP (const Mat &K, const Mat &pts, Mat &calib_norm_pts) {
     const auto * const points = (float *) pts.data;
-    const auto inv_k11 = float(1 / K(0, 0));
-    const auto inv_k12 = float(-K(0, 1) / (K(0, 0)*K(1, 1)));
-    const auto inv_k13 = float((-K(0, 2)*K(1, 1) + K(0, 1)*K(1, 2)) / (K(0, 0)*K(1, 1)));
-    const auto inv_k22 = float(1 / K(1, 1));
-    const auto inv_k23 = float(-K(1, 2) / K(1, 1));
+    const auto * const k = (double *) K.data;
+    const auto inv_k11 = float(1 / k[0]);
+    const auto inv_k12 = float(-k[1] / (k[0]*k[4]));
+    const auto inv_k13 = float((-k[2]*k[4] + k[1]*k[5]) / (k[0]*k[4]));
+    const auto inv_k22 = float(1 / k[4]);
+    const auto inv_k23 = float(-k[5] / k[4]);
+
     calib_norm_pts = Mat (pts.rows, 3, pts.type());
     auto * calib_norm_pts_ = (float *) calib_norm_pts.data;
 
@@ -298,9 +302,10 @@ void Utils::calibrateAndNormalizePointsPnP (const Matx33d &K, const Mat &pts, Ma
     }
 }
 
-void Utils::normalizeAndDecalibPointsPnP (const Matx33d &K_, Mat &pts, Mat &calib_norm_pts) {
-    const auto k11 = (float)K_(0, 0), k12 = (float)K_(0, 1), k13 = (float)K_(0, 2),
-               k22 = (float)K_(1, 1), k23 = (float)K_(1, 2);
+void Utils::normalizeAndDecalibPointsPnP (const Mat &K_, Mat &pts, Mat &calib_norm_pts) {
+    const auto * const K = (double *) K_.data;
+    const auto k11 = (float)K[0], k12 = (float)K[1], k13 = (float)K[2],
+               k22 = (float)K[4], k23 = (float)K[5];
     calib_norm_pts = Mat (pts.rows, 3, pts.type());
     auto * points = (float *) pts.data;
     auto * calib_norm_pts_ = (float *) calib_norm_pts.data;
@@ -339,10 +344,10 @@ void Utils::decomposeProjection (const Mat &P, Matx33d &K, Matx33d &R, Vec3d &t,
 }
 
 double Utils::getPoissonCDF (double lambda, int inliers) {
-    double exp_lamda = exp(-lambda), cdf = exp_lamda, lambda_i_div_fact_i = 1;
+    double exp_lambda = exp(-lambda), cdf = exp_lambda, lambda_i_div_fact_i = 1;
     for (int i = 1; i <= inliers; i++) {
         lambda_i_div_fact_i *= (lambda / i);
-        cdf += exp_lamda * lambda_i_div_fact_i;
+        cdf += exp_lambda * lambda_i_div_fact_i;
         if (fabs(cdf - 1) < DBL_EPSILON) // cdf is almost 1
             break;
     }
@@ -407,10 +412,11 @@ void Utils::densitySort (const Mat &points, int knn, Mat &sorted_points, std::ve
             (*spoints_ptr++) =  points_ptr[pt2+j];
     }
 }
+
 Matx33d Math::getSkewSymmetric(const Vec3d &v) {
-     return Matx33d(0,    -v[2], v[1],
-             v[2],  0,    -v[0],
-            -v[1],  v[0], 0);
+     return {0,    -v[2], v[1],
+             v[2],  0,   -v[0],
+            -v[1],  v[0], 0};
 }
 
 Matx33d Math::rotVec2RotMat (const Vec3d &v) {
@@ -418,9 +424,9 @@ Matx33d Math::rotVec2RotMat (const Vec3d &v) {
     const double x = v[0] / phi, y = v[1] / phi, z = v[2] / phi;
     const double a = std::sin(phi), b = std::cos(phi);
     // R = I + sin(phi) * skew(v) + (1 - cos(phi) * skew(v)^2
-    return Matx33d((b - 1)*y*y + (b - 1)*z*z + 1, -a*z - x*y*(b - 1), a*y - x*z*(b - 1),
+    return {(b - 1)*y*y + (b - 1)*z*z + 1, -a*z - x*y*(b - 1), a*y - x*z*(b - 1),
      a*z - x*y*(b - 1), (b - 1)*x*x + (b - 1)*z*z + 1, -a*x - y*z*(b - 1),
-    -a*y - x*z*(b - 1), a*x - y*z*(b - 1), (b - 1)*x*x + (b - 1)*y*y + 1);
+    -a*y - x*z*(b - 1), a*x - y*z*(b - 1), (b - 1)*x*x + (b - 1)*y*y + 1};
 }
 
 Vec3d Math::rotMat2RotVec (const Matx33d &R) {
@@ -434,8 +440,8 @@ Vec3d Math::rotMat2RotVec (const Matx33d &R) {
     } else if (3 - FLT_EPSILON > trace && trace > -1 + FLT_EPSILON) {
         double theta = std::acos((trace - 1) / 2);
         rot_vec = (theta / (2 * std::sin(theta))) * Vec3d(R(2,1)-R(1,2),
-                                                          R(0,2)-R(2,0),
-                                                          R(1,0)-R(0,1));
+                                                     R(0,2)-R(2,0),
+                                                     R(1,0)-R(0,1));
     } else {
         int a;
         if (R(0,0) > R(1,1))
