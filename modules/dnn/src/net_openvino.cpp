@@ -343,7 +343,6 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         Ptr<Layer> layer = ld.layerInstance;
         if (!fused && !layer->supportBackend(preferableBackend))
         {
-            std::cout << "not supported " << ld.type << std::endl;
             CV_LOG_DEBUG(NULL, "DNN/IE:    NOT supported!");
             bool customizable = ld.id != 0 && supportsCPUFallback;
 
@@ -550,7 +549,6 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 break;
             }
         }
-        ieNode->net->setNodePtr(&ieNode->node);
 
         net->addBlobs(ld.inputBlobsWrappers);
         net->addBlobs(ld.outputBlobsWrappers);

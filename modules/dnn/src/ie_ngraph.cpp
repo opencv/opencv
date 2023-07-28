@@ -446,10 +446,6 @@ void InfEngineNgraphNet::addOutput(const Ptr<InfEngineNgraphNode>& node)
     requestedOutputs.insert({name, node.get()});
 }
 
-void InfEngineNgraphNet::setNodePtr(std::shared_ptr<ngraph::Node>* ptr) {
-    all_nodes.emplace((*ptr)->get_friendly_name(), ptr);
-}
-
 void InfEngineNgraphNet::createNet(Target targetId) {
     if (!hasNetOwner)
     {
