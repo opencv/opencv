@@ -196,7 +196,8 @@ enum {
  CV_OpenCLApiCallError=        -220, /**< OpenCL API call error */
  CV_OpenCLDoubleNotSupported=  -221,
  CV_OpenCLInitError=           -222, /**< OpenCL initialization error */
- CV_OpenCLNoAMDBlasFft=        -223
+ CV_OpenCLNoAMDBlasFft=        -223,
+ CV_AscendApiCallError =       -224  /**< AscendCL API call error */
 };
 
 /****************************************************************************************\

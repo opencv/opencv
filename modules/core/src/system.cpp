@@ -1416,6 +1416,7 @@ CV_IMPL const char* cvErrorStr( int status )
     case CV_GpuApiCallError :        return "Gpu API call";
     case CV_OpenGlNotSupported :     return "No OpenGL support";
     case CV_OpenGlApiCallError :     return "OpenGL API call";
+    case CV_AscendApiCallError :     return "Ascend API call";
     };
 
     snprintf(buf, sizeof(buf), "Unknown %s code %d", status >= 0 ? "status":"error", status);

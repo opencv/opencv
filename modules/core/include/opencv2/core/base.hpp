@@ -120,7 +120,8 @@ enum Code {
     OpenCLApiCallError=        -220, //!< OpenCL API call error
     OpenCLDoubleNotSupported=  -221,
     OpenCLInitError=           -222, //!< OpenCL initialization error
-    OpenCLNoAMDBlasFft=        -223
+    OpenCLNoAMDBlasFft=        -223,
+    AscendApiCallError =       -224  //!< AscendCL API call error
 };
 } //Error
 
@@ -624,6 +625,11 @@ namespace cuda
 namespace cudev
 {
     template <typename _Tp> class GpuMat_;
+}
+
+namespace cann
+{
+    class CV_EXPORTS NpuMat;
 }
 
 namespace ipp
