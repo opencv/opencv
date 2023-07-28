@@ -57,11 +57,6 @@ public:
 //private:
     detail::NetImplBase& netImpl_;
 
-    void release();
-    int getNumComponents();
-    void dfs(std::shared_ptr<ngraph::Node>& node, std::vector<std::shared_ptr<ngraph::Node>>& comp,
-             std::unordered_map<std::string, bool>& used);
-
     ngraph::ParameterVector inputs_vec;
     std::shared_ptr<ngraph::Function> ngraph_function;
     std::vector<std::vector<std::shared_ptr<ngraph::Node>>> components;
