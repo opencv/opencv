@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.6)
 
-set(target mixed_sample)
+set(target JNIpart)
 project(${target} CXX)
 
 set(ANDROID_OPENCV_COMPONENTS "opencv_java" CACHE STRING "")

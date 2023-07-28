@@ -19,6 +19,11 @@ allprojects {
     repositories {
         google()
         jcenter()
+        if (gradle.opencv_source == "maven_local") {
+            maven {
+                url gradle.opencv_maven_path
+            }
+        }
     }
 }
 

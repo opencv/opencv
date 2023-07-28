@@ -1,3 +1,5 @@
+set (OPENCV_VERSION "4.8.0")
+
 # https://developer.android.com/studio/releases/gradle-plugin
 set(ANDROID_GRADLE_PLUGIN_VERSION "3.2.1" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
@@ -119,11 +121,24 @@ include ':opencv'
 file(WRITE "${ANDROID_TMP_INSTALL_BASE_DIR}/settings.gradle" "
 rootProject.name = 'opencv_samples'
 
-def opencvsdk='../'
-//def opencvsdk='/<path to OpenCV-android-sdk>'
-//println opencvsdk
-include ':opencv'
-project(':opencv').projectDir = new File(opencvsdk + '/sdk')
+gradle.ext {
+    //opencv_source = "maven_central"
+    //opencv_source = "maven_local"
+    opencv_source = "sdk_path"
+}
+
+if (gradle.opencv_source == "maven_local") {
+    gradle.ext {
+        opencv_maven_path = '../maven_repo'
+    }
+}
+
+if (gradle.opencv_source == "sdk_path") {
+    def opencvsdk = "../"
+    //def opencvsdk='/<path to OpenCV-android-sdk>'
+    include ':opencv'
+    project(':opencv').projectDir = new File(opencvsdk + '/sdk')
+}
 ")
 
 ocv_check_environment_variables(OPENCV_GRADLE_VERBOSE_OPTIONS)

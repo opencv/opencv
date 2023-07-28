@@ -136,23 +136,22 @@ public class CameraCalibrationActivity extends CameraActivity implements CvCamer
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-        case R.id.calibration:
+        if (item.getItemId() == R.id.calibration) {
             mOnCameraFrameRender =
                 new OnCameraFrameRender(new CalibrationFrameRender(mCalibrator));
             item.setChecked(true);
             return true;
-        case R.id.undistortion:
+        } else if (item.getItemId() == R.id.undistortion) {
             mOnCameraFrameRender =
                 new OnCameraFrameRender(new UndistortionFrameRender(mCalibrator));
             item.setChecked(true);
             return true;
-        case R.id.comparison:
+        } else if (item.getItemId() == R.id.comparison) {
             mOnCameraFrameRender =
                 new OnCameraFrameRender(new ComparisonFrameRender(mCalibrator, mWidth, mHeight, getResources()));
             item.setChecked(true);
             return true;
-        case R.id.calibrate:
+        } else if (item.getItemId() == R.id.calibrate) {
             final Resources res = getResources();
             if (mCalibrator.getCornersBufferSize() < 2) {
                 (Toast.makeText(this, res.getString(R.string.more_samples), Toast.LENGTH_SHORT)).show();
@@ -196,7 +195,7 @@ public class CameraCalibrationActivity extends CameraActivity implements CvCamer
                 }
             }.execute();
             return true;
-        default:
+        } else {
             return super.onOptionsItemSelected(item);
         }
     }
