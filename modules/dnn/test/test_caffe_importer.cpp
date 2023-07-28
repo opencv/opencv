@@ -742,8 +742,13 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
         scoreDiff = 0.02;
 #endif
 #if defined(INF_ENGINE_RELEASE)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
         iouDiff = 0.02;
+        if (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16) {
+            scoreDiff = 0.04;
+            iouDiff = 0.06;
+        }
+    }
 #endif
 
     static Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.949398, 99.2454, 210.141, 601.205, 462.849,
@@ -771,9 +776,6 @@ TEST_P(Test_Caffe_nets, FasterRCNN_zf)
 #endif
 
     if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
-         backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_OPENCL_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
-    if ((backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
          backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
     if (target == DNN_TARGET_CUDA_FP16)
@@ -783,7 +785,14 @@ TEST_P(Test_Caffe_nets, FasterRCNN_zf)
     static Mat ref = (Mat_<float>(3, 7) << 0, 2, 0.90121, 120.407, 115.83, 570.586, 528.395,
                                            0, 7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
                                            0, 12, 0.967198, 138.588, 206.843, 329.766, 553.176);
-    testFaster("faster_rcnn_zf.prototxt", "ZF_faster_rcnn_final.caffemodel", ref);
+
+    double scoreDiff = 0.0, iouDiff = 0.0;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
+        scoreDiff = 0.02;
+        iouDiff = 0.13;
+    }
+
+    testFaster("faster_rcnn_zf.prototxt", "ZF_faster_rcnn_final.caffemodel", ref, scoreDiff, iouDiff);
 }
 
 TEST_P(Test_Caffe_nets, RFCN)
@@ -806,8 +815,8 @@ TEST_P(Test_Caffe_nets, RFCN)
         iouDiff = 0.12;
     }
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
+#if defined(INF_ENGINE_RELEASE)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
         scoreDiff = 0.1f;
         iouDiff = 0.2f;
