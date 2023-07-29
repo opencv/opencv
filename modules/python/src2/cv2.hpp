@@ -51,8 +51,8 @@ public:
 
     ArgInfo(const char* name_, int arg_) :
         name(name_),
-        outputarg(arg_ & arg_outputarg_flag),
-        arithm_op_src(arg_ & arg_arithm_op_src_flag) {}
+        outputarg((arg_ & arg_outputarg_flag) != 0),
+        arithm_op_src((arg_ & arg_arithm_op_src_flag) != 0) {}
 
 private:
     ArgInfo(const ArgInfo&) = delete;
