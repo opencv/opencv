@@ -816,6 +816,80 @@ class Arguments(NewOpenCVTests):
         np.testing.assert_equal(dst, src_copy)
         self.assertEqual(arguments_dump, 'lambda=25, sigma=5.5')
 
+    def test_arithm_op_with_scalar_issue_24057(self):
+        src1_mat = np.full(shape=(5,5,3), fill_value=(64,64,64), dtype='uint8')
+
+        # Basic arithm operators
+        ## add
+        dst = src1_mat + [[[192,31,30],]]  # The result of this calculation is not saturated.
+        np.testing.assert_equal(dst[0][0], [256,95,94], "mat + mat [0][0]")
+        np.testing.assert_equal(dst[4][4], [256,95,94], "mat + mat [4][4]")
+
+        dst = cv.add(src1_mat, (192,31,30))  # The result of this calculation is saturated.
+        np.testing.assert_equal(dst[0][0], [255,95,94], "add(mat, vec3) [0][0]")
+        np.testing.assert_equal(dst[4][4], [255,95,94], "add(mat, vec3) [4][4]")
+
+        ## subtract
+        dst = src1_mat - [[[192,31,30],]]  # The result of this calculation is not saturated.
+        np.testing.assert_equal(dst[0][0], [-128,33,34], "mat - mat [0][0]")
+        np.testing.assert_equal(dst[4][4], [-128,33,34], "mat - mat [4][4]")
+
+        dst = cv.subtract(src1_mat, (192,31,30))  # The result of this calculation is saturated.
+        np.testing.assert_equal(dst[0][0], [0,33,34], "subtract(mat, vec3) [0][0]")
+        np.testing.assert_equal(dst[4][4], [0,33,34], "subtract(mat, vec3) [4][4]")
+
+        ## multiply
+        dst = src1_mat * [[[2,3,4],]]  # The result of this calculation is not saturated.
+        np.testing.assert_equal(dst[0][0], [128,192,256], "mat * mat [0][0]")
+        np.testing.assert_equal(dst[4][4], [128,192,256], "mat * mat [4][4]")
+
+        dst = cv.multiply(src1_mat, (2,3,4)) # The result of this calculation is saturated.
+        np.testing.assert_equal(dst[0][0], [128,192,255], "multiply(mat, vec3) [0][0]")
+        np.testing.assert_equal(dst[4][4], [128,192,255], "multiply(mat, vec3) [4][4]")
+
+        ## divide
+        dst = src1_mat / [[[2,4,8],]]
+        np.testing.assert_equal(dst[0][0], [32,16,8], "mat / mat [0][0]")
+        np.testing.assert_equal(dst[4][4], [32,16,8], "mat / mat [4][4]")
+
+        dst = cv.divide(src1_mat, (2,4,8) )
+        np.testing.assert_equal(dst[0][0], [32,16,8], "multiply(mat, vec3) [0][0]")
+        np.testing.assert_equal(dst[4][4], [32,16,8], "multiply(mat, vec3) [4][4]")
+
+        ## absdiff
+        dst = cv.absdiff(src1_mat, (65,60,64))
+        np.testing.assert_equal(dst[0][0], [1,4,0],   "absdiff(mat, vec3) [0][0]")
+        np.testing.assert_equal(dst[4][4], [1,4,0],   "absdiff(mat, vec3) [4][4]")
+
+        # Special case, vector length is not same as color channel of src mat
+        ## bgr image
+        dst = cv.subtract(src1_mat, 32)
+        np.testing.assert_equal(dst[0][0], [32,64,64], "subtract(mat, int) [0][0]")
+        np.testing.assert_equal(dst[4][4], [32,64,64], "subtract(mat, int) [4][4]")
+
+        dst = cv.subtract(src1_mat, (32))
+        np.testing.assert_equal(dst[0][0], [32,64,64], "subtract(mat, vec1) [0][0]")
+        np.testing.assert_equal(dst[4][4], [32,64,64], "subtract(mat, vec1) [4][4]")
+
+        dst = cv.subtract(src1_mat, (32,31))
+        np.testing.assert_equal(dst[0][0], [32,33,64], "subtract(mat, vec2) [0][0]")
+        np.testing.assert_equal(dst[4][4], [32,33,64], "subtract(mat, vec2) [4][4]")
+
+        dst = cv.subtract(src1_mat, (32,31,30,29))
+        np.testing.assert_equal(dst[0][0], [32,33,34], "subtract(mat, vec4) [0][0]")
+        np.testing.assert_equal(dst[4][4], [32,33,34], "subtract(mat, vec4) [4][4]")
+
+        ## gray image
+        src1_mat1 = np.full(shape=(5,5,1), fill_value=(64), dtype='uint8')
+        dst = cv.subtract(src1_mat1, (31))
+        np.testing.assert_equal(dst[0][0], 33, "subtract(mat1, vec1) [0][0]")
+        np.testing.assert_equal(dst[4][4], 33, "subtract(mat1, vec1) [4][4]")
+
+        ## cmyk image
+        src1_mat4 = np.full(shape=(5,5,4), fill_value=(64,64,64,64), dtype='uint8')
+        dst = cv.subtract(src1_mat4, (32,31,30,29))
+        np.testing.assert_equal(dst[0][0], [32,33,34,35], "subtract(mat4, vec4) [0][0]")
+        np.testing.assert_equal(dst[4][4], [32,33,34,35], "subtract(mat4, vec4) [4][4]")
 
 class CanUsePurePythonModuleFunction(NewOpenCVTests):
     def test_can_get_ocv_version(self):

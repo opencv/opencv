@@ -493,6 +493,10 @@ class ArgInfo(object):
         return '/O' not in self._modifiers
 
     @property
+    def arithm_op_src_arg(self):
+        return '/AOS' in self._modifiers
+
+    @property
     def outputarg(self):
         return '/O' in self._modifiers or '/IO' in self._modifiers
 
@@ -517,7 +521,9 @@ class ArgInfo(object):
                            "UMat", "vector_UMat"] # or self.tp.startswith("vector")
 
     def crepr(self):
-        return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
+        arg  = 0x01 if self.outputarg else 0x0
+        arg += 0x02 if self.arithm_op_src_arg else 0x0
+        return "ArgInfo(\"%s\", %d)" % (self.name, arg)
 
 
 def find_argument_class_info(argument_type, function_namespace,

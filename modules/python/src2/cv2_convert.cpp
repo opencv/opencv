@@ -74,8 +74,10 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     }
     if( PyTuple_Check(o) )
     {
+        // see https://github.com/opencv/opencv/issues/24057
         int i, sz = (int)PyTuple_Size((PyObject*)o);
-        m = Mat(sz, 1, CV_64F);
+        int sz2 = (info.arithm_op_src && (sz <= 4) )? 4 : sz; // Extend to 4 to handle as Scalar
+        m = Mat(sz2, 1, CV_64F);
         for( i = 0; i < sz; i++ )
         {
             PyObject* oi = PyTuple_GetItem(o, i);
@@ -89,6 +91,10 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
                 m.release();
                 return false;
             }
+        }
+        for( i = sz; i < sz2; i++ ) // Padding 0
+        {
+            m.at<double>(i) = 0.0;
         }
         return true;
     }

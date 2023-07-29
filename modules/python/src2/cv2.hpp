@@ -39,12 +39,20 @@
 
 class ArgInfo
 {
+private:
+    static const int arg_outputarg_flag     = 0x1;
+    static const int arg_arithm_op_src_flag = 0x2;
+
 public:
     const char* name;
     bool outputarg;
+    bool arithm_op_src;
     // more fields may be added if necessary
 
-    ArgInfo(const char* name_, bool outputarg_) : name(name_), outputarg(outputarg_) {}
+    ArgInfo(const char* name_, int arg_) :
+        name(name_),
+        outputarg(arg_ & arg_outputarg_flag),
+        arithm_op_src(arg_ & arg_arithm_op_src_flag) {}
 
 private:
     ArgInfo(const ArgInfo&) = delete;
