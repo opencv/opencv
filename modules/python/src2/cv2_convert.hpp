@@ -286,13 +286,13 @@ bool pyopencv_to(PyObject *obj, std::map<K,V> &map, const ArgInfo& info)
     while(PyDict_Next(obj, &pos, &py_key, &py_value))
     {
         K cpp_key;
-        if (!pyopencv_to(py_key, cpp_key, ArgInfo("key", false))) {
+        if (!pyopencv_to(py_key, cpp_key, ArgInfo("key", 0))) {
             failmsg("Can't parse dict key. Key on position %lu has a wrong type", pos);
             return false;
         }
 
         V cpp_value;
-        if (!pyopencv_to(py_value, cpp_value, ArgInfo("value", false))) {
+        if (!pyopencv_to(py_value, cpp_value, ArgInfo("value", 0))) {
             failmsg("Can't parse dict value. Value on position %lu has a wrong type", pos);
             return false;
         }

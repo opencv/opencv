@@ -813,7 +813,7 @@ bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
     }
     {
         const String centerItemName = format("'%s' center point", info.name);
-        const ArgInfo centerItemInfo(centerItemName.c_str(), false);
+        const ArgInfo centerItemInfo(centerItemName.c_str(), 0);
         SafeSeqItem centerItem(obj, 0);
         if (!pyopencv_to(centerItem.item, dst.center, centerItemInfo))
         {
@@ -822,7 +822,7 @@ bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
     }
     {
         const String sizeItemName = format("'%s' size", info.name);
-        const ArgInfo sizeItemInfo(sizeItemName.c_str(), false);
+        const ArgInfo sizeItemInfo(sizeItemName.c_str(), 0);
         SafeSeqItem sizeItem(obj, 1);
         if (!pyopencv_to(sizeItem.item, dst.size, sizeItemInfo))
         {
@@ -831,7 +831,7 @@ bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
     }
     {
         const String angleItemName = format("'%s' angle", info.name);
-        const ArgInfo angleItemInfo(angleItemName.c_str(), false);
+        const ArgInfo angleItemInfo(angleItemName.c_str(), 0);
         SafeSeqItem angleItem(obj, 2);
         if (!pyopencv_to(angleItem.item, dst.angle, angleItemInfo))
         {
@@ -1081,7 +1081,7 @@ bool pyopencv_to(PyObject* obj, TermCriteria& dst, const ArgInfo& info)
     }
     {
         const String typeItemName = format("'%s' criteria type", info.name);
-        const ArgInfo typeItemInfo(typeItemName.c_str(), false);
+        const ArgInfo typeItemInfo(typeItemName.c_str(), 0);
         SafeSeqItem typeItem(obj, 0);
         if (!pyopencv_to(typeItem.item, dst.type, typeItemInfo))
         {
@@ -1090,7 +1090,7 @@ bool pyopencv_to(PyObject* obj, TermCriteria& dst, const ArgInfo& info)
     }
     {
         const String maxCountItemName = format("'%s' max count", info.name);
-        const ArgInfo maxCountItemInfo(maxCountItemName.c_str(), false);
+        const ArgInfo maxCountItemInfo(maxCountItemName.c_str(), 0);
         SafeSeqItem maxCountItem(obj, 1);
         if (!pyopencv_to(maxCountItem.item, dst.maxCount, maxCountItemInfo))
         {
@@ -1099,7 +1099,7 @@ bool pyopencv_to(PyObject* obj, TermCriteria& dst, const ArgInfo& info)
     }
     {
         const String epsilonItemName = format("'%s' epsilon", info.name);
-        const ArgInfo epsilonItemInfo(epsilonItemName.c_str(), false);
+        const ArgInfo epsilonItemInfo(epsilonItemName.c_str(), 0);
         SafeSeqItem epsilonItem(obj, 2);
         if (!pyopencv_to(epsilonItem.item, dst.epsilon, epsilonItemInfo))
         {
