@@ -26,7 +26,10 @@ PERF_TEST_P_(BroadcastTest, basic)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/ , BroadcastTest,
     testing::Combine(
-        testing::Values(std::vector<int>{10, 100, 1000}),
+        testing::Values(std::vector<int>{1, 10, 100, 1000},
+                        std::vector<int>{1000, 1, 100, 1000},
+                        std::vector<int>{1000, 10, 1, 1000},
+                        std::vector<int>{1000, 10, 100, 1}),
         testing::Values(CV_32FC1),
         testing::Values(std::vector<int>{1000, 10, 100, 1000})
     )
