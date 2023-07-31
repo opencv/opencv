@@ -923,22 +923,22 @@ static bool _flatten_for_broadcast(int narrays, int max_ndims, const int* ndims,
     return true;
 }
 
-void broadcastTo(InputArray _src, InputArray _shape, OutputArray _dst) {
+void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
-    CV_CheckTrue(src.isContinuous(), "broadcastTo: input array must be continuous");
-    CV_CheckChannelsEQ(src.channels(), 1, "broadcastTo: input array must be single channel");
+    CV_CheckTrue(src.isContinuous(), "broadcast: input array must be continuous");
+    CV_CheckChannelsEQ(src.channels(), 1, "broadcast: input array must be single channel");
 
     Mat shape = _shape.getMat();
-    CV_CheckTypeEQ(shape.type(), CV_32S, "broadcastTo: target shape must be of type int32");
+    CV_CheckTypeEQ(shape.type(), CV_32S, "broadcast: target shape must be of type int32");
     const auto dims_shape = static_cast<int>(shape.total());
     const auto *ptr_shape = shape.ptr<int>();
 
     // check valid shape, 1D/0D Mat would fail in the following checks
     const auto dims_src = src.dims;
     CV_CheckLE(dims_src, dims_shape,
-               "broadcastTo: dimension of input array must be less than or equal to dimension of target shape");
+               "broadcast: dimension of input array must be less than or equal to dimension of target shape");
     std::vector<int> shape_src{src.size.p, src.size.p + dims_src};
     if (shape_src.size() < static_cast<size_t>(dims_shape)) {
         shape_src.insert(shape_src.begin(), dims_shape - shape_src.size(), 1);

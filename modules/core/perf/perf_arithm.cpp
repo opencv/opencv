@@ -19,7 +19,7 @@ PERF_TEST_P_(BroadcastTest, basic)
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() cv::broadcastTo(src, shape_dst, dst);
+    TEST_CYCLE() cv::broadcast(src, shape_dst, dst);
 
     SANITY_CHECK_NOTHING();
 }
