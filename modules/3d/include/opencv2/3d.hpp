@@ -2479,6 +2479,8 @@ void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatr
                           TermCriteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 0.01));
 
 
+class CV_EXPORTS OctreeNode;
+
 /** @brief Octree for 3D vision.
  *
  * In 3D vision filed, the Octree is used to process and accelerate the pointcloud data. The class Octree represents
@@ -2650,8 +2652,28 @@ public:
     void KNNSearch(const Point3f& query, const int K, std::vector<Point3f> &pointSet, std::vector<float> &squareDistSet) const;
 
 protected:
-    struct Impl;
+    struct Impl{
+        Impl():maxDepth(0), size(0), origin(0,0,0), resolution(0)
+        {}
+
+        ~Impl()
+        {}
+
+        // The pointer to Octree root node.
+        Ptr <OctreeNode> rootNode = nullptr;
+        //! Max depth of the Octree. And depth must be greater than zero
+        size_t maxDepth;
+        //! The size of the cube of the .
+        double size;
+        //! The origin coordinate of root node.
+        Point3f origin;
+        //! The size of the leaf node.
+        double resolution;
+        //! Whether the point cloud has a color attribute.
+        bool hasColor{};
+    };
     Ptr<Impl> p;
+    friend class OctreeSerializeCoder;
 };
 
 

@@ -30,20 +30,19 @@ namespace cv {
 class OctreeSerializeCoder {
 private:
     Octree *octree;
-    float resolution;
 public:
 
-    OctreeSerializeCoder();
-
-    OctreeSerializeCoder(float resolution);
+    OctreeSerializeCoder(){
+        this->octree=new Octree();
+    };
 
     //! encode Pointcloud data to serialized char vector
     void encode(const std::vector<Point3f> &pointCloud,
-                        std::vector<unsigned char> &serializedVector);
+                std::vector<unsigned char> &serializedVector, double resolution);
 
     //! decode Pointcloud data from serialized char vector
     void decode(const std::vector<unsigned char> &serializedVector,
-                        std::vector<Point3f> &pointCloud);
+                std::vector<Point3f> &pointCloud, Point3f &origin, double resolution);
 };
 
 /** @brief Class to reduce vectorized data size by EntropyCoding
@@ -71,22 +70,23 @@ public:
 */
 class PointCloudCompression{
 private:
-    OctreeSerializeCoder _coder;
-    EntropyCoder _entropyCoder;
+    OctreeSerializeCoder _coder=OctreeSerializeCoder();
+    EntropyCoder _entropyCoder=EntropyCoder();
 public:
-    /** @brief User compress the pointcloud to stream
+    /** @brief User compress the pointcloud to stream.
      *
-     * @param pointCloud the pointcloud to compress
-     * @param outputStream the output compressed bit stream destination
+     * @param pointCloud the pointcloud to compress.
+     * @param resolution the size of the leaf node.
+     * @param outputStream the output compressed bit stream destination.
     */
-    void compress(const std::vector<Point3f> &pointCloud, std::ostream &outputStream);
+    void compress(const std::vector<Point3f> &pointCloud, double resolution, std::ostream &outputStream);
 
-    /** @brief User decompress(recover) pointcloud from stream
+    /** @brief User decompress(recover) pointcloud from stream.
      *
-     * @param inputStream the input compressed bit stream source
-     * @param pointCloud the output pointcloud
+     * @param inputStream the input compressed bit stream source.
+     * @param pointCloud the output pointcloud.
     */
-    void decompress(std::istream &inputStream, const std::vector<Point3f> &pointCloud);
+    void decompress(std::istream &inputStream, std::vector<Point3f> &pointCloud);
 };
 
 }

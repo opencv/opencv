@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "pcc.h"
-
+#include <queue>
 namespace cv{
 
 void EntropyCoder::encodeCharVectorToStream(
@@ -206,17 +206,105 @@ void EntropyCoder::decodeStreamToCharVector(
 }
 
 void traverse(OctreeNode &root, std::vector<unsigned char> &serializedVectorOut) {
+    std::queue<OctreeNode *> nodeQueue;
+    nodeQueue.push(&root);
 
+    while (!nodeQueue.empty()) {
+
+        OctreeNode &node = *(nodeQueue.front());
+        nodeQueue.pop();
+
+        // Stop at last leaf level, no need to encode leaf node
+        if (node.isLeaf) {
+            break;
+        }
+
+        // Push OctreeNode occupancy code
+        serializedVectorOut.push_back(OctreeKey::getBitPattern(node));
+
+        // Further branching
+        for (unsigned char i = 0; i < 8; i++) {
+            if (!node.children[i].empty()) {
+                nodeQueue.push(node.children[i]);
+            }
+        }
+    }
 }
 
-OctreeSerializeCoder::OctreeSerializeCoder(float resolution) : resolution(resolution) {}
+void restore(OctreeNode &root,const std::vector<unsigned char> &serializedVectorIn){
+    std::queue<OctreeNode *> nodeQueue;
+    nodeQueue.push(&root);
+
+    size_t index = 0;
+    size_t index_bound = serializedVectorIn.size();
+
+    // Restore tree
+    while (!nodeQueue.empty()) {
+
+        OctreeNode &node = *(nodeQueue.front());
+        nodeQueue.pop();
+
+        // Octree mode
+        if (index >= index_bound) {
+            // Restore Leaf level
+            node.isLeaf = true;
+            OctreeNode *pNode = &node;
+            while (pNode != nullptr) {
+                ++(pNode->pointNum);
+                pNode = pNode->parent;
+            }
+            continue;
+        }
+        unsigned char mask = 1;
+        unsigned char occup_code = serializedVectorIn[index++];
+
+        for (unsigned char i = 0; i < 8; i++) {
+            if (!!(occup_code & mask)) {
+                node.children[i] = new OctreeNode(node.depth + 1, 0, Point3f(0, 0, 0),
+                                                  Point3f(0, 0, 0), int(i), 0);
+                node.children[i]->parent = &node;
+                nodeQueue.push(node.children[i]);
+            }
+            mask = mask << 1;
+        }
+    }
+}
 
 void OctreeSerializeCoder::encode(const std::vector<Point3f> &pointCloud,
-            std::vector<unsigned char> &serializedVector) {
-    // create octree by pointcloud
-    this->octree->create(pointCloud, this->resolution);
+                                  std::vector<unsigned char> &serializedVector, double resolution) {
+    // create octree by pointCloud
+    this->octree->create(pointCloud, resolution);
 
-    // Encode octree by traverse its occupancy code in BFS order
+    // Encode octree by traverse its occupancy code in BFS order.
+    traverse(*(this->octree->p->rootNode),serializedVector);
+}
+
+void OctreeSerializeCoder::decode(const std::vector<unsigned char> &serializedVector,
+                                  std::vector<Point3f> &pointCloud,Point3f &origin, double resolution){
+    this->octree->clear();
+    this->octree->p->origin=origin;
+    this->octree->p->resolution=resolution;this->octree->p->rootNode=new OctreeNode();
+    restore(*this->octree->p->rootNode,serializedVector);
+    std::vector<Point3f> color;
+    this->octree->getPointCloudByOctree(pointCloud,color);
+}
+
+void PointCloudCompression::compress(const std::vector<Point3f> &pointCloud, double resolution, std::ostream &outputStream) {
+    std::vector<unsigned char> serializedVector;
+    this->_coder.encode(pointCloud,serializedVector,resolution);
+    //TODO: set header.
+
+    this->_entropyCoder.encodeCharVectorToStream(serializedVector,outputStream);
+}
+
+void PointCloudCompression::decompress(std::istream &inputStream, std::vector<Point3f> &pointCloud) {
+    std::vector<unsigned char> outputCharVector;
+    this->_entropyCoder.decodeStreamToCharVector(inputStream,outputCharVector);
+    //TODO: parse header and set the attribute of octree.
+    Point3f origin(0,0,0);
+    double resolution=1;
+    this->_coder.decode(outputCharVector,pointCloud,origin,resolution);
+
 }
 
 }
