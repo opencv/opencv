@@ -858,6 +858,71 @@ void flipND(InputArray _src, OutputArray _dst, int _axis)
     flipNDImpl(dst.ptr(), dst.size.p, dst.step.p, axis);
 }
 
+/*
+    This function first prepends 1 to each tensor shape to have a common max_ndims dimension, then flatten non-broadcast dimensions.
+*/
+static bool _flatten_for_broadcast(int narrays, int max_ndims, const int* ndims, const int** orig_shape,
+                                   int** flatten_shape, size_t** flatten_step) {
+    int i, j, k;
+
+    // step 1.
+    // * make all inputs and the output max_ndims-dimensional.
+    // * compute proper step's
+    for (i = max_ndims - 1; i >= 0; i-- ) {
+        for (k = 0; k < narrays; k++) {
+            j = ndims[k] - (max_ndims - i);
+            int sz_i = j >= 0 ? orig_shape[k][j] : 1;
+            size_t st_i = i == max_ndims - 1 ? 1 : flatten_step[k][i+1] * flatten_shape[k][i+1];
+            flatten_shape[k][i] = sz_i;
+            flatten_step[k][i] = st_i;
+            if (flatten_shape[k][i] == 0)
+                return false;
+        }
+    }
+
+    // step 2. Let's do the flattening first,
+    // since we'd need proper values of steps to check continuity.
+    // this loop is probably the most tricky part
+    // in the whole implementation of broadcasting.
+    j = max_ndims-1;
+    for (i = j - 1; i >= 0; i--) {
+        bool all_contiguous = true, all_scalars = true, all_consistent = true;
+        for(k = 0; k < narrays; k++) {
+            size_t st = flatten_step[k][j] * flatten_shape[k][j];
+            bool prev_scalar = flatten_shape[k][j] == 1;
+            bool scalar = flatten_shape[k][i] == 1;
+            all_contiguous = all_contiguous && (st == flatten_step[k][i]);
+            all_scalars = all_scalars && scalar;
+            all_consistent = all_consistent && (scalar == prev_scalar);
+        }
+        if (all_contiguous && (all_consistent || all_scalars)) {
+            for(k = 0; k < narrays; k++)
+                flatten_shape[k][j] *= flatten_shape[k][i];
+        } else {
+            j--;
+            if (i < j) {
+                for(k = 0; k < narrays; k++) {
+                    flatten_shape[k][j] = flatten_shape[k][i];
+                    flatten_step[k][j] = flatten_step[k][i];
+                }
+            }
+        }
+    }
+
+    // step 3. Set some step's to 0's.
+    for (i = max_ndims-1; i >= j; i--) {
+        for (k = 0; k < narrays; k++)
+            flatten_step[k][i] = flatten_shape[k][i] == 1 ? 0 : flatten_step[k][i];
+    }
+    for (; i >= 0; i--) {
+        for (k = 0; k < narrays; k++) {
+            flatten_step[k][i] = 0;
+            flatten_shape[k][i] = 1;
+        }
+    }
+    return true;
+}
+
 void broadcastTo(InputArray _src, InputArray _shape, OutputArray _dst) {
     CV_INSTRUMENT_REGION();
 
@@ -901,44 +966,111 @@ void broadcastTo(InputArray _src, InputArray _shape, OutputArray _dst) {
         std::memcpy(p_dst, p_src, dst.total() * dst.elemSize());
         return;
     }
-    // initial copy (src to dst)
-    std::vector<size_t> step_src{src.step.p, src.step.p + dims_src};
-    if (step_src.size() < static_cast<size_t>(dims_shape)) {
-        step_src.insert(step_src.begin(), dims_shape - step_src.size(), step_src[0]);
-    }
-    for (size_t i = 0; i < src.total(); ++i) {
-        size_t t = i;
-        size_t src_offset = 0, dst_offset = 0;
-        for (int j = static_cast<int>(shape_src.size() - 1); j >= 0; --j) {
-            size_t idx = t / shape_src[j];
-            size_t offset = static_cast<size_t>(t - idx * shape_src[j]);
-            src_offset += offset * step_src[j];
-            dst_offset += offset * dst.step[j];
-            t = idx;
+    // other cases
+    int max_ndims = std::max(dims_src, dims_shape);
+    const int all_ndims[2] = {src.dims, dst.dims};
+    const int* orig_shapes[2] = {src.size.p, dst.size.p};
+    cv::AutoBuffer<size_t> buff(max_ndims * 4);
+    int* flatten_shapes[2] = {(int*)buff.data(), (int*)(buff.data() + max_ndims)};
+    size_t* flatten_steps[2] = {(size_t*)(buff.data() + 2 * max_ndims), (size_t*)(buff.data() + 3 * max_ndims)};
+    if (_flatten_for_broadcast(2, max_ndims, all_ndims, orig_shapes, flatten_shapes, flatten_steps)) {
+        size_t src_dp = flatten_steps[0][max_ndims - 1];
+        size_t dst_dp = flatten_steps[1][max_ndims - 1];
+        CV_Assert(dst_dp == 1);
+        CV_Assert(max_ndims >= 2); // >= 3?
+        size_t rowstep_src = flatten_steps[0][max_ndims - 2];
+        size_t rowstep_dst = flatten_steps[1][max_ndims - 2];
+        const char* ptr_src = src.ptr<const char>();
+        char* ptr_dst = dst.ptr<char>();
+        size_t esz = src.elemSize();
+        int nrows = flatten_shapes[1][max_ndims - 2];
+        int ncols = flatten_shapes[1][max_ndims - 1];
+        int nplanes = 1;
+        if (esz != 1 && esz != 2 && esz != 4 && esz != 8) {
+            CV_Error(Error::StsNotImplemented, "not supported");
         }
-        const auto *p_src = src.ptr<const char>();
-        auto *p_dst = dst.ptr<char>();
-        std::memcpy(p_dst + dst_offset, p_src + src_offset, dst.elemSize());
-    }
-    // broadcast copy (dst inplace)
-    std::vector<int> cumulative_shape(dims_shape, 1);
-    int total = static_cast<int>(dst.total());
-    for (int i = dims_shape - 1; i >= 0; --i) {
-        cumulative_shape[i] = static_cast<int>(total / ptr_shape[i]);
-        total = cumulative_shape[i];
-    }
-    for (int i = dims_shape - 1; i >= 0; --i) {
-        if (is_same_shape[i] == 1) {
-            continue;
+
+        for (int k = 0; k < max_ndims - 2; k++) {
+            nplanes *= flatten_shapes[1][k];
         }
-        auto step = dst.step[i];
-        auto *p_dst = dst.ptr<char>();
-        for (int j = 0; j < cumulative_shape[i]; j++) {
-            for (int k = 0; k < ptr_shape[i] - 1; k++) {
-                std::memcpy(p_dst + step, p_dst, step);
+        for (int plane_idx = 0; plane_idx < nplanes; plane_idx++) {
+            size_t offset_src = 0, offset_dst = 0;
+            size_t idx = (size_t)plane_idx;
+            for (int k = max_ndims - 3; k >= 0; k--) {
+                size_t prev_idx = idx / flatten_shapes[1][k];
+                size_t i_k = (int)(idx - prev_idx * flatten_shapes[1][k]);
+                offset_src += i_k * flatten_steps[0][k];
+                offset_dst += i_k * flatten_steps[1][k];
+                idx = prev_idx;
+            }
+
+            #define OPENCV_CORE_BROADCAST_LOOP(_Tp) \
+                for (int i = 0; i < nrows; i++) {   \
+                    const _Tp *ptr_src_ = (const _Tp*)ptr_src + offset_src + rowstep_src * i; \
+                    _Tp *ptr_dst_ = (_Tp*)ptr_dst + offset_dst + rowstep_dst * i; \
+                    if (src_dp == 1) { \
+                        for (int j = 0; j < ncols; j++) { \
+                            ptr_dst_[j] = ptr_src_[j]; \
+                        } \
+                    } else { \
+                        _Tp x = *ptr_src_; \
+                        for (int j = 0; j < ncols; j++) { \
+                            ptr_dst_[j] = x; \
+                        } \
+                    } \
+                }
+
+            if (esz == 1) {
+                OPENCV_CORE_BROADCAST_LOOP(int8_t);
+            } else if (esz == 2) {
+                OPENCV_CORE_BROADCAST_LOOP(int16_t);
+            } else if (esz == 4) {
+                OPENCV_CORE_BROADCAST_LOOP(int32_t);
+            } else if (esz == 8) {
+                OPENCV_CORE_BROADCAST_LOOP(int64_t);
+            }
+            #undef OPENCV_CORE_BROADCAST_LOOP
+        }
+    } else {
+        // initial copy (src to dst)
+        std::vector<size_t> step_src{src.step.p, src.step.p + dims_src};
+        if (step_src.size() < static_cast<size_t>(dims_shape)) {
+            step_src.insert(step_src.begin(), dims_shape - step_src.size(), step_src[0]);
+        }
+        for (size_t i = 0; i < src.total(); ++i) {
+            size_t t = i;
+            size_t src_offset = 0, dst_offset = 0;
+            for (int j = static_cast<int>(shape_src.size() - 1); j >= 0; --j) {
+                size_t idx = t / shape_src[j];
+                size_t offset = static_cast<size_t>(t - idx * shape_src[j]);
+                src_offset += offset * step_src[j];
+                dst_offset += offset * dst.step[j];
+                t = idx;
+            }
+            const auto *p_src = src.ptr<const char>();
+            auto *p_dst = dst.ptr<char>();
+            std::memcpy(p_dst + dst_offset, p_src + src_offset, dst.elemSize());
+        }
+        // broadcast copy (dst inplace)
+        std::vector<int> cumulative_shape(dims_shape, 1);
+        int total = static_cast<int>(dst.total());
+        for (int i = dims_shape - 1; i >= 0; --i) {
+            cumulative_shape[i] = static_cast<int>(total / ptr_shape[i]);
+            total = cumulative_shape[i];
+        }
+        for (int i = dims_shape - 1; i >= 0; --i) {
+            if (is_same_shape[i] == 1) {
+                continue;
+            }
+            auto step = dst.step[i];
+            auto *p_dst = dst.ptr<char>();
+            for (int j = 0; j < cumulative_shape[i]; j++) {
+                for (int k = 0; k < ptr_shape[i] - 1; k++) {
+                    std::memcpy(p_dst + step, p_dst, step);
+                    p_dst += step;
+                }
                 p_dst += step;
             }
-            p_dst += step;
         }
     }
 }
