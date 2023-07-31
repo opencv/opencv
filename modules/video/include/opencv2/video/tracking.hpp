@@ -888,6 +888,65 @@ public:
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
+
+enum TrackState { NEW = 0, TRACKED, LOST};
+
+class CV_EXPORTS_W Track
+{
+public:
+    Rect rect;
+    float classScore;
+    int classLabel; // static_cast<> ()
+    int trackingId; // abs(tracking_id) <= (1 << 24) or tracking_id % (1 << 24)
+};
+
+
+class CV_EXPORTS_W Detection
+{
+public:
+    Rect rect;
+    int classLabel;
+    float classScore;
+};
+
+
+/** @brief Base abstract class for multiple object tracker (MOT)
+ */
+class CV_EXPORTS_W MultiTracker
+{
+protected:
+    MultiTracker();
+public:
+    virtual ~MultiTracker();
+
+
+    /** @brief Initialize the tracker with a known bounding box that surrounded the target
+    @param image The initial frame
+    @param boundingBox The initial bounding box
+    */
+    //CV_WRAP virtual
+    //void init(InputArray image, const Rect& boundingBox) = 0;
+    //im not sure if I need an init here
+
+    /** @brief Update the tracker, find the new most likely bounding boxes for each target
+    @param detections current frame detections
+    @param tracks The bounding boxes that represent the new target locations
+
+    @return True means that some target was located and false means that tracker cannot locate any target in current frame. Note, that latter *does not* imply that tracker has failed, maybe targets are indeed missing from the frame (say, out of sight)
+    */
+    CV_WRAP virtual
+    bool update(InputArray inputDetections, CV_OUT cv::OutputArray& outputTracks) = 0; // Wrapper for python
+
+    /** @brief Update the tracker, find the new most likely bounding boxes for each target
+    @param detections current frame detections
+    @param tracks The bounding boxes that represent the new target locations
+
+    @return True means that some target was located and false means that tracker cannot locate any target in current frame. Note, that latter *does not* imply that tracker has failed, maybe targets are indeed missing from the frame (say, out of sight)
+    */
+    //CV_WRAP virtual
+    //void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) = 0;
+};
+
 /** @brief ByteTrack is a simple, fast and strong multi-object tracker.
  *
  * [ECCV 2022] ByteTrack: Multi-Object Tracking by Associating Every Detection Box. ByteTracker needs one model for object detection.
@@ -898,28 +957,17 @@ public:
  * Author: Yifu Zhang, https://github.com/ifzhang
  */
 
-enum TrackState { NEW = 0, TRACKED, LOST};
-
-class CV_EXPORTS_W Detection
-{
-public:
-    int classId;
-    float confidence;
-    cv::Rect box;
-};
-
-
-class CV_EXPORTS_W Strack {
+class CV_EXPORTS_W Strack : public Track {
 public:
     Strack();
-    Strack(Rect tlwh, int classId, float score);
+    Strack(Rect2d tlwh, int classId, float score);
     int getId() const;
-    cv::Rect getTlwh() const;
-    void setTlwh(cv::Rect tlwh);
+    cv::Rect2d getTlwh() const;
+    void setTlwh(cv::Rect2d tlwh);
     TrackState getState() const;
     void setState(TrackState);
     int getClass();
-    cv::Rect predict();
+    cv::Rect2d predict();
     void update(Strack& track);
     void activate(int frame, int id);
     void reactivate(Strack& track, int frame);
@@ -930,19 +978,18 @@ public:
     ~Strack();
 
 private:
-    cv::Rect tlwh_;
-    int trackId_;
-    int classId_;
+    //cv::Rect tlwh_; //rect
+    //int trackId_; //trackingId
+    //int classId_; //classLabel
     TrackState state_;
     int trackletLen_;
-    float score_;
+    //float score_; //classScore
     int startFrame_;
     cv::KalmanFilter kalmanFilter_;
 
 };
 
-
-class CV_EXPORTS_W ByteTracker {
+class CV_EXPORTS_W ByteTracker : public MultiTracker {
 protected:
     ByteTracker();
 public:
@@ -957,9 +1004,11 @@ public:
 
     static CV_WRAP
     Ptr<ByteTracker> create(const ByteTracker::Params& parameters = ByteTracker::Params());
-    //CV_WRAP bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks);
-    CV_WRAP
-    virtual bool update(InputArray inputDetections, CV_OUT OutputArray& outputTracks) = 0;
+
+    CV_WRAP bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks) CV_OVERRIDE = 0;
+
+    //CV_WRAP virtual
+    void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks);
 
 };
 
