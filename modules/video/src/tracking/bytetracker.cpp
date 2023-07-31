@@ -40,6 +40,10 @@ ByteTracker::Params::Params()
     frameRate = 30;
     frameBuffer = 30;
 }
+void ByteTracker::update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks)
+{
+    //nothing
+}
 
 class ByteTrackerImpl : public ByteTracker
 {
@@ -51,12 +55,13 @@ public:
         matchThreshold_ = 0.7f;
         lastId_ = 0;
         frame_ = 0;
-        maxTimeLost_ = static_cast<int>(params_.frameRate / 30.0f * params_.frameBuffer);
+        maxTimeLost_ = params_.frameRate / 30.0f * params_.frameBuffer;
     }
 
     void init(InputArray image, Rect& boundingBox);
     //std::vector<std::vector<float>> update(std::vector<std::vector<float>>)
     bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks) CV_OVERRIDE;
+
     //Scalar get_color(int idx);
     int getFrame();
     void incrementFrame();
@@ -84,7 +89,7 @@ protected:
     Mat getCostMatrix(unordered_map<int, Strack>& atracks, vector<Strack> &btracks);
 
 
-    Mat calculateIous(vector<Rect>& atlwhs, vector<Rect> &btlwhs);
+    Mat calculateIous(vector<Rect2d>& atlwhs, vector<Rect2d> &btlwhs);
 
 
     unordered_map<int, Strack> joinStracks(const vector<Strack>& trackA, vector<Strack>& trackB);
@@ -124,7 +129,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     for (auto& pair : strackPool)
     {
         Strack& track = pair.second;
-        cv::Rect prediction = track.predict(); // cx cy w h
+        cv::Rect2d prediction = track.predict(); // cx cy w h
         prediction.x -= prediction.width;
         prediction.y -= prediction.height;
         track.setTlwh(prediction);
@@ -152,7 +157,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     matches = lapjv(dists); // returns a map (track_i,matched_det_index)
 
     // Find unmatched track indexes
-    for (int trackIndex = 0; trackIndex < static_cast<int>(strackPool.size()); ++trackIndex)
+    for (size_t trackIndex = 0; trackIndex < strackPool.size(); ++trackIndex)
     {
         if (matches.find(trackIndex) == matches.end())
         {
@@ -161,13 +166,13 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     }
 
     // Find unmatched detection indexes
-    for (int detectionIndex = 0; detectionIndex < static_cast<int>(detections.size());
+    for (size_t detectionIndex = 0; detectionIndex < detections.size();
         ++detectionIndex)
     {
         bool matched = false;
         for (const auto &match : matches)
         {
-            int matchedDetectionIndex = match.second;
+            size_t matchedDetectionIndex = match.second;
             if (detectionIndex == matchedDetectionIndex)
             {
                 matched = true;
@@ -181,13 +186,13 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     }
 
     // remain tracks and dets
-    for (int i = 0; i < static_cast<int>(strackIndex.size()); i++)
+    for (size_t i = 0; i < strackIndex.size(); i++)
     {
         int key = indexToKey[strackIndex[i]];
         Strack track = strackPool[key];
         remainTracks.push_back(track);
     }
-    for (int j = 0; j < static_cast<int>(detectionsIndex.size()); j++)
+    for (size_t j = 0; j < detectionsIndex.size(); j++)
     {
         remainDets.push_back(detections[detectionsIndex[j]]);
     }
@@ -218,7 +223,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     matches = lapjv(dists);
 
     // Find unmatched track indexes
-    for (int trackIndex = 0; trackIndex < static_cast<int>(remainTracks.size()); ++trackIndex)
+    for (size_t trackIndex = 0; trackIndex < remainTracks.size(); ++trackIndex)
     {
         if (matches.find(trackIndex) == matches.end())
         {
@@ -227,7 +232,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     }
 
 
-    for (int i = 0; i < static_cast<int>(strackIndex.size()); i++)
+    for (size_t i = 0; i < strackIndex.size(); i++)
     {
         reRemainTracks.push_back(remainTracks[strackIndex[i]]);
     }
@@ -252,7 +257,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     }
 
     // initialize new tracks
-    for (int i = 0; i < static_cast<int>(remainDets.size()); i++)
+    for (size_t i = 0; i < remainDets.size(); i++)
     {
         Strack newTrack = remainDets[i];
         newTrack.activate(getFrame(), lastId_++);
@@ -286,20 +291,20 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
         lostStracks_.erase(key);
     }
 
-    cv::Mat trackData(static_cast<int>(trackedStracks_.size()), 7, CV_32F);
+    cv::Mat trackData(trackedStracks_.size(), 7, CV_32F);
     int row = 0;
     for (auto &track : trackedStracks_)
     {
 
         float* data = trackData.ptr<float>(row);
-        Rect tlwh = track.second.getTlwh();
-        data[0] = static_cast<float>(tlwh.x);
-        data[1] = static_cast<float>(tlwh.y);
-        data[2] = static_cast<float>(tlwh.width);
-        data[3] = static_cast<float>(tlwh.height);
-        data[4] = static_cast<float>(track.second.getClass());
+        Rect2d tlwh = track.second.getTlwh();
+        data[0] = tlwh.x;
+        data[1] = tlwh.y;
+        data[2] = tlwh.width;
+        data[3] = tlwh.height;
+        data[4] = track.second.getClass();
         data[5] = track.second.getScore();
-        data[6] = static_cast<float>(track.second.getId());
+        data[6] = track.second.getId();
 
         ++row;
     }
@@ -317,15 +322,15 @@ void ByteTrackerImpl::getDetections(InputArray& inputObjects, vector<Strack>& de
     incrementFrame(); // update frame
     for (int i = 0; i < objects.rows; i++)
     {
-        Rect box;
+        Rect2d box;
         float score;
         int classId;
 
-        box.x = static_cast<int>(objects.at<float>(i, 0));
-        box.y = static_cast<int>(objects.at<float>(i, 1));
-        box.width = static_cast<int>(objects.at<float>(i, 2));
-        box.height = static_cast<int>(objects.at<float>(i, 3));
-        classId = static_cast<int>(objects.at<float>(i, 4));
+        box.x = objects.at<float>(i, 0);
+        box.y = objects.at<float>(i, 1);
+        box.width = objects.at<float>(i, 2);
+        box.height = objects.at<float>(i, 3);
+        classId = objects.at<float>(i, 4);
         score = objects.at<float>(i, 5);
 
         Strack strack(box, classId, score);
@@ -362,7 +367,7 @@ Mat ByteTrackerImpl::getCostMatrix(vector<Strack> &atracks, vector<Strack> &btra
         return costMatrix; // returns empty matrix
     }
 
-    vector<Rect> atlwhs, btlwhs;
+    vector<Rect2d> atlwhs, btlwhs;
     for (auto& track : atracks)
     {
         atlwhs.push_back(track.getTlwh());
@@ -386,16 +391,16 @@ Mat ByteTrackerImpl::getCostMatrix(unordered_map<int, Strack> &atracks, vector<S
         return costMatrix; // returns empty matrix
     }
 
-    vector<Rect> atlwhs, btlwhs;
+    vector<Rect2d> atlwhs, btlwhs;
     for (auto &pair : atracks)
     {
-        Rect tlwh = pair.second.getTlwh();
+        Rect2d tlwh = pair.second.getTlwh();
         atlwhs.push_back(tlwh);
     }
 
     for (auto &track : btracks)
     {
-        Rect tlwh = track.getTlwh();
+        Rect2d tlwh = track.getTlwh();
         btlwhs.push_back(tlwh);
     }
 
@@ -406,7 +411,7 @@ Mat ByteTrackerImpl::getCostMatrix(unordered_map<int, Strack> &atracks, vector<S
 }
 
 
-Mat ByteTrackerImpl::calculateIous(vector<Rect> &atlwhs, vector<Rect> &btlwhs)
+Mat ByteTrackerImpl::calculateIous(vector<Rect2d> &atlwhs, vector<Rect2d> &btlwhs)
 {
     Mat iousMatrix;
     if (atlwhs.empty() || btlwhs.empty())
@@ -414,17 +419,17 @@ Mat ByteTrackerImpl::calculateIous(vector<Rect> &atlwhs, vector<Rect> &btlwhs)
         return iousMatrix;
     }
 
-    iousMatrix.create(static_cast<int>(atlwhs.size()), static_cast<int>(btlwhs.size()), CV_32F);
+    iousMatrix.create(atlwhs.size(), btlwhs.size(), CV_32F);
 
     // bbox_ious
-    for (int i = 0; i < static_cast<int>(atlwhs.size()); ++i)
+    for (size_t i = 0; i < atlwhs.size(); ++i)
     {
-        for (int j = 0; j < static_cast<int>(btlwhs.size()); ++j)
+        for (size_t j = 0; j < btlwhs.size(); ++j)
         {
-            cv::Rect intersection = atlwhs[i] & btlwhs[j];
-            cv::Rect unionRect = atlwhs[i] | btlwhs[j];
-            float intersectionArea = static_cast<float>(intersection.area());
-            float unionArea = static_cast<float>(unionRect.area());
+            cv::Rect2d intersection = atlwhs[i] & btlwhs[j];
+            cv::Rect2d unionRect = atlwhs[i] | btlwhs[j];
+            float intersectionArea = intersection.area();
+            float unionArea = unionRect.area();
             iousMatrix.at<float>(i, j) = intersectionArea / unionArea;
         }
     }

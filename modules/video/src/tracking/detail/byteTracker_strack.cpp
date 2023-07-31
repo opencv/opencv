@@ -15,8 +15,8 @@ namespace cv {
 
 Strack::Strack()
 {
-    trackId_ = 0;
-    classId_ = 0;
+    trackingId = 0;
+    classLabel = 0;
     state_ = TrackState::NEW;
     trackletLen_ = 0;
     startFrame_ = 0;
@@ -28,9 +28,12 @@ Strack::~Strack()
     //nothing
 }
 
-Strack::Strack(cv::Rect tlwh,  int classId, float score) : tlwh_(tlwh), classId_(classId), score_(score)
+Strack::Strack(cv::Rect2d tlwh,  int classId, float score)
 {
-    trackId_ = 0;
+    rect = tlwh;
+    classLabel = classId;
+    classScore = score;
+    trackingId = 0;
     state_ = TrackState::NEW;
     trackletLen_ = 0;
     startFrame_ = 0;
@@ -40,17 +43,17 @@ Strack::Strack(cv::Rect tlwh,  int classId, float score) : tlwh_(tlwh), classId_
 
 int Strack::getId() const
 {
-  return trackId_;
+  return trackingId;
 }
 
-cv::Rect Strack::getTlwh() const
+cv::Rect2d Strack::getTlwh() const
 {
-  return tlwh_;
+  return rect;
 }
 
-void Strack::setTlwh(cv::Rect tlwh)
+void Strack::setTlwh(cv::Rect2d tlwh)
 {
-    tlwh_ = tlwh;
+    rect = tlwh;
 }
 
 TrackState Strack::getState() const
@@ -65,7 +68,7 @@ void Strack::setState(TrackState state)
 
 int Strack::getClass()
 {
-    return classId_;
+    return classLabel;
 }
 
 void Strack::activate(int frame, int id)
@@ -73,7 +76,7 @@ void Strack::activate(int frame, int id)
     startFrame_ = frame;
     trackletLen_ = 0;
     state_ = TrackState::TRACKED;
-    trackId_ = id;
+    trackingId = id;
 
     kalmanFilter_.measurementMatrix = cv::Mat::eye(4, 8, CV_32F); //H mat
 
@@ -100,10 +103,10 @@ void Strack::activate(int frame, int id)
     kalmanFilter_.processNoiseCov.at<float>(4,4) = static_cast<float>(1e-4);
     kalmanFilter_.processNoiseCov.at<float>(5,5) = static_cast<float>(1e-4);
 
-    float cx = static_cast<float>(tlwh_.x + tlwh_.width);
-    float cy = static_cast<float>(tlwh_.y + tlwh_.height);
-    float w = static_cast<float>(tlwh_.width);
-    float h = static_cast<float>(tlwh_.height);
+    float cx = rect.x + rect.width;
+    float cy = rect.y + rect.height;
+    float w = rect.width;
+    float h = rect.height;
     kalmanFilter_.statePre = (cv::Mat_<float>(8,1,CV_32F) << cx, cy, w, h, 0, 0, 0, 0);
     kalmanFilter_.statePost = (cv::Mat_<float>(8,1,CV_32F) << cx, cy, w, h, 0, 0, 0, 0);
 
@@ -113,14 +116,14 @@ void Strack::update(Strack& track)
 {
     trackletLen_++;
 
-    float cx = static_cast<float>(track.tlwh_.x + track.tlwh_.width);
-    float cy = static_cast<float>(track.tlwh_.y + track.tlwh_.height);
-    float w = static_cast<float>(track.tlwh_.width);
-    float h = static_cast<float>(track.tlwh_.height);
+    float cx = track.rect.x + track.rect.width;
+    float cy = track.rect.y + track.rect.height;
+    float w = track.rect.width;
+    float h = track.rect.height;
 
     cv::Mat measurement = (cv::Mat_<float>(4,1) << cx, cy, w, h);
     kalmanFilter_.correct(measurement);
-    score_ = track.score_;
+    classScore = track.classScore;
 
 }
 
@@ -146,21 +149,21 @@ void Strack::setTrackletLen(int val)
     trackletLen_= val;
 }
 
-cv::Rect Strack::predict()
+cv::Rect2d Strack::predict()
 {
     cv::Mat predictionMat = kalmanFilter_.predict();
-    cv::Rect prediction(
-        static_cast<int>(predictionMat.at<float>(0)),
-        static_cast<int>(predictionMat.at<float>(1)),
-        static_cast<int>(predictionMat.at<float>(2)),
-        static_cast<int>(predictionMat.at<float>(3))
+    cv::Rect2d prediction(
+        predictionMat.at<float>(0),
+        predictionMat.at<float>(1),
+        predictionMat.at<float>(2),
+        predictionMat.at<float>(3)
     );
     return prediction;
 }
 
 float Strack::getScore() const
 {
-    return score_;
+    return classScore;
 }
 
 }
