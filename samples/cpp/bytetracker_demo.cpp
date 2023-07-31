@@ -303,9 +303,9 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
         // Draw class labels.
         drawLabel(inputImage, label, left, top);
         Detection det;
-        det.box = box;
-        det.confidence = confidences[idx];
-        det.classId = classIds[idx];
+        det.rect = box;
+        det.classScore = confidences[idx];
+        det.classLabel = classIds[idx];
         object.push_back(det);
     }
 
@@ -352,12 +352,12 @@ void writeDetectionsToFile(const vector<Detection> objects, const string &output
     for (const auto object : objects)
     {
         // Extract the detection data (frame, trackId, x, y, width, height, score, classId)
-        int y = object.box.y;
-        int x = object.box.x;
-        int width = object.box.width;
-        int height = object.box.height;
-        float score = object.confidence;
-        int classId = object.classId;
+        int y = object.rect.y;
+        int x = object.rect.x;
+        int width = object.rect.width;
+        int height = object.rect.height;
+        float score = object.classScore;
+        int classId = object.classLabel;
 
         // Write the data to the output file
         outputFile << frameNumber << ", " << -1 << ", " << x << ", " << y << ", " << width << ", " << height << ", " << score << ", "<<classId << endl;
@@ -426,12 +426,12 @@ Mat detectionToMat(vector<Detection> objs)
         const Detection& detection = objs[i];
         cv::Mat row = output.row(i);
 
-        row.at<float>(0) = static_cast<float>(detection.box.x);
-        row.at<float>(1) = static_cast<float>(detection.box.y);
-        row.at<float>(2) = static_cast<float>(detection.box.width);
-        row.at<float>(3) = static_cast<float>(detection.box.height);
-        row.at<float>(4) = static_cast<float>(detection.classId);
-        row.at<float>(5) = detection.confidence;
+        row.at<float>(0) = static_cast<float>(detection.rect.x);
+        row.at<float>(1) = static_cast<float>(detection.rect.y);
+        row.at<float>(2) = static_cast<float>(detection.rect.width);
+        row.at<float>(3) = static_cast<float>(detection.rect.height);
+        row.at<float>(4) = static_cast<float>(detection.classLabel);
+        row.at<float>(5) = detection.classScore;
     }
 
     return output;
