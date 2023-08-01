@@ -74,6 +74,10 @@ if(POLICY CMP0077)
   cmake_policy(SET CMP0077 NEW)  # CMake 3.13+: option() honors normal variables.
 endif()
 
+if(POLICY CMP0146)
+  cmake_policy(SET CMP0146 OLD)  # CMake 3.27+: use CMake FindCUDA if available.
+endif()
+
 #
 # Configure OpenCV CMake hooks
 #
