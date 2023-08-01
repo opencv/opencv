@@ -136,6 +136,7 @@ public:
 #ifdef HAVE_OPENCL
     bool fast_forward_ocl(std::vector<UMat> &inputs, std::vector<UMat> &outputs)
     {
+        std::cout << "fast_forward_ocl" << std::endl;
         if (umat_scale.empty() && !scale.empty())
             scale.copyTo(umat_scale);
         if (umat_shift.empty() && !shift.empty())
@@ -150,7 +151,7 @@ public:
                              LOCAL_SIZE
         );
 
-        for (size_t inpIdx = 0; inpIdx < inputs.size(); inpIdx++)
+        for (size_t inpIdx = 0; inpIdx < 1; inpIdx++)
         {
             UMat &inpMat = inputs[inpIdx];
             UMat &outMat = outputs[inpIdx];
@@ -214,6 +215,13 @@ public:
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
+        if (inputs.size() > 1) {
+            bnorm_weight = inputs[1];
+            if (inputs.size() > 2) {
+                bnorm_bias = inputs[2];
+            }
+        }
+
         int row_size = total(shape(inputs[0]), 0, axis);
         int plane_size = total(shape(inputs[0]), axis);
         if (normVariance && (row_size % 4 == 0) && (plane_size % 4 == 0))
@@ -224,7 +232,7 @@ public:
 
         String opts = format(" -DT=float -DT4=float4 -Dconvert_T=convert_float4");
 
-        for (size_t inpIdx = 0; inpIdx < inputs.size(); inpIdx++)
+        for (size_t inpIdx = 0; inpIdx < 1; inpIdx++)
         {
             UMat &inpMat = inputs[inpIdx];
             UMat &outMat = outputs[inpIdx];
@@ -269,9 +277,10 @@ public:
             }
 
             String kname = format("mvn%d", number);
-            buildopt += format("%s%s%s -DKERNEL_MVN", (normVariance) ? " -DNORM_VARIANCE" : "",
+            buildopt += format("%s%s%s%s -DKERNEL_MVN", (normVariance) ? " -DNORM_VARIANCE" : "",
                                (fuse_batch_norm) ? " -DFUSE_BATCH_NORM" : "",
-                               (fuse_relu) ? " -DFUSE_RELU" : "");
+                               (fuse_relu) ? " -DFUSE_RELU" : "",
+                               (!bnorm_weight.empty() && bnorm_weight.total() != newRows) ? " -DFUSE_SCALES" : "");
             ocl::Kernel kernel1(kname.c_str(), ocl::dnn::mvn_oclsrc, buildopt);
             if (kernel1.empty())
                 return false;
