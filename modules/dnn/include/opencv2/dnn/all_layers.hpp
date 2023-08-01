@@ -1098,7 +1098,7 @@ CV__DNN_INLINE_NS_BEGIN
         int axis;
         float epsilon;
 
-        static Ptr<Layer> create(const LayerParams& params);
+        static Ptr<LayerNormLayer> create(const LayerParams& params);
     };
 
 //! @}
