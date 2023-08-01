@@ -417,7 +417,7 @@ public:
         attr_axis->set_i(axis);
         // epsilon
         opencv_onnx::AttributeProto* attr_epsilon = node->add_attribute();
-        attr_epsilon->set_name("eps");
+        attr_epsilon->set_name("epsilon");
         attr_epsilon->set_f(epsilon);
         // add input
         node->add_input(weight_name);

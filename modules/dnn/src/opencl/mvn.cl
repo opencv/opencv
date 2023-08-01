@@ -126,15 +126,18 @@ __kernel void MVN(__global const Dtype* src,
     alpha = 1;
 #endif
 
-    Dtype w = 1.f, b = 0.f;
-#ifdef FUSE_BATCH_NORM
+    vec_type w = 1.f, b = 0.f;
+#ifdef FUSE_SCALES
+    w = load(bnorm_weight, y);
+    b = load(bnorm_bias, y);
+#elif defined FUSE_BATCH_NORM
     w = bnorm_weight[x % channels];
     b = bnorm_bias[x % channels];
 #endif
 
     vec_type src_vec = load(src, index) - (vec_type)mean_val;
     vec_type dst_vec = src_vec * alpha;
-    dst_vec = dst_vec * w + (vec_type)b;
+    dst_vec = dst_vec * w + b;
 
 #ifdef FUSE_RELU
     vec_type new_val = dst_vec * relu_slope;
