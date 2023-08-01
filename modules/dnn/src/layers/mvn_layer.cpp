@@ -71,6 +71,7 @@ public:
         setParamsFrom(params);
         normVariance = params.get<bool>("normalize_variance", true);
         acrossChannels = params.get<bool>("across_channels", false);
+        axis = params.get<int>("axis", acrossChannels ? 1 : 2);
         eps = params.get<double>("eps", 1e-9);
         fuse_batch_norm = false;
         fuse_relu = false;
@@ -111,9 +112,8 @@ public:
     {
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
-        int splitDim = (acrossChannels) ? 1 : 2;
         int i, newRows = 1;
-        for( i = 0; i < splitDim; i++ )
+        for( i = 0; i < axis; i++ )
             newRows *= inputs[0].size[i];
         zeroDev = inputs[0].total() == newRows;
 #ifdef HAVE_OPENCL
@@ -150,12 +150,11 @@ public:
                              LOCAL_SIZE
         );
 
-        int splitDim = (acrossChannels) ? 1 : 2;
         for (size_t inpIdx = 0; inpIdx < inputs.size(); inpIdx++)
         {
             UMat &inpMat = inputs[inpIdx];
             UMat &outMat = outputs[inpIdx];
-            int newRows = total(shape(inpMat), 0, splitDim);
+            int newRows = total(shape(inpMat), 0, axis);
             CV_Assert(newRows != 0);
 
             MatShape s = shape(newRows, inpMat.total() / newRows);
@@ -215,9 +214,8 @@ public:
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
-        int splitDim = (acrossChannels) ? 1 : 2;
-        int row_size = total(shape(inputs[0]), 0, splitDim);
-        int plane_size = total(shape(inputs[0]), splitDim);
+        int row_size = total(shape(inputs[0]), 0, axis);
+        int plane_size = total(shape(inputs[0]), axis);
         if (normVariance && (row_size % 4 == 0) && (plane_size % 4 == 0))
             return fast_forward_ocl(inputs, outputs);
 
@@ -230,7 +228,7 @@ public:
         {
             UMat &inpMat = inputs[inpIdx];
             UMat &outMat = outputs[inpIdx];
-            int newRows = total(shape(inpMat), 0, splitDim);
+            int newRows = total(shape(inpMat), 0, axis);
             CV_Assert(newRows != 0);
 
             MatShape s = shape(newRows, inpMat.total() / newRows);
@@ -314,15 +312,20 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
+        if (scale.empty() && inputs.size() > 1) {
+            scale = inputs[1];
+        }
+        if (shift.empty() && inputs.size() > 2) {
+            shift = inputs[2];
+        }
 
-        for (size_t inpIdx = 0; inpIdx < inputs.size(); inpIdx++)
+        for (size_t inpIdx = 0; inpIdx < 1; inpIdx++)
         {
             Mat &inpBlob = inputs[inpIdx];
             Mat &outBlob = outputs[inpIdx];
 
-            int splitDim = (acrossChannels) ? 1 : 2;
             int i, newRows = 1;
-            for( i = 0; i < splitDim; i++ )
+            for( i = 0; i < axis; i++ )
                 newRows *= inpBlob.size[i];
 
             Mat inpMat = inpBlob.reshape(1, newRows);
@@ -350,32 +353,34 @@ public:
             {
                 Mat inpRow = inpMat.row(i);
                 Mat outRow = outMat.row(i);
-                float weight = 1.f;
-                float bias = 0.f;
-                if (fuse_batch_norm)
-                {
-                    weight = i < scale.cols ? ((float*)scale.data)[i] : weight;
-                    bias = i < shift.cols ? ((float*)shift.data)[i] : bias;
-                }
+
                 cv::meanStdDev(inpRow, mean, (normVariance) ? dev : noArray());
                 double alpha = 1;
                 if (normVariance)
                 {
                     alpha = 1 / std::sqrt(eps + dev[0]*dev[0]);
                 }
-                double normalizationScale = 1.0;
-                double normalizationShift = 0.0;
-                if (fuse_batch_norm)
+
+                if (scale.empty() || scale.total() == newRows)
                 {
-                    normalizationScale = alpha * weight;
-                    normalizationShift = -mean[0] * normalizationScale + bias;
+                    double normalizationScale = alpha;
+                    double normalizationShift = -mean[0] * alpha;
+                    if (!scale.empty())
+                    {
+                        float weight = scale.ptr<float>()[i];
+                        float bias = shift.ptr<float>()[i];
+                        normalizationScale *= weight;
+                        normalizationShift = normalizationShift * weight + bias;
+                    }
+                    inpRow.convertTo(outRow, outRow.type(), normalizationScale, normalizationShift);
                 }
                 else
                 {
-                    normalizationScale = alpha;
-                    normalizationShift = -mean[0] * alpha;
+                    Mat scaleRow = scale.reshape(1, 1);
+                    Mat shiftRow = shift.reshape(1, 1);
+                    multiply(inpRow - mean[0], scaleRow, outRow, alpha);
+                    outRow += shiftRow;
                 }
-                inpRow.convertTo(outRow, outRow.type(), normalizationScale, normalizationShift);
             }
         }
     }
@@ -389,9 +394,8 @@ public:
 #if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2021_2)
         auto mvn = std::make_shared<ngraph::op::MVN>(ieInpNode, acrossChannels, normVariance, eps);
 #else
-        int64_t start_axis = acrossChannels ? 1 : 2;
-        std::vector<int64_t> axes_v(ieInpNode->get_shape().size() - start_axis);
-        std::iota(axes_v.begin(), axes_v.end(), start_axis);
+        std::vector<int64_t> axes_v(ieInpNode->get_shape().size() - axis);
+        std::iota(axes_v.begin(), axes_v.end(), axis);
         auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_v.size()}, axes_v.data());
         auto mvn = std::make_shared<ngraph::op::v6::MVN>(ieInpNode, axes, normVariance, eps, ngraph::op::MVNEpsMode::INSIDE_SQRT);
 #endif
@@ -409,7 +413,7 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
         cuda4dnn::MVNConfiguration config;
-        config.split_axis = acrossChannels ? 1 : 2;
+        config.split_axis = axis;
         config.normalize_variance = normVariance;
         config.epsilon = eps;
         config.input_shapes.resize(inputs.size());
@@ -435,6 +439,9 @@ public:
         }
         return flops;
     }
+
+private:
+    int axis;
 };
 
 Ptr<MVNLayer> MVNLayer::create(const LayerParams& params)

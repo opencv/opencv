@@ -323,10 +323,10 @@ public:
         int sqrt = addNodeToMatch("Sqrt", add);
 
         int div = addNodeToMatch("Div", sub, sqrt);
-        // int mul = addNodeToMatch("Mul", div, addNodeToMatch(""));
-        // addNodeToMatch("Add", mul, addNodeToMatch(""));
+        int mul = addNodeToMatch("Mul", div, addNodeToMatch(""));
+        addNodeToMatch("Add", mul, addNodeToMatch(""));
 
-        setFusedNode("MVN", input);
+        setFusedNode("LayerNormalization", input);
     }
 
     static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
@@ -398,8 +398,8 @@ public:
 
             epsilon = extractConstant(net, matchedNodesIds[4], 1);
 
-            // weight_name = getInputName(net, matchedNodesIds[7], 1);
-            // bias_name = getInputName(net, matchedNodesIds[8], 1);
+            weight_name = getInputName(net, matchedNodesIds[7], 1);
+            bias_name = getInputName(net, matchedNodesIds[8], 1);
 
             return true;
         }
@@ -413,22 +413,22 @@ public:
         opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
         // axis
         opencv_onnx::AttributeProto* attr_axis = node->add_attribute();
-        attr_axis->set_name("across_channels");
-        attr_axis->set_i(false);
+        attr_axis->set_name("axis");
+        attr_axis->set_i(axis);
         // epsilon
         opencv_onnx::AttributeProto* attr_epsilon = node->add_attribute();
         attr_epsilon->set_name("eps");
         attr_epsilon->set_f(epsilon);
         // add input
-        // node->add_input(weight_name);
-        // node->add_input(bias_name);
+        node->add_input(weight_name);
+        node->add_input(bias_name);
     }
 
 protected:
     int axis;
     float epsilon;
-    // std::string weight_name;
-    // std::string bias_name;
+    std::string weight_name;
+    std::string bias_name;
 };
 
 class SoftMaxSubgraphBase : public Subgraph
