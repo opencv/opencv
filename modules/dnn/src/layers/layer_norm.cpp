@@ -168,9 +168,11 @@ public:
     }
 };
 
-Ptr<LayerNormLayer> LayerNormLayer::create(const LayerParams& params)
+Ptr<Layer> LayerNormLayer::create(const LayerParams& params)
 {
-    return makePtr<LayerNormLayerImpl>(params);
+    LayerParams mvnParams = params;
+    mvnParams.set("eps", params.get<float>("epsilon", 1e-5));
+    return MVNLayer::create(mvnParams);
 }
 
 }} // cv::dnn
