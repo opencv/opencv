@@ -1947,16 +1947,18 @@ void ONNXImporter::parseBatchNormalization(LayerParams& layerParams, const openc
     addLayer(layerParams, node_proto);
 }
 
-// A * B + C = Y, we require that the dimension of A is [m, k], and the dimension of B is [n, k].
-// And the dim of output Y is [m, n]
 void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
     auto node_proto = node_proto_;
+    layerParams.type = "Gemm";
     CV_CheckGE(node_proto.input_size(), 2, "DNN/ONNXImporter: Gemm requires at least two inputs");
     CV_CheckLE(node_proto.input_size(), 3, "DNN/ONNXImporter: Gemm have at most three inputs.");
 
     // set const for constants if found
     for (int i = 0; i < node_proto.input_size(); ++i) {
+        if (i == 2) {
+            layerParams.set("have_bias", true);
+        }
         if (constBlobs.find(node_proto.input(i)) == constBlobs.end()) {
             continue;
         }
@@ -1967,17 +1969,20 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
 
         Mat blob = getBlob(node_proto, i);
 
-        LayerParams const_params;
+        // LayerParams const_params;
         std::string const_params_name = i == 0 ? "A" : i == 1 ? "B" : "C";
-        const_params.name = layerParams.name + cv::format("/const_%s", const_params_name.c_str());
-        const_params.type = "Const";
-        const_params.blobs.push_back(blob);
+        // const_params.name = layerParams.name + cv::format("/const_%s", const_params_name.c_str());
+        // const_params.type = "Const";
+        // const_params.blobs.push_back(blob);
 
-        opencv_onnx::NodeProto const_node_proto;
-        const_node_proto.add_output(const_params.name);
-        addLayer(const_params, const_node_proto);
+        // opencv_onnx::NodeProto const_node_proto;
+        // const_node_proto.add_output(const_params.name);
+        // addLayer(const_params, const_node_proto);
 
-        node_proto.set_input(i, const_params.name);
+        // node_proto.set_input(i, const_params.name);
+
+        layerParams.blobs.push_back(blob);
+        layerParams.set(cv::format("const%s", const_params_name.c_str()), true);
     }
 
     addLayer(layerParams, node_proto);

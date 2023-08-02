@@ -25,13 +25,28 @@
 // #define FAST_GEMM_F32_VOL (1<<18) // 2^18
 #define FAST_GEMM_F32_MR 8
 #define FAST_GEMM_F32_NR 12
+#define FAST_GEMM_F32_PACKED_STRIDE_K 256
 
 namespace cv { namespace dnn {
 
+void fast_gemm_packA(const Mat &A, std::vector<float> &packed_A, bool trans = false);
+void fast_gemm_packB(const Mat &m, std::vector<float> &packed_B, bool trans = false);
+
+void fast_gemm(bool trans_a, int M, int N, int K,
+               float alpha, const float *A, int lda,
+               const float *packed_B, float beta,
+               float *C, int ldc);
+void fast_gemm(bool trans_b, int M, int N, int K,
+               float alpha, const float *packed_A,
+               const float *B, int ldb, float beta,
+               float *C, int ldc);
+void fast_gemm(int M, int N, int K,
+               float alpha, const float *packed_A,
+               const float *packed_B, float beta,
+               float *C, int ldc);
 void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
               float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
               float beta, float *C, int ldc);
-
 void fast_gemm(bool trans_a, bool trans_b,
                float alpha, const Mat &A, const Mat &B,
                float beta, Mat &C);

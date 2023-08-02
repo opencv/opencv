@@ -79,6 +79,80 @@ static void fast_gemm_pack##N##suffix( int m, int k, const void* A_, \
 FAST_GEMM_IMPLEMENT_PACK(8, _f32, float, float)
 FAST_GEMM_IMPLEMENT_PACK(12, _f32, float, float)
 
+void fast_gemm_packA(const Mat &A, std::vector<float> &packed_A, bool trans) {
+    CV_CheckEQ(A.dims, 2, "fast_gemm_packA: input mat should be two-dimensional");
+    CV_CheckTypeEQ(A.type(), CV_32F, "fast_gemm_packA: only float32 is supported for now");
+
+    auto A_shape = shape(A);
+    int M = A_shape[0], K = A_shape[1], lda0 = K, lda1 = 1;
+    if (trans) {
+        std::swap(M, K);
+        std::swap(lda0, lda1);
+    }
+
+    int esz = A.elemSize(),
+        GEMM_MC = FAST_GEMM_F32_MC,
+        GEMM_MR = FAST_GEMM_F32_MR;
+    int MC = (((GEMM_MC < M ? GEMM_MC : M) + GEMM_MR - 1) / GEMM_MR) * GEMM_MR;
+    int KC = FAST_GEMM_F32_PACKED_STRIDE_K;
+
+    int col = KC * MC;
+    int row = (M + MC - 1) / MC;
+    if (!packed_A.empty()) {
+        packed_A.clear();
+    }
+    packed_A.resize(row * col);
+
+    const auto *ptr_A = A.ptr<char>();
+    auto ptr_packed = packed_A.data();
+    auto packer = fast_gemm_pack8_f32;
+    for (int r = 0; r < row; ++r) {
+        int mc = M - r < MC ? M - r : MC;
+        for (int k = 0; k < K; k+= KC) {
+            int kc = K - k < KC ? K - k : KC;
+            packer(mc, kc, ptr_A + (r * lda0 + k * lda1) * esz, lda0, lda1, ptr_packed);
+            ptr_packed += col * esz;
+        }
+    }
+}
+
+void fast_gemm_packB(const Mat &B, std::vector<float> &packed_B, bool trans) {
+    CV_CheckEQ(B.dims, 2, "fast_gemm_packB: input mat should be two-dimensional");
+    CV_CheckTypeEQ(B.type(), CV_32F, "fast_gemm_packB: only float32 is supported for now");
+
+    auto B_shape = shape(B);
+    int K = B_shape[0], N = B_shape[1], ldb0 = N, ldb1 = 1;
+    if (trans) {
+        std::swap(K, N);
+        std::swap(ldb0, ldb1);
+    }
+
+    int esz = B.elemSize(),
+        GEMM_NC = FAST_GEMM_F32_NC,
+        GEMM_NR = FAST_GEMM_F32_NR;
+    int NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
+    int KC = FAST_GEMM_F32_PACKED_STRIDE_K;
+
+    int row = KC * NC;
+    int col = (N + NC - 1) / NC;
+    if (!packed_B.empty()) {
+        packed_B.clear();
+    }
+    packed_B.resize(row * col);
+
+    const auto *ptr_B = B.ptr<char>();
+    auto ptr_packed = packed_B.data();
+    auto packer = fast_gemm_pack12_f32;
+    for (int c = 0; c < col; ++c) {
+        int nc = N - c < NC ? N - c : NC;
+        for (int k = 0; k < K; k+= KC) {
+            int kc = K - k < KC ? K - k : KC;
+            packer(nc, kc, ptr_B + (k * ldb0 + c * ldb1) * esz, ldb1, ldb0, ptr_packed);
+            ptr_packed += col * esz;
+        }
+    }
+}
+
 static void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
                             char *c_, int ldc, const void* palpha)
 {
@@ -244,9 +318,237 @@ static void fast_gemm_thin(float alpha, float beta, int M, int N, int K,
     parallel_for_(Range(0, total), fn, nstripes);
 }
 
+void fast_gemm(bool trans_a, int M, int N, int K,
+               float alpha, const float *A, int lda,
+               const float *packed_B, float beta,
+               float *C, int ldc) {
+    const char *a = (const char *)A;
+    const char *packed_b = (const char *)packed_B;
+    char *c = (char *)C;
+
+    int lda0 = lda, lda1 = 1;
+    if (trans_a) {
+        std::swap(lda0, lda1);
+    }
+
+    const void* palpha = (const void*)&alpha;
+
+    int esz = sizeof(float);
+    int GEMM_MC = FAST_GEMM_F32_MC,
+        GEMM_NC = FAST_GEMM_F32_NC,
+        GEMM_MR = FAST_GEMM_F32_MR,
+        GEMM_NR = FAST_GEMM_F32_NR;
+
+    int MC = (((GEMM_MC < M ? GEMM_MC : M) + GEMM_MR - 1) / GEMM_MR) * GEMM_MR;
+    int NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
+    int KC = FAST_GEMM_F32_PACKED_STRIDE_K;
+
+    size_t buff_size = KC * MC * esz;
+    bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF; // TODO: adjust STACKBUF?
+    int m_tiles = (M + MC - 1) / MC;
+    int n_tiles = (N + NC - 1) / NC;
+    int total_tiles = m_tiles * n_tiles;
+
+    std::function<void(int, int, const void*, int, int, void*)> a_packer = fast_gemm_pack8_f32;
+
+    auto fn = [&](const Range &r) {
+        char* packed_a = (char*)(use_stackbuff ? alloca(buff_size) : malloc(buff_size));
+        const char *packed_b_ = packed_b;
+        int start = r.start;
+        int end = r.end;
+
+        for (int tile_idx = start; tile_idx < end; tile_idx++) {
+            int i0 = (tile_idx / n_tiles) * MC;
+            int j0 = (tile_idx % n_tiles) * NC;
+            int mc = M - i0 < MC ? M - i0 : MC;
+            int nc = N - j0 < NC ? N - j0 : NC;
+            int ldc_block = ldc;
+            char* c_block = c + (i0 * ldc + j0) * esz;
+            packed_b_ += j0 * KC;
+
+            if (beta == 0.f) {
+                for(int i = 0; i < mc; i++)
+                    memset(c_block + i * ldc_block * esz, 0, nc * esz);
+            } else if (beta != 1.f) {
+                for(int i = 0; i < mc; i++) {
+                    float* c_i = (float*)c_block + i * ldc_block;
+                    for(int j = 0; j < nc; j++)
+                        c_i[j] *= beta;
+                }
+            }
+
+            for(int k0 = 0; k0 < K; k0 += KC)
+            {
+                int kc = K - k0 < KC ? K - k0 : KC;
+                a_packer(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
+                fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b_, palpha,
+                                     c_block, ldc_block, GEMM_MR, GEMM_NR);
+                packed_b_ += KC;
+            }
+        }
+
+        if (!use_stackbuff) {
+            free(packed_a);
+        }
+    };
+
+    int total = total_tiles;
+    int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
+    double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
+    parallel_for_(Range(0, total), fn, nstripes);
+}
+
+void fast_gemm(bool trans_b, int M, int N, int K,
+               float alpha, const float *packed_A,
+               const float *B, int ldb, float beta,
+               float *C, int ldc) {
+    const char *packed_a = (const char *)packed_A;
+    const char *b = (const char *)B;
+    char *c = (char *)C;
+
+    int ldb0 = ldb, ldb1 = 1;
+    if (trans_b) {
+        std::swap(ldb0, ldb1);
+    }
+
+    const void* palpha = (const void*)&alpha;
+
+    int esz = sizeof(float);
+    int GEMM_MC = FAST_GEMM_F32_MC,
+        GEMM_NC = FAST_GEMM_F32_NC,
+        GEMM_MR = FAST_GEMM_F32_MR,
+        GEMM_NR = FAST_GEMM_F32_NR;
+
+    int MC = (((GEMM_MC < M ? GEMM_MC : M) + GEMM_MR - 1) / GEMM_MR) * GEMM_MR;
+    int NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
+    int KC = FAST_GEMM_F32_PACKED_STRIDE_K;
+
+    size_t buff_size = KC * NC * esz;
+    bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF; // TODO: adjust STACKBUF?
+    int m_tiles = (M + MC - 1) / MC;
+    int n_tiles = (N + NC - 1) / NC;
+    int total_tiles = m_tiles * n_tiles;
+
+    std::function<void(int, int, const void*, int, int, void*)> b_packer = fast_gemm_pack12_f32;
+
+    auto fn = [&](const Range &r) {
+        const char *packed_a_ = packed_a;
+        char* packed_b = (char*)(use_stackbuff ? alloca(buff_size) : malloc(buff_size));
+        int start = r.start;
+        int end = r.end;
+
+        for (int tile_idx = start; tile_idx < end; tile_idx++) {
+            int i0 = (tile_idx / n_tiles) * MC;
+            int j0 = (tile_idx % n_tiles) * NC;
+            int mc = M - i0 < MC ? M - i0 : MC;
+            int nc = N - j0 < NC ? N - j0 : NC;
+            int ldc_block = ldc;
+            char* c_block = c + (i0 * ldc + j0) * esz;
+            packed_a_ += i0 * KC;
+
+            if (beta == 0.f) {
+                for(int i = 0; i < mc; i++)
+                    memset(c_block + i * ldc_block * esz, 0, nc * esz);
+            } else if (beta != 1.f) {
+                for(int i = 0; i < mc; i++) {
+                    float* c_i = (float*)c_block + i * ldc_block;
+                    for(int j = 0; j < nc; j++)
+                        c_i[j] *= beta;
+                }
+            }
+
+            for(int k0 = 0; k0 < K; k0 += KC)
+            {
+                int kc = K - k0 < KC ? K - k0 : KC;
+                b_packer(nc, kc, b + (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, packed_b);
+                fast_gemm_macro_kernel(mc, nc, kc, packed_a_, packed_b, palpha,
+                                     c_block, ldc_block, GEMM_MR, GEMM_NR);
+                packed_a_ += KC;
+            }
+        }
+
+        if (!use_stackbuff) {
+            free(packed_b);
+        }
+    };
+
+    int total = total_tiles;
+    int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
+    double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
+    parallel_for_(Range(0, total), fn, nstripes);
+}
+
+void fast_gemm(int M, int N, int K,
+               float alpha, const float *packed_A,
+               const float *packed_B, float beta,
+               float *C, int ldc) {
+    const char *packed_a = (const char *)packed_A;
+    const char *packed_b = (const char *)packed_B;
+    char *c = (char *)C;
+
+    const void* palpha = (const void*)&alpha;
+
+    int esz = sizeof(float);
+    int GEMM_MC = FAST_GEMM_F32_MC,
+        GEMM_NC = FAST_GEMM_F32_NC,
+        GEMM_MR = FAST_GEMM_F32_MR,
+        GEMM_NR = FAST_GEMM_F32_NR;
+
+    int MC = (((GEMM_MC < M ? GEMM_MC : M) + GEMM_MR - 1) / GEMM_MR) * GEMM_MR;
+    int NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
+    int KC = FAST_GEMM_F32_PACKED_STRIDE_K;
+
+    int m_tiles = (M + MC - 1) / MC;
+    int n_tiles = (N + NC - 1) / NC;
+    int total_tiles = m_tiles * n_tiles;
+
+    auto fn = [&](const Range &r) {
+        const char *packed_a_ = packed_a;
+        const char *packed_b_ = packed_b;
+        int start = r.start;
+        int end = r.end;
+
+        for (int tile_idx = start; tile_idx < end; tile_idx++) {
+            int i0 = (tile_idx / n_tiles) * MC;
+            int j0 = (tile_idx % n_tiles) * NC;
+            int mc = M - i0 < MC ? M - i0 : MC;
+            int nc = N - j0 < NC ? N - j0 : NC;
+            int ldc_block = ldc;
+            char* c_block = c + (i0 * ldc + j0) * esz;
+            packed_a_ += i0 * KC;
+            packed_b_ += j0 * KC;
+
+            if (beta == 0.f) {
+                for(int i = 0; i < mc; i++)
+                    memset(c_block + i * ldc_block * esz, 0, nc * esz);
+            } else if (beta != 1.f) {
+                for(int i = 0; i < mc; i++) {
+                    float* c_i = (float*)c_block + i * ldc_block;
+                    for(int j = 0; j < nc; j++)
+                        c_i[j] *= beta;
+                }
+            }
+
+            for(int k0 = 0; k0 < K; k0 += KC)
+            {
+                int kc = K - k0 < KC ? K - k0 : KC;
+                fast_gemm_macro_kernel(mc, nc, kc, packed_a_, packed_b_, palpha,
+                                     c_block, ldc_block, GEMM_MR, GEMM_NR);
+                packed_a_ += KC;
+                packed_b_ += KC;
+            }
+        }
+    };
+
+    int total = total_tiles;
+    int cost_per_thread = static_cast<int>((K / KC) * (MC / GEMM_MR) * (NC / GEMM_NR));
+    double nstripes = (size_t)total * cost_per_thread * (1 / 1024.0);
+    parallel_for_(Range(0, total), fn, nstripes);
+}
+
 void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
-              float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
-              float beta, float *C, int ldc) {
+               float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
+               float beta, float *C, int ldc) {
 
     const char *a = (const char *)A;
     const char *b = (const char *)B;
@@ -282,6 +584,7 @@ void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
     int KC = FAST_GEMM_STORAGE / ((MC + NC) * esz);
     KC = KC > 8 ? KC : 8;
     KC = KC < K ? KC : K;
+    // printf("MC=%d, NC=%d, KC=%d\n", MC, NC, KC);
 
     size_t buff_size = KC * (MC + NC) * esz;
     bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
