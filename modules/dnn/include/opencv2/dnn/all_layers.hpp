@@ -343,6 +343,14 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<GatherLayer> create(const LayerParams& params);
     };
 
+    /** @brief GatherElements layer
+     */
+    class CV_EXPORTS GatherElementsLayer : public Layer
+    {
+    public:
+        static Ptr<GatherElementsLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS PoolingLayer : public Layer
     {
     public:
