@@ -2548,7 +2548,7 @@ double dotProd_16s(const short* src1, const short* src2, int len)
 
 double dotProd_32s(const int* src1, const int* src2, int len)
 {
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+#if CV_SIMD_64F // TODO: enable for CV_SIMD_SCALABLE_64F
     double r = .0;
     int i = 0;
     const int step  = VTraits<v_int32>::vlanes();
