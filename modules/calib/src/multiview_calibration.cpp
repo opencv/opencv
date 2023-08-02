@@ -328,12 +328,13 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
         cnt_valid_frame = 0;
         for (int i = 0; i < NUM_FRAMES; i++ ) {
             if (!valid_frames[i]) continue;
-            for (int k = 1; k < NUM_CAMERAS; k++ ) { // skip first camera as there is nothing to optimize
+            for (int k = 0; k < NUM_CAMERAS; k++ ) {
+                // Pose for camera #0 is not optimized, but it's re-projection error is taken into account
                 if (!detection_mask_mat[k][i]) continue;
                 const int cam_idx = (k-1)*6; // camera extrinsics
-                const auto * const pose_k = param_p + cam_idx;
-                Vec3d om_0ToK(pose_k[0], pose_k[1], pose_k[2]), om[2];
-                Vec3d T_0ToK(pose_k[3], pose_k[4], pose_k[5]), T[2];
+                const auto * const pose_k = (k > 0)? (param_p + cam_idx) : nullptr;
+                Vec3d om_0ToK = (k > 0)? Vec3d(pose_k[0], pose_k[1], pose_k[2]) : Vec3d(0., 0., 0.), om[2];
+                Vec3d T_0ToK = (k > 0)? Vec3d(pose_k[3], pose_k[4], pose_k[5]) : Vec3d(0., 0., 0.), T[2];
                 Matx33d dr3dr1, dr3dr2, dt3dr2, dt3dt1, dt3dt2;
 
                 auto * pi = param_p + (cnt_valid_frame+NUM_CAMERAS-1)*6; // get rvecs / tvecs for frame pose
@@ -382,50 +383,49 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
                     const int eofs = (cnt_valid_frame+NUM_CAMERAS-1)*6;
                     assert( JtJ_.needed() && JtErr_.needed() );
                     // JtJ : NUM_PARAMS x NUM_PARAMS, JtErr : NUM_PARAMS x 1
-
-                    // k is always greater than zero
                     // d(err_{x|y}R) ~ de3
                     // convert de3/{dr3,dt3} => de3{dr1,dt1} & de3{dr2,dt2}
-                    for (int p = 0; p < NUM_PATTERN_PTS * 2; p++)
-                    {
-                        Matx13d de3dr3, de3dt3, de3dr2, de3dt2, de3dr1, de3dt1;
-                        for (int j = 0; j < 3; j++)
-                            de3dr3(j) = Je.at<double>(p, j);
-
-                        for (int j = 0; j < 3; j++)
-                            de3dt3(j) = Je.at<double>(p, 3 + j);
-
-                        for (int j = 0; j < 3; j++)
-                            de3dr2(j) = J_0ToK.at<double>(p, j);
-
-                        for (int j = 0; j < 3; j++)
-                            de3dt2(j) = J_0ToK.at<double>(p, 3 + j);
-
-                        de3dr1 = de3dr3 * dr3dr1;
-                        de3dt1 = de3dt3 * dt3dt1;
-                        de3dr2 = de3dr3 * dr3dr2 + de3dt3 * dt3dr2;
-                        de3dt2 = de3dt3 * dt3dt2;
-
-                        for (int j = 0; j < 3; j++)
-                            Je.at<double>(p, j) = de3dr1(j);
-
-                        for (int j = 0; j < 3; j++)
-                            Je.at<double>(p, 3 + j) = de3dt1(j);
-
-                        for (int j = 0; j < 3; j++)
-                            J_0ToK.at<double>(p, j) = de3dr2(j);
-
-                        for (int j = 0; j < 3; j++)
-                            J_0ToK.at<double>(p, 3 + j) = de3dt2(j);
-                    }
 
                     Mat wd;
                     Mat::diag(weights).convertTo(wd, CV_64F);
-                    // 6 x (ni*2) * (ni*2 x ni*2) * (ni*2) x 6
-                    JtJ(Rect((k - 1) * 6, (k - 1) * 6, 6, 6)) += (J_0ToK.t() * wd * J_0ToK);
-                    JtJ(Rect(eofs, (k - 1) * 6, 6, 6)) = (J_0ToK.t() * wd * Je);
-                    JtErr.rowRange((k - 1) * 6, (k - 1) * 6 + 6) += (J_0ToK.t() * wd * err);
+                    if (k > 0) { // if not camera #0
+                        for (int p = 0; p < NUM_PATTERN_PTS * 2; p++) {
+                            Matx13d de3dr3, de3dt3, de3dr2, de3dt2, de3dr1, de3dt1;
+                            for (int j = 0; j < 3; j++)
+                                de3dr3(j) = Je.at<double>(p, j);
 
+                            for (int j = 0; j < 3; j++)
+                                de3dt3(j) = Je.at<double>(p, 3 + j);
+
+                            for (int j = 0; j < 3; j++)
+                                de3dr2(j) = J_0ToK.at<double>(p, j);
+
+                            for (int j = 0; j < 3; j++)
+                                de3dt2(j) = J_0ToK.at<double>(p, 3 + j);
+
+                            de3dr1 = de3dr3 * dr3dr1;
+                            de3dt1 = de3dt3 * dt3dt1;
+                            de3dr2 = de3dr3 * dr3dr2 + de3dt3 * dt3dr2;
+                            de3dt2 = de3dt3 * dt3dt2;
+
+                            for (int j = 0; j < 3; j++)
+                                Je.at<double>(p, j) = de3dr1(j);
+
+                            for (int j = 0; j < 3; j++)
+                                Je.at<double>(p, 3 + j) = de3dt1(j);
+
+                            for (int j = 0; j < 3; j++)
+                                J_0ToK.at<double>(p, j) = de3dr2(j);
+
+                            for (int j = 0; j < 3; j++)
+                                J_0ToK.at<double>(p, 3 + j) = de3dt2(j);
+                        }
+
+                        // 6 x (ni*2) * (ni*2 x ni*2) * (ni*2) x 6
+                        JtJ(Rect((k - 1) * 6, (k - 1) * 6, 6, 6)) += (J_0ToK.t() * wd * J_0ToK);
+                        JtJ(Rect(eofs, (k - 1) * 6, 6, 6)) = (J_0ToK.t() * wd * Je);
+                        JtErr.rowRange((k - 1) * 6, (k - 1) * 6 + 6) += (J_0ToK.t() * wd * err);
+                    }
                     JtJ(Rect(eofs, eofs, 6, 6)) += Je.t() * wd * Je;
                     JtErr.rowRange(eofs, eofs + 6) += Je.t() * wd * err;
                 }
