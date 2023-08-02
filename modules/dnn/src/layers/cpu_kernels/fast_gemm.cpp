@@ -94,7 +94,7 @@ void fast_gemm_packA(const Mat &A, std::vector<float> &packed_A, bool trans) {
         GEMM_MC = FAST_GEMM_F32_MC,
         GEMM_MR = FAST_GEMM_F32_MR;
     int MC = (((GEMM_MC < M ? GEMM_MC : M) + GEMM_MR - 1) / GEMM_MR) * GEMM_MR;
-    int KC = FAST_GEMM_F32_PACKED_STRIDE_K;
+    int KC = std::min(FAST_GEMM_F32_PACKED_STRIDE_K, K);
 
     int col = KC * MC;
     int row = (M + MC - 1) / MC;
@@ -131,7 +131,7 @@ void fast_gemm_packB(const Mat &B, std::vector<float> &packed_B, bool trans) {
         GEMM_NC = FAST_GEMM_F32_NC,
         GEMM_NR = FAST_GEMM_F32_NR;
     int NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
-    int KC = FAST_GEMM_F32_PACKED_STRIDE_K;
+    int KC = std::min(FAST_GEMM_F32_PACKED_STRIDE_K, K);
 
     int row = KC * NC;
     int col = (N + NC - 1) / NC;
@@ -341,7 +341,7 @@ void fast_gemm(bool trans_a, int M, int N, int K,
 
     int MC = (((GEMM_MC < M ? GEMM_MC : M) + GEMM_MR - 1) / GEMM_MR) * GEMM_MR;
     int NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
-    int KC = FAST_GEMM_F32_PACKED_STRIDE_K;
+    int KC = std::min(FAST_GEMM_F32_PACKED_STRIDE_K, K);
 
     size_t buff_size = KC * MC * esz;
     bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF; // TODO: adjust STACKBUF?
@@ -421,7 +421,7 @@ void fast_gemm(bool trans_b, int M, int N, int K,
 
     int MC = (((GEMM_MC < M ? GEMM_MC : M) + GEMM_MR - 1) / GEMM_MR) * GEMM_MR;
     int NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
-    int KC = FAST_GEMM_F32_PACKED_STRIDE_K;
+    int KC = std::min(FAST_GEMM_F32_PACKED_STRIDE_K, K);
 
     size_t buff_size = KC * NC * esz;
     bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF; // TODO: adjust STACKBUF?
@@ -496,7 +496,7 @@ void fast_gemm(int M, int N, int K,
 
     int MC = (((GEMM_MC < M ? GEMM_MC : M) + GEMM_MR - 1) / GEMM_MR) * GEMM_MR;
     int NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
-    int KC = FAST_GEMM_F32_PACKED_STRIDE_K;
+    int KC = std::min(FAST_GEMM_F32_PACKED_STRIDE_K, K);
 
     int m_tiles = (M + MC - 1) / MC;
     int n_tiles = (N + NC - 1) / NC;
