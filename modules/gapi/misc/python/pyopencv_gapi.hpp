@@ -31,6 +31,8 @@ using map_string_and_vector_float   = std::map<std::string, std::vector<float>>;
 using map_int_and_double            = std::map<int, double>;
 using ep_OpenVINO                   = cv::gapi::onnx::ep::OpenVINO;
 using ep_DirectML                   = cv::gapi::onnx::ep::DirectML;
+using ep_CUDA                       = cv::gapi::onnx::ep::CUDA;
+using ep_TensorRT                   = cv::gapi::onnx::ep::TensorRT;
 
 // NB: Python wrapper generate T_U for T<U>
 // This behavior is only observed for inputs

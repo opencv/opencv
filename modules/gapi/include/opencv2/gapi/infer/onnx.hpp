@@ -34,6 +34,56 @@ namespace ep {
 
 /**
  * @brief This structure provides functions
+ * that fill inference options for CUDA Execution Provider.
+ * Please follow https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html#cuda-execution-provider
+ */
+struct GAPI_EXPORTS_W_SIMPLE CUDA {
+    // NB: Used from python.
+    /// @private -- Exclude this constructor from OpenCV documentation
+    GAPI_WRAP
+    CUDA() = default;
+
+    /** @brief Class constructor.
+
+    Constructs CUDA parameters based on device type information.
+
+    @param dev_id Target device id to use.
+    */
+    GAPI_WRAP
+    explicit CUDA(const int dev_id)
+        : device_id(dev_id) {
+    }
+
+    int device_id;
+};
+
+/**
+ * @brief This structure provides functions
+ * that fill inference options for TensorRT Execution Provider.
+ * Please follow https://onnxruntime.ai/docs/execution-providers/TensorRT-ExecutionProvider.html#tensorrt-execution-provider
+ */
+struct GAPI_EXPORTS_W_SIMPLE TensorRT {
+    // NB: Used from python.
+    /// @private -- Exclude this constructor from OpenCV documentation
+    GAPI_WRAP
+    TensorRT() = default;
+
+    /** @brief Class constructor.
+
+    Constructs TensorRT parameters based on device type information.
+
+    @param dev_id Target device id to use.
+    */
+    GAPI_WRAP
+    explicit TensorRT(const int dev_id)
+        : device_id(dev_id) {
+    }
+
+    int device_id;
+};
+
+/**
+ * @brief This structure provides functions
  * that fill inference options for ONNX OpenVINO Execution Provider.
  * Please follow https://onnxruntime.ai/docs/execution-providers/OpenVINO-ExecutionProvider.html#summary-of-options
  */
@@ -143,7 +193,11 @@ public:
     DeviceDesc ddesc;
 };
 
-using EP = cv::util::variant<cv::util::monostate, OpenVINO, DirectML>;
+using EP = cv::util::variant< cv::util::monostate
+                            , OpenVINO
+                            , DirectML
+                            , CUDA
+                            , TensorRT>;
 
 } // namespace ep
 
@@ -431,6 +485,34 @@ public:
         return *this;
     }
 
+    /** @brief Adds execution provider for runtime.
+
+    The function is used to add ONNX Runtime CUDA Execution Provider options.
+
+    @param ep CUDA Execution Provider options.
+    @see cv::gapi::onnx::ep::CUDA.
+
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgAddExecutionProvider(ep::CUDA&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+        return *this;
+    }
+
+    /** @brief Adds execution provider for runtime.
+
+    The function is used to add ONNX Runtime TensorRT Execution Provider options.
+
+    @param ep TensorRT Execution Provider options.
+    @see cv::gapi::onnx::ep::TensorRT.
+
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgAddExecutionProvider(ep::TensorRT&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+        return *this;
+    }
+
     /** @brief Disables the memory pattern optimization.
 
     @return the reference on modified object.
@@ -488,6 +570,16 @@ public:
 
     /** @see onnx::Params::cfgAddExecutionProvider. */
     void cfgAddExecutionProvider(ep::DirectML&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+    }
+
+    /** @see onnx::Params::cfgAddExecutionProvider. */
+    void cfgAddExecutionProvider(ep::CUDA&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+    }
+
+    /** @see onnx::Params::cfgAddExecutionProvider. */
+    void cfgAddExecutionProvider(ep::TensorRT&& ep) {
         desc.execution_providers.emplace_back(std::move(ep));
     }
 
