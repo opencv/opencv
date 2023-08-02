@@ -145,9 +145,39 @@ public:
     void run();
 };
 
+static void addCUDAExecutionProvider(Ort::SessionOptions *session_options,
+                                     const cv::gapi::onnx::ep::CUDA &cuda_ep) {
+     OrtCUDAProviderOptions options{};
+     options.device_id = cuda_ep.device_id;
+
+     try {
+        session_options->AppendExecutionProvider_CUDA(options);
+     } catch (const std::exception &e) {
+         std::stringstream ss;
+         ss << "ONNX Backend: Failed to enable CUDA"
+            << " Execution Provider: " << e.what();
+         cv::util::throw_error(std::runtime_error(ss.str()));
+     }
+}
+
+static void addTensorRTExecutionProvider(Ort::SessionOptions *session_options,
+                                         const cv::gapi::onnx::ep::TensorRT &trt_ep) {
+     OrtTensorRTProviderOptions options{};
+     options.device_id = trt_ep.device_id;
+
+     try {
+        session_options->AppendExecutionProvider_TensorRT(options);
+     } catch (const std::exception &e) {
+         std::stringstream ss;
+         ss << "ONNX Backend: Failed to enable TensorRT"
+            << " Execution Provider: " << e.what();
+         cv::util::throw_error(std::runtime_error(ss.str()));
+     }
+}
+
 static void addOpenVINOExecutionProvider(Ort::SessionOptions *session_options,
                                          const cv::gapi::onnx::ep::OpenVINO &ov_ep) {
-     OrtOpenVINOProviderOptions options;
+     OrtOpenVINOProviderOptions options{};
      options.device_type = ov_ep.device_type.c_str();
      options.cache_dir = ov_ep.cache_dir.c_str();
      options.num_of_threads = ov_ep.num_of_threads;
@@ -179,6 +209,18 @@ static void addExecutionProvider(Ort::SessionOptions          *session_options,
             GAPI_LOG_INFO(NULL, "DirectML Execution Provider is added.");
             const auto &dml_ep = cv::util::get<ep::DirectML>(execution_provider);
             addDMLExecutionProvider(session_options, dml_ep);
+            break;
+        }
+        case ep::EP::index_of<ep::CUDA>(): {
+            GAPI_LOG_INFO(NULL, "CUDA Execution Provider is added.");
+            const auto &cuda_ep = cv::util::get<ep::CUDA>(execution_provider);
+            addCUDAExecutionProvider(session_options, cuda_ep);
+            break;
+        }
+        case ep::EP::index_of<ep::TensorRT>(): {
+            GAPI_LOG_INFO(NULL, "TensorRT Execution Provider is added.");
+            const auto &trt_ep = cv::util::get<ep::TensorRT>(execution_provider);
+            addTensorRTExecutionProvider(session_options, trt_ep);
             break;
         }
         default:
