@@ -180,15 +180,12 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         bool tranAorB = transA || transB;
-#ifdef HAVE_INF_ENGINE
-        if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-            return axis == 1;
-#endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !tranAorB) ||
                (backendId == DNN_BACKEND_WEBNN && axis == 1 && !tranAorB) ||
                backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !tranAorB);
     }
 
@@ -806,13 +803,9 @@ public:
         }
         else
         {
-            std::vector<int64_t> data = {(int64_t)ieInpNode->get_shape()[0], (int64_t)blobs[0].size[1]};
-            auto new_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, data.data());
-            auto inp = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, new_shape, true);
-
-            std::vector<size_t> weight_shape{(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
+            std::vector<size_t> weight_shape = getShape<size_t>(oriMat);
             auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, weight_shape, blobs[0].data);
-            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, transA, transB);
+            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, ieWeights, transA, transB);
         }
 
         if (bias) {
