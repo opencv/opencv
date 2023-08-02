@@ -1159,6 +1159,33 @@ TEST(Imgproc_cvWarpAffine, regression)
     cvReleaseImage(&dst);
 }
 
+TEST(Imgproc_cvWarpPerspective, aarch64) {
+    const cv::Mat input_image(
+        /*rows=*/200, /*cols=*/200, CV_8UC4, cv::Vec4b(0, 0, 0, 0));
+    const cv::Mat red_mask(/*rows=*/33, /*cols=*/30, CV_8UC4,
+                           cv::Vec4b(255, 0, 0, 0));
+    red_mask.copyTo(input_image(cv::Rect(85, 98, 30, 33)));
+    cv::RotatedRect rotated_area(cv::Point2f(100, 115), cv::Size2f(30, 33),
+                                 0.0f);
+    cv::Point2f area_points[4];
+    rotated_area.points(area_points);
+    const cv::Size2f target_size = rotated_area.size;
+    const cv::Point2f target_points[4]{
+        cv::Point2f(0, target_size.height),
+        cv::Point2f(0, 0),
+        cv::Point2f(target_size.width, 0),
+        cv::Point2f(target_size.width, target_size.height),
+    };
+    const cv::Mat rotation_matrix =
+        cv::getPerspectiveTransform(area_points, target_points);
+    cv::Mat cropped_image;
+    cv::warpPerspective(input_image, cropped_image, rotation_matrix,
+                        target_size,
+                        /*flags=*/cv::INTER_NEAREST,
+                        /*borderMode=*/cv::BORDER_REPLICATE);
+    ASSERT_EQ(cv::sum(red_mask != cropped_image), cv::Scalar::all(0));
+}
+
 TEST(Imgproc_fitLine_vector_3d, regression)
 {
     std::vector<Point3f> points_vector;

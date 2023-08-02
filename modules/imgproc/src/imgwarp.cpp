@@ -2872,8 +2872,10 @@ void WarpPerspectiveLine_ProcessNN_CV_SIMD(const double *M, short* xy, double X0
             v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
             v_x1 += v_2;
 
-            v_X0 = v_round(v_fX0, v_fX1);
-            v_Y0 = v_round(v_fY0, v_fY1);
+            v_float32x4 v_fX = v_cvt_f32(v_fX0, v_fX1);
+            v_float32x4 v_fY = v_cvt_f32(v_fY0, v_fY1);
+            v_X0 = v_trunc(v_fX);
+            v_Y0 = v_trunc(v_fY);
         }
 
         // 4-7
@@ -2891,8 +2893,10 @@ void WarpPerspectiveLine_ProcessNN_CV_SIMD(const double *M, short* xy, double X0
             v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
             v_x1 += v_2;
 
-            v_X1 = v_round(v_fX0, v_fX1);
-            v_Y1 = v_round(v_fY0, v_fY1);
+            v_float32x4 v_fX = v_cvt_f32(v_fX0, v_fX1);
+            v_float32x4 v_fY = v_cvt_f32(v_fY0, v_fY1);
+            v_X1 = v_trunc(v_fX);
+            v_Y1 = v_trunc(v_fY);
         }
 
         // 8-11
@@ -2910,8 +2914,10 @@ void WarpPerspectiveLine_ProcessNN_CV_SIMD(const double *M, short* xy, double X0
             v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
             v_x1 += v_2;
 
-            v_X2 = v_round(v_fX0, v_fX1);
-            v_Y2 = v_round(v_fY0, v_fY1);
+            v_float32x4 v_fX = v_cvt_f32(v_fX0, v_fX1);
+            v_float32x4 v_fY = v_cvt_f32(v_fY0, v_fY1);
+            v_X2 = v_trunc(v_fX);
+            v_Y2 = v_trunc(v_fY);
         }
 
         // 12-15
@@ -2929,8 +2935,10 @@ void WarpPerspectiveLine_ProcessNN_CV_SIMD(const double *M, short* xy, double X0
             v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_muladd(v_M3, v_x1, v_Y0d) * v_W));
             v_x1 += v_2;
 
-            v_X3 = v_round(v_fX0, v_fX1);
-            v_Y3 = v_round(v_fY0, v_fY1);
+            v_float32x4 v_fX = v_cvt_f32(v_fX0, v_fX1);
+            v_float32x4 v_fY = v_cvt_f32(v_fY0, v_fY1);
+            v_X3 = v_trunc(v_fX);
+            v_Y3 = v_trunc(v_fY);
         }
 
         // convert to 16s
