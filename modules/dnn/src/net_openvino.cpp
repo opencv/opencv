@@ -549,7 +549,6 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 break;
             }
         }
-        ieNode->net->setNodePtr(&ieNode->node);
 
         net->addBlobs(ld.inputBlobsWrappers);
         net->addBlobs(ld.outputBlobsWrappers);

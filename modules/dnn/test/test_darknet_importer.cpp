@@ -1046,7 +1046,7 @@ TEST_P(Test_Darknet_layers, region)
        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2022010000)
     // accuracy on CPU, OpenCL
     // Expected: (normL1) <= (l1), actual: 0.000358148 vs 1e-05
     //   |ref| = 1.207319974899292

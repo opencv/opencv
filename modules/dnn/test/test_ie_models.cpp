@@ -465,8 +465,8 @@ TEST_P(DNNTestHighLevelAPI, predict)
     const std::string modelPath = getOpenVINOModel(modelName, isFP16);
     ASSERT_FALSE(modelPath.empty()) << modelName;
 
-    std::string xmlPath = findDataFile(modelPath + ".xml");
-    std::string binPath = findDataFile(modelPath + ".bin");
+    std::string xmlPath = findDataFile(modelPath + ".xml", false);
+    std::string binPath = findDataFile(modelPath + ".bin", false);
 
     Model model(xmlPath, binPath);
     Mat frame = imread(findDataFile("dnn/googlenet_1.png"));
