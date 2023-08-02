@@ -14,10 +14,10 @@ PERF_TEST_P_(BroadcastTest, basic)
     int dt_type = get<1>(GetParam());
     std::vector<int> shape_dst = get<2>(GetParam());
 
-    cv::Mat src(shape_src, dt_type);
-    cv::Mat dst(shape_dst, dt_type);
+    cv::Mat src(static_cast<int>(shape_src.size()), shape_src.data(), dt_type);
+    cv::Mat dst(static_cast<int>(shape_dst.size()), shape_dst.data(), dt_type);
 
-    declare.in(src, WARMUP_RNG).out(dst);
+    cv::randu(src, -1.f, 1.f);
 
     TEST_CYCLE() cv::broadcast(src, shape_dst, dst);
 
