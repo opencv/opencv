@@ -1391,7 +1391,10 @@ void ONNXImporter::parseSplit(LayerParams& layerParams, const opencv_onnx::NodeP
         {
             slicePoints[i] = slicePoints[i - 1] + splitsBlob.at<int>(i);
         }
-        layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
+        if (slicePoints.size() == 0)
+            layerParams.set("num_split", 1);
+        else
+            layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
     }
     else
     {
