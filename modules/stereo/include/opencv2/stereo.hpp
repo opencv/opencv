@@ -198,6 +198,44 @@ CV_EXPORTS float rectify3Collinear( InputArray _cameraMatrix1, InputArray _distC
                    double alpha, Size newImgSize,
                    Rect* roi1, Rect* roi2, int flags );
 
+namespace fisheye {
+
+/** @brief Stereo rectification for fisheye camera model
+
+@param K1 First camera intrinsic matrix.
+@param D1 First camera distortion parameters.
+@param K2 Second camera intrinsic matrix.
+@param D2 Second camera distortion parameters.
+@param imageSize Size of the image used for stereo calibration.
+@param R Rotation matrix between the coordinate systems of the first and the second
+cameras.
+@param tvec Translation vector between coordinate systems of the cameras.
+@param R1 Output 3x3 rectification transform (rotation matrix) for the first camera.
+@param R2 Output 3x3 rectification transform (rotation matrix) for the second camera.
+@param P1 Output 3x4 projection matrix in the new (rectified) coordinate systems for the first
+camera.
+@param P2 Output 3x4 projection matrix in the new (rectified) coordinate systems for the second
+camera.
+@param Q Output \f$4 \times 4\f$ disparity-to-depth mapping matrix (see reprojectImageTo3D ).
+@param flags Operation flags that may be zero or @ref CALIB_ZERO_DISPARITY . If the flag is set,
+the function makes the principal points of each camera have the same pixel coordinates in the
+rectified views. And if the flag is not set, the function may still shift the images in the
+horizontal or vertical direction (depending on the orientation of epipolar lines) to maximize the
+useful image area.
+@param newImageSize New image resolution after rectification. The same size should be passed to
+#initUndistortRectifyMap (see the stereo_calib.cpp sample in OpenCV samples directory). When (0,0)
+is passed (default), it is set to the original imageSize . Setting it to larger value can help you
+preserve details in the original image, especially when there is a big radial distortion.
+@param balance Sets the new focal length in range between the min focal length and the max focal
+length. Balance is in range of [0, 1].
+@param fov_scale Divisor for new focal length.
+ */
+CV_EXPORTS_W void stereoRectify(InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size &imageSize, InputArray R, InputArray tvec,
+    OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2, OutputArray Q, int flags, const Size &newImageSize = Size(),
+    double balance = 0.0, double fov_scale = 1.0);
+
+} // namespace fisheye
+
 /** @brief The base class for stereo correspondence algorithms.
  */
 class CV_EXPORTS_W StereoMatcher : public Algorithm
