@@ -52,7 +52,8 @@ static inline void PrintTo(const cv::VideoCaptureAPIs& api, std::ostream* os)
 
 inline std::string fourccToString(int fourcc)
 {
-    return cv::format("%c%c%c%c", fourcc & 255, (fourcc >> 8) & 255, (fourcc >> 16) & 255, (fourcc >> 24) & 255);
+    return cv::format("%c%c%c%c", (char)(fourcc & 255), (char)((fourcc >> 8) & 255),
+                                  (char)((fourcc >> 16) & 255), (char)((fourcc >> 24) & 255));
 }
 
 inline int fourccFromString(const std::string &fourcc)
