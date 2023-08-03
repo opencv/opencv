@@ -68,10 +68,10 @@ inline void generateFrame(int i, int FRAME_COUNT, cv::Mat & frame)
     int offset = (((i * 5) % FRAME_COUNT) - FRAME_COUNT / 2) * (frame.cols / 2) / FRAME_COUNT;
     frame(cv::Rect(0, 0, frame.cols / 2 + offset, frame.rows)) = Scalar(255, 255, 255);
     frame(cv::Rect(frame.cols / 2 + offset, 0, frame.cols - frame.cols / 2 - offset, frame.rows)) = Scalar(0, 0, 0);
-    ostringstream buf; buf << "Frame " << setw(2) << setfill('0') << i + 1;
+    std::string str = cv::format("%02d", i+1);
     int baseLine = 0;
-    Size box = getTextSize(buf.str(), FONT_HERSHEY_COMPLEX, 2, 5, &baseLine);
-    putText(frame, buf.str(), Point((frame.cols - box.width) / 2, (frame.rows - box.height) / 2 + baseLine),
+    Size box = getTextSize(str, FONT_HERSHEY_COMPLEX, 2, 5, &baseLine);
+    putText(frame, str, Point((frame.cols - box.width) / 2, (frame.rows - box.height) / 2 + baseLine),
             FONT_HERSHEY_COMPLEX, 2, Scalar(0, 0, 255), 5, LINE_AA);
     Point p(i * frame.cols / (FRAME_COUNT - 1), i * frame.rows / (FRAME_COUNT - 1));
     circle(frame, p, 50, Scalar(200, 25, 55), 8, LINE_AA);

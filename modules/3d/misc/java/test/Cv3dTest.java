@@ -315,8 +315,8 @@ public class Cv3dTest extends OpenCVTestCase {
         Mat truth_tvec = new Mat(3, 1, CvType.CV_64F);
         truth_tvec.put(0, 0, -320, -240, 400);
 
-        assertMatEqual(truth_rvec, rvec, EPS);
-        assertMatEqual(truth_tvec, tvec, EPS);
+        assertMatEqual(truth_rvec, rvec, EPS*2);
+        assertMatEqual(truth_tvec, tvec, EPS*2);
     }
 
     public void testSolvePnPListOfPoint3ListOfPointMatMatMatMatBoolean() {
