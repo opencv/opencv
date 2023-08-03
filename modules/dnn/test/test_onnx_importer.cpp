@@ -102,7 +102,7 @@ public:
             netSoftmax.setInput(ref);
             ref = netSoftmax.forward();
         }
-        normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        normAssert(ref, out, basename.c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
         if (checkNoFallbacks)
             expectNoFallbacksFromIE(net);
     }
