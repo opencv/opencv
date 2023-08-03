@@ -213,6 +213,9 @@ public:
             std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &newShape),
             true
         );
+        if (indices->get_element_type() != ngraph::element::i32 && indices->get_element_type() != ngraph::element::i64) {
+            indices = std::make_shared<ngraph::op::Convert>(indices, ngraph::element::i64);
+        }
 
         int axis = 0;
         std::shared_ptr<ngraph::Node> unpool = std::make_shared<ngraph::op::ScatterElementsUpdate>(zeroInp, indices, features,
