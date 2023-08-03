@@ -589,6 +589,21 @@ struct SeluFunctor {
 };
 
 template <class T>
+struct GeluFunctor {
+    struct Params {
+        CUDA4DNN_HOST_DEVICE Params() { }
+    };
+
+    CUDA4DNN_DEVICE GeluFunctor() { }
+    CUDA4DNN_DEVICE GeluFunctor(const Params& params) { }
+
+    CUDA4DNN_DEVICE T operator()(T value) {
+        using csl::device::erf;
+        return static_cast<T>(0.5f) * value * (static_cast<T>(1.f) + erf(value * static_cast<T>(M_SQRT1_2)));
+    }
+};
+
+template <class T>
 struct ThresholdedReluFunctor {
     struct Params {
         CUDA4DNN_HOST_DEVICE Params() : alpha(1) { }

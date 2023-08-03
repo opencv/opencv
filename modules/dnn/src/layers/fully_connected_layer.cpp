@@ -630,8 +630,10 @@ public:
 
             if(input_wrapper->getRank() == inp2Dim)
                 return make_cuda_node<cuda4dnn::MatMulOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), oriMat, biasMat_, transA, transB);
-            else
+            else {
+                CV_LOG_INFO(NULL, "DNN/CUDA: no implementation for MatMul with rank " << input_wrapper->getRank());
                 return Ptr<BackendNode>();
+            }
         }
 
         auto flatten_start_axis = normalize_axis(axis, input_wrapper->getRank());

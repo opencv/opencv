@@ -1965,9 +1965,11 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
     }
 
     int transB = layerParams.get<int>("transB", 0);
+    int secondInpDims;
     if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
     {
         Mat weights = getBlob(node_proto, 1);
+        secondInpDims = weights.dims;
 
         if (transA == 0) // optimized barnch, for now, we can only optimize the Gemm when transA = 0.
         {
@@ -1993,7 +1995,10 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
         }
     }
     else
+    {
         layerParams.set("transB", transB == 1);
+        secondInpDims = outShapes[node_proto.input(1)].size();
+    }
 
     if (node_proto.input_size() == 3)
     {
@@ -2002,7 +2007,7 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
     }
 
     layerParams.set("bias_term", node_proto.input_size() == 3);
-    layerParams.set("is_matmul", true);
+    layerParams.set("is_matmul", secondInpDims > 2);
     addLayer(layerParams, node_proto);
 }
 
@@ -2045,7 +2050,7 @@ void ONNXImporter::parseMatMul(LayerParams& layerParams, const opencv_onnx::Node
         layerParams.blobs.push_back(transBlob);
         int numOutput = layerParams.blobs[0].total(0, secondInpDims - 1);
         layerParams.set("num_output", numOutput);
-        layerParams.set("is_matmul", true);
+        layerParams.set("is_matmul", secondInpDims > 2);
     } else
         secondInpDims = outShapes[node_proto.input(1)].size();
 

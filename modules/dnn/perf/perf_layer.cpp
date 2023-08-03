@@ -643,4 +643,69 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_ScatterND, testing::Values(std::make_tuple(D
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNormExpanded, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 
+
+typedef TestBaseWithParam<tuple<Vec4i, int, bool, tuple<Backend, Target> > > Layer_FullyConnected;
+PERF_TEST_P_(Layer_FullyConnected, fc)
+{
+    std::vector<int> inpShape;
+    inpShape.reserve(4);
+    for (int i = 0; i < 4; ++i) {
+        int dim = get<0>(GetParam())[i];
+        if (dim == 0)
+            break;
+        inpShape.push_back(dim);
+    }
+    Mat input(inpShape, CV_32F);
+    randn(input, 0, 1);
+
+    int axis = input.dims - 1;
+    int outDims = get<1>(GetParam());
+    bool isMatMul = get<2>(GetParam());
+    int backendId = get<0>(get<3>(GetParam()));
+    int targetId = get<1>(get<3>(GetParam()));
+
+    std::vector<int> weightShape;
+    if (isMatMul) {
+        weightShape = inpShape;
+        weightShape[weightShape.size() - 2] = outDims;
+    } else {
+        weightShape = {outDims, (int)input.total(axis, input.dims)};
+    }
+    Mat weights(weightShape, CV_32F);
+    randn(weights, 0, 1);
+
+    LayerParams lp;
+    lp.set("axis", input.dims - 1);
+    lp.set("is_matmul", weights.dims > 2);
+    lp.set("bias_term", false);
+    lp.set("transB", true);
+    lp.set("num_output", (int)weights.total(0, weights.dims - 1));
+    lp.blobs.resize(1, weights);
+
+    Net net;
+    net.addLayerToPrev("matmul", "InnerProduct", lp);
+
+    net.setInput(input);
+    net.setPreferableBackend(backendId);
+    net.setPreferableTarget(targetId);
+
+    // warmup
+    Mat output = net.forward();
+
+    TEST_CYCLE()
+    {
+        net.forward();
+    }
+    SANITY_CHECK_NOTHING();
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_FullyConnected, Combine(
+    Values(                // input size
+        Vec4i(5, 512, 384),
+        Vec4i(5, 16, 512, 128)
+    ),
+    Values(256, 512, 1024),  // output dimension
+    testing::Bool(),         // is_matmul
+    dnnBackendsAndTargets()
+));
+
 } // namespace

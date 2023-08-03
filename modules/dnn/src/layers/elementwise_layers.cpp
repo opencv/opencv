@@ -821,13 +821,20 @@ struct GeluFunctor : public BaseDefaultFunctor<GeluFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     inline float calculate(float x) const
     {
         return 0.5f * x * (1.0f + erf(x * M_SQRT1_2));
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::GeluOp>(target, stream);
+    }
+#endif
 
     int64 getFLOPSPerElement() const { return 100; }
 };
