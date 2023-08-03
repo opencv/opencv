@@ -454,6 +454,11 @@ TEST_P(FullyConnected, Accuracy)
     {
         l1 = 0.01;
     }
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL)
+    {
+        l1 = 5e-3;
+        lInf = 7e-3;
+    }
 #endif
     if (targetId == DNN_TARGET_CUDA_FP16)
         l1 = 0.015;

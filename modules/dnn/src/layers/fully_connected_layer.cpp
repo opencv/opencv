@@ -803,9 +803,22 @@ public:
         }
         else
         {
-            std::vector<size_t> weight_shape = getShape<size_t>(oriMat);
+            std::vector<int> shape(1 + normalize_axis(axis, ieInpNode->get_shape().size()), 0);
+            shape[shape.size() - 1] = -1;
+            auto inp = std::make_shared<ngraph::op::v1::Reshape>(
+                ieInpNode,
+                std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{shape.size()}, shape.data()),
+                true
+            );
+
+            std::vector<size_t> weight_shape;
+            if (isMatMul) {
+                weight_shape = getShape<size_t>(oriMat);
+            } else {
+                weight_shape = {(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
+            }
             auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, weight_shape, blobs[0].data);
-            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, ieWeights, transA, transB);
+            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, transA, transB);
         }
 
         if (bias) {
