@@ -17,6 +17,7 @@ class PccEntropyCodingTest: public testing::Test
 protected:
     void SetUp() override
     {
+        //setbuf(stdout, nullptr);
         // set test char vector to encode and decode
         testCharVector = {'a', 'a', 'b', 'b', 'b', 'c', '1', '2', '3'};
         String FileBase = R"(C:\Users\WYH\Desktop\PointCloud\dress)";
@@ -35,29 +36,29 @@ protected:
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
         std::cout << "Time taken by loadPointCloud: "
-                  << duration.count()/1e6 << " seconds" << std::endl;
+                  << duration.count()/1e6<< std::endl;
 
-        OctreeSerializeCoder _coder;
-        EntropyCoder _entropyCoder;
         PointCloudCompression pcc;
 
         start = std::chrono::high_resolution_clock::now();
         std::ofstream vectorToStream;
         vectorToStream.open(FileBase + label + res_str + ".bin", std::ios_base::binary);
         pcc.compress(pointCloud,resolution,vectorToStream);
+        vectorToStream.close();
         stop = std::chrono::high_resolution_clock::now();
         duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
         std::cout << "Time taken by Compress: "
-                  << duration.count()/1e6 << " seconds" << std::endl;
+                  << duration.count()/1e6<< std::endl;
 
         start = std::chrono::high_resolution_clock::now();
         std::ifstream streamToVector;
         streamToVector.open(FileBase + label + res_str + ".bin", std::ios_base::binary);
         pcc.decompress(streamToVector,restorePointCloudData);
+        streamToVector.close();
         stop = std::chrono::high_resolution_clock::now();
         duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
         std::cout << "Time taken by Decompress: "
-                  << duration.count()/1e6 << " seconds" << std::endl;
+                  << duration.count()/1e6<< std::endl;
 
         start = std::chrono::high_resolution_clock::now();
         String saveFileName= FileBase + label + res_str + ".ply";
@@ -65,7 +66,7 @@ protected:
         stop = std::chrono::high_resolution_clock::now();
         duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
         std::cout << "Time taken by SavePointCloud: "
-                  << duration.count()/1e6 << " seconds" << std::endl;
+                  << duration.count()/1e6<< std::endl;
     }
 
 public:

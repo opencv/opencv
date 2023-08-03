@@ -37,8 +37,8 @@ public:
     };
 
     //! encode Pointcloud data to serialized char vector
-    void encode(const std::vector<Point3f> &pointCloud,
-                std::vector<unsigned char> &serializedVector, double resolution);
+    void encode(const std::vector<Point3f> &pointCloud,std::vector<unsigned char> &serializedVector,
+                double resolution,std::ostream &outputStream);
 
     //! decode Pointcloud data from serialized char vector
     void decode(const std::vector<unsigned char> &serializedVector,
