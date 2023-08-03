@@ -52,8 +52,11 @@ static inline void PrintTo(const cv::VideoCaptureAPIs& api, std::ostream* os)
 
 inline std::string fourccToString(int fourcc)
 {
-    return cv::format("%c%c%c%c", (char)(fourcc & 255), (char)((fourcc >> 8) & 255),
-                                  (char)((fourcc >> 16) & 255), (char)((fourcc >> 24) & 255));
+    return cv::format("%c%c%c%c",
+        (char)(fourcc & 255),
+        (char)((fourcc >> 8) & 255),
+        (char)((fourcc >> 16) & 255),
+        (char)((fourcc >> 24) & 255));
 }
 
 inline int fourccFromString(const std::string &fourcc)
@@ -62,11 +65,11 @@ inline int fourccFromString(const std::string &fourcc)
     return cv::VideoWriter::fourcc(fourcc[0], fourcc[1], fourcc[2], fourcc[3]);
 }
 
-inline void generateFrame(int i, int FRAME_COUNT, cv::Mat & frame)
+inline void generateFrame(int i, int frame_count, cv::Mat & frame)
 {
     using namespace cv;
     using namespace std;
-    int offset = (((i * 5) % FRAME_COUNT) - FRAME_COUNT / 2) * (frame.cols / 2) / FRAME_COUNT;
+    int offset = (((i * 5) % frame_count) - frame_count / 2) * (frame.cols / 2) / frame_count;
     frame(cv::Rect(0, 0, frame.cols / 2 + offset, frame.rows)) = Scalar(255, 255, 255);
     frame(cv::Rect(frame.cols / 2 + offset, 0, frame.cols - frame.cols / 2 - offset, frame.rows)) = Scalar(0, 0, 0);
     std::string str = cv::format("%02d", i+1);
@@ -74,7 +77,7 @@ inline void generateFrame(int i, int FRAME_COUNT, cv::Mat & frame)
     Size box = getTextSize(str, FONT_HERSHEY_COMPLEX, 2, 5, &baseLine);
     putText(frame, str, Point((frame.cols - box.width) / 2, (frame.rows - box.height) / 2 + baseLine),
             FONT_HERSHEY_COMPLEX, 2, Scalar(0, 0, 255), 5, LINE_AA);
-    Point p(i * frame.cols / (FRAME_COUNT - 1), i * frame.rows / (FRAME_COUNT - 1));
+    Point p(i * frame.cols / (frame_count - 1), i * frame.rows / (frame_count - 1));
     circle(frame, p, 50, Scalar(200, 25, 55), 8, LINE_AA);
 #if 0
     imshow("frame", frame);
