@@ -406,8 +406,32 @@ public:
         std::vector<int64_t> axes_v(ieInpNode->get_shape().size() - axis);
         std::iota(axes_v.begin(), axes_v.end(), axis);
         auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_v.size()}, axes_v.data());
-        auto mvn = std::make_shared<ngraph::op::v6::MVN>(ieInpNode, axes, normVariance, eps, ngraph::op::MVNEpsMode::INSIDE_SQRT);
+        std::shared_ptr<ngraph::Node> mvn = std::make_shared<ngraph::op::v6::MVN>(ieInpNode, axes, normVariance, eps, ngraph::op::MVNEpsMode::INSIDE_SQRT);
 #endif
+        if (nodes.size() > 1)
+        {
+            auto scale = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+            if (axis == ieInpNode->get_shape().size() - 1) {
+                int shape = -1;
+                scale = std::make_shared<ngraph::op::v1::Reshape>(scale,
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &shape),
+                    true
+                );
+            }
+            mvn = std::make_shared<ngraph::op::v1::Multiply>(mvn, scale, ngraph::op::AutoBroadcastType::NUMPY);
+        }
+        if (nodes.size() > 2)
+        {
+            auto shift = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+            if (axis == ieInpNode->get_shape().size() - 1) {
+                int shape = -1;
+                shift = std::make_shared<ngraph::op::v1::Reshape>(shift,
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &shape),
+                    true
+                );
+            }
+            mvn = std::make_shared<ngraph::op::v1::Add>(mvn, shift, ngraph::op::AutoBroadcastType::NUMPY);
+        }
         return Ptr<BackendNode>(new InfEngineNgraphNode(mvn));
     }
 #endif  // HAVE_DNN_NGRAPH
