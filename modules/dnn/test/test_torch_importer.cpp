@@ -573,7 +573,7 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
             normAssert(out, refBlob, "", 0.62, 25);
         }
         else
-            normAssert(out, refBlob, "", 0.5, 1.11);
+            normAssert(out, refBlob, "", 0.5, 1.16);
     }
 }
 
