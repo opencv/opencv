@@ -732,16 +732,9 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
 #endif
 
     double scoreDiff = 0.0, iouDiff = 0.0;
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Check 'backward_compatible_check || in_out_elements_equal' failed at core/src/op/reshape.cpp:427:
-    // While validating node 'v1::Reshape bbox_pred_reshape (bbox_pred[0]:f32{1,84}, Constant_265242[0]:i64{4}) -> (f32{?,?,?,?})' with friendly_name 'bbox_pred_reshape':
-    // Requested output shape {1,6300,4,1} is incompatible with input shape {1, 84}
+#if defined(INF_ENGINE_RELEASE)
     if (target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    if (target == DNN_TARGET_OPENCL_FP16)
-        scoreDiff = 0.02;
-#endif
-#if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
         iouDiff = 0.02;
         if (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16) {
