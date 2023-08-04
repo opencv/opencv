@@ -410,7 +410,10 @@ public:
         }
         attrs.shape_calculation_mode = ngraph::op::v4::Interpolate::ShapeCalcMode::SIZES;
 
-        if (alignCorners) {
+        CV_Assert(!halfPixelCenters || !alignCorners);
+        if (halfPixelCenters) {
+            attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::HALF_PIXEL;
+        } else if (alignCorners) {
             attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::ALIGN_CORNERS;
         }
 
@@ -427,7 +430,10 @@ public:
         }
         attrs.shape_calculation_mode = ngraph::op::v4::Interpolate::ShapeCalcMode::sizes;
 
-        if (alignCorners) {
+        CV_Assert(!halfPixelCenters || !alignCorners);
+        if (halfPixelCenters) {
+            attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::half_pixel;
+        } else if (alignCorners) {
             attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::align_corners;
         }
 

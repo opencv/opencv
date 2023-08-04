@@ -215,7 +215,13 @@ TEST_P(Test_Caffe_layers, InnerProduct)
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 
-    testLayerUsingCaffeModels("layer_inner_product", true);
+    double l1 = 0.0, lInf = 0.0;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
+    {
+        l1 = 5e-3;
+        lInf = 2e-2;
+    }
+    testLayerUsingCaffeModels("layer_inner_product", true, true, l1, lInf);
 }
 
 TEST_P(Test_Caffe_layers, Pooling_max)
