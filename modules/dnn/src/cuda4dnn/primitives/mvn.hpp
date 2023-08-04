@@ -14,6 +14,7 @@
 
 #include "../kernels/fill_copy.hpp"
 #include "../kernels/mvn.hpp"
+#include "../kernels/scale_shift.hpp"
 
 #include <opencv2/core.hpp>
 
@@ -75,9 +76,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
             const std::vector<cv::Ptr<BackendWrapper>>& outputs,
             csl::Workspace& workspace) override
         {
-            CV_Assert(inputs.size() == outputs.size());
-
-            for (int i = 0; i < inputs.size(); i++)
+            for (int i = 0; i < 1; i++)
             {
                 auto input_wrapper = inputs[i].dynamicCast<wrapper_type>();
                 auto input = input_wrapper->getView();
@@ -112,6 +111,15 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                     {
                         kernels::reduce_mean<T>(stream, means, input, inner_size);
                         kernels::normalize_mean<T>(stream, output, input, means, inner_size);
+                    }
+                    if (inputs.size() > 1) {
+                        auto scale = inputs[1].dynamicCast<wrapper_type>()->getView();
+                        if (inputs.size() > 2) {
+                            auto bias = inputs[2].dynamicCast<wrapper_type>()->getView();
+                            kernels::scaleN_with_biasN<T>(stream, output, output, 1, scale, bias);
+                        } else {
+                            kernels::scaleN<T>(stream, output, output, 1, scale);
+                        }
                     }
                 }
             }
