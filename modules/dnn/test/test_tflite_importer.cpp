@@ -20,6 +20,14 @@ namespace opencv_test { namespace {
 using namespace cv;
 using namespace cv::dnn;
 
+class Test_TFLite : public DNNTestLayer {
+public:
+    void testModel(Net& net, const std::string& modelName, const Mat& input, double l1 = 0, double lInf = 0);
+    void testModel(const std::string& modelName, const Mat& input, double l1 = 0, double lInf = 0);
+    void testModel(const std::string& modelName, const Size& inpSize, double l1 = 0, double lInf = 0);
+    void testLayer(const std::string& modelName, double l1 = 0, double lInf = 0);
+};
+
 void testInputShapes(const Net& net, const std::vector<Mat>& inps) {
     std::vector<MatShape> inLayerShapes;
     std::vector<MatShape> outLayerShapes;
@@ -31,8 +39,14 @@ void testInputShapes(const Net& net, const std::vector<Mat>& inps) {
     }
 }
 
-void testModel(Net& net, const std::string& modelName, const Mat& input, double l1 = 1e-5, double lInf = 1e-4)
+void Test_TFLite::testModel(Net& net, const std::string& modelName, const Mat& input, double l1, double lInf)
 {
+    l1 = l1 ? l1 : default_l1;
+    lInf = lInf ? lInf : default_lInf;
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
     testInputShapes(net, {input});
     net.setInput(input);
 
@@ -48,20 +62,20 @@ void testModel(Net& net, const std::string& modelName, const Mat& input, double 
     }
 }
 
-void testModel(const std::string& modelName, const Mat& input, double l1 = 1e-5, double lInf = 1e-4)
+void Test_TFLite::testModel(const std::string& modelName, const Mat& input, double l1, double lInf)
 {
     Net net = readNet(findDataFile("dnn/tflite/" + modelName + ".tflite", false));
     testModel(net, modelName, input, l1, lInf);
 }
 
-void testModel(const std::string& modelName, const Size& inpSize, double l1 = 1e-5, double lInf = 1e-4)
+void Test_TFLite::testModel(const std::string& modelName, const Size& inpSize, double l1, double lInf)
 {
     Mat input = imread(findDataFile("cv/shared/lena.png"));
     input = blobFromImage(input, 1.0 / 255, inpSize, 0, true);
     testModel(modelName, input, l1, lInf);
 }
 
-void testLayer(const std::string& modelName, double l1 = 1e-5, double lInf = 1e-4)
+void Test_TFLite::testLayer(const std::string& modelName, double l1, double lInf)
 {
     Mat inp = blobFromNPY(findDataFile("dnn/tflite/" + modelName + "_inp.npy"));
     Net net = readNet(findDataFile("dnn/tflite/" + modelName + ".tflite"));
@@ -69,29 +83,66 @@ void testLayer(const std::string& modelName, double l1 = 1e-5, double lInf = 1e-
 }
 
 // https://google.github.io/mediapipe/solutions/face_mesh
-TEST(Test_TFLite, face_landmark)
+TEST_P(Test_TFLite, face_landmark)
 {
-    testModel("face_landmark", Size(192, 192), 2e-5, 2e-4);
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
+    double l1 = 2e-5, lInf = 2e-4;
+    if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL))
+    {
+        l1 = 0.15;
+        lInf = 0.82;
+    }
+    testModel("face_landmark", Size(192, 192), l1, lInf);
 }
 
 // https://google.github.io/mediapipe/solutions/face_detection
-TEST(Test_TFLite, face_detection_short_range)
+TEST_P(Test_TFLite, face_detection_short_range)
 {
-    testModel("face_detection_short_range", Size(128, 128));
+    double l1 = 0, lInf = 2e-4;
+    if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL))
+    {
+        l1 = 0.04;
+        lInf = 0.8;
+    }
+    testModel("face_detection_short_range", Size(128, 128), l1, lInf);
 }
 
 // https://google.github.io/mediapipe/solutions/selfie_segmentation
-TEST(Test_TFLite, selfie_segmentation)
+TEST_P(Test_TFLite, selfie_segmentation)
 {
-    testModel("selfie_segmentation", Size(256, 256));
+    double l1 = 0, lInf = 0;
+    if (target == DNN_TARGET_CPU_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD ||
+        (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL))
+    {
+        l1 = 0.01;
+        lInf = 0.48;
+    }
+    testModel("selfie_segmentation", Size(256, 256), l1, lInf);
 }
 
-TEST(Test_TFLite, max_unpooling)
+TEST_P(Test_TFLite, max_unpooling)
 {
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU) {
+        if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+        if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+        if (target == DNN_TARGET_MYRIAD)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+    }
+
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
     // Due Max Unpoling is a numerically unstable operation and small difference between frameworks
     // might lead to positional difference of maximal elements in the tensor, this test checks
     // behavior of Max Unpooling layer only.
     Net net = readNet(findDataFile("dnn/tflite/hair_segmentation.tflite", false));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     Mat input = imread(findDataFile("cv/shared/lena.png"));
     cvtColor(input, input, COLOR_BGR2RGBA);
@@ -101,7 +152,15 @@ TEST(Test_TFLite, max_unpooling)
     net.setInput(input);
 
     std::vector<std::vector<Mat> > outs;
-    net.forward(outs, {"p_re_lu_1", "max_pooling_with_argmax2d", "conv2d_86", "max_unpooling2d_2"});
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
+        // TODO: seems like a bug with a retrieving intermediate tensors
+        net.forward(outs, {"conv2d_transpose_4", "p_re_lu_1", "max_pooling_with_argmax2d", "conv2d_86", "max_unpooling2d_2"});
+        outs.erase(outs.begin());
+    }
+    else {
+        net.forward(outs, {"p_re_lu_1", "max_pooling_with_argmax2d", "conv2d_86", "max_unpooling2d_2"});
+    }
+
     ASSERT_EQ(outs.size(), 4);
     ASSERT_EQ(outs[0].size(), 1);
     ASSERT_EQ(outs[1].size(), 2);
@@ -116,6 +175,8 @@ TEST(Test_TFLite, max_unpooling)
     ASSERT_EQ(poolInp.size, unpoolOut.size);
     ASSERT_EQ(poolOut.size, poolIds.size);
     ASSERT_EQ(poolOut.size, unpoolInp.size);
+
+    ASSERT_EQ(countNonZero(poolInp), poolInp.total());
 
     for (int c = 0; c < 32; ++c) {
         float *poolInpData = poolInp.ptr<float>(0, c);
@@ -135,15 +196,19 @@ TEST(Test_TFLite, max_unpooling)
                     }
                 }
                 EXPECT_EQ(poolInpData[maxIdx], poolOutData[y * 64 + x]) << errMsg;
-                EXPECT_EQ(poolIdsData[y * 64 + x], (float)maxIdx) << errMsg;
+                if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
+                    EXPECT_EQ(poolIdsData[y * 64 + x], (float)maxIdx) << errMsg;
+                }
                 EXPECT_EQ(unpoolOutData[maxIdx], unpoolInpData[y * 64 + x]) << errMsg;
             }
         }
     }
 }
 
-TEST(Test_TFLite, EfficientDet_int8) {
+TEST_P(Test_TFLite, EfficientDet_int8) {
     Net net = readNet(findDataFile("dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", false));
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     Mat img = imread(findDataFile("dnn/dog416.png"));
     Mat blob = blobFromImage(img, 1.0, Size(320, 320));
@@ -158,9 +223,17 @@ TEST(Test_TFLite, EfficientDet_int8) {
     normAssertDetections(ref, out, "", 0.5, 0.05, 0.1);
 }
 
-TEST(Test_TFLite, replicate_by_pack) {
-    testLayer("replicate_by_pack");
+TEST_P(Test_TFLite, replicate_by_pack) {
+    double l1 = 0, lInf = 0;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+    {
+        l1 = 4e-4;
+        lInf = 2e-3;
+    }
+    testLayer("replicate_by_pack", l1, lInf);
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
 
 }}  // namespace
 

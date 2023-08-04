@@ -13,6 +13,7 @@ Implementation of Batch Normalization layer.
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
 #include "../op_halide.hpp"
+#include "../ie_ngraph.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
@@ -41,6 +42,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && !poolPad.width && !poolPad.height);
     }
 
@@ -181,6 +183,50 @@ public:
 #endif  // HAVE_HALIDE
         return Ptr<BackendNode>();
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto features = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto indices = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+
+        std::vector<MatShape> inpShapes(nodes.size());
+        std::vector<MatShape> outShapes, internals;
+        for (int i = 0; i < nodes.size(); ++i) {
+            std::vector<size_t> shape = nodes[i].dynamicCast<InfEngineNgraphNode>()->node->get_shape();
+            inpShapes[i] = std::vector<int>(shape.begin(), shape.end());
+        }
+        getMemoryShapes(inpShapes, 1, outShapes, internals);
+
+        Mat zeros = Mat::zeros(1, total(outShapes[0]), CV_32F);
+        auto zeroInp = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{zeros.total()}, zeros.data);
+
+        int newShape = -1;
+        features = std::make_shared<ngraph::op::v1::Reshape>(
+            features,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &newShape),
+            true
+        );
+        indices = std::make_shared<ngraph::op::v1::Reshape>(
+            indices,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &newShape),
+            true
+        );
+        if (indices->get_element_type() != ngraph::element::i32 && indices->get_element_type() != ngraph::element::i64) {
+            indices = std::make_shared<ngraph::op::Convert>(indices, ngraph::element::i64);
+        }
+
+        int axis = 0;
+        std::shared_ptr<ngraph::Node> unpool = std::make_shared<ngraph::op::ScatterElementsUpdate>(zeroInp, indices, features,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &axis));
+
+        auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{outShapes[0].size()}, outShapes[0].data());
+        unpool = std::make_shared<ngraph::op::v1::Reshape>(unpool, shape, true);
+
+        return Ptr<BackendNode>(new InfEngineNgraphNode(unpool));
+    }
+#endif  // HAVE_DNN_NGRAPH
 };
 
 Ptr<MaxUnpoolLayer> MaxUnpoolLayer::create(const LayerParams& params)
