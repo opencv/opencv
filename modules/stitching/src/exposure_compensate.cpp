@@ -129,7 +129,7 @@ void GainCompensator::singleFeed(const std::vector<Point> &corners, const std::v
     const int num_images = static_cast<int>(images.size());
     Mat_<int> N(num_images, num_images); N.setTo(0);
     Mat_<double> I(num_images, num_images); I.setTo(0);
-    Mat_<bool> skip(num_images, 1); skip.setTo(true);
+    Mat_<uchar> skip(num_images, 1); skip.setTo(1);
 
     Mat subimg1, subimg2;
     Mat_<uchar> submask1, submask2, intersect;

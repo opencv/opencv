@@ -66,8 +66,8 @@ typedef signed char schar;
 
 #define CV_USRTYPE1 (void)"CV_USRTYPE1 support has been dropped in OpenCV 4.0"
 
-#define CV_CN_MAX     512
-#define CV_CN_SHIFT   3
+#define CV_CN_MAX     128
+#define CV_CN_SHIFT   5
 #define CV_DEPTH_MAX  (1 << CV_CN_SHIFT)
 
 #define CV_8U   0
@@ -78,9 +78,17 @@ typedef signed char schar;
 #define CV_32F  5
 #define CV_64F  6
 #define CV_16F  7
+#define CV_16BF 8
+#define CV_Bool 9
+#define CV_64U  10
+#define CV_64S  11
+#define CV_32U  12
+#define CV_DEPTH_CURR_MAX 13
 
 #define CV_MAT_DEPTH_MASK       (CV_DEPTH_MAX - 1)
 #define CV_MAT_DEPTH(flags)     ((flags) & CV_MAT_DEPTH_MASK)
+#define CV_IS_INT_TYPE(flags)   (((1 << CV_MAT_DEPTH(flags)) & 0x1e1f) != 0)
+#define CV_IS_FLOAT_TYPE(flags) (((1 << CV_MAT_DEPTH(flags)) & 0x1e0) != 0)
 
 #define CV_MAKETYPE(depth,cn) (CV_MAT_DEPTH(depth) + (((cn)-1) << CV_CN_SHIFT))
 #define CV_MAKE_TYPE CV_MAKETYPE
@@ -132,6 +140,37 @@ typedef signed char schar;
 #define CV_16FC3 CV_MAKETYPE(CV_16F,3)
 #define CV_16FC4 CV_MAKETYPE(CV_16F,4)
 #define CV_16FC(n) CV_MAKETYPE(CV_16F,(n))
+
+#define CV_64SC1 CV_MAKETYPE(CV_64S,1)
+#define CV_64SC2 CV_MAKETYPE(CV_64S,2)
+#define CV_64SC3 CV_MAKETYPE(CV_64S,3)
+#define CV_64SC4 CV_MAKETYPE(CV_64S,4)
+#define CV_64SC(n) CV_MAKETYPE(CV_64S,(n))
+
+#define CV_64UC1 CV_MAKETYPE(CV_64U,1)
+#define CV_64UC2 CV_MAKETYPE(CV_64U,2)
+#define CV_64UC3 CV_MAKETYPE(CV_64U,3)
+#define CV_64UC4 CV_MAKETYPE(CV_64U,4)
+#define CV_64UC(n) CV_MAKETYPE(CV_64U,(n))
+
+#define CV_BoolC1 CV_MAKETYPE(CV_Bool,1)
+#define CV_BoolC2 CV_MAKETYPE(CV_Bool,2)
+#define CV_BoolC3 CV_MAKETYPE(CV_Bool,3)
+#define CV_BoolC4 CV_MAKETYPE(CV_Bool,4)
+#define CV_BoolC(n) CV_MAKETYPE(CV_Bool,(n))
+
+#define CV_32UC1 CV_MAKETYPE(CV_32U,1)
+#define CV_32UC2 CV_MAKETYPE(CV_32U,2)
+#define CV_32UC3 CV_MAKETYPE(CV_32U,3)
+#define CV_32UC4 CV_MAKETYPE(CV_32U,4)
+#define CV_32UC(n) CV_MAKETYPE(CV_32U,(n))
+
+#define CV_16BFC1 CV_MAKETYPE(CV_16BF,1)
+#define CV_16BFC2 CV_MAKETYPE(CV_16BF,2)
+#define CV_16BFC3 CV_MAKETYPE(CV_16BF,3)
+#define CV_16BFC4 CV_MAKETYPE(CV_16BF,4)
+#define CV_16BFC(n) CV_MAKETYPE(CV_16BF,(n))
+
 //! @}
 
 //! @name Comparison operation

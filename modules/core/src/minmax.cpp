@@ -1002,7 +1002,8 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
 
     CV_Assert(!haveSrc2 || _src2.type() == type);
 
-    if (depth == CV_32S)
+    if (depth == CV_32S || depth == CV_8S || depth == CV_32U || depth == CV_64U ||
+        depth == CV_64S || depth == CV_16F || depth == CV_16BF)
         return false;
 
     if ((depth == CV_64F || ddepth == CV_64F) && !doubleSupport)

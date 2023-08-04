@@ -31,12 +31,12 @@ TEST(Core_OutputArrayCreate, _1997)
     ASSERT_NO_THROW(local::create( mat(Rect(Point(), submatSize)), submatSize, mat.type() ));
 }
 
-TEST(Core_SaturateCast, NegativeNotClipped)
+TEST(Core_SaturateCast, NegativesAreClipped)
 {
     double d = -1.0;
     unsigned int val = cv::saturate_cast<unsigned int>(d);
 
-    ASSERT_EQ(0xffffffff, val);
+    ASSERT_EQ(0u, val);
 }
 
 template<typename T, typename U>

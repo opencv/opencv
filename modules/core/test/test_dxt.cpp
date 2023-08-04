@@ -589,7 +589,7 @@ void CxCore_DXTBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     {
         if( cn == 1 )
         {
-            types[OUTPUT][0] = depth + 8;
+            types[OUTPUT][0] = CV_MAKETYPE(depth, 2);
             sizes[TEMP][0] = size;
         }
         sizes[INPUT][0] = sizes[INPUT][1] = size;
@@ -597,7 +597,7 @@ void CxCore_DXTBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     }
     else if( /*(cn == 2 && (bits&32)) ||*/ (cn == 1 && allow_complex) )
     {
-        types[TEMP][0] = depth + 8; // CV_??FC2
+        types[TEMP][0] = CV_MAKETYPE(depth, 2); // CV_??FC2
         sizes[TEMP][0] = size;
         size = cvSize(size.width/2+1, size.height);
 
@@ -614,7 +614,7 @@ void CxCore_DXTBaseTest::get_test_array_types_and_sizes( int test_case_idx,
         else
         {
             if( allow_complex )
-                types[OUTPUT][0] = depth + 8;
+                types[OUTPUT][0] = CV_MAKETYPE(depth, 2);
 
             if( cn == 2 )
             {

@@ -1151,7 +1151,7 @@ Mat Mat::reshape(int new_cn, int new_rows) const
         }
         if( new_rows > 0 )
         {
-            int sz[] = { new_rows, (int)(total()/new_rows) };
+            int sz[] = { new_rows, (int)(total()*cn/new_rows) };
             return reshape(new_cn, 2, sz);
         }
     }

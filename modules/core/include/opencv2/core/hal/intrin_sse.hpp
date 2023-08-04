@@ -1275,6 +1275,14 @@ inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
 { return ~(a == b); }
 #endif
 
+inline v_int64x2 operator > (const v_int64x2& a, const v_int64x2& b)
+{
+    __m128i s = _mm_srli_epi64(_mm_sub_epi64(b.val, a.val), 63);
+    return v_int64x2(_mm_sub_epi64(_mm_setzero_si128(), s));
+}
+inline v_int64x2 operator < (const v_int64x2& a, const v_int64x2& b)
+{ return b > a; }
+
 OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_uint64x2)
 OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_int64x2)
 

@@ -40,7 +40,11 @@ struct BaseElemWiseOp
                                   ninputs > 1 ? ARITHM_MAX_CHANNELS : 4);
     }
 
-    virtual double getMaxErr(int depth) { return depth < CV_32F ? 1 : depth == CV_32F ? 1e-5 : 1e-12; }
+    virtual double getMaxErr(int depth)
+    {
+        return depth < CV_32F || depth == CV_32U || depth == CV_64U || depth == CV_64S ? 1 :
+               depth == CV_16F || depth == CV_16BF ? 1e-2 : depth == CV_32F ? 1e-5 : 1e-12;
+    }
     virtual void generateScalars(int depth, RNG& rng)
     {
         const double m = 3.;
@@ -93,11 +97,31 @@ struct BaseElemWiseOp
     int context;
 };
 
+static const _OutputArray::DepthMask baseArithmTypeMask =
+    _OutputArray::DepthMask(
+        _OutputArray::DEPTH_MASK_8U |
+        _OutputArray::DEPTH_MASK_16U |
+        _OutputArray::DEPTH_MASK_16S |
+        _OutputArray::DEPTH_MASK_32S |
+        _OutputArray::DEPTH_MASK_32F |
+        _OutputArray::DEPTH_MASK_64F);
 
-struct BaseAddOp : public BaseElemWiseOp
+struct BaseArithmOp : public BaseElemWiseOp
+{
+    BaseArithmOp(int _ninputs, int _flags, double _alpha, double _beta, Scalar _gamma=Scalar::all(0))
+    : BaseElemWiseOp(_ninputs, _flags, _alpha, _beta, _gamma) {}
+
+    int getRandomType(RNG& rng)
+    {
+        return cvtest::randomType(rng, baseArithmTypeMask, 1,
+                                  ninputs > 1 ? ARITHM_MAX_CHANNELS : 4);
+    }
+};
+
+struct BaseAddOp : public BaseArithmOp
 {
     BaseAddOp(int _ninputs, int _flags, double _alpha, double _beta, Scalar _gamma=Scalar::all(0))
-    : BaseElemWiseOp(_ninputs, _flags, _alpha, _beta, _gamma) {}
+    : BaseArithmOp(_ninputs, _flags, _alpha, _beta, _gamma) {}
 
     void refop(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
@@ -192,9 +216,9 @@ struct AddWeightedOp : public BaseAddOp
     }
 };
 
-struct MulOp : public BaseElemWiseOp
+struct MulOp : public BaseArithmOp
 {
-    MulOp() : BaseElemWiseOp(2, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
+    MulOp() : BaseArithmOp(2, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
     void getValueRange(int depth, double& minval, double& maxval)
     {
         minval = depth < CV_32S ? cvtest::getMinVal(depth) : depth == CV_32S ? -1000000 : -1000.;
@@ -216,9 +240,9 @@ struct MulOp : public BaseElemWiseOp
     }
 };
 
-struct DivOp : public BaseElemWiseOp
+struct DivOp : public BaseArithmOp
 {
-    DivOp() : BaseElemWiseOp(2, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
+    DivOp() : BaseArithmOp(2, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         cv::divide(src[0], src[1], dst, alpha);
@@ -233,9 +257,9 @@ struct DivOp : public BaseElemWiseOp
     }
 };
 
-struct RecipOp : public BaseElemWiseOp
+struct RecipOp : public BaseArithmOp
 {
-    RecipOp() : BaseElemWiseOp(1, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
+    RecipOp() : BaseArithmOp(1, FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         cv::divide(alpha, src[0], dst);
@@ -339,9 +363,9 @@ struct LogicSOp : public BaseElemWiseOp
     char opcode;
 };
 
-struct MinOp : public BaseElemWiseOp
+struct MinOp : public BaseArithmOp
 {
-    MinOp() : BaseElemWiseOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
+    MinOp() : BaseArithmOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         cv::min(src[0], src[1], dst);
@@ -356,9 +380,9 @@ struct MinOp : public BaseElemWiseOp
     }
 };
 
-struct MaxOp : public BaseElemWiseOp
+struct MaxOp : public BaseArithmOp
 {
-    MaxOp() : BaseElemWiseOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
+    MaxOp() : BaseArithmOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         cv::max(src[0], src[1], dst);
@@ -373,9 +397,9 @@ struct MaxOp : public BaseElemWiseOp
     }
 };
 
-struct MinSOp : public BaseElemWiseOp
+struct MinSOp : public BaseArithmOp
 {
-    MinSOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)) {}
+    MinSOp() : BaseArithmOp(1, FIX_ALPHA+FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         cv::min(src[0], gamma[0], dst);
@@ -390,9 +414,9 @@ struct MinSOp : public BaseElemWiseOp
     }
 };
 
-struct MaxSOp : public BaseElemWiseOp
+struct MaxSOp : public BaseArithmOp
 {
-    MaxSOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)) {}
+    MaxSOp() : BaseArithmOp(1, FIX_ALPHA+FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         cv::max(src[0], gamma[0], dst);
@@ -407,9 +431,9 @@ struct MaxSOp : public BaseElemWiseOp
     }
 };
 
-struct CmpOp : public BaseElemWiseOp
+struct CmpOp : public BaseArithmOp
 {
-    CmpOp() : BaseElemWiseOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) { cmpop = 0; }
+    CmpOp() : BaseArithmOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) { cmpop = 0; }
     void generateScalars(int depth, RNG& rng)
     {
         BaseElemWiseOp::generateScalars(depth, rng);
@@ -425,7 +449,7 @@ struct CmpOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);
+        return cvtest::randomType(rng, baseArithmTypeMask, 1, 1);
     }
 
     double getMaxErr(int)
@@ -435,9 +459,9 @@ struct CmpOp : public BaseElemWiseOp
     int cmpop;
 };
 
-struct CmpSOp : public BaseElemWiseOp
+struct CmpSOp : public BaseArithmOp
 {
-    CmpSOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)) { cmpop = 0; }
+    CmpSOp() : BaseArithmOp(1, FIX_ALPHA+FIX_BETA+REAL_GAMMA, 1, 1, Scalar::all(0)) { cmpop = 0; }
     void generateScalars(int depth, RNG& rng)
     {
         BaseElemWiseOp::generateScalars(depth, rng);
@@ -455,7 +479,7 @@ struct CmpSOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);
+        return cvtest::randomType(rng, baseArithmTypeMask, 1, 1);
     }
     double getMaxErr(int)
     {
@@ -478,7 +502,7 @@ struct CopyOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -500,7 +524,7 @@ struct SetOp : public BaseElemWiseOp
     }
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_16F, 1, ARITHM_MAX_CHANNELS);
+        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, ARITHM_MAX_CHANNELS);
     }
     double getMaxErr(int)
     {
@@ -650,9 +674,9 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
 } // namespace
 CVTEST_GUARD_SYMBOL(inRange);
 
-struct InRangeSOp : public BaseElemWiseOp
+struct InRangeSOp : public BaseArithmOp
 {
-    InRangeSOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA, 1, 1, Scalar::all(0)) {}
+    InRangeSOp() : BaseArithmOp(1, FIX_ALPHA+FIX_BETA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         cv::inRange(src[0], gamma, gamma1, dst);
@@ -680,9 +704,9 @@ struct InRangeSOp : public BaseElemWiseOp
 };
 
 
-struct InRangeOp : public BaseElemWiseOp
+struct InRangeOp : public BaseArithmOp
 {
-    InRangeOp() : BaseElemWiseOp(3, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
+    InRangeOp() : BaseArithmOp(3, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         Mat lb, rb;
@@ -725,7 +749,7 @@ struct ConvertScaleOp : public BaseElemWiseOp
     }
     double getMaxErr(int)
     {
-        return ddepth <= CV_32S ? 2 : ddepth < CV_64F ? 1e-3 : 1e-12;
+        return ddepth <= CV_32S || ddepth == CV_32U || ddepth == CV_64U || ddepth == CV_64S ? 2 : ddepth == CV_64F ? 1e-12 : ddepth == CV_Bool ? 0 : ddepth == CV_16BF ? 1e-2 : 2e-3;
     }
     void generateScalars(int depth, RNG& rng)
     {
@@ -1018,9 +1042,9 @@ static void log(const Mat& src, Mat& dst)
 
 } // namespace
 
-struct ExpOp : public BaseElemWiseOp
+struct ExpOp : public BaseArithmOp
 {
-    ExpOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
+    ExpOp() : BaseArithmOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
     int getRandomType(RNG& rng)
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_FLT, 1, ARITHM_MAX_CHANNELS);
@@ -1045,9 +1069,9 @@ struct ExpOp : public BaseElemWiseOp
 };
 
 
-struct LogOp : public BaseElemWiseOp
+struct LogOp : public BaseArithmOp
 {
-    LogOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
+    LogOp() : BaseArithmOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)) {}
     int getRandomType(RNG& rng)
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_FLT, 1, ARITHM_MAX_CHANNELS);
@@ -1129,9 +1153,9 @@ static void cartToPolar(const Mat& mx, const Mat& my, Mat& mmag, Mat& mangle, bo
 
 } // namespace
 
-struct CartToPolarToCartOp : public BaseElemWiseOp
+struct CartToPolarToCartOp : public BaseArithmOp
 {
-    CartToPolarToCartOp() : BaseElemWiseOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0))
+    CartToPolarToCartOp() : BaseArithmOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0))
     {
         context = 3;
         angleInDegrees = true;
@@ -1173,9 +1197,9 @@ struct CartToPolarToCartOp : public BaseElemWiseOp
 };
 
 
-struct MeanOp : public BaseElemWiseOp
+struct MeanOp : public BaseArithmOp
 {
-    MeanOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
+    MeanOp() : BaseArithmOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
     {
         context = 3;
     };
@@ -1196,9 +1220,9 @@ struct MeanOp : public BaseElemWiseOp
 };
 
 
-struct SumOp : public BaseElemWiseOp
+struct SumOp : public BaseArithmOp
 {
-    SumOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
+    SumOp() : BaseArithmOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
     {
         context = 3;
     };
@@ -1219,13 +1243,13 @@ struct SumOp : public BaseElemWiseOp
 };
 
 
-struct CountNonZeroOp : public BaseElemWiseOp
+struct CountNonZeroOp : public BaseArithmOp
 {
-    CountNonZeroOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SCALAR_OUTPUT+SUPPORT_MASK, 1, 1, Scalar::all(0))
+    CountNonZeroOp() : BaseArithmOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SCALAR_OUTPUT+SUPPORT_MASK, 1, 1, Scalar::all(0))
     {}
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL, 1, 1);
+        return cvtest::randomType(rng, baseArithmTypeMask, 1, 1);
     }
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
@@ -1252,12 +1276,12 @@ struct CountNonZeroOp : public BaseElemWiseOp
 };
 
 
-struct MeanStdDevOp : public BaseElemWiseOp
+struct MeanStdDevOp : public BaseArithmOp
 {
     Scalar sqmeanRef;
     int cn;
 
-    MeanStdDevOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
+    MeanStdDevOp() : BaseArithmOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
     {
         cn = 0;
         context = 7;
@@ -1296,16 +1320,16 @@ struct MeanStdDevOp : public BaseElemWiseOp
 };
 
 
-struct NormOp : public BaseElemWiseOp
+struct NormOp : public BaseArithmOp
 {
-    NormOp() : BaseElemWiseOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
+    NormOp() : BaseArithmOp(2, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
     {
         context = 1;
         normType = 0;
     };
     int getRandomType(RNG& rng)
     {
-        int type = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 4);
+        int type = cvtest::randomType(rng, baseArithmTypeMask, 1, 4);
         for(;;)
         {
             normType = rng.uniform(1, 8);
@@ -1343,15 +1367,15 @@ struct NormOp : public BaseElemWiseOp
 };
 
 
-struct MinMaxLocOp : public BaseElemWiseOp
+struct MinMaxLocOp : public BaseArithmOp
 {
-    MinMaxLocOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
+    MinMaxLocOp() : BaseArithmOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
     {
         context = ARITHM_MAX_NDIMS*2 + 2;
     };
     int getRandomType(RNG& rng)
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);
+        return cvtest::randomType(rng, baseArithmTypeMask, 1, 1);
     }
     void saveOutput(const vector<int>& minidx, const vector<int>& maxidx,
                     double minval, double maxval, Mat& dst)
@@ -1389,16 +1413,16 @@ struct MinMaxLocOp : public BaseElemWiseOp
     }
 };
 
-struct reduceArgMinMaxOp : public BaseElemWiseOp
+struct reduceArgMinMaxOp : public BaseArithmOp
 {
-    reduceArgMinMaxOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)),
+    reduceArgMinMaxOp() : BaseArithmOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA, 1, 1, Scalar::all(0)),
                           isLast(false), isMax(false), axis(0)
     {
         context = ARITHM_MAX_NDIMS*2 + 2;
     };
     int getRandomType(RNG& rng) override
     {
-        return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);
+        return cvtest::randomType(rng, baseArithmTypeMask, 1, 1);
     }
     void getRandomSize(RNG& rng, vector<int>& size) override
     {
@@ -1568,82 +1592,82 @@ INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(
 
 TEST(Core_ArithmMask, uninitialized)
 {
-            RNG& rng = theRNG();
-            const int MAX_DIM=3;
-            int sizes[MAX_DIM];
-            for( int iter = 0; iter < 100; iter++ )
-            {
-                int dims = rng.uniform(1, MAX_DIM+1);
-                int depth = rng.uniform(CV_8U, CV_64F+1);
-                int cn = rng.uniform(1, 6);
-                int type = CV_MAKETYPE(depth, cn);
-                int op = rng.uniform(0, depth < CV_32F ? 5 : 2); // don't run binary operations between floating-point values
-                int depth1 = op <= 1 ? CV_64F : depth;
-                for (int k = 0; k < MAX_DIM; k++)
-                {
-                    sizes[k] = k < dims ? rng.uniform(1, 30) : 0;
-                }
-                SCOPED_TRACE(cv::format("iter=%d dims=%d depth=%d cn=%d type=%d op=%d depth1=%d dims=[%d; %d; %d]",
-                                         iter,   dims,   depth,   cn,   type,   op,   depth1, sizes[0], sizes[1], sizes[2]));
+    RNG& rng = theRNG();
+    const int MAX_DIM=3;
+    int sizes[MAX_DIM];
+    for( int iter = 0; iter < 100; iter++ )
+    {
+        int dims = rng.uniform(1, MAX_DIM+1);
+        int depth = rng.uniform(CV_8U, CV_64F+1);
+        int cn = rng.uniform(1, 6);
+        int type = CV_MAKETYPE(depth, cn);
+        int op = rng.uniform(0, depth < CV_32F ? 5 : 2); // don't run binary operations between floating-point values
+        int depth1 = op <= 1 ? CV_64F : depth;
+        for (int k = 0; k < MAX_DIM; k++)
+        {
+            sizes[k] = k < dims ? rng.uniform(1, 30) : 0;
+        }
+        SCOPED_TRACE(cv::format("iter=%d dims=%d depth=%d cn=%d type=%d op=%d depth1=%d dims=[%d; %d; %d]",
+                                 iter,   dims,   depth,   cn,   type,   op,   depth1, sizes[0], sizes[1], sizes[2]));
 
-                Mat a(dims, sizes, type), a1;
-                Mat b(dims, sizes, type), b1;
-                Mat mask(dims, sizes, CV_8U);
-                Mat mask1;
-                Mat c, d;
+        Mat a(dims, sizes, type), a1;
+        Mat b(dims, sizes, type), b1;
+        Mat mask(dims, sizes, CV_8U);
+        Mat mask1;
+        Mat c, d;
 
-                rng.fill(a, RNG::UNIFORM, 0, 100);
-                rng.fill(b, RNG::UNIFORM, 0, 100);
+        rng.fill(a, RNG::UNIFORM, 0, 100);
+        rng.fill(b, RNG::UNIFORM, 0, 100);
 
-                // [-2,2) range means that the each generated random number
-                // will be one of -2, -1, 0, 1. Saturated to [0,255], it will become
-                // 0, 0, 0, 1 => the mask will be filled by ~25%.
-                rng.fill(mask, RNG::UNIFORM, -2, 2);
+        // [-2,2) range means that the each generated random number
+        // will be one of -2, -1, 0, 1. Saturated to [0,255], it will become
+        // 0, 0, 0, 1 => the mask will be filled by ~25%.
+        rng.fill(mask, RNG::UNIFORM, -2, 2);
 
-                a.convertTo(a1, depth1);
-                b.convertTo(b1, depth1);
-                // invert the mask
-                cv::compare(mask, 0, mask1, CMP_EQ);
-                a1.setTo(0, mask1);
-                b1.setTo(0, mask1);
+        a.convertTo(a1, depth1);
+        b.convertTo(b1, depth1);
+        // invert the mask
+        cv::compare(mask, 0, mask1, CMP_EQ);
+        a1.setTo(0, mask1);
+        b1.setTo(0, mask1);
 
-                if( op == 0 )
-                {
-                    cv::add(a, b, c, mask);
-                    cv::add(a1, b1, d);
-                }
-                else if( op == 1 )
-                {
-                    cv::subtract(a, b, c, mask);
-                    cv::subtract(a1, b1, d);
-                }
-                else if( op == 2 )
-                {
-                    cv::bitwise_and(a, b, c, mask);
-                    cv::bitwise_and(a1, b1, d);
-                }
-                else if( op == 3 )
-                {
-                    cv::bitwise_or(a, b, c, mask);
-                    cv::bitwise_or(a1, b1, d);
-                }
-                else if( op == 4 )
-                {
-                    cv::bitwise_xor(a, b, c, mask);
-                    cv::bitwise_xor(a1, b1, d);
-                }
-                Mat d1;
-                d.convertTo(d1, depth);
-                EXPECT_LE(cvtest::norm(c, d1, CV_C), DBL_EPSILON);
-            }
+        if( op == 0 )
+        {
+            cv::add(a, b, c, mask);
+            cv::add(a1, b1, d);
+        }
+        else if( op == 1 )
+        {
+            cv::subtract(a, b, c, mask);
+            cv::subtract(a1, b1, d);
+        }
+        else if( op == 2 )
+        {
+            cv::bitwise_and(a, b, c, mask);
+            cv::bitwise_and(a1, b1, d);
+        }
+        else if( op == 3 )
+        {
+            cv::bitwise_or(a, b, c, mask);
+            cv::bitwise_or(a1, b1, d);
+        }
+        else if( op == 4 )
+        {
+            cv::bitwise_xor(a, b, c, mask);
+            cv::bitwise_xor(a1, b1, d);
+        }
+        Mat d1;
+        d.convertTo(d1, depth);
+        EXPECT_LE(cvtest::norm(c, d1, CV_C), DBL_EPSILON);
+    }
 
-            Mat_<uchar> tmpSrc(100,100);
-            tmpSrc = 124;
-            Mat_<uchar> tmpMask(100,100);
-            tmpMask = 255;
-            Mat_<uchar> tmpDst(100,100);
-            tmpDst = 2;
-            tmpSrc.copyTo(tmpDst,tmpMask);
+    Mat_<uchar> tmpSrc(100,100);
+    tmpSrc = 124;
+    Mat_<uchar> tmpMask(100,100);
+    tmpMask = 255;
+    Mat_<uchar> tmpDst(100,100);
+    tmpDst = 2;
+    tmpSrc.copyTo(tmpDst,tmpMask);
 }
 
 TEST(Multiply, FloatingPointRounding)
@@ -2273,35 +2297,35 @@ TEST(Core_minMaxIdx, regression_9207_2)
     const int rows = 13;
     const int cols = 15;
     uchar mask_[rows*cols] = {
-   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 255,
-   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 255,
-   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 255,
-   0, 255, 255, 255, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0, 255,
- 255,   0,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0,   0,   0, 255,
- 255,   0,   0,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0, 255, 255,
- 255,   0,   0,   0,   0,   0,   0, 255, 255,   0,   0, 255, 255, 255,   0,
- 255,   0,   0,   0,   0,   0,   0,   0,   0, 255, 255, 255,   0, 255,   0,
- 255,   0,   0,   0,   0,   0,   0, 255, 255,   0,   0,   0, 255, 255,   0,
- 255,   0,   0,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0, 255,   0,
- 255,   0,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-   0, 255,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-   0, 255, 255, 255, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0
-};
+       0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 255,
+       0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 255,
+       0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 255,
+       0, 255, 255, 255, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0, 255,
+     255,   0,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0,   0,   0, 255,
+     255,   0,   0,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0, 255, 255,
+     255,   0,   0,   0,   0,   0,   0, 255, 255,   0,   0, 255, 255, 255,   0,
+     255,   0,   0,   0,   0,   0,   0,   0,   0, 255, 255, 255,   0, 255,   0,
+     255,   0,   0,   0,   0,   0,   0, 255, 255,   0,   0,   0, 255, 255,   0,
+     255,   0,   0,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0, 255,   0,
+     255,   0,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+       0, 255,   0,   0,   0, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+       0, 255, 255, 255, 255,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0
+    };
     uchar src_[15*13] = {
-   5,   5,   5,   5,   5,   6,   5,   2,   0,   4,   6,   6,   4,   1,   0,
-   6,   5,   4,   4,   5,   6,   6,   5,   2,   0,   4,   6,   5,   2,   0,
-   3,   2,   1,   1,   2,   4,   6,   6,   4,   2,   3,   4,   4,   2,   0,
-   1,   0,   0,   0,   0,   1,   4,   5,   4,   4,   4,   4,   3,   2,   0,
-   0,   0,   0,   0,   0,   0,   2,   3,   4,   4,   4,   3,   2,   1,   0,
-   0,   0,   0,   0,   0,   0,   0,   2,   3,   4,   3,   2,   1,   0,   0,
-   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,   1,   0,   0,   0,   1,
-   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,
-   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,   1,   1,   0,   0,   1,
-   0,   0,   0,   0,   0,   0,   0,   1,   2,   4,   3,   3,   1,   0,   1,
-   0,   0,   0,   0,   0,   0,   1,   4,   5,   6,   5,   4,   3,   2,   0,
-   1,   0,   0,   0,   0,   0,   3,   5,   5,   4,   3,   4,   4,   3,   0,
-   2,   0,   0,   0,   0,   2,   5,   6,   5,   2,   2,   5,   4,   3,   0
-};
+       5,   5,   5,   5,   5,   6,   5,   2,   0,   4,   6,   6,   4,   1,   0,
+       6,   5,   4,   4,   5,   6,   6,   5,   2,   0,   4,   6,   5,   2,   0,
+       3,   2,   1,   1,   2,   4,   6,   6,   4,   2,   3,   4,   4,   2,   0,
+       1,   0,   0,   0,   0,   1,   4,   5,   4,   4,   4,   4,   3,   2,   0,
+       0,   0,   0,   0,   0,   0,   2,   3,   4,   4,   4,   3,   2,   1,   0,
+       0,   0,   0,   0,   0,   0,   0,   2,   3,   4,   3,   2,   1,   0,   0,
+       0,   0,   0,   0,   0,   0,   0,   0,   0,   1,   1,   0,   0,   0,   1,
+       0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,
+       0,   0,   0,   0,   0,   0,   0,   0,   0,   1,   1,   1,   0,   0,   1,
+       0,   0,   0,   0,   0,   0,   0,   1,   2,   4,   3,   3,   1,   0,   1,
+       0,   0,   0,   0,   0,   0,   1,   4,   5,   6,   5,   4,   3,   2,   0,
+       1,   0,   0,   0,   0,   0,   3,   5,   5,   4,   3,   4,   4,   3,   0,
+       2,   0,   0,   0,   0,   2,   5,   6,   5,   2,   2,   5,   4,   3,   0
+    };
     Mat mask(Size(cols, rows), CV_8UC1, mask_);
     Mat src(Size(cols, rows), CV_8UC1, src_);
     double minVal = -0.0, maxVal = -0.0;
@@ -2715,7 +2739,6 @@ TEST(Core_CartPolar, inplace)
     EXPECT_THROW(cv::polarToCart(uA[0], uA[1], uA[1], uA[0]), cv::Exception);
     EXPECT_THROW(cv::cartToPolar(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
     EXPECT_THROW(cv::cartToPolar(uA[0], uA[1], uA[0], uA[1]), cv::Exception);
-
 }
 
 }} // namespace

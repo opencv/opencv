@@ -720,6 +720,22 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int32 vx_load_expand_q(const schar * ptr) { return VXPREFIX(_load_expand_q)(ptr); }
     //! @}
 
+    #ifndef OPENCV_HAL_HAVE_LOAD_STORE_BFLOAT16
+
+    inline v_float32 vx_load_expand(const bfloat16_t* ptr)
+    {
+        v_uint32 v = vx_load_expand((const ushort*)ptr);
+        return v_reinterpret_as_f32(v_shl<16>(v));
+    }
+
+    inline void v_pack_store(const bfloat16_t* ptr, v_float32 v)
+    {
+        v_int32 iv = v_shr<16>(v_reinterpret_as_s32(v));
+        v_pack_store((short*)ptr, iv);
+    }
+
+    #endif
+
     /** @brief SIMD processing state cleanup call */
     inline void vx_cleanup() { VXPREFIX(_cleanup)(); }
 
@@ -1093,6 +1109,10 @@ namespace CV__SIMD_NAMESPACE {
 
 #ifndef CV_SIMD
 #define CV_SIMD 0
+#endif
+
+#if (!defined CV_SIMD_64F) || (!CV_SIMD_64F)
+typedef struct v_float64 { int dummy; } v_float64;
 #endif
 
 #include "simd_utils.impl.hpp"

@@ -937,6 +937,11 @@ OPENCV_HAL_IMPL_AVX_CMP_OP_INT(v_uint32x8,  v_int32x8,  epi32, (int)0x80000000)
     inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
     { return ~(a == b); }
 
+inline v_int64x4 operator > (const v_int64x4& a, const v_int64x4& b)
+{ return v_int64x4(_mm256_cmpgt_epi64(a.val, b.val)); }
+inline v_int64x4 operator < (const v_int64x4& a, const v_int64x4& b)
+{ return v_int64x4(_mm256_cmpgt_epi64(b.val, a.val)); }
+
 OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(v_uint64x4)
 OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(v_int64x4)
 
@@ -3161,6 +3166,22 @@ inline void v_pack_store(float16_t* ptr, const v_float32x8& a)
         ptr[i] = float16_t(buf[i]);
 #endif
 }
+
+/*#define OPENCV_HAL_HAVE_PACK_STORE_BFLOAT16 1
+
+inline v_float32x8 v256_load_expand(const bfloat16_t* ptr)
+{
+    __m128i bf = _mm_loadu_si128((const __m128i*)ptr);
+    __m256i f = _mm256_unpacklo_epi16(_mm256_setzero_si256(), _mm256_castsi128_si256(bf));
+    return v_float32x8(_mm256_castsi256_ps(f));
+}
+
+inline void v_pack_store(bfloat16_t* ptr, const v_float32x8& a)
+{
+    __m256i f = _mm256_castps_si256(a.val);
+    f = _mm256_packs_epi32(_mm256_srai_epi32(f, 16), f);
+    _mm_storeu_si128((__m128i*)ptr, _v256_extract_low(f));
+}*/
 
 //
 // end of FP16

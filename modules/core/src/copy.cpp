@@ -72,28 +72,43 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
     switch(depth)
     {
     case CV_8U:
-        scalarToRawData_<uchar>(s, (uchar*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (uchar*)_buf, cn, unroll_to);
         break;
     case CV_8S:
-        scalarToRawData_<schar>(s, (schar*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (schar*)_buf, cn, unroll_to);
+        break;
+    case CV_Bool:
+        scalarToRawData_(s, (bool*)_buf, cn, unroll_to);
         break;
     case CV_16U:
-        scalarToRawData_<ushort>(s, (ushort*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (ushort*)_buf, cn, unroll_to);
         break;
     case CV_16S:
-        scalarToRawData_<short>(s, (short*)_buf, cn, unroll_to);
-        break;
-    case CV_32S:
-        scalarToRawData_<int>(s, (int*)_buf, cn, unroll_to);
-        break;
-    case CV_32F:
-        scalarToRawData_<float>(s, (float*)_buf, cn, unroll_to);
-        break;
-    case CV_64F:
-        scalarToRawData_<double>(s, (double*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (short*)_buf, cn, unroll_to);
         break;
     case CV_16F:
-        scalarToRawData_<float16_t>(s, (float16_t*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (float16_t*)_buf, cn, unroll_to);
+        break;
+    case CV_16BF:
+        scalarToRawData_(s, (bfloat16_t*)_buf, cn, unroll_to);
+        break;
+    case CV_32U:
+        scalarToRawData_(s, (unsigned*)_buf, cn, unroll_to);
+        break;
+    case CV_32S:
+        scalarToRawData_(s, (int*)_buf, cn, unroll_to);
+        break;
+    case CV_32F:
+        scalarToRawData_(s, (float*)_buf, cn, unroll_to);
+        break;
+    case CV_64U:
+        scalarToRawData_(s, (uint64_t*)_buf, cn, unroll_to);
+        break;
+    case CV_64S:
+        scalarToRawData_(s, (int64_t*)_buf, cn, unroll_to);
+        break;
+    case CV_64F:
+        scalarToRawData_(s, (double*)_buf, cn, unroll_to);
         break;
     default:
         CV_Error(CV_StsUnsupportedFormat,"");

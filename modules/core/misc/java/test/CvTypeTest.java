@@ -65,7 +65,7 @@ public class CvTypeTest extends OpenCVTestCase {
     public void testTypeToString() {
         assertEquals("CV_32FC1", CvType.typeToString(CvType.CV_32F));
         assertEquals("CV_32FC3", CvType.typeToString(CvType.CV_32FC3));
-        assertEquals("CV_32FC(128)", CvType.typeToString(CvType.CV_32FC(128)));
+        assertEquals("CV_32FC(127)", CvType.typeToString(CvType.CV_32FC(127)));
     }
 
 }

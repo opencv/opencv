@@ -50,12 +50,15 @@ typedef void (*MergeFunc)(const uchar** src, uchar* dst, int len, int cn);
 
 static MergeFunc getMergeFunc(int depth)
 {
-    static MergeFunc mergeTab[] =
+    static MergeFunc mergeTab[CV_DEPTH_MAX] =
     {
         (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u),
         (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u),
         (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s),
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u)
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u),
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u),
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s),
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s), 0, 0, 0,
     };
 
     return mergeTab[depth];

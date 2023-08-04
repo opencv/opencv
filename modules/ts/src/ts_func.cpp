@@ -72,10 +72,10 @@ int randomType(RNG& rng, _OutputArray::DepthMask typeMask, int minChannels, int 
 {
     int channels = rng.uniform(minChannels, maxChannels+1);
     int depth = 0;
-    CV_Assert((typeMask & _OutputArray::DEPTH_MASK_ALL_16F) != 0);
+    CV_Assert((typeMask & _OutputArray::DEPTH_MASK_ALL) != 0);
     for(;;)
     {
-        depth = rng.uniform(CV_8U, CV_16F+1);
+        depth = rng.uniform(CV_8U, CV_DEPTH_CURR_MAX);
         if( ((1 << depth) & typeMask) != 0 )
             break;
     }
@@ -246,8 +246,43 @@ convert_(const _Tp1* src, _Tp2* dst, size_t total, double alpha, double beta)
             dst[i] = saturate_cast<_Tp2>(src[i]*alpha + beta);
 }
 
+template<typename _Tp1> inline void
+convert_to_bool(const _Tp1* src, bool* dst,
+                size_t total, double alpha, double beta)
+{
+    size_t i;
+    if( alpha == 1 && beta == 0 )
+        for( i = 0; i < total; i++ )
+            dst[i] = src[i] != 0;
+    else if( beta == 0 )
+        for( i = 0; i < total; i++ )
+            dst[i] = src[i]*alpha != 0;
+    else
+        for( i = 0; i < total; i++ )
+            dst[i] = src[i]*alpha + beta != 0;
+}
+
+template<typename _Tp2>
+inline void
+convert_(const bool* src_, _Tp2* dst,
+         size_t total, double alpha, double beta)
+{
+    size_t i;
+    const uint8_t* src = (const uint8_t*)src_;
+    if( alpha == 1 && beta == 0 )
+        for( i = 0; i < total; i++ )
+            dst[i] = saturate_cast<_Tp2>(src[i] != 0);
+    else if( beta == 0 )
+        for( i = 0; i < total; i++ )
+            dst[i] = saturate_cast<_Tp2>((src[i] != 0)*alpha);
+    else
+        for( i = 0; i < total; i++ )
+            dst[i] = saturate_cast<_Tp2>((src[i] != 0)*alpha + beta);
+}
+
 template<typename _Tp> inline void
-convertTo(const _Tp* src, void* dst, int dtype, size_t total, double alpha, double beta)
+convertTo(const _Tp* src, void* dst, int dtype,
+          size_t total, double alpha, double beta)
 {
     switch( CV_MAT_DEPTH(dtype) )
     {
@@ -263,6 +298,9 @@ convertTo(const _Tp* src, void* dst, int dtype, size_t total, double alpha, doub
     case CV_16S:
         convert_(src, (short*)dst, total, alpha, beta);
         break;
+    case CV_32U:
+        convert_(src, (unsigned*)dst, total, alpha, beta);
+        break;
     case CV_32S:
         convert_(src, (int*)dst, total, alpha, beta);
         break;
@@ -272,16 +310,35 @@ convertTo(const _Tp* src, void* dst, int dtype, size_t total, double alpha, doub
     case CV_64F:
         convert_(src, (double*)dst, total, alpha, beta);
         break;
+    case CV_64U:
+        convert_(src, (uint64_t*)dst, total, alpha, beta);
+        break;
+    case CV_64S:
+        convert_(src, (int64_t*)dst, total, alpha, beta);
+        break;
+    case CV_16F:
+        convert_(src, (cv::float16_t*)dst, total, alpha, beta);
+        break;
+    case CV_16BF:
+        convert_(src, (cv::bfloat16_t*)dst, total, alpha, beta);
+        break;
+    case CV_Bool:
+        convert_to_bool(src, (bool*)dst, total, alpha, beta);
+        break;
     default:
         CV_Assert(0);
     }
 }
 
-void convert(const Mat& src, cv::OutputArray _dst, int dtype, double alpha, double beta)
+void convert(const Mat& src, cv::OutputArray _dst,
+             int dtype, double alpha, double beta)
 {
     if (dtype < 0) dtype = _dst.depth();
 
-    dtype = CV_MAKETYPE(CV_MAT_DEPTH(dtype), src.channels());
+    int sdepth = src.depth();
+    int ddepth = CV_MAT_DEPTH(dtype);
+
+    dtype = CV_MAKETYPE(ddepth, src.channels());
     _dst.create(src.dims, &src.size[0], dtype);
     Mat dst = _dst.getMat();
     if( alpha == 0 )
@@ -307,7 +364,7 @@ void convert(const Mat& src, cv::OutputArray _dst, int dtype, double alpha, doub
         const uchar* sptr = planes[0].ptr();
         uchar* dptr = planes[1].ptr();
 
-        switch( src.depth() )
+        switch( sdepth )
         {
         case CV_8U:
             convertTo((const uchar*)sptr, dptr, dtype, total, alpha, beta);
@@ -315,11 +372,17 @@ void convert(const Mat& src, cv::OutputArray _dst, int dtype, double alpha, doub
         case CV_8S:
             convertTo((const schar*)sptr, dptr, dtype, total, alpha, beta);
             break;
+        case CV_Bool:
+            convertTo((const bool*)sptr, dptr, dtype, total, alpha, beta);
+            break;
         case CV_16U:
             convertTo((const ushort*)sptr, dptr, dtype, total, alpha, beta);
             break;
         case CV_16S:
             convertTo((const short*)sptr, dptr, dtype, total, alpha, beta);
+            break;
+        case CV_32U:
+            convertTo((const unsigned*)sptr, dptr, dtype, total, alpha, beta);
             break;
         case CV_32S:
             convertTo((const int*)sptr, dptr, dtype, total, alpha, beta);
@@ -330,6 +393,20 @@ void convert(const Mat& src, cv::OutputArray _dst, int dtype, double alpha, doub
         case CV_64F:
             convertTo((const double*)sptr, dptr, dtype, total, alpha, beta);
             break;
+        case CV_64U:
+            convertTo((const uint64_t*)sptr, dptr, dtype, total, alpha, beta);
+            break;
+        case CV_64S:
+            convertTo((const int64_t*)sptr, dptr, dtype, total, alpha, beta);
+            break;
+        case CV_16F:
+            convertTo((const cv::float16_t*)sptr, dptr, dtype, total, alpha, beta);
+            break;
+        case CV_16BF:
+            convertTo((const cv::bfloat16_t*)sptr, dptr, dtype, total, alpha, beta);
+            break;
+        default:
+            CV_Error(CV_StsNotImplemented, "unknown/unsupported depth");
         }
     }
 }
@@ -1351,7 +1428,7 @@ double norm(InputArray _src, int normType, InputArray _mask)
 double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 {
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
-    if( src1.depth() == CV_16F )
+    if( src1.depth() == CV_16F || src1.depth() == CV_16BF )
     {
         Mat src1_32f, src2_32f;
         src1.convertTo(src1_32f, CV_32F);
@@ -1769,10 +1846,10 @@ cmpUlpsInt_(const _Tp* src1, const _Tp* src2, size_t total, int imaxdiff,
            size_t startidx, size_t& idx)
 {
     size_t i;
-    int realmaxdiff = 0;
+    int64_t realmaxdiff = 0;
     for( i = 0; i < total; i++ )
     {
-        int diff = std::abs(src1[i] - src2[i]);
+        int64_t diff = (int64_t)std::abs((int64_t)src1[i] - (int64_t)src2[i]);
         if( realmaxdiff < diff )
         {
             realmaxdiff = diff;
@@ -1780,7 +1857,7 @@ cmpUlpsInt_(const _Tp* src1, const _Tp* src2, size_t total, int imaxdiff,
                 idx = i + startidx;
         }
     }
-    return realmaxdiff;
+    return (double)realmaxdiff;
 }
 
 
@@ -2008,7 +2085,7 @@ int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
 {
     Mat arr = arr_, refarr = refarr_;
     CV_Assert( arr.type() == refarr.type() && arr.size == refarr.size );
-    if( arr.depth() == CV_16F )
+    if( arr.depth() == CV_16F || arr.depth() == CV_16BF )
     {
         Mat arr32f, refarr32f;
         arr.convertTo(arr32f, CV_32F);
@@ -2017,7 +2094,8 @@ int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
         refarr = refarr32f;
     }
 
-    int ilevel = refarr.depth() <= CV_32S ? cvFloor(success_err_level) : 0;
+    int depth = refarr.depth();
+    int ilevel = depth <= CV_32S || depth == CV_32U || depth == CV_64U || depth == CV_64S ? cvFloor(success_err_level) : 0;
     int result = CMP_EPS_OK;
 
     const Mat *arrays[]={&arr, &refarr, 0};
@@ -2025,14 +2103,13 @@ int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
     NAryMatIterator it(arrays, planes);
     size_t total = planes[0].total()*planes[0].channels(), j = total;
     size_t i, nplanes = it.nplanes;
-    int depth = arr.depth();
     size_t startidx = 1, idx = 0;
     double realmaxdiff = 0, maxval = 0;
 
     if(_realmaxdiff)
         *_realmaxdiff = 0;
 
-    if( refarr.depth() >= CV_32F && !element_wise_relative_error )
+    if( !CV_IS_INT_TYPE(depth) && !element_wise_relative_error )
     {
         maxval = cvtest::norm( refarr, NORM_INF );
         maxval = MAX(maxval, 1.);
@@ -2048,6 +2125,9 @@ int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
         case CV_8U:
             realmaxdiff = cmpUlpsInt_((const uchar*)sptr1, (const uchar*)sptr2, total, ilevel, startidx, idx);
             break;
+        case CV_Bool:
+            realmaxdiff = cmpUlpsInt_((const uchar*)sptr1, (const uchar*)sptr2, total, ilevel, startidx, idx);
+            break;
         case CV_8S:
             realmaxdiff = cmpUlpsInt_((const schar*)sptr1, (const schar*)sptr2, total, ilevel, startidx, idx);
             break;
@@ -2059,6 +2139,15 @@ int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
             break;
         case CV_32S:
             realmaxdiff = cmpUlpsInt_((const int*)sptr1, (const int*)sptr2, total, ilevel, startidx, idx);
+            break;
+        case CV_32U:
+            realmaxdiff = cmpUlpsInt_((const unsigned*)sptr1, (const unsigned*)sptr2, total, ilevel, startidx, idx);
+            break;
+        case CV_64S:
+            realmaxdiff = cmpUlpsInt_((const int64_t*)sptr1, (const int64_t*)sptr2, total, ilevel, startidx, idx);
+            break;
+        case CV_64U:
+            realmaxdiff = cmpUlpsInt_((const uint64_t*)sptr1, (const uint64_t*)sptr2, total, ilevel, startidx, idx);
             break;
         case CV_32F:
             for( j = 0; j < total; j++ )
@@ -2887,7 +2976,7 @@ std::ostream& operator << (std::ostream& out, const MatInfo& m)
         out << "<Empty>";
     else
     {
-        static const char* depthstr[] = {"8u", "8s", "16u", "16s", "32s", "32f", "64f", "?"};
+        static const char* depthstr[] = {"8u", "8s", "16u", "16s", "32s", "32f", "64f", "16f", "16bf", "Bool", "64u", "64s", "32u", "?", "?", "?"};
         out << depthstr[m.m->depth()] << "C" << m.m->channels() << " " << m.m->dims << "-dim (";
         for( int i = 0; i < m.m->dims; i++ )
             out << m.m->size[i] << (i < m.m->dims-1 ? " x " : ")");
@@ -2930,7 +3019,6 @@ writeElems(std::ostream& out, const void* data, int nelems, int starpos)
     }
 }
 
-
 static void writeElems(std::ostream& out, const void* data, int nelems, int depth, int starpos)
 {
     if(depth == CV_8U)
@@ -2943,6 +3031,28 @@ static void writeElems(std::ostream& out, const void* data, int nelems, int dept
         writeElems<short, int>(out, data, nelems, starpos);
     else if(depth == CV_32S)
         writeElems<int, int>(out, data, nelems, starpos);
+    else if(depth == CV_32U)
+        writeElems<unsigned, unsigned>(out, data, nelems, starpos);
+    else if(depth == CV_64U)
+        writeElems<uint64_t, uint64_t>(out, data, nelems, starpos);
+    else if(depth == CV_64S)
+        writeElems<int64_t, int64_t>(out, data, nelems, starpos);
+    else if(depth == CV_Bool)
+        writeElems<bool, int>(out, data, nelems, starpos);
+    else if(depth == CV_16F)
+    {
+        std::streamsize pp = out.precision();
+        out.precision(4);
+        writeElems<cv::float16_t, float>(out, data, nelems, starpos);
+        out.precision(pp);
+    }
+    else if(depth == CV_16BF)
+    {
+        std::streamsize pp = out.precision();
+        out.precision(4);
+        writeElems<cv::bfloat16_t, float>(out, data, nelems, starpos);
+        out.precision(pp);
+    }
     else if(depth == CV_32F)
     {
         std::streamsize pp = out.precision();
