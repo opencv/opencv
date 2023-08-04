@@ -425,7 +425,7 @@ public:
             dtype* p_dst = dst.ptr<dtype>();
 
             size_t main_index = start / last_unreduced_dim;
-            size_t loop = start / last_unreduced_dim;
+            size_t loop = start % last_unreduced_dim;
             size_t origin = unprojected_steps[main_index] + loop * last_unreduced_step;
             for (int i = start; i < end; ++i) {
                 Op accumulator(n_reduce, p_src[origin + projected_steps[0]]);
