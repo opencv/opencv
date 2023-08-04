@@ -136,7 +136,6 @@ public:
 #ifdef HAVE_OPENCL
     bool fast_forward_ocl(std::vector<UMat> &inputs, std::vector<UMat> &outputs)
     {
-        std::cout << "fast_forward_ocl" << std::endl;
         if (umat_scale.empty() && !scale.empty())
             scale.copyTo(umat_scale);
         if (umat_shift.empty() && !shift.empty())
@@ -303,6 +302,119 @@ public:
     }
 #endif
 
+    template<bool hasScale, bool hasBias>
+    class LayerNormInvoker : public ParallelLoopBody
+    {
+    public:
+        const Mat& src;
+        const float* scaleData;
+        const float* biasData;
+        Mat& dst;
+
+        float epsilon;
+
+        int total;
+        int normSize;
+        float invNormSize;
+        bool scaleByStripe = false;
+
+        LayerNormInvoker(const Mat& src_, const Mat* scale, const Mat* b, Mat& dst_, int axis, float epsilon_)
+            : src(src_), scaleData(nullptr), biasData(nullptr), dst(dst_), epsilon(epsilon_)
+        {
+            auto dstShape = shape(dst);
+            total = std::accumulate(dstShape.begin(), dstShape.begin() + axis, 1, std::multiplies<int>());
+            normSize = std::accumulate(dstShape.begin() + axis, dstShape.end(), 1, std::multiplies<int>());
+            invNormSize = 1.0f / normSize;
+
+            if (hasScale)
+            {
+                CV_Assert(scale != nullptr);
+                CV_Assert(scale->isContinuous());
+                scaleData = (const float*)scale->ptr<float>();
+                scaleByStripe = scale->total() == total;
+            }
+            if (hasBias)
+            {
+                CV_Assert(b != nullptr);
+                CV_Assert(b->isContinuous());
+                biasData = (const float*)b->ptr<float>();
+            }
+        }
+
+        static void run(const Mat& src, const Mat* scale, const Mat* b, Mat& dst, int axis, float epsilon)
+        {
+            CV_Assert(src.isContinuous());
+            CV_Assert(dst.isContinuous());
+            CV_CheckTypeEQ(src.type(), CV_32F, "DNN/LayerNorm: only support float32");
+            CV_CheckTypeEQ(src.type(), dst.type(), "");
+
+            CV_CheckGE(epsilon, 0.0f, "");
+
+            LayerNormInvoker p(src, scale, b, dst, axis, epsilon);
+
+            if ( p.normSize == 1 )
+            {
+                // MVN is applied to single values at an every row.
+                if (!p.biasData)
+                {
+                    dst.setTo(0);
+                }
+                else
+                {
+                    float* dstData = dst.ptr<float>();
+                    for (int i = 0; i < p.total; i++)
+                    {
+                        dstData[i] = p.biasData[i];
+                    }
+                }
+                return;
+            }
+
+            double nstripes = ((size_t)p.total * p.normSize) * (1 / 1024.0);
+            // double nstripes = ((size_t)p.total) * (1 / 1024.0);
+            parallel_for_(Range(0, p.total), p, nstripes);
+        }
+
+        void operator()(const Range& r) const CV_OVERRIDE
+        {
+            int stripeStart = r.start;
+            int stripeEnd = r.end;
+
+            const float* srcData = src.ptr<float>();
+            float* dstData = dst.ptr<float>();
+
+            for (int ofs = stripeStart; ofs < stripeEnd; ++ofs)
+            {
+                const float* first = srcData + ofs * normSize;
+                float* dstFirst = dstData + ofs * normSize;
+
+                float mean = 0;
+                float meanSquare = 0;
+                for (int h = 0; h < normSize; ++h)
+                {
+                    float v = first[h];
+                    mean += v;
+                    meanSquare += v * v;
+                }
+                mean *= invNormSize;
+                meanSquare = std::sqrt(std::max(0.f, meanSquare * invNormSize - mean * mean) + epsilon);
+                float invMeanSquare = 1.0f / meanSquare;
+                for (int h = 0; h < normSize; ++h)
+                {
+                    float v = (first[h] - mean) * invMeanSquare;
+                    if (hasScale) {
+                        int scaleOffset = scaleByStripe ? ofs : h;
+                        v = v * scaleData[scaleOffset];
+                        if (hasBias) {
+                            v = v + biasData[scaleOffset];
+                        }
+                    }
+                    dstFirst[h] = v;
+                }
+            }
+        }
+    };
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
@@ -317,10 +429,11 @@ public:
             return;
         }
 
-        std::vector<Mat> inputs, outputs, internals;
+        CV_UNUSED(internals_arr);
+
+        std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
-        internals_arr.getMatVector(internals);
         if (scale.empty() && inputs.size() > 1) {
             scale = inputs[1];
         }
@@ -328,69 +441,12 @@ public:
             shift = inputs[2];
         }
 
-        for (size_t inpIdx = 0; inpIdx < 1; inpIdx++)
-        {
-            Mat &inpBlob = inputs[inpIdx];
-            Mat &outBlob = outputs[inpIdx];
-
-            int i, newRows = 1;
-            for( i = 0; i < axis; i++ )
-                newRows *= inpBlob.size[i];
-
-            Mat inpMat = inpBlob.reshape(1, newRows);
-            Mat outMat = outBlob.reshape(1, newRows);
-
-            if ( inpBlob.total() == newRows )
-            {
-                // MVN is applied to single values at an every row.
-                if (shift.empty())
-                {
-                    outBlob.setTo(0);
-                }
-                else
-                {
-                    for ( i = 0; i < newRows; i++ )
-                    {
-                        outMat.row(i).setTo(((float*)shift.data)[i]);
-                    }
-                }
-                return;
-            }
-
-            Scalar mean, dev;
-            for ( i = 0; i < newRows; i++)
-            {
-                Mat inpRow = inpMat.row(i);
-                Mat outRow = outMat.row(i);
-
-                cv::meanStdDev(inpRow, mean, (normVariance) ? dev : noArray());
-                double alpha = 1;
-                if (normVariance)
-                {
-                    alpha = 1 / std::sqrt(eps + dev[0]*dev[0]);
-                }
-
-                if (scale.empty() || scale.total() == newRows)
-                {
-                    double normalizationScale = alpha;
-                    double normalizationShift = -mean[0] * alpha;
-                    if (!scale.empty())
-                    {
-                        float weight = scale.ptr<float>()[i];
-                        float bias = shift.ptr<float>()[i];
-                        normalizationScale *= weight;
-                        normalizationShift = normalizationShift * weight + bias;
-                    }
-                    inpRow.convertTo(outRow, outRow.type(), normalizationScale, normalizationShift);
-                }
-                else
-                {
-                    Mat scaleRow = scale.reshape(1, 1);
-                    Mat shiftRow = shift.reshape(1, 1);
-                    multiply(inpRow - mean[0], scaleRow, outRow, alpha);
-                    outRow += shiftRow;
-                }
-            }
+        if (!shift.empty()) {
+            LayerNormInvoker<true, true>::run(inputs[0], &scale, &shift, outputs[0], axis, eps);
+        } else if (!scale.empty()) {
+            LayerNormInvoker<true, false>::run(inputs[0], &scale, nullptr, outputs[0], axis, eps);
+        } else {
+            LayerNormInvoker<false, false>::run(inputs[0], nullptr, nullptr, outputs[0], axis, eps);
         }
     }
 
