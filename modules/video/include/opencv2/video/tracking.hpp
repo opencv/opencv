@@ -47,6 +47,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
 
+
 namespace cv
 {
 
@@ -889,22 +890,21 @@ public:
 };
 
 
-enum TrackState { NEW = 0, TRACKED, LOST};
 
-class CV_EXPORTS_W Track
+class CV_EXPORTS Track
 {
 public:
-    Rect rect;
+    Rect2f rect;
     float classScore;
     int classLabel; // static_cast<> ()
     int trackingId; // abs(tracking_id) <= (1 << 24) or tracking_id % (1 << 24)
 };
 
 
-class CV_EXPORTS_W Detection
+class CV_EXPORTS Detection
 {
 public:
-    Rect rect;
+    Rect2f rect;
     int classLabel;
     float classScore;
 };
@@ -956,38 +956,6 @@ public:
  * Original repo is here: https://github.com/ifzhang/ByteTrack
  * Author: Yifu Zhang, https://github.com/ifzhang
  */
-
-class CV_EXPORTS_W Strack : public Track {
-public:
-    Strack();
-    Strack(Rect2d tlwh, int classId, float score);
-    int getId() const;
-    cv::Rect2d getTlwh() const;
-    void setTlwh(cv::Rect2d tlwh);
-    TrackState getState() const;
-    void setState(TrackState);
-    int getClass();
-    cv::Rect2d predict();
-    void update(Strack& track);
-    void activate(int frame, int id);
-    void reactivate(Strack& track, int frame);
-    int getTrackletLen() const;
-    void setTrackletLen(int val);
-    void incrementTrackletLen();
-    float getScore() const;
-    ~Strack();
-
-private:
-    //cv::Rect tlwh_; //rect
-    //int trackId_; //trackingId
-    //int classId_; //classLabel
-    TrackState state_;
-    int trackletLen_;
-    //float score_; //classScore
-    int startFrame_;
-    cv::KalmanFilter kalmanFilter_;
-
-};
 
 class CV_EXPORTS_W ByteTracker : public MultiTracker {
 protected:

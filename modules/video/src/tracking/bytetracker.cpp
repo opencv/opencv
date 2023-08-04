@@ -5,7 +5,7 @@
 #include "../precomp.hpp"
 
 //#include "opencv2/video/detail/bytetracker.hpp"
-// /#include "opencv2/video/detail/bytetracker_strack.hpp"
+#include "detail/bytetracker_strack.hpp"
 #include "../lapjv/lapjv.hpp"
 //#include "opencv2/video/detail/tracking.detail.hpp"
 #include <map>
@@ -21,7 +21,8 @@ using namespace cv;
 
 namespace cv {
 
-//using cv::detail::tracking::Strack;
+using cv::detail::tracking::Strack;
+using cv::detail::tracking::TrackState;
 //using cv::detail::tracking::Detection;
 //using cv::detail::tracking::TrackState;
 
@@ -89,7 +90,7 @@ protected:
     Mat getCostMatrix(unordered_map<int, Strack>& atracks, vector<Strack> &btracks);
 
 
-    Mat calculateIous(vector<Rect2d>& atlwhs, vector<Rect2d> &btlwhs);
+    Mat calculateIous(vector<Rect2f>& atlwhs, vector<Rect2f> &btlwhs);
 
 
     unordered_map<int, Strack> joinStracks(const vector<Strack>& trackA, vector<Strack>& trackB);
@@ -129,7 +130,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     for (auto& pair : strackPool)
     {
         Strack& track = pair.second;
-        cv::Rect2d prediction = track.predict(); // cx cy w h
+        cv::Rect2f prediction = track.predict(); // cx cy w h
         prediction.x -= prediction.width;
         prediction.y -= prediction.height;
         track.setTlwh(prediction);
@@ -297,7 +298,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     {
 
         float* data = trackData.ptr<float>(row);
-        Rect2d tlwh = track.second.getTlwh();
+        Rect2f tlwh = track.second.getTlwh();
         data[0] = tlwh.x;
         data[1] = tlwh.y;
         data[2] = tlwh.width;
@@ -322,7 +323,7 @@ void ByteTrackerImpl::getDetections(InputArray& inputObjects, vector<Strack>& de
     incrementFrame(); // update frame
     for (int i = 0; i < objects.rows; i++)
     {
-        Rect2d box;
+        Rect2f box;
         float score;
         int classId;
 
@@ -367,7 +368,7 @@ Mat ByteTrackerImpl::getCostMatrix(vector<Strack> &atracks, vector<Strack> &btra
         return costMatrix; // returns empty matrix
     }
 
-    vector<Rect2d> atlwhs, btlwhs;
+    vector<Rect2f> atlwhs, btlwhs;
     for (auto& track : atracks)
     {
         atlwhs.push_back(track.getTlwh());
@@ -391,16 +392,16 @@ Mat ByteTrackerImpl::getCostMatrix(unordered_map<int, Strack> &atracks, vector<S
         return costMatrix; // returns empty matrix
     }
 
-    vector<Rect2d> atlwhs, btlwhs;
+    vector<Rect2f> atlwhs, btlwhs;
     for (auto &pair : atracks)
     {
-        Rect2d tlwh = pair.second.getTlwh();
+        Rect2f tlwh = pair.second.getTlwh();
         atlwhs.push_back(tlwh);
     }
 
     for (auto &track : btracks)
     {
-        Rect2d tlwh = track.getTlwh();
+        Rect2f tlwh = track.getTlwh();
         btlwhs.push_back(tlwh);
     }
 
@@ -411,7 +412,7 @@ Mat ByteTrackerImpl::getCostMatrix(unordered_map<int, Strack> &atracks, vector<S
 }
 
 
-Mat ByteTrackerImpl::calculateIous(vector<Rect2d> &atlwhs, vector<Rect2d> &btlwhs)
+Mat ByteTrackerImpl::calculateIous(vector<Rect2f> &atlwhs, vector<Rect2f> &btlwhs)
 {
     Mat iousMatrix;
     if (atlwhs.empty() || btlwhs.empty())
@@ -426,8 +427,8 @@ Mat ByteTrackerImpl::calculateIous(vector<Rect2d> &atlwhs, vector<Rect2d> &btlwh
     {
         for (size_t j = 0; j < btlwhs.size(); ++j)
         {
-            cv::Rect2d intersection = atlwhs[i] & btlwhs[j];
-            cv::Rect2d unionRect = atlwhs[i] | btlwhs[j];
+            cv::Rect2f intersection = atlwhs[i] & btlwhs[j];
+            cv::Rect2f unionRect = atlwhs[i] | btlwhs[j];
             float intersectionArea = intersection.area();
             float unionArea = unionRect.area();
             iousMatrix.at<float>(i, j) = intersectionArea / unionArea;

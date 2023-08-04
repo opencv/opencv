@@ -5,13 +5,14 @@
 // #include "bytetracker_strack.hpp"
 //#include "opencv2/video/detail/bytetracker_strack.hpp"
 #include "opencv2/video/tracking.hpp"
+#include "bytetracker_strack.hpp"
 //#include "opencv2/core.hpp"
 
 namespace cv {
-//namespace detail {
-//namespace tracking {
+namespace detail {
+namespace tracking {
 
-//using namespace cv::detail::tracking;
+using namespace cv::detail::tracking;
 
 Strack::Strack()
 {
@@ -28,7 +29,7 @@ Strack::~Strack()
     //nothing
 }
 
-Strack::Strack(cv::Rect2d tlwh,  int classId, float score)
+Strack::Strack(cv::Rect2f tlwh,  int classId, float score)
 {
     rect = tlwh;
     classLabel = classId;
@@ -46,12 +47,12 @@ int Strack::getId() const
   return trackingId;
 }
 
-cv::Rect2d Strack::getTlwh() const
+cv::Rect2f Strack::getTlwh() const
 {
   return rect;
 }
 
-void Strack::setTlwh(cv::Rect2d tlwh)
+void Strack::setTlwh(cv::Rect2f tlwh)
 {
     rect = tlwh;
 }
@@ -94,6 +95,7 @@ void Strack::activate(int frame, int id)
     kalmanFilter_.transitionMatrix = transitionMatrix; // F mat
 
     //Q matrix
+    /*
     setIdentity(kalmanFilter_.processNoiseCov, cv::Scalar::all(1e-2));
     for (int i=0; i < 4; i++){
         kalmanFilter_.processNoiseCov.at<float>(i,i) *= 10000;
@@ -102,6 +104,22 @@ void Strack::activate(int frame, int id)
     //vx  vy = 1
     kalmanFilter_.processNoiseCov.at<float>(4,4) = static_cast<float>(1e-4);
     kalmanFilter_.processNoiseCov.at<float>(5,5) = static_cast<float>(1e-4);
+    */
+
+    cv::Mat noiseCov = cv::Mat::zeros(8, 8, CV_32F);
+    float stdWeightPosition = 1./20;
+    float stdWeightVelocity = 1./160;
+
+    noiseCov.at<float>(0, 0) = 2 * stdWeightPosition * rect.height;
+    noiseCov.at<float>(1, 1) = 2 * stdWeightPosition * rect.height;
+    noiseCov.at<float>(2, 2) = 1e-2f;
+    noiseCov.at<float>(3, 3) = 2 * stdWeightPosition * rect.height;
+    noiseCov.at<float>(4, 4) = 10 * stdWeightVelocity * rect.height;
+    noiseCov.at<float>(5, 5) = 10 * stdWeightVelocity * rect.height;
+    noiseCov.at<float>(6, 6) = 1e-5f;
+    noiseCov.at<float>(7, 7) = 10 * stdWeightVelocity * rect.height;
+
+    kalmanFilter_.processNoiseCov = noiseCov;
 
     float cx = rect.x + rect.width;
     float cy = rect.y + rect.height;
@@ -122,7 +140,40 @@ void Strack::update(Strack& track)
     float h = track.rect.height;
 
     cv::Mat measurement = (cv::Mat_<float>(4,1) << cx, cy, w, h);
+
+    /*
+    cv::Mat noiseCov = cv::Mat::zeros(8, 8, CV_32F);
+    float stdWeightPosition = 1./20;
+    float stdWeightVelocity = 1./160;
+
+    noiseCov.at<float>(0, 0) = stdWeightPosition * h;
+    noiseCov.at<float>(1, 1) = stdWeightPosition * rect.height;
+    noiseCov.at<float>(2, 2) = 1e-2f;
+    noiseCov.at<float>(3, 3) = stdWeightPosition * h;
+    noiseCov.at<float>(4, 4) = stdWeightVelocity * h;
+    noiseCov.at<float>(5, 5) = stdWeightVelocity * h;
+    noiseCov.at<float>(6, 6) = 1e-5f;
+    noiseCov.at<float>(7, 7) = stdWeightVelocity * h;
+
+    kalmanFilter_.processNoiseCov = noiseCov;
+    */
+
     kalmanFilter_.correct(measurement);
+    cv::Mat noiseCov = cv::Mat::zeros(8, 8, CV_32F);
+    float stdWeightPosition = 1./20;
+    float stdWeightVelocity = 1./160;
+
+    noiseCov.at<float>(0, 0) = stdWeightPosition * h;
+    noiseCov.at<float>(1, 1) = stdWeightPosition * rect.height;
+    noiseCov.at<float>(2, 2) = 1e-2f;
+    noiseCov.at<float>(3, 3) = stdWeightPosition * h;
+    noiseCov.at<float>(4, 4) = stdWeightVelocity * h;
+    noiseCov.at<float>(5, 5) = stdWeightVelocity * h;
+    noiseCov.at<float>(6, 6) = 1e-5f;
+    noiseCov.at<float>(7, 7) = stdWeightVelocity * h;
+
+    kalmanFilter_.processNoiseCov += noiseCov;
+
     classScore = track.classScore;
 
 }
@@ -149,10 +200,10 @@ void Strack::setTrackletLen(int val)
     trackletLen_= val;
 }
 
-cv::Rect2d Strack::predict()
+cv::Rect2f Strack::predict()
 {
     cv::Mat predictionMat = kalmanFilter_.predict();
-    cv::Rect2d prediction(
+    cv::Rect2f prediction(
         predictionMat.at<float>(0),
         predictionMat.at<float>(1),
         predictionMat.at<float>(2),
@@ -166,4 +217,6 @@ float Strack::getScore() const
     return classScore;
 }
 
+}
+}
 }
