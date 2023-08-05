@@ -1387,35 +1387,39 @@ public:
         Mat outputInt32 = Mat(shape(outputs[0]), CV_32S);
 
         // TODO! optimize the fastQConv by AVX/AVX2, need to rethink the Pack_layout.
+        // TODO: optimize Conv1D and Conv3D. Currently, the fastQConv branch is slower in DepthWise Conv3D and Conv1D cases.
         // Currently, on x86 and Loongson platform, the fastQConv branch is slower than ParallelConv branch.
         // So we keep it for now.
 #if CV_NEON && CV_NEON_AARCH64
-        if (!fastQConvImpl)
+        int conv_dim = CONV_2D;
+        if (inputs[0].dims == 3)
+            conv_dim = CONV_1D;
+        if (inputs[0].dims == 5)
+            conv_dim = CONV_3D;
+
+        if (conv_dim == CONV_2D)
         {
-            int K = outputs[0].size[1];
-            int C = inputs[0].size[1];
+            if (!fastQConvImpl)
+            {
+                int K = outputs[0].size[1];
+                int C = inputs[0].size[1];
 
-            int conv_dim = CONV_2D;
-            if (inputs[0].dims == 3)
-                conv_dim = CONV_1D;
-            if (inputs[0].dims == 5)
-                conv_dim = CONV_3D;
+                CV_Assert(outputs[0].size[1] % ngroups == 0);
+                fastQConvImpl = initFastQConv(weightsMat, &biasvec[0], ngroups, K, C, kernel_size, strides, dilations,
+                                              pads_begin, pads_end, conv_dim, outputMultiplier, input_sc, input_zp,
+                                              output_sc, output_zp, per_channel);
+            }
 
-            CV_Assert(outputs[0].size[1] % ngroups == 0);
-            fastQConvImpl = initFastQConv(weightsMat, &biasvec[0], ngroups, K, C, kernel_size, strides, dilations,
-                                          pads_begin, pads_end, conv_dim, outputMultiplier, input_sc, input_zp,
-                                          output_sc, output_zp, per_channel);
+            runFastQConv(inputs[0], outputs[0], fastQConvImpl, nstripes, activ);
         }
-
-        runFastQConv(inputs[0], outputs[0], fastQConvImpl, nstripes, activ);
-#else
+        else
+#endif
         {
             ParallelConv::run(inputs[0], outputInt32, weightsMat, outputMultiplier, biasvec, activationLUT, kernel_size, strides,
                               pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes, input_zp, output_zp);
 
             outputInt32.convertTo(outputs[0], CV_8S);
         }
-#endif
 
 #if CV_SSE3
         _MM_SET_FLUSH_ZERO_MODE(ftzMode);
