@@ -75,7 +75,7 @@ public:
     * @param inputCharVector Char vector for entropy encoding.
     * @param outputStream The output stream, will be written to point cloud compressed file.
     */
-    void encodeCharVectorToStream(std::vector<unsigned char> &inputCharVector,
+    static void encodeCharVectorToStream(std::vector<unsigned char> &inputCharVector,
                                   std::ostream &outputStream);
 
     /** @brief decode char vector from bit stream
@@ -83,7 +83,7 @@ public:
     * @param inputStream The point cloud compressed file.
     * @param outputCharVector The output Char vector, used for storing the char vector.
     */
-    void decodeStreamToCharVector(std::istream &inputStream,
+    static void decodeStreamToCharVector(std::istream &inputStream,
                                   std::vector<unsigned char> &outputCharVector);
 };
 
