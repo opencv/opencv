@@ -272,46 +272,25 @@ void restore(OctreeNode &root,const std::vector<unsigned char> &serializedVector
 void OctreeSerializeCoder::encode(const std::vector<Point3f> &pointCloud,std::vector<unsigned char> &serializedVector,
                                   double resolution,std::ostream &outputStream) {
     // create octree by pointCloud
-    auto start1 = std::chrono::high_resolution_clock::now();
     this->octree->create(pointCloud, resolution);
-    auto stop1 = std::chrono::high_resolution_clock::now();
-    auto duration1 = std::chrono::duration_cast<std::chrono::microseconds>(stop1 - start1);
-    printf("Time taken by create: %f\n"
-            ,duration1.count()/1e6);
 
     outputStream<<"origin "<<this->octree->p->origin.x;
     outputStream<<" "<<this->octree->p->origin.y;
     outputStream<<" "<<this->octree->p->origin.z<<"\n";
 
     // Encode octree by traverse its occupancy code in BFS order.
-    auto start2 = std::chrono::high_resolution_clock::now();
     traverse(*(this->octree->p->rootNode),serializedVector);
-    auto stop2 = std::chrono::high_resolution_clock::now();
-    auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(stop2 - start2);
-    printf("Time taken by traverse: %f\n"
-            ,duration2.count()/1e6);
 }
 
-void OctreeSerializeCoder::decode(const std::vector<unsigned char> &serializedVector,
-                                  std::vector<Point3f> &pointCloud,Point3f &origin, double resolution){
+void OctreeSerializeCoder::decode(std::vector<Point3f> &pointCloud,const std::vector<unsigned char> &serializedVector,
+                                  double resolution,Point3f &origin){
     this->octree->clear();
     this->octree->p->origin=origin;
     this->octree->p->resolution=resolution;
     this->octree->p->rootNode=new OctreeNode();
-    auto start1 = std::chrono::high_resolution_clock::now();
     restore(*this->octree->p->rootNode,serializedVector);
-    auto stop1 = std::chrono::high_resolution_clock::now();
-    auto duration1 = std::chrono::duration_cast<std::chrono::microseconds>(stop1 - start1);
-    printf("Time taken by restore: %f\n"
-              ,duration1.count()/1e6);
     std::vector<Point3f> color;
-
-    auto start2 = std::chrono::high_resolution_clock::now();
     this->octree->getPointCloudByOctree(pointCloud,color);
-    auto stop2 = std::chrono::high_resolution_clock::now();
-    auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(stop2 - start2);
-    printf("Time taken by getPointCloudByOctree: %f\n"
-            ,duration2.count()/1e6);
 }
 
 void PointCloudCompression::compress(const std::vector<Point3f> &pointCloud, double resolution, std::ostream &outputStream) {
@@ -332,7 +311,7 @@ void PointCloudCompression::decompress(std::istream &inputStream, std::vector<Po
     Point3f origin(ori_x,ori_y,ori_z);
     inputStream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     this->_entropyCoder.decodeStreamToCharVector(inputStream,outputCharVector);
-    this->_coder.decode(outputCharVector,pointCloud,origin,resolution);
+    this->_coder.decode(pointCloud,outputCharVector,resolution,origin);
 }
 
 }

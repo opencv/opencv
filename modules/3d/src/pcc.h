@@ -19,30 +19,48 @@ namespace cv {
 
 /** @brief class to serialize or deserialize pointcloud data
  *
- * A class for "encoding" pointcloud data to a
+ * A class for "encoding" pointCloud data to a
  * meaningful, unevenly distributed char vector,
  * so that it can be further compressed by Entropy coding.
  * And the opposite "decoding" way as well.
  *
- * The current implementation is to represent pointcloud as Octree,
+ * The current implementation is to represent pointCloud as Octree,
  * then traverse OctreeNodes to get vector of "occupancy code".
 */
 class OctreeSerializeCoder {
 private:
     Octree *octree;
 public:
-
+    //! Default constructor.
     OctreeSerializeCoder(){
         this->octree=new Octree();
     };
 
-    //! encode Pointcloud data to serialized char vector
+    /** @brief encode pointCloud data to serialized char vector
+    *
+    * Based on the specified resolution, an octree is constructed from the point cloud data.
+    * The octree is then serialized into meaningful, unevenly distributed char vector, which
+    * is used for entropy coding to further compress the data. At the same time, the octree
+    * information is written to the outputStream header.
+    * @param pointCloud The point cloud data.
+    * @param serializedVector Used for storing the serialized char vector.
+    * @param resolution The size of the Octree leaf node.
+    * @param outputStream The output stream, will be written to point cloud compressed file.
+    */
     void encode(const std::vector<Point3f> &pointCloud,std::vector<unsigned char> &serializedVector,
                 double resolution,std::ostream &outputStream);
 
-    //! decode Pointcloud data from serialized char vector
-    void decode(const std::vector<unsigned char> &serializedVector,
-                std::vector<Point3f> &pointCloud, Point3f &origin, double resolution);
+    /** @brief decode pointCloud data from serialized char vector
+    *
+    * Based on the specified resolution and origin, an octree is restored from the serialized char vector.
+    * Then, the point cloud data is extracted from the octree.
+    * @param pointCloud Used for storing the point cloud data.
+    * @param serializedVector The serialized char vector.
+    * @param resolution The size of the Octree leaf node.
+    * @param origin The vertex of the cube represented by the octree root node.
+    */
+    void decode(std::vector<Point3f> &pointCloud, const std::vector<unsigned char> &serializedVector,
+                double resolution, Point3f &origin);
 };
 
 /** @brief Class to reduce vectorized data size by EntropyCoding
@@ -52,18 +70,26 @@ public:
 */
 class EntropyCoder {
 public:
-    //! encode char vector to bit stream
+    /** @brief encode char vector to bit stream.
+    *
+    * @param inputCharVector Char vector for entropy encoding.
+    * @param outputStream The output stream, will be written to point cloud compressed file.
+    */
     void encodeCharVectorToStream(std::vector<unsigned char> &inputCharVector,
                                   std::ostream &outputStream);
 
-    //! decode char vector from bit stream
+    /** @brief decode char vector from bit stream
+    *
+    * @param inputStream The point cloud compressed file.
+    * @param outputCharVector The output Char vector, used for storing the char vector.
+    */
     void decodeStreamToCharVector(std::istream &inputStream,
                                   std::vector<unsigned char> &outputCharVector);
 };
 
-/** @brief pointcloud compression class
+/** @brief pointCloud compression class
  *
- * This class enables user to do compression and decompression to pointcloud,
+ * This class enables user to do compression and decompression to pointCloud,
  * currently based on Octree,
  * may support other method (like kd-tree, etc.) in future if necessary.
  *
