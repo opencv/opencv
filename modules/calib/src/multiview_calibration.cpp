@@ -18,7 +18,7 @@ public:
 #define USE_FAST_EXP 0
 
 // TODO: should we require a least number of visible points? Now I set to three since this should be the minimal number of points to do the PNP
-#define MINIMUM_OBSERVATION 3
+#define MINIMUM_OBSERVATION 4
 
 #if USE_FAST_EXP
 class RobustExpFunction : public RobustFunction {
@@ -120,7 +120,7 @@ static void establishValidPointMap(const std::vector<std::vector<Mat>>& imagePoi
                 NUM_PATTERN_PTS = imagePoints[c][f].rows;
             for (int p = 0; p < NUM_PATTERN_PTS; p++) {
                 if (imagePoints[c][f].type() == CV_32F && imagePoints[c][f].cols == 2) {
-                    if (std::min((imagePoints[c][f].at<double>(p, 0)), imagePoints[c][f].at<double>(p, 1)) < 0)
+                    if (std::min((imagePoints[c][f].at<float>(p, 0)), imagePoints[c][f].at<float>(p, 1)) < 0)
                         continue;
                     
                     if (imageSize[c].height > 0 && imageSize[c].width > 0) {
@@ -568,7 +568,7 @@ static void checkConnected (const std::vector<std::vector<bool>> &detection_mask
         if (! visited[c]) {
             std::string isolated_cameras = "", visited_str = "";
             for (int i = 0; i < NUM_CAMERAS; i++) {
-                if (!visited_str[i]) {
+                if (!visited[i]) {
                     if (isolated_cameras != "")
                         isolated_cameras += ", ";
                     isolated_cameras += std::to_string(i);
