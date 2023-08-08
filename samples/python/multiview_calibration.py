@@ -926,6 +926,7 @@ if __name__ == '__main__':
 
     # Evaluate the error
     if params.gt_file is not None:
+        assert os.path.exists(params.gt_file), f'Path to gt file does not exist: {params.gt_file}'
         compareGT(params.gt_file, **output)
     visualizeResults(**output)
 
