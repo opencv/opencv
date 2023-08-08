@@ -64,7 +64,9 @@ def export2JSON(pattern_points, image_points, image_sizes, is_fisheye, json_file
     image_points_list = [[] for i in range(len(image_sizes))]
     for c in range(len(image_points)):
         for f in range(len(image_points[c])):
-            if areAllInsideImage(image_points[c][f], image_sizes[c][0], image_sizes[c][1]):
+            if insideImage(image_points[c][f].T, image_sizes[c][0], image_sizes[c][1]) >= 4:
+                mask = np.logical_not(insideImageMask(image_points[c][f].T, image_sizes[c][0], image_sizes[c][1]))
+                image_points[c][f][mask] = -1.
                 image_points_list[c].append(image_points[c][f].tolist())
             else:
                 image_points_list[c].append([])
