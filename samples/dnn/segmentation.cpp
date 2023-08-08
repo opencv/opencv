@@ -7,7 +7,7 @@
 
 #include "common.hpp"
 
-std::string keys =
+std::string param_keys =
     "{ help  h     | | Print help message. }"
     "{ @alias      | | An alias name of model to extract preprocessing parameters from models.yml file. }"
     "{ zoo         | models.yml | An optional path to file with preprocessing parameters }"
@@ -16,22 +16,24 @@ std::string keys =
     "{ framework f | | Optional name of an origin framework of the model. Detect it automatically if it does not set. }"
     "{ classes     | | Optional path to a text file with names of classes. }"
     "{ colors      | | Optional path to a text file with colors for an every class. "
-                      "An every color is represented with three values from 0 to 255 in BGR channels order. }"
-    "{ backend     | 0 | Choose one of computation backends: "
-                        "0: automatically (by default), "
-                        "1: Halide language (http://halide-lang.org/), "
-                        "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                        "3: OpenCV implementation, "
-                        "4: VKCOM, "
-                        "5: CUDA }"
-    "{ target      | 0 | Choose one of target computation devices: "
-                        "0: CPU target (by default), "
-                        "1: OpenCL, "
-                        "2: OpenCL fp16 (half-float precision), "
-                        "3: VPU, "
-                        "4: Vulkan, "
-                        "6: CUDA, "
-                        "7: CUDA fp16 (half-float preprocess) }";
+                      "An every color is represented with three values from 0 to 255 in BGR channels order. }";
+std::string backend_keys = cv::format(
+    "{ backend   | 0 | Choose one of computation backends: "
+                       "%d: automatically (by default), "
+                       "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                       "%d: OpenCV implementation, "
+                       "%d: VKCOM, "
+                       "%d: CUDA }", cv::dnn::DNN_BACKEND_DEFAULT, cv::dnn::DNN_BACKEND_INFERENCE_ENGINE, cv::dnn::DNN_BACKEND_OPENCV, cv::dnn::DNN_BACKEND_VKCOM, cv::dnn::DNN_BACKEND_CUDA);
+std::string target_keys = cv::format(
+    "{ target    | 0 | Choose one of target computation devices: "
+                       "%d: CPU target (by default), "
+                       "%d: OpenCL, "
+                       "%d: OpenCL fp16 (half-float precision), "
+                       "%d: VPU, "
+                       "%d: Vulkan, "
+                       "%d: CUDA, "
+                       "%d: CUDA fp16 (half-float preprocess) }", cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16, cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA, cv::dnn::DNN_TARGET_CUDA_FP16);
+std::string keys = param_keys + backend_keys + target_keys;
 
 using namespace cv;
 using namespace dnn;

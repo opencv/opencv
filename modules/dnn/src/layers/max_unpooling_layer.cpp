@@ -12,7 +12,6 @@ Implementation of Batch Normalization layer.
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../ie_ngraph.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -42,8 +41,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() && !poolPad.width && !poolPad.height);
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -155,34 +153,6 @@ public:
         return make_cuda_node<cuda4dnn::MaxUnpoolingOp>(preferableTarget, std::move(context->stream), config);
     }
 #endif
-
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        // Meaningless operation if false because if kernel > stride
-        // it is not deterministic and if kernel < stride we just
-        // skip a part of input data (you'd better change your model).
-        if (poolKernel.width != poolStride.width ||
-            poolKernel.height != poolStride.height)
-            CV_Error(cv::Error::StsNotImplemented,
-                     "Halide backend for maximum unpooling "
-                     "is not support cases when kernel != stride");
-
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::Buffer<float> inputBuffer = halideBuffer(input[0]);
-        Halide::Buffer<float> indices = halideBuffer(input[1]);
-
-        Halide::Expr pooledX = x / poolKernel.width;
-        Halide::Expr pooledY = y / poolKernel.height;
-
-        const int outW = inputBuffer.width() * poolKernel.width;
-        top(x, y, c, n) = select(y * outW + x == indices(pooledX, pooledY, c, n),
-                                 inputBuffer(pooledX, pooledY, c, n), 0.0f);
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,

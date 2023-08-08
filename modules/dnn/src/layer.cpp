@@ -57,12 +57,6 @@ Ptr<BackendNode> Layer::initVkCom(const std::vector<Ptr<BackendWrapper> > &input
     return Ptr<BackendNode>();
 }
 
-Ptr<BackendNode> Layer::initHalide(const std::vector<Ptr<BackendWrapper>>&)
-{
-    CV_Error(Error::StsNotImplemented, "Halide pipeline of " + type + " layers is not defined.");
-    return Ptr<BackendNode>();
-}
-
 Ptr<BackendNode> Layer::initNgraph(const std::vector<Ptr<BackendWrapper>>& inputs, const std::vector<Ptr<BackendNode>>& nodes)
 {
     CV_Error(Error::StsNotImplemented, "Inference Engine pipeline of " + type + " layers is not defined.");
@@ -90,11 +84,6 @@ Ptr<BackendNode> Layer::initCann(const std::vector<Ptr<BackendWrapper> > &inputs
                                  const std::vector<Ptr<BackendNode> >& nodes)
 {
     CV_Error(Error::StsNotImplemented, "CANN pipeline of " + type + " layers is not defined.");
-    return Ptr<BackendNode>();
-}
-
-Ptr<BackendNode> Layer::tryAttach(const Ptr<BackendNode>& node)
-{
     return Ptr<BackendNode>();
 }
 

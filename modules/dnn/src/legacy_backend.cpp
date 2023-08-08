@@ -6,7 +6,6 @@
 
 #include "legacy_backend.hpp"
 
-#include "op_halide.hpp"
 #include "op_inf_engine.hpp"
 #include "ie_ngraph.hpp"
 #include "op_vkcom.hpp"
@@ -62,13 +61,6 @@ Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
 #endif
         else
             CV_Error(Error::StsNotImplemented, "Unknown/unsupported target identifier");
-    }
-    else if (backendId == DNN_BACKEND_HALIDE)
-    {
-        CV_Assert(haveHalide());
-#ifdef HAVE_HALIDE
-        return Ptr<BackendWrapper>(new HalideBackendWrapper(targetId, m));
-#endif  // HAVE_HALIDE
     }
     else if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
     {

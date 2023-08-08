@@ -104,9 +104,6 @@ void Net::Impl::validateBackendAndTarget()
               preferableTarget == DNN_TARGET_CPU_FP16 ||
               preferableTarget == DNN_TARGET_OPENCL ||
               preferableTarget == DNN_TARGET_OPENCL_FP16);
-    CV_Assert(preferableBackend != DNN_BACKEND_HALIDE ||
-              preferableTarget == DNN_TARGET_CPU ||
-              preferableTarget == DNN_TARGET_OPENCL);
 #ifdef HAVE_WEBNN
     if (preferableBackend == DNN_BACKEND_WEBNN)
     {
@@ -203,16 +200,6 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
         it->second.skip = netInputLayer->skip;
 
         initBackend(blobsToKeep_);
-
-        if (!netWasAllocated)
-        {
-#ifdef HAVE_HALIDE
-            if (preferableBackend == DNN_BACKEND_HALIDE)
-                compileHalide();
-#else
-            CV_Assert(preferableBackend != DNN_BACKEND_HALIDE);
-#endif
-        }
 
         netWasAllocated = true;
 
@@ -807,10 +794,6 @@ void Net::Impl::forwardLayer(LayerData& ld)
                     wrapper->copyToHostInBackground();
                 }
 #endif
-            }
-            else if (preferableBackend == DNN_BACKEND_HALIDE)
-            {
-                forwardHalide(ld.outputBlobsWrappers, node);
             }
             else if (preferableBackend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             {
@@ -1566,7 +1549,6 @@ string Net::Impl::dump(bool forceAllocation) const
     switch (prefBackend)
     {
     case DNN_BACKEND_DEFAULT: backend = "DEFAULT/"; break;
-    case DNN_BACKEND_HALIDE: backend = "HALIDE/"; break;
     case DNN_BACKEND_INFERENCE_ENGINE:  // fallthru
     case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019:  // fallthru
     case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: backend = "OpenVINO/"; break;
