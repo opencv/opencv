@@ -415,7 +415,8 @@ static void optimizeLM (std::vector<double> &param,
         std::vector<int> frame_head(NUM_CAMERAS, 0);
         for (int i = 0; i < NUM_FRAMES; i++ ) {
             if (!valid_frames[i]) continue;
-            for (int k = 0; k < NUM_CAMERAS; k++ ) { // for the first camera, take caution that only the frame camera is to be optimized
+            for (int k = 0; k < NUM_CAMERAS; k++ ) {
+                // Pose for camera #0 is not optimized, but it's re-projection error is taken into account
                 if (!detection_mask_mat[k][i]) continue;
                 int f = frame_head[k];
                 frame_head[k]++;
@@ -473,12 +474,12 @@ static void optimizeLM (std::vector<double> &param,
                     const int eofs = (cnt_valid_frame+NUM_CAMERAS-1)*6;
                     assert( JtJ_.needed() && JtErr_.needed() );
                     // JtJ : NUM_PARAMS x NUM_PARAMS, JtErr : NUM_PARAMS x 1
-
                     // d(err_{x|y}R) ~ de3
                     // convert de3/{dr3,dt3} => de3{dr1,dt1} & de3{dr2,dt2}
+
                     Mat wd;
                     Mat::diag(weights).convertTo(wd, CV_64F);
-                    if (k > 0) { // if not the first camera 
+                    if (k > 0) { // if not camera #0
                         for (int p = 0; p < NUM_PATTERN_PTS * 2; p++) {
                             Matx13d de3dr3, de3dt3, de3dr2, de3dt2, de3dr1, de3dt1;
                             for (int j = 0; j < 3; j++)
@@ -513,11 +514,9 @@ static void optimizeLM (std::vector<double> &param,
 
                         // 6 x (ni*2) * (ni*2 x ni*2) * (ni*2) x 6
                         JtJ(Rect((k - 1) * 6, (k - 1) * 6, 6, 6)) += (J_0ToK.t() * wd * J_0ToK);
-                        // TODO: kind of strange here, any reason not updating both symmetric parts?
-                        JtJ(Rect(eofs, (k - 1) * 6, 6, 6)) += (J_0ToK.t() * wd * Je); 
+                        JtJ(Rect(eofs, (k - 1) * 6, 6, 6)) = (J_0ToK.t() * wd * Je);
                         JtErr.rowRange((k - 1) * 6, (k - 1) * 6 + 6) += (J_0ToK.t() * wd * err);
                     }
-
                     JtJ(Rect(eofs, eofs, 6, 6)) += Je.t() * wd * Je;
                     JtErr.rowRange(eofs, eofs + 6) += Je.t() * wd * err;
                 }

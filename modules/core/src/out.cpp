@@ -70,14 +70,19 @@ namespace cv
         char braces[5];
 
         void (FormattedImpl::*valueToStr)();
+        void valueToStrBool() { snprintf(buf, sizeof(buf), "%d", (int)mtx.ptr<uchar>(row, col)[cn] != 0); }
         void valueToStr8u()  { snprintf(buf, sizeof(buf), "%3d", (int)mtx.ptr<uchar>(row, col)[cn]); }
         void valueToStr8s()  { snprintf(buf, sizeof(buf), "%3d", (int)mtx.ptr<schar>(row, col)[cn]); }
         void valueToStr16u() { snprintf(buf, sizeof(buf), "%d", (int)mtx.ptr<ushort>(row, col)[cn]); }
         void valueToStr16s() { snprintf(buf, sizeof(buf), "%d", (int)mtx.ptr<short>(row, col)[cn]); }
+        void valueToStr32u() { snprintf(buf, sizeof(buf), "%u", mtx.ptr<unsigned>(row, col)[cn]); }
         void valueToStr32s() { snprintf(buf, sizeof(buf), "%d", mtx.ptr<int>(row, col)[cn]); }
         void valueToStr32f() { snprintf(buf, sizeof(buf), floatFormat, mtx.ptr<float>(row, col)[cn]); }
         void valueToStr64f() { snprintf(buf, sizeof(buf), floatFormat, mtx.ptr<double>(row, col)[cn]); }
+        void valueToStr64u() { snprintf(buf, sizeof(buf), "%llu", (unsigned long long)mtx.ptr<uint64_t>(row, col)[cn]); }
+        void valueToStr64s() { snprintf(buf, sizeof(buf), "%lld", (long long)mtx.ptr<int64_t>(row, col)[cn]); }
         void valueToStr16f() { snprintf(buf, sizeof(buf), floatFormat, (float)mtx.ptr<float16_t>(row, col)[cn]); }
+        void valueToStr16bf() { snprintf(buf, sizeof(buf), floatFormat, (float)mtx.ptr<bfloat16_t>(row, col)[cn]); }
         void valueToStrOther() { buf[0] = 0; }
 
     public:
@@ -111,13 +116,19 @@ namespace cv
             {
                 case CV_8U:  valueToStr = &FormattedImpl::valueToStr8u; break;
                 case CV_8S:  valueToStr = &FormattedImpl::valueToStr8s; break;
+                case CV_Bool: valueToStr = &FormattedImpl::valueToStrBool; break;
                 case CV_16U: valueToStr = &FormattedImpl::valueToStr16u; break;
                 case CV_16S: valueToStr = &FormattedImpl::valueToStr16s; break;
+                case CV_32U: valueToStr = &FormattedImpl::valueToStr32u; break;
                 case CV_32S: valueToStr = &FormattedImpl::valueToStr32s; break;
                 case CV_32F: valueToStr = &FormattedImpl::valueToStr32f; break;
                 case CV_64F: valueToStr = &FormattedImpl::valueToStr64f; break;
-                default:     CV_Assert(mtx.depth() == CV_16F);
-                             valueToStr = &FormattedImpl::valueToStr16f;
+                case CV_64U: valueToStr = &FormattedImpl::valueToStr64u; break;
+                case CV_64S: valueToStr = &FormattedImpl::valueToStr64s; break;
+                case CV_16F: valueToStr = &FormattedImpl::valueToStr16f; break;
+                case CV_16BF: valueToStr = &FormattedImpl::valueToStr16bf; break;
+                default:
+                    CV_Error_(Error::StsError, ("unsupported matrix type %d\n", mtx.depth()));
             }
         }
 

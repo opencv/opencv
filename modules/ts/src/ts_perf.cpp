@@ -465,6 +465,15 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
 {
     int expected_kind = (int)node["kind"];
     int expected_type = (int)node["type"];
+    int array_type = array.type();
+    if (array_type != expected_type) {
+        // temporary hack; we optimistically assume that type in the computed and expected array should be the same.
+        // if they are different, it must be because of the change in type representation between OpenCV 5.x and OpenCV 2.x,3.x,4.x.
+        // need to add "type5" or something like that and use it in the newer files. Then type will always mean 'earlier than 5.x type'.
+        int depth = expected_type & 7;
+        int channels = ((expected_type >> 3) & 127) + 1;
+        expected_type = CV_MAKETYPE(depth, channels);
+    }
     ASSERT_EQ(expected_kind, array.kind()) << "  Argument \"" << node.name() << "\" has unexpected kind";
     ASSERT_EQ(expected_type, array.type()) << "  Argument \"" << node.name() << "\" has unexpected type";
 

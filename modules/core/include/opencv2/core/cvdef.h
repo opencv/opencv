@@ -487,9 +487,13 @@ Cv64suf;
 #define CV_SUBMAT_FLAG          (1 << CV_SUBMAT_FLAG_SHIFT)
 #define CV_IS_SUBMAT(flags)     ((flags) & CV_MAT_SUBMAT_FLAG)
 
-/** Size of each channel item,
-   0x28442211 = 0010 1000 0100 0100 0010 0010 0001 0001 ~ array of sizeof(arr_type_elem) */
-#define CV_ELEM_SIZE1(type) ((0x28442211 >> CV_MAT_DEPTH(type)*4) & 15)
+/** Size of an array/scalar single-channel value, 4 bits per type:
+    CV_8U - 1 byte
+    CV_8S - 1 byte
+    CV_16U - 2 bytes
+    ...
+*/
+#define CV_ELEM_SIZE1(type) ((int)(0x4881228442211ULL >> (CV_MAT_DEPTH(type) * 4)) & 15)
 
 #define CV_ELEM_SIZE(type) (CV_MAT_CN(type)*CV_ELEM_SIZE1(type))
 
@@ -961,6 +965,41 @@ protected:
     ushort w;
 
 #endif
+};
+
+class bfloat16_t
+{
+public:
+    bfloat16_t() : w(0) {}
+    explicit bfloat16_t(float x)
+    {
+        Cv32suf in;
+        in.f = x;
+        w = (ushort)(in.u >> 16);
+    }
+
+    operator float() const
+    {
+        Cv32suf out;
+        out.u = w << 16;
+        return out.f;
+    }
+
+    static bfloat16_t fromBits(ushort b)
+    {
+        bfloat16_t result;
+        result.w = b;
+        return result;
+    }
+    static bfloat16_t zero()
+    {
+        bfloat16_t result;
+        result.w = (ushort)0;
+        return result;
+    }
+    ushort bits() const { return w; }
+protected:
+    ushort w;
 };
 
 }

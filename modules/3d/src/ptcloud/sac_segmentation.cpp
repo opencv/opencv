@@ -55,7 +55,6 @@ SACSegmentationImpl::segmentSingle(Mat &points, std::vector<bool> &label, Mat &m
 
     // RANSAC
     using namespace usac;
-    int _max_iterations_before_lo = 100, _max_num_hypothesis_to_test_before_rejection = 15;
     SamplingMethod _sampling_method = SamplingMethod::SAMPLING_UNIFORM;
     LocalOptimMethod _lo_method = LocalOptimMethod::LOCAL_OPTIM_INNER_LO;
     ScoreMethod _score_method = ScoreMethod::SCORE_METHOD_RANSAC;
@@ -70,16 +69,17 @@ SACSegmentationImpl::segmentSingle(Mat &points, std::vector<bool> &label, Mat &m
     Ptr <ModelVerifier> verifier;
     Ptr <LocalOptimization> lo;
     Ptr <Degeneracy> degeneracy;
-    Ptr <TerminationCriteria> termination;
+    Ptr <Termination> termination;
     Ptr <FinalModelPolisher> polisher;
     Ptr <MinimalSolver> min_solver;
     Ptr <NonMinimalSolver> non_min_solver;
     Ptr <Estimator> estimator;
     Ptr <usac::Error> error;
-
+    EstimationMethod est_method;
     switch (sac_model_type)
     {
         case SAC_MODEL_PLANE:
+            est_method = EstimationMethod::PLANE;
             min_solver = PlaneModelMinimalSolver::create(points);
             non_min_solver = PlaneModelNonMinimalSolver::create(points);
             error = PlaneModelError::create(points);
@@ -90,6 +90,7 @@ SACSegmentationImpl::segmentSingle(Mat &points, std::vector<bool> &label, Mat &m
             //            error = CylinderModelError::create(points);
             //            break;
         case SAC_MODEL_SPHERE:
+            est_method = EstimationMethod::SPHERE;
             min_solver = SphereModelMinimalSolver::create(points);
             non_min_solver = SphereModelNonMinimalSolver::create(points);
             error = SphereModelError::create(points);
@@ -114,7 +115,7 @@ SACSegmentationImpl::segmentSingle(Mat &points, std::vector<bool> &label, Mat &m
     estimator = PointCloudModelEstimator::create(min_solver, non_min_solver, constraint_func);
     sampler = UniformSampler::create(state++, min_sample_size, points_size);
     quality = RansacQuality::create(points_size, _threshold, error);
-    verifier = ModelVerifier::create();
+    verifier = ModelVerifier::create(quality);
 
 
     Ptr <RandomGenerator> lo_sampler = UniformRandomGenerator::create(state++, points_size,
@@ -128,11 +129,8 @@ SACSegmentationImpl::segmentSingle(Mat &points, std::vector<bool> &label, Mat &m
     termination = StandardTerminationCriteria::create
             (confidence, points_size, min_sample_size, max_iterations);
 
-    Ptr <SimpleUsacConfig> usacConfig = SimpleUsacConfig::create();
+    Ptr <SimpleUsacConfig> usacConfig = SimpleUsacConfig::create(est_method);
     usacConfig->setMaxIterations(max_iterations);
-    usacConfig->setMaxIterationsBeforeLo(_max_iterations_before_lo);
-    usacConfig->setMaxNumHypothesisToTestBeforeRejection(
-            _max_num_hypothesis_to_test_before_rejection);
     usacConfig->setRandomGeneratorState(state);
     usacConfig->setParallel(is_parallel);
     usacConfig->setNeighborsSearchMethod(_neighbors_search_method);
@@ -146,7 +144,6 @@ SACSegmentationImpl::segmentSingle(Mat &points, std::vector<bool> &label, Mat &m
     UniversalRANSAC ransac(usacConfig, points_size, estimator, quality, sampler,
             termination, verifier, degeneracy, lo, polisher);
     Ptr <usac::RansacOutput> ransac_output;
-
     if (!ransac.run(ransac_output))
     {
         return 0;

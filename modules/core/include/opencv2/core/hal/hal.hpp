@@ -197,9 +197,11 @@ CV_EXPORTS void addWeighted64f( const double* src1, size_t step1, const double* 
 
 CV_EXPORTS void cvt16f32f( const float16_t* src, float* dst, int len );
 CV_EXPORTS void cvt32f16f( const float* src, float16_t* dst, int len );
+CV_EXPORTS void cvt16bf32f( const bfloat16_t* src, float* dst, int len );
+CV_EXPORTS void cvt32f16bf( const float* src, bfloat16_t* dst, int len );
 
-CV_EXPORTS void addRNGBias32f( float* arr, const float* scaleBiasPairs, int len );
-CV_EXPORTS void addRNGBias64f( double* arr, const double* scaleBiasPairs, int len );
+CV_EXPORTS void addRNGBias32f( float* arr, const float* scaleBiasPairs, int len, int cn );
+CV_EXPORTS void addRNGBias64f( double* arr, const double* scaleBiasPairs, int len, int cn );
 
 struct CV_EXPORTS DFT1D
 {

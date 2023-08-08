@@ -1057,44 +1057,61 @@ OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int16x8, vreinterpretq_s16_u16, s16, u16)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint32x4, OPENCV_HAL_NOP, u32, u32)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int32x4, vreinterpretq_s32_u32, s32, u32)
 OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_float32x4, vreinterpretq_f32_u32, f32, u32)
+
 #if defined(__aarch64__) || defined(_M_ARM64)
 static inline uint64x2_t vmvnq_u64(uint64x2_t a)
 {
     uint64x2_t vx = vreinterpretq_u64_u32(vdupq_n_u32(0xFFFFFFFF));
     return veorq_u64(a, vx);
 }
-//OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint64x2, OPENCV_HAL_NOP, u64, u64)
-//OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int64x2, vreinterpretq_s64_u64, s64, u64)
-static inline v_uint64x2 operator == (const v_uint64x2& a, const v_uint64x2& b)
-{ return v_uint64x2(vceqq_u64(a.val, b.val)); }
-static inline v_uint64x2 operator != (const v_uint64x2& a, const v_uint64x2& b)
-{ return v_uint64x2(vmvnq_u64(vceqq_u64(a.val, b.val))); }
-static inline v_int64x2 operator == (const v_int64x2& a, const v_int64x2& b)
-{ return v_int64x2(vreinterpretq_s64_u64(vceqq_s64(a.val, b.val))); }
-static inline v_int64x2 operator != (const v_int64x2& a, const v_int64x2& b)
-{ return v_int64x2(vreinterpretq_s64_u64(vmvnq_u64(vceqq_s64(a.val, b.val)))); }
+OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint64x2, OPENCV_HAL_NOP, u64, u64)
+OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int64x2, vreinterpretq_s64_u64, s64, u64)
 #else
 static inline v_uint64x2 operator == (const v_uint64x2& a, const v_uint64x2& b)
 {
-    uint32x4_t cmp = vceqq_u32(vreinterpretq_u32_u64(a.val), vreinterpretq_u32_u64(b.val));
-    uint32x4_t swapped = vrev64q_u32(cmp);
-    return v_uint64x2(vreinterpretq_u64_u32(vandq_u32(cmp, swapped)));
+    uint32x4_t cmp = vceqq_u32(vreinterpretq_u32_u64(a.val),
+                               vreinterpretq_u32_u64(b.val));
+    uint32x4_t v_eq = vandq_u32(cmp, vrev64q_u32(cmp));
+    return v_uint64x2(vreinterpretq_u64_u32(v_eq));
 }
 static inline v_uint64x2 operator != (const v_uint64x2& a, const v_uint64x2& b)
 {
-    uint32x4_t cmp = vceqq_u32(vreinterpretq_u32_u64(a.val), vreinterpretq_u32_u64(b.val));
-    uint32x4_t swapped = vrev64q_u32(cmp);
-    uint64x2_t v_eq = vreinterpretq_u64_u32(vandq_u32(cmp, swapped));
-    uint64x2_t vx = vreinterpretq_u64_u32(vdupq_n_u32(0xFFFFFFFF));
-    return v_uint64x2(veorq_u64(v_eq, vx));
+    uint64x2_t v_mask = vorrq_u64(vsubq_u64(a.val, b.val), vsubq_u64(b.val, a.val));
+    int64x2_t v_smask = vshrq_n_s64(vreinterpretq_s64_u64(v_mask), 63);
+    return v_uint64x2(vreinterpretq_u64_s64(v_smask));
 }
 static inline v_int64x2 operator == (const v_int64x2& a, const v_int64x2& b)
 {
-    return v_reinterpret_as_s64(v_reinterpret_as_u64(a) == v_reinterpret_as_u64(b));
+    uint32x4_t cmp = vceqq_u32(vreinterpretq_u32_s64(a.val),
+                               vreinterpretq_u32_s64(b.val));
+    uint32x4_t v_eq = vandq_u32(cmp, vrev64q_u32(cmp));
+    return v_int64x2(vreinterpretq_s64_u32(v_eq));
 }
 static inline v_int64x2 operator != (const v_int64x2& a, const v_int64x2& b)
 {
-    return v_reinterpret_as_s64(v_reinterpret_as_u64(a) != v_reinterpret_as_u64(b));
+    int64x2_t v_mask = vorrq_s64(vsubq_s64(a.val, b.val), vsubq_s64(b.val, a.val));
+    int64x2_t v_smask = vshrq_n_s64(v_mask, 63);
+    return v_int64x2(v_smask);
+}
+static inline v_uint64x2 operator > (const v_uint64x2& a, const v_uint64x2& b)
+{
+    int64x2_t v_mask = vreinterpretq_s64_u64(vsubq_u64(b.val, a.val));
+    return v_uint64x2(vreinterpretq_u64_s64(vshrq_n_s64(v_mask, 63)));
+}
+static inline v_uint64x2 operator < (const v_uint64x2& a, const v_uint64x2& b)
+{
+    int64x2_t v_mask = vreinterpretq_s64_u64(vsubq_u64(a.val, b.val));
+    return v_uint64x2(vreinterpretq_u64_s64(vshrq_n_s64(v_mask, 63)));
+}
+static inline v_int64x2 operator > (const v_int64x2& a, const v_int64x2& b)
+{
+    int64x2_t v_mask = vsubq_s64(b.val, a.val);
+    return v_int64x2(vshrq_n_s64(v_mask, 63));
+}
+static inline v_int64x2 operator < (const v_int64x2& a, const v_int64x2& b)
+{
+    int64x2_t v_mask = vsubq_s64(a.val, b.val);
+    return v_int64x2(vshrq_n_s64(v_mask, 63));
 }
 #endif
 #if CV_SIMD128_64F
@@ -1622,7 +1639,7 @@ inline int v_signmask(const v_uint64x2& a)
     const int64x2_t signPosition = {0,1};
     uint64x2_t v0 = vshlq_u64(vshrq_n_u64(a.val, 63), signPosition);
     uint64_t t0 = vaddvq_u64(v0);
-    return t0;
+    return (int)t0;
 #else // #if CV_NEON_AARCH64
     int64x1_t m0 = vdup_n_s64(0);
     uint64x2_t v0 = vshlq_u64(vshrq_n_u64(a.val, 63), vcombine_s64(m0, m0));

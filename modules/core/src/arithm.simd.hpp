@@ -104,10 +104,6 @@ namespace cv { namespace hal {
 
 #ifdef ARITHM_DEFINITIONS_ONLY
 
-#if !CV_SIMD_64F
-typedef int v_float64; // dummy
-#endif
-
 //=======================================
 // Utility
 //=======================================

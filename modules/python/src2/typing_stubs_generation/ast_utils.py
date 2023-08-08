@@ -1,4 +1,5 @@
-from typing import NamedTuple, Sequence, Tuple, Union, List, Dict
+from typing import (NamedTuple, Sequence, Tuple, Union, List,
+                    Dict, Callable, Optional, Generator, cast)
 import keyword
 
 from .nodes import (ASTNode, NamespaceNode, ClassNode, FunctionNode,
@@ -142,13 +143,24 @@ because 'GOpaque' class is not registered yet
     return scope
 
 
-def find_class_node(root: NamespaceNode, full_class_name: str,
-                    namespaces: Sequence[str]) -> ClassNode:
-    symbol_name = SymbolName.parse(full_class_name, namespaces)
-    scope = find_scope(root, symbol_name)
-    if symbol_name.name not in scope.classes:
-        raise SymbolNotFoundError("Can't find {} in its scope".format(symbol_name))
-    return scope.classes[symbol_name.name]
+def find_class_node(root: NamespaceNode, class_symbol: SymbolName,
+                    create_missing_namespaces: bool = False) -> ClassNode:
+    scope = find_scope(root, class_symbol, create_missing_namespaces)
+    if class_symbol.name not in scope.classes:
+        raise SymbolNotFoundError(
+            "Can't find {} in its scope".format(class_symbol)
+        )
+    return scope.classes[class_symbol.name]
+
+
+def find_function_node(root: NamespaceNode, function_symbol: SymbolName,
+                       create_missing_namespaces: bool = False) -> FunctionNode:
+    scope = find_scope(root, function_symbol, create_missing_namespaces)
+    if function_symbol.name not in scope.functions:
+        raise SymbolNotFoundError(
+            "Can't find {} in its scope".format(function_symbol)
+        )
+    return scope.functions[function_symbol.name]
 
 
 def create_function_node_in_scope(scope: Union[NamespaceNode, ClassNode],
@@ -192,9 +204,7 @@ def create_function_node_in_scope(scope: Union[NamespaceNode, ClassNode],
                 outlist = variant.py_outlist
             for _, argno in outlist:
                 assert argno >= 0, \
-                    "Logic Error! Outlist contains function return type: {}".format(
-                        outlist
-                    )
+                    f"Logic Error! Outlist contains function return type: {outlist}"
 
                 ret_types.append(create_type_node(variant.args[argno].tp))
 
@@ -323,12 +333,18 @@ def resolve_enum_scopes(root: NamespaceNode,
         enum_node.parent = scope
 
 
-def get_enclosing_namespace(node: ASTNode) -> NamespaceNode:
+def get_enclosing_namespace(
+    node: ASTNode,
+    class_node_callback: Optional[Callable[[ClassNode], None]] = None
+) -> NamespaceNode:
     """Traverses up nodes hierarchy to find closest enclosing namespace of the
     passed node
 
     Args:
         node (ASTNode): Node to find a namespace for.
+        class_node_callback (Optional[Callable[[ClassNode], None]]): Optional
+            callable object invoked for each traversed class node in bottom-up
+            order. Defaults: None.
 
     Returns:
         NamespaceNode: Closest enclosing namespace of the provided node.
@@ -360,8 +376,59 @@ def get_enclosing_namespace(node: ASTNode) -> NamespaceNode:
             "Can't find enclosing namespace for '{}' known as: '{}'".format(
                 node.full_export_name, node.native_name
             )
+        if class_node_callback:
+            class_node_callback(cast(ClassNode, parent_node))
         parent_node = parent_node.parent
     return parent_node
+
+
+def get_enum_module_and_export_name(enum_node: EnumerationNode) -> Tuple[str, str]:
+    """Get export name of the enum node with its module name.
+
+    Note: Enumeration export names are prefixed with enclosing class names.
+
+    Args:
+        enum_node (EnumerationNode): Enumeration node to construct name for.
+
+    Returns:
+        Tuple[str, str]: a pair of enum export name and its full module name.
+    """
+    enum_export_name = enum_node.export_name
+
+    def update_full_export_name(class_node: ClassNode) -> None:
+        nonlocal enum_export_name
+        enum_export_name = class_node.export_name + "_" + enum_export_name
+
+    namespace_node = get_enclosing_namespace(enum_node,
+                                             update_full_export_name)
+    return enum_export_name, namespace_node.full_export_name
+
+
+def for_each_class(
+    node: Union[NamespaceNode, ClassNode]
+) -> Generator[ClassNode, None, None]:
+    for cls in node.classes.values():
+        yield cls
+        if len(cls.classes):
+            yield from for_each_class(cls)
+
+
+def for_each_function(
+    node: Union[NamespaceNode, ClassNode],
+    traverse_class_nodes: bool = True
+) -> Generator[FunctionNode, None, None]:
+    yield from node.functions.values()
+    if traverse_class_nodes:
+        for cls in for_each_class(node):
+            yield from for_each_function(cls)
+
+
+def for_each_function_overload(
+    node: Union[NamespaceNode, ClassNode],
+    traverse_class_nodes: bool = True
+) -> Generator[FunctionNode.Overload, None, None]:
+    for func in for_each_function(node, traverse_class_nodes):
+        yield from func.overloads
 
 
 if __name__ == '__main__':

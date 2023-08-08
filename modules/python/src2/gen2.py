@@ -231,6 +231,8 @@ simple_argtype_mapping = {
     "c_string": ArgTypeInfo("char*", FormatStrings.string, '(char*)""'),
     "string": ArgTypeInfo("std::string", FormatStrings.object, None, True),
     "Stream": ArgTypeInfo("Stream", FormatStrings.object, 'Stream::Null()', True),
+    "cuda_Stream": ArgTypeInfo("cuda::Stream", FormatStrings.object, "cuda::Stream::Null()", True),
+    "cuda_GpuMat": ArgTypeInfo("cuda::GpuMat", FormatStrings.object, "cuda::GpuMat()", True),
     "UMat": ArgTypeInfo("UMat", FormatStrings.object, 'UMat()', True),  # FIXIT: switch to CV_EXPORTS_W_SIMPLE as UMat is already a some kind of smart pointer
 }
 
@@ -509,14 +511,17 @@ class ArgInfo(object):
         return self.enclosing_arg.name + '.' + self.name
 
     def isbig(self):
-        return self.tp in ["Mat", "vector_Mat", "cuda::GpuMat", "GpuMat", "vector_GpuMat", "UMat", "vector_UMat"] # or self.tp.startswith("vector")
+        return self.tp in ["Mat", "vector_Mat",
+                           "cuda::GpuMat", "cuda_GpuMat", "GpuMat",
+                           "vector_GpuMat", "vector_cuda_GpuMat",
+                           "UMat", "vector_UMat"] # or self.tp.startswith("vector")
 
     def crepr(self):
         return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
 
 
 def find_argument_class_info(argument_type, function_namespace,
-                            function_class_name, known_classes):
+                             function_class_name, known_classes):
     # type: (str, str, str, dict[str, ClassInfo]) -> ClassInfo | None
     """Tries to find corresponding class info for the provided argument type
 

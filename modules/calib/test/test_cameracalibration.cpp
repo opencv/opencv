@@ -1226,10 +1226,6 @@ public:
     ~CV_StereoCalibrationTest();
     void clear();
 protected:
-    bool checkPandROI( int test_case_idx,
-        const Mat& M, const Mat& D, const Mat& R,
-        const Mat& P, Size imgsize, Rect roi );
-
     // covers of tested functions
     virtual double calibrateStereoCamera( const vector<vector<Point3f> >& objectPoints,
         const vector<vector<Point2f> >& imagePoints1,
@@ -1276,52 +1272,6 @@ CV_StereoCalibrationTest::~CV_StereoCalibrationTest()
 void CV_StereoCalibrationTest::clear()
 {
     cvtest::BaseTest::clear();
-}
-
-bool CV_StereoCalibrationTest::checkPandROI( int test_case_idx, const Mat& M, const Mat& D, const Mat& R,
-                                            const Mat& P, Size imgsize, Rect roi )
-{
-    const double eps = 0.05;
-    const int N = 21;
-    int x, y, k;
-    vector<Point2f> pts, upts;
-
-    // step 1. check that all the original points belong to the destination image
-    for( y = 0; y < N; y++ )
-        for( x = 0; x < N; x++ )
-            pts.push_back(Point2f((float)x*imgsize.width/(N-1), (float)y*imgsize.height/(N-1)));
-
-    undistortPoints(pts, upts, M, D, R, P );
-    for( k = 0; k < N*N; k++ )
-        if( upts[k].x < -imgsize.width*eps || upts[k].x > imgsize.width*(1+eps) ||
-            upts[k].y < -imgsize.height*eps || upts[k].y > imgsize.height*(1+eps) )
-        {
-            ts->printf(cvtest::TS::LOG, "Test #%d. The point (%g, %g) was mapped to (%g, %g) which is out of image\n",
-                test_case_idx, pts[k].x, pts[k].y, upts[k].x, upts[k].y);
-            return false;
-        }
-
-    // step 2. check that all the points inside ROI belong to the original source image
-    Mat temp(imgsize, CV_8U), utemp, map1, map2;
-    temp = Scalar::all(1);
-    initUndistortRectifyMap(M, D, R, P, imgsize, CV_16SC2, map1, map2);
-    remap(temp, utemp, map1, map2, INTER_LINEAR);
-
-    if(roi.x < 0 || roi.y < 0 || roi.x + roi.width > imgsize.width || roi.y + roi.height > imgsize.height)
-    {
-            ts->printf(cvtest::TS::LOG, "Test #%d. The ROI=(%d, %d, %d, %d) is outside of the imge rectangle\n",
-                            test_case_idx, roi.x, roi.y, roi.width, roi.height);
-            return false;
-    }
-    double s = sum(utemp(roi))[0];
-    if( s > roi.area() || roi.area() - s > roi.area()*(1-eps) )
-    {
-            ts->printf(cvtest::TS::LOG, "Test #%d. The ratio of black pixels inside the valid ROI (~%g%%) is too large\n",
-                            test_case_idx, s*100./roi.area());
-            return false;
-    }
-
-    return true;
 }
 
 int CV_StereoCalibrationTest::compare(double* val, double* ref_val, int len,
@@ -1529,38 +1479,6 @@ void CV_StereoCalibrationTest::run( int )
         Mat R1, R2, P1, P2, Q;
         Rect roi1, roi2;
         rectify(M1, D1, M2, D2, imgsize, R, T, R1, R2, P1, P2, Q, 1, imgsize, &roi1, &roi2, 0);
-        Mat eye33 = Mat::eye(3,3,CV_64F);
-        Mat R1t = R1.t(), R2t = R2.t();
-
-        if( cvtest::norm(R1t*R1 - eye33, NORM_L2) > 0.01 ||
-            cvtest::norm(R2t*R2 - eye33, NORM_L2) > 0.01 ||
-            abs(determinant(F)) > 0.01)
-        {
-            ts->printf( cvtest::TS::LOG, "The computed (by rectify) R1 and R2 are not orthogonal,"
-                "or the computed (by calibrate) F is not singular, testcase %d\n", testcase);
-            ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
-            return;
-        }
-
-        if(!checkPandROI(testcase, M1, D1, R1, P1, imgsize, roi1))
-        {
-            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-            return;
-        }
-
-        if(!checkPandROI(testcase, M2, D2, R2, P2, imgsize, roi2))
-        {
-            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-            return;
-        }
-
-        //check that Tx after rectification is equal to distance between cameras
-        double tx = fabs(P2.at<double>(0, 3) / P2.at<double>(0, 0));
-        if (fabs(tx - cvtest::norm(T, NORM_L2)) > 1e-5)
-        {
-            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-            return;
-        }
 
         //check that Q reprojects points before the camera
         double testPoint[4] = {0.0, 0.0, 100.0, 1.0};
@@ -1826,7 +1744,7 @@ void CV_StereoCalibrationTest_CPP::rectify( const Mat& cameraMatrix1, const Mat&
                                          Rect* validPixROI1, Rect* validPixROI2, int flags )
 {
     stereoRectify( cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2,
-                imageSize, R, T, R1, R2, P1, P2, Q, flags, alpha, newImageSize,validPixROI1, validPixROI2 );
+                imageSize, R, T, R1, R2, P1, P2, Q, flags, alpha, newImageSize, validPixROI1, validPixROI2 );
 }
 
 bool CV_StereoCalibrationTest_CPP::rectifyUncalibrated( const Mat& points1,
@@ -2092,8 +2010,8 @@ double CV_MultiviewCalibrationTest_CPP::calibrateStereoCamera( const vector<vect
         img_pts2.copyTo(image_points_all[1][i]);
     }
     std::vector<Size> image_sizes (2, imageSize);
-    Mat visibility_mat = Mat_<bool>::ones(2, numImgs);
-    std::vector<bool> is_fisheye(2, false);
+    Mat visibility_mat = Mat_<uchar>::ones(2, numImgs);
+    std::vector<uchar> is_fisheye(2, false);
     std::vector<int> all_flags(2, flags);
     double rms = calibrateMultiview(objectPoints, image_points_all, image_sizes, visibility_mat,
                                     Rs, Ts, Ks, distortions, rvecs, tvecs, is_fisheye, errors_mat, noArray(), false, all_flags);
@@ -2221,82 +2139,6 @@ TEST(Calib3d_StereoCalibrate_CPP, extended)
 
     EXPECT_LE(res1, res0);
     EXPECT_TRUE(err.total() == 2);
-}
-
-TEST(Calib3d_StereoCalibrate, regression_10791)
-{
-    const Matx33d M1(
-        853.1387981631528, 0, 704.154907802121,
-        0, 853.6445089162528, 520.3600712930319,
-        0, 0, 1
-    );
-    const Matx33d M2(
-        848.6090216909176, 0, 701.6162856852185,
-        0, 849.7040162357157, 509.1864036137,
-        0, 0, 1
-    );
-    const Matx<double, 14, 1> D1(-6.463598629567206, 79.00104930508179, -0.0001006144444464403, -0.0005437499822299972,
-        12.56900616588467, -6.056719942752855, 76.3842481414836, 45.57460250612659,
-        0, 0, 0, 0, 0, 0);
-    const Matx<double, 14, 1> D2(0.6123436439798265, -0.4671756923224087, -0.0001261947899033442, -0.000597334584036978,
-        -0.05660119809538371, 1.037075740629769, -0.3076042835831711, -0.2502169324283623,
-        0, 0, 0, 0, 0, 0);
-
-    const Matx33d R(
-        0.9999926627018476, -0.0001095586963765905, 0.003829169539302921,
-        0.0001021735876758584, 0.9999981346680941, 0.0019287874145156,
-        -0.003829373712065528, -0.001928382022437616, 0.9999908085776333
-    );
-    const Matx31d T(-58.9161771697128, -0.01581306249996402, -0.8492960216760961);
-
-    const Size imageSize(1280, 960);
-
-    Mat R1, R2, P1, P2, Q;
-    Rect roi1, roi2;
-    stereoRectify(M1, D1, M2, D2, imageSize, R, T,
-                  R1, R2, P1, P2, Q,
-                  CALIB_ZERO_DISPARITY, 1, imageSize, &roi1, &roi2);
-
-    EXPECT_GE(roi1.area(), 400*300) << roi1;
-    EXPECT_GE(roi2.area(), 400*300) << roi2;
-}
-
-TEST(Calib3d_StereoCalibrate, regression_11131)
-{
-    const Matx33d M1(
-        1457.572438721727, 0, 1212.945694211622,
-        0, 1457.522226502963, 1007.32058848921,
-        0, 0, 1
-    );
-    const Matx33d M2(
-        1460.868570835972, 0, 1215.024068023046,
-        0, 1460.791367088, 1011.107202932225,
-        0, 0, 1
-    );
-    const Matx<double, 5, 1> D1(0, 0, 0, 0, 0);
-    const Matx<double, 5, 1> D2(0, 0, 0, 0, 0);
-
-    const Matx33d R(
-        0.9985404059825475, 0.02963547172078553, -0.04515303352041626,
-        -0.03103795276460111, 0.9990471552537432, -0.03068268351343364,
-        0.04420071389006859, 0.03203935697372317, 0.9985087763742083
-    );
-    const Matx31d T(0.9995500167379527, 0.0116311595111068, 0.02764923448462666);
-
-    const Size imageSize(2456, 2058);
-
-    Mat R1, R2, P1, P2, Q;
-    Rect roi1, roi2;
-    stereoRectify(M1, D1, M2, D2, imageSize, R, T,
-                  R1, R2, P1, P2, Q,
-                  CALIB_ZERO_DISPARITY, 1, imageSize, &roi1, &roi2);
-
-    EXPECT_GT(P1.at<double>(0, 0), 0);
-    EXPECT_GT(P2.at<double>(0, 0), 0);
-    EXPECT_GT(R1.at<double>(0, 0), 0);
-    EXPECT_GT(R2.at<double>(0, 0), 0);
-    EXPECT_GE(roi1.area(), 400*300) << roi1;
-    EXPECT_GE(roi2.area(), 400*300) << roi2;
 }
 
 TEST(Calib_StereoCalibrate, regression_22421)

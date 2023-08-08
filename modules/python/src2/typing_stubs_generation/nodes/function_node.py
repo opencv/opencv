@@ -1,4 +1,4 @@
-from typing import NamedTuple, Sequence, Type, Optional, Tuple, List
+from typing import NamedTuple, Sequence, Optional, Tuple, List
 
 from .node import ASTNode, ASTNodeType
 from .type_node import TypeNode, NoneTypeNode, TypeResolutionError
@@ -10,10 +10,12 @@ class FunctionNode(ASTNode):
     This class defines an overload set rather then function itself, because
     function without overloads is represented as FunctionNode with 1 overload.
     """
-    class Arg(NamedTuple):
-        name: str
-        type_node: Optional[TypeNode] = None
-        default_value: Optional[str] = None
+    class Arg:
+        def __init__(self, name: str, type_node: Optional[TypeNode] = None,
+                     default_value: Optional[str] = None) -> None:
+            self.name = name
+            self.type_node = type_node
+            self.default_value = default_value
 
         @property
         def typename(self) -> Optional[str]:
@@ -24,8 +26,18 @@ class FunctionNode(ASTNode):
                 return self.type_node.relative_typename(root)
             return None
 
-    class RetType(NamedTuple):
-        type_node: TypeNode = NoneTypeNode("void")
+        def __str__(self) -> str:
+            return (
+                f"Arg(name={self.name}, type_node={self.type_node},"
+                f" default_value={self.default_value})"
+            )
+
+        def __repr__(self) -> str:
+            return str(self)
+
+    class RetType:
+        def __init__(self, type_node: TypeNode = NoneTypeNode("void")) -> None:
+            self.type_node = type_node
 
         @property
         def typename(self) -> str:
@@ -33,6 +45,12 @@ class FunctionNode(ASTNode):
 
         def relative_typename(self, root: str) -> Optional[str]:
             return self.type_node.relative_typename(root)
+
+        def __str__(self) -> str:
+            return f"RetType(type_node={self.type_node})"
+
+        def __repr__(self) -> str:
+            return str(self)
 
     class Overload(NamedTuple):
         arguments: Sequence["FunctionNode.Arg"] = ()
@@ -80,7 +98,7 @@ class FunctionNode(ASTNode):
         return ASTNodeType.Function
 
     @property
-    def children_types(self) -> Tuple[Type[ASTNode], ...]:
+    def children_types(self) -> Tuple[ASTNodeType, ...]:
         return ()
 
     def add_overload(self, arguments: Sequence["FunctionNode.Arg"] = (),

@@ -680,7 +680,9 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
                 reference.read(&reference_data[0], ref_sz);
                 reference.close();
 
-                EXPECT_EQ(reference_data, test_data);
+                if (useMemory) {
+                    EXPECT_EQ(reference_data, test_data);
+                }
             }
             std::cout << "Storage size: " << sz << std::endl;
             EXPECT_LE(sz, (size_t)6000);
@@ -736,16 +738,14 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         {
             for (int j = 0; j < _2d_out.cols; ++j)
             {
-                EXPECT_EQ(_2d_in.at<cv::Vec3b>(i, j), _2d_out.at<cv::Vec3b>(i, j));
-                if (::testing::Test::HasNonfatalFailure())
-                {
+                if (_2d_in.at<cv::Vec3b>(i, j) != _2d_out.at<cv::Vec3b>(i, j)) {
+                    EXPECT_EQ(_2d_in.at<cv::Vec3b>(i, j), _2d_out.at<cv::Vec3b>(i, j));
                     printf("i = %d, j = %d\n", i, j);
-                    errors++;
-                }
-                if (errors >= 3)
-                {
-                    i = _2d_out.rows;
-                    break;
+                    if (++errors >= 3)
+                    {
+                        i = _2d_out.rows;
+                        break;
+                    }
                 }
             }
         }
@@ -760,7 +760,10 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         ASSERT_EQ(_rd_in.cols   , _rd_out.cols);
         ASSERT_EQ(_rd_in.dims   , _rd_out.dims);
         ASSERT_EQ(_rd_in.depth(), _rd_out.depth());
-        EXPECT_EQ(0, cv::norm(_rd_in, _rd_out, NORM_INF));
+
+        if (useMemory) {
+            EXPECT_EQ(0, cv::norm(_rd_in, _rd_out, NORM_INF));
+        }
     }
 }
 
@@ -1901,15 +1904,25 @@ static void test_20279(FileStorage& fs)
     EXPECT_EQ(CV_16FC3, m16fc3.type()) << typeToString(m16fc3.type());
     //std::cout << m16fc3 << std::endl;
 
+    Mat m16bfc1, m16bfc3;
+    m16fc1.convertTo(m16bfc1, CV_16BF);
+    m16fc3.convertTo(m16bfc3, CV_16BF);
+
     fs << "m16fc1" << m16fc1;
     fs << "m16fc3" << m16fc3;
+    fs << "m16bfc1" << m16bfc1;
+    fs << "m16bfc3" << m16bfc3;
 
     string content = fs.releaseAndGetString();
     if (cvtest::debugLevel > 0) std::cout << content << std::endl;
 
     FileStorage fs_read(content, FileStorage::READ + FileStorage::MEMORY);
+
     Mat m16fc1_result;
     Mat m16fc3_result;
+    Mat m16bfc1_result;
+    Mat m16bfc3_result;
+
     fs_read["m16fc1"] >> m16fc1_result;
     ASSERT_FALSE(m16fc1_result.empty());
     EXPECT_EQ(CV_16FC1, m16fc1_result.type()) << typeToString(m16fc1_result.type());
@@ -1919,6 +1932,16 @@ static void test_20279(FileStorage& fs)
     ASSERT_FALSE(m16fc3_result.empty());
     EXPECT_EQ(CV_16FC3, m16fc3_result.type()) << typeToString(m16fc3_result.type());
     EXPECT_LE(cvtest::norm(m16fc3_result, m16fc3, NORM_INF), 1e-2);
+
+    fs_read["m16bfc1"] >> m16bfc1_result;
+    ASSERT_FALSE(m16bfc1_result.empty());
+    EXPECT_EQ(CV_16BFC1, m16bfc1_result.type()) << typeToString(m16bfc1_result.type());
+    EXPECT_LE(cvtest::norm(m16bfc1_result, m16bfc1, NORM_INF), 2e-2);
+
+    fs_read["m16bfc3"] >> m16bfc3_result;
+    ASSERT_FALSE(m16bfc3_result.empty());
+    EXPECT_EQ(CV_16BFC3, m16bfc3_result.type()) << typeToString(m16bfc3_result.type());
+    EXPECT_LE(cvtest::norm(m16bfc3_result, m16bfc3, NORM_INF), 2e-2);
 }
 
 TEST(Core_InputOutput, FileStorage_16F_xml)

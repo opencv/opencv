@@ -27,11 +27,6 @@ public:
         return 1;
     }
 
-    Ptr <MinimalSolver> clone() const override
-    {
-        return makePtr<SphereModelMinimalSolverImpl>(*points_mat);
-    }
-
     /** [center_x, center_y, center_z, radius] <--> (x - center_x)^2 + (y - center_y)^2 + (z - center_z)^2 = radius^2
      Fitting the sphere using Cramer's Rule.
     */
@@ -130,11 +125,6 @@ public:
     int getMaxNumberOfSolutions() const override
     {
         return 1;
-    }
-
-    Ptr <NonMinimalSolver> clone() const override
-    {
-        return makePtr<SphereModelNonMinimalSolverImpl>(*points_mat);
     }
 
     /** [center_x, center_y, center_z, radius] <--> (x - center_x)^2 + (y - center_y)^2 + (z - center_z)^2 = radius^2
@@ -261,6 +251,11 @@ public:
         }
 
     }
+    int estimate (const std::vector<bool> &/*mask*/, std::vector<Mat> &/*models*/,
+                  const std::vector<double> &/*weights*/) override {
+        return 0;
+    }
+    void enforceRankConstraint (bool /*enforce*/) override {}
 };
 
 Ptr <SphereModelNonMinimalSolver> SphereModelNonMinimalSolver::create(const Mat &points_)

@@ -2,19 +2,26 @@ __all__ = ("generate_typing_stubs", )
 
 from io import StringIO
 from pathlib import Path
-from typing import (Generator, Type, Callable, NamedTuple, Union, Set, Dict,
-                    Collection)
+import re
+from typing import (Callable, NamedTuple, Union, Set, Dict,
+                    Collection, Tuple, List)
 import warnings
 
-from .ast_utils import get_enclosing_namespace
+from .ast_utils import (get_enclosing_namespace,
+                        get_enum_module_and_export_name,
+                        for_each_function_overload,
+                        for_each_class)
 
 from .predefined_types import PREDEFINED_TYPES
+from .api_refinement import apply_manual_api_refinement
 
-from .nodes import (ASTNode, NamespaceNode, ClassNode, FunctionNode,
-                    EnumerationNode, ConstantNode)
+from .nodes import (ASTNode, ASTNodeType, NamespaceNode, ClassNode,
+                    FunctionNode, EnumerationNode, ConstantNode,
+                    ProtocolClassNode)
 
 from .nodes.type_node import (TypeNode, AliasTypeNode, AliasRefTypeNode,
-                              AggregatedTypeNode)
+                              AggregatedTypeNode, ASTNodeTypeNode,
+                              ConditionalAliasTypeNode, PrimitiveTypeNode)
 
 
 def generate_typing_stubs(root: NamespaceNode, output_path: Path):
@@ -45,6 +52,18 @@ def generate_typing_stubs(root: NamespaceNode, output_path: Path):
         root (NamespaceNode): Root namespace node of the library AST.
         output_path (Path): Path to output directory.
     """
+    # Perform special handling for function arguments that has some conventions
+    # not expressed in their API e.g. optionality of mutually exclusive arguments
+    # without default values:
+    # ```cxx
+    # cv::resize(cv::InputArray src, cv::OutputArray dst, cv::Size dsize,
+    #       double fx = 0.0, double fy = 0.0, int interpolation);
+    # ```
+    # should accept `None` as `dsize`:
+    # ```python
+    # cv2.resize(image, dsize=None, fx=0.5, fy=0.5)
+    # ```
+    apply_manual_api_refinement(root)
     # Most of the time type nodes miss their full name (especially function
     # arguments and return types), so resolution should start from the narrowest
     # scope and gradually expanded.
@@ -70,10 +89,11 @@ def generate_typing_stubs(root: NamespaceNode, output_path: Path):
     # checked and at least 1 node is still unresolved.
     root.resolve_type_nodes()
     _generate_typing_module(root, output_path)
+    _populate_reexported_symbols(root)
     _generate_typing_stubs(root, output_path)
 
 
-def _generate_typing_stubs(root: NamespaceNode, output_path: Path):
+def _generate_typing_stubs(root: NamespaceNode, output_path: Path) -> None:
     output_path = Path(output_path) / root.export_name
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -82,19 +102,24 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path):
 
     output_stream = StringIO()
 
+    # Add empty __all__ dunder on top of the module
+    output_stream.write("__all__: list[str] = []\n\n")
+
     # Write required imports at the top of file
     _write_required_imports(required_imports, output_stream)
 
-    # Write constants section, because constants don't impose any dependencies
-    _generate_section_stub(StubSection("# Constants", ConstantNode), root,
-                           output_stream, 0)
+    _write_reexported_symbols_section(root, output_stream)
+
     # NOTE: Enumerations require special handling, because all enumeration
     # constants are exposed as module attributes
-    has_enums = _generate_section_stub(StubSection("# Enumerations", EnumerationNode),
-                                       root, output_stream, 0)
+    has_enums = _generate_section_stub(
+        StubSection("# Enumerations", ASTNodeType.Enumeration), root,
+        output_stream, 0
+    )
     # Collect all enums from class level and export them to module level
     for class_node in root.classes.values():
-        if _generate_enums_from_classes_tree(class_node, output_stream, indent=0):
+        if _generate_enums_from_classes_tree(class_node, output_stream,
+                                             indent=0):
             has_enums = True
     # 2 empty lines between enum and classes definitions
     if has_enums:
@@ -112,14 +137,15 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path):
 
 class StubSection(NamedTuple):
     name: str
-    node_type: Type[ASTNode]
+    node_type: ASTNodeType
 
 
 STUB_SECTIONS = (
-    StubSection("# Constants", ConstantNode),
-    # StubSection("# Enumerations", EnumerationNode), # Skipped for now (special rules)
-    StubSection("# Classes", ClassNode),
-    StubSection("# Functions", FunctionNode)
+    StubSection("# Constants", ASTNodeType.Constant),
+    # Enumerations are skipped due to special handling rules
+    # StubSection("# Enumerations", ASTNodeType.Enumeration),
+    StubSection("# Classes", ASTNodeType.Class),
+    StubSection("# Functions", ASTNodeType.Function)
 )
 
 
@@ -228,9 +254,9 @@ def _generate_class_stub(class_node: ClassNode, output_stream: StringIO,
             else:
                 bases.append(base.export_name)
 
-        inheritance_str = "({})".format(
-            ', '.join(bases)
-        )
+        inheritance_str = f"({', '.join(bases)})"
+    elif isinstance(class_node, ProtocolClassNode):
+        inheritance_str = "(Protocol)"
     else:
         inheritance_str = ""
 
@@ -269,7 +295,8 @@ def _generate_class_stub(class_node: ClassNode, output_stream: StringIO,
 
 def _generate_constant_stub(constant_node: ConstantNode,
                             output_stream: StringIO, indent: int = 0,
-                            extra_export_prefix: str = "") -> None:
+                            extra_export_prefix: str = "",
+                            generate_uppercase_version: bool = True) -> Tuple[str, ...]:
     """Generates stub for the provided constant node.
 
     Args:
@@ -277,18 +304,36 @@ def _generate_constant_stub(constant_node: ConstantNode,
         output_stream (StringIO): Output stream for constant stub.
         indent (int, optional): Indent used for each line written to
             `output_stream`. Defaults to 0.
-        extra_export_prefix (str, optional) Extra prefix added to the export
+        extra_export_prefix (str, optional): Extra prefix added to the export
             constant name. Defaults to empty string.
+        generate_uppercase_version (bool, optional): Generate uppercase version
+            alongside the normal one. Defaults to True.
+
+    Returns:
+        Tuple[str, ...]: exported constants names.
     """
 
-    output_stream.write(
-        "{indent}{prefix}{name}: {value_type}\n".format(
-            prefix=extra_export_prefix,
-            name=constant_node.export_name,
-            value_type=constant_node.value_type,
-            indent=" " * indent
+    def write_constant_to_stream(export_name: str) -> None:
+        output_stream.write(
+            "{indent}{name}: {value_type}\n".format(
+                name=export_name,
+                value_type=constant_node.value_type,
+                indent=" " * indent
+            )
         )
-    )
+
+    export_name = extra_export_prefix + constant_node.export_name
+    write_constant_to_stream(export_name)
+    if generate_uppercase_version:
+        # Handle Python "magic" constants like __version__
+        if re.match(r"^__.*__$", export_name) is not None:
+            return export_name,
+
+        uppercase_name = re.sub(r"([a-z])([A-Z])", r"\1_\2", export_name).upper()
+        if export_name != uppercase_name:
+            write_constant_to_stream(uppercase_name)
+            return export_name, uppercase_name
+    return export_name,
 
 
 def _generate_enumeration_stub(enumeration_node: EnumerationNode,
@@ -353,18 +398,20 @@ def _generate_enumeration_stub(enumeration_node: EnumerationNode,
     entries_extra_prefix = extra_export_prefix
     if enumeration_node.is_scoped:
         entries_extra_prefix += enumeration_node.export_name + "_"
+    generated_constants_entries: List[str] = []
     for entry in enumeration_node.constants.values():
-        _generate_constant_stub(entry, output_stream, indent, entries_extra_prefix)
+        generated_constants_entries.extend(
+            _generate_constant_stub(entry, output_stream, indent, entries_extra_prefix)
+        )
     # Unnamed enumerations are skipped as definition
     if enumeration_node.export_name.endswith("<unnamed>"):
         output_stream.write("\n")
         return
     output_stream.write(
-        "{indent}{export_prefix}{name} = int  # One of [{entries}]\n\n".format(
+        '{indent}{export_prefix}{name} = int\n{indent}"""One of [{entries}]"""\n\n'.format(
             export_prefix=extra_export_prefix,
             name=enumeration_node.export_name,
-            entries=", ".join(entry.export_name
-                              for entry in enumeration_node.constants.values()),
+            entries=", ".join(generated_constants_entries),
             indent=" " * indent
         )
     )
@@ -500,35 +547,12 @@ def check_overload_presence(node: Union[NamespaceNode, ClassNode]) -> bool:
             otherwise.
     """
     for func_node in node.functions.values():
-        if len(func_node.overloads):
+        if len(func_node.overloads) > 1:
             return True
     return False
 
 
-def _for_each_class(node: Union[NamespaceNode, ClassNode]) \
-        -> Generator[ClassNode, None, None]:
-    for cls in node.classes.values():
-        yield cls
-        if len(cls.classes):
-            yield from _for_each_class(cls)
-
-
-def _for_each_function(node: Union[NamespaceNode, ClassNode]) \
-        -> Generator[FunctionNode, None, None]:
-    for func in node.functions.values():
-        yield func
-    for cls in node.classes.values():
-        yield from _for_each_function(cls)
-
-
-def _for_each_function_overload(node: Union[NamespaceNode, ClassNode]) \
-        -> Generator[FunctionNode.Overload, None, None]:
-    for func in _for_each_function(node):
-        for overload in func.overloads:
-            yield overload
-
-
-def _collect_required_imports(root: NamespaceNode) -> Set[str]:
+def _collect_required_imports(root: NamespaceNode) -> Collection[str]:
     """Collects all imports required for classes and functions typing stubs
     declarations.
 
@@ -536,8 +560,8 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
         root (NamespaceNode): Namespace node to collect imports for
 
     Returns:
-        Set[str]: Collection of unique `import smth` statements required for
-        classes and function declarations of `root` node.
+        Collection[str]: Collection of unique `import smth` statements required
+        for classes and function declarations of `root` node.
     """
 
     def _add_required_usage_imports(type_node: TypeNode, imports: Set[str]):
@@ -550,7 +574,8 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
     has_overload = check_overload_presence(root)
     # if there is no module-level functions with overload, check its presence
     # during class traversing, including their inner-classes
-    for cls in _for_each_class(root):
+    has_protocol = False
+    for cls in for_each_class(root):
         if not has_overload and check_overload_presence(cls):
             has_overload = True
             required_imports.add("import typing")
@@ -564,12 +589,15 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
                 required_imports.add(
                     "import " + base_namespace.full_export_name
                 )
+        if isinstance(cls, ProtocolClassNode):
+            has_protocol = True
 
     if has_overload:
         required_imports.add("import typing")
     # Importing modules required to resolve functions arguments
-    for overload in _for_each_function_overload(root):
-        for arg in filter(lambda a: a.type_node is not None, overload.arguments):
+    for overload in for_each_function_overload(root):
+        for arg in filter(lambda a: a.type_node is not None,
+                          overload.arguments):
             _add_required_usage_imports(arg.type_node, required_imports)  # type: ignore
         if overload.return_type is not None:
             _add_required_usage_imports(overload.return_type.type_node,
@@ -579,7 +607,74 @@ def _collect_required_imports(root: NamespaceNode) -> Set[str]:
     if root_import in required_imports:
         required_imports.remove(root_import)
 
-    return required_imports
+    if has_protocol:
+        required_imports.add("import sys")
+    ordered_required_imports = sorted(required_imports)
+
+    # Protocol import always goes as last import statement
+    if has_protocol:
+        ordered_required_imports.append(
+            """if sys.version_info >= (3, 8):
+    from typing import Protocol
+else:
+    from typing_extensions import Protocol"""
+        )
+
+    return ordered_required_imports
+
+
+def _populate_reexported_symbols(root: NamespaceNode) -> None:
+    # Re-export all submodules to allow referencing symbols in submodules
+    # without submodule import. Example:
+    # `cv2.aruco.ArucoDetector` should be accessible without `import cv2.aruco`
+    def _reexport_submodule(ns: NamespaceNode) -> None:
+        for submodule in ns.namespaces.values():
+            ns.reexported_submodules.append(submodule.export_name)
+            _reexport_submodule(submodule)
+
+    _reexport_submodule(root)
+
+    # Special cases, symbols defined in possible pure Python submodules
+    # should be
+    root.reexported_submodules_symbols["mat_wrapper"].append("Mat")
+
+
+def _write_reexported_symbols_section(module: NamespaceNode,
+                                      output_stream: StringIO) -> None:
+    """Write re-export section for the given module.
+
+    Re-export statements have from `from module_name import smth as smth`.
+    Example:
+    ```python
+    from cv2 import aruco as aruco
+    from cv2 import cuda as cuda
+    from cv2 import ml as ml
+    from cv2.mat_wrapper import Mat as Mat
+    ```
+
+    Args:
+        module (NamespaceNode): Module with re-exported symbols.
+        output_stream (StringIO): Output stream for re-export statements.
+    """
+
+    parent_name = module.full_export_name
+    for submodule in sorted(module.reexported_submodules):
+        output_stream.write(
+            "from {0} import {1} as {1}\n".format(parent_name, submodule)
+        )
+
+    for submodule, symbols in sorted(module.reexported_submodules_symbols.items(),
+                                     key=lambda kv: kv[0]):
+        for symbol in symbols:
+            output_stream.write(
+                "from {0}.{1} import {2} as {2}\n".format(
+                    parent_name, submodule, symbol
+                )
+            )
+
+    if len(module.reexported_submodules) or \
+            len(module.reexported_submodules_symbols):
+        output_stream.write("\n\n")
 
 
 def _write_required_imports(required_imports: Collection[str],
@@ -592,7 +687,7 @@ def _write_required_imports(required_imports: Collection[str],
         output_stream (StringIO): Output stream for import statements.
     """
 
-    for required_import in sorted(required_imports):
+    for required_import in required_imports:
         output_stream.write(required_import)
         output_stream.write("\n")
     if len(required_imports):
@@ -614,16 +709,68 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
             f"Provided type node '{type_node.ctype_name}' is not an aggregated type"
 
         for item in filter(lambda i: isinstance(i, AliasRefTypeNode), type_node):
-            register_alias(PREDEFINED_TYPES[item.ctype_name])  # type: ignore
+            type_node = PREDEFINED_TYPES[item.ctype_name]
+            if isinstance(type_node, AliasTypeNode):
+                register_alias(type_node)
+            elif isinstance(type_node, ConditionalAliasTypeNode):
+                conditional_type_nodes[type_node.ctype_name] = type_node
+
+    def create_alias_for_enum_node(enum_node_alias: AliasTypeNode) -> ConditionalAliasTypeNode:
+        """Create conditional int alias corresponding to the given enum node.
+
+        Args:
+            enum_node (AliasTypeNode): Enumeration node to create conditional
+                int alias for.
+
+        Returns:
+            ConditionalAliasTypeNode: conditional int alias node with same
+                export name as enum.
+        """
+        enum_node = enum_node_alias.ast_node
+        assert enum_node.node_type == ASTNodeType.Enumeration, \
+            f"{enum_node} has wrong node type. Expected type: Enumeration."
+
+        enum_export_name, enum_module_name = get_enum_module_and_export_name(
+            enum_node
+        )
+        return ConditionalAliasTypeNode(
+            enum_export_name,
+            "typing.TYPE_CHECKING",
+            positive_branch_type=enum_node_alias,
+            negative_branch_type=PrimitiveTypeNode.int_(enum_export_name),
+            condition_required_imports=("import typing", )
+        )
 
     def register_alias(alias_node: AliasTypeNode) -> None:
         typename = alias_node.typename
         # Check if alias is already registered
         if typename in aliases:
             return
+
+        # Collect required imports for alias definition
+        for required_import in alias_node.required_definition_imports:
+            required_imports.add(required_import)
+
         if isinstance(alias_node.value, AggregatedTypeNode):
             # Check if collection contains a link to another alias
             register_alias_links_from_aggregated_type(alias_node.value)
+
+            # Remove references to alias nodes
+            for i, item in enumerate(alias_node.value.items):
+                # Process enumerations only
+                if not isinstance(item, ASTNodeTypeNode) or item.ast_node is None:
+                    continue
+                if item.ast_node.node_type != ASTNodeType.Enumeration:
+                    continue
+                enum_node = create_alias_for_enum_node(item)
+                alias_node.value.items[i] = enum_node
+                conditional_type_nodes[enum_node.ctype_name] = enum_node
+
+        if isinstance(alias_node.value, ASTNodeTypeNode) \
+                and alias_node.value.ast_node == ASTNodeType.Enumeration:
+            enum_node = create_alias_for_enum_node(alias_node.ast_node)
+            conditional_type_nodes[enum_node.ctype_name] = enum_node
+            return
 
         # Strip module prefix from aliased types
         aliases[typename] = alias_node.value.full_typename.replace(
@@ -631,14 +778,13 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         )
         if alias_node.doc is not None:
             aliases[typename] += f'\n"""{alias_node.doc}"""'
-        for required_import in alias_node.required_definition_imports:
-            required_imports.add(required_import)
 
     output_path = Path(output_path) / root.export_name / "typing"
     output_path.mkdir(parents=True, exist_ok=True)
 
     required_imports: Set[str] = set()
     aliases: Dict[str, str] = {}
+    conditional_type_nodes: Dict[str, ConditionalAliasTypeNode] = {}
 
     # Resolve each node and register aliases
     TypeNode.compatible_to_runtime_usage = True
@@ -646,6 +792,12 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         node.resolve(root)
         if isinstance(node, AliasTypeNode):
             register_alias(node)
+        elif isinstance(node, ConditionalAliasTypeNode):
+            conditional_type_nodes[node.ctype_name] = node
+
+    for node in conditional_type_nodes.values():
+        for required_import in node.required_definition_imports:
+            required_imports.add(required_import)
 
     output_stream = StringIO()
     output_stream.write("__all__ = [\n")
@@ -655,11 +807,14 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
 
     _write_required_imports(required_imports, output_stream)
 
+    # Add type checking time definitions as generated __init__.py content
+    for _, type_node in conditional_type_nodes.items():
+        output_stream.write(f"if {type_node.condition}:\n    ")
+        output_stream.write(f"{type_node.typename} = {type_node.positive_branch_type.full_typename}\nelse:\n")
+        output_stream.write(f"    {type_node.typename} = {type_node.negative_branch_type.full_typename}\n\n\n")
+
     for alias_name, alias_type in aliases.items():
-        output_stream.write(alias_name)
-        output_stream.write(" = ")
-        output_stream.write(alias_type)
-        output_stream.write("\n")
+        output_stream.write(f"{alias_name} = {alias_type}\n")
 
     TypeNode.compatible_to_runtime_usage = False
     (output_path / "__init__.py").write_text(output_stream.getvalue())
@@ -669,8 +824,8 @@ StubGenerator = Callable[[ASTNode, StringIO, int], None]
 
 
 NODE_TYPE_TO_STUB_GENERATOR = {
-    ClassNode: _generate_class_stub,
-    ConstantNode: _generate_constant_stub,
-    EnumerationNode: _generate_enumeration_stub,
-    FunctionNode: _generate_function_stub
+    ASTNodeType.Class: _generate_class_stub,
+    ASTNodeType.Constant: _generate_constant_stub,
+    ASTNodeType.Enumeration: _generate_enumeration_stub,
+    ASTNodeType.Function: _generate_function_stub
 }

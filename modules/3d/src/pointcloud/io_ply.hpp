@@ -21,11 +21,11 @@ enum class DataFormat
 class PlyDecoder CV_FINAL : public BasePointCloudDecoder
 {
 public:
-    void readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<std::vector<int32_t>> &indices) CV_OVERRIDE;
+    void readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb, std::vector<std::vector<int32_t>> &indices) CV_OVERRIDE;
 
 protected:
     bool parseHeader(std::ifstream &file);
-    void parseBody(std::ifstream &file, std::vector<Point3f> &points, std::vector<Point3f> &normals);
+    void parseBody(std::ifstream &file, std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb);
 
     DataFormat m_inputDataFormat;
     size_t m_vertexCount{0};
@@ -36,7 +36,7 @@ protected:
 class PlyEncoder CV_FINAL : public BasePointCloudEncoder
 {
 public:
-    void writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<std::vector<int32_t>> &indices) CV_OVERRIDE;
+    void writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<Point3_<uchar>> &rgb, const std::vector<std::vector<int32_t>> &indices) CV_OVERRIDE;
 
 };
 

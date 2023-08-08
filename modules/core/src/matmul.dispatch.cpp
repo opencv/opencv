@@ -647,7 +647,7 @@ void scaleAdd(InputArray _src1, double alpha, InputArray _src2, OutputArray _dst
     CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && _dst.isUMat(),
             ocl_scaleAdd(_src1, alpha, _src2, _dst, type))
 
-    if( depth < CV_32F )
+    if( depth != CV_32F && depth != CV_64F )
     {
         addWeighted(_src1, alpha, _src2, 1, 0, _dst, depth);
         return;
@@ -979,7 +979,7 @@ typedef double (*DotProdFunc)(const uchar* src1, const uchar* src2, int len);
 
 static DotProdFunc getDotProdFunc(int depth)
 {
-    static DotProdFunc dotProdTab[] =
+    static DotProdFunc dotProdTab[CV_DEPTH_MAX] =
     {
         (DotProdFunc)GET_OPTIMIZED(dotProd_8u), (DotProdFunc)GET_OPTIMIZED(dotProd_8s),
         (DotProdFunc)dotProd_16u, (DotProdFunc)dotProd_16s,

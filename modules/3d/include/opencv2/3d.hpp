@@ -419,12 +419,13 @@ enum { FM_7POINT = 1, //!< 7-point algorithm
        FM_RANSAC = 8  //!< RANSAC algorithm. It needs at least 15 points. 7-point algorithm is used.
      };
 
-enum SamplingMethod { SAMPLING_UNIFORM, SAMPLING_PROGRESSIVE_NAPSAC, SAMPLING_NAPSAC,
-        SAMPLING_PROSAC };
-enum LocalOptimMethod {LOCAL_OPTIM_NULL, LOCAL_OPTIM_INNER_LO, LOCAL_OPTIM_INNER_AND_ITER_LO,
-        LOCAL_OPTIM_GC, LOCAL_OPTIM_SIGMA};
-enum ScoreMethod {SCORE_METHOD_RANSAC, SCORE_METHOD_MSAC, SCORE_METHOD_MAGSAC, SCORE_METHOD_LMEDS};
-enum NeighborSearchMethod { NEIGH_FLANN_KNN, NEIGH_GRID, NEIGH_FLANN_RADIUS };
+enum SamplingMethod { SAMPLING_UNIFORM=0, SAMPLING_PROGRESSIVE_NAPSAC=1, SAMPLING_NAPSAC=2,
+        SAMPLING_PROSAC=3 };
+enum LocalOptimMethod {LOCAL_OPTIM_NULL=0, LOCAL_OPTIM_INNER_LO=1, LOCAL_OPTIM_INNER_AND_ITER_LO=2,
+        LOCAL_OPTIM_GC=3, LOCAL_OPTIM_SIGMA=4};
+enum ScoreMethod {SCORE_METHOD_RANSAC=0, SCORE_METHOD_MSAC=1, SCORE_METHOD_MAGSAC=2, SCORE_METHOD_LMEDS=3};
+enum NeighborSearchMethod { NEIGH_FLANN_KNN=0, NEIGH_GRID=1, NEIGH_FLANN_RADIUS=2 };
+enum PolishingMethod { NONE_POLISHER=0, LSQ_POLISHER=1, MAGSAC=2, COV_POLISHER=3 };
 
 struct CV_EXPORTS_W_SIMPLE UsacParams
 { // in alphabetical order
@@ -440,6 +441,8 @@ struct CV_EXPORTS_W_SIMPLE UsacParams
     CV_PROP_RW SamplingMethod sampler;
     CV_PROP_RW ScoreMethod score;
     CV_PROP_RW double threshold;
+    CV_PROP_RW PolishingMethod final_polisher;
+    CV_PROP_RW int final_polisher_iterations;
 };
 
 /** @brief Converts a rotation matrix to a rotation vector or vice versa.
@@ -2478,6 +2481,130 @@ void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatr
                           InputArray distCoeffs,
                           TermCriteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 0.01));
 
+namespace fisheye {
+
+/** @brief Projects points using fisheye model
+
+@param objectPoints Array of object points, 1xN/Nx1 3-channel (or vector\<Point3f\> ), where N is
+the number of points in the view.
+@param imagePoints Output array of image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel, or
+vector\<Point2f\>.
+@param affine
+@param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+@param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+@param alpha The skew coefficient.
+@param jacobian Optional output 2Nx15 jacobian matrix of derivatives of image points with respect
+to components of the focal lengths, coordinates of the principal point, distortion coefficients,
+rotation vector, translation vector, and the skew. In the old interface different components of
+the jacobian are returned via different output parameters.
+
+The function computes projections of 3D points to the image plane given intrinsic and extrinsic
+camera parameters. Optionally, the function computes Jacobians - matrices of partial derivatives of
+image points coordinates (as functions of all the input parameters) with respect to the particular
+parameters, intrinsic and/or extrinsic.
+ */
+CV_EXPORTS void projectPoints(InputArray objectPoints, OutputArray imagePoints, const Affine3d& affine,
+    InputArray K, InputArray D, double alpha = 0, OutputArray jacobian = noArray());
+
+/** @overload */
+CV_EXPORTS_W void projectPoints(InputArray objectPoints, OutputArray imagePoints, InputArray rvec, InputArray tvec,
+    InputArray K, InputArray D, double alpha = 0, OutputArray jacobian = noArray());
+
+/** @brief Distorts 2D points using fisheye model.
+
+@param undistorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is
+the number of points in the view.
+@param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+@param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+@param alpha The skew coefficient.
+@param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
+
+Note that the function assumes the camera intrinsic matrix of the undistorted points to be identity.
+This means if you want to distort image points you have to multiply them with \f$K^{-1}\f$.
+ */
+CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
+
+/** @brief Undistorts 2D points using fisheye model
+
+@param distorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is the
+number of points in the view.
+@param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+@param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+@param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
+1-channel or 1x1 3-channel
+@param P New camera intrinsic matrix (3x3) or new projection matrix (3x4)
+@param criteria Termination criteria
+@param undistorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
+ */
+CV_EXPORTS_W void undistortPoints(InputArray distorted, OutputArray undistorted,
+    InputArray K, InputArray D, InputArray R = noArray(), InputArray P  = noArray(),
+    TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8));
+
+/** @brief Estimates new camera intrinsic matrix for undistortion or rectification.
+
+@param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+@param image_size Size of the image
+@param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+@param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
+1-channel or 1x1 3-channel
+@param P New camera intrinsic matrix (3x3) or new projection matrix (3x4)
+@param balance Sets the new focal length in range between the min focal length and the max focal
+length. Balance is in range of [0, 1].
+@param new_size the new size
+@param fov_scale Divisor for new focal length.
+ */
+CV_EXPORTS_W void estimateNewCameraMatrixForUndistortRectify(InputArray K, InputArray D, const Size &image_size, InputArray R,
+    OutputArray P, double balance = 0.0, const Size& new_size = Size(), double fov_scale = 1.0);
+
+/** @brief Computes undistortion and rectification maps for image transform by cv::remap(). If D is empty zero
+distortion is used, if R or P is empty identity matrixes are used.
+
+@param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+@param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+@param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
+1-channel or 1x1 3-channel
+@param P New camera intrinsic matrix (3x3) or new projection matrix (3x4)
+@param size Undistorted image size.
+@param m1type Type of the first output map that can be CV_32FC1 or CV_16SC2 . See convertMaps()
+for details.
+@param map1 The first output map.
+@param map2 The second output map.
+ */
+CV_EXPORTS_W void initUndistortRectifyMap(InputArray K, InputArray D, InputArray R, InputArray P,
+    const cv::Size& size, int m1type, OutputArray map1, OutputArray map2);
+
+/** @brief Transforms an image to compensate for fisheye lens distortion.
+
+@param distorted image with fisheye lens distortion.
+@param undistorted Output image with compensated fisheye lens distortion.
+@param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+@param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+@param Knew Camera intrinsic matrix of the distorted image. By default, it is the identity matrix but you
+may additionally scale and shift the result by using a different matrix.
+@param new_size the new size
+
+The function transforms an image to compensate radial and tangential lens distortion.
+
+The function is simply a combination of fisheye::initUndistortRectifyMap (with unity R ) and remap
+(with bilinear interpolation). See the former function for details of the transformation being
+performed.
+
+See below the results of undistortImage.
+   -   a\) result of undistort of perspective camera model (all possible coefficients (k_1, k_2, k_3,
+        k_4, k_5, k_6) of distortion were optimized under calibration)
+    -   b\) result of fisheye::undistortImage of fisheye camera model (all possible coefficients (k_1, k_2,
+        k_3, k_4) of fisheye distortion were optimized under calibration)
+    -   c\) original image was captured with fisheye lens
+
+Pictures a) and b) almost the same. But if we consider points of image located far from the center
+of image, we can notice that on image a) these points are distorted.
+
+![image](pics/fisheye_undistorted.jpg)
+ */
+CV_EXPORTS_W void undistortImage(InputArray distorted, OutputArray undistorted,
+    InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size());
+
+} // namespace fisheye
 
 /** @brief Octree for 3D vision.
  *
@@ -2636,8 +2763,9 @@ protected:
 * @param filename Name of the file.
 * @param vertices (vector of Point3f) Point coordinates of a point cloud
 * @param normals (vector of Point3f) Point normals of a point cloud
+* @param rgb (vector of Point3_<uchar>) Point RGB color of a point cloud
 */
-CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals = noArray());
+CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals = noArray(), OutputArray rgb = noArray());
 
 /** @brief Saves a point cloud to a specified file.
 *
@@ -2647,8 +2775,9 @@ CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, O
 * @param filename Name of the file.
 * @param vertices (vector of Point3f) Point coordinates of a point cloud
 * @param normals (vector of Point3f) Point normals of a point cloud
+* @param rgb (vector of Point3_<uchar>) Point RGB color of a point cloud
 */
-CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, InputArray normals = noArray());
+CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, InputArray normals = noArray(), InputArray rgb = noArray());
 
 /** @brief Loads a mesh from a file.
 *

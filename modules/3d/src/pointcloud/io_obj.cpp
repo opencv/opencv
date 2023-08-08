@@ -12,10 +12,11 @@ namespace cv {
 
 std::unordered_set<std::string> ObjDecoder::m_unsupportedKeys;
 
-void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<std::vector<int32_t>> &indices)
+void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &normals, std::vector<Point3_<uchar>> &rgb, std::vector<std::vector<int32_t>> &indices)
 {
     points.clear();
     normals.clear();
+    rgb.clear();
     indices.clear();
 
     std::ifstream file(m_filename, std::ios::binary);
@@ -39,9 +40,34 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
             continue;
         else if (key == "v")
         {
+            // (x, y, z, [w], [r, g, b])
+            auto splitArr = split(s, ' ');
+            if (splitArr.size() <= 3)
+            {
+                CV_LOG_ERROR(NULL, "Vertex should have at least 3 coordinate values.");
+                return;
+            }
             Point3f vertex;
             ss >> vertex.x >> vertex.y >> vertex.z;
             points.push_back(vertex);
+            if (splitArr.size() == 5 || splitArr.size() == 8)
+            {
+                float w;
+                ss >> w;
+                CV_UNUSED(w);
+            }
+            if (splitArr.size() >= 7)
+            {
+                Point3f color;
+                if (ss.rdbuf()->in_avail() != 0) {
+                    Point3_<uchar> uc_color;
+                    ss >> color.x >> color.y >> color.z;
+                    uc_color.x = static_cast<uchar>(std::round(255.f * color.x));
+                    uc_color.y = static_cast<uchar>(std::round(255.f * color.y));
+                    uc_color.z = static_cast<uchar>(std::round(255.f * color.z));
+                    rgb.push_back(uc_color);
+                }
+            }
         }
         else if (key == "vn")
         {
@@ -75,7 +101,7 @@ void ObjDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
     file.close();
 }
 
-void ObjEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<std::vector<int32_t>> &indices)
+void ObjEncoder::writeData(const std::vector<Point3f> &points, const std::vector<Point3f> &normals, const std::vector<Point3_<uchar>> &rgb, const std::vector<std::vector<int32_t>> &indices)
 {
     std::ofstream file(m_filename, std::ios::binary);
     if (!file) {
@@ -83,12 +109,22 @@ void ObjEncoder::writeData(const std::vector<Point3f> &points, const std::vector
         return;
     }
 
+    if (!rgb.empty() && rgb.size() != points.size()) {
+        CV_LOG_ERROR(NULL, "Vertices and Colors have different size.");
+        return;
+    }
+
     file << "# OBJ file writer" << std::endl;
     file << "o Point_Cloud" << std::endl;
 
-    for (const auto& point : points)
+    for (size_t i = 0; i < points.size(); ++i)
     {
-        file << "v " << point.x << " " << point.y << " " << point.z << std::endl;
+        file << "v " << points[i].x << " " << points[i].y << " " << points[i].z;
+        if (!rgb.empty()) {
+            file << " " << static_cast<float>(rgb[i].x) / 255.f << " " <<
+                static_cast<float>(rgb[i].y) / 255.f  << " " << static_cast<float>(rgb[i].z) / 255.f;
+        }
+        file << std::endl;
     }
 
     for (const auto& normal : normals)
