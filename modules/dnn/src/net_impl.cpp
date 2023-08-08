@@ -104,8 +104,6 @@ void Net::Impl::validateBackendAndTarget()
               preferableTarget == DNN_TARGET_CPU_FP16 ||
               preferableTarget == DNN_TARGET_OPENCL ||
               preferableTarget == DNN_TARGET_OPENCL_FP16);
-    CV_Assert(preferableTarget == DNN_TARGET_CPU ||
-              preferableTarget == DNN_TARGET_OPENCL);
 #ifdef HAVE_WEBNN
     if (preferableBackend == DNN_BACKEND_WEBNN)
     {
