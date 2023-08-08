@@ -31,6 +31,7 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
+    // TODO: replace with cv::Mat.broadcast() once https://github.com/opencv/opencv/pull/23965 is merged.
     void prepare_broadcast_C(int M, int N, const Mat& C) {
         broadcast_C.clear();
         broadcast_C.resize(M * N);
@@ -46,7 +47,7 @@ public:
                 ptr_bc[i] = c;
             }
         } else if ((real_ndims_C == 1 && shape_C[0] != 1) ||
-                    (real_ndims_C == 2 && shape_C[0] == 1)) {
+                   (real_ndims_C == 2 && shape_C[0] == 1)) {
             // (N,), (1, N)
             for (int i = 0; i < M; ++i) {
                 std::memcpy(ptr_bc + i * N, ptr_c, N * sizeof(float));
@@ -66,12 +67,10 @@ public:
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
-        // pack A or B if one of them is const
+        // pack B if it is const
         if (const_B) {
             /*
             blobs:
-                none,        invalid
-                bias,        invalid
                 b,
                 b, bias
             */
@@ -138,6 +137,7 @@ public:
         return false;
     }
 
+    // Y = A * B + C, note that C is unidirectionaly broadcastable to (A * B).
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());

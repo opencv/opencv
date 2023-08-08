@@ -18,6 +18,7 @@ struct GemmParam_t {
         : a_shape(a_shape_), b_shape(b_shape_), c_shape(c_shape_), trans_a(trans_a_), trans_b(trans_b_) {}
 };
 
+// TODO: Dsiable most of the test cases except vision transformers to save time
 static const GemmParam_t test_gemm_configs[] = {
     // vision transformers cases
     { {  768,  768 }, {  768,  768 }, {  768 } },
