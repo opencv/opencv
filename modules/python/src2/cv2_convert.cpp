@@ -153,7 +153,6 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         failmsg("%s dimensionality (=%d) is too high", info.name, ndims);
         return false;
     }
-
     size_t elemsize = CV_ELEM_SIZE1(type);
     const npy_intp* _sizes = PyArray_DIMS(oarr);
     const npy_intp* _strides = PyArray_STRIDES(oarr);

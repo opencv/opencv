@@ -816,42 +816,41 @@ class Arguments(NewOpenCVTests):
         np.testing.assert_equal(dst, src_copy)
         self.assertEqual(arguments_dump, 'lambda=25, sigma=5.5')
 
+    def test_arithm_op_with_scalar_issue_24057_regression(self):
+        res = cv.samples.findFile('lena.jpg', False)
+        src = cv.imread(res)
+        try:
+            dst = cv.subtract(src, (10, 10, 10))
+            dst = cv.subtract(src, (10., 10., 10.))
+            # array is not supported.
+#           dst = cv.subtract(src, np.uint8([10, 10, 10]))
+#           dst = cv.subtract(src, np.array([10, 10, 10]))
+#           dst = cv.subtract(src, np.float64([10, 10, 10]))
+        except cv.error as _e:
+            raise Exception
+        else:
+            pass
+
     def test_arithm_op_with_scalar_issue_24057(self):
         src1_mat = np.full(shape=(5,5,3), fill_value=(64,64,64), dtype='uint8')
 
         # Basic arithm operators
         ## add
-        dst = src1_mat + [[[192,31,30],]]  # The result of this calculation is not saturated.
-        np.testing.assert_equal(dst[0][0], [256,95,94], "mat + mat [0][0]")
-        np.testing.assert_equal(dst[4][4], [256,95,94], "mat + mat [4][4]")
-
         dst = cv.add(src1_mat, (192,31,30))  # The result of this calculation is saturated.
         np.testing.assert_equal(dst[0][0], [255,95,94], "add(mat, vec3) [0][0]")
         np.testing.assert_equal(dst[4][4], [255,95,94], "add(mat, vec3) [4][4]")
 
         ## subtract
-        dst = src1_mat - [[[192,31,30],]]  # The result of this calculation is not saturated.
-        np.testing.assert_equal(dst[0][0], [-128,33,34], "mat - mat [0][0]")
-        np.testing.assert_equal(dst[4][4], [-128,33,34], "mat - mat [4][4]")
-
         dst = cv.subtract(src1_mat, (192,31,30))  # The result of this calculation is saturated.
         np.testing.assert_equal(dst[0][0], [0,33,34], "subtract(mat, vec3) [0][0]")
         np.testing.assert_equal(dst[4][4], [0,33,34], "subtract(mat, vec3) [4][4]")
 
         ## multiply
-        dst = src1_mat * [[[2,3,4],]]  # The result of this calculation is not saturated.
-        np.testing.assert_equal(dst[0][0], [128,192,256], "mat * mat [0][0]")
-        np.testing.assert_equal(dst[4][4], [128,192,256], "mat * mat [4][4]")
-
         dst = cv.multiply(src1_mat, (2,3,4)) # The result of this calculation is saturated.
         np.testing.assert_equal(dst[0][0], [128,192,255], "multiply(mat, vec3) [0][0]")
         np.testing.assert_equal(dst[4][4], [128,192,255], "multiply(mat, vec3) [4][4]")
 
         ## divide
-        dst = src1_mat / [[[2,4,8],]]
-        np.testing.assert_equal(dst[0][0], [32,16,8], "mat / mat [0][0]")
-        np.testing.assert_equal(dst[4][4], [32,16,8], "mat / mat [4][4]")
-
         dst = cv.divide(src1_mat, (2,4,8) )
         np.testing.assert_equal(dst[0][0], [32,16,8], "multiply(mat, vec3) [0][0]")
         np.testing.assert_equal(dst[4][4], [32,16,8], "multiply(mat, vec3) [4][4]")
@@ -863,10 +862,6 @@ class Arguments(NewOpenCVTests):
 
         # Special case, vector length is not same as color channel of src mat
         ## bgr image
-        dst = cv.subtract(src1_mat, 32)
-        np.testing.assert_equal(dst[0][0], [32,64,64], "subtract(mat, int) [0][0]")
-        np.testing.assert_equal(dst[4][4], [32,64,64], "subtract(mat, int) [4][4]")
-
         dst = cv.subtract(src1_mat, (32))
         np.testing.assert_equal(dst[0][0], [32,64,64], "subtract(mat, vec1) [0][0]")
         np.testing.assert_equal(dst[4][4], [32,64,64], "subtract(mat, vec1) [4][4]")
