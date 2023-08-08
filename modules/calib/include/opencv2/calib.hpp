@@ -1128,7 +1128,7 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
 
 // TODO: add documentation for this
-CV_EXPORTS_AS(stereoCalibrateExtrinsicExtended)  double stereoExtrinsicCalibrate( InputArrayOfArrays objectPoints,
+CV_EXPORTS_AS(registerCamerasExtended)  double registerCameras( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
                                      bool isFisheye1,
@@ -1141,7 +1141,7 @@ CV_EXPORTS_AS(stereoCalibrateExtrinsicExtended)  double stereoExtrinsicCalibrate
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
 
 /// @overload
-CV_EXPORTS_W double stereoExtrinsicCalibrate( InputArrayOfArrays objectPoints,
+CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
                                      bool isFisheye1,
@@ -1152,7 +1152,7 @@ CV_EXPORTS_W double stereoExtrinsicCalibrate( InputArrayOfArrays objectPoints,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
            
 /// @overload                          
-CV_EXPORTS_W double stereoExtrinsicCalibrate( InputArrayOfArrays objectPoints,
+CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
                                      bool isFisheye1,

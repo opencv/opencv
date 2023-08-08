@@ -1182,11 +1182,11 @@ static double stereoCalibrateImpl(
     return std::sqrt(reprojErr/(pointsTotal*2));
 }
 
-static double stereoExtrinsicCalibrateImpl(
+static double registerCamerasImpl(
         const Mat& _objectPoints, const Mat& _imagePoints1,
         const Mat& _imagePoints2, const Mat& _npoints,
-        Mat& _cameraMatrix1, Mat& _distCoeffs1, bool isFisheye1,
-        Mat& _cameraMatrix2, Mat& _distCoeffs2, bool isFisheye2,
+        Mat& _cameraMatrix1, Mat& _distCoeffs1, int cameraModel1,
+        Mat& _cameraMatrix2, Mat& _distCoeffs2, int cameraModel2,
         Mat matR, Mat matT,
         Mat matE, Mat matF,
         Mat rvecs, Mat tvecs,
@@ -1224,8 +1224,8 @@ static double stereoExtrinsicCalibrateImpl(
     {
         int cn = rvecs.channels();
         int depth = rvecs.depth();
-        if( (depth != CV_32F && depth != CV_64F) ||
-            ((rvecs.rows != nimages || (rvecs.cols*cn != 3 && rvecs.cols*cn != 9)) &&
+        CV_Assert(depth == CV_32F || depth == CV_64F);
+        if(((rvecs.rows != nimages || (rvecs.cols*cn != 3 && rvecs.cols*cn != 9)) &&
              (rvecs.rows != 1 || rvecs.cols != nimages || cn != 3)) )
             CV_Error( CV_StsBadArg, "the output array of rotation vectors must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 or nx9 array, where n is the number of views" );
@@ -1234,25 +1234,25 @@ static double stereoExtrinsicCalibrateImpl(
     {
         int cn = tvecs.channels();
         int depth = tvecs.depth();
-        if( (depth != CV_32F && depth != CV_64F) ||
-            ((tvecs.rows != nimages || tvecs.cols*cn != 3) &&
+        CV_Assert(depth == CV_32F || depth == CV_64F);
+        if(((tvecs.rows != nimages || tvecs.cols*cn != 3) &&
              (tvecs.rows != 1 || tvecs.cols != nimages || cn != 3)) )
             CV_Error( CV_StsBadArg, "the output array of translation vectors must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of views" );
     }
 
-    bool isFisheyes[2] = {isFisheye1, isFisheye2};
+    int cameraModels[2] = {cameraModel1, cameraModel2};
     std::vector<int> nIntrinVec(2);
     for(int k = 0; k < 2; k++ )
     {
         const Mat& points = k == 0 ? _imagePoints1 : _imagePoints2;
         const Mat& cameraMatrix = k == 0 ? _cameraMatrix1 : _cameraMatrix2;
         const Mat& distCoeffs = k == 0 ? _distCoeffs1 : _distCoeffs2;
-        bool isFisheye = isFisheyes[k];
+        int cameraModel = cameraModels[k];
 
-        if (isFisheye) {
+        if (cameraModel == CALIB_MODEL_FISHEYE) {
             nIntrinVec[k] = 4 + 4; // f, c, k; ignoring ratio now
-        } else {
+        } else if (cameraModel == CALIB_MODEL_PINHOLE)  {
             nIntrinVec[k] = NINTRINSIC;
         }
 
@@ -1320,15 +1320,11 @@ static double stereoExtrinsicCalibrateImpl(
         for(int k = 0; k < 2; k++ )
         {
             Mat imgpt_ik = imagePoints[k].colRange(pos, pos + ni);
-            if (!isFisheyes[k])
+            if (cameraModels[k] == CALIB_MODEL_PINHOLE)
                 solvePnP(objpt_i, imgpt_ik, A[k], distInitial[k], rv, T[k], false, SOLVEPNP_ITERATIVE );
-            else {
-                // TODO: to the initialization of camer matrix for the fisheye camera model, should take better choise than solvePnP
-                Mat& cameraMatrix = (k == 0) ? _cameraMatrix1 : _cameraMatrix2; 
+            else if (cameraModels[k] == CALIB_MODEL_FISHEYE){
                 Mat& distCoeffs = (k == 0) ? _distCoeffs1 : _distCoeffs2; 
-                Mat imagePointsNormalized;
-                cv::fisheye::undistortPoints(imgpt_ik, imagePointsNormalized, cameraMatrix, distCoeffs, noArray(), cameraMatrix);
-                solvePnP(objpt_i, imagePointsNormalized, cameraMatrix, noArray(), rv, T[k], false, SOLVEPNP_ITERATIVE);
+                fisheye::solvePnP(objpt_i, imgpt_ik, A[k], distCoeffs, rv, T[k], false, SOLVEPNP_ITERATIVE );
             }
             Rodrigues(rv, R[k]);
 
@@ -1395,7 +1391,7 @@ static double stereoExtrinsicCalibrateImpl(
     Mat J_LRBuf( maxPoints*2, 6, CV_64F );
     // Mat JiBuf( maxPoints*2, NINTRINSIC, CV_64F, Scalar(0) );
 
-    auto lmcallback = [&, nimages, isFisheyes, nIntrinVec, _npoints]
+    auto lmcallback = [&, nimages, cameraModels, nIntrinVec, _npoints]
                       (InputOutputArray _param, OutputArray JtErr_, OutputArray JtJ_, double& errnorm)
     {   
         Mat_<double> param_m = _param.getMat();
@@ -1445,13 +1441,13 @@ static double stereoExtrinsicCalibrateImpl(
             {
                 Mat imgpt_ik = imagePoints[k](Range::all(), Range(ptPos, ptPos + ni));
 
-                if (!isFisheyes[k]) {
+                if (cameraModels[k] == CALIB_MODEL_PINHOLE) {
                     if( JtJ_.needed() || JtErr_.needed() )
                         projectPoints(objpt_i, om[k], T[k], intrin[k], distCoeffs[k],
                                     tmpImagePoints, dpdrot, dpdt, noArray(), noArray(), noArray(), noArray(), 0.);
                     else
                         projectPoints(objpt_i, om[k], T[k], intrin[k], distCoeffs[k], tmpImagePoints);
-                } else {
+                } else if (cameraModels[k] == CALIB_MODEL_FISHEYE) {
                     if( JtJ_.needed() || JtErr_.needed() ) {
                         Mat jacobian; // of size num_points*2  x  15 (2 + 2+ 4 + 3 + 3 + 1 ; // f, c, k, om, T, alpha)
                         fisheye::projectPoints(objpt_i, tmpImagePoints, om[k], T[k], intrin[k], distCoeffs[k], 0, jacobian);
@@ -2126,53 +2122,57 @@ double stereoCalibrate( InputArrayOfArrays _objectPoints,
     return err;
 }
 
-double stereoExtrinsicCalibrate( InputArrayOfArrays _objectPoints,
+double registerCameras( InputArrayOfArrays _objectPoints,
                         InputArrayOfArrays _imagePoints1,
                         InputArrayOfArrays _imagePoints2,
-                        InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1, bool isFisheye1,
-                        InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2, bool isFisheye2,
+                        InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1, int cameraModel1,
+                        InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2, int cameraModel2,
                         OutputArray _Rmat, OutputArray _Tmat,
                         OutputArray _Emat, OutputArray _Fmat, int flags,
                         TermCriteria criteria)
 {
     if (flags & CALIB_USE_EXTRINSIC_GUESS)
-        CV_Error(Error::StsBadFlag, "stereoExtrinsicCalibrate does not support CALIB_USE_EXTRINSIC_GUESS.");
+        CV_Error(Error::StsBadFlag, "registerCameras does not support CALIB_USE_EXTRINSIC_GUESS.");
 
     Mat Rmat, Tmat;
-    double ret = stereoExtrinsicCalibrate(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, isFisheye1,
-                                 _cameraMatrix2, _distCoeffs2, isFisheye2, Rmat, Tmat, _Emat, _Fmat,
+    double ret = registerCameras(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, cameraModel1,
+                                 _cameraMatrix2, _distCoeffs2, cameraModel2, Rmat, Tmat, _Emat, _Fmat,
                                  noArray(), flags, criteria);
     Rmat.copyTo(_Rmat);
     Tmat.copyTo(_Tmat);
     return ret;
 }
 
-double stereoExtrinsicCalibrate( InputArrayOfArrays _objectPoints,
+double registerCameras( InputArrayOfArrays _objectPoints,
                         InputArrayOfArrays _imagePoints1,
                         InputArrayOfArrays _imagePoints2,
-                        InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1, bool isFisheye1,
-                        InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2, bool isFisheye2,
+                        InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1, int cameraModel1,
+                        InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2, int cameraModel2,
                         InputOutputArray _Rmat, InputOutputArray _Tmat,
                         OutputArray _Emat, OutputArray _Fmat,
                         OutputArray _perViewErrors, int flags,
                         TermCriteria criteria)
 {
-    return stereoExtrinsicCalibrate(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, isFisheye1,
-                           _cameraMatrix2, _distCoeffs2, isFisheye2, _Rmat, _Tmat, _Emat, _Fmat,
+    return registerCameras(_objectPoints, _imagePoints1, _imagePoints2, _cameraMatrix1, _distCoeffs1, cameraModel1,
+                           _cameraMatrix2, _distCoeffs2, cameraModel2, _Rmat, _Tmat, _Emat, _Fmat,
                            noArray(), noArray(), _perViewErrors, flags, criteria);
 }
 
-double stereoExtrinsicCalibrate( InputArrayOfArrays _objectPoints,
+double registerCameras( InputArrayOfArrays _objectPoints,
                         InputArrayOfArrays _imagePoints1,
                         InputArrayOfArrays _imagePoints2,
-                        InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1, bool isFisheye1,
-                        InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2, bool isFisheye2,
+                        InputOutputArray _cameraMatrix1, InputOutputArray _distCoeffs1, int cameraModel1,
+                        InputOutputArray _cameraMatrix2, InputOutputArray _distCoeffs2, int cameraModel2,
                         InputOutputArray _Rmat, InputOutputArray _Tmat,
                         OutputArray _Emat, OutputArray _Fmat,
                         OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs,
                         OutputArray _perViewErrors, int flags,
                         TermCriteria criteria)
 {
+    // Only support fisheye camera model and pinhole camera model
+    CV_Assert(cameraModel1 == CALIB_MODEL_FISHEYE || cameraModel1 == CALIB_MODEL_PINHOLE);
+    CV_Assert(cameraModel2 == CALIB_MODEL_FISHEYE || cameraModel2 == CALIB_MODEL_PINHOLE);
+
     int rtype = CV_64F;
     Mat cameraMatrix1 = _cameraMatrix1.getMat();
     Mat cameraMatrix2 = _cameraMatrix2.getMat();
@@ -2180,8 +2180,14 @@ double stereoExtrinsicCalibrate( InputArrayOfArrays _objectPoints,
     Mat distCoeffs2 = _distCoeffs2.getMat();
     cameraMatrix1 = prepareCameraMatrix(cameraMatrix1, rtype, flags);
     cameraMatrix2 = prepareCameraMatrix(cameraMatrix2, rtype, flags);
-    distCoeffs1 = (isFisheye1)? prepareDistCoeffs(distCoeffs1, rtype, 4) : prepareDistCoeffs(distCoeffs1, rtype, 14);
-    distCoeffs2 = (isFisheye2)? prepareDistCoeffs(distCoeffs2, rtype, 4) : prepareDistCoeffs(distCoeffs2, rtype, 14);
+
+    int paramNum1 = 14, paramNum2 = 14;
+    if (cameraModel1 == CALIB_MODEL_FISHEYE)
+        paramNum1 = 4;
+    if (cameraModel2 == CALIB_MODEL_FISHEYE)
+        paramNum2 = 4;
+    distCoeffs1 = prepareDistCoeffs(distCoeffs1, rtype, paramNum1);
+    distCoeffs2 = prepareDistCoeffs(distCoeffs2, rtype, paramNum2);
 
     if(!(flags & CALIB_USE_EXTRINSIC_GUESS))
     {
@@ -2244,8 +2250,8 @@ double stereoExtrinsicCalibrate( InputArrayOfArrays _objectPoints,
         matErr = _perViewErrors.getMat();
     }
 
-    double err = stereoExtrinsicCalibrateImpl(objPt, imgPt, imgPt2, npoints, cameraMatrix1,
-                                     distCoeffs1, isFisheye1, cameraMatrix2, distCoeffs2, isFisheye2,
+    double err = registerCamerasImpl(objPt, imgPt, imgPt2, npoints, cameraMatrix1,
+                                     distCoeffs1, cameraModel1, cameraMatrix2, distCoeffs2, cameraModel2,
                                      matR, matT, matE, matF, rvecLM, tvecLM,
                                      matErr, flags, criteria);
     cameraMatrix1.copyTo(_cameraMatrix1);
