@@ -103,11 +103,6 @@ public:
         CV_Error(Error::StsNotImplemented, msg);
     }
 
-    virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
-    {
-        CV_Error(Error::StsNotImplemented, msg);
-    }
-
     virtual bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
     {
         CV_Error(Error::StsNotImplemented, msg);

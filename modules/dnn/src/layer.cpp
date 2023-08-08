@@ -87,11 +87,6 @@ Ptr<BackendNode> Layer::initCann(const std::vector<Ptr<BackendWrapper> > &inputs
     return Ptr<BackendNode>();
 }
 
-Ptr<BackendNode> Layer::tryAttach(const Ptr<BackendNode>& node)
-{
-    return Ptr<BackendNode>();
-}
-
 bool Layer::setActivation(const Ptr<ActivationLayer>&) { return false; }
 bool Layer::tryFuse(Ptr<Layer>&) { return false; }
 void Layer::getScaleShift(Mat& scale, Mat& shift) const

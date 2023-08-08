@@ -359,17 +359,6 @@ CV__DNN_INLINE_NS_BEGIN
                                           const std::vector<Ptr<BackendNode> >& nodes);
 
         /**
-         * @brief Implement layers fusing.
-         * @param[in] node Backend node of bottom layer.
-         * @see BackendNode
-         *
-         * Actual for graph-based backends. If layer attached successfully,
-         * returns non-empty cv::Ptr to node of the same backend.
-         * Fuse only over the last function.
-         */
-        virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node);
-
-        /**
          * @brief Tries to attach to the layer the subsequent activation layer, i.e. do the layer fusion in a partial case.
          * @param[in] layer The subsequent activation layer.
          *
