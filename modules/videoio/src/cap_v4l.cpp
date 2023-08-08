@@ -260,6 +260,10 @@ typedef uint32_t __u32;
 #define V4L2_CID_IRIS_ABSOLUTE (V4L2_CID_CAMERA_CLASS_BASE+17)
 #endif
 
+#ifndef v4l2_fourcc_be
+#define v4l2_fourcc_be(a, b, c, d) (v4l2_fourcc(a, b, c, d) | (1U << 31))
+#endif
+
 #ifndef V4L2_PIX_FMT_Y10
 #define V4L2_PIX_FMT_Y10 v4l2_fourcc('Y', '1', '0', ' ')
 #endif

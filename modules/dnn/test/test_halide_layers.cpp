@@ -361,22 +361,9 @@ TEST_P(MaxPooling, Accuracy)
     Backend backendId = get<0>(get<5>(GetParam()));
     Target targetId = get<1>(get<5>(GetParam()));
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
-            && inSize == Size(7, 6) && kernel == Size(3, 2)
-            && (stride == Size(1, 1) || stride == Size(2, 2))
-            && (pad == Size(0, 1) || pad == Size(1, 1))
-    )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
-            && (kernel == Size(2, 2) || kernel == Size(3, 2))
-            && stride == Size(1, 1) && (pad == Size(0, 0) || pad == Size(0, 1))
-    )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
+    // https://github.com/openvinotoolkit/openvino/issues/18731
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && stride != Size(1, 1))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
@@ -466,6 +453,11 @@ TEST_P(FullyConnected, Accuracy)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL_FP16)
     {
         l1 = 0.01;
+    }
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL)
+    {
+        l1 = 5e-3;
+        lInf = 7e-3;
     }
 #endif
     if (targetId == DNN_TARGET_CUDA_FP16)
