@@ -820,12 +820,32 @@ class Arguments(NewOpenCVTests):
         res = cv.samples.findFile('lena.jpg', False)
         src = cv.imread(res)
         try:
+            # tuple
             dst = cv.subtract(src, (10, 10, 10))
+            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
+            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
+            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
+
             dst = cv.subtract(src, (10., 10., 10.))
-            # array is not supported.
-#           dst = cv.subtract(src, np.uint8([10, 10, 10]))
-#           dst = cv.subtract(src, np.array([10, 10, 10]))
-#           dst = cv.subtract(src, np.float64([10, 10, 10]))
+            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
+            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
+            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
+
+            # array
+            dst = cv.subtract(src, np.uint8([10, 10, 10]))
+            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
+            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
+            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
+
+            dst = cv.subtract(src, np.array([10, 10, 10]))
+            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
+            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
+            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
+
+            dst = cv.subtract(src, np.float64([10, 10, 10]))
+            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
+            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
+            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
         except cv.error as _e:
             raise Exception
         else:

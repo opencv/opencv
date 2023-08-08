@@ -75,9 +75,10 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     if( PyTuple_Check(o) )
     {
         // see https://github.com/opencv/opencv/issues/24057
-        int i, sz = (int)PyTuple_Size((PyObject*)o);
-        int sz2 = (info.arithm_op_src && (sz <= 4) )? 4 : sz; // Extend to 4 to handle as Scalar
+        const int sz  = (int)PyTuple_Size((PyObject*)o);
+        const int sz2 = (info.arithm_op_src && (sz <= 4) )? 4 : sz; // Extend to 4 to handle as Scalar
         m = Mat(sz2, 1, CV_64F);
+        int i;
         for( i = 0; i < sz; i++ )
         {
             PyObject* oi = PyTuple_GetItem(o, i);
@@ -244,6 +245,36 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
             step[i] = default_step;
             default_step *= size[i];
         }
+    }
+
+    // see https://github.com/opencv/opencv/issues/24057
+    if ( ( info.arithm_op_src ) && ( ndims == 1 ) && ( size[0] <= 4 ) )
+    {
+        const int sz  = size[0]; // Real Data Length(1, 2, 3 or 4)
+        const int sz2 = 4;       // Scalar has 4 elements.
+        m = Mat(sz2, 1, CV_64F);
+
+        const char *base_ptr = PyArray_BYTES(oarr);
+        int i;
+        for( i = 0; i < sz; i++ )
+        {
+            PyObject* oi = PyArray_GETITEM(oarr, base_ptr + step[0] * i);
+            if( PyInt_Check(oi) )
+                m.at<double>(i) = (double)PyInt_AsLong(oi);
+            else if( PyFloat_Check(oi) )
+                m.at<double>(i) = (double)PyFloat_AsDouble(oi);
+            else
+            {
+                failmsg("%s has some non-numerical elements", info.name);
+                m.release();
+                return false;
+            }
+        }
+        for( i = sz; i < sz2; i++ ) // Padding 0
+        {
+            m.at<double>(i) = 0.0;
+        }
+        return true;
     }
 
     // handle degenerate case
