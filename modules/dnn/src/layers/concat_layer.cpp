@@ -43,7 +43,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
@@ -139,7 +138,6 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
                (backendId == DNN_BACKEND_WEBNN && !padding) ||
                (backendId == DNN_BACKEND_CANN && !padding);
     }
@@ -330,29 +328,6 @@ public:
         return make_cuda_node<cuda4dnn::ConcatOp>(preferableTarget, std::move(context->stream), concat_axis, padding);
     }
 #endif
-
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        std::vector<Halide::Buffer<> > inputBuffers = halideBuffers(input);
-
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        int offset = inputBuffers[0].channels();
-        Halide::Expr topExpr = select(c < offset,
-                                      inputBuffers[0](x, y, c, n),
-                                      inputBuffers[1](x, y, c - offset, n));
-        for (int i = 2; i < input.size(); ++i)
-        {
-            offset += inputBuffers[i - 1].channels();
-            topExpr = select(c < offset, topExpr,
-                             inputBuffers[i](x, y, c - offset, n));
-        }
-        top(x, y, c, n) = topExpr;
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,

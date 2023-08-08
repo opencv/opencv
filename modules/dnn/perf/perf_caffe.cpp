@@ -10,8 +10,6 @@
 // because whole output includes Caffe's logs.
 //
 // Note: Be sure that interesting version of Caffe was linked.
-// Note: There is an impact on Halide performance. Comment this tests if you
-//       want to run the last one.
 //
 // How to build Intel-Caffe with MKLDNN backend
 // ============================================

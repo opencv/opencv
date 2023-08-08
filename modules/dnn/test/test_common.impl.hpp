@@ -22,7 +22,6 @@ void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
 {
     switch (v) {
     case DNN_BACKEND_DEFAULT: *os << "DEFAULT"; return;
-    case DNN_BACKEND_HALIDE: *os << "HALIDE"; return;
     case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE*"; return;
     case DNN_BACKEND_VKCOM: *os << "VKCOM"; return;
     case DNN_BACKEND_OPENCV: *os << "OCV"; return;
@@ -248,7 +247,6 @@ void readFileContent(const std::string& filename, CV_OUT std::vector<char>& cont
 
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargets(
         bool withInferenceEngine /*= true*/,
-        bool withHalide /*= false*/,
         bool withCpuOCV /*= true*/,
         bool withVkCom /*= true*/,
         bool withCUDA /*= true*/,
@@ -261,12 +259,6 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 
     std::vector< tuple<Backend, Target> > targets;
     std::vector< Target > available;
-    if (withHalide)
-    {
-        available = getAvailableTargets(DNN_BACKEND_HALIDE);
-        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
-            targets.push_back(make_tuple(DNN_BACKEND_HALIDE, *i));
-    }
     if (withInferenceEngine)
     {
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
@@ -443,11 +435,6 @@ void initDNNTests()
         CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_CPU_FP16,
         CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16
     );
-#if defined(HAVE_HALIDE)
-    registerGlobalSkipTag(
-        CV_TEST_TAG_DNN_SKIP_HALIDE
-    );
-#endif
 #if defined(INF_ENGINE_RELEASE)
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_IE,

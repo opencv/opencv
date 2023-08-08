@@ -117,7 +117,7 @@ execution policy and operates with its own, special kernels. Fluid
 backend allows to achieve less memory footprint and better memory
 locality when running on CPU.
 
-There may be more backends available, e.g. Halide, OpenCL, etc. --
+There may be more backends available, e.g. OpenCL, etc. --
 G-API provides an uniform internal API to develop backends so any
 enthusiast or a company are free to scale G-API on a new platform or
 accelerator. In terms of OpenCV infrastructure, every new backend is a

@@ -73,7 +73,6 @@ CV__DNN_INLINE_NS_BEGIN
         //! OpenCV is built with Intel OpenVINO or
         //! DNN_BACKEND_OPENCV otherwise.
         DNN_BACKEND_DEFAULT = 0,
-        DNN_BACKEND_HALIDE,
         DNN_BACKEND_INFERENCE_ENGINE,            //!< Intel OpenVINO computational backend
                                                  //!< @note Tutorial how to build OpenCV with OpenVINO: @ref tutorial_dnn_openvino
         DNN_BACKEND_OPENCV,
@@ -316,18 +315,6 @@ CV__DNN_INLINE_NS_BEGIN
          */
         virtual bool supportBackend(int backendId);  // FIXIT const
 
-        /**
-         * @brief Returns Halide backend node.
-         * @param[in] inputs Input Halide buffers.
-         * @see BackendNode, BackendWrapper
-         *
-         * Input buffers should be exactly the same that will be used in forward invocations.
-         * Despite we can use Halide::ImageParam based on input shape only,
-         * it helps prevent some memory management issues (if something wrong,
-         * Halide tests will be failed).
-         */
-        virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs);
-
         virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs, const std::vector<Ptr<BackendNode> >& nodes);
 
         virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs, std::vector<Ptr<BackendWrapper> > &outputs);
@@ -370,22 +357,6 @@ CV__DNN_INLINE_NS_BEGIN
         virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
                                           const std::vector<Ptr<BackendWrapper> > &outputs,
                                           const std::vector<Ptr<BackendNode> >& nodes);
-
-       /**
-        * @brief Automatic Halide scheduling based on layer hyper-parameters.
-        * @param[in] node Backend node with Halide functions.
-        * @param[in] inputs Blobs that will be used in forward invocations.
-        * @param[in] outputs Blobs that will be used in forward invocations.
-        * @param[in] targetId Target identifier
-        * @see BackendNode, Target
-        *
-        * Layer don't use own Halide::Func members because we can have applied
-        * layers fusing. In this way the fused function should be scheduled.
-        */
-        virtual void applyHalideScheduler(Ptr<BackendNode>& node,
-                                          const std::vector<Mat*> &inputs,
-                                          const std::vector<Mat> &outputs,
-                                          int targetId) const;
 
         /**
          * @brief Implement layers fusing.
@@ -674,17 +645,6 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP void getOutputDetails(CV_OUT std::vector<float>& scales, CV_OUT std::vector<int>& zeropoints) const;
 
         /**
-         * @brief Compile Halide layers.
-         * @param[in] scheduler Path to YAML file with scheduling directives.
-         * @see setPreferableBackend
-         *
-         * Schedule layers that support Halide backend. Then compile them for
-         * specific target. For layers that not represented in scheduling file
-         * or if no manual scheduling used at all, automatic scheduling will be applied.
-         */
-        CV_WRAP void setHalideScheduler(const String& scheduler);
-
-        /**
          * @brief Ask network to use specific computation backend where it supported.
          * @param[in] backendId backend identifier.
          * @see Backend
@@ -700,16 +660,16 @@ CV__DNN_INLINE_NS_BEGIN
          * @see Target
          *
          * List of supported combinations backend / target:
-         * |                        | DNN_BACKEND_OPENCV | DNN_BACKEND_INFERENCE_ENGINE | DNN_BACKEND_HALIDE |  DNN_BACKEND_CUDA |
-         * |------------------------|--------------------|------------------------------|--------------------|-------------------|
-         * | DNN_TARGET_CPU         |                  + |                            + |                  + |                   |
-         * | DNN_TARGET_OPENCL      |                  + |                            + |                  + |                   |
-         * | DNN_TARGET_OPENCL_FP16 |                  + |                            + |                    |                   |
-         * | DNN_TARGET_MYRIAD      |                    |                            + |                    |                   |
-         * | DNN_TARGET_FPGA        |                    |                            + |                    |                   |
-         * | DNN_TARGET_CUDA        |                    |                              |                    |                 + |
-         * | DNN_TARGET_CUDA_FP16   |                    |                              |                    |                 + |
-         * | DNN_TARGET_HDDL        |                    |                            + |                    |                   |
+         * |                        | DNN_BACKEND_OPENCV | DNN_BACKEND_INFERENCE_ENGINE |  DNN_BACKEND_CUDA |
+         * |------------------------|--------------------|------------------------------|-------------------|
+         * | DNN_TARGET_CPU         |                  + |                            + |                   |
+         * | DNN_TARGET_OPENCL      |                  + |                            + |                   |
+         * | DNN_TARGET_OPENCL_FP16 |                  + |                            + |                   |
+         * | DNN_TARGET_MYRIAD      |                    |                            + |                   |
+         * | DNN_TARGET_FPGA        |                    |                            + |                   |
+         * | DNN_TARGET_CUDA        |                    |                              |                 + |
+         * | DNN_TARGET_CUDA_FP16   |                    |                              |                 + |
+         * | DNN_TARGET_HDDL        |                    |                            + |                   |
          */
         CV_WRAP void setPreferableTarget(int targetId);
 

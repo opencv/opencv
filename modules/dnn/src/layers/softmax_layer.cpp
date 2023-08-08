@@ -43,7 +43,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
@@ -115,7 +114,6 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               (backendId == DNN_BACKEND_HALIDE && haveHalide() && axisRaw == 1) ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -324,31 +322,6 @@ public:
         return make_cuda_node<cuda4dnn::SoftmaxOp>(preferableTarget, std::move(context->cudnn_handle), channel_axis, logSoftMax);
     }
 #endif
-
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
-        int inW, inH, inC, inN;
-        getCanonicalSize(inputBuffer, &inW, &inH, &inC, &inN);
-
-        if (inW != 1 || inH != 1)
-            CV_Error(cv::Error::StsNotImplemented,
-                     "Halide backend for SoftMax with spatial size "
-                     "more than 1x1 is not implemented");
-
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-
-        Halide::Func expInput("expInput");
-        Halide::RDom r(0, inW, 0, inH, 0, inC);
-        expInput(x, y, c, n) = exp(inputBuffer(x, y, c, n));
-        Halide::Expr globalSum = sum(expInput(r.x, r.y, r.z, n));
-        top(x, y, c, n) = expInput(x, y, c, n) / globalSum;
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,

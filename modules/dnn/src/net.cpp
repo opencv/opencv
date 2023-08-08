@@ -402,14 +402,6 @@ void Net::enableWinograd(bool useWinograd)
     return impl->enableWinograd(useWinograd);
 }
 
-void Net::setHalideScheduler(const String& scheduler)
-{
-    CV_TRACE_FUNCTION();
-    CV_TRACE_ARG_VALUE(scheduler, "scheduler", scheduler.c_str());
-    CV_Assert(impl);
-    return impl->setHalideScheduler(scheduler);
-}
-
 int64 Net::getPerfProfile(std::vector<double>& timings)
 {
     CV_TRACE_FUNCTION();

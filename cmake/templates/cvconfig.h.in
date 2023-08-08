@@ -53,9 +53,6 @@
 /* Geospatial Data Abstraction Library */
 #cmakedefine HAVE_GDAL
 
-/* Halide support */
-#cmakedefine HAVE_HALIDE
-
 /* Vulkan support */
 #cmakedefine HAVE_VULKAN
 

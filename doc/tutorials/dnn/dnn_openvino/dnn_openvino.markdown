@@ -1,7 +1,7 @@
 OpenCV usage with OpenVINO {#tutorial_dnn_openvino}
 =====================
 
-@prev_tutorial{tutorial_dnn_halide_scheduling}
+@prev_tutorial{tutorial_dnn_googlenet}
 @next_tutorial{tutorial_dnn_android}
 
 |    |    |

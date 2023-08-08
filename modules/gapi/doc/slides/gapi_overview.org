@@ -39,11 +39,6 @@
 - Usage model:
   - /Express/ an image/vision processing graph and then /execute/ it;
   - Fine-tune execution without changes in the graph;
-- Similar to Halide -- separates logic from
-  platform details.
-- More than Halide:
-  - Kernels can be written in unconstrained platform-native code;
-  - Halide can serve as a backend (one of many).
 
 ** OpenCV evolution in one slide (cont'd)
 # FIXME: Learn proper page-breaking!

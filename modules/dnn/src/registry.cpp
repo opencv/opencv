@@ -4,7 +4,6 @@
 
 #include "precomp.hpp"
 
-#include "op_halide.hpp"
 #include "op_inf_engine.hpp"
 #include "ie_ngraph.hpp"
 #include "op_vkcom.hpp"
@@ -12,8 +11,6 @@
 #include "op_webnn.hpp"
 #include "op_timvx.hpp"
 #include "op_cann.hpp"
-
-#include "halide_scheduler.hpp"
 
 #include "backend.hpp"
 #include "factory.hpp"
@@ -38,14 +35,6 @@ public:
 private:
     BackendRegistry()
     {
-#ifdef HAVE_HALIDE
-        backends.push_back(std::make_pair(DNN_BACKEND_HALIDE, DNN_TARGET_CPU));
-#ifdef HAVE_OPENCL
-        if (cv::ocl::useOpenCL())
-            backends.push_back(std::make_pair(DNN_BACKEND_HALIDE, DNN_TARGET_OPENCL));
-#endif
-#endif  // HAVE_HALIDE
-
         bool haveBackendOpenVINO = false;
 #ifdef HAVE_INF_ENGINE
         haveBackendOpenVINO = true;

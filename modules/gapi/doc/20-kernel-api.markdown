@@ -30,11 +30,9 @@ digraph {
 
   "CPU::A"     -> ki_a [dir="forward"];
   "OpenCL::A"  -> ki_a [dir="forward"];
-  "Halide::A"  -> ki_a [dir="forward"];
 
   "CPU::B"     -> ki_b [dir="forward"];
   "OpenCL::B"  -> ki_b [dir="forward"];
-  "Halide::B"  -> ki_b [dir="forward"];
 }
 @enddot
 
