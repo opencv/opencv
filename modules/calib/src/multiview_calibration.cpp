@@ -378,7 +378,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
             flags_extrinsics += CALIB_USE_EXTRINSIC_GUESS;
         }
 
-        stereoExtrinsicCalibrate(grid_points, image_points1, image_points2,
+        registerCameras(grid_points, image_points1, image_points2,
                         Ks[c1], distortions[c1], is_fisheye_vec[c1],
                         Ks[c2], distortions[c2], is_fisheye_vec[c2],
                         R, T, noArray(), noArray(), noArray(), noArray(), noArray(), flags_extrinsics);

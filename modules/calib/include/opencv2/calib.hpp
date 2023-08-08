@@ -9,6 +9,7 @@
 #include "opencv2/core/types.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/core/affine.hpp"
+#include "opencv2/3d.hpp"
 
 /**
   @defgroup calib Camera Calibration
@@ -420,6 +421,11 @@ enum { CALIB_CB_SYMMETRIC_GRID  = 1,
      };
 
 #define CALIB_NINTRINSIC 18 //!< Maximal size of camera internal parameters (initrinsics) vector
+
+enum { 
+    CALIB_MODEL_PINHOLE = 0,
+    CALIB_MODEL_FISHEYE = 1,
+};
 
 enum { CALIB_USE_INTRINSIC_GUESS = 0x00001, //!< Use user provided intrinsics as initial point for optimization.
        CALIB_FIX_ASPECT_RATIO    = 0x00002, //!< Use with CALIB_USE_INTRINSIC_GUESS. The ratio fx/fy stays the same as in the input cameraMatrix.
@@ -1131,9 +1137,9 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
 CV_EXPORTS_AS(registerCamerasExtended)  double registerCameras( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
-                                     bool isFisheye1,
+                                     int cameraModel1,
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
-                                     bool isFisheye2,
+                                     int cameraModel2,
                                      InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
                                      OutputArray perViewErrors,
@@ -1144,9 +1150,9 @@ CV_EXPORTS_AS(registerCamerasExtended)  double registerCameras( InputArrayOfArra
 CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
-                                     bool isFisheye1,
+                                     int cameraModel1,
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
-                                     bool isFisheye2,
+                                     int cameraModel2,
                                      OutputArray R,OutputArray T, OutputArray E, OutputArray F,
                                      int flags = 0,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
@@ -1155,9 +1161,9 @@ CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints,
 CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
                                      InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
-                                     bool isFisheye1,
+                                     int cameraModel1,
                                      InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
-                                     bool isFisheye2,
+                                     int cameraModel2,
                                      InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
                                      OutputArray perViewErrors,
                                      int flags = 0,
@@ -1768,6 +1774,82 @@ CV_EXPORTS_W double stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
                                     InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
                                     OutputArray R, OutputArray T, int flags = CALIB_FIX_INTRINSIC,
                                     TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
+
+/** @example samples/cpp/tutorial_code/features2D/Homography/homography_from_camera_displacement.cpp
+An example program about homography from the camera displacement
+
+Check @ref tutorial_homography "the corresponding tutorial" for more details
+*/
+
+/** @brief Finds an object pose from 3D-2D point correspondences for fisheye camera moodel.
+
+@see @ref calib3d_solvePnP
+
+This function returns the rotation and the translation vectors that transform a 3D point expressed in the object
+coordinate frame to the camera coordinate frame, using different methods:
+- P3P methods (@ref SOLVEPNP_P3P, @ref SOLVEPNP_AP3P): need 4 input points to return a unique solution.
+- @ref SOLVEPNP_IPPE Input points must be >= 4 and object points must be coplanar.
+- @ref SOLVEPNP_IPPE_SQUARE Special case suitable for marker pose estimation.
+Number of input points must be 4. Object points must be defined in the following order:
+  - point 0: [-squareLength / 2,  squareLength / 2, 0]
+  - point 1: [ squareLength / 2,  squareLength / 2, 0]
+  - point 2: [ squareLength / 2, -squareLength / 2, 0]
+  - point 3: [-squareLength / 2, -squareLength / 2, 0]
+- for all the other flags, number of input points must be >= 4 and object points can be in any configuration.
+
+@param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
+1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
+@param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
+where N is the number of points. vector\<Point2d\> can be also passed here.
+@param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
+@param distCoeffs Input vector of distortion coefficients
+\f$\distcoeffs\f$. If the vector is NULL/empty, the zero distortion coefficients are
+assumed.
+@param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
+the model coordinate system to the camera coordinate system.
+@param tvec Output translation vector.
+@param useExtrinsicGuess Parameter used for #SOLVEPNP_ITERATIVE. If true (1), the function uses
+the provided rvec and tvec values as initial approximations of the rotation and translation
+vectors, respectively, and further optimizes them.
+@param flags Method for solving a PnP problem: see @ref calib3d_solvePnP_flags
+
+More information about Perspective-n-Points is described in @ref calib3d_solvePnP
+
+@note
+   -   An example of how to use solvePnP for planar augmented reality can be found at
+        opencv_source_code/samples/python/plane_ar.py
+   -   If you are using Python:
+        - Numpy array slices won't work as input because solvePnP requires contiguous
+        arrays (enforced by the assertion using cv::Mat::checkVector() around line 55 of
+        modules/3d/src/solvepnp.cpp version 2.4.9)
+        - The P3P algorithm requires image points to be in an array of shape (N,1,2) due
+        to its calling of #undistortPoints (around line 75 of modules/3d/src/solvepnp.cpp version 2.4.9)
+        which requires 2-channel information.
+        - Thus, given some data D = np.array(...) where D.shape = (N,M), in order to use a subset of
+        it as, e.g., imagePoints, one must effectively copy it into a new array: imagePoints =
+        np.ascontiguousarray(D[:,:2]).reshape((N,1,2))
+   -   The methods @ref SOLVEPNP_DLS and @ref SOLVEPNP_UPNP cannot be used as the current implementations are
+       unstable and sometimes give completely wrong results. If you pass one of these two
+       flags, @ref SOLVEPNP_EPNP method will be used instead.
+   -   The minimum number of points is 4 in the general case. In the case of @ref SOLVEPNP_P3P and @ref SOLVEPNP_AP3P
+       methods, it is required to use exactly 4 points (the first 3 points are used to estimate all the solutions
+       of the P3P problem, the last one is used to retain the best solution that minimizes the reprojection error).
+   -   With @ref SOLVEPNP_ITERATIVE method and `useExtrinsicGuess=true`, the minimum number of points is 3 (3 points
+       are sufficient to compute a pose but there are up to 4 solutions). The initial solution should be close to the
+       global solution to converge.
+   -   With @ref SOLVEPNP_IPPE input points must be >= 4 and object points must be coplanar.
+   -   With @ref SOLVEPNP_IPPE_SQUARE this is a special case suitable for marker pose estimation.
+       Number of input points must be 4. Object points must be defined in the following order:
+         - point 0: [-squareLength / 2,  squareLength / 2, 0]
+         - point 1: [ squareLength / 2,  squareLength / 2, 0]
+         - point 2: [ squareLength / 2, -squareLength / 2, 0]
+         - point 3: [-squareLength / 2, -squareLength / 2, 0]
+    -  With @ref SOLVEPNP_SQPNP input points must be >= 3
+ */
+CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
+                            InputArray cameraMatrix, InputArray distCoeffs,
+                            OutputArray rvec, OutputArray tvec,
+                            bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE );
 
 //! @} calib3d_fisheye
 } //end namespace fisheye
