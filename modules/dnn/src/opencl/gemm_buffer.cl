@@ -510,7 +510,7 @@ __kernel void TEMPLATE(gemm_buffer_NT, Dtype)(
         Dtype8 arow;
 
 #define READ_BROW(_brow, _row) \
-        _brow = as_half8(vload4(0, (__local float *)(slm_brow0 + _row * SLM_BLOCK))); \
+        _brow = vload8(0, slm_brow0 + _row * SLM_BLOCK); \
         _brow.s0 = (mad24(local_x, 8, w) < K) ? _brow.s0 : 0.0f; \
         _brow.s1 = (mad24(local_x, 8, w + 1) < K) ? _brow.s1 : 0.0f; \
         _brow.s2 = (mad24(local_x, 8, w + 2) < K) ? _brow.s2 : 0.0f; \
@@ -532,7 +532,7 @@ __kernel void TEMPLATE(gemm_buffer_NT, Dtype)(
 #undef READ_BROW
 
 #define MM_DOT_PRODUCT( _row, _dot )   \
-        arow = as_half8(vload4(0, (__global float *)(src0_read + _row * K)));                           \
+        arow = vload8(0, src0_read + _row * K);                           \
         arow.s0 = (mad24(local_x, 8, w) < K) ? arow.s0 : 0.0f; \
         arow.s1 = (mad24(local_x, 8, w + 1) < K) ? arow.s1 : 0.0f; \
         arow.s2 = (mad24(local_x, 8, w + 2) < K) ? arow.s2 : 0.0f; \
