@@ -46,7 +46,6 @@ std::string target_keys = cv::format(
                          "%d: CUDA, "
                          "%d: CUDA fp16 (half-float preprocess) }", cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16, cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA, cv::dnn::DNN_TARGET_CUDA_FP16);
 std::string keys = param_keys + backend_keys + target_keys;
-    
 
 using namespace cv;
 using namespace dnn;
