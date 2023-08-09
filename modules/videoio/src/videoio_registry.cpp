@@ -6,6 +6,8 @@
 
 #include "videoio_registry.hpp"
 
+#include "cvconfig.h"
+
 #include "opencv2/videoio/registry.hpp"
 
 #include "opencv2/core/utils/filesystem.private.hpp" // OPENCV_HAVE_FILESYSTEM_SUPPORT

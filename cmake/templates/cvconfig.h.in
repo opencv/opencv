@@ -152,4 +152,8 @@
 /* Library QR-code decoding */
 #cmakedefine HAVE_QUIRC
 
+#cmakedefine HAVE_ANDROID_MEDIANDK
+
+#cmakedefine HAVE_FLATBUFFERS
+
 #endif // OPENCV_CVCONFIG_H_INCLUDED
