@@ -2719,8 +2719,6 @@ CvResult CV_API_CALL cv_capture_open_with_params(
     if (!handle)
         return CV_ERROR_FAIL;
     *handle = NULL;
-    if (!filename)
-        return CV_ERROR_FAIL;
     CaptureT* cap = 0;
     try
     {
