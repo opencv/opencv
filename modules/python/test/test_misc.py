@@ -820,6 +820,17 @@ class Arguments(NewOpenCVTests):
         res = cv.samples.findFile('lena.jpg', False)
         src = cv.imread(res)
         try:
+            # single number
+            dst = cv.subtract(src, 10)
+            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
+            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
+            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
+
+            dst = cv.subtract(src, 10.)
+            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
+            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
+            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
+
             # tuple
             dst = cv.subtract(src, (10, 10, 10))
             np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
@@ -882,7 +893,7 @@ class Arguments(NewOpenCVTests):
 
         # Special case, vector length is not same as color channel of src mat
         ## bgr image
-        dst = cv.subtract(src1_mat, (32))
+        dst = cv.subtract(src1_mat, (32,))
         np.testing.assert_equal(dst[0][0], [32,64,64], "subtract(mat, vec1) [0][0]")
         np.testing.assert_equal(dst[4][4], [32,64,64], "subtract(mat, vec1) [4][4]")
 

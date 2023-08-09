@@ -63,12 +63,29 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     if( PyInt_Check(o) )
     {
         double v[] = {static_cast<double>(PyInt_AsLong((PyObject*)o)), 0., 0., 0.};
+        if ( info.arithm_op_src )
+        {
+            // Normally cv.XXX(x) means cv.XXX( (x, 0., 0., 0.) );
+            // However  cv.add(mat,x) means cv::add(mat, (x,x,x,x) ).
+            v[1] = v[0];
+            v[2] = v[0];
+            v[3] = v[0];
+        }
         m = Mat(4, 1, CV_64F, v).clone();
         return true;
     }
     if( PyFloat_Check(o) )
     {
         double v[] = {PyFloat_AsDouble((PyObject*)o), 0., 0., 0.};
+
+       if ( info.arithm_op_src )
+        {
+            // Normally cv.XXX(x) means cv.XXX( (x, 0., 0., 0.) );
+            // However  cv.add(mat,x) means cv::add(mat, (x,x,x,x) ).
+            v[1] = v[0];
+            v[2] = v[0];
+            v[3] = v[0];
+        }
         m = Mat(4, 1, CV_64F, v).clone();
         return true;
     }
