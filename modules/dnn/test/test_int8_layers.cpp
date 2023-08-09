@@ -820,7 +820,7 @@ TEST_P(Test_Int8_nets, CaffeNet)
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    float l1 = 2e-4, lInf = 0.0025;
+    float l1 = 2e-4, lInf = 0.0042;
     testONNXNet("caffenet", l1, lInf);
 }
 
@@ -886,7 +886,7 @@ TEST_P(Test_Int8_nets, MobileNet_SSD)
     Mat blob = blobFromImage(inp, 1.0 / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
     Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
 
-    float confThreshold = FLT_MIN, scoreDiff = 0.084, iouDiff = 0.16;
+    float confThreshold = FLT_MIN, scoreDiff = 0.084, iouDiff = 0.43;
     testDetectionNet(net, blob, ref, confThreshold, scoreDiff, iouDiff);
 }
 

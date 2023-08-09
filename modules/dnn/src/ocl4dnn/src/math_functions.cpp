@@ -489,7 +489,6 @@ static bool ocl4dnnFastBufferGEMM(const CBLAS_TRANSPOSE TransA,
             global[0] = (N + 3) / 4 * local[0];
         global[1] = 1;
     } else {
-        return false;
         size_t lx = sub_group_size;
         size_t ly = (TransB != CblasNoTrans && TransA == CblasNoTrans && halfPrecisionMode) ? 2 : 4;
         int dx = (TransB != CblasNoTrans && TransA == CblasNoTrans) ? 1 : 4;
