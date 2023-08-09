@@ -2557,7 +2557,6 @@ void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::Node
 void ONNXImporter::parseGatherElements(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_CheckEQ(node_proto.input_size(), 2, "GatherElements: two inputs are required");
-    int axis = layerParams.get<int>("axis", 0);
 
     size_t consts = 0;
     for (size_t i = 0; i < node_proto.input_size(); ++i){

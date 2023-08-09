@@ -232,7 +232,7 @@ TEST_P(Test_ONNX_layers, Gather)
 
 TEST_P(Test_ONNX_layers, GatherElements)
 {
-    testONNXModels("gather_elements", pb);
+    testONNXModels("gather_elements", pb, 0, 0, false, false, 2);
 }
 
 TEST_P(Test_ONNX_layers, Gather_Scalar)

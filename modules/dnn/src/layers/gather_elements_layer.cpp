@@ -32,6 +32,11 @@ public:
         return false;
     }
 
+    template<typename T>
+    auto rd(const T& a, const T& b){
+         return b; 
+         }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
@@ -44,13 +49,6 @@ public:
         const Mat& data = inputs[0];
         const Mat& indices = inputs[1];
         Mat& out = outputs[0];
-
-        typeDispatch(outputs[0].type(), data, indices, out);
-    }
-
-    template<typename T, typename Functor>
-    void forward_impl(const Functor& rd, const Mat& data, const Mat& indices,  Mat& out)
-    {
 
         const int ndims = data.dims;
         CV_Assert(ndims >= 1);
@@ -67,9 +65,9 @@ public:
 
         size_t inp_offset = 0;
         size_t ind_offset = 0;
-        const T* p_index = indices.ptr<const T>();
-        const T* p_data = data.ptr<const T>();
-        T* p_out = out.ptr<T>();
+        const auto* p_index = indices.ptr();
+        const auto* p_data = data.ptr();
+        auto* p_out = out.ptr();
 
         size_t total = indices.total();
 
@@ -93,49 +91,23 @@ public:
                     offset_at_axis = offset_at_idx * step[j];
                 }
             }
-            ind_offset /= sizeof(T);
+            ind_offset /= sizeof(outputs[0].type());
 
             // get index and overwrite current indices
-            const T* tmp_p_index = p_index + ind_offset;
+            const auto* tmp_p_index = p_index + ind_offset;
             index = (int)(*tmp_p_index);
             CV_Assert(index < shape[axis] && index > -shape[axis]);
 
             inp_offset = inp_offset - offset_at_axis + ((index + shape[axis]) % shape[axis]) * step[axis];
-            inp_offset /= sizeof(T);
+            inp_offset /= sizeof(outputs[0].type());
 
-            const T* tmp_p_data = p_data + inp_offset;
-            T* tmp_p_out = p_out + ind_offset;
+            const auto* tmp_p_data = p_data + inp_offset;
+            auto* tmp_p_out = p_out + ind_offset;
             *tmp_p_out = rd(*tmp_p_out, *tmp_p_data);
         }
     }
-
-    template<typename... Args>
-    inline void typeDispatch(const int type, Args&&... args)
-    {
-        switch (type)
-        {
-            case CV_8U:
-                reductionDispatch<uint8_t>(std::forward<Args>(args)...);
-                break;
-            case CV_32S:
-                reductionDispatch<int32_t>(std::forward<Args>(args)...);
-                break;
-            case CV_32F:
-                reductionDispatch<float>(std::forward<Args>(args)...);
-                break;
-            default:
-                CV_Error(cv::Error::BadDepth, "Unsupported type.");
-        };
-    }
-
-    template<typename T, typename... Args>
-    inline void reductionDispatch(Args&&... args)
-    {
-        auto rd = [](const T& a, const T& b) { return b; };
-        forward_impl<T>(rd, std::forward<Args>(args)...);
-    }
-
-
+    
+    
 private:
     int axis;
 };
