@@ -626,8 +626,8 @@ void hlineResizeCn<uint16_t, ufixedpoint32, 2, true, 1>(uint16_t* src, int, int 
 
         v_uint64 v_res0 = v_reinterpret_as_u64(v_mul(v_src0, vx_load((uint32_t *)m)));
         v_uint64 v_res1 = v_reinterpret_as_u64(v_mul(v_src1, vx_load((uint32_t *)m + VECSZ)));
-        v_store((uint32_t*)dst, v_pack(v_add(v_and(v_res0, vx_setall_u64(4294967295U)), v_shr<32>(v_res0)),
-                                       v_add(v_and(v_res1, vx_setall_u64(4294967295U)), v_shr<32>(v_res1))));
+        v_store((uint32_t*)dst, v_pack(v_add(v_and(v_res0, vx_setall_u64(0xFFFFFFFF)), v_shr<32>(v_res0)),
+                                       v_add(v_and(v_res1, vx_setall_u64(0xFFFFFFFF)), v_shr<32>(v_res1))));
     }
 #endif
     for (; i < dst_max; i += 1, m += 2)
@@ -1260,7 +1260,7 @@ struct VResizeLinearVec_32s8u
         int x = 0;
         v_int16 b0 = vx_setall_s16(beta[0]), b1 = vx_setall_s16(beta[1]);
 
-        if( (((size_t)S0|(size_t)S1)&(CV_SIMD_WIDTH - 1)) == 0 )
+        if( (((size_t)S0|(size_t)S1)&(VTraits<v_uint8>::vlanes() - 1)) == 0 )
             for( ; x <= width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes())
                 v_store(dst + x, v_rshr_pack_u<2>(v_add(v_mul_hi(v_pack(v_shr<4>(vx_load_aligned(S0 + x)), v_shr<4>(vx_load_aligned(S0 + x + VTraits<v_int32>::vlanes()))), b0), v_mul_hi(v_pack(v_shr<4>(vx_load_aligned(S1 + x)), v_shr<4>(vx_load_aligned(S1 + x + VTraits<v_int32>::vlanes()))), b1)),
                                                   v_add(v_mul_hi(v_pack(v_shr<4>(vx_load_aligned(S0 + x + 2 * VTraits<v_int32>::vlanes())), v_shr<4>(vx_load_aligned(S0 + x + 3 * VTraits<v_int32>::vlanes()))), b0), v_mul_hi(v_pack(v_shr<4>(vx_load_aligned(S1 + x + 2 * VTraits<v_int32>::vlanes())), v_shr<4>(vx_load_aligned(S1 + x + 3 * VTraits<v_int32>::vlanes()))), b1))));
@@ -1285,7 +1285,7 @@ struct VResizeLinearVec_32f16u
 
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
 
-        if( (((size_t)S0|(size_t)S1)&(CV_SIMD_WIDTH - 1)) == 0 )
+        if( (((size_t)S0|(size_t)S1)&(VTraits<v_uint8>::vlanes() - 1)) == 0 )
             for( ; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
                 v_store(dst + x, v_pack_u(v_round(v_muladd(vx_load_aligned(S0 + x                    ), b0, v_mul(vx_load_aligned(S1 + x), b1))),
                                           v_round(v_muladd(vx_load_aligned(S0 + x + VTraits<v_float32>::vlanes()), b0, v_mul(vx_load_aligned(S1 + x + VTraits<v_float32>::vlanes()), b1)))));
@@ -1312,7 +1312,7 @@ struct VResizeLinearVec_32f16s
 
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
 
-        if( (((size_t)S0|(size_t)S1)&(CV_SIMD_WIDTH - 1)) == 0 )
+        if( (((size_t)S0|(size_t)S1)&(VTraits<v_uint8>::vlanes() - 1)) == 0 )
             for( ; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
                 v_store(dst + x, v_pack(v_round(v_muladd(vx_load_aligned(S0 + x                    ), b0, v_mul(vx_load_aligned(S1 + x), b1))),
                                         v_round(v_muladd(vx_load_aligned(S0 + x + VTraits<v_float32>::vlanes()), b0, v_mul(vx_load_aligned(S1 + x + VTraits<v_float32>::vlanes()), b1)))));
@@ -1339,7 +1339,7 @@ struct VResizeLinearVec_32f
 
         v_float32 b0 = vx_setall_f32(beta[0]), b1 = vx_setall_f32(beta[1]);
 
-        if( (((size_t)S0|(size_t)S1)&(CV_SIMD_WIDTH - 1)) == 0 )
+        if( (((size_t)S0|(size_t)S1)&(VTraits<v_uint8>::vlanes() - 1)) == 0 )
             for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
                 v_store(dst + x, v_muladd(vx_load_aligned(S0 + x), b0, v_mul(vx_load_aligned(S1 + x), b1)));
         else
@@ -1362,7 +1362,7 @@ struct VResizeCubicVec_32s8u
         v_float32 b0 = vx_setall_f32(beta[0] * scale), b1 = vx_setall_f32(beta[1] * scale),
                   b2 = vx_setall_f32(beta[2] * scale), b3 = vx_setall_f32(beta[3] * scale);
 
-        if( (((size_t)S0|(size_t)S1|(size_t)S2|(size_t)S3)&(CV_SIMD_WIDTH - 1)) == 0 )
+        if( (((size_t)S0|(size_t)S1|(size_t)S2|(size_t)S3)&(VTraits<v_uint8>::vlanes() - 1)) == 0 )
             for( ; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
                 v_pack_u_store(dst + x, v_pack(v_round(v_muladd(v_cvt_f32(vx_load_aligned(S0 + x                    )),  b0,
                                                        v_muladd(v_cvt_f32(vx_load_aligned(S1 + x                    )),  b1,
