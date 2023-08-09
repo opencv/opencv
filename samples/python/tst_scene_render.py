@@ -102,8 +102,6 @@ def main():
     fgr = cv.imread(cv.samples.findFile('box.png'))
 
     render = TestSceneRender(backGr, fgr)
-    #render = TestSceneRender(None, fgr)
-    #render = TestSceneRender(backGr)
 
     while True:
 
