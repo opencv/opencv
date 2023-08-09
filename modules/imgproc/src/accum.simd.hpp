@@ -139,7 +139,7 @@ void acc_general_(const T* src, AT* dst, const uchar* mask, int len, int cn, int
     }
 #if CV_AVX && !CV_AVX2
     _mm256_zeroupper();
-#elif CV_SIMD
+#elif (CV_SIMD || CV_SIMD_SCALABLE)
     vx_cleanup();
 #endif
 }
@@ -187,7 +187,7 @@ accSqr_general_( const T* src, AT* dst, const uchar* mask, int len, int cn, int 
     }
 #if CV_AVX && !CV_AVX2
     _mm256_zeroupper();
-#elif CV_SIMD
+#elif (CV_SIMD || CV_SIMD_SCALABLE)
     vx_cleanup();
 #endif
 }
@@ -236,7 +236,7 @@ accProd_general_( const T* src1, const T* src2, AT* dst, const uchar* mask, int 
     }
 #if CV_AVX && !CV_AVX2
     _mm256_zeroupper();
-#elif CV_SIMD
+#elif (CV_SIMD || CV_SIMD_SCALABLE)
     vx_cleanup();
 #endif
 }
@@ -285,7 +285,7 @@ accW_general_( const T* src, AT* dst, const uchar* mask, int len, int cn, double
     }
 #if CV_AVX && !CV_AVX2
     _mm256_zeroupper();
-#elif CV_SIMD
+#elif (CV_SIMD || CV_SIMD_SCALABLE)
     vx_cleanup();
 #endif
 }
@@ -2870,7 +2870,7 @@ void accW_simd_(const float* src, float* dst, const uchar* mask, int len, int cn
             _mm256_storeu_ps(dst + x + 8, _mm256_add_ps(_mm256_mul_ps(_mm256_loadu_ps(dst + x + 8), v_beta), _mm256_mul_ps(_mm256_loadu_ps(src + x + 8), v_alpha)));
         }
     }
-#elif CV_SIMD
+#elif (CV_SIMD || CV_SIMD_SCALABLE)
     const v_float32 v_alpha = vx_setall_f32((float)alpha);
     const v_float32 v_beta = vx_setall_f32((float)(1.0f - alpha));
     const int cVectorWidth = VTraits<v_uint16>::vlanes();
@@ -3014,7 +3014,7 @@ void accW_simd_(const float* src, double* dst, const uchar* mask, int len, int c
             _mm256_storeu_pd(dst + x + 12, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 12), v_beta), _mm256_mul_pd(v_src11, v_alpha)));
         }
     }
-#elif CV_SIMD_64F
+#elif (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     const v_float64 v_alpha = vx_setall_f64(alpha);
     const v_float64 v_beta = vx_setall_f64(1.0f - alpha);
     const int cVectorWidth = VTraits<v_float32>::vlanes() * 2;
@@ -3072,7 +3072,7 @@ void accW_simd_(const double* src, double* dst, const uchar* mask, int len, int 
             _mm256_storeu_pd(dst + x + 4, _mm256_add_pd(_mm256_mul_pd(_mm256_loadu_pd(dst + x + 4), v_beta), _mm256_mul_pd(v_src1, v_alpha)));
         }
     }
-#elif CV_SIMD_64F
+#elif (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     const v_float64 v_alpha = vx_setall_f64(alpha);
     const v_float64 v_beta = vx_setall_f64(1.0f - alpha);
     const int cVectorWidth = VTraits<v_float64>::vlanes() * 2;
