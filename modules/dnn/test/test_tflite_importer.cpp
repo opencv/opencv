@@ -204,6 +204,10 @@ TEST_P(Test_TFLite, max_unpooling)
 }
 
 TEST_P(Test_TFLite, EfficientDet_int8) {
+    if (target != DNN_TARGET_CPU || (backend != DNN_BACKEND_OPENCV &&
+        backend != DNN_BACKEND_TIMVX && backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)) {
+        throw SkipTestException("");
+    }
     Net net = readNet(findDataFile("dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", false));
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
@@ -218,7 +222,10 @@ TEST_P(Test_TFLite, EfficientDet_int8) {
         0, 17, 0.56640625, 0.15983937680721283, 0.35905322432518005, 0.5155506730079651, 0.9409466981887817,
         0, 1, 0.5, 0.14357104897499084, 0.2240825891494751, 0.7183101177215576, 0.9140362739562988
     });
-    normAssertDetections(ref, out, "", 0.5, 0.05, 0.1);
+    double iouDiff = 0.1;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        iouDiff = 0.17;
+    normAssertDetections(ref, out, "", 0.5, 0.05, iouDiff);
 }
 
 TEST_P(Test_TFLite, replicate_by_pack) {

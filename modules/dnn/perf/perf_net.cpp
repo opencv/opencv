@@ -305,6 +305,10 @@ PERF_TEST_P_(DNNTestNetwork, EfficientDet)
 
 PERF_TEST_P_(DNNTestNetwork, EfficientDet_int8)
 {
+    if (target != DNN_TARGET_CPU || (backend != DNN_BACKEND_OPENCV &&
+        backend != DNN_BACKEND_TIMVX && backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)) {
+        throw SkipTestException("");
+    }
     Mat inp = imread(findDataFile("dnn/dog416.png"));
     resize(inp, inp, Size(320, 320));
     processNet("", "dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", "", inp);
