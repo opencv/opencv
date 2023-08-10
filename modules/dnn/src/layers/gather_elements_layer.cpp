@@ -56,7 +56,6 @@ public:
         CV_Assert(ndims >= 1);
         CV_Assert(axis >= -1 * ndims && axis <= (ndims - 1));
 
-        const int indices_ndims = indices.dims;
         CV_CheckEQ(data.dims, indices.dims, "GatherElements: input and indices have to be of same rank.");
 
         const int* shape = data.size.p;
