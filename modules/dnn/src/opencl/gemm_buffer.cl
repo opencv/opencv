@@ -469,17 +469,17 @@ __kernel void TEMPLATE(gemm_buffer_NT, Dtype)(
         while( w + TILE_K <= end_w ) {
             Dtype8 arow;
 
-            brow0 = as_half8(vload4(0, (__local float *)(slm_brow0 + 0 * SLM_BLOCK)));
-            brow1 = as_half8(vload4(0, (__local float *)(slm_brow0 + 1 * SLM_BLOCK)));
-            brow2 = as_half8(vload4(0, (__local float *)(slm_brow0 + 2 * SLM_BLOCK)));
-            brow3 = as_half8(vload4(0, (__local float *)(slm_brow0 + 3 * SLM_BLOCK)));
-            brow4 = as_half8(vload4(0, (__local float *)(slm_brow0 + 4 * SLM_BLOCK)));
-            brow5 = as_half8(vload4(0, (__local float *)(slm_brow0 + 5 * SLM_BLOCK)));
-            brow6 = as_half8(vload4(0, (__local float *)(slm_brow0 + 6 * SLM_BLOCK)));
-            brow7 = as_half8(vload4(0, (__local float *)(slm_brow0 + 7 * SLM_BLOCK)));
+            brow0 = vload8(0, slm_brow0 + 0 * SLM_BLOCK);
+            brow1 = vload8(0, slm_brow0 + 1 * SLM_BLOCK);
+            brow2 = vload8(0, slm_brow0 + 2 * SLM_BLOCK);
+            brow3 = vload8(0, slm_brow0 + 3 * SLM_BLOCK);
+            brow4 = vload8(0, slm_brow0 + 4 * SLM_BLOCK);
+            brow5 = vload8(0, slm_brow0 + 5 * SLM_BLOCK);
+            brow6 = vload8(0, slm_brow0 + 6 * SLM_BLOCK);
+            brow7 = vload8(0, slm_brow0 + 7 * SLM_BLOCK);
 
 #define MM_DOT_PRODUCT( _row, _dot )   \
-            arow = as_half8(vload4(0, (__global float *)(src0_read + _row * K)));                           \
+            arow = vload8(0, src0_read + _row * K); \
             _dot = mad( (Dtype8)(arow.s0), (Dtype8)(brow0.s0, brow1.s0, brow2.s0, brow3.s0, brow4.s0, brow5.s0, brow6.s0, brow7.s0), _dot ); \
             _dot = mad( (Dtype8)(arow.s1), (Dtype8)(brow0.s1, brow1.s1, brow2.s1, brow3.s1, brow4.s1, brow5.s1, brow6.s1, brow7.s1), _dot ); \
             _dot = mad( (Dtype8)(arow.s2), (Dtype8)(brow0.s2, brow1.s2, brow2.s2, brow3.s2, brow4.s2, brow5.s2, brow6.s2, brow7.s2), _dot ); \
