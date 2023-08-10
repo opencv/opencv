@@ -468,7 +468,7 @@ TEST_P(FullyConnected, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, FullyConnected, Combine(
-/*batch*/        Values(1, 2, 4, 8, 24),
+/*batch*/        Values(1, 2, 4, 8, 16),
 /*in channels*/  Values(3, 4),
 /*in size*/      Values(Size(5, 4), Size(4, 5), Size(1, 1)),
 /*out channels*/ Values(3, 4),
