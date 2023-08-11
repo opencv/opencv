@@ -78,7 +78,7 @@ protected:
     int frame_;
     int maxTimeLost_;
 
-    void getDetections(InputArray& inputObjects, vector<Strack>& detections,
+    void getDetections(InputArray inputObjects, vector<Strack>& detections,
         vector<Strack>& detectionsLow);
 
 
@@ -86,11 +86,11 @@ protected:
         vector<Strack>& inactiveStracks, vector<Strack>& trackedStracks);
 
 
-    Mat getCostMatrix(vector<Strack>& tracks, vector<Strack>& btracks);
-    Mat getCostMatrix(unordered_map<int, Strack>& atracks, vector<Strack> &btracks);
+    Mat getCostMatrix(const vector<Strack>& tracks, const vector<Strack>& btracks);
+    Mat getCostMatrix(const unordered_map<int, Strack>& atracks,const vector<Strack> &btracks);
 
 
-    Mat calculateIous(vector<Rect2f>& atlwhs, vector<Rect2f> &btlwhs);
+    Mat calculateIous(const vector<Rect2f>& atlwhs,const vector<Rect2f>& btlwhs);
 
 
     unordered_map<int, Strack> joinStracks(const vector<Strack>& trackA, vector<Strack>& trackB);
@@ -315,7 +315,7 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     return true;
 }
 
-void ByteTrackerImpl::getDetections(InputArray& inputObjects, vector<Strack>& detections,
+void ByteTrackerImpl::getDetections(InputArray inputObjects, vector<Strack>& detections,
     vector<Strack>& detectionsLow)
 {
     Mat objects = inputObjects.getMat();
@@ -360,15 +360,16 @@ void ByteTrackerImpl::addNewDetectedTracks(unordered_map<int, Strack> trackedMap
     }
 }
 
-Mat ByteTrackerImpl::getCostMatrix(vector<Strack> &atracks, vector<Strack> &btracks)
+Mat ByteTrackerImpl::getCostMatrix(const vector<Strack> &atracks, const vector<Strack> &btracks)
 {
     Mat costMatrix;
     if (atracks.size() == 0 || btracks.size() == 0)
     {
         return costMatrix; // returns empty matrix
     }
-
-    vector<Rect2f> atlwhs, btlwhs;
+    vector<Rect2f> atlwhs,btlwhs;
+    //vector<Rect2f> atlwhs(atracks.size());
+    //vector<Rect2f> btlwhs(btracks.size());
     for (auto& track : atracks)
     {
         atlwhs.push_back(track.getTlwh());
@@ -384,7 +385,7 @@ Mat ByteTrackerImpl::getCostMatrix(vector<Strack> &atracks, vector<Strack> &btra
     return costMatrix;
 }
 
-Mat ByteTrackerImpl::getCostMatrix(unordered_map<int, Strack> &atracks, vector<Strack> &btracks)
+Mat ByteTrackerImpl::getCostMatrix(const unordered_map<int, Strack> &atracks, const vector<Strack> &btracks)
 {
     Mat costMatrix;
     if (atracks.size() == 0 && btracks.size() == 0)
@@ -392,7 +393,9 @@ Mat ByteTrackerImpl::getCostMatrix(unordered_map<int, Strack> &atracks, vector<S
         return costMatrix; // returns empty matrix
     }
 
-    vector<Rect2f> atlwhs, btlwhs;
+    vector<Rect2f> atlwhs,btlwhs;
+    //vector<Rect2f> atlwhs(atracks.size());
+    //vector<Rect2f> btlwhs(btracks.size());
     for (auto &pair : atracks)
     {
         Rect2f tlwh = pair.second.getTlwh();
@@ -412,7 +415,7 @@ Mat ByteTrackerImpl::getCostMatrix(unordered_map<int, Strack> &atracks, vector<S
 }
 
 
-Mat ByteTrackerImpl::calculateIous(vector<Rect2f> &atlwhs, vector<Rect2f> &btlwhs)
+Mat ByteTrackerImpl::calculateIous(const vector<Rect2f> &atlwhs,const vector<Rect2f> &btlwhs)
 {
     Mat iousMatrix;
     if (atlwhs.empty() || btlwhs.empty())
