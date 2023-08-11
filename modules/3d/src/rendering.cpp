@@ -2,7 +2,18 @@
 
 namespace cv {
 
-    void Triangle::setVertexPosition(int index, Vec3f vertex)
+    struct Triangle
+    {
+        Vec4f vertices[3];
+        Vec3f color[3];
+
+        void setVertexPosition(int index, Vec4f vertex);
+        void setVertexColor(int index, Vec3f color);
+
+        Vec3f getTriangleColor() const { return color[0]; }
+    };
+
+    void Triangle::setVertexPosition(int index, Vec4f vertex)
     {
         vertices[index] = vertex;
     }
@@ -12,29 +23,19 @@ namespace cv {
         color[index] = colorPerVertex;
     }
 
-    Vec3f cross_product(const Vec3f& a, const Vec3f& b)
-    {
-        return Vec3f(a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]);
-    }
-
     Vec3f normalize_vector(Vec3f a)
     {
         float length = std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
         return Vec3f(a[0] / length, a[1] / length, a[2] / length);
     }
 
-    float length(Vec3f a)
-    {
-        return std::sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
-    }
-
     Matx44f lookAtMatrixCal(const Vec3f& position, const Vec3f& lookat, const Vec3f& upVector)
     {
         Vec3f w, u;
         w = normalize_vector(position - lookat);
-        u = normalize_vector(cross_product(upVector, w));
+        u = normalize_vector(upVector.cross(w));
 
-        Vec3f v = cross_product(w, u);
+        Vec3f v = w.cross(u);
         Vec4f w_prime(w[0], w[1], w[2], 0.0f), u_prime(u[0], u[1], u[2], 0.0f), v_prime(v[0], v[1], v[2], 0.0f), identity(0.0f, 0.0f, 0.0f, 1.0f);
         Matx44f res(u_prime[0], u_prime[1], u_prime[2], u_prime[3],
                     v_prime[0], v_prime[1], v_prime[2], v_prime[3],
@@ -61,7 +62,7 @@ namespace cv {
         return res;
     }
 
-    bool insideTriangle(float x, float y, const Vec3f* vertices)
+    bool insideTriangle(float x, float y, const Vec4f* vertices)
     {
         Vec3f A(vertices[0][0], vertices[0][1], 1.0);
         Vec3f B(vertices[1][0], vertices[1][1], 1.0);
@@ -76,8 +77,8 @@ namespace cv {
 
         if (ACcrossAB.dot(ACcrossAP) >= 0 && ABcrossAC.dot(ABcrossAP) >= 0)
         {
-            float beta = length(ACcrossAP) / length(ACcrossAB);
-            float gamma = length(ABcrossAP) / length(ABcrossAC);
+            float beta = norm(ACcrossAP) / norm(ACcrossAB);
+            float gamma = norm(ABcrossAP) / norm(ABcrossAC);
             if (beta + gamma <= 1)
                 return true;
         }
@@ -85,7 +86,7 @@ namespace cv {
         return false;
     }
 
-    Vec3f barycentricCal(float x, float y, const Vec3f* vertices, int width, int height)
+    Vec3f barycentricCal(float x, float y, const Vec4f* vertices, int width, int height)
     {
         Vec3f A(vertices[0][0] / width, vertices[0][1] / height, 1.0);
         Vec3f B(vertices[1][0] / width, vertices[1][1] / height, 1.0);
@@ -100,15 +101,15 @@ namespace cv {
 
         if (ACcrossAB.dot(ACcrossAP) >= 0 && ABcrossAC.dot(ABcrossAP) >= 0)
         {
-            float beta = length(ACcrossAP) / length(ACcrossAB);
-            float gamma = length(ABcrossAP) / length(ABcrossAC);
+            float beta = norm(ACcrossAP) / norm(ACcrossAB);
+            float gamma = norm(ABcrossAP) / norm(ABcrossAC);
             if (beta + gamma <= 1)
                 return Vec3f( 1.0 - beta - gamma, beta, gamma );
         }
     }
 
-    void triangle_rendering(const Triangle& tri, int width, int height, bool isConstant,
-                                    std::vector<float>& depth_buf, std::vector<Vec3f>& color_buf)
+    void triangle_rendering(const Triangle& tri, int width, int height, bool shadingMode,
+                                    Mat& depth_buf, Mat& color_buf)
     {
         float min_x = width, max_x = 0;
         float min_y = height, max_y = 0;
@@ -128,57 +129,66 @@ namespace cv {
                 {
                     Vec3f barycentricCoord = barycentricCal(x + 0.5, y + 0.5, tri.vertices, width, height);
                     float alpha = barycentricCoord[0], beta = barycentricCoord[1], gamma = barycentricCoord[2];
-                    float z_interpolated = 1.0f / (alpha / tri.vertices[0][2] + beta / tri.vertices[1][2] + gamma / tri.vertices[2][2]);
+                    float z_interpolated = 1.0f / (alpha / tri.vertices[0][3] + beta / tri.vertices[1][3] + gamma / tri.vertices[2][3]);
 
-                    int index = (height - 1 - y) * width + x;
-                    if (z_interpolated < depth_buf[index] && z_interpolated >= 0.0 && z_interpolated <= 1.0)
+                    float z = depth_buf.at<float>(y, x);
+                    if (z_interpolated < z)
                     {
-                        if (isConstant)
-                            color_buf[index] = tri.getTriangleColor();
-                            //color_buf[index] = Vec3f(255, 0, 0);
+                        if (shadingMode)
+                            color_buf.at<Vec3f>(y, x) = tri.getTriangleColor();
                         else {
-                            float r1 = alpha * z_interpolated / tri.vertices[0][2] * tri.color[0][0] + beta * z_interpolated / tri.vertices[1][2] * tri.color[1][0]
-                                + gamma * z_interpolated / tri.vertices[2][2] * tri.color[2][0];
-                            float g1 = alpha * z_interpolated / tri.vertices[0][2] * tri.color[0][1] + beta * z_interpolated / tri.vertices[1][2] * tri.color[1][1]
-                                + gamma * z_interpolated / tri.vertices[2][2] * tri.color[2][1];
-                            float b1 = alpha * z_interpolated / tri.vertices[0][2] * tri.color[0][2] + beta * z_interpolated / tri.vertices[1][2] * tri.color[1][2]
-                                + gamma * z_interpolated / tri.vertices[2][2] * tri.color[2][2];
+                            float r1 = alpha * z_interpolated / tri.vertices[0][3] * tri.color[0][0] + beta * z_interpolated / tri.vertices[1][3] * tri.color[1][0]
+                                + gamma * z_interpolated / tri.vertices[2][3] * tri.color[2][0];
+                            float g1 = alpha * z_interpolated / tri.vertices[0][3] * tri.color[0][1] + beta * z_interpolated / tri.vertices[1][3] * tri.color[1][1]
+                                + gamma * z_interpolated / tri.vertices[2][3] * tri.color[2][1];
+                            float b1 = alpha * z_interpolated / tri.vertices[0][3] * tri.color[0][2] + beta * z_interpolated / tri.vertices[1][3] * tri.color[1][2]
+                                + gamma * z_interpolated / tri.vertices[2][3] * tri.color[2][2];
 
-                            color_buf[index] = Vec3f(r1, g1, b1);
+                            color_buf.at<Vec3f>(y, x) = Vec3f(r1, g1, b1);
                         }
-                        depth_buf[index] = z_interpolated;
+                        depth_buf.at<float>(y, x) = z_interpolated;
                     }
                 }
             }
     }
 
-    void triangleRasterize(const std::vector<Vec3f>& vertices, const std::vector<Vec3i>& indices,
-                           const std::vector<Vec3f>& colors, const Vec3f& position, const Vec3f& lookat, const Vec3f& upVector,
-                           float fovy, float zNear, float zFar, int width, int height, bool isConstant,
-                           std::vector<float>& depth_buf, std::vector<Vec3f>& color_buf)
+    void triangleRasterize(InputArray vertices, InputArray indices,
+                           InputArray colors, InputArray cameraMatrix, int width, int height, bool shadingMode,
+                           OutputArray depth_buf, OutputArray color_buf)
     {
+        Mat camera = cameraMatrix.getMat();
+
+        Vec3f position = camera.row(0);
+        Vec3f lookat = camera.row(1);
+        Vec3f upVector = camera.row(2);
+        float fovy = camera.at<float>(3, 0), zNear = camera.at<float>(3, 1), zFar = camera.at<float>(3, 2);
+
         Matx44f lookAtMatrix = lookAtMatrixCal(position, lookat, upVector);
         Matx44f perspectMatrix = perspectMatrixCal((float)width / (float)height, fovy, zNear, zFar);
         Matx44f mvpMatrix = perspectMatrix * lookAtMatrix;
 
-        depth_buf.resize(width * height);
-        color_buf.resize(width * height);
+        Mat depth_buf_mat = depth_buf.getMat();
+        Mat color_buf_mat = color_buf.getMat();
 
-        std::fill(depth_buf.begin(), depth_buf.end(), std::numeric_limits<float>::infinity());
-        std::fill(color_buf.begin(), color_buf.end(), Vec3f(0.0, 0.0, 0.0));
+        if (vertices.empty() && indices.empty() && colors.empty())
+            return;
 
-        for (int i = 0; i < indices.size(); i++)
+        std::vector<Vec3f> verticesVector = vertices.getMat();
+        std::vector<Vec3f> indicesVector = indices.getMat();
+        std::vector<Vec3f> colorsVector = colors.getMat();
+
+        for (int i = 0; i < indicesVector.size(); i++)
         {
             Triangle tri;
             Vec4f ver[3] = {
-                mvpMatrix * Vec4f(vertices[indices[i][0]][0], vertices[indices[i][0]][1], vertices[indices[i][0]][2], 1.0),
-                mvpMatrix * Vec4f(vertices[indices[i][1]][0], vertices[indices[i][1]][1], vertices[indices[i][1]][2], 1.0),
-                mvpMatrix * Vec4f(vertices[indices[i][2]][0], vertices[indices[i][2]][1], vertices[indices[i][2]][2], 1.0)
+                mvpMatrix * Vec4f(verticesVector[indicesVector[i][0]][0], verticesVector[indicesVector[i][0]][1], verticesVector[indicesVector[i][0]][2], 1.0),
+                mvpMatrix * Vec4f(verticesVector[indicesVector[i][1]][0], verticesVector[indicesVector[i][1]][1], verticesVector[indicesVector[i][1]][2], 1.0),
+                mvpMatrix * Vec4f(verticesVector[indicesVector[i][2]][0], verticesVector[indicesVector[i][2]][1], verticesVector[indicesVector[i][2]][2], 1.0)
             };
 
             for (auto& vertex: ver)
             {
-                vertex = Vec4f(vertex[0] / vertex[3], vertex[1] / vertex[3], vertex[2] / vertex[3], 1.0);
+                vertex = Vec4f(vertex[0] / vertex[3], vertex[1] / vertex[3], vertex[2] / vertex[3], vertex[3]);
             }
 
             for (int j = 0; j < 3; j++)
@@ -188,15 +198,15 @@ namespace cv {
                 vertex[1] = 0.5 * height * (vertex[1] + 1.0);
                 vertex[2] = vertex[2] * 0.5 + 0.5;
 
-                tri.setVertexPosition(j, Vec3f(vertex[0], vertex[1], vertex[2]));
+                tri.setVertexPosition(j, Vec4f(vertex[0], vertex[1], vertex[2], vertex[3]));
             }
 
             for (int j = 0; j < 3; j++)
             {
-                tri.setVertexColor(j, colors[indices[i][j]]);
+                tri.setVertexColor(j, colorsVector[indicesVector[i][j]]);
             }
 
-            triangle_rendering(tri, width, height, isConstant, depth_buf, color_buf);
+            triangle_rendering(tri, width, height, shadingMode, depth_buf_mat, color_buf_mat);
         }
     }
 }

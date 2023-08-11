@@ -2805,10 +2805,19 @@ CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputA
 */
 CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArray normals, InputArrayOfArrays indices);
 
-CV_EXPORTS  void triangleRasterize(const std::vector<Vec3f>& vertices, const std::vector<Vec3i>& indices,
-    const std::vector<Vec3f>& colors, const Vec3f& position, const Vec3f& lookat, const Vec3f& upVector,
-    float fovy, float zNear, float zFar, int width, int height, bool isConstant,
-    std::vector<float>& depth_buf, std::vector<Vec3f>& color_buf);
+/*
+*@param vertices(vector of Vec3f) vertex coordinates of a mesh
+*@param indices(vector of Vec3i) vertex index of the mesh in vertices
+*@param colors(vector of Vec3f) vertex colors of a mesh
+*@param cameraMatrix(4*3 matrix), which contains vector parameters to define a camera 
+*@param width, height are the size of the screen
+*@param shadingMode represents different ways of shading
+*@param depth_buf(matrix of depth buffer image)
+*@param color_buf(matrix of color buffer image) represents the final rendered image
+* */
+CV_EXPORTS  void triangleRasterize(InputArray vertices, InputArray indices,
+    InputArray colors, InputArray cameraMatrix, int width, int height, bool shadingMode,
+    OutputArray depth_buf, OutputArray color_buf);
 
 //! @} _3d
 } //end namespace cv

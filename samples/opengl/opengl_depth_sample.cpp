@@ -18,13 +18,11 @@
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/highgui.hpp"
+#include <opencv2/imgproc/imgproc.hpp>
 
 using namespace std;
 using namespace cv;
 using namespace cv::cuda;
-
-const int win_width = 700;
-const int win_height = 700;
 
 struct DrawData
 {
@@ -41,33 +39,96 @@ void draw(void* userdata)
 	ogl::render(data->arr, data->indices, ogl::TRIANGLES);
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+    if (argc != 4)
+    {
+        std::cout << "Wrong input for the demo. please input again" << std::endl;
+        return 0;
+    }
+    std::string testMode = argv[1];
+    int win_width = std::atoi(argv[2]), win_height = std::atoi(argv[3]);
+
 	namedWindow("OpenGL", WINDOW_OPENGL);
 	resizeWindow("OpenGL", win_width, win_height);
 
-	Mat_<Vec3f> vertex(1, 6);
-	vertex << Vec3f(2.0, 0, -2.0), Vec3f(0, -2, -2),
-		Vec3f(-2, 0, -2), Vec3f(3.5, -1, -5),
-		Vec3f(2.5, -1.5, -5), Vec3f(-1, 0.5, -5);
+    DrawData data;
 
-	Mat_<int> indices(1, 6);
-	indices << 0, 1, 2, 3, 4, 5;
+    if (testMode == "depth")
+    {
+        Mat_<Vec3f> vertex(1, 6);
+        vertex <<
+            Vec3f(2.0, 0, -2.0), Vec3f(0, -2, -2),
+            Vec3f(-2, 0, -2), Vec3f(3.5, -1, -5),
+            Vec3f(2.5, -1.5, -5), Vec3f(-1, 0.5, -5);
 
-	Mat_<Vec4f> colors(1, 6);
-	colors << Vec4f(0.725f, 0.933f, 0.851f, 1.0f), Vec4f(0.725f, 0.933f, 0.851f, 1.0f),
-		Vec4f(0.725f, 0.933f, 0.851f, 1.0f), Vec4f(0.933f, 0.851f, 0.725f, 1.0f),
-		Vec4f(0.933f, 0.851f, 0.725f, 1.0f), Vec4f(0.933f, 0.851f, 0.725f, 1.0f);
+        Mat_<int> indices(1, 6);
+        indices << 0, 1, 2, 3, 4, 5;
 
-	DrawData data;
+        Mat_<Vec4f> colors(1, 6);
+        colors <<
+            Vec4f(0.851f, 0.933f, 0.725f, 1.0f), Vec4f(0.851f, 0.933f, 0.725f, 1.0f),
+            Vec4f(0.851f, 0.933f, 0.725f, 1.0f), Vec4f(0.725f, 0.851f, 0.933f, 1.0f),
+            Vec4f(0.725f, 0.851f, 0.933f, 1.0f), Vec4f(0.725f, 0.851f, 0.933f, 1.0f);
 
-	data.arr.setVertexArray(vertex);
-	data.arr.setColorArray(colors);
-	data.indices.copyFrom(indices);
+        data.arr.setVertexArray(vertex);
+        data.arr.setColorArray(colors);
+        data.indices.copyFrom(indices);
+    }
+    else if (testMode == "color")
+    {
+        Mat_<Vec3f> vertex(1, 4);
+        vertex <<
+            Vec3f(2.0, 0, -2.0), Vec3f(0, 2, -3),
+            Vec3f(-2, 0, -2), Vec3f(0, -2, 1.0);
+
+        Mat_<int> indices(1, 6);
+        indices <<
+            0, 1, 2, 0, 2, 3;
+
+        Mat_<Vec4f> colors(1, 4);
+        colors <<
+            Vec4f(0.0f, 0.0f, 1.0f, 1.0f), Vec4f(0.0f, 1.0f, 0.0f, 1.0f),
+            Vec4f(1.0f, 0.0f, 0.0f, 1.0f), Vec4f(0.0f, 1.0f, 0.0f, 1.0f);
+
+        data.arr.setVertexArray(vertex);
+        data.arr.setColorArray(colors);
+        data.indices.copyFrom(indices);
+    }
+    else if (testMode == "clipping")
+    {
+        Mat_<Vec3f> vertex(1, 9);
+        vertex <<
+            Vec3f(2.0, 0, -2.0), Vec3f(0, -6, -2), Vec3f(-2, 0, -2),
+            Vec3f(3.5, -1, -5),  Vec3f(2.5, -2.5, -5), Vec3f(-1, 1, -5),
+            Vec3f(-6.5, -1, -3), Vec3f(-2.5, -2, -3), Vec3f(1, 1, -5);
+
+        Mat_<int> indices(1, 9);
+        indices <<
+            0, 1, 2, 3, 4, 5, 6, 7, 8;
+
+        Mat_<Vec4f> colors(1, 9);
+        colors <<
+            Vec4f(0.851f, 0.933f, 0.725f, 1.0f), Vec4f(0.851f, 0.933f, 0.725f, 1.0f), Vec4f(0.851f, 0.933f, 0.725f, 1.0f),
+            Vec4f(0.725f, 0.851f, 0.933f, 1.0f), Vec4f(0.725f, 0.851f, 0.933f, 1.0f), Vec4f(0.725f, 0.851f, 0.933f, 1.0f),
+            Vec4f(0.588f, 0.039f, 0.933f, 1.0f), Vec4f(0.588f, 0.039f, 0.933f, 1.0f), Vec4f(0.588f, 0.039f, 0.933f, 1.0f);
+
+        data.arr.setVertexArray(vertex);
+        data.arr.setColorArray(colors);
+        data.indices.copyFrom(indices);
+    }
+    else
+    {
+        std::cout << "wrong parameter" << std::endl;
+        return 0;
+    }
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(45.0, (double)win_width / win_height, 0.1, 50);
+    if(testMode == "color")
+	    gluPerspective(60.0, (double)win_width / win_height, 0.1, 50);
+    else
+        gluPerspective(45.0, (double)win_width / win_height, 0.1, 50);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -83,9 +144,10 @@ int main()
         std::vector<uint8_t> pixels(win_width * win_height * 3);
         glReadPixels(0, 0, win_width, win_height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
         cv::Mat image(win_height, win_width, CV_8UC3, pixels.data());
+        cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
         cv::flip(image, image, 0);
 
-        cv::imwrite("example_image_depth.png", image);
+        cv::imwrite("example_image.png", image);
 		updateWindow("OpenGL");
 		char key = (char)waitKey(40);
 		if (key == 27)

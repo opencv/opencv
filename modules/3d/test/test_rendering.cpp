@@ -17,7 +17,7 @@ protected:
 
         fovy = 45.0;
         zNear = 0.1, zFar = 50;
-        isConstant = false;
+        shadingMode = false;
     }
 
 public:
@@ -26,13 +26,13 @@ public:
     Vec3f lookat;
     Vec3f upVector;
     float zNear, zFar, fovy;
-    bool isConstant;
+    bool shadingMode;
 };
 
 TEST_P(RenderingTest, depthRenderingTest)
 {
-    std::vector<float> depth_buf;
-    std::vector<Vec3f> color_buf;
+    Mat depth_buf(height, width, CV_32F, std::numeric_limits<float>::infinity());
+    Mat color_buf(height, width, CV_32FC3, Scalar(0.0, 0.0, 0.0));
     //position = Vec3f(0.0, 0.5, 5.0);
 
     std::vector <Vec3f> vertices = {
@@ -58,23 +58,34 @@ TEST_P(RenderingTest, depthRenderingTest)
         Vec3f(185.0, 217.0, 238.0)
     };
 
-    triangleRasterize(vertices, indices, colors, position, lookat, upVector, fovy, zNear, zFar, width, height,
-        isConstant, depth_buf, color_buf);
+    Mat cameraMatrix(4, 3, CV_32F);
 
-    Mat image(height, width, CV_32FC3, color_buf.data());
-    image.convertTo(image, CV_8UC3, 1.0f);
-    cvtColor(image, image, cv::COLOR_RGB2BGR);
+    cameraMatrix.row(0) = Mat(position).t();
+    cameraMatrix.row(1) = Mat(lookat).t();
+    cameraMatrix.row(2) = Mat(upVector).t();
+    cameraMatrix.row(3) = Mat(Vec3f(fovy, zNear, zFar)).t();
 
-    if (width == 700)
-        imwrite("temp_image.png", image);
-    else
-        imwrite("temp_image_cam.png", image);
+    triangleRasterize(vertices, indices, colors, cameraMatrix, width, height,
+        shadingMode, depth_buf, color_buf);
+
+    color_buf.convertTo(color_buf, CV_8UC3, 1.0f);
+    cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
+    cv::flip(color_buf, color_buf, 0);
+
+    if (cvtest::debugLevel > 0)
+    {
+        if (width == 700)
+            imwrite("temp_image.png", color_buf);
+        else
+            imwrite("temp_image_cam.png", color_buf);
+    }
+    
 }
 
 TEST_P(RenderingTest, clippingTest)
 {
-    std::vector<float> depth_buf;
-    std::vector<Vec3f> color_buf;
+    Mat depth_buf(height, width, CV_32F, std::numeric_limits<float>::infinity());
+    Mat color_buf(height, width, CV_32FC3, Scalar(0.0, 0.0, 0.0));
 
     std::vector <Vec3f> vertices = {
         Vec3f(2.0, 0, -2.0),
@@ -106,26 +117,45 @@ TEST_P(RenderingTest, clippingTest)
         Vec3f(150.0, 10.0, 238.0)
     };
 
-    triangleRasterize(vertices, indices, colors, position, lookat, upVector, fovy, zNear, zFar, width, height,
-        isConstant, depth_buf, color_buf);
+    Mat cameraMatrix(4, 3, CV_32F);
 
-    Mat image(height, width, CV_32FC3, color_buf.data());
-    image.convertTo(image, CV_8UC3, 1.0f);
-    cvtColor(image, image, cv::COLOR_RGB2BGR);
-    if(width == 700)
-        imwrite("temp_multiple_image.png", image);
-    else
-        imwrite("temp_multiple_image_cam.png", image);
+    cameraMatrix.row(0) = Mat(position).t();
+    cameraMatrix.row(1) = Mat(lookat).t();
+    cameraMatrix.row(2) = Mat(upVector).t();
+    cameraMatrix.row(3) = Mat(Vec3f(fovy, zNear, zFar)).t();
+
+    triangleRasterize(vertices, indices, colors, cameraMatrix, width, height,
+        shadingMode, depth_buf, color_buf);
+
+    color_buf.convertTo(color_buf, CV_8UC3, 1.0f);
+    cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
+    cv::flip(color_buf, color_buf, 0);
+
+    if (cvtest::debugLevel > 0)
+    {
+        if (width == 700)
+            imwrite("temp_multiple_image.png", color_buf);
+        else
+            imwrite("temp_multiple_image_cam.png", color_buf);
+    }
 }
 
 TEST_P(RenderingTest, colorRenderingTest)
 {
-    std::vector<float> depth_buf;
-    std::vector<Vec3f> color_buf;
-    isConstant = false;
+    Mat depth_buf(height, width, CV_32F, std::numeric_limits<float>::infinity());
+    Mat color_buf(height, width, CV_32FC3, Scalar(0.0, 0.0, 0.0));
+
+    shadingMode = false;
     position = Vec3f(0, 0, 5.0);
     lookat = Vec3f(0.0, 0.0, 0.0);
     fovy = 60.0;
+
+    Mat cameraMatrix(4, 3, CV_32F);
+
+    cameraMatrix.row(0) = Mat(position).t();
+    cameraMatrix.row(1) = Mat(lookat).t();
+    cameraMatrix.row(2) = Mat(upVector).t();
+    cameraMatrix.row(3) = Mat(Vec3f(fovy, zNear, zFar)).t();
 
     std::vector <Vec3f> vertices = {
         Vec3f(2.0, 0, -2.0),
@@ -145,41 +175,49 @@ TEST_P(RenderingTest, colorRenderingTest)
         Vec3f(0.0f, 0.0f, 255.0f),  Vec3f(0.0f, 255.0f, 0.0f),  Vec3f(255.0f, 0.0f, 0.0f), Vec3f(0.0f, 255.0f, 0.0f)
     };
 
-    triangleRasterize(vertices, indices, colors, position, lookat, upVector, fovy, zNear, zFar, width, height,
-        isConstant, depth_buf, color_buf);
+    triangleRasterize(vertices, indices, colors, cameraMatrix, width, height,
+        shadingMode, depth_buf, color_buf);
 
-    Scalar blue_color(255, 0, 0);
-    Mat image(height, width, CV_32FC3, color_buf.data());
-    //Mat image(width, height, CV_32FC3, blue_color);
-    image.convertTo(image, CV_8UC3, 1.0f);
-    cvtColor(image, image, cv::COLOR_RGB2BGR);
+    color_buf.convertTo(color_buf, CV_8UC3, 1.0f);
+    cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
+    cv::flip(color_buf, color_buf, 0);
 
-    if (width == 700)
-        imwrite("temp_image_color.png", image);
-    else
-        imwrite("temp_image_color_cam.png", image);
+    if (cvtest::debugLevel > 0)
+    {
+        if (width == 700)
+            imwrite("temp_image_color.png", color_buf);
+        else
+            imwrite("temp_image_color_cam.png", color_buf);
+    }
 }
 
 TEST_P(RenderingTest, emptyIndiceTest)
 {
-    std::vector<float> depth_buf;
-    std::vector<Vec3f> color_buf;
+    Mat depth_buf(height, width, CV_32F, std::numeric_limits<float>::infinity());
+    Mat color_buf(height, width, CV_32FC3, Scalar(0.0, 0.0, 0.0));
 
-    std::vector <Vec3f> vertices = {};
-    std::vector<Vec3i> indices = {};
-    std::vector<Vec3f> colors = {};
+    std::vector <Vec3f> vertices;
+    std::vector<Vec3i> indices;
+    std::vector<Vec3f> colors;
 
-    triangleRasterize(vertices, indices, colors, position, lookat, upVector, fovy, zNear, zFar, width, height,
-        isConstant, depth_buf, color_buf);
+    Mat cameraMatrix(4, 3, CV_32F);
 
-    Mat image(height, width, CV_32FC3, color_buf.data());
-    image.convertTo(image, CV_8UC3, 1.0f);
-    cvtColor(image, image, cv::COLOR_RGB2BGR);
+    cameraMatrix.row(0) = Mat(position).t();
+    cameraMatrix.row(1) = Mat(lookat).t();
+    cameraMatrix.row(2) = Mat(upVector).t();
+    cameraMatrix.row(3) = Mat(Vec3f(fovy, zNear, zFar)).t();
 
-    if (width == 700)
-        imwrite("temp_empty_set_rendering.png", image);
-    else
-        imwrite("temp_empty_set_rendering_cam.png", image);
+    triangleRasterize(vertices, indices, colors, cameraMatrix, width, height,
+        shadingMode, depth_buf, color_buf);
+
+    color_buf.convertTo(color_buf, CV_8UC3, 1.0f);
+    std::vector<Mat> channels(3);
+    split(color_buf, channels);
+
+    for (int i = 0; i < 3; i++)
+    {
+        ASSERT_EQ(countNonZero(channels[i]), 0);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(Rendering, RenderingTest, ::testing::Values(

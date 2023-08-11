@@ -23,8 +23,8 @@ using namespace std;
 using namespace cv;
 using namespace cv::cuda;
 
-const int win_width = 640;
-const int win_height = 480;
+const int win_width = 700;
+const int win_height = 700;
 
 struct DrawData
 {
