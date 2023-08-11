@@ -440,7 +440,7 @@ template<typename T1, typename T2> CV_ALWAYS_INLINE void flipHoriz_double( const
 static void
 flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
-#if CV_SIMD
+#if CV_SIMD128
 #if CV_STRONG_ALIGNMENT
     size_t alignmentMark = ((size_t)src)|((size_t)dst)|sstep|dstep;
 #endif
@@ -563,7 +563,7 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
     }
 #endif
     else
-#endif // CV_SIMD
+#endif // CV_SIMD128
     {
         int i, j, limit = (int)(((size.width + 1)/2)*esz);
         AutoBuffer<int> _tab(size.width*esz);
@@ -596,12 +596,12 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
                                                   dst0 += dstep, dst1 -= dstep )
     {
         int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 #if CV_STRONG_ALIGNMENT
         if (isAligned<sizeof(int)>(src0, src1, dst0, dst1))
 #endif
         {
-            for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
+            for (; i <= size.width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes())
             {
                 v_int32 t0 = v_reinterpret_as_s32(vx_load(src0 + i));
                 v_int32 t1 = v_reinterpret_as_s32(vx_load(src1 + i));
@@ -612,7 +612,7 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
 #if CV_STRONG_ALIGNMENT
         else
         {
-            for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
+            for (; i <= size.width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes())
             {
                 v_uint8 t0 = vx_load(src0 + i);
                 v_uint8 t1 = vx_load(src1 + i);
