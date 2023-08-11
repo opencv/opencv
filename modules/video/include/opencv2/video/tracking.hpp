@@ -736,7 +736,6 @@ public:
     */
     CV_WRAP virtual
     bool update(InputArray image, CV_OUT Rect& boundingBox) = 0;
-
 };
 
 
@@ -977,12 +976,7 @@ public:
 
     //CV_WRAP virtual
     void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks);
-
 };
-
-
-
-
 //! @} video_track
 
 } // cv
