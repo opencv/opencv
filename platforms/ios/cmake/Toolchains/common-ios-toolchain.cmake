@@ -188,7 +188,7 @@ else()
 endif()
 
 # Include extra modules for the iOS platform files
-#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/platforms/ios/cmake/Modules")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/platforms/ios/cmake/Modules")
 
 # Force the compilers to clang for iOS
 include(CMakeForceCompiler)
