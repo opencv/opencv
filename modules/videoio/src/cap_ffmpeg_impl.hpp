@@ -580,6 +580,7 @@ struct CvCapture_FFMPEG
     bool processRawPacket();
     bool rawMode;
     bool rawModeInitialized;
+    bool rawSeek;
     bool convertRGB;
     AVPacket packet_filtered;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(58, 20, 100)
@@ -633,6 +634,7 @@ void CvCapture_FFMPEG::init()
 
     rawMode = false;
     rawModeInitialized = false;
+    rawSeek = false;
     convertRGB = true;
     memset(&packet_filtered, 0, sizeof(packet_filtered));
     av_init_packet(&packet_filtered);
@@ -1051,33 +1053,35 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
                 return false;
             }
         }
-        if (params.has(CAP_PROP_HW_ACCELERATION))
-        {
-            va_type = params.get<VideoAccelerationType>(CAP_PROP_HW_ACCELERATION);
+        if(!rawMode) {
+            if (params.has(CAP_PROP_HW_ACCELERATION))
+            {
+                va_type = params.get<VideoAccelerationType>(CAP_PROP_HW_ACCELERATION);
 #if !USE_AV_HW_CODECS
-            if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
-            {
-                CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: FFmpeg backend is build without acceleration support. Can't handle CAP_PROP_HW_ACCELERATION parameter. Bailout");
-                return false;
-            }
+                if (va_type != VIDEO_ACCELERATION_NONE && va_type != VIDEO_ACCELERATION_ANY)
+                {
+                    CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: FFmpeg backend is build without acceleration support. Can't handle CAP_PROP_HW_ACCELERATION parameter. Bailout");
+                    return false;
+                }
 #endif
-        }
-        if (params.has(CAP_PROP_HW_DEVICE))
-        {
-            hw_device = params.get<int>(CAP_PROP_HW_DEVICE);
-            if (va_type == VIDEO_ACCELERATION_NONE && hw_device != -1)
-            {
-                CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: Invalid usage of CAP_PROP_HW_DEVICE without requested H/W acceleration. Bailout");
-                return false;
             }
-            if (va_type == VIDEO_ACCELERATION_ANY && hw_device != -1)
+            if (params.has(CAP_PROP_HW_DEVICE))
             {
-                CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: Invalid usage of CAP_PROP_HW_DEVICE with 'ANY' H/W acceleration. Bailout");
-                return false;
+                hw_device = params.get<int>(CAP_PROP_HW_DEVICE);
+                if (va_type == VIDEO_ACCELERATION_NONE && hw_device != -1)
+                {
+                    CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: Invalid usage of CAP_PROP_HW_DEVICE without requested H/W acceleration. Bailout");
+                    return false;
+                }
+                if (va_type == VIDEO_ACCELERATION_ANY && hw_device != -1)
+                {
+                    CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: Invalid usage of CAP_PROP_HW_DEVICE with 'ANY' H/W acceleration. Bailout");
+                    return false;
+                }
             }
-        }
-        if (params.has(CAP_PROP_HW_ACCELERATION_USE_OPENCL)) {
-            use_opencl = params.get<int>(CAP_PROP_HW_ACCELERATION_USE_OPENCL);
+            if (params.has(CAP_PROP_HW_ACCELERATION_USE_OPENCL)) {
+                use_opencl = params.get<int>(CAP_PROP_HW_ACCELERATION_USE_OPENCL);
+            }
         }
 #if USE_AV_INTERRUPT_CALLBACK
         if (params.has(CAP_PROP_OPEN_TIMEOUT_MSEC))
@@ -1152,6 +1156,23 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
     {
         CV_LOG_WARNING(NULL, "Unable to read codec parameters from stream (" << _opencv_ffmpeg_get_error_string(err) << ")");
         goto exit_func;
+    }
+
+    if (rawMode) {
+        video_stream = av_find_best_stream(ic, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+        if (video_stream < 0) {
+            close();
+            return false;
+        }
+        video_st = ic->streams[video_stream];
+#ifndef CV_FFMPEG_CODECPAR
+        frame.height = video_st->codec->height;
+        frame.width = video_st->codec->width;
+#else
+        frame.height = video_st->codecpar->height;
+        frame.width = video_st->codecpar->width;
+#endif
+        return true;
     }
     for(i = 0; i < ic->nb_streams; i++)
     {
@@ -1440,6 +1461,10 @@ bool CvCapture_FFMPEG::processRawPacket()
 
 bool CvCapture_FFMPEG::grabFrame()
 {
+    if (rawSeek) {
+        rawSeek = false;
+        return true;
+    }
     bool valid = false;
 
     static const size_t max_read_attempts = cv::utils::getConfigurationParameterSizeT("OPENCV_FFMPEG_READ_ATTEMPTS", 4096);
@@ -1447,7 +1472,7 @@ bool CvCapture_FFMPEG::grabFrame()
     size_t cur_read_attempts = 0;
     size_t cur_decode_attempts = 0;
 
-    if( !ic || !video_st || !context )  return false;
+    if( !ic || !video_st || (!rawMode && !context) )  return false;
 
     if( ic->streams[video_stream]->nb_frames > 0 &&
         frame_number > ic->streams[video_stream]->nb_frames )
@@ -1464,7 +1489,7 @@ bool CvCapture_FFMPEG::grabFrame()
 
 #if USE_AV_SEND_FRAME_API
     // check if we can receive frame from previously decoded packet
-    valid = avcodec_receive_frame(context, picture) >= 0;
+    valid = rawMode ? false : avcodec_receive_frame(context, picture) >= 0;
 #endif
 
     // get the next frame
@@ -1548,12 +1573,16 @@ bool CvCapture_FFMPEG::grabFrame()
     }
 
     if (valid) {
-        if( picture_pts == AV_NOPTS_VALUE_ )
-            picture_pts = picture->CV_FFMPEG_PTS_FIELD != AV_NOPTS_VALUE_ && picture->CV_FFMPEG_PTS_FIELD != 0 ? picture->CV_FFMPEG_PTS_FIELD : picture->pkt_dts;
-        frame_number++;
+        if (picture_pts == AV_NOPTS_VALUE_) {
+            if (!rawMode)
+                picture_pts = picture->CV_FFMPEG_PTS_FIELD != AV_NOPTS_VALUE_ && picture->CV_FFMPEG_PTS_FIELD != 0 ? picture->CV_FFMPEG_PTS_FIELD : picture->pkt_dts;
+            else
+                picture_pts = packet.pts != AV_NOPTS_VALUE_ && packet.pts != 0 ? packet.pts : packet.dts;
+            frame_number++;
+        }
     }
 
-    if (!rawMode && valid && first_frame_number < 0)
+    if (valid && first_frame_number < 0)
         first_frame_number = dts_to_frame_number(picture_pts);
 
 #if USE_AV_INTERRUPT_CALLBACK
@@ -1567,7 +1596,7 @@ bool CvCapture_FFMPEG::grabFrame()
 
 bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, int* width, int* height, int* cn, int* depth)
 {
-    if (!video_st || !context)
+    if (!video_st || (!rawMode && !context))
         return false;
 
     if (rawMode || flag == extraDataIdx)
@@ -1735,7 +1764,7 @@ static inline double getCodecIdFourcc(const AVCodecID codec_id)
 
 double CvCapture_FFMPEG::getProperty( int property_id ) const
 {
-    if( !video_st || !context ) return 0;
+    if( !video_st || (!rawMode && !context) ) return 0;
 
     switch( property_id )
     {
@@ -1814,7 +1843,8 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         //ic->start_time_realtime is in microseconds
         return ((double)ic->start_time_realtime);
     case CAP_PROP_N_THREADS:
-        return static_cast<double>(context->thread_count);
+        if (!rawMode)
+            return static_cast<double>(context->thread_count);
     default:
         break;
     }
@@ -1910,9 +1940,11 @@ void CvCapture_FFMPEG::get_rotation_angle()
 
 void CvCapture_FFMPEG::seek(int64_t _frame_number)
 {
-    CV_Assert(context);
+    if (!rawMode) {
+        CV_Assert(context);
+    }
     _frame_number = std::min(_frame_number, get_total_frames());
-    int delta = 16;
+    int delta = !rawMode ? 16 : 0;
 
     // if we have not grabbed a single frame before first seek, let's read the first frame
     // and get some valuable information during the process
@@ -1927,7 +1959,8 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
         double  time_base  = r2d(ic->streams[video_stream]->time_base);
         time_stamp += (int64_t)(sec / time_base + 0.5);
         if (get_total_frames() > 1) av_seek_frame(ic, video_stream, time_stamp, AVSEEK_FLAG_BACKWARD);
-        avcodec_flush_buffers(context);
+        if(!rawMode)
+            avcodec_flush_buffers(context);
         if( _frame_number > 0 )
         {
             grabFrame();
@@ -1935,6 +1968,10 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
             if( _frame_number > 1 )
             {
                 frame_number = dts_to_frame_number(picture_pts) - first_frame_number;
+                if (rawMode) {
+                    rawSeek = true;
+                    break;
+                }
                 //printf("_frame_number = %d, frame_number = %d, delta = %d\n",
                 //       (int)_frame_number, (int)frame_number, delta);
 
