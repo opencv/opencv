@@ -3,6 +3,18 @@
 namespace opencv_test { namespace {
 using namespace cv;
 
+void AssertMatsEqual(const cv::Mat& mat1, const cv::Mat& mat2) {
+    ASSERT_EQ(mat1.size(), mat2.size()); // Check if sizes are equal
+    ASSERT_EQ(mat1.type(), mat2.type()); // Check if types are equal
+
+    // Check if the matrices have the same content
+    cv::Mat diff;
+    cv::compare(mat1, mat2, diff, cv::CMP_NE);
+    int nonZeroElements = cv::countNonZero(diff.reshape(1));
+
+    EXPECT_LT(nonZeroElements, 1000);
+}
+
 class RenderingTest : public ::testing::TestWithParam<std::tuple<int, int>>
 {
 protected:
@@ -72,12 +84,33 @@ TEST_P(RenderingTest, depthRenderingTest)
     cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
     cv::flip(color_buf, color_buf, 0);
 
-    if (cvtest::debugLevel > 0)
+    if (width == 700)
     {
-        if (width == 700)
+        if (debugLevel > 0)
+        {
+            Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_depth_1.png");
+            AssertMatsEqual(color_buf, groundTruth);
             imwrite("temp_image.png", color_buf);
+        }
         else
+        {
+            Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_depth_1.png");
+            AssertMatsEqual(color_buf, groundTruth);
+        }
+    }
+    else
+    {
+        if (debugLevel > 0)
+        {
+            Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_depth_2.png");
+            AssertMatsEqual(color_buf, groundTruth);
             imwrite("temp_image_cam.png", color_buf);
+        }
+        else
+        {
+            Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_depth_2.png");
+            AssertMatsEqual(color_buf, groundTruth);
+        }
     }
     
 }
@@ -131,12 +164,33 @@ TEST_P(RenderingTest, clippingTest)
     cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
     cv::flip(color_buf, color_buf, 0);
 
-    if (cvtest::debugLevel > 0)
+    if (width == 700)
     {
-        if (width == 700)
-            imwrite("temp_multiple_image.png", color_buf);
+        if (debugLevel > 0)
+        {
+            Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_clipping_1.png");
+            AssertMatsEqual(color_buf, groundTruth);
+            imwrite("temp_image_clipping.png", color_buf);
+        }
         else
-            imwrite("temp_multiple_image_cam.png", color_buf);
+        {
+            Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_clipping_1.png");
+            AssertMatsEqual(color_buf, groundTruth);
+        }
+    }
+    else
+    {
+        if (debugLevel > 0)
+        {
+            Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_clipping_2.png");
+            AssertMatsEqual(color_buf, groundTruth);
+            imwrite("temp_image_clipping_cam.png", color_buf);
+        }
+        else
+        {
+            Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_clipping_2.png");
+            AssertMatsEqual(color_buf, groundTruth);
+        }
     }
 }
 
@@ -182,12 +236,34 @@ TEST_P(RenderingTest, colorRenderingTest)
     cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
     cv::flip(color_buf, color_buf, 0);
 
-    if (cvtest::debugLevel > 0)
+    
+    if (width == 700)
     {
-        if (width == 700)
+        if (debugLevel > 0)
+        {
+            Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_color_1.png");
+            AssertMatsEqual(color_buf, groundTruth);
             imwrite("temp_image_color.png", color_buf);
+        }
         else
+        {
+            Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_color_1.png");
+            AssertMatsEqual(color_buf, groundTruth);
+        }
+    }
+    else
+    {
+        if (debugLevel > 0)
+        {
+            Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_color_2.png");
+            AssertMatsEqual(color_buf, groundTruth);
             imwrite("temp_image_color_cam.png", color_buf);
+        }
+        else
+        {
+            Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_color_2.png");
+            AssertMatsEqual(color_buf, groundTruth);
+        }
     }
 }
 
