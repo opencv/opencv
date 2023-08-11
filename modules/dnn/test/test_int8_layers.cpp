@@ -820,7 +820,7 @@ TEST_P(Test_Int8_nets, CaffeNet)
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    float l1 = 2e-4, lInf = 0.0042;
+    float l1 = 4e-5, lInf = 0.0025;
     testONNXNet("caffenet", l1, lInf);
 }
 
@@ -868,8 +868,7 @@ TEST_P(Test_Int8_nets, Shufflenet)
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    float l1 = default_l1, lInf = 3e-3;
-    testONNXNet("shufflenet", l1, lInf);
+    testONNXNet("shufflenet", default_l1, default_lInf);
 }
 
 TEST_P(Test_Int8_nets, MobileNet_SSD)
@@ -879,8 +878,8 @@ TEST_P(Test_Int8_nets, MobileNet_SSD)
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    Net net = readNetFromCaffe(findDataFile("dnn/MobileNetSSD_deploy.prototxt", false),
-                               findDataFile("dnn/MobileNetSSD_deploy.caffemodel", false));
+    Net net = readNetFromCaffe(findDataFile("dnn/MobileNetSSD_deploy_19e3ec3.prototxt", false),
+                               findDataFile("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", false));
 
     Mat inp = imread(_tf("street.png"));
     Mat blob = blobFromImage(inp, 1.0 / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
