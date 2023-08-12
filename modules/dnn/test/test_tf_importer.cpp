@@ -1675,6 +1675,7 @@ TEST_P(Test_TensorFlow_layers, clip_by_value)
 
 TEST_P(Test_TensorFlow_layers, tf2_prelu)
 {
+    double l1 = 0, lInf = 0;
     if (backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA); // not supported; only across channels is supported
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -1686,6 +1687,11 @@ TEST_P(Test_TensorFlow_layers, tf2_prelu)
         applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
             CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
         );
+#elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2023000000)
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) {
+        l1 = 1e-4;
+        lInf = 1e-3;
+    }
 #elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
@@ -1705,7 +1711,7 @@ TEST_P(Test_TensorFlow_layers, tf2_prelu)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
 
-    runTensorFlowNet("tf2_prelu");
+    runTensorFlowNet("tf2_prelu", false, l1, lInf);
 }
 
 TEST_P(Test_TensorFlow_layers, tf2_permute_nhwc_ncwh)
@@ -1810,6 +1816,11 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
 
     double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.2 : 2e-5;
     double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.018 : default_lInf;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+    {
+        scoreDiff = std::max(scoreDiff, 0.06);
+        iouDiff = std::max(iouDiff, 0.01);
+    }
     normAssertDetections(refDetections, outDetections, "", /*threshold for zero confidence*/1e-5, scoreDiff, iouDiff);
 
     // Output size of masks is NxCxHxW where

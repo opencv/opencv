@@ -1,5 +1,5 @@
 from typing import (NamedTuple, Sequence, Tuple, Union, List,
-                    Dict, Callable, Optional)
+                    Dict, Callable, Optional, Generator, cast)
 import keyword
 
 from .nodes import (ASTNode, NamespaceNode, ClassNode, FunctionNode,
@@ -204,9 +204,7 @@ def create_function_node_in_scope(scope: Union[NamespaceNode, ClassNode],
                 outlist = variant.py_outlist
             for _, argno in outlist:
                 assert argno >= 0, \
-                    "Logic Error! Outlist contains function return type: {}".format(
-                        outlist
-                    )
+                    f"Logic Error! Outlist contains function return type: {outlist}"
 
                 ret_types.append(create_type_node(variant.args[argno].tp))
 
@@ -379,7 +377,7 @@ def get_enclosing_namespace(
                 node.full_export_name, node.native_name
             )
         if class_node_callback:
-            class_node_callback(parent_node)
+            class_node_callback(cast(ClassNode, parent_node))
         parent_node = parent_node.parent
     return parent_node
 
@@ -395,13 +393,42 @@ def get_enum_module_and_export_name(enum_node: EnumerationNode) -> Tuple[str, st
     Returns:
         Tuple[str, str]: a pair of enum export name and its full module name.
     """
+    enum_export_name = enum_node.export_name
+
     def update_full_export_name(class_node: ClassNode) -> None:
         nonlocal enum_export_name
         enum_export_name = class_node.export_name + "_" + enum_export_name
 
-    enum_export_name = enum_node.export_name
-    namespace_node = get_enclosing_namespace(enum_node, update_full_export_name)
+    namespace_node = get_enclosing_namespace(enum_node,
+                                             update_full_export_name)
     return enum_export_name, namespace_node.full_export_name
+
+
+def for_each_class(
+    node: Union[NamespaceNode, ClassNode]
+) -> Generator[ClassNode, None, None]:
+    for cls in node.classes.values():
+        yield cls
+        if len(cls.classes):
+            yield from for_each_class(cls)
+
+
+def for_each_function(
+    node: Union[NamespaceNode, ClassNode],
+    traverse_class_nodes: bool = True
+) -> Generator[FunctionNode, None, None]:
+    yield from node.functions.values()
+    if traverse_class_nodes:
+        for cls in for_each_class(node):
+            yield from for_each_function(cls)
+
+
+def for_each_function_overload(
+    node: Union[NamespaceNode, ClassNode],
+    traverse_class_nodes: bool = True
+) -> Generator[FunctionNode.Overload, None, None]:
+    for func in for_each_function(node, traverse_class_nodes):
+        yield from func.overloads
 
 
 if __name__ == '__main__':

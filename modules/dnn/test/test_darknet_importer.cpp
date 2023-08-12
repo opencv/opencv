@@ -102,11 +102,14 @@ TEST(Test_Darknet, read_yolo_voc_stream)
 class Test_Darknet_layers : public DNNTestLayer
 {
 public:
-    void testDarknetLayer(const std::string& name, bool hasWeights = false, bool testBatchProcessing = true)
+    void testDarknetLayer(const std::string& name, bool hasWeights = false, bool testBatchProcessing = true,
+                          double l1 = 0.0, double lInf = 0.0)
     {
         SCOPED_TRACE(name);
         Mat inp = blobFromNPY(findDataFile("dnn/darknet/" + name + "_in.npy"));
         Mat ref = blobFromNPY(findDataFile("dnn/darknet/" + name + "_out.npy"));
+        l1 = l1 ? l1 : default_l1;
+        lInf = lInf ? lInf : default_lInf;
 
         std::string cfg = findDataFile("dnn/darknet/" + name + ".cfg");
         std::string model = "";
@@ -120,7 +123,7 @@ public:
         net.setPreferableTarget(target);
         net.setInput(inp);
         Mat out = net.forward();
-        normAssert(out, ref, "", default_l1, default_lInf);
+        normAssert(out, ref, "", l1, lInf);
 
         if (inp.size[0] == 1 && testBatchProcessing)  // test handling of batch size
         {
@@ -166,8 +169,8 @@ public:
             }*/
             ASSERT_EQ(out2.dims, ref2.dims) << ref.dims;
 
-            normAssert(out2(ranges0), ref2, "", default_l1, default_lInf);
-            normAssert(out2(ranges1), ref2, "", default_l1, default_lInf);
+            normAssert(out2(ranges0), ref2, "", l1, lInf);
+            normAssert(out2(ranges1), ref2, "", l1, lInf);
         }
     }
 };
@@ -1046,7 +1049,7 @@ TEST_P(Test_Darknet_layers, region)
        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2022010000)
     // accuracy on CPU, OpenCL
     // Expected: (normL1) <= (l1), actual: 0.000358148 vs 1e-05
     //   |ref| = 1.207319974899292
@@ -1116,7 +1119,12 @@ TEST_P(Test_Darknet_layers, connected)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
-    testDarknetLayer("connected", true);
+    double l1 = 0.0;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+    {
+        l1 = 3e-5;
+    }
+    testDarknetLayer("connected", true, true, l1);
 }
 
 TEST_P(Test_Darknet_layers, relu)

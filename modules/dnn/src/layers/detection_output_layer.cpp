@@ -221,7 +221,7 @@ public:
     {
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_CUDA && !_groupByClasses) ||
-               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && !_locPredTransposed && _bboxesNormalized);
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -1006,9 +1006,30 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(nodes.size() == 3);
-        auto& box_logits  = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto& class_preds = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-        auto& proposals   = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+        auto box_logits  = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto class_preds = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto proposals   = nodes[2].dynamicCast<InfEngineNgraphNode>()->node;
+
+        if (_locPredTransposed) {
+            // Convert box predictions from yxYX to xyXY
+            box_logits = std::make_shared<ngraph::op::v1::Reshape>(box_logits,
+                std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{3}, std::vector<int32_t>{0, -1, 2}),
+                true
+            );
+            int axis = 2;
+            box_logits = std::make_shared<ngraph::op::v1::Reverse>(box_logits,
+                std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &axis),
+                ngraph::op::v1::Reverse::Mode::INDEX
+            );
+        }
+
+        auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{2}, std::vector<int32_t>{0, -1});
+        box_logits = std::make_shared<ngraph::op::v1::Reshape>(box_logits, shape, true);
+        class_preds = std::make_shared<ngraph::op::v1::Reshape>(class_preds, shape, true);
+        proposals = std::make_shared<ngraph::op::v1::Reshape>(proposals,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{3}, std::vector<int32_t>{0, _varianceEncodedInTarget ? 1 : 2, -1}),
+            true
+        );
 
         ngraph::op::DetectionOutputAttrs attrs;
         attrs.num_classes                = _numClasses;

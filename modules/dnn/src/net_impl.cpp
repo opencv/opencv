@@ -662,14 +662,14 @@ void Net::Impl::forwardLayer(LayerData& ld)
                             m = u.getMat(ACCESS_READ);
                         if (!checkRange(m))
                         {
-                            std::cerr << "WARNING: NaN detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
-                            std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
+                            CV_LOG_WARNING(NULL, "NaN detected in layer output: id=" << ld.id << " name=" << layer->name
+                                           << " output id=" << i << " output shape=" << shape(m));
                             fail = true;
                         }
                         else if (!checkRange(m, true, NULL, -1e6, 1e6))
                         {
-                            std::cerr << "WARNING: Inf detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
-                            std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
+                            CV_LOG_WARNING(NULL, "Inf detected in layer output: id=" << ld.id << " name=" << layer->name
+                                           << " output id=" << i << " output shape=" << shape(m));
                             fail = true;
                         }
                     }
@@ -738,14 +738,14 @@ void Net::Impl::forwardLayer(LayerData& ld)
                         const Mat& m = ld.outputBlobs[i];
                         if (!checkRange(m))
                         {
-                            std::cerr << "WARNING: NaN detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
-                            std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
+                            CV_LOG_WARNING(NULL, "NaN detected in layer output: "
+                                << cv::format("id=%d name=%s output id=%zu output shape=", ld.id, layer->name.c_str(), i) << shape(m));
                             fail = true;
                         }
                         else if (!checkRange(m, true, NULL, -1e6, 1e6))
                         {
-                            std::cerr << "WARNING: Inf detected in layer output: id=" << ld.id << " name=" << layer->name << std::endl;
-                            std::cerr << "output id=" << i << " output shape=" << shape(m) << std::endl;
+                            CV_LOG_WARNING(NULL, "Inf detected in layer output: "
+                                << cv::format("id=%d name=%s output id=%zu output shape=", ld.id, layer->name.c_str(), i) << shape(m));
                             fail = true;
                         }
                     }

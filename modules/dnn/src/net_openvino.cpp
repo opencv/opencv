@@ -476,12 +476,13 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
             {
                 int lid = ld.inputBlobsId[i].lid;
                 int oid = ld.inputBlobsId[i].oid;
-                if (oid == 0 || lid == 0)
-                    continue;
 
                 auto ieInpNode = inputNodes[i].dynamicCast<InfEngineNgraphNode>();
                 const auto& ngraph_input_node = ieInpNode->node;
                 CV_LOG_DEBUG(NULL, "DNN/IE: bind output port " << lid << ":" << oid << " (" << ngraph_input_node->get_friendly_name() << ":" << ngraph_input_node->get_type_info().name << ")");
+
+                if ((oid == 0 && ngraph_input_node->get_output_size() == 1) || lid == 0)
+                    continue;
 
                 // Handle parameters from other subnets. Output port is not used in this case
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
@@ -549,7 +550,6 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 break;
             }
         }
-        ieNode->net->setNodePtr(&ieNode->node);
 
         net->addBlobs(ld.inputBlobsWrappers);
         net->addBlobs(ld.outputBlobsWrappers);

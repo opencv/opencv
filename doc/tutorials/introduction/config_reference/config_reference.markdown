@@ -484,7 +484,6 @@ OpenCV have own DNN inference module which have own build-in engine, but can als
 | `OPENCV_DNN_CUDA` | _OFF_ | Enable CUDA backend. [CUDA](https://en.wikipedia.org/wiki/CUDA), CUBLAS and [CUDNN](https://developer.nvidia.com/cudnn) must be installed. |
 | `WITH_HALIDE` | _OFF_ | Use experimental [Halide](https://en.wikipedia.org/wiki/Halide_(programming_language)) backend which can generate optimized code for dnn-layers at runtime. Halide must be installed. |
 | `WITH_VULKAN` | _OFF_ | Enable experimental [Vulkan](https://en.wikipedia.org/wiki/Vulkan_(API)) backend. Does not require additional dependencies, but can use external Vulkan headers (`VULKAN_INCLUDE_DIRS`). |
-| `WITH_TENGINE` | _OFF_ | Enable experimental [Tengine](https://github.com/OAID/Tengine) backend for ARM CPUs. Tengine library must be installed. |
 
 
 # Installation layout {#tutorial_config_reference_install}

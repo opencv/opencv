@@ -50,22 +50,14 @@ public:
     void addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs);
 
     void createNet(Target targetId);
-    void setNodePtr(std::shared_ptr<ngraph::Node>* ptr);
 
     void reset();
 
 //private:
     detail::NetImplBase& netImpl_;
 
-    void release();
-    int getNumComponents();
-    void dfs(std::shared_ptr<ngraph::Node>& node, std::vector<std::shared_ptr<ngraph::Node>>& comp,
-             std::unordered_map<std::string, bool>& used);
-
     ngraph::ParameterVector inputs_vec;
     std::shared_ptr<ngraph::Function> ngraph_function;
-    std::vector<std::vector<std::shared_ptr<ngraph::Node>>> components;
-    std::unordered_map<std::string, std::shared_ptr<ngraph::Node>* > all_nodes;
 
     InferenceEngine::ExecutableNetwork netExec;
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)

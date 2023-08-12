@@ -140,7 +140,7 @@ enum VideoCaptureAPIs {
 */
 enum VideoCaptureProperties {
        CAP_PROP_POS_MSEC       =0, //!< Current position of the video file in milliseconds.
-       CAP_PROP_POS_FRAMES     =1, //!< 0-based index of the frame to be decoded/captured next.
+       CAP_PROP_POS_FRAMES     =1, //!< 0-based index of the frame to be decoded/captured next. When the index i is set in RAW mode (CAP_PROP_FORMAT == -1) this will seek to the key frame k, where k <= i.
        CAP_PROP_POS_AVI_RATIO  =2, //!< Relative position of the video file: 0=start of the film, 1=end of the film.
        CAP_PROP_FRAME_WIDTH    =3, //!< Width of the frames in the video stream.
        CAP_PROP_FRAME_HEIGHT   =4, //!< Height of the frames in the video stream.
@@ -311,6 +311,10 @@ enum { CAP_PROP_OPENNI_OUTPUT_MODE       = 100,
        CAP_PROP_OPENNI2_MIRROR           = 111
      };
 
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable: 5054 )
+#endif
 //! OpenNI shortcuts
 enum { CAP_OPENNI_IMAGE_GENERATOR_PRESENT         = CAP_OPENNI_IMAGE_GENERATOR + CAP_PROP_OPENNI_GENERATOR_PRESENT,
        CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE     = CAP_OPENNI_IMAGE_GENERATOR + CAP_PROP_OPENNI_OUTPUT_MODE,
@@ -321,6 +325,9 @@ enum { CAP_OPENNI_IMAGE_GENERATOR_PRESENT         = CAP_OPENNI_IMAGE_GENERATOR +
        CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION_ON = CAP_OPENNI_DEPTH_GENERATOR_REGISTRATION,
        CAP_OPENNI_IR_GENERATOR_PRESENT            = CAP_OPENNI_IR_GENERATOR + CAP_PROP_OPENNI_GENERATOR_PRESENT,
      };
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
 
 //! OpenNI data given from depth generator
 enum { CAP_OPENNI_DEPTH_MAP         = 0, //!< Depth values in mm (CV_16UC1)
@@ -1029,6 +1036,9 @@ public:
     - Most codecs are lossy. If you want lossless video file you need to use a lossless codecs
       (eg. FFMPEG FFV1, Huffman HFYU, Lagarith LAGS, etc...)
     - If FFMPEG is enabled, using `codec=0; fps=0;` you can create an uncompressed (raw) video file.
+    - If FFMPEG is used, we allow frames of odd width or height, but in this case we truncate
+      the rightmost column/the bottom row. Probably, this should be handled more elegantly,
+      but some internal functions inside FFMPEG swscale require even width/height.
     */
     CV_WRAP VideoWriter(const String& filename, int fourcc, double fps,
                 Size frameSize, bool isColor = true);
