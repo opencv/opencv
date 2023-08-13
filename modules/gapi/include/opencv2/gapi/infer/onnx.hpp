@@ -34,6 +34,56 @@ namespace ep {
 
 /**
  * @brief This structure provides functions
+ * that fill inference options for CUDA Execution Provider.
+ * Please follow https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html#cuda-execution-provider
+ */
+struct GAPI_EXPORTS_W_SIMPLE CUDA {
+    // NB: Used from python.
+    /// @private -- Exclude this constructor from OpenCV documentation
+    GAPI_WRAP
+    CUDA() = default;
+
+    /** @brief Class constructor.
+
+    Constructs CUDA parameters based on device type information.
+
+    @param dev_id Target device id to use.
+    */
+    GAPI_WRAP
+    explicit CUDA(const int dev_id)
+        : device_id(dev_id) {
+    }
+
+    int device_id;
+};
+
+/**
+ * @brief This structure provides functions
+ * that fill inference options for TensorRT Execution Provider.
+ * Please follow https://onnxruntime.ai/docs/execution-providers/TensorRT-ExecutionProvider.html#tensorrt-execution-provider
+ */
+struct GAPI_EXPORTS_W_SIMPLE TensorRT {
+    // NB: Used from python.
+    /// @private -- Exclude this constructor from OpenCV documentation
+    GAPI_WRAP
+    TensorRT() = default;
+
+    /** @brief Class constructor.
+
+    Constructs TensorRT parameters based on device type information.
+
+    @param dev_id Target device id to use.
+    */
+    GAPI_WRAP
+    explicit TensorRT(const int dev_id)
+        : device_id(dev_id) {
+    }
+
+    int device_id;
+};
+
+/**
+ * @brief This structure provides functions
  * that fill inference options for ONNX OpenVINO Execution Provider.
  * Please follow https://onnxruntime.ai/docs/execution-providers/OpenVINO-ExecutionProvider.html#summary-of-options
  */
@@ -45,28 +95,13 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
 
     /** @brief Class constructor.
 
-    Constructs OpenVINO parameters based on device information.
+    Constructs OpenVINO parameters based on device type information.
 
-    @param device Target device to use.
+    @param dev_type Target device type to use. ("CPU_FP32", "GPU_FP16", etc)
     */
     GAPI_WRAP
-    OpenVINO(const std::string &device)
-        : device_id(device) {
-    }
-
-    /** @brief Specifies OpenVINO Execution Provider device type.
-
-    This function is used to override the accelerator hardware type
-    and precision at runtime. If this option is not explicitly configured, default
-    hardware and precision specified during onnxruntime build time is used.
-
-    @param type Device type ("CPU_FP32", "GPU_FP16", etc)
-    @return reference to this parameter structure.
-    */
-    GAPI_WRAP
-    OpenVINO& cfgDeviceType(const std::string &type) {
-        device_type = cv::util::make_optional(type);
-        return *this;
+    explicit OpenVINO(const std::string &dev_type)
+        : device_type(dev_type) {
     }
 
     /** @brief Specifies OpenVINO Execution Provider cache dir.
@@ -86,15 +121,14 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     /** @brief Specifies OpenVINO Execution Provider number of threads.
 
     This function is used to override the accelerator default value
-    of number of threads with this value at runtime. If this option
-    is not explicitly set, default value of 8 is used during build time.
+    of number of threads with this value at runtime.
 
     @param nthreads Number of threads.
     @return reference to this parameter structure.
     */
     GAPI_WRAP
     OpenVINO& cfgNumThreads(size_t nthreads) {
-        num_of_threads = cv::util::make_optional(nthreads);
+        num_of_threads = nthreads;
         return *this;
     }
 
@@ -127,15 +161,43 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
         return *this;
     }
 
-    std::string device_id;
+    std::string device_type;
     std::string cache_dir;
-    cv::optional<std::string> device_type;
-    cv::optional<size_t> num_of_threads;
+    size_t num_of_threads = 0;
     bool enable_opencl_throttling = false;
     bool enable_dynamic_shapes = false;
 };
 
-using EP = cv::util::variant<cv::util::monostate, OpenVINO>;
+/**
+ * @brief This structure provides functions
+ * that fill inference options for ONNX DirectML Execution Provider.
+ * Please follow https://onnxruntime.ai/docs/execution-providers/DirectML-ExecutionProvider.html#directml-execution-provider
+ */
+class GAPI_EXPORTS_W_SIMPLE DirectML {
+public:
+    // NB: Used from python.
+    /// @private -- Exclude this constructor from OpenCV documentation
+    GAPI_WRAP
+    DirectML() = default;
+
+    /** @brief Class constructor.
+
+    Constructs DirectML parameters based on device id.
+
+    @param device_id Target device id to use. ("0", "1", etc)
+    */
+    GAPI_WRAP
+    explicit DirectML(const int device_id) : ddesc(device_id) { };
+
+    using DeviceDesc = cv::util::variant<int>;
+    DeviceDesc ddesc;
+};
+
+using EP = cv::util::variant< cv::util::monostate
+                            , OpenVINO
+                            , DirectML
+                            , CUDA
+                            , TensorRT>;
 
 } // namespace ep
 
@@ -191,7 +253,7 @@ struct ParamDesc {
     std::unordered_map<std::string, std::pair<cv::Scalar, cv::Scalar> > generic_mstd;
     std::unordered_map<std::string, bool> generic_norm;
 
-    cv::gapi::onnx::ep::EP execution_provider;
+    std::vector<cv::gapi::onnx::ep::EP> execution_providers;
     bool disable_mem_pattern;
 };
 } // namespace detail
@@ -395,17 +457,59 @@ public:
         return *this;
     }
 
-    /** @brief Specifies execution provider for runtime.
+    /** @brief Adds execution provider for runtime.
 
-    The function is used to set ONNX Runtime OpenVINO Execution Provider options.
+    The function is used to add ONNX Runtime OpenVINO Execution Provider options.
 
-    @param ovep OpenVINO Execution Provider options.
+    @param ep OpenVINO Execution Provider options.
     @see cv::gapi::onnx::ep::OpenVINO.
 
     @return the reference on modified object.
     */
-    Params<Net>& cfgExecutionProvider(ep::OpenVINO&& ovep) {
-        desc.execution_provider = std::move(ovep);
+    Params<Net>& cfgAddExecutionProvider(ep::OpenVINO&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+        return *this;
+    }
+
+    /** @brief Adds execution provider for runtime.
+
+    The function is used to add ONNX Runtime DirectML Execution Provider options.
+
+    @param ep DirectML Execution Provider options.
+    @see cv::gapi::onnx::ep::DirectML.
+
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgAddExecutionProvider(ep::DirectML&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+        return *this;
+    }
+
+    /** @brief Adds execution provider for runtime.
+
+    The function is used to add ONNX Runtime CUDA Execution Provider options.
+
+    @param ep CUDA Execution Provider options.
+    @see cv::gapi::onnx::ep::CUDA.
+
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgAddExecutionProvider(ep::CUDA&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+        return *this;
+    }
+
+    /** @brief Adds execution provider for runtime.
+
+    The function is used to add ONNX Runtime TensorRT Execution Provider options.
+
+    @param ep TensorRT Execution Provider options.
+    @see cv::gapi::onnx::ep::TensorRT.
+
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgAddExecutionProvider(ep::TensorRT&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
         return *this;
     }
 
@@ -447,20 +551,39 @@ public:
     Params(const std::string& tag, const std::string& model_path)
         : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true, {}, {}, {}, false }, m_tag(tag) {}
 
+    /** @see onnx::Params::cfgMeanStdDev. */
     void cfgMeanStdDev(const std::string &layer,
                        const cv::Scalar &m,
                        const cv::Scalar &s) {
         desc.generic_mstd[layer] = std::make_pair(m, s);
     }
 
+    /** @see onnx::Params::cfgNormalize. */
     void cfgNormalize(const std::string &layer, bool flag) {
         desc.generic_norm[layer] = flag;
     }
 
-    void cfgExecutionProvider(ep::OpenVINO&& ov_ep) {
-        desc.execution_provider = std::move(ov_ep);
+    /** @see onnx::Params::cfgAddExecutionProvider. */
+    void cfgAddExecutionProvider(ep::OpenVINO&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
     }
 
+    /** @see onnx::Params::cfgAddExecutionProvider. */
+    void cfgAddExecutionProvider(ep::DirectML&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+    }
+
+    /** @see onnx::Params::cfgAddExecutionProvider. */
+    void cfgAddExecutionProvider(ep::CUDA&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+    }
+
+    /** @see onnx::Params::cfgAddExecutionProvider. */
+    void cfgAddExecutionProvider(ep::TensorRT&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+    }
+
+    /** @see onnx::Params::cfgDisableMemPattern. */
     void cfgDisableMemPattern() {
         desc.disable_mem_pattern = true;
     }

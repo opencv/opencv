@@ -22,8 +22,26 @@ cv::gapi::onnx::PyParams& cv::gapi::onnx::PyParams::cfgNormalize(const std::stri
 }
 
 cv::gapi::onnx::PyParams&
-cv::gapi::onnx::PyParams::cfgExecutionProvider(cv::gapi::onnx::ep::OpenVINO ov_ep) {
-    m_priv->cfgExecutionProvider(std::move(ov_ep));
+cv::gapi::onnx::PyParams::cfgAddExecutionProvider(cv::gapi::onnx::ep::OpenVINO ep) {
+    m_priv->cfgAddExecutionProvider(std::move(ep));
+    return *this;
+}
+
+cv::gapi::onnx::PyParams&
+cv::gapi::onnx::PyParams::cfgAddExecutionProvider(cv::gapi::onnx::ep::DirectML ep) {
+    m_priv->cfgAddExecutionProvider(std::move(ep));
+    return *this;
+}
+
+cv::gapi::onnx::PyParams&
+cv::gapi::onnx::PyParams::cfgAddExecutionProvider(cv::gapi::onnx::ep::CUDA ep) {
+    m_priv->cfgAddExecutionProvider(std::move(ep));
+    return *this;
+}
+
+cv::gapi::onnx::PyParams&
+cv::gapi::onnx::PyParams::cfgAddExecutionProvider(cv::gapi::onnx::ep::TensorRT ep) {
+    m_priv->cfgAddExecutionProvider(std::move(ep));
     return *this;
 }
 

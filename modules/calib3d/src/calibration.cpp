@@ -2699,11 +2699,11 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
     if( alpha >= 0 )
     {
         double s0 = std::max(std::max(std::max((double)cx1/(cx1_0 - inner1.x), (double)cy1/(cy1_0 - inner1.y)),
-                            (double)(newImgSize.width - cx1)/(inner1.x + inner1.width - cx1_0)),
-                        (double)(newImgSize.height - cy1)/(inner1.y + inner1.height - cy1_0));
+                            (double)(newImgSize.width - 1 - cx1)/(inner1.x + inner1.width - cx1_0)),
+                        (double)(newImgSize.height - 1 - cy1)/(inner1.y + inner1.height - cy1_0));
         s0 = std::max(std::max(std::max(std::max((double)cx2/(cx2_0 - inner2.x), (double)cy2/(cy2_0 - inner2.y)),
-                         (double)(newImgSize.width - cx2)/(inner2.x + inner2.width - cx2_0)),
-                     (double)(newImgSize.height - cy2)/(inner2.y + inner2.height - cy2_0)),
+                         (double)(newImgSize.width - 1 - cx2)/(inner2.x + inner2.width - cx2_0)),
+                     (double)(newImgSize.height - 1 - cy2)/(inner2.y + inner2.height - cy2_0)),
                  s0);
 
         double s1 = std::min(std::min(std::min((double)cx1/(cx1_0 - outer1.x), (double)cy1/(cy1_0 - outer1.y)),

@@ -1,9 +1,6 @@
 ######
 # Download via commit id
 ######
-# Tengine
-ocv_update(TENGINE_PKG_MD5_GITCODE 1b5908632b557275cd6e85b0c03f9690)
-ocv_update(TENGINE_PKG_MD5_ORIGINAL 23f61ebb1dd419f1207d8876496289c5) # same as tengine_md5sum for TENGINE commit of e89cf8870de2ff0a80cfe626c0b52b2a16fb302e
 # NVIDIA_OPTICAL_FLOW
 ocv_update(NVIDIA_OPTICAL_FLOW_PKG_MD5_GITCODE 8d5b7eeb24d6ca9c6bcfdff4196d5b47)
 ocv_update(NVIDIA_OPTICAL_FLOW_PKG_MD5_ORIGINAL a73cd48b18dcc0cc8933b30796074191)
@@ -74,7 +71,7 @@ if((DL_ID STREQUAL "FFMPEG") OR (DL_ID STREQUAL "IPPICV") OR (DL_ID STREQUAL "da
   ocv_download_url_gitcode_usercontent(opencv)
 elseif(DL_ID STREQUAL "wechat_qrcode")
   ocv_download_url_gitcode_usercontent(mirrors/WeChatCV)
-elseif((DL_ID STREQUAL "TENGINE") OR (DL_ID STREQUAL "NVIDIA_OPTICAL_FLOW") OR (DL_ID STREQUAL "TIM-VX"))
+elseif((DL_ID STREQUAL "NVIDIA_OPTICAL_FLOW") OR (DL_ID STREQUAL "TIM-VX"))
   ocv_download_url_gitcode_archive_commit_id()
 elseif(DL_ID STREQUAL "TBB")
   ocv_download_url_gitcode_archive_release(OPENCV_TBB_SUBDIR)

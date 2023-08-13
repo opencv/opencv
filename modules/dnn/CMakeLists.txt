@@ -58,11 +58,6 @@ endif()
 ocv_cmake_hook_append(INIT_MODULE_SOURCES_opencv_dnn "${CMAKE_CURRENT_LIST_DIR}/cmake/hooks/INIT_MODULE_SOURCES_opencv_dnn.cmake")
 
 
-if(HAVE_TENGINE)
-  ocv_target_compile_definitions(${the_module} PRIVATE "HAVE_TENGINE=1")
-endif()
-
-
 if(MSVC)
   add_definitions( -D_CRT_SECURE_NO_WARNINGS=1 )
   ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4244 /wd4267 /wd4018 /wd4355 /wd4800 /wd4251 /wd4996 /wd4146
@@ -170,11 +165,6 @@ if(OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
   unset(CC_LIST)
 else()
   set(sources_options ${sources_options} EXCLUDE_CUDA)
-endif()
-
-if(HAVE_TENGINE)
-	list(APPEND include_dirs ${TENGINE_INCLUDE_DIRS})
-	list(APPEND libs -Wl,--whole-archive ${TENGINE_LIBRARIES} -Wl,--no-whole-archive)
 endif()
 
 if(HAVE_TIMVX)

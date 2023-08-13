@@ -1,7 +1,7 @@
 import itertools
 import weakref
 from collections import defaultdict
-from typing import Dict, List, Optional, Sequence, Tuple, Type
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from .class_node import ClassNode, ClassProperty
 from .constant_node import ConstantNode
@@ -33,29 +33,29 @@ class NamespaceNode(ASTNode):
         return ASTNodeType.Namespace
 
     @property
-    def children_types(self) -> Tuple[Type[ASTNode], ...]:
-        return (NamespaceNode, ClassNode, FunctionNode,
-                EnumerationNode, ConstantNode)
+    def children_types(self) -> Tuple[ASTNodeType, ...]:
+        return (ASTNodeType.Namespace, ASTNodeType.Class, ASTNodeType.Function,
+                ASTNodeType.Enumeration, ASTNodeType.Constant)
 
     @property
     def namespaces(self) -> Dict[str, "NamespaceNode"]:
-        return self._children[NamespaceNode]
+        return self._children[ASTNodeType.Namespace]
 
     @property
     def classes(self) -> Dict[str, ClassNode]:
-        return self._children[ClassNode]
+        return self._children[ASTNodeType.Class]
 
     @property
     def functions(self) -> Dict[str, FunctionNode]:
-        return self._children[FunctionNode]
+        return self._children[ASTNodeType.Function]
 
     @property
     def enumerations(self) -> Dict[str, EnumerationNode]:
-        return self._children[EnumerationNode]
+        return self._children[ASTNodeType.Enumeration]
 
     @property
     def constants(self) -> Dict[str, ConstantNode]:
-        return self._children[ConstantNode]
+        return self._children[ASTNodeType.Constant]
 
     def add_namespace(self, name: str) -> "NamespaceNode":
         return self._add_child(NamespaceNode, name)

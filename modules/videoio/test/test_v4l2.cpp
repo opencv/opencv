@@ -22,6 +22,9 @@
 #include <linux/videodev2.h>
 
 // workarounds for older versions
+#ifndef v4l2_fourcc_be
+#define v4l2_fourcc_be(a, b, c, d) (v4l2_fourcc(a, b, c, d) | (1U << 31))
+#endif
 #ifndef V4L2_PIX_FMT_Y10
 #define V4L2_PIX_FMT_Y10 v4l2_fourcc('Y', '1', '0', ' ')
 #endif
