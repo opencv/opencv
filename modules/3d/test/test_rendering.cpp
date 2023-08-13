@@ -43,7 +43,7 @@ public:
 
 TEST_P(RenderingTest, depthRenderingTest)
 {
-    Mat depth_buf(height, width, CV_32F, std::numeric_limits<float>::infinity());
+    Mat depth_buf(height, width, CV_32F, zFar);
     Mat color_buf(height, width, CV_32FC3, Scalar(0.0, 0.0, 0.0));
     //position = Vec3f(0.0, 0.5, 5.0);
 
@@ -84,18 +84,29 @@ TEST_P(RenderingTest, depthRenderingTest)
     cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
     cv::flip(color_buf, color_buf, 0);
 
+    depth_buf.convertTo(depth_buf, CV_8UC1, 1.0);
+    cv::flip(depth_buf, depth_buf, 0);
+
     if (width == 700)
     {
         if (debugLevel > 0)
         {
             Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_depth_1.png");
             AssertMatsEqual(color_buf, groundTruth);
+
+            Mat groundTruthDepth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/depth_image_depth_1.png", cv::IMREAD_GRAYSCALE);
+            AssertMatsEqual(depth_buf, groundTruthDepth);
+
             imwrite("temp_image.png", color_buf);
+            imwrite("constant_image_depth", depth_buf);
         }
         else
         {
             Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_depth_1.png");
             AssertMatsEqual(color_buf, groundTruth);
+
+            Mat groundTruthDepth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/depth_image_depth_1.png", cv::IMREAD_GRAYSCALE);
+            AssertMatsEqual(depth_buf, groundTruthDepth);
         }
     }
     else
@@ -104,12 +115,20 @@ TEST_P(RenderingTest, depthRenderingTest)
         {
             Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_depth_2.png");
             AssertMatsEqual(color_buf, groundTruth);
+
+            Mat groundTruthDepth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/depth_image_depth_2.png", cv::IMREAD_GRAYSCALE);
+            AssertMatsEqual(depth_buf, groundTruthDepth);
+
             imwrite("temp_image_cam.png", color_buf);
+            imwrite("constant_image_depth_cam", depth_buf);
         }
         else
         {
             Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_depth_2.png");
             AssertMatsEqual(color_buf, groundTruth);
+
+            Mat groundTruthDepth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/depth_image_depth_2.png", cv::IMREAD_GRAYSCALE);
+            AssertMatsEqual(depth_buf, groundTruthDepth);
         }
     }
     
@@ -117,7 +136,7 @@ TEST_P(RenderingTest, depthRenderingTest)
 
 TEST_P(RenderingTest, clippingTest)
 {
-    Mat depth_buf(height, width, CV_32F, std::numeric_limits<float>::infinity());
+    Mat depth_buf(height, width, CV_32F, zFar);
     Mat color_buf(height, width, CV_32FC3, Scalar(0.0, 0.0, 0.0));
 
     std::vector <Vec3f> vertices = {
@@ -164,18 +183,29 @@ TEST_P(RenderingTest, clippingTest)
     cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
     cv::flip(color_buf, color_buf, 0);
 
+    depth_buf.convertTo(depth_buf, CV_8UC1, 1.0);
+    cv::flip(depth_buf, depth_buf, 0);
+
     if (width == 700)
     {
         if (debugLevel > 0)
         {
             Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_clipping_1.png");
             AssertMatsEqual(color_buf, groundTruth);
+
+            Mat groundTruthDepth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/depth_image_clipping_1.png", cv::IMREAD_GRAYSCALE);
+            AssertMatsEqual(depth_buf, groundTruthDepth);
+
             imwrite("temp_image_clipping.png", color_buf);
+            imwrite("clipping_image_depth_cam.png", depth_buf);
         }
         else
         {
             Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_clipping_1.png");
             AssertMatsEqual(color_buf, groundTruth);
+
+            Mat groundTruthDepth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/depth_image_clipping_1.png", cv::IMREAD_GRAYSCALE);
+            AssertMatsEqual(depth_buf, groundTruthDepth);
         }
     }
     else
@@ -184,19 +214,27 @@ TEST_P(RenderingTest, clippingTest)
         {
             Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_clipping_2.png");
             AssertMatsEqual(color_buf, groundTruth);
+
+            Mat groundTruthDepth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/depth_image_clipping_2.png", cv::IMREAD_GRAYSCALE);
+            AssertMatsEqual(depth_buf, groundTruthDepth);
+
             imwrite("temp_image_clipping_cam.png", color_buf);
+            imwrite("clipping_image_depth_cam.png", depth_buf);
         }
         else
         {
             Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_clipping_2.png");
             AssertMatsEqual(color_buf, groundTruth);
+
+            Mat groundTruthDepth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/depth_image_clipping_2.png", cv::IMREAD_GRAYSCALE);
+            AssertMatsEqual(depth_buf, groundTruthDepth);
         }
     }
 }
 
 TEST_P(RenderingTest, colorRenderingTest)
 {
-    Mat depth_buf(height, width, CV_32F, std::numeric_limits<float>::infinity());
+    Mat depth_buf(height, width, CV_32F, zFar);
     Mat color_buf(height, width, CV_32FC3, Scalar(0.0, 0.0, 0.0));
 
     shadingMode = false;
@@ -236,19 +274,29 @@ TEST_P(RenderingTest, colorRenderingTest)
     cvtColor(color_buf, color_buf, cv::COLOR_RGB2BGR);
     cv::flip(color_buf, color_buf, 0);
 
-    
+    depth_buf.convertTo(depth_buf, CV_8UC1, 1.0);
+    cv::flip(depth_buf, depth_buf, 0);
+
     if (width == 700)
     {
         if (debugLevel > 0)
         {
             Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_color_1.png");
             AssertMatsEqual(color_buf, groundTruth);
+
+            Mat groundTruthDepth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/depth_image_color_1.png", cv::IMREAD_GRAYSCALE);
+            AssertMatsEqual(depth_buf, groundTruthDepth);
+
             imwrite("temp_image_color.png", color_buf);
+            imwrite("color_image_depth.png", depth_buf);
         }
         else
         {
             Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_color_1.png");
             AssertMatsEqual(color_buf, groundTruth);
+
+            Mat groundTruthDepth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/depth_image_color_1.png", cv::IMREAD_GRAYSCALE);
+            AssertMatsEqual(depth_buf, groundTruthDepth);
         }
     }
     else
@@ -257,19 +305,27 @@ TEST_P(RenderingTest, colorRenderingTest)
         {
             Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_color_2.png");
             AssertMatsEqual(color_buf, groundTruth);
+
+            Mat groundTruthDepth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/depth_image_color_2.png", cv::IMREAD_GRAYSCALE);
+            AssertMatsEqual(depth_buf, groundTruthDepth);
+
             imwrite("temp_image_color_cam.png", color_buf);
+            imwrite("color_image_depth.png", depth_buf);
         }
         else
         {
             Mat groundTruth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/example_image_color_2.png");
             AssertMatsEqual(color_buf, groundTruth);
+
+            Mat groundTruthDepth = imread("../../../opencv_extra/opencv_extra/testdata/rendering/depth_image_color_2.png", cv::IMREAD_GRAYSCALE);
+            AssertMatsEqual(depth_buf, groundTruthDepth);
         }
     }
 }
 
 TEST_P(RenderingTest, emptyIndiceTest)
 {
-    Mat depth_buf(height, width, CV_32F, std::numeric_limits<float>::infinity());
+    Mat depth_buf(height, width, CV_32F, zFar);
     Mat color_buf(height, width, CV_32FC3, Scalar(0.0, 0.0, 0.0));
 
     std::vector <Vec3f> vertices;

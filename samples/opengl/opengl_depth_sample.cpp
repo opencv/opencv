@@ -123,12 +123,13 @@ int main(int argc, char* argv[])
         return 0;
     }
 
+    float zNear = 0.1, zFar = 50;
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
     if(testMode == "color")
-	    gluPerspective(60.0, (double)win_width / win_height, 0.1, 50);
+	    gluPerspective(60.0, (double)win_width / win_height, zNear, zFar);
     else
-        gluPerspective(45.0, (double)win_width / win_height, 0.1, 50);
+        gluPerspective(45.0, (double)win_width / win_height, zNear, zFar);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -136,6 +137,7 @@ int main(int argc, char* argv[])
 
 	glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
+    glClear(GL_DEPTH_BUFFER_BIT);
 
 	setOpenGlDrawCallback("OpenGL", draw, &data);
 
@@ -146,9 +148,22 @@ int main(int argc, char* argv[])
         cv::Mat image(win_height, win_width, CV_8UC3, pixels.data());
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
         cv::flip(image, image, 0);
-
         cv::imwrite("example_image.png", image);
+
+        std::vector<float> depthData(win_width * win_height);
+        std::vector<uint8_t> depthImage8Bit(win_width * win_height);
+        glReadPixels(0, 0, win_width, win_height, GL_DEPTH_COMPONENT, GL_FLOAT, depthData.data());
+        for (int i = 0; i < depthData.size(); i++)
+        {
+            float linearDepthValue = zFar * zNear / (depthData[i] * (zNear - zFar) + zFar);
+            depthImage8Bit[i] = static_cast<uint8_t>(linearDepthValue);
+        }
+        cv::Mat depthMat(win_height, win_width, CV_8UC1, depthImage8Bit.data());
+        cv::flip(depthMat, depthMat, 0);
+        cv::imwrite("depth_image.png", depthMat);
+
 		updateWindow("OpenGL");
+        glClear(GL_DEPTH_BUFFER_BIT);
 		char key = (char)waitKey(40);
 		if (key == 27)
 			break;
