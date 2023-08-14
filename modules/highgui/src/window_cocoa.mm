@@ -732,18 +732,15 @@ void cvSetModeWindow_COCOA( const char* name, double prop_value )
 
     localpool = [[NSAutoreleasePool alloc] init];
 
-    // std::cout << "setting mode" << std::endl;
 #if MAC_OS_X_VERSION_MAX_ALLOWED > MAC_OS_X_VERSION_10_6
     if ( ([window styleMask] & NSFullScreenWindowMask) && prop_value==CV_WINDOW_NORMAL )
     {
-        // std::cout << "exiting fullscreen" << std::endl;
         [window toggleFullScreen:nil];
 
         window.status=CV_WINDOW_NORMAL;
     }
     else if( !([window styleMask] & NSFullScreenWindowMask) && prop_value==CV_WINDOW_FULLSCREEN )
     {
-        // std::cout << "entering fullscreen" << std::endl;
         [window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
 
         NSScreen* screen = [window screen];
