@@ -374,37 +374,28 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto input0 = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto input1 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        auto res = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        res = std::make_shared<ngraph::op::Convert>(res, ngraph::element::f32);
+        if (!coeffs.empty()) {
+            auto coeff = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[0]);
+            res = std::make_shared<ngraph::op::v1::Multiply>(res, coeff, ngraph::op::AutoBroadcastType::NUMPY);
+        }
 
-        // float low = -128, high = 127;
-        input0 = std::make_shared<ngraph::op::Convert>(input0, ngraph::element::f32);
-        input0 = std::make_shared<ngraph::op::v1::Multiply>(
-            input0,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[0])
-        );
-        // input0 = std::make_shared<ngraph::op::FakeQuantize>(input0,
-        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
-        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
-        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
-        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
-        //     256 // levels
-        // );
-
-        input1 = std::make_shared<ngraph::op::Convert>(input1, ngraph::element::f32);
-        input1 = std::make_shared<ngraph::op::v1::Multiply>(
-            input1,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[1])
-        );
-        // // input1 = std::make_shared<ngraph::op::FakeQuantize>(input1,
-        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
-        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
-        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
-        //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
-        //     256 // levels
-        // );
-
-        std::shared_ptr<ngraph::Node> res = std::make_shared<ngraph::op::v1::Add>(input0, input1);
+        for (size_t i = 1; i < nodes.size(); i++)
+        {
+            auto input = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
+            input = std::make_shared<ngraph::op::Convert>(input, ngraph::element::f32);
+            if (!coeffs.empty()) {
+                auto coeff = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[i]);
+                input = std::make_shared<ngraph::op::v1::Multiply>(input, coeff, ngraph::op::AutoBroadcastType::NUMPY);
+            }
+            switch (op) {
+                case SUM:  res = std::make_shared<ngraph::op::v1::Add>(res, input); break;
+                case PROD: res = std::make_shared<ngraph::op::v1::Multiply>(res, input); break;
+                case MAX:  res = std::make_shared<ngraph::op::v1::Maximum>(res, input); break;
+                default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
+            }
+        }
         res = std::make_shared<ngraph::op::v1::Add>(
             res,
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &offset)
