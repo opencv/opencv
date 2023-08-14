@@ -590,8 +590,7 @@ void InfEngineNgraphNet::init(Target targetId)
             allBlobs[name] = ov::Tensor(src.get_element_type(), outShape, src.data());
         }
 
-        // ppp.output(i++).tensor().set_element_type(ov::element::i8);  // Should be always FP32
-        ppp.output(i++).tensor().set_element_type(ov::element::f32);  // Should be always FP32
+        ppp.output(i++).tensor().set_element_type(src.get_element_type());
     }
 
     ppp.build();

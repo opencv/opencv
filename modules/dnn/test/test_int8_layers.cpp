@@ -15,6 +15,9 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 #ifdef HAVE_TIMVX
     targets.push_back(make_tuple(DNN_BACKEND_TIMVX, DNN_TARGET_NPU));
 #endif
+#ifdef HAVE_INF_ENGINE
+    targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, DNN_TARGET_CPU));
+#endif
     return testing::ValuesIn(targets);
 }
 
@@ -66,8 +69,6 @@ public:
             outPath = _tf("onnx/data/output_" + basename);
         }
         ASSERT_FALSE(net.empty());
-        net.setPreferableBackend(backend);
-        net.setPreferableTarget(target);
 
         for (int i = 0; i < numInps; i++)
             inps[i] = blobFromNPY(inpPath + ((numInps > 1) ? cv::format("_%d.npy", i) : ".npy"));
@@ -78,6 +79,8 @@ public:
         qnet = net.quantize(inps, CV_8S, CV_8S, perChannel);
         qnet.getInputDetails(inputScale, inputZp);
         qnet.getOutputDetails(outputScale, outputZp);
+        qnet.setPreferableBackend(backend);
+        qnet.setPreferableTarget(target);
 
         // Quantize inputs to int8
         // int8_value = float_value/scale + zero-point

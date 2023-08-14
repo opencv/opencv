@@ -280,7 +280,6 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        CV_Assert(type == MAX);
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
         ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;
@@ -288,10 +287,19 @@ public:
             pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
 
         auto rounding_type = ceilMode ? ngraph::op::RoundingType::CEIL : ngraph::op::RoundingType::FLOOR;
-        auto max_pool = std::make_shared<ngraph::op::v1::MaxPool>(input, ngraph::Strides(strides),
+        std::shared_ptr<ngraph::Node> pool;
+        if (type == MAX) {
+            pool = std::make_shared<ngraph::op::v1::MaxPool>(input, ngraph::Strides(strides),
                         ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
                         rounding_type, pad_type);
-        return new InfEngineNgraphNode(max_pool);
+        } else if (type == AVE) {
+            pool = std::make_shared<ngraph::op::v1::AvgPool>(input, ngraph::Strides(strides),
+                        ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+                        !avePoolPaddedArea, rounding_type, pad_type);
+        } else {
+            CV_Error(Error::StsNotImplemented, format("INT8 Pooling type: %d", type));
+        }
+        return new InfEngineNgraphNode(pool);
     }
 #endif  // HAVE_DNN_NGRAPH
 
