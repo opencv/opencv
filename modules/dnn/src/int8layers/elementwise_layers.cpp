@@ -250,67 +250,50 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+
+        float inpLow = -128, inpHigh = 127;
+        float outLow = input_sc * (inpLow - input_zp);
+        float outHigh = input_sc * (inpHigh - input_zp);
+        input = std::make_shared<ngraph::op::FakeQuantize>(input,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+            256 // levels
+        );
+
         std::shared_ptr<ngraph::Node> res = nullptr;
         if (type == "ReLU6Int8") {
-            res = input;  // TODO: implement it
+            res = std::make_shared<ngraph::op::Clamp>(input, 0.0f, 6.0f);
         } else if (type == "ReLUInt8") {
-            res = input;  // TODO: implement it
+            if (slope) {
+                auto param = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &slope);
+                res = std::make_shared<ngraph::op::PRelu>(input, param);
+            } else {
+                res = std::make_shared<ngraph::op::Relu>(input);
+            }
         } else if (type == "ELUInt8") {
-            res = input;  // TODO: implement it
+            res = std::make_shared<ngraph::op::Elu>(input, 1.0f);
         } else if (type == "MishInt8") {
-            res = input;  // TODO: implement it
+            res = std::make_shared<ngraph::op::v4::Mish>(input);
         } else if (type == "AbsValInt8") {
-            res = input;  // TODO: implement it
+            res = std::make_shared<ngraph::op::Abs>(input);
         } else if (type == "SigmoidInt8") {
-            std::cout << "sigmoid" << std::endl;
-            std::cout << input_zp << std::endl;
-            std::cout << output_zp << std::endl;
-            std::cout << input_sc << std::endl;
-            std::cout << output_sc << std::endl;
-            float input_zp_f = input_zp;
-            float output_zp_f = output_zp;
-            // float inpLow = -128;
-            // float inpHigh = 127;
-            // float outLow = -128;
-            // float outHigh = 127;
-
-            // outLow = output_sc * (outLow - output_zp);
-            // outHigh = output_sc * (outHigh - output_zp);
-            // inpLow = input_sc * (inpLow - input_zp);
-            // inpHigh = input_sc * (inpHigh - input_zp);
-
-            input = std::make_shared<ngraph::op::Convert>(input, ngraph::element::f32);
-            input = std::make_shared<ngraph::op::v1::Subtract>(
-                input,
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &input_zp_f)
-            );
-            input = std::make_shared<ngraph::op::v1::Multiply>(
-                input,
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &input_sc)
-            );
-
-            // input = std::make_shared<ngraph::op::FakeQuantize>(input,
-            //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            //     std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            //     256 // levels
-            // );
             res = std::make_shared<ngraph::op::Sigmoid>(input);
-
-            res = std::make_shared<ngraph::op::v1::Divide>(
-                res,
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &output_sc)
-            );
-            res = std::make_shared<ngraph::op::v1::Add>(
-                res,
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &output_zp_f)
-            );
-            res = std::make_shared<ngraph::op::Clamp>(res, -128, 127);
-            res = std::make_shared<ngraph::op::Convert>(res, ngraph::element::i8);
         } else {
             CV_Error(Error::StsNotImplemented, type + " activation with OpenVINO");
         }
+
+        outLow = -128; outHigh = 127;
+        inpLow = output_sc * (outLow - output_zp);
+        inpHigh = output_sc * (outHigh - output_zp);
+        res = std::make_shared<ngraph::op::FakeQuantize>(res,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+            256 // levels
+        );
         return new InfEngineNgraphNode(res);
     }
 #endif  // HAVE_DNN_NGRAPH
