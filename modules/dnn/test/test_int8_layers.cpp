@@ -554,10 +554,10 @@ public:
         Mat blob = readTensorFromONNX(findDataFile("dnn/onnx/data/input_" + basename + ".pb"));
         Mat ref = readTensorFromONNX(findDataFile("dnn/onnx/data/output_" + basename + ".pb"));
         Net baseNet = readNetFromONNX(onnxmodel);
-        baseNet.setPreferableBackend(backend);
-        baseNet.setPreferableTarget(target);
 
         Net qnet = baseNet.quantize(blob, CV_32F, CV_32F, perChannel);
+        qnet.setPreferableBackend(backend);
+        qnet.setPreferableTarget(target);
         qnet.setInput(blob);
         Mat out = qnet.forward();
 

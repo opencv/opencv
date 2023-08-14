@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_timvx.hpp"
+#include "../ie_ngraph.hpp"
 
 #include <algorithm>
 #include <stdlib.h>
@@ -90,7 +91,8 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-            (backendId == DNN_BACKEND_TIMVX && haveTimVX());
+            (backendId == DNN_BACKEND_TIMVX && haveTimVX()) ||
+            backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
@@ -193,6 +195,45 @@ public:
 #endif  // HAVE_TIMVX
         return Ptr<BackendNode>();
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+
+        // TODO: layer mush work in INT8 precision
+        float inpLow = -128, inpHigh = 127;
+        float outLow = input_sc * (inpLow - input_zp);
+        float outHigh = input_sc * (inpHigh - input_zp);
+        input = std::make_shared<ngraph::op::FakeQuantize>(input,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+            256 // levels
+        );
+
+        std::shared_ptr<ngraph::Node> res = nullptr;
+        if (logSoftMax) {
+            res = std::make_shared<ngraph::op::v5::LogSoftmax>(input, axis);
+        } else {
+            res = std::make_shared<ngraph::op::v1::Softmax>(input, axis);
+        }
+
+        outLow = -128; outHigh = 127;
+        inpLow = output_sc * (outLow - output_zp);
+        inpHigh = output_sc * (outHigh - output_zp);
+        res = std::make_shared<ngraph::op::FakeQuantize>(res,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+            256 // levels
+        );
+        return new InfEngineNgraphNode(res);
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     template <bool with_log>
     class SoftmaxInt8Invoker : public ParallelLoopBody {
