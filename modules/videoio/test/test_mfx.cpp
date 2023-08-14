@@ -6,6 +6,19 @@
 
 namespace opencv_test { namespace {
 
+TEST(videoio_mfx, yuv_frame)
+{
+    VideoCapture cap;
+    ASSERT_NO_THROW(cap.open(0, CAP_MSMF));
+    if (!cap.isOpened())
+        throw SkipTestException("No camera can be open");
+
+    ASSERT_TRUE(cap.set(CAP_PROP_FOURCC, VideoWriter::fourcc('Y', 'U', 'Y', 'V')));
+    Mat img;
+    ASSERT_NO_THROW(cap >> img);
+    ASSERT_FALSE(img.empty());
+}
+
 TEST(videoio_mfx, read_invalid)
 {
     if (!videoio_registry::hasBackend(CAP_INTEL_MFX))
