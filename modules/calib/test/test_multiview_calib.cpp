@@ -138,13 +138,11 @@ TEST(multiview_calibration, accuracy) {
 
     const double K_err_tol = 1e1, dist_tol = 5e-2, R_tol = 1e-2, T_tol = 1e-2;
     for (int c = 0; c < num_cameras; c++) {
-        cv::Mat R;
-        cv::Rodrigues(Rs[c], R);
         EXPECT_MAT_NEAR(Ks_gt[c], Ks[c], K_err_tol);
         CV_LOG_INFO(NULL, "true  distortions: " << distortions_gt[c]);
         CV_LOG_INFO(NULL, "found distortions: " << distortions[c]);
         EXPECT_MAT_NEAR(distortions_gt[c], distortions[c], dist_tol);
-        EXPECT_MAT_NEAR(Rs_gt[c], R, R_tol);
+        EXPECT_MAT_NEAR(Rs_gt[c], Rs[c], R_tol);
         EXPECT_MAT_NEAR(Ts_gt[c], Ts[c], T_tol);
     }
 }
