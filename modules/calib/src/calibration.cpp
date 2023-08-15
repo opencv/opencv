@@ -1251,15 +1251,7 @@ static double registerCamerasImpl(
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of views" );
     }
 
-    // for (int k = 0; k < 2; k++) {
-    //     distCoeffs[k].resize(nIntrinVec[k] - 4);
-    // }
-
     int cameraModels[2] = {cameraModel1, cameraModel2};
-    // std::vector<int> nIntrinVec(2);
-    // std::vector<Mat> distCoeffs(2);
-    // distCoeffs[0] = _distCoeffs1;
-    // distCoeffs[1] = _distCoeffs2;
     for(int k = 0; k < 2; k++ )
     {
         const Mat& points = k == 0 ? _imagePoints1 : _imagePoints2;
@@ -2168,7 +2160,7 @@ double registerCameras( InputArrayOfArrays _objectPoints1,
     cameraMatrix1 = prepareCameraMatrix(cameraMatrix1, rtype, flags);
     cameraMatrix2 = prepareCameraMatrix(cameraMatrix2, rtype, flags);
 
-    int paramNum1 = _distCoeffs1.getMat().total(), paramNum2 = _distCoeffs2.getMat().total();
+    int paramNum1 = int(_distCoeffs1.getMat().total()), paramNum2 = int(_distCoeffs2.getMat().total());
     distCoeffs1 = prepareDistCoeffs(distCoeffs1, rtype, paramNum1);
     distCoeffs2 = prepareDistCoeffs(distCoeffs2, rtype, paramNum2);
 
@@ -2234,10 +2226,12 @@ double registerCameras( InputArrayOfArrays _objectPoints1,
         matErr = _perViewErrors.getMat();
     }
 
-    double err = registerCamerasImpl(objPt1, objPt2, imgPt1, imgPt2, npoints1, npoints2, cameraMatrix1,
-                                     distCoeffs1, cameraModel1, cameraMatrix2, distCoeffs2, cameraModel2,
-                                     matR, matT, matE, matF, rvecLM, tvecLM,
-                                     matErr, flags, criteria);
+    double err = registerCamerasImpl(objPt1, objPt2, imgPt1, imgPt2,
+                                    npoints1, npoints2,
+                                    cameraMatrix1, distCoeffs1, cameraModel1, 
+                                    cameraMatrix2, distCoeffs2, cameraModel2,
+                                    matR, matT, matE, matF, rvecLM, tvecLM,
+                                    matErr, flags, criteria);
 
     for(int i = 0; i < nimages; i++ )
     {
