@@ -97,7 +97,7 @@ public:
         for (int i = 0; i < numOuts; i++)
         {
             outs_int8[i].convertTo(outs_dequantized[i], CV_32F, outputScale[i], -(outputScale[i] * outputZp[i]));
-            normAssert(refs[i], outs_dequantized[i], "", l1, lInf);
+            normAssert(refs[i], outs_dequantized[i], basename.c_str(), l1, lInf);
         }
     }
 };
@@ -219,8 +219,6 @@ TEST_P(Test_Int8_layers, MaxPooling)
         throw SkipTestException("Only CPU is supported");
     testLayer("pool_conv_3d", "ONNX", 0.0033, 0.0124);
 
-    /* All the below tests have MaxPooling as last layer, so computeMaxIdx is set to true
-       which is not supported by int8 maxpooling
     testLayer("layer_pooling_max", "Caffe", 0.0021, 0.004);
     testLayer("max_pool_even", "TensorFlow", 0.0048, 0.0139);
     testLayer("max_pool_odd_valid", "TensorFlow", 0.0043, 0.012);
@@ -230,7 +228,7 @@ TEST_P(Test_Int8_layers, MaxPooling)
     testLayer("two_maxpooling_1d", "ONNX", 0.0037, 0.0052);
     testLayer("maxpooling", "ONNX", 0.0034, 0.0065);
     testLayer("two_maxpooling", "ONNX", 0.0025, 0.0052);
-    testLayer("max_pool3d", "ONNX", 0.0028, 0.0069);*/
+    testLayer("max_pool3d", "ONNX", 0.0028, 0.0069);
 }
 
 TEST_P(Test_Int8_layers, Reduce)

@@ -6,6 +6,7 @@
 #include "layers_common.hpp"
 #include <opencv2/imgproc.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
+#include "../ie_ngraph.hpp"
 
 namespace cv
 {
@@ -72,7 +73,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -185,6 +187,62 @@ public:
         }
         return flops;
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        std::vector<std::shared_ptr<ngraph::Node>> ieInpNodes(nodes.size());
+        for (int i = 0; i < nodes.size(); ++i) {
+            ieInpNodes[i] = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
+        }
+
+        float inpLow = -128, inpHigh = 127;
+        float outLow = inp_sc[0] * (inpLow - inp_zp[0]);
+        float outHigh = inp_sc[0] * (inpHigh - inp_zp[0]);
+        ieInpNodes[0] = std::make_shared<ngraph::op::FakeQuantize>(ieInpNodes[0],
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+            256 // levels
+        );
+
+        CV_Assert(!blobs.empty() || ieInpNodes.size() == 2);
+
+        size_t numChannels = 1;
+        if (blobs.empty())
+            for (const size_t& dim : ieInpNodes[1]->get_shape())
+                numChannels *= dim;
+        else
+            numChannels = blobs[0].total();
+
+        std::vector<size_t> shape(ieInpNodes[0]->get_shape().size(), 1);
+        int cAxis = normalize_axis(axis, shape.size());
+        shape[cAxis] = numChannels;
+
+        std::shared_ptr<ngraph::Node> res = ieInpNodes[0];
+        if (hasWeights) {
+            auto ieWeights = blobs.empty() ? ieInpNodes[1] : std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, blobs[0].data);
+            res = std::make_shared<ngraph::op::v1::Multiply>(res, ieWeights);
+        }
+        if (hasBias) {
+            auto ieBias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, blobs[(int)hasWeights].data);
+            res = std::make_shared<ngraph::op::v1::Add>(res, ieBias);
+        }
+
+        outLow = -128; outHigh = 127;
+        inpLow = output_sc * (outLow - output_zp);
+        inpHigh = output_sc * (outHigh - output_zp);
+        res = std::make_shared<ngraph::op::FakeQuantize>(res,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+            256 // levels
+        );
+        return new InfEngineNgraphNode(res);
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 private:
     bool hasWeights;
