@@ -1134,11 +1134,12 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
 
 // TODO: add documentation for this
-CV_EXPORTS_AS(registerCamerasExtended)  double registerCameras( InputArrayOfArrays objectPoints,
+CV_EXPORTS_AS(registerCamerasExtended)  double registerCameras( InputArrayOfArrays objectPoints1,
+                                     InputArrayOfArrays objectPoints2,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
-                                     InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
+                                     InputArray cameraMatrix1, InputArray distCoeffs1,
                                      int cameraModel1,
-                                     InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
+                                     InputArray cameraMatrix2, InputArray distCoeffs2,
                                      int cameraModel2,
                                      InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
                                      OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs,
@@ -1148,10 +1149,11 @@ CV_EXPORTS_AS(registerCamerasExtended)  double registerCameras( InputArrayOfArra
 
 /// @overload
 CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays objectPoints2,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
-                                     InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
+                                     InputArray cameraMatrix1, InputArray distCoeffs1,
                                      int cameraModel1,
-                                     InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
+                                     InputArray cameraMatrix2, InputArray distCoeffs2,
                                      int cameraModel2,
                                      OutputArray R,OutputArray T, OutputArray E, OutputArray F,
                                      int flags = 0,
@@ -1159,10 +1161,11 @@ CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints,
            
 /// @overload                          
 CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints,
+                                     InputArrayOfArrays objectPoints2,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
-                                     InputOutputArray cameraMatrix1, InputOutputArray distCoeffs1,
+                                     InputArray cameraMatrix1, InputArray distCoeffs1,
                                      int cameraModel1,
-                                     InputOutputArray cameraMatrix2, InputOutputArray distCoeffs2,
+                                     InputArray cameraMatrix2, InputArray distCoeffs2,
                                      int cameraModel2,
                                      InputOutputArray R, InputOutputArray T, OutputArray E, OutputArray F,
                                      OutputArray perViewErrors,
@@ -1201,7 +1204,6 @@ points in all the available views from all cameras.
 @sa findChessboardCorners, findCirclesGrid, calibrateCamera, fisheye::calibrate
 */
 
-// TODO: clean the "useUndistort" flag 
 CV_EXPORTS_W double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
         const std::vector<Size> &imageSize, InputArray detectionMask,
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts, CV_IN_OUT std::vector<Mat> &Ks, CV_IN_OUT std::vector<Mat> &distortions,
