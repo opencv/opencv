@@ -105,13 +105,13 @@ static void computeExtrinsics(const Mat &obj_points_, const Mat &img_points_, co
 
 }
 
-static void establishValidPointMap(const std::vector<std::vector<Mat>>& imagePoints, 
-                        const std::vector<Size> &imageSize, 
+static void establishValidPointMap(const std::vector<std::vector<Mat>>& imagePoints,
+                        const std::vector<Size> &imageSize,
                         const std::vector<std::vector<bool>>& detection_mask_mat,
                         std::vector<std::vector<std::vector<bool>>>& is_valid_imgpt) {
 
-    int NUM_CAMERAS = imagePoints.size();
-    int NUM_FRAMES = imagePoints[0].size();
+    int NUM_CAMERAS = int(imagePoints.size());
+    int NUM_FRAMES = int(imagePoints[0].size());
     int NUM_PATTERN_PTS = 0;
     for (int c = 0; c < NUM_CAMERAS; c++) {
         for (int f = 0; f < NUM_FRAMES; f++) {
@@ -123,7 +123,7 @@ static void establishValidPointMap(const std::vector<std::vector<Mat>>& imagePoi
                 if (imagePoints[c][f].type() == CV_32F && imagePoints[c][f].cols == 2) {
                     if (std::min((imagePoints[c][f].at<float>(p, 0)), imagePoints[c][f].at<float>(p, 1)) < 0)
                         continue;
-                    
+
                     if (imageSize[c].height > 0 && imageSize[c].width > 0) {
                         if ((imagePoints[c][f].at<float>(p, 0) > imageSize[c].width) || (imagePoints[c][f].at<float>(p, 1) > imageSize[c].height))
                             continue;
@@ -131,7 +131,7 @@ static void establishValidPointMap(const std::vector<std::vector<Mat>>& imagePoi
                 } else { // imagePoints[c][f].type() == CV_32FC2
                     if (std::min((imagePoints[c][f].at<Point2f>(p, 0).x), imagePoints[c][f].at<Point2f>(p, 0).y) < 0)
                         continue;
-                    
+
                     if (imageSize[c].height > 0 && imageSize[c].width > 0) {
                         if ((imagePoints[c][f].at<Point2f>(p, 0).x > imageSize[c].width) || (imagePoints[c][f].at<Point2f>(p, 0).y > imageSize[c].height))
                             continue;
@@ -314,7 +314,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
         const std::vector<Mat> &distortions, std::vector<Matx33d> &Rs_vec, std::vector<Vec3d> &Ts_vec, bool useExtrinsicsGuess) {
     const int NUM_FRAMES = (int) detection_mask_mat[0].size();
     int NUM_CAMERAS = int(Rs_vec.size());
-    
+
     std::vector<Matx33d> Rs_prior;
     std::vector<Vec3d> Ts_prior;
     if (useExtrinsicsGuess) {
@@ -325,7 +325,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
             Ts_vec[i].copyTo(Ts_prior[i]);
         }
     }
-    
+
     std::vector<int> camera_models(NUM_CAMERAS);
     for (int camera = 0; camera < NUM_CAMERAS; camera++) {
         if (is_fisheye_vec[camera]) {
@@ -366,7 +366,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
         // TODO: what flags do we need to perform the stereo calibration?
         // image size does not matter since intrinsics are used
         int flags_extrinsics = CALIB_FIX_INTRINSIC;
-        
+
         if (useExtrinsicsGuess) {
             flags_extrinsics += CALIB_USE_EXTRINSIC_GUESS;
         }
@@ -615,6 +615,13 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     if (flagsForIntrinsics_mat.empty())
     {
         flagsForIntrinsics_mat = Mat(Size(1, NUM_CAMERAS), CV_32SC1, cv::Scalar(0));
+        // set the flag for fisheye camera to be cv::CALIB_RECOMPUTE_EXTRINSIC+cv::CALIB_FIX_SKEW;
+        auto * const is_fisheye_ptr = is_fisheye_mat.data;
+        for (int c = 0; c < NUM_CAMERAS; c++) {
+            if (is_fisheye_ptr[c] != 0) {
+                flagsForIntrinsics_mat.at<int>(c) = cv::CALIB_RECOMPUTE_EXTRINSIC+cv::CALIB_FIX_SKEW;
+            }
+        }
     }
 
     CV_Assert(flagsForIntrinsics_mat.total() == size_t(NUM_CAMERAS));
@@ -671,16 +678,16 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                     img_points_frame.push_back(imagePoints[camera][f].row(i).reshape(2));
                 }
             }
-            // Only put it if there are more than some points
-            CV_LOG_IF_WARNING(NULL, obj_points_frame.rows < MINIMUM_OBSERVATION, "Warning! Fewer than " + std::to_string(MINIMUM_OBSERVATION) + " object points are visible in the image frame " + std::to_string(f) + " for camera " + std::to_string(camera));
-            
-            // Refine the detection mask by removing the frames with only degenerate observation (when all images points are collinear, or are very close together)
             double area_ratio = multiview::imagePointsAreaFrame(imageSize[camera], img_points_frame);
-            CV_LOG_IF_WARNING(NULL, area_ratio < MINIMUM_AREA_RATIO, "Warning! Observation covers on less than " + std::to_string(MINIMUM_AREA_RATIO) + " area in frame " + std::to_string(f) + " for camera " + std::to_string(camera) + " and is " + std::to_string(area_ratio));
+
+            // // Only put it if there are more than some points pr covers a non-degenerate region
+            // CV_LOG_IF_WARNING(NULL, obj_points_frame.rows < MINIMUM_OBSERVATION || area_ratio < MINIMUM_AREA_RATIO, "Warning! Fewer than " + std::to_string(MINIMUM_OBSERVATION) + " object points are visible or observation covers less than " + std::to_string(MINIMUM_AREA_RATIO) + " area  in the image frame " + std::to_string(f) + " for camera " + std::to_string(camera));
+
+            // Refine the detection mask by removing the frames with only degenerate observation (when all images points are collinear, or are very close together)
             if (obj_points_frame.rows >= MINIMUM_OBSERVATION && area_ratio >= MINIMUM_AREA_RATIO) {
                 obj_points_.emplace_back(obj_points_frame);
                 img_points_.emplace_back(img_points_frame);
-                points_ratio_area[camera][f] = area_ratio;
+                points_ratio_area[camera][f] = float(area_ratio);
             } else
                 detection_mask_mat[camera][f] = false;
         }
@@ -703,7 +710,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     }
 
     multiview::checkConnected(detection_mask_mat);
-    
+
     // constant threshold for angle between two camera axes in radians (=160*M_PI/180).
     // if angle exceeds this threshold then a weight of a camera pair is lowered.
     const double THR_PATTERN_CAMERA_ANGLES = 160*M_PI/180;
@@ -738,7 +745,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                 repr_err = calibrateCamera(obj_points_, img_points_, imageSize[camera], Ks[camera], distortions[camera],
                    rvecs, tvecs, noArray(), noArray(), errors_per_view, flagsForIntrinsics_mat.at<int>(camera));
             }
-            CV_LOG_IF_WARNING(NULL, repr_err > WARNING_RMSE, "Warning! Mean RMSE of intrinsics calibration is higher than "+std::to_string(WARNING_RMSE)+" pixels!");
+            CV_LOG_IF_WARNING(NULL, repr_err > WARNING_RMSE, "Warning! Mean RMSE of intrinsics calibration for camera "+std::to_string(camera)+" is higher than "+std::to_string(WARNING_RMSE)+" pixels!");
             int cnt_visible_frame = 0;
             for (int f = 0; f < NUM_FRAMES; f++) {
                 if (detection_mask_mat[camera][f]) {

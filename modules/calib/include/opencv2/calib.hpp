@@ -422,7 +422,7 @@ enum { CALIB_CB_SYMMETRIC_GRID  = 1,
 
 #define CALIB_NINTRINSIC 18 //!< Maximal size of camera internal parameters (initrinsics) vector
 
-enum { 
+enum {
     CALIB_MODEL_PINHOLE = 0,
     CALIB_MODEL_FISHEYE = 1,
 };
@@ -1158,8 +1158,8 @@ CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints,
                                      OutputArray R,OutputArray T, OutputArray E, OutputArray F,
                                      int flags = 0,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6) );
-           
-/// @overload                          
+
+/// @overload
 CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays objectPoints2,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,

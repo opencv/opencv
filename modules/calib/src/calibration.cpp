@@ -1268,7 +1268,7 @@ static double registerCamerasImpl(
 
         points.convertTo(imagePoints[k], CV_64F);
         imagePoints[k] = imagePoints[k].reshape(2, 1);
-        
+
         cameraMatrix.convertTo(A[k], CV_64F);
         distCoeffs.convertTo(tdists[k], CV_64F);
     }
@@ -1374,7 +1374,8 @@ static double registerCamerasImpl(
     Mat JeBuf( maxPoints*2, 6, CV_64F );
     Mat J_LRBuf( maxPoints*2, 6, CV_64F );
 
-    auto lmcallback = [&, nimages, cameraModels, _npoints]
+    // auto lmcallback = [&, nimages, cameraModels, _npoints]
+    auto lmcallback = [&, nimages]
                       (InputOutputArray _param, OutputArray JtErr_, OutputArray JtJ_, double& errnorm)
     {   
         Mat_<double> param_m = _param.getMat();
