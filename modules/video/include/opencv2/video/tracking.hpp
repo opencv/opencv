@@ -892,7 +892,11 @@ public:
 
 class CV_EXPORTS Track
 {
+protected:
+    Track();
 public:
+    virtual ~Track();
+    Track(Rect2f, int, int, float);
     Rect2f rect;
     float classScore;
     int classLabel; // static_cast<> ()
@@ -902,7 +906,11 @@ public:
 
 class CV_EXPORTS Detection
 {
+protected:
+    Detection();
 public:
+    virtual ~Detection();
+    Detection(Rect2f, int, float);
     Rect2f rect;
     int classLabel;
     float classScore;
@@ -974,8 +982,7 @@ public:
 
     CV_WRAP bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks) CV_OVERRIDE = 0;
 
-    //CV_WRAP virtual
-    void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks);
+    //CV_WRAP virtual    void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) = 0;
 };
 //! @} video_track
 

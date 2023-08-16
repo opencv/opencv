@@ -41,10 +41,12 @@ ByteTracker::Params::Params()
     frameRate = 30;
     frameBuffer = 30;
 }
+/*
 void ByteTracker::update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks)
 {
-    //nothing
+
 }
+*/
 
 class ByteTrackerImpl : public ByteTracker
 {
@@ -63,6 +65,7 @@ public:
     //std::vector<std::vector<float>> update(std::vector<std::vector<float>>)
     bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks) CV_OVERRIDE;
 
+    void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks);
     //Scalar get_color(int idx);
     int getFrame();
     void incrementFrame();
@@ -78,7 +81,7 @@ protected:
     int frame_;
     int maxTimeLost_;
 
-    void getDetections(InputArray inputObjects, vector<Strack>& detections,
+    void getDetections(vector<Detection> inputObjects, vector<Strack>& detections,
         vector<Strack>& detectionsLow);
 
 
@@ -108,6 +111,52 @@ Ptr<ByteTracker> ByteTracker::create(const ByteTracker::Params& parameters)
 
 
 bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outputTracks)
+{
+    Mat dets = inputDetections.getMat();
+    vector<Detection> detections;
+    vector<Track> tracks;
+
+    for (int i = 0; i < dets.rows; i++)
+    {
+        Rect2f box;
+        float score;
+        int classId;
+
+        box.x = dets.at<float>(i, 0);
+        box.y = dets.at<float>(i, 1);
+        box.width = dets.at<float>(i, 2);
+        box.height = dets.at<float>(i, 3);
+        classId = dets.at<float>(i, 4);
+        score = dets.at<float>(i, 5);
+
+        Detection detection(box, classId, score);
+        detections.push_back(detection);
+    }
+    ByteTrackerImpl::update(detections, tracks);
+
+    cv::Mat trackData(tracks.size(), 7, CV_32F);
+    int row = 0;
+    for (auto &track : tracks)
+    {
+        float* data = trackData.ptr<float>(row);
+        Rect2f tlwh = track.rect;
+        data[0] = tlwh.x;
+        data[1] = tlwh.y;
+        data[2] = tlwh.width;
+        data[3] = tlwh.height;
+        data[4] = track.classLabel;
+        data[5] = track.classScore;
+        data[6] = track.trackingId;
+
+        ++row;
+    }
+
+    trackData.copyTo(outputTracks);
+
+    return true;
+}
+
+void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_OUT std::vector<Track>& tracks)
 {
     // Detetions, Dk = Detections(fk)
     vector<Strack> detections; // consider changing to cv::Mat_<Strack>
@@ -291,33 +340,22 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
     {
         lostStracks_.erase(key);
     }
-
-    cv::Mat trackData(trackedStracks_.size(), 7, CV_32F);
-    int row = 0;
-    for (auto &track : trackedStracks_)
+    if (tracks.empty())
     {
-
-        float* data = trackData.ptr<float>(row);
-        Rect2f tlwh = track.second.getTlwh();
-        data[0] = tlwh.x;
-        data[1] = tlwh.y;
-        data[2] = tlwh.width;
-        data[3] = tlwh.height;
-        data[4] = track.second.getClass();
-        data[5] = track.second.getScore();
-        data[6] = track.second.getId();
-
-        ++row;
+        tracks.clear();
     }
 
-    trackData.copyTo(outputTracks);
-
-    return true;
+    for (auto& strack : activatedStracks)
+    {
+        Track track(strack.getTlwh(), strack.getId(), strack.getClass(), strack.getScore());
+        tracks.push_back(track);
+    }
 }
 
-void ByteTrackerImpl::getDetections(InputArray inputObjects, vector<Strack>& detections,
+void ByteTrackerImpl::getDetections(vector<Detection> inputObjects, vector<Strack>& detections,
     vector<Strack>& detectionsLow)
 {
+    /*
     Mat objects = inputObjects.getMat();
 
     incrementFrame(); // update frame
@@ -333,6 +371,23 @@ void ByteTrackerImpl::getDetections(InputArray inputObjects, vector<Strack>& det
         box.height = objects.at<float>(i, 3);
         classId = objects.at<float>(i, 4);
         score = objects.at<float>(i, 5);
+
+        Strack strack(box, classId, score);
+        if (score >= trackThreshold_) // Dhigh or Dlow
+        {
+            detections.push_back(strack);
+        }
+        else
+        {
+            detectionsLow.push_back(strack);
+        }
+    }
+    */
+    for (const Detection& detection : inputObjects)
+    {
+        Rect2f box = detection.rect;
+        int classId = detection.classLabel;
+        float score = detection.classScore;
 
         Strack strack(box, classId, score);
         if (score >= trackThreshold_) // Dhigh or Dlow

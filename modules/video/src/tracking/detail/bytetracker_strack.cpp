@@ -141,23 +141,6 @@ void Strack::update(Strack& track)
 
     cv::Mat measurement = (cv::Mat_<float>(4,1) << cx, cy, w, h);
 
-    /*
-    cv::Mat noiseCov = cv::Mat::zeros(8, 8, CV_32F);
-    float stdWeightPosition = 1./20;
-    float stdWeightVelocity = 1./160;
-
-    noiseCov.at<float>(0, 0) = stdWeightPosition * h;
-    noiseCov.at<float>(1, 1) = stdWeightPosition * rect.height;
-    noiseCov.at<float>(2, 2) = 1e-2f;
-    noiseCov.at<float>(3, 3) = stdWeightPosition * h;
-    noiseCov.at<float>(4, 4) = stdWeightVelocity * h;
-    noiseCov.at<float>(5, 5) = stdWeightVelocity * h;
-    noiseCov.at<float>(6, 6) = 1e-5f;
-    noiseCov.at<float>(7, 7) = stdWeightVelocity * h;
-
-    kalmanFilter_.processNoiseCov = noiseCov;
-    */
-
     kalmanFilter_.correct(measurement);
     cv::Mat noiseCov = cv::Mat::zeros(8, 8, CV_32F);
     float stdWeightPosition = 1./20;

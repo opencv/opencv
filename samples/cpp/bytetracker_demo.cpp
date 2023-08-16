@@ -302,10 +302,7 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
         label = className[classIds[idx]] + ":" + label;
         // Draw class labels.
         drawLabel(inputImage, label, left, top);
-        Detection det;
-        det.rect = box;
-        det.classScore = confidences[idx];
-        det.classLabel = classIds[idx];
+        Detection det(box, classIds[idx], confidences[idx]);
         object.push_back(det);
     }
 
