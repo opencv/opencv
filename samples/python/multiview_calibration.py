@@ -43,7 +43,7 @@ def read_gt_rig(file, num_cameras, num_frames):
             for i in range(3):
                 R[i] = np.array([float(x) for x in f.readline().strip().split(" ")])
             rvecs_gt.append(R)
-        
+
             # 1 line of translation
             t = np.zeros([3, 1])
             for i in range(3):
@@ -57,7 +57,7 @@ def read_gt_rig(file, num_cameras, num_frames):
             for i in range(3):
                 R[i] = np.array([float(x) for x in f.readline().strip().split(" ")])
             rvecs0_gt.append(R)
-        
+
             # 3 line of translation
             t = np.zeros([3, 1])
             for i in range(3):
@@ -313,7 +313,7 @@ def calibrateFromPoints(
 
     #HACK: OpenCV API does not well support mix of fisheye and pinhole models.
     # Pinhole models with rational distortion model is used instead
-    pinhole_flag = cv.CALIB_RATIONAL_MODEL + cv.CALIB_ZERO_TANGENT_DIST + cv.CALIB_FIX_K5 + cv.CALIB_FIX_K6
+    pinhole_flag = cv.CALIB_ZERO_TANGENT_DIST
     # if Ks is not None and distortions is not None:
     fisheye_flag = cv.CALIB_RECOMPUTE_EXTRINSIC+cv.CALIB_FIX_SKEW
     if False:
@@ -412,6 +412,11 @@ def visualizeResults(detection_mask, Rs, Ts, Ks, distortions, is_fisheye,
 
     # Get very first frame from first camera
     frame_idx = detection_mask_idxs[1, 0]
+    pos = 0
+    while rvecs0[frame_idx] is None:
+        pos += 1
+        frame_idx = detection_mask_idxs[1, pos]
+
     R_frame = cv.Rodrigues(rvecs0[frame_idx])[0]
     pattern_frame = (R_frame @ pattern_points.T + tvecs0[frame_idx]).T
     plotCamerasPosition(Rs, Ts, image_sizes, output_pairs, pattern_frame, frame_idx, cam_ids)
@@ -441,7 +446,7 @@ def visualizeResults(detection_mask, Rs, Ts, Ks, distortions, is_fisheye,
             image,
         )
 
-    plot(detection_mask_idxs[0, 0], detection_mask_idxs[1, 0])
+    plot(detection_mask_idxs[0, pos], detection_mask_idxs[1, pos])
     showUndistorted(image_points, Ks, distortions, image_names)
     # plt.show()
 
@@ -496,7 +501,7 @@ def saveToFile(path_to_save, **kwargs):
             #     value = [arr if arr is not None else np.zeros((3, 1)) for arr in value]
             if key in ('rvecs0'):
                 # Replace None by [0, 0, 0]
-                value = [cv.Rodrigues(arr)[0] if arr is not None else np.eye((3, )) for arr in value]
+                value = [cv.Rodrigues(arr)[0] if arr is not None else np.eye(3) for arr in value]
             if key in ('tvecs0'):
                 # Replace None by [0, 0, 0]
                 value = [arr if arr is not None else np.zeros((3, 1)) for arr in value]
@@ -507,29 +512,29 @@ def saveToFile(path_to_save, **kwargs):
 def compareGT(gt_file, detection_mask, Rs, Ts, Ks, distortions, is_fisheye,
                      image_points, errors_per_frame, rvecs0, tvecs0,
                      pattern_points, image_sizes, output_pairs, image_names, cam_ids):
-    
+
     # Load the gt file
-    Ks_gt, distortions_gt, rvecs_gt, tvecs_gt, rvecs0_gt, tvecs0_gt = read_gt_rig(gt_file, len(output['cam_ids']), output['detection_mask'][0].shape[0])
-    
+    Ks_gt, distortions_gt, rvecs_gt, tvecs_gt, rvecs0_gt, tvecs0_gt = read_gt_rig(gt_file, len(cam_ids), detection_mask[0].shape[0])
+
     # Compare the results and the gt
-    Rs = output['Rs']
-    Ts = output['Ts']
-    err_r = np.zeros([len(output['cam_ids']),])
-    err_c = np.zeros([len(output['cam_ids']),])
-    for cam in range(len(output['cam_ids'])):
+    Rs = Rs
+    Ts = Ts
+    err_r = np.zeros([len(cam_ids),])
+    err_c = np.zeros([len(cam_ids),])
+    for cam in range(len(cam_ids)):
         R = Rs[cam]
-        
+
         # Convert angle from radians to degrees
         err_r[cam] = calc_angle(R, rvecs_gt[cam])
         err_c[cam] = calc_trans(R, Ts[cam], rvecs_gt[cam], tvecs_gt[cam])
 
     # Compute the distortion estimation error
-    distortions = output["distortions"]
-    Ks = output["Ks"]
-    err_dist_mean = np.zeros([len(output['cam_ids']),])
-    err_dist_max = np.zeros([len(output['cam_ids']),])
-    err_dist_median = np.zeros([len(output['cam_ids']),])
-    for cam in range(len(output['cam_ids'])):
+    distortions = distortions
+    Ks = Ks
+    err_dist_mean = np.zeros([len(cam_ids),])
+    err_dist_max = np.zeros([len(cam_ids),])
+    err_dist_median = np.zeros([len(cam_ids),])
+    for cam in range(len(cam_ids)):
         # Define the x and y coordinate vectors
         width = int(Ks_gt[cam][0, 2] * 2)
         height = int(Ks_gt[cam][1, 2] * 2)
@@ -538,7 +543,7 @@ def compareGT(gt_file, detection_mask, Rs, Ts, Ks, distortions, is_fisheye,
 
         # Generate the grid using np.meshgrid
         X, Y = np.meshgrid(x, y)
-        
+
         points = np.concatenate([X[:,:,None], Y[:,:,None]], axis=2).reshape([-1, 1, 2])
         # Undistort the image points with the estimated distortions
         if is_fisheye[cam]:
@@ -553,7 +558,7 @@ def compareGT(gt_file, detection_mask, Rs, Ts, Ks, distortions, is_fisheye,
             projected = cv.fisheye.projectPoints(pt_norm, np.zeros([3, 1]), np.zeros([3, 1]), Ks_gt[cam], distortions_gt[cam])[0]
         else:
             projected = cv.projectPoints(pt_norm, np.zeros([3, 1]), np.zeros([3, 1]), Ks_gt[cam], distortions_gt[cam])[0]
-        
+
         errs_pt = np.linalg.norm(projected - points, axis=2)
         err_dist_mean[cam] = np.mean(errs_pt)
         err_dist_max[cam] = np.max(errs_pt)
@@ -571,23 +576,23 @@ def compareGT(gt_file, detection_mask, Rs, Ts, Ks, distortions, is_fisheye,
         print("Saving: " + savefile)
         plt.savefig(savefile,dpi=300, bbox_inches='tight')
 
-    print("Distrotion error (mean, median):\n", " ".join([f'(%.4f, %.4f)' % (err_dist_mean[i], err_dist_median[i]) for i in range(len(output['cam_ids']))]))
-    print("Extrinsics error (R, C):\n", " ".join([f'(%.4f, %.4f)' % (err_r[i], err_c[i]) for i in range(len(output['cam_ids']))]))
+    print("Distrotion error (mean, median):\n", " ".join([f'(%.4f, %.4f)' % (err_dist_mean[i], err_dist_median[i]) for i in range(len(cam_ids))]))
+    print("Extrinsics error (R, C):\n", " ".join([f'(%.4f, %.4f)' % (err_r[i], err_c[i]) for i in range(len(cam_ids))]))
     print("Rotation error (mean, median):", f'(%.4f, %.4f)' % (np.mean(err_r), np.median(err_r)))
     print("Position error (mean, median):", f'(%.4f, %.4f)' % (np.mean(err_c), np.median(err_c)))
-    
+
     # conver all things with respect to the first frame
     rvecs0 = []
     tvecs0 = []
-    
+
     for frame in range(0, len(rvecs0_gt)):
-        rvecs0.append(cv.Rodrigues(output['rvecs0'][frame])[0])
-        tvecs0.append(output['tvecs0'][frame])
-    
+        rvecs0.append(cv.Rodrigues(rvecs0[frame])[0])
+        tvecs0.append(tvecs0[frame])
+
     # Compare the results and the gt
-    err_r = np.zeros([output['detection_mask'][0].shape[0],])
-    err_c = np.zeros([output['detection_mask'][0].shape[0],])
-    for frame in range(output['detection_mask'][0].shape[0]):
+    err_r = np.zeros([detection_mask[0].shape[0],])
+    err_c = np.zeros([detection_mask[0].shape[0],])
+    for frame in range(detection_mask[0].shape[0]):
         # Convert angle from radians to degrees
         err_r[frame] = calc_angle(rvecs0[frame], rvecs0_gt[frame])
         err_c[frame] = calc_trans(rvecs0[frame], tvecs0[frame], rvecs0_gt[frame], tvecs0_gt[frame])
@@ -670,15 +675,24 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
             dictionary=dictionary
         )
 
-        detector = cv.aruco.CharucoDetector(board)
+        # The found best practice is to refine detected Aruco marker with contour,
+        # then refine subpix with the board functions
+        detector_params = cv.aruco.DetectorParameters()
+        charuco_params = cv.aruco.CharucoParameters()
+        charuco_params.tryRefineMarkers = True
+        detector_params.cornerRefinementMethod = cv.aruco.CORNER_REFINE_CONTOUR
+        refine_params = cv.aruco.RefineParameters()
+        detector = cv.aruco.CharucoDetector(board, charuco_params, detector_params, refine_params)
         charucoCorners, charucoIds, _, _ = detector.detectBoard(cv.cvtColor(img_detection, cv.COLOR_BGR2GRAY))
 
         corners = np.ones([grid_size[0] * grid_size[1], 1, 2]) * -1
-        ret = (not charucoIds is None) and charucoIds.flatten().size > 8
+        ret = (not charucoIds is None) and charucoIds.flatten().size > 3
 
         if ret:
-            corners[charucoIds.flatten()] = charucoCorners
-            corners2 = corners / scale
+            corners[charucoIds.flatten()] = cv.cornerSubPix(cv.cvtColor(img, cv.COLOR_BGR2GRAY),
+                                       charucoCorners / scale, winsize, (-1,-1), criteria)
+            corners2 = corners
+
     else:
         raise ValueError("Calibration pattern is not supported!")
 # [detect_pattern]
@@ -712,7 +726,7 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
         pattern = asym_circles_grid_points(grid_size, dist_m)
     else:
         raise NotImplementedError("Pattern type is not implemented!")
-    
+
     if pattern_type.lower() == 'charuco':
         assert (board_dict_path is not None) and os.path.exists(board_dict_path)
         board_dict = json.load(open(board_dict_path, 'r'))
@@ -843,6 +857,17 @@ def calibrateFromJSON(json_file, find_intrinsics_in_python):
     for i in range(len(data['image_points'])):
         for j in range(len(data['image_points'][i])):
             data['image_points'][i][j] = np.array(data['image_points'][i][j], dtype=np.float32)
+
+            # Randomly choose 20% of points to be invisible
+            if data['image_points'][i][j].shape[0] > 0:
+                # Calculate the number of rows to select (20% of total rows)
+                num_rows_to_select = int(data['image_points'][i][j].shape[0] * 0.7)
+
+                # Randomly choose 20% of rows
+                selected_rows = np.random.choice(data['image_points'][i][j].shape[0], num_rows_to_select, replace=False)
+
+                # Get the selected rows from the original array
+                data['image_points'][i][j][selected_rows, :] = -1
 
     Ks = data['Ks'] if 'Ks' in data else None
     distortions = data['distortions'] if 'distortions' in data else None
