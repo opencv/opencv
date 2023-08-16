@@ -374,33 +374,52 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto res = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        res = std::make_shared<ngraph::op::Convert>(res, ngraph::element::f32);
-        if (!coeffs.empty()) {
-            auto coeff = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[0]);
-            res = std::make_shared<ngraph::op::v1::Multiply>(res, coeff, ngraph::op::AutoBroadcastType::NUMPY);
+        std::vector<std::shared_ptr<ngraph::Node>> ieInpNodes(nodes.size());
+        for (size_t i = 0; i < nodes.size(); i++)
+        {
+            ieInpNodes[i] = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
+
+            float inpLow = -128, inpHigh = 127;
+            float outLow = inpLow;
+            float outHigh = inpHigh;
+            if (op == PROD) {
+                outLow -= zeropoints[i];
+                outHigh -= zeropoints[i];
+            }
+            if (!coeffs.empty()) {
+                outLow *= coeffs[i];
+                outHigh *= coeffs[i];
+            }
+            ieInpNodes[i] = std::make_shared<ngraph::op::FakeQuantize>(ieInpNodes[i],
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+                256 // levels
+            );
         }
 
-        for (size_t i = 1; i < nodes.size(); i++)
+        auto res = ieInpNodes[0];
+        for (size_t i = 1; i < ieInpNodes.size(); i++)
         {
-            auto input = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
-            input = std::make_shared<ngraph::op::Convert>(input, ngraph::element::f32);
-            if (!coeffs.empty()) {
-                auto coeff = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[i]);
-                input = std::make_shared<ngraph::op::v1::Multiply>(input, coeff, ngraph::op::AutoBroadcastType::NUMPY);
-            }
             switch (op) {
-                case SUM:  res = std::make_shared<ngraph::op::v1::Add>(res, input); break;
-                case PROD: res = std::make_shared<ngraph::op::v1::Multiply>(res, input); break;
-                case MAX:  res = std::make_shared<ngraph::op::v1::Maximum>(res, input); break;
+                case SUM:  res = std::make_shared<ngraph::op::v1::Add>(res, ieInpNodes[i]); break;
+                case PROD: res = std::make_shared<ngraph::op::v1::Multiply>(res, ieInpNodes[i]); break;
+                case MAX:  res = std::make_shared<ngraph::op::v1::Maximum>(res, ieInpNodes[i]); break;
                 default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
             }
         }
-        res = std::make_shared<ngraph::op::v1::Add>(
-            res,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &offset)
+
+        float outLow = -128, outHigh = 127;
+        float inpLow = outLow - offset;
+        float inpHigh = outHigh - offset;
+        res = std::make_shared<ngraph::op::FakeQuantize>(res,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+            256 // levels
         );
-        res = std::make_shared<ngraph::op::Clamp>(res, -128, 127);
 
         return new InfEngineNgraphNode(res);
     }
