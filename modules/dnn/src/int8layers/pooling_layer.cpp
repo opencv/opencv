@@ -307,6 +307,17 @@ public:
             pool = std::make_shared<ngraph::op::v1::AvgPool>(input, ngraph::Strides(strides),
                         ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
                         !avePoolPaddedArea, rounding_type, pad_type);
+        } else if (type == SUM) {
+            ngraph::Shape inpShape = input->get_shape();
+            CV_Assert(inpShape.size() == 2 + kernel_size.size());
+            std::vector<int64_t> axes;
+            for (size_t i = 0; i < kernel_size.size(); i++)
+            {
+                if (inpShape[2 + i] == kernel_size[i])
+                    axes.push_back(2 + i);
+            }
+            auto reduction_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes.size()}, axes);
+            pool = std::make_shared<ngraph::op::v1::ReduceSum>(input, reduction_axes, true);
         } else {
             CV_Error(Error::StsNotImplemented, format("INT8 Pooling type: %d", type));
         }

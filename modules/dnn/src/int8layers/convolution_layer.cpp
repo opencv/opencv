@@ -1513,13 +1513,6 @@ public:
         int nstripes = std::max(getNumThreads(), 1);
         Mat outputInt32 = Mat(shape(outputs[0]), CV_32S);
 
-        // for (int i = 0; i < outputMultiplier.size(); ++i)
-        //     outputMultiplier[i] = 1;
-        // for (int i = 0; i < biasvec.size(); ++i)
-        //     biasvec[i] = 0;
-        // input_zp = 0;
-        // output_zp = 0;
-
         ParallelConv::run(inputs[0], outputInt32, weightsMat, outputMultiplier, biasvec, activationLUT, kernel_size, strides,
                           pads_begin, pads_end, dilations, activ.get(), ngroups, nstripes, input_zp, output_zp);
 
