@@ -466,15 +466,16 @@ public:
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{outputMultiplier.total()}, outputMultiplier.ptr<float>())
         );
 
-        matmul = std::make_shared<ngraph::op::v5::Round>(matmul, ngraph::op::v5::Round::RoundMode::HALF_AWAY_FROM_ZERO);
-
-        float output_zp_f = output_zp;
-        matmul = std::make_shared<ngraph::op::v1::Add>(
-            matmul,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &output_zp_f)
+        float outLow = -128, outHigh = 127;
+        float inpLow = outLow - output_zp;
+        float inpHigh = outHigh - output_zp;
+        matmul = std::make_shared<ngraph::op::FakeQuantize>(matmul,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+            256 // levels
         );
-        matmul = std::make_shared<ngraph::op::Clamp>(matmul, -128, 127);
-
         return new InfEngineNgraphNode(matmul);
     }
 #endif  // HAVE_DNN_NGRAPH

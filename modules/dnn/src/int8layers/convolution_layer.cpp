@@ -672,19 +672,16 @@ public:
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), outputMultiplier.data())
         );
 
-        // TODO: this is strange! Is OpenCV uses different round for depthwise and common convolutions?
-        if (group != 1) {
-            conv_node = std::make_shared<ngraph::op::v5::Round>(conv_node, ngraph::op::v5::Round::RoundMode::HALF_AWAY_FROM_ZERO);
-        } else {
-            conv_node = std::make_shared<ngraph::op::v5::Round>(conv_node, ngraph::op::v5::Round::RoundMode::HALF_TO_EVEN);
-        }
-
-        float output_zp_f = output_zp;
-        conv_node = std::make_shared<ngraph::op::v1::Add>(
-            conv_node,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &output_zp_f)
+        outLow = -128; outHigh = 127;
+        float inpLow = outLow - output_zp;
+        float inpHigh = outHigh - output_zp;
+        conv_node = std::make_shared<ngraph::op::FakeQuantize>(conv_node,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+            256 // levels
         );
-        conv_node = std::make_shared<ngraph::op::Clamp>(conv_node, -128, 127);
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(conv_node));
     }
