@@ -251,7 +251,7 @@ def generateAll(cameras, board, num_frames, rand_gen, MAX_RAND_ITERS=10000, save
     if save_3d_animation is not None: animation3D(board, cameras, points_3d, save_3d_animation, VIDEOS_FPS, VIDEOS_DPI, MAX_FRAMES)
 
     print('number of found frames', len(points_2d))
-    return np.stack(points_2d), np.stack(points_3d), np.stack(R_used), np.stack(t_used) 
+    return np.stack(points_2d), np.stack(points_3d), np.stack(R_used), np.stack(t_used)
 
 def createConfigFile(fname, params):
     file = open(fname, 'w')
