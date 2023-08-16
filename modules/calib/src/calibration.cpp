@@ -1257,7 +1257,7 @@ static double registerCamerasImpl(
         const Mat& points = k == 0 ? _imagePoints1 : _imagePoints2;
         const Mat& cameraMatrix = k == 0 ? _cameraMatrix1 : _cameraMatrix2;
         const Mat& distCoeffs = k == 0 ? _distCoeffs1 : _distCoeffs2;
-        
+
         int depth = points.depth();
         int cn = points.channels();
         CV_Assert( (depth == CV_32F || depth == CV_64F) &&
@@ -1377,7 +1377,7 @@ static double registerCamerasImpl(
     // auto lmcallback = [&, nimages, cameraModels, _npoints]
     auto lmcallback = [&, nimages]
                       (InputOutputArray _param, OutputArray JtErr_, OutputArray JtJ_, double& errnorm)
-    {   
+    {
         Mat_<double> param_m = _param.getMat();
         Vec3d om_LR(param_m(0), param_m(1), param_m(2));
         Vec3d T_LR(param_m(3), param_m(4), param_m(5));
@@ -2229,7 +2229,7 @@ double registerCameras( InputArrayOfArrays _objectPoints1,
 
     double err = registerCamerasImpl(objPt1, objPt2, imgPt1, imgPt2,
                                     npoints1, npoints2,
-                                    cameraMatrix1, distCoeffs1, cameraModel1, 
+                                    cameraMatrix1, distCoeffs1, cameraModel1,
                                     cameraMatrix2, distCoeffs2, cameraModel2,
                                     matR, matT, matE, matF, rvecLM, tvecLM,
                                     matErr, flags, criteria);
