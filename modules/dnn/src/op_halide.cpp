@@ -11,9 +11,8 @@
 
 #ifdef HAVE_HALIDE
 #include <HalideRuntimeOpenCL.h>
-#endif  // HAVE_HALIDE
-
 #include <thread>
+#endif  // HAVE_HALIDE
 
 namespace cv
 {
