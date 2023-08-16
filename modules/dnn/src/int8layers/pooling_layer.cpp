@@ -282,6 +282,17 @@ public:
     {
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
+        float inpLow = -128, inpHigh = 127;
+        float outLow = input_sc * (inpLow - input_zp);
+        float outHigh = input_sc * (inpHigh - input_zp);
+        input = std::make_shared<ngraph::op::FakeQuantize>(input,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+            256 // levels
+        );
+
         ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;
         if (!padMode.empty())
             pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
@@ -299,6 +310,18 @@ public:
         } else {
             CV_Error(Error::StsNotImplemented, format("INT8 Pooling type: %d", type));
         }
+
+        outLow = -128; outHigh = 127;
+        inpLow = output_sc * (outLow - output_zp);
+        inpHigh = output_sc * (outHigh - output_zp);
+        pool = std::make_shared<ngraph::op::FakeQuantize>(pool,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+            256 // levels
+        );
+
         return new InfEngineNgraphNode(pool);
     }
 #endif  // HAVE_DNN_NGRAPH
