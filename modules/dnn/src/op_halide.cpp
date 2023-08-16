@@ -16,6 +16,8 @@
 #include <HalideRuntimeOpenCL.h>
 #endif  // HAVE_HALIDE
 
+#include <thread>
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
