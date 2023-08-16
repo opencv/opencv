@@ -13,6 +13,8 @@
 #include <HalideRuntimeOpenCL.h>
 #endif  // HAVE_HALIDE
 
+#include <thread>
+
 namespace cv
 {
 namespace dnn
