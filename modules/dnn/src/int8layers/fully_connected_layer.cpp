@@ -408,6 +408,7 @@ public:
         std::shared_ptr<ngraph::Node> input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::shared_ptr<ngraph::Node> ieWeights, ieBias, matmul;
         bool transA = false, transB = true;
+        size_t numOutput = blobs[0].size[0];
 
         if (nodes.size() == 2)
         {
@@ -434,14 +435,23 @@ public:
                 256 // levels
             );
 
+            std::vector<float> inpLows(numOutput, low);
+            std::vector<float> inpHighs(numOutput, high);
+            std::vector<float> outLows(numOutput);
+            std::vector<float> outHighs(numOutput);
+            for (int i = 0; i < numOutput; ++i) {
+                outLows[i] = low * outputMultiplier.ptr<float>()[i] * output_sc / input_sc;
+                outHighs[i] = high * outputMultiplier.ptr<float>()[i] * output_sc / input_sc;
+            }
+
             std::vector<size_t> weight_shape{(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
             ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::i8, weight_shape, blobs[0].data);
             ieWeights = std::make_shared<ngraph::op::Convert>(ieWeights, ngraph::element::f32);
             ieWeights = std::make_shared<ngraph::op::FakeQuantize>(ieWeights,
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numOutput, 1}, inpLows.data()),
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numOutput, 1}, inpHighs.data()),
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numOutput, 1}, outLows.data()),
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numOutput, 1}, outHighs.data()),
                 256 // levels
             );
             matmul = std::make_shared<ngraph::op::MatMul>(input, ieWeights, transA, transB);
@@ -451,19 +461,13 @@ public:
             int32_t* bias = blobs[1].ptr<int32_t>();
             std::vector<float> ovBias(blobs[1].total());
             for (int i = 0; i < ovBias.size(); ++i) {
-                ovBias[i] = (bias[i] + input_zp * cv::sum(blobs[0].row(i))[0]) * input_sc;
+                ovBias[i] = (bias[i] + input_zp * cv::sum(blobs[0].row(i))[0]) * outputMultiplier.ptr<float>()[i] * output_sc;
             }
             auto bias_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
                                             ngraph::Shape{blobs[1].total()}, ovBias.data());
             matmul = std::make_shared<ngraph::op::v1::Add>(matmul, bias_node);
         }
-        Mat mults = outputMultiplier * output_sc / input_sc;
-        matmul = std::make_shared<ngraph::op::v1::Multiply>(
-            matmul,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{mults.total()}, mults.ptr<float>())
-        );
 
-        // Apply multipliers with rounding.
         float outLow = -128, outHigh = 127;
         float inpLow = output_sc * (outLow - output_zp);
         float inpHigh = output_sc * (outHigh - output_zp);

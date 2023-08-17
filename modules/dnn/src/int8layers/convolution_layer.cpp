@@ -606,7 +606,7 @@ public:
             pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
 
         const float low = -128, high = 127;
-        float outLow = low - input_zp, outHigh = high - input_zp;
+        float outLow = input_sc * (low - input_zp), outHigh = input_sc * (high - input_zp);
         ieInpNode = std::make_shared<ngraph::op::FakeQuantize>(ieInpNode,
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
@@ -615,12 +615,31 @@ public:
             256 // levels
         );
 
+        std::vector<float> inpLows(numOutput, low);
+        std::vector<float> inpHighs(numOutput, high);
+        std::vector<float> outLows(numOutput);
+        std::vector<float> outHighs(numOutput);
+        std::vector<size_t> quantShape(kernel_shape.size(), 1);
+        if (group != 1)
+        {
+            quantShape[0] = group;
+            quantShape[1] = numOutput / group;
+        }
+        else
+        {
+            quantShape[0] = numOutput;
+        }
+
+        for (int i = 0; i < numOutput; ++i) {
+            outLows[i] = low * outputMultiplier[i] * output_sc / input_sc;
+            outHighs[i] = high * outputMultiplier[i] * output_sc / input_sc;
+        }
         ieWeights = std::make_shared<ngraph::op::Convert>(ieWeights, ngraph::element::f32);
         ieWeights = std::make_shared<ngraph::op::FakeQuantize>(ieWeights,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, quantShape, inpLows.data()),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, quantShape, inpHighs.data()),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, quantShape, outLows.data()),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, quantShape, outHighs.data()),
             256 // levels
         );
 
@@ -656,25 +675,18 @@ public:
             }
             else
             {
-                std::vector<int32_t> ovBias(numOutput);
+                std::vector<float> ovBias(numOutput);
                 for (int i = 0; i < numOutput; ++i) {
-                    ovBias[i] = biasvec[i] + input_zp * cv::sum(blobs[0].row(i))[0];
+                    ovBias[i] = (biasvec[i] + input_zp * cv::sum(blobs[0].row(i))[0]) * outputMultiplier[i] * output_sc;
                 }
-                bias = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape(shape), ovBias.data());
+                bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), ovBias.data());
             }
-            bias = std::make_shared<ngraph::op::Convert>(bias, ngraph::element::f32);
             conv_node = std::make_shared<ngraph::op::v1::Add>(conv_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
         }
 
-        // Apply multipliers with rounding.
-        conv_node = std::make_shared<ngraph::op::v1::Multiply>(
-            conv_node,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), outputMultiplier.data())
-        );
-
-        outLow = -128; outHigh = 127;
-        float inpLow = outLow - output_zp;
-        float inpHigh = outHigh - output_zp;
+        outLow = -128, outHigh = 127;
+        float inpLow = output_sc * (outLow - output_zp);
+        float inpHigh = output_sc * (outHigh - output_zp);
         conv_node = std::make_shared<ngraph::op::FakeQuantize>(conv_node,
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
@@ -683,7 +695,7 @@ public:
             256 // levels
         );
 
-        return Ptr<BackendNode>(new InfEngineNgraphNode(conv_node));
+        return new InfEngineNgraphNode(conv_node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
