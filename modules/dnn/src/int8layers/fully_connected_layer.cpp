@@ -406,7 +406,7 @@ public:
         CV_CheckTypeEQ(outputMultiplier.type(), CV_32F, "");
 
         std::shared_ptr<ngraph::Node> input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        std::shared_ptr<ngraph::Node> ieWeights, matmul;
+        std::shared_ptr<ngraph::Node> ieWeights, ieBias, matmul;
         bool transA = false, transB = true;
 
         if (nodes.size() == 2)
@@ -425,7 +425,7 @@ public:
                 true
             );
             const float low = -128, high = 127;
-            float outLow = low - input_zp, outHigh = high - input_zp;
+            float outLow = input_sc * (low - input_zp), outHigh = input_sc * (high - input_zp);
             input = std::make_shared<ngraph::op::FakeQuantize>(input,
                 std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
                 std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
@@ -444,31 +444,29 @@ public:
                 std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
                 256 // levels
             );
-
             matmul = std::make_shared<ngraph::op::MatMul>(input, ieWeights, transA, transB);
         }
 
         if (blobs.size() > 1) {
-                int32_t* bias = blobs[1].ptr<int32_t>();
-                std::vector<float> ovBias(blobs[1].total());
-                for (int i = 0; i < ovBias.size(); ++i) {
-                    ovBias[i] = bias[i] + input_zp * cv::sum(blobs[0].row(i))[0];
-                }
-                // bias = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape(shape), ovBias.data());
-                auto bias_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                                ngraph::Shape{blobs[1].total()}, ovBias.data());
-                matmul = std::make_shared<ngraph::op::v1::Add>(matmul, bias_node);
+            int32_t* bias = blobs[1].ptr<int32_t>();
+            std::vector<float> ovBias(blobs[1].total());
+            for (int i = 0; i < ovBias.size(); ++i) {
+                ovBias[i] = (bias[i] + input_zp * cv::sum(blobs[0].row(i))[0]) * input_sc;
+            }
+            auto bias_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+                                            ngraph::Shape{blobs[1].total()}, ovBias.data());
+            matmul = std::make_shared<ngraph::op::v1::Add>(matmul, bias_node);
         }
-
-        // Apply multipliers with rounding.
+        Mat mults = outputMultiplier * output_sc / input_sc;
         matmul = std::make_shared<ngraph::op::v1::Multiply>(
             matmul,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{outputMultiplier.total()}, outputMultiplier.ptr<float>())
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{mults.total()}, mults.ptr<float>())
         );
 
+        // Apply multipliers with rounding.
         float outLow = -128, outHigh = 127;
-        float inpLow = outLow - output_zp;
-        float inpHigh = outHigh - output_zp;
+        float inpLow = output_sc * (outLow - output_zp);
+        float inpHigh = output_sc * (outHigh - output_zp);
         matmul = std::make_shared<ngraph::op::FakeQuantize>(matmul,
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
             std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
