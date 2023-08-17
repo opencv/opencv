@@ -442,7 +442,6 @@ models = [
         filename='onnx/models/alexnet.onnx'),
     Model(
         name='GoogleNet (ONNX)',
-        archive='bvlc_googlenet.tar.gz',
         url='https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/inception_and_googlenet/googlenet/model/googlenet-8.onnx',
         sha='534a16d7e2472f6a9a1925a5ee6c9abc2f5c02b0',
         filename='onnx/models/googlenet.onnx'),
