@@ -14,6 +14,7 @@
 #include "halide_scheduler.hpp"
 
 #include <HalideRuntimeOpenCL.h>
+#include <thread>
 #endif  // HAVE_HALIDE
 
 namespace cv {
