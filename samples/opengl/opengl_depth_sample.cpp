@@ -59,8 +59,8 @@ int main(int argc, char* argv[])
         Mat_<Vec3f> vertex(1, 6);
         vertex <<
             Vec3f(2.0, 0, -2.0), Vec3f(0, -2, -2),
-            Vec3f(-2, 0, -2), Vec3f(3.5, -1, -5),
-            Vec3f(2.5, -1.5, -5), Vec3f(-1, 0.5, -5);
+            Vec3f(-2, 0, -2), Vec3f(3.5, -1, -3),
+            Vec3f(2.5, -1.5, -3), Vec3f(-1, 0.5, -3);
 
         Mat_<int> indices(1, 6);
         indices << 0, 1, 2, 3, 4, 5;
@@ -140,6 +140,7 @@ int main(int argc, char* argv[])
     glClear(GL_DEPTH_BUFFER_BIT);
 
 	setOpenGlDrawCallback("OpenGL", draw, &data);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	for (;;)
 	{
@@ -150,20 +151,18 @@ int main(int argc, char* argv[])
         cv::flip(image, image, 0);
         cv::imwrite("example_image.png", image);
 
-        std::vector<float> depthData(win_width * win_height);
-        std::vector<uint8_t> depthImage8Bit(win_width * win_height);
-        glReadPixels(0, 0, win_width, win_height, GL_DEPTH_COMPONENT, GL_FLOAT, depthData.data());
-        for (int i = 0; i < depthData.size(); i++)
+        cv::Mat depthMat(win_height, win_width, CV_32F);
+        glReadPixels(0, 0, win_width, win_height, GL_DEPTH_COMPONENT, GL_FLOAT, depthMat.ptr());
+        for (auto it = depthMat.begin<float>(); it != depthMat.end<float>(); ++it)
         {
-            float linearDepthValue = zFar * zNear / (depthData[i] * (zNear - zFar) + zFar);
-            depthImage8Bit[i] = static_cast<uint8_t>(linearDepthValue);
+            *it = zNear * zFar / ((*it) * (zNear - zFar) + zFar);
         }
-        cv::Mat depthMat(win_height, win_width, CV_8UC1, depthImage8Bit.data());
+
         cv::flip(depthMat, depthMat, 0);
         cv::imwrite("depth_image.png", depthMat);
 
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		updateWindow("OpenGL");
-        glClear(GL_DEPTH_BUFFER_BIT);
 		char key = (char)waitKey(40);
 		if (key == 27)
 			break;
