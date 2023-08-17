@@ -1266,6 +1266,22 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS_W void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_);
 
+    /**  @brief return a specific Mat in a blob.
+    * A blob is 3 or 4D matrix function return a specific plane.
+    * if dims blob is less or equal  to 2 (N rows x M columns) blob is return
+    * if dims blob is 3: blob is an H x N x M array and  mat at (coord(0),0, 0) is returned.
+    * if dims blob is 4: blob is T x H x N x C array
+    *      mat at (coord(0), coord(1), 0, 0) is returned as Mat with C channel if channelOrder = DNN_LAYOUT_NHWC.
+    *      mat at (coord(0), coord(1), 0, 0) is returned as Mat with one channel if channelOrder = DNN_LAYOUT_NCHW.
+    * @param[in] blob a blob with dim size less or equal than 4
+    * @param[in] coord blob coordinate
+    * @param[in] channelOrder blob coordinate
+    * @returns Mat with dim size less or equal than 2
+    *
+    * @note return Mat is original data in blob with read write access to blob data
+    */
+    CV_EXPORTS Mat getMatInBlob(Mat blob, std::vector<int> coord, int channelOrder = DNN_LAYOUT_NCHW);
+
     /** @brief Convert all weights of Caffe network to half precision floating point.
      * @param src Path to origin model from Caffe framework contains single
      *            precision floating point weights (usually has `.caffemodel` extension).

@@ -259,6 +259,43 @@ void imagesFromBlob(const cv::Mat& blob_, OutputArrayOfArrays images_)
     }
 }
 
+Mat getMatInBlob(Mat blob, std::vector<int> coord, int channelOrder)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(blob.dims <= 4);
+    CV_Assert(channelOrder == DNN_LAYOUT_NHWC || channelOrder == DNN_LAYOUT_NCHW);
+    Mat x, y, out;
+
+    switch (blob.dims)
+    {
+    case 0:
+        out = Mat();
+        break;
+    case 1:
+    case 2:
+        return blob;
+        break;
+    case 3:
+        CV_Assert(coord[0] < blob.size[0]);
+        x = blob.reshape(1, std::vector<int> {blob.size[0], blob.size[1] * blob.size[2]});
+        out = x.row(coord[0]).reshape(0, blob.size[1]);
+        break;
+    case 4:
+        CV_Assert(coord[0] < blob.size[0]);
+        x = blob.reshape(1, std::vector<int> {blob.size[0], blob.size[1] * blob.size[2] * blob.size[3]});
+        if (channelOrder == DNN_LAYOUT_NHWC)
+            out = x.row(coord[0]).reshape(blob.size[3], blob.size[1]);
+        else
+        {
+            CV_Assert(coord[1] < blob.size[1]);
+            out = x.row(coord[0]).reshape(1, std::vector<int> {blob.size[1], blob.size[2] * blob.size[3]});
+            out = out.row(coord[1]).reshape(1, blob.size[2]);
+        }
+        break;
+    }
+    return out;
+}
+
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn
