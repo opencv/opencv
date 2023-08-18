@@ -60,6 +60,23 @@ if(CV_TRACE AND HAVE_ITT)
   add_definitions(-DOPENCV_WITH_ITT=1)
 endif()
 
+# https://github.com/opencv/opencv/issues/24145
+ocv_check_environment_variables(OPENCV_IPP_MEAN)
+option(OPENCV_IPP_MEAN "Enable IPP optimizations for mean (+200Kb in binary size)" OFF)
+if(OPENCV_IPP_MEAN)
+  add_definitions(-DOPENCV_IPP_MEAN=1)
+endif()
+ocv_check_environment_variables(OPENCV_IPP_MINMAX)
+option(OPENCV_IPP_MINMAX "Enable IPP optimizations for minMaxLoc/minMaxIdx (+200Kb in binary size)" OFF)
+if(OPENCV_IPP_MINMAX)
+  add_definitions(-DOPENCV_IPP_MINMAX=1)
+endif()
+ocv_check_environment_variables(OPENCV_IPP_SUM)
+option(OPENCV_IPP_SUM "Enable IPP optimizations for sum (+100Kb in binary size)" OFF)
+if(OPENCV_IPP_SUM)
+  add_definitions(-DOPENCV_IPP_SUM=1)
+endif()
+
 file(GLOB lib_cuda_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.h")

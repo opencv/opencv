@@ -224,6 +224,16 @@ Following options can be used to produce special builds with instrumentation or 
 @see [Link time optimization](https://gcc.gnu.org/wiki/LinkTimeOptimization)
 @see [ThinLTO](https://clang.llvm.org/docs/ThinLTO.html)
 
+## Enable IPP optimization
+
+Following options can be used to enables IPP optimizations for each functions but increases the size of the opencv library. All options are disabled by default.
+
+| Option | Functions | + roughly size |
+| -------| --------- | -------------- |
+| `OPENCV_IPP_GAUSSIAN_BLUR` | GaussianBlur() | +8Mb |
+| `OPENCV_IPP_MEAN` | mean() / meanStdDev() | +0.2Mb |
+| `OPENCV_IPP_MINMAX` | minMaxLoc() / minMaxIdx() | +0.2Mb |
+| `OPENCV_IPP_SUM` | sum() | +0.1Mb |
 
 # Functional features and dependencies {#tutorial_config_reference_func}
 
