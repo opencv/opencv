@@ -207,27 +207,41 @@ public:
             256 // levels
         );
 
-        CV_Assert(!blobs.empty() || ieInpNodes.size() == 2);
+        CV_Assert(!blobs.empty() || ieInpNodes.size() == 1 + (int)hasWeights + (int)hasBias);
 
-        size_t numChannels = 1;
-        if (blobs.empty())
-            for (const size_t& dim : ieInpNodes[1]->get_shape())
-                numChannels *= dim;
-        else
-            numChannels = blobs[0].total();
+        std::shared_ptr<ngraph::Node> weights = nullptr, bias = nullptr;
+        if (blobs.empty()) {
+            if (hasWeights)
+                weights = ieInpNodes[1];
+            if (hasBias)
+                bias = ieInpNodes[1 + (int)hasWeights];
+        } else {
+            std::vector<size_t> shape = ieInpNodes[0]->get_shape();
+            int cAxis = normalize_axis(axis, shape.size());
 
-        std::vector<size_t> shape(ieInpNodes[0]->get_shape().size(), 1);
-        int cAxis = normalize_axis(axis, shape.size());
-        shape[cAxis] = numChannels;
+            size_t numWeights = blobs[0].total();
+            for (int i = 0; i < cAxis; ++i) {
+                shape[i] = 1;
+            }
+            for (int i = cAxis; i < shape.size(); ++i) {
+                if (numWeights == 1) {
+                    shape[i] = 1;
+                }
+                numWeights = std::max(numWeights / shape[i], (size_t)1);
+            }
+
+            if (hasWeights)
+                weights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, blobs[0].data);
+            if (hasBias)
+                bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, blobs[(int)hasWeights].data);
+        }
 
         std::shared_ptr<ngraph::Node> res = ieInpNodes[0];
         if (hasWeights) {
-            auto ieWeights = blobs.empty() ? ieInpNodes[1] : std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, blobs[0].data);
-            res = std::make_shared<ngraph::op::v1::Multiply>(res, ieWeights);
+            res = std::make_shared<ngraph::op::v1::Multiply>(res, weights);
         }
         if (hasBias) {
-            auto ieBias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, blobs[(int)hasWeights].data);
-            res = std::make_shared<ngraph::op::v1::Add>(res, ieBias);
+            res = std::make_shared<ngraph::op::v1::Add>(res, bias);
         }
 
         outLow = -128; outHigh = 127;

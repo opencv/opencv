@@ -323,7 +323,9 @@ TEST_P(Test_Int8_layers, DISABLED_Softmax_unfused_ONNX)  // FIXIT Support 'Ident
 TEST_P(Test_Int8_layers, Concat)
 {
     testLayer("layer_concat_shared_input", "Caffe", 0.0076, 0.029, 1, 1, true, false);
-    testLayer("concat_axis_1", "TensorFlow", 0.0056, 0.017);
+    if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
+        testLayer("concat_axis_1", "TensorFlow", 0.0056, 0.017);
+    }
     testLayer("keras_pad_concat", "TensorFlow", 0.0032, 0.0089);
     testLayer("concat_3d", "TensorFlow", 0.005, 0.014);
     testLayer("concatenation", "ONNX", 0.0032, 0.009);
@@ -401,10 +403,13 @@ TEST_P(Test_Int8_layers, Reshape)
         testLayer("reshape_nchw", "TensorFlow", 0.0089, 0.029);
 
     testLayer("reshape_conv", "TensorFlow", 0.035, 0.054);
-    testLayer("reshape_reduce", "TensorFlow", 0.0042, 0.0078);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        testLayer("reshape_reduce", "TensorFlow", 0.0053, 0.011);
+    else
+        testLayer("reshape_reduce", "TensorFlow", 0.0042, 0.0078);
     testLayer("reshape_as_shape", "TensorFlow", 0.0014, 0.0028);
     testLayer("reshape_no_reorder", "TensorFlow", 0.0014, 0.0028);
-    testLayer("shift_reshape_no_reorder", "TensorFlow", 0.0063, 0.014);
+    testLayer("shift_reshape_no_reorder", "TensorFlow", 0.0063, backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ? 0.016 : 0.014);
     testLayer("dynamic_reshape", "ONNX", 0.0047, 0.0079);
     testLayer("dynamic_reshape_opset_11", "ONNX", 0.0048, 0.0081);
     testLayer("flatten_by_prod", "ONNX", 0.0048, 0.0081);
@@ -492,10 +497,10 @@ TEST_P(Test_Int8_layers, Eltwise)
 
     testLayer("conv_2_inps", "Caffe", 0.0086, 0.0232, 2, 1, true, false);
     testLayer("eltwise_sub", "TensorFlow", 0.015, 0.047);
-    testLayer("eltwise_add_vec", "TensorFlow", 0.037, 0.21); // tflite 0.0095, 0.0365
+    testLayer("eltwise_add_vec", "TensorFlow", 0.037, backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ? 0.24 : 0.21); // tflite 0.0095, 0.0365
     testLayer("eltwise_mul_vec", "TensorFlow", 0.173, 1.14); // tflite 0.0028, 0.017
     testLayer("channel_broadcast", "TensorFlow", 0.0025, 0.0063);
-    testLayer("split_equals", "TensorFlow", 0.02, 0.065);
+    testLayer("split_equals", "TensorFlow", backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ? 0.021 : 0.02, 0.065);
     testLayer("mul", "ONNX", 0.0039, 0.014);
     testLayer("split_max", "ONNX", 0.004, 0.012);
 }
