@@ -255,8 +255,8 @@ private:
 struct BaseAgeGenderOV: public ::testing::Test {
     BaseAgeGenderOV() {
         initDLDTDataPath();
-        xml_path  = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        bin_path  = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        xml_path  = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        bin_path  = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         device    = "CPU";
         blob_path = "age-gender-recognition-retail-0013.blob";
     }
