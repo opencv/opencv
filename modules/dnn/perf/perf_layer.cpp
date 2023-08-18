@@ -678,7 +678,6 @@ PERF_TEST_P_(Layer_FullyConnected, fc)
     lp.set("axis", input.dims - 1);
     lp.set("is_matmul", weights.dims > 2);
     lp.set("bias_term", false);
-    lp.set("transB", true);
     lp.set("num_output", (int)weights.total(0, weights.dims - 1));
     lp.blobs.resize(1, weights);
 
