@@ -927,7 +927,7 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     CV_INSTRUMENT_REGION();
 
     Mat src = _src.getMat();
-    CV_CheckTrue(src.isContinuous(), "broadcast: input array must be continuous");
+    CV_CheckTrue(src.isContinuous(), "broadcast: input array must be contiguous");
     CV_CheckChannelsEQ(src.channels(), 1, "broadcast: input array must be single channel");
 
     Mat shape = _shape.getMat();
@@ -961,8 +961,8 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     }
     // copy if same shape
     if (std::accumulate(is_same_shape.begin(), is_same_shape.end(), 1, std::multiplies<int>()) != 0) {
-        const auto *p_src = src.ptr<const void>();
-        auto *p_dst = dst.ptr<void>();
+        const auto *p_src = src.ptr<const char>();
+        auto *p_dst = dst.ptr<char>();
         std::memcpy(p_dst, p_src, dst.total() * dst.elemSize());
         return;
     }
@@ -986,9 +986,7 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
         int nrows = flatten_shapes[1][max_ndims - 2];
         int ncols = flatten_shapes[1][max_ndims - 1];
         int nplanes = 1;
-        if (esz != 1 && esz != 2 && esz != 4 && esz != 8) {
-            CV_Error(Error::StsNotImplemented, "not supported");
-        }
+        CV_Check(esz, esz == 1 || esz == 2 || esz == 4 || esz == 8, "broadcast: not supported data type");
 
         for (int k = 0; k < max_ndims - 2; k++) {
             nplanes *= flatten_shapes[1][k];
@@ -1028,6 +1026,8 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
                 OPENCV_CORE_BROADCAST_LOOP(int32_t);
             } else if (esz == 8) {
                 OPENCV_CORE_BROADCAST_LOOP(int64_t);
+            } else {
+                CV_Error(cv::Error::StsNotImplemented, "");
             }
             #undef OPENCV_CORE_BROADCAST_LOOP
         }
