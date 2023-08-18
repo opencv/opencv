@@ -110,16 +110,6 @@ if(NOT ${found})
     endif()
   endif()
 
-  if(__update_python_vars)
-    # Clear find_host_package side effects
-    unset(PYTHONINTERP_FOUND)
-    unset(PYTHON_EXECUTABLE CACHE)
-    unset(PYTHON_VERSION_STRING)
-    unset(PYTHON_VERSION_MAJOR)
-    unset(PYTHON_VERSION_MINOR)
-    unset(PYTHON_VERSION_PATCH)
-  endif()
-
   if(_found)
     set(_version_major_minor "${_version_major}.${_version_minor}")
 
@@ -261,6 +251,16 @@ if(NOT ${found})
   set(${packages_path} "${_packages_path}" CACHE PATH "Where to install the python packages.")
   set(${numpy_include_dirs} ${_numpy_include_dirs} CACHE PATH "Path to numpy headers")
   set(${numpy_version} "${_numpy_version}" CACHE INTERNAL "")
+
+  if(__update_python_vars)
+    # Clear find_host_package side effects
+    unset(PYTHONINTERP_FOUND)
+    unset(PYTHON_EXECUTABLE CACHE)
+    unset(PYTHON_VERSION_STRING)
+    unset(PYTHON_VERSION_MAJOR)
+    unset(PYTHON_VERSION_MINOR)
+    unset(PYTHON_VERSION_PATCH)
+  endif()
 endif()
 endfunction(find_python)
 
