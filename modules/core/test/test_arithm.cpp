@@ -2284,7 +2284,7 @@ TEST(BroadcastTo, basic) {
         return index;
     };
 
-    auto fn_verify = [get_index](const Mat& ref, const Mat& res) {
+    auto fn_verify = [&get_index](const Mat& ref, const Mat& res) {
         // check type
         EXPECT_EQ(ref.type(), res.type());
         // check shape
