@@ -1134,7 +1134,7 @@ struct ColumnSum<int, float> :
             {
                 int i = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if CV_SIMD //TODO: temporarily disable CV_SIMD_SCALABLE due to an internal bug with GCC 13.
                 for( ; i <= width-VTraits<v_int32>::vlanes(); i+=VTraits<v_int32>::vlanes() )
                 {
                     v_int32 v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
