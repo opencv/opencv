@@ -11,6 +11,7 @@
 #include <type_traits>                 // is_base_of
 
 #include <opencv2/gapi/gmetaarg.hpp>   // GMetaArg + all descr_of
+#include <opencv2/gapi/streaming/source.hpp> // IStreamSource
 
 namespace cv {
 namespace gapi {
@@ -23,7 +24,7 @@ class GAPI_EXPORTS QueueSourceBase: public cv::gapi::wip::IStreamSource {
 
 public:
     explicit QueueSourceBase(const cv::GMetaArg &m);
-    void push(const Data &data);
+    void push(Data &&data);
     virtual bool pull(Data &data) override;
     virtual void halt() override;
     virtual GMetaArg descr_of() const override;

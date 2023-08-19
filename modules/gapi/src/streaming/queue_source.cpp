@@ -29,7 +29,15 @@ QueueSourceBase::QueueSourceBase(const cv::GMetaArg &m)
     m_priv->m = m;
 }
 
-void QueueSourceBase::push(const Data &data) {
+void QueueSourceBase::push(Data &&data) {
+
+    // Tag data with seq_id/ts
+    const auto now = std::chrono::system_clock::now();
+    const auto dur = std::chrono::duration_cast<std::chrono::microseconds>
+        (now.time_since_epoch());
+    data.meta[cv::gapi::streaming::meta_tag::timestamp] = int64_t{dur.count()};
+    data.meta[cv::gapi::streaming::meta_tag::seq_id]    = int64_t{m_priv->c++};
+
     m_priv->q.push(data);
 }
 
@@ -39,13 +47,6 @@ bool QueueSourceBase::pull(Data &data) {
     if (m_priv->halted) {
         return false;
     }
-
-    // Tag data with seq_id/ts
-    const auto now = std::chrono::system_clock::now();
-    const auto dur = std::chrono::duration_cast<std::chrono::microseconds>
-        (now.time_since_epoch());
-    data.meta[cv::gapi::streaming::meta_tag::timestamp] = int64_t{dur.count()};
-    data.meta[cv::gapi::streaming::meta_tag::seq_id]    = int64_t{m_priv->c++};
     return true;
 }
 
