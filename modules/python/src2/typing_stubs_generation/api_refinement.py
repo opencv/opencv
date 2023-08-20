@@ -6,14 +6,19 @@ from typing import cast, Sequence, Callable, Iterable
 
 from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode, TypeNode,
                     ClassProperty, PrimitiveTypeNode, ASTNodeTypeNode,
-                    AggregatedTypeNode)
+                    AggregatedTypeNode, CallableTypeNode, AnyTypeNode,
+                    TupleTypeNode, UnionTypeNode, ProtocolClassNode,
+                    DictTypeNode, ClassTypeNode)
 from .ast_utils import (find_function_node, SymbolName,
                         for_each_function_overload)
+from .types_conversion import create_type_node
 
 
 def apply_manual_api_refinement(root: NamespaceNode) -> None:
+    refine_highgui_module(root)
     refine_cuda_module(root)
     export_matrix_type_constants(root)
+    refine_dnn_module(root)
     # Export OpenCV exception class
     builtin_exception = root.add_class("Exception")
     builtin_exception.is_exported = False
@@ -22,6 +27,29 @@ def apply_manual_api_refinement(root: NamespaceNode) -> None:
         refine_symbol(root, symbol_name)
     version_constant = root.add_constant("__version__", "<unused>")
     version_constant._value_type = "str"
+
+    """
+    def redirectError(
+        onError: Callable[[int, str, str, str, int], None] | None
+    ) -> None: ...
+    """
+    root.add_function("redirectError", [
+        FunctionNode.Arg(
+            "onError",
+            OptionalTypeNode(
+                CallableTypeNode(
+                    "ErrorCallback",
+                    [
+                        PrimitiveTypeNode.int_(),
+                        PrimitiveTypeNode.str_(),
+                        PrimitiveTypeNode.str_(),
+                        PrimitiveTypeNode.str_(),
+                        PrimitiveTypeNode.int_()
+                    ]
+                )
+            )
+        )
+    ])
 
 
 def export_matrix_type_constants(root: NamespaceNode) -> None:
@@ -103,6 +131,171 @@ def refine_cuda_module(root: NamespaceNode) -> None:
     for ns in [ns for ns_name, ns in root.namespaces.items()
                if ns_name.startswith("cuda")]:
         fix_namespace_usage_scope(ns)
+
+
+def refine_highgui_module(root: NamespaceNode) -> None:
+    # Check if library is built with enabled highgui module
+    if "destroyAllWindows" not in root.functions:
+        return
+    """
+    def createTrackbar(trackbarName: str,
+                       windowName: str,
+                       value: int,
+                       count: int,
+                       onChange: Callable[[int], None]) -> None: ...
+    """
+    root.add_function(
+        "createTrackbar",
+        [
+            FunctionNode.Arg("trackbarName", PrimitiveTypeNode.str_()),
+            FunctionNode.Arg("windowName", PrimitiveTypeNode.str_()),
+            FunctionNode.Arg("value", PrimitiveTypeNode.int_()),
+            FunctionNode.Arg("count", PrimitiveTypeNode.int_()),
+            FunctionNode.Arg("onChange",
+                             CallableTypeNode("TrackbarCallback",
+                                              PrimitiveTypeNode.int_("int"))),
+        ]
+    )
+    """
+    def createButton(buttonName: str,
+                     onChange: Callable[[tuple[int] | tuple[int, Any]], None],
+                     userData: Any | None = ...,
+                     buttonType: int = ...,
+                     initialButtonState: int = ...) -> None: ...
+    """
+    root.add_function(
+        "createButton",
+        [
+            FunctionNode.Arg("buttonName", PrimitiveTypeNode.str_()),
+            FunctionNode.Arg(
+                "onChange",
+                CallableTypeNode(
+                    "ButtonCallback",
+                    UnionTypeNode(
+                        "onButtonChangeCallbackData",
+                        [
+                            TupleTypeNode("onButtonChangeCallbackData",
+                                          [PrimitiveTypeNode.int_(), ]),
+                            TupleTypeNode("onButtonChangeCallbackData",
+                                          [PrimitiveTypeNode.int_(),
+                                           AnyTypeNode("void*")])
+                        ]
+                    )
+                )),
+            FunctionNode.Arg("userData",
+                             OptionalTypeNode(AnyTypeNode("void*")),
+                             default_value="None"),
+            FunctionNode.Arg("buttonType", PrimitiveTypeNode.int_(),
+                             default_value="0"),
+            FunctionNode.Arg("initialButtonState", PrimitiveTypeNode.int_(),
+                             default_value="0")
+        ]
+    )
+    """
+    def setMouseCallback(
+        windowName: str,
+        onMouse: Callback[[int, int, int, int, Any | None], None],
+        param: Any | None = ...
+    ) -> None: ...
+    """
+    root.add_function(
+        "setMouseCallback",
+        [
+            FunctionNode.Arg("windowName", PrimitiveTypeNode.str_()),
+            FunctionNode.Arg(
+                "onMouse",
+                CallableTypeNode("MouseCallback", [
+                    PrimitiveTypeNode.int_(),
+                    PrimitiveTypeNode.int_(),
+                    PrimitiveTypeNode.int_(),
+                    PrimitiveTypeNode.int_(),
+                    OptionalTypeNode(AnyTypeNode("void*"))
+                ])
+            ),
+            FunctionNode.Arg("param", OptionalTypeNode(AnyTypeNode("void*")),
+                             default_value="None")
+        ]
+    )
+
+
+def refine_dnn_module(root: NamespaceNode) -> None:
+    if "dnn" not in root.namespaces:
+        return
+    dnn_module = root.namespaces["dnn"]
+
+    """
+    class LayerProtocol(Protocol):
+        def __init__(
+            self, params: dict[str, DictValue],
+            blobs: typing.Sequence[cv2.typing.MatLike]
+        ) -> None: ...
+
+        def getMemoryShapes(
+            self, inputs: typing.Sequence[typing.Sequence[int]]
+        ) -> typing.Sequence[typing.Sequence[int]]: ...
+
+        def forward(
+            self, inputs: typing.Sequence[cv2.typing.MatLike]
+        ) -> typing.Sequence[cv2.typing.MatLike]: ...
+    """
+    layer_proto = ProtocolClassNode("LayerProtocol", dnn_module)
+    layer_proto.add_function(
+        "__init__",
+        arguments=[
+            FunctionNode.Arg(
+                "params",
+                DictTypeNode(
+                    "LayerParams", PrimitiveTypeNode.str_(),
+                    create_type_node("cv::dnn::DictValue")
+                )
+            ),
+            FunctionNode.Arg("blobs", create_type_node("vector<cv::Mat>"))
+        ]
+    )
+    layer_proto.add_function(
+        "getMemoryShapes",
+        arguments=[
+            FunctionNode.Arg("inputs",
+                             create_type_node("vector<vector<int>>"))
+        ],
+        return_type=FunctionNode.RetType(
+            create_type_node("vector<vector<int>>")
+        )
+    )
+    layer_proto.add_function(
+        "forward",
+        arguments=[
+            FunctionNode.Arg("inputs", create_type_node("vector<cv::Mat>"))
+        ],
+        return_type=FunctionNode.RetType(create_type_node("vector<cv::Mat>"))
+    )
+
+    """
+    def dnn_registerLayer(layerTypeName: str,
+                          layerClass: typing.Type[LayerProtocol]) -> None: ...
+    """
+    root.add_function(
+        "dnn_registerLayer",
+        arguments=[
+            FunctionNode.Arg("layerTypeName", PrimitiveTypeNode.str_()),
+            FunctionNode.Arg(
+                "layerClass",
+                ClassTypeNode(ASTNodeTypeNode(
+                    layer_proto.export_name, f"dnn.{layer_proto.export_name}"
+                ))
+            )
+        ]
+    )
+
+    """
+    def dnn_unregisterLayer(layerTypeName: str) -> None: ...
+    """
+    root.add_function(
+        "dnn_unregisterLayer",
+        arguments=[
+            FunctionNode.Arg("layerTypeName", PrimitiveTypeNode.str_())
+        ]
+    )
 
 
 def _trim_class_name_from_argument_types(

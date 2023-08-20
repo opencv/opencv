@@ -34,7 +34,16 @@ public:
     PyParams& cfgNormalize(const std::string &layer_name, bool flag);
 
     GAPI_WRAP
-    PyParams& cfgExecutionProvider(ep::OpenVINO ov_ep);
+    PyParams& cfgAddExecutionProvider(ep::OpenVINO ep);
+
+    GAPI_WRAP
+    PyParams& cfgAddExecutionProvider(ep::DirectML ep);
+
+    GAPI_WRAP
+    PyParams& cfgAddExecutionProvider(ep::CUDA ep);
+
+    GAPI_WRAP
+    PyParams& cfgAddExecutionProvider(ep::TensorRT ep);
 
     GAPI_WRAP
     PyParams& cfgDisableMemPattern();

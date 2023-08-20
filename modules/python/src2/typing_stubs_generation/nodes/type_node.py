@@ -839,6 +839,21 @@ class CallableTypeNode(AggregatedTypeNode):
         yield from super().required_usage_imports
 
 
+class ClassTypeNode(ContainerTypeNode):
+    """Type node representing types themselves (refer to typing.Type)
+    """
+    def __init__(self, value: TypeNode) -> None:
+        super().__init__(value.ctype_name, (value,))
+
+    @property
+    def type_format(self) -> str:
+        return "typing.Type[{}]"
+
+    @property
+    def types_separator(self) -> str:
+        return ", "
+
+
 def _resolve_symbol(root: Optional[ASTNode], full_symbol_name: str) -> Optional[ASTNode]:
     """Searches for a symbol with the given full export name in the AST
     starting from the `root`.

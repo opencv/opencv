@@ -511,14 +511,17 @@ class ArgInfo(object):
         return self.enclosing_arg.name + '.' + self.name
 
     def isbig(self):
-        return self.tp in ["Mat", "vector_Mat", "cuda::GpuMat", "GpuMat", "vector_GpuMat", "UMat", "vector_UMat"] # or self.tp.startswith("vector")
+        return self.tp in ["Mat", "vector_Mat",
+                           "cuda::GpuMat", "cuda_GpuMat", "GpuMat",
+                           "vector_GpuMat", "vector_cuda_GpuMat",
+                           "UMat", "vector_UMat"] # or self.tp.startswith("vector")
 
     def crepr(self):
         return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
 
 
 def find_argument_class_info(argument_type, function_namespace,
-                            function_class_name, known_classes):
+                             function_class_name, known_classes):
     # type: (str, str, str, dict[str, ClassInfo]) -> ClassInfo | None
     """Tries to find corresponding class info for the provided argument type
 
