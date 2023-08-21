@@ -123,24 +123,85 @@ void fast_gemm_packB(const Mat &B, std::vector<float> &packed_B, bool trans) {
     }
 }
 
-static void fast_gemm_f32(int k, const float *a, const float *b, float *c, int ldc, const float alpha) {
-    float sbuf[FAST_GEMM_F32_MR * FAST_GEMM_F32_NR];
-    memset(sbuf, 0, sizeof(sbuf));
-    for(int p = 0; p < k; p++) {
-        for( int i = 0; i < FAST_GEMM_F32_MR; i++ ) {
-            float ai = a[FAST_GEMM_F32_MR * p + i];
-            for( int j = 0; j < FAST_GEMM_F32_NR; j++ )
-                sbuf[i*FAST_GEMM_F32_NR + j] += b[FAST_GEMM_F32_NR * p + j] * ai;
-        }
-    }
-    for (int i = 0; i < FAST_GEMM_F32_MR; i++) {
-        for (int j = 0; j < FAST_GEMM_F32_NR; j++)
-            c[i * ldc + j] += alpha * sbuf[i * FAST_GEMM_F32_NR + j];
-    }
-}
+// 12x8 is optimal for CPU with 16 x 256-bit registers (AVX, AVX2)
+#if CV_AVX || CV_AVX2
+#if !CV_FMA3 // AVX workaround
+#undef _mm256_fmadd_ps
+#define _mm256_fmadd_ps(a, b, c) _mm256_add_ps(c, _mm256_mul_ps(a, b))
+#endif
+static void fast_gemm12x8_f32(int k, const char *a_, const char *b_,
+                              char *c_, int ldc, const void* palpha) {
+    const float* a = (const float*)a_;
+    const float* b = (const float*)b_;
+    float* c = (float*)c_;
+    float alpha = *(const float*)palpha;
 
+    __m256 s00 = _mm256_setzero_ps(),
+           s10 = _mm256_setzero_ps(),
+           s20 = _mm256_setzero_ps(),
+           s30 = _mm256_setzero_ps(),
+           s40 = _mm256_setzero_ps(),
+           s50 = _mm256_setzero_ps(),
+           s60 = _mm256_setzero_ps(),
+           s70 = _mm256_setzero_ps(),
+           s80 = _mm256_setzero_ps(),
+           s90 = _mm256_setzero_ps(),
+           sa0 = _mm256_setzero_ps(),
+           sb0 = _mm256_setzero_ps();
+        for (int p = 0; p < k; p++, a += FAST_GEMM_F32_MR, b += FAST_GEMM_F32_NR) {
+            __m256 b0 = _mm256_loadu_ps(b);
+
+            __m256 a0 = _mm256_set1_ps(*a);
+            s00 = _mm256_fmadd_ps(b0, a0, s00);
+            __m256 a1 = _mm256_set1_ps(*(a + 1));
+            s10 = _mm256_fmadd_ps(b0, a1, s10);
+            __m256 a2 = _mm256_set1_ps(*(a + 2));
+            s20 = _mm256_fmadd_ps(b0, a2, s20);
+
+            a0 = _mm256_set1_ps(*(a + 3));
+            s30 = _mm256_fmadd_ps(b0, a0, s30);
+            a1 = _mm256_set1_ps(*(a + 4));
+            s40 = _mm256_fmadd_ps(b0, a1, s40);
+            a2 = _mm256_set1_ps(*(a + 5));
+            s50 = _mm256_fmadd_ps(b0, a2, s50);
+
+            a0 = _mm256_set1_ps(*(a + 6));
+            s60 = _mm256_fmadd_ps(b0, a0, s60);
+            a1 = _mm256_set1_ps(*(a + 7));
+            s70 = _mm256_fmadd_ps(b0, a1, s70);
+            a2 = _mm256_set1_ps(*(a + 8));
+            s80 = _mm256_fmadd_ps(b0, a2, s80);
+
+            a0 = _mm256_set1_ps(*(a + 9));
+            s90 = _mm256_fmadd_ps(b0, a0, s90);
+            a1 = _mm256_set1_ps(*(a + 10));
+            sa0 = _mm256_fmadd_ps(b0, a1, sa0);
+            a2 = _mm256_set1_ps(*(a + 11));
+            sb0 = _mm256_fmadd_ps(b0, a2, sb0);
+        }
+
+        __m256 c0, c1, c2, c3, v_alpha = _mm256_set1_ps(alpha);
+    #define FAST_GEMM_FINALE(row0, row1, row2, row3)    \
+        c0 = _mm256_loadu_ps(c + row0 * ldc);   \
+        c1 = _mm256_loadu_ps(c + row1 * ldc);   \
+        c2 = _mm256_loadu_ps(c + row2 * ldc);   \
+        c3 = _mm256_loadu_ps(c + row3 * ldc);   \
+        c0 = _mm256_fmadd_ps(s##row0##0, v_alpha, c0);  \
+        c1 = _mm256_fmadd_ps(s##row1##0, v_alpha, c1);  \
+        c1 = _mm256_fmadd_ps(s##row1##0, v_alpha, c2);  \
+        c1 = _mm256_fmadd_ps(s##row1##0, v_alpha, c3);  \
+        _mm256_storeu_ps(c + row0 * ldc, c0);   \
+        _mm256_storeu_ps(c + row1 * ldc, c1);   \
+        _mm256_storeu_ps(c + row2 * ldc, c2);   \
+        _mm256_storeu_ps(c + row3 * ldc, c3);   \
+
+        FAST_GEMM_FINALE(0, 1,  2,  3);
+        FAST_GEMM_FINALE(4, 5,  6,  7);
+        FAST_GEMM_FINALE(8, 9, 10, 11);
+    #undef FAST_GEMM_FINALE
+}
 // 8x12 is optimal for CPU with 32 x 128-bit registers (NEON with ARMv8.x-A or ARMv9.x-A)
-#if CV_NEON && CV_NEON_AARCH64
+#elif CV_NEON && CV_NEON_AARCH64
 static void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
                               char *c_, int ldc, const void* palpha) {
     const float* a = (const float*)a_;
@@ -220,84 +281,26 @@ static void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
     FAST_GEMM_FINALE(6, 7);
 #undef FAST_GEMM_FINALE
 }
-#endif
-
-// 12x8 is optimal for CPU with 16 x 256-bit registers (AVX, AVX2)
-#if CV_AVX || CV_AVX2
-#if !CV_FMA3 // AVX workaround
-#undef _mm256_fmadd_ps
-#define _mm256_fmadd_ps(a, b, c) _mm256_add_ps(c, _mm256_mul_ps(a, b))
-#endif
-static void fast_gemm12x8_f32(int k, const char *a_, const char *b_,
-                              char *c_, int ldc, const void* palpha) {
+#else
+static void fast_gemm_f32(int k, const char *a_, const char *b_, char *c_, int ldc, const void palpha) {
     const float* a = (const float*)a_;
     const float* b = (const float*)b_;
     float* c = (float*)c_;
     float alpha = *(const float*)palpha;
 
-    __m256 s00 = _mm256_setzero_ps(),
-           s10 = _mm256_setzero_ps(),
-           s20 = _mm256_setzero_ps(),
-           s30 = _mm256_setzero_ps(),
-           s40 = _mm256_setzero_ps(),
-           s50 = _mm256_setzero_ps(),
-           s60 = _mm256_setzero_ps(),
-           s70 = _mm256_setzero_ps(),
-           s80 = _mm256_setzero_ps(),
-           s90 = _mm256_setzero_ps(),
-           sa0 = _mm256_setzero_ps(),
-           sb0 = _mm256_setzero_ps();
-        for (int p = 0; p < k; p++, a += FAST_GEMM_F32_MR, b += FAST_GEMM_F32_NR) {
-            __m256 b0 = _mm256_loadu_ps(b);
-
-            __m256 a0 = _mm256_set1_ps(*a);
-            s00 = _mm256_fmadd_ps(b0, a0, s00);
-            __m256 a1 = _mm256_set1_ps(*(a + 1));
-            s10 = _mm256_fmadd_ps(b0, a1, s10);
-            __m256 a2 = _mm256_set1_ps(*(a + 2));
-            s20 = _mm256_fmadd_ps(b0, a2, s20);
-
-            a0 = _mm256_set1_ps(*(a + 3));
-            s30 = _mm256_fmadd_ps(b0, a0, s30);
-            a1 = _mm256_set1_ps(*(a + 4));
-            s40 = _mm256_fmadd_ps(b0, a1, s40);
-            a2 = _mm256_set1_ps(*(a + 5));
-            s50 = _mm256_fmadd_ps(b0, a2, s50);
-
-            a0 = _mm256_set1_ps(*(a + 6));
-            s60 = _mm256_fmadd_ps(b0, a0, s60);
-            a1 = _mm256_set1_ps(*(a + 7));
-            s70 = _mm256_fmadd_ps(b0, a1, s70);
-            a2 = _mm256_set1_ps(*(a + 8));
-            s80 = _mm256_fmadd_ps(b0, a2, s80);
-
-            a0 = _mm256_set1_ps(*(a + 9));
-            s90 = _mm256_fmadd_ps(b0, a0, s90);
-            a1 = _mm256_set1_ps(*(a + 10));
-            sa0 = _mm256_fmadd_ps(b0, a1, sa0);
-            a2 = _mm256_set1_ps(*(a + 11));
-            sb0 = _mm256_fmadd_ps(b0, a2, sb0);
+    float sbuf[FAST_GEMM_F32_MR * FAST_GEMM_F32_NR];
+    memset(sbuf, 0, sizeof(sbuf));
+    for(int p = 0; p < k; p++) {
+        for( int i = 0; i < FAST_GEMM_F32_MR; i++ ) {
+            float ai = a[FAST_GEMM_F32_MR * p + i];
+            for( int j = 0; j < FAST_GEMM_F32_NR; j++ )
+                sbuf[i*FAST_GEMM_F32_NR + j] += b[FAST_GEMM_F32_NR * p + j] * ai;
         }
-
-        __m256 c0, c1, c2, c3, v_alpha = _mm256_set1_ps(alpha);
-    #define FAST_GEMM_FINALE(row0, row1, row2, row3)    \
-        c0 = _mm256_loadu_ps(c + row0 * ldc);   \
-        c1 = _mm256_loadu_ps(c + row1 * ldc);   \
-        c2 = _mm256_loadu_ps(c + row2 * ldc);   \
-        c3 = _mm256_loadu_ps(c + row3 * ldc);   \
-        c0 = _mm256_fmadd_ps(s##row0##0, v_alpha, c0);  \
-        c1 = _mm256_fmadd_ps(s##row1##0, v_alpha, c1);  \
-        c1 = _mm256_fmadd_ps(s##row1##0, v_alpha, c2);  \
-        c1 = _mm256_fmadd_ps(s##row1##0, v_alpha, c3);  \
-        _mm256_storeu_ps(c + row0 * ldc, c0);   \
-        _mm256_storeu_ps(c + row1 * ldc, c1);   \
-        _mm256_storeu_ps(c + row2 * ldc, c2);   \
-        _mm256_storeu_ps(c + row3 * ldc, c3);   \
-
-        FAST_GEMM_FINALE(0, 1,  2,  3);
-        FAST_GEMM_FINALE(4, 5,  6,  7);
-        FAST_GEMM_FINALE(8, 9, 10, 11);
-    #undef FAST_GEMM_FINALE
+    }
+    for (int i = 0; i < FAST_GEMM_F32_MR; i++) {
+        for (int j = 0; j < FAST_GEMM_F32_NR; j++)
+            c[i * ldc + j] += alpha * sbuf[i * FAST_GEMM_F32_NR + j];
+    }
 }
 #endif
 
