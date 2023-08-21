@@ -7,6 +7,8 @@
 #include <chrono>
 #include <atomic>
 
+#include <ade/util/zip_range.hpp>
+
 #include <opencv2/gapi/streaming/queue_source.hpp>
 #include <opencv2/gapi/streaming/meta.hpp>
 
@@ -61,6 +63,34 @@ void QueueSourceBase::halt() {
 
 cv::GMetaArg QueueSourceBase::descr_of() const {
     return m_priv->m;
+}
+
+QueueInput::QueueInput(const cv::GMetaArgs &args) {
+    for (auto &&m : args) {
+        m_sources.emplace_back(new cv::gapi::wip::QueueSourceBase(m));
+    }
+}
+
+void QueueInput::push(cv::GRunArgs &&args) {
+    GAPI_Assert(m_sources.size() == args.size());
+    for (auto && it : ade::util::zip(ade::util::toRange(m_sources),
+                                     ade::util::toRange(args)))
+    {
+        auto &src = std::get<0>(it);
+        auto &obj = std::get<1>(it);
+
+        Data d;
+        d = obj;
+        src->push(std::move(d));
+    }
+}
+
+QueueInput::operator cv::GRunArgs () {
+    cv::GRunArgs args;
+    for (auto &&s : m_sources) {
+        args.push_back(s->ptr());
+    }
+    return args;
 }
 
 } // wip

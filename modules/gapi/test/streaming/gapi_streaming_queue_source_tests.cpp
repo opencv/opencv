@@ -87,4 +87,41 @@ TEST(GAPI_Streaming_Queue_Source, Mixed) {
     EXPECT_EQ(0, cvtest::norm(ref - eye, result, NORM_INF));
 }
 
+TEST(GAPI_Streaming_Queue_Input, SmokeTest) {
+
+    // Queue Input: a tiny wrapper atop of multiple queue sources.
+    // Allows users to pass all input data at once.
+
+    cv::GMat in1;
+    cv::GScalar in2;
+    cv::GMat out = in1 + in2;
+    cv::GStreamingCompiled comp = cv::GComputation(cv::GIn(in1, in2), cv::GOut(out))
+        .compileStreaming();
+
+    // FIXME: This API is too raw
+    cv::gapi::wip::QueueInput input({
+            cv::GMetaArg{ cv::GMatDesc{CV_8U, 1, cv::Size{64,64} } },
+            cv::GMetaArg{ cv::empty_scalar_desc() }
+        });
+    comp.setSource(input); // Implicit conversion allows it to be passed as-is.
+    comp.start();
+
+    // Push data via queue input
+    cv::Mat eye = cv::Mat::eye(cv::Size{64, 64}, CV_8UC1);
+    input.push(cv::gin(eye, cv::Scalar(1)));
+    input.push(cv::gin(eye, cv::Scalar(2)));
+    input.push(cv::gin(eye, cv::Scalar(3)));
+
+    // Pop data and validate
+    cv::Mat result;
+    ASSERT_TRUE(comp.pull(cv::gout(result)));
+    EXPECT_EQ(0, cvtest::norm(eye+1, result, NORM_INF));
+
+    ASSERT_TRUE(comp.pull(cv::gout(result)));
+    EXPECT_EQ(0, cvtest::norm(eye+2, result, NORM_INF));
+
+    ASSERT_TRUE(comp.pull(cv::gout(result)));
+    EXPECT_EQ(0, cvtest::norm(eye+3, result, NORM_INF));
+}
+
 } // namespace opencv_test

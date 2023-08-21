@@ -10,17 +10,20 @@
 #include <memory>                      // shared_ptr
 #include <type_traits>                 // is_base_of
 
+#include <opencv2/gapi/garg.hpp>       // GRunArgs
 #include <opencv2/gapi/gmetaarg.hpp>   // GMetaArg + all descr_of
 #include <opencv2/gapi/streaming/source.hpp> // IStreamSource
 
 namespace cv {
 namespace gapi {
 namespace wip {
-struct Data; // "forward-declaration" of GRunArg
+struct Data; // fwd-declare to avoid circular? header dependencies
 
 class GAPI_EXPORTS QueueSourceBase: public cv::gapi::wip::IStreamSource {
     class Priv;
     std::shared_ptr<Priv> m_priv;
+    // FIXME: Need to understand how it works with IStreamSource's shared_from_this
+    // Can we avoid having too many shared_ptrs here?
 
 public:
     explicit QueueSourceBase(const cv::GMetaArg &m);
@@ -45,6 +48,16 @@ public:
     void push(T t) {
         QueueSourceBase::push(Data{t});
     }
+};
+
+class GAPI_EXPORTS QueueInput {
+    std::vector<std::shared_ptr<QueueSourceBase> > m_sources;
+
+public:
+    explicit QueueInput(const cv::GMetaArgs &args);
+
+    void push(cv::GRunArgs &&ins);
+    operator cv::GRunArgs();
 };
 
 } // namespace wip

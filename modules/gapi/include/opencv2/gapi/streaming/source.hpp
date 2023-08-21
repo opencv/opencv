@@ -16,7 +16,7 @@
 namespace cv {
 namespace gapi {
 namespace wip {
-    struct Data; // "forward-declaration" of GRunArg
+struct Data; // forward-declaration of Data to avoid circular dependencies
 
 /**
  * @brief Abstract streaming pipeline source.
