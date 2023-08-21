@@ -2771,7 +2771,7 @@ int videoInput::start(int deviceID, videoDevice *VD){
     if(customSize){
         DebugPrintOut("SETUP: Default Format is set to %ix%i\n", currentWidth, currentHeight);
 
-        if (strcmp("OBS Virtual Camera", VD->nDeviceName) == 0)
+        if (strcmp("OBS Virtual Camera", VD->nDeviceName) == 0 || strcmp("Streamlabs Desktop Virtual Webcam", VD->nDeviceName) == 0)
         {
             // OBS Virtual Camera always returns S_OK on SetFormat(), even if it doesn't support
             // the actual format. So we have to choose a format that it supports manually, e.g. NV12.

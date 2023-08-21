@@ -290,8 +290,8 @@ TEST(Reproducibility_SSD, Accuracy)
 typedef testing::TestWithParam<tuple<Backend, Target> > Reproducibility_MobileNet_SSD;
 TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
 {
-    const string proto = findDataFile("dnn/MobileNetSSD_deploy.prototxt", false);
-    const string model = findDataFile("dnn/MobileNetSSD_deploy.caffemodel", false);
+    const string proto = findDataFile("dnn/MobileNetSSD_deploy_19e3ec3.prototxt", false);
+    const string model = findDataFile("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", false);
     Net net = readNetFromCaffe(proto, model);
     int backendId = get<0>(GetParam());
     int targetId = get<1>(GetParam());
