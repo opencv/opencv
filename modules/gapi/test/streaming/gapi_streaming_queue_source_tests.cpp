@@ -38,10 +38,10 @@ TEST(GAPI_Streaming_Queue_Source, SmokeTest) {
     // Note the queue source queues are unbounded to avoid deadlocks
 
     cv::Mat result;
-    comp.pull(cv::gout(result));
+    ASSERT_TRUE(comp.pull(cv::gout(result)));
     EXPECT_EQ(0, cvtest::norm(eye + 1, result, NORM_INF));
 
-    comp.pull(cv::gout(result));
+    ASSERT_TRUE(comp.pull(cv::gout(result)));
     EXPECT_EQ(0, cvtest::norm(eye*2 + 1, result, NORM_INF));
 }
 

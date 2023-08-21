@@ -18,6 +18,11 @@ namespace wip {
 
 class QueueSourceBase::Priv {
 public:
+    explicit Priv(const cv::GMetaArg &meta) {
+        m = meta;
+        halted = false;
+    }
+
     cv::GMetaArg m;
     cv::gapi::own::concurrent_bounded_queue<cv::GRunArg> q;
     int64_t c = 0;
@@ -25,8 +30,7 @@ public:
 };
 
 QueueSourceBase::QueueSourceBase(const cv::GMetaArg &m)
-    : m_priv(new Priv) {
-    m_priv->m = m;
+    : m_priv(new Priv(m)) {
 }
 
 void QueueSourceBase::push(Data &&data) {
