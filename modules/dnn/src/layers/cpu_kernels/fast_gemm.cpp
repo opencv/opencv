@@ -282,7 +282,8 @@ static void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
 #undef FAST_GEMM_FINALE
 }
 #else
-static void fast_gemm_f32(int k, const char *a_, const char *b_, char *c_, int ldc, const void palpha) {
+static void fast_gemm_f32(int k, const char *a_, const char *b_,
+                          char *c_, int ldc, const void* palpha) {
     const float* a = (const float*)a_;
     const float* b = (const float*)b_;
     float* c = (float*)c_;
