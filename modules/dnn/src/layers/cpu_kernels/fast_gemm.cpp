@@ -99,110 +99,31 @@ void fast_gemm_packB(const Mat &B, std::vector<float> &packed_B, bool trans) {
     if (!packed_B.empty()) {
         packed_B.clear();
     }
-    int total_size = (static_cast<int>(((N % NC + 12 - 1) / 12)) * 12 + static_cast<int>(N / NC) * NC) * K;
+    int total_size = static_cast<int>((N + NC - 1) / NC) * NC * K;
     packed_B.resize(total_size);
 
     const auto *ptr_B = B.ptr<char>();
     auto ptr_packed = packed_B.data();
-    auto packer = fast_gemm_pack12_f32;
+    std::function<void(int, int, const void*, int, int, void*)> packer;
+#if CV_AVX2 || CV_AVX
+    packer = fast_gemm_pack8_f32;
+#else
+    packer = fast_gemm_pack12_f32;
+#endif
     int n_tiles = (N + NC - 1) / NC;
     for (int r = 0; r < n_tiles; ++r) {
         int j0 = r * NC;
         int nc = N - j0 < NC ? N - j0 : NC;
+        int _nc = static_cast<int>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
         for (int k = 0; k < K; k += KC) {
             int kc = K - k < KC ? K - k : KC;
             packer(nc, kc, ptr_B + (k * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, ptr_packed);
-            ptr_packed += static_cast<int>((nc + 12 - 1) / 12) * kc * 12;
+            ptr_packed += _nc * kc;
         }
     }
 }
 
-static void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
-                            char *c_, int ldc, const void* palpha)
-{
-    const float* a = (const float*)a_;
-    const float* b = (const float*)b_;
-    float* c = (float*)c_;
-    float alpha = *(const float*)palpha;
-
-#ifdef CV_SIMD128
-    v_float32x4 s00 = v_setzero_f32(), s01 = s00, s02 = s00;
-    v_float32x4 s10 = s00, s11 = s00, s12 = s00;
-    v_float32x4 s20 = s00, s21 = s00, s22 = s00;
-    v_float32x4 s30 = s00, s31 = s00, s32 = s00;
-    v_float32x4 s40 = s00, s41 = s00, s42 = s00;
-    v_float32x4 s50 = s00, s51 = s00, s52 = s00;
-    v_float32x4 s60 = s00, s61 = s00, s62 = s00;
-    v_float32x4 s70 = s00, s71 = s00, s72 = s00;
-
-    for(int p = 0; p < k; p++, a += FAST_GEMM_F32_MR, b += FAST_GEMM_F32_NR) {
-        v_float32x4 b0 = v_load(b), b1 = v_load(b + 4), b2 = v_load(b + 8);
-
-        v_float32x4 a0 = v_setall_f32(*a);
-        s00 = v_fma(b0, a0, s00);
-        s01 = v_fma(b1, a0, s01);
-        s02 = v_fma(b2, a0, s02);
-        v_float32x4 a1 = v_setall_f32(*(a + 1));
-        s10 = v_fma(b0, a1, s10);
-        s11 = v_fma(b1, a1, s11);
-        s12 = v_fma(b2, a1, s12);
-
-        v_float32x4 a2 = v_setall_f32(*(a + 2));
-        s20 = v_fma(b0, a2, s20);
-        s21 = v_fma(b1, a2, s21);
-        s22 = v_fma(b2, a2, s22);
-        v_float32x4 a3 = v_setall_f32(*(a + 3));
-        s30 = v_fma(b0, a3, s30);
-        s31 = v_fma(b1, a3, s31);
-        s32 = v_fma(b2, a3, s32);
-
-        a0 = v_setall_f32(*(a + 4));
-        s40 = v_fma(b0, a0, s40);
-        s41 = v_fma(b1, a0, s41);
-        s42 = v_fma(b2, a0, s42);
-        a1 = v_setall_f32(*(a + 5));
-        s50 = v_fma(b0, a1, s50);
-        s51 = v_fma(b1, a1, s51);
-        s52 = v_fma(b2, a1, s52);
-
-        a2 = v_setall_f32(*(a + 6));
-        s60 = v_fma(b0, a2, s60);
-        s61 = v_fma(b1, a2, s61);
-        s62 = v_fma(b2, a2, s62);
-        a3 = v_setall_f32(*(a + 7));
-        s70 = v_fma(b0, a3, s70);
-        s71 = v_fma(b1, a3, s71);
-        s72 = v_fma(b2, a3, s72);
-    }
-
-    v_float32x4 c0, c1, c2, c3, c4, c5, v_alpha = v_setall_f32(alpha);
-#define FAST_GEMM_FINALE(row0, row1)       \
-    c0 = v_load(c + row0 * ldc);         \
-    c1 = v_load(c + row0 * ldc + 4);     \
-    c2 = v_load(c + row0 * ldc + 8);     \
-    c3 = v_load(c + row1 * ldc);         \
-    c4 = v_load(c + row1 * ldc + 4);     \
-    c5 = v_load(c + row1 * ldc + 8);     \
-    c0 = v_fma(s##row0##0, v_alpha, c0); \
-    c1 = v_fma(s##row0##1, v_alpha, c1); \
-    c2 = v_fma(s##row0##2, v_alpha, c2); \
-    c3 = v_fma(s##row1##0, v_alpha, c3); \
-    c4 = v_fma(s##row1##1, v_alpha, c4); \
-    c5 = v_fma(s##row1##2, v_alpha, c5); \
-    v_store(c + row0 * ldc, c0);         \
-    v_store(c + row0 * ldc + 4, c1);     \
-    v_store(c + row0 * ldc + 8, c2);     \
-    v_store(c + row1 * ldc, c3);         \
-    v_store(c + row1 * ldc + 4, c4);     \
-    v_store(c + row1 * ldc + 8, c5);
-
-    FAST_GEMM_FINALE(0, 1);
-    FAST_GEMM_FINALE(2, 3);
-    FAST_GEMM_FINALE(4, 5);
-    FAST_GEMM_FINALE(6, 7);
-#undef FAST_GEMM_FINALE
-
-#else
+static void fast_gemm_f32(int k, const float *a, const float *b, float *c, int ldc, const float alpha) {
     float sbuf[FAST_GEMM_F32_MR * FAST_GEMM_F32_NR];
     memset(sbuf, 0, sizeof(sbuf));
     for(int p = 0; p < k; p++) {
@@ -214,15 +135,176 @@ static void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
     }
     for (int i = 0; i < FAST_GEMM_F32_MR; i++) {
         for (int j = 0; j < FAST_GEMM_F32_NR; j++)
-            c[i*ldc + j] += alpha * sbuf[i * FAST_GEMM_F32_NR + j];
+            c[i * ldc + j] += alpha * sbuf[i * FAST_GEMM_F32_NR + j];
     }
-#endif
 }
 
+// 8x12 is optimal for CPU with 32 x 128-bit registers (NEON with ARMv8.x-A or ARMv9.x-A)
+#if CV_NEON && CV_NEON_AARCH64
+static void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
+                              char *c_, int ldc, const void* palpha) {
+    const float* a = (const float*)a_;
+    const float* b = (const float*)b_;
+    float* c = (float*)c_;
+    float alpha = *(const float*)palpha;
+
+    float32x4_t s00 = vdupq_n_f32(0.f), s01 = s00, s02 = s00;
+    float32x4_t s10 = s00, s11 = s00, s12 = s00;
+    float32x4_t s20 = s00, s21 = s00, s22 = s00;
+    float32x4_t s30 = s00, s31 = s00, s32 = s00;
+    float32x4_t s40 = s00, s41 = s00, s42 = s00;
+    float32x4_t s50 = s00, s51 = s00, s52 = s00;
+    float32x4_t s60 = s00, s61 = s00, s62 = s00;
+    float32x4_t s70 = s00, s71 = s00, s72 = s00;
+
+    for(int p = 0; p < k; p++, a += FAST_GEMM_F32_MR, b += FAST_GEMM_F32_NR)
+    {
+        float32x4_t a0 = vld1q_f32(a);
+        float32x4_t b0 = vld1q_f32(b), b1 = vld1q_f32(b + 4), b2 = vld1q_f32(b + 8);
+
+        s00 = vfmaq_laneq_f32(s00, b0, a0, 0);
+        s01 = vfmaq_laneq_f32(s01, b1, a0, 0);
+        s02 = vfmaq_laneq_f32(s02, b2, a0, 0);
+        s10 = vfmaq_laneq_f32(s10, b0, a0, 1);
+        s11 = vfmaq_laneq_f32(s11, b1, a0, 1);
+        s12 = vfmaq_laneq_f32(s12, b2, a0, 1);
+
+        s20 = vfmaq_laneq_f32(s20, b0, a0, 2);
+        s21 = vfmaq_laneq_f32(s21, b1, a0, 2);
+        s22 = vfmaq_laneq_f32(s22, b2, a0, 2);
+        s30 = vfmaq_laneq_f32(s30, b0, a0, 3);
+        s31 = vfmaq_laneq_f32(s31, b1, a0, 3);
+        s32 = vfmaq_laneq_f32(s32, b2, a0, 3);
+
+        a0 = vld1q_f32(a + 4);
+
+        s40 = vfmaq_laneq_f32(s40, b0, a0, 0);
+        s41 = vfmaq_laneq_f32(s41, b1, a0, 0);
+        s42 = vfmaq_laneq_f32(s42, b2, a0, 0);
+        s50 = vfmaq_laneq_f32(s50, b0, a0, 1);
+        s51 = vfmaq_laneq_f32(s51, b1, a0, 1);
+        s52 = vfmaq_laneq_f32(s52, b2, a0, 1);
+
+        s60 = vfmaq_laneq_f32(s60, b0, a0, 2);
+        s61 = vfmaq_laneq_f32(s61, b1, a0, 2);
+        s62 = vfmaq_laneq_f32(s62, b2, a0, 2);
+        s70 = vfmaq_laneq_f32(s70, b0, a0, 3);
+        s71 = vfmaq_laneq_f32(s71, b1, a0, 3);
+        s72 = vfmaq_laneq_f32(s72, b2, a0, 3);
+    }
+
+    float32x4_t c0, c1, c2, c3, c4, c5, v_alpha = vdupq_n_f32(alpha);
+#define FAST_GEMM_FINALE(row0, row1)         \
+    c0 = vld1q_f32(c + row0 * ldc);          \
+    c1 = vld1q_f32(c + row0 * ldc + 4);      \
+    c2 = vld1q_f32(c + row0 * ldc + 8);      \
+    c3 = vld1q_f32(c + row1 * ldc);          \
+    c4 = vld1q_f32(c + row1 * ldc + 4);      \
+    c5 = vld1q_f32(c + row1 * ldc + 8);      \
+    c0 = vfmaq_f32(s##row0##0, v_alpha, c0); \
+    c1 = vfmaq_f32(s##row0##1, v_alpha, c1); \
+    c2 = vfmaq_f32(s##row0##2, v_alpha, c2); \
+    c3 = vfmaq_f32(s##row1##0, v_alpha, c3); \
+    c4 = vfmaq_f32(s##row1##1, v_alpha, c4); \
+    c5 = vfmaq_f32(s##row1##2, v_alpha, c5); \
+    vst1q_f32(c + row0 * ldc, c0);           \
+    vst1q_f32(c + row0 * ldc + 4, c1);       \
+    vst1q_f32(c + row0 * ldc + 8, c2);       \
+    vst1q_f32(c + row1 * ldc, c3);           \
+    vst1q_f32(c + row1 * ldc + 4, c4);       \
+    vst1q_f32(c + row1 * ldc + 8, c5);
+
+    FAST_GEMM_FINALE(0, 1);
+    FAST_GEMM_FINALE(2, 3);
+    FAST_GEMM_FINALE(4, 5);
+    FAST_GEMM_FINALE(6, 7);
+#undef FAST_GEMM_FINALE
+}
+#endif
+
+// 12x8 is optimal for CPU with 16 x 256-bit registers (AVX, AVX2)
+#if CV_AVX || CV_AVX2
+#if !CV_FMA3 // AVX workaround
+#undef _mm256_fmadd_ps
+#define _mm256_fmadd_ps(a, b, c) _mm256_add_ps(c, _mm256_mul_ps(a, b))
+#endif
+static void fast_gemm12x8_f32(int k, const char *a_, const char *b_,
+                              char *c_, int ldc, const void* palpha) {
+    const float* a = (const float*)a_;
+    const float* b = (const float*)b_;
+    float* c = (float*)c_;
+    float alpha = *(const float*)palpha;
+
+    __m256 s00 = _mm256_setzero_ps(),
+           s10 = _mm256_setzero_ps(),
+           s20 = _mm256_setzero_ps(),
+           s30 = _mm256_setzero_ps(),
+           s40 = _mm256_setzero_ps(),
+           s50 = _mm256_setzero_ps(),
+           s60 = _mm256_setzero_ps(),
+           s70 = _mm256_setzero_ps(),
+           s80 = _mm256_setzero_ps(),
+           s90 = _mm256_setzero_ps(),
+           sa0 = _mm256_setzero_ps(),
+           sb0 = _mm256_setzero_ps();
+        for (int p = 0; p < k; p++, a += FAST_GEMM_F32_MR, b += FAST_GEMM_F32_NR) {
+            __m256 b0 = _mm256_loadu_ps(b);
+
+            __m256 a0 = _mm256_set1_ps(*a);
+            s00 = _mm256_fmadd_ps(b0, a0, s00);
+            __m256 a1 = _mm256_set1_ps(*(a + 1));
+            s10 = _mm256_fmadd_ps(b0, a1, s10);
+            __m256 a2 = _mm256_set1_ps(*(a + 2));
+            s20 = _mm256_fmadd_ps(b0, a2, s20);
+
+            a0 = _mm256_set1_ps(*(a + 3));
+            s30 = _mm256_fmadd_ps(b0, a0, s30);
+            a1 = _mm256_set1_ps(*(a + 4));
+            s40 = _mm256_fmadd_ps(b0, a1, s40);
+            a2 = _mm256_set1_ps(*(a + 5));
+            s50 = _mm256_fmadd_ps(b0, a2, s50);
+
+            a0 = _mm256_set1_ps(*(a + 6));
+            s60 = _mm256_fmadd_ps(b0, a0, s60);
+            a1 = _mm256_set1_ps(*(a + 7));
+            s70 = _mm256_fmadd_ps(b0, a1, s70);
+            a2 = _mm256_set1_ps(*(a + 8));
+            s80 = _mm256_fmadd_ps(b0, a2, s80);
+
+            a0 = _mm256_set1_ps(*(a + 9));
+            s90 = _mm256_fmadd_ps(b0, a0, s90);
+            a1 = _mm256_set1_ps(*(a + 10));
+            sa0 = _mm256_fmadd_ps(b0, a1, sa0);
+            a2 = _mm256_set1_ps(*(a + 11));
+            sb0 = _mm256_fmadd_ps(b0, a2, sb0);
+        }
+
+        __m256 c0, c1, c2, c3, v_alpha = _mm256_set1_ps(alpha);
+    #define FAST_GEMM_FINALE(row0, row1, row2, row3)    \
+        c0 = _mm256_loadu_ps(c + row0 * ldc);   \
+        c1 = _mm256_loadu_ps(c + row1 * ldc);   \
+        c2 = _mm256_loadu_ps(c + row2 * ldc);   \
+        c3 = _mm256_loadu_ps(c + row3 * ldc);   \
+        c0 = _mm256_fmadd_ps(s##row0##0, v_alpha, c0);  \
+        c1 = _mm256_fmadd_ps(s##row1##0, v_alpha, c1);  \
+        c1 = _mm256_fmadd_ps(s##row1##0, v_alpha, c2);  \
+        c1 = _mm256_fmadd_ps(s##row1##0, v_alpha, c3);  \
+        _mm256_storeu_ps(c + row0 * ldc, c0);   \
+        _mm256_storeu_ps(c + row1 * ldc, c1);   \
+        _mm256_storeu_ps(c + row2 * ldc, c2);   \
+        _mm256_storeu_ps(c + row3 * ldc, c3);   \
+
+        FAST_GEMM_FINALE(0, 1,  2,  3);
+        FAST_GEMM_FINALE(4, 5,  6,  7);
+        FAST_GEMM_FINALE(8, 9, 10, 11);
+    #undef FAST_GEMM_FINALE
+}
+#endif
+
 static void fast_gemm_macro_kernel(int m, int n, int k,
-                                 const char *packA, const char *packB,
-                                 const void* palpha, char *c, int ldc0,
-                                 int MR, int NR) {
+                                   const char *packA, const char *packB,
+                                   const void* palpha, char *c, int ldc0,
+                                   int MR, int NR) {
     int esz = sizeof(float);
     int ldc0_esz = ldc0 * esz;
 
@@ -244,7 +326,13 @@ static void fast_gemm_macro_kernel(int m, int n, int k,
                     memcpy(cptr + p*(ldc*esz), cptr0 + p*ldc0_esz, nr_esz);
             }
 
+#if CV_AVX || CV_AVX2
             fast_gemm8x12_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
+#elif CV_NEON && CV_NEON_AARCH64
+            fast_gemm8x12_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
+#else
+            fast_gemm_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
+#endif
 
             if (partial) {
                 for(int p = 0; p < mr; p++)
@@ -313,10 +401,15 @@ void fast_gemm(bool trans_a, int M, int N, int K,
     int n_tiles = (N + NC - 1) / NC;
     int total_tiles = m_tiles * n_tiles;
 
-    std::function<void(int, int, const void*, int, int, void*)> a_packer = fast_gemm_pack8_f32;
+    std::function<void(int, int, const void*, int, int, void*)> a_packer;
+#if CV_AVX2 || CV_AVX
+    a_packer = fast_gemm_pack12_f32;
+#else
+    a_packer = fast_gemm_pack8_f32;
+#endif
 
     auto fn = [&](const Range &r) {
-        char* packed_a = (char*)(use_stackbuff ? alloca(buff_size) : malloc(buff_size));
+        char* packed_a = (char*)(use_stackbuff ? alloca(buff_size) : malloc(buff_size)); // TODO: use AutoBuffer
         const char *packed_b_ = packed_b;
         int start = r.start;
         int end = r.end;
@@ -341,13 +434,14 @@ void fast_gemm(bool trans_a, int M, int N, int K,
                 }
             }
 
+            int _nc = static_cast<int>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR * esz;
             for(int k0 = 0; k0 < K; k0 += KC)
             {
                 int kc = K - k0 < KC ? K - k0 : KC;
                 a_packer(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
                 fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b_, palpha,
                                        c_block, ldc_block, GEMM_MR, GEMM_NR);
-                packed_b_ += static_cast<int>((nc + 12 - 1) / 12) * kc * 12 * esz;
+                packed_b_ += _nc * kc;
             }
         }
 
@@ -400,7 +494,6 @@ void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
     int KC = FAST_GEMM_STORAGE / ((MC + NC) * esz);
     KC = KC > 8 ? KC : 8;
     KC = KC < K ? KC : K;
-    // printf("MC=%d, NC=%d, KC=%d\n", MC, NC, KC);
 
     size_t buff_size = KC * (MC + NC) * esz;
     bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
@@ -443,7 +536,7 @@ void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
                 a_packer(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, pack_a);
                 b_packer(nc, kc, b + (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, pack_b);
                 fast_gemm_macro_kernel(mc, nc, kc, pack_a, pack_b, palpha,
-                                     c_block, ldc_block, GEMM_MR, GEMM_NR);
+                                       c_block, ldc_block, GEMM_MR, GEMM_NR);
             }
         }
 
