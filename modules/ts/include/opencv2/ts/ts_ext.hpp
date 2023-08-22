@@ -47,6 +47,9 @@ bool checkBigDataTests();
        } \
     } \
 
+struct DummyTest : public ::testing::Test {
+  virtual void TestBody() CV_OVERRIDE {}
+};
 
 #undef TEST
 #define TEST_(test_case_name, test_name, parent_class, bodyMethodName, BODY_ATTR, BODY_IMPL) \
@@ -60,6 +63,17 @@ bool checkBigDataTests();
       GTEST_DISALLOW_COPY_AND_ASSIGN_(\
           GTEST_TEST_CLASS_NAME_(test_case_name, test_name));\
     };\
+    class test_case_name##test_name##_factory : public ::testing::internal::TestFactoryBase { \
+     public:\
+      virtual ::testing::Test* CreateTest() { \
+        try { \
+          return new GTEST_TEST_CLASS_NAME_(test_case_name, test_name); \
+        } catch (const cvtest::details::SkipTestExceptionBase& e) { \
+          printf("[     SKIP ] %s\n", e.what()); \
+          return new DummyTest(); \
+        } \
+      } \
+    };\
     \
     ::testing::TestInfo* const GTEST_TEST_CLASS_NAME_(test_case_name, test_name)\
       ::test_info_ =\
@@ -69,8 +83,7 @@ bool checkBigDataTests();
             (::testing::internal::GetTestTypeId()), \
             parent_class::SetUpTestCase, \
             parent_class::TearDownTestCase, \
-            new ::testing::internal::TestFactoryImpl<\
-                GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>);\
+            new test_case_name##test_name##_factory);\
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() BODY_IMPL( #test_case_name "_" #test_name ) \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::bodyMethodName()
 
@@ -113,6 +126,17 @@ bool checkBigDataTests();
       GTEST_DISALLOW_COPY_AND_ASSIGN_(\
           GTEST_TEST_CLASS_NAME_(test_fixture, test_name));\
     };\
+    class test_fixture##test_name##_factory : public ::testing::internal::TestFactoryBase { \
+     public:\
+      virtual ::testing::Test* CreateTest() { \
+        try { \
+          return new GTEST_TEST_CLASS_NAME_(test_fixture, test_name); \
+        } catch (const cvtest::details::SkipTestExceptionBase& e) { \
+          printf("[     SKIP ] %s\n", e.what()); \
+          return new DummyTest(); \
+        } \
+      } \
+    };\
     \
     ::testing::TestInfo* const GTEST_TEST_CLASS_NAME_(test_fixture, test_name)\
       ::test_info_ =\
@@ -122,8 +146,7 @@ bool checkBigDataTests();
             (::testing::internal::GetTypeId<test_fixture>()), \
             test_fixture::SetUpTestCase, \
             test_fixture::TearDownTestCase, \
-            new ::testing::internal::TestFactoryImpl<\
-                GTEST_TEST_CLASS_NAME_(test_fixture, test_name)>);\
+            new test_fixture##test_name##_factory);\
     void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::TestBody() CV__TEST_BODY_IMPL( #test_fixture "_" #test_name ) \
     void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::Body()
 
