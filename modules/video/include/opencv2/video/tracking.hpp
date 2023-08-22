@@ -888,7 +888,16 @@ public:
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
+class CV_EXPORTS_W LapSolver
+{
+public:
+    /** @brief Linear assignment problem solver
 
+    @param cost cost matrix to minimize
+    */
+    CV_WRAP virtual void lapjv(InputArray &cost) = 0;
+
+}
 
 class CV_EXPORTS Track
 {
@@ -926,11 +935,10 @@ protected:
 public:
     virtual ~MultiTracker();
 
-
-    /** @brief Initialize the tracker with a known bounding box that surrounded the target
-    @param image The initial frame
-    @param boundingBox The initial bounding box
-    */
+    // /** @brief Initialize the tracker with a known bounding box that surrounded the target
+    //@param image The initial frame
+    //@param boundingBox The initial bounding box
+    //*/
     //CV_WRAP virtual
     //void init(InputArray image, const Rect& boundingBox) = 0;
     //im not sure if I need an init here
@@ -945,8 +953,8 @@ public:
     bool update(InputArray inputDetections, CV_OUT cv::OutputArray& outputTracks) = 0; // Wrapper for python
 
     /** @brief Update the tracker, find the new most likely bounding boxes for each target
-    @param detections current frame detections
-    @param tracks The bounding boxes that represent the new target locations
+    @param inputDetections current frame detections
+    @param outputTracks The bounding boxes that represent the new target locations
 
     @return True means that some target was located and false means that tracker cannot locate any target in current frame. Note, that latter *does not* imply that tracker has failed, maybe targets are indeed missing from the frame (say, out of sight)
     */

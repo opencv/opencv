@@ -1,7 +1,11 @@
-#include "lapjv.hpp"
+#include "opencv2/video/lapjv.hpp"
+#include "../precomp.hpp"
 #include <cstring>
 
+using namespace std;
 
+namespace cv
+{
 /** Column-reduction and reduction transfer for a dense cost matrix.
  */
 int_t _ccrrt_dense(const uint_t n, cost_t *cost[],
@@ -332,4 +336,57 @@ int lapjv_internal(
     FREE(v);
     FREE(free_rows);
     return ret;
+}
+
+map<int, int> lapjv(InputArray &cost, float matchThreshold)
+{
+    Mat _cost = cost.getMat();
+    map<int, int> ret;
+    if (_cost.rows == 0 || _cost.cols == 0)
+        return ret;
+    int maxI = _cost.rows;
+    int maxJ = _cost.cols;
+    int n = max(maxJ, maxI);
+
+    vector<vector<double>> cost_ptr(n, vector<double>(n));
+    vector<int> x_c(n);
+    vector<int> y_c(n);
+
+    vector<double*> cost_ptr_ptr(n);
+    for (int i=0; i < n; i++)
+    {
+        cost_ptr_ptr[i] = cost_ptr[i].data();
+    }
+
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            if (i < maxI && j < maxJ && _cost.at<float>(i, j) < matchThreshold) // verify
+            {
+                cost_ptr[i][j] = static_cast<double>(_cost.at<float>(i, j));
+            }
+            else
+            {
+                cost_ptr[i][j] = LARGE;
+            }
+        }
+        x_c[i] = -1;
+        y_c[i] = -1;
+    }
+    lapjv_internal(n, cost_ptr_ptr.data(), x_c.data(), y_c.data());
+    for (int i = 0; i < n; i++)
+    {
+        if (i < maxI && x_c[i] < maxJ) // verify
+        {
+            ret[i] = x_c[i];
+        }
+    }
+
+    return ret;
+}
+
+
+
+
 }

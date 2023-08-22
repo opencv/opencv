@@ -6,7 +6,8 @@
 
 //#include "opencv2/video/detail/bytetracker.hpp"
 #include "detail/bytetracker_strack.hpp"
-#include "../lapjv/lapjv.hpp"
+//#include "../lapjv/lapjv.hpp"
+#include "opencv2/video/lapjv.hpp"
 //#include "opencv2/video/detail/tracking.detail.hpp"
 #include <map>
 #include <unordered_map>

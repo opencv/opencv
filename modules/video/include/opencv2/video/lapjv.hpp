@@ -13,6 +13,9 @@
 
 #include <stdlib.h>
 #include "opencv2/core.hpp"
+//#include "../precomp.hpp"
+#include <map>
+
 #ifndef LAPJV_H
 #define LAPJV_H
 
@@ -70,20 +73,24 @@ typedef unsigned int uint_t;
 typedef double cost_t;
 typedef char boolean;
 typedef enum fp_t { FP_1 = 1, FP_2 = 2, FP_DYNAMIC = 3 } fp_t;
+namespace cv
+{
 
-CV_WRAP extern int_t lapjv_internal(
+int_t lapjv_internal(
     const uint_t n, cost_t *cost[],
     int_t *x, int_t *y);
 
-CV_WRAP extern int_t lapmod_internal(
+int_t lapmod_internal(
     const uint_t n, cost_t *cc, uint_t *ii, uint_t *kk,
     int_t *x, int_t *y, fp_t fp_version);
 
-CV_WRAP extern int_t _ccrrt_dense(uint_t, cost_t**, int_t*, int_t*, int_t*, cost_t*);
-CV_WRAP extern int_t _carr_dense(uint_t, cost_t**, uint_t, int_t*, int_t*, int_t*, cost_t*);
-CV_WRAP extern uint_t _find_dense(uint_t, uint_t, cost_t*, int_t*);
-CV_WRAP extern int_t _scan_dense(uint_t, cost_t**, uint_t*, uint_t*, cost_t*, int_t*, int_t*, int_t*, cost_t*);
-CV_WRAP extern int_t find_path_dense(uint_t, cost_t**, int_t, int_t*, cost_t*, int_t*);
-CV_WRAP extern int_t _ca_dense(uint_t, cost_t**, uint_t, int_t*, int_t*, int_t*, cost_t*);
+int_t _ccrrt_dense(uint_t, cost_t**, int_t*, int_t*, int_t*, cost_t*);
+int_t _carr_dense(uint_t, cost_t**, uint_t, int_t*, int_t*, int_t*, cost_t*);
+uint_t _find_dense(uint_t, uint_t, cost_t*, int_t*);
+int_t _scan_dense(uint_t, cost_t**, uint_t*, uint_t*, cost_t*, int_t*, int_t*, int_t*, cost_t*);
+int_t find_path_dense(uint_t, cost_t**, int_t, int_t*, cost_t*, int_t*);
+int_t _ca_dense(uint_t, cost_t**, uint_t, int_t*, int_t*, int_t*, cost_t*);
+CV_WRAP std::map<int, int> lapjv(InputArray&, float matchThreshold = 0.7);
+}
 
 #endif // LAPJV_H
