@@ -62,20 +62,19 @@ endif()
 
 # https://github.com/opencv/opencv/issues/24145
 if(HAVE_IPP)
-  ocv_check_environment_variables(OPENCV_IPP_MEAN)
-  option(OPENCV_IPP_MEAN "Enable IPP optimizations for mean (+200Kb in binary size)" OFF)
+  OCV_OPTION(OPENCV_IPP_ENABLE_ALL "Force to enable all ipp optimization" OFF)
+  OCV_OPTION(OPENCV_IPP_MEAN   "Enable IPP optimizations for mean (+200Kb in binary size)"                OPENCV_IPP_ENABLE_ALL)
+  OCV_OPTION(OPENCV_IPP_MINMAX "Enable IPP optimizations for minMaxLoc/minMaxIdx (+200Kb in binary size)" OPENCV_IPP_ENABLE_ALL)
+  OCV_OPTION(OPENCV_IPP_SUM    "Enable IPP optimizations for sum (+100Kb in binary size)"                 OPENCV_IPP_ENABLE_ALL)
+
   if(OPENCV_IPP_MEAN)
     ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/mean.dispatch.cpp "OPENCV_IPP_MEAN=1")
   endif()
 
-  ocv_check_environment_variables(OPENCV_IPP_MINMAX)
-  option(OPENCV_IPP_MINMAX "Enable IPP optimizations for minMaxLoc/minMaxIdx (+200Kb in binary size)" OFF)
   if(OPENCV_IPP_MINMAX)
     ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/minmax.cpp "OPENCV_IPP_MINMAX=1")
   endif()
 
-  ocv_check_environment_variables(OPENCV_IPP_SUM)
-  option(OPENCV_IPP_SUM "Enable IPP optimizations for sum (+100Kb in binary size)" OFF)
   if(OPENCV_IPP_SUM)
     ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/sum.dispatch.cpp "OPENCV_IPP_SUM=1")
   endif()
