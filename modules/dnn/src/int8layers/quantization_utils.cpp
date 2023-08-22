@@ -312,20 +312,19 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        float zeropoint = static_cast<float>(zeropoints[0]);
+        const auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
-        auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        input = std::make_shared<ngraph::op::Convert>(input, ngraph::element::f32);
-
-        auto shifted = std::make_shared<ngraph::op::v1::Subtract>(
-            input,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &zeropoint)
+        float inpLow = -128, inpHigh = 127;
+        float outLow = scales[0] * (inpLow - zeropoints[0]);
+        float outHigh = scales[0] * (inpHigh - zeropoints[0]);
+        auto quantized = std::make_shared<ngraph::op::FakeQuantize>(input,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+            256 // levels
         );
-        auto scaled = std::make_shared<ngraph::op::v1::Multiply>(
-            shifted,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &scales[0])
-        );
-        return new InfEngineNgraphNode(scaled);
+        return new InfEngineNgraphNode(quantized);
     }
 #endif  // HAVE_DNN_NGRAPH
 };
