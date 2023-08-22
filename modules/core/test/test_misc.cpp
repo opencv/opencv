@@ -13,6 +13,10 @@
 #include <thread>
 #endif
 
+#ifdef _MSC_VER
+# pragma warning(disable:4702)  // unreachable code
+#endif
+
 namespace opencv_test { namespace {
 
 TEST(Core_OutputArrayCreate, _1997)
