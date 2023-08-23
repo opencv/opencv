@@ -888,16 +888,20 @@ public:
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
-class CV_EXPORTS_W LapSolver
+
+/*
+class CV_EXPORTS_W LapjvSolver
 {
 public:
-    /** @brief Linear assignment problem solver
+    /** @brief Linear assignment problem jonker volgenant solver
 
     @param cost cost matrix to minimize
     */
-    CV_WRAP virtual void lapjv(InputArray &cost) = 0;
+//    CV_WRAP OutputArray lapjv(InputArray &cost, float matchThreshold = 0.7);
 
-}
+//};
+
+
 
 class CV_EXPORTS Track
 {
@@ -958,8 +962,10 @@ public:
 
     @return True means that some target was located and false means that tracker cannot locate any target in current frame. Note, that latter *does not* imply that tracker has failed, maybe targets are indeed missing from the frame (say, out of sight)
     */
-    //CV_WRAP virtual
-    //void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) = 0;
+    CV_EXPORTS virtual
+    void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) = 0;
+
+    CV_WRAP static Ptr<MultiTracker> create();
 };
 
 /** @brief ByteTrack is a simple, fast and strong multi-object tracker.
@@ -990,7 +996,8 @@ public:
 
     CV_WRAP bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks) CV_OVERRIDE = 0;
 
-    //CV_WRAP virtual    void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) = 0;
+    CV_EXPORTS virtual void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) CV_OVERRIDE = 0;
+
 };
 //! @} video_track
 
