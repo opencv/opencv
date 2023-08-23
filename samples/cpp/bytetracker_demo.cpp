@@ -19,7 +19,7 @@ using namespace dnn;
 // Constants.
 const int INPUT_WIDTH = 640;
 const int INPUT_HEIGHT = 640;
-const float SCORE_THRESHOLD = 0.5f;
+const float SCORE_THRESHOLD = 0.6f;
 const float NMS_THRESHOLD = 0.45f;
 const float CONFIDENCE_THRESHOLD = 0.45f;
 
@@ -40,8 +40,8 @@ string TRACKINGS_OUTPUT_PATH = home + "/files/tracked.txt";
 string VIDEO_OUTPUT_PATH = home + "/files/output.mp4";
 string COCO_NAMES = home + "/files/coco.names";
 //string NET_PATH = home + "/files/YOLOv5s.onnx";
-string NET_PATH = home + "/files/yolov8s.onnx";
-//string NET_PATH = home + "/files/yolov8x.onnx";
+//string NET_PATH = home + "/files/yolov8s.onnx";
+string NET_PATH = home + "/files/yolov8x.onnx";
 //string NET_PATH = home + "/files/bytetrack_x_mot20.onnx";
 
 int outputCodec = VideoWriter::fourcc('M', 'J', 'P', 'G');
@@ -88,6 +88,7 @@ int main()
     Mat frame;
     int frameNumber = 0;
     int fps = capture.get(CAP_PROP_FPS);
+    cout<<"my fps is"<<fps;
     cv::ByteTracker::Params params;
     params.frameRate = fps;
     params.frameBuffer = 30;
@@ -108,7 +109,7 @@ int main()
         vector<Mat> detections; // Process the image.
         vector<Detection> objects;
         detections = preProcessImage(frame, net);
-        Mat frameClone = frame.clone();
+        //Mat frameClone = frame.clone();
         Mat img = postProcessImage(frame, detections, classList,
                                objects);
         Mat objectsMat = detectionToMat(objects);
@@ -194,6 +195,7 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
     vector<int> classIds;
     vector<float> confidences;
     vector<Rect> boxes;
+    //cout << "Original Height and Width :" << inputImage.rows << "x" << inputImage.cols << endl;
     // Resizing factor.
     float xFactor = 1.0 * inputImage.cols / INPUT_WIDTH;
     float yFactor = 1.0 * inputImage.rows / INPUT_HEIGHT;
@@ -210,7 +212,6 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
         yolov8 = true;
         rows = output[0].size[2];
         dimensions = output[0].size[1];
-
         output[0] = output[0].reshape(1, dimensions);
         cv::transpose(output[0], output[0]);
     }
@@ -253,7 +254,7 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
             // Discard bad detections and continue.
             if (confidence >= CONFIDENCE_THRESHOLD)
             {
-                float *classes_scores = data + 5;
+                float *classes_scores = data + 5; //this should actually just be one code and just change the index
                 // Create a 1x85 Mat and store class scores of 80 classes.
                 //This is also true for yolox
                 Mat scores(1, className.size(), CV_32FC1, classes_scores);
@@ -295,10 +296,9 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
         int width = box.width;
         int height = box.height;
         // Draw bounding box.
-        //rectangle(inputImage, Point(left, top), Point(left + width, top + height), BLUE, 3 * THICKNESS);
+        rectangle(inputImage, Point(left, top), Point(left + width, top + height), BLUE, 1 * THICKNESS);
         // Get the label for the class name and its confidence.
         string label = format("%.2f", confidences[idx]);
-        //cout<<classIds
         label = className[classIds[idx]] + ":" + label;
         // Draw class labels.
         drawLabel(inputImage, label, left, top);

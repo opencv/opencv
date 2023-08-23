@@ -48,6 +48,9 @@ void ByteTracker::update(const std::vector<Detection>& detections, CV_OUT std::v
 
 }
 */
+bool compareTracksByTrackId(const Track& track1, const Track& track2) {
+    return track1.rect.x < track2.rect.x;
+}
 
 class ByteTrackerImpl : public ByteTracker
 {
@@ -56,7 +59,7 @@ public:
     ByteTrackerImpl(const ByteTracker::Params& parameters) : params_(parameters)
     {
         trackThreshold_ = 0.5f;
-        matchThreshold_ = 0.7f;
+        matchThreshold_ = 0.8f;
         lastId_ = 0;
         frame_ = 0;
         maxTimeLost_ = params_.frameRate / 30.0f * params_.frameBuffer;
@@ -66,7 +69,7 @@ public:
     //std::vector<std::vector<float>> update(std::vector<std::vector<float>>)
     bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks) CV_OVERRIDE;
 
-    void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks);
+    void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) CV_OVERRIDE;
     //Scalar get_color(int idx);
     int getFrame();
     void incrementFrame();
@@ -248,7 +251,7 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
         remainDets.push_back(detections[detectionsIndex[j]]);
     }
 
-    for (auto &pair : matches) // row
+    for (auto &pair : matches)
     {
         int key = indexToKey[pair.first];
         Strack &track = strackPool[key];
@@ -282,7 +285,6 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
         }
     }
 
-
     for (size_t i = 0; i < strackIndex.size(); i++)
     {
         reRemainTracks.push_back(remainTracks[strackIndex[i]]);
@@ -306,11 +308,30 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
             lostStracks_.erase(track.getId());
         }
     }
+    //here it does another matching
+    dists = getCostMatrix(inactiveStracks, remainDets);
+    strackIndex.clear();
+    detectionsIndex.clear();
+    matches = lapjv(dists);
+
+    for (auto pair : matches) // row
+    {
+        Strack &track = inactiveStracks[pair.first];
+        Strack &detection = remainDets[pair.second];
+        track.reactivate(detection,getFrame());
+        activatedStracks.push_back(track);
+    }
 
     // initialize new tracks
     for (size_t i = 0; i < remainDets.size(); i++)
     {
         Strack newTrack = remainDets[i];
+
+        if (newTrack.getScore() < trackThreshold_ + 0.1)
+        {
+            continue;
+        }
+
         newTrack.activate(getFrame(), lastId_++);
         activatedStracks.push_back(newTrack);
     }
@@ -325,7 +346,7 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
     for (auto& pair : lostStracks_)
     {
         Strack& track = pair.second;
-        if (track.getState() != TrackState::LOST)
+        if (track.getState() != TrackState::LOST) //fist time that it enters the map
         {
             track.setTrackletLen(1);
             track.setState(TrackState::LOST);
@@ -341,7 +362,7 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
     {
         lostStracks_.erase(key);
     }
-    if (tracks.empty())
+    if (!tracks.empty())
     {
         tracks.clear();
     }
@@ -351,39 +372,21 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
         Track track(strack.getTlwh(), strack.getId(), strack.getClass(), strack.getScore());
         tracks.push_back(track);
     }
+
+    for (auto& pair: lostStracks_)
+    {
+        Strack& strack = pair.second;
+        Track track(strack.getTlwh(), strack.getId(), strack.getClass(), strack.getScore());
+        tracks.push_back(track);
+    }
+
+
+    std::sort(tracks.begin(), tracks.end(), compareTracksByTrackId);
 }
 
 void ByteTrackerImpl::getDetections(vector<Detection> inputObjects, vector<Strack>& detections,
     vector<Strack>& detectionsLow)
 {
-    /*
-    Mat objects = inputObjects.getMat();
-
-    incrementFrame(); // update frame
-    for (int i = 0; i < objects.rows; i++)
-    {
-        Rect2f box;
-        float score;
-        int classId;
-
-        box.x = objects.at<float>(i, 0);
-        box.y = objects.at<float>(i, 1);
-        box.width = objects.at<float>(i, 2);
-        box.height = objects.at<float>(i, 3);
-        classId = objects.at<float>(i, 4);
-        score = objects.at<float>(i, 5);
-
-        Strack strack(box, classId, score);
-        if (score >= trackThreshold_) // Dhigh or Dlow
-        {
-            detections.push_back(strack);
-        }
-        else
-        {
-            detectionsLow.push_back(strack);
-        }
-    }
-    */
     for (const Detection& detection : inputObjects)
     {
         Rect2f box = detection.rect;
@@ -391,11 +394,11 @@ void ByteTrackerImpl::getDetections(vector<Detection> inputObjects, vector<Strac
         float score = detection.classScore;
 
         Strack strack(box, classId, score);
-        if (score >= trackThreshold_) // Dhigh or Dlow
+        if (score >= trackThreshold_) // + 0.05 Dhigh or Dlow
         {
             detections.push_back(strack);
         }
-        else
+        else if (score > 0.1)
         {
             detectionsLow.push_back(strack);
         }
@@ -607,5 +610,4 @@ unordered_map<int, Strack> ByteTrackerImpl::vectorToMap(const vector<Strack>& st
     }
     return strackMap;
 }
-
 }
