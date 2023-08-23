@@ -919,7 +919,7 @@ INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);
 
 // Expected that SkipTestException thrown in the constructor should skip test but not fail
 struct TestFixtureSkip: public ::testing::Test {
-    TestFixtureSkip() {
+    CV_NORETURN TestFixtureSkip() {
         throw SkipTestException("Skip test at constructor");
     }
 };
