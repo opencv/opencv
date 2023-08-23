@@ -62,7 +62,7 @@ endif()
 
 # https://github.com/opencv/opencv/issues/24145
 if(HAVE_IPP)
-  OCV_OPTION(OPENCV_IPP_ENABLE_ALL "Force to enable all ipp optimization" OFF)
+  OCV_OPTION(OPENCV_IPP_ENABLE_ALL "Enable all OPENCV_IPP_ options at once" OFF)
   OCV_OPTION(OPENCV_IPP_MEAN   "Enable IPP optimizations for mean (+200Kb in binary size)"                OPENCV_IPP_ENABLE_ALL)
   OCV_OPTION(OPENCV_IPP_MINMAX "Enable IPP optimizations for minMaxLoc/minMaxIdx (+200Kb in binary size)" OPENCV_IPP_ENABLE_ALL)
   OCV_OPTION(OPENCV_IPP_SUM    "Enable IPP optimizations for sum (+100Kb in binary size)"                 OPENCV_IPP_ENABLE_ALL)
