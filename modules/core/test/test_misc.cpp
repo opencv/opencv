@@ -924,7 +924,7 @@ INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);
 // Expected that SkipTestException thrown in the constructor should skip test but not fail
 struct TestFixtureSkip: public ::testing::Test {
     TestFixtureSkip() {
-        throw SkipTestException("");
+        throw SkipTestException("Skip test at constructor");
     }
 };
 
@@ -932,7 +932,7 @@ TEST_F(TestFixtureSkip, NoBodyRun) {
     FAIL() << "Unreachable code called";
 }
 
-
+// Check no test body started in case of skip exception at static SetUpTestCase
 struct TestSetUpTestCaseSkip: public ::testing::Test {
     static void SetUpTestCase() {
         throw SkipTestException("Skip test at SetUpTestCase");
@@ -943,6 +943,16 @@ TEST_F(TestSetUpTestCaseSkip, NoBodyRun) {
     FAIL() << "Unreachable code called";
 }
 TEST_F(TestSetUpTestCaseSkip, NoBodyRun2) {
+    FAIL() << "Unreachable code called";
+}
+
+struct TestSetUpSkip: public ::testing::Test {
+    virtual void SetUp() {
+        throw SkipTestException("Skip test at SetUp");
+    }
+};
+
+TEST_F(TestSetUpSkip, NoBodyRun) {
     FAIL() << "Unreachable code called";
 }
 

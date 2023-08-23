@@ -47,6 +47,15 @@ bool checkBigDataTests();
        } \
     } \
 
+#define CV__TEST_SETUP_IMPL(parent_class) \
+    { \
+      try { \
+        parent_class::SetUp(); \
+      } catch (const cvtest::details::SkipTestExceptionBase& e) { \
+        printf("[     SKIP ] %s\n", e.what()); \
+      } \
+    }
+
 struct DummyTest : public ::testing::Test {
   virtual void TestBody() CV_OVERRIDE {}
 };
@@ -122,6 +131,7 @@ struct DummyTest : public ::testing::Test {
      private:\
       virtual void TestBody() CV_OVERRIDE;\
       virtual void Body(); \
+      virtual void SetUp() CV_OVERRIDE; \
       static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;\
       GTEST_DISALLOW_COPY_AND_ASSIGN_(\
           GTEST_TEST_CLASS_NAME_(test_fixture, test_name));\
@@ -148,6 +158,7 @@ struct DummyTest : public ::testing::Test {
             test_fixture::TearDownTestCase, \
             new test_fixture##test_name##_factory);\
     void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::TestBody() CV__TEST_BODY_IMPL( #test_fixture "_" #test_name ) \
+    void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::SetUp() CV__TEST_SETUP_IMPL(test_fixture) \
     void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::Body()
 
 // Don't use directly
