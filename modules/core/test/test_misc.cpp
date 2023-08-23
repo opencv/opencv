@@ -932,4 +932,18 @@ TEST_F(TestFixtureSkip, NoBodyRun) {
     FAIL() << "Unreachable code called";
 }
 
+
+struct TestSetUpTestCaseSkip: public ::testing::Test {
+    static void SetUpTestCase() {
+        throw SkipTestException("Skip test at SetUpTestCase");
+    }
+};
+
+TEST_F(TestSetUpTestCaseSkip, NoBodyRun) {
+    FAIL() << "Unreachable code called";
+}
+TEST_F(TestSetUpTestCaseSkip, NoBodyRun2) {
+    FAIL() << "Unreachable code called";
+}
+
 }} // namespace
