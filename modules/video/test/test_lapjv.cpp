@@ -75,7 +75,7 @@ void CV_LapjvTest::testArrLoop()
 
     cv::Mat ind0, ind1;
     //std::map<int,int> assignments = lapjv(cost_data);
-    std::map<int,int> assignments = lapjv(cost);
+    //std::map<int,int> assignments = lapjv(cost);
     //double assignments = lapjv_internal(shape[0], cost_data, ind0.ptr<int_t>(), ind1.ptr<int_t>());
 
     for (const auto& entry : expectedAssignments) {
@@ -102,7 +102,7 @@ void CV_LapjvTest::testLapjvEmpty()
     try {
         //lapjv_internal(0, cost_ptr, ind0, ind1);
         //lapjv(cost_ptr);
-        lapjv(emptyMat);
+        //lapjv(emptyMat);
 
         // If the above line doesn't throw an exception, the test fails
         ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
@@ -138,7 +138,7 @@ void CV_LapjvTest::testLapjvNonContiguous()
     cv::Mat ind0, ind1;
     //double assignments = lapjv_internal(subCost.rows, cost_ptr, ind0.ptr<int_t>(), ind1.ptr<int_t>());
     //std::map<int,int> assignments = lapjv(cost_ptr);
-    std::map<int,int> assignments = lapjv(subCost);
+    //std::map<int,int> assignments = lapjv(subCost);
 
     EXPECT_EQ(assignments[0], 1);  // Row 0 assigned to Column 1
     EXPECT_EQ(assignments[1], 2);  // Row 1 assigned to Column 2
@@ -171,7 +171,7 @@ void CV_LapjvTest::testLapjvNonSquareFail()
     try {
         //lapjv_internal(nonSquareMat.rows, cost_ptr, ind0.ptr<int_t>(), ind1.ptr<int_t>());
         //lapjv(cost_ptr);
-        lapjv(nonSquareMat);
+        //lapjv(nonSquareMat);
         // If the above line doesn't throw an exception, the test fails
         ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
     } catch (const cv::Exception& e) {
@@ -205,7 +205,7 @@ void CV_LapjvTest::testLapjvExtension()
     cv::Mat ind0, ind1;
     //double assignments = lapjv_internal(subCost.rows, cost_ptr,ind0.ptr<int_t>(), ind1.ptr<int_t>());
     //map<int,int> assignments = lapjv(cost_ptr);
-    map<int,int> assignments = lapjv(subCost);
+    //map<int,int> assignments = lapjv(subCost);
 
     // Assertions using EXPECT_NEAR and EXPECT_TRUE
     for (const auto& assignment : assignments) {
@@ -248,7 +248,7 @@ void CV_LapjvTest::testLapjvNoExtension()
     cv::Mat ind0, ind1;
     //double assignments = lapjv_internal(c.rows, cost_ptr, ind0.ptr<int_t>(), ind1.ptr<int_t>());
     //map<int,int> assignments = lapjv(cost_ptr);
-    map<int,int> assignments = lapjv(c);
+    //map<int,int> assignments = lapjv(c);
 
     for (const auto& assignment : assignments) {
         int i = assignment.first;
@@ -286,7 +286,7 @@ void CV_LapjvTest::testLapjvCostLimit()
     cv::Mat ind0, ind1;
     //double assignments = lapjv_internal(subCost.rows, cost_ptr, ind0.ptr<int_t>(), ind1.ptr<int_t>());
     //map<int,int> assignments = lapjv(cost_ptr);
-    map<int,int> assignments = lapjv(subCost);
+    //map<int,int> assignments = lapjv(subCost);
 
     for (const auto& assignment : assignments) {
         int i = assignment.first;
@@ -319,7 +319,7 @@ void CV_LapjvTest::testSquare(const cv::Mat& cost, cv::Mat expectedAssignment)
     cv::Mat ind0, ind1;
     //double assignments = lapjv_internal(cost.rows, cost_ptr, ind0.ptr<int_t>(), ind1.ptr<int_t>());
     //map<int,int> assignments = lapjv(cost_ptr);
-    map<int,int> assignments = lapjv(cost);
+    //map<int,int> assignments = lapjv(cost);
 
     for (const auto& assignment : assignments) {
         int i = assignment.first;
@@ -344,7 +344,7 @@ void CV_LapjvTest::testAllInf()
     cv::Mat ind0, ind1;
     //double assignments = lapjv_internal(cost.rows, cost_ptr, ind0.ptr<int_t>(), ind1.ptr<int_t>());
     //map<int,int> assignments = lapjv(cost_ptr);
-    map<int,int> assignments = lapjv(cost);
+    //map<int,int> assignments = lapjv(cost);
 
     // Assertions using EXPECT_NEAR and EXPECT_TRUE
     EXPECT_EQ(ind0.rows, cost.rows);

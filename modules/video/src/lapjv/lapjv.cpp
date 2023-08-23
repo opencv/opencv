@@ -2,7 +2,8 @@
 #include "../precomp.hpp"
 #include <cstring>
 
-using namespace std;
+
+//using namespace std;
 
 namespace cv
 {
@@ -338,21 +339,21 @@ int lapjv_internal(
     return ret;
 }
 
-map<int, int> lapjv(InputArray &cost, float matchThreshold)
+std::map<int, int> lapjv(InputArray &cost, float matchThreshold)
 {
     Mat _cost = cost.getMat();
-    map<int, int> ret;
+    std::map<int, int> ret;
     if (_cost.rows == 0 || _cost.cols == 0)
         return ret;
     int maxI = _cost.rows;
     int maxJ = _cost.cols;
     int n = max(maxJ, maxI);
 
-    vector<vector<double>> cost_ptr(n, vector<double>(n));
-    vector<int> x_c(n);
-    vector<int> y_c(n);
+    std::vector<std::vector<double>> cost_ptr(n, std::vector<double>(n));
+    std::vector<int> x_c(n);
+    std::vector<int> y_c(n);
 
-    vector<double*> cost_ptr_ptr(n);
+    std::vector<double*> cost_ptr_ptr(n);
     for (int i=0; i < n; i++)
     {
         cost_ptr_ptr[i] = cost_ptr[i].data();
