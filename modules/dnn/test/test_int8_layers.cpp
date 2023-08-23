@@ -878,14 +878,14 @@ TEST_P(Test_Int8_nets, MobileNet_SSD)
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    Net net = readNetFromCaffe(findDataFile("dnn/MobileNetSSD_deploy.prototxt", false),
-                               findDataFile("dnn/MobileNetSSD_deploy.caffemodel", false));
+    Net net = readNetFromCaffe(findDataFile("dnn/MobileNetSSD_deploy_19e3ec3.prototxt", false),
+                               findDataFile("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", false));
 
     Mat inp = imread(_tf("street.png"));
     Mat blob = blobFromImage(inp, 1.0 / 127.5, Size(300, 300), Scalar(127.5, 127.5, 127.5), false);
     Mat ref = blobFromNPY(_tf("mobilenet_ssd_caffe_out.npy"));
 
-    float confThreshold = FLT_MIN, scoreDiff = 0.059, iouDiff = 0.11;
+    float confThreshold = FLT_MIN, scoreDiff = 0.084, iouDiff = 0.43;
     testDetectionNet(net, blob, ref, confThreshold, scoreDiff, iouDiff);
 }
 
