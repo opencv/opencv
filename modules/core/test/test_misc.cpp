@@ -919,8 +919,10 @@ INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);
 
 // Expected that SkipTestException thrown in the constructor should skip test but not fail
 struct TestFixtureSkip: public ::testing::Test {
-    TestFixtureSkip() {
-        findDataFile("missed_file", false);
+    TestFixtureSkip(bool throwEx = true) {
+        if (throwEx) {
+            throw SkipTestException("Skip test at constructor");
+        }
     }
 };
 
