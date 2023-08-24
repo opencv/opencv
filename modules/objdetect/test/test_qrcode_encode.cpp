@@ -33,11 +33,6 @@ std::string encode_qrcode_eci_images_name[] = {
 const Size fixed_size = Size(200, 200);
 const float border_width = 2.0;
 
-void randomShuffle(std::string& info) {
-    std::mt19937 rand_gen {1};
-    std::shuffle(info.begin(), info.end(), rand_gen);
-}
-
 int establishCapacity(QRCodeEncoder::EncodeMode mode, int version, int capacity)
 {
     int result = 0;
@@ -269,7 +264,8 @@ TEST(Objdetect_QRCode_Encode_Decode, regression)
                 int true_capacity = establishCapacity(mode, version, cur_capacity);
 
                 std::string input_info = symbol_set;
-                randomShuffle(input_info);
+                std::mt19937 rand_gen {1};
+                std::shuffle(input_info.begin(), input_info.end(), rand_gen);
                 int count = 0;
                 if((int)input_info.length() > true_capacity)
                 {
@@ -395,7 +391,8 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, DISABLED_regression)
         std::string symbol_set = config["symbols_set"];
 
         std::string input_info = symbol_set;
-        randomShuffle(input_info);
+        std::mt19937 rand_gen {1};
+        std::shuffle(input_info.begin(), input_info.end(), rand_gen);
         for (int j = min_stuctures_num; j < max_stuctures_num; j++)
         {
             QRCodeEncoder::Params params;
