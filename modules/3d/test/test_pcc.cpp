@@ -7,6 +7,7 @@
 // TODO: when pcc.h put into 3d.hpp, this need to change
 #include "../src/pcc.h"
 #include "../src/pcc.cpp"
+#include "test_ptcloud_utils.hpp"
 
 namespace opencv_test { namespace {
 
@@ -24,8 +25,15 @@ protected:
 
         //The point cloud is generated randomly by the function generateSphere()
 
-        //generateSphere(pointCloud,vector<float>{0.f,0.f,0.f,10.f},0.5,10000,vector<float>{-10.f,10.f,-10.f,10.f,-10.f,10.f});
+        generateSphere(pointCloud,vector<float>{0.f,0.f,0.f,10.f},0.5,10000,vector<float>{-10.f,10.f,-10.f,10.f,-10.f,10.f});
         //savePointCloud(inputFilename+".ply",pointCloud, normal_placeholder, restore_color_attribute);
+        std::vector<Point3i> color;
+        for(auto & i : pointCloud){
+            int z_color=int((i.z+10)/20*255);
+            color.emplace_back(255-z_color,z_color,128);
+        }
+        savePointCloud(inputFilename+"_color"+".ply",pointCloud, normal_placeholder, color);
+
 
         loadPointCloud(inputFilename+".ply",pointCloud,normal_placeholder);
         String res_str = std::to_string(resolution);
@@ -92,11 +100,13 @@ TEST_F(PccTest, PointCloudCompressionTest){
     CV_LOG_INFO(nullptr,"The BPP of oriFile is "+std::to_string(ori_bpp));
 
     // PSNR (Peak signal-to-noise ratio)
-    // PSNR is commonly used to quantify reconstruction quality for images and video subject to lossy compression.
-    // The same applies to point clouds.
-    // There is a tool provided by MPEG to calculate PSNR in pcc, see details in https://github.com/minhkstn/mpeg-pcc-dmetric.
+    // PSNR is commonly used metric to quantify reconstruction quality to pointcloud compression.
+    // It evaluates the distortion between reconstructed signal and original signal,
+    // by defining peak signal as diagonal length of pointcloud bounding box,
+    // and mean-square error as the Euclidean distance of each point drifting away from original position.
+    // To get convincing result, There is a tool provided by MPEG to calculate PSNR in pcc, see details in https://github.com/minhkstn/mpeg-pcc-dmetric.
 
-
+//
 
 }
 
