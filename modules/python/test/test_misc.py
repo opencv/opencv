@@ -42,6 +42,89 @@ def get_conversion_error_msg(value, expected, actual):
 def get_no_exception_msg(value):
     return 'Exception is not risen for {} of type {}'.format(value, type(value).__name__)
 
+
+def rpad(src, dst_size, pad_value=0):
+    """Extend `src` up to `dst_size` with given value.
+
+    Args:
+        src (np.ndarray | tuple | list): 1d array like object to pad.
+        dst_size (_type_): Desired `src` size after padding.
+        pad_value (int, optional): Padding value. Defaults to 0.
+
+    Returns:
+        np.ndarray: 1d array with len == `dst_size`.
+    """
+    def pad_fn(arr, pad_width, iaxis, kwargs):
+        pad_value = kwargs.get("pad_value", 0)
+        arr[:pad_width[0]] = pad_value
+        if pad_width[1] != 0:
+            arr[-pad_width[1]:] = pad_value
+
+    src = np.asarray(src)
+    if len(src.shape) != 1:
+        raise ValueError("Only 1d arrays are supported")
+
+    return np.pad(src, (0, dst_size - len(src)), pad_fn, pad_value=pad_value)
+
+
+def get_ocv_arithm_op_table(apply_saturation=False):
+    def saturate(func):
+        def wrapped_func(x, y):
+            dst_dtype = x.dtype
+            if apply_saturation:
+                if np.issubdtype(x.dtype, np.integer):
+                    x = x.astype(np.int64)
+            # Apply padding or truncation for array-like `y` inputs
+            if not isinstance(y, (float, int)):
+                if len(y) > x.shape[-1]:
+                    y = y[:x.shape[-1]]
+                else:
+                    y = rpad(y, x.shape[-1], pad_value=0)
+
+            dst = func(x, y)
+            if apply_saturation:
+                min_val, max_val = get_limits(dst_dtype)
+                dst = np.clip(dst, min_val, max_val)
+            return dst.astype(dst_dtype)
+        return wrapped_func
+
+    @saturate
+    def subtract(x, y):
+        return x - y
+
+    @saturate
+    def add(x, y):
+        return x + y
+
+    @saturate
+    def divide(x, y):
+        if not isinstance(y, (int, float)):
+            _, max_value = get_limits(x.dtype)
+            y[y == 0] = max_value
+
+        dst = x / y
+        if np.issubdtype(x.dtype, np.integer):
+            dst = np.rint(dst)
+        return dst
+
+    @saturate
+    def multiply(x, y):
+        return x * y
+
+    @saturate
+    def absdiff(x, y):
+        res = np.abs(x - y)
+        return res
+
+    return {
+        cv.subtract: subtract,
+        cv.add: add,
+        cv.multiply: multiply,
+        cv.divide: divide,
+        cv.absdiff: absdiff
+    }
+
+
 class Bindings(NewOpenCVTests):
 
     def test_inheritance(self):
@@ -816,106 +899,39 @@ class Arguments(NewOpenCVTests):
         np.testing.assert_equal(dst, src_copy)
         self.assertEqual(arguments_dump, 'lambda=25, sigma=5.5')
 
-    def test_arithm_op_with_scalar_issue_24057_regression(self):
-        res = cv.samples.findFile('lena.jpg', False)
-        src = cv.imread(res)
-        try:
-            # single number
-            dst = cv.subtract(src, 10)
-            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
-            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
-            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
+    def test_arithm_op_without_saturation(self):
+        rng = np.random.default_rng(423156)
+        src = rng.integers(20, 40, (8, 4, 3), dtype=np.uint8)
+        operations = get_ocv_arithm_op_table(apply_saturation=False)
+        for ocv_op, numpy_op in operations.items():
+            for val in (2, 4, (5, ), (6, 4), (2., 4., 1.),
+                        np.uint8([1, 2, 2]), np.float64([5, 2, 6, 3]),):
+                dst = ocv_op(src, val)
+                expected = numpy_op(src, val)
+                np.testing.assert_equal(
+                    dst, expected,
+                    err_msg="Operation '{}' is failed for {}".format(
+                        ocv_op.__name__, val
+                    )
+                )
 
-            dst = cv.subtract(src, 10.)
-            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
-            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
-            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
+    def test_arithm_op_with_saturation(self):
+        rng = np.random.default_rng(4231568)
+        src = rng.integers(20, 40, (4, 8, 4), dtype=np.uint8)
+        operations = get_ocv_arithm_op_table(apply_saturation=True)
 
-            # tuple
-            dst = cv.subtract(src, (10, 10, 10))
-            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
-            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
-            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
+        for ocv_op, numpy_op in operations.items():
+            for val in (10, 4, (40, ), (15, 12), (25., 41., 15.),
+                        np.uint8([1, 2, 20]), np.float64([50, 21, 64, 30]),):
+                dst = ocv_op(src, val)
+                expected = numpy_op(src, val)
+                np.testing.assert_equal(
+                    dst, expected,
+                    err_msg="Saturated operation '{}' is failed for {}".format(
+                        ocv_op.__name__, val
+                    )
+                )
 
-            dst = cv.subtract(src, (10., 10., 10.))
-            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
-            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
-            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
-
-            # array
-            dst = cv.subtract(src, np.uint8([10, 10, 10]))
-            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
-            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
-            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
-
-            dst = cv.subtract(src, np.array([10, 10, 10]))
-            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
-            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
-            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
-
-            dst = cv.subtract(src, np.float64([10, 10, 10]))
-            np.testing.assert_equal(src[0][0][0] - 10, dst[0][0][0])
-            np.testing.assert_equal(src[0][0][1] - 10, dst[0][0][1])
-            np.testing.assert_equal(src[0][0][2] - 10, dst[0][0][2])
-        except cv.error as _e:
-            raise Exception
-        else:
-            pass
-
-    def test_arithm_op_with_scalar_issue_24057(self):
-        src1_mat = np.full(shape=(5,5,3), fill_value=(64,64,64), dtype='uint8')
-
-        # Basic arithm operators
-        ## add
-        dst = cv.add(src1_mat, (192,31,30))  # The result of this calculation is saturated.
-        np.testing.assert_equal(dst[0][0], [255,95,94], "add(mat, vec3) [0][0]")
-        np.testing.assert_equal(dst[4][4], [255,95,94], "add(mat, vec3) [4][4]")
-
-        ## subtract
-        dst = cv.subtract(src1_mat, (192,31,30))  # The result of this calculation is saturated.
-        np.testing.assert_equal(dst[0][0], [0,33,34], "subtract(mat, vec3) [0][0]")
-        np.testing.assert_equal(dst[4][4], [0,33,34], "subtract(mat, vec3) [4][4]")
-
-        ## multiply
-        dst = cv.multiply(src1_mat, (2,3,4)) # The result of this calculation is saturated.
-        np.testing.assert_equal(dst[0][0], [128,192,255], "multiply(mat, vec3) [0][0]")
-        np.testing.assert_equal(dst[4][4], [128,192,255], "multiply(mat, vec3) [4][4]")
-
-        ## divide
-        dst = cv.divide(src1_mat, (2,4,8) )
-        np.testing.assert_equal(dst[0][0], [32,16,8], "multiply(mat, vec3) [0][0]")
-        np.testing.assert_equal(dst[4][4], [32,16,8], "multiply(mat, vec3) [4][4]")
-
-        ## absdiff
-        dst = cv.absdiff(src1_mat, (65,60,64))
-        np.testing.assert_equal(dst[0][0], [1,4,0],   "absdiff(mat, vec3) [0][0]")
-        np.testing.assert_equal(dst[4][4], [1,4,0],   "absdiff(mat, vec3) [4][4]")
-
-        # Special case, vector length is not same as color channel of src mat
-        ## bgr image
-        dst = cv.subtract(src1_mat, (32,))
-        np.testing.assert_equal(dst[0][0], [32,64,64], "subtract(mat, vec1) [0][0]")
-        np.testing.assert_equal(dst[4][4], [32,64,64], "subtract(mat, vec1) [4][4]")
-
-        dst = cv.subtract(src1_mat, (32,31))
-        np.testing.assert_equal(dst[0][0], [32,33,64], "subtract(mat, vec2) [0][0]")
-        np.testing.assert_equal(dst[4][4], [32,33,64], "subtract(mat, vec2) [4][4]")
-
-        dst = cv.subtract(src1_mat, (32,31,30,29))
-        np.testing.assert_equal(dst[0][0], [32,33,34], "subtract(mat, vec4) [0][0]")
-        np.testing.assert_equal(dst[4][4], [32,33,34], "subtract(mat, vec4) [4][4]")
-
-        ## gray image
-        src1_mat1 = np.full(shape=(5,5,1), fill_value=(64), dtype='uint8')
-        dst = cv.subtract(src1_mat1, (31))
-        np.testing.assert_equal(dst[0][0], 33, "subtract(mat1, vec1) [0][0]")
-        np.testing.assert_equal(dst[4][4], 33, "subtract(mat1, vec1) [4][4]")
-
-        ## cmyk image
-        src1_mat4 = np.full(shape=(5,5,4), fill_value=(64,64,64,64), dtype='uint8')
-        dst = cv.subtract(src1_mat4, (32,31,30,29))
-        np.testing.assert_equal(dst[0][0], [32,33,34,35], "subtract(mat4, vec4) [0][0]")
-        np.testing.assert_equal(dst[4][4], [32,33,34,35], "subtract(mat4, vec4) [4][4]")
 
 class CanUsePurePythonModuleFunction(NewOpenCVTests):
     def test_can_get_ocv_version(self):

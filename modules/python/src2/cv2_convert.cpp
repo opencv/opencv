@@ -93,10 +93,9 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     {
         // see https://github.com/opencv/opencv/issues/24057
         const int sz  = (int)PyTuple_Size((PyObject*)o);
-        const int sz2 = (info.arithm_op_src && (sz <= 4) )? 4 : sz; // Extend to 4 to handle as Scalar
-        m = Mat(sz2, 1, CV_64F);
-        int i;
-        for( i = 0; i < sz; i++ )
+        const int sz2 = info.arithm_op_src ? std::max(4, sz) : sz; // Scalar has 4 elements.
+        m = Mat::zeros(sz2, 1, CV_64F);
+        for( int i = 0; i < sz; i++ )
         {
             PyObject* oi = PyTuple_GetItem(o, i);
             if( PyInt_Check(oi) )
@@ -109,10 +108,6 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
                 m.release();
                 return false;
             }
-        }
-        for( i = sz; i < sz2; i++ ) // Padding 0
-        {
-            m.at<double>(i) = 0.0;
         }
         return true;
     }
@@ -171,6 +166,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         failmsg("%s dimensionality (=%d) is too high", info.name, ndims);
         return false;
     }
+
     size_t elemsize = CV_ELEM_SIZE1(type);
     const npy_intp* _sizes = PyArray_DIMS(oarr);
     const npy_intp* _strides = PyArray_STRIDES(oarr);
@@ -269,11 +265,10 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     {
         const int sz  = size[0]; // Real Data Length(1, 2, 3 or 4)
         const int sz2 = 4;       // Scalar has 4 elements.
-        m = Mat(sz2, 1, CV_64F);
+        m = Mat::zeros(sz2, 1, CV_64F);
 
         const char *base_ptr = PyArray_BYTES(oarr);
-        int i;
-        for( i = 0; i < sz; i++ )
+        for(int i = 0; i < sz; i++ )
         {
             PyObject* oi = PyArray_GETITEM(oarr, base_ptr + step[0] * i);
             if( PyInt_Check(oi) )
@@ -286,10 +281,6 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
                 m.release();
                 return false;
             }
-        }
-        for( i = sz; i < sz2; i++ ) // Padding 0
-        {
-            m.at<double>(i) = 0.0;
         }
         return true;
     }
