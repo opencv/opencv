@@ -34,15 +34,8 @@ const Size fixed_size = Size(200, 200);
 const float border_width = 2.0;
 
 void randomShuffle(std::string& info) {
-#if defined CV_CXX11
-    // std::random_shuffle is deprecated since C++11 and removed in C++17.
-    // Use manually constructed RNG with a fixed seed and std::shuffle instead.
     std::mt19937 rand_gen {1};
     std::shuffle(info.begin(), info.end(), rand_gen);
-#else
-    SeededRandFunctor<1> rand_gen;
-    std::random_shuffle(info.begin(), info.end(), rand_gen);
-#endif
 }
 
 int establishCapacity(QRCodeEncoder::EncodeMode mode, int version, int capacity)
