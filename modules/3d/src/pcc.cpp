@@ -558,10 +558,12 @@ void restore(OctreeNode &root, const std::vector<unsigned char> &serializedVecto
 }
 
 void
-OctreeSerializeCoder::encode(const std::vector<Point3f> &pointCloud, std::vector<unsigned char> &serializedVector,
-                             double resolution, std::ostream &outputStream) {
-    // create octree by pointCloud
-    this->octree->create(pointCloud, resolution);
+OctreeSerializeCoder::encode(const std::vector<Point3f> &pointCloud, const std::vector<Point3f> &colorAttribute,
+                             std::vector<unsigned char> &serializedVector, double resolution, double qStep,
+                             std::ostream &outputStream) {
+    // create octree by pointCloud & colorAttribute
+    this->octree->p->hasColor = !colorAttribute.empty();
+    this->octree->create(pointCloud, colorAttribute, resolution);
 
     outputStream << "origin " << this->octree->p->origin.x;
     outputStream << " " << this->octree->p->origin.y;
@@ -572,7 +574,7 @@ OctreeSerializeCoder::encode(const std::vector<Point3f> &pointCloud, std::vector
 
     // Encode octree's color attribute
     if (this->octree->p->hasColor)
-        encodeColor(*(this->octree->p->rootNode), 10.0f, serializedVector);
+        encodeColor(*(this->octree->p->rootNode), (float)qStep, serializedVector);
 }
 
 void
@@ -592,19 +594,22 @@ OctreeSerializeCoder::decode(std::vector<Point3f> &pointCloud, const std::vector
 }
 
 void PointCloudCompression::compress(const std::vector<Point3f> &pointCloud, double resolution,
-                                     std::ostream &outputStream) {
+                                     std::ostream &outputStream, const std::vector<Point3f> &colorAttribute, double qStep) {
     std::vector<unsigned char> serializedVector;
     outputStream << "resolution " << resolution << "\n";
-    this->_coder.encode(pointCloud, serializedVector, resolution, outputStream);
+    outputStream << "qstep " << qStep << "\n";
+    this->_coder.encode(pointCloud, colorAttribute, serializedVector, resolution, qStep, outputStream);
     this->_entropyCoder.encodeCharVectorToStream(serializedVector, outputStream);
 }
 
 void PointCloudCompression::decompress(std::istream &inputStream, std::vector<Point3f> &pointCloud) {
     std::vector<unsigned char> outputCharVector;
-    std::string res, tmp;
-    std::getline(inputStream, res);
-    inputStream >> tmp;
-    double resolution = std::stod(res.substr(11));
+    std::string tmp;
+//    std::getline(inputStream, res);
+    double resolution, qStep;
+    inputStream >> tmp >> resolution >> tmp;
+    inputStream >> tmp >> qStep >> tmp;
+//    double resolution = std::stod(res.substr(11));
     float ori_x, ori_y, ori_z;
     inputStream >> ori_x >> ori_y >> ori_z;
     Point3f origin(ori_x, ori_y, ori_z);

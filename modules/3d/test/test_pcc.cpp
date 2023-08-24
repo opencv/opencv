@@ -35,11 +35,20 @@ protected:
         savePointCloud(inputFilename+"_color"+".ply",pointCloud, normal_placeholder, color);
 
 
-        loadPointCloud(inputFilename+".ply",pointCloud,normal_placeholder);
+        loadPointCloud(inputFilename + ".ply", pointCloud, normalPlaceholder, colorAttribute);
         String res_str = std::to_string(resolution);
         res_str.erase(res_str.find_last_not_of('0') + 1);
         res_str.erase(res_str.find('.'), 1);
-        outputFilename=inputFilename+"_"+res_str+ ".ply";
+        outputFilename = inputFilename + "_" + res_str + ".ply";
+        if (colorAttribute.empty()) {
+            outputFilename = inputFilename + "_" + res_str + ".ply";
+        } else {
+            outputFilename = inputFilename + "_" + res_str;
+            res_str = std::to_string(qStep);
+            res_str.erase(res_str.find_last_not_of('0') + 1);
+            res_str.erase(res_str.find('.'), 1);
+            outputFilename = outputFilename + "_q" + res_str + ".ply";
+        }
     }
 
 public:
@@ -51,6 +60,7 @@ public:
     String inputFilename;
     String outputFilename;
     double resolution;
+    double qStep;
     PointCloudCompression pcc;
     std::ofstream vectorToStream;
     std::ifstream streamToVector;
@@ -59,8 +69,8 @@ public:
     std::vector<Point3f> pointCloud;
     //Point cloud data from octree
     std::vector<Point3f> restorePointCloudData;
-    std::vector<Point3f> normal_placeholder;
-    vector<Point3f> restore_color_attribute;
+    std::vector<Point3f> normalPlaceholder;
+    vector<Point3f> colorAttribute;
 };
 
 TEST_F(PccTest, EntropyEncodingTest){
@@ -73,14 +83,14 @@ TEST_F(PccTest, EntropyEncodingTest){
 TEST_F(PccTest, PointCloudCompressionTest){
 
     vectorToStream.open(inputFilename+".bin", std::ios_base::binary);
-    pcc.compress(pointCloud,resolution,vectorToStream);
+    pcc.compress(pointCloud, resolution, vectorToStream, colorAttribute, qStep);
     vectorToStream.close();
 
     streamToVector.open(inputFilename+".bin", std::ios_base::binary);
     pcc.decompress(streamToVector,restorePointCloudData);
     streamToVector.close();
 
-    savePointCloud(outputFilename,restorePointCloudData, normal_placeholder, restore_color_attribute);
+    savePointCloud(outputFilename,restorePointCloudData, normalPlaceholder, colorAttribute);
 
     // BPP (Bits Per Point)
     // BPP is used to quantify the compression efficiency of point cloud compression algorithms.

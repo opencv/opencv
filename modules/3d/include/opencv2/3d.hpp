@@ -2583,7 +2583,7 @@ public:
     * @param resolution The size of the Octree leaf node.
     * @return Returns whether the creation is successful.
     */
-    bool create(const std::vector<Point3f> &pointCloud,const std::vector<Point3f> &colorAttribute,double resolution);
+    bool create(const std::vector<Point3f> &pointCloud,const std::vector<Point3f> &colorAttribute, double resolution);
 
     /** @brief Determine whether the point is within the space range of the specific cube.
      *
