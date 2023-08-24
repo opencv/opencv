@@ -919,12 +919,14 @@ INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);
 
 // Expected that SkipTestException thrown in the constructor should skip test but not fail
 struct TestFixtureSkip: public ::testing::Test {
-    CV_NORETURN TestFixtureSkip() {
-        throw SkipTestException("Skip test at constructor");
+    TestFixtureSkip() {
+        findDataFile("missed_file", false);
     }
 };
 
-TEST_F(TestFixtureSkip, NoBodyRun) {}
+TEST_F(TestFixtureSkip, NoBodyRun) {
+    FAIL() << "Unreachable code called";
+}
 
 // Check no test body started in case of skip exception at static SetUpTestCase
 struct TestSetUpTestCaseSkip: public ::testing::Test {
