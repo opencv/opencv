@@ -965,7 +965,6 @@ public:
     CV_EXPORTS virtual
     void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) = 0;
 
-    CV_WRAP static Ptr<MultiTracker> create();
 };
 
 /** @brief ByteTrack is a simple, fast and strong multi-object tracker.

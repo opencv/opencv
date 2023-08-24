@@ -1,12 +1,9 @@
+#include <opencv2/highgui.hpp>
 #include <opencv2/dnn.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/video.hpp>
-#include <opencv2/highgui.hpp>
-#include <iostream>
-#include <fstream>
-#include "opencv2/video/tracking.hpp"
-#include <opencv2/core.hpp>
 #include <opencv2/core/utils/logger.hpp>
+#include <fstream>
 
 
 
@@ -42,7 +39,6 @@ string COCO_NAMES = home + "/files/coco.names";
 //string NET_PATH = home + "/files/YOLOv5s.onnx";
 //string NET_PATH = home + "/files/yolov8s.onnx";
 string NET_PATH = home + "/files/yolov8x.onnx";
-//string NET_PATH = home + "/files/bytetrack_x_mot20.onnx";
 
 int outputCodec = VideoWriter::fourcc('M', 'J', 'P', 'G');
 double outputFps = 10;
@@ -109,14 +105,12 @@ int main()
         vector<Mat> detections; // Process the image.
         vector<Detection> objects;
         detections = preProcessImage(frame, net);
-        //Mat frameClone = frame.clone();
         Mat img = postProcessImage(frame, detections, classList,
                                objects);
         Mat objectsMat = detectionToMat(objects);
         Mat trackedObjects;
         bool ok = false;
         ok = tracker->update(objectsMat, trackedObjects);
-        //cout<<trackedObjects<<"\n";
         if (ok)
         {
             for (int i = 0; i < trackedObjects.rows; i++)
@@ -130,13 +124,13 @@ int main()
                     trackedObjects.at<float>(i, 3));
 
                 rectangle(img, tlwh_, color, 2);
-                putText(img, to_string(id_), Point(tlwh_.x, tlwh_.y - 5), FONT_FACE, FONT_SCALE, RED); // THICKNESS
+                putText(img, to_string(id_), Point(tlwh_.x, tlwh_.y - 5), FONT_FACE, FONT_SCALE, RED);
             }
             writeTracksToFile(trackedObjects, TRACKINGS_OUTPUT_PATH, frameNumber);
             writeDetectionsToFile(objects, DETECTIONS_OUTPUT_PATH, frameNumber);
 
             // Put efficiency information.
-            // The function getPerfProfile returns the overall time for     inference(t) and the timings for each of the layers(in layersTimes).
+            // The function getPerfProfile returns the overall time for inference(t) and the timings for each of the layers(in layersTimes).
             vector<double> layersTimes;
             double freq = getTickFrequency() / 1000;
             double t = net.getPerfProfile(layersTimes) / freq;
@@ -162,8 +156,6 @@ int main()
 vector<Mat> preProcessImage(Mat &inputImage, Net &net)
 {
     // Convert to blob.
-    // Mat img = formatYolov5(inputImage);
-
     Mat blob;
     dnn::blobFromImage(inputImage, blob, 1. / 255., Size(INPUT_WIDTH, INPUT_HEIGHT), Scalar(), true, false);
 
@@ -176,22 +168,10 @@ vector<Mat> preProcessImage(Mat &inputImage, Net &net)
     return outputs;
 }
 
-Mat formatYolov5(const Mat &source)
-{
-    int col = source.cols;
-    int row = source.rows;
-    int _max = MAX(col, row);
-    //int _min = MIN(col, row);
-    Mat result = Mat::zeros(_max, _max, CV_8UC3);
-    source.copyTo(result(Rect(0, 0, col, row)));
-    return result;
-}
-
 Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> &className,
     vector<Detection> &object)
 {
-    //This post process works for Yolov3, for Yolox I should use another format
-    // Initialize vectors to hold respective outputs while unwrapping     detections.
+    // Initialize vectors to hold respective outputs while unwrapping detections.
     vector<int> classIds;
     vector<float> confidences;
     vector<Rect> boxes;
@@ -200,14 +180,11 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
     float xFactor = 1.0 * inputImage.cols / INPUT_WIDTH;
     float yFactor = 1.0 * inputImage.rows / INPUT_HEIGHT;
     bool yolov8 = false;
-    //const int dimensions = 85;
 
-    //  25200 for default size 640.
-    // 8400 for yolox and yolov8
     int rows = output[0].size[1];
     int dimensions = output[0].size[2];
 
-    if (dimensions > rows) // Check if the shape[2] is more than shape[1] (yolov8)
+    if (dimensions > rows) // Check if shape[2] is more than shape[1] (yolov8)
     {
         yolov8 = true;
         rows = output[0].size[2];
@@ -215,72 +192,58 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
         output[0] = output[0].reshape(1, dimensions);
         cv::transpose(output[0], output[0]);
     }
-    // Iterate through 25200 detections.
+
+    // Iterate through detections.
     float *data = (float*)output[0].data;
     Point classId;
     double maxClassScore;
     for (int i = 0; i < rows; ++i)
     {
+        float confidence;
+        float *classes_scores;
         if (yolov8)
         {
-            float *classes_scores = data + 4;
-            cv::Mat scores(1, 80, CV_32FC1, classes_scores); //80 classes
-
-            minMaxLoc(scores, 0, &maxClassScore, 0, &classId);
-
-            if (maxClassScore > SCORE_THRESHOLD)
-            {
-                confidences.push_back(maxClassScore);
-                classIds.push_back(classId.x);
-                //class_ids.push_back(class_id.x);
-
-                float x = data[0];
-                float y = data[1];
-                float w = data[2];
-                float h = data[3];
-
-                int left = int((x - 0.5 * w) * xFactor);
-                int top = int((y - 0.5 * h) * yFactor);
-
-                int width = int(w * xFactor);
-                int height = int(h * yFactor);
-
-                boxes.push_back(cv::Rect(left, top, width, height));
-            }
+            classes_scores = data + 4;
         }
         else
         {
-            float confidence = data[4];
+            confidence = data[4];
             // Discard bad detections and continue.
             if (confidence >= CONFIDENCE_THRESHOLD)
             {
-                float *classes_scores = data + 5; //this should actually just be one code and just change the index
-                // Create a 1x85 Mat and store class scores of 80 classes.
-                //This is also true for yolox
-                Mat scores(1, className.size(), CV_32FC1, classes_scores);
-                // Perform minMaxLoc and acquire the index of best class  score.
-                minMaxLoc(scores, 0, &maxClassScore, 0, &classId);
-                // Continue if the class score is above the threshold.
-                if (maxClassScore > SCORE_THRESHOLD)
-                {
-                    // Store class ID and confidence in the pre-defined respective vectors.
-                    confidences.push_back(confidence);
-                    classIds.push_back(classId.x);
-                    // Center.
-                    float cx = data[0];
-                    float cy = data[1];
-                    // Box dimension.
-                    float w = data[2];
-                    float h = data[3];
-                    // Bounding box coordinates.
-                    int left = int((cx - 0.5 * w) * xFactor);
-                    int top = int((cy - 0.5 * h) * yFactor);
-                    int width = int(w * xFactor);
-                    int height = int(h * yFactor);
-                    // Store good detections in the boxes vector.
-                    boxes.push_back(Rect(left, top, width, height));
-                }
+                classes_scores = data + 5;
             }
+        }
+        Mat scores(1, 80, CV_32FC1, classes_scores); //80 classes
+        // Perform minMaxLoc and acquire the index of best class  score.
+        minMaxLoc(scores, 0, &maxClassScore, 0, &classId);
+        // Continue if the class score is above the threshold.
+        if (maxClassScore > SCORE_THRESHOLD)
+        {
+            // Store class ID and confidence in the pre-defined respective vectors.
+            if (yolov8)
+            {
+                confidences.push_back(maxClassScore);
+            }
+            else
+            {
+                confidences.push_back(confidence);
+            }
+
+            classIds.push_back(classId.x);
+            // Center.
+            float cx = data[0];
+            float cy = data[1];
+            // Box dimension.
+            float w = data[2];
+            float h = data[3];
+            // Bounding box coordinates.
+            int left = int((cx - 0.5 * w) * xFactor);
+            int top = int((cy - 0.5 * h) * yFactor);
+            int width = int(w * xFactor);
+            int height = int(h * yFactor);
+            // Store good detections in the boxes vector.
+            boxes.push_back(Rect(left, top, width, height));
         }
         // Jump to the next row.
         data += dimensions;
@@ -336,7 +299,6 @@ void writeDetectionsToFile(const vector<Detection> objects, const string &output
         return;
     }
     // Check if the output file is empty
-    //bool isEmpty = outputFile.tellp() == 0; //doesnt work on windows for some reason
     ifstream file(outputPath);
     bool isEmpty = file.peek() == ifstream::traits_type::eof();
     // Write the header row of the file is empty
@@ -377,7 +339,6 @@ void writeTracksToFile(const Mat& objects, const string &outputPath,
         return;
     }
     // Check if the output file is empty
-    //bool isEmpty = outputFile.tellp() == 0;
     ifstream file(outputPath);
     bool isEmpty = file.peek() == ifstream::traits_type::eof();
     // Write the header row of the file is empty
