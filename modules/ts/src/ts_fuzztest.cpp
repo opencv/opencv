@@ -1,6 +1,5 @@
+#ifdef OPENCV_BUILD_FUZZ_TESTS
 #include "opencv2/ts/ts_fuzztest.hpp"
-
-#include <limits>
 
 #include "fuzztest/fuzztest.h"
 
@@ -29,3 +28,4 @@ void InitializeOpenCV() {
 }
 
 }  // namespace opencv_fuzztest
+#endif  // OPENCV_BUILD_FUZZ_TESTS

@@ -48,15 +48,17 @@ if(OPENCV_DISABLE_THREAD_SUPPORT)
   ocv_target_compile_definitions(${the_module} PUBLIC GTEST_HAS_PTHREAD=0)
 endif()
 
-include(FetchContent)
-FetchContent_Declare(fuzztest
-  GIT_REPOSITORY https://github.com/google/fuzztest.git
-  GIT_TAG main
-#  BUILD_COMMAND ${CMAKE_COMMAND} -E echo "Starting $<CONFIG> build"
-#  COMMAND       ${CMAKE_COMMAND} --build <BINARY_DIR> --config $<CONFIG>
-#  COMMAND       ${CMAKE_COMMAND} -E echo "$<CONFIG> build complete"
-)
-FetchContent_MakeAvailable(fuzztest)
+if(BUILD_FUZZ_TESTS)
+  include(FetchContent)
+  FetchContent_Declare(fuzztest
+    GIT_REPOSITORY https://github.com/google/fuzztest.git
+    GIT_TAG 5c14a8d~ # Right before CMake 3.19 is mandatory.
+  )
+  FetchContent_MakeAvailable(fuzztest)
+  set_target_properties(fuzztest_googletest_adaptor PROPERTIES LINKER_LANGUAGE CXX)
+  set_target_properties(fuzztest_googletest_fixture_adapter PROPERTIES LINKER_LANGUAGE CXX)
 
-link_fuzztest(opencv_ts)
-ocv_target_link_libraries(opencv_ts PUBLIC fuzztest_gtest_main)
+  link_fuzztest(${the_module})
+  ocv_target_compile_definitions(${the_module} PUBLIC OPENCV_BUILD_FUZZ_TESTS)
+  ocv_target_link_libraries(${the_module} PUBLIC fuzztest_gtest_main)
+endif(BUILD_FUZZ_TESTS)
