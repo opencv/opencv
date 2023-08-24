@@ -47,8 +47,9 @@ public:
     * @param resolution The size of the Octree leaf node.
     * @param outputStream The output stream, will be written to point cloud compressed file.
     */
-    void encode(const std::vector<Point3f> &pointCloud,std::vector<unsigned char> &serializedVector,
-                double resolution,std::ostream &outputStream);
+    void encode(const std::vector<Point3f> &pointCloud, const std::vector<Point3f> &colorAttribute,
+                std::vector<unsigned char> &serializedVector, double resolution, double qStep,
+                std::ostream &outputStream);
 
     /** @brief decode pointCloud data from serialized char vector
     *
@@ -105,7 +106,8 @@ public:
      * @param resolution the size of the leaf node.
      * @param outputStream the output compressed bit stream destination.
     */
-    void compress(const std::vector<Point3f> &pointCloud, double resolution, std::ostream &outputStream);
+    void compress(const std::vector<Point3f> &pointCloud, double resolution, std::ostream &outputStream,
+                  const std::vector<Point3f> &colorAttribute = std::vector<Point3f>(), double qStep = -1.0);
 
     /** @brief User decompress(recover) pointcloud from stream.
      *
