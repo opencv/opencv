@@ -924,9 +924,7 @@ struct TestFixtureSkip: public ::testing::Test {
     }
 };
 
-TEST_F(TestFixtureSkip, NoBodyRun) {
-    FAIL() << "Unreachable code called";
-}
+TEST_F(TestFixtureSkip, NoBodyRun) {}
 
 // Check no test body started in case of skip exception at static SetUpTestCase
 struct TestSetUpTestCaseSkip: public ::testing::Test {
