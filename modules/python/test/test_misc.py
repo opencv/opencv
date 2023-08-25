@@ -900,8 +900,8 @@ class Arguments(NewOpenCVTests):
         self.assertEqual(arguments_dump, 'lambda=25, sigma=5.5')
 
     def test_arithm_op_without_saturation(self):
-        rng = np.random.default_rng(423156)
-        src = rng.integers(20, 40, (8, 4, 3), dtype=np.uint8)
+        np.random.seed(4231568)
+        src = np.random.randint(20, 40, 8 * 4 * 3).astype(np.uint8).reshape(8, 4, 3)
         operations = get_ocv_arithm_op_table(apply_saturation=False)
         for ocv_op, numpy_op in operations.items():
             for val in (2, 4, (5, ), (6, 4), (2., 4., 1.),
@@ -916,8 +916,8 @@ class Arguments(NewOpenCVTests):
                 )
 
     def test_arithm_op_with_saturation(self):
-        rng = np.random.default_rng(4231568)
-        src = rng.integers(20, 40, (4, 8, 4), dtype=np.uint8)
+        np.random.seed(4231568)
+        src = np.random.randint(20, 40, 4 * 8 * 4).astype(np.uint8).reshape(4, 8, 4)
         operations = get_ocv_arithm_op_table(apply_saturation=True)
 
         for ocv_op, numpy_op in operations.items():
