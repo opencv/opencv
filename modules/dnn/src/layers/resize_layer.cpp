@@ -443,7 +443,7 @@ public:
         std::vector<int64_t> shape = {outHeight, outWidth};
         auto out_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, shape.data());
 
-        auto& input_shape = ieInpNode->get_shape();
+        auto& input_shape = ieInpNode.get_shape();
         CV_Assert_N(input_shape[2] != 0, input_shape[3] != 0);
         std::vector<float> scales = {static_cast<float>(outHeight) / input_shape[2], static_cast<float>(outWidth) / input_shape[3]};
         auto scales_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{2}, scales.data());

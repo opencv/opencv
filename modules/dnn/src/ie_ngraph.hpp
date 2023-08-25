@@ -99,7 +99,7 @@ public:
     void setName(const std::string& name);
 
     // Inference Engine network object that allows to obtain the outputs of this layer.
-    std::shared_ptr<ngraph::Node> node;
+    ngraph::Output<ngraph::Node> node;
     Ptr<InfEngineNgraphNet> net;
     Ptr<dnn::Layer> cvLayer;
 };

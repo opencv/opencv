@@ -474,7 +474,7 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 int oid = ld.inputBlobsId[i].oid;
 
                 auto ieInpNode = inputNodes[i].dynamicCast<InfEngineNgraphNode>();
-                const auto& ngraph_input_node = ieInpNode->node;
+                const auto& ngraph_input_node = ieInpNode->node.get_node_shared_ptr();
                 CV_LOG_DEBUG(NULL, "DNN/IE: bind output port " << lid << ":" << oid << " (" << ngraph_input_node->get_friendly_name() << ":" << ngraph_input_node->get_type_info().name << ")");
 
                 if ((oid == 0 && ngraph_input_node->get_output_size() == 1) || lid == 0)
@@ -494,10 +494,8 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 }
                 CV_CheckLT((size_t)oid, ngraph_input_node->get_output_size(), "");
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-                // FIXIT refactor ".initNgraph()" API to use Output<Node>
-                // WA: use Concat to emulate Identity operation with requested output port
-                auto oid_node = std::make_shared<ngraph::op::Concat>(ngraph::OutputVector { ngraph_input_node->output(oid) }, 0);
-                inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(oid_node));
+                inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(nullptr));
+                inputNodes[i].dynamicCast<InfEngineNgraphNode>()->node = ngraph_input_node->output(oid);
 #elif INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_3)
                 inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(ieInpNode->node->get_output_as_single_output_node(oid)));
 #else
