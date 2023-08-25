@@ -568,8 +568,7 @@ void OctreeSerializeCoder::encode(const std::vector<Point3f> &pointCloud, const 
     traverse(*(this->octree->p->rootNode), serializedVector);
 }
 
-void OctreeSerializeCoder::decode(std::vector<Point3f> &pointCloud, const std::vector<unsigned char> &serializedVector,
-                             double resolution, Point3f &origin) {
+void OctreeSerializeCoder::decode(const std::vector<unsigned char> &serializedVector, double resolution, Point3f &origin) {
     this->octree->clear();
     this->octree->p->origin = origin;
     this->octree->p->resolution = resolution;
@@ -604,7 +603,7 @@ void PointCloudCompression::decompress(std::istream &inputStream, std::vector<Po
     Point3f origin(ori_x, ori_y, ori_z);
     inputStream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     this->_entropyCoder.decodeStreamToCharVector(inputStream, outputCharVector);
-    this->_coder.decode(pointCloud, outputCharVector, resolution, origin);
+    this->_coder.decode(outputCharVector, resolution, origin);
     outputCharVector.clear();
     if (qStep > 0) {
         this->_entropyCoder.decodeStreamToCharVector(inputStream, outputCharVector);
