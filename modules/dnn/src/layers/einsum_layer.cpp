@@ -37,12 +37,6 @@ Mat batchwiseMatMul(
     const Mat& input2,
     const MatShape& input2ShapeOverride)
 {
-    std::cout << "\n\n\t\t ----> Batchwise Matrix Multiplication <---- " << std::endl;
-    std::cout << "input1 shape: " << input1.size << std::endl;
-    std::cout << "input1 overide shape: " << input1ShapeOverride << std::endl;
-
-    std::cout << "input2 shape: " << input2.size << std::endl;
-    std::cout << "input2 overide shape: " << input2ShapeOverride << std::endl;
 
     // Sanity checks before the actual MatMul
     //input_1.DataType() == input_2.DataType(), "Data types of the inputs must match for MatMul");
@@ -57,46 +51,11 @@ Mat batchwiseMatMul(
     size_t K = input1ShapeOverride[2];
     size_t N = input2ShapeOverride[2];
 
-    std::cout << "Batch size is: " << batches << std::endl;
     //TODO: deal with dynamic shapes
     //TODO: deal with reshaping operation (it might not always be needed)
     std::vector<Mat> output;
     if (batches > 1)
     {
-        // for (size_t i=0; i < batches; i++)
-        // {
-
-        //     std::vector<Range> ranges1 = {cv::Range(i, i+1)};
-        //     for (int j = 1; j < input1.dims; j++)
-        //         ranges1.emplace_back(cv::Range::all());
-
-        //     Mat part1 = input1(ranges1);
-        //     std::cout << "part1: " << part1.size << std::endl;
-        //     int shape[] = {M, K};
-        //     part1 = part1.reshape(1, sizeof(shape)/sizeof(shape[0]), shape);
-        //     std::cout << "part1: " << part1.size << std::endl;
-
-        //     std::vector<Range> ranges2 = {cv::Range(i, i+1)};
-        //     for (int j = 1; j < input2.dims; j++)
-        //         ranges2.emplace_back(cv::Range::all());
-
-        //     Mat part2 = input2(ranges2);
-        //     std::cout << "part2: " << part2.size << std::endl;
-        //     int shape2[] = {K, N};
-        //     part2 = part2.reshape(1, sizeof(shape2)/sizeof(shape2[0]), shape2);
-        //     std::cout << "part2: " << part2.size << std::endl;
-
-        //     Mat tmp;
-        //     cv::gemm(part1, part2, 1.0, cv::Mat(), 1.0, tmp);
-        //     std::cout << "tmp shape: " << tmp.size << std::endl;
-        //     int newShape[] = {1, M, N};
-        //     tmp = tmp.reshape(1, sizeof(newShape)/sizeof(shape[0]), newShape);
-        //     std::cout << "reshaped tmp shape: " << tmp.size << std::endl;
-
-        //     output.emplace_back(tmp);
-        // }
-
-        std::cout << "M: " << M << " K: " << K << " N: " << N << std::endl;
         Mat reshapedInput1 = input1;
         Mat reshapedInput2 = input2;
 
@@ -106,7 +65,6 @@ Mat batchwiseMatMul(
         {
             int shape[] = {batches, M, K};
             reshapedInput1 = input1.reshape(1, 3, shape);
-            std::cout << "Reshaped input1: " << reshapedInput1.size << std::endl;
         }
 
         // input2 should be of size KxN
@@ -115,7 +73,6 @@ Mat batchwiseMatMul(
         {
             int shape[] = {batches, K, N};
             reshapedInput2 = input2.reshape(1, 3, shape);
-            std::cout << "Reshaped input2: " << reshapedInput2.size << std::endl;
         }
 
         for (size_t i=0; i < batches; i++)
@@ -125,34 +82,27 @@ Mat batchwiseMatMul(
                 ranges1.emplace_back(cv::Range::all());
 
             Mat part1 = reshapedInput1(ranges1);
-            std::cout << "part1: " << part1.size << std::endl;
             int shape[] = {M, K};
             part1 = part1.reshape(1, sizeof(shape)/sizeof(shape[0]), shape);
-            std::cout << "part1: " << part1.size << std::endl;
 
             std::vector<Range> ranges2 = {cv::Range(i, i+1)};
             for (int j = 1; j < reshapedInput2.dims; j++)
                 ranges2.emplace_back(cv::Range::all());
 
             Mat part2 = reshapedInput2(ranges2);
-            std::cout << "part2: " << part2.size << std::endl;
             int shape2[] = {K, N};
             part2 = part2.reshape(1, sizeof(shape2)/sizeof(shape2[0]), shape2);
-            std::cout << "part2: " << part2.size << std::endl;
 
             Mat tmp_output;
             cv::gemm(part1, part2, 1.0, cv::Mat(), 1.0, tmp_output);
-            std::cout << "tmp shape: " << tmp_output.size << std::endl;
             int newShape[] = {1, M, N};
             tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
-            std::cout << "reshaped tmp shape: " << tmp_output.size << std::endl;
 
             output.emplace_back(tmp_output);
         }
 
     } else {
 
-        std::cout << "M: " << M << " K: " << K << " N: " << N << std::endl;
         Mat reshapedInput1 = input1;
         Mat reshapedInput2 = input2;
 
@@ -162,7 +112,6 @@ Mat batchwiseMatMul(
         {
             int shape[] = {M, K};
             reshapedInput1 = input1.reshape(1, 2, shape);
-            std::cout << "Reshaped input1: " << reshapedInput1.size << std::endl;
         }
 
         // input2 should be of size KxN
@@ -171,16 +120,13 @@ Mat batchwiseMatMul(
         {
             int shape2[] = {K, N};
             reshapedInput2 = input2.reshape(1, 2, shape2);
-            std::cout << "Reshaped input2: " << reshapedInput2.size << std::endl;
         }
 
         Mat tmp_output;
         cv::gemm(reshapedInput1, reshapedInput2, 1.0, cv::Mat(), 1.0, tmp_output);
-        std::cout << "tmp shape: " << tmp_output.size << std::endl;
 
         int newShape[] = {1, M, N};
         tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
-        std::cout<< "reshaped tmp shape: " << tmp_output.size << std::endl;
         output.emplace_back(tmp_output);
 
     }
@@ -192,10 +138,6 @@ Mat batchwiseMatMul(
         Mat output_slice = output_buffer.row(i);
         output[i].copyTo(output_slice);
     }
-
-    std::cout << "Final output size: " << output_buffer.size << std::endl;
-    std::cout << "Final output sum: " << cv::sum(output_buffer) << std::endl;
-    std::cout << "\n\n\t\t -----> BatchMatMul Finished <------" << std::endl;
     return output_buffer;
 };
 
@@ -204,16 +146,8 @@ Mat Transpose(
     const MatShape& input_shape_override,
     const std::vector<size_t> permutation)
 {
-    std::cout << "\n\n\t\t ---> Transpose started <---" << std::endl;
-    std::cout << "Input dimentions: " << input.size << std::endl;
-    std::cout << "Premutation dimentions: " << permutation << std::endl;
-    std::cout << "input_shape_override: " << input_shape_override << std::endl;
 
-    // int input_rank = input_shape_override.dims();
     int input_rank = input_shape_override.size();
-    // std::cout << "rank = " << input_shape_override.dims() << std::endl;
-    std::cout << "rank = " << input_shape_override.size() << std::endl;
-    std::cout << "per rank " << permutation.size() << std::endl;
 
     if(input_rank != permutation.size())
     {
@@ -226,24 +160,19 @@ Mat Transpose(
     bool reshape = false;
     if (input.dims != input_shape_override.size())
     {
-        std::cout << "sizes do not match" << std::endl;
         reshape = true;
-        std::cout << "input needs to be reshaped" << std::endl;
     }
 
     Mat input_reshaped;
     if(reshape)
     {
         input_reshaped = input.reshape(1, input_shape_override.size(), input_shape_override.data());
-        std::cout << "reshaped input: " << input_reshaped.size << std::endl;
     }
 
     MatShape outputDims;
     outputDims.reserve(input_rank);
     for (const auto& dim : permutation)
         outputDims.emplace_back(input_shape_override[dim]);
-
-    std::cout << "output shoud dimentions: " << outputDims << std::endl;
 
     Mat output;
     // TODO: ouptimize
@@ -253,8 +182,6 @@ Mat Transpose(
         tmp_perm.emplace_back(static_cast<int>(permutation[i]));
 
     cv::transposeND((reshape ? input_reshaped : input), tmp_perm, output);
-    std::cout << "transpoed shape: " << output.size << std::endl;
-    std::cout << "\t\t ---> Transpose is finished <---" << std::endl;
     return output;
 }
 
@@ -408,7 +335,6 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        std::cout << "\n\n\t\t ---> getMemoryShapes start <---" << std::endl;
         // Start preprocessing related to equation parsing
         // and dimention broadcasting
         if (!is_parsed)
@@ -425,14 +351,6 @@ public:
             outputs.clear();
             outputs.push_back(dims);
         }
-
-        std::cout << "Output Shape: [";
-        for(int i = 0; i < outputs[0].size(); i++){
-            std::cout << outputs[0][i] << " ";
-        }
-        std::cout << "]";
-
-        std::cout << "\n\n\t\t ---> getMemoryShapes end<---" << std::endl;
         return true;
 
     } // getMemoryShape
@@ -445,14 +363,10 @@ public:
 
         CV_Assert(preProcessInputs(inputs_arr));
 
-        printf("finished preProcessingInputs\n");
         std::vector<cv::Mat> rawInputs, outputs;
         inputs_arr.getMatVector(rawInputs);
         outputs_arr.getMatVector(outputs);
-        printf("\n\t\t starting forward\n");
         Mat result;
-        std::cout << "result shape: " << result.size << std::endl;
-        std::cout << "output[0] sum: " << cv::sum(outputs[0]) << std::endl;
 
         // Pre-process the first input so as to reduce any dims that only it has
         {
@@ -492,8 +406,6 @@ public:
                 result = FinalizeOutput(!result.empty() ? result : rawInputs[0], preservedDims);
                 result.copyTo(outputs[0]);
             }
-            std::cout << "reduceDims1 : " << reducedDims << std::endl;
-            std::cout << "I was here " << std::endl;
         }
 
 
@@ -515,17 +427,12 @@ public:
 
                 if (input == inputSize - 1)
                     isFinalPair = true;
-                std::cout << "reduceDims2 : " << reducedDims << std::endl;
-                for (const auto& t : homogenizedInputDims)
-                    std::cout << "Homoginized Input Dims Shape: " << t << std::endl;
 
                 // creaet temporary variable
                 MatShape tmpResult;
                 for (int i = 0; i < result.size.dims(); i++)
                     tmpResult.emplace_back(result.size[i]);
 
-                std::cout << "preprocessed[input]: " << preProcessedInputs[input].size << std::endl;
-                std::cout << "rawInputs[input]: " << rawInputs[input].size << std::endl;
 
                 // Use either the preprocessed inputs (if it is available) or the corresponding raw inputs
                 result = pairwiseOperandProcess(!result.empty() ? result : rawInputs[0],
@@ -537,39 +444,28 @@ public:
             }
         }
 
-        std::cout << "result @ end of forward: " << cv::sum(result) << std::endl;
-        std::cout << "result shape @ end of forward: " << result.size << std::endl;
-
         // check of product of output dimentions and computed output dimentions match
         size_t reqProd = std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<int>());
         MatShape realOutputDims = MatShape(result.size.p, result.size.p + result.size.dims());
         size_t realProd = std::accumulate(realOutputDims.begin(), realOutputDims.end(), 1, std::multiplies<int>());
 
         CV_CheckEQ(reqProd, realProd, "Real output can not be shaped in to requred output");
+
         // reduce dimentions
         result = result.reshape(1, dims.size(), dims.data());
-
-        std::cout << "reshaped result @ end of forward: " << cv::sum(result) << std::endl;
-        std::cout << "reshaped result shape @ end of forward: " << result.size << std::endl;
-
         result.copyTo(outputs[0]);
-        std::cout << "outputs[0] sum: " << cv::sum(outputs[0]) << std::endl;
     } // forward
 }; // EinsumClass
 
 
 bool LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 {
-    std::cout << "\n\n\t\t ---> PreprocessInputs <---" << std::endl;
     std::vector<cv::Mat> inputs;
     inputs_arr.getMatVector(inputs);
 
-    for(const auto& t : inputs)
-        std::cout << "Original Inputs shape: " << t.size << std::endl;
 
     preProcessedInputs.reserve(inputs.size());
     homogenizedInputDims.reserve(inputs.size());
-    std::cout << "Inputs size: " << inputs.size() << std::endl;
 
     int64_t inputIter = 0;
     for(const Mat& input : inputs)
@@ -598,14 +494,11 @@ bool LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         // same axes order
         MatShape homogenizedInputDims_(numLetterIndices, 1);
 
-        std::cout << "HomigenizedInputDims: " <<  homogenizedInputDims_ << std::endl;
-
         int64_t dimIndexInIreprocessedInput = 0;
         int64_t dimIndexInOriginalInput = 0;
 
         for (const auto& subscriptIndex : currSubscriptIndices)
         {
-            std::cout << "subscript index: " << subscriptIndex << std::endl;
             if(subscriptIndicesToInputIndex[subscriptIndex] == -1)
             {
                 subscriptIndicesToInputIndex[subscriptIndex] = dimIndexInIreprocessedInput++;
@@ -626,8 +519,6 @@ bool LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
             if (d != -1)
                 permutation.emplace_back(d);
         }
-        std::cout << "subscriptIndicesToInputIndex: " << subscriptIndicesToInputIndex << std::endl;
-        std::cout << "permutation: " << permutation << std::endl;
 
         if (IsTransposeRequired(
             !preprocessed.empty() ? preprocessed.size.dims() : inputs[inputIter].size.dims(),
@@ -641,14 +532,11 @@ bool LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
                 permutation);
         }
 
-        std::cout << "preprocessed before reshape: " << preprocessed.size << std::endl;
         if (!preprocessed.empty())
         {
-            std::cout << "reshaped this input " << preprocessed.size << std::endl;
             // check if this is correct
             preprocessed = preprocessed.reshape(1, homogenizedInputDims_.size(), homogenizedInputDims_.data());
         }
-        std::cout << "preprocessed after reshape: " << preprocessed.size << std::endl;
 
         // fails here! check the problem
         preProcessedInputs.push_back(preprocessed);
@@ -656,15 +544,6 @@ bool LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 
         ++inputIter;
     }
-
-    for(const auto& t : preProcessedInputs)
-        std::cout << "preprocessed shape: " << t.size << std::endl;
-
-
-    for (const auto& t : homogenizedInputDims)
-        std::cout << "Homoginized Input Dims Shape: " << t << std::endl;
-
-    std::cout << "\n\n\t\t --> finish Input Preporcessing <--" << std::endl;
     return true;
 }
 
@@ -758,11 +637,9 @@ bool LayerEinsumImpl::calculateOutputShape(std::vector<MatShape>& outputDims) co
                 "Output subscript has letters that were not encountered in the inputs");
             }
 
-            std::cout << "Segmentation fault happens here!" << std::endl;
             // Push output dimention
             // Einsum layer only has one output vector
             dims.push_back(subscriptIndicesToDimValue[mappedIndex]);
-            std::cout << "Conferm" << std::endl;
 
             // Reset the last input index for this subscript label
             // given that it is seen in the output and hence can't be reduced
@@ -943,27 +820,18 @@ Mat LayerEinsumImpl::FinalizeOutput(
     const Mat& candidateOutput,
     const MatShape& ordered_subscript_indices_in_candidate)
 {
-    printf("\n\t\t >>> FinalizeOutput function start <<< \n");
     const std::vector<int64_t>& subscript_indices_to_output_indices = subscriptIndicesToOutputIndices;
     const auto output_dims = dims;
 
-    std::cout << "subscript_indices_to_output_indices: " << subscript_indices_to_output_indices << std::endl;
-    std::cout << "output_dims" << output_dims << std::endl;
 
     MatShape output_shape = output_dims;
     const auto output_rank = output_dims.size();
 
-    std::cout << "candidate_size: " <<  candidateOutput.dims << std::endl;
-    std::cout << "output shape: " << output_shape.size() << std::endl;
-
     // CV_CheckEQ((int) candidateOutput.dims,  (int) output_shape.size(),
     //           "Einsum op: The candidate output cannot be reshaped into the op's output");
 
-
     const MatShape candidate_output_dims = MatShape(candidateOutput.size.p, candidateOutput.size.p + candidateOutput.dims);
     const int candidate_output_rank = candidate_output_dims.size();
-
-    std::cout << "candidate_output_dims: " << candidate_output_dims << std::endl;
 
     // This vector holds the shape of the candidate_output after removing the dims that have
     // been reduced in the final output
@@ -993,8 +861,6 @@ Mat LayerEinsumImpl::FinalizeOutput(
 
     // Transpose to the required final output order
     // (Identify no-op transposes and prevent triggering the transpose)
-    std::cout << "candidate_output_shape_without_reduced_dims size: " << candidate_output_shape_without_reduced_dims.size() << std::endl;
-    std::cout << "output_permutation: " << output_permutation << std::endl;
 
     if (IsTransposeRequired(candidate_output_shape_without_reduced_dims.size(), output_permutation))
     {
@@ -1002,7 +868,6 @@ Mat LayerEinsumImpl::FinalizeOutput(
                                             candidateOutput,
                                             candidate_output_shape_without_reduced_dims,
                                             output_permutation);
-        std::cout << "candidate_output_tranposed shape: " << candidate_output_transposed.size  << std::endl;
         return candidate_output_transposed;
     }
     return candidateOutput;
@@ -1017,15 +882,6 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     bool isFinalPair
 )
 {
-    std::cout<< "\n\n\t\t ---> PairWiseOperandProcess <---" << std::endl;
-
-    std::cout << "left: " << left.size << std::endl;
-    std::cout << "leftShapeOverride: " << leftShapeOverride << std::endl;
-
-    std::cout << "right: " << right.size << std::endl;
-    std::cout << "rigthShapeOverride: " << rightShapeOverride << std::endl;
-
-
     // TODO: Create check similar to those that are in onnxruntime
     // multiplication of dimention should be the same for input and override
     size_t matDimSize = 1;
@@ -1051,9 +907,6 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     // Make copy as this may be overridden downstream
     const auto& leftDims = leftShapeOverride;
     const auto& rightDims = rightShapeOverride;
-
-    std::cout << "left shape: " << leftDims << std::endl;
-    std::cout << "right shape: " << rightDims << std::endl;
 
     int64_t leftRank = static_cast<int64_t>(leftDims.size());
     int64_t rightRank = static_cast<int64_t>(rightDims.size());
@@ -1166,9 +1019,6 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     }
     left_permutation.insert(left_permutation.end(), ro.begin(), ro.end());
 
-    std::cout << "Current left dims: " << currentLeft.size << std::endl;
-    std::cout << "LeftDims: " << leftDims << std::endl;
-    std::cout << "Left Permutaion size: " << left_permutation << std::endl;
     if (IsTransposeRequired(!currentLeft.empty() ? currentLeft.dims : leftDims.size(),
                                         left_permutation))
     {
@@ -1179,11 +1029,9 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
             // This can be done because curent_* tensors (if they exist) and output tensors are
             // intermediate tensors and cannot be input tensors to the Einsum node itself
             // (which are immutable).
-            std::cout << "Left to be reshaped" << std::endl;
             currentLeft = currentLeft.reshape(1, reshaped_dims.size(), reshaped_dims.data());
         } else {
             // Covered by ExplicitEinsumAsTensorContraction, DiagonalWithMatmul, ...
-            std::cout << "Left to be Tranposed" << std::endl;
             currentLeft = Transpose(!currentLeft.empty() ? currentLeft: left,
                                     !currentLeft.empty() ? MatShape(currentLeft.size.p, currentLeft.size.p + currentLeft.dims): leftDims,
                                     left_permutation);
@@ -1201,10 +1049,6 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     right_permutation.insert(right_permutation.end(), ro.begin(), ro.end());
     right_permutation.insert(right_permutation.end(), lo.begin(), lo.end());
 
-
-    std::cout << "Current right dims: " << currentRight.size << std::endl;
-    std::cout << "RightDims: " << rightDims << std::endl;
-    std::cout << "Right Permutaion size: " << right_permutation << std::endl;
     if (IsTransposeRequired(!currentRight.empty() ? currentRight.dims: rightDims.size(),
                                         right_permutation))
     {
@@ -1212,12 +1056,9 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
                                                                 MatShape(currentRight.size.p, currentRight.size.p + currentRight.dims),
                                                                 reshaped_dims))
         {
-            std::cout << "Right to be reshaped" << std::endl;
             currentRight = currentRight.reshape(1, reshaped_dims.size(), reshaped_dims.data());
 
         } else {
-
-            std::cout << "Right to be Tranposed" << std::endl;
             currentRight = Transpose(!currentRight.empty() ? currentRight : right,
                                     !currentRight.empty() ? MatShape(currentRight.size.p, currentRight.size.p + currentRight.dims): rightDims,
                                     right_permutation);
@@ -1291,24 +1132,6 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
         currentSubscriptOrder.insert(currentSubscriptOrder.end(), ro.begin(), ro.end());
     }
 
-
-    if(!currentLeft.empty()){
-        std::cout << "currentLeft shape: " << currentLeft.size << std::endl;
-    } else {
-        std::cout << "left shape: " << left.size << std::endl;
-    }
-    std::cout << "Left shape vector: [" << lro_size << " " << lo_size << " " << reduced_size <<  "]" << std::endl;
-
-    if(!currentRight.empty()){
-        std::cout << "currentRight shape: " << currentRight.size << std::endl;
-    } else {
-        std::cout << "left shape: " << right.size << std::endl;
-    }
-
-    std::cout << "Right shape vector: [" << lro_size << " " << reduced_size << " " << ro_size <<  "]" << std::endl;
-
-
-    std::cout << "Batch matrix Multiply" << std::endl;
     Mat output = batchwiseMatMul(
         !currentLeft.empty() ? currentLeft : left,
         MatShape({static_cast<int>(lro_size), static_cast<int>(lo_size), static_cast<int>(reduced_size)}),
@@ -1318,7 +1141,6 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
 
     //reshape
     output = output.reshape(1, outputDims.size(), outputDims.data());
-    std::cout << "Final output size after reshape: " << output.size << std::endl;
 
 
 
@@ -1341,7 +1163,6 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
                 outputPermutation);
         }
     } else {  // This is the final pair - Transpose directly to the output ordering required and copy the contents to the op's output
-        std::cout << "FinilizeOutput needs be done" << std::endl;
         // not sure if this finalize shape is needed at all
         output = FinalizeOutput(output, currentSubscriptOrder);
     }
