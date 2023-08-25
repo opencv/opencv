@@ -48,8 +48,7 @@ public:
     * @param outputStream The output stream, will be written to point cloud compressed file.
     */
     void encode(const std::vector<Point3f> &pointCloud, const std::vector<Point3f> &colorAttribute,
-                std::vector<unsigned char> &serializedVector, double resolution, double qStep,
-                std::ostream &outputStream);
+                std::vector<unsigned char> &serializedVector, double resolution, std::ostream &outputStream);
 
     /** @brief decode pointCloud data from serialized char vector
     *
@@ -62,6 +61,12 @@ public:
     */
     void decode(std::vector<Point3f> &pointCloud, const std::vector<unsigned char> &serializedVector,
                 double resolution, Point3f &origin);
+
+    void encodeColor(float qStep, std::vector<unsigned char> &colorCode);
+
+    void decodeColor(float qStep, const std::vector<unsigned char> &colorCode);
+
+    Octree *getOctree() const { return octree; };
 };
 
 /** @brief Class to reduce vectorized data size by EntropyCoding
@@ -114,7 +119,7 @@ public:
      * @param inputStream the input compressed bit stream source.
      * @param pointCloud the output pointcloud.
     */
-    void decompress(std::istream &inputStream, std::vector<Point3f> &pointCloud);
+    void decompress(std::istream &inputStream, std::vector<Point3f> &pointCloud, std::vector<Point3f> &colorAttribute);
 };
 
 }

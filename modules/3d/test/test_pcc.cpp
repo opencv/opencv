@@ -31,7 +31,6 @@ protected:
         String res_str = std::to_string(resolution);
         res_str.erase(res_str.find_last_not_of('0') + 1);
         res_str.erase(res_str.find('.'), 1);
-        outputFilename = inputFilename + "_" + res_str + ".ply";
         if (colorAttribute.empty()) {
             outputFilename = inputFilename + "_" + res_str + ".ply";
         } else {
@@ -62,6 +61,7 @@ public:
     //Point cloud data from octree
     std::vector<Point3f> restorePointCloudData;
     std::vector<Point3f> normalPlaceholder;
+    std::vector<Point3f> restoredColor;
     vector<Point3f> colorAttribute;
 };
 
@@ -79,10 +79,10 @@ TEST_F(PccTest, PointCloudCompressionTest){
     vectorToStream.close();
 
     streamToVector.open(inputFilename+".bin", std::ios_base::binary);
-    pcc.decompress(streamToVector,restorePointCloudData);
+    pcc.decompress(streamToVector,restorePointCloudData, restoredColor);
     streamToVector.close();
 
-    savePointCloud(outputFilename,restorePointCloudData, normalPlaceholder, colorAttribute);
+    savePointCloud(outputFilename,restorePointCloudData, normalPlaceholder, restoredColor);
 
     // BPP (Bits Per Point)
     // BPP is used to quantify the compression efficiency of point cloud compression algorithms.

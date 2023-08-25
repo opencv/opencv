@@ -401,9 +401,9 @@ void invHaar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients
 }
 
 
-void encodeColor(OctreeNode &root, float QStep, std::vector<unsigned char> &serializedVectorOut) {
+void OctreeSerializeCoder::encodeColor(float qStep, std::vector<unsigned char> &colorCode) {
+    OctreeNode root = *this->octree->p->rootNode;
     std::vector<Point3f> haarCoeffs;
-    std::vector<unsigned char> colorCode;
 
     size_t N = 0;
 
@@ -422,14 +422,14 @@ void encodeColor(OctreeNode &root, float QStep, std::vector<unsigned char> &seri
     haarCoeffs[N++] = root.RAHTCoefficient;
 
     // Init array for quantization
-    assert(QStep > 0.0f);
+    assert(qStep > 0.0f);
     std::vector<int32_t> qCoeffs(colorNum);
 
     // Quantization
     for (size_t i = 0; i < N; ++i) {
-        qCoeffs[i] = (int32_t) std::round(haarCoeffs[i].x / QStep);
-        qCoeffs[N + i] = (int32_t) std::round(haarCoeffs[i].y / QStep);
-        qCoeffs[(N << 1) + i] = (int32_t) std::round(haarCoeffs[i].z / QStep);
+        qCoeffs[i] = (int32_t) std::round(haarCoeffs[i].x / qStep);
+        qCoeffs[N + i] = (int32_t) std::round(haarCoeffs[i].y / qStep);
+        qCoeffs[(N << 1) + i] = (int32_t) std::round(haarCoeffs[i].z / qStep);
     }
 
     // save coefficients to vector for further encoding
@@ -451,12 +451,10 @@ void encodeColor(OctreeNode &root, float QStep, std::vector<unsigned char> &seri
 
     for (auto &p: cubes)
         delete p;
-    // append color code to output
-    serializedVectorOut.insert(serializedVectorOut.end(), colorCode.begin(), colorCode.end());
 }
 
-void decodeColor(OctreeNode &root, float QStep, const std::vector<unsigned char> &colorCode) {
-
+void OctreeSerializeCoder::decodeColor(float qStep, const std::vector<unsigned char> &colorCode) {
+    OctreeNode root = *this->octree->p->rootNode;
     size_t pointNum = root.pointNum;
     size_t colorNum = 3 * pointNum;
     size_t i, j, k;
@@ -476,9 +474,9 @@ void decodeColor(OctreeNode &root, float QStep, const std::vector<unsigned char>
     // de-quantization
     std::vector<Point3f> haarCoeffs(pointNum);
     for (i = 0, j = i + pointNum, k = j + pointNum; i < pointNum; ++i) {
-        haarCoeffs[i].x = static_cast<float>(qCoeffs[i]) * QStep;
-        haarCoeffs[i].y = static_cast<float>(qCoeffs[j++]) * QStep;
-        haarCoeffs[i].z = static_cast<float>(qCoeffs[k++]) * QStep;
+        haarCoeffs[i].x = static_cast<float>(qCoeffs[i]) * qStep;
+        haarCoeffs[i].y = static_cast<float>(qCoeffs[j++]) * qStep;
+        haarCoeffs[i].z = static_cast<float>(qCoeffs[k++]) * qStep;
     }
 
     size_t N = haarCoeffs.size() - 1;
@@ -557,12 +555,9 @@ void restore(OctreeNode &root, const std::vector<unsigned char> &serializedVecto
     }
 }
 
-void
-OctreeSerializeCoder::encode(const std::vector<Point3f> &pointCloud, const std::vector<Point3f> &colorAttribute,
-                             std::vector<unsigned char> &serializedVector, double resolution, double qStep,
-                             std::ostream &outputStream) {
+void OctreeSerializeCoder::encode(const std::vector<Point3f> &pointCloud, const std::vector<Point3f> &colorAttribute,
+                             std::vector<unsigned char> &serializedVector, double resolution, std::ostream &outputStream) {
     // create octree by pointCloud & colorAttribute
-    this->octree->p->hasColor = !colorAttribute.empty();
     this->octree->create(pointCloud, colorAttribute, resolution);
 
     outputStream << "origin " << this->octree->p->origin.x;
@@ -571,43 +566,37 @@ OctreeSerializeCoder::encode(const std::vector<Point3f> &pointCloud, const std::
 
     // Encode octree by traverse its occupancy code in BFS order.
     traverse(*(this->octree->p->rootNode), serializedVector);
-
-    // Encode octree's color attribute
-    if (this->octree->p->hasColor)
-        encodeColor(*(this->octree->p->rootNode), (float)qStep, serializedVector);
 }
 
-void
-OctreeSerializeCoder::decode(std::vector<Point3f> &pointCloud, const std::vector<unsigned char> &serializedVector,
+void OctreeSerializeCoder::decode(std::vector<Point3f> &pointCloud, const std::vector<unsigned char> &serializedVector,
                              double resolution, Point3f &origin) {
     this->octree->clear();
     this->octree->p->origin = origin;
     this->octree->p->resolution = resolution;
     this->octree->p->rootNode = new OctreeNode();
     restore(*this->octree->p->rootNode, serializedVector);
-    // TODO: use the rest part of serializedVector as color code for decoding
-    // TODO: update has color?
-    if (this->octree->p->hasColor)
-        decodeColor(*this->octree->p->rootNode, 10.0f, serializedVector);
-    std::vector<Point3f> color;
-    this->octree->getPointCloudByOctree(pointCloud, color);
 }
 
-void PointCloudCompression::compress(const std::vector<Point3f> &pointCloud, double resolution,
+    void PointCloudCompression::compress(const std::vector<Point3f> &pointCloud, double resolution,
                                      std::ostream &outputStream, const std::vector<Point3f> &colorAttribute, double qStep) {
     std::vector<unsigned char> serializedVector;
     outputStream << "resolution " << resolution << "\n";
     outputStream << "qstep " << qStep << "\n";
-    this->_coder.encode(pointCloud, colorAttribute, serializedVector, resolution, qStep, outputStream);
+    this->_coder.encode(pointCloud, colorAttribute, serializedVector, resolution, outputStream);
     this->_entropyCoder.encodeCharVectorToStream(serializedVector, outputStream);
+    if (!colorAttribute.empty()) {
+        serializedVector.clear();
+        this->_coder.encodeColor((float) qStep, serializedVector);
+        this->_entropyCoder.encodeCharVectorToStream(serializedVector, outputStream);
+    }
 }
 
-void PointCloudCompression::decompress(std::istream &inputStream, std::vector<Point3f> &pointCloud) {
+void PointCloudCompression::decompress(std::istream &inputStream, std::vector<Point3f> &pointCloud, std::vector<Point3f> &colorAttribute) {
     std::vector<unsigned char> outputCharVector;
     std::string tmp;
 //    std::getline(inputStream, res);
     double resolution, qStep;
-    inputStream >> tmp >> resolution >> tmp;
+    inputStream >> tmp >> resolution;
     inputStream >> tmp >> qStep >> tmp;
 //    double resolution = std::stod(res.substr(11));
     float ori_x, ori_y, ori_z;
@@ -616,6 +605,12 @@ void PointCloudCompression::decompress(std::istream &inputStream, std::vector<Po
     inputStream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     this->_entropyCoder.decodeStreamToCharVector(inputStream, outputCharVector);
     this->_coder.decode(pointCloud, outputCharVector, resolution, origin);
+    outputCharVector.clear();
+    if (qStep > 0) {
+        this->_entropyCoder.decodeStreamToCharVector(inputStream, outputCharVector);
+        this->_coder.decodeColor((float)qStep, outputCharVector);
+    }
+    this->_coder.getOctree()->getPointCloudByOctree(pointCloud, colorAttribute);
 }
 }
 
