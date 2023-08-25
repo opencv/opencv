@@ -230,6 +230,11 @@ TEST_P(Test_ONNX_layers, Gather)
     testONNXModels("gather", npy, 0, 0, false, false);
 }
 
+TEST_P(Test_ONNX_layers, RAFT)
+{
+    testONNXModels("RAFT", npy, 0, 0, false, true, 2);
+}
+
 TEST_P(Test_ONNX_layers, GatherElements)
 {
     testONNXModels("gather_elements_0", pb);
