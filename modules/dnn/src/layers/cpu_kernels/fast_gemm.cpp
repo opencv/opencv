@@ -262,12 +262,12 @@ static void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
     c3 = vld1q_f32(c + row1 * ldc);          \
     c4 = vld1q_f32(c + row1 * ldc + 4);      \
     c5 = vld1q_f32(c + row1 * ldc + 8);      \
-    c0 = vfmaq_f32(s##row0##0, v_alpha, c0); \
-    c1 = vfmaq_f32(s##row0##1, v_alpha, c1); \
-    c2 = vfmaq_f32(s##row0##2, v_alpha, c2); \
-    c3 = vfmaq_f32(s##row1##0, v_alpha, c3); \
-    c4 = vfmaq_f32(s##row1##1, v_alpha, c4); \
-    c5 = vfmaq_f32(s##row1##2, v_alpha, c5); \
+    c0 = vfmaq_f32(c0, s##row0##0, v_alpha); \
+    c1 = vfmaq_f32(c1, s##row0##1, v_alpha); \
+    c2 = vfmaq_f32(c2, s##row0##2, v_alpha); \
+    c3 = vfmaq_f32(c3, s##row1##0, v_alpha); \
+    c4 = vfmaq_f32(c4, s##row1##1, v_alpha); \
+    c5 = vfmaq_f32(c5, s##row1##2, v_alpha); \
     vst1q_f32(c + row0 * ldc, c0);           \
     vst1q_f32(c + row0 * ldc + 4, c1);       \
     vst1q_f32(c + row0 * ldc + 8, c2);       \
@@ -331,7 +331,7 @@ static void fast_gemm_macro_kernel(int m, int n, int k,
             }
 
 #if CV_AVX || CV_AVX2
-            fast_gemm8x12_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
+            fast_gemm12x8_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
 #elif CV_NEON && CV_NEON_AARCH64
             fast_gemm8x12_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
 #else
@@ -489,7 +489,6 @@ void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
 
     int GEMM_MC = FAST_GEMM_F32_MC,
         GEMM_NC = FAST_GEMM_F32_NC,
-        // GEMM_VOL = FAST_GEMM_F32_VOL,
         GEMM_MR = FAST_GEMM_F32_MR,
         GEMM_NR = FAST_GEMM_F32_NR;
 
