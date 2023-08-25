@@ -602,7 +602,7 @@ class CppHeaderParser(object):
 
                         if arg_type == "InputArray":
                             arg_type = mat
-                            if is_arithm_op_func and arg_name in { "src1", "src2" }: # Avoid to mask arguments
+                            if is_arithm_op_func:
                                 modlist.append("/AOS") # Arithm Ope Source
                         elif arg_type == "InputOutputArray":
                             arg_type = mat

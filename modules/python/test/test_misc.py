@@ -99,7 +99,9 @@ def get_ocv_arithm_op_table(apply_saturation=False):
     @saturate
     def divide(x, y):
         if not isinstance(y, (int, float)):
-            _, max_value = get_limits(y.dtype)
+            dst_dtype = np.result_type(x, y)
+            y = np.array(y).astype(dst_dtype)
+            _, max_value = get_limits(dst_dtype)
             y[y == 0] = max_value
 
         dst = x / y
