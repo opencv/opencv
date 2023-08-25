@@ -48,8 +48,8 @@ public:
         typeDispatch(outputs[0].type(), data, indices, out);
     }
 
-    template<typename T, typename Functor>
-    void forward_impl(const Functor& rd, const Mat& data, const Mat& indices,  Mat& out)
+    template<typename T>
+    void forward_impl(const Mat& data, const Mat& indices,  Mat& out)
     {
 
         const int ndims = data.dims;
@@ -104,7 +104,9 @@ public:
 
             const T* tmp_p_data = p_data + inp_offset;
             T* tmp_p_out = p_out + ind_offset;
-            *tmp_p_out = rd(*tmp_p_out, *tmp_p_data);
+            for (size_t i = 0; i < total; i++) {
+                *tmp_p_out = *tmp_p_data;
+            }
         }
     }
 
@@ -114,26 +116,18 @@ public:
         switch (type)
         {
             case CV_8U:
-                reductionDispatch<uint8_t>(std::forward<Args>(args)...);
+                forward_impl<uint8_t>(std::forward<Args>(args)...);
                 break;
             case CV_32S:
-                reductionDispatch<int32_t>(std::forward<Args>(args)...);
+                forward_impl<int32_t>(std::forward<Args>(args)...);
                 break;
             case CV_32F:
-                reductionDispatch<float>(std::forward<Args>(args)...);
+                forward_impl<float>(std::forward<Args>(args)...);
                 break;
             default:
-                CV_Error(cv::Error::BadDepth, "Unsupported type.");
+                CV_Error(cv::Error::BadDepth, "DNN/GatherElements: Unsupported type.");
         };
     }
-
-    template<typename T, typename... Args>
-    inline void reductionDispatch(Args&&... args)
-    {
-        auto rd = [](const T& a, const T& b) { return b; };
-        forward_impl<T>(rd, std::forward<Args>(args)...);
-    }
-
 
 private:
     int axis;

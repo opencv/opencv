@@ -2557,7 +2557,7 @@ void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::Node
 void ONNXImporter::parseGatherElements(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_CheckEQ(node_proto.input_size(), 2, "GatherElements: two inputs are required");
-
+    CV_CheckTrue(constBlobs.find(node_proto.input(1)) != constBlobs.end(), "DNN/ONNX-GatherElements: indices must be constant");
     size_t consts = 0;
     for (size_t i = 0; i < node_proto.input_size(); ++i){
         if (layer_id.find(node_proto.input(i)) == layer_id.end())
