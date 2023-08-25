@@ -26,9 +26,10 @@
 #if CV_AVX || CV_AVX2
 #define FAST_GEMM_F32_MR 12
 #define FAST_GEMM_F32_NR 8
-#endif
+#else
 #define FAST_GEMM_F32_MR 8
 #define FAST_GEMM_F32_NR 12
+#endif
 #define FAST_GEMM_F32_PACKED_STRIDE_K 256
 
 namespace cv { namespace dnn {
