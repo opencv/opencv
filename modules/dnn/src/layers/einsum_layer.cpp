@@ -63,7 +63,7 @@ Mat batchwiseMatMul(
         // check if input1 needs reshape, if need reshape
         if (input1.size[0] != M || input1.size[1] != K)
         {
-            int shape[] = {batches, M, K};
+            int shape[] = {static_cast<int>(batches), static_cast<int>(M), static_cast<int>(K)};
             reshapedInput1 = input1.reshape(1, 3, shape);
         }
 
@@ -71,7 +71,7 @@ Mat batchwiseMatMul(
         // check if input2 needs reshape, if needs reshape
         if (input2.size[0] != K || input2.size[1] != N)
         {
-            int shape[] = {batches, K, N};
+            int shape[] = {static_cast<int>(batches), static_cast<int>(K), static_cast<int>(N)};
             reshapedInput2 = input2.reshape(1, 3, shape);
         }
 
@@ -82,7 +82,7 @@ Mat batchwiseMatMul(
                 ranges1.emplace_back(cv::Range::all());
 
             Mat part1 = reshapedInput1(ranges1);
-            int shape[] = {M, K};
+            int shape[] = {static_cast<int>(M), static_cast<int>(K)};
             part1 = part1.reshape(1, sizeof(shape)/sizeof(shape[0]), shape);
 
             std::vector<Range> ranges2 = {cv::Range(i, i+1)};
@@ -90,12 +90,12 @@ Mat batchwiseMatMul(
                 ranges2.emplace_back(cv::Range::all());
 
             Mat part2 = reshapedInput2(ranges2);
-            int shape2[] = {K, N};
+            int shape2[] = {static_cast<int>(K), static_cast<int>(N)};
             part2 = part2.reshape(1, sizeof(shape2)/sizeof(shape2[0]), shape2);
 
             Mat tmp_output;
             cv::gemm(part1, part2, 1.0, cv::Mat(), 1.0, tmp_output);
-            int newShape[] = {1, M, N};
+            int newShape[] = {1, static_cast<int>(M), static_cast<int>(N)};
             tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
 
             output.emplace_back(tmp_output);
@@ -110,7 +110,7 @@ Mat batchwiseMatMul(
         // check if input1 needs reshape, if need reshape
         if (input1.dims > 2 || input1.size[0] != M || input1.size[1] != K)
         {
-            int shape[] = {M, K};
+            int shape[] = {static_cast<int>(M), static_cast<int>(K)};
             reshapedInput1 = input1.reshape(1, 2, shape);
         }
 
@@ -118,20 +118,20 @@ Mat batchwiseMatMul(
         // check if input2 needs reshape, if needs reshape
         if (input2.dims > 2 || input2.size[0] != K || input2.size[1] != N)
         {
-            int shape2[] = {K, N};
+            int shape2[] = {static_cast<int>(K), static_cast<int>(N)};
             reshapedInput2 = input2.reshape(1, 2, shape2);
         }
 
         Mat tmp_output;
         cv::gemm(reshapedInput1, reshapedInput2, 1.0, cv::Mat(), 1.0, tmp_output);
 
-        int newShape[] = {1, M, N};
+        int newShape[] = {1, static_cast<int>(M), static_cast<int>(N)};
         tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
         output.emplace_back(tmp_output);
 
     }
 
-    int outputDim[] = {static_cast<int>(output.size()), M, N};
+    int outputDim[] = {static_cast<int>(output.size()), static_cast<int>(M), static_cast<int>(N)};
     Mat output_buffer = Mat::zeros(3, outputDim, CV_32F);
 
     for (size_t i = 0; i < output.size(); i++) {
