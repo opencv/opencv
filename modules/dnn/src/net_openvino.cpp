@@ -321,8 +321,10 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         return;
     }
 
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2022_1)
     bool supportsCPUFallback = !isArmComputePlugin() && (preferableTarget == DNN_TARGET_CPU ||
                                openvino::checkTarget(DNN_TARGET_CPU));
+#endif
 
     // Build Inference Engine networks from sets of layers that support this
     // backend. Split a whole model on several Inference Engine networks if
@@ -341,6 +343,10 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 
         bool fused = ld.skip;
         Ptr<Layer> layer = ld.layerInstance;
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+        if (ld.id == 0)
+            continue;
+#else
         if (!fused && !layer->supportBackend(preferableBackend))
         {
             CV_LOG_DEBUG(NULL, "DNN/IE:    NOT supported!");
@@ -354,17 +360,6 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                     customizable = ld.inputBlobs[i]->size[0] == 1;
                 }
             }
-
-            // TODO: fix these workarounds
-            if (preferableTarget == DNN_TARGET_MYRIAD ||
-                preferableTarget == DNN_TARGET_HDDL ||
-                preferableTarget == DNN_TARGET_OPENCL ||
-                preferableTarget == DNN_TARGET_OPENCL_FP16)
-                customizable &= ld.type != "Concat";
-
-            if (preferableTarget == DNN_TARGET_OPENCL ||
-                preferableTarget == DNN_TARGET_OPENCL_FP16)
-                customizable &= ld.type != "Power";
 
             if (preferableTarget == DNN_TARGET_OPENCL)
                 customizable &= ld.type != "Eltwise";
@@ -390,6 +385,7 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 continue;
             }
         }
+#endif
         ld.skip = true;  // Initially skip all Inference Engine supported layers.
 
         // Create a new network if one of inputs from different Inference Engine graph.
@@ -579,6 +575,10 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
             ieNode->net->addOutput(ieNode);
             ieNode->net->createNet((Target)preferableTarget);
             ld.skip = false;
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+            // There is only one network
+            break;
+#endif
         }
     }
 }
