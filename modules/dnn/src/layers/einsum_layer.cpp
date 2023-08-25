@@ -45,7 +45,7 @@ Mat batchwiseMatMul(
     std::cout << "input2 overide shape: " << input2ShapeOverride << std::endl;
 
     // Sanity checks before the actual MatMul
-    // ORT_ENFORCE(input_1.DataType() == input_2.DataType(), "Data types of the inputs must match for MatMul");
+    //input_1.DataType() == input_2.DataType(), "Data types of the inputs must match for MatMul");
 
     CV_CheckEQ((size_t) input1ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
     CV_CheckEQ((size_t) input2ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
@@ -56,10 +56,6 @@ Mat batchwiseMatMul(
     size_t M = input1ShapeOverride[1];
     size_t K = input1ShapeOverride[2];
     size_t N = input2ShapeOverride[2];
-
-    size_t left_offset = M * K;
-    size_t right_offset = K * N;
-    size_t output_offset = M * N;
 
     std::cout << "Batch size is: " << batches << std::endl;
     //TODO: deal with dynamic shapes
@@ -168,7 +164,6 @@ Mat batchwiseMatMul(
             reshapedInput1 = input1.reshape(1, 2, shape);
             std::cout << "Reshaped input1: " << reshapedInput1.size << std::endl;
         }
-        // CV_LOG_DEBUG(NULL, "DNN/ONNX: " << prefix << "[" << i << "] dim[" << j << "] = <" << dimension.dim_param() << "> (dynamic)");
 
         // input2 should be of size KxN
         // check if input2 needs reshape, if needs reshape
@@ -190,9 +185,6 @@ Mat batchwiseMatMul(
 
     }
 
-    // int matShape[] = {batches, M, N};
-    // Mat output_buffer = Mat::zeros(3, matShape, CV_32F);
-
     int outputDim[] = {static_cast<int>(output.size()), M, N};
     Mat output_buffer = Mat::zeros(3, outputDim, CV_32F);
 
@@ -200,9 +192,6 @@ Mat batchwiseMatMul(
         Mat output_slice = output_buffer.row(i);
         output[i].copyTo(output_slice);
     }
-
-    // std::cout << "buffer size: " << output_buffer.size << std::endl;
-    // cv::vconcat(output, output_buffer);
 
     std::cout << "Final output size: " << output_buffer.size << std::endl;
     std::cout << "Final output sum: " << cv::sum(output_buffer) << std::endl;
@@ -212,7 +201,6 @@ Mat batchwiseMatMul(
 
 Mat Transpose(
     const cv::Mat& input,
-    // const MatSize& input_shape_override,
     const MatShape& input_shape_override,
     const std::vector<size_t> permutation)
 {
@@ -239,17 +227,8 @@ Mat Transpose(
     if (input.dims != input_shape_override.size())
     {
         std::cout << "sizes do not match" << std::endl;
-        // for(int i = 0; i < input.dims; i++)
-        // {
-            // if (input.size[i] != input_shape_override[i])
-            // {
-                // CV_Error(
-                    // Error::StsAssert,
-                    // "Input Shape does not match with transpose shape");
-                reshape = true;
-                std::cout << "input needs to be reshaped" << std::endl;
-            // }
-        // }
+        reshape = true;
+        std::cout << "input needs to be reshaped" << std::endl;
     }
 
     Mat input_reshaped;
@@ -331,12 +310,6 @@ int64_t letterToIndex(const char ch) {
 // Implimentation of Einsum layer is havily inflovensed by Onnxrutime as the time of writing
 // Main logic from is borrowed from onnxrutime:
 // https://github.com/microsoft/onnxruntime/blob/eaea34f8e29df9fb21fab675a3a895084407f306/onnxruntime/core/providers/cpu/math/einsum_utils/einsum_compute_preprocessor.cc#L8
-
-
-
-
-
-
 class LayerEinsumImpl CV_FINAL : public EinsumLayer
 {
 public:
@@ -473,11 +446,13 @@ public:
         CV_Assert(preProcessInputs(inputs_arr));
 
         printf("finished preProcessingInputs\n");
-        std::vector<cv::Mat> rawInputs;
+        std::vector<cv::Mat> rawInputs, outputs;
         inputs_arr.getMatVector(rawInputs);
+        outputs_arr.getMatVector(outputs);
         printf("\n\t\t starting forward\n");
         Mat result;
         std::cout << "result shape: " << result.size << std::endl;
+        std::cout << "output[0] sum: " << cv::sum(outputs[0]) << std::endl;
 
         // Pre-process the first input so as to reduce any dims that only it has
         {
@@ -500,9 +475,6 @@ public:
             if (reducedDims.size() != 0)
             {
                 CV_Error(Error::StsNotImplemented, "Reduce is not implemented yet");
-                // result = ReduceSum(!preProcessedInputs[0].empty() ? preProcessedInputs[0] : rawInputs[0],
-                //                         homogenizedInputDims[0].size(), reducedDims, allocator_, tp_,
-                //                         einsum_ep_assets_, device_reduce_sum_func_);
             } else {
                 // Check if there is a pre-processed version of this input
                 // If so assign it to result
@@ -517,9 +489,8 @@ public:
                 // Finalize the output by applying any transpose required to get
                 // it to the required output ordering and move it to the op's output
 
-                CV_Error(Error::StsNotImplemented, "Finalize is not implemented yet");
-                // FinalizeOutput(!result.empty() ? result : rawInputs[0], preservedDims);
-                return;
+                result = FinalizeOutput(!result.empty() ? result : rawInputs[0], preservedDims);
+                result.copyTo(outputs[0]);
             }
             std::cout << "reduceDims1 : " << reducedDims << std::endl;
             std::cout << "I was here " << std::endl;
@@ -551,7 +522,7 @@ public:
                 // creaet temporary variable
                 MatShape tmpResult;
                 for (int i = 0; i < result.size.dims(); i++)
-                    tmpResult[i] = result.size[i];
+                    tmpResult.emplace_back(result.size[i]);
 
                 std::cout << "preprocessed[input]: " << preProcessedInputs[input].size << std::endl;
                 std::cout << "rawInputs[input]: " << rawInputs[input].size << std::endl;
@@ -581,12 +552,8 @@ public:
         std::cout << "reshaped result @ end of forward: " << cv::sum(result) << std::endl;
         std::cout << "reshaped result shape @ end of forward: " << result.size << std::endl;
 
-        // At the end of the forward computation, after you have the 'result':
-        outputs_arr.create(1, 1, CV_32F); // Assuming the output is a single matrix of type CV_32F
-
-        // Assign the computed 'result' to the output
-        Mat outputMat = result.clone(); // Clone the result to ensure data is copied
-        outputs_arr.getMatRef(0) = outputMat;
+        result.copyTo(outputs[0]);
+        std::cout << "outputs[0] sum: " << cv::sum(outputs[0]) << std::endl;
     } // forward
 }; // EinsumClass
 
@@ -618,7 +585,6 @@ bool LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         }
 
         const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
-
 
         // There should be subscript index (subscript label) for each dim of the input
         if (input_dims.size() != currSubscriptIndices.size())
@@ -747,7 +713,7 @@ bool LayerEinsumImpl::calculateOutputShape(std::vector<MatShape>& outputDims) co
 
     // Traverse through each of the subscript labels within the output subscript.
     bool middleOfEllipsis = false;
-    int64_t ellipsisCharCount = 0;
+    // int64_t ellipsisCharCount = 0;
 
     subscriptIndicesToOutputIndices.resize(numLetterIndices, -1);
 
@@ -977,17 +943,15 @@ Mat LayerEinsumImpl::FinalizeOutput(
     const Mat& candidateOutput,
     const MatShape& ordered_subscript_indices_in_candidate)
 {
-    printf("\n\t\t\ >>> FinalizeOutput function start <<< \n");
+    printf("\n\t\t >>> FinalizeOutput function start <<< \n");
     const std::vector<int64_t>& subscript_indices_to_output_indices = subscriptIndicesToOutputIndices;
     const auto output_dims = dims;
 
     std::cout << "subscript_indices_to_output_indices: " << subscript_indices_to_output_indices << std::endl;
     std::cout << "output_dims" << output_dims << std::endl;
 
-
     MatShape output_shape = output_dims;
     const auto output_rank = output_dims.size();
-    // Mat& output = *context_->Output(0, output_dims);
 
     std::cout << "candidate_size: " <<  candidateOutput.dims << std::endl;
     std::cout << "output shape: " << output_shape.size() << std::endl;
@@ -1042,29 +1006,6 @@ Mat LayerEinsumImpl::FinalizeOutput(
         return candidate_output_transposed;
     }
     return candidateOutput;
-
-
-
-        // We have the result in an output "candidate". Now we have to copy the contents in its buffer
-        // into the buffer of the actual output given to us by the execution frame
-        // We need to do this because the buffer owned by the output tensor of the op could be user provided buffer
-
-
-        //do i have to really copy the data?
-        // auto status = device_data_copy_func_(*candidate_output_transposed, output, einsum_ep_assets_);
-
-        // ORT_ENFORCE(status.IsOK(), "Einsum op: Could not copy the intermediate output's buffer into the op's output buffer. Error: ",
-                    // status.ErrorMessage());
-
-    // } else {
-
-    //     // Copy the output candidate into the op's output
-    //     //do i have to really copy the data?
-    //     auto status = device_data_copy_func_(*candidate_output_transposed, output, einsum_ep_assets_);
-    //     auto status = device_data_copy_func_(candidate_output, output, einsum_ep_assets_);
-    //     ORT_ENFORCE(status.IsOK(), "Einsum op: Could not copy the intermediate output's buffer into the op's output buffer. Error: ",
-    //                 status.ErrorMessage());
-    // }
 }
 
 Mat LayerEinsumImpl::pairwiseOperandProcess(
@@ -1120,7 +1061,6 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     Mat currentLeft;
     Mat currentRight;
 
-    // CV_CheckEQ(leftRank, rightRank, "Raks of pair-wise operands must be equal");
     if (leftRank != rightRank)
         CV_Error(Error::StsError, "Raks of pair-wise operands must be equal");
 
@@ -1285,8 +1225,6 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
         }
     }
 
-
-
     // Calculate output size
     // Output shape will be determined by rules of MatMul:
     // because we are multiplying two tensors of shapes [lro, lo, reduce_dims] , [lro, reduce_dims, ro]
@@ -1296,14 +1234,18 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     // dim_value of `ro` dims]
     MatShape outputDims;
     outputDims.reserve(lro.size() + lo.size() + reduceDims.size() + ro.size());
-    for (size_t i = 0; i < lro.size(); ++i) {
+    for (size_t i = 0; i < lro.size(); ++i)
+    {
         outputDims.emplace_back(leftDims[lro[i]]);
     }
-    for (size_t i = 0; i < lo.size(); ++i) {
+
+    for (size_t i = 0; i < lo.size(); ++i)
+    {
         outputDims.emplace_back(leftDims[lo[i]]);
     }
 
-    for (size_t i = 0; i < reduceDims.size(); ++i) {
+    for (size_t i = 0; i < reduceDims.size(); ++i)
+    {
         outputDims.emplace_back(1);  // reduced dimensions will have a value 1 in it
     }
 
@@ -1312,7 +1254,6 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     }
 
     MatShape currentSubscriptOrder;
-
     // Calculate output permutation
     // After the MatMul op, the because the two operands have been permutated,
     // the output is permutated as well with respect to the original ordering of the axes.
@@ -1322,18 +1263,26 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     if (!isFinalPair) {  // If this is not the final pair, we need to permutate the result to match the pre-fixed order for the next iteration
         outputPermutation.resize(lro.size() + lo.size() + reduceDims.size() + ro.size(), 0);
         size_t iter = 0;
-        for (size_t i = 0; i < lro.size(); ++i) {
-        outputPermutation[lro[i]] = iter++;
+        for (size_t i = 0; i < lro.size(); ++i)
+        {
+            outputPermutation[lro[i]] = iter++;
         }
-        for (size_t i = 0; i < lo.size(); ++i) {
-        outputPermutation[lo[i]] = iter++;
+
+        for (size_t i = 0; i < lo.size(); ++i)
+        {
+            outputPermutation[lo[i]] = iter++;
         }
-        for (size_t i = 0; i < reduceDims.size(); ++i) {
-        outputPermutation[reduceDims[i]] = iter++;
+
+        for (size_t i = 0; i < reduceDims.size(); ++i)
+        {
+            outputPermutation[reduceDims[i]] = iter++;
         }
-        for (size_t i = 0; i < ro.size(); ++i) {
-        outputPermutation[ro[i]] = iter++;
+
+        for (size_t i = 0; i < ro.size(); ++i)
+        {
+            outputPermutation[ro[i]] = iter++;
         }
+
     } else {
         currentSubscriptOrder.reserve(lro.size() + lo.size() + reduceDims.size() + ro.size());
         currentSubscriptOrder.insert(currentSubscriptOrder.end(), lro.begin(), lro.end());
@@ -1396,7 +1345,6 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
         // not sure if this finalize shape is needed at all
         output = FinalizeOutput(output, currentSubscriptOrder);
     }
-
     return output;
 };
 
