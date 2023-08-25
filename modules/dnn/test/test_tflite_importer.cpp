@@ -157,14 +157,7 @@ TEST_P(Test_TFLite, max_unpooling)
     net.setInput(input);
 
     std::vector<std::vector<Mat> > outs;
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
-        // TODO: seems like a bug with a retrieving intermediate tensors
-        net.forward(outs, {"conv2d_transpose_4", "p_re_lu_1", "max_pooling_with_argmax2d", "conv2d_86", "max_unpooling2d_2"});
-        outs.erase(outs.begin());
-    }
-    else {
-        net.forward(outs, {"p_re_lu_1", "max_pooling_with_argmax2d", "conv2d_86", "max_unpooling2d_2"});
-    }
+    net.forward(outs, {"p_re_lu_1", "max_pooling_with_argmax2d", "conv2d_86", "max_unpooling2d_2"});
 
     ASSERT_EQ(outs.size(), 4);
     ASSERT_EQ(outs[0].size(), 1);

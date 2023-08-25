@@ -550,6 +550,36 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         addNgraphOutputs(ld);
     }
 
+    // User may choose to return only intermediate blobs but not network's result (see Test_TFLite.max_unpooling)
+    // Such layers should not be skipped when forwardLayer is called.
+    // Also, perform a sanity check that there is no double inferred networks (a single skip=false per unique net instance)
+    std::set<Ptr<InfEngineNgraphNet>> uniqueNets;
+    if (!blobsToKeep_.empty())
+    {
+        LayerPin latestLayerPin = getLatestLayerPin(blobsToKeep_);
+        for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); ++it)
+        {
+            LayerData& ld = it->second;
+            auto iter = ld.backendNodes.find(preferableBackend);
+            if (iter == ld.backendNodes.end())
+                continue;
+
+            Ptr<BackendNode>& node = iter->second;
+            if (node.empty())
+                continue;
+
+            Ptr<InfEngineNgraphNode> ieNode = node.dynamicCast<InfEngineNgraphNode>();
+            if (ieNode.empty())
+                continue;
+
+            if (ld.id == latestLayerPin.lid) {
+                ld.skip = false;
+                uniqueNets.insert(ieNode->net);
+                break;
+            }
+        }
+    }
+
     // Initialize all networks.
     for (MapIdToLayerData::reverse_iterator it = layers.rbegin(); it != layers.rend(); ++it)
     {
@@ -572,13 +602,15 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         {
             ieNode->net->addOutput(ieNode);
             ieNode->net->createNet((Target)preferableTarget);
-            ld.skip = false;
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
-            // There is only one network
-            break;
-#endif
+            if (uniqueNets.find(ieNode->net) == uniqueNets.end()) {
+                ld.skip = false;
+                uniqueNets.insert(ieNode->net);
+            }
         }
     }
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+    CV_Assert(uniqueNets.size() == 1);
+#endif
 }
 
 
