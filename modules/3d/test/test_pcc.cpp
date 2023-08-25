@@ -20,19 +20,20 @@ protected:
     {
         testCharVector = {'a', 'a', 'b', 'b', 'b', 'c', '1', '2', '3'};
 
-        resolution = 0.001;
-        inputFilename=cvtest::TS::ptr()->get_data_path()+"pointcloudio/sphere";
+        resolution = 0.1;
+        qStep=10;
+        inputFilename=cvtest::TS::ptr()->get_data_path()+"pointcloudio/sphere_color";
 
         //The point cloud is generated randomly by the function generateSphere()
 
-        generateSphere(pointCloud,vector<float>{0.f,0.f,0.f,10.f},0.5,10000,vector<float>{-10.f,10.f,-10.f,10.f,-10.f,10.f});
+        //generateSphere(pointCloud,vector<float>{0.f,0.f,0.f,10.f},0.5,10000,vector<float>{-10.f,10.f,-10.f,10.f,-10.f,10.f});
         //savePointCloud(inputFilename+".ply",pointCloud, normal_placeholder, restore_color_attribute);
         std::vector<Point3i> color;
         for(auto & i : pointCloud){
             int z_color=int((i.z+10)/20*255);
             color.emplace_back(255-z_color,z_color,128);
         }
-        savePointCloud(inputFilename+"_color"+".ply",pointCloud, normal_placeholder, color);
+        //savePointCloud(inputFilename+"_color"+".ply",pointCloud, normalPlaceholder, color);
 
 
         loadPointCloud(inputFilename + ".ply", pointCloud, normalPlaceholder, colorAttribute);

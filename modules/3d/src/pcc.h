@@ -117,6 +117,29 @@ public:
     void decompress(std::istream &inputStream, std::vector<Point3f> &pointCloud);
 };
 
+
+/** @brief Traversing octree by BFS.
+ *
+ * By traversing the octree, the octree is represented as vector for further compression.
+ * Each node is represented as a unsigned char.
+ *
+ * @param root the root node of octree.
+ * @param serializedVectorOut The vector obtained after traversing the octree.
+*/
+void traverse(OctreeNode &root, std::vector<unsigned char> &serializedVectorOut);
+
+/** @brief Restore octree from vector.
+ *
+ * @param root the root node of octree.
+ * @param serializedVectorOut The vector obtained by traversing the octree.
+*/
+void restore(OctreeNode &root, const std::vector<unsigned char> &serializedVectorIn);
+
+void Haar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients, std::vector<OctreeNode *> &cubes,
+                         size_t &N);
+void invHaar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients, std::vector<OctreeNode *> &cubes,
+                            size_t &N);
+
 }
 
 #endif //OPENCV_PCC_H
