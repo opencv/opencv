@@ -43,31 +43,48 @@ public:
     * is used for entropy coding to further compress the data. At the same time, the octree
     * information is written to the outputStream header.
     * @param pointCloud The point cloud data.
+    * @param colorAttribute The color attribute data.
     * @param serializedVector Used for storing the serialized char vector.
     * @param resolution The size of the Octree leaf node.
     * @param outputStream The output stream, will be written to point cloud compressed file.
     */
     void encode(const std::vector<Point3f> &pointCloud, const std::vector<Point3f> &colorAttribute,
-                std::vector<unsigned char> &serializedVector, double resolution, double qStep,
-                std::ostream &outputStream);
+                std::vector<unsigned char> &serializedVector, double resolution, std::ostream &outputStream);
 
     /** @brief decode pointCloud data from serialized char vector
     *
     * Based on the specified resolution and origin, an octree is restored from the serialized char vector.
     * Then, the point cloud data is extracted from the octree.
-    * @param pointCloud Used for storing the point cloud data.
     * @param serializedVector The serialized char vector.
     * @param resolution The size of the Octree leaf node.
     * @param origin The vertex of the cube represented by the octree root node.
     */
-    void decode(std::vector<Point3f> &pointCloud, const std::vector<unsigned char> &serializedVector,
-                double resolution, Point3f &origin);
+    void decode(const std::vector<unsigned char> &serializedVector, double resolution, Point3f &origin);
+
+    /** @brief encode color data to serialized char vector
+    *
+    * Based on the specified quantization step, an octree's color attribute is encoded to a serialized char vector.
+    * @param qStep Parameter for quantization.
+    * @param colorCode The serialized char vector for color attribute.
+    */
+    void encodeColor(float qStep, std::vector<unsigned char> &colorCode);
+
+    /** @brief decode color data from serialized char vector
+    *
+    * Based on the specified quantization step, an octree's color attribute is restored from the serialized char vector.
+    * @param qStep Parameter for quantization.
+    * @param colorCode The input serialized char vector for color attribute.
+    */
+    void decodeColor(float qStep, const std::vector<unsigned char> &colorCode);
+
+    /** @brief get the octree instance **/
+    Octree *getOctree() const { return octree; };
 };
 
 /** @brief Class to reduce vectorized data size by EntropyCoding
- *
- * The algorithm used here is Range Coding Algorithm.
- *
+*
+* The algorithm used here is Range Coding Algorithm.
+*
 */
 class EntropyCoder {
 public:
@@ -114,7 +131,7 @@ public:
      * @param inputStream the input compressed bit stream source.
      * @param pointCloud the output pointcloud.
     */
-    void decompress(std::istream &inputStream, std::vector<Point3f> &pointCloud);
+    void decompress(std::istream &inputStream, std::vector<Point3f> &pointCloud, std::vector<Point3f> &colorAttribute);
 };
 
 
