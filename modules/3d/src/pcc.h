@@ -139,7 +139,6 @@ public:
  *
  * By traversing the octree, the octree is represented as vector for further compression.
  * Each node is represented as a unsigned char.
- *
  * @param root the root node of octree.
  * @param serializedVectorOut The vector obtained after traversing the octree.
 */

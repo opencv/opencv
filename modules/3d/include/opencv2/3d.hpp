@@ -2479,7 +2479,7 @@ void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatr
                           TermCriteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 0.01));
 
 
-class CV_EXPORTS OctreeNode;
+class OctreeNode;
 
 /** @brief Octree for 3D vision.
  *
