@@ -41,7 +41,7 @@ within the node, which will be used for octree indexing and mapping from point c
 in an octree, each leaf node contains at least one point cloud data. Similarly, every intermediate OctreeNode
 contains at least one non-empty child pointer, except for the root node.
 */
-class OctreeNode{
+class CV_EXPORTS OctreeNode{
 public:
 
     /**

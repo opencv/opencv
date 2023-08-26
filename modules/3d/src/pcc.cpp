@@ -422,7 +422,6 @@ void OctreeSerializeCoder::encodeColor(float qStep, std::vector<unsigned char> &
     haarCoeffs[N++] = root.RAHTCoefficient;
 
     // Init array for quantization
-    assert(qStep > 0.0f);
     std::vector<int32_t> qCoeffs(colorNum);
 
     // Quantization
