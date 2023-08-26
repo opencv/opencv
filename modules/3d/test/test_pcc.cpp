@@ -4,7 +4,6 @@
 
 #include "test_precomp.hpp"
 #include <fstream>
-// TODO: when pcc.h put into 3d.hpp, this need to change
 #include "../src/pcc.h"
 #include "../src/pcc.cpp"
 #include "test_ptcloud_utils.hpp"
@@ -20,20 +19,19 @@ protected:
     {
         testCharVector = {'a', 'a', 'b', 'b', 'b', 'c', '1', '2', '3'};
 
-        resolution = 0.1;
-        qStep=10;
-        inputFilename=cvtest::TS::ptr()->get_data_path()+"pointcloudio/sphere_color";
+        resolution = 0.5;
+        qStep=-1;
+        inputFilename=cvtest::TS::ptr()->get_data_path()+"pointcloudio/longdress_vox10_1051";
 
-        //The point cloud is generated randomly by the function generateSphere()
+        //The point cloud is generated randomly by the function generateSphere(), color the sphere according to the y coordinate.
 
         //generateSphere(pointCloud,vector<float>{0.f,0.f,0.f,10.f},0.5,10000,vector<float>{-10.f,10.f,-10.f,10.f,-10.f,10.f});
-        //savePointCloud(inputFilename+".ply",pointCloud, normal_placeholder, restore_color_attribute);
-        std::vector<Point3i> color;
-        for(auto & i : pointCloud){
-            int z_color=int((i.z+10)/20*255);
-            color.emplace_back(255-z_color,z_color,128);
-        }
-        //savePointCloud(inputFilename+"_color"+".ply",pointCloud, normalPlaceholder, color);
+        //std::vector<Point3i> color;
+        //for(auto & i : pointCloud){
+            //int z_color=int((i.z+10)/20*255);
+            //color.emplace_back(255-z_color,z_color,128);
+        //}
+        //savePointCloud(inputFilename+".ply",pointCloud, normalPlaceholder, color);
 
 
         loadPointCloud(inputFilename + ".ply", pointCloud, normalPlaceholder, colorAttribute);
@@ -105,8 +103,8 @@ TEST_F(PccTest, PointCloudCompressionTest){
     std::streampos oriFileSize = oriFile.tellg();
     oriFile.close();
 
-    float pcc_bpp=(float)pccFileSize/(float)pointCloud.size();
-    float ori_bpp=(float)oriFileSize/(float)pointCloud.size();
+    float pcc_bpp=(float)pccFileSize/(float)pointCloud.size()*8;
+    float ori_bpp=(float)oriFileSize/(float)pointCloud.size()*8;
     CV_LOG_INFO(nullptr,"The BPP of pccFile is "+std::to_string(pcc_bpp));
     CV_LOG_INFO(nullptr,"The BPP of oriFile is "+std::to_string(ori_bpp));
 
@@ -116,8 +114,6 @@ TEST_F(PccTest, PointCloudCompressionTest){
     // by defining peak signal as diagonal length of pointcloud bounding box,
     // and mean-square error as the Euclidean distance of each point drifting away from original position.
     // To get convincing result, There is a tool provided by MPEG to calculate PSNR in pcc, see details in https://github.com/minhkstn/mpeg-pcc-dmetric.
-
-//
 
 }
 
