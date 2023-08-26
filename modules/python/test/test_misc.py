@@ -54,18 +54,16 @@ def rpad(src, dst_size, pad_value=0):
     Returns:
         np.ndarray: 1d array with len == `dst_size`.
     """
-    def pad_fn(arr, pad_width, iaxis, kwargs):
-        pad_value = kwargs.get("pad_value", 0)
-        arr[:pad_width[0]] = pad_value
-        if pad_width[1] != 0:
-            arr[-pad_width[1]:] = pad_value
-
     src = np.asarray(src)
     if len(src.shape) != 1:
         raise ValueError("Only 1d arrays are supported")
 
-    return np.pad(src, (0, dst_size - len(src)), pad_fn, pad_value=pad_value)
+    # Considering the meaning, it is desirable to use np.pad().
+    # However, the old numpy doesn't include the following fixes and cannot work as expected.
+    # So an alternative fix that combines np.append() and np.fill() is used.
+    # https://docs.scipy.org/doc/numpy-1.13.0/release.html#support-for-returning-arrays-of-arbitrary-dimensions-in-apply-along-axis
 
+    return np.append(src, np.full( dst_size - len(src), pad_value, dtype=src.dtype) )
 
 def get_ocv_arithm_op_table(apply_saturation=False):
     def saturate(func):
@@ -104,7 +102,11 @@ def get_ocv_arithm_op_table(apply_saturation=False):
             _, max_value = get_limits(dst_dtype)
             y[y == 0] = max_value
 
-        dst = x / y
+        # to compatible between python2 and python3, it calicurates with float.
+        # python2: int / int = int
+        # python3: int / int = float
+        dst = 1.0 * x / y
+
         if np.issubdtype(x.dtype, np.integer):
             dst = np.rint(dst)
         return dst
