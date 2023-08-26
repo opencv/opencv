@@ -2652,28 +2652,41 @@ public:
     void KNNSearch(const Point3f& query, const int K, std::vector<Point3f> &pointSet, std::vector<float> &squareDistSet) const;
 
 protected:
-    struct Impl{
-        Impl():maxDepth(0), size(0), origin(0,0,0), resolution(0)
-        {}
-
-        ~Impl()
-        {}
-
-        // The pointer to Octree root node.
-        Ptr <OctreeNode> rootNode = nullptr;
-        //! Max depth of the Octree. And depth must be greater than zero
-        size_t maxDepth;
-        //! The size of the cube of the .
-        double size;
-        //! The origin coordinate of root node.
-        Point3f origin;
-        //! The size of the leaf node.
-        double resolution;
-        //! Whether the point cloud has a color attribute.
-        bool hasColor{};
-    };
+    struct Impl;
     Ptr<Impl> p;
     friend class OctreeSerializeCoder;
+};
+
+/** @brief pointCloud compression class
+ *
+ * This class enables user to do compression and decompression to pointCloud,
+ * currently based on Octree,
+ * may support other method (like kd-tree, etc.) in future if necessary.
+ *
+*/
+class CV_EXPORTS PointCloudCompression{
+public:
+    //! Default constructor.
+    PointCloudCompression();
+
+    /** @brief User compress the pointcloud to stream.
+     *
+     * @param pointCloud the pointcloud to compress.
+     * @param resolution the size of the leaf node.
+     * @param outputStream the output compressed bit stream destination.
+    */
+    void compress(const std::vector<Point3f> &pointCloud, double resolution, std::ostream &outputStream,
+                  const std::vector<Point3f> &colorAttribute = std::vector<Point3f>(), double qStep = -1.0);
+
+    /** @brief User decompress(recover) pointcloud from stream.
+     *
+     * @param inputStream the input compressed bit stream source.
+     * @param pointCloud the output pointcloud.
+    */
+    void decompress(std::istream &inputStream, std::vector<Point3f> &pointCloud, std::vector<Point3f> &colorAttribute);
+private:
+    struct Impl;
+    Ptr<Impl> p;
 };
 
 

@@ -2,131 +2,184 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
+#include "precomp.hpp"
 #include "pcc.h"
+#include "octree.hpp"
+#include "zlib.h"
 #include <queue>
 
 namespace cv {
 
+// Initialize EntropyCodingMethod
+EntropyCodingMethod EntropyCoder::codingMethod = EntropyCodingMethod::ZLIB_METHOD;
+
 void EntropyCoder::encodeCharVectorToStream(
         std::vector<unsigned char> &inputCharVector,
         std::ostream &outputStream) {
-    // histogram of char frequency
-    std::uint64_t hist[257];
 
-    // partition of symbol ranges from cumulative frequency, define by left index
-    std::uint32_t part_idx[257];
+    if (EntropyCoder::codingMethod == EntropyCodingMethod::RANGE_CODING_METHOD) {
+        // histogram of char frequency
+        std::uint64_t hist[257];
 
-    // define range limits
-    const std::uint32_t adjust_limit = static_cast<std::uint32_t> (1) << 24;
-    const std::uint32_t bottom_limit = static_cast<std::uint32_t> (1) << 16;
+        // partition of symbol ranges from cumulative frequency, define by left index
+        std::uint32_t part_idx[257];
 
-    // encoding variables
-    std::uint32_t low, range;
-    size_t readPos;
-    std::uint8_t symbol;
+        // define range limits
+        const std::uint32_t adjust_limit = static_cast<std::uint32_t> (1) << 24;
+        const std::uint32_t bottom_limit = static_cast<std::uint32_t> (1) << 16;
 
-    auto input_size = static_cast<size_t> (inputCharVector.size());
+        // encoding variables
+        std::uint32_t low, range;
+        size_t readPos;
+        std::uint8_t symbol;
 
-    // output vector ready
-    std::vector<unsigned char> outputCharVector_;
-    outputCharVector_.clear();
-    outputCharVector_.reserve(sizeof(unsigned char) * input_size);
+        auto input_size = static_cast<size_t> (inputCharVector.size());
+
+        // output vector ready
+        std::vector<unsigned char> outputCharVector_;
+        outputCharVector_.clear();
+        outputCharVector_.reserve(sizeof(unsigned char) * input_size);
 
 
-    // Calculate frequency histogram and then partition index of each char
-    memset(hist, 0, sizeof(hist));
-    readPos = 0;
-    while (readPos < input_size) {
-        // scan the input char vector to obtain char frequency
-        symbol = static_cast<std::uint8_t> (inputCharVector[readPos++]);
-        hist[symbol + 1]++;
-    }
-    part_idx[0] = 0;
-    for (int i = 1; i <= 256; i++) {
-        if (hist[i] <= 0) {
-            // partition must have at least 1 space for each symbol
-            part_idx[i] = part_idx[i - 1] + 1;
-            continue;
+        // Calculate frequency histogram and then partition index of each char
+        memset(hist, 0, sizeof(hist));
+        readPos = 0;
+        while (readPos < input_size) {
+            // scan the input char vector to obtain char frequency
+            symbol = static_cast<std::uint8_t> (inputCharVector[readPos++]);
+            hist[symbol + 1]++;
         }
-        // partition index is cumulate position when separate a "range"
-        // into spaces for each char, space length allocated according to char frequency.
-        // "aaaaccbbbbbbbb" -> [__'a'__][____'b'____][_'c'_]...
-        // part_idx[i] marks the left bound of char i,
-        // while (part_idx[i+1] - 1) marks the right bound.
-        part_idx[i] = part_idx[i - 1] + static_cast<std::uint32_t> (hist[i]);
-    }
-
-    // rescale if range exceeds bottom_limit
-    while (part_idx[256] >= bottom_limit) {
+        part_idx[0] = 0;
         for (int i = 1; i <= 256; i++) {
-            part_idx[i] >>= 1;
-            if (part_idx[i] <= part_idx[i - 1]) {
+            if (hist[i] <= 0) {
+                // partition must have at least 1 space for each symbol
                 part_idx[i] = part_idx[i - 1] + 1;
+                continue;
+            }
+            // partition index is cumulate position when separate a "range"
+            // into spaces for each char, space length allocated according to char frequency.
+            // "aaaaccbbbbbbbb" -> [__'a'__][____'b'____][_'c'_]...
+            // part_idx[i] marks the left bound of char i,
+            // while (part_idx[i+1] - 1) marks the right bound.
+            part_idx[i] = part_idx[i - 1] + static_cast<std::uint32_t> (hist[i]);
+        }
+
+        // rescale if range exceeds bottom_limit
+        while (part_idx[256] >= bottom_limit) {
+            for (int i = 1; i <= 256; i++) {
+                part_idx[i] >>= 1;
+                if (part_idx[i] <= part_idx[i - 1]) {
+                    part_idx[i] = part_idx[i - 1] + 1;
+                }
             }
         }
-    }
 
-    // Start Encoding
+        // Start Encoding
 
-    // the process is to recursively partition a large range by each char,
-    // which each char's range defined by part_idx[]
-    // the current range is located at left index "low", and "range" record the length
+        // the process is to recursively partition a large range by each char,
+        // which each char's range defined by part_idx[]
+        // the current range is located at left index "low", and "range" record the length
 
-    // range initialize to maximum(cast signed number "-1" to unsigned equal to numeric maximum)
-    // initial range is spanned to discrete 32-bit integer that
-    // mimics infinitely divisible rational number range(0..1) in theory.
-    // the solution is to scale up the range(Renormalization) before
-    // recursive partition hits the precision limit.
-    readPos = 0;
-    low = 0;
-    range = static_cast<std::uint32_t> (-1);
+        // range initialize to maximum(cast signed number "-1" to unsigned equal to numeric maximum)
+        // initial range is spanned to discrete 32-bit integer that
+        // mimics infinitely divisible rational number range(0..1) in theory.
+        // the solution is to scale up the range(Renormalization) before
+        // recursive partition hits the precision limit.
+        readPos = 0;
+        low = 0;
+        range = static_cast<std::uint32_t> (-1);
 
-    while (readPos < input_size) {
-        // read each input symbol
-        symbol = static_cast<std::uint8_t>(inputCharVector[readPos++]);
+        while (readPos < input_size) {
+            // read each input symbol
+            symbol = static_cast<std::uint8_t>(inputCharVector[readPos++]);
 
-        // map to range
-        // first, divide range by part_idx size to get unit length, and get low bound
-        // second, get actual range length by multiply unit length with partition space
-        // all under coordinate of 32-bit largest range.
-        low += part_idx[symbol] * (range /= part_idx[256]);
-        range *= part_idx[symbol + 1] - part_idx[symbol];
+            // map to range
+            // first, divide range by part_idx size to get unit length, and get low bound
+            // second, get actual range length by multiply unit length with partition space
+            // all under coordinate of 32-bit largest range.
+            low += part_idx[symbol] * (range /= part_idx[256]);
+            range *= part_idx[symbol + 1] - part_idx[symbol];
 
-        // Renormalization
-        // first case: range is completely inside a block of adjust_limit
-        //      - 1. current range smaller than 2^24,
-        //      - 2. further partition won't affect high 8-bit of range(don't go across two blocks)
-        // second case: while first case continuously misses and range drops below bottom_limit
-        //      - happens when range always coincidentally fall on the border of adjust_limit blocks
-        //      - force the range to truncate inside a block of bottom_limit
-        // preform resize to bottom_limit(scale up coordinate by 2^8)
-        // push 8 bit to output, then scale up by 2^8 to flush them.
-        while ((low ^ (low + range)) < adjust_limit ||
-               ((range < bottom_limit) && ((range = -int(low) & (bottom_limit - 1)), 1))) {
-            auto out = static_cast<unsigned char> (low >> 24);
-            range <<= 8;
-            low <<= 8;
+            // Renormalization
+            // first case: range is completely inside a block of adjust_limit
+            //      - 1. current range smaller than 2^24,
+            //      - 2. further partition won't affect high 8-bit of range(don't go across two blocks)
+            // second case: while first case continuously misses and range drops below bottom_limit
+            //      - happens when range always coincidentally fall on the border of adjust_limit blocks
+            //      - force the range to truncate inside a block of bottom_limit
+            // preform resize to bottom_limit(scale up coordinate by 2^8)
+            // push 8 bit to output, then scale up by 2^8 to flush them.
+            while ((low ^ (low + range)) < adjust_limit ||
+                   ((range < bottom_limit) && ((range = -int(low) & (bottom_limit - 1)), 1))) {
+                auto out = static_cast<unsigned char> (low >> 24);
+                range <<= 8;
+                low <<= 8;
 
-            outputCharVector_.push_back(out);
+                outputCharVector_.push_back(out);
+            }
+
         }
 
+        // flush remaining data
+        for (int i = 0; i < 4; i++) {
+            auto out = static_cast<unsigned char> (low >> 24);
+            outputCharVector_.push_back(out);
+            low <<= 8;
+        }
+
+        const size_t vec_len = inputCharVector.size();
+
+        // write cumulative frequency table to output stream
+        outputStream.write(reinterpret_cast<const char *> (&part_idx[0]), sizeof(part_idx));
+        // write vec_size
+        outputStream.write(reinterpret_cast<const char *> (&vec_len), sizeof(vec_len));
+        // write encoded data to stream
+        outputStream.write(reinterpret_cast<const char *> (&outputCharVector_[0]), outputCharVector_.size());
+
     }
+    else if (EntropyCoder::codingMethod == EntropyCodingMethod::ZLIB_METHOD){
+        z_stream strm;
+        strm.zalloc = Z_NULL;
+        strm.zfree = Z_NULL;
+        strm.opaque = Z_NULL;
 
-    // flush remaining data
-    for (int i = 0; i < 4; i++) {
-        auto out = static_cast<unsigned char> (low >> 24);
-        outputCharVector_.push_back(out);
-        low <<= 8;
+        if (deflateInit(&strm, Z_DEFAULT_COMPRESSION) != Z_OK) {
+            // Handle error
+            return;
+        }
+
+        strm.avail_in = inputCharVector.size();
+        strm.next_in = inputCharVector.data();
+
+        std::vector<unsigned char> compressedBuffer(2 * strm.avail_in); // Initial estimate
+        strm.avail_out = compressedBuffer.size();
+        strm.next_out = compressedBuffer.data();
+
+        int result = deflate(&strm, Z_FINISH);
+        // Handle error
+        if (result == Z_BUF_ERROR) {
+            deflateEnd(&strm);
+            CV_LOG_ERROR(NULL, "Compressed data size exceeded twice the size of the input data.");
+            return;
+        } else if (result != Z_STREAM_END) {
+            CV_LOG_ERROR(NULL, "An error occurred during Zlib compression.");
+            return;
+        }
+
+        compressedBuffer.resize(strm.total_out);
+        // first write current compressed segment size and original vector length
+        size_t segmentSize = compressedBuffer.size();
+        size_t vec_len = inputCharVector.size();
+        outputStream.write(reinterpret_cast<const char*>(&segmentSize), sizeof(size_t));
+        outputStream.write(reinterpret_cast<const char *> (&vec_len), sizeof(vec_len));
+        // then write the segment
+        outputStream.write(reinterpret_cast<char*>(compressedBuffer.data()), compressedBuffer.size());
+
+        deflateEnd(&strm);
     }
-
-    const size_t vec_len = inputCharVector.size();
-
-    // write cumulative frequency table to output stream
-    outputStream.write(reinterpret_cast<const char *> (&part_idx[0]), sizeof(part_idx));
-    // write vec_size
-    outputStream.write(reinterpret_cast<const char *> (&vec_len), sizeof(vec_len));
-    // write encoded data to stream
-    outputStream.write(reinterpret_cast<const char *> (&outputCharVector_[0]), outputCharVector_.size());
+    else {
+        CV_LOG_ERROR(NULL, "Current EntropyCodingMethod has no implementation");
+    }
 
 
 }
@@ -134,73 +187,119 @@ void EntropyCoder::encodeCharVectorToStream(
 void EntropyCoder::decodeStreamToCharVector(
         std::istream &inputStream,
         std::vector<unsigned char> &outputCharVector) {
-    // partition of symbol ranges from cumulative frequency, define by left index
-    std::uint32_t part_idx[257];
+    if (EntropyCoder::codingMethod == EntropyCodingMethod::RANGE_CODING_METHOD) {
+        // partition of symbol ranges from cumulative frequency, define by left index
+        std::uint32_t part_idx[257];
 
-    // define range limits
-    const std::uint32_t adjust_limit = static_cast<std::uint32_t> (1) << 24;
-    const std::uint32_t bottom_limit = static_cast<std::uint32_t> (1) << 16;
+        // define range limits
+        const std::uint32_t adjust_limit = static_cast<std::uint32_t> (1) << 24;
+        const std::uint32_t bottom_limit = static_cast<std::uint32_t> (1) << 16;
 
-    // decoding variables
-    std::uint32_t low, range;
-    std::uint32_t code;
+        // decoding variables
+        std::uint32_t low, range;
+        std::uint32_t code;
 
-    size_t outputPos;
-    size_t output_size;
+        size_t outputPos;
+        size_t output_size;
 
-    outputPos = 0;
+        outputPos = 0;
 
-    // read cumulative frequency table
-    inputStream.read(reinterpret_cast<char *> (&part_idx[0]), sizeof(part_idx));
-    // read vec_size
-    inputStream.read(reinterpret_cast<char *> (&output_size), sizeof(output_size));
+        // read cumulative frequency table
+        inputStream.read(reinterpret_cast<char *> (&part_idx[0]), sizeof(part_idx));
+        // read vec_size
+        inputStream.read(reinterpret_cast<char *> (&output_size), sizeof(output_size));
 
-    outputCharVector.clear();
-    outputCharVector.resize(output_size);
+        outputCharVector.clear();
+        outputCharVector.resize(output_size);
 
-    // read code
-    code = 0;
-    for (size_t i = 0; i < 4; i++) {
-        std::uint8_t out;
-        inputStream.read(reinterpret_cast<char *> (&out), sizeof(unsigned char));
-        code = (code << 8) | out;
-    }
-
-    low = 0;
-    range = static_cast<std::uint32_t> (-1);
-
-    // decoding
-    for (size_t i = 0; i < output_size; i++) {
-        // symbol lookup in cumulative frequency table
-        std::uint32_t count = (code - low) / (range /= part_idx[256]);
-
-        // finding symbol by range using Jump search
-        std::uint8_t symbol = 0;
-        std::uint8_t step = 128;
-        while (step > 0) {
-            if (part_idx[symbol + step] <= count) {
-                symbol = static_cast<std::uint8_t> (symbol + step);
-            }
-            step /= 2;
-        }
-
-        // write symbol to output stream
-        outputCharVector[outputPos++] = symbol;
-
-        // map to range
-        low += part_idx[symbol] * range;
-        range *= part_idx[symbol + 1] - part_idx[symbol];
-
-        // check range limits, reverse Renormalization
-        while ((low ^ (low + range)) < adjust_limit ||
-               ((range < bottom_limit) && ((range = -int(low) & (bottom_limit - 1)), 1))) {
+        // read code
+        code = 0;
+        for (size_t i = 0; i < 4; i++) {
             std::uint8_t out;
             inputStream.read(reinterpret_cast<char *> (&out), sizeof(unsigned char));
-            code = code << 8 | out;
-            range <<= 8;
-            low <<= 8;
+            code = (code << 8) | out;
         }
 
+        low = 0;
+        range = static_cast<std::uint32_t> (-1);
+
+        // decoding
+        for (size_t i = 0; i < output_size; i++) {
+            // symbol lookup in cumulative frequency table
+            std::uint32_t count = (code - low) / (range /= part_idx[256]);
+
+            // finding symbol by range using Jump search
+            std::uint8_t symbol = 0;
+            std::uint8_t step = 128;
+            while (step > 0) {
+                if (part_idx[symbol + step] <= count) {
+                    symbol = static_cast<std::uint8_t> (symbol + step);
+                }
+                step /= 2;
+            }
+
+            // write symbol to output stream
+            outputCharVector[outputPos++] = symbol;
+
+            // map to range
+            low += part_idx[symbol] * range;
+            range *= part_idx[symbol + 1] - part_idx[symbol];
+
+            // check range limits, reverse Renormalization
+            while ((low ^ (low + range)) < adjust_limit ||
+                   ((range < bottom_limit) && ((range = -int(low) & (bottom_limit - 1)), 1))) {
+                std::uint8_t out;
+                inputStream.read(reinterpret_cast<char *> (&out), sizeof(unsigned char));
+                code = code << 8 | out;
+                range <<= 8;
+                low <<= 8;
+            }
+
+        }
+    }
+    else if (EntropyCoder::codingMethod == EntropyCodingMethod::ZLIB_METHOD){
+        z_stream strm;
+        strm.zalloc = Z_NULL;
+        strm.zfree = Z_NULL;
+        strm.opaque = Z_NULL;
+
+        if (inflateInit(&strm) != Z_OK) {
+            // Handle error
+            return;
+        }
+
+        // first read current segment size and vector length
+        size_t segmentSize = 0;
+        size_t vec_len = 0;
+        inputStream.read(reinterpret_cast<char*>(&segmentSize), sizeof(size_t));
+        inputStream.read(reinterpret_cast<char *> (&vec_len), sizeof(vec_len));
+        // then read the segment
+        std::vector<unsigned char> compressedBuffer(segmentSize);
+        inputStream.read(reinterpret_cast<char*>(compressedBuffer.data()), segmentSize);
+
+        strm.avail_in = compressedBuffer.size();
+        strm.next_in = compressedBuffer.data();
+
+        outputCharVector.clear();
+        outputCharVector.resize(vec_len);
+
+        strm.avail_out = outputCharVector.size();
+        strm.next_out = outputCharVector.data();
+
+        int result = inflate(&strm, Z_FINISH);
+        if (result != Z_STREAM_END) {
+            // Handle error
+            inflateEnd(&strm);
+            outputCharVector.resize(strm.total_out);
+            return;
+        }
+
+        outputCharVector.resize(strm.total_out);
+
+        inflateEnd(&strm);
+    }
+    else {
+        CV_LOG_ERROR(NULL, "Current EntropyCodingMethod has no implementation");
     }
 }
 
@@ -453,6 +552,10 @@ void OctreeSerializeCoder::encodeColor(float qStep, std::vector<unsigned char> &
 }
 
 void OctreeSerializeCoder::decodeColor(float qStep, const std::vector<unsigned char> &colorCode) {
+    // set octree has color
+    if (qStep > 0) {
+        this->octree->p->hasColor = true;
+    }
     OctreeNode root = *this->octree->p->rootNode;
     size_t pointNum = root.pointNum;
     size_t colorNum = 3 * pointNum;
@@ -576,27 +679,52 @@ void OctreeSerializeCoder::decode(const std::vector<unsigned char> &serializedVe
     restore(*this->octree->p->rootNode, serializedVector);
 }
 
+struct PointCloudCompression::Impl{
+    Impl()
+    {}
+
+    ~Impl()
+    {}
+
+    OctreeSerializeCoder _coder = OctreeSerializeCoder();
+    EntropyCoder _entropyCoder = EntropyCoder();
+};
+
+PointCloudCompression::PointCloudCompression(): p(new Impl)
+{}
+
 void PointCloudCompression::compress(const std::vector<Point3f> &pointCloud, double resolution,
                                      std::ostream &outputStream, const std::vector<Point3f> &colorAttribute, double qStep) {
     std::vector<unsigned char> serializedVector;
+
+    // refresh coder
+    this->p->_coder = OctreeSerializeCoder();
 
     // set file header.
     outputStream << "resolution " << resolution << "\n";
     outputStream << "qstep " << qStep << "\n";
 
-    this->_coder.encode(pointCloud, colorAttribute, serializedVector, resolution, outputStream);
-    this->_entropyCoder.encodeCharVectorToStream(serializedVector, outputStream);
+    this->p->_coder.encode(pointCloud, colorAttribute, serializedVector, resolution, outputStream);
+    this->p->_entropyCoder.encodeCharVectorToStream(serializedVector, outputStream);
+
+    // check if color attribute exists.
+    if (colorAttribute.empty()) {
+        qStep = -1;
+    }
 
     // encode color if it has color attribute.
     if (qStep > 0) {
         serializedVector.clear();
-        this->_coder.encodeColor((float) qStep, serializedVector);
-        this->_entropyCoder.encodeCharVectorToStream(serializedVector, outputStream);
+        this->p->_coder.encodeColor((float) qStep, serializedVector);
+        this->p->_entropyCoder.encodeCharVectorToStream(serializedVector, outputStream);
     }
 }
 
 void PointCloudCompression::decompress(std::istream &inputStream, std::vector<Point3f> &pointCloud, std::vector<Point3f> &colorAttribute) {
     std::vector<unsigned char> outputCharVector;
+
+    // refresh coder
+    this->p->_coder = OctreeSerializeCoder();
 
     // parse the octree parameters from the file header
     std::string tmp;
@@ -609,17 +737,17 @@ void PointCloudCompression::decompress(std::istream &inputStream, std::vector<Po
     inputStream.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
 
-    this->_entropyCoder.decodeStreamToCharVector(inputStream, outputCharVector);
-    this->_coder.decode(outputCharVector, resolution, origin);
+    this->p->_entropyCoder.decodeStreamToCharVector(inputStream, outputCharVector);
+    this->p->_coder.decode(outputCharVector, resolution, origin);
     outputCharVector.clear();
 
     // decode color if it has color attribute.
     if (qStep > 0) {
-        this->_entropyCoder.decodeStreamToCharVector(inputStream, outputCharVector);
-        this->_coder.decodeColor((float)qStep, outputCharVector);
+        this->p->_entropyCoder.decodeStreamToCharVector(inputStream, outputCharVector);
+        this->p->_coder.decodeColor((float)qStep, outputCharVector);
     }
 
-    this->_coder.getOctree()->getPointCloudByOctree(pointCloud, colorAttribute);
+    this->p->_coder.getOctree()->getPointCloudByOctree(pointCloud, colorAttribute);
 }
 }
 

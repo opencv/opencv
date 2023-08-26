@@ -4,8 +4,6 @@
 
 #include "test_precomp.hpp"
 #include <fstream>
-#include "../src/pcc.h"
-#include "../src/pcc.cpp"
 #include "test_ptcloud_utils.hpp"
 
 namespace opencv_test { namespace {
@@ -17,11 +15,10 @@ class PccTest: public testing::Test
 protected:
     void SetUp() override
     {
-        testCharVector = {'a', 'a', 'b', 'b', 'b', 'c', '1', '2', '3'};
 
         resolution = 0.5;
-        qStep=-1;
-        inputFilename=cvtest::TS::ptr()->get_data_path()+"pointcloudio/longdress_vox10_1051";
+        qStep = -1;
+        inputFilename=cvtest::TS::ptr()->get_data_path()+"pointcloudio/longdress_vox10_1300";
 
         //The point cloud is generated randomly by the function generateSphere(), color the sphere according to the y coordinate.
 
@@ -53,7 +50,6 @@ public:
     std::vector<unsigned char> testCharVector;
     std::stringstream binaryStream;
     std::vector<unsigned char> restoreCharVector;
-    EntropyCoder testEntropyCoder;
 
     String inputFilename;
     String outputFilename;
@@ -70,13 +66,6 @@ public:
     std::vector<Point3f> normalPlaceholder;
     std::vector<Point3f> restoredColor;
     vector<Point3f> colorAttribute;
-};
-
-TEST_F(PccTest, EntropyEncodingTest){
-    EXPECT_NO_THROW(testEntropyCoder.encodeCharVectorToStream(testCharVector, binaryStream));
-    binaryStream.seekg(0, std::ios::beg);
-    EXPECT_NO_THROW(testEntropyCoder.decodeStreamToCharVector(binaryStream, restoreCharVector));
-    EXPECT_EQ(testCharVector, restoreCharVector);
 };
 
 TEST_F(PccTest, PointCloudCompressionTest){

@@ -81,6 +81,14 @@ public:
     Octree *getOctree() const { return octree; };
 };
 
+/** @brief to select EntropyCoder's coding Algorithm
+*
+*/
+enum class EntropyCodingMethod {
+    RANGE_CODING_METHOD,
+    ZLIB_METHOD
+};
+
 /** @brief Class to reduce vectorized data size by EntropyCoding
 *
 * The algorithm used here is Range Coding Algorithm.
@@ -88,6 +96,7 @@ public:
 */
 class EntropyCoder {
 public:
+
     /** @brief encode char vector to bit stream.
     *
     * @param inputCharVector Char vector for entropy encoding.
@@ -103,35 +112,9 @@ public:
     */
     static void decodeStreamToCharVector(std::istream &inputStream,
                                   std::vector<unsigned char> &outputCharVector);
-};
-
-/** @brief pointCloud compression class
- *
- * This class enables user to do compression and decompression to pointCloud,
- * currently based on Octree,
- * may support other method (like kd-tree, etc.) in future if necessary.
- *
-*/
-class PointCloudCompression{
 private:
-    OctreeSerializeCoder _coder=OctreeSerializeCoder();
-    EntropyCoder _entropyCoder=EntropyCoder();
-public:
-    /** @brief User compress the pointcloud to stream.
-     *
-     * @param pointCloud the pointcloud to compress.
-     * @param resolution the size of the leaf node.
-     * @param outputStream the output compressed bit stream destination.
-    */
-    void compress(const std::vector<Point3f> &pointCloud, double resolution, std::ostream &outputStream,
-                  const std::vector<Point3f> &colorAttribute = std::vector<Point3f>(), double qStep = -1.0);
-
-    /** @brief User decompress(recover) pointcloud from stream.
-     *
-     * @param inputStream the input compressed bit stream source.
-     * @param pointCloud the output pointcloud.
-    */
-    void decompress(std::istream &inputStream, std::vector<Point3f> &pointCloud, std::vector<Point3f> &colorAttribute);
+    //! Select EntropyCoding Algorithm.
+    static EntropyCodingMethod codingMethod;
 };
 
 
