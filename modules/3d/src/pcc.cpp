@@ -422,7 +422,6 @@ void OctreeSerializeCoder::encodeColor(float qStep, std::vector<unsigned char> &
     haarCoeffs[N++] = root.RAHTCoefficient;
 
     // Init array for quantization
-    assert(qStep > 0.0f);
     std::vector<int32_t> qCoeffs(colorNum);
 
     // Quantization
@@ -589,7 +588,7 @@ void PointCloudCompression::compress(const std::vector<Point3f> &pointCloud, dou
     this->_entropyCoder.encodeCharVectorToStream(serializedVector, outputStream);
 
     // encode color if it has color attribute.
-    if (!colorAttribute.empty()) {
+    if (qStep > 0) {
         serializedVector.clear();
         this->_coder.encodeColor((float) qStep, serializedVector);
         this->_entropyCoder.encodeCharVectorToStream(serializedVector, outputStream);
