@@ -151,8 +151,22 @@ void traverse(OctreeNode &root, std::vector<unsigned char> &serializedVectorOut)
 */
 void restore(OctreeNode &root, const std::vector<unsigned char> &serializedVectorIn);
 
+/** @brief 3D Haar Transform
+ *
+ * @param node the current octree node.
+ * @param haarCoefficients The vector storing Haar coefficients.
+ * @param cubes The vector of octree nodes to avoid wasting memory.
+ * @param N The index.
+*/
 void Haar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients, std::vector<OctreeNode *> &cubes,
                          size_t &N);
+/** @brief Inverse 3D Haar Transform
+ *
+ * @param node the current octree node.
+ * @param haarCoefficients The vector storing Haar coefficients.
+ * @param cubes The vector of octree nodes to avoid wasting memory.
+ * @param N The index.
+*/
 void invHaar3DRecursive(OctreeNode *node, std::vector<Point3f> &haarCoefficients, std::vector<OctreeNode *> &cubes,
                             size_t &N);
 
