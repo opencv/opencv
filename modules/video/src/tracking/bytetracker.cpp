@@ -34,9 +34,7 @@ ByteTracker::Params::Params()
     frameBuffer = 30;
 }
 
-bool compareTracksByTrackId(const Track& track1, const Track& track2) {
-    return track1.rect.x < track2.rect.x;
-}
+
 
 class ByteTrackerImpl : public ByteTracker
 {
@@ -89,6 +87,7 @@ protected:
         unordered_map<int, Strack>& trackMap, bool inplace);
 
     unordered_map<int, Strack> vectorToMap(const vector<Strack>& stracks);
+    static bool compareTracksByTrackId(const Track& track1, const Track& track2);
 };
 
 Ptr<ByteTracker> ByteTracker::create(const ByteTracker::Params& parameters)
@@ -588,5 +587,9 @@ unordered_map<int, Strack> ByteTrackerImpl::vectorToMap(const vector<Strack>& st
         strackMap.emplace(id, strack);
     }
     return strackMap;
+}
+
+bool ByteTrackerImpl::compareTracksByTrackId(const Track& track1, const Track& track2) {
+    return track1.rect.x < track2.rect.x;
 }
 }// namespace cv
