@@ -54,14 +54,12 @@ public:
 
     TrackerVit::Params params;
 
-    };
 
 protected:
     const cv::Size searchSize{256, 256};
     const cv::Size templateSize{128, 128};
 
     Mat hanningWindow;
-    Mat grid2searchX, grid2searchY;
 
     dnn::Net net;
     Mat image;
