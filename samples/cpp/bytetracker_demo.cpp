@@ -40,6 +40,9 @@ string COCO_NAMES = home + "/files/coco.names";
 //string NET_PATH = home + "/files/yolov8s.onnx";
 string NET_PATH = home + "/files/yolov8x.onnx";
 
+//string folderPath = "./imgs/%06d.jpg";
+string folderPath="../data/vtest.avi";
+
 int outputCodec = VideoWriter::fourcc('M', 'J', 'P', 'G');
 double outputFps = 10;
 Size outputSize(768, 576);
@@ -64,9 +67,6 @@ int main()
     {
         classList.push_back(line);
     }
-
-    //string folderPath = "./imgs/%06d.jpg";
-    string folderPath="../data/vtest.avi";
 
     VideoCapture capture;
     VideoWriter writer(VIDEO_OUTPUT_PATH, outputCodec, outputFps, outputSize);
