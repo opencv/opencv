@@ -49,7 +49,6 @@ void CV_ByteTrackerTest::run(int)
         ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
         return;
     }
-    int lastFrame = 0;
     cv::Mat frameRows;
 
     while (std::getline(referenceFile, referenceLine))
@@ -167,9 +166,8 @@ void CV_ByteTrackerTest::run(int)
     ASSERT_EQ(result, true);
 
     float eps = 30;
-    bool printed = false;
+    //bool printed = false;
     ASSERT_EQ(trackedResultMat.size(), referenceResultMat.size());
-    int counter = 0;
     for (int i = 1; i < trackedResultMat.rows; ++i)
     {
         /*
@@ -214,7 +212,7 @@ void CV_ByteTrackerTest::run(int)
                 */
 
             }
-            float eps = cv::abs(0.2 * referenceResultMat.at<float>(i,j));
+            eps = cv::abs(0.2 * referenceResultMat.at<float>(i,j));
             //cout<<referenceResultMat.row(i);
             //cout<<trackedResultMat.row(i);
             if (j == 2 || j==3 || j==6)
