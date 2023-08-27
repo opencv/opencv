@@ -16,9 +16,9 @@ protected:
     void SetUp() override
     {
 
-        resolution = 0.5;
-        qStep = -1;
-        inputFilename=cvtest::TS::ptr()->get_data_path()+"pointcloudio/longdress_vox10_1300";
+        resolution = 0.001;
+        qStep = 10;
+        inputFilename=cvtest::TS::ptr()->get_data_path()+"pointcloudio/sphere";
 
         //The point cloud is generated randomly by the function generateSphere(), color the sphere according to the y coordinate.
 

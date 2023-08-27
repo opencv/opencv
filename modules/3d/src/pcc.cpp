@@ -10,12 +10,13 @@
 
 namespace cv {
 
-// Initialize EntropyCodingMethod
+// Initialize EntropyCodingMethod(RANGE_CODING_METHOD or ZLIB_METHOD)
 EntropyCodingMethod EntropyCoder::codingMethod = EntropyCodingMethod::ZLIB_METHOD;
 
 void EntropyCoder::encodeCharVectorToStream(
         std::vector<unsigned char> &inputCharVector,
         std::ostream &outputStream) {
+
 
     if (EntropyCoder::codingMethod == EntropyCodingMethod::RANGE_CODING_METHOD) {
         // histogram of char frequency
@@ -181,12 +182,12 @@ void EntropyCoder::encodeCharVectorToStream(
         CV_LOG_ERROR(NULL, "Current EntropyCodingMethod has no implementation");
     }
 
-
 }
 
 void EntropyCoder::decodeStreamToCharVector(
         std::istream &inputStream,
         std::vector<unsigned char> &outputCharVector) {
+
     if (EntropyCoder::codingMethod == EntropyCodingMethod::RANGE_CODING_METHOD) {
         // partition of symbol ranges from cumulative frequency, define by left index
         std::uint32_t part_idx[257];
