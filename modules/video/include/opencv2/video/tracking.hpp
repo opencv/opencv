@@ -887,6 +887,41 @@ public:
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
+/** @brief the vt tracker is a super lightweight dnn-based general object tracking.
+ *
+ *  Nano tracker is much faster and extremely lightweight due to special model structure, the model file is about 600KB.
+ *  Model download link: https://github.com/opencv/opencv_extra/blob/4.x/testdata/dnn/onnx/models/vttrack.onnx
+ *  Author: PengyuLiu, 1872918507@qq.com
+ */
+class CV_EXPORTS_W TrackerVit : public Tracker
+{
+protected:
+    TrackerVit();  // use ::create()
+public:
+    virtual ~TrackerVit() CV_OVERRIDE;
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW std::string net;
+        CV_PROP_RW int backend;
+        CV_PROP_RW int target;
+    };
+
+    /** @brief Constructor
+    @param parameters vt tracker parameters TrackerNano::Params
+    */
+    static CV_WRAP
+    Ptr<TrackerVit> create(const TrackerVit::Params& parameters = TrackerVit::Params());
+
+    /** @brief Return tracking score
+    */
+    CV_WRAP virtual float getTrackingScore() = 0;
+
+    // void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
+    // bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
+};
+
 //! @} video_track
 
 } // cv
