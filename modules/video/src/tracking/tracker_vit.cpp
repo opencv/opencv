@@ -54,23 +54,12 @@ public:
 
     TrackerVit::Params params;
 
-    struct trackerConfig
-    {
-        float windowInfluence = 0.455f;
-        float lr = 0.37f;
-        float contextAmount = 0.5;
-        bool swapRB = true;
-        int totalStride = 16;
-        float penaltyK = 0.055f;
     };
 
 protected:
     const cv::Size searchSize{256, 256};
     const cv::Size templateSize{128, 128};
 
-    trackerConfig trackState;
-    int scoreSize;
-    Size imgSize = {0, 0};
     Mat hanningWindow;
     Mat grid2searchX, grid2searchY;
 
