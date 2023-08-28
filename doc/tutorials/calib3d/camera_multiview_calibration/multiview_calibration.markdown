@@ -97,7 +97,7 @@ Additional (optional) flags to the Python sample that could be used are as follo
 * `--path_to_visualize` - path to results pickle file needed to run visualization
 * `--visualize` - visualization flag (True or False), if True only runs visualization but path_to_visualize must be provided
 * `--resize_image_detection` - True / False, if True an image will be resized to speed up corners detection
-* `--gt_file` - path to the file containing the ground truth. An example can be found in `opencv_extra/testdata/python/hololens_multiview_calibration_images/HololensCapture4/gt.txt`. It is in the format
+* `--gt_file` - path to the file containing the ground truth. An example can be found in `opencv_extra/testdata/python/hololens_multiview_calibration_images/HololensCapture4/gt.txt` (currently in pull request [1089](https://github.com/opencv/opencv_extra/pull/1089)). It is in the format
   ```
   K_0 (3 x 3)
   distortion_0 (1 row),
@@ -117,7 +117,7 @@ Additional (optional) flags to the Python sample that could be used are as follo
   ```
 
 Alternatively, the Python sample could be run from a JSON file that should contain image points, pattern points, and a boolean indicator of whether a camera is fisheye.
-An example JSON file is in `opencv_extra/testdata/python/multiview_calibration_data.json`. Its format should be a dictionary with the following items:
+An example JSON file is in `opencv_extra/testdata/python/multiview_calibration_data.json` (current in pull request [1001](https://github.com/opencv/opencv_extra/pull/1001)). Its format should be a dictionary with the following items:
 * `object_points` - list of lists of pattern (object) points (size NUM_POINTS x 3).
 * `image_points` - list of lists of lists of lists of image points (size NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 2). Note that it is of fixed size. To have incomplete observation, set the corresponding image points to be invalid (for example, (-1, -1))
 * `image_sizes` - list of tuples (width x height) of image size.
