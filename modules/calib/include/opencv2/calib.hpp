@@ -423,8 +423,8 @@ enum { CALIB_CB_SYMMETRIC_GRID  = 1,
 #define CALIB_NINTRINSIC 18 //!< Maximal size of camera internal parameters (initrinsics) vector
 
 enum {
-    CALIB_MODEL_PINHOLE = 0,
-    CALIB_MODEL_FISHEYE = 1,
+    CALIB_MODEL_PINHOLE = 0, //!< Pinhole camera model
+    CALIB_MODEL_FISHEYE = 1, //!< Fisheye camera model
 };
 
 enum { CALIB_USE_INTRINSIC_GUESS = 0x00001, //!< Use user provided intrinsics as initial point for optimization.
@@ -1133,7 +1133,75 @@ CV_EXPORTS_W double stereoCalibrate( InputArrayOfArrays objectPoints,
                                      OutputArray perViewErrors, int flags = CALIB_FIX_INTRINSIC,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
 
-// TODO: add documentation for this
+/** @brief Calibrates a camera pair set up. This function finds the extrinsic parameters between the two cameras.
+
+@param objectPoints1 Vector of vectors of the calibration pattern points for camera 1. A similar structure as
+objectPoints in @ref calibrateCamera and for each pattern view, both cameras do not need to see the same object
+points.
+objectPoints1.size(), imagePoints1.size() nees to be equal,
+as well as objectPoints1[i].size(), imagePoints1[i].size() need to
+be equal for each i.
+@param objectPoints2 Vector of vectors of the calibration pattern points for camera 2. A similar structure as objectPoints1.
+objectPoints2.size(), and imagePoints2.size() nees to be equal,
+as well as objectPoints2[i].size(), imagePoints2[i].size() need to
+be equal for each i.
+However, objectPoints1[i].size() and objectPoints2[i].size() are not required to be equal.
+@param imagePoints1 Vector of vectors of the projections of the calibration pattern points,
+observed by the first camera. The same structure as in @ref calibrateCamera.
+@param imagePoints2 Vector of vectors of the projections of the calibration pattern points,
+observed by the second camera. The same structure as in @ref calibrateCamera.
+@param cameraMatrix1 Input/output camera intrinsic matrix for the first camera, the same as in
+@ref calibrateCamera. Furthermore, for the stereo case, additional flags may be used, see below.
+@param distCoeffs1 Input/output vector of distortion coefficients, the same as in
+@ref calibrateCamera.
+@param cameraModel1 Flag reflecting the type of model for camera 1 (pinhole / fisheye):
+- @ref CALIB_MODEL_PINHOLE pinhole camera model
+- @ref CALIB_MODEL_FISHEYE fisheye camera model
+@param cameraMatrix2 Input/output second camera intrinsic matrix for the second camera. See description for
+cameraMatrix1.
+@param distCoeffs2 Input/output lens distortion coefficients for the second camera. See
+description for distCoeffs1.
+@param cameraModel2 Flag reflecting the type of model for camera 2 (pinhole / fisheye).
+See description for cameraModel1.
+@param R Output rotation matrix. Together with the translation vector T, this matrix brings
+points given in the first camera's coordinate system to points in the second camera's
+coordinate system. In more technical terms, the tuple of R and T performs a change of basis
+from the first camera's coordinate system to the second camera's coordinate system. Due to its
+duality, this tuple is equivalent to the position of the first camera with respect to the
+second camera coordinate system.
+@param T Output translation vector, see description above.
+@param E Output essential matrix.
+@param F Output fundamental matrix.
+@param rvecs Output vector of rotation vectors ( @ref Rodrigues ) estimated for each pattern view in the
+coordinate system of the first camera of the stereo pair (e.g. std::vector<cv::Mat>). More in detail, each
+i-th rotation vector together with the corresponding i-th translation vector (see the next output parameter
+description) brings the calibration pattern from the object coordinate space (in which object points are
+specified) to the camera coordinate space of the first camera of the stereo pair. In more technical terms,
+the tuple of the i-th rotation and translation vector performs a change of basis from object coordinate space
+to the camera coordinate space of the first camera of the stereo pair.
+@param tvecs Output vector of translation vectors estimated for each pattern view, see parameter description
+of previous output parameter ( rvecs ).
+@param perViewErrors Output vector of the RMS re-projection error estimated for each pattern view.
+@param flags Different flags that may be zero or a combination of the following values:
+-   @ref CALIB_USE_EXTRINSIC_GUESS R and T contain valid initial values that are optimized further.
+@param criteria Termination criteria for the iterative optimization algorithm.
+
+The function estimates the transformation between two cameras making a stereo pair.
+The principle follows closely to @ref stereoCalibrate. To understand the problem of estimating the relative pose between a camera pair,
+please refer to the description there. The difference for this function is that, camera intrinsics
+are not optimized and two cameras are not required to have overlapping fields of view as long as they are observing
+the same calibration target and the absolute positions of each object point are known
+![](pics/register_pair.png)
+The above illustration shows an example where such a case may become relevant.
+Additionally, it supports a camera pair with the mixed model (pinhole / fisheye).
+
+Similarly to #calibrateCamera, the function minimizes the total re-projection error for all the
+points in all the available views from both cameras.
+@return the final value of the
+re-projection error.
+
+@sa calibrateCamera, stereoCalibrate
+ */
 CV_EXPORTS_AS(registerCamerasExtended)  double registerCameras( InputArrayOfArrays objectPoints1,
                                      InputArrayOfArrays objectPoints2,
                                      InputArrayOfArrays imagePoints1, InputArrayOfArrays imagePoints2,
@@ -1171,37 +1239,64 @@ CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints,
                                      OutputArray perViewErrors,
                                      int flags = 0,
                                      TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 1e-6) );
-/** @brief Estimates intrinsics and extrinsics (camera pose) for multi-camera system a.k.a multiview calibraton.
+/** @brief Estimates intrinsics and extrinsics (camera pose) for multi-camera system a.k.a multiview calibration.
 
 @param[in] objPoints Calibration pattern object points. Expected shape: NUM_FRAMES x NUM_POINTS x 3. Supported data type: CV_32F.
 @param[in] imagePoints Detected pattern points on camera images. Expected shape: NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 2.
+This function supports partial observation of the calibration pattern.
+To enable this, set the unobserved image points to be invalid points (eg. (-1., -1.)).
 @param[in] imageSize   Images resolution.
-@param[in] detectionMask Pattern detection mask. Each value defines if i-camera observes calibration pattern in j moment of time.
+@param[in] detectionMask Pattern detection mask. Each value defines if i-camera observes the calibration pattern in j-th frame.
 Expected size: NUM_CAMERAS x NUM_FRAMES. Expected type: CV_8U.
-@param[in] isFisheye indicates whether i-th camera is fisheye. In case if the input data contains
-mix of pinhole and fisheye cameras Rational distortion model is used. See @ref CALIB_RATIONAL_MODEL
+@param[in] isFisheye indicates whether i-th camera is fisheye. In case the input data contains
+a mix of pinhole and fisheye cameras Rational distortion model is used. See @ref CALIB_RATIONAL_MODEL
 for details. Expected type: CV_8U.
-@param[in] useIntrinsicsGuess Use user specified intrinsic parameters (internal camera matrix and distortion).
+@param[in] useIntrinsicsGuess Use user-specified intrinsic parameters (internal camera matrix and distortion).
 If true intrinsics are not estimated during calibration.
 @param[in] flagsForIntrinsics Flags used for each camera intrinsics calibration.
-Use per-camera call and `useIntrinsicsGuess` flag to get custom intrinsics calibration for each camera.
+Use per-camera call and the `useIntrinsicsGuess` flag to get custom intrinsics calibration for each camera.
 See @ref CALIB_USE_INTRINSIC_GUESS and other `CALIB_` constants. Expected shape: NUM_CAMERAS x 1. Supported data type: CV_32S.
-@param[out] Rs Rotation vectors relative to camera 0, where Rs[0] = 0. Output size: NUM_CAMERAS x 3 x 1. See @ref Rodrigues.
-@param[out] Ts Estimated translation vectors relative to camera 0, where Ts[0] = 0. Output size: NUM_CAMERAS x 3 x 1.
-@param[out] rvecs0 Estimated rotation vectors for camera 0. Output size: NUM_FRAMES x 3 x 1 (may contain null Mat, if frame is not valid). See @ref Rodrigues.
-@param[out] tvecs0 Translation vectors for camera 0. Output size: NUM_FRAMES x 3 x 1. (may contain null Mat, if frame is not valid).
+@param[in] useExtrinsicsGuess Flag used for (relative) camera extrinsics initialization.
+If this parameter is set to be true, Rs, Ts needs to be provided and Rs.size() = Ts.size() = NUM_FRAMES.
+@param Rs Rotation vectors relative to camera 0, where Rs[0] = 0. Output size: NUM_CAMERAS x 3 x 3. Needs to be provided if useIntrinsicsGuess = true.
+@param Ts Estimated translation vectors relative to camera 0, where Ts[0] = 0. Output size: NUM_CAMERAS x 3 x 1. Needs to be provided if useIntrinsicsGuess = true.
+@param[out] rvecs0 Estimated rotation vectors for camera 0. Output size: NUM_FRAMES x 3 x 1 (may contain null Mat, if the frame is not valid). See @ref Rodrigues.
+@param[out] tvecs0 Translation vectors for camera 0. Output size: NUM_FRAMES x 3 x 1. (may contain null Mat, if the frame is not valid).
 @param[out] Ks Estimated floating-point camera intrinsic matrix. Output size: NUM_CAMERAS x 3 x 3.
 @param[out] distortions Distortion coefficients. Output size: NUM_CAMERAS x NUM_PARAMS.
 @param[out] perFrameErrors RMSE value for each visible frame, (-1 for non-visible). Output size: NUM_CAMERAS x NUM_FRAMES.
 @param[out] initializationPairs Pairs with camera indices that were used for initial pairwise stereo calibration.
 Output size: (NUM_CAMERAS-1) x 2.
 
+@ref tutorial_multiview_camera_calibration provides a detailed tutorial of using this function. Please refer to it for more information.
+
+Multiview calibration usually requires several cameras to observe the same calibration pattern simultaneously.
+The fundamental assumption is that relative camera poses are fixed,
+and then for each frame, only the absolute camera pose for a single camera is needed to fix the camera pose for the multiple cameras
+
+![multiview calibration](pics/multiview_calib.png)
+The above illustration shows an example setting for multiview camera calibration.
+
+For each frame, suppose the absolute camera pose for camera \f$i\f$ is \f$R_i, t_i\f$,
+and the relative camera pose between camera \f$i\f$ and camera \f$j\f$ is \f$R_{ij}, t_{ij}\f$.
+Suppose \f$R_1, t_1\f$, and \f$R_{1i}\f$ for any \f$i\not=1\f$ are known, then its pose can be calculated by
+\f[ R_i = R_{1i} R_1\f]
+\f[ t_i = R_{1i} t_1 + t_{1i}\f]
+
+Since the relative pose between two cameras can be calculated by
+\f[ R_{ij} = R_j R_i^\top \f]
+\f[ t_{ij} = -R_{ij} t_i + R_j \f]
+
+This implies that any other relative pose of the form \f$R_{ij}, i\not=1\f$ is redundant.
+Given this, the total number of poses to determine is (NUM_CAMERAS-1) and NUM_FRAMES.
+This serves as the foundation of this function.
+
 Similarly to #calibrateCamera, the function minimizes the total re-projection error for all the
 points in all the available views from all cameras.
 
 @return Overall RMS re-projection error over detectionMask.
 
-@sa findChessboardCorners, findCirclesGrid, calibrateCamera, fisheye::calibrate
+@sa findChessboardCorners, findCirclesGrid, calibrateCamera, fisheye::calibrate, registerCameras
 */
 
 CV_EXPORTS_W double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
@@ -1627,9 +1722,22 @@ An example program about homography from the camera displacement
 Check @ref tutorial_homography "the corresponding tutorial" for more details
 */
 
-/** @brief Finds an object pose from 3D-2D point correspondences for fisheye camera moodel.
+/**
+@brief Finds an object pose from 3D-2D point correspondences for fisheye camera moodel.
 
-@see @ref calib3d_solvePnP
+@param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
+1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
+@param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
+where N is the number of points. vector\<Point2d\> can be also passed here.
+@param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
+@param distCoeffs Input vector of distortion coefficients (4x1/1x4).
+@param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
+the model coordinate system to the camera coordinate system.
+@param tvec Output translation vector.
+@param useExtrinsicGuess Parameter used for #SOLVEPNP_ITERATIVE. If true (1), the function uses
+the provided rvec and tvec values as initial approximations of the rotation and translation
+vectors, respectively, and further optimizes them.
+@param flags Method for solving a PnP problem: see @ref calib3d_solvePnP_flags
 
 This function returns the rotation and the translation vectors that transform a 3D point expressed in the object
 coordinate frame to the camera coordinate frame, using different methods:
@@ -1643,54 +1751,7 @@ Number of input points must be 4. Object points must be defined in the following
   - point 3: [-squareLength / 2, -squareLength / 2, 0]
 - for all the other flags, number of input points must be >= 4 and object points can be in any configuration.
 
-@param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
-1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
-@param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
-where N is the number of points. vector\<Point2d\> can be also passed here.
-@param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
-@param distCoeffs Input vector of distortion coefficients
-\f$\distcoeffs\f$. If the vector is NULL/empty, the zero distortion coefficients are
-assumed.
-@param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
-the model coordinate system to the camera coordinate system.
-@param tvec Output translation vector.
-@param useExtrinsicGuess Parameter used for #SOLVEPNP_ITERATIVE. If true (1), the function uses
-the provided rvec and tvec values as initial approximations of the rotation and translation
-vectors, respectively, and further optimizes them.
-@param flags Method for solving a PnP problem: see @ref calib3d_solvePnP_flags
-
-More information about Perspective-n-Points is described in @ref calib3d_solvePnP
-
-@note
-   -   An example of how to use solvePnP for planar augmented reality can be found at
-        opencv_source_code/samples/python/plane_ar.py
-   -   If you are using Python:
-        - Numpy array slices won't work as input because solvePnP requires contiguous
-        arrays (enforced by the assertion using cv::Mat::checkVector() around line 55 of
-        modules/3d/src/solvepnp.cpp version 2.4.9)
-        - The P3P algorithm requires image points to be in an array of shape (N,1,2) due
-        to its calling of #undistortPoints (around line 75 of modules/3d/src/solvepnp.cpp version 2.4.9)
-        which requires 2-channel information.
-        - Thus, given some data D = np.array(...) where D.shape = (N,M), in order to use a subset of
-        it as, e.g., imagePoints, one must effectively copy it into a new array: imagePoints =
-        np.ascontiguousarray(D[:,:2]).reshape((N,1,2))
-   -   The methods @ref SOLVEPNP_DLS and @ref SOLVEPNP_UPNP cannot be used as the current implementations are
-       unstable and sometimes give completely wrong results. If you pass one of these two
-       flags, @ref SOLVEPNP_EPNP method will be used instead.
-   -   The minimum number of points is 4 in the general case. In the case of @ref SOLVEPNP_P3P and @ref SOLVEPNP_AP3P
-       methods, it is required to use exactly 4 points (the first 3 points are used to estimate all the solutions
-       of the P3P problem, the last one is used to retain the best solution that minimizes the reprojection error).
-   -   With @ref SOLVEPNP_ITERATIVE method and `useExtrinsicGuess=true`, the minimum number of points is 3 (3 points
-       are sufficient to compute a pose but there are up to 4 solutions). The initial solution should be close to the
-       global solution to converge.
-   -   With @ref SOLVEPNP_IPPE input points must be >= 4 and object points must be coplanar.
-   -   With @ref SOLVEPNP_IPPE_SQUARE this is a special case suitable for marker pose estimation.
-       Number of input points must be 4. Object points must be defined in the following order:
-         - point 0: [-squareLength / 2,  squareLength / 2, 0]
-         - point 1: [ squareLength / 2,  squareLength / 2, 0]
-         - point 2: [ squareLength / 2, -squareLength / 2, 0]
-         - point 3: [-squareLength / 2, -squareLength / 2, 0]
-    -  With @ref SOLVEPNP_SQPNP input points must be >= 3
+It interally undistort points with @ref undistortPoints and call @ref cv::solvePnP, thus the input are very similar. Check there and Perspective-n-Points is described in @ref calib3d_solvePnP for more information.
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
