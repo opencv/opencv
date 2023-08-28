@@ -889,6 +889,20 @@ public:
 };
 
 
+/*
+class CV_EXPORTS_W LapjvSolver
+{
+public:
+    /** @brief Linear assignment problem jonker volgenant solver
+
+    @param cost cost matrix to minimize
+    */
+//    CV_WRAP OutputArray lapjv(InputArray &cost, float matchThreshold = 0.7);
+
+//};
+
+
+
 class CV_EXPORTS Track
 {
 protected:
@@ -915,15 +929,15 @@ public:
     float classScore;
 };
 
-
+/*
 /** @brief Base abstract class for multiple object tracker (MOT)
  */
-class CV_EXPORTS_W MultiTracker
+class CV_EXPORTS_W MultipleTracker
 {
 protected:
-    MultiTracker();
+    MultipleTracker();
 public:
-    virtual ~MultiTracker();
+    virtual ~MultipleTracker();
 
     // /** @brief Initialize the tracker with a known bounding box that surrounded the target
     //@param image The initial frame
@@ -950,6 +964,7 @@ public:
     */
     CV_EXPORTS virtual
     void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) = 0;
+
 };
 
 /** @brief ByteTrack is a simple, fast and strong multi-object tracker.
@@ -962,7 +977,7 @@ public:
  * Author: Yifu Zhang, https://github.com/ifzhang
  */
 
-class CV_EXPORTS_W ByteTracker : public MultiTracker {
+class CV_EXPORTS_W ByteTracker : public MultipleTracker {
 protected:
     ByteTracker();
 public:
@@ -975,10 +990,10 @@ public:
         CV_PROP_RW int frameBuffer;
     };
 
-    static CV_EXPORTS_W
+    static CV_WRAP
     Ptr<ByteTracker> create(const ByteTracker::Params& parameters = ByteTracker::Params());
 
-    CV_EXPORTS_W bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks) CV_OVERRIDE = 0;
+    CV_WRAP bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks) CV_OVERRIDE = 0;
 
     CV_EXPORTS virtual void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) CV_OVERRIDE = 0;
 

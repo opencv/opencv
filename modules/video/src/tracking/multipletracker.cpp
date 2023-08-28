@@ -6,12 +6,12 @@
 
 namespace cv {
 
-MultiTracker::MultiTracker()
+MultipleTracker::MultipleTracker()
 {
     // nothing
 }
 
-MultiTracker::~MultiTracker()
+MultipleTracker::~MultipleTracker()
 {
     // nothing
 }
