@@ -339,14 +339,14 @@ int lapjv_internal(
     return ret;
 }
 
-std::map<int, int> lapjv(InputArray &cost, float matchThreshold)
+std::map<int, int> lapjv(const cv::Mat &cost, float matchThreshold)
 {
-    Mat _cost = cost.getMat();
+
     std::map<int, int> ret;
-    if (_cost.rows == 0 || _cost.cols == 0)
+    if (cost.rows == 0 || cost.cols == 0)
         return ret;
-    int maxI = _cost.rows;
-    int maxJ = _cost.cols;
+    int maxI = cost.rows;
+    int maxJ = cost.cols;
     int n = max(maxJ, maxI);
 
     std::vector<std::vector<double>> cost_ptr(n, std::vector<double>(n));
@@ -363,9 +363,9 @@ std::map<int, int> lapjv(InputArray &cost, float matchThreshold)
     {
         for (int j = 0; j < n; j++)
         {
-            if (i < maxI && j < maxJ && _cost.at<float>(i, j) < matchThreshold) // verify
+            if (i < maxI && j < maxJ && cost.at<float>(i, j) < matchThreshold) // verify
             {
-                cost_ptr[i][j] = static_cast<double>(_cost.at<float>(i, j));
+                cost_ptr[i][j] = static_cast<double>(cost.at<float>(i, j));
             }
             else
             {
@@ -387,7 +387,16 @@ std::map<int, int> lapjv(InputArray &cost, float matchThreshold)
     return ret;
 }
 
+void lapjv(InputArray costMatrix, OutputArray assignedPairs, float matchThreshold) {
 
+    auto ret = lapjv(costMatrix.getMat(), matchThreshold);
+    auto numPairs = ret.size();
+    assignedPairs.create(numPairs, 2, CV_32S);
 
-
+    auto c_assigned_pairs = assignedPairs.getMat();
+    for (auto const& x : ret) {
+        c_assigned_pairs.at<int>(x.first, 0) = x.first;
+        c_assigned_pairs.at<int>(x.first, 1) = x.second;
+    }
+}
 }

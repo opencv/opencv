@@ -42,24 +42,20 @@ typedef unsigned int uint_t;
 typedef double cost_t;
 typedef char boolean;
 typedef enum fp_t { FP_1 = 1, FP_2 = 2, FP_DYNAMIC = 3 } fp_t;
-namespace cv
+namespace cv {
+    int_t _ccrrt_dense(uint_t, cost_t**, int_t*, int_t*, int_t*, cost_t*);
+    int_t _carr_dense(uint_t, cost_t**, uint_t, int_t*, int_t*, int_t*, cost_t*);
+    uint_t _find_dense(uint_t, uint_t, cost_t*, int_t*);
+    int_t _scan_dense(uint_t, cost_t**, uint_t*, uint_t*, cost_t*, int_t*, int_t*, int_t*, cost_t*);
+    int_t find_path_dense(uint_t, cost_t**, int_t, int_t*, cost_t*, int_t*);
+    int_t _ca_dense(uint_t, cost_t**, uint_t, int_t*, int_t*, int_t*, cost_t*);
 
-{
-int_t lapjv_internal(
-    const uint_t n, cost_t *cost[],
-    int_t *x, int_t *y);
+    int_t lapjv_internal(
+        const uint_t n, cost_t *cost[],
+        int_t *x, int_t *y);
 
-int_t lapmod_internal(
-    const uint_t n, cost_t *cc, uint_t *ii, uint_t *kk,
-    int_t *x, int_t *y, fp_t fp_version);
-
-int_t _ccrrt_dense(uint_t, cost_t**, int_t*, int_t*, int_t*, cost_t*);
-int_t _carr_dense(uint_t, cost_t**, uint_t, int_t*, int_t*, int_t*, cost_t*);
-uint_t _find_dense(uint_t, uint_t, cost_t*, int_t*);
-int_t _scan_dense(uint_t, cost_t**, uint_t*, uint_t*, cost_t*, int_t*, int_t*, int_t*, cost_t*);
-int_t find_path_dense(uint_t, cost_t**, int_t, int_t*, cost_t*, int_t*);
-int_t _ca_dense(uint_t, cost_t**, uint_t, int_t*, int_t*, int_t*, cost_t*);
-std::map<int, int> lapjv(InputArray&, float matchThreshold = 0.7);
+    CV_EXPORTS std::map<int, int> lapjv(const cv::Mat &cost, float matchThreshold = 0.7);
+    CV_EXPORTS_W void lapjv(InputArray costMatrix, OutputArray assignedPairs, float matchThreshold = 0.7);
 }
 
 #endif // LAPJV_H
