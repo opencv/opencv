@@ -889,7 +889,7 @@ public:
 
 /** @brief the vt tracker is a super lightweight dnn-based general object tracking.
  *
- *  Nano tracker is much faster and extremely lightweight due to special model structure, the model file is about 600KB.
+ *  Vit tracker is much faster and extremely lightweight due to special model structure, the model file is about 600KB.
  *  Model download link: https://github.com/opencv/opencv_extra/blob/4.x/testdata/dnn/onnx/models/vttrack.onnx
  *  Author: PengyuLiu, 1872918507@qq.com
  */

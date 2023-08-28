@@ -23,7 +23,7 @@ TrackerVit::~TrackerVit()
 
 TrackerVit::Params::Params()
 {
-    net = "vttrack.onnx";
+    net = "vitTracker.onnx";
 #ifdef HAVE_OPENCV_DNN
     backend = dnn::DNN_BACKEND_DEFAULT;
     target = dnn::DNN_TARGET_CPU;
@@ -175,15 +175,15 @@ bool TrackerVitImpl::update(InputArray image_, Rect &boundingBoxRes)
     std::vector<Mat> outs;
     net.forward(outs, outputName);
     CV_Assert(outs.size() == 3);
-    
+
     cv::Mat conf_map = outs[0].reshape(0, {16, 16});
     cv::Mat size_map = outs[1].reshape(0, {2, 16, 16});
-    cv::Mat offset_map = outs[2].reshape(0, {2, 16, 16});  
+    cv::Mat offset_map = outs[2].reshape(0, {2, 16, 16});
 
     cv::multiply(conf_map, (1.0 - hanningWindow), conf_map);
 
     double maxVal;
-    cv::Point maxLoc;   
+    cv::Point maxLoc;
     cv::minMaxLoc(conf_map, nullptr, &maxVal, nullptr, &maxLoc);
     tracking_score = maxVal;
 
@@ -191,7 +191,7 @@ bool TrackerVitImpl::update(InputArray image_, Rect &boundingBoxRes)
     float cy = (maxLoc.y + offset_map.at<float>(1, maxLoc.y, maxLoc.x)) / 16;
     float w = size_map.at<float>(0, maxLoc.y, maxLoc.x);
     float h = size_map.at<float>(1, maxLoc.y, maxLoc.x);
-    
+
     cv::Rect finalres = returnfromcrop(cx - w / 2, cy - h / 2, w, h, rect_last);
     rect_last = finalres;
     boundingBoxRes = finalres;

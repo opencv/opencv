@@ -162,7 +162,7 @@ TEST(NanoTrack, accuracy_NanoTrack_V2)
 
 TEST(vttrack, accuracy_vttrack)
 {
-    std::string model = cvtest::findDataFile("dnn/onnx/models/vttrack.onnx", false);
+    std::string model = cvtest::findDataFile("dnn/onnx/models/vitTracker.onnx", false);
     cv::TrackerVit::Params params;
     params.net = model;
     cv::Ptr<Tracker> tracker = TrackerVit::create(params);
