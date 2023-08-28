@@ -688,8 +688,6 @@ bool LayerEinsumImpl::processBroadcastedDims() const
 
 bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<MatShape>& inputs) const
 {
-    bool result = true;
-
     // parser equation and extract tokens from the equation
     // save token to lhs_eq_tokens variable
     parseEquation(equation); // TODO: return lhs_eq_tokens
@@ -774,7 +772,8 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
                     if (subscriptIndicesToDimValue[mappedIndx] != dimValue)
                     {
                         if(subscriptIndicesToDimValue[mappedIndx] == 1){
-                            subscriptIndicesToDimValue[mappedIndx] == dimValue;
+                            //TODO: uncomment later on
+                            // subscriptIndicesToDimValue[mappedIndx] == dimValue;
                         } else
                         {
                             if (dimValue != 1)
@@ -813,7 +812,7 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
         inputSubscriptIndices.push_back(std::move(currTokenIndices));
         ++inputIdx;
     }
-    return result;
+    return true;
 }
 
 Mat LayerEinsumImpl::FinalizeOutput(
