@@ -6,6 +6,11 @@
 #include "layers_common.hpp"
 // backends
 #include "../op_cuda.hpp"
+#ifdef HAVE_CUDA
+// #include "../cuda4dnn/primitives/matmul.hpp"
+#include "../cuda4dnn/primitives/inner_product.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 #include "../op_cann.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
@@ -197,8 +202,8 @@ public:
     Ptr<BackendNode> initCUDA(void *context_,
                               const std::vector<Ptr<BackendWrapper>>& inputs,
                               const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE {
-        CV_CheckFalse(trans_A, "DNN/Gemm/Cuda: does not support transA");
-        CV_CheckTure(const_B, "DNN/Gemm/Cuda: input B (weight) is required to be constant");
+        CV_CheckFalse(trans_a, "DNN/Gemm/Cuda: does not support transA");
+        CV_CheckTrue(const_B, "DNN/Gemm/Cuda: input B (weight) is required to be constant");
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         auto B = blobs[0];
         auto C = have_bias && const_C ? blobs[1] : Mat();
