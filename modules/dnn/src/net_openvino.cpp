@@ -494,8 +494,7 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 }
                 CV_CheckLT((size_t)oid, ngraph_input_node->get_output_size(), "");
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-                inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(nullptr));
-                inputNodes[i].dynamicCast<InfEngineNgraphNode>()->node = ngraph_input_node->output(oid);
+                inputNodes[i] = new InfEngineNgraphNode(ngraph_input_node->output(oid));
 #elif INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_3)
                 inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(ieInpNode->node->get_output_as_single_output_node(oid)));
 #else

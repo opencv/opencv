@@ -93,8 +93,8 @@ public:
                         std::vector<Mat*>& inputs, std::vector<Mat>& outputs,
                         std::vector<Mat>& internals);
 
-    InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node);
-    InfEngineNgraphNode(const std::shared_ptr<ngraph::Node>& _node);
+    InfEngineNgraphNode(ngraph::Output<ngraph::Node>&& _node);
+    InfEngineNgraphNode(const ngraph::Output<ngraph::Node>& _node);
 
     void setName(const std::string& name);
 
