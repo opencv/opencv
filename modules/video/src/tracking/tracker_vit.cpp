@@ -212,7 +212,7 @@ Ptr<TrackerVit> TrackerVit::create(const TrackerVit::Params& parameters)
 Ptr<TrackerVit> TrackerVit::create(const TrackerVit::Params& parameters)
 {
     CV_UNUSED(parameters);
-    CV_Error(cv::Error::StsNotImplemented, "to use vttrack, the tracking module needs to be built with opencv_dnn !");
+    CV_Error(cv::Error::StsNotImplemented, "to use vittrack, the tracking module needs to be built with opencv_dnn !");
 }
 #endif  // OPENCV_HAVE_DNN
 }

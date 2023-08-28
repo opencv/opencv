@@ -887,10 +887,10 @@ public:
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
-/** @brief the vt tracker is a super lightweight dnn-based general object tracking.
+/** @brief the vit tracker is a super lightweight dnn-based general object tracking.
  *
  *  Vit tracker is much faster and extremely lightweight due to special model structure, the model file is about 600KB.
- *  Model download link: https://github.com/opencv/opencv_extra/blob/4.x/testdata/dnn/onnx/models/vttrack.onnx
+ *  Model download link: https://github.com/opencv/opencv_extra/blob/4.x/testdata/dnn/onnx/models/vitTracker.onnx
  *  Author: PengyuLiu, 1872918507@qq.com
  */
 class CV_EXPORTS_W TrackerVit : public Tracker
