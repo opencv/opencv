@@ -678,7 +678,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                     img_points_frame.push_back(imagePoints[camera][f].row(i).reshape(2));
                 }
             }
-            double area_ratio = multiview::imagePointsAreaFrame(imageSize[camera], img_points_frame);
+            double area_ratio = img_points_frame.empty() ? 0 : multiview::imagePointsAreaFrame(imageSize[camera], img_points_frame);
 
             // // Only put it if there are more than some points pr covers a non-degenerate region
             // CV_LOG_IF_WARNING(NULL, obj_points_frame.rows < MINIMUM_OBSERVATION || area_ratio < MINIMUM_AREA_RATIO, "Warning! Fewer than " + std::to_string(MINIMUM_OBSERVATION) + " object points are visible or observation covers less than " + std::to_string(MINIMUM_AREA_RATIO) + " area  in the image frame " + std::to_string(f) + " for camera " + std::to_string(camera));
