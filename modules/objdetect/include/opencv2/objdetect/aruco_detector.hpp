@@ -99,7 +99,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
     /// minimum distance of any corner to the image border for detected markers (in pixels) (default 3)
     CV_PROP_RW int minDistanceToBorder;
 
-    /** @brief minimum mean distance beetween two marker corners to be considered imilar, so that the smaller one is removed.
+    /** @brief minimum mean distance between two marker corners to be considered similar, so that the smaller one is removed.
      *
      * The rate is relative to the smaller perimeter of the two markers (default 0.05).
      */
@@ -219,7 +219,7 @@ struct CV_EXPORTS_W_SIMPLE RefineParameters {
      */
     CV_PROP_RW float minRepDistance;
 
-    /** @brief minRepDistance rate of allowed erroneous bits respect to the error correction capability of the used dictionary.
+    /** @brief errorCorrectionRate rate of allowed erroneous bits respect to the error correction capability of the used dictionary.
      *
      * -1 ignores the error correction step.
      */
