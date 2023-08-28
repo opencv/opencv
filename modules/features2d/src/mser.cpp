@@ -33,10 +33,41 @@
  * 2. the gray image algorithm is taken from: Linear Time Maximally Stable Extremal Regions;
  *    the paper claims to be faster than union-find method;
  *    it actually get 1.5~2m/s on my centrino L7200 1.2GHz laptop.
- * 3. the color image algorithm is taken from: Maximally Stable Colour Regions for Recognition and Match;
+ * 3. though the name is *contours*, the result actually is a list of point set.
+ * 4. the color image algorithm is taken from: Maximally Stable Colour Regions for Recognition and Match;
  *    it should be much slower than gray image method ( 3~4 times );
- *    the chi_table.h file is taken directly from paper's source code which is distributed under permissive BSD-like license: http://users.isy.liu.se/cvl/perfo/software/chi_table.h
- * 4. though the name is *contours*, the result actually is a list of point set.
+ *    the chi_table.h file is taken directly from paper's source code:
+ *    http://users.isy.liu.se/cvl/perfo/software/chi_table.h
+ *
+ *                           License Agreement
+ *                           For chi_table.h
+ *
+ * Copyright (C) 2007 Per-Erik Forssen, all rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ *   * Redistribution's of source code must retain the above copyright notice,
+ *     this list of conditions and the following disclaimer.
+ *
+ *   * Redistribution's in binary form must reproduce the above copyright notice,
+ *     this list of conditions and the following disclaimer in the documentation
+ *     and/or other materials provided with the distribution.
+ *
+ *   * The name of the copyright holders may not be used to endorse or promote products
+ *     derived from this software without specific prior written permission.
+ *
+ * This software is provided by the copyright holders and contributors "as is" and
+ * any express or implied warranties, including, but not limited to, the implied
+ * warranties of merchantability and fitness for a particular purpose are disclaimed.
+ * In no event shall the Intel Corporation or contributors be liable for any direct,
+ * indirect, incidental, special, exemplary, or consequential damages
+ * (including, but not limited to, procurement of substitute goods or services;
+ * loss of use, data, or profits; or business interruption) however caused
+ * and on any theory of liability, whether in contract, strict liability,
+ * or tort (including negligence or otherwise) arising in any way out of
+ * the use of this software, even if advised of the possibility of such damage.
+ *
  */
 
 #include "precomp.hpp"
