@@ -4,14 +4,12 @@
 #include <string>
 #include <fstream> // Include the header for file input/output
 
-std::string home = getenv("HOME");
-std::string detections = home + "/files/detFile.txt";
-std::string reference = home + "/files/new_ref_x.txt";
-
-
-
 namespace opencv_test { namespace {
 
+static std::string getDataDir() { return TS::ptr()->get_data_path(); }
+
+std::string getDetections() { return getDataDir() + "bytetracker/detFile.txt"; }
+std::string getReference() { return getDataDir() + "bytetracker/newRef.txt"; }
 
 class CV_ByteTrackerTest : public cvtest::BaseTest
 {
@@ -40,8 +38,8 @@ void CV_ByteTrackerTest::run(int)
     std::string referenceLine;
 
     // Read detections from a file
-    std::ifstream detectionFile(detections);
-    std::ifstream referenceFile(reference);
+    std::ifstream detectionFile(getDetections());
+    std::ifstream referenceFile(getReference());
     if (!detectionFile.is_open() || !referenceFile.is_open())
     {
         cout<<detectionFile.is_open();

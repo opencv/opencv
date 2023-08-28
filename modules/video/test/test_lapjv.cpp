@@ -6,7 +6,7 @@
 
 using namespace cv;
 
-#define TEST_AVAILABLE 0
+#define TEST_AVAILABLE 1
 #ifdef TEST_AVAILABLE
 
 namespace opencv_test { namespace {
@@ -35,7 +35,7 @@ TEST(Video_Lapjv, testSquare) {
         int i = assignment.first;
         int j = assignment.second;
         int expected_j = expectedAssignment.at(i);
-        EXPECT_EQ(j, expected_j);  
+        EXPECT_EQ(j, expected_j);
     }
 }
 
