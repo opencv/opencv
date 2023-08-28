@@ -909,7 +909,7 @@ public:
     };
 
     /** @brief Constructor
-    @param parameters vt tracker parameters TrackerNano::Params
+    @param parameters vit tracker parameters TrackerVit::Params
     */
     static CV_WRAP
     Ptr<TrackerVit> create(const TrackerVit::Params& parameters = TrackerVit::Params());
