@@ -51,6 +51,7 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_dista
         CV_Error(cv::Error::StsNotImplemented, "pattern_type is not implemented!");
     }
 // ! [calib_init]
+// ! [charuco_detector]
     cv::aruco::CharucoDetector* detector = nullptr;
     if (pattern_type == "charuco") {
         CV_Assert(dict_path != nullptr);
@@ -64,7 +65,10 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_dista
         fs["marker_size"] >> marker_size;
 
         auto dictionary = cv::aruco::getPredefinedDictionary(dict_int);
-        auto charuco_board = cv::aruco::CharucoBoard(cv::Size(pattern_size.width + 1, pattern_size.height + 1), square_size, marker_size, dictionary);
+        // For charuco board, the size is defined to be the number of box (not inner corner)
+        auto charuco_board = cv::aruco::CharucoBoard(
+            cv::Size(pattern_size.width+1, pattern_size.height+1),
+            square_size, marker_size, dictionary);
 
         // It is suggested to use refinement in detecting charuco board
         auto detector_params = cv::aruco::DetectorParameters();
@@ -72,8 +76,8 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_dista
         charuco_params.tryRefineMarkers = true;
         detector_params.cornerRefinementMethod = cv::aruco::CORNER_REFINE_CONTOUR;
         detector = new cv::aruco::CharucoDetector(charuco_board, charuco_params, detector_params);
-
     }
+// ! [charuco_detector]
 // ! [detect_pattern]
     int num_frames = -1;
     for (const auto &filename : filenames) {
@@ -113,7 +117,7 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_dista
                 detector->detectBoard(img, corners_sub, ids);
                 corners.create(board.size(), 2, CV_32F);
                 if (ids.size() < 4)
-                    success == false;
+                    success = false;
                 else {
                     success = true;
                     int head = 0;
