@@ -81,14 +81,16 @@ public:
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
+        opt.init();
+
         // pack B if it is const
         if (const_B) {
             /*
-            blobs:
-                b,
-                b, bias
+                blobs:
+                    b,
+                    b, bias
             */
-            fast_gemm_packB(blobs[0], packed_B, trans_b);
+            fast_gemm_packB(blobs[0], packed_B, trans_b, opt);
         }
 
         // also pre-broadcast bias
@@ -191,9 +193,9 @@ public:
 
         if (const_B) {
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
-            fast_gemm(trans_a, M, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), beta, Y.ptr<float>(), N);
+            fast_gemm(trans_a, M, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), beta, Y.ptr<float>(), N, opt);
         } else {
-            fast_gemm(trans_a, trans_b, alpha, A, inputs[1], beta, Y);
+            fast_gemm(trans_a, trans_b, alpha, A, inputs[1], beta, Y, opt);
         }
     }
 
@@ -327,6 +329,7 @@ private:
     std::vector<float> packed_B;
     std::vector<float> broadcast_C;
     int real_ndims_C;
+    FastGemmOpt opt;
 };
 
 Ptr<GemmLayer> GemmLayer::create(const LayerParams& params) {

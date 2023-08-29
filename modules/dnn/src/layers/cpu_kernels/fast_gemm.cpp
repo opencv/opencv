@@ -79,56 +79,16 @@ static void fast_gemm_pack##N##suffix( int m, int k, const void* A_, \
 FAST_GEMM_IMPLEMENT_PACK(8, _f32, float, float)
 FAST_GEMM_IMPLEMENT_PACK(12, _f32, float, float)
 
-void fast_gemm_packB(const Mat &B, std::vector<float> &packed_B, bool trans) {
-    CV_CheckEQ(B.dims, 2, "fast_gemm_packB: input mat should be two-dimensional");
-    CV_CheckTypeEQ(B.type(), CV_32F, "fast_gemm_packB: only float32 is supported for now");
+CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-    auto B_shape = shape(B);
-    int K = B_shape[0], N = B_shape[1], ldb0 = N, ldb1 = 1;
-    if (trans) {
-        std::swap(K, N);
-        std::swap(ldb0, ldb1);
-    }
+// AVX and AVX2 (16 x 256-bit registers)
+#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_AVX
 
-    int esz = B.elemSize(),
-        GEMM_NC = FAST_GEMM_F32_NC,
-        GEMM_NR = FAST_GEMM_F32_NR;
-    int NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
-    int KC = std::min(FAST_GEMM_F32_PACKED_STRIDE_K, K);
-
-    if (!packed_B.empty()) {
-        packed_B.clear();
-    }
-    int total_size = static_cast<int>((N + NC - 1) / NC) * NC * K;
-    packed_B.resize(total_size);
-
-    const auto *ptr_B = B.ptr<char>();
-    auto ptr_packed = packed_B.data();
-    std::function<void(int, int, const void*, int, int, void*)> packer;
-#if CV_AVX2 || CV_AVX
-    packer = fast_gemm_pack8_f32;
-#else
-    packer = fast_gemm_pack12_f32;
-#endif
-    int n_tiles = (N + NC - 1) / NC;
-    for (int r = 0; r < n_tiles; ++r) {
-        int j0 = r * NC;
-        int nc = N - j0 < NC ? N - j0 : NC;
-        int _nc = static_cast<int>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
-        for (int k = 0; k < K; k += KC) {
-            int kc = K - k < KC ? K - k : KC;
-            packer(nc, kc, ptr_B + (k * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, ptr_packed);
-            ptr_packed += _nc * kc;
-        }
-    }
-}
-
-// 12x8 is optimal for CPU with 16 x 256-bit registers (AVX, AVX2)
-#if CV_AVX || CV_AVX2
-#if !CV_FMA3 // AVX workaround
+#if !CV_FMA3 // AVX workaround for FMA
 #undef _mm256_fmadd_ps
 #define _mm256_fmadd_ps(a, b, c) _mm256_add_ps(c, _mm256_mul_ps(a, b))
 #endif
+
 static void fast_gemm12x8_f32(int k, const char *a_, const char *b_,
                               char *c_, int ldc, const void* palpha) {
     const float* a = (const float*)a_;
@@ -200,8 +160,12 @@ static void fast_gemm12x8_f32(int k, const char *a_, const char *b_,
         FAST_GEMM_FINALE(8, 9, 10, 11);
     #undef FAST_GEMM_FINALE
 }
-// 8x12 is optimal for CPU with 32 x 128-bit registers (NEON with ARMv8.x-A or ARMv9.x-A)
-#elif CV_NEON && CV_NEON_AARCH64
+
+#endif // CV_AVX
+
+// NEON AARCH64 (32 128-bit registers)
+#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_NEON && CV_NEON_AARCH64
+
 static void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
                               char *c_, int ldc, const void* palpha) {
     const float* a = (const float*)a_;
@@ -281,7 +245,61 @@ static void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
     FAST_GEMM_FINALE(6, 7);
 #undef FAST_GEMM_FINALE
 }
-#else
+
+#endif // CV_NEON && CV_NEON_AARCH64
+
+CV_CPU_OPTIMIZATION_NAMESPACE_END
+
+void fast_gemm_packB(const Mat &B, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt) {
+    CV_CheckEQ(B.dims, 2, "fast_gemm_packB: input mat should be two-dimensional");
+    CV_CheckTypeEQ(B.type(), CV_32F, "fast_gemm_packB: only float32 is supported for now");
+
+    auto B_shape = shape(B);
+    int K = B_shape[0], N = B_shape[1], ldb0 = N, ldb1 = 1;
+    if (trans) {
+        std::swap(K, N);
+        std::swap(ldb0, ldb1);
+    }
+
+    int esz = B.elemSize(),
+        GEMM_NC = FAST_GEMM_F32_NC,
+        GEMM_NR = FAST_GEMM_F32_NR;
+    int NC = (((GEMM_NC < N ? GEMM_NC : N) + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
+    int KC = std::min(FAST_GEMM_F32_PACKED_STRIDE_K, K);
+
+    if (!packed_B.empty()) {
+        packed_B.clear();
+    }
+    int total_size = static_cast<int>((N + NC - 1) / NC) * NC * K;
+    packed_B.resize(total_size);
+
+    const auto *ptr_B = B.ptr<char>();
+    auto ptr_packed = packed_B.data();
+    int n_tiles = (N + NC - 1) / NC;
+    for (int r = 0; r < n_tiles; ++r) {
+        int j0 = r * NC;
+        int nc = N - j0 < NC ? N - j0 : NC;
+        int _nc = static_cast<int>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
+        for (int k = 0; k < K; k += KC) {
+            int kc = K - k < KC ? K - k : KC;
+#if CV_TRY_AVX || CV_TRY_AVX2
+            if (opt.use_avx || opt.use_avx2) {
+                fast_gemm_pack8_f32(nc, kc, ptr_B + (k * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, ptr_packed);
+            } else
+#endif
+#if CV_TRY_NEON
+            if (opt.use_neon_aarch64) {
+                fast_gemm_pack12_f32(nc, kc, ptr_B + (k * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, ptr_packed);
+            } else
+#endif
+            {
+                fast_gemm_pack8_f32(nc, kc, ptr_B + (k * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, ptr_packed);
+            }
+            ptr_packed += _nc * kc;
+        }
+    }
+}
+
 static void fast_gemm_f32(int k, const char *a_, const char *b_,
                           char *c_, int ldc, const void* palpha) {
     const float* a = (const float*)a_;
@@ -295,7 +313,7 @@ static void fast_gemm_f32(int k, const char *a_, const char *b_,
         for( int i = 0; i < FAST_GEMM_F32_MR; i++ ) {
             float ai = a[FAST_GEMM_F32_MR * p + i];
             for( int j = 0; j < FAST_GEMM_F32_NR; j++ )
-                sbuf[i*FAST_GEMM_F32_NR + j] += b[FAST_GEMM_F32_NR * p + j] * ai;
+                sbuf[i * FAST_GEMM_F32_NR + j] += b[FAST_GEMM_F32_NR * p + j] * ai;
         }
     }
     for (int i = 0; i < FAST_GEMM_F32_MR; i++) {
@@ -303,12 +321,11 @@ static void fast_gemm_f32(int k, const char *a_, const char *b_,
             c[i * ldc + j] += alpha * sbuf[i * FAST_GEMM_F32_NR + j];
     }
 }
-#endif
 
 static void fast_gemm_macro_kernel(int m, int n, int k,
                                    const char *packA, const char *packB,
                                    const void* palpha, char *c, int ldc0,
-                                   int MR, int NR) {
+                                   int MR, int NR, FastGemmOpt &opt) {
     int esz = sizeof(float);
     int ldc0_esz = ldc0 * esz;
 
@@ -330,13 +347,24 @@ static void fast_gemm_macro_kernel(int m, int n, int k,
                     memcpy(cptr + p*(ldc*esz), cptr0 + p*ldc0_esz, nr_esz);
             }
 
-#if CV_AVX || CV_AVX2
-            fast_gemm12x8_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
-#elif CV_NEON && CV_NEON_AARCH64
-            fast_gemm8x12_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
-#else
-            fast_gemm_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
+#if CV_TRY_AVX
+            if (opt.use_avx) {
+                opt_AVX::fast_gemm12x8_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
+            } else
 #endif
+#if CV_TRY_AVX2
+            if (opt.use_avx2) {
+                opt_AVX2::fast_gemm_12x8_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
+            } else
+#endif
+#if CV_TRY_NEON
+            if (opt.use_neon_aarch64) {
+                cpu_baseline::fast_gemm8x12_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
+            } else
+#endif
+            {
+                fast_gemm_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
+            }
 
             if (partial) {
                 for(int p = 0; p < mr; p++)
@@ -377,7 +405,7 @@ static void fast_gemm_thin(float alpha, float beta, int M, int N, int K,
 void fast_gemm(bool trans_a, int M, int N, int K,
                float alpha, const float *A, int lda,
                const float *packed_B, float beta,
-               float *C, int ldc) {
+               float *C, int ldc, FastGemmOpt &opt) {
     const char *a = (const char *)A;
     const char *packed_b = (const char *)packed_B;
     char *c = (char *)C;
@@ -400,17 +428,10 @@ void fast_gemm(bool trans_a, int M, int N, int K,
     int KC = std::min(FAST_GEMM_F32_PACKED_STRIDE_K, K);
 
     size_t buff_size = KC * MC * esz;
-    bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF; // TODO: adjust STACKBUF?
+    bool use_stackbuff = buff_size <= FAST_GEMM_MAX_STACKBUF;
     int m_tiles = (M + MC - 1) / MC;
     int n_tiles = (N + NC - 1) / NC;
     int total_tiles = m_tiles * n_tiles;
-
-    std::function<void(int, int, const void*, int, int, void*)> a_packer;
-#if CV_AVX2 || CV_AVX
-    a_packer = fast_gemm_pack12_f32;
-#else
-    a_packer = fast_gemm_pack8_f32;
-#endif
 
     auto fn = [&](const Range &r) {
         char* packed_a = (char*)(use_stackbuff ? alloca(buff_size) : malloc(buff_size)); // TODO: use AutoBuffer
@@ -442,9 +463,21 @@ void fast_gemm(bool trans_a, int M, int N, int K,
             for(int k0 = 0; k0 < K; k0 += KC)
             {
                 int kc = K - k0 < KC ? K - k0 : KC;
-                a_packer(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
+#if CV_TRY_AVX || CV_TRY_AVX2
+                if (opt.use_avx || opt.use_avx2) {
+                    fast_gemm_pack12_f32(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
+                } else
+#endif
+#if CV_TRY_NEON
+                if (opt.use_neon_aarch64) {
+                    fast_gemm_pack8_f32(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
+                } else
+#endif
+                {
+                    fast_gemm_pack12_f32(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
+                }
                 fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b_, palpha,
-                                       c_block, ldc_block, GEMM_MR, GEMM_NR);
+                                           c_block, ldc_block, GEMM_MR, GEMM_NR, opt);
                 packed_b_ += _nc * kc;
             }
         }
@@ -462,7 +495,7 @@ void fast_gemm(bool trans_a, int M, int N, int K,
 
 void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
                float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
-               float beta, float *C, int ldc) {
+               float beta, float *C, int ldc, FastGemmOpt &opt) {
 
     const char *a = (const char *)A;
     const char *b = (const char *)B;
@@ -536,10 +569,24 @@ void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
             for(int k0 = 0; k0 < K; k0 += KC)
             {
                 int kc = K - k0 < KC ? K - k0 : KC;
-                a_packer(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, pack_a);
-                b_packer(nc, kc, b + (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, pack_b);
+#if CV_TRY_AVX || CV_TRY_AVX2
+                if (opt.use_avx || opt.use_avx2) {
+                    fast_gemm_pack12_f32(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, pack_a);
+                    fast_gemm_pack8_f32(nc, kc, b + (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, pack_b);
+                } else
+#endif
+#if CV_TRY_NEON
+                if (opt.use_neon_aarch64) {
+                    fast_gemm_pack8_f32(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, pack_a);
+                    fast_gemm_pack12_f32(nc, kc, b + (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, pack_b);
+                } else
+#endif
+                {
+                    fast_gemm_pack12_f32(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, pack_a);
+                    fast_gemm_pack8_f32(nc, kc, b + (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, pack_b);
+                }
                 fast_gemm_macro_kernel(mc, nc, kc, pack_a, pack_b, palpha,
-                                       c_block, ldc_block, GEMM_MR, GEMM_NR);
+                                       c_block, ldc_block, GEMM_MR, GEMM_NR, opt);
             }
         }
 
@@ -556,7 +603,7 @@ void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
 
 void fast_gemm(bool trans_a, bool trans_b,
                float alpha, const Mat &A, const Mat &B,
-               float beta, Mat &C) {
+               float beta, Mat &C, FastGemmOpt &opt) {
     CV_CheckTypeEQ(A.type(), B.type(), "DNN/gemm: A and B should have the same type");
     CV_CheckTypeEQ(B.type(), C.type(), "DNN/gemm: B and C should have the same type");
     CV_CheckTypeEQ(A.type(), CV_32F, "DNN/gemm: only support float32 for now");
@@ -578,7 +625,7 @@ void fast_gemm(bool trans_a, bool trans_b,
 
     fast_gemm(trans_a, trans_b, ma, na, mb, nb,
              alpha, a, lda0, lda1, b, ldb0, ldb1,
-             beta, c, ldc);
+             beta, c, ldc, opt);
 }
 
 }} // cv::dnn

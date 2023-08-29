@@ -12,8 +12,6 @@
 #ifndef OPENCV_DNN_FAST_GEMM_HPP
 #define OPENCV_DNN_FAST_GEMM_HPP
 
-#include <functional>
-
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core/hal/intrin.hpp>
 
@@ -22,30 +20,47 @@
 
 #define FAST_GEMM_F32_MC 64
 #define FAST_GEMM_F32_NC 240
-// #define FAST_GEMM_F32_VOL (1<<18) // 2^18
-#if CV_AVX || CV_AVX2
-#define FAST_GEMM_F32_MR 12
-#define FAST_GEMM_F32_NR 8
-#else
+#if CV_NEON && CV_NEON_AARCH64
 #define FAST_GEMM_F32_MR 8
 #define FAST_GEMM_F32_NR 12
+#else // default, AVX, AVX2
+#define FAST_GEMM_F32_MR 12
+#define FAST_GEMM_F32_NR 8
 #endif
 #define FAST_GEMM_F32_PACKED_STRIDE_K 256
 
 namespace cv { namespace dnn {
 
-void fast_gemm_packB(const Mat &m, std::vector<float> &packed_B, bool trans = false);
+struct FastGemmOpt {
+    bool use_avx;
+    bool use_avx2;
+    bool use_neon_aarch64;
+
+    FastGemmOpt() {
+        use_avx = false;
+        use_avx2 = false;
+        use_neon_aarch64 = false;
+    }
+
+    void init() {
+        use_avx = checkHardwareSupport(CPU_AVX);
+        use_avx2 = checkHardwareSupport(CPU_AVX2);
+        use_neon_aarch64 = checkHardwareSupport(CPU_NEON) && CV_NEON_AARCH64;
+    }
+};
+
+void fast_gemm_packB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
 
 void fast_gemm(bool trans_a, int M, int N, int K,
                float alpha, const float *A, int lda,
                const float *packed_B, float beta,
-               float *C, int ldc);
+               float *C, int ldc, FastGemmOpt &opt);
 void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
               float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
-              float beta, float *C, int ldc);
+              float beta, float *C, int ldc, FastGemmOpt &opt);
 void fast_gemm(bool trans_a, bool trans_b,
                float alpha, const Mat &A, const Mat &B,
-               float beta, Mat &C);
+               float beta, Mat &C, FastGemmOpt &opt);
 
 }} // cv::dnn
 
