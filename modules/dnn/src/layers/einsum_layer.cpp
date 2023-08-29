@@ -782,7 +782,7 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
                                 CV_Error(Error::StsError, cv::format("Einsum operands can not be broadcasted."
                                                                      "Check input shapes/equation passed."
                                                                      "Input shape of operand [%" PRId64 "]", inputIdx) +
-                                                          cv::format(" is incompatible in the dimention [%" PRId64 "]." ,dim_count));
+                                                          cv::format(" is incompatible in the dimention [%zu].", static_cast<size_t>(dim_count)));
                             }
                         }
                     }
