@@ -58,6 +58,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
                 std::size_t batch_size = input.size_range(0, axis);
 
                 auto input_size = input.size() / batch_size;
+                printf("axis=%d, batch_size=%d, input_size=%d\n", axis, batch_size, input_size);
                 CV_Assert(input_size == weightsTensor.get_axis_size(-1));
 
                 auto output_size = output.size() / batch_size;
