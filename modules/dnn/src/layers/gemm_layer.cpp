@@ -210,7 +210,7 @@ public:
 
         if (!trans_b)
             cv::transpose(B, B);
-        return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), 0, B, C);
+        return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), 1, B, C);
     }
 #endif // HAVE_CUDA
 
