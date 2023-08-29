@@ -232,6 +232,7 @@ TEST_P(Test_ONNX_layers, Gather)
 
 TEST_P(Test_ONNX_layers, RAFT)
 {
+    required = false;
     testONNXModels("RAFT", npy, 0, 0, false, true, 2);
 }
 
