@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+#include <inttypes.h>
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
@@ -742,7 +743,7 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
                 {
                     CV_Error(Error::StsAssert,
                     cv::format(
-                        "Encountered '.' character that is not part of an ellipsis in the input: [%ld]",
+                        "Encountered '.' character that is not part of an ellipsis in the input: [%" PRId64 "]",
                         inputIdx));
                 }
 
@@ -780,10 +781,8 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
                             {
                                 CV_Error(Error::StsError, cv::format("Einsum operands can not be broadcasted."
                                                                      "Check input shapes/equation passed."
-                                                                     "Input shape of operand [%ld]"
-                                                                     " is incompatible in the dimention [%ld]."
-                                                                    ,inputIdx
-                                                                    ,dim_count));
+                                                                     "Input shape of operand [%" PRId64 "]", inputIdx) +
+                                                          cv::format(" is incompatible in the dimention [%" PRId64 "]." ,dim_count));
                             }
                         }
                     }
