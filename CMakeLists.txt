@@ -488,7 +488,7 @@ OCV_OPTION(BUILD_ANDROID_EXAMPLES   "Build examples for Android platform"       
 OCV_OPTION(BUILD_DOCS               "Create build rules for OpenCV Documentation" OFF  IF (NOT WINRT AND NOT APPLE_FRAMEWORK))
 OCV_OPTION(BUILD_EXAMPLES           "Build all examples"                          OFF )
 OCV_OPTION(BUILD_PACKAGE            "Enables 'make package_source' command"       ON  IF NOT WINRT)
-OCV_OPTION(BUILD_FUZZ_TESTS         "Build fuzz tests"                            NOT INSTALL_CREATE_DISTRIB  IF CV_CLANG )
+OCV_OPTION(BUILD_FUZZ_TESTS         "Build fuzz tests"                            NOT INSTALL_CREATE_DISTRIB  IF (CV_CLANG AND (UNIX AND NOT APPLE AND NOT ANDROID)) )
 OCV_OPTION(BUILD_PERF_TESTS         "Build performance tests"                     NOT INSTALL_CREATE_DISTRIB  IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_TESTS              "Build accuracy & regression tests"           NOT INSTALL_CREATE_DISTRIB  IF (NOT APPLE_FRAMEWORK) )
 OCV_OPTION(BUILD_WITH_DEBUG_INFO    "Include debug info into release binaries ('OFF' means default settings)" OFF )
