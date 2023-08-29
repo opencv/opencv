@@ -3931,7 +3931,7 @@ struct Luv2RGB_b
 
         int i, j, dcn = dstcn;
         uchar alpha = ColorChannel<uchar>::max();
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if CV_SIMD
         float CV_DECL_ALIGNED(CV_SIMD_WIDTH) buf[3*BLOCK_SIZE];
 #else
         float CV_DECL_ALIGNED(16) buf[3*BLOCK_SIZE];
