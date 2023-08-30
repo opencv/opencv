@@ -2299,10 +2299,24 @@ TEST(AP3P, ctheta1p_nan_23607)
     std::vector<Mat> R, t;
     solveP3P(modelPts, cameraPts, Mat::eye(3, 3, CV_64F), Mat(), R, t, SOLVEPNP_AP3P);
 
-    for (size_t i = 0; i < R.size(); i++)
-    {
+    EXPECT_EQ(R.size(), 2ul);
+    EXPECT_EQ(t.size(), 2ul);
+
+    // Try apply rvec and tvec to get model points from camera points.
+    Mat pts = Mat(modelPts).reshape(1, 3);
+    Mat expected = Mat(cameraPts).reshape(1, 3);
+    for (size_t i = 0; i < R.size(); ++i) {
         EXPECT_TRUE(!hasNan(R[i]));
         EXPECT_TRUE(!hasNan(t[i]));
+
+        Mat transform;
+        cv::Rodrigues(R[i], transform);
+        Mat res = pts * transform.t();
+        for (int j = 0; j < 3; ++j) {
+            res.row(j) += t[i].reshape(1, 1);
+            res.row(j) /= res.row(j).at<double>(2);
+        }
+        EXPECT_LE(cvtest::norm(res.colRange(0, 2), expected, NORM_INF), 3e-16);
     }
 }
 
