@@ -9,10 +9,10 @@ static inline double cbrt(double x) { return (double)cv::cubeRoot((float)x); };
 #endif
 
 namespace {
-void polishQuarticRoots(const double *coeffs, double *roots) {
+void polishQuarticRoots(const double *coeffs, double *roots, int nb_roots) {
     const int iterations = 2;
     for (int i = 0; i < iterations; ++i) {
-        for (int j = 0; j < 4; ++j) {
+        for (int j = 0; j < nb_roots; ++j) {
             double error =
                     (((coeffs[0] * roots[j] + coeffs[1]) * roots[j] + coeffs[2]) * roots[j] + coeffs[3]) * roots[j] +
                     coeffs[4];
@@ -175,9 +175,9 @@ int ap3p::computePoses(const double featureVectors[3][4],
                         2 * (g6 * g7 - g1 * g2 - g3 * g4),
                         g7 * g7 - g2 * g2 - g4 * g4};
     double s[4];
-    solve_deg4(coeffs[0], coeffs[1], coeffs[2], coeffs[3], coeffs[4],
-               s[0], s[1], s[2], s[3]);
-    polishQuarticRoots(coeffs, s);
+    int nb_roots = solve_deg4(coeffs[0], coeffs[1], coeffs[2], coeffs[3], coeffs[4],
+                              s[0], s[1], s[2], s[3]);
+    polishQuarticRoots(coeffs, s, nb_roots);
 
     double temp[3];
     vect_cross(k1, nl, temp);
@@ -203,7 +203,7 @@ int ap3p::computePoses(const double featureVectors[3][4],
     double reproj_errors[4];
 
     int nb_solutions = 0;
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < nb_roots; ++i) {
         double ctheta1p = s[i];
         if (abs(ctheta1p) > 1)
             continue;

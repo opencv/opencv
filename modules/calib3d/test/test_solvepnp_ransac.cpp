@@ -2264,13 +2264,13 @@ bool hasNan(const cv::Mat& mat)
     bool has = false;
     if (mat.type() == CV_32F)
     {
-        for(size_t i = 0; i < mat.total(); i++)
-            has |= cvIsNaN(mat.at<float>(i));
+        for(int i = 0; i < static_cast<int>(mat.total()); i++)
+            has |= cvIsNaN(mat.at<float>(i)) != 0;
     }
     else if (mat.type() == CV_64F)
     {
-        for(size_t i = 0; i < mat.total(); i++)
-            has |= cvIsNaN(mat.at<double>(i));
+        for(int i = 0; i < static_cast<int>(mat.total()); i++)
+            has |= cvIsNaN(mat.at<double>(i)) != 0;
     }
     else
     {
