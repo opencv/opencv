@@ -191,7 +191,7 @@ static void fast_gemm_macro_kernel(int m, int n, int k,
 #endif
 #if CV_TRY_NEON
             if (opt.use_neon_aarch64) {
-                opt_NEON_AARCH64::fast_gemm8x12_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha);
+                opt_NEON_AARCH64::fast_gemm8x12_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha, MR, NR);
             } else
 #endif
             {

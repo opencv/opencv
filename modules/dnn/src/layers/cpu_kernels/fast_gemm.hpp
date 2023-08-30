@@ -12,6 +12,7 @@
 #ifndef OPENCV_DNN_FAST_GEMM_HPP
 #define OPENCV_DNN_FAST_GEMM_HPP
 
+#include "opencv2/core/hal/intrin.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 #define FAST_GEMM_STORAGE (1<<20) // 2^20
