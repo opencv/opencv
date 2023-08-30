@@ -56,6 +56,7 @@ public:
     int getFrame();
     void incrementFrame();
     map<int, int> lapjv(InputArray &cost);
+    Mat getCostMatrix(const cv::Mat, const cv::Mat);
 
 protected:
     ByteTracker::Params params_;
@@ -451,6 +452,45 @@ Mat ByteTrackerImpl::getCostMatrix(const unordered_map<int, Strack> &atracks, co
     return costMatrix;
 }
 
+Mat ByteTrackerImpl::getCostMatrix(const Mat amat, const Mat bmat)
+{
+    Mat costMatrix;
+    if (amat.rows == 0 && bmat.rows == 0)
+    {
+        return costMatrix;
+    }
+
+    vector<Rect2f> atlwhs,btlwhs;
+    for (int i = 0; i < amat.rows ; i++)
+    {
+        cv::Rect2f rect(
+            amat.at<float>(0, 0), // x
+            amat.at<float>(0, 1), // y
+            amat.at<float>(0, 2), // width
+            amat.at<float>(0, 3)  // height
+        );
+        Rect2f tlwh = rect;
+        atlwhs.push_back(tlwh);
+    }
+
+    for (int i = 0; i < bmat.rows ; i++)
+    {
+        cv::Rect2f rect(
+            bmat.at<float>(0, 0), // x
+            bmat.at<float>(0, 1), // y
+            bmat.at<float>(0, 2), // width
+            bmat.at<float>(0, 3)  // height
+        );
+        Rect2f tlwh = rect;
+        btlwhs.push_back(tlwh);
+    }
+
+    costMatrix = calculateIous(atlwhs, btlwhs);
+    subtract(1, costMatrix, costMatrix); //costMatrix = 1 - costMatrix
+
+    return costMatrix;
+}
+
 
 Mat ByteTrackerImpl::calculateIous(const vector<Rect2f> &atlwhs,const vector<Rect2f> &btlwhs)
 {
@@ -590,6 +630,6 @@ unordered_map<int, Strack> ByteTrackerImpl::vectorToMap(const vector<Strack>& st
 }
 
 bool ByteTrackerImpl::compareTracksByTrackId(const Track& track1, const Track& track2) {
-    return track1.rect.x < track2.rect.x;
+    return track1.trackingId< track2.trackingId;
 }
 }// namespace cv

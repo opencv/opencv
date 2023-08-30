@@ -997,6 +997,8 @@ public:
 
     CV_EXPORTS virtual void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) CV_OVERRIDE = 0;
 
+    CV_WRAP virtual Mat getCostMatrix(const cv::Mat, const cv::Mat) = 0;
+
 };
 //! @} video_track
 
