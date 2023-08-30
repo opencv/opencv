@@ -178,18 +178,17 @@ static void fast_gemm_macro_kernel(int m, int n, int k,
                 for(int p = 0; p < mr; p++)
                     memcpy(cptr + p*(ldc*esz), cptr0 + p*ldc0_esz, nr_esz);
             }
-
-#if CV_TRY_AVX
-            if (opt.use_avx) {
-                opt_AVX::fast_gemm_micro_kernel_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha, MR, NR);
-            } else
-#endif
 #if CV_TRY_AVX2
             if (opt.use_avx2) {
                 opt_AVX2::fast_gemm_micro_kernel_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha, MR, NR);
             } else
 #endif
-#if CV_TRY_NEON
+#if CV_TRY_AVX
+            if (opt.use_avx) {
+                opt_AVX::fast_gemm_micro_kernel_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha, MR, NR);
+            } else
+#endif
+#if CV_TRY_NEON && CV_NEON_AARCH64
             if (opt.use_neon_aarch64) {
                 opt_NEON_AARCH64::fast_gemm8x12_f32(k, packA + i * k * esz, packB + j * k * esz, cptr, ldc, palpha, MR, NR);
             } else
@@ -295,17 +294,12 @@ void fast_gemm(bool trans_a, int M, int N, int K,
             for(int k0 = 0; k0 < K; k0 += KC)
             {
                 int kc = K - k0 < KC ? K - k0 : KC;
-#if CV_TRY_AVX || CV_TRY_AVX2
-                if (opt.use_avx || opt.use_avx2) {
-                    fast_gemm_pack12_f32(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
-                } else
-#endif
 #if CV_TRY_NEON
                 if (opt.use_neon_aarch64) {
                     fast_gemm_pack8_f32(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
                 } else
 #endif
-                {
+                { // default, AVX, AVX2
                     fast_gemm_pack12_f32(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, packed_a);
                 }
                 fast_gemm_macro_kernel(mc, nc, kc, packed_a, packed_b_, palpha,
@@ -369,10 +363,6 @@ void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
     int n_tiles = (N + NC - 1) / NC;
     int total_tiles = m_tiles * n_tiles;
 
-    std::function<void(int, int, const void*, int, int, void*)> a_packer, b_packer;
-    a_packer = fast_gemm_pack8_f32;
-    b_packer = fast_gemm_pack12_f32;
-
     auto fn = [&](const Range &r) {
         char* pack_a = (char*)(use_stackbuff ? alloca(buff_size) : malloc(buff_size));
         char* pack_b = pack_a + KC * MC * esz;
@@ -401,19 +391,13 @@ void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
             for(int k0 = 0; k0 < K; k0 += KC)
             {
                 int kc = K - k0 < KC ? K - k0 : KC;
-#if CV_TRY_AVX || CV_TRY_AVX2
-                if (opt.use_avx || opt.use_avx2) {
-                    fast_gemm_pack12_f32(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, pack_a);
-                    fast_gemm_pack8_f32(nc, kc, b + (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, pack_b);
-                } else
-#endif
-#if CV_TRY_NEON
+#if CV_TRY_NEON && CV_NEON_AARCH64
                 if (opt.use_neon_aarch64) {
                     fast_gemm_pack8_f32(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, pack_a);
                     fast_gemm_pack12_f32(nc, kc, b + (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, pack_b);
                 } else
 #endif
-                {
+                { // default, AVX, AVX2
                     fast_gemm_pack12_f32(mc, kc, a + (i0 * lda0 + k0 * lda1) * esz, lda0, lda1, pack_a);
                     fast_gemm_pack8_f32(nc, kc, b + (k0 * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, pack_b);
                 }
