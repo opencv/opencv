@@ -1443,6 +1443,42 @@ TEST_P(Test_ONNX_layers, Einsum_5D)
     testONNXModels("einsum_5d", npy, 0, 0, false, false, 2);
 }
 
+TEST_P(Test_ONNX_layers, Einsum_InnerProduct)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("einsum_inner", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_HadamardProduct)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("einsum_hadamard", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_Batch_Diagonal)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("einsum_batch_diagonal", npy, 0, 0, false, false, 1);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_Sum)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("einsum_sum", npy, 0, 0, false, false, 1);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_transpose)
+{
+    if(backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
+    testONNXModels("einsum_transpose", npy, 0, 0, false, false, 1);
+}
+
+
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 {
     testONNXModels("ReflectionPad2d");
