@@ -45,7 +45,11 @@ struct FastGemmOpt {
     void init() {
         use_avx = checkHardwareSupport(CPU_AVX);
         use_avx2 = checkHardwareSupport(CPU_AVX2);
+#ifdef CV_NEON_AARCH64
         use_neon_aarch64 = checkHardwareSupport(CPU_NEON) && CV_NEON_AARCH64;
+#else
+        use_neon_aarch64 = false;
+#endif
     }
 };
 
