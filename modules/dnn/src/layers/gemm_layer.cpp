@@ -45,38 +45,45 @@ public:
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !have_bias && !trans_a);
     }
 
-    // TODO: replace with cv::Mat.broadcast() once https://github.com/opencv/opencv/pull/23965 is merged.
-    void prepare_broadcast_C(int M, int N, const Mat& C) {
-        broadcast_C.clear();
-        broadcast_C.resize(M * N);
-        const auto shape_C = shape(C);
-        float *ptr_bc = broadcast_C.data();
-        const float *ptr_c = C.ptr<const float>();
-        if (real_ndims_C == 0 || (real_ndims_C == 1 && shape_C[0] == 1) ||
-            (real_ndims_C == 2 && shape_C[0] == 1 && shape_C[1] == 1)) {
-            // (), (1,), (1, 1)
-            float c = *ptr_c;
-            int total = M * N;
-            for (int i = 0; i < total; ++i) {
-                ptr_bc[i] = c;
-            }
-        } else if ((real_ndims_C == 1 && shape_C[0] != 1) ||
-                   (real_ndims_C == 2 && shape_C[0] == 1)) {
-            // (N,), (1, N)
-            for (int i = 0; i < M; ++i) {
-                std::memcpy(ptr_bc + i * N, ptr_c, N * sizeof(float));
-            }
-        } else if (real_ndims_C == 2 && shape_C[1] == 1) {
-            // (M, 1)
-            for (int i = 0; i < M; ++i) {
-                int step = i * M;
-                for (int j = 0; j < N; ++j) {
-                    ptr_bc[step + j] = ptr_c[i];
+    // TODO: replace with cv::broadcast() once 1d mat is supported
+    // FIXME: fix if conditions if 1d mat is supported properly
+    void broadcastCWtihBeta(int M, int N, const Mat &C) {
+        if (beta != 0 && !C.empty()) {
+            broadcast_C.clear();
+            broadcast_C.resize(M * N, 0.f);
+
+            const float *ptr_c = C.ptr<const float>();
+            const auto shape_C = shape(C);
+            if ((real_ndims_C == 0) || (real_ndims_C == 1 && shape_C[0] == 1) ||
+                (real_ndims_C == 2 && shape_C[0] == 1 && shape_C[1] == 1)) {
+                // (), (1,), (1, 1)
+                float c = *ptr_c;
+                int total = M * N;
+                for (int i = 0; i < total; ++i) {
+                    broadcast_C[i] = beta * c;
                 }
+            } else if ((real_ndims_C == 1 && shape_C[0] == N) ||
+                       (real_ndims_C == 2 && shape_C[0] == 1 && shape_C[1] == N)) {
+                // (N,), (1, N)
+                for (int i = 0; i < M; ++i) {
+                    int step = i * N;
+                    for (int j = 0; j < N; ++j) {
+                        broadcast_C[step + j] = beta * ptr_c[j];
+                    }
+                }
+            } else if (real_ndims_C == 2 && shape_C[0] == M && shape_C[1] == 1) {
+                // (M, 1)
+                for (int i = 0; i < M; ++i) {
+                    int step = i * N;
+                    for (int j = 0; j < N; ++j) {
+                        broadcast_C[step + j] = beta * ptr_c[i];
+                    }
+                }
+            } else {
+                // (M, N)
+                std::transform(ptr_c, ptr_c + M * N, broadcast_C.begin(), [this] (const float &c) {
+                    return this->beta * c; });
             }
-        } else {
-            // (M, N)
-            std::memcpy(ptr_bc, ptr_c, M * N * sizeof(float));
         }
     }
 
@@ -90,7 +97,7 @@ public:
                     b,
                     b, bias
             */
-            fast_gemm_packB(blobs[0], packed_B, trans_b, opt);
+            fastGemmPackB(blobs[0], packed_B, trans_b, opt);
         }
 
         // also pre-broadcast bias
@@ -104,7 +111,7 @@ public:
             int M = shape_Y[0], N = shape_Y[1];
 
             // broadcast
-            prepare_broadcast_C(M, N, C);
+            broadcastCWtihBeta(M, N, C);
         }
     }
 
@@ -139,7 +146,7 @@ public:
             CV_CheckLE(ndims_C, static_cast<size_t>(2), "DNN/Gemm: C can only be 0d (scalar) / 1d / 2d tensor");
 
             if (real_ndims_C == 1) { // (1,) or (N,)
-                CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N, "DNN/Gemm: C must be either of shape (1,) or (N,)");
+                CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N, "DNN/Gemm: invalid dimension of C");
             } else if (real_ndims_C == 2) { // (1, 1) or (1, N) or (M, 1) or (M, N)
                 // printf("shape_C=[%d, %d]\n", shape_C[0], shape_C[1]);
                 CV_Check(shape_C[0], (shape_C[0] == 1 && shape_C[1] == 1) ||
@@ -147,6 +154,13 @@ public:
                                      (shape_C[0] == M && shape_C[1] == 1) ||
                                      (shape_C[0] == M && shape_C[1] == N),
                                      "DNN/Gemm: C must be of shape (1, 1) or (1, N) or (M, 1) or (M, N)");
+                if (shape_C[0] == 1) {
+                    CV_Check(shape_C[1], shape_C[1] == 1 || shape_C[1] == N, "DNN/Gemm: invalid dimension of C");
+                } else if (shape_C[0] == M) {
+                    CV_Check(shape_C[1], shape_C[1] == 1 || shape_C[1] == N, "DNN/Gemm: invalid dimension of C");
+                } else {
+                    CV_Error(Error::StsBadSize, "DNN/Gemm: invalid dimension of C");
+                }
             }
         }
 
@@ -181,9 +195,9 @@ public:
         // broadcast C and copy C to output
         if (have_bias) {
             if (!const_C) {
-                prepare_broadcast_C(M, N, inputs.back());
+                broadcastCWtihBeta(M, N, inputs.back());
             }
-            CV_CheckEQ(broadcast_C.size(), static_cast<size_t>(M * N), "DNN/Gemm: broadcast_C is not prepared");
+            CV_CheckEQ(broadcast_C.size(), static_cast<size_t>(M * N), "DNN/Gemm: C is not broadcast properly");
             float *ptr_y = Y.ptr<float>();
             std::memcpy(ptr_y, broadcast_C.data(), M * N * sizeof(float));
         } else { // initialization
@@ -193,9 +207,9 @@ public:
 
         if (const_B) {
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
-            fast_gemm(trans_a, M, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), beta, Y.ptr<float>(), N, opt);
+            fastGemm(trans_a, M, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
         } else {
-            fast_gemm(trans_a, trans_b, alpha, A, inputs[1], beta, Y, opt);
+            fastGemm(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
         }
     }
 

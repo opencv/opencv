@@ -82,9 +82,9 @@ static void fast_gemm_pack##N##suffix( int m, int k, const void* A_, \
 FAST_GEMM_IMPLEMENT_PACK(8, _f32, float, float)
 FAST_GEMM_IMPLEMENT_PACK(12, _f32, float, float)
 
-void fast_gemm_packB(const Mat &B, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt) {
-    CV_CheckEQ(B.dims, 2, "fast_gemm_packB: input mat should be two-dimensional");
-    CV_CheckTypeEQ(B.type(), CV_32F, "fast_gemm_packB: only float32 is supported for now");
+void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt) {
+    CV_CheckEQ(B.dims, 2, "fastGemmPackB: input mat should be two-dimensional");
+    CV_CheckTypeEQ(B.type(), CV_32F, "fastGemmPackB: only float32 is supported for now");
 
     auto B_shape = shape(B);
     int K = B_shape[0], N = B_shape[1], ldb0 = N, ldb1 = 1;
@@ -233,7 +233,7 @@ static void fast_gemm_thin(float alpha, float beta, int M, int N, int K,
     parallel_for_(Range(0, total), fn, nstripes);
 }
 
-void fast_gemm(bool trans_a, int M, int N, int K,
+void fastGemm(bool trans_a, int M, int N, int K,
                float alpha, const float *A, int lda,
                const float *packed_B, float beta,
                float *C, int ldc, FastGemmOpt &opt) {
@@ -319,7 +319,7 @@ void fast_gemm(bool trans_a, int M, int N, int K,
     parallel_for_(Range(0, total), fn, nstripes);
 }
 
-void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
+void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
                float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
                float beta, float *C, int ldc, FastGemmOpt &opt) {
 
@@ -417,7 +417,7 @@ void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
     parallel_for_(Range(0, total), fn, nstripes);
 }
 
-void fast_gemm(bool trans_a, bool trans_b,
+void fastGemm(bool trans_a, bool trans_b,
                float alpha, const Mat &A, const Mat &B,
                float beta, Mat &C, FastGemmOpt &opt) {
     CV_CheckTypeEQ(A.type(), B.type(), "DNN/gemm: A and B should have the same type");
@@ -439,7 +439,7 @@ void fast_gemm(bool trans_a, bool trans_b,
     const float *b = B.ptr<const float>();
     float *c = C.ptr<float>();
 
-    fast_gemm(trans_a, trans_b, ma, na, mb, nb,
+    fastGemm(trans_a, trans_b, ma, na, mb, nb,
              alpha, a, lda0, lda1, b, ldb0, ldb1,
              beta, c, ldc, opt);
 }

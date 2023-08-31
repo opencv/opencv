@@ -56,16 +56,16 @@ struct FastGemmOpt {
     }
 };
 
-void fast_gemm_packB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
+void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
 
-void fast_gemm(bool trans_a, int M, int N, int K,
+void fastGemm(bool trans_a, int M, int N, int K,
                float alpha, const float *A, int lda,
                const float *packed_B, float beta,
                float *C, int ldc, FastGemmOpt &opt);
-void fast_gemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
+void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
               float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
               float beta, float *C, int ldc, FastGemmOpt &opt);
-void fast_gemm(bool trans_a, bool trans_b,
+void fastGemm(bool trans_a, bool trans_b,
                float alpha, const Mat &A, const Mat &B,
                float beta, Mat &C, FastGemmOpt &opt);
 
