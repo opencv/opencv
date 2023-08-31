@@ -94,7 +94,11 @@ public:
         for (int i = 0; i < numOuts; i++)
         {
             outs_int8[i].convertTo(outs_dequantized[i], CV_32F, outputScale[i], -(outputScale[i] * outputZp[i]));
-            normAssert(refs[i], outs_dequantized[i], "", l1, lInf);
+            Mat out_i = outs_dequantized[i], ref_i = refs[i];
+            if (out_i.dims == 2 && ref_i.dims == 1) {
+                ref_i = ref_i.reshape(1, 1);
+            }
+            normAssert(ref_i, out_i, "", l1, lInf);
         }
     }
 };

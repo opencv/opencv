@@ -42,7 +42,7 @@ public:
             if (hasDynamicShapes)
                 continue;
             if (inLayerShapes[i].size() == 1) {  // 1D input
-                ASSERT_EQ(shape(inLayerShapes[i][0], 1), shape(inps[i]));
+                ASSERT_EQ(shape(inLayerShapes[i][0]), shape(inps[i]));
             } else {
                 // Compare all axes except batch dimension which is variable.
                 inLayerShapes[i][0] = inps[i].size[0];
