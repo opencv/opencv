@@ -42,8 +42,8 @@ void fast_gemm12x8_f32(int k, const char *a_, const char *b_,
            s70 = _mm256_setzero_ps(),
            s80 = _mm256_setzero_ps(),
            s90 = _mm256_setzero_ps(),
-           sa0 = _mm256_setzero_ps(),
-           sb0 = _mm256_setzero_ps();
+           s100 = _mm256_setzero_ps(),
+           s110 = _mm256_setzero_ps();
         for (int p = 0; p < k; p++, a += mr, b += nr) {
             __m256 b0 = _mm256_loadu_ps(b);
 
@@ -71,9 +71,9 @@ void fast_gemm12x8_f32(int k, const char *a_, const char *b_,
             a0 = _mm256_set1_ps(*(a + 9));
             s90 = _mm256_fmadd_ps(b0, a0, s90);
             a1 = _mm256_set1_ps(*(a + 10));
-            sa0 = _mm256_fmadd_ps(b0, a1, sa0);
+            s100 = _mm256_fmadd_ps(b0, a1, s100);
             a2 = _mm256_set1_ps(*(a + 11));
-            sb0 = _mm256_fmadd_ps(b0, a2, sb0);
+            s110 = _mm256_fmadd_ps(b0, a2, s110);
         }
 
         __m256 c0, c1, c2, c3, v_alpha = _mm256_set1_ps(alpha);
@@ -84,8 +84,8 @@ void fast_gemm12x8_f32(int k, const char *a_, const char *b_,
         c3 = _mm256_loadu_ps(c + row3 * ldc);   \
         c0 = _mm256_fmadd_ps(s##row0##0, v_alpha, c0);  \
         c1 = _mm256_fmadd_ps(s##row1##0, v_alpha, c1);  \
-        c1 = _mm256_fmadd_ps(s##row1##0, v_alpha, c2);  \
-        c1 = _mm256_fmadd_ps(s##row1##0, v_alpha, c3);  \
+        c2 = _mm256_fmadd_ps(s##row2##0, v_alpha, c2);  \
+        c3 = _mm256_fmadd_ps(s##row3##0, v_alpha, c3);  \
         _mm256_storeu_ps(c + row0 * ldc, c0);   \
         _mm256_storeu_ps(c + row1 * ldc, c1);   \
         _mm256_storeu_ps(c + row2 * ldc, c2);   \

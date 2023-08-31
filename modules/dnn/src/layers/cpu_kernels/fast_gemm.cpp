@@ -114,17 +114,12 @@ void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastG
         int _nc = static_cast<int>((nc + GEMM_NR - 1) / GEMM_NR) * GEMM_NR;
         for (int k = 0; k < K; k += KC) {
             int kc = K - k < KC ? K - k : KC;
-#if CV_TRY_AVX || CV_TRY_AVX2
-            if (opt.use_avx || opt.use_avx2) {
-                fast_gemm_pack8_f32(nc, kc, ptr_B + (k * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, ptr_packed);
-            } else
-#endif
-#if CV_TRY_NEON
+#if CV_TRY_NEON && CV_NEON_AARCH64
             if (opt.use_neon_aarch64) {
                 fast_gemm_pack12_f32(nc, kc, ptr_B + (k * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, ptr_packed);
             } else
 #endif
-            {
+            { // default, AVX, AVX2
                 fast_gemm_pack8_f32(nc, kc, ptr_B + (k * ldb0 + j0 * ldb1) * esz, ldb1, ldb0, ptr_packed);
             }
             ptr_packed += _nc * kc;
