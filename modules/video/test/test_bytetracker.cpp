@@ -43,7 +43,6 @@ void CV_ByteTrackerTest::run(int)
     // Read detections from a file
     std::ifstream detectionFile(getDetections());
     std::ifstream referenceFile(getReference());
-    std::ifstream fileStream(filePath);
 
     if (!detectionFile.is_open() || !referenceFile.is_open())
     {
@@ -64,8 +63,8 @@ void CV_ByteTrackerTest::run(int)
         sscanf(referenceLine.c_str(), "%d,%d,%f,%f,%f,%f,%f,%d", &frame, &trackId, &x, &y, &width, &height, &score, &classId);
 
         cv::Mat row(1, 8, CV_32F);
-        row.at<float>(0, 0) = frame;
-        row.at<float>(0, 1) = trackId;
+        row.at<float>(0, 0) = static_cast<float>(frame);
+        row.at<float>(0, 1) = static_cast<float>(trackId);
         row.at<float>(0, 2) = x;
         row.at<float>(0, 3) = y;
         row.at<float>(0, 4) = width;
@@ -91,7 +90,7 @@ void CV_ByteTrackerTest::run(int)
             cv::Mat newRow(1, 4, CV_32F);
             for (int i = 0; i < newRow.cols; ++i)
             {
-                newRow.at<int>(0, i) = row.at<float>(0,2+i);
+                newRow.at<int>(0, i) = static_cast<int>(row.at<float>(0,2+i));
                 referenceMap[frame].push_back(newRow);
             }
         }
@@ -124,7 +123,7 @@ void CV_ByteTrackerTest::run(int)
         detectionRow.at<float>(0, 1) = y;
         detectionRow.at<float>(0, 2) = width;
         detectionRow.at<float>(0, 3) = height;
-        detectionRow.at<float>(0, 4) = classId;
+        detectionRow.at<float>(0, 4) = static_cast<float>(classId);
         detectionRow.at<float>(0, 5) = score;
 
 
@@ -188,7 +187,7 @@ void CV_ByteTrackerTest::run(int)
                 cv::Mat newRow(1, 4, CV_32F);
                 for (int j = 0; j < newRow.cols; ++j)
                 {
-                    newRow.at<int>(0, j) = row.at<float>(0,2+j);
+                    newRow.at<int>(0, j) = static_cast<int>(row.at<float>(0,2+j));
                     trackedMap[pair.first].push_back(newRow);
                 }
             }
@@ -205,7 +204,7 @@ void CV_ByteTrackerTest::run(int)
     }
     ASSERT_EQ(result, true);
 
-    float eps = 30;
+    //float eps = 30;
     //bool printed = false;
     //ASSERT_EQ(trackedResultMat.size(), referenceResultMat.size());
 
@@ -264,8 +263,9 @@ void CV_ByteTrackerTest::run(int)
 
     // }
     int counter = 0;
-    for (size_t i=0; i < referenceMap.size(); i++)
+    for (const auto& pair : referenceMap)
     {
+        int i = pair.first;
         cv::Mat costMatrix;
         cv::Mat assignedPairs;
         cv::Mat referenceMat = referenceMap[i];

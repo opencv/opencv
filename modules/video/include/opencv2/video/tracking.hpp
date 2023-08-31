@@ -962,7 +962,7 @@ public:
 
     @return True means that some target was located and false means that tracker cannot locate any target in current frame. Note, that latter *does not* imply that tracker has failed, maybe targets are indeed missing from the frame (say, out of sight)
     */
-    CV_EXPORTS virtual
+     virtual
     void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) = 0;
 
 };
@@ -993,9 +993,9 @@ public:
     static CV_WRAP
     Ptr<ByteTracker> create(const ByteTracker::Params& parameters = ByteTracker::Params());
 
-    CV_WRAP bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks) CV_OVERRIDE = 0;
+     bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks) CV_OVERRIDE = 0;
 
-    CV_EXPORTS virtual void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) CV_OVERRIDE = 0;
+     virtual void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) CV_OVERRIDE = 0;
 
     CV_WRAP virtual Mat getCostMatrix(const cv::Mat, const cv::Mat) = 0;
 
