@@ -380,7 +380,6 @@ void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diam
     if (_markerCorners.empty() && _markerIds.empty()) {
         charucoDetectorImpl->arucoDetector.detectMarkers(image, _markerCorners, _markerIds);
     }
-    const vector<vector<Point2f>>& markerCorners = _markerCorners.getVecVecRef<Point2f>();
 
     const float minRepDistanceRate = 1.302455f;
     vector<vector<Point2f>> diamondCorners;
@@ -397,6 +396,11 @@ void CharucoDetector::detectDiamonds(InputArray image, OutputArrayOfArrays _diam
     else
         grey = image.getMat();
     auto board = getBoard();
+
+    unsigned int nmarkers = (unsigned int)_markerCorners.total();
+    std::vector<std::vector<Point2f>> markerCorners(nmarkers);
+    for(unsigned int i = 0; i < nmarkers; i++)
+        _markerCorners.getMat((int)i).copyTo(markerCorners[i]);
 
     // for each of the detected markers, try to find a diamond
     for(unsigned int i = 0; i < (unsigned int)_markerIds.total(); i++) {
