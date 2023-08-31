@@ -15,23 +15,6 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
-#define FAST_GEMM_STORAGE (1<<20) // 2^20
-#define FAST_GEMM_MAX_STACKBUF (1 << 14)
-
-#define FAST_GEMM_F32_MC 64
-#define FAST_GEMM_F32_NC 240
-
-// micro kernel size
-#if CV_NEON && CV_NEON_AARCH64
-#define FAST_GEMM_F32_MR 8
-#define FAST_GEMM_F32_NR 12
-#else // default, AVX, AVX2
-#define FAST_GEMM_F32_MR 12
-#define FAST_GEMM_F32_NR 8
-#endif
-
-#define FAST_GEMM_F32_PACKED_STRIDE_K 256
-
 namespace cv { namespace dnn {
 
 struct FastGemmOpt {
