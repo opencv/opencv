@@ -9,6 +9,7 @@
     See ficus/LICENSE for the licensing terms
 */
 
+#include "../../precomp.hpp"
 #include "fast_gemm.hpp"
 
 #include "fast_gemm_kernels.simd.hpp"

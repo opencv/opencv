@@ -29,8 +29,6 @@
 
 #define FAST_GEMM_F32_PACKED_STRIDE_K 256
 
-namespace cv { namespace dnn {
-
 #define FAST_GEMM_IMPLEMENT_PACK(N, suffix, styp, dtyp) \
 static void fast_gemm_pack##N##suffix( int m, int k, const void* A_, \
                                       int lda0, int lda1, void* packA_ ) \
@@ -94,12 +92,14 @@ static void fast_gemm_pack##N##suffix( int m, int k, const void* A_, \
 #define FAST_GEMM_PACK_f32_8(src, dst) FAST_GEMM_PACK_COPY((src), (dst), 8)
 #define FAST_GEMM_PACK_f32_12(src, dst) FAST_GEMM_PACK_COPY((src), (dst), 12)
 
+namespace cv { namespace dnn {
+
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 // TODO: type to size_t
 int fastGemmPackBSize(int N, int K);
 
-void fastGemmPackBKernel(const char *, char *, int, int, int, int, int);
+void fastGemmPackBKernel(const char *B, char *packed_B, int N, int K, int ldb0, int ldb1, int esz);
 
 void fastGemmKernel(int M, int N, int K,
                     float alpha, const char *A, int lda0, int lda1,
