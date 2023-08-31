@@ -104,7 +104,7 @@ void fastGemm(bool trans_a, int M, int N, int K,
 #endif
 #if CV_TRY_AVX
     if (opt.use_avx) {
-        opt_AVX2::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
+        opt_AVX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
     } else
 #endif
     {
@@ -143,18 +143,18 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
 #endif
 #if CV_TRY_AVX2
     if (opt.use_avx2) {
-        opt_NEON_AARCH64::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
+        opt_AVX2::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
                                          (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
     } else
 #endif
 #if CV_TRY_AVX
     if (opt.use_avx) {
-        opt_NEON_AARCH64::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
+        opt_AVX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
                                          (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
     } else
 #endif
     {
-        opt_NEON_AARCH64::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
+        cpu_baseline::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
                                          (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
     }
 }
