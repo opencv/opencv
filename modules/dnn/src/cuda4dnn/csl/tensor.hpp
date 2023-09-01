@@ -207,7 +207,7 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         template <class ForwardItr>
         typename std::enable_if<cxx_utils::is_forward_iterator<ForwardItr>::value, void>
         ::type resize(ForwardItr start, ForwardItr end) {
-            //CV_Assert(start != end);
+            CV_Assert(start != end);
             CV_Assert(std::distance(start, end) <= CSL_MAX_TENSOR_RANK);
 
             using ItrValueType = typename std::iterator_traits<ForwardItr>::value_type;
