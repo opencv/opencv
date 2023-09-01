@@ -72,15 +72,8 @@ static Point2f intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f b2)
     const float eps = 0.001f;
     if (abs(divisor) < eps)
         return a2;
-    Point2f result_square_angle(
-                              ((a1.x * a2.y  -  a1.y * a2.x) * (b1.x - b2.x) -
-                               (b1.x * b2.y  -  b1.y * b2.x) * (a1.x - a2.x)) /
-                               divisor,
-                              ((a1.x * a2.y  -  a1.y * a2.x) * (b1.y - b2.y) -
-                               (b1.x * b2.y  -  b1.y * b2.x) * (a1.y - a2.y)) /
-                               divisor
-                              );
-    return result_square_angle;
+    const float u = ((b2.x - a2.x) * (b1.y - b2.y) + (b1.x - b2.x) * (a2.y - b2.y)) / divisor;
+    return a2 + u * (a1 - a2);
 }
 
 //      / | b
