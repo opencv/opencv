@@ -35,8 +35,8 @@ int shapeCount(const Shape& shape, int start, int end)
     if (start == -1) start = 0;
     if (end == -1) end = (int)shape.size();
 
-    if (shape.empty())
-        return 0;
+    //if (shape.empty())
+    //    return 0;
 
     int elems = 1;
     assert(start <= (int)shape.size() &&
