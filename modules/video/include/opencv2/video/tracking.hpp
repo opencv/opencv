@@ -883,25 +883,7 @@ public:
     /** @brief Return tracking score
     */
     CV_WRAP virtual float getTrackingScore() = 0;
-
-    //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
-    //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
-
-
-/*
-class CV_EXPORTS_W LapjvSolver
-{
-public:
-    /** @brief Linear assignment problem jonker volgenant solver
-
-    @param cost cost matrix to minimize
-    */
-//    CV_WRAP OutputArray lapjv(InputArray &cost, float matchThreshold = 0.7);
-
-//};
-
-
 
 class CV_EXPORTS Track
 {
@@ -929,7 +911,7 @@ public:
     float classScore;
 };
 
-/*
+
 /** @brief Base abstract class for multiple object tracker (MOT)
  */
 class CV_EXPORTS_W MultipleTracker
@@ -939,17 +921,9 @@ protected:
 public:
     virtual ~MultipleTracker();
 
-    // /** @brief Initialize the tracker with a known bounding box that surrounded the target
-    //@param image The initial frame
-    //@param boundingBox The initial bounding box
-    //*/
-    //CV_WRAP virtual
-    //void init(InputArray image, const Rect& boundingBox) = 0;
-    //im not sure if I need an init here
-
     /** @brief Update the tracker, find the new most likely bounding boxes for each target
-    @param detections current frame detections
-    @param tracks The bounding boxes that represent the new target locations
+    @param inputDetections current frame detections
+    @param outputTracks The bounding boxes that represent the new target locations
 
     @return True means that some target was located and false means that tracker cannot locate any target in current frame. Note, that latter *does not* imply that tracker has failed, maybe targets are indeed missing from the frame (say, out of sight)
     */
@@ -957,12 +931,12 @@ public:
     bool update(InputArray inputDetections, CV_OUT cv::OutputArray& outputTracks) = 0; // Wrapper for python
 
     /** @brief Update the tracker, find the new most likely bounding boxes for each target
-    @param inputDetections current frame detections
-    @param outputTracks The bounding boxes that represent the new target locations
+    @param detections current frame detections
+    @param tracks The bounding boxes that represent the new target locations
 
     @return True means that some target was located and false means that tracker cannot locate any target in current frame. Note, that latter *does not* imply that tracker has failed, maybe targets are indeed missing from the frame (say, out of sight)
     */
-     virtual
+    virtual
     void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) = 0;
 
 };
@@ -990,6 +964,9 @@ public:
         CV_PROP_RW int frameBuffer;
     };
 
+    /** @brief Constructor
+    @param parameters ByteTrack parameters ByteTracker::Params
+    */
     static CV_WRAP
     Ptr<ByteTracker> create(const ByteTracker::Params& parameters = ByteTracker::Params());
 

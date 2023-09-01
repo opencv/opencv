@@ -83,7 +83,7 @@ int main()
     // Load image sequence.
     Mat frame;
     int frameNumber = 0;
-    int fps = capture.get(CAP_PROP_FPS);
+    double fps = capture.get(CAP_PROP_FPS);
     cout<<"my fps is"<<fps;
     cv::ByteTracker::Params params;
     params.frameRate = fps;
@@ -124,7 +124,9 @@ int main()
                     trackedObjects.at<float>(i, 3));
 
                 rectangle(img, tlwh_, color, 2);
-                putText(img, to_string(id_), Point(tlwh_.x, tlwh_.y - 5), FONT_FACE, FONT_SCALE, RED);
+                int xPoint = static_cast<int>(tlwh_.x);
+                int yPoint = static_cast<int>(tlwh_.y);
+                putText(img, to_string(id_), Point(xPoint, yPoint - 5), FONT_FACE, FONT_SCALE, RED);
             }
             writeTracksToFile(trackedObjects, TRACKINGS_OUTPUT_PATH, frameNumber);
             writeDetectionsToFile(objects, DETECTIONS_OUTPUT_PATH, frameNumber);
@@ -177,8 +179,8 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
     vector<Rect> boxes;
     //cout << "Original Height and Width :" << inputImage.rows << "x" << inputImage.cols << endl;
     // Resizing factor.
-    float xFactor = 1.0 * inputImage.cols / INPUT_WIDTH;
-    float yFactor = 1.0 * inputImage.rows / INPUT_HEIGHT;
+    float xFactor = static_cast<float>(1.0f * inputImage.cols / INPUT_WIDTH);
+    float yFactor = static_cast<float>(1.0f * inputImage.rows / INPUT_HEIGHT);
     bool yolov8 = false;
 
     int rows = output[0].size[1];
@@ -196,7 +198,7 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
     // Iterate through detections.
     float *data = (float*)output[0].data;
     Point classId;
-    double maxClassScore;
+    float maxClassScore;
     for (int i = 0; i < rows; ++i)
     {
         float confidence;
@@ -311,10 +313,10 @@ void writeDetectionsToFile(const vector<Detection> objects, const string &output
     for (const auto object : objects)
     {
         // Extract the detection data (frame, trackId, x, y, width, height, score, classId)
-        int y = object.rect.y;
-        int x = object.rect.x;
-        int width = object.rect.width;
-        int height = object.rect.height;
+        float y = object.rect.y;
+        float x = object.rect.x;
+        float width = object.rect.width;
+        float height = object.rect.height;
         float score = object.classScore;
         int classId = object.classLabel;
 
@@ -378,8 +380,8 @@ Scalar getColor(const int idx)
 
 Mat detectionToMat(vector<Detection> objs)
 {
-    Mat output(objs.size(), 6, CV_32F);
-    for (size_t i = 0; i < objs.size(); ++i)
+    Mat output(static_cast<int>(objs.size()), 6, CV_32F);
+    for (int i = 0; i < static_cast<int>(objs.size()); ++i)
     {
         const Detection& detection = objs[i];
         cv::Mat row = output.row(i);
@@ -388,7 +390,7 @@ Mat detectionToMat(vector<Detection> objs)
         row.at<float>(1) = detection.rect.y;
         row.at<float>(2) = detection.rect.width;
         row.at<float>(3) = detection.rect.height;
-        row.at<float>(4) = detection.classLabel;
+        row.at<float>(4) = static_cast<float>(detection.classLabel);
         row.at<float>(5) = detection.classScore;
     }
 

@@ -387,11 +387,11 @@ std::map<int, int> lapjv(const cv::Mat &cost, float matchThreshold)
     return ret;
 }
 
-void lapjv(InputArray costMatrix, OutputArray assignedPairs, float matchThreshold) {
-
+void lapjv(InputArray costMatrix, OutputArray assignedPairs, float matchThreshold)
+{
     auto ret = lapjv(costMatrix.getMat(), matchThreshold);
     auto numPairs = ret.size();
-    assignedPairs.create(numPairs, 2, CV_32S);
+    assignedPairs.create(static_cast<int>(numPairs), 2, CV_32S);
 
     auto c_assigned_pairs = assignedPairs.getMat();
     for (auto const& x : ret) {

@@ -9,7 +9,6 @@ namespace cv {
 namespace detail {
 namespace tracking {
 
-using namespace cv::detail::tracking;
 
 Strack::Strack()
 {
@@ -104,8 +103,8 @@ void Strack::activate(int frame, int id)
     */
 
     cv::Mat noiseCov = cv::Mat::zeros(8, 8, CV_32F);
-    float stdWeightPosition = 1./20;
-    float stdWeightVelocity = 1./160;
+    float stdWeightPosition = 1.0f/20;
+    float stdWeightVelocity = 1.0f/160;
 
     noiseCov.at<float>(0, 0) = 2 * stdWeightPosition * rect.height;
     noiseCov.at<float>(1, 1) = 2 * stdWeightPosition * rect.height;
@@ -140,8 +139,8 @@ void Strack::update(Strack& track)
 
     kalmanFilter_.correct(measurement);
     cv::Mat noiseCov = cv::Mat::zeros(8, 8, CV_32F);
-    float stdWeightPosition = 1./10;
-    float stdWeightVelocity = 1./160;
+    float stdWeightPosition = 1.0f/10;
+    float stdWeightVelocity = 1.0f/160;
 
     noiseCov.at<float>(0, 0) = stdWeightPosition * h;
     noiseCov.at<float>(1, 1) = stdWeightPosition * h;
