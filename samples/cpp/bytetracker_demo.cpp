@@ -198,7 +198,7 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
     // Iterate through detections.
     float *data = (float*)output[0].data;
     Point classId;
-    float maxClassScore;
+    double maxClassScore;
     for (int i = 0; i < rows; ++i)
     {
         float confidence;

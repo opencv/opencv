@@ -55,7 +55,7 @@ public:
     int getFrame();
     void incrementFrame();
     map<int, int> lapjv(InputArray &cost);
-    Mat getCostMatrix(const cv::Mat, const cv::Mat);
+    Mat getCostMatrix(const cv::Mat, const cv::Mat) CV_OVERRIDE;
 
 protected:
     ByteTracker::Params params;
@@ -213,7 +213,7 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
         bool matched = false;
         for (const auto &match : matches)
         {
-            size_t matchedDetectionIndex = match.second;
+            int matchedDetectionIndex = match.second;
             if (detectionIndex == matchedDetectionIndex)
             {
                 matched = true;

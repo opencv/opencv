@@ -960,7 +960,7 @@ public:
     struct CV_EXPORTS_W_SIMPLE Params
     {
         CV_WRAP Params();
-        CV_PROP_RW int frameRate;
+        CV_PROP_RW double frameRate;
         CV_PROP_RW int frameBuffer;
     };
 
@@ -970,9 +970,9 @@ public:
     static CV_WRAP
     Ptr<ByteTracker> create(const ByteTracker::Params& parameters = ByteTracker::Params());
 
-     bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks) CV_OVERRIDE = 0;
+    bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks) CV_OVERRIDE = 0;
 
-     virtual void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) CV_OVERRIDE = 0;
+    virtual void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) CV_OVERRIDE = 0;
 
     CV_WRAP virtual Mat getCostMatrix(const cv::Mat, const cv::Mat) = 0;
 
