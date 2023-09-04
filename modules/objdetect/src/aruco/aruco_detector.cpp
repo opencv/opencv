@@ -1000,7 +1000,13 @@ static inline void _projectUndetectedMarkers(const Board &board, InputOutputArra
                                              OutputArray undetectedMarkersIds) {
     Mat rvec, tvec; // first estimate board pose with the current avaible markers
     Mat objPoints, imgPoints; // object and image points for the solvePnP function
-    board.matchImagePoints(detectedCorners, detectedIds, objPoints, imgPoints);
+    // To refine corners of ArUco markers the function refineDetectedMarkers() find an aruco markers pose from 3D-2D point correspondences.
+    // To find 3D-2D point correspondences uses matchImagePoints().
+    // The method matchImagePoints() works with ArUco corners (in Board/GridBoard cases) or with ChArUco corners (in CharucoBoard case).
+    // To refine corners of ArUco markers we need work with ArUco corners only in all boards.
+    // To call matchImagePoints() with ArUco corners for all boards we need to call matchImagePoints() from base class Board.
+    // The method matchImagePoints() implemented in Pimpl and we need to create temp Board object to call the base method.
+    Board(board.getObjPoints(), board.getDictionary(), board.getIds()).matchImagePoints(detectedCorners, detectedIds, objPoints, imgPoints);
     if (objPoints.total() < 4ull) // at least one marker from board so rvec and tvec are valid
         return;
     solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs, rvec, tvec);
