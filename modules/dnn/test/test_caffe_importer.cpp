@@ -737,10 +737,10 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
         iouDiff = 0.02;
-        if (target == DNN_TARGET_OPENCL)
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL);
-        if (target == DNN_TARGET_OPENCL_FP16)
-            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+        if (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16) {
+            scoreDiff = 0.04;
+            iouDiff = 0.06;
+        }
     }
 #endif
 
