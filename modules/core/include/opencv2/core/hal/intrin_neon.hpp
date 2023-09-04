@@ -1997,12 +1997,12 @@ inline v_int32x4 v_trunc(const v_float32x4& a)
 inline v_int32x4 v_round(const v_float64x2& a)
 {
     static const int32x2_t zero = vdup_n_s32(0);
-    return v_int32x4(vcombine_s32(vmovn_s64(vcvtaq_s64_f64(a.val)), zero));
+    return v_int32x4(vcombine_s32(vmovn_s64(vcvtnq_s64_f64(a.val)), zero));
 }
 
 inline v_int32x4 v_round(const v_float64x2& a, const v_float64x2& b)
 {
-    return v_int32x4(vcombine_s32(vmovn_s64(vcvtaq_s64_f64(a.val)), vmovn_s64(vcvtaq_s64_f64(b.val))));
+    return v_int32x4(vcombine_s32(vmovn_s64(vcvtnq_s64_f64(a.val)), vmovn_s64(vcvtnq_s64_f64(b.val))));
 }
 
 inline v_int32x4 v_floor(const v_float64x2& a)
