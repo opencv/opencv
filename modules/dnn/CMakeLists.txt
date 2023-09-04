@@ -227,6 +227,9 @@ if(TARGET ocv.3rdparty.openvino AND OPENCV_DNN_OPENVINO)
   endif()
 endif()
 
+set(OPENCV_DNN_BACKEND_DEFAULT "DNN_BACKEND_OPENCV" CACHE STRING "Default backend used by the DNN module")
+ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/dnn_params.cpp" "OPENCV_DNN_BACKEND_DEFAULT=${OPENCV_DNN_BACKEND_DEFAULT}")
+
 
 ocv_install_used_external_targets(${libs} ${dnn_runtime_libs})
 
