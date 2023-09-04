@@ -120,7 +120,7 @@ GAPI_OCV_KERNEL_ST(OCV_CvVideo768x576_Detect, CvVideo768x576_Detect, FrameDetect
 };
 
 G_API_OP(CheckTrackerResults, <cv::GOpaque<bool>(cv::GArray<cv::Rect>, cv::GArray<int32_t>,
-                                                 cv::GArray<uint64_t>, cv::GArray<cv::gapi::ot::TrackingStatus>)>,
+                                                 cv::GArray<uint64_t>, cv::GArray<int>)>,
     "test.custom.check_tracker_results") {
     static cv::GOpaqueDesc outMeta(cv::GArrayDesc, cv::GArrayDesc, cv::GArrayDesc, cv::GArrayDesc) {
         return cv::empty_gopaque_desc();
@@ -140,7 +140,7 @@ GAPI_OCV_KERNEL_ST(OCVCheckTrackerResults, CheckTrackerResults, TrackerReference
     static void run(const std::vector<cv::Rect> &in_tr_rcts,
                     const std::vector<int32_t> &in_det_ids,
                     const std::vector<uint64_t> &in_tr_ids,
-                    const std::vector<cv::gapi::ot::TrackingStatus> &in_tr_statuses,
+                    const std::vector<int> &in_tr_statuses,
                     bool& success,
                     TrackerReference& state) {
 
@@ -237,7 +237,7 @@ TEST(VASObjectTracker, PipelineTest)
     cv::GArray<cv::Rect> tracking_rects;
     cv::GArray<int32_t> tracking_det_ids;
     cv::GArray<uint64_t> tracking_ids;
-    cv::GArray<cv::gapi::ot::TrackingStatus> tracking_statuses;
+    cv::GArray<int> tracking_statuses;
     std::tie(tracking_rects, tracking_det_ids, tracking_ids, tracking_statuses) =
         cv::gapi::ot::track(in, detections, det_ids, delta_time);
 

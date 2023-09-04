@@ -53,6 +53,7 @@
 #define PyInt_CheckExact PyLong_CheckExact
 #define PyInt_AsLong PyLong_AsLong
 #define PyInt_AS_LONG PyLong_AS_LONG
+#define PyInt_AsUnsignedLongLongMask PyLong_AsUnsignedLongLongMask
 #define PyInt_FromLong PyLong_FromLong
 #define PyNumber_Int PyNumber_Long
 
