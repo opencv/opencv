@@ -461,8 +461,8 @@ template<> int PyrDownVecV<int, uchar>(int** src, uchar* dst, int width)
         v_rshr_pack_store<8>(dst + x, t0);
         x += VTraits<v_uint16>::vlanes();
     }
-    typedef int CV_DECL_ALIGNED(1) unaligned_int;
     #if CV_SIMD128
+    typedef int CV_DECL_ALIGNED(1) unaligned_int;
     for ( ; x <= width - v_int32x4::nlanes; x += v_int32x4::nlanes)
     {
         v_int32x4 r0, r1, r2, r3, r4, t0;
@@ -752,8 +752,8 @@ template <> int PyrUpVecVOneRow<int, uchar>(int** src, uchar* dst, int width)
         v_rshr_pack_u_store<6>(dst + x, v_add(v_add(v_r00, v_r20), v_add(v_add(v_2r10, v_2r10), v_2r10)));
         x += VTraits<v_uint16>::vlanes();
     }
-    typedef int CV_DECL_ALIGNED(1) unaligned_int;
     #if CV_SIMD128
+    typedef int CV_DECL_ALIGNED(1) unaligned_int;
     for (; x <= width - v_int32x4::nlanes; x += v_int32x4::nlanes)
     {
         v_int32 v_r00 = vx_load(row0 + x),
