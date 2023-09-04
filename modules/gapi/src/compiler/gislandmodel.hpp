@@ -192,6 +192,7 @@ class GIslandEmitter
 public:
     // Obtain next value from the emitter
     virtual bool pull(GRunArg &) = 0;
+    virtual void halt() = 0;
     virtual ~GIslandEmitter() = default;
 };
 
