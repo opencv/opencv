@@ -58,6 +58,14 @@ static void fast_gemm_pack##N##suffix( int m, int k, const void* A_, \
     } \
 }
 
+#define FAST_GEMM_LOAD_TO_BUF_4(styp) \
+    styp buf[] = { \
+        a_ptr[j], a_ptr[j+lda0], a_ptr[j+lda0*2], a_ptr[j+lda0*3] }
+
+#define FAST_GEMM_LOAD_TO_BUF_BORDERS_4(styp) \
+    styp buf[] = { \
+        a_ptr[0][j], a_ptr[1][j], a_ptr[2][j], a_ptr[3][j] }
+
 #define FAST_GEMM_LOAD_TO_BUF_6(styp) \
     styp buf[] = { \
         a_ptr[j], a_ptr[j+lda0], a_ptr[j+lda0*2], a_ptr[j+lda0*3], \
