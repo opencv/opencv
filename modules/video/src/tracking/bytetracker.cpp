@@ -45,7 +45,7 @@ public:
         matchThreshold = 0.8f;
         lastId = 0;
         frame = 0;
-        maxTimeLost = params.frameRate / 30.0f * params.frameBuffer;
+        maxTimeLost = static_cast<int>(params.frameRate) / 30.0f * params.frameBuffer;
     }
 
     void init(InputArray image, Rect& boundingBox);
@@ -195,7 +195,7 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
 
     // Find unmatched track indexes
     for (
-        int trackIndex = 0; 
+        int trackIndex = 0;
         trackIndex < static_cast<int>(strackPool.size());                  ++trackIndex)
     {
         if (matches.find(trackIndex) == matches.end())
@@ -206,7 +206,7 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
 
     // Find unmatched detection indexes
     for (
-        int detectionIndex = 0; 
+        int detectionIndex = 0;
         detectionIndex < static_cast<int>(detections.size());
         ++detectionIndex)
     {
@@ -266,8 +266,8 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
     matches = lapjv(dists);
 
     for (
-        int trackIndex = 0; 
-        trackIndex < static_cast<int>(remainTracks.size()); 
+        int trackIndex = 0;
+        trackIndex < static_cast<int>(remainTracks.size());
         ++trackIndex)
     {
         if (matches.find(trackIndex) == matches.end())
