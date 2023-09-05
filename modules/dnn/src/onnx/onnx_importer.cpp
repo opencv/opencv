@@ -1990,6 +1990,7 @@ void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodePr
     addLayer(layerParams, node_proto);
 
 #else // AVX512, RVV, LASX, and default
+    auto node_proto = node_proto_;
     CV_Assert(node_proto.input_size() >= 2);
     layerParams.type = "InnerProduct";
     int transA = layerParams.get<int>("transA", 0);
