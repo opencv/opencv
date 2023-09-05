@@ -78,7 +78,7 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
 
     const uchar* src = _src.ptr();
     int* temp = _temp.ptr<int>();
-    float* dist = _dist.ptr<float>();
+    float* dist = _dist.ptr<float>(_dist.rows - 1);
     int srcstep = (int)(_src.step/sizeof(src[0]));
     int step = (int)(_temp.step/sizeof(temp[0]));
     int dststep = (int)(_dist.step/sizeof(dist[0]));
@@ -87,11 +87,10 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
     initTopBottom( _temp, BORDER );
 
     // forward pass
+    unsigned int* tmp = (unsigned int*)(temp + BORDER*step) + BORDER;
+    const uchar* s = src;
     for( i = 0; i < size.height; i++ )
     {
-        const uchar* s = src + i*srcstep;
-        unsigned int* tmp = (unsigned int*)(temp + (i+BORDER)*step) + BORDER;
-
         for( j = 0; j < BORDER; j++ )
             tmp[-j-1] = tmp[size.width + j] = INIT_DIST0;
 
@@ -111,13 +110,15 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
                 tmp[j] = t0;
             }
         }
+        tmp += step;
+        s += srcstep;
     }
 
     // backward pass
+    float* d = (float*)dist;
     for( i = size.height - 1; i >= 0; i-- )
     {
-        float* d = (float*)(dist + i*dststep);
-        unsigned int* tmp = (unsigned int*)(temp + (i+BORDER)*step) + BORDER;
+        tmp -= step;
 
         for( j = size.width - 1; j >= 0; j-- )
         {
@@ -137,6 +138,7 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
             t0 = (t0 > DIST_MAX) ? DIST_MAX : t0;
             d[j] = (float)(t0 * scale);
         }
+        d -= dststep;
     }
 }
 
@@ -153,7 +155,7 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
 
     const uchar* src = _src.ptr();
     int* temp = _temp.ptr<int>();
-    float* dist = _dist.ptr<float>();
+    float* dist = _dist.ptr<float>(_dist.rows - 1);
     int srcstep = (int)(_src.step/sizeof(src[0]));
     int step = (int)(_temp.step/sizeof(temp[0]));
     int dststep = (int)(_dist.step/sizeof(dist[0]));
@@ -162,11 +164,10 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
     initTopBottom( _temp, BORDER );
 
     // forward pass
+    unsigned int* tmp = (unsigned int*)(temp + BORDER*step) + BORDER;
+    const uchar* s = src;
     for( i = 0; i < size.height; i++ )
     {
-        const uchar* s = src + i*srcstep;
-        unsigned int* tmp = (unsigned int*)(temp + (i+BORDER)*step) + BORDER;
-
         for( j = 0; j < BORDER; j++ )
             tmp[-j-1] = tmp[size.width + j] = INIT_DIST0;
 
@@ -194,13 +195,15 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
                 tmp[j] = t0;
             }
         }
+        tmp += step;
+        s += srcstep;
     }
 
     // backward pass
+    float* d = (float*)dist;
     for( i = size.height - 1; i >= 0; i-- )
     {
-        float* d = (float*)(dist + i*dststep);
-        unsigned int* tmp = (unsigned int*)(temp + (i+BORDER)*step) + BORDER;
+        tmp -= step;
 
         for( j = size.width - 1; j >= 0; j-- )
         {
@@ -228,6 +231,7 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
             t0 = (t0 > DIST_MAX) ? DIST_MAX : t0;
             d[j] = (float)(t0 * scale);
         }
+        d -= dststep;
     }
 }
 
@@ -245,7 +249,7 @@ distanceTransformEx_5x5( const Mat& _src, Mat& _temp, Mat& _dist, Mat& _labels, 
 
     const uchar* src = _src.ptr();
     int* temp = _temp.ptr<int>();
-    float* dist = _dist.ptr<float>();
+    float* dist = _dist.ptr<float>(_dist.rows - 1);
     int* labels = _labels.ptr<int>();
     int srcstep = (int)(_src.step/sizeof(src[0]));
     int step = (int)(_temp.step/sizeof(temp[0]));
@@ -256,12 +260,11 @@ distanceTransformEx_5x5( const Mat& _src, Mat& _temp, Mat& _dist, Mat& _labels, 
     initTopBottom( _temp, BORDER );
 
     // forward pass
+    const uchar* s = src;
+    unsigned int* tmp = (unsigned int*)(temp + BORDER*step) + BORDER;
+    int* lls = (int*)labels;
     for( i = 0; i < size.height; i++ )
     {
-        const uchar* s = src + i*srcstep;
-        unsigned int* tmp = (unsigned int*)(temp + (i+BORDER)*step) + BORDER;
-        int* lls = (int*)(labels + i*lstep);
-
         for( j = 0; j < BORDER; j++ )
             tmp[-j-1] = tmp[size.width + j] = INIT_DIST0;
 
@@ -330,14 +333,17 @@ distanceTransformEx_5x5( const Mat& _src, Mat& _temp, Mat& _dist, Mat& _labels, 
                 lls[j] = l0;
             }
         }
+        s += srcstep;
+        tmp += step;
+        lls += lstep;
     }
 
     // backward pass
+    float* d = (float*)dist;
     for( i = size.height - 1; i >= 0; i-- )
     {
-        float* d = (float*)(dist + i*dststep);
-        unsigned int* tmp = (unsigned int*)(temp + (i+BORDER)*step) + BORDER;
-        int* lls = (int*)(labels + i*lstep);
+        tmp -= step;
+        lls -= lstep;
 
         for( j = size.width - 1; j >= 0; j-- )
         {
@@ -399,6 +405,7 @@ distanceTransformEx_5x5( const Mat& _src, Mat& _temp, Mat& _dist, Mat& _labels, 
             t0 = (t0 > DIST_MAX) ? DIST_MAX : t0;
             d[j] = (float)(t0 * scale);
         }
+        d -= dststep;
     }
 }
 
