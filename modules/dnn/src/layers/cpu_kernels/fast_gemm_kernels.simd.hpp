@@ -264,32 +264,32 @@ static void fast_gemm12x4_f32(int k, const char *a_, const char *b_,
         float32x4_t b0 = vld1q_f32(b);
 
         float32x4_t a0 = vld1q_dup_f32(a);
-        s00 = vfmaq_f32(a0, b0, s00);
+        s00 = vmlaq_f32(a0, b0, s00);
         float32x4_t a1 = vld1q_dup_f32(a + 1);
-        s10 = vfmaq_f32(a1, b0, s10);
+        s10 = vmlaq_f32(a1, b0, s10);
         float32x4_t a2 = vld1q_dup_f32(a + 2);
-        s20 = vfmaq_f32(a2, b0, s20);
+        s20 = vmlaq_f32(a2, b0, s20);
 
         a0 = vld1q_dup_f32(a + 3);
-        s30 = vfmaq_f32(a0, b0, s30);
+        s30 = vmlaq_f32(a0, b0, s30);
         a1 = vld1q_dup_f32(a + 4);
-        s40 = vfmaq_f32(a1, b0, s40);
+        s40 = vmlaq_f32(a1, b0, s40);
         a2 = vld1q_dup_f32(a + 5);
-        s50 = vfmaq_f32(a2, b0, s50);
+        s50 = vmlaq_f32(a2, b0, s50);
 
         a0 = vld1q_dup_f32(a + 6);
-        s60 = vfmaq_f32(a0, b0, s60);
+        s60 = vmlaq_f32(a0, b0, s60);
         a1 = vld1q_dup_f32(a + 7);
-        s70 = vfmaq_f32(a1, b0, s70);
+        s70 = vmlaq_f32(a1, b0, s70);
         a2 = vld1q_dup_f32(a + 8);
-        s80 = vfmaq_f32(a2, b0, s80);
+        s80 = vmlaq_f32(a2, b0, s80);
 
         a0 = vld1q_dup_f32(a + 9);
-        s90 = vfmaq_f32(a0, b0, s90);
+        s90 = vmlaq_f32(a0, b0, s90);
         a1 = vld1q_dup_f32(a + 10);
-        s100 = vfmaq_f32(a1, b0, s100);
+        s100 = vmlaq_f32(a1, b0, s100);
         a2 = vld1q_dup_f32(a + 11);
-        s110 = vfmaq_f32(a2, b0, s110);
+        s110 = vmlaq_f32(a2, b0, s110);
     }
 
     float32x4_t c0, c1, c2, c3, v_alpha = vdupq_n_f32(alpha);
@@ -298,10 +298,10 @@ static void fast_gemm12x4_f32(int k, const char *a_, const char *b_,
     c1 = vld1q_f32(c + row1 * ldc);               \
     c2 = vld1q_f32(c + row2 * ldc);               \
     c3 = vld1q_f32(c + row3 * ldc);               \
-    c0 = vfmaq_f32(c0, s##row0##0, v_alpha);      \
-    c1 = vfmaq_f32(c1, s##row1##1, v_alpha);      \
-    c2 = vfmaq_f32(c2, s##row2##2, v_alpha);      \
-    c3 = vfmaq_f32(c3, s##row3##2, v_alpha);      \
+    c0 = vmlaq_f32(c0, s##row0##0, v_alpha);      \
+    c1 = vmlaq_f32(c1, s##row1##0, v_alpha);      \
+    c2 = vmlaq_f32(c2, s##row2##0, v_alpha);      \
+    c3 = vmlaq_f32(c3, s##row3##0, v_alpha);      \
     vst1q_f32(c + row0 * ldc, c0);                \
     vst1q_f32(c + row1 * ldc, c1);                \
     vst1q_f32(c + row2 * ldc, c2);                \
