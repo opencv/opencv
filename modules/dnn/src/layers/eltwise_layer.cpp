@@ -896,12 +896,14 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+        CV_Assert(nodes.size() >= 2);
         auto curr_node = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         if (!coeffs.empty()) {
             auto coeff = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[0]);
             curr_node = std::make_shared<ngraph::op::v1::Multiply>(curr_node, coeff, ngraph::op::AutoBroadcastType::NUMPY);
         }
 
+        std::shared_ptr<ngraph::Node> res;
         for (size_t i = 1; i < nodes.size(); i++)
         {
             auto next_node = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
@@ -910,15 +912,16 @@ public:
                 next_node = std::make_shared<ngraph::op::v1::Multiply>(next_node, coeff, ngraph::op::AutoBroadcastType::NUMPY);
             }
             switch (op) {
-                case SUM:  curr_node = std::make_shared<ngraph::op::v1::Add>(curr_node, next_node); break;
-                case PROD: curr_node = std::make_shared<ngraph::op::v1::Multiply>(curr_node, next_node); break;
-                case DIV:  curr_node = std::make_shared<ngraph::op::v1::Divide>(curr_node, next_node); break;
-                case MAX:  curr_node = std::make_shared<ngraph::op::v1::Maximum>(curr_node, next_node); break;
-                case MIN:  curr_node = std::make_shared<ngraph::op::v1::Minimum>(curr_node, next_node); break;
+                case SUM:  res = std::make_shared<ngraph::op::v1::Add>(curr_node, next_node); break;
+                case PROD: res = std::make_shared<ngraph::op::v1::Multiply>(curr_node, next_node); break;
+                case DIV:  res = std::make_shared<ngraph::op::v1::Divide>(curr_node, next_node); break;
+                case MAX:  res = std::make_shared<ngraph::op::v1::Maximum>(curr_node, next_node); break;
+                case MIN:  res = std::make_shared<ngraph::op::v1::Minimum>(curr_node, next_node); break;
                 default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
             }
+            curr_node = res;
         }
-        return Ptr<BackendNode>(new InfEngineNgraphNode(curr_node));
+        return Ptr<BackendNode>(new InfEngineNgraphNode(res));
     }
 #endif  // HAVE_DNN_NGRAPH
 

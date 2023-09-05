@@ -466,7 +466,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto parent_shape = input->get_shape();
+        auto parent_shape = input.get_shape();
         int64_t b = parent_shape[0];
         int64_t h = parent_shape[1];
         int64_t w = parent_shape[2];
@@ -567,7 +567,7 @@ public:
             int hNorm, wNorm;
             if (nodes.size() > 1)
             {
-                auto node_1_shape = nodes[1].dynamicCast<InfEngineNgraphNode>()->node->get_shape();
+                auto node_1_shape = nodes[1].dynamicCast<InfEngineNgraphNode>()->node.get_shape();
                 hNorm = node_1_shape[2];
                 wNorm = node_1_shape[3];
             }

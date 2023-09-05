@@ -133,7 +133,7 @@ public:
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         auto rois = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
 
-        auto rois_shape = rois->get_shape();
+        auto rois_shape = rois.get_shape();
         std::vector<int64_t> dims(rois_shape.begin(), rois_shape.end()), offsets(4, 0);
         offsets[3] = 2;
         dims[3] = 7;

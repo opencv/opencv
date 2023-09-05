@@ -93,13 +93,13 @@ public:
                         std::vector<Mat*>& inputs, std::vector<Mat>& outputs,
                         std::vector<Mat>& internals);
 
-    InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node);
-    InfEngineNgraphNode(const std::shared_ptr<ngraph::Node>& _node);
+    InfEngineNgraphNode(ngraph::Output<ngraph::Node>&& _node);
+    InfEngineNgraphNode(const ngraph::Output<ngraph::Node>& _node);
 
     void setName(const std::string& name);
 
     // Inference Engine network object that allows to obtain the outputs of this layer.
-    std::shared_ptr<ngraph::Node> node;
+    ngraph::Output<ngraph::Node> node;
     Ptr<InfEngineNgraphNet> net;
     Ptr<dnn::Layer> cvLayer;
 };
