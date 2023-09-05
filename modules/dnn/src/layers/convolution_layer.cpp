@@ -822,13 +822,13 @@ public:
         CV_Assert(!blobs.empty());
         CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        std::vector<size_t> dims = ieInpNode->get_shape();
+        std::vector<size_t> dims = ieInpNode.get_shape();
         CV_Check(dims.size(), dims.size() >= 3 && dims.size() <= 5, "");
-        std::shared_ptr<ngraph::Node> ieWeights = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;
+        ngraph::Output<ngraph::Node> ieWeights;
         if (nodes.size() > 1)
-            CV_Assert(ieWeights);  // dynamic_cast should not fail
+            ieWeights = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
         const int inpCn = dims[1];
-        const int inpGroupCn = nodes.size() > 1 ? ieWeights->get_shape()[1] : blobs[0].size[1];
+        const int inpGroupCn = nodes.size() > 1 ? ieWeights.get_shape()[1] : blobs[0].size[1];
         const int group = inpCn / inpGroupCn;
 
         std::vector<size_t> kernel_shape;

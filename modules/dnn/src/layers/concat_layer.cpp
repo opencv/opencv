@@ -392,7 +392,7 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        const int numDims = nodes[0].dynamicCast<InfEngineNgraphNode>()->node->get_shape().size();
+        const int numDims = nodes[0].dynamicCast<InfEngineNgraphNode>()->node.get_shape().size();
         const int cAxis = normalize_axis(axis, numDims);
         std::vector<size_t> maxDims(numDims, 0);
 
@@ -403,7 +403,7 @@ public:
             auto inp = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
             inp_nodes.push_back(inp);
 
-            std::vector<size_t> inpShape = inp->get_shape();
+            std::vector<size_t> inpShape = inp.get_shape();
             for (int i = 0; i < numDims; ++i)
                 maxDims[i] = std::max(maxDims[i], inpShape[i]);
         }

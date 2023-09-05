@@ -490,7 +490,7 @@ struct ReLUFunctor : public BaseFunctor
 #endif
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         if (slope) {
             auto param = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &slope);
@@ -674,7 +674,7 @@ struct ReLU6Functor : public BaseFunctor
 
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         return std::make_shared<ngraph::op::Clamp>(node, minValue, maxValue);
     }
@@ -796,7 +796,7 @@ struct BaseDefaultFunctor : public BaseFunctor
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         CV_Error(Error::StsNotImplemented, "");
     }
@@ -929,7 +929,7 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         return std::make_shared<ngraph::op::Tanh>(node);
     }
@@ -998,7 +998,7 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         auto sigmoid = std::make_shared<ngraph::op::Sigmoid>(node);
         return std::make_shared<ngraph::op::v1::Multiply>(node, sigmoid);
@@ -1074,7 +1074,7 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         float one = 1.0f;
         auto constant = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &one);
@@ -1157,7 +1157,7 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         return std::make_shared<ngraph::op::Sigmoid>(node);
     }
@@ -1237,7 +1237,7 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         return std::make_shared<ngraph::op::Elu>(node, alpha);
     }
@@ -1307,7 +1307,7 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         float coeff = -0.999999f;
         // float coeff = preferableTarget == DNN_TARGET_MYRIAD ? -0.999f : -0.999999f;
@@ -1603,7 +1603,7 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
 #endif  // HAVE_HALIDE
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         return std::make_shared<ngraph::op::v0::Sqrt>(node);
     }
@@ -2329,7 +2329,7 @@ struct PowerFunctor : public BaseFunctor
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         auto scale_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
                                                                  ngraph::Shape{1}, &scale);
@@ -2439,7 +2439,7 @@ struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
 #endif  // HAVE_HALIDE
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         auto scale_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
                                                                  ngraph::Shape{1}, &normScale);
@@ -2598,7 +2598,7 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 #endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         const size_t numChannels = scale.total();
         auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numChannels}, scale.data);
@@ -2678,7 +2678,7 @@ struct PReLUFunctor : public ChannelsPReLUFunctor
     }
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
         auto shape = getShape<size_t>(scale);
         auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, scale.ptr<float>());
