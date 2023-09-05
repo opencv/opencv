@@ -186,6 +186,39 @@ class aruco_objdetect_test(NewOpenCVTests):
         self.assertEqual((1, 4, 2), refine_corners[0].shape)
         np.testing.assert_array_equal(corners, refine_corners)
 
+    def test_charuco_refine(self):
+        aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_6X6_50)
+        board_size = (3, 4)
+        board = cv.aruco.CharucoBoard(board_size, 1., .7, aruco_dict)
+        aruco_detector = cv.aruco.ArucoDetector(aruco_dict)
+        charuco_detector = cv.aruco.CharucoDetector(board)
+        cell_size = 100
+        image = board.generateImage((cell_size*board_size[0], cell_size*board_size[1]))
+        camera = np.array([[1, 0, 0.5],
+                           [0, 1, 0.5],
+                           [0, 0, 1]])
+        dist = np.array([0, 0, 0, 0, 0], dtype=np.float32).reshape(1, -1)
+
+        # generate gold corners of the ArUco markers for the test
+        gold_corners = np.array(board.getObjPoints())[:, :, 0:2]*cell_size
+
+        # detect corners
+        markerCorners, markerIds, _ = aruco_detector.detectMarkers(image)
+
+        # test refine
+        rejected = [markerCorners[-1]]
+        markerCorners, markerIds = markerCorners[:-1], markerIds[:-1]
+        markerCorners, markerIds, _, _ = aruco_detector.refineDetectedMarkers(image, board, markerCorners, markerIds,
+                                                                              rejected, cameraMatrix=camera, distCoeffs=dist)
+
+        charucoCorners, charucoIds, _, _ = charuco_detector.detectBoard(image, markerCorners=markerCorners,
+                                                                        markerIds=markerIds)
+        self.assertEqual(len(charucoIds), 6)
+        self.assertEqual(len(markerIds), 6)
+
+        for i, id in enumerate(markerIds.reshape(-1)):
+            np.testing.assert_allclose(gold_corners[id], markerCorners[i].reshape(4, 2), 0.01, 1.)
+
     def test_write_read_dictionary(self):
         try:
             aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_5X5_50)
