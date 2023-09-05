@@ -328,17 +328,16 @@ static LineSegmentIntersection parallelInt( Point2f a, Point2f b, Point2f c, Poi
 static LineSegmentIntersection intersectLineSegments( Point2f a, Point2f b, Point2f c,
                                                       Point2f d, Point2f& p, Point2f& q )
 {
-    double denom = a.x * (double)(d.y - c.y) + b.x * (double)(c.y - d.y) +
-                   d.x * (double)(b.y - a.y) + c.x * (double)(a.y - b.y);
+    double denom = (a.x - b.x) * (double)(d.y - c.y) - (a.y - b.y) * (double)(d.x - c.x);
 
     // If denom is zero, then segments are parallel: handle separately.
     if( denom == 0. )
         return parallelInt(a, b, c, d, p, q);
 
-    double num = a.x * (double)(d.y - c.y) + c.x * (double)(a.y - d.y) + d.x * (double)(c.y - a.y);
+    double num = (d.y - a.y) * (double)(a.x - c.x) + (a.x - d.x) * (double)(a.y - c.y);
     double s = num / denom;
 
-    num = a.x * (double)(b.y - c.y) + b.x * (double)(c.y - a.y) + c.x * (double)(a.y - b.y);
+    num = (b.y - a.y) * (double)(a.x - c.x) + (c.y - a.y) * (double)(b.x - a.x);
     double t = num / denom;
 
     p.x = (float)(a.x + s*(b.x - a.x));
