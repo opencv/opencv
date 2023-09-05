@@ -55,7 +55,7 @@ namespace cv {
         int_t *x, int_t *y);
 
     CV_EXPORTS std::map<int, int> lapjv(const cv::Mat &cost, float matchThreshold = 0.8f);
-    CV_EXPORTS_W void lapjv(InputArray costMatrix, OutputArray assignedPairs, float matchThreshold = 0.7);
+    CV_EXPORTS_W void lapjv(InputArray costMatrix, OutputArray assignedPairs, float matchThreshold = 0.8f);
 }
 
 #endif // LAPJV_H
