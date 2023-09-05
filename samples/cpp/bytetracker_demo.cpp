@@ -202,7 +202,7 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
     for (int i = 0; i < rows; ++i)
     {
         float confidence;
-        float *classes_scores;
+        float *classes_scores = 0;
         if (yolov8)
         {
             classes_scores = data + 4;
@@ -225,7 +225,7 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
             // Store class ID and confidence in the pre-defined respective vectors.
             if (yolov8)
             {
-                confidences.push_back(maxClassScore);
+                confidences.push_back(static_cast<float>(maxClassScore));
             }
             else
             {
