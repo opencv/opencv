@@ -239,7 +239,8 @@ public:
             // (5) Compute the left eigenvectors of the action matrix
             Eigen::EigenSolver<Eigen::Matrix<double, 10, 10>> eigensolver(action_mat_eig);
             const Eigen::VectorXcd &eigenvalues = eigensolver.eigenvalues();
-            const auto * const eig_vecs_ = (double *) eigensolver.eigenvectors().real().data();
+            const Eigen::MatrixXcd eigenvectors = eigensolver.eigenvectors();
+            const auto * const eig_vecs_ = (double *) eigenvectors.data();
 #else
             Matx<double, 10, 10> A = constraint_mat.colRange(0, 10),
                              B = constraint_mat.colRange(10, 20), eliminated_mat;
