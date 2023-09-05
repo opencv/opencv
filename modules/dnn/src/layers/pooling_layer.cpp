@@ -601,7 +601,7 @@ public:
             return Ptr<BackendNode>(new InfEngineNgraphNode(ave_pool));
         }
         else if (type == SUM) {
-            ngraph::Shape inpShape = ieInpNode->get_shape();
+            ngraph::Shape inpShape = ieInpNode.get_shape();
             CV_Assert(inpShape.size() == 2 + kernel_size.size());
             std::vector<int64_t> axes;
             for (size_t i = 0; i < kernel_size.size(); i++)
