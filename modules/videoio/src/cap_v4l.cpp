@@ -2154,6 +2154,7 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
             return convert_rgb;
         }else{
             convert_rgb = false;
+            releaseFrame();
             v4l2_create_frame();
             return true;
         }
