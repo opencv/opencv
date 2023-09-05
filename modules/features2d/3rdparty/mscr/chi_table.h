@@ -29,6 +29,7 @@
 ** or tort (including negligence or otherwise) arising in any way out of
 ** the use of this software, even if advised of the possibility of such damage.
 **
+** Content origin: http://users.isy.liu.se/cvl/perfo/software/chi_table.h
 */
 #define TABLE_SIZE 400
 

@@ -39,14 +39,14 @@
  *    it should be much slower than gray image method ( 3~4 times );
  *    the chi_table.h file is taken directly from the paper's source code:
  *    http://users.isy.liu.se/cvl/perfo/software/chi_table.h
- *    license (BSD-like) is located in the file: 3rdparty/MSCR/chi_table_LICENSE.txt
+ *    license (BSD-like) is located in the file: 3rdparty/mscr/chi_table_LICENSE.txt
  * 4. though the name is *contours*, the result actually is a list of point set.
  */
 
 #include "precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include <limits>
-#include "../3rdparty/MSCR/chi_table.h"
+#include "../3rdparty/mscr/chi_table.h"
 
 namespace cv
 {
