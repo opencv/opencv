@@ -37,20 +37,24 @@ struct FastGemmOpt {
         use_neon_aarch64 = false;
 #endif
     }
+
+    bool all() {
+        return use_avx || use_avx2 || use_neon_aarch64;
+    }
 };
 
 void fastGemmPackB(const Mat &m, std::vector<float> &packed_B, bool trans, FastGemmOpt &opt);
 
 void fastGemm(bool trans_a, int M, int N, int K,
-               float alpha, const float *A, int lda,
-               const float *packed_B, float beta,
-               float *C, int ldc, FastGemmOpt &opt);
+              float alpha, const float *A, int lda,
+              const float *packed_B, float beta,
+              float *C, int ldc, FastGemmOpt &opt);
 void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
               float alpha, const float *A, int lda0, int lda1, const float *B, int ldb0, int ldb1,
               float beta, float *C, int ldc, FastGemmOpt &opt);
 void fastGemm(bool trans_a, bool trans_b,
-               float alpha, const Mat &A, const Mat &B,
-               float beta, Mat &C, FastGemmOpt &opt);
+              float alpha, const Mat &A, const Mat &B,
+              float beta, Mat &C, FastGemmOpt &opt);
 
 }} // cv::dnn
 
