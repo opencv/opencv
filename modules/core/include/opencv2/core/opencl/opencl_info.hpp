@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include <iostream>
+#include <sstream>
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/ocl.hpp>
