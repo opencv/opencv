@@ -1249,14 +1249,14 @@ bool QRDecode::computeSidesPoints(const vector<Point> &result_integer_hull)
         {
             if (points.front().x > points.back().x)
             {
-                reverse(points.begin(), points.end());
+                std::reverse(points.begin(), points.end());
             }
         }
         else
         {
             if (points.front().y > points.back().y)
             {
-                reverse(points.begin(), points.end());
+                std::reverse(points.begin(), points.end());
             }
         }
         if (points.empty())
@@ -1632,7 +1632,7 @@ bool QRDecode::findPatternsVerticesPoints(vector<vector<Point> > &patterns_verti
             }
             if ((int)min_angle_pnts_indexes.size() == num_vertices) { break; }
         }
-        sort(min_angle_pnts_indexes.begin(), min_angle_pnts_indexes.end());
+        std::sort(min_angle_pnts_indexes.begin(), min_angle_pnts_indexes.end());
 
         vector<Point> contour_vertices_points;
 
@@ -1761,11 +1761,11 @@ bool QRDecode::findTempPatternsAddingPoints(vector<std::pair<int, vector<Point> 
             }
             if (abs(p1.x - p2.x) > abs(p1.y - p2.y))
             {
-                sort(points.begin(), points.end(), sortPointsByX());
+                std::sort(points.begin(), points.end(), sortPointsByX());
             }
             else
             {
-                sort(points.begin(), points.end(), sortPointsByY());
+                std::sort(points.begin(), points.end(), sortPointsByY());
             }
 
             temp_patterns_add_points.push_back(std::pair<int, vector<Point> >(idx_curved_side,points));
@@ -1909,11 +1909,11 @@ void QRDecode::completeAndSortSides()
         Point p2 = it->second.back();
         if (abs(p1.x - p2.x) > abs(p1.y - p2.y))
         {
-            sort(it->second.begin(), it->second.end(), sortPointsByX());
+            std::sort(it->second.begin(), it->second.end(), sortPointsByX());
         }
         else
         {
-            sort(it->second.begin(), it->second.end(), sortPointsByY());
+            std::sort(it->second.begin(), it->second.end(), sortPointsByY());
         }
     }
 }
@@ -2075,8 +2075,8 @@ bool QRDecode::divideIntoEvenSegments(vector<vector<Point2f> > &segments_points)
                 Point2f segment_start = segments_points[i][j];
                 Point2f segment_end   = segments_points[i][j + 1];
                 vector<Point2f>::iterator it_start, it_end, it;
-                it_start = find(spline_lines[i].begin(), spline_lines[i].end(), segment_start);
-                it_end   = find(spline_lines[i].begin(), spline_lines[i].end(), segment_end);
+                it_start = std::find(spline_lines[i].begin(), spline_lines[i].end(), segment_start);
+                it_end   = std::find(spline_lines[i].begin(), spline_lines[i].end(), segment_end);
                 float max_dist_to_line = 0.0;
                 for (it = it_start; it != it_end; it++)
                 {

@@ -142,7 +142,7 @@ TEST_P(DescriptorImage, no_crash)
 {
     vector<String> fnames;
     glob(cvtest::TS::ptr()->get_data_path() + pattern, fnames, false);
-    sort(fnames.begin(), fnames.end());
+    std::sort(fnames.begin(), fnames.end());
 
     Ptr<AKAZE> akaze_mldb = AKAZE::create(AKAZE::DESCRIPTOR_MLDB);
     Ptr<AKAZE> akaze_mldb_upright = AKAZE::create(AKAZE::DESCRIPTOR_MLDB_UPRIGHT);

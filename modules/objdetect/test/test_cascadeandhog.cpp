@@ -355,7 +355,7 @@ int CV_DetectorTest::validate( int detectorIdx, vector<vector<Rect> >& objects )
                     map[minIdx] = 1;
             }
         }
-        noPair += (int)count_if( map.begin(), map.end(), isZero );
+        noPair += (int)std::count_if( map.begin(), map.end(), isZero );
         totalNoPair += noPair;
 
         /*if( noPair > cvRound(valRects.size()*eps.noPair)+1 )
