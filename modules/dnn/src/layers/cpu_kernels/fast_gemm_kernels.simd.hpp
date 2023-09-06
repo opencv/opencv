@@ -100,6 +100,7 @@ static void fast_gemm_pack##N##suffix( int m, int k, const void* A_, \
 
 #define FAST_GEMM_PACK_COPY(src, dst, N) \
     memcpy((dst), (src), N*sizeof(src[0]))
+#define FAST_GEMM_PACK_f32_4(src, dst) FAST_GEMM_PACK_COPY((src), (dst), 4)
 #define FAST_GEMM_PACK_f32_8(src, dst) FAST_GEMM_PACK_COPY((src), (dst), 8)
 #define FAST_GEMM_PACK_f32_12(src, dst) FAST_GEMM_PACK_COPY((src), (dst), 12)
 
