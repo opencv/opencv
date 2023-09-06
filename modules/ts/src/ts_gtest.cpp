@@ -9505,6 +9505,7 @@ void FilePath::Normalize() {
 # include <io.h>
 # include <sys/stat.h>
 # include <map>  // Used in ThreadLocal.
+# include <crtdbg.h>
 #else
 # include <unistd.h>
 #endif  // GTEST_OS_WINDOWS
