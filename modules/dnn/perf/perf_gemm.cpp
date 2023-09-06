@@ -115,6 +115,7 @@ static inline void PrintTo(const GemmParamId& v, std::ostream* os)
 typedef tuple<GemmParamId, tuple<Backend, Target> > GemmTestParam_t;
 typedef TestBaseWithParam<GemmTestParam_t> Gemm;
 
+#if CV_TRY_AVX2 || CV_TRY_AVX || CV_TRY_NEON
 PERF_TEST_P_(Gemm, gemm)
 {
     int test_id = (int)get<0>(GetParam());
@@ -195,6 +196,7 @@ PERF_TEST_P_(Gemm, gemm)
 
     SANITY_CHECK_NOTHING();
 }
+#endif
 
 PERF_TEST_P_(Gemm, innerproduct)
 {
