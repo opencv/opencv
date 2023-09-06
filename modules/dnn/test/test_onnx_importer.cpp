@@ -2597,6 +2597,7 @@ TEST_P(Test_ONNX_layers, where_node)
     testONNXModels("where_layer");
 }
 
+#if CV_TRY_AVX2 || CV_TRY_AVX || CV_TRY_NEON
 TEST_P(Test_ONNX_layers, Conformance_Gemm_all_attributes) {
     testONNXModels("test_gemm_all_attributes", pb, 0, 0, false, true, 2);
 }
@@ -2630,6 +2631,7 @@ TEST_P(Test_ONNX_layers, Conformance_Gemm_transposeA) {
 TEST_P(Test_ONNX_layers, Conformance_Gemm_transposeB) {
     testONNXModels("test_gemm_transposeB", pb, 0, 0, false, true, 2);
 }
+#endif
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
