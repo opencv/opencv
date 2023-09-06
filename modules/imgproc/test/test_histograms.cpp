@@ -1198,7 +1198,7 @@ void CV_CalcHistTest::run_func(void)
     }
 
     std::vector<cv::Mat> imagesv(cdims);
-    copy(images.begin(), images.begin() + cdims, imagesv.begin());
+    std::copy(images.begin(), images.begin() + cdims, imagesv.begin());
 
     Mat mask = images[CV_MAX_DIM];
     if( !CV_IS_SPARSE_HIST(hist[0]) )
@@ -1493,7 +1493,7 @@ void CV_CalcBackProjectTest::run_func(void)
     }
 
     std::vector<cv::Mat> imagesv(hdims);
-    copy(images.begin(), images.begin() + hdims, imagesv.begin());
+    std::copy(images.begin(), images.begin() + hdims, imagesv.begin());
 
     cv::Mat dst = images[CV_MAX_DIM+1];
 

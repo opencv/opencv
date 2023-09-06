@@ -160,8 +160,8 @@ bool CV_Affine3D_EstTest::testNPoints()
         return false;
     }
 
-    bool outl_good = count(outl.begin(), outl.end(), 1) == m &&
-        m == accumulate(outl.begin(), outl.begin() + m, 0);
+    bool outl_good = std::count(outl.begin(), outl.end(), 1) == m &&
+        m == std::accumulate(outl.begin(), outl.begin() + m, 0);
 
     if (!outl_good)
     {
