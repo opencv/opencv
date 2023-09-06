@@ -19,6 +19,11 @@ void PlyDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
     CV_UNUSED(indices);
 
     std::ifstream file(m_filename, std::ios::binary);
+
+    if (!file.is_open()) {
+        CV_LOG_ERROR(NULL, "File does not exist.");
+    }
+
     if (parseHeader(file))
     {
         parseBody(file, points, normals, rgb);
