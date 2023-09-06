@@ -46,7 +46,6 @@ namespace cv
 
 static const int DIST_SHIFT = 16;
 static const int INIT_DIST0 = INT_MAX;
-static const int DIST_MAX   = (INT_MAX >> 2);
 #define  CV_FLT_TO_FIX(x,n)  cvRound((x)*(1<<(n)))
 
 static void
@@ -135,7 +134,6 @@ distanceTransform_3x3( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
                 if( t0 > t ) t0 = t;
                 tmp[j] = t0;
             }
-            t0 = (t0 > DIST_MAX) ? DIST_MAX : t0;
             d[j] = (float)(t0 * scale);
         }
         d -= dststep;
@@ -228,7 +226,6 @@ distanceTransform_5x5( const Mat& _src, Mat& _temp, Mat& _dist, const float* met
                 if( t0 > t ) t0 = t;
                 tmp[j] = t0;
             }
-            t0 = (t0 > DIST_MAX) ? DIST_MAX : t0;
             d[j] = (float)(t0 * scale);
         }
         d -= dststep;
@@ -402,7 +399,6 @@ distanceTransformEx_5x5( const Mat& _src, Mat& _temp, Mat& _dist, Mat& _labels, 
                 tmp[j] = t0;
                 lls[j] = l0;
             }
-            t0 = (t0 > DIST_MAX) ? DIST_MAX : t0;
             d[j] = (float)(t0 * scale);
         }
         d -= dststep;
