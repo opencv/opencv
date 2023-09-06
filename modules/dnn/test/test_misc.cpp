@@ -120,6 +120,28 @@ TEST(blobFromImageWithParams_4ch, letter_box)
     EXPECT_EQ(0, cvtest::norm(targetBlob, blob, NORM_INF));
 }
 
+TEST(blobFromImagesWithParams_4ch, multi_image)
+{
+    Mat img(10, 10, CV_8UC4, cv::Scalar(0, 1, 2, 3));
+    Scalar scalefactor(0.1, 0.2, 0.3, 0.4);
+
+    Image2BlobParams param;
+    param.scalefactor = scalefactor;
+    param.datalayout = DNN_LAYOUT_NHWC;
+
+    Mat blobs = blobFromImagesWithParams(std::vector<Mat> { img, 2*img }, param);
+    vector<Range> ranges;
+    ranges.push_back(Range(0, 1));
+    ranges.push_back(Range(0, blobs.size[1]));
+    ranges.push_back(Range(0, blobs.size[2]));
+    ranges.push_back(Range(0, blobs.size[3]));
+    Mat blob0 = blobs(ranges);
+    ranges[0] = Range(1, 2);
+    Mat blob1 = blobs(ranges);
+
+    EXPECT_EQ(0, cvtest::norm(2*blob0, blob1, NORM_INF));
+}
+
 TEST(readNet, Regression)
 {
     Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),
