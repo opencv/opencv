@@ -368,4 +368,37 @@ BIGDATA_TEST(Imgproc_DistanceTransform, issue_23895_5x5_labels)
     EXPECT_EQ(nz, 0);
 }
 
+TEST(Imgproc_DistanceTransform, max_distance_3x3)
+{
+    Mat src = Mat::ones(1, 70000, CV_8U), dist;
+    src.at<uint8_t>(0, 0) = 0;
+    distanceTransform(src, dist, DIST_L2, DIST_MASK_3);
+
+    double minVal, maxVal;
+    minMaxLoc(dist, &minVal, &maxVal);
+    EXPECT_GE(maxVal, 65533);
+}
+
+TEST(Imgproc_DistanceTransform, max_distance_5x5)
+{
+    Mat src = Mat::ones(1, 70000, CV_8U), dist;
+    src.at<uint8_t>(0, 0) = 0;
+    distanceTransform(src, dist, DIST_L2, DIST_MASK_5);
+
+    double minVal, maxVal;
+    minMaxLoc(dist, &minVal, &maxVal);
+    EXPECT_GE(maxVal, 65533);
+}
+
+TEST(Imgproc_DistanceTransform, max_distance_5x5_labels)
+{
+    Mat src = Mat::ones(1, 70000, CV_8U), dist, labels;
+    src.at<uint8_t>(0, 0) = 0;
+    distanceTransform(src, dist, labels, DIST_L2, DIST_MASK_5);
+
+    double minVal, maxVal;
+    minMaxLoc(dist, &minVal, &maxVal);
+    EXPECT_GE(maxVal, 65533);
+}
+
 }} // namespace
