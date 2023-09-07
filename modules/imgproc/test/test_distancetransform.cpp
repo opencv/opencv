@@ -40,6 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include <numeric>
 
 namespace opencv_test { namespace {
 
@@ -399,6 +400,20 @@ TEST(Imgproc_DistanceTransform, max_distance_5x5_labels)
     double minVal, maxVal;
     minMaxLoc(dist, &minVal, &maxVal);
     EXPECT_GE(maxVal, 65533);
+}
+
+TEST(Imgproc_DistanceTransform, precise_long_dist)
+{
+    static const int maxDist = 1 << 16;
+    Mat src = Mat::ones(1, 70000, CV_8U), dist;
+    src.at<uint8_t>(0, 0) = 0;
+    distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE, CV_32F);
+
+    Mat expected(src.size(), CV_32F);
+    std::iota(expected.begin<float>(), expected.end<float>(), 0);
+    expected.colRange(maxDist, expected.cols).setTo(maxDist);
+
+    EXPECT_EQ(cv::norm(expected, dist, NORM_INF), 0);
 }
 
 }} // namespace

@@ -453,7 +453,7 @@ static void getDistanceTransformMask( int maskType, float *metrics )
 
 struct DTColumnInvoker : ParallelLoopBody
 {
-    DTColumnInvoker( const Mat* _src, Mat* _dst, const int* _sat_tab, const int* _sqr_tab)
+    DTColumnInvoker( const Mat* _src, Mat* _dst, const int* _sat_tab, const unsigned int* _sqr_tab)
     {
         src = _src;
         dst = _dst;
@@ -494,12 +494,14 @@ struct DTColumnInvoker : ParallelLoopBody
     const Mat* src;
     Mat* dst;
     const int* sat_tab;
-    const int* sqr_tab;
+    const unsigned int* sqr_tab;
 };
+
+static const int PRECISE_DIST_MAX = 1 << 16;
 
 struct DTRowInvoker : ParallelLoopBody
 {
-    DTRowInvoker( Mat* _dst, const int* _sqr_tab, const float* _inv_tab )
+    DTRowInvoker( Mat* _dst, const unsigned int* _sqr_tab, const float* _inv_tab )
     {
         dst = _dst;
         sqr_tab = _sqr_tab;
@@ -526,7 +528,7 @@ struct DTRowInvoker : ParallelLoopBody
             z[1] = inf;
             f[0] = d[0];
 
-            for( q = 1, k = 0; q < n; q++ )
+            for( q = 1, k = 0; q < std::min(PRECISE_DIST_MAX, n); q++ )
             {
                 float fq = d[q];
                 f[q] = fq;
@@ -535,6 +537,25 @@ struct DTRowInvoker : ParallelLoopBody
                 {
                     p = v[k];
                     float s = (fq - d[p] + (sqr_tab[q]-sqr_tab[p]))*inv_tab[q - p];
+                    if( s > z[k] )
+                    {
+                        k++;
+                        v[k] = q;
+                        z[k] = s;
+                        z[k+1] = inf;
+                        break;
+                    }
+                }
+            }
+            for(; q < n; q++ )
+            {
+                float fq = d[q];
+                f[q] = fq;
+
+                for(;;k--)
+                {
+                    p = v[k];
+                    float s = (fq - d[p] + static_cast<float>(q + p) * (q - p))*inv_tab[q - p];
                     if( s > z[k] )
                     {
                         k++;
@@ -557,14 +578,14 @@ struct DTRowInvoker : ParallelLoopBody
     }
 
     Mat* dst;
-    const int* sqr_tab;
+    const unsigned int* sqr_tab;
     const float* inv_tab;
 };
 
 static void
 trueDistTrans( const Mat& src, Mat& dst )
 {
-    const int inf = INT_MAX;
+    const unsigned int inf = UINT_MAX;
 
     CV_Assert( src.size() == dst.size() );
 
@@ -573,12 +594,12 @@ trueDistTrans( const Mat& src, Mat& dst )
 
     cv::AutoBuffer<uchar> _buf(std::max(m*2*sizeof(int) + (m*3+1)*sizeof(int), n*2*sizeof(float)));
     // stage 1: compute 1d distance transform of each column
-    int* sqr_tab = (int*)_buf.data();
+    unsigned int* sqr_tab = (unsigned int*)_buf.data();
     int* sat_tab = cv::alignPtr((int*)(sqr_tab + m*2), sizeof(int));
     int shift = m*2;
 
     for( i = 0; i < m; i++ )
-        sqr_tab[i] = i*i;
+        sqr_tab[i] = i >= PRECISE_DIST_MAX ? inf : static_cast<unsigned int>(i) * i;
     for( i = m; i < m*2; i++ )
         sqr_tab[i] = inf;
     for( i = 0; i < shift; i++ )
@@ -596,7 +617,7 @@ trueDistTrans( const Mat& src, Mat& dst )
     for( i = 1; i < n; i++ )
     {
         inv_tab[i] = (float)(0.5/i);
-        sqr_tab[i] = i*i;
+        sqr_tab[i] = i >= PRECISE_DIST_MAX ? inf : static_cast<unsigned int>(i) * i;
     }
 
     cv::parallel_for_(cv::Range(0, m), cv::DTRowInvoker(&dst, sqr_tab, inv_tab));
