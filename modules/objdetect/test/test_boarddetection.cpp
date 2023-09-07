@@ -318,4 +318,12 @@ TEST(CV_ArucoGenerateBoard, regression_1226) {
     });
 }
 
+TEST(CV_ArucoDictionary, extendDictionary) {
+    aruco::Dictionary base_dictionary = aruco::getPredefinedDictionary(aruco::DICT_4X4_250);
+    aruco::Dictionary custom_dictionary = aruco::extendDictionary(150, 4, base_dictionary);
+
+    ASSERT_EQ(custom_dictionary.bytesList.rows, 150);
+    ASSERT_EQ(cv::norm(custom_dictionary.bytesList, base_dictionary.bytesList.rowRange(0, 150)), 0.);
+}
+
 }} // namespace
