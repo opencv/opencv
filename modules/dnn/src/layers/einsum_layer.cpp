@@ -3,9 +3,9 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include <inttypes.h>
+#include <opencv2/dnn/shape_utils.hpp>
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv
 {
@@ -235,6 +235,8 @@ int letterToIndex(const char ch) {
 // https://github.com/microsoft/onnxruntime/blob/eaea34f8e29df9fb21fab675a3a895084407f306/onnxruntime/core/providers/cpu/math/einsum_utils/einsum_compute_preprocessor.cc#L8
 class LayerEinsumImpl CV_FINAL : public EinsumLayer
 {
+private:
+    Ptr<ReduceLayer> reduce;
 public:
     // Number of inputs and outputs of the layer
     int inputSize, outputSize;
@@ -383,7 +385,7 @@ public:
             // Reduce the dims that are last seen in the first input alone
             if (reducedDims.size() != 0)
             {
-                CV_Error(Error::StsNotImplemented, "Reduce is not implemented yet");
+                result = reduceSum((!preProcessedInputs[0].empty() ? preProcessedInputs[0] : rawInputs[0]), reducedDims);
             } else {
                 // Check if there is a pre-processed version of this input
                 // If so assign it to result
@@ -398,7 +400,6 @@ public:
                 // Finalize the output by applying any transpose required to get
                 // it to the required output ordering and move it to the op's output
                 result = FinalizeOutput(!result.empty() ? result : rawInputs[0], preservedDims);
-                result.copyTo(outputs[0]);
             }
         }
 
@@ -451,6 +452,33 @@ public:
     } // forward
 }; // EinsumClass
 
+Mat LayerEinsumImpl::reduceSum(Mat& src, MatShape& reduceAxis)
+{
+    // initialize ReduceLayer
+    LayerParams lp;
+    lp.set("reduce", "SUM");
+    int num_axes = reduceAxis.size();
+    lp.set("axes", DictValue::arrayInt(&reduceAxis[0] , num_axes));
+    reduce = ReduceLayer::create(lp);
+
+    // Compute output shapes
+    std::vector<MatShape> inputShapes{shape(src)};
+    std::vector<MatShape> outputShapes{MatShape()};
+    std::vector<MatShape> internalShapes {MatShape()};
+    reduce->getMemoryShapes(inputShapes, 1, outputShapes, internalShapes);
+
+    Mat output(outputShapes[0].size(), outputShapes[0].data(), CV_32FC1);
+
+    std::vector<Mat> inputs;
+    std::vector<Mat> outputs;
+    std::vector<Mat> internals;
+    inputs.emplace_back(src);
+    outputs.emplace_back(output);
+    internals.emplace_back(Mat());
+
+    reduce->forward(inputs, outputs, internals);
+    return outputs[0];
+}
 
 void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 {
