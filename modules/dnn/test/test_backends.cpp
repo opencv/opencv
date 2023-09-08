@@ -529,7 +529,10 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     expectNoFallbacksFromCUDA(net);
 }
 
-INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets(true, true, false, true, true));
+INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets(/* withInferenceEngine = */ true,
+                                                                           /* withCpuOCV = */ false,
+                                                                           /* withVkCom = */true,
+                                                                           /* withCUDA = */ true));
 
 /*
     Backend tests of layers

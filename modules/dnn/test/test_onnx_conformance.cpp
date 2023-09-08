@@ -1231,7 +1231,7 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_conformance,
     testing::Combine(
         testing::ValuesIn(testConformanceConfig),
-        dnnBackendsAndTargets(/*withInferenceEngine=*/true)
+        dnnBackendsAndTargets(/* withInferenceEngine = */ true)
     ),
     printOnnxConfParams
 );
