@@ -40,7 +40,7 @@ function detectFaces(img) {
 
 //! [Get 128 floating points feature vector]
 function face2vec(face) {
-  var blob = cv.blobFromImage(face, 1.0 / 255, {width: 96, height: 96}, [0, 0, 0, 0], true, false)
+  var blob = cv.blobFromImage(face, 1.0, {width: 112, height: 112}, [0, 0, 0, 0], true, false)
   netRecogn.setInput(blob);
   var vec = netRecogn.forward();
   blob.delete();
@@ -71,15 +71,15 @@ function loadModels(callback) {
   var utils = new Utils('');
   var proto = 'https://raw.githubusercontent.com/opencv/opencv/4.x/samples/dnn/face_detector/deploy_lowres.prototxt';
   var weights = 'https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20180205_fp16/res10_300x300_ssd_iter_140000_fp16.caffemodel';
-  var recognModel = 'https://raw.githubusercontent.com/pyannote/pyannote-data/master/openface.nn4.small2.v1.t7';
+  var recognModel =  'https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx';
   utils.createFileFromUrl('face_detector.prototxt', proto, () => {
     document.getElementById('status').innerHTML = 'Downloading face_detector.caffemodel';
     utils.createFileFromUrl('face_detector.caffemodel', weights, () => {
       document.getElementById('status').innerHTML = 'Downloading OpenFace model';
-      utils.createFileFromUrl('face_recognition.t7', recognModel, () => {
+      utils.createFileFromUrl('face_recognition_sface_2021dec.onnx', recognModel, () => {
         document.getElementById('status').innerHTML = '';
         netDet = cv.readNetFromCaffe('face_detector.prototxt', 'face_detector.caffemodel');
-        netRecogn = cv.readNetFromTorch('face_recognition.t7');
+        netRecogn = cv.readNet('face_recognition_sface_2021dec.onnx');
         callback();
       });
     });
@@ -121,8 +121,8 @@ function main() {
       persons[name] = face2vec(face).clone();
 
       var canvas = document.createElement("canvas");
-      canvas.setAttribute("width", 96);
-      canvas.setAttribute("height", 96);
+      canvas.setAttribute("width", 112);
+      canvas.setAttribute("height", 112);
       var cell = document.getElementById("targetImgs").insertCell(0);
       cell.appendChild(canvas);
 
