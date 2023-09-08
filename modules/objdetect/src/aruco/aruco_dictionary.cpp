@@ -355,6 +355,7 @@ static int _getSelfDistance(const Mat &marker) {
 
 
 Dictionary extendDictionary(int nMarkers, int markerSize, const Dictionary &baseDictionary, int randomSeed) {
+    CV_Assert(nMarkers > 0);
     RNG rng((uint64)(randomSeed));
 
     Dictionary out = Dictionary(Mat(), markerSize);
@@ -370,7 +371,7 @@ Dictionary extendDictionary(int nMarkers, int markerSize, const Dictionary &base
     // if baseDictionary is provided, calculate its intermarker distance
     if(baseDictionary.bytesList.rows > 0) {
         CV_Assert(baseDictionary.markerSize == markerSize);
-        out.bytesList = baseDictionary.bytesList.clone();
+        out.bytesList = baseDictionary.bytesList.rowRange(0, min(nMarkers, baseDictionary.bytesList.rows)).clone();
 
         int minDistance = markerSize * markerSize + 1;
         for(int i = 0; i < out.bytesList.rows; i++) {
