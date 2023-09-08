@@ -79,7 +79,7 @@ function loadModels(callback) {
       utils.createFileFromUrl('face_recognition_sface_2021dec.onnx', recognModel, () => {
         document.getElementById('status').innerHTML = '';
         netDet = cv.readNetFromCaffe('face_detector.prototxt', 'face_detector.caffemodel');
-        netRecogn = cv.readNetFromONNX('face_recognition_sface_2021dec.onnx');
+        netRecogn = cv.readNet('face_recognition_sface_2021dec.onnx');
         callback();
       });
     });
