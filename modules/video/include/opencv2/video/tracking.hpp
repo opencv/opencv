@@ -865,7 +865,7 @@ public:
     virtual ~TrackerNano() CV_OVERRIDE;
 
     struct CV_EXPORTS_W_SIMPLE Params
-    {
+    {600
         CV_WRAP Params();
         CV_PROP_RW std::string backbone;
         CV_PROP_RW std::string neckhead;
@@ -889,8 +889,8 @@ public:
 
 /** @brief the vit tracker is a super lightweight dnn-based general object tracking.
  *
- *  Vit tracker is much faster and extremely lightweight due to special model structure, the model file is about 600KB.
- *  Model download link: https://github.com/opencv/opencv_extra/blob/4.x/testdata/dnn/onnx/models/vitTracker.onnx
+ *  Vit tracker is much faster and extremely lightweight due to special model structure, the model file is about 767KB.
+ *  Model download link: https://github.com/opencv/opencv_zoo/tree/main/models/object_tracking_vittrack/vitTracker.onnx
  *  Author: PengyuLiu, 1872918507@qq.com
  */
 class CV_EXPORTS_W TrackerVit : public Tracker

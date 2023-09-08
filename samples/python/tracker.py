@@ -112,10 +112,13 @@ class App(object):
                 break
 
             ok, newbox = self.tracker.update(image)
+            score = self.tracker.getTrackingScore()
             #print(ok, newbox)
 
             if ok:
                 cv.rectangle(image, newbox, (200,0,0))
+                cv.putText(image, self.trackerAlgorithm, (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv.putText(image, str(score), (50, 100), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
             cv.imshow("tracking", image)
             k = cv.waitKey(1)
@@ -131,7 +134,7 @@ if __name__ == '__main__':
     print(__doc__)
     parser = argparse.ArgumentParser(description="Run tracker")
     parser.add_argument("--input", type=str, default="vtest.avi", help="Path to video source")
-    parser.add_argument("--tracker_algo", type=str, default="nanotrack", help="One of available tracking algorithms: mil, goturn, dasiamrpn, nanotrack")
+    parser.add_argument("--tracker_algo", type=str, default="nanotrack", help="One of available tracking algorithms: mil, goturn, dasiamrpn, nanotrack, vittrack")
     parser.add_argument("--goturn", type=str, default="goturn.prototxt", help="Path to GOTURN architecture")
     parser.add_argument("--goturn_model", type=str, default="goturn.caffemodel", help="Path to GOTERN model")
     parser.add_argument("--dasiamrpn_net", type=str, default="dasiamrpn_model.onnx", help="Path to onnx model of DaSiamRPN net")
