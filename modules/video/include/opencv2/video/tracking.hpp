@@ -865,7 +865,7 @@ public:
     virtual ~TrackerNano() CV_OVERRIDE;
 
     struct CV_EXPORTS_W_SIMPLE Params
-    {600
+    {
         CV_WRAP Params();
         CV_PROP_RW std::string backbone;
         CV_PROP_RW std::string neckhead;
