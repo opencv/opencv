@@ -7,7 +7,7 @@
 
     <target name="compile">
         <mkdir dir="${dstDir}"/>
-        <javac includeantruntime="false" srcdir="${srcDir}" destdir="${dstDir}" classpathref="classpath" source="8" target="8"/>
+        <javac includeantruntime="false" srcdir="${srcDir}" destdir="${dstDir}" classpathref="classpath"/>
     </target>
 
 </project>

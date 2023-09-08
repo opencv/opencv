@@ -8,7 +8,7 @@
     </tstamp>
 
   <target name="jar">
-    <javac sourcepath="" srcdir="java" destdir="build/classes" debug="on" includeantruntime="false" source="8" target="8" @OPENCV_ANT_JAVAC_EXTRA_ATTRS@ >
+    <javac sourcepath="" srcdir="java" destdir="build/classes" debug="on" includeantruntime="false" @OPENCV_ANT_JAVAC_EXTRA_ATTRS@ >
       <include name="**/*.java"/>
       <compilerarg line="-encoding utf-8"/>
     </javac>
