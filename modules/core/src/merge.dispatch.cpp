@@ -118,6 +118,7 @@ void merge(const Mat* mv, size_t n, OutputArray _dst)
     CV_INSTRUMENT_REGION();
 
     CV_Assert( mv && n > 0 );
+    CV_Assert(!mv[0].empty());
 
     int depth = mv[0].depth();
     bool allch1 = true;
