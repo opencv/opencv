@@ -5,6 +5,16 @@ import java.lang.ref.ReferenceQueue;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * This class is a Java 8+ implementation Cleaner similar to java.lang.ref.Cleaner available
+ * from Java 9.
+ * <p>
+ * This implementation replace finalize() method that is deprecated since Java 9 and for removal
+ * since Java 18
+ * <p>
+ * When OpenCV has Java 8 as its minimum version, this class can be removed and replaced by java.lang.ref.Cleaner.
+ * In Mat, <code>public static final Cleaner cleaner = Cleaner.create();</code>
+ */
 public final class CustomCleaner {
 
     final PhantomCleanable phantomCleanableList;

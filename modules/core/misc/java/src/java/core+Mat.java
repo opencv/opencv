@@ -14,7 +14,7 @@ public class Mat {
         if (addr == 0)
             throw new UnsupportedOperationException("Native object address is NULL");
         nativeObj = addr;
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
     }
 
     //
@@ -24,7 +24,7 @@ public class Mat {
     // javadoc: Mat::Mat()
     public Mat() {
         nativeObj = n_Mat();
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
     }
 
     //
@@ -34,7 +34,7 @@ public class Mat {
     // javadoc: Mat::Mat(rows, cols, type)
     public Mat(int rows, int cols, int type) {
         nativeObj = n_Mat(rows, cols, type);
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
     }
 
     //
@@ -44,7 +44,7 @@ public class Mat {
     // javadoc: Mat::Mat(rows, cols, type, data)
     public Mat(int rows, int cols, int type, ByteBuffer data) {
         nativeObj = n_Mat(rows, cols, type, data);
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
     }
 
     //
@@ -54,7 +54,7 @@ public class Mat {
     // javadoc: Mat::Mat(rows, cols, type, data, step)
     public Mat(int rows, int cols, int type, ByteBuffer data, long step) {
         nativeObj = n_Mat(rows, cols, type, data, step);
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
     }
 
     //
@@ -64,7 +64,7 @@ public class Mat {
     // javadoc: Mat::Mat(size, type)
     public Mat(Size size, int type) {
         nativeObj = n_Mat(size.width, size.height, type);
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
     }
 
     //
@@ -74,7 +74,7 @@ public class Mat {
     // javadoc: Mat::Mat(sizes, type)
     public Mat(int[] sizes, int type) {
         nativeObj = n_Mat(sizes.length, sizes, type);
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
     }
 
     //
@@ -84,7 +84,7 @@ public class Mat {
     // javadoc: Mat::Mat(rows, cols, type, s)
     public Mat(int rows, int cols, int type, Scalar s) {
         nativeObj = n_Mat(rows, cols, type, s.val[0], s.val[1], s.val[2], s.val[3]);
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
     }
 
     //
@@ -94,7 +94,7 @@ public class Mat {
     // javadoc: Mat::Mat(size, type, s)
     public Mat(Size size, int type, Scalar s) {
         nativeObj = n_Mat(size.width, size.height, type, s.val[0], s.val[1], s.val[2], s.val[3]);
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
     }
 
     //
@@ -104,7 +104,7 @@ public class Mat {
     // javadoc: Mat::Mat(sizes, type, s)
     public Mat(int[] sizes, int type, Scalar s) {
         nativeObj = n_Mat(sizes.length, sizes, type, s.val[0], s.val[1], s.val[2], s.val[3]);
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
     }
 
     //
@@ -114,13 +114,13 @@ public class Mat {
     // javadoc: Mat::Mat(m, rowRange, colRange)
     public Mat(Mat m, Range rowRange, Range colRange) {
         nativeObj = n_Mat(m.nativeObj, rowRange.start, rowRange.end, colRange.start, colRange.end);
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
     }
 
     // javadoc: Mat::Mat(m, rowRange)
     public Mat(Mat m, Range rowRange) {
         nativeObj = n_Mat(m.nativeObj, rowRange.start, rowRange.end);
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
     }
 
     //
@@ -130,7 +130,7 @@ public class Mat {
     // javadoc: Mat::Mat(m, ranges)
     public Mat(Mat m, Range[] ranges) {
         nativeObj = n_Mat(m.nativeObj, ranges);
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
     }
 
     //
@@ -140,7 +140,13 @@ public class Mat {
     // javadoc: Mat::Mat(m, roi)
     public Mat(Mat m, Rect roi) {
         nativeObj = n_Mat(m.nativeObj, roi.y, roi.y + roi.height, roi.x, roi.x + roi.width);
-        cleaner.register(this, () -> n_delete(nativeObj));
+        registerCleaner();
+    }
+
+    protected void registerCleaner(){
+        // The n_delete action must not refer to the object being registered. So, do not use nativeObj directly.
+        long nativeObjCopy = nativeObj;
+        cleaner.register(this, () -> n_delete(nativeObjCopy));
     }
 
     //

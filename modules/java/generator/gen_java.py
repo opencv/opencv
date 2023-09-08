@@ -366,7 +366,7 @@ class ClassInfo(GeneralInfo):
                             module = m,
                             name = self.name,
                             jname = self.jname,
-                            jcleaner = "org.opencv.core.Mat.cleaner.register(this, () -> delete(nativeObj));",
+                            jcleaner = "long nativeObjCopy = nativeObj;\n      org.opencv.core.Mat.cleaner.register(this, () -> delete(nativeObjCopy));",
                             imports = "\n".join(self.getAllImports(M)),
                             docs = self.docstring,
                             annotation = "\n" + "\n".join(self.annotation) if self.annotation else "",
@@ -949,7 +949,7 @@ class JavaWrapperGenerator(object):
                     tail = ")"
                 else:
                     ret_val = "nativeObj = "
-                    tail = ";\n        org.opencv.core.Mat.cleaner.register(this, () -> delete(nativeObj))"
+                    tail = ";\n        long nativeObjCopy = nativeObj;\n        org.opencv.core.Mat.cleaner.register(this, () -> delete(nativeObjCopy))"
                 ret = ""
             elif self.isWrapped(ret_type): # wrapped class
                 constructor = self.getClass(ret_type).jname + "("
