@@ -252,7 +252,7 @@ void NetImplOpenVINO::addNgraphOutputs(LayerData& ld)
             CV_Assert(!ieInpNode->net.empty());
             if (layerNet != ieInpNode->net)
             {
-                CV_LOG_DEBUG(NULL, "DNN/IE: pin output between subnets: " << ieInpNode->node->get_friendly_name());
+                CV_LOG_DEBUG(NULL, "DNN/IE: pin output between subnets: " << ieInpNode->node.get_node()->get_friendly_name());
                 ieInpNode->net->addOutput(ieInpNode);
             }
         }
