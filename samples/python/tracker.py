@@ -112,13 +112,10 @@ class App(object):
                 break
 
             ok, newbox = self.tracker.update(image)
-            score = self.tracker.getTrackingScore()
             #print(ok, newbox)
 
             if ok:
                 cv.rectangle(image, newbox, (200,0,0))
-                cv.putText(image, self.trackerAlgorithm, (50, 50), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                cv.putText(image, str(score), (50, 100), cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
             cv.imshow("tracking", image)
             k = cv.waitKey(1)

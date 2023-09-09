@@ -56,8 +56,8 @@ public:
 
 
 protected:
-    const cv::Size searchSize{256, 256};
-    const cv::Size templateSize{128, 128};
+    const Size searchSize{256, 256};
+    const Size templateSize{128, 128};
 
     Mat hanningWindow;
 
@@ -65,7 +65,7 @@ protected:
     Mat image;
 };
 
-static void crop_image(const cv::Mat& src, cv::Mat& dst, cv::Rect box, int factor)
+static void crop_image(const Mat& src, Mat& dst, Rect box, int factor)
 {
     int x = box.x, y = box.y, w = box.width, h = box.height;
     int crop_sz = ceil(sqrt(w * h) * factor);
@@ -80,31 +80,31 @@ static void crop_image(const cv::Mat& src, cv::Mat& dst, cv::Rect box, int facto
     int x2_pad = std::max(x2 - src.size[1] + 1, 0);
     int y2_pad = std::max(y2 - src.size[0] + 1, 0);
 
-    cv::Rect roi(x1 + x1_pad, y1 + y1_pad, x2 - x2_pad - x1 - x1_pad, y2 - y2_pad - y1 - y1_pad);
-    cv::Mat im_crop = src(roi);
-    cv::copyMakeBorder(im_crop, dst, y1_pad, y2_pad, x1_pad, x2_pad, cv::BORDER_CONSTANT);
+    Rect roi(x1 + x1_pad, y1 + y1_pad, x2 - x2_pad - x1 - x1_pad, y2 - y2_pad - y1 - y1_pad);
+    Mat im_crop = src(roi);
+    copyMakeBorder(im_crop, dst, y1_pad, y2_pad, x1_pad, x2_pad, BORDER_CONSTANT);
 }
 
-static void preprocess(const cv::Mat& src, cv::Mat& dst, cv::Size size)
+static void preprocess(const Mat& src, Mat& dst, Size size)
 {
-    cv::Scalar meanvalue(0.485, 0.456, 0.406);
-    cv::Scalar stdvalue(0.229, 0.224, 0.225);
+    Scalar meanvalue(0.485, 0.456, 0.406);
+    Scalar stdvalue(0.229, 0.224, 0.225);
 
-    cv::Mat mean = cv::Mat(size, CV_32FC3, meanvalue);
-    cv::Mat std = cv::Mat(size, CV_32FC3, stdvalue);
-    mean = cv::dnn::blobFromImage(mean, 1.0, cv::Size(), cv::Scalar(), false);
-    std = cv::dnn::blobFromImage(std, 1.0, cv::Size(), cv::Scalar(), false);
+    Mat mean = Mat(size, CV_32FC3, meanvalue);
+    Mat std = Mat(size, CV_32FC3, stdvalue);
+    mean = dnn::blobFromImage(mean, 1.0, Size(), Scalar(), false);
+    std = dnn::blobFromImage(std, 1.0, Size(), Scalar(), false);
 
-    cv::Mat img;
-    cv::resize(src, img, size);
+    Mat img;
+    resize(src, img, size);
 
-    dst = cv::dnn::blobFromImage(img, 1.0, cv::Size(), cv::Scalar(), false);
+    dst = dnn::blobFromImage(img, 1.0, Size(), Scalar(), false);
     dst /= 255;
     dst = (dst - mean) / std;
 }
 
-static cv::Mat hann1d(int sz, bool centered = true) {
-    cv::Mat hanningWindow(sz, 1, CV_32FC1);
+static Mat hann1d(int sz, bool centered = true) {
+    Mat hanningWindow(sz, 1, CV_32FC1);
     float* data = hanningWindow.ptr<float>(0);
 
     if(centered) {
@@ -125,24 +125,24 @@ static cv::Mat hann1d(int sz, bool centered = true) {
     return hanningWindow;
 }
 
-static cv::Mat hann2d(cv::Size size, bool centered = true) {
+static Mat hann2d(Size size, bool centered = true) {
     int rows = size.height;
     int cols = size.width;
 
-    cv::Mat hanningWindowRows = hann1d(rows, centered);
-    cv::Mat hanningWindowCols = hann1d(cols, centered);
+    Mat hanningWindowRows = hann1d(rows, centered);
+    Mat hanningWindowCols = hann1d(cols, centered);
 
-    cv::Mat hanningWindow = hanningWindowRows * hanningWindowCols.t();
+    Mat hanningWindow = hanningWindowRows * hanningWindowCols.t();
 
     return hanningWindow;
 }
 
-static cv::Rect returnfromcrop(float x, float y, float w, float h, cv::Rect res_Last)
+static Rect returnfromcrop(float x, float y, float w, float h, Rect res_Last)
 {
     int cropwindowwh = 4 * sqrt(res_Last.width * res_Last.height);
     int x0 = res_Last.x + 0.5 * res_Last.width - 0.5 * cropwindowwh;
     int y0 = res_Last.y + 0.5 * res_Last.height - 0.5 * cropwindowwh;
-    cv::Rect finalres;
+    Rect finalres;
     finalres.x = x * cropwindowwh + x0;
     finalres.y = y * cropwindowwh + y0;
     finalres.width = w * cropwindowwh;
@@ -158,7 +158,7 @@ void TrackerVitImpl::init(InputArray image_, const Rect &boundingBox_)
     Mat blob;
     preprocess(crop, blob, templateSize);
     net.setInput(blob, "template");
-    cv::Size size(16, 16);
+    Size size(16, 16);
     hanningWindow = hann2d(size, false);
     rect_last = boundingBox_;
 }
@@ -176,15 +176,15 @@ bool TrackerVitImpl::update(InputArray image_, Rect &boundingBoxRes)
     net.forward(outs, outputName);
     CV_Assert(outs.size() == 3);
 
-    cv::Mat conf_map = outs[0].reshape(0, {16, 16});
-    cv::Mat size_map = outs[1].reshape(0, {2, 16, 16});
-    cv::Mat offset_map = outs[2].reshape(0, {2, 16, 16});
+    Mat conf_map = outs[0].reshape(0, {16, 16});
+    Mat size_map = outs[1].reshape(0, {2, 16, 16});
+    Mat offset_map = outs[2].reshape(0, {2, 16, 16});
 
-    cv::multiply(conf_map, (1.0 - hanningWindow), conf_map);
+    multiply(conf_map, (1.0 - hanningWindow), conf_map);
 
     double maxVal;
-    cv::Point maxLoc;
-    cv::minMaxLoc(conf_map, nullptr, &maxVal, nullptr, &maxLoc);
+    Point maxLoc;
+    minMaxLoc(conf_map, nullptr, &maxVal, nullptr, &maxLoc);
     tracking_score = maxVal;
 
     float cx = (maxLoc.x + offset_map.at<float>(0, maxLoc.y, maxLoc.x)) / 16;
@@ -192,7 +192,7 @@ bool TrackerVitImpl::update(InputArray image_, Rect &boundingBoxRes)
     float w = size_map.at<float>(0, maxLoc.y, maxLoc.x);
     float h = size_map.at<float>(1, maxLoc.y, maxLoc.x);
 
-    cv::Rect finalres = returnfromcrop(cx - w / 2, cy - h / 2, w, h, rect_last);
+    Rect finalres = returnfromcrop(cx - w / 2, cy - h / 2, w, h, rect_last);
     rect_last = finalres;
     boundingBoxRes = finalres;
     return true;
@@ -212,7 +212,7 @@ Ptr<TrackerVit> TrackerVit::create(const TrackerVit::Params& parameters)
 Ptr<TrackerVit> TrackerVit::create(const TrackerVit::Params& parameters)
 {
     CV_UNUSED(parameters);
-    CV_Error(cv::Error::StsNotImplemented, "to use vittrack, the tracking module needs to be built with opencv_dnn !");
+    CV_Error(Error::StsNotImplemented, "to use vittrack, the tracking module needs to be built with opencv_dnn !");
 }
 #endif  // OPENCV_HAVE_DNN
 }
