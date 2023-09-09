@@ -1236,6 +1236,32 @@ void InfEngineNgraphNet::forward(const std::vector<Ptr<BackendWrapper> >& outBlo
 #endif // OpenVINO >= 2022.1
 }
 
+ngraph::Output<ngraph::Node> ngraphQuantize(ngraph::Output<ngraph::Node> input, float output_sc, float output_zp) {
+    float outLow = -128, outHigh = 127;
+    float inpLow = output_sc * (outLow - output_zp);
+    float inpHigh = output_sc * (outHigh - output_zp);
+    return std::make_shared<ngraph::op::FakeQuantize>(input,
+        std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+        std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+        std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+        std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+        256 // levels
+    );
+}
+
+ngraph::Output<ngraph::Node> ngraphDequantize(ngraph::Output<ngraph::Node> input, float input_sc, float input_zp) {
+    float inpLow = -128, inpHigh = 127;
+    float outLow = input_sc * (inpLow - input_zp);
+    float outHigh = input_sc * (inpHigh - input_zp);
+    return std::make_shared<ngraph::op::FakeQuantize>(input,
+        std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
+        std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
+        std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
+        std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
+        256 // levels
+    );
+}
+
 #endif
 
 }}

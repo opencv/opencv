@@ -251,18 +251,9 @@ public:
     {
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
-        float inpLow = -128, inpHigh = 127;
-        float outLow = input_sc * (inpLow - input_zp);
-        float outHigh = input_sc * (inpHigh - input_zp);
-        input = std::make_shared<ngraph::op::FakeQuantize>(input,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        input = ngraphDequantize(input, input_sc, input_zp);
 
-        std::shared_ptr<ngraph::Node> res = nullptr;
+        ngraph::Output<ngraph::Node> res;
         if (type == "ReLU6Int8") {
             res = std::make_shared<ngraph::op::Clamp>(input, 0.0f, 6.0f);
         } else if (type == "ReLUInt8") {
@@ -284,16 +275,8 @@ public:
             CV_Error(Error::StsNotImplemented, type + " activation with OpenVINO");
         }
 
-        outLow = -128; outHigh = 127;
-        inpLow = output_sc * (outLow - output_zp);
-        inpHigh = output_sc * (outHigh - output_zp);
-        res = std::make_shared<ngraph::op::FakeQuantize>(res,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        res = ngraphQuantize(res, output_sc, output_zp);
+
         return new InfEngineNgraphNode(res);
     }
 #endif  // HAVE_DNN_NGRAPH

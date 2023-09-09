@@ -196,16 +196,7 @@ public:
             ieInpNodes[i] = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
         }
 
-        float inpLow = -128, inpHigh = 127;
-        float outLow = inp_sc[0] * (inpLow - inp_zp[0]);
-        float outHigh = inp_sc[0] * (inpHigh - inp_zp[0]);
-        ieInpNodes[0] = std::make_shared<ngraph::op::FakeQuantize>(ieInpNodes[0],
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        ieInpNodes[0] = ngraphDequantize(ieInpNodes[0], inp_sc[0], inp_zp[0]);
 
         CV_Assert(!blobs.empty() || ieInpNodes.size() == 1 + (int)hasWeights + (int)hasBias);
 
@@ -244,16 +235,8 @@ public:
             res = std::make_shared<ngraph::op::v1::Add>(res, bias);
         }
 
-        outLow = -128; outHigh = 127;
-        inpLow = output_sc * (outLow - output_zp);
-        inpHigh = output_sc * (outHigh - output_zp);
-        res = std::make_shared<ngraph::op::FakeQuantize>(res,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        res = ngraphQuantize(res, output_sc, output_zp);
+
         return new InfEngineNgraphNode(res);
     }
 #endif  // HAVE_DNN_NGRAPH

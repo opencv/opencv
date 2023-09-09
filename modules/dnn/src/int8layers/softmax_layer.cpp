@@ -202,35 +202,16 @@ public:
     {
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
-        // TODO: layer mush work in INT8 precision
-        float inpLow = -128, inpHigh = 127;
-        float outLow = input_sc * (inpLow - input_zp);
-        float outHigh = input_sc * (inpHigh - input_zp);
-        input = std::make_shared<ngraph::op::FakeQuantize>(input,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        input = ngraphDequantize(input, input_sc, input_zp);
 
-        std::shared_ptr<ngraph::Node> res = nullptr;
+        ngraph::Output<ngraph::Node> res;
         if (logSoftMax) {
             res = std::make_shared<ngraph::op::v5::LogSoftmax>(input, axis);
         } else {
             res = std::make_shared<ngraph::op::v1::Softmax>(input, axis);
         }
 
-        outLow = -128; outHigh = 127;
-        inpLow = output_sc * (outLow - output_zp);
-        inpHigh = output_sc * (outHigh - output_zp);
-        res = std::make_shared<ngraph::op::FakeQuantize>(res,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        res = ngraphQuantize(res, output_sc, output_zp);
         return new InfEngineNgraphNode(res);
     }
 #endif  // HAVE_DNN_NGRAPH

@@ -245,36 +245,18 @@ public:
     {
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
-        float inpLow = -128, inpHigh = 127;
-        float outLow = input_sc * (inpLow - input_zp);
-        float outHigh = input_sc * (inpHigh - input_zp);
-        input = std::make_shared<ngraph::op::FakeQuantize>(input,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        input = ngraphDequantize(input, input_sc, input_zp);
 
         std::vector<size_t> shape(input.get_shape().size(), 1);
         shape[1] = origin_weights.total();
 
-        std::shared_ptr<ngraph::Node> res;
+        ngraph::Output<ngraph::Node> res;
         auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, origin_weights.data);
         auto ieBias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, origin_bias.data);
         res = std::make_shared<ngraph::op::v1::Multiply>(input, ieWeights);
         res = std::make_shared<ngraph::op::v1::Add>(res, ieBias);
 
-        outLow = -128; outHigh = 127;
-        inpLow = output_sc * (outLow - output_zp);
-        inpHigh = output_sc * (outHigh - output_zp);
-        res = std::make_shared<ngraph::op::FakeQuantize>(res,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        res = ngraphQuantize(res, output_sc, output_zp);
         return new InfEngineNgraphNode(res);
     }
 #endif  // HAVE_DNN_NGRAPH

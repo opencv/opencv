@@ -605,16 +605,9 @@ public:
         if (!padMode.empty())
             pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
 
-        const float low = -128, high = 127;
-        float outLow = input_sc * (low - input_zp), outHigh = input_sc * (high - input_zp);
-        ieInpNode = std::make_shared<ngraph::op::FakeQuantize>(ieInpNode,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        ieInpNode = ngraphDequantize(ieInpNode, input_sc, input_zp);
 
+        const float low = -128, high = 127;
         std::vector<float> inpLows(numOutput, low);
         std::vector<float> inpHighs(numOutput, high);
         std::vector<float> outLows(numOutput);
@@ -643,7 +636,7 @@ public:
             256 // levels
         );
 
-        std::shared_ptr<ngraph::Node> conv_node;
+        ngraph::Output<ngraph::Node> conv_node;
         if (group != 1) {
             conv_node = std::make_shared<ngraph::op::v1::GroupConvolution>(
                                 ieInpNode, ieWeights,
@@ -662,8 +655,8 @@ public:
                                 pad_type);
         }
 
-        std::vector<size_t> shape(conv_node->get_shape().size(), 1);
-        shape[1] = conv_node->get_shape()[1];
+        std::vector<size_t> shape(conv_node.get_shape().size(), 1);
+        shape[1] = conv_node.get_shape()[1];
         if (biasvec.size() || nodes.size() == 3)
         {
             std::shared_ptr<ngraph::Node> bias;
@@ -684,16 +677,7 @@ public:
             conv_node = std::make_shared<ngraph::op::v1::Add>(conv_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
         }
 
-        outLow = -128, outHigh = 127;
-        float inpLow = output_sc * (outLow - output_zp);
-        float inpHigh = output_sc * (outHigh - output_zp);
-        conv_node = std::make_shared<ngraph::op::FakeQuantize>(conv_node,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        conv_node = ngraphQuantize(conv_node, output_sc, output_zp);
 
         return new InfEngineNgraphNode(conv_node);
     }

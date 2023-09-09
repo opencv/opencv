@@ -380,24 +380,9 @@ public:
         {
             ieInpNodes[i] = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
 
-            float inpLow = -128, inpHigh = 127;
-            float outLow = inpLow;
-            float outHigh = inpHigh;
-            if (op == PROD) {
-                outLow -= zeropoints[i];
-                outHigh -= zeropoints[i];
-            }
-            if (!coeffs.empty()) {
-                outLow *= coeffs[i];
-                outHigh *= coeffs[i];
-            }
-            ieInpNodes[i] = std::make_shared<ngraph::op::FakeQuantize>(ieInpNodes[i],
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-                256 // levels
-            );
+            float input_sc = !coeffs.empty() ? coeffs[i] : 1.0f;
+            float input_zp = op == PROD ? zeropoints[i] : 0.0f;
+            ieInpNodes[i] = ngraphDequantize(ieInpNodes[i], input_sc, input_zp);
         }
 
         auto res = ieInpNodes[0];
@@ -411,16 +396,7 @@ public:
             }
         }
 
-        float outLow = -128, outHigh = 127;
-        float inpLow = outLow - offset;
-        float inpHigh = outHigh - offset;
-        res = std::make_shared<ngraph::op::FakeQuantize>(res,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        res = ngraphQuantize(res, 1.0f, offset);
 
         return new InfEngineNgraphNode(res);
     }

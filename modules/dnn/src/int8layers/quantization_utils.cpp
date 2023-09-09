@@ -179,17 +179,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         const auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-
-        float outLow = -128, outHigh = 127;
-        float inpLow = scales[0] * (outLow - zeropoints[0]);
-        float inpHigh = scales[0] * (outHigh - zeropoints[0]);
-        auto quantized = std::make_shared<ngraph::op::FakeQuantize>(input,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        auto quantized = ngraphQuantize(input, scales[0], zeropoints[0]);
         return Ptr<BackendNode>(new InfEngineNgraphNode(quantized));
     }
 #endif  // HAVE_DNN_NGRAPH
@@ -313,17 +303,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         const auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-
-        float inpLow = -128, inpHigh = 127;
-        float outLow = scales[0] * (inpLow - zeropoints[0]);
-        float outHigh = scales[0] * (inpHigh - zeropoints[0]);
-        auto quantized = std::make_shared<ngraph::op::FakeQuantize>(input,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        auto quantized = ngraphDequantize(input, scales[0], zeropoints[0]);
         return new InfEngineNgraphNode(quantized);
     }
 #endif  // HAVE_DNN_NGRAPH

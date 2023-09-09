@@ -425,16 +425,10 @@ public:
                 std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{shape.size()}, shape.data()),
                 true
             );
-            const float low = -128, high = 127;
-            float outLow = input_sc * (low - input_zp), outHigh = input_sc * (high - input_zp);
-            input = std::make_shared<ngraph::op::FakeQuantize>(input,
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &low),
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &high),
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-                256 // levels
-            );
 
+            input = ngraphDequantize(input, input_sc, input_zp);
+
+            const float low = -128, high = 127;
             std::vector<float> inpLows(numOutput, low);
             std::vector<float> inpHighs(numOutput, high);
             std::vector<float> outLows(numOutput);
@@ -468,16 +462,8 @@ public:
             matmul = std::make_shared<ngraph::op::v1::Add>(matmul, bias_node);
         }
 
-        float outLow = -128, outHigh = 127;
-        float inpLow = output_sc * (outLow - output_zp);
-        float inpHigh = output_sc * (outHigh - output_zp);
-        matmul = std::make_shared<ngraph::op::FakeQuantize>(matmul,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &inpHigh),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outLow),
-            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &outHigh),
-            256 // levels
-        );
+        matmul = ngraphQuantize(matmul, output_sc, output_zp);
+
         return new InfEngineNgraphNode(matmul);
     }
 #endif  // HAVE_DNN_NGRAPH
