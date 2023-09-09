@@ -73,7 +73,7 @@ if (typeof module !== 'undefined' && module.exports) {
     var cv = require('./opencv.js'); // eslint-disable-line no-var
 }
 
-QUnit.module('Core', {});
+QUnit.module('CoreMat', {});
 
 QUnit.test('test_mat_creation', function(assert) {
     // Mat constructors.
