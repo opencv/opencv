@@ -930,20 +930,6 @@ TEST_F(TestFixtureSkip, NoBodyRun) {
     FAIL() << "Unreachable code called";
 }
 
-// Check no test body started in case of skip exception at static SetUpTestCase
-struct TestSetUpTestCaseSkip: public ::testing::Test {
-    static void SetUpTestCase() {
-        throw SkipTestException("Skip test at SetUpTestCase");
-    }
-};
-
-TEST_F(TestSetUpTestCaseSkip, NoBodyRun) {
-    FAIL() << "Unreachable code called";
-}
-TEST_F(TestSetUpTestCaseSkip, NoBodyRun2) {
-    FAIL() << "Unreachable code called";
-}
-
 struct TestSetUpSkip: public ::testing::Test {
     virtual void SetUp() {
         throw SkipTestException("Skip test at SetUp");
@@ -953,5 +939,23 @@ struct TestSetUpSkip: public ::testing::Test {
 TEST_F(TestSetUpSkip, NoBodyRun) {
     FAIL() << "Unreachable code called";
 }
+
+// Check that single test skip won't break others
+TEST(TestCaseSkip, skipped_test)
+{
+    throw SkipTestException("Skip test");
+}
+
+static bool testRun = false;
+TEST(TestCaseSkip, executed_test)
+{
+    testRun = true;
+}
+
+TEST(TestCaseSkipCheck, run)
+{
+    ASSERT_TRUE(testRun);
+}
+
 
 }} // namespace

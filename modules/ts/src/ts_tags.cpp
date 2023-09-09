@@ -11,7 +11,7 @@ namespace cvtest {
 static bool printTestTag = false;
 
 static std::vector<std::string> currentDirectTestTags, currentImpliedTestTags;
-static std::vector<const ::testing::TestCase*> skipped_tests;
+static std::vector<const ::testing::TestInfo*> skipped_tests;
 
 static std::map<std::string, int>& getTestTagsSkipCounts()
 {
@@ -26,7 +26,7 @@ static std::map<std::string, int>& getTestTagsSkipExtraCounts()
 void testTagIncreaseSkipCount(const std::string& tag, bool isMain, bool appendSkipTests)
 {
     if (appendSkipTests)
-        skipped_tests.push_back(::testing::UnitTest::GetInstance()->current_test_case());
+        skipped_tests.push_back(::testing::UnitTest::GetInstance()->current_test_info());
     std::map<std::string, int>& counts = isMain ? getTestTagsSkipCounts() : getTestTagsSkipExtraCounts();
     std::map<std::string, int>::iterator i = counts.find(tag);
     if (i == counts.end())
@@ -281,7 +281,7 @@ static bool isTestTagSkipped(const std::string& testTag, CV_OUT std::string& ski
 void checkTestTags()
 {
     if (std::find(skipped_tests.begin(), skipped_tests.end(),
-                  ::testing::UnitTest::GetInstance()->current_test_case()) != skipped_tests.end()) {
+                  ::testing::UnitTest::GetInstance()->current_test_info()) != skipped_tests.end()) {
         throw details::SkipTestExceptionBase(false);
     }
 
@@ -312,7 +312,7 @@ void checkTestTags()
             }
             if (found != tags.size())
             {
-                skipped_tests.push_back(::testing::UnitTest::GetInstance()->current_test_case());
+                skipped_tests.push_back(::testing::UnitTest::GetInstance()->current_test_info());
                 throw details::SkipTestExceptionBase("Test tags don't pass required tags list (--test_tag parameter)", true);
             }
         }
@@ -346,7 +346,7 @@ void checkTestTags()
 
     if (!skip_message.empty())
     {
-        skipped_tests.push_back(::testing::UnitTest::GetInstance()->current_test_case());
+        skipped_tests.push_back(::testing::UnitTest::GetInstance()->current_test_info());
         throw details::SkipTestExceptionBase(skip_message, true);
     }
 }
