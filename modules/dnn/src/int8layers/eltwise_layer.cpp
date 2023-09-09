@@ -374,7 +374,8 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        std::vector<std::shared_ptr<ngraph::Node>> ieInpNodes(nodes.size());
+        CV_Assert(nodes.size() >= 2);
+        std::vector<ngraph::Output<ngraph::Node>> ieInpNodes(nodes.size());
         for (size_t i = 0; i < nodes.size(); i++)
         {
             ieInpNodes[i] = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;

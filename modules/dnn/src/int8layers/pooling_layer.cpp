@@ -308,7 +308,7 @@ public:
                         ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
                         !avePoolPaddedArea, rounding_type, pad_type);
         } else if (type == SUM) {
-            ngraph::Shape inpShape = input->get_shape();
+            ngraph::Shape inpShape = input.get_shape();
             CV_Assert(inpShape.size() == 2 + kernel_size.size());
             std::vector<int64_t> axes;
             for (size_t i = 0; i < kernel_size.size(); i++)

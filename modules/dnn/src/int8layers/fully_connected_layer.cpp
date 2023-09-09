@@ -405,8 +405,8 @@ public:
         CV_CheckTypeEQ(blobs[1].type(), CV_32S, "");  // bias
         CV_CheckTypeEQ(outputMultiplier.type(), CV_32F, "");
 
-        std::shared_ptr<ngraph::Node> input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        std::shared_ptr<ngraph::Node> ieWeights, ieBias, matmul;
+        ngraph::Output<ngraph::Node> input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        ngraph::Output<ngraph::Node> ieWeights, ieBias, matmul;
         bool transA = false, transB = true;
         size_t numOutput = blobs[0].size[0];
 
@@ -418,7 +418,7 @@ public:
         }
         else
         {
-            std::vector<int> shape(1 + normalize_axis(axis, input->get_shape().size()), 0);
+            std::vector<int> shape(1 + normalize_axis(axis, input.get_shape().size()), 0);
             shape[shape.size() - 1] = -1;
             input = std::make_shared<ngraph::op::v1::Reshape>(
                 input,

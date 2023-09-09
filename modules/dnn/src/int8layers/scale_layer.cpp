@@ -191,7 +191,7 @@ public:
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        std::vector<std::shared_ptr<ngraph::Node>> ieInpNodes(nodes.size());
+        std::vector<ngraph::Output<ngraph::Node>> ieInpNodes(nodes.size());
         for (int i = 0; i < nodes.size(); ++i) {
             ieInpNodes[i] = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
         }
@@ -209,14 +209,14 @@ public:
 
         CV_Assert(!blobs.empty() || ieInpNodes.size() == 1 + (int)hasWeights + (int)hasBias);
 
-        std::shared_ptr<ngraph::Node> weights = nullptr, bias = nullptr;
+        ngraph::Output<ngraph::Node> weights, bias;
         if (blobs.empty()) {
             if (hasWeights)
                 weights = ieInpNodes[1];
             if (hasBias)
                 bias = ieInpNodes[1 + (int)hasWeights];
         } else {
-            std::vector<size_t> shape = ieInpNodes[0]->get_shape();
+            std::vector<size_t> shape = ieInpNodes[0].get_shape();
             int cAxis = normalize_axis(axis, shape.size());
 
             size_t numWeights = blobs[0].total();
@@ -236,7 +236,7 @@ public:
                 bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, blobs[(int)hasWeights].data);
         }
 
-        std::shared_ptr<ngraph::Node> res = ieInpNodes[0];
+        ngraph::Output<ngraph::Node> res = ieInpNodes[0];
         if (hasWeights) {
             res = std::make_shared<ngraph::op::v1::Multiply>(res, weights);
         }

@@ -256,7 +256,7 @@ public:
             256 // levels
         );
 
-        std::vector<size_t> shape(input->get_shape().size(), 1);
+        std::vector<size_t> shape(input.get_shape().size(), 1);
         shape[1] = origin_weights.total();
 
         std::shared_ptr<ngraph::Node> res;
