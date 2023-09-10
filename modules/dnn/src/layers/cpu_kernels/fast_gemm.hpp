@@ -52,6 +52,11 @@ void fastGemm(bool trans_a, bool trans_b,
               float alpha, const Mat &A, const Mat &B,
               float beta, Mat &C, FastGemmOpt &opt);
 
+// FIXME: B needs to 2d for now. Support nd (n>=2) B in the future.
+void fastGemmBatched(bool trans_a, bool trans_b,
+                     float alpha, const Mat &A, const Mat &B,
+                     float beta, Mat &C, FastGemmOpt &opt);
+
 }} // cv::dnn
 
 #endif // OPENCV_DNN_FAST_GEMM_HPP

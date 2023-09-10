@@ -45,6 +45,62 @@ public:
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !have_bias && !trans_a);
     }
 
+        virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
+                                 const int requiredOutputs,
+                                 std::vector<MatShape> &outputs,
+                                 std::vector<MatShape> &internals) const CV_OVERRIDE {
+        int num_inputs = static_cast<int>(inputs.size() + blobs.size());
+        CV_CheckGE(num_inputs, 2, "DNN/Gemm: Gemm takes at least two inputs");
+        CV_CheckLE(num_inputs, 3, "DNN/Gemm: Gemm takes at most three inputs");
+
+        // Check whether A and B are two dimensional
+        const auto shape_A = inputs[0];
+        const auto shape_B = const_B ? shape(blobs[0]) : inputs[1];
+        CV_CheckGE(shape_A.size(), static_cast<size_t>(2), "DNN/Gemm: Tensor A must be n-dimensional (n >= 2)");
+        CV_CheckEQ(shape_B.size(), static_cast<size_t>(2), "DNN/Gemm: Tensor B must be two dimensional");
+
+        // Check legal matrix multiplication
+        size_t dims_A = shape_A.size();
+        int ma = shape_A[dims_A - 2], na = shape_A[dims_A - 1];
+        int mb = shape_B[0], nb = shape_B[1];
+        int M = trans_a ? na : ma;
+        int N = trans_b ? mb : nb;
+        int K_a = trans_a ? ma : na;
+        int K_b = trans_b ? nb : mb;
+        CV_CheckEQ(K_a, K_b, "DNN/Gemm: Invalid dimension of dim K");
+
+        // Check whether C can be unidirectional broadcast to (M, N). Handle carefully with 1D Mat.
+        if (have_bias) {
+            const auto shape_C = const_C ? shape(blobs.back()) : inputs.back();
+
+            auto ndims_C = shape_C.size();
+            CV_CheckLE(ndims_C, static_cast<size_t>(2), "DNN/Gemm: C can only be 0d (scalar) / 1d / 2d tensor");
+
+            if (real_ndims_C == 1) { // (1,) or (N,)
+                CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N, "DNN/Gemm: invalid dimension of C");
+            } else if (real_ndims_C == 2) { // (1, 1) or (1, N) or (M, 1) or (M, N)
+                // printf("shape_C=[%d, %d]\n", shape_C[0], shape_C[1]);
+                CV_Check(shape_C[0], (shape_C[0] == 1 && shape_C[1] == 1) ||
+                                     (shape_C[0] == 1 && shape_C[1] == N) ||
+                                     (shape_C[0] == M && shape_C[1] == 1) ||
+                                     (shape_C[0] == M && shape_C[1] == N),
+                                     "DNN/Gemm: C must be of shape (1, 1) or (1, N) or (M, 1) or (M, N)");
+                if (shape_C[0] == 1) {
+                    CV_Check(shape_C[1], shape_C[1] == 1 || shape_C[1] == N, "DNN/Gemm: invalid dimension of C");
+                } else if (shape_C[0] == M) {
+                    CV_Check(shape_C[1], shape_C[1] == 1 || shape_C[1] == N, "DNN/Gemm: invalid dimension of C");
+                } else {
+                    CV_Error(Error::StsBadSize, "DNN/Gemm: invalid dimension of C");
+                }
+            }
+        }
+
+        int batches = std::accumulate(shape_A.begin(), shape_A.end() - 2, 1, std::multiplies<int>());
+        MatShape shape_y{M * batches, N};
+        outputs.assign(1, shape_y);
+        return false;
+    }
+
     // TODO: replace with cv::broadcast() once 1d mat is supported
     // FIXME: fix if conditions if 1d mat is supported properly
     void broadcastCWtihBeta(int M, int N, const Mat &C) {
@@ -92,11 +148,6 @@ public:
 
         // pack B if it is const
         if (const_B) {
-            /*
-                blobs:
-                    b,
-                    b, bias
-            */
             fastGemmPackB(blobs[0], packed_B, trans_b, opt);
         }
 
@@ -108,65 +159,12 @@ public:
             outputs_arr.getMatVector(outputs);
             const auto &Y = outputs[0];
             const auto shape_Y = shape(Y);
-            int M = shape_Y[0], N = shape_Y[1];
+            size_t dims_Y = shape_Y.size();
+            int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
 
             // broadcast
             broadcastCWtihBeta(M, N, C);
         }
-    }
-
-    virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
-                                 const int requiredOutputs,
-                                 std::vector<MatShape> &outputs,
-                                 std::vector<MatShape> &internals) const CV_OVERRIDE {
-        int num_inputs = static_cast<int>(inputs.size() + blobs.size());
-        CV_CheckGE(num_inputs, 2, "DNN/Gemm: Gemm takes at least two inputs");
-        CV_CheckLE(num_inputs, 3, "DNN/Gemm: Gemm takes at most three inputs");
-
-        // Check whether A and B are two dimensional
-        const auto shape_A = inputs[0];
-        const auto shape_B = const_B ? shape(blobs[0]) : inputs[1];
-        CV_CheckEQ(shape_A.size(), static_cast<size_t>(2), "DNN/Gemm: Tensor A must be two dimensional");
-        CV_CheckEQ(shape_B.size(), static_cast<size_t>(2), "DNN/Gemm: Tensor B must be two dimensional");
-
-        // Check legal matrix multiplication
-        int ma = shape_A[0], na = shape_A[1];
-        int mb = shape_B[0], nb = shape_B[1];
-        int M = trans_a ? na : ma;
-        int N = trans_b ? mb : nb;
-        int K_a = trans_a ? ma : na;
-        int K_b = trans_b ? nb : mb;
-        CV_CheckEQ(K_a, K_b, "DNN/Gemm: Invalid dimension of dim K");
-
-        // Check whether C can be unidirectional broadcast to (M, N). Handle carefully with 1D Mat.
-        if (have_bias) {
-            const auto shape_C = const_C ? shape(blobs.back()) : inputs.back();
-
-            auto ndims_C = shape_C.size();
-            CV_CheckLE(ndims_C, static_cast<size_t>(2), "DNN/Gemm: C can only be 0d (scalar) / 1d / 2d tensor");
-
-            if (real_ndims_C == 1) { // (1,) or (N,)
-                CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N, "DNN/Gemm: invalid dimension of C");
-            } else if (real_ndims_C == 2) { // (1, 1) or (1, N) or (M, 1) or (M, N)
-                // printf("shape_C=[%d, %d]\n", shape_C[0], shape_C[1]);
-                CV_Check(shape_C[0], (shape_C[0] == 1 && shape_C[1] == 1) ||
-                                     (shape_C[0] == 1 && shape_C[1] == N) ||
-                                     (shape_C[0] == M && shape_C[1] == 1) ||
-                                     (shape_C[0] == M && shape_C[1] == N),
-                                     "DNN/Gemm: C must be of shape (1, 1) or (1, N) or (M, 1) or (M, N)");
-                if (shape_C[0] == 1) {
-                    CV_Check(shape_C[1], shape_C[1] == 1 || shape_C[1] == N, "DNN/Gemm: invalid dimension of C");
-                } else if (shape_C[0] == M) {
-                    CV_Check(shape_C[1], shape_C[1] == 1 || shape_C[1] == N, "DNN/Gemm: invalid dimension of C");
-                } else {
-                    CV_Error(Error::StsBadSize, "DNN/Gemm: invalid dimension of C");
-                }
-            }
-        }
-
-        MatShape shape_y{M, N};
-        outputs.assign(1, shape_y);
-        return false;
     }
 
     // Y = A * B + C, note that C is unidirectionaly broadcastable to (A * B).
@@ -188,28 +186,36 @@ public:
         auto &Y = outputs[0];
 
         const auto shape_A = shape(A), shape_Y = shape(Y);
-        int ma = shape_A[0], na = shape_A[1];
-        int M = shape_Y[0], N = shape_Y[1];
+        size_t dims_A = shape_A.size();
+        int ma = shape_A[dims_A - 2], na = shape_A[dims_A - 1];
+        size_t dims_Y = shape_Y.size();
+        int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
         int K = trans_a ? ma : na;
+        int batches = std::accumulate(shape_A.begin(), shape_A.end() - 2, 1, std::multiplies<int>());
 
         // broadcast C and copy C to output
         if (have_bias) {
             if (!const_C) {
                 broadcastCWtihBeta(M, N, inputs.back());
             }
-            CV_CheckEQ(broadcast_C.size(), static_cast<size_t>(M * N), "DNN/Gemm: C is not broadcast properly");
+            int step = M * N;
+            CV_CheckEQ(broadcast_C.size(), static_cast<size_t>(step), "DNN/Gemm: C is not broadcast properly");
             float *ptr_y = Y.ptr<float>();
-            std::memcpy(ptr_y, broadcast_C.data(), M * N * sizeof(float));
+            for (int i = 0; i < batches; i++) {
+                std::memcpy(ptr_y + i * step, broadcast_C.data(), step * sizeof(float));
+            }
         } else { // initialization
             float *ptr_y = Y.ptr<float>();
-            std::memset(ptr_y, 0, M * N * sizeof(float));
+            int total = std::accumulate(shape_A.begin(), shape_A.end(), 1, std::multiplies<int>());
+            std::memset(ptr_y, 0, total * sizeof(float));
         }
 
         if (const_B) {
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
+            M *= batches;
             fastGemm(trans_a, M, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
         } else {
-            fastGemm(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
+            fastGemmBatched(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
         }
     }
 

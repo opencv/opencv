@@ -160,15 +160,18 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
 }
 
 void fastGemm(bool trans_a, bool trans_b,
-               float alpha, const Mat &A, const Mat &B,
-               float beta, Mat &C, FastGemmOpt &opt) {
-    CV_CheckTypeEQ(A.type(), B.type(), "DNN/gemm: A and B should have the same type");
-    CV_CheckTypeEQ(B.type(), C.type(), "DNN/gemm: B and C should have the same type");
-    CV_CheckTypeEQ(A.type(), CV_32F, "DNN/gemm: only support float32 for now");
+              float alpha, const Mat &A, const Mat &B,
+              float beta, Mat &C, FastGemmOpt &opt) {
+    CV_CheckTypeEQ(A.type(), CV_32F, "DNN/fastGemm: only support float32 for now");
+    CV_CheckTypeEQ(A.type(), B.type(), "DNN/fastGemm: A and B should have the same type");
+    CV_CheckTypeEQ(B.type(), C.type(), "DNN/fastGemm: B and C should have the same type");
 
     const auto shape_a = shape(A);
+    CV_CheckEQ(shape_a.size(), static_cast<size_t>(2), "DNN/fastGemm: A must be 2-dimensional");
     const auto shape_b = shape(B);
+    CV_CheckEQ(shape_b.size(), static_cast<size_t>(2), "DNN/fastGemm: B must be 2-dimensional");
     const auto shape_c = shape(C);
+    CV_CheckEQ(shape_c.size(), static_cast<size_t>(2), "DNN/fastGemm: C must be 2-dimensional");
 
     int ma = shape_a[0], na = shape_a[1];
     int mb = shape_b[0], nb = shape_b[1];
@@ -184,6 +187,60 @@ void fastGemm(bool trans_a, bool trans_b,
     fastGemm(trans_a, trans_b, ma, na, mb, nb,
              alpha, a, lda0, lda1, b, ldb0, ldb1,
              beta, c, ldc, opt);
+}
+
+void fastGemmBatched(bool trans_a, bool trans_b,
+                     float alpha, const Mat &A, const Mat &B,
+                     float beta, Mat &C, FastGemmOpt &opt) {
+    CV_CheckTypeEQ(A.type(), B.type(), "DNN/fastGemmBatched: A and B should have the same type");
+    CV_CheckTypeEQ(B.type(), C.type(), "DNN/fastGemmBatched: B and C should have the same type");
+    CV_CheckTypeEQ(A.type(), CV_32F, "DNN/fastGemmBatched: only support float32 for now");
+
+    const auto shape_a = shape(A);
+    size_t dims_A = shape_a.size();
+    CV_CheckGE(dims_A, static_cast<size_t>(2), "DNN/fastGemmBatched: A must be n-dimensional (n >= 2)");
+    const auto shape_b = shape(B);
+    CV_CheckEQ(shape_b.size(), static_cast<size_t>(2), "DNN/fastGemmBatched: B must be 2-dimensional");
+    const auto shape_c = shape(C);
+    size_t dims_C = shape_c.size();
+    CV_CheckGE(dims_C, static_cast<size_t>(2), "DNN/fastGemmBatched: C must be n-dimensional (n >= 2)");
+    // CV_CheckEQ(dims_A, dims_C, "DNN/fastGemmBatched: dims_A must be equal to dims_C");
+    // for (size_t i = 0; i < dims_A - 2; i++) {
+    //     CV_CheckEQ(shape_a[i], shape_c[i], "DNN/fastGemmBatched: dims_A[i] must be equal to dims_C[i]");
+    // }
+
+    if (trans_a) {
+        int ma = shape_a[dims_A - 2], na = shape_a[dims_A - 1];
+        int mb = shape_b[0], nb = shape_b[1];
+
+        int lda0 = na, lda1 = 1, ldb0 = nb, ldb1 = 1, ldc = shape_c[1];
+
+        const float *a = A.ptr<const float>();
+        const float *b = B.ptr<const float>();
+        float *c = C.ptr<float>();
+
+        int batches = std::accumulate(shape_a.begin(), shape_a.end() - 2, 1, std::multiplies<int>());
+        int step = ma * na;
+        for (int i = 0; i < batches; i++) {
+            fastGemm(true, trans_b, ma, na, mb, nb,
+                     alpha, a + i * step, lda0, lda1, b, ldb0, ldb1,
+                     beta, c + i * step, ldc, opt);
+        }
+    } else {
+        int ma = std::accumulate(shape_a.begin(), shape_a.end() - 1, 1, std::multiplies<int>()),
+            na = shape_a[dims_A - 1];
+        int mb = shape_b[0], nb = shape_b[1];
+
+        int lda0 = na, lda1 = 1, ldb0 = nb, ldb1 = 1, ldc = shape_c[1];
+
+        const float *a = A.ptr<const float>();
+        const float *b = B.ptr<const float>();
+        float *c = C.ptr<float>();
+
+        fastGemm(false, trans_b, ma, na, mb, nb,
+                 alpha, a, lda0, lda1, b, ldb0, ldb1,
+                 beta, c, ldc, opt);
+    }
 }
 
 }} // cv::dnn

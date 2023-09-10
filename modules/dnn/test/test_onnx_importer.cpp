@@ -2071,7 +2071,7 @@ TEST_P(Test_ONNX_nets, Googlenet)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
 
-    const String model = _tf("models/googlenet_2023.onnx", false);
+    const String model = _tf("models/googlenet.onnx", false);
 
     Net net = readNetFromONNX(model);
     ASSERT_FALSE(net.empty());
@@ -2083,7 +2083,7 @@ TEST_P(Test_ONNX_nets, Googlenet)
     images.push_back( imread(_tf("../googlenet_0.png")) );
     images.push_back( imread(_tf("../googlenet_1.png")) );
     Mat inp = blobFromImages(images, 1.0f, Size(), Scalar(), false);
-    Mat ref = blobFromNPY(_tf("../googlenet_prob_2023.npy"));
+    Mat ref = blobFromNPY(_tf("../googlenet_prob.npy"));
     checkBackend(&inp, &ref);
 
     net.setInput(inp);
