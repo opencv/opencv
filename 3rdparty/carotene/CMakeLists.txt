@@ -42,6 +42,14 @@ endif()
 
 if(WITH_NEON)
     target_compile_definitions(carotene_objs PRIVATE "-DWITH_NEON")
+
+    if(CAROTENE_ROUNDING STREQUAL "LEGACY")
+        target_compile_definitions(carotene_objs PUBLIC "-DCAROTENE_ROUNDING_LEGACY")
+    endif()
+    if(CAROTENE_ROUNDING STREQUAL "ARMV7")
+        target_compile_definitions(carotene_objs PUBLIC "-DCAROTENE_ROUNDING_ARMV7")
+    endif()
+
 endif()
 
 # we add dummy file to fix XCode build

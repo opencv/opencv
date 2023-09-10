@@ -1561,4 +1561,56 @@ TEST(Core_Arithm, scalar_handling_19599)  // https://github.com/opencv/opencv/is
     EXPECT_EQ(1, c.rows);
 }
 
+TEST(Core_Arith, regression_24163) // https://github.com/opencv/opencv/issues/24163
+{
+    {
+        Mat src1 = ( Mat_<uchar>(1, 16) <<  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 );
+        Mat src2 = ( Mat_<uchar>(1, 16) <<  1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  1,  1,  1,  1,  1,  1 );
+        Mat mean = ( src1 + src2 ) / 2;
+        Mat expected(1,16,CV_8U);
+
+        for(int i=0;i<16;i++)
+        {
+            expected.at<uchar>(0,i) = cvRound( ( (double) src1.at<char>(0,i) + src2.at<char>(0,i) ) / 2.0 );
+        }
+
+#if 0
+        std::cout << "[CV_8U]" << std::endl;
+        std::cout << " src1     = " << src1 << std::endl;
+        std::cout << " src2     = " << src2 << std::endl;
+        std::cout << " mean     = " << mean << std::endl;
+        std::cout << " expected = " << expected << std::endl;
+#endif
+
+        for(int i=0;i<16;i++)
+        {
+            EXPECT_EQ( (int)mean.at<uchar>(0,i), (int)expected.at<uchar>(0,i)) << cv::format("i = %d", i );
+        }
+    }
+    {
+        Mat src1 = ( Mat_<char>(1, 16) << -7, -6, -5, -4, -3, -2, -1,  0, 1, 2, 3, 4, 5, 6, 7, 8 );
+        Mat src2 = ( Mat_<char>(1, 16) <<  1,  1,  1,  1,  1,  1,  1,  1, 1, 1, 1, 1, 1, 1, 1, 1 );
+        Mat mean = ( src1 + src2 ) / 2;
+        Mat expected(1,16,CV_8S);
+
+        for(int i=0;i<16;i++)
+        {
+            expected.at<char>(0,i) = cvRound( ( (double) src1.at<char>(0,i) + src2.at<char>(0,i) ) / 2.0 );
+        }
+
+#if 0
+        std::cout << "[CV_8S]" << std::endl;
+        std::cout << " src1     = " << src1 << std::endl;
+        std::cout << " src2     = " << src2 << std::endl;
+        std::cout << " mean     = " << mean << std::endl;
+        std::cout << " expected = " << expected << std::endl;
+#endif
+
+        for(int i=0;i<16;i++)
+        {
+            EXPECT_EQ( (int)mean.at<char>(0,i), (int)expected.at<char>(0,i)) << cv::format("i = %d", i );
+        }
+    }
+}
+
 }} // namespace
