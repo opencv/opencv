@@ -20,26 +20,22 @@ namespace cv { namespace dnn {
 struct FastGemmOpt {
     bool use_avx;
     bool use_avx2;
-    bool use_neon_aarch64;
+    bool use_neon;
 
     FastGemmOpt() {
         use_avx = false;
         use_avx2 = false;
-        use_neon_aarch64 = false;
+        use_neon = false;
     }
 
     void init() {
         use_avx = checkHardwareSupport(CPU_AVX);
         use_avx2 = checkHardwareSupport(CPU_AVX2);
-#ifdef CV_NEON_AARCH64
-        use_neon_aarch64 = checkHardwareSupport(CPU_NEON) && CV_NEON_AARCH64;
-#else
-        use_neon_aarch64 = false;
-#endif
+        use_neon = checkHardwareSupport(CPU_NEON);
     }
 
     bool all() {
-        return use_avx || use_avx2 || use_neon_aarch64;
+        return use_avx || use_avx2 || use_neon;
     }
 };
 
