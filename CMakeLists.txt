@@ -1672,7 +1672,7 @@ else()
   endif()
 endif()
 
-if(BUILD_opencv_dnn)
+if(BUILD_opencv_dnn AND OPENCV_DNN_BACKEND_DEFAULT)
     status("    Default DNN backend:" ${OPENCV_DNN_BACKEND_DEFAULT})
 endif()
 
