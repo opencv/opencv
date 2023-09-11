@@ -244,14 +244,7 @@ CV__DNN_INLINE_NS_BEGIN
     /** @brief This function performs array summation based
     * on the Einstein summation convention. The function
     * allows for concise expressions of various mathematical
-    * operations using subscripts. For example:
-    * `trace(a)`         -> `einsum("ii", a)`
-    * `transpose(a)`     -> `einsum("ji", a)`
-    * `multiply(a, b)`   -> `einsum(",", a, b)`
-    * `inner(a, b)`      -> `einsum("i,i", a, b)`
-    * `outer(a, b)`      -> `einsum("i,j", a, b)`
-    * `matvec(a, b)`     -> `einsum("ij,j", a, b)`
-    * `matmat(a, b)`     -> `einsum("ij,jk", a, b)`
+    * operations using subscripts.
     *
     * By default, the labels are placed in alphabetical
     * order at the end of the output.
