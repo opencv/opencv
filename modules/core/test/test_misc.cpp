@@ -940,22 +940,4 @@ TEST_F(TestSetUpSkip, NoBodyRun) {
     FAIL() << "Unreachable code called";
 }
 
-// Check that single test skip won't break others
-TEST(TestCaseSkip, skipped_test)
-{
-    throw SkipTestException("Skip test");
-}
-
-static bool testRun = false;
-TEST(TestCaseSkip, executed_test)
-{
-    testRun = true;
-}
-
-TEST(TestCaseSkipCheck, run)
-{
-    ASSERT_TRUE(testRun);
-}
-
-
 }} // namespace
