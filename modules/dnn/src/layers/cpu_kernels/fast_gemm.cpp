@@ -220,11 +220,11 @@ void fastGemmBatched(bool trans_a, bool trans_b,
         float *c = C.ptr<float>();
 
         int batches = std::accumulate(shape_a.begin(), shape_a.end() - 2, 1, std::multiplies<int>());
-        int step = ma * na;
+        int step_a = ma * na, step_c = na * nb;
         for (int i = 0; i < batches; i++) {
             fastGemm(true, trans_b, ma, na, mb, nb,
-                     alpha, a + i * step, lda0, lda1, b, ldb0, ldb1,
-                     beta, c + i * step, ldc, opt);
+                     alpha, a + i * step_a, lda0, lda1, b, ldb0, ldb1,
+                     beta, c + i * step_c, ldc, opt);
         }
     } else {
         int ma = std::accumulate(shape_a.begin(), shape_a.end() - 1, 1, std::multiplies<int>()),
