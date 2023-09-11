@@ -128,6 +128,11 @@ TEST_P(Test_TFLite, max_unpooling)
     if (backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
 
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2022010000)
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
+#endif
+
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU) {
         if (target == DNN_TARGET_OPENCL_FP16) applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
         if (target == DNN_TARGET_OPENCL)      applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
@@ -152,14 +157,7 @@ TEST_P(Test_TFLite, max_unpooling)
     net.setInput(input);
 
     std::vector<std::vector<Mat> > outs;
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
-        // TODO: seems like a bug with a retrieving intermediate tensors
-        net.forward(outs, {"conv2d_transpose_4", "p_re_lu_1", "max_pooling_with_argmax2d", "conv2d_86", "max_unpooling2d_2"});
-        outs.erase(outs.begin());
-    }
-    else {
-        net.forward(outs, {"p_re_lu_1", "max_pooling_with_argmax2d", "conv2d_86", "max_unpooling2d_2"});
-    }
+    net.forward(outs, {"p_re_lu_1", "max_pooling_with_argmax2d", "conv2d_86", "max_unpooling2d_2"});
 
     ASSERT_EQ(outs.size(), 4);
     ASSERT_EQ(outs[0].size(), 1);

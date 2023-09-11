@@ -190,6 +190,9 @@ set(gapi_srcs
     src/backends/ov/bindings_ov.cpp
     src/backends/python/gpythonbackend.cpp
 
+    # Queue Streaming source
+    src/streaming/queue_source.cpp
+
     # OpenVPL Streaming source
     src/streaming/onevpl/source.cpp
     src/streaming/onevpl/source_priv.cpp

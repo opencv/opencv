@@ -141,7 +141,7 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_Caffe)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt", "",
+    processNet("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", "dnn/MobileNetSSD_deploy_19e3ec3.prototxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
 }
 

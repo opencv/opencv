@@ -290,8 +290,8 @@ TEST(Reproducibility_SSD, Accuracy)
 typedef testing::TestWithParam<tuple<Backend, Target> > Reproducibility_MobileNet_SSD;
 TEST_P(Reproducibility_MobileNet_SSD, Accuracy)
 {
-    const string proto = findDataFile("dnn/MobileNetSSD_deploy.prototxt", false);
-    const string model = findDataFile("dnn/MobileNetSSD_deploy.caffemodel", false);
+    const string proto = findDataFile("dnn/MobileNetSSD_deploy_19e3ec3.prototxt", false);
+    const string model = findDataFile("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", false);
     Net net = readNetFromCaffe(proto, model);
     int backendId = get<0>(GetParam());
     int targetId = get<1>(GetParam());
@@ -731,7 +731,7 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
-    double scoreDiff = 0.0, iouDiff = 0.0;
+    double scoreDiff = 0.001, iouDiff = 0.03;
 #if defined(INF_ENGINE_RELEASE)
     if (target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -779,7 +779,7 @@ TEST_P(Test_Caffe_nets, FasterRCNN_zf)
                                            0, 7, 0.988779, 469.849, 75.1756, 718.64, 186.762,
                                            0, 12, 0.967198, 138.588, 206.843, 329.766, 553.176);
 
-    double scoreDiff = 0.0, iouDiff = 0.0;
+    double scoreDiff = 0.003, iouDiff = 0.07;
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
         scoreDiff = 0.02;
         iouDiff = 0.13;

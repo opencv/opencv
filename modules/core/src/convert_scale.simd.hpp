@@ -22,9 +22,9 @@ template<typename _Ts, typename _Td> inline void
 cvtabs_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
             Size size, float a, float b )
 {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     v_float32 va = vx_setall_f32(a), vb = vx_setall_f32(b);
-    const int VECSZ = v_float32::nlanes*2;
+    const int VECSZ = VTraits<v_float32>::vlanes()*2;
 #endif
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
@@ -32,7 +32,7 @@ cvtabs_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
     for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
         int j = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         for( ; j < size.width; j += VECSZ )
         {
             if( j > size.width - VECSZ )
@@ -72,9 +72,9 @@ template<typename _Ts, typename _Td> inline void
 cvt_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
          Size size, float a, float b )
 {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     v_float32 va = vx_setall_f32(a), vb = vx_setall_f32(b);
-    const int VECSZ = v_float32::nlanes*2;
+    const int VECSZ = VTraits<v_float32>::vlanes()*2;
 #endif
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
@@ -82,7 +82,7 @@ cvt_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
     for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
         int j = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         for( ; j < size.width; j += VECSZ )
         {
             if( j > size.width - VECSZ )
@@ -108,9 +108,9 @@ template<typename _Ts, typename _Td> inline void
 cvt1_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
           Size size, float a, float b )
 {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     v_float32 va = vx_setall_f32(a), vb = vx_setall_f32(b);
-    const int VECSZ = v_float32::nlanes;
+    const int VECSZ = VTraits<v_float32>::vlanes();
 #endif
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
@@ -118,7 +118,7 @@ cvt1_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
     for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
         int j = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         for( ; j < size.width; j += VECSZ )
         {
             if( j > size.width - VECSZ )
@@ -143,9 +143,9 @@ template<typename _Ts, typename _Td> inline void
 cvt_64f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
          Size size, double a, double b )
 {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     v_float64 va = vx_setall_f64(a), vb = vx_setall_f64(b);
-    const int VECSZ = v_float64::nlanes*2;
+    const int VECSZ = VTraits<v_float64>::vlanes()*2;
 #endif
     sstep /= sizeof(src[0]);
     dstep /= sizeof(dst[0]);
@@ -153,7 +153,7 @@ cvt_64f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
     for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
         int j = 0;
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         for( ; j < size.width; j += VECSZ )
         {
             if( j > size.width - VECSZ )

@@ -104,4 +104,28 @@ TEST(Imgproc_DistanceTransform, large_square_22732)
     EXPECT_EQ(0, nerrs) << "reference distance map is different from computed one at " << nerrs << " pixels\n";
 }
 
+BIGDATA_TEST(Imgproc_DistanceTransform, issue_23895_3x3)
+{
+    Mat src = Mat::zeros(50000, 50000, CV_8U), dist;
+    distanceTransform(src.col(0), dist, DIST_L2, DIST_MASK_3);
+    int nz = countNonZero(dist);
+    EXPECT_EQ(nz, 0);
+}
+
+BIGDATA_TEST(Imgproc_DistanceTransform, issue_23895_5x5)
+{
+    Mat src = Mat::zeros(50000, 50000, CV_8U), dist;
+    distanceTransform(src.col(0), dist, DIST_L2, DIST_MASK_5);
+    int nz = countNonZero(dist);
+    EXPECT_EQ(nz, 0);
+}
+
+BIGDATA_TEST(Imgproc_DistanceTransform, issue_23895_5x5_labels)
+{
+    Mat src = Mat::zeros(50000, 50000, CV_8U), dist, labels;
+    distanceTransform(src.col(0), dist, labels, DIST_L2, DIST_MASK_5);
+    int nz = countNonZero(dist);
+    EXPECT_EQ(nz, 0);
+}
+
 }} // namespace

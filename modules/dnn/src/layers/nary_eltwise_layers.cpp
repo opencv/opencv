@@ -900,12 +900,12 @@ public:
         auto& inp0 = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         auto& inp1 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
 
-        if (inp0->get_element_type() != inp1->get_element_type()) {
+        if (inp0.get_element_type() != inp1.get_element_type()) {
             auto dtype = preferableTarget == DNN_TARGET_OPENCL_FP16 || preferableTarget == DNN_TARGET_MYRIAD ?
                         ngraph::element::f16 : ngraph::element::f32;
-            if (inp0->get_element_type() != dtype)
+            if (inp0.get_element_type() != dtype)
                 inp0 = std::make_shared<ngraph::op::v0::Convert>(inp0, dtype);
-            if (inp1->get_element_type() != dtype)
+            if (inp1.get_element_type() != dtype)
                 inp1 = std::make_shared<ngraph::op::v0::Convert>(inp1, dtype);
         }
 
