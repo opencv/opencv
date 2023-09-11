@@ -42,8 +42,8 @@ Mat batchwiseMatMul(
     // Sanity checks before the actual MatMul
     //input_1.DataType() == input_2.DataType(), "Data types of the inputs must match for MatMul");
 
-    CV_CheckEQ((size_t) input1ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
-    CV_CheckEQ((size_t) input2ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
+    CV_CheckEQ(input1ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
+    CV_CheckEQ(input2ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
     CV_CheckEQ((size_t) input1ShapeOverride[0], (size_t) input2ShapeOverride[0], "Batch dimension should match for MatMul;");
     CV_CheckEQ((size_t) input1ShapeOverride[2], (size_t) input2ShapeOverride[1], "Incompatible matrix dimensions for matMul");
 
@@ -150,12 +150,7 @@ Mat Transpose(
 
     int input_rank = input_shape_override.size();
 
-    if(input_rank != permutation.size())
-    {
-        CV_Error(
-            Error::StsAssert,
-            "Length of permutation must match the rank of the input to be permutated");
-    }
+    CV_Assert(input_rank == permutation.size());
 
     // TODO: ouptimize
     bool reshape = false;
@@ -188,13 +183,13 @@ Mat Transpose(
 
 
 bool IsTransposeRequired(size_t input_rank, const std::vector<size_t>& permutation) {
-  if(input_rank != permutation.size())
-    CV_Error(Error::StsAssert, "The rank of the input must match permutation size for Transpose");
+    CV_Assert(input_rank == permutation.size());
 
-  // No transpose required for scalars
-  if (input_rank == 0) {
-    return false;
-  }
+    // No transpose required for scalars
+    if (input_rank == 0)
+    {
+        return false;
+    }
 
   // Weeds out cases where permutation is something like [0, 1, 2] for a 3D input and so on
   bool transpose_required = false;
@@ -210,8 +205,8 @@ bool IsTransposeRequired(size_t input_rank, const std::vector<size_t>& permutati
 
 Mat Diagonal(
     const cv::Mat& input,
-    int64_t subscriptIndicesToInputIndex,
-    int64_t dimIndexInIreprocessedInput)
+    int subscriptIndicesToInputIndex,
+    int dimIndexInIreprocessedInput)
 {
     CV_Error(Error::StsNotImplemented, "Diagonal Not Implemented Yet");
 }
@@ -222,13 +217,13 @@ Mat Diagonal(
  * - Returns a value between 26 and 51 for inputs in the range 'A' to 'Z'.
  * - Returns -1 for invalid input that is not in the range 'a' to 'z' or 'A' to 'Z' (the caller should handle the returned result accordingly).
  */
-int64_t letterToIndex(const char ch) {
+int letterToIndex(const char ch) {
     if (ch >= 'a' && ch <= 'z') {
-    return static_cast<int64_t>(ch) - 'a';
+    return static_cast<int>(ch) - 'a';
     }
 
     if (ch >= 'A' && ch <= 'Z') {
-    return 26 + static_cast<int64_t>(ch) - 'A';
+    return 26 + static_cast<int>(ch) - 'A';
     }
 
     // invalid character - return error value
@@ -265,47 +260,47 @@ public:
     mutable bool is_parsed = false;
 
     // Stores the subscript indices for each input in the equation
-    mutable std::vector<std::vector<int64_t>> inputSubscriptIndices;
+    mutable std::vector<std::vector<int>> inputSubscriptIndices;
 
     // Keeps track of the input index of the last input that had the subscript label
     // If the value is `-1`, it means the subscript label was never encountered or it appears in the output
-    mutable std::vector<int64_t> subscriptIndicesToLastInput;
+    mutable std::vector<int> subscriptIndicesToLastInput;
 
     // Holds the dimension value of the index corresponding to the subscript label
     // `-1` indicates that the corresponding label was not encountered at all
-    mutable std::vector<int64_t> subscriptIndicesToDimValue;
+    mutable std::vector<int> subscriptIndicesToDimValue;
 
     // Index corresponding to each output dim corresponding to each subscript index
     // A value of -1 means the corresponding subscript index is not found in the output
-    mutable std::vector<int64_t> subscriptIndicesToOutputIndices;
+    mutable std::vector<int> subscriptIndicesToOutputIndices;
 
     // Hold max number of alphabetic numbers
     static const size_t numOfLetters = 52;
 
     // Stores the count corresponding to each letter encountered
     // A value of `0` indicates that the corresponding letter hasn't been seen at all
-    mutable std::array<int64_t, numOfLetters> letter2count;
+    mutable std::array<int, numOfLetters> letter2count;
 
     // Hold the assigned index corresponding to the letter seen
     // `-1` means the corresponding letter wasn't seen at all
-    mutable std::array<int64_t, numOfLetters> letter2index;
+    mutable std::array<int, numOfLetters> letter2index;
 
     // Represents the count of unique subscript labels (subscript indices)
     // Example 1: For the equation 'ij, jk -> ik', num_subscript_indices_ = 3 (i, j, k)
-    // Example 2: For the equation '...ij', 'jk' -> '...ik', num_subscript_indices_ = 3 (i, j, k) + number of dimensions specified by an ellipsis (across all inputs)
-    mutable int64_t numLetterIndices = 0;
+    // Example 2: For the equation '...ij', 'jk' -> '...ik',
+    // num_subscript_indices_ = 3 (i, j, k) + number of dimensions specified by an ellipsis (across all inputs)
+    mutable int numLetterIndices = 0;
 
     // The number of dimensions that are encompassed by an "ellipsis" - "...".
     size_t numOfEllipsisDims = 0;
 
 
-    // bool processEquation(const String& equation,  const LayerParams& params);
     void parseEquation(const String& equation) const;
-    bool processEquation(const String& equation, const std::vector<MatShape>& inputs) const;
-    bool processBroadcastedDims() const;
-    bool createOutputSubsctipt() const;
-    bool calculateOutputShape(std::vector<MatShape>& outputDims) const;
-    bool preProcessInputs(InputArrayOfArrays& inputs);
+    void processEquation(const String& equation, const std::vector<MatShape>& inputs) const;
+    void processBroadcastedDims() const;
+    void createOutputSubsctipt() const;
+    void calculateOutputShape(std::vector<MatShape>& outputDims) const;
+    void preProcessInputs(InputArrayOfArrays& inputs);
     Mat FinalizeOutput(const Mat& candidateOuput, const MatShape& ordered_subscript_indices_in_candidate);
     Mat pairwiseOperandProcess(
         const Mat& left,
@@ -340,12 +335,11 @@ public:
         // and dimention broadcasting
         if (!is_parsed)
         {
-            CV_Assert(processEquation(equation, inputs));
-            CV_Assert(processBroadcastedDims());
-            CV_Assert(createOutputSubsctipt());
-            CV_Assert(calculateOutputShape(outputs));
+            processEquation(equation, inputs);
+            processBroadcastedDims();
+            createOutputSubsctipt();
+            calculateOutputShape(outputs);
             is_parsed = true;
-
         } else {
             // TODO: recompute output dimentions on in forward call!!!
             // currently outputs are only computed once on import stage
@@ -361,8 +355,8 @@ public:
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
-
-        CV_Assert(preProcessInputs(inputs_arr));
+        // homogenize inputs
+        preProcessInputs(inputs_arr);
 
         std::vector<cv::Mat> rawInputs, outputs;
         inputs_arr.getMatVector(rawInputs);
@@ -403,7 +397,6 @@ public:
             if (inputSize == 1) {
                 // Finalize the output by applying any transpose required to get
                 // it to the required output ordering and move it to the op's output
-
                 result = FinalizeOutput(!result.empty() ? result : rawInputs[0], preservedDims);
                 result.copyTo(outputs[0]);
             }
@@ -417,7 +410,7 @@ public:
             for (int input = 1; input < inputSize; ++input) {
                 MatShape reducedDims;
                 reducedDims.reserve(numLetterIndices);  // num_subscript_labels is the upper bound. No harm in over-reserving by a small margin.
-                for (int64_t dim = 0; dim < numLetterIndices; ++dim)
+                for (int dim = 0; dim < numLetterIndices; ++dim)
                 {
                     if (subscriptIndicesToLastInput[dim] == input)
                     {
@@ -429,7 +422,7 @@ public:
                 if (input == inputSize - 1)
                     isFinalPair = true;
 
-                // creaet temporary variable
+                // create temporary variable
                 MatShape tmpResult;
                 for (int i = 0; i < result.size.dims(); i++)
                     tmpResult.emplace_back(result.size[i]);
@@ -447,7 +440,7 @@ public:
 
         // check of product of output dimentions and computed output dimentions match
         size_t reqProd = std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<int>());
-        MatShape realOutputDims = MatShape(result.size.p, result.size.p + result.size.dims());
+        MatShape realOutputDims = shape(result);
         size_t realProd = std::accumulate(realOutputDims.begin(), realOutputDims.end(), 1, std::multiplies<int>());
 
         CV_CheckEQ(reqProd, realProd, "Real output can not be shaped in to requred output");
@@ -459,7 +452,7 @@ public:
 }; // EinsumClass
 
 
-bool LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
+void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 {
     std::vector<cv::Mat> inputs;
     inputs_arr.getMatVector(inputs);
@@ -468,18 +461,13 @@ bool LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
     preProcessedInputs.reserve(inputs.size());
     homogenizedInputDims.reserve(inputs.size());
 
-    int64_t inputIter = 0;
+    int inputIter = 0;
     for(const Mat& input : inputs)
     {
         Mat preprocessed;
 
         // variable to hold processed version of the original input
-        MatShape input_dims;
-
-        // TODO: optimize
-        for (int i = 0; i < input.size.dims(); i++){
-            input_dims.emplace_back(input.size[i]);
-        }
+        MatShape input_dims = shape(input);
 
         const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
 
@@ -490,13 +478,13 @@ bool LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
                 "Rank of the input must match number of subscript labels corresponding to the input");
         }
 
-        std::vector<int64_t> subscriptIndicesToInputIndex(numLetterIndices, -1);
+        std::vector<int> subscriptIndicesToInputIndex(numLetterIndices, -1);
         // this will hold input dims after reordering so that all inputs have
         // same axes order
         MatShape homogenizedInputDims_(numLetterIndices, 1);
 
-        int64_t dimIndexInIreprocessedInput = 0;
-        int64_t dimIndexInOriginalInput = 0;
+        int dimIndexInIreprocessedInput = 0;
+        int dimIndexInOriginalInput = 0;
 
         for (const auto& subscriptIndex : currSubscriptIndices)
         {
@@ -528,8 +516,7 @@ bool LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
             // call transpose
             preprocessed = Transpose(
                 !preprocessed.empty() ? preprocessed : inputs[inputIter],
-                // !preprocessed.empty() ? preprocessed.size : inputs[inputIter].size,
-                !preprocessed.empty() ? MatShape(preprocessed.size.p, preprocessed.size.p + preprocessed.dims) : MatShape(inputs[inputIter].size.p, inputs[inputIter].size.p + inputs[inputIter].dims),
+                !preprocessed.empty() ? shape(preprocessed) : shape(inputs[inputIter]),
                 permutation);
         }
 
@@ -545,7 +532,6 @@ bool LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 
         ++inputIter;
     }
-    return true;
 }
 
 void LayerEinsumImpl::parseEquation(const String& equation) const
@@ -581,9 +567,8 @@ void LayerEinsumImpl::parseEquation(const String& equation) const
 }
 
 
-bool LayerEinsumImpl::calculateOutputShape(std::vector<MatShape>& outputDims) const
+void LayerEinsumImpl::calculateOutputShape(std::vector<MatShape>& outputDims) const
 {
-    bool result = true;
 
     if (outputSize!= 1)
     {
@@ -597,10 +582,10 @@ bool LayerEinsumImpl::calculateOutputShape(std::vector<MatShape>& outputDims) co
 
     subscriptIndicesToOutputIndices.resize(numLetterIndices, -1);
 
-    std::array<int64_t, numOfLetters> outputLetterToCount;
+    std::array<int, numOfLetters> outputLetterToCount;
     outputLetterToCount.fill(0);
 
-    int64_t outputDimCounter = 0;
+    int outputDimCounter = 0;
     for (auto letter : rhs_eq)
     {
         if(letter == '.')
@@ -650,14 +635,12 @@ bool LayerEinsumImpl::calculateOutputShape(std::vector<MatShape>& outputDims) co
     }
     outputDims.clear();
     outputDims.push_back(dims);
-    return result;
 }
 
-bool LayerEinsumImpl::createOutputSubsctipt() const
+void LayerEinsumImpl::createOutputSubsctipt() const
 {
     // The explicit form requires no operation, as the output
     // would have already been parsed during the input parsing process.
-    bool result = true;
     if(explicitEquation)
     {
         // Ensure that the provided explicit equation includes an ellipsis if the input contains ellipses.
@@ -667,27 +650,23 @@ bool LayerEinsumImpl::createOutputSubsctipt() const
             {
                 CV_Error(Error::StsError,
                 "Provided output subscript does not include ellipsis while Inputs subscrits constain ellipsis");
-                result = false;
             }
         }
     }
-    return result;
 }
 
-bool LayerEinsumImpl::processBroadcastedDims() const
+void LayerEinsumImpl::processBroadcastedDims() const
 {
-    bool result = true;
     // Only compute this function if ellipsis "..." was found in the equation
     if (numOfEllipsisDims > 0){
+        // add assert inplace of return bool
         CV_Error(Error::StsError, "Ellipsis are not supperted currenly");
-        result = false;
     }
-    return result;
 }
 
 
 
-bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<MatShape>& inputs) const
+void LayerEinsumImpl::processEquation(const String& equation, const std::vector<MatShape>& inputs) const
 {
     // parser equation and extract tokens from the equation
     // save token to lhs_eq_tokens variable
@@ -707,7 +686,7 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
             "in the input equation", num_input_tensors, lhs_eq_tokens.size())
             );
     }
-    int64_t inputIdx = 0;
+    int inputIdx = 0;
 
     // Maintains a mapping between input indices and their corresponding subscript labels for each input
     inputSubscriptIndices.reserve(num_input_tensors);
@@ -724,7 +703,7 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
         size_t rank = shape.size();
         size_t dim_count = 0;
 
-        std::vector<int64_t> currTokenIndices;
+        std::vector<int> currTokenIndices;
         currTokenIndices.reserve(rank);
 
         // Variable to deal with "ellipsis" - '...' in the input
@@ -743,7 +722,7 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
                 {
                     CV_Error(Error::StsAssert,
                     cv::format(
-                        "Encountered '.' character that is not part of an ellipsis in the input: [%" PRId64 "]",
+                        "Encountered '.' character that is not part of an ellipsis in the input: [%d]",
                         inputIdx));
                 }
 
@@ -781,7 +760,7 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
                             {
                                 CV_Error(Error::StsError, cv::format("Einsum operands can not be broadcasted."
                                                                      "Check input shapes/equation passed."
-                                                                     "Input shape of operand [%" PRId64 "]", inputIdx) +
+                                                                     "Input shape of operand [%d]", inputIdx) +
                                                           cv::format(" is incompatible in the dimention [%zu].", static_cast<size_t>(dim_count)));
                             }
                         }
@@ -811,14 +790,13 @@ bool LayerEinsumImpl::processEquation(const String& equation, const std::vector<
         inputSubscriptIndices.push_back(std::move(currTokenIndices));
         ++inputIdx;
     }
-    return true;
 }
 
 Mat LayerEinsumImpl::FinalizeOutput(
     const Mat& candidateOutput,
     const MatShape& ordered_subscript_indices_in_candidate)
 {
-    const std::vector<int64_t>& subscript_indices_to_output_indices = subscriptIndicesToOutputIndices;
+    const std::vector<int>& subscript_indices_to_output_indices = subscriptIndicesToOutputIndices;
     const auto output_dims = dims;
 
 
@@ -906,8 +884,8 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     const auto& leftDims = leftShapeOverride;
     const auto& rightDims = rightShapeOverride;
 
-    int64_t leftRank = static_cast<int64_t>(leftDims.size());
-    int64_t rightRank = static_cast<int64_t>(rightDims.size());
+    int leftRank = static_cast<int>(leftDims.size());
+    int rightRank = static_cast<int>(rightDims.size());
 
     Mat currentLeft;
     Mat currentRight;
@@ -929,19 +907,19 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     ro.reserve(5);  // Reserve an arbitrary amount of space for this vector (not bound to see a tensor of rank > kTensorShapeSmallBufferElementsSize)
 
     // Maintain sizes to create reshaped "views"
-    int64_t lro_size = 1;
-    int64_t lo_size = 1;
-    int64_t ro_size = 1;
-    int64_t reduced_size = 1;
+    int lro_size = 1;
+    int lo_size = 1;
+    int ro_size = 1;
+    int reduced_size = 1;
 
     size_t reduceDimsIter = 0;
     size_t reduceDimsSize = reduceDims.size();
 
-    for (int64_t i = 0; i < leftRank; ++i)
+    for (int i = 0; i < leftRank; ++i)
     {
 
-        int64_t leftDim = leftDims[i];
-        int64_t rightDim = rightDims[i];
+        int leftDim = leftDims[i];
+        int rightDim = rightDims[i];
 
         bool hasLeftDim = leftDim > 1;    // non-trivial dimension (dim_value != 1)
         bool hasRightDim = rightDim > 1;  // non-trivial dimension (dim_value != 1)
@@ -1021,7 +999,7 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
                                         left_permutation))
     {
         if (!currentLeft.empty() && IsTransposeReshapeForEinsum(left_permutation,
-                                                                MatShape(currentLeft.size.p, currentLeft.size.p + currentLeft.dims),
+                                                                shape(currentLeft),
                                                                 reshaped_dims))
         {
             // This can be done because curent_* tensors (if they exist) and output tensors are
@@ -1031,7 +1009,7 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
         } else {
             // Covered by ExplicitEinsumAsTensorContraction, DiagonalWithMatmul, ...
             currentLeft = Transpose(!currentLeft.empty() ? currentLeft: left,
-                                    !currentLeft.empty() ? MatShape(currentLeft.size.p, currentLeft.size.p + currentLeft.dims): leftDims,
+                                    !currentLeft.empty() ? shape(currentLeft) : leftDims,
                                     left_permutation);
         }
     }
@@ -1051,16 +1029,14 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
                                         right_permutation))
     {
         if (!currentRight.empty() && IsTransposeReshapeForEinsum(right_permutation,
-                                                                MatShape(currentRight.size.p, currentRight.size.p + currentRight.dims),
+                                                                shape(currentRight),
                                                                 reshaped_dims))
         {
             currentRight = currentRight.reshape(1, reshaped_dims.size(), reshaped_dims.data());
-
         } else {
             currentRight = Transpose(!currentRight.empty() ? currentRight : right,
-                                    !currentRight.empty() ? MatShape(currentRight.size.p, currentRight.size.p + currentRight.dims): rightDims,
+                                    !currentRight.empty() ? shape(currentRight) : rightDims,
                                     right_permutation);
-
         }
     }
 
