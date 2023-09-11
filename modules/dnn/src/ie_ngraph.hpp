@@ -50,22 +50,14 @@ public:
     void addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs);
 
     void createNet(Target targetId);
-    void setNodePtr(std::shared_ptr<ngraph::Node>* ptr);
 
     void reset();
 
 //private:
     detail::NetImplBase& netImpl_;
 
-    void release();
-    int getNumComponents();
-    void dfs(std::shared_ptr<ngraph::Node>& node, std::vector<std::shared_ptr<ngraph::Node>>& comp,
-             std::unordered_map<std::string, bool>& used);
-
     ngraph::ParameterVector inputs_vec;
     std::shared_ptr<ngraph::Function> ngraph_function;
-    std::vector<std::vector<std::shared_ptr<ngraph::Node>>> components;
-    std::unordered_map<std::string, std::shared_ptr<ngraph::Node>* > all_nodes;
 
     InferenceEngine::ExecutableNetwork netExec;
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
@@ -101,13 +93,13 @@ public:
                         std::vector<Mat*>& inputs, std::vector<Mat>& outputs,
                         std::vector<Mat>& internals);
 
-    InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node);
-    InfEngineNgraphNode(const std::shared_ptr<ngraph::Node>& _node);
+    InfEngineNgraphNode(ngraph::Output<ngraph::Node>&& _node);
+    InfEngineNgraphNode(const ngraph::Output<ngraph::Node>& _node);
 
     void setName(const std::string& name);
 
     // Inference Engine network object that allows to obtain the outputs of this layer.
-    std::shared_ptr<ngraph::Node> node;
+    ngraph::Output<ngraph::Node> node;
     Ptr<InfEngineNgraphNet> net;
     Ptr<dnn::Layer> cvLayer;
 };

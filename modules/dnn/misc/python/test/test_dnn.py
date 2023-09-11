@@ -191,10 +191,10 @@ class dnn_test(NewOpenCVTests):
 
     def test_model(self):
         img_path = self.find_dnn_file("dnn/street.png")
-        weights = self.find_dnn_file("dnn/MobileNetSSD_deploy.caffemodel", required=False)
-        config = self.find_dnn_file("dnn/MobileNetSSD_deploy.prototxt", required=False)
+        weights = self.find_dnn_file("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", required=False)
+        config = self.find_dnn_file("dnn/MobileNetSSD_deploy_19e3ec3.prototxt", required=False)
         if weights is None or config is None:
-            raise unittest.SkipTest("Missing DNN test files (dnn/MobileNetSSD_deploy.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+            raise unittest.SkipTest("Missing DNN test files (dnn/MobileNetSSD_deploy_19e3ec3.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 
         frame = cv.imread(img_path)
         model = cv.dnn_DetectionModel(weights, config)

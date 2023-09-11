@@ -196,7 +196,7 @@ public:
                 a2[10] = v * Z;
                 a2[11] = v;
 
-                // fill covarinace matrix
+                // fill covariance matrix
                 for (int j = 0; j < 12; j++)
                     for (int z = j; z < 12; z++)
                         AtA[j * 12 + z] += a1[j] * a1[z] + a2[j] * a2[z];
@@ -227,7 +227,7 @@ public:
                 a2[10] = v * weight_Z;
                 a2[11] = v * weight;
 
-                // fill covarinace matrix
+                // fill covariance matrix
                 for (int j = 0; j < 12; j++)
                     for (int z = j; z < 12; z++)
                         AtA[j * 12 + z] += a1[j] * a1[z] + a2[j] * a2[z];

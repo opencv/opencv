@@ -344,10 +344,10 @@ void Utils::decomposeProjection (const Mat &P, Matx33d &K, Matx33d &R, Vec3d &t,
 }
 
 double Utils::getPoissonCDF (double lambda, int inliers) {
-    double exp_lamda = exp(-lambda), cdf = exp_lamda, lambda_i_div_fact_i = 1;
+    double exp_lambda = exp(-lambda), cdf = exp_lambda, lambda_i_div_fact_i = 1;
     for (int i = 1; i <= inliers; i++) {
         lambda_i_div_fact_i *= (lambda / i);
-        cdf += exp_lamda * lambda_i_div_fact_i;
+        cdf += exp_lambda * lambda_i_div_fact_i;
         if (fabs(cdf - 1) < DBL_EPSILON) // cdf is almost 1
             break;
     }
@@ -825,95 +825,5 @@ Ptr<GridNeighborhoodGraph> GridNeighborhoodGraph::create(const Mat &points,
      int cell_size_x_img2_, int cell_size_y_img2_, int max_neighbors) {
     return makePtr<GridNeighborhoodGraphImpl>(points, points_size,
       cell_size_x_img1_, cell_size_y_img1_, cell_size_x_img2_, cell_size_y_img2_, max_neighbors);
-}
-
-class GridNeighborhoodGraph2ImagesImpl : public GridNeighborhoodGraph2Images {
-private:
-    // This struct is used for the nearest neighbors search by griding two images.
-    struct CellCoord {
-        int c1x, c1y;
-        CellCoord (int c1x_, int c1y_) {
-            c1x = c1x_; c1y = c1y_;
-        }
-        bool operator==(const CellCoord &o) const {
-            return c1x == o.c1x && c1y == o.c1y;
-        }
-        bool operator<(const CellCoord &o) const {
-            if (c1x < o.c1x) return true;
-            return c1x == o.c1x && c1y < o.c1y;
-        }
-    };
-
-    std::vector<std::vector<int>> graph;
-public:
-    GridNeighborhoodGraph2ImagesImpl (const Mat &container_, int points_size,
-            float cell_size_x_img1, float cell_size_y_img1, float cell_size_x_img2, float cell_size_y_img2) {
-
-        std::map<CellCoord, std::vector<int >> neighbors_map1, neighbors_map2;
-        const auto * const container = (float *) container_.data;
-        // Key is cell position. The value is indexes of neighbors.
-
-        const auto cell_sz_x1 = 1.f / cell_size_x_img1,
-                   cell_sz_y1 = 1.f / cell_size_y_img1,
-                   cell_sz_x2 = 1.f / cell_size_x_img2,
-                   cell_sz_y2 = 1.f / cell_size_y_img2;
-        const int dimension = container_.cols;
-        for (int i = 0; i < points_size; i++) {
-            const int idx = dimension * i;
-            neighbors_map1[CellCoord((int)(container[idx  ] * cell_sz_x1),
-                                    (int)(container[idx+1] * cell_sz_y1))].emplace_back(i);
-            neighbors_map2[CellCoord((int)(container[idx+2] * cell_sz_x2),
-                                    (int)(container[idx+3] * cell_sz_y2))].emplace_back(i);
-        }
-
-        //--------- create a graph ----------
-        graph = std::vector<std::vector<int>>(points_size);
-
-        // store neighbors cells into graph (2D vector)
-        for (const auto &cell : neighbors_map1) {
-            const int neighbors_in_cell = static_cast<int>(cell.second.size());
-            // only one point in cell -> no neighbors
-            if (neighbors_in_cell < 2) continue;
-
-            const std::vector<int> &neighbors = cell.second;
-            // ---------- fill graph -----
-            // for speed-up we make no symmetric graph, eg, x has a neighbor y, but y does not have x
-            const int v_in_cell = neighbors[0];
-            // there is always at least one neighbor
-            auto &graph_row = graph[v_in_cell];
-            graph_row.reserve(neighbors_in_cell);
-            for (int n : neighbors)
-                if (n != v_in_cell)
-                    graph_row.emplace_back(n);
-        }
-
-        // fill neighbors of a second image
-        for (const auto &cell : neighbors_map2) {
-            if (cell.second.size() < 2) continue;
-            const std::vector<int> &neighbors = cell.second;
-            const int v_in_cell = neighbors[0];
-            auto &graph_row = graph[v_in_cell];
-            for (const int &n : neighbors)
-                if (n != v_in_cell) {
-                    bool has = false;
-                    for (const int &nn : graph_row)
-                        if (n == nn) {
-                            has = true; break;
-                        }
-                    if (!has) graph_row.emplace_back(n);
-                }
-        }
-    }
-    const std::vector<std::vector<int>> &getGraph () const override { return graph; }
-    inline const std::vector<int> &getNeighbors(int point_idx) const override {
-        // Note, neighbors vector also includes point_idx!
-        return graph[point_idx];
-    }
-};
-
-Ptr<GridNeighborhoodGraph2Images> GridNeighborhoodGraph2Images::create(const Mat &points,
-        int points_size, float cell_size_x_img1_, float cell_size_y_img1_, float cell_size_x_img2_, float cell_size_y_img2_) {
-    return makePtr<GridNeighborhoodGraph2ImagesImpl>(points, points_size,
-            cell_size_x_img1_, cell_size_y_img1_, cell_size_x_img2_, cell_size_y_img2_);
 }
 }}

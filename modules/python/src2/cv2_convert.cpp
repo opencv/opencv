@@ -5,6 +5,7 @@
 
 #include "cv2_convert.hpp"
 #include "cv2_numpy.hpp"
+#include "cv2_util.hpp"
 #include "opencv2/core/utils/logger.hpp"
 
 PyTypeObject* pyopencv_Mat_TypePtr = nullptr;
@@ -22,6 +23,26 @@ static std::string pycv_dumpArray(const T* arr, int n)
         out << " " << arr[i];
     out << " ]";
     return out.str();
+}
+
+static inline std::string getArrayTypeName(PyArrayObject* arr)
+{
+    PyArray_Descr* dtype = PyArray_DESCR(arr);
+    PySafeObject dtype_str(PyObject_Str(reinterpret_cast<PyObject*>(dtype)));
+    if (!dtype_str)
+    {
+        // Fallback to typenum value
+        return cv::format("%d", PyArray_TYPE(arr));
+    }
+    std::string type_name;
+    if (!getUnicodeString(dtype_str, type_name))
+    {
+        // Failed to get string from bytes object - clear set TypeError and
+        // fallback to typenum value
+        PyErr_Clear();
+        return cv::format("%d", PyArray_TYPE(arr));
+    }
+    return type_name;
 }
 
 //======================================================================================================================
@@ -80,6 +101,13 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     PyArrayObject* oarr = (PyArrayObject*) o;
 
+    if (info.outputarg && !PyArray_ISWRITEABLE(oarr))
+    {
+        failmsg("%s marked as output argument, but provided NumPy array "
+                "marked as readonly", info.name);
+        return false;
+    }
+
     bool needcopy = false, needcast = false;
     int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
     int type = typenum == NPY_UBYTE ? CV_8U :
@@ -102,7 +130,9 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         }
         else
         {
-            failmsg("%s data type = %d is not supported", info.name, typenum);
+            const std::string dtype_name = getArrayTypeName(oarr);
+            failmsg("%s data type = %s is not supported", info.name,
+                    dtype_name.c_str());
             return false;
         }
     }

@@ -209,7 +209,8 @@ public:
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-            return !computeMaxIdx && type != STOCHASTIC && kernel_size.size() > 1 && (kernel_size.size() != 3 || !isArmComputePlugin());
+            return type != STOCHASTIC && kernel_size.size() > 1 && (kernel_size.size() != 3 || !isArmComputePlugin()) &&
+                   (!computeMaxIdx || INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1));
         }
 #endif
         if (backendId == DNN_BACKEND_OPENCV)
@@ -600,7 +601,7 @@ public:
             return Ptr<BackendNode>(new InfEngineNgraphNode(ave_pool));
         }
         else if (type == SUM) {
-            ngraph::Shape inpShape = ieInpNode->get_shape();
+            ngraph::Shape inpShape = ieInpNode.get_shape();
             CV_Assert(inpShape.size() == 2 + kernel_size.size());
             std::vector<int64_t> axes;
             for (size_t i = 0; i < kernel_size.size(); i++)
@@ -613,9 +614,21 @@ public:
             return Ptr<BackendNode>(new InfEngineNgraphNode(reduce_sum));
         }
         else if (type == MAX) {
-            auto max_pool = std::make_shared<ngraph::op::v1::MaxPool>(ieInpNode, ngraph::Strides(strides),
-                            ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
-                            rounding_type, pad_type);
+            std::shared_ptr<ngraph::Node> max_pool;
+            if (computeMaxIdx) {
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+                std::vector<size_t> dilations(kernel_size.size(), 1);
+                max_pool = std::make_shared<ngraph::op::v8::MaxPool>(ieInpNode, ngraph::Strides(strides), ngraph::Strides(dilations),
+                                ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+                                rounding_type, pad_type);
+#else
+                CV_Error(Error::StsNotImplemented, "OpenVINO MaxPool with indices");
+#endif
+            } else {
+                max_pool = std::make_shared<ngraph::op::v1::MaxPool>(ieInpNode, ngraph::Strides(strides),
+                                ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+                                rounding_type, pad_type);
+            }
             return Ptr<BackendNode>(new InfEngineNgraphNode(max_pool));
         }
         else if (type == ROI) {

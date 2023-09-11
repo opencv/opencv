@@ -142,7 +142,7 @@ public:
             }
 
             std::vector<double> c(11), rs;
-            // filling coefficients of 10-degree polynomial satysfying zero-determinant constraint of essential matrix, ie., det(E) = 0
+            // filling coefficients of 10-degree polynomial satisfying zero-determinant constraint of essential matrix, ie., det(E) = 0
             // based on "An Efficient Solution to the Five-Point Relative Pose Problem" (David Nister)
             // same as in five-point.cpp
             c[10] = (b[0]*b[17]*b[34]+b[26]*b[4]*b[21]-b[26]*b[17]*b[8]-b[13]*b[4]*b[34]-b[0]*b[21]*b[30]+b[13]*b[30]*b[8]);
@@ -239,7 +239,8 @@ public:
             // (5) Compute the left eigenvectors of the action matrix
             Eigen::EigenSolver<Eigen::Matrix<double, 10, 10>> eigensolver(action_mat_eig);
             const Eigen::VectorXcd &eigenvalues = eigensolver.eigenvalues();
-            const auto * const eig_vecs_ = (double *) eigensolver.eigenvectors().real().data();
+            const Eigen::MatrixXcd eigenvectors = eigensolver.eigenvectors();
+            const auto * const eig_vecs_ = (double *) eigenvectors.data();
 #else
             Matx<double, 10, 10> A = constraint_mat.colRange(0, 10),
                              B = constraint_mat.colRange(10, 20), eliminated_mat;

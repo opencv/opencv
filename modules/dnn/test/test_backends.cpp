@@ -194,7 +194,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
     float scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 1.5e-2 : 0.0;
     float iouDiff = (target == DNN_TARGET_MYRIAD) ? 0.063  : 0.0;
     float detectionConfThresh = (target == DNN_TARGET_MYRIAD) ? 0.262  : FLT_MIN;
-         processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
+         processNet("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", "dnn/MobileNetSSD_deploy_19e3ec3.prototxt",
                     inp, "detection_out", "", scoreDiff, iouDiff, detectionConfThresh);
     expectNoFallbacksFromIE(net);
 }
@@ -237,7 +237,7 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
         scoreDiff = 0.03;
         iouDiff = 0.08;
     }
-    processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
+    processNet("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", "dnn/MobileNetSSD_deploy_19e3ec3.prototxt",
                 inp, "detection_out", "", scoreDiff, iouDiff);
     expectNoFallbacksFromIE(net);
 }

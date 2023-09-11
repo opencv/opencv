@@ -2,7 +2,7 @@ OpenCV configuration options reference {#tutorial_config_reference}
 ======================================
 
 @prev_tutorial{tutorial_general_install}
-@next_tutorial{tutorial_linux_install}
+@next_tutorial{tutorial_env_reference}
 
 @tableofcontents
 
@@ -224,6 +224,16 @@ Following options can be used to produce special builds with instrumentation or 
 @see [Link time optimization](https://gcc.gnu.org/wiki/LinkTimeOptimization)
 @see [ThinLTO](https://clang.llvm.org/docs/ThinLTO.html)
 
+## Enable IPP optimization
+
+Following options can be used to enables IPP optimizations for each functions but increases the size of the opencv library. All options are disabled by default.
+
+| Option | Functions | + roughly size |
+| -------| --------- | -------------- |
+| `OPENCV_IPP_GAUSSIAN_BLUR` | GaussianBlur() | +8Mb |
+| `OPENCV_IPP_MEAN` | mean() / meanStdDev() | +0.2Mb |
+| `OPENCV_IPP_MINMAX` | minMaxLoc() / minMaxIdx() | +0.2Mb |
+| `OPENCV_IPP_SUM` | sum() | +0.1Mb |
 
 # Functional features and dependencies {#tutorial_config_reference_func}
 
@@ -484,7 +494,6 @@ OpenCV have own DNN inference module which have own build-in engine, but can als
 | `OPENCV_DNN_CUDA` | _OFF_ | Enable CUDA backend. [CUDA](https://en.wikipedia.org/wiki/CUDA), CUBLAS and [CUDNN](https://developer.nvidia.com/cudnn) must be installed. |
 | `WITH_HALIDE` | _OFF_ | Use experimental [Halide](https://en.wikipedia.org/wiki/Halide_(programming_language)) backend which can generate optimized code for dnn-layers at runtime. Halide must be installed. |
 | `WITH_VULKAN` | _OFF_ | Enable experimental [Vulkan](https://en.wikipedia.org/wiki/Vulkan_(API)) backend. Does not require additional dependencies, but can use external Vulkan headers (`VULKAN_INCLUDE_DIRS`). |
-| `WITH_TENGINE` | _OFF_ | Enable experimental [Tengine](https://github.com/OAID/Tengine) backend for ARM CPUs. Tengine library must be installed. |
 
 
 # Installation layout {#tutorial_config_reference_install}
@@ -566,6 +575,7 @@ Following options can be used to change installation layout for common scenarios
 | ------ | ------- | ----------- |
 | `OPENCV_ENABLE_NONFREE` | _OFF_ | Some algorithms included in the library are known to be protected by patents and are disabled by default. |
 | `OPENCV_FORCE_3RDPARTY_BUILD`| _OFF_ | Enable all `BUILD_` options at once. |
+| `OPENCV_IPP_ENABLE_ALL`| _OFF_ | Enable all `OPENCV_IPP_` options at once. |
 | `ENABLE_CCACHE` | _ON_ (on Unix-like platforms) | Enable [ccache](https://en.wikipedia.org/wiki/Ccache) auto-detection. This tool wraps compiler calls and caches results, can significantly improve re-compilation time. |
 | `ENABLE_PRECOMPILED_HEADERS` | _ON_ (for MSVC) | Enable precompiled headers support. Improves build time. |
 | `BUILD_DOCS` | _OFF_ | Enable documentation build (_doxygen_, _doxygen_cpp_, _doxygen_python_, _doxygen_javadoc_ targets). [Doxygen](http://www.doxygen.org/index.html) must be installed for C++ documentation build. Python and [BeautifulSoup4](https://en.wikipedia.org/wiki/Beautiful_Soup_(HTML_parser)) must be installed for Python documentation build. Javadoc and Ant must be installed for Java documentation build (part of Java SDK). |

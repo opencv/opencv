@@ -52,7 +52,7 @@ public:
     }
 
     void testONNXModels(const String& basename, const Extension ext = npy,
-                        const double l1 = 0, const float lInf = 0, const bool useSoftmax = false,
+                        double l1 = 0, double lInf = 0, const bool useSoftmax = false,
                         bool checkNoFallbacks = true, int numInps = 1)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx", required);
@@ -102,7 +102,12 @@ public:
             netSoftmax.setInput(ref);
             ref = netSoftmax.forward();
         }
-        normAssert(ref, out, "", l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+        {
+            l1 = std::max(l1, 1.4e-3);
+            lInf = std::max(lInf, 8e-3);
+        }
+        normAssert(ref, out, basename.c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
         if (checkNoFallbacks)
             expectNoFallbacksFromIE(net);
     }

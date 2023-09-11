@@ -198,16 +198,32 @@ public:
     CV_WRAP GpuMat clone() const;
 
     //! copies the GpuMat content to device memory (Blocking call)
-    CV_WRAP void copyTo(OutputArray dst) const;
+    void copyTo(OutputArray dst) const;
+    //! bindings overload which copies the GpuMat content to device memory (Blocking call)
+    CV_WRAP void copyTo(CV_OUT GpuMat& dst) const {
+        copyTo(static_cast<OutputArray>(dst));
+    }
 
     //! copies the GpuMat content to device memory (Non-Blocking call)
-    CV_WRAP void copyTo(OutputArray dst, Stream& stream) const;
+    void copyTo(OutputArray dst, Stream& stream) const;
+    //! bindings overload which copies the GpuMat content to device memory (Non-Blocking call)
+    CV_WRAP void copyTo(CV_OUT GpuMat& dst, Stream& stream) const {
+        copyTo(static_cast<OutputArray>(dst), stream);
+    }
 
     //! copies those GpuMat elements to "m" that are marked with non-zero mask elements (Blocking call)
-    CV_WRAP void copyTo(OutputArray dst, InputArray mask) const;
+    void copyTo(OutputArray dst, InputArray mask) const;
+    //! bindings overload which copies those GpuMat elements to "m" that are marked with non-zero mask elements (Blocking call)
+    CV_WRAP void copyTo(CV_OUT GpuMat& dst, GpuMat& mask) const {
+        copyTo(static_cast<OutputArray>(dst), static_cast<InputArray>(mask));
+    }
 
     //! copies those GpuMat elements to "m" that are marked with non-zero mask elements (Non-Blocking call)
-    CV_WRAP void copyTo(OutputArray dst, InputArray mask, Stream& stream) const;
+    void copyTo(OutputArray dst, InputArray mask, Stream& stream) const;
+    //! bindings overload which copies those GpuMat elements to "m" that are marked with non-zero mask elements (Non-Blocking call)
+    CV_WRAP void copyTo(CV_OUT GpuMat& dst, GpuMat& mask, Stream& stream) const {
+        copyTo(static_cast<OutputArray>(dst), static_cast<InputArray>(mask), stream);
+    }
 
     //! sets some of the GpuMat elements to s (Blocking call)
     CV_WRAP GpuMat& setTo(Scalar s);
@@ -222,19 +238,31 @@ public:
     CV_WRAP GpuMat& setTo(Scalar s, InputArray mask, Stream& stream);
 
     //! converts GpuMat to another datatype (Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype) const;
+    void convertTo(OutputArray dst, int rtype) const;
 
     //! converts GpuMat to another datatype (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, Stream& stream) const;
+    void convertTo(OutputArray dst, int rtype, Stream& stream) const;
+    //! bindings overload which converts GpuMat to another datatype (Non-Blocking call)
+    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype, Stream& stream) const {
+        convertTo(static_cast<OutputArray>(dst), rtype, stream);
+    }
 
     //! converts GpuMat to another datatype with scaling (Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, double beta = 0.0) const;
+    void convertTo(OutputArray dst, int rtype, double alpha, double beta = 0.0) const;
+    //! bindings overload which converts GpuMat to another datatype with scaling(Blocking call)
+    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype, double alpha = 1.0, double beta = 0.0) const {
+        convertTo(static_cast<OutputArray>(dst), rtype, alpha, beta);
+    }
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const;
+    void convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const;
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
-    CV_WRAP void convertTo(OutputArray dst, int rtype, double alpha, double beta, Stream& stream) const;
+    void convertTo(OutputArray dst, int rtype, double alpha, double beta, Stream& stream) const;
+    //! bindings overload which converts GpuMat to another datatype with scaling (Non-Blocking call)
+    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype, double alpha, double beta, Stream& stream) const {
+        convertTo(static_cast<OutputArray>(dst), rtype, alpha, beta, stream);
+    }
 
     CV_WRAP void assignTo(GpuMat& m, int type = -1) const;
 
@@ -577,7 +605,7 @@ CV_EXPORTS_W void ensureSizeIsEnough(int rows, int cols, int type, OutputArray a
  */
 CV_EXPORTS_W GpuMat inline createGpuMatFromCudaMemory(int rows, int cols, int type, size_t cudaMemoryAddress, size_t step = Mat::AUTO_STEP) {
     return GpuMat(rows, cols, type, reinterpret_cast<void*>(cudaMemoryAddress), step);
-};
+}
 
  /** @overload
 @param size 2D array size: Size(cols, rows). In the Size() constructor, the number of rows and the number of columns go in the reverse order.
@@ -588,7 +616,7 @@ CV_EXPORTS_W GpuMat inline createGpuMatFromCudaMemory(int rows, int cols, int ty
  */
 CV_EXPORTS_W inline GpuMat createGpuMatFromCudaMemory(Size size, int type, size_t cudaMemoryAddress, size_t step = Mat::AUTO_STEP) {
     return GpuMat(size, type, reinterpret_cast<void*>(cudaMemoryAddress), step);
-};
+}
 
 /** @brief BufferPool for use with CUDA streams
 

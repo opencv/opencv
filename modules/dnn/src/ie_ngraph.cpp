@@ -383,11 +383,17 @@ public:
 
 #endif // OpenVINO >= 2022.1
 
-InfEngineNgraphNode::InfEngineNgraphNode(std::shared_ptr<ngraph::Node>&& _node)
-    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(std::move(_node)) {}
+InfEngineNgraphNode::InfEngineNgraphNode(ngraph::Output<ngraph::Node>&& _node)
+    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(std::move(_node)) {
+    CV_Assert(node.get_node());
+    CV_Assert(node.get_node_shared_ptr());
+}
 
-InfEngineNgraphNode::InfEngineNgraphNode(const std::shared_ptr<ngraph::Node>& _node)
-    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(_node) {}
+InfEngineNgraphNode::InfEngineNgraphNode(const ngraph::Output<ngraph::Node>& _node)
+    : BackendNode(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH), node(_node) {
+    CV_Assert(node.get_node());
+    CV_Assert(node.get_node_shared_ptr());
+}
 
 InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& nodes,
                                          Ptr<Layer>& cvLayer_, std::vector<Mat*>& inputs,
@@ -420,7 +426,7 @@ InfEngineNgraphNode::InfEngineNgraphNode(const std::vector<Ptr<BackendNode> >& n
 }
 
 void InfEngineNgraphNode::setName(const std::string& name) {
-    node->set_friendly_name(name);
+    node.get_node()->set_friendly_name(name);
 }
 
 InfEngineNgraphNet::InfEngineNgraphNet(detail::NetImplBase& netImpl)
@@ -441,69 +447,8 @@ InfEngineNgraphNet::InfEngineNgraphNet(detail::NetImplBase& netImpl, InferenceEn
 void InfEngineNgraphNet::addOutput(const Ptr<InfEngineNgraphNode>& node)
 {
     CV_Assert(node);
-    CV_Assert(node->node);
-    const std::string& name = node->node->get_friendly_name();
+    const std::string& name = node->node.get_node()->get_friendly_name();
     requestedOutputs.insert({name, node.get()});
-}
-
-void InfEngineNgraphNet::setNodePtr(std::shared_ptr<ngraph::Node>* ptr) {
-    all_nodes.emplace((*ptr)->get_friendly_name(), ptr);
-}
-
- void InfEngineNgraphNet::release()
- {
-     // FIXIT release should not be conditional, release ALL
-     for (auto& node : components.back()) {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-         if (!(ngraph::op::is_parameter(node) || ngraph::op::is_output(node) || ngraph::op::is_constant(node)) ) {
-#else
-         if (!(node->is_parameter() || node->is_output() || node->is_constant()) ) {
-#endif
-             auto it = all_nodes.find(node->get_friendly_name());
-             if (it != all_nodes.end()) {
-                 it->second->reset();
-                 all_nodes.erase(it);
-             }
-         }
-     }
- }
-
-void InfEngineNgraphNet::dfs(std::shared_ptr<ngraph::Node>& node,
-                             std::vector<std::shared_ptr<ngraph::Node>>& comp,
-                             std::unordered_map<std::string, bool>& used) {
-    used[node->get_friendly_name()] = true;
-    comp.push_back(node);
-    auto inputs = node->get_users();
-    for (size_t i = 0; i < node->get_input_size(); ++i) {
-        inputs.push_back(node->input_value(i).get_node()->shared_from_this());
-    }
-
-    for (auto& to : inputs) {
-        if (!used[to->get_friendly_name()]) {
-            dfs(to, comp, used);
-        }
-    }
-}
-
-int InfEngineNgraphNet::getNumComponents()
-{
-    if (!components.empty()) {
-        return components.size();
-    }
-    std::unordered_map<std::string, bool> used;
-    auto inputs = ngraph_function->get_ordered_ops();
-    for (auto& node : inputs) {
-        used.emplace(node->get_friendly_name(), false);
-    }
-
-    for (auto& node : inputs) {
-        if (!used[node->get_friendly_name()]) {
-            std::vector<std::shared_ptr<ngraph::Node>> current_comp;
-            dfs(node, current_comp, used);
-            components.push_back(current_comp);
-        }
-    }
-    return components.size();
 }
 
 void InfEngineNgraphNet::createNet(Target targetId) {
@@ -518,52 +463,13 @@ void InfEngineNgraphNet::createNet(Target targetId) {
             CV_Assert(output_node_it->second);
             auto out = std::make_shared<ngraph::op::Result>(output_node_it->second->node);
 #if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
-            out->set_friendly_name(output_node_it->first + (output_node_it->second->node->get_output_size() == 1 ? "" : ".0"));
+            out->set_friendly_name(output_node_it->first + (output_node_it->second->node.get_node()->get_output_size() == 1 ? "" : ".0"));
 #endif
             outs.push_back(out);
         }
         CV_Assert_N(!inputs_vec.empty(), !outs.empty());
         ngraph_function = std::make_shared<ngraph::Function>(outs, inputs_vec);
-
-        int num_comp = getNumComponents();
-        CV_LOG_DEBUG(NULL, "DNN/IE: number of subgraphs: " << num_comp);
-        if (num_comp > 1) {
-            for (int i = num_comp - 1; i >= 0; --i) {
-                ngraph::ResultVector outputs;
-                ngraph::ParameterVector inps;
-                for (auto& node : components.back()) {
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-                    if (ngraph::op::is_parameter(node)) {
-#else
-                    if (node->is_parameter()) {
-#endif
-                        CV_LOG_DEBUG(NULL, "DNN/IE: subgraph[" << i << "]: +input[" << inps.size() << "] = '" << node->get_friendly_name() << "'");
-                        auto parameter = std::dynamic_pointer_cast<ngraph::op::Parameter>(node);
-                        inps.push_back(parameter);
-                    }
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-                    else if (ngraph::op::is_output(node)) {
-#else
-                    else if (node->is_output()) {
-#endif
-                        CV_LOG_DEBUG(NULL, "DNN/IE: subgraph[" << i << "]: +output[" << outputs.size() << "] = '" << node->get_friendly_name() << "'");
-                        auto result = std::dynamic_pointer_cast<ngraph::op::Result>(node);
-                        outputs.push_back(result);
-                    }
-                }
-                CV_LOG_DEBUG(NULL, "DNN/IE: subgraph[" << i << ": nodes=" << components.back().size() << " inputs=" << inps.size() << " outputs=" << outputs.size());
-                isInit = false;
-                CV_Assert_N(!inps.empty(), !outputs.empty());
-                ngraph_function = std::make_shared<ngraph::Function>(outputs, inps);
-                release();
-                components.pop_back();
-                init(targetId);
-            }
-        } else {
-            release();
-            components.clear();
-            init(targetId);
-        }
+        init(targetId);
     }
 }
 

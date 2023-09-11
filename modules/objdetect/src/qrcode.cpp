@@ -68,19 +68,14 @@ static void updatePointsResult(OutputArray points_, const vector<Point2f>& point
 
 static Point2f intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f b2)
 {
+    // Try to solve a two lines intersection (a1, a2) and (b1, b2) as a system of equations:
+    // a2 + u * (a1 - a2) = b2 + v * (b1 - b2)
     const float divisor = (a1.x - a2.x) * (b1.y - b2.y) - (a1.y - a2.y) * (b1.x - b2.x);
     const float eps = 0.001f;
     if (abs(divisor) < eps)
         return a2;
-    Point2f result_square_angle(
-                              ((a1.x * a2.y  -  a1.y * a2.x) * (b1.x - b2.x) -
-                               (b1.x * b2.y  -  b1.y * b2.x) * (a1.x - a2.x)) /
-                               divisor,
-                              ((a1.x * a2.y  -  a1.y * a2.x) * (b1.y - b2.y) -
-                               (b1.x * b2.y  -  b1.y * b2.x) * (a1.y - a2.y)) /
-                               divisor
-                              );
-    return result_square_angle;
+    const float u = ((b2.x - a2.x) * (b1.y - b2.y) + (b1.x - b2.x) * (a2.y - b2.y)) / divisor;
+    return a2 + u * (a1 - a2);
 }
 
 //      / | b
@@ -1254,14 +1249,14 @@ bool QRDecode::computeSidesPoints(const vector<Point> &result_integer_hull)
         {
             if (points.front().x > points.back().x)
             {
-                reverse(points.begin(), points.end());
+                std::reverse(points.begin(), points.end());
             }
         }
         else
         {
             if (points.front().y > points.back().y)
             {
-                reverse(points.begin(), points.end());
+                std::reverse(points.begin(), points.end());
             }
         }
         if (points.empty())
@@ -1637,7 +1632,7 @@ bool QRDecode::findPatternsVerticesPoints(vector<vector<Point> > &patterns_verti
             }
             if ((int)min_angle_pnts_indexes.size() == num_vertices) { break; }
         }
-        sort(min_angle_pnts_indexes.begin(), min_angle_pnts_indexes.end());
+        std::sort(min_angle_pnts_indexes.begin(), min_angle_pnts_indexes.end());
 
         vector<Point> contour_vertices_points;
 
@@ -1766,11 +1761,11 @@ bool QRDecode::findTempPatternsAddingPoints(vector<std::pair<int, vector<Point> 
             }
             if (abs(p1.x - p2.x) > abs(p1.y - p2.y))
             {
-                sort(points.begin(), points.end(), sortPointsByX());
+                std::sort(points.begin(), points.end(), sortPointsByX());
             }
             else
             {
-                sort(points.begin(), points.end(), sortPointsByY());
+                std::sort(points.begin(), points.end(), sortPointsByY());
             }
 
             temp_patterns_add_points.push_back(std::pair<int, vector<Point> >(idx_curved_side,points));
@@ -1914,11 +1909,11 @@ void QRDecode::completeAndSortSides()
         Point p2 = it->second.back();
         if (abs(p1.x - p2.x) > abs(p1.y - p2.y))
         {
-            sort(it->second.begin(), it->second.end(), sortPointsByX());
+            std::sort(it->second.begin(), it->second.end(), sortPointsByX());
         }
         else
         {
-            sort(it->second.begin(), it->second.end(), sortPointsByY());
+            std::sort(it->second.begin(), it->second.end(), sortPointsByY());
         }
     }
 }
@@ -2080,8 +2075,8 @@ bool QRDecode::divideIntoEvenSegments(vector<vector<Point2f> > &segments_points)
                 Point2f segment_start = segments_points[i][j];
                 Point2f segment_end   = segments_points[i][j + 1];
                 vector<Point2f>::iterator it_start, it_end, it;
-                it_start = find(spline_lines[i].begin(), spline_lines[i].end(), segment_start);
-                it_end   = find(spline_lines[i].begin(), spline_lines[i].end(), segment_end);
+                it_start = std::find(spline_lines[i].begin(), spline_lines[i].end(), segment_start);
+                it_end   = std::find(spline_lines[i].begin(), spline_lines[i].end(), segment_end);
                 float max_dist_to_line = 0.0;
                 for (it = it_start; it != it_end; it++)
                 {

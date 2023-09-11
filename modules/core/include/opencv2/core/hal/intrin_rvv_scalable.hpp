@@ -924,6 +924,9 @@ inline scalartype v_reduce_sum(const _Tpvec& a)  \
     return (scalartype)v_get0(res); \
 }
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float32, v_float32, vfloat32m1_t, float, f32, VTraits<v_float32>::vlanes())
+#if CV_SIMD_SCALABLE_64F
+OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float64, v_float64, vfloat64m1_t, float, f64, VTraits<v_float64>::vlanes())
+#endif
 
 #define OPENCV_HAL_IMPL_RVV_REDUCE(_Tpvec, func, scalartype, suffix, vl, red) \
 inline scalartype v_reduce_##func(const _Tpvec& a)  \
@@ -1651,6 +1654,10 @@ inline v_uint32 v_popcount(const v_uint32& a)
 {
     return v_hadd(v_hadd(v_popcount(vreinterpret_u8m1(a))));
 }
+inline v_uint64 v_popcount(const v_uint64& a)
+{
+    return v_hadd(v_hadd(v_hadd(v_popcount(vreinterpret_u8m1(a)))));
+}
 
 inline v_uint8 v_popcount(const v_int8& a)
 {
@@ -1663,6 +1670,11 @@ inline v_uint16 v_popcount(const v_int16& a)
 inline v_uint32 v_popcount(const v_int32& a)
 {
     return v_popcount(v_abs(a));\
+}
+inline v_uint64 v_popcount(const v_int64& a)
+{
+    // max(0 - a) is used, since v_abs does not support 64-bit integers.
+    return v_popcount(v_reinterpret_as_u64(vmax(a, v_sub(v_setzero_s64(), a), VTraits<v_int64>::vlanes())));
 }
 
 

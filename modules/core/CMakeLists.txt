@@ -68,6 +68,26 @@ if(CV_TRACE AND HAVE_ITT)
   add_definitions(-DOPENCV_WITH_ITT=1)
 endif()
 
+# https://github.com/opencv/opencv/issues/24145
+if(HAVE_IPP)
+  OCV_OPTION(OPENCV_IPP_ENABLE_ALL "Enable all OPENCV_IPP_ options at once" OFF)
+  OCV_OPTION(OPENCV_IPP_MEAN   "Enable IPP optimizations for mean (+200Kb in binary size)"                OPENCV_IPP_ENABLE_ALL)
+  OCV_OPTION(OPENCV_IPP_MINMAX "Enable IPP optimizations for minMaxLoc/minMaxIdx (+200Kb in binary size)" OPENCV_IPP_ENABLE_ALL)
+  OCV_OPTION(OPENCV_IPP_SUM    "Enable IPP optimizations for sum (+100Kb in binary size)"                 OPENCV_IPP_ENABLE_ALL)
+
+  if(OPENCV_IPP_MEAN)
+    ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/mean.dispatch.cpp "OPENCV_IPP_MEAN=1")
+  endif()
+
+  if(OPENCV_IPP_MINMAX)
+    ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/minmax.cpp "OPENCV_IPP_MINMAX=1")
+  endif()
+
+  if(OPENCV_IPP_SUM)
+    ocv_append_source_file_compile_definitions(${CMAKE_CURRENT_SOURCE_DIR}/src/sum.dispatch.cpp "OPENCV_IPP_SUM=1")
+  endif()
+endif()
+
 file(GLOB lib_cuda_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cuda/*.h")

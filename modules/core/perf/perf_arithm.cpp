@@ -5,7 +5,34 @@ namespace opencv_test
 {
 using namespace perf;
 
+using BroadcastTest = perf::TestBaseWithParam<std::tuple<std::vector<int>, perf::MatType, std::vector<int>>>;
 typedef Size_MatType BinaryOpTest;
+
+PERF_TEST_P_(BroadcastTest, basic)
+{
+    std::vector<int> shape_src = get<0>(GetParam());
+    int dt_type = get<1>(GetParam());
+    std::vector<int> shape_dst = get<2>(GetParam());
+
+    cv::Mat src(static_cast<int>(shape_src.size()), shape_src.data(), dt_type);
+    cv::Mat dst(static_cast<int>(shape_dst.size()), shape_dst.data(), dt_type);
+
+    cv::randu(src, -1.f, 1.f);
+
+    TEST_CYCLE() cv::broadcast(src, shape_dst, dst);
+
+    SANITY_CHECK_NOTHING();
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/ , BroadcastTest,
+    testing::Combine(
+        testing::Values(std::vector<int>{1, 100, 800},
+                        std::vector<int>{10, 1, 800},
+                        std::vector<int>{10, 100, 1}),
+        testing::Values(CV_32FC1),
+        testing::Values(std::vector<int>{10, 100, 800})
+    )
+);
 
 PERF_TEST_P_(BinaryOpTest, min)
 {
