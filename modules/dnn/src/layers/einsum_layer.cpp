@@ -303,6 +303,7 @@ public:
     void createOutputSubsctipt() const;
     void calculateOutputShape(std::vector<MatShape>& outputDims) const;
     void preProcessInputs(InputArrayOfArrays& inputs);
+    Mat reduceSum(Mat& src, MatShape& reduceAxis);
     Mat FinalizeOutput(const Mat& candidateOuput, const MatShape& ordered_subscript_indices_in_candidate);
     Mat pairwiseOperandProcess(
         const Mat& left,
