@@ -176,6 +176,13 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
         CV_LOG_WARNING(NULL, "DNN: Only default, TIMVX and OpenVINO backends support quantized networks");
         backendId = DNN_BACKEND_OPENCV;
     }
+#ifdef HAVE_DNN_NGRAPH
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2023_0))
+    {
+        CV_LOG_WARNING(NULL, "DNN: OpenVINO 2023.0 and higher supports quantized networks");
+        backendId = DNN_BACKEND_OPENCV;
+    }
+#endif
 
     if (preferableBackend != backendId)
     {
