@@ -7,12 +7,6 @@ import sys
 import tarfile
 import requests
 
-if sys.version_info[0] < 3:
-    from urllib2 import urlopen
-else:
-    from urllib.request import urlopen
-
-
 class Model:
     MB = 1024*1024
     BUFSIZE = 10*MB
@@ -31,12 +25,12 @@ class Model:
 
     def printRequest(self, r):
         def getMB(r):
-            d = dict(r.info())
+            d = dict(r.headers)
             for c in ['content-length', 'Content-Length']:
                 if c in d:
                     return int(d[c]) / self.MB
             return '<unknown>'
-        print('  {} {} [{} Mb]'.format(r.getcode(), r.msg, getMB(r)))
+        print('  {} [{} Mb]'.format(r.status_code, getMB(r)))
 
     def verify(self):
         if not self.sha:
@@ -54,7 +48,7 @@ class Model:
             self.sha_actual = sha.hexdigest()
             return self.sha == self.sha_actual
         except Exception as e:
-            print('  catch {}'.format(e))
+            print('  verify {}'.format(e))
 
     def get(self):
         if self.verify():
@@ -90,31 +84,42 @@ class Model:
 
     def download(self):
         try:
-            r = urlopen(self.url, timeout=60)
+            session = requests.Session()
+            r = session.get(self.url, stream=True, timeout=60)
             self.printRequest(r)
-            self.save(r)
+
+            with open(self.filename, 'wb') as f:
+                print('  progress ', end='')
+                sys.stdout.flush()
+                for buf in r.iter_content(self.BUFSIZE):
+                    if not buf:
+                        continue
+                    f.write(buf)
+                    print('>', end='')
+                    sys.stdout.flush()
+
         except Exception as e:
-            print('  catch {}'.format(e))
+            print('  download {}'.format(e))
 
     def extract(self):
         try:
             with tarfile.open(self.archive) as f:
                 assert self.member in f.getnames()
-                self.save(f.extractfile(self.member))
-        except Exception as e:
-            print('  catch {}'.format(e))
+                r = f.extractfile(self.member)
 
-    def save(self, r):
-        with open(self.filename, 'wb') as f:
-            print('  progress ', end='')
-            sys.stdout.flush()
-            while True:
-                buf = r.read(self.BUFSIZE)
-                if not buf:
-                    break
-                f.write(buf)
-                print('>', end='')
-                sys.stdout.flush()
+                with open(self.filename, 'wb') as f:
+                    print('  progress ', end='')
+                    sys.stdout.flush()
+                    while True:
+                        buf = r.read(self.BUFSIZE)
+                        if not buf:
+                            break
+                        f.write(buf)
+                        print('>', end='')
+                        sys.stdout.flush()
+
+        except Exception as e:
+            print('  extract {}'.format(e))
 
     def handle_bad_download(self):
         if os.path.exists(self.filename):
@@ -220,14 +225,14 @@ models = [
         filename='squeezenet_v1.1.caffemodel'),
     Model(
         name='MobileNet-SSD',  # https://github.com/chuanqi305/MobileNet-SSD
-        url='https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc',
-        sha='994d30a8afaa9e754d17d2373b2d62a7dfbaaf7a',
-        filename='MobileNetSSD_deploy.caffemodel'),
+        url='https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/97406996b1eee2d40eb0a00ae567cf41e23369f9/mobilenet_iter_73000.caffemodel',
+        sha='19e3ec38842f3e68b02c07a1c24424a1e9db57e9',
+        filename='MobileNetSSD_deploy_19e3ec3.caffemodel'),
     Model(
         name='MobileNet-SSD',
-        url='https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/daef68a6c2f5fbb8c88404266aa28180646d17e0/MobileNetSSD_deploy.prototxt',
-        sha='d77c9cf09619470d49b82a9dd18704813a2043cd',
-        filename='MobileNetSSD_deploy.prototxt'),
+        url='https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/97406996b1eee2d40eb0a00ae567cf41e23369f9/deploy.prototxt',
+        sha='50cf80235a8fcccc641bf9f8efc803edbf21c615',
+        filename='MobileNetSSD_deploy_19e3ec3.prototxt'),
     Model(
         name='OpenFace',  # https://github.com/cmusatyalab/openface
         url='https://storage.cmusatyalab.org/openface-models/nn4.small2.v1.t7',
@@ -298,7 +303,7 @@ models = [
         filename='ssd_mobilenet_v2_coco_2018_03_29.pb'),
     Model(
         name='Colorization',
-        url='https://raw.githubusercontent.com/richzhang/colorization/master/models/colorization_deploy_v2.prototxt',
+        url='https://raw.githubusercontent.com/richzhang/colorization/caffe/models/colorization_deploy_v2.prototxt',
         sha='f528334e386a69cbaaf237a7611d833bef8e5219',
         filename='colorization_deploy_v2.prototxt'),
     Model(
@@ -432,29 +437,17 @@ models = [
         filename='faster_rcnn_resnet50_coco_2018_01_28.pb'),
     Model(
         name='AlexNet (ONNX)',
-        url='https://s3.amazonaws.com/download.onnx/models/opset_8/bvlc_alexnet.tar.gz',
-        sha='c713be2852472582224fa7395e2ab4641f8b6356',
-        filename='bvlc_alexnet.tar.gz'),
-    Model(
-        name='AlexNet (ONNX)',
-        archive='bvlc_alexnet.tar.gz',
-        member='bvlc_alexnet/model.onnx',
+        url='https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/alexnet/model/bvlcalexnet-8.onnx',
         sha='b256703f2b125d8681a0a6e5a40a6c9deb7d2b4b',
         filename='onnx/models/alexnet.onnx'),
     Model(
         name='GoogleNet (ONNX)',
-        url='https://s3.amazonaws.com/download.onnx/models/opset_8/bvlc_googlenet.tar.gz',
-        sha='739732220ba2e3efa88f7c26f13badad9b7514bc',
-        filename='bvlc_googlenet.tar.gz'),
-    Model(
-        name='GoogleNet (ONNX)',
-        archive='bvlc_googlenet.tar.gz',
-        member='bvlc_googlenet/model.onnx',
+        url='https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/inception_and_googlenet/googlenet/model/googlenet-8.onnx',
         sha='534a16d7e2472f6a9a1925a5ee6c9abc2f5c02b0',
         filename='onnx/models/googlenet.onnx'),
     Model(
         name='CaffeNet (ONNX)',
-        url='https://s3.amazonaws.com/download.onnx/models/opset_8/bvlc_reference_caffenet.tar.gz',
+        url='https://github.com/onnx/models/raw/4eff8f9b9189672de28d087684e7085ad977747c/vision/classification/caffenet/model/caffenet-8.tar.gz',
         sha='f9f5dd60d4c9172a7e26bd4268eab7ecddb37393',
         filename='bvlc_reference_caffenet.tar.gz'),
     Model(
@@ -477,7 +470,7 @@ models = [
         filename='onnx/data/output_caffenet.pb'),
     Model(
         name='RCNN_ILSVRC13 (ONNX)',
-        url='https://s3.amazonaws.com/download.onnx/models/opset_8/bvlc_reference_rcnn_ilsvrc13.tar.gz',
+        url='https://github.com/onnx/models/raw/cbda9ebd037241c6c6a0826971741d5532af8fa4/vision/classification/rcnn_ilsvrc13/model/rcnn-ilsvrc13-8.tar.gz',
         sha='b1b27a41066c26f824d57e99036dc885459017f0',
         filename='bvlc_reference_rcnn_ilsvrc13.tar.gz'),
     Model(
@@ -500,7 +493,7 @@ models = [
         filename='onnx/data/output_rcnn_ilsvrc13.pb'),
     Model(
         name='ZFNet512 (ONNX)',
-        url='https://s3.amazonaws.com/download.onnx/models/opset_8/zfnet512.tar.gz',
+        url='https://github.com/onnx/models/raw/f884b33c3e2371952aad7ea091898f418c830fe5/vision/classification/zfnet-512/model/zfnet512-8.tar.gz',
         sha='c040c455c8aac71c8cda57595b698b76449e4ff4',
         filename='zfnet512.tar.gz'),
     Model(
@@ -523,7 +516,7 @@ models = [
         filename='onnx/data/output_zfnet512.pb'),
     Model(
         name='VGG16_bn (ONNX)',
-        url='https://s3.amazonaws.com/onnx-model-zoo/vgg/vgg16-bn/vgg16-bn.tar.gz',
+        url='https://github.com/onnx/models/raw/f884b33c3e2371952aad7ea091898f418c830fe5/vision/classification/vgg/model/vgg16-bn-7.tar.gz',
         sha='60f4685aed632d2ce3b137017cf44ae1a5c55459',
         filename='vgg16-bn.tar.gz'),
     Model(
@@ -546,7 +539,7 @@ models = [
         filename='onnx/data/output_vgg16-bn.pb'),
     Model(
         name='ResNet-18v1 (ONNX)',
-        url='https://s3.amazonaws.com/onnx-model-zoo/resnet/resnet18v1/resnet18v1.tar.gz',
+        url='https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/resnet/model/resnet18-v1-7.tar.gz',
         sha='d132be4857d024de9caa21fd5300dee7c063bc35',
         filename='resnet18v1.tar.gz'),
     Model(
@@ -569,7 +562,7 @@ models = [
         filename='onnx/data/output_resnet18v1.pb'),
     Model(
         name='ResNet-50v1 (ONNX)',
-        url='https://s3.amazonaws.com/onnx-model-zoo/resnet/resnet50v1/resnet50v1.tar.gz',
+        url='https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/resnet/model/resnet50-v1-7.tar.gz',
         sha='a4ac2da7e0024d61fdb80481496ba966b48b9fea',
         filename='resnet50v1.tar.gz'),
     Model(
@@ -592,7 +585,7 @@ models = [
         filename='onnx/data/output_resnet50v1.pb'),
     Model(
         name='ResNet50-Int8 (ONNX)',
-        url='https://github.com/onnx/models/raw/master/vision/classification/resnet/model/resnet50-v1-12-int8.tar.gz',
+        url='https://github.com/onnx/models/raw/771185265efbdc049fb223bd68ab1aeb1aecde76/vision/classification/resnet/model/resnet50-v1-12-int8.tar.gz',
         sha='2ff2a58f4a27362ee6234915452e86287cdcf269',
         filename='resnet50-v1-12-int8.tar.gz'),
     Model(
@@ -626,7 +619,7 @@ models = [
         filename='ssd_mobilenet_v1_ppn_coco.pb'),
     Model(
         name='ResNet101_DUC_HDC (ONNX)',
-        url='https://s3.amazonaws.com/onnx-model-zoo/duc/ResNet101_DUC_HDC.tar.gz',
+        url='https://github.com/onnx/models/raw/69c5d3751dda5349fd3fc53f525395d180420c07/vision/classification/resnet/model/resnet101-v1-7.tar.gz',
         sha='f8314f381939d01045ac31dbb53d7d35fe3ff9a0',
         filename='ResNet101_DUC_HDC.tar.gz'),
     Model(
@@ -649,7 +642,7 @@ models = [
         filename='onnx/data/output_resnet101_duc_hdc.pb'),
     Model(
         name='TinyYolov2 (ONNX)',
-        url='https://www.cntk.ai/OnnxModels/tiny_yolov2/opset_1/tiny_yolov2.tar.gz',
+        url='https://github.com/onnx/models/raw/3d4b2c28f951064ab35c89d5f5c3ffe74a149e4b/vision/object_detection_segmentation/tiny-yolov2/model/tinyyolov2-1.tar.gz',
         sha='b9102abb8fa6f51368119b52146c30189353164a',
         filename='tiny_yolov2.tar.gz'),
     Model(
@@ -672,7 +665,7 @@ models = [
         filename='onnx/data/output_tiny_yolo2.pb'),
     Model(
         name='CNN Mnist (ONNX)',
-        url='https://www.cntk.ai/OnnxModels/mnist/opset_7/mnist.tar.gz',
+        url='https://github.com/onnx/models/raw/cbda9ebd037241c6c6a0826971741d5532af8fa4/vision/classification/mnist/model/mnist-7.tar.gz',
         sha='8bcd3372e44bd95dc8a211bc31fb3025d8edf9f9',
         filename='mnist.tar.gz'),
     Model(
@@ -741,7 +734,7 @@ models = [
         filename='onnx/data/output_LResNet100E_IR.pb'),
     Model(
         name='Emotion FERPlus (ONNX)',
-        url='https://www.cntk.ai/OnnxModels/emotion_ferplus/opset_7/emotion_ferplus.tar.gz',
+        url='https://github.com/onnx/models/raw/7cee9777a86dd6e80040d6b786869a83d2ad1273/vision/body_analysis/emotion_ferplus/model/emotion-ferplus-7.tar.gz',
         sha='9ff80899c0cd468999db5d8ffde98780ef85455e',
         filename='emotion_ferplus.tar.gz'),
     Model(
@@ -764,7 +757,7 @@ models = [
         filename='onnx/data/output_emotion_ferplus.pb'),
     Model(
         name='Squeezenet (ONNX)',
-        url='https://s3.amazonaws.com/download.onnx/models/opset_8/squeezenet.tar.gz',
+        url='https://github.com/onnx/models/raw/f884b33c3e2371952aad7ea091898f418c830fe5/vision/classification/squeezenet/model/squeezenet1.0-8.tar.gz',
         sha='57348321d4d460c07c41af814def3abe728b3a03',
         filename='squeezenet.tar.gz'),
     Model(
@@ -787,7 +780,7 @@ models = [
         filename='onnx/data/output_squeezenet.pb'),
     Model(
         name='DenseNet121 (ONNX)',
-        url='https://s3.amazonaws.com/download.onnx/models/opset_8/densenet121.tar.gz',
+        url='https://github.com/onnx/models/raw/4eff8f9b9189672de28d087684e7085ad977747c/vision/classification/densenet-121/model/densenet-8.tar.gz',
         sha='338b70e871e73b0550fc8ccc0863b8382e90e8e5',
         filename='densenet121.tar.gz'),
     Model(
@@ -810,7 +803,7 @@ models = [
         filename='onnx/data/output_densenet121.pb'),
     Model(
         name='Inception v1 (ONNX)',
-        url='https://s3.amazonaws.com/download.onnx/models/opset_8/inception_v1.tar.gz',
+        url='https://github.com/onnx/models/raw/4eff8f9b9189672de28d087684e7085ad977747c/vision/classification/inception_and_googlenet/inception_v1/model/inception-v1-8.tar.gz',
         sha='94ecb2bd1426704dca578dc746e3c27bedf22352',
         filename='inception_v1.tar.gz'),
     Model(
@@ -833,7 +826,7 @@ models = [
         filename='onnx/data/output_inception_v1.pb'),
     Model(
         name='Inception v2 (ONNX)',
-        url='https://s3.amazonaws.com/download.onnx/models/opset_8/inception_v2.tar.gz',
+        url='https://github.com/onnx/models/raw/4eff8f9b9189672de28d087684e7085ad977747c/vision/classification/inception_and_googlenet/inception_v2/model/inception-v2-8.tar.gz',
         sha='d07a442a84d939232c37c976fd8d624fa9f82026',
         filename='inception_v2.tar.gz'),
     Model(
@@ -856,7 +849,7 @@ models = [
         filename='onnx/data/output_inception_v2.pb'),
     Model(
         name='Shufflenet (ONNX)',
-        url='https://s3.amazonaws.com/download.onnx/models/opset_9/shufflenet.tar.gz',
+        url='https://github.com/onnx/models/raw/f884b33c3e2371952aad7ea091898f418c830fe5/vision/classification/shufflenet/model/shufflenet-9.tar.gz',
         sha='c99afcb7fcc809c0688cc99cb3709a052fde1de7',
         filename='shufflenet.tar.gz'),
     Model(
