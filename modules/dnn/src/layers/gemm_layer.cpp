@@ -206,7 +206,7 @@ public:
             }
         } else { // initialization
             float *ptr_y = Y.ptr<float>();
-            int total = std::accumulate(shape_A.begin(), shape_A.end(), 1, std::multiplies<int>());
+            size_t total = Y.total();
             std::memset(ptr_y, 0, total * sizeof(float));
         }
 
@@ -232,7 +232,8 @@ public:
 
         if (!trans_b)
             cv::transpose(B, B);
-        return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), 1, B, C);
+        auto flatten_start_axis = normalize_axis(1, input_wrapper->getRank());
+        return make_cuda_node<cuda4dnn::InnerProductOp>(preferableTarget, std::move(context->stream), std::move(context->cublas_handle), flatten_start_axis, B, C);
     }
 #endif // HAVE_CUDA
 
