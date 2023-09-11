@@ -16,6 +16,7 @@
 #include "fast_gemm_kernels.simd.hpp"
 #include "layers/cpu_kernels/fast_gemm_kernels.simd_declarations.hpp"
 #undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+#include "fast_gemm_kernels.default.hpp"
 
 namespace cv { namespace dnn {
 
@@ -52,7 +53,9 @@ void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastG
     } else
 #endif
     {
-        CV_Error(Error::StsNotImplemented, "DNN/fastGemm: instruction set not supported");
+        int size_packed_B = cpu_baseline::fastGemmPackBSize(N, K);
+        packed_B.resize(size_packed_B);
+        cpu_baseline::fastGemmPackBKernel(B.ptr<const char>(), (char *)packed_B.data(), N, K, ldb0, ldb1, B.elemSize());
     }
 }
 
@@ -109,7 +112,7 @@ void fastGemm(bool trans_a, int M, int N, int K,
     } else
 #endif
     {
-        CV_Error(Error::StsNotImplemented, "DNN/fastGemm: instruction set not supported");
+        cpu_baseline::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
     }
 }
 
@@ -155,7 +158,8 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
     } else
 #endif
     {
-        CV_Error(Error::StsNotImplemented, "DNN/fastGemm: instruction set not supported");
+        cpu_baseline::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
+                                         (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
     }
 }
 

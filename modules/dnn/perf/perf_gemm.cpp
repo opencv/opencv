@@ -115,7 +115,6 @@ static inline void PrintTo(const GemmParamId& v, std::ostream* os)
 typedef tuple<GemmParamId, tuple<Backend, Target> > GemmTestParam_t;
 typedef TestBaseWithParam<GemmTestParam_t> Gemm;
 
-#if CV_TRY_AVX2 || CV_TRY_AVX || CV_TRY_NEON
 PERF_TEST_P_(Gemm, gemm)
 {
     int test_id = (int)get<0>(GetParam());
@@ -161,30 +160,11 @@ PERF_TEST_P_(Gemm, gemm)
     Net net;
     int id = net.addLayerToPrev(lp.name, lp.type, lp);
     net.connect(0, 0, id, 0);
-    // net.connect(0, 1, id, 1);
-    // if (have_bias)
-    // {
-    //     net.connect(0, 2, id, 2);
-    // }
     net.setPreferableBackend(backend_id);
     net.setPreferableTarget(target_id);
 
     // warmup
     {
-        // std::vector<std::string> input_names(2);
-        // input_names[0] = "A";
-        // input_names[1] = "B";
-        // if (have_bias) {
-        //     input_names.push_back("C");
-        // }
-        // net.setInputsNames(input_names);
-        // net.setInput(A, input_names[0]);
-        // net.setInput(B, input_names[1]);
-        // if (have_bias) {
-        //     Mat C(static_cast<int>(c_shape.size()), c_shape.data(), CV_32F);
-        //     randu(C, -1.0f, 1.0f);
-        //     net.setInput(C, input_names[2]);
-        // }
         net.setInput(A);
         Mat out = net.forward();
     }
@@ -196,7 +176,6 @@ PERF_TEST_P_(Gemm, gemm)
 
     SANITY_CHECK_NOTHING();
 }
-#endif
 
 PERF_TEST_P_(Gemm, innerproduct)
 {
