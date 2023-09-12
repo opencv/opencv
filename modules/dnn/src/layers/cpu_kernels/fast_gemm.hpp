@@ -21,21 +21,24 @@ struct FastGemmOpt {
     bool use_avx;
     bool use_avx2;
     bool use_neon;
+    bool use_lasx;
 
     FastGemmOpt() {
         use_avx = false;
         use_avx2 = false;
         use_neon = false;
+        use_lasx = false;
     }
 
     void init() {
         use_avx = checkHardwareSupport(CPU_AVX);
         use_avx2 = checkHardwareSupport(CPU_AVX2);
         use_neon = checkHardwareSupport(CPU_NEON);
+        use_lasx = checkHardwareSupport(CPU_LASX);
     }
 
     bool all() {
-        return use_avx || use_avx2 || use_neon;
+        return use_avx || use_avx2 || use_neon || use_lasx;
     }
 };
 

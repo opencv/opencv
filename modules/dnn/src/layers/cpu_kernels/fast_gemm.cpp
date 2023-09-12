@@ -52,6 +52,13 @@ void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastG
         opt_AVX::fastGemmPackBKernel(B.ptr<const char>(), (char *)packed_B.data(), N, K, ldb0, ldb1, B.elemSize());
     } else
 #endif
+#if CV_TRY_LASX
+    if (opt.use_lasx) {
+        int size_packed_B = opt_LASX::fastGemmPackBSize(N, K);
+        packed_B.resize(size_packed_B);
+        opt_LASX::fastGemmPackBKernel(B.ptr<const char>(), (char *)packed_B.data(), N, K, ldb0, ldb1, B.elemSize());
+    } else
+#endif
     {
         int size_packed_B = cpu_baseline::fastGemmPackBSize(N, K);
         packed_B.resize(size_packed_B);
@@ -111,6 +118,11 @@ void fastGemm(bool trans_a, int M, int N, int K,
         opt_AVX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
     } else
 #endif
+#if CV_TRY_LASX
+    if (opt.use_lasx) {
+        opt_LASX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
+    } else
+#endif
     {
         cpu_baseline::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
     }
@@ -154,6 +166,12 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
 #if CV_TRY_AVX
     if (opt.use_avx) {
         opt_AVX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
+                                         (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
+    } else
+#endif
+#if CV_TRY_LASX
+    if (opt.use_lasx) {
+        opt_LASX::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
                                          (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
     } else
 #endif
