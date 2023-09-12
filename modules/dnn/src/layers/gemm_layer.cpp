@@ -45,7 +45,7 @@ public:
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !have_bias && !trans_a);
     }
 
-        virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
+    virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
@@ -220,7 +220,7 @@ public:
     }
 
 #ifdef HAVE_CUDA
-    // Y = A * B + C. A and B should be guaranteed as two dimensional.
+    // Y = A * B + C. B should be guaranteed as two dimensional.
     Ptr<BackendNode> initCUDA(void *context_,
                               const std::vector<Ptr<BackendWrapper>>& inputs,
                               const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE {

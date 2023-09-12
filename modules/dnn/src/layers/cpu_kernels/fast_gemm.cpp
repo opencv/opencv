@@ -200,8 +200,6 @@ void fastGemm(bool trans_a, bool trans_b,
 
     int lda0 = na, lda1 = 1, ldb0 = nb, ldb1 = 1, ldc = shape_c[1];
 
-    // printf("trans_a=%d, trans_b=%d, ma=%d, na=%d, mb=%d, nb=%d, alpha=%f, beta=%f, lda0=%d, lda1=%d, ldb0=%d, ldb1=%d\n", static_cast<int>(trans_a), static_cast<int>(trans_b), ma, na, mb, nb, alpha, beta, lda0, lda1, ldb0, ldb1);
-
     const float *a = A.ptr<const float>();
     const float *b = B.ptr<const float>();
     float *c = C.ptr<float>();
@@ -226,10 +224,6 @@ void fastGemmBatched(bool trans_a, bool trans_b,
     const auto shape_c = shape(C);
     size_t dims_C = shape_c.size();
     CV_CheckGE(dims_C, static_cast<size_t>(2), "DNN/fastGemmBatched: C must be n-dimensional (n >= 2)");
-    // CV_CheckEQ(dims_A, dims_C, "DNN/fastGemmBatched: dims_A must be equal to dims_C");
-    // for (size_t i = 0; i < dims_A - 2; i++) {
-    //     CV_CheckEQ(shape_a[i], shape_c[i], "DNN/fastGemmBatched: dims_A[i] must be equal to dims_C[i]");
-    // }
 
     if (trans_a) {
         int ma = shape_a[dims_A - 2], na = shape_a[dims_A - 1];
