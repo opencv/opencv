@@ -394,5 +394,69 @@ class aruco_objdetect_test(NewOpenCVTests):
         self.assertEqual(2, img_points.shape[2])
         np.testing.assert_array_equal(chessboard_corners, obj_points[:, :, :2].reshape(-1, 2))
 
+    def test_draw_detected_markers(self):
+        detected_points = [[[10, 10], [50, 10], [50, 50], [10, 50]]]
+        img = np.zeros((60, 60), dtype=np.uint8)
+
+        # add extra dimension in Python to create Nx4 Mat with 2 channels
+        points1 = np.array(detected_points).reshape(-1, 4, 1, 2)
+        img = cv.aruco.drawDetectedMarkers(img, points1, borderColor=255)
+
+        # check that the marker borders are painted
+        contours, _ = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        self.assertEqual(len(contours), 1)
+        self.assertEqual(img[10, 10], 255)
+        self.assertEqual(img[50, 10], 255)
+        self.assertEqual(img[50, 50], 255)
+        self.assertEqual(img[10, 50], 255)
+
+        # must throw Exception without extra dimension
+        points2 = np.array(detected_points)
+        with self.assertRaises(Exception):
+            img = cv.aruco.drawDetectedMarkers(img, points2, borderColor=255)
+
+    def test_draw_detected_charuco(self):
+        detected_points = [[[10, 10], [50, 10], [50, 50], [10, 50]]]
+        img = np.zeros((60, 60), dtype=np.uint8)
+
+        # add extra dimension in Python to create Nx1 Mat with 2 channels
+        points = np.array(detected_points).reshape(-1, 1, 2)
+        img = cv.aruco.drawDetectedCornersCharuco(img, points, cornerColor=255)
+
+        # check that the 4 charuco corners are painted
+        contours, _ = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        self.assertEqual(len(contours), 4)
+        for contour in contours:
+            center_x = round(np.average(contour[:, 0, 0]))
+            center_y = round(np.average(contour[:, 0, 1]))
+            center = [center_x, center_y]
+            self.assertTrue(center in detected_points[0])
+
+        # must throw Exception without extra dimension
+        points2 = np.array(detected_points)
+        with self.assertRaises(Exception):
+            img = cv.aruco.drawDetectedCornersCharuco(img, points2, borderColor=255)
+
+    def test_draw_detected_diamonds(self):
+        detected_points = [[[10, 10], [50, 10], [50, 50], [10, 50]]]
+        img = np.zeros((60, 60), dtype=np.uint8)
+
+        # add extra dimension in Python to create Nx4 Mat with 2 channels
+        points = np.array(detected_points).reshape(-1, 4, 1, 2)
+        img = cv.aruco.drawDetectedDiamonds(img, points, borderColor=255)
+
+        # check that the diamonds borders are painted
+        contours, _ = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+        self.assertEqual(len(contours), 1)
+        self.assertEqual(img[10, 10], 255)
+        self.assertEqual(img[50, 10], 255)
+        self.assertEqual(img[50, 50], 255)
+        self.assertEqual(img[10, 50], 255)
+
+        # must throw Exception without extra dimension
+        points2 = np.array(detected_points)
+        with self.assertRaises(Exception):
+            img = cv.aruco.drawDetectedDiamonds(img, points2, borderColor=255)
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

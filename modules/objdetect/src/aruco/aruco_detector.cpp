@@ -1315,24 +1315,26 @@ void drawDetectedMarkers(InputOutputArray _image, InputArrayOfArrays _corners,
     int nMarkers = (int)_corners.total();
     for(int i = 0; i < nMarkers; i++) {
         Mat currentMarker = _corners.getMat(i);
-        CV_Assert(currentMarker.total() == 4 && currentMarker.type() == CV_32FC2);
+        CV_Assert(currentMarker.total() == 4 && currentMarker.channels() == 2);
+        if (currentMarker.type() != CV_32SC2)
+            currentMarker.convertTo(currentMarker, CV_32SC2);
 
         // draw marker sides
         for(int j = 0; j < 4; j++) {
-            Point2f p0, p1;
-            p0 = currentMarker.ptr<Point2f>(0)[j];
-            p1 = currentMarker.ptr<Point2f>(0)[(j + 1) % 4];
+            Point p0, p1;
+            p0 = currentMarker.ptr<Point>(0)[j];
+            p1 = currentMarker.ptr<Point>(0)[(j + 1) % 4];
             line(_image, p0, p1, borderColor, 1);
         }
         // draw first corner mark
-        rectangle(_image, currentMarker.ptr<Point2f>(0)[0] - Point2f(3, 3),
-                  currentMarker.ptr<Point2f>(0)[0] + Point2f(3, 3), cornerColor, 1, LINE_AA);
+        rectangle(_image, currentMarker.ptr<Point>(0)[0] - Point(3, 3),
+                  currentMarker.ptr<Point>(0)[0] + Point(3, 3), cornerColor, 1, LINE_AA);
 
         // draw ID
         if(_ids.total() != 0) {
-            Point2f cent(0, 0);
+            Point cent(0, 0);
             for(int p = 0; p < 4; p++)
-                cent += currentMarker.ptr<Point2f>(0)[p];
+                cent += currentMarker.ptr<Point>(0)[p];
             cent = cent / 4.;
             stringstream s;
             s << "id=" << _ids.getMat().ptr<int>(0)[i];
