@@ -961,10 +961,17 @@ if( dstMat.type() == CV_32F )
         v_store(dst + k, __dst);
     }
 #endif
+#if defined(__GNUC__) && __GNUC__ >= 9
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"  // iteration XX invokes undefined behavior
+#endif
     for( ; k < len; k++ )
     {
         dst[k] = saturate_cast<uchar>(rawDst[k]*nrm2);
     }
+#if defined(__GNUC__) && __GNUC__ >= 9
+#pragma GCC diagnostic pop
+#endif
 }
 else // CV_8U
 {
@@ -984,9 +991,8 @@ else // CV_8U
 #endif
 
 #if defined(__GNUC__) && __GNUC__ >= 9
-// avoid warning "iteration 7 invokes undefined behavior" on Linux ARM64
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"
+#pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"  // iteration XX invokes undefined behavior
 #endif
     for( ; k < len; k++ )
     {
@@ -997,7 +1003,6 @@ else // CV_8U
 #endif
 }
 #else
-    float* dst = dstMat.ptr<float>(row);
     float nrm1 = 0;
     for( k = 0; k < len; k++ )
     {
@@ -1005,20 +1010,22 @@ else // CV_8U
         nrm1 += rawDst[k];
     }
     nrm1 = 1.f/std::max(nrm1, FLT_EPSILON);
-if( dstMat.type() == CV_32F )
-{
-    for( k = 0; k < len; k++ )
+    if( dstMat.type() == CV_32F )
     {
-        dst[k] = std::sqrt(rawDst[k] * nrm1);
+        float *dst = dstMat.ptr<float>(row);
+        for( k = 0; k < len; k++ )
+        {
+            dst[k] = std::sqrt(rawDst[k] * nrm1);
+        }
     }
-}
-else // CV_8U
-{
-    for( k = 0; k < len; k++ )
+    else // CV_8U
     {
-        dst[k] = saturate_cast<uchar>(std::sqrt(rawDst[k] * nrm1)*SIFT_INT_DESCR_FCTR);
+        uint8_t *dst = dstMat.ptr<uint8_t>(row);
+        for( k = 0; k < len; k++ )
+        {
+            dst[k] = saturate_cast<uchar>(std::sqrt(rawDst[k] * nrm1)*SIFT_INT_DESCR_FCTR);
+        }
     }
-}
 #endif
 }
 

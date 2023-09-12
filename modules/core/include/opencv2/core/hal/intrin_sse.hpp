@@ -1921,11 +1921,12 @@ OPENCV_HAL_IMPL_SSE_EXPAND(v_int16x8,  v_int32x4,   short,    _v128_cvtepi16_epi
 OPENCV_HAL_IMPL_SSE_EXPAND(v_uint32x4, v_uint64x2,  unsigned, _v128_cvtepu32_epi64)
 OPENCV_HAL_IMPL_SSE_EXPAND(v_int32x4,  v_int64x2,   int,      _v128_cvtepi32_epi64)
 
-#define OPENCV_HAL_IMPL_SSE_EXPAND_Q(_Tpvec, _Tp, intrin)  \
-    inline _Tpvec v_load_expand_q(const _Tp* ptr)          \
-    {                                                      \
-        __m128i a = _mm_cvtsi32_si128(*(const int*)ptr);   \
-        return _Tpvec(intrin(a));                          \
+#define OPENCV_HAL_IMPL_SSE_EXPAND_Q(_Tpvec, _Tp, intrin)          \
+    inline _Tpvec v_load_expand_q(const _Tp* ptr)                  \
+    {                                                              \
+        typedef int CV_DECL_ALIGNED(1) unaligned_int;              \
+        __m128i a = _mm_cvtsi32_si128(*(const unaligned_int*)ptr); \
+        return _Tpvec(intrin(a));                                  \
     }
 
 OPENCV_HAL_IMPL_SSE_EXPAND_Q(v_uint32x4, uchar, _v128_cvtepu8_epi32)

@@ -182,4 +182,26 @@ TEST(Features2d_AFFINE_FEATURE, regression)
 #endif
 }
 
+TEST(Features2d_AFFINE_FEATURE, mask)
+{
+    Mat gray = imread(cvtest::findDataFile("features2d/tsukuba.png"), IMREAD_GRAYSCALE);
+    ASSERT_FALSE(gray.empty()) << "features2d/tsukuba.png image was not found in test data!";
+
+    // small tilt range to limit internal mask warping
+    Ptr<AffineFeature> ext = AffineFeature::create(SIFT::create(), 1, 0);
+    Mat mask = Mat::zeros(gray.size(), CV_8UC1);
+    mask(Rect(50, 50, mask.cols-100, mask.rows-100)).setTo(255);
+
+    // calc and compare keypoints
+    vector<KeyPoint> calcKeypoints;
+    ext->detectAndCompute(gray, mask, calcKeypoints, noArray(), false);
+
+    // added expanded test range to cover sub-pixel coordinates for features on mask border
+    for( size_t i = 0; i < calcKeypoints.size(); i++ )
+    {
+        ASSERT_TRUE((calcKeypoints[i].pt.x >= 50-1) && (calcKeypoints[i].pt.x <= mask.cols-50+1));
+        ASSERT_TRUE((calcKeypoints[i].pt.y >= 50-1) && (calcKeypoints[i].pt.y <= mask.rows-50+1));
+    }
+}
+
 }} // namespace

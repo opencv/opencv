@@ -208,7 +208,7 @@ public:
                     }
                     else
                     {
-                        sprintf( data, "#x%02x", (uchar)c );
+                        snprintf( data, sizeof(buf) - (data - buf), "#x%02x", (uchar)c );
                         data += 4;
                     }
                     *data++ = ';';
@@ -308,8 +308,8 @@ public:
 
         if( !multiline )
         {
-            ptr = fs->resizeWriteBuffer( ptr, len + 9 );
-            sprintf( ptr, "<!-- %s -->", comment );
+            ptr = fs->resizeWriteBuffer( ptr, len + 5+4+1 );
+            snprintf( ptr, len + 5+4+1, "<!-- %s -->", comment );
             len = (int)strlen(ptr);
         }
         else
@@ -344,7 +344,7 @@ public:
                 fs->setBufferPtr(ptr);
                 ptr = fs->flush();
             }
-            sprintf( ptr, "-->" );
+            strcpy( ptr, "-->" );
             fs->setBufferPtr(ptr + 3);
             fs->flush();
         }

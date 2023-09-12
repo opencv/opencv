@@ -371,10 +371,9 @@ cv::gimpl::findMatches(const cv::gimpl::GModel::Graph& patternGraph,
                                                   testNodeMeta,
                                                   isAlreadyVisited);
                         default:
-                            GAPI_Assert(false && "Unsupported Node type!");
+                            break;
                         }
-
-                        return false;
+                        GAPI_Error("Unsupported Node type!");
                     });
 
                     if (testIt == testOutputNodesLabeled.end()) {

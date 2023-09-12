@@ -89,10 +89,10 @@ public:
         if (inputs[0].dims == 3)
         {
             // Pool1D
-            kernel_size.assign(1, kernel_size[0]);
-            strides.assign(1, strides[0]);
-            pads_begin.assign(1, pads_begin[0]);
-            pads_end.assign(1, pads_end[0]);
+            kernel_size.resize(1, kernel_size[0]);
+            strides.resize(1, strides[0]);
+            pads_begin.resize(1, pads_begin[0]);
+            pads_end.resize(1, pads_end[0]);
         }
     }
 

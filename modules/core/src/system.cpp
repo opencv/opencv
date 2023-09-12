@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <atomic>
 #include <iostream>
 #include <ostream>
 
@@ -57,18 +58,6 @@
 
 #include <opencv2/core/utils/fp_control_utils.hpp>
 #include <opencv2/core/utils/fp_control.private.hpp>
-
-#ifndef OPENCV_WITH_THREAD_SANITIZER
-  #if defined(__clang__) && defined(__has_feature)
-  #if __has_feature(thread_sanitizer)
-      #define OPENCV_WITH_THREAD_SANITIZER 1
-      #include <atomic>  // assume C++11
-  #endif
-  #endif
-#endif
-#ifndef OPENCV_WITH_THREAD_SANITIZER
-    #define OPENCV_WITH_THREAD_SANITIZER 0
-#endif
 
 namespace cv {
 
@@ -247,6 +236,7 @@ std::wstring GetTempFileNameWinRT(std::wstring prefix)
 #if defined __MACH__ && defined __APPLE__
 #include <mach/mach.h>
 #include <mach/mach_time.h>
+#include <sys/sysctl.h>
 #endif
 
 #endif
@@ -634,6 +624,14 @@ struct HWFeatures
     #endif
     #if (defined __ARM_FP  && (((__ARM_FP & 0x2) != 0) && defined __ARM_NEON__))
         have[CV_CPU_FP16] = true;
+    #endif
+    #if (defined __ARM_FEATURE_DOTPROD)
+        int has_feat_dotprod = 0;
+        size_t has_feat_dotprod_size = sizeof(has_feat_dotprod);
+        sysctlbyname("hw.optional.arm.FEAT_DotProd", &has_feat_dotprod, &has_feat_dotprod_size, NULL, 0);
+        if (has_feat_dotprod) {
+            have[CV_CPU_NEON_DOTPROD] = true;
+        }
     #endif
     #elif (defined __clang__)
     #if (defined __ARM_NEON__ || (defined __ARM_NEON && defined __aarch64__))
@@ -1530,11 +1528,7 @@ private:
 #endif
 #else // _WIN32
     pthread_key_t  tlsKey;
-#if OPENCV_WITH_THREAD_SANITIZER
     std::atomic<bool> disposed;
-#else
-    bool disposed;
-#endif
 #endif
 };
 
@@ -2580,7 +2574,7 @@ public:
         ippStatus = ippGetCpuFeatures(&cpuFeatures, NULL);
         if(ippStatus < 0)
         {
-            std::cerr << "ERROR: IPP cannot detect CPU features, IPP was disabled " << std::endl;
+            CV_LOG_ERROR(NULL, "ERROR: IPP cannot detect CPU features, IPP was disabled");
             useIPP = false;
             return;
         }
@@ -2618,7 +2612,7 @@ public:
 
             if(env == "disabled")
             {
-                std::cerr << "WARNING: IPP was disabled by OPENCV_IPP environment variable" << std::endl;
+                CV_LOG_WARNING(NULL, "WARNING: IPP was disabled by OPENCV_IPP environment variable");
                 useIPP = false;
             }
             else if(env == "sse42")
@@ -2632,7 +2626,7 @@ public:
 #endif
 #endif
             else
-                std::cerr << "ERROR: Improper value of OPENCV_IPP: " << env.c_str() << ". Correct values are: disabled, sse42, avx2, avx512 (Intel64 only)" << std::endl;
+                CV_LOG_ERROR(NULL, "ERROR: Improper value of OPENCV_IPP: " << env.c_str() << ". Correct values are: disabled, sse42, avx2, avx512 (Intel64 only)");
 
             // Trim unsupported features
             ippFeatures &= cpuFeatures;

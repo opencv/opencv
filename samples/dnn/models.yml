@@ -35,6 +35,20 @@ yolo:
   classes: "object_detection_classes_yolov4.txt"
   sample: "object_detection"
 
+yolov4-tiny:
+  load_info:
+    url: "https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.weights"
+    sha1: "451caaab22fb9831aa1a5ee9b5ba74a35ffa5dcb"
+  model: "yolov4-tiny.weights"
+  config: "yolov4-tiny.cfg"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 416
+  height: 416
+  rgb: true
+  classes: "object_detection_classes_yolov4.txt"
+  sample: "object_detection"
+
 tiny-yolo-voc:
   load_info:
     url: "https://pjreddie.com/media/files/yolov2-tiny-voc.weights"

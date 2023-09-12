@@ -1170,8 +1170,8 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
             "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
             "-D T1=%s -D cn=%d -D kercn=%d -D fdepth=%d -D %s -D LOCAL_SIZE=%d",
             ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, cn)),
-            ocl::convertTypeStr(float_depth, depth, cn, cvt[0]),
-            ocl::convertTypeStr(depth, float_depth, cn, cvt[1]),
+            ocl::convertTypeStr(float_depth, depth, cn, cvt[0], sizeof(cvt[0])),
+            ocl::convertTypeStr(depth, float_depth, cn, cvt[1], sizeof(cvt[1])),
             doubleSupport ? " -D DOUBLE_SUPPORT" : "", ocl::typeToStr(depth),
             cn, kercn, float_depth, borderMap[borderType], local_size
     );
@@ -1213,8 +1213,8 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
             "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
             "-D T1=%s -D cn=%d -D LOCAL_SIZE=%d",
             ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, channels)),
-            ocl::convertTypeStr(float_depth, depth, channels, cvt[0]),
-            ocl::convertTypeStr(depth, float_depth, channels, cvt[1]),
+            ocl::convertTypeStr(float_depth, depth, channels, cvt[0], sizeof(cvt[0])),
+            ocl::convertTypeStr(depth, float_depth, channels, cvt[1], sizeof(cvt[1])),
             doubleSupport ? " -D DOUBLE_SUPPORT" : "",
             ocl::typeToStr(depth), channels, local_size
     );

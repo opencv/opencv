@@ -361,22 +361,9 @@ TEST_P(MaxPooling, Accuracy)
     Backend backendId = get<0>(get<5>(GetParam()));
     Target targetId = get<1>(get<5>(GetParam()));
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LE(2018050000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
-            && inSize == Size(7, 6) && kernel == Size(3, 2)
-            && (stride == Size(1, 1) || stride == Size(2, 2))
-            && (pad == Size(0, 1) || pad == Size(1, 1))
-    )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2018050000)
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
-            && (kernel == Size(2, 2) || kernel == Size(3, 2))
-            && stride == Size(1, 1) && (pad == Size(0, 0) || pad == Size(0, 1))
-    )
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
+    // https://github.com/openvinotoolkit/openvino/issues/18731
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && stride != Size(1, 1))
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && targetId == DNN_TARGET_MYRIAD
@@ -420,15 +407,16 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, MaxPooling, Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Fully-connected
 ////////////////////////////////////////////////////////////////////////////////
-typedef TestWithParam<tuple<int, Size, int, bool, tuple<Backend, Target> > > FullyConnected;
+typedef TestWithParam<tuple<int, int, Size, int, bool, tuple<Backend, Target> > > FullyConnected;
 TEST_P(FullyConnected, Accuracy)
 {
-    int inChannels = get<0>(GetParam());
-    Size inSize = get<1>(GetParam());
-    int outChannels = get<2>(GetParam());
-    bool hasBias = get<3>(GetParam());
-    Backend backendId = get<0>(get<4>(GetParam()));
-    Target targetId = get<1>(get<4>(GetParam()));
+    int batch = get<0>(GetParam());
+    int inChannels = get<1>(GetParam());
+    Size inSize = get<2>(GetParam());
+    int outChannels = get<3>(GetParam());
+    bool hasBias = get<4>(GetParam());
+    Backend backendId = get<0>(get<5>(GetParam()));
+    Target targetId = get<1>(get<5>(GetParam()));
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
          backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && (targetId == DNN_TARGET_OPENCL_FP16 ||
@@ -436,6 +424,13 @@ TEST_P(FullyConnected, Accuracy)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
     }
+#endif
+    // https://github.com/openvinotoolkit/openvino/issues/19436
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL_FP16 && batch == 16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2023000000)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL && batch == 16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL);
 #endif
 
     Mat weights(outChannels, inChannels * inSize.height * inSize.width, CV_32F);
@@ -452,7 +447,7 @@ TEST_P(FullyConnected, Accuracy)
     lp.type = "InnerProduct";
     lp.name = "testLayer";
 
-    int sz[] = {1, inChannels, inSize.height, inSize.width};
+    int sz[] = {batch, inChannels, inSize.height, inSize.width};
     Mat input(4, &sz[0], CV_32F);
 
     double l1 = 0.0;
@@ -466,6 +461,13 @@ TEST_P(FullyConnected, Accuracy)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL_FP16)
     {
         l1 = 0.01;
+        if (INF_ENGINE_VER_MAJOR_GE(2023000000))
+            lInf = 0.016;
+    }
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL)
+    {
+        l1 = 5e-3;
+        lInf = INF_ENGINE_VER_MAJOR_GE(2023000000) ? 0.016 : 7e-3;
     }
 #endif
     if (targetId == DNN_TARGET_CUDA_FP16)
@@ -475,6 +477,7 @@ TEST_P(FullyConnected, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, FullyConnected, Combine(
+/*batch*/        Values(1, 2, 4, 8, 16),
 /*in channels*/  Values(3, 4),
 /*in size*/      Values(Size(5, 4), Size(4, 5), Size(1, 1)),
 /*out channels*/ Values(3, 4),
@@ -642,12 +645,6 @@ TEST_P(NoParamActivation, Accuracy)
     Backend backendId = get<0>(get<1>(GetParam()));
     Target targetId = get<1>(get<1>(GetParam()));
     std::string layer_type = get<0>(GetParam());
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_CPU && layer_type == "BNLL")
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
 
     LayerParams lp;
     lp.type = layer_type;

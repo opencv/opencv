@@ -69,7 +69,7 @@ opj_sparse_array_int32_t* opj_sparse_array_int32_create(OPJ_UINT32 width,
         return NULL;
     }
     sa->data_blocks = (OPJ_INT32**) opj_calloc(sizeof(OPJ_INT32*),
-                      sa->block_count_hor * sa->block_count_ver);
+                      (size_t) sa->block_count_hor * sa->block_count_ver);
     if (sa->data_blocks == NULL) {
         opj_free(sa);
         return NULL;
@@ -235,7 +235,7 @@ static OPJ_BOOL opj_sparse_array_int32_read_or_write(
             } else {
                 if (src_block == NULL) {
                     src_block = (OPJ_INT32*) opj_calloc(1,
-                                                        sa->block_width * sa->block_height * sizeof(OPJ_INT32));
+                                                        (size_t) sa->block_width * sa->block_height * sizeof(OPJ_INT32));
                     if (src_block == NULL) {
                         return OPJ_FALSE;
                     }

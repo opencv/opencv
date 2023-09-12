@@ -86,7 +86,7 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<descriptorSize>32</descriptorSize>\n</opencv_storage>\n";
+        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<name>Feature2D.BRIEF</name>\n<descriptorSize>32</descriptorSize>\n<use_orientation>0</use_orientation>\n</opencv_storage>\n";
         assertEquals(truth, readFile(filename));
     }
 
@@ -95,7 +95,7 @@ public class BRIEFDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-        String truth = "%YAML:1.0\n---\ndescriptorSize: 32\n";
+        String truth = "%YAML:1.0\n---\nname: \"Feature2D.BRIEF\"\ndescriptorSize: 32\nuse_orientation: 0\n";
         assertEquals(truth, readFile(filename));
     }
 

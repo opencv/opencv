@@ -259,7 +259,7 @@ TEST_P (CountNonZeroND, ndim)
     const int ONE_SIZE = 5;
 
     vector<int> sizes(dims);
-    fill(sizes.begin(), sizes.end(), ONE_SIZE);
+    std::fill(sizes.begin(), sizes.end(), ONE_SIZE);
 
     Mat data(sizes, CV_MAKETYPE(type, 1));
     data = 0;

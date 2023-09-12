@@ -2201,6 +2201,205 @@ INSTANTIATE_TEST_CASE_P(Arithm, TransposeND, testing::Combine(
     testing::Values(perf::MatType(CV_8UC1), CV_32FC1)
 ));
 
+class FlipND : public testing::TestWithParam< tuple<std::vector<int>, perf::MatType> >
+{
+public:
+    std::vector<int> m_shape;
+    int m_type;
+
+    void SetUp()
+    {
+        std::tie(m_shape, m_type) = GetParam();
+    }
+};
+
+TEST_P(FlipND, basic)
+{
+    Mat inp(m_shape, m_type);
+    randu(inp, 0, 255);
+
+    int ndim = static_cast<int>(m_shape.size());
+    std::vector<int> axes(ndim*2); // [-shape, shape)
+    std::iota(axes.begin(), axes.end(), -ndim);
+    auto get_flipped_indices = [&inp, ndim] (size_t total, std::vector<int>& indices, int axis)
+    {
+        const int* shape = inp.size.p;
+        size_t t = total, idx;
+        for (int i = ndim - 1; i >= 0; --i)
+        {
+            idx = t / shape[i];
+            indices[i] = int(t - idx * shape[i]);
+            t = idx;
+        }
+
+        int _axis = (axis + ndim) % ndim;
+        std::vector<int> flipped_indices = indices;
+        flipped_indices[_axis] = shape[_axis] - 1 - indices[_axis];
+        return flipped_indices;
+    };
+
+    for (size_t i = 0; i < axes.size(); ++i)
+    {
+        int axis = axes[i];
+        Mat out;
+        cv::flipND(inp, out, axis);
+        // check values
+        std::vector<int> indices(ndim, 0);
+        for (size_t j = 0; j < inp.total(); ++j)
+        {
+            auto flipped_indices = get_flipped_indices(j, indices, axis);
+            switch (inp.type())
+            {
+            case CV_8UC1:
+                ASSERT_EQ(inp.at<uint8_t>(indices.data()), out.at<uint8_t>(flipped_indices.data()));
+                break;
+            case CV_32FC1:
+                ASSERT_EQ(inp.at<float>(indices.data()), out.at<float>(flipped_indices.data()));
+                break;
+            default:
+                FAIL() << "Unsupported type: " << inp.type();
+            }
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Arithm, FlipND, testing::Combine(
+    testing::Values(std::vector<int>{5, 10}, std::vector<int>{2, 3, 4}),
+    testing::Values(perf::MatType(CV_8UC1), CV_32FC1)
+));
+
+TEST(BroadcastTo, basic) {
+    std::vector<int> shape_src{2, 1};
+    std::vector<int> data_src{1, 2};
+    Mat src(static_cast<int>(shape_src.size()), shape_src.data(), CV_32SC1, data_src.data());
+
+    auto get_index = [](const std::vector<int>& shape, size_t cnt) {
+        std::vector<int> index(shape.size());
+        size_t t = cnt;
+        for (int i = static_cast<int>(shape.size() - 1); i >= 0; --i) {
+            size_t idx = t / shape[i];
+            index[i] = static_cast<int>(t - idx * shape[i]);
+            t = idx;
+        }
+        return index;
+    };
+
+    auto fn_verify = [&get_index](const Mat& ref, const Mat& res) {
+        // check type
+        EXPECT_EQ(ref.type(), res.type());
+        // check shape
+        EXPECT_EQ(ref.dims, res.dims);
+        for (int i = 0; i < ref.dims; ++i) {
+            EXPECT_EQ(ref.size[i], res.size[i]);
+        }
+        // check value
+        std::vector<int> shape{ref.size.p, ref.size.p + ref.dims};
+        for (size_t i = 0; i < ref.total(); ++i) {
+            auto index = get_index(shape, i);
+            switch (ref.type()) {
+                case CV_32SC1: {
+                    ASSERT_EQ(ref.at<int>(index.data()), res.at<int>(index.data()));
+                } break;
+                case CV_8UC1: {
+                    ASSERT_EQ(ref.at<uint8_t>(index.data()), res.at<uint8_t>(index.data()));
+                } break;
+                case CV_32FC1: {
+                    ASSERT_EQ(ref.at<float>(index.data()), res.at<float>(index.data()));
+                } break;
+                default: FAIL() << "Unsupported type: " << ref.type();
+            }
+        }
+    };
+
+    {
+        std::vector<int> shape{4, 2, 3};
+        std::vector<int> data_ref{
+            1, 1, 1, // [0, 0, :]
+            2, 2, 2, // [0, 1, :]
+            1, 1, 1, // [1, 0, :]
+            2, 2, 2, // [1, 1, :]
+            1, 1, 1, // [2, 0, :]
+            2, 2, 2, // [2, 1, :]
+            1, 1, 1, // [3, 0, :]
+            2, 2, 2  // [3, 1, :]
+        };
+        Mat ref(static_cast<int>(shape.size()), shape.data(), src.type(), data_ref.data());
+        Mat dst;
+        broadcast(src, shape, dst);
+        fn_verify(ref, dst);
+    }
+
+    {
+        Mat _src;
+        src.convertTo(_src, CV_8U);
+        std::vector<int> shape{4, 2, 3};
+        std::vector<uint8_t> data_ref{
+            1, 1, 1, // [0, 0, :]
+            2, 2, 2, // [0, 1, :]
+            1, 1, 1, // [1, 0, :]
+            2, 2, 2, // [1, 1, :]
+            1, 1, 1, // [2, 0, :]
+            2, 2, 2, // [2, 1, :]
+            1, 1, 1, // [3, 0, :]
+            2, 2, 2  // [3, 1, :]
+        };
+        Mat ref(static_cast<int>(shape.size()), shape.data(), _src.type(), data_ref.data());
+        Mat dst;
+        broadcast(_src, shape, dst);
+        fn_verify(ref, dst);
+    }
+
+    {
+        Mat _src;
+        src.convertTo(_src, CV_32F);
+        std::vector<int> shape{1, 1, 2, 1}; // {2, 1}
+        std::vector<float> data_ref{
+            1.f, // [0, 0, 0, 0]
+            2.f, // [0, 0, 1, 0]
+        };
+        Mat ref(static_cast<int>(shape.size()), shape.data(), _src.type(), data_ref.data());
+        Mat dst;
+        broadcast(_src, shape, dst);
+        fn_verify(ref, dst);
+    }
+
+    {
+        std::vector<int> _shape_src{2, 3, 4};
+        std::vector<float> _data_src{
+            1.f, 2.f, 3.f, 4.f, // [0, 0, :]
+            2.f, 3.f, 4.f, 5.f, // [0, 1, :]
+            3.f, 4.f, 5.f, 6.f, // [0, 2, :]
+
+            4.f, 5.f, 6.f, 7.f, // [1, 0, :]
+            5.f, 6.f, 7.f, 8.f, // [1, 1, :]
+            6.f, 7.f, 8.f, 9.f, // [1, 2, :]
+        };
+        Mat _src(static_cast<int>(_shape_src.size()), _shape_src.data(), CV_32FC1, _data_src.data());
+
+        std::vector<int> shape{2, 1, 2, 3, 4};
+        std::vector<float> data_ref{
+            1.f, 2.f, 3.f, 4.f, // [0, 0, 0, 0, :]
+            2.f, 3.f, 4.f, 5.f, // [0, 0, 0, 1, :]
+            3.f, 4.f, 5.f, 6.f, // [0, 0, 0, 2, :]
+
+            4.f, 5.f, 6.f, 7.f, // [0, 0, 1, 0, :]
+            5.f, 6.f, 7.f, 8.f, // [0, 0, 1, 1, :]
+            6.f, 7.f, 8.f, 9.f, // [0, 0, 1, 2, :]
+
+            1.f, 2.f, 3.f, 4.f, // [1, 0, 0, 0, :]
+            2.f, 3.f, 4.f, 5.f, // [1, 0, 0, 1, :]
+            3.f, 4.f, 5.f, 6.f, // [1, 0, 0, 2, :]
+
+            4.f, 5.f, 6.f, 7.f, // [1, 0, 1, 0, :]
+            5.f, 6.f, 7.f, 8.f, // [1, 0, 1, 1, :]
+            6.f, 7.f, 8.f, 9.f, // [1, 0, 1, 2, :]
+        };
+        Mat ref(static_cast<int>(shape.size()), shape.data(), _src.type(), data_ref.data());
+        Mat dst;
+        broadcast(_src, shape, dst);
+        fn_verify(ref, dst);
+    }
+}
 
 TEST(Core_minMaxIdx, regression_9207_2)
 {

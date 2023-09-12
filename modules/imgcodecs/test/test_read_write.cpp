@@ -480,4 +480,24 @@ TEST(ImgCodecs, multipage_collection_two_iterator_operatorpp)
     }
 }
 
+
+TEST(Imgcodecs_Params, imwrite_regression_22752)
+{
+    const Mat img(16, 16, CV_8UC3, cv::Scalar::all(0));
+    vector<int> params;
+    params.push_back(IMWRITE_JPEG_QUALITY);
+//  params.push_back(100)); // Forget it.
+    EXPECT_ANY_THROW(cv::imwrite("test.jpg", img, params));  // parameters size or missing JPEG codec
+}
+
+TEST(Imgcodecs_Params, imencode_regression_22752)
+{
+    const Mat img(16, 16, CV_8UC3, cv::Scalar::all(0));
+    vector<int> params;
+    params.push_back(IMWRITE_JPEG_QUALITY);
+//  params.push_back(100)); // Forget it.
+    vector<uchar> buf;
+    EXPECT_ANY_THROW(cv::imencode("test.jpg", img, buf, params));  // parameters size or missing JPEG codec
+}
+
 }} // namespace

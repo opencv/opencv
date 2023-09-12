@@ -119,7 +119,7 @@ class dnn_test(NewOpenCVTests):
             inp = np.random.standard_normal([1, 2, 10, 11]).astype(np.float32)
             net.setInput(inp)
             net.forward()
-        except BaseException as e:
+        except BaseException:
             return False
         return True
 
@@ -153,13 +153,48 @@ class dnn_test(NewOpenCVTests):
         target = target.transpose(2, 0, 1).reshape(1, 3, height, width)  # to NCHW
         normAssert(self, blob, target)
 
+    def test_blobFromImageWithParams(self):
+        np.random.seed(324)
+
+        width = 6
+        height = 7
+        stddev = np.array([0.2, 0.3, 0.4])
+        scalefactor = 1.0/127.5 * stddev
+        mean = (10, 20, 30)
+
+        # Test arguments names.
+        img = np.random.randint(0, 255, [4, 5, 3]).astype(np.uint8)
+
+        param = cv.dnn.Image2BlobParams()
+        param.scalefactor = scalefactor
+        param.size = (6, 7)
+        param.mean = mean
+        param.swapRB=True
+        param.datalayout = cv.dnn.DNN_LAYOUT_NHWC
+
+        blob = cv.dnn.blobFromImageWithParams(img, param)
+        blob_args = cv.dnn.blobFromImageWithParams(img, cv.dnn.Image2BlobParams(scalefactor=scalefactor, size=(6, 7), mean=mean,
+                                                                      swapRB=True, datalayout=cv.dnn.DNN_LAYOUT_NHWC))
+        normAssert(self, blob, blob_args)
+
+        target2 = cv.resize(img, (width, height), interpolation=cv.INTER_LINEAR).astype(np.float32)
+        target2 = target2[:,:,[2, 1, 0]]  # BGR2RGB
+        target2[:,:,0] -= mean[0]
+        target2[:,:,1] -= mean[1]
+        target2[:,:,2] -= mean[2]
+
+        target2[:,:,0] *= scalefactor[0]
+        target2[:,:,1] *= scalefactor[1]
+        target2[:,:,2] *= scalefactor[2]
+        target2 = target2.reshape(1, height, width, 3)  # to NHWC
+        normAssert(self, blob, target2)
 
     def test_model(self):
         img_path = self.find_dnn_file("dnn/street.png")
-        weights = self.find_dnn_file("dnn/MobileNetSSD_deploy.caffemodel", required=False)
-        config = self.find_dnn_file("dnn/MobileNetSSD_deploy.prototxt", required=False)
+        weights = self.find_dnn_file("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", required=False)
+        config = self.find_dnn_file("dnn/MobileNetSSD_deploy_19e3ec3.prototxt", required=False)
         if weights is None or config is None:
-            raise unittest.SkipTest("Missing DNN test files (dnn/MobileNetSSD_deploy.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+            raise unittest.SkipTest("Missing DNN test files (dnn/MobileNetSSD_deploy_19e3ec3.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 
         frame = cv.imread(img_path)
         model = cv.dnn_DetectionModel(weights, config)
@@ -410,6 +445,12 @@ class dnn_test(NewOpenCVTests):
             real_output = net.forward()
 
             normAssert(self, real_output, gold_output, "", getDefaultThreshold(target))
+
+    def test_scalefactor_assign(self):
+        params = cv.dnn.Image2BlobParams()
+        self.assertEqual(params.scalefactor, (1.0, 1.0, 1.0, 1.0))
+        params.scalefactor = 2.0
+        self.assertEqual(params.scalefactor, (2.0, 0.0, 0.0, 0.0))
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

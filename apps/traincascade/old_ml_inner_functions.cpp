@@ -60,61 +60,57 @@ void CvStatModel::clear()
 
 void CvStatModel::save( const char* filename, const char* name ) const
 {
-    CvFileStorage* fs = 0;
+    cv::FileStorage fs;
 
     CV_FUNCNAME( "CvStatModel::save" );
 
     __BEGIN__;
 
-    CV_CALL( fs = cvOpenFileStorage( filename, 0, CV_STORAGE_WRITE ));
-    if( !fs )
+    if( !fs.open( filename, cv::FileStorage::WRITE ))
         CV_ERROR( CV_StsError, "Could not open the file storage. Check the path and permissions" );
 
     write( fs, name ? name : default_model_name );
 
     __END__;
 
-    cvReleaseFileStorage( &fs );
 }
 
 
 void CvStatModel::load( const char* filename, const char* name )
 {
-    CvFileStorage* fs = 0;
+    cv::FileStorage fs;
 
-    CV_FUNCNAME( "CvAlgorithm::load" );
+    CV_FUNCNAME( "CvStatModel::load" );
 
     __BEGIN__;
 
-    CvFileNode* model_node = 0;
+    cv::FileNode model_node;
 
-    CV_CALL( fs = cvOpenFileStorage( filename, 0, CV_STORAGE_READ ));
-    if( !fs )
-        EXIT;
+    if( !fs.open(filename, cv::FileStorage::READ) )
+        CV_ERROR( CV_StsError, "Could not open the file storage. Check the path and permissions" );
 
     if( name )
-        model_node = cvGetFileNodeByName( fs, 0, name );
+        model_node = fs[ name ];
     else
     {
-        CvFileNode* root = cvGetRootFileNode( fs );
-        if( root->data.seq->total > 0 )
-            model_node = (CvFileNode*)cvGetSeqElem( root->data.seq, 0 );
+        auto root = fs.root();
+        if ( root.size() > 0 )
+            model_node = fs[0];
     }
 
-    read( fs, model_node );
+    read( model_node );
 
     __END__;
 
-    cvReleaseFileStorage( &fs );
 }
 
 
-void CvStatModel::write( CvFileStorage*, const char* ) const
+void CvStatModel::write( cv::FileStorage&, const char* ) const
 {
     OPENCV_ERROR( CV_StsNotImplemented, "CvStatModel::write", "" );
 }
 
-void CvStatModel::read( CvFileStorage*, CvFileNode* )
+void CvStatModel::read( const cv::FileNode& )
 {
     OPENCV_ERROR( CV_StsNotImplemented, "CvStatModel::read", "" );
 }

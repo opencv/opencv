@@ -24,7 +24,7 @@ if(UNIX)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function -Wno-missing-braces -Wno-missing-field-initializers")
   endif()
   if(CV_CLANG)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-self-assign")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-self-assign -Wno-strict-prototypes")
   endif()
 endif()
 

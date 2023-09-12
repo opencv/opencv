@@ -152,7 +152,7 @@ VPLDX11AccelerationPolicy::surface_weak_ptr_t VPLDX11AccelerationPolicy::get_fre
 }
 
 size_t VPLDX11AccelerationPolicy::get_free_surface_count(pool_key_t) const {
-    GAPI_Assert(false && "get_free_surface_count() is not implemented");
+    GAPI_Error("get_free_surface_count() is not implemented");
 }
 
 size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t key) const {
@@ -448,39 +448,39 @@ namespace wip {
 namespace onevpl {
 VPLDX11AccelerationPolicy::VPLDX11AccelerationPolicy(device_selector_ptr_t selector) :
     VPLAccelerationPolicy(selector) {
-    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLDX11AccelerationPolicy unavailable in current configuration");
 }
 
 VPLDX11AccelerationPolicy::~VPLDX11AccelerationPolicy() = default;
 
 void VPLDX11AccelerationPolicy::init(session_t ) {
-    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLDX11AccelerationPolicy unavailable in current configuration");
 }
 
 void VPLDX11AccelerationPolicy::deinit(session_t) {
-    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLDX11AccelerationPolicy unavailable in current configuration");
 }
 
 VPLDX11AccelerationPolicy::pool_key_t VPLDX11AccelerationPolicy::create_surface_pool(const mfxFrameAllocRequest&,
                                                                                      mfxFrameInfo&) {
-    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLDX11AccelerationPolicy unavailable in current configuration");
 }
 
 VPLDX11AccelerationPolicy::surface_weak_ptr_t VPLDX11AccelerationPolicy::get_free_surface(pool_key_t) {
-    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLDX11AccelerationPolicy unavailable in current configuration");
 }
 
 size_t VPLDX11AccelerationPolicy::get_free_surface_count(pool_key_t) const {
-    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLDX11AccelerationPolicy unavailable in current configuration");
 }
 
 size_t VPLDX11AccelerationPolicy::get_surface_count(pool_key_t) const {
-    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLDX11AccelerationPolicy unavailable in current configuration");
 }
 
 cv::MediaFrame::AdapterPtr VPLDX11AccelerationPolicy::create_frame_adapter(pool_key_t,
                                                                           const FrameConstructorArgs &) {
-    GAPI_Assert(false && "VPLDX11AccelerationPolicy unavailable in current configuration");
+    GAPI_Error("VPLDX11AccelerationPolicy unavailable in current configuration");
 }
 } // namespace onevpl
 } // namespace wip

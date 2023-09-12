@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019-2021 Intel Corporation
+// Copyright (C) 2019-2023 Intel Corporation
 
 #include "../test_precomp.hpp"
 
@@ -62,6 +62,11 @@ public:
         return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
     }
     cv::util::any blobParams() const override {
+#if INF_ENGINE_RELEASE > 2023000000
+        // NB: blobParams() shouldn't be used in tests
+        // if OpenVINO versions is higher than 2023.0
+        GAPI_Assert(false && "NV12 feature has been deprecated in OpenVINO 1.0 API.");
+#else
         return std::make_pair<InferenceEngine::TensorDesc,
                               InferenceEngine::ParamMap>({IE::Precision::U8,
                                                           {1, 3, 300, 300},
@@ -69,6 +74,7 @@ public:
                                                          {{"HELLO", 42},
                                                           {"COLOR_FORMAT",
                                                            InferenceEngine::ColorFormat::NV12}});
+#endif // INF_ENGINE_RELEASE > 2023000000
     }
 };
 
@@ -138,7 +144,13 @@ void setNetParameters(IE::CNNNetwork& net, bool is_nv12 = false) {
     ii->setPrecision(IE::Precision::U8);
     ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
     if (is_nv12) {
+#if INF_ENGINE_RELEASE > 2023000000
+        // NB: NV12 feature shouldn't be used in tests
+        // if OpenVINO versions is higher than 2023.0
+        GAPI_Assert(false && "NV12 feature has been deprecated in OpenVINO 1.0 API.");
+#else
         ii->getPreProcess().setColorFormat(IE::ColorFormat::NV12);
+#endif // INF_ENGINE_RELEASE > 2023000000
     }
 }
 
@@ -175,8 +187,8 @@ std::string compileAgeGenderBlob(const std::string& device) {
         cv::gapi::ie::detail::ParamDesc params;
         const std::string model_name = "age-gender-recognition-retail-0013";
         const std::string output  = model_name + ".blob";
-        params.model_path   = findDataFile(SUBDIR + model_name + ".xml");
-        params.weights_path = findDataFile(SUBDIR + model_name + ".bin");
+        params.model_path   = findDataFile(SUBDIR + model_name + ".xml", false);
+        params.weights_path = findDataFile(SUBDIR + model_name + ".bin", false);
         params.device_id    = device;
         compileBlob(params, output, IE::Precision::U8);
         return output;
@@ -193,8 +205,8 @@ TEST(TestAgeGenderIE, InferBasicTensor)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -244,8 +256,8 @@ TEST(TestAgeGenderIE, InferBasicImage)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // FIXME: Ideally it should be an image from disk
@@ -322,8 +334,8 @@ struct InferWithReshape: public ::testing::Test {
         reshape_dims = {1, 3, 70, 70};
 
         initDLDTDataPath();
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
 
         params.device_id = "CPU";
 
@@ -392,10 +404,14 @@ struct InferWithReshapeNV12: public InferWithReshape {
         cv::randu(m_in_y, 0, 255);
         m_in_uv = cv::Mat{sz / 2, CV_8UC2};
         cv::randu(m_in_uv, 0, 255);
+// NB: NV12 feature shouldn't be used in tests
+// if OpenVINO versions is higher than 2023.0
+#if INF_ENGINE_RELEASE <= 2023000000
         setNetParameters(net, true);
         net.reshape({{"data", reshape_dims}});
         auto frame_blob = cv::gapi::ie::util::to_ie(m_in_y, m_in_uv);
         inferROIs(frame_blob);
+#endif // INF_ENGINE_RELEASE <= 2023000000
     }
 };
 
@@ -416,8 +432,8 @@ struct ROIList: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         params.device_id = "CPU";
 
         // FIXME: it must be cv::imread(findDataFile("../dnn/grace_hopper_227.png", false));
@@ -489,8 +505,8 @@ struct ROIListNV12: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         params.device_id = "CPU";
 
         cv::Size sz{320, 240};
@@ -505,8 +521,11 @@ struct ROIListNV12: public ::testing::Test {
             cv::Rect(cv::Point{50, 32}, cv::Size{128, 160}),
         };
 
-        // Load & run IE network
+// NB: NV12 feature shouldn't be used in tests
+// if OpenVINO versions is higher than 2023.0
+#if INF_ENGINE_RELEASE <= 2023000000
         {
+            // Load & run IE network
             auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
             auto net           = cv::gimpl::ie::wrap::readNetwork(params);
             setNetParameters(net, true);
@@ -530,9 +549,11 @@ struct ROIListNV12: public ::testing::Test {
                 m_out_ie_genders.push_back(to_ocv(infer_request.GetBlob("prob")).clone());
             }
         } // namespace IE = ..
+#endif // INF_ENGINE_RELEASE <= 2023000000
     } // ROIList()
 
     void validate() {
+#if INF_ENGINE_RELEASE <= 2023000000
         // Validate with IE itself (avoid DNN module dependency here)
         ASSERT_EQ(2u, m_out_ie_ages.size());
         ASSERT_EQ(2u, m_out_ie_genders.size());
@@ -543,6 +564,10 @@ struct ROIListNV12: public ::testing::Test {
         normAssert(m_out_ie_genders[0], m_out_gapi_genders[0], "0: Test gender output");
         normAssert(m_out_ie_ages   [1], m_out_gapi_ages   [1], "1: Test age output");
         normAssert(m_out_ie_genders[1], m_out_gapi_genders[1], "1: Test gender output");
+#else
+        GAPI_Assert(false && "Reference hasn't been calculated because"
+                             " NV12 feature has been deprecated.");
+#endif // INF_ENGINE_RELEASE <= 2023000000
     }
 };
 
@@ -560,8 +585,8 @@ struct SingleROI: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         params.device_id = "CPU";
 
         // FIXME: it must be cv::imread(findDataFile("../dnn/grace_hopper_227.png", false));
@@ -619,8 +644,8 @@ struct SingleROINV12: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         params.device_id = "CPU";
 
         cv::Size sz{320, 240};
@@ -631,6 +656,9 @@ struct SingleROINV12: public ::testing::Test {
 
         m_roi = cv::Rect(cv::Point{64, 60}, cv::Size{96, 96});
 
+// NB: NV12 feature shouldn't be used in tests
+// if OpenVINO versions is higher than 2023.0
+#if INF_ENGINE_RELEASE <= 2023000000
         // Load & run IE network
         IE::Blob::Ptr ie_age, ie_gender;
         {
@@ -657,12 +685,18 @@ struct SingleROINV12: public ::testing::Test {
             m_out_ie_age    = to_ocv(infer_request.GetBlob("age_conv3")).clone();
             m_out_ie_gender = to_ocv(infer_request.GetBlob("prob")).clone();
         }
+#endif // INF_ENGINE_RELEASE <= 2023000000
     }
 
     void validate() {
+#if INF_ENGINE_RELEASE <= 2023000000
         // Validate with IE itself (avoid DNN module dependency here)
         normAssert(m_out_ie_age   , m_out_gapi_age   , "Test age output");
         normAssert(m_out_ie_gender, m_out_gapi_gender, "Test gender output");
+#else
+        GAPI_Assert(false && "Reference hasn't been calculated because"
+                             " NV12 feature has been deprecated.");
+#endif
     }
 };
 
@@ -775,8 +809,8 @@ TEST(TestAgeGenderIE, GenericInfer)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     cv::Mat in_mat(cv::Size(320, 240), CV_8UC3);
@@ -825,8 +859,8 @@ TEST(TestAgeGenderIE, InvalidConfigGeneric)
 {
     initDLDTDataPath();
 
-    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     std::string device_id    = "CPU";
 
     // Configure & run G-API
@@ -851,8 +885,8 @@ TEST(TestAgeGenderIE, CPUConfigGeneric)
 {
     initDLDTDataPath();
 
-    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     std::string device_id    = "CPU";
 
     // Configure & run G-API
@@ -878,8 +912,8 @@ TEST(TestAgeGenderIE, InvalidConfig)
 {
     initDLDTDataPath();
 
-    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     std::string device_id    = "CPU";
 
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
@@ -903,8 +937,8 @@ TEST(TestAgeGenderIE, CPUConfig)
 {
     initDLDTDataPath();
 
-    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     std::string device_id    = "CPU";
 
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
@@ -962,11 +996,20 @@ TEST_F(ROIListNV12, MediaInputNV12)
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
 
     validate();
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi_list),
+                     cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST(TestAgeGenderIE, MediaInputNV12)
@@ -974,8 +1017,8 @@ TEST(TestAgeGenderIE, MediaInputNV12)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     cv::Size sz{320, 240};
@@ -986,6 +1029,9 @@ TEST(TestAgeGenderIE, MediaInputNV12)
 
     cv::Mat gapi_age, gapi_gender;
 
+// NB: NV12 feature shouldn't be used in tests
+// if OpenVINO versions is higher than 2023.0
+#if INF_ENGINE_RELEASE <= 2023000000
     // Load & run IE network
     IE::Blob::Ptr ie_age, ie_gender;
     {
@@ -999,6 +1045,7 @@ TEST(TestAgeGenderIE, MediaInputNV12)
         ie_age    = infer_request.GetBlob("age_conv3");
         ie_gender = infer_request.GetBlob("prob");
     }
+#endif
 
     // Configure & run G-API
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
@@ -1014,13 +1061,20 @@ TEST(TestAgeGenderIE, MediaInputNV12)
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
-
 
     // Validate with IE itself (avoid DNN module dependency here)
     normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame), cv::gout(gapi_age, gapi_gender),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST(TestAgeGenderIE, MediaInputBGR)
@@ -1028,8 +1082,8 @@ TEST(TestAgeGenderIE, MediaInputBGR)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     cv::Size sz{320, 240};
@@ -1080,8 +1134,8 @@ TEST(InferROI, MediaInputBGR)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     cv::Size sz{320, 240};
@@ -1142,8 +1196,8 @@ TEST(InferROI, MediaInputNV12)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     cv::Size sz{320, 240};
@@ -1155,6 +1209,9 @@ TEST(InferROI, MediaInputNV12)
     cv::Mat gapi_age, gapi_gender;
     cv::Rect rect(cv::Point{64, 60}, cv::Size{96, 96});
 
+// NB: NV12 feature shouldn't be used in tests
+// if OpenVINO versions is higher than 2023.0
+#if INF_ENGINE_RELEASE <= 2023000000
     // Load & run IE network
     IE::Blob::Ptr ie_age, ie_gender;
     {
@@ -1176,6 +1233,7 @@ TEST(InferROI, MediaInputNV12)
         ie_age    = infer_request.GetBlob("age_conv3");
         ie_gender = infer_request.GetBlob("prob");
     }
+#endif
 
     // Configure & run G-API
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
@@ -1192,13 +1250,20 @@ TEST(InferROI, MediaInputNV12)
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, rect), cv::gout(gapi_age, gapi_gender),
                cv::compile_args(cv::gapi::networks(pp)));
-
 
     // Validate with IE itself (avoid DNN module dependency here)
     normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, rect), cv::gout(gapi_age, gapi_gender),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST_F(ROIList, Infer2MediaInputBGR)
@@ -1233,10 +1298,20 @@ TEST_F(ROIListNV12, Infer2MediaInputNV12)
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" });
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
+
     validate();
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi_list),
+                     cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST_F(SingleROI, GenericInfer)
@@ -1310,10 +1385,19 @@ TEST_F(SingleROINV12, GenericInferMediaNV12)
     pp.cfgNumRequests(2u);
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, m_roi), cv::gout(m_out_gapi_age, m_out_gapi_gender),
             cv::compile_args(cv::gapi::networks(pp)));
 
     validate();
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi),
+                     cv::gout(m_out_gapi_age, m_out_gapi_gender),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST_F(ROIList, GenericInfer)
@@ -1386,11 +1470,20 @@ TEST_F(ROIListNV12, GenericInferMediaNV12)
     pp.cfgNumRequests(2u);
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+
+    // NB: NV12 feature has been deprecated in OpenVINO versions higher
+    // than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, m_roi_list),
-            cv::gout(m_out_gapi_ages, m_out_gapi_genders),
-            cv::compile_args(cv::gapi::networks(pp)));
+               cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+               cv::compile_args(cv::gapi::networks(pp)));
 
     validate();
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi_list),
+                     cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST_F(ROIList, GenericInfer2)
@@ -1461,10 +1554,20 @@ TEST_F(ROIListNV12, GenericInfer2MediaInputNV12)
     pp.cfgNumRequests(2u);
 
     auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, m_roi_list),
-            cv::gout(m_out_gapi_ages, m_out_gapi_genders),
-            cv::compile_args(cv::gapi::networks(pp)));
+               cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+               cv::compile_args(cv::gapi::networks(pp)));
+
     validate();
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi_list),
+                     cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST(Infer, SetInvalidNumberOfRequests)
@@ -1484,8 +1587,8 @@ TEST(Infer, TestStreamingInfer)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -1551,8 +1654,8 @@ TEST(InferROI, TestStreamingInfer)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -1629,8 +1732,8 @@ TEST(InferList, TestStreamingInfer)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -1718,8 +1821,8 @@ TEST(Infer2, TestStreamingInfer)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -1808,8 +1911,8 @@ TEST(InferEmptyList, TestStreamingInfer)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -1862,8 +1965,8 @@ TEST(Infer2EmptyList, TestStreamingInfer)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -2050,11 +2153,20 @@ TEST_F(InferWithReshapeNV12, TestInferListYUV)
     auto pp = cv::gapi::ie::Params<AgeGender> {
         params.model_path, params.weights_path, params.device_id
     }.cfgOutputLayers({ "age_conv3", "prob" }).cfgInputReshape({{"data", reshape_dims}});
+
+// NB: NV12 feature has been deprecated in OpenVINO versions higher
+// than 2023.0 so G-API must throw error in that case.
+#if INF_ENGINE_RELEASE <= 2023000000
     comp.apply(cv::gin(frame, m_roi_list),
                cv::gout(m_out_gapi_ages, m_out_gapi_genders),
                cv::compile_args(cv::gapi::networks(pp)));
     // Validate
     validate();
+#else
+    EXPECT_ANY_THROW(comp.apply(cv::gin(frame, m_roi_list),
+                     cv::gout(m_out_gapi_ages, m_out_gapi_genders),
+                     cv::compile_args(cv::gapi::networks(pp))));
+#endif
 }
 
 TEST_F(ROIList, CallInferMultipleTimes)
@@ -2079,6 +2191,7 @@ TEST_F(ROIList, CallInferMultipleTimes)
     validate();
 }
 
+#if INF_ENGINE_RELEASE <= 2023000000
 TEST(IEFrameAdapter, blobParams)
 {
     cv::Mat bgr = cv::Mat::eye(240, 320, CV_8UC3);
@@ -2093,6 +2206,7 @@ TEST(IEFrameAdapter, blobParams)
 
     EXPECT_EQ(expected, actual);
 }
+#endif
 
 namespace
 {
@@ -2180,8 +2294,8 @@ struct LimitedSourceInfer: public ::testing::Test {
 
     GStreamingCompiled compileStreaming(int nireq) {
         cv::gapi::ie::detail::ParamDesc params;
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         params.device_id = "CPU";
 
         auto pp = cv::gapi::ie::Params<AgeGender> {
@@ -2234,11 +2348,11 @@ TEST(TestAgeGenderIE, InferWithBatch)
 
     constexpr int batch_size = 4;
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
-    cv::Mat in_mat({batch_size, 3, 320, 240}, CV_8U);
+    cv::Mat in_mat({batch_size, 3, 62, 62}, CV_8U);
     cv::randu(in_mat, 0, 255);
 
     cv::Mat gapi_age, gapi_gender;
@@ -2247,8 +2361,9 @@ TEST(TestAgeGenderIE, InferWithBatch)
     IE::Blob::Ptr ie_age, ie_gender;
     {
         auto plugin = cv::gimpl::ie::wrap::getPlugin(params);
-        auto net    = cv::gimpl::ie::wrap::readNetwork(params);
-        setNetParameters(net);
+        auto net = cv::gimpl::ie::wrap::readNetwork(params);
+        auto ii = net.getInputsInfo().at("data");
+        ii->setPrecision(IE::Precision::U8);
         net.setBatchSize(batch_size);
         auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
         auto infer_request = this_network.CreateInferRequest();
@@ -2280,6 +2395,10 @@ TEST(TestAgeGenderIE, InferWithBatch)
     normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
 }
 
+// NB: All tests below use preprocessing for "Import" networks
+// passed as the last argument to SetBLob. This overload has
+// been deprecated in OpenVINO 1.0 API.
+#if INF_ENGINE_RELEASE <= 2023000000
 TEST(ImportNetwork, Infer)
 {
     const std::string device = "MYRIAD";
@@ -2819,6 +2938,7 @@ TEST(ImportNetwork, InferList2NV12)
         normAssert(out_ie_genders[i], out_gapi_genders[i], "Test gender output");
     }
 }
+#endif
 
 TEST(TestAgeGender, ThrowBlobAndInputPrecisionMismatch)
 {
@@ -2971,8 +3091,8 @@ struct AgeGenderInferTest: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        m_params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        m_params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        m_params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        m_params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         m_params.device_id = "CPU";
 
         m_plugin = cv::gimpl::ie::wrap::getPlugin(m_params);
@@ -3054,6 +3174,73 @@ TEST_F(AgeGenderInferTest, ChangeSpecificOutputPrecison) {
     buildGraph().apply(cv::gin(m_in_mat), cv::gout(m_gapi_age, m_gapi_gender),
                        cv::compile_args(cv::gapi::networks(pp)));
     validate();
+}
+
+TEST_F(AgeGenderInferTest, ThrowIfSetLayoutForImage) {
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        m_params.model_path, m_params.weights_path, m_params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgOutputPrecision({{"prob", CV_8U}})
+     .cfgInputLayout("NHWC");
+
+    EXPECT_ANY_THROW(buildGraph().apply(cv::gin(m_in_mat), cv::gout(m_gapi_age, m_gapi_gender),
+                                        cv::compile_args(cv::gapi::networks(pp))));
+}
+
+TEST(TestAgeGenderIE, InferTensorWithPreproc) {
+    initDLDTDataPath();
+
+    cv::gapi::ie::detail::ParamDesc params;
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
+    params.device_id = "CPU";
+
+    // Load IE network, initialize input data using that.
+    cv::Mat in_mat({1, 240, 320, 3}, CV_8U);
+    cv::randu(in_mat, 0, 255);
+    cv::Mat gapi_age, gapi_gender;
+
+    IE::Blob::Ptr ie_age, ie_gender;
+    {
+        auto plugin        = cv::gimpl::ie::wrap::getPlugin(params);
+        auto net           = cv::gimpl::ie::wrap::readNetwork(params);
+        auto ii = net.getInputsInfo().at("data");
+
+        ii->setPrecision(IE::Precision::U8);
+        ii->getPreProcess().setResizeAlgorithm(IE::RESIZE_BILINEAR);
+        ii->setLayout(IE::Layout::NHWC);
+
+        auto this_network  = cv::gimpl::ie::wrap::loadNetwork(plugin, net, params);
+        auto infer_request = this_network.CreateInferRequest();
+        IE::TensorDesc desc{IE::Precision::U8, {1, 3, 240, 320}, IE::Layout::NHWC};
+        auto blob =  IE::make_shared_blob<uint8_t>(desc, const_cast<uint8_t*>(in_mat.ptr<uint8_t>()));
+        infer_request.SetBlob("data", blob);
+        infer_request.Infer();
+        ie_age    = infer_request.GetBlob("age_conv3");
+        ie_gender = infer_request.GetBlob("prob");
+    }
+
+    // Configure & run G-API
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "test-age-gender");
+
+    cv::GMat in;
+    cv::GMat age, gender;
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+    cv::GComputation comp(cv::GIn(in), cv::GOut(age, gender));
+
+    auto pp = cv::gapi::ie::Params<AgeGender> {
+        params.model_path, params.weights_path, params.device_id
+    }.cfgOutputLayers({ "age_conv3", "prob" })
+     .cfgResize(cv::INTER_LINEAR)
+     .cfgInputLayout("NHWC");
+
+    comp.apply(cv::gin(in_mat), cv::gout(gapi_age, gapi_gender),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    // Validate with IE itself (avoid DNN module dependency here)
+    normAssert(cv::gapi::ie::util::to_ocv(ie_age),    gapi_age,    "Test age output"   );
+    normAssert(cv::gapi::ie::util::to_ocv(ie_gender), gapi_gender, "Test gender output");
 }
 
 } // namespace opencv_test

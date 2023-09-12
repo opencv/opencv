@@ -166,7 +166,7 @@ template <typename R> struct Data
     {
         *this = r;
     }
-    operator R ()
+    operator R () const
     {
         return initializer<VTraits<R>::max_nlanes>().init(*this);
     }
@@ -1081,7 +1081,7 @@ template<typename R> struct TheTest
         typedef typename VTraits<uint_reg>::lane_type uint_type;
 
         Data<R> dataA, dataB(0), dataC, dataD(1), dataE(2);
-        dataA[0] = std::numeric_limits<int_type>::max();
+        dataA[0] = (LaneType)std::numeric_limits<int_type>::max();
         dataA[1] *= (LaneType)-1;
         union
         {
@@ -1475,12 +1475,15 @@ template<typename R> struct TheTest
     TheTest & test_float_math()
     {
         typedef typename V_RegTraits<R>::round_reg Ri;
-        Data<R> data1, data2, data3;
+        Data<R> data1, data1_border, data2, data3;
+        // See https://github.com/opencv/opencv/issues/24213
+        data1_border *= 0.5;
         data1 *= 1.1;
         data2 += 10;
-        R a1 = data1, a2 = data2, a3 = data3;
+        R a1 = data1, a1_border = data1_border, a2 = data2, a3 = data3;
 
         Data<Ri> resB = v_round(a1),
+                 resB_border = v_round(a1_border),
                  resC = v_trunc(a1),
                  resD = v_floor(a1),
                  resE = v_ceil(a1);
@@ -1493,6 +1496,7 @@ template<typename R> struct TheTest
         {
             SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(cvRound(data1[i]), resB[i]);
+            EXPECT_EQ(cvRound(data1_border[i]), resB_border[i]);
             EXPECT_EQ((typename VTraits<Ri>::lane_type)data1[i], resC[i]);
             EXPECT_EQ(cvFloor(data1[i]), resD[i]);
             EXPECT_EQ(cvCeil(data1[i]), resE[i]);
@@ -1736,11 +1740,39 @@ template<typename R> struct TheTest
     }
 #endif
 
-#if CV_SIMD_64F
+    void do_check_cmp64(const Data<R>& dataA, const Data<R>& dataB)
+    {
+        R a = dataA;
+        R b = dataB;
+
+#if CV_SIMD_SCALABLE
+        Data<R> dataEQ = v_eq(a, b);
+        Data<R> dataNE = v_ne(a, b);
+#else
+        Data<R> dataEQ = (a == b);
+        Data<R> dataNE = (a != b);
+#endif
+
+        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
+        {
+            SCOPED_TRACE(cv::format("i=%d", i));
+            if (cvtest::debugLevel > 0) cout << "i=" << i << " ( " << dataA[i] << " vs " << dataB[i] << " ): eq=" << dataEQ[i] << " ne=" << dataNE[i] << endl;
+            EXPECT_NE((LaneType)dataEQ[i], (LaneType)dataNE[i]);
+            if (dataA[i] == dataB[i])
+                EXPECT_EQ((LaneType)-1, (LaneType)dataEQ[i]);
+            else
+                EXPECT_EQ((LaneType)0, (LaneType)dataEQ[i]);
+            if (dataA[i] != dataB[i])
+                EXPECT_EQ((LaneType)-1, (LaneType)dataNE[i]);
+            else
+                EXPECT_EQ((LaneType)0, (LaneType)dataNE[i]);
+        }
+    }
+
     TheTest & test_cmp64()
     {
-        Data<R> dataA, dataB;
-        R a = dataA, b = dataB;
+        Data<R> dataA;
+        Data<R> dataB;
 
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
@@ -1748,37 +1780,25 @@ template<typename R> struct TheTest
         }
         dataA[0]++;
 
-        a = dataA, b = dataB;
+        do_check_cmp64(dataA, dataB);
+        do_check_cmp64(dataB, dataA);
 
-        Data<R> resC = (a == b);
-        Data<R> resD = (a != b);
+        dataA[0] = dataB[0];
+        dataA[1] += (((LaneType)1) << 32);
+        do_check_cmp64(dataA, dataB);
+        do_check_cmp64(dataB, dataA);
 
-        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
-        {
-            SCOPED_TRACE(cv::format("i=%d", i));
-            EXPECT_EQ(dataA[i] == dataB[i], resC[i] != 0);
-            EXPECT_EQ(dataA[i] != dataB[i], resD[i] != 0);
-        }
+        dataA[0] = (LaneType)-1;
+        dataB[0] = (LaneType)-1;
+        dataA[1] = (LaneType)-1;
+        dataB[1] = (LaneType)2;
 
-        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
-        {
-            dataA[i] = dataB[i] = (LaneType)-1;
-        }
+        do_check_cmp64(dataA, dataB);
+        do_check_cmp64(dataB, dataA);
 
-        a = dataA, b = dataB;
-
-        resC = (a == b);
-        resD = (a != b);
-
-        for (int i = 0; i < VTraits<R>::vlanes(); ++i)
-        {
-            SCOPED_TRACE(cv::format("i=%d", i));
-            EXPECT_EQ(dataA[i] == dataB[i], resC[i] != 0);
-            EXPECT_EQ(dataA[i] != dataB[i], resD[i] != 0);
-        }
         return *this;
     }
-#endif
+
 };
 
 #define DUMP_ENTRY(type) printf("SIMD%d: %s\n", 8*VTraits<v_uint8>::vlanes(), CV__TRACE_FUNCTION);
@@ -2023,9 +2043,8 @@ void test_hal_intrin_uint64()
     TheTest<v_uint64>()
         .test_loadstore()
         .test_addsub()
-#if CV_SIMD_64F
         .test_cmp64()
-#endif
+        //.test_cmp() - not declared as supported
         .test_shift<1>().test_shift<8>()
         .test_logic()
         .test_reverse()
@@ -2033,6 +2052,7 @@ void test_hal_intrin_uint64()
         .test_rotate<0>().test_rotate<1>()
         .test_extract_n<0>().test_extract_n<1>()
         .test_extract_highest()
+        .test_popcount()
         //.test_broadcast_element<0>().test_broadcast_element<1>()
         ;
 }
@@ -2043,9 +2063,8 @@ void test_hal_intrin_int64()
     TheTest<v_int64>()
         .test_loadstore()
         .test_addsub()
-#if CV_SIMD_64F
         .test_cmp64()
-#endif
+        //.test_cmp() - not declared as supported
         .test_shift<1>().test_shift<8>()
         .test_logic()
         .test_reverse()
@@ -2055,6 +2074,7 @@ void test_hal_intrin_int64()
         .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>()
         .test_cvt64_double()
+        .test_popcount()
         ;
 }
 
@@ -2128,7 +2148,8 @@ void test_hal_intrin_float64()
         .test_rotate<2>().test_rotate<3>()
 #endif
         ;
-
+#else
+    std::cout << "SKIP: CV_SIMD_64F is not available" << std::endl;
 #endif
 }
 

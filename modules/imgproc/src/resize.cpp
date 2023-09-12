@@ -1212,9 +1212,9 @@ static void resizeNN_bitexact( const Mat& src, Mat& dst, double /*fx*/, double /
 {
     Size ssize = src.size(), dsize = dst.size();
     int ifx = ((ssize.width << 16) + dsize.width / 2) / dsize.width; // 16bit fixed-point arithmetic
-    int ifx0 = ifx / 2 - 1;                                     // This method uses center pixel coordinate as Pillow and scikit-images do.
+    int ifx0 = ifx / 2 - ssize.width % 2;                       // This method uses center pixel coordinate as Pillow and scikit-images do.
     int ify = ((ssize.height << 16) + dsize.height / 2) / dsize.height;
-    int ify0 = ify / 2 - 1;
+    int ify0 = ify / 2 - ssize.height % 2;
 
     cv::utils::BufferArea area;
     int* x_ofse = 0;
@@ -3305,11 +3305,11 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     if (useSampler)
     {
         int wdepth = std::max(depth, CV_32S);
-        char buf[2][32];
+        char buf[2][50];
         cv::String compileOpts = format("-D USE_SAMPLER -D depth=%d -D T=%s -D T1=%s "
                         "-D convertToDT=%s -D cn=%d",
                         depth, ocl::typeToStr(type), ocl::typeToStr(depth),
-                        ocl::convertTypeStr(wdepth, depth, cn, buf[1]),
+                        ocl::convertTypeStr(wdepth, depth, cn, buf[1], sizeof(buf[1])),
                         cn);
         k.create("resizeSampler", ocl::imgproc::resize_oclsrc, compileOpts);
 
@@ -3327,7 +3327,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
 
     if (interpolation == INTER_LINEAR && !useSampler)
     {
-        char buf[2][32];
+        char buf[2][50];
 
         // integer path is slower because of CPU part, so it's disabled
         if (depth == CV_8U && ((void)0, 0))
@@ -3375,8 +3375,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                             "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
                             "-D INTER_RESIZE_COEF_BITS=%d",
                             depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
-                            ocl::convertTypeStr(depth, wdepth, cn, buf[0]),
-                            ocl::convertTypeStr(wdepth, depth, cn, buf[1]),
+                            ocl::convertTypeStr(depth, wdepth, cn, buf[0], sizeof(buf[0])),
+                            ocl::convertTypeStr(wdepth, depth, cn, buf[1], sizeof(buf[1])),
                             cn, INTER_RESIZE_COEF_BITS));
             if (k.empty())
                 return false;
@@ -3393,8 +3393,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
                             "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
                             "-D INTER_RESIZE_COEF_BITS=%d",
                             depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
-                            ocl::convertTypeStr(depth, wdepth, cn, buf[0]),
-                            ocl::convertTypeStr(wdepth, depth, cn, buf[1]),
+                            ocl::convertTypeStr(depth, wdepth, cn, buf[0], sizeof(buf[0])),
+                            ocl::convertTypeStr(wdepth, depth, cn, buf[1], sizeof(buf[1])),
                             cn, INTER_RESIZE_COEF_BITS));
             if (k.empty())
                 return false;
@@ -3419,10 +3419,10 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         int wdepth = std::max(depth, is_area_fast ? CV_32S : CV_32F);
         int wtype = CV_MAKE_TYPE(wdepth, cn);
 
-        char cvt[2][40];
+        char cvt[2][50];
         String buildOption = format("-D INTER_AREA -D T=%s -D T1=%s -D WTV=%s -D convertToWTV=%s -D cn=%d",
                                     ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
-                                    ocl::convertTypeStr(depth, wdepth, cn, cvt[0]), cn);
+                                    ocl::convertTypeStr(depth, wdepth, cn, cvt[0], sizeof(cvt[0])), cn);
 
         UMat alphaOcl, tabofsOcl, mapOcl;
         UMat dmap, smap;
@@ -3432,8 +3432,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
             int wdepth2 = std::max(CV_32F, depth), wtype2 = CV_MAKE_TYPE(wdepth2, cn);
             buildOption = buildOption + format(" -D convertToT=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
                                                 " -D XSCALE=%d -D YSCALE=%d -D SCALE=%ff",
-                                                ocl::convertTypeStr(wdepth2, depth, cn, cvt[0]),
-                                                ocl::typeToStr(wtype2), ocl::convertTypeStr(wdepth, wdepth2, cn, cvt[1]),
+                                                ocl::convertTypeStr(wdepth2, depth, cn, cvt[0], sizeof(cvt[0])),
+                                                ocl::typeToStr(wtype2), ocl::convertTypeStr(wdepth, wdepth2, cn, cvt[1], sizeof(cvt[1])),
                                     iscale_x, iscale_y, 1.0f / (iscale_x * iscale_y));
 
             k.create("resizeAREA_FAST", ocl::imgproc::resize_oclsrc, buildOption);
@@ -3442,7 +3442,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         }
         else
         {
-            buildOption = buildOption + format(" -D convertToT=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0]));
+            buildOption = buildOption + format(" -D convertToT=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0], sizeof(cvt[0])));
             k.create("resizeAREA", ocl::imgproc::resize_oclsrc, buildOption);
             if (k.empty())
                 return false;

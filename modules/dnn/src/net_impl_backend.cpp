@@ -17,7 +17,8 @@ CV__DNN_INLINE_NS_BEGIN
 
 Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
 {
-    if (preferableBackend == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_CPU)
+    if (preferableBackend == DNN_BACKEND_OPENCV &&
+            (preferableTarget == DNN_TARGET_CPU || preferableTarget == DNN_TARGET_CPU_FP16))
         return Ptr<BackendWrapper>();
 
     MatShape shape(host.dims);
@@ -85,6 +86,10 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
             return Ptr<BackendWrapper>(new TimVXBackendWrapper(baseBuffer, host));
 #endif
         }
+        else if (preferableBackend == DNN_BACKEND_CANN)
+        {
+            CV_Assert(0 && "Internal error: DNN_BACKEND_CANN must be implemented through inheritance");
+        }
         else
             CV_Error(Error::StsNotImplemented, "Unknown backend identifier");
     }
@@ -100,7 +105,7 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
     CV_TRACE_FUNCTION();
     if (preferableBackend == DNN_BACKEND_OPENCV)
     {
-        CV_Assert(preferableTarget == DNN_TARGET_CPU || IS_DNN_OPENCL_TARGET(preferableTarget));
+        CV_Assert(preferableTarget == DNN_TARGET_CPU || preferableTarget == DNN_TARGET_CPU_FP16 || IS_DNN_OPENCL_TARGET(preferableTarget));
     }
     else if (preferableBackend == DNN_BACKEND_HALIDE)
     {
@@ -146,6 +151,10 @@ void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         CV_Error(Error::StsNotImplemented, "This OpenCV version is built without support of TimVX");
 #endif
     }
+    else if (preferableBackend == DNN_BACKEND_CANN)
+    {
+        CV_Assert(0 && "Internal error: DNN_BACKEND_CANN must be implemented through inheritance");
+    }
     else
     {
         CV_Error(Error::StsNotImplemented, cv::format("Unknown backend identifier: %d", preferableBackend));
@@ -179,6 +188,14 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
             networkBackend.switchBackend(net);
 #else
             CV_Error(Error::StsNotImplemented, "OpenVINO backend is not available in the current OpenCV build");
+#endif
+        }
+        else if (backendId == DNN_BACKEND_CANN)
+        {
+#ifdef HAVE_CANN
+            switchToCannBackend(net);
+#else
+            CV_Error(Error::StsNotImplemented, "CANN backend is not availlable in the current OpenCV build");
 #endif
         }
         else
@@ -216,6 +233,15 @@ void Net::Impl::setPreferableTarget(int targetId)
                 preferableTarget = DNN_TARGET_OPENCL;
 #endif
         }
+
+#if !defined(__arm64__) || !__arm64__
+        if (targetId == DNN_TARGET_CPU_FP16)
+        {
+            CV_LOG_WARNING(NULL, "DNN: fall back to DNN_TARGET_CPU. Only ARM v8 CPU is supported by DNN_TARGET_CPU_FP16.");
+            targetId = DNN_TARGET_CPU;
+        }
+#endif
+
         clear();
     }
 }

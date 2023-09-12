@@ -51,6 +51,7 @@ struct GAPI_EXPORTS GKernel
     GShapes     outShapes;  // types (shapes) kernel's outputs
     GKinds      inKinds;    // kinds of kernel's inputs (fixme: below)
     GCtors      outCtors;   // captured constructors for template output types
+    GKinds      outKinds;   // kinds of kernel's outputs (fixme: below)
 };
 // TODO: It's questionable if inKinds should really be here. Instead,
 // this information could come from meta.
@@ -227,7 +228,8 @@ public:
                               , &K::getOutMeta
                               , {detail::GTypeTraits<R>::shape...}
                               , {detail::GTypeTraits<Args>::op_kind...}
-                              , {detail::GObtainCtor<R>::get()...}});
+                              , {detail::GObtainCtor<R>::get()...}
+                              , {detail::GTypeTraits<R>::op_kind...}});
         call.pass(args...); // TODO: std::forward() here?
         return yield(call, typename detail::MkSeq<sizeof...(R)>::type());
     }
@@ -251,7 +253,8 @@ public:
                               , &K::getOutMeta
                               , {detail::GTypeTraits<R>::shape}
                               , {detail::GTypeTraits<Args>::op_kind...}
-                              , {detail::GObtainCtor<R>::get()}});
+                              , {detail::GObtainCtor<R>::get()}
+                              , {detail::GTypeTraits<R>::op_kind}});
         call.pass(args...);
         return detail::Yield<R>::yield(call, 0);
     }
@@ -414,8 +417,8 @@ namespace cv {
     class GAPI_EXPORTS_W_SIMPLE GKernelPackage;
 
 namespace gapi {
-    GAPI_EXPORTS cv::GKernelPackage combine(const cv::GKernelPackage  &lhs,
-                                            const cv::GKernelPackage  &rhs);
+    GAPI_EXPORTS_W cv::GKernelPackage combine(const cv::GKernelPackage  &lhs,
+                                              const cv::GKernelPackage  &rhs);
 
     /// @private
     class GFunctor
@@ -513,7 +516,7 @@ namespace gapi {
          *
          * @return a number of kernels in the package
          */
-        std::size_t size() const;
+        GAPI_WRAP std::size_t size() const;
 
         /**
          * @brief Returns vector of transformations included in the package
@@ -717,6 +720,8 @@ namespace gapi {
     {
         return combine(a, combine(b, rest...));
     }
+    // NB(DM): Variadic-arg version in Python may require the same
+    // approach as used in GComputation::compile/apply.
 
     /** \addtogroup gapi_compile_args
      * @{

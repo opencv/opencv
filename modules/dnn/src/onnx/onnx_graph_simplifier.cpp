@@ -7,6 +7,7 @@
 
 #include "../precomp.hpp"
 
+#ifdef HAVE_PROTOBUF
 #include "../graph_simplifier.hpp"
 #include "onnx_graph_simplifier.hpp"
 
@@ -75,6 +76,29 @@ public:
         return makePtr<ONNXNodeWrapper>(node);
     }
 
+    int getInputInitializerId(int node_id, int node_input_id)
+    {
+        auto node = getNode(node_id);
+        std::string node_input_name = node->getInputName(node_input_id);
+        for (int i = 0; i < numInitializers; ++i)
+            if (net.initializer(i).name() == node_input_name)
+                return i;
+        // CV_Error(Error::StsParseError, "Initializer with name " + node_input_name + " not found");
+        return -1;
+    }
+
+    Mat getMatFromInitializer(int idx)
+    {
+        const opencv_onnx::TensorProto& tensor_proto = net.initializer(idx);
+        return getMatFromTensor(tensor_proto);
+    }
+
+    std::string getNameOfInitializer(int idx) const
+    {
+        const opencv_onnx::TensorProto& tensor_proto = net.initializer(idx);
+        return tensor_proto.name();
+    }
+
     virtual int getNumNodes() const CV_OVERRIDE
     {
         return numInputs + numInitializers + net.node_size();
@@ -108,6 +132,303 @@ public:
 private:
     int numInputs, numInitializers;
     opencv_onnx::GraphProto& net;
+};
+
+/*  Fusion for Gelu.
+
+    Graph before fusion:
+           +---------------------------------------------+
+           |                                             |
+        [Input] -> Div[B=sqrt(2)] -> Erf -> Add[B=1] -> Mul -> Mul[B=0.5] -> [Output]
+
+    Graph after fusion:
+        [Input] -> Gelu -> [Output]
+
+*/
+class GeluSubGraph : public Subgraph
+{
+public:
+    GeluSubGraph()
+    {
+        int input = addNodeToMatch("");
+        int div = addNodeToMatch("Div", input, addNodeToMatch("") /* B=sqrt(2) */ );
+        int erf = addNodeToMatch("Erf", div);
+        int add = addNodeToMatch("Add", erf, addNodeToMatch("") /* B=1 */ );
+        int mul = addNodeToMatch("Mul", input, add);
+        addNodeToMatch("Mul", mul, addNodeToMatch("") /* B=0.5 */) ;
+
+        setFusedNode("Gelu", input);
+    }
+
+    static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
+    {
+        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
+        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
+        if (initializer_id != -1)
+        {
+            Mat const_mat = onnx_net->getMatFromInitializer(initializer_id);
+            return *const_mat.ptr<float>();
+        }
+        else
+        {
+            const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
+            int constant_id = getInputNodeId(net, node, input_id);
+            Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
+            opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
+            opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
+            Mat constant_mat = getMatFromTensor(constant_proto);
+            return *constant_mat.ptr<float>();
+        }
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds,
+                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+    {
+        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        {
+            // Check Div[B=sqrt(2)]
+            float divisor = extractConstant(net, matchedNodesIds[0], 1);
+            if (std::fabs(divisor - M_SQRT2) >= std::numeric_limits<float>::epsilon())
+                return false;
+
+            // Check Add[B=1]
+            float add_const = extractConstant(net, matchedNodesIds[2], 1);
+            if (std::fabs(add_const - 1.f) >= std::numeric_limits<float>::epsilon())
+                return false;
+
+            // Check Mul[B=0.5]
+            float mul_const = extractConstant(net, matchedNodesIds[4], 1);
+            if (std::fabs(mul_const - 0.5f) >= std::numeric_limits<float>::epsilon())
+                return false;
+
+            return true;
+        }
+        return false;
+    }
+};
+
+/*  Fusion for GeluApproximation.
+
+    Graph before fusion:
+           +--------+------+----------------+------------------------------------+
+           |        |      |                |                                    |
+        [Input] -> Mul -> Mul -> Mul[ ] -> Add -> Mul[ ] -> Tanh -> Add[A=1] -> Mul -> Mul(A=0.5) -> [Output]
+                                    /                  \
+                    A=0.044714998453855515          A=sqrt(2/pie)
+
+    Graph after fusion:
+        [Input] -> GeluApproximation -> [Output]
+
+*/
+class GeluApproximationSubGraph : public Subgraph
+{
+public:
+    GeluApproximationSubGraph()
+    {
+        int input = addNodeToMatch("");
+        int mul0 = addNodeToMatch("Mul", input, input);
+        int mul1 = addNodeToMatch("Mul", input, mul0);
+        int mul2 = addNodeToMatch("Mul", addNodeToMatch("") /* A=0.044714998453855515 */, mul1);
+        int add0 = addNodeToMatch("Add", input, mul2);
+        int mul3 = addNodeToMatch("Mul", addNodeToMatch("") /* A=sqrt(2/pie) */, add0);
+        int tanh = addNodeToMatch("Tanh", mul3);
+        int add1 = addNodeToMatch("Add", addNodeToMatch("") /* A=1 */, tanh);
+        int mul4 = addNodeToMatch("Mul", input, add1);
+        addNodeToMatch("Mul", addNodeToMatch("") /* A=0.5 */, mul4);
+
+        setFusedNode("GeluApproximation", input);
+    }
+
+    static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
+    {
+        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
+        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
+        if (initializer_id != -1)
+        {
+            Mat const_mat = onnx_net->getMatFromInitializer(initializer_id);
+            return *const_mat.ptr<float>();
+        }
+        else
+        {
+            const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
+            int constant_id = getInputNodeId(net, node, input_id);
+            Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
+            opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
+            opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
+            Mat constant_mat = getMatFromTensor(constant_proto);
+            return *constant_mat.ptr<float>();
+        }
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds,
+                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+    {
+        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        {
+            // Check Mul[A=0.044714998453855515]
+            float coef = extractConstant(net, matchedNodesIds[2], 0);
+            if (coef - 0.044714998453855515 >= 1e-6)
+                return false;
+
+            // Check Mul[A=sqrt(2/pie)]
+            float sqrt_2_pie = extractConstant(net, matchedNodesIds[4], 0);
+            if (sqrt_2_pie - 0.7978845834732056 >= 1e-6)
+                return false;
+
+            // Check Add[A=1]
+            float add_const = extractConstant(net, matchedNodesIds[6], 0);
+            if (add_const - 1.f >= 1e-6)
+                return false;
+
+            // Check Mul[A=0.5]
+            float mul_const = extractConstant(net, matchedNodesIds[8], 0);
+            if (mul_const - 0.5f >= 1e-6)
+                return false;
+
+            return true;
+        }
+        return false;
+    }
+};
+
+/*  Fusion for LayerNormalization.
+
+    Graph before fusion
+           +-> ReduceMean ->+
+           |                |
+        [Input]  ------->  Sub  ----------------------------------------------->  Div -> Mul(B=weight) -> Add(B=bias) -> [Output]
+                            |                                                      |
+                            +-> Pow(Y=2) -> ReduceMean -> Add(B=epsilon) -> Sqrt ->+
+
+    Graph after fusion
+        [Input] -> LayerNorm -> [Output]
+                        \
+                    [weight], [bias]
+*/
+class LayerNormSubGraph : public Subgraph
+{
+public:
+    LayerNormSubGraph() : axis(-1), epsilon(1e-5)
+    {
+        int input = addNodeToMatch("");
+        int mean = addNodeToMatch("ReduceMean", input);
+
+        int sub = addNodeToMatch("Sub", input, mean);
+
+        int pow = addNodeToMatch("Pow", sub, addNodeToMatch(""));
+        int mean1 = addNodeToMatch("ReduceMean", pow);
+        int add = addNodeToMatch("Add", mean1, addNodeToMatch(""));
+        int sqrt = addNodeToMatch("Sqrt", add);
+
+        int div = addNodeToMatch("Div", sub, sqrt);
+        int mul = addNodeToMatch("Mul", div, addNodeToMatch(""));
+        addNodeToMatch("Add", mul, addNodeToMatch(""));
+
+        setFusedNode("LayerNormalization", input);
+    }
+
+    static float extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
+    {
+        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
+        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
+        if (initializer_id != -1) // initializer
+        {
+            Mat const_mat = onnx_net->getMatFromInitializer(initializer_id);
+            return *const_mat.ptr<float>();
+        }
+        else
+        {
+            const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
+            int constant_id = getInputNodeId(net, node, input_id);
+            Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
+            opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
+            opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
+            Mat constant_mat = getMatFromTensor(constant_proto);
+            return *constant_mat.ptr<float>();
+        }
+    }
+
+    static float extractAxis(const Ptr<ImportGraphWrapper>& net, int node_id)
+    {
+        Ptr<ImportNodeWrapper> mean_ptr = net->getNode(node_id);
+        opencv_onnx::NodeProto* mean_node = mean_ptr.dynamicCast<ONNXNodeWrapper>()->node;
+        int axis_ = -1;
+        for (int i = 0; i < mean_node->attribute_size(); i++)
+        {
+            opencv_onnx::AttributeProto attr = mean_node->attribute(i);
+            if (attr.name() != "axes")
+                continue;
+            axis_ = static_cast<int>(attr.ints(0));
+        }
+        return axis_;
+    }
+
+    static std::string getInputName(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
+    {
+        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
+        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
+        if (initializer_id != -1)
+        {
+            return onnx_net->getNameOfInitializer(initializer_id);
+        }
+        else
+        {
+            const auto node = net->getNode(node_id);
+            return node->getInputName(input_id);
+        }
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds,
+                       std::vector<int>& targetNodesIds) CV_OVERRIDE
+    {
+        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds))
+        {
+            float pow_exp = extractConstant(net, matchedNodesIds[2], 1);
+            if (pow_exp - 2 > 1e-5) // not pow(2)
+                return false;
+
+            int axis_mean1 = extractAxis(net, matchedNodesIds[0]);
+            int axis_mean2 = extractAxis(net, matchedNodesIds[3]);
+            if (axis_mean1 != axis_mean2)
+                return false;
+            axis = axis_mean1;
+
+            epsilon = extractConstant(net, matchedNodesIds[4], 1);
+
+            weight_name = getInputName(net, matchedNodesIds[7], 1);
+            bias_name = getInputName(net, matchedNodesIds[8], 1);
+
+            return true;
+        }
+        return false;
+    }
+
+    virtual void finalize(const Ptr<ImportGraphWrapper>&,
+                          const Ptr<ImportNodeWrapper>& fusedNode,
+                          std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE
+    {
+        opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
+        // axis
+        opencv_onnx::AttributeProto* attr_axis = node->add_attribute();
+        attr_axis->set_name("axis");
+        attr_axis->set_i(axis);
+        // epsilon
+        opencv_onnx::AttributeProto* attr_epsilon = node->add_attribute();
+        attr_epsilon->set_name("epsilon");
+        attr_epsilon->set_f(epsilon);
+        // add input
+        node->add_input(weight_name);
+        node->add_input(bias_name);
+    }
+
+protected:
+    int axis;
+    float epsilon;
+    std::string weight_name;
+    std::string bias_name;
 };
 
 class SoftMaxSubgraphBase : public Subgraph
@@ -487,7 +808,7 @@ public:
                         const Ptr<ImportNodeWrapper> node_to_check = net->getNode(i);
                         int numInp = node_to_check->getNumInputs();
                         for (int inp = 0; inp < numInp; ++inp) {
-                            if (i != nodeToMatch && inpNodeName == node_to_check->getInputName(0)) {
+                            if (i != nodeToMatch && inpNodeName == node_to_check->getInputName(inp)) {
                                 // Another node has the same input node, so it cannot be merged.
                                 return false;
                             }
@@ -746,6 +1067,9 @@ public:
 void simplifySubgraphs(opencv_onnx::GraphProto& net)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
+    subgraphs.push_back(makePtr<GeluSubGraph>());
+    subgraphs.push_back(makePtr<GeluApproximationSubGraph>());
+    subgraphs.push_back(makePtr<LayerNormSubGraph>());
     subgraphs.push_back(makePtr<GatherCastSubgraph>());
     subgraphs.push_back(makePtr<MulCastSubgraph>());
     subgraphs.push_back(makePtr<UpsampleSubgraph>());
@@ -801,7 +1125,7 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
     else if (datatype == opencv_onnx::TensorProto_DataType_FLOAT16)
     {
         // FIXME, for now, we only load FP16 Tensor as FP32 Mat, full support for FP16 is required in the future.
-        CV_LOG_ONCE_WARNING(NULL, "DNN: load FP16 model as FP32 model, and it takes twice the FP16 RAM requirement.");
+        CV_LOG_ONCE_INFO(NULL, "DNN: load FP16 model as FP32 model, and it takes twice the FP16 RAM requirement.");
 
         // ONNX saves float 16 data in two format: int32 and raw_data.
         // Link: https://github.com/onnx/onnx/issues/4460#issuecomment-1224373746
@@ -845,8 +1169,12 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
     else if (datatype == opencv_onnx::TensorProto_DataType_DOUBLE)
     {
         const ::google::protobuf::RepeatedField<double> field = tensor_proto.double_data();
-        CV_Assert(!field.empty());
-        char* val = (char *)field.data();
+        char* val = nullptr;
+        if (!field.empty())
+            val = (char *)field.data();
+        else
+            val = const_cast<char*>(tensor_proto.raw_data().c_str()); // sometime, the double will be stored at raw_data.
+
 #if CV_STRONG_ALIGNMENT
         // Aligned pointer is required.
         AutoBuffer<double, 16> aligned_val;
@@ -938,3 +1266,4 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto)
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn
+#endif  // HAVE_PROTOBUF

@@ -24,6 +24,7 @@
 
 #include <map>
 #include <mutex>
+#include <condition_variable>
 
 #include "cap_obsensor/obsensor_stream_channel_interface.hpp"
 
@@ -33,7 +34,7 @@ class VideoCapture_obsensor : public IVideoCapture
 {
 public:
     VideoCapture_obsensor(int index);
-    virtual ~VideoCapture_obsensor() {}
+    virtual ~VideoCapture_obsensor();
 
     virtual double getProperty(int propIdx) const CV_OVERRIDE;
     virtual bool setProperty(int propIdx, double propVal) CV_OVERRIDE;
@@ -51,6 +52,7 @@ private:
     std::vector<Ptr<obsensor::IStreamChannel>> streamChannelGroup_;
 
     std::mutex frameMutex_;
+    std::condition_variable frameCv_;
 
     Mat depthFrame_;
     Mat colorFrame_;

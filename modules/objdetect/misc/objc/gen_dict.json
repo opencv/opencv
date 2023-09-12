@@ -1,0 +1,7 @@
+{
+    "ManualFuncs" : {
+        "QRCodeDetectorAruco": {
+            "getDetectorParameters": { "declaration" : [""], "implementation" : [""] }
+        }
+    }
+}

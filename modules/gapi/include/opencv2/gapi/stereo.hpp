@@ -62,7 +62,7 @@ G_TYPED_KERNEL(GStereo, <GMat(GMat, GMat, const StereoOutputFormat)>, "org.openc
             case StereoOutputFormat::DISPARITY_FIXED16_12_4:
                 return left.withDepth(CV_16SC1);
             default:
-                GAPI_Assert(false && "Unknown output format!");
+                GAPI_Error("Unknown output format!");
         }
     }
 };

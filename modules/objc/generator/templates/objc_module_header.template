@@ -19,7 +19,7 @@ $enumDeclarations
 NS_ASSUME_NONNULL_BEGIN
 
 $docs
-CV_EXPORTS @interface $module : $base
+CV_EXPORTS @interface $objcName : $base
 
 $methodDeclarations
 

@@ -27,19 +27,19 @@ Theory
     (\f$d(H_{1}, H_{2})\f$) to express how well both histograms match.
 -   OpenCV implements the function @ref cv::compareHist to perform a comparison. It also offers 4
     different metrics to compute the matching:
-    -#  **Correlation ( CV_COMP_CORREL )**
+    -#  **Correlation ( cv::HISTCMP_CORREL )**
         \f[d(H_1,H_2) =  \frac{\sum_I (H_1(I) - \bar{H_1}) (H_2(I) - \bar{H_2})}{\sqrt{\sum_I(H_1(I) - \bar{H_1})^2 \sum_I(H_2(I) - \bar{H_2})^2}}\f]
         where
         \f[\bar{H_k} =  \frac{1}{N} \sum _J H_k(J)\f]
         and \f$N\f$ is the total number of histogram bins.
 
-    -#  **Chi-Square ( CV_COMP_CHISQR )**
+    -#  **Chi-Square ( cv::HISTCMP_CHISQR )**
         \f[d(H_1,H_2) =  \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)}\f]
 
-    -#  **Intersection ( method=CV_COMP_INTERSECT )**
+    -#  **Intersection ( method=cv::HISTCMP_INTERSECT )**
         \f[d(H_1,H_2) =  \sum _I  \min (H_1(I), H_2(I))\f]
 
-    -#  **Bhattacharyya distance ( CV_COMP_BHATTACHARYYA )**
+    -#  **Bhattacharyya distance ( cv::HISTCMP_BHATTACHARYYA )**
         \f[d(H_1,H_2) =  \sqrt{1 - \frac{1}{\sqrt{\bar{H_1} \bar{H_2} N^2}} \sum_I \sqrt{H_1(I) \cdot H_2(I)}}\f]
 
 Code

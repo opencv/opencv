@@ -5,6 +5,7 @@
 
 #include "cv2_convert.hpp"
 #include "cv2_numpy.hpp"
+#include "cv2_util.hpp"
 #include "opencv2/core/utils/logger.hpp"
 
 PyTypeObject* pyopencv_Mat_TypePtr = nullptr;
@@ -22,6 +23,26 @@ static std::string pycv_dumpArray(const T* arr, int n)
         out << " " << arr[i];
     out << " ]";
     return out.str();
+}
+
+static inline std::string getArrayTypeName(PyArrayObject* arr)
+{
+    PyArray_Descr* dtype = PyArray_DESCR(arr);
+    PySafeObject dtype_str(PyObject_Str(reinterpret_cast<PyObject*>(dtype)));
+    if (!dtype_str)
+    {
+        // Fallback to typenum value
+        return cv::format("%d", PyArray_TYPE(arr));
+    }
+    std::string type_name;
+    if (!getUnicodeString(dtype_str, type_name))
+    {
+        // Failed to get string from bytes object - clear set TypeError and
+        // fallback to typenum value
+        PyErr_Clear();
+        return cv::format("%d", PyArray_TYPE(arr));
+    }
+    return type_name;
 }
 
 //======================================================================================================================
@@ -80,6 +101,13 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     PyArrayObject* oarr = (PyArrayObject*) o;
 
+    if (info.outputarg && !PyArray_ISWRITEABLE(oarr))
+    {
+        failmsg("%s marked as output argument, but provided NumPy array "
+                "marked as readonly", info.name);
+        return false;
+    }
+
     bool needcopy = false, needcast = false;
     int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
     int type = typenum == NPY_UBYTE ? CV_8U :
@@ -88,6 +116,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
                typenum == NPY_SHORT ? CV_16S :
                typenum == NPY_INT ? CV_32S :
                typenum == NPY_INT32 ? CV_32S :
+               typenum == NPY_HALF ? CV_16F :
                typenum == NPY_FLOAT ? CV_32F :
                typenum == NPY_DOUBLE ? CV_64F : -1;
 
@@ -101,7 +130,9 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         }
         else
         {
-            failmsg("%s data type = %d is not supported", info.name, typenum);
+            const std::string dtype_name = getArrayTypeName(oarr);
+            failmsg("%s data type = %s is not supported", info.name,
+                    dtype_name.c_str());
             return false;
         }
     }
@@ -326,7 +357,7 @@ bool pyopencv_to(PyObject *o, Scalar& s, const ArgInfo& info)
         }
     } else {
         if (PyFloat_Check(o) || PyInt_Check(o)) {
-            s[0] = PyFloat_AsDouble(o);
+            s = PyFloat_AsDouble(o);
         } else {
             failmsg("Scalar value for argument '%s' is not numeric", info.name);
             return false;
@@ -443,6 +474,30 @@ PyObject* pyopencv_from(const int& value)
 }
 
 // --- int64
+
+template<>
+bool pyopencv_to(PyObject* obj, int64& value, const ArgInfo& info)
+{
+    if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+    if (isBool(obj))
+    {
+        failmsg("Argument '%s' must be integer, not bool", info.name);
+        return false;
+    }
+    if (PyArray_IsIntegerScalar(obj))
+    {
+        value = PyLong_AsLongLong(obj);
+    }
+    else
+    {
+        failmsg("Argument '%s' is required to be an integer", info.name);
+        return false;
+    }
+    return !CV_HAS_CONVERSION_ERROR(value);
+}
 
 template<>
 PyObject* pyopencv_from(const int64& value)
@@ -703,10 +758,36 @@ PyObject* pyopencv_from(const Rect2d& r)
 
 // --- RotatedRect
 
+static inline bool convertToRotatedRect(PyObject* obj, RotatedRect& dst)
+{
+    PyObject* type = PyObject_Type(obj);
+    if (getPyObjectAttr(type, "__module__") == MODULESTR &&
+        getPyObjectNameAttr(type) == "RotatedRect")
+    {
+        struct pyopencv_RotatedRect_t
+        {
+            PyObject_HEAD
+            cv::RotatedRect v;
+        };
+        dst = reinterpret_cast<pyopencv_RotatedRect_t*>(obj)->v;
+
+        Py_DECREF(type);
+        return true;
+    }
+    Py_DECREF(type);
+    return false;
+}
+
 template<>
 bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
 {
     if (!obj || obj == Py_None)
+    {
+        return true;
+    }
+    // This is a workaround for compatibility with an initialization from tuple.
+    // Allows import RotatedRect as an object.
+    if (convertToRotatedRect(obj, dst))
     {
         return true;
     }

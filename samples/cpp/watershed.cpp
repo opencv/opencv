@@ -54,7 +54,7 @@ int main( int argc, char** argv )
         return 0;
     }
     string filename = samples::findFile(parser.get<string>("@input"));
-    Mat img0 = imread(filename, 1), imgGray;
+    Mat img0 = imread(filename, IMREAD_COLOR), imgGray;
 
     if( img0.empty() )
     {

@@ -66,8 +66,8 @@ void CV_PhaseCorrelatorTest::run( int )
     double expectedShiftY = -20.0;
 
     // draw 10x10 rectangles @ (100, 100) and (90, 80) should see ~(-10, -20) shift here...
-    cv::rectangle(r1, Point(100, 100), Point(110, 110), Scalar(0, 0, 0), CV_FILLED);
-    cv::rectangle(r2, Point(90, 80), Point(100, 90), Scalar(0, 0, 0), CV_FILLED);
+    cv::rectangle(r1, Point(100, 100), Point(110, 110), Scalar(0, 0, 0), cv::FILLED);
+    cv::rectangle(r2, Point(90, 80), Point(100, 90), Scalar(0, 0, 0), cv::FILLED);
 
     Mat hann;
     createHanningWindow(hann, r1.size(), CV_64F);

@@ -1,5 +1,5 @@
 macro(simd_fail message)
-    message(WARNING "${message}.  Performance will suffer.")
+    message(STATUS "libjpeg-turbo(SIMD): ${message}.  Performance will suffer.")
     set(WITH_SIMD 0 PARENT_SCOPE)
 endmacro()
 
@@ -361,7 +361,7 @@ if(NOT NEON_INTRINSICS)
       -x assembler-with-cpp -c ${CMAKE_CURRENT_BINARY_DIR}/gastest.S
     RESULT_VARIABLE RESULT OUTPUT_VARIABLE OUTPUT ERROR_VARIABLE ERROR)
   if(NOT RESULT EQUAL 0)
-    message(WARNING "GAS appears to be broken.  Using the full Neon SIMD intrinsics implementation.")
+    message(STATUS "libjpeg-turbo(SIMD): GAS appears to be broken.  Using the full Neon SIMD intrinsics implementation.")
     set(NEON_INTRINSICS 1 CACHE INTERNAL "" FORCE)
   endif()
 endif()

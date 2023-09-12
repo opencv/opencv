@@ -1232,10 +1232,10 @@ static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32
         return false;
 
     wgs = std::min<size_t>(ocl::Device::getDefault().maxWorkGroupSize(), BINS);
-    char cvt[40];
+    char cvt[50];
     ocl::Kernel k2("merge_histogram", ocl::imgproc::histogram_oclsrc,
                    format("-D BINS=%d -D HISTS_COUNT=%d -D WGS=%d -D convertToHT=%s -D HT=%s",
-                          BINS, compunits, (int)wgs, ocl::convertTypeStr(CV_32S, ddepth, 1, cvt),
+                          BINS, compunits, (int)wgs, ocl::convertTypeStr(CV_32S, ddepth, 1, cvt, sizeof(cvt)),
                           ocl::typeToStr(ddepth)));
     if (k2.empty())
         return false;

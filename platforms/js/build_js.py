@@ -180,6 +180,8 @@ class Builder:
             flags += "-s WASM=1 "
         elif self.options.disable_wasm:
             flags += "-s WASM=0 "
+        if not self.options.disable_single_file:
+            flags += "-s SINGLE_FILE=1 "
         if self.options.threads:
             flags += "-s USE_PTHREADS=1 -s PTHREAD_POOL_SIZE=4 "
         else:
@@ -233,6 +235,7 @@ if __name__ == "__main__":
     parser.add_argument('--emscripten_dir', default=emscripten_dir, help="Path to Emscripten to use for build (deprecated in favor of 'emcmake' launcher)")
     parser.add_argument('--build_wasm', action="store_true", help="Build OpenCV.js in WebAssembly format")
     parser.add_argument('--disable_wasm', action="store_true", help="Build OpenCV.js in Asm.js format")
+    parser.add_argument('--disable_single_file', action="store_true", help="Do not merge JavaScript and WebAssembly into one single file")
     parser.add_argument('--threads', action="store_true", help="Build OpenCV.js with threads optimization")
     parser.add_argument('--simd', action="store_true", help="Build OpenCV.js with SIMD optimization")
     parser.add_argument('--build_test', action="store_true", help="Build tests")

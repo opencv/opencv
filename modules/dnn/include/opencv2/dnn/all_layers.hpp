@@ -258,7 +258,6 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<BaseConvolutionLayer> create(const LayerParams& params);
         bool fusedActivation = false;
         bool fusedAdd = false;
-        bool isConv2D = false; // Should be deleted after fastconv branch support Conv1D and Conv3D.
         bool useWinograd = false; // Flag whether to use Winograd to speed up 3x3 convolution.
     };
 
@@ -346,16 +345,7 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS ReduceLayer : public Layer
     {
     public:
-        int reduceType;
-        // reduceDims contains the dimensions that need to be reduced, targetDims is the target output dimension.
-        std::vector<size_t> reduceDims, targetDims;
         static Ptr<ReduceLayer> create(const LayerParams& params);
-    };
-
-    class CV_EXPORTS ReduceLayerInt8 : public ReduceLayer
-    {
-    public:
-        static Ptr<ReduceLayerInt8> create(const LayerParams& params);
     };
 
     class CV_EXPORTS SoftmaxLayer : public Layer
@@ -374,6 +364,10 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SoftmaxLayerInt8> create(const LayerParams& params);
     };
 
+    /**
+     * `InnerProduct`, `MatMul` and `Gemm` operations are all implemented by Fully Connected Layer.
+     * Parameter `is_matmul` is used to distinguish `MatMul` and `Gemm` from `InnerProduct`.
+     */
     class CV_EXPORTS InnerProductLayer : public Layer
     {
     public:
@@ -802,6 +796,18 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SeluLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS GeluLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<GeluLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS GeluApproximationLayer : public ActivationLayer
+    {
+    public:
+        static Ptr<GeluApproximationLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS ThresholdedReluLayer : public ActivationLayer
     {
     public:
@@ -1077,6 +1083,22 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<ScatterNDLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS TileLayer : public Layer
+    {
+    public:
+        static Ptr<TileLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS LayerNormLayer : public Layer
+    {
+    public:
+        bool hasBias;
+        int axis;
+        float epsilon;
+
+        static Ptr<LayerNormLayer> create(const LayerParams& params);
     };
 
 //! @}
