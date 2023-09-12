@@ -689,6 +689,58 @@ TEST(Charuco, testmatchImagePoints)
     }
 }
 
+typedef testing::TestWithParam<int> CharucoDraw;
+INSTANTIATE_TEST_CASE_P(/**/, CharucoDraw, testing::Values(CV_8UC2, CV_8SC2, CV_16UC2, CV_16SC2, CV_32SC2, CV_32FC2, CV_64FC2));
+TEST_P(CharucoDraw, testDrawDetected) {
+    vector<vector<Point>> detected_golds = {{Point(20, 20), Point(80, 20), Point(80, 80), Point2f(20, 80)}};
+    Point center_gold = (detected_golds[0][0] + detected_golds[0][1] + detected_golds[0][2] + detected_golds[0][3]) / 4;
+    int type = GetParam();
+    vector<Mat> detected(detected_golds[0].size(), Mat(4, 1, type));
+    // copy detected_golds to detected with any 2 channels type
+    for (size_t i = 0ull; i < detected_golds[0].size(); i++) {
+        detected[0].row((int)i) = Scalar(detected_golds[0][i].x, detected_golds[0][i].y);
+    }
+    vector<vector<Point>> contours;
+    Point detectedCenter;
+    Moments m;
+    Mat img;
+
+    // check drawDetectedMarkers
+    img = Mat::zeros(100, 100, CV_8UC1);
+    ASSERT_NO_THROW(aruco::drawDetectedMarkers(img, detected, noArray(), Scalar(255, 255, 255)));
+    // check that the marker borders are painted
+    findContours(img, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    ASSERT_EQ(contours.size(), 1ull);
+    m = moments(contours[0]);
+    detectedCenter = Point(cvRound(m.m10/m.m00), cvRound(m.m01/m.m00));
+    ASSERT_EQ(detectedCenter, center_gold);
+
+
+    // check drawDetectedCornersCharuco
+    img = Mat::zeros(100, 100, CV_8UC1);
+    ASSERT_NO_THROW(aruco::drawDetectedCornersCharuco(img, detected[0], noArray(), Scalar(255, 255, 255)));
+    // check that the 4 charuco corners are painted
+    findContours(img, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    ASSERT_EQ(contours.size(), 4ull);
+    for (size_t i = 0ull; i < 4ull; i++) {
+        m = moments(contours[i]);
+        detectedCenter = Point(cvRound(m.m10/m.m00), cvRound(m.m01/m.m00));
+        // detectedCenter must be in detected_golds
+        ASSERT_TRUE(find(detected_golds[0].begin(), detected_golds[0].end(), detectedCenter) != detected_golds[0].end());
+    }
+
+
+    // check drawDetectedDiamonds
+    img = Mat::zeros(100, 100, CV_8UC1);
+    ASSERT_NO_THROW(aruco::drawDetectedDiamonds(img, detected, noArray(), Scalar(255, 255, 255)));
+    // check that the diamonds borders are painted
+    findContours(img, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    ASSERT_EQ(contours.size(), 1ull);
+    m = moments(contours[0]);
+    detectedCenter = Point(cvRound(m.m10/m.m00), cvRound(m.m01/m.m00));
+    ASSERT_EQ(detectedCenter, center_gold);
+}
+
 typedef testing::TestWithParam<cv::Size> CharucoBoard;
 INSTANTIATE_TEST_CASE_P(/**/, CharucoBoard, testing::Values(Size(3, 2), Size(3, 2), Size(6, 2), Size(2, 6),
                                                             Size(3, 4), Size(4, 3), Size(7, 3), Size(3, 7)));
