@@ -890,7 +890,7 @@ public:
 /** @brief the VIT tracker is a super lightweight dnn-based general object tracking.
  *
  *  VIT tracker is much faster and extremely lightweight due to special model structure, the model file is about 767KB.
- *  Model download link: https://github.com/opencv/opencv_zoo/tree/main/models/object_tracking_vittrack/vitTracker.onnx
+ *  Model download link: https://github.com/opencv/opencv_zoo/tree/main/models/object_tracking_vittrack
  *  Author: PengyuLiu, 1872918507@qq.com
  */
 class CV_EXPORTS_W TrackerVit : public Tracker

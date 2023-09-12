@@ -1,5 +1,5 @@
 // VitTracker
-// model: https://github.com/opencv/opencv_zoo/tree/main/models/object_tracking_vittrack/vitTracker.onnx
+// model: https://github.com/opencv/opencv_zoo/tree/main/models/object_tracking_vittrack
 
 #include <iostream>
 #include <cmath>
