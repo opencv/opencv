@@ -971,15 +971,17 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
             } else if (hasLeftDim)
             {
                 // if the dim to be reduced is only in one of left and right, we can reduce right away
-                // const Mat& tensor_to_be_reduced = !currentLeft.empty() ? currentLeft : left;
-                // auto tensor_to_be_reduced_dims = !currentLeft.empty() ? currentLeft.size : leftDims;
-                CV_Error(Error::StsNotImplemented, "Left Reduce not Implemented");
+                // CV_Error(Error::StsNotImplemented, "Left Reduce not Implemented");
+                Mat tensorToReduce = !currentLeft.empty() ? currentLeft : left;
+                MatShape shapeToReduce = !currentLeft.empty() ? shape(currentLeft) : leftDims;
+                currentLeft = reduceSum(tensorToReduce, shapeToReduce);
 
             } else if (hasRightDim)
             {
-                // const Mat& tensor_to_be_reduced = !currentRight.empty() ? currentRight : right;
-                // auto tensor_to_be_reduced_dims = !currentRight.empty() ? currentRight.size : rightDims;
-                CV_Error(Error::StsNotImplemented, "Right Reduce not Implemented");
+                // CV_Error(Error::StsNotImplemented, "Right Reduce not Implemented");
+                Mat tensorToReduce = !currentRight.empty() ? currentRight : right;
+                MatShape shapeToReduce = !currentRight.empty() ? shape(currentRight) : rightDims;
+                currentLeft = reduceSum(tensorToReduce, shapeToReduce);
             }
 
         } else {
