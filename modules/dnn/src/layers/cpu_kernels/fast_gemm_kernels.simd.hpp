@@ -15,12 +15,15 @@
 #define FAST_GEMM_STORAGE (1<<20) // 2^20
 #define FAST_GEMM_MAX_STACKBUF (1 << 14)
 
-#if CV_LASX
-#define FAST_GEMM_F32_MC 48
-#define FAST_GEMM_F32_NC 128
-#else
+#if CV_NEON
 #define FAST_GEMM_F32_MC 64
 #define FAST_GEMM_F32_NC 240
+#elif CV_AVX
+#define FAST_GEMM_F32_MC 60
+#define FAST_GEMM_F32_NC 320
+#elif CV_LASX
+#define FAST_GEMM_F32_MC 48
+#define FAST_GEMM_F32_NC 128
 #endif
 
 // micro kernel size
@@ -30,18 +33,20 @@
 #elif CV_NEON
 #define FAST_GEMM_F32_MR 12
 #define FAST_GEMM_F32_NR 4
+#elif CV_AVX
+#define FAST_GEMM_F32_MR 12
+#define FAST_GEMM_F32_NR 8
 #elif CV_LASX
 #define FAST_GEMM_F32_MR 12
 #define FAST_GEMM_F32_NR 16
-#else // CV_AVX, CV_AVX2
-#define FAST_GEMM_F32_MR 12
-#define FAST_GEMM_F32_NR 8
 #endif
 
-#if CV_LASX
-#define FAST_GEMM_F32_PACKED_STRIDE_K 64
-#else
+#if CV_NEON
 #define FAST_GEMM_F32_PACKED_STRIDE_K 256
+#elif CV_AVX
+#define FAST_GEMM_F32_PACKED_STRIDE_K 128
+#elif CV_LASX
+#define FAST_GEMM_F32_PACKED_STRIDE_K 64
 #endif
 
 #define FAST_GEMM_IMPLEMENT_PACK(N, suffix, styp, dtyp) \
