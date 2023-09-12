@@ -1368,6 +1368,12 @@ TEST(Core_Mat, copyNx1ToVector)
     ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst16, cv::Mat_<ushort>(dst16));
 }
 
+TEST(Core_Mat, copyMakeBoderUndefinedBehavior)
+{
+    cv::Mat1b src = cv::Mat1b::zeros(4,4), dst;
+    cv::copyMakeBorder(src, dst, 2, 2, 2, 2, 4);
+}
+
 TEST(Core_Matx, fromMat_)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
