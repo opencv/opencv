@@ -4893,7 +4893,7 @@ for(int i = 0; i < it2.count; i++, ++it2)
 }
 @endcode
 */
-class CV_EXPORTS LineIterator
+class CV_EXPORTS_W LineIterator
 {
 public:
     /** @brief Initializes iterator object for the given line and image.
@@ -4902,7 +4902,7 @@ public:
     connects the given two points.
     The line will be clipped on the image boundaries.
 
-    @param img Underlying image.
+    @param src Underlying image.
     @param pt1 First endpoint of the line.
     @param pt2 The other endpoint of the line.
     @param connectivity Pixel connectivity of the iterator. Valid values are 4 (iterator can move
@@ -4910,10 +4910,10 @@ public:
     @param leftToRight If true, the line is traversed from the leftmost endpoint to the rightmost
     endpoint. Otherwise, the line is traversed from \p pt1 to \p pt2.
     */
-    LineIterator( const Mat& img, Point pt1, Point pt2,
+    LineIterator( const Mat &src, Point pt1, Point pt2,
                   int connectivity = 8, bool leftToRight = false )
     {
-        init(&img, Rect(0, 0, img.cols, img.rows), pt1, pt2, connectivity, leftToRight);
+        init(&src, Rect(0, 0, src.cols, src.rows), pt1, pt2, connectivity, leftToRight);
         ptmode = false;
     }
     LineIterator( Point pt1, Point pt2,
@@ -4940,6 +4940,22 @@ public:
         ptmode = true;
     }
     void init(const Mat* img, Rect boundingAreaRect, Point pt1, Point pt2, int connectivity, bool leftToRight);
+    /** @brief Create a LineIterator.
+
+    The returned iterator can be used to traverse all pixels on a line that
+    connects the given two points.
+    The line will be clipped on the image boundaries.
+
+    @param pt1 First endpoint of the line.
+    @param pt2 The other endpoint of the line.
+    @param connectivity Pixel connectivity of the iterator. Valid values are 4 (iterator can move
+    up, down, left and right) and 8 (iterator can also move diagonally).
+    @param leftToRight If true, the line is traversed from the leftmost endpoint to the rightmost
+    endpoint. Otherwise, the line is traversed from \p pt1 to \p pt2.
+    @return LineIterator class instance.
+     */
+    CV_WRAP static Ptr<LineIterator> create(Point pt1, Point pt2,
+        int connectivity = 8, bool leftToRight = false);
 
     /** @brief Returns pointer to the current pixel.
     */
@@ -4959,8 +4975,16 @@ public:
 
     /** @brief Returns coordinates of the current pixel.
     */
-    Point pos() const;
+    CV_WRAP Point pos() const;
 
+    /** @brief next pixel. Use for python binding.
+    */
+    CV_WRAP Point Next() {
+        this->operator++();
+        return this->p;
+    }
+
+    Mat img;
     uchar* ptr;
     const uchar* ptr0;
     int step, elemSize;

@@ -39,7 +39,7 @@
 //
 //M*/
 #include "precomp.hpp"
-
+#include <iostream>
 namespace cv
 {
 
@@ -156,7 +156,7 @@ bool clipLine( Rect img_rect, Point& pt1, Point& pt2 )
     return inside;
 }
 
-void LineIterator::init( const Mat* img, Rect rect, Point pt1_, Point pt2_, int connectivity, bool leftToRight )
+void LineIterator::init( const Mat* src, Rect rect, Point pt1_, Point pt2_, int connectivity, bool leftToRight )
 {
     CV_Assert( connectivity == 8 || connectivity == 4 );
 
@@ -164,7 +164,7 @@ void LineIterator::init( const Mat* img, Rect rect, Point pt1_, Point pt2_, int 
     p = Point(0, 0);
     ptr0 = ptr = 0;
     step = elemSize = 0;
-    ptmode = !img;
+    ptmode = !src;
 
     Point pt1 = pt1_ - rect.tl();
     Point pt2 = pt2_ - rect.tl();
@@ -250,13 +250,26 @@ void LineIterator::init( const Mat* img, Rect rect, Point pt1_, Point pt2_, int 
     p = pt1;
     if( !ptmode )
     {
-        ptr0 = img->ptr();
-        step = (int)img->step;
-        elemSize = (int)img->elemSize();
+        ptr0 = src->ptr();
+        step = (int)src->step;
+        elemSize = (int)src->elemSize();
         ptr = (uchar*)ptr0 + (size_t)p.y*step + (size_t)p.x*elemSize;
         plusStep = plusStep*step + plusShift*elemSize;
         minusStep = minusStep*step + minusShift*elemSize;
     }
+}
+
+Ptr<LineIterator> LineIterator::create(Point pt1, Point pt2, int connectivity, bool leftToRight)
+{
+    Ptr<LineIterator> lineiterator = makePtr<LineIterator>(pt1, pt2, connectivity, leftToRight);
+    lineiterator->init(0, Rect(std::min(pt1.x, pt2.x), std::min(pt1.y, pt2.y),
+                               std::max(pt1.x, pt2.x) - std::min(pt1.x, pt2.x) + 1,
+                               std::max(pt1.y, pt2.y) - std::min(pt1.y, pt2.y) + 1),
+                      pt1, pt2, connectivity, leftToRight);
+    lineiterator->ptmode = true;
+
+
+    return lineiterator;
 }
 
 static void
