@@ -7,6 +7,7 @@
 #define SRC_CONVERT_HPP
 
 #include "opencv2/core/types.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
@@ -32,11 +33,11 @@ static inline void vx_load_as(const unsigned* ptr, v_float32& a)
 {
     v_uint32 delta = vx_setall_u32(0x80000000U);
     v_uint32 ua = vx_load(ptr);
-    v_uint32 mask_a = (ua >= delta) & delta;
+    v_uint32 mask_a = v_and(v_ge(ua, delta), delta);
     v_float32 fmask_a = v_cvt_f32(v_reinterpret_as_s32(mask_a)); // 0.f or (float)(-(1 << 31))
-    a = v_cvt_f32(v_reinterpret_as_s32(ua - mask_a));
+    a = v_cvt_f32(v_reinterpret_as_s32(v_sub(ua, mask_a)));
     // restore the original values
-    a -= fmask_a; // subtract 0 or a large negative number
+    a = v_sub(a, fmask_a); // subtract 0 or a large negative number
 }
 
 static inline void vx_load_as(const float* ptr, v_float32& a)
@@ -200,8 +201,8 @@ static inline void vx_load_pair_as(const int64_t* ptr, v_uint64& a, v_uint64& b)
 {
     v_int64 z = vx_setzero_s64();
     v_int64 ia = vx_load(ptr), ib = vx_load(ptr + VTraits<v_uint64>::vlanes());
-    ia &= (ia > z);
-    ib &= (ib > z);
+    ia = v_and(ia, v_gt(ia, z));
+    ib = v_and(ib, v_gt(ib, z));
     a = v_reinterpret_as_u64(ia);
     b = v_reinterpret_as_u64(ib);
 }
@@ -212,10 +213,10 @@ static inline void vx_load_pair_as(const int64_t* ptr, v_uint32& a, v_uint32& b)
     v_int64 z = vx_setzero_s64();
     v_int64 ia0 = vx_load(ptr), ia1 = vx_load(ptr + nlanes);
     v_int64 ib0 = vx_load(ptr + nlanes*2), ib1 = vx_load(ptr + nlanes*3);
-    ia0 &= (ia0 > z);
-    ia1 &= (ia1 > z);
-    ib0 &= (ib0 > z);
-    ib1 &= (ib1 > z);
+    ia0 = v_and(ia0, v_gt(ia0, z));
+    ia1 = v_and(ia1, v_gt(ia1, z));
+    ib0 = v_and(ib0, v_gt(ib0, z));
+    ib1 = v_and(ib1, v_gt(ib1, z));
     a = v_pack(v_reinterpret_as_u64(ia0), v_reinterpret_as_u64(ia1));
     b = v_pack(v_reinterpret_as_u64(ib0), v_reinterpret_as_u64(ib1));
 }
@@ -246,7 +247,7 @@ static inline void vx_load_pair_as(const bool* ptr, v_float32& a, v_float32& b)
 {
     v_uint16 z = vx_setzero_u16();
     v_uint16 uab = vx_load_expand((const uchar*)ptr);
-    uab = v_shr<15>(uab > z);
+    uab = v_shr<15>(v_gt(uab, z));
     v_int32 ia, ib;
     v_expand(v_reinterpret_as_s16(uab), ia, ib);
     a = v_cvt_f32(ia);
@@ -257,7 +258,7 @@ static inline void vx_load_as(const bool* ptr, v_float32& a)
 {
     v_uint32 z = vx_setzero_u32();
     v_uint32 ua = vx_load_expand_q((const uchar*)ptr);
-    ua = v_shr<31>(ua > z);
+    ua = v_shr<31>(v_gt(ua, z));
     a = v_cvt_f32(v_reinterpret_as_s32(ua));
 }
 
@@ -330,14 +331,14 @@ static inline void vx_load_pair_as(const unsigned* ptr, v_float32& a, v_float32&
     v_uint32 delta = vx_setall_u32(0x80000000U);
     v_uint32 ua = vx_load(ptr);
     v_uint32 ub = vx_load(ptr + VTraits<v_uint32>::vlanes());
-    v_uint32 mask_a = (ua >= delta) & delta, mask_b = (ub >= delta) & delta;
+    v_uint32 mask_a = v_and(v_ge(ua, delta), delta), mask_b = v_and(v_ge(ub, delta), delta);
     v_float32 fmask_a = v_cvt_f32(v_reinterpret_as_s32(mask_a)); // 0.f or (float)(-(1 << 31))
     v_float32 fmask_b = v_cvt_f32(v_reinterpret_as_s32(mask_b)); // 0.f or (float)(-(1 << 31))
-    a = v_cvt_f32(v_reinterpret_as_s32(ua - mask_a));
-    b = v_cvt_f32(v_reinterpret_as_s32(ub - mask_b));
+    a = v_cvt_f32(v_reinterpret_as_s32(v_sub(ua, mask_a)));
+    b = v_cvt_f32(v_reinterpret_as_s32(v_sub(ub, mask_b)));
     // restore the original values
-    a -= fmask_a; // subtract 0 or a large negative number
-    b -= fmask_b; // subtract 0 or a large negative number
+    a = v_sub(a, fmask_a); // subtract 0 or a large negative number
+    b = v_sub(b, fmask_b); // subtract 0 or a large negative number
 }
 
 static inline void v_store_pair_as(uchar* ptr, const v_uint16& a, const v_uint16& b)
@@ -403,8 +404,8 @@ static inline void v_store_pair_as(schar* ptr, const v_float32& a, const v_float
 static inline void v_store_pair_as(bool* ptr, const v_float32& a, const v_float32& b)
 {
     v_float32 z = vx_setzero_f32();
-    v_uint32 ma = v_shr<31>(v_reinterpret_as_u32(a != z));
-    v_uint32 mb = v_shr<31>(v_reinterpret_as_u32(b != z));
+    v_uint32 ma = v_shr<31>(v_reinterpret_as_u32(v_ne(a, z)));
+    v_uint32 mb = v_shr<31>(v_reinterpret_as_u32(v_ne(b, z)));
     v_uint16 mab = v_pack(ma, mb);
     v_pack_store((uchar*)ptr, mab);
 }
@@ -494,7 +495,7 @@ static inline void vx_load_pair_as(const bool* ptr, v_float64& a, v_float64& b)
 {
     v_uint32 z = vx_setzero_u32();
     v_uint32 uab = vx_load_expand_q((const uchar*)ptr);
-    uab = v_shr<31>(uab > z);
+    uab = v_shr<31>(v_gt(uab, z));
     v_float32 fab = v_cvt_f32(v_reinterpret_as_s32(uab));
     a = v_cvt_f64(fab);
     b = v_cvt_f64_high(fab);

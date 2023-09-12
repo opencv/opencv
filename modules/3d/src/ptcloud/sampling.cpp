@@ -272,7 +272,7 @@ int farthestPointSampling(OutputArray sampled_point_flags, InputArray input_pts,
         float max_dist_square = 0;
         int next_pt = sampled_cnt;
         int i = sampled_cnt;
-#ifdef CV_SIMD
+#if CV_SIMD
         v_float32 v_last_p_x = vx_setall_f32(last_pt_x);
         v_float32 v_last_p_y = vx_setall_f32(last_pt_y);
         v_float32 v_last_p_z = vx_setall_f32(last_pt_z);
