@@ -507,20 +507,27 @@ void drawDetectedCornersCharuco(InputOutputArray _image, InputArray _charucoCorn
                                 InputArray _charucoIds, Scalar cornerColor) {
     CV_Assert(!_image.getMat().empty() &&
               (_image.getMat().channels() == 1 || _image.getMat().channels() == 3));
-    CV_Assert((_charucoCorners.getMat().total() == _charucoIds.getMat().total()) ||
-              _charucoIds.getMat().total() == 0);
+    CV_Assert((_charucoCorners.total() == _charucoIds.total()) ||
+              _charucoIds.total() == 0);
+    CV_Assert(_charucoCorners.channels() == 2);
 
-    size_t nCorners = _charucoCorners.getMat().total();
+    Mat charucoCorners = _charucoCorners.getMat();
+    if (charucoCorners.type() != CV_32SC2)
+        charucoCorners.convertTo(charucoCorners, CV_32SC2);
+    Mat charucoIds;
+    if (!_charucoIds.empty())
+        charucoIds = _charucoIds.getMat();
+    size_t nCorners = charucoCorners.total();
     for(size_t i = 0; i < nCorners; i++) {
-        Point2f corner = _charucoCorners.getMat().at<Point2f>((int)i);
+        Point corner = charucoCorners.at<Point>((int)i);
         // draw first corner mark
-        rectangle(_image, corner - Point2f(3, 3), corner + Point2f(3, 3), cornerColor, 1, LINE_AA);
+        rectangle(_image, corner - Point(3, 3), corner + Point(3, 3), cornerColor, 1, LINE_AA);
         // draw ID
         if(!_charucoIds.empty()) {
-            int id = _charucoIds.getMat().at<int>((int)i);
+            int id = charucoIds.at<int>((int)i);
             stringstream s;
             s << "id=" << id;
-            putText(_image, s.str(), corner + Point2f(5, -5), FONT_HERSHEY_SIMPLEX, 0.5,
+            putText(_image, s.str(), corner + Point(5, -5), FONT_HERSHEY_SIMPLEX, 0.5,
                     cornerColor, 2);
         }
     }
@@ -540,25 +547,27 @@ void drawDetectedDiamonds(InputOutputArray _image, InputArrayOfArrays _corners, 
     int nMarkers = (int)_corners.total();
     for(int i = 0; i < nMarkers; i++) {
         Mat currentMarker = _corners.getMat(i);
-        CV_Assert(currentMarker.total() == 4 && currentMarker.type() == CV_32FC2);
+        CV_Assert(currentMarker.total() == 4 && currentMarker.channels() == 2);
+        if (currentMarker.type() != CV_32SC2)
+            currentMarker.convertTo(currentMarker, CV_32SC2);
 
         // draw marker sides
         for(int j = 0; j < 4; j++) {
-            Point2f p0, p1;
-            p0 = currentMarker.at< Point2f >(j);
-            p1 = currentMarker.at< Point2f >((j + 1) % 4);
+            Point p0, p1;
+            p0 = currentMarker.at<Point>(j);
+            p1 = currentMarker.at<Point>((j + 1) % 4);
             line(_image, p0, p1, borderColor, 1);
         }
 
         // draw first corner mark
-        rectangle(_image, currentMarker.at< Point2f >(0) - Point2f(3, 3),
-                  currentMarker.at< Point2f >(0) + Point2f(3, 3), cornerColor, 1, LINE_AA);
+        rectangle(_image, currentMarker.at<Point>(0) - Point(3, 3),
+                  currentMarker.at<Point>(0) + Point(3, 3), cornerColor, 1, LINE_AA);
 
         // draw id composed by four numbers
         if(_ids.total() != 0) {
-            Point2f cent(0, 0);
+            Point cent(0, 0);
             for(int p = 0; p < 4; p++)
-                cent += currentMarker.at< Point2f >(p);
+                cent += currentMarker.at<Point>(p);
             cent = cent / 4.;
             stringstream s;
             s << "id=" << _ids.getMat().at< Vec4i >(i);
