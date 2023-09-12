@@ -186,7 +186,7 @@ CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
 
 @param prev first 8-bit single-channel input image.
 @param next second input image of the same size and the same type as prev.
-@param flow computed flow image that has the same size as prev and type CV_32FC2.
+@param flow computed flow image that is a UMat with the same size as prev and type CV_32FC2.
 @param pyr_scale parameter, specifying the image scale (\<1) to build pyramids for each image;
 pyr_scale=0.5 means a classical pyramid, where each next layer is twice smaller than the previous
 one.
@@ -205,7 +205,7 @@ good value would be poly_sigma=1.5.
  -   **OPTFLOW_USE_INITIAL_FLOW** uses the input flow as an initial flow approximation.
  -   **OPTFLOW_FARNEBACK_GAUSSIAN** uses the Gaussian \f$\texttt{winsize}\times\texttt{winsize}\f$
      filter instead of a box filter of the same size for optical flow estimation; usually, this
-     option gives z more accurate flow than with a box filter, at the cost of lower speed;
+     option gives a more accurate flow than with a box filter, at the cost of lower speed;
      normally, winsize for a Gaussian window should be set to a larger value to achieve the same
      level of robustness.
 
