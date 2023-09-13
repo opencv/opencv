@@ -3342,6 +3342,27 @@ void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx
 
 void ONNXImporter::parseEinsum(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    std::vector<MatShape> einsumInpShapes;
+    for (int j = 0; j < node_proto.input_size(); j++)
+    {
+        const auto& inputLayerName = node_proto.input(j);
+        auto it = outShapes.find(inputLayerName);
+        if (it != outShapes.end())
+        {
+            einsumInpShapes.emplace_back(it->second);
+        } else {
+            CV_Error(Error::StsAssert, "ERROR input shape not found");
+        }
+    }
+    if (!einsumInpShapes.empty())
+    {
+        for (int i = 0; i < einsumInpShapes.size(); i++)
+        {
+            layerParams.set("inputShapes" + cv::format("%d", i), DictValue::arrayInt(einsumInpShapes[i].begin(), einsumInpShapes[i].size()));
+        }
+    } else {
+        CV_Error(Error::StsAssert, "ERROR no inputs shapes");
+    }
 
     // Check if of eqution is valid
     std::string equation = layerParams.get<std::string>("equation");

@@ -241,67 +241,70 @@ public:
     // Number of inputs and outputs of the layer
     int inputSize, outputSize;
 
+    // inputShapes;
+    std::vector<MatShape> einsumInpShapes;
+
     // Preprocessed inputs
     std::vector<Mat> preProcessedInputs;
 
     // This is container for preporcessed inputs
     std::vector<MatShape> homogenizedInputDims;
 
-    // collect outpus dimentions
-    mutable MatShape dims; // vector to store output dimentions
+    // Collect outpus dimentions
+    MatShape einsumOutDims; // vector to store output dimentions
 
     // These hold equation subring, left hand side and right it of
-    mutable String equation, lhs_eq, rhs_eq;
+    String equation, lhs_eq, rhs_eq;
 
     // Holds token from left hand side of the equation
-    mutable std::vector<String> lhs_eq_tokens;
+    std::vector<String> lhs_eq_tokens;
 
     // Idicates if equation substring is defined in explit way such as "ij, jk->ik"
     // as opposed to "ij->"
-    mutable bool explicitEquation = false;
-    mutable bool is_parsed = false;
+    bool explicitEquation = false;
+    bool is_parsed = false;
 
     // Stores the subscript indices for each input in the equation
-    mutable std::vector<std::vector<int>> inputSubscriptIndices;
+    std::vector<std::vector<int>> inputSubscriptIndices;
 
     // Keeps track of the input index of the last input that had the subscript label
     // If the value is `-1`, it means the subscript label was never encountered or it appears in the output
-    mutable std::vector<int> subscriptIndicesToLastInput;
+    std::vector<int> subscriptIndicesToLastInput;
 
     // Holds the dimension value of the index corresponding to the subscript label
     // `-1` indicates that the corresponding label was not encountered at all
-    mutable std::vector<int> subscriptIndicesToDimValue;
+    std::vector<int> subscriptIndicesToDimValue;
 
     // Index corresponding to each output dim corresponding to each subscript index
     // A value of -1 means the corresponding subscript index is not found in the output
-    mutable std::vector<int> subscriptIndicesToOutputIndices;
+    std::vector<int> subscriptIndicesToOutputIndices;
 
     // Hold max number of alphabetic numbers
     static const size_t numOfLetters = 52;
 
     // Stores the count corresponding to each letter encountered
     // A value of `0` indicates that the corresponding letter hasn't been seen at all
-    mutable std::array<int, numOfLetters> letter2count;
+    std::array<int, numOfLetters> letter2count;
 
     // Hold the assigned index corresponding to the letter seen
     // `-1` means the corresponding letter wasn't seen at all
-    mutable std::array<int, numOfLetters> letter2index;
+    std::array<int, numOfLetters> letter2index;
 
     // Represents the count of unique subscript labels (subscript indices)
     // Example 1: For the equation 'ij, jk -> ik', num_subscript_indices_ = 3 (i, j, k)
     // Example 2: For the equation '...ij', 'jk' -> '...ik',
     // num_subscript_indices_ = 3 (i, j, k) + number of dimensions specified by an ellipsis (across all inputs)
-    mutable int numLetterIndices = 0;
+    int numLetterIndices = 0;
 
     // The number of dimensions that are encompassed by an "ellipsis" - "...".
     size_t numOfEllipsisDims = 0;
 
 
-    void parseEquation(const String& equation) const;
-    void processEquation(const String& equation, const std::vector<MatShape>& inputs) const;
-    void processBroadcastedDims() const;
-    void createOutputSubsctipt() const;
-    void calculateOutputShape(std::vector<MatShape>& outputDims) const;
+    void parseEquation(const String& equation);
+    void processEquation(const std::vector<MatShape>& inputs);
+    void processBroadcastedDims();
+    void createOutputSubsctipt();
+    void calculateOutputShape();
     void preProcessInputs(InputArrayOfArrays& inputs);
     Mat reduceSum(Mat& src, MatShape& reduceAxis);
     Mat FinalizeOutput(const Mat& candidateOuput, const MatShape& ordered_subscript_indices_in_candidate);
@@ -323,9 +326,42 @@ public:
         outputSize = params.get<int>("outputSize");
         inputSize  = params.get<int>("inputSize");
 
+
+        // get the input shapes from onnx importer
+        for (int i=0; i < inputSize; i++){
+            auto param = params.get("inputShapes" + cv::format("%d", i));
+            int num_inps = param.size();
+            std::vector<int> shape;
+            for (int i = 0; i < num_inps; ++i)
+                shape.emplace_back(param.get<int>(i));
+            einsumInpShapes.emplace_back(shape);
+        }
+
+        // parser equation and extract tokens from the equation
+        // save token to lhs_eq_tokens variable
+
+        // Maintains a mapping between input indices and their corresponding subscript labels for each input
+        inputSubscriptIndices.reserve(inputSize);
+
+        // We allocate space for 10 values as a precaution,
+        // assuming that we won't encounter any input with a rank greater than 10.
+        // In such cases, the value of num_subscript_indices_ would be greater than 10.
+        subscriptIndicesToLastInput.reserve(10);
+        subscriptIndicesToDimValue.reserve(10);
+
         // fill in vectors to avoid getting random numbers
         letter2count.fill(0);
         letter2index.fill(-1);
+
+        // Start preprocessing related to equation parsing
+        // and dimention broadcasting
+        parseEquation(equation); // TODO: return lhs_eq_tokens
+        processEquation(einsumInpShapes);
+        processBroadcastedDims();
+
+        // calculate output shape
+        createOutputSubsctipt();
+        calculateOutputShape();
     }
 
     // getMeoryShapes
@@ -334,21 +370,16 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        // Start preprocessing related to equation parsing
-        // and dimention broadcasting
-        if (!is_parsed)
+        // check if passed and parsed inputs match up in number and dimensions
+        CV_Assert(inputs.size() == inputSize);
+        for (int i = 0; i < inputSize; i++)
         {
-            processEquation(equation, inputs);
-            processBroadcastedDims();
-            createOutputSubsctipt();
-            calculateOutputShape(outputs);
-            is_parsed = true;
-        } else {
-            // TODO: recompute output dimentions on in forward call!!!
-            // currently outputs are only computed once on import stage
-            outputs.clear();
-            outputs.push_back(dims);
+            if (inputs[i] != einsumInpShapes[i])
+                CV_Error(Error::StsAssert, "Passed input shapes do not match with parsed input shapes!");
         }
+
+        outputs.clear();
+        outputs.emplace_back(einsumOutDims);
         return true;
 
     } // getMemoryShape
@@ -441,14 +472,14 @@ public:
         }
 
         // check of product of output dimentions and computed output dimentions match
-        size_t reqProd = std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<int>());
+        size_t reqProd = std::accumulate(einsumOutDims.begin(), einsumOutDims.end(), 1, std::multiplies<int>());
         MatShape realOutputDims = shape(result);
         size_t realProd = std::accumulate(realOutputDims.begin(), realOutputDims.end(), 1, std::multiplies<int>());
 
         CV_CheckEQ(reqProd, realProd, "Real output can not be shaped in to requred output");
 
         // reduce dimentions
-        result = result.reshape(1, dims.size(), dims.data());
+        result = result.reshape(1, einsumOutDims.size(), einsumOutDims.data());
         result.copyTo(outputs[0]);
     } // forward
 }; // EinsumClass
@@ -556,14 +587,14 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         }
 
         // fails here! check the problem
-        preProcessedInputs.push_back(preprocessed);
+        preProcessedInputs.emplace_back(preprocessed);
         homogenizedInputDims.emplace_back(homogenizedInputDims_);
 
         ++inputIter;
     }
 }
 
-void LayerEinsumImpl::parseEquation(const String& equation) const
+void LayerEinsumImpl::parseEquation(const String& equation)
 {
     // copy copy of an eqution, will be changed
     String eq = equation;
@@ -591,12 +622,12 @@ void LayerEinsumImpl::parseEquation(const String& equation) const
         idx = lhs_eq.find(comma);
         token = lhs_eq.substr(0, idx);
         lhs_eq.erase(0, idx + comma.length());
-        lhs_eq_tokens.push_back(token);
+        lhs_eq_tokens.emplace_back(token);
     }
 }
 
 
-void LayerEinsumImpl::calculateOutputShape(std::vector<MatShape>& outputDims) const
+void LayerEinsumImpl::calculateOutputShape()
 {
 
     if (outputSize!= 1)
@@ -654,7 +685,7 @@ void LayerEinsumImpl::calculateOutputShape(std::vector<MatShape>& outputDims) co
 
             // Push output dimention
             // Einsum layer only has one output vector
-            dims.push_back(subscriptIndicesToDimValue[mappedIndex]);
+            einsumOutDims.emplace_back(subscriptIndicesToDimValue[mappedIndex]);
 
             // Reset the last input index for this subscript label
             // given that it is seen in the output and hence can't be reduced
@@ -662,11 +693,9 @@ void LayerEinsumImpl::calculateOutputShape(std::vector<MatShape>& outputDims) co
             subscriptIndicesToOutputIndices[mappedIndex] = outputDimCounter++;
         }
     }
-    outputDims.clear();
-    outputDims.push_back(dims);
 }
 
-void LayerEinsumImpl::createOutputSubsctipt() const
+void LayerEinsumImpl::createOutputSubsctipt()
 {
     // The explicit form requires no operation, as the output
     // would have already been parsed during the input parsing process.
@@ -684,7 +713,7 @@ void LayerEinsumImpl::createOutputSubsctipt() const
     }
 }
 
-void LayerEinsumImpl::processBroadcastedDims() const
+void LayerEinsumImpl::processBroadcastedDims()
 {
     // Only compute this function if ellipsis "..." was found in the equation
     if (numOfEllipsisDims > 0){
@@ -695,13 +724,10 @@ void LayerEinsumImpl::processBroadcastedDims() const
 
 
 
-void LayerEinsumImpl::processEquation(const String& equation, const std::vector<MatShape>& inputs) const
+void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
 {
-    // parser equation and extract tokens from the equation
-    // save token to lhs_eq_tokens variable
-    parseEquation(equation); // TODO: return lhs_eq_tokens
 
-    const auto& left_eq_tokes = lhs_eq_tokens;
+    auto& left_eq_tokes = lhs_eq_tokens;
 
     // Check if number of tokens in equal to number of inputs.
     // For install "ij, jk -> ik" needs to have 2 inputs tensors
@@ -715,17 +741,8 @@ void LayerEinsumImpl::processEquation(const String& equation, const std::vector<
             "in the input equation", num_input_tensors, lhs_eq_tokens.size())
             );
     }
+
     int inputIdx = 0;
-
-    // Maintains a mapping between input indices and their corresponding subscript labels for each input
-    inputSubscriptIndices.reserve(num_input_tensors);
-
-    // We allocate space for 10 values as a precaution,
-    // assuming that we won't encounter any input with a rank greater than 10.
-    // In such cases, the value of num_subscript_indices_ would be greater than 10.
-    subscriptIndicesToLastInput.reserve(10);
-    subscriptIndicesToDimValue.reserve(10);
-
     for (const auto& token : left_eq_tokes)
     {
         const MatShape shape = inputs[inputIdx];
@@ -816,7 +833,7 @@ void LayerEinsumImpl::processEquation(const String& equation, const std::vector<
             }
         }
 
-        inputSubscriptIndices.push_back(std::move(currTokenIndices));
+        inputSubscriptIndices.emplace_back(std::move(currTokenIndices));
         ++inputIdx;
     }
 }
@@ -826,7 +843,7 @@ Mat LayerEinsumImpl::FinalizeOutput(
     const MatShape& ordered_subscript_indices_in_candidate)
 {
     const std::vector<int>& subscript_indices_to_output_indices = subscriptIndicesToOutputIndices;
-    const auto output_dims = dims;
+    const auto output_dims = einsumOutDims;
 
 
     MatShape output_shape = output_dims;
