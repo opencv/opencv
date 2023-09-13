@@ -230,8 +230,8 @@ int letterToIndex(const char ch) {
     return -1;
 }
 
-// Implimentation of Einsum layer is havily inflovensed by Onnxrutime as the time of writing
-// Main logic from is borrowed from onnxrutime:
+// Implementation of the Einsum layer is heavily influenced by Onnxruntime at the time of writing.
+// Main logic is borrowed from onnxrutime:
 // https://github.com/microsoft/onnxruntime/blob/eaea34f8e29df9fb21fab675a3a895084407f306/onnxruntime/core/providers/cpu/math/einsum_utils/einsum_compute_preprocessor.cc#L8
 class LayerEinsumImpl CV_FINAL : public EinsumLayer
 {
@@ -254,7 +254,7 @@ public:
     MatShape einsumOutDims; // vector to store output dimentions
 
     // These hold equation subring, left hand side and right it of
-    String equation, lhs_eq, rhs_eq;
+    String lhs_eq, rhs_eq;
 
     // Holds token from left hand side of the equation
     std::vector<String> lhs_eq_tokens;
@@ -262,7 +262,6 @@ public:
     // Idicates if equation substring is defined in explit way such as "ij, jk->ik"
     // as opposed to "ij->"
     bool explicitEquation = false;
-    bool is_parsed = false;
 
     // Stores the subscript indices for each input in the equation
     std::vector<std::vector<int>> inputSubscriptIndices;
@@ -300,7 +299,7 @@ public:
     size_t numOfEllipsisDims = 0;
 
 
-    void parseEquation(const String& equation);
+    void parseEquation(String equation);
     void processEquation(const std::vector<MatShape>& inputs);
     void processBroadcastedDims();
     void createOutputSubsctipt();
@@ -322,7 +321,7 @@ public:
     LayerEinsumImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        equation = params.get<String>("equation");
+        String equation = params.get<String>("equation");
         outputSize = params.get<int>("outputSize");
         inputSize  = params.get<int>("inputSize");
 
@@ -517,7 +516,6 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
     std::vector<cv::Mat> inputs;
     inputs_arr.getMatVector(inputs);
 
-
     preProcessedInputs.reserve(inputs.size());
     homogenizedInputDims.reserve(inputs.size());
 
@@ -532,11 +530,13 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
 
         // There should be subscript index (subscript label) for each dim of the input
-        if (input_dims.size() != currSubscriptIndices.size())
-        {
-            CV_Error(Error::StsError,
-                "Rank of the input must match number of subscript labels corresponding to the input");
-        }
+        CV_Assert(input_dims.size() == currSubscriptIndices.size() && \
+         "Rank of the input must match number of subscript labels corresponding to the input");
+        // if (input_dims.size() != currSubscriptIndices.size())
+        // {
+        //     CV_Error(Error::StsError,
+        //         "Rank of the input must match number of subscript labels corresponding to the input");
+        // }
 
         std::vector<int> subscriptIndicesToInputIndex(numLetterIndices, -1);
         // this will hold input dims after reordering so that all inputs have
@@ -582,46 +582,41 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 
         if (!preprocessed.empty())
         {
-            // check if this is correct
             preprocessed = preprocessed.reshape(1, homogenizedInputDims_.size(), homogenizedInputDims_.data());
         }
 
-        // fails here! check the problem
         preProcessedInputs.emplace_back(preprocessed);
         homogenizedInputDims.emplace_back(homogenizedInputDims_);
-
         ++inputIter;
     }
 }
 
-void LayerEinsumImpl::parseEquation(const String& equation)
+void LayerEinsumImpl::parseEquation(String equation)
 {
-    // copy copy of an eqution, will be changed
-    String eq = equation;
-
     // remove white spaces in the copy
-    eq.erase(std::remove_if(eq.begin(), eq.end(), ::isspace), eq.end());
+    equation.erase(std::remove_if(equation.begin(), equation.end(), ::isspace), equation.end());
 
     // check if '->' - the output subscript label is present in the equation;
-    std::size_t arrow_idx = eq.find("->");
+    std::size_t arrow_idx = equation.find("->");
     if (arrow_idx != std::string::npos)
     {
         // split left and righ hand sides of the equation
-        lhs_eq = eq.substr(0, arrow_idx);
-        rhs_eq = eq.substr(arrow_idx + 2);
+        lhs_eq = equation.substr(0, arrow_idx);
+        rhs_eq = equation.substr(arrow_idx + 2);
         explicitEquation = true;
     } else {
-        lhs_eq = eq;
+        lhs_eq = equation;
     }
 
     // split lhs_eq by ',' - comma and put all created token - splits
     // into lhs_eq_tokens vector
     String token, comma = ",";
     size_t idx = 0;
+    size_t start = 0;
     while(idx != String::npos){
-        idx = lhs_eq.find(comma);
-        token = lhs_eq.substr(0, idx);
-        lhs_eq.erase(0, idx + comma.length());
+        idx = lhs_eq.find(comma, start);
+        token = lhs_eq.substr(start, idx - start);
+        start = idx + comma.length();
         lhs_eq_tokens.emplace_back(token);
     }
 }
@@ -630,11 +625,7 @@ void LayerEinsumImpl::parseEquation(const String& equation)
 void LayerEinsumImpl::calculateOutputShape()
 {
 
-    if (outputSize!= 1)
-    {
-        CV_Error(Error::StsError,
-        cv::format("Einsum layer should only have one output, currenly [%d]", outputSize));
-    }
+    CV_Assert(outputSize == 1 && "Einsum layer should only have one output");
 
     // Traverse through each of the subscript labels within the output subscript.
     bool middleOfEllipsis = false;
@@ -660,18 +651,12 @@ void LayerEinsumImpl::calculateOutputShape()
 
             auto letterIndex = letterToIndex(letter);
 
-            if (letterIndex == -1)
-            {
-                 CV_Error(Error::StsError,
-                    "The only permissible subscript labels are"
-                    " lowercase letters (a-z) and uppercase letters (A-Z).");
-            }
 
-            if (outputLetterToCount[letterIndex] != 0)
-            {
-                CV_Error(Error::StsError,
-                 "Output subscript constains repeated letters");
-            }
+            CV_Assert(letterIndex != -1
+                && "The only permissible subscript labels are lowercase letters (a-z) and uppercase letters (A-Z).");
+            CV_Assert(outputLetterToCount[letterIndex] == 0
+                && "Output subscript constains repeated letters");
+
 
             ++outputLetterToCount[letterIndex];
 
@@ -708,6 +693,8 @@ void LayerEinsumImpl::createOutputSubsctipt()
             {
                 CV_Error(Error::StsError,
                 "Provided output subscript does not include ellipsis while Inputs subscrits constain ellipsis");
+            } else {
+                CV_Error(Error::StsNotImplemented, "Ellipsis are not yet supported");
             }
         }
     }
@@ -815,23 +802,16 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
 
                 ++letter2count[letterIdx];
                 currTokenIndices.push_back(letter2index[letterIdx]);
-                if (++dim_count > rank)
-                {
-                    CV_Error(Error::StsError,
-                    "The Einsum subscripts string has an excessive number of subscript labels compared to the rank of the input.");
-                }
+
+                CV_Assert(!(++dim_count > rank)
+                    && "The Einsum subscripts string has an excessive number of subscript labels compared to the rank of the input.");
+
             }
         }
 
         // When no broadcasting is requested, the number of subscript labels (dim_counter) should match the input's rank.
-        if (numOfEllipsisDims == 0)
-        {
-            if (dim_count != rank)
-            {
-                CV_Error(Error::StsError,
-                "The Einsum subscripts string does not contain required amount of subsprit labels and no ellipsis is provided in the input");
-            }
-        }
+        CV_Assert(!(numOfEllipsisDims == 0 && dim_count != rank)
+            && "The Einsum subscripts string does not contain required amount of subscript labels and no ellipsis is provided in the input.");
 
         inputSubscriptIndices.emplace_back(std::move(currTokenIndices));
         ++inputIdx;
@@ -844,7 +824,6 @@ Mat LayerEinsumImpl::FinalizeOutput(
 {
     const std::vector<int>& subscript_indices_to_output_indices = subscriptIndicesToOutputIndices;
     const auto output_dims = einsumOutDims;
-
 
     MatShape output_shape = output_dims;
     const auto output_rank = output_dims.size();
@@ -1007,8 +986,7 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
             // They must be equal
             if (hasLeftDim && hasRightDim)
             {
-                if(leftDim != rightDim)
-                    CV_Error(Error::StsError, "Input shapes do not align");
+                CV_Assert(leftDim == rightDim && "Input shapes do not align");
 
                 lro.push_back(i);
                 lro_size *= leftDim;
@@ -1163,8 +1141,6 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
 
     //reshape
     output = output.reshape(1, outputDims.size(), outputDims.data());
-
-
 
     if (!isFinalPair)
     {  // This is not the final pair - so bring the axes order to what the inputs conformed to
