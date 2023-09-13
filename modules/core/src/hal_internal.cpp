@@ -66,6 +66,7 @@
 
 #if defined(__clang__) && defined(__has_feature)
 #if __has_feature(memory_sanitizer)
+#include <sanitizer/msan_interface.h>
 #define CV_ANNOTATE_MEMORY_IS_INITIALIZED(address, size) \
 __msan_unpoison(address, size)
 #endif
