@@ -262,13 +262,6 @@ void LineIterator::init( const Mat* src, Rect rect, Point pt1_, Point pt2_, int 
 Ptr<LineIterator> LineIterator::create(Point pt1, Point pt2, int connectivity, bool leftToRight)
 {
     Ptr<LineIterator> lineiterator = makePtr<LineIterator>(pt1, pt2, connectivity, leftToRight);
-    lineiterator->init(0, Rect(std::min(pt1.x, pt2.x), std::min(pt1.y, pt2.y),
-                               std::max(pt1.x, pt2.x) - std::min(pt1.x, pt2.x) + 1,
-                               std::max(pt1.y, pt2.y) - std::min(pt1.y, pt2.y) + 1),
-                      pt1, pt2, connectivity, leftToRight);
-    lineiterator->ptmode = true;
-
-
     return lineiterator;
 }
 
