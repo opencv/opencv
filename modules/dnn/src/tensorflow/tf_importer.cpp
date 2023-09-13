@@ -2665,14 +2665,20 @@ void TFImporter::parseActivation(tensorflow::GraphDef& net, const tensorflow::No
     connectToAllBlobs(layer_id, dstNet, parsePin(layer.input(0)), id, num_inputs);
 }
 
+// ArgMin or ArgMax node
 void TFImporter::parseArg(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
     const std::string& name = layer.name();
     const std::string& type = layer.op();
 
-    Mat dimension = getTensorContent(getConstBlob(layer, value_id, 1));
-    CV_Assert(dimension.total() == 1 && dimension.type() == CV_32SC1);
-    layerParams.set("axis", *dimension.ptr<int>());
+    if (layer.input_size() < 2)
+        layerParams.set("axis", 0); // default dimension is 0
+    else
+    {
+        Mat dimension = getTensorContent(getConstBlob(layer, value_id, 1));
+        CV_Assert(dimension.total() == 1 && dimension.type() == CV_32SC1);
+        layerParams.set("axis", *dimension.ptr<int>());
+    }
     layerParams.set("op", type == "ArgMax" ? "max" : "min");
     layerParams.set("keepdims", false); //tensorflow doesn't have this atrr, the output's dims minus one(default);
 
@@ -2866,6 +2872,10 @@ const tensorflow::TensorProto& TFImporter::getConstBlob(const tensorflow::NodeDe
 
     if (input_blob_index == -1)
         CV_Error(Error::StsError, "Const input blob for weights not found");
+    if (input_blob_index >= layer.input_size())
+        CV_Error(Error::StsError,
+            format("Input index %i is out of range for layer with %i inputs",
+                input_blob_index, layer.input_size()));
 
     Pin kernel_inp = parsePin(layer.input(input_blob_index));
     if (const_layers.find(kernel_inp.name) == const_layers.end())
