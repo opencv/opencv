@@ -272,7 +272,7 @@ static void fast_gemm4x12_f32(int k, const char *a_, const char *b_,
 
     for(int p = 0; p < k; p++, a += FAST_GEMM_F32_MR, b += FAST_GEMM_F32_NR)
     {
-        float32x4_t b0 = vld1q_f32(b), b1 = vld1q_f32(b + 4), vld1q_f32(b + 8);
+        float32x4_t b0 = vld1q_f32(b), b1 = vld1q_f32(b + 4), b2 = vld1q_f32(b + 8);
 
         float32x4_t a0 = vld1q_dup_f32(a);
         s00 = vmlaq_f32(a0, b0, s00);
