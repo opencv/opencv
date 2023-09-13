@@ -865,5 +865,6 @@ public:
 #include "opencv2/objdetect/face.hpp"
 #include "opencv2/objdetect/charuco_detector.hpp"
 #include "opencv2/objdetect/barcode.hpp"
+#include "opencv2/objdetect/object_yolox.hpp"
 
 #endif
