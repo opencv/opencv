@@ -964,6 +964,7 @@ template <>
 inline uint32x2_t mulWrap<uint32x2_t>(const uint32x2_t &v1, const uint32x2_t &v2, const float scale)
 { return vcvt_u32_f32(vmul_n_f32(vmul_f32(vcvt_f32_u32(v1), vcvt_f32_u32(v2)), scale)); }
 
+
 template <int n> inline  uint8x16_t vshrq_n(const uint8x16_t  & v0) { return vshrq_n_u8 (v0, n); }
 template <int n> inline   int8x16_t vshrq_n(const int8x16_t   & v0) { return vshrq_n_s8 (v0, n); }
 template <int n> inline  uint16x8_t vshrq_n(const uint16x8_t  & v0) { return vshrq_n_u16(v0, n); }

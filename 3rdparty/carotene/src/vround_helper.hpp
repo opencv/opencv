@@ -53,24 +53,12 @@
 
 namespace CAROTENE_NS { namespace internal {
 
-#if ( defined(__aarch64__) || defined(__aarch32__) )
-#    undef  CAROTENE_ROUNDING_ARMV7
-#    define CAROTENE_ROUNDING_ARMV8
-#else
-#    define CAROTENE_ROUNDING_ARMV7
-#    if defined( CAROTENE_ROUNDING_ARMV8 )
-#        error " ARMv7 doesn't support A32/A64 Neon Instructions."
-#    endif
-#endif
-
-#if defined(CAROTENE_ROUNDING_LEGACY)
-#    undef CAROTENE_ROUNDING_ARMV7
-#    undef CAROTENE_ROUNDING_ARMV8
-#endif
-
 inline uint32x4_t vroundq_u32_f32(const float32x4_t val)
 {
-#ifdef CAROTENE_ROUNDING_ARMV7
+#if CAROTENE_NEON_ARCH == 8
+    return vcvtnq_u32_f32(val);
+
+#elif CAROTENE_NEON_ARCH == 7
     static const float32x4_t v0_5_f32 = vdupq_n_f32(0.5);
     static const uint32x4_t  v1_0_u32 = vdupq_n_u32(1);
 
@@ -81,17 +69,20 @@ inline uint32x4_t vroundq_u32_f32(const float32x4_t val)
     const uint32x4_t  ret        = vsubq_u32( round, round_down );
 
     return ret;
-#elif defined( CAROTENE_ROUNDING_ARMV8 )
-    return vcvtnq_u32_f32(val);
-#else // CAROTENE_ROUNDING_LEGACY
+
+#else
     static const float32x4_t v0_5_f32 = vdupq_n_f32(0.5);
     return vcvtq_u32_f32( vaddq_f32(val, v0_5_f32 ));
+
 #endif
 }
 
 inline uint32x2_t vround_u32_f32(const float32x2_t val)
 {
-#ifdef CAROTENE_ROUNDING_ARMV7
+#if CAROTENE_NEON_ARCH == 8
+    return vcvtn_u32_f32(val);
+
+#elif CAROTENE_NEON_ARCH == 7
     static const float32x2_t v0_5_f32 = vdup_n_f32(0.5);
     static const uint32x2_t  v1_0_u32 = vdup_n_u32(1);
 
@@ -103,18 +94,19 @@ inline uint32x2_t vround_u32_f32(const float32x2_t val)
 
     return ret;
 
-#elif defined( CAROTENE_ROUNDING_ARMV8 )
-    return vcvtn_u32_f32(val);
-
 #else
     static const float32x2_t v0_5_f32 = vdup_n_f32(0.5);
     return vcvt_u32_f32( vadd_f32(val, v0_5_f32) );
+
 #endif
 }
 
 inline int32x4_t vroundq_s32_f32(const float32x4_t val)
 {
-#ifdef CAROTENE_ROUNDING_ARMV7
+#if CAROTENE_NEON_ARCH == 8
+    return vcvtnq_s32_f32(val);
+
+#elif CAROTENE_NEON_ARCH == 7
     static const float32x4_t v0_0_f32  = vdupq_n_f32(0.0);
     static const float32x4_t v0_5_f32  = vdupq_n_f32(0.5);
     static const int32x4_t   v1_0_s32  = vdupq_n_s32(1);
@@ -135,9 +127,6 @@ inline int32x4_t vroundq_s32_f32(const float32x4_t val)
 
     return ret;
 
-#elif defined( CAROTENE_ROUNDING_ARMV8 )
-    return vcvtnq_s32_f32(val);
-
 #else
     static const float32x4_t v0_0_f32  = vdupq_n_f32(0.0);
     static const float32x4_t v0_5_f32  = vdupq_n_f32(0.5);
@@ -155,13 +144,15 @@ inline int32x4_t vroundq_s32_f32(const float32x4_t val)
 
     return ret;
 
-
 #endif
 }
 
 inline int32x2_t vround_s32_f32(const float32x2_t val)
 {
-#ifdef CAROTENE_ROUNDING_ARMV7
+#if CAROTENE_NEON_ARCH == 8
+    return vcvtn_s32_f32(val);
+
+#elif CAROTENE_NEON_ARCH == 7
     static const float32x2_t v0_0_f32  = vdup_n_f32(0.0);
     static const float32x2_t v0_5_f32  = vdup_n_f32(0.5);
     static const int32x2_t   v1_0_s32  = vdup_n_s32(1);
@@ -181,9 +172,6 @@ inline int32x2_t vround_s32_f32(const float32x2_t val)
     const int32x2_t   ret        = vmul_s32( ret_abs, ret_signs );
 
     return ret;
-
-#elif defined( CAROTENE_ROUNDING_ARMV8 )
-    return vcvtn_s32_f32(val);
 
 #else
     static const float32x2_t v0_0_f32  = vdup_n_f32(0.0);

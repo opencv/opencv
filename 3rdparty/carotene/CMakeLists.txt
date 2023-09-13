@@ -42,14 +42,14 @@ endif()
 
 if(WITH_NEON)
     target_compile_definitions(carotene_objs PRIVATE "-DWITH_NEON")
-
-    if(CAROTENE_ROUNDING STREQUAL "LEGACY")
-        target_compile_definitions(carotene_objs PUBLIC "-DCAROTENE_ROUNDING_LEGACY")
+    if(NOT DEFINED CAROTENE_NEON_ARCH )
+    elseif(CAROTENE_NEON_ARCH EQUAL 8)
+	    target_compile_definitions(carotene_objs PRIVATE "-DCAROTENE_NEON_ARCH=8")
+    elseif(CAROTENE_NEON_ARCH EQUAL 7)
+	    target_compile_definitions(carotene_objs PRIVATE "-DCAROTENE_NEON_ARCH=7")
+    else()
+	    target_compile_definitions(carotene_objs PRIVATE "-DCAROTENE_NEON_ARCH=0")
     endif()
-    if(CAROTENE_ROUNDING STREQUAL "ARMV7")
-        target_compile_definitions(carotene_objs PUBLIC "-DCAROTENE_ROUNDING_ARMV7")
-    endif()
-
 endif()
 
 # we add dummy file to fix XCode build
