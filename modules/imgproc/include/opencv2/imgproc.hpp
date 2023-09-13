@@ -4984,7 +4984,6 @@ public:
         return this->p;
     }
 
-    Mat img;
     uchar* ptr;
     const uchar* ptr0;
     int step, elemSize;
