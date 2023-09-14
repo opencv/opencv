@@ -56,6 +56,8 @@ public:
 
 
 protected:
+    void preprocess(const Mat& src, Mat& dst, Size size);
+
     const Size searchSize{256, 256};
     const Size templateSize{128, 128};
 
@@ -85,13 +87,10 @@ static void crop_image(const Mat& src, Mat& dst, Rect box, int factor)
     copyMakeBorder(im_crop, dst, y1_pad, y2_pad, x1_pad, x2_pad, BORDER_CONSTANT);
 }
 
-static void preprocess(const Mat& src, Mat& dst, Size size)
+void TrackerVitImpl::preprocess(const Mat& src, Mat& dst, Size size)
 {
-    Scalar meanvalue(0.485, 0.456, 0.406);
-    Scalar stdvalue(0.229, 0.224, 0.225);
-
-    Mat mean = Mat(size, CV_32FC3, meanvalue);
-    Mat std = Mat(size, CV_32FC3, stdvalue);
+    Mat mean = Mat(size, CV_32FC3, params.meanvalue);
+    Mat std = Mat(size, CV_32FC3, params.stdvalue);
     mean = dnn::blobFromImage(mean, 1.0, Size(), Scalar(), false);
     std = dnn::blobFromImage(std, 1.0, Size(), Scalar(), false);
 
