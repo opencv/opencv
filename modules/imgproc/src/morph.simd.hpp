@@ -106,7 +106,9 @@ struct MorphNoVec
     int operator()(uchar**, int, uchar*, int) const { return 0; }
 };
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+// Only for clang temporarily. PR #24166
+// TODO: Remove __clang__ macro when GCC is available.
+#if (CV_SIMD || CV_SIMD_SCALABLE) && defined(__clang__)
 
 template<class VecUpdate> struct MorphRowVec
 {
