@@ -59,7 +59,6 @@ std::string keys =
 "{ input i          |                                               | Path to input image or video file. Skip this argument to capture frames from a camera.}"
 "{ confidence       | 0.5                                           | Class confidence }"
 "{ nms              | 0.5                                           | Enter nms IOU threshold }"
-"{ save s           | true                                          | Specify to save results. This flag is invalid when using camera. }"
 "{ vis v            | 1                                             | Specify to open a window for result visualization. This flag is invalid when using camera. }"
 "{ backend bt       | 0                                             | Choose one of computation backends: "
 "0: (default) OpenCV implementation + CPU, "
@@ -68,7 +67,11 @@ std::string keys =
 "3: TIM-VX + NPU, "
 "4: CANN + NPU}";
 
-pair<Mat, double> letterBox(Mat srcimg, Size targetSize = Size(640, 640))
+pair<Mat, double> letterBox(Mat srcimg, Size targetSize = Size(640, 640));
+Mat unLetterBox(Mat bbox, double letterboxScale);
+Mat visualize(Mat dets, Mat srcimg, double letterbox_scale, double fps = -1);
+
+pair<Mat, double> letterBox(Mat srcimg, Size targetSize)
 {
     Mat paddedImg(targetSize.height, targetSize.width, CV_32FC3, Scalar::all(114.0));
     Mat resizeImg;
@@ -84,7 +87,7 @@ Mat unLetterBox(Mat bbox, double letterboxScale)
     return bbox / letterboxScale;
 }
 
-Mat visualize(Mat dets, Mat srcimg, double letterbox_scale, double fps = -1)
+Mat visualize(Mat dets, Mat srcimg, double letterboxScale, double fps)
 {
     Mat resImg = srcimg.clone();
 
@@ -93,7 +96,7 @@ Mat visualize(Mat dets, Mat srcimg, double letterbox_scale, double fps = -1)
 
     for (int row = 0; row < dets.rows; row++)
     {
-        Mat boxF = unLetterBox(dets(Rect(0, row, 4, 1)), letterbox_scale);
+        Mat boxF = unLetterBox(dets(Rect(0, row, 4, 1)), letterboxScale);
         Mat box;
         boxF.convertTo(box, CV_32S);
         float score = dets.at<float>(row, 4);
@@ -131,7 +134,6 @@ int main(int argc, char** argv)
     float confThreshold = parser.get<float>("confidence");
     float nmsThreshold = parser.get<float>("nms");
     bool vis = parser.get<bool>("vis");
-    bool save = parser.get<bool>("save");
     int backendTargetid = parser.get<int>("backend");
 
     if (model.empty())
@@ -152,7 +154,6 @@ int main(int argc, char** argv)
     double letterboxScale;
 
     static const std::string kWinName = model;
-    int nbInference = 0;
     while (waitKey(1) < 0)
     {
         cap >> frame;
@@ -162,7 +163,7 @@ int main(int argc, char** argv)
             waitKey();
             break;
         }
-        pair<Mat, double> w = letterBox(frame);
+        pair<Mat, double> w = letterBox(frame, detector->getInputSize());
         inputBlob = get<0>(w);
         letterboxScale = get<1>(w);
         TickMeter tm;

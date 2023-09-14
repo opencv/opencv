@@ -38,14 +38,14 @@ std::vector<std::string> labelYolox = {
 class ObjectDetectorYXImpl : public ObjectDetectorYX
     {
     public:
-        ObjectDetectorYXImpl(const std::string& modelPath,
+        ObjectDetectorYXImpl(const std::string& modelFilePath,
             float confThresh,
             float nmsThresh,
             dnn::Backend backId,
-            dnn::Target tgtId):confThreshold(confThresh), nmsThreshold(nmsThresh), backendId(backId), targetId(tgtId)
+            dnn::Target tgtId):modelPath(modelFilePath), confThreshold(confThresh), nmsThreshold(nmsThresh), backendId(backId), targetId(tgtId)
         {
             this->num_classes = int(labelYolox.size());
-            this->net = dnn::readNet(modelPath);
+            this->net = dnn::readNet(samples::findFile(modelPath));
             this->inputSize = Size(640, 640);
             this->strides = std::vector<int>{ 8, 16, 32 };
             this->net.setPreferableBackend(this->backendId);
