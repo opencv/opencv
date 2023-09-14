@@ -259,12 +259,6 @@ void LineIterator::init( const Mat* src, Rect rect, Point pt1_, Point pt2_, int 
     }
 }
 
-Ptr<LineIterator> LineIterator::create(Point pt1, Point pt2, int connectivity, bool leftToRight)
-{
-    Ptr<LineIterator> lineiterator = makePtr<LineIterator>(pt1, pt2, connectivity, leftToRight);
-    return lineiterator;
-}
-
 static void
 Line( Mat& img, Point pt1, Point pt2,
       const void* _color, int connectivity = 8 )
