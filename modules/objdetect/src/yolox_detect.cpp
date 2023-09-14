@@ -39,10 +39,10 @@ class ObjectDetectorYXImpl : public ObjectDetectorYX
     {
     public:
         ObjectDetectorYXImpl(const std::string& modelPath,
-            float confThreshold,
-            float nmsThreshold,
-            int backendId,
-            int targetId)
+            float confThresh,
+            float nmsThresh,
+            dnn::Backend backId,
+            dnn::Target tgtId):confThreshold(confThresh), nmsThreshold(nmsThresh), backendId(backId), targetId(tgtId)
         {
             this->num_classes = int(labelYolox.size());
             this->net = dnn::readNet(modelPath);
