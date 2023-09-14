@@ -51,16 +51,17 @@ static void
 initTopBottom( Mat& temp, int border, unsigned int value )
 {
     Size size = temp.size();
+    unsigned int* ttop = (unsigned int*)temp.ptr<int>(0);
+    unsigned int* tbottom = (unsigned int*)temp.ptr<int>(size.height - 1);
     for( int i = 0; i < border; i++ )
     {
-        unsigned int* ttop = temp.ptr<unsigned int>(i);
-        unsigned int* tbottom = temp.ptr<unsigned int>(size.height - i - 1);
-
         for( int j = 0; j < size.width; j++ )
         {
             ttop[j] = value;
             tbottom[j] = value;
         }
+        ttop += size.width;
+        tbottom -= size.width;
     }
 }
 
