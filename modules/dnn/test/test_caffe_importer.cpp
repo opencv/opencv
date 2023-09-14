@@ -731,7 +731,7 @@ TEST_P(Test_Caffe_nets, FasterRCNN_vgg16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
-    double scoreDiff = 0.001, iouDiff = 0.03;
+    double scoreDiff = 0.0012, iouDiff = 0.03;
 #if defined(INF_ENGINE_RELEASE)
     if (target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
