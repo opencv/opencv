@@ -1571,7 +1571,7 @@ TEST(Core_Arith, regression_24163) // https://github.com/opencv/opencv/issues/24
 
         for(int i=0;i<16;i++)
         {
-            expected.at<uchar>(0,i) = cvRound( ( (double) src1.at<char>(0,i) + src2.at<char>(0,i) ) / 2.0 );
+            expected.at<uchar>(0,i) = static_cast<uchar>( cvRound( ( (double) src1.at<uchar>(0,i) + src2.at<uchar>(0,i) ) / 2.0 ) & 0xFF);
         }
 
 #if 0
@@ -1595,7 +1595,7 @@ TEST(Core_Arith, regression_24163) // https://github.com/opencv/opencv/issues/24
 
         for(int i=0;i<16;i++)
         {
-            expected.at<char>(0,i) = cvRound( ( (double) src1.at<char>(0,i) + src2.at<char>(0,i) ) / 2.0 );
+            expected.at<char>(0,i) = static_cast<char>( cvRound( ( (double) src1.at<char>(0,i) + src2.at<char>(0,i) ) / 2.0 ) & 0xFF);
         }
 
 #if 0
