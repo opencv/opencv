@@ -1128,7 +1128,7 @@ Mat& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
     if(col1 > col2)
         std::swap(col1, col2);
 
-    data += (row1 - ofs.y)*step + (col1 - ofs.x)*esz;
+    data += (row1 - ofs.y)*(std::ptrdiff_t)step + (col1 - ofs.x)*(std::ptrdiff_t)esz;
     rows = row2 - row1; cols = col2 - col1;
     size.p[0] = rows; size.p[1] = cols;
     updateContinuityFlag();

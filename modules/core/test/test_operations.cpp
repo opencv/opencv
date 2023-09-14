@@ -1379,6 +1379,15 @@ TEST(MatTestRoi, adjustRoiOverflow)
     ASSERT_EQ(roi.rows, m.rows);
 }
 
+TEST(MatTestRoi, adjustRoiUndefinedBehavior)
+{
+    Mat m(6, 6, CV_8U);
+    Mat roi(m, cv::Range(2, 4), cv::Range(2, 4));
+    // This could trigger a (negative int)*size_t when updating data,
+    // which is undefined behavior.
+    roi.adjustROI(2, 2, 2, 2);
+    EXPECT_EQ(m.data, roi.data);
+}
 
 CV_ENUM(SortRowCol, SORT_EVERY_COLUMN, SORT_EVERY_ROW)
 CV_ENUM(SortOrder, SORT_ASCENDING, SORT_DESCENDING)
