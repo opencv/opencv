@@ -239,7 +239,7 @@ private:
     Ptr<ReduceLayer> reduce;
 public:
     // Number of inputs and outputs of the layer
-    int inputSize, outputSize;
+    int inputSize;
 
     // inputShapes;
     std::vector<MatShape> einsumInpShapes;
@@ -322,9 +322,10 @@ public:
     {
         setParamsFrom(params);
         String equation = params.get<String>("equation");
-        outputSize = params.get<int>("outputSize");
+        int outputSize = params.get<int>("outputSize");
         inputSize  = params.get<int>("inputSize");
 
+        CV_Assert(outputSize == 1 && "Einsum layer should only have one output");
 
         // get the input shapes from onnx importer
         for (int i=0; i < inputSize; i++){
@@ -336,8 +337,6 @@ public:
             einsumInpShapes.emplace_back(shape);
         }
 
-        // parser equation and extract tokens from the equation
-        // save token to lhs_eq_tokens variable
 
         // Maintains a mapping between input indices and their corresponding subscript labels for each input
         inputSubscriptIndices.reserve(inputSize);
@@ -352,9 +351,12 @@ public:
         letter2count.fill(0);
         letter2index.fill(-1);
 
+        // parser equation and extract tokens from the equation
+        // save token to lhs_eq_tokens variable
+        parseEquation(equation); // TODO: return lhs_eq_tokens
+
         // Start preprocessing related to equation parsing
         // and dimention broadcasting
-        parseEquation(equation); // TODO: return lhs_eq_tokens
         processEquation(einsumInpShapes);
         processBroadcastedDims();
 
@@ -369,6 +371,8 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        CV_UNUSED(internals);
+
         // check if passed and parsed inputs match up in number and dimensions
         CV_Assert(inputs.size() == inputSize);
         for (int i = 0; i < inputSize; i++)
@@ -625,7 +629,6 @@ void LayerEinsumImpl::parseEquation(String equation)
 void LayerEinsumImpl::calculateOutputShape()
 {
 
-    CV_Assert(outputSize == 1 && "Einsum layer should only have one output");
 
     // Traverse through each of the subscript labels within the output subscript.
     bool middleOfEllipsis = false;
