@@ -866,6 +866,31 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 namespace cv
 {
 
+CV_INLINE void updateBounds(const Point& pt, int& xmin, int& xmax, int& ymin, int& ymax)
+{
+    if( xmin > pt.x )
+        xmin = pt.x;
+
+    if( xmax < pt.x )
+        xmax = pt.x;
+
+    if( ymin > pt.y )
+        ymin = pt.y;
+
+    if( ymax < pt.y )
+        ymax = pt.y;
+}
+
+CV_INLINE void processBoundsWithToggleAndFloor(int& xmin, int& ymin, int& xmax, int& ymax) {
+    Cv32suf v;
+    v.i = CV_TOGGLE_FLT(xmin); xmin = cvFloor(v.f);
+    v.i = CV_TOGGLE_FLT(ymin); ymin = cvFloor(v.f);
+    // because right and bottom sides of the bounding rectangle are not inclusive
+    // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
+    v.i = CV_TOGGLE_FLT(xmax); xmax = cvFloor(v.f);
+    v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
+}
+
 // Calculates bounding rectangle of a point set or retrieves already calculated
 static Rect pointSetBoundingRect( const Mat& points )
 {
@@ -936,17 +961,7 @@ static Rect pointSetBoundingRect( const Mat& points )
             {
                 pt = pts_[i];
 
-                if( xmin > pt.x )
-                    xmin = pt.x;
-
-                if( xmax < pt.x )
-                    xmax = pt.x;
-
-                if( ymin > pt.y )
-                    ymin = pt.y;
-
-                if( ymax < pt.y )
-                    ymax = pt.y;
+                updateBounds(pt, xmin, xmax, ymin, ymax);
             }
         }
     #endif
@@ -1004,32 +1019,15 @@ static Rect pointSetBoundingRect( const Mat& points )
         {
             const Point* pts_ = points.ptr<Point>();
             Point pt;
-            Cv32suf v;
             for( ; i < npoints; i++ )
             {
                 pt = pts_[i];
                 pt.x = CV_TOGGLE_FLT(pt.x);
                 pt.y = CV_TOGGLE_FLT(pt.y);
 
-                if( xmin > pt.x )
-                    xmin = pt.x;
-
-                if( xmax < pt.x )
-                    xmax = pt.x;
-
-                if( ymin > pt.y )
-                    ymin = pt.y;
-
-                if( ymax < pt.y )
-                    ymax = pt.y;
+                updateBounds(pt, xmin, xmax, ymin, ymax);
             }
-
-            v.i = CV_TOGGLE_FLT(xmin); xmin = cvFloor(v.f);
-            v.i = CV_TOGGLE_FLT(ymin); ymin = cvFloor(v.f);
-            // because right and bottom sides of the bounding rectangle are not inclusive
-            // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
-            v.i = CV_TOGGLE_FLT(xmax); xmax = cvFloor(v.f);
-            v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
+            processBoundsWithToggleAndFloor(xmin, ymin, xmax, ymax);
         }
     #endif
 
@@ -1048,22 +1046,11 @@ static Rect pointSetBoundingRect( const Mat& points )
         {
             pt = pts[i];
 
-            if( xmin > pt.x )
-                xmin = pt.x;
-
-            if( xmax < pt.x )
-                xmax = pt.x;
-
-            if( ymin > pt.y )
-                ymin = pt.y;
-
-            if( ymax < pt.y )
-                ymax = pt.y;
+            updateBounds(pt, xmin, xmax, ymin, ymax);
         }
     }
     else
     {
-        Cv32suf v;
         // init values
         xmin = xmax = CV_TOGGLE_FLT(pt.x);
         ymin = ymax = CV_TOGGLE_FLT(pt.y);
@@ -1074,25 +1061,10 @@ static Rect pointSetBoundingRect( const Mat& points )
             pt.x = CV_TOGGLE_FLT(pt.x);
             pt.y = CV_TOGGLE_FLT(pt.y);
 
-            if( xmin > pt.x )
-                xmin = pt.x;
-
-            if( xmax < pt.x )
-                xmax = pt.x;
-
-            if( ymin > pt.y )
-                ymin = pt.y;
-
-            if( ymax < pt.y )
-                ymax = pt.y;
+            updateBounds(pt, xmin, xmax, ymin, ymax);
         }
 
-        v.i = CV_TOGGLE_FLT(xmin); xmin = cvFloor(v.f);
-        v.i = CV_TOGGLE_FLT(ymin); ymin = cvFloor(v.f);
-        // because right and bottom sides of the bounding rectangle are not inclusive
-        // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
-        v.i = CV_TOGGLE_FLT(xmax); xmax = cvFloor(v.f);
-        v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
+        processBoundsWithToggleAndFloor(xmin, ymin, xmax, ymax);
     }
 #endif
 
