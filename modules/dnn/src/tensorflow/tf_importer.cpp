@@ -2677,7 +2677,7 @@ void TFImporter::parseArg(tensorflow::GraphDef& net, const tensorflow::NodeDef& 
     {
         Mat dimension = getTensorContent(getConstBlob(layer, value_id, 1));
         CV_Assert(dimension.total() == 1 && dimension.type() == CV_32SC1);
-        layerParams.set("axis", *dimension.ptr<int>());
+        layerParams.set("axis", dimension.at<int>(0));
     }
     layerParams.set("op", type == "ArgMax" ? "max" : "min");
     layerParams.set("keepdims", false); //tensorflow doesn't have this atrr, the output's dims minus one(default);
@@ -2872,10 +2872,7 @@ const tensorflow::TensorProto& TFImporter::getConstBlob(const tensorflow::NodeDe
 
     if (input_blob_index == -1)
         CV_Error(Error::StsError, "Const input blob for weights not found");
-    if (input_blob_index >= layer.input_size())
-        CV_Error(Error::StsError,
-            format("Input index %i is out of range for layer with %i inputs",
-                input_blob_index, layer.input_size()));
+    CV_CheckLT(input_blob_index, layer.input_size(), "Input index is out of range");
 
     Pin kernel_inp = parsePin(layer.input(input_blob_index));
     if (const_layers.find(kernel_inp.name) == const_layers.end())
