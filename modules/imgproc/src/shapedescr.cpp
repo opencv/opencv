@@ -866,31 +866,6 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
 namespace cv
 {
 
-CV_INLINE void updateBounds(const Point& pt, int& xmin, int& xmax, int& ymin, int& ymax)
-{
-    if( xmin > pt.x )
-        xmin = pt.x;
-
-    if( xmax < pt.x )
-        xmax = pt.x;
-
-    if( ymin > pt.y )
-        ymin = pt.y;
-
-    if( ymax < pt.y )
-        ymax = pt.y;
-}
-
-CV_INLINE void processBoundsWithToggleAndFloor(int& xmin, int& ymin, int& xmax, int& ymax) {
-    Cv32suf v;
-    v.i = CV_TOGGLE_FLT(xmin); xmin = cvFloor(v.f);
-    v.i = CV_TOGGLE_FLT(ymin); ymin = cvFloor(v.f);
-    // because right and bottom sides of the bounding rectangle are not inclusive
-    // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
-    v.i = CV_TOGGLE_FLT(xmax); xmax = cvFloor(v.f);
-    v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
-}
-
 // Calculates bounding rectangle of a point set or retrieves already calculated
 static Rect pointSetBoundingRect( const Mat& points )
 {
@@ -904,7 +879,7 @@ static Rect pointSetBoundingRect( const Mat& points )
     if( npoints == 0 )
         return Rect();
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE, loop tail related.
     const int64_t* pts = points.ptr<int64_t>();
 
     if( !is_float )
@@ -936,7 +911,6 @@ static Rect pointSetBoundingRect( const Mat& points )
         ymin = v_get0(v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))));
         ymax = v_get0(v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
 #if CV_SIMD_WIDTH > 16
-    #if CV_SIMD
         if( i < npoints )
         {
             v_int32x4 minval2, maxval2;
@@ -952,21 +926,7 @@ static Rect pointSetBoundingRect( const Mat& points )
             ymin = min(ymin, v_get0(v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval2)))));
             ymax = max(ymax, v_get0(v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval2)))));
         }
-    #else // #if (CV_SIMD_WIDTH > 16 && !CV_SIMD) equal to "#elif CV_SIMD_SCALABLE"
-        if( i < npoints )
-        {
-            const Point* pts_ = points.ptr<Point>();
-            Point pt;
-            for(; i < npoints; i++ )
-            {
-                pt = pts_[i];
-
-                updateBounds(pt, xmin, xmax, ymin, ymax);
-            }
-        }
-    #endif
-
-#endif //(CV_SIMD || CV_SIMD_SCALABLE)
+#endif // CV_SIMD
     }
     else
     {
@@ -997,7 +957,6 @@ static Rect pointSetBoundingRect( const Mat& points )
         ymin = cvFloor(v_get0(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval)))));
         ymax = cvFloor(v_get0(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval)))));
 #if CV_SIMD_WIDTH > 16
-    #if CV_SIMD
         if( i < npoints )
         {
             v_float32x4 minval2, maxval2;
@@ -1013,24 +972,6 @@ static Rect pointSetBoundingRect( const Mat& points )
             ymin = min(ymin, cvFloor(v_get0(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval2))))));
             ymax = max(ymax, cvFloor(v_get0(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval2))))));
         }
-    #else // #if (CV_SIMD_WIDTH > 16 && !CV_SIMD) equal to "#elif CV_SIMD_SCALABLE"
-
-        if( i < npoints )
-        {
-            const Point* pts_ = points.ptr<Point>();
-            Point pt;
-            for( ; i < npoints; i++ )
-            {
-                pt = pts_[i];
-                pt.x = CV_TOGGLE_FLT(pt.x);
-                pt.y = CV_TOGGLE_FLT(pt.y);
-
-                updateBounds(pt, xmin, xmax, ymin, ymax);
-            }
-            processBoundsWithToggleAndFloor(xmin, ymin, xmax, ymax);
-        }
-    #endif
-
 #endif
     }
 #else
@@ -1046,11 +987,22 @@ static Rect pointSetBoundingRect( const Mat& points )
         {
             pt = pts[i];
 
-            updateBounds(pt, xmin, xmax, ymin, ymax);
+            if( xmin > pt.x )
+                xmin = pt.x;
+
+            if( xmax < pt.x )
+                xmax = pt.x;
+
+            if( ymin > pt.y )
+                ymin = pt.y;
+
+            if( ymax < pt.y )
+                ymax = pt.y;
         }
     }
     else
     {
+        Cv32suf v;
         // init values
         xmin = xmax = CV_TOGGLE_FLT(pt.x);
         ymin = ymax = CV_TOGGLE_FLT(pt.y);
@@ -1061,10 +1013,25 @@ static Rect pointSetBoundingRect( const Mat& points )
             pt.x = CV_TOGGLE_FLT(pt.x);
             pt.y = CV_TOGGLE_FLT(pt.y);
 
-            updateBounds(pt, xmin, xmax, ymin, ymax);
+            if( xmin > pt.x )
+                xmin = pt.x;
+
+            if( xmax < pt.x )
+                xmax = pt.x;
+
+            if( ymin > pt.y )
+                ymin = pt.y;
+
+            if( ymax < pt.y )
+                ymax = pt.y;
         }
 
-        processBoundsWithToggleAndFloor(xmin, ymin, xmax, ymax);
+        v.i = CV_TOGGLE_FLT(xmin); xmin = cvFloor(v.f);
+        v.i = CV_TOGGLE_FLT(ymin); ymin = cvFloor(v.f);
+        // because right and bottom sides of the bounding rectangle are not inclusive
+        // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
+        v.i = CV_TOGGLE_FLT(xmax); xmax = cvFloor(v.f);
+        v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
     }
 #endif
 
