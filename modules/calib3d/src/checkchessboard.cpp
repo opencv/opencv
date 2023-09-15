@@ -55,15 +55,12 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
     const float max_aspect_ratio = 3.0f;
     const float min_box_size = 10.0f;
 
-    typedef std::vector< std::vector< cv::Point > >::const_iterator iter_t;
-    iter_t i;
-    for (i = contours.begin(); i != contours.end(); ++i)
+    for (size_t i = 0; i < contours.size(); ++i)
     {
-        const iter_t::difference_type idx = i - contours.begin();
-        if (hierarchy.at(idx)[3] != -1)
+        if (hierarchy.at(i)[3] != -1)
             continue; // skip holes
 
-        const std::vector< cv::Point > & c = *i;
+        const std::vector< cv::Point > & c = contours[i];
         cv::RotatedRect box = cv::minAreaRect(c);
 
         float box_size = MAX(box.size.width, box.size.height);
