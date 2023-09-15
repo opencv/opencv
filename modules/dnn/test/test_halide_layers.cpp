@@ -55,17 +55,12 @@ static void test(LayerParams& params, Mat& input, Backend backendId, Target targ
     test(input, net, backendId, targetId, skipCheck, true, l1, lInf);
 }
 
-// static inline testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsWithHalide()
-// {
-//     return dnnBackendsAndTargets(true, true, false); // OpenCV/CPU is used as reference
-// }
-
-class Test_Halide_layers : public DNNTestLayer {};
+class Test_layers_backends : public DNNTestLayer {};
 
 ////////////////////////////////////////////////////////////////////////////////
 // Padding
 ////////////////////////////////////////////////////////////////////////////////
-TEST_P(Test_Halide_layers, Padding)
+TEST_P(Test_layers_backends, Padding)
 {
     static const int kNumRuns = 10;
     std::vector<int> paddings(8);
@@ -500,7 +495,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, SoftMax, Combine(
 //////////////////////////////////////////////////////////////////////////////
 // Max pooling - unpooling
 //////////////////////////////////////////////////////////////////////////////
-TEST_P(Test_Halide_layers, MaxPoolUnpool)
+TEST_P(Test_layers_backends, MaxPoolUnpool)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
@@ -695,7 +690,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Halide, Exp, Combine(
                        dnnBackendsAndTargets()
 ));
 
-TEST_P(Test_Halide_layers, ChannelsPReLU)
+TEST_P(Test_layers_backends, ChannelsPReLU)
 {
     LayerParams lp;
     lp.type = "ChannelsPReLU";
@@ -983,6 +978,6 @@ TEST(MixedBackends_Halide_Default_Halide, Accuracy)
 }
 #endif  // HAVE_HALIDE
 
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_Halide_layers, dnnBackendsAndTargets());
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_layers_backends, dnnBackendsAndTargets());
 
 }} // namespace
