@@ -280,11 +280,6 @@ static bool isTestTagSkipped(const std::string& testTag, CV_OUT std::string& ski
 
 void checkTestTags()
 {
-    if (std::find(skipped_tests.begin(), skipped_tests.end(),
-                  ::testing::UnitTest::GetInstance()->current_test_info()) != skipped_tests.end()) {
-        throw details::SkipTestExceptionBase(false);
-    }
-
     std::string skipTag;
     const std::vector<std::string>& testTags = currentDirectTestTags;
     {
