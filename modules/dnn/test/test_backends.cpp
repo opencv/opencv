@@ -214,13 +214,8 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe_Different_Width_Height)
         scoreDiff = 0.03;
         iouDiff = 0.08;
     }
-<<<<<<< HEAD
     processNet("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", "dnn/MobileNetSSD_deploy_19e3ec3.prototxt",
-                inp, "detection_out", "", scoreDiff, iouDiff);
-=======
-    processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt",
                 inp, "detection_out", scoreDiff, iouDiff);
->>>>>>> de083a8b58 (first commit)
     expectNoFallbacksFromIE(net);
 }
 
