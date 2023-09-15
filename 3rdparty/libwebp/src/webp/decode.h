@@ -81,11 +81,12 @@ WEBP_EXTERN uint8_t* WebPDecodeBGR(const uint8_t* data, size_t data_size,
 // returned is the Y samples buffer. Upon return, *u and *v will point to
 // the U and V chroma data. These U and V buffers need NOT be passed to
 // WebPFree(), unlike the returned Y luma one. The dimension of the U and V
-// planes are both (*width + 1) / 2 and (*height + 1)/ 2.
+// planes are both (*width + 1) / 2 and (*height + 1) / 2.
 // Upon return, the Y buffer has a stride returned as '*stride', while U and V
 // have a common stride returned as '*uv_stride'.
-// Return NULL in case of error.
-// (*) Also named Y'CbCr. See: http://en.wikipedia.org/wiki/YCbCr
+// 'width' and 'height' may be NULL, the other pointers must not be.
+// Returns NULL in case of error.
+// (*) Also named Y'CbCr. See: https://en.wikipedia.org/wiki/YCbCr
 WEBP_EXTERN uint8_t* WebPDecodeYUV(const uint8_t* data, size_t data_size,
                                    int* width, int* height,
                                    uint8_t** u, uint8_t** v,
@@ -250,23 +251,24 @@ typedef enum VP8StatusCode {
 // WebPIDecoder object. This object can be left in a SUSPENDED state if the
 // picture is only partially decoded, pending additional input.
 // Code example:
-//
-//   WebPInitDecBuffer(&output_buffer);
-//   output_buffer.colorspace = mode;
-//   ...
-//   WebPIDecoder* idec = WebPINewDecoder(&output_buffer);
-//   while (additional_data_is_available) {
-//     // ... (get additional data in some new_data[] buffer)
-//     status = WebPIAppend(idec, new_data, new_data_size);
-//     if (status != VP8_STATUS_OK && status != VP8_STATUS_SUSPENDED) {
-//       break;    // an error occurred.
-//     }
-//
-//     // The above call decodes the current available buffer.
-//     // Part of the image can now be refreshed by calling
-//     // WebPIDecGetRGB()/WebPIDecGetYUVA() etc.
-//   }
-//   WebPIDelete(idec);
+/*
+     WebPInitDecBuffer(&output_buffer);
+     output_buffer.colorspace = mode;
+     ...
+     WebPIDecoder* idec = WebPINewDecoder(&output_buffer);
+     while (additional_data_is_available) {
+       // ... (get additional data in some new_data[] buffer)
+       status = WebPIAppend(idec, new_data, new_data_size);
+       if (status != VP8_STATUS_OK && status != VP8_STATUS_SUSPENDED) {
+         break;    // an error occurred.
+       }
+
+       // The above call decodes the current available buffer.
+       // Part of the image can now be refreshed by calling
+       // WebPIDecGetRGB()/WebPIDecGetYUVA() etc.
+     }
+     WebPIDelete(idec);
+*/
 
 // Creates a new incremental decoder with the supplied buffer parameter.
 // This output_buffer can be passed NULL, in which case a default output buffer
@@ -388,7 +390,7 @@ WEBP_EXTERN const WebPDecBuffer* WebPIDecodedArea(
      CHECK(WebPGetFeatures(data, data_size, &config.input) == VP8_STATUS_OK);
 
      // C) Adjust 'config', if needed
-     config.no_fancy_upsampling = 1;
+     config.options.no_fancy_upsampling = 1;
      config.output.colorspace = MODE_BGRA;
      // etc.
 
