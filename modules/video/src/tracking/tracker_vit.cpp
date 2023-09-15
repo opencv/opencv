@@ -24,6 +24,8 @@ TrackerVit::~TrackerVit()
 TrackerVit::Params::Params()
 {
     net = "vitTracker.onnx";
+    meanvalue = Scalar{0.485, 0.456, 0.406};
+    stdvalue = Scalar{0.229, 0.224, 0.225};
 #ifdef HAVE_OPENCV_DNN
     backend = dnn::DNN_BACKEND_DEFAULT;
     target = dnn::DNN_TARGET_CPU;

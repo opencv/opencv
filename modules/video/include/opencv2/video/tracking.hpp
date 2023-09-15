@@ -906,8 +906,8 @@ public:
         CV_PROP_RW std::string net;
         CV_PROP_RW int backend;
         CV_PROP_RW int target;
-        Scalar meanvalue{0.485, 0.456, 0.406};
-        Scalar stdvalue{0.229, 0.224, 0.225};
+        CV_PROP_RW Scalar meanvalue;
+        CV_PROP_RW Scalar stdvalue;
     };
 
     /** @brief Constructor
