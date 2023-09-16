@@ -69,17 +69,15 @@ template<typename _Tp> static inline cv::v_float32 splineInterpolate(const cv::v
     // assume that v_float32::nlanes == v_int32::nlanes
     if(VTraits<v_float32>::vlanes() == 4)
     {
-#if CV_SIMD_WIDTH == 16
         int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) idx[4];
         v_store_aligned(idx, ix);
-        v_float32x4 tt[4];
-        tt[0] = v_load(tab + idx[0]);
-        tt[1] = v_load(tab + idx[1]);
-        tt[2] = v_load(tab + idx[2]);
-        tt[3] = v_load(tab + idx[3]);
-        v_transpose4x4(tt[0], tt[1], tt[2], tt[3],
+        v_float32 tt0, tt1, tt2, tt3;
+        tt0 = vx_load(tab + idx[0]);
+        tt1 = vx_load(tab + idx[1]);
+        tt2 = vx_load(tab + idx[2]);
+        tt3 = vx_load(tab + idx[3]);
+        v_transpose4x4(tt0, tt1, tt2, tt3,
                         t0,  t1,  t2,  t3);
-#endif
     }
     else
     {
