@@ -1,8 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
-'''
-This example illustrates how to use LineIterator to get point coordinates on a line
-'''
 
 # Python 2/3 compatibility
 from __future__ import print_function
@@ -10,7 +7,6 @@ from __future__ import print_function
 import cv2 as cv
 import numpy as np
 import sys
-import math
 
 from tests_common import NewOpenCVTests
 

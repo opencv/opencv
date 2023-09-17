@@ -4963,9 +4963,9 @@ public:
 
     /** @brief next pixel. Use for python binding.
     */
-    CV_WRAP Point next() {
+    CV_WRAP bool next() {
         this->operator++();
-        return this->p;
+        return true;
     }
 
     uchar* ptr;
