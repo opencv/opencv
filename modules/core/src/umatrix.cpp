@@ -694,12 +694,12 @@ void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFla
         _usageFlags = usageFlags;
     }
 
-    if( u && (d == dims || (d == 1 && dims <= 2)) && _type == type() && _usageFlags == usageFlags )
+    if( u && d == dims && _type == type() && _usageFlags == usageFlags )
     {
         for( i = 0; i < d; i++ )
             if( size[i] != _sizes[i] )
                 break;
-        if( i == d && (d > 1 || size[1] == 1))
+        if( i == d )
             return;
     }
 
