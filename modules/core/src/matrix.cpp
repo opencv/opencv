@@ -324,7 +324,8 @@ void finalizeHdr(Mat& m)
         m.datalimit = m.datastart + m.size[0]*m.step[0];
         if( m.size[0] > 0 )
         {
-            m.dataend = m.ptr() + m.size[d-1]*m.step[d-1];
+            int lastdim = d > 0 ? d - 1 : 0;
+            m.dataend = m.ptr() + m.size[lastdim]*m.step[lastdim];
             for( int i = 0; i < d-1; i++ )
                 m.dataend += (m.size[i] - 1)*m.step[i];
         }
