@@ -57,7 +57,7 @@ std::string keys =
 "{ help  h          |                                               | Print help message. }"
 "{ model m          | object_detection_yolox_2022nov.onnx           | Usage: Path to the model, defaults to object_detection_yolox_2022nov.onnx  }"
 "{ input i          |                                               | Path to input image or video file. Skip this argument to capture frames from a camera.}"
-"{ confidence       | 0.5                                           | Class confidence }"
+"{ confidence c     | 0.5                                           | Class confidence }"
 "{ nms              | 0.5                                           | Enter nms IOU threshold }"
 "{ vis v            | 1                                             | Specify to open a window for result visualization. This flag is invalid when using camera. }"
 "{ backend bt       | 0                                             | Choose one of computation backends: "
@@ -87,13 +87,17 @@ Mat unLetterBox(Mat bbox, double letterboxScale)
     return bbox / letterboxScale;
 }
 
-Mat visualize(Mat dets, Mat srcimg, double letterboxScale, double fps)
+Mat visualize(Mat dets, Mat srcimg, double letterboxScale, double fps, bool vis=true)
 {
     Mat resImg = srcimg.clone();
 
     if (fps > 0)
         putText(resImg, format("FPS: %.2f", fps), Size(10, 25), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255), 2);
 
+    if (!vis)
+    {
+        cout << "Class name : score in rect( [topleft] , [bottomright])\n";
+    }
     for (int row = 0; row < dets.rows; row++)
     {
         Mat boxF = unLetterBox(dets(Rect(0, row, 4, 1)), letterboxScale);
@@ -114,6 +118,11 @@ Mat visualize(Mat dets, Mat srcimg, double letterboxScale, double fps)
         rectangle(resImg, Point(x0, y0), Point(x1, y1), Scalar(0, 255, 0), 2);
         rectangle(resImg, Point(x0, y0 + 1), Point(x0 + txtSize.width + 1, y0 + int(1.5 * txtSize.height)), Scalar(255, 255, 255), -1);
         putText(resImg, text, Point(x0, y0 + txtSize.height), font, 0.4, Scalar(0, 0, 0), 1);
+        if (!vis)
+        {
+            cout << text;
+            cout << " in rect (" << Point(x0, y0) << ", " << Point(x1, y1) << ")\n";
+        }
     }
 
     return resImg;
@@ -172,7 +181,7 @@ int main(int argc, char** argv)
         detector->detect(inputBlob, predictions);
         tm.stop();
         cout << "Inference time: " << tm.getTimeMilli() << " ms\n";
-        Mat img = visualize(predictions, frame, letterboxScale, tm.getFPS());
+        Mat img = visualize(predictions, frame, letterboxScale, tm.getFPS(), vis);
         if (vis)
         {
             imshow(kWinName, img);
