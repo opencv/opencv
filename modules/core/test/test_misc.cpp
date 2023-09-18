@@ -917,5 +917,17 @@ REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows);
 typedef ::testing::Types<int, float, double> RectTypes;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);
 
+// Expected that SkipTestException thrown in the constructor should skip test but not fail
+struct TestFixtureSkip: public ::testing::Test {
+    TestFixtureSkip(bool throwEx = true) {
+        if (throwEx) {
+            throw SkipTestException("Skip test at constructor");
+        }
+    }
+};
+
+TEST_F(TestFixtureSkip, NoBodyRun) {
+    FAIL() << "Unreachable code called";
+}
 
 }} // namespace
