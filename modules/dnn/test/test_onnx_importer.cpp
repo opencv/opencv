@@ -1417,71 +1417,51 @@ TEST_P(Test_ONNX_layers, LSTM_layout_batch)
 
 TEST_P(Test_ONNX_layers, DISABLED_Einsum_1D)
 {
-    if(backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("einsum_1d", npy, 0, 0, false, false, 2);
 }
 
 TEST_P(Test_ONNX_layers, Einsum_2D)
 {
-    if(backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("einsum_2d", npy, 0, 0, false, false, 2);
 }
 
 TEST_P(Test_ONNX_layers, Einsum_3D)
 {
-    if(backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("einsum_3d", npy, 0, 0, false, false, 2);
 }
 
 TEST_P(Test_ONNX_layers, Einsum_4D)
 {
-    if(backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("einsum_4d", npy, 0, 0, false, false, 2);
 }
 
 TEST_P(Test_ONNX_layers, Einsum_5D)
 {
-    if(backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("einsum_5d", npy, 0, 0, false, false, 2);
 }
 
 TEST_P(Test_ONNX_layers, DISABLED_Einsum_InnerProduct)
 {
-    if(backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("einsum_inner", npy, 0, 0, false, false, 2);
 }
 
 TEST_P(Test_ONNX_layers, DISABLED_Einsum_HadamardProduct)
 {
-    if(backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("einsum_hadamard", npy, 0, 0, false, false, 2);
 }
 
 TEST_P(Test_ONNX_layers, DISABLED_Einsum_Batch_Diagonal)
 {
-    if(backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("einsum_batch_diagonal", npy, 0, 0, false, false, 1);
 }
 
 TEST_P(Test_ONNX_layers, Einsum_Sum)
 {
-    if(backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("einsum_sum", npy, 0, 0, false, false, 1);
 }
 
 TEST_P(Test_ONNX_layers, Einsum_transpose)
 {
-    if(backend == DNN_BACKEND_CUDA)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("einsum_transpose", npy, 0, 0, false, false, 1);
 }
 

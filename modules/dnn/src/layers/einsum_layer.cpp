@@ -186,19 +186,18 @@ bool IsTransposeRequired(size_t input_rank, const std::vector<size_t>& permutati
     CV_Assert(input_rank == permutation.size());
 
     // No transpose required for scalars
-    if (input_rank == 0)
-    {
+    if (input_rank == 0){
         return false;
     }
 
-  // Weeds out cases where permutation is something like [0, 1, 2] for a 3D input and so on
-  bool transpose_required = false;
-  for (size_t i = 0; i < input_rank; ++i) {
-    if (permutation[i] != i) {
-      transpose_required = true;
-      break;
+    // Weeds out cases where permutation is something like [0, 1, 2] for a 3D input and so on
+    bool transpose_required = false;
+    for (size_t i = 0; i < input_rank; ++i) {
+        if (permutation[i] != i) {
+            transpose_required = true;
+            break;
+        }
     }
-  }
 
   return transpose_required;
 }
@@ -223,7 +222,7 @@ int letterToIndex(const char ch) {
     }
 
     if (ch >= 'A' && ch <= 'Z') {
-    return 26 + static_cast<int>(ch) - 'A';
+    return static_cast<int>('z') + static_cast<int>(ch) - 'A';
     }
 
     // invalid character - return error value
@@ -325,7 +324,7 @@ public:
         int outputSize = params.get<int>("outputSize");
         inputSize  = params.get<int>("inputSize");
 
-        CV_Assert(outputSize == 1 && "Einsum layer should only have one output");
+        CV_CheckEQ(outputSize, 1, "Einsum layer should only have one output");
 
         // get the input shapes from onnx importer
         for (int i=0; i < inputSize; i++){
@@ -498,18 +497,16 @@ Mat LayerEinsumImpl::reduceSum(Mat& src, MatShape& reduceAxis)
 
     // Compute output shapes
     std::vector<MatShape> inputShapes{shape(src)};
-    std::vector<MatShape> outputShapes{MatShape()};
-    std::vector<MatShape> internalShapes {MatShape()};
+    std::vector<MatShape> outputShapes, internalShapes;
     reduce->getMemoryShapes(inputShapes, 1, outputShapes, internalShapes);
 
-    Mat output(outputShapes[0].size(), outputShapes[0].data(), CV_32FC1);
+    Mat output(outputShapes[0], CV_32F);
 
     std::vector<Mat> inputs;
     std::vector<Mat> outputs;
     std::vector<Mat> internals;
     inputs.emplace_back(src);
     outputs.emplace_back(output);
-    internals.emplace_back(Mat());
 
     reduce->forward(inputs, outputs, internals);
     return outputs[0];
@@ -534,13 +531,8 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
 
         // There should be subscript index (subscript label) for each dim of the input
-        CV_Assert(input_dims.size() == currSubscriptIndices.size() && \
-         "Rank of the input must match number of subscript labels corresponding to the input");
-        // if (input_dims.size() != currSubscriptIndices.size())
-        // {
-        //     CV_Error(Error::StsError,
-        //         "Rank of the input must match number of subscript labels corresponding to the input");
-        // }
+        CV_CheckEQ(input_dims.size(), currSubscriptIndices.size(),
+            "Rank of the input must match number of subscript labels corresponding to the input");
 
         std::vector<int> subscriptIndicesToInputIndex(numLetterIndices, -1);
         // this will hold input dims after reordering so that all inputs have
@@ -552,8 +544,7 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 
         for (const auto& subscriptIndex : currSubscriptIndices)
         {
-            if(subscriptIndicesToInputIndex[subscriptIndex] == -1)
-            {
+            if(subscriptIndicesToInputIndex[subscriptIndex] == -1){
                 subscriptIndicesToInputIndex[subscriptIndex] = dimIndexInIreprocessedInput++;
                 homogenizedInputDims_[subscriptIndex] = input_dims[dimIndexInOriginalInput];
             } else {
@@ -614,13 +605,8 @@ void LayerEinsumImpl::parseEquation(String equation)
 
     // split lhs_eq by ',' - comma and put all created token - splits
     // into lhs_eq_tokens vector
-    String token, comma = ",";
-    size_t idx = 0;
-    size_t start = 0;
-    while(idx != String::npos){
-        idx = lhs_eq.find(comma, start);
-        token = lhs_eq.substr(start, idx - start);
-        start = idx + comma.length();
+    std::stringstream src(lhs_eq);
+    for (std::string token; std::getline(src, token, ',');) {
         lhs_eq_tokens.emplace_back(token);
     }
 }
@@ -628,8 +614,6 @@ void LayerEinsumImpl::parseEquation(String equation)
 
 void LayerEinsumImpl::calculateOutputShape()
 {
-
-
     // Traverse through each of the subscript labels within the output subscript.
     bool middleOfEllipsis = false;
     // int64_t ellipsisCharCount = 0;
@@ -646,30 +630,21 @@ void LayerEinsumImpl::calculateOutputShape()
         {
             CV_Error(Error::StsNotImplemented, "Ellipsis are not supported yet");
         } else {
-            if (middleOfEllipsis)
-            {
-                CV_Error(Error::StsError, "Encountered '.' character that is"
-                " not part of output subscript");
-            }
+            CV_CheckEQ(middleOfEllipsis, false,
+                "Encountered '.' character that is not part of output subscript");
 
             auto letterIndex = letterToIndex(letter);
 
-
-            CV_Assert(letterIndex != -1
-                && "The only permissible subscript labels are lowercase letters (a-z) and uppercase letters (A-Z).");
-            CV_Assert(outputLetterToCount[letterIndex] == 0
-                && "Output subscript constains repeated letters");
-
+            CV_CheckNE(letterIndex, -1,
+                "The only permissible subscript labels are lowercase letters (a-z) and uppercase letters (A-Z).");
+            CV_CheckEQ(outputLetterToCount[letterIndex], 0,
+                "Output subscript constains repeated letters");
 
             ++outputLetterToCount[letterIndex];
-
             auto mappedIndex = letter2index[letterIndex];
 
-            if(mappedIndex == -1)
-            {
-                CV_Error(Error::StsError,
+            CV_CheckNE(mappedIndex, -1,
                 "Output subscript has letters that were not encountered in the inputs");
-            }
 
             // Push output dimention
             // Einsum layer only has one output vector
@@ -717,8 +692,6 @@ void LayerEinsumImpl::processBroadcastedDims()
 void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
 {
 
-    auto& left_eq_tokes = lhs_eq_tokens;
-
     // Check if number of tokens in equal to number of inputs.
     // For install "ij, jk -> ik" needs to have 2 inputs tensors
     int num_input_tensors = inputs.size();
@@ -733,7 +706,7 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
     }
 
     int inputIdx = 0;
-    for (const auto& token : left_eq_tokes)
+    for (const auto& token : lhs_eq_tokens)
     {
         const MatShape shape = inputs[inputIdx];
         size_t rank = shape.size();
@@ -802,13 +775,11 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
                         }
                     }
                 }
-
                 ++letter2count[letterIdx];
                 currTokenIndices.push_back(letter2index[letterIdx]);
 
-                CV_Assert(!(++dim_count > rank)
-                    && "The Einsum subscripts string has an excessive number of subscript labels compared to the rank of the input.");
-
+                CV_CheckLE(++dim_count, rank,
+                    "The Einsum subscripts string has an excessive number of subscript labels compared to the rank of the input.");
             }
         }
 
@@ -945,7 +916,6 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
 
     for (int i = 0; i < leftRank; ++i)
     {
-
         int leftDim = leftDims[i];
         int rightDim = rightDims[i];
 
@@ -989,7 +959,7 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
             // They must be equal
             if (hasLeftDim && hasRightDim)
             {
-                CV_Assert(leftDim == rightDim && "Input shapes do not align");
+                CV_CheckEQ(leftDim, rightDim, "Input shapes do not align");
 
                 lro.push_back(i);
                 lro_size *= leftDim;
