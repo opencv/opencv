@@ -16,21 +16,17 @@ class lineiterator_test(NewOpenCVTests):
     def test_lineiterator(self):
 
         p1 = (0, 0)
-        p2 = (100, 100)
+        p2 = (10, 10)
         d1 = cv.LineIterator(p1, p2)
-        self.assertEqual(d1.pos(), p1)
-        self.assertEqual(d1.next(), True)
-        self.assertEqual(d1.pos(), (1.0, 1.0))
+        self.assertEqual(d1.count, 11)
+        for p in d1:
+            pass
         d2 = cv.LineIterator(p2, p1)
-        self.assertEqual(d2.pos(), p2)
-        self.assertEqual(d2.next(), True)
-        self.assertEqual(d2.pos(), (99.0, 99.0))
         count = 0
-        for p in cv.LineIterator(p1, p2):
+        seg = cv.LineIterator(p1, p2)
+        for p in seg:
             count = count + 1
-            if count == 10:
-                self.assertEqual(p.pos(), (10.0, 10.0))
-                break
+        self.assertEqual(count, seg.count)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

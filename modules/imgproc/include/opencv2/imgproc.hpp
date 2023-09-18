@@ -4916,6 +4916,20 @@ public:
         init(&img, Rect(0, 0, img.cols, img.rows), pt1, pt2, connectivity, leftToRight);
         ptmode = false;
     }
+
+    /** @brief Initializes iterator object for the given line and image.
+
+    The returned iterator can be used to traverse all pixels on a line that
+    connects the given two points.
+    The line will be clipped Rect defined by pt1 and pt2
+
+    @param pt1 First endpoint of the line.
+    @param pt2 The other endpoint of the line.
+    @param connectivity Pixel connectivity of the iterator. Valid values are 4 (iterator can move
+    up, down, left and right) and 8 (iterator can also move diagonally).
+    @param leftToRight If true, the line is traversed from the leftmost endpoint to the rightmost
+    endpoint. Otherwise, the line is traversed from \p pt1 to \p pt2.
+    */
     CV_WRAP LineIterator( Point pt1, Point pt2,
                   int connectivity = 8, bool leftToRight = false )
     {
@@ -4933,7 +4947,7 @@ public:
              pt1, pt2, connectivity, leftToRight);
         ptmode = true;
     }
-    CV_WRAP LineIterator( Rect boundingAreaRect, Point pt1, Point pt2,
+    LineIterator( Rect boundingAreaRect, Point pt1, Point pt2,
                   int connectivity = 8, bool leftToRight = false )
     {
         init(0, boundingAreaRect, pt1, pt2, connectivity, leftToRight);
@@ -4964,6 +4978,8 @@ public:
     /** @brief next pixel. Use for python binding.
     */
     CV_WRAP bool next() {
+        if (iter >= count)
+            return false;
         this->operator++();
         return true;
     }
@@ -4971,11 +4987,14 @@ public:
     uchar* ptr;
     const uchar* ptr0;
     int step, elemSize;
-    int err, count;
+    int err;
+    CV_PROP_RW int iter;
+    CV_PROP_RW int count;
     int minusDelta, plusDelta;
     int minusStep, plusStep;
     int minusShift, plusShift;
     Point p;
+    CV_PROP_RW Point pNext;
     bool ptmode;
 };
 
@@ -4992,7 +5011,11 @@ uchar* LineIterator::operator *()
 inline
 LineIterator& LineIterator::operator ++()
 {
+    if (iter >= count)
+        return *this;
+    iter++;
     int mask = err < 0 ? -1 : 0;
+    p = pNext;
     err += minusDelta + (plusDelta & mask);
     if(!ptmode)
     {
@@ -5000,8 +5023,8 @@ LineIterator& LineIterator::operator ++()
     }
     else
     {
-        p.x += minusShift + (plusShift & mask);
-        p.y += minusStep + (plusStep & mask);
+        pNext.x += minusShift + (plusShift & mask);
+        pNext.y += minusStep + (plusStep & mask);
     }
     return *this;
 }

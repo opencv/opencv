@@ -161,6 +161,7 @@ void LineIterator::init( const Mat* src, Rect rect, Point pt1_, Point pt2_, int 
     CV_Assert( connectivity == 8 || connectivity == 4 );
 
     count = -1;
+    iter = 0;
     p = Point(0, 0);
     ptr0 = ptr = 0;
     step = elemSize = 0;
@@ -248,6 +249,7 @@ void LineIterator::init( const Mat* src, Rect rect, Point pt1_, Point pt2_, int 
     }
 
     p = pt1;
+    pNext = p;
     if( !ptmode )
     {
         ptr0 = src->ptr();
