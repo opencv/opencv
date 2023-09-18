@@ -54,7 +54,7 @@ static float float_setall(float val) {
 }
 
 static float float_sqrt(const float& val) {
-    return std::sqrtf(val);
+    return std::sqrt(val);
 }
 
 static void doCalcMinEigenValLine_NOSIMD(int& j, int width, const float* cov_x2, const float* cov_xy, const float* cov_y2, float* dst) {

@@ -32,31 +32,31 @@ struct v_float32x8
     v_float32x8() {}
 };
 
-v_float32x8 operator+(const v_float32x8& lhs, const v_float32x8& rhs) {
+static v_float32x8 operator+(const v_float32x8& lhs, const v_float32x8& rhs) {
     return v_float32x8(_mm256_add_ps(lhs.val, rhs.val));
 }
 
-v_float32x8 operator-(const v_float32x8& lhs, const v_float32x8& rhs) {
+static v_float32x8 operator-(const v_float32x8& lhs, const v_float32x8& rhs) {
     return v_float32x8(_mm256_sub_ps(lhs.val, rhs.val));
 }
 
-v_float32x8 operator*(const v_float32x8& lhs, const v_float32x8& rhs) {
+static v_float32x8 operator*(const v_float32x8& lhs, const v_float32x8& rhs) {
     return v_float32x8(_mm256_mul_ps(lhs.val, rhs.val));
 }
 
-v_float32x8 v_load(const float* ptr) {
+static v_float32x8 v_load(const float* ptr) {
     return v_float32x8(_mm256_load_ps(ptr));
 }
 
-void v_store(float* ptr, const v_float32x8& vec) {
+static void v_store(float* ptr, const v_float32x8& vec) {
     _mm256_storeu_ps(ptr, vec.val);
 }
 
-v_float32x8 v_setall(float val) {
+static v_float32x8 v_setall(float val) {
     return v_float32x8(_mm256_set1_ps(val));
 }
 
-v_float32x8 v_sqrt(const v_float32x8& vec) {
+static v_float32x8 v_sqrt(const v_float32x8& vec) {
     return v_float32x8(_mm256_sqrt_ps(vec.val));
 }
 
