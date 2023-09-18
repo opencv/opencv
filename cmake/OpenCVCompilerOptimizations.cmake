@@ -224,7 +224,7 @@ if(X86 OR X86_64)
     ocv_update(CPU_SSE2_IMPLIES "SSE")
   endif()
 
-  if(CV_ICC)
+  if(CV_ICC OR CV_ICX)
     macro(ocv_intel_compiler_optimization_option name unix_flags msvc_flags)
       ocv_update(CPU_${name}_FLAGS_NAME "${name}")
       if(MSVC)
@@ -944,7 +944,7 @@ macro(ocv_add_dispatched_file_force_all)
 endmacro()
 
 
-if(CV_DISABLE_OPTIMIZATION OR CV_ICC)
+if(CV_DISABLE_OPTIMIZATION OR CV_ICC OR CX_ICX)
   ocv_update(CV_ENABLE_UNROLLED 0)
 else()
   ocv_update(CV_ENABLE_UNROLLED 1)
