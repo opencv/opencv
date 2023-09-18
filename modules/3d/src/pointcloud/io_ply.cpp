@@ -21,7 +21,8 @@ void PlyDecoder::readData(std::vector<Point3f> &points, std::vector<Point3f> &no
     std::ifstream file(m_filename, std::ios::binary);
 
     if (!file.is_open()) {
-        CV_LOG_ERROR(NULL, "File does not exist.");
+        CV_LOG_ERROR(NULL, "File " + m_filename + " does not exist.");
+        return;
     }
 
     if (parseHeader(file))
