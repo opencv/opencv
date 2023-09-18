@@ -234,7 +234,7 @@ simple_argtype_mapping = {
     "cuda_Stream": ArgTypeInfo("cuda::Stream", FormatStrings.object, "cuda::Stream::Null()", True),
     "cuda_GpuMat": ArgTypeInfo("cuda::GpuMat", FormatStrings.object, "cuda::GpuMat()", True),
     "UMat": ArgTypeInfo("UMat", FormatStrings.object, 'UMat()', True),  # FIXIT: switch to CV_EXPORTS_W_SIMPLE as UMat is already a some kind of smart pointer
-    "cann_NpuMat": ArgTypeInfo("cann::NpuMat", FormatStrings.object, "cann::NpuMat()", True),
+    "cann_AscendMat": ArgTypeInfo("cann::AscendMat", FormatStrings.object, "cann::AscendMat()", True),
 }
 
 # Set of reserved keywords for Python. Can be acquired via the following call
@@ -515,8 +515,8 @@ class ArgInfo(object):
         return self.tp in ["Mat", "vector_Mat",
                            "cuda::GpuMat", "cuda_GpuMat", "GpuMat",
                            "vector_GpuMat", "vector_cuda_GpuMat",
-                           "UMat", "vector_UMat", "cann::NpuMat",
-                           "NpuMat", "vector_NpuMat"] # or self.tp.startswith("vector")
+                           "UMat", "vector_UMat", "cann::AscendMat",
+                           "AscendMat", "vector_AscendMat"] # or self.tp.startswith("vector")
 
     def crepr(self):
         return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
@@ -929,9 +929,9 @@ class FuncInfo(object):
                     if "cuda::GpuMat" in tp:
                         if "Mat" in defval and "GpuMat" not in defval:
                             defval = defval.replace("Mat", "cuda::GpuMat")
-                    if "cann::NpuMat" in tp:
-                        if "Mat" in defval and "NpuMat" not in defval:
-                            defval = defval.replace("Mat", "cann::NpuMat")
+                    if "cann::AscendMat" in tp:
+                        if "Mat" in defval and "AscendMat" not in defval:
+                            defval = defval.replace("Mat", "cann::AscendMat")
                 # "tp arg = tp();" is equivalent to "tp arg;" in the case of complex types
                 if defval == tp + "()" and arg_type_info.format_str == FormatStrings.object:
                     defval = ""
@@ -1304,7 +1304,7 @@ class PythonWrapperGenerator(object):
 
     def gen(self, srcfiles, output_path):
         self.clear()
-        self.parser = hdr_parser.CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True, generate_npumat_decls=True)
+        self.parser = hdr_parser.CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True, generate_ascendmat_decls=True)
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:

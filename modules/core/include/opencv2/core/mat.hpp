@@ -184,7 +184,7 @@ public:
         STD_ARRAY         =14 << KIND_SHIFT,  //!< removed: https://github.com/opencv/opencv/issues/18897
 #endif
         STD_ARRAY_MAT     =15 << KIND_SHIFT,
-        NPU_MAT           =16 << KIND_SHIFT
+        ASCEND_MAT        =16 << KIND_SHIFT
     };
 
     _InputArray();
@@ -202,7 +202,7 @@ public:
     template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
     _InputArray(const double& val);
     _InputArray(const cuda::GpuMat& d_mat);
-    _InputArray(const cann::NpuMat& n_mat);
+    _InputArray(const cann::AscendMat& a_mat);
 
     _InputArray(const std::vector<cuda::GpuMat>& d_mat_array);
     _InputArray(const ogl::Buffer& buf);
@@ -318,7 +318,7 @@ public:
     _OutputArray(Mat& m);
     _OutputArray(std::vector<Mat>& vec);
     _OutputArray(cuda::GpuMat& d_mat);
-    _OutputArray(cann::NpuMat& n_mat);
+    _OutputArray(cann::AscendMat& a_mat);
     _OutputArray(std::vector<cuda::GpuMat>& d_mat);
     _OutputArray(ogl::Buffer& buf);
     _OutputArray(cuda::HostMem& cuda_mem);
@@ -337,7 +337,7 @@ public:
     _OutputArray(const Mat& m);
     _OutputArray(const std::vector<Mat>& vec);
     _OutputArray(const cuda::GpuMat& d_mat);
-    _OutputArray(const cann::NpuMat& n_mat);
+    _OutputArray(const cann::AscendMat& a_mat);
     _OutputArray(const std::vector<cuda::GpuMat>& d_mat);
     _OutputArray(const ogl::Buffer& buf);
     _OutputArray(const cuda::HostMem& cuda_mem);

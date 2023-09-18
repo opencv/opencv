@@ -629,7 +629,7 @@ namespace cudev
 
 namespace cann
 {
-    class CV_EXPORTS NpuMat;
+    class CV_EXPORTS AscendMat;
 }
 
 namespace ipp

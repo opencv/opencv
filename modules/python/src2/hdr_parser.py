@@ -33,10 +33,10 @@ original_return_type is None if the original_return_type is the same as return_v
 
 class CppHeaderParser(object):
 
-    def __init__(self, generate_umat_decls=False, generate_gpumat_decls=False, generate_npumat_decls=False):
+    def __init__(self, generate_umat_decls=False, generate_gpumat_decls=False, generate_ascendmat_decls=False):
         self._generate_umat_decls = generate_umat_decls
         self._generate_gpumat_decls = generate_gpumat_decls
-        self._generate_npumat_decls = generate_npumat_decls
+        self._generate_ascendmat_decls = generate_ascendmat_decls
 
         self.BLOCK_TYPE = 0
         self.BLOCK_NAME = 1
@@ -1014,15 +1014,15 @@ class CppHeaderParser(object):
                                     if umat_decl != decl:
                                         decls.append(umat_decl)
 
-                            if self._generate_npumat_decls and "cv.cann" in decl[0]:
+                            if self._generate_ascendmat_decls and "cv.cann" in decl[0]:
                                 # If function takes as one of arguments Mat or vector<Mat> - we want to create the
-                                # same declaration working with NpuMat
+                                # same declaration working with AscendMat
                                 args = decl[3]
                                 has_mat = len(list(filter(lambda x: x[0] in {"Mat", "vector_Mat"}, args))) > 0
                                 if has_mat:
-                                    _, _, _, npumat_decl = self.parse_stmt(stmt, token, mat="cann::NpuMat", docstring=docstring)
-                                    if npumat_decl != decl:
-                                        decls.append(npumat_decl)
+                                    _, _, _, ascendmat_decl = self.parse_stmt(stmt, token, mat="cann::AscendMat", docstring=docstring)
+                                    if ascendmat_decl != decl:
+                                        decls.append(ascendmat_decl)
 
                         docstring = ""
                     if stmt_type == "namespace":
@@ -1066,7 +1066,7 @@ class CppHeaderParser(object):
                     print()
 
 if __name__ == '__main__':
-    parser = CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True, generate_npumat_decls=True)
+    parser = CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True, generate_ascendmat_decls=True)
     decls = []
     for hname in opencv_hdr_list:
         decls += parser.parse(hname)
