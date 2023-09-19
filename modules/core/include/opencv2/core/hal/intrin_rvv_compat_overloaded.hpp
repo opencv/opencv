@@ -45,6 +45,7 @@ OPENCV_HAL_IMPL_RVV_FUN_LOXEI(vuint8m2_t, u8m2, vuint8m2_t, i8)
 OPENCV_HAL_IMPL_RVV_FUN_LOXEI(vuint8m4_t, u8m4, vuint8m4_t, i8)
 OPENCV_HAL_IMPL_RVV_FUN_LOXEI(vuint8m8_t, u8m8, vuint8m8_t, i8)
 OPENCV_HAL_IMPL_RVV_FUN_LOXEI(vfloat32m1_t, f32m1, vuint32m1_t, i32)
+OPENCV_HAL_IMPL_RVV_FUN_LOXEI(vuint32m1_t, u32m1, vuint32m1_t, i32)
 #if CV_SIMD_SCALABLE_64F
 OPENCV_HAL_IMPL_RVV_FUN_LOXEI(vfloat64m1_t, f64m1, vuint32mf2_t, i32)
 #endif
