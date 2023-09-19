@@ -6,7 +6,7 @@ pt1 = (30, 40)
 pt2 = (40, 50)
 h = cv.LineIterator(pt1, pt2)
 print(h.pos(), h.iter)
-for pt in  h:
+for pt in h:
     print(pt, h.iter)
     img[pt[1], pt[0]] = 255
 cv.imshow("Line", img)

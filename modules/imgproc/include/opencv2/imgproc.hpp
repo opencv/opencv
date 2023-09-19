@@ -5015,7 +5015,7 @@ LineIterator& LineIterator::operator ++()
         return *this;
     iter++;
     int mask = err < 0 ? -1 : 0;
-    p = pNext;
+    pNext = p;
     err += minusDelta + (plusDelta & mask);
     if(!ptmode)
     {
@@ -5023,8 +5023,8 @@ LineIterator& LineIterator::operator ++()
     }
     else
     {
-        pNext.x += minusShift + (plusShift & mask);
-        pNext.y += minusStep + (plusStep & mask);
+        p.x += minusShift + (plusShift & mask);
+        p.y += minusStep + (plusStep & mask);
     }
     return *this;
 }
