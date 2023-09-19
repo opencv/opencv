@@ -1,4 +1,4 @@
-<img src="./images/header.png">
+<img src="./images/cover.jpg">
 
 ## OpenCV: Open Source Computer Vision Library
 
