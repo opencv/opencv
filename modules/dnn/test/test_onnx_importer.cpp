@@ -987,9 +987,21 @@ TEST_P(Test_ONNX_layers, MatMulAdd)
 TEST_P(Test_ONNX_layers, Expand)
 {
     testONNXModels("expand");
+}
+
+TEST_P(Test_ONNX_layers, ExpandIdentity) {
     testONNXModels("expand_identity");
+}
+
+TEST_P(Test_ONNX_layers, ExpandBatch) {
     testONNXModels("expand_batch");
+}
+
+TEST_P(Test_ONNX_layers, ExpandChannels) {
     testONNXModels("expand_channels");
+}
+
+TEST_P(Test_ONNX_layers, ExpandNegBatch) {
     testONNXModels("expand_neg_batch");
 }
 
