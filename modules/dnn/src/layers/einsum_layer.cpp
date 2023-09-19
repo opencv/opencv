@@ -695,15 +695,8 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
     // Check if number of tokens in equal to number of inputs.
     // For install "ij, jk -> ik" needs to have 2 inputs tensors
     int num_input_tensors = inputs.size();
-    if (lhs_eq_tokens.size() != num_input_tensors)
-    {
-        CV_Error(
-            Error::StsAssert,
-            cv::format("Number of input tensors [%d] does not "
-            "match the number of subscribts [%ld] "
-            "in the input equation", num_input_tensors, lhs_eq_tokens.size())
-            );
-    }
+    CV_CheckEQ(static_cast<int>(lhs_eq_tokens.size()), num_input_tensors,
+        "Number of input tensors does not match the number of subscripts in the input equation");
 
     int inputIdx = 0;
     for (const auto& token : lhs_eq_tokens)
@@ -736,11 +729,8 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
                 }
 
                 int letterIdx = letterToIndex(letter);
-                if (letterIdx == -1)
-                {
-                    CV_Error(Error::StsError,
+                CV_CheckNE(letterIdx, -1,
                     "The only permissible subscript labels are lowercase letters (a-z) and uppercase letters (A-Z).");
-                }
 
                 int dimValue = shape[dim_count];
 
@@ -857,25 +847,13 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     bool isFinalPair
 )
 {
-    // TODO: Create check similar to those that are in onnxruntime
-    // multiplication of dimention should be the same for input and override
-    size_t matDimSize = 1;
-    size_t overrideDimSize = 1;
-    for (int i = 0; i < left.dims; i++)
-        matDimSize *= left.size[i];
-
-    for (int i = 0; i < leftShapeOverride.size(); i++)
-        overrideDimSize *= leftShapeOverride[i];
+    size_t matDimSize = left.total();
+    size_t overrideDimSize = total(leftShapeOverride);
 
     CV_CheckEQ(matDimSize, overrideDimSize, "Override dims are not compatible with left tensor shape");
 
-    matDimSize = 1;
-    overrideDimSize = 1;
-    for (int i = 0; i < right.dims; i++)
-        matDimSize *= right.size[i];
-
-    for (int i = 0; i < rightShapeOverride.size(); i++)
-        overrideDimSize *= rightShapeOverride[i];
+    matDimSize = right.total();
+    overrideDimSize = total(rightShapeOverride);
 
     CV_CheckEQ(matDimSize, overrideDimSize, "Override dims are not compatible with right tensor shape");
 
@@ -889,8 +867,7 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     Mat currentLeft;
     Mat currentRight;
 
-    if (leftRank != rightRank)
-        CV_Error(Error::StsError, "Raks of pair-wise operands must be equal");
+    CV_CheckEQ(leftRank, rightRank, "Raks of pair-wise operands must be equal");
 
     // Following vectors hold:
     // lro: dim indices that are present in left, right, and reduce_dims
@@ -931,10 +908,11 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
                 // Both inputs have non-trivial dim values along this dimension
                 // Both the left and right operands have non-trivial dimension value along this axis
                 // They must be equal
-                if(leftDim != rightDim)
-                    CV_Error(
-                        Error::StsError,
-                        "Einsum op: Input dimensions must be equal along an axis to be reduced across all inputs");
+                // if(leftDim != rightDim)
+                //     CV_Error(
+                //         Error::StsError,
+                //         "Einsum op: Input dimensions must be equal along an axis to be reduced across all inputs");
+                CV_CheckEQ(leftDim, rightDim, "Einsum op: Input dimensions must be equal along an axis to be reduced across all inputs");
                 reduced_size *= leftDim;
 
             } else if (hasLeftDim)
