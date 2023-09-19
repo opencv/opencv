@@ -93,8 +93,6 @@ class ONNXImporter
                   const opencv_onnx::NodeProto& node_proto);
     void setParamsDtype(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
-    void expandMid(const std::string& prefix, opencv_onnx::NodeProto& node_proto,
-                   const std::string& input, size_t n);
     void lstm_extractConsts(LayerParams& layerParams, const opencv_onnx::NodeProto& lstm_proto, size_t idx, int* blobShape_, int size);
     void lstm_add_reshape(const std::string& input_name, const std::string& output_name, int* layerShape, size_t n);
     std::string lstm_add_slice(int index, const std::string& input_name, int* begin, int* end, size_t n);
@@ -653,37 +651,6 @@ void ONNXImporter::addLayer(LayerParams& layerParams,
         {
             outShapes[node_proto.output(i)] = layerOutShapes[i];
         }
-    }
-}
-
-/** @brief Make N copies of input layer and set them as input to node_proto.
- * @param prefix prefix of new layers' names
- * @param node_proto node which will contain all copies as inputs
- * @param input name of the node to copy
- * @param n number of copies
- */
-void ONNXImporter::expandMid(const std::string& prefix, opencv_onnx::NodeProto& node_proto,
-                             const std::string& input, size_t n)
-{
-    std::vector<std::string> input_names;
-    input_names.reserve(n);
-    for (size_t j = 0; j < n; j++)
-    {
-        LayerParams copyLP;
-        copyLP.name = format("%s/copy_%zu", prefix.c_str(), j);
-        copyLP.type = "Identity";
-        CV_Assert((layer_id.find(copyLP.name) == layer_id.end()) &&
-            "Couldn't copy the node: generated name already exists in the graph.");
-        input_names.push_back(copyLP.name);
-
-        node_proto.set_input(0, input);
-        node_proto.set_output(0, copyLP.name);
-        addLayer(copyLP, node_proto);
-    }
-    node_proto.clear_input();
-    for (size_t i = 0; i < input_names.size(); i++)
-    {
-        node_proto.add_input(input_names[i]);
     }
 }
 
