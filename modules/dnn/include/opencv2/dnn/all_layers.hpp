@@ -1101,6 +1101,16 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<LayerNormLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS GemmLayer : public Layer {
+    public:
+        bool trans_a;
+        bool trans_b;
+        float alpha;
+        float beta;
+
+        static Ptr<GemmLayer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END
