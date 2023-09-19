@@ -934,41 +934,12 @@ CV__DNN_INLINE_NS_BEGIN
       */
     CV_EXPORTS Net readNetFromTFLite(const char *bufferModel, size_t lenModel);
 
-    /**
-     *  @brief Reads a network model stored in <a href="http://torch.ch">Torch7</a> framework's format.
-     *  @param model    path to the file, dumped from Torch by using torch.save() function.
-     *  @param isBinary specifies whether the network was serialized in ascii mode or binary.
-     *  @param evaluate specifies testing phase of network. If true, it's similar to evaluate() method in Torch.
-     *  @returns Net object.
-     *
-     *  @note Ascii mode of Torch serializer is more preferable, because binary mode extensively use `long` type of C language,
-     *  which has various bit-length on different systems.
-     *
-     * The loading file must contain serialized <a href="https://github.com/torch/nn/blob/master/doc/module.md">nn.Module</a> object
-     * with importing network. Try to eliminate a custom objects from serialazing data to avoid importing errors.
-     *
-     * List of supported layers (i.e. object instances derived from Torch nn.Module class):
-     * - nn.Sequential
-     * - nn.Parallel
-     * - nn.Concat
-     * - nn.Linear
-     * - nn.SpatialConvolution
-     * - nn.SpatialMaxPooling, nn.SpatialAveragePooling
-     * - nn.ReLU, nn.TanH, nn.Sigmoid
-     * - nn.Reshape
-     * - nn.SoftMax, nn.LogSoftMax
-     *
-     * Also some equivalents of these classes from cunn, cudnn, and fbcunn may be successfully imported.
-     */
-     CV_EXPORTS_W Net readNetFromTorch(const String &model, bool isBinary = true, bool evaluate = true);
-
      /**
       * @brief Read deep learning network represented in one of the supported formats.
       * @param[in] model Binary file contains trained weights. The following file
       *                  extensions are expected for models from different frameworks:
       *                  * `*.caffemodel` (Caffe, http://caffe.berkeleyvision.org/)
       *                  * `*.pb` (TensorFlow, https://www.tensorflow.org/)
-      *                  * `*.t7` | `*.net` (Torch, http://torch.ch/)
       *                  * `*.weights` (Darknet, https://pjreddie.com/darknet/)
       *                  * `*.bin` (DLDT, https://software.intel.com/openvino-toolkit)
       *                  * `*.onnx` (ONNX, https://onnx.ai/)
@@ -982,8 +953,8 @@ CV__DNN_INLINE_NS_BEGIN
       * @returns Net object.
       *
       * This function automatically detects an origin framework of trained model
-      * and calls an appropriate function such @ref readNetFromCaffe, @ref readNetFromTensorflow,
-      * @ref readNetFromTorch or @ref readNetFromDarknet. An order of @p model and @p config
+      * and calls an appropriate function such @ref readNetFromCaffe, @ref readNetFromTensorflow
+      * or @ref readNetFromDarknet. An order of @p model and @p config
       * arguments does not matter.
       */
      CV_EXPORTS_W Net readNet(const String& model, const String& config = "", const String& framework = "");
@@ -999,11 +970,6 @@ CV__DNN_INLINE_NS_BEGIN
       */
      CV_EXPORTS_W Net readNet(const String& framework, const std::vector<uchar>& bufferModel,
                               const std::vector<uchar>& bufferConfig = std::vector<uchar>());
-
-    /** @brief Loads blob which was serialized as torch.Tensor object of Torch7 framework.
-     *  @warning This function has the same limitations as readNetFromTorch().
-     */
-    CV_EXPORTS_W Mat readTorchBlob(const String &filename, bool isBinary = true);
 
     /** @brief Load a network from Intel's Model Optimizer intermediate representation.
      *  @param[in] xml XML configuration file with network's topology.

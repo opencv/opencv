@@ -147,26 +147,6 @@ TEST_P(DNNTestNetwork, Inception_5h)
     expectNoFallbacksFromCUDA(net);
 }
 
-TEST_P(DNNTestNetwork, ENet)
-{
-    applyTestTag(target == DNN_TARGET_CPU ? "" : CV_TEST_TAG_MEMORY_512MB);
-
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
-#endif
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16);
-    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
-    processNet("dnn/Enet-model-best.net", "", Size(512, 512), "l367_Deconvolution", 2e-5, 0.15);
-    expectNoFallbacksFromCUDA(net);
-}
-
 TEST_P(DNNTestNetwork, MobileNet_SSD_Caffe)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
@@ -380,21 +360,6 @@ TEST_P(DNNTestNetwork, OpenPose_pose_mpi_faster_4_stages)
     expectNoFallbacksFromCUDA(net);
 }
 
-TEST_P(DNNTestNetwork, OpenFace)
-{
-#if defined(INF_ENGINE_RELEASE)
-#if INF_ENGINE_VER_MAJOR_EQ(2018050000)
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
-#endif
-    const float l1 = (target == DNN_TARGET_MYRIAD) ? 0.0024 : 0.0;
-    const float lInf = (target == DNN_TARGET_MYRIAD) ? 0.0071 : 0.0;
-    processNet("dnn/openface_nn4.small2.v1.t7", "", Size(96, 96), "", l1, lInf);
-
-    expectNoFallbacksFromCUDA(net);
-}
-
 TEST_P(DNNTestNetwork, opencv_face_detector)
 {
     Mat img = imread(findDataFile("gpu/lbpcascade/er.png"));
@@ -482,9 +447,9 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
 #endif
 
     Mat img = imread(findDataFile("dnn/googlenet_1.png"));
-    Mat inp = blobFromImage(img, 1.0, Size(320, 240), Scalar(103.939, 116.779, 123.68), false, false);
-    // Output image has values in range [-143.526, 148.539].
-    float l1 = 2e-4, lInf = 2.4e-3;
+    Mat inp = blobFromImage(img, 1.0, Size(224, 224), Scalar(0.0, 0.0, 0.0), true, false);
+    // Output image has values in range [0.0, 255.0].
+    float l1 = 5e-4, lInf = 1e-2;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         l1 = 0.4;
@@ -492,13 +457,13 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        l1 = 0.3;
-        lInf = 7.6;
+        l1 = 0.9;
+        lInf = 16;
     }
     else if (target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.4;
-        lInf = 19.;
+        lInf = 26.;
     }
     else if (target == DNN_TARGET_VULKAN)
     {
@@ -519,7 +484,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
 #endif
 
 
-    processNet("dnn/fast_neural_style_eccv16_starry_night.t7", "", inp, "", l1, lInf);
+    processNet("dnn/mosaic-9.onnx", "", inp, "", l1, lInf);
 #if defined(HAVE_INF_ENGINE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     expectNoFallbacksFromIE(net);
 #endif

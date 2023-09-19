@@ -16,7 +16,7 @@ def get_args_parser(func_args):
                         help='An optional path to file with preprocessing parameters.')
     parser.add_argument('--input',
                         help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-    parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'torch', 'darknet'],
+    parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'darknet'],
                         help='Optional name of an origin framework of the model. '
                              'Detect it automatically if it does not set.')
     parser.add_argument('--std', nargs='*', type=float,

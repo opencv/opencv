@@ -33,10 +33,6 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
     {
         return readNetFromTFLite(model);
     }
-    if (framework == "torch" || modelExt == "t7" || modelExt == "net" || configExt == "t7" || configExt == "net")
-    {
-        return readNetFromTorch(model.empty() ? config : model);
-    }
     if (framework == "darknet" || modelExt == "weights" || configExt == "weights" || modelExt == "cfg" || configExt == "cfg")
     {
         if (modelExt == "cfg" || configExt == "weights")
@@ -66,8 +62,6 @@ Net readNet(const String& _framework, const std::vector<uchar>& bufferModel,
         return readNetFromTensorflow(bufferModel, bufferConfig);
     else if (framework == "darknet")
         return readNetFromDarknet(bufferConfig, bufferModel);
-    else if (framework == "torch")
-        CV_Error(Error::StsNotImplemented, "Reading Torch models from buffers");
     else if (framework == "dldt")
         return readNetFromModelOptimizer(bufferConfig, bufferModel);
     else if (framework == "tflite")

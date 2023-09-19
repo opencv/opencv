@@ -148,7 +148,7 @@ video = {
 }
 
 dnn = {'dnn_Net': ['setInput', 'forward', 'setPreferableBackend'],
-       '': ['readNetFromCaffe', 'readNetFromTensorflow', 'readNetFromTorch', 'readNetFromDarknet',
+       '': ['readNetFromCaffe', 'readNetFromTensorflow', 'readNetFromDarknet',
             'readNetFromONNX', 'readNetFromTFLite', 'readNet', 'blobFromImage']}
 
 features2d = {'Feature2D': ['detect', 'compute', 'detectAndCompute', 'descriptorSize', 'descriptorType', 'defaultNorm', 'empty', 'getDefaultName'],
