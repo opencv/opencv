@@ -39,7 +39,6 @@ public:
         auto& moreDimension = inputs[0].size() > target_shape.size() ? inputs[0] : target_shape;
         auto& lessDimension = inputs[0].size() <= target_shape.size() ? inputs[0] : target_shape;
 
-
         /*  Example:
                              i = 3
                                |
@@ -50,9 +49,10 @@ public:
         for (int i = 0; i < moreDimension.size(); i++) {
             int d = moreDimension[i];
             int j = i - (moreDimension.size() - lessDimension.size());
-            std::cout << "i = " << i << ", j = " << j << std::endl;
             if (j >= 0) {
-                if (d == 1 || lessDimension[j] == 1 || d == lessDimension[j]) {
+                if (d == 1 || lessDimension[j] == 1 || // broadcast
+                    (d == -1 && lessDimension[j] != -1) || (lessDimension[j] == -1 && d != -1) || // shape deduction from -1
+                    d == lessDimension[j]) { // plain copy
                     outputShape[i] = std::max(d, lessDimension[j]);
                 } else {
                     CV_Error(Error::StsBadSize, cv::format("DNN/Expand: invalid dimension, d (%d) != d (%d)", moreDimension[i], lessDimension[j]));
