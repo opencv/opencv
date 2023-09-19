@@ -745,7 +745,22 @@ namespace CV__SIMD_NAMESPACE {
     inline _Tpvec v_add(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
         return v_add(f1 + f2, vf...); \
     }
+    #define OPENCV_HAL_WRAP_SHIFT_OP(_Tpvec) \
+    inline _Tpvec v_shr(const _Tpvec& a, int n) \
+    { \
+        return a >> n; \
+    } \
+    inline _Tpvec v_shl(const _Tpvec& a, int n) \
+    { \
+        return a << n; \
+    }
 
+    OPENCV_HAL_WRAP_SHIFT_OP(v_uint16)
+    OPENCV_HAL_WRAP_SHIFT_OP(v_uint32)
+    OPENCV_HAL_WRAP_SHIFT_OP(v_uint64)
+    OPENCV_HAL_WRAP_SHIFT_OP(v_int16)
+    OPENCV_HAL_WRAP_SHIFT_OP(v_int32)
+    OPENCV_HAL_WRAP_SHIFT_OP(v_int64)
     OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint8)
     OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint16)
     OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint32)
@@ -769,6 +784,12 @@ namespace CV__SIMD_NAMESPACE {
         OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int32x4)
         OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int64x2)
         OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float32x4)
+        OPENCV_HAL_WRAP_SHIFT_OP(v_uint16x8)
+        OPENCV_HAL_WRAP_SHIFT_OP(v_uint32x4)
+        OPENCV_HAL_WRAP_SHIFT_OP(v_uint64x2)
+        OPENCV_HAL_WRAP_SHIFT_OP(v_int16x8)
+        OPENCV_HAL_WRAP_SHIFT_OP(v_int32x4)
+        OPENCV_HAL_WRAP_SHIFT_OP(v_int64x2)
         #if CV_SIMD_64F
         OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float64x2)
         #endif
@@ -784,6 +805,12 @@ namespace CV__SIMD_NAMESPACE {
         OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int32x8)
         OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int64x4)
         OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float32x8)
+        OPENCV_HAL_WRAP_SHIFT_OP(v_uint16x16)
+        OPENCV_HAL_WRAP_SHIFT_OP(v_uint32x8)
+        OPENCV_HAL_WRAP_SHIFT_OP(v_uint64x4)
+        OPENCV_HAL_WRAP_SHIFT_OP(v_int16x16)
+        OPENCV_HAL_WRAP_SHIFT_OP(v_int32x8)
+        OPENCV_HAL_WRAP_SHIFT_OP(v_int64x4)
         #if CV_SIMD_64F
         OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float64x4)
         #endif
@@ -801,7 +828,9 @@ namespace CV__SIMD_NAMESPACE {
     inline _Tpvec v_xor(const _Tpvec& a, const _Tpvec& b) \
     { \
         return a ^ b; \
-    } \
+    }
+
+    #define OPENCV_HAL_WRAP_NOT_OP(_Tpvec) \
     inline _Tpvec v_not(const _Tpvec& a) \
     { \
         return ~a; \
@@ -815,6 +844,18 @@ namespace CV__SIMD_NAMESPACE {
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int16)
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int32)
     OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int64)
+    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float32)
+    OPENCV_HAL_WRAP_NOT_OP(v_uint8)
+    OPENCV_HAL_WRAP_NOT_OP(v_uint16)
+    OPENCV_HAL_WRAP_NOT_OP(v_uint32)
+    OPENCV_HAL_WRAP_NOT_OP(v_uint64)
+    OPENCV_HAL_WRAP_NOT_OP(v_int8)
+    OPENCV_HAL_WRAP_NOT_OP(v_int16)
+    OPENCV_HAL_WRAP_NOT_OP(v_int32)
+    OPENCV_HAL_WRAP_NOT_OP(v_int64)
+    #if CV_SIMD_64F
+    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float64)
+    #endif
     #if CV_SIMD_WIDTH != 16/*128*/ && CV_SIMD128
         OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint8x16)
         OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint16x8)
@@ -824,6 +865,18 @@ namespace CV__SIMD_NAMESPACE {
         OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int16x8)
         OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int32x4)
         OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int64x2)
+        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float32x4)
+        OPENCV_HAL_WRAP_NOT_OP(v_uint8x16)
+        OPENCV_HAL_WRAP_NOT_OP(v_uint16x8)
+        OPENCV_HAL_WRAP_NOT_OP(v_uint32x4)
+        OPENCV_HAL_WRAP_NOT_OP(v_uint64x2)
+        OPENCV_HAL_WRAP_NOT_OP(v_int8x16)
+        OPENCV_HAL_WRAP_NOT_OP(v_int16x8)
+        OPENCV_HAL_WRAP_NOT_OP(v_int32x4)
+        OPENCV_HAL_WRAP_NOT_OP(v_int64x2)
+        #if CV_SIMD_64F
+        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float64x2)
+        #endif
     #endif
     #if CV_SIMD_WIDTH != 32/*256*/ && CV_SIMD256
         OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint8x32)
@@ -834,6 +887,18 @@ namespace CV__SIMD_NAMESPACE {
         OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int16x16)
         OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int32x8)
         OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int64x4)
+        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float32x8)
+        OPENCV_HAL_WRAP_NOT_OP(v_uint8x32)
+        OPENCV_HAL_WRAP_NOT_OP(v_uint16x16)
+        OPENCV_HAL_WRAP_NOT_OP(v_uint32x8)
+        OPENCV_HAL_WRAP_NOT_OP(v_uint64x4)
+        OPENCV_HAL_WRAP_NOT_OP(v_int8x32)
+        OPENCV_HAL_WRAP_NOT_OP(v_int16x16)
+        OPENCV_HAL_WRAP_NOT_OP(v_int32x8)
+        OPENCV_HAL_WRAP_NOT_OP(v_int64x4)
+        #if CV_SIMD_64F
+        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float64x4)
+        #endif
     #endif
 
     #define OPENCV_HAL_WRAP_BIN_OP_MUL(_Tpvec) \
