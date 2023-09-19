@@ -3354,19 +3354,15 @@ void ONNXImporter::parseEinsum(LayerParams& layerParams, const opencv_onnx::Node
             CV_Error(Error::StsAssert, "ERROR input shape not found");
         }
     }
-    if (!einsumInpShapes.empty())
-    {
-        for (int i = 0; i < einsumInpShapes.size(); i++)
-        {
-            layerParams.set("inputShapes" + cv::format("%d", i), DictValue::arrayInt(einsumInpShapes[i].begin(), einsumInpShapes[i].size()));
-        }
-    } else {
-        CV_Error(Error::StsAssert, "ERROR no inputs shapes");
+
+    CV_CheckFalse(einsumInpShapes.empty(), "ERROR no inputs shapes");
+    for (int i = 0; i < einsumInpShapes.size(); i++) {
+        layerParams.set("inputShapes" + cv::format("%d", i), DictValue::arrayInt(einsumInpShapes[i].begin(), einsumInpShapes[i].size()));
     }
 
     // Check if of eqution is valid
     std::string equation = layerParams.get<std::string>("equation");
-    CV_Assert(!equation.empty());
+    CV_CheckFalse(equation.empty(), "Equation is empty");
 
     // Save number of inputs. We need it in layer initialization
     layerParams.set("inputSize", node_proto.input_size());

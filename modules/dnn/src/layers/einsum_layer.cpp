@@ -20,9 +20,9 @@ static bool IsTransposeReshapeForEinsum(const std::vector<size_t>& perm,
     size_t last_permuted_axis = 0;
     for (size_t i = 0; i < perm.size(); ++i) {
         if (input_dims[perm[i]] == 1)
-        continue;
+            continue;
         if (perm[i] < last_permuted_axis)
-        return false;
+            return false;
         last_permuted_axis = perm[i];
     }
     new_shape.assign(input_dims.begin(), input_dims.end());
@@ -218,13 +218,12 @@ Mat Diagonal(
  */
 int letterToIndex(const char ch) {
     if (ch >= 'a' && ch <= 'z') {
-    return static_cast<int>(ch) - 'a';
+        return static_cast<int>(ch) - 'a';
     }
 
     if (ch >= 'A' && ch <= 'Z') {
-    return static_cast<int>('z') + static_cast<int>(ch) - 'A';
+        return static_cast<int>('z') + static_cast<int>(ch) - 'A';
     }
-
     // invalid character - return error value
     return -1;
 }
@@ -373,7 +372,8 @@ public:
         CV_UNUSED(internals);
 
         // check if passed and parsed inputs match up in number and dimensions
-        CV_Assert(inputs.size() == inputSize);
+        CV_CheckEQ(static_cast<int>(inputs.size()), inputSize,
+            "Number of inputs in forward and inputs during graph constructions do not match");
         for (int i = 0; i < inputSize; i++)
         {
             if (inputs[i] != einsumInpShapes[i])
@@ -1144,6 +1144,5 @@ Ptr<EinsumLayer> EinsumLayer::create(const LayerParams& params)
 {
     return makePtr<LayerEinsumImpl>(params);
 }
-
 
 }} // namespace cv::dnn
