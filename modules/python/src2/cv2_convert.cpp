@@ -63,20 +63,39 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     if( PyInt_Check(o) )
     {
         double v[] = {static_cast<double>(PyInt_AsLong((PyObject*)o)), 0., 0., 0.};
+        if ( info.arithm_op_src )
+        {
+            // Normally cv.XXX(x) means cv.XXX( (x, 0., 0., 0.) );
+            // However  cv.add(mat,x) means cv::add(mat, (x,x,x,x) ).
+            v[1] = v[0];
+            v[2] = v[0];
+            v[3] = v[0];
+        }
         m = Mat(4, 1, CV_64F, v).clone();
         return true;
     }
     if( PyFloat_Check(o) )
     {
         double v[] = {PyFloat_AsDouble((PyObject*)o), 0., 0., 0.};
+
+       if ( info.arithm_op_src )
+        {
+            // Normally cv.XXX(x) means cv.XXX( (x, 0., 0., 0.) );
+            // However  cv.add(mat,x) means cv::add(mat, (x,x,x,x) ).
+            v[1] = v[0];
+            v[2] = v[0];
+            v[3] = v[0];
+        }
         m = Mat(4, 1, CV_64F, v).clone();
         return true;
     }
     if( PyTuple_Check(o) )
     {
-        int i, sz = (int)PyTuple_Size((PyObject*)o);
-        m = Mat(sz, 1, CV_64F);
-        for( i = 0; i < sz; i++ )
+        // see https://github.com/opencv/opencv/issues/24057
+        const int sz  = (int)PyTuple_Size((PyObject*)o);
+        const int sz2 = info.arithm_op_src ? std::max(4, sz) : sz; // Scalar has 4 elements.
+        m = Mat::zeros(sz2, 1, CV_64F);
+        for( int i = 0; i < sz; i++ )
         {
             PyObject* oi = PyTuple_GetItem(o, i);
             if( PyInt_Check(oi) )
@@ -239,6 +258,31 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
             step[i] = default_step;
             default_step *= size[i];
         }
+    }
+
+    // see https://github.com/opencv/opencv/issues/24057
+    if ( ( info.arithm_op_src ) && ( ndims == 1 ) && ( size[0] <= 4 ) )
+    {
+        const int sz  = size[0]; // Real Data Length(1, 2, 3 or 4)
+        const int sz2 = 4;       // Scalar has 4 elements.
+        m = Mat::zeros(sz2, 1, CV_64F);
+
+        const char *base_ptr = PyArray_BYTES(oarr);
+        for(int i = 0; i < sz; i++ )
+        {
+            PyObject* oi = PyArray_GETITEM(oarr, base_ptr + step[0] * i);
+            if( PyInt_Check(oi) )
+                m.at<double>(i) = (double)PyInt_AsLong(oi);
+            else if( PyFloat_Check(oi) )
+                m.at<double>(i) = (double)PyFloat_AsDouble(oi);
+            else
+            {
+                failmsg("%s has some non-numerical elements", info.name);
+                m.release();
+                return false;
+            }
+        }
+        return true;
     }
 
     // handle degenerate case
@@ -807,7 +851,7 @@ bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
     }
     {
         const String centerItemName = format("'%s' center point", info.name);
-        const ArgInfo centerItemInfo(centerItemName.c_str(), false);
+        const ArgInfo centerItemInfo(centerItemName.c_str(), 0);
         SafeSeqItem centerItem(obj, 0);
         if (!pyopencv_to(centerItem.item, dst.center, centerItemInfo))
         {
@@ -816,7 +860,7 @@ bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
     }
     {
         const String sizeItemName = format("'%s' size", info.name);
-        const ArgInfo sizeItemInfo(sizeItemName.c_str(), false);
+        const ArgInfo sizeItemInfo(sizeItemName.c_str(), 0);
         SafeSeqItem sizeItem(obj, 1);
         if (!pyopencv_to(sizeItem.item, dst.size, sizeItemInfo))
         {
@@ -825,7 +869,7 @@ bool pyopencv_to(PyObject* obj, RotatedRect& dst, const ArgInfo& info)
     }
     {
         const String angleItemName = format("'%s' angle", info.name);
-        const ArgInfo angleItemInfo(angleItemName.c_str(), false);
+        const ArgInfo angleItemInfo(angleItemName.c_str(), 0);
         SafeSeqItem angleItem(obj, 2);
         if (!pyopencv_to(angleItem.item, dst.angle, angleItemInfo))
         {
@@ -1075,7 +1119,7 @@ bool pyopencv_to(PyObject* obj, TermCriteria& dst, const ArgInfo& info)
     }
     {
         const String typeItemName = format("'%s' criteria type", info.name);
-        const ArgInfo typeItemInfo(typeItemName.c_str(), false);
+        const ArgInfo typeItemInfo(typeItemName.c_str(), 0);
         SafeSeqItem typeItem(obj, 0);
         if (!pyopencv_to(typeItem.item, dst.type, typeItemInfo))
         {
@@ -1084,7 +1128,7 @@ bool pyopencv_to(PyObject* obj, TermCriteria& dst, const ArgInfo& info)
     }
     {
         const String maxCountItemName = format("'%s' max count", info.name);
-        const ArgInfo maxCountItemInfo(maxCountItemName.c_str(), false);
+        const ArgInfo maxCountItemInfo(maxCountItemName.c_str(), 0);
         SafeSeqItem maxCountItem(obj, 1);
         if (!pyopencv_to(maxCountItem.item, dst.maxCount, maxCountItemInfo))
         {
@@ -1093,7 +1137,7 @@ bool pyopencv_to(PyObject* obj, TermCriteria& dst, const ArgInfo& info)
     }
     {
         const String epsilonItemName = format("'%s' epsilon", info.name);
-        const ArgInfo epsilonItemInfo(epsilonItemName.c_str(), false);
+        const ArgInfo epsilonItemInfo(epsilonItemName.c_str(), 0);
         SafeSeqItem epsilonItem(obj, 2);
         if (!pyopencv_to(epsilonItem.item, dst.epsilon, epsilonItemInfo))
         {
