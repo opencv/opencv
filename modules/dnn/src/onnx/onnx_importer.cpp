@@ -2318,6 +2318,16 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
     CV_CheckTypeEQ(mat_input_shape.depth(), CV_32S, "DNN/ONNXImporter-Expand: data type of input shape must be CV_32S");
     layerParams.set("shape", DictValue::arrayInt(mat_input_shape.ptr<int>(), mat_input_shape.total()));
 
+    if (constBlobs.find(node_proto.input(0)) != constBlobs.end()) {
+        Mat input = getBlob(node_proto, 0);
+        std::vector<Mat> inputs, expanded;
+        inputs.push_back(input);
+        runLayer(layerParams, inputs, expanded);
+        CV_CheckEQ(expanded.size(), static_cast<size_t>(1), "DNN/Expand: only one output is expected when folding constant");
+        addConstant(node_proto.output(0), expanded[0]);
+        return;
+    }
+
     addLayer(layerParams, node_proto);
 }
 
