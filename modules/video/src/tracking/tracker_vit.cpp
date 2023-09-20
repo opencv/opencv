@@ -72,11 +72,11 @@ protected:
 static void crop_image(const Mat& src, Mat& dst, Rect box, int factor)
 {
     int x = box.x, y = box.y, w = box.width, h = box.height;
-    int crop_sz = ceil(sqrt(w * h) * factor);
+    int crop_sz = cvCeil(sqrt(w * h) * factor);
 
-    int x1 = round(x + 0.5 * w - crop_sz * 0.5);
+    int x1 = x + (w - crop_sz) / 2;
     int x2 = x1 + crop_sz;
-    int y1 = round(y + 0.5 * h - crop_sz * 0.5);
+    int y1 = y + (h - crop_sz) / 2;
     int y2 = y1 + crop_sz;
 
     int x1_pad = std::max(0, -x1);
@@ -110,14 +110,14 @@ static Mat hann1d(int sz, bool centered = true) {
 
     if(centered) {
         for(int i = 0; i < sz; i++) {
-            float val = 0.5 * (1 - std::cos((2 * M_PI / (sz + 1)) * (i + 1)));
+            float val = 0.5f * (1.f - std::cos(static_cast<float>(2 * M_PI / (sz + 1)) * (i + 1)));
             data[i] = val;
         }
     }
     else {
         int half_sz = sz / 2;
         for(int i = 0; i <= half_sz; i++) {
-            float val = 0.5 * (1 + std::cos((2 * M_PI / (sz + 2)) * i));
+            float val = 0.5f * (1.f + std::cos(static_cast<float>(2 * M_PI / (sz + 2)) * i));
             data[i] = val;
             data[sz - 1 - i] = val;
         }
@@ -140,14 +140,14 @@ static Mat hann2d(Size size, bool centered = true) {
 
 static Rect returnfromcrop(float x, float y, float w, float h, Rect res_Last)
 {
-    int cropwindowwh = 4 * sqrt(res_Last.width * res_Last.height);
-    int x0 = res_Last.x + 0.5 * res_Last.width - 0.5 * cropwindowwh;
-    int y0 = res_Last.y + 0.5 * res_Last.height - 0.5 * cropwindowwh;
+    int cropwindowwh = 4 * cvFloor(sqrt(res_Last.width * res_Last.height));
+    int x0 = res_Last.x + (res_Last.width - cropwindowwh) / 2;
+    int y0 = res_Last.y + (res_Last.height - cropwindowwh) / 2;
     Rect finalres;
-    finalres.x = x * cropwindowwh + x0;
-    finalres.y = y * cropwindowwh + y0;
-    finalres.width = w * cropwindowwh;
-    finalres.height = h * cropwindowwh;
+    finalres.x = cvFloor(x * cropwindowwh + x0);
+    finalres.y = cvFloor(y * cropwindowwh + y0);
+    finalres.width = cvFloor(w * cropwindowwh);
+    finalres.height = cvFloor(h * cropwindowwh);
     return finalres;
 }
 
@@ -186,7 +186,7 @@ bool TrackerVitImpl::update(InputArray image_, Rect &boundingBoxRes)
     double maxVal;
     Point maxLoc;
     minMaxLoc(conf_map, nullptr, &maxVal, nullptr, &maxLoc);
-    tracking_score = maxVal;
+    tracking_score = static_cast<float>(maxVal);
 
     float cx = (maxLoc.x + offset_map.at<float>(0, maxLoc.y, maxLoc.x)) / 16;
     float cy = (maxLoc.y + offset_map.at<float>(1, maxLoc.y, maxLoc.x)) / 16;
