@@ -769,4 +769,58 @@ TEST_P(CharucoBoard, testWrongSizeDetection)
     ASSERT_TRUE(detectedCharucoIds.empty());
 }
 
+TEST(Charuco, testSeveralBoardsWithCustomIds)
+{
+    Size res{500, 500};
+    Mat K = (Mat_<double>(3,3) <<
+        0.5*res.width, 0, 0.5*res.width,
+        0, 0.5*res.height, 0.5*res.height,
+        0, 0, 1);
+
+    Mat expected_corners = (Mat_<float>(9,2) <<
+        200, 200,
+        250, 200,
+        300, 200,
+        200, 250,
+        250, 250,
+        300, 250,
+        200, 300,
+        250, 300,
+        300, 300
+    );
+
+
+    aruco::Dictionary dict = cv::aruco::getPredefinedDictionary(aruco::DICT_4X4_50);
+    vector<int> ids1 = {0, 1, 33, 3, 4, 5, 6, 8}, ids2 = {7, 9, 44, 11, 12, 13, 14, 15};
+    aruco::CharucoBoard board1(Size(4, 4), 1.f, .8f, dict, ids1), board2(Size(4, 4), 1.f, .8f, dict, ids2);
+
+    // generate ChArUco board
+    Mat gray;
+    {
+        Mat gray1, gray2;
+        board1.generateImage(Size(res.width, res.height), gray1, 150);
+        board2.generateImage(Size(res.width, res.height), gray2, 150);
+        hconcat(gray1, gray2, gray);
+    }
+
+    aruco::CharucoParameters charucoParameters;
+    charucoParameters.cameraMatrix = K;
+    aruco::CharucoDetector detector1(board1, charucoParameters), detector2(board2, charucoParameters);
+
+    vector<int> ids;
+    vector<Mat> corners;
+    Mat c_ids1, c_ids2, c_corners1, c_corners2;
+
+    detector1.detectBoard(gray, c_corners1, c_ids1, corners, ids);
+    detector2.detectBoard(gray, c_corners2, c_ids2, corners, ids);
+
+    ASSERT_EQ(ids.size(), size_t(16));
+    ASSERT_EQ(c_corners1.rows, expected_corners.rows);
+    EXPECT_NEAR(0, cvtest::norm(expected_corners, c_corners1.reshape(1), NORM_INF), 3e-1);
+
+    ASSERT_EQ(c_corners2.rows, expected_corners.rows);
+    expected_corners.col(0) += 500;
+    EXPECT_NEAR(0, cvtest::norm(expected_corners, c_corners2.reshape(1), NORM_INF), 3e-1);
+}
+
 }} // namespace

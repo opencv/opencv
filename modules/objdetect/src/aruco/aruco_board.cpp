@@ -319,8 +319,9 @@ struct CharucoBoardImpl : Board::Impl {
     // vector of chessboard 3D corners precalculated
     std::vector<Point3f> chessboardCorners;
 
-    // for each charuco corner, nearest marker id and nearest marker corner id of each marker
+    // for each charuco corner, nearest marker index in ids array
     std::vector<std::vector<int> > nearestMarkerIdx;
+    // for each charuco corner, nearest marker corner id of each marker
     std::vector<std::vector<int> > nearestMarkerCorners;
 
     void createCharucoBoard();
