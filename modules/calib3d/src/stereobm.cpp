@@ -573,7 +573,7 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
 
                 sad8 = v_reinterpret_as_s16(vx_load(hsad + d + v_int16::nlanes)) - v_reinterpret_as_s16(vx_load(hsad_sub + d + v_int16::nlanes)) + v_reinterpret_as_s16(vx_load(sad + d + v_int16::nlanes));
                 v_store(sad + d + v_int16::nlanes, v_reinterpret_as_u16(sad8));
-                mind8 = v_max(mind8, (minsad8 > sad8) & vx_setall_s16((short)d+v_int16::nlanes));
+                mind8 = v_max(mind8, (minsad8 > sad8) & vx_setall_s16((short)(d+v_int16::nlanes)));
                 minsad8 = v_min(minsad8, sad8);
             }
             if( d <= ndisp - v_int16::nlanes )
