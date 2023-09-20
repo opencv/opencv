@@ -1961,7 +1961,7 @@ void SGBM3WayMainLoop::accumulateCostsRight(const BufferSGBM3Way &mem, int x,
         v_store_aligned(leftBuf+D-v_int16::nlanes, res);
 
         min_sum_cost_reg = v_min(min_sum_cost_reg,res);
-        min_sum_pos_reg = min_sum_pos_reg + ((min_sum_cost_reg == res) & (vx_setall_s16((short)D-v_int16::nlanes) - min_sum_pos_reg));
+        min_sum_pos_reg = min_sum_pos_reg + ((min_sum_cost_reg == res) & (vx_setall_s16((short)(D-v_int16::nlanes)) - min_sum_pos_reg));
         min_pos(min_sum_cost_reg,min_sum_pos_reg, min_cost, optimal_disp);
     }
     else
@@ -2076,7 +2076,7 @@ void SGBM3WayMainLoop::impl(const Range& range) const
                 v_int16 thresh_reg = vx_setall_s16((short)(thresh+1));
                 v_int16 d1 = vx_setall_s16((short)(best_d-1));
                 v_int16 d2 = vx_setall_s16((short)(best_d+1));
-                v_int16 eight_reg = vx_setall_s16(v_int16::nlanes);
+                v_int16 eight_reg = vx_setall_s16((short)v_int16::nlanes);
                 v_int16 cur_d = vx_load(idx_row);
                 v_int16 mask;
 
