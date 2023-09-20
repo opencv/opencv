@@ -930,4 +930,15 @@ TEST_F(TestFixtureSkip, NoBodyRun) {
     FAIL() << "Unreachable code called";
 }
 
+// Expected that SkipTestException thrown in SetUp method should skip test but not fail
+struct TestSetUpSkip: public ::testing::Test {
+    virtual void SetUp() CV_OVERRIDE {
+        throw SkipTestException("Skip test at SetUp");
+    }
+};
+
+TEST_F(TestSetUpSkip, NoBodyRun) {
+    FAIL() << "Unreachable code called";
+}
+
 }} // namespace
