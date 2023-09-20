@@ -237,7 +237,7 @@ private:
     Ptr<ReduceLayer> reduce;
 public:
     // Number of inputs and outputs of the layer
-    int inputSize;
+    int numInputs;
 
     // inputShapes;
     std::vector<MatShape> einsumInpShapes;
@@ -321,23 +321,23 @@ public:
         setParamsFrom(params);
         String equation = params.get<String>("equation");
         int outputSize = params.get<int>("outputSize");
-        inputSize  = params.get<int>("inputSize");
+        numInputs  = params.get<int>("inputSize");
 
         CV_CheckEQ(outputSize, 1, "Einsum layer should only have one output");
 
         // get the input shapes from onnx importer
-        for (int i=0; i < inputSize; i++){
+        for (int i=0; i < numInputs; i++){
             auto param = params.get("inputShapes" + cv::format("%d", i));
-            int num_inps = param.size();
+            int inputDims = param.size();
             std::vector<int> shape;
-            for (int i = 0; i < num_inps; ++i)
+            for (int i = 0; i < inputDims; ++i)
                 shape.emplace_back(param.get<int>(i));
             einsumInpShapes.emplace_back(shape);
         }
 
 
         // Maintains a mapping between input indices and their corresponding subscript labels for each input
-        inputSubscriptIndices.reserve(inputSize);
+        inputSubscriptIndices.reserve(numInputs);
 
         // We allocate space for 10 values as a precaution,
         // assuming that we won't encounter any input with a rank greater than 10.
@@ -372,9 +372,9 @@ public:
         CV_UNUSED(internals);
 
         // check if passed and parsed inputs match up in number and dimensions
-        CV_CheckEQ(static_cast<int>(inputs.size()), inputSize,
+        CV_CheckEQ(static_cast<int>(inputs.size()), numInputs,
             "Number of inputs in forward and inputs during graph constructions do not match");
-        for (int i = 0; i < inputSize; i++)
+        for (int i = 0; i < numInputs; i++)
         {
             if (inputs[i] != einsumInpShapes[i])
                 CV_Error(Error::StsAssert, "Passed input shapes do not match with parsed input shapes!");
@@ -430,7 +430,7 @@ public:
             }
 
             // Finalize the output at this stage if num_inputs == 1
-            if (inputSize == 1) {
+            if (numInputs == 1) {
                 // Finalize the output by applying any transpose required to get
                 // it to the required output ordering and move it to the op's output
                 result = FinalizeOutput(!result.empty() ? result : rawInputs[0], preservedDims);
@@ -442,7 +442,7 @@ public:
         {
             bool isFinalPair = false;
             // Keep processing each input pair-wise
-            for (int input = 1; input < inputSize; ++input) {
+            for (int input = 1; input < numInputs; ++input) {
                 MatShape reducedDims;
                 reducedDims.reserve(numLetterIndices);  // num_subscript_labels is the upper bound. No harm in over-reserving by a small margin.
                 for (int dim = 0; dim < numLetterIndices; ++dim)
@@ -454,7 +454,7 @@ public:
                     }
                 }
 
-                if (input == inputSize - 1)
+                if (input == numInputs - 1)
                     isFinalPair = true;
 
                 // create temporary variable
@@ -903,29 +903,19 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
         {
             // This dimension is to be reduced after this pair-wise operation
             ++reduceDimsIter;
-            if (hasLeftDim && hasRightDim)
-            {
+            if (hasLeftDim && hasRightDim){
                 // Both inputs have non-trivial dim values along this dimension
                 // Both the left and right operands have non-trivial dimension value along this axis
-                // They must be equal
-                // if(leftDim != rightDim)
-                //     CV_Error(
-                //         Error::StsError,
-                //         "Einsum op: Input dimensions must be equal along an axis to be reduced across all inputs");
                 CV_CheckEQ(leftDim, rightDim, "Einsum op: Input dimensions must be equal along an axis to be reduced across all inputs");
                 reduced_size *= leftDim;
 
-            } else if (hasLeftDim)
-            {
+            } else if (hasLeftDim){
                 // if the dim to be reduced is only in one of left and right, we can reduce right away
-                // CV_Error(Error::StsNotImplemented, "Left Reduce not Implemented");
                 Mat tensorToReduce = !currentLeft.empty() ? currentLeft : left;
                 MatShape shapeToReduce = !currentLeft.empty() ? shape(currentLeft) : leftDims;
                 currentLeft = reduceSum(tensorToReduce, shapeToReduce);
 
-            } else if (hasRightDim)
-            {
-                // CV_Error(Error::StsNotImplemented, "Right Reduce not Implemented");
+            } else if (hasRightDim){
                 Mat tensorToReduce = !currentRight.empty() ? currentRight : right;
                 MatShape shapeToReduce = !currentRight.empty() ? shape(currentRight) : rightDims;
                 currentLeft = reduceSum(tensorToReduce, shapeToReduce);
@@ -935,10 +925,8 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
             // This dimension is not reduced (i.e.) it appears in the output after processing these 2 operands
             // Both the left and right operands have non-trivial dimension value along this axis
             // They must be equal
-            if (hasLeftDim && hasRightDim)
-            {
+            if (hasLeftDim && hasRightDim){
                 CV_CheckEQ(leftDim, rightDim, "Input shapes do not align");
-
                 lro.push_back(i);
                 lro_size *= leftDim;
 
