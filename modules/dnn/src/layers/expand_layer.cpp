@@ -22,6 +22,8 @@ public:
         for (int i = 0; i < ndims_shape; i++) {
             target_shape[i] = param_shape.get<int>(i);
         }
+
+        const_input_1d = params.get("const_input_1d", false);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
@@ -36,8 +38,13 @@ public:
         CV_CheckLE(inputs.size(), static_cast<size_t>(2), "DNN/Expand: two input at most");
         CV_CheckFalse(target_shape.empty(), "DNN/Expand: shape must known before memory is set");
 
-        auto& moreDimension = inputs[0].size() > target_shape.size() ? inputs[0] : target_shape;
-        auto& lessDimension = inputs[0].size() <= target_shape.size() ? inputs[0] : target_shape;
+        MatShape input_shape = inputs[0]; // 1d tensor is represented as 2d mat, e.g. [3] -> [3, 1]
+        if (const_input_1d) {
+            input_shape = {inputs[0][0]};
+        }
+
+        auto& moreDimension = input_shape.size() > target_shape.size() ? input_shape : target_shape;
+        auto& lessDimension = input_shape.size() <= target_shape.size() ? input_shape : target_shape;
 
         /*  Example:
                              i = 3
@@ -70,7 +77,10 @@ public:
         inputs_arr.getMatVector(inputs);
 
         const auto &input = inputs[0];
-        const auto input_shape = shape(input);
+        auto input_shape = shape(input);
+        if (const_input_1d) {
+            input_shape = {input_shape[0]};
+        }
 
         auto& moreDimension = input_shape.size() > target_shape.size() ? input_shape : target_shape;
         auto& lessDimension = input_shape.size() <= target_shape.size() ? input_shape : target_shape;
@@ -103,11 +113,22 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        cv::broadcast(inputs[0], target_shape, outputs[0]);
+        if (const_input_1d) {
+            const char *data = inputs[0].ptr<const char>();
+            int total = std::accumulate(target_shape.begin(), target_shape.end() - 1, 1, std::multiplies<int>());
+            char *output = outputs[0].ptr<char>();
+            int step = target_shape.back() * outputs[0].elemSize();
+            for (int i = 0; i < total; i++) {
+                std::memcpy(output + i * step, data, step);
+            }
+        } else {
+            cv::broadcast(inputs[0], target_shape, outputs[0]);
+        }
     }
 
 private:
     MatShape target_shape;
+    bool const_input_1d;
 };
 
 Ptr<ExpandLayer> ExpandLayer::create(const LayerParams &params) {

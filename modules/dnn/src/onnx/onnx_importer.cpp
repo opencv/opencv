@@ -2319,6 +2319,14 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
     layerParams.set("shape", DictValue::arrayInt(mat_input_shape.ptr<int>(), mat_input_shape.total()));
 
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end()) {
+        bool const_input_1d = false;
+        if (constBlobsExtraInfo.find(node_proto.input(0)) != constBlobsExtraInfo.end()) {
+            if (getBlobExtraInfo(node_proto, 0).real_ndims == 1) {
+                const_input_1d = true;
+            }
+        }
+        layerParams.set("const_input_1d", const_input_1d);
+
         Mat input = getBlob(node_proto, 0);
         std::vector<Mat> inputs, expanded;
         inputs.push_back(input);
