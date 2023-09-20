@@ -11,11 +11,11 @@ from tests_common import NewOpenCVTests
 class lineiterator_test(NewOpenCVTests):
 
     def test_lineiterator(self):
-
+        n = 10
         p1 = (0, 0)
-        p2 = (10, 10)
+        p2 = (n, n)
         d1 = cv.LineIterator(p1, p2)
-        self.assertEqual(d1.count, 11)
+        self.assertEqual(d1.count, n + 1)
         count = 0
         for p in d1:
             self.assertEqual(p, (count, count))
