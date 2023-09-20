@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 
 #include <opencv2/calib3d.hpp>
+#include <opencv2/core/utils/logger.hpp>
 #include "opencv2/objdetect/charuco_detector.hpp"
 #include "aruco_utils.hpp"
 
@@ -26,12 +27,13 @@ struct CharucoDetector::CharucoDetectorImpl {
     bool checkBoard(InputArrayOfArrays markerCorners, InputArray markerIds, InputArray charucoCorners, InputArray charucoIds) {
         vector<Mat> mCorners;
         markerCorners.getMatVector(mCorners);
-        Mat mIds = markerIds.getMat();
+        const Mat& mIds = markerIds.getMat();
 
-        Mat chCorners = charucoCorners.getMat();
-        Mat chIds = charucoIds.getMat();
+        const Mat& chCorners = charucoCorners.getMat();
+        const Mat& chIds = charucoIds.getMat();
+        const vector<int>& boardIds = board.getIds();
 
-        vector<vector<int> > nearestMarkerIdx = board.getNearestMarkerIdx();
+        const vector<vector<int> >& nearestMarkerIdx = board.getNearestMarkerIdx();
         vector<Point2f> distance(board.getNearestMarkerIdx().size(), Point2f(0.f, std::numeric_limits<float>::max()));
         // distance[i].x: max distance from the i-th charuco corner to charuco corner-forming markers.
         // The two charuco corner-forming markers of i-th charuco corner are defined in getNearestMarkerIdx()[i]
@@ -41,13 +43,19 @@ struct CharucoDetector::CharucoDetectorImpl {
             Point2f charucoCorner(chCorners.ptr<Point2f>(0)[i]);
             for (size_t j = 0ull; j < mIds.total(); j++) {
                 int idMaker = mIds.ptr<int>(0)[j];
+                // skip the check if the marker is not in the current board.
+                if (find(boardIds.begin(), boardIds.end(), idMaker) == boardIds.end())
+                    continue;
                 Point2f centerMarker((mCorners[j].ptr<Point2f>(0)[0] + mCorners[j].ptr<Point2f>(0)[1] +
                                       mCorners[j].ptr<Point2f>(0)[2] + mCorners[j].ptr<Point2f>(0)[3]) / 4.f);
                 float dist = sqrt(normL2Sqr<float>(centerMarker - charucoCorner));
-                // check distance from the charuco corner to charuco corner-forming markers
-                if (nearestMarkerIdx[chId][0] == idMaker || nearestMarkerIdx[chId][1] == idMaker) {
-                    int nearestCornerId =  nearestMarkerIdx[chId][0] == idMaker ? board.getNearestMarkerCorners()[chId][0] : board.getNearestMarkerCorners()[chId][1];
+                // nearestMarkerIdx contains for each charuco corner, nearest marker index in ids array
+                const int nearestMarkerId1 = boardIds[nearestMarkerIdx[chId][0]];
+                const int nearestMarkerId2 = boardIds[nearestMarkerIdx[chId][1]];
+                if (nearestMarkerId1 == idMaker || nearestMarkerId2 == idMaker) {
+                    int nearestCornerId = nearestMarkerId1 == idMaker ? board.getNearestMarkerCorners()[chId][0] : board.getNearestMarkerCorners()[chId][1];
                     Point2f nearestCorner = mCorners[j].ptr<Point2f>(0)[nearestCornerId];
+                    // distToNearest: distance from the charuco corner to charuco corner-forming markers
                     float distToNearest = sqrt(normL2Sqr<float>(nearestCorner - charucoCorner));
                     distance[chId].x = max(distance[chId].x, distToNearest);
                     // check that nearestCorner is nearest point
@@ -363,6 +371,7 @@ void CharucoDetector::detectBoard(InputArray image, OutputArray charucoCorners, 
                                   InputOutputArrayOfArrays markerCorners, InputOutputArray markerIds) const {
     charucoDetectorImpl->detectBoard(image, charucoCorners, charucoIds, markerCorners, markerIds);
     if (charucoDetectorImpl->checkBoard(markerCorners, markerIds, charucoCorners, charucoIds) == false) {
+        CV_LOG_DEBUG(NULL, "ChArUco board is built incorrectly");
         charucoCorners.release();
         charucoIds.release();
     }
