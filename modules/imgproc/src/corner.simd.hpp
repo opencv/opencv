@@ -60,8 +60,12 @@ static v_float32x8 v_sqrt(const v_float32x8& vec) {
     return v_float32x8(_mm256_sqrt_ps(vec.val));
 }
 
+static v_float32x8 v_muladd(const v_float32x8& v1, const v_float32x8& v2, const v_float32x8& v3) {
+    return (v1 * v2) + v3;
+}
+
 void doCalcMinEigenValLine(int& j, int width, const float* cov_x2, const float* cov_xy, const float* cov_y2, float* dst) {
-    calcMinEigenValLine<v_float32x8, v_load, v_store, v_setall, v_sqrt>(j, width, v_float32x8::nlanes, cov_x2, cov_xy, cov_y2, dst);
+    calcMinEigenValLine<v_float32x8, v_load, v_store, v_setall, v_sqrt, v_muladd>(j, width, v_float32x8::nlanes, cov_x2, cov_xy, cov_y2, dst);
 }
 
 void doCalcHarrisLine(int& j, int width, const float* cov_x2, const float* cov_xy, const float* cov_y2, float* dst, double k) {
