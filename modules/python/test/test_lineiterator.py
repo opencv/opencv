@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import sys
 import cv2 as cv
+import unittest
 
 from tests_common import NewOpenCVTests
 
@@ -25,6 +26,14 @@ try:
                 self.assertEqual(p, (count, count))
                 count = count + 1
             self.assertEqual(d1.count, d1.iter)
+            count = 0
+            d1 = iter(cv.LineIterator(p1, p2))
+            d2 = iter(cv.LineIterator(p2, p1))
+            for p1, p2 in zip(d1, d2):
+                self.assertEqual(p1, (count, count))
+                self.assertEqual(p2, (d2.count - count - 1, d2.count -count -1))
+                count = count + 1
+            self.assertEqual(d1.count, d1.iter)
 
 except unittest.SkipTest as e:
 
@@ -38,7 +47,6 @@ except unittest.SkipTest as e:
             pass
 
     pass
-
 
 
 if __name__ == '__main__':
