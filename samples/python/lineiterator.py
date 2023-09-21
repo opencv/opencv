@@ -29,12 +29,10 @@ pt2 = (30, 200)
 h = cv.LineIterator(pt1, pt2)
 
 for pt in iter(h):
-    print(pt)
     img[pt[1], pt[0]] = [255, 0, 0]
 cv.imshow("Line", img)
 cv.waitKey()
 for pt in iter(h):
-    print(pt)
     img[pt[1], pt[0]] = [0, 0, 0]
 cv.imshow("Line", img)
 cv.waitKey()
