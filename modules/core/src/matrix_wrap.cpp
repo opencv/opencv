@@ -1662,6 +1662,14 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         return;
     }
 
+    if ((k == CUDA_GPU_MAT || k == CUDA_HOST_MEM) && d <= 2 &&
+        i < 0 && !allowTransposed && fixedDepthMask == 0)
+    {
+        create((d < 2 ? 1 : sizes[0]), (d < 1 ? 1 : sizes[d > 1]),
+                mtype, i, allowTransposed, fixedDepthMask);
+        return;
+    }
+
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
