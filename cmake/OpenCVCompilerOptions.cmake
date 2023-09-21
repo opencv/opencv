@@ -105,14 +105,14 @@ elseif(CV_ICC)
       add_extra_compiler_option("-fp-model precise")
     endif()
   endif()
-elseif(CV_GCC OR CV_CLANG)
+elseif(CV_GCC OR CV_CLANG OR CV_ICX)
   if(ENABLE_FAST_MATH)
     add_extra_compiler_option(-ffast-math)
     add_extra_compiler_option(-fno-finite-math-only)
   endif()
 endif()
 
-if(CV_GCC OR CV_CLANG)
+if(CV_GCC OR CV_CLANG OR CV_ICX)
   # High level of warnings.
   add_extra_compiler_option(-W)
   if (NOT MSVC)
@@ -336,7 +336,7 @@ if(COMMAND ocv_compiler_optimization_options_finalize)
 endif()
 
 # set default visibility to hidden
-if((CV_GCC OR CV_CLANG)
+if((CV_GCC OR CV_CLANG OR CV_ICX)
     AND NOT MSVC
     AND NOT OPENCV_SKIP_VISIBILITY_HIDDEN
     AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fvisibility")
