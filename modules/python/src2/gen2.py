@@ -109,7 +109,7 @@ gen_template_set_prop_from_map = Template("""
     if( PyMapping_HasKeyString(src, (char*)"$propname") )
     {
         tmp = PyMapping_GetItemString(src, (char*)"$propname");
-        ok = tmp && pyopencv_to_safe(tmp, dst.$propname, ArgInfo("$propname", false));
+        ok = tmp && pyopencv_to_safe(tmp, dst.$propname, ArgInfo("$propname", 0));
         Py_DECREF(tmp);
         if(!ok) return false;
     }""")
@@ -163,7 +163,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         PyErr_SetString(PyExc_TypeError, "Cannot delete the ${member} attribute");
         return -1;
     }
-    return pyopencv_to_safe(value, p->v${access}${member}, ArgInfo("value", false)) ? 0 : -1;
+    return pyopencv_to_safe(value, p->v${access}${member}, ArgInfo("value", 0)) ? 0 : -1;
 }
 """)
 
@@ -181,7 +181,7 @@ static int pyopencv_${name}_set_${member}(pyopencv_${name}_t* p, PyObject *value
         failmsgp("Incorrect type of object (must be '${name}' or its derivative)");
         return -1;
     }
-    return pyopencv_to_safe(value, _self_${access}${member}, ArgInfo("value", false)) ? 0 : -1;
+    return pyopencv_to_safe(value, _self_${access}${member}, ArgInfo("value", 0)) ? 0 : -1;
 }
 """)
 
@@ -493,6 +493,10 @@ class ArgInfo(object):
         return '/O' not in self._modifiers
 
     @property
+    def arithm_op_src_arg(self):
+        return '/AOS' in self._modifiers
+
+    @property
     def outputarg(self):
         return '/O' in self._modifiers or '/IO' in self._modifiers
 
@@ -517,7 +521,9 @@ class ArgInfo(object):
                            "UMat", "vector_UMat"] # or self.tp.startswith("vector")
 
     def crepr(self):
-        return "ArgInfo(\"%s\", %d)" % (self.name, self.outputarg)
+        arg  = 0x01 if self.outputarg else 0x0
+        arg += 0x02 if self.arithm_op_src_arg else 0x0
+        return "ArgInfo(\"%s\", %d)" % (self.name, arg)
 
 
 def find_argument_class_info(argument_type, function_namespace,

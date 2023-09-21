@@ -734,6 +734,7 @@ VP8SimpleFilterFunc VP8SimpleHFilter16i;
 void (*VP8DitherCombine8x8)(const uint8_t* dither, uint8_t* dst,
                             int dst_stride);
 
+extern VP8CPUInfo VP8GetCPUInfo;
 extern void VP8DspInitSSE2(void);
 extern void VP8DspInitSSE41(void);
 extern void VP8DspInitNEON(void);
@@ -807,10 +808,10 @@ WEBP_DSP_INIT_FUNC(VP8DspInit) {
 
   // If defined, use CPUInfo() to overwrite some pointers with faster versions.
   if (VP8GetCPUInfo != NULL) {
-#if defined(WEBP_USE_SSE2)
+#if defined(WEBP_HAVE_SSE2)
     if (VP8GetCPUInfo(kSSE2)) {
       VP8DspInitSSE2();
-#if defined(WEBP_USE_SSE41)
+#if defined(WEBP_HAVE_SSE41)
       if (VP8GetCPUInfo(kSSE4_1)) {
         VP8DspInitSSE41();
       }
@@ -834,7 +835,7 @@ WEBP_DSP_INIT_FUNC(VP8DspInit) {
 #endif
   }
 
-#if defined(WEBP_USE_NEON)
+#if defined(WEBP_HAVE_NEON)
   if (WEBP_NEON_OMIT_C_CODE ||
       (VP8GetCPUInfo != NULL && VP8GetCPUInfo(kNEON))) {
     VP8DspInitNEON();

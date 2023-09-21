@@ -194,7 +194,7 @@ public:
         std::vector<MatShape> inpShapes(nodes.size());
         std::vector<MatShape> outShapes, internals;
         for (int i = 0; i < nodes.size(); ++i) {
-            std::vector<size_t> shape = nodes[i].dynamicCast<InfEngineNgraphNode>()->node->get_shape();
+            std::vector<size_t> shape = nodes[i].dynamicCast<InfEngineNgraphNode>()->node.get_shape();
             inpShapes[i] = std::vector<int>(shape.begin(), shape.end());
         }
         getMemoryShapes(inpShapes, 1, outShapes, internals);
@@ -213,7 +213,7 @@ public:
             std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &newShape),
             true
         );
-        if (indices->get_element_type() != ngraph::element::i32 && indices->get_element_type() != ngraph::element::i64) {
+        if (indices.get_element_type() != ngraph::element::i32 && indices.get_element_type() != ngraph::element::i64) {
             indices = std::make_shared<ngraph::op::Convert>(indices, ngraph::element::i64);
         }
 

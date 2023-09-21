@@ -52,12 +52,12 @@
               if (window.cv instanceof Promise) {
                 window.cv.then((target) => {
                    window.cv = target;
-                   //console.log(cv.getBuildInformation());
+                   console.log(cv.getBuildInformation());
                    QUnit.start();
                 })
               } else {
                 // for backward compatible
-                // console.log(cv.getBuildInformation());
+                console.log(cv.getBuildInformation());
                 QUnit.start();
               }
             },
@@ -108,6 +108,7 @@
         <script type="application/javascript" async src="opencv.js" onerror="opencvjs_LoadError()"></script>
         <script type="application/javascript" src="test_mat.js"></script>
         <script type="application/javascript" src="test_utils.js"></script>
+        <script type="application/javascript" src="test_core.js"></script>
         <script type="application/javascript" src="test_imgproc.js"></script>
         <script type="application/javascript" src="test_objdetect.js"></script>
         <script type="application/javascript" src="test_video.js"></script>

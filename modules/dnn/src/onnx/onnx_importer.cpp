@@ -1947,73 +1947,45 @@ void ONNXImporter::parseBatchNormalization(LayerParams& layerParams, const openc
     addLayer(layerParams, node_proto);
 }
 
-// A * B + C = Y, we require that the dimension of A is [m, k], and the dimension of B is [n, k].
-// And the dim of output Y is [m, n]
-void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+void ONNXImporter::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
-    CV_Assert(node_proto.input_size() >= 2);
-    layerParams.type = "InnerProduct";
-    int transA = layerParams.get<int>("transA", 0);
-    layerParams.set("transA", transA == 1);
+    auto node_proto = node_proto_;
+    layerParams.type = "Gemm";
+    CV_CheckGE(node_proto.input_size(), 2, "DNN/ONNXImporter: Gemm requires at least two inputs");
+    CV_CheckLE(node_proto.input_size(), 3, "DNN/ONNXImporter: Gemm have at most three inputs.");
 
-    if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
-    {
-        Mat inputBuf = getBlob(node_proto, 0);
-
-        LayerParams constParams;
-        constParams.name = node_proto.input(0);
-        constParams.type = "Const";
-        constParams.blobs.push_back(inputBuf);
-
-        opencv_onnx::NodeProto proto;
-        proto.add_output(constParams.name);
-        addLayer(constParams, proto);
-    }
-
-    int transB = layerParams.get<int>("transB", 0);
-    int secondInpDims;
-    if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
-    {
-        Mat weights = getBlob(node_proto, 1);
-        secondInpDims = weights.dims;
-
-        if (transA == 0) // optimized barnch, for now, we can only optimize the Gemm when transA = 0.
-        {
-            if (transB == 0)
-            {
-                transpose(weights, weights);
-            }
-            layerParams.set("transB", false);
-            layerParams.blobs.push_back(weights);
-            layerParams.set("num_output", layerParams.blobs[0].size[0]);
+    for (int i = 0; i < node_proto.input_size(); ++i) {
+        if (i == 2) {
+            layerParams.set("have_bias", true);
         }
-        else // no optimized branch, TODO! optimize when the transA==1.
-        {
-            LayerParams constParams;
-            constParams.name = node_proto.input(1);
-            constParams.type = "Const";
-            constParams.blobs.push_back(weights);
+        if (constBlobs.find(node_proto.input(i)) == constBlobs.end()) {
+            continue;
+        }
 
-            opencv_onnx::NodeProto proto;
-            proto.add_output(constParams.name);
-            addLayer(constParams, proto);
-            layerParams.set("transB", transB == 1);
+        if (i == 2 && constBlobsExtraInfo.find(node_proto.input(2)) != constBlobsExtraInfo.end()) {
+            layerParams.set("real_ndims_C", getBlobExtraInfo(node_proto, 2).real_ndims);
+        }
+
+        Mat blob = getBlob(node_proto, i);
+
+        if (i == 0) { // A, always as inputs without prepacking
+            LayerParams const_A_params;
+            const_A_params.name = layerParams.name + "/const_A";
+            const_A_params.type = "Const";
+            const_A_params.blobs.push_back(blob);
+
+            opencv_onnx::NodeProto const_node_proto;
+            const_node_proto.add_output(const_A_params.name);
+            addLayer(const_A_params, const_node_proto);
+            node_proto.set_input(0, const_A_params.name);
+        } else { // B or C
+            std::string const_params_name = i == 1 ? "B" : "C";
+
+            layerParams.blobs.push_back(blob);
+            layerParams.set(cv::format("const%s", const_params_name.c_str()), true);
         }
     }
-    else
-    {
-        layerParams.set("transB", transB == 1);
-        secondInpDims = outShapes[node_proto.input(1)].size();
-    }
 
-    if (node_proto.input_size() == 3)
-    {
-        Mat bias = getBlob(node_proto, 2);
-        layerParams.blobs.push_back(bias);
-    }
-
-    layerParams.set("bias_term", node_proto.input_size() == 3);
-    layerParams.set("is_matmul", secondInpDims > 2);
     addLayer(layerParams, node_proto);
 }
 

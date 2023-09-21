@@ -1672,6 +1672,10 @@ else()
   endif()
 endif()
 
+if(BUILD_opencv_dnn AND OPENCV_DNN_BACKEND_DEFAULT)
+    status("    Default DNN backend:" ${OPENCV_DNN_BACKEND_DEFAULT})
+endif()
+
 if(WITH_EIGEN OR HAVE_EIGEN)
   status("    Eigen:"      HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 endif()

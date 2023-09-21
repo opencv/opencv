@@ -480,7 +480,7 @@ public:
         if (type != SPATIAL_NRM) {
             axes = {1};
         } else {
-            axes.resize(ieInpNode->get_shape().size() - 2);
+            axes.resize(ieInpNode.get_shape().size() - 2);
             std::iota(axes.begin(), axes.end(), 2);
         }
         auto ngraph_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes.size()}, axes.data());

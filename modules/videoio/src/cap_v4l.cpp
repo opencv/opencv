@@ -2155,6 +2155,7 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
         }else{
             convert_rgb = false;
             releaseFrame();
+            v4l2_create_frame();
             return true;
         }
     case cv::CAP_PROP_FOURCC:
