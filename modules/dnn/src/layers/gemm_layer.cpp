@@ -294,11 +294,11 @@ public:
         if (nodes.size() == 2)
         {
             auto& inp2 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, inp2, transA, transB);
+            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, inp2, trans_a, trans_b);
         }
         else
         {
-            std::vector<int> shape(1 + normalize_axis(axis, ieInpNode->get_shape().size()), 0);
+            std::vector<int> shape(1 + normalize_axis(axis, ieInpNode.get_shape().size()), 0);
             shape[shape.size() - 1] = -1;
             auto inp = std::make_shared<ngraph::op::v1::Reshape>(
                 ieInpNode,
@@ -308,7 +308,7 @@ public:
 
             std::vector<size_t> weight_shape{(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
             auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, weight_shape, blobs[0].data);
-            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, transA, transB);
+            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, trans_a, trans_b);
         }
 
         if (have_bias && const_C) {
