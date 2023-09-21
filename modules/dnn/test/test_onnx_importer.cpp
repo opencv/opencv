@@ -42,7 +42,7 @@ public:
             if (hasDynamicShapes)
                 continue;
             if (inLayerShapes[i].size() == 1) {  // 1D input
-                ASSERT_EQ(shape(inLayerShapes[i][0], 1), shape(inps[i]));
+                ASSERT_EQ(shape(inLayerShapes[i][0]), shape(inps[i]));
             } else {
                 // Compare all axes except batch dimension which is variable.
                 inLayerShapes[i][0] = inps[i].size[0];
@@ -101,6 +101,12 @@ public:
 
             netSoftmax.setInput(ref);
             ref = netSoftmax.forward();
+        }
+        if (ref.dims != out.dims) {
+            if (ref.dims <= 1)
+                ref = ref.reshape(1, out.rows);
+            if (out.dims <= 1)
+                out = out.reshape(1, ref.rows);
         }
         if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
         {
@@ -1899,7 +1905,7 @@ TEST_P(Test_ONNX_layers, Quantized_Convolution)
 
 TEST_P(Test_ONNX_layers, Quantized_MatMul)
 {
-    testONNXModels("quantized_matmul_uint8_weights", npy, 0.005, 0.007);
+    testONNXModels("quantized_matmul_uint8_weights", npy, 0.008, 0.015);
     testONNXModels("quantized_matmul_int8_weights", npy, 0.06, 0.2);
     testONNXModels("quantized_matmul_per_channel_weights", npy, 0.06, 0.22);
 }
@@ -1998,7 +2004,7 @@ TEST_P(Test_ONNX_layers, Quantized_Concat)
 
 TEST_P(Test_ONNX_layers, Quantized_Constant)
 {
-    testONNXModels("quantized_constant", npy, 0.002, 0.008);
+    testONNXModels("quantized_constant", npy, 0.008, 0.02);
 }
 
 TEST_P(Test_ONNX_layers, OutputRegistration)

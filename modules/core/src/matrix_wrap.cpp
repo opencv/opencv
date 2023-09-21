@@ -43,8 +43,9 @@ Mat _InputArray::getMat_(int i) const
         CV_Assert( i < 0 );
         int t = CV_MAT_TYPE(flags);
         const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
+        int v_size = size().width;
 
-        return !v.empty() ? Mat(size(), t, (void*)&v[0]) : Mat();
+        return !v.empty() ? Mat(1, &v_size, t, (void*)&v[0]) : Mat();
     }
 
     if( k == STD_BOOL_VECTOR )
@@ -55,7 +56,7 @@ Mat _InputArray::getMat_(int i) const
         int j, n = (int)v.size();
         if( n == 0 )
             return Mat();
-        Mat m(1, n, t);
+        Mat m(1, &n, t);
         uchar* dst = m.data;
         for( j = 0; j < n; j++ )
             dst[j] = (uchar)v[j];
@@ -71,8 +72,9 @@ Mat _InputArray::getMat_(int i) const
         const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
         CV_Assert( 0 <= i && i < (int)vv.size() );
         const std::vector<uchar>& v = vv[i];
+        int v_size = size(i).width;
 
-        return !v.empty() ? Mat(size(i), t, (void*)&v[0]) : Mat();
+        return !v.empty() ? Mat(1, &v_size, t, (void*)&v[0]) : Mat();
     }
 
     if( k == STD_VECTOR_MAT )
@@ -165,9 +167,10 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
         const Mat& m = *(const Mat*)obj;
         int n = (int)m.size[0];
         mv.resize(n);
+        CV_Assert(m.dims >= 2);
 
         for( int i = 0; i < n; i++ )
-            mv[i] = m.dims == 2 ? Mat(1, m.cols, m.type(), (void*)m.ptr(i)) :
+            mv[i] = m.dims <= 2 ? Mat(1, m.cols, m.type(), (void*)m.ptr(i)) :
                 Mat(m.dims-1, &m.size[1], m.type(), (void*)m.ptr(i), &m.step[1]);
         return;
     }
@@ -394,13 +397,17 @@ Size _InputArray::size(int i) const
     if( k == MAT )
     {
         CV_Assert( i < 0 );
-        return ((const Mat*)obj)->size();
+        const Mat* m = (const Mat*)obj;
+        CV_Assert(m->dims <= 2);
+        return Size(m->cols, m->rows);
     }
 
     if( k == UMAT )
     {
         CV_Assert( i < 0 );
-        return ((const UMat*)obj)->size();
+        const UMat* m = (const UMat*)obj;
+        CV_Assert(m->dims <= 2);
+        return Size(m->cols, m->rows);
     }
 
     if (k == MATX)
@@ -562,6 +569,15 @@ int _InputArray::sizend(int* arrsz, int i) const
             for(j = 0; j < d; j++)
                 arrsz[j] = m.size.p[j];
     }
+    else if (k == STD_VECTOR && i < 0 )
+    {
+        Size sz2d = size();
+        d = 1;
+        if(arrsz)
+        {
+            arrsz[0] = sz2d.width;
+        }
+    }
     else
     {
         CV_CheckLE(dims(i), 2, "Not supported");
@@ -636,7 +652,7 @@ int _InputArray::dims(int i) const
     if( k == STD_VECTOR || k == STD_BOOL_VECTOR )
     {
         CV_Assert( i < 0 );
-        return 2;
+        return 1;
     }
 
     if( k == NONE )
@@ -1268,14 +1284,7 @@ void _OutputArray::create(int _rows, int _cols, int mtype, int i, bool allowTran
 void _OutputArray::create(int d, const int* sizes, int mtype, int i,
                           bool allowTransposed, _OutputArray::DepthMask fixedDepthMask) const
 {
-    int sizebuf[2];
-    if(d == 1)
-    {
-        d = 2;
-        sizebuf[0] = sizes[0];
-        sizebuf[1] = 1;
-        sizes = sizebuf;
-    }
+    int size0 = d > 0 ? sizes[0] : 1, size1 = d > 1 ? sizes[1] : 1;
     _InputArray::KindFlag k = kind();
     mtype = CV_MAT_TYPE(mtype);
 
@@ -1284,10 +1293,10 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         CV_Assert( i < 0 );
         Mat& m = *(Mat*)obj;
         CV_Assert(!(m.empty() && fixedType() && fixedSize()) && "Can't reallocate empty Mat with locked layout (probably due to misused 'const' modifier)");
-        if (allowTransposed && !m.empty() &&
-            d == 2 && m.dims == 2 &&
-            m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] &&
-            m.isContinuous())
+        if (!m.empty() && d <= 2 && m.dims <= 2 &&
+            m.type() == mtype &&
+            ((m.rows == size0 && m.cols == size1) ||
+            (allowTransposed && m.rows == size1 && m.cols == size0 && m.isContinuous())))
         {
             return;
         }
@@ -1314,10 +1323,10 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         CV_Assert( i < 0 );
         UMat& m = *(UMat*)obj;
         CV_Assert(!(m.empty() && fixedType() && fixedSize()) && "Can't reallocate empty UMat with locked layout (probably due to misused 'const' modifier)");
-        if (allowTransposed && !m.empty() &&
-            d == 2 && m.dims == 2 &&
-            m.type() == mtype && m.rows == sizes[1] && m.cols == sizes[0] &&
-            m.isContinuous())
+        if (!m.empty() && d <= 2 && m.dims <= 2 &&
+            m.type() == mtype &&
+            ((m.rows == size0 && m.cols == size1) ||
+            (allowTransposed && m.rows == size1 && m.cols == size0 && m.isContinuous())))
         {
             return;
         }
@@ -1370,8 +1379,8 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
 
     if( k == STD_VECTOR || k == STD_VECTOR_VECTOR )
     {
-        CV_Assert( d == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
-        size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0;
+        CV_Assert( d <= 2 && (size0 == 1 || size1 == 1 || size0*size1 == 0) );
+        size_t len = size0*size1 > 0 ? size0 + size1 - 1 : 0;
         std::vector<uchar>* v = (std::vector<uchar>*)obj;
 
         if( k == STD_VECTOR_VECTOR )
@@ -1650,6 +1659,14 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         }
 
         m.create(d, sizes, mtype);
+        return;
+    }
+
+    if ((k == CUDA_GPU_MAT || k == CUDA_HOST_MEM) && d <= 2 &&
+        i < 0 && !allowTransposed && fixedDepthMask == 0)
+    {
+        create((d < 2 ? 1 : sizes[0]), (d < 1 ? 1 : sizes[d > 1]),
+                mtype, i, allowTransposed, fixedDepthMask);
         return;
     }
 

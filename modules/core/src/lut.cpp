@@ -81,7 +81,7 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     int lcn = _lut.channels(), dcn = _src.channels(), ddepth = _lut.depth();
 
     UMat src = _src.getUMat(), lut = _lut.getUMat();
-    _dst.create(src.size(), CV_MAKETYPE(ddepth, dcn));
+    _dst.createSameSize(src, CV_MAKETYPE(ddepth, dcn));
     UMat dst = _dst.getUMat();
     int kercn = lcn == 1 ? std::min(4, ocl::predictOptimalVectorWidth(_src, _dst)) : dcn;
 
@@ -371,7 +371,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
                ocl_LUT(_src, _lut, _dst))
 
     Mat src = _src.getMat(), lut = _lut.getMat();
-    _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
+    _dst.createSameSize(_src, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_TABLE_LOOKUP>(src.cols, src.rows),

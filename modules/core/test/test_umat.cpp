@@ -1452,4 +1452,16 @@ TEST(UMat, exceptions_refcounts_issue_20594)
     umat1.u->handle = original_handle;
 }
 
+TEST(UMat, copy_scalar)
+{
+    Mat m(0, nullptr, CV_32F), m2;
+    m.at<float>(0) = 5;
+    UMat um;
+    m.copyTo(um);
+    um.copyTo(m2);
+    EXPECT_EQ(0, m2.dims);
+    EXPECT_EQ(1, m2.cols);
+    EXPECT_EQ(5.f, m2.at<float>(0));
+}
+
 } } // namespace opencv_test::ocl

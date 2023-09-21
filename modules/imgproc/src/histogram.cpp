@@ -1222,9 +1222,10 @@ static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32
     if (k1.empty())
         return false;
 
-    _hist.create(BINS, 1, ddepth);
+    int hsz = BINS;
+    _hist.create(1, &hsz, ddepth);
     UMat src = _src.getUMat(), ghist(1, BINS * compunits, CV_32SC1),
-            hist = _hist.getUMat();
+            hist = _hist.getUMat().reshape(1, hsz);
 
     k1.args(ocl::KernelArg::ReadOnly(src),
             ocl::KernelArg::PtrWriteOnly(ghist), (int)src.total());
@@ -1622,7 +1623,12 @@ void cv::calcBackProject( const Mat* images, int nimages, const int* channels,
     std::vector<int> deltas;
     std::vector<double> uniranges;
     Size imsize;
-    int dims = hist.dims == 2 && hist.size[1] == 1 ? 1 : hist.dims;
+    if (hist.dims == 2 && (hist.rows == 1 || hist.cols == 1)) {
+        CV_Assert(hist.isContinuous());
+        std::vector<int> hist_size = {hist.rows + hist.cols - 1};
+        hist = hist.reshape(1, hist_size);
+    }
+    int dims = hist.dims;
 
     CV_Assert( dims > 0 && !hist.empty() );
     _backProject.create( images[0].size(), images[0].depth() );
@@ -1889,6 +1895,7 @@ static bool ocl_calcBackProject( InputArrayOfArrays _images, std::vector<int> ch
         UMat lut(1, (int)lsize, CV_32SC1);
         UMat hist = _hist.getUMat();
         UMat uranges; Mat(ranges, false).copyTo(uranges);
+        hist = hist.reshape(1, hist.rows + hist.cols-1);
 
         lutk.args(ocl::KernelArg::ReadOnlyNoSize(hist), hist.rows,
                   ocl::KernelArg::PtrWriteOnly(lut), scale, ocl::KernelArg::PtrReadOnly(uranges));

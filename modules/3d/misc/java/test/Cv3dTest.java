@@ -549,7 +549,8 @@ public class Cv3dTest extends OpenCVTestCase {
 
         Cv3d.undistortPoints(src, dst, cameraMatrix, distCoeffs);
 
-        assertEquals(src.size(), dst.size());
+        assertEquals(src.cols(), dst.rows());
+        assertEquals(src.rows(), dst.cols());
         for(int i=0; i<src.toList().size(); i++) {
             //Log.d("UndistortPoints", "s="+src.get(i)+", d="+dst.get(i));
             assertTrue(src.toList().get(i).equals(dst.toList().get(i)));

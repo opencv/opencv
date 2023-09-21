@@ -68,8 +68,8 @@ TEST(Imgproc_Hist_Calc, calcHist_regression_11544)
 
     for(int i = 0; i < 1000; i++)
     {
-        EXPECT_EQ(hist1.at<float>(i, 0), hist1_opt.at<float>(i, 0)) << i;
-        EXPECT_EQ(hist2.at<float>(i, 0), hist2_opt.at<float>(i, 0)) << i;
+        EXPECT_EQ(hist1.at<float>(i), hist1_opt.at<float>(i)) << i;
+        EXPECT_EQ(hist2.at<float>(i), hist2_opt.at<float>(i)) << i;
     }
 }
 

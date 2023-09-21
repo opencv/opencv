@@ -1762,7 +1762,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
     size_t esz = src.elemSize();
     size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
 
-    _dst.create(src.dims, src.size, CV_8UC1);
+    _dst.createSameSize(_src, CV_8UC1);
     Mat dst = _dst.getMat();
     InRangeFunc func = getInRangeFunc(depth);
 

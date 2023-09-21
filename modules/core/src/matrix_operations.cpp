@@ -35,16 +35,18 @@ void cv::swap( Mat& a, Mat& b )
     std::swap(a.step.buf[0], b.step.buf[0]);
     std::swap(a.step.buf[1], b.step.buf[1]);
 
-    if( a.step.p == b.step.buf )
+    if(a.dims <= 2)
     {
-        a.step.p = a.step.buf;
-        a.size.p = &a.rows;
+        int a_1d = a.dims <= 1;
+        a.step.p = &a.step.buf[a_1d];
+        a.size.p = &a.rows + a_1d;
     }
 
-    if( b.step.p == a.step.buf )
+    if(b.dims <= 2)
     {
-        b.step.p = b.step.buf;
-        b.size.p = &b.rows;
+        int b_1d = b.dims <= 1;
+        b.step.p = &b.step.buf[b_1d];
+        b.size.p = &b.rows + b_1d;
     }
 }
 
@@ -788,6 +790,15 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
         srcUMat = _src.getUMat();
 
     Mat src = _src.getMat();
+    if (src.dims <= 1) {
+        if (src.dims == 0) {
+            src.convertTo(_dst, dtype);
+            return;
+        }
+        CV_Assert(dim == 0);
+        dim = 1;
+    }
+
     _dst.create(dim == 0 ? 1 : src.rows, dim == 0 ? src.cols : 1, dtype);
     Mat dst = _dst.getMat(), temp = dst;
 
@@ -1255,7 +1266,7 @@ void cv::sort( InputArray _src, OutputArray _dst, int flags )
 
     Mat src = _src.getMat();
     CV_Assert( src.dims <= 2 && src.channels() == 1 );
-    _dst.create( src.size(), src.type() );
+    _dst.createSameSize( src, src.type() );
     Mat dst = _dst.getMat();
     CV_IPP_RUN_FAST(ipp_sort(src, dst, flags));
 
@@ -1279,7 +1290,7 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
     Mat dst = _dst.getMat();
     if( dst.data == src.data )
         _dst.release();
-    _dst.create( src.size(), CV_32S );
+    _dst.createSameSize( src, CV_32S );
     dst = _dst.getMat();
 
     CV_IPP_RUN_FAST(ipp_sortIdx(src, dst, flags));

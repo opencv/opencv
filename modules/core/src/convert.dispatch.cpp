@@ -107,10 +107,10 @@ void Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) cons
     }
 
     Mat src = *this;
-    if( dims <= 2 )
-        _dst.create( size(), _type );
-    else
-        _dst.create( dims, size, _type );
+    bool allowTransposed = dims == 1 ||
+        _dst.kind() == _InputArray::STD_VECTOR ||
+        (_dst.fixedSize() && _dst.dims() == 1);
+    _dst.create( dims, size, _type, -1, allowTransposed );
     Mat dst = _dst.getMat();
 
     BinaryFunc func = noScale ? getConvertFunc(sdepth, ddepth) : getConvertScaleFunc(sdepth, ddepth);

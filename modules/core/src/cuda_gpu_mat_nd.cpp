@@ -68,8 +68,20 @@ GpuMat GpuMatND::createGpuMatHeader() const
         return true;
     };
     CV_Assert(Effectively2D(*this));
+    int rows_, cols_ = dims >= 1 ? size[dims - 1] : 1;
+    size_t step_;
+    if (dims >= 2)
+    {
+        rows_ = size[dims - 2];
+        step_ = step[dims - 2];
+    }
+    else
+    {
+        rows_ = 1;
+        step_ = cols_ * elemSize();
+    }
 
-    return GpuMat(size[dims-2], size[dims-1], type(), getDevicePtr(), step[dims-2]);
+    return GpuMat(rows_, cols_, type(), getDevicePtr(), step_);
 }
 
 GpuMat GpuMatND::operator()(IndexArray idx, Range rowRange, Range colRange) const

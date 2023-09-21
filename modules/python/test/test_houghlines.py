@@ -31,7 +31,7 @@ class houghlines_test(NewOpenCVTests):
         src = self.get_sample(fn)
         dst = cv.Canny(src, 50, 200)
 
-        lines = cv.HoughLinesP(dst, 1, math.pi/180.0, 40, np.array([]), 50, 10)[:,0,:]
+        lines = cv.HoughLinesP(dst, 1, math.pi/180.0, 40, np.array([]), 50, 10)[:,:]
 
         eps = 5
         testLines = [
@@ -65,8 +65,8 @@ class houghlines_test(NewOpenCVTests):
         self.assertGreater(float(matches_counter) / len(testLines), .7)
 
         lines_acc = cv.HoughLinesWithAccumulator(dst, rho=1, theta=np.pi / 180, threshold=150, srn=0, stn=0)
-        self.assertEqual(lines_acc[0,0,2], 192.0)
-        self.assertEqual(lines_acc[1,0,2], 187.0)
+        self.assertEqual(lines_acc[0,2], 192.0)
+        self.assertEqual(lines_acc[1,2], 187.0)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

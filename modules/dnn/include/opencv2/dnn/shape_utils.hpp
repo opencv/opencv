@@ -160,8 +160,8 @@ static inline MatShape shape(int a0, int a1=-1, int a2=-1, int a3=-1)
 
 static inline int total(const MatShape& shape, int start = -1, int end = -1)
 {
-    if (shape.empty())
-        return 0;
+    //if (shape.empty())
+    //    return 0;
 
     int dims = (int)shape.size();
 
@@ -240,9 +240,9 @@ static inline std::ostream& operator<<(std::ostream &out, const std::vector<_Tp>
 static inline
 int normalize_axis(int axis, int dims)
 {
-    CV_Check(axis, axis >= -dims && axis < dims, "");
-    axis = (axis < 0) ? (dims + axis) : axis;
-    CV_DbgCheck(axis, axis >= 0 && axis < dims, "");
+    CV_Assert(dims >= 0);
+    CV_Check(axis, axis >= -dims && axis <= dims, "");
+    axis = (unsigned)axis < (unsigned)dims ? axis : axis < 0 ? axis + dims : axis - dims;
     return axis;
 }
 
@@ -255,7 +255,7 @@ int normalize_axis(int axis, const MatShape& shape)
 static inline
 Range normalize_axis_range(const Range& r, int axisSize)
 {
-    if (r == Range::all())
+    if (r == Range::all() || r == Range(0, INT_MAX))
         return Range(0, axisSize);
     CV_CheckGE(r.start, 0, "");
     Range clamped(r.start,

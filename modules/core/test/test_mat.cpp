@@ -10,6 +10,7 @@
 #endif
 
 #include "opencv2/core/cuda.hpp"
+#include "opencv2/core/bindings_utils.hpp"
 
 namespace opencv_test { namespace {
 
@@ -1360,12 +1361,12 @@ TEST(Core_Mat, copyNx1ToVector)
     src.copyTo(ref_dst8);
     src.copyTo(dst8);
 
-    ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst8, cv::Mat_<uchar>(dst8));
+    ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst8, cv::Mat_<uchar>(dst8).reshape(1, 5));
 
     src.convertTo(ref_dst16, CV_16U);
     src.convertTo(dst16, CV_16U);
 
-    ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst16, cv::Mat_<ushort>(dst16));
+    ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst16, cv::Mat_<ushort>(dst16).reshape(1, 5));
 }
 
 TEST(Core_Matx, fromMat_)
@@ -1510,6 +1511,7 @@ TEST(Core_Mat_vector, copyTo_roi_row)
     {
         _dst.create(src.rows, src.cols, src.type());
         Mat dst = _dst.getMat();
+        dst = dst.reshape(dst.channels(), dst.rows);
         EXPECT_EQ(src.dims, dst.dims);
         EXPECT_EQ(src.cols, dst.cols);
         EXPECT_EQ(src.rows, dst.rows);
@@ -1780,7 +1782,8 @@ TEST(Mat_, range_based_for)
 TEST(Mat, from_initializer_list)
 {
     Mat A({1.f, 2.f, 3.f});
-    Mat_<float> B(3, 1); B << 1, 2, 3;
+    int n = 3;
+    Mat_<float> B(1, &n); B << 1, 2, 3;
     Mat_<float> C({3}, {1,2,3});
 
     ASSERT_EQ(A.type(), CV_32F);
@@ -1796,7 +1799,8 @@ TEST(Mat, from_initializer_list)
 TEST(Mat_, from_initializer_list)
 {
     Mat_<float> A = {1, 2, 3};
-    Mat_<float> B(3, 1); B << 1, 2, 3;
+    int n = 3;
+    Mat_<float> B(1, &n); B << 1, 2, 3;
     Mat_<float> C({3}, {1,2,3});
 
     ASSERT_DOUBLE_EQ(cvtest::norm(A, B, NORM_INF), 0.);
@@ -2375,10 +2379,11 @@ TEST(Mat, regression_18473)
 }
 
 // FITIT: remove DISABLE_ when 1D Mat is supported
-TEST(Mat1D, DISABLED_basic)
+TEST(Mat1D, basic)
 {
     std::vector<int> sizes { 100 };
     Mat m1(sizes, CV_8UC1, Scalar::all(5));
+    Mat m1_copy(sizes, CV_8UC1, Scalar::all(5));
     m1.at<uchar>(50) = 10;
     EXPECT_FALSE(m1.empty());
     ASSERT_EQ(1, m1.dims);
@@ -2402,7 +2407,7 @@ TEST(Mat1D, DISABLED_basic)
     {
         SCOPED_TRACE("reshape(1, 1)");
         Mat m = m1.reshape(1, 1);
-        EXPECT_EQ(1, m.dims);
+        EXPECT_EQ(2, m.dims);
         EXPECT_EQ(Size(100, 1), m.size());
     }
 
@@ -2414,10 +2419,12 @@ TEST(Mat1D, DISABLED_basic)
     }
 
     {
-        SCOPED_TRACE("reshape(1, {1, 100})");
-        Mat m = m1.reshape(1, {1, 100});
-        EXPECT_EQ(2, m.dims);
-        EXPECT_EQ(Size(100, 1), m.size());
+        SCOPED_TRACE("reshape(1, {10, 10}).reshape(1, {100})");
+        std::vector<int> newsize={100};
+        Mat m2 = m1.reshape(1, {10, 10});
+        Mat m3 = m2.reshape(1, newsize);
+        EXPECT_EQ(1, m3.dims);
+        EXPECT_EQ(Size(100, 1), m3.size());
     }
 
     {
@@ -2432,6 +2439,7 @@ TEST(Mat1D, DISABLED_basic)
         Mat m(5, 100, CV_8UC1, Scalar::all(0));
         const Mat row2D = m.row(2);
         EXPECT_NO_THROW(m1.copyTo(row2D));
+        EXPECT_NO_THROW(row2D.copyTo(m1_copy));
     }
 
     {
@@ -2452,16 +2460,19 @@ TEST(Mat1D, DISABLED_basic)
         SCOPED_TRACE("CvMatND");
         CvMatND c_mat = cvMatND(m1);
         EXPECT_EQ(2, c_mat.dims);
-        EXPECT_EQ(100, c_mat.dim[0].size);
-        EXPECT_EQ(1, c_mat.dim[1].size);
+        EXPECT_EQ(1, c_mat.dim[0].size);
+        EXPECT_EQ(100, c_mat.dim[1].size);
     }
 
     {
         SCOPED_TRACE("minMaxLoc");
         Point pt;
         minMaxLoc(m1, 0, 0, 0, &pt);
-        EXPECT_EQ(50, pt.x);
         EXPECT_EQ(0, pt.y);
+        EXPECT_EQ(50, pt.x);
+        minMaxLoc(m1_copy, 0, 0, 0, &pt);
+        EXPECT_EQ(0, pt.y);
+        EXPECT_EQ(50, pt.x);
     }
 }
 
@@ -2581,6 +2592,15 @@ TEST(Mat, Recreate1DMatWithSameMeta)
     m.dims = 1;
 
     EXPECT_NO_THROW(m.create(dims, depth));
+}
+
+TEST(InputArray, dumpEmpty)
+{
+    std::string s;
+    s = cv::utils::dumpInputArray(noArray());
+    EXPECT_EQ(s, "InputArray: noArray()");
+    s = cv::utils::dumpInputArray(Mat());
+    EXPECT_EQ(s, "InputArray: empty()=true kind=0x00010000 flags=0x01010000 total(-1)=0 dims(-1)=0 size(-1)=0x0 type(-1)=CV_8UC1");
 }
 
 }} // namespace

@@ -1248,14 +1248,20 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
         Mat(finalAcceptedIds).copyTo(_detectedIds);
         _copyVector2Output(finalAcceptedCorners, _detectedCorners);
 
+        vector<vector<Point2f> > rejectedCorners;
+        _copyInput2Vector(_rejectedCorners, rejectedCorners);
+
         // recalculate _rejectedCorners based on alreadyIdentified
         vector<vector<Point2f> > finalRejected;
-        for(unsigned int i = 0; i < alreadyIdentified.size(); i++) {
+        for(size_t i = 0; i < alreadyIdentified.size(); i++) {
             if(!alreadyIdentified[i]) {
-                finalRejected.push_back(_rejectedCorners.getMat(i).clone());
+                finalRejected.push_back(rejectedCorners[i]);
             }
         }
-        _copyVector2Output(finalRejected, _rejectedCorners);
+        rejectedCorners.clear();
+        for (size_t i = 0; i < finalRejected.size(); i++)
+            rejectedCorners.push_back(finalRejected[i]);
+        _copyVector2Output(rejectedCorners, _rejectedCorners);
 
         if(_recoveredIdxs.needed()) {
             Mat(recoveredIdxs).copyTo(_recoveredIdxs);

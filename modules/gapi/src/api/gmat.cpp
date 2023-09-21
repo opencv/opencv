@@ -85,7 +85,7 @@ cv::GMatDesc cv::descr_of(const cv::Mat &mat)
 {
     const auto mat_dims = mat.size.dims();
 
-    if (mat_dims == 2)
+    if (mat_dims <= 2)
         return GMatDesc{mat.depth(), mat.channels(), {mat.cols, mat.rows}};
 
     std::vector<int> dims(mat_dims);

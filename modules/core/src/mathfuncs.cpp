@@ -79,7 +79,7 @@ static bool ocl_math_op(InputArray _src1, InputArray _src2, OutputArray _dst, in
         return false;
 
     UMat src1 = _src1.getUMat(), src2 = _src2.getUMat();
-    _dst.create(src1.size(), type);
+    _dst.createSameSize(src1, type);
     UMat dst = _dst.getUMat();
 
     ocl::KernelArg src1arg = ocl::KernelArg::ReadOnlyNoSize(src1),
@@ -1189,7 +1189,7 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
         return false;
 
     UMat src = _src.getUMat();
-    _dst.create(src.size(), type);
+    _dst.createSameSize(src, type);
     UMat dst = _dst.getUMat();
 
     ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),

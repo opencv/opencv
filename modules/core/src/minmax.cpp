@@ -1578,19 +1578,19 @@ void cv::minMaxLoc( InputArray _img, double* minVal, double* maxVal,
     CV_CheckLE(dims, 2, "");
 
     minMaxIdx(_img, minVal, maxVal, (int*)minLoc, (int*)maxLoc, mask);
-    if( minLoc )
-    {
+    if( minLoc) {
         if (dims == 2)
             std::swap(minLoc->x, minLoc->y);
-        else
+        else {
             minLoc->y = 0;
+        }
     }
-    if( maxLoc )
-    {
+    if( maxLoc) {
         if (dims == 2)
             std::swap(maxLoc->x, maxLoc->y);
-        else
+        else {
             maxLoc->y = 0;
+        }
     }
 }
 

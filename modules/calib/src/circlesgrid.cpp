@@ -204,16 +204,16 @@ void CirclesGridClusterFinder::findCorners(const std::vector<cv::Point2f> &hull2
   //corners are the most sharp angles (6)
   Mat anglesMat = Mat(angles);
   Mat sortedIndices;
-  sortIdx(anglesMat, sortedIndices, SORT_EVERY_COLUMN + SORT_DESCENDING);
+  sortIdx(anglesMat, sortedIndices, SORT_EVERY_ROW + SORT_DESCENDING);
   CV_Assert(sortedIndices.type() == CV_32SC1);
-  CV_Assert(sortedIndices.cols == 1);
+  CV_Assert(sortedIndices.rows == 1);
   const int cornersCount = isAsymmetricGrid ? 6 : 4;
   Mat cornersIndices;
-  cv::sort(sortedIndices.rowRange(0, cornersCount), cornersIndices, SORT_EVERY_COLUMN + SORT_ASCENDING);
+  cv::sort(sortedIndices.colRange(0, cornersCount), cornersIndices, SORT_EVERY_ROW + SORT_ASCENDING);
   corners.clear();
   for(int i=0; i<cornersCount; i++)
   {
-    corners.push_back(hull2f[cornersIndices.at<int>(i, 0)]);
+    corners.push_back(hull2f[cornersIndices.at<int>(i)]);
   }
 }
 
@@ -427,7 +427,8 @@ void CirclesGridClusterFinder::parsePatternPoints(const std::vector<cv::Point2f>
   CV_Error(Error::StsNotImplemented, "The desired functionality requires flann module, which was disabled.");
 #else
   flann::LinearIndexParams flannIndexParams;
-  flann::Index flannIndex(Mat(rectifiedPatternPoints).reshape(1), flannIndexParams);
+  flann::Index flannIndex(Mat(rectifiedPatternPoints).reshape(1,
+                (int)rectifiedPatternPoints.size()), flannIndexParams);
 
   centers.clear();
   for( int i = 0; i < patternSize.height; i++ )
@@ -1126,7 +1127,8 @@ void CirclesGridFinder::findBasis(const std::vector<Point2f> &samples, std::vect
   TermCriteria termCriteria;
   Mat centers;
   const int clustersCount = 4;
-  kmeans(Mat(samples).reshape(1, 0), clustersCount, bestLabels, termCriteria, parameters.kmeansAttempts,
+  int nsamples = (int)samples.size();
+  kmeans(Mat(samples).reshape(1, nsamples), clustersCount, bestLabels, termCriteria, parameters.kmeansAttempts,
          KMEANS_RANDOM_CENTERS, centers);
   CV_Assert( centers.type() == CV_32FC1 );
 

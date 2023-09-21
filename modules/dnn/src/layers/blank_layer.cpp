@@ -115,7 +115,8 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        for (int i = 0, n = outputs.size(); i < n; ++i)
+        size_t i, n = outputs.size();
+        for (i = 0; i < n; ++i)
             if (outputs[i].data != inputs[i].data)
                 inputs[i].copyTo(outputs[i]);
     }

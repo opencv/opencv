@@ -289,7 +289,7 @@ class aruco_objdetect_test(NewOpenCVTests):
         self.assertEqual(diamond_ids.size, 4)
         self.assertEqual(marker_ids.size, 4)
         for i in range(0, 4):
-            self.assertEqual(diamond_ids[0][0][i], i)
+            self.assertEqual(diamond_ids[0][i], i)
         np.testing.assert_allclose(gold_corners, np.array(diamond_corners, dtype=np.float32).reshape(-1, 2), 0.01, 0.1)
 
     # check no segfault when cameraMatrix or distCoeffs are not initialized
@@ -378,8 +378,8 @@ class aruco_objdetect_test(NewOpenCVTests):
 
         self.assertEqual(aruco_corners.shape[0], obj_points.shape[0])
         self.assertEqual(img_points.shape[0], obj_points.shape[0])
-        self.assertEqual(2, img_points.shape[2])
-        np.testing.assert_array_equal(aruco_corners, obj_points[:, :, :2].reshape(-1, 2))
+        self.assertEqual(2, img_points.shape[1])
+        np.testing.assert_array_equal(aruco_corners, obj_points[:, :2].reshape(-1, 2))
 
     def test_charuco_match_image_points(self):
         aruco_dict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_50)
@@ -391,8 +391,8 @@ class aruco_objdetect_test(NewOpenCVTests):
 
         self.assertEqual(chessboard_corners.shape[0], obj_points.shape[0])
         self.assertEqual(img_points.shape[0], obj_points.shape[0])
-        self.assertEqual(2, img_points.shape[2])
-        np.testing.assert_array_equal(chessboard_corners, obj_points[:, :, :2].reshape(-1, 2))
+        self.assertEqual(2, img_points.shape[1])
+        np.testing.assert_array_equal(chessboard_corners, obj_points[:, :2].reshape(-1, 2))
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

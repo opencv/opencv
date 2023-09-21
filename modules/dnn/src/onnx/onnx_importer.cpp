@@ -1215,7 +1215,7 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
     // except for ReduceSum, which has "axes" input since opset 13.
     if (!layerParams.has("axes") && num_inputs == 2 && constBlobs.find(node_proto.input(1)) != constBlobs.end()) {
         Mat mat_axes = getBlob(node_proto, 1);
-        int num_axes = mat_axes.total();
+        int num_axes = (int)mat_axes.total();
         std::vector<int> axes(num_axes);
         for (int i = 0; i < num_axes; ++i)
             axes[i] = mat_axes.at<int>(i);
@@ -1420,13 +1420,17 @@ void ONNXImporter::parseConstant(LayerParams& layerParams, const opencv_onnx::No
 {
     CV_Assert(node_proto.input_size() == 0);
     CV_Assert(layerParams.blobs.size() == 1);
-    addConstant(node_proto.output(0), layerParams.blobs[0]);
-    // add constant for constBlobsExtraInfo
-    if (layerParams.has("original_dims_of_mat"))
-    {
+    if (layerParams.has("original_dims_of_mat")) {
         int original_dims_of_mat = layerParams.get<int>("original_dims_of_mat");
+        if (original_dims_of_mat == 0) {
+            Mat& blob = layerParams.blobs[0];
+            CV_Assert(blob.dims <= 2 && blob.total() == 1);
+            blob = blob.reshape(1, 0, 0);
+        }
+        // add constant for constBlobsExtraInfo
         constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), TensorInfo(original_dims_of_mat)));
     }
+    addConstant(node_proto.output(0), layerParams.blobs[0]);
 }
 
 void transformBlobs(std::vector<Mat>& blobs)
@@ -2584,7 +2588,7 @@ void ONNXImporter::parseShape(LayerParams& layerParams, const opencv_onnx::NodeP
     int dims = static_cast<int>(inpShape.size());
     if (isInput1D)
         dims = 1;
-    Mat shapeMat(dims, 1, CV_32S);
+    Mat shapeMat(1, dims, CV_32S);
     bool isDynamicShape = false;
     for (int j = 0; j < dims; ++j)
     {
@@ -2671,7 +2675,6 @@ void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::Node
             std::vector<Mat> inputs, output;
 
             Mat input = getBlob(node_proto, 0);
-            int input_real_ndims = input.dims;
             int type = input.type();
             input.convertTo(input, CV_32FC1);
             inputs.push_back(input);
@@ -2682,8 +2685,7 @@ void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::Node
 
             runLayer(layerParams, inputs, output);
             output.back().convertTo(output.back(), type);
-            if (real_ndims < 2)  // In case of scalars or 1D vectors, OpenCV initializes 2D cv::Mat
-                output.back().dims = std::max(input_real_ndims - real_ndims, 1);
+            //output.back().dims = std::max(input.dims - real_ndims, 1);
             addConstant(node_proto.output(0), output.back());
             return;
         }
@@ -2736,8 +2738,8 @@ void ONNXImporter::parseConcat(LayerParams& layerParams, const opencv_onnx::Node
         MatShape inputShape;
         for (size_t i = 0; i < inputs.size(); ++i)
         {
-            inputs[i] = getBlob(node_proto, i);
-            if (inputs[i].size.dims() > inputShape.size())
+            inputs[i] = getBlob(node_proto, (int)i);
+            if (inputs[i].size.dims() > (int)inputShape.size())
             {
                 inputShape = shape(inputs[i]);
             }
@@ -2747,10 +2749,9 @@ void ONNXImporter::parseConcat(LayerParams& layerParams, const opencv_onnx::Node
         int axis = layerParams.get<int>("axis", 1);
         for (size_t i = 0; i < inputs.size(); ++i)
         {
-            MatShape targetShape = inputShape;
-            targetShape[axis] = shape(inputs[i])[axis];
-            CV_CheckEQ(total(targetShape), total(shape(inputs[i])), "");
-            inputs[i] = inputs[i].reshape(0, targetShape);
+            inputShape[axis] = inputs[i].dims == (int)inputShape.size() ? inputs[i].size[axis] : 1;
+            CV_CheckEQ((size_t)total(inputShape), inputs[i].total(), "");
+            inputs[i] = inputs[i].reshape(1, inputShape);
         }
         runLayer(layerParams, inputs, concatenated);
 
@@ -3219,7 +3220,7 @@ void ONNXImporter::parseTile(LayerParams& layerParams, const opencv_onnx::NodePr
     if (all_const)
         input0_dims = getBlob(node_proto, 0).dims;
     else
-        input0_dims = outShapes[node_proto.input(0)].size();
+        input0_dims = (int)outShapes[node_proto.input(0)].size();
 
     // repeats, treated as paramenter
     std::vector<int> repeats_vec(input0_dims, 1);
@@ -3238,11 +3239,11 @@ void ONNXImporter::parseTile(LayerParams& layerParams, const opencv_onnx::NodePr
     else
     {
         // input1 in tile>1: repeats
-        CV_CheckEQ(input1_blob.dims, 2, "ONNX/Tile: repeats must be a 1D tensor."); // 1D tensor is represented as a 2D Mat
+        CV_CheckLE(input1_blob.dims, 2, "ONNX/Tile: repeats must be a 1D tensor."); // 1D tensor is represented as a 2D Mat
         for (int i = 0; i < input1_blob.total(); i++)
             repeats_vec[i] = input1_blob.at<int>(i);
     }
-    layerParams.set("repeats", DictValue::arrayInt(repeats_vec.data(), repeats_vec.size()));
+    layerParams.set("repeats", DictValue::arrayInt(repeats_vec.data(), (int)repeats_vec.size()));
 
     if (all_const)
     {
