@@ -3,14 +3,10 @@
 # Python 2/3 compatibility
 from __future__ import print_function
 
-import sys
 import cv2 as cv
 import unittest
 
 from tests_common import NewOpenCVTests
-
-if sys.version_info[:2] < (3, 0):
-    raise unittest.SkipTest('Python 2.x is not supported')
 
 
 class lineiterator_test(NewOpenCVTests):
