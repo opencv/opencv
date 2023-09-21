@@ -80,7 +80,7 @@ GpuMat GpuMatND::createGpuMatHeader() const
         rows_ = 1;
         step_ = cols_ * elemSize();
     }
-    
+
     return GpuMat(rows_, cols_, type(), getDevicePtr(), step_);
 }
 
