@@ -2316,6 +2316,9 @@ void ONNXImporter::parseExpand(LayerParams& layerParams, const opencv_onnx::Node
 
     Mat mat_input_shape = getBlob(node_proto, 1);
     CV_CheckTypeEQ(mat_input_shape.depth(), CV_32S, "DNN/ONNXImporter-Expand: data type of input shape must be CV_32S");
+    for (int i = 0; i < mat_input_shape.total(); ++i) {
+        CV_Check(i, *(mat_input_shape.ptr<int>() + i) >= 0, "DNN/ONNXImporter-Expand: invalid shape dimension");
+    }
     layerParams.set("shape", DictValue::arrayInt(mat_input_shape.ptr<int>(), mat_input_shape.total()));
 
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end()) {

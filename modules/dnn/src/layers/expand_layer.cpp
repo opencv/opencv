@@ -23,6 +23,7 @@ public:
             target_shape[i] = param_shape.get<int>(i);
         }
 
+        // FIXME: remove when 0d/1d mat is available
         const_input_1d = params.get("const_input_1d", false);
     }
 
@@ -49,8 +50,10 @@ public:
         /*  Example:
                              i = 3
                                |
-            moreDimension: 0 1 2 3 4, assign non-aligned dimensions to output shape
-            lessDimension:     0 1 2, when dimension is aligned, check valid dimension (either equal or one of them is 1) and assign bigger one
+            moreDimension: 1 2 3 4 5, assign non-aligned dimensions to output shape
+            lessDimension:     1 1 5, when dimension is aligned, check valid dimension (either equal or one of them is 1) and assign bigger one
+                               |
+                             j = 0 = i - (moreDimension.size() - lessDimension.size());
         */
         MatShape outputShape(moreDimension.size(), 1);
         for (int i = 0; i < moreDimension.size(); i++) {
@@ -58,8 +61,7 @@ public:
             int j = i - (moreDimension.size() - lessDimension.size());
             if (j >= 0) {
                 if (d == 1 || lessDimension[j] == 1 || // broadcast
-                    (d == -1 && lessDimension[j] != -1) || (lessDimension[j] == -1 && d != -1) || // shape deduction from -1
-                    d == lessDimension[j]) { // plain copy
+                    d == lessDimension[j]) {           // plain copy
                     outputShape[i] = std::max(d, lessDimension[j]);
                 } else {
                     CV_Error(Error::StsBadSize, cv::format("DNN/Expand: invalid dimension, d (%d) != d (%d)", moreDimension[i], lessDimension[j]));
@@ -113,11 +115,20 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
+        int target_shape_total = std::accumulate(target_shape.begin(), target_shape.end(), 1, std::multiplies<int>());
+        if (target_shape_total == inputs[0].total()) {
+            const char *data = inputs[0].ptr<const char>();
+            char *output = outputs[0].ptr<char>();
+            int step = target_shape_total * outputs[0].elemSize();
+            std::memcpy(output, data, step);
+            return;
+        }
+
         if (const_input_1d) {
             const char *data = inputs[0].ptr<const char>();
-            int total = std::accumulate(target_shape.begin(), target_shape.end() - 1, 1, std::multiplies<int>());
             char *output = outputs[0].ptr<char>();
             int step = target_shape.back() * outputs[0].elemSize();
+            int total = std::accumulate(target_shape.begin(), target_shape.end() - 1, 1, std::multiplies<int>());
             for (int i = 0; i < total; i++) {
                 std::memcpy(output + i * step, data, step);
             }
