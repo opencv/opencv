@@ -289,7 +289,6 @@ public:
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::shared_ptr<ngraph::Node> matmul;
-        int axis = -2;
 
         if (nodes.size() == 2)
         {
@@ -298,22 +297,24 @@ public:
         }
         else
         {
-            std::vector<int> shape(1 + normalize_axis(axis, ieInpNode.get_shape().size()), 0);
-            shape[shape.size() - 1] = -1;
-            auto inp = std::make_shared<ngraph::op::v1::Reshape>(
-                ieInpNode,
-                std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{shape.size()}, shape.data()),
-                true
+            std::shared_ptr<ngraph::Node> ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, getShape(blobs[0]), blobs[0].data);
+            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, ieWeights, trans_a, trans_b);
+        }
+        if (alpha != 1.0f) {
+            matmul = std::make_shared<ngraph::op::v1::Multiply>(matmul,
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &alpha)
             );
-
-            std::vector<size_t> weight_shape{(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
-            auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, weight_shape, blobs[0].data);
-            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, trans_a, trans_b);
         }
 
         if (have_bias && const_C) {
-            auto bias_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                              ngraph::Shape{(size_t)blobs.back().size[1]}, blobs.back().data);
+            Mat bias = blobs.back();
+            auto shape = bias.total() == bias.size[0] ? ngraph::Shape{bias.total()} : getShape(bias);
+            std::shared_ptr<ngraph::Node> bias_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, bias.data);
+            if (beta != 1.0f) {
+                bias_node = std::make_shared<ngraph::op::v1::Multiply>(bias_node,
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &beta)
+                );
+            }
             matmul = std::make_shared<ngraph::op::v1::Add>(matmul, bias_node, ngraph::op::AutoBroadcastType::NUMPY);
         }
         return Ptr<BackendNode>(new InfEngineNgraphNode(matmul));
