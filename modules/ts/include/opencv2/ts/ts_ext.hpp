@@ -31,6 +31,8 @@ bool checkBigDataTests();
 
 #define CV__TEST_INIT \
     CV__TEST_NAMESPACE_CHECK \
+    if (setUpSkipped) \
+        return; \
     ::cvtest::testSetUp();
 #define CV__TEST_CLEANUP ::cvtest::testTearDown();
 #define CV__TEST_BODY_IMPL(name) \
@@ -46,6 +48,16 @@ bool checkBigDataTests();
           printf("[     SKIP ] %s\n", e.what()); \
        } \
     } \
+
+#define CV__TEST_SETUP_IMPL(parent_class) { \
+  setUpSkipped = false; \
+  try { \
+    parent_class::SetUp(); \
+  } catch (const cvtest::details::SkipTestExceptionBase& e) { \
+    setUpSkipped = true; \
+    printf("[     SKIP ] %s\n", e.what()); \
+  } \
+} \
 
 struct SkipThisTest : public ::testing::Test {
   SkipThisTest(const std::string& msg_) : msg(msg_) {}
@@ -63,8 +75,10 @@ struct SkipThisTest : public ::testing::Test {
      public:\
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {}\
      private:\
+      bool setUpSkipped = false; \
       virtual void TestBody() CV_OVERRIDE;\
       virtual void bodyMethodName() BODY_ATTR;\
+      virtual void SetUp() CV_OVERRIDE; \
       static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;\
       GTEST_DISALLOW_COPY_AND_ASSIGN_(\
           GTEST_TEST_CLASS_NAME_(test_case_name, test_name));\
@@ -90,6 +104,7 @@ struct SkipThisTest : public ::testing::Test {
             parent_class::TearDownTestCase, \
             new test_case_name##test_name##_factory);\
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() BODY_IMPL( #test_case_name "_" #test_name ) \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::SetUp() CV__TEST_SETUP_IMPL(parent_class) \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::bodyMethodName()
 
 #define TEST(test_case_name, test_name) TEST_(test_case_name, test_name, ::testing::Test, Body,, CV__TEST_BODY_IMPL)
@@ -125,8 +140,10 @@ struct SkipThisTest : public ::testing::Test {
      public:\
       GTEST_TEST_CLASS_NAME_(test_fixture, test_name)() {}\
      private:\
+      bool setUpSkipped = false; \
       virtual void TestBody() CV_OVERRIDE;\
       virtual void Body(); \
+      virtual void SetUp() CV_OVERRIDE; \
       static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;\
       GTEST_DISALLOW_COPY_AND_ASSIGN_(\
           GTEST_TEST_CLASS_NAME_(test_fixture, test_name));\
@@ -152,6 +169,7 @@ struct SkipThisTest : public ::testing::Test {
             test_fixture::TearDownTestCase, \
             new test_fixture##test_name##_factory);\
     void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::TestBody() CV__TEST_BODY_IMPL( #test_fixture "_" #test_name ) \
+    void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::SetUp() CV__TEST_SETUP_IMPL(test_fixture) \
     void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::Body()
 
 // Don't use directly
@@ -161,8 +179,10 @@ struct SkipThisTest : public ::testing::Test {
    public: \
     GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {} \
    private: \
+    bool setUpSkipped = false; \
     virtual void bodyMethodName() BODY_ATTR; \
     virtual void TestBody() CV_OVERRIDE; \
+    virtual void SetUp() CV_OVERRIDE; \
     static int AddToRegistry() { \
       ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
           GetTestCasePatternHolder<test_case_name>(\
@@ -184,6 +204,7 @@ struct SkipThisTest : public ::testing::Test {
                              test_name)::gtest_registering_dummy_ = \
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::AddToRegistry(); \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() BODY_IMPL( #test_case_name "_" #test_name ) \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::SetUp() CV__TEST_SETUP_IMPL(test_case_name) \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::bodyMethodName()
 
 #undef TEST_P
