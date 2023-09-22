@@ -3,6 +3,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function
 
+import numpy as np
 import cv2 as cv
 
 from tests_common import NewOpenCVTests
@@ -15,7 +16,7 @@ class lineiterator_test(NewOpenCVTests):
         orig = 0
         p1 = (orig, orig)
         p2 = (orig + n, orig + n)
-        cv.norm(p1 - p2, cv.NORM_L2)
+        d1 = cv.LineIterator(p1, p2)
 
 
 if __name__ == '__main__':
