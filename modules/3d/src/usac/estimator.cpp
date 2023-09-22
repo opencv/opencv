@@ -638,7 +638,7 @@ public:
             return errors_cache;
 
         int i = 0;
-#ifdef CV_SIMD
+#if CV_SIMD
         v_float32 v_a = vx_setall_f32(a);
         v_float32 v_b = vx_setall_f32(b);
         v_float32 v_c = vx_setall_f32(c);
@@ -718,7 +718,7 @@ public:
             return errors_cache;
 
         int i = 0;
-#ifdef CV_SIMD
+#if CV_SIMD
         v_float32 v_center_x = vx_setall_f32(center_x);
         v_float32 v_center_y = vx_setall_f32(center_y);
         v_float32 v_center_z = vx_setall_f32(center_z);

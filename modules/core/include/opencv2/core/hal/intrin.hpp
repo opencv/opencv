@@ -720,7 +720,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int32 vx_load_expand_q(const schar * ptr) { return VXPREFIX(_load_expand_q)(ptr); }
     //! @}
 
-    #ifndef OPENCV_HAL_HAVE_LOAD_STORE_BFLOAT16
+    #ifndef OPENCV_HAL_HAVE_PACK_STORE_BFLOAT16
     inline v_float32 vx_load_expand(const bfloat16_t* ptr)
     {
         v_uint32 v = vx_load_expand((const ushort*)ptr);
@@ -730,7 +730,7 @@ namespace CV__SIMD_NAMESPACE {
     inline void v_pack_store(const bfloat16_t* ptr, const v_float32& v)
     {
         v_int32 iv = v_shr<16>(v_reinterpret_as_s32(v));
-        v_pack_store((short*)ptr, iv);
+        cv::v_pack_store((short*)ptr, iv);
     }
 
     #endif
@@ -967,6 +967,9 @@ namespace CV__SIMD_NAMESPACE {
         OPENCV_HAL_WRAP_CMP(v_float64x4)
         #endif
     #endif
+    OPENCV_HAL_WRAP_CMP_OP(v_int64, lt, <) \
+    OPENCV_HAL_WRAP_CMP_OP(v_int64, gt, >) \
+
 
     //////////// get0 ////////////
     #define OPENCV_HAL_WRAP_GRT0(_Tpvec) \
@@ -1110,7 +1113,7 @@ namespace CV__SIMD_NAMESPACE {
 #define CV_SIMD 0
 #endif
 
-#if (!defined CV_SIMD_64F) || (!CV_SIMD_64F)
+#if !CV_SIMD_64F && !CV_SIMD_SCALABLE_64F
 typedef struct v_float64 { int dummy; } v_float64;
 #endif
 
