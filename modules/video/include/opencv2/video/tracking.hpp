@@ -885,12 +885,22 @@ public:
     CV_WRAP virtual float getTrackingScore() = 0;
 };
 
+/** @brief class for single track in a multiple object tracker
+ */
+
 class CV_EXPORTS Track
 {
 protected:
     Track();
 public:
     virtual ~Track();
+    /**
+    * \brief Constructor
+    * \param rect Top-Left-Width-Height of the track's bbox
+    * \param classScore Confidence score of the track
+    * \param classLabel Classification of the track (dog, car, person, etc.)
+    * \param trackingId Track's ID number
+    */
     Track(Rect2f, int, int, float);
     Rect2f rect;
     float classScore;
@@ -898,13 +908,20 @@ public:
     int trackingId; // abs(tracking_id) <= (1 << 24) or tracking_id % (1 << 24)
 };
 
-
+/** @brief class for single detection in a multiple object tracker
+ */
 class CV_EXPORTS Detection
 {
 protected:
     Detection();
 public:
     virtual ~Detection();
+    /**
+    * \brief Constructor
+    * \param rect Top-Left-Width-Height of the detection's bbox
+    * \param classLabel Classification of the detection (dog, car, person, etc.)
+    * \param classScore Confidence score of the detection
+    */
     Detection(Rect2f, int, float);
     Rect2f rect;
     int classLabel;
@@ -922,8 +939,8 @@ public:
     virtual ~MultipleTracker();
 
     /** @brief Update the tracker, find the new most likely bounding boxes for each target
-    @param inputDetections current frame detections
-    @param outputTracks The bounding boxes that represent the new target locations
+    @param inputDetections current frame detections. Input array layout is [x y w h classId score] where x y w h corresponds to the bounding box's tlwh
+    @param outputTracks The bounding boxes that represent the new target locations. Output array layout is [x y w h classLabel classScore trackingId]
 
     @return True means that some target was located and false means that tracker cannot locate any target in current frame. Note, that latter *does not* imply that tracker has failed, maybe targets are indeed missing from the frame (say, out of sight)
     */
@@ -931,10 +948,8 @@ public:
     bool update(InputArray inputDetections, CV_OUT cv::OutputArray& outputTracks) = 0; // Wrapper for python
 
     /** @brief Update the tracker, find the new most likely bounding boxes for each target
-    @param detections current frame detections
-    @param tracks The bounding boxes that represent the new target locations
-
-    @return True means that some target was located and false means that tracker cannot locate any target in current frame. Note, that latter *does not* imply that tracker has failed, maybe targets are indeed missing from the frame (say, out of sight)
+    @param detections current frame detections. Input is a vector of Detections(class).
+    @param tracks The bounding boxes that represent the new target locations. Output is a vector of Tracks(class).
     */
     virtual
     void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) = 0;
