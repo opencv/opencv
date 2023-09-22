@@ -1415,6 +1415,56 @@ TEST_P(Test_ONNX_layers, LSTM_layout_batch)
     testONNXModels("lstm_layout_1", npy, 0.005, 0.005, false, false, 3);
 }
 
+TEST_P(Test_ONNX_layers, DISABLED_Einsum_1D)
+{
+    testONNXModels("einsum_1d", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_2D)
+{
+    testONNXModels("einsum_2d", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_3D)
+{
+    testONNXModels("einsum_3d", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_4D)
+{
+    testONNXModels("einsum_4d", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_5D)
+{
+    testONNXModels("einsum_5d", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, DISABLED_Einsum_InnerProduct)
+{
+    testONNXModels("einsum_inner", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, DISABLED_Einsum_HadamardProduct)
+{
+    testONNXModels("einsum_hadamard", npy, 0, 0, false, false, 2);
+}
+
+TEST_P(Test_ONNX_layers, DISABLED_Einsum_Batch_Diagonal)
+{
+    testONNXModels("einsum_batch_diagonal", npy, 0, 0, false, false, 1);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_Sum)
+{
+    testONNXModels("einsum_sum", npy, 0, 0, false, false, 1);
+}
+
+TEST_P(Test_ONNX_layers, Einsum_transpose)
+{
+    testONNXModels("einsum_transpose", npy, 0, 0, false, false, 1);
+}
+
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
 {
     testONNXModels("ReflectionPad2d");

@@ -194,6 +194,7 @@ private:
     void parseTile                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimpleLayers         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseEinsum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
@@ -3310,6 +3311,40 @@ void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx
     addLayer(layerParams, node_proto);
 }
 
+
+void ONNXImporter::parseEinsum(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    std::vector<MatShape> einsumInpShapes;
+    for (int j = 0; j < node_proto.input_size(); j++)
+    {
+        const auto& inputLayerName = node_proto.input(j);
+        auto it = outShapes.find(inputLayerName);
+        if (it != outShapes.end())
+        {
+            einsumInpShapes.emplace_back(it->second);
+        } else {
+            CV_Error(Error::StsAssert, "ERROR input shape not found");
+        }
+    }
+
+    CV_CheckFalse(einsumInpShapes.empty(), "ERROR no inputs shapes");
+    for (int i = 0; i < einsumInpShapes.size(); i++) {
+        layerParams.set("inputShapes" + cv::format("%d", i), DictValue::arrayInt(einsumInpShapes[i].begin(), einsumInpShapes[i].size()));
+    }
+
+    // Check if of eqution is valid
+    std::string equation = layerParams.get<std::string>("equation");
+    CV_CheckFalse(equation.empty(), "Equation is empty");
+
+    // Save number of inputs. We need it in layer initialization
+    layerParams.set("inputSize", node_proto.input_size());
+
+    // Save number of outputs. We need it in layer initialization
+    layerParams.set("outputSize", node_proto.output_size());
+
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseCustomLayer(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     const std::string& name = layerParams.name;
@@ -4016,6 +4051,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = &ONNXImporter::parseElementWise;
     dispatch["Where"] = &ONNXImporter::parseElementWise;
     dispatch["Range"] = &ONNXImporter::parseRange;
+    dispatch["Einsum"] = &ONNXImporter::parseEinsum;
 
     std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
                                           "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
