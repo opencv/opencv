@@ -352,7 +352,7 @@ PERF_TEST_P_(DNNTestNetwork, YuNet) {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
 
-    processNet("", "onnx/models/yunet-202303.onnx", "",  Mat(cv::Size(640, 640), CV_32FC3));
+    processNet("", "dnn/onnx/models/yunet-202303.onnx", "",  Mat(cv::Size(640, 640), CV_32FC3));
 }
 
 PERF_TEST_P_(DNNTestNetwork, SFace) {
