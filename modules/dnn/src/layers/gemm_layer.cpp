@@ -287,7 +287,7 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::shared_ptr<ngraph::Node> matmul;
 
         if (nodes.size() == 2)
@@ -298,6 +298,17 @@ public:
         else
         {
             std::shared_ptr<ngraph::Node> ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, getShape(blobs[0]), blobs[0].data);
+
+            int flatten_axis = ieInpNode.get_shape().size() - ieWeights->get_shape().size();
+            if (flatten_axis > 0) {
+                std::vector<int> shape(1 + flatten_axis, 0);
+                shape[shape.size() - 1] = -1;
+                ieInpNode = std::make_shared<ngraph::op::v1::Reshape>(
+                    ieInpNode,
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{shape.size()}, shape.data()),
+                    true
+                );
+            }
             matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, ieWeights, trans_a, trans_b);
         }
         if (alpha != 1.0f) {
