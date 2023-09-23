@@ -37,8 +37,8 @@ string TRACKINGS_OUTPUT_PATH = home + "/files/tracked.txt";
 string VIDEO_OUTPUT_PATH = home + "/files/output.mp4";
 string COCO_NAMES = home + "/files/coco.names";
 //string NET_PATH = home + "/files/YOLOv5s.onnx";
-//string NET_PATH = home + "/files/yolov8s.onnx";
-string NET_PATH = home + "/files/yolov8x.onnx";
+string NET_PATH = home + "/files/yolov8s.onnx";
+//string NET_PATH = home + "/files/yolov8x.onnx";
 
 //string folderPath = "./imgs/%06d.jpg";
 string folderPath="../data/vtest.avi";
@@ -47,12 +47,14 @@ int outputCodec = VideoWriter::fourcc('M', 'J', 'P', 'G');
 double outputFps = 10;
 Size outputSize(768, 576);
 
-vector<Mat> preProcessImage(Mat&, Net&);
+vector<Mat> inference(Mat&, Net&);
 Mat formatYolov5(const Mat&);
 Mat postProcessImage(Mat&, vector<Mat>&, const vector<string>&, vector<Detection>&);
 void drawLabel(Mat&, string, int, int);
 void writeDetectionsToFile(const vector<Detection>, const string&, const int);
 void writeTracksToFile(const Mat&, const string&, const int);
+void writeTracksToFile(const vector<Track> objects, const string &outputPath,
+    const int frameNumber);
 Scalar getColor(int);
 Mat detectionToMat(vector<Detection>);
 
@@ -84,7 +86,7 @@ int main()
     Mat frame;
     int frameNumber = 0;
     double fps = capture.get(CAP_PROP_FPS);
-    cout<<"my fps is"<<fps;
+    //cout<<"my fps is"<<fps;
     cv::ByteTracker::Params params;
     params.frameRate = fps;
     params.frameBuffer = 30;
@@ -104,15 +106,17 @@ int main()
         // net.setPreferableTarget(dnn::DNN_TARGET_CUDA_FP16);
         vector<Mat> detections; // Process the image.
         vector<Detection> objects;
-        detections = preProcessImage(frame, net);
+        detections = inference(frame, net);
         Mat img = postProcessImage(frame, detections, classList,
                                objects);
-        Mat objectsMat = detectionToMat(objects);
-        Mat trackedObjects;
+
         bool ok = false;
-        ok = tracker->update(objectsMat, trackedObjects);
-        if (ok)
+        bool useArray = false;
+        if (useArray) //Update method with input array and output array
         {
+            Mat objectsMat = detectionToMat(objects);
+            Mat trackedObjects;
+            ok = tracker->update(objectsMat, trackedObjects);
             for (int i = 0; i < trackedObjects.rows; i++)
             {
                 int id_ = static_cast<int>(trackedObjects.at<float>(i, 6));
@@ -129,24 +133,37 @@ int main()
                 putText(img, to_string(id_), Point(xPoint, yPoint - 5), FONT_FACE, FONT_SCALE, RED);
             }
             writeTracksToFile(trackedObjects, TRACKINGS_OUTPUT_PATH, frameNumber);
-            writeDetectionsToFile(objects, DETECTIONS_OUTPUT_PATH, frameNumber);
-
-            // Put efficiency information.
-            // The function getPerfProfile returns the overall time for inference(t) and the timings for each of the layers(in layersTimes).
-            vector<double> layersTimes;
-            double freq = getTickFrequency() / 1000;
-            double t = net.getPerfProfile(layersTimes) / freq;
-            string label = format("Inference time : %.2f ms", t);
-            putText(img, label, Point(20, 40), FONT_FACE, FONT_SCALE, RED);
-            imshow("Output", img);
-            writer.write(img);
-            //waitKey(0);
-
-            if (waitKey(1) == 27)
-                break;
-
-            frameNumber++;
         }
+        else if (!useArray)
+        {
+            vector<Track> trackedObjects;
+            tracker->update(objects, trackedObjects); //Update method with vector of detection as input and vector of tracks as output
+            for (auto& track : trackedObjects)
+            {
+                Scalar color = getColor(track.trackingId);
+                rectangle(img, track.rect, color, 2);
+                int xPoint = static_cast<int>(track.rect.x);
+                int yPoint = static_cast<int>(track.rect.y);
+                putText(img, to_string(track.trackingId), Point(xPoint, yPoint - 5), FONT_FACE, FONT_SCALE, RED);
+            }
+            writeTracksToFile(trackedObjects, TRACKINGS_OUTPUT_PATH, frameNumber);
+        }
+        writeDetectionsToFile(objects, DETECTIONS_OUTPUT_PATH, frameNumber);
+        // Put efficiency information.
+        // The function getPerfProfile returns the overall time for inference(t) and the timings for each of the layers(in layersTimes).
+        vector<double> layersTimes;
+        double freq = getTickFrequency() / 1000;
+        double t = net.getPerfProfile(layersTimes) / freq;
+        string label = format("Inference time : %.2f ms", t);
+        putText(img, label, Point(20, 40), FONT_FACE, FONT_SCALE, RED);
+        imshow("Output", img);
+        writer.write(img);
+        //waitKey(0);
+
+        if (waitKey(1) == 27)
+            break;
+
+        frameNumber++;
     }
     writer.release();
     capture.release();
@@ -155,7 +172,7 @@ int main()
     return 0;
 }
 
-vector<Mat> preProcessImage(Mat &inputImage, Net &net)
+vector<Mat> inference(Mat &inputImage, Net &net)
 {
     // Convert to blob.
     Mat blob;
@@ -349,7 +366,6 @@ void writeTracksToFile(const Mat& objects, const string &outputPath,
         outputFile << "frame, trackId, x, y, width, height, score, classId" << endl;
     }
 
-
     // Iterate over the detections and write the data to the output file
     for (int i = 0; i < objects.rows; ++i)
     {
@@ -368,7 +384,47 @@ void writeTracksToFile(const Mat& objects, const string &outputPath,
 
     // Close the output file
     outputFile.close();
+    //cout << "\n Detection data saved to: " << outputPath << endl;
+}
 
+void writeTracksToFile(const vector<Track> objects, const string &outputPath,
+    const int frameNumber)
+{
+    // Open the output file for writing
+    ofstream outputFile(outputPath, ios_base::app);
+    if (!outputFile.is_open())
+    {
+        cout << "Failed to open the output file: " << outputPath << endl;
+        return;
+    }
+    // Check if the output file is empty
+    ifstream file(outputPath);
+    bool isEmpty = file.peek() == ifstream::traits_type::eof();
+    // Write the header row of the file is empty
+    if (isEmpty)
+    {
+        outputFile << "frame, trackId, x, y, width, height, score, classId" << endl;
+    }
+
+
+    // Iterate over the detections and write the data to the output file
+    for (auto track : objects)
+    {
+        // Extract the detection data (frame, trackId, x1, y1, width, height, score, classId)
+        float x = track.rect.x;
+        float y = track.rect.y;
+        float width = track.rect.width;
+        float height = track.rect.height;
+        int classId = track.classLabel;
+        float score = track.classScore;
+        int trackId = track.trackingId;
+
+
+        // Write the data to the output file
+        outputFile << frameNumber << ", " << trackId << ", " << x << ", " << y << ", " << width << ", " << height << ", " << score << ", " << classId << endl;
+    }
+    // Close the output file
+    outputFile.close();
     //cout << "\n Detection data saved to: " << outputPath << endl;
 }
 
