@@ -9,6 +9,7 @@ core = {
         'perspectiveTransform', 'polarToCart', 'pow', 'randn', 'randu', 'reduce', 'repeat', 'rotate', 'setIdentity', 'setRNGSeed',
         'solve', 'solvePoly', 'split', 'sqrt', 'subtract', 'trace', 'transform', 'transpose', 'vconcat',
         'setLogLevel', 'getLogLevel',
+        'LUT',
     ],
     'Algorithm': [],
 }

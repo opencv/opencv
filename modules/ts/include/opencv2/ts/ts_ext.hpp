@@ -31,6 +31,8 @@ bool checkBigDataTests();
 
 #define CV__TEST_INIT \
     CV__TEST_NAMESPACE_CHECK \
+    if (setUpSkipped) \
+        return; \
     ::cvtest::testSetUp();
 #define CV__TEST_CLEANUP ::cvtest::testTearDown();
 #define CV__TEST_BODY_IMPL(name) \
@@ -47,17 +49,24 @@ bool checkBigDataTests();
        } \
     } \
 
-#define CV__TEST_SETUP_IMPL(parent_class) \
-    { \
-      try { \
-        parent_class::SetUp(); \
-      } catch (const cvtest::details::SkipTestExceptionBase& e) { \
-        printf("[     SKIP ] %s\n", e.what()); \
-      } \
-    }
+#define CV__TEST_SETUP_IMPL(parent_class) { \
+  setUpSkipped = false; \
+  try { \
+    parent_class::SetUp(); \
+  } catch (const cvtest::details::SkipTestExceptionBase& e) { \
+    setUpSkipped = true; \
+    printf("[     SKIP ] %s\n", e.what()); \
+  } \
+} \
 
-struct DummyTest : public ::testing::Test {
-  virtual void TestBody() CV_OVERRIDE {}
+struct SkipThisTest : public ::testing::Test {
+  SkipThisTest(const std::string& msg_) : msg(msg_) {}
+
+  virtual void TestBody() CV_OVERRIDE {
+      printf("[     SKIP ] %s\n", msg.c_str());
+  }
+
+  std::string msg;
 };
 
 #undef TEST
@@ -66,8 +75,10 @@ struct DummyTest : public ::testing::Test {
      public:\
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {}\
      private:\
+      bool setUpSkipped = false; \
       virtual void TestBody() CV_OVERRIDE;\
       virtual void bodyMethodName() BODY_ATTR;\
+      virtual void SetUp() CV_OVERRIDE; \
       static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;\
       GTEST_DISALLOW_COPY_AND_ASSIGN_(\
           GTEST_TEST_CLASS_NAME_(test_case_name, test_name));\
@@ -78,8 +89,7 @@ struct DummyTest : public ::testing::Test {
         try { \
           return new GTEST_TEST_CLASS_NAME_(test_case_name, test_name); \
         } catch (const cvtest::details::SkipTestExceptionBase& e) { \
-          printf("[     SKIP ] %s\n", e.what()); \
-          return new DummyTest(); \
+          return new SkipThisTest(e.what()); \
         } \
       } \
     };\
@@ -94,6 +104,7 @@ struct DummyTest : public ::testing::Test {
             parent_class::TearDownTestCase, \
             new test_case_name##test_name##_factory);\
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() BODY_IMPL( #test_case_name "_" #test_name ) \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::SetUp() CV__TEST_SETUP_IMPL(parent_class) \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::bodyMethodName()
 
 #define TEST(test_case_name, test_name) TEST_(test_case_name, test_name, ::testing::Test, Body,, CV__TEST_BODY_IMPL)
@@ -129,6 +140,7 @@ struct DummyTest : public ::testing::Test {
      public:\
       GTEST_TEST_CLASS_NAME_(test_fixture, test_name)() {}\
      private:\
+      bool setUpSkipped = false; \
       virtual void TestBody() CV_OVERRIDE;\
       virtual void Body(); \
       virtual void SetUp() CV_OVERRIDE; \
@@ -142,8 +154,7 @@ struct DummyTest : public ::testing::Test {
         try { \
           return new GTEST_TEST_CLASS_NAME_(test_fixture, test_name); \
         } catch (const cvtest::details::SkipTestExceptionBase& e) { \
-          printf("[     SKIP ] %s\n", e.what()); \
-          return new DummyTest(); \
+          return new SkipThisTest(e.what()); \
         } \
       } \
     };\
@@ -168,8 +179,10 @@ struct DummyTest : public ::testing::Test {
    public: \
     GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {} \
    private: \
+    bool setUpSkipped = false; \
     virtual void bodyMethodName() BODY_ATTR; \
     virtual void TestBody() CV_OVERRIDE; \
+    virtual void SetUp() CV_OVERRIDE; \
     static int AddToRegistry() { \
       ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
           GetTestCasePatternHolder<test_case_name>(\
@@ -191,6 +204,7 @@ struct DummyTest : public ::testing::Test {
                              test_name)::gtest_registering_dummy_ = \
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::AddToRegistry(); \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() BODY_IMPL( #test_case_name "_" #test_name ) \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::SetUp() CV__TEST_SETUP_IMPL(test_case_name) \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::bodyMethodName()
 
 #undef TEST_P

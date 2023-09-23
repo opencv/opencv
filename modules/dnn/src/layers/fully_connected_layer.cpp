@@ -803,7 +803,7 @@ public:
         }
         else
         {
-            std::vector<int> shape(1 + normalize_axis(axis, ieInpNode->get_shape().size()), 0);
+            std::vector<int> shape(1 + normalize_axis(axis, ieInpNode.get_shape().size()), 0);
             shape[shape.size() - 1] = -1;
             auto inp = std::make_shared<ngraph::op::v1::Reshape>(
                 ieInpNode,

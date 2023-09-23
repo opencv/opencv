@@ -930,22 +930,9 @@ TEST_F(TestFixtureSkip, NoBodyRun) {
     FAIL() << "Unreachable code called";
 }
 
-// Check no test body started in case of skip exception at static SetUpTestCase
-struct TestSetUpTestCaseSkip: public ::testing::Test {
-    static void SetUpTestCase() {
-        throw SkipTestException("Skip test at SetUpTestCase");
-    }
-};
-
-TEST_F(TestSetUpTestCaseSkip, NoBodyRun) {
-    FAIL() << "Unreachable code called";
-}
-TEST_F(TestSetUpTestCaseSkip, NoBodyRun2) {
-    FAIL() << "Unreachable code called";
-}
-
+// Expected that SkipTestException thrown in SetUp method should skip test but not fail
 struct TestSetUpSkip: public ::testing::Test {
-    virtual void SetUp() {
+    virtual void SetUp() CV_OVERRIDE {
         throw SkipTestException("Skip test at SetUp");
     }
 };

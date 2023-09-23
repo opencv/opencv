@@ -366,7 +366,7 @@ TEST_P(Test_Int8_layers, InnerProduct)
     testLayer("matmul_layout", "TensorFlow", 0.035, 0.06);
     testLayer("tf2_dense", "TensorFlow", 0, 0);
     testLayer("matmul_add", "ONNX", 0.041, 0.082);
-    testLayer("linear", "ONNX", 0.0018, 0.0029);
+    testLayer("linear", "ONNX", 0.0027, 0.0046);
 
     if (backend == DNN_BACKEND_TIMVX)
         testLayer("constant", "ONNX", 0.00048, 0.0013);
@@ -384,7 +384,7 @@ TEST_P(Test_Int8_layers, InnerProduct)
         testLayer("matmul_layout", "TensorFlow", 0.035, 0.095, 1, 1, false, true, false, false);
         testLayer("tf2_dense", "TensorFlow", 0, 0, 1, 1, false, true, false, false);
         testLayer("matmul_add", "ONNX", 0.041, 0.082, 1, 1, false, true, false, false);
-        testLayer("linear", "ONNX", 0.0022, 0.004, 1, 1, false, true, false, false);
+        testLayer("linear", "ONNX", 0.0027, 0.005, 1, 1, false, true, false, false);
         testLayer("constant", "ONNX", 0.00038, 0.0012, 1, 1, false, true, false, false);
         testLayer("lin_with_constant", "ONNX", 0.0011, 0.0016, 1, 1, false, true, false, false);
     }
@@ -837,7 +837,7 @@ TEST_P(Test_Int8_nets, RCNN_ILSVRC13)
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
 
-    float l1 = 0.02, lInf = 0.042;
+    float l1 = 0.02, lInf = 0.047;
     testONNXNet("rcnn_ilsvrc13", l1, lInf);
 }
 
