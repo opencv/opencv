@@ -901,7 +901,7 @@ public:
     * \param classLabel Classification of the track (dog, car, person, etc.)
     * \param trackingId Track's ID number
     */
-    Track(Rect2f, int, int, float);
+    Track(Rect2f rect, int trackingId, int classLabel, float classScore);
     Rect2f rect;
     float classScore;
     int classLabel; // static_cast<> ()
@@ -922,7 +922,7 @@ public:
     * \param classLabel Classification of the detection (dog, car, person, etc.)
     * \param classScore Confidence score of the detection
     */
-    Detection(Rect2f, int, float);
+    Detection(Rect2f rect, int classLabel, float classScore);
     Rect2f rect;
     int classLabel;
     float classScore;

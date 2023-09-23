@@ -110,29 +110,32 @@ int main()
         Mat img = postProcessImage(frame, detections, classList,
                                objects);
 
-        bool ok = false;
+
         bool useArray = false;
         if (useArray) //Update method with input array and output array
         {
             Mat objectsMat = detectionToMat(objects);
             Mat trackedObjects;
-            ok = tracker->update(objectsMat, trackedObjects);
-            for (int i = 0; i < trackedObjects.rows; i++)
+            bool ok = tracker->update(objectsMat, trackedObjects);
+            if (ok)
             {
-                int id_ = static_cast<int>(trackedObjects.at<float>(i, 6));
-                Scalar color = getColor(id_);
-                cv::Rect2f tlwh_(
-                    trackedObjects.at<float>(i, 0),
-                    trackedObjects.at<float>(i, 1),
-                    trackedObjects.at<float>(i, 2),
-                    trackedObjects.at<float>(i, 3));
+                for (int i = 0; i < trackedObjects.rows; i++)
+                {
+                    int id_ = static_cast<int>(trackedObjects.at<float>(i, 6));
+                    Scalar color = getColor(id_);
+                    cv::Rect2f tlwh_(
+                        trackedObjects.at<float>(i, 0),
+                        trackedObjects.at<float>(i, 1),
+                        trackedObjects.at<float>(i, 2),
+                        trackedObjects.at<float>(i, 3));
 
-                rectangle(img, tlwh_, color, 2);
-                int xPoint = static_cast<int>(tlwh_.x);
-                int yPoint = static_cast<int>(tlwh_.y);
-                putText(img, to_string(id_), Point(xPoint, yPoint - 5), FONT_FACE, FONT_SCALE, RED);
+                    rectangle(img, tlwh_, color, 2);
+                    int xPoint = static_cast<int>(tlwh_.x);
+                    int yPoint = static_cast<int>(tlwh_.y);
+                    putText(img, to_string(id_), Point(xPoint, yPoint - 5), FONT_FACE, FONT_SCALE, RED);
+                }
+                writeTracksToFile(trackedObjects, TRACKINGS_OUTPUT_PATH, frameNumber);
             }
-            writeTracksToFile(trackedObjects, TRACKINGS_OUTPUT_PATH, frameNumber);
         }
         else if (!useArray)
         {
