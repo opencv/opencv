@@ -1122,7 +1122,7 @@ struct CalcVerticalSums: public ParallelLoopBody
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                                 for( x = x1*Da; x < x2*Da; x += VTraits<v_int16>::vlanes() )
-                                    v_store_aligned(C + x, vx_load_aligned(Cprev + x) - vx_load_aligned(hsumSub + x) + vx_load_aligned(hsumAdd + x));
+                                    v_store_aligned(C + x, v_add(v_sub(vx_load_aligned(Cprev + x), vx_load_aligned(hsumSub + x)), vx_load_aligned(hsumAdd + x)));
 #else
                                 for( x = x1*Da; x < x2*Da; x++ )
                                     C[x] = (CostType)(Cprev[x] + hsumAdd[x] - hsumSub[x]);

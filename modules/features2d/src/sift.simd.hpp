@@ -211,11 +211,11 @@ float calcOrientationHist(
 
     k = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    const int vecsize = VTraits<v_float32>::max_nlanes;
+    const int vecsize = VTraits<v_float32>::vlanes();
     v_float32 nd360 = vx_setall_f32(n/360.f);
     v_int32 __n = vx_setall_s32(n);
-    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) bin_buf[vecsize];
-    float CV_DECL_ALIGNED(CV_SIMD_WIDTH) w_mul_mag_buf[vecsize];
+    int CV_DECL_ALIGNED(CV_SIMD_WIDTH) bin_buf[VTraits<v_float32>::max_nlanes];
+    float CV_DECL_ALIGNED(CV_SIMD_WIDTH) w_mul_mag_buf[VTraits<v_float32>::max_nlanes];
 
     for( ; k <= len - vecsize; k += vecsize )
     {
@@ -779,9 +779,9 @@ void calcSIFTDescriptor(
     k = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     {
-        const int vecsize = VTraits<v_float32>::max_nlanes;
-        int CV_DECL_ALIGNED(CV_SIMD_WIDTH) idx_buf[vecsize];
-        float CV_DECL_ALIGNED(CV_SIMD_WIDTH) rco_buf[8*vecsize];
+        const int vecsize = VTraits<v_float32>::vlanes();
+        int CV_DECL_ALIGNED(CV_SIMD_WIDTH) idx_buf[VTraits<v_float32>::max_nlanes];
+        float CV_DECL_ALIGNED(CV_SIMD_WIDTH) rco_buf[8*VTraits<v_float32>::max_nlanes];
         const v_float32 __ori  = vx_setall_f32(ori);
         const v_float32 __bins_per_rad = vx_setall_f32(bins_per_rad);
         const v_int32 __n = vx_setall_s32(n);
