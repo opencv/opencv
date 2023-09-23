@@ -11,7 +11,7 @@ from tests_common import NewOpenCVTests
 class lineiterator_test(NewOpenCVTests):
 
     def test_lineiterator(self):
-        n = 10
+        n = 5
         orig = 0
         p1 = (orig, orig)
         p2 = (orig + n, orig + n)
@@ -24,6 +24,19 @@ class lineiterator_test(NewOpenCVTests):
                 count = count + 1
             self.assertEqual(d1.count, d1.iter)
             count = 0
+            line_p21 = iter(cv.LineIterator(p2, p1))
+            for point21 in line_p21:
+                self.assertEqual(point21, (orig + line_p21.count - count - 1,
+                                           orig + line_p21.count - count - 1))
+                count = count + 1
+            self.assertEqual(line_p21.count, line_p21.iter)
+            self.assertEqual(line_p21.count, count)
+            line_p21 = iter(cv.LineIterator(p2, p1))
+            count = 0
+            for point21 in line_p21:
+                self.assertEqual(point21, (orig + line_p21.count - count - 1,
+                                           orig + line_p21.count - count - 1))
+                count = count + 1
 
 
 if __name__ == '__main__':
