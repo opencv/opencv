@@ -580,8 +580,8 @@ void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double ns
             pthread_mutex_unlock(&mutex);
 
             CV_LOG_VERBOSE(NULL, 5, "MainThread: wake worker threads...");
-            size_t max_loop = std::min(static_cast<size_t>(range.size()), threads.size());
-            for (size_t i = 0; i < max_loop; ++i)
+            size_t num_threads_to_wake = std::min(static_cast<size_t>(range.size()), threads.size());
+            for (size_t i = 0; i < num_threads_to_wake; ++i)
             {
                 if (job->current_task >= job->range.size())
                     break;
