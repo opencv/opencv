@@ -21,6 +21,10 @@
 #define FAST_GEMM_F32_NR 12
 #define FAST_GEMM_F32_PACKED_STRIDE_K 64
 
+#ifndef CV_NEON_AARCH64
+#define CV_NEON_AARCH64 0
+#endif
+
 #define FAST_GEMM_IMPLEMENT_PACK(N, suffix, styp, dtyp) \
 static void fast_gemm_pack##N##suffix( int m, int k, const void* A_, \
                                       int lda0, int lda1, void* packA_ ) \
@@ -117,7 +121,7 @@ void fastGemmPackBKernel(const char *B, char *packed_B, int N, int K, int ldb0, 
 }
 
 // NEON (AARCH64: 32 x 128-bit registers, armv7: 16 x 128-bit registers)
-#if CV_NEON_AARCH64
+#if CV_NEON && CV_NEON_AARCH64
 static inline void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
                                      char *c_, int ldc, float alpha) {
     const float* a = (const float*)a_;
