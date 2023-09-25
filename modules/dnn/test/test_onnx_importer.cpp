@@ -1450,7 +1450,7 @@ TEST_P(Test_ONNX_layers, DISABLED_Einsum_HadamardProduct)
     testONNXModels("einsum_hadamard", npy, 0, 0, false, false, 2);
 }
 
-TEST_P(Test_ONNX_layers, DISABLED_Einsum_Batch_Diagonal)
+TEST_P(Test_ONNX_layers, Einsum_Batch_Diagonal)
 {
     testONNXModels("einsum_batch_diagonal", npy, 0, 0, false, false, 1);
 }
