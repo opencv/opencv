@@ -423,6 +423,7 @@ PERF_TEST_P_(DNNTestNetwork, CRNN) {
 
     Mat inp(cv::Size(100, 32), CV_32FC1);
     randu(inp, 0.0f, 1.0f);
+    inp = blobFromImage(inp, 1.0, Size(), Scalar(), false);
     processNet("", "dnn/text_recognition_CRNN_EN_2021sep.onnx", "", inp);
 }
 
