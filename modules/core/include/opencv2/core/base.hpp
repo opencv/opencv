@@ -121,7 +121,7 @@ enum Code {
     OpenCLDoubleNotSupported=  -221,
     OpenCLInitError=           -222, //!< OpenCL initialization error
     OpenCLNoAMDBlasFft=        -223,
-    AscendApiCallError =       -224  //!< AscendCL API call error
+    AscendApiCallError =       -224, //!< AscendCL API call error
 };
 } //Error
 
