@@ -80,7 +80,7 @@ public:
     void processNet(std::string weights, std::string proto, std::string halide_scheduler,
                     Mat &input, const std::string& outputLayer = "")
     {
-        processNet(weights, proto, halide_scheduler, {{input, ""}}, outputLayer);
+        processNet(weights, proto, halide_scheduler, {std::make_tuple(input, "")}, outputLayer);
     }
 
     void processNet(std::string weights, std::string proto, std::string halide_scheduler,
@@ -437,7 +437,7 @@ PERF_TEST_P_(DNNTestNetwork, ViTTrack) {
     randu(inp2, 0.0f, 1.0f);
     inp1 = blobFromImage(inp1, 1.0, Size(), Scalar(), false);
     inp2 = blobFromImage(inp2, 1.0, Size(), Scalar(), false);
-    processNet("", "dnn/onnx/models/vitTracker.onnx", "",  {{inp1, "template"}, {inp2, "search"}});
+    processNet("", "dnn/onnx/models/vitTracker.onnx", "",  {std::make_tuple(inp1, "template"), std::make_tuple(inp2, "search")});
 }
 
 
