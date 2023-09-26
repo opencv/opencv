@@ -966,12 +966,13 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Backends, MaxPooling, testing::Combine(
 typedef TestWithParam<tuple<int, Size, int, bool, tuple<Backend, Target> > > FullyConnected;
 TEST_P(FullyConnected, Accuracy)
 {
-    int inChannels = get<0>(GetParam());
-    Size inSize = get<1>(GetParam());
-    int outChannels = get<2>(GetParam());
-    bool hasBias = get<3>(GetParam());
-    Backend backendId = get<0>(get<4>(GetParam()));
-    Target targetId = get<1>(get<4>(GetParam()));
+    int batch = get<0>(GetParam());
+    int inChannels = get<1>(GetParam());
+    Size inSize = get<2>(GetParam());
+    int outChannels = get<3>(GetParam());
+    bool hasBias = get<4>(GetParam());
+    Backend backendId = get<0>(get<5>(GetParam()));
+    Target targetId = get<1>(get<5>(GetParam()));
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
     if ((backendId == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
          backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) && (targetId == DNN_TARGET_OPENCL_FP16 ||
@@ -1002,7 +1003,7 @@ TEST_P(FullyConnected, Accuracy)
     lp.type = "InnerProduct";
     lp.name = "testLayer";
 
-    int sz[] = {1, inChannels, inSize.height, inSize.width};
+    int sz[] = {batch, inChannels, inSize.height, inSize.width};
     Mat input(4, &sz[0], CV_32F);
 
     double l1 = 0.0;
@@ -1028,10 +1029,11 @@ TEST_P(FullyConnected, Accuracy)
     if (targetId == DNN_TARGET_CUDA_FP16)
         l1 = 0.015;
 
-    testLayer(lp, input, backendId, targetId, false, l1, lInf);
+    test(lp, input, backendId, targetId, false, l1, lInf);
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Backends, FullyConnected, testing::Combine(
+/*batch*/        testing::Values(1, 2, 4, 8, 16),
 /*in channels*/  testing::Values(3, 4),
 /*in size*/      testing::Values(Size(5, 4), Size(4, 5), Size(1, 1)),
 /*out channels*/ testing::Values(3, 4),
