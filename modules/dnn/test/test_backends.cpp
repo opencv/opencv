@@ -980,6 +980,13 @@ TEST_P(FullyConnected, Accuracy)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD_X);
     }
 #endif
+    // https://github.com/openvinotoolkit/openvino/issues/19436
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL_FP16 && batch == 16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2023000000)
+    if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL && batch == 16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL);
+#endif
 
     Mat weights(outChannels, inChannels * inSize.height * inSize.width, CV_32F);
     randu(weights, -1.0f, 1.0f);
@@ -1009,11 +1016,13 @@ TEST_P(FullyConnected, Accuracy)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL_FP16)
     {
         l1 = 0.01;
+        if (INF_ENGINE_VER_MAJOR_GE(2023000000))
+            lInf = 0.016;
     }
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && targetId == DNN_TARGET_OPENCL)
     {
         l1 = 5e-3;
-        lInf = 7e-3;
+        lInf = INF_ENGINE_VER_MAJOR_GE(2023000000) ? 0.016 : 7e-3;
     }
 #endif
     if (targetId == DNN_TARGET_CUDA_FP16)
