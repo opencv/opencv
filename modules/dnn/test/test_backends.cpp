@@ -1029,7 +1029,7 @@ TEST_P(FullyConnected, Accuracy)
     if (targetId == DNN_TARGET_CUDA_FP16)
         l1 = 0.015;
 
-    test(lp, input, backendId, targetId, false, l1, lInf);
+    testLayer(lp, input, backendId, targetId, false, l1, lInf);
 }
 
 INSTANTIATE_TEST_CASE_P(Layer_Test_Backends, FullyConnected, testing::Combine(
