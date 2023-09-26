@@ -963,7 +963,7 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Backends, MaxPooling, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Fully-connected
 ////////////////////////////////////////////////////////////////////////////////
-typedef TestWithParam<tuple<int, Size, int, bool, tuple<Backend, Target> > > FullyConnected;
+typedef TestWithParam<tuple<int, int, Size, int, bool, tuple<Backend, Target> > > FullyConnected;
 TEST_P(FullyConnected, Accuracy)
 {
     int batch = get<0>(GetParam());
