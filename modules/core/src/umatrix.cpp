@@ -1171,7 +1171,9 @@ void UMat::copyTo(OutputArray _dst) const
         if( u == dst.u && dst.offset == offset )
             return;
 
-        if (u->allocatorContext == dst.u->allocatorContext && u->currAllocator == dst.u->currAllocator)
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxSrc = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxDst = std::static_pointer_cast<ocl::OpenCLExecutionContext>(dst.u->allocatorContext);
+        if (pExecCtxSrc->getContext().ptr() == pExecCtxDst->getContext().ptr() && u->currAllocator == dst.u->currAllocator)
         {
             dst.ndoffset(dstofs);
             dstofs[dims-1] *= esz;
