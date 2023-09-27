@@ -3042,7 +3042,7 @@ embedding = onnx.numpy_helper.from_array(embedding, name='embedding')
 X = onnx.helper.make_tensor_value_info('input', onnx.TensorProto.FLOAT, input.shape)
 Y = onnx.helper.make_tensor_value_info('output', onnx.TensorProto.FLOAT, output.shape)
 
-shape = np.array([1, 1, -1], dtype=np.int32)
+shape = np.array([1, 1, 1], dtype=np.int64)
 shape = onnx.numpy_helper.from_array(shape, name='shape')
 expand = onnx.helper.make_node("Expand", inputs=['embedding', 'shape'], outputs=['expand'])
 
