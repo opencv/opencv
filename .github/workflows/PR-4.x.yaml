@@ -1,9 +1,9 @@
-name: PR:4.x
+name: PR:4.8.x
 
 on:
   pull_request:
     branches:
-      - 4.x
+      - 4.8.x
 
 jobs:
   Ubuntu2004-ARM64:
