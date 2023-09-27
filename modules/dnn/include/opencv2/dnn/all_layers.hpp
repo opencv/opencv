@@ -1144,6 +1144,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<GemmLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS ExpandLayer : public Layer
+    {
+    public:
+        static Ptr<ExpandLayer> create(const LayerParams &params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END
