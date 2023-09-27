@@ -160,8 +160,7 @@ PERF_TEST_P_(Gemm, gemm)
     }
 
     Net net;
-    int id = net.addLayerToPrev(lp.name, lp.type, lp);
-    net.connect(0, 0, id, 0);
+    net.addLayerToPrev(lp.name, lp.type, lp);
     net.setPreferableBackend(backend_id);
     net.setPreferableTarget(target_id);
 
@@ -221,14 +220,13 @@ PERF_TEST_P_(Gemm, innerproduct)
     }
 
     Net net;
-    int id = net.addLayerToPrev(lp.name, lp.type, lp);
-    net.connect(0, 0, id, 0);
+    net.addLayerToPrev(lp.name, lp.type, lp);
     net.setPreferableBackend(backend_id);
     net.setPreferableTarget(target_id);
 
     // warmup
     {
-        std::vector<std::string> input_names(2);
+        std::vector<std::string> input_names(1);
         input_names[0] = "A";
         net.setInputsNames(input_names);
         net.setInput(A, input_names[0]);
