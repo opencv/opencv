@@ -270,9 +270,6 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv4_tiny)
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv5) {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(640, 640), Scalar(), true);
     processNet("", "dnn/yolov5n.onnx", "", inp);
@@ -280,9 +277,6 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv5) {
 
 PERF_TEST_P_(DNNTestNetwork, YOLOv8) {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(640, 640), Scalar(), true);
     processNet("", "dnn/yolov8n.onnx", "", inp);
@@ -290,9 +284,6 @@ PERF_TEST_P_(DNNTestNetwork, YOLOv8) {
 
 PERF_TEST_P_(DNNTestNetwork, YOLOX) {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(640, 640), Scalar(), true);
     processNet("", "dnn/yolox_s.onnx", "", inp);
@@ -346,9 +337,6 @@ PERF_TEST_P_(DNNTestNetwork, EfficientDet)
 
 PERF_TEST_P_(DNNTestNetwork, EfficientNet)
 {
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-
     Mat sample = imread(findDataFile("dnn/dog416.png"));
     Mat inp = blobFromImage(sample, 1.0 / 255.0, Size(224, 224), Scalar(), true);
     transposeND(inp, {0, 2, 3, 1}, inp);
@@ -356,23 +344,14 @@ PERF_TEST_P_(DNNTestNetwork, EfficientNet)
 }
 
 PERF_TEST_P_(DNNTestNetwork, YuNet) {
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-
     processNet("", "dnn/onnx/models/yunet-202303.onnx", "",  cv::Size(640, 640));
 }
 
 PERF_TEST_P_(DNNTestNetwork, SFace) {
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-
     processNet("", "dnn/face_recognition_sface_2021dec.onnx", "",  cv::Size(112, 112));
 }
 
 PERF_TEST_P_(DNNTestNetwork, MPPalm) {
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-
     Mat inp(cv::Size(192, 192), CV_32FC3);
     randu(inp, 0.0f, 1.0f);
     inp = blobFromImage(inp, 1.0, Size(), Scalar(), false);
@@ -381,9 +360,6 @@ PERF_TEST_P_(DNNTestNetwork, MPPalm) {
 }
 
 PERF_TEST_P_(DNNTestNetwork, MPHand) {
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-
     Mat inp(cv::Size(224, 224), CV_32FC3);
     randu(inp, 0.0f, 1.0f);
     inp = blobFromImage(inp, 1.0, Size(), Scalar(), false);
@@ -392,9 +368,6 @@ PERF_TEST_P_(DNNTestNetwork, MPHand) {
 }
 
 PERF_TEST_P_(DNNTestNetwork, MPPose) {
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-
     Mat inp(cv::Size(256, 256), CV_32FC3);
     randu(inp, 0.0f, 1.0f);
     inp = blobFromImage(inp, 1.0, Size(), Scalar(), false);
@@ -404,23 +377,14 @@ PERF_TEST_P_(DNNTestNetwork, MPPose) {
 
 PERF_TEST_P_(DNNTestNetwork, PPOCRv3) {
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-
     processNet("", "dnn/onnx/models/PP_OCRv3_DB_text_det.onnx", "", cv::Size(736, 736));
 }
 
 PERF_TEST_P_(DNNTestNetwork, PPHumanSeg) {
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-
     processNet("", "dnn/human_segmentation_pphumanseg_2023mar.onnx", "", cv::Size(192, 192));
 }
 
 PERF_TEST_P_(DNNTestNetwork, CRNN) {
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-
     Mat inp(cv::Size(100, 32), CV_32FC1);
     randu(inp, 0.0f, 1.0f);
     inp = blobFromImage(inp, 1.0, Size(), Scalar(), false);
@@ -428,9 +392,6 @@ PERF_TEST_P_(DNNTestNetwork, CRNN) {
 }
 
 PERF_TEST_P_(DNNTestNetwork, ViTTrack) {
-    if (backend == DNN_BACKEND_HALIDE)
-        throw SkipTestException("");
-
     Mat inp1(cv::Size(128, 128), CV_32FC3);
     Mat inp2(cv::Size(256, 256), CV_32FC3);
     randu(inp1, 0.0f, 1.0f);
