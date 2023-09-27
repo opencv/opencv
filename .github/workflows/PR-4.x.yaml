@@ -7,41 +7,41 @@ on:
 
 jobs:
   Ubuntu2004-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64.yaml@release_4.8.x
 
   Ubuntu2004-ARM64-Debug:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64-Debug.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64-Debug.yaml@release_4.8.x
 
   Ubuntu2004-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20.yaml@release_4.8.x
 
   Ubuntu2004-x64-CUDA:
     if: "${{ contains(github.event.pull_request.labels.*.name, 'category: dnn') }} || ${{ contains(github.event.pull_request.labels.*.name, 'category: dnn (onnx)') }}"
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-Cuda.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-Cuda.yaml@release_4.8.x
 
   Windows10-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10.yaml@release_4.8.x
 
   Windows10-x64-Vulkan:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10-Vulkan.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10-Vulkan.yaml@release_4.8.x
 
   macOS-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64.yaml@release_4.8.x
 
   macOS-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-x86_64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-x86_64.yaml@release_4.8.x
 
   macOS-ARM64-Vulkan:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64-Vulkan.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64-Vulkan.yaml@release_4.8.x
 
   iOS:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-iOS.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-iOS.yaml@release_4.8.x
 
   Android:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-Android.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-Android.yaml@release_4.8.x
 
   TIM-VX:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@release_4.8.x
 
   docs:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-docs.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-docs.yaml@release_4.8.x
