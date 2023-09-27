@@ -987,9 +987,21 @@ TEST_P(Test_ONNX_layers, MatMulAdd)
 TEST_P(Test_ONNX_layers, Expand)
 {
     testONNXModels("expand");
+}
+
+TEST_P(Test_ONNX_layers, ExpandIdentity) {
     testONNXModels("expand_identity");
+}
+
+TEST_P(Test_ONNX_layers, ExpandBatch) {
     testONNXModels("expand_batch");
+}
+
+TEST_P(Test_ONNX_layers, ExpandChannels) {
     testONNXModels("expand_channels");
+}
+
+TEST_P(Test_ONNX_layers, ExpandNegBatch) {
     testONNXModels("expand_neg_batch");
 }
 
@@ -2679,6 +2691,27 @@ TEST_P(Test_ONNX_layers, Conformance_Gemm_transposeA) {
 }
 TEST_P(Test_ONNX_layers, Conformance_Gemm_transposeB) {
     testONNXModels("test_gemm_transposeB", pb, 0, 0, false, true, 2);
+}
+
+// Note: These tests are converted from onnx/onnx so that they have constant shape as input.
+// TODO: They can be moved into conformance tests once dynamic input is properly supported.
+TEST_P(Test_ONNX_layers, Expand_dim_changed) {
+    testONNXModels("test_expand_dim_changed", pb, 0, 0, false, true, 1);
+}
+TEST_P(Test_ONNX_layers, Expand_dim_unchanged) {
+    testONNXModels("test_expand_dim_unchanged", pb, 0, 0, false, true, 1);
+}
+TEST_P(Test_ONNX_layers, Expand_shape_model1) {
+    testONNXModels("test_expand_shape_model1", pb, 0, 0, false, true, 1);
+}
+TEST_P(Test_ONNX_layers, Expand_shape_model2) {
+    testONNXModels("test_expand_shape_model2", pb, 0, 0, false, true, 1);
+}
+TEST_P(Test_ONNX_layers, Expand_shape_model3) {
+    testONNXModels("test_expand_shape_model3", pb, 0, 0, false, true, 1);
+}
+TEST_P(Test_ONNX_layers, Expand_shape_model4) {
+    testONNXModels("test_expand_shape_model4", pb, 0, 0, false, true, 1);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
