@@ -1171,7 +1171,7 @@ void UMat::copyTo(OutputArray _dst) const
         if( u == dst.u && dst.offset == offset )
             return;
 
-        if (u->currAllocator == dst.u->currAllocator)
+        if (u->allocatorContext == dst.u->allocatorContext && u->currAllocator == dst.u->currAllocator)
         {
             dst.ndoffset(dstofs);
             dstofs[dims-1] *= esz;
@@ -1211,6 +1211,9 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
         String opts = format("-D COPY_TO_MASK -D T1=%s -D scn=%d -D mcn=%d%s",
                              ocl::memopTypeToStr(depth()), cn, mcn,
                              haveDstUninit ? " -D HAVE_DST_UNINIT" : "");
+
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
+        ocl::OpenCLExecutionContextScope scope(*pExecCtx.get());
 
         ocl::Kernel k("copyToMask", ocl::core::copyset_oclsrc, opts);
         if (!k.empty())
@@ -1260,6 +1263,9 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
         int wdepth = std::max(CV_32F, sdepth), rowsPerWI = 4;
 
         char cvt[2][50];
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
+        ocl::OpenCLExecutionContextScope scope(*pExecCtx.get());
+
         ocl::Kernel k("convertTo", ocl::core::convert_oclsrc,
                       format("-D srcT=%s -D WT=%s -D dstT=%s -D convertToWT=%s -D convertToDT=%s%s%s",
                              ocl::typeToStr(sdepth), ocl::typeToStr(wdepth), ocl::typeToStr(ddepth),
@@ -1301,7 +1307,6 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
 UMat& UMat::setTo(InputArray _value, InputArray _mask)
 {
     CV_INSTRUMENT_REGION();
-
     bool haveMask = !_mask.empty();
 #ifdef HAVE_OPENCL
     int tp = type(), cn = CV_MAT_CN(tp), d = CV_MAT_DEPTH(tp);
@@ -1322,6 +1327,9 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
                              ocl::memopTypeToStr(kertp), rowsPerWI,
                              ocl::memopTypeToStr(CV_MAKETYPE(d, scalarcn)),
                              ocl::memopTypeToStr(d), kercn);
+
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
+        ocl::OpenCLExecutionContextScope scope(*pExecCtx.get());
 
         ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
         if( !setK.empty() )
