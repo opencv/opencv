@@ -18,7 +18,7 @@ namespace cv
 namespace dnn
 {
 
-#if CV_SIMD
+#if CV_SIMD128
 static inline void v_expand_mul_add(const v_int8x16& a, const v_int8x16& b,
                                     v_int32x4& out0, v_int32x4& out1, v_int32x4& out2, v_int32x4& out3)
 {
@@ -893,7 +893,7 @@ public:
                                         outptr[0] = std::min(std::max(out1, -128), 127);
                                         out_j = 1;
                                     }
-                                #if CV_SIMD
+                                #if CV_SIMD128
                                     if( stride_w == 1 )
                                     {
                                         const int out_delta = 16;
