@@ -38,8 +38,14 @@ static inline void PrintTo(const EinsumParams& params, ::std::ostream* os) {
 
 // test cases
 static const EinsumParams testEinsumConfigs[] = {
-    {"ij, jk -> ik", 2, 1,  {{2, 3}, {3, 2}}}
+    // TODO: Add tests with one input after ellips merge
+    {"ij, jk -> ik", 2, 1,  {{2, 3}, {3, 2}}},
+    {"ij, jk -> ik", 2, 1,  {{20, 30}, {30, 20}}},
+    {"ij, jk -> ik", 2, 1,  {{200, 300}, {300, 200}}},
 
+    {"imkj, injs -> imnks", 2, 1,  {{1, 4, 7, 9}, {1, 5, 9, 8}}},
+    {"imkj, injs -> imnks", 2, 1,  {{10, 40, 70, 90}, {10, 50, 90, 80}}},
+    {"imkj, injs -> imnks", 2, 1,  {{100, 400, 700, 900}, {100, 500, 900, 800}}}
 };
 
 class Layer_Einsum: public TestBaseWithParam<EinsumParams> {};
@@ -59,19 +65,41 @@ PERF_TEST_P_(Layer_Einsum, einsum) {
         lp.set("inputShapes" + cv::format("%d", i), DictValue::arrayInt(params.einsumInpShapes[i].begin(), params.einsumInpShapes[i].size()));
     }
 
-    // create inputs
-    Mat input1(params.einsumInpShapes[0].size(), params.einsumInpShapes[0].data(), CV_32FC1);
-    Mat input2(params.einsumInpShapes[1].size(), params.einsumInpShapes[1].data(), CV_32FC1);
-
     Net net;
-    net.setInput(input1);
-    net.setInput(input2);
-    net.addLayerToPrev(lp.name, lp.type, lp);
+    std::vector<Mat> inputs;
+    std::vector<std::string> input_names;
+    if (params.inputSize == 1){
 
-    // Warm up
+        // create inputs
+        inputs.emplace_back(Mat(params.einsumInpShapes[0].size(), params.einsumInpShapes[0].data(), CV_32FC1));
+
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+
+        input_names.emplace_back("input1");
+
+    } else {
+
+        // create inputs
+        inputs.emplace_back(Mat(params.einsumInpShapes[0].size(), params.einsumInpShapes[0].data(), CV_32FC1));
+        inputs.emplace_back(Mat(params.einsumInpShapes[1].size(), params.einsumInpShapes[1].data(), CV_32FC1));
+
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+
+        input_names.emplace_back("input1");
+        input_names.emplace_back("input2");
+    }
+
+    //warm up
+    net.setInputsNames(input_names);
+    for (int i = 0; i < input_names.size(); i++){
+        net.setInput(inputs[i], input_names[i]);
+    }
+    Mat out = net.forward();
+
     std::vector<Mat> outputs;
-    net.forward(outputs, "testEinsum");
-
     TEST_CYCLE()
     {
         net.forward(outputs, "testEinsum");
