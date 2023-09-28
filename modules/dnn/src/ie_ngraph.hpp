@@ -148,6 +148,9 @@ private:
     InferenceEngine::CNNNetwork t_net;
 };
 
+ngraph::Output<ngraph::Node> ngraphQuantize(ngraph::Output<ngraph::Node> input, float output_sc, float output_zp);
+ngraph::Output<ngraph::Node> ngraphDequantize(ngraph::Output<ngraph::Node> input, float input_sc, float input_zp);
+
 #endif  // HAVE_DNN_NGRAPH
 
 }}  // namespace cv::dnn

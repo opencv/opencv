@@ -204,6 +204,10 @@ TEST_P(Test_TFLite, max_unpooling)
 }
 
 TEST_P(Test_TFLite, EfficientDet_int8) {
+    if (target != DNN_TARGET_CPU || (backend != DNN_BACKEND_OPENCV &&
+        backend != DNN_BACKEND_TIMVX && backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)) {
+        throw SkipTestException("Only OpenCV, TimVX and OpenVINO targets support INT8 on CPU");
+    }
     Net net = readNet(findDataFile("dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", false));
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);

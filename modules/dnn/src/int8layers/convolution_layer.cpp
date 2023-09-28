@@ -10,6 +10,7 @@
 #include "opencv2/core/hal/hal.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include "../op_timvx.hpp"
+#include "../ie_ngraph.hpp"
 #include <iostream>
 #include <numeric>
 
@@ -195,7 +196,8 @@ public:
         }
 #endif
         // Only default backend and Conv1D/Conv2D/Conv3D are supported
-        return backendId == DNN_BACKEND_OPENCV && ksize >= 1 && ksize <= 3;
+        return (backendId == DNN_BACKEND_OPENCV && ksize >= 1 && ksize <= 3) ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -560,6 +562,126 @@ public:
 #endif  // HAVE_TIMVX
         return Ptr<BackendNode>();
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(!blobs.empty());
+        CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
+        CV_CheckTypeEQ(weightsMat.type(), CV_8S, "");
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        std::vector<size_t> dims = ieInpNode.get_shape();
+        CV_Check(dims.size(), dims.size() >= 3 && dims.size() <= 5, "");
+        CV_Assert(ieInpNode.get_element_type() == ngraph::element::f32);
+        ngraph::Output<ngraph::Node> ieWeights;
+        if (nodes.size() > 1)
+            ieWeights = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
+        const int inpCn = dims[1];
+        const int inpGroupCn = nodes.size() > 1 ? ieWeights.get_shape()[1] : blobs[0].size[1];
+        const int group = inpCn / inpGroupCn;
+
+        std::vector<size_t> kernel_shape;
+        if (group != 1)
+        {
+            kernel_shape.push_back(group);
+        }
+        kernel_shape.push_back(numOutput / group);
+        kernel_shape.push_back(inpCn / group);
+        std::copy(kernel_size.begin(), kernel_size.end(), back_inserter(kernel_shape));
+
+        if (nodes.size() == 1)
+        {
+            ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::i8, kernel_shape, blobs[0].data);
+        }
+        else
+        {
+            auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
+                             ngraph::Shape{kernel_shape.size()}, std::vector<int64_t>(kernel_shape.begin(), kernel_shape.end()));
+            ieWeights  = std::make_shared<ngraph::op::v1::Reshape>(ieWeights, shape, true);
+        }
+
+        ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;
+        if (!padMode.empty())
+            pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
+
+        ieInpNode = ngraphDequantize(ieInpNode, input_sc, input_zp);
+
+        const float low = -128, high = 127;
+        std::vector<float> inpLows(numOutput, low);
+        std::vector<float> inpHighs(numOutput, high);
+        std::vector<float> outLows(numOutput);
+        std::vector<float> outHighs(numOutput);
+        std::vector<size_t> quantShape(kernel_shape.size(), 1);
+        if (group != 1)
+        {
+            quantShape[0] = group;
+            quantShape[1] = numOutput / group;
+        }
+        else
+        {
+            quantShape[0] = numOutput;
+        }
+
+        for (int i = 0; i < numOutput; ++i) {
+            outLows[i] = low * outputMultiplier[i] * output_sc / input_sc;
+            outHighs[i] = high * outputMultiplier[i] * output_sc / input_sc;
+        }
+        ieWeights = std::make_shared<ngraph::op::Convert>(ieWeights, ngraph::element::f32);
+        ieWeights = std::make_shared<ngraph::op::FakeQuantize>(ieWeights,
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, quantShape, inpLows.data()),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, quantShape, inpHighs.data()),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, quantShape, outLows.data()),
+            std::make_shared<ngraph::op::Constant>(ngraph::element::f32, quantShape, outHighs.data()),
+            256 // levels
+        );
+
+        ngraph::Output<ngraph::Node> conv_node;
+        if (group != 1) {
+            conv_node = std::make_shared<ngraph::op::v1::GroupConvolution>(
+                                ieInpNode, ieWeights,
+                                ngraph::Strides(strides),
+                                ngraph::CoordinateDiff(std::vector<std::ptrdiff_t>(pads_begin.begin(), pads_begin.end())),
+                                ngraph::CoordinateDiff(std::vector<std::ptrdiff_t>(pads_end.begin(),   pads_end.end())),
+                                ngraph::Strides(dilations),
+                                pad_type);
+        } else {
+            conv_node = std::make_shared<ngraph::op::v1::Convolution>(
+                                ieInpNode, ieWeights,
+                                ngraph::Strides(strides),
+                                ngraph::CoordinateDiff(std::vector<std::ptrdiff_t>(pads_begin.begin(), pads_begin.end())),
+                                ngraph::CoordinateDiff(std::vector<std::ptrdiff_t>(pads_end.begin(), pads_end.end())),
+                                ngraph::Strides(dilations),
+                                pad_type);
+        }
+
+        std::vector<size_t> shape(conv_node.get_shape().size(), 1);
+        shape[1] = conv_node.get_shape()[1];
+        if (biasvec.size() || nodes.size() == 3)
+        {
+            std::shared_ptr<ngraph::Node> bias;
+            if (nodes.size() == 3)
+            {
+                auto bias_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
+                                    ngraph::Shape{shape.size()}, std::vector<int64_t>(shape.begin(), shape.end()));
+                bias = std::make_shared<ngraph::op::v1::Reshape>(nodes[2].dynamicCast<InfEngineNgraphNode>()->node, bias_shape, true);
+            }
+            else
+            {
+                std::vector<float> ovBias(numOutput);
+                for (int i = 0; i < numOutput; ++i) {
+                    ovBias[i] = (biasvec[i] + input_zp * cv::sum(blobs[0].row(i))[0]) * outputMultiplier[i] * output_sc;
+                }
+                bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), ovBias.data());
+            }
+            conv_node = std::make_shared<ngraph::op::v1::Add>(conv_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
+        }
+
+        conv_node = ngraphQuantize(conv_node, output_sc, output_zp);
+
+        return new InfEngineNgraphNode(conv_node);
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     class ParallelConv : public cv::ParallelLoopBody
     {

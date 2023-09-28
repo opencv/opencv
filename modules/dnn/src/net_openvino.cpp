@@ -48,7 +48,6 @@ public:
         CV_Assert(basePtr_);
         Net::Impl& base = *basePtr_;
         CV_Assert(!base.netWasAllocated);
-        CV_Assert(!base.netWasQuantized);
         netInputLayer = base.netInputLayer;
         blobsToKeep = base.blobsToKeep;
         layers = base.layers;
