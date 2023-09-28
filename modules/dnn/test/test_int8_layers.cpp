@@ -200,6 +200,7 @@ TEST_P(Test_Int8_layers, Padding)
 
 TEST_P(Test_Int8_layers, AvePooling)
 {
+    // Some tests failed with OpenVINO due to wrong padded area calculation
     if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         testLayer("layer_pooling_ave", "Caffe", 0.0021, 0.0075);
     testLayer("ave_pool_same", "TensorFlow", 0.00153, 0.0041);
@@ -326,6 +327,7 @@ TEST_P(Test_Int8_layers, Concat)
 {
     testLayer("layer_concat_shared_input", "Caffe", 0.0076, 0.029, 1, 1, true, false);
     if (backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
+        // Crashes with segfault
         testLayer("concat_axis_1", "TensorFlow", 0.0056, 0.017);
     }
     testLayer("keras_pad_concat", "TensorFlow", 0.0032, 0.0089);
