@@ -707,9 +707,6 @@ TEST_P(Test_Int8_nets, AlexNet)
 #else
     applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
 #endif
-    if (backend != DNN_BACKEND_OPENCV)
-        throw SkipTestException("Only OpenCV backend is supported");
-
     if (target == DNN_TARGET_OPENCL_FP16 && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
@@ -750,8 +747,6 @@ TEST_P(Test_Int8_nets, GoogLeNet)
 TEST_P(Test_Int8_nets, ResNet50)
 {
     applyTestTag(target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
-    if (backend != DNN_BACKEND_OPENCV)
-        throw SkipTestException("Only OpenCV backend is supported");
 
     if (target == DNN_TARGET_OPENCL_FP16 && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
@@ -782,6 +777,8 @@ TEST_P(Test_Int8_nets, DenseNet121)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
     Net net = readNetFromCaffe(findDataFile("dnn/DenseNet_121.prototxt", false),
                                findDataFile("dnn/DenseNet_121.caffemodel", false));
@@ -963,6 +960,8 @@ TEST_P(Test_Int8_nets, opencv_face_detector)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
     Net net = readNetFromCaffe(findDataFile("dnn/opencv_face_detector.prototxt"),
                                findDataFile("dnn/opencv_face_detector.caffemodel", false));
@@ -1029,7 +1028,8 @@ TEST_P(Test_Int8_nets, FasterRCNN_resnet50)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
@@ -1056,7 +1056,8 @@ TEST_P(Test_Int8_nets, FasterRCNN_inceptionv2)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
-
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
@@ -1087,6 +1088,8 @@ TEST_P(Test_Int8_nets, FasterRCNN_vgg16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
     Net net = readNetFromCaffe(findDataFile("dnn/faster_rcnn_vgg16.prototxt"),
                                findDataFile("dnn/VGG16_faster_rcnn_final.caffemodel", false));
@@ -1114,6 +1117,8 @@ TEST_P(Test_Int8_nets, FasterRCNN_zf)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
     Net net = readNetFromCaffe(findDataFile("dnn/faster_rcnn_zf.prototxt"),
                                findDataFile("dnn/ZF_faster_rcnn_final.caffemodel", false));
@@ -1146,6 +1151,9 @@ TEST_P(Test_Int8_nets, RFCN)
                                     0, 12, 0.94786, 132.093, 223.903, 338.077, 566.16);
 
     float confThreshold = 0.8, scoreDiff = 0.15, iouDiff = 0.11;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
+        iouDiff = 0.12;
+    }
     testFaster(net, ref, confThreshold, scoreDiff, iouDiff);
 }
 
@@ -1325,6 +1333,8 @@ TEST_P(Test_Int8_nets, YOLOv4_tiny)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (target == DNN_TARGET_OPENCL && !ocl::Device::getDefault().isIntel())
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 
     const float confThreshold = 0.6;
 

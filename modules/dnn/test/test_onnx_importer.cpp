@@ -2048,12 +2048,16 @@ TEST_P(Test_ONNX_layers, Quantized_Unsqueeze)
 TEST_P(Test_ONNX_layers, Quantized_Resize)
 {
     testONNXModels("quantized_resize_nearest");
-    testONNXModels("quantized_resize_bilinear", npy, 2e-4, 0.003);
-    testONNXModels("quantized_resize_bilinear_align", npy, 3e-4, 0.003);
+    double l1 = backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ? 0.0013 : 2e-4;
+    testONNXModels("quantized_resize_bilinear", npy, l1, 0.003);
+    l1 = backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ? 0.0013 : 3e-4;
+    testONNXModels("quantized_resize_bilinear_align", npy, l1, 0.003);
 }
 
 TEST_P(Test_ONNX_layers, Quantized_Concat)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("quantized_concat");
     testONNXModels("quantized_concat_const_blob");
 }
@@ -2070,6 +2074,8 @@ TEST_P(Test_ONNX_layers, OutputRegistration)
 
 TEST_P(Test_ONNX_layers, QLinearSoftmax)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("qlinearsoftmax_v11", npy, 0.002, 0.002); // 2D coerced
     testONNXModels("qlinearsoftmax_v13", npy, 0.002, 0.002);
 }
