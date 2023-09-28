@@ -94,6 +94,10 @@ Mat batchwiseMatMul(
             int shape2[] = {static_cast<int>(K), static_cast<int>(N)};
             part2 = part2.reshape(1, sizeof(shape2)/sizeof(shape2[0]), shape2);
 
+            // print type of part1 and part2
+            std::cout << "part1 type: " << part1.type() << " shape: " << part1.size << std::endl;
+            std::cout << "part2 type: " << part2.type() << " shape: " << part2.size << std::endl;
+
             Mat tmp_output;
             cv::gemm(part1, part2, 1.0, cv::Mat(), 1.0, tmp_output);
             int newShape[] = {1, static_cast<int>(M), static_cast<int>(N)};
@@ -123,6 +127,9 @@ Mat batchwiseMatMul(
             reshapedInput2 = input2.reshape(1, 2, shape2);
         }
 
+        // print type of part1 and part2
+        std::cout << "part1 type: " << reshapedInput1.type() << " shape: " << reshapedInput1.size << std::endl;
+        std::cout << "part2 type: " << reshapedInput2.type() << " shape: " << reshapedInput2.size << std::endl;
         Mat tmp_output;
         cv::gemm(reshapedInput1, reshapedInput2, 1.0, cv::Mat(), 1.0, tmp_output);
 
