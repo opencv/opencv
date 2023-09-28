@@ -2503,11 +2503,11 @@ void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::Node
     CV_CheckEQ(node_proto.input_size(), 2, "");
 
     // TODO: get rid of the type conversions and 1-d/0-d special-casing when the time comes
-    if (layer_id.find(node_proto.input(1)) == layer_id.end())
+    if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
     {
         int real_ndims = getBlobExtraInfo(node_proto.input(1)).real_ndims;
         layerParams.set("real_ndims", real_ndims);
-        if (layer_id.find(node_proto.input(0)) == layer_id.end())
+        if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
         {
             std::vector<Mat> inputs, output;
 
