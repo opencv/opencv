@@ -976,7 +976,6 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
         int ellipsisCharCount = 0;
         for (auto letter : token)
         {
-            // Broadcasting based tokens are not implemented yet
             if (letter == '.')
             {
                 middleOfellipsis = true;
@@ -1052,16 +1051,11 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
                     subscriptIndicesToLastInput[mappedIndx] = inputIdx;
 
                     if (subscriptIndicesToDimValue[mappedIndx] != dimValue) {
-                        if(subscriptIndicesToDimValue[mappedIndx] == 1) {
-                            //TODO: uncomment later on
-                            subscriptIndicesToDimValue[mappedIndx] == dimValue;
-                        } else {
-                            if (dimValue != 1) {
-                                CV_Error(Error::StsError, cv::format("Einsum operands can not be broadcasted."
-                                                                     "Check input shapes/equation passed."
-                                                                     "Input shape of operand [%d]", inputIdx) +
-                                                          cv::format(" is incompatible in the dimention [%zu].", static_cast<size_t>(dim_count)));
-                            }
+                        if (dimValue != 1) {
+                            CV_Error(Error::StsError, cv::format("Einsum operands can not be broadcasted."
+                                                                "Check input shapes/equation passed."
+                                                                "Input shape of operand [%d]", inputIdx) +
+                                                    cv::format(" is incompatible in the dimention [%zu].", static_cast<size_t>(dim_count)));
                         }
                     }
                 }
