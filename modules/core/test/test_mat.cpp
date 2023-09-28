@@ -1369,6 +1369,18 @@ TEST(Core_Mat, copyNx1ToVector)
     ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst16, cv::Mat_<ushort>(dst16).reshape(1, 5));
 }
 
+TEST(Core_Mat, copyMakeBoderUndefinedBehavior)
+{
+    Mat1b src(4, 4), dst;
+    randu(src, Scalar(10), Scalar(100));
+    // This could trigger a (signed int)*size_t operation which is undefined behavior.
+    cv::copyMakeBorder(src, dst, 1, 1, 1, 1, cv::BORDER_REFLECT_101);
+    EXPECT_EQ(0, cv::norm(src.row(1), dst(Rect(1,0,4,1))));
+    EXPECT_EQ(0, cv::norm(src.row(2), dst(Rect(1,5,4,1))));
+    EXPECT_EQ(0, cv::norm(src.col(1), dst(Rect(0,1,1,4))));
+    EXPECT_EQ(0, cv::norm(src.col(2), dst(Rect(5,1,1,4))));
+}
+
 TEST(Core_Matx, fromMat_)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);

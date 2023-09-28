@@ -898,14 +898,14 @@ void copyMakeBorder_8u( const uchar* src, size_t srcstep, cv::Size srcroi,
     }
 
     dstroi.width *= elemSize;
-    dst += dststep*top;
 
     for( i = 0; i < top; i++ )
     {
         j = cv::borderInterpolate(i - top, srcroi.height, borderType);
-        memcpy(dst + (i - top)*dststep, dst + j*dststep, dstroi.width);
+        memcpy(dst + i*dststep, dst + (top+j)*dststep, dstroi.width);
     }
 
+    dst += dststep*top;
     for( i = 0; i < bottom; i++ )
     {
         j = cv::borderInterpolate(i + srcroi.height, srcroi.height, borderType);

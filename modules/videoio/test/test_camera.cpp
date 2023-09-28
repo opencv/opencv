@@ -130,7 +130,12 @@ TEST(DISABLED_videoio_camera, msmf_read_yuyv)
     std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
     int fourcc = (int)capture.get(CAP_PROP_FOURCC);
     std::cout << "FOURCC code: " << cv::format("0x%8x", fourcc) << std::endl;
-    test_readFrames(capture);
+    cv::Mat frame;
+    for (int i = 0; i < 10; i++)
+    {
+        capture >> frame;
+        EXPECT_EQ(2, frame.channels());
+    }
     capture.release();
 }
 
