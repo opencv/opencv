@@ -42,7 +42,7 @@
 
   <target name="test" depends="jar">
     <mkdir dir="${test.dir}"/>
-    <junit printsummary="withOutAndErr" haltonfailure="false" haltonerror="false" showoutput="true" logfailedtests="true" maxmemory="256m">
+    <junit printsummary="withOutAndErr" failureproperty="junit_test.failed" haltonfailure="false" haltonerror="false" showoutput="true" logfailedtests="true" maxmemory="256m">
       <sysproperty key="java.library.path" path="${opencv.lib.path}"/>
       <env key="PATH" path="${opencv.lib.path}:${env.PATH}:${env.Path}"/>
       <env key="DYLD_LIBRARY_PATH" path="${env.OPENCV_SAVED_DYLD_LIBRARY_PATH}"/>  <!-- https://github.com/opencv/opencv/issues/14353 -->
@@ -65,6 +65,7 @@
       </fileset>
       <report format="noframes" todir="${test.dir}"/>
     </junitreport>
+    <fail message="JUnit test execution failed" if="junit_test.failed"/>
   </target>
 
   <target name="build" depends="jar">
