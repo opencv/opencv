@@ -889,6 +889,9 @@ public:
     @param nOctaveLayers Default number of sublevels per scale level
     @param diffusivity Diffusivity type. DIFF_PM_G1, DIFF_PM_G2, DIFF_WEICKERT or
     DIFF_CHARBONNIER
+    @param max_points Maximum amount of returned points. In case if image contains
+    more features, then the features with highest response are returned.
+    Negative value means no limitation.
      */
     CV_WRAP static Ptr<AKAZE> create(AKAZE::DescriptorType descriptor_type = AKAZE::DESCRIPTOR_MLDB,
                                      int descriptor_size = 0, int descriptor_channels = 3,
