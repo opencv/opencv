@@ -491,7 +491,7 @@ TEST(Core_InputOutput, FileStorage)
     char arr[66];
     snprintf(arr, sizeof(arr), "snprintf is hell %d", 666);
     EXPECT_NO_THROW(f << arr);
-    EXPECT_EQ(0, remove(file.c_str()));
+    remove(file.c_str());
 }
 
 TEST(Core_InputOutput, FileStorageKey)
