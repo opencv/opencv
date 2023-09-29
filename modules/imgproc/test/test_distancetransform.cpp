@@ -410,7 +410,7 @@ TEST(Imgproc_DistanceTransform, precise_long_dist)
     distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE, CV_32F);
 
     Mat expected(src.size(), CV_32F);
-    std::iota(expected.begin<float>(), expected.end<float>(), 0);
+    std::iota(expected.begin<float>(), expected.end<float>(), 0.f);
     expected.colRange(maxDist, expected.cols).setTo(maxDist);
 
     EXPECT_EQ(cv::norm(expected, dist, NORM_INF), 0);
