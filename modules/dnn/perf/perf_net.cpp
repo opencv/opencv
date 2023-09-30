@@ -409,7 +409,7 @@ PERF_TEST_P_(DNNTestNetwork, EfficientDet_int8)
         throw SkipTestException("");
     }
     Mat inp = imread(findDataFile("dnn/dog416.png"));
-    resize(inp, inp, Size(320, 320));
+    inp = blobFromImage(inp, 1.0 / 255.0, Size(320, 320), Scalar(), true);
     processNet("", "dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", "", inp);
 }
 
