@@ -623,8 +623,8 @@ __kernel void RGB2YUV_422(__global const uchar* srcptr, int src_step, int src_of
                 dst[yidx+2] = output_scale_fn(Y2);
 
                 ++y;
-                dst_index += (dst_step << 1);
-                src_index += (src_step << 1);
+                dst_index += dst_step;
+                src_index += src_step;
             }
         }
     }
