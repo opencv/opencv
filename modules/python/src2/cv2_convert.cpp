@@ -729,12 +729,13 @@ PyObject* pyopencv_from(const String& value)
 {
     const char* v = value.empty() ? "" : value.c_str();
     PyObject* res = PyString_FromString(v);
-    if (!res) {
+    if (!res)
+    {
         PyErr_Clear();
         return PyUnicode_DecodeRawUnicodeEscape(v, value.size(), NULL);
-    } else {
-        return res;
     }
+    else
+        return res;
 }
 
 #if CV_VERSION_MAJOR == 3
@@ -743,12 +744,13 @@ PyObject* pyopencv_from(const std::string& value)
 {
     const char* v = value.empty() ? "" : value.c_str();
     PyObject* res = PyString_FromString(v);
-    if (!res) {
+    if (!res)
+    {
         PyErr_Clear();
         return PyUnicode_DecodeRawUnicodeEscape(v, value.size(), NULL);
-    } else {
-        return res;
     }
+    else
+        return res;
 }
 #endif
 
