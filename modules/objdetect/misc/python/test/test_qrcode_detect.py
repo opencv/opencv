@@ -50,3 +50,10 @@ class qrcode_detector_test(NewOpenCVTests):
         self.assertTrue("STEP BACK" in decoded_data)
         self.assertTrue("QUESTION" in decoded_data)
         self.assertEqual(points.shape, (6, 4, 2))
+
+    def test_decode_non_utf8(self):
+        img = cv.imread(os.path.join(self.extraTestDataPath, 'cv/qrcode/umlaut.png'))
+        self.assertFalse(img is None)
+        detector = cv.QRCodeDetector()
+        decoded_data, _, _ = detector.detectAndDecode(img)
+        self.assertTrue(u"Müllheimstrasse" in decoded_data)
