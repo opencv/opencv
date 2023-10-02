@@ -186,6 +186,8 @@ class PatternMaker:
         yspacing = (self.height - self.rows * self.square_size) / 2.0
 
         ch_ar_border = (self.square_size - self.aruco_marker_size)/2
+        if ch_ar_border < side*0.7:
+            print("Marker border {} is less than 70% of ArUco pin size {}. Please increase --square_size or decrease --marker_size for stable board detection".format(ch_ar_border, int(side)))
         marker_id = 0
         for y in range(0, self.rows):
             for x in range(0, self.cols):
@@ -282,6 +284,9 @@ def main():
                 markers.add((x, y))
             else:
                 raise ValueError("The marker {},{} is outside the checkerboard".format(x, y))
+
+    if p_type == "charuco_board" and aruco_marker_size >= square_size:
+        raise ValueError("ArUco markers size must be smaller than square size")
 
     pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, dict_file)
     # dict for easy lookup of pattern type
