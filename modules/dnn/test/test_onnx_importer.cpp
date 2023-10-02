@@ -1425,6 +1425,11 @@ TEST_P(Test_ONNX_layers, Einsum_2D)
     testONNXModels("einsum_2d", npy, 0, 0, false, false, 2);
 }
 
+TEST_P(Test_ONNX_layers, Einsum_2D_Ellipses)
+{
+    testONNXModels("einsum_2d_ellipses", npy, 0, 0, false, false, 2);
+}
+
 TEST_P(Test_ONNX_layers, Einsum_3D)
 {
     testONNXModels("einsum_3d", npy, 0, 0, false, false, 2);

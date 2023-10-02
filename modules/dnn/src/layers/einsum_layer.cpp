@@ -310,10 +310,8 @@ Mat Diagonal(const Mat& input, int dim1, int dim2)
         CV_Error(Error::StsError, cv::format("Cannot parse the diagonal elements along dims %d and %d for input shape %s",dim1, dim2, input_dims_str.c_str()));
     }
 
-    int first_dim = -1;   // first_dim holds the lesser of dim1 and dim2
-    int second_dim = -1;  // second_dim holds the greater of dim1 and dim2
-    first_dim = std::min(dim1, dim2);
-    second_dim = std::max(dim1, dim2);
+    int first_dim = std::min(dim1, dim2);
+    int second_dim = std::max(dim1, dim2);
 
     Mat output;
     bool preserve_innermost_dim_val = false;
@@ -476,7 +474,7 @@ public:
     void parseEquation(String equation);
     void processEquation(const std::vector<MatShape>& inputs);
     void processBroadcastedDims();
-    void createOutputSubsctipt();
+    void validateOutputSubscript();
     void calculateOutputShape();
     void preProcessInputs(InputArrayOfArrays& inputs);
     Mat reduceSum(Mat& src, MatShape& reduceAxis);
@@ -535,7 +533,7 @@ public:
         processBroadcastedDims();
 
         // calculate output shape
-        createOutputSubsctipt();
+        validateOutputSubscript();
         calculateOutputShape();
     }
 
@@ -792,7 +790,7 @@ void LayerEinsumImpl::calculateOutputShape()
 {
     // Traverse through each of the subscript labels within the output subscript.
     bool middleOfEllipsis = false;
-    int64_t ellipsisCharCount = 0;
+    int ellipsisCharCount = 0;
 
     subscriptIndicesToOutputIndices.resize(numLetterIndices, -1);
 
@@ -848,7 +846,7 @@ void LayerEinsumImpl::calculateOutputShape()
     }
 }
 
-void LayerEinsumImpl::createOutputSubsctipt()
+void LayerEinsumImpl::validateOutputSubscript()
 {
     // The explicit form requires no operation, as the output
     // would have already been parsed during the input parsing process.
