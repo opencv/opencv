@@ -59,8 +59,8 @@ int main(int argc, char* argv[])
         Mat_<Vec3f> vertex(1, 6);
         vertex <<
             Vec3f(2.0, 0, -2.0), Vec3f(0, -2, -2),
-            Vec3f(-2, 0, -2), Vec3f(3.5, -1, -3),
-            Vec3f(2.5, -1.5, -3), Vec3f(-1, 0.5, -3);
+            Vec3f(-2, 0, -2), Vec3f(3.5, -1, -5),
+            Vec3f(2.5, -1.5, -5), Vec3f(-1, 0.5, -5);
 
         Mat_<int> indices(1, 6);
         indices << 0, 1, 2, 3, 4, 5;

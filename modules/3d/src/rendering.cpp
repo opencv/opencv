@@ -62,6 +62,28 @@ namespace cv {
         return res;
     }
 
+    Matx44f modelMatrixCal(float angle)
+    {
+        Matx44f modelMatrix_scale(15, 0, 0, 0,
+            0, 15, 0, 0,
+            0, 0, 15, 0,
+            0, 0, 0, 1);
+        Matx44f modelMatrix_translate(1, 0, 0, 0,
+            0, 1, 0, 20,
+            0, 0, 1, -15,
+            0, 0, 0, 1);
+        angle = angle * M_PI / 180.0f;
+        Matx44f modelMatrix_rotate_y(std::cos(angle), 0, std::sin(angle), 0.,
+                            0, 1, 0, 0,
+                            -std::sin(angle), 0, std::cos(angle), 0,
+                            0, 0, 0, 1);
+        Matx44f modelMatrix_rotate_x(1, 0, 0, 0,
+            0, std::cos(0), std::sin(0), 0,
+            0, -std::sin(0), std::cos(0), 0,
+            0, 0, 0, 1);
+        return modelMatrix_translate * modelMatrix_scale * modelMatrix_rotate_y;
+    }
+
     bool insideTriangle(float x, float y, const Vec4f* vertices)
     {
         Vec3f A(vertices[0][0], vertices[0][1], 1.0);
@@ -165,7 +187,8 @@ namespace cv {
 
         Matx44f lookAtMatrix = lookAtMatrixCal(position, lookat, upVector);
         Matx44f perspectMatrix = perspectMatrixCal((float)width / (float)height, fovy, zNear, zFar);
-        Matx44f mvpMatrix = perspectMatrix * lookAtMatrix;
+        Matx44f modelMatrix = modelMatrixCal(180.0f);
+        Matx44f mvpMatrix = perspectMatrix * lookAtMatrix * modelMatrix; 
 
         Mat depth_buf_mat = depth_buf.getMat();
         Mat color_buf_mat = color_buf.getMat();
@@ -173,9 +196,20 @@ namespace cv {
         if (vertices.empty() && indices.empty() && colors.empty())
             return;
 
-        std::vector<Vec3f> verticesVector = vertices.getMat();
-        std::vector<Vec3f> indicesVector = indices.getMat();
-        std::vector<Vec3f> colorsVector = colors.getMat();
+        std::vector<Point3f> verticesPoint = vertices.getMat();
+        std::vector<Point3f> colorsPoint = colors.getMat();
+        std::vector<Mat> indicesMat;
+        indices.getMatVector(indicesMat);
+
+        std::vector<Vec3f> verticesVector(verticesPoint.begin(), verticesPoint.end());
+        std::vector<Vec3f> colorsVector(colorsPoint.begin(), colorsPoint.end());
+        std::vector<std::vector<int>> indicesVector;
+        for (const auto& mat : indicesMat)
+        {
+            std::vector<int> innerVec;
+            mat.copyTo(innerVec);
+            indicesVector.push_back(innerVec);
+        }
 
         for (int i = 0; i < indicesVector.size(); i++)
         {
