@@ -84,7 +84,7 @@ public:
         for (size_t outer_idx = 0; outer_idx < outer_size; outer_idx++)
         {
             const size_t target_offset = outer_idx * outer_step_length;
-            
+
             // Handle first element of target dimension.
             size_t first_inner_offset = target_offset + target_start * inner_size;
             if (exclusive)
