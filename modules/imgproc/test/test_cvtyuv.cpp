@@ -636,11 +636,10 @@ void referenceRGB2YUV422(const Mat& rgb, Mat& yuv, RGBreader* rgbReader, YUVwrit
     convertor cvt;
 
     for(int row = 0; row < rgb.rows; ++row)
-        for(int col = 0; col < rgb.cols; ++col)
+        for(int col = 0; col < rgb.cols; col+=2)
         {
             yuvWriter->write(yuv, row, col, cvt.convert(rgbReader->read(rgb, row, col), rgbReader->read(rgb, row, col+1), 0));
             yuvWriter->write(yuv, row, col+1, cvt.convert(rgbReader->read(rgb, row, col), rgbReader->read(rgb, row, col+1), 1));
-            ++col;
         }
 }
 
