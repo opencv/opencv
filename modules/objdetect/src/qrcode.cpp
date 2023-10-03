@@ -2758,7 +2758,14 @@ bool QRDecode::decodingProcess()
 
     for (int i = 0; i < qr_code_data.payload_len; i++)
     {
-        result_info += qr_code_data.payload[i];
+        uint8_t byte = qr_code_data.payload[i];
+        if (byte > 127) {
+            // UTF-8 encoding
+            result_info += 0b11000000 | byte >> 6;
+            result_info += 0b10000000 | (byte & 0b00111111);
+        } else {
+            result_info += byte;
+        }
     }
     return true;
 #else
