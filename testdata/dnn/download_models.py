@@ -997,6 +997,58 @@ models = [
                 sha='f541f0b448561c7ad919ba9fffa72ff105062934',
                 filename='onnx/models/PP_OCRv3_DB_text_det.onnx'),
         ]),
+    Model(
+        name='YOLOv5n (ONNX)',
+        url='https://github.com/ultralytics/yolov5/releases/download/v7.0/yolov5n.onnx',
+        sha='90aa4b5f8e1ba19166f214f3e4258e5d1d05070b',
+        filename='yolov5n.onnx'),
+    Model(
+        # model link form https://github.com/CVHub520/X-AnyLabeling/blob/20dff273cdb0658fdb81cad72aef0c1add33fdb1/docs/models_list.md
+        name='YOLOv8n (ONNX)',
+        url='https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx',
+        sha='68f864475d06e2ec4037181052739f268eeac38d',
+        filename='yolov8n.onnx'),
+    Model(
+        name='YOLOX_S (ONNX)',
+        url='https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_s.onnx',
+        sha='0249e66522b38462e6962915a8850a5908023a1c',
+        filename='yolox_s.onnx'),
+    Model(
+        # model link from https://github.com/onnx/models/tree/main/vision/classification/efficientnet-lite4
+        name='EfficientNet Lite4 (ONNX)',
+        url='https://github.com/onnx/models/raw/280606e8de3a8fed89a1ef3031d32032af17744b/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx',
+        sha='78c3d1eb329793b253565ef319182f03ee9af78e',
+        filename='efficientnet-lite4.onnx'),
+    Model(
+        name='SFace (ONNX)',
+        url='https://github.com/opencv/opencv_zoo/raw/ba91a3b91d00d76e86540d4013f944bd6b514e39/models/face_recognition_sface/face_recognition_sface_2021dec.onnx',
+        sha='316ca25772af10f61e356f81f0ec68caf6909a51',
+        filename='face_recognition_sface_2021dec.onnx'),
+    Model(
+        name='MediaPipe Palm Detector (ONNX)',
+        url='https://github.com/opencv/opencv_zoo/raw/8de36535ea29e8f9d41e6e3fa5a0df14bab00ec5/models/palm_detection_mediapipe/palm_detection_mediapipe_2023feb.onnx',
+        sha='b9e6df1d4f93ee1b0b4f5c99a2f88716ccd7ca9a',
+        filename='palm_detection_mediapipe_2023feb.onnx'),
+    Model(
+        name='MediaPipe Hand Landmarker (ONNX)',
+        url='https://github.com/opencv/opencv_zoo/raw/56cef36ae45e5a6da7eba01a91631f6d7e955da1/models/handpose_estimation_mediapipe/handpose_estimation_mediapipe_2023feb.onnx',
+        sha='48cfa3de98f30986ae2be6ed55e80d46e06713ab',
+        filename='handpose_estimation_mediapipe_2023feb.onnx'),
+    Model(
+        name='MediaPipe Pose Landmarker (ONNX)',
+        url='https://github.com/opencv/opencv_zoo/raw/1f19f821d68288feff2ef5c53993b33da74b1509/models/pose_estimation_mediapipe/pose_estimation_mediapipe_2023mar.onnx',
+        sha='9ecbfab8dec975ba02d8436a65cd69755238be20',
+        filename='pose_estimation_mediapipe_2023mar.onnx'),
+    Model(
+        name='PaddlePaddle Human Segmentation (ONNX)',
+        url='https://github.com/opencv/opencv_zoo/raw/2027dd2f5a8a5746b5d4964900a0465afc6d3a53/models/human_segmentation_pphumanseg/human_segmentation_pphumanseg_2023mar.onnx',
+        sha='f0fec695ab7b716eeab4c58b125e98fc3826bb72',
+        filename='human_segmentation_pphumanseg_2023mar.onnx'),
+    Model(
+        name='CRNN (ONNX)',
+        url='https://github.com/opencv/opencv_zoo/raw/aab69020085e9b6390723b61f9789ec56b96b07e/models/text_recognition_crnn/text_recognition_CRNN_EN_2021sep.onnx',
+        sha='dc8c70a52c6880f11859bf074bcd294a45860821',
+        filename='text_recognition_CRNN_EN_2021sep.onnx'),
 ]
 
 # Note: models will be downloaded to current working directory
