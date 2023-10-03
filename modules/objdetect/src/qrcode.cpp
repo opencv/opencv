@@ -963,6 +963,7 @@ public:
     double epsX, epsY;
     mutable vector<vector<Point2f>> alignmentMarkers;
     mutable vector<Point2f> updateQrCorners;
+    mutable vector<QRCodeEncoder::ECIEncodings> encodings;
     bool useAlignmentMarkers = true;
 
     bool detect(InputArray in, OutputArray points) const override;
@@ -978,6 +979,8 @@ public:
     String decodeCurved(InputArray in, InputArray points, OutputArray straight_qrcode);
 
     std::string detectAndDecodeCurved(InputArray in, OutputArray points, OutputArray straight_qrcode);
+
+    QRCodeEncoder::ECIEncodings getEncoding(size_t codeIdx);
 };
 
 QRCodeDetector::QRCodeDetector() {
@@ -992,6 +995,12 @@ QRCodeDetector& QRCodeDetector::setEpsX(double epsX) {
 QRCodeDetector& QRCodeDetector::setEpsY(double epsY) {
     std::dynamic_pointer_cast<ImplContour>(p)->epsY = epsY;
     return *this;
+}
+
+QRCodeEncoder::ECIEncodings QRCodeDetector::getEncoding(size_t codeIdx) {
+    auto& encodings = std::dynamic_pointer_cast<ImplContour>(p)->encodings;
+    CV_Assert(codeIdx < encodings.size());
+    return encodings[codeIdx];
 }
 
 bool ImplContour::detect(InputArray in, OutputArray points) const
@@ -1034,6 +1043,8 @@ public:
         uint8_t sequence_num = 0;
         uint8_t total_num = 1;
     } structure_info;
+
+    QRCodeEncoder::ECIEncodings eci;
 
 protected:
     double getNumModules();
@@ -2802,7 +2813,6 @@ static std::string encodeUTF8_bytesarray(const uint8_t* str, const size_t size) 
 
 bool QRDecode::decodingProcess()
 {
-    QRCodeEncoder::ECIEncodings eci;
     const uint8_t* payload;
     size_t payload_len;
 #ifdef HAVE_QUIRC
@@ -2966,6 +2976,7 @@ std::string ImplContour::decode(InputArray in, InputArray points, OutputArray st
         alignmentMarkers = {qrdec.alignment_coords};
         updateQrCorners = qrdec.getOriginalPoints();
     }
+    encodings.resize(1, qrdec.encoding);
     return ok ? decoded_info : std::string();
 }
 
@@ -2999,6 +3010,7 @@ String ImplContour::decodeCurved(InputArray in, InputArray points, OutputArray s
     {
         qrdec.getStraightBarcode().convertTo(straight_qrcode, CV_8UC1);
     }
+    encodings.resize(1, qrdec.encoding);
 
     return ok ? decoded_info : std::string();
 }
