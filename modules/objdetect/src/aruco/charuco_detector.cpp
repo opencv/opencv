@@ -27,13 +27,12 @@ struct CharucoDetector::CharucoDetectorImpl {
     bool checkBoard(InputArrayOfArrays markerCorners, InputArray markerIds, InputArray charucoCorners, InputArray charucoIds) {
         vector<Mat> mCorners;
         markerCorners.getMatVector(mCorners);
-        const Mat& mIds = markerIds.getMat();
-
-        const Mat& chCorners = charucoCorners.getMat();
-        const Mat& chIds = charucoIds.getMat();
+        const Mat mIds = markerIds.getMat();
+        const Mat chCorners = charucoCorners.getMat();
+        const Mat chIds = charucoIds.getMat();
         const vector<int>& boardIds = board.getIds();
 
-        const vector<vector<int> >& nearestMarkerIdx = board.getNearestMarkerIdx();
+        const vector<vector<int> > nearestMarkerIdx = board.getNearestMarkerIdx();
         vector<Point2f> distance(board.getNearestMarkerIdx().size(), Point2f(0.f, std::numeric_limits<float>::max()));
         // distance[i].x: max distance from the i-th charuco corner to charuco corner-forming markers.
         // The two charuco corner-forming markers of i-th charuco corner are defined in getNearestMarkerIdx()[i]
