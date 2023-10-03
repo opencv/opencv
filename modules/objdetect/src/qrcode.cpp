@@ -2727,6 +2727,50 @@ bool QRDecode::samplingForVersion()
     return true;
 }
 
+static bool checkUTF8(const std::string& str) {
+    for (int i = 0; i < str.size(); ++i) {
+        uint8_t byte = str[i];
+        if (byte > 127) {
+            // Check that symbol is encoded correctly.
+
+            // Count number of bytes per symbol as a number of leading non-zero bits
+            uint8_t numBytesPerSymdol = 1;
+            for (int j = 1; j < 8; ++j) {
+                if (byte & (1 << (7 - j))) {
+                    numBytesPerSymdol += 1;
+                } else {
+                    break;
+                }
+            }
+            if (numBytesPerSymdol < 2 || numBytesPerSymdol > 4) {
+                return false;
+            }
+
+            for (int j = 1; j < numBytesPerSymdol; ++j) {
+                if (i + j >= str.size() || (str[i + j] & 0b11000000) >> 6 != 0b00000010) {
+                    return false;
+                }
+            }
+            i += numBytesPerSymdol - 1;
+        }
+    }
+    return true;
+}
+
+static std::string encodeUTF8(const std::string& str) {
+    std::string res = "";
+    for (int i = 0; i < str.size(); ++i) {
+        uint8_t byte = str[i];
+        if (byte > 127) {
+            res += 0b11000000 | (byte >> 6);
+            res += 0b10000000 | (byte & 0b00111111);
+        } else {
+            res += byte;
+        }
+    }
+    return res;
+}
+
 bool QRDecode::decodingProcess()
 {
 #ifdef HAVE_QUIRC
@@ -2758,14 +2802,10 @@ bool QRDecode::decodingProcess()
 
     for (int i = 0; i < qr_code_data.payload_len; i++)
     {
-        uint8_t byte = qr_code_data.payload[i];
-        if (byte > 127) {
-            // UTF-8 encoding
-            result_info += 0b11000000 | byte >> 6;
-            result_info += 0b10000000 | (byte & 0b00111111);
-        } else {
-            result_info += byte;
-        }
+        result_info += qr_code_data.payload[i];
+    }
+    if (qr_code_data.data_type == QUIRC_DATA_TYPE_BYTE && !checkUTF8(result_info)) {
+        result_info = encodeUTF8(result_info);
     }
     return true;
 #else
