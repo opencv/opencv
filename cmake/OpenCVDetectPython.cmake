@@ -216,7 +216,7 @@ if(NOT ${found})
           message(STATUS "  PYTHON3_NUMPY_INCLUDE_DIRS")
         else()
           # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
-          execute_process(COMMAND "${_executable}" -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print(os.pathsep.join(numpy.distutils.misc_util.get_numpy_include_dirs()))"
+          execute_process(COMMAND "${_executable}" -c "import numpy; print(numpy.get_include())"
                           RESULT_VARIABLE _numpy_process
                           OUTPUT_VARIABLE _numpy_include_dirs
                           OUTPUT_STRIP_TRAILING_WHITESPACE)
