@@ -474,12 +474,13 @@ TEST(Core_PCA, accuracy)
     ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of cvBackProjectPCA() (CV_PCA_DATA_AS_COL)";
 #endif
     // Test read and write
-    FileStorage fs( "PCA_store.yml", FileStorage::WRITE );
+    const std::string filename = cv::tempfile("PCA_store.yml");
+    FileStorage fs( filename, FileStorage::WRITE );
     rPCA.write( fs );
     fs.release();
 
     PCA lPCA;
-    fs.open( "PCA_store.yml", FileStorage::READ );
+    fs.open( filename, FileStorage::READ );
     lPCA.read( fs.root() );
     err = cvtest::norm(rPCA.eigenvectors, lPCA.eigenvectors, NORM_L2 | NORM_RELATIVE);
     EXPECT_LE(err, 0) << "bad accuracy of write/load functions (YML)";
@@ -487,6 +488,7 @@ TEST(Core_PCA, accuracy)
     EXPECT_LE(err, 0) << "bad accuracy of write/load functions (YML)";
     err = cvtest::norm(rPCA.mean, lPCA.mean, NORM_L2 | NORM_RELATIVE);
     EXPECT_LE(err, 0) << "bad accuracy of write/load functions (YML)";
+    EXPECT_EQ(0, remove(filename.c_str()));
 }
 
 class Core_ArrayOpTest : public cvtest::BaseTest
