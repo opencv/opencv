@@ -1045,6 +1045,7 @@ TEST(Imgcodecs_Tiff_Modes, write_multipage)
     {
         EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), read_pages[i], pages[i]);
     }
+    EXPECT_EQ(0, remove(tmp_filename.c_str()));
 }
 
 //==================================================================================================
