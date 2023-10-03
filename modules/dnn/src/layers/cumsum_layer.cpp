@@ -17,6 +17,7 @@ class CumSumLayerImpl CV_FINAL : public CumSumLayer
 public:
     CumSumLayerImpl(const LayerParams &params)
     {
+        axis_raw = params.get<int>("axis", 0);
         exclusive_raw = params.get<int>("exclusive", 0);
         reverse_raw = params.get<int>("reverse", 0);
         setParamsFrom(params);
@@ -46,14 +47,14 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        CV_CheckEQ(inputs.size(), 2u, "CumSum requires two inputs: data, axis");
-
         // Get input tensor.
         const auto& src_mat = inputs[0];
         const auto* src_ptr = src_mat.ptr<float>();
 
         // Get target axis.
-        int axis = normalize_axis(parseAxis(inputs[1]), src_mat.dims);
+        int axis = inputs.size() > 1 ? parseAxis(inputs[1]) : axis_raw;
+        axis = normalize_axis(axis, src_mat.dims);
+
 
         // Get output tensor.
         auto& dst_mat = outputs[0];

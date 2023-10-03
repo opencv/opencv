@@ -2929,6 +2929,17 @@ void ONNXImporter::parseDetectionOutput(LayerParams& layerParams, const opencv_o
 void ONNXImporter::parseCumSum(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "CumSum";
+
+    // Get axis.
+    const std::string& input1 = node_proto.input(1);
+
+    if (constBlobs.find(input1) != constBlobs.end())
+    {
+        Mat axis_blob = getBlob(input1);
+        CV_Assert(axis_blob.total() == 1u);
+        layerParams.set("axis", axis_blob.at<int>(0));
+    }
+
     addLayer(layerParams, node_proto);
 }
 
