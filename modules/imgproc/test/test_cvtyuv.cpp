@@ -406,10 +406,18 @@ public:
         int g2 = rgb2[1];
         int b2 = rgb2[2];
 
+        // Coefficients below based on ITU.BT-601, ISBN 1-878707-09-4 (https://fourcc.org/fccyvrgb.php)
+        // The conversion coefficients for RGB to YUV422 are based on the ones for RGB to YUV.
+        // For both Y components, the coefficients are applied as given in the link to each input RGB pixel
+        // separately. For U and V, they are reduced by half to account for two RGB pixels contributing
+        // to the same U and V values. In other words, the U and V contributions from the two RGB pixels
+        // are averaged. The integer versions are obtained by multiplying the float versions by 16384
+        // and rounding to the nearest integer.
+
         uchar y1 = saturate_cast<uchar>((int)( 0.257f*r1 + 0.504f*g1 + 0.098f*b1 + 16));
         uchar y2 = saturate_cast<uchar>((int)( 0.257f*r2 + 0.504f*g2 + 0.098f*b2 + 16));
-        uchar u = saturate_cast<uchar>((int)(-0.074f*(r1+r2) - 0.146f*(g1+g2) + 0.22f*(b1+b2) + 128));
-        uchar v = saturate_cast<uchar>((int)( 0.22f*(r1+r2) - 0.184f*(g1+g2) - 0.036f*(b1+b2) + 128));
+        uchar u = saturate_cast<uchar>((int)(-0.074f*(r1+r2) - 0.1455f*(g1+g2) + 0.2195f*(b1+b2) + 128));
+        uchar v = saturate_cast<uchar>((int)( 0.2195f*(r1+r2) - 0.184f*(g1+g2) - 0.0355f*(b1+b2) + 128));
 
         return YUV((idx==0)?y1:y2, u, v);
     }
@@ -636,11 +644,13 @@ void referenceRGB2YUV422(const Mat& rgb, Mat& yuv, RGBreader* rgbReader, YUVwrit
     convertor cvt;
 
     for(int row = 0; row < rgb.rows; ++row)
-        for(int col = 0; col < rgb.cols; col+=2)
-        {
-            yuvWriter->write(yuv, row, col, cvt.convert(rgbReader->read(rgb, row, col), rgbReader->read(rgb, row, col+1), 0));
-            yuvWriter->write(yuv, row, col+1, cvt.convert(rgbReader->read(rgb, row, col), rgbReader->read(rgb, row, col+1), 1));
-        }
+    {
+            for(int col = 0; col < rgb.cols; col+=2)
+            {
+                yuvWriter->write(yuv, row, col, cvt.convert(rgbReader->read(rgb, row, col), rgbReader->read(rgb, row, col+1), 0));
+                yuvWriter->write(yuv, row, col+1, cvt.convert(rgbReader->read(rgb, row, col), rgbReader->read(rgb, row, col+1), 1));
+            }
+    }
 }
 
 struct ConversionYUV

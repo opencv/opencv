@@ -8,9 +8,10 @@
 using namespace cv;
 using namespace std;
 
-
 const char* window_name1 = "Original Image";
-const char* window_name2 = "Reconverted image";
+const char* window_name2 = "Reconstructed image";
+
+const uint8_t diff_scale = 30;
 
 static void help(const char** argv)
 {
@@ -45,16 +46,23 @@ int main( int argc, const char** argv )
     // Forward conversion to UYVY
     cvtColor(image, image_yuv, COLOR_BGR2YUV_UYVY);
 
-    // Backward conversion from UYVY to BGR (gives the reconverted image)
+    // Backward conversion from UYVY to BGR (gives the reconstructed image)
     cvtColor(image_yuv, image_yuv2bgr, COLOR_YUV2BGR_UYVY);
 
     // Create a window
     namedWindow(window_name1, 1);
     namedWindow(window_name2, 1);
 
-    // Display the original and reconverted images.
+    // Display the original and reconstructed images.
     imshow(window_name1, orig_img);
     imshow(window_name2, image_yuv2bgr);
+
+    // Calculate and display scaled diff
+    Mat diff;
+    absdiff(orig_img, image_yuv2bgr, diff);
+    char formatted_window_name[100];
+    sprintf(formatted_window_name, "%d x Scaled Absolute Difference", diff_scale);
+    imshow(formatted_window_name, diff_scale * diff);
 
     // Wait for a key stroke; the same function arranges events processing
     waitKey(0);

@@ -1861,8 +1861,16 @@ inline void cvtYUV422toRGB(uchar * dst_data, size_t dst_step, const uchar * src_
 
 static const int RGB2YUV422_SHIFT = 14;
 
-int   c_RGB2YUV422Coeffs_i[10]  = {1024, 8192, 4210,  8257,  1605,
-                                   -1212, -2392,  3604, -3014, -589};
+// Coefficients based on ITU.BT-601, ISBN 1-878707-09-4 (https://fourcc.org/fccyvrgb.php)
+// The conversion coefficients for RGB to YUV422 are based on the ones for RGB to YUV.
+// For both Y components, the coefficients are applied as given in the link to each input RGB pixel
+// separately. For U and V, they are reduced by half to account for two RGB pixels contributing
+// to the same U and V values. In other words, the U and V contributions from the two RGB pixels
+// are averaged. The integer versions are obtained by multiplying the float versions by 16384
+// and rounding to the nearest integer.
+
+int   c_RGB2YUV422Coeffs_i[10]  = {1024, 8192, 4211,  8258,  1606,
+                                   -1212, -2384,  3596, -3015,  -582};
 
 static inline void RGB2Y(const uchar r, const uchar g, const uchar b, uchar& y)
 {

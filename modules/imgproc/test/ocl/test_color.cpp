@@ -445,7 +445,6 @@ struct CvtColor_YUV2RGB_422 :
     }
 };
 
-
 OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGB_UYVY) { performTest(2, 3, CVTCODE(YUV2RGB_UYVY)); }
 OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2BGR_UYVY) { performTest(2, 3, CVTCODE(YUV2BGR_UYVY)); }
 OCL_TEST_P(CvtColor_YUV2RGB_422, YUV2RGBA_UYVY) { performTest(2, 4, CVTCODE(YUV2RGBA_UYVY)); }
@@ -484,7 +483,6 @@ struct CvtColor_RGB2YUV_422 :
     }
 };
 
-
 OCL_TEST_P(CvtColor_RGB2YUV_422, RGB2YUV_UYVY)  { performTest(3, 2, CVTCODE(RGB2YUV_UYVY)); }
 OCL_TEST_P(CvtColor_RGB2YUV_422, BGR2YUV_UYVY)  { performTest(3, 2, CVTCODE(BGR2YUV_UYVY)); }
 OCL_TEST_P(CvtColor_RGB2YUV_422, RGBA2YUV_UYVY) { performTest(4, 2, CVTCODE(RGBA2YUV_UYVY)); }
@@ -497,7 +495,6 @@ OCL_TEST_P(CvtColor_RGB2YUV_422, RGB2YUV_YVYU)  { performTest(3, 2, CVTCODE(RGB2
 OCL_TEST_P(CvtColor_RGB2YUV_422, BGR2YUV_YVYU)  { performTest(3, 2, CVTCODE(BGR2YUV_YVYU)); }
 OCL_TEST_P(CvtColor_RGB2YUV_422, RGBA2YUV_YVYU) { performTest(4, 2, CVTCODE(RGBA2YUV_YVYU)); }
 OCL_TEST_P(CvtColor_RGB2YUV_422, BGRA2YUV_YVYU) { performTest(4, 2, CVTCODE(BGRA2YUV_YVYU)); }
-
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgProc, CvtColor8u,
                             testing::Combine(testing::Values(MatDepth(CV_8U)), Bool()));

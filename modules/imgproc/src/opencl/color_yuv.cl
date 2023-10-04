@@ -568,8 +568,16 @@ __kernel void YUV2RGB_422(__global const uchar* srcptr, int src_step, int src_of
     }
 }
 
-__constant float c_RGB2YUV422Coeffs_f[10]  = {0.0625, 0.5, 0.257, 0.504, 0.098, -0.074, -0.146, 0.22, -0.184, -.036};
-__constant int   c_RGB2YUV422Coeffs_i[10]  = {1024 * HALF_MAX_NUM * 2, 8192 * HALF_MAX_NUM * 2, 4210,  8257,  1605, -1212, -2392,  3604, -3014,  -589};
+// Coefficients based on ITU.BT-601, ISBN 1-878707-09-4 (https://fourcc.org/fccyvrgb.php)
+// The conversion coefficients for RGB to YUV422 are based on the ones for RGB to YUV.
+// For both Y components, the coefficients are applied as given in the link to each input RGB pixel
+// separately. For U and V, they are reduced by half to account for two RGB pixels contributing
+// to the same U and V values. In other words, the U and V contributions from the two RGB pixels
+// are averaged. The integer versions are obtained by multiplying the float versions by 16384
+// and rounding to the nearest integer.
+
+__constant float c_RGB2YUV422Coeffs_f[10]  = {0.0625, 0.5, 0.257, 0.504, 0.098, -0.074 , -0.1455, 0.2195, -0.184 , -0.0355};
+__constant int   c_RGB2YUV422Coeffs_i[10]  = {1024 * HALF_MAX_NUM * 2, 8192 * HALF_MAX_NUM * 2, 4211,  8258,  1606, -1212, -2384,  3596, -3015,  -582};
 
 __kernel void RGB2YUV_422(__global const uchar* srcptr, int src_step, int src_offset,
                           __global uchar* dstptr, int dst_step, int dst_offset,
