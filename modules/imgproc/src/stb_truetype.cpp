@@ -403,6 +403,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #ifdef STB_TRUETYPE_IMPLEMENTATION
 
+namespace cv {
+
 #ifndef STBTT_MAX_OVERSAMPLE
 #define STBTT_MAX_OVERSAMPLE   8
 #endif
@@ -4427,6 +4429,8 @@ STBTT_DEF int stbtt_SetInstance(stbtt_fontinfo* info, const int* params, int cou
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
+
+} // namespace cv
 
 #endif // STB_TRUETYPE_IMPLEMENTATION
 

@@ -72,7 +72,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 #ifdef __cplusplus
-extern "C" {
+namespace cv {
 #endif
 
 #define STBTT_FOURCC(a, b, c, d) \
