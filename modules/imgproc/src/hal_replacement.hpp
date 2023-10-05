@@ -301,9 +301,9 @@ inline int hal_ni_warpPerspective(int src_type, const uchar *src_data, size_t sr
 /**
    @brief hal_cvtBGRtoBGR
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param depth image depth (one of CV_8U, CV_16U, CV_32F)
@@ -317,9 +317,9 @@ inline int hal_ni_cvtBGRtoBGR(const uchar * src_data, size_t src_step, uchar * d
 /**
    @brief hal_cvtBGRtoBGR5x5
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param scn source image channels (3 or 4)
@@ -333,9 +333,9 @@ inline int hal_ni_cvtBGRtoBGR5x5(const uchar * src_data, size_t src_step, uchar 
 /**
    @brief hal_cvtBGR5x5toBGR
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param dcn destination image channels (3 or 4)
@@ -349,9 +349,9 @@ inline int hal_ni_cvtBGR5x5toBGR(const uchar * src_data, size_t src_step, uchar 
 /**
    @brief hal_cvtBGRtoGray
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param depth image depth (one of CV_8U, CV_16U or CV_32F)
@@ -364,9 +364,9 @@ inline int hal_ni_cvtBGRtoGray(const uchar * src_data, size_t src_step, uchar * 
 /**
    @brief hal_cvtGraytoBGR
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param depth image depth (one of CV_8U, CV_16U or CV_32F)
@@ -378,9 +378,9 @@ inline int hal_ni_cvtGraytoBGR(const uchar * src_data, size_t src_step, uchar * 
 /**
    @brief hal_cvtBGR5x5toGray
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param greenBits number of bits for green channel (5 or 6)
@@ -392,9 +392,9 @@ inline int hal_ni_cvtBGR5x5toGray(const uchar * src_data, size_t src_step, uchar
 /**
    @brief hal_cvtGraytoBGR5x5
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param greenBits number of bits for green channel (5 or 6)
@@ -406,9 +406,9 @@ inline int hal_ni_cvtGraytoBGR5x5(const uchar * src_data, size_t src_step, uchar
 /**
    @brief hal_cvtBGRtoYUV
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param depth image depth (one of CV_8U, CV_16U or CV_32F)
@@ -422,9 +422,9 @@ inline int hal_ni_cvtBGRtoYUV(const uchar * src_data, size_t src_step, uchar * d
 /**
    @brief hal_cvtYUVtoBGR
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param depth image depth (one of CV_8U, CV_16U or CV_32F)
@@ -438,9 +438,9 @@ inline int hal_ni_cvtYUVtoBGR(const uchar * src_data, size_t src_step, uchar * d
 /**
    @brief hal_cvtBGRtoXYZ
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param depth image depth (one of CV_8U, CV_16U or CV_32F)
@@ -453,9 +453,9 @@ inline int hal_ni_cvtBGRtoXYZ(const uchar * src_data, size_t src_step, uchar * d
 /**
    @brief hal_cvtXYZtoBGR
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param depth image depth (one of CV_8U, CV_16U or CV_32F)
@@ -468,9 +468,9 @@ inline int hal_ni_cvtXYZtoBGR(const uchar * src_data, size_t src_step, uchar * d
 /**
    @brief hal_cvtBGRtoHSV
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param depth image depth (one of CV_8U or CV_32F)
@@ -485,9 +485,9 @@ inline int hal_ni_cvtBGRtoHSV(const uchar * src_data, size_t src_step, uchar * d
 /**
    @brief hal_cvtHSVtoBGR
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param depth image depth (one of CV_8U or CV_32F)
@@ -502,9 +502,9 @@ inline int hal_ni_cvtHSVtoBGR(const uchar * src_data, size_t src_step, uchar * d
 /**
    @brief hal_cvtBGRtoLab
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param depth image depth (one of CV_8U or CV_32F)
@@ -519,9 +519,9 @@ inline int hal_ni_cvtBGRtoLab(const uchar * src_data, size_t src_step, uchar * d
 /**
    @brief hal_cvtLabtoBGR
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param depth image depth (one of CV_8U or CV_32F)
@@ -536,9 +536,9 @@ inline int hal_ni_cvtLabtoBGR(const uchar * src_data, size_t src_step, uchar * d
 /**
    @brief hal_cvtTwoPlaneYUVtoBGR
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param dst_width destination image width
    @param dst_height destination image height
    @param dcn destination image channels (3 or 4)
@@ -556,7 +556,7 @@ inline int hal_ni_cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step, u
    @param uv_data source image data (UV-plane)
    @param uv_step source image step (UV-plane)
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param dst_width destination image width
    @param dst_height destination image height
    @param dcn destination image channels (3 or 4)
@@ -572,7 +572,7 @@ inline int hal_ni_cvtTwoPlaneYUVtoBGREx(const uchar * y_data, size_t y_step, con
 /**
    @brief hal_cvtBGRtoTwoPlaneYUV
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param y_data destination image data (Y-plane)
    @param y_step destination image step (Y-plane)
    @param uv_data destination image data (UV-plane)
@@ -593,9 +593,9 @@ inline int hal_ni_cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
 /**
    @brief hal_cvtThreePlaneYUVtoBGR
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param dst_width destination image width
    @param dst_height destination image height
    @param dcn destination image channels (3 or 4)
@@ -609,9 +609,9 @@ inline int hal_ni_cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
 /**
    @brief hal_cvtBGRtoThreePlaneYUV
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param scn source image channels (3 or 4)
@@ -625,9 +625,9 @@ inline int hal_ni_cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
 /**
    @brief hal_cvtOnePlaneYUVtoBGR
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    @param dcn destination image channels (3 or 4)
@@ -643,9 +643,9 @@ inline int hal_ni_cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step, u
 /**
    @brief hal_cvtRGBAtoMultipliedRGBA
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    Convert from BGRA or RGBA to format with multiplied alpha channel.
@@ -656,9 +656,9 @@ inline int hal_ni_cvtRGBAtoMultipliedRGBA(const uchar * src_data, size_t src_ste
 /**
    @brief hal_cvtMultipliedRGBAtoRGBA
    @param src_data source image data
-@param src_step source image step
+   @param src_step source image step
    @param dst_data destination image data
-@param dst_step destination image step
+   @param dst_step destination image step
    @param width image width
    @param height image height
    Convert from format with multiplied alpha channel to BGRA or RGBA.
