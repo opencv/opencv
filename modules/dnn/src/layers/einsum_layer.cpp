@@ -210,6 +210,7 @@ template <typename T>
 Mat DiagonalDataAssignment(Mat input) {
 
     int rank = input.dims;
+    CV_Assert(rank >= 2);
     CV_Assert(input.size[rank - 1] == input.size[rank - 2]);
     MatShape original_dims = shape(input);
 
@@ -292,7 +293,7 @@ Mat DiagonalInnermostDims(const Mat& input, bool preserve_innermost_dim_val) {
     Mat output = DiagonalDataAssignment<float>(input);
 
     if (output_dims != shape(output)){
-        CV_Error(Error::StsError, "Output shape does not with calculated shape");
+        CV_Error(Error::StsError, "Output shape does not match with calculated shape");
     }
     return output;
 }
