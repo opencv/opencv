@@ -276,7 +276,7 @@ template<typename T> struct VBLAS
     int givens(T*, T*, int, T, T) const { return 0; }
 };
 
-#if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE_64F
+#if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE, GCC 13 related
 template<> inline int VBLAS<float>::dot(const float* a, const float* b, int n, float* result) const
 {
     if( n < 2*VTraits<v_float32>::vlanes() )

@@ -475,9 +475,9 @@ void acc_simd_(const ushort* src, float* dst, const uchar* mask, int len, int cn
 void acc_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
 {
     int x = 0;
-#if CV_SIMD
-    const int cVectorWidth = v_uint16::nlanes;
-    const int step = v_float32::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int cVectorWidth = VTraits<v_uint16>::vlanes();
+    const int step = VTraits<v_float32>::vlanes();
 
     if (!mask)
     {
@@ -493,8 +493,8 @@ void acc_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
         #else
         for (; x <= size - cVectorWidth; x += cVectorWidth)
         {
-            v_store(dst + x, vx_load(dst + x) + vx_load(src + x));
-            v_store(dst + x + step, vx_load(dst + x + step) + vx_load(src + x + step));
+            v_store(dst + x, v_add(vx_load(dst + x), vx_load(src + x)));
+            v_store(dst + x + step, v_add(vx_load(dst + x + step), vx_load(src + x + step)));
         }
         #endif // CV_AVX && !CV_AVX2
     }
@@ -508,11 +508,11 @@ void acc_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
                 v_uint16 v_masku16 = vx_load_expand(mask + x);
                 v_uint32 v_masku320, v_masku321;
                 v_expand(v_masku16, v_masku320, v_masku321);
-                v_float32 v_mask0 = v_reinterpret_as_f32(~(v_masku320 == v_reinterpret_as_u32(v_0)));
-                v_float32 v_mask1 = v_reinterpret_as_f32(~(v_masku321 == v_reinterpret_as_u32(v_0)));
+                v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_masku320, v_reinterpret_as_u32(v_0))));
+                v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_masku321, v_reinterpret_as_u32(v_0))));
 
-                v_store(dst + x, vx_load(dst + x) + (vx_load(src + x) & v_mask0));
-                v_store(dst + x + step, vx_load(dst + x + step) + (vx_load(src + x + step) & v_mask1));
+                v_store(dst + x, v_add(vx_load(dst + x), v_and(vx_load(src + x), v_mask0)));
+                v_store(dst + x + step, v_add(vx_load(dst + x + step), v_and(vx_load(src + x + step), v_mask1)));
             }
         }
         else if (cn == 3)
@@ -522,25 +522,25 @@ void acc_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
                 v_uint16 v_masku16 = vx_load_expand(mask + x);
                 v_uint32 v_masku320, v_masku321;
                 v_expand(v_masku16, v_masku320, v_masku321);
-                v_float32 v_mask0 = v_reinterpret_as_f32(~(v_masku320 == v_reinterpret_as_u32(v_0)));
-                v_float32 v_mask1 = v_reinterpret_as_f32(~(v_masku321 == v_reinterpret_as_u32(v_0)));
+                v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_masku320, v_reinterpret_as_u32(v_0))));
+                v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_masku321, v_reinterpret_as_u32(v_0))));
 
                 v_float32 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
                 v_load_deinterleave(src + x * cn, v_src00, v_src10, v_src20);
                 v_load_deinterleave(src + (x + step) * cn, v_src01, v_src11, v_src21);
-                v_src00 = v_src00 & v_mask0;
-                v_src01 = v_src01 & v_mask1;
-                v_src10 = v_src10 & v_mask0;
-                v_src11 = v_src11 & v_mask1;
-                v_src20 = v_src20 & v_mask0;
-                v_src21 = v_src21 & v_mask1;
+                v_src00 = v_and(v_src00, v_mask0);
+                v_src01 = v_and(v_src01, v_mask1);
+                v_src10 = v_and(v_src10, v_mask0);
+                v_src11 = v_and(v_src11, v_mask1);
+                v_src20 = v_and(v_src20, v_mask0);
+                v_src21 = v_and(v_src21, v_mask1);
 
                 v_float32 v_dst00, v_dst01, v_dst10, v_dst11, v_dst20, v_dst21;
                 v_load_deinterleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
                 v_load_deinterleave(dst + (x + step) * cn, v_dst01, v_dst11, v_dst21);
 
-                v_store_interleave(dst + x * cn, v_dst00 + v_src00, v_dst10 + v_src10, v_dst20 + v_src20);
-                v_store_interleave(dst + (x + step) * cn, v_dst01 + v_src01, v_dst11 + v_src11, v_dst21 + v_src21);
+                v_store_interleave(dst + x * cn, v_add(v_dst00, v_src00), v_add(v_dst10, v_src10), v_add(v_dst20, v_src20));
+                v_store_interleave(dst + (x + step) * cn, v_add(v_dst01, v_src01), v_add(v_dst11, v_src11), v_add(v_dst21, v_src21));
             }
         }
     }
@@ -862,9 +862,9 @@ void acc_simd_(const ushort* src, double* dst, const uchar* mask, int len, int c
 void acc_simd_(const float* src, double* dst, const uchar* mask, int len, int cn)
 {
     int x = 0;
-#if CV_SIMD_64F
-    const int cVectorWidth = v_float32::nlanes;
-    const int step = v_float64::nlanes;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    const int cVectorWidth = VTraits<v_float32>::vlanes();
+    const int step = VTraits<v_float64>::vlanes();
 
     if (!mask)
     {
@@ -889,8 +889,8 @@ void acc_simd_(const float* src, double* dst, const uchar* mask, int len, int cn
             v_float64 v_src0 = v_cvt_f64(v_src);
             v_float64 v_src1 = v_cvt_f64_high(v_src);
 
-            v_store(dst + x, vx_load(dst + x) + v_src0);
-            v_store(dst + x + step, vx_load(dst + x + step) + v_src1);
+            v_store(dst + x, v_add(vx_load(dst + x), v_src0));
+            v_store(dst + x + step, v_add(vx_load(dst + x + step), v_src1));
         }
         #endif // CV_AVX && !CV_AVX2
     }
@@ -904,15 +904,15 @@ void acc_simd_(const float* src, double* dst, const uchar* mask, int len, int cn
                 v_uint32 v_masku32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_masku32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_reinterpret_as_f64(v_not(v_eq(v_masku640, v_0)));
+                v_float64 v_mask1 = v_reinterpret_as_f64(v_not(v_eq(v_masku641, v_0)));
 
                 v_float32 v_src = vx_load(src + x);
-                v_float64 v_src0 = v_cvt_f64(v_src) & v_mask0;
-                v_float64 v_src1 = v_cvt_f64_high(v_src) & v_mask1;
+                v_float64 v_src0 = v_and(v_cvt_f64(v_src), v_mask0);
+                v_float64 v_src1 = v_and(v_cvt_f64_high(v_src), v_mask1);
 
-                v_store(dst + x, vx_load(dst + x) + v_src0);
-                v_store(dst + x + step, vx_load(dst + x + step) + v_src1);
+                v_store(dst + x, v_add(vx_load(dst + x), v_src0));
+                v_store(dst + x + step, v_add(vx_load(dst + x + step), v_src1));
             }
         }
         else if (cn == 3)
@@ -922,24 +922,24 @@ void acc_simd_(const float* src, double* dst, const uchar* mask, int len, int cn
                 v_uint32 v_masku32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_masku32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_reinterpret_as_f64(v_not(v_eq(v_masku640, v_0)));
+                v_float64 v_mask1 = v_reinterpret_as_f64(v_not(v_eq(v_masku641, v_0)));
 
                 v_float32 v_src0, v_src1, v_src2;
                 v_load_deinterleave(src + x * cn, v_src0, v_src1, v_src2);
-                v_float64 v_src00 = v_cvt_f64(v_src0) & v_mask0;
-                v_float64 v_src01 = v_cvt_f64_high(v_src0) & v_mask1;
-                v_float64 v_src10 = v_cvt_f64(v_src1) & v_mask0;
-                v_float64 v_src11 = v_cvt_f64_high(v_src1) & v_mask1;
-                v_float64 v_src20 = v_cvt_f64(v_src2) & v_mask0;
-                v_float64 v_src21 = v_cvt_f64_high(v_src2) & v_mask1;
+                v_float64 v_src00 = v_and(v_cvt_f64(v_src0), v_mask0);
+                v_float64 v_src01 = v_and(v_cvt_f64_high(v_src0), v_mask1);
+                v_float64 v_src10 = v_and(v_cvt_f64(v_src1), v_mask0);
+                v_float64 v_src11 = v_and(v_cvt_f64_high(v_src1), v_mask1);
+                v_float64 v_src20 = v_and(v_cvt_f64(v_src2), v_mask0);
+                v_float64 v_src21 = v_and(v_cvt_f64_high(v_src2), v_mask1);
 
                 v_float64 v_dst00, v_dst01, v_dst10, v_dst11, v_dst20, v_dst21;
                 v_load_deinterleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
                 v_load_deinterleave(dst + (x + step) * cn, v_dst01, v_dst11, v_dst21);
 
-                v_store_interleave(dst + x * cn, v_dst00 + v_src00, v_dst10 + v_src10, v_dst20 + v_src20);
-                v_store_interleave(dst + (x + step) * cn, v_dst01 + v_src01, v_dst11 + v_src11, v_dst21 + v_src21);
+                v_store_interleave(dst + x * cn, v_add(v_dst00, v_src00), v_add(v_dst10, v_src10), v_add(v_dst20, v_src20));
+                v_store_interleave(dst + (x + step) * cn, v_add(v_dst01, v_src01), v_add(v_dst11, v_src11), v_add(v_dst21, v_src21));
             }
         }
     }
@@ -950,9 +950,9 @@ void acc_simd_(const float* src, double* dst, const uchar* mask, int len, int cn
 void acc_simd_(const double* src, double* dst, const uchar* mask, int len, int cn)
 {
     int x = 0;
-#if CV_SIMD_64F
-    const int cVectorWidth = v_float64::nlanes * 2;
-    const int step = v_float64::nlanes;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    const int cVectorWidth = VTraits<v_float64>::vlanes() * 2;
+    const int step = VTraits<v_float64>::vlanes();
 
     if (!mask)
     {
@@ -971,8 +971,8 @@ void acc_simd_(const double* src, double* dst, const uchar* mask, int len, int c
             v_float64 v_src0 = vx_load(src + x);
             v_float64 v_src1 = vx_load(src + x + step);
 
-            v_store(dst + x, vx_load(dst + x) + v_src0);
-            v_store(dst + x + step, vx_load(dst + x + step) + v_src1);
+            v_store(dst + x, v_add(vx_load(dst + x), v_src0));
+            v_store(dst + x + step, v_add(vx_load(dst + x + step), v_src1));
         }
         #endif // CV_AVX && !CV_AVX2
     }
@@ -986,14 +986,14 @@ void acc_simd_(const double* src, double* dst, const uchar* mask, int len, int c
                 v_uint32 v_masku32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_masku32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_reinterpret_as_f64(v_not(v_eq(v_masku640, v_0)));
+                v_float64 v_mask1 = v_reinterpret_as_f64(v_not(v_eq(v_masku641, v_0)));
 
                 v_float64 v_src0 = vx_load(src + x);
                 v_float64 v_src1 = vx_load(src + x + step);
 
-                v_store(dst + x, vx_load(dst + x) + (v_src0 & v_mask0));
-                v_store(dst + x + step, vx_load(dst + x + step) + (v_src1 & v_mask1));
+                v_store(dst + x, v_add(vx_load(dst + x), v_and(v_src0, v_mask0)));
+                v_store(dst + x + step, v_add(vx_load(dst + x + step), v_and(v_src1, v_mask1)));
             }
         }
         else if (cn == 3)
@@ -1003,25 +1003,25 @@ void acc_simd_(const double* src, double* dst, const uchar* mask, int len, int c
                 v_uint32 v_masku32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_masku32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_reinterpret_as_f64(v_not(v_eq(v_masku640, v_0)));
+                v_float64 v_mask1 = v_reinterpret_as_f64(v_not(v_eq(v_masku641, v_0)));
 
                 v_float64 v_src00, v_src10, v_src20, v_src01, v_src11, v_src21;
                 v_load_deinterleave(src + x * cn, v_src00, v_src10, v_src20);
                 v_load_deinterleave(src + (x + step) * cn, v_src01, v_src11, v_src21);
-                v_src00 = v_src00 & v_mask0;
-                v_src01 = v_src01 & v_mask1;
-                v_src10 = v_src10 & v_mask0;
-                v_src11 = v_src11 & v_mask1;
-                v_src20 = v_src20 & v_mask0;
-                v_src21 = v_src21 & v_mask1;
+                v_src00 = v_and(v_src00, v_mask0);
+                v_src01 = v_and(v_src01, v_mask1);
+                v_src10 = v_and(v_src10, v_mask0);
+                v_src11 = v_and(v_src11, v_mask1);
+                v_src20 = v_and(v_src20, v_mask0);
+                v_src21 = v_and(v_src21, v_mask1);
 
                 v_float64 v_dst00, v_dst10, v_dst20, v_dst01, v_dst11, v_dst21;
                 v_load_deinterleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
                 v_load_deinterleave(dst + (x + step) * cn, v_dst01, v_dst11, v_dst21);
 
-                v_store_interleave(dst + x * cn, v_dst00 + v_src00, v_dst10 + v_src10, v_dst20 + v_src20);
-                v_store_interleave(dst + (x + step) * cn, v_dst01 + v_src01, v_dst11 + v_src11, v_dst21 + v_src21);
+                v_store_interleave(dst + x * cn, v_add(v_dst00, v_src00), v_add(v_dst10, v_src10), v_add(v_dst20, v_src20));
+                v_store_interleave(dst + (x + step) * cn, v_add(v_dst01, v_src01), v_add(v_dst11, v_src11), v_add(v_dst21, v_src21));
             }
         }
     }
@@ -1256,9 +1256,9 @@ void accSqr_simd_(const ushort* src, float* dst, const uchar* mask, int len, int
 void accSqr_simd_(const float* src, float* dst, const uchar* mask, int len, int cn)
 {
     int x = 0;
-#if CV_SIMD
-    const int cVectorWidth = v_uint16::nlanes;
-    const int step = v_float32::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int cVectorWidth = VTraits<v_uint16>::vlanes();
+    const int step = VTraits<v_float32>::vlanes();
 
     if (!mask)
     {
@@ -1293,12 +1293,12 @@ void accSqr_simd_(const float* src, float* dst, const uchar* mask, int len, int 
                 v_uint16 v_mask16 = vx_load_expand(mask + x);
                 v_uint32 v_mask_0, v_mask_1;
                 v_expand(v_mask16, v_mask_0, v_mask_1);
-                v_float32 v_mask0 = v_reinterpret_as_f32(~(v_mask_0 == v_0));
-                v_float32 v_mask1 = v_reinterpret_as_f32(~(v_mask_1 == v_0));
+                v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_mask_0, v_0)));
+                v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_mask_1, v_0)));
                 v_float32 v_src0 = vx_load(src + x);
                 v_float32 v_src1 = vx_load(src + x + step);
-                v_src0 = v_src0 & v_mask0;
-                v_src1 = v_src1 & v_mask1;
+                v_src0 = v_and(v_src0, v_mask0);
+                v_src1 = v_and(v_src1, v_mask1);
 
                 v_store(dst + x, v_fma(v_src0, v_src0, vx_load(dst + x)));
                 v_store(dst + x + step, v_fma(v_src1, v_src1, vx_load(dst + x + step)));
@@ -1311,18 +1311,18 @@ void accSqr_simd_(const float* src, float* dst, const uchar* mask, int len, int 
                 v_uint16 v_mask16 = vx_load_expand(mask + x);
                 v_uint32 v_mask_0, v_mask_1;
                 v_expand(v_mask16, v_mask_0, v_mask_1);
-                v_float32 v_mask0 = v_reinterpret_as_f32(~(v_mask_0 == v_0));
-                v_float32 v_mask1 = v_reinterpret_as_f32(~(v_mask_1 == v_0));
+                v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_mask_0, v_0)));
+                v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_mask_1, v_0)));
 
                 v_float32 v_src00, v_src10, v_src20, v_src01, v_src11, v_src21;
                 v_load_deinterleave(src + x * cn, v_src00, v_src10, v_src20);
                 v_load_deinterleave(src + (x + step) * cn, v_src01, v_src11, v_src21);
-                v_src00 = v_src00 & v_mask0;
-                v_src01 = v_src01 & v_mask1;
-                v_src10 = v_src10 & v_mask0;
-                v_src11 = v_src11 & v_mask1;
-                v_src20 = v_src20 & v_mask0;
-                v_src21 = v_src21 & v_mask1;
+                v_src00 = v_and(v_src00, v_mask0);
+                v_src01 = v_and(v_src01, v_mask1);
+                v_src10 = v_and(v_src10, v_mask0);
+                v_src11 = v_and(v_src11, v_mask1);
+                v_src20 = v_and(v_src20, v_mask0);
+                v_src21 = v_and(v_src21, v_mask1);
 
                 v_float32 v_dst00, v_dst10, v_dst20, v_dst01, v_dst11, v_dst21;
                 v_load_deinterleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
@@ -1625,9 +1625,9 @@ void accSqr_simd_(const ushort* src, double* dst, const uchar* mask, int len, in
 void accSqr_simd_(const float* src, double* dst, const uchar* mask, int len, int cn)
 {
     int x = 0;
-#if CV_SIMD_64F
-    const int cVectorWidth = v_float32::nlanes;
-    const int step = v_float64::nlanes;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    const int cVectorWidth = VTraits<v_float32>::vlanes();
+    const int step = VTraits<v_float64>::vlanes();
 
     if (!mask)
     {
@@ -1667,9 +1667,9 @@ void accSqr_simd_(const float* src, double* dst, const uchar* mask, int len, int
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
                 v_uint32 v_mask = vx_load_expand_q(mask + x);;
-                v_mask = ~(v_mask == v_0);
+                v_mask = v_not(v_eq(v_mask, v_0));
                 v_float32 v_src = vx_load(src + x);
-                v_src = v_src & v_reinterpret_as_f32(v_mask);
+                v_src = v_and(v_src, v_reinterpret_as_f32(v_mask));
                 v_float64 v_src0 = v_cvt_f64(v_src);
                 v_float64 v_src1 = v_cvt_f64_high(v_src);
 
@@ -1682,13 +1682,13 @@ void accSqr_simd_(const float* src, double* dst, const uchar* mask, int len, int
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
                 v_uint32 v_mask = vx_load_expand_q(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_mask = v_not(v_eq(v_mask, v_0));
 
                 v_float32 v_src0, v_src1, v_src2;
                 v_load_deinterleave(src + x * cn, v_src0, v_src1, v_src2);
-                v_src0 = v_src0 & v_reinterpret_as_f32(v_mask);
-                v_src1 = v_src1 & v_reinterpret_as_f32(v_mask);
-                v_src2 = v_src2 & v_reinterpret_as_f32(v_mask);
+                v_src0 = v_and(v_src0, v_reinterpret_as_f32(v_mask));
+                v_src1 = v_and(v_src1, v_reinterpret_as_f32(v_mask));
+                v_src2 = v_and(v_src2, v_reinterpret_as_f32(v_mask));
 
                 v_float64 v_src00 = v_cvt_f64(v_src0);
                 v_float64 v_src01 = v_cvt_f64_high(v_src0);
@@ -1720,9 +1720,9 @@ void accSqr_simd_(const float* src, double* dst, const uchar* mask, int len, int
 void accSqr_simd_(const double* src, double* dst, const uchar* mask, int len, int cn)
 {
     int x = 0;
-#if CV_SIMD_64F
-    const int cVectorWidth = v_float64::nlanes * 2;
-    const int step = v_float64::nlanes;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    const int cVectorWidth = VTraits<v_float64>::vlanes() * 2;
+    const int step = VTraits<v_float64>::vlanes();
 
     if (!mask)
     {
@@ -1756,12 +1756,12 @@ void accSqr_simd_(const double* src, double* dst, const uchar* mask, int len, in
                 v_uint32 v_mask32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_mask32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_reinterpret_as_f64(v_not(v_eq(v_masku640, v_0)));
+                v_float64 v_mask1 = v_reinterpret_as_f64(v_not(v_eq(v_masku641, v_0)));
                 v_float64 v_src0 = vx_load(src + x);
                 v_float64 v_src1 = vx_load(src + x + step);
-                v_src0 = v_src0 & v_mask0;
-                v_src1 = v_src1 & v_mask1;
+                v_src0 = v_and(v_src0, v_mask0);
+                v_src1 = v_and(v_src1, v_mask1);
                 v_store(dst + x, v_fma(v_src0, v_src0, vx_load(dst + x)));
                 v_store(dst + x + step, v_fma(v_src1, v_src1, vx_load(dst + x + step)));
             }
@@ -1773,18 +1773,18 @@ void accSqr_simd_(const double* src, double* dst, const uchar* mask, int len, in
                 v_uint32 v_mask32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_mask32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_reinterpret_as_f64(v_not(v_eq(v_masku640, v_0)));
+                v_float64 v_mask1 = v_reinterpret_as_f64(v_not(v_eq(v_masku641, v_0)));
 
                 v_float64 v_src00, v_src01, v_src10, v_src11, v_src20, v_src21;
                 v_load_deinterleave(src + x * cn, v_src00, v_src10, v_src20);
                 v_load_deinterleave(src + (x + step) * cn, v_src01, v_src11, v_src21);
-                v_src00 = v_src00 & v_mask0;
-                v_src01 = v_src01 & v_mask1;
-                v_src10 = v_src10 & v_mask0;
-                v_src11 = v_src11 & v_mask1;
-                v_src20 = v_src20 & v_mask0;
-                v_src21 = v_src21 & v_mask1;
+                v_src00 = v_and(v_src00, v_mask0);
+                v_src01 = v_and(v_src01, v_mask1);
+                v_src10 = v_and(v_src10, v_mask0);
+                v_src11 = v_and(v_src11, v_mask1);
+                v_src20 = v_and(v_src20, v_mask0);
+                v_src21 = v_and(v_src21, v_mask1);
 
                 v_float64 v_dst00, v_dst01, v_dst10, v_dst11, v_dst20, v_dst21;
                 v_load_deinterleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
@@ -2035,9 +2035,9 @@ void accProd_simd_(const ushort* src1, const ushort* src2, float* dst, const uch
 void accProd_simd_(const float* src1, const float* src2, float* dst, const uchar* mask, int len, int cn)
 {
     int x = 0;
-#if CV_SIMD
-    const int cVectorWidth = v_uint16::nlanes;
-    const int step = v_float32::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int cVectorWidth = VTraits<v_uint16>::vlanes();
+    const int step = VTraits<v_float32>::vlanes();
 
     if (!mask)
     {
@@ -2069,11 +2069,11 @@ void accProd_simd_(const float* src1, const float* src2, float* dst, const uchar
             {
                 v_uint32 v_mask32_0 = vx_load_expand_q(mask + x);
                 v_uint32 v_mask32_1 = vx_load_expand_q(mask + x + step);
-                v_float32 v_mask0 = v_reinterpret_as_f32(~(v_mask32_0 == v_0));
-                v_float32 v_mask1 = v_reinterpret_as_f32(~(v_mask32_1 == v_0));
+                v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_mask32_0, v_0)));
+                v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_mask32_1, v_0)));
 
-                v_store(dst + x, vx_load(dst + x) + ((vx_load(src1 + x) * vx_load(src2 + x)) & v_mask0));
-                v_store(dst + x + step, vx_load(dst + x + step) + ((vx_load(src1 + x + step) * vx_load(src2 + x + step)) & v_mask1));
+                v_store(dst + x, v_add(vx_load(dst + x), v_and(v_mul(vx_load(src1 + x), vx_load(src2 + x)), v_mask0)));
+                v_store(dst + x + step, v_add(vx_load(dst + x + step), v_and(v_mul(vx_load(src1 + x + step), vx_load(src2 + x + step)), v_mask1)));
             }
         }
         else if (cn == 3)
@@ -2082,8 +2082,8 @@ void accProd_simd_(const float* src1, const float* src2, float* dst, const uchar
             {
                 v_uint32 v_mask32_0 = vx_load_expand_q(mask + x);
                 v_uint32 v_mask32_1 = vx_load_expand_q(mask + x + step);
-                v_float32 v_mask0 = v_reinterpret_as_f32(~(v_mask32_0 == v_0));
-                v_float32 v_mask1 = v_reinterpret_as_f32(~(v_mask32_1 == v_0));
+                v_float32 v_mask0 = v_reinterpret_as_f32(v_not(v_eq(v_mask32_0, v_0)));
+                v_float32 v_mask1 = v_reinterpret_as_f32(v_not(v_eq(v_mask32_1, v_0)));
 
                 v_float32 v_1src00, v_1src01, v_1src10, v_1src11, v_1src20, v_1src21;
                 v_float32 v_2src00, v_2src01, v_2src10, v_2src11, v_2src20, v_2src21;
@@ -2096,8 +2096,8 @@ void accProd_simd_(const float* src1, const float* src2, float* dst, const uchar
                 v_load_deinterleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
                 v_load_deinterleave(dst + (x + step) * cn, v_dst01, v_dst11, v_dst21);
 
-                v_store_interleave(dst + x * cn, v_dst00 + ((v_1src00 * v_2src00) & v_mask0), v_dst10 + ((v_1src10 * v_2src10) & v_mask0), v_dst20 + ((v_1src20 * v_2src20) & v_mask0));
-                v_store_interleave(dst + (x + step) * cn, v_dst01 + ((v_1src01 * v_2src01) & v_mask1), v_dst11 + ((v_1src11 * v_2src11) & v_mask1), v_dst21 + ((v_1src21 * v_2src21) & v_mask1));
+                v_store_interleave(dst + x * cn, v_add(v_dst00, v_and(v_mul(v_1src00, v_2src00), v_mask0)), v_add(v_dst10, v_and(v_mul(v_1src10, v_2src10), v_mask0)), v_add(v_dst20, v_and(v_mul(v_1src20, v_2src20), v_mask0)));
+                v_store_interleave(dst + (x + step) * cn, v_add(v_dst01, v_and(v_mul(v_1src01, v_2src01), v_mask1)), v_add(v_dst11, v_and(v_mul(v_1src11, v_2src11), v_mask1)), v_add(v_dst21, v_and(v_mul(v_1src21, v_2src21), v_mask1)));
             }
         }
     }
@@ -2398,9 +2398,9 @@ void accProd_simd_(const ushort* src1, const ushort* src2, double* dst, const uc
 void accProd_simd_(const float* src1, const float* src2, double* dst, const uchar* mask, int len, int cn)
 {
     int x = 0;
-#if CV_SIMD_64F
-    const int cVectorWidth = v_float32::nlanes;
-    const int step = v_float64::nlanes;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    const int cVectorWidth = VTraits<v_float32>::vlanes();
+    const int step = VTraits<v_float64>::vlanes();
 
     if (!mask)
     {
@@ -2447,11 +2447,11 @@ void accProd_simd_(const float* src1, const float* src2, double* dst, const ucha
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
                 v_uint32 v_mask = vx_load_expand_q(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_mask = v_not(v_eq(v_mask, v_0));
                 v_float32 v_1src = vx_load(src1 + x);
                 v_float32 v_2src = vx_load(src2 + x);
-                v_1src = v_1src & v_reinterpret_as_f32(v_mask);
-                v_2src = v_2src & v_reinterpret_as_f32(v_mask);
+                v_1src = v_and(v_1src, v_reinterpret_as_f32(v_mask));
+                v_2src = v_and(v_2src, v_reinterpret_as_f32(v_mask));
 
                 v_float64 v_1src0 = v_cvt_f64(v_1src);
                 v_float64 v_1src1 = v_cvt_f64_high(v_1src);
@@ -2467,16 +2467,16 @@ void accProd_simd_(const float* src1, const float* src2, double* dst, const ucha
             for (; x <= len - cVectorWidth; x += cVectorWidth)
             {
                 v_uint32 v_mask = vx_load_expand_q(mask + x);
-                v_mask = ~(v_mask == v_0);
+                v_mask = v_not(v_eq(v_mask, v_0));
                 v_float32 v_1src0, v_1src1, v_1src2, v_2src0, v_2src1, v_2src2;
                 v_load_deinterleave(src1 + x * cn, v_1src0, v_1src1, v_1src2);
                 v_load_deinterleave(src2 + x * cn, v_2src0, v_2src1, v_2src2);
-                v_1src0 = v_1src0 & v_reinterpret_as_f32(v_mask);
-                v_1src1 = v_1src1 & v_reinterpret_as_f32(v_mask);
-                v_1src2 = v_1src2 & v_reinterpret_as_f32(v_mask);
-                v_2src0 = v_2src0 & v_reinterpret_as_f32(v_mask);
-                v_2src1 = v_2src1 & v_reinterpret_as_f32(v_mask);
-                v_2src2 = v_2src2 & v_reinterpret_as_f32(v_mask);
+                v_1src0 = v_and(v_1src0, v_reinterpret_as_f32(v_mask));
+                v_1src1 = v_and(v_1src1, v_reinterpret_as_f32(v_mask));
+                v_1src2 = v_and(v_1src2, v_reinterpret_as_f32(v_mask));
+                v_2src0 = v_and(v_2src0, v_reinterpret_as_f32(v_mask));
+                v_2src1 = v_and(v_2src1, v_reinterpret_as_f32(v_mask));
+                v_2src2 = v_and(v_2src2, v_reinterpret_as_f32(v_mask));
 
                 v_float64 v_dst00, v_dst01, v_dst10, v_dst11, v_dst20, v_dst21;
                 v_load_deinterleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
@@ -2501,9 +2501,9 @@ void accProd_simd_(const float* src1, const float* src2, double* dst, const ucha
 void accProd_simd_(const double* src1, const double* src2, double* dst, const uchar* mask, int len, int cn)
 {
     int x = 0;
-#if CV_SIMD_64F
-    const int cVectorWidth = v_float64::nlanes * 2;
-    const int step = v_float64::nlanes;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    const int cVectorWidth = VTraits<v_float64>::vlanes() * 2;
+    const int step = VTraits<v_float64>::vlanes();
 
     if (!mask)
     {
@@ -2542,16 +2542,16 @@ void accProd_simd_(const double* src1, const double* src2, double* dst, const uc
                 v_uint32 v_mask32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_mask32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_reinterpret_as_f64(v_not(v_eq(v_masku640, v_0)));
+                v_float64 v_mask1 = v_reinterpret_as_f64(v_not(v_eq(v_masku641, v_0)));
 
                 v_float64 v_src00 = vx_load(src1 + x);
                 v_float64 v_src01 = vx_load(src1 + x + step);
                 v_float64 v_src10 = vx_load(src2 + x);
                 v_float64 v_src11 = vx_load(src2 + x + step);
 
-                v_store(dst + x, vx_load(dst + x) + ((v_src00 * v_src10) & v_mask0));
-                v_store(dst + x + step, vx_load(dst + x + step) + ((v_src01 * v_src11) & v_mask1));
+                v_store(dst + x, v_add(vx_load(dst + x), v_and(v_mul(v_src00, v_src10), v_mask0)));
+                v_store(dst + x + step, v_add(vx_load(dst + x + step), v_and(v_mul(v_src01, v_src11), v_mask1)));
             }
         }
         else if (cn == 3)
@@ -2561,8 +2561,8 @@ void accProd_simd_(const double* src1, const double* src2, double* dst, const uc
                 v_uint32 v_mask32 = vx_load_expand_q(mask + x);
                 v_uint64 v_masku640, v_masku641;
                 v_expand(v_mask32, v_masku640, v_masku641);
-                v_float64 v_mask0 = v_reinterpret_as_f64(~(v_masku640 == v_0));
-                v_float64 v_mask1 = v_reinterpret_as_f64(~(v_masku641 == v_0));
+                v_float64 v_mask0 = v_reinterpret_as_f64(v_not(v_eq(v_masku640, v_0)));
+                v_float64 v_mask1 = v_reinterpret_as_f64(v_not(v_eq(v_masku641, v_0)));
 
                 v_float64 v_1src00, v_1src01, v_1src10, v_1src11, v_1src20, v_1src21;
                 v_float64 v_2src00, v_2src01, v_2src10, v_2src11, v_2src20, v_2src21;
@@ -2570,19 +2570,19 @@ void accProd_simd_(const double* src1, const double* src2, double* dst, const uc
                 v_load_deinterleave(src1 + (x + step) * cn, v_1src01, v_1src11, v_1src21);
                 v_load_deinterleave(src2 + x * cn, v_2src00, v_2src10, v_2src20);
                 v_load_deinterleave(src2 + (x + step) * cn, v_2src01, v_2src11, v_2src21);
-                v_float64 v_src00 = (v_1src00 & v_mask0) * v_2src00;
-                v_float64 v_src01 = (v_1src01 & v_mask1) * v_2src01;
-                v_float64 v_src10 = (v_1src10 & v_mask0) * v_2src10;
-                v_float64 v_src11 = (v_1src11 & v_mask1) * v_2src11;
-                v_float64 v_src20 = (v_1src20 & v_mask0) * v_2src20;
-                v_float64 v_src21 = (v_1src21 & v_mask1) * v_2src21;
+                v_float64 v_src00 = v_mul(v_and(v_1src00, v_mask0), v_2src00);
+                v_float64 v_src01 = v_mul(v_and(v_1src01, v_mask1), v_2src01);
+                v_float64 v_src10 = v_mul(v_and(v_1src10, v_mask0), v_2src10);
+                v_float64 v_src11 = v_mul(v_and(v_1src11, v_mask1), v_2src11);
+                v_float64 v_src20 = v_mul(v_and(v_1src20, v_mask0), v_2src20);
+                v_float64 v_src21 = v_mul(v_and(v_1src21, v_mask1), v_2src21);
 
                 v_float64 v_dst00, v_dst01, v_dst10, v_dst11, v_dst20, v_dst21;
                 v_load_deinterleave(dst + x * cn, v_dst00, v_dst10, v_dst20);
                 v_load_deinterleave(dst + (x + step) * cn, v_dst01, v_dst11, v_dst21);
 
-                v_store_interleave(dst + x * cn, v_dst00 + v_src00, v_dst10 + v_src10, v_dst20 + v_src20);
-                v_store_interleave(dst + (x + step) * cn, v_dst01 + v_src01, v_dst11 + v_src11, v_dst21 + v_src21);
+                v_store_interleave(dst + x * cn, v_add(v_dst00, v_src00), v_add(v_dst10, v_src10), v_add(v_dst20, v_src20));
+                v_store_interleave(dst + (x + step) * cn, v_add(v_dst01, v_src01), v_add(v_dst11, v_src11), v_add(v_dst21, v_src21));
             }
         }
     }

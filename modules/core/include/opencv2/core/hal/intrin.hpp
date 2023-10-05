@@ -972,6 +972,15 @@ namespace CV__SIMD_NAMESPACE {
     { \
         return a op b; \
     }
+    #define OPENCV_HAL_WRAP_EQ_OP(_Tpvec) \
+    inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b) \
+    { \
+        return a == b; \
+    } \
+    inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b) \
+    { \
+        return a != b; \
+    }
 
     #define OPENCV_HAL_WRAP_CMP(_Tpvec) \
     OPENCV_HAL_WRAP_CMP_OP(_Tpvec, eq, ==) \
@@ -984,11 +993,11 @@ namespace CV__SIMD_NAMESPACE {
     OPENCV_HAL_WRAP_CMP(v_uint8)
     OPENCV_HAL_WRAP_CMP(v_uint16)
     OPENCV_HAL_WRAP_CMP(v_uint32)
-    // OPENCV_HAL_WRAP_CMP(v_uint64)
+    OPENCV_HAL_WRAP_EQ_OP(v_uint64)
     OPENCV_HAL_WRAP_CMP(v_int8)
     OPENCV_HAL_WRAP_CMP(v_int16)
     OPENCV_HAL_WRAP_CMP(v_int32)
-    // OPENCV_HAL_WRAP_CMP(v_int64)
+    OPENCV_HAL_WRAP_EQ_OP(v_int64)
     OPENCV_HAL_WRAP_CMP(v_float32)
     #if CV_SIMD_64F
     OPENCV_HAL_WRAP_CMP(v_float64)
@@ -997,9 +1006,11 @@ namespace CV__SIMD_NAMESPACE {
         OPENCV_HAL_WRAP_CMP(v_uint8x16)
         OPENCV_HAL_WRAP_CMP(v_uint16x8)
         OPENCV_HAL_WRAP_CMP(v_uint32x4)
+        OPENCV_HAL_WRAP_EQ_OP(v_uint64x2)
         OPENCV_HAL_WRAP_CMP(v_int8x16)
         OPENCV_HAL_WRAP_CMP(v_int16x8)
         OPENCV_HAL_WRAP_CMP(v_int32x4)
+        OPENCV_HAL_WRAP_EQ_OP(v_int64x2)
         OPENCV_HAL_WRAP_CMP(v_float32x4)
         #if CV_SIMD_64F
         OPENCV_HAL_WRAP_CMP(v_float64x2)
@@ -1009,9 +1020,11 @@ namespace CV__SIMD_NAMESPACE {
         OPENCV_HAL_WRAP_CMP(v_uint8x32)
         OPENCV_HAL_WRAP_CMP(v_uint16x16)
         OPENCV_HAL_WRAP_CMP(v_uint32x8)
+        OPENCV_HAL_WRAP_EQ_OP(v_uint64x4)
         OPENCV_HAL_WRAP_CMP(v_int8x32)
         OPENCV_HAL_WRAP_CMP(v_int16x16)
         OPENCV_HAL_WRAP_CMP(v_int32x8)
+        OPENCV_HAL_WRAP_EQ_OP(v_int64x4)
         OPENCV_HAL_WRAP_CMP(v_float32x8)
         #if CV_SIMD_64F
         OPENCV_HAL_WRAP_CMP(v_float64x4)

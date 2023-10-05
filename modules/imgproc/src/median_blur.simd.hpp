@@ -548,7 +548,7 @@ struct MinMax32f
     }
 };
 
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 
 struct MinMaxVec8u
 {
@@ -688,7 +688,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                 if( limit == size.width )
                     break;
 
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 int nlanes = VTraits<typename VecOp::arg_type>::vlanes();
 #else
                 int nlanes = 1;
@@ -793,7 +793,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                 if( limit == size.width )
                     break;
 
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 int nlanes = VTraits<typename VecOp::arg_type>::vlanes();
 #else
                 int nlanes = 1;

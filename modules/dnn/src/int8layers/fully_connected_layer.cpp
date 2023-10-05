@@ -305,7 +305,7 @@ public:
             #endif
                 {
                     int i = 0;
-            #if CV_SIMD
+            #if CV_SIMD128
                     for( ; i  <= nw - 4; i += 4, wptr += 4*wstep )
                     {
                         v_int32x4 vs0 = v_setzero_s32(), vs1 = v_setzero_s32(),
