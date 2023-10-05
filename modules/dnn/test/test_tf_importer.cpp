@@ -619,10 +619,12 @@ TEST_P(Test_TensorFlow_layers, pooling_reduce_sum_1_2_true)
 
 TEST_P(Test_TensorFlow_layers, max_pool_grad)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     runTensorFlowNet("max_pool_grad");
 }
 
@@ -1496,17 +1498,21 @@ TEST_P(Test_TensorFlow_layers, split)
 
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     runTensorFlowNet("split");
 }
 
 TEST_P(Test_TensorFlow_layers, split_equals)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
     runTensorFlowNet("split_equals");
 }
 
@@ -1581,7 +1587,7 @@ TEST_P(Test_TensorFlow_layers, relu6)
 
 TEST_P(Test_TensorFlow_layers, subpixel)
 {
-#if defined(INF_ENGINE_RELEASE)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -1621,8 +1627,10 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear_align_corners)
 // TF case: align_corners=False, half_pixel_centers=True
 TEST_P(Test_TensorFlow_layers, resize_bilinear_half_pixel)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
 
     runTensorFlowNet("resize_bilinear", false, 0.0, 0.0, false, "_half_pixel");
 }
@@ -1636,8 +1644,10 @@ TEST_P(Test_TensorFlow_layers, resize_bilinear_factor)
 // TF case: align_corners=False, half_pixel_centers=True
 TEST_P(Test_TensorFlow_layers, resize_bilinear_factor_half_pixel)
 {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
+#endif
 
     runTensorFlowNet("resize_bilinear_factor", false, 0.0, 0.0, false, "_half_pixel");
 }
