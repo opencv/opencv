@@ -361,8 +361,9 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
         std::string input_info = input.substr(segment_begin, segment_end);
         string_itr += segment_end;
         int detected_version = versionAuto(input_info);
-        CV_Assert(detected_version != -1);
-        if (version_level == 0)
+        if (detected_version == -1)
+            CV_Error(Error::StsBadArg, "The given input exceeds the maximum capacity of a QR code with the selected encoding mode and error correction level " );
+        else if (version_level == 0)
             version_level = detected_version;
         else if (version_level < detected_version)
             CV_Error(Error::StsBadArg, "The given version is not suitable for the given input string length ");
