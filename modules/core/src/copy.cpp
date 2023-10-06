@@ -628,11 +628,20 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 
     if (mask.empty())
     {
-        Mat valueFlattened = value.reshape(1);
-        Scalar _scalar;
-        Mat _scalarWrapper(static_cast<int>(valueFlattened.total()), 1, traits::Type<Scalar::value_type>::value, &_scalar[0]);//value is a scalar, so it should be safe
-        valueFlattened.convertTo(_scalarWrapper, _scalarWrapper.type());
-        return (*this = _scalar);
+        const bool isSingleValue = (value.size() == Size(1, 1));
+        const bool canBeDispatchedAsScalar = isSingleValue || (channels() <= 4);
+        if (canBeDispatchedAsScalar)
+        {
+            Mat valueFlattened = value.reshape(1, static_cast<int>(value.total()));
+            Scalar _scalar;
+            Mat _scalarWrapper(static_cast<int>(valueFlattened.total()), 1, traits::Type<Scalar::value_type>::value, &_scalar[0]);
+            valueFlattened.convertTo(_scalarWrapper, _scalarWrapper.type());
+            if (isSingleValue)
+              this->reshape(1) = Scalar::all(_scalar[0]);
+            else
+              *this = _scalar;
+            return *this;
+        }
     }
 
     CV_IPP_RUN_FAST(ipp_Mat_setTo_Mat(*this, value, mask), *this)
