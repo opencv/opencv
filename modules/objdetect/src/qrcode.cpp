@@ -2727,46 +2727,56 @@ bool QRDecode::samplingForVersion()
     return true;
 }
 
-static bool checkUTF8(const std::string& str) {
-    for (size_t i = 0; i < str.size(); ++i) {
+
+static bool checkASCIIcompatible(const uint8_t* str, const size_t size) {
+    for (size_t i = 0; i < size; ++i) {
         uint8_t byte = str[i];
-        if (byte > 127) {
+        if (byte >= 0x80)
+            return false;
+    }
+    return true;
+}
+
+static bool checkUTF8(const uint8_t* str, const size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        uint8_t byte = str[i];
+        if (byte >= 0x80) {
             // Check that symbol is encoded correctly.
 
             // Count number of bytes per symbol as a number of leading non-zero bits
-            uint8_t numBytesPerSymdol;
-            if ((byte & 0b11100000) == 0b11000000)
-                numBytesPerSymdol = 2;
-            else if ((byte & 0b11110000) == 0b11100000)
-                numBytesPerSymdol = 3;
-            else if ((byte & 0b11111000) == 0b11110000)
-                numBytesPerSymdol = 4;
+            uint8_t numBytesPerSymbol;
+            if ((byte & 0xe0) == 0xc0)
+                numBytesPerSymbol = 2;
+            else if ((byte & 0xf0) == 0xe0)
+                numBytesPerSymbol = 3;
+            else if ((byte & 0xf8) == 0xf0)
+                numBytesPerSymbol = 4;
             else
                 return false;
 
-            for (size_t j = 1; j < numBytesPerSymdol; ++j) {
-                if (i + j >= str.size() || (str[i + j] & 0b11000000) != 0b10000000) {
+            for (size_t j = 1; j < numBytesPerSymbol; ++j) {
+                if (i + j >= size || (str[i + j] & 0xc0) != 0x80) {
                     return false;
                 }
             }
-            i += numBytesPerSymdol - 1;
+            i += numBytesPerSymbol - 1;
         }
     }
     return true;
 }
 
-static std::string encodeUTF8(const std::string& str) {
-    std::string res = "";
-    for (size_t i = 0; i < str.size(); ++i) {
+static std::string encodeUTF8_bytesarray(const uint8_t* str, const size_t size) {
+    std::ostringstream res;
+    for (size_t i = 0; i < size; ++i) {
         uint8_t byte = str[i];
-        if (byte > 127) {
-            res += 0b11000000 | (byte >> 6);
-            res += 0b10000000 | (byte & 0b00111111);
+        if (byte >= 0x80) {
+            res << (char)(0xc0 | (byte >> 6));
+            res << (char)(0x80 | (byte & 0x3f));
         } else {
-            res += byte;
+            res << (char)byte;
         }
     }
-    return res;
+    return res.str();
 }
 
 bool QRDecode::decodingProcess()
@@ -2798,14 +2808,58 @@ bool QRDecode::decodingProcess()
 
     if (errorCode != 0) { return false; }
 
-    for (int i = 0; i < qr_code_data.payload_len; i++)
+    CV_LOG_INFO(NULL, "QR: decoded with .version=" << qr_code_data.version << " .data_type=" << qr_code_data.data_type << " .eci=" << qr_code_data.eci << " .payload_len=" << qr_code_data.payload_len)
+
+    switch (qr_code_data.data_type)
     {
-        result_info += qr_code_data.payload[i];
+        case QUIRC_DATA_TYPE_NUMERIC:
+            if (!checkASCIIcompatible(qr_code_data.payload, qr_code_data.payload_len)) {
+                CV_LOG_INFO(NULL, "QR: DATA_TYPE_NUMERIC payload must be ACSII compatible string");
+                return false;
+            }
+            result_info.assign((const char*)qr_code_data.payload, qr_code_data.payload_len);
+            return true;
+        case QUIRC_DATA_TYPE_ALPHA:
+            if (!checkASCIIcompatible(qr_code_data.payload, qr_code_data.payload_len)) {
+                CV_LOG_INFO(NULL, "QR: DATA_TYPE_ALPHA payload must be ASCII compatible string");
+                return false;
+            }
+            result_info.assign((const char*)qr_code_data.payload, qr_code_data.payload_len);
+            return true;
+        case QUIRC_DATA_TYPE_BYTE:
+            // https://en.wikipedia.org/wiki/Extended_Channel_Interpretation
+            if (qr_code_data.eci == QUIRC_ECI_UTF_8) {
+                CV_LOG_INFO(NULL, "QR: payload ECI is UTF-8");
+                if (!checkUTF8(qr_code_data.payload, qr_code_data.payload_len)) {
+                    CV_LOG_INFO(NULL, "QUIRC_DATA_TYPE_BYTE with UTF-8 ECI must be UTF-8 compatible string");
+                    return false;
+                }
+                result_info.assign((const char*)qr_code_data.payload, qr_code_data.payload_len);
+            } else if (qr_code_data.eci == 25/*ECI_UTF_16BE*/) {
+                CV_LOG_INFO(NULL, "QR: UTF-16BE ECI is not supported");
+                return false;
+            } else if (checkASCIIcompatible(qr_code_data.payload, qr_code_data.payload_len)) {
+                CV_LOG_INFO(NULL, "QR: payload is ASCII compatible (special handling for symbols encoding is not needed)");
+                result_info.assign((const char*)qr_code_data.payload, qr_code_data.payload_len);
+            } else {
+                if (checkUTF8(qr_code_data.payload, qr_code_data.payload_len)) {
+                    CV_LOG_INFO(NULL, "QR: payload QUIRC_DATA_TYPE_BYTE is UTF-8 compatible, return as-is");
+                    result_info.assign((const char*)qr_code_data.payload, qr_code_data.payload_len);
+                } else {
+                    CV_LOG_INFO(NULL, "QR: assume 1-byte per symbol encoding");
+                    result_info = encodeUTF8_bytesarray(qr_code_data.payload, qr_code_data.payload_len);
+                }
+            }
+            return true;
+        case QUIRC_DATA_TYPE_KANJI:
+            // FIXIT BUG: we must return UTF-8 compatible string
+            CV_LOG_WARNING(NULL, "QR: Kanji is not supported properly");
+            result_info.assign((const char*)qr_code_data.payload, qr_code_data.payload_len);
+            return true;
     }
-    if (qr_code_data.data_type == QUIRC_DATA_TYPE_BYTE && !checkUTF8(result_info)) {
-        result_info = encodeUTF8(result_info);
-    }
-    return true;
+
+    CV_LOG_WARNING(NULL, "QR: unsupported QR data type");
+    return false;
 #else
     return false;
 #endif

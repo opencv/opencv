@@ -8,7 +8,7 @@ import os
 import numpy as np
 import cv2 as cv
 
-from tests_common import NewOpenCVTests, unittest
+from tests_common import NewOpenCVTests
 
 class qrcode_detector_test(NewOpenCVTests):
 
@@ -50,14 +50,3 @@ class qrcode_detector_test(NewOpenCVTests):
         self.assertTrue("STEP BACK" in decoded_data)
         self.assertTrue("QUESTION" in decoded_data)
         self.assertEqual(points.shape, (6, 4, 2))
-
-    def test_decode_non_utf8(self):
-        import sys
-        if sys.version_info[0] < 3:
-            raise unittest.SkipTest('Python 2.x is not supported')
-
-        img = cv.imread(os.path.join(self.extraTestDataPath, 'cv/qrcode/umlaut.png'))
-        self.assertFalse(img is None)
-        detector = cv.QRCodeDetector()
-        decoded_data, _, _ = detector.detectAndDecode(img)
-        self.assertTrue(isinstance(decoded_data, str))

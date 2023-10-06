@@ -641,7 +641,7 @@ TEST(Objdetect_QRCode_detectAndDecode, utf8_output)
 {
 #ifndef HAVE_QUIRC
     throw SkipTestException("Quirc is required for decoding");
-#endif
+#else
     const std::string name_current_image = "umlaut.png";
     const std::string root = "qrcode/";
 
@@ -655,6 +655,7 @@ TEST(Objdetect_QRCode_detectAndDecode, utf8_output)
     std::string decoded_info = qrcode.detectAndDecode(src, corners, straight);
     EXPECT_FALSE(decoded_info.empty());
     EXPECT_NE(decoded_info.find("M\xc3\xbcllheimstrasse"), std::string::npos);
+#endif // HAVE_QUIRC
 }
 
 }} // namespace
