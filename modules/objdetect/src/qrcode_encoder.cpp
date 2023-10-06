@@ -360,20 +360,22 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
 
         std::string input_info = input.substr(segment_begin, segment_end);
         string_itr += segment_end;
+
         int detected_version = versionAuto(input_info);
+        int tmp_version_level = version_level;
         if (detected_version == -1)
             CV_Error(Error::StsBadArg, "The given input exceeds the maximum capacity of a QR code with the selected encoding mode and error correction level " );
-        else if (version_level == 0)
-            version_level = detected_version;
-        else if (version_level < detected_version)
+        else if (tmp_version_level == 0)
+            tmp_version_level = detected_version;
+        else if (tmp_version_level < detected_version)
             CV_Error(Error::StsBadArg, "The given version is not suitable for the given input string length ");
 
         payload.clear();
         payload.reserve(MAX_PAYLOAD_LEN);
         format = vector<uint8_t> (15, 255);
         version_reserved = vector<uint8_t> (18, 255);
-        version_size = (21 + (version_level - 1) * 4);
-        version_info = makePtr<VersionInfo>(version_info_database[version_level]);
+        version_size = (21 + (tmp_version_level - 1) * 4);
+        version_info = makePtr<VersionInfo>(version_info_database[tmp_version_level]);
         cur_ecc_params = makePtr<BlockParams>(version_info->ecc[ecc_level]);
         original = Mat(Size(version_size, version_size), CV_8UC1, Scalar(255));
         masked_data = original.clone();
