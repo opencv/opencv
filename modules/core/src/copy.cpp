@@ -626,6 +626,15 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
     int cn = channels(), mcn = mask.channels();
     CV_Assert( mask.empty() || (mask.depth() == CV_8U && (mcn == 1 || mcn == cn) && size == mask.size) );
 
+    if (mask.empty())
+    {
+        Mat valueFlattened = value.reshape(1);
+        Scalar _scalar;
+        Mat _scalarWrapper(static_cast<int>(valueFlattened.total()), 1, traits::Type<Scalar::value_type>::value, &_scalar[0]);//value is a scalar, so it should be safe
+        valueFlattened.convertTo(_scalarWrapper, _scalarWrapper.type());
+        return (*this = _scalar);
+    }
+
     CV_IPP_RUN_FAST(ipp_Mat_setTo_Mat(*this, value, mask), *this)
 
     size_t esz = mcn > 1 ? elemSize1() : elemSize();
