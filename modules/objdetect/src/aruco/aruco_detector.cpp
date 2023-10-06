@@ -692,7 +692,7 @@ static void _identifyCandidates(InputArray grey,
 
 /**
  * Line fitting  A * B = C :: Called from function refineCandidateLines
- * @param nContours, contour-container
+ * @param nContours contour-container
  */
 static Point3f _interpolate2Dline(const vector<Point2f>& nContours){
     CV_Assert(nContours.size() >= 2);
@@ -748,10 +748,8 @@ static Point2f _getCrossPoint(Point3f nLine1, Point3f nLine2){
 
 /**
  * Refine Corners using the contour vector :: Called from function detectMarkers
- * @param nContours, contour-container
- * @param nCorners, candidate Corners
- * @param camMatrix, cameraMatrix input 3x3 floating-point camera matrix
- * @param distCoeff, distCoeffs vector of distortion coefficient
+ * @param nContours contour-container
+ * @param nCorners candidate Corners
  */
 static void _refineCandidateLines(vector<Point>& nContours, vector<Point2f>& nCorners){
     vector<Point2f> contour2f(nContours.begin(), nContours.end());
