@@ -638,7 +638,7 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
         uchar* rawValueBytesBufEnd = rawValueBytesBuf+rawValueBytesSize;
         convertAndUnrollScalar( value, type(), rawValueBytesBuf, this->channels());
         const uchar referenceByte = *rawValueBytesBuf;
-        const bool isUniformByte = std::all_of(rawValueBytesBuf, rawValueBytesBufEnd, [referenceByte](const uchar x) {return (x == referenceByte);});
+        const bool isUniformByte = (std::find_if_not(rawValueBytesBuf, rawValueBytesBufEnd, std::bind2nd(std::equal_to<uchar>(), referenceByte)) == rawValueBytesBufEnd);
         if (isUniformByte)
         {
             if (this->isContinuous())
