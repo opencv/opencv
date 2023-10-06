@@ -628,45 +628,6 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 
     CV_IPP_RUN_FAST(ipp_Mat_setTo_Mat(*this, value, mask), *this)
 
-    const bool checkMemsetUsability = mask.empty();
-    if (checkMemsetUsability)
-    {
-        const size_t esz = this->elemSize();
-        AutoBuffer<uchar> rawValueBytes(esz);
-        const size_t rawValueBytesSize = rawValueBytes.size();
-        uchar* rawValueBytesBuf = rawValueBytes.data();
-        uchar* rawValueBytesBufEnd = rawValueBytesBuf+rawValueBytesSize;
-        convertAndUnrollScalar( value, type(), rawValueBytesBuf, this->channels());
-        const uchar referenceByte = *rawValueBytesBuf;
-        const bool isUniformByte = (std::find_if_not(rawValueBytesBuf, rawValueBytesBufEnd, std::bind2nd(std::equal_to<uchar>(), referenceByte)) == rawValueBytesBufEnd);
-        if (isUniformByte)
-        {
-            if (this->isContinuous())
-                memset(this->data, referenceByte, this->total()*esz);
-            else if (this->dims == 2)
-            {
-                for(int row = 0, rowCount = this->rows, colCount = this->cols ; row<rowCount ; ++row)
-                    memset(this->ptr<uchar>(row), referenceByte, colCount*esz);
-            }
-            else
-            {
-                const Mat* arrays[] = {this, nullptr};
-                Mat planes[1];
-                NAryMatIterator itNAry(arrays, planes, 1);
-                for(size_t p = 0 ; p<itNAry.nplanes ; ++p, ++itNAry)
-                {
-                    Mat& plane = itNAry.planes[0];
-                    if (plane.isContinuous())
-                        memset(plane.data, referenceByte, plane.total()*esz);
-                    for(int row = 0, rowsCount = plane.rows, colCount = plane.cols ; row<rowsCount ; ++row)
-                        memset(plane.ptr<uchar>(row), referenceByte, colCount*esz);
-                }
-            }
-
-            return *this;
-        }//end if (isUniformByte)
-    }
-
     size_t esz = mcn > 1 ? elemSize1() : elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
 
