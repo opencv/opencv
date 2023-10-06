@@ -51,8 +51,8 @@
 
 #include "precomp.hpp"
 #include "opencv2/imgcodecs.hpp"
-
 #include "opencv2/core/utils/filesystem.hpp"
+#include "opencv2/videoio/utils.private.hpp"
 
 #if 0
 #define CV_WARN(message)
@@ -113,7 +113,16 @@ void CvCapture_Images::close()
 
 bool CvCapture_Images::grabFrame()
 {
-    cv::String filename = cv::format(filename_pattern.c_str(), (int)(firstframe + currentframe));
+    cv::String filename;
+    if (length == 1)
+        if (currentframe < length)
+            filename = filename_pattern;
+        else
+        {
+            return false;
+        }
+    else
+        filename = cv::format(filename_pattern.c_str(), (int)(firstframe + currentframe));
     CV_Assert(!filename.empty());
 
     if (grabbedInOpen)
@@ -200,7 +209,7 @@ bool CvCapture_Images::setProperty(int id, double value)
     return false;
 }
 
-static
+// static
 std::string icvExtractPattern(const std::string& filename, unsigned *offset)
 {
     size_t len = filename.size();
@@ -249,9 +258,7 @@ std::string icvExtractPattern(const std::string& filename, unsigned *offset)
         while (pos < len && !isdigit(filename[pos])) pos++;
 
         if (pos == len)
-        {
-            CV_Error_(Error::StsBadArg, ("CAP_IMAGES: can't find starting number (in the name of file): %s", filename.c_str()));
-        }
+            return "";
 
         std::string::size_type pos0 = pos;
 
@@ -292,44 +299,61 @@ bool CvCapture_Images::open(const std::string& _filename)
 
     CV_Assert(!_filename.empty());
     filename_pattern = icvExtractPattern(_filename, &offset);
-    CV_Assert(!filename_pattern.empty());
-
-    // determine the length of the sequence
-    for (length = 0; ;)
+    if (filename_pattern.empty())
     {
-        cv::String filename = cv::format(filename_pattern.c_str(), (int)(offset + length));
-        if (!utils::fs::exists(filename))
+        filename_pattern = _filename;
+        if (!utils::fs::exists(filename_pattern))
         {
-            if (length == 0 && offset == 0) // allow starting with 0 or 1
+            CV_LOG_INFO(NULL, "CAP_IMAGES: File does not exist: " << filename_pattern);
+            close();
+            return false;
+        }
+        if (!haveImageReader(filename_pattern))
+        {
+            CV_LOG_INFO(NULL, "CAP_IMAGES: File is not an image: " << filename_pattern);
+            close();
+            return false;
+        }
+        length = 1;
+    }
+    else
+    {
+        // determine the length of the sequence
+        for (length = 0; ;)
+        {
+            cv::String filename = cv::format(filename_pattern.c_str(), (int)(offset + length));
+            if (!utils::fs::exists(filename))
             {
-                offset++;
-                continue;
+                if (length == 0 && offset == 0) // allow starting with 0 or 1
+                {
+                    offset++;
+                    continue;
+                }
+                CV_LOG_INFO(NULL, "CAP_IMAGES: File does not exist: " << filename);
+                break;
             }
-            break;
+
+            if(!haveImageReader(filename))
+            {
+                CV_LOG_INFO(NULL, "CAP_IMAGES: File is not an image: " << filename);
+                break;
+            }
+
+            length++;
         }
 
-        if(!haveImageReader(filename))
+        if (length == 0)
         {
-            CV_LOG_INFO(NULL, "CAP_IMAGES: Stop scanning. Can't read image file: " << filename);
-            break;
+            close();
+            return false;
         }
 
-        length++;
+        firstframe = offset;
     }
-
-    if (length == 0)
-    {
-        close();
-        return false;
-    }
-
-    firstframe = offset;
-
     // grab frame to enable properties retrieval
-    bool grabRes = grabFrame();
+    bool grabRes = CvCapture_Images::grabFrame();
     grabbedInOpen = true;
     currentframe = 0;
-
     return grabRes;
 }
 

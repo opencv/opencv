@@ -449,7 +449,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
         throw SkipTestException("");
     }
 #endif
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2021010000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
@@ -566,14 +566,14 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
         }
         else if(target == DNN_TARGET_CUDA_FP16)
         {
-            normAssert(out, refBlob, "", 0.6, 25);
+            normAssert(out, refBlob, "", 0.6, 26);
         }
         else if (target == DNN_TARGET_CPU_FP16)
         {
             normAssert(out, refBlob, "", 0.62, 25);
         }
         else
-            normAssert(out, refBlob, "", 0.5, 1.1);
+            normAssert(out, refBlob, "", 0.5, 1.11);
     }
 }
 

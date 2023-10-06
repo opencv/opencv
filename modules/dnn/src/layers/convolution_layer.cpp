@@ -62,9 +62,6 @@
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
 #endif
-#ifdef HAVE_TENGINE
-#include "../tengine4dnn/include/tengine_graph_convolution.hpp"
-#endif
 
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/convolution.hpp"
@@ -245,8 +242,6 @@ public:
 };
 
 
-#define IS_POWER_LAYER(layer) \
-            (!layer.empty() && !layer->type.compare("Power"))
 //TODO: simultaneously convolution and bias addition for cache optimization
 class ConvolutionLayerImpl CV_FINAL : public BaseConvolutionLayerImpl
 {
@@ -265,10 +260,6 @@ public:
     bool newActiv;
     ocl4dnnFusedActiv_t activType;
     float power;
-#endif
-
-#ifdef HAVE_TENGINE
-    teng_graph_t tengine_graph;
 #endif
 
 #ifdef HAVE_CUDA
@@ -290,19 +281,7 @@ public:
         cudaFusionMode = cuda4dnn::ConvolutionConfiguration::FusionMode::NONE;
         cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
 #endif
-#ifdef HAVE_TENGINE
-        tengine_graph=NULL;
-#endif
     }
-#ifdef HAVE_TENGINE
-    ~ConvolutionLayerImpl()
-    {
-        if(NULL != tengine_graph )
-        {
-            tengine_release(tengine_graph);
-        }
-    }
-#endif
 
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
     {
@@ -466,13 +445,6 @@ public:
             for(int i = 0; i < numOutput; i++ )
                 biasvec[i] = biasMat.at<float>(i);
         }
-#ifdef HAVE_TENGINE
-        if(NULL != tengine_graph )
-        {
-            tengine_release(tengine_graph);
-            tengine_graph = NULL ;
-        }
-#endif
 #ifdef HAVE_OPENCL
         convolutionOp.release();
 #endif
@@ -848,13 +820,13 @@ public:
         CV_Assert(!blobs.empty());
         CV_Assert_N(inputs.size() >= 1, nodes.size() >= 1);
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        std::vector<size_t> dims = ieInpNode->get_shape();
+        std::vector<size_t> dims = ieInpNode.get_shape();
         CV_Check(dims.size(), dims.size() >= 3 && dims.size() <= 5, "");
-        std::shared_ptr<ngraph::Node> ieWeights = nodes.size() > 1 ? nodes[1].dynamicCast<InfEngineNgraphNode>()->node : nullptr;
+        ngraph::Output<ngraph::Node> ieWeights;
         if (nodes.size() > 1)
-            CV_Assert(ieWeights);  // dynamic_cast should not fail
+            ieWeights = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
         const int inpCn = dims[1];
-        const int inpGroupCn = nodes.size() > 1 ? ieWeights->get_shape()[1] : blobs[0].size[1];
+        const int inpGroupCn = nodes.size() > 1 ? ieWeights.get_shape()[1] : blobs[0].size[1];
         const int group = inpCn / inpGroupCn;
 
         std::vector<size_t> kernel_shape;
@@ -1095,7 +1067,7 @@ public:
             config.pads = pads;
             config.stride = stride;
             config.dilation = dilation;
-            if (inputs[0].dims != 4 && inputs[0].dims != umat_blobs[0].dims)
+            if (inputs[0].dims != 4 && inputs[0].dims != (blobs.empty() ? umat_blobs[0].dims : blobs[0].dims))
             {
                 static bool bypassCheck = utils::getConfigurationParameterBool("OPENCV_OCL4DNN_CONVOLUTION_IGNORE_INPUT_DIMS_4_CHECK", false);
                 if (!bypassCheck)
@@ -1107,7 +1079,7 @@ public:
                     return false;
                 }
             }
-            config.group = inputs[0].size[1] / umat_blobs[0].size[1];
+            config.group = inputs[0].size[1] / (blobs.empty() ? umat_blobs[0].size[1] : blobs[0].size[1]);
             if (config.group < 1)  // config.group == 0 causes div by zero in ocl4dnn code
             {
                 CV_LOG_WARNING(NULL, "DNN/OpenCL: Unsupported config.group=" << config.group
@@ -1305,65 +1277,6 @@ public:
             }
         }
 
-#ifdef HAVE_TENGINE
-        bool tengine_ret = false;
-
-        std::vector<Mat> teng_in, teng_out;
-        inputs_arr.getMatVector(teng_in);
-        outputs_arr.getMatVector(teng_out);
-
-        int inch = teng_in[0].size[1];    // inch
-        int in_h = teng_in[0].size[2];    // in_h
-        int in_w = teng_in[0].size[3];    // in_w
-
-        int out_b = teng_out[0].size[0];  // out batch size
-        int outch = teng_out[0].size[1];  // outch
-        int out_h = teng_out[0].size[2];  // out_h
-        int out_w = teng_out[0].size[3];  // out_w
-
-        float *input_  = teng_in[0].ptr<float>();
-        float *output_ = teng_out[0].ptr<float>();
-        float *kernel_ = weightsMat.ptr<float>();
-        float *teg_bias = &biasvec[0];
-
-        int nstripes = std::max(getNumThreads(), 1);
-
-        /* tengine_init will run when first time. */
-        if(NULL == tengine_graph)
-        {
-            // pads_begin: 0 - pad_top,    1 - pad_left
-            // pads_end:   0 - pad_bottom, 1 - pad_right
-            // pad_h0: pad_top,  pad_h1: pad_bottom
-            // pad_w0: pad_left, pad_w1: pad_right
-            tengine_graph = tengine_init(name.c_str(), input_, inch, ngroups, in_h, in_w,
-                                         output_, out_b, outch, out_h, out_w,
-                                         kernel_, kernel_size.size(), kernel.height, kernel.width,
-                                         teg_bias, stride.height, stride.width,
-                                         pads_begin[0], pads_end[0], pads_begin[1], pads_end[1], dilation.height, dilation.width,
-                                         weightsMat.step1(), padMode, tengine_graph, nstripes);
-            // printf("Init(%s):  input=%p(%d %d %d %d ),output=%p(%d %d %d %d ),kernel=%p(%ld %d %d ), bias=%p ,"
-            //        "stride(%d %d), pad(%d %d %d %d), dilation(%d %d) ,weightsMat=%ld, padMode=%s ,tengine_graph = %p \n",
-            //        name.c_str(),input_, inch, ngroups, in_h, in_w,
-            //        output_, out_b, outch, out_h, out_w,
-            //        kernel_, kernel_size.size(), kernel.height, kernel.width,
-            //        teg_bias, stride.height, stride.width,
-            //        pads_begin[0], pads_end[0], pads_begin[1], pads_end[1], dilation.height, dilation.width,
-            //        weightsMat.step1(), padMode.c_str() ,tengine_graph);
-        }
-        if(NULL != tengine_graph)
-        {
-            tengine_ret = tengine_forward(tengine_graph);
-        }
-        /* activation */
-        if((true == tengine_ret) && activ )
-        {
-            int out_cstep = out_h * out_w;	    // out_cstep
-
-            ActivationLayer* activ_ = activ.get();
-            activ_->forwardSlice(output_, output_, out_cstep, out_cstep, 0, outch);
-        }
-        if(false == tengine_ret)
-#endif
         {
             int nstripes = std::max(getNumThreads(), 1);
             int conv_dim = CONV_2D;

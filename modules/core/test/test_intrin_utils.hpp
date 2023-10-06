@@ -1475,12 +1475,15 @@ template<typename R> struct TheTest
     TheTest & test_float_math()
     {
         typedef typename V_RegTraits<R>::round_reg Ri;
-        Data<R> data1, data2, data3;
+        Data<R> data1, data1_border, data2, data3;
+        // See https://github.com/opencv/opencv/issues/24213
+        data1_border *= 0.5;
         data1 *= 1.1;
         data2 += 10;
-        R a1 = data1, a2 = data2, a3 = data3;
+        R a1 = data1, a1_border = data1_border, a2 = data2, a3 = data3;
 
         Data<Ri> resB = v_round(a1),
+                 resB_border = v_round(a1_border),
                  resC = v_trunc(a1),
                  resD = v_floor(a1),
                  resE = v_ceil(a1);
@@ -1493,6 +1496,7 @@ template<typename R> struct TheTest
         {
             SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ(cvRound(data1[i]), resB[i]);
+            EXPECT_EQ(cvRound(data1_border[i]), resB_border[i]);
             EXPECT_EQ((typename VTraits<Ri>::lane_type)data1[i], resC[i]);
             EXPECT_EQ(cvFloor(data1[i]), resD[i]);
             EXPECT_EQ(cvCeil(data1[i]), resE[i]);
@@ -2048,6 +2052,7 @@ void test_hal_intrin_uint64()
         .test_rotate<0>().test_rotate<1>()
         .test_extract_n<0>().test_extract_n<1>()
         .test_extract_highest()
+        .test_popcount()
         //.test_broadcast_element<0>().test_broadcast_element<1>()
         ;
 }
@@ -2069,6 +2074,7 @@ void test_hal_intrin_int64()
         .test_extract_highest()
         //.test_broadcast_element<0>().test_broadcast_element<1>()
         .test_cvt64_double()
+        .test_popcount()
         ;
 }
 

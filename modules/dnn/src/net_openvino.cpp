@@ -48,7 +48,6 @@ public:
         CV_Assert(basePtr_);
         Net::Impl& base = *basePtr_;
         CV_Assert(!base.netWasAllocated);
-        CV_Assert(!base.netWasQuantized);
         netInputLayer = base.netInputLayer;
         blobsToKeep = base.blobsToKeep;
         layers = base.layers;
@@ -252,7 +251,7 @@ void NetImplOpenVINO::addNgraphOutputs(LayerData& ld)
             CV_Assert(!ieInpNode->net.empty());
             if (layerNet != ieInpNode->net)
             {
-                CV_LOG_DEBUG(NULL, "DNN/IE: pin output between subnets: " << ieInpNode->node->get_friendly_name());
+                CV_LOG_DEBUG(NULL, "DNN/IE: pin output between subnets: " << ieInpNode->node.get_node()->get_friendly_name());
                 ieInpNode->net->addOutput(ieInpNode);
             }
         }
@@ -321,8 +320,10 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         return;
     }
 
+#if INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2022_1)
     bool supportsCPUFallback = !isArmComputePlugin() && (preferableTarget == DNN_TARGET_CPU ||
                                openvino::checkTarget(DNN_TARGET_CPU));
+#endif
 
     // Build Inference Engine networks from sets of layers that support this
     // backend. Split a whole model on several Inference Engine networks if
@@ -341,6 +342,10 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 
         bool fused = ld.skip;
         Ptr<Layer> layer = ld.layerInstance;
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+        if (ld.id == 0)
+            continue;
+#else
         if (!fused && !layer->supportBackend(preferableBackend))
         {
             CV_LOG_DEBUG(NULL, "DNN/IE:    NOT supported!");
@@ -354,17 +359,6 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                     customizable = ld.inputBlobs[i]->size[0] == 1;
                 }
             }
-
-            // TODO: fix these workarounds
-            if (preferableTarget == DNN_TARGET_MYRIAD ||
-                preferableTarget == DNN_TARGET_HDDL ||
-                preferableTarget == DNN_TARGET_OPENCL ||
-                preferableTarget == DNN_TARGET_OPENCL_FP16)
-                customizable &= ld.type != "Concat";
-
-            if (preferableTarget == DNN_TARGET_OPENCL ||
-                preferableTarget == DNN_TARGET_OPENCL_FP16)
-                customizable &= ld.type != "Power";
 
             if (preferableTarget == DNN_TARGET_OPENCL)
                 customizable &= ld.type != "Eltwise";
@@ -390,6 +384,7 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 continue;
             }
         }
+#endif
         ld.skip = true;  // Initially skip all Inference Engine supported layers.
 
         // Create a new network if one of inputs from different Inference Engine graph.
@@ -476,12 +471,13 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
             {
                 int lid = ld.inputBlobsId[i].lid;
                 int oid = ld.inputBlobsId[i].oid;
-                if (oid == 0 || lid == 0)
-                    continue;
 
                 auto ieInpNode = inputNodes[i].dynamicCast<InfEngineNgraphNode>();
-                const auto& ngraph_input_node = ieInpNode->node;
+                const auto& ngraph_input_node = ieInpNode->node.get_node_shared_ptr();
                 CV_LOG_DEBUG(NULL, "DNN/IE: bind output port " << lid << ":" << oid << " (" << ngraph_input_node->get_friendly_name() << ":" << ngraph_input_node->get_type_info().name << ")");
+
+                if ((oid == 0 && ngraph_input_node->get_output_size() == 1) || lid == 0)
+                    continue;
 
                 // Handle parameters from other subnets. Output port is not used in this case
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
@@ -497,10 +493,7 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 }
                 CV_CheckLT((size_t)oid, ngraph_input_node->get_output_size(), "");
 #if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-                // FIXIT refactor ".initNgraph()" API to use Output<Node>
-                // WA: use Concat to emulate Identity operation with requested output port
-                auto oid_node = std::make_shared<ngraph::op::Concat>(ngraph::OutputVector { ngraph_input_node->output(oid) }, 0);
-                inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(oid_node));
+                inputNodes[i] = new InfEngineNgraphNode(ngraph_input_node->output(oid));
 #elif INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_3)
                 inputNodes[i] = Ptr<BackendNode>(new InfEngineNgraphNode(ieInpNode->node->get_output_as_single_output_node(oid)));
 #else
@@ -549,11 +542,40 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 break;
             }
         }
-        ieNode->net->setNodePtr(&ieNode->node);
 
         net->addBlobs(ld.inputBlobsWrappers);
         net->addBlobs(ld.outputBlobsWrappers);
         addNgraphOutputs(ld);
+    }
+
+    // User may choose to return only intermediate blobs but not network's result (see Test_TFLite.max_unpooling)
+    // Such layers should not be skipped when forwardLayer is called.
+    // Also, perform a sanity check that there is no double inferred networks (a single skip=false per unique net instance)
+    std::set<Ptr<InfEngineNgraphNet>> uniqueNets;
+    if (!blobsToKeep_.empty())
+    {
+        LayerPin latestLayerPin = getLatestLayerPin(blobsToKeep_);
+        for (MapIdToLayerData::iterator it = layers.begin(); it != layers.end(); ++it)
+        {
+            LayerData& ld = it->second;
+            auto iter = ld.backendNodes.find(preferableBackend);
+            if (iter == ld.backendNodes.end())
+                continue;
+
+            Ptr<BackendNode>& node = iter->second;
+            if (node.empty())
+                continue;
+
+            Ptr<InfEngineNgraphNode> ieNode = node.dynamicCast<InfEngineNgraphNode>();
+            if (ieNode.empty())
+                continue;
+
+            if (ld.id == latestLayerPin.lid) {
+                ld.skip = false;
+                uniqueNets.insert(ieNode->net);
+                break;
+            }
+        }
     }
 
     // Initialize all networks.
@@ -578,9 +600,15 @@ void NetImplOpenVINO::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         {
             ieNode->net->addOutput(ieNode);
             ieNode->net->createNet((Target)preferableTarget);
-            ld.skip = false;
+            if (uniqueNets.find(ieNode->net) == uniqueNets.end()) {
+                ld.skip = false;
+                uniqueNets.insert(ieNode->net);
+            }
         }
     }
+#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+    CV_Assert(uniqueNets.size() == 1);
+#endif
 }
 
 

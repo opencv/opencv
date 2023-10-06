@@ -22,6 +22,7 @@ USAGE:
                     [--dasiamrpn_backend DASIAMRPN_BACKEND]
                     [--dasiamrpn_target DASIAMRPN_TARGET]
                     [--nanotrack_backbone NANOTRACK_BACKEND] [--nanotrack_headneck NANOTRACK_TARGET]
+                    [--vittrack_net VITTRACK_MODEL]
 '''
 
 # Python 2/3 compatibility
@@ -61,6 +62,10 @@ class App(object):
             params.backbone = args.nanotrack_backbone
             params.neckhead = args.nanotrack_headneck
             tracker = cv.TrackerNano_create(params)
+        elif self.trackerAlgorithm == 'vittrack':
+            params = cv.TrackerVit_Params()
+            params.net = args.vittrack_net
+            tracker = cv.TrackerVit_create(params)
         else:
             sys.exit("Tracker {} is not recognized. Please use one of three available: mil, goturn, dasiamrpn, nanotrack.".format(self.trackerAlgorithm))
         return tracker
@@ -126,7 +131,7 @@ if __name__ == '__main__':
     print(__doc__)
     parser = argparse.ArgumentParser(description="Run tracker")
     parser.add_argument("--input", type=str, default="vtest.avi", help="Path to video source")
-    parser.add_argument("--tracker_algo", type=str, default="nanotrack", help="One of available tracking algorithms: mil, goturn, dasiamrpn, nanotrack")
+    parser.add_argument("--tracker_algo", type=str, default="nanotrack", help="One of available tracking algorithms: mil, goturn, dasiamrpn, nanotrack, vittrack")
     parser.add_argument("--goturn", type=str, default="goturn.prototxt", help="Path to GOTURN architecture")
     parser.add_argument("--goturn_model", type=str, default="goturn.caffemodel", help="Path to GOTERN model")
     parser.add_argument("--dasiamrpn_net", type=str, default="dasiamrpn_model.onnx", help="Path to onnx model of DaSiamRPN net")
@@ -134,6 +139,7 @@ if __name__ == '__main__':
     parser.add_argument("--dasiamrpn_kernel_cls1", type=str, default="dasiamrpn_kernel_cls1.onnx", help="Path to onnx model of DaSiamRPN kernel_cls1")
     parser.add_argument("--nanotrack_backbone", type=str, default="nanotrack_backbone_sim.onnx", help="Path to onnx model of NanoTrack backBone")
     parser.add_argument("--nanotrack_headneck", type=str, default="nanotrack_head_sim.onnx", help="Path to onnx model of NanoTrack headNeck")
+    parser.add_argument("--vittrack_net", type=str, default="vitTracker.onnx", help="Path to onnx model of  vittrack")
 
     args = parser.parse_args()
     App(args).run()

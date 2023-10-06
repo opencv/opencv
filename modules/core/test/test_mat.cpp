@@ -18,7 +18,7 @@ class Core_ReduceTest : public cvtest::BaseTest
 public:
     Core_ReduceTest() {}
 protected:
-    void run( int);
+    void run( int) CV_OVERRIDE;
     int checkOp( const Mat& src, int dstType, int opType, const Mat& opRes, int dim );
     int checkCase( int srcType, int dstType, int dim, Size sz );
     int checkDim( int dim, Size sz );
@@ -474,12 +474,13 @@ TEST(Core_PCA, accuracy)
     ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of cvBackProjectPCA() (CV_PCA_DATA_AS_COL)";
 #endif
     // Test read and write
-    FileStorage fs( "PCA_store.yml", FileStorage::WRITE );
+    const std::string filename = cv::tempfile("PCA_store.yml");
+    FileStorage fs( filename, FileStorage::WRITE );
     rPCA.write( fs );
     fs.release();
 
     PCA lPCA;
-    fs.open( "PCA_store.yml", FileStorage::READ );
+    fs.open( filename, FileStorage::READ );
     lPCA.read( fs.root() );
     err = cvtest::norm(rPCA.eigenvectors, lPCA.eigenvectors, NORM_L2 | NORM_RELATIVE);
     EXPECT_LE(err, 0) << "bad accuracy of write/load functions (YML)";
@@ -487,6 +488,7 @@ TEST(Core_PCA, accuracy)
     EXPECT_LE(err, 0) << "bad accuracy of write/load functions (YML)";
     err = cvtest::norm(rPCA.mean, lPCA.mean, NORM_L2 | NORM_RELATIVE);
     EXPECT_LE(err, 0) << "bad accuracy of write/load functions (YML)";
+    EXPECT_EQ(0, remove(filename.c_str()));
 }
 
 class Core_ArrayOpTest : public cvtest::BaseTest
@@ -495,7 +497,7 @@ public:
     Core_ArrayOpTest();
     ~Core_ArrayOpTest();
 protected:
-    void run(int);
+    void run(int) CV_OVERRIDE;
 };
 
 
@@ -599,6 +601,11 @@ static void setValue(SparseMat& M, const int* idx, double value, RNG& rng)
         CV_Error(CV_StsUnsupportedFormat, "");
 }
 
+#if defined(__GNUC__) && (__GNUC__ == 11 || __GNUC__ == 12)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
 template<typename Pixel>
 struct InitializerFunctor{
     /// Initializer for cv::Mat::forEach test
@@ -620,6 +627,11 @@ struct InitializerFunctor5D{
         pixel[4] = idx[4];
     }
 };
+
+#if defined(__GNUC__) && (__GNUC__ == 11 || __GNUC__ == 12)
+#pragma GCC diagnostic pop
+#endif
+
 
 template<typename Pixel>
 struct EmptyFunctor
@@ -1023,7 +1035,7 @@ class Core_MergeSplitBaseTest : public cvtest::BaseTest
 protected:
     virtual int run_case(int depth, size_t channels, const Size& size, RNG& rng) = 0;
 
-    virtual void run(int)
+    virtual void run(int) CV_OVERRIDE
     {
         // m is Mat
         // mv is vector<Mat>
@@ -1068,7 +1080,7 @@ public:
     ~Core_MergeTest() {}
 
 protected:
-    virtual int run_case(int depth, size_t matCount, const Size& size, RNG& rng)
+    virtual int run_case(int depth, size_t matCount, const Size& size, RNG& rng) CV_OVERRIDE
     {
         const int maxMatChannels = 10;
 
@@ -1126,7 +1138,7 @@ public:
     ~Core_SplitTest() {}
 
 protected:
-    virtual int run_case(int depth, size_t channels, const Size& size, RNG& rng)
+    virtual int run_case(int depth, size_t channels, const Size& size, RNG& rng) CV_OVERRIDE
     {
         Mat src(size, CV_MAKETYPE(depth, (int)channels));
         rng.fill(src, RNG::UNIFORM, 0, 100, true);
@@ -1356,6 +1368,18 @@ TEST(Core_Mat, copyNx1ToVector)
     src.convertTo(dst16, CV_16U);
 
     ASSERT_PRED_FORMAT2(cvtest::MatComparator(0, 0), ref_dst16, cv::Mat_<ushort>(dst16));
+}
+
+TEST(Core_Mat, copyMakeBoderUndefinedBehavior)
+{
+    Mat1b src(4, 4), dst;
+    randu(src, Scalar(10), Scalar(100));
+    // This could trigger a (signed int)*size_t operation which is undefined behavior.
+    cv::copyMakeBorder(src, dst, 1, 1, 1, 1, cv::BORDER_REFLECT_101);
+    EXPECT_EQ(0, cv::norm(src.row(1), dst(Rect(1,0,4,1))));
+    EXPECT_EQ(0, cv::norm(src.row(2), dst(Rect(1,5,4,1))));
+    EXPECT_EQ(0, cv::norm(src.col(1), dst(Rect(0,1,1,4))));
+    EXPECT_EQ(0, cv::norm(src.col(2), dst(Rect(5,1,1,4))));
 }
 
 TEST(Core_Matx, fromMat_)
@@ -2012,7 +2036,6 @@ TEST(Core_InputArray, fetch_MatExpr)
 }
 
 
-#ifdef CV_CXX11
 class TestInputArrayRangeChecking {
     static const char *kind2str(cv::_InputArray ia)
     {
@@ -2159,8 +2182,6 @@ TEST(Core_InputArray, range_checking)
 {
     TestInputArrayRangeChecking::run();
 }
-#endif
-
 
 TEST(Core_Vectors, issue_13078)
 {

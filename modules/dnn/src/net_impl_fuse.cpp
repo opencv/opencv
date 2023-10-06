@@ -210,7 +210,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                 if (!nextData->params.has("operation") || toLowerCase(nextData->params.get<String>("operation")) != "add")
                 {
                     CV_LOG_DEBUG(NULL, "DNN/CPU: fusion with NaryEltwise or Eltwise Layer operation is not supported: "
-                        << nextData->params.get<String>("operation"));
+                        << toLowerCase(nextData->params.get<String>("operation", "sum")));
                     break;
                 }
 

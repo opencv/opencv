@@ -11,11 +11,13 @@
 
 #include <algorithm>
 
+#ifndef OPENCV_IPP_MINMAX
 #undef HAVE_IPP
 #undef CV_IPP_RUN_FAST
 #define CV_IPP_RUN_FAST(f, ...)
 #undef CV_IPP_RUN
 #define CV_IPP_RUN(c, f, ...)
+#endif // OPENCV_IPP_MINMAX
 
 #define IPP_DISABLE_MINMAXIDX_MANY_ROWS 1  // see Core_MinMaxIdx.rows_overflow test
 
@@ -1543,9 +1545,9 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     if (!src.empty() && mask.empty())
     {
         if( minidx == 0 )
-             minidx = 1;
-         if( maxidx == 0 )
-             maxidx = 1;
+            minidx = 1;
+        if( maxidx == 0 )
+            maxidx = 1;
     }
 
     if( minidx == 0 )

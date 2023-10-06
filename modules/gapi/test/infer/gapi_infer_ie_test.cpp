@@ -187,8 +187,8 @@ std::string compileAgeGenderBlob(const std::string& device) {
         cv::gapi::ie::detail::ParamDesc params;
         const std::string model_name = "age-gender-recognition-retail-0013";
         const std::string output  = model_name + ".blob";
-        params.model_path   = findDataFile(SUBDIR + model_name + ".xml");
-        params.weights_path = findDataFile(SUBDIR + model_name + ".bin");
+        params.model_path   = findDataFile(SUBDIR + model_name + ".xml", false);
+        params.weights_path = findDataFile(SUBDIR + model_name + ".bin", false);
         params.device_id    = device;
         compileBlob(params, output, IE::Precision::U8);
         return output;
@@ -205,8 +205,8 @@ TEST(TestAgeGenderIE, InferBasicTensor)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -256,8 +256,8 @@ TEST(TestAgeGenderIE, InferBasicImage)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // FIXME: Ideally it should be an image from disk
@@ -334,8 +334,8 @@ struct InferWithReshape: public ::testing::Test {
         reshape_dims = {1, 3, 70, 70};
 
         initDLDTDataPath();
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
 
         params.device_id = "CPU";
 
@@ -432,8 +432,8 @@ struct ROIList: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         params.device_id = "CPU";
 
         // FIXME: it must be cv::imread(findDataFile("../dnn/grace_hopper_227.png", false));
@@ -505,8 +505,8 @@ struct ROIListNV12: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         params.device_id = "CPU";
 
         cv::Size sz{320, 240};
@@ -585,8 +585,8 @@ struct SingleROI: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         params.device_id = "CPU";
 
         // FIXME: it must be cv::imread(findDataFile("../dnn/grace_hopper_227.png", false));
@@ -644,8 +644,8 @@ struct SingleROINV12: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         params.device_id = "CPU";
 
         cv::Size sz{320, 240};
@@ -809,8 +809,8 @@ TEST(TestAgeGenderIE, GenericInfer)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     cv::Mat in_mat(cv::Size(320, 240), CV_8UC3);
@@ -859,8 +859,8 @@ TEST(TestAgeGenderIE, InvalidConfigGeneric)
 {
     initDLDTDataPath();
 
-    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     std::string device_id    = "CPU";
 
     // Configure & run G-API
@@ -885,8 +885,8 @@ TEST(TestAgeGenderIE, CPUConfigGeneric)
 {
     initDLDTDataPath();
 
-    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     std::string device_id    = "CPU";
 
     // Configure & run G-API
@@ -912,8 +912,8 @@ TEST(TestAgeGenderIE, InvalidConfig)
 {
     initDLDTDataPath();
 
-    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     std::string device_id    = "CPU";
 
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
@@ -937,8 +937,8 @@ TEST(TestAgeGenderIE, CPUConfig)
 {
     initDLDTDataPath();
 
-    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    std::string model_path   = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    std::string weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     std::string device_id    = "CPU";
 
     using AGInfo = std::tuple<cv::GMat, cv::GMat>;
@@ -1017,8 +1017,8 @@ TEST(TestAgeGenderIE, MediaInputNV12)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     cv::Size sz{320, 240};
@@ -1082,8 +1082,8 @@ TEST(TestAgeGenderIE, MediaInputBGR)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     cv::Size sz{320, 240};
@@ -1134,8 +1134,8 @@ TEST(InferROI, MediaInputBGR)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     cv::Size sz{320, 240};
@@ -1196,8 +1196,8 @@ TEST(InferROI, MediaInputNV12)
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     cv::Size sz{320, 240};
@@ -1587,8 +1587,8 @@ TEST(Infer, TestStreamingInfer)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -1654,8 +1654,8 @@ TEST(InferROI, TestStreamingInfer)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -1732,8 +1732,8 @@ TEST(InferList, TestStreamingInfer)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -1821,8 +1821,8 @@ TEST(Infer2, TestStreamingInfer)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -1911,8 +1911,8 @@ TEST(InferEmptyList, TestStreamingInfer)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -1965,8 +1965,8 @@ TEST(Infer2EmptyList, TestStreamingInfer)
     std::string filepath = findDataFile("cv/video/768x576.avi");
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.
@@ -2294,8 +2294,8 @@ struct LimitedSourceInfer: public ::testing::Test {
 
     GStreamingCompiled compileStreaming(int nireq) {
         cv::gapi::ie::detail::ParamDesc params;
-        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         params.device_id = "CPU";
 
         auto pp = cv::gapi::ie::Params<AgeGender> {
@@ -2348,8 +2348,8 @@ TEST(TestAgeGenderIE, InferWithBatch)
 
     constexpr int batch_size = 4;
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     cv::Mat in_mat({batch_size, 3, 62, 62}, CV_8U);
@@ -3091,8 +3091,8 @@ struct AgeGenderInferTest: public ::testing::Test {
 
     void SetUp() {
         initDLDTDataPath();
-        m_params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-        m_params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+        m_params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        m_params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
         m_params.device_id = "CPU";
 
         m_plugin = cv::gimpl::ie::wrap::getPlugin(m_params);
@@ -3191,8 +3191,8 @@ TEST(TestAgeGenderIE, InferTensorWithPreproc) {
     initDLDTDataPath();
 
     cv::gapi::ie::detail::ParamDesc params;
-    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml");
-    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin");
+    params.model_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+    params.weights_path = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
     params.device_id = "CPU";
 
     // Load IE network, initialize input data using that.

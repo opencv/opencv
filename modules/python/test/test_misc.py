@@ -42,6 +42,93 @@ def get_conversion_error_msg(value, expected, actual):
 def get_no_exception_msg(value):
     return 'Exception is not risen for {} of type {}'.format(value, type(value).__name__)
 
+
+def rpad(src, dst_size, pad_value=0):
+    """Extend `src` up to `dst_size` with given value.
+
+    Args:
+        src (np.ndarray | tuple | list): 1d array like object to pad.
+        dst_size (_type_): Desired `src` size after padding.
+        pad_value (int, optional): Padding value. Defaults to 0.
+
+    Returns:
+        np.ndarray: 1d array with len == `dst_size`.
+    """
+    src = np.asarray(src)
+    if len(src.shape) != 1:
+        raise ValueError("Only 1d arrays are supported")
+
+    # Considering the meaning, it is desirable to use np.pad().
+    # However, the old numpy doesn't include the following fixes and cannot work as expected.
+    # So an alternative fix that combines np.append() and np.fill() is used.
+    # https://docs.scipy.org/doc/numpy-1.13.0/release.html#support-for-returning-arrays-of-arbitrary-dimensions-in-apply-along-axis
+
+    return np.append(src, np.full( dst_size - len(src), pad_value, dtype=src.dtype) )
+
+def get_ocv_arithm_op_table(apply_saturation=False):
+    def saturate(func):
+        def wrapped_func(x, y):
+            dst_dtype = x.dtype
+            if apply_saturation:
+                if np.issubdtype(x.dtype, np.integer):
+                    x = x.astype(np.int64)
+            # Apply padding or truncation for array-like `y` inputs
+            if not isinstance(y, (float, int)):
+                if len(y) > x.shape[-1]:
+                    y = y[:x.shape[-1]]
+                else:
+                    y = rpad(y, x.shape[-1], pad_value=0)
+
+            dst = func(x, y)
+            if apply_saturation:
+                min_val, max_val = get_limits(dst_dtype)
+                dst = np.clip(dst, min_val, max_val)
+            return dst.astype(dst_dtype)
+        return wrapped_func
+
+    @saturate
+    def subtract(x, y):
+        return x - y
+
+    @saturate
+    def add(x, y):
+        return x + y
+
+    @saturate
+    def divide(x, y):
+        if not isinstance(y, (int, float)):
+            dst_dtype = np.result_type(x, y)
+            y = np.array(y).astype(dst_dtype)
+            _, max_value = get_limits(dst_dtype)
+            y[y == 0] = max_value
+
+        # to compatible between python2 and python3, it calicurates with float.
+        # python2: int / int = int
+        # python3: int / int = float
+        dst = 1.0 * x / y
+
+        if np.issubdtype(x.dtype, np.integer):
+            dst = np.rint(dst)
+        return dst
+
+    @saturate
+    def multiply(x, y):
+        return x * y
+
+    @saturate
+    def absdiff(x, y):
+        res = np.abs(x - y)
+        return res
+
+    return {
+        cv.subtract: subtract,
+        cv.add: add,
+        cv.multiply: multiply,
+        cv.divide: divide,
+        cv.absdiff: absdiff
+    }
+
+
 class Bindings(NewOpenCVTests):
 
     def test_inheritance(self):
@@ -218,6 +305,25 @@ class Arguments(NewOpenCVTests):
         #a = np.zeros((2,3,4,5), dtype='f')
         #res6 = cv.utils.dumpInputArray([a, b])
         #self.assertEqual(res6, "InputArrayOfArrays: empty()=false kind=0x00050000 flags=0x01050000 total(-1)=2 dims(-1)=1 size(-1)=2x1 type(0)=CV_32FC1 dims(0)=4 size(0)=[2 3 4 5]")
+
+    def test_unsupported_numpy_data_types_string_description(self):
+        for dtype in (object, str, np.complex128):
+            test_array = np.zeros((4, 4, 3), dtype=dtype)
+            msg = ".*type = {} is not supported".format(test_array.dtype)
+            if sys.version_info[0] < 3:
+                self.assertRaisesRegexp(
+                    Exception, msg, cv.utils.dumpInputArray, test_array
+                )
+            else:
+                self.assertRaisesRegex(
+                    Exception, msg, cv.utils.dumpInputArray, test_array
+                )
+
+    def test_numpy_writeable_flag_is_preserved(self):
+        array = np.zeros((10, 10, 1), dtype=np.uint8)
+        array.setflags(write=False)
+        with self.assertRaises(Exception):
+            cv.rectangle(array, (0, 0), (5, 5), (255), 2)
 
     def test_20968(self):
         pixel = np.uint8([[[40, 50, 200]]])
@@ -797,6 +903,32 @@ class Arguments(NewOpenCVTests):
         np.testing.assert_equal(dst, src_copy)
         self.assertEqual(arguments_dump, 'lambda=25, sigma=5.5')
 
+    def test_arithm_op_without_saturation(self):
+        np.random.seed(4231568)
+        src = np.random.randint(20, 40, 8 * 4 * 3).astype(np.uint8).reshape(8, 4, 3)
+        operations = get_ocv_arithm_op_table(apply_saturation=False)
+        for ocv_op, numpy_op in operations.items():
+            for val in (2, 4, (5, ), (6, 4), (2., 4., 1.),
+                        np.uint8([1, 2, 2]), np.float64([5, 2, 6, 3]),):
+                dst = ocv_op(src, val)
+                expected = numpy_op(src, val)
+                # Temporarily allows a difference of 1 for arm64 workaround.
+                self.assertLess(np.max(np.abs(dst - expected)), 2,
+                  msg="Operation '{}' is failed for {}".format(ocv_op.__name__, val ) )
+
+    def test_arithm_op_with_saturation(self):
+        np.random.seed(4231568)
+        src = np.random.randint(20, 40, 4 * 8 * 4).astype(np.uint8).reshape(4, 8, 4)
+        operations = get_ocv_arithm_op_table(apply_saturation=True)
+
+        for ocv_op, numpy_op in operations.items():
+            for val in (10, 4, (40, ), (15, 12), (25., 41., 15.),
+                        np.uint8([1, 2, 20]), np.float64([50, 21, 64, 30]),):
+                dst = ocv_op(src, val)
+                expected = numpy_op(src, val)
+                # Temporarily allows a difference of 1 for arm64 workaround.
+                self.assertLess(np.max(np.abs(dst - expected)), 2,
+                  msg="Saturated Operation '{}' is failed for {}".format(ocv_op.__name__, val ) )
 
 class CanUsePurePythonModuleFunction(NewOpenCVTests):
     def test_can_get_ocv_version(self):

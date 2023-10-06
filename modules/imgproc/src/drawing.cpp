@@ -939,6 +939,7 @@ void ellipse2Poly( Point center, Size axes, int angle,
     }
 
     // If there are no points, it's a zero-size polygon
+    CV_Assert( !pts.empty() );
     if (pts.size() == 1) {
         pts.assign(2, center);
     }
@@ -1001,6 +1002,7 @@ void ellipse2Poly( Point2d center, Size2d axes, int angle,
     }
 
     // If there are no points, it's a zero-size polygon
+    CV_Assert( !pts.empty() );
     if( pts.size() == 1) {
         pts.assign(2,center);
     }
@@ -1021,7 +1023,6 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
 
     std::vector<Point2l> v;
     Point2l prevPt(0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF);
-    v.resize(0);
     for (unsigned int i = 0; i < _v.size(); ++i)
     {
         Point2l pt;
@@ -1036,7 +1037,7 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
     }
 
     // If there are no points, it's a zero-size polygon
-    if (v.size() == 1) {
+    if (v.size() <= 1) {
         v.assign(2, center);
     }
 
@@ -1556,7 +1557,7 @@ Circle( Mat& img, Point center, int radius, const void* color, int fill )
                 ICV_HLINE( tptr1, x21, x22, color, pix_size );
             }
         }
-        else if( x11 < size.width && x12 >= 0 && y21 < size.height && y22 >= 0 )
+        else if( x11 < size.width && x12 >= 0 && y21 < size.height && y22 >= 0)
         {
             if( fill )
             {
@@ -1564,7 +1565,7 @@ Circle( Mat& img, Point center, int radius, const void* color, int fill )
                 x12 = MIN( x12, size.width - 1 );
             }
 
-            if( (unsigned)y11 < (unsigned)size.height )
+            if( y11 >= 0 && y11 < size.height )
             {
                 uchar *tptr = ptr + y11 * step;
 
@@ -1579,7 +1580,7 @@ Circle( Mat& img, Point center, int radius, const void* color, int fill )
                     ICV_HLINE( tptr, x11, x12, color, pix_size );
             }
 
-            if( (unsigned)y12 < (unsigned)size.height )
+            if( y12 >= 0 && y12 < size.height )
             {
                 uchar *tptr = ptr + y12 * step;
 
@@ -1602,7 +1603,7 @@ Circle( Mat& img, Point center, int radius, const void* color, int fill )
                     x22 = MIN( x22, size.width - 1 );
                 }
 
-                if( (unsigned)y21 < (unsigned)size.height )
+                if( y21 >= 0 && y21 < size.height )
                 {
                     uchar *tptr = ptr + y21 * step;
 
@@ -1617,7 +1618,7 @@ Circle( Mat& img, Point center, int radius, const void* color, int fill )
                         ICV_HLINE( tptr, x21, x22, color, pix_size );
                 }
 
-                if( (unsigned)y22 < (unsigned)size.height )
+                if( y22 >= 0 && y22 < size.height )
                 {
                     uchar *tptr = ptr + y22 * step;
 
@@ -2582,9 +2583,6 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
 
 static const int CodeDeltas[8][2] =
 { {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1} };
-
-#define CV_ADJUST_EDGE_COUNT( count, seq )  \
-    ((count) -= ((count) == (seq)->total && !CV_IS_SEQ_CLOSED(seq)))
 
 CV_IMPL void
 cvDrawContours( void* _img, CvSeq* contour,

@@ -119,6 +119,26 @@ TEST(DISABLED_videoio_camera, v4l_read_mjpg)
     capture.release();
 }
 
+TEST(DISABLED_videoio_camera, msmf_read_yuyv)
+{
+    VideoCapture capture(CAP_MSMF);
+    ASSERT_TRUE(capture.isOpened());
+    ASSERT_TRUE(capture.set(CAP_PROP_FOURCC, VideoWriter::fourcc('Y', 'U', 'Y', 'V')));
+    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
+    std::cout << "Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
+    std::cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
+    std::cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << std::endl;
+    int fourcc = (int)capture.get(CAP_PROP_FOURCC);
+    std::cout << "FOURCC code: " << cv::format("0x%8x", fourcc) << std::endl;
+    cv::Mat frame;
+    for (int i = 0; i < 10; i++)
+    {
+        capture >> frame;
+        EXPECT_EQ(2, frame.channels());
+    }
+    capture.release();
+}
+
 TEST(DISABLED_videoio_camera, v4l_open_mjpg)
 {
     VideoCapture capture;

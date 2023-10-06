@@ -385,12 +385,12 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        int axis = normalize_axis(axisRaw, ieInpNode->get_shape().size());
-        auto softmax = std::make_shared<ngraph::op::v1::Softmax>(ieInpNode, axis);
-        if (logSoftMax)
-            return Ptr<BackendNode>(new InfEngineNgraphNode(std::make_shared<ngraph::op::v0::Log>(softmax)));
-
-        return Ptr<BackendNode>(new InfEngineNgraphNode(softmax));
+        int axis = normalize_axis(axisRaw, ieInpNode.get_shape().size());
+        if (logSoftMax) {
+            return new InfEngineNgraphNode(std::make_shared<ngraph::op::v5::LogSoftmax>(ieInpNode, axis));
+        } else {
+            return new InfEngineNgraphNode(std::make_shared<ngraph::op::v1::Softmax>(ieInpNode, axis));
+        }
     }
 #endif  // HAVE_DNN_NGRAPH
 
