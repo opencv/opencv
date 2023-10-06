@@ -36,6 +36,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
         minMarkerDistanceRate = 0.05;
         cornerRefinementMethod = (int)CORNER_REFINE_NONE;
         cornerRefinementWinSize = 5;
+        relativeCornerRefinmentWinSize = 0.3f;
         cornerRefinementMaxIterations = 30;
         cornerRefinementMinAccuracy = 0.1;
         markerBorderBits = 1;
@@ -108,8 +109,26 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
     /** @brief default value CORNER_REFINE_NONE */
     CV_PROP_RW int cornerRefinementMethod;
 
-    /// window size for the corner refinement process (in pixels) (default 5).
+    /** @brief maximum window size for the corner refinement process (in pixels) (default 5).
+     *
+     * The window size may decrease if the ArUco marker is too small, check relativeCornerRefinmentWinSize.
+     * The final window size is calculated as:
+     * min(cornerRefinementWinSize, averageArucoModuleSize*relativeCornerRefinmentWinSize),
+     * where averageArucoModuleSize is average module size of ArUco marker in pixels.
+     * (ArUco marker is composed of black and white modules)
+     */
     CV_PROP_RW int cornerRefinementWinSize;
+
+    /** @brief Dynamic window size for corner refinement relative to Aruco module size (default 0.3).
+     *
+     * The final window size is calculated as:
+     * min(cornerRefinementWinSize, averageArucoModuleSize*relativeCornerRefinmentWinSize),
+     * where averageArucoModuleSize is average module size of ArUco marker in pixels.
+     * (ArUco marker is composed of black and white modules)
+     * In the case of markers located far from each other, it may be useful to increase the value of the parameter to 0.4-0.5.
+     * In the case of markers located close to each other, it may be useful to decrease the parameter value to 0.1-0.2.
+     */
+    CV_PROP_RW float relativeCornerRefinmentWinSize;
 
     /// maximum number of iterations for stop criteria of the corner refinement process (default 30).
     CV_PROP_RW int cornerRefinementMaxIterations;
