@@ -31,6 +31,13 @@ void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastG
         std::swap(ldb0, ldb1);
     }
 
+#if CV_TRY_NEON
+    if (opt.use_neon) {
+        int size_packed_B = opt_NEON::fastGemmPackBSize(N, K);
+        packed_B.resize(size_packed_B);
+        opt_NEON::fastGemmPackBKernel(B.ptr<const char>(), (char *)packed_B.data(), N, K, ldb0, ldb1, B.elemSize());
+    } else
+#endif
 #if CV_TRY_AVX2
     if (opt.use_avx2) {
         int size_packed_B = opt_AVX2::fastGemmPackBSize(N, K);
@@ -53,7 +60,6 @@ void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastG
     } else
 #endif
     {
-        // NEON optimization integrated
         int size_packed_B = cpu_baseline::fastGemmPackBSize(N, K);
         packed_B.resize(size_packed_B);
         cpu_baseline::fastGemmPackBKernel(B.ptr<const char>(), (char *)packed_B.data(), N, K, ldb0, ldb1, B.elemSize());
@@ -97,6 +103,11 @@ void fastGemm(bool trans_a, int M, int N, int K,
         std::swap(lda0, lda1);
     }
 
+#if CV_TRY_NEON
+    if (opt.use_neon) {
+        opt_NEON::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
+    } else
+#endif
 #if CV_TRY_AVX2
     if (opt.use_avx2) {
         opt_AVX2::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
@@ -113,7 +124,6 @@ void fastGemm(bool trans_a, int M, int N, int K,
     } else
 #endif
     {
-        // NEON optimization integrated
         cpu_baseline::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1, (const char *)packed_B, beta, (char *)C, ldc, sizeof(float));
     }
 }
@@ -141,6 +151,12 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
         return fast_gemm_thin(alpha, beta, M, N, K, a, lda0, lda1, b, ldb0, c, ldc);
     }
 
+#if CV_TRY_NEON
+    if (opt.use_neon) {
+        opt_NEON::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
+                                         (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
+    } else
+#endif
 #if CV_TRY_AVX2
     if (opt.use_avx2) {
         opt_AVX2::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
@@ -160,7 +176,6 @@ void fastGemm(bool trans_a, bool trans_b, int ma, int na, int mb, int nb,
     } else
 #endif
     {
-        // NEON optimization integrated
         cpu_baseline::fastGemmKernel(M, N, K, alpha, (const char *)A, lda0, lda1,
                                          (const char *)B, ldb0, ldb1, beta, (char *)C, ldc, sizeof(float));
     }
