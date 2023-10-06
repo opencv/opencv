@@ -34,7 +34,7 @@ public:
         */
         TrackerMILTargetState(const Point2f& position, int width, int height, bool foreground, const Mat& features);
 
-        ~TrackerMILTargetState() {};
+        ~TrackerMILTargetState() {}
 
         /** @brief Set label: true for target foreground, false for background
         @param foreground Label for background/foreground

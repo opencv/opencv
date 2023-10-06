@@ -14,7 +14,7 @@ typedef std::tuple<std::string, int, int, double, VideoCaptureAPIs> param;
 class AudioBaseTest
 {
 protected:
-    AudioBaseTest(){};
+    AudioBaseTest(){}
     void getValidAudioData()
     {
         const double step = 3.14/22050;
@@ -157,7 +157,7 @@ public:
             params = {  CAP_PROP_AUDIO_STREAM, 0,
                         CAP_PROP_VIDEO_STREAM, 0,
                         CAP_PROP_AUDIO_DATA_DEPTH, CV_16S };
-        };
+        }
 
     void doTest()
     {

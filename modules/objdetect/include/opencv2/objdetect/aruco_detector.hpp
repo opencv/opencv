@@ -56,7 +56,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
         useAruco3Detection = false;
         minSideLengthCanonicalImg = 32;
         minMarkerLengthRatioOriginalImg = 0.0;
-    };
+    }
 
     /** @brief Read a new set of DetectorParameters from FileNode (use FileStorage.root()).
      */

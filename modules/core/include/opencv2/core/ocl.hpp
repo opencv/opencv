@@ -779,7 +779,7 @@ public:
     void start();
     void stop();
 
-    uint64 durationNS() const; //< duration in nanoseconds
+    uint64 durationNS() const; ///< duration in nanoseconds
 
 protected:
     struct Impl;

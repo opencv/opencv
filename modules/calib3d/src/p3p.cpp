@@ -214,8 +214,8 @@ int p3p::solve(double R[4][3][3], double t[4][3],
 /// Only the solution to the main branch.
 /// Reference : X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
 /// IEEE Trans. on PAMI, vol. 25, No. 8, August 2003
-/// \param lengths3D Lengths of line segments up to four solutions.
-/// \param dist3D Distance between 3D points in pairs |BC|, |AC|, |AB|.
+/// \param lengths Lengths of line segments up to four solutions.
+/// \param distances Distance between 3D points in pairs |BC|, |AC|, |AB|.
 /// \param cosines Cosine of the angles /_BPC, /_APC, /_APB.
 /// \returns Number of solutions.
 /// WARNING: NOT ALL THE DEGENERATE CASES ARE IMPLEMENTED

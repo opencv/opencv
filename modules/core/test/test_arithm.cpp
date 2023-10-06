@@ -648,7 +648,7 @@ static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& ds
 }
 
 } // namespace
-CVTEST_GUARD_SYMBOL(inRange);
+CVTEST_GUARD_SYMBOL(inRange)
 
 struct InRangeSOp : public BaseElemWiseOp
 {
@@ -1178,7 +1178,7 @@ struct MeanOp : public BaseElemWiseOp
     MeanOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
     {
         context = 3;
-    };
+    }
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
         dst.create(1, 1, CV_64FC4);
@@ -1201,7 +1201,7 @@ struct SumOp : public BaseElemWiseOp
     SumOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
     {
         context = 3;
-    };
+    }
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         dst.create(1, 1, CV_64FC4);
@@ -1261,7 +1261,7 @@ struct MeanStdDevOp : public BaseElemWiseOp
     {
         cn = 0;
         context = 7;
-    };
+    }
     void op(const vector<Mat>& src, Mat& dst, const Mat& mask)
     {
         dst.create(1, 2, CV_64FC4);
@@ -1302,7 +1302,7 @@ struct NormOp : public BaseElemWiseOp
     {
         context = 1;
         normType = 0;
-    };
+    }
     int getRandomType(RNG& rng)
     {
         int type = cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 4);
@@ -1348,7 +1348,7 @@ struct MinMaxLocOp : public BaseElemWiseOp
     MinMaxLocOp() : BaseElemWiseOp(1, FIX_ALPHA+FIX_BETA+FIX_GAMMA+SUPPORT_MASK+SCALAR_OUTPUT, 1, 1, Scalar::all(0))
     {
         context = ARITHM_MAX_NDIMS*2 + 2;
-    };
+    }
     int getRandomType(RNG& rng)
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);
@@ -1395,7 +1395,7 @@ struct reduceArgMinMaxOp : public BaseElemWiseOp
                           isLast(false), isMax(false), axis(0)
     {
         context = ARITHM_MAX_NDIMS*2 + 2;
-    };
+    }
     int getRandomType(RNG& rng) override
     {
         return cvtest::randomType(rng, _OutputArray::DEPTH_MASK_ALL_BUT_8S, 1, 1);

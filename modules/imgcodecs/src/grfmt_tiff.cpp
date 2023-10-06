@@ -72,11 +72,6 @@ static void extend_cvtColor( InputArray _src, OutputArray _dst, int code );
         CV_Error(Error::StsError, "OpenCV TIFF: failed " #call); \
     }
 
-#define CV_TIFF_CHECK_CALL_INFO(call) \
-    if (0 == (call)) { \
-        CV_LOG_INFO(NULL, "OpenCV TIFF(line " << __LINE__ << "): failed optional call: " #call ", ignoring"); \
-    }
-
 #define CV_TIFF_CHECK_CALL_DEBUG(call) \
     if (0 == (call)) { \
         CV_LOG_DEBUG(NULL, "OpenCV TIFF(line " << __LINE__ << "): failed optional call: " #call ", ignoring"); \

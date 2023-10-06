@@ -173,7 +173,7 @@ public:
               , {}
               , {}
               , {} } {
-    };
+    }
 
     /** @overload
     Use this constructor to work with pre-compiled network.
@@ -202,7 +202,7 @@ public:
               , {}
               , {}
               , {} } {
-    };
+    }
 
     /** @brief Specifies sequence of network input layers names for inference.
 
@@ -547,7 +547,7 @@ public:
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
                 {}, {}, {}, {}, InferMode::Async, {}, {}, {}, {} },
           m_tag(tag) {
-    };
+    }
 
     /** @overload
 
@@ -565,7 +565,7 @@ public:
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
                 {}, {}, {}, {}, InferMode::Async, {}, {}, {}, {} },
           m_tag(tag) {
-    };
+    }
 
     /** @see ie::Params::pluginConfig. */
     Params& pluginConfig(const IEConfig& cfg) {

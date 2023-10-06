@@ -73,7 +73,7 @@ bool compareDataNodes(const ade::NodeHandle& first, const std::vector<std::size_
     // check that first and second nodes have the same type of DATA::Storage.
 
     return true;
-};
+}
 
 // Returns true if two OP nodes semantically and structurally identical:
 //    - both nodes have the same kernel name
@@ -130,7 +130,7 @@ bool compareOpNodes(const VisitedMatchings& matchedVisitedNodes,
     }
 
     return true;
-};
+}
 
 // Retrieves and return sample from the cartesian product of candidates sets
 VisitedMatchings sampleFromProduct(std::size_t sampleIdx, // index of the sample in the product
@@ -168,7 +168,7 @@ std::size_t labelOf (const ade::NodeHandle& node, // reader node
     else {
         return graph.metadata(edge).get<cv::gimpl::Output>().port;
     }
-};
+}
 
 inline bool IS_STARTPOINT(const ade::NodeHandle& nh){
     return nh->inEdges().empty();

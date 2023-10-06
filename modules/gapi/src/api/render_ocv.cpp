@@ -67,7 +67,7 @@ inline void mosaic(cv::Mat& mat, const cv::Rect &rect, int cellSz)
             cell_roi = cv::mean(cell_roi);
         }
     }
-};
+}
 
 inline void blendImage(const cv::Mat& img,
                        const cv::Mat& alpha,
@@ -120,7 +120,7 @@ inline void poly(cv::Mat& mat,
 {
     std::vector<std::vector<cv::Point>> points{pp.points};
     cv::fillPoly(mat, points, pp.color, pp.lt, pp.shift);
-};
+}
 
 struct BGR2YUVConverter
 {
@@ -133,13 +133,13 @@ struct BGR2YUVConverter
         return {y, u, v};
     }
 
-    void cvtImg(const cv::Mat& in, cv::Mat& out) { cv::cvtColor(in, out, cv::COLOR_BGR2YUV); };
+    void cvtImg(const cv::Mat& in, cv::Mat& out) { cv::cvtColor(in, out, cv::COLOR_BGR2YUV); }
 };
 
 struct EmptyConverter
 {
-    cv::Scalar cvtColor(const cv::Scalar& bgr)   const { return bgr; };
-    void cvtImg(const cv::Mat& in, cv::Mat& out) const { out = in;   };
+    cv::Scalar cvtColor(const cv::Scalar& bgr)   const { return bgr; }
+    void cvtImg(const cv::Mat& in, cv::Mat& out) const { out = in;   }
 };
 
 // FIXME util::visitor ?

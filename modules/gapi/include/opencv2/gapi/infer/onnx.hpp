@@ -293,7 +293,7 @@ public:
         desc.num_out = std::tuple_size<typename Net::OutArgs>::value;
         desc.is_generic = false;
         desc.disable_mem_pattern = false;
-    };
+    }
 
     /** @brief Specifies sequence of network input layers names for inference.
 

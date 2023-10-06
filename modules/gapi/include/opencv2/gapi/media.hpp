@@ -33,6 +33,7 @@ namespace cv {
  * @brief Extra G-API data structures used to pass input/output data
  * to the graph for processing.
  */
+
 /**
  * @brief cv::MediaFrame class represents an image/media frame
  * obtained from an external source.

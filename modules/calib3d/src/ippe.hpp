@@ -111,7 +111,7 @@ private:
     /**
      * @brief                           Computes the translation solution for a given rotation solution
      * @param objectPoints              Array of corresponding object points, 1xN/Nx1 3-channel where N is the number of points
-     * @param normalizedImagePoints     Array of corresponding image points (undistorted), 1xN/Nx1 2-channel where N is the number of points
+     * @param normalizedImgPoints       Array of corresponding image points (undistorted), 1xN/Nx1 2-channel where N is the number of points
      * @param R                         Rotation solution (3x1 rotation vector)
      * @param t                         Translation solution (3x1 rotation vector)
      */
@@ -220,10 +220,10 @@ private:
 
     /**
      * @brief                   Computes the average depth of an object given its pose in camera coordinates
-     * @param objectPoints:     Object points defined in 3D object space
-     * @param rvec:             Rotation component of pose
-     * @param tvec:             Translation component of pose
-     * @return:                 average depth of the object
+     * @param objectPoints      Object points defined in 3D object space
+     * @param rvec              Rotation component of pose
+     * @param tvec              Translation component of pose
+     * @return                  average depth of the object
      */
     double meanSceneDepth(InputArray objectPoints, InputArray rvec, InputArray tvec);
 

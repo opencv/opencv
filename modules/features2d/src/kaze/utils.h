@@ -6,7 +6,7 @@
  * @brief This function computes the value of a 2D Gaussian function
  * @param x X Position
  * @param y Y Position
- * @param sig Standard Deviation
+ * @param sigma Standard Deviation
  */
 inline float gaussian(float x, float y, float sigma) {
   return expf(-(x*x + y*y) / (2.0f*sigma*sigma));

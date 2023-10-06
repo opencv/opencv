@@ -45,4 +45,4 @@ PERF_TEST_P(MatDepth_tb, DISABLED_Allocation_Aligned,
     SANITY_CHECK_NOTHING();
 }
 
-};
+}

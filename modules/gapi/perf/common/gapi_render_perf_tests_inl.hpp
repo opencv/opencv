@@ -16,7 +16,7 @@ void create_rand_mats(const cv::Size &size, MatType type, cv::Mat &ref_mat, cv::
     ref_mat.create(size, type);
     cv::randu(ref_mat, cv::Scalar::all(0), cv::Scalar::all(255));
     ref_mat.copyTo(gapi_mat);
-};
+}
 
 } // namespace
 

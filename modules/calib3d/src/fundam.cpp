@@ -113,7 +113,7 @@ public:
      *            2 columns 1 channel
      * @param _m2 destination points containing (x,y), depth is CV_32F with 1 column 2 channels or
      *            2 columns 1 channel
-     * @param _model, CV_64FC1, 3x3, normalized, i.e., the last element is 1
+     * @param _model CV_64FC1, 3x3, normalized, i.e., the last element is 1
      */
     int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
@@ -188,7 +188,7 @@ public:
      * @param _m1 depth CV_32F, 1-channel with 2 columns or 2-channel with 1 column
      * @param _m2 depth CV_32F, 1-channel with 2 columns or 2-channel with 1 column
      * @param _model CV_64FC1, 3x3
-     * @param _err, output, CV_32FC1, square of the L2 norm
+     * @param _err output, CV_32FC1, square of the L2 norm
      */
     void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const CV_OVERRIDE
     {

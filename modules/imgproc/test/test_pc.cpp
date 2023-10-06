@@ -301,7 +301,7 @@ static std::pair<double, double> divide_complex_numbers( const double nu_re, con
     const double result_re = nu_re * de_re + nu_im * de_im;
     const double result_im = nu_re * (-de_im) + nu_im * de_re;
     return std::pair<double, double>(result_re / result_de, result_im / result_de);
-};
+}
 
 /// Helper function to divide a DFT in src1 by a DFT in src2 with depths depth_t.  The DFTs are
 /// complex matrices.

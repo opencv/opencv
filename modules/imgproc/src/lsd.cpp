@@ -214,7 +214,7 @@ public:
 /**
  * Draw lines on the given canvas.
  *
- * @param image     The image, where lines will be drawn.
+ * @param _image    The image, where lines will be drawn.
  *                  Should have the size of the image, where the lines were found
  * @param lines     The lines that need to be drawn
  */
@@ -226,7 +226,7 @@ public:
  * @param size      The size of the image, where lines1 and lines2 were found.
  * @param lines1    The first lines that need to be drawn. Color - Blue.
  * @param lines2    The second lines that need to be drawn. Color - Red.
- * @param image     An optional image, where lines will be drawn.
+ * @param _image    An optional image, where lines will be drawn.
  *                  Should have the size of the image, where the lines were found
  * @return          The number of mismatching pixels between lines1 and lines2.
  */
@@ -308,8 +308,6 @@ private:
  *
  * @param threshold      The minimum value of the angle that is considered defined, otherwise NOTDEF
  * @param n_bins         The number of bins with which gradients are ordered by, using bucket sort.
- * @param ordered_points Return: Vector of coordinate points that are pseudo ordered by magnitude.
- *                       Pixels would be ordered by norm value, up to a precision given by max_grad/n_bins.
  */
     void ll_angle(const double& threshold, const unsigned int& n_bins);
 

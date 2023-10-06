@@ -321,7 +321,7 @@ PyObject* pyopencv_from(const cv::detail::OpaqueRef& o)
 
     PyErr_SetString(PyExc_TypeError, "Unsupported GOpaque type");
     return NULL;
-};
+}
 
 template <>
 PyObject* pyopencv_from(const cv::detail::VectorRef& v)
