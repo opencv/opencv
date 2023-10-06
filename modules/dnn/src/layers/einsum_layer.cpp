@@ -32,7 +32,7 @@ static bool IsTransposeReshapeForEinsum(const std::vector<size_t>& perm,
     return true;
 }
 
-Mat batchwiseMatMul(
+static Mat batchwiseMatMul(
     const Mat& input1,
     const MatShape& input1ShapeOverride,
     const Mat& input2,
@@ -139,7 +139,7 @@ Mat batchwiseMatMul(
     return output_buffer;
 };
 
-Mat Transpose(
+static Mat Transpose(
     const Mat& input,
     const MatShape& input_shape_override,
     const std::vector<size_t> permutation)
@@ -161,10 +161,7 @@ Mat Transpose(
         outputDims.emplace_back(input_shape_override[dim]);
 
     Mat output;
-    MatShape order;
-    order.reserve(permutation.size());
-    for (const auto& elem : permutation)
-        order.emplace_back(static_cast<int>(elem));
+    MatShape order(permutation.begin(), permutation.end());
 
     cv::transposeND((reshape ? input_reshaped : input), order, output);
     return output;
@@ -249,19 +246,19 @@ Mat DiagonalDataAssignment(Mat input) {
     return output;
 }
 
-// Extract the diagonal elements from the last two dimensions of the tensor.
-// For instance, given an input_shape of [1, 2, 3, 3]:
+/* Extract the diagonal elements from the last two dimensions of the tensor.
+For instance, given an input_shape of [1, 2, 3, 3]:
 
-// The flexibility in this implementation allows one to choose which of the two
-// last dimensions retains its value, determined by the `preserve_innermost_dim_val` parameter.
+The flexibility in this implementation allows one to choose which of the two
+last dimensions retains its value, determined by the `preserve_innermost_dim_val` parameter.
 
-// When preserve_innermost_dim_val == true:
-//       The resulting shape is [1, 2, 1, 3], indicating the diagonal has 3 elements,
-//       and it keeps the dimension value of the innermost dimension.
+When preserve_innermost_dim_val == true:
+    The resulting shape is [1, 2, 1, 3], indicating the diagonal has 3 elements,
+    and it keeps the dimension value of the innermost dimension.
 
-// When preserve_innermost_dim_val == false:
-//       The resulting shape is [1, 2, 3, 1], indicating the diagonal also has 3 elements,
-//       but it retains the dimension value of the penultimate dimension.
+When preserve_innermost_dim_val == false:
+    The resulting shape is [1, 2, 3, 1], indicating the diagonal also has 3 elements,
+    but it retains the dimension value of the penultimate dimension. */
 Mat DiagonalInnermostDims(const Mat& input, bool preserve_innermost_dim_val) {
     const MatShape input_dims = shape(input);
     int rank = input_dims.size();
