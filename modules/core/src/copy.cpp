@@ -119,6 +119,21 @@ void convertAndUnrollScalar( const Mat& sc, int buftype, uchar* scbuf, size_t bl
         scbuf[i] = scbuf[i - esz];
 }
 
+static inline void copy_repeat(const unsigned char* pattern, size_t patternSize, unsigned char* dst, size_t dstSize)
+{
+  unsigned char* dstEnd = dst+dstSize;
+  size_t sizeToCopy = std::min(patternSize, dstSize);
+  memcpy(dst, pattern, sizeToCopy);
+  unsigned char* dstCur = dst+sizeToCopy;
+  while(dstCur<dstEnd)
+  {
+    sizeToCopy = std::min(dstCur-dst, dstEnd-dstCur);
+    memcpy(dstCur, dst, sizeToCopy);
+    dstCur += sizeToCopy;
+  }//end while(dstCur<dstEnd)
+}
+//end copy_repeat()
+
 template<typename T> static void
 copyMask_(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
@@ -554,6 +569,50 @@ Mat& Mat::operator = (const Scalar& s)
     return *this;
 }
 
+Mat& Mat::setToScalar(const Scalar& s)
+{
+    CV_INSTRUMENT_REGION();
+
+    if (this->empty())
+        return *this;
+
+    const Mat* arrays[] = { this };
+    uchar* dptr;
+    NAryMatIterator it(arrays, &dptr, 1);
+    size_t elsize = it.size*elemSize();
+    const int64* is = (const int64*)&s.val[0];
+
+    if( is[0] == 0 && is[1] == 0 && is[2] == 0 && is[3] == 0 )
+    {
+        for( size_t i = 0; i < it.nplanes; i++, ++it )
+            memset( dptr, 0, elsize );
+    }
+    else
+    {
+        int fill_value = 0;
+        if ( can_apply_memset(*this, s, fill_value) )
+        {
+            for (size_t i = 0; i < it.nplanes; i++, ++it)
+                memset(dptr, fill_value, elsize);
+            return *this;
+        }
+
+        if( it.nplanes > 0 )
+        {
+            double scalar[12];
+            scalarToRawData(s, scalar, type(), 12);
+            copy_repeat(reinterpret_cast<const unsigned char*>(&scalar[0]), std::min(12*elemSize1(), sizeof(scalar)), dptr, elsize);
+        }
+
+        for( size_t i = 1; i < it.nplanes; i++ )
+        {
+            ++it;
+            memcpy( dptr, data, elsize );
+        }
+    }
+    return *this;
+}
+
 #ifdef HAVE_IPP
 static bool ipp_Mat_setTo_Mat(Mat &dst, Mat &_val, Mat &mask)
 {
@@ -636,10 +695,13 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
             Scalar _scalar;
             Mat _scalarWrapper(static_cast<int>(valueFlattened.total()), 1, traits::Type<Scalar::value_type>::value, &_scalar[0]);
             valueFlattened.convertTo(_scalarWrapper, _scalarWrapper.type());
-            if (isSingleValue)
-              this->reshape(1) = Scalar::all(_scalar[0]);
+            if (!isSingleValue)
+                this->setToScalar(_scalar);
+            else if (cn == 1)
+              this->setToScalar(Scalar::all(_scalar[0]));
             else
-              *this = _scalar;
+              this->reshape(1).setToScalar(Scalar::all(_scalar[0]));
+              
             return *this;
         }
     }
