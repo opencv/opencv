@@ -701,7 +701,6 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
               this->setToScalar(Scalar::all(_scalar[0]));
             else
               this->reshape(1).setToScalar(Scalar::all(_scalar[0]));
-              
             return *this;
         }
     }
