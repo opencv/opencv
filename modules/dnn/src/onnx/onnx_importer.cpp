@@ -2557,37 +2557,34 @@ void ONNXImporter::parseGather(LayerParams& layerParams, const opencv_onnx::Node
 void ONNXImporter::parseGatherElements(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_CheckEQ(node_proto.input_size(), 2, "GatherElements: two inputs are required");
-    CV_CheckTrue(constBlobs.find(node_proto.input(1)) != constBlobs.end(), "DNN/ONNX-GatherElements: indices must be constant");
-    size_t consts = 0;
+
+    size_t num_const = 0;
     for (size_t i = 0; i < node_proto.input_size(); ++i){
-        if (layer_id.find(node_proto.input(i)) == layer_id.end())
-            ++consts;
+        if (constBlobs.find(node_proto.input(i)) != constBlobs.end())
+            ++num_const;
     }
-    if (consts == node_proto.input_size())
+
+    if (num_const == node_proto.input_size())
     {
         std::vector<Mat> inputs, output;
-        for (size_t i = 0; i < node_proto.input_size(); i++)
-        {
+        for (size_t i = 0; i < node_proto.input_size(); i++) {
             Mat blob = getBlob(node_proto, i);
-            if (i == 1) // indices
+            if (i == 1) { // indices, from int32/int64 to float32 for compatibility
                 blob.convertTo(blob, CV_32F);
+            }
             inputs.push_back(blob);
         }
         runLayer(layerParams, inputs, output);
         CV_Assert(output.size() == 1);
         addConstant(node_proto.output(0), output[0]);
         return;
-    }
-
-    else if (consts > 0)
-    {
-        for (size_t i = 0; i < node_proto.input_size(); i++)
-        {
-            if (layer_id.find(node_proto.input(i)) == layer_id.end())
-            {
+    } else if (num_const > 0) {
+        for (size_t i = 0; i < node_proto.input_size(); i++) {
+            if (constBlobs.find(node_proto.input(i)) != constBlobs.end()) {
                 Mat blob = getBlob(node_proto, i);
-                if (i == 1) // indices, from int32/int64 to float32
+                if (i == 1) { // indices, from int32/int64 to float32 for compatibility
                     blob.convertTo(blob, CV_32F);
+                }
 
                 LayerParams constParams;
                 constParams.name = node_proto.input(i);
