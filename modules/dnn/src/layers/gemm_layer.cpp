@@ -191,7 +191,6 @@ public:
         size_t dims_Y = shape_Y.size();
         int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
         int K = trans_a ? ma : na;
-        int batches = std::accumulate(shape_A.begin(), shape_A.end() - 2, 1, std::multiplies<int>());
 
         // broadcast C and copy C to output
         if (have_bias) {
@@ -201,9 +200,7 @@ public:
             int step = M * N;
             CV_CheckEQ(broadcast_C.size(), static_cast<size_t>(step), "DNN/Gemm: C is not broadcast properly");
             float *ptr_y = Y.ptr<float>();
-            for (int i = 0; i < batches; i++) {
-                std::memcpy(ptr_y + i * step, broadcast_C.data(), step * sizeof(float));
-            }
+            std::memcpy(ptr_y, broadcast_C.data(), step * sizeof(float));
         } else { // initialization
             float *ptr_y = Y.ptr<float>();
             size_t total = Y.total();
@@ -212,7 +209,6 @@ public:
 
         if (const_B) {
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
-            M *= batches;
             fastGemm(trans_a, M, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
         } else {
             fastGemmBatched(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
