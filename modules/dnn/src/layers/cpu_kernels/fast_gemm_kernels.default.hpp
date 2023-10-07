@@ -116,91 +116,6 @@ void fastGemmPackBKernel(const char *B, char *packed_B, int N, int K, int ldb0, 
     }
 }
 
-#if CV_SIMD128
-static inline void fast_gemm8x12_f32(int k, const char *a_, const char *b_,
-                                     char *c_, int ldc, float alpha) {
-    const float* a = (const float*)a_;
-    const float* b = (const float*)b_;
-    float* c = (float*)c_;
-
-    v_float32x4 s00 = v_setzero_f32(), s01 = s00, s02 = s00;
-    v_float32x4 s10 = s00, s11 = s00, s12 = s00;
-    v_float32x4 s20 = s00, s21 = s00, s22 = s00;
-    v_float32x4 s30 = s00, s31 = s00, s32 = s00;
-    v_float32x4 s40 = s00, s41 = s00, s42 = s00;
-    v_float32x4 s50 = s00, s51 = s00, s52 = s00;
-    v_float32x4 s60 = s00, s61 = s00, s62 = s00;
-    v_float32x4 s70 = s00, s71 = s00, s72 = s00;
-
-    for(int p = 0; p < k; p++, a += FAST_GEMM_F32_MR, b += FAST_GEMM_F32_NR) {
-        v_float32x4 b0 = v_load(b), b1 = v_load(b + 4), b2 = v_load(b + 8);
-
-        v_float32x4 a0 = v_setall_f32(*a);
-        s00 = v_fma(b0, a0, s00);
-        s01 = v_fma(b1, a0, s01);
-        s02 = v_fma(b2, a0, s02);
-        v_float32x4 a1 = v_setall_f32(*(a + 1));
-        s10 = v_fma(b0, a1, s10);
-        s11 = v_fma(b1, a1, s11);
-        s12 = v_fma(b2, a1, s12);
-
-        v_float32x4 a2 = v_setall_f32(*(a + 2));
-        s20 = v_fma(b0, a2, s20);
-        s21 = v_fma(b1, a2, s21);
-        s22 = v_fma(b2, a2, s22);
-        v_float32x4 a3 = v_setall_f32(*(a + 3));
-        s30 = v_fma(b0, a3, s30);
-        s31 = v_fma(b1, a3, s31);
-        s32 = v_fma(b2, a3, s32);
-
-        a0 = v_setall_f32(*(a + 4));
-        s40 = v_fma(b0, a0, s40);
-        s41 = v_fma(b1, a0, s41);
-        s42 = v_fma(b2, a0, s42);
-        a1 = v_setall_f32(*(a + 5));
-        s50 = v_fma(b0, a1, s50);
-        s51 = v_fma(b1, a1, s51);
-        s52 = v_fma(b2, a1, s52);
-
-        a2 = v_setall_f32(*(a + 6));
-        s60 = v_fma(b0, a2, s60);
-        s61 = v_fma(b1, a2, s61);
-        s62 = v_fma(b2, a2, s62);
-        a3 = v_setall_f32(*(a + 7));
-        s70 = v_fma(b0, a3, s70);
-        s71 = v_fma(b1, a3, s71);
-        s72 = v_fma(b2, a3, s72);
-    }
-
-    v_float32x4 c0, c1, c2, c3, c4, c5, v_alpha = v_setall_f32(alpha);
-#define FAST_GEMM_FINALE(row0, row1)       \
-    c0 = v_load(c + row0 * ldc);         \
-    c1 = v_load(c + row0 * ldc + 4);     \
-    c2 = v_load(c + row0 * ldc + 8);     \
-    c3 = v_load(c + row1 * ldc);         \
-    c4 = v_load(c + row1 * ldc + 4);     \
-    c5 = v_load(c + row1 * ldc + 8);     \
-    c0 = v_fma(s##row0##0, v_alpha, c0); \
-    c1 = v_fma(s##row0##1, v_alpha, c1); \
-    c2 = v_fma(s##row0##2, v_alpha, c2); \
-    c3 = v_fma(s##row1##0, v_alpha, c3); \
-    c4 = v_fma(s##row1##1, v_alpha, c4); \
-    c5 = v_fma(s##row1##2, v_alpha, c5); \
-    v_store(c + row0 * ldc, c0);         \
-    v_store(c + row0 * ldc + 4, c1);     \
-    v_store(c + row0 * ldc + 8, c2);     \
-    v_store(c + row1 * ldc, c3);         \
-    v_store(c + row1 * ldc + 4, c4);     \
-    v_store(c + row1 * ldc + 8, c5);
-
-    FAST_GEMM_FINALE(0, 1);
-    FAST_GEMM_FINALE(2, 3);
-    FAST_GEMM_FINALE(4, 5);
-    FAST_GEMM_FINALE(6, 7);
-#undef FAST_GEMM_FINALE
-}
-
-#else
 static inline void fast_gemm_f32(int k, const char *a_, const char *b_,
                                  char *c_, int ldc, float alpha) {
     const float* a = (const float*)a_;
@@ -221,7 +136,6 @@ static inline void fast_gemm_f32(int k, const char *a_, const char *b_,
             c[i * ldc + j] += alpha * sbuf[i * FAST_GEMM_F32_NR + j];
     }
 }
-#endif // CV_SIMD128
 
 static void fast_gemm_macro_kernel(int m, int n, int k,
                                    const char *packed_A, const char *packed_B,
@@ -245,11 +159,7 @@ static void fast_gemm_macro_kernel(int m, int n, int k,
                 for(int p = 0; p < mr; p++)
                     memcpy(cptr + p * (ldc * esz), cptr0 + p * ldc0_esz, nr_esz);
             }
-#if CV_SIMD128
-            fast_gemm8x12_f32(k, packed_A + i * k * esz, packed_B + j * k * esz, cptr, ldc, alpha);
-#else
             fast_gemm_f32(k, packed_A + i * k * esz, packed_B + j * k * esz, cptr, ldc, alpha);
-#endif
 
             if (partial) {
                 for(int p = 0; p < mr; p++)
