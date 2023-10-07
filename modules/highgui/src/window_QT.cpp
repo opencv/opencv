@@ -1675,6 +1675,7 @@ CvWinProperties::~CvWinProperties()
 
 CvWindow::CvWindow(QString name, int arg2)
 {
+    Q_INIT_RESOURCE(window_QT);
     type = type_CvWindow;
 
     param_flags = arg2 & 0x0000000F;
