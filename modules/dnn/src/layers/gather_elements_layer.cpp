@@ -27,7 +27,7 @@ public:
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_CheckEQ(inputs.size(), 2ull, "GatherElements: requires two inputs ");
+        CV_CheckEQ(inputs.size(), 2ull, "GatherElements: requires two inputs");
         outputs.assign(1, inputs[1]); // shape of output is same as indices
         return false;
     }
@@ -48,7 +48,7 @@ public:
         typeDispatch(outputs[0].type(), data, indices, out);
     }
 
-    template<typename T>
+    template <typename T>
     void forward_impl(const Mat& data, const Mat& indices,  Mat& out)
     {
 

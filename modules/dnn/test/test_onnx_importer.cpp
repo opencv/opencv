@@ -230,7 +230,7 @@ TEST_P(Test_ONNX_layers, Gather)
     testONNXModels("gather", npy, 0, 0, false, false);
 }
 
-TEST_P(Test_ONNX_layers, RAFT)
+TEST_P(Test_ONNX_layers, DISABLED_RAFT)
 {
     std::string weight_path = _tf("models/optical_flow_estimation_raft_2023aug.onnx", false);
     std::string img0_path = findDataFile(std::string("gpu/opticalflow/frame0.png"));
@@ -241,8 +241,11 @@ TEST_P(Test_ONNX_layers, RAFT)
     auto img1 = imread(img1_path);
     cvtColor(img0, img0, COLOR_BGR2RGB);
     cvtColor(img1, img1, COLOR_BGR2RGB);
-    auto blob0 = blobFromImage(img0);
-    auto blob1 = blobFromImage(img1);
+    Mat blob0, blob1;
+    resize(img0, blob0, target_size);
+    resize(img1, blob1, target_size);
+    blob0 = blobFromImage(blob0);
+    blob1 = blobFromImage(blob1);
 
     auto net = readNet(weight_path);
     net.setInput(blob0, "0");

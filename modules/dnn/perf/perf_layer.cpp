@@ -633,6 +633,56 @@ PERF_TEST_P_(Layer_LayerNormExpanded, DISABLED_LayerNormExpanded)
     test_layer({N, H ,W});
 }
 
+struct Layer_GatherElements : public TestBaseWithParam<tuple<Backend, Target> >
+{
+    void test_layer(const std::vector<int>& data_shape, const std::vector<int>& indices_shape, int axis = 0)
+    {
+        int backendId = get<0>(GetParam());
+        int targetId = get<1>(GetParam());
+
+        Mat data(data_shape, CV_32FC1);
+        Mat indices(indices_shape, CV_32FC1);
+
+        randu(data, 0.f, 1.f);
+        randu(indices, 0, data_shape[axis]);
+
+        Net net;
+        LayerParams lp;
+        lp.type = "GatherElements";
+        lp.name = "testLayer";
+        lp.set("axis", axis);
+        int id = net.addLayerToPrev(lp.name, lp.type, lp);
+        net.connect(0, 0, id, 0);
+        net.connect(0, 1, id, 1);
+
+        // warmup
+        {
+            std::vector<String> inpNames(3);
+            inpNames[0] = "data";
+            inpNames[1] = "indices";
+            net.setInputsNames(inpNames);
+            net.setInput(data, inpNames[0]);
+            net.setInput(indices, inpNames[1]);
+
+            net.setPreferableBackend(backendId);
+            net.setPreferableTarget(targetId);
+            Mat out = net.forward();
+        }
+
+        TEST_CYCLE()
+        {
+            Mat res = net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+};
+
+PERF_TEST_P_(Layer_GatherElements, DISABLED_GatherElements)
+{
+    test_layer({2700, 1, 2914}, {2700, 1, 81});
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(false, false));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 #ifdef HAVE_CUDA
@@ -642,6 +692,7 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Scatter, testing::Values(std::make_tuple(DNN
 INSTANTIATE_TEST_CASE_P(/**/, Layer_ScatterND, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNorm, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_LayerNormExpanded, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_GatherElements, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 
 
 typedef TestBaseWithParam<tuple<Vec4i, int, bool, tuple<Backend, Target> > > Layer_FullyConnected;
