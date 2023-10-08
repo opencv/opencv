@@ -762,7 +762,11 @@ TEST_F(Layer_RNN_Test, get_set_test)
     EXPECT_EQ(shape(outputs[1]), shape(nT, nS, nH));
 }
 
+#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
 TEST_P(Test_Caffe_layers, Accum)
+#else
+TEST_P(Test_Caffe_layers, DISABLED_Accum)  // requires patched protobuf (available in OpenCV source tree only)
+#endif
 {
     if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
@@ -786,7 +790,11 @@ TEST_P(Test_Caffe_layers, ChannelNorm)
     testLayerUsingCaffeModels("channel_norm", false, false);
 }
 
+#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
 TEST_P(Test_Caffe_layers, DataAugmentation)
+#else
+TEST_P(Test_Caffe_layers, DISABLED_DataAugmentation)  // requires patched protobuf (available in OpenCV source tree only)
+#endif
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
@@ -795,7 +803,11 @@ TEST_P(Test_Caffe_layers, DataAugmentation)
     testLayerUsingCaffeModels("data_augmentation_8x6", true, false);
 }
 
+#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
 TEST_P(Test_Caffe_layers, Resample)
+#else
+TEST_P(Test_Caffe_layers, DISABLED_Resample)  // requires patched protobuf (available in OpenCV source tree only)
+#endif
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend != DNN_BACKEND_OPENCV)
@@ -805,7 +817,11 @@ TEST_P(Test_Caffe_layers, Resample)
     testLayerUsingCaffeModels("nearest", false, false);
 }
 
+#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
 TEST_P(Test_Caffe_layers, Correlation)
+#else
+TEST_P(Test_Caffe_layers, DISABLED_Correlation)  // requires patched protobuf (available in OpenCV source tree only)
+#endif
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER,

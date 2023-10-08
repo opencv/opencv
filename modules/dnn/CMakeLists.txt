@@ -249,6 +249,10 @@ ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})
 
+if(NOT BUILD_PROTOBUF)
+  ocv_target_compile_definitions(opencv_test_dnn PRIVATE "OPENCV_DNN_EXTERNAL_PROTOBUF=1")
+endif()
+
 set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
 file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")
 file(GLOB_RECURSE perf_hdrs "${perf_path}/*.hpp" "${perf_path}/*.h")
@@ -313,3 +317,4 @@ if(OPENCV_TEST_DNN_TFLITE)
     ocv_target_compile_definitions(opencv_perf_dnn PRIVATE "OPENCV_TEST_DNN_TFLITE=1")
   endif()
 endif()
+

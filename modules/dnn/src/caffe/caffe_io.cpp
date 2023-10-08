@@ -1130,7 +1130,17 @@ bool ReadProtoFromTextFile(const char* filename, Message* proto) {
     parser.AllowUnknownField(true);
     parser.SetRecursionLimit(1000);
 #endif
-    return parser.Parse(&input, proto);
+    const bool ret = parser.Parse(&input, proto);
+
+#ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
+    if(!ret)
+    {
+        LOG(ERROR) << "Some data requires patched protobuf (available in OpenCV source tree only).";
+        CV_Error_(Error::StsError,("Some data requires patched protobuf (available in OpenCV source tree only)."));
+    }
+#endif
+
+    return ret;
 }
 
 bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
@@ -1148,7 +1158,17 @@ bool ReadProtoFromTextBuffer(const char* data, size_t len, Message* proto) {
     parser.AllowUnknownField(true);
     parser.SetRecursionLimit(1000);
 #endif
-    return parser.Parse(&input, proto);
+    const bool ret = parser.Parse(&input, proto);
+
+#ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
+    if(!ret)
+    {
+        LOG(ERROR) << "Some data requires patched protobuf (available in OpenCV source tree only).";
+        CV_Error_(Error::StsError,("Some data requires patched protobuf (available in OpenCV source tree only)."));
+    }
+#endif
+
+    return ret;
 }
 
 
