@@ -3,10 +3,21 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
-#include "layers_common.hpp"
-
+#include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv { namespace dnn {
+
+static inline int calculateOffset(int outer_dim, const MatShape &shape_indices, int axis_skip, const MatStep &step_data) {
+    int offset = 0;
+    for (int axis = static_cast<int>(shape_indices.size()) - 2; axis >= 0; axis--) {
+        int dim = shape_indices[axis];
+        if (axis != axis_skip) {
+            offset += (outer_dim % dim) * step_data[axis];
+        }
+        outer_dim /= dim;
+    }
+    return offset;
+}
 
 class GatherElementsLayerImpl CV_FINAL : public GatherElementsLayer
 {
@@ -28,21 +39,30 @@ public:
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_CheckEQ(inputs.size(), 2ull, "GatherElements: requires two inputs");
+
+        const auto &data = inputs[0];
+        const auto &indices = inputs[1];
+        CV_CheckEQ(data.size(), indices.size(), "GatherElements: data and indices should have the same dimension");
+
+        int normalized_axis = normalize_axis(axis, static_cast<int>(data.size()));
+        CV_CheckGE(normalized_axis, 0, "GatherElements: axis out of range");
+        CV_CheckLT(normalized_axis, static_cast<int>(data.size()), "GatherElements: axis out of range");
+        for (size_t i = 0; i < data.size(); i++) {
+            if (i != normalized_axis) {
+                CV_CheckEQ(data[i], indices[i], "GatherElements: shape mismatched");
+            }
+        }
+
         outputs.assign(1, inputs[1]); // shape of output is same as indices
         return false;
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         std::vector<Mat> inputs;
-        inputs_arr.getMatVector(inputs); // two inputs are guaranteed in getMemoryShapes
+        inputs_arr.getMatVector(inputs);
 
         const auto &data = inputs[0];
         axis = normalize_axis(axis, data.dims);
-        CV_CheckGE(axis, 0, "GatherElements: axis out of range");
-        CV_CheckLT(axis, data.dims, "GatherElements: axis out of range");
-
-        const auto &indices = inputs[1];
-        CV_CheckEQ(data.dims, indices.dims, "GatherElements: data and indices should have the same dimension");
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -62,59 +82,45 @@ public:
     }
 
     template <typename T>
-    void forward_impl(const Mat& data, const Mat& indices,  Mat& out)
+    void forward_impl(const Mat& data_, const Mat& indices_,  Mat& out_)
     {
+        const auto *ptr_data = data_.ptr<const T>();
+        const auto *ptr_indices = indices_.ptr<const T>();
+        auto *ptr_out = out_.ptr<T>();
 
-        const int ndims = data.dims;
+        const auto shape_data = shape(data_);
+        const auto &step_data = data_.step;
+        const auto shape_indices = shape(indices_);
 
-        const int* shape = data.size.p;
-        const size_t* step = data.step.p;
+        int inner_most_dim = shape_indices.back();
+        int axis_dim = shape_data[axis];
+        size_t axis_step = static_cast<size_t>(step_data[axis] / sizeof(T));
 
-        const int* ind_shape = indices.size.p;
-        const size_t* ind_step = indices.step.p;
+        bool innermost_axis = axis == static_cast<int>(shape_data.size() - 1);
 
-        size_t inp_offset = 0;
-        size_t ind_offset = 0;
-        const T* p_index = indices.ptr<const T>();
-        const T* p_data = data.ptr<const T>();
-        T* p_out = out.ptr<T>();
+        auto fn = [&](const Range &r) {
+            for (int i = r.start; i < r.end; i++) {
+                auto *data = ptr_data + static_cast<size_t>(calculateOffset(i, shape_indices, axis, step_data) / sizeof(T));
+                auto *indices = ptr_indices + i * inner_most_dim;
+                auto *out = ptr_out + i * inner_most_dim;
 
-        size_t total = indices.total();
-
-        int j, offset_at_idx, index;
-        size_t t, idx;
-        for (size_t i = 0; i < total; i++)
-        {
-            t = i;
-            inp_offset = 0;
-            ind_offset = 0;
-            int offset_at_axis = 0;
-            for (j = ndims - 1; j >= 0; j--)
-            {
-                idx = t / ind_shape[j];
-                offset_at_idx = (int)(t - idx * ind_shape[j]);
-                ind_offset += offset_at_idx * ind_step[j];
-                inp_offset += offset_at_idx * step[j];
-                t = idx;
-                if (j == axis)
-                {
-                    offset_at_axis = offset_at_idx * step[j];
+                if (innermost_axis) {
+                    for (int j = 0; j < inner_most_dim; j++) {
+                        int index = static_cast<int>((indices[j] + axis_dim)) % axis_dim; // TODO: Check out-of-range index
+                        out[j] = data[index];
+                    }
+                } else {
+                    for (int j = 0; j < inner_most_dim; j++) {
+                        int index = static_cast<int>(indices[j] + axis_dim) % axis_dim; // TODO: Check out-of-range index
+                        out[j] = data[index * axis_step + j];
+                    }
                 }
             }
-            ind_offset /= sizeof(T);
+        };
 
-            // get index and overwrite current indices
-            const T* tmp_p_index = p_index + ind_offset;
-            index = (int)(*tmp_p_index);
-            CV_Assert(index < shape[axis] && index > -shape[axis]);
-
-            inp_offset = inp_offset - offset_at_axis + ((index + shape[axis]) % shape[axis]) * step[axis];
-            inp_offset /= sizeof(T);
-
-            const T* tmp_p_data = p_data + inp_offset;
-            T* tmp_p_out = p_out + ind_offset;
-            *tmp_p_out = *tmp_p_data;
-        }
+        int outer_dims = total(shape_indices, 0, shape_indices.size() - 1);
+        double nstripes = static_cast<size_t>(outer_dims * inner_most_dim * (1 / 1024.0));
+        parallel_for_(Range(0, outer_dims), fn, nstripes);
     }
 
     template<typename... Args>

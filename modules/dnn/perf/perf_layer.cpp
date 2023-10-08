@@ -680,7 +680,7 @@ struct Layer_GatherElements : public TestBaseWithParam<tuple<Backend, Target> >
 
 PERF_TEST_P_(Layer_GatherElements, GatherElements)
 {
-    test_layer({2700, 1, 2914}, {2700, 1, 81});
+    test_layer({2700, 1, 2914}, {2700, 1, 81}, 2);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(false, false));

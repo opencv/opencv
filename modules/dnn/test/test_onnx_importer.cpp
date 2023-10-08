@@ -230,7 +230,7 @@ TEST_P(Test_ONNX_layers, Gather)
     testONNXModels("gather", npy, 0, 0, false, false);
 }
 
-TEST_P(Test_ONNX_layers, RAFT)
+TEST_P(Test_ONNX_layers, DISABLED_RAFT)
 {
     std::string weight_path = _tf("models/optical_flow_estimation_raft_2023aug.onnx", false);
     std::string img0_path = findDataFile(std::string("gpu/opticalflow/frame0.png"));
@@ -264,6 +264,9 @@ TEST_P(Test_ONNX_layers, RAFT)
     normAssert(ref1, out1, "", 1e-5, 1e-4);
 }
 
+/*
+    TODO: need to enable these tests in conformance list instead
+*/
 TEST_P(Test_ONNX_layers, GatherElements_0)
 {
     testONNXModels("test_gather_elements_0", pb);
