@@ -230,7 +230,7 @@ TEST_P(Test_ONNX_layers, Gather)
     testONNXModels("gather", npy, 0, 0, false, false);
 }
 
-TEST_P(Test_ONNX_layers, DISABLED_RAFT)
+TEST_P(Test_ONNX_layers, RAFT)
 {
     std::string weight_path = _tf("models/optical_flow_estimation_raft_2023aug.onnx", false);
     std::string img0_path = findDataFile(std::string("gpu/opticalflow/frame0.png"));

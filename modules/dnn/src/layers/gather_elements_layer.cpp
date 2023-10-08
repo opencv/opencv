@@ -32,6 +32,19 @@ public:
         return false;
     }
 
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs); // two inputs are guaranteed in getMemoryShapes
+
+        const auto &data = inputs[0];
+        axis = normalize_axis(axis, data.dims);
+        CV_CheckGE(axis, 0, "GatherElements: axis out of range");
+        CV_CheckLT(axis, data.dims, "GatherElements: axis out of range");
+
+        const auto &indices = inputs[1];
+        CV_CheckEQ(data.dims, indices.dims, "GatherElements: data and indices should have the same dimension");
+    }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
@@ -53,10 +66,6 @@ public:
     {
 
         const int ndims = data.dims;
-        CV_Assert(ndims >= 1);
-        CV_Assert(axis >= -1 * ndims && axis <= (ndims - 1));
-
-        CV_CheckEQ(data.dims, indices.dims, "GatherElements: input and indices have to be of same rank.");
 
         const int* shape = data.size.p;
         const size_t* step = data.step.p;
@@ -104,9 +113,7 @@ public:
 
             const T* tmp_p_data = p_data + inp_offset;
             T* tmp_p_out = p_out + ind_offset;
-            for (size_t i = 0; i < total; i++) {
-                *tmp_p_out = *tmp_p_data;
-            }
+            *tmp_p_out = *tmp_p_data;
         }
     }
 

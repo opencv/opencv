@@ -678,7 +678,7 @@ struct Layer_GatherElements : public TestBaseWithParam<tuple<Backend, Target> >
     }
 };
 
-PERF_TEST_P_(Layer_GatherElements, DISABLED_GatherElements)
+PERF_TEST_P_(Layer_GatherElements, GatherElements)
 {
     test_layer({2700, 1, 2914}, {2700, 1, 81});
 }
