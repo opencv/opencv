@@ -317,4 +317,3 @@ if(OPENCV_TEST_DNN_TFLITE)
     ocv_target_compile_definitions(opencv_perf_dnn PRIVATE "OPENCV_TEST_DNN_TFLITE=1")
   endif()
 endif()
-

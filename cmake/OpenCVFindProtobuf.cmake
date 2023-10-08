@@ -71,12 +71,14 @@ endif()
 # In Protocol Buffers v22.0 and later drops C++11 support and depends abseil-cpp.
 #   Details: https://protobuf.dev/news/2022-08-03/
 # And if std::text_view is in abseil-cpp requests C++17 and later.
+
 if(HAVE_PROTOBUF)
     if("${Protobuf_VERSION}" MATCHES [[[0-9]+.([0-9]+).[0-9]+]])
-        string(COMPARE GREATER_EQUAL "${CMAKE_MATCH_1}" "22" REQUEST_ABSL)
+        string(COMPARE GREATER "${CMAKE_MATCH_1}" "21" REQUEST_ABSL)  # >=22
 
         if(REQUEST_ABSL)
-            string(COMPARE GREATER_EQUAL "${CMAKE_CXX_STANDARD}" "17" USED_AFTER_CXX17)
+            string(COMPARE GREATER "${CMAKE_CXX_STANDARD}" "16" USED_AFTER_CXX17)  # >=17
+
             if(NOT USED_AFTER_CXX17)
                 message("CMAKE_CXX_STANDARD : ${CMAKE_CXX_STANDARD}")
                 message("protobuf           : ${Protobuf_VERSION}")
