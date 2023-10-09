@@ -54,10 +54,6 @@ public:
         CV_CheckEQ(bias.total(), C, "InstanceNorm: bias should be a 1d tensor and match the channel of input data");
 
         // This implementation assumes [N, C, D1, D2, ..., Dn], where N is the batch size and C is the channel.
-        const auto *input_data = input.ptr<const float>();
-        const auto *scale_data = scale.ptr<const float>();
-        const auto *bias_data = bias.ptr<const float>();
-        auto *output_data = outputs[0].ptr<float>();
         size_t loops = N * C, step = static_cast<size_t>(total(input_shape, 2));
         auto compute_squared_norm = [step] (const float *data, float mean) {
             float sum = 0.f;
@@ -67,19 +63,27 @@ public:
             }
             return sum / step;
         };
-        for (size_t i = 0; i < loops; i++) {
-            float mean = std::accumulate(input_data, input_data + step, 0.f) / step;
-            float inv_stdev = 1.0f / std::sqrt(compute_squared_norm(input_data, mean) + epsilon);
+        auto fn = [&](const Range &r) {
+            const auto *input_data = input.ptr<const float>();
+            const auto *scale_data = scale.ptr<const float>();
+            const auto *bias_data = bias.ptr<const float>();
+            auto *output_data = outputs[0].ptr<float>();
+            for (int i = r.start; i < r.end; i++) {
+                const auto *x = input_data + step * i;
+                auto *y = output_data + step * i;
 
-            size_t channel = i % C;
-            float s = scale_data[channel], b = bias_data[channel];
-            // y = scale * (x - mean) / sqrt(variance + epsilon) + B
-            for (size_t j = 0; j < step; j++) {
-                output_data[j] = s * (input_data[j] - mean) * inv_stdev + b;
+                float mean = std::accumulate(x, x + step, 0.f) / step;
+                float inv_stdev = 1.f / std::sqrt(compute_squared_norm(x, mean) + epsilon);
+
+                size_t c = i % C;
+                float s = scale_data[c], b = bias_data[c];
+                for (size_t j = 0; j < step; j++) {
+                    y[j] = s * (x[j] - mean) * inv_stdev + b;
+                }
             }
-            input_data += step;
-            output_data += step;
-        }
+        };
+        double nstripes = loops * step * (1 / 1024.0);
+        parallel_for_(Range(0, loops), fn, nstripes);
     }
 };
 
