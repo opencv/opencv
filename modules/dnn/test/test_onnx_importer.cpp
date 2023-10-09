@@ -124,6 +124,12 @@ TEST_P(Test_ONNX_layers, InstanceNorm)
     else
         testONNXModels("instancenorm", npy);
 }
+TEST_P(Test_ONNX_layers, InstanceNormEpsilon) {
+    testONNXModels("test_instancenorm_epsilon", pb);
+}
+TEST_P(Test_ONNX_layers, InstanceNormExample) {
+    testONNXModels("test_instancenorm_example", pb);
+}
 
 TEST_P(Test_ONNX_layers, MaxPooling)
 {
