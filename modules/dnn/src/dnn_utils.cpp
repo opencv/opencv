@@ -79,7 +79,7 @@ void blobFromImage(InputArray image, OutputArray blob, double scalefactor,
     if (image.kind() == _InputArray::UMAT) {
         std::vector<UMat> images(1, image.getUMat());
         blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop, ddepth);
-    } else if (image.kind() == _InputArray::MAT) {
+    } else {
         std::vector<Mat> images(1, image.getMat());
         blobFromImages(images, blob, scalefactor, size, mean, swapRB, crop, ddepth);
     }
