@@ -288,7 +288,7 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
     else
     {
         CV_Error(Error::StsUnsupportedFormat, "Unsupported data layout in blobFromImagesWithParams function.");
-
+    }
     CV_Assert(blob_.total());
 }
 
