@@ -31,17 +31,17 @@ void getVector(InputArrayOfArrays images_, std::vector<UMat>& images) {
 
 void getMat(UMat& blob, InputArray blob_, AccessFlag flag) {
     if(blob_.kind() == _InputArray::UMAT)
-        blob = blob_.getUMat();
+        blob = blob_.getUMat().clone();
     else if(blob_.kind() == _InputArray::MAT) {
-        blob = blob_.getMat().getUMat(flag);
+        blob = blob_.getMat().getUMat(flag).clone();
     }
 }
 
 void getMat(Mat& blob, InputArray blob_, AccessFlag flag) {
     if(blob_.kind() == _InputArray::UMAT)
-        blob = blob_.getUMat().getMat(flag);
+        blob = blob_.getUMat().getMat(flag).clone();
     else if(blob_.kind() == _InputArray::MAT) {
-        blob = blob_.getMat();
+        blob = blob_.getMat().clone();
     }
 }
 
