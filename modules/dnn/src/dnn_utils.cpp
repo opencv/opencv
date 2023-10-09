@@ -285,29 +285,29 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
 void blobFromImagesWithParams(InputArrayOfArrays images, OutputArray blob, const Image2BlobParams& param) {
     CV_TRACE_FUNCTION();
 
-        if (images.kind() == _InputArray::STD_VECTOR_UMAT) {
-            if(blob.kind() == _InputArray::UMAT) {
-                UMat& u = blob.getUMatRef();
-                blobFromImagesWithParamsImpl<cv::UMat>(images, u, param);
-                return;
-            } else if(blob.kind() == _InputArray::MAT) {
-                UMat u = blob.getMatRef().getUMat(ACCESS_WRITE);
-                blobFromImagesWithParamsImpl<cv::UMat>(images, u, param);
-                u.copyTo(blob);
-                return;
-            }
-        } else if (images.kind() == _InputArray::STD_VECTOR_MAT) {
-            if(blob.kind() == _InputArray::UMAT) {
-                Mat m = blob.getUMatRef().getMat(ACCESS_WRITE);
-                blobFromImagesWithParamsImpl<cv::Mat>(images, m, param);
-                m.copyTo(blob);
-                return;
-            } else if(blob.kind() == _InputArray::MAT) {
-                Mat& m = blob.getMatRef();
-                blobFromImagesWithParamsImpl<cv::Mat>(images, m, param);
-                return;
-            }
-        }
+	if (images.kind() == _InputArray::STD_VECTOR_UMAT) {
+		if(blob.kind() == _InputArray::UMAT) {
+			UMat& u = blob.getUMatRef();
+			blobFromImagesWithParamsImpl<cv::UMat>(images, u, param);
+			return;
+		} else if(blob.kind() == _InputArray::MAT) {
+			UMat u = blob.getMatRef().getUMat(ACCESS_WRITE);
+			blobFromImagesWithParamsImpl<cv::UMat>(images, u, param);
+			u.copyTo(blob);
+			return;
+		}
+	} else if (images.kind() == _InputArray::STD_VECTOR_MAT) {
+		if(blob.kind() == _InputArray::UMAT) {
+			Mat m = blob.getUMatRef().getMat(ACCESS_WRITE);
+			blobFromImagesWithParamsImpl<cv::Mat>(images, m, param);
+			m.copyTo(blob);
+			return;
+		} else if(blob.kind() == _InputArray::MAT) {
+			Mat& m = blob.getMatRef();
+			blobFromImagesWithParamsImpl<cv::Mat>(images, m, param);
+			return;
+		}
+	}
 
     CV_Error(Error::StsBadArg, "Images are expected to be a vector of either a Mat or UMat and Blob is expected to be either a Mat or UMat");
 }
