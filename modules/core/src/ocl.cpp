@@ -51,7 +51,6 @@
 #include <set>
 #include <string>
 #include <sstream>
-#include <iostream> // std::cerr
 #include <fstream>
 #if !(defined _MSC_VER) || (defined _MSC_VER && _MSC_VER > 1700)
 #include <inttypes.h>

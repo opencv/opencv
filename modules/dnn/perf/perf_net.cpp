@@ -141,7 +141,7 @@ PERF_TEST_P_(DNNTestNetwork, MobileNet_SSD_Caffe)
 {
     if (backend == DNN_BACKEND_HALIDE)
         throw SkipTestException("");
-    processNet("dnn/MobileNetSSD_deploy.caffemodel", "dnn/MobileNetSSD_deploy.prototxt", "",
+    processNet("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", "dnn/MobileNetSSD_deploy_19e3ec3.prototxt", "",
             Mat(cv::Size(300, 300), CV_32FC3));
 }
 
@@ -300,6 +300,18 @@ PERF_TEST_P_(DNNTestNetwork, EfficientDet)
     Mat inp;
     sample.convertTo(inp, CV_32FC3, 1.0/255);
     processNet("dnn/efficientdet-d0.pb", "dnn/efficientdet-d0.pbtxt", "", inp);
+}
+
+
+PERF_TEST_P_(DNNTestNetwork, EfficientDet_int8)
+{
+    if (target != DNN_TARGET_CPU || (backend != DNN_BACKEND_OPENCV &&
+        backend != DNN_BACKEND_TIMVX && backend != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)) {
+        throw SkipTestException("");
+    }
+    Mat inp = imread(findDataFile("dnn/dog416.png"));
+    resize(inp, inp, Size(320, 320));
+    processNet("", "dnn/tflite/coco_efficientdet_lite0_v1_1.0_quant_2021_09_06.tflite", "", inp);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets());

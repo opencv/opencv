@@ -5,6 +5,7 @@
 #include "precomp.hpp"
 
 #include <opencv2/imgproc.hpp>
+#include <opencv2/core/utils/logger.hpp>
 
 
 namespace cv {
@@ -143,13 +144,27 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
 
     CV_Assert(!images.empty());
 
-    int nch = images[0].channels();
-    Scalar scalefactor = param.scalefactor;
-
     if (param.ddepth == CV_8U)
     {
-        CV_Assert(scalefactor == Scalar::all(1.0) && "Scaling is not supported for CV_8U blob depth");
+        CV_Assert(param.scalefactor == Scalar::all(1.0) && "Scaling is not supported for CV_8U blob depth");
         CV_Assert(param.mean == Scalar() && "Mean subtraction is not supported for CV_8U blob depth");
+    }
+
+    int nch = images[0].channels();
+    Scalar scalefactor = param.scalefactor;
+    Scalar mean = param.mean;
+
+    if (param.swapRB)
+    {
+        if (nch > 2)
+        {
+            std::swap(mean[0], mean[2]);
+            std::swap(scalefactor[0], scalefactor[2]);
+        }
+        else
+        {
+            CV_LOG_WARNING(NULL, "Red/blue color swapping requires at least three image channels.");
+        }
     }
 
     for (size_t i = 0; i < images.size(); i++)
@@ -169,32 +184,24 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
                           size);
                 images[i] = images[i](crop);
             }
+            else if (param.paddingmode == DNN_PMODE_LETTERBOX)
+            {
+                float resizeFactor = std::min(size.width / (float)imgSize.width,
+                                              size.height / (float)imgSize.height);
+                int rh = int(imgSize.height * resizeFactor);
+                int rw = int(imgSize.width * resizeFactor);
+                resize(images[i], images[i], Size(rw, rh), INTER_LINEAR);
+
+                int top = (size.height - rh)/2;
+                int bottom = size.height - top - rh;
+                int left = (size.width - rw)/2;
+                int right = size.width - left - rw;
+                copyMakeBorder(images[i], images[i], top, bottom, left, right, BORDER_CONSTANT);
+            }
             else
             {
-                if (param.paddingmode == DNN_PMODE_LETTERBOX)
-                {
-                    float resizeFactor = std::min(size.width / (float)imgSize.width,
-                                                  size.height / (float)imgSize.height);
-                    int rh = int(imgSize.height * resizeFactor);
-                    int rw = int(imgSize.width * resizeFactor);
-                    resize(images[i], images[i], Size(rw, rh), INTER_LINEAR);
-
-                    int top = (size.height - rh)/2;
-                    int bottom = size.height - top - rh;
-                    int left = (size.width - rw)/2;
-                    int right = size.width - left - rw;
-                    copyMakeBorder(images[i], images[i], top, bottom, left, right, BORDER_CONSTANT);
-                }
-                else
-                    resize(images[i], images[i], size, 0, 0, INTER_LINEAR);
+                resize(images[i], images[i], size, 0, 0, INTER_LINEAR);
             }
-        }
-
-        Scalar mean = param.mean;
-        if (param.swapRB)
-        {
-            std::swap(mean[0], mean[2]);
-            std::swap(scalefactor[0], scalefactor[2]);
         }
 
         if (images[i].depth() == CV_8U && param.ddepth == CV_32F)
@@ -266,17 +273,20 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
             CV_Assert(image.depth() == blob_.depth());
             CV_Assert(image.channels() == image0.channels());
             CV_Assert(image.size() == image0.size());
-            if (param.swapRB)
+            if (nch > 2 && param.swapRB)
             {
                 Mat tmpRB;
                 cvtColor(image, tmpRB, COLOR_BGR2RGB);
                 tmpRB.copyTo(Mat(tmpRB.rows, tmpRB.cols, subMatType, blob.ptr((int)i, 0)));
             }
             else
+            {
                 image.copyTo(Mat(image.rows, image.cols, subMatType, blob.ptr((int)i, 0)));
+            }
         }
     }
     else
+    {
         CV_Error(Error::StsUnsupportedFormat, "Unsupported data layout in blobFromImagesWithParams function.");
 
     CV_Assert(blob_.total());

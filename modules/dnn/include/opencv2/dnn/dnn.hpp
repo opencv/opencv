@@ -69,9 +69,7 @@ CV__DNN_INLINE_NS_BEGIN
      */
     enum Backend
     {
-        //! DNN_BACKEND_DEFAULT equals to DNN_BACKEND_INFERENCE_ENGINE if
-        //! OpenCV is built with Intel OpenVINO or
-        //! DNN_BACKEND_OPENCV otherwise.
+        //! DNN_BACKEND_DEFAULT equals to OPENCV_DNN_BACKEND_DEFAULT, which can be defined using CMake or a configuration parameter
         DNN_BACKEND_DEFAULT = 0,
         DNN_BACKEND_HALIDE,
         DNN_BACKEND_INFERENCE_ENGINE,            //!< Intel OpenVINO computational backend
@@ -688,9 +686,6 @@ CV__DNN_INLINE_NS_BEGIN
          * @brief Ask network to use specific computation backend where it supported.
          * @param[in] backendId backend identifier.
          * @see Backend
-         *
-         * If OpenCV is compiled with Intel's Inference Engine library, DNN_BACKEND_DEFAULT
-         * means DNN_BACKEND_INFERENCE_ENGINE. Otherwise it equals to DNN_BACKEND_OPENCV.
          */
         CV_WRAP void setPreferableBackend(int backendId);
 

@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "../precomp.hpp"
+#include <opencv2/core/utils/logger.hpp>
 #include "opencv2/objdetect/aruco_board.hpp"
 
 #include <opencv2/objdetect/aruco_dictionary.hpp>
@@ -250,7 +251,11 @@ GridBoard::GridBoard() {}
 GridBoard::GridBoard(const Size& size, float markerLength, float markerSeparation,
                      const Dictionary &dictionary, InputArray ids):
     Board(new GridBoardImpl(dictionary, size, markerLength, markerSeparation)) {
-
+    float onePin = markerLength / ((float)(dictionary.markerSize+2));
+    if (markerSeparation < onePin*.7f) {
+        CV_LOG_WARNING(NULL, "Marker border " << markerSeparation << " is less than 70% of ArUco pin size "
+            << onePin << ". Please increase markerSeparation or decrease markerLength for stable board detection");
+    }
     size_t totalMarkers = (size_t) size.width*size.height;
     CV_Assert(ids.empty() || totalMarkers == ids.total());
     vector<vector<Point3f> > objPoints;
@@ -319,8 +324,9 @@ struct CharucoBoardImpl : Board::Impl {
     // vector of chessboard 3D corners precalculated
     std::vector<Point3f> chessboardCorners;
 
-    // for each charuco corner, nearest marker id and nearest marker corner id of each marker
+    // for each charuco corner, nearest marker index in ids array
     std::vector<std::vector<int> > nearestMarkerIdx;
+    // for each charuco corner, nearest marker corner id of each marker
     std::vector<std::vector<int> > nearestMarkerCorners;
 
     void createCharucoBoard();
@@ -540,7 +546,12 @@ CharucoBoard::CharucoBoard(const Size& size, float squareLength, float markerLen
     Board(new CharucoBoardImpl(dictionary, size, squareLength, markerLength)) {
 
     CV_Assert(size.width > 1 && size.height > 1 && markerLength > 0 && squareLength > markerLength);
-
+    float onePin = markerLength / ((float)(dictionary.markerSize+2));
+    float markerSeparation = (squareLength - markerLength)/2.f;
+    if (markerSeparation < onePin*.7f) {
+        CV_LOG_WARNING(NULL, "Marker border " << markerSeparation << " is less than 70% of ArUco pin size "
+            << onePin <<". Please increase markerSeparation or decrease markerLength for stable board detection");
+    }
     ids.copyTo(impl->ids);
 
     static_pointer_cast<CharucoBoardImpl>(impl)->createCharucoBoard();

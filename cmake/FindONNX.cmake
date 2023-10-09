@@ -16,7 +16,22 @@ if(ONNXRT_ROOT_DIR)
     CMAKE_FIND_ROOT_PATH_BOTH)
 endif()
 
+macro(detect_onxxrt_ep filename dir have_ep_var)
+    find_path(ORT_EP_INCLUDE ${filename} ${dir} CMAKE_FIND_ROOT_PATH_BOTH)
+    if(ORT_EP_INCLUDE)
+       set(${have_ep_var} TRUE)
+    endif()
+endmacro()
+
 if(ORT_LIB AND ORT_INCLUDE)
+  # Check DirectML Execution Provider availability
+  get_filename_component(dml_dir ${ONNXRT_ROOT_DIR}/include/onnxruntime/core/providers/dml ABSOLUTE)
+  detect_onxxrt_ep(
+      dml_provider_factory.h
+      ${dml_dir}
+      HAVE_ONNX_DML
+  )
+
   set(HAVE_ONNX TRUE)
   # For CMake output only
   set(ONNX_LIBRARIES "${ORT_LIB}" CACHE STRING "ONNX Runtime libraries")

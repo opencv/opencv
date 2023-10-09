@@ -73,14 +73,23 @@ __kernel void ReLU6Forward(const int count, __global const T* in, __global T* ou
   }
 }
 
+__kernel void ChannelsPReLUForward(const int count, const int channels, const int plane_size,
+                                   __global const T* in, __global T* out,
+                                   __global const KERNEL_ARG_DTYPE* slope_data)
+{
+  int index = get_global_id(0);
+  int c = (index / plane_size) % channels;
+  if(index < count)
+    out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[c];
+}
+
 __kernel void PReLUForward(const int count, const int channels, const int plane_size,
                            __global const T* in, __global T* out,
                            __global const KERNEL_ARG_DTYPE* slope_data)
 {
   int index = get_global_id(0);
-  int c = (index / plane_size) % channels;
   if(index < count)
-  out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[c];
+    out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[index];
 }
 
 __kernel void TanHForward(const int count, __global T* in, __global T* out) {

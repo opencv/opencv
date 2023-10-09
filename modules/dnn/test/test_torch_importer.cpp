@@ -566,14 +566,14 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
         }
         else if(target == DNN_TARGET_CUDA_FP16)
         {
-            normAssert(out, refBlob, "", 0.6, 25);
+            normAssert(out, refBlob, "", 0.6, 26);
         }
         else if (target == DNN_TARGET_CPU_FP16)
         {
             normAssert(out, refBlob, "", 0.62, 25);
         }
         else
-            normAssert(out, refBlob, "", 0.5, 1.1);
+            normAssert(out, refBlob, "", 0.5, 1.11);
     }
 }
 
