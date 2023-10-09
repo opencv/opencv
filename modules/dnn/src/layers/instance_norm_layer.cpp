@@ -47,7 +47,6 @@ public:
         const auto &bias = inputs[2];
 
         const auto input_shape = shape(input);
-        std::cout << "input_shape=" << input_shape << std::endl;
         CV_CheckGE(input_shape.size(), static_cast<size_t>(3), "InstanceNorm: input data should be at least three dimensional");
         size_t N = static_cast<size_t>(input_shape[0]),
                C = static_cast<size_t>(input_shape[1]);
@@ -60,7 +59,6 @@ public:
         const auto *bias_data = bias.ptr<const float>();
         auto *output_data = outputs[0].ptr<float>();
         size_t loops = N * C, step = static_cast<size_t>(total(input_shape, 2));
-        std::cout << "loops=" << loops << ", step=" << step << std::endl;
         auto compute_squared_norm = [step] (const float *data, float mean) {
             float sum = 0.f;
             for (size_t i = 0; i < step; i++) {

@@ -1848,12 +1848,11 @@ void ONNXImporter::parseInstanceNormalization(LayerParams& layerParams, const op
     int num_inputs = node_proto.input_size();
     CV_CheckEQ(num_inputs, 3, "DNN/ONNXImporter - InstanceNorm: three inputs are required");
 
+    bool found_input = constBlobs.find(node_proto.input(0)) != constBlobs.end();
     bool found_scale = constBlobs.find(node_proto.input(1)) != constBlobs.end();
-    CV_CheckTrue(found_scale, "DNN/ONNXImporter - InstanceNorm: input scale needs to be constant");
     bool found_bias = constBlobs.find(node_proto.input(2)) != constBlobs.end();
-    CV_CheckTrue(found_bias, "DNN/ONNXImporter - InstanceNorm: input bias needs to be constant");
 
-    if (constBlobs.find(node_proto.input(0)) != constBlobs.end()) {
+    if (found_input && found_scale && found_bias) {
         std::vector<Mat> inputs, output;
 
         Mat input = getBlob(node_proto, 0);
@@ -1866,7 +1865,7 @@ void ONNXImporter::parseInstanceNormalization(LayerParams& layerParams, const op
         runLayer(layerParams, inputs, output);
         addConstant(node_proto.output(0), output[0]);
     } else {
-        for (int i = 1; i < num_inputs; i++) {
+        auto add_const_node = [&] (int i) {
             LayerParams const_params;
             const_params.name = node_proto.input(i);
             const_params.type = "Const";
@@ -1876,7 +1875,10 @@ void ONNXImporter::parseInstanceNormalization(LayerParams& layerParams, const op
             opencv_onnx::NodeProto proto;
             proto.add_output(const_params.name);
             addLayer(const_params, proto);
-        }
+        };
+        if (found_input) { add_const_node(0); }
+        if (found_scale) { add_const_node(1); }
+        if (found_bias) { add_const_node(2); }
         addLayer(layerParams, node_proto);
     }
 }
