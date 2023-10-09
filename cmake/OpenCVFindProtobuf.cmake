@@ -123,8 +123,3 @@ if(HAVE_PROTOBUF)
     BUILD_PROTOBUF THEN "build (${Protobuf_VERSION})"
     ELSE "${__location} (${Protobuf_VERSION})")
 endif()
-
-if(HAVE_ABSL_STRINGS AND HAVE_ABSL_LOG)
-  list(APPEND CUSTOM_STATUS absl)
-  list(APPEND CUSTOM_STATUS_absl "      abseil-cpp:" "YES (${ABSL_STRINGS_VERSION})" )
-endif()

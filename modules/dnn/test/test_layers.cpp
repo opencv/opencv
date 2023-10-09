@@ -762,17 +762,17 @@ TEST_F(Layer_RNN_Test, get_set_test)
     EXPECT_EQ(shape(outputs[1]), shape(nT, nS, nH));
 }
 
-#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
 TEST_P(Test_Caffe_layers, Accum)
-#else
-TEST_P(Test_Caffe_layers, DISABLED_Accum)  // requires patched protobuf (available in OpenCV source tree only)
-#endif
 {
+#ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
+    throw SkipTestException("Requires patched protobuf");
+#else
     if (backend == DNN_BACKEND_OPENCV && target != DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
 
     testLayerUsingCaffeModels("accum", false, false, 0.0, 0.0, 2);
     testLayerUsingCaffeModels("accum_ref", false, false, 0.0, 0.0, 2);
+#endif
 }
 
 TEST_P(Test_Caffe_layers, FlowWarp)
@@ -790,43 +790,43 @@ TEST_P(Test_Caffe_layers, ChannelNorm)
     testLayerUsingCaffeModels("channel_norm", false, false);
 }
 
-#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
 TEST_P(Test_Caffe_layers, DataAugmentation)
-#else
-TEST_P(Test_Caffe_layers, DISABLED_DataAugmentation)  // requires patched protobuf (available in OpenCV source tree only)
-#endif
 {
+#ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
+    throw SkipTestException("Requires patched protobuf");
+#else
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     testLayerUsingCaffeModels("data_augmentation", true, false);
     testLayerUsingCaffeModels("data_augmentation_2x1", true, false);
     testLayerUsingCaffeModels("data_augmentation_8x6", true, false);
+#endif
 }
 
-#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
 TEST_P(Test_Caffe_layers, Resample)
-#else
-TEST_P(Test_Caffe_layers, DISABLED_Resample)  // requires patched protobuf (available in OpenCV source tree only)
-#endif
 {
+#ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
+    throw SkipTestException("Requires patched protobuf");
+#else
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend != DNN_BACKEND_OPENCV)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
     testLayerUsingCaffeModels("nearest_2inps", false, false, 0.0, 0.0, 2);
     testLayerUsingCaffeModels("nearest", false, false);
+#endif
 }
 
-#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
 TEST_P(Test_Caffe_layers, Correlation)
-#else
-TEST_P(Test_Caffe_layers, DISABLED_Correlation)  // requires patched protobuf (available in OpenCV source tree only)
-#endif
 {
+#ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
+    throw SkipTestException("Requires patched protobuf");
+#else
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER,
                      CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     testLayerUsingCaffeModels("correlation", false, false, 0.0, 0.0, 2);
+#endif
 }
 
 TEST_P(Test_Caffe_layers, Convolution2Inputs)
@@ -1667,12 +1667,11 @@ private:
     int outWidth, outHeight, zoomFactor;
 };
 
-#ifndef OPENCV_DNN_EXTERNAL_PROTOBUF
 TEST_P(Test_Caffe_layers, Interp)
-#else
-TEST_P(Test_Caffe_layers, DISABLED_Interp)  // requires patched protobuf (available in OpenCV source tree only)
-#endif
 {
+#ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
+    throw SkipTestException("Requires patched protobuf");
+#else
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021030000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);  // exception
@@ -1696,6 +1695,7 @@ TEST_P(Test_Caffe_layers, DISABLED_Interp)  // requires patched protobuf (availa
 
     // Test an implemented layer.
     testLayerUsingCaffeModels("layer_interp", false, false);
+#endif
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_Caffe_layers, dnnBackendsAndTargets());
