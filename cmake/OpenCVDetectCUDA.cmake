@@ -355,6 +355,14 @@ if(CUDA_FOUND)
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-Xptxas;-dlcm=ca")
   endif()
 
+  # Tell NVCC the maximum number of threads to be used to execute the compilation steps in parallel
+  # (option --threads was introduced in version 11.2)
+  if(NOT CUDA_VERSION VERSION_LESS "11.2")
+    if(NOT $ENV{CMAKE_BUILD_PARALLEL_LEVEL} STREQUAL "")
+      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "--threads=$ENV{CMAKE_BUILD_PARALLEL_LEVEL}")
+    endif()
+  endif()
+
   message(STATUS "CUDA NVCC target flags: ${CUDA_NVCC_FLAGS}")
 
   OCV_OPTION(CUDA_FAST_MATH "Enable --use_fast_math for CUDA compiler " OFF)
