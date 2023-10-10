@@ -250,7 +250,9 @@ ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})
 
 if(NOT BUILD_PROTOBUF)
-  ocv_target_compile_definitions(opencv_test_dnn PRIVATE "OPENCV_DNN_EXTERNAL_PROTOBUF=1")
+  if(TARGET opencv_test_dnn)
+    ocv_target_compile_definitions(opencv_test_dnn PRIVATE "OPENCV_DNN_EXTERNAL_PROTOBUF=1")
+  endif()
 endif()
 
 set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
