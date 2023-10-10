@@ -678,6 +678,8 @@ protected:
     detail::ParamDesc m_desc;
 };
 
+GAPI_EXPORTS cv::GKernelPackage kernels();
+
 } // namespace ov
 } // namespace gapi
 } // namespace cv
