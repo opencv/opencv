@@ -1876,9 +1876,9 @@ void ONNXImporter::parseInstanceNormalization(LayerParams& layerParams, const op
             proto.add_output(const_params.name);
             addLayer(const_params, proto);
         };
-        if (found_input) { add_const_node(0); }
-        if (found_scale) { add_const_node(1); }
-        if (found_bias) { add_const_node(2); }
+        if (found_input && layer_id.find(node_proto.input(0)) == layer_id.end()) { add_const_node(0); }
+        if (found_scale && layer_id.find(node_proto.input(1)) == layer_id.end()) { add_const_node(1); }
+        if (found_bias && layer_id.find(node_proto.input(2)) == layer_id.end()) { add_const_node(2); }
         addLayer(layerParams, node_proto);
     }
 }
