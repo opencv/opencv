@@ -178,6 +178,26 @@ namespace cv {
                     fused_layer_names.push_back(last_layer);
                 }
 
+                void setCrop(int crop_height, int crop_width, int flip, int exposure, int saturation, int angle)
+                {
+                    cv::dnn::LayerParams crop_param;
+                    crop_param.type = "Crop";
+
+                    darknet::LayerParameter lp;
+                    std::string layer_name = cv::format("crop_%d", layer_id);
+
+                    lp.layer_name = layer_name;
+                    lp.layer_type = crop_param.type;
+                    lp.layerParams = crop_param;
+                    lp.bottom_indexes.push_back(last_layer);
+                    last_layer = layer_name;
+                    net->layers.push_back(lp);
+
+                    layer_id++;
+                    fused_layer_names.push_back(last_layer);
+                }
+
+
                 cv::dnn::LayerParams getParamFullyConnected(int output)
                 {
                     cv::dnn::LayerParams params;
@@ -897,6 +917,16 @@ namespace cv {
 
                         setParams.setPermute(false);
                         setParams.setYolo(classes, mask_vec, anchors_vec, thresh, nms_threshold, scale_x_y, new_coords);
+                    }
+                    else if (layer_type == "crop")
+                    {
+                        int crop_height = getParam<int>(layer_params, "crop_height", 224);
+                        int crop_width = getParam<int>(layer_params, "crop_width", 224);
+                        int flip = getParam<int>(layer_params, "flip", 1);
+                        int exposure = getParam<int>(layer_params, "exposure", 1);
+                        int saturation = getParam<int>(layer_params, "saturation", 1);
+                        int angle = getParam<int>(layer_params, "angle", 0);
+                        setParams.setCrop(crop_height, crop_width, flip, exposure, saturation, angle);
                     }
                     else {
                         CV_Error(cv::Error::StsParseError, "Unknown layer type: " + layer_type);
