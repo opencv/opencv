@@ -328,7 +328,9 @@ int QRCodeEncoderImpl::versionAuto(const std::string& input_str)
     encodeAuto(input_str, payload_tmp, &mode);
 
     vector<int> possible_version;
-    estimateVersion((int)input_str.length(), mode, possible_version);
+    if (!estimateVersion((int)input_str.length(), mode, possible_version)) {
+        return -1;
+    }
 
     const auto tmp_version = findVersionCapacity((int)payload_tmp.size(), ecc_level,
                             possible_version.front(), possible_version.back() + 1);
