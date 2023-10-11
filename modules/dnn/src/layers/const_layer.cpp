@@ -80,6 +80,7 @@ public:
 
         std::vector<Mat> outputs;
         outputs_arr.getMatVector(outputs);
+        blobs[0].convertTo(blobs[0], outputs[0].type());
         blobs[0].copyTo(outputs[0]);
     }
 

@@ -383,7 +383,7 @@ void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
     {
         inpShapes[i] = shape(inputs[i]);
         if (i > 0 && ddepth != inputs[i].depth())
-            CV_Error(Error::StsNotImplemented, "Mixed input data types.");
+            CV_Error(Error::StsNotImplemented, cv::format("Mixed input data types. Required type: %d, actual type: %d", ddepth, inputs[i].depth()));
 
         // Quantize and Dequantize layer have different output type than input.
         if (params.type != "Quantize" && params.type != "Dequantize")
@@ -2820,11 +2820,7 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
         std::vector<Mat> inputs, output;
         for (size_t i = 0; i < node_proto.input_size(); ++i)
         {
-            auto input_i = getBlob(node_proto, i);
-            if (input_i.type() != CV_32F) {
-                input_i.convertTo(input_i, CV_32F);
-            }
-            inputs.push_back(input_i);
+            inputs.push_back(getBlob(node_proto, i));
         }
         runLayer(layerParams, inputs, output);
         CV_Assert(output.size() == 1);
@@ -2838,9 +2834,6 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
             if (layer_id.find(node_proto.input(i)) == layer_id.end())
             {
                 Mat inp = getBlob(node_proto, i);
-                if (inp.type() != CV_32F) {
-                    inp.convertTo(inp, CV_32F);
-                }
                 // for cases like a tensor of shape (2,), it will be loaded as shape (2, 1) in OpenCV Mat,
                 // but for correct broadcast, we need to make it of shape (1, 2)
                 if (constBlobsExtraInfo.find(node_proto.input(i)) != constBlobsExtraInfo.end())
