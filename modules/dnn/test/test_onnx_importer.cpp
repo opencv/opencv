@@ -230,22 +230,6 @@ TEST_P(Test_ONNX_layers, Gather)
     testONNXModels("gather", npy, 0, 0, false, false);
 }
 
-/*
-    TODO: need to enable these tests in conformance list instead
-*/
-TEST_P(Test_ONNX_layers, GatherElements_0)
-{
-    testONNXModels("test_gather_elements_0", pb);
-}
-TEST_P(Test_ONNX_layers, GatherElements_1)
-{
-    testONNXModels("test_gather_elements_1", pb);
-}
-TEST_P(Test_ONNX_layers, GatherElements_negative_indices)
-{
-    testONNXModels("test_gather_elements_negative_indices", pb);
-}
-
 TEST_P(Test_ONNX_layers, Gather_Scalar)
 {
     testONNXModels("gather_scalar", npy, 0, 0, false, false);
