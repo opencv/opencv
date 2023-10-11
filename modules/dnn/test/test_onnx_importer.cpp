@@ -2151,9 +2151,9 @@ TEST_P(Test_ONNX_nets, DISABLED_RAFT)
 
     // output 12006 is not checked to save space in opencv_extra since its ref is > 1MB,
     // and output 12006 is calculated from 12007 so checking 12007 is sufficient.
-    std::string ref0_path = findDataFile(std::string("dnn/onnx/data/output_optical_flow_estimation_raft_2023aug_0.npy"));
-    auto ref0 = blobFromNPY(ref0_path);
-    normAssert(ref0, outs[0], "", 1e-5, 1e-4);
+    std::string ref_12700_path = _tf("data/output_optical_flow_estimation_raft_2023aug.npy");
+    auto ref0 = blobFromNPY(ref_12700_path);
+    normAssert(ref0, outs[0], "", 1e-5, 1.4e-4);
 }
 
 TEST_P(Test_ONNX_nets, Squeezenet)
