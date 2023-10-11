@@ -2821,10 +2821,10 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
         for (size_t i = 0; i < node_proto.input_size(); ++i)
         {
             auto input_i = getBlob(node_proto, i);
-            if (i == 1) {
+            if (input_i.type() != CV_32F) {
                 input_i.convertTo(input_i, CV_32F);
             }
-            inputs.push_back(getBlob(node_proto, i));
+            inputs.push_back(input_i);
         }
         runLayer(layerParams, inputs, output);
         CV_Assert(output.size() == 1);
@@ -2838,7 +2838,7 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
             if (layer_id.find(node_proto.input(i)) == layer_id.end())
             {
                 Mat inp = getBlob(node_proto, i);
-                if (i == 1) {
+                if (inp.type() != CV_32F) {
                     inp.convertTo(inp, CV_32F);
                 }
                 // for cases like a tensor of shape (2,), it will be loaded as shape (2, 1) in OpenCV Mat,
