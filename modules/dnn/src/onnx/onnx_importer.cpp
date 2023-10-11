@@ -2820,6 +2820,10 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
         std::vector<Mat> inputs, output;
         for (size_t i = 0; i < node_proto.input_size(); ++i)
         {
+            auto input_i = getBlob(node_proto, i);
+            if (i == 1) {
+                input_i.convertTo(input_i, CV_32F);
+            }
             inputs.push_back(getBlob(node_proto, i));
         }
         runLayer(layerParams, inputs, output);
@@ -2834,6 +2838,9 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
             if (layer_id.find(node_proto.input(i)) == layer_id.end())
             {
                 Mat inp = getBlob(node_proto, i);
+                if (i == 1) {
+                    inp.convertTo(inp, CV_32F);
+                }
                 // for cases like a tensor of shape (2,), it will be loaded as shape (2, 1) in OpenCV Mat,
                 // but for correct broadcast, we need to make it of shape (1, 2)
                 if (constBlobsExtraInfo.find(node_proto.input(i)) != constBlobsExtraInfo.end())
