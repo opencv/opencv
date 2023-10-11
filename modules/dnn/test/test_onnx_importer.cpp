@@ -230,40 +230,6 @@ TEST_P(Test_ONNX_layers, Gather)
     testONNXModels("gather", npy, 0, 0, false, false);
 }
 
-TEST_P(Test_ONNX_layers, DISABLED_RAFT)
-{
-    std::string weight_path = _tf("models/optical_flow_estimation_raft_2023aug.onnx", false);
-    std::string img0_path = findDataFile(std::string("gpu/opticalflow/frame0.png"));
-    std::string img1_path = findDataFile(std::string("gpu/opticalflow/frame1.png"));
-
-    Size target_size{480, 360};
-    auto img0 = imread(img0_path);
-    auto img1 = imread(img1_path);
-    cvtColor(img0, img0, COLOR_BGR2RGB);
-    cvtColor(img1, img1, COLOR_BGR2RGB);
-    Mat blob0, blob1;
-    resize(img0, blob0, target_size);
-    resize(img1, blob1, target_size);
-    blob0 = blobFromImage(blob0);
-    blob1 = blobFromImage(blob1);
-
-    auto net = readNet(weight_path);
-    net.setInput(blob0, "0");
-    net.setInput(blob1, "1");
-    auto out0 = net.forward("12007");
-    auto out1 = net.forward("12006");
-
-    // load ref
-    std::string ref0_path = findDataFile(std::string("dnn/onnx/data/output_optical_flow_estimation_raft_2023aug_0.npy"));
-    std::string ref1_path = findDataFile(std::string("dnn/onnx/data/output_optical_flow_estimation_raft_2023aug_1.npy"));
-    auto ref0 = blobFromNPY(ref0_path);
-    auto ref1 = blobFromNPY(ref1_path);
-
-    // cmp
-    normAssert(ref0, out0, "", 1e-5, 1e-4);
-    normAssert(ref1, out1, "", 1e-5, 1e-4);
-}
-
 /*
     TODO: need to enable these tests in conformance list instead
 */
@@ -2177,6 +2143,33 @@ TEST_P(Test_ONNX_nets, Alexnet)
 
     normAssert(out, ref, "", default_l1,  default_lInf);
     expectNoFallbacksFromIE(net);
+}
+
+// Waiting for https://github.com/opencv/opencv/pull/24386 for a bug fix to get correct result
+TEST_P(Test_ONNX_nets, DISABLED_RAFT)
+{
+    std::string weight_path = _tf("models/optical_flow_estimation_raft_2023aug.onnx", false);
+    std::string img0_path = findDataFile(std::string("gpu/opticalflow/frame0.png"));
+    std::string img1_path = findDataFile(std::string("gpu/opticalflow/frame1.png"));
+
+    Size target_size{480, 360};
+    auto img0 = imread(img0_path);
+    auto img1 = imread(img1_path);
+    auto blob0 = blobFromImage(img0, 1.0, target_size, 0, true);
+    auto blob1 = blobFromImage(img1, 1.0, target_size, 0, true);
+
+    auto net = readNet(weight_path);
+    net.setInput(blob0, "0");
+    net.setInput(blob1, "1");
+    std::vector<std::string> outnames{"12007", "12006"};
+    std::vector<Mat> outs;
+    net.forward(outs, outnames);
+
+    // output 12006 is not checked to save space in opencv_extra since its ref is > 1MB,
+    // and output 12006 is calculated from 12007 so checking 12007 is sufficient.
+    std::string ref0_path = findDataFile(std::string("dnn/onnx/data/output_optical_flow_estimation_raft_2023aug_0.npy"));
+    auto ref0 = blobFromNPY(ref0_path);
+    normAssert(ref0, outs[0], "", 1e-5, 1e-4);
 }
 
 TEST_P(Test_ONNX_nets, Squeezenet)
