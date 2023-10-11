@@ -3701,10 +3701,10 @@ stored in two planes.
 
 This function only supports YUV420 to RGB conversion as of now.
 
-@param src1: 8-bit image (#CV_8U) of the Y plane.
-@param src2: image containing interleaved U/V plane.
-@param dst: output image.
-@param code: Specifies the type of conversion. It can take any of the following values:
+@param src1 8-bit image (#CV_8U) of the Y plane.
+@param src2 image containing interleaved U/V plane.
+@param dst output image.
+@param code Specifies the type of conversion. It can take any of the following values:
 - #COLOR_YUV2BGR_NV12
 - #COLOR_YUV2RGB_NV12
 - #COLOR_YUV2BGRA_NV12

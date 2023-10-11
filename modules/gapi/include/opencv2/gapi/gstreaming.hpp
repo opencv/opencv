@@ -409,7 +409,7 @@ namespace streaming {
 struct GAPI_EXPORTS_W_SIMPLE queue_capacity
 {
     GAPI_WRAP
-    explicit queue_capacity(size_t cap = 1) : capacity(cap) { };
+    explicit queue_capacity(size_t cap = 1) : capacity(cap) { }
     GAPI_PROP_RW
     size_t capacity;
 };

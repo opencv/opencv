@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include "hal_replacement.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
 
 #include <algorithm> // std::swap_ranges
@@ -802,6 +803,9 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     _dst.create( size, type );
     Mat dst = _dst.getMat();
 
+    CALL_HAL(flip, cv_hal_flip, type, src.ptr(), src.step, src.cols, src.rows,
+             dst.ptr(), dst.step, flip_mode);
+
     CV_IPP_RUN_FAST(ipp_flip(src, dst, flip_mode));
 
     size_t esz = CV_ELEM_SIZE(type);
@@ -1075,10 +1079,8 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     }
 }
 
-void rotate(InputArray _src, OutputArray _dst, int rotateMode)
+static void rotateImpl(InputArray _src, OutputArray _dst, int rotateMode)
 {
-    CV_Assert(_src.dims() <= 2);
-
     switch (rotateMode)
     {
     case ROTATE_90_CLOCKWISE:
@@ -1095,6 +1097,53 @@ void rotate(InputArray _src, OutputArray _dst, int rotateMode)
     default:
         break;
     }
+}
+
+void rotate(InputArray _src, OutputArray _dst, int rotateMode)
+{
+    CV_Assert(_src.dims() <= 2);
+    int angle;
+
+    if (_dst.isUMat())
+    {
+        rotateImpl(_src, _dst, rotateMode);
+        return;
+    }
+
+    Mat src = _src.getMat();
+    int type = src.type();
+    if( src.empty() )
+    {
+        _dst.release();
+        return;
+    }
+
+    switch (rotateMode)
+    {
+    case ROTATE_90_CLOCKWISE:
+        _dst.create(src.cols, src.rows, type);
+        angle = 90;
+        break;
+    case ROTATE_180:
+        _dst.create(src.rows, src.cols, type);
+        angle = 180;
+        break;
+    case ROTATE_90_COUNTERCLOCKWISE:
+        _dst.create(src.cols, src.rows, type);
+        angle = 270;
+        break;
+    default:
+        _dst.create(src.rows, src.cols, type);
+        angle = 0;
+        break;
+    }
+
+    Mat dst = _dst.getMat();
+    CALL_HAL(rotate90, cv_hal_rotate90, type, src.ptr(), src.step, src.cols, src.rows,
+             dst.ptr(), dst.step, angle);
+
+    // use src (Mat) since _src (InputArray) is updated by _dst.create() when in-place
+    rotateImpl(src, _dst, rotateMode);
 }
 
 }  // namespace

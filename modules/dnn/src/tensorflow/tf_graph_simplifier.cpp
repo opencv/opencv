@@ -1120,15 +1120,16 @@ void removePhaseSwitches(tensorflow::GraphDef& net)
             inpName = inpName.substr(1 + (int)inpName.find('^'), inpName.rfind(':'));
             nodesMapIt = nodesMap.find(inpName);
             CV_Assert(nodesMapIt != nodesMap.end());
-
             int inpNodeId = nodesMapIt->second;
+
+            CV_CheckGT(numConsumers[inpNodeId], 0,
+                       "Input node of the current node should have at least one output node");
             if (numConsumers[inpNodeId] == 1)
             {
                 mergeOpSubgraphNodes.push(inpNodeId);
                 nodesToRemove.push_back(inpNodeId);
             }
-            else if (numConsumers[inpNodeId] > 0)
-                numConsumers[inpNodeId] -= 1;
+            numConsumers[inpNodeId] -= 1;
         }
     }
     std::sort(nodesToRemove.begin(), nodesToRemove.end());

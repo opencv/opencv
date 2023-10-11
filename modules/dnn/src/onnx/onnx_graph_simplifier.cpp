@@ -821,6 +821,16 @@ public:
     }
 };
 
+/*  Constant folding shape for Expand.
+
+    Before fusion:
+             +--------------------------------------------------------------+ (X)
+             |                                                              |
+    ConstantOfShape[input=[4]] -> Mul[B=-1] -> Equal[A=[2, -1, -1, -1]] -> Where[Y=[2, -1, -1, -1]] -> Expand
+             \                                                           \
+             value=[1]                                                   (condition)
+
+*/
 class ExpandSubgraph : public Subgraph
 {
 public:
@@ -837,6 +847,128 @@ public:
         addNodeToMatch("Expand", input, where);
         setFusedNode("Expand", input, shape);
     }
+
+    static int extractValue(const Ptr<ImportGraphWrapper>& net, int node_id, int64_t &val) {
+        Ptr<ImportNodeWrapper> node_wrapper = net->getNode(node_id);
+        opencv_onnx::NodeProto* node = node_wrapper.dynamicCast<ONNXNodeWrapper>()->node;
+
+        if (node->attribute_size() == 0) {
+            val = 0;
+            return 1;
+        } else if (node->attribute_size() == 1) {
+            opencv_onnx::AttributeProto attr = node->attribute(0);
+            if (attr.name() != "value") {
+                return 0;
+            }
+            Mat mat_value = getMatFromTensor(attr.t());
+            switch (mat_value.type()) {
+                case CV_32S: {
+                    val = static_cast<int64_t>(mat_value.at<int>());
+                } break;
+                default: return 0;
+            }
+            return 1;
+        }
+        return 0;
+    }
+
+    static std::vector<int64_t> extractConstant(const Ptr<ImportGraphWrapper>& net, int node_id, int input_id)
+    {
+        auto onnx_net = net.dynamicCast<ONNXGraphWrapper>();
+        int initializer_id = onnx_net->getInputInitializerId(node_id, input_id);
+        Mat mat_constant;
+        if (initializer_id != -1) // initializer
+        {
+            mat_constant = onnx_net->getMatFromInitializer(initializer_id);
+        }
+        else
+        {
+            const Ptr<ImportNodeWrapper> node = net->getNode(node_id);
+            int constant_id = getInputNodeId(net, node, input_id);
+            Ptr<ImportNodeWrapper> constant_ptr = net->getNode(constant_id);
+            opencv_onnx::NodeProto* constant_node = constant_ptr.dynamicCast<ONNXNodeWrapper>()->node;
+            opencv_onnx::TensorProto constant_proto = constant_node->attribute(0).t();
+            mat_constant = getMatFromTensor(constant_proto);
+        }
+
+        std::vector<int64_t> retvals{mat_constant.begin<int>(), mat_constant.end<int>()};
+        return retvals;
+    }
+
+    virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
+                       std::vector<int>& matchedNodesIds,
+                       std::vector<int>& targetNodesIds) CV_OVERRIDE {
+        if (Subgraph::match(net, nodeId, matchedNodesIds, targetNodesIds)) {
+            int64_t value_ConstantOfShape;
+            if (!extractValue(net, matchedNodesIds[0], value_ConstantOfShape)) {
+                return false;
+            }
+            std::vector<int64_t> input_ConstantOfShape = extractConstant(net, matchedNodesIds[0], 0);
+            if (input_ConstantOfShape.size() != static_cast<size_t>(1)) {
+                return false;
+            }
+
+            auto B_Mul = extractConstant(net, matchedNodesIds[1], 1);
+            if (B_Mul.size() != static_cast<size_t>(1)) {
+                return false;
+            }
+
+            auto A_Equal = extractConstant(net, matchedNodesIds[2], 0);
+            if (A_Equal.size() != static_cast<size_t>(input_ConstantOfShape[0])) {
+                return false;
+            }
+
+            auto Y_Where = extractConstant(net, matchedNodesIds[3], 2);
+            if (Y_Where.size() != A_Equal.size()) {
+                return false;
+            }
+
+            // run ConstantOfShape
+            std::vector<int64_t> output_ConstantOfShape(std::accumulate(input_ConstantOfShape.begin(), input_ConstantOfShape.end(), static_cast<int64_t>(1), std::multiplies<int64_t>()), value_ConstantOfShape);
+            // run Mul
+            std::vector<int64_t> output_Mul = output_ConstantOfShape;
+            for (size_t i = 0; i < output_Mul.size(); i++) {
+                int64_t b = B_Mul[0];
+                output_Mul[i] *= b;
+            }
+            // run Equal
+            std::vector<bool> output_Equal(output_Mul.size());
+            for (int i = 0; i < output_Equal.size(); i++) {
+                if (A_Equal[i] == output_Mul[i]) {
+                    output_Equal[i] = true;
+                } else {
+                    output_Equal[i] = false;
+                }
+            }
+            // run Where
+            std::vector<int64_t> output_Where(output_Equal.size());
+            for (int i = 0; i < output_Where.size(); i++) {
+                if (output_Equal[i]) {
+                    output_Where[i] = output_ConstantOfShape[i];
+                } else {
+                    output_Where[i] = Y_Where[i];
+                }
+            }
+            shape = output_Where;
+
+            return true;
+        }
+        return false;
+    }
+
+    virtual void finalize(const Ptr<ImportGraphWrapper>& graph,
+                          const Ptr<ImportNodeWrapper>& fusedNode,
+                          std::vector<Ptr<ImportNodeWrapper> >& inputs) CV_OVERRIDE {
+        // replace values
+        opencv_onnx::NodeProto* node_shape = inputs[1].dynamicCast<ONNXNodeWrapper>()->node;
+        auto attr = node_shape->mutable_attribute()->Mutable(0);
+        auto tensor = attr->mutable_t();
+        tensor->clear_raw_data();
+        tensor->set_raw_data(std::string((const char*)(shape.data()), shape.size() * sizeof(int64_t)));
+    }
+
+protected:
+    std::vector<int64_t> shape;
 };
 
 class MishSubgraph : public Subgraph

@@ -228,7 +228,7 @@ if(CUDA_FOUND)
     endif()
   endmacro()
 
-  set(__cuda_arch_ptx "")
+  set(__cuda_arch_ptx ${CUDA_ARCH_PTX})
   if(CUDA_GENERATION STREQUAL "Fermi")
     set(__cuda_arch_bin ${_arch_fermi})
   elseif(CUDA_GENERATION STREQUAL "Kepler")
@@ -259,7 +259,7 @@ if(CUDA_FOUND)
     set(__cuda_arch_bin ${CUDA_ARCH_BIN})
   endif()
 
-  if(NOT DEFINED __cuda_arch_bin)
+  if(NOT DEFINED __cuda_arch_bin AND NOT DEFINED __cuda_arch_ptx)
     if(ARM)
       set(__cuda_arch_bin "3.2")
       set(__cuda_arch_ptx "")
@@ -295,6 +295,7 @@ if(CUDA_FOUND)
           ${_arch_lovelace}
           ${_arch_hopper}
       )
+      list(GET __cuda_arch_bin -1 __cuda_arch_ptx)
     endif()
   endif()
 

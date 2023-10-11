@@ -56,40 +56,38 @@ template<typename _Tp> static inline _Tp splineInterpolate(_Tp x, const _Tp* tab
     return ((tab[3]*x + tab[2])*x + tab[1])*x + tab[0];
 }
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 
 template<typename _Tp> static inline cv::v_float32 splineInterpolate(const cv::v_float32& x, const _Tp* tab, int n)
 {
     using namespace cv;
     v_int32 ix = v_min(v_max(v_trunc(x), vx_setzero_s32()), vx_setall_s32(n-1));
-    cv::v_float32 xx = x - v_cvt_f32(ix);
-    ix = ix << 2;
+    cv::v_float32 xx = v_sub(x, v_cvt_f32(ix));
+    ix = v_shl<2>(ix);
 
-    v_float32 t[4];
+    v_float32 t0, t1, t2, t3;
     // assume that v_float32::nlanes == v_int32::nlanes
-    if(v_float32::nlanes == 4)
+    if(VTraits<v_float32>::vlanes() == 4)
     {
-#if CV_SIMD_WIDTH == 16
         int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) idx[4];
         v_store_aligned(idx, ix);
-        v_float32x4 tt[4];
-        tt[0] = v_load(tab + idx[0]);
-        tt[1] = v_load(tab + idx[1]);
-        tt[2] = v_load(tab + idx[2]);
-        tt[3] = v_load(tab + idx[3]);
-        v_transpose4x4(tt[0], tt[1], tt[2], tt[3],
-                        t[0],  t[1],  t[2],  t[3]);
-#endif
+        v_float32 tt0, tt1, tt2, tt3;
+        tt0 = vx_load(tab + idx[0]);
+        tt1 = vx_load(tab + idx[1]);
+        tt2 = vx_load(tab + idx[2]);
+        tt3 = vx_load(tab + idx[3]);
+        v_transpose4x4(tt0, tt1, tt2, tt3,
+                        t0,  t1,  t2,  t3);
     }
     else
     {
-        t[0] = v_lut(tab + 0, ix);
-        t[1] = v_lut(tab + 1, ix);
-        t[2] = v_lut(tab + 2, ix);
-        t[3] = v_lut(tab + 3, ix);
+        t0 = v_lut(tab + 0, ix);
+        t1 = v_lut(tab + 1, ix);
+        t2 = v_lut(tab + 2, ix);
+        t3 = v_lut(tab + 3, ix);
     }
 
-    return v_fma(v_fma(v_fma(t[3], xx, t[2]), xx, t[1]), xx, t[0]);
+    return v_fma(v_fma(v_fma(t3, xx, t2), xx, t1), xx, t0);
 }
 
 #endif
@@ -207,8 +205,8 @@ struct RGB2XYZ_f<float>
               C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
               C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
         int i = 0;
-#if CV_SIMD
-        const int vsize = v_float32::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_float32>::vlanes();
         v_float32 vc0 = vx_setall_f32(C0), vc1 = vx_setall_f32(C1), vc2 = vx_setall_f32(C2);
         v_float32 vc3 = vx_setall_f32(C3), vc4 = vx_setall_f32(C4), vc5 = vx_setall_f32(C5);
         v_float32 vc6 = vx_setall_f32(C6), vc7 = vx_setall_f32(C7), vc8 = vx_setall_f32(C8);
@@ -226,9 +224,9 @@ struct RGB2XYZ_f<float>
             }
 
             v_float32 x, y, z;
-            x = v_fma(b, vc0, v_fma(g, vc1, r*vc2));
-            y = v_fma(b, vc3, v_fma(g, vc4, r*vc5));
-            z = v_fma(b, vc6, v_fma(g, vc7, r*vc8));
+            x = v_fma(b, vc0, v_fma(g, vc1, v_mul(r, vc2)));
+            y = v_fma(b, vc3, v_fma(g, vc4, v_mul(r, vc5)));
+            z = v_fma(b, vc6, v_fma(g, vc7, v_mul(r, vc8)));
 
             v_store_interleave(dst, x, y, z);
         }
@@ -313,8 +311,8 @@ struct RGB2XYZ_i<uchar>
             C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
             C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
 
-#if CV_SIMD
-        const int vsize = v_uint8::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_uint8>::vlanes();
         int descaleShift = 1 << (shift-1);
         v_int16 vdescale = vx_setall_s16((short)descaleShift);
         v_int16 cxbg, cxr1, cybg, cyr1, czbg, czr1;
@@ -349,27 +347,36 @@ struct RGB2XYZ_i<uchar>
             sg0 = v_reinterpret_as_s16(g0); sg1 = v_reinterpret_as_s16(g1);
             sb0 = v_reinterpret_as_s16(b0); sb1 = v_reinterpret_as_s16(b1);
 
-            v_int16 bg[4], rd[4];
-            v_zip(sb0, sg0, bg[0], bg[1]);
-            v_zip(sb1, sg1, bg[2], bg[3]);
-            v_zip(sr0, vdescale, rd[0], rd[1]);
-            v_zip(sr1, vdescale, rd[2], rd[3]);
+            v_int16 bg0, bg1, bg2, bg3, rd0, rd1, rd2, rd3;
+            v_zip(sb0, sg0, bg0, bg1);
+            v_zip(sb1, sg1, bg2, bg3);
+            v_zip(sr0, vdescale, rd0, rd1);
+            v_zip(sr1, vdescale, rd2, rd3);
 
-            v_uint32 vx[4], vy[4], vz[4];
-            for(int j = 0; j < 4; j++)
-            {
-                vx[j] = v_reinterpret_as_u32(v_dotprod(bg[j], cxbg) + v_dotprod(rd[j], cxr1)) >> shift;
-                vy[j] = v_reinterpret_as_u32(v_dotprod(bg[j], cybg) + v_dotprod(rd[j], cyr1)) >> shift;
-                vz[j] = v_reinterpret_as_u32(v_dotprod(bg[j], czbg) + v_dotprod(rd[j], czr1)) >> shift;
-            }
+            v_uint32 vx0, vx1, vx2, vx3;
+            v_uint32 vy0, vy1, vy2, vy3;
+            v_uint32 vz0, vz1, vz2, vz3;
+
+            vx0 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg0, cxbg), v_dotprod(rd0, cxr1))));
+            vy0 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg0, cybg), v_dotprod(rd0, cyr1))));
+            vz0 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg0, czbg), v_dotprod(rd0, czr1))));
+            vx1 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg1, cxbg), v_dotprod(rd1, cxr1))));
+            vy1 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg1, cybg), v_dotprod(rd1, cyr1))));
+            vz1 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg1, czbg), v_dotprod(rd1, czr1))));
+            vx2 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg2, cxbg), v_dotprod(rd2, cxr1))));
+            vy2 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg2, cybg), v_dotprod(rd2, cyr1))));
+            vz2 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg2, czbg), v_dotprod(rd2, czr1))));
+            vx3 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg3, cxbg), v_dotprod(rd3, cxr1))));
+            vy3 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg3, cybg), v_dotprod(rd3, cyr1))));
+            vz3 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg3, czbg), v_dotprod(rd3, czr1))));
 
             v_uint16 x0, x1, y0, y1, z0, z1;
-            x0 = v_pack(vx[0], vx[1]);
-            x1 = v_pack(vx[2], vx[3]);
-            y0 = v_pack(vy[0], vy[1]);
-            y1 = v_pack(vy[2], vy[3]);
-            z0 = v_pack(vz[0], vz[1]);
-            z1 = v_pack(vz[2], vz[3]);
+            x0 = v_pack(vx0, vx1);
+            x1 = v_pack(vx2, vx3);
+            y0 = v_pack(vy0, vy1);
+            y1 = v_pack(vy2, vy3);
+            z0 = v_pack(vz0, vz1);
+            z1 = v_pack(vz2, vz3);
 
             v_uint8 x, y, z;
             x = v_pack(x0, x1);
@@ -424,8 +431,8 @@ struct RGB2XYZ_i<ushort>
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
             C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
             C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-#if CV_SIMD
-        const int vsize = v_uint16::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_uint16>::vlanes();
         const int descaleShift = 1 << (shift-1);
         v_int16 vdescale = vx_setall_s16(descaleShift);
         v_int16 vc0 = vx_setall_s16((short)C0), vc1 = vx_setall_s16((short)C1), vc2 = vx_setall_s16((short)C2);
@@ -464,29 +471,29 @@ struct RGB2XYZ_i<ushort>
             v_int16 ymr, ymg, ymb;
             v_int16 zmr, zmg, zmb;
 
-            v_int16 mr = sr < zero, mg = sg < zero, mb = sb < zero;
+            v_int16 mr = v_lt(sr, zero), mg = v_lt(sg, zero), mb = v_lt(sb, zero);
 
-            xmb = mb & vc0;
-            xmg = mg & vc1;
-            xmr = mr & vc2;
-            ymb = mb & vc3;
-            ymg = mg & vc4;
-            ymr = mr & vc5;
-            zmb = mb & vc6;
-            zmg = mg & vc7;
-            zmr = mr & vc8;
+            xmb = v_and(mb, vc0);
+            xmg = v_and(mg, vc1);
+            xmr = v_and(mr, vc2);
+            ymb = v_and(mb, vc3);
+            ymg = v_and(mg, vc4);
+            ymr = v_and(mr, vc5);
+            zmb = v_and(mb, vc6);
+            zmg = v_and(mg, vc7);
+            zmr = v_and(mr, vc8);
 
             v_int32 xfix0, xfix1, yfix0, yfix1, zfix0, zfix1;
-            v_expand(xmr + xmg + xmb, xfix0, xfix1);
-            v_expand(ymr + ymg + ymb, yfix0, yfix1);
-            v_expand(zmr + zmg + zmb, zfix0, zfix1);
+            v_expand(v_add(v_add(xmr, xmg), xmb), xfix0, xfix1);
+            v_expand(v_add(v_add(ymr, ymg), ymb), yfix0, yfix1);
+            v_expand(v_add(v_add(zmr, zmg), zmb), zfix0, zfix1);
 
-            xfix0 = xfix0 << 16;
-            xfix1 = xfix1 << 16;
-            yfix0 = yfix0 << 16;
-            yfix1 = yfix1 << 16;
-            zfix0 = zfix0 << 16;
-            zfix1 = zfix1 << 16;
+            xfix0 = v_shl<16>(xfix0);
+            xfix1 = v_shl<16>(xfix1);
+            yfix0 = v_shl<16>(yfix0);
+            yfix1 = v_shl<16>(yfix1);
+            zfix0 = v_shl<16>(zfix0);
+            zfix1 = v_shl<16>(zfix1);
 
             v_int16 bg0, bg1, rd0, rd1;
             v_zip(sb, sg, bg0, bg1);
@@ -494,12 +501,12 @@ struct RGB2XYZ_i<ushort>
 
             v_uint32 x0, x1, y0, y1, z0, z1;
 
-            x0 = v_reinterpret_as_u32(v_dotprod(bg0, cxbg) + v_dotprod(rd0, cxr1) + xfix0) >> shift;
-            x1 = v_reinterpret_as_u32(v_dotprod(bg1, cxbg) + v_dotprod(rd1, cxr1) + xfix1) >> shift;
-            y0 = v_reinterpret_as_u32(v_dotprod(bg0, cybg) + v_dotprod(rd0, cyr1) + yfix0) >> shift;
-            y1 = v_reinterpret_as_u32(v_dotprod(bg1, cybg) + v_dotprod(rd1, cyr1) + yfix1) >> shift;
-            z0 = v_reinterpret_as_u32(v_dotprod(bg0, czbg) + v_dotprod(rd0, czr1) + zfix0) >> shift;
-            z1 = v_reinterpret_as_u32(v_dotprod(bg1, czbg) + v_dotprod(rd1, czr1) + zfix1) >> shift;
+            x0 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_add(v_dotprod(bg0, cxbg), v_dotprod(rd0, cxr1)), xfix0)));
+            x1 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_add(v_dotprod(bg1, cxbg), v_dotprod(rd1, cxr1)), xfix1)));
+            y0 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_add(v_dotprod(bg0, cybg), v_dotprod(rd0, cyr1)), yfix0)));
+            y1 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_add(v_dotprod(bg1, cybg), v_dotprod(rd1, cyr1)), yfix1)));
+            z0 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_add(v_dotprod(bg0, czbg), v_dotprod(rd0, czr1)), zfix0)));
+            z1 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_add(v_dotprod(bg1, czbg), v_dotprod(rd1, czr1)), zfix1)));
 
             v_uint16 x, y, z;
             x = v_pack(x0, x1);
@@ -593,8 +600,8 @@ struct XYZ2RGB_f<float>
               C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
               C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
         int i = 0;
-#if CV_SIMD
-        const int vsize = v_float32::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_float32>::vlanes();
         v_float32 valpha = vx_setall_f32(alpha);
         v_float32 vc0 = vx_setall_f32(C0), vc1 = vx_setall_f32(C1), vc2 = vx_setall_f32(C2);
         v_float32 vc3 = vx_setall_f32(C3), vc4 = vx_setall_f32(C4), vc5 = vx_setall_f32(C5);
@@ -606,9 +613,9 @@ struct XYZ2RGB_f<float>
             v_load_deinterleave(src, x, y, z);
 
             v_float32 b, g, r;
-            b = v_fma(x, vc0, v_fma(y, vc1, z*vc2));
-            g = v_fma(x, vc3, v_fma(y, vc4, z*vc5));
-            r = v_fma(x, vc6, v_fma(y, vc7, z*vc8));
+            b = v_fma(x, vc0, v_fma(y, vc1, v_mul(z, vc2)));
+            g = v_fma(x, vc3, v_fma(y, vc4, v_mul(z, vc5)));
+            r = v_fma(x, vc6, v_fma(y, vc7, v_mul(z, vc8)));
 
             if(dcn == 4)
             {
@@ -707,8 +714,8 @@ struct XYZ2RGB_i<uchar>
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
             C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
             C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-#if CV_SIMD
-        const int vsize = v_uint8::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_uint8>::vlanes();
         const int descaleShift = 1 << (shift - 1);
         v_uint8 valpha = vx_setall_u8(alpha);
         v_int16 vdescale = vx_setall_s16(descaleShift);
@@ -739,25 +746,35 @@ struct XYZ2RGB_i<uchar>
             z0 = v_reinterpret_as_s16(uz0);
             z1 = v_reinterpret_as_s16(uz1);
 
-            v_int32 b[4], g[4], r[4];
+            v_int32 bb0, bb1, bb2, bb3,
+                    gg0, gg1, gg2, gg3,
+                    rr0, rr1, rr2, rr3;
 
-            v_int16 xy[4], zd[4];
-            v_zip(x0, y0, xy[0], xy[1]);
-            v_zip(x1, y1, xy[2], xy[3]);
-            v_zip(z0, vdescale, zd[0], zd[1]);
-            v_zip(z1, vdescale, zd[2], zd[3]);
+            v_int16 xy0, xy1, xy2, xy3;
+            v_int16 zd0, zd1, zd2, zd3;
 
-            for(int j = 0; j < 4; j++)
-            {
-                b[j] = (v_dotprod(xy[j], cbxy) + v_dotprod(zd[j], cbz1)) >> shift;
-                g[j] = (v_dotprod(xy[j], cgxy) + v_dotprod(zd[j], cgz1)) >> shift;
-                r[j] = (v_dotprod(xy[j], crxy) + v_dotprod(zd[j], crz1)) >> shift;
-            }
+            v_zip(x0, y0, xy0, xy1);
+            v_zip(x1, y1, xy2, xy3);
+            v_zip(z0, vdescale, zd0, zd1);
+            v_zip(z1, vdescale, zd2, zd3);
+
+            bb0 = v_shr<shift>(v_add(v_dotprod(xy0, cbxy), v_dotprod(zd0, cbz1)));
+            gg0 = v_shr<shift>(v_add(v_dotprod(xy0, cgxy), v_dotprod(zd0, cgz1)));
+            rr0 = v_shr<shift>(v_add(v_dotprod(xy0, crxy), v_dotprod(zd0, crz1)));
+            bb1 = v_shr<shift>(v_add(v_dotprod(xy1, cbxy), v_dotprod(zd1, cbz1)));
+            gg1 = v_shr<shift>(v_add(v_dotprod(xy1, cgxy), v_dotprod(zd1, cgz1)));
+            rr1 = v_shr<shift>(v_add(v_dotprod(xy1, crxy), v_dotprod(zd1, crz1)));
+            bb2 = v_shr<shift>(v_add(v_dotprod(xy2, cbxy), v_dotprod(zd2, cbz1)));
+            gg2 = v_shr<shift>(v_add(v_dotprod(xy2, cgxy), v_dotprod(zd2, cgz1)));
+            rr2 = v_shr<shift>(v_add(v_dotprod(xy2, crxy), v_dotprod(zd2, crz1)));
+            bb3 = v_shr<shift>(v_add(v_dotprod(xy3, cbxy), v_dotprod(zd3, cbz1)));
+            gg3 = v_shr<shift>(v_add(v_dotprod(xy3, cgxy), v_dotprod(zd3, cgz1)));
+            rr3 = v_shr<shift>(v_add(v_dotprod(xy3, crxy), v_dotprod(zd3, crz1)));
 
             v_uint16 b0, b1, g0, g1, r0, r1;
-            b0 = v_pack_u(b[0], b[1]); b1 = v_pack_u(b[2], b[3]);
-            g0 = v_pack_u(g[0], g[1]); g1 = v_pack_u(g[2], g[3]);
-            r0 = v_pack_u(r[0], r[1]); r1 = v_pack_u(r[2], r[3]);
+            b0 = v_pack_u(bb0, bb1); b1 = v_pack_u(bb2, bb3);
+            g0 = v_pack_u(gg0, gg1); g1 = v_pack_u(gg2, gg3);
+            r0 = v_pack_u(rr0, rr1); r1 = v_pack_u(rr2, rr3);
 
             v_uint8 bb, gg, rr;
             bb = v_pack(b0, b1);
@@ -820,8 +837,8 @@ struct XYZ2RGB_i<ushort>
         int C0 = coeffs[0], C1 = coeffs[1], C2 = coeffs[2],
             C3 = coeffs[3], C4 = coeffs[4], C5 = coeffs[5],
             C6 = coeffs[6], C7 = coeffs[7], C8 = coeffs[8];
-#if CV_SIMD
-        const int vsize = v_uint16::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_uint16>::vlanes();
         const int descaleShift = 1 << (shift-1);
         v_uint16 valpha = vx_setall_u16(alpha);
         v_int16 vdescale = vx_setall_s16(descaleShift);
@@ -850,30 +867,30 @@ struct XYZ2RGB_i<ushort>
             sz = v_reinterpret_as_s16(z);
 
             // fixing 16bit signed multiplication
-            v_int16 mx = sx < zero, my = sy < zero, mz = sz < zero;
+            v_int16 mx = v_lt(sx, zero), my = v_lt(sy, zero), mz = v_lt(sz, zero);
 
             v_int16 bmx, bmy, bmz;
             v_int16 gmx, gmy, gmz;
             v_int16 rmx, rmy, rmz;
 
-            bmx = mx & vc0;
-            bmy = my & vc1;
-            bmz = mz & vc2;
-            gmx = mx & vc3;
-            gmy = my & vc4;
-            gmz = mz & vc5;
-            rmx = mx & vc6;
-            rmy = my & vc7;
-            rmz = mz & vc8;
+            bmx = v_and(mx, vc0);
+            bmy = v_and(my, vc1);
+            bmz = v_and(mz, vc2);
+            gmx = v_and(mx, vc3);
+            gmy = v_and(my, vc4);
+            gmz = v_and(mz, vc5);
+            rmx = v_and(mx, vc6);
+            rmy = v_and(my, vc7);
+            rmz = v_and(mz, vc8);
 
             v_int32 bfix0, bfix1, gfix0, gfix1, rfix0, rfix1;
-            v_expand(bmx + bmy + bmz, bfix0, bfix1);
-            v_expand(gmx + gmy + gmz, gfix0, gfix1);
-            v_expand(rmx + rmy + rmz, rfix0, rfix1);
+            v_expand(v_add(v_add(bmx, bmy), bmz), bfix0, bfix1);
+            v_expand(v_add(v_add(gmx, gmy), gmz), gfix0, gfix1);
+            v_expand(v_add(v_add(rmx, rmy), rmz), rfix0, rfix1);
 
-            bfix0 = bfix0 << 16; bfix1 = bfix1 << 16;
-            gfix0 = gfix0 << 16; gfix1 = gfix1 << 16;
-            rfix0 = rfix0 << 16; rfix1 = rfix1 << 16;
+            bfix0 = v_shl<16>(bfix0); bfix1 = v_shl<16>(bfix1);
+            gfix0 = v_shl<16>(gfix0); gfix1 = v_shl<16>(gfix1);
+            rfix0 = v_shl<16>(rfix0); rfix1 = v_shl<16>(rfix1);
 
             v_int16 xy0, xy1, zd0, zd1;
             v_zip(sx, sy, xy0, xy1);
@@ -881,12 +898,12 @@ struct XYZ2RGB_i<ushort>
 
             v_int32 b0, b1, g0, g1, r0, r1;
 
-            b0 = (v_dotprod(xy0, cbxy) + v_dotprod(zd0, cbz1) + bfix0) >> shift;
-            b1 = (v_dotprod(xy1, cbxy) + v_dotprod(zd1, cbz1) + bfix1) >> shift;
-            g0 = (v_dotprod(xy0, cgxy) + v_dotprod(zd0, cgz1) + gfix0) >> shift;
-            g1 = (v_dotprod(xy1, cgxy) + v_dotprod(zd1, cgz1) + gfix1) >> shift;
-            r0 = (v_dotprod(xy0, crxy) + v_dotprod(zd0, crz1) + rfix0) >> shift;
-            r1 = (v_dotprod(xy1, crxy) + v_dotprod(zd1, crz1) + rfix1) >> shift;
+            b0 = v_shr<shift>(v_add(v_add(v_dotprod(xy0, cbxy), v_dotprod(zd0, cbz1)), bfix0));
+            b1 = v_shr<shift>(v_add(v_add(v_dotprod(xy1, cbxy), v_dotprod(zd1, cbz1)), bfix1));
+            g0 = v_shr<shift>(v_add(v_add(v_dotprod(xy0, cgxy), v_dotprod(zd0, cgz1)), gfix0));
+            g1 = v_shr<shift>(v_add(v_add(v_dotprod(xy1, cgxy), v_dotprod(zd1, cgz1)), gfix1));
+            r0 = v_shr<shift>(v_add(v_add(v_dotprod(xy0, crxy), v_dotprod(zd0, crz1)), rfix0));
+            r1 = v_shr<shift>(v_add(v_add(v_dotprod(xy1, crxy), v_dotprod(zd1, crz1)), rfix1));
 
             v_uint16 b, g, r;
             b = v_pack_u(b0, b1); g = v_pack_u(g0, g1); r = v_pack_u(r0, r1);
@@ -1452,19 +1469,19 @@ static inline void trilinearPackedInterpolate(const v_uint16x8& inX, const v_uin
 #undef DOT_SHIFT_PACK
 }
 
-#elif CV_SIMD
+#elif CV_SIMD // Fixed size v_int16x8 used below, CV_SIMD_SCALABLE is disabled.
 
 // inValues are in [0; LAB_BASE]
 static inline void trilinearPackedInterpolate(const v_uint16& inX, const v_uint16& inY, const v_uint16& inZ,
                                               const int16_t* LUT,
                                               v_uint16& outA, v_uint16& outB, v_uint16& outC)
 {
-    const int vsize = v_uint16::nlanes;
+    const int vsize = VTraits<v_uint16>::max_nlanes;
 
     // LUT idx of origin pt of cube
-    v_uint16 tx = inX >> (lab_base_shift - lab_lut_shift);
-    v_uint16 ty = inY >> (lab_base_shift - lab_lut_shift);
-    v_uint16 tz = inZ >> (lab_base_shift - lab_lut_shift);
+    v_uint16 tx = v_shr<lab_base_shift - lab_lut_shift>(inX);
+    v_uint16 ty = v_shr<lab_base_shift - lab_lut_shift>(inY);
+    v_uint16 tz = v_shr<lab_base_shift - lab_lut_shift>(inZ);
 
     v_uint32 btmp00, btmp01, btmp10, btmp11, btmp20, btmp21;
     v_uint32 baseIdx0, baseIdx1;
@@ -1472,8 +1489,8 @@ static inline void trilinearPackedInterpolate(const v_uint16& inX, const v_uint1
     v_mul_expand(tx, vx_setall_u16(3*8), btmp00, btmp01);
     v_mul_expand(ty, vx_setall_u16(3*8*LAB_LUT_DIM), btmp10, btmp11);
     v_mul_expand(tz, vx_setall_u16(3*8*LAB_LUT_DIM*LAB_LUT_DIM), btmp20, btmp21);
-    baseIdx0 = btmp00 + btmp10 + btmp20;
-    baseIdx1 = btmp01 + btmp11 + btmp21;
+    baseIdx0 = v_add(v_add(btmp00, btmp10), btmp20);
+    baseIdx1 = v_add(v_add(btmp01, btmp11), btmp21);
 
     uint32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) vbaseIdx[vsize];
     v_store_aligned(vbaseIdx + 0*vsize/2, baseIdx0);
@@ -1482,9 +1499,9 @@ static inline void trilinearPackedInterpolate(const v_uint16& inX, const v_uint1
     // fracX, fracY, fracZ are [0; TRILINEAR_BASE)
     const uint16_t bitMask = (1 << trilinear_shift) - 1;
     v_uint16 bitMaskReg = vx_setall_u16(bitMask);
-    v_uint16 fracX = (inX >> (lab_base_shift - 8 - 1)) & bitMaskReg;
-    v_uint16 fracY = (inY >> (lab_base_shift - 8 - 1)) & bitMaskReg;
-    v_uint16 fracZ = (inZ >> (lab_base_shift - 8 - 1)) & bitMaskReg;
+    v_uint16 fracX = v_and(v_shr<lab_base_shift - 8 - 1>(inX), bitMaskReg);
+    v_uint16 fracY = v_and(v_shr<lab_base_shift - 8 - 1>(inY), bitMaskReg);
+    v_uint16 fracZ = v_and(v_shr<lab_base_shift - 8 - 1>(inZ), bitMaskReg);
 
     // trilinearIdx = 8*x + 8*TRILINEAR_BASE*y + 8*TRILINEAR_BASE*TRILINEAR_BASE*z
     v_uint32 trilinearIdx0, trilinearIdx1;
@@ -1493,8 +1510,8 @@ static inline void trilinearPackedInterpolate(const v_uint16& inX, const v_uint1
     v_expand(fracY, fracY0, fracY1);
     v_expand(fracZ, fracZ0, fracZ1);
 
-    trilinearIdx0 = (fracX0 << 3) + (fracY0 << (3+trilinear_shift)) + (fracZ0 << (3+trilinear_shift*2));
-    trilinearIdx1 = (fracX1 << 3) + (fracY1 << (3+trilinear_shift)) + (fracZ1 << (3+trilinear_shift*2));
+    trilinearIdx0 = v_add(v_add(v_shl<3>(fracX0), v_shl<3 + trilinear_shift>(fracY0)), v_shl<3 + trilinear_shift * 2>(fracZ0));
+    trilinearIdx1 = v_add(v_add(v_shl<3>(fracX1), v_shl<3 + trilinear_shift>(fracY1)), v_shl<3 + trilinear_shift * 2>(fracZ1));
 
     uint32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) vtrilinearIdx[vsize];
     v_store_aligned(vtrilinearIdx + 0*vsize/2, trilinearIdx0);
@@ -1528,12 +1545,12 @@ static inline void trilinearPackedInterpolate(const v_uint16& inX, const v_uint1
 
     // CV_DESCALE
     const v_uint32 descaleShift = vx_setall_u32(1 << (trilinear_shift*3 - 1));
-    a0 = (a0 + descaleShift) >> (trilinear_shift*3);
-    a1 = (a1 + descaleShift) >> (trilinear_shift*3);
-    b0 = (b0 + descaleShift) >> (trilinear_shift*3);
-    b1 = (b1 + descaleShift) >> (trilinear_shift*3);
-    c0 = (c0 + descaleShift) >> (trilinear_shift*3);
-    c1 = (c1 + descaleShift) >> (trilinear_shift*3);
+    a0 = v_shr<trilinear_shift * 3>(v_add(a0, descaleShift));
+    a1 = v_shr<trilinear_shift * 3>(v_add(a1, descaleShift));
+    b0 = v_shr<trilinear_shift * 3>(v_add(b0, descaleShift));
+    b1 = v_shr<trilinear_shift * 3>(v_add(b1, descaleShift));
+    c0 = v_shr<trilinear_shift * 3>(v_add(c0, descaleShift));
+    c1 = v_shr<trilinear_shift * 3>(v_add(c1, descaleShift));
 
     outA = v_pack(a0, a1); outB = v_pack(b0, b1); outC = v_pack(c0, c1);
 }

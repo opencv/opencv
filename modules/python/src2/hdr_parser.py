@@ -535,6 +535,13 @@ class CppHeaderParser(object):
 
         funcname = self.get_dotted_name(funcname)
 
+        # see https://github.com/opencv/opencv/issues/24057
+        is_arithm_op_func = funcname in {"cv.add",
+                                         "cv.subtract",
+                                         "cv.absdiff",
+                                         "cv.multiply",
+                                         "cv.divide"}
+
         if not self.wrap_mode:
             decl = self.parse_func_decl_no_wrap(decl_str, static_method, docstring)
             decl[0] = funcname
@@ -595,6 +602,8 @@ class CppHeaderParser(object):
 
                         if arg_type == "InputArray":
                             arg_type = mat
+                            if is_arithm_op_func:
+                                modlist.append("/AOS") # Arithm Ope Source
                         elif arg_type == "InputOutputArray":
                             arg_type = mat
                             modlist.append("/IO")
