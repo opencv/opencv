@@ -62,10 +62,15 @@ public:
     {
         std::vector<UMat> outputs;
         outs.getUMatVector(outputs);
-        if (outs.depth() == CV_16S)
-            convertFp16(blobs[0], outputs[0]);
+        if (outs.depth() == CV_16S) {
+            auto blob = blobs[0];
+            if (blob.type() == CV_32S) {
+                blob.convertTo(blob, CV_32F);
+            }
+            convertFp16(blob, outputs[0]);
+        }
         else
-            blobs[0].copyTo(outputs[0]);
+            blobs[0].convertTo(outputs[0], outputs[0].type());
         return true;
     }
 #endif
