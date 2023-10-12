@@ -358,7 +358,7 @@ if(CUDA_FOUND)
   # Tell NVCC the maximum number of threads to be used to execute the compilation steps in parallel
   # (option --threads was introduced in version 11.2)
   if(NOT CUDA_VERSION VERSION_LESS "11.2")
-    if(NOT $ENV{CMAKE_BUILD_PARALLEL_LEVEL} STREQUAL "")
+    if(MSVC AND NOT $ENV{CMAKE_BUILD_PARALLEL_LEVEL} STREQUAL "")
       set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "--threads=$ENV{CMAKE_BUILD_PARALLEL_LEVEL}")
     endif()
   endif()
