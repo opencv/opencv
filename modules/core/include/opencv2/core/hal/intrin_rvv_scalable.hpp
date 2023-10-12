@@ -21,6 +21,10 @@
 #include "intrin_rvv_010_compat_overloaded-non-policy.hpp"
 #endif
 
+#if defined(__riscv_v_intrinsic) && __riscv_v_intrinsic>11999
+#include "intrin_rvv_011_compat.hpp"
+#endif
+
 #if defined(__GNUC__) && !defined(__clang__)
 // FIXIT: eliminate massive warnigs from templates
 // GCC from 'rvv-next': riscv64-unknown-linux-gnu-g++ (g42df3464463) 12.0.1 20220505 (prerelease)
