@@ -5697,8 +5697,8 @@ public:
         if (cv::__termination)  // process is not in consistent state (after ExitProcess call) and terminating
             return;             // avoid any OpenCL calls
 #endif
-        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
-        OpenCLExecutionContextScope scope(*pExecCtx.get());
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxOuter = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
+        OpenCLExecutionContextScope scopeOuter(*pExecCtxOuter.get());
 
         if(u->tempUMat())
         {
