@@ -80,8 +80,7 @@ public:
 
         std::vector<Mat> outputs;
         outputs_arr.getMatVector(outputs);
-        blobs[0].convertTo(blobs[0], outputs[0].type());
-        blobs[0].copyTo(outputs[0]);
+        blobs[0].convertTo(outputs[0], outputs[0].type());
     }
 
 #ifdef HAVE_CANN
@@ -164,7 +163,11 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
         CV_Assert(blobs.size() == 1);
-        return make_cuda_node<cuda4dnn::ConstOp>(preferableTarget, std::move(context->stream), blobs[0]);
+        Mat blob = blobs[0];
+        if (blob.type() != CV_32F) {
+            blob.converTo(blob, CV_32F);
+        }
+        return make_cuda_node<cuda4dnn::ConstOp>(preferableTarget, std::move(context->stream), blob);
     }
 #endif
 
