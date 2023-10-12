@@ -1545,9 +1545,9 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     if (!src.empty() && mask.empty())
     {
         if( minidx == 0 )
-             minidx = 1;
-         if( maxidx == 0 )
-             maxidx = 1;
+            minidx = 1;
+        if( maxidx == 0 )
+            maxidx = 1;
     }
 
     if( minidx == 0 )

@@ -2584,9 +2584,6 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
 static const int CodeDeltas[8][2] =
 { {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1} };
 
-#define CV_ADJUST_EDGE_COUNT( count, seq )  \
-    ((count) -= ((count) == (seq)->total && !CV_IS_SEQ_CLOSED(seq)))
-
 CV_IMPL void
 cvDrawContours( void* _img, CvSeq* contour,
                 CvScalar _externalColor, CvScalar _holeColor,

@@ -879,14 +879,14 @@ static Rect pointSetBoundingRect( const Mat& points )
     if( npoints == 0 )
         return Rect();
 
-#if CV_SIMD
+#if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE, loop tail related.
     const int64_t* pts = points.ptr<int64_t>();
 
     if( !is_float )
     {
         v_int32 minval, maxval;
         minval = maxval = v_reinterpret_as_s32(vx_setall_s64(*pts)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
-        for( i = 1; i <= npoints - v_int32::nlanes/2; i+= v_int32::nlanes/2 )
+        for( i = 1; i <= npoints - VTraits<v_int32>::vlanes()/2; i+= VTraits<v_int32>::vlanes()/2 )
         {
             v_int32 ptXY2 = v_reinterpret_as_s32(vx_load(pts + i));
             minval = v_min(ptXY2, minval);
@@ -894,22 +894,22 @@ static Rect pointSetBoundingRect( const Mat& points )
         }
         minval = v_min(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))));
         maxval = v_max(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
-        if( i <= npoints - v_int32::nlanes/4 )
+        if( i <= npoints - VTraits<v_int32>::vlanes()/4 )
         {
             v_int32 ptXY = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + i))));
             minval = v_min(ptXY, minval);
             maxval = v_max(ptXY, maxval);
-            i += v_int64::nlanes/2;
+            i += VTraits<v_int64>::vlanes()/2;
         }
-        for(int j = 16; j < CV_SIMD_WIDTH; j*=2)
+        for(int j = 16; j < VTraits<v_uint8>::vlanes(); j*=2)
         {
             minval = v_min(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))));
             maxval = v_max(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
         }
-        xmin = minval.get0();
-        xmax = maxval.get0();
-        ymin = v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))).get0();
-        ymax = v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))).get0();
+        xmin = v_get0(minval);
+        xmax = v_get0(maxval);
+        ymin = v_get0(v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))));
+        ymax = v_get0(v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
 #if CV_SIMD_WIDTH > 16
         if( i < npoints )
         {
@@ -921,18 +921,18 @@ static Rect pointSetBoundingRect( const Mat& points )
                 minval2 = v_min(ptXY, minval2);
                 maxval2 = v_max(ptXY, maxval2);
             }
-            xmin = min(xmin, minval2.get0());
-            xmax = max(xmax, maxval2.get0());
-            ymin = min(ymin, v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval2))).get0());
-            ymax = max(ymax, v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval2))).get0());
+            xmin = min(xmin, v_get0(minval2));
+            xmax = max(xmax, v_get0(maxval2));
+            ymin = min(ymin, v_get0(v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval2)))));
+            ymax = max(ymax, v_get0(v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval2)))));
         }
-#endif
+#endif // CV_SIMD
     }
     else
     {
         v_float32 minval, maxval;
         minval = maxval = v_reinterpret_as_f32(vx_setall_s64(*pts)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
-        for( i = 1; i <= npoints - v_float32::nlanes/2; i+= v_float32::nlanes/2 )
+        for( i = 1; i <= npoints - VTraits<v_float32>::vlanes()/2; i+= VTraits<v_float32>::vlanes()/2 )
         {
             v_float32 ptXY2 = v_reinterpret_as_f32(vx_load(pts + i));
             minval = v_min(ptXY2, minval);
@@ -940,22 +940,22 @@ static Rect pointSetBoundingRect( const Mat& points )
         }
         minval = v_min(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))));
         maxval = v_max(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))));
-        if( i <= npoints - v_float32::nlanes/4 )
+        if( i <= npoints - VTraits<v_float32>::vlanes()/4 )
         {
             v_float32 ptXY = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + i))));
             minval = v_min(ptXY, minval);
             maxval = v_max(ptXY, maxval);
-            i += v_float32::nlanes/4;
+            i += VTraits<v_float32>::vlanes()/4;
         }
-        for(int j = 16; j < CV_SIMD_WIDTH; j*=2)
+        for(int j = 16; j < VTraits<v_uint8>::vlanes(); j*=2)
         {
             minval = v_min(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))));
             maxval = v_max(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))));
         }
-        xmin = cvFloor(minval.get0());
-        xmax = cvFloor(maxval.get0());
-        ymin = cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))).get0());
-        ymax = cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))).get0());
+        xmin = cvFloor(v_get0(minval));
+        xmax = cvFloor(v_get0(maxval));
+        ymin = cvFloor(v_get0(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval)))));
+        ymax = cvFloor(v_get0(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval)))));
 #if CV_SIMD_WIDTH > 16
         if( i < npoints )
         {
@@ -967,10 +967,10 @@ static Rect pointSetBoundingRect( const Mat& points )
                 minval2 = v_min(ptXY, minval2);
                 maxval2 = v_max(ptXY, maxval2);
             }
-            xmin = min(xmin, cvFloor(minval2.get0()));
-            xmax = max(xmax, cvFloor(maxval2.get0()));
-            ymin = min(ymin, cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval2))).get0()));
-            ymax = max(ymax, cvFloor(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval2))).get0()));
+            xmin = min(xmin, cvFloor(v_get0(minval2)));
+            xmax = max(xmax, cvFloor(v_get0(maxval2)));
+            ymin = min(ymin, cvFloor(v_get0(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval2))))));
+            ymax = max(ymax, cvFloor(v_get0(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval2))))));
         }
 #endif
     }

@@ -166,7 +166,7 @@ performance boost.
 The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids. See
 @cite Bouguet00 . The function is parallelized with the TBB library.
 
-@note
+@note Some examples:
 
 -   An example using the Lucas-Kanade optical flow algorithm can be found at
     opencv_source_code/samples/cpp/lkdemo.cpp
@@ -213,7 +213,7 @@ The function finds an optical flow for each prev pixel using the @cite Farneback
 
 \f[\texttt{prev} (y,x)  \sim \texttt{next} ( y + \texttt{flow} (y,x)[1],  x + \texttt{flow} (y,x)[0])\f]
 
-@note
+@note Some examples:
 
 -   An example using the optical flow algorithm described by Gunnar Farneback can be found at
     opencv_source_code/samples/cpp/fback.cpp
@@ -885,6 +885,43 @@ public:
 
     //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
+};
+
+/** @brief the VIT tracker is a super lightweight dnn-based general object tracking.
+ *
+ *  VIT tracker is much faster and extremely lightweight due to special model structure, the model file is about 767KB.
+ *  Model download link: https://github.com/opencv/opencv_zoo/tree/main/models/object_tracking_vittrack
+ *  Author: PengyuLiu, 1872918507@qq.com
+ */
+class CV_EXPORTS_W TrackerVit : public Tracker
+{
+protected:
+    TrackerVit();  // use ::create()
+public:
+    virtual ~TrackerVit() CV_OVERRIDE;
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW std::string net;
+        CV_PROP_RW int backend;
+        CV_PROP_RW int target;
+        CV_PROP_RW Scalar meanvalue;
+        CV_PROP_RW Scalar stdvalue;
+    };
+
+    /** @brief Constructor
+    @param parameters vit tracker parameters TrackerVit::Params
+    */
+    static CV_WRAP
+    Ptr<TrackerVit> create(const TrackerVit::Params& parameters = TrackerVit::Params());
+
+    /** @brief Return tracking score
+    */
+    CV_WRAP virtual float getTrackingScore() = 0;
+
+    // void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
+    // bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
 //! @} video_track

@@ -101,6 +101,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Reduce,         ReduceLayer);
     CV_DNN_REGISTER_LAYER_CLASS(LRN,            LRNLayer);
     CV_DNN_REGISTER_LAYER_CLASS(InnerProduct,   InnerProductLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Gemm,           GemmLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Softmax,        SoftmaxLayer);
     CV_DNN_REGISTER_LAYER_CLASS(SoftMax,        SoftmaxLayer);  // For compatibility. See https://github.com/opencv/opencv/issues/16877
     CV_DNN_REGISTER_LAYER_CLASS(MVN,            MVNLayer);
@@ -157,6 +158,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Reciprocal,     ReciprocalLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Gather,         GatherLayer);
     CV_DNN_REGISTER_LAYER_CLASS(LayerNormalization, LayerNormLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Expand,         ExpandLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Crop,           CropLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Eltwise,        EltwiseLayer);
@@ -183,6 +185,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(LSTM,           LSTMLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GRU,            GRULayer);
     CV_DNN_REGISTER_LAYER_CLASS(CumSum,         CumSumLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Einsum,         EinsumLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Scatter,        ScatterLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ScatterND,      ScatterNDLayer);
