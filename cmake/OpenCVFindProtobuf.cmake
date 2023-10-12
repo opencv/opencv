@@ -6,6 +6,7 @@ if(NOT WITH_PROTOBUF)
   return()
 endif()
 
+
 ocv_option(BUILD_PROTOBUF "Force to build libprotobuf runtime from sources" ON)
 ocv_option(PROTOBUF_UPDATE_FILES "Force rebuilding .proto files (protoc should be available)" OFF)
 
@@ -30,8 +31,14 @@ if(BUILD_PROTOBUF)
   set(Protobuf_LIBRARIES "libprotobuf")
   set(HAVE_PROTOBUF TRUE)
 else()
+  # we still need this for command PROTOBUF_GENERATE_CPP.
+  set(protobuf_MODULE_COMPATIBLE ON)
+
   unset(Protobuf_VERSION CACHE)
-  find_package(Protobuf QUIET)
+  find_package(Protobuf QUIET CONFIG)
+  if(NOT Protobuf_FOUND)
+    find_package(Protobuf QUIET)
+  endif()
 
   # Backwards compatibility
   # Define camel case versions of input variables
@@ -74,25 +81,15 @@ endif()
 
 if(HAVE_PROTOBUF)
     if("${Protobuf_VERSION}" MATCHES [[[0-9]+.([0-9]+).[0-9]+]])
-        string(COMPARE GREATER "${CMAKE_MATCH_1}" "21" REQUEST_ABSL)  # >=22
+        string(COMPARE GREATER "${CMAKE_MATCH_1}" "21" REQUEST_AFTER_CXX17)  # >=22
 
-        if(REQUEST_ABSL)
+        if(REQUEST_AFTER_CXX17)
             string(COMPARE GREATER "${CMAKE_CXX_STANDARD}" "16" USED_AFTER_CXX17)  # >=17
 
             if(NOT USED_AFTER_CXX17)
                 message("CMAKE_CXX_STANDARD : ${CMAKE_CXX_STANDARD}")
                 message("protobuf           : ${Protobuf_VERSION}")
                 message(FATAL_ERROR "protobuf(v22 and later) and abseil-cpp request CMAKE_CXX_STANDARD=17 and later.")
-            endif()
-
-            ocv_check_modules(ABSL_STRINGS absl_strings)
-            if(NOT ABSL_STRINGS_FOUND)
-                message(FATAL_ERROR "protobuf(v22 and later) requests abseil-cpp(strings), but missing.")
-            endif()
-
-            ocv_check_modules(ABSL_LOG absl_log)
-            if(NOT ABSL_LOG_FOUND)
-                message(FATAL_ERROR "protobuf(v22 and later) requests abseil-cpp(log), but missing.")
             endif()
 
         endif()
@@ -108,15 +105,20 @@ endif()
 if(HAVE_PROTOBUF)
   list(APPEND CUSTOM_STATUS protobuf)
   if(NOT BUILD_PROTOBUF)
+    unset( __location)
     if(TARGET "${Protobuf_LIBRARIES}")
       get_target_property(__location "${Protobuf_LIBRARIES}" IMPORTED_LOCATION_RELEASE)
       if(NOT __location)
         get_target_property(__location "${Protobuf_LIBRARIES}" IMPORTED_LOCATION)
       endif()
-    elseif(Protobuf_LIBRARY)
-      set(__location "${Protobuf_LIBRARY}")
-    else()
-      set(__location "${Protobuf_LIBRARIES}")
+    endif()
+
+    if(NOT __location)
+      if(Protobuf_LIBRARY)
+        set(__location "${Protobuf_LIBRARY}")
+      else()
+        set(__location "${Protobuf_LIBRARIES}")
+      endif()
     endif()
   endif()
   list(APPEND CUSTOM_STATUS_protobuf "    Protobuf:"

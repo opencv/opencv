@@ -145,15 +145,6 @@ if(NOT BUILD_PROTOBUF)
   list(APPEND include_dirs ${Protobuf_INCLUDE_DIRS})
 endif()
 
-if(HAVE_ABSL_STRINGS)
-  list(APPEND libs ${ABSL_STRINGS_LIBRARIES})
-  list(APPEND include_dirs ${ABSL_STRTRINGS_INCLUDE_DIRS})
-endif()
-if(HAVE_ABSL_LOG)
-  list(APPEND libs ${ABSL_LOG_LIBRARIES})
-  list(APPEND include_dirs ${ABSL_LOG_INCLUDE_DIRS})
-endif()
-
 set(sources_options "")
 
 list(APPEND libs ${LAPACK_LIBRARIES})
