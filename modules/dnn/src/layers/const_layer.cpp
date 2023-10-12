@@ -167,7 +167,7 @@ public:
         CV_Assert(blobs.size() == 1);
         Mat blob = blobs[0];
         if (blob.type() != CV_32F) {
-            blob.converTo(blob, CV_32F);
+            blob.convertTo(blob, CV_32F);
         }
         return make_cuda_node<cuda4dnn::ConstOp>(preferableTarget, std::move(context->stream), blob);
     }
