@@ -568,6 +568,76 @@ __kernel void YUV2RGB_422(__global const uchar* srcptr, int src_step, int src_of
     }
 }
 
+// Coefficients based on ITU.BT-601, ISBN 1-878707-09-4 (https://fourcc.org/fccyvrgb.php)
+// The conversion coefficients for RGB to YUV422 are based on the ones for RGB to YUV.
+// For both Y components, the coefficients are applied as given in the link to each input RGB pixel
+// separately. For U and V, they are reduced by half to account for two RGB pixels contributing
+// to the same U and V values. In other words, the U and V contributions from the two RGB pixels
+// are averaged. The integer versions are obtained by multiplying the float versions by 16384
+// and rounding to the nearest integer.
+
+__constant float c_RGB2YUV422Coeffs_f[10]  = {0.0625, 0.5, 0.257, 0.504, 0.098, -0.074 , -0.1455, 0.2195, -0.184 , -0.0355};
+__constant int   c_RGB2YUV422Coeffs_i[10]  = {1024 * HALF_MAX_NUM * 2, 8192 * HALF_MAX_NUM * 2, 4211,  8258,  1606, -1212, -2384,  3596, -3015,  -582};
+
+__kernel void RGB2YUV_422(__global const uchar* srcptr, int src_step, int src_offset,
+                          __global uchar* dstptr, int dst_step, int dst_offset,
+                          int rows, int cols)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1) * PIX_PER_WI_Y;
+
+    if (x < cols/2)
+    {
+        int src_index = mad24(y, src_step, mad24(x << 1, scnbytes, src_offset));
+        int dst_index = mad24(y, dst_step, mad24(x << 1, dcnbytes, dst_offset));
+
+        #pragma unroll
+        for (int cy = 0; cy < PIX_PER_WI_Y; ++cy)
+        {
+            if (y < rows)
+            {
+                __global const DATA_TYPE* src = (__global const DATA_TYPE*)(srcptr + src_index);
+                __global DATA_TYPE* dst = (__global DATA_TYPE*)(dstptr + dst_index);
+                DATA_TYPE_3 src_pix1 = vload3(0, src);
+                DATA_TYPE b1 = src_pix1.B_COMP, g1 = src_pix1.G_COMP, r1 = src_pix1.R_COMP;
+                DATA_TYPE_3 src_pix2 = vload3(0, src+scn);
+                DATA_TYPE b2 = src_pix2.B_COMP, g2 = src_pix2.G_COMP, r2 = src_pix2.R_COMP;
+
+
+#ifdef DEPTH_5
+                __constant float * coeffs = c_RGB2YUV422Coeffs_f;
+                #define MAC_fn fma
+                #define res_dtype DATA_TYPE
+                #define mul_fn(x,y) (x*y)
+                #define output_scale_fn(x) x
+#else
+                __constant int * coeffs = c_RGB2YUV422Coeffs_i;
+                #define MAC_fn mad24
+                #define res_dtype int
+                #define mul_fn mul24
+                #define output_scale_fn(x) SAT_CAST(CV_DESCALE(x, yuv_shift))
+#endif
+
+                const res_dtype Y1 = MAC_fn(coeffs[2], r1, coeffs[0] + MAC_fn(coeffs[3], g1, mul_fn(coeffs[4], b1)));
+                const res_dtype Y2 = MAC_fn(coeffs[2], r2, coeffs[0] + MAC_fn(coeffs[3], g2, mul_fn(coeffs[4], b2)));
+
+                const res_dtype sr = r1+r2, sg = g1+g2, sb = b1+b2;
+                const res_dtype U = MAC_fn(coeffs[5], sr, coeffs[1] + MAC_fn(coeffs[6], sg, mul_fn(coeffs[7], sb)));
+                const res_dtype V = MAC_fn(coeffs[7], sr, coeffs[1] + MAC_fn(coeffs[8], sg, mul_fn(coeffs[9], sb)));
+
+                dst[uidx] = output_scale_fn(U);
+                dst[(2 + uidx) % 4] = output_scale_fn(V);
+                dst[yidx] = output_scale_fn(Y1);
+                dst[yidx+2] = output_scale_fn(Y2);
+
+                ++y;
+                dst_index += dst_step;
+                src_index += src_step;
+            }
+        }
+    }
+}
+
 ///////////////////////////////////// RGB <-> YCrCb //////////////////////////////////////
 
 __constant float c_RGB2YCrCbCoeffs_f[5] = {R2YF, G2YF, B2YF, YCRF, YCBF};

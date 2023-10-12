@@ -159,6 +159,42 @@ class I420Writer: public YUV420pWriter
     }
 };
 
+class YUV422Writer: public YUVwriter
+{
+    int channels() { return 2; }
+    Size size(Size imgSize) { return Size(imgSize.width, imgSize.height); }
+};
+
+class UYVYWriter: public YUV422Writer
+{
+    virtual void write(Mat& yuv, int row, int col, const YUV& val)
+    {
+        yuv.ptr<Vec2b>(row)[col][1] = val[0];
+        yuv.ptr<Vec2b>(row)[(col/2)*2][0] = val[1];
+        yuv.ptr<Vec2b>(row)[(col/2)*2 + 1][0] = val[2];
+    }
+};
+
+class YUY2Writer: public YUV422Writer
+{
+    virtual void write(Mat& yuv, int row, int col, const YUV& val)
+    {
+        yuv.ptr<Vec2b>(row)[col][0] = val[0];
+        yuv.ptr<Vec2b>(row)[(col/2)*2][1] = val[1];
+        yuv.ptr<Vec2b>(row)[(col/2)*2 + 1][1] = val[2];
+    }
+};
+
+class YVYUWriter: public YUV422Writer
+{
+    virtual void write(Mat& yuv, int row, int col, const YUV& val)
+    {
+        yuv.ptr<Vec2b>(row)[col][0] = val[0];
+        yuv.ptr<Vec2b>(row)[(col/2)*2 + 1][1] = val[1];
+        yuv.ptr<Vec2b>(row)[(col/2)*2][1] = val[2];
+    }
+};
+
 class YUV420Reader: public YUVreader
 {
     int channels() { return 1; }
@@ -357,6 +393,36 @@ public:
     }
 };
 
+class RGB2YUV422_Converter
+{
+public:
+    YUV convert(RGB rgb1, RGB rgb2, int idx)
+    {
+        int r1 = rgb1[0];
+        int g1 = rgb1[1];
+        int b1 = rgb1[2];
+
+        int r2 = rgb2[0];
+        int g2 = rgb2[1];
+        int b2 = rgb2[2];
+
+        // Coefficients below based on ITU.BT-601, ISBN 1-878707-09-4 (https://fourcc.org/fccyvrgb.php)
+        // The conversion coefficients for RGB to YUV422 are based on the ones for RGB to YUV.
+        // For both Y components, the coefficients are applied as given in the link to each input RGB pixel
+        // separately. For U and V, they are reduced by half to account for two RGB pixels contributing
+        // to the same U and V values. In other words, the U and V contributions from the two RGB pixels
+        // are averaged. The integer versions are obtained by multiplying the float versions by 16384
+        // and rounding to the nearest integer.
+
+        uchar y1 = saturate_cast<uchar>((int)( 0.257f*r1 + 0.504f*g1 + 0.098f*b1 + 16));
+        uchar y2 = saturate_cast<uchar>((int)( 0.257f*r2 + 0.504f*g2 + 0.098f*b2 + 16));
+        uchar u = saturate_cast<uchar>((int)(-0.074f*(r1+r2) - 0.1455f*(g1+g2) + 0.2195f*(b1+b2) + 128));
+        uchar v = saturate_cast<uchar>((int)( 0.2195f*(r1+r2) - 0.184f*(g1+g2) - 0.0355f*(b1+b2) + 128));
+
+        return YUV((idx==0)?y1:y2, u, v);
+    }
+};
+
 YUVreader* YUVreader::getReader(int code)
 {
     switch(code)
@@ -421,15 +487,27 @@ RGBreader* RGBreader::getReader(int code)
     {
     case COLOR_RGB2YUV_YV12:
     case COLOR_RGB2YUV_I420:
+    case COLOR_RGB2YUV_UYVY:
+    case COLOR_RGB2YUV_YUY2:
+    case COLOR_RGB2YUV_YVYU:
         return new RGB888Reader();
     case COLOR_BGR2YUV_YV12:
     case COLOR_BGR2YUV_I420:
+    case COLOR_BGR2YUV_UYVY:
+    case COLOR_BGR2YUV_YUY2:
+    case COLOR_BGR2YUV_YVYU:
         return new BGR888Reader();
     case COLOR_RGBA2YUV_I420:
     case COLOR_RGBA2YUV_YV12:
+    case COLOR_RGBA2YUV_UYVY:
+    case COLOR_RGBA2YUV_YUY2:
+    case COLOR_RGBA2YUV_YVYU:
         return new RGBA8888Reader();
     case COLOR_BGRA2YUV_YV12:
     case COLOR_BGRA2YUV_I420:
+    case COLOR_BGRA2YUV_UYVY:
+    case COLOR_BGRA2YUV_YUY2:
+    case COLOR_BGRA2YUV_YVYU:
         return new BGRA8888Reader();
     default:
         return 0;
@@ -505,6 +583,21 @@ YUVwriter* YUVwriter::getWriter(int code)
     case COLOR_RGBA2YUV_YV12:
     case COLOR_BGRA2YUV_YV12:
         return new YV12Writer();
+    case COLOR_RGB2YUV_UYVY:
+    case COLOR_BGR2YUV_UYVY:
+    case COLOR_RGBA2YUV_UYVY:
+    case COLOR_BGRA2YUV_UYVY:
+        return new UYVYWriter();
+    case COLOR_RGB2YUV_YUY2:
+    case COLOR_BGR2YUV_YUY2:
+    case COLOR_RGBA2YUV_YUY2:
+    case COLOR_BGRA2YUV_YUY2:
+        return new YUY2Writer();
+    case COLOR_RGB2YUV_YVYU:
+    case COLOR_BGR2YUV_YVYU:
+    case COLOR_RGBA2YUV_YVYU:
+    case COLOR_BGRA2YUV_YVYU:
+        return new YVYUWriter();
     case COLOR_RGB2YUV_I420:
     case COLOR_BGR2YUV_I420:
     case COLOR_RGBA2YUV_I420:
@@ -543,6 +636,21 @@ void referenceRGB2YUV(const Mat& rgb, Mat& yuv, RGBreader* rgbReader, YUVwriter*
     for(int row = 0; row < rgb.rows; ++row)
         for(int col = 0; col < rgb.cols; ++col)
             yuvWriter->write(yuv, row, col, cvt.convert(rgbReader->read(rgb, row, col)));
+}
+
+template<class convertor>
+void referenceRGB2YUV422(const Mat& rgb, Mat& yuv, RGBreader* rgbReader, YUVwriter* yuvWriter)
+{
+    convertor cvt;
+
+    for(int row = 0; row < rgb.rows; ++row)
+    {
+            for(int col = 0; col < rgb.cols; col+=2)
+            {
+                yuvWriter->write(yuv, row, col, cvt.convert(rgbReader->read(rgb, row, col), rgbReader->read(rgb, row, col+1), 0));
+                yuvWriter->write(yuv, row, col+1, cvt.convert(rgbReader->read(rgb, row, col), rgbReader->read(rgb, row, col+1), 1));
+            }
+    }
 }
 
 struct ConversionYUV
@@ -611,6 +719,28 @@ struct ConversionYUV
     GRAYwriter* grayWriter_;
 };
 
+bool is_rgb2yuv422(int code)
+{
+    switch (code)
+    {
+        case COLOR_RGB2YUV_UYVY:
+        case COLOR_BGR2YUV_UYVY:
+        case COLOR_RGBA2YUV_UYVY:
+        case COLOR_BGRA2YUV_UYVY:
+        case COLOR_RGB2YUV_YUY2:
+        case COLOR_BGR2YUV_YUY2:
+        case COLOR_RGBA2YUV_YUY2:
+        case COLOR_BGRA2YUV_YUY2:
+        case COLOR_RGB2YUV_YVYU:
+        case COLOR_BGR2YUV_YVYU:
+        case COLOR_RGBA2YUV_YVYU:
+        case COLOR_BGRA2YUV_YVYU:
+            return true;
+        default:
+            return false;
+    }
+}
+
 CV_ENUM(YUVCVTS, COLOR_YUV2RGB_NV12, COLOR_YUV2BGR_NV12, COLOR_YUV2RGB_NV21, COLOR_YUV2BGR_NV21,
                  COLOR_YUV2RGBA_NV12, COLOR_YUV2BGRA_NV12, COLOR_YUV2RGBA_NV21, COLOR_YUV2BGRA_NV21,
                  COLOR_YUV2RGB_YV12, COLOR_YUV2BGR_YV12, COLOR_YUV2RGB_IYUV, COLOR_YUV2BGR_IYUV,
@@ -620,13 +750,18 @@ CV_ENUM(YUVCVTS, COLOR_YUV2RGB_NV12, COLOR_YUV2BGR_NV12, COLOR_YUV2RGB_NV21, COL
                  COLOR_YUV2RGBA_YUY2, COLOR_YUV2BGRA_YUY2, COLOR_YUV2RGBA_YVYU, COLOR_YUV2BGRA_YVYU,
                  COLOR_YUV2GRAY_420, COLOR_YUV2GRAY_UYVY, COLOR_YUV2GRAY_YUY2,
                  COLOR_YUV2BGR, COLOR_YUV2RGB, COLOR_RGB2YUV_YV12, COLOR_BGR2YUV_YV12, COLOR_RGBA2YUV_YV12,
-                 COLOR_BGRA2YUV_YV12, COLOR_RGB2YUV_I420, COLOR_BGR2YUV_I420, COLOR_RGBA2YUV_I420, COLOR_BGRA2YUV_I420)
+                 COLOR_BGRA2YUV_YV12, COLOR_RGB2YUV_I420, COLOR_BGR2YUV_I420, COLOR_RGBA2YUV_I420, COLOR_BGRA2YUV_I420,
+                 COLOR_RGB2YUV_UYVY,  COLOR_BGR2YUV_UYVY,  COLOR_RGBA2YUV_UYVY, COLOR_BGRA2YUV_UYVY,
+                 COLOR_RGB2YUV_YUY2,  COLOR_BGR2YUV_YUY2,  COLOR_RGB2YUV_YVYU,  COLOR_BGR2YUV_YVYU,
+                 COLOR_RGBA2YUV_YUY2, COLOR_BGRA2YUV_YUY2, COLOR_RGBA2YUV_YVYU, COLOR_BGRA2YUV_YVYU)
 
 typedef ::testing::TestWithParam<YUVCVTS> Imgproc_ColorYUV;
 
 TEST_P(Imgproc_ColorYUV, accuracy)
 {
     int code = GetParam();
+    bool yuv422 = is_rgb2yuv422(code);
+
     RNG& random = theRNG();
 
     ConversionYUV cvt(code);
@@ -654,7 +789,12 @@ TEST_P(Imgproc_ColorYUV, accuracy)
         else if(cvt.grayWriter_)
             referenceYUV2GRAY<YUV2GRAY_Converter>(src, gold, cvt.yuvReader_, cvt.grayWriter_);
         else if(cvt.yuvWriter_)
-            referenceRGB2YUV<RGB2YUV_Converter>  (src, gold, cvt.rgbReader_, cvt.yuvWriter_);
+        {
+            if(!yuv422)
+                referenceRGB2YUV<RGB2YUV_Converter>  (src, gold, cvt.rgbReader_, cvt.yuvWriter_);
+            else
+                referenceRGB2YUV422<RGB2YUV422_Converter>  (src, gold, cvt.rgbReader_, cvt.yuvWriter_);
+        }
 
         cv::cvtColor(src, dst, code, -1);
 
@@ -665,6 +805,8 @@ TEST_P(Imgproc_ColorYUV, accuracy)
 TEST_P(Imgproc_ColorYUV, roi_accuracy)
 {
     int code = GetParam();
+    bool yuv422 = is_rgb2yuv422(code);
+
     RNG& random = theRNG();
 
     ConversionYUV cvt(code);
@@ -701,7 +843,12 @@ TEST_P(Imgproc_ColorYUV, roi_accuracy)
         else if(cvt.grayWriter_)
             referenceYUV2GRAY<YUV2GRAY_Converter>(src, gold, cvt.yuvReader_, cvt.grayWriter_);
         else if(cvt.yuvWriter_)
-            referenceRGB2YUV<RGB2YUV_Converter>  (src, gold, cvt.rgbReader_, cvt.yuvWriter_);
+        {
+            if(!yuv422)
+                referenceRGB2YUV<RGB2YUV_Converter>  (src, gold, cvt.rgbReader_, cvt.yuvWriter_);
+            else
+                referenceRGB2YUV422<RGB2YUV422_Converter>  (src, gold, cvt.rgbReader_, cvt.yuvWriter_);
+        }
 
         cv::cvtColor(src, dst, code, -1);
 
@@ -722,7 +869,11 @@ INSTANTIATE_TEST_CASE_P(cvt422, Imgproc_ColorYUV,
     ::testing::Values((int)COLOR_YUV2RGB_UYVY, (int)COLOR_YUV2BGR_UYVY, (int)COLOR_YUV2RGBA_UYVY, (int)COLOR_YUV2BGRA_UYVY,
                       (int)COLOR_YUV2RGB_YUY2, (int)COLOR_YUV2BGR_YUY2, (int)COLOR_YUV2RGB_YVYU, (int)COLOR_YUV2BGR_YVYU,
                       (int)COLOR_YUV2RGBA_YUY2, (int)COLOR_YUV2BGRA_YUY2, (int)COLOR_YUV2RGBA_YVYU, (int)COLOR_YUV2BGRA_YVYU,
-                      (int)COLOR_YUV2GRAY_UYVY, (int)COLOR_YUV2GRAY_YUY2));
+                      (int)COLOR_YUV2GRAY_UYVY, (int)COLOR_YUV2GRAY_YUY2,
+                      (int)COLOR_RGB2YUV_UYVY,  (int)COLOR_BGR2YUV_UYVY,  (int)COLOR_RGBA2YUV_UYVY, (int)COLOR_BGRA2YUV_UYVY,
+                      (int)COLOR_RGB2YUV_YUY2,  (int)COLOR_BGR2YUV_YUY2,  (int)COLOR_RGB2YUV_YVYU,  (int)COLOR_BGR2YUV_YVYU,
+                      (int)COLOR_RGBA2YUV_YUY2, (int)COLOR_BGRA2YUV_YUY2, (int)COLOR_RGBA2YUV_YVYU, (int)COLOR_BGRA2YUV_YVYU,
+                      (int)COLOR_RGB2YUV_YUY2));
 
 }
 
