@@ -1219,7 +1219,7 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
                              haveDstUninit ? " -D HAVE_DST_UNINIT" : "");
 
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
-        ocl::OpenCLExecutionContextScope scope(*pExecCtx.get());
+        ocl::OpenCLExecutionContextScope scope(pExecCtx ? *pExecCtx.get() : ocl::OpenCLExecutionContext::getCurrent());
 
         ocl::Kernel k("copyToMask", ocl::core::copyset_oclsrc, opts);
         if (!k.empty())
@@ -1270,7 +1270,7 @@ void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) con
 
         char cvt[2][50];
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
-        ocl::OpenCLExecutionContextScope scope(*pExecCtx.get());
+        ocl::OpenCLExecutionContextScope scope(pExecCtx ? *pExecCtx.get() : ocl::OpenCLExecutionContext::getCurrent());
 
         ocl::Kernel k("convertTo", ocl::core::convert_oclsrc,
                       format("-D srcT=%s -D WT=%s -D dstT=%s -D convertToWT=%s -D convertToDT=%s%s%s",
@@ -1335,7 +1335,7 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
                              ocl::memopTypeToStr(d), kercn);
 
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
-        ocl::OpenCLExecutionContextScope scope(*pExecCtx.get());
+        ocl::OpenCLExecutionContextScope scope(pExecCtx ? *pExecCtx.get() : ocl::OpenCLExecutionContext::getCurrent());
 
         ocl::Kernel setK(haveMask ? "setMask" : "set", ocl::core::copyset_oclsrc, opts);
         if( !setK.empty() )
