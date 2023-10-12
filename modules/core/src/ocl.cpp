@@ -3747,7 +3747,7 @@ int Kernel::set(int i, const KernelArg& arg)
     if( arg.m )
     {
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(arg.m->u->allocatorContext);
-        OpenCLExecutionContextScope scope(*pExecCtx.get());
+        OpenCLExecutionContextScope scope(pExecCtx ? *pExecCtx.get() : ocl::OpenCLExecutionContext::getCurrent());
 
         AccessFlag accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : static_cast<AccessFlag>(0)) |
                                  ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : static_cast<AccessFlag>(0));
