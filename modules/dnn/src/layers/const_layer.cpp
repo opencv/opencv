@@ -126,7 +126,7 @@ public:
         ngraph::element::Type dType;
         if (blobs[0].depth() == CV_32F) {
             dType = ngraph::element::f32;
-        } else if (blobs[0].depth() == CV_32S {
+        } else if (blobs[0].depth() == CV_32S) {
             dType = ngraph::element::i32;
         } else if (blobs[0].depth() == CV_8S) {
             dType = ngraph::element::i8;
