@@ -383,7 +383,7 @@ void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
     {
         inpShapes[i] = shape(inputs[i]);
         if (i > 0 && ddepth != inputs[i].depth())
-            CV_Error(Error::StsNotImplemented, "Mixed input data types.");
+            CV_Error(Error::StsNotImplemented, cv::format("Mixed input data types. Required type: %d, actual type: %d", ddepth, inputs[i].depth()));
 
         // Quantize and Dequantize layer have different output type than input.
         if (params.type != "Quantize" && params.type != "Dequantize")
