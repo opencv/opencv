@@ -1086,22 +1086,22 @@ static inline uint64x2_t vmvnq_u64(uint64x2_t a)
 }
 //OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_uint64x2, OPENCV_HAL_NOP, u64, u64)
 //OPENCV_HAL_IMPL_NEON_INT_CMP_OP(v_int64x2, vreinterpretq_s64_u64, s64, u64)
-static inline v_uint64x2 operator == (const v_uint64x2& a, const v_uint64x2& b)
+static inline v_uint64x2 v_eq (const v_uint64x2& a, const v_uint64x2& b)
 { return v_uint64x2(vceqq_u64(a.val, b.val)); }
-static inline v_uint64x2 operator != (const v_uint64x2& a, const v_uint64x2& b)
+static inline v_uint64x2 v_ne (const v_uint64x2& a, const v_uint64x2& b)
 { return v_uint64x2(vmvnq_u64(vceqq_u64(a.val, b.val))); }
-static inline v_int64x2 operator == (const v_int64x2& a, const v_int64x2& b)
+static inline v_int64x2 v_eq (const v_int64x2& a, const v_int64x2& b)
 { return v_int64x2(vreinterpretq_s64_u64(vceqq_s64(a.val, b.val))); }
-static inline v_int64x2 operator != (const v_int64x2& a, const v_int64x2& b)
+static inline v_int64x2 v_ne (const v_int64x2& a, const v_int64x2& b)
 { return v_int64x2(vreinterpretq_s64_u64(vmvnq_u64(vceqq_s64(a.val, b.val)))); }
 #else
-static inline v_uint64x2 operator == (const v_uint64x2& a, const v_uint64x2& b)
+static inline v_uint64x2 v_eq (const v_uint64x2& a, const v_uint64x2& b)
 {
     uint32x4_t cmp = vceqq_u32(vreinterpretq_u32_u64(a.val), vreinterpretq_u32_u64(b.val));
     uint32x4_t swapped = vrev64q_u32(cmp);
     return v_uint64x2(vreinterpretq_u64_u32(vandq_u32(cmp, swapped)));
 }
-static inline v_uint64x2 operator != (const v_uint64x2& a, const v_uint64x2& b)
+static inline v_uint64x2 v_ne (const v_uint64x2& a, const v_uint64x2& b)
 {
     uint32x4_t cmp = vceqq_u32(vreinterpretq_u32_u64(a.val), vreinterpretq_u32_u64(b.val));
     uint32x4_t swapped = vrev64q_u32(cmp);
@@ -1109,13 +1109,13 @@ static inline v_uint64x2 operator != (const v_uint64x2& a, const v_uint64x2& b)
     uint64x2_t vx = vreinterpretq_u64_u32(vdupq_n_u32(0xFFFFFFFF));
     return v_uint64x2(veorq_u64(v_eq, vx));
 }
-static inline v_int64x2 operator == (const v_int64x2& a, const v_int64x2& b)
+static inline v_int64x2 v_eq (const v_int64x2& a, const v_int64x2& b)
 {
-    return v_reinterpret_as_s64(v_reinterpret_as_u64(a) == v_reinterpret_as_u64(b));
+    return v_reinterpret_as_s64(v_eq(v_reinterpret_as_u64(a), v_reinterpret_as_u64(b)));
 }
-static inline v_int64x2 operator != (const v_int64x2& a, const v_int64x2& b)
+static inline v_int64x2 v_ne (const v_int64x2& a, const v_int64x2& b)
 {
-    return v_reinterpret_as_s64(v_reinterpret_as_u64(a) != v_reinterpret_as_u64(b));
+    return v_reinterpret_as_s64(v_ne(v_reinterpret_as_u64(a), v_reinterpret_as_u64(b)));
 }
 #endif
 #if CV_SIMD128_64F
