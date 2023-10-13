@@ -675,6 +675,9 @@ TEST_P(Test_ONNX_layers, Compare_GT)
 
     testONNXModels("greater");
 }
+TEST_P(Test_ONNX_layers, Greater_input_dtype_int64) {
+    testONNXModels("greater_input_dtype_int64");
+}
 
 TEST_P(Test_ONNX_layers, Compare_LT)
 {
