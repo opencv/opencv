@@ -1,11 +1,17 @@
 import os
 import os.path as osp
+import argparse
 import cv2
 import numpy as np
 from ultralytics.utils import ASSETS, yaml_load
 from ultralytics.utils.checks import check_yaml
 from ultralytics import YOLO
 
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "testimg_path",type=str, 
+    help="the path of the image you want to adding bounding box"
+)
 CLASSES = yaml_load(check_yaml('coco128.yaml'))['names']
 
 COLOR_MAP = [
@@ -127,24 +133,38 @@ class Opencv_Yolov8:
         add_text()
     
 
+def download_and_export_model(yolov8_dir:os.PathLike)->os.PathLike:
+    
+    modelpath = osp.join(yolov8_dir, "yolov8net.onnx")
+    if os.path.exists(modelpath):
+        print("find yolov8 onnx model")
+        return modelpath
 
-def main():
-
-    yolov8_onnx_path = osp.join("models", "yolov8net.onnx")
-    if not os.path.exists(yolov8_onnx_path):
+    if not osp.exists(yolov8_dir):
+        print("download model ..")
+        if not osp.exists(yolov8_dir):
+            os.mkdir(yolov8_dir)
+        
         original_model = YOLO("yolov8n.pt")
         original_model.export(format="onnx",opset=12)
-        os.replace('yolov8n.onnx',yolov8_onnx_path)
+        os.replace('yolov8n.onnx',modelpath)
         os.remove('yolov8n.pt')
+    return modelpath
+
+def main(testimg_path:os.PathLike):
+    print(testimg_path)
+    yolov8_onnx_path = download_and_export_model(
+        yolov8_dir=osp.join("model")
+    )
     cvyolo = Opencv_Yolov8(yolov8_onnx_path=yolov8_onnx_path)
-    testimg_path = osp.join("test","dog1.jpg")
     testimg = cv2.imread(testimg_path)
     prediction = cvyolo(img=testimg)
     folder, imgname = osp.split(testimg_path)
-    outname=osp.join('predict',f"bbox_{imgname}")
+    outname=osp.join(folder,f"bbox_{imgname}")
     print(outname, end=",write ")
     print(cv2.imwrite(outname,prediction))
     print("="*40)
 
 if __name__ == "__main__":
-    main()
+    args = parser.parse_args()
+    main(testimg_path=args.testimg_path)
