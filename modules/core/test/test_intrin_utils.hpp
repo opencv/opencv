@@ -1745,8 +1745,8 @@ template<typename R> struct TheTest
         R a = dataA;
         R b = dataB;
 
-        Data<R> dataEQ = (a == b);
-        Data<R> dataNE = (a != b);
+        Data<R> dataEQ = v_eq(a, b);
+        Data<R> dataNE = v_ne(a, b);
 
         for (int i = 0; i < R::nlanes; ++i)
         {
