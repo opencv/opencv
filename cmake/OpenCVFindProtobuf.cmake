@@ -6,7 +6,6 @@ if(NOT WITH_PROTOBUF)
   return()
 endif()
 
-
 ocv_option(BUILD_PROTOBUF "Force to build libprotobuf runtime from sources" ON)
 ocv_option(PROTOBUF_UPDATE_FILES "Force rebuilding .proto files (protoc should be available)" OFF)
 
