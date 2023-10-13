@@ -64,7 +64,7 @@ public:
         outs.getUMatVector(outputs);
         if (outs.depth() == CV_16S) {
             auto blob = blobs[0];
-            if (blob.type() == CV_32S) {
+            if (blob.type() != CV_32F) {
                 blob.convertTo(blob, CV_32F);
             }
             convertFp16(blob, outputs[0]);
