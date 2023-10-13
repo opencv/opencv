@@ -140,9 +140,9 @@ public:
 #if CV_SIMD128
                         v_uint32x4 rval = v_setall_u32(sptr[j]);
                         v_uint32x4 val(ksptr0[j], ksptr1[j], ksptr2[j], ksptr3[j]);
-                        v_float32x4 w = kweight4 * v_lut(color_weight, v_reinterpret_as_s32(v_absdiff(val, rval)));
+                        v_float32x4 w = v_mul(kweight4, v_lut(this->color_weight, v_reinterpret_as_s32(v_absdiff(val, rval))));
                         wsum[j] += v_reduce_sum(w);
-                        sum[j] += v_reduce_sum(v_cvt_f32(v_reinterpret_as_s32(val)) * w);
+                        sum[j] += v_reduce_sum(v_mul(v_cvt_f32(v_reinterpret_as_s32(val)), w));
 #else
                         int rval = sptr[j];
 
@@ -407,11 +407,11 @@ public:
                             v_uint32x4 b(ksptr0[0], ksptr1[0], ksptr2[0], ksptr3[0]);
                             v_uint32x4 g(ksptr0[1], ksptr1[1], ksptr2[1], ksptr3[1]);
                             v_uint32x4 r(ksptr0[2], ksptr1[2], ksptr2[2], ksptr3[2]);
-                            v_float32x4 w = kweight4 * v_lut(color_weight, v_reinterpret_as_s32(v_absdiff(b, rb) + v_absdiff(g, rg) + v_absdiff(r, rr)));
+                            v_float32x4 w = v_mul(kweight4, v_lut(this->color_weight, v_reinterpret_as_s32(v_add(v_add(v_absdiff(b, rb), v_absdiff(g, rg)), v_absdiff(r, rr)))));
                             wsum[j] += v_reduce_sum(w);
-                            sum_b[j] += v_reduce_sum(v_cvt_f32(v_reinterpret_as_s32(b)) * w);
-                            sum_g[j] += v_reduce_sum(v_cvt_f32(v_reinterpret_as_s32(g)) * w);
-                            sum_r[j] += v_reduce_sum(v_cvt_f32(v_reinterpret_as_s32(r)) * w);
+                            sum_b[j] += v_reduce_sum(v_mul(v_cvt_f32(v_reinterpret_as_s32(b)), w));
+                            sum_g[j] += v_reduce_sum(v_mul(v_cvt_f32(v_reinterpret_as_s32(g)), w));
+                            sum_r[j] += v_reduce_sum(v_mul(v_cvt_f32(v_reinterpret_as_s32(r)), w));
 #else
                         int rb = rsptr[0], rg = rsptr[1], rr = rsptr[2];
 
@@ -661,12 +661,12 @@ public:
                         v_float32x4 rval = v_setall_f32(sptr[j]);
                         v_float32x4 val(ksptr0[j], ksptr1[j], ksptr2[j], ksptr3[j]);
                         v_float32x4 knan = v_not_nan(val);
-                        v_float32x4 alpha = (v_absdiff(val, rval) * sindex4) & v_not_nan(rval) & knan;
+                        v_float32x4 alpha = v_and(v_and(v_mul(v_absdiff(val, rval), sindex4), v_not_nan(rval)), knan);
                         v_int32x4 idx = v_trunc(alpha);
-                        alpha -= v_cvt_f32(idx);
-                        v_float32x4 w = (kweight4 * v_muladd(v_lut(expLUT + 1, idx), alpha, v_lut(expLUT, idx) * (v_one4 - alpha))) & knan;
+                        alpha = v_sub(alpha, v_cvt_f32(idx));
+                        v_float32x4 w = v_and(v_mul(kweight4, v_muladd(v_lut(this->expLUT + 1, idx), alpha, v_mul(v_lut(this->expLUT, idx), v_sub(v_one4, alpha)))), knan);
                         wsum[j] += v_reduce_sum(w);
-                        sum[j] += v_reduce_sum((val & knan) * w);
+                        sum[j] += v_reduce_sum(v_mul(v_and(val, knan), w));
 #else
                         float rval = sptr[j];
 
@@ -862,15 +862,15 @@ public:
                         v_float32x4 kb(ksptr0[0], ksptr1[0], ksptr2[0], ksptr3[0]);
                         v_float32x4 kg(ksptr0[1], ksptr1[1], ksptr2[1], ksptr3[1]);
                         v_float32x4 kr(ksptr0[2], ksptr1[2], ksptr2[2], ksptr3[2]);
-                        v_float32x4 knan = v_not_nan(kb) & v_not_nan(kg) & v_not_nan(kr);
-                        v_float32x4 alpha = ((v_absdiff(kb, rb) + v_absdiff(kg, rg) + v_absdiff(kr, rr)) * sindex4) & v_not_nan(rb) & v_not_nan(rg) & v_not_nan(rr) & knan;
+                        v_float32x4 knan = v_and(v_and(v_not_nan(kb), v_not_nan(kg)), v_not_nan(kr));
+                        v_float32x4 alpha = v_and(v_and(v_and(v_and(v_mul(v_add(v_add(v_absdiff(kb, rb), v_absdiff(kg, rg)), v_absdiff(kr, rr)), sindex4), v_not_nan(rb)), v_not_nan(rg)), v_not_nan(rr)), knan);
                         v_int32x4 idx = v_trunc(alpha);
-                        alpha -= v_cvt_f32(idx);
-                        v_float32x4 w = (kweight4 * v_muladd(v_lut(expLUT + 1, idx), alpha, v_lut(expLUT, idx) * (v_one4 - alpha))) & knan;
+                        alpha = v_sub(alpha, v_cvt_f32(idx));
+                        v_float32x4 w = v_and(v_mul(kweight4, v_muladd(v_lut(this->expLUT + 1, idx), alpha, v_mul(v_lut(this->expLUT, idx), v_sub(v_one4, alpha)))), knan);
                         wsum[j] += v_reduce_sum(w);
-                        sum_b[j] += v_reduce_sum((kb & knan) * w);
-                        sum_g[j] += v_reduce_sum((kg & knan) * w);
-                        sum_r[j] += v_reduce_sum((kr & knan) * w);
+                        sum_b[j] += v_reduce_sum(v_mul(v_and(kb, knan), w));
+                        sum_g[j] += v_reduce_sum(v_mul(v_and(kg, knan), w));
+                        sum_r[j] += v_reduce_sum(v_mul(v_and(kr, knan), w));
 #else
                         float rb = rsptr[0], rg = rsptr[1], rr = rsptr[2];
                         bool r_NAN = cvIsNaN(rb) || cvIsNaN(rg) || cvIsNaN(rr);
