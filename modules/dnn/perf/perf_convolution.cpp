@@ -889,7 +889,7 @@ PERF_TEST_P_(Conv, conv)
 
 INSTANTIATE_TEST_CASE_P(/**/, Conv, Combine(
     ConvParamID::all(),
-    dnnBackendsAndTargets(false, false)  // defined in ../test/test_common.hpp
+    dnnBackendsAndTargets(/* withInferenceEngine = */false, /* obsolete_withHalide = */false)  // defined in ../test/test_common.hpp
 ));
 
 } // namespace

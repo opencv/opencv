@@ -44,7 +44,6 @@
 #include "layers_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
@@ -71,14 +70,6 @@ using std::min;
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 using namespace cv::dnn::ocl4dnn;
-#endif
-
-#ifdef HAVE_HALIDE
-#if 0  // size_t is not well supported in Halide operations
-typedef size_t HALIDE_DIFF_T;
-#else
-typedef int HALIDE_DIFF_T;
-#endif
 #endif
 
 #ifdef HAVE_CUDA
@@ -221,12 +212,6 @@ public:
                 return true;
             else
                 return false;
-        }
-        else if (backendId == DNN_BACKEND_HALIDE)
-        {
-            if (kernel_size.empty() || kernel_size.size() == 2)
-                return haveHalide() &&
-                       (type == MAX || (type == AVE && !pads_begin[0] && !pads_begin[1] && !pads_end[0] && !pads_end[1]));
         }
         else if (backendId == DNN_BACKEND_WEBNN)
         {
@@ -494,16 +479,6 @@ public:
         return make_cuda_node<cuda4dnn::PoolingOp>(preferableTarget, std::move(context->cudnn_handle), config);
     }
 #endif
-
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-        if (type == MAX)
-            return initMaxPoolingHalide(inputs);
-        else if (type == AVE)
-            return initAvePoolingHalide(inputs);
-        else
-            return Ptr<BackendNode>();
-    }
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
@@ -1192,142 +1167,6 @@ public:
         pads_begin.resize(2);
         pads_end.resize(2);
         PoolingInvoker::run(src, rois, dst, mask, kernel_size, strides, pads_begin, pads_end, avePoolPaddedArea, type, spatialScale, computeMaxIdx, nstripes);
-    }
-
-    virtual Ptr<BackendNode> initMaxPoolingHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
-    {
-#ifdef HAVE_HALIDE
-        Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
-        const int inWidth = inputBuffer.width();
-        const int inHeight = inputBuffer.height();
-        const HALIDE_DIFF_T kernelHeight = (HALIDE_DIFF_T)kernel_size[0];
-        const HALIDE_DIFF_T kernelWidth = (HALIDE_DIFF_T)kernel_size[1];
-        const HALIDE_DIFF_T strideHeight = (HALIDE_DIFF_T)strides[0];
-        const HALIDE_DIFF_T strideWidth = (HALIDE_DIFF_T)strides[1];
-        const HALIDE_DIFF_T paddingTop = (HALIDE_DIFF_T)pads_begin[0];
-        const HALIDE_DIFF_T paddingLeft = (HALIDE_DIFF_T)pads_begin[1];
-
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::RDom r(0, kernelWidth, 0, kernelHeight);
-        Halide::Expr kx, ky;
-        if(paddingLeft || paddingTop)
-        {
-            kx = clamp(x * strideWidth + r.x - paddingLeft, 0, inWidth - 1);
-            ky = clamp(y * strideHeight + r.y - paddingTop, 0, inHeight - 1);
-        }
-        else
-        {
-            kx = min(x * strideWidth + r.x, inWidth - 1);
-            ky = min(y * strideHeight + r.y, inHeight - 1);
-        }
-
-        // Halide::argmax returns tuple (r.x, r.y, max).
-        Halide::Tuple res = argmax(inputBuffer(kx, ky, c, n));
-
-        if (!computeMaxIdx)
-        {
-            top(x, y, c, n) = res[2];
-            return Ptr<BackendNode>(new HalideBackendNode(top));
-        }
-
-        // Compute offset from argmax in range [0, kernel_size).
-        Halide::Expr max_index;
-        if(paddingLeft || paddingTop)
-        {
-            max_index = clamp(y * strideHeight + res[1] - paddingTop,
-                              0, inHeight - 1) * inWidth +
-                        clamp(x * strideWidth + res[0] - paddingLeft,
-                              0, inWidth - 1);
-        }
-        else
-        {
-            max_index = min(y * strideHeight + res[1], inHeight - 1) * inWidth +
-                        min(x * strideWidth + res[0], inWidth - 1);
-        }
-        top(x, y, c, n) = { res[2], Halide::cast<float>(max_index) };
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
-
-    virtual Ptr<BackendNode> initAvePoolingHalide(const std::vector<Ptr<BackendWrapper> > &inputs)
-    {
-#ifdef HAVE_HALIDE
-        Halide::Buffer<float> inputBuffer = halideBuffer(inputs[0]);
-
-        const int inW = inputBuffer.width(), inH = inputBuffer.height();
-        const HALIDE_DIFF_T kernelHeight = (HALIDE_DIFF_T)kernel_size[0];
-        const HALIDE_DIFF_T kernelWidth = (HALIDE_DIFF_T)kernel_size[1];
-        const HALIDE_DIFF_T strideHeight = (HALIDE_DIFF_T)strides[0];
-        const HALIDE_DIFF_T strideWidth = (HALIDE_DIFF_T)strides[1];
-        if ((inW - kernelWidth) % strideWidth || (inH - kernelHeight) % strideHeight)
-        {
-            CV_Error(cv::Error::StsNotImplemented,
-                     "Halide backend for average pooling with partial "
-                     "kernels is not implemented");
-        }
-
-        const float norm = 1.0f / (kernelWidth * kernelHeight);
-
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::RDom r(0, kernelWidth, 0, kernelHeight);
-        top(x, y, c, n) = sum(
-            inputBuffer(x * strideWidth + r.x,
-                        y * strideHeight + r.y, c, n)) * norm;
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
-
-    virtual void applyHalideScheduler(Ptr<BackendNode>& node,
-                                      const std::vector<Mat*> &inputs,
-                                      const std::vector<Mat> &outputs,
-                                      int targetId) const CV_OVERRIDE
-    {
-#ifdef  HAVE_HALIDE
-        if (targetId != DNN_TARGET_CPU)
-        {
-            Layer::applyHalideScheduler(node, inputs, outputs, targetId);
-            return;
-        }
-        Halide::Var x("x"), y("y"), c("c"), n("n"), tile("tile"),
-                    xi("xi"), yi("yi"), ci("ci"), xo("xo"), yo("yo"), co("co");
-        Halide::Func& top = node.dynamicCast<HalideBackendNode>()->funcs.back();
-
-        int outW, outH, outC, outN;
-        getCanonicalSize(outputs[0].size, &outW, &outH, &outC, &outN);
-
-        if (outW < 8 || outH < 8)
-        {
-            if (outC > 8)
-                top.split(c, co, ci, 8)
-                   .fuse(x, y, tile).fuse(co, tile, tile).fuse(n, tile, tile)
-                   .parallel(tile)
-                   .vectorize(ci);
-            else
-            {
-                top.fuse(y, c, tile).fuse(n, tile, tile)
-                   .parallel(tile);
-                if (outW > 1)
-                    top.vectorize(x);
-            }
-        }
-        else
-        {
-            if (outC > 8)
-                top.split(x, xo, xi, 8).split(y, yo, yi, 8).split(c, co, ci, 8)
-                   .fuse(xo, yo, tile).fuse(co, tile, tile).fuse(n, tile, tile)
-                   .parallel(tile)
-                   .vectorize(xi);
-            else
-                top.split(x, xo, xi, 8).split(y, yo, yi, 8)
-                   .fuse(xo, yo, tile).fuse(c, tile, tile).fuse(n, tile, tile)
-                   .parallel(tile)
-                   .vectorize(xi);
-        }
-#endif  // HAVE_HALIDE
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,

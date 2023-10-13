@@ -43,7 +43,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_cann.hpp"
@@ -183,9 +182,7 @@ public:
             return channelsModeInput == ELTWISE_CHANNNELS_SAME;
         }
 
-        return backendId == DNN_BACKEND_OPENCV ||
-               (backendId == DNN_BACKEND_HALIDE && op != DIV)  // TODO: not implemented, see PR #15811
-               ;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -789,64 +786,6 @@ public:
         return make_cuda_node<cuda4dnn::EltwiseOp>(preferableTarget, std::move(context->stream), op_, coeffs);
     }
 #endif
-
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (name.empty() ? Halide::Func() : Halide::Func(name));
-        Halide::Expr topExpr;
-        std::vector<Halide::Buffer<> > inputBuffers = halideBuffers(input);
-        switch (op)
-        {
-            case SUM:
-                if (coeffs.empty())
-                {
-                    topExpr = inputBuffers[0](x, y, c, n) +
-                              inputBuffers[1](x, y, c, n);
-                    for (int i = 2; i < inputBuffers.size(); ++i)
-                        topExpr += inputBuffers[i](x, y, c, n);
-                }
-                else
-                {
-                  topExpr = coeffs[0] * inputBuffers[0](x, y, c, n) +
-                            coeffs[1] * inputBuffers[1](x, y, c, n);
-                  for (int i = 2; i < inputBuffers.size(); ++i)
-                      topExpr += coeffs[i] * inputBuffers[i](x, y, c, n);
-                }
-                break;
-            case PROD:
-                topExpr = inputBuffers[0](x, y, c, n) *
-                          inputBuffers[1](x, y, c, n);
-                for (int i = 2; i < inputBuffers.size(); ++i)
-                    topExpr *= inputBuffers[i](x, y, c, n);
-                break;
-            case DIV:
-                topExpr = inputBuffers[0](x, y, c, n) /
-                          inputBuffers[1](x, y, c, n);
-                for (int i = 2; i < inputBuffers.size(); ++i)
-                    topExpr /= inputBuffers[i](x, y, c, n);
-                break;
-            case MAX:
-                topExpr = max(inputBuffers[0](x, y, c, n),
-                              inputBuffers[1](x, y, c, n));
-                for (int i = 2; i < inputBuffers.size(); ++i)
-                    topExpr = max(topExpr, inputBuffers[i](x, y, c, n));
-                break;
-            case MIN:
-                topExpr = min(inputBuffers[0](x, y, c, n),
-                              inputBuffers[1](x, y, c, n));
-                for (int i = 2; i < inputBuffers.size(); ++i)
-                    topExpr = min(topExpr, inputBuffers[i](x, y, c, n));
-                break;
-            default:
-                return Ptr<BackendNode>();
-        }
-        top(x, y, c, n) = topExpr;
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
-    }
 
 #ifdef HAVE_CANN
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,

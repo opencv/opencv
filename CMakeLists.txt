@@ -297,9 +297,6 @@ OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
 OCV_OPTION(WITH_IPP "Include Intel IPP support" (NOT MINGW AND NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS
   VERIFY HAVE_IPP)
-OCV_OPTION(WITH_HALIDE "Include Halide support" OFF
-  VISIBLE_IF TRUE
-  VERIFY HAVE_HALIDE)
 OCV_OPTION(WITH_VULKAN "Include Vulkan support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_VULKAN)
@@ -829,11 +826,6 @@ endif()
 # --- OpenCL ---
 if(WITH_OPENCL)
   include(cmake/OpenCVDetectOpenCL.cmake)
-endif()
-
-# --- Halide ---
-if(WITH_HALIDE)
-  include(cmake/OpenCVDetectHalide.cmake)
 endif()
 
 # --- VkCom ---
@@ -1619,10 +1611,6 @@ endif()
 
 if(WITH_LAPACK OR HAVE_LAPACK)
   status("    Lapack:"      HAVE_LAPACK     THEN "YES (${LAPACK_LIBRARIES} ${LAPACK_VERSION})" ELSE NO)
-endif()
-
-if(WITH_HALIDE OR HAVE_HALIDE)
-  status("    Halide:"     HAVE_HALIDE      THEN "YES (${HALIDE_LIBRARIES} ${HALIDE_INCLUDE_DIRS})" ELSE NO)
 endif()
 
 if(HAVE_OPENVINO

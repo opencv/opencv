@@ -43,7 +43,6 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
-#include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
@@ -153,38 +152,6 @@ public:
     virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE
     {
         func.finalize();
-    }
-
-    virtual Ptr<BackendNode> tryAttach(const Ptr<BackendNode>& node) CV_OVERRIDE
-    {
-        switch (node->backendId)
-        {
-            case DNN_BACKEND_HALIDE:
-            {
-#ifdef HAVE_HALIDE
-                auto base = node.dynamicCast<HalideBackendNode>();
-                Halide::Func& input = base->funcs.back();
-                Halide::Var x("x"), y("y"), c("c"), n("n");
-                Halide::Func top = (this->name.empty() ? Halide::Func() : Halide::Func(this->name));
-                func.attachHalide(input(x, y, c, n), top);
-                return Ptr<BackendNode>(new HalideBackendNode(base, top));
-#endif  // HAVE_HALIDE
-                break;
-            }
-        }
-        return Ptr<BackendNode>();
-    }
-
-    virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_HALIDE
-        Halide::Buffer<float> input = halideBuffer(inputs[0]);
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Func top = (this->name.empty() ? Halide::Func() : Halide::Func(this->name));
-        func.attachHalide(input(x, y, c, n), top);
-        return Ptr<BackendNode>(new HalideBackendNode(top));
-#endif  // HAVE_HALIDE
-        return Ptr<BackendNode>();
     }
 
 #ifdef HAVE_CANN
@@ -351,7 +318,6 @@ struct ReLUFunctor : public BaseFunctor
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -437,21 +403,6 @@ struct ReLUFunctor : public BaseFunctor
         return true;
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        if (slope)
-        {
-            top(x, y, c, n) = select(input >= 0.0f, input, slope * input);
-        }
-        else
-        {
-            top(x, y, c, n) = max(input, 0.0f);
-        }
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -555,7 +506,6 @@ struct ReLU6Functor : public BaseFunctor
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_WEBNN ||
                backendId == DNN_BACKEND_CANN;
     }
@@ -631,14 +581,6 @@ struct ReLU6Functor : public BaseFunctor
         return make_cuda_node<cuda4dnn::ClippedReLUOp>(target, stream, minValue, maxValue);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = clamp(input, minValue, maxValue);
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -779,13 +721,6 @@ struct BaseDefaultFunctor : public BaseFunctor
     }
 #endif
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        CV_Error(Error::StsNotImplemented, "");
-    }
-#endif  // HAVE_HALIDE
-
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
                                 const std::vector<Ptr<BackendWrapper> > &inputs,
@@ -883,7 +818,6 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -898,14 +832,6 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
         return make_cuda_node<cuda4dnn::TanHOp>(target, stream);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = tanh(input);
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -949,7 +875,6 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                backendId == DNN_BACKEND_CANN;
     }
@@ -965,14 +890,6 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
         return make_cuda_node<cuda4dnn::SwishOp>(target, stream);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = input / (1.0f + exp(-input));
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -1019,7 +936,6 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
                backendId == DNN_BACKEND_CANN;
     }
@@ -1043,14 +959,6 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
         return make_cuda_node<cuda4dnn::MishOp>(target, stream);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = input * tanh(log(1.0f + exp(input)));
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -1104,7 +1012,6 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -1126,14 +1033,6 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
         return make_cuda_node<cuda4dnn::SigmoidOp>(target, stream);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = 1.0f / (1.0f + exp(-input));
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -1184,7 +1083,6 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -1204,14 +1102,6 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
         return make_cuda_node<cuda4dnn::ELUOp>(target, stream, alpha);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = select(input >= 0.0f, input, alpha * (exp(input) - 1));
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -1261,7 +1151,6 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -1276,14 +1165,6 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
         return make_cuda_node<cuda4dnn::AbsValOp>(target, stream);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = abs(input);
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -1330,7 +1211,6 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -1368,15 +1248,6 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
     }
 #endif // HAVE_CANN
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        // https://github.com/BVLC/caffe/blame/1.0/src/caffe/layers/bnll_layer.cpp#L17
-        top(x, y, c, n) = max(input, 0) + log(1.0f + exp(-abs(input)));
-    }
-#endif  // HAVE_HALIDE
-
     int64 getFLOPSPerElement() const { return 5; }
 };
 
@@ -1389,7 +1260,7 @@ struct CeilFunctor : public BaseDefaultFunctor<CeilFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     inline float calculate(float x) const
@@ -1425,14 +1296,6 @@ struct CeilFunctor : public BaseDefaultFunctor<CeilFunctor>
     }
 #endif // HAVE_CANN
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = ceil(input);
-    }
-#endif  // HAVE_HALIDE
-
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1447,7 +1310,6 @@ struct FloorFunctor : public BaseDefaultFunctor<FloorFunctor>
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA   ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -1484,14 +1346,6 @@ struct FloorFunctor : public BaseDefaultFunctor<FloorFunctor>
     }
 #endif // HAVE_CANN
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = floor(input);
-    }
-#endif  // HAVE_HALIDE
-
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1504,7 +1358,7 @@ struct LogFunctor : public BaseDefaultFunctor<LogFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     inline float calculate(float x) const
@@ -1519,14 +1373,6 @@ struct LogFunctor : public BaseDefaultFunctor<LogFunctor>
     }
 #endif
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = log(input);
-    }
-#endif  // HAVE_HALIDE
-
     int64 getFLOPSPerElement() const { return 1; }
 };
 
@@ -1539,7 +1385,7 @@ struct RoundFunctor : public BaseDefaultFunctor<RoundFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     inline float calculate(float x) const
@@ -1559,14 +1405,6 @@ struct RoundFunctor : public BaseDefaultFunctor<RoundFunctor>
     }
 #endif
 
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = round(input);
-    }
-#endif  // HAVE_HALIDE
-
     int64 getFLOPSPerElement() const { return 2; }
 };
 
@@ -1579,7 +1417,7 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     inline float calculate(float x) const
@@ -1593,14 +1431,6 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
         return make_cuda_node<cuda4dnn::SqrtOp>(target, stream);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = sqrt(input);
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_DNN_NGRAPH
     std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
@@ -1621,7 +1451,7 @@ struct NotFunctor : public BaseDefaultFunctor<NotFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
     }
 
     inline float calculate(float x) const
@@ -1635,14 +1465,6 @@ struct NotFunctor : public BaseDefaultFunctor<NotFunctor>
         return make_cuda_node<cuda4dnn::NotOp>(target, stream);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = floor(1.0f - input);
-    }
-#endif  // HAVE_HALIDE
 
     int64 getFLOPSPerElement() const { return 2; }
 };
@@ -2224,8 +2046,7 @@ struct PowerFunctor : public BaseFunctor
 #endif
         {
             return backendId == DNN_BACKEND_OPENCV ||
-                   backendId == DNN_BACKEND_CUDA ||
-                   backendId == DNN_BACKEND_HALIDE;
+                   backendId == DNN_BACKEND_CUDA;
         }
     }
 
@@ -2301,23 +2122,6 @@ struct PowerFunctor : public BaseFunctor
         return make_cuda_node<cuda4dnn::PowerOp>(target, stream, power, scale, shift);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        Halide::Expr topExpr = (scale == 1.0f ? input : input * scale);
-        if (shift)
-        {
-            topExpr += shift;
-        }
-        if (power != 1.0f)
-        {
-            topExpr = pow(topExpr, power);
-        }
-        top(x, y, c, n) = topExpr;
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,
@@ -2409,7 +2213,7 @@ struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
     bool supportBackend(int backendId, int targetId)
     {
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     inline float calculate(float x) const
@@ -2429,14 +2233,6 @@ struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
         return make_cuda_node<cuda4dnn::ExpOp>(target, stream, normScale, normShift);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        top(x, y, c, n) = exp(normScale * input + normShift);
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_DNN_NGRAPH
     std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
@@ -2478,7 +2274,6 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -2560,15 +2355,6 @@ struct ChannelsPReLUFunctor : public BaseFunctor
         return make_cuda_node<cuda4dnn::ChannelwiseReLUOp>(target, stream, scale);
     }
 #endif
-
-#ifdef HAVE_HALIDE
-    void attachHalide(const Halide::Expr& input, Halide::Func& top)
-    {
-        Halide::Var x("x"), y("y"), c("c"), n("n");
-        auto weights = wrapToHalideBuffer(scale, {(int)scale.total()});
-        top(x, y, c, n) = select(input >= 0.0f, input, weights(c) * input);
-    }
-#endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
     Ptr<BackendNode> initCannOp(const std::string& name,

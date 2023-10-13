@@ -22,7 +22,7 @@
 using namespace cv;
 using namespace cv::dnn;
 
-const char* keys =
+std::string param_keys =
 "{help    h  |                 | show help message}"
 "{model   m  |                 | network model}"
 "{query_list q |               | list of query images}"
@@ -31,21 +31,24 @@ const char* keys =
 "{resize_h   | 256             | resize input to specific height.}"
 "{resize_w   | 128             | resize input to specific width.}"
 "{topk k     | 5               | number of gallery images showed in visualization}"
-"{output_dir |                 | path for visualization(it should be existed)}"
-"{backend b  | 0               | choose one of computation backends: "
-"0: automatically (by default), "
-"1: Halide language (http://halide-lang.org/), "
-"2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-"3: OpenCV implementation, "
-"4: VKCOM, "
-"5: CUDA }"
-"{target  t  | 0                | choose one of target computation devices: "
-"0: CPU target (by default), "
-"1: OpenCL, "
-"2: OpenCL fp16 (half-float precision), "
-"4: Vulkan, "
-"6: CUDA, "
-"7: CUDA fp16 (half-float preprocess) }";
+"{output_dir |                 | path for visualization(it should be existed)}";
+std::string backend_keys = cv::format(
+"{ backend   | 0 | Choose one of computation backends: "
+                   "%d: automatically (by default), "
+                   "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                   "%d: OpenCV implementation, "
+                   "%d: VKCOM, "
+                   "%d: CUDA }", cv::dnn::DNN_BACKEND_DEFAULT, cv::dnn::DNN_BACKEND_INFERENCE_ENGINE, cv::dnn::DNN_BACKEND_OPENCV, cv::dnn::DNN_BACKEND_VKCOM, cv::dnn::DNN_BACKEND_CUDA);
+std::string target_keys = cv::format(
+"{ target    | 0 | Choose one of target computation devices: "
+                   "%d: CPU target (by default), "
+                   "%d: OpenCL, "
+                   "%d: OpenCL fp16 (half-float precision), "
+                   "%d: VPU, "
+                   "%d: Vulkan, "
+                   "%d: CUDA, "
+                   "%d: CUDA fp16 (half-float preprocess) }", cv::dnn::DNN_TARGET_CPU, cv::dnn::DNN_TARGET_OPENCL, cv::dnn::DNN_TARGET_OPENCL_FP16, cv::dnn::DNN_TARGET_MYRIAD, cv::dnn::DNN_TARGET_VULKAN, cv::dnn::DNN_TARGET_CUDA, cv::dnn::DNN_TARGET_CUDA_FP16);
+std::string keys = param_keys + backend_keys + target_keys;
 
 namespace cv{
 namespace reid{

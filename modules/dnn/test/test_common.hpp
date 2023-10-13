@@ -19,7 +19,6 @@
 #define INF_ENGINE_VER_MAJOR_EQ(ver) (((INF_ENGINE_RELEASE) / 10000) == ((ver) / 10000))
 
 #define CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND      "dnn_skip_opencv_backend"
-#define CV_TEST_TAG_DNN_SKIP_HALIDE              "dnn_skip_halide"
 #define CV_TEST_TAG_DNN_SKIP_CPU                 "dnn_skip_cpu"
 #define CV_TEST_TAG_DNN_SKIP_CPU_FP16            "dnn_skip_cpu_fp16"
 #define CV_TEST_TAG_DNN_SKIP_OPENCL              "dnn_skip_ocl"
@@ -137,7 +136,7 @@ bool validateVPUType();
 
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargets(
         bool withInferenceEngine = true,
-        bool withHalide = false,
+        bool obsolete_withHalide = false, // this is kept for compatibility
         bool withCpuOCV = true,
         bool withVkCom = true,
         bool withCUDA = true,

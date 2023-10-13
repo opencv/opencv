@@ -2423,7 +2423,12 @@ public:
 
     static testing::internal::ParamGenerator<tuple<Backend, Target> > dnnBackendsAndTargetsForFusionTests()
     {
-        return dnnBackendsAndTargets(false, false, true, false, true, false); // OCV OpenCL + OCV CPU + CUDA
+        return dnnBackendsAndTargets(/* withInferenceEngine = */ false,
+                                     /* obsolete_withHalide = */ false,
+                                     /* withCpuOCV = */ true,
+                                     /* withVkCom = */ false,
+                                     /* withCUDA = */ true,
+                                     /* withNgraph = */false); // OCV OpenCL + OCV CPU + CUDA
     }
 };
 
