@@ -2727,7 +2727,6 @@ bool QRDecode::samplingForVersion()
     return true;
 }
 
-
 static bool checkASCIIcompatible(const uint8_t* str, const size_t size) {
     for (size_t i = 0; i < size; ++i) {
         uint8_t byte = str[i];
@@ -2778,6 +2777,8 @@ static std::string encodeUTF8_bytesarray(const uint8_t* str, const size_t size) 
     }
     return res.str();
 }
+
+extern bool decode(const Mat& straight, String& decoded_info);
 
 bool QRDecode::decodingProcess()
 {
@@ -2861,14 +2862,13 @@ bool QRDecode::decodingProcess()
     CV_LOG_WARNING(NULL, "QR: unsupported QR data type");
     return false;
 #else
-    return false;
+    return decode(straight, result_info);
 #endif
 
 }
 
 bool QRDecode::straightDecodingProcess()
 {
-#ifdef HAVE_QUIRC
     if (!updatePerspective(getHomography()))  { return false; }
     if (!versionDefinition())  { return false; }
     if (useAlignmentMarkers)
@@ -2876,24 +2876,15 @@ bool QRDecode::straightDecodingProcess()
     if (!samplingForVersion()) { return false; }
     if (!decodingProcess())    { return false; }
     return true;
-#else
-    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
-    return false;
-#endif
 }
 
 bool QRDecode::curvedDecodingProcess()
 {
-#ifdef HAVE_QUIRC
     if (!preparingCurvedQRCodes()) { return false; }
     if (!versionDefinition())  { return false; }
     if (!samplingForVersion()) { return false; }
     if (!decodingProcess())    { return false; }
     return true;
-#else
-    std::cout << "Library QUIRC is not linked. No decoding is performed. Take it to the OpenCV repository." << std::endl;
-    return false;
-#endif
 }
 
 QRDecode::QRDecode(bool _useAlignmentMarkers):
