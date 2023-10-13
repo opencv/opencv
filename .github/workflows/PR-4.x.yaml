@@ -51,3 +51,6 @@ jobs:
 
   docs:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-docs.yaml@main
+
+  Linux-RISC-V-Clang:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-RISCV.yaml@main
