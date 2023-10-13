@@ -1745,13 +1745,8 @@ template<typename R> struct TheTest
         R a = dataA;
         R b = dataB;
 
-#if CV_SIMD_SCALABLE
         Data<R> dataEQ = v_eq(a, b);
         Data<R> dataNE = v_ne(a, b);
-#else
-        Data<R> dataEQ = (a == b);
-        Data<R> dataNE = (a != b);
-#endif
 
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
