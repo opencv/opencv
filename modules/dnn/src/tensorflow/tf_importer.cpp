@@ -3227,7 +3227,7 @@ void TFLayerHandler::fillRegistry(const tensorflow::GraphDef& net)
         }
     }
     printMissing();
-};
+}
 
 bool TFLayerHandler::handleMissing(const tensorflow::NodeDef& layer)
 {

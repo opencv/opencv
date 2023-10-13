@@ -47,11 +47,11 @@ public:
     explicit FileLock(const char* fname);
     ~FileLock();
 
-    void lock(); //< acquire exclusive (writer) lock
-    void unlock(); //< release exclusive (writer) lock
+    void lock(); ///< acquire exclusive (writer) lock
+    void unlock(); ///< release exclusive (writer) lock
 
-    void lock_shared(); //< acquire shareable (reader) lock
-    void unlock_shared(); //< release shareable (reader) lock
+    void lock_shared(); ///< acquire shareable (reader) lock
+    void unlock_shared(); ///< release shareable (reader) lock
 
     struct Impl;
 protected:
