@@ -80,22 +80,12 @@ endif()
 # And if std::text_view is in abseil-cpp requests C++17 and later.
 
 if(HAVE_PROTOBUF)
-    if("${Protobuf_VERSION}" MATCHES [[[0-9]+.([0-9]+).[0-9]+]])
-        string(COMPARE GREATER "${CMAKE_MATCH_1}" "21" REQUEST_AFTER_CXX17)  # >=22
-
-        if(REQUEST_AFTER_CXX17)
-            string(COMPARE GREATER "${CMAKE_CXX_STANDARD}" "16" USED_AFTER_CXX17)  # >=17
-
-            if(NOT USED_AFTER_CXX17)
-                message("CMAKE_CXX_STANDARD : ${CMAKE_CXX_STANDARD}")
-                message("protobuf           : ${Protobuf_VERSION}")
-                message(FATAL_ERROR "protobuf(v22 and later) and abseil-cpp request CMAKE_CXX_STANDARD=17 and later.")
-            endif()
-
-        endif()
-    else()
-        message(FATAL_ERROR "Protobuf version(${Protobuf_VERSION}) is unexpected to split.")
+  if(NOT (Protobuf_VERSION VERSION_LESS 22))
+    if((CMAKE_CXX_STANDARD EQUAL 98) OR (CMAKE_CXX_STANDARD LESS 17))
+      message(STATUS "CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD} is too old to support protobuf(${Protobuf_VERSION}) and/or abseil-cpp. Use C++17 or later. Turning HAVE_PROTOBUF off")
+      set(HAVE_PROTOBUF FALSE)
     endif()
+  endif()
 endif()
 
 if(HAVE_PROTOBUF AND PROTOBUF_UPDATE_FILES AND NOT COMMAND PROTOBUF_GENERATE_CPP)
