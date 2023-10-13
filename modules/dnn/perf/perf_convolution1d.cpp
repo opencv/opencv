@@ -157,7 +157,7 @@ PERF_TEST_P_(Conv1D, conv1d)
 
 INSTANTIATE_TEST_CASE_P(/**/, Conv1D, Combine(
         Conv1DParamID::all(),
-        dnnBackendsAndTargets(/* withInferenceEngine = */ false)  // defined in ../test/test_common.hpp
+        dnnBackendsAndTargets(/* withInferenceEngine = */false, /* obsolete_withHalide = */false)  // defined in ../test/test_common.hpp
 ));
 
 } // namespace

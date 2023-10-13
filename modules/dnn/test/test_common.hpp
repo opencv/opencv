@@ -136,6 +136,7 @@ bool validateVPUType();
 
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargets(
         bool withInferenceEngine = true,
+        bool obsolete_withHalide = false, // this is kept for compatibility
         bool withCpuOCV = true,
         bool withVkCom = true,
         bool withCUDA = true,

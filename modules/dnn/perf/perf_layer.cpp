@@ -633,7 +633,7 @@ PERF_TEST_P_(Layer_LayerNormExpanded, DISABLED_LayerNormExpanded)
     test_layer({N, H ,W});
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(/* withInferenceEngine = */ false));
+INSTANTIATE_TEST_CASE_P(/**/, Layer_Slice, dnnBackendsAndTargets(/* withInferenceEngine = */false, /* obsolete_withHalide = */false));
 INSTANTIATE_TEST_CASE_P(/**/, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_OPENCV, DNN_TARGET_CPU)));
 #ifdef HAVE_CUDA
 INSTANTIATE_TEST_CASE_P(CUDA, Layer_NaryEltwise, testing::Values(std::make_tuple(DNN_BACKEND_CUDA, DNN_TARGET_CUDA)));

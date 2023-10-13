@@ -247,6 +247,7 @@ void readFileContent(const std::string& filename, CV_OUT std::vector<char>& cont
 
 testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTargets(
         bool withInferenceEngine /*= true*/,
+        bool obsolete_withHalide /*= false*/,
         bool withCpuOCV /*= true*/,
         bool withVkCom /*= true*/,
         bool withCUDA /*= true*/,

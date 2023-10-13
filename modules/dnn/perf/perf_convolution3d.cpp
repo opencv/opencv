@@ -176,7 +176,7 @@ PERF_TEST_P_(Conv3D, conv3d)
 
 INSTANTIATE_TEST_CASE_P(/**/, Conv3D, Combine(
     Conv3DParamID::all(),
-    dnnBackendsAndTargets(/* withInferenceEngine = */ false)  // defined in ../test/test_common.hpp
+    dnnBackendsAndTargets(/* withInferenceEngine = */false, /* obsolete_withHalide = */false)  // defined in ../test/test_common.hpp
 ));
 
 } // namespace

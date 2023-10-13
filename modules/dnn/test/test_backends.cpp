@@ -525,9 +525,10 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets(/* withInferenceEngine = */ true,
-                                                                           /* withCpuOCV = */ false,
-                                                                           /* withVkCom = */true,
-                                                                           /* withCUDA = */ true));
+                                                                           /* obsolete_withHalide = */ false,
+                                                                           /* withCpuOCV = */          false,
+                                                                           /* withVkCom = */           true,
+                                                                           /* withCUDA = */            true));
 
 /*
     Backend tests of layers
