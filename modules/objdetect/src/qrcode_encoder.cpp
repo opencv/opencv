@@ -1336,11 +1336,14 @@ Ptr<QRCodeEncoder> QRCodeEncoder::create(const QRCodeEncoder::Params& parameters
 
 // QRCodeDecoder
 
-bool decode(const Mat& straight, String& decoded_info);
+bool decode(const Mat& straight, String& decoded_info, QRCodeEncoder::EncodeMode& mode, QRCodeEncoder::ECIEncodings& eci);
 
 class QRCodeDecoder {
 public:
     bool run(const Mat& straight, String& decoded_info);
+
+    QRCodeEncoder::EncodeMode mode;
+    QRCodeEncoder::ECIEncodings eci;
 
 private:
     QRCodeEncoder::CorrectionLevel level;
@@ -1386,14 +1389,19 @@ private:
     void decodeKanji(String& result);
 };
 
-bool decode(const Mat& _straight, String& decoded_info) {
+bool decode(const Mat& _straight, String& decoded_info, QRCodeEncoder::EncodeMode& mode, QRCodeEncoder::ECIEncodings& eci) {
     QRCodeDecoder decoder;
     Mat straight = ~_straight;  // Invert modules
-    if (!decoder.run(straight, decoded_info)) {
+    bool decoded = decoder.run(straight, decoded_info);
+    if (!decoded) {
         cv::transpose(straight, straight);
-        return decoder.run(straight, decoded_info);
+        decoded = decoder.run(straight, decoded_info);
     }
-    return true;
+    if (decoded) {
+        mode = decoder.mode;
+        eci = decoder.eci;
+    }
+    return decoded;
 }
 
 // Unmask format info bits and apply error correction
@@ -1472,6 +1480,8 @@ bool QRCodeDecoder::run(const Mat& straight, String& decoded_info) {
     version = (straight.rows - 21) / 4 + 1;
 
     decoded_info = "";
+    mode = static_cast<QRCodeEncoder::EncodeMode>(0);
+    eci = static_cast<QRCodeEncoder::ECIEncodings>(0);
 
     // Decode format info
     int maskPattern;
@@ -1757,25 +1767,28 @@ void QRCodeDecoder::decodeSymbols(String& result) {
     CV_Assert(!bitstream.empty());
 
     // Decode depends on the mode
-    QRCodeEncoder::EncodeMode mode;
     result = "";
     while (!bitstream.empty()) {
         // Determine mode
-        mode = static_cast<QRCodeEncoder::EncodeMode>(bitstream.next(4));
-        if (mode == 0 || bitstream.empty())
+        auto currMode = static_cast<QRCodeEncoder::EncodeMode>(bitstream.next(4));
+        if (this->mode == 0) {
+            mode = currMode;
+        }
+
+        if (currMode == 0 || bitstream.empty())
             return;
-        else if (mode == QRCodeEncoder::EncodeMode::MODE_NUMERIC)
+        if (currMode == QRCodeEncoder::EncodeMode::MODE_NUMERIC)
             decodeNumeric(result);
-        else if (mode == QRCodeEncoder::EncodeMode::MODE_ALPHANUMERIC)
+        else if (currMode == QRCodeEncoder::EncodeMode::MODE_ALPHANUMERIC)
             decodeAlpha(result);
-        else if (mode == QRCodeEncoder::EncodeMode::MODE_BYTE)
+        else if (currMode == QRCodeEncoder::EncodeMode::MODE_BYTE)
             decodeByte(result);
-        else if (mode == QRCodeEncoder::EncodeMode::MODE_ECI)
+        else if (currMode == QRCodeEncoder::EncodeMode::MODE_ECI)
             decodeECI(result);
-        else if (mode == QRCodeEncoder::EncodeMode::MODE_KANJI)
+        else if (currMode == QRCodeEncoder::EncodeMode::MODE_KANJI)
             decodeKanji(result);
         else
-            CV_Error(Error::StsNotImplemented, format("mode %d", mode));
+            CV_Error(Error::StsNotImplemented, format("mode %d", currMode));
     }
 }
 
@@ -1830,7 +1843,9 @@ void QRCodeDecoder::decodeECI(String& result) {
         else
             break;
     }
-    // TODO: do something with eciAssignValue
+    if (this->eci == 0) {
+        this->eci = static_cast<QRCodeEncoder::ECIEncodings>(eciAssignValue);
+    }
     decodeSymbols(result);
 
 }
