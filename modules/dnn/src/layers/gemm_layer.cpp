@@ -191,7 +191,6 @@ public:
         size_t dims_Y = shape_Y.size();
         int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
         int K = trans_a ? ma : na;
-        int batches = std::accumulate(shape_A.begin(), shape_A.end() - 2, 1, std::multiplies<int>());
 
         // broadcast C and copy C to output
         if (have_bias) {
@@ -201,9 +200,7 @@ public:
             int step = M * N;
             CV_CheckEQ(broadcast_C.size(), static_cast<size_t>(step), "DNN/Gemm: C is not broadcast properly");
             float *ptr_y = Y.ptr<float>();
-            for (int i = 0; i < batches; i++) {
-                std::memcpy(ptr_y + i * step, broadcast_C.data(), step * sizeof(float));
-            }
+            std::memcpy(ptr_y, broadcast_C.data(), step * sizeof(float));
         } else { // initialization
             float *ptr_y = Y.ptr<float>();
             size_t total = Y.total();
@@ -212,7 +209,6 @@ public:
 
         if (const_B) {
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
-            M *= batches;
             fastGemm(trans_a, M, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
         } else {
             fastGemmBatched(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
@@ -287,33 +283,45 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::shared_ptr<ngraph::Node> matmul;
-        int axis = -2;
 
         if (nodes.size() == 2)
         {
             auto& inp2 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, inp2, transA, transB);
+            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, inp2, trans_a, trans_b);
         }
         else
         {
-            std::vector<int> shape(1 + normalize_axis(axis, ieInpNode->get_shape().size()), 0);
-            shape[shape.size() - 1] = -1;
-            auto inp = std::make_shared<ngraph::op::v1::Reshape>(
-                ieInpNode,
-                std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{shape.size()}, shape.data()),
-                true
-            );
+            std::shared_ptr<ngraph::Node> ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, getShape(blobs[0]), blobs[0].data);
 
-            std::vector<size_t> weight_shape{(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
-            auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, weight_shape, blobs[0].data);
-            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, transA, transB);
+            int flatten_axis = ieInpNode.get_shape().size() - ieWeights->get_shape().size();
+            if (flatten_axis > 0) {
+                std::vector<int> shape(1 + flatten_axis, 0);
+                shape[shape.size() - 1] = -1;
+                ieInpNode = std::make_shared<ngraph::op::v1::Reshape>(
+                    ieInpNode,
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{shape.size()}, shape.data()),
+                    true
+                );
+            }
+            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, ieWeights, trans_a, trans_b);
+        }
+        if (alpha != 1.0f) {
+            matmul = std::make_shared<ngraph::op::v1::Multiply>(matmul,
+                std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &alpha)
+            );
         }
 
         if (have_bias && const_C) {
-            auto bias_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                              ngraph::Shape{(size_t)blobs.back().size[1]}, blobs.back().data);
+            Mat bias = blobs.back();
+            auto shape = bias.total() == bias.size[0] ? ngraph::Shape{bias.total()} : getShape(bias);
+            std::shared_ptr<ngraph::Node> bias_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, bias.data);
+            if (beta != 1.0f) {
+                bias_node = std::make_shared<ngraph::op::v1::Multiply>(bias_node,
+                    std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &beta)
+                );
+            }
             matmul = std::make_shared<ngraph::op::v1::Add>(matmul, bias_node, ngraph::op::AutoBroadcastType::NUMPY);
         }
         return Ptr<BackendNode>(new InfEngineNgraphNode(matmul));

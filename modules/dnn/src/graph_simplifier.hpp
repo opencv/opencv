@@ -17,7 +17,7 @@ namespace cv { namespace dnn {
 class ImportNodeWrapper
 {
 public:
-    virtual ~ImportNodeWrapper() {};
+    virtual ~ImportNodeWrapper() {}
 
     virtual int getNumInputs() const = 0;
 
@@ -33,7 +33,7 @@ public:
 class ImportGraphWrapper
 {
 public:
-    virtual ~ImportGraphWrapper() {};
+    virtual ~ImportGraphWrapper() {}
 
     virtual Ptr<ImportNodeWrapper> getNode(int idx) const = 0;
 
