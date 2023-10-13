@@ -268,7 +268,11 @@ _operation_, which is defined on the top API level (see
 G_TYPED_KERNEL() macro).
 
 Backend is a thing which is aware of device & platform specifics, and
-which executes its kernels with keeping that specifics in mind.
+which executes its kernels with keeping that specifics in mind. For
+example, there may be [Halide](http://halide-lang.org/) backend which
+allows to write (implement) G-API operations in Halide language and
+then generate functional Halide code for portions of G-API graph which
+map well there.
 
 ## Running a graph with a Fluid backend {#gapi_anisotropic_fluid}
 
