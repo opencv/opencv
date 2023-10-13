@@ -1,6 +1,7 @@
 import os
 import cv2
 import numpy as np
+import argparse
 
 import torch
 import torch.onnx
@@ -108,7 +109,7 @@ def get_opencv_dnn_prediction(opencv_net, original_image, preproc_img):
     out = np.argmax(predict[0], axis=0)
 
     # Visualize the segmentation result and save it
-    visualization(original_image, out, "./data/opencv_dnn_prediction.jpg")
+    visualization(original_image, out, "./opencv_dnn_prediction.jpg")
 
 def main():
     # initialize fcn_resnet50 with default weight
@@ -123,11 +124,14 @@ def main():
     opencv_net = cv2.dnn.readNetFromONNX(full_model_path)
     
     # Input image should be square
-    input_path = "./data/cat_and_bike.jpg"
-    original_image = cv2.imread(input_path, cv2.IMREAD_COLOR) 
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--input', help='Input picture which you want to predict')
+    args, _ = parser.parse_known_args()
+
+    original_image = cv2.imread(args.input, cv2.IMREAD_COLOR) 
     original_image = cv2.resize(original_image, (500, 500))
     # get preprocessed image
-    input_img = get_preprocessed_img(input_path)
+    input_img = get_preprocessed_img(args.input)
     
     # obtain OpenCV DNN predictions
     get_opencv_dnn_prediction(opencv_net, original_image, input_img)
