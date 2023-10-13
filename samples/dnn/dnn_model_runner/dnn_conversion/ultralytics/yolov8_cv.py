@@ -136,19 +136,19 @@ class Opencv_Yolov8:
 def download_and_export_model(yolov8_dir:os.PathLike)->os.PathLike:
     
     modelpath = osp.join(yolov8_dir, "yolov8net.onnx")
+    print(f"model path : {modelpath}")
     if os.path.exists(modelpath):
         print("find yolov8 onnx model")
         return modelpath
 
     if not osp.exists(yolov8_dir):
-        print("download model ..")
-        if not osp.exists(yolov8_dir):
-            os.mkdir(yolov8_dir)
-        
-        original_model = YOLO("yolov8n.pt")
-        original_model.export(format="onnx",opset=12)
-        os.replace('yolov8n.onnx',modelpath)
-        os.remove('yolov8n.pt')
+        os.mkdir(yolov8_dir)
+    
+    print("download model ..")
+    original_model = YOLO("yolov8n.pt")
+    original_model.export(format="onnx",opset=12)
+    os.replace('yolov8n.onnx',modelpath)
+    os.replace('yolov8n.pt', osp.join(yolov8_dir, 'yolov8n.pt'))
     return modelpath
 
 def main(testimg_path:os.PathLike):
