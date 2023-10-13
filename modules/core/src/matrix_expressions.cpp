@@ -1685,11 +1685,11 @@ void MatOp_Initializer::assign(const MatExpr& e, Mat& m, int _type) const
         m.create(e.a.dims, e.a.size, _type);
 
     if( e.flags == 'I' && e.a.dims <= 2 )
-        setIdentity(m, Scalar(e.alpha));
+        setIdentity(m, Scalar(e.alpha, e.a.channels()));
     else if( e.flags == '0' )
         m = Scalar();
     else if( e.flags == '1' )
-        m = Scalar(e.alpha);
+        m = Mat(e.a.size(), e.a.type(), Scalar(e.alpha, e.a.channels()));
     else
         CV_Error(CV_StsError, "Invalid matrix initializer type");
 }

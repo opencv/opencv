@@ -673,6 +673,7 @@ public:
     Scalar_();
     Scalar_(_Tp v0, _Tp v1, _Tp v2=0, _Tp v3=0);
     Scalar_(_Tp v0);
+    Scalar_(_Tp v, int n);
 
     Scalar_(const Scalar_& s);
     Scalar_(Scalar_&& s) CV_NOEXCEPT;
@@ -2144,6 +2145,16 @@ Scalar_<_Tp>::Scalar_(_Tp v0, _Tp v1, _Tp v2, _Tp v3)
     this->val[1] = v1;
     this->val[2] = v2;
     this->val[3] = v3;
+}
+
+template<typename _Tp>
+Scalar_<_Tp>::Scalar_(_Tp v, const int n)
+{
+    CV_Assert(n <= 4);
+    for (size_t i = 0; i < n; i++)
+    {
+        this->val[i] = v;
+    }
 }
 
 template<typename _Tp> inline

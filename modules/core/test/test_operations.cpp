@@ -419,6 +419,20 @@ bool CV_OperationsTest::TestMat()
         CHECK_DIFF_FLT(mt.inv() * mt, d1);
 
         CHECK_DIFF_FLT(mt.inv() * (2*mt - mt), d1);
+
+        ///// Initalize Mat with ones and eye
+        Mat e = cv::Mat::eye(2, 2, CV_32FC3);
+        Mat o = cv::Mat::ones(2, 2, CV_32FC3);
+
+        float e_[2][6] = {{1, 1, 1, 0, 0, 0}, {0, 0, 0, 1, 1, 1}};
+        Mat e_ans(2, 2, e.type(), e_);
+        float o_[2][6] = {{1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1}};
+        Mat o_ans(2, 2, o.type(), o_);
+
+        CHECK_DIFF(e, e_ans);
+        CHECK_DIFF(e_ans, e);
+        CHECK_DIFF(o, o_ans);
+        CHECK_DIFF(o_ans, o);
 #endif
     }
     catch (const test_excep& e)
