@@ -2130,7 +2130,7 @@ TEST_P(Test_ONNX_nets, Alexnet)
 }
 
 // Waiting for https://github.com/opencv/opencv/pull/24386 for a bug fix to get correct result
-TEST_P(Test_ONNX_nets, DISABLED_RAFT)
+TEST_P(Test_ONNX_nets, RAFT)
 {
     std::string weight_path = _tf("models/optical_flow_estimation_raft_2023aug.onnx", false);
     std::string img0_path = findDataFile(std::string("gpu/opticalflow/frame0.png"));
