@@ -219,7 +219,7 @@ Net readNetFromDarknet(const String &cfgFile, const String &darknetModel /*= Str
         return readNetFromDarknet(cfgStream, darknetModelStream);
     }
     else
-        return readNetFromDarknet(cfgStream);
+        return readNetFromDarknet(cfgStream); 
 }
 
 struct BufferStream : public std::streambuf

@@ -922,8 +922,8 @@ namespace cv {
                     {
                         int crop_height = getParam<int>(layer_params, "crop_height", 224);
                         int crop_width = getParam<int>(layer_params, "crop_width", 224);
-                        int flip = getParam<int>(layer_params, "flip", 1);
-                        int exposure = getParam<int>(layer_params, "exposure", 1);
+                        bool flip = getParam<bool>(layer_params, "flip", true);
+                        float exposure = getParam<float>(layer_params, "exposure", 1.0);
                         int saturation = getParam<int>(layer_params, "saturation", 1);
                         int angle = getParam<int>(layer_params, "angle", 0);
                         setParams.setCrop(crop_height, crop_width, flip, exposure, saturation, angle);
