@@ -1103,6 +1103,14 @@ bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats)
     return imdecodemulti_(buf, flags, mats, 0, -1);
 }
 
+bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats, int start, int count)
+{
+    CV_TRACE_FUNCTION();
+
+    Mat buf = _buf.getMat();
+    return imdecodemulti_(buf, flags, mats, start, count);
+}
+
 bool imencode( const String& ext, InputArray _image,
                std::vector<uchar>& buf, const std::vector<int>& params_ )
 {
