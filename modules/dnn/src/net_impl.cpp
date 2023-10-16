@@ -557,11 +557,11 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
         CV_Assert(inp.total());
         int type = CV_32F;
         if (preferableBackend == DNN_BACKEND_OPENCV &&
-            preferableTarget == DNN_TARGET_OPENCL_FP16 &&
-            (layers[0].dtype == CV_32F || layers[0].dtype == CV_16S))
+            preferableTarget == DNN_TARGET_OPENCL_FP16)
         {
-            layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16S);
             type = CV_16S;
+            if (layers[0].dtype == CV_32F)
+                layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16S);
         }
         if (netWasQuantized && inp.type() == CV_8S) {
             type = CV_8S;
