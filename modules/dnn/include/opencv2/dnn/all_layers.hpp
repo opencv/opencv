@@ -1127,7 +1127,6 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS LayerNormLayer : public Layer
     {
     public:
-        bool hasBias;
         int axis;
         float epsilon;
 

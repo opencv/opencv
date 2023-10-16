@@ -55,7 +55,7 @@ namespace cv { namespace dnn {
 // onnx mvn: https://github.com/onnx/onnx/blob/main/docs/Operators.md#MeanVarianceNormalization
 
 */
-void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, int axis) {
+void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, int normalized_axis) {
     // const auto input_shape = shape(input);
 
     // // Normalize axes
@@ -87,9 +87,11 @@ void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, 
     // TODO: check shape?
 
     const auto input_shape = shape(input);
+    CV_CheckGE(normalized_axis, 0, "fastNorm: axis out of range");
+    CV_CheckLT(normalized_axis, static_cast<int>(input_shape.size()), "fastNorm: axis out of range");
 
-    size_t loops = std::accumulate(input_shape.begin() + axis + 1, input_shape.end(), static_cast<size_t>(1), std::multiplies<size_t>()),
-           norm_size = static_cast<size_t>(total(input_shape, 2));
+    size_t loops = static_cast<size_t>(total(input_shape, 0, normalized_axis)),
+           norm_size = static_cast<size_t>(total(input_shape, normalized_axis));
     float inv_norm_size = 1.0 / norm_size;
 
     auto fn = [&](const Range &r) {

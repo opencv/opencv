@@ -3112,12 +3112,6 @@ void ONNXImporter::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::N
     axis = (axis + inputDims) % inputDims;
     layerParams.set("axis", axis);
 
-    // check if bias existed
-    bool hasBias = false;
-    if (node_proto.input_size() > 2)
-        hasBias = true;
-    layerParams.set("hasBias", hasBias);
-
     // constants as constant inputs
     for (size_t i = 1; i < node_proto.input_size(); i++)
     {

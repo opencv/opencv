@@ -9,7 +9,7 @@
 
 namespace cv { namespace dnn {
 
-void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, int axis = 0);
+void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, int axis = 0);
 
 }} // cv::dnn
 
