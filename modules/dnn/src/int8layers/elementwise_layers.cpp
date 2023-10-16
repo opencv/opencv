@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_timvx.hpp"
+#include "../ie_ngraph.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <iostream>
@@ -56,7 +57,7 @@ public:
             return tvActType != tvActNotSupported;
         }
 #endif
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -243,6 +244,42 @@ public:
 #endif  // HAVE_TIMVX
         return Ptr<BackendNode>();
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+
+        input = ngraphDequantize(input, input_sc, input_zp);
+
+        ngraph::Output<ngraph::Node> res;
+        if (type == "ReLU6Int8") {
+            res = std::make_shared<ngraph::op::Clamp>(input, 0.0f, 6.0f);
+        } else if (type == "ReLUInt8") {
+            if (slope) {
+                auto param = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &slope);
+                res = std::make_shared<ngraph::op::PRelu>(input, param);
+            } else {
+                res = std::make_shared<ngraph::op::Relu>(input);
+            }
+        } else if (type == "ELUInt8") {
+            res = std::make_shared<ngraph::op::Elu>(input, 1.0f);
+        } else if (type == "MishInt8") {
+            res = std::make_shared<ngraph::op::v4::Mish>(input);
+        } else if (type == "AbsValInt8") {
+            res = std::make_shared<ngraph::op::Abs>(input);
+        } else if (type == "SigmoidInt8") {
+            res = std::make_shared<ngraph::op::Sigmoid>(input);
+        } else {
+            CV_Error(Error::StsNotImplemented, type + " activation with OpenVINO");
+        }
+
+        res = ngraphQuantize(res, output_sc, output_zp);
+
+        return new InfEngineNgraphNode(res);
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
