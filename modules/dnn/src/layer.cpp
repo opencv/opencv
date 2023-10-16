@@ -240,6 +240,17 @@ bool Layer::getMemoryShapes(const std::vector<MatShape>& inputs,
     return false;
 }
 
+void Layer::getTypes(const std::vector<MatType>&inputs,
+                     const int requiredOutputs,
+                     const int requiredInternals,
+                     std::vector<MatType>&outputs,
+                     std::vector<MatType>&internals) const
+{
+    CV_Assert(inputs.size());
+    outputs.assign(requiredOutputs, inputs[0]);
+    internals.assign(requiredInternals, inputs[0]);
+}
+
 bool Layer::updateMemoryShapes(const std::vector<MatShape>& inputs)
 {
     return true;

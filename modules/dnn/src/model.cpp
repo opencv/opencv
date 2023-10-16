@@ -48,7 +48,7 @@ public:
         outNames = net.getUnconnectedOutLayersNames();
         std::vector<MatShape> inLayerShapes;
         std::vector<MatShape> outLayerShapes;
-        net.getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+        net.getLayerShapes(MatShape(), CV_32F, 0, inLayerShapes, outLayerShapes);
         if (!inLayerShapes.empty() && inLayerShapes[0].size() == 4)
             size = Size(inLayerShapes[0][3], inLayerShapes[0][2]);
         else

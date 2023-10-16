@@ -232,9 +232,11 @@ struct Net::Impl : public detail::NetImplBase
             std::vector<ShapesVec>& outLayersShapes) /*const*/;
 
     void getLayersShapes(const ShapesVec& netInputShapes,
+            const TypesVec& netInputTypes,
             LayersShapesMap& inOutShapes);
 
     void getLayerShapes(const ShapesVec& netInputShapes,
+            const TypesVec& netInputTypes,
             const int layerId,
             LayerShapes& shapes);
 

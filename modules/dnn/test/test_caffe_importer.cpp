@@ -209,7 +209,7 @@ TEST_P(Reproducibility_AlexNet, Accuracy)
     // Test input layer size
     std::vector<MatShape> inLayerShapes;
     std::vector<MatShape> outLayerShapes;
-    net.getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+    net.getLayerShapes(MatShape(), CV_32F, 0, inLayerShapes, outLayerShapes);
     ASSERT_FALSE(inLayerShapes.empty());
     ASSERT_EQ(inLayerShapes[0].size(), 4);
     ASSERT_EQ(inLayerShapes[0][0], 1);

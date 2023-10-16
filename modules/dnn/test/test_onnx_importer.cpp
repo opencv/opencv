@@ -44,7 +44,7 @@ public:
     {
         std::vector<MatShape> inLayerShapes;
         std::vector<MatShape> outLayerShapes;
-        net.getLayerShapes(MatShape(), 0, inLayerShapes, outLayerShapes);
+        net.getLayerShapes(MatShape(), CV_32F, 0, inLayerShapes, outLayerShapes);
         ASSERT_EQ(inLayerShapes.size(), inps.size());
 
         for (int i = 0; i < inps.size(); ++i) {
