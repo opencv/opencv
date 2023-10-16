@@ -124,10 +124,12 @@ static inline void copy_repeat(const unsigned char* pattern, size_t patternSize,
   unsigned char* dstEnd = dst+dstSize;
   size_t sizeToCopy = std::min(patternSize, dstSize);
   memcpy(dst, pattern, sizeToCopy);
+  constexpr size_t hot_cache_size = 1U*32*1024;
+  const size_t sizeToCopyLimit = (patternSize > hot_cache_size) ? patternSize : (patternSize*(hot_cache_size/patternSize));//we limit sizeToCopy to stick to hot data in cache
   unsigned char* dstCur = dst+sizeToCopy;
   while(dstCur<dstEnd)
   {
-    sizeToCopy = std::min(dstCur-dst, dstEnd-dstCur);
+    sizeToCopy = std::min({static_cast<size_t>(dstCur-dst), static_cast<size_t>(dstEnd-dstCur), sizeToCopyLimit});
     memcpy(dstCur, dst, sizeToCopy);
     dstCur += sizeToCopy;
   }//end while(dstCur<dstEnd)
@@ -548,60 +550,10 @@ Mat& Mat::operator = (const Scalar& s)
 
         if( it.nplanes > 0 )
         {
-            double scalar[12];
-            scalarToRawData(s, scalar, type(), 12);
-            size_t blockSize = 12*elemSize1();
-
-            for( size_t j = 0; j < elsize; j += blockSize )
-            {
-                size_t sz = MIN(blockSize, elsize - j);
-                CV_Assert(sz <= sizeof(scalar));
-                memcpy( dptr + j, scalar, sz );
-            }
-        }
-
-        for( size_t i = 1; i < it.nplanes; i++ )
-        {
-            ++it;
-            memcpy( dptr, data, elsize );
-        }
-    }
-    return *this;
-}
-
-Mat& Mat::setToScalar(const Scalar& s)
-{
-    CV_INSTRUMENT_REGION();
-
-    if (this->empty())
-        return *this;
-
-    const Mat* arrays[] = { this };
-    uchar* dptr;
-    NAryMatIterator it(arrays, &dptr, 1);
-    size_t elsize = it.size*elemSize();
-    const int64* is = (const int64*)&s.val[0];
-
-    if( is[0] == 0 && is[1] == 0 && is[2] == 0 && is[3] == 0 )
-    {
-        for( size_t i = 0; i < it.nplanes; i++, ++it )
-            memset( dptr, 0, elsize );
-    }
-    else
-    {
-        int fill_value = 0;
-        if ( can_apply_memset(*this, s, fill_value) )
-        {
-            for (size_t i = 0; i < it.nplanes; i++, ++it)
-                memset(dptr, fill_value, elsize);
-            return *this;
-        }
-
-        if( it.nplanes > 0 )
-        {
-            double scalar[12];
-            scalarToRawData(s, scalar, type(), 12);
-            copy_repeat(reinterpret_cast<const unsigned char*>(&scalar[0]), std::min(12*elemSize1(), sizeof(scalar)), dptr, elsize);
+            constexpr size_t unrolledElementsCount = 4;
+            double scalar[unrolledElementsCount];
+            scalarToRawData(s, scalar, type(), unrolledElementsCount);
+            copy_repeat(reinterpret_cast<const unsigned char*>(&scalar[0]), elemSize(), dptr, elsize);
         }
 
         for( size_t i = 1; i < it.nplanes; i++ )
@@ -691,16 +643,21 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
         const bool canBeDispatchedAsScalar = isSingleValue || (channels() <= 4);
         if (canBeDispatchedAsScalar)
         {
-            Mat valueFlattened = value.reshape(1, static_cast<int>(value.total()));
             Scalar _scalar;
-            Mat _scalarWrapper(static_cast<int>(valueFlattened.total()), 1, traits::Type<Scalar::value_type>::value, &_scalar[0]);
-            valueFlattened.convertTo(_scalarWrapper, _scalarWrapper.type());
-            if (!isSingleValue)
-                this->setToScalar(_scalar);
-            else if (cn == 1)
-              this->setToScalar(Scalar::all(_scalar[0]));
+            //checkScalar ensures that value is continuous
+            if (value.depth() == CV_64F)//fast path
+                memcpy(&_scalar[0], value.data, value.total()*value.channels()*sizeof(double));
             else
-              this->reshape(1).setToScalar(Scalar::all(_scalar[0]));
+            {
+                Mat _scalarWrapper(static_cast<int>(value.total()), 1, traits::Type<Scalar::value_type>::value, &_scalar[0]);
+                value.reshape(1).convertTo(_scalarWrapper, _scalarWrapper.type());
+            }
+            if (!isSingleValue)
+                *this = _scalar;
+            else if (cn == 1)
+                *this = Scalar::all(_scalar[0]);
+            else
+                this->reshape(1) = Scalar::all(_scalar[0]);
             return *this;
         }
     }

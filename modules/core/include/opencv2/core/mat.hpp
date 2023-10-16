@@ -1266,7 +1266,6 @@ public:
     @param mask Operation mask of the same size as \*this. Its non-zero elements indicate which matrix
     elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels
      */
-    Mat& setToScalar(const Scalar& s);
     Mat& setTo(InputArray value, InputArray mask=noArray());
 
     /** @brief Changes the shape and/or the number of channels of a 2D matrix without copying the data.
