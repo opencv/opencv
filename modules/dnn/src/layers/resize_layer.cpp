@@ -343,7 +343,7 @@ public:
     {
         if (inputs_arr.kind() == _InputArray::STD_VECTOR_UMAT) {
             forward<UMat>(inputs_arr, outputs_arr, internals_arr);
-        } else if (inputs_arr.kind() == _InputArray::STD_VECTOR_MAT) {
+        } else {
             forward<Mat>(inputs_arr, outputs_arr, internals_arr);
         }
     }
