@@ -299,7 +299,7 @@ public:
                     if (index < outShapes.size() && inPlace)
                     {
                         CV_Assert(ld.inputBlobs[0]->total() == total(shapes[index]));
-                        CV_Assert(ld.inputBlobs[0]->type(), types[index]);
+                        CV_CheckEQ(ld.inputBlobs[0]->type(), types[index]);
                         ld.outputBlobs[index] = ld.inputBlobs[0]->reshape(1, shapes[index]);
                         reuse(ld.inputBlobsId[0], blobPin);
                     }
