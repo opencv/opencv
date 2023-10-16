@@ -227,6 +227,10 @@ Currently, the following file formats are supported:
 */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
 
+
+CV_EXPORTS_W Mat imread( const String& filename, Mat & img, int flags = IMREAD_COLOR );
+
+
 /** @brief Loads a multi-page image from a file.
 
 The function imreadmulti loads a multi-page image from the specified file into a vector of Mat objects.
