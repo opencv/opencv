@@ -62,6 +62,7 @@ CV__DNN_INLINE_NS_BEGIN
 //! @{
 
     typedef std::vector<int> MatShape;
+    typedef int MatType;
 
     /**
      * @brief Enum of computation backends supported by layers.
@@ -397,6 +398,12 @@ CV__DNN_INLINE_NS_BEGIN
                                      std::vector<MatShape> &outputs,
                                      std::vector<MatShape> &internals) const;
 
+        virtual void getTypes(const std::vector<MatType>& inputs,
+                              const int requiredOutputs,
+                              const int requiredInternals,
+                              std::vector<MatType>&outputs,
+                              std::vector<MatType>&internals) const;
+
         virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                                const std::vector<MatShape> &outputs) const {CV_UNUSED(inputs); CV_UNUSED(outputs); return 0;}
 
@@ -702,12 +709,14 @@ CV__DNN_INLINE_NS_BEGIN
          * order is the same as in layersIds
          */
         void getLayerShapes(const MatShape& netInputShape,
+                                    const MatType& netInputType,
                                     const int layerId,
                                     CV_OUT std::vector<MatShape>& inLayerShapes,
                                     CV_OUT std::vector<MatShape>& outLayerShapes) const; // FIXIT: CV_WRAP
 
         /** @overload */
         void getLayerShapes(const std::vector<MatShape>& netInputShapes,
+                                    const std::vector<MatType>& netInputTypes,
                                     const int layerId,
                                     CV_OUT std::vector<MatShape>& inLayerShapes,
                                     CV_OUT std::vector<MatShape>& outLayerShapes) const; // FIXIT: CV_WRAP

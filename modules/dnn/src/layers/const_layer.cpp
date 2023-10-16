@@ -57,6 +57,19 @@ public:
         return false;
     }
 
+    void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16 && blobs[0].type() == CV_32F)
+            outputs.assign(1, CV_16S);
+        else
+            outputs.assign(1, blobs[0].type());
+    }
+
+
 #ifdef HAVE_OPENCL
     bool forward_ocl(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
     {

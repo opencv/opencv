@@ -252,22 +252,24 @@ void Net::getLayersShapes(const MatShape& netInputShape,
 }
 
 void Net::getLayerShapes(const MatShape& netInputShape,
+        const MatType& netInputType,
         const int layerId,
         ShapesVec& inLayerShapes,
         ShapesVec& outLayerShapes) const
 {
-    getLayerShapes(ShapesVec(1, netInputShape),
+    getLayerShapes(ShapesVec(1, netInputShape), TypesVec(1, netInputType),
             layerId, inLayerShapes, outLayerShapes);
 }
 
 void Net::getLayerShapes(const ShapesVec& netInputShapes,
+        const TypesVec& netInputTypes,
         const int layerId,
         ShapesVec& inLayerShapes,
         ShapesVec& outLayerShapes) const
 {
     CV_Assert(impl);
     LayerShapes shapes;
-    impl->getLayerShapes(netInputShapes, layerId, shapes);
+    impl->getLayerShapes(netInputShapes, netInputTypes, layerId, shapes);
     inLayerShapes = shapes.in;
     outLayerShapes = shapes.out;
 }
