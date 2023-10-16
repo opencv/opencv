@@ -3747,8 +3747,8 @@ int Kernel::set(int i, const KernelArg& arg)
     if( arg.m )
     {
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(arg.m->u->allocatorContext);
-        OpenCLExecutionContextScope scope(*pExecCtx.get());
-        
+        OpenCLExecutionContextScope scope(pExecCtx ? *pExecCtx.get() : ocl::OpenCLExecutionContext::getCurrent());
+
         AccessFlag accessFlags = ((arg.flags & KernelArg::READ_ONLY) ? ACCESS_READ : static_cast<AccessFlag>(0)) |
                                  ((arg.flags & KernelArg::WRITE_ONLY) ? ACCESS_WRITE : static_cast<AccessFlag>(0));
         bool ptronly = (arg.flags & KernelArg::PTR_ONLY) != 0;
@@ -5697,9 +5697,9 @@ public:
         if (cv::__termination)  // process is not in consistent state (after ExitProcess call) and terminating
             return;             // avoid any OpenCL calls
 #endif
-        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
-        OpenCLExecutionContextScope scope(*pExecCtx.get());
-        
+        std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxOuter = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
+        OpenCLExecutionContextScope scopeOuter(*pExecCtxOuter.get());
+
         if(u->tempUMat())
         {
             CV_Assert(u->origdata);
@@ -5887,7 +5887,7 @@ public:
 
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
         OpenCLExecutionContextScope scope(*pExecCtx.get());
-        
+
         if (!!(accessFlags & ACCESS_WRITE))
             u->markDeviceCopyObsolete(true);
 
@@ -5979,7 +5979,7 @@ public:
 
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
         OpenCLExecutionContextScope scope(*pExecCtx.get());
-        
+
         UMatDataAutoLock autolock(u);
 
         cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
@@ -6253,7 +6253,7 @@ public:
 
         std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtx = std::static_pointer_cast<ocl::OpenCLExecutionContext>(u->allocatorContext);
         OpenCLExecutionContextScope scope(*pExecCtx.get());
-        
+
         // there should be no user-visible CPU copies of the UMat which we are going to copy to
         CV_Assert(u->refcount == 0 || u->tempUMat());
 
@@ -6408,7 +6408,6 @@ public:
         if(!src || !dst)
             return;
 
-        
         size_t total = 0, new_sz[] = {0, 0, 0};
         size_t srcrawofs = 0, new_srcofs[] = {0, 0, 0}, new_srcstep[] = {0, 0, 0};
         size_t dstrawofs = 0, new_dstofs[] = {0, 0, 0}, new_dststep[] = {0, 0, 0};
