@@ -24,7 +24,7 @@ BackendNode::BackendNode(int backendId)
     : backendId(backendId)
 {}
 
-BackendNode::~BackendNode() {};
+BackendNode::~BackendNode() {}
 
 BackendWrapper::BackendWrapper(int backendId, int targetId)
     : backendId(backendId)

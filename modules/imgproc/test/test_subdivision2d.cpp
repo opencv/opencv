@@ -50,4 +50,4 @@ TEST(Imgproc_Subdiv2D_getTriangleList, regression_5788)
     EXPECT_EQ(trig_cnt, 105);
 }
 
-}};
+}}

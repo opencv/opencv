@@ -224,6 +224,11 @@ CV_EXPORTS void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                                     int width, int height,
                                     int dcn, bool swapBlue, int uIdx, int ycn);
 
+CV_EXPORTS void cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step,
+                                    uchar * dst_data, size_t dst_step,
+                                    int width, int height,
+                                    int scn, bool swapBlue, int uIdx, int ycn);
+
 CV_EXPORTS void cvtRGBAtoMultipliedRGBA(const uchar * src_data, size_t src_step,
                                         uchar * dst_data, size_t dst_step,
                                         int width, int height);

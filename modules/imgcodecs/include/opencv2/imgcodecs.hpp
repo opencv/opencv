@@ -319,8 +319,8 @@ See cv::imread for the list of supported formats and flags description.
 CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
 
 /** @overload
-@param buf
-@param flags
+@param buf Input array or vector of bytes.
+@param flags The same flags as in cv::imread, see cv::ImreadModes.
 @param dst The optional output placeholder for the decoded matrix. It can save the image
 reallocations when the function is called repeatedly for images of the same size.
 */

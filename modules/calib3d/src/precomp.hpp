@@ -69,7 +69,7 @@ namespace cv
  * @param ep outlier ratio
  * @param modelPoints number of model points required for estimation
  * @param maxIters maximum number of iterations
- * @return
+ * @return The number of iterations according to the formula
  * \f[
  * \frac{\ln(1-p)}{\ln\left(1-(1-ep)^\mathrm{modelPoints}\right)}
  * \f]
