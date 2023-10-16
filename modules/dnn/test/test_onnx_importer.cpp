@@ -2132,6 +2132,8 @@ TEST_P(Test_ONNX_nets, Alexnet)
 
 TEST_P(Test_ONNX_nets, RAFT)
 {
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_VERYLONG, CV_TEST_TAG_MEMORY_2GB);
+
     std::string weight_path = _tf("models/optical_flow_estimation_raft_2023aug.onnx", false);
     std::string img0_path = findDataFile(std::string("gpu/opticalflow/frame0.png"));
     std::string img1_path = findDataFile(std::string("gpu/opticalflow/frame1.png"));
