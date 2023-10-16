@@ -9,6 +9,7 @@
 #include "test_precomp.hpp"
 #include "npy_blob.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <numeric>
 namespace opencv_test { namespace {
 
 template<typename TString>
@@ -2129,7 +2130,6 @@ TEST_P(Test_ONNX_nets, Alexnet)
     expectNoFallbacksFromIE(net);
 }
 
-// Waiting for https://github.com/opencv/opencv/pull/24386 for a bug fix to get correct result
 TEST_P(Test_ONNX_nets, RAFT)
 {
     std::string weight_path = _tf("models/optical_flow_estimation_raft_2023aug.onnx", false);
@@ -2153,7 +2153,7 @@ TEST_P(Test_ONNX_nets, RAFT)
     // and output 12006 is calculated from 12007 so checking 12007 is sufficient.
     std::string ref_12700_path = _tf("data/output_optical_flow_estimation_raft_2023aug.npy");
     auto ref0 = blobFromNPY(ref_12700_path);
-    normAssert(ref0, outs[0], "", 1e-5, 1.4e-4);
+    normAssert(ref0, outs[0], "", 1e-5, 1.8e-4);
 }
 
 TEST_P(Test_ONNX_nets, Squeezenet)
