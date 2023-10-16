@@ -1161,8 +1161,8 @@ void Net::Impl::getLayerShapesRecursively(int id, LayersShapesMap& inOutShapes)
     {
         layerSupportInPlace = l->getMemoryShapes(is, requiredOutputs, os, ints);
         l->getTypes(layerShapes.inTypes, os.size(), ints.size(), layerShapes.outTypes, layerShapes.internalTypes);
-        CV_CheckEQ(layerShapes.out.size(), layerShapes.outTypes.size());
-        CV_CheckEQ(layerShapes.internal.size(), layerShapes.internalTypes.size());
+        CV_CheckEQ(layerShapes.out.size(), layerShapes.outTypes.size(), "Number of shapes and types should be equal");
+        CV_CheckEQ(layerShapes.internal.size(), layerShapes.internalTypes.size(), "Number of shapes and types should be equal");
     }
     catch (const cv::Exception& e)
     {
