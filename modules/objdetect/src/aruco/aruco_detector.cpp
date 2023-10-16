@@ -35,6 +35,8 @@ static inline bool readWrite(DetectorParameters &params, const FileNode* readNod
     check |= readWriteParameter("minMarkerDistanceRate", params.minMarkerDistanceRate, readNode, writeStorage);
     check |= readWriteParameter("cornerRefinementMethod", params.cornerRefinementMethod, readNode, writeStorage);
     check |= readWriteParameter("cornerRefinementWinSize", params.cornerRefinementWinSize, readNode, writeStorage);
+    check |= readWriteParameter("relativeCornerRefinmentWinSize", params.relativeCornerRefinmentWinSize, readNode,
+                                writeStorage);
     check |= readWriteParameter("cornerRefinementMaxIterations", params.cornerRefinementMaxIterations,
                                 readNode, writeStorage);
     check |= readWriteParameter("cornerRefinementMinAccuracy", params.cornerRefinementMinAccuracy,
@@ -845,6 +847,16 @@ struct ArucoDetector::ArucoDetectorImpl {
                       const RefineParameters& _refineParams): dictionary(_dictionary),
                       detectorParams(_detectorParams), refineParams(_refineParams) {}
 
+    float getAverageArucoPinSize(vector<Point2f> markerCorners) {
+        float averageArucoModuleSize = 0.f;
+        int numPins = dictionary.markerSize + detectorParams.markerBorderBits * 2;
+        for (size_t i = 0ull; i < markerCorners.size(); i++) {
+            averageArucoModuleSize += sqrt(normL2Sqr<float>(Point2f(markerCorners[i] - markerCorners[(i+1ull)%markerCorners.size()])));
+        }
+        averageArucoModuleSize /= ((float)markerCorners.size()*numPins);
+        return averageArucoModuleSize;
+}
+
 };
 
 ArucoDetector::ArucoDetector(const Dictionary &_dictionary,
@@ -949,13 +961,15 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
                     const float scale_init = (float) grey_pyramid[closest_pyr_image_idx].cols / grey.cols;
                     findCornerInPyrImage(scale_init, closest_pyr_image_idx, grey_pyramid, Mat(candidates[i]), detectorParams);
                 }
-                else
-                cornerSubPix(grey, Mat(candidates[i]),
-                             Size(detectorParams.cornerRefinementWinSize, detectorParams.cornerRefinementWinSize),
-                             Size(-1, -1),
-                             TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
-                                          detectorParams.cornerRefinementMaxIterations,
-                                          detectorParams.cornerRefinementMinAccuracy));
+                else {
+                    int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
+                                                                      arucoDetectorImpl->getAverageArucoPinSize(candidates[i])));
+                    cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
+                    cornerSubPix(grey, Mat(candidates[i]), Size(cornerRefinementWinSize, cornerRefinementWinSize), Size(-1, -1),
+                                 TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
+                                              detectorParams.cornerRefinementMaxIterations,
+                                              detectorParams.cornerRefinementMinAccuracy));
+                }
             }
         });
     }
@@ -1221,8 +1235,13 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
                 CV_Assert(detectorParams.cornerRefinementWinSize > 0 &&
                           detectorParams.cornerRefinementMaxIterations > 0 &&
                           detectorParams.cornerRefinementMinAccuracy > 0);
+
+                std::vector<Point2f> marker(closestRotatedMarker.begin<Point2f>(), closestRotatedMarker.end<Point2f>());
+                int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
+                                                                  arucoDetectorImpl->getAverageArucoPinSize(marker)));
+                cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
                 cornerSubPix(grey, closestRotatedMarker,
-                             Size(detectorParams.cornerRefinementWinSize, detectorParams.cornerRefinementWinSize),
+                             Size(cornerRefinementWinSize, cornerRefinementWinSize),
                              Size(-1, -1), TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
                                                         detectorParams.cornerRefinementMaxIterations,
                                                         detectorParams.cornerRefinementMinAccuracy));
