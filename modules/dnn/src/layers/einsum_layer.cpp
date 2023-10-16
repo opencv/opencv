@@ -38,7 +38,6 @@ Mat batchwiseMatMul(
     const Mat& input2,
     const MatShape& input2ShapeOverride)
 {
-
     // Sanity checks before the actual MatMul
     //input_1.DataType() == input_2.DataType(), "Data types of the inputs must match for MatMul");
 
@@ -391,6 +390,15 @@ public:
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        if (inputs_arr.depth() == CV_16S)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
+
         // homogenize inputs
         preProcessInputs(inputs_arr);
 

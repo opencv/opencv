@@ -69,10 +69,14 @@
 /**
 Add: _dst[i] = src1[i] + src2[i]_ @n
 Sub: _dst[i] = src1[i] - src2[i]_
-@param src1_data,src1_step first source image data and step
-@param src2_data,src2_step second source image data and step
-@param dst_data,dst_step destination image data and step
-@param width,height dimensions of the images
+@param src1_data first source image data
+@param src1_step first source image step
+@param src2_data second source image data
+@param src2_step second source image step
+@param dst_data destination image data
+@param dst_step destination image step
+@param width width of the images
+@param height height of the images
 */
 //! @addtogroup core_hal_interface_addsub Element-wise add and subtract
 //! @{
@@ -96,10 +100,14 @@ inline int hal_ni_sub64f(const double *src1_data, size_t src1_step, const double
 /**
 Minimum: _dst[i] = min(src1[i], src2[i])_ @n
 Maximum: _dst[i] = max(src1[i], src2[i])_
-@param src1_data,src1_step first source image data and step
-@param src2_data,src2_step second source image data and step
-@param dst_data,dst_step destination image data and step
-@param width,height dimensions of the images
+@param src1_data first source image data
+@param src1_step first source image step
+@param src2_data second source image data
+@param src2_step second source image step
+@param dst_data destination image data
+@param dst_step destination image step
+@param width width of the images
+@param height height of the images
 */
 //! @addtogroup core_hal_interface_minmax Element-wise minimum or maximum
 //! @{
@@ -122,11 +130,14 @@ inline int hal_ni_min64f(const double *src1_data, size_t src1_step, const double
 
 /**
 Absolute difference: _dst[i] = | src1[i] - src2[i] |_
-@param src1_data,src1_step first source image data and step
-@param src2_data,src2_step second source image data and step
-@param dst_data,dst_step destination image data and step
-@param width,height dimensions of the images
-@param scale additional multiplier
+@param src1_data first source image data
+@param src1_step first source image step
+@param src2_data second source image data
+@param src2_step second source image step
+@param dst_data destination image data
+@param dst_step destination image step
+@param width width of the images
+@param height height of the images
 */
 //! @addtogroup core_hal_interface_absdiff Element-wise absolute difference
 //! @{
@@ -144,10 +155,14 @@ Bitwise AND: _dst[i] = src1[i] & src2[i]_ @n
 Bitwise OR: _dst[i] = src1[i] | src2[i]_ @n
 Bitwise XOR: _dst[i] = src1[i] ^ src2[i]_ @n
 Bitwise NOT: _dst[i] = !src[i]_
-@param src1_data,src1_step first source image data and step
-@param src2_data,src2_step second source image data and step
-@param dst_data,dst_step destination image data and step
-@param width,height dimensions of the images
+@param src1_data first source image data
+@param src1_step first source image step
+@param src2_data second source image data
+@param src2_step second source image step
+@param dst_data destination image data
+@param dst_step destination image step
+@param width width of the images
+@param height height of the images
  */
 //! @addtogroup core_hal_interface_logical Bitwise logical operations
 //! @{
@@ -201,10 +216,14 @@ inline int hal_ni_not8u(const uchar *src_data, size_t src_step, uchar *dst_data,
 
 /**
 Compare: _dst[i] = src1[i] op src2[i]_
-@param src1_data,src1_step first source image data and step
-@param src2_data,src2_step second source image data and step
-@param dst_data,dst_step destination image data and step
-@param width,height dimensions of the images
+@param src1_data first source image data
+@param src1_step first source image step
+@param src2_data second source image data
+@param src2_step second source image step
+@param dst_data destination image data
+@param dst_step destination image step
+@param width width of the images
+@param height height of the images
 @param operation one of (CV_HAL_CMP_EQ, CV_HAL_CMP_GT, ...)
 */
 //! @addtogroup core_hal_interface_compare Element-wise compare
@@ -230,10 +249,14 @@ inline int hal_ni_cmp64f(const double *src1_data, size_t src1_step, const double
 
 /**
 Multiply: _dst[i] = scale * src1[i] * src2[i]_
-@param src1_data,src1_step first source image data and step
-@param src2_data,src2_step second source image data and step
-@param dst_data,dst_step destination image data and step
-@param width,height dimensions of the images
+@param src1_data first source image data
+@param src1_step first source image step
+@param src2_data second source image data
+@param src2_step second source image step
+@param dst_data destination image data
+@param dst_step destination image step
+@param width width of the images
+@param height height of the images
 @param scale additional multiplier
 */
 //! @addtogroup core_hal_interface_multiply Element-wise multiply
@@ -249,10 +272,14 @@ inline int hal_ni_mul64f(const double *src1_data, size_t src1_step, const double
 
 /**
 Divide: _dst[i] = scale * src1[i] / src2[i]_
-@param src1_data,src1_step first source image data and step
-@param src2_data,src2_step second source image data and step
-@param dst_data,dst_step destination image data and step
-@param width,height dimensions of the images
+@param src1_data first source image data and step
+@param src1_step first source image data and step
+@param src2_data second source image data and step
+@param src2_step second source image data and step
+@param dst_data destination image data and step
+@param dst_step destination image data and step
+@param width dimensions of the images
+@param height dimensions of the images
 @param scale additional multiplier
 */
 //! @addtogroup core_hal_interface_divide Element-wise divide
@@ -268,9 +295,12 @@ inline int hal_ni_div64f(const double *src1_data, size_t src1_step, const double
 
 /**
 Computes reciprocial: _dst[i] = scale / src[i]_
-@param src_data,src_step source image data and step
-@param dst_data,dst_step destination image data and step
-@param width,height dimensions of the images
+@param src_data source image data
+@param src_step source image step
+@param dst_data destination image data
+@param dst_step destination image step
+@param width width of the images
+@param height height of the images
 @param scale additional multiplier
  */
 //! @addtogroup core_hal_interface_reciprocial Element-wise reciprocial
@@ -310,10 +340,14 @@ inline int hal_ni_recip64f(const double *src_data, size_t src_step, double *dst_
 
 /**
 Computes weighted sum of two arrays using formula: _dst[i] = a * src1[i] + b * src2[i] + c_
-@param src1_data,src1_step first source image data and step
-@param src2_data,src2_step second source image data and step
-@param dst_data,dst_step destination image data and step
-@param width,height dimensions of the images
+@param src1_data first source image data
+@param src1_step first source image step
+@param src2_data second source image data
+@param src2_step second source image step
+@param dst_data destination image data
+@param dst_step destination image step
+@param width width of the images
+@param height height of the images
 @param scalars numbers _a_, _b_, and _c_
  */
 //! @addtogroup core_hal_interface_addWeighted Element-wise weighted sum
@@ -381,7 +415,8 @@ inline int hal_ni_merge64s(const int64 **src_data, int64 *dst_data, int len, int
 
 
 /**
-@param y,x source Y and X arrays
+@param y source Y arrays
+@param x source X arrays
 @param dst destination array
 @param len length of arrays
 @param angleInDegrees if set to true return angles in degrees, otherwise in radians
@@ -399,7 +434,8 @@ inline int hal_ni_fastAtan64f(const double* y, const double* x, double* dst, int
 
 
 /**
-@param x,y source X and Y arrays
+@param x source X array
+@param y source Y array
 @param dst destination array
 @param len length of arrays
  */
@@ -530,7 +566,8 @@ inline int hal_ni_dftFree1D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEME
 
 /**
 @param context double pointer to context storing all necessary data
-@param width,height image dimensions
+@param width image width
+@param height image height
 @param depth image type (CV_32F or CV_64F)
 @param src_channels number of channels in input image
 @param dst_channels number of channels in output image
@@ -540,8 +577,10 @@ inline int hal_ni_dftFree1D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEME
 inline int hal_ni_dftInit2D(cvhalDFT **context, int width, int height, int depth, int src_channels, int dst_channels, int flags, int nonzero_rows) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 /**
 @param context pointer to context storing all necessary data
-@param src_data,src_step source image data and step
-@param dst_data,dst_step destination image data and step
+@param src_data source image data
+@param src_step source image step
+@param dst_data destination image data
+@param dst_step destination image step
  */
 inline int hal_ni_dft2D(cvhalDFT *context, const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 /**
@@ -557,15 +596,18 @@ inline int hal_ni_dftFree2D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEME
 
 /**
 @param context double pointer to context storing all necessary data
-@param width,height image dimensions
+@param width image width
+@param height image height
 @param depth image type (CV_32F or CV_64F)
 @param flags algorithm options (combination of CV_HAL_DFT_INVERSE, ...)
  */
 inline int hal_ni_dctInit2D(cvhalDFT **context, int width, int height, int depth, int flags) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 /**
 @param context pointer to context storing all necessary data
-@param src_data,src_step source image data and step
-@param dst_data,dst_step destination image data and step
+@param src_data source image data
+@param src_step source image step
+@param dst_data destination image data
+@param dst_step destination image step
  */
 inline int hal_ni_dct2D(cvhalDFT *context, const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 /**
@@ -717,11 +759,15 @@ inline int hal_ni_gemm64fc(const double* src1, size_t src1_step, const double* s
 
 /**
    @brief Finds the global minimum and maximum in an array.
-   @param src_data,src_step Source image
-   @param width,height Source image dimensions
+   @param src_data Source image
+   @param src_step Source image
+   @param width Source image dimensions
+   @param height Source image dimensions
    @param depth Depth of source image
-   @param minVal,maxVal Pointer to the returned global minimum and maximum in an array.
-   @param minIdx,maxIdx Pointer to the returned minimum and maximum location.
+   @param minVal Pointer to the returned global minimum and maximum in an array.
+   @param maxVal Pointer to the returned global minimum and maximum in an array.
+   @param minIdx Pointer to the returned minimum and maximum location.
+   @param maxIdx Pointer to the returned minimum and maximum location.
    @param mask Specified array region.
 */
 inline int hal_ni_minMaxIdx(const uchar* src_data, size_t src_step, int width, int height, int depth, double* minVal, double* maxVal,
@@ -729,6 +775,47 @@ inline int hal_ni_minMaxIdx(const uchar* src_data, size_t src_step, int width, i
 
 //! @cond IGNORED
 #define cv_hal_minMaxIdx hal_ni_minMaxIdx
+//! @endcond
+
+/**
+   @brief hal_flip
+   @param src_type source and destination image type
+   @param src_data source image data
+   @param src_step source image step
+   @param src_width source and destination image width
+   @param src_height source and destination image height
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param flip_mode 0 flips around x-axis, positive around y-axis, negative both
+ */
+inline int hal_ni_flip(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height,
+                       uchar* dst_data, size_t dst_step, int flip_mode) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_flip hal_ni_flip
+//! @endcond
+
+
+/**
+   @brief rotate90
+   @param src_type source and destination image type
+   @param src_data source image data
+   @param src_step source image step
+   @param src_width source image width
+   If angle has value [180] it is also destination image width
+   If angle has values [90, 270] it is also destination image height
+   @param src_height source and destination image height (destination image width for angles [90, 270])
+   If angle has value [180] it is also destination image height
+   If angle has values [90, 270] it is also destination image width
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param angle clockwise angle for rotation in degrees from set [90, 180, 270]
+ */
+inline int hal_ni_rotate90(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height,
+                           uchar* dst_data, size_t dst_step, int angle) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_rotate90 hal_ni_rotate90
 //! @endcond
 
 //! @}

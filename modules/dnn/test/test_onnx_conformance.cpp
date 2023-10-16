@@ -1236,4 +1236,4 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_conformance,
     printOnnxConfParams
 );
 
-};
+}

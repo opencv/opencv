@@ -627,7 +627,7 @@ namespace
         void assignIsland(const std::string &s)
         {
             cv::gapi::island(s, cv::GIn(tmp[0]), cv::GOut(tmp[2]));
-        };
+        }
     };
     TEST_P(CheckName, Test)
     {

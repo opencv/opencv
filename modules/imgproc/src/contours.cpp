@@ -510,9 +510,6 @@ It supports both hierarchical and plane variants of Suzuki algorithm.
 typedef struct _CvContourScanner* CvContourScanner;
 
 
-#define _CV_FIND_CONTOURS_FLAGS_EXTERNAL_ONLY    1
-#define _CV_FIND_CONTOURS_FLAGS_HIERARCHIC       2
-
 /*
    Initializes scanner structure.
    Prepare image for scanning ( clear borders and convert all pixels to 0-1.

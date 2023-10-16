@@ -24,7 +24,7 @@ struct SumSqr_SIMD
     }
 };
 
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 
 template <>
 struct SumSqr_SIMD<uchar, int, int>

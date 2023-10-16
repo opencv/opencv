@@ -225,7 +225,7 @@ public:
     void copyTo(const _OutputArray& dst) const;
     void convertTo(const _OutputArray& dst, int type, double scale=1., double shift=0.) const;
 
-    _Tp val[m*n]; //< matrix elements
+    _Tp val[m*n]; ///< matrix elements
 };
 
 typedef Matx<float, 1, 2> Matx12f;

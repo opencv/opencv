@@ -984,13 +984,7 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 #ifdef HAVE_DNN_NGRAPH
     std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
-        float one = 1.0f;
-        auto constant = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &one);
-        auto exp_node = std::make_shared<ngraph::op::v0::Exp>(node);
-        auto sum = std::make_shared<ngraph::op::v1::Add>(constant, exp_node, ngraph::op::AutoBroadcastType::NUMPY);
-        auto log_node = std::make_shared<ngraph::op::v0::Log>(sum);
-        auto tanh_node = std::make_shared<ngraph::op::Tanh>(log_node);
-        return std::make_shared<ngraph::op::v1::Multiply>(node, tanh_node);
+        return std::make_shared<ngraph::op::v4::Mish>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -1190,10 +1184,7 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 #ifdef HAVE_DNN_NGRAPH
     std::shared_ptr<ngraph::Node> initNgraphAPI(const ngraph::Output<ngraph::Node>& node)
     {
-        float coeff = -0.999999f;
-        // float coeff = preferableTarget == DNN_TARGET_MYRIAD ? -0.999f : -0.999999f;
-        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeff);
-        return std::make_shared<ngraph::op::PRelu>(node, slope);
+        return std::make_shared<ngraph::op::Abs>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -2561,11 +2552,6 @@ struct ReciprocalFunctor : public BaseDefaultFunctor<ReciprocalFunctor>
 
 template<>
 const char* const ReciprocalFunctor::BaseDefaultFunctor<ReciprocalFunctor>::ocl_kernel_name = "ReciprocalForward";
-
-
-#define ACTIVATION_CREATOR_FOR(_Layer, _Functor, ...) \
-Ptr<_Layer> _Layer::create() { \
-    return return Ptr<_Layer>( new ElementWiseLayer<_Functor>(_Functor()) ); }
 
 
 Ptr<ReLULayer> ReLULayer::create(const LayerParams& params)

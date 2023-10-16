@@ -163,8 +163,6 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     wholeSize = Size(-1,-1);
 }
 
-#define VEC_ALIGN CV_MALLOC_ALIGN
-
 int FilterEngine::start(const Size& _wholeSize, const Size& sz, const Point& ofs)
 {
     CV_INSTRUMENT_REGION();
