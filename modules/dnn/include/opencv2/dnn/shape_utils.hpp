@@ -106,7 +106,7 @@ static inline Mat slice(const Mat &m, const _Range &r0, const _Range &r1, const 
 }
 
 static inline UMat getPlane(UMat& m, int n, int ch) {
-    CV_Assert(m.dims > 3);
+    CV_Assert(m.dims > 2);
     int offset = (n * m.step.p[0] + ch * m.step.p[1]) / m.elemSize();
     int total_length = 1;
     int plane_length = 1;
@@ -121,7 +121,7 @@ static inline UMat getPlane(UMat& m, int n, int ch) {
     const int newShape[1] { total_length };
     UMat reshaped = m.reshape(1, 1, newShape);
     UMat roi = reshaped(Rect(0, offset, 1, plane_length));
-    return roi.reshape(m.channels(), m.size[3]);
+    return roi.reshape(m.channels(), m.size[2]);
 }
 
 static inline Mat getPlane(const Mat &m, int n, int cn)
