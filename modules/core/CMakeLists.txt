@@ -1,5 +1,6 @@
 set(the_description "The Core Functionality")
 
+ocv_add_dispatched_file(try_cpu_features FP16 NEON FP16_SIMD BF16_SIMD NEON_DOTPROD)
 ocv_add_dispatched_file(mathfuncs_core SSE2 AVX AVX2)
 ocv_add_dispatched_file(stat SSE4_2 AVX2)
 ocv_add_dispatched_file(arithm SSE2 SSE4_1 AVX2 VSX3)
