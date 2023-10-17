@@ -1095,20 +1095,21 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
     return !mats.empty();
 }
 
-bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats)
+bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats, const Range& range)
 {
     CV_TRACE_FUNCTION();
 
     Mat buf = _buf.getMat();
-    return imdecodemulti_(buf, flags, mats, 0, -1);
-}
-
-bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats, int start, int count)
-{
-    CV_TRACE_FUNCTION();
-
-    Mat buf = _buf.getMat();
-    return imdecodemulti_(buf, flags, mats, start, count);
+    if (range == Range::all())
+    {
+        return imdecodemulti_(buf, flags, mats, 0, -1);
+    }
+    else
+    {
+        CV_Assert( range.start >= 0 );
+        CV_Assert( range.size() > 0 );
+        return imdecodemulti_(buf, flags, mats, range.start, range.size());
+    }
 }
 
 bool imencode( const String& ext, InputArray _image,
