@@ -639,7 +639,7 @@ Mat imread( const String& filename, int flags )
  *  This function merely calls the actual implementation above and returns itself.
  *
  * @param[in] filename File to load
- * @param[in] img
+ * @param[in] img object in which the image will be loaded
  * @param[in] flags Flags you wish to set.
 */
 Mat imread( const String& filename, Mat & img, int flags )
