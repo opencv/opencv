@@ -3048,7 +3048,7 @@ struct VArea {};
 
 template <>
 struct VArea<float> {
-    static const int nlanes = v_float32::nlanes;
+    typedef v_float32 vWT;
 };
 #endif
 
@@ -3057,7 +3057,7 @@ static inline v_float64 vx_setall(double coeff) { return vx_setall_f64(coeff); }
 
 template <>
 struct VArea<double> {
-    static const int nlanes = v_float64::nlanes;
+    typedef v_float64 vWT;
 };
 
 #else
@@ -3078,7 +3078,7 @@ template <typename T, typename WT>
 inline void saturate_store(const WT* sum, int width, T* D) {
     int dx = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    constexpr int step = VArea<WT>::nlanes * sizeof(WT) / sizeof(T);
+    const int step = VTraits<typename VArea<WT>::vWT>::vlanes() * sizeof(WT) / sizeof(T);
     for (; dx + step < width; dx += step) {
         saturate_store(sum + dx, D + dx);
     }
@@ -3098,7 +3098,7 @@ template <typename WT>
 inline void mul(const WT* buf, int width, WT beta, WT* sum) {
     int dx = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    constexpr int step = VArea<WT>::nlanes;
+    const int step = VTraits<typename VArea<WT>::vWT>::vlanes();
     for (; dx + step < width; dx += step) {
         vx_store(sum + dx, vx_setall(beta) * vx_load(buf + dx));
     }
@@ -3112,7 +3112,7 @@ template <typename WT>
 inline void muladd(const WT* buf, int width, WT beta, WT* sum) {
     int dx = 0;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-    constexpr int step = VArea<WT>::nlanes;
+    const int step = VTraits<typename VArea<WT>::vWT>::vlanes();
     for (; dx + step < width; dx += step) {
         vx_store(sum + dx, vx_load(sum + dx) + vx_setall(beta) * vx_load(buf + dx));
     }
