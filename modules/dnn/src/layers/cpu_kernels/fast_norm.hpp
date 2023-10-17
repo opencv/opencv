@@ -9,6 +9,8 @@
 
 namespace cv { namespace dnn {
 
+void fastNorm(const Mat &input, Mat &output, float epsilon, int axis = 0, bool normalize_variance = true);
+void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, int axis = 0);
 void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, int axis = 0);
 
 }} // cv::dnn

@@ -82,10 +82,14 @@ public:
         const auto &input = inputs[0];
         const auto &scale = inputs[1];
         const auto scale_shape = shape(scale);
-        const auto &bias = inputs.size() == 3 ? inputs[2] : Mat::zeros(static_cast<int>(scale_shape.size()), scale_shape.data(), CV_32F);
         auto &output = outputs[0];
 
-        fastNorm(input, scale, bias, output, epsilon, axis);
+        if (inputs.size() == 3) {
+            const auto &bias = inputs[2];
+            fastNorm(input, scale, bias, output, epsilon, axis);
+        } else {
+            fastNorm(input, scale, output, epsilon, axis);
+        }
     }
 };
 
